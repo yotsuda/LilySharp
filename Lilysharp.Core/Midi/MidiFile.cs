@@ -10,6 +10,7 @@ public class MidiTrack
     public List<MidiNote> Notes { get; } = [];
     public List<TempoChange> TempoChanges { get; } = [];
     public List<TimeSignatureChange> TimeSignatures { get; } = [];
+    public List<LyricEvent> Lyrics { get; } = [];
 }
 
 /// <summary>
@@ -105,6 +106,13 @@ public class MidiFile
                     WriteVariableLength(trackWriter, nameBytes.Length);
                     trackWriter.Write(nameBytes);
                     break;
+                case MidiEventType.Lyric:
+                    trackWriter.Write((byte)0xFF);
+                    trackWriter.Write((byte)0x05); // Lyric meta event
+                    var lyricBytes = System.Text.Encoding.UTF8.GetBytes(evt.Text ?? "");
+                    WriteVariableLength(trackWriter, lyricBytes.Length);
+                    trackWriter.Write(lyricBytes);
+                    break;
             }
             lastTick = evt.Tick;
         }
@@ -144,6 +152,9 @@ public class MidiFile
             events.Add(new MidiEvent(note.StartTick + note.DurationTicks, MidiEventType.NoteOff, note.Channel, note.Pitch, 0));
         }
         
+        foreach (var lyric in track.Lyrics)
+            events.Add(new MidiEvent(lyric.Tick, MidiEventType.Lyric, 0, 0, 0, lyric.Text));
+        
         events.Sort((a, b) =>
         {
             int cmp = a.Tick.CompareTo(b.Tick);
@@ -181,6 +192,6 @@ public class MidiFile
         foreach (var b in bytes) writer.Write(b);
     }
     
-    private enum MidiEventType { NoteOff = 0, NoteOn = 1, Tempo = 2, TimeSignature = 3, TrackName = 4 }
-    private readonly record struct MidiEvent(int Tick, MidiEventType Type, int Channel, int Data1, int Data2);
+    private enum MidiEventType { NoteOff = 0, NoteOn = 1, Tempo = 2, TimeSignature = 3, TrackName = 4, Lyric = 5 }
+    private readonly record struct MidiEvent(int Tick, MidiEventType Type, int Channel, int Data1, int Data2, string? Text = null);
 }

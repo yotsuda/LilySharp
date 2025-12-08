@@ -19,7 +19,7 @@ public enum ArticulationType
 /// </summary>
 public enum DynamicLevel
 {
-    None = 0,
+    None,
     PPP = 20,
     PP = 35,
     P = 50,
