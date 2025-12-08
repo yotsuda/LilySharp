@@ -551,18 +551,41 @@ public sealed class DynamicSyntax : SyntaxNode
     /// <summary>
     /// Gets the dynamic level.
     /// </summary>
-    public DynamicLevel Level => DynamicToken.Text switch
+    public DynamicLevel Level
     {
-        "ppp" => DynamicLevel.PPP,
-        "pp" => DynamicLevel.PP,
-        "p" => DynamicLevel.P,
-        "mp" => DynamicLevel.MP,
-        "mf" => DynamicLevel.MF,
-        "f" => DynamicLevel.F,
-        "ff" => DynamicLevel.FF,
-        "fff" => DynamicLevel.FFF,
-        _ => DynamicLevel.None
-    };
+        get
+        {
+            // First try by Kind (for proper dynamic tokens)
+            var byKind = DynamicToken.Kind switch
+            {
+                SyntaxKind.DynamicPPP => DynamicLevel.PPP,
+                SyntaxKind.DynamicPP => DynamicLevel.PP,
+                SyntaxKind.DynamicP => DynamicLevel.P,
+                SyntaxKind.DynamicMP => DynamicLevel.MP,
+                SyntaxKind.DynamicMF => DynamicLevel.MF,
+                SyntaxKind.DynamicF => DynamicLevel.F,
+                SyntaxKind.DynamicFF => DynamicLevel.FF,
+                SyntaxKind.DynamicFFF => DynamicLevel.FFF,
+                _ => DynamicLevel.None
+            };
+            
+            if (byKind != DynamicLevel.None) return byKind;
+            
+            // Fallback to text matching (for pitch tokens used as dynamics like \f)
+            return DynamicToken.Text switch
+            {
+                "ppp" => DynamicLevel.PPP,
+                "pp" => DynamicLevel.PP,
+                "p" => DynamicLevel.P,
+                "mp" => DynamicLevel.MP,
+                "mf" => DynamicLevel.MF,
+                "f" => DynamicLevel.F,
+                "ff" => DynamicLevel.FF,
+                "fff" => DynamicLevel.FFF,
+                _ => DynamicLevel.None
+            };
+        }
+    }
     
     /// <summary>
     /// Gets the MIDI velocity value for this dynamic.

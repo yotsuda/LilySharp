@@ -288,20 +288,17 @@ public class MidiExporter
     private void ProcessGrace(GraceExpressionSyntax grace, MidiTrack track)
     {
         // Grace notes steal time from the following note
-        // For now, use a fixed short duration (1/32 note per grace note)
+        // Use a fixed short duration (1/32 note per grace note)
         int graceDuration = _ticksPerQuarter / 8; // 1/32 note
         
-        // Collect all notes in the grace expression
-        var graceNotes = grace.Body.Items.OfType<NoteSyntax>().ToList();
-        
-        // Temporarily set shorter duration for grace notes
-        var savedDefaultDuration = _defaultDuration;
-        _defaultDuration = new Fraction(1, 32);
-        
-        foreach (var note in graceNotes)
+        foreach (var note in grace.Body.Items.OfType<NoteSyntax>())
         {
-            var (pitchClass, octave) = ParsePitch(note.Pitch);
-            int midiPitch = (octave + 1) * 12 + pitchClass;
+            // Use the same pitch calculation as ProcessNote for consistency
+            var (basePitch, _) = ParsePitch(note.Pitch);
+            int octaveChange = note.Pitch.OctaveOffset;
+            int targetOctave = _currentOctave + octaveChange;
+            int midiPitch = Math.Clamp(basePitch + (targetOctave + 1) * 12, 0, 127);
+            _currentOctave = targetOctave;
             
             track.Notes.Add(new MidiNote(
                 track.Channel,
@@ -313,8 +310,6 @@ public class MidiExporter
             
             _currentTick += graceDuration;
         }
-        
-        _defaultDuration = savedDefaultDuration;
     }
     
     private (int velocity, int durationPercent) ApplyArticulationType(

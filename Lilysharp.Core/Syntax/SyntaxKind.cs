@@ -99,7 +99,8 @@ public enum SyntaxKind : ushort
     Apostrophe,         // '
     Dollar,             // $
     DoubleOpenAngle,    // <<
-    DoubleCloseAngle,   // >>    
+    DoubleCloseAngle,   // >>
+    
     // === Articulation Names ===
     StaccatoKeyword,
     AccentKeyword,
