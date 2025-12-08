@@ -1,0 +1,28 @@
+// Happy Birthday in Lilysharp
+title "Happy Birthday"
+composer "Traditional"
+tempo 120
+time 3/4
+key g major
+
+score {
+    part Melody "Voice" {
+        relative c' {
+            // First phrase
+            d8. d16 e4 d |
+            g4 fis2 |
+            
+            // Second phrase
+            d8. d16 e4 d |
+            a'4 g2 |
+            
+            // Third phrase
+            d8. d16 d'4 b |
+            g4 fis e |
+            
+            // Final phrase
+            c'8. c16 b4 g |
+            a4 g2 |
+        }
+    }
+}

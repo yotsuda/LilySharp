@@ -1,0 +1,32 @@
+// Minuet with repeats and parallel voices
+title "Minuet in G"
+composer "J.S. Bach"
+tempo 108
+time 3/4
+
+score {
+    part Piano {
+        staff RH {
+            relative c'' {
+                repeat volta 2 {
+                    d4 g8 a b c |
+                    d4 g, g |
+                    e4 c'8 b c a |
+                    d,4 fis8 e fis d |
+                }
+                alternative {
+                    { g4 g, g | }
+                    { g4 g2 | }
+                }
+            }
+        }
+        staff LH {
+            relative c {
+                repeat volta 2 {
+                    << { g2 a4 } \\ { g,2. } >> |
+                    << { b'2. } \\ { g2. } >> |
+                }
+            }
+        }
+    }
+}

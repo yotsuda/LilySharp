@@ -1,0 +1,131 @@
+{
+    "name": "Lilysharp",
+    "scopeName": "source.lilysharp",
+    "patterns": [
+        { "include": "#comments" },
+        { "include": "#strings" },
+        { "include": "#keywords" },
+        { "include": "#structures" },
+        { "include": "#pitches" },
+        { "include": "#rests" },
+        { "include": "#durations" },
+        { "include": "#barlines" },
+        { "include": "#dynamics" },
+        { "include": "#articulations" },
+        { "include": "#numbers" }
+    ],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.double-slash.lilysharp",
+                    "match": "//.*$"
+                },
+                {
+                    "name": "comment.block.lilysharp",
+                    "begin": "/\\*",
+                    "end": "\\*/"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.lilysharp",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.lilysharp",
+                            "match": "\\\\."
+                        }
+                    ]
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.lilysharp",
+                    "match": "\\b(score|part|staff|voice|relative|absolute|fixed|repeat|volta|alternative|let|use)\\b"
+                },
+                {
+                    "name": "keyword.other.lilysharp",
+                    "match": "\\b(title|composer|tempo|time|key|clef|major|minor)\\b"
+                }
+            ]
+        },
+        "structures": {
+            "patterns": [
+                {
+                    "name": "punctuation.definition.block.lilysharp",
+                    "match": "[{}]"
+                },
+                {
+                    "name": "punctuation.definition.parallel.lilysharp",
+                    "match": "<<|>>"
+                },
+                {
+                    "name": "punctuation.separator.lilysharp",
+                    "match": "\\\\\\\\|:"
+                }
+            ]
+        },
+        "pitches": {
+            "patterns": [
+                {
+                    "name": "variable.other.pitch.lilysharp",
+                    "match": "\\b[a-g](isis|eses|is|es|as)?[',]*"
+                }
+            ]
+        },
+        "rests": {
+            "patterns": [
+                {
+                    "name": "constant.language.rest.lilysharp",
+                    "match": "\\b[rsR]\\b"
+                }
+            ]
+        },
+        "durations": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.duration.lilysharp",
+                    "match": "\\b(1|2|4|8|16|32|64|128)\\.{0,3}\\b"
+                }
+            ]
+        },
+        "barlines": {
+            "patterns": [
+                {
+                    "name": "punctuation.separator.barline.lilysharp",
+                    "match": "\\|\\||\\|\\.|\\|:|:\\||\\|"
+                }
+            ]
+        },
+        "dynamics": {
+            "patterns": [
+                {
+                    "name": "keyword.other.dynamic.lilysharp",
+                    "match": "\\\\(ppp|pp|p|mp|mf|f|ff|fff|cresc|decresc|dim)\\b"
+                }
+            ]
+        },
+        "articulations": {
+            "patterns": [
+                {
+                    "name": "keyword.other.articulation.lilysharp",
+                    "match": "@(staccato|accent|tenuto|marcato|fermata|portato)\\b"
+                }
+            ]
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.lilysharp",
+                    "match": "\\b\\d+\\b"
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,63 @@
+{
+    "name": "lilysharp",
+    "displayName": "Lilysharp",
+    "description": "Language support for Lilysharp music notation",
+    "version": "0.1.0",
+    "publisher": "lilysharp",
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "activationEvents": [
+        "onLanguage:lilysharp"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "languages": [
+            {
+                "id": "lilysharp",
+                "aliases": ["Lilysharp", "lilysharp"],
+                "extensions": [".lys"],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "lilysharp",
+                "scopeName": "source.lilysharp",
+                "path": "./syntaxes/lilysharp.tmLanguage.json"
+            }
+        ],
+        "configuration": {
+            "title": "Lilysharp",
+            "properties": {
+                "lilysharp.serverPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to the Lilysharp language server executable"
+                },
+                "lilysharp.trace.server": {
+                    "type": "string",
+                    "enum": ["off", "messages", "verbose"],
+                    "default": "off",
+                    "description": "Traces the communication between VS Code and the language server"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@types/vscode": "^1.85.0",
+        "typescript": "^5.3.0"
+    },
+    "dependencies": {
+        "vscode-languageclient": "^9.0.1"
+    }
+}
