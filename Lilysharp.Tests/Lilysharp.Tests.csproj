@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Lilysharp.Core\Lilysharp.Core.csproj" />
+    <ProjectReference Include="..\Lilysharp.Lsp\Lilysharp.Lsp.csproj" />
   </ItemGroup>
 
 </Project>
