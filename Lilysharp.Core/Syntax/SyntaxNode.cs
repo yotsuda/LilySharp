@@ -117,6 +117,8 @@ public abstract class SyntaxNode
             SyntaxKind.KeySignature => new KeySignatureSyntax((KeySignatureGreen)green, this, position),
             SyntaxKind.ClefDeclaration => new ClefDeclarationSyntax((ClefDeclarationGreen)green, this, position),
             SyntaxKind.TupletExpression => new TupletExpressionSyntax((TupletExpressionGreen)green, this, position),
+            SyntaxKind.GraceExpression => new GraceExpressionSyntax((GraceExpressionGreen)green, this, position),
+            SyntaxKind.LyricsBlock => new LyricsBlockSyntax((LyricsBlockGreen)green, this, position),
             _ => new GenericSyntaxNode(green, this, position)
         };
     }

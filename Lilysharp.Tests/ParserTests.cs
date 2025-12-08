@@ -600,4 +600,47 @@ c4 d e f
         var tree = SyntaxTree.Parse(source);
         Assert.Equal(source, tree.ToFullString());
     }
+
+    // ========== Grace Notes ==========
+
+    [Fact]
+    public void ParseGraceNotes()
+    {
+        var source = "grace { c16 d e } c4";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var grace = tree.GetNodes<GraceExpressionSyntax>().First();
+        Assert.Equal(SyntaxKind.GraceKeyword, grace.GraceKeyword.Kind);
+    }
+
+    [Fact]
+    public void ParseAcciaccatura()
+    {
+        var source = "acciaccatura { c16 } d4";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var grace = tree.GetNodes<GraceExpressionSyntax>().First();
+        Assert.True(grace.IsAcciaccatura);
+    }
+
+    [Fact]
+    public void ParseAppoggiatura()
+    {
+        var source = "appoggiatura { c8 } d4";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var grace = tree.GetNodes<GraceExpressionSyntax>().First();
+        Assert.True(grace.IsAppoggiatura);
+    }
+
+    [Fact]
+    public void RoundTripGrace()
+    {
+        var source = "grace { c16 d e }";
+        var tree = SyntaxTree.Parse(source);
+        Assert.Equal(source, tree.ToFullString());
+    }
 }

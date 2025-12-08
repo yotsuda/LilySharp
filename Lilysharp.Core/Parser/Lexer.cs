@@ -400,6 +400,10 @@ internal sealed class Lexer
             "bass" => SyntaxKind.BassKeyword,
             "alto" => SyntaxKind.AltoKeyword,
             "tenor" => SyntaxKind.TenorKeyword,
+            "grace" => SyntaxKind.GraceKeyword,
+            "acciaccatura" => SyntaxKind.AcciaccaturaKeyword,
+            "appoggiatura" => SyntaxKind.AppogiaturaKeyword,
+            "lyrics" => SyntaxKind.LyricsKeyword,
 
             // Articulation names
             "staccato" or "stac" => SyntaxKind.StaccatoKeyword,

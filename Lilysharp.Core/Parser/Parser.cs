@@ -97,6 +97,11 @@ internal sealed class Parser
             SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword => ParseMetadataDeclaration(),
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),
+            
+            SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or 
+            SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
+            
+            SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
             SyntaxKind.OpenBrace => ParseMusicBlock(),
             _ when IsMusicItemStart() => ParseMusicItem(),
@@ -353,6 +358,8 @@ internal sealed class Parser
             SyntaxKind.TupletKeyword => true,
             SyntaxKind.KeyKeyword => true,
             SyntaxKind.ClefKeyword => true,
+            SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or SyntaxKind.AppogiaturaKeyword => true,
+            SyntaxKind.LyricsKeyword => true,
             _ => false
         };
     }
@@ -385,7 +392,10 @@ internal sealed class Parser
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),
             
-
+            SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or 
+            SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
+            
+            SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             _ => null
         };
     }
@@ -702,5 +712,34 @@ private GreenNode?[] ParseArticulations()
         var body = ParseMusicBlock();
         
         return new TupletExpressionGreen(tupletKeyword, numerator, slash, denominator, body);
+    }
+    private GraceExpressionGreen ParseGraceExpression()
+    {
+        var keyword = Advance(); // grace, acciaccatura, or appoggiatura
+        var body = ParseMusicBlock();
+        return new GraceExpressionGreen(keyword, body);
+    }
+
+    private LyricsBlockGreen ParseLyricsBlock()
+    {
+        var lyricsKeyword = Expect(SyntaxKind.LyricsKeyword);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        
+        var syllables = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            // Parse syllables (identifiers, strings, or -- for extenders)
+            if (Check(SyntaxKind.Identifier) || Check(SyntaxKind.StringLiteral))
+            {
+                syllables.Add(Advance());
+            }
+            else
+            {
+                Advance(); // Skip unexpected tokens
+            }
+        }
+        
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new LyricsBlockGreen(lyricsKeyword, openBrace, [.. syllables], closeBrace);
     }
 }

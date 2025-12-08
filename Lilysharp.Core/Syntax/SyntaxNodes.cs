@@ -439,3 +439,54 @@ public sealed class TupletExpressionSyntax : SyntaxNode
     /// </summary>
     public int BaseDivision => int.TryParse(Denominator.Text, out int d) ? d : 2;
 }
+
+/// <summary>
+/// Grace expression: grace { notes } or acciaccatura { notes }
+/// </summary>
+public sealed class GraceExpressionSyntax : SyntaxNode
+{
+    internal GraceExpressionSyntax(InternalSyntax.GraceExpressionGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode GraceKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(1)!;
+    
+    /// <summary>
+    /// True if this is an acciaccatura (slashed grace note)
+    /// </summary>
+    public bool IsAcciaccatura => GraceKeyword.Kind == SyntaxKind.AcciaccaturaKeyword;
+    
+    /// <summary>
+    /// True if this is an appoggiatura (unslashed grace note)
+    /// </summary>
+    public bool IsAppoggiatura => GraceKeyword.Kind == SyntaxKind.AppogiaturaKeyword;
+}
+
+/// <summary>
+/// Lyrics block: lyrics { ... }
+/// </summary>
+public sealed class LyricsBlockSyntax : SyntaxNode
+{
+    internal LyricsBlockSyntax(InternalSyntax.LyricsBlockGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode LyricsKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(1)!;
+    public IEnumerable<SyntaxNode> Syllables
+    {
+        get
+        {
+            for (int i = 2; i < SlotCount - 1; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+    public SyntaxTokenNode CloseBrace => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
+}

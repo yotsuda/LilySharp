@@ -363,3 +363,31 @@ internal sealed class TupletExpressionGreen : GreenSyntaxNode
     {
     }
 }
+
+/// <summary>
+/// Grace expression: grace { notes } or acciaccatura { notes }
+/// </summary>
+internal sealed class GraceExpressionGreen : GreenSyntaxNode
+{
+    public GraceExpressionGreen(
+        SyntaxToken graceKeyword,
+        GreenNode body)
+        : base(SyntaxKind.GraceExpression, [graceKeyword, body])
+    {
+    }
+}
+
+/// <summary>
+/// Lyrics block: lyrics { text -- text }
+/// </summary>
+internal sealed class LyricsBlockGreen : GreenSyntaxNode
+{
+    public LyricsBlockGreen(
+        SyntaxToken lyricsKeyword,
+        SyntaxToken openBrace,
+        GreenNode?[] syllables,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.LyricsBlock, [lyricsKeyword, openBrace, .. syllables, closeBrace])
+    {
+    }
+}

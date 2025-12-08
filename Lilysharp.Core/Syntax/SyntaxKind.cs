@@ -65,6 +65,10 @@ public enum SyntaxKind : ushort
     BassKeyword,
     AltoKeyword,
     TenorKeyword,
+    GraceKeyword,
+    AcciaccaturaKeyword,
+    AppogiaturaKeyword,
+    LyricsKeyword,
     
     // === Rest ===
     RestR,              // r
@@ -164,4 +168,7 @@ public enum SyntaxKind : ushort
     
     // Tuplet
     TupletExpression,
+    GraceExpression,
+    LyricsBlock,
+    
 }
