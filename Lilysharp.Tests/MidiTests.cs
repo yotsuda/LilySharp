@@ -227,4 +227,22 @@ public class MidiTests
         Assert.Single(articulations);
         Assert.IsType<DynamicSyntax>(articulations[0]);
     }
+
+    [Fact]
+    public void ExportWithLyrics()
+    {
+        var source = @"
+{ c4 d e f }
+lyrics { Hap -- py birth -- day }
+";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MidiExporter();
+        var midi = exporter.Export(tree);
+        
+        var track = midi.Tracks.Skip(1).First();
+        Assert.Equal(4, track.Notes.Count);
+        
+        // Lyrics should be added (may not sync perfectly with notes in this simple implementation)
+        Assert.True(track.Lyrics.Count > 0);
+    }
 }

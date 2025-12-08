@@ -105,6 +105,10 @@ public class MidiExporter
             case DynamicSyntax:
                 break;
                 
+            case LyricsBlockSyntax lyrics:
+                ProcessLyrics(lyrics, track);
+                break;
+                
             case ParallelExpressionSyntax parallel:
                 var voices = parallel.Voices.ToList();
                 if (voices.Count > 0)
@@ -326,5 +330,23 @@ public class MidiExporter
             ArticulationType.Fermata => (velocity, 150),                      // Extended
             _ => (velocity, durationPercent)
         };
+    }
+    
+    private void ProcessLyrics(LyricsBlockSyntax lyrics, MidiTrack track)
+    {
+        // For now, we add each syllable as a lyric event at the current tick
+        // A more sophisticated implementation would sync lyrics with notes
+        foreach (var syllable in lyrics.Syllables)
+        {
+            if (syllable is SyntaxTokenNode token)
+            {
+                var text = token.Text.Trim();
+                if (!string.IsNullOrEmpty(text) && text != "--")
+                {
+                    // Add lyric event at current tick
+                    track.Lyrics.Add(new LyricEvent(_currentTick, text));
+                }
+            }
+        }
     }
 }
