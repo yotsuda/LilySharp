@@ -56,6 +56,7 @@ public sealed class LilysharpLanguageServer
                 DocumentSymbolProvider = true,
                 DefinitionProvider = true,
                 ReferencesProvider = true,
+                DocumentHighlightProvider = true,
                 FoldingRangeProvider = true,
                 RenameProvider = true,
                 DocumentFormattingProvider = true,
@@ -1392,5 +1393,82 @@ public sealed class LilysharpLanguageServer
             if (c == ' ' && count < 10) count++;
         }
         return Math.Max(0, count - 1);
+    }
+
+    // ========== Document Highlight ==========
+
+    [JsonRpcMethod(Methods.TextDocumentDocumentHighlightName)]
+    public DocumentHighlight[]? GetDocumentHighlight(DocumentHighlightParams @params)
+    {
+        var uri = @params.TextDocument.Uri;
+        var doc = _documentManager.GetDocument(uri);
+        if (doc == null) return null;
+
+        var position = @params.Position;
+        var offset = GetOffset(doc.Text, position.Line, position.Character);
+        var node = doc.Tree.FindNode(offset);
+        if (node == null) return null;
+
+        // Find variable name at position
+        string? variableName = null;
+        
+        if (node is VariableReferenceSyntax varRef)
+        {
+            variableName = varRef.Name.Text;
+        }
+        else if (node is VariableDeclarationSyntax varDecl)
+        {
+            variableName = varDecl.Name.Text;
+        }
+        else if (node.Parent is VariableReferenceSyntax parentRef)
+        {
+            variableName = parentRef.Name.Text;
+        }
+        else if (node.Parent is VariableDeclarationSyntax parentDecl)
+        {
+            variableName = parentDecl.Name.Text;
+        }
+
+        if (variableName == null) return null;
+
+        var highlights = new List<DocumentHighlight>();
+
+        // Highlight declaration (Write)
+        foreach (var decl in doc.Tree.GetNodes<VariableDeclarationSyntax>())
+        {
+            if (decl.Name.Text == variableName)
+            {
+                var (line, character) = GetLineAndCharacter(doc.Text, decl.Name.Position);
+                highlights.Add(new DocumentHighlight
+                {
+                    Range = new LspRange
+                    {
+                        Start = new Position { Line = line, Character = character },
+                        End = new Position { Line = line, Character = character + decl.Name.FullWidth }
+                    },
+                    Kind = DocumentHighlightKind.Write
+                });
+            }
+        }
+
+        // Highlight references (Read)
+        foreach (var reference in doc.Tree.GetNodes<VariableReferenceSyntax>())
+        {
+            if (reference.Name.Text == variableName)
+            {
+                var (line, character) = GetLineAndCharacter(doc.Text, reference.Name.Position);
+                highlights.Add(new DocumentHighlight
+                {
+                    Range = new LspRange
+                    {
+                        Start = new Position { Line = line, Character = character },
+                        End = new Position { Line = line, Character = character + reference.Name.FullWidth }
+                    },
+                    Kind = DocumentHighlightKind.Read
+                });
+            }
+        }
+
+        return highlights.ToArray();
     }
 }
