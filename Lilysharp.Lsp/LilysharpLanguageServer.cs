@@ -49,7 +49,27 @@ public sealed class LilysharpLanguageServer
                 HoverProvider = true,
                 DocumentSymbolProvider = true,
                 DefinitionProvider = true,
-                ReferencesProvider = true
+                ReferencesProvider = true,
+                SemanticTokensOptions = new SemanticTokensOptions
+                {
+                    Full = true,
+                    Legend = new SemanticTokensLegend
+                    {
+                        TokenTypes = new[]
+                        {
+                            SemanticTokenTypes.Keyword,
+                            SemanticTokenTypes.Variable,
+                            SemanticTokenTypes.Number,
+                            SemanticTokenTypes.String,
+                            SemanticTokenTypes.Comment,
+                            SemanticTokenTypes.Operator,
+                            "pitch",           // Custom: note pitches
+                            "articulation",    // Custom: @staccato, @accent
+                            "dynamic"          // Custom: \p, \f
+                        },
+                        TokenModifiers = Array.Empty<string>()
+                    }
+                }
             }
         };
     }
@@ -653,5 +673,142 @@ public sealed class LilysharpLanguageServer
         }
 
         return locations.ToArray();
+    }
+
+    // ========== Semantic Tokens ==========
+
+    [JsonRpcMethod(Methods.TextDocumentSemanticTokensFullName)]
+    public SemanticTokens? GetSemanticTokensFull(SemanticTokensParams @params)
+    {
+        var uri = @params.TextDocument.Uri;
+        var doc = _documentManager.GetDocument(uri);
+        if (doc == null) return null;
+
+        var tokens = new List<int>(); // [deltaLine, deltaStart, length, tokenType, tokenModifiers]
+        int prevLine = 0;
+        int prevChar = 0;
+
+        foreach (var token in CollectSemanticTokens(doc.Tree.GetRoot(), doc.Text))
+        {
+            int deltaLine = token.Line - prevLine;
+            int deltaChar = deltaLine == 0 ? token.Character - prevChar : token.Character;
+            
+            tokens.Add(deltaLine);
+            tokens.Add(deltaChar);
+            tokens.Add(token.Length);
+            tokens.Add(token.TokenType);
+            tokens.Add(0); // No modifiers
+            
+            prevLine = token.Line;
+            prevChar = token.Character;
+        }
+
+        return new SemanticTokens { Data = tokens.ToArray() };
+    }
+
+    private record SemanticToken(int Line, int Character, int Length, int TokenType);
+
+    private IEnumerable<SemanticToken> CollectSemanticTokens(SyntaxNode root, string text)
+    {
+        var tokens = new List<SemanticToken>();
+        CollectTokensRecursive(root, text, tokens);
+        return tokens.OrderBy(t => t.Line).ThenBy(t => t.Character);
+    }
+
+    private void CollectTokensRecursive(SyntaxNode node, string text, List<SemanticToken> tokens)
+    {
+        // Token types: 0=keyword, 1=variable, 2=number, 3=string, 4=comment, 5=operator, 6=pitch, 7=articulation, 8=dynamic
+        
+        if (node is SyntaxTokenNode tokenNode)
+        {
+            var kind = tokenNode.Kind;
+            int? tokenType = kind switch
+            {
+                // Keywords
+                SyntaxKind.RelativeKeyword or SyntaxKind.AbsoluteKeyword or SyntaxKind.RepeatKeyword or
+                SyntaxKind.AlternativeKeyword or SyntaxKind.LetKeyword or SyntaxKind.UseKeyword or
+                SyntaxKind.ScoreKeyword or SyntaxKind.PartKeyword or SyntaxKind.StaffKeyword or
+                SyntaxKind.VoiceKeyword or SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword or
+                SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or SyntaxKind.KeyKeyword or
+                SyntaxKind.ClefKeyword or SyntaxKind.TupletKeyword or SyntaxKind.GraceKeyword or
+                SyntaxKind.MajorKeyword or SyntaxKind.MinorKeyword or SyntaxKind.LyricsKeyword => 0,
+                
+                // Numbers
+                SyntaxKind.IntegerLiteral => 2,
+                
+                // Strings
+                SyntaxKind.StringLiteral => 3,
+                
+                // Pitches
+                SyntaxKind.PitchC or SyntaxKind.PitchD or SyntaxKind.PitchE or SyntaxKind.PitchF or
+                SyntaxKind.PitchG or SyntaxKind.PitchA or SyntaxKind.PitchB => 6,
+                
+                // Rest
+                SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full => 6,
+                
+                // Articulation names
+                SyntaxKind.StaccatoKeyword or SyntaxKind.AccentKeyword or SyntaxKind.TenutoKeyword or
+                SyntaxKind.MarcatoKeyword or SyntaxKind.FermataKeyword or SyntaxKind.PortatoKeyword => 7,
+                
+                // Dynamic names
+                SyntaxKind.DynamicPPP or SyntaxKind.DynamicPP or SyntaxKind.DynamicP or
+                SyntaxKind.DynamicMP or SyntaxKind.DynamicMF or SyntaxKind.DynamicF or
+                SyntaxKind.DynamicFF or SyntaxKind.DynamicFFF => 8,
+                
+                _ => null
+            };
+            
+            if (tokenType.HasValue)
+            {
+                var (line, character) = GetLineAndCharacter(text, node.Position);
+                tokens.Add(new SemanticToken(line, character, node.FullWidth, tokenType.Value));
+            }
+        }
+        else if (node is VariableReferenceSyntax varRef)
+        {
+            // Variable reference (after $ or use)
+            var nameNode = varRef.Name;
+            var (line, character) = GetLineAndCharacter(text, nameNode.Position);
+            tokens.Add(new SemanticToken(line, character, nameNode.FullWidth, 1));
+        }
+        else if (node is VariableDeclarationSyntax varDecl)
+        {
+            // Variable declaration name
+            var nameNode = varDecl.Name;
+            var (line, character) = GetLineAndCharacter(text, nameNode.Position);
+            tokens.Add(new SemanticToken(line, character, nameNode.FullWidth, 1));
+        }
+        
+        // Recurse into children
+        for (int i = 0; i < node.SlotCount; i++)
+        {
+            var child = node.GetChild(i);
+            if (child != null)
+                CollectTokensRecursive(child, text, tokens);
+        }
+    }
+
+    private static (int line, int character) GetLineAndCharacter(string text, int position)
+    {
+        int line = 0;
+        int lastLineStart = 0;
+        
+        for (int i = 0; i < position && i < text.Length; i++)
+        {
+            if (text[i] == '\n')
+            {
+                line++;
+                lastLineStart = i + 1;
+            }
+            else if (text[i] == '\r')
+            {
+                line++;
+                if (i + 1 < text.Length && text[i + 1] == '\n')
+                    i++;
+                lastLineStart = i + 1;
+            }
+        }
+        
+        return (line, position - lastLineStart);
     }
 }
