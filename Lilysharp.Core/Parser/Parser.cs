@@ -45,6 +45,13 @@ internal sealed class Parser
         return new SyntaxToken(kind, "", Current.LeadingTrivia, null);
     }
 
+    private SyntaxToken? TryConsume(SyntaxKind kind)
+    {
+        if (Check(kind))
+            return Advance();
+        return null;
+    }
+
     /// <summary>
     /// Parse the entire source into a compilation unit.
     /// </summary>
@@ -69,12 +76,224 @@ internal sealed class Parser
     {
         return Current.Kind switch
         {
+            SyntaxKind.ScoreKeyword => ParseScoreDeclaration(),
+            SyntaxKind.PartKeyword => ParsePartDeclaration(),
             SyntaxKind.RelativeKeyword => ParseRelativeExpression(),
+            SyntaxKind.LetKeyword => ParseVariableDeclaration(),
+            SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
+            SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
+            SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or 
+            SyntaxKind.KeyKeyword => ParseMetadataDeclaration(),
             SyntaxKind.OpenBrace => ParseMusicBlock(),
             _ when IsMusicItemStart() => ParseMusicItem(),
             _ => null
         };
     }
+
+    // ========== Structure Declarations ==========
+
+    private ScoreDeclarationGreen ParseScoreDeclaration()
+    {
+        var keyword = Expect(SyntaxKind.ScoreKeyword);
+        var title = TryConsume(SyntaxKind.StringLiteral);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        
+        var members = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var member = ParseScoreMember();
+            if (member != null)
+                members.Add(member);
+            else
+                Advance();
+        }
+        
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new ScoreDeclarationGreen(keyword, title, openBrace, [.. members], closeBrace);
+    }
+
+    private GreenNode? ParseScoreMember()
+    {
+        return Current.Kind switch
+        {
+            SyntaxKind.PartKeyword => ParsePartDeclaration(),
+            SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or 
+            SyntaxKind.KeyKeyword => ParsePropertyAssignment(),
+            SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParsePropertyAssignment(),
+            _ => null
+        };
+    }
+
+    private PartDeclarationGreen ParsePartDeclaration()
+    {
+        var keyword = Expect(SyntaxKind.PartKeyword);
+        var name = TryConsume(SyntaxKind.Identifier);
+        var displayName = TryConsume(SyntaxKind.StringLiteral);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        
+        var members = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var member = ParsePartMember();
+            if (member != null)
+                members.Add(member);
+            else
+                Advance();
+        }
+        
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new PartDeclarationGreen(keyword, name, displayName, openBrace, [.. members], closeBrace);
+    }
+
+    private GreenNode? ParsePartMember()
+    {
+        return Current.Kind switch
+        {
+            SyntaxKind.StaffKeyword => ParseStaffDeclaration(),
+            SyntaxKind.RelativeKeyword => ParseRelativeExpression(),
+            SyntaxKind.ClefKeyword or SyntaxKind.TempoKeyword or 
+            SyntaxKind.TimeKeyword or SyntaxKind.KeyKeyword => ParsePropertyAssignment(),
+            SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
+            SyntaxKind.OpenBrace => ParseMusicBlock(),
+            _ when IsMusicItemStart() => ParseMusicItem(),
+            _ => null
+        };
+    }
+
+    private StaffDeclarationGreen ParseStaffDeclaration()
+    {
+        var keyword = Expect(SyntaxKind.StaffKeyword);
+        var name = TryConsume(SyntaxKind.Identifier);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        
+        var members = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var member = ParsePartMember(); // Staff has same members as Part
+            if (member != null)
+                members.Add(member);
+            else
+                Advance();
+        }
+        
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new StaffDeclarationGreen(keyword, name, openBrace, [.. members], closeBrace);
+    }
+
+    // ========== Properties and Metadata ==========
+
+    private PropertyAssignmentGreen ParsePropertyAssignment()
+    {
+        var name = Advance(); // keyword like tempo, clef, etc.
+        var colon = Expect(SyntaxKind.Colon);
+        var valueTokens = ParsePropertyValue();
+        return new PropertyAssignmentGreen(name, colon, valueTokens);
+    }
+
+    private GreenNode?[] ParsePropertyValue()
+    {
+        var tokens = new List<GreenNode?>();
+        
+        // Collect value tokens until we hit a newline, brace, or another property
+        while (!Check(SyntaxKind.EndOfFile) && 
+               !Check(SyntaxKind.OpenBrace) && 
+               !Check(SyntaxKind.CloseBrace) &&
+               !IsPropertyStart())
+        {
+            // Check if current token has trailing newline - stop after consuming it
+            var token = Current;
+            bool hasNewline = HasTrailingNewline(token);
+            
+            tokens.Add(Advance());
+            
+            if (hasNewline)
+                break;
+        }
+        
+        return [.. tokens];
+    }
+
+    private bool IsPropertyStart()
+    {
+        return Current.Kind is SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or
+            SyntaxKind.KeyKeyword or SyntaxKind.ClefKeyword or
+            SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword;
+    }
+
+    private static bool HasTrailingNewline(SyntaxToken token)
+    {
+        var trivia = token.TrailingTrivia;
+        if (trivia == null) return false;
+        
+        if (trivia.Kind == SyntaxKind.EndOfLineTrivia) return true;
+        
+        // Check trivia list
+        for (int i = 0; i < trivia.SlotCount; i++)
+        {
+            if (trivia.GetSlot(i)?.Kind == SyntaxKind.EndOfLineTrivia)
+                return true;
+        }
+        return false;
+    }
+
+    private MetadataDeclarationGreen ParseMetadataDeclaration()
+    {
+        var keyword = Advance();
+        var valueTokens = new List<GreenNode?>();
+        
+        // Collect value tokens (string, number, identifiers)
+        while (Check(SyntaxKind.StringLiteral) || 
+               Check(SyntaxKind.IntegerLiteral) ||
+               Check(SyntaxKind.Identifier) ||
+               IsPitchStart() ||
+               Check(SyntaxKind.MajorKeyword) ||
+               Check(SyntaxKind.MinorKeyword) ||
+               Check(SyntaxKind.Slash))
+        {
+            valueTokens.Add(Advance());
+        }
+        
+        return new MetadataDeclarationGreen(keyword, [.. valueTokens]);
+    }
+
+    // ========== Variables ==========
+
+    private VariableDeclarationGreen ParseVariableDeclaration()
+    {
+        var letKeyword = Expect(SyntaxKind.LetKeyword);
+        var name = Expect(SyntaxKind.Identifier);
+        var equals = Expect(SyntaxKind.Equals);
+        var expression = ParseMusicExpression();
+        return new VariableDeclarationGreen(letKeyword, name, equals, expression);
+    }
+
+    private VariableReferenceGreen ParseVariableReference()
+    {
+        if (Check(SyntaxKind.UseKeyword))
+        {
+            var use = Advance();
+            var name = Expect(SyntaxKind.Identifier);
+            return new VariableReferenceGreen(use, name);
+        }
+        else // $name
+        {
+            var dollar = Expect(SyntaxKind.Dollar);
+            var name = Expect(SyntaxKind.Identifier);
+            return new VariableReferenceGreen(dollar, name);
+        }
+    }
+
+    private GreenNode ParseMusicExpression()
+    {
+        return Current.Kind switch
+        {
+            SyntaxKind.RelativeKeyword => ParseRelativeExpression(),
+            SyntaxKind.OpenBrace => ParseMusicBlock(),
+            _ => ParseMusicBlock() // fallback
+        };
+    }
+
+    // ========== Music Expressions ==========
 
     private RelativeExpressionGreen ParseRelativeExpression()
     {
@@ -138,9 +357,13 @@ internal sealed class Parser
 
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => ParseSlur(),
 
+            SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
+
             _ => null
         };
     }
+
+    // ========== Notes and Pitches ==========
 
     private bool IsPitchStart()
     {

@@ -202,4 +202,143 @@ c4 d e f  /* first measure */
         var reconstructed = tree.ToFullString();
         Assert.Equal(source, reconstructed);
     }
+
+    // ========== Structure Tests ==========
+
+    [Fact]
+    public void ParseScoreDeclaration()
+    {
+        var tree = SyntaxTree.Parse(@"score ""My Song"" {
+    part {
+        relative c' { c d e f }
+    }
+}");
+        var score = tree.Root.GetSlot(0) as ScoreDeclarationGreen;
+        
+        Assert.NotNull(score);
+        Assert.Equal(SyntaxKind.ScoreDeclaration, score.Kind);
+    }
+
+    [Fact]
+    public void ParsePartDeclaration()
+    {
+        var tree = SyntaxTree.Parse(@"part Violin ""First Violin"" {
+    relative c' { c d e f }
+}");
+        var part = tree.Root.GetSlot(0) as PartDeclarationGreen;
+        
+        Assert.NotNull(part);
+        Assert.Equal(SyntaxKind.PartDeclaration, part.Kind);
+    }
+
+    [Fact]
+    public void ParseStaffDeclaration()
+    {
+        var tree = SyntaxTree.Parse(@"part Piano {
+    staff RH {
+        relative c'' { c d e f }
+    }
+    staff LH {
+        relative c { c d e f }
+    }
+}");
+        var part = tree.Root.GetSlot(0) as PartDeclarationGreen;
+        Assert.NotNull(part);
+    }
+
+    [Fact]
+    public void ParseMetadata()
+    {
+        var tree = SyntaxTree.Parse(@"title ""Happy Birthday""
+composer ""Traditional""
+tempo 120
+time 3/4
+key g major
+");
+        // Should have 5 metadata declarations + EOF
+        Assert.Equal(6, tree.Root.SlotCount);
+        
+        var title = tree.Root.GetSlot(0) as MetadataDeclarationGreen;
+        Assert.NotNull(title);
+        Assert.Equal(SyntaxKind.MetadataDeclaration, title.Kind);
+    }
+
+    [Fact]
+    public void ParsePropertyAssignment()
+    {
+        var tree = SyntaxTree.Parse(@"part {
+    clef: treble
+    relative c' { c d e f }
+}");
+        var part = tree.Root.GetSlot(0) as PartDeclarationGreen;
+        Assert.NotNull(part);
+    }
+
+    [Fact]
+    public void ParseVariableDeclaration()
+    {
+        var tree = SyntaxTree.Parse(@"let theme = relative c' { c d e f }
+
+part {
+    use theme
+}");
+        var varDecl = tree.Root.GetSlot(0) as VariableDeclarationGreen;
+        Assert.NotNull(varDecl);
+        Assert.Equal(SyntaxKind.VariableDeclaration, varDecl.Kind);
+    }
+
+    [Fact]
+    public void ParseVariableReference()
+    {
+        var tree = SyntaxTree.Parse(@"let theme = { c d e f }
+use theme");
+        
+        var varRef = tree.Root.GetSlot(1) as VariableReferenceGreen;
+        Assert.NotNull(varRef);
+        Assert.Equal(SyntaxKind.VariableReference, varRef.Kind);
+    }
+
+    [Fact]
+    public void ParseCompleteScore()
+    {
+        var source = @"title ""Fur Elise""
+composer ""Beethoven""
+tempo 76
+time 3/8
+key a minor
+
+score {
+    part Piano {
+        staff RH {
+            clef: treble
+            relative c'' { e8 dis e dis e b d c | a4. }
+        }
+        staff LH {
+            clef: bass
+            relative c { r4. a8 e' a | c4. }
+        }
+    }
+}";
+        var tree = SyntaxTree.Parse(source);
+        
+        // Round-trip should preserve text
+        var reconstructed = tree.ToFullString();
+        Assert.Equal(source, reconstructed);
+    }
+
+    [Fact]
+    public void ParseScoreWithProperties()
+    {
+        var tree = SyntaxTree.Parse(@"score {
+    tempo: 120
+    time: 4/4
+    key: c major
+    
+    part {
+        relative c' { c d e f }
+    }
+}");
+        var score = tree.Root.GetSlot(0) as ScoreDeclarationGreen;
+        Assert.NotNull(score);
+    }
 }

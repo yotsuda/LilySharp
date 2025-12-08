@@ -156,3 +156,100 @@ internal sealed class SlurGreen : GreenSyntaxNode
     {
     }
 }
+
+/// <summary>
+/// Score declaration: score "title" { ... }
+/// </summary>
+internal sealed class ScoreDeclarationGreen : GreenSyntaxNode
+{
+    public ScoreDeclarationGreen(
+        SyntaxToken scoreKeyword,
+        SyntaxToken? title,
+        SyntaxToken openBrace,
+        GreenNode?[] members,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.ScoreDeclaration, [scoreKeyword, title, openBrace, .. members, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// Part declaration: part Name "display" { ... }
+/// </summary>
+internal sealed class PartDeclarationGreen : GreenSyntaxNode
+{
+    public PartDeclarationGreen(
+        SyntaxToken partKeyword,
+        SyntaxToken? name,
+        SyntaxToken? displayName,
+        SyntaxToken openBrace,
+        GreenNode?[] members,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.PartDeclaration, [partKeyword, name, displayName, openBrace, .. members, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// Staff declaration: staff Name { ... }
+/// </summary>
+internal sealed class StaffDeclarationGreen : GreenSyntaxNode
+{
+    public StaffDeclarationGreen(
+        SyntaxToken staffKeyword,
+        SyntaxToken? name,
+        SyntaxToken openBrace,
+        GreenNode?[] members,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.StaffDeclaration, [staffKeyword, name, openBrace, .. members, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// Property assignment: name: value
+/// </summary>
+internal sealed class PropertyAssignmentGreen : GreenSyntaxNode
+{
+    public PropertyAssignmentGreen(SyntaxToken name, SyntaxToken colon, GreenNode?[] valueTokens)
+        : base(SyntaxKind.PropertyAssignment, [name, colon, .. valueTokens])
+    {
+    }
+}
+
+/// <summary>
+/// Metadata declaration: title "value" or tempo 120
+/// </summary>
+internal sealed class MetadataDeclarationGreen : GreenSyntaxNode
+{
+    public MetadataDeclarationGreen(SyntaxToken keyword, GreenNode?[] valueTokens)
+        : base(SyntaxKind.MetadataDeclaration, [keyword, .. valueTokens])
+    {
+    }
+}
+
+/// <summary>
+/// Variable declaration: let name = expr
+/// </summary>
+internal sealed class VariableDeclarationGreen : GreenSyntaxNode
+{
+    public VariableDeclarationGreen(
+        SyntaxToken letKeyword,
+        SyntaxToken name,
+        SyntaxToken equals,
+        GreenNode expression)
+        : base(SyntaxKind.VariableDeclaration, [letKeyword, name, equals, expression])
+    {
+    }
+}
+
+/// <summary>
+/// Variable reference: use name or $name
+/// </summary>
+internal sealed class VariableReferenceGreen : GreenSyntaxNode
+{
+    public VariableReferenceGreen(SyntaxToken keyword, SyntaxToken name)
+        : base(SyntaxKind.VariableReference, [keyword, name])
+    {
+    }
+}
