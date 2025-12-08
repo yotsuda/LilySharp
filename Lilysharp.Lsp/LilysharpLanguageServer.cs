@@ -48,7 +48,8 @@ public sealed class LilysharpLanguageServer
                 },
                 HoverProvider = true,
                 DocumentSymbolProvider = true,
-                DefinitionProvider = true
+                DefinitionProvider = true,
+                ReferencesProvider = true
             }
         };
     }
@@ -582,5 +583,63 @@ public sealed class LilysharpLanguageServer
                 End = new Position(endLine, endCol)
             }
         };
+    }
+
+    // ========== Find References ==========
+
+    [JsonRpcMethod(Methods.TextDocumentReferencesName)]
+    public Location[]? References(ReferenceParams @params)
+    {
+        var uri = @params.TextDocument.Uri;
+        var doc = _documentManager.GetDocument(uri);
+        if (doc == null) return null;
+
+        var position = @params.Position;
+        var offset = GetOffset(doc.Text, position.Line, position.Character);
+        var node = doc.Tree.FindNode(offset);
+        
+        if (node == null) return null;
+
+        string? name = null;
+
+        // Find variable name from reference or declaration
+        var varRef = FindAncestor<VariableReferenceSyntax>(node);
+        if (varRef != null)
+        {
+            name = varRef.Name.Text;
+        }
+        else
+        {
+            var varDecl = FindAncestor<VariableDeclarationSyntax>(node);
+            if (varDecl != null)
+            {
+                name = varDecl.Name.Text;
+            }
+        }
+
+        if (name == null) return null;
+
+        var locations = new List<Location>();
+        
+        // Include declaration if requested
+        if (@params.Context.IncludeDeclaration)
+        {
+            var decl = FindVariableDefinition(doc.Tree.GetRoot(), name);
+            if (decl != null)
+            {
+                locations.Add(CreateLocation(uri, doc.Text, decl.Name));
+            }
+        }
+
+        // Find all references
+        foreach (var reference in doc.Tree.GetRoot().DescendantNodes<VariableReferenceSyntax>())
+        {
+            if (reference.Name.Text == name)
+            {
+                locations.Add(CreateLocation(uri, doc.Text, reference.Name));
+            }
+        }
+
+        return locations.ToArray();
     }
 }
