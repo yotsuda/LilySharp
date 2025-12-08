@@ -46,7 +46,8 @@ public sealed class LilysharpLanguageServer
                     TriggerCharacters = ["\\", "@", " "],
                     ResolveProvider = false
                 },
-                HoverProvider = true
+                HoverProvider = true,
+                DocumentSymbolProvider = true
             }
         };
     }
@@ -398,5 +399,119 @@ public sealed class LilysharpLanguageServer
         }
 
         return Math.Min(offset + character, text.Length);
+    }
+
+    // ========== Document Symbols ==========
+
+    [JsonRpcMethod(Methods.TextDocumentDocumentSymbolName)]
+    public DocumentSymbol[]? DocumentSymbol(DocumentSymbolParams @params)
+    {
+        var uri = @params.TextDocument.Uri;
+        var doc = _documentManager.GetDocument(uri);
+        if (doc == null) return null;
+
+        var symbols = new List<DocumentSymbol>();
+        CollectSymbols(doc.Tree.GetRoot(), doc.Text, symbols);
+        return symbols.ToArray();
+    }
+
+    private void CollectSymbols(SyntaxNode node, string text, List<DocumentSymbol> symbols)
+    {
+        var symbol = CreateSymbol(node, text);
+        if (symbol != null)
+        {
+            // Collect children
+            var children = new List<DocumentSymbol>();
+            for (int i = 0; i < node.SlotCount; i++)
+            {
+                var child = node.GetChild(i);
+                if (child != null && child is not SyntaxTokenNode)
+                    CollectSymbols(child, text, children);
+            }
+            if (children.Count > 0)
+            {
+                symbol.Children = children.ToArray();
+            }
+            symbols.Add(symbol);
+        }
+        else
+        {
+            // No symbol for this node, but check children
+            for (int i = 0; i < node.SlotCount; i++)
+            {
+                var child = node.GetChild(i);
+                if (child != null && child is not SyntaxTokenNode)
+                    CollectSymbols(child, text, symbols);
+            }
+        }
+    }
+
+    private DocumentSymbol? CreateSymbol(SyntaxNode node, string text)
+    {
+        var (name, kind) = node switch
+        {
+            ScoreDeclarationSyntax => ("score", SymbolKind.Module),
+            PartDeclarationSyntax part => (GetPartName(part), SymbolKind.Class),
+            StaffDeclarationSyntax staff => (GetStaffName(staff), SymbolKind.Class),
+
+            VariableDeclarationSyntax variable => (variable.Name.Text, SymbolKind.Variable),
+            RelativeExpressionSyntax => ("relative", SymbolKind.Namespace),
+            RepeatExpressionSyntax repeat => ($"repeat {repeat.Count.Text}x", SymbolKind.Operator),
+            ParallelExpressionSyntax => ("parallel", SymbolKind.Struct),
+            TupletExpressionSyntax tuplet => ($"tuplet {tuplet.TupletRatio}/{tuplet.BaseDivision}", SymbolKind.Operator),
+            KeySignatureSyntax key => ($"key {key.Pitch.PitchName} {(key.IsMajor ? "major" : "minor")}", SymbolKind.Key),
+            ClefDeclarationSyntax clef => ($"clef {clef.ClefName.Text}", SymbolKind.Key),
+            LyricsBlockSyntax => ("lyrics", SymbolKind.String),
+            _ => (null, SymbolKind.Null)
+        };
+
+        if (name == null) return null;
+
+        var (startLine, startCol) = GetLineAndColumn(text, node.Position);
+        var (endLine, endCol) = GetLineAndColumn(text, node.Position + node.FullWidth);
+        
+        return new DocumentSymbol
+        {
+            Name = name,
+            Kind = kind,
+            Range = new LspRange
+            {
+                Start = new Position(startLine, startCol),
+                End = new Position(endLine, endCol)
+            },
+            SelectionRange = new LspRange
+            {
+                Start = new Position(startLine, startCol),
+                End = new Position(endLine, endCol)
+            }
+        };
+    }
+
+    private static string GetPartName(PartDeclarationSyntax part)
+    {
+        // Try to get identifier or string name
+        for (int i = 0; i < part.SlotCount; i++)
+        {
+            var child = part.GetChild(i);
+            if (child is SyntaxTokenNode token)
+            {
+                if (token.Kind == SyntaxKind.Identifier)
+                    return token.Text;
+                if (token.Kind == SyntaxKind.StringLiteral)
+                    return token.Text.Trim('"');
+            }
+        }
+        return "part";
+    }
+
+    private static string GetStaffName(StaffDeclarationSyntax staff)
+    {
+        for (int i = 0; i < staff.SlotCount; i++)
+        {
+            var child = staff.GetChild(i);
+            if (child is SyntaxTokenNode token && token.Kind == SyntaxKind.Identifier)
+                return token.Text;
+        }
+        return "staff";
     }
 }
