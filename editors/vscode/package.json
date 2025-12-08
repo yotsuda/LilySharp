@@ -30,6 +30,43 @@
                 "path": "./syntaxes/lilysharp.tmLanguage.json"
             }
         ],
+        "semanticTokenTypes": [
+            {
+                "id": "pitch",
+                "superType": "variable",
+                "description": "Note pitches (c, d, e, f, g, a, b)"
+            },
+            {
+                "id": "articulation",
+                "superType": "decorator",
+                "description": "Articulation marks (@staccato, @accent)"
+            },
+            {
+                "id": "dynamic",
+                "superType": "modifier",
+                "description": "Dynamic marks (\\p, \\f)"
+            }
+        ],
+        "semanticTokenScopes": [
+            {
+                "scopes": {
+                    "pitch": ["variable.other.pitch.lilysharp"],
+                    "articulation": ["entity.name.function.articulation.lilysharp"],
+                    "dynamic": ["keyword.control.dynamic.lilysharp"]
+                }
+            }
+        ],
+        "configurationDefaults": {
+            "editor.semanticTokenColorCustomizations": {
+                "[*]": {
+                    "rules": {
+                        "pitch": "#4EC9B0",
+                        "articulation": "#DCDCAA",
+                        "dynamic": "#C586C0"
+                    }
+                }
+            }
+        },
         "configuration": {
             "title": "Lilysharp",
             "properties": {
