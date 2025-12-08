@@ -90,7 +90,27 @@ public enum SyntaxKind : ushort
     Apostrophe,         // '
     Dollar,             // $
     DoubleOpenAngle,    // <<
-    DoubleCloseAngle,   // >>
+    DoubleCloseAngle,   // >>    
+    // === Articulation Names ===
+    StaccatoKeyword,
+    AccentKeyword,
+    TenutoKeyword,
+    MarcatoKeyword,
+    FermataKeyword,
+    PortatoKeyword,
+    
+    // === Dynamics ===
+    DynamicPPP,         // ppp
+    DynamicPP,          // pp
+    DynamicP,           // p
+    DynamicMP,          // mp
+    DynamicMF,          // mf
+    DynamicF,           // f
+    DynamicFF,          // ff
+    DynamicFFF,         // fff
+    CrescKeyword,       // cresc
+    DecrescKeyword,     // decresc
+    DimKeyword,         // dim
     
     // === Nodes ===
     CompilationUnit,

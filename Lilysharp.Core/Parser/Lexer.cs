@@ -396,6 +396,27 @@ internal sealed class Lexer
             "major" => SyntaxKind.MajorKeyword,
             "minor" => SyntaxKind.MinorKeyword,
 
+            // Articulation names
+            "staccato" or "stac" => SyntaxKind.StaccatoKeyword,
+            "accent" or "acc" => SyntaxKind.AccentKeyword,
+            "tenuto" or "ten" => SyntaxKind.TenutoKeyword,
+            "marcato" or "marc" => SyntaxKind.MarcatoKeyword,
+            "fermata" or "ferm" => SyntaxKind.FermataKeyword,
+            "portato" => SyntaxKind.PortatoKeyword,
+
+            // Dynamics
+            "ppp" => SyntaxKind.DynamicPPP,
+            "pp" => SyntaxKind.DynamicPP,
+            "p" => SyntaxKind.DynamicP,
+            "mp" => SyntaxKind.DynamicMP,
+            "mf" => SyntaxKind.DynamicMF,
+            "f" => SyntaxKind.DynamicF,
+            "ff" => SyntaxKind.DynamicFF,
+            "fff" => SyntaxKind.DynamicFFF,
+            "cresc" => SyntaxKind.CrescKeyword,
+            "decresc" => SyntaxKind.DecrescKeyword,
+            "dim" => SyntaxKind.DimKeyword,
+
             // Default: identifier
             _ => SyntaxKind.Identifier
         };

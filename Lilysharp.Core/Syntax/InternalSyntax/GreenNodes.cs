@@ -253,3 +253,25 @@ internal sealed class VariableReferenceGreen : GreenSyntaxNode
     {
     }
 }
+
+/// <summary>
+/// Articulation: @staccato, @accent, etc.
+/// </summary>
+internal sealed class ArticulationGreen : GreenSyntaxNode
+{
+    public ArticulationGreen(SyntaxToken atToken, SyntaxToken nameToken)
+        : base(SyntaxKind.Articulation, [atToken, nameToken])
+    {
+    }
+}
+
+/// <summary>
+/// Dynamic mark: \p, \f, \cresc, etc.
+/// </summary>
+internal sealed class DynamicGreen : GreenSyntaxNode
+{
+    public DynamicGreen(SyntaxToken backslashToken, SyntaxToken dynamicToken)
+        : base(SyntaxKind.Dynamic, [backslashToken, dynamicToken])
+    {
+    }
+}

@@ -464,9 +464,70 @@ internal sealed class Parser
         return new SlurGreen(paren);
     }
 
-    private GreenNode?[] ParseArticulations()
+private GreenNode?[] ParseArticulations()
     {
-        // TODO: Parse @staccato, \p, etc.
-        return [];
+        var articulations = new List<GreenNode?>();
+        
+        while (true)
+        {
+            if (Check(SyntaxKind.At))
+            {
+                // @staccato, @accent, etc.
+                var at = Advance();
+                if (IsArticulationName())
+                {
+                    var name = Advance();
+                    articulations.Add(new ArticulationGreen(at, name));
+                }
+                else
+                {
+                    // Error: expected articulation name after @
+                    var span = new TextSpan(_textPosition, Current.FullWidth);
+                    _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                        $"Expected articulation name after '@', found '{Current.Kind}'");
+                }
+            }
+            else if (Check(SyntaxKind.Backslash))
+            {
+                // \p, \f, \cresc, etc.
+                var backslash = Advance();
+                if (IsDynamicName())
+                {
+                    var name = Advance();
+                    articulations.Add(new DynamicGreen(backslash, name));
+                }
+                else
+                {
+                    // Not a dynamic - might be other command, stop parsing articulations
+                    _position--; // Put backslash back
+                    _textPosition -= backslash.FullWidth;
+                    break;
+                }
+            }
+            else
+            {
+                break;
+            }
+        }
+        
+        return [.. articulations];
+    }
+
+    private bool IsArticulationName()
+    {
+        return Current.Kind is SyntaxKind.StaccatoKeyword or SyntaxKind.AccentKeyword or
+            SyntaxKind.TenutoKeyword or SyntaxKind.MarcatoKeyword or
+            SyntaxKind.FermataKeyword or SyntaxKind.PortatoKeyword or
+            SyntaxKind.Identifier; // Allow custom articulation names
+    }
+
+    private bool IsDynamicName()
+    {
+        return Current.Kind is SyntaxKind.DynamicPPP or SyntaxKind.DynamicPP or
+            SyntaxKind.DynamicP or SyntaxKind.DynamicMP or
+            SyntaxKind.DynamicMF or SyntaxKind.DynamicF or
+            SyntaxKind.DynamicFF or SyntaxKind.DynamicFFF or
+            SyntaxKind.CrescKeyword or SyntaxKind.DecrescKeyword or
+            SyntaxKind.DimKeyword;
     }
 }

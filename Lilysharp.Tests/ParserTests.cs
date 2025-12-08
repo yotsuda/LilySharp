@@ -341,4 +341,35 @@ score {
         var score = tree.Root.GetSlot(0) as ScoreDeclarationGreen;
         Assert.NotNull(score);
     }
+
+    [Fact]
+    public void ParseNoteWithArticulation()
+    {
+        var tree = SyntaxTree.Parse("{ c4@staccato }");
+        Assert.False(tree.HasErrors);
+        
+        var root = tree.GetRoot();
+        Assert.NotNull(root);
+    }
+
+    [Fact]
+    public void ParseNoteWithDynamic()
+    {
+        var tree = SyntaxTree.Parse(@"{ c4\p }");
+        Assert.False(tree.HasErrors);
+    }
+
+    [Fact]
+    public void ParseNoteWithMultipleArticulations()
+    {
+        var tree = SyntaxTree.Parse(@"{ c4@staccato@accent\f }");
+        Assert.False(tree.HasErrors);
+    }
+
+    [Fact]
+    public void ParseDynamicSequence()
+    {
+        var tree = SyntaxTree.Parse(@"{ c4\p d\cresc e\f }");
+        Assert.False(tree.HasErrors);
+    }
 }
