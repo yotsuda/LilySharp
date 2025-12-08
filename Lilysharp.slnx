@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Lilysharp.Core/Lilysharp.Core.csproj" />
+  <Project Path="Lilysharp.Tests/Lilysharp.Tests.csproj" />
+</Solution>
