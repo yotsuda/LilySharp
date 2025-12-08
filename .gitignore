@@ -29,3 +29,6 @@ TestResults/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Generated MIDI files
+*.mid
