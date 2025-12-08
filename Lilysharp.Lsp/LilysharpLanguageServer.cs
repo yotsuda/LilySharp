@@ -38,7 +38,7 @@ public sealed class LilysharpLanguageServer
                 TextDocumentSync = new TextDocumentSyncOptions
                 {
                     OpenClose = true,
-                    Change = TextDocumentSyncKind.Full,
+                    Change = TextDocumentSyncKind.Incremental,
                     Save = new SaveOptions { IncludeText = true }
                 },
                 CompletionProvider = new CompletionOptions
@@ -91,11 +91,23 @@ public sealed class LilysharpLanguageServer
         var uri = @params.TextDocument.Uri;
         var version = @params.TextDocument.Version;
 
-        // Full sync - use the last content change
         if (@params.ContentChanges.Length > 0)
         {
-            var text = @params.ContentChanges[^1].Text;
-            var doc = _documentManager.OpenOrUpdate(uri, text, version);
+            // Check if any change has a Range (incremental) or not (full)
+            var hasRange = @params.ContentChanges.Any(c => c.Range != null);
+            
+            Document doc;
+            if (hasRange)
+            {
+                // Incremental sync
+                doc = _documentManager.ApplyChanges(uri, @params.ContentChanges, version);
+            }
+            else
+            {
+                // Full sync fallback
+                var text = @params.ContentChanges[^1].Text;
+                doc = _documentManager.OpenOrUpdate(uri, text, version);
+            }
             PublishDiagnostics(doc);
         }
     }

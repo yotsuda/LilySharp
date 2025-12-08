@@ -1,4 +1,5 @@
 using Lilysharp.Core.Syntax;
+using Microsoft.VisualStudio.LanguageServer.Protocol;
 
 namespace Lilysharp.Lsp;
 
@@ -40,6 +41,61 @@ public sealed class DocumentManager
     /// Gets all open documents.
     /// </summary>
     public IEnumerable<Document> GetAllDocuments() => _documents.Values;
+    /// <summary>
+    /// Applies incremental changes to a document.
+    /// </summary>
+    public Document ApplyChanges(Uri uri, IEnumerable<TextDocumentContentChangeEvent> changes, int version)
+    {
+        var doc = GetDocument(uri);
+        if (doc == null)
+            throw new InvalidOperationException($"Document not found: {uri}");
+
+        var tree = doc.Tree;
+        foreach (var change in changes)
+        {
+            if (change.Range != null)
+            {
+                // Incremental change
+                var start = GetOffset(doc.Text, change.Range.Start);
+                var end = GetOffset(doc.Text, change.Range.End);
+                var textChange = new TextChange(new TextSpan(start, end - start), change.Text);
+                tree = tree.WithChange(textChange);
+            }
+            else
+            {
+                // Full replacement
+                tree = SyntaxTree.Parse(change.Text);
+            }
+        }
+
+        var newDoc = new Document(uri, tree.Text, tree, version);
+        _documents[uri] = newDoc;
+        return newDoc;
+    }
+
+    /// <summary>
+    /// Converts line/character position to text offset.
+    /// </summary>
+    private static int GetOffset(string text, Position position)
+    {
+        int offset = 0;
+        int line = 0;
+        
+        while (line < position.Line && offset < text.Length)
+        {
+            if (text[offset] == '\n')
+                line++;
+            else if (text[offset] == '\r')
+            {
+                line++;
+                if (offset + 1 < text.Length && text[offset + 1] == '\n')
+                    offset++;
+            }
+            offset++;
+        }
+        
+        return offset + position.Character;
+    }
 }
 
 /// <summary>
