@@ -50,6 +50,9 @@ public sealed class LilysharpLanguageServer
                 DocumentSymbolProvider = true,
                 DefinitionProvider = true,
                 ReferencesProvider = true,
+                FoldingRangeProvider = true,
+                RenameProvider = true,
+                DocumentFormattingProvider = true,
                 SemanticTokensOptions = new SemanticTokensOptions
                 {
                     Full = true,
@@ -810,5 +813,226 @@ public sealed class LilysharpLanguageServer
         }
         
         return (line, position - lastLineStart);
+    }
+
+    // ========== Folding Ranges ==========
+
+    [JsonRpcMethod(Methods.TextDocumentFoldingRangeName)]
+    public FoldingRange[]? GetFoldingRanges(FoldingRangeParams @params)
+    {
+        var uri = @params.TextDocument.Uri;
+        var doc = _documentManager.GetDocument(uri);
+        if (doc == null) return null;
+
+        var ranges = new List<FoldingRange>();
+        CollectFoldingRanges(doc.Tree.GetRoot(), doc.Text, ranges);
+        return ranges.ToArray();
+    }
+
+    private void CollectFoldingRanges(SyntaxNode node, string text, List<FoldingRange> ranges)
+    {
+        // Foldable node types: MusicBlock, ScoreDeclaration, PartDeclaration, etc.
+        bool isFoldable = node is MusicBlockSyntax or ScoreDeclarationSyntax or 
+                          PartDeclarationSyntax or StaffDeclarationSyntax or
+                          RepeatExpressionSyntax or ParallelExpressionSyntax or
+                          TupletExpressionSyntax or GraceExpressionSyntax or
+                          LyricsBlockSyntax or AlternativeClauseSyntax;
+
+        if (isFoldable && node.FullWidth > 0)
+        {
+            var startPos = node.Position;
+            var endPos = node.Position + node.FullWidth - 1;
+            
+            var (startLine, _) = GetLineAndCharacter(text, startPos);
+            var (endLine, endChar) = GetLineAndCharacter(text, endPos);
+            
+            // Only create fold if it spans multiple lines
+            if (endLine > startLine)
+            {
+                ranges.Add(new FoldingRange
+                {
+                    StartLine = startLine,
+                    EndLine = endLine,
+                    Kind = FoldingRangeKind.Region
+                });
+            }
+        }
+
+        // Recurse into children
+        for (int i = 0; i < node.SlotCount; i++)
+        {
+            var child = node.GetChild(i);
+            if (child != null)
+                CollectFoldingRanges(child, text, ranges);
+        }
+    }
+
+    // ========== Rename ==========
+
+    [JsonRpcMethod(Methods.TextDocumentRenameName)]
+    public WorkspaceEdit? Rename(RenameParams @params)
+    {
+        var uri = @params.TextDocument.Uri;
+        var doc = _documentManager.GetDocument(uri);
+        if (doc == null) return null;
+
+        var position = @params.Position;
+        var newName = @params.NewName;
+        
+        // Find the node at position
+        int offset = GetOffset(doc.Text, position.Line, position.Character);
+        var node = doc.Tree.FindNode(offset);
+        if (node == null) return null;
+
+        // Find variable name at position
+        string? variableName = null;
+        
+        if (node is VariableReferenceSyntax varRef)
+        {
+            variableName = varRef.Name.Text;
+        }
+        else if (node is VariableDeclarationSyntax varDecl)
+        {
+            variableName = varDecl.Name.Text;
+        }
+        else if (node.Parent is VariableReferenceSyntax parentRef)
+        {
+            variableName = parentRef.Name.Text;
+        }
+        else if (node.Parent is VariableDeclarationSyntax parentDecl)
+        {
+            variableName = parentDecl.Name.Text;
+        }
+
+        if (variableName == null) return null;
+
+        // Find all references and the declaration
+        var edits = new List<TextEdit>();
+        
+        // Find declaration
+        foreach (var decl in doc.Tree.GetNodes<VariableDeclarationSyntax>())
+        {
+            if (decl.Name.Text == variableName)
+            {
+                var (line, character) = GetLineAndCharacter(doc.Text, decl.Name.Position);
+                edits.Add(new TextEdit
+                {
+                    Range = new LspRange
+                    {
+                        Start = new Position { Line = line, Character = character },
+                        End = new Position { Line = line, Character = character + decl.Name.FullWidth }
+                    },
+                    NewText = newName
+                });
+            }
+        }
+
+        // Find all references
+        foreach (var reference in doc.Tree.GetNodes<VariableReferenceSyntax>())
+        {
+            if (reference.Name.Text == variableName)
+            {
+                var (line, character) = GetLineAndCharacter(doc.Text, reference.Name.Position);
+                edits.Add(new TextEdit
+                {
+                    Range = new LspRange
+                    {
+                        Start = new Position { Line = line, Character = character },
+                        End = new Position { Line = line, Character = character + reference.Name.FullWidth }
+                    },
+                    NewText = newName
+                });
+            }
+        }
+
+        if (edits.Count == 0) return null;
+
+        return new WorkspaceEdit
+        {
+            Changes = new Dictionary<string, TextEdit[]>
+            {
+                [uri.ToString()] = edits.ToArray()
+            }
+        };
+    }
+
+    // ========== Document Formatting ==========
+
+    [JsonRpcMethod(Methods.TextDocumentFormattingName)]
+    public TextEdit[]? Format(DocumentFormattingParams @params)
+    {
+        var uri = @params.TextDocument.Uri;
+        var doc = _documentManager.GetDocument(uri);
+        if (doc == null) return null;
+
+        var options = @params.Options;
+        var tabSize = options.TabSize;
+        var insertSpaces = options.InsertSpaces;
+        var indentStr = insertSpaces ? new string(' ', tabSize) : "\t";
+
+        var formatted = FormatSource(doc.Text, indentStr);
+        
+        // Return a single edit replacing the entire document
+        var lines = doc.Text.Split('\n');
+        var lastLine = lines.Length - 1;
+        var lastChar = lines[lastLine].TrimEnd('\r').Length;
+
+        return new[]
+        {
+            new TextEdit
+            {
+                Range = new LspRange
+                {
+                    Start = new Position { Line = 0, Character = 0 },
+                    End = new Position { Line = lastLine, Character = lastChar }
+                },
+                NewText = formatted
+            }
+        };
+    }
+
+    private static string FormatSource(string source, string indentStr)
+    {
+        var sb = new System.Text.StringBuilder();
+        int depth = 0;
+        var lines = source.Split('\n');
+        
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.TrimEnd('\r').Trim();
+            
+            if (string.IsNullOrEmpty(line))
+            {
+                sb.AppendLine();
+                continue;
+            }
+            
+            // Adjust depth for closing braces at start of line
+            if (line.StartsWith('}') || line.StartsWith(">>"))
+            {
+                depth = Math.Max(0, depth - 1);
+            }
+            
+            // Write indented line
+            var indent = string.Concat(Enumerable.Repeat(indentStr, depth));
+            sb.AppendLine($"{indent}{line}");
+            
+            // Adjust depth for opening braces at end of line
+            if (line.EndsWith('{') || line.EndsWith("<<"))
+            {
+                depth++;
+            }
+            // Handle inline close (e.g., "} else {")
+            else if (line.Contains('{') && !line.Contains('}'))
+            {
+                depth++;
+            }
+            else if (line.Contains('}') && !line.Contains('{'))
+            {
+                // Already handled above
+            }
+        }
+        
+        return sb.ToString().TrimEnd();
     }
 }
