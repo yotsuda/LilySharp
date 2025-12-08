@@ -5,6 +5,7 @@ using Lilysharp.Core.Semantics;
 using LspRange = Microsoft.VisualStudio.LanguageServer.Protocol.Range;
 using LspDiagnosticSeverity = Microsoft.VisualStudio.LanguageServer.Protocol.DiagnosticSeverity;
 using CoreDiagnosticSeverity = Lilysharp.Core.Syntax.DiagnosticSeverity;
+using CoreDiagnostic = Lilysharp.Core.Syntax.Diagnostic;
 
 namespace Lilysharp.Lsp;
 
@@ -53,6 +54,14 @@ public sealed class LilysharpLanguageServer
                 FoldingRangeProvider = true,
                 RenameProvider = true,
                 DocumentFormattingProvider = true,
+                CodeActionProvider = new CodeActionOptions
+                {
+                    CodeActionKinds = new[]
+                    {
+                        CodeActionKind.QuickFix,
+                        CodeActionKind.Refactor
+                    }
+                },
                 SemanticTokensOptions = new SemanticTokensOptions
                 {
                     Full = true,
@@ -1034,5 +1043,194 @@ public sealed class LilysharpLanguageServer
         }
         
         return sb.ToString().TrimEnd();
+    }
+
+    // ========== Code Actions ==========
+
+    [JsonRpcMethod(Methods.TextDocumentCodeActionName)]
+    public CodeAction[]? GetCodeActions(CodeActionParams @params)
+    {
+        var uri = @params.TextDocument.Uri;
+        var doc = _documentManager.GetDocument(uri);
+        if (doc == null) return null;
+
+        var actions = new List<CodeAction>();
+        var range = @params.Range;
+        
+        // Get diagnostics in range
+        var startOffset = GetOffset(doc.Text, range.Start.Line, range.Start.Character);
+        var endOffset = GetOffset(doc.Text, range.End.Line, range.End.Character);
+        
+        foreach (var diagnostic in doc.Tree.Diagnostics)
+        {
+            if (diagnostic.Span.Start >= startOffset && diagnostic.Span.Start <= endOffset)
+            {
+                // Generate quick fixes based on diagnostic
+                var fixes = GenerateQuickFixes(doc, diagnostic, uri);
+                actions.AddRange(fixes);
+            }
+        }
+        
+        // Add refactoring actions for valid selections
+        var node = doc.Tree.FindNode(startOffset);
+        if (node != null)
+        {
+            var refactorings = GenerateRefactorings(doc, node, uri);
+            actions.AddRange(refactorings);
+        }
+        
+        return actions.ToArray();
+    }
+
+    private IEnumerable<CodeAction> GenerateQuickFixes(Document doc, CoreDiagnostic diagnostic, Uri uri)
+    {
+        var actions = new List<CodeAction>();
+        var message = diagnostic.Message;
+        
+        // Fix: Unknown pitch - suggest valid pitches
+        if (message.Contains("Unknown") || message.Contains("Expected"))
+        {
+            // Suggest inserting a rest if there's a parsing error
+            var (line, character) = GetLineAndCharacter(doc.Text, diagnostic.Span.Start);
+            actions.Add(new CodeAction
+            {
+                Title = "Insert rest (r4)",
+                Kind = CodeActionKind.QuickFix,
+                Edit = new WorkspaceEdit
+                {
+                    Changes = new Dictionary<string, TextEdit[]>
+                    {
+                        [uri.ToString()] = new[]
+                        {
+                            new TextEdit
+                            {
+                                Range = new LspRange
+                                {
+                                    Start = new Position { Line = line, Character = character },
+                                    End = new Position { Line = line, Character = character + diagnostic.Span.Length }
+                                },
+                                NewText = "r4"
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Fix: Unclosed brace
+        if (message.Contains("Expected '}'") || message.Contains("unclosed"))
+        {
+            var lines = doc.Text.Split('\n');
+            var lastLine = lines.Length - 1;
+            var lastChar = lines[lastLine].TrimEnd('\r').Length;
+            
+            actions.Add(new CodeAction
+            {
+                Title = "Add closing brace",
+                Kind = CodeActionKind.QuickFix,
+                Edit = new WorkspaceEdit
+                {
+                    Changes = new Dictionary<string, TextEdit[]>
+                    {
+                        [uri.ToString()] = new[]
+                        {
+                            new TextEdit
+                            {
+                                Range = new LspRange
+                                {
+                                    Start = new Position { Line = lastLine, Character = lastChar },
+                                    End = new Position { Line = lastLine, Character = lastChar }
+                                },
+                                NewText = "\n}"
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        return actions;
+    }
+
+    private IEnumerable<CodeAction> GenerateRefactorings(Document doc, SyntaxNode node, Uri uri)
+    {
+        var actions = new List<CodeAction>();
+        
+        // Refactor: Extract variable from music block
+        if (node is MusicBlockSyntax block && block.Items.Any())
+        {
+            var blockText = block.ToFullString().Trim();
+            var (line, character) = GetLineAndCharacter(doc.Text, block.Position);
+            var (endLine, endChar) = GetLineAndCharacter(doc.Text, block.Position + block.FullWidth);
+            
+            actions.Add(new CodeAction
+            {
+                Title = "Extract to variable",
+                Kind = CodeActionKind.Refactor,
+                Edit = new WorkspaceEdit
+                {
+                    Changes = new Dictionary<string, TextEdit[]>
+                    {
+                        [uri.ToString()] = new[]
+                        {
+                            // Insert variable declaration at start
+                            new TextEdit
+                            {
+                                Range = new LspRange
+                                {
+                                    Start = new Position { Line = 0, Character = 0 },
+                                    End = new Position { Line = 0, Character = 0 }
+                                },
+                                NewText = $"let melody = {blockText}\n\n"
+                            },
+                            // Replace block with variable reference
+                            new TextEdit
+                            {
+                                Range = new LspRange
+                                {
+                                    Start = new Position { Line = line, Character = character },
+                                    End = new Position { Line = endLine, Character = endChar }
+                                },
+                                NewText = "$melody"
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Refactor: Wrap in relative
+        if (node is NoteSyntax note)
+        {
+            var noteText = note.ToFullString().Trim();
+            var (line, character) = GetLineAndCharacter(doc.Text, note.Position);
+            var (endLine, endChar) = GetLineAndCharacter(doc.Text, note.Position + note.FullWidth);
+            
+            actions.Add(new CodeAction
+            {
+                Title = "Wrap in relative block",
+                Kind = CodeActionKind.Refactor,
+                Edit = new WorkspaceEdit
+                {
+                    Changes = new Dictionary<string, TextEdit[]>
+                    {
+                        [uri.ToString()] = new[]
+                        {
+                            new TextEdit
+                            {
+                                Range = new LspRange
+                                {
+                                    Start = new Position { Line = line, Character = character },
+                                    End = new Position { Line = endLine, Character = endChar }
+                                },
+                                NewText = $"relative c' {{ {noteText} }}"
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        return actions;
     }
 }
