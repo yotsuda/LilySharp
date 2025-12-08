@@ -47,7 +47,8 @@ public sealed class LilysharpLanguageServer
                     ResolveProvider = false
                 },
                 HoverProvider = true,
-                DocumentSymbolProvider = true
+                DocumentSymbolProvider = true,
+                DefinitionProvider = true
             }
         };
     }
@@ -513,5 +514,73 @@ public sealed class LilysharpLanguageServer
                 return token.Text;
         }
         return "staff";
+    }
+
+    // ========== Go to Definition ==========
+
+    [JsonRpcMethod(Methods.TextDocumentDefinitionName)]
+    public Location? Definition(TextDocumentPositionParams @params)
+    {
+        var uri = @params.TextDocument.Uri;
+        var doc = _documentManager.GetDocument(uri);
+        if (doc == null) return null;
+
+        var position = @params.Position;
+        var offset = GetOffset(doc.Text, position.Line, position.Character);
+        var node = doc.Tree.FindNode(offset);
+        
+        if (node == null) return null;
+
+        // Find variable reference
+        var varRef = FindAncestor<VariableReferenceSyntax>(node);
+        if (varRef != null)
+        {
+            var name = varRef.Name.Text;
+            var definition = FindVariableDefinition(doc.Tree.GetRoot(), name);
+            if (definition != null)
+            {
+                return CreateLocation(uri, doc.Text, definition);
+            }
+        }
+
+        return null;
+    }
+
+    private static T? FindAncestor<T>(SyntaxNode node) where T : SyntaxNode
+    {
+        var current = node;
+        while (current != null)
+        {
+            if (current is T t)
+                return t;
+            current = current.Parent;
+        }
+        return null;
+    }
+
+    private static VariableDeclarationSyntax? FindVariableDefinition(SyntaxNode root, string name)
+    {
+        foreach (var decl in root.DescendantNodes<VariableDeclarationSyntax>())
+        {
+            if (decl.Name.Text == name)
+                return decl;
+        }
+        return null;
+    }
+
+    private Location CreateLocation(Uri uri, string text, SyntaxNode node)
+    {
+        var (startLine, startCol) = GetLineAndColumn(text, node.Position);
+        var (endLine, endCol) = GetLineAndColumn(text, node.Position + node.FullWidth);
+        
+        return new Location
+        {
+            Uri = uri,
+            Range = new LspRange
+            {
+                Start = new Position(startLine, startCol),
+                End = new Position(endLine, endCol)
+            }
+        };
     }
 }
