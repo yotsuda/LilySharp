@@ -9,13 +9,18 @@ namespace Lilysharp.Core.Parser;
 internal sealed class Parser
 {
     private readonly List<SyntaxToken> _tokens;
+    private readonly DiagnosticBag _diagnostics = new();
     private int _position;
+    private int _textPosition; // Tracks position in source text
 
     public Parser(IEnumerable<SyntaxToken> tokens)
     {
         _tokens = tokens.ToList();
         _position = 0;
+        _textPosition = 0;
     }
+
+    public DiagnosticBag Diagnostics => _diagnostics;
 
     private SyntaxToken Current => _position < _tokens.Count 
         ? _tokens[_position] 
@@ -29,7 +34,10 @@ internal sealed class Parser
     {
         var token = Current;
         if (_position < _tokens.Count - 1)
+        {
+            _textPosition += token.FullWidth;
             _position++;
+        }
         return token;
     }
 
@@ -40,6 +48,11 @@ internal sealed class Parser
     {
         if (Check(kind))
             return Advance();
+        
+        // Report error
+        var span = new TextSpan(_textPosition, Current.FullWidth);
+        _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+            $"Expected '{kind}', found '{Current.Kind}'");
         
         // Error recovery: create a missing token
         return new SyntaxToken(kind, "", Current.LeadingTrivia, null);
@@ -52,7 +65,6 @@ internal sealed class Parser
         return null;
     }
 
-    /// <summary>
     /// Parse the entire source into a compilation unit.
     /// </summary>
     public CompilationUnitGreen ParseCompilationUnit()

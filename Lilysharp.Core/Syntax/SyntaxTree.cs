@@ -10,18 +10,30 @@ public sealed class SyntaxTree
 {
     private readonly CompilationUnitGreen _greenRoot;
     private readonly string _text;
+    private readonly IReadOnlyList<Diagnostic> _diagnostics;
     private CompilationUnitSyntax? _redRoot;
 
-    private SyntaxTree(string text, CompilationUnitGreen root)
+    private SyntaxTree(string text, CompilationUnitGreen root, IReadOnlyList<Diagnostic> diagnostics)
     {
         _text = text;
         _greenRoot = root;
+        _diagnostics = diagnostics;
     }
 
     /// <summary>
     /// The source text.
     /// </summary>
     public string Text => _text;
+
+    /// <summary>
+    /// Parse diagnostics (errors, warnings).
+    /// </summary>
+    public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics;
+
+    /// <summary>
+    /// Whether the tree has any errors.
+    /// </summary>
+    public bool HasErrors => _diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
 
     /// <summary>
     /// The root node (internal green).
@@ -45,7 +57,7 @@ public sealed class SyntaxTree
         var tokens = lexer.ScanAllTokens();
         var parser = new Parser.Parser(tokens);
         var root = parser.ParseCompilationUnit();
-        return new SyntaxTree(text, root);
+        return new SyntaxTree(text, root, parser.Diagnostics.ToList());
     }
 
     /// <summary>
