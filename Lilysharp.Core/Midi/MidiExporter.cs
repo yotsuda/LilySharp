@@ -100,6 +100,11 @@ public class MidiExporter
                 ProcessGrace(grace, track);
                 break;
                 
+            // Articulations and dynamics are handled within ProcessNote, skip here
+            case ArticulationSyntax:
+            case DynamicSyntax:
+                break;
+                
             case ParallelExpressionSyntax parallel:
                 var voices = parallel.Voices.ToList();
                 if (voices.Count > 0)
@@ -134,7 +139,28 @@ public class MidiExporter
         var duration = GetDuration(note.Duration);
         int durationTicks = FractionToTicks(duration);
         
-        track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, _currentTick, durationTicks));
+        // Process articulations and dynamics
+        int velocity = _velocity;
+        int durationPercent = 100;
+        
+        foreach (var child in note.Articulations)
+        {
+            switch (child)
+            {
+                case DynamicSyntax dynamic:
+                    velocity = dynamic.Velocity;
+                    _velocity = velocity; // Update default velocity for subsequent notes
+                    break;
+                    
+                case ArticulationSyntax articulation:
+                    (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
+                    break;
+            }
+        }
+        
+        int actualDuration = durationTicks * durationPercent / 100;
+        
+        track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration));
         _currentTick += durationTicks;
     }
     
@@ -285,5 +311,20 @@ public class MidiExporter
         }
         
         _defaultDuration = savedDefaultDuration;
+    }
+    
+    private (int velocity, int durationPercent) ApplyArticulationType(
+        ArticulationType type, int velocity, int durationPercent)
+    {
+        return type switch
+        {
+            ArticulationType.Staccato => (velocity, 50),                      // Half duration
+            ArticulationType.Accent => (Math.Min(127, velocity + 20), durationPercent),
+            ArticulationType.Tenuto => (velocity, 100),                       // Full duration
+            ArticulationType.Marcato => (Math.Min(127, velocity + 30), 80),   // Louder, slightly shorter
+            ArticulationType.Portato => (velocity, 75),                       // Slightly shorter
+            ArticulationType.Fermata => (velocity, 150),                      // Extended
+            _ => (velocity, durationPercent)
+        };
     }
 }

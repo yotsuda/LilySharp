@@ -144,6 +144,22 @@ public sealed class NoteSyntax : SyntaxNode
 
     public PitchSyntax Pitch => (PitchSyntax)GetChild(0)!;
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+    
+    /// <summary>
+    /// Gets the articulations and dynamics attached to this note.
+    /// </summary>
+    public IEnumerable<SyntaxNode> Articulations
+    {
+        get
+        {
+            for (int i = 2; i < Green.SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
 }
 
 /// <summary>
@@ -489,4 +505,67 @@ public sealed class LyricsBlockSyntax : SyntaxNode
         }
     }
     public SyntaxTokenNode CloseBrace => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
+}
+
+/// <summary>
+/// An articulation mark: @staccato, @accent, etc.
+/// </summary>
+public sealed class ArticulationSyntax : SyntaxNode
+{
+    internal ArticulationSyntax(InternalSyntax.ArticulationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode AtToken => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode NameToken => (SyntaxTokenNode)GetChild(1)!;
+    
+    /// <summary>
+    /// Gets the articulation type.
+    /// </summary>
+    public ArticulationType Type => NameToken.Kind switch
+    {
+        SyntaxKind.StaccatoKeyword => ArticulationType.Staccato,
+        SyntaxKind.AccentKeyword => ArticulationType.Accent,
+        SyntaxKind.TenutoKeyword => ArticulationType.Tenuto,
+        SyntaxKind.MarcatoKeyword => ArticulationType.Marcato,
+        SyntaxKind.FermataKeyword => ArticulationType.Fermata,
+        SyntaxKind.PortatoKeyword => ArticulationType.Portato,
+        _ => ArticulationType.None
+    };
+}
+
+/// <summary>
+/// A dynamic mark: \p, \f, \ff, etc.
+/// </summary>
+public sealed class DynamicSyntax : SyntaxNode
+{
+    internal DynamicSyntax(InternalSyntax.DynamicGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode BackslashToken => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode DynamicToken => (SyntaxTokenNode)GetChild(1)!;
+    
+    /// <summary>
+    /// Gets the dynamic level.
+    /// </summary>
+    public DynamicLevel Level => DynamicToken.Text switch
+    {
+        "ppp" => DynamicLevel.PPP,
+        "pp" => DynamicLevel.PP,
+        "p" => DynamicLevel.P,
+        "mp" => DynamicLevel.MP,
+        "mf" => DynamicLevel.MF,
+        "f" => DynamicLevel.F,
+        "ff" => DynamicLevel.FF,
+        "fff" => DynamicLevel.FFF,
+        _ => DynamicLevel.None
+    };
+    
+    /// <summary>
+    /// Gets the MIDI velocity value for this dynamic.
+    /// </summary>
+    public int Velocity => (int)Level;
 }

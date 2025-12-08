@@ -548,6 +548,14 @@ private GreenNode?[] ParseArticulations()
 
     private bool IsDynamicName()
     {
+        // Note: PitchF can also be dynamics (\f, \ff, \fff) when preceded by backslash
+        // Check token text as well as kind
+        var text = Current.Text;
+        if (text is "f" or "ff" or "fff" or "p" or "pp" or "ppp" or "mp" or "mf" or
+            "cresc" or "decresc" or "dim")
+        {
+            return true;
+        }
         return Current.Kind is SyntaxKind.DynamicPPP or SyntaxKind.DynamicPP or
             SyntaxKind.DynamicP or SyntaxKind.DynamicMP or
             SyntaxKind.DynamicMF or SyntaxKind.DynamicF or

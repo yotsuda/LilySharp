@@ -119,6 +119,8 @@ public abstract class SyntaxNode
             SyntaxKind.TupletExpression => new TupletExpressionSyntax((TupletExpressionGreen)green, this, position),
             SyntaxKind.GraceExpression => new GraceExpressionSyntax((GraceExpressionGreen)green, this, position),
             SyntaxKind.LyricsBlock => new LyricsBlockSyntax((LyricsBlockGreen)green, this, position),
+            SyntaxKind.Articulation => new ArticulationSyntax((ArticulationGreen)green, this, position),
+            SyntaxKind.Dynamic => new DynamicSyntax((DynamicGreen)green, this, position),
             _ => new GenericSyntaxNode(green, this, position)
         };
     }

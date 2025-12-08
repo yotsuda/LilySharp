@@ -164,4 +164,67 @@ public class MidiTests
         Assert.Equal(60, notes[0].DurationTicks);
         Assert.Equal(60, notes[1].DurationTicks);
     }
+
+    [Fact]
+    public void ExportWithDynamics()
+    {
+        var source = @"c4\p d4\f e4\ff";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MidiExporter();
+        var midi = exporter.Export(tree);
+        
+        var notes = midi.Tracks.Skip(1).First().Notes;
+        Assert.Equal(3, notes.Count);
+        
+        // p = 50, f = 95, ff = 110
+        Assert.Equal(50, notes[0].Velocity);
+        Assert.Equal(95, notes[1].Velocity);
+        Assert.Equal(110, notes[2].Velocity);
+    }
+
+    [Fact]
+    public void ExportWithStaccato()
+    {
+        var source = @"c4@staccato";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MidiExporter();
+        var midi = exporter.Export(tree);
+        
+        var notes = midi.Tracks.Skip(1).First().Notes;
+        Assert.Single(notes);
+        
+        // Staccato = 50% duration, quarter note = 480 ticks, so 240 ticks
+        Assert.Equal(240, notes[0].DurationTicks);
+    }
+
+    [Fact]
+    public void ExportWithAccent()
+    {
+        var source = @"c4@accent";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MidiExporter();
+        var midi = exporter.Export(tree);
+        
+        var notes = midi.Tracks.Skip(1).First().Notes;
+        Assert.Single(notes);
+        
+        // Accent adds 20 to velocity (default 80 -> 100)
+        Assert.Equal(100, notes[0].Velocity);
+    }
+
+    [Fact]
+    public void DynamicsParsing()
+    {
+        var source = @"c4\p d4\f";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        
+        var notes = tree.GetNodes<NoteSyntax>().ToList();
+        Assert.Equal(2, notes.Count);
+        
+        var articulations = notes[0].Articulations.ToList();
+        Assert.Single(articulations);
+        Assert.IsType<DynamicSyntax>(articulations[0]);
+    }
 }
