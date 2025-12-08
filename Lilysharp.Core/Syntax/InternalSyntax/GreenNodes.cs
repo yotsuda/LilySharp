@@ -275,3 +275,48 @@ internal sealed class DynamicGreen : GreenSyntaxNode
     {
     }
 }
+
+/// <summary>
+/// Repeat expression: repeat volta 2 { ... } alternative { ... }
+/// </summary>
+internal sealed class RepeatExpressionGreen : GreenSyntaxNode
+{
+    public RepeatExpressionGreen(
+        SyntaxToken repeatKeyword,
+        SyntaxToken repeatType,
+        SyntaxToken count,
+        MusicBlockGreen body,
+        AlternativeClauseGreen? alternative)
+        : base(SyntaxKind.RepeatExpression, [repeatKeyword, repeatType, count, body, alternative])
+    {
+    }
+}
+
+/// <summary>
+/// Alternative clause: alternative { { ... } { ... } }
+/// </summary>
+internal sealed class AlternativeClauseGreen : GreenSyntaxNode
+{
+    public AlternativeClauseGreen(
+        SyntaxToken alternativeKeyword,
+        SyntaxToken openBrace,
+        GreenNode?[] alternatives,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.AlternativeClause, [alternativeKeyword, openBrace, .. alternatives, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// Parallel expression: << expr \\ expr >>
+/// </summary>
+internal sealed class ParallelExpressionGreen : GreenSyntaxNode
+{
+    public ParallelExpressionGreen(
+        SyntaxToken openAngle,
+        GreenNode?[] voices,
+        SyntaxToken closeAngle)
+        : base(SyntaxKind.ParallelExpression, [openAngle, .. voices, closeAngle])
+    {
+    }
+}

@@ -111,6 +111,9 @@ public abstract class SyntaxNode
             SyntaxKind.MetadataDeclaration => new MetadataDeclarationSyntax((MetadataDeclarationGreen)green, this, position),
             SyntaxKind.VariableDeclaration => new VariableDeclarationSyntax((VariableDeclarationGreen)green, this, position),
             SyntaxKind.VariableReference => new VariableReferenceSyntax((VariableReferenceGreen)green, this, position),
+            SyntaxKind.RepeatExpression => new RepeatExpressionSyntax((RepeatExpressionGreen)green, this, position),
+            SyntaxKind.AlternativeClause => new AlternativeClauseSyntax((AlternativeClauseGreen)green, this, position),
+            SyntaxKind.ParallelExpression => new ParallelExpressionSyntax((ParallelExpressionGreen)green, this, position),
             _ => new GenericSyntaxNode(green, this, position)
         };
     }

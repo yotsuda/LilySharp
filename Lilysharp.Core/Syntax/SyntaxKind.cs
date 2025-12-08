@@ -144,6 +144,11 @@ public enum SyntaxKind : ushort
     VariableDeclaration,
     VariableReference,
     
+    // Repeat and parallel
+    RepeatExpression,
+    AlternativeClause,
+    ParallelExpression,
+    
     // Properties
     PropertyAssignment,
     MetadataDeclaration,

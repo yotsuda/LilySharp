@@ -372,4 +372,111 @@ score {
         var tree = SyntaxTree.Parse(@"{ c4\p d\cresc e\f }");
         Assert.False(tree.HasErrors);
     }
+
+    // ========== Repeat Tests ==========
+
+    [Fact]
+    public void ParseRepeatVolta()
+    {
+        var tree = SyntaxTree.Parse("repeat volta 2 { c4 d e f }");
+        Assert.False(tree.HasErrors);
+        
+        var repeat = tree.Root.GetSlot(0) as RepeatExpressionGreen;
+        Assert.NotNull(repeat);
+        Assert.Equal(SyntaxKind.RepeatExpression, repeat.Kind);
+    }
+
+    [Fact]
+    public void ParseRepeatWithAlternative()
+    {
+        var tree = SyntaxTree.Parse(@"repeat volta 2 { c4 d e f } alternative { { g2 } { a2 } }");
+        Assert.False(tree.HasErrors);
+        
+        var repeat = tree.Root.GetSlot(0) as RepeatExpressionGreen;
+        Assert.NotNull(repeat);
+        
+        // Should have alternative clause
+        var alternative = repeat.GetSlot(4) as AlternativeClauseGreen;
+        Assert.NotNull(alternative);
+    }
+
+    [Fact]
+    public void ParseRepeatRoundTrip()
+    {
+        var source = "repeat volta 2 { c4 d e f | g2 g | }";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+        Assert.Equal(source, tree.ToFullString());
+    }
+
+    [Fact]
+    public void ParseRepeatWithAlternativeRoundTrip()
+    {
+        var source = "repeat volta 2 { c4 d e f } alternative { { g2 } { a2 } }";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+        Assert.Equal(source, tree.ToFullString());
+    }
+
+    // ========== Parallel Tests ==========
+
+    [Fact]
+    public void ParseParallelExpression()
+    {
+        var tree = SyntaxTree.Parse(@"<< { c2 d } \\ { e2 f } >>");
+        Assert.False(tree.HasErrors);
+        
+        var parallel = tree.Root.GetSlot(0) as ParallelExpressionGreen;
+        Assert.NotNull(parallel);
+        Assert.Equal(SyntaxKind.ParallelExpression, parallel.Kind);
+    }
+
+    [Fact]
+    public void ParseParallelWithRelative()
+    {
+        var tree = SyntaxTree.Parse(@"<< relative c'' { c2 d } \\ relative c' { e2 f } >>");
+        Assert.False(tree.HasErrors);
+    }
+
+    [Fact]
+    public void ParseParallelRoundTrip()
+    {
+        var source = @"<< { c2 d } \\ { e2 f } >>";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+        Assert.Equal(source, tree.ToFullString());
+    }
+
+    [Fact]
+    public void ParseParallelThreeVoices()
+    {
+        var tree = SyntaxTree.Parse(@"<< { c2 } \\ { e2 } \\ { g2 } >>");
+        Assert.False(tree.HasErrors);
+    }
+
+    [Fact]
+    public void ParseNestedRepeatInPart()
+    {
+        var tree = SyntaxTree.Parse(@"part {
+    repeat volta 2 {
+        c4 d e f |
+    }
+    alternative {
+        { g2 g | }
+        { a2 a | }
+    }
+}");
+        Assert.False(tree.HasErrors);
+    }
+
+    [Fact]
+    public void ParseParallelInStaff()
+    {
+        var tree = SyntaxTree.Parse(@"part {
+    staff {
+        << relative c'' { c2 d } \\ relative c' { e2 f } >>
+    }
+}");
+        Assert.False(tree.HasErrors);
+    }
 }

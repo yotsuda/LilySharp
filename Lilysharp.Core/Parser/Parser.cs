@@ -342,10 +342,12 @@ internal sealed class Parser
             SyntaxKind.PitchB => true,
             SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full => true,
             SyntaxKind.OpenAngle => true, // Chord
+            SyntaxKind.DoubleOpenAngle => true, // Parallel <<
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
             SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => true,
             SyntaxKind.Tilde => true,
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => true,
+            SyntaxKind.RepeatKeyword => true,
             _ => false
         };
     }
@@ -361,6 +363,8 @@ internal sealed class Parser
             SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full => ParseRest(),
 
             SyntaxKind.OpenAngle => ParseChord(),
+            
+            SyntaxKind.DoubleOpenAngle => ParseParallelExpression(),
 
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
             SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => ParseBarline(),
@@ -370,6 +374,8 @@ internal sealed class Parser
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => ParseSlur(),
 
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
+            
+            SyntaxKind.RepeatKeyword => ParseRepeatExpression(),
 
             _ => null
         };
@@ -529,5 +535,108 @@ private GreenNode?[] ParseArticulations()
             SyntaxKind.DynamicFF or SyntaxKind.DynamicFFF or
             SyntaxKind.CrescKeyword or SyntaxKind.DecrescKeyword or
             SyntaxKind.DimKeyword;
+    }
+
+    // ========== Repeat and Parallel ==========
+
+    private RepeatExpressionGreen ParseRepeatExpression()
+    {
+        var repeatKeyword = Expect(SyntaxKind.RepeatKeyword);
+        
+        // Expect repeat type: volta, unfold, percent, tremolo
+        SyntaxToken repeatType;
+        if (Check(SyntaxKind.VoltaKeyword) || Check(SyntaxKind.Identifier))
+        {
+            repeatType = Advance();
+        }
+        else
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                "Expected repeat type (volta, unfold, percent, tremolo)");
+            repeatType = new SyntaxToken(SyntaxKind.VoltaKeyword, "volta", null, null);
+        }
+        
+        // Expect count
+        var count = Expect(SyntaxKind.IntegerLiteral);
+        
+        // Parse body
+        var body = ParseMusicBlock();
+        
+        // Parse optional alternative
+        AlternativeClauseGreen? alternative = null;
+        if (Check(SyntaxKind.AlternativeKeyword))
+        {
+            alternative = ParseAlternativeClause();
+        }
+        
+        return new RepeatExpressionGreen(repeatKeyword, repeatType, count, body, alternative);
+    }
+
+    private AlternativeClauseGreen ParseAlternativeClause()
+    {
+        var alternativeKeyword = Expect(SyntaxKind.AlternativeKeyword);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        
+        var alternatives = new List<GreenNode?>();
+        while (Check(SyntaxKind.OpenBrace))
+        {
+            alternatives.Add(ParseMusicBlock());
+        }
+        
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new AlternativeClauseGreen(alternativeKeyword, openBrace, [.. alternatives], closeBrace);
+    }
+
+    private ParallelExpressionGreen ParseParallelExpression()
+    {
+        var openAngle = Expect(SyntaxKind.DoubleOpenAngle);
+        
+        var voices = new List<GreenNode?>();
+        
+        // Parse first voice
+        voices.Add(ParseVoiceContent());
+        
+        // Parse additional voices separated by \\
+        while (Check(SyntaxKind.Backslash) && Peek().Kind == SyntaxKind.Backslash)
+        {
+            voices.Add(Advance()); // first backslash
+            voices.Add(Advance()); // second backslash
+            voices.Add(ParseVoiceContent());
+        }
+        
+        var closeAngle = Expect(SyntaxKind.DoubleCloseAngle);
+        return new ParallelExpressionGreen(openAngle, [.. voices], closeAngle);
+    }
+
+    private GreenNode ParseVoiceContent()
+    {
+        // A voice can be a relative expression, music block, or sequence of items
+        if (Check(SyntaxKind.RelativeKeyword))
+        {
+            return ParseRelativeExpression();
+        }
+        if (Check(SyntaxKind.OpenBrace))
+        {
+            return ParseMusicBlock();
+        }
+        
+        // Parse inline music items until \\ or >>
+        var items = new List<GreenNode?>();
+        while (!Check(SyntaxKind.DoubleCloseAngle) && 
+               !Check(SyntaxKind.EndOfFile) &&
+               !(Check(SyntaxKind.Backslash) && Peek().Kind == SyntaxKind.Backslash))
+        {
+            var item = ParseMusicItem();
+            if (item != null)
+                items.Add(item);
+            else
+                break;
+        }
+        
+        // Wrap in an implicit music block
+        var openBrace = new SyntaxToken(SyntaxKind.OpenBrace, "", null, null);
+        var closeBrace = new SyntaxToken(SyntaxKind.CloseBrace, "", null, null);
+        return new MusicBlockGreen(openBrace, [.. items], closeBrace);
     }
 }

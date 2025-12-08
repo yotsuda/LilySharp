@@ -309,3 +309,75 @@ public sealed class VariableReferenceSyntax : SyntaxNode
 
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
 }
+
+/// <summary>
+/// Repeat expression: repeat volta 2 { ... } alternative { ... }
+/// </summary>
+public sealed class RepeatExpressionSyntax : SyntaxNode
+{
+    internal RepeatExpressionSyntax(InternalSyntax.RepeatExpressionGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode RepeatKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode RepeatType => (SyntaxTokenNode)GetChild(1)!;
+    public SyntaxTokenNode Count => (SyntaxTokenNode)GetChild(2)!;
+    public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(3)!;
+    public AlternativeClauseSyntax? Alternative => GetChild(4) as AlternativeClauseSyntax;
+}
+
+/// <summary>
+/// Alternative clause: alternative { { ... } { ... } }
+/// </summary>
+public sealed class AlternativeClauseSyntax : SyntaxNode
+{
+    internal AlternativeClauseSyntax(InternalSyntax.AlternativeClauseGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode AlternativeKeyword => (SyntaxTokenNode)GetChild(0)!;
+    
+    public IEnumerable<MusicBlockSyntax> Alternatives
+    {
+        get
+        {
+            for (int i = 2; i < SlotCount - 1; i++)
+            {
+                if (GetChild(i) is MusicBlockSyntax block)
+                    yield return block;
+            }
+        }
+    }
+}
+
+/// <summary>
+/// Parallel expression: << expr \\ expr >>
+/// </summary>
+public sealed class ParallelExpressionSyntax : SyntaxNode
+{
+    internal ParallelExpressionSyntax(InternalSyntax.ParallelExpressionGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode OpenAngle => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode CloseAngle => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
+    
+    /// <summary>
+    /// Gets the voice expressions (music blocks or relative expressions between \\).
+    /// </summary>
+    public IEnumerable<SyntaxNode> Voices
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount - 1; i++)
+            {
+                var child = GetChild(i);
+                if (child is MusicBlockSyntax or RelativeExpressionSyntax)
+                    yield return child;
+            }
+        }
+    }
+}
