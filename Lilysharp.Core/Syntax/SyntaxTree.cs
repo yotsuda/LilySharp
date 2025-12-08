@@ -83,4 +83,43 @@ public sealed class SyntaxTree
     {
         return GetRoot().DescendantNodes<T>();
     }
+
+    /// <summary>
+    /// Creates a new syntax tree with the specified changes applied.
+    /// </summary>
+    /// <param name="changes">The changes to apply, in document order.</param>
+    /// <returns>A new syntax tree with the changes applied.</returns>
+    public SyntaxTree WithChanges(params TextChange[] changes)
+    {
+        if (changes.Length == 0)
+            return this;
+
+        var newText = ApplyChanges(_text, changes);
+        return Parse(newText);
+    }
+
+    /// <summary>
+    /// Creates a new syntax tree with a single change applied.
+    /// </summary>
+    public SyntaxTree WithChange(TextChange change)
+        => WithChanges(change);
+
+    /// <summary>
+    /// Applies changes to text, processing from end to start to maintain positions.
+    /// </summary>
+    private static string ApplyChanges(string text, TextChange[] changes)
+    {
+        // Sort changes by position descending to apply from end to start
+        var sortedChanges = changes.OrderByDescending(c => c.Span.Start).ToArray();
+        
+        var result = text;
+        foreach (var change in sortedChanges)
+        {
+            var prefix = result[..change.Span.Start];
+            var suffix = result[(change.Span.Start + change.Span.Length)..];
+            result = prefix + change.NewText + suffix;
+        }
+        
+        return result;
+    }
 }
