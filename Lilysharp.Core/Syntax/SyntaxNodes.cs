@@ -1,0 +1,311 @@
+using Lilysharp.Core.Syntax.InternalSyntax;
+
+namespace Lilysharp.Core.Syntax;
+
+/// <summary>
+/// Compilation unit - the root of a syntax tree.
+/// </summary>
+public sealed class CompilationUnitSyntax : SyntaxNode
+{
+    internal CompilationUnitSyntax(CompilationUnitGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>
+    /// All members (notes, declarations, etc.)
+    /// </summary>
+    public IEnumerable<SyntaxNode> Members
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount - 1; i++) // -1 to exclude EOF
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+}
+
+/// <summary>
+/// Music block: { ... }
+/// </summary>
+public sealed class MusicBlockSyntax : SyntaxNode
+{
+    internal MusicBlockSyntax(MusicBlockGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode CloseBrace => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
+
+    public IEnumerable<SyntaxNode> Items
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount - 1; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+}
+
+/// <summary>
+/// Relative expression: relative c' { ... }
+/// </summary>
+public sealed class RelativeExpressionSyntax : SyntaxNode
+{
+    internal RelativeExpressionSyntax(RelativeExpressionGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode RelativeKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public PitchSyntax BasePitch => (PitchSyntax)GetChild(1)!;
+    public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(2)!;
+}
+
+/// <summary>
+/// A pitch: c, cis', des,,
+/// </summary>
+public sealed class PitchSyntax : SyntaxNode
+{
+    internal PitchSyntax(PitchGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode PitchToken => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>
+    /// The base pitch name (c, d, e, f, g, a, b) with accidentals.
+    /// </summary>
+    public string PitchName => PitchToken.Text;
+
+    /// <summary>
+    /// Number of octave marks (' positive, , negative).
+    /// </summary>
+    public int OctaveOffset
+    {
+        get
+        {
+            int offset = 0;
+            for (int i = 1; i < SlotCount; i++)
+            {
+                var child = GetChild(i) as SyntaxTokenNode;
+                if (child?.Kind == SyntaxKind.Apostrophe)
+                    offset++;
+                else if (child?.Kind == SyntaxKind.Comma)
+                    offset--;
+            }
+            return offset;
+        }
+    }
+}
+
+/// <summary>
+/// A duration: 4, 8., 16..
+/// </summary>
+public sealed class DurationSyntax : SyntaxNode
+{
+    internal DurationSyntax(DurationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode NumberToken => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>
+    /// The base duration value (1, 2, 4, 8, 16, etc.)
+    /// </summary>
+    public int Value => int.Parse(NumberToken.Text);
+
+    /// <summary>
+    /// Number of dots.
+    /// </summary>
+    public int DotCount => SlotCount - 1;
+}
+
+/// <summary>
+/// A note: pitch + optional duration + articulations
+/// </summary>
+public sealed class NoteSyntax : SyntaxNode
+{
+    internal NoteSyntax(NoteGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public PitchSyntax Pitch => (PitchSyntax)GetChild(0)!;
+    public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+}
+
+/// <summary>
+/// A rest: r, s, R + optional duration
+/// </summary>
+public sealed class RestSyntax : SyntaxNode
+{
+    internal RestSyntax(RestGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode RestToken => (SyntaxTokenNode)GetChild(0)!;
+    public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+}
+
+/// <summary>
+/// A chord: < pitches > + optional duration
+/// </summary>
+public sealed class ChordSyntax : SyntaxNode
+{
+    internal ChordSyntax(ChordGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public IEnumerable<PitchSyntax> Pitches => DescendantNodes<PitchSyntax>();
+}
+
+/// <summary>
+/// A barline: |, ||, |., etc.
+/// </summary>
+public sealed class BarlineSyntax : SyntaxNode
+{
+    internal BarlineSyntax(BarlineGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode BarToken => (SyntaxTokenNode)GetChild(0)!;
+}
+
+/// <summary>
+/// A tie: ~
+/// </summary>
+public sealed class TieSyntax : SyntaxNode
+{
+    internal TieSyntax(TieGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+}
+
+/// <summary>
+/// Slur markers: ( or )
+/// </summary>
+public sealed class SlurSyntax : SyntaxNode
+{
+    internal SlurSyntax(SlurGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public bool IsOpen => ((SyntaxTokenNode)GetChild(0)!).Kind == SyntaxKind.OpenParen;
+}
+
+/// <summary>
+/// Score declaration: score "title" { ... }
+/// </summary>
+public sealed class ScoreDeclarationSyntax : SyntaxNode
+{
+    internal ScoreDeclarationSyntax(ScoreDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode ScoreKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode? Title => GetChild(1) as SyntaxTokenNode;
+
+    public IEnumerable<PartDeclarationSyntax> Parts => DescendantNodes<PartDeclarationSyntax>();
+}
+
+/// <summary>
+/// Part declaration: part Name "display" { ... }
+/// </summary>
+public sealed class PartDeclarationSyntax : SyntaxNode
+{
+    internal PartDeclarationSyntax(PartDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode PartKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode? Name => GetChild(1) as SyntaxTokenNode;
+}
+
+/// <summary>
+/// Staff declaration: staff Name { ... }
+/// </summary>
+public sealed class StaffDeclarationSyntax : SyntaxNode
+{
+    internal StaffDeclarationSyntax(StaffDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode StaffKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode? Name => GetChild(1) as SyntaxTokenNode;
+}
+
+/// <summary>
+/// Property assignment: name: value
+/// </summary>
+public sealed class PropertyAssignmentSyntax : SyntaxNode
+{
+    internal PropertyAssignmentSyntax(PropertyAssignmentGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode NameToken => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode Colon => (SyntaxTokenNode)GetChild(1)!;
+}
+
+/// <summary>
+/// Metadata declaration: title "value" or tempo 120
+/// </summary>
+public sealed class MetadataDeclarationSyntax : SyntaxNode
+{
+    internal MetadataDeclarationSyntax(MetadataDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
+}
+
+/// <summary>
+/// Variable declaration: let name = expr
+/// </summary>
+public sealed class VariableDeclarationSyntax : SyntaxNode
+{
+    internal VariableDeclarationSyntax(VariableDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode LetKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
+    public SyntaxTokenNode EqualsToken => (SyntaxTokenNode)GetChild(2)!;
+    public SyntaxNode Expression => GetChild(3)!;
+}
+
+/// <summary>
+/// Variable reference: use name or $name
+/// </summary>
+public sealed class VariableReferenceSyntax : SyntaxNode
+{
+    internal VariableReferenceSyntax(VariableReferenceGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
+}

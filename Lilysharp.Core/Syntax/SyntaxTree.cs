@@ -8,13 +8,14 @@ namespace Lilysharp.Core.Syntax;
 /// </summary>
 public sealed class SyntaxTree
 {
-    private readonly CompilationUnitGreen _root;
+    private readonly CompilationUnitGreen _greenRoot;
     private readonly string _text;
+    private CompilationUnitSyntax? _redRoot;
 
     private SyntaxTree(string text, CompilationUnitGreen root)
     {
         _text = text;
-        _root = root;
+        _greenRoot = root;
     }
 
     /// <summary>
@@ -23,9 +24,17 @@ public sealed class SyntaxTree
     public string Text => _text;
 
     /// <summary>
-    /// The root node (internal).
+    /// The root node (internal green).
     /// </summary>
-    internal CompilationUnitGreen Root => _root;
+    internal CompilationUnitGreen Root => _greenRoot;
+
+    /// <summary>
+    /// Gets the root syntax node (red node with position info).
+    /// </summary>
+    public CompilationUnitSyntax GetRoot()
+    {
+        return _redRoot ??= new CompilationUnitSyntax(_greenRoot, null, 0);
+    }
 
     /// <summary>
     /// Parse source text into a syntax tree.
@@ -44,6 +53,22 @@ public sealed class SyntaxTree
     /// </summary>
     public string ToFullString()
     {
-        return _root.ToFullString();
+        return _greenRoot.ToFullString();
+    }
+
+    /// <summary>
+    /// Find the node at the given position.
+    /// </summary>
+    public SyntaxNode? FindNode(int position)
+    {
+        return GetRoot().FindNode(position);
+    }
+
+    /// <summary>
+    /// Get all nodes of a specific type.
+    /// </summary>
+    public IEnumerable<T> GetNodes<T>() where T : SyntaxNode
+    {
+        return GetRoot().DescendantNodes<T>();
     }
 }
