@@ -320,3 +320,46 @@ internal sealed class ParallelExpressionGreen : GreenSyntaxNode
     {
     }
 }
+
+/// <summary>
+/// Key signature: key c major, key g minor
+/// </summary>
+internal sealed class KeySignatureGreen : GreenSyntaxNode
+{
+    public KeySignatureGreen(
+        SyntaxToken keyKeyword,
+        GreenNode pitch,
+        SyntaxToken mode)
+        : base(SyntaxKind.KeySignature, [keyKeyword, pitch, mode])
+    {
+    }
+}
+
+/// <summary>
+/// Clef declaration: clef treble, clef bass
+/// </summary>
+internal sealed class ClefDeclarationGreen : GreenSyntaxNode
+{
+    public ClefDeclarationGreen(
+        SyntaxToken clefKeyword,
+        SyntaxToken clefName)
+        : base(SyntaxKind.ClefDeclaration, [clefKeyword, clefName])
+    {
+    }
+}
+
+/// <summary>
+/// Tuplet expression: tuplet 3/2 { ... }
+/// </summary>
+internal sealed class TupletExpressionGreen : GreenSyntaxNode
+{
+    public TupletExpressionGreen(
+        SyntaxToken tupletKeyword,
+        SyntaxToken numerator,
+        SyntaxToken slash,
+        SyntaxToken denominator,
+        GreenNode body)
+        : base(SyntaxKind.TupletExpression, [tupletKeyword, numerator, slash, denominator, body])
+    {
+    }
+}

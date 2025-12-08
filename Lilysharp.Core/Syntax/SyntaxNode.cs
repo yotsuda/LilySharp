@@ -114,6 +114,9 @@ public abstract class SyntaxNode
             SyntaxKind.RepeatExpression => new RepeatExpressionSyntax((RepeatExpressionGreen)green, this, position),
             SyntaxKind.AlternativeClause => new AlternativeClauseSyntax((AlternativeClauseGreen)green, this, position),
             SyntaxKind.ParallelExpression => new ParallelExpressionSyntax((ParallelExpressionGreen)green, this, position),
+            SyntaxKind.KeySignature => new KeySignatureSyntax((KeySignatureGreen)green, this, position),
+            SyntaxKind.ClefDeclaration => new ClefDeclarationSyntax((ClefDeclarationGreen)green, this, position),
+            SyntaxKind.TupletExpression => new TupletExpressionSyntax((TupletExpressionGreen)green, this, position),
             _ => new GenericSyntaxNode(green, this, position)
         };
     }

@@ -479,4 +479,125 @@ score {
 }");
         Assert.False(tree.HasErrors);
     }
+
+    // ========== Key Signature ==========
+
+    [Fact]
+    public void ParseKeySignatureMajor()
+    {
+        var source = "key c major";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var keySig = tree.GetNodes<KeySignatureSyntax>().First();
+        Assert.Equal("c", keySig.Pitch.PitchName);
+        Assert.True(keySig.IsMajor);
+    }
+
+    [Fact]
+    public void ParseKeySignatureMinor()
+    {
+        var source = "key a minor";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var keySig = tree.GetNodes<KeySignatureSyntax>().First();
+        Assert.Equal("a", keySig.Pitch.PitchName);
+        Assert.False(keySig.IsMajor);
+    }
+
+    [Fact]
+    public void ParseKeySignatureWithAccidental()
+    {
+        var source = "key bes major";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var keySig = tree.GetNodes<KeySignatureSyntax>().First();
+        Assert.Equal("bes", keySig.Pitch.PitchName);
+    }
+
+    // ========== Clef ==========
+
+    [Fact]
+    public void ParseClefTreble()
+    {
+        var source = "clef treble";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var clef = tree.GetNodes<ClefDeclarationSyntax>().First();
+        Assert.Equal(SyntaxKind.TrebleKeyword, clef.ClefName.Kind);
+    }
+
+    [Fact]
+    public void ParseClefBass()
+    {
+        var source = "clef bass";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var clef = tree.GetNodes<ClefDeclarationSyntax>().First();
+        Assert.Equal(SyntaxKind.BassKeyword, clef.ClefName.Kind);
+    }
+
+    // ========== Tuplet ==========
+
+    [Fact]
+    public void ParseTupletTriplet()
+    {
+        var source = "tuplet 3/2 { c d e }";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var tuplet = tree.GetNodes<TupletExpressionSyntax>().First();
+        Assert.Equal(3, tuplet.TupletRatio);
+        Assert.Equal(2, tuplet.BaseDivision);
+        Assert.Equal(3, tuplet.Body.Items.Count());
+    }
+
+    [Fact]
+    public void ParseTupletQuintuplet()
+    {
+        var source = "tuplet 5/4 { c d e f g }";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var tuplet = tree.GetNodes<TupletExpressionSyntax>().First();
+        Assert.Equal(5, tuplet.TupletRatio);
+        Assert.Equal(4, tuplet.BaseDivision);
+    }
+
+    [Fact]
+    public void ParseKeyClefTupletCombined()
+    {
+        var source = @"
+clef treble
+key g major
+tuplet 3/2 { c d e }
+c4 d e f
+";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        Assert.Single(tree.GetNodes<ClefDeclarationSyntax>());
+        Assert.Single(tree.GetNodes<KeySignatureSyntax>());
+        Assert.Single(tree.GetNodes<TupletExpressionSyntax>());
+    }
+
+    [Fact]
+    public void RoundTripKeySignature()
+    {
+        var source = "key fis minor";
+        var tree = SyntaxTree.Parse(source);
+        Assert.Equal(source, tree.ToFullString());
+    }
+
+    [Fact]
+    public void RoundTripTuplet()
+    {
+        var source = "tuplet 3/2 { c d e }";
+        var tree = SyntaxTree.Parse(source);
+        Assert.Equal(source, tree.ToFullString());
+    }
 }

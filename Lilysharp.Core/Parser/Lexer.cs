@@ -395,6 +395,11 @@ internal sealed class Lexer
             // Mode keywords
             "major" => SyntaxKind.MajorKeyword,
             "minor" => SyntaxKind.MinorKeyword,
+            "tuplet" => SyntaxKind.TupletKeyword,
+            "treble" => SyntaxKind.TrebleKeyword,
+            "bass" => SyntaxKind.BassKeyword,
+            "alto" => SyntaxKind.AltoKeyword,
+            "tenor" => SyntaxKind.TenorKeyword,
 
             // Articulation names
             "staccato" or "stac" => SyntaxKind.StaccatoKeyword,

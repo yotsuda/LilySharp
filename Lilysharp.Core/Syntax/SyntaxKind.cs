@@ -60,6 +60,11 @@ public enum SyntaxKind : ushort
     ClefKeyword,
     MajorKeyword,
     MinorKeyword,
+    TupletKeyword,
+    TrebleKeyword,
+    BassKeyword,
+    AltoKeyword,
+    TenorKeyword,
     
     // === Rest ===
     RestR,              // r
@@ -152,4 +157,11 @@ public enum SyntaxKind : ushort
     // Properties
     PropertyAssignment,
     MetadataDeclaration,
+    
+    // Key and clef
+    KeySignature,
+    ClefDeclaration,
+    
+    // Tuplet
+    TupletExpression,
 }

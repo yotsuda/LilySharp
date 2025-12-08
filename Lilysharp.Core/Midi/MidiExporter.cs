@@ -14,6 +14,7 @@ public class MidiExporter
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _tempo = 120;
     private int _velocity = 80;
+    private readonly Stack<(int numerator, int denominator)> _tupletStack = new();
     
     public MidiExporter(int ticksPerQuarter = MidiFile.DefaultTicksPerQuarter)
     {
@@ -88,6 +89,12 @@ public class MidiExporter
                 
             case RepeatExpressionSyntax repeat:
                 ProcessRepeat(repeat, track, conductorTrack);
+                break;
+                
+            case TupletExpressionSyntax tuplet:
+                _tupletStack.Push((tuplet.TupletRatio, tuplet.BaseDivision));
+                ProcessNode(tuplet.Body, track, conductorTrack);
+                _tupletStack.Pop();
                 break;
                 
             case ParallelExpressionSyntax parallel:
@@ -232,7 +239,15 @@ public class MidiExporter
     
     private int FractionToTicks(Fraction duration)
     {
-        return (int)(duration.Numerator * 4 * _ticksPerQuarter / duration.Denominator);
+        int baseTicks = (int)(duration.Numerator * 4 * _ticksPerQuarter / duration.Denominator);
+        
+        // Apply tuplet scaling: each note plays in (denominator/numerator) of normal time
+        foreach (var (numerator, denominator) in _tupletStack)
+        {
+            baseTicks = baseTicks * denominator / numerator;
+        }
+        
+        return baseTicks;
     }
     
     private static int BpmToMicroseconds(int bpm) => 60_000_000 / bpm;

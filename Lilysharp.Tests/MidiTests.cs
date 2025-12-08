@@ -122,4 +122,28 @@ public class MidiTests
         
         Assert.True(midi.Tracks[1].Notes.Count > 0);
     }
+
+    [Fact]
+    public void ExportTupletTriplet()
+    {
+        // Triplet: 3 notes in the time of 2 quarter notes
+        var source = "tuplet 3/2 { c4 d4 e4 }";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MidiExporter();
+        var midi = exporter.Export(tree);
+        
+        var notes = midi.Tracks.Skip(1).First().Notes;
+        Assert.Equal(3, notes.Count);
+        
+        // Each quarter note in triplet should be 2/3 of normal duration
+        // Normal quarter = 480 ticks, triplet quarter = 480 * 2/3 = 320 ticks
+        Assert.Equal(320, notes[0].DurationTicks);
+        Assert.Equal(320, notes[1].DurationTicks);
+        Assert.Equal(320, notes[2].DurationTicks);
+        
+        // Total duration should equal 2 quarter notes = 960 ticks
+        Assert.Equal(0, notes[0].StartTick);
+        Assert.Equal(320, notes[1].StartTick);
+        Assert.Equal(640, notes[2].StartTick);
+    }
 }

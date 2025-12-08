@@ -94,8 +94,10 @@ internal sealed class Parser
             SyntaxKind.LetKeyword => ParseVariableDeclaration(),
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
-            SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or 
-            SyntaxKind.KeyKeyword => ParseMetadataDeclaration(),
+            SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword => ParseMetadataDeclaration(),
+            SyntaxKind.KeyKeyword => ParseKeySignature(),
+            SyntaxKind.ClefKeyword => ParseClefDeclaration(),
+            SyntaxKind.TupletKeyword => ParseTupletExpression(),
             SyntaxKind.OpenBrace => ParseMusicBlock(),
             _ when IsMusicItemStart() => ParseMusicItem(),
             _ => null
@@ -348,6 +350,9 @@ internal sealed class Parser
             SyntaxKind.Tilde => true,
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => true,
             SyntaxKind.RepeatKeyword => true,
+            SyntaxKind.TupletKeyword => true,
+            SyntaxKind.KeyKeyword => true,
+            SyntaxKind.ClefKeyword => true,
             _ => false
         };
     }
@@ -376,6 +381,10 @@ internal sealed class Parser
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
             
             SyntaxKind.RepeatKeyword => ParseRepeatExpression(),
+            SyntaxKind.TupletKeyword => ParseTupletExpression(),
+            SyntaxKind.KeyKeyword => ParseKeySignature(),
+            SyntaxKind.ClefKeyword => ParseClefDeclaration(),
+            
 
             _ => null
         };
@@ -638,5 +647,60 @@ private GreenNode?[] ParseArticulations()
         var openBrace = new SyntaxToken(SyntaxKind.OpenBrace, "", null, null);
         var closeBrace = new SyntaxToken(SyntaxKind.CloseBrace, "", null, null);
         return new MusicBlockGreen(openBrace, [.. items], closeBrace);
+    }
+
+    // ========== Key, Clef, Tuplet ==========
+
+    private KeySignatureGreen ParseKeySignature()
+    {
+        var keyKeyword = Expect(SyntaxKind.KeyKeyword);
+        var pitch = ParsePitch();
+        
+        SyntaxToken mode;
+        if (Check(SyntaxKind.MajorKeyword) || Check(SyntaxKind.MinorKeyword))
+        {
+            mode = Advance();
+        }
+        else
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                "Expected 'major' or 'minor'");
+            mode = new SyntaxToken(SyntaxKind.MajorKeyword, "major", null, null);
+        }
+        
+        return new KeySignatureGreen(keyKeyword, pitch, mode);
+    }
+
+    private ClefDeclarationGreen ParseClefDeclaration()
+    {
+        var clefKeyword = Expect(SyntaxKind.ClefKeyword);
+        
+        SyntaxToken clefName;
+        if (CheckAny(SyntaxKind.TrebleKeyword, SyntaxKind.BassKeyword, 
+                     SyntaxKind.AltoKeyword, SyntaxKind.TenorKeyword))
+        {
+            clefName = Advance();
+        }
+        else
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                "Expected clef name (treble, bass, alto, tenor)");
+            clefName = new SyntaxToken(SyntaxKind.TrebleKeyword, "treble", null, null);
+        }
+        
+        return new ClefDeclarationGreen(clefKeyword, clefName);
+    }
+
+    private TupletExpressionGreen ParseTupletExpression()
+    {
+        var tupletKeyword = Expect(SyntaxKind.TupletKeyword);
+        var numerator = Expect(SyntaxKind.IntegerLiteral);
+        var slash = Expect(SyntaxKind.Slash);
+        var denominator = Expect(SyntaxKind.IntegerLiteral);
+        var body = ParseMusicBlock();
+        
+        return new TupletExpressionGreen(tupletKeyword, numerator, slash, denominator, body);
     }
 }

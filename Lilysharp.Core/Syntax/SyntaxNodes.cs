@@ -381,3 +381,61 @@ public sealed class ParallelExpressionSyntax : SyntaxNode
         }
     }
 }
+
+/// <summary>
+/// Key signature: key c major
+/// </summary>
+public sealed class KeySignatureSyntax : SyntaxNode
+{
+    internal KeySignatureSyntax(InternalSyntax.KeySignatureGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode KeyKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public PitchSyntax Pitch => (PitchSyntax)GetChild(1)!;
+    public SyntaxTokenNode Mode => (SyntaxTokenNode)GetChild(2)!;
+    
+    public bool IsMajor => Mode.Kind == SyntaxKind.MajorKeyword;
+}
+
+/// <summary>
+/// Clef declaration: clef treble
+/// </summary>
+public sealed class ClefDeclarationSyntax : SyntaxNode
+{
+    internal ClefDeclarationSyntax(InternalSyntax.ClefDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode ClefKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode ClefName => (SyntaxTokenNode)GetChild(1)!;
+}
+
+/// <summary>
+/// Tuplet expression: tuplet 3/2 { ... }
+/// </summary>
+public sealed class TupletExpressionSyntax : SyntaxNode
+{
+    internal TupletExpressionSyntax(InternalSyntax.TupletExpressionGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode TupletKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode Numerator => (SyntaxTokenNode)GetChild(1)!;
+    public SyntaxTokenNode Slash => (SyntaxTokenNode)GetChild(2)!;
+    public SyntaxTokenNode Denominator => (SyntaxTokenNode)GetChild(3)!;
+    public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(4)!;
+    
+    /// <summary>
+    /// Gets the tuplet ratio (e.g., 3 for triplets)
+    /// </summary>
+    public int TupletRatio => int.TryParse(Numerator.Text, out int n) ? n : 3;
+    
+    /// <summary>
+    /// Gets the base division (e.g., 2 for triplets in place of 2)
+    /// </summary>
+    public int BaseDivision => int.TryParse(Denominator.Text, out int d) ? d : 2;
+}
