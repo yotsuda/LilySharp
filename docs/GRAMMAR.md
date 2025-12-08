@@ -1,6 +1,6 @@
-# Lilysharp Grammar Specification
-# Version: 0.1.0
-# Date: 2024-12-08
+﻿# Lilysharp Grammar Specification
+# Version: 0.2.0
+# Date: 2025-12-09
 
 ## Design Principles
 
