@@ -48,6 +48,11 @@ public sealed class LilysharpLanguageServer
                     ResolveProvider = false
                 },
                 HoverProvider = true,
+                SignatureHelpProvider = new SignatureHelpOptions
+                {
+                    TriggerCharacters = new[] { " " },
+                    RetriggerCharacters = new[] { " " }
+                },
                 DocumentSymbolProvider = true,
                 DefinitionProvider = true,
                 ReferencesProvider = true,
@@ -1232,5 +1237,160 @@ public sealed class LilysharpLanguageServer
         }
         
         return actions;
+    }
+
+    // ========== Signature Help ==========
+
+    [JsonRpcMethod(Methods.TextDocumentSignatureHelpName)]
+    public SignatureHelp? GetSignatureHelp(SignatureHelpParams @params)
+    {
+        var uri = @params.TextDocument.Uri;
+        var doc = _documentManager.GetDocument(uri);
+        if (doc == null) return null;
+
+        var position = @params.Position;
+        var offset = GetOffset(doc.Text, position.Line, position.Character);
+        
+        // Look backwards for a keyword
+        var lineStart = doc.Text.LastIndexOf('\n', Math.Max(0, offset - 1)) + 1;
+        var lineText = doc.Text[lineStart..offset];
+        
+        // Check for keywords that have signatures
+        var signatures = new List<SignatureInformation>();
+        int activeParameter = 0;
+        
+        if (lineText.Contains("relative"))
+        {
+            var paramIndex = lineText.IndexOf("relative") + "relative".Length;
+            activeParameter = CountSpaces(lineText[paramIndex..]);
+            
+            signatures.Add(new SignatureInformation
+            {
+                Label = "relative pitch { music }",
+                Documentation = "Sets relative pitch mode. Notes are interpreted relative to the previous note.",
+                Parameters = new[]
+                {
+                    new ParameterInformation { Label = "pitch", Documentation = "Base pitch with optional octave marks (e.g., c', c'')" },
+                    new ParameterInformation { Label = "{ music }", Documentation = "Music block containing notes" }
+                }
+            });
+        }
+        else if (lineText.Contains("repeat"))
+        {
+            var paramIndex = lineText.IndexOf("repeat") + "repeat".Length;
+            activeParameter = CountSpaces(lineText[paramIndex..]);
+            
+            signatures.Add(new SignatureInformation
+            {
+                Label = "repeat count { music } [alternative { ... }]",
+                Documentation = "Repeats the music block the specified number of times.",
+                Parameters = new[]
+                {
+                    new ParameterInformation { Label = "count", Documentation = "Number of repetitions (integer)" },
+                    new ParameterInformation { Label = "{ music }", Documentation = "Music block to repeat" },
+                    new ParameterInformation { Label = "alternative { ... }", Documentation = "Optional different endings" }
+                }
+            });
+        }
+        else if (lineText.Contains("tempo"))
+        {
+            var paramIndex = lineText.IndexOf("tempo") + "tempo".Length;
+            activeParameter = CountSpaces(lineText[paramIndex..]);
+            
+            signatures.Add(new SignatureInformation
+            {
+                Label = "tempo \"marking\" duration = bpm",
+                Documentation = "Sets the tempo for playback.",
+                Parameters = new[]
+                {
+                    new ParameterInformation { Label = "\"marking\"", Documentation = "Optional tempo marking (e.g., \"Allegro\")" },
+                    new ParameterInformation { Label = "duration", Documentation = "Note duration (e.g., 4 for quarter note)" },
+                    new ParameterInformation { Label = "bpm", Documentation = "Beats per minute" }
+                }
+            });
+        }
+        else if (lineText.Contains("time"))
+        {
+            var paramIndex = lineText.IndexOf("time") + "time".Length;
+            activeParameter = CountSpaces(lineText[paramIndex..]);
+            
+            signatures.Add(new SignatureInformation
+            {
+                Label = "time numerator/denominator",
+                Documentation = "Sets the time signature.",
+                Parameters = new[]
+                {
+                    new ParameterInformation { Label = "numerator/denominator", Documentation = "Time signature (e.g., 4/4, 3/4, 6/8)" }
+                }
+            });
+        }
+        else if (lineText.Contains("key"))
+        {
+            var paramIndex = lineText.IndexOf("key") + "key".Length;
+            activeParameter = CountSpaces(lineText[paramIndex..]);
+            
+            signatures.Add(new SignatureInformation
+            {
+                Label = "key pitch major|minor",
+                Documentation = "Sets the key signature.",
+                Parameters = new[]
+                {
+                    new ParameterInformation { Label = "pitch", Documentation = "Key pitch (e.g., c, g, fis, bes)" },
+                    new ParameterInformation { Label = "major|minor", Documentation = "Mode: major or minor" }
+                }
+            });
+        }
+        else if (lineText.Contains("tuplet"))
+        {
+            var paramIndex = lineText.IndexOf("tuplet") + "tuplet".Length;
+            activeParameter = CountSpaces(lineText[paramIndex..]);
+            
+            signatures.Add(new SignatureInformation
+            {
+                Label = "tuplet ratio { music }",
+                Documentation = "Creates a tuplet (e.g., triplet).",
+                Parameters = new[]
+                {
+                    new ParameterInformation { Label = "ratio", Documentation = "Ratio (e.g., 3/2 for triplet)" },
+                    new ParameterInformation { Label = "{ music }", Documentation = "Notes in the tuplet" }
+                }
+            });
+        }
+        else if (lineText.Contains("let"))
+        {
+            var paramIndex = lineText.IndexOf("let") + "let".Length;
+            activeParameter = CountSpaces(lineText[paramIndex..]);
+            
+            signatures.Add(new SignatureInformation
+            {
+                Label = "let name = expression",
+                Documentation = "Declares a variable.",
+                Parameters = new[]
+                {
+                    new ParameterInformation { Label = "name", Documentation = "Variable name (identifier)" },
+                    new ParameterInformation { Label = "expression", Documentation = "Value to assign" }
+                }
+            });
+        }
+        
+        if (signatures.Count == 0)
+            return null;
+            
+        return new SignatureHelp
+        {
+            Signatures = signatures.ToArray(),
+            ActiveSignature = 0,
+            ActiveParameter = Math.Min(activeParameter, signatures[0].Parameters?.Length - 1 ?? 0)
+        };
+    }
+
+    private static int CountSpaces(string text)
+    {
+        int count = 0;
+        foreach (var c in text)
+        {
+            if (c == ' ' && count < 10) count++;
+        }
+        return Math.Max(0, count - 1);
     }
 }
