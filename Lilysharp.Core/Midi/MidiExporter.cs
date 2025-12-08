@@ -96,6 +96,9 @@ public class MidiExporter
                 ProcessNode(tuplet.Body, track, conductorTrack);
                 _tupletStack.Pop();
                 break;
+            case GraceExpressionSyntax grace:
+                ProcessGrace(grace, track);
+                break;
                 
             case ParallelExpressionSyntax parallel:
                 var voices = parallel.Voices.ToList();
@@ -251,4 +254,36 @@ public class MidiExporter
     }
     
     private static int BpmToMicroseconds(int bpm) => 60_000_000 / bpm;
+    
+    private void ProcessGrace(GraceExpressionSyntax grace, MidiTrack track)
+    {
+        // Grace notes steal time from the following note
+        // For now, use a fixed short duration (1/32 note per grace note)
+        int graceDuration = _ticksPerQuarter / 8; // 1/32 note
+        
+        // Collect all notes in the grace expression
+        var graceNotes = grace.Body.Items.OfType<NoteSyntax>().ToList();
+        
+        // Temporarily set shorter duration for grace notes
+        var savedDefaultDuration = _defaultDuration;
+        _defaultDuration = new Fraction(1, 32);
+        
+        foreach (var note in graceNotes)
+        {
+            var (pitchClass, octave) = ParsePitch(note.Pitch);
+            int midiPitch = (octave + 1) * 12 + pitchClass;
+            
+            track.Notes.Add(new MidiNote(
+                track.Channel,
+                midiPitch,
+                _velocity,
+                _currentTick,
+                graceDuration
+            ));
+            
+            _currentTick += graceDuration;
+        }
+        
+        _defaultDuration = savedDefaultDuration;
+    }
 }

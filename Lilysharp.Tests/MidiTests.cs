@@ -146,4 +146,22 @@ public class MidiTests
         Assert.Equal(320, notes[1].StartTick);
         Assert.Equal(640, notes[2].StartTick);
     }
+
+    [Fact]
+    public void ExportGraceNotes()
+    {
+        var source = "grace { c8 d } e4";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MidiExporter();
+        var midi = exporter.Export(tree);
+        
+        var notes = midi.Tracks.Skip(1).First().Notes;
+        
+        // 2 grace notes + 1 main note = 3 notes total
+        Assert.Equal(3, notes.Count);
+        
+        // Grace notes should have short duration (1/32 = 60 ticks at 480 PPQ)
+        Assert.Equal(60, notes[0].DurationTicks);
+        Assert.Equal(60, notes[1].DurationTicks);
+    }
 }
