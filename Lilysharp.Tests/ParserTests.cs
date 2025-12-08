@@ -643,4 +643,31 @@ c4 d e f
         var tree = SyntaxTree.Parse(source);
         Assert.Equal(source, tree.ToFullString());
     }
+
+    // ========== Lyrics ==========
+
+    [Fact]
+    public void ParseLyricsBlock()
+    {
+        var source = "lyrics { Hap -- py birth -- day }";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var lyrics = tree.GetNodes<LyricsBlockSyntax>().First();
+        Assert.NotEmpty(lyrics.Syllables);
+    }
+
+    [Fact]
+    public void ParseMusicWithLyrics()
+    {
+        var source = @"
+{ c d e f g }
+lyrics { do re mi fa sol }
+";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        Assert.Single(tree.GetNodes<LyricsBlockSyntax>());
+        Assert.Equal(5, tree.GetNodes<NoteSyntax>().Count());
+    }
 }
