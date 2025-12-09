@@ -209,12 +209,33 @@ public sealed class ChordSyntax : SyntaxNode
     {
     }
 
-    public IEnumerable<PitchSyntax> Pitches => DescendantNodes<PitchSyntax>();
+    public IEnumerable<PitchSyntax> Pitches
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is PitchSyntax pitch)
+                    yield return pitch;
+            }
+        }
+    }
     
     /// <summary>
     /// Gets the duration of the chord (after the closing angle bracket).
     /// </summary>
-    public DurationSyntax? Duration => DescendantNodes<DurationSyntax>().FirstOrDefault();
+    public DurationSyntax? Duration
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is DurationSyntax duration)
+                    return duration;
+            }
+            return null;
+        }
+    }
     
     /// <summary>
     /// Gets the articulations attached to this chord.
