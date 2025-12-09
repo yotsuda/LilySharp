@@ -110,6 +110,16 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+
+    // Watch for cursor position changes
+    context.subscriptions.push(
+        vscode.window.onDidChangeTextEditorSelection(event => {
+            if (event.textEditor.document.languageId === 'lilysharp' && previewPanel) {
+                const position = event.textEditor.document.offsetAt(event.selections[0].active);
+                previewPanel.webview.postMessage({ type: 'highlightPosition', position });
+            }
+        })
+    );
     
     outputChannel.appendLine('Lilysharp extension activated');
 }
@@ -233,12 +243,20 @@ function getPreviewHtml(svg: string): string {
         .zoom-info.visible {
             opacity: 1;
         }
+        .highlight {
+            fill: #ff6600 !important;
+            filter: drop-shadow(0 0 4px #ff6600);
+        }
         @media (prefers-color-scheme: dark) {
             body {
                 background: #1e1e1e;
             }
             svg {
                 filter: invert(1) hue-rotate(180deg);
+            }
+            .highlight {
+                fill: #00ccff !important;
+                filter: drop-shadow(0 0 4px #00ccff);
             }
         }
     </style>
@@ -254,13 +272,13 @@ function getPreviewHtml(svg: string): string {
         const minScale = 0.25;
         const maxScale = 4;
         const scaleStep = 0.1;
-        const svg = document.querySelector('svg');
+        const svgEl = document.querySelector('svg');
         const zoomInfo = document.getElementById('zoomInfo');
         let hideTimeout;
 
         function updateZoom() {
-            if (svg) {
-                svg.style.transform = 'scale(' + scale + ')';
+            if (svgEl) {
+                svgEl.style.transform = 'scale(' + scale + ')';
             }
             zoomInfo.textContent = Math.round(scale * 100) + '%';
             zoomInfo.classList.add('visible');
@@ -269,6 +287,33 @@ function getPreviewHtml(svg: string): string {
                 zoomInfo.classList.remove('visible');
             }, 1500);
         }
+
+        function highlightNearestElement(cursorPos) {
+            document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+            const elements = document.querySelectorAll('[data-pos]');
+            let nearest = null;
+            let nearestDist = Infinity;
+            elements.forEach(el => {
+                const pos = parseInt(el.getAttribute('data-pos'), 10);
+                if (pos <= cursorPos) {
+                    const dist = cursorPos - pos;
+                    if (dist < nearestDist) {
+                        nearestDist = dist;
+                        nearest = el;
+                    }
+                }
+            });
+            if (nearest && nearestDist < 50) {
+                nearest.classList.add('highlight');
+            }
+        }
+
+        window.addEventListener('message', event => {
+            const message = event.data;
+            if (message.type === 'highlightPosition') {
+                highlightNearestElement(message.position);
+            }
+        });
 
         document.addEventListener('wheel', (e) => {
             if (e.ctrlKey) {
@@ -290,7 +335,6 @@ function getPreviewHtml(svg: string): string {
 </body>
 </html>`;
 }
-
 function getErrorHtml(error: string): string {
     return `<!DOCTYPE html>
 <html>

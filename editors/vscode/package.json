@@ -145,6 +145,12 @@
     },
     "keybindings": [
       {
+        "command": "lilysharp.openPreview",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "resourceLangId == lilysharp"
+      },
+      {
         "command": "lilysharp.openPreviewToSide",
         "key": "ctrl+k v",
         "mac": "cmd+k v",
