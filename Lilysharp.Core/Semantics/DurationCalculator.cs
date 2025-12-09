@@ -76,9 +76,10 @@ public static class DurationCalculator
                     break;
 
                 case ChordSyntax chord:
-                    // Chord duration - get from first pitch or default
-                    // TODO: proper chord duration handling
-                    total += currentDefault;
+                    var chordDuration = chord.Duration?.ToFraction() ?? currentDefault;
+                    if (chord.Duration != null)
+                        currentDefault = chordDuration;
+                    total += chordDuration;
                     break;
 
                 case BarlineSyntax:

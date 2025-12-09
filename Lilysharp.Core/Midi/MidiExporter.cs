@@ -6,7 +6,7 @@ namespace Lilysharp.Core.Midi;
 /// <summary>
 /// Exports a Lilysharp syntax tree to MIDI format.
 /// </summary>
-public class MidiExporter
+public sealed class MidiExporter
 {
     private readonly int _ticksPerQuarter;
     private int _currentTick;

@@ -37,19 +37,17 @@ public sealed class MeasureValidator
                 ValidateMusicBlock(block);
                 break;
 
-            case MetadataDeclarationSyntax metadata:
-                // Check for time signature changes
-                if (metadata.KeywordToken.Kind == SyntaxKind.TimeKeyword)
-                {
-                    // TODO: Extract time signature from metadata
-                }
+            case TimeSignatureSyntax timeSig:
+                SetTimeSignature(timeSig.Beats, timeSig.BeatType);
                 break;
 
-            case PropertyAssignmentSyntax prop:
-                if (prop.NameToken.Kind == SyntaxKind.TimeKeyword)
-                {
-                    // TODO: Extract time signature from property
-                }
+            case MetadataDeclarationSyntax:
+                // MetadataDeclaration now only handles title/composer
+                // Time signatures use TimeSignatureSyntax
+                break;
+
+            case PropertyAssignmentSyntax:
+                // Property assignments are handled within blocks
                 break;
         }
 
