@@ -218,6 +218,28 @@ internal sealed class PropertyAssignmentGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// <summary>
+/// Time signature: time 4/4
+/// </summary>
+internal sealed class TimeSignatureGreen : GreenSyntaxNode
+{
+    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken numerator, SyntaxToken slash, SyntaxToken denominator)
+        : base(SyntaxKind.TimeSignature, [timeKeyword, numerator, slash, denominator])
+    {
+    }
+}
+
+/// <summary>
+/// Tempo declaration: tempo "Allegro" 4 = 120 or tempo 120
+/// </summary>
+internal sealed class TempoDeclarationGreen : GreenSyntaxNode
+{
+    public TempoDeclarationGreen(SyntaxToken tempoKeyword, GreenNode?[] values)
+        : base(SyntaxKind.TempoDeclaration, [tempoKeyword, .. values])
+    {
+    }
+}
+
 /// Metadata declaration: title "value" or tempo 120
 /// </summary>
 internal sealed class MetadataDeclarationGreen : GreenSyntaxNode

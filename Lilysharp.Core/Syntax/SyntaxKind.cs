@@ -162,6 +162,8 @@ public enum SyntaxKind : ushort
     // Properties
     PropertyAssignment,
     MetadataDeclaration,
+    TimeSignature,
+    TempoDeclaration,
     
     // Key and clef
     KeySignature,

@@ -107,6 +107,31 @@ public sealed class PitchSyntax : SyntaxNode
             return offset;
         }
     }
+
+    /// <summary>
+    /// The base pitch letter (c, d, e, f, g, a, b) without accidentals.
+    /// </summary>
+    public char BaseName => char.ToLower(PitchName[0]);
+    
+    /// <summary>
+    /// The accidental suffix (is, es, isis, eses, s, as) or empty string.
+    /// </summary>
+    public string Accidental => PitchName.Length > 1 ? PitchName[1..] : string.Empty;
+    
+    /// <summary>
+    /// Gets the accidental as semitone offset (-2 to +2).
+    /// </summary>
+    public int AccidentalOffset => Accidental switch
+    {
+        "isis" => 2,
+        "is" => 1,
+        "" => 0,
+        "es" or "s" => -1,
+        "eses" or "ses" => -2,
+        "as" => -1,  // Special case for aes -> as
+        "aes" => -1,
+        _ => 0
+    };
 }
 
 /// <summary>
@@ -306,6 +331,128 @@ public sealed class PropertyAssignmentSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Time signature: time 4/4
+/// </summary>
+public sealed class TimeSignatureSyntax : SyntaxNode
+{
+    internal TimeSignatureSyntax(InternalSyntax.TimeSignatureGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode TimeKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode Numerator => (SyntaxTokenNode)GetChild(1)!;
+    public SyntaxTokenNode Slash => (SyntaxTokenNode)GetChild(2)!;
+    public SyntaxTokenNode Denominator => (SyntaxTokenNode)GetChild(3)!;
+    
+    /// <summary>
+    /// Gets the numerator value (e.g., 4 for 4/4).
+    /// </summary>
+    public int Beats => int.TryParse(Numerator.Text, out var n) ? n : 4;
+    
+    /// <summary>
+    /// Gets the denominator value (e.g., 4 for 4/4).
+    /// </summary>
+    public int BeatType => int.TryParse(Denominator.Text, out var n) ? n : 4;
+}
+
+/// <summary>
+/// Tempo declaration: tempo "Allegro" 4 = 120 or tempo 120
+/// </summary>
+public sealed class TempoDeclarationSyntax : SyntaxNode
+{
+    internal TempoDeclarationSyntax(InternalSyntax.TempoDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode TempoKeyword => (SyntaxTokenNode)GetChild(0)!;
+    
+    /// <summary>
+    /// Gets all value tokens after the keyword.
+    /// </summary>
+    public IEnumerable<SyntaxNode> Values
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets the tempo marking string (e.g., "Allegro"), if present.
+    /// </summary>
+    public string? Marking
+    {
+        get
+        {
+            foreach (var value in Values)
+            {
+                if (value is SyntaxTokenNode token && token.Kind == SyntaxKind.StringLiteral)
+                    return token.Text.Trim('"');
+            }
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// Gets the BPM value, if present.
+    /// </summary>
+    public int? Bpm
+    {
+        get
+        {
+            // Look for the last integer (BPM is usually at the end)
+            int? lastInt = null;
+            foreach (var value in Values)
+            {
+                if (value is SyntaxTokenNode token && 
+                    (token.Kind == SyntaxKind.IntegerLiteral || token.Kind == SyntaxKind.DurationNumber))
+                {
+                    if (int.TryParse(token.Text, out var n))
+                        lastInt = n;
+                }
+            }
+            return lastInt;
+        }
+    }
+    
+    /// <summary>
+    /// Gets the beat unit (e.g., 4 for quarter note), if present.
+    /// </summary>
+    public int? BeatUnit
+    {
+        get
+        {
+            // Look for the first integer before '=' (beat unit)
+            bool foundEquals = false;
+            foreach (var value in Values)
+            {
+                if (value is SyntaxTokenNode token)
+                {
+                    if (token.Kind == SyntaxKind.Equals)
+                    {
+                        foundEquals = true;
+                        break;
+                    }
+                    if (token.Kind == SyntaxKind.IntegerLiteral || token.Kind == SyntaxKind.DurationNumber)
+                    {
+                        if (int.TryParse(token.Text, out var n))
+                            return n;
+                    }
+                }
+            }
+            return foundEquals ? 4 : null; // Default to quarter note if = is present
+        }
+    }
+}
+
+/// <summary>
 /// Metadata declaration: title "value" or tempo 120
 /// </summary>
 public sealed class MetadataDeclarationSyntax : SyntaxNode
@@ -316,6 +463,63 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
+    
+    /// <summary>
+    /// Gets the keyword text (e.g., "title", "tempo", "time").
+    /// </summary>
+    public string Keyword => KeywordToken.Text;
+    
+    /// <summary>
+    /// Gets all value tokens after the keyword.
+    /// </summary>
+    public IEnumerable<SyntaxNode> Values
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets the first string literal value, if any.
+    /// </summary>
+    public string? StringValue
+    {
+        get
+        {
+            foreach (var value in Values)
+            {
+                if (value is SyntaxTokenNode token && token.Kind == SyntaxKind.StringLiteral)
+                    return token.Text.Trim('"');
+            }
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// Gets the first integer value, if any.
+    /// </summary>
+    public int? IntegerValue
+    {
+        get
+        {
+            foreach (var value in Values)
+            {
+                if (value is SyntaxTokenNode token && 
+                    (token.Kind == SyntaxKind.IntegerLiteral || token.Kind == SyntaxKind.DurationNumber))
+                {
+                    if (int.TryParse(token.Text, out var result))
+                        return result;
+                }
+            }
+            return null;
+        }
+    }
 }
 
 /// <summary>

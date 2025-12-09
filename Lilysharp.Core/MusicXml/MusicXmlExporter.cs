@@ -77,6 +77,14 @@ public sealed class MusicXmlExporter
                     ProcessNode(member);
                 break;
                 
+            case TimeSignatureSyntax timeSig:
+                ProcessTimeSignature(timeSig);
+                break;
+                
+            case TempoDeclarationSyntax tempo:
+                ProcessTempo(tempo);
+                break;
+                
             case MetadataDeclarationSyntax metadata:
                 ProcessMetadata(metadata);
                 break;
@@ -133,51 +141,28 @@ public sealed class MusicXmlExporter
         }
     }
 
+    private void ProcessTimeSignature(TimeSignatureSyntax timeSig)
+    {
+        _timeNumerator = timeSig.Beats;
+        _timeDenominator = timeSig.BeatType;
+    }
+
+    private void ProcessTempo(TempoDeclarationSyntax tempo)
+    {
+        if (tempo.Bpm is int bpm)
+            _tempo = bpm;
+    }
+
     private void ProcessMetadata(MetadataDeclarationSyntax metadata)
     {
         if (_document == null) return;
         
-        var keyword = metadata.KeywordToken.Text.ToLowerInvariant();
+        var keyword = metadata.Keyword.ToLowerInvariant();
         
-        // Get string value if present
-        for (int i = 1; i < metadata.SlotCount; i++)
-        {
-            if (metadata.GetChild(i) is SyntaxTokenNode token)
-            {
-                if (token.Kind == SyntaxKind.StringLiteral)
-                {
-                    var value = token.Text.Trim('"');
-                    if (keyword == "title")
-                        _document.Title = value;
-                    else if (keyword == "composer")
-                        _document.Composer = value;
-                }
-                else if (token.Kind == SyntaxKind.DurationNumber || token.Kind == SyntaxKind.IntegerLiteral)
-                {
-                    if (keyword == "tempo" && int.TryParse(token.Text, out var bpm))
-                        _tempo = bpm;
-                }
-            }
-        }
-        
-        // Handle time signature: time 4/4
-        if (keyword == "time")
-        {
-            for (int i = 1; i < metadata.SlotCount; i++)
-            {
-                if (metadata.GetChild(i) is SyntaxTokenNode token && 
-                    (token.Kind == SyntaxKind.DurationNumber || token.Kind == SyntaxKind.IntegerLiteral))
-                {
-                    if (int.TryParse(token.Text, out var num))
-                    {
-                        if (_timeNumerator == 4 && _timeDenominator == 4) // first number
-                            _timeNumerator = num;
-                        else
-                            _timeDenominator = num;
-                    }
-                }
-            }
-        }
+        if (keyword == "title" && metadata.StringValue is string title)
+            _document.Title = title;
+        else if (keyword == "composer" && metadata.StringValue is string composer)
+            _document.Composer = composer;
     }
 
     private void ProcessKeySignature(KeySignatureSyntax key)

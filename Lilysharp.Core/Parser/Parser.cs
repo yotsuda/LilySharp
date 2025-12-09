@@ -58,6 +58,21 @@ internal sealed class Parser
         return new SyntaxToken(kind, "", Current.LeadingTrivia, null);
     }
 
+    private SyntaxToken Expect(params SyntaxKind[] kinds)
+    {
+        if (CheckAny(kinds))
+            return Advance();
+        
+        // Report error
+        var span = new TextSpan(_textPosition, Current.FullWidth);
+        var expected = string.Join(" or ", kinds.Select(k => $"'{k}'"));
+        _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+            $"Expected {expected}, found '{Current.Kind}'");
+        
+        // Error recovery: create a missing token
+        return new SyntaxToken(kinds[0], "", Current.LeadingTrivia, null);
+    }
+
     private SyntaxToken? TryConsume(SyntaxKind kind)
     {
         if (Check(kind))
@@ -94,7 +109,8 @@ internal sealed class Parser
             SyntaxKind.LetKeyword => ParseVariableDeclaration(),
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
-            SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword => ParseMetadataDeclaration(),
+            SyntaxKind.TimeKeyword => ParseTimeSignature(),
+            SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),
             
@@ -136,7 +152,8 @@ internal sealed class Parser
         return Current.Kind switch
         {
             SyntaxKind.PartKeyword => ParsePartDeclaration(),
-            SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or 
+            SyntaxKind.TimeKeyword => ParseTimeSignature(),
+            SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.KeyKeyword => ParsePropertyAssignment(),
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParsePropertyAssignment(),
             _ => null
@@ -170,8 +187,9 @@ internal sealed class Parser
         {
             SyntaxKind.StaffKeyword => ParseStaffDeclaration(),
             SyntaxKind.RelativeKeyword => ParseRelativeExpression(),
-            SyntaxKind.ClefKeyword or SyntaxKind.TempoKeyword or 
-            SyntaxKind.TimeKeyword or SyntaxKind.KeyKeyword => ParsePropertyAssignment(),
+            SyntaxKind.ClefKeyword or SyntaxKind.KeyKeyword => ParsePropertyAssignment(),
+            SyntaxKind.TimeKeyword => ParseTimeSignature(),
+            SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
             SyntaxKind.OpenBrace => ParseMusicBlock(),
             _ when IsMusicItemStart() => ParseMusicItem(),
@@ -273,6 +291,32 @@ internal sealed class Parser
         }
         
         return new MetadataDeclarationGreen(keyword, [.. valueTokens]);
+    }
+
+    private TimeSignatureGreen ParseTimeSignature()
+    {
+        var timeKeyword = Expect(SyntaxKind.TimeKeyword);
+        var numerator = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
+        var slash = Expect(SyntaxKind.Slash);
+        var denominator = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
+        return new TimeSignatureGreen(timeKeyword, numerator, slash, denominator);
+    }
+
+    private TempoDeclarationGreen ParseTempoDeclaration()
+    {
+        var tempoKeyword = Expect(SyntaxKind.TempoKeyword);
+        var valueTokens = new List<GreenNode?>();
+        
+        // Collect value tokens: "marking" duration = bpm
+        while (Check(SyntaxKind.StringLiteral) || 
+               Check(SyntaxKind.IntegerLiteral) ||
+               Check(SyntaxKind.DurationNumber) ||
+               Check(SyntaxKind.Equals))
+        {
+            valueTokens.Add(Advance());
+        }
+        
+        return new TempoDeclarationGreen(tempoKeyword, [.. valueTokens]);
     }
 
     // ========== Variables ==========

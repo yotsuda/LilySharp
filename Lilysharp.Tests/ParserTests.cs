@@ -670,4 +670,93 @@ lyrics { do re mi fa sol }
         Assert.Single(tree.GetNodes<LyricsBlockSyntax>());
         Assert.Equal(5, tree.GetNodes<NoteSyntax>().Count());
     }
+
+    // ========== Time Signature and Tempo ==========
+
+    [Fact]
+    public void ParseTimeSignature()
+    {
+        var source = "time 3/4";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var timeSig = tree.GetNodes<TimeSignatureSyntax>().First();
+        Assert.Equal(3, timeSig.Beats);
+        Assert.Equal(4, timeSig.BeatType);
+    }
+
+    [Fact]
+    public void ParseTempoDeclaration_Simple()
+    {
+        var source = "tempo 120";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var tempo = tree.GetNodes<TempoDeclarationSyntax>().First();
+        Assert.Equal(120, tempo.Bpm);
+    }
+
+    [Fact]
+    public void ParseTempoDeclaration_WithBeatUnit()
+    {
+        var source = "tempo 4 = 120";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var tempo = tree.GetNodes<TempoDeclarationSyntax>().First();
+        Assert.Equal(4, tempo.BeatUnit);
+        Assert.Equal(120, tempo.Bpm);
+    }
+
+    [Fact]
+    public void ParseTempoDeclaration_WithMarking()
+    {
+        var source = "tempo \"Allegro\" 4 = 132";
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors);
+        var tempo = tree.GetNodes<TempoDeclarationSyntax>().First();
+        Assert.Equal("Allegro", tempo.Marking);
+        Assert.Equal(4, tempo.BeatUnit);
+        Assert.Equal(132, tempo.Bpm);
+    }
+
+    // ========== Pitch Properties ==========
+
+    [Fact]
+    public void PitchSyntax_BaseName()
+    {
+        var source = "cis";
+        var tree = SyntaxTree.Parse(source);
+        var pitch = tree.GetNodes<PitchSyntax>().First();
+        
+        Assert.Equal('c', pitch.BaseName);
+        Assert.Equal("is", pitch.Accidental);
+        Assert.Equal(1, pitch.AccidentalOffset);
+    }
+
+    [Fact]
+    public void PitchSyntax_Flat()
+    {
+        var source = "bes";
+        var tree = SyntaxTree.Parse(source);
+        var pitch = tree.GetNodes<PitchSyntax>().First();
+        
+        Assert.Equal('b', pitch.BaseName);
+        Assert.Equal("es", pitch.Accidental);
+        Assert.Equal(-1, pitch.AccidentalOffset);
+    }
+
+    // ========== Metadata Properties ==========
+
+    [Fact]
+    public void MetadataDeclaration_StringValue()
+    {
+        var source = "title \"My Song\"";
+        var tree = SyntaxTree.Parse(source);
+        var meta = tree.GetNodes<MetadataDeclarationSyntax>().First();
+        
+        Assert.Equal("title", meta.Keyword);
+        Assert.Equal("My Song", meta.StringValue);
+    }
 }
