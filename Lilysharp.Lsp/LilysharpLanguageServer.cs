@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.LanguageServer.Protocol;
 using StreamJsonRpc;
 using Lilysharp.Core.Syntax;
 using Lilysharp.Core.Semantics;
+using Lilysharp.Core.Svg;
 using LspRange = Microsoft.VisualStudio.LanguageServer.Protocol.Range;
 using LspDiagnosticSeverity = Microsoft.VisualStudio.LanguageServer.Protocol.DiagnosticSeverity;
 using CoreDiagnosticSeverity = Lilysharp.Core.Syntax.DiagnosticSeverity;
@@ -19,8 +20,12 @@ public sealed class LilysharpLanguageServer
 
     public LilysharpLanguageServer(Stream input, Stream output)
     {
-        var handler = new HeaderDelimitedMessageHandler(input, output);
-        _rpc = new JsonRpc(handler, this);
+        var handler = new HeaderDelimitedMessageHandler(output, input);
+        _rpc = new JsonRpc(handler);
+        _rpc.AddLocalRpcTarget(this, new JsonRpcTargetOptions
+        {
+            UseSingleObjectParameterDeserialization = true
+        });
     }
 
     public async Task RunAsync()
@@ -29,7 +34,7 @@ public sealed class LilysharpLanguageServer
         await _rpc.Completion;
     }
 
-    [JsonRpcMethod(Methods.InitializeName)]
+    [JsonRpcMethod(Methods.InitializeName, UseSingleObjectParameterDeserialization = true)]
     public InitializeResult Initialize(InitializeParams @params)
     {
         return new InitializeResult
@@ -112,7 +117,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Text Document Synchronization ==========
 
-    [JsonRpcMethod(Methods.TextDocumentDidOpenName)]
+    [JsonRpcMethod(Methods.TextDocumentDidOpenName, UseSingleObjectParameterDeserialization = true)]
     public void DidOpen(DidOpenTextDocumentParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -123,7 +128,7 @@ public sealed class LilysharpLanguageServer
         PublishDiagnostics(doc);
     }
 
-    [JsonRpcMethod(Methods.TextDocumentDidChangeName)]
+    [JsonRpcMethod(Methods.TextDocumentDidChangeName, UseSingleObjectParameterDeserialization = true)]
     public void DidChange(DidChangeTextDocumentParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -150,7 +155,7 @@ public sealed class LilysharpLanguageServer
         }
     }
 
-    [JsonRpcMethod(Methods.TextDocumentDidCloseName)]
+    [JsonRpcMethod(Methods.TextDocumentDidCloseName, UseSingleObjectParameterDeserialization = true)]
     public void DidClose(DidCloseTextDocumentParams @params)
     {
         _documentManager.Close(@params.TextDocument.Uri);
@@ -163,7 +168,7 @@ public sealed class LilysharpLanguageServer
         });
     }
 
-    [JsonRpcMethod(Methods.TextDocumentDidSaveName)]
+    [JsonRpcMethod(Methods.TextDocumentDidSaveName, UseSingleObjectParameterDeserialization = true)]
     public void DidSave(DidSaveTextDocumentParams @params)
     {
         if (@params.Text != null)
@@ -247,7 +252,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Completion ==========
 
-    [JsonRpcMethod(Methods.TextDocumentCompletionName)]
+    [JsonRpcMethod(Methods.TextDocumentCompletionName, UseSingleObjectParameterDeserialization = true)]
     public CompletionList? Completion(CompletionParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
@@ -387,7 +392,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Hover ==========
 
-    [JsonRpcMethod(Methods.TextDocumentHoverName)]
+    [JsonRpcMethod(Methods.TextDocumentHoverName, UseSingleObjectParameterDeserialization = true)]
     public Hover? Hover(TextDocumentPositionParams @params)
     {
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
@@ -459,7 +464,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Document Symbols ==========
 
-    [JsonRpcMethod(Methods.TextDocumentDocumentSymbolName)]
+    [JsonRpcMethod(Methods.TextDocumentDocumentSymbolName, UseSingleObjectParameterDeserialization = true)]
     public DocumentSymbol[]? DocumentSymbol(DocumentSymbolParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -573,7 +578,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Go to Definition ==========
 
-    [JsonRpcMethod(Methods.TextDocumentDefinitionName)]
+    [JsonRpcMethod(Methods.TextDocumentDefinitionName, UseSingleObjectParameterDeserialization = true)]
     public Location? Definition(TextDocumentPositionParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -641,7 +646,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Find References ==========
 
-    [JsonRpcMethod(Methods.TextDocumentReferencesName)]
+    [JsonRpcMethod(Methods.TextDocumentReferencesName, UseSingleObjectParameterDeserialization = true)]
     public Location[]? References(ReferenceParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -699,7 +704,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Semantic Tokens ==========
 
-    [JsonRpcMethod(Methods.TextDocumentSemanticTokensFullName)]
+    [JsonRpcMethod(Methods.TextDocumentSemanticTokensFullName, UseSingleObjectParameterDeserialization = true)]
     public SemanticTokens? GetSemanticTokensFull(SemanticTokensParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -836,7 +841,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Folding Ranges ==========
 
-    [JsonRpcMethod(Methods.TextDocumentFoldingRangeName)]
+    [JsonRpcMethod(Methods.TextDocumentFoldingRangeName, UseSingleObjectParameterDeserialization = true)]
     public FoldingRange[]? GetFoldingRanges(FoldingRangeParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -888,7 +893,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Rename ==========
 
-    [JsonRpcMethod(Methods.TextDocumentRenameName)]
+    [JsonRpcMethod(Methods.TextDocumentRenameName, UseSingleObjectParameterDeserialization = true)]
     public WorkspaceEdit? Rename(RenameParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -977,7 +982,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Document Formatting ==========
 
-    [JsonRpcMethod(Methods.TextDocumentFormattingName)]
+    [JsonRpcMethod(Methods.TextDocumentFormattingName, UseSingleObjectParameterDeserialization = true)]
     public TextEdit[]? Format(DocumentFormattingParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -1057,7 +1062,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Code Actions ==========
 
-    [JsonRpcMethod(Methods.TextDocumentCodeActionName)]
+    [JsonRpcMethod(Methods.TextDocumentCodeActionName, UseSingleObjectParameterDeserialization = true)]
     public CodeAction[]? GetCodeActions(CodeActionParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -1246,7 +1251,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Signature Help ==========
 
-    [JsonRpcMethod(Methods.TextDocumentSignatureHelpName)]
+    [JsonRpcMethod(Methods.TextDocumentSignatureHelpName, UseSingleObjectParameterDeserialization = true)]
     public SignatureHelp? GetSignatureHelp(SignatureHelpParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -1401,7 +1406,7 @@ public sealed class LilysharpLanguageServer
 
     // ========== Document Highlight ==========
 
-    [JsonRpcMethod(Methods.TextDocumentDocumentHighlightName)]
+    [JsonRpcMethod(Methods.TextDocumentDocumentHighlightName, UseSingleObjectParameterDeserialization = true)]
     public DocumentHighlight[]? GetDocumentHighlight(DocumentHighlightParams @params)
     {
         var uri = @params.TextDocument.Uri;
@@ -1475,4 +1480,74 @@ public sealed class LilysharpLanguageServer
 
         return highlights.ToArray();
     }
+
+    // ============================================================
+    // Custom: SVG Preview
+    // ============================================================
+    
+    /// <summary>
+    /// Custom request to generate SVG from a document.
+    /// Used for real-time preview in VS Code.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/svg", UseSingleObjectParameterDeserialization = true)]
+    public SvgResponse GetSvg(SvgParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+        {
+            return new SvgResponse 
+            { 
+                Svg = null, 
+                Error = "Document not found" 
+            };
+        }
+        
+        if (doc.Tree.HasErrors)
+        {
+            var errors = string.Join("\n", doc.Tree.Diagnostics
+                .Where(d => d.Severity == CoreDiagnosticSeverity.Error)
+                .Select(d => d.Message));
+            return new SvgResponse 
+            { 
+                Svg = null, 
+                Error = errors 
+            };
+        }
+        
+        try
+        {
+            var exporter = new SvgExporter();
+            var svg = exporter.Export(doc.Tree);
+            return new SvgResponse 
+            { 
+                Svg = svg, 
+                Error = null 
+            };
+        }
+        catch (Exception ex)
+        {
+            return new SvgResponse 
+            { 
+                Svg = null, 
+                Error = ex.Message 
+            };
+        }
+    }
+}
+
+/// <summary>
+/// Parameters for lilysharp/svg request.
+/// </summary>
+public class SvgParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+}
+
+/// <summary>
+/// Response for lilysharp/svg request.
+/// </summary>
+public class SvgResponse
+{
+    public string? Svg { get; set; }
+    public string? Error { get; set; }
 }

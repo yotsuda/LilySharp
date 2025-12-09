@@ -55,6 +55,7 @@ public class SvgExporter
     }
     
     private readonly StringBuilder _svg = new();
+    private string _sourceText = "";
     private double _currentX;
     private double _currentY;
     private int _currentOctave = 4;
@@ -65,6 +66,7 @@ public class SvgExporter
     public string Export(SyntaxTree tree)
     {
         _svg.Clear();
+        _sourceText = tree.Text;
         _currentX = MarginLeft;
         _currentY = MarginTop;
         
@@ -106,6 +108,8 @@ public class SvgExporter
         _svg.AppendLine($"    .ledger-line {{ stroke: black; stroke-width: {LegerLineThickness:F2}; }}");
         _svg.AppendLine($"    .stem {{ stroke: black; stroke-width: {StemThickness:F2}; }}");
         _svg.AppendLine($"    .barline {{ stroke: black; stroke-width: {ThinBarlineThickness:F2}; }}");
+        _svg.AppendLine("    .clickable { cursor: pointer; }");
+        _svg.AppendLine("    .clickable:hover { fill: #0066cc; }");
         _svg.AppendLine("  </style>");
     }
     
@@ -145,9 +149,16 @@ public class SvgExporter
         _currentX += ClefWidth;
     }
     
-    private void DrawGlyph(char glyph, double x, double y)
+    private void DrawGlyph(char glyph, double x, double y, int? sourcePosition = null)
     {
-        _svg.AppendLine($"""  <text class="music" x="{x:F1}" y="{y:F1}">{glyph}</text>""");
+        if (sourcePosition.HasValue)
+        {
+            _svg.AppendLine($"""  <text class="music clickable" x="{x:F1}" y="{y:F1}" data-pos="{sourcePosition.Value}">{glyph}</text>""");
+        }
+        else
+        {
+            _svg.AppendLine($"""  <text class="music" x="{x:F1}" y="{y:F1}">{glyph}</text>""");
+        }
     }
     
     private void ProcessNode(SyntaxNode node)
@@ -243,7 +254,7 @@ public class SvgExporter
         
         // Draw notehead
         char notehead = SmuflGlyphs.GetNotehead(noteValue);
-        DrawGlyph(notehead, _currentX, noteY);
+        DrawGlyph(notehead, _currentX, noteY, FindActualPosition(note.Position, note.Pitch.PitchName));
         
         // Draw stem (for half notes and shorter)
         if (noteValue >= 2)
@@ -320,7 +331,7 @@ public class SvgExporter
         
         // Rest Y position (centered on staff)
         double restY = _currentY + (2 * SpaceHeight);
-        DrawGlyph(restGlyph, _currentX, restY);
+        DrawGlyph(restGlyph, _currentX, restY, FindActualPosition(rest.Position, "r"));
         
         _currentX += GetNoteSpacing(noteValue);
     }
@@ -355,7 +366,7 @@ public class SvgExporter
         foreach (var (pos, octave) in positions)
         {
             double noteY = _currentY + StaffHeight - (pos * SpaceHeight / 2);
-            DrawGlyph(notehead, _currentX, noteY);
+            DrawGlyph(notehead, _currentX, noteY, FindActualPosition(chord.Position, "<"));
         }
         
         // Draw stem (for half notes and shorter)
@@ -491,5 +502,46 @@ public class SvgExporter
             ('c', 0, false) => -3,
             _ => 0
         };
+    }
+    
+    /// <summary>
+    /// Finds the actual text position by skipping whitespace and comments.
+    /// </summary>
+    private int FindActualPosition(int startPos, string searchText)
+    {
+        if (string.IsNullOrEmpty(_sourceText) || startPos >= _sourceText.Length)
+            return startPos;
+        
+        // Search for the actual text within the node's range
+        int pos = startPos;
+        while (pos < _sourceText.Length)
+        {
+            // Skip whitespace
+            while (pos < _sourceText.Length && char.IsWhiteSpace(_sourceText[pos]))
+                pos++;
+            
+            // Skip line comments
+            if (pos + 1 < _sourceText.Length && _sourceText[pos] == '/' && _sourceText[pos + 1] == '/')
+            {
+                while (pos < _sourceText.Length && _sourceText[pos] != '\n')
+                    pos++;
+                continue;
+            }
+            
+            // Skip block comments
+            if (pos + 1 < _sourceText.Length && _sourceText[pos] == '/' && _sourceText[pos + 1] == '*')
+            {
+                pos += 2;
+                while (pos + 1 < _sourceText.Length && !(_sourceText[pos] == '*' && _sourceText[pos + 1] == '/'))
+                    pos++;
+                pos += 2;
+                continue;
+            }
+            
+            // Found non-whitespace, non-comment
+            break;
+        }
+        
+        return pos;
     }
 }
