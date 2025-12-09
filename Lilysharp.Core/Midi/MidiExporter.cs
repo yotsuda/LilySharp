@@ -15,6 +15,8 @@ public class MidiExporter
     private int _tempo = 120;
     private int _velocity = 80;
     private readonly Stack<(int numerator, int denominator)> _tupletStack = new();
+    private int _timeNumerator = 4;
+    private int _timeDenominator = 4;
     
     public MidiExporter(int ticksPerQuarter = MidiFile.DefaultTicksPerQuarter)
     {
@@ -27,11 +29,13 @@ public class MidiExporter
         
         var conductorTrack = new MidiTrack { Name = "Tempo", Channel = 0 };
         conductorTrack.TempoChanges.Add(new TempoChange(0, BpmToMicroseconds(_tempo)));
-        conductorTrack.TimeSignatures.Add(new TimeSignatureChange(0, 4, 4));
         midi.Tracks.Add(conductorTrack);
         
         var mainTrack = new MidiTrack { Name = "Track 1", Channel = 0 };
         ProcessNode(tree.GetRoot(), mainTrack, conductorTrack);
+        
+        // Add initial time signature (may have been updated during processing)
+        conductorTrack.TimeSignatures.Insert(0, new TimeSignatureChange(0, _timeNumerator, _timeDenominator));
         
         if (mainTrack.Notes.Count > 0)
             midi.Tracks.Add(mainTrack);
@@ -81,6 +85,14 @@ public class MidiExporter
                 
             case ChordSyntax chord:
                 ProcessChord(chord, track);
+                break;
+                
+            case TimeSignatureSyntax timeSig:
+                ProcessTimeSignature(timeSig, conductorTrack);
+                break;
+                
+            case TempoDeclarationSyntax tempo:
+                ProcessTempo(tempo, conductorTrack);
                 break;
                 
             case MetadataDeclarationSyntax metadata:
@@ -196,29 +208,26 @@ public class MidiExporter
         _currentTick = startTick + durationTicks;
     }
     
-    private void ProcessMetadata(MetadataDeclarationSyntax metadata, MidiTrack conductorTrack)
+    private void ProcessTimeSignature(TimeSignatureSyntax timeSig, MidiTrack conductorTrack)
     {
-        string keyword = metadata.KeywordToken.Text.ToLowerInvariant();
-        
-        // Get value from child nodes
-        SyntaxTokenNode? valueToken = null;
-        for (int i = 1; i < metadata.SlotCount; i++)
-        {
-            if (metadata.GetChild(i) is SyntaxTokenNode token && 
-                token.Kind == SyntaxKind.DurationNumber)
-            {
-                valueToken = token;
-                break;
-            }
-        }
-        
-        if (valueToken == null) return;
-        
-        if (keyword == "tempo" && int.TryParse(valueToken.Text, out int bpm))
+        _timeNumerator = timeSig.Beats;
+        _timeDenominator = timeSig.BeatType;
+        conductorTrack.TimeSignatures.Add(new TimeSignatureChange(_currentTick, _timeNumerator, _timeDenominator));
+    }
+    
+    private void ProcessTempo(TempoDeclarationSyntax tempo, MidiTrack conductorTrack)
+    {
+        if (tempo.Bpm is int bpm)
         {
             _tempo = bpm;
             conductorTrack.TempoChanges.Add(new TempoChange(_currentTick, BpmToMicroseconds(bpm)));
         }
+    }
+
+    private void ProcessMetadata(MetadataDeclarationSyntax metadata, MidiTrack conductorTrack)
+    {
+        // MetadataDeclarationSyntax now only handles title/composer which don't affect MIDI
+        // Tempo and time signatures have their own syntax nodes
     }
     
     private void ProcessRepeat(RepeatExpressionSyntax repeat, MidiTrack track, MidiTrack conductorTrack)
@@ -243,22 +252,13 @@ public class MidiExporter
     
     private (int basePitch, int octave) ParsePitch(PitchSyntax pitch)
     {
-        string text = pitch.PitchName.ToLowerInvariant();
-        
-        char noteName = text[0];
-        int basePitch = noteName switch
+        int basePitch = pitch.BaseName switch
         {
             'c' => 0, 'd' => 2, 'e' => 4, 'f' => 5,
             'g' => 7, 'a' => 9, 'b' => 11, _ => 0
         };
         
-        int accidental = 0;
-        if (text.Contains("isis")) accidental = 2;
-        else if (text.Contains("eses")) accidental = -2;
-        else if (text.Contains("is")) accidental = 1;
-        else if (text.Contains("es") || text.Contains("as")) accidental = -1;
-        
-        return (basePitch + accidental, 4 + pitch.OctaveOffset);
+        return (basePitch + pitch.AccidentalOffset, 4 + pitch.OctaveOffset);
     }
     
     private Fraction GetDuration(DurationSyntax? duration)

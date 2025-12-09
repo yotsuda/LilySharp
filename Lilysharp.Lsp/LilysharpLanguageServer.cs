@@ -434,6 +434,10 @@ public sealed class LilysharpLanguageServer
             SlurSyntax slur => slur.IsOpen ? "**Slur start**" : "**Slur end**",
             RepeatExpressionSyntax => "**Repeat**: Repeats the enclosed music",
             ParallelExpressionSyntax => "**Parallel**: Multiple voices played simultaneously",
+            TimeSignatureSyntax ts => $"**Time Signature**: {ts.Beats}/{ts.BeatType}",
+            TempoDeclarationSyntax tempo => $"**Tempo**: {tempo.Marking ?? ""} {(tempo.BeatUnit != null ? $"{tempo.BeatUnit} = " : "")}{tempo.Bpm ?? 120} BPM".Trim(),
+            KeySignatureSyntax key => $"**Key Signature**: {key.Pitch?.PitchName} {(key.IsMajor ? "major" : "minor")}",
+            ClefDeclarationSyntax clef => $"**Clef**: {clef.ClefName.Text}",
             _ => null
         };
     }

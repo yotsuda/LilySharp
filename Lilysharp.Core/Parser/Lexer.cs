@@ -318,7 +318,7 @@ internal sealed class Lexer
 
     private bool TryMatchAccidental()
     {
-        // Try to match: isis, eses, is, es, as (for a-flat)
+        // Try to match: isis, eses, is, es
         // Must not be followed by a letter (to avoid matching "issue" as "is" + "sue")
         
         int savedPos = _position;
@@ -335,18 +335,13 @@ internal sealed class Lexer
             return true;
         }
 
-        // is / es / as (2 chars) - check Peek(2) for char after accidental
+        // is / es (2 chars) - check Peek(2) for char after accidental
         if (MatchesAt("is") && !char.IsLetter(Peek(2)))
         {
             _position += 2;
             return true;
         }
         if (MatchesAt("es") && !char.IsLetter(Peek(2)))
-        {
-            _position += 2;
-            return true;
-        }
-        if (MatchesAt("as") && !char.IsLetter(Peek(2)))
         {
             _position += 2;
             return true;

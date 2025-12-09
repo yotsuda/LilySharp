@@ -349,18 +349,8 @@ public sealed class MusicXmlExporter
 
     private (string step, int alter) ParsePitch(PitchSyntax pitch)
     {
-        var text = pitch.PitchName.ToLowerInvariant();
-        
-        char basePitch = text[0];
-        string step = basePitch.ToString().ToUpper();
-        
-        int alter = 0;
-        if (text.Contains("isis")) alter = 2;
-        else if (text.Contains("eses")) alter = -2;
-        else if (text.Contains("is")) alter = 1;
-        else if (text.Contains("es") || text.Contains("as")) alter = -1;
-        
-        return (step, alter);
+        string step = char.ToUpper(pitch.BaseName).ToString();
+        return (step, pitch.AccidentalOffset);
     }
 
     private Fraction GetDuration(DurationSyntax? duration)

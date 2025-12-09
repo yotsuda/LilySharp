@@ -126,10 +126,8 @@ public sealed class PitchSyntax : SyntaxNode
         "isis" => 2,
         "is" => 1,
         "" => 0,
-        "es" or "s" => -1,
-        "eses" or "ses" => -2,
-        "as" => -1,  // Special case for aes -> as
-        "aes" => -1,
+        "es" => -1,
+        "eses" => -2,
         _ => 0
     };
 }

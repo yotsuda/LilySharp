@@ -245,4 +245,29 @@ lyrics { Hap -- py birth -- day }
         // Lyrics should be added (may not sync perfectly with notes in this simple implementation)
         Assert.True(track.Lyrics.Count > 0);
     }
+
+    [Fact]
+    public void ExportTimeSignature()
+    {
+        var source = "time 3/4 c4 d e";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MidiExporter();
+        var midi = exporter.Export(tree);
+        
+        var conductorTrack = midi.Tracks[0];
+        Assert.Contains(conductorTrack.TimeSignatures, ts => ts.Numerator == 3 && ts.Denominator == 4);
+    }
+
+    [Fact]
+    public void ExportTempoDeclaration()
+    {
+        var source = "tempo 140 c4 d e";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MidiExporter();
+        var midi = exporter.Export(tree);
+        
+        var conductorTrack = midi.Tracks[0];
+        // 140 BPM = 428571 microseconds per beat
+        Assert.Contains(conductorTrack.TempoChanges, tc => tc.MicrosecondsPerBeat == 428571);
+    }
 }
