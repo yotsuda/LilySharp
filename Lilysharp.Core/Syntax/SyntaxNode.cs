@@ -154,7 +154,17 @@ public abstract class SyntaxNode
     /// </summary>
     public IEnumerable<T> DescendantNodes<T>() where T : SyntaxNode
     {
-        return DescendantNodes().OfType<T>();
+        for (int i = 0; i < SlotCount; i++)
+        {
+            var child = GetChild(i);
+            if (child != null)
+            {
+                if (child is T typed)
+                    yield return typed;
+                foreach (var descendant in child.DescendantNodes<T>())
+                    yield return descendant;
+            }
+        }
     }
 
     /// <summary>
