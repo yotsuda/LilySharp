@@ -1,3 +1,4 @@
+using Lilysharp.Core.Semantics;
 using Lilysharp.Core.Syntax.InternalSyntax;
 
 namespace Lilysharp.Core.Syntax;
@@ -153,6 +154,11 @@ public sealed class DurationSyntax : SyntaxNode
     /// Number of dots.
     /// </summary>
     public int DotCount => SlotCount - 1;
+    
+    /// <summary>
+    /// Converts to a Fraction representing the duration.
+    /// </summary>
+    public Fraction ToFraction() => Fraction.FromNoteValue(Value).Dotted(DotCount);
 }
 
 /// <summary>
@@ -304,7 +310,17 @@ public sealed class ScoreDeclarationSyntax : SyntaxNode
     public SyntaxTokenNode ScoreKeyword => (SyntaxTokenNode)GetChild(0)!;
     public SyntaxTokenNode? Title => GetChild(1) as SyntaxTokenNode;
 
-    public IEnumerable<PartDeclarationSyntax> Parts => DescendantNodes<PartDeclarationSyntax>();
+    public IEnumerable<PartDeclarationSyntax> Parts
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is PartDeclarationSyntax part)
+                    yield return part;
+            }
+        }
+    }
 }
 
 /// <summary>

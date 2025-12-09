@@ -356,9 +356,7 @@ public sealed class MusicXmlExporter
     private Fraction GetDuration(DurationSyntax? duration)
     {
         if (duration == null) return _defaultDuration;
-        
-        var baseDuration = Fraction.FromNoteValue(duration.Value);
-        _defaultDuration = baseDuration.Dotted(duration.DotCount);
+        _defaultDuration = duration.ToFraction();
         return _defaultDuration;
     }
 
