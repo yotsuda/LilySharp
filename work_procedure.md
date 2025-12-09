@@ -157,3 +157,21 @@ PowerShell で `Add-Type` を使うと DLL がロックされ、ビルドが失�
 - 英語一文で簡潔に記述
 - 動詞から始める (Add, Fix, Refactor, Update, Remove...)
 - 例: "Add MusicXML chord export support"
+
+### シングルパス化の準備
+
+将来的に Lexer → Parser のストリーミング処理（真のシングルパス）を実現するため、以下を守る:
+
+**禁止事項**:
+- `Peek(n)` で n >= 2 の先読み（現状 LL(2) を維持）
+- バックトラック（`_position--`）の新規追加
+- トークンリストの複数回走査
+
+**現状の制約** (将来解消予定):
+- Parser コンストラクタで `tokens.ToList()` している（1箇所）
+- Articulation パースで1トークンのバックトラックあり（行571）
+
+**シングルパス化時の変更方針**:
+- Lexer: 2トークンバッファ保持に変更
+- Parser: Lexer から直接トークン取得
+- バックトラック: 先読みロジックに書き換え

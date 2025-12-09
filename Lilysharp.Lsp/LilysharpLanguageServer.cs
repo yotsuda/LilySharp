@@ -1506,7 +1506,10 @@ public sealed class LilysharpLanguageServer
         {
             var errors = string.Join("\n", doc.Tree.Diagnostics
                 .Where(d => d.Severity == CoreDiagnosticSeverity.Error)
-                .Select(d => d.Message));
+                .Select(d => {
+                    var (line, col) = GetLineAndColumn(doc.Tree.Text, d.Span.Start);
+                    return $"Line {line}, Col {col}: {d.Message}";
+                }));
             return new SvgResponse 
             { 
                 Svg = null, 

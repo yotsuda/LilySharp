@@ -128,7 +128,17 @@
 
 | タスク | status | priority | effort | notes |
 |--------|:------:|:--------:|-------:|-------|
-| SVG 余白計算ロジック | 🔍 | High | 中 | LilyPond 準拠スケーリング修正、LineDetails 拡張完了 |
+| SVG 余白計算ロジック | ✅ | High | 中 | LilyPond 準拠スケーリング修正、LineDetails 拡張完了 |
+| VS Code リアルタイムプレビュー | 🔍 | High | 中 | LSP カスタムリクエスト + WebView 実装完了 |
+
+## 🔧 技術的改善候補
+
+| 対象 | priority | effort | 内容 |
+|------|:--------:|-------:|------|
+| LayoutEngine.cs | Low | 低 | Footnote 対応 (LilyPond の account_for_footnotes 相当) |
+| LineDetails.SpringLength | Low | 低 | refpoint_extent_ を使った正確な計算（現在は Tallness で近似） |
+| PaperSettings.cs | Low | 低 | MmPerPoint を 25.4/72 で計算（現在は 0.3528 のハードコード） |
+
 ---
 
 ## 📋 今後の候補

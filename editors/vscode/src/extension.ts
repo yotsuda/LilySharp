@@ -10,9 +10,8 @@ import {
 
 let client: LanguageClient;
 let clientReady = false;
-let previewPanel: vscode.WebviewPanel | undefined;
-let currentDocument: vscode.TextDocument | undefined;
-let debounceTimer: NodeJS.Timeout | undefined;
+const previewPanels = new Map<string, vscode.WebviewPanel>();
+let debounceTimers = new Map<string, NodeJS.Timeout>();
 const outputChannel = vscode.window.createOutputChannel('Lilysharp Extension');
 
 // Constants
@@ -83,31 +82,24 @@ export function activate(context: vscode.ExtensionContext) {
     // Watch for document changes
     context.subscriptions.push(
         vscode.workspace.onDidChangeTextDocument(event => {
-            if (event.document.languageId === 'lilysharp' && previewPanel) {
-                const cfg = vscode.workspace.getConfiguration('lilysharp');
-                const autoRefresh = cfg.get<boolean>('preview.autoRefresh', true);
-                const delay = cfg.get<number>('preview.refreshDelay', DEBOUNCE_DELAY_DEFAULT);
-                
-                if (autoRefresh) {
-                    if (debounceTimer) {
-                        clearTimeout(debounceTimer);
+            if (event.document.languageId === 'lilysharp') {
+                const uri = event.document.uri.toString();
+                const panel = previewPanels.get(uri);
+                if (panel) {
+                    const cfg = vscode.workspace.getConfiguration('lilysharp');
+                    const autoRefresh = cfg.get<boolean>('preview.autoRefresh', true);
+                    const delay = cfg.get<number>('preview.refreshDelay', DEBOUNCE_DELAY_DEFAULT);
+                    
+                    if (autoRefresh) {
+                        const existingTimer = debounceTimers.get(uri);
+                        if (existingTimer) {
+                            clearTimeout(existingTimer);
+                        }
+                        debounceTimers.set(uri, setTimeout(() => {
+                            updatePreviewContent(event.document, panel);
+                            debounceTimers.delete(uri);
+                        }, delay));
                     }
-                    debounceTimer = setTimeout(() => {
-                        updatePreviewContent(event.document);
-                    }, delay);
-                }
-            }
-        })
-    );
-
-    // Watch for active editor changes
-    context.subscriptions.push(
-        vscode.window.onDidChangeActiveTextEditor(editor => {
-            if (editor && editor.document.languageId === 'lilysharp' && previewPanel) {
-                if (currentDocument?.uri.toString() !== editor.document.uri.toString()) {
-                    currentDocument = editor.document;
-                    updatePreviewTitle();
-                    updatePreviewContent(editor.document);
                 }
             }
         })
@@ -116,21 +108,18 @@ export function activate(context: vscode.ExtensionContext) {
     // Watch for cursor position changes
     context.subscriptions.push(
         vscode.window.onDidChangeTextEditorSelection(event => {
-            if (event.textEditor.document.languageId === 'lilysharp' && previewPanel) {
-                const position = event.textEditor.document.offsetAt(event.selections[0].active);
-                previewPanel.webview.postMessage({ type: 'highlightPosition', position });
+            if (event.textEditor.document.languageId === 'lilysharp') {
+                const uri = event.textEditor.document.uri.toString();
+                const panel = previewPanels.get(uri);
+                if (panel) {
+                    const position = event.textEditor.document.offsetAt(event.selections[0].active);
+                    panel.webview.postMessage({ type: 'highlightPosition', position });
+                }
             }
         })
     );
     
     outputChannel.appendLine('Lilysharp extension activated');
-}
-
-function updatePreviewTitle() {
-    if (previewPanel && currentDocument) {
-        const fileName = path.basename(currentDocument.uri.fsPath);
-        previewPanel.title = `Preview: ${fileName}`;
-    }
 }
 
 function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewColumn) {
@@ -140,16 +129,20 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         return;
     }
 
-    currentDocument = editor.document;
+    const document = editor.document;
+    const uri = document.uri.toString();
 
-    if (previewPanel) {
-        previewPanel.reveal(viewColumn);
-        updatePreviewContent(editor.document);
+    // Check if preview already exists for this document
+    const existingPanel = previewPanels.get(uri);
+    if (existingPanel) {
+        existingPanel.reveal(viewColumn);
+        updatePreviewContent(document, existingPanel);
         return;
     }
 
-    const fileName = path.basename(editor.document.uri.fsPath);
-    previewPanel = vscode.window.createWebviewPanel(
+    // Create new preview panel
+    const fileName = path.basename(document.uri.fsPath);
+    const panel = vscode.window.createWebviewPanel(
         'lilysharpPreview',
         `Preview: ${fileName}`,
         viewColumn,
@@ -159,17 +152,23 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         }
     );
 
-    previewPanel.onDidDispose(() => {
-        previewPanel = undefined;
-        currentDocument = undefined;
+    previewPanels.set(uri, panel);
+
+    panel.onDidDispose(() => {
+        previewPanels.delete(uri);
+        const timer = debounceTimers.get(uri);
+        if (timer) {
+            clearTimeout(timer);
+            debounceTimers.delete(uri);
+        }
     });
 
     // Handle messages from webview
-    previewPanel.webview.onDidReceiveMessage(
+    panel.webview.onDidReceiveMessage(
         message => {
             if (message.type === 'jumpToPosition') {
                 const targetEditor = vscode.window.visibleTextEditors.find(
-                    e => e.document.languageId === 'lilysharp'
+                    e => e.document.uri.toString() === uri
                 );
                 if (targetEditor) {
                     const position = targetEditor.document.positionAt(message.position);
@@ -187,14 +186,14 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     );
 
     // Set initial HTML structure
-    previewPanel.webview.html = getPreviewHtml();
+    panel.webview.html = getPreviewHtml();
     
     // Then load content
-    updatePreviewContent(editor.document);
+    updatePreviewContent(document, panel);
 }
 
-async function updatePreviewContent(document: vscode.TextDocument) {
-    if (!previewPanel || !client || !clientReady) {
+async function updatePreviewContent(document: vscode.TextDocument, panel: vscode.WebviewPanel) {
+    if (!client || !clientReady) {
         return;
     }
 
@@ -203,22 +202,23 @@ async function updatePreviewContent(document: vscode.TextDocument) {
             textDocument: { uri: document.uri.toString() }
         });
 
-        if (!previewPanel) return; // Panel may have been disposed
+        // Panel may have been disposed during async request
+        if (!previewPanels.has(document.uri.toString())) return;
 
         if (response.Error) {
-            previewPanel.webview.postMessage({ 
+            panel.webview.postMessage({ 
                 type: 'updateContent', 
                 error: response.Error 
             });
         } else if (response.Svg) {
-            previewPanel.webview.postMessage({ 
+            panel.webview.postMessage({ 
                 type: 'updateContent', 
                 svg: response.Svg 
             });
         }
     } catch (error) {
-        if (previewPanel) {
-            previewPanel.webview.postMessage({ 
+        if (previewPanels.has(document.uri.toString())) {
+            panel.webview.postMessage({ 
                 type: 'updateContent', 
                 error: `Failed to generate preview: ${error}` 
             });
@@ -378,7 +378,6 @@ function getPreviewHtml(): string {
                         svgContainer.innerHTML = '<div class="error">' + escapeHtml(message.error) + '</div>';
                     } else if (message.svg) {
                         svgContainer.innerHTML = message.svg;
-                        // Re-apply highlight if we had one
                         if (lastHighlightPos >= 0) {
                             highlightNearestElement(lastHighlightPos);
                         }
@@ -413,9 +412,10 @@ function getPreviewHtml(): string {
 }
 
 export function deactivate(): Thenable<void> | undefined {
-    if (debounceTimer) {
-        clearTimeout(debounceTimer);
-    }
+    // Clear all debounce timers
+    debounceTimers.forEach(timer => clearTimeout(timer));
+    debounceTimers.clear();
+    
     if (!client) {
         return undefined;
     }
