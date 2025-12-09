@@ -147,8 +147,11 @@ public sealed class MeasureValidator
                     total += restDuration;
                     break;
 
-                case ChordSyntax:
-                    total += defaultDuration;
+                case ChordSyntax chord:
+                    var chordDuration = DurationCalculator.GetDuration(chord, defaultDuration);
+                    if (chord.Duration != null)
+                        defaultDuration = chordDuration;
+                    total += chordDuration;
                     break;
             }
         }

@@ -8,36 +8,22 @@ namespace Lilysharp.Core.Semantics;
 public static class DurationCalculator
 {
     /// <summary>
-    /// Gets the duration of a note or rest.
+    /// Gets the duration of a note, using default if not specified.
     /// </summary>
     public static Fraction GetDuration(NoteSyntax note, Fraction defaultDuration)
-    {
-        if (note.Duration == null)
-            return defaultDuration;
-        return GetDuration(note.Duration);
-    }
+        => note.Duration?.ToFraction() ?? defaultDuration;
 
     /// <summary>
-    /// Gets the duration of a rest.
+    /// Gets the duration of a rest, using default if not specified.
     /// </summary>
     public static Fraction GetDuration(RestSyntax rest, Fraction defaultDuration)
-    {
-        if (rest.Duration == null)
-            return defaultDuration;
-        return GetDuration(rest.Duration);
-    }
+        => rest.Duration?.ToFraction() ?? defaultDuration;
 
     /// <summary>
-    /// Gets the duration from a DurationSyntax node.
+    /// Gets the duration of a chord, using default if not specified.
     /// </summary>
-    public static Fraction GetDuration(DurationSyntax duration)
-    {
-        int noteValue = duration.Value;
-        int dots = duration.DotCount;
-        
-        var baseDuration = Fraction.FromNoteValue(noteValue);
-        return baseDuration.Dotted(dots);
-    }
+    public static Fraction GetDuration(ChordSyntax chord, Fraction defaultDuration)
+        => chord.Duration?.ToFraction() ?? defaultDuration;
 
     /// <summary>
     /// Parses a time signature like "4/4" or "3/4".
@@ -76,7 +62,7 @@ public static class DurationCalculator
                     break;
 
                 case ChordSyntax chord:
-                    var chordDuration = chord.Duration?.ToFraction() ?? currentDefault;
+                    var chordDuration = GetDuration(chord, currentDefault);
                     if (chord.Duration != null)
                         currentDefault = chordDuration;
                     total += chordDuration;
