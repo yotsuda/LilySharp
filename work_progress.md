@@ -123,6 +123,12 @@
 - ✅ Formatting, Code Actions, Signature Help
 - ✅ Document Highlight
 
+
+## 📋 現在のタスク
+
+| タスク | status | priority | effort | notes |
+|--------|:------:|:--------:|-------:|-------|
+| SVG 余白計算ロジック | 🔍 | High | 中 | LilyPond 準拠スケーリング修正、LineDetails 拡張完了 |
 ---
 
 ## 📋 今後の候補
