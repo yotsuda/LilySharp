@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Lilysharp.Core.Syntax;
 using Lilysharp.Core.Semantics;
+using Lilysharp.Core.Tablature;
 
 namespace Lilysharp.Core.Svg;
 
@@ -63,6 +64,11 @@ public class SvgExporter
     private string _currentClef = "treble";
     private int _keySignature = 0; // Number of sharps (+) or flats (-)
     
+    // Tablature state
+    private bool _isTabMode = false;
+    private int[] _tabTuning = Tunings.Guitar;
+    private int _tabStringCount = 6;
+    
     public string Export(SyntaxTree tree)
     {
         // Reset all state
@@ -115,6 +121,9 @@ public class SvgExporter
         _svg.AppendLine($"    .barline {{ stroke: black; stroke-width: {ThinBarlineThickness:F2}; }}");
         _svg.AppendLine("    .clickable { cursor: pointer; }");
         _svg.AppendLine("    .clickable:hover { fill: #0066cc; }");
+        _svg.AppendLine("    .tab-clef { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; text-anchor: middle; }");
+        _svg.AppendLine("    .tab-fret { font-family: Arial, sans-serif; font-size: 12px; text-anchor: middle; dominant-baseline: middle; }");
+        _svg.AppendLine("    .tab-line { stroke: black; stroke-width: 0.5; }");
         _svg.AppendLine("  </style>");
     }
     
@@ -208,6 +217,10 @@ public class SvgExporter
                 _keySignature = CalculateKeySignature(key);
                 break;
                 
+            case TabStaffDeclarationSyntax tabStaff:
+                ProcessTabStaff(tabStaff);
+                break;
+                
             default:
                 // Process children for container nodes
                 for (int i = 0; i < node.SlotCount; i++)
@@ -229,6 +242,18 @@ public class SvgExporter
         // Get the base note value from the duration syntax, not the computed fraction
         // This handles dotted notes correctly (e.g., d8. should use noteValue=8, not 1)
         int noteValue = note.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        
+        // Tab mode: draw fret number instead of notehead
+        if (_isTabMode)
+        {
+            // Calculate octave without updating _currentOctave (avoid accumulation)
+            int tabOctave = _currentOctave + note.Pitch.OctaveOffset;
+            int midiPitch = CalculateMidiPitch(note.Pitch, tabOctave);
+            int preferredString = GetPreferredString(note);
+            DrawTabNote(midiPitch, preferredString, FindActualPosition(note.Position));
+            _currentX += GetNoteSpacing(noteValue);
+            return;
+        }
         
         // Calculate pitch position
         var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);
@@ -348,8 +373,6 @@ public class SvgExporter
             _defaultDuration = duration;
         
         int noteValue = (int)duration.Denominator;
-        char notehead = SmuflGlyphs.GetNotehead(noteValue);
-        double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
         
         var pitches = chord.Pitches.ToList();
         if (pitches.Count == 0)
@@ -357,6 +380,18 @@ public class SvgExporter
             _currentX += GetNoteSpacing(noteValue);
             return;
         }
+        
+        // Tab mode: draw fret numbers for all pitches
+        if (_isTabMode)
+        {
+            DrawTabChord(chord, pitches, noteValue);
+            return;
+        }
+        
+        char notehead = SmuflGlyphs.GetNotehead(noteValue);
+        double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
+        
+
         
         // Calculate positions for all pitches
         var positions = pitches.Select(p => CalculateStaffPosition(p)).ToList();
@@ -548,5 +583,178 @@ public class SvgExporter
         }
         
         return pos;
+    }
+    
+    // ============================================================
+    // Tablature Methods
+    // ============================================================
+    
+    private void ProcessTabStaff(TabStaffDeclarationSyntax tabStaff)
+    {
+        // Save current state
+        bool wasTabMode = _isTabMode;
+        int[] prevTuning = _tabTuning;
+        int prevStringCount = _tabStringCount;
+        double savedX = _currentX;
+        
+        // Enter tab mode
+        _isTabMode = true;
+        
+        // Set tuning if specified
+        if (tabStaff.Tuning != null)
+        {
+            var tuningType = tabStaff.Tuning.Type;
+            _tabTuning = Tunings.GetTuning(tuningType);
+            _tabStringCount = Tunings.GetStringCount(tuningType);
+        }
+        else
+        {
+            _tabTuning = Tunings.Guitar;
+            _tabStringCount = 6;
+        }
+        
+        // Draw TAB clef
+        DrawTabClef();
+        
+        // Process body first to determine width
+        double startX = _currentX;
+        ProcessNode(tabStaff.Body);
+        double endX = _currentX + 20;
+        
+        // Draw tab lines (one per string)
+        WriteTabLines(savedX, endX);
+        
+        // Restore state
+        _isTabMode = wasTabMode;
+        _tabTuning = prevTuning;
+        _tabStringCount = prevStringCount;
+    }
+    
+    private void WriteTabLines(double startX, double endX)
+    {
+        for (int i = 0; i < _tabStringCount; i++)
+        {
+            double y = _currentY + (i * SpaceHeight);
+            _svg.AppendLine($"""  <line class="tab-line" x1="{startX:F1}" y1="{y:F1}" x2="{endX:F1}" y2="{y:F1}"/>""");
+        }
+    }
+    
+    private void DrawTabClef()
+    {
+        // Draw "TAB" text vertically
+        double x = _currentX;
+        double centerY = _currentY + ((_tabStringCount - 1) * SpaceHeight) / 2;
+        
+        _svg.AppendLine($"""  <text class="tab-clef" x="{x:F1}" y="{centerY:F1}">TAB</text>""");
+        _currentX += ClefWidth;
+    }
+    
+    private void DrawTabNote(int midiPitch, int preferredString, int? sourcePosition)
+    {
+        var (stringNum, fret) = Tunings.CalculateFret(midiPitch, _tabTuning, preferredString);
+        
+        // Calculate Y position (string 1 at top, string N at bottom)
+        double y = _currentY + (stringNum - 1) * SpaceHeight;
+        
+        // Draw fret number
+        string fretText = fret.ToString();
+        if (sourcePosition.HasValue)
+        {
+            _svg.AppendLine($"""  <text class="tab-fret clickable" x="{_currentX:F1}" y="{y:F1}" data-pos="{sourcePosition.Value}">{fretText}</text>""");
+        }
+        else
+        {
+            _svg.AppendLine($"""  <text class="tab-fret" x="{_currentX:F1}" y="{y:F1}">{fretText}</text>""");
+        }
+    }
+    
+    private void DrawTabChord(ChordSyntax chord, List<PitchSyntax> pitches, int noteValue)
+    {
+        // Calculate MIDI pitches for all notes
+        var midiPitches = new List<int>();
+        foreach (var pitch in pitches)
+        {
+            var (_, octave) = CalculateStaffPosition(pitch);
+            midiPitches.Add(CalculateMidiPitch(pitch, octave));
+        }
+        
+        // Find best string assignment for each pitch (avoiding duplicates)
+        var usedStrings = new HashSet<int>();
+        var assignments = new List<(int stringNum, int fret)>();
+        
+        // Sort by pitch (low to high) for better string assignment
+        var sortedPitches = midiPitches.OrderBy(p => p).ToList();
+        
+        foreach (var midiPitch in sortedPitches)
+        {
+            // Try to find an unused string
+            var (stringNum, fret) = Tunings.CalculateFret(midiPitch, _tabTuning, 0);
+            
+            // If string already used, try to find another
+            if (usedStrings.Contains(stringNum))
+            {
+                // Try other strings
+                for (int s = _tabStringCount; s >= 1; s--)
+                {
+                    if (!usedStrings.Contains(s))
+                    {
+                        var (_, testFret) = Tunings.CalculateFret(midiPitch, _tabTuning, s);
+                        if (testFret >= 0 && testFret <= 24)
+                        {
+                            stringNum = s;
+                            fret = testFret;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            usedStrings.Add(stringNum);
+            assignments.Add((stringNum, fret));
+        }
+        
+        // Draw all fret numbers at current X position
+        int? sourcePos = FindActualPosition(chord.Position);
+        foreach (var (stringNum, fret) in assignments)
+        {
+            double y = _currentY + (stringNum - 1) * SpaceHeight;
+            string fretText = fret.ToString();
+            if (sourcePos.HasValue)
+            {
+                _svg.AppendLine($"""  <text class="tab-fret clickable" x="{_currentX:F1}" y="{y:F1}" data-pos="{sourcePos.Value}">{fretText}</text>""");
+            }
+            else
+            {
+                _svg.AppendLine($"""  <text class="tab-fret" x="{_currentX:F1}" y="{y:F1}">{fretText}</text>""");
+            }
+        }
+        
+        _currentX += GetNoteSpacing(noteValue);
+    }
+    
+    private int CalculateMidiPitch(PitchSyntax pitch, int octave)
+    {
+        // MIDI note numbers: C4 = 60
+        int basePitch = pitch.BaseName switch
+        {
+            'c' => 0,
+            'd' => 2,
+            'e' => 4,
+            'f' => 5,
+            'g' => 7,
+            'a' => 9,
+            'b' => 11,
+            _ => 0
+        };
+        
+        return 12 * (octave + 1) + basePitch + pitch.AccidentalOffset;
+    }
+    
+    private int GetPreferredString(NoteSyntax note)
+    {
+        // Check for string number annotation (\1, \2, etc.)
+        // For now, return 0 (auto)
+        // TODO: Parse string annotations from note
+        return 0;
     }
 }

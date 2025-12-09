@@ -163,7 +163,16 @@ internal sealed class Lexer
             case '\'': _position++; return (SyntaxKind.Apostrophe, "'");
             case ',': _position++; return (SyntaxKind.Comma, ",");
             case '.': _position++; return (SyntaxKind.Dot, ".");
-            case '\\': _position++; return (SyntaxKind.Backslash, "\\");
+            case '\\':
+                if (Peek(1) >= '1' && Peek(1) <= '9')
+                {
+                    _position++; // skip \
+                    var stringNum = Current.ToString();
+                    _position++;
+                    return (SyntaxKind.StringNumber, stringNum);
+                }
+                _position++; 
+                return (SyntaxKind.Backslash, "\\");
             case '/': _position++; return (SyntaxKind.Slash, "/");
         }
 
@@ -399,6 +408,8 @@ internal sealed class Lexer
             "acciaccatura" => SyntaxKind.AcciaccaturaKeyword,
             "appoggiatura" => SyntaxKind.AppogiaturaKeyword,
             "lyrics" => SyntaxKind.LyricsKeyword,
+            "tabStaff" or "tabstaff" => SyntaxKind.TabStaffKeyword,
+            "tuning" => SyntaxKind.TuningKeyword,
 
             // Articulation names
             "staccato" or "stac" => SyntaxKind.StaccatoKeyword,

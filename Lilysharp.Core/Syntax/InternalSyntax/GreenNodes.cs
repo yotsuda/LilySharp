@@ -413,3 +413,53 @@ internal sealed class LyricsBlockGreen : GreenSyntaxNode
     {
     }
 }
+
+// ============================================================
+// Tablature Green Nodes
+// ============================================================
+
+/// <summary>
+/// Tab staff declaration: tabStaff [tuning] { ... }
+/// </summary>
+internal sealed class TabStaffDeclarationGreen : GreenSyntaxNode
+{
+    public TabStaffDeclarationGreen(
+        SyntaxToken tabStaffKeyword,
+        GreenNode body)
+        : base(SyntaxKind.TabStaffDeclaration, [tabStaffKeyword, body])
+    {
+    }
+    
+    public TabStaffDeclarationGreen(
+        SyntaxToken tabStaffKeyword,
+        GreenNode tuning,
+        GreenNode body)
+        : base(SyntaxKind.TabStaffDeclaration, [tabStaffKeyword, tuning, body])
+    {
+    }
+}
+
+/// <summary>
+/// Tuning declaration: \tuning guitar | \tuning bass
+/// </summary>
+internal sealed class TuningDeclarationGreen : GreenSyntaxNode
+{
+    public TuningDeclarationGreen(
+        SyntaxToken backslash,
+        SyntaxToken tuningKeyword,
+        SyntaxToken tuningName)
+        : base(SyntaxKind.TuningDeclaration, [backslash, tuningKeyword, tuningName])
+    {
+    }
+}
+
+/// <summary>
+/// String number annotation: \1, \2, etc.
+/// </summary>
+internal sealed class StringNumberAnnotationGreen : GreenSyntaxNode
+{
+    public StringNumberAnnotationGreen(SyntaxToken stringNumber)
+        : base(SyntaxKind.StringNumberAnnotation, [stringNumber])
+    {
+    }
+}

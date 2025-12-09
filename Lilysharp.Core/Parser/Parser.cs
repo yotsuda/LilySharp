@@ -118,6 +118,7 @@ internal sealed class Parser
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
             
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
+            SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
             SyntaxKind.OpenBrace => ParseMusicBlock(),
             _ when IsMusicItemStart() => ParseMusicItem(),
@@ -440,6 +441,7 @@ internal sealed class Parser
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
             
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
+            SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
             _ => null
         };
     }
@@ -793,5 +795,43 @@ private GreenNode?[] ParseArticulations()
         
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new LyricsBlockGreen(lyricsKeyword, openBrace, [.. syllables], closeBrace);
+    }
+
+    // ========== Tablature ==========
+
+    private TabStaffDeclarationGreen ParseTabStaffDeclaration()
+    {
+        var tabStaffKeyword = Expect(SyntaxKind.TabStaffKeyword);
+        
+        // Optional tuning declaration
+        TuningDeclarationGreen? tuning = null;
+        if (Check(SyntaxKind.Backslash) && Peek(1)?.Kind == SyntaxKind.TuningKeyword)
+        {
+            tuning = ParseTuningDeclaration();
+        }
+        
+        var body = ParseMusicBlock();
+        
+        if (tuning != null)
+        {
+            return new TabStaffDeclarationGreen(tabStaffKeyword, tuning, body);
+        }
+        return new TabStaffDeclarationGreen(tabStaffKeyword, body);
+    }
+
+    private TuningDeclarationGreen ParseTuningDeclaration()
+    {
+        var backslash = Expect(SyntaxKind.Backslash);
+        var tuningKeyword = Expect(SyntaxKind.TuningKeyword);
+        
+        // Tuning name can be Identifier or a keyword like "bass"
+        var tuningName = Current.Kind switch
+        {
+            SyntaxKind.BassKeyword => Advance(),
+            SyntaxKind.Identifier => Advance(),
+            _ => Expect(SyntaxKind.Identifier) // will produce error
+        };
+        
+        return new TuningDeclarationGreen(backslash, tuningKeyword, tuningName);
     }
 }

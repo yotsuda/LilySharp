@@ -1,0 +1,16 @@
+﻿// Guitar tablature example
+// Standard tuning: E A D G B E
+
+\tabStaff {
+    // Open strings (low to high)
+    e,4 a, d g b e'
+    
+    // Simple melody on high E string
+    e'4 fis' gis' a' b' cis'' d'' e''
+    
+    // Power chord pattern (E5)
+    <e, b,>4 <e, b,> <e, b,> <e, b,>
+    
+    // A minor chord arpeggio
+    a,4 e a c' e' a'
+}

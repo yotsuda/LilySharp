@@ -123,6 +123,9 @@ public abstract class SyntaxNode
             SyntaxKind.LyricsBlock => new LyricsBlockSyntax((LyricsBlockGreen)green, this, position),
             SyntaxKind.Articulation => new ArticulationSyntax((ArticulationGreen)green, this, position),
             SyntaxKind.Dynamic => new DynamicSyntax((DynamicGreen)green, this, position),
+            SyntaxKind.TabStaffDeclaration => new TabStaffDeclarationSyntax((TabStaffDeclarationGreen)green, this, position),
+            SyntaxKind.TuningDeclaration => new TuningDeclarationSyntax((TuningDeclarationGreen)green, this, position),
+            SyntaxKind.StringNumberAnnotation => new StringNumberAnnotationSyntax((StringNumberAnnotationGreen)green, this, position),
             _ => new GenericSyntaxNode(green, this, position)
         };
     }

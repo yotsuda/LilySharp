@@ -29,3 +29,20 @@ public enum DynamicLevel
     FF = 110,
     FFF = 127
 }
+
+/// <summary>
+/// Predefined instrument tunings for tablature.
+/// </summary>
+public enum TuningType
+{
+    /// <summary>Standard guitar tuning: E A D G B E</summary>
+    Guitar,
+    /// <summary>4-string bass tuning: E A D G</summary>
+    Bass,
+    /// <summary>5-string bass tuning: B E A D G</summary>
+    Bass5,
+    /// <summary>Ukulele tuning: G C E A</summary>
+    Ukulele,
+    /// <summary>Custom tuning</summary>
+    Custom
+}

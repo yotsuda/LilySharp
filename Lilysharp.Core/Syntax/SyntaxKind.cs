@@ -69,11 +69,16 @@ public enum SyntaxKind : ushort
     AcciaccaturaKeyword,
     AppogiaturaKeyword,
     LyricsKeyword,
+    TabStaffKeyword,
+    TuningKeyword,
     
     // === Rest ===
     RestR,              // r
     RestS,              // s (spacer)
     RestR_Full,         // R (full measure)
+    
+    // === String Number (for tablature) ===
+    StringNumber,       // \1, \2, \3, \4, \5, \6
     
     // === Punctuation ===
     OpenBrace,          // {
@@ -173,5 +178,10 @@ public enum SyntaxKind : ushort
     TupletExpression,
     GraceExpression,
     LyricsBlock,
+    
+    // Tablature
+    TabStaffDeclaration,
+    TuningDeclaration,
+    StringNumberAnnotation,
     
 }

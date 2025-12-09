@@ -852,3 +852,67 @@ public sealed class DynamicSyntax : SyntaxNode
     /// </summary>
     public int Velocity => (int)Level;
 }
+
+// ============================================================
+// Tablature Nodes
+// ============================================================
+
+/// <summary>
+/// Represents a tablature staff declaration: \tabStaff { ... }
+/// </summary>
+public sealed partial class TabStaffDeclarationSyntax : SyntaxNode
+{
+    internal TabStaffDeclarationSyntax(TabStaffDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode TabStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public TuningDeclarationSyntax? Tuning => SlotCount > 2 ? GetChild(1) as TuningDeclarationSyntax : null;
+    public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(SlotCount - 1)!;
+}
+
+/// <summary>
+/// Represents a tuning declaration: \tuning guitar | \tuning bass | \tuning custom { pitches }
+/// </summary>
+public sealed partial class TuningDeclarationSyntax : SyntaxNode
+{
+    internal TuningDeclarationSyntax(TuningDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode BackslashToken => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode TuningKeyword => (SyntaxTokenNode)GetChild(1)!;
+    public SyntaxTokenNode TuningName => (SyntaxTokenNode)GetChild(2)!;
+    
+    /// <summary>
+    /// Gets the tuning type.
+    /// </summary>
+    public TuningType Type => TuningName.Text.ToLowerInvariant() switch
+    {
+        "guitar" => TuningType.Guitar,
+        "bass" => TuningType.Bass,
+        "bass5" => TuningType.Bass5,
+        "ukulele" => TuningType.Ukulele,
+        _ => TuningType.Guitar
+    };
+}
+
+/// <summary>
+/// Represents a string number annotation: \1, \2, \3, etc.
+/// </summary>
+public sealed partial class StringNumberAnnotationSyntax : SyntaxNode
+{
+    internal StringNumberAnnotationSyntax(StringNumberAnnotationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode StringNumberToken => (SyntaxTokenNode)GetChild(0)!;
+    
+    /// <summary>
+    /// Gets the string number (1-based).
+    /// </summary>
+    public int StringNumber => int.Parse(StringNumberToken.Text);
+}

@@ -1,0 +1,15 @@
+﻿// Bass tablature example
+// 4-string bass: E A D G
+
+\tabStaff \tuning bass {
+    // Simple bass line
+    e,4 e, g, a,
+    e,4 e, g, a,
+    
+    // Walking bass
+    c4 d e f g a b c'
+    
+    // Octave pattern
+    e,4 e e, e
+    a,4 a a, a
+}
