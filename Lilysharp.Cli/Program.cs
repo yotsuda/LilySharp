@@ -1,5 +1,6 @@
 ﻿using Lilysharp.Core.Midi;
 using Lilysharp.Core.MusicXml;
+using Lilysharp.Core.Svg;
 using Lilysharp.Core.Syntax;
 
 if (args.Length == 0)
@@ -12,6 +13,7 @@ if (args.Length == 0)
     Console.WriteLine("  midi <input.lys> [output.mid]  Convert to MIDI");
     Console.WriteLine("  xml <input.lys> [output.xml]   Convert to MusicXML");
     Console.WriteLine("  check <input.lys>              Check syntax");
+    Console.WriteLine("  svg <input.lys> [output.svg]   Convert to SVG");
     return 0;
 }
 
@@ -25,6 +27,8 @@ switch (command)
         return ExportMusicXml(args.Skip(1).ToArray());
     case "check":
         return CheckSyntax(args.Skip(1).ToArray());
+    case "svg":
+        return ExportSvg(args.Skip(1).ToArray());
     default:
         Console.Error.WriteLine($"Unknown command: {command}");
         return 1;
@@ -167,6 +171,54 @@ static int ExportMusicXml(string[] args)
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine($"  Parts: {xml.Parts.Count}");
         Console.WriteLine($"  Measures: {xml.Parts.Sum(p => p.Measures.Count)}");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        return 1;
+    }
+}
+
+static int ExportSvg(string[] args)
+{
+    if (args.Length == 0)
+    {
+        Console.Error.WriteLine("Error: Input file required");
+        return 1;
+    }
+
+    var inputPath = args[0];
+    if (!File.Exists(inputPath))
+    {
+        Console.Error.WriteLine($"Error: File not found: {inputPath}");
+        return 1;
+    }
+
+    var outputPath = args.Length > 1 
+        ? args[1] 
+        : Path.ChangeExtension(inputPath, ".svg");
+
+    try
+    {
+        var source = File.ReadAllText(inputPath);
+        var tree = SyntaxTree.Parse(source);
+
+        if (tree.HasErrors)
+        {
+            Console.Error.WriteLine("Syntax errors:");
+            foreach (var diag in tree.Diagnostics)
+            {
+                Console.Error.WriteLine($"  {diag}");
+            }
+            return 1;
+        }
+
+        var exporter = new SvgExporter();
+        var svg = exporter.Export(tree);
+        File.WriteAllText(outputPath, svg);
+
+        Console.WriteLine($"Created: {outputPath}");
         return 0;
     }
     catch (Exception ex)
