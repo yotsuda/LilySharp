@@ -163,4 +163,27 @@ c4 d4 e4 f4";
         Assert.Equal(4, attrs.TimeBeats);
         Assert.Equal(4, attrs.TimeBeatType);
     }
+
+    [Fact]
+    public void ExportChord_CreatesMultipleNotesWithChordFlag()
+    {
+        var source = "<c e g>4";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+        
+        var notes = xml.Parts[0].Measures[0].Notes;
+        Assert.Equal(3, notes.Count);
+        
+        // First note should not have chord flag
+        Assert.False(notes[0].IsChord);
+        Assert.Equal("C", notes[0].Step);
+        
+        // Second and third notes should have chord flag
+        Assert.True(notes[1].IsChord);
+        Assert.Equal("E", notes[1].Step);
+        
+        Assert.True(notes[2].IsChord);
+        Assert.Equal("G", notes[2].Step);
+    }
 }

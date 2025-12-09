@@ -187,6 +187,27 @@ public sealed class ChordSyntax : SyntaxNode
     }
 
     public IEnumerable<PitchSyntax> Pitches => DescendantNodes<PitchSyntax>();
+    
+    /// <summary>
+    /// Gets the duration of the chord (after the closing angle bracket).
+    /// </summary>
+    public DurationSyntax? Duration => DescendantNodes<DurationSyntax>().FirstOrDefault();
+    
+    /// <summary>
+    /// Gets the articulations attached to this chord.
+    /// </summary>
+    public IEnumerable<SyntaxNode> Articulations
+    {
+        get
+        {
+            for (int i = 0; i < Green.SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child is ArticulationSyntax or DynamicSyntax)
+                    yield return child;
+            }
+        }
+    }
 }
 
 /// <summary>

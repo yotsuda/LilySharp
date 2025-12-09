@@ -102,6 +102,10 @@ public sealed class MusicXmlExporter
                 ProcessNote(note);
                 break;
                 
+            case ChordSyntax chord:
+                ProcessChord(chord);
+                break;
+                
             case RestSyntax rest:
                 ProcessRest(rest);
                 break;
@@ -271,6 +275,72 @@ public sealed class MusicXmlExporter
         }
         
         _currentMeasure.Notes.Add(xmlNote);
+    }
+
+    private void ProcessChord(ChordSyntax chord)
+    {
+        if (_currentMeasure == null) return;
+        
+        var pitches = chord.Pitches.ToList();
+        if (pitches.Count == 0) return;
+        
+        var duration = GetDuration(chord.Duration);
+        int durationTicks = FractionToTicks(duration);
+        var (type, dots) = GetNoteType(duration);
+        
+        bool isFirst = true;
+        foreach (var pitch in pitches)
+        {
+            var (step, alter) = ParsePitch(pitch);
+            int octaveChange = pitch.OctaveOffset;
+            int targetOctave = _currentOctave + octaveChange;
+            
+            var xmlNote = new MusicXmlNote
+            {
+                Step = step,
+                Alter = alter,
+                Octave = targetOctave,
+                Duration = durationTicks,
+                Type = type,
+                Dots = dots,
+                IsChord = !isFirst,
+                Dynamic = isFirst ? _currentDynamic : null
+            };
+            
+            // Add articulations only to the first note
+            if (isFirst)
+            {
+                foreach (var artic in chord.Articulations)
+                {
+                    if (artic is ArticulationSyntax articulation)
+                    {
+                        var articName = articulation.Type switch
+                        {
+                            ArticulationType.Staccato => "staccato",
+                            ArticulationType.Accent => "accent",
+                            ArticulationType.Tenuto => "tenuto",
+                            ArticulationType.Marcato => "strong-accent",
+                            ArticulationType.Fermata => "fermata",
+                            _ => null
+                        };
+                        if (articName != null)
+                            xmlNote.Articulations.Add(articName);
+                    }
+                    else if (artic is DynamicSyntax dynamic)
+                    {
+                        _currentDynamic = dynamic.DynamicToken.Text;
+                    }
+                }
+            }
+            
+            _currentMeasure.Notes.Add(xmlNote);
+            
+            if (isFirst)
+            {
+                _currentOctave = targetOctave;
+                isFirst = false;
+            }
+        }
     }
 
     private void ProcessRest(RestSyntax rest)
