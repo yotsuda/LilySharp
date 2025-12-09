@@ -1,6 +1,6 @@
-import * as path from 'path';
-import * as vscode from 'vscode';
+﻿import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as path from 'path';
 import {
     LanguageClient,
     LanguageClientOptions,
@@ -9,9 +9,15 @@ import {
 } from 'vscode-languageclient/node';
 
 let client: LanguageClient;
+let clientReady = false;
 let previewPanel: vscode.WebviewPanel | undefined;
+let currentDocument: vscode.TextDocument | undefined;
 let debounceTimer: NodeJS.Timeout | undefined;
 const outputChannel = vscode.window.createOutputChannel('Lilysharp Extension');
+
+// Constants
+const DEBOUNCE_DELAY_DEFAULT = 300;
+const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 
 export function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine('Lilysharp extension activating...');
@@ -21,13 +27,11 @@ export function activate(context: vscode.ExtensionContext) {
     
     outputChannel.appendLine(`Config serverPath: "${serverPath}"`);
     
-    // If no custom path, try to find in PATH or use bundled
     if (!serverPath || serverPath.trim() === '') {
         serverPath = 'lilysharp-lsp';
         outputChannel.appendLine(`Using default: ${serverPath}`);
     }
     
-    // Check if file exists (for absolute paths)
     if (path.isAbsolute(serverPath)) {
         if (fs.existsSync(serverPath)) {
             outputChannel.appendLine(`Server executable found: ${serverPath}`);
@@ -39,14 +43,8 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     const serverOptions: ServerOptions = {
-        run: {
-            command: serverPath,
-            transport: TransportKind.stdio
-        },
-        debug: {
-            command: serverPath,
-            transport: TransportKind.stdio
-        }
+        run: { command: serverPath, transport: TransportKind.stdio },
+        debug: { command: serverPath, transport: TransportKind.stdio }
     };
 
     const clientOptions: LanguageClientOptions = {
@@ -66,6 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     outputChannel.appendLine('Starting language client...');
     client.start().then(() => {
+        clientReady = true;
         outputChannel.appendLine('Language client started successfully');
     }).catch((error) => {
         outputChannel.appendLine(`Failed to start language client: ${error}`);
@@ -85,17 +84,16 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.workspace.onDidChangeTextDocument(event => {
             if (event.document.languageId === 'lilysharp' && previewPanel) {
-                const config = vscode.workspace.getConfiguration('lilysharp');
-                const autoRefresh = config.get<boolean>('preview.autoRefresh', true);
-                const delay = config.get<number>('preview.refreshDelay', 300);
+                const cfg = vscode.workspace.getConfiguration('lilysharp');
+                const autoRefresh = cfg.get<boolean>('preview.autoRefresh', true);
+                const delay = cfg.get<number>('preview.refreshDelay', DEBOUNCE_DELAY_DEFAULT);
                 
                 if (autoRefresh) {
-                    // Debounce the refresh
                     if (debounceTimer) {
                         clearTimeout(debounceTimer);
                     }
                     debounceTimer = setTimeout(() => {
-                        refreshPreview(event.document);
+                        updatePreviewContent(event.document);
                     }, delay);
                 }
             }
@@ -106,7 +104,11 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.window.onDidChangeActiveTextEditor(editor => {
             if (editor && editor.document.languageId === 'lilysharp' && previewPanel) {
-                refreshPreview(editor.document);
+                if (currentDocument?.uri.toString() !== editor.document.uri.toString()) {
+                    currentDocument = editor.document;
+                    updatePreviewTitle();
+                    updatePreviewContent(editor.document);
+                }
             }
         })
     );
@@ -124,6 +126,13 @@ export function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine('Lilysharp extension activated');
 }
 
+function updatePreviewTitle() {
+    if (previewPanel && currentDocument) {
+        const fileName = path.basename(currentDocument.uri.fsPath);
+        previewPanel.title = `Preview: ${fileName}`;
+    }
+}
+
 function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewColumn) {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'lilysharp') {
@@ -131,15 +140,18 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         return;
     }
 
+    currentDocument = editor.document;
+
     if (previewPanel) {
         previewPanel.reveal(viewColumn);
-        refreshPreview(editor.document);
+        updatePreviewContent(editor.document);
         return;
     }
 
+    const fileName = path.basename(editor.document.uri.fsPath);
     previewPanel = vscode.window.createWebviewPanel(
         'lilysharpPreview',
-        'Lilysharp Preview',
+        `Preview: ${fileName}`,
         viewColumn,
         {
             enableScripts: true,
@@ -149,9 +161,10 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
 
     previewPanel.onDidDispose(() => {
         previewPanel = undefined;
+        currentDocument = undefined;
     });
 
-    // Handle messages from webview (click to jump)
+    // Handle messages from webview
     previewPanel.webview.onDidReceiveMessage(
         message => {
             if (message.type === 'jumpToPosition') {
@@ -165,7 +178,6 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                         new vscode.Range(position, position),
                         vscode.TextEditorRevealType.InCenter
                     );
-                    // Focus the editor
                     vscode.window.showTextDocument(targetEditor.document, targetEditor.viewColumn);
                 }
             }
@@ -174,11 +186,15 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         context.subscriptions
     );
 
-    refreshPreview(editor.document);
+    // Set initial HTML structure
+    previewPanel.webview.html = getPreviewHtml();
+    
+    // Then load content
+    updatePreviewContent(editor.document);
 }
 
-async function refreshPreview(document: vscode.TextDocument) {
-    if (!previewPanel || !client) {
+async function updatePreviewContent(document: vscode.TextDocument) {
+    if (!previewPanel || !client || !clientReady) {
         return;
     }
 
@@ -187,13 +203,26 @@ async function refreshPreview(document: vscode.TextDocument) {
             textDocument: { uri: document.uri.toString() }
         });
 
+        if (!previewPanel) return; // Panel may have been disposed
+
         if (response.Error) {
-            previewPanel.webview.html = getErrorHtml(response.Error);
+            previewPanel.webview.postMessage({ 
+                type: 'updateContent', 
+                error: response.Error 
+            });
         } else if (response.Svg) {
-            previewPanel.webview.html = getPreviewHtml(response.Svg);
+            previewPanel.webview.postMessage({ 
+                type: 'updateContent', 
+                svg: response.Svg 
+            });
         }
     } catch (error) {
-        previewPanel.webview.html = getErrorHtml(`Failed to generate preview: ${error}`);
+        if (previewPanel) {
+            previewPanel.webview.postMessage({ 
+                type: 'updateContent', 
+                error: `Failed to generate preview: ${error}` 
+            });
+        }
     }
 }
 
@@ -202,7 +231,7 @@ interface SvgResponse {
     Error: string | null;
 }
 
-function getPreviewHtml(svg: string): string {
+function getPreviewHtml(): string {
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -222,10 +251,12 @@ function getPreviewHtml(svg: string): string {
             max-width: 100%;
             overflow: auto;
         }
-        svg {
-            display: block;
+        #svgContainer {
             transform-origin: top left;
             transition: transform 0.1s ease-out;
+        }
+        #svgContainer svg {
+            display: block;
         }
         .zoom-info {
             position: fixed;
@@ -247,39 +278,62 @@ function getPreviewHtml(svg: string): string {
             fill: #ff6600 !important;
             filter: drop-shadow(0 0 4px #ff6600);
         }
+        .error {
+            color: #f44336;
+            background: #ffebee;
+            padding: 16px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .loading {
+            color: #666;
+            font-family: system-ui, sans-serif;
+        }
         @media (prefers-color-scheme: dark) {
             body {
                 background: #1e1e1e;
             }
-            svg {
+            #svgContainer svg {
                 filter: invert(1) hue-rotate(180deg);
             }
             .highlight {
                 fill: #00ccff !important;
                 filter: drop-shadow(0 0 4px #00ccff);
             }
+            .error {
+                background: #4a1515;
+                color: #ff8a80;
+            }
+            .loading {
+                color: #aaa;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        ${svg}
+        <div id="svgContainer">
+            <div class="loading">Loading preview...</div>
+        </div>
     </div>
     <div class="zoom-info" id="zoomInfo">100%</div>
     <script>
         const vscode = acquireVsCodeApi();
+        const HIGHLIGHT_THRESHOLD = ${HIGHLIGHT_DISTANCE_THRESHOLD};
+        
         let scale = 1;
         const minScale = 0.25;
         const maxScale = 4;
         const scaleStep = 0.1;
-        const svgEl = document.querySelector('svg');
+        
+        const svgContainer = document.getElementById('svgContainer');
         const zoomInfo = document.getElementById('zoomInfo');
         let hideTimeout;
+        let lastHighlightPos = -1;
 
         function updateZoom() {
-            if (svgEl) {
-                svgEl.style.transform = 'scale(' + scale + ')';
-            }
+            svgContainer.style.transform = 'scale(' + scale + ')';
             zoomInfo.textContent = Math.round(scale * 100) + '%';
             zoomInfo.classList.add('visible');
             clearTimeout(hideTimeout);
@@ -303,15 +357,37 @@ function getPreviewHtml(svg: string): string {
                     }
                 }
             });
-            if (nearest && nearestDist < 50) {
+            if (nearest && nearestDist < HIGHLIGHT_THRESHOLD) {
                 nearest.classList.add('highlight');
             }
         }
 
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
         window.addEventListener('message', event => {
             const message = event.data;
-            if (message.type === 'highlightPosition') {
-                highlightNearestElement(message.position);
+            switch (message.type) {
+                case 'updateContent':
+                    if (message.error) {
+                        svgContainer.innerHTML = '<div class="error">' + escapeHtml(message.error) + '</div>';
+                    } else if (message.svg) {
+                        svgContainer.innerHTML = message.svg;
+                        // Re-apply highlight if we had one
+                        if (lastHighlightPos >= 0) {
+                            highlightNearestElement(lastHighlightPos);
+                        }
+                    }
+                    break;
+                case 'highlightPosition':
+                    lastHighlightPos = message.position;
+                    highlightNearestElement(message.position);
+                    break;
             }
         });
 
@@ -334,49 +410,6 @@ function getPreviewHtml(svg: string): string {
     </script>
 </body>
 </html>`;
-}
-function getErrorHtml(error: string): string {
-    return `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body {
-            margin: 20px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        .error {
-            color: #f44336;
-            background: #ffebee;
-            padding: 16px;
-            border-radius: 4px;
-            white-space: pre-wrap;
-            font-family: monospace;
-        }
-        @media (prefers-color-scheme: dark) {
-            body {
-                background: #1e1e1e;
-                color: #fff;
-            }
-            .error {
-                background: #4a1515;
-                color: #ff8a80;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="error">${escapeHtml(error)}</div>
-</body>
-</html>`;
-}
-
-function escapeHtml(text: string): string {
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
 }
 
 export function deactivate(): Thenable<void> | undefined {

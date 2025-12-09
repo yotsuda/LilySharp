@@ -65,10 +65,15 @@ public class SvgExporter
     
     public string Export(SyntaxTree tree)
     {
+        // Reset all state
         _svg.Clear();
         _sourceText = tree.Text;
         _currentX = MarginLeft;
         _currentY = MarginTop;
+        _currentOctave = 4;
+        _defaultDuration = Fraction.Quarter;
+        _currentClef = "treble";
+        _keySignature = 0;
         
         // Calculate approximate width needed
         var width = CalculateWidth(tree);
@@ -254,7 +259,7 @@ public class SvgExporter
         
         // Draw notehead
         char notehead = SmuflGlyphs.GetNotehead(noteValue);
-        DrawGlyph(notehead, _currentX, noteY, FindActualPosition(note.Position, note.Pitch.PitchName));
+        DrawGlyph(notehead, _currentX, noteY, FindActualPosition(note.Position));
         
         // Draw stem (for half notes and shorter)
         if (noteValue >= 2)
@@ -331,7 +336,7 @@ public class SvgExporter
         
         // Rest Y position (centered on staff)
         double restY = _currentY + (2 * SpaceHeight);
-        DrawGlyph(restGlyph, _currentX, restY, FindActualPosition(rest.Position, "r"));
+        DrawGlyph(restGlyph, _currentX, restY, FindActualPosition(rest.Position));
         
         _currentX += GetNoteSpacing(noteValue);
     }
@@ -366,7 +371,7 @@ public class SvgExporter
         foreach (var (pos, octave) in positions)
         {
             double noteY = _currentY + StaffHeight - (pos * SpaceHeight / 2);
-            DrawGlyph(notehead, _currentX, noteY, FindActualPosition(chord.Position, "<"));
+            DrawGlyph(notehead, _currentX, noteY, FindActualPosition(chord.Position));
         }
         
         // Draw stem (for half notes and shorter)
@@ -507,7 +512,7 @@ public class SvgExporter
     /// <summary>
     /// Finds the actual text position by skipping whitespace and comments.
     /// </summary>
-    private int FindActualPosition(int startPos, string searchText)
+    private int FindActualPosition(int startPos)
     {
         if (string.IsNullOrEmpty(_sourceText) || startPos >= _sourceText.Length)
             return startPos;
