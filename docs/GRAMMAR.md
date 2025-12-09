@@ -1,14 +1,15 @@
 ﻿# Lilysharp Grammar Specification
-# Version: 0.2.0
+# Version: 0.4.0
 # Date: 2025-12-09
 
 ## Design Principles
 
-1. Explicit over implicit     - No hidden state
-2. Locality                   - Each element independently parsable
-3. Completion-friendly        - Context determines valid tokens
-4. Visual correspondence      - Corresponds to sheet music visually
-5. LilyPond respect           - Inherit practical conventions
+1. Single-pass compilation  - No forward references, immediate error detection
+2. Explicit over implicit   - No hidden state, no optional structure
+3. Locality                 - Each element independently parsable
+4. Visual correspondence    - Corresponds to sheet music visually
+5. LilyPond inspiration     - Inherit practical conventions, not Scheme complexity
+6. Section-oriented         - Organize by musical sections, not just by parts
 
 ================================================================================
 ## 1. Lexical Grammar
@@ -34,17 +35,17 @@ EscapeChar     = '"' | '\' | 'n' | 'r' | 't' ;
 
 Identifier     = IdentStart , { IdentCont } ;
 IdentStart     = 'a'..'z' | 'A'..'Z' | '_' ;
-IdentCont      = IdentStart | Digit ;
+IdentCont      = IdentStart | Digit | '-' ;
 
 ### Pitch Names
 
 (* Base pitch *)
 PitchBase      = 'c' | 'd' | 'e' | 'f' | 'g' | 'a' | 'b' ;
 
-(* Accidentals - LilyPond compatible *)
-Accidental     = 'is' | 'es' | 'isis' | 'eses'
-               | 's'                              (* b -> bes shorthand *)
-               | 'as' | 'aes'                     (* a-flat both allowed *)
+(* Accidentals *)
+Accidental     = 'is' | 'ees' | 'isis' | 'eeses'
+               | 'aes'                            (* a-flat *)
+               | 'bes'                            (* b-flat *)
                ;
 
 (* Octave marks *)
@@ -64,108 +65,319 @@ DurationToken  = DurationBase , [ Dots ] ;
 
 ### Keywords
 
-Keyword        = 'score' | 'part' | 'staff' | 'voice'
-               | 'relative' | 'absolute' | 'fixed'
-               | 'repeat' | 'volta' | 'alternative'
-               | 'let' | 'use'
-               | 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
-               | 'verse' | 'notes' | 'lyrics' | 'chords'
-               | 'major' | 'minor' | 'dorian' | 'phrygian' | 'lydian'
-               | 'mixolydian' | 'aeolian' | 'locrian'
-               | 'treble' | 'bass' | 'alto' | 'tenor' | 'percussion'
-               | 'r'                              (* rest *)
-               | 's'                              (* spacer rest *)
+(* Structure keywords - no backslash *)
+StructureKeyword = 'section' | 'structure' | 'render'
+                 | 'staff' | 'tab' | 'voice'
+                 | 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
+                 | 'transpose' | 'octave' | 'instrument' | 'channel'
+                 | 'relative' | 'absolute' | 'fixed'
+                 | 'major' | 'minor' | 'dorian' | 'phrygian' | 'lydian'
+                 | 'mixolydian' | 'aeolian' | 'locrian'
+                 | 'treble' | 'bass' | 'alto' | 'tenor' | 'percussion'
+                 | 'r' | 's'                      (* rests *)
+                 ;
+
+(* Dynamic keywords - with backslash *)
+DynamicKeyword = '\p' | '\pp' | '\ppp' | '\mp'
+               | '\f' | '\ff' | '\fff' | '\mf'
+               | '\fp' | '\sf' | '\sfz' | '\rfz'
+               | '\cresc' | '\decresc' | '\dim'
                ;
+
+(* Structure control *)
+StructureControl = 'segno' | 'fine' | 'coda' | 'dc' | 'ds' | 'al' | 'to' ;
 
 ### Operators & Punctuation
 
 Punctuation    = '{' | '}' | '(' | ')' | '<' | '>' | '[' | ']'
                | '|' | '~' | ':' | '=' | '/' | '@' | '\' | '-'
+               | '|:' | ':|' | ':|:'              (* repeat signs *)
                ;
 
 ================================================================================
-## 2. Syntactic Grammar
+## 2. File Structure (All Required)
 ================================================================================
 
 ### 2.1 Top-Level Structure
 
+(* A valid file MUST contain: at least one section, one structure, one render *)
+
 File           = { TopLevelItem } ;
 
-TopLevelItem   = MetadataDecl
-               | VariableDecl
-               | ScoreDecl
-               | PartDecl
-               | MusicExpr                        (* implicit single part *)
+TopLevelItem   = MetadataDecl                     (* title, composer, etc. *)
+               | GlobalSetting                    (* tempo, time, key *)
+               | VariableDecl                     (* reusable music fragments *)
+               | SectionDecl                      (* musical sections - REQUIRED *)
+               | StructureDecl                    (* song form - REQUIRED *)
+               | RenderDecl                       (* output definitions - REQUIRED *)
                ;
 
-### Metadata
+(* Validation: File must contain at least one SectionDecl, one StructureDecl, one RenderDecl *)
 
-MetadataDecl   = MetadataKey , MetadataValue ;
-MetadataKey    = 'title' | 'composer' | 'arranger' | 'copyright'
-               | 'tagline' | 'dedication' ;
-MetadataValue  = String | Integer ;
+### 2.2 Metadata
 
-### Variables
+MetadataDecl   = MetadataKey , String ;
+MetadataKey    = 'title' | 'composer' | 'arranger' | 'copyright' | 'tagline' ;
 
-VariableDecl   = 'let' , Identifier , '=' , MusicExpr ;
-VariableRef    = 'use' , Identifier
-               | '$' , Identifier ;              (* shorthand *)
+(* Example:
+   title "My Song"
+   composer "John Doe"
+*)
 
-### 2.2 Score & Part Structure
+### 2.3 Global Settings
 
-(* Score *)
-ScoreDecl      = 'score' , [ String ] , '{' , { ScoreItem } , '}' ;
+GlobalSetting  = TempoDecl | TimeDecl | KeyDecl ;
 
-ScoreItem      = ScoreProperty
-               | PartDecl
-               | StaffGroup
-               ;
+TempoDecl      = 'tempo' , Integer ;              (* BPM *)
+TimeDecl       = 'time' , Integer , '/' , Integer ;
+KeyDecl        = 'key' , PitchToken , Mode ;
 
-ScoreProperty  = PropertyName , ':' , PropertyValue ;
-PropertyName   = 'tempo' | 'time' | 'key' | 'pickup' ;
-PropertyValue  = TempoValue | TimeValue | KeyValue | DurationToken ;
-
-TempoValue     = Integer                          (* BPM *)
-               | DurationToken , '=' , Integer    (* quarter = 120 *)
-               ;
-TimeValue      = Integer , '/' , Integer ;        (* 4/4, 3/4, 6/8 *)
-KeyValue       = PitchBase , [ Accidental ] , Mode ;
 Mode           = 'major' | 'minor' | 'dorian' | 'phrygian'
                | 'lydian' | 'mixolydian' | 'aeolian' | 'locrian' ;
 
-(* Part *)
-PartDecl       = 'part' , [ Identifier ] , [ String ] , '{' , { PartItem } , '}' ;
+(* Example:
+   tempo 120
+   time 4/4
+   key c major
+*)
 
-PartItem       = PartProperty
-               | StaffDecl
-               | VoiceDecl
-               | MusicExpr                        (* implicit single staff *)
+================================================================================
+## 3. Variables
+================================================================================
+
+### 3.1 Variable Definition
+
+(* Reusable music fragments - must be defined before use *)
+(* Variables may NOT contain key/tempo/time/clef changes - pure music only *)
+
+VariableDecl   = Identifier , '=' , MusicBlock ;
+
+(* Example:
+   guitar_riff = { c4 d e f | g a b c' }
+   bass_line = { c,4 g, c, g, }
+*)
+
+(* Error: Variables cannot contain key/tempo/time/clef changes
+   bad_var = { c4 d | key g major | e4 f }   // ERROR
+*)
+
+### 3.2 Variable Reference
+
+VariableRef    = Identifier ;
+
+(* Variables can be referenced in section part blocks *)
+
+================================================================================
+## 4. Section-Oriented Structure
+================================================================================
+
+### 4.1 Section Definition
+
+(* Musical sections with rehearsal marks - at least one required *)
+SectionDecl    = 'section' , Identifier , '{' , { SectionItem } , '}' ;
+
+SectionItem    = SectionSetting                   (* key, tempo at section start *)
+               | PartBlock                        (* instrument parts *)
                ;
 
-PartProperty   = 'clef' , ':' , ClefValue
-               | 'instrument' , ':' , String
-               | PropertyName , ':' , PropertyValue
+SectionSetting = KeyDecl | TempoDecl | TimeDecl ;
+
+PartBlock      = Identifier , [ PartOptions ] , MusicBlock ;
+
+PartOptions    = { PartOption } ;
+PartOption     = 'transpose' , ':' , TransposeValue
+               | 'octave' , ':' , Integer
+               | 'instrument' , ':' , InstrumentName
+               | 'clef' , ':' , ClefValue
                ;
-ClefValue      = 'treble' | 'bass' | 'alto' | 'tenor'
-               | 'treble_8' | 'bass^8' | 'percussion' ;
 
-(* Staff & Voice *)
-StaffDecl      = 'staff' , [ Identifier ] , '{' , { StaffItem } , '}' ;
-StaffItem      = PartProperty | VoiceDecl | MusicExpr ;
+TransposeValue = PitchToken                       (* transpose:bes for Bb instruments *)
+               | Integer                          (* transpose:-2 for semitones *)
+               ;
 
-VoiceDecl      = 'voice' , [ Identifier ] , '{' , MusicExpr , '}' ;
+InstrumentName = Identifier | String ;
 
-(* Staff Grouping *)
-StaffGroup     = GroupType , '{' , { PartDecl | StaffGroup } , '}' ;
-GroupType      = 'piano' | 'group' | 'choir' | 'grand' ;
+ClefValue      = 'treble' | 'bass' | 'alto' | 'tenor' | 'percussion' ;
 
-### 2.3 Music Expression
+(* Example:
+   section Intro {
+     key c major
+     tempo 120
+     guitar { c4 d e f | g a b c' }
+     bass { c,4 g, c, g, | c, g, c, g, }
+   }
+
+   section A {
+     key g major
+     guitar { g4 a b c' | d' e' fis' g' }
+     bass { g,4 d, g, d, | g, d, g, d, }
+   }
+*)
+
+### 4.2 Mid-Section Changes
+
+(* Key, tempo, time, clef can change mid-section inside part blocks *)
+(* Changes affect all parts from that point - parts should have matching bar positions *)
+(* Warning issued if key/tempo changes occur at different bar positions across parts *)
+
+MidSectionChange = 'key' , PitchToken , Mode
+                 | 'tempo' , Integer
+                 | 'time' , Integer , '/' , Integer
+                 | 'clef' , ClefValue
+                 ;
+
+(* Example - correct usage (changes at same bar position):
+   section A {
+     key c major
+     tempo 120
+     
+     guitar {
+       c4 d e f | g a b c' |
+       key g major                    // bar 3: key change
+       tempo 140                      // bar 3: tempo change
+       g4 a b c' | d' e' fis' g' |
+     }
+     
+     bass {
+       c,4 g, c, g, | c, g, c, g, |
+       key g major                    // bar 3: must match guitar
+       tempo 140
+       g,4 d, g, d, | g, d, g, d, |
+     }
+   }
+*)
+
+(* Warning example - mismatched bar positions:
+   section A {
+     guitar { c4 d e f | key g major | g4 a b c' | }    // key at bar 2
+     bass   { c,4 g, | c,4 g, | key g major | g,4 d, | } // key at bar 3
+   }
+   // Warning: Key change in 'guitar' at bar 2, but 'bass' at bar 3
+*)
+
+### 4.3 Structure Definition (Required)
+
+(* Song form with repeat signs - 1:1 correspondence with music notation *)
+(* Exactly one structure block required per file *)
+
+StructureDecl  = 'structure' , '{' , { StructureItem } , '}' ;
+
+StructureItem  = SectionRef                       (* section name *)
+               | RepeatBlock                      (* |: ... :| *)
+               | NavigationMark                   (* segno, fine, coda, etc. *)
+               ;
+
+SectionRef     = Identifier ;
+
+RepeatBlock    = '|:' , { StructureItem } , ':|'
+               | '|:' , { StructureItem } , '|' , Alternatives , ':|' , AlternativeEnd
+               ;
+
+Alternatives   = Alternative , { Alternative } ;
+Alternative    = Integer , '.' , SectionRef ;     (* 1. A, 2. B *)
+AlternativeEnd = Integer , '.' , SectionRef ;     (* final alternative *)
+
+NavigationMark = 'segno'                          (* 𝄋 sign *)
+               | 'fine'                           (* Fine *)
+               | 'coda'                           (* ⊕ Coda *)
+               | 'to' , 'coda'                    (* To Coda *)
+               | 'dc'                             (* D.C. *)
+               | 'dc' , 'al' , 'fine'             (* D.C. al Fine *)
+               | 'dc' , 'al' , 'coda'             (* D.C. al Coda *)
+               | 'ds'                             (* D.S. *)
+               | 'ds' , 'al' , 'fine'             (* D.S. al Fine *)
+               | 'ds' , 'al' , 'coda'             (* D.S. al Coda *)
+               ;
+
+(* Example:
+   structure {
+     Intro
+     |: A :|
+     |: B | 1. A :| 2. C
+     fine
+   }
+*)
+
+================================================================================
+## 5. Output Definition (Required)
+================================================================================
+
+### 5.1 Render Declaration
+
+(* At least one render block required per file *)
+
+RenderDecl     = 'render' , Identifier , String , '{' , { RenderItem } , '}' ;
+
+(* Identifier = render name for --render command line option *)
+(* String = output filename, extension determines format *)
+
+RenderItem     = StaffRender | TabRender | MidiPart ;
+
+StaffRender    = 'staff' , [ ClefOption ] , '{' , PartRef , '}' ;
+TabRender      = 'tab' , TuningOption , '{' , PartRef , '}' ;
+MidiPart       = PartRef , [ MidiOptions ] ;
+
+ClefOption     = Identifier                       (* bass, treble, etc. *)
+               | 'clef' , ':' , ClefValue
+               ;
+
+TuningOption   = Identifier                       (* guitar, bass, ukulele *)
+               | 'tuning' , ':' , TuningValue
+               ;
+
+TuningValue    = 'guitar' | 'bass' | 'bass5' | 'ukulele' ;
+
+PartRef        = Identifier ;                     (* part name from sections *)
+
+MidiOptions    = { MidiOption } ;
+MidiOption     = 'channel' , ':' , Integer        (* 1-16 *)
+               | 'instrument' , ':' , Integer     (* GM program 1-128 *)
+               | 'octave' , ':' , Integer         (* octave shift for playback *)
+               ;
+
+(* Examples:
+
+   // Full band score
+   render full "mysong-full.svg" {
+     staff { guitar }
+     tab guitar { guitar }
+     staff bass { bass }
+   }
+
+   // Guitar part only
+   render guitarPart "mysong-guitar.pdf" {
+     staff { guitar }
+     tab guitar { guitar }
+   }
+
+   // MIDI output
+   render audio "mysong.mid" {
+     guitar channel:1 instrument:25
+     bass channel:2 instrument:33 octave:-1
+   }
+*)
+
+### 5.2 Output Formats
+
+(* Determined by file extension *)
+
+| Extension | Format | Description           |
+|-----------|--------|-----------------------|
+| .svg      | SVG    | Web display, preview  |
+| .pdf      | PDF    | Print                 |
+| .png      | PNG    | Image embedding       |
+| .mid      | MIDI   | Playback, DAW         |
+
+================================================================================
+## 6. Music Expression
+================================================================================
+
+### 6.1 Music Expression Types
 
 MusicExpr      = RelativeExpr
                | AbsoluteExpr
                | SequentialExpr
                | ParallelExpr
-               | RepeatExpr
                | VariableRef
                ;
 
@@ -181,23 +393,21 @@ MusicItem      = Note
                | Rest
                | Chord
                | Barline
-               | InlineProperty
+               | MidSectionChange                 (* key, tempo, time, clef *)
                | Slur
                | Tie
-               | RepeatExpr
                | VariableRef
-               | VerseBlock
                ;
 
-### 2.4 Notes, Rests, Chords
+### 6.2 Notes, Rests, Chords
 
 (* Note *)
-Note           = Pitch , [ Duration ] , { Articulation } , [ LyricAttach ] ;
+Note           = Pitch , [ Duration ] , { Articulation } ;
 
-Pitch          = PitchToken ;                     (* c, cis', des,, etc. *)
+Pitch          = PitchToken ;
 
-Duration       = DurationToken                    (* 4, 8., 16.. etc. *)
-               | '*' , Fraction ;                 (* duration multiplier *)
+Duration       = DurationToken
+               | '*' , Fraction ;
 Fraction       = Integer , [ '/' , Integer ] ;
 
 (* Rest *)
@@ -214,313 +424,185 @@ Chord          = '<' , Pitch , { Pitch } , '>' , [ Duration ] , { Articulation }
 Barline        = '|'                              (* normal *)
                | '||'                             (* double bar *)
                | '|.'                             (* final bar *)
-               | '.|'                             (* opening double bar *)
-               | ':|'                             (* left repeat *)
-               | '|:'                             (* right repeat *)
-               | ':|:'                            (* bidirectional repeat *)
                ;
 
-### 2.5 Articulations & Ornaments
+### 6.3 Articulations & Dynamics
 
-(* Articulation *)
 Articulation   = '@' , ArticulationName
                | DynamicMark
-               | OrnamentMark
                ;
 
-ArticulationName = 'staccato' | 'stac'            (* . *)
-                 | 'accent' | 'acc'               (* > *)
-                 | 'tenuto' | 'ten'               (* - *)
-                 | 'marcato' | 'marc'             (* ^ *)
-                 | 'fermata' | 'ferm'             (* fermata symbol *)
-                 | 'portato'                      (* -. *)
-                 | 'staccatissimo' | 'stacc'      (* ' *)
-                 | 'downbow' | 'upbow'
-                 | 'trill' | 'turn' | 'mordent'
-                 | 'prall' | 'prallmordent'
+ArticulationName = 'staccato' | 'stac'
+                 | 'accent' | 'acc'
+                 | 'tenuto' | 'ten'
+                 | 'marcato' | 'marc'
+                 | 'fermata' | 'ferm'
+                 | 'portato'
+                 | 'staccatissimo' | 'stacc'
                  ;
 
-(* Dynamics *)
+(* Dynamics use backslash - visually distinct from structure *)
 DynamicMark    = '\' , DynamicLevel
                | '\' , DynamicChange
                ;
 DynamicLevel   = 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'f' | 'ff' | 'fff'
                | 'fp' | 'sf' | 'sfz' | 'rfz' ;
-DynamicChange  = 'cresc' | 'decresc' | 'dim'
-               | '<' | '>' ;                      (* hairpin *)
+DynamicChange  = 'cresc' | 'decresc' | 'dim' ;
 
-(* Ornaments - grace notes *)
-OrnamentMark   = GraceNote | Tremolo | Glissando ;
-GraceNote      = '\grace' , ( Note | Chord | MusicBlock )
-               | '\acciaccatura' , ( Note | Chord )
-               | '\appoggiatura' , ( Note | Chord )
-               ;
-Tremolo        = ':' , TremoloDuration ;          (* c4:32 = 32nd tremolo *)
-TremoloDuration = '8' | '16' | '32' | '64' ;
-Glissando      = '\gliss' ;
+### 6.4 Slurs, Ties, Beams
 
-### 2.6 Slurs, Ties, Beams
-
-(* Slur *)
-Slur           = '('                              (* slur start *)
-               | ')'                              (* slur end *)
-               | '\(' | '\)'                      (* phrasing slur *)
-               ;
-
-(* Tie *)
-Tie            = '~' ;                            (* after note: c4~ c4 *)
-
-(* Beam *)
-BeamControl    = '['                              (* beam start *)
-               | ']'                              (* beam end *)
-               ;
-
-(* Connectors attached after Note *)
-NoteWithConnectors = Note , [ Tie ] , [ Slur ] , [ BeamControl ] ;
-
-### 2.7 Repeat Structure
-
-RepeatExpr     = 'repeat' , RepeatType , Integer , MusicBlock , [ Alternative ] ;
-
-RepeatType     = 'volta'                          (* with repeat signs *)
-               | 'unfold'                         (* expand *)
-               | 'percent'                        (* % sign *)
-               | 'tremolo'
-               ;
-
-Alternative    = 'alternative' , '{' , { MusicBlock } , '}' ;
-
-(* Example: repeat volta 2 { c4 d e f } alternative { { g2 } { g4 a } } *)
-
-### 2.8 Lyrics & Chord Names
-
-(* Inline Lyrics *)
-LyricAttach    = '(' , String , ')' ;             (* c4("Hel") d("lo") *)
-
-(* Verse Block - Table Format *)
-VerseBlock     = 'verse' , [ Integer | Identifier ] , '{' , { VerseLine } , '}' ;
-
-VerseLine      = 'notes' , ':' , MusicBlock
-               | 'lyrics' , ':' , LyricLine
-               | 'chords' , ':' , ChordLine
-               ;
-
-LyricLine      = '|' , { LyricSyllable } , '|' , { '|' , { LyricSyllable } , '|' } ;
-LyricSyllable  = String                           (* "Hel" *)
-               | '-'                              (* continuation of previous *)
-               | '_'                              (* melisma *)
-               | '___'                            (* long melisma *)
-               ;
-
-(* Chord Symbols *)
-ChordLine      = '|' , { ChordSymbol } , '|' , { '|' , { ChordSymbol } , '|' } ;
-ChordSymbol    = '@' , ChordRoot , [ ChordQuality ] , [ ChordExtension ] , [ ChordBass ]
-               | '-'                              (* continuation *)
-               ;
-
-ChordRoot      = 'C' | 'D' | 'E' | 'F' | 'G' | 'A' | 'B'
-               | PitchBase , [ '#' | 'b' ]        (* uppercase preferred *)
-               ;
-ChordQuality   = 'm' | 'min' | 'maj' | 'dim' | 'aug' | 'sus2' | 'sus4' ;
-ChordExtension = '6' | '7' | 'maj7' | '9' | '11' | '13'
-               | 'add9' | 'add11' ;
-ChordBass      = '/' , ChordRoot ;                (* C/G = C over G bass *)
-
-(* Examples: @Cmaj7, @Dm7, @G7sus4, @C/E *)
-
-### 2.9 Inline Property Changes
-
-InlineProperty = KeyChange | TimeChange | TempoChange | ClefChange ;
-
-KeyChange      = '\key' , PitchBase , [ Accidental ] , Mode ;
-TimeChange     = '\time' , Integer , '/' , Integer ;
-TempoChange    = '\tempo' , TempoValue ;
-ClefChange     = '\clef' , ClefValue ;
-
-(* Note: These use backslash for mid-piece changes *)
-(* File-level declarations use property: value format *)
+Slur           = '(' | ')' ;
+Tie            = '~' ;
+BeamControl    = '[' | ']' ;
 
 ================================================================================
-## 3. Sample Files
+## 7. Backslash Usage Summary
 ================================================================================
 
-### Simple Song
+(* Only dynamics use backslash - everything else is plain keywords *)
+
+| Category         | Syntax              | Example                |
+|------------------|---------------------|------------------------|
+| Dynamics         | \p \f \ff \mf etc.  | c4\f d\p e\cresc       |
+| Key signature    | key                 | key g major            |
+| Time signature   | time                | time 3/4               |
+| Tempo            | tempo               | tempo 120              |
+| Clef             | clef                | clef bass              |
+| Relative mode    | relative            | relative c' { ... }    |
+| Absolute mode    | absolute / fixed    | absolute { ... }       |
+
+================================================================================
+## 8. Complete Example
+================================================================================
 
 ```lilysharp
-// Simple song
-title "Happy Birthday"
-composer "Traditional"
+// Metadata
+title "Rock Song"
+composer "John Doe"
+
+// Global settings
 tempo 120
-time 3/4
-key g major
+time 4/4
+key c major
 
-part Vocal {
-    clef: treble
+// Reusable variables (pure music only, no key/tempo changes)
+guitar_riff = { e4 f g a | b c' d' e' }
+bass_groove = { c,4 g, c, g, | c, g, c, g, }
 
-    relative d' {
-        \partial 8
-        d8 |
-        d4 e d | g2 fis4 |
-        d4 d e | d2 a'4 |
-        d4 d d' | b2 g4 |
-        a4 a g | d2. |
-    }
-}
-```
-
-### With Inline Lyrics
-
-```lilysharp
-part Vocal {
-    relative c' {
-        | c4("Hap") c("py") d("birth") | c2("day") f4("to") | e2.("you") |
-    }
-}
-```
-
-### With Table Format Lyrics
-
-```lilysharp
-part Vocal {
-    verse 1 {
-        notes:  | c'4   c     d     | c2    f4    | e2.         |
-        lyrics: | "Hap" "py"  "birth"| "day" "to"  | "you___"    |
-        chords: | @C    -     -     | @F    -     | @C          |
-    }
-}
-```
-
-### Piano Score
-
-```lilysharp
-score "Fur Elise" {
-    tempo: 76
-    time: 3/8
-    key: a minor
-
-    part Piano {
-        staff RH {
-            clef: treble
-            relative c'' {
-                | e8 dis e dis e b d c | a4. r8 c e |
-                | a8 b c e, gis b | c4. r8 e, e' |
-            }
-        }
-        staff LH {
-            clef: bass
-            relative c {
-                | r4. a8 e' a | c4. e,8 e' gis |
-                | a4. e,8 e' e | a4. r4. |
-            }
-        }
-    }
-}
-```
-
-### With Variables
-
-```lilysharp
-let theme = relative c'' {
-    | c4 d e f | g2 g |
+// Sections (required - at least one)
+section Intro {
+  guitar { c4 d e f | g a b c' }
+  bass { bass_groove }
 }
 
-let variation = relative c'' {
-    | c8 d c d e f e f | g4 a g2 |
+section A {
+  guitar { 
+    guitar_riff |
+    key g major                       // mid-section key change
+    tempo 140                         // mid-section tempo change
+    g4\f a b c' | d' e' fis' g' |
+  }
+  bass { 
+    e,4 b, e, b, | e, b, e, b, |
+    key g major                       // must match guitar's bar position
+    tempo 140
+    g,4 d, g, d, | g, d, g, d, |
+  }
 }
 
-score {
-    part Violin {
-        use theme
-        use variation
-        use theme
-    }
+section B {
+  guitar { g8\ff a b c' d' e' fis' g' | a' g' fis' e' d' c' b a | }
+  bass { g,4 d, g, d, | g, d, g, d, | }
 }
-```
 
-### Repeat with Alternatives
-
-```lilysharp
-part {
-    relative c' {
-        repeat volta 2 {
-            | c4 d e f | g2 g |
-        }
-        alternative {
-            { | a4 b c2 | }
-            { | a4 g f2 | }
-        }
-    }
+section Outro {
+  tempo 100
+  guitar { c'1\p }
+  bass { c,1 }
 }
-```
 
-### Articulations and Dynamics
-
-```lilysharp
-part {
-    relative c' {
-        | c4@staccato d@accent e@tenuto f@fermata |
-        | c4\p d e\cresc f |
-        | g4\f a b\dim c |
-        | c1\pp |
-    }
+// Song structure (required - exactly one)
+structure {
+  Intro
+  |: A :|
+  |: B | 1. A :| 2. Outro
+  fine
 }
-```
 
-### Parallel Voices
+// Output definitions (required - at least one)
+render full "rocksong-full.svg" {
+  staff { guitar }
+  tab guitar { guitar }
+  staff bass { bass }
+}
 
-```lilysharp
-part {
-    staff {
-        <<
-            relative c'' { c2 d | e2 f }
-        \\
-            relative c'  { e2 f | g2 a }
-        >>
-    }
+render guitarPart "rocksong-guitar.pdf" {
+  staff { guitar }
+  tab guitar { guitar }
+}
+
+render bassPart "rocksong-bass.pdf" {
+  staff bass { bass }
+}
+
+render bassTab "rocksong-bass-tab.pdf" {
+  tab bass { bass }
+}
+
+render audio "rocksong.mid" {
+  guitar channel:1 instrument:25 octave:-1
+  bass channel:2 instrument:33 octave:-1
 }
 ```
 
 ================================================================================
-## 4. Undecided Items
+## 9. Error Detection
 ================================================================================
 
-| Item                | Proposal    | Reason                              |
-|---------------------|-------------|-------------------------------------|
-| File extension      | .lys        | LilySharp abbreviation, distinct from .ly |
-| Duration inheritance| Allow       | LilyPond compatible, efficient input |
-| Dynamics prefix     | \p \f       | Visually distinct, LilyPond compatible |
-| Multi-language pitch| Future      | do re mi switchable via settings    |
+### Required Elements
+
+| Error | Description |
+|-------|-------------|
+| No section | File must contain at least one `section` block |
+| No structure | File must contain exactly one `structure` block |
+| No render | File must contain at least one `render` block |
+
+### Compile-time Errors
+
+| Error | Description |
+|-------|-------------|
+| Undefined section | Section referenced in structure but not defined |
+| Undefined variable | Variable referenced but not defined |
+| Undefined part | Part referenced in render but not in sections |
+| Forward reference | Variable/section used before definition |
+| Variable with key/tempo | Variables cannot contain key/tempo/time/clef changes |
+| Missing fine | `dc al fine` without `fine` |
+| Missing segno | `ds` without `segno` |
+| Missing coda | `to coda` without `coda` |
+| Duplicate fine | Multiple `fine` marks |
+| Duplicate segno | Multiple `segno` marks (unnamed) |
+| Invalid alternative | Alternative outside repeat block |
+| Unreachable section | Section after `dc al fine` (except coda) |
+
+### Warnings
+
+| Warning | Description |
+|---------|-------------|
+| Unused section | Section defined but not in structure |
+| Unused variable | Variable defined but never referenced |
+| Incomplete measure | Measure duration doesn't match time signature |
+| Missing alternative | `1.` without `2.` |
+| Mismatched key/tempo | Key/tempo change at different bar positions across parts |
 
 ================================================================================
-## 5. Completion Context Mapping
+## 10. Future Considerations
 ================================================================================
 
-[Top level]        -> score, part, title, composer, tempo, time, key
-[score block]      -> part, title, tempo, time, key
-[part block]       -> clef, staff, relative, absolute
-[relative after]   -> base pitch: c, c', c'', c,
-[music block]      -> note names, r, <, (, repeat, variables
-[after @]          -> staccato, accent, fermata, ...
-[after \]          -> p, pp, f, ff, mp, mf, cresc, dim
-[key: after]       -> c, d, e, f, g, a, b
-[pitch after]      -> major, minor, dorian, phrygian, ...
-[clef: after]      -> treble, bass, alto, tenor
-
-================================================================================
-## 6. Real-time Validation
-================================================================================
-
-Measure checking example:
-
-    time: 4/4
-
-    | c4 d e f |  <- [████████████] 4/4 ✓
-    | g4 a b |    <- [████████░░░░] 3/4 ⚠ remaining 1/4
-    | c4 d e |    <- [████████░░░░] 3/4 (typing...)
-                  ^ cursor position
-
-LSP Diagnostics:
-- Measure incomplete: warning with remaining duration
-- Measure overflow: error with excess duration
-- Undefined time signature: error
-- Real-time feedback as user types
+| Item | Status | Notes |
+|------|--------|-------|
+| Named segno/coda | Future | For complex navigation |
+| Custom tunings | Future | User-defined string tunings |
+| Lyrics | Planned | Verse/chorus lyrics alignment |
+| Chord symbols | Planned | Lead sheet style |
+| Drum notation | Future | Percussion staff |
+| Multi-language pitch | Future | do re mi support |
