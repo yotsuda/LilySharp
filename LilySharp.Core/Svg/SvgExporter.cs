@@ -191,7 +191,7 @@ public class SvgExporter
         double boxHeight = 16;
         
         // Draw box
-        _svg.AppendLine($"""  <rect x="{boxX:F1}" y="{boxY:F1}" width="{boxWidth:F1}" height="{boxHeight:F1}" fill="white" stroke="black" stroke-width="1"/>""");
+        _svg.AppendLine($"""  <rect x="{boxX:F1}" y="{boxY:F1}" width="{boxWidth:F1}" height="{boxHeight:F1}" fill="transparent" stroke="black" stroke-width="1"/>""");
         
         // Draw text
         double textX = boxX + padding;
