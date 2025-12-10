@@ -1,4 +1,4 @@
-// Fur Elise (opening) in Lilysharp
+// Fur Elise (opening) in Lily#
 title "Fur Elise"
 composer "Ludwig van Beethoven"
 tempo 76
@@ -6,11 +6,12 @@ time 3/8
 key a minor
 
 let mainTheme = relative c'' {
-    e8 dis e dis e b d c |
-    a4. r8 c e |
-    a4. r8 e gis |
-    b4. r8 e, gis |
-    a4. r4 r8 |
+    // Pickup + opening phrase (3 eighth notes per measure)
+    e8 dis e | dis e b | d c a~ |
+    a4. | r8 c e |
+    a4. | r8 e gis |
+    b4. | r8 e, gis |
+    a4. | r4 r8 |
 }
 
 score {
@@ -22,11 +23,11 @@ score {
         staff LH {
             clef: bass
             relative c {
-                r4. a8 e' a |
-                c4. r8 e, a |
-                c4. r8 e, gis |
-                b4. r8 e, gis |
-                a4. a,8 c e |
+                r4. | a8 e' a |
+                c4. | r8 e, a |
+                c4. | r8 e, gis |
+                b4. | r8 e, gis |
+                a4. | a,8 c e |
             }
         }
     }
