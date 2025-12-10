@@ -164,9 +164,10 @@ public sealed class MeasureValidator
         if (items.Count == 0)
             return new TextSpan(0, 0);
 
-        int start = items[0].Position;
-        var last = items[^1];
-        int end = last.Position + last.FullWidth;
+        // Use Span (not Position/FullSpan) to exclude leading/trailing trivia like comments
+        int start = items[0].Span.Start;
+        var lastSpan = items[^1].Span;
+        int end = lastSpan.Start + lastSpan.Length;
         return new TextSpan(start, end - start);
     }
 }
