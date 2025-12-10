@@ -1,6 +1,0 @@
-<Solution>
-  <Project Path="Lilysharp.Core/Lilysharp.Core.csproj" />
-  <Project Path="Lilysharp.Lsp/Lilysharp.Lsp.csproj" />
-    <Project Path="Lilysharp.Cli/Lilysharp.Cli.csproj" />
-  <Project Path="Lilysharp.Tests/Lilysharp.Tests.csproj" />
-</Solution>

@@ -1,5 +1,5 @@
 {
-    "name": "Lilysharp",
+    "name": "Lily#",
     "scopeName": "source.lilysharp",
     "patterns": [
         { "include": "#comments" },

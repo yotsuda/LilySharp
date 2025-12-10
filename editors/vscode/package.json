@@ -1,7 +1,7 @@
 {
   "name": "lilysharp",
-  "displayName": "Lilysharp",
-  "description": "Language support for Lilysharp music notation",
+  "displayName": "Lily#",
+  "description": "Language support for Lily# music notation",
   "version": "0.1.0",
   "publisher": "lilysharp",
   "engines": {
@@ -19,7 +19,7 @@
       {
         "id": "lilysharp",
         "aliases": [
-          "Lilysharp",
+          "Lily#",
           "lilysharp"
         ],
         "extensions": [
@@ -79,12 +79,12 @@
       }
     },
     "configuration": {
-      "title": "Lilysharp",
+      "title": "Lily#",
       "properties": {
         "lilysharp.serverPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the Lilysharp language server executable"
+          "description": "Path to the Lily# language server executable"
         },
         "lilysharp.trace.server": {
           "type": "string",
@@ -113,13 +113,13 @@
     "commands": [
       {
         "command": "lilysharp.openPreview",
-        "category": "Lilysharp",
+        "category": "Lily#",
         "icon": "$(open-preview)",
         "title": "Open Preview"
       },
       {
         "command": "lilysharp.openPreviewToSide",
-        "category": "Lilysharp",
+        "category": "Lily#",
         "icon": "$(open-preview)",
         "title": "Open Preview to Side"
       }

@@ -1,6 +1,6 @@
-# Lilysharp VS Code Extension
+﻿# Lily# VS Code Extension
 
-Language support for Lilysharp music notation files (`.lys`).
+Language support for Lily# music notation files (`.lys`).
 
 ## Features
 
@@ -44,7 +44,7 @@ Colors can be customized in settings.
 1. Build the LSP server:
    ```bash
    cd ../..
-   dotnet build Lilysharp.Lsp
+   dotnet build LilySharp.Lsp
    ```
 
 2. Build the extension:
@@ -82,7 +82,7 @@ If not set, the extension looks for `lilysharp-lsp` in PATH.
 ## Usage
 
 1. Create a file with `.lys` extension
-2. Start typing Lilysharp notation
+2. Start typing Lily# notation
 3. Use `Ctrl+Space` for completion suggestions
 4. Hover over elements for documentation
 5. Use `Ctrl+Shift+O` to open document outline
@@ -113,13 +113,13 @@ score {
 ### Language server not starting
 
 1. Check if `lilysharp-lsp` is in PATH or configure `lilysharp.serverPath`
-2. Check Output panel (View → Output → Lilysharp Language Server)
+2. Check Output panel (View → Output → Lily# Language Server)
 3. Enable tracing: Set `lilysharp.trace.server` to `verbose`
 
 ### No syntax highlighting
 
 1. Ensure file has `.lys` extension
-2. Check that the extension is activated (look for Lilysharp in status bar)
+2. Check that the extension is activated (look for Lily# in status bar)
 
 ## Development
 

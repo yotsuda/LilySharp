@@ -1,4 +1,4 @@
-# Lilysharp 作業進捗
+# Lily# 作業進捗
 
 ## 📊 全体進捗
 
@@ -21,14 +21,14 @@
 
 ---
 
-## 📁 Lilysharp.Core - Parser
+## 📁 LilySharp.Core - Parser
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
 | Parser/Lexer.cs | ✅ | - | - | トークン化、臨時記号対応済 |
 | Parser/Parser.cs | ✅ | - | - | 再帰下降パーサー、797行 |
 
-## 📁 Lilysharp.Core - Syntax
+## 📁 LilySharp.Core - Syntax
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -41,7 +41,7 @@
 | Syntax/Diagnostic.cs | ✅ | - | - | 診断メッセージ |
 | Syntax/MusicEnums.cs | ✅ | - | - | ArticulationType, DynamicLevel |
 
-## 📁 Lilysharp.Core - InternalSyntax
+## 📁 LilySharp.Core - InternalSyntax
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -49,7 +49,7 @@
 | InternalSyntax/GreenNodes.cs | ✅ | - | - | 全 Green node 定義 |
 | InternalSyntax/SyntaxToken.Internal.cs | ✅ | - | - | トークン構造 |
 
-## 📁 Lilysharp.Core - Semantics
+## 📁 LilySharp.Core - Semantics
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -57,7 +57,7 @@
 | Semantics/DurationCalculator.cs | ✅ | - | - | 音価計算 |
 | Semantics/MeasureValidator.cs | ✅ | - | - | 小節検証 |
 
-## 📁 Lilysharp.Core - Midi
+## 📁 LilySharp.Core - Midi
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -65,28 +65,28 @@
 | Midi/MidiEvents.cs | ✅ | - | - | MIDI イベント |
 | Midi/MidiExporter.cs | ✅ | - | - | MIDI エクスポート |
 
-## 📁 Lilysharp.Core - MusicXml
+## 📁 LilySharp.Core - MusicXml
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
 | MusicXml/MusicXmlTypes.cs | ✅ | - | - | MusicXML 型定義 |
 | MusicXml/MusicXmlExporter.cs | ✅ | - | - | MusicXML エクスポート |
 
-## 📁 Lilysharp.Lsp
+## 📁 LilySharp.Lsp
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
 | DocumentManager.cs | ✅ | - | - | ドキュメント状態管理 |
-| LilysharpLanguageServer.cs | ✅ | - | - | LSP 実装 (13機能) |
+| LilySharpLanguageServer.cs | ✅ | - | - | LSP 実装 (13機能) |
 | Program.cs | ✅ | - | - | エントリポイント |
 
-## 📁 Lilysharp.Cli
+## 📁 LilySharp.Cli
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
 | Program.cs | ✅ | - | - | CLI (midi/xml/check) |
 
-## 📁 Lilysharp.Tests
+## 📁 LilySharp.Tests
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|

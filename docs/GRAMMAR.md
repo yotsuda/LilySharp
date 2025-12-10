@@ -1,4 +1,4 @@
-﻿# Lilysharp Grammar Specification
+﻿# Lily# Grammar Specification
 # Version: 0.4.0
 # Date: 2025-12-09
 

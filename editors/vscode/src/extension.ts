@@ -1,4 +1,4 @@
-﻿import * as vscode from 'vscode';
+import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import {
@@ -12,14 +12,14 @@ let client: LanguageClient;
 let clientReady = false;
 const previewPanels = new Map<string, vscode.WebviewPanel>();
 let debounceTimers = new Map<string, NodeJS.Timeout>();
-const outputChannel = vscode.window.createOutputChannel('Lilysharp Extension');
+const outputChannel = vscode.window.createOutputChannel('Lily# Extension');
 
 // Constants
 const DEBOUNCE_DELAY_DEFAULT = 300;
 const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 
 export function activate(context: vscode.ExtensionContext) {
-    outputChannel.appendLine('Lilysharp extension activating...');
+    outputChannel.appendLine('Lily# extension activating...');
     
     const config = vscode.workspace.getConfiguration('lilysharp');
     let serverPath = config.get<string>('serverPath');
@@ -36,7 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine(`Server executable found: ${serverPath}`);
         } else {
             outputChannel.appendLine(`ERROR: Server executable not found: ${serverPath}`);
-            vscode.window.showErrorMessage(`Lilysharp LSP server not found: ${serverPath}`);
+            vscode.window.showErrorMessage(`Lily# LSP server not found: ${serverPath}`);
             return;
         }
     }
@@ -51,12 +51,12 @@ export function activate(context: vscode.ExtensionContext) {
         synchronize: {
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.lys')
         },
-        outputChannelName: 'Lilysharp Language Server'
+        outputChannelName: 'Lily# Language Server'
     };
 
     client = new LanguageClient(
         'lilysharp',
-        'Lilysharp Language Server',
+        'Lily# Language Server',
         serverOptions,
         clientOptions
     );
@@ -119,13 +119,13 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
     
-    outputChannel.appendLine('Lilysharp extension activated');
+    outputChannel.appendLine('Lily# extension activated');
 }
 
 function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewColumn) {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.languageId !== 'lilysharp') {
-        vscode.window.showWarningMessage('No Lilysharp file is open');
+        vscode.window.showWarningMessage('No Lily# file is open');
         return;
     }
 

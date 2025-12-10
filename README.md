@@ -1,10 +1,10 @@
-﻿# Lilysharp
+﻿# Lily#
 
 A modern music notation compiler with real-time preview support.
 
 ## Overview
 
-Lilysharp is a new music notation language inspired by LilyPond, designed for:
+Lily# is a new music notation language inspired by LilyPond, designed for:
 - **Explicit over implicit**: Clear, readable syntax
 - **Completion-friendly**: IDE-first design with full LSP support
 - **Single-pass incremental compilation**: Using Roslyn-style Red-Green tree pattern
@@ -12,15 +12,15 @@ Lilysharp is a new music notation language inspired by LilyPond, designed for:
 ## Project Structure
 
 ```
-Lilysharp/
-├── Lilysharp.Core/          # Core compiler (lexer, parser, semantic analysis)
+LilySharp/
+├── LilySharp.Core/          # Core compiler (lexer, parser, semantic analysis)
 │   ├── Parser/              # Lexer and recursive descent parser
 │   ├── Syntax/              # Syntax kinds, green/red tree nodes
 │   ├── Semantics/           # Duration calculation, measure validation
 │   └── Midi/                # MIDI export
-├── Lilysharp.Cli/           # Command-line interface
-├── Lilysharp.Lsp/           # Language Server Protocol implementation
-├── Lilysharp.Tests/         # Unit tests (140+ tests)
+├── LilySharp.Cli/           # Command-line interface
+├── LilySharp.Lsp/           # Language Server Protocol implementation
+├── LilySharp.Tests/         # Unit tests (140+ tests)
 ├── editors/
 │   └── vscode/              # VS Code extension
 ├── samples/                 # Example .lys files
@@ -143,16 +143,16 @@ dotnet test
 
 ```bash
 # Check syntax
-dotnet run --project Lilysharp.Cli -- check samples/simple.lys
+dotnet run --project LilySharp.Cli -- check samples/simple.lys
 
 # Export to MIDI
-dotnet run --project Lilysharp.Cli -- midi samples/simple.lys -o output.mid
+dotnet run --project LilySharp.Cli -- midi samples/simple.lys -o output.mid
 ```
 
 ### Run LSP Server
 
 ```bash
-dotnet run --project Lilysharp.Lsp
+dotnet run --project LilySharp.Lsp
 ```
 
 ### VS Code Extension
@@ -187,7 +187,7 @@ The VS Code extension provides comprehensive language support:
 
 ### Red-Green Tree Pattern
 
-Lilysharp uses the Roslyn-style Red-Green tree pattern for efficient incremental compilation:
+Lily# uses the Roslyn-style Red-Green tree pattern for efficient incremental compilation:
 
 - **Green Nodes**: Immutable, position-independent syntax nodes
 - **Red Nodes**: Lazily created wrappers with position information

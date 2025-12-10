@@ -1,8 +1,8 @@
-﻿# Lilysharp 作業手順書
+# Lily# 作業手順書
 
 ## 概要
 
-LilyPond の後継となる楽譜作成ソフトウェア「Lilysharp」の開発。
+LilyPond の後継となる楽譜作成ソフトウェア「Lily#」の開発。
 C# で実装し、以下の特徴を持つ:
 
 - **シングルパスコンパイル**: Lexer → Parser → SyntaxTree を単一パスで処理
@@ -14,16 +14,16 @@ C# で実装し、以下の特徴を持つ:
 ## プロジェクト構造
 
 ```
-Lilysharp/
-├── Lilysharp.Core/        # コアライブラリ
+LilySharp/
+├── LilySharp.Core/        # コアライブラリ
 │   ├── Parser/            # Lexer, Parser
 │   ├── Syntax/            # 構文ノード (Red-Green Tree)
 │   ├── Semantics/         # 意味解析 (Duration, Measure)
 │   ├── Midi/              # MIDI エクスポート
 │   └── MusicXml/          # MusicXML エクスポート
-├── Lilysharp.Lsp/         # Language Server Protocol 実装
-├── Lilysharp.Cli/         # コマンドラインツール
-├── Lilysharp.Tests/       # テストプロジェクト
+├── LilySharp.Lsp/         # Language Server Protocol 実装
+├── LilySharp.Cli/         # コマンドラインツール
+├── LilySharp.Tests/       # テストプロジェクト
 └── editors/vscode/        # VS Code 拡張機能
 ```
 
