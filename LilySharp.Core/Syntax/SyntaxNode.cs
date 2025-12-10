@@ -126,6 +126,17 @@ public abstract class SyntaxNode
             SyntaxKind.TabStaffDeclaration => new TabStaffDeclarationSyntax((TabStaffDeclarationGreen)green, this, position),
             SyntaxKind.TuningDeclaration => new TuningDeclarationSyntax((TuningDeclarationGreen)green, this, position),
             SyntaxKind.StringNumberAnnotation => new StringNumberAnnotationSyntax((StringNumberAnnotationGreen)green, this, position),
+            
+            // Section/Structure/Render declarations
+            SyntaxKind.SectionDeclaration => new SectionDeclarationSyntax((SectionDeclarationGreen)green, this, position),
+            SyntaxKind.PartBlock => new PartBlockSyntax((PartBlockGreen)green, this, position),
+            SyntaxKind.StructureDeclaration => new StructureDeclarationSyntax((StructureDeclarationGreen)green, this, position),
+            SyntaxKind.StructureRepeatBlock => new StructureRepeatBlockSyntax((StructureRepeatBlockGreen)green, this, position),
+            SyntaxKind.StructureAlternative => new StructureAlternativeSyntax((StructureAlternativeGreen)green, this, position),
+            SyntaxKind.SectionReference => new SectionReferenceSyntax((SectionReferenceGreen)green, this, position),
+            SyntaxKind.NavigationMark => new NavigationMarkSyntax((NavigationMarkGreen)green, this, position),
+            SyntaxKind.RenderDeclaration => new RenderDeclarationSyntax((RenderDeclarationGreen)green, this, position),
+            
             _ => new GenericSyntaxNode(green, this, position)
         };
     }

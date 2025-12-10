@@ -25,6 +25,11 @@ public class SvgExporter
     private static double LegerLineExtension => SmuflDefaults.LegerLineExtension * SpaceHeight;
     private static double LegerLineThickness => SmuflDefaults.LegerLineThickness * SpaceHeight;
     
+    // Page layout constants
+    private const double PageWidth = 800;
+    private const double MarginRight = 20;
+    private const double SystemSpacing = 80;  // Vertical space between systems (staves)
+    
     // Stem attachment points (from SMuFL, in pixels)
     private static double StemUpAttachX => SmuflDefaults.StemUpAttachX * SpaceHeight;
     private static double StemUpAttachY => SmuflDefaults.StemUpAttachY * SpaceHeight;
@@ -55,7 +60,8 @@ public class SvgExporter
         return Math.Max(spacing, MinNoteSpacing);
     }
     
-    private readonly StringBuilder _svg = new();
+    private StringBuilder _svg = new();
+    private StringBuilder _content = new();  // Content builder for line breaking support
     private string _sourceText = "";
     private double _currentX;
     private double _currentY;
@@ -70,45 +76,53 @@ public class SvgExporter
     private int[] _tabTuning = Tunings.Guitar;
     private int _tabStringCount = 6;
     
+    // Line breaking state
+    private int _systemCount = 1;
+    private double _systemStartY;
+    private readonly double _lineBreakThreshold = PageWidth - MarginRight - 50; // Leave some margin
+    
     public string Export(SyntaxTree tree)
     {
         // Reset all state
-        _svg.Clear();
+        _content = new StringBuilder();
         _sourceText = tree.Text;
         _currentX = MarginLeft;
         _currentY = MarginTop;
+        _systemStartY = MarginTop;
         _currentOctave = 4;
         _currentNoteName = 0;
         _defaultDuration = Fraction.Quarter;
         _currentClef = "treble";
         _keySignature = 0;
+        _systemCount = 1;
         
-        // Calculate approximate width needed
-        var width = CalculateWidth(tree);
-        var height = MarginTop + StaffHeight + 60;
+        // Use fixed page width for consistent staff lines
+        var width = PageWidth;
         
-        WriteHeader(width, height);
-        WriteStaffLines(width - 20);
+        // Temporarily use _content for drawing (so we can insert header with correct height later)
+        var originalSvg = _svg;
+        _svg = _content;
         
-        // Draw clef
+        // Draw first system's staff lines and clef
+        WriteStaffLines(width - MarginRight);
         DrawClef();
         
-        // Process syntax tree
+        // Process syntax tree (this may create new systems)
         ProcessNode(tree.GetRoot());
         
+        // Restore original _svg and build final output
+        _svg = originalSvg;
+        _svg.Clear();
+        
+        // Calculate final height based on system count
+        var height = MarginTop + (_systemCount * (StaffHeight + SystemSpacing));
+        
+        // Write final SVG with correct dimensions
+        WriteHeader(width, height);
+        _svg.Append(_content);
         WriteFooter();
+        
         return _svg.ToString();
-    }
-    
-    private double CalculateWidth(SyntaxTree tree)
-    {
-        int noteCount = 0;
-        foreach (var node in tree.GetRoot().DescendantNodes())
-        {
-            if (node is NoteSyntax or RestSyntax or ChordSyntax)
-                noteCount++;
-        }
-        return MarginLeft + ClefWidth + TimeSignatureWidth + (noteCount * GetNoteSpacing(4)) + 40;
     }
     
     private void WriteHeader(double width, double height)
@@ -140,6 +154,59 @@ public class SvgExporter
         {
             double y = _currentY + (i * SpaceHeight);
             _svg.AppendLine($"""  <line class="staff-line" x1="{MarginLeft}" y1="{y:F1}" x2="{width:F1}" y2="{y:F1}"/>""");
+        }
+    }
+    
+    /// <summary>
+    /// Start a new system (staff line) when line break is needed.
+    /// </summary>
+    private void StartNewSystem()
+    {
+        _systemCount++;
+        _currentY += StaffHeight + SystemSpacing;
+        _currentX = MarginLeft;
+        _systemStartY = _currentY;
+        
+        // Draw new staff lines
+        WriteStaffLines(PageWidth - MarginRight);
+        
+        // Draw clef at the beginning of new system
+        DrawClef();
+    }
+    
+
+    /// <summary>
+    /// Draw section label in a box above the staff.
+    /// </summary>
+    private void DrawSectionLabel(string sectionName)
+    {
+        string text = sectionName;
+        
+        // Position: above the staff, at current X position
+        double boxX = _currentX;
+        double boxY = _currentY - 25;  // Above staff
+        double padding = 4;
+        double textWidth = text.Length * 7; // Approximate width
+        double boxWidth = textWidth + padding * 2;
+        double boxHeight = 16;
+        
+        // Draw box
+        _svg.AppendLine($"""  <rect x="{boxX:F1}" y="{boxY:F1}" width="{boxWidth:F1}" height="{boxHeight:F1}" fill="white" stroke="black" stroke-width="1"/>""");
+        
+        // Draw text
+        double textX = boxX + padding;
+        double textY = boxY + boxHeight - 4;
+        _svg.AppendLine($"""  <text x="{textX:F1}" y="{textY:F1}" font-family="Arial, sans-serif" font-size="12">{text}</text>""");
+    }
+    /// <summary>
+    /// Check if line break is needed and perform it if necessary.
+    /// Called after drawing a barline.
+    /// </summary>
+    private void CheckLineBreak()
+    {
+        if (_currentX >= _lineBreakThreshold)
+        {
+            StartNewSystem();
         }
     }
     
@@ -203,8 +270,8 @@ public class SvgExporter
                 DrawChord(chord);
                 break;
                 
-            case BarlineSyntax:
-                DrawBarline();
+            case BarlineSyntax barline:
+                DrawBarline(barline.BarToken.Text);
                 break;
                 
             case TimeSignatureSyntax timeSig:
@@ -221,6 +288,17 @@ public class SvgExporter
                 
             case TabStaffDeclarationSyntax tabStaff:
                 ProcessTabStaff(tabStaff);
+                break;
+                
+            case SectionDeclarationSyntax section:
+                DrawSectionLabel(section.SectionName);
+                // Process children (part blocks)
+                for (int i = 0; i < section.SlotCount; i++)
+                {
+                    var child = section.GetChild(i);
+                    if (child != null && child is not SyntaxTokenNode)
+                        ProcessNode(child);
+                }
                 break;
                 
             default:
@@ -441,15 +519,88 @@ public class SvgExporter
         _currentX += GetNoteSpacing(noteValue);
     }
     
-    private void DrawBarline()
+    private void DrawBarline(string barType = "|")
     {
-        // Draw barline at current position
-        // Note: Space before barline is included in the previous note's spacing
         double x = _currentX;
-        _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{_currentY:F1}" x2="{x:F1}" y2="{_currentY + StaffHeight:F1}"/>""");
+        double y1 = _currentY;
+        double y2 = _currentY + StaffHeight;
+        double dotRadius = SpaceHeight * 0.25;
+        double dotY1 = _currentY + SpaceHeight * 1.5;  // Between lines 2 and 3
+        double dotY2 = _currentY + SpaceHeight * 2.5;  // Between lines 3 and 4
         
-        // Add space after barline (LilyPond: semi-shrink-space 1.3)
-        _currentX += SpaceAfterBarline;
+        switch (barType)
+        {
+            case "|:":  // Repeat start
+                // Draw thick bar
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}" stroke-width="3"/>""");
+                x += 4;
+                // Draw thin bar
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
+                x += 4;
+                // Draw dots
+                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY1:F1}" r="{dotRadius:F1}" fill="black"/>""");
+                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY2:F1}" r="{dotRadius:F1}" fill="black"/>""");
+                _currentX += 12 + SpaceAfterBarline;
+                break;
+                
+            case ":|":  // Repeat end
+                // Draw dots
+                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY1:F1}" r="{dotRadius:F1}" fill="black"/>""");
+                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY2:F1}" r="{dotRadius:F1}" fill="black"/>""");
+                x += 4;
+                // Draw thin bar
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
+                x += 4;
+                // Draw thick bar
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}" stroke-width="3"/>""");
+                _currentX += 12 + SpaceAfterBarline;
+                break;
+                
+            case ":|:":  // Repeat both
+                // Left dots
+                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY1:F1}" r="{dotRadius:F1}" fill="black"/>""");
+                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY2:F1}" r="{dotRadius:F1}" fill="black"/>""");
+                x += 4;
+                // Thin bar
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
+                x += 3;
+                // Thick bar
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}" stroke-width="3"/>""");
+                x += 3;
+                // Thin bar
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
+                x += 4;
+                // Right dots
+                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY1:F1}" r="{dotRadius:F1}" fill="black"/>""");
+                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY2:F1}" r="{dotRadius:F1}" fill="black"/>""");
+                _currentX += 18 + SpaceAfterBarline;
+                break;
+                
+            case "||":  // Double bar
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
+                x += 4;
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
+                _currentX += 8 + SpaceAfterBarline;
+                break;
+                
+            case "|.":  // Final bar
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
+                x += 4;
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}" stroke-width="3"/>""");
+                _currentX += 8 + SpaceAfterBarline;
+                break;
+                
+            default:  // Single bar |
+                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
+                _currentX += SpaceAfterBarline;
+                break;
+        }
+        
+        // Check for line break after barline (except final bar and repeat start)
+        if (barType != "|." && barType != "|:")
+        {
+            CheckLineBreak();
+        }
     }
     
     private void DrawTimeSignature(int beats, int beatType)

@@ -74,7 +74,10 @@ public static class SmuflGlyphs
     public const char BarlineSingle = '\uE030';
     public const char BarlineDouble = '\uE031';
     public const char BarlineFinal = '\uE032';
-    
+    public const char RepeatLeft = '\uE040';      // |:
+    public const char RepeatRight = '\uE041';     // :|
+    public const char RepeatRightLeft = '\uE042'; // :|:
+    public const char RepeatDots = '\uE043';
     // === Dynamics ===
     public const char DynamicPiano = '\uE520';
     public const char DynamicMezzo = '\uE521';
