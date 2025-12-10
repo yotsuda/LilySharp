@@ -95,7 +95,8 @@ public class SvgTests
         
         var svg = exporter.Export(tree);
         
-        Assert.Contains("class=\"barline\"", svg);
+        // Barline is now drawn using SMuFL glyph (class="music")
+        Assert.Contains(SmuflGlyphs.BarlineSingle.ToString(), svg);
     }
     
     [Fact]

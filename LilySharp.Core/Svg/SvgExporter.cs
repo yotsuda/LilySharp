@@ -522,76 +522,38 @@ public class SvgExporter
     private void DrawBarline(string barType = "|")
     {
         double x = _currentX;
-        double y1 = _currentY;
-        double y2 = _currentY + StaffHeight;
-        double dotRadius = SpaceHeight * 0.25;
-        double dotY1 = _currentY + SpaceHeight * 1.5;  // Between lines 2 and 3
-        double dotY2 = _currentY + SpaceHeight * 2.5;  // Between lines 3 and 4
+        // SMuFL barline glyphs are positioned at the bottom staff line
+        double y = _currentY + StaffHeight;
         
         switch (barType)
         {
             case "|:":  // Repeat start
-                // Draw thick bar
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}" stroke-width="3"/>""");
-                x += 4;
-                // Draw thin bar
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
-                x += 4;
-                // Draw dots
-                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY1:F1}" r="{dotRadius:F1}" fill="black"/>""");
-                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY2:F1}" r="{dotRadius:F1}" fill="black"/>""");
-                _currentX += 12 + SpaceAfterBarline;
+                DrawGlyph(SmuflGlyphs.RepeatLeft, x, y);
+                _currentX += 20 + SpaceAfterBarline;
                 break;
                 
             case ":|":  // Repeat end
-                // Draw dots
-                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY1:F1}" r="{dotRadius:F1}" fill="black"/>""");
-                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY2:F1}" r="{dotRadius:F1}" fill="black"/>""");
-                x += 4;
-                // Draw thin bar
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
-                x += 4;
-                // Draw thick bar
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}" stroke-width="3"/>""");
-                _currentX += 12 + SpaceAfterBarline;
+                DrawGlyph(SmuflGlyphs.RepeatRight, x, y);
+                _currentX += 20 + SpaceAfterBarline;
                 break;
                 
             case ":|:":  // Repeat both
-                // Left dots
-                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY1:F1}" r="{dotRadius:F1}" fill="black"/>""");
-                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY2:F1}" r="{dotRadius:F1}" fill="black"/>""");
-                x += 4;
-                // Thin bar
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
-                x += 3;
-                // Thick bar
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}" stroke-width="3"/>""");
-                x += 3;
-                // Thin bar
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
-                x += 4;
-                // Right dots
-                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY1:F1}" r="{dotRadius:F1}" fill="black"/>""");
-                _svg.AppendLine($"""  <circle cx="{x:F1}" cy="{dotY2:F1}" r="{dotRadius:F1}" fill="black"/>""");
-                _currentX += 18 + SpaceAfterBarline;
+                DrawGlyph(SmuflGlyphs.RepeatRightLeft, x, y);
+                _currentX += 24 + SpaceAfterBarline;
                 break;
                 
             case "||":  // Double bar
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
-                x += 4;
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
+                DrawGlyph(SmuflGlyphs.BarlineDouble, x, y);
                 _currentX += 8 + SpaceAfterBarline;
                 break;
                 
             case "|.":  // Final bar
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
-                x += 4;
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}" stroke-width="3"/>""");
-                _currentX += 8 + SpaceAfterBarline;
+                DrawGlyph(SmuflGlyphs.BarlineFinal, x, y);
+                _currentX += 10 + SpaceAfterBarline;
                 break;
                 
             default:  // Single bar |
-                _svg.AppendLine($"""  <line class="barline" x1="{x:F1}" y1="{y1:F1}" x2="{x:F1}" y2="{y2:F1}"/>""");
+                DrawGlyph(SmuflGlyphs.BarlineSingle, x, y);
                 _currentX += SpaceAfterBarline;
                 break;
         }
