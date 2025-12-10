@@ -11,6 +11,7 @@ public sealed class MidiExporter
     private readonly int _ticksPerQuarter;
     private int _currentTick;
     private int _currentOctave = 4;
+    private int _currentNoteName = 0; // c=0, d=1, e=2, f=3, g=4, a=5, b=6
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _tempo = 120;
     private int _velocity = 80;
@@ -65,8 +66,7 @@ public sealed class MidiExporter
                 break;
                 
             case RelativeExpressionSyntax relative:
-                var (_, baseOctave) = ParsePitch(relative.BasePitch);
-                _currentOctave = baseOctave;
+                InitializeRelativeMode(relative.BasePitch);
                 ProcessNode(relative.Body, track, conductorTrack);
                 break;
                 
@@ -144,13 +144,78 @@ public sealed class MidiExporter
         }
     }
     
+    /// <summary>
+    /// Initializes the relative mode with the base pitch (e.g., c'' sets octave 5 and note name c).
+    /// </summary>
+    private void InitializeRelativeMode(PitchSyntax basePitch)
+    {
+        _currentNoteName = GetNoteName(basePitch.BaseName);
+        // Base octave: c' = octave 4, c'' = octave 5, etc.
+        // OctaveOffset is the number of ' minus the number of ,
+        _currentOctave = 3 + basePitch.OctaveOffset;
+    }
+    
+    /// <summary>
+    /// Calculates the MIDI pitch using LilyPond's relative octave algorithm.
+    /// Finds the closest octave to the previous note, then applies explicit octave modifiers.
+    /// </summary>
+    private int CalculateRelativeMidiPitch(PitchSyntax pitch)
+    {
+        int noteName = GetNoteName(pitch.BaseName);
+        
+        // Calculate up and down candidates (LilyPond algorithm)
+        int upOctave = _currentOctave;
+        if (_currentNoteName > noteName)
+            upOctave++;
+        
+        int downOctave = _currentOctave;
+        if (_currentNoteName < noteName)
+            downOctave--;
+        
+        // Calculate steps (note name + octave * 7)
+        int currentSteps = _currentNoteName + _currentOctave * 7;
+        int upSteps = noteName + upOctave * 7;
+        int downSteps = noteName + downOctave * 7;
+        
+        // Choose the closer octave
+        int targetOctave;
+        if (Math.Abs(upSteps - currentSteps) < Math.Abs(downSteps - currentSteps))
+            targetOctave = upOctave;
+        else
+            targetOctave = downOctave;
+        
+        // Apply explicit octave offset (' or ,)
+        targetOctave += pitch.OctaveOffset;
+        
+        // Update current state for next note
+        _currentNoteName = noteName;
+        _currentOctave = targetOctave;
+        
+        // Calculate MIDI pitch
+        int basePitch = pitch.BaseName switch
+        {
+            'c' => 0, 'd' => 2, 'e' => 4, 'f' => 5,
+            'g' => 7, 'a' => 9, 'b' => 11, _ => 0
+        };
+        
+        return Math.Clamp(basePitch + pitch.AccidentalOffset + (targetOctave + 1) * 12, 0, 127);
+    }
+    
+    /// <summary>
+    /// Gets the note name index (c=0, d=1, e=2, f=3, g=4, a=5, b=6).
+    /// </summary>
+    private static int GetNoteName(char baseName)
+    {
+        return baseName switch
+        {
+            'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3,
+            'g' => 4, 'a' => 5, 'b' => 6, _ => 0
+        };
+    }
+    
     private void ProcessNote(NoteSyntax note, MidiTrack track)
     {
-        var (basePitch, _) = ParsePitch(note.Pitch);
-        int octaveChange = note.Pitch.OctaveOffset;
-        int targetOctave = _currentOctave + octaveChange;
-        int midiPitch = Math.Clamp(basePitch + (targetOctave + 1) * 12, 0, 127);
-        _currentOctave = targetOctave;
+        int midiPitch = CalculateRelativeMidiPitch(note.Pitch);
         
         var duration = GetDuration(note.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -195,15 +260,37 @@ public sealed class MidiExporter
         var duration = durationNode != null ? GetDuration(durationNode) : _defaultDuration;
         int durationTicks = FractionToTicks(duration);
         
+        // For chords, calculate all pitches relative to the current state,
+        // but only update the state based on the first (lowest) pitch
+        bool isFirst = true;
+        int savedNoteName = _currentNoteName;
+        int savedOctave = _currentOctave;
+        
         foreach (var pitch in pitches)
         {
-            var (basePitch, _) = ParsePitch(pitch);
-            int octaveChange = pitch.OctaveOffset;
-            int targetOctave = _currentOctave + octaveChange;
-            int midiPitch = Math.Clamp(basePitch + (targetOctave + 1) * 12, 0, 127);
+            if (!isFirst)
+            {
+                // Restore state for each subsequent pitch in the chord
+                _currentNoteName = savedNoteName;
+                _currentOctave = savedOctave;
+            }
+            
+            int midiPitch = CalculateRelativeMidiPitch(pitch);
+            
+            if (isFirst)
+            {
+                // Save the state after processing the first pitch
+                savedNoteName = _currentNoteName;
+                savedOctave = _currentOctave;
+                isFirst = false;
+            }
             
             track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks));
         }
+        
+        // Restore the state from the first pitch for the next note
+        _currentNoteName = savedNoteName;
+        _currentOctave = savedOctave;
         
         _currentTick = startTick + durationTicks;
     }
@@ -250,17 +337,6 @@ public sealed class MidiExporter
         }
     }
     
-    private (int basePitch, int octave) ParsePitch(PitchSyntax pitch)
-    {
-        int basePitch = pitch.BaseName switch
-        {
-            'c' => 0, 'd' => 2, 'e' => 4, 'f' => 5,
-            'g' => 7, 'a' => 9, 'b' => 11, _ => 0
-        };
-        
-        return (basePitch + pitch.AccidentalOffset, 4 + pitch.OctaveOffset);
-    }
-    
     private Fraction GetDuration(DurationSyntax? duration)
     {
         if (duration == null) return _defaultDuration;
@@ -291,12 +367,7 @@ public sealed class MidiExporter
         
         foreach (var note in grace.Body.Items.OfType<NoteSyntax>())
         {
-            // Use the same pitch calculation as ProcessNote for consistency
-            var (basePitch, _) = ParsePitch(note.Pitch);
-            int octaveChange = note.Pitch.OctaveOffset;
-            int targetOctave = _currentOctave + octaveChange;
-            int midiPitch = Math.Clamp(basePitch + (targetOctave + 1) * 12, 0, 127);
-            _currentOctave = targetOctave;
+            int midiPitch = CalculateRelativeMidiPitch(note.Pitch);
             
             track.Notes.Add(new MidiNote(
                 track.Channel,

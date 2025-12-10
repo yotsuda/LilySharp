@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Tablature;
@@ -60,6 +60,7 @@ public class SvgExporter
     private double _currentX;
     private double _currentY;
     private int _currentOctave = 4;
+    private int _currentNoteName = 0; // c=0, d=1, e=2, f=3, g=4, a=5, b=6
     private Fraction _defaultDuration = Fraction.Quarter;
     private string _currentClef = "treble";
     private int _keySignature = 0; // Number of sharps (+) or flats (-)
@@ -77,6 +78,7 @@ public class SvgExporter
         _currentX = MarginLeft;
         _currentY = MarginTop;
         _currentOctave = 4;
+        _currentNoteName = 0;
         _defaultDuration = Fraction.Quarter;
         _currentClef = "treble";
         _keySignature = 0;
@@ -180,7 +182,7 @@ public class SvgExporter
         switch (node)
         {
             case RelativeExpressionSyntax relative:
-                _currentOctave = GetOctaveFromPitch(relative.BasePitch);
+                InitializeRelativeMode(relative.BasePitch);
                 ProcessNode(relative.Body);
                 break;
                 
@@ -480,36 +482,57 @@ public class SvgExporter
     
     private (int position, int octave) CalculateStaffPosition(PitchSyntax pitch)
     {
-        // Base note positions in treble clef (C4 = middle C = position -2)
-        int basePosition = pitch.BaseName switch
-        {
-            'c' => 0,
-            'd' => 1,
-            'e' => 2,
-            'f' => 3,
-            'g' => 4,
-            'a' => 5,
-            'b' => 6,
-            _ => 0
-        };
+        int noteName = GetNoteName(pitch.BaseName);
         
-        // Calculate octave from relative marks
-        int octave = _currentOctave + pitch.OctaveOffset;
+        // LilyPond relative octave algorithm: find closest octave
+        int upOctave = _currentOctave;
+        if (_currentNoteName > noteName)
+            upOctave++;
         
-        // Adjust for relative pitch (within a fourth of previous note)
-        // For now, simplified implementation
+        int downOctave = _currentOctave;
+        if (_currentNoteName < noteName)
+            downOctave--;
+        
+        // Calculate steps (note name + octave * 7)
+        int currentSteps = _currentNoteName + _currentOctave * 7;
+        int upSteps = noteName + upOctave * 7;
+        int downSteps = noteName + downOctave * 7;
+        
+        // Choose the closer octave
+        int targetOctave;
+        if (Math.Abs(upSteps - currentSteps) < Math.Abs(downSteps - currentSteps))
+            targetOctave = upOctave;
+        else
+            targetOctave = downOctave;
+        
+        // Apply explicit octave offset (' or ,)
+        targetOctave += pitch.OctaveOffset;
+        
+        // Update current state for next note
+        _currentNoteName = noteName;
+        _currentOctave = targetOctave;
         
         // Position on staff (0 = middle C ledger line in treble clef)
         // Treble clef: E4 = line 0 (bottom), so C4 = -2
-        int staffPosition = basePosition + ((octave - 4) * 7) - 2;
+        int staffPosition = noteName + ((targetOctave - 4) * 7) - 2;
         
-        return (staffPosition, octave);
+        return (staffPosition, targetOctave);
     }
     
-    private int GetOctaveFromPitch(PitchSyntax pitch)
+    private void InitializeRelativeMode(PitchSyntax basePitch)
     {
-        // Default octave is 4, adjusted by octave marks
-        return 4 + pitch.OctaveOffset;
+        _currentNoteName = GetNoteName(basePitch.BaseName);
+        // Base octave: c' = octave 4, c'' = octave 5, etc.
+        _currentOctave = 3 + basePitch.OctaveOffset;
+    }
+    
+    private static int GetNoteName(char baseName)
+    {
+        return baseName switch
+        {
+            'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3,
+            'g' => 4, 'a' => 5, 'b' => 6, _ => 0
+        };
     }
     
     private int CalculateKeySignature(KeySignatureSyntax key)

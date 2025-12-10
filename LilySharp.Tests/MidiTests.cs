@@ -28,9 +28,9 @@ public class MidiTests
         var midi = exporter.Export(tree);
         
         Assert.Equal(8, midi.Tracks[1].Notes.Count);
-        Assert.Equal(72, midi.Tracks[1].Notes[0].Pitch); // c = C5 (relative to c')
-        Assert.Equal(74, midi.Tracks[1].Notes[1].Pitch); // d = D5
-        Assert.Equal(76, midi.Tracks[1].Notes[2].Pitch); // e = E5
+        Assert.Equal(60, midi.Tracks[1].Notes[0].Pitch); // c = C4 (relative to c')
+        Assert.Equal(62, midi.Tracks[1].Notes[1].Pitch); // d = D4
+        Assert.Equal(64, midi.Tracks[1].Notes[2].Pitch); // e = E4
     }
     
     [Fact]
