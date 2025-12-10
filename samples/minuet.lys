@@ -1,32 +1,49 @@
-// Minuet with repeats and parallel voices
+// Minuet in G in Lily#
 title "Minuet in G"
 composer "J.S. Bach"
+
 tempo 108
 time 3/4
+key g major
 
-score {
-    part Piano {
-        staff RH {
-            relative c'' {
-                repeat volta 2 {
-                    d4 g8 a b c |
-                    d4 g, g |
-                    e4 c'8 b c a |
-                    d,4 fis8 e fis d |
-                }
-                alternative {
-                    { g4 g, g | }
-                    { g4 g2 | }
-                }
-            }
-        }
-        staff LH {
-            relative c {
-                repeat volta 2 {
-                    << { g2 a4 } \\ { g,2. } >> |
-                    << { b'2. } \\ { g2. } >> |
-                }
-            }
-        }
+// Sections
+section A {
+    rightHand relative c'' {
+        d4 g8 a b c |
+        d4 g, g |
+        e4 c'8 b c a |
+        d,4 fis8 e fis d |
     }
+    leftHand relative c {
+        << { g2 a4 } \\ { g,2. } >> |
+        << { b'2. } \\ { g2. } >> |
+        << { c2. } \\ { e,2. } >> |
+        << { d'2. } \\ { d,2. } >> |
+    }
+}
+
+section A1 {
+    rightHand relative c'' { g4 g, g | }
+    leftHand relative c { g2. | }
+}
+
+section A2 {
+    rightHand relative c'' { g4 g2 | }
+    leftHand relative c { g2. | }
+}
+
+// Song structure with repeats
+structure {
+    |: A | 1. A1 :| 2. A2
+}
+
+// Output definitions
+render score "minuet.svg" {
+    staff treble { rightHand }
+    staff bass { leftHand }
+}
+
+render audio "minuet.mid" {
+    rightHand channel:1 instrument:1
+    leftHand channel:2 instrument:1
 }

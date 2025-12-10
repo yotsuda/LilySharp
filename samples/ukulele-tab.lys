@@ -1,10 +1,31 @@
-﻿// Ukulele tablature example
+// Ukulele tablature example in Lily#
 // Standard tuning: G C E A
 
-\tabStaff \tuning ukulele {
-    // C major chord strum
-    <c e g c'>4 <c e g c'> <c e g c'> <c e g c'>
-    
-    // Simple melody
-    c'4 d' e' f' g' a' b' c''
+tempo 120
+time 4/4
+
+// Sections
+section Main {
+    ukulele {
+        // C major chord strum
+        <c e g c'>4 <c e g c'> <c e g c'> <c e g c'> |
+        
+        // Simple melody
+        c'4 d' e' f' | g' a' b' c'' |
+    }
+}
+
+// Song structure
+structure {
+    Main
+}
+
+// Output definitions
+render score "ukulele-tab.svg" {
+    staff treble { ukulele }
+    tab ukulele { ukulele }
+}
+
+render audio "ukulele-tab.mid" {
+    ukulele channel:1 instrument:24
 }

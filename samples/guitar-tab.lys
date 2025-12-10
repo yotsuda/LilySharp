@@ -1,16 +1,37 @@
-﻿// Guitar tablature example
+// Guitar tablature example in Lily#
 // Standard tuning: E A D G B E
 
-\tabStaff {
-    // Open strings (low to high)
-    e,4 a, d g b e'
-    
-    // Simple melody on high E string
-    e'4 fis' gis' a' b' cis'' d'' e''
-    
-    // Power chord pattern (E5)
-    <e, b,>4 <e, b,> <e, b,> <e, b,>
-    
-    // A minor chord arpeggio
-    a,4 e a c' e' a'
+tempo 120
+time 4/4
+
+// Sections
+section Main {
+    guitar {
+        // Open strings (low to high)
+        e,4 a, d g b e' |
+        
+        // Simple melody on high E string
+        e'4 fis' gis' a' | b' cis'' d'' e'' |
+        
+        // Power chord pattern (E5)
+        <e, b,>4 <e, b,> <e, b,> <e, b,> |
+        
+        // A minor chord arpeggio
+        a,4 e a c' | e' a' e' c' |
+    }
+}
+
+// Song structure
+structure {
+    Main
+}
+
+// Output definitions
+render score "guitar-tab.svg" {
+    staff treble { guitar }
+    tab guitar { guitar }
+}
+
+render audio "guitar-tab.mid" {
+    guitar channel:1 instrument:25
 }

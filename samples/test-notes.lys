@@ -1,1 +1,15 @@
-{ c1 d2 e4 f8 }
+// Test notes in Lily#
+
+time 4/4
+
+section Main {
+    test { c1 | d2 e4 f8 g8 | }
+}
+
+structure {
+    Main
+}
+
+render score "test-notes.svg" {
+    staff treble { test }
+}
