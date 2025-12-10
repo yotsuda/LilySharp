@@ -463,3 +463,198 @@ internal sealed class StringNumberAnnotationGreen : GreenSyntaxNode
     {
     }
 }
+
+// ============================================================
+// New Section-Oriented Green Nodes
+
+/// <summary>
+/// Section declaration: section Name { ... }
+/// </summary>
+internal sealed class SectionDeclarationGreen : GreenSyntaxNode
+{
+    public SectionDeclarationGreen(
+        SyntaxToken sectionKeyword,
+        SyntaxToken name,
+        SyntaxToken openBrace,
+        GreenNode?[] items,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.SectionDeclaration, [sectionKeyword, name, openBrace, .. items, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// Part block inside section: guitar { ... }
+/// </summary>
+internal sealed class PartBlockGreen : GreenSyntaxNode
+{
+    public PartBlockGreen(
+        SyntaxToken partName,
+        GreenNode?[] options,
+        GreenNode body)
+        : base(SyntaxKind.PartBlock, [partName, .. options, body])
+    {
+    }
+}
+
+/// <summary>
+/// Structure declaration: structure { ... }
+/// </summary>
+internal sealed class StructureDeclarationGreen : GreenSyntaxNode
+{
+    public StructureDeclarationGreen(
+        SyntaxToken structureKeyword,
+        SyntaxToken openBrace,
+        GreenNode?[] items,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.StructureDeclaration, [structureKeyword, openBrace, .. items, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// Section reference in structure: SectionName
+/// </summary>
+internal sealed class SectionReferenceGreen : GreenSyntaxNode
+{
+    public SectionReferenceGreen(SyntaxToken identifier)
+        : base(SyntaxKind.SectionReference, [identifier])
+    {
+    }
+}
+
+/// <summary>
+/// Repeat block in structure: |: ... :|
+/// </summary>
+internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
+{
+    public StructureRepeatBlockGreen(
+        SyntaxToken repeatStart,
+        GreenNode?[] items,
+        SyntaxToken repeatEnd)
+        : base(SyntaxKind.StructureRepeatBlock, [repeatStart, .. items, repeatEnd])
+    {
+    }
+    
+    public StructureRepeatBlockGreen(
+        SyntaxToken repeatStart,
+        GreenNode?[] items,
+        SyntaxToken barline,
+        GreenNode?[] alternatives,
+        SyntaxToken repeatEnd,
+        GreenNode finalAlternative)
+        : base(SyntaxKind.StructureRepeatBlock, [repeatStart, .. items, barline, .. alternatives, repeatEnd, finalAlternative])
+    {
+    }
+}
+
+/// <summary>
+/// Alternative in repeat: 1. A, 2. B
+/// </summary>
+internal sealed class StructureAlternativeGreen : GreenSyntaxNode
+{
+    public StructureAlternativeGreen(
+        SyntaxToken number,
+        SyntaxToken dot,
+        SyntaxToken sectionName)
+        : base(SyntaxKind.StructureAlternative, [number, dot, sectionName])
+    {
+    }
+}
+
+/// <summary>
+/// Navigation mark: segno, fine, coda, dc, ds, etc.
+/// </summary>
+internal sealed class NavigationMarkGreen : GreenSyntaxNode
+{
+    // Simple: segno, fine, coda, dc, ds
+    public NavigationMarkGreen(SyntaxToken keyword)
+        : base(SyntaxKind.NavigationMark, [keyword])
+    {
+    }
+    
+    // Two parts: to coda, dc al, ds al
+    public NavigationMarkGreen(SyntaxToken keyword1, SyntaxToken keyword2)
+        : base(SyntaxKind.NavigationMark, [keyword1, keyword2])
+    {
+    }
+    
+    // Three parts: dc al fine, dc al coda, ds al fine, ds al coda
+    public NavigationMarkGreen(SyntaxToken keyword1, SyntaxToken keyword2, SyntaxToken keyword3)
+        : base(SyntaxKind.NavigationMark, [keyword1, keyword2, keyword3])
+    {
+    }
+}
+
+/// <summary>
+/// Render declaration: render Name "file.svg" { ... }
+/// </summary>
+internal sealed class RenderDeclarationGreen : GreenSyntaxNode
+{
+    public RenderDeclarationGreen(
+        SyntaxToken renderKeyword,
+        SyntaxToken? name,
+        SyntaxToken filename,
+        SyntaxToken openBrace,
+        GreenNode?[] items,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.RenderDeclaration, name != null 
+            ? [renderKeyword, name, filename, openBrace, .. items, closeBrace]
+            : [renderKeyword, filename, openBrace, .. items, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// Staff render: staff [clef] { partName }
+/// </summary>
+internal sealed class StaffRenderGreen : GreenSyntaxNode
+{
+    public StaffRenderGreen(
+        SyntaxToken staffKeyword,
+        SyntaxToken openBrace,
+        SyntaxToken partName,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.StaffRender, [staffKeyword, openBrace, partName, closeBrace])
+    {
+    }
+    
+    public StaffRenderGreen(
+        SyntaxToken staffKeyword,
+        SyntaxToken clefName,
+        SyntaxToken openBrace,
+        SyntaxToken partName,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.StaffRender, [staffKeyword, clefName, openBrace, partName, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// Tab render: tab tuning { partName }
+/// </summary>
+internal sealed class TabRenderGreen : GreenSyntaxNode
+{
+    public TabRenderGreen(
+        SyntaxToken tabKeyword,
+        SyntaxToken tuning,
+        SyntaxToken openBrace,
+        SyntaxToken partName,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.TabRender, [tabKeyword, tuning, openBrace, partName, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// MIDI part render: partName channel:1 instrument:25
+/// </summary>
+internal sealed class MidiPartRenderGreen : GreenSyntaxNode
+{
+    public MidiPartRenderGreen(
+        SyntaxToken partName,
+        GreenNode?[] options)
+        : base(SyntaxKind.MidiPartRender, [partName, .. options])
+    {
+    }
+}

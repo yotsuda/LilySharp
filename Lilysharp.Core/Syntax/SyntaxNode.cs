@@ -1,4 +1,4 @@
-using Lilysharp.Core.Syntax.InternalSyntax;
+﻿using Lilysharp.Core.Syntax.InternalSyntax;
 
 namespace Lilysharp.Core.Syntax;
 

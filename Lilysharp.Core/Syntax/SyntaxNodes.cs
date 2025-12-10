@@ -916,3 +916,212 @@ public sealed partial class StringNumberAnnotationSyntax : SyntaxNode
     /// </summary>
     public int StringNumber => int.Parse(StringNumberToken.Text);
 }
+
+// ============================================================
+// New Section-Oriented Syntax Nodes
+// ============================================================
+
+/// <summary>
+/// Represents a section declaration: section Name { ... }
+/// </summary>
+public sealed partial class SectionDeclarationSyntax : SyntaxNode
+{
+    internal SectionDeclarationSyntax(SectionDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode SectionKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
+    
+    /// <summary>
+    /// Gets the section name as a string.
+    /// </summary>
+    public string SectionName => Name.Text;
+}
+
+/// <summary>
+/// Represents a part block inside a section: partName { ... }
+/// </summary>
+public sealed partial class PartBlockSyntax : SyntaxNode
+{
+    internal PartBlockSyntax(PartBlockGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode PartName => (SyntaxTokenNode)GetChild(0)!;
+    
+    /// <summary>
+    /// Gets the part name as a string.
+    /// </summary>
+    public string Name => PartName.Text;
+}
+
+/// <summary>
+/// Represents a structure declaration: structure { ... }
+/// </summary>
+public sealed partial class StructureDeclarationSyntax : SyntaxNode
+{
+    internal StructureDeclarationSyntax(StructureDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode StructureKeyword => (SyntaxTokenNode)GetChild(0)!;
+}
+
+/// <summary>
+/// Represents a section reference in structure: SectionName
+/// </summary>
+public sealed partial class SectionReferenceSyntax : SyntaxNode
+{
+    internal SectionReferenceSyntax(SectionReferenceGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode Identifier => (SyntaxTokenNode)GetChild(0)!;
+    
+    /// <summary>
+    /// Gets the referenced section name.
+    /// </summary>
+    public string SectionName => Identifier.Text;
+}
+
+/// <summary>
+/// Represents a repeat block in structure: |: ... :|
+/// </summary>
+public sealed partial class StructureRepeatBlockSyntax : SyntaxNode
+{
+    internal StructureRepeatBlockSyntax(StructureRepeatBlockGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+}
+
+/// <summary>
+/// Represents an alternative in structure: 1. SectionName
+/// </summary>
+public sealed partial class StructureAlternativeSyntax : SyntaxNode
+{
+    internal StructureAlternativeSyntax(StructureAlternativeGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode Number => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode SectionName => (SyntaxTokenNode)GetChild(2)!;
+    
+    /// <summary>
+    /// Gets the alternative number.
+    /// </summary>
+    public int AlternativeNumber => int.Parse(Number.Text);
+}
+
+/// <summary>
+/// Represents a navigation mark: segno, fine, coda, dc, ds, etc.
+/// </summary>
+public sealed partial class NavigationMarkSyntax : SyntaxNode
+{
+    internal NavigationMarkSyntax(NavigationMarkGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+    
+    /// <summary>
+    /// Gets the type of navigation mark.
+    /// </summary>
+    public NavigationMarkType MarkType
+    {
+        get
+        {
+            var first = (SyntaxTokenNode)GetChild(0)!;
+            return first.Kind switch
+            {
+                SyntaxKind.SegnoKeyword => NavigationMarkType.Segno,
+                SyntaxKind.FineKeyword => NavigationMarkType.Fine,
+                SyntaxKind.CodaKeyword => NavigationMarkType.Coda,
+                SyntaxKind.ToKeyword => NavigationMarkType.ToCoda,
+                SyntaxKind.DcKeyword => SlotCount == 1 ? NavigationMarkType.DaCapo :
+                    ((SyntaxTokenNode)GetChild(2)!).Kind == SyntaxKind.FineKeyword 
+                        ? NavigationMarkType.DaCapoAlFine 
+                        : NavigationMarkType.DaCapoAlCoda,
+                SyntaxKind.DsKeyword => SlotCount == 1 ? NavigationMarkType.DalSegno :
+                    ((SyntaxTokenNode)GetChild(2)!).Kind == SyntaxKind.FineKeyword 
+                        ? NavigationMarkType.DalSegnoAlFine 
+                        : NavigationMarkType.DalSegnoAlCoda,
+                _ => NavigationMarkType.Segno
+            };
+        }
+    }
+}
+
+/// <summary>
+/// Navigation mark types.
+/// </summary>
+public enum NavigationMarkType
+{
+    Segno,
+    Fine,
+    Coda,
+    ToCoda,
+    DaCapo,
+    DaCapoAlFine,
+    DaCapoAlCoda,
+    DalSegno,
+    DalSegnoAlFine,
+    DalSegnoAlCoda
+}
+
+/// <summary>
+/// Represents a render declaration: render Name "file.svg" { ... }
+/// </summary>
+public sealed partial class RenderDeclarationSyntax : SyntaxNode
+{
+    internal RenderDeclarationSyntax(RenderDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode RenderKeyword => (SyntaxTokenNode)GetChild(0)!;
+}
+
+/// <summary>
+/// Represents a staff render item: staff [clef] { partName }
+/// </summary>
+public sealed partial class StaffRenderSyntax : SyntaxNode
+{
+    internal StaffRenderSyntax(StaffRenderGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode StaffKeyword => (SyntaxTokenNode)GetChild(0)!;
+}
+
+/// <summary>
+/// Represents a tab render item: tab tuning { partName }
+/// </summary>
+public sealed partial class TabRenderSyntax : SyntaxNode
+{
+    internal TabRenderSyntax(TabRenderGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode TabKeyword => (SyntaxTokenNode)GetChild(0)!;
+}
+
+/// <summary>
+/// Represents a MIDI part render: partName channel:1 instrument:25
+/// </summary>
+public sealed partial class MidiPartRenderSyntax : SyntaxNode
+{
+    internal MidiPartRenderSyntax(MidiPartRenderGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode PartName => (SyntaxTokenNode)GetChild(0)!;
+}

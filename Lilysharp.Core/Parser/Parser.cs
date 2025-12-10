@@ -103,6 +103,15 @@ internal sealed class Parser
     {
         return Current.Kind switch
         {
+            // New section-oriented structure
+            SyntaxKind.SectionKeyword => ParseSectionDeclaration(),
+            SyntaxKind.StructureKeyword => ParseStructureDeclaration(),
+            SyntaxKind.RenderKeyword => ParseRenderDeclaration(),
+            
+            // Variable declaration: identifier = { ... }
+            SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
+            
+            // Legacy structure
             SyntaxKind.ScoreKeyword => ParseScoreDeclaration(),
             SyntaxKind.PartKeyword => ParsePartDeclaration(),
             SyntaxKind.RelativeKeyword => ParseRelativeExpression(),
@@ -833,5 +842,316 @@ private GreenNode?[] ParseArticulations()
         };
         
         return new TuningDeclarationGreen(backslash, tuningKeyword, tuningName);
+    }
+
+    
+    // ========== New Section-Oriented Parsing ==========
+    
+    /// <summary>
+    /// Parse variable declaration: identifier = { ... }
+    /// </summary>
+    private VariableDeclarationGreen ParseNewVariableDeclaration()
+    {
+        var name = Expect(SyntaxKind.Identifier);
+        var equals = Expect(SyntaxKind.Equals);
+        var body = ParseMusicBlock();
+        return new VariableDeclarationGreen(name, equals, body);
+    }
+    
+    /// <summary>
+    /// Parse section declaration: section Name { ... }
+    /// </summary>
+    private SectionDeclarationGreen ParseSectionDeclaration()
+    {
+        var keyword = Expect(SyntaxKind.SectionKeyword);
+        var name = Expect(SyntaxKind.Identifier);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        
+        var items = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var item = ParseSectionItem();
+            if (item != null)
+                items.Add(item);
+            else
+                Advance();
+        }
+        
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new SectionDeclarationGreen(keyword, name, openBrace, [.. items], closeBrace);
+    }
+    
+    private GreenNode? ParseSectionItem()
+    {
+        return Current.Kind switch
+        {
+            SyntaxKind.KeyKeyword => ParseKeySignature(),
+            SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
+            SyntaxKind.TimeKeyword => ParseTimeSignature(),
+            // Allow identifier or instrument keywords (bass, guitar-like names) as part names
+            SyntaxKind.Identifier => ParsePartBlock(),
+            // bass, treble etc. can also be part names
+            SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword 
+                or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword 
+                when Peek(1)?.Kind == SyntaxKind.OpenBrace => ParsePartBlockWithKeyword(),
+            _ => null
+        };
+    }
+    
+    /// <summary>
+    /// Parse part block when part name is a keyword (e.g., bass)
+    /// </summary>
+    private PartBlockGreen ParsePartBlockWithKeyword()
+    {
+        var partName = Advance(); // bass, treble, etc. as identifier
+        var body = ParseMusicBlock();
+        return new PartBlockGreen(partName, [], body);
+    }
+    
+    /// <summary>
+    /// Parse part block: partName { ... } or partName options { ... }
+    /// </summary>
+    private PartBlockGreen ParsePartBlock()
+    {
+        var partName = Expect(SyntaxKind.Identifier);
+        
+        // Parse optional options (transpose, octave, instrument, clef)
+        var options = new List<GreenNode?>();
+        while (IsPartOption())
+        {
+            options.Add(ParsePartOption());
+        }
+        
+        var body = ParseMusicBlock();
+        return new PartBlockGreen(partName, [.. options], body);
+    }
+    
+    private bool IsPartOption()
+    {
+        return Current.Kind is SyntaxKind.TransposeKeyword 
+            or SyntaxKind.OctaveKeyword 
+            or SyntaxKind.InstrumentKeyword 
+            or SyntaxKind.ClefKeyword;
+    }
+    
+    private GreenNode ParsePartOption()
+    {
+        var keyword = Advance(); // transpose, octave, instrument, or clef
+        var colon = Expect(SyntaxKind.Colon);
+        var value = Advance(); // value token
+        return new PropertyAssignmentGreen(keyword, colon, [value]);
+    }
+    
+    /// <summary>
+    /// Parse structure declaration: structure { ... }
+    /// </summary>
+    private StructureDeclarationGreen ParseStructureDeclaration()
+    {
+        var keyword = Expect(SyntaxKind.StructureKeyword);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        
+        var items = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var item = ParseStructureItem();
+            if (item != null)
+                items.Add(item);
+            else
+                Advance();
+        }
+        
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new StructureDeclarationGreen(keyword, openBrace, [.. items], closeBrace);
+    }
+    
+    private GreenNode? ParseStructureItem()
+    {
+        return Current.Kind switch
+        {
+            SyntaxKind.Identifier => new SectionReferenceGreen(Advance()),
+            SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
+                or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword 
+                => ParseNavigationMark(),
+            _ => null
+        };
+    }
+    
+    /// <summary>
+    /// Parse navigation mark: segno, fine, coda, dc, ds, etc.
+    /// </summary>
+    private NavigationMarkGreen ParseNavigationMark()
+    {
+        var first = Advance();
+        
+        // Single keyword: segno, fine, coda
+        if (first.Kind is SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword)
+        {
+            return new NavigationMarkGreen(first);
+        }
+        
+        // "to coda"
+        if (first.Kind == SyntaxKind.ToKeyword)
+        {
+            var coda = Expect(SyntaxKind.CodaKeyword);
+            return new NavigationMarkGreen(first, coda);
+        }
+        
+        // dc/ds alone or with "al fine/coda"
+        if (first.Kind is SyntaxKind.DcKeyword or SyntaxKind.DsKeyword)
+        {
+            if (Check(SyntaxKind.AlKeyword))
+            {
+                var al = Advance();
+                var target = Expect(SyntaxKind.FineKeyword, SyntaxKind.CodaKeyword);
+                return new NavigationMarkGreen(first, al, target);
+            }
+            return new NavigationMarkGreen(first);
+        }
+        
+        return new NavigationMarkGreen(first);
+    }
+    
+    /// <summary>
+    /// Parse render declaration: render [name] "file.svg" { ... }
+    /// </summary>
+    private RenderDeclarationGreen ParseRenderDeclaration()
+    {
+        var keyword = Expect(SyntaxKind.RenderKeyword);
+        
+        // Optional name
+        SyntaxToken? name = null;
+        if (Check(SyntaxKind.Identifier))
+        {
+            name = Advance();
+        }
+        
+        var filename = Expect(SyntaxKind.StringLiteral);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        
+        var items = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var item = ParseRenderItem();
+            if (item != null)
+                items.Add(item);
+            else
+                Advance();
+        }
+        
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new RenderDeclarationGreen(keyword, name, filename, openBrace, [.. items], closeBrace);
+    }
+    
+        
+    /// <summary>
+    /// Check if current token can be a part name (Identifier or instrument keyword like bass).
+    /// </summary>
+    private bool IsPartNameStart()
+    {
+        return Current.Kind is SyntaxKind.Identifier 
+            or SyntaxKind.BassKeyword 
+            or SyntaxKind.TrebleKeyword 
+            or SyntaxKind.AltoKeyword 
+            or SyntaxKind.TenorKeyword;
+    }
+    
+    /// <summary>
+    /// Expect a part name (Identifier or instrument keyword like bass).
+    /// </summary>
+    private SyntaxToken ExpectPartName()
+    {
+        if (IsPartNameStart())
+            return Advance();
+        
+        // Report error
+        var span = new TextSpan(_textPosition, Current.FullWidth);
+        _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+            $"Expected part name, found '{Current.Kind}'");
+        
+        return new SyntaxToken(SyntaxKind.Identifier, "", Current.LeadingTrivia, null);
+    }
+    
+    private GreenNode? ParseRenderItem()
+    {
+        return Current.Kind switch
+        {
+            SyntaxKind.StaffKeyword => ParseStaffRender(),
+            SyntaxKind.TabKeyword => ParseTabRender(),
+            _ when IsPartNameStart() => ParseMidiPartRender(),
+            _ => null
+        };
+    }
+    
+    /// <summary>
+    /// Parse staff render: staff [clef] { partName }
+    /// </summary>
+    private StaffRenderGreen ParseStaffRender()
+    {
+        var staffKeyword = Expect(SyntaxKind.StaffKeyword);
+        
+        // Check for optional clef (bass, treble, alto, tenor)
+        if (IsClefKeyword())
+        {
+            var clef = Advance();
+            var openBrace = Expect(SyntaxKind.OpenBrace);
+            var partName = ExpectPartName();
+            var closeBrace = Expect(SyntaxKind.CloseBrace);
+            return new StaffRenderGreen(staffKeyword, clef, openBrace, partName, closeBrace);
+        }
+        
+        var openBraceSimple = Expect(SyntaxKind.OpenBrace);
+        var partNameSimple = ExpectPartName();
+        var closeBraceSimple = Expect(SyntaxKind.CloseBrace);
+        return new StaffRenderGreen(staffKeyword, openBraceSimple, partNameSimple, closeBraceSimple);
+    }
+    
+    private bool IsClefKeyword()
+    {
+        return Current.Kind is SyntaxKind.TrebleKeyword 
+            or SyntaxKind.BassKeyword 
+            or SyntaxKind.AltoKeyword 
+            or SyntaxKind.TenorKeyword;
+    }
+    
+    /// <summary>
+    /// Parse tab render: tab tuning { partName }
+    /// </summary>
+    private TabRenderGreen ParseTabRender()
+    {
+        var tabKeyword = Expect(SyntaxKind.TabKeyword);
+        
+        // Tuning name (guitar, bass, ukulele, etc.)
+        var tuning = Current.Kind switch
+        {
+            SyntaxKind.Identifier => Advance(),
+            SyntaxKind.BassKeyword => Advance(),
+            _ => Expect(SyntaxKind.Identifier)
+        };
+        
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        var partName = ExpectPartName();
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new TabRenderGreen(tabKeyword, tuning, openBrace, partName, closeBrace);
+    }
+    
+    /// <summary>
+    /// Parse MIDI part render: partName [channel:N] [instrument:N] [octave:N]
+    /// </summary>
+    private MidiPartRenderGreen ParseMidiPartRender()
+    {
+        var partName = ExpectPartName();
+        
+        var options = new List<GreenNode?>();
+        while (Current.Kind is SyntaxKind.ChannelKeyword 
+            or SyntaxKind.InstrumentKeyword 
+            or SyntaxKind.OctaveKeyword)
+        {
+            var optKeyword = Advance();
+            var colon = Expect(SyntaxKind.Colon);
+            var value = Advance();
+            options.Add(new PropertyAssignmentGreen(optKeyword, colon, [value]));
+        }
+        
+        return new MidiPartRenderGreen(partName, [.. options]);
     }
 }

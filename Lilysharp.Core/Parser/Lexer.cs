@@ -374,7 +374,28 @@ internal sealed class Lexer
     {
         return text switch
         {
-            // Structure keywords
+            // New structure keywords
+            "section" => SyntaxKind.SectionKeyword,
+            "structure" => SyntaxKind.StructureKeyword,
+            "render" => SyntaxKind.RenderKeyword,
+            "tab" => SyntaxKind.TabKeyword,
+            
+            // Part options
+            "transpose" => SyntaxKind.TransposeKeyword,
+            "octave" => SyntaxKind.OctaveKeyword,
+            "instrument" => SyntaxKind.InstrumentKeyword,
+            "channel" => SyntaxKind.ChannelKeyword,
+            
+            // Navigation keywords (structure block)
+            "segno" => SyntaxKind.SegnoKeyword,
+            "fine" => SyntaxKind.FineKeyword,
+            "coda" => SyntaxKind.CodaKeyword,
+            "dc" => SyntaxKind.DcKeyword,
+            "ds" => SyntaxKind.DsKeyword,
+            "al" => SyntaxKind.AlKeyword,
+            "to" => SyntaxKind.ToKeyword,
+            
+            // Legacy structure keywords
             "score" => SyntaxKind.ScoreKeyword,
             "part" => SyntaxKind.PartKeyword,
             "staff" => SyntaxKind.StaffKeyword,
@@ -399,11 +420,21 @@ internal sealed class Lexer
             // Mode keywords
             "major" => SyntaxKind.MajorKeyword,
             "minor" => SyntaxKind.MinorKeyword,
-            "tuplet" => SyntaxKind.TupletKeyword,
+            "dorian" => SyntaxKind.DorianKeyword,
+            "phrygian" => SyntaxKind.PhrygianKeyword,
+            "lydian" => SyntaxKind.LydianKeyword,
+            "mixolydian" => SyntaxKind.MixolydianKeyword,
+            "aeolian" => SyntaxKind.AeolianKeyword,
+            "locrian" => SyntaxKind.LocrianKeyword,
+            
+            // Clef keywords
             "treble" => SyntaxKind.TrebleKeyword,
             "bass" => SyntaxKind.BassKeyword,
             "alto" => SyntaxKind.AltoKeyword,
             "tenor" => SyntaxKind.TenorKeyword,
+            
+            // Other keywords
+            "tuplet" => SyntaxKind.TupletKeyword,
             "grace" => SyntaxKind.GraceKeyword,
             "acciaccatura" => SyntaxKind.AcciaccaturaKeyword,
             "appoggiatura" => SyntaxKind.AppogiaturaKeyword,

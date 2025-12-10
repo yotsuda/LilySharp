@@ -39,38 +39,63 @@ public enum SyntaxKind : ushort
     DurationNumber,     // 1, 2, 4, 8, 16, 32, 64, 128
     Dot,                // .
     
-    // === Keywords ===
-    ScoreKeyword,
-    PartKeyword,
-    StaffKeyword,
-    VoiceKeyword,
-    RelativeKeyword,
-    AbsoluteKeyword,
-    FixedKeyword,
-    RepeatKeyword,
-    VoltaKeyword,
-    AlternativeKeyword,
-    LetKeyword,
-    UseKeyword,
-    TitleKeyword,
-    ComposerKeyword,
-    TempoKeyword,
-    TimeKeyword,
-    KeyKeyword,
-    ClefKeyword,
-    MajorKeyword,
-    MinorKeyword,
-    TupletKeyword,
-    TrebleKeyword,
-    BassKeyword,
-    AltoKeyword,
-    TenorKeyword,
-    GraceKeyword,
+    // === Structure Keywords (no backslash) ===
+    SectionKeyword,     // section
+    StructureKeyword,   // structure
+    RenderKeyword,      // render
+    ScoreKeyword,       // score (legacy)
+    PartKeyword,        // part (legacy)
+    StaffKeyword,       // staff
+    TabKeyword,         // tab
+    VoiceKeyword,       // voice
+    RelativeKeyword,    // relative
+    AbsoluteKeyword,    // absolute
+    FixedKeyword,       // fixed
+    RepeatKeyword,      // repeat (legacy)
+    VoltaKeyword,       // volta (legacy)
+    AlternativeKeyword, // alternative (legacy)
+    LetKeyword,         // let (legacy)
+    UseKeyword,         // use (legacy)
+    TitleKeyword,       // title
+    ComposerKeyword,    // composer
+    TempoKeyword,       // tempo
+    TimeKeyword,        // time
+    KeyKeyword,         // key
+    ClefKeyword,        // clef
+    MajorKeyword,       // major
+    MinorKeyword,       // minor
+    TupletKeyword,      // tuplet
+    TrebleKeyword,      // treble
+    BassKeyword,        // bass
+    AltoKeyword,        // alto
+    TenorKeyword,       // tenor
+    GraceKeyword,       // grace
     AcciaccaturaKeyword,
     AppogiaturaKeyword,
-    LyricsKeyword,
-    TabStaffKeyword,
-    TuningKeyword,
+    LyricsKeyword,      // lyrics
+    TabStaffKeyword,    // tabStaff (legacy)
+    TuningKeyword,      // tuning
+    TransposeKeyword,   // transpose
+    OctaveKeyword,      // octave
+    InstrumentKeyword,  // instrument
+    ChannelKeyword,     // channel
+    
+    // === Navigation Keywords (structure block) ===
+    SegnoKeyword,       // segno
+    FineKeyword,        // fine
+    CodaKeyword,        // coda
+    DcKeyword,          // dc
+    DsKeyword,          // ds
+    AlKeyword,          // al
+    ToKeyword,          // to
+    
+    // === Mode Keywords ===
+    DorianKeyword,      // dorian
+    PhrygianKeyword,    // phrygian
+    LydianKeyword,      // lydian
+    MixolydianKeyword,  // mixolydian
+    AeolianKeyword,     // aeolian
+    LocrianKeyword,     // locrian
     
     // === Rest ===
     RestR,              // r
@@ -114,74 +139,86 @@ public enum SyntaxKind : ushort
     FermataKeyword,
     PortatoKeyword,
     
-    // === Dynamics ===
-    DynamicPPP,         // ppp
-    DynamicPP,          // pp
-    DynamicP,           // p
-    DynamicMP,          // mp
-    DynamicMF,          // mf
-    DynamicF,           // f
-    DynamicFF,          // ff
-    DynamicFFF,         // fff
-    CrescKeyword,       // cresc
-    DecrescKeyword,     // decresc
-    DimKeyword,         // dim
+    // === Dynamics (with backslash) ===
+    DynamicPPP,         // \ppp
+    DynamicPP,          // \pp
+    DynamicP,           // \p
+    DynamicMP,          // \mp
+    DynamicMF,          // \mf
+    DynamicF,           // \f
+    DynamicFF,          // \ff
+    DynamicFFF,         // \fff
+    CrescKeyword,       // \cresc
+    DecrescKeyword,     // \decresc
+    DimKeyword,         // \dim
     
-    // === Nodes ===
+    // === Nodes: Top Level ===
     CompilationUnit,
+    MetadataDeclaration,
+    VariableDeclaration,
+    VariableReference,
     
-    // Music structure
+    // === Nodes: New Structure ===
+    SectionDeclaration,         // section Name { ... }
+    StructureDeclaration,       // structure { ... }
+    RenderDeclaration,          // render Name "file.svg" { ... }
+    PartBlock,                  // guitar { ... } inside section
+    StaffRender,                // staff { guitar } inside render
+    TabRender,                  // tab guitar { guitar } inside render
+    MidiPartRender,             // guitar channel:1 inside render
+    
+    // === Nodes: Structure Block Items ===
+    SectionReference,           // section name in structure
+    StructureRepeatBlock,       // |: ... :| in structure
+    StructureAlternative,       // 1. A, 2. B in structure
+    NavigationMark,             // segno, fine, coda, dc, ds
+    
+    // === Nodes: Legacy Structure ===
     ScoreDeclaration,
     PartDeclaration,
     StaffDeclaration,
     VoiceDeclaration,
     
-    // Music content
+    // === Nodes: Music Content ===
     MusicBlock,
     RelativeExpression,
     AbsoluteExpression,
     
-    // Notes and rests
+    // === Nodes: Notes and Rests ===
     Note,
     Rest,
     Chord,
     Pitch,
     Duration,
     
-    // Articulations
+    // === Nodes: Articulations ===
     Articulation,
     Dynamic,
     
-    // Other
+    // === Nodes: Other Music ===
     Barline,
     Tie,
     Slur,
-    VariableDeclaration,
-    VariableReference,
     
-    // Repeat and parallel
+    // === Nodes: Repeat and Parallel ===
     RepeatExpression,
     AlternativeClause,
     ParallelExpression,
     
-    // Properties
+    // === Nodes: Properties ===
     PropertyAssignment,
-    MetadataDeclaration,
     TimeSignature,
     TempoDeclaration,
-    
-    // Key and clef
     KeySignature,
     ClefDeclaration,
     
-    // Tuplet
+    // === Nodes: Tuplet and Grace ===
     TupletExpression,
     GraceExpression,
     LyricsBlock,
     
-    // Tablature
+    // === Nodes: Tablature ===
     TabStaffDeclaration,
     TuningDeclaration,
     StringNumberAnnotation,
-    
 }
