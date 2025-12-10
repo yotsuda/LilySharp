@@ -414,6 +414,7 @@ internal sealed class Parser
             SyntaxKind.ClefKeyword => true,
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or SyntaxKind.AppogiaturaKeyword => true,
             SyntaxKind.LyricsKeyword => true,
+            SyntaxKind.Identifier => true, // Variable reference
             _ => false
         };
     }
@@ -450,7 +451,8 @@ internal sealed class Parser
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
             
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
-            SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
+                        SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
+            SyntaxKind.Identifier => new VariableReferenceGreen(Advance()), // Variable reference without 'use'
             _ => null
         };
     }
@@ -854,7 +856,18 @@ private GreenNode?[] ParseArticulations()
     {
         var name = Expect(SyntaxKind.Identifier);
         var equals = Expect(SyntaxKind.Equals);
-        var body = ParseMusicBlock();
+        
+        // Body can be: { ... } or relative c' { ... }
+        GreenNode body;
+        if (Check(SyntaxKind.RelativeKeyword))
+        {
+            body = ParseRelativeExpression();
+        }
+        else
+        {
+            body = ParseMusicBlock();
+        }
+        
         return new VariableDeclarationGreen(name, equals, body);
     }
     
@@ -909,7 +922,7 @@ private GreenNode?[] ParseArticulations()
     }
     
     /// <summary>
-    /// Parse part block: partName { ... } or partName options { ... }
+    /// Parse part block: partName [options] { ... } or partName [options] relative c' { ... }
     /// </summary>
     private PartBlockGreen ParsePartBlock()
     {
@@ -922,7 +935,27 @@ private GreenNode?[] ParseArticulations()
             options.Add(ParsePartOption());
         }
         
-        var body = ParseMusicBlock();
+        // Body can be: { ... } or relative c' { ... } or variable reference
+        GreenNode body;
+        if (Check(SyntaxKind.RelativeKeyword))
+        {
+            body = ParseRelativeExpression();
+        }
+        else if (Check(SyntaxKind.OpenBrace))
+        {
+            body = ParseMusicBlock();
+        }
+        else if (Check(SyntaxKind.Identifier))
+        {
+            // Variable reference: partName { existingVariable }
+            body = new VariableReferenceGreen(Advance());
+        }
+        else
+        {
+            // Error recovery: expect a block
+            body = ParseMusicBlock();
+        }
+        
         return new PartBlockGreen(partName, [.. options], body);
     }
     
@@ -969,11 +1002,72 @@ private GreenNode?[] ParseArticulations()
         return Current.Kind switch
         {
             SyntaxKind.Identifier => new SectionReferenceGreen(Advance()),
+            SyntaxKind.RepeatStartBar => ParseStructureRepeatBlock(),
             SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
                 or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword 
                 => ParseNavigationMark(),
             _ => null
         };
+    }
+    
+    /// <summary>
+    /// Parse repeat block: |: ... :| or |: ... | 1. A :| 2. B
+    /// </summary>
+    private StructureRepeatBlockGreen ParseStructureRepeatBlock()
+    {
+        var startBar = Expect(SyntaxKind.RepeatStartBar);
+        
+        var items = new List<GreenNode?>();
+        var alternatives = new List<GreenNode?>();
+        SyntaxToken? pipeBeforeAlternatives = null;
+        
+        // Parse items until :| or | (for alternatives)
+        while (!Check(SyntaxKind.RepeatEndBar) && !Check(SyntaxKind.EndOfFile))
+        {
+            // Check for | followed by number (start of alternatives)
+            if (Check(SyntaxKind.Bar) && Peek(1)?.Kind == SyntaxKind.IntegerLiteral)
+            {
+                pipeBeforeAlternatives = Advance(); // consume |
+                break;
+            }
+            
+            var item = ParseStructureItem();
+            if (item != null)
+                items.Add(item);
+            else
+                Advance();
+        }
+        // Parse alternatives before :| (e.g., "1. A1" in "|: A | 1. A1 :| 2. A2")
+        if (pipeBeforeAlternatives != null)
+        {
+            while (Check(SyntaxKind.IntegerLiteral) && !Check(SyntaxKind.RepeatEndBar))
+            {
+                alternatives.Add(ParseStructureAlternative());
+            }
+        }
+        
+        var endBar = Expect(SyntaxKind.RepeatEndBar);
+        
+        // Final alternative after :| (e.g., "2. A2")
+        GreenNode? finalAlternative = null;
+        if (Check(SyntaxKind.IntegerLiteral))
+        {
+            finalAlternative = ParseStructureAlternative();
+        }
+        
+        return new StructureRepeatBlockGreen(startBar, [.. items], pipeBeforeAlternatives, [.. alternatives], endBar, finalAlternative);
+        
+    }
+    
+    /// <summary>
+    /// Parse structure alternative: 1. SectionName
+    /// </summary>
+    private StructureAlternativeGreen ParseStructureAlternative()
+    {
+        var number = Expect(SyntaxKind.IntegerLiteral);
+        var dot = Expect(SyntaxKind.Dot);
+        var section = Expect(SyntaxKind.Identifier);
+        return new StructureAlternativeGreen(number, dot, section);
     }
     
     /// <summary>
@@ -1018,9 +1112,9 @@ private GreenNode?[] ParseArticulations()
     {
         var keyword = Expect(SyntaxKind.RenderKeyword);
         
-        // Optional name
+        // Optional name (can be identifier or keywords like 'score', 'audio')
         SyntaxToken? name = null;
-        if (Check(SyntaxKind.Identifier))
+        if (Check(SyntaxKind.Identifier) || Check(SyntaxKind.ScoreKeyword))
         {
             name = Advance();
         }

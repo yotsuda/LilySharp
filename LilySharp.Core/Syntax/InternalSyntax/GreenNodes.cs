@@ -276,12 +276,17 @@ internal sealed class VariableDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Variable reference: use name or $name
+/// Variable reference: use name or $name or just name
 /// </summary>
 internal sealed class VariableReferenceGreen : GreenSyntaxNode
 {
     public VariableReferenceGreen(SyntaxToken keyword, SyntaxToken name)
         : base(SyntaxKind.VariableReference, [keyword, name])
+    {
+    }
+    
+    public VariableReferenceGreen(SyntaxToken name)
+        : base(SyntaxKind.VariableReference, [name])
     {
     }
 }
@@ -533,11 +538,13 @@ internal sealed class SectionReferenceGreen : GreenSyntaxNode
     }
 }
 
+
 /// <summary>
-/// Repeat block in structure: |: ... :|
+/// Repeat block in structure: |: ... :| or |: ... | 1. A :| 2. B
 /// </summary>
 internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
 {
+    // Simple repeat: |: items :|
     public StructureRepeatBlockGreen(
         SyntaxToken repeatStart,
         GreenNode?[] items,
@@ -546,17 +553,42 @@ internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
     {
     }
     
+    // Repeat with alternatives: |: items | 1. A :| 2. B
     public StructureRepeatBlockGreen(
         SyntaxToken repeatStart,
         GreenNode?[] items,
-        SyntaxToken barline,
-        GreenNode?[] alternatives,
+        SyntaxToken? barline,
+        GreenNode?[] alternativesBeforeEnd,
         SyntaxToken repeatEnd,
-        GreenNode finalAlternative)
-        : base(SyntaxKind.StructureRepeatBlock, [repeatStart, .. items, barline, .. alternatives, repeatEnd, finalAlternative])
+        GreenNode? finalAlternative)
+        : base(SyntaxKind.StructureRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative))
     {
     }
+    
+    private static GreenNode?[] BuildChildren(
+        SyntaxToken repeatStart,
+        GreenNode?[] items,
+        SyntaxToken? barline,
+        GreenNode?[] alternativesBeforeEnd,
+        SyntaxToken repeatEnd,
+        GreenNode? finalAlternative)
+    {
+        var children = new List<GreenNode?> { repeatStart };
+        children.AddRange(items);
+        if (barline != null)
+        {
+            children.Add(barline);
+            children.AddRange(alternativesBeforeEnd);
+        }
+        children.Add(repeatEnd);
+        if (finalAlternative != null)
+        {
+            children.Add(finalAlternative);
+        }
+        return [.. children];
+    }
 }
+
 
 /// <summary>
 /// Alternative in repeat: 1. A, 2. B
