@@ -129,7 +129,7 @@
 | タスク | status | priority | effort | notes |
 |--------|:------:|:--------:|-------:|-------|
 | SVG 余白計算ロジック | ✅ | High | 中 | LilyPond 準拠スケーリング修正、LineDetails 拡張完了 |
-| VS Code リアルタイムプレビュー | 🔍 | High | 中 | LSP カスタムリクエスト + WebView 実装完了 |
+| VS Code リアルタイムプレビュー | ✅ | High | 中 | LSP カスタムリクエスト + WebView 実装完了 |
 
 ## 🔧 技術的改善候補
 

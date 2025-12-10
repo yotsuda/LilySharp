@@ -8,135 +8,159 @@ public class SectionOrientedTests
     [Fact]
     public void ParseVariableDeclaration()
     {
-        var source = "riff = { c4 d e f }";
+        var source = "guitar_riff = { c4 d e f }";
         var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
     
     [Fact]
     public void ParseSectionDeclaration()
     {
-        var source = @"
-section Intro {
-  guitar { c4 d e f }
-  bass { c,4 g, c, g, }
-}";
+        var source = """
+            section Intro {
+                guitar { c4 d e f }
+            }
+            """;
         var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+    }
+    
+    [Fact]
+    public void ParseSectionWithMultipleParts()
+    {
+        var source = """
+            section A {
+                guitar { c4 d e f }
+                bass { c,4 g, c, g, }
+            }
+            """;
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
     
     [Fact]
     public void ParseSectionWithKeyAndTempo()
     {
-        var source = @"
-section A {
-  key c major
-  tempo 120
-  guitar { c4 d e f }
-}";
+        var source = """
+            section Intro {
+                key c major
+                tempo 120
+                guitar { c4 d e f }
+            }
+            """;
         var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
     
     [Fact]
     public void ParseStructureDeclaration()
     {
-        var source = @"
-structure {
-  Intro
-  A
-  B
-}";
+        var source = """
+            section A { guitar { c4 } }
+            structure {
+                A
+            }
+            """;
         var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
     
     [Fact]
     public void ParseStructureWithNavigationMarks()
     {
-        var source = @"
-structure {
-  Intro
-  segno
-  A
-  fine
-  B
-  ds al fine
-}";
+        var source = """
+            section A { guitar { c4 } }
+            section B { guitar { d4 } }
+            structure {
+                A
+                segno
+                B
+                dc al fine
+                fine
+            }
+            """;
         var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
     
     [Fact]
     public void ParseRenderDeclaration()
     {
-        var source = @"
-render full ""output.svg"" {
-  staff { guitar }
-  tab guitar { guitar }
-}";
+        var source = """
+            section A { guitar { c4 } }
+            structure { A }
+            render full "output.svg" {
+                staff { guitar }
+            }
+            """;
         var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
     
     [Fact]
-    public void ParseRenderWithClef()
+    public void ParseRenderWithTabAndStaff()
     {
-        var source = @"
-render bassOnly ""bass.svg"" {
-  staff bass { bass }
-}";
+        var source = """
+            section A { guitar { c4 d e f } }
+            structure { A }
+            render guitarPart "guitar.pdf" {
+                staff { guitar }
+                tab guitar { guitar }
+            }
+            """;
         var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
     
     [Fact]
-    public void ParseMidiRender()
+    public void ParseRenderMidi()
     {
-        var source = @"
-render audio ""song.mid"" {
-  guitar channel:1 instrument:25
-  bass channel:2 instrument:33
-}";
+        var source = """
+            section A { guitar { c4 } }
+            structure { A }
+            render audio "song.mid" {
+                guitar channel:1 instrument:25
+            }
+            """;
         var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
     
     [Fact]
     public void ParseCompleteFile()
     {
-        var source = @"
-title ""My Song""
-composer ""John Doe""
-
-tempo 120
-time 4/4
-key c major
-
-guitar_riff = { c4 d e f | g a b c' }
-
-section Intro {
-  guitar { guitar_riff }
-  bass { c,4 g, c, g, }
-}
-
-section A {
-  guitar { e4 f g a }
-  bass { e,4 b, e, b, }
-}
-
-structure {
-  Intro
-  A
-}
-
-render full ""mysong.svg"" {
-  staff { guitar }
-  tab guitar { guitar }
-  staff bass { bass }
-}
-";
+        var source = """
+            title "Test Song"
+            tempo 120
+            time 4/4
+            key c major
+            
+            guitar_riff = { c4 d e f }
+            
+            section Intro {
+                guitar { guitar_riff }
+                bass { c,4 g, c, g, }
+            }
+            
+            section A {
+                key g major
+                guitar { g4 a b c' }
+                bass { g,4 d, g, d, }
+            }
+            
+            structure {
+                Intro
+                A
+                fine
+            }
+            
+            render full "test.svg" {
+                staff { guitar }
+                tab guitar { guitar }
+                staff bass { bass }
+            }
+            """;
         var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.Message)));
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
 }

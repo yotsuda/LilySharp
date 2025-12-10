@@ -251,10 +251,20 @@ internal sealed class MetadataDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Variable declaration: let name = expr
+/// Variable declaration: name = expr (new style) or let name = expr (legacy)
 /// </summary>
 internal sealed class VariableDeclarationGreen : GreenSyntaxNode
 {
+    // New style: name = { ... }
+    public VariableDeclarationGreen(
+        SyntaxToken name,
+        SyntaxToken equals,
+        GreenNode expression)
+        : base(SyntaxKind.VariableDeclaration, [name, equals, expression])
+    {
+    }
+    
+    // Legacy style: let name = expr
     public VariableDeclarationGreen(
         SyntaxToken letKeyword,
         SyntaxToken name,

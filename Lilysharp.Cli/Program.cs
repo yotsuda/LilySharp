@@ -7,7 +7,7 @@ if (args.Length == 0)
 {
     Console.WriteLine("Lilysharp - Music notation compiler");
     Console.WriteLine();
-    Console.WriteLine("Usage: lilysharp <command> [options]");
+    Console.WriteLine("Usage: lysc <command> [options]");
     Console.WriteLine();
     Console.WriteLine("Commands:");
     Console.WriteLine("  midi <input.lys> [output.mid]  Convert to MIDI");
