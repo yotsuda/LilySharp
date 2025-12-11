@@ -140,23 +140,26 @@ feature/smufl-spacing
 | TieFormatting.cs | 🚀 | Low | 10h | tie-formatting-problem.cc 完全再現（1100行） |
 | SlurScoring.cs | 🚀 | Low | 12h | slur-scoring.cc 完全再現（800行） |
 
-## Phase 5: 和音内臨時記号 ⏳
+## Phase 5: 和音内臨時記号 ✅
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| AccidentalPlacement.cs | 🔍 | High | 6h | 臨時記号配置計算 |
-| AccidentalPlacementParameters.cs | 🔍 | High | 0.5h | パラメータ設定 |
-| SvgRenderer.cs (和音臨時記号) | 🔍 | High | 2h | 複数臨時記号描画 |
-| AccidentalPlacementTests.cs | 🔍 | High | 1h | テスト |
+| AccidentalPlacement.cs | ✅ | High | 6h | 臨時記号配置計算 |
+| AccidentalPlacementParameters.cs | ✅ | High | 0.5h | パラメータ設定 |
+| SvgRenderer.cs (和音臨時記号) | ✅ | High | 2h | 複数臨時記号描画 |
+| AccidentalPlacementTests.cs | ✅ | High | 1h | テスト |
 
-## Phase 6: 複数声部 🚀
+## Phase 6: 複数声部 ⏳
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| Voice.cs | 🚀 | High | 2h | 声部モデル |
+| VoiceColumn.cs | 🔍 | High | 2h | 声部列モデル |
+| NoteCollision.cs | 🔍 | High | 6h | Lilypond note-collision.cc 移植 |
+| StemDirection.cs | 🔍 | High | 3h | 自動符幹方向計算 |
+| NoteCollisionTests.cs | 🔍 | High | 1h | 衝突テスト |
+| StemDirectionTests.cs | 🔍 | High | 1h | 符幹方向テスト |
 | VoiceCollector.cs | 🚀 | High | 3h | 声部分離 |
-| NoteCollision.cs | 🚀 | High | 6h | note-collision.cc 完全再現 |
-| StemDirection.cs | 🚀 | High | 3h | Lilypond 同様の自動符幹方向 |
+| SvgRenderer.cs (複数声部) | 🚀 | High | 4h | 複数声部描画 |
 
 ## Phase 7: 記譜記号 🚀
 
