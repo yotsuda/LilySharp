@@ -104,15 +104,16 @@ feature/smufl-spacing
 
 **注**: 現在の矩形近似 Skyline は暫定実装。Lilypond と等価にするには斜め Building 対応が必須。
 
-## Phase 3: 連桁（Beaming） 🚀
+## Phase 3: 連桁（Beaming） ⏳
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| BeamGroup.cs | 🚀 | High | 2h | 連桁グループモデル |
-| BeamEngraver.cs | 🚀 | High | 4h | beam.cc 完全再現 |
+| BeamGroup.cs | 🔍 | High | 2h | 連桁グループモデル（BeamGroup, BeamMember, BeamLayout） |
+| BeamDetector.cs | 🔍 | High | 2h | 連桁検出（自動グループ化） |
+| BeamEngraver.cs | 🔍 | High | 4h | beam 位置計算（基本実装） |
+| LayoutEngine.cs (Beam統合) | 🔍 | High | 1h | LayoutEngine への Beam 統合 |
 | BeamQuanting.cs | 🚀 | High | 12h | beam-quanting.cc 完全再現（1200行） |
-| SvgRenderer.cs (連桁描画) | 🚀 | High | 2h | path 要素で描画 |
-| MeasureCollector.cs (連桁検出) | 🚀 | High | 2h | Lilypond 同様の自動グループ化 |
+| SvgRenderer.cs (連桁描画) | 🔍 | High | 2h | path 要素で描画 |
 
 ## Phase 4: タイ・スラー 🚀
 

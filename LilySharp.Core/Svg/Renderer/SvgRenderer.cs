@@ -58,6 +58,9 @@ public sealed class SvgRenderer
             DrawSystem(score, system, isFirstSystem);
         }
         
+        // Draw beams
+        DrawBeams(layout);
+        
         WriteFooter();
         
         return _svg.ToString();
@@ -488,6 +491,7 @@ public sealed class SvgRenderer
     
     private static char GetTimeNumberGlyph(int number) => SmuflGlyphs.GetTimeSigDigit(number);
     
+    
     private static string EscapeXml(string text)
     {
         return text
@@ -496,5 +500,160 @@ public sealed class SvgRenderer
             .Replace(">", "&gt;")
             .Replace("\"", "&quot;")
             .Replace("'", "&apos;");
+    }
+    
+    // Beam constants (matching Lilypond defaults)
+    private const double BeamThickness = 0.48; // staff spaces
+    private const double BeamTranslation = 0.58; // distance between multiple beams in staff spaces
+    
+    private void DrawBeams(ScoreLayout layout)
+    {
+        if (layout.BeamLayouts.Length == 0)
+            return;
+        
+        // Build measure to system mapping
+        var measureToSystem = new Dictionary<int, SystemLayout>();
+        foreach (var system in layout.Systems)
+        {
+            foreach (var measure in system.Measures)
+            {
+                measureToSystem[measure.MeasureIndex] = system;
+            }
+        }
+        
+        foreach (var beamLayout in layout.BeamLayouts)
+        {
+            if (!measureToSystem.TryGetValue(beamLayout.Group.MeasureIndex, out var system))
+                continue;
+            
+            DrawBeamGroup(beamLayout, system);
+        }
+    }
+    
+    private void DrawBeamGroup(BeamLayout beamLayout, SystemLayout system)
+    {
+        var group = beamLayout.Group;
+        
+        // System Y is at the top staff line
+        // Staff position 0 = middle line = 4th space from top = StaffHeight/2 from top
+        double staffMiddleY = system.Y + StaffHeight / 2;
+        
+        // Convert staff space coordinates to pixels
+        // In staff coordinates: positive Y goes down (lower pitches)
+        double leftY = staffMiddleY - beamLayout.LeftY * SpaceHeight / 2;
+        double rightY = staffMiddleY - beamLayout.RightY * SpaceHeight / 2;
+        double leftX = beamLayout.LeftX;
+        double rightX = beamLayout.RightX;
+        
+        // Draw beam segments for each beam level
+        // Level 0 = main beam (8th notes), Level 1 = secondary beam (16th notes), etc.
+        int maxBeamCount = 0;
+        foreach (var member in group.Members)
+        {
+            maxBeamCount = Math.Max(maxBeamCount, member.BeamCount);
+        }
+        
+        double beamThicknessPx = BeamThickness * SpaceHeight;
+        double beamTranslationPx = BeamTranslation * SpaceHeight;
+        
+        for (int level = 0; level < maxBeamCount; level++)
+        {
+            // Offset for this beam level
+            double levelOffset = level * beamTranslationPx;
+            if (group.StemUp)
+                levelOffset = -levelOffset; // Beams stack downward for stem-up
+            // For stem-down, beams stack upward (positive offset)
+            
+            DrawBeamLevel(beamLayout, level, leftX, leftY + levelOffset, rightX, rightY + levelOffset, beamThicknessPx);
+        }
+    }
+    
+    private void DrawBeamLevel(BeamLayout beamLayout, int level, double leftX, double leftY, double rightX, double rightY, double thickness)
+    {
+        var group = beamLayout.Group;
+        var members = group.Members;
+        
+        // Find continuous segments at this beam level
+        int i = 0;
+        while (i < members.Length)
+        {
+            // Find start of a segment
+            while (i < members.Length && members[i].BeamCount <= level)
+                i++;
+            
+            if (i >= members.Length)
+                break;
+            
+            int segmentStart = i;
+            
+            // Find end of segment
+            while (i < members.Length && members[i].BeamCount > level)
+                i++;
+            
+            int segmentEnd = i - 1;
+            
+            // Draw this segment
+            if (segmentStart <= segmentEnd)
+            {
+                DrawBeamSegment(beamLayout, segmentStart, segmentEnd, leftX, leftY, rightX, rightY, thickness);
+            }
+        }
+    }
+    
+    private void DrawBeamSegment(BeamLayout beamLayout, int startIdx, int endIdx, double leftX, double leftY, double rightX, double rightY, double thickness)
+    {
+        var group = beamLayout.Group;
+        var members = group.Members;
+        
+        // Calculate X positions for segment start and end
+        double segLeftX, segRightX, segLeftY, segRightY;
+        
+        if (startIdx == endIdx)
+        {
+            // Single-note beamlet
+            var member = members[startIdx];
+            double memberX = beamLayout.LeftX + (beamLayout.RightX - beamLayout.LeftX) * startIdx / Math.Max(1, members.Length - 1);
+            
+            // Determine beamlet direction based on neighbors
+            bool extendLeft = startIdx > 0 && members[startIdx - 1].BeamCount > members[startIdx].BeamCount;
+            double beamletLength = SpaceHeight * 1.0; // 1 staff space
+            
+            if (extendLeft)
+            {
+                segLeftX = memberX - beamletLength;
+                segRightX = memberX;
+            }
+            else
+            {
+                segLeftX = memberX;
+                segRightX = memberX + beamletLength;
+            }
+        }
+        else
+        {
+            // Multi-note beam segment
+            double span = beamLayout.RightX - beamLayout.LeftX;
+            double tStart = members.Length > 1 ? (double)startIdx / (members.Length - 1) : 0;
+            double tEnd = members.Length > 1 ? (double)endIdx / (members.Length - 1) : 0;
+            
+            segLeftX = beamLayout.LeftX + span * tStart;
+            segRightX = beamLayout.LeftX + span * tEnd;
+        }
+        
+        // Interpolate Y positions
+        double slope = (rightX - leftX) > 0.001 ? (rightY - leftY) / (rightX - leftX) : 0;
+        segLeftY = leftY + slope * (segLeftX - leftX);
+        segRightY = leftY + slope * (segRightX - leftX);
+        
+        // Draw beam as a polygon (quadrilateral)
+        double halfThickness = thickness / 2;
+        
+        // Four corners of the beam
+        double x1 = segLeftX, y1 = segLeftY - halfThickness;  // top-left
+        double x2 = segRightX, y2 = segRightY - halfThickness; // top-right
+        double x3 = segRightX, y3 = segRightY + halfThickness; // bottom-right
+        double x4 = segLeftX, y4 = segLeftY + halfThickness;  // bottom-left
+        
+        _svg.AppendLine($"  <polygon points=\"{x1:F1},{y1:F1} {x2:F1},{y2:F1} {x3:F1},{y3:F1} {x4:F1},{y4:F1}\" fill=\"black\"/>");
     }
 }

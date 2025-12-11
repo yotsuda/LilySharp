@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -38,9 +39,16 @@ public sealed record ScoreLayout(
     double Width,
     double Height,
     double HeaderHeight,                   // Space for title/composer
-    ImmutableArray<SystemLayout> Systems
+    ImmutableArray<SystemLayout> Systems,
+    ImmutableArray<BeamLayout> BeamLayouts // Beam layout information
 )
 {
     /// <summary>Total number of systems.</summary>
     public int SystemCount => Systems.Length;
+    
+    /// <summary>Creates a ScoreLayout without beam layouts (for backward compatibility).</summary>
+    public ScoreLayout(double width, double height, double headerHeight, ImmutableArray<SystemLayout> systems)
+        : this(width, height, headerHeight, systems, ImmutableArray<BeamLayout>.Empty)
+    {
+    }
 }

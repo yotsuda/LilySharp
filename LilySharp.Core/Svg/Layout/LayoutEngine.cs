@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -9,6 +10,8 @@ namespace LilySharp.Core.Svg.Layout;
 public sealed class LayoutEngine
 {
     private readonly LayoutOptions _options;
+    private readonly BeamDetector _beamDetector = new();
+    private readonly BeamEngraver _beamEngraver = new();
     
     public LayoutEngine(LayoutOptions? options = null)
     {
@@ -50,11 +53,67 @@ public sealed class LayoutEngine
         
         double totalHeight = currentY - _options.SystemSpacing + _options.MarginTop;
         
+        // Detect and layout beams
+        var systemsArray = systems.ToImmutableArray();
+        var beamLayouts = LayoutBeams(score, systemsArray);
+        
         return new ScoreLayout(
             _options.PageWidth,
             totalHeight,
             headerHeight,
-            systems.ToImmutableArray());
+            systemsArray,
+            beamLayouts);
+    }
+    
+    /// <summary>
+    /// Detects beam groups and calculates their layouts.
+    /// </summary>
+    private ImmutableArray<BeamLayout> LayoutBeams(Score score, ImmutableArray<SystemLayout> systems)
+    {
+        // Detect beam groups
+        var beamGroups = _beamDetector.DetectBeamGroups(score);
+        
+        if (beamGroups.Length == 0)
+            return ImmutableArray<BeamLayout>.Empty;
+        
+        // Build a map from measure index to (system, measureLayout)
+        var measureMap = new Dictionary<int, (SystemLayout system, MeasureLayout measure)>();
+        foreach (var system in systems)
+        {
+            foreach (var measureLayout in system.Measures)
+            {
+                measureMap[measureLayout.MeasureIndex] = (system, measureLayout);
+            }
+        }
+        
+        // Calculate layout for each beam group
+        var beamLayouts = new List<BeamLayout>();
+        
+        foreach (var group in beamGroups)
+        {
+            if (!measureMap.TryGetValue(group.MeasureIndex, out var measureInfo))
+                continue;
+            
+            var (system, measureLayout) = measureInfo;
+            
+            // Get X positions for all items in this measure
+            var itemXPositions = new List<double>();
+            foreach (var itemLayout in measureLayout.Items)
+            {
+                // Absolute X position = measure X + item X offset
+                itemXPositions.Add(measureLayout.X + itemLayout.X);
+            }
+            
+            // Calculate beam layout
+            var beamLayout = _beamEngraver.CalculateBeamLayout(
+                group,
+                itemXPositions,
+                _options.StaffSpaceSize);
+            
+            beamLayouts.Add(beamLayout);
+        }
+        
+        return beamLayouts.ToImmutableArray();
     }
     
     /// <summary>

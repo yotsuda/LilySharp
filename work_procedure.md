@@ -27,6 +27,14 @@ LilySharp/
 └── editors/vscode/        # VS Code 拡張機能
 ```
 
+## 参照リソース
+
+- **LilyPond ソースコード**: `C:\MyProj\lilypond-master`
+  - `lily/beam.cc`: 連桁処理
+  - `lily/beam-quanting.cc`: 連桁の quantization
+  - `lily/stem.cc`: 符幹処理
+  - `lily/spacing-*.cc`: スペーシング関連
+
 ## 作業手順
 
 ### 1. 機能追加
