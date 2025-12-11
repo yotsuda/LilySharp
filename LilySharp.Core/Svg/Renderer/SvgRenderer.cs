@@ -287,8 +287,17 @@ public sealed class SvgRenderer
         for (int d = 0; d < note.Dots; d++)
         {
             double dotX = noteheadLeftX + noteheadWidth + dotGap + d * (dotWidth + dotGap);
-            // Dots are placed slightly above the line to avoid collision with staff lines
-            double dotY = noteY - GlyphMetrics.ToPixels(dotBBox.CenterY);
+            
+            // Dots must avoid staff lines
+            // If note is on a line (StaffPosition is even), shift dot up by half a space
+            double dotYOffset = 0;
+            if (note.StaffPosition % 2 == 0)
+            {
+                // On a staff line - shift dot up to sit in the space above
+                dotYOffset = -SpaceHeight / 2;
+            }
+            
+            double dotY = noteY + dotYOffset;
             DrawGlyph(SmuflGlyphs.AugmentationDot, dotX, dotY);
         }
     }

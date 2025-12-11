@@ -370,10 +370,18 @@ public static class SpacingRules
             double dotWidth = GlyphMetrics.ToPixels(dotBBox.Width);
             double dotGap = GlyphMetrics.ToPixels(0.3);
             
+            // Dots must avoid staff lines - if note is on a line, shift dot up
+            int staffPosition = item switch
+            {
+                NoteItem note => note.StaffPosition,
+                _ => 1  // Default to odd (not on line)
+            };
+            double dotYOffset = (staffPosition % 2 == 0) ? -GlyphMetrics.SpaceHeight / 2 : 0;
+            
             for (int d = 0; d < dots; d++)
             {
                 double dotX = noteheadLeftX + noteheadWidth + dotGap + d * (dotWidth + dotGap);
-                double dotYCenter = noteY - GlyphMetrics.ToPixels(dotBBox.CenterY);
+                double dotYCenter = noteY + dotYOffset;
                 double dotRadius = GlyphMetrics.ToPixels(dotBBox.Height / 2);
                 boxes.Add((dotYCenter - dotRadius, dotYCenter + dotRadius, dotX, dotX + dotWidth));
             }
