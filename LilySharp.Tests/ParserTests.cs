@@ -759,4 +759,30 @@ lyrics { do re mi fa sol }
         Assert.Equal("title", meta.Keyword);
         Assert.Equal("My Song", meta.StringValue);
     }
+
+    [Fact]
+    public void ParseStructureRepeatBlock()
+    {
+        var source = @"
+section A {
+    melody { c4 d e | }
+}
+structure {
+    |: A :|
+}
+";
+        var tree = SyntaxTree.Parse(source);
+        var root = tree.GetRoot();
+        
+        // Find StructureDeclarationSyntax
+        var structure = root.DescendantNodes().OfType<StructureDeclarationSyntax>().FirstOrDefault();
+        Assert.NotNull(structure);
+        
+        // Find StructureRepeatBlockSyntax  
+        var repeat = root.DescendantNodes().OfType<StructureRepeatBlockSyntax>().FirstOrDefault();
+        Assert.NotNull(repeat);
+        
+        // Check slots - should have |:, A (reference), and :|
+        Assert.True(repeat!.SlotCount >= 3, $"Expected at least 3 slots but got {repeat.SlotCount}");
+    }
 }

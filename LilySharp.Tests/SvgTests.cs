@@ -126,4 +126,28 @@ public class SvgTests
         Assert.Equal('\uE242', SmuflGlyphs.GetFlag(16, true));  // 16th up
         Assert.Null(SmuflGlyphs.GetFlag(4, true));              // No flag for quarter
     }
+    
+    [Fact]
+    public void ExportRepeatBarlines()
+    {
+        var source = @"
+section A {
+    melody relative c' { c4 d e | }
+}
+structure {
+    |: A :|
+}
+render score ""test.svg"" {
+    staff treble { melody }
+}
+";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new SvgExporter();
+        var svg = exporter.Export(tree);
+        
+        // Check for repeat barlines (SMuFL glyphs U+E040 and U+E041)
+        // RepeatLeft = U+E040, RepeatRight = U+E041
+        Assert.Contains("\uE040", svg); // |: 
+        Assert.Contains("\uE041", svg); // :|
+    }
 }

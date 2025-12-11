@@ -85,10 +85,64 @@ public class SvgExporter
     private string? _title;
     private string? _composer;
     private int? _tempo;
+    private int _timeBeats = 4;
+    private int _timeBeatType = 4;
+    
+    // Structural definitions (collected before rendering)
+    private Dictionary<string, SectionDeclarationSyntax> _sections = new();
+    private StructureDeclarationSyntax? _structure;
+    private string? _renderPartName;  // Current part being rendered (e.g., "rightHand")
+    private SyntaxNode? _root;  // Root node for fallback processing
     
     public string Export(SyntaxTree tree)
     {
-        // Reset all state
+        // Phase 1: Reset all state
+        ResetState(tree);
+        
+        // Phase 2: Collect all definitions (sections, structure, metadata)
+        CollectDefinitions(tree.GetRoot());
+        
+        // Phase 3: Setup rendering
+        var originalSvg = _svg;
+        _svg = _content;
+        
+        double headerHeight = (_title != null || _composer != null) ? 50 : 0;
+        _currentY = MarginTop + headerHeight;
+        _systemStartY = _currentY;
+        _currentX = MarginLeft;
+        
+        // Draw header elements
+        if (_title != null || _composer != null)
+            DrawTitleAndComposer();
+        
+        WriteStaffLines(PageWidth - MarginRight);
+        DrawClef();
+        
+        if (_keySignature != 0)
+            DrawKeySignature();
+        
+        DrawTimeSignature(_timeBeats, _timeBeatType);
+        
+        if (_tempo.HasValue)
+            DrawTempoMarking();
+        
+        // Phase 4: Render content based on structure
+        RenderByStructure();
+        
+        // Phase 5: Finalize SVG
+        _svg = originalSvg;
+        _svg.Clear();
+        
+        var height = MarginTop + headerHeight + (_systemCount * (StaffHeight + SystemSpacing));
+        WriteHeader(PageWidth, height);
+        _svg.Append(_content);
+        WriteFooter();
+        
+        return _svg.ToString();
+    }
+    
+    private void ResetState(SyntaxTree tree)
+    {
         _content = new StringBuilder();
         _sourceText = tree.Text;
         _currentOctave = 4;
@@ -100,111 +154,286 @@ public class SvgExporter
         _title = null;
         _composer = null;
         _tempo = null;
-        
-        // Use fixed page width for consistent staff lines
-        var width = PageWidth;
-        
-        // Temporarily use _content for drawing (so we can insert header with correct height later)
-        var originalSvg = _svg;
-        _svg = _content;
-        
-        // First pass: collect metadata from top-level declarations
-        CollectMetadata(tree.GetRoot());
-        
-        // Calculate initial Y position based on whether we have title/composer
-        double headerHeight = 0;
-        if (_title != null || _composer != null)
-        {
-            headerHeight = 50; // Space for title and composer
-        }
-        
-        _currentY = MarginTop + headerHeight;
-        _systemStartY = _currentY;
-        _currentX = MarginLeft;
-        
-        // Draw title and composer if present
-        if (_title != null || _composer != null)
-        {
-            DrawTitleAndComposer();
-        }
-        
-        // Draw first system's staff lines and clef
-        WriteStaffLines(width - MarginRight);
-        DrawClef();
-        
-        // Draw key signature if set
-        if (_keySignature != 0)
-        {
-            DrawKeySignature();
-        }
-        
-        // Draw tempo marking if present
-        if (_tempo.HasValue)
-        {
-            DrawTempoMarking();
-        }
-        
-        // Process syntax tree (this may create new systems)
-        ProcessNode(tree.GetRoot());
-        
-        // Restore original _svg and build final output
-        _svg = originalSvg;
-        _svg.Clear();
-        
-        // Calculate final height based on system count
-        var height = MarginTop + headerHeight + (_systemCount * (StaffHeight + SystemSpacing));
-        
-        // Write final SVG with correct dimensions
-        WriteHeader(width, height);
-        _svg.Append(_content);
-        WriteFooter();
-        
-        return _svg.ToString();
+        _timeBeats = 4;
+        _timeBeatType = 4;
+        _sections = new();
+        _structure = null;
+        _renderPartName = null;
     }
     
     /// <summary>
-    /// Collect metadata from top-level declarations before rendering.
+    /// Collect all definitions from the syntax tree before rendering.
+    /// This includes metadata, sections, structure, and render blocks.
     /// </summary>
-    private void CollectMetadata(SyntaxNode root)
+    private void CollectDefinitions(SyntaxNode root)
     {
-        foreach (var child in root.DescendantNodes())
+        _root = root;  // Save for fallback processing
+        
+        foreach (var node in root.DescendantNodes())
         {
-            if (child is MetadataDeclarationSyntax metadata)
+            switch (node)
             {
-                var keyword = metadata.Keyword.ToLowerInvariant();
-                var values = metadata.Values.ToList();
-                
-                switch (keyword)
+                case MetadataDeclarationSyntax metadata:
+                    CollectMetadataItem(metadata);
+                    break;
+                    
+                case TempoDeclarationSyntax tempoDecl:
+                    var tempoValues = tempoDecl.Values.ToList();
+                    if (tempoValues.Count > 0 && tempoValues[0] is SyntaxTokenNode tempoToken)
+                        if (int.TryParse(tempoToken.Text, out int tempo))
+                            _tempo = tempo;
+                    break;
+                    
+                case TimeSignatureSyntax timeSig:
+                    _timeBeats = timeSig.Beats;
+                    _timeBeatType = timeSig.BeatType;
+                    break;
+                    
+                case KeySignatureSyntax key:
+                    _keySignature = CalculateKeySignature(key);
+                    break;
+                    
+                case ClefDeclarationSyntax clef:
+                    _currentClef = clef.ClefName.Text.ToLowerInvariant();
+                    break;
+                    
+                case SectionDeclarationSyntax section:
+                    _sections[section.SectionName] = section;
+                    break;
+                    
+                case StructureDeclarationSyntax structure:
+                    _structure = structure;
+                    break;
+                    
+                case RenderDeclarationSyntax render:
+                    // Extract the first staff's part name for rendering
+                    ExtractRenderPartName(render);
+                    break;
+            }
+        }
+    }
+    
+    private void CollectMetadataItem(MetadataDeclarationSyntax metadata)
+    {
+        var keyword = metadata.Keyword.ToLowerInvariant();
+        var values = metadata.Values.ToList();
+        
+        switch (keyword)
+        {
+            case "title":
+                if (values.Count > 0 && values[0] is SyntaxTokenNode titleToken)
+                    _title = titleToken.Text.Trim('"');
+                break;
+            case "composer":
+                if (values.Count > 0 && values[0] is SyntaxTokenNode composerToken)
+                    _composer = composerToken.Text.Trim('"');
+                break;
+        }
+    }
+    
+    private void ExtractRenderPartName(RenderDeclarationSyntax render)
+    {
+        // Find the first staff render and extract its part name
+        // StaffRender structure: staff [clef] { partName }
+        foreach (var child in render.DescendantNodes())
+        {
+            if (child is StaffRenderSyntax staff)
+            {
+                // Part name is either at index 2 (with clef) or index 1 (without clef)
+                // staff treble { rightHand } -> [staff, treble, {, rightHand, }]
+                // staff { rightHand } -> [staff, {, rightHand, }]
+                for (int i = 0; i < staff.SlotCount; i++)
                 {
-                    case "title":
-                        if (values.Count > 0 && values[0] is SyntaxTokenNode titleToken)
-                            _title = titleToken.Text.Trim('"');
-                        break;
-                    case "composer":
-                        if (values.Count > 0 && values[0] is SyntaxTokenNode composerToken)
-                            _composer = composerToken.Text.Trim('"');
-                        break;
-                    case "tempo":
-                        if (values.Count > 0 && values[0] is SyntaxTokenNode tempoToken)
-                            if (int.TryParse(tempoToken.Text, out int tempo))
-                                _tempo = tempo;
-                        break;
-                    case "key":
-                        // Key signature is handled separately in ProcessNode
-                        break;
+                    var slot = staff.GetChild(i);
+                    if (slot is SyntaxTokenNode token && 
+                        token.Kind == SyntaxKind.Identifier &&
+                        token.Text != "staff" && token.Text != "treble" && 
+                        token.Text != "bass" && token.Text != "alto" && token.Text != "tenor")
+                    {
+                        _renderPartName = token.Text;
+                        return;
+                    }
                 }
             }
-            else if (child is TempoDeclarationSyntax tempoDecl)
+        }
+    }
+    
+    /// <summary>
+    /// Render content based on structure block, or fall back to section order.
+    /// </summary>
+    private void RenderByStructure()
+    {
+        if (_structure != null)
+        {
+            // Render according to structure
+            for (int i = 0; i < _structure.SlotCount; i++)
             {
-                var values = tempoDecl.Values.ToList();
-                if (values.Count > 0 && values[0] is SyntaxTokenNode tempoToken)
-                    if (int.TryParse(tempoToken.Text, out int tempo))
-                        _tempo = tempo;
+                var child = _structure.GetChild(i);
+                if (child != null && child is not SyntaxTokenNode)
+                    ProcessStructureItem(child);
             }
-            else if (child is KeySignatureSyntax key)
+        }
+        else if (_sections.Count > 0)
+        {
+            // Fallback: render sections in definition order
+            foreach (var section in _sections.Values)
             {
-                _keySignature = CalculateKeySignature(key);
+                DrawSectionLabel(section.SectionName);
+                RenderSectionContent(section);
             }
+        }
+        else
+        {
+            // No structure, no sections: fall back to legacy behavior
+            // Process all nodes directly (for simple files without section/structure)
+            ProcessNode(_root!);
+
+        }
+    }
+    
+    /// <summary>
+    /// Process a single item within the structure block.
+    /// </summary>
+    private void ProcessStructureItem(SyntaxNode item)
+    {
+        switch (item)
+        {
+            case StructureRepeatBlockSyntax repeat:
+                ProcessRepeatBlock(repeat);
+                break;
+                
+            case SectionReferenceSyntax reference:
+                RenderSectionReference(reference.SectionName);
+                break;
+                
+            case StructureAlternativeSyntax alt:
+                RenderAlternative(alt);
+                break;
+                
+            case BarlineSyntax barline:
+                DrawBarline(barline.BarToken.Text);
+                break;
+        }
+    }
+    
+    /// <summary>
+    /// Process a repeat block: |: ... :| or |: ... | 1. A :| 2. B
+    /// </summary>
+    private void ProcessRepeatBlock(StructureRepeatBlockSyntax repeat)
+    {
+        bool afterRepeatStart = false;
+        bool beforeRepeatEnd = true;
+        
+        for (int i = 0; i < repeat.SlotCount; i++)
+        {
+            var child = repeat.GetChild(i);
+            
+            if (child is SyntaxTokenNode token)
+            {
+                var text = token.Text;
+                
+                if (text == "|:")
+                {
+                    DrawBarline("|:");
+                    afterRepeatStart = true;
+                }
+                else if (text == ":|")
+                {
+                    DrawBarline(":|");
+                    beforeRepeatEnd = false;
+                }
+                else if (text == "|" && afterRepeatStart && beforeRepeatEnd)
+                {
+                    DrawBarline("|");
+                }
+            }
+            else if (child != null && afterRepeatStart)
+            {
+                ProcessStructureItem(child);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Render a section reference with label and content.
+    /// </summary>
+    private void RenderSectionReference(string sectionName)
+    {
+        if (_sections.TryGetValue(sectionName, out var section))
+        {
+            DrawSectionLabel(sectionName);
+            RenderSectionContent(section);
+        }
+    }
+    
+    /// <summary>
+    /// Render an alternative ending (1. A, 2. B).
+    /// </summary>
+    private void RenderAlternative(StructureAlternativeSyntax alt)
+    {
+        var sectionName = alt.SectionName.Text;
+        if (_sections.TryGetValue(sectionName, out var section))
+        {
+            // TODO: Draw volta bracket with alternative number
+            DrawSectionLabel(sectionName);
+            RenderSectionContent(section);
+        }
+    }
+    
+    /// <summary>
+    /// Render the musical content of a section.
+    /// </summary>
+    private void RenderSectionContent(SectionDeclarationSyntax section)
+    {
+        // Find the part that matches _renderPartName
+        foreach (var child in section.DescendantNodes())
+        {
+            if (child is PartBlockSyntax partBlock)
+            {
+                // If no specific part is requested, or this is the requested part
+                if (_renderPartName == null || partBlock.Name == _renderPartName)
+                {
+                    // Render all music content in this part
+                    foreach (var partChild in partBlock.DescendantNodes())
+                    {
+                        ProcessMusicNode(partChild);
+                    }
+                    
+                    // Only render one part per section
+                    if (_renderPartName != null)
+                        return;
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Process a music node (note, rest, chord, barline, etc.)
+    /// </summary>
+    private void ProcessMusicNode(SyntaxNode node)
+    {
+        switch (node)
+        {
+            case RelativeExpressionSyntax relative:
+                InitializeRelativeMode(relative.BasePitch);
+                // Don't recurse here - DescendantNodes will handle children
+                break;
+                
+            case NoteSyntax note:
+                DrawNote(note);
+                break;
+                
+            case RestSyntax rest:
+                DrawRest(rest);
+                break;
+                
+            case ChordSyntax chord:
+                DrawChord(chord);
+                break;
+                
+            case BarlineSyntax barline:
+                DrawBarline(barline.BarToken.Text);
+                break;
         }
     }
     
