@@ -104,7 +104,7 @@ feature/smufl-spacing
 
 **注**: 現在の矩形近似 Skyline は暫定実装。Lilypond と等価にするには斜め Building 対応が必須。
 
-## Phase 3: 連桁（Beaming） ⏳
+## Phase 3: 連桁（Beaming） ✅
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -113,20 +113,24 @@ feature/smufl-spacing
 | BeamEngraver.cs | ✅ | High | 4h | beam 位置計算（BeamScoringProblem 統合） |
 | LayoutEngine.cs (Beam統合) | ✅ | High | 1h | LayoutEngine への Beam 統合 |
 | SvgRenderer.cs (連桁描画) | ✅ | High | 2h | path 要素で描画 |
-| BeamQuantParameters.cs | 🔍 | High | 1h | Lilypond Beam_quant_parameters 移植 |
-| BeamConfiguration.cs | 🔍 | High | 1h | Lilypond Beam_configuration 移植 |
-| BeamScoringProblem.cs | 🔍 | High | 8h | Lilypond beam-quanting.cc 基本移植（7 scorers） |
+| BeamQuantParameters.cs | ✅ | High | 1h | Lilypond Beam_quant_parameters 移植 |
+| BeamConfiguration.cs | ✅ | High | 1h | Lilypond Beam_configuration 移植 |
+| BeamScoringProblem.cs | ✅ | High | 8h | Lilypond beam-quanting.cc 基本移植（7 scorers） |
 
-## Phase 4: タイ・スラー 🚀
+## Phase 4: タイ・スラー ⏳
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| TieItem.cs | 🚀 | High | 1h | タイのモデル |
+| TieItem.cs | 🔍 | High | 1h | タイのモデル |
+| TieLayout.cs | 🔍 | High | 1h | タイのレイアウト（Bezier 制御点） |
+| TieDetails.cs | 🔍 | High | 1h | Lilypond Tie_details 移植 |
+| TieDetector.cs | 🔍 | High | 1h | タイ検出（プレースホルダー） |
+| TieEngraver.cs | 🔍 | High | 4h | Lilypond bezier-bow.cc 基本移植 |
 | TieFormatting.cs | 🚀 | High | 10h | tie-formatting-problem.cc 完全再現（1100行） |
 | SlurItem.cs | 🚀 | High | 1h | スラーのモデル |
 | SlurScoring.cs | 🚀 | High | 12h | slur-scoring.cc 完全再現（800行） |
-| SvgRenderer.cs (タイ描画) | 🚀 | High | 2h | ベジェ曲線（制御点計算も完全再現） |
-| SvgRenderer.cs (スラー描画) | 🚀 | High | 2h | ベジェ曲線（制御点計算も完全再現） |
+| SvgRenderer.cs (タイ描画) | 🚀 | High | 2h | ベジェ曲線描画 |
+| SvgRenderer.cs (スラー描画) | 🚀 | High | 2h | ベジェ曲線描画 |
 
 ## Phase 5: 和音内臨時記号 🚀
 
