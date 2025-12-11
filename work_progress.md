@@ -121,15 +121,17 @@ feature/smufl-spacing
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| TieItem.cs | 🔍 | High | 1h | タイのモデル |
-| TieLayout.cs | 🔍 | High | 1h | タイのレイアウト（Bezier 制御点） |
-| TieDetails.cs | 🔍 | High | 1h | Lilypond Tie_details 移植 |
-| TieDetector.cs | 🔍 | High | 1h | タイ検出（プレースホルダー） |
-| TieEngraver.cs | 🔍 | High | 4h | Lilypond bezier-bow.cc 基本移植 |
+| TieItem.cs | ✅ | High | 1h | タイのモデル |
+| TieLayout.cs | ✅ | High | 1h | タイのレイアウト（Bezier 制御点） |
+| TieDetails.cs | ✅ | High | 1h | Lilypond Tie_details 移植 |
+| TieDetector.cs | ✅ | High | 1h | タイ検出（プレースホルダー） |
+| TieEngraver.cs | ✅ | High | 4h | Lilypond bezier-bow.cc 基本移植 |
+| ScoreLayout.cs | 🔍 | High | 0.5h | TieLayouts プロパティ追加 |
+| LayoutEngine.cs (Tie統合) | 🔍 | High | 1h | LayoutEngine への Tie 統合 |
+| SvgRenderer.cs (タイ描画) | 🔍 | High | 2h | ベジェ曲線描画 |
 | TieFormatting.cs | 🚀 | High | 10h | tie-formatting-problem.cc 完全再現（1100行） |
 | SlurItem.cs | 🚀 | High | 1h | スラーのモデル |
 | SlurScoring.cs | 🚀 | High | 12h | slur-scoring.cc 完全再現（800行） |
-| SvgRenderer.cs (タイ描画) | 🚀 | High | 2h | ベジェ曲線描画 |
 | SvgRenderer.cs (スラー描画) | 🚀 | High | 2h | ベジェ曲線描画 |
 
 ## Phase 5: 和音内臨時記号 🚀

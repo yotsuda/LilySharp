@@ -12,6 +12,8 @@ public sealed class LayoutEngine
     private readonly LayoutOptions _options;
     private readonly BeamDetector _beamDetector = new();
     private readonly BeamEngraver _beamEngraver = new();
+    private readonly TieDetector _tieDetector = new();
+    private readonly TieEngraver _tieEngraver = new();
     
     public LayoutEngine(LayoutOptions? options = null)
     {
@@ -57,12 +59,16 @@ public sealed class LayoutEngine
         var systemsArray = systems.ToImmutableArray();
         var beamLayouts = LayoutBeams(score, systemsArray);
         
+        // Detect and layout ties
+        var tieLayouts = LayoutTies(score, systemsArray);
+        
         return new ScoreLayout(
             _options.PageWidth,
             totalHeight,
             headerHeight,
             systemsArray,
-            beamLayouts);
+            beamLayouts,
+            tieLayouts);
     }
     
     /// <summary>
@@ -263,5 +269,68 @@ public sealed class LayoutEngine
         }
         
         return layouts.ToImmutableArray();
+    }
+    
+    /// <summary>
+    /// Detects ties and calculates their layouts.
+    /// </summary>
+    private ImmutableArray<TieLayout> LayoutTies(Score score, ImmutableArray<SystemLayout> systems)
+    {
+        // Detect ties in the score
+        var ties = _tieDetector.DetectTies(score);
+        
+        if (ties.Length == 0)
+            return ImmutableArray<TieLayout>.Empty;
+        
+        // Build a map from measure index to (system, measureLayout)
+        var measureMap = new Dictionary<int, (SystemLayout system, MeasureLayout measure)>();
+        foreach (var system in systems)
+        {
+            foreach (var measureLayout in system.Measures)
+            {
+                measureMap[measureLayout.MeasureIndex] = (system, measureLayout);
+            }
+        }
+        
+        // Calculate layout for each tie
+        var tieLayouts = new List<TieLayout>();
+        
+        foreach (var tie in ties)
+        {
+            // Get layout info for start and end measures
+            if (!measureMap.TryGetValue(tie.StartMeasureIndex, out var startInfo))
+                continue;
+            if (!measureMap.TryGetValue(tie.EndMeasureIndex, out var endInfo))
+                continue;
+            
+            var (startSystem, startMeasure) = startInfo;
+            var (endSystem, endMeasure) = endInfo;
+            
+            // Calculate X positions
+            double startX = startMeasure.X;
+            double endX = endMeasure.X;
+            
+            if (tie.StartItemIndex < startMeasure.Items.Length)
+                startX += startMeasure.Items[tie.StartItemIndex].X;
+            if (tie.EndItemIndex < endMeasure.Items.Length)
+                endX += endMeasure.Items[tie.EndItemIndex].X;
+            
+            // Calculate Y position (staff middle + staff position offset)
+            double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
+            double y = staffMiddleY - tie.StaffPosition * _options.SpaceHeight / 2;
+            
+            // Calculate tie layout
+            var tieLayout = _tieEngraver.CalculateTieLayout(
+                tie,
+                startX,
+                y,
+                endX,
+                y,
+                _options.StaffSpaceSize);
+            
+            tieLayouts.Add(tieLayout);
+        }
+        
+        return tieLayouts.ToImmutableArray();
     }
 }

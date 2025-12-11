@@ -61,6 +61,8 @@ public sealed class SvgRenderer
         // Draw beams
         DrawBeams(layout);
         
+        // Draw ties
+        DrawTies(layout);
         WriteFooter();
         
         return _svg.ToString();
@@ -655,5 +657,51 @@ public sealed class SvgRenderer
         double x4 = segLeftX, y4 = segLeftY + halfThickness;  // bottom-left
         
         _svg.AppendLine($"  <polygon points=\"{x1:F1},{y1:F1} {x2:F1},{y2:F1} {x3:F1},{y3:F1} {x4:F1},{y4:F1}\" fill=\"black\"/>");
+    }
+    
+    private void DrawTies(ScoreLayout layout)
+    {
+        if (layout.TieLayouts.Length == 0)
+            return;
+        
+        foreach (var tieLayout in layout.TieLayouts)
+        {
+            DrawTie(tieLayout);
+        }
+    }
+    
+    private void DrawTie(TieLayout tieLayout)
+    {
+        // Draw tie as a cubic Bezier curve
+        // SVG path: M startX,startY C control1X,control1Y control2X,control2Y endX,endY
+        
+        double startX = tieLayout.StartX;
+        double startY = tieLayout.StartY;
+        double endX = tieLayout.EndX;
+        double endY = tieLayout.EndY;
+        double c1x = tieLayout.Control1.X;
+        double c1y = tieLayout.Control1.Y;
+        double c2x = tieLayout.Control2.X;
+        double c2y = tieLayout.Control2.Y;
+        
+        // Draw the tie as a filled shape (two Bezier curves)
+        // Outer curve and inner curve to create thickness
+        double thickness = 0.12 * SpaceHeight; // Tie thickness
+        
+        // Offset for inner curve (direction depends on curve direction)
+        double offsetY = tieLayout.CurveUp ? thickness : -thickness;
+        
+        // Outer curve
+        string outerPath = $"M {startX:F1},{startY:F1} C {c1x:F1},{c1y:F1} {c2x:F1},{c2y:F1} {endX:F1},{endY:F1}";
+        
+        // Inner curve (reversed, with offset)
+        double innerC1y = c1y + offsetY;
+        double innerC2y = c2y + offsetY;
+        string innerPath = $"C {c2x:F1},{innerC2y:F1} {c1x:F1},{innerC1y:F1} {startX:F1},{startY:F1}";
+        
+        // Combined path (closed shape)
+        string fullPath = $"{outerPath} {innerPath} Z";
+        
+        _svg.AppendLine($"  <path d=\"{fullPath}\" fill=\"black\"/>");
     }
 }

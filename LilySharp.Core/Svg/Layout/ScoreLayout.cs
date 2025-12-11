@@ -40,15 +40,22 @@ public sealed record ScoreLayout(
     double Height,
     double HeaderHeight,                   // Space for title/composer
     ImmutableArray<SystemLayout> Systems,
-    ImmutableArray<BeamLayout> BeamLayouts // Beam layout information
+    ImmutableArray<BeamLayout> BeamLayouts,  // Beam layout information
+    ImmutableArray<TieLayout> TieLayouts     // Tie layout information
 )
 {
     /// <summary>Total number of systems.</summary>
     public int SystemCount => Systems.Length;
     
-    /// <summary>Creates a ScoreLayout without beam layouts (for backward compatibility).</summary>
+    /// <summary>Creates a ScoreLayout without beam/tie layouts (for backward compatibility).</summary>
     public ScoreLayout(double width, double height, double headerHeight, ImmutableArray<SystemLayout> systems)
-        : this(width, height, headerHeight, systems, ImmutableArray<BeamLayout>.Empty)
+        : this(width, height, headerHeight, systems, ImmutableArray<BeamLayout>.Empty, ImmutableArray<TieLayout>.Empty)
+    {
+    }
+    
+    /// <summary>Creates a ScoreLayout without tie layouts (for backward compatibility).</summary>
+    public ScoreLayout(double width, double height, double headerHeight, ImmutableArray<SystemLayout> systems, ImmutableArray<BeamLayout> beamLayouts)
+        : this(width, height, headerHeight, systems, beamLayouts, ImmutableArray<TieLayout>.Empty)
     {
     }
 }
