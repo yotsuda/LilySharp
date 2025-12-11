@@ -567,10 +567,14 @@ public sealed class VariableDeclarationSyntax : SyntaxNode
     {
     }
 
-    public SyntaxTokenNode LetKeyword => (SyntaxTokenNode)GetChild(0)!;
-    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
-    public SyntaxTokenNode EqualsToken => (SyntaxTokenNode)GetChild(2)!;
-    public SyntaxNode Expression => GetChild(3)!;
+    // New style (3 slots): name = expression
+    // Legacy style (4 slots): let name = expression
+    private bool IsLegacyStyle => SlotCount == 4;
+    
+    public SyntaxTokenNode? LetKeyword => IsLegacyStyle ? (SyntaxTokenNode)GetChild(0)! : null;
+    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(IsLegacyStyle ? 1 : 0)!;
+    public SyntaxTokenNode EqualsToken => (SyntaxTokenNode)GetChild(IsLegacyStyle ? 2 : 1)!;
+    public SyntaxNode Expression => GetChild(IsLegacyStyle ? 3 : 2)!;
 }
 
 /// <summary>
@@ -583,7 +587,8 @@ public sealed class VariableReferenceSyntax : SyntaxNode
     {
     }
 
-    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
+    // Name can be at index 0 (single-arg constructor) or index 1 (two-arg with keyword)
+    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(SlotCount > 1 ? 1 : 0)!;
 }
 
 /// <summary>

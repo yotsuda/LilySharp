@@ -11,6 +11,7 @@ namespace LilySharp.Core.Svg.Collector;
 public sealed class MeasureCollector
 {
     private readonly Dictionary<string, SectionDeclarationSyntax> _sections = new();
+    private readonly Dictionary<string, SyntaxNode> _variables = new();
     private StructureDeclarationSyntax? _structure;
     private string? _voiceName;
     private SyntaxNode? _root;
@@ -60,6 +61,7 @@ public sealed class MeasureCollector
     private void Reset()
     {
         _sections.Clear();
+        _variables.Clear();
         _structure = null;
         _root = null;
         _currentOctave = 4;
@@ -109,6 +111,10 @@ public sealed class MeasureCollector
                     
                 case StructureDeclarationSyntax structure:
                     _structure = structure;
+                    break;
+                    
+                case VariableDeclarationSyntax varDecl:
+                    _variables[varDecl.Name.Text] = varDecl.Expression;
                     break;
                     
                 case RenderDeclarationSyntax render:
@@ -381,14 +387,54 @@ public sealed class MeasureCollector
             {
                 if (_voiceName == null || partBlock.Name == _voiceName)
                 {
-                    var musicNodes = partBlock.DescendantNodes()
-                        .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or RelativeExpressionSyntax);
-                    processNodes(musicNodes);
+                    ProcessPartBlock(partBlock, processNodes);
                     
                     if (_voiceName != null) return;
                 }
             }
         }
+    }
+    
+    private void ProcessPartBlock(PartBlockSyntax partBlock, Action<IEnumerable<SyntaxNode>> processNodes)
+    {
+        // Collect all music nodes, expanding variable references
+        var musicNodes = new List<SyntaxNode>();
+        
+        foreach (var node in partBlock.DescendantNodes())
+        {
+            switch (node)
+            {
+                case NoteSyntax:
+                case RestSyntax:
+                case ChordSyntax:
+                case BarlineSyntax:
+                case RelativeExpressionSyntax:
+                    musicNodes.Add(node);
+                    break;
+                    
+                case VariableReferenceSyntax varRef:
+                    // Expand variable reference (handles both 'use name' and bare identifier)
+                    ExpandVariable(varRef.Name.Text, musicNodes);
+                    break;
+                    
+                // Note: SyntaxTokenNode with Identifier kind is NOT processed here
+                // because it's already wrapped in VariableReferenceSyntax by the parser
+            }
+        }
+        
+        processNodes(musicNodes);
+    }
+    
+    private void ExpandVariable(string name, List<SyntaxNode> musicNodes)
+    {
+        if (!_variables.TryGetValue(name, out var expression))
+            return;
+            
+        // Get music nodes from the variable expression
+        var nodes = expression.DescendantNodes()
+            .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or RelativeExpressionSyntax);
+        
+        musicNodes.AddRange(nodes);
     }
     
     private static BarlineSyntax CreateBarlineSyntax(string barText, int position)

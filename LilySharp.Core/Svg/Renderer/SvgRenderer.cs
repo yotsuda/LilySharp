@@ -107,7 +107,18 @@ public sealed class SvgRenderer
     {
         double y = system.Y;
         double startX = _layoutOptions.MarginLeft;
-        double endX = _layoutOptions.PageWidth - _layoutOptions.MarginRight;
+        
+        // Calculate the actual end of the system (right edge of last measure)
+        double endX;
+        if (system.Measures.Length > 0)
+        {
+            var lastMeasure = system.Measures[^1];
+            endX = lastMeasure.X + lastMeasure.Width;
+        }
+        else
+        {
+            endX = _layoutOptions.PageWidth - _layoutOptions.MarginRight;
+        }
         
         // Draw staff lines
         for (int i = 0; i < 5; i++)
@@ -200,8 +211,8 @@ public sealed class SvgRenderer
             }
         }
         
-        // Draw end barline
-        double endX = x + layout.Width - SpacingRules.GetBarlineWidth(measure.EndBarline);
+        // Draw end barline at the right edge of the measure
+        double endX = x + layout.Width;
         DrawBarline(measure.EndBarline, endX, systemY);
     }
     
