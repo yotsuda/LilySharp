@@ -1,5 +1,41 @@
 # Lilypond レイアウト完全模倣 - 進捗管理
 
+## 🔧 現在の作業状態
+
+### ブランチ
+```
+feature/smufl-spacing
+```
+
+### 実装済みファイル
+| ファイル | パス | 内容 |
+|----------|------|------|
+| Skyline.cs | `LilySharp.Core/Svg/Layout/` | 矩形ベースの Skyline |
+| GlyphMetrics.cs | `LilySharp.Core/Svg/Layout/` | SMuFL bounding box |
+| SpacingRules.cs | `LilySharp.Core/Svg/Layout/` | Skyline 生成、MinDistance 計算 |
+| Spring.cs | `LilySharp.Core/Svg/Layout/` | Spring-Rod モデル |
+| SpringSolver.cs | `LilySharp.Core/Svg/Layout/` | 制約ソルバー |
+
+### テストファイル
+| ファイル | 用途 |
+|----------|------|
+| `samples/fur-elise.lys` | 視覚テスト用入力 |
+| `samples/fur-elise-smufl.svg` | 生成された SVG（視覚確認用） |
+| `SvgTests.cs` の `GenerateFurEliseSvg_ForVisualCheck` | SVG 生成テスト |
+
+### 直近の解決済み問題（2025-12-11）
+1. ✅ 臨時記号と符頭の重なり → SMuFL metrics + 座標系統一
+2. ✅ 旗と臨時記号の重なり → Skyline で旗の extent を考慮
+3. ✅ 付点と五線の重なり → 線上なら半 space 上にシフト
+
+### 次のタスク候補
+| 優先度 | タスク | 理由 |
+|:------:|--------|------|
+| 1 | Phase 3: 連桁（Beaming） | fur-elise に連桁が多い |
+| 2 | Phase 2: Skyline 斜め対応 | 矩形近似でも現状動作するため後回し可 |
+| 3 | Phase 4: タイ | fur-elise にタイがある |
+
+---
 ## 🎯 目標
 
 **Lilypond と完全に等価なレイアウト** - 同じ入力に対してピクセル単位で同一の出力
