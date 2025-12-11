@@ -1,4 +1,4 @@
-# Lily# 作業手順書
+﻿# Lily# 作業手順書
 
 ## 概要
 
@@ -175,3 +175,243 @@ PowerShell で `Add-Type` を使うと DLL がロックされ、ビルドが失�
 - Lexer: 2トークンバッファ保持に変更
 - Parser: Lexer から直接トークン取得
 - バックトラック: 先読みロジックに書き換え
+# Lilypond レイアウト完全模倣 - 作業手順書
+
+## 概要
+
+LilySharp の SVG レンダリングを **Lilypond と完全に等価** にする。
+同じ入力に対して、Lilypond が出力するレイアウトと **ピクセル単位で同一** の結果を得ることを目標とする。
+
+## 目標
+
+```
+入力: fur-elise.lys
+出力: LilySharp SVG ≡ Lilypond PDF（座標・サイズ・配置が完全一致）
+```
+
+## アプローチ
+
+1. Lilypond のソースコード（`C:\MyProj\lilypond-master\lily\`）を精読
+2. アルゴリズムを **忠実に** C# で再実装（簡略化しない）
+3. Lilypond 出力と差分比較し、差異をゼロにする
+
+## スコープ
+
+### 対象
+- Lilypond の **全て** の視覚的レイアウトアルゴリズム
+- グリフ配置、スペーシング、衝突回避の完全再現
+- 曲線（タイ・スラー）の制御点計算の完全再現
+- 改行・ページ分割の完全再現
+
+### 対象外
+- MIDI 出力（別プロジェクト）
+- Scheme インタプリタおよび Scheme 依存機能
+- 処理時間が長くなる機能（動的評価など）
+
+## 設計方針
+
+### 結果等価・プロセス独自
+
+```
+目標: Lilypond 出力 ≡ LilySharp 出力（ピクセル単位）
+手段: 独自実装可（Lilypond のコードをそのまま移植する必要なし）
+```
+
+### 処理時間優先
+
+| Lilypond | LilySharp |
+|----------|-----------|
+| Scheme で動的計算 | C# で静的計算 |
+| 汎用アルゴリズム | 特化アルゴリズム |
+| 後方互換性維持 | 新規設計 |
+
+### 表記変更の許容
+
+処理時間短縮のため、LilySharp 独自の表記を採用する場合がある：
+
+| Lilypond | LilySharp | 理由 |
+|----------|-----------|------|
+| 小節線自動挿入 | 小節線必須 | パース簡略化 |
+| `\override` 動的評価 | 静的プロパティ | Scheme 不要化 |
+| （今後追加） | | |
+
+### 移植しない機能
+
+- Scheme callback による動的スタイル変更
+- `\override` の実行時評価
+- その他、処理時間を著しく増加させる機能
+
+これらは静的な代替手段を提供するか、サポート外とする。
+
+## 実装フェーズ
+
+### Phase 1: 基本グリフ配置 ✅ 完了
+- 符頭・符幹・旗・休符
+- 臨時記号配置
+- 付点配置（線上回避）
+
+### Phase 2: Skyline ベース衝突回避 ✅ 完了
+- Skyline クラス（矩形近似）
+- 音符間の MinDistance 計算
+- SMuFL glyph metrics 参照
+
+### Phase 3: 連桁（Beaming）
+- 連桁グループの検出
+- 傾き計算（beam-quanting.cc 参照）
+- 連桁と符幹の接続
+
+### Phase 4: タイ・スラー
+- タイの曲線計算（tie-formatting-problem.cc 参照）
+- スラーの曲線計算（slur-scoring.cc 参照）
+- 衝突回避
+
+### Phase 5: 和音内臨時記号
+- 複数臨時記号のスタッキング（accidental-placement.cc 参照）
+- 衝突回避とスペーシング
+
+### Phase 6: 複数声部
+- Voice の分離
+- 衝突回避（note-collision.cc 参照）
+- 符幹方向の自動決定
+
+### Phase 7: 記譜記号
+- 音部記号（clef.cc）
+- 調号（key-signature-interface.cc）
+- 拍子記号（time-signature-*.cc）
+
+### Phase 8: 歌詞配置
+- 歌詞と音符の紐付け
+- ハイフン・エクステンダー
+- 複数番の歌詞
+
+### Phase 9: ページレイアウト最適化
+- Knuth-Plass 行分割（page-layout-problem.cc 参照）
+- ページ分割最適化（page-spacing.cc）
+- 余白・マージン調整
+
+### Phase 10: 高度な機能
+- ダイナミクス（強弱記号）
+- アーティキュレーション
+- 装飾音
+- 繰り返し記号
+- トレモロ
+
+## 品質基準
+
+1. **視覚的一致**: Lilypond 出力と並べて比較し、明らかな差異がないこと
+2. **衝突なし**: グリフ同士の重なりがないこと
+3. **テスト通過**: 全ての既存テストが通過すること
+4. **性能**: fur-elise 規模で 10ms 以下
+
+## リスク
+
+| リスク | 対策 |
+|--------|------|
+| Lilypond のアルゴリズムが複雑すぎる | 簡略化版を実装し、段階的に精度向上 |
+| Scheme 依存部分がある | C# で同等ロジックを再実装 |
+| 性能劣化 | ベンチマークを継続監視 |
+
+## コミットポリシー
+
+- テスト全通過 AND ユーザーレビュー承認後にコミット
+- feature/smufl-spacing ブランチで作業
+- 機能単位でコミット（英語一文）
+
+## 進捗更新ルール
+
+- 作業進捗があるたびに work_progress.md を即座に更新
+- ステータス変更、タスク完了時に必ず更新
+
+## 学習更新ルール
+
+- 実装中に得た知見は本ファイルに追記
+- Lilypond ソースの重要な参照箇所を記録
+
+## Lilypond ソース参照メモ
+
+### Skyline
+- `skyline.cc`: Building 構造体、distance() メソッド
+- 斜めの建物（slope）をサポート - LilySharp は矩形近似
+
+### Beaming
+- `beam.cc`: 連桁の描画
+- `beam-quanting.cc`: 連桁の傾き最適化（41KB、最も複雑）
+
+### Tie/Slur
+- `tie-formatting-problem.cc`: タイの曲線計算（38KB）
+- `slur-scoring.cc`: スラーのスコアリング（26KB）
+
+### Spacing
+- `note-spacing.cc`: 音符間隔
+- `spacing-spanner.cc`: スペーシング全体制御
+
+## 参照ドキュメント
+
+### LilySharp 内部ドキュメント
+
+詳細なアーキテクチャは以下を参照:
+- **`docs/SVG_LAYOUT_ARCHITECTURE.md`** - 3層アーキテクチャ、Spring-Rod モデル、実装ノート
+
+### Roslyn 参照ファイル（重要）
+
+Roslyn の Formatting Engine を参考にすべき点:
+
+| Roslyn パス | 参考ポイント |
+|------------|-------------|
+| `src/Workspaces/Core/Portable/Formatting/` | フォーマッティング全般 |
+| `src/.../Formatting/Engine/TokenStream` | トークン間の間隔計算 |
+| `src/.../Formatting/Engine/ChainedFormattingRules` | ルールの連鎖適用 |
+| `src/Workspaces/Core/Portable/Workspace/Solution/DocumentState` | インクリメンタル更新 |
+
+**Roslyn ソースパス**: `C:\MyProj\roslyn`
+
+### Lilypond 参照ファイル
+
+| Lilypond パス | 役割 |
+|--------------|------|
+| `lily/spring.cc` | バネの定義（理想距離、最小距離、伸縮性） |
+| `lily/simple-spacer.cc` | 制約ソルバー（バネとロッドから位置計算） |
+| `lily/spacing-spanner.cc` | バネとロッドの生成 |
+| `lily/note-spacing.cc` | 音符間のバネ生成 |
+| `lily/skyline.cc` | Skyline（衝突検出） |
+| `lily/beam-quanting.cc` | 連桁の傾き最適化 |
+| `lily/tie-formatting-problem.cc` | タイの曲線計算 |
+| `lily/slur-scoring.cc` | スラーのスコアリング |
+
+**Lilypond ソースパス**: `C:\MyProj\lilypond-master`
+
+## 設計原則（SVG_LAYOUT_ARCHITECTURE.md より）
+
+1. **Immutability**: 全てのドメインオブジェクトは不変（record）
+2. **Separation of Concerns**: 収集・レイアウト・描画を完全分離
+3. **Lazy Evaluation**: レイアウト計算は必要時に実行
+4. **Cacheability**: 小節単位でキャッシュ可能
+5. **Single Pass**: 構文木は1回だけ走査
+6. **Lilypond equality**: Lilypond のロジックと等価なものを実装
+
+## Spring-Rod モデル 気づき（実装時の注意）
+
+### 気づき 1: アイテム幅 vs 間隔距離
+- 従来: アイテム自体の幅を計算
+- Spring-Rod: 隣接アイテム間の距離を扱う
+- 臨時記号が**左側**に張り出す問題を正しく扱える
+
+### 気づき 2: Reference Point
+- 各アイテムに基準点（符頭の中心など）
+- LeftExtent: 基準点から左への張り出し（臨時記号）
+- RightExtent: 基準点から右への張り出し（符頭、付点）
+
+### 気づき 3: MinDistance による衝突回避
+```
+MinDistance = PrevItem.RightExtent + NextItem.LeftExtent + MinGap
+```
+- 衝突回避が**暗黙的に**行われる
+- 特別な衝突チェックロジック不要
+
+### 気づき 4: Spring.Length() の動作
+```
+Length(force) = max(IdealDistance + force/Stiffness, MinDistance)
+```
+- force > 0: 伸張
+- force < 0: 圧縮（MinDistance を下回らない）
+- force = 0: IdealDistance と MinDistance の大きい方

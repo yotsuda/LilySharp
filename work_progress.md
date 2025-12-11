@@ -1,153 +1,179 @@
-# Lily# 作業進捗
+# Lilypond レイアウト完全模倣 - 進捗管理
+
+## 🎯 目標
+
+**Lilypond と完全に等価なレイアウト** - 同じ入力に対してピクセル単位で同一の出力
+
+### 設計方針
+
+| 項目 | 方針 |
+|------|------|
+| 出力 | Lilypond と完全等価（ピクセル単位） |
+| 処理 | 高速化優先。Scheme 機能は移植しない |
+| 表記 | 処理時間短縮のため独自表記を採用可 |
+
+**結果等価・プロセス独自**: 出力は同じでも、実装方法は異なって良い
 
 ## 📊 全体進捗
 
-- **実装済み**: 34/34 ファイル (100%)
-- **テスト**: 220 件パス
-- **ステータス**: ✅ 基本機能完成、拡張フェーズ
+| Phase | 項目 | 完了 | 合計 | 進捗 |
+|-------|------|-----:|-----:|-----:|
+| 1 | 基本グリフ配置 | 6 | 6 | 100% |
+| 2 | Skyline 衝突回避 | 2 | 5 | 40% |
+| 3 | 連桁（Beaming） | 0 | 5 | 0% |
+| 4 | タイ・スラー | 0 | 6 | 0% |
+| 5 | 和音内臨時記号 | 0 | 3 | 0% |
+| 6 | 複数声部 | 0 | 4 | 0% |
+| 7 | 記譜記号 | 0 | 3 | 0% |
+| 8 | 歌詞配置 | 0 | 4 | 0% |
+| 9 | ページレイアウト | 0 | 3 | 0% |
+| 10 | 高度な機能 | 0 | 6 | 0% |
+| **合計** | | **8** | **45** | **18%** |
 
-## 📌 ステータス凡例
+## 📋 ステータス凡例
 
 | ステータス | 意味 | ワークフロー |
-|:----------:|------|--------------|
+|:----------:|------|-------------|
 | 🚀 | NotStarted | 未着手 |
 | ⏳ | Working | 作業中 |
 | 🔍 | Review | レビュー待ち |
-| ✅ | Complete | 完了 |
+| ✅ | Complete | 完了（Lilypond と等価確認済） |
 | 🟡 | Hold | 保留 |
 | ❌ | Error | エラー |
 
-**フロー**: 🚀 → ⏳ → 🔍 → ✅
+ワークフロー: 🚀→⏳→🔍→✅
 
 ---
 
-## 📁 LilySharp.Core - Parser
+## Phase 1: 基本グリフ配置 ✅
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| Parser/Lexer.cs | ✅ | - | - | トークン化、臨時記号対応済 |
-| Parser/Parser.cs | ✅ | - | - | 再帰下降パーサー、797行 |
+| SvgRenderer.cs (符頭描画) | ✅ | High | 2h | SMuFL グリフ使用 |
+| SvgRenderer.cs (符幹描画) | ✅ | High | 1h | StemUp/Down 対応 |
+| SvgRenderer.cs (旗描画) | ✅ | High | 1h | 8th/16th/32nd |
+| SvgRenderer.cs (休符描画) | ✅ | High | 1h | 全休符〜32分休符 |
+| SvgRenderer.cs (臨時記号) | ✅ | High | 2h | SMuFL metrics で配置 |
+| SvgRenderer.cs (付点) | ✅ | High | 1h | 線上回避（Lilypond 同様） |
 
-## 📁 LilySharp.Core - Syntax
-
-| filename | status | priority | effort | notes |
-|----------|:------:|:--------:|-------:|-------|
-| Syntax/SyntaxKind.cs | ✅ | - | - | 全トークン/ノード種別 |
-| Syntax/SyntaxNode.cs | ✅ | - | - | Red node 基底クラス |
-| Syntax/SyntaxNodes.cs | ✅ | - | - | 全 Red node 定義 |
-| Syntax/SyntaxTree.cs | ✅ | - | - | インクリメンタル対応 |
-| Syntax/TextChange.cs | ✅ | - | - | 差分更新 API |
-| Syntax/TextSpan.cs | ✅ | - | - | テキスト範囲 |
-| Syntax/Diagnostic.cs | ✅ | - | - | 診断メッセージ |
-| Syntax/MusicEnums.cs | ✅ | - | - | ArticulationType, DynamicLevel |
-
-## 📁 LilySharp.Core - InternalSyntax
+## Phase 2: Skyline ベース衝突回避 ⏳
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| InternalSyntax/GreenNode.cs | ✅ | - | - | Green node 基底 |
-| InternalSyntax/GreenNodes.cs | ✅ | - | - | 全 Green node 定義 |
-| InternalSyntax/SyntaxToken.Internal.cs | ✅ | - | - | トークン構造 |
+| Skyline.cs (矩形版) | ✅ | High | 3h | 矩形近似 - **要改修** |
+| Skyline.cs (斜め Building) | 🚀 | High | 4h | Lilypond 同様の slope 対応必須 |
+| GlyphMetrics.cs | ✅ | High | 2h | SMuFL bounding box |
+| SpacingRules.cs (Skyline 生成) | 🟡 | High | 2h | 斜め対応後に再実装 |
+| SpacingRules.cs (MinDistance) | 🟡 | High | 1h | 斜め対応後に再実装 |
 
-## 📁 LilySharp.Core - Semantics
+**注**: 現在の矩形近似 Skyline は暫定実装。Lilypond と等価にするには斜め Building 対応が必須。
 
-| filename | status | priority | effort | notes |
-|----------|:------:|:--------:|-------:|-------|
-| Semantics/Fraction.cs | ✅ | - | - | 分数演算 |
-| Semantics/DurationCalculator.cs | ✅ | - | - | 音価計算 |
-| Semantics/MeasureValidator.cs | ✅ | - | - | 小節検証 |
-
-## 📁 LilySharp.Core - Midi
+## Phase 3: 連桁（Beaming） 🚀
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| Midi/MidiFile.cs | ✅ | - | - | MIDI ファイル構造 |
-| Midi/MidiEvents.cs | ✅ | - | - | MIDI イベント |
-| Midi/MidiExporter.cs | ✅ | - | - | MIDI エクスポート |
+| BeamGroup.cs | 🚀 | High | 2h | 連桁グループモデル |
+| BeamEngraver.cs | 🚀 | High | 4h | beam.cc 完全再現 |
+| BeamQuanting.cs | 🚀 | High | 12h | beam-quanting.cc 完全再現（1200行） |
+| SvgRenderer.cs (連桁描画) | 🚀 | High | 2h | path 要素で描画 |
+| MeasureCollector.cs (連桁検出) | 🚀 | High | 2h | Lilypond 同様の自動グループ化 |
 
-## 📁 LilySharp.Core - MusicXml
-
-| filename | status | priority | effort | notes |
-|----------|:------:|:--------:|-------:|-------|
-| MusicXml/MusicXmlTypes.cs | ✅ | - | - | MusicXML 型定義 |
-| MusicXml/MusicXmlExporter.cs | ✅ | - | - | MusicXML エクスポート |
-
-## 📁 LilySharp.Lsp
+## Phase 4: タイ・スラー 🚀
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| DocumentManager.cs | ✅ | - | - | ドキュメント状態管理 |
-| LilySharpLanguageServer.cs | ✅ | - | - | LSP 実装 (13機能) |
-| Program.cs | ✅ | - | - | エントリポイント |
+| TieItem.cs | 🚀 | High | 1h | タイのモデル |
+| TieFormatting.cs | 🚀 | High | 10h | tie-formatting-problem.cc 完全再現（1100行） |
+| SlurItem.cs | 🚀 | High | 1h | スラーのモデル |
+| SlurScoring.cs | 🚀 | High | 12h | slur-scoring.cc 完全再現（800行） |
+| SvgRenderer.cs (タイ描画) | 🚀 | High | 2h | ベジェ曲線（制御点計算も完全再現） |
+| SvgRenderer.cs (スラー描画) | 🚀 | High | 2h | ベジェ曲線（制御点計算も完全再現） |
 
-## 📁 LilySharp.Cli
-
-| filename | status | priority | effort | notes |
-|----------|:------:|:--------:|-------:|-------|
-| Program.cs | ✅ | - | - | CLI (midi/xml/check) |
-
-## 📁 LilySharp.Tests
+## Phase 5: 和音内臨時記号 🚀
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| LexerTests.cs | ✅ | - | - | Lexer テスト |
-| ParserTests.cs | ✅ | - | - | Parser テスト (62件) |
-| SyntaxNodeTests.cs | ✅ | - | - | 構文ノードテスト |
-| SemanticTests.cs | ✅ | - | - | 意味解析テスト |
-| MidiTests.cs | ✅ | - | - | MIDI エクスポートテスト |
-| MusicXmlTests.cs | ✅ | - | - | MusicXML テスト |
-| LspTests.cs | ✅ | - | - | LSP テスト (13件) |
-| IncrementalParsingTests.cs | ✅ | - | - | インクリメンタルテスト |
-| IntegrationTests.cs | ✅ | - | - | 統合テスト |
+| AccidentalPlacement.cs | 🚀 | High | 6h | accidental-placement.cc 完全再現 |
+| ChordItem.cs (臨時記号配置) | 🚀 | High | 3h | スタッキングロジック完全再現 |
+| SvgRenderer.cs (和音臨時記号) | 🚀 | High | 2h | 複数臨時記号描画 |
+
+## Phase 6: 複数声部 🚀
+
+| filename | status | priority | effort | notes |
+|----------|:------:|:--------:|-------:|-------|
+| Voice.cs | 🚀 | High | 2h | 声部モデル |
+| VoiceCollector.cs | 🚀 | High | 3h | 声部分離 |
+| NoteCollision.cs | 🚀 | High | 6h | note-collision.cc 完全再現 |
+| StemDirection.cs | 🚀 | High | 3h | Lilypond 同様の自動符幹方向 |
+
+## Phase 7: 記譜記号 🚀
+
+| filename | status | priority | effort | notes |
+|----------|:------:|:--------:|-------:|-------|
+| ClefRenderer.cs | 🚀 | Normal | 3h | 音部記号描画（位置完全一致） |
+| KeySignatureRenderer.cs | 🚀 | Normal | 4h | 調号描画（位置完全一致） |
+| TimeSignatureRenderer.cs | 🚀 | Normal | 3h | 拍子記号描画（位置完全一致） |
+
+## Phase 8: 歌詞配置 🚀
+
+| filename | status | priority | effort | notes |
+|----------|:------:|:--------:|-------:|-------|
+| LyricItem.cs | 🚀 | Normal | 1h | 歌詞モデル |
+| LyricCollector.cs | 🚀 | Normal | 3h | 歌詞と音符の紐付け（Lilypond 同様） |
+| LyricHyphen.cs | 🚀 | Normal | 3h | ハイフン・エクステンダー |
+| SvgRenderer.cs (歌詞描画) | 🚀 | Normal | 3h | テキスト配置（位置完全一致） |
+
+## Phase 9: ページレイアウト最適化 🚀
+
+| filename | status | priority | effort | notes |
+|----------|:------:|:--------:|-------:|-------|
+| KnuthPlassBreaker.cs | 🚀 | High | 12h | page-layout-problem.cc 完全再現 |
+| PageBreaker.cs | 🚀 | High | 6h | page-spacing.cc 完全再現 |
+| ScoreLayout.cs (最適化) | 🚀 | High | 6h | 既存コードの Lilypond 等価化 |
+
+## Phase 10: 高度な機能 🚀
+
+| filename | status | priority | effort | notes |
+|----------|:------:|:--------:|-------:|-------|
+| DynamicsRenderer.cs | 🚀 | Normal | 4h | 強弱記号（位置完全一致） |
+| ArticulationRenderer.cs | 🚀 | Normal | 4h | アーティキュレーション |
+| GraceNoteRenderer.cs | 🚀 | Normal | 6h | 装飾音 |
+| RepeatRenderer.cs | 🚀 | Normal | 4h | 繰り返し記号 |
+| TremoloRenderer.cs | 🚀 | Normal | 4h | トレモロ |
+| OrnamentRenderer.cs | 🚀 | Normal | 4h | 装飾記号 |
 
 ---
 
-## 🎯 実装済み機能
+## 📐 検証方法
 
-### 構文要素
-- ✅ 音符 (Note), 休符 (Rest), 和音 (Chord)
-- ✅ 音高 (Pitch) + 臨時記号 (is/es/isis/eses)
-- ✅ 音価 (Duration) + 付点
-- ✅ 調号 (KeySignature), 拍子 (TimeSignature)
-- ✅ テンポ (TempoDeclaration), 音部記号 (Clef)
-- ✅ 連符 (Tuplet), 装飾音 (Grace)
-- ✅ アーティキュレーション, ダイナミクス
-- ✅ 反復 (Repeat), 並行 (Parallel)
-- ✅ 歌詞 (Lyrics)
-- ✅ 変数 (let/use)
+各フェーズ完了時に以下を実施:
 
-### LSP 機能 (13/13)
-- ✅ Diagnostics, Completion, Hover
-- ✅ Document Symbols, Go to Definition, Find References
-- ✅ Semantic Highlighting, Folding, Rename
-- ✅ Formatting, Code Actions, Signature Help
-- ✅ Document Highlight
+1. **Lilypond で同じファイルをレンダリング**
+2. **座標・サイズを数値比較**
+3. **差異が許容範囲（0.1px）以内であることを確認**
 
+## 📚 参照ドキュメント
 
-## 📋 現在のタスク
+**詳細アーキテクチャ**: `docs/SVG_LAYOUT_ARCHITECTURE.md`
+- 3層レイアウトアーキテクチャ
+- Spring-Rod モデルの設計と気づき
+- Roslyn 参照ファイル一覧
 
-| タスク | status | priority | effort | notes |
-|--------|:------:|:--------:|-------:|-------|
-| SVG 余白計算ロジック | ✅ | High | 中 | LilyPond 準拠スケーリング修正、LineDetails 拡張完了 |
-| VS Code リアルタイムプレビュー | ✅ | High | 中 | LSP カスタムリクエスト + WebView 実装完了 |
-| SVG 新アーキテクチャ (Phase 1-4) | ✅ | High | 高 | Model/Collector/Layout/Renderer 分離、`svg2` コマンドで動作確認 |
-| SVG 新アーキテクチャ (Phase 5-6) | ⏳ | High | 中 | SvgExporter 統合、旧ファイル削除、LSP 連携 |
+## 参照ファイル（Lilypond）
 
-## 🔧 技術的改善候補
+| LilySharp ファイル | Lilypond 参照 | 行数 | 複雑度 |
+|-------------------|--------------|-----:|:------:|
+| Skyline.cs | skyline.cc | 600 | 中 |
+| BeamQuanting.cs | beam-quanting.cc | 1200 | **高** |
+| TieFormatting.cs | tie-formatting-problem.cc | 1100 | **高** |
+| SlurScoring.cs | slur-scoring.cc | 800 | **高** |
+| AccidentalPlacement.cs | accidental-placement.cc | 400 | 中 |
+| NoteCollision.cs | note-collision.cc | 600 | 中 |
+| KnuthPlassBreaker.cs | page-layout-problem.cc | 1400 | **高** |
 
-| 対象 | priority | effort | 内容 |
-|------|:--------:|-------:|------|
-| LayoutEngine.cs | Low | 低 | Footnote 対応 (LilyPond の account_for_footnotes 相当) |
-| LineDetails.SpringLength | Low | 低 | refpoint_extent_ を使った正確な計算（現在は Tallness で近似） |
-| PaperSettings.cs | Low | 低 | MmPerPoint を 25.4/72 で計算（現在は 0.3528 のハードコード） |
+## 更新履歴
 
----
-
-## 📋 今後の候補
-
-| 機能 | priority | effort | notes |
-|------|:--------:|-------:|-------|
-| PDF/SVG レンダリング | Normal | 高 | Emmentaler フォント必要 |
-| MusicXML インポート | Low | 中 | 逆変換 |
-| マルチファイルプロジェクト | Normal | 中 | include 構文 |
-| コード記法 | Normal | 低 | <c e g> の名前付け |
+| 日付 | 更新内容 |
+|------|----------|
+| 2025-12-11 | Phase 1 完了。Phase 2 部分完了（矩形 Skyline 暫定実装） |
+| 2025-12-11 | 目標を「完全等価」に修正。工数見積もり上方修正 |
