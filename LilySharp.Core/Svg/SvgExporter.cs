@@ -79,6 +79,10 @@ public class SvgExporter
     // Line breaking state
     private int _systemCount = 1;
     private double _systemStartY;
+    private double _previousSystemY;  // Y coordinate of previous system (for drawing :| on previous line)
+    private double _previousLineEndX;  // X coordinate at end of previous line (for drawing :| on previous line)
+    private bool _lineJustBroken;  // True if line break just occurred
+    private bool _suppressTrailingBarline;  // True to skip last barline in section (before :|)
     private readonly double _lineBreakThreshold = PageWidth - MarginRight - 50; // Leave some margin
     
     // Metadata
@@ -151,6 +155,10 @@ public class SvgExporter
         _currentClef = "treble";
         _keySignature = 0;
         _systemCount = 1;
+        _previousSystemY = 0;
+        _previousLineEndX = 0;
+        _lineJustBroken = false;
+        _suppressTrailingBarline = false;
         _title = null;
         _composer = null;
         _tempo = null;
@@ -322,11 +330,46 @@ public class SvgExporter
     private void ProcessRepeatBlock(StructureRepeatBlockSyntax repeat)
     {
         bool afterRepeatStart = false;
-        bool beforeRepeatEnd = true;
+        bool hasAlternatives = false;
+        
+        // Pre-scan for alternatives to determine if this is a simple repeat or has volta brackets
+        for (int i = 0; i < repeat.SlotCount; i++)
+        {
+            if (repeat.GetChild(i) is StructureAlternativeSyntax)
+            {
+                hasAlternatives = true;
+                break;
+            }
+        }
         
         for (int i = 0; i < repeat.SlotCount; i++)
         {
             var child = repeat.GetChild(i);
+            
+            // Look ahead: check what follows this element
+            bool nextIsRepeatEnd = false;
+            bool nextIsAlternative = false;
+            for (int j = i + 1; j < repeat.SlotCount; j++)
+            {
+                var next = repeat.GetChild(j);
+                if (next is SyntaxTokenNode nextToken)
+                {
+                    if (nextToken.Text == ":|")
+                        nextIsRepeatEnd = true;
+                    else if (nextToken.Text == "|" && hasAlternatives)
+                        continue;  // Skip separator, look further
+                    break;
+                }
+                else if (next is StructureAlternativeSyntax)
+                {
+                    nextIsAlternative = true;
+                    break;
+                }
+                else if (next != null)
+                {
+                    break;
+                }
+            }
             
             if (child is SyntaxTokenNode token)
             {
@@ -339,13 +382,33 @@ public class SvgExporter
                 }
                 else if (text == ":|")
                 {
-                    DrawBarline(":|");
-                    beforeRepeatEnd = false;
+                    // Draw repeat end on current line, then check for line break
+                    DrawBarline(":|", checkLineBreak: false);
+                    CheckLineBreak();
                 }
-                else if (text == "|" && afterRepeatStart && beforeRepeatEnd)
+                else if (text == "|" && afterRepeatStart && hasAlternatives)
                 {
-                    DrawBarline("|");
+                    // This is the alternatives separator - don't draw as regular barline
+                    // It marks the start of volta brackets (will implement volta later)
+                    // Skip drawing
                 }
+            }
+            else if (child is SectionReferenceSyntax reference && afterRepeatStart)
+            {
+                // Suppress trailing barline in section if :| follows directly
+                _suppressTrailingBarline = nextIsRepeatEnd;
+                // Don't check line break if followed by :| or alternatives
+                bool suppressLineBreak = nextIsRepeatEnd || nextIsAlternative;
+                RenderSectionReference(reference.SectionName, checkLineBreak: !suppressLineBreak);
+                _suppressTrailingBarline = false;
+            }
+            else if (child is StructureAlternativeSyntax alt && afterRepeatStart)
+            {
+                // Suppress trailing barline if :| follows directly
+                _suppressTrailingBarline = nextIsRepeatEnd;
+                // Alternatives: don't check line break if :| follows
+                RenderAlternative(alt, checkLineBreak: !nextIsRepeatEnd);
+                _suppressTrailingBarline = false;
             }
             else if (child != null && afterRepeatStart)
             {
@@ -356,20 +419,23 @@ public class SvgExporter
     
     /// <summary>
     /// Render a section reference with label and content.
-    /// </summary>
-    private void RenderSectionReference(string sectionName)
+    private void RenderSectionReference(string sectionName, bool checkLineBreak = true)
     {
         if (_sections.TryGetValue(sectionName, out var section))
         {
             DrawSectionLabel(sectionName);
             RenderSectionContent(section);
+            
+            // Check for line break after section content
+            if (checkLineBreak)
+                CheckLineBreak();
         }
     }
     
     /// <summary>
     /// Render an alternative ending (1. A, 2. B).
     /// </summary>
-    private void RenderAlternative(StructureAlternativeSyntax alt)
+    private void RenderAlternative(StructureAlternativeSyntax alt, bool checkLineBreak = true)
     {
         var sectionName = alt.SectionName.Text;
         if (_sections.TryGetValue(sectionName, out var section))
@@ -377,6 +443,9 @@ public class SvgExporter
             // TODO: Draw volta bracket with alternative number
             DrawSectionLabel(sectionName);
             RenderSectionContent(section);
+            
+            if (checkLineBreak)
+                CheckLineBreak();
         }
     }
     
@@ -393,10 +462,24 @@ public class SvgExporter
                 // If no specific part is requested, or this is the requested part
                 if (_renderPartName == null || partBlock.Name == _renderPartName)
                 {
-                    // Render all music content in this part
-                    foreach (var partChild in partBlock.DescendantNodes())
+                    // Collect nodes and find the last barline
+                    var nodes = partBlock.DescendantNodes().ToList();
+                    int lastBarlineIndex = -1;
+                    for (int i = nodes.Count - 1; i >= 0; i--)
                     {
-                        ProcessMusicNode(partChild);
+                        if (nodes[i] is BarlineSyntax)
+                        {
+                            lastBarlineIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    // Render all music content, skipping last barline if suppressed
+                    for (int i = 0; i < nodes.Count; i++)
+                    {
+                        if (i == lastBarlineIndex && _suppressTrailingBarline)
+                            continue;  // Skip trailing barline before :|
+                        ProcessMusicNode(nodes[i]);
                     }
                     
                     // Only render one part per section
@@ -432,6 +515,7 @@ public class SvgExporter
                 break;
                 
             case BarlineSyntax barline:
+                // Enable line break check for barlines in section content
                 DrawBarline(barline.BarToken.Text);
                 break;
         }
@@ -568,6 +652,9 @@ public class SvgExporter
     private void StartNewSystem()
     {
         _systemCount++;
+        _previousSystemY = _currentY;  // Save Y before moving to new line
+        _previousLineEndX = _currentX;  // Save X at end of previous line
+        _lineJustBroken = true;  // Mark that we just broke the line
         _currentY += StaffHeight + SystemSpacing;
         _currentX = MarginLeft;
         _systemStartY = _currentY;
@@ -930,47 +1017,64 @@ public class SvgExporter
         _currentX += GetNoteSpacing(noteValue);
     }
     
-    private void DrawBarline(string barType = "|")
+    private void DrawBarline(string barType = "|", bool checkLineBreak = true)
     {
         double x = _currentX;
         // SMuFL barline glyphs are positioned at the bottom staff line
         double y = _currentY + StaffHeight;
+        
+        // Special handling for repeat end: if we just broke the line, 
+        // draw on previous line instead
+        if (barType == ":|" && _lineJustBroken && _previousSystemY > 0)
+        {
+            x = _previousLineEndX;
+            y = _previousSystemY + StaffHeight;
+            DrawGlyph(SmuflGlyphs.RepeatRight, x, y);
+            _lineJustBroken = false;  // Reset flag
+            return;  // Don't advance _currentX on current line
+        }
         
         switch (barType)
         {
             case "|:":  // Repeat start
                 DrawGlyph(SmuflGlyphs.RepeatLeft, x, y);
                 _currentX += 20 + SpaceAfterBarline;
+                _lineJustBroken = false;
                 break;
                 
             case ":|":  // Repeat end
                 DrawGlyph(SmuflGlyphs.RepeatRight, x, y);
                 _currentX += 20 + SpaceAfterBarline;
+                _lineJustBroken = false;
                 break;
                 
             case ":|:":  // Repeat both
                 DrawGlyph(SmuflGlyphs.RepeatRightLeft, x, y);
                 _currentX += 24 + SpaceAfterBarline;
+                _lineJustBroken = false;
                 break;
                 
             case "||":  // Double bar
                 DrawGlyph(SmuflGlyphs.BarlineDouble, x, y);
                 _currentX += 8 + SpaceAfterBarline;
+                _lineJustBroken = false;
                 break;
                 
             case "|.":  // Final bar
                 DrawGlyph(SmuflGlyphs.BarlineFinal, x, y);
                 _currentX += 10 + SpaceAfterBarline;
+                _lineJustBroken = false;
                 break;
                 
             default:  // Single bar |
                 DrawGlyph(SmuflGlyphs.BarlineSingle, x, y);
                 _currentX += SpaceAfterBarline;
+                _lineJustBroken = false;
                 break;
         }
         
         // Check for line break after barline (except final bar and repeat start)
-        if (barType != "|." && barType != "|:")
+        if (checkLineBreak && barType != "|." && barType != "|:")
         {
             CheckLineBreak();
         }
