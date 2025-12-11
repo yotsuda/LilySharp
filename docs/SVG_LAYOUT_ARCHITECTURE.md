@@ -310,14 +310,15 @@ LilySharp.Core/
 - Phase 5: CLI/LSP を新アーキテクチャに切り替え ✅
 - Phase 6: 旧ファイル削除 (MusicElement.cs, SystemLayout.cs) ✅
 - GetGlobalMeasureIndex を MeasureLayout.MeasureIndex に置き換え ✅
+- SvgTests/BenchmarkTest を新アーキテクチャに移行 ✅
+- シンプルファイル（セクション/構造なし）のフォールバック処理追加 ✅
 
 ### 未完了
 - Tablature 機能の新アーキテクチャ移行
 - セクション単位キャッシュの実装
-- テストの新アーキテクチャ移行
 
 ### 既知の問題
-- 旧 `SvgExporter` が Tablature とテスト用に残存
+- 旧 `SvgExporter` が Tablature テスト用に残存
 
 ## 設計決定事項
 
@@ -353,8 +354,7 @@ LilySharp.Core/
 
 ### 短期 (次回の作業)
 1. Tablature 機能を新アーキテクチャに移行
-2. テストを新アーキテクチャに移行
-3. 旧 SvgExporter を削除
+2. 旧 SvgExporter を削除
 
 ### 中期
 1. セクション単位キャッシュの実装
