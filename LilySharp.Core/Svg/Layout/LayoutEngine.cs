@@ -14,6 +14,8 @@ public sealed class LayoutEngine
     private readonly BeamEngraver _beamEngraver = new();
     private readonly TieDetector _tieDetector = new();
     private readonly TieEngraver _tieEngraver = new();
+    private readonly SlurDetector _slurDetector = new();
+    private readonly SlurEngraver _slurEngraver = new();
     
     public LayoutEngine(LayoutOptions? options = null)
     {
@@ -62,13 +64,17 @@ public sealed class LayoutEngine
         // Detect and layout ties
         var tieLayouts = LayoutTies(score, systemsArray);
         
+        // Detect and layout slurs
+        var slurLayouts = LayoutSlurs(score, systemsArray);
+        
         return new ScoreLayout(
             _options.PageWidth,
             totalHeight,
             headerHeight,
             systemsArray,
             beamLayouts,
-            tieLayouts);
+            tieLayouts,
+            slurLayouts);
     }
     
     /// <summary>
@@ -332,5 +338,69 @@ public sealed class LayoutEngine
         }
         
         return tieLayouts.ToImmutableArray();
+    }
+    
+    /// <summary>
+    /// Detects slurs and calculates their layouts.
+    /// </summary>
+    private ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems)
+    {
+        // Detect slurs in the score
+        var slurs = _slurDetector.DetectSlurs(score);
+        
+        if (slurs.Length == 0)
+            return ImmutableArray<SlurLayout>.Empty;
+        
+        // Build a map from measure index to (system, measureLayout)
+        var measureMap = new Dictionary<int, (SystemLayout system, MeasureLayout measure)>();
+        foreach (var system in systems)
+        {
+            foreach (var measureLayout in system.Measures)
+            {
+                measureMap[measureLayout.MeasureIndex] = (system, measureLayout);
+            }
+        }
+        
+        // Calculate layout for each slur
+        var slurLayouts = new List<SlurLayout>();
+        
+        foreach (var slur in slurs)
+        {
+            // Get layout info for start and end measures
+            if (!measureMap.TryGetValue(slur.StartMeasureIndex, out var startInfo))
+                continue;
+            if (!measureMap.TryGetValue(slur.EndMeasureIndex, out var endInfo))
+                continue;
+            
+            var (startSystem, startMeasure) = startInfo;
+            var (endSystem, endMeasure) = endInfo;
+            
+            // Calculate X positions
+            double startX = startMeasure.X;
+            double endX = endMeasure.X;
+            
+            if (slur.StartItemIndex < startMeasure.Items.Length)
+                startX += startMeasure.Items[slur.StartItemIndex].X;
+            if (slur.EndItemIndex < endMeasure.Items.Length)
+                endX += endMeasure.Items[slur.EndItemIndex].X;
+            
+            // Calculate Y positions (staff middle + staff position offset)
+            double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
+            double startY = staffMiddleY - slur.StartStaffPosition * _options.SpaceHeight / 2;
+            double endY = staffMiddleY - slur.EndStaffPosition * _options.SpaceHeight / 2;
+            
+            // Calculate slur layout
+            var slurLayout = _slurEngraver.CalculateSlurLayout(
+                slur,
+                startX,
+                startY,
+                endX,
+                endY,
+                _options.StaffSpaceSize);
+            
+            slurLayouts.Add(slurLayout);
+        }
+        
+        return slurLayouts.ToImmutableArray();
     }
 }

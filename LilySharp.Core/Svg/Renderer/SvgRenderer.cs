@@ -63,6 +63,10 @@ public sealed class SvgRenderer
         
         // Draw ties
         DrawTies(layout);
+        
+        // Draw slurs
+        DrawSlurs(layout);
+        
         WriteFooter();
         
         return _svg.ToString();
@@ -690,6 +694,52 @@ public sealed class SvgRenderer
         
         // Offset for inner curve (direction depends on curve direction)
         double offsetY = tieLayout.CurveUp ? thickness : -thickness;
+        
+        // Outer curve
+        string outerPath = $"M {startX:F1},{startY:F1} C {c1x:F1},{c1y:F1} {c2x:F1},{c2y:F1} {endX:F1},{endY:F1}";
+        
+        // Inner curve (reversed, with offset)
+        double innerC1y = c1y + offsetY;
+        double innerC2y = c2y + offsetY;
+        string innerPath = $"C {c2x:F1},{innerC2y:F1} {c1x:F1},{innerC1y:F1} {startX:F1},{startY:F1}";
+        
+        // Combined path (closed shape)
+        string fullPath = $"{outerPath} {innerPath} Z";
+        
+        _svg.AppendLine($"  <path d=\"{fullPath}\" fill=\"black\"/>");
+    }
+    
+    private void DrawSlurs(ScoreLayout layout)
+    {
+        if (layout.SlurLayouts.Length == 0)
+            return;
+        
+        foreach (var slurLayout in layout.SlurLayouts)
+        {
+            DrawSlur(slurLayout);
+        }
+    }
+    
+    private void DrawSlur(SlurLayout slurLayout)
+    {
+        // Draw slur as a cubic Bezier curve
+        // SVG path: M startX,startY C control1X,control1Y control2X,control2Y endX,endY
+        
+        double startX = slurLayout.StartX;
+        double startY = slurLayout.StartY;
+        double endX = slurLayout.EndX;
+        double endY = slurLayout.EndY;
+        double c1x = slurLayout.Control1.X;
+        double c1y = slurLayout.Control1.Y;
+        double c2x = slurLayout.Control2.X;
+        double c2y = slurLayout.Control2.Y;
+        
+        // Draw the slur as a filled shape (two Bezier curves)
+        // Outer curve and inner curve to create thickness
+        double thickness = 0.15 * SpaceHeight; // Slur thickness (slightly thicker than tie)
+        
+        // Offset for inner curve (direction depends on curve direction)
+        double offsetY = slurLayout.CurveUp ? thickness : -thickness;
         
         // Outer curve
         string outerPath = $"M {startX:F1},{startY:F1} C {c1x:F1},{c1y:F1} {c2x:F1},{c2y:F1} {endX:F1},{endY:F1}";
