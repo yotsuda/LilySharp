@@ -331,12 +331,17 @@ public sealed class SvgRenderer
         double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
         char notehead = SmuflGlyphs.GetNotehead(noteValue);
         
+        // Calculate accidental positions
+        var accidentalPlacement = new AccidentalPlacement();
+        var accidentalLayouts = accidentalPlacement.CalculatePositions(chord.Notes, SpaceHeight);
+        var accidentalMap = accidentalLayouts.ToDictionary(a => a.StaffPosition);
+        
         foreach (var note in chord.Notes)
         {
             double noteY = systemY + StaffHeight - (note.StaffPosition * SpaceHeight / 2);
             
-            // Draw accidental
-            if (note.Accidental != null)
+            // Draw accidental with calculated position
+            if (note.Accidental != null && accidentalMap.TryGetValue(note.StaffPosition, out var accLayout))
             {
                 char accGlyph = note.Accidental switch
                 {
@@ -346,7 +351,7 @@ public sealed class SvgRenderer
                     "doubleFlat" => SmuflGlyphs.AccidentalDoubleFlat,
                     _ => SmuflGlyphs.AccidentalNatural
                 };
-                DrawGlyph(accGlyph, x - 12, noteY);
+                DrawGlyph(accGlyph, x + accLayout.XOffset, noteY);
             }
             
             // Draw ledger lines
