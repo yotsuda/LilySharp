@@ -1,4 +1,7 @@
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -6,14 +9,21 @@ namespace LilySharp.Tests;
 
 public class SvgTests
 {
+    private static string RenderSvg(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, null);
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+        var renderer = new SvgRenderer();
+        return renderer.Render(score, layout);
+    }
+    
     [Fact]
     public void ExportSimpleNote()
     {
-        var source = "{ c4 }";
-        var tree = SyntaxTree.Parse(source);
-        var exporter = new SvgExporter();
-        
-        var svg = exporter.Export(tree);
+        var svg = RenderSvg("{ c4 }");
         
         Assert.Contains("<svg", svg);
         Assert.Contains("</svg>", svg);
@@ -23,11 +33,7 @@ public class SvgTests
     [Fact]
     public void ExportNoteWithAccidental()
     {
-        var source = "{ cis4 }";
-        var tree = SyntaxTree.Parse(source);
-        var exporter = new SvgExporter();
-        
-        var svg = exporter.Export(tree);
+        var svg = RenderSvg("{ cis4 }");
         
         // Should contain sharp accidental (U+E262)
         Assert.Contains("\uE262", svg);
@@ -36,11 +42,7 @@ public class SvgTests
     [Fact]
     public void ExportRest()
     {
-        var source = "{ r4 }";
-        var tree = SyntaxTree.Parse(source);
-        var exporter = new SvgExporter();
-        
-        var svg = exporter.Export(tree);
+        var svg = RenderSvg("{ r4 }");
         
         // Should contain quarter rest (U+E4E5)
         Assert.Contains("\uE4E5", svg);
@@ -49,11 +51,7 @@ public class SvgTests
     [Fact]
     public void ExportWithClef()
     {
-        var source = "clef treble { c4 }";
-        var tree = SyntaxTree.Parse(source);
-        var exporter = new SvgExporter();
-        
-        var svg = exporter.Export(tree);
+        var svg = RenderSvg("clef treble { c4 }");
         
         // Should contain G clef (U+E050)
         Assert.Contains("\uE050", svg);
@@ -62,11 +60,7 @@ public class SvgTests
     [Fact]
     public void ExportWithTimeSignature()
     {
-        var source = "time 4/4 { c4 }";
-        var tree = SyntaxTree.Parse(source);
-        var exporter = new SvgExporter();
-        
-        var svg = exporter.Export(tree);
+        var svg = RenderSvg("time 4/4 { c4 }");
         
         // Should contain time sig digits (U+E084 = 4)
         Assert.Contains("\uE084", svg);
@@ -75,11 +69,7 @@ public class SvgTests
     [Fact]
     public void ExportChord()
     {
-        var source = "{ <c e g>4 }";
-        var tree = SyntaxTree.Parse(source);
-        var exporter = new SvgExporter();
-        
-        var svg = exporter.Export(tree);
+        var svg = RenderSvg("{ <c e g>4 }");
         
         // Should contain multiple noteheads
         var noteheadCount = System.Text.RegularExpressions.Regex.Matches(svg, "\uE0A4").Count;
@@ -89,13 +79,9 @@ public class SvgTests
     [Fact]
     public void ExportBarline()
     {
-        var source = "{ c4 | d4 }";
-        var tree = SyntaxTree.Parse(source);
-        var exporter = new SvgExporter();
+        var svg = RenderSvg("{ c4 | d4 }");
         
-        var svg = exporter.Export(tree);
-        
-        // Barline is now drawn using SMuFL glyph (class="music")
+        // Barline is drawn using SMuFL glyph
         Assert.Contains(SmuflGlyphs.BarlineSingle.ToString(), svg);
     }
     
@@ -141,12 +127,9 @@ render score ""test.svg"" {
     staff treble { melody }
 }
 ";
-        var tree = SyntaxTree.Parse(source);
-        var exporter = new SvgExporter();
-        var svg = exporter.Export(tree);
+        var svg = RenderSvg(source);
         
         // Check for repeat barlines (SMuFL glyphs U+E040 and U+E041)
-        // RepeatLeft = U+E040, RepeatRight = U+E041
         Assert.Contains("\uE040", svg); // |: 
         Assert.Contains("\uE041", svg); // :|
     }

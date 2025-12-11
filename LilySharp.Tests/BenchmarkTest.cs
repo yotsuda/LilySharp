@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using LilySharp.Core.Syntax;
-using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Renderer;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,6 +12,16 @@ public class BenchmarkTest
 {
     private readonly ITestOutputHelper _output;
     public BenchmarkTest(ITestOutputHelper output) => _output = output;
+    
+    private static string RenderSvg(SyntaxTree tree)
+    {
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, null);
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+        var renderer = new SvgRenderer();
+        return renderer.Render(score, layout);
+    }
 
     [Fact]
     public void BenchmarkFurElise()
@@ -19,7 +31,7 @@ public class BenchmarkTest
         // Warmup
         for (int i = 0; i < 3; i++) {
             var tree = SyntaxTree.Parse(source);
-            var svg = new SvgExporter().Export(tree);
+            var svg = RenderSvg(tree);
         }
         
         // Benchmark
@@ -27,7 +39,7 @@ public class BenchmarkTest
         for (int i = 0; i < 10; i++) {
             var sw = Stopwatch.StartNew();
             var tree = SyntaxTree.Parse(source);
-            var svg = new SvgExporter().Export(tree);
+            var svg = RenderSvg(tree);
             sw.Stop();
             times.Add(sw.Elapsed.TotalMilliseconds);
         }

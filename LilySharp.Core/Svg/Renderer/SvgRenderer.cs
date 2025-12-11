@@ -155,25 +155,11 @@ public sealed class SvgRenderer
         }
         
         // Draw measures
-        int measureIndex = 0;
         foreach (var measureLayout in system.Measures)
         {
-            var measure = score.Voice.Measures[GetGlobalMeasureIndex(system, measureIndex)];
+            var measure = score.Voice.Measures[measureLayout.MeasureIndex];
             DrawMeasure(measure, measureLayout, y);
-            measureIndex++;
         }
-    }
-    
-    private int GetGlobalMeasureIndex(SystemLayout system, int localIndex)
-    {
-        // Calculate global measure index based on system index and local index
-        int globalIndex = 0;
-        for (int i = 0; i < system.SystemIndex; i++)
-        {
-            // This is a simplification - in a full implementation, we'd track measure counts per system
-            globalIndex += 4; // Approximate
-        }
-        return globalIndex + localIndex;
     }
     
     private void DrawMeasure(Measure measure, MeasureLayout layout, double systemY)

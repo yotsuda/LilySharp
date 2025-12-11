@@ -13,6 +13,7 @@ public sealed class MeasureCollector
     private readonly Dictionary<string, SectionDeclarationSyntax> _sections = new();
     private StructureDeclarationSyntax? _structure;
     private string? _voiceName;
+    private SyntaxNode? _root;
     
     // State for relative pitch mode
     private int _currentOctave = 4;
@@ -60,6 +61,7 @@ public sealed class MeasureCollector
     {
         _sections.Clear();
         _structure = null;
+        _root = null;
         _currentOctave = 4;
         _lastPitchName = 'c';
         _defaultDuration = Fraction.Quarter;
@@ -74,6 +76,8 @@ public sealed class MeasureCollector
     
     private void CollectDefinitions(SyntaxNode root)
     {
+        _root = root;
+        
         foreach (var node in root.DescendantNodes())
         {
             switch (node)
@@ -247,6 +251,18 @@ public sealed class MeasureCollector
                             pendingStartBarline = BarlineType.RepeatStart;
                             measureSourceStart = barline.Position;
                         }
+                        else if (barType == BarlineType.RepeatEnd && currentItems.Count == 0 && measures.Count > 0)
+                        {
+                            // :| after section end - modify last measure's end barline
+                            var lastMeasure = measures[measures.Count - 1];
+                            measures[measures.Count - 1] = new Measure(
+                                lastMeasure.Items,
+                                lastMeasure.StartBarline,
+                                BarlineType.RepeatEnd,
+                                lastMeasure.SectionLabel,
+                                lastMeasure.SourceStart,
+                                lastMeasure.SourceEnd);
+                        }
                         else
                         {
                             CompleteMeasure(barType, barline.Position);
@@ -268,6 +284,13 @@ public sealed class MeasureCollector
                 sectionLabel = section.SectionName;
                 ProcessSection(section, ProcessNodes);
             }
+        }
+        else if (_root != null)
+        {
+            // Fallback: process music nodes directly from root (for simple files)
+            var musicNodes = _root.DescendantNodes()
+                .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or RelativeExpressionSyntax);
+            ProcessNodes(musicNodes);
         }
         
         // Handle final measure without trailing barline

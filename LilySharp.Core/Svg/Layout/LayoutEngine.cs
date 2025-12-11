@@ -31,6 +31,7 @@ public sealed class LayoutEngine
         var systemMeasures = BreakIntoSystems(score);
         
         // Layout each system
+        int firstMeasureIndex = 0;
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
             bool isFirstSystem = sysIdx == 0;
@@ -39,10 +40,12 @@ public sealed class LayoutEngine
                 systemMeasures[sysIdx], 
                 currentY, 
                 score.KeySignature.Sharps,
-                isFirstSystem);
+                isFirstSystem,
+                firstMeasureIndex);
             
             systems.Add(system);
             currentY += _options.StaffHeight + _options.SystemSpacing;
+            firstMeasureIndex += systemMeasures[sysIdx].Count;
         }
         
         double totalHeight = currentY - _options.SystemSpacing + _options.MarginTop;
@@ -100,7 +103,8 @@ public sealed class LayoutEngine
         List<Measure> measures, 
         double y,
         int keySharps,
-        bool isFirstSystem)
+        bool isFirstSystem,
+        int firstMeasureIndex)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
         double startX = _options.MarginLeft + prefixWidth;
@@ -135,7 +139,7 @@ public sealed class LayoutEngine
             var itemLayouts = LayoutMeasureItems(measures[i], measureWidth);
             
             measureLayouts.Add(new MeasureLayout(
-                i,
+                firstMeasureIndex + i,
                 currentX,
                 measureWidth,
                 itemLayouts));
