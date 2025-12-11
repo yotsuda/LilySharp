@@ -221,10 +221,14 @@ public sealed class SvgRenderer
         // x is the reference point (center of notehead in Spring-Rod model)
         double noteY = systemY + StaffHeight - (note.StaffPosition * SpaceHeight / 2);
         int noteValue = GetNoteValue(note.BaseDuration);
-        double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
+        
+        // Get notehead metrics from GlyphMetrics
+        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+        double noteheadWidth = GlyphMetrics.ToPixels(noteheadBBox.Width);
+        double noteheadCenterX = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
         
         // Convert reference point to notehead left edge (SMuFL glyphs are drawn from left edge)
-        double noteheadLeftX = x - noteheadWidth / 2;
+        double noteheadLeftX = x - noteheadCenterX;
         
         // Draw accidental (to the left of notehead)
         if (note.Accidental != null)
@@ -237,8 +241,14 @@ public sealed class SvgRenderer
                 "doubleFlat" => SmuflGlyphs.AccidentalDoubleFlat,
                 _ => SmuflGlyphs.AccidentalNatural
             };
-            // Accidental is drawn to the left of notehead with a small gap
-            double accidentalX = noteheadLeftX - SpacingRules.AccidentalWidth - 2;
+            
+            // Get accidental metrics
+            var accBBox = GlyphMetrics.GetAccidentalBBox(note.Accidental);
+            double accWidth = GlyphMetrics.ToPixels(accBBox.Width);
+            double accNoteGap = GlyphMetrics.ToPixels(GlyphMetrics.AccidentalNoteGap);
+            
+            // Accidental is drawn to the left of notehead with a gap
+            double accidentalX = noteheadLeftX - accWidth - accNoteGap;
             DrawGlyph(accGlyph, accidentalX, noteY);
         }
         
@@ -252,11 +262,12 @@ public sealed class SvgRenderer
         char notehead = SmuflGlyphs.GetNotehead(noteValue);
         DrawGlyph(notehead, noteheadLeftX, noteY, note.SourcePosition);
         
-        // Draw stem (stem attachment is relative to notehead left edge)
+        // Draw stem using GlyphMetrics anchor points
         if (noteValue >= 2)
         {
-            double stemX = note.StemUp ? noteheadLeftX + StemUpAttachX : noteheadLeftX + StemDownAttachX;
-            double stemAttachY = note.StemUp ? noteY - StemUpAttachY : noteY - StemDownAttachY;
+            var stemAnchor = note.StemUp ? GlyphMetrics.StemUpSE : GlyphMetrics.StemDownNW;
+            double stemX = noteheadLeftX + GlyphMetrics.ToPixels(stemAnchor.X);
+            double stemAttachY = noteY - GlyphMetrics.ToPixels(stemAnchor.Y);
             double stemEndY = note.StemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
             
             _svg.AppendLine($"""  <line class="stem" x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}"/>""");
@@ -270,9 +281,15 @@ public sealed class SvgRenderer
         }
         
         // Draw dots (to the right of notehead)
+        var dotBBox = GlyphMetrics.AugmentationDot;
+        double dotWidth = GlyphMetrics.ToPixels(dotBBox.Width);
+        double dotGap = GlyphMetrics.ToPixels(0.3);  // Gap between notehead and first dot
         for (int d = 0; d < note.Dots; d++)
         {
-            DrawGlyph(SmuflGlyphs.AugmentationDot, noteheadLeftX + noteheadWidth + 3 + (d * 6), noteY - 2);
+            double dotX = noteheadLeftX + noteheadWidth + dotGap + d * (dotWidth + dotGap);
+            // Dots are placed slightly above the line to avoid collision with staff lines
+            double dotY = noteY - GlyphMetrics.ToPixels(dotBBox.CenterY);
+            DrawGlyph(SmuflGlyphs.AugmentationDot, dotX, dotY);
         }
     }
     

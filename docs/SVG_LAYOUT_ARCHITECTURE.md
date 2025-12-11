@@ -7,6 +7,7 @@
 3. **Lazy Evaluation**: レイアウト計算は必要時に実行
 4. **Cacheability**: 小節単位でキャッシュ可能
 5. **Single Pass**: 構文木は1回だけ走査
+6. **Lilypond equality**: Lilipond のロジックと等価なものを実装
 
 ## 楽譜レイアウトの3レベル
 

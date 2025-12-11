@@ -149,66 +149,93 @@ public static class SpacingRules
     // ========================================
     // Spring-Rod Model Support
     // ========================================
+    // Uses SMuFL metrics from GlyphMetrics for accurate spacing
     
-    /// <summary>Notehead width (reference point is center).</summary>
-    public const double NoteheadWidth = 12;
+    /// <summary>Minimum gap between items in pixels.</summary>
+    public static double MinItemGap => GlyphMetrics.ToPixels(GlyphMetrics.MinItemGap);
     
-    /// <summary>Rest width.</summary>
-    public const double RestWidth = 10;
+    /// <summary>Padding between barline and first/last item in pixels.</summary>
+    public static double BarlinePadding => GlyphMetrics.ToPixels(GlyphMetrics.BarlinePadding);
     
-    /// <summary>Minimum gap between items.</summary>
-    public const double MinItemGap = 4;
-    
-    /// <summary>Padding between barline and first/last item.</summary>
-    public const double BarlinePadding = 8;
+    /// <summary>Gap between accidental and notehead in pixels.</summary>
+    public static double AccidentalNoteGap => GlyphMetrics.ToPixels(GlyphMetrics.AccidentalNoteGap);
     
     /// <summary>
-    /// Calculates the left extent of an item from its reference point.
+    /// Calculates the left extent of an item from its reference point (notehead center).
     /// This includes accidentals which are drawn to the left of the notehead.
     /// </summary>
+    /// <remarks>
+    /// Reference point is at the horizontal center of the notehead.
+    /// Left extent = half notehead + accidental width + gap (if accidental present)
+    /// </remarks>
     public static double CalculateLeftExtent(MusicItem item)
     {
-        double extent = item switch
+        // Get notehead metrics (note value determines which notehead glyph)
+        int noteValue = GetNoteValue(item);
+        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+        
+        // Base extent: from center to left edge of notehead
+        double extent = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+        
+        // For rests, use a simplified calculation
+        if (item is RestItem)
         {
-            NoteItem => NoteheadWidth / 2,  // Half notehead to the left of center
-            ChordItem => NoteheadWidth / 2,
-            RestItem => RestWidth / 2,
-            _ => NoteheadWidth / 2
+            return extent;
+        }
+        
+        // Add accidental width if present
+        string? accidental = item switch
+        {
+            NoteItem note => note.Accidental,
+            ChordItem chord => chord.Notes.Select(n => n.Accidental).FirstOrDefault(a => a != null),
+            _ => null
         };
         
-        // Add accidental width (accidentals are to the left of the notehead)
-        double accidentalExtent = item switch
+        if (accidental != null)
         {
-            NoteItem note => note.Accidental != null ? AccidentalWidth + 2 : 0,
-            ChordItem chord => chord.Notes.Any(n => n.Accidental != null) ? AccidentalWidth + 2 : 0,
-            _ => 0
-        };
+            var accBBox = GlyphMetrics.GetAccidentalBBox(accidental);
+            extent += GlyphMetrics.ToPixels(accBBox.Width) + AccidentalNoteGap;
+        }
         
-        return extent + accidentalExtent;
+        return extent;
     }
     
     /// <summary>
-    /// Calculates the right extent of an item from its reference point.
+    /// Calculates the right extent of an item from its reference point (notehead center).
     /// This includes the notehead and any dots.
     /// </summary>
+    /// <remarks>
+    /// Reference point is at the horizontal center of the notehead.
+    /// Right extent = half notehead + dots (if present)
+    /// </remarks>
     public static double CalculateRightExtent(MusicItem item)
     {
-        double extent = item switch
-        {
-            NoteItem => NoteheadWidth / 2,  // Half notehead to the right of center
-            ChordItem => NoteheadWidth / 2,
-            RestItem => RestWidth / 2,
-            _ => NoteheadWidth / 2
-        };
+        // Get notehead metrics
+        int noteValue = GetNoteValue(item);
+        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+        
+        // Base extent: from center to right edge of notehead
+        double extent = GlyphMetrics.ToPixels(noteheadBBox.Width - noteheadBBox.CenterX);
         
         // Add dot width
         int dots = GetDots(item);
         if (dots > 0)
         {
-            extent += dots * DotWidth;
+            var dotBBox = GlyphMetrics.AugmentationDot;
+            // Each dot plus a small gap
+            extent += dots * GlyphMetrics.ToPixels(dotBBox.Width + 0.3);
         }
         
         return extent;
+    }
+    
+    /// <summary>
+    /// Gets the note value (1=whole, 2=half, 4=quarter, etc.) for a music item.
+    /// </summary>
+    private static int GetNoteValue(MusicItem item)
+    {
+        var duration = item.Duration;
+        return (int)duration.Denominator;
     }
     
     /// <summary>
@@ -222,10 +249,9 @@ public static class SpacingRules
         // Calculate ideal distance based on duration (Gourlay algorithm)
         double idealDistance = CalculateDurationWidth(prevDuration);
         
-        // Calculate minimum distance to avoid collision
-        double prevRightExtent = prevItem != null ? CalculateRightExtent(prevItem) : BarlinePadding;
-        double nextLeftExtent = nextItem != null ? CalculateLeftExtent(nextItem) : BarlinePadding;
-        double minDistance = prevRightExtent + nextLeftExtent + MinItemGap;
+        // Calculate minimum distance using Skyline-based collision detection
+        // Use staffY = 0 as reference; actual Y positions come from StaffPosition
+        double minDistance = CalculateSkylineDistance(prevItem, nextItem, staffY: 0);
         
         // Ensure ideal is at least min
         idealDistance = Math.Max(idealDistance, minDistance);
@@ -266,5 +292,177 @@ public static class SpacingRules
         springs.Add(CreateSpring(lastItem, null, lastItem.Duration));
         
         return springs.ToImmutableArray();
+    }
+
+    // ========================================
+    // Skyline Generation
+    // ========================================
+    
+    /// <summary>
+    /// Creates the right skyline for a music item.
+    /// The right skyline represents the rightmost extent at each Y coordinate.
+    /// </summary>
+    /// <param name="item">The music item</param>
+    /// <param name="referenceX">X coordinate of the reference point (notehead center)</param>
+    /// <param name="staffY">Y coordinate of the staff's middle line</param>
+    public static Skyline CreateRightSkyline(MusicItem item, double referenceX, double staffY)
+    {
+        var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
+        
+        int noteValue = GetNoteValue(item);
+        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+        double noteheadCenterX = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+        double noteheadLeftX = referenceX - noteheadCenterX;
+        double noteheadWidth = GlyphMetrics.ToPixels(noteheadBBox.Width);
+        
+        // Get note Y position
+        double noteY = item switch
+        {
+            NoteItem note => staffY - note.StaffPosition * GlyphMetrics.SpaceHeight / 2,
+            _ => staffY
+        };
+        
+        // Add notehead box
+        double noteheadYBottom = noteY - GlyphMetrics.ToPixels(noteheadBBox.Top);
+        double noteheadYTop = noteY - GlyphMetrics.ToPixels(noteheadBBox.Bottom);
+        boxes.Add((noteheadYBottom, noteheadYTop, noteheadLeftX, noteheadLeftX + noteheadWidth));
+        
+        // Add flag if present (8th notes and shorter with stems)
+        if (item is NoteItem note2 && noteValue >= 8)
+        {
+            var flagBBox = GlyphMetrics.GetFlagBBox(noteValue, note2.StemUp);
+            if (flagBBox != default)
+            {
+                // Flag is attached to the stem end
+                double stemHeight = 3.5 * GlyphMetrics.SpaceHeight;
+                double stemEndY = note2.StemUp ? noteY - stemHeight : noteY + stemHeight;
+                
+                // Flag position (attached at stem)
+                double stemX = note2.StemUp 
+                    ? noteheadLeftX + GlyphMetrics.ToPixels(GlyphMetrics.StemUpSE.X)
+                    : noteheadLeftX + GlyphMetrics.ToPixels(GlyphMetrics.StemDownNW.X);
+                
+                double flagYBottom, flagYTop;
+                if (note2.StemUp)
+                {
+                    // Flag extends downward from stem end
+                    flagYBottom = stemEndY;
+                    flagYTop = stemEndY - GlyphMetrics.ToPixels(flagBBox.Bottom - flagBBox.Top);
+                }
+                else
+                {
+                    // Flag extends upward from stem end  
+                    flagYTop = stemEndY;
+                    flagYBottom = stemEndY + GlyphMetrics.ToPixels(flagBBox.Top - flagBBox.Bottom);
+                }
+                
+                double flagWidth = GlyphMetrics.ToPixels(flagBBox.Width);
+                boxes.Add((Math.Min(flagYBottom, flagYTop), Math.Max(flagYBottom, flagYTop), 
+                           stemX, stemX + flagWidth));
+            }
+        }
+        
+        // Add dots if present
+        int dots = GetDots(item);
+        if (dots > 0)
+        {
+            var dotBBox = GlyphMetrics.AugmentationDot;
+            double dotWidth = GlyphMetrics.ToPixels(dotBBox.Width);
+            double dotGap = GlyphMetrics.ToPixels(0.3);
+            
+            for (int d = 0; d < dots; d++)
+            {
+                double dotX = noteheadLeftX + noteheadWidth + dotGap + d * (dotWidth + dotGap);
+                double dotYCenter = noteY - GlyphMetrics.ToPixels(dotBBox.CenterY);
+                double dotRadius = GlyphMetrics.ToPixels(dotBBox.Height / 2);
+                boxes.Add((dotYCenter - dotRadius, dotYCenter + dotRadius, dotX, dotX + dotWidth));
+            }
+        }
+        
+        return Skyline.FromBoxes(boxes, Skyline.Direction.Right);
+    }
+    
+    /// <summary>
+    /// Creates the left skyline for a music item.
+    /// The left skyline represents the leftmost extent at each Y coordinate.
+    /// </summary>
+    public static Skyline CreateLeftSkyline(MusicItem item, double referenceX, double staffY)
+    {
+        var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
+        
+        int noteValue = GetNoteValue(item);
+        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+        double noteheadCenterX = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+        double noteheadLeftX = referenceX - noteheadCenterX;
+        double noteheadWidth = GlyphMetrics.ToPixels(noteheadBBox.Width);
+        
+        // Get note Y position
+        double noteY = item switch
+        {
+            NoteItem note => staffY - note.StaffPosition * GlyphMetrics.SpaceHeight / 2,
+            _ => staffY
+        };
+        
+        // Add notehead box
+        double noteheadYBottom = noteY - GlyphMetrics.ToPixels(noteheadBBox.Top);
+        double noteheadYTop = noteY - GlyphMetrics.ToPixels(noteheadBBox.Bottom);
+        boxes.Add((noteheadYBottom, noteheadYTop, noteheadLeftX, noteheadLeftX + noteheadWidth));
+        
+        // Add accidental if present (to the left of notehead)
+        string? accidental = item switch
+        {
+            NoteItem note => note.Accidental,
+            ChordItem chord => chord.Notes.Select(n => n.Accidental).FirstOrDefault(a => a != null),
+            _ => null
+        };
+        
+        if (accidental != null)
+        {
+            var accBBox = GlyphMetrics.GetAccidentalBBox(accidental);
+            double accWidth = GlyphMetrics.ToPixels(accBBox.Width);
+            double accNoteGap = GlyphMetrics.ToPixels(GlyphMetrics.AccidentalNoteGap);
+            double accX = noteheadLeftX - accWidth - accNoteGap;
+            
+            double accYBottom = noteY - GlyphMetrics.ToPixels(accBBox.Top);
+            double accYTop = noteY - GlyphMetrics.ToPixels(accBBox.Bottom);
+            boxes.Add((accYBottom, accYTop, accX, accX + accWidth));
+        }
+        
+        return Skyline.FromBoxes(boxes, Skyline.Direction.Left);
+    }
+    
+    /// <summary>
+    /// Calculates the minimum distance between two items using their skylines.
+    /// </summary>
+    public static double CalculateSkylineDistance(MusicItem? prevItem, MusicItem? nextItem, 
+                                                   double staffY)
+    {
+        // For barline-to-item or item-to-barline, use simple calculation
+        if (prevItem == null || nextItem == null)
+        {
+            double prevExtent = prevItem != null ? CalculateRightExtent(prevItem) : BarlinePadding;
+            double nextExtent = nextItem != null ? CalculateLeftExtent(nextItem) : BarlinePadding;
+            return prevExtent + nextExtent + MinItemGap;
+        }
+        
+        // Create skylines (using 0 as reference X - we only care about relative distances)
+        var prevRightSkyline = CreateRightSkyline(prevItem, 0, staffY);
+        var nextLeftSkyline = CreateLeftSkyline(nextItem, 0, staffY);
+        
+        // Distance is negative of the skyline overlap
+        // We need: prevRight + gap + nextLeft >= 0
+        // So: minDistance = -skylineDistance + gap
+        double skylineDistance = prevRightSkyline.Distance(nextLeftSkyline);
+        
+        // If skylines don't overlap vertically, use simple extent calculation
+        if (double.IsInfinity(skylineDistance))
+        {
+            double prevExtent = CalculateRightExtent(prevItem);
+            double nextExtent = CalculateLeftExtent(nextItem);
+            return prevExtent + nextExtent + MinItemGap;
+        }
+        
+        // MinDistance = gap needed to separate skylines
+        return -skylineDistance + MinItemGap;
     }
 }

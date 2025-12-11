@@ -198,4 +198,50 @@ render score ""test.svg"" {
         var svg = renderer.Render(score, layout);
         File.WriteAllText(@"C:\MyProj\LilySharp\samples\fur-elise-check.svg", svg);
     }
+
+    [Fact]
+    public void GenerateFurEliseSvg_ForVisualCheck()
+    {
+        var source = File.ReadAllText(@"C:\MyProj\LilySharp\samples\fur-elise.lys");
+        var tree = SyntaxTree.Parse(source);
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, "rightHand");
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+        var renderer = new SvgRenderer();
+        var svg = renderer.Render(score, layout);
+        
+        var outputPath = @"C:\MyProj\LilySharp\samples\fur-elise-smufl.svg";
+        File.WriteAllText(outputPath, svg);
+        Console.WriteLine($"SVG generated: {svg.Length} bytes at {outputPath}");
+    }
+
+    [Fact]
+    public void Benchmark_FurElise()
+    {
+        var source = File.ReadAllText(@"C:\MyProj\LilySharp\samples\fur-elise.lys");
+        
+        // Warm up
+        var tree = SyntaxTree.Parse(source);
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, "rightHand");
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+        var renderer = new SvgRenderer();
+        var svg = renderer.Render(score, layout);
+        
+        // Measure
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        for (int i = 0; i < 100; i++)
+        {
+            tree = SyntaxTree.Parse(source);
+            score = collector.Collect(tree, "rightHand");
+            layout = layoutEngine.Layout(score);
+            svg = renderer.Render(score, layout);
+        }
+        sw.Stop();
+        
+        Console.WriteLine($"LilySharp (100 iterations): {sw.ElapsedMilliseconds} ms");
+        Console.WriteLine($"Per iteration: {sw.ElapsedMilliseconds / 100.0:F2} ms");
+    }
 }
