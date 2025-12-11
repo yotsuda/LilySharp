@@ -81,7 +81,7 @@ public class SvgTests
     {
         var svg = RenderSvg("{ c4 | d4 }");
         
-        // Barline is drawn using SMuFL glyph
+        // Barline is now drawn using SMuFL glyph (class="music")
         Assert.Contains(SmuflGlyphs.BarlineSingle.ToString(), svg);
     }
     
@@ -130,6 +130,7 @@ render score ""test.svg"" {
         var svg = RenderSvg(source);
         
         // Check for repeat barlines (SMuFL glyphs U+E040 and U+E041)
+        // RepeatLeft = U+E040, RepeatRight = U+E041
         Assert.Contains("\uE040", svg); // |: 
         Assert.Contains("\uE041", svg); // :|
     }
