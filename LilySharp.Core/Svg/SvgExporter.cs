@@ -81,20 +81,25 @@ public class SvgExporter
     private double _systemStartY;
     private readonly double _lineBreakThreshold = PageWidth - MarginRight - 50; // Leave some margin
     
+    // Metadata
+    private string? _title;
+    private string? _composer;
+    private int? _tempo;
+    
     public string Export(SyntaxTree tree)
     {
         // Reset all state
         _content = new StringBuilder();
         _sourceText = tree.Text;
-        _currentX = MarginLeft;
-        _currentY = MarginTop;
-        _systemStartY = MarginTop;
         _currentOctave = 4;
         _currentNoteName = 0;
         _defaultDuration = Fraction.Quarter;
         _currentClef = "treble";
         _keySignature = 0;
         _systemCount = 1;
+        _title = null;
+        _composer = null;
+        _tempo = null;
         
         // Use fixed page width for consistent staff lines
         var width = PageWidth;
@@ -103,9 +108,41 @@ public class SvgExporter
         var originalSvg = _svg;
         _svg = _content;
         
+        // First pass: collect metadata from top-level declarations
+        CollectMetadata(tree.GetRoot());
+        
+        // Calculate initial Y position based on whether we have title/composer
+        double headerHeight = 0;
+        if (_title != null || _composer != null)
+        {
+            headerHeight = 50; // Space for title and composer
+        }
+        
+        _currentY = MarginTop + headerHeight;
+        _systemStartY = _currentY;
+        _currentX = MarginLeft;
+        
+        // Draw title and composer if present
+        if (_title != null || _composer != null)
+        {
+            DrawTitleAndComposer();
+        }
+        
         // Draw first system's staff lines and clef
         WriteStaffLines(width - MarginRight);
         DrawClef();
+        
+        // Draw key signature if set
+        if (_keySignature != 0)
+        {
+            DrawKeySignature();
+        }
+        
+        // Draw tempo marking if present
+        if (_tempo.HasValue)
+        {
+            DrawTempoMarking();
+        }
         
         // Process syntax tree (this may create new systems)
         ProcessNode(tree.GetRoot());
@@ -115,7 +152,7 @@ public class SvgExporter
         _svg.Clear();
         
         // Calculate final height based on system count
-        var height = MarginTop + (_systemCount * (StaffHeight + SystemSpacing));
+        var height = MarginTop + headerHeight + (_systemCount * (StaffHeight + SystemSpacing));
         
         // Write final SVG with correct dimensions
         WriteHeader(width, height);
@@ -123,6 +160,145 @@ public class SvgExporter
         WriteFooter();
         
         return _svg.ToString();
+    }
+    
+    /// <summary>
+    /// Collect metadata from top-level declarations before rendering.
+    /// </summary>
+    private void CollectMetadata(SyntaxNode root)
+    {
+        foreach (var child in root.DescendantNodes())
+        {
+            if (child is MetadataDeclarationSyntax metadata)
+            {
+                var keyword = metadata.Keyword.ToLowerInvariant();
+                var values = metadata.Values.ToList();
+                
+                switch (keyword)
+                {
+                    case "title":
+                        if (values.Count > 0 && values[0] is SyntaxTokenNode titleToken)
+                            _title = titleToken.Text.Trim('"');
+                        break;
+                    case "composer":
+                        if (values.Count > 0 && values[0] is SyntaxTokenNode composerToken)
+                            _composer = composerToken.Text.Trim('"');
+                        break;
+                    case "tempo":
+                        if (values.Count > 0 && values[0] is SyntaxTokenNode tempoToken)
+                            if (int.TryParse(tempoToken.Text, out int tempo))
+                                _tempo = tempo;
+                        break;
+                    case "key":
+                        // Key signature is handled separately in ProcessNode
+                        break;
+                }
+            }
+            else if (child is TempoDeclarationSyntax tempoDecl)
+            {
+                var values = tempoDecl.Values.ToList();
+                if (values.Count > 0 && values[0] is SyntaxTokenNode tempoToken)
+                    if (int.TryParse(tempoToken.Text, out int tempo))
+                        _tempo = tempo;
+            }
+            else if (child is KeySignatureSyntax key)
+            {
+                _keySignature = CalculateKeySignature(key);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Draw title and composer at the top of the page.
+    /// </summary>
+    private void DrawTitleAndComposer()
+    {
+        double centerX = PageWidth / 2;
+        
+        if (_title != null)
+        {
+            // Title: centered, large font
+            _svg.AppendLine($"""  <text x="{centerX:F1}" y="30" font-family="serif" font-size="24" font-weight="bold" text-anchor="middle">{EscapeXml(_title)}</text>""");
+        }
+        
+        if (_composer != null)
+        {
+            // Composer: right-aligned, smaller font
+            double composerX = PageWidth - MarginRight;
+            _svg.AppendLine($"""  <text x="{composerX:F1}" y="50" font-family="serif" font-size="14" font-style="italic" text-anchor="end">{EscapeXml(_composer)}</text>""");
+        }
+    }
+    
+    /// <summary>
+    /// Draw tempo marking above the staff.
+    /// </summary>
+    private void DrawTempoMarking()
+    {
+        double tempoX = MarginLeft;
+        // LilyPond places tempo marks above staff with padding
+        // Position about 2.5 staff-spaces above the top staff line
+        double tempoY = _currentY - (SpaceHeight * 2.5);
+        
+        // Draw quarter note at smaller size (60% of normal music font)
+        // LilyPond uses padding of 0.8 staff-space between elements
+        double noteSize = FontSize * 0.6;  // Smaller note for tempo marking
+        double padding = SpaceHeight * 0.8;  // LilyPond standard padding
+        
+        // Quarter note glyph (smaller size)
+        _svg.AppendLine($"""  <text style="font-family: 'Bravura', 'Bravura Text'; font-size: {noteSize:F0}px;" x="{tempoX:F1}" y="{tempoY:F1}">{SmuflGlyphs.MetNoteQuarterUp}</text>""");
+        
+        // LilyPond style: note - space - equals - space - number
+        // Each element separated by equal padding for balanced appearance
+        double textSize = noteSize * 0.5;
+        double noteWidth = noteSize * 0.4;  // Approximate width of quarter note glyph
+        double equalsPadding = padding * 0.5;  // Padding on each side of equals sign
+        
+        // Position equals sign with equal spacing on both sides
+        double equalsX = tempoX + noteWidth + equalsPadding;
+        _svg.AppendLine($"""  <text x="{equalsX:F1}" y="{tempoY:F1}" font-family="Times New Roman, serif" font-size="{textSize:F0}" font-weight="bold">=</text>""");
+        
+        // Position number after equals with same padding
+        double numberX = equalsX + textSize * 0.6 + equalsPadding;  // equals width + padding
+        _svg.AppendLine($"""  <text x="{numberX:F1}" y="{tempoY:F1}" font-family="Times New Roman, serif" font-size="{textSize:F0}" font-weight="bold">{_tempo}</text>""");
+    }
+    
+    /// <summary>
+    /// Draw key signature (sharps or flats) after the clef.
+    /// </summary>
+    private void DrawKeySignature()
+    {
+        if (_keySignature == 0) return;
+        
+        bool isSharps = _keySignature > 0;
+        int count = Math.Abs(_keySignature);
+        char glyph = isSharps ? SmuflGlyphs.AccidentalSharp : SmuflGlyphs.AccidentalFlat;
+        
+        // Sharp positions (F, C, G, D, A, E, B) - line/space from top
+        // In treble clef: F5, C5, G5, D5, A4, E5, B4 
+        int[] sharpPositions = [8, 5, 9, 6, 3, 7, 4];  // Staff positions from bottom (0 = middle C ledger)
+        // Flat positions (B, E, A, D, G, C, F)
+        int[] flatPositions = [4, 7, 3, 6, 2, 5, 1];
+        
+        int[] positions = isSharps ? sharpPositions : flatPositions;
+        
+        for (int i = 0; i < count && i < positions.Length; i++)
+        {
+            int pos = positions[i];
+            double y = _currentY + StaffHeight - (pos * SpaceHeight / 2);
+            DrawGlyph(glyph, _currentX, y);
+            _currentX += 10;
+        }
+        
+        _currentX += 5; // Space after key signature
+    }
+    
+    private static string EscapeXml(string text)
+    {
+        return text
+            .Replace("&", "&amp;")
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;")
+            .Replace("\"", "&quot;");
     }
     
     private void WriteHeader(double width, double height)

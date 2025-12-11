@@ -56,6 +56,14 @@ public static class SmuflGlyphs
     // === Augmentation dot ===
     public const char AugmentationDot = '\uE1E7';
     
+    // === Metronome marks (for tempo indication) ===
+    public const char MetNoteDoubleWhole = '\uECA0';
+    public const char MetNoteWhole = '\uECA2';
+    public const char MetNoteHalfUp = '\uECA3';
+    public const char MetNoteQuarterUp = '\uECA5';   // ♩
+    public const char MetNote8thUp = '\uECA7';       // ♪
+    public const char MetNote16thUp = '\uECA9';
+    
     // === Time signatures ===
     public const char TimeSig0 = '\uE080';
     public const char TimeSig1 = '\uE081';
