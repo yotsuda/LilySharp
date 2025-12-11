@@ -1,4 +1,4 @@
-# LilySharp SVG Layout Architecture
+﻿# LilySharp SVG Layout Architecture
 
 ## 設計原則
 
@@ -299,3 +299,86 @@ LilySharp.Core/
 4. Phase 4: SvgRenderer 作成 (Score + ScoreLayout → SVG)
 5. Phase 5: SvgExporter をファサードとして再構成
 6. Phase 6: 既存の MusicElement.cs, SystemLayout.cs を削除
+
+## 実装状況 (2024-12)
+
+### 完了
+- Phase 1: ドメインモデル作成 ✅
+- Phase 2: MeasureCollector 作成 ✅
+- Phase 3: LayoutEngine 作成 ✅
+- Phase 4: SvgRenderer 作成 ✅
+- `svg2` コマンドで新アーキテクチャをテスト可能
+
+### 未完了
+- Phase 5: SvgExporter をファサードとして再構成
+- Phase 6: 旧ファイル削除 (MusicElement.cs, SystemLayout.cs)
+- LSP プレビューとの統合
+- セクション単位キャッシュの実装
+- GetGlobalMeasureIndex の正しい実装
+
+### 既知の問題
+- `SvgRenderer.GetGlobalMeasureIndex()` が近似値を返している
+- 旧 `SvgExporter` と新アーキテクチャが共存している状態
+
+## 設計決定事項
+
+### 表記法
+| 項目 | 決定 | 理由 |
+|------|------|------|
+| 小節線 | 入力必須 | 小節を基本単位として扱うため |
+| 状態リセット | セクション開始時 | 入力の利便性を維持しつつ、エラー伝播を制限 |
+| スコープ単位 | セクション | キャッシュ・インクリメンタル更新の粒度として適切 |
+| relative モード | 維持 | 入力の利便性のため |
+| 音価継承 | セクション内で継承 | 入力の利便性のため |
+
+### アーキテクチャ
+| 項目 | 決定 | 理由 |
+|------|------|------|
+| 基本単位 | 小節 (Measure) | 拍子検証、レイアウト、キャッシュに最適 |
+| データ構造 | 不変 (record) | 安全性、テスト容易性 |
+| レイヤー分離 | Model/Collector/Layout/Renderer | 関心の分離、テスト容易性 |
+| 間隔計算 | Gourlay アルゴリズム | 対数スケーリングで自然な音符間隔 |
+
+## 状態管理
+
+### セクション開始時にリセットされる状態
+- `_currentOctave` - 現在のオクターブ (デフォルト: 4)
+- `_lastPitchName` - 最後の音名 (デフォルト: 'c')
+- `_defaultDuration` - デフォルト音価 (デフォルト: 4分音符)
+
+### セクション内で継承される状態
+- relative モードでのオクターブ計算
+- 音価の継承
+
+## 次のステップ
+
+### 短期 (次回の作業)
+1. MeasureCollector でセクション開始時の状態リセットを明確化
+2. 旧 SvgExporter を新アーキテクチャのファサードとして再構成
+3. `svg` コマンドを新アーキテクチャに切り替え
+
+### 中期
+1. LSP プレビューを新アーキテクチャで動作させる
+2. セクション単位キャッシュの実装
+3. インクリメンタル更新の実装
+
+### 長期
+1. パフォーマンス計測と最適化
+2. パラレル処理の検討（セクション単位）
+3. エラーメッセージの改善
+
+## 参照リソース
+
+### 外部ソースコード
+| プロジェクト | パス | 参照ポイント |
+|-------------|------|-------------|
+| Roslyn | `C:\MyProj\roslyn` | Formatting Engine, Red-Green Tree, Workspace |
+| LilyPond | (未取得) | Spacing アルゴリズム、レイアウト |
+
+### Roslyn の参考ファイル
+- `src/Workspaces/Core/Portable/Formatting/` - フォーマッティング全般
+- `src/Workspaces/SharedUtilitiesAndExtensions/Compiler/Core/Formatting/Engine/` - TokenStream, ChainedFormattingRules
+- `src/Workspaces/Core/Portable/Workspace/Solution/` - DocumentState, インクリメンタル更新
+
+### 学術参考文献
+- Gourlay (1987): "Spacing a Line of Music" - 音符間隔の対数スケーリング
