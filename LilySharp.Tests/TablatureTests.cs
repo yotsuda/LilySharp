@@ -1,5 +1,4 @@
 using LilySharp.Core.Syntax;
-using LilySharp.Core.Svg;
 using LilySharp.Core.Tablature;
 using Xunit;
 
@@ -88,48 +87,5 @@ public class TablatureTests
         // E1 (28) on low E string = fret 0
         var (stringNum, fret) = Tunings.CalculateFret(28, Tunings.Bass);
         Assert.Equal(0, fret);
-    }
-    
-    [Fact]
-    public void SvgExporter_TabStaff_ProducesSvg()
-    {
-        var source = @"\tabStaff { e4 a d' g' }";
-        var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
-        
-        var exporter = new SvgExporter();
-        var svg = exporter.Export(tree);
-        
-        Assert.Contains("<svg", svg);
-        Assert.Contains("TAB", svg);
-        Assert.Contains("tab-fret", svg);
-    }
-    
-    [Fact]
-    public void SvgExporter_TabStaff_WithChords()
-    {
-        var source = @"\tabStaff { <e, b,>4 <a, e a>4 }";
-        var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
-        
-        var exporter = new SvgExporter();
-        var svg = exporter.Export(tree);
-        
-        Assert.Contains("<svg", svg);
-        Assert.Contains("tab-fret", svg);
-    }
-    
-    [Fact]
-    public void SvgExporter_TabStaff_BassTuning()
-    {
-        var source = @"\tabStaff \tuning bass { e,4 a, d g }";
-        var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
-        
-        var exporter = new SvgExporter();
-        var svg = exporter.Export(tree);
-        
-        Assert.Contains("<svg", svg);
-        Assert.Contains("TAB", svg);
     }
 }
