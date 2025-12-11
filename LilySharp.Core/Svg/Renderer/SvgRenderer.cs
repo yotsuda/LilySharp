@@ -1,0 +1,471 @@
+﻿using System.Text;
+using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
+
+namespace LilySharp.Core.Svg.Renderer;
+
+/// <summary>
+/// Renders a Score with its ScoreLayout to SVG.
+/// </summary>
+public sealed class SvgRenderer
+{
+    // Layout constants
+    private const double SpaceHeight = 10;
+    private const double StaffHeight = 4 * SpaceHeight;
+    private const double FontSize = 40;
+    
+    // Derived from SMuFL defaults
+    private static double StaffLineThickness => SmuflDefaults.StaffLineThickness * SpaceHeight;
+    private static double StemThickness => SmuflDefaults.StemThickness * SpaceHeight;
+    private static double ThinBarlineThickness => SmuflDefaults.ThinBarlineThickness * SpaceHeight;
+    private static double LegerLineExtension => SmuflDefaults.LegerLineExtension * SpaceHeight;
+    private static double LegerLineThickness => SmuflDefaults.LegerLineThickness * SpaceHeight;
+    
+    // Stem attachment points
+    private static double StemUpAttachX => SmuflDefaults.StemUpAttachX * SpaceHeight;
+    private static double StemUpAttachY => SmuflDefaults.StemUpAttachY * SpaceHeight;
+    private static double StemDownAttachX => SmuflDefaults.StemDownAttachX * SpaceHeight;
+    private static double StemDownAttachY => SmuflDefaults.StemDownAttachY * SpaceHeight;
+    private static double StemHeight => 3.5 * SpaceHeight;
+    
+    private readonly StringBuilder _svg = new();
+    private readonly LayoutOptions _layoutOptions;
+    
+    public SvgRenderer(LayoutOptions? options = null)
+    {
+        _layoutOptions = options ?? LayoutOptions.Default;
+    }
+    
+    /// <summary>
+    /// Renders a score with its layout to SVG.
+    /// </summary>
+    public string Render(Score score, ScoreLayout layout)
+    {
+        _svg.Clear();
+        
+        WriteHeader(layout.Width, layout.Height);
+        
+        // Draw header (title/composer)
+        if (score.Title != null || score.Composer != null)
+            DrawHeader(score, layout);
+        
+        // Draw each system
+        for (int sysIdx = 0; sysIdx < layout.Systems.Length; sysIdx++)
+        {
+            var system = layout.Systems[sysIdx];
+            bool isFirstSystem = sysIdx == 0;
+            
+            DrawSystem(score, system, isFirstSystem);
+        }
+        
+        WriteFooter();
+        
+        return _svg.ToString();
+    }
+    
+    private void WriteHeader(double width, double height)
+    {
+        _svg.AppendLine($"""<?xml version="1.0" encoding="UTF-8"?>""");
+        _svg.AppendLine($"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">""");
+        _svg.AppendLine("<style>");
+        _svg.AppendLine("  @font-face { font-family: 'Bravura'; src: url('https://cdn.jsdelivr.net/npm/bravura-font@1.0.0/fonts/bravura/Bravura.woff2') format('woff2'); }");
+        _svg.AppendLine("  .music { font-family: 'Bravura', serif; }");
+        _svg.AppendLine($"  .staff {{ stroke: black; stroke-width: {StaffLineThickness:F2}; }}");
+        _svg.AppendLine($"  .stem {{ stroke: black; stroke-width: {StemThickness:F2}; }}");
+        _svg.AppendLine($"  .barline {{ stroke: black; stroke-width: {ThinBarlineThickness:F2}; }}");
+        _svg.AppendLine($"  .ledger {{ stroke: black; stroke-width: {LegerLineThickness:F2}; }}");
+        _svg.AppendLine("  .title { font-family: serif; font-size: 24px; font-weight: bold; }");
+        _svg.AppendLine("  .composer { font-family: serif; font-size: 16px; font-style: italic; }");
+        _svg.AppendLine("  .tempo { font-family: serif; font-size: 14px; }");
+        _svg.AppendLine("  .section-label { font-family: serif; font-size: 16px; font-weight: bold; }");
+        _svg.AppendLine("</style>");
+    }
+    
+    private void WriteFooter()
+    {
+        _svg.AppendLine("</svg>");
+    }
+    
+    private void DrawHeader(Score score, ScoreLayout layout)
+    {
+        double centerX = layout.Width / 2;
+        double y = _layoutOptions.MarginTop;
+        
+        if (score.Title != null)
+        {
+            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle">{EscapeXml(score.Title)}</text>""");
+            y += 25;
+        }
+        
+        if (score.Composer != null)
+        {
+            _svg.AppendLine($"""  <text class="composer" x="{centerX}" y="{y}" text-anchor="middle">{EscapeXml(score.Composer)}</text>""");
+        }
+    }
+    
+    private void DrawSystem(Score score, SystemLayout system, bool isFirstSystem)
+    {
+        double y = system.Y;
+        double startX = _layoutOptions.MarginLeft;
+        double endX = _layoutOptions.PageWidth - _layoutOptions.MarginRight;
+        
+        // Draw staff lines
+        for (int i = 0; i < 5; i++)
+        {
+            double lineY = y + i * SpaceHeight;
+            _svg.AppendLine($"""  <line class="staff" x1="{startX}" y1="{lineY}" x2="{endX}" y2="{lineY}"/>""");
+        }
+        
+        // Draw clef
+        double currentX = startX;
+        char clefGlyph = score.Clef switch
+        {
+            "bass" => SmuflGlyphs.FClef,
+            "alto" => SmuflGlyphs.CClef,
+            "tenor" => SmuflGlyphs.CClef,
+            _ => SmuflGlyphs.GClef
+        };
+        double clefY = score.Clef switch
+        {
+            "bass" => y + SpaceHeight,
+            "alto" => y + 2 * SpaceHeight,
+            "tenor" => y + SpaceHeight,
+            _ => y + 3 * SpaceHeight
+        };
+        DrawGlyph(clefGlyph, currentX, clefY);
+        currentX += 30;
+        
+        // Draw key signature
+        if (score.KeySignature.Count > 0)
+        {
+            currentX = DrawKeySignature(score.KeySignature, score.Clef, currentX, y);
+        }
+        
+        // Draw time signature (first system only)
+        if (isFirstSystem)
+        {
+            DrawTimeSignature(score.TimeSignature, currentX, y);
+            currentX += 25;
+        }
+        
+        // Draw tempo marking (first system only)
+        if (isFirstSystem && score.Tempo.HasValue)
+        {
+            DrawTempoMarking(score.Tempo.Value, startX, y);
+        }
+        
+        // Draw measures
+        int measureIndex = 0;
+        foreach (var measureLayout in system.Measures)
+        {
+            var measure = score.Voice.Measures[GetGlobalMeasureIndex(system, measureIndex)];
+            DrawMeasure(measure, measureLayout, y);
+            measureIndex++;
+        }
+    }
+    
+    private int GetGlobalMeasureIndex(SystemLayout system, int localIndex)
+    {
+        // Calculate global measure index based on system index and local index
+        int globalIndex = 0;
+        for (int i = 0; i < system.SystemIndex; i++)
+        {
+            // This is a simplification - in a full implementation, we'd track measure counts per system
+            globalIndex += 4; // Approximate
+        }
+        return globalIndex + localIndex;
+    }
+    
+    private void DrawMeasure(Measure measure, MeasureLayout layout, double systemY)
+    {
+        double x = layout.X;
+        double staffBottom = systemY + StaffHeight;
+        
+        // Draw section label if present
+        if (measure.SectionLabel != null)
+        {
+            DrawSectionLabel(measure.SectionLabel, x, systemY);
+        }
+        
+        // Draw start barline
+        if (measure.StartBarline != BarlineType.None)
+        {
+            DrawBarline(measure.StartBarline, x, systemY);
+        }
+        
+        // Draw items
+        for (int i = 0; i < measure.Items.Length; i++)
+        {
+            var item = measure.Items[i];
+            var itemLayout = layout.Items[i];
+            double itemX = x + itemLayout.X;
+            
+            switch (item)
+            {
+                case NoteItem note:
+                    DrawNote(note, itemX, systemY);
+                    break;
+                case RestItem rest:
+                    DrawRest(rest, itemX, systemY);
+                    break;
+                case ChordItem chord:
+                    DrawChord(chord, itemX, systemY);
+                    break;
+            }
+        }
+        
+        // Draw end barline
+        double endX = x + layout.Width - SpacingRules.GetBarlineWidth(measure.EndBarline);
+        DrawBarline(measure.EndBarline, endX, systemY);
+    }
+    
+    private void DrawNote(NoteItem note, double x, double systemY)
+    {
+        double noteY = systemY + StaffHeight - (note.StaffPosition * SpaceHeight / 2);
+        int noteValue = GetNoteValue(note.BaseDuration);
+        double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
+        
+        // Draw accidental
+        if (note.Accidental != null)
+        {
+            char accGlyph = note.Accidental switch
+            {
+                "doubleSharp" => SmuflGlyphs.AccidentalDoubleSharp,
+                "sharp" => SmuflGlyphs.AccidentalSharp,
+                "flat" => SmuflGlyphs.AccidentalFlat,
+                "doubleFlat" => SmuflGlyphs.AccidentalDoubleFlat,
+                _ => SmuflGlyphs.AccidentalNatural
+            };
+            DrawGlyph(accGlyph, x - 12, noteY);
+        }
+        
+        // Draw ledger lines
+        if (note.NeedsLedgerLines)
+        {
+            DrawLedgerLines(note.StaffPosition, x, noteheadWidth, systemY);
+        }
+        
+        // Draw notehead
+        char notehead = SmuflGlyphs.GetNotehead(noteValue);
+        DrawGlyph(notehead, x, noteY, note.SourcePosition);
+        
+        // Draw stem
+        if (noteValue >= 2)
+        {
+            double stemX = note.StemUp ? x + StemUpAttachX : x + StemDownAttachX;
+            double stemAttachY = note.StemUp ? noteY - StemUpAttachY : noteY - StemDownAttachY;
+            double stemEndY = note.StemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
+            
+            _svg.AppendLine($"""  <line class="stem" x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}"/>""");
+            
+            // Draw flag
+            var flag = SmuflGlyphs.GetFlag(noteValue, note.StemUp);
+            if (flag.HasValue)
+            {
+                DrawGlyph(flag.Value, stemX, stemEndY);
+            }
+        }
+        
+        // Draw dots
+        for (int d = 0; d < note.Dots; d++)
+        {
+            DrawGlyph(SmuflGlyphs.AugmentationDot, x + noteheadWidth + 3 + (d * 6), noteY - 2);
+        }
+    }
+    
+    private void DrawRest(RestItem rest, double x, double systemY)
+    {
+        int noteValue = GetNoteValue(rest.BaseDuration);
+        double restY = systemY + 2 * SpaceHeight;
+        
+        if (noteValue == 1)
+            restY = systemY + SpaceHeight;
+        else if (noteValue == 2)
+            restY = systemY + 2 * SpaceHeight;
+        
+        char restGlyph = SmuflGlyphs.GetRest(noteValue);
+        DrawGlyph(restGlyph, x, restY, rest.SourcePosition);
+    }
+    
+    private void DrawChord(ChordItem chord, double x, double systemY)
+    {
+        int noteValue = GetNoteValue(chord.BaseDuration);
+        double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
+        char notehead = SmuflGlyphs.GetNotehead(noteValue);
+        
+        foreach (var note in chord.Notes)
+        {
+            double noteY = systemY + StaffHeight - (note.StaffPosition * SpaceHeight / 2);
+            
+            // Draw accidental
+            if (note.Accidental != null)
+            {
+                char accGlyph = note.Accidental switch
+                {
+                    "doubleSharp" => SmuflGlyphs.AccidentalDoubleSharp,
+                    "sharp" => SmuflGlyphs.AccidentalSharp,
+                    "flat" => SmuflGlyphs.AccidentalFlat,
+                    "doubleFlat" => SmuflGlyphs.AccidentalDoubleFlat,
+                    _ => SmuflGlyphs.AccidentalNatural
+                };
+                DrawGlyph(accGlyph, x - 12, noteY);
+            }
+            
+            // Draw ledger lines
+            if (note.NeedsLedgerLines)
+            {
+                DrawLedgerLines(note.StaffPosition, x, noteheadWidth, systemY);
+            }
+            
+            // Draw notehead
+            DrawGlyph(notehead, x, noteY, chord.SourcePosition);
+        }
+        
+        // Draw single stem for chord
+        if (noteValue >= 2 && chord.Notes.Length > 0)
+        {
+            int stemNotePos = chord.StemUp
+                ? chord.Notes.Min(n => n.StaffPosition)
+                : chord.Notes.Max(n => n.StaffPosition);
+            double stemNoteY = systemY + StaffHeight - (stemNotePos * SpaceHeight / 2);
+            
+            double stemX = chord.StemUp ? x + StemUpAttachX : x + StemDownAttachX;
+            double stemAttachY = chord.StemUp ? stemNoteY - StemUpAttachY : stemNoteY - StemDownAttachY;
+            double stemEndY = chord.StemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
+            
+            _svg.AppendLine($"""  <line class="stem" x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}"/>""");
+            
+            // Draw flag
+            var flag = SmuflGlyphs.GetFlag(noteValue, chord.StemUp);
+            if (flag.HasValue)
+            {
+                DrawGlyph(flag.Value, stemX, stemEndY);
+            }
+        }
+    }
+    
+    private void DrawBarline(BarlineType type, double x, double systemY)
+    {
+        if (type == BarlineType.None) return;
+        
+        double y = systemY + StaffHeight;
+        char glyph = type switch
+        {
+            BarlineType.RepeatStart => SmuflGlyphs.RepeatLeft,
+            BarlineType.RepeatEnd => SmuflGlyphs.RepeatRight,
+            BarlineType.RepeatBoth => SmuflGlyphs.RepeatRightLeft,
+            BarlineType.Double => SmuflGlyphs.BarlineDouble,
+            BarlineType.Final => SmuflGlyphs.BarlineFinal,
+            _ => SmuflGlyphs.BarlineSingle
+        };
+        
+        DrawGlyph(glyph, x, y);
+    }
+    
+    private void DrawSectionLabel(string label, double x, double systemY)
+    {
+        double labelY = systemY - 15;
+        double padding = 4;
+        double boxWidth = label.Length * 10 + padding * 2;
+        double boxHeight = 20;
+        
+        _svg.AppendLine($"""  <rect x="{x - padding}" y="{labelY - boxHeight + 5}" width="{boxWidth}" height="{boxHeight}" fill="none" stroke="black" stroke-width="1"/>""");
+        _svg.AppendLine($"""  <text class="section-label" x="{x}" y="{labelY}">{EscapeXml(label)}</text>""");
+    }
+    
+    private double DrawKeySignature(KeySignature keySig, string clef, double x, double systemY)
+    {
+        if (keySig.Count == 0) return x;
+        
+        int[] sharpPositions = clef switch
+        {
+            "bass" => [4, 1, 5, 2, 6, 3, 0],
+            _ => [6, 3, 7, 4, 1, 5, 2]
+        };
+        
+        int[] flatPositions = clef switch
+        {
+            "bass" => [0, 3, -1, 2, 5, 1, 4],
+            _ => [2, 5, 1, 4, 0, 3, -1]
+        };
+        
+        char glyph = keySig.IsSharps ? SmuflGlyphs.AccidentalSharp : SmuflGlyphs.AccidentalFlat;
+        int[] positions = keySig.IsSharps ? sharpPositions : flatPositions;
+        
+        for (int i = 0; i < keySig.Count; i++)
+        {
+            double accY = systemY + StaffHeight - (positions[i] * SpaceHeight / 2);
+            DrawGlyph(glyph, x, accY);
+            x += 10;
+        }
+        
+        return x + 5;
+    }
+    
+    private void DrawTimeSignature(TimeSignature timeSig, double x, double y)
+    {
+        char topGlyph = GetTimeNumberGlyph(timeSig.Beats);
+        char bottomGlyph = GetTimeNumberGlyph(timeSig.BeatType);
+        
+        DrawGlyph(topGlyph, x, y + SpaceHeight);
+        DrawGlyph(bottomGlyph, x, y + 3 * SpaceHeight);
+    }
+    
+    private void DrawTempoMarking(int tempo, double x, double systemY)
+    {
+        double tempoY = systemY - 25;
+        string tempoText = $"♩ = {tempo}";
+        _svg.AppendLine($"""  <text class="tempo" x="{x}" y="{tempoY}">{tempoText}</text>""");
+    }
+    
+    private void DrawLedgerLines(int staffPosition, double x, double noteheadWidth, double systemY)
+    {
+        double extension = LegerLineExtension;
+        double ledgerX1 = x - extension;
+        double ledgerX2 = x + noteheadWidth + extension;
+        
+        // Lines above staff
+        if (staffPosition >= 10)
+        {
+            for (int pos = 10; pos <= staffPosition; pos += 2)
+            {
+                double ledgerY = systemY + StaffHeight - (pos * SpaceHeight / 2);
+                _svg.AppendLine($"""  <line class="ledger" x1="{ledgerX1:F1}" y1="{ledgerY:F1}" x2="{ledgerX2:F1}" y2="{ledgerY:F1}"/>""");
+            }
+        }
+        
+        // Lines below staff
+        if (staffPosition <= -2)
+        {
+            for (int pos = -2; pos >= staffPosition; pos -= 2)
+            {
+                double ledgerY = systemY + StaffHeight - (pos * SpaceHeight / 2);
+                _svg.AppendLine($"""  <line class="ledger" x1="{ledgerX1:F1}" y1="{ledgerY:F1}" x2="{ledgerX2:F1}" y2="{ledgerY:F1}"/>""");
+            }
+        }
+    }
+    
+    private void DrawGlyph(char glyph, double x, double y, int? sourcePosition = null)
+    {
+        string dataAttr = sourcePosition.HasValue ? $" data-source=\"{sourcePosition}\"" : "";
+        _svg.AppendLine($"  <text class=\"music\" x=\"{x:F1}\" y=\"{y:F1}\" font-size=\"{FontSize}\"{dataAttr}>{glyph}</text>");
+    }
+    
+    private static int GetNoteValue(Semantics.Fraction duration)
+    {
+        // Convert fraction to note value (1=whole, 2=half, 4=quarter, etc.)
+        return (int)duration.Denominator;
+    }
+    
+    private static char GetTimeNumberGlyph(int number) => SmuflGlyphs.GetTimeSigDigit(number);
+    
+    private static string EscapeXml(string text)
+    {
+        return text
+            .Replace("&", "&amp;")
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;")
+            .Replace("\"", "&quot;")
+            .Replace("'", "&apos;");
+    }
+}

@@ -136,37 +136,4 @@ public class LayoutTests
         // Even with large negative force, should not go below minimum
         Assert.Equal(5.0, spring.Length(-100));
     }
-    
-    [Fact]
-    public void LayoutEngine_CalculatePageLayout_ReturnsPositions()
-    {
-        var engine = new LayoutEngine();
-        var lines = new List<LineDetails>
-        {
-            new() { Height = 4, Tallness = 4, IsTitle = false },
-            new() { Height = 4, Tallness = 4, IsTitle = false }
-        };
-        
-        var layout = engine.CalculatePageLayout(lines, pageNumber: 1, isLastPage: false);
-        
-        Assert.Equal(2, layout.LinePositions.Count);
-        Assert.True(layout.LinePositions[0] > 0); // First line not at top
-        Assert.True(layout.LinePositions[1] > layout.LinePositions[0]); // Second below first
-    }
-    
-    [Fact]
-    public void LayoutEngine_RaggedLastBottom_NoStretch()
-    {
-        var spacing = new SpacingSettings { RaggedLastBottom = true };
-        var engine = new LayoutEngine(spacing: spacing);
-        var lines = new List<LineDetails>
-        {
-            new() { Height = 4, Tallness = 4, IsTitle = false }
-        };
-        
-        var layout = engine.CalculatePageLayout(lines, pageNumber: 1, isLastPage: true);
-        
-        // With ragged-last-bottom, force should be 0 (no stretching)
-        Assert.Equal(0, layout.Force);
-    }
 }

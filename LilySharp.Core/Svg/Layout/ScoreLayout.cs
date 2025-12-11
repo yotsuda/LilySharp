@@ -1,0 +1,46 @@
+using System.Collections.Immutable;
+
+namespace LilySharp.Core.Svg.Layout;
+
+/// <summary>
+/// Layout information for a single music item within a measure.
+/// </summary>
+public readonly record struct ItemLayout(
+    int ItemIndex,
+    double X,       // X offset from measure start
+    double Width    // Allocated width (may include stretch)
+);
+
+/// <summary>
+/// Layout information for a single measure.
+/// </summary>
+public sealed record MeasureLayout(
+    int MeasureIndex,
+    double X,                              // X position of measure start
+    double Width,                          // Total measure width (including barlines)
+    ImmutableArray<ItemLayout> Items       // Layout of items within the measure
+);
+
+/// <summary>
+/// Layout information for a single system (staff line).
+/// </summary>
+public sealed record SystemLayout(
+    int SystemIndex,
+    double Y,                              // Y position of system top
+    double PrefixWidth,                    // Width of clef + key + time
+    ImmutableArray<MeasureLayout> Measures // Measures in this system
+);
+
+/// <summary>
+/// Complete layout information for a score.
+/// </summary>
+public sealed record ScoreLayout(
+    double Width,
+    double Height,
+    double HeaderHeight,                   // Space for title/composer
+    ImmutableArray<SystemLayout> Systems
+)
+{
+    /// <summary>Total number of systems.</summary>
+    public int SystemCount => Systems.Length;
+}

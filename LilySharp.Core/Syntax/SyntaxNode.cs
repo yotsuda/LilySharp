@@ -136,6 +136,8 @@ public abstract class SyntaxNode
             SyntaxKind.SectionReference => new SectionReferenceSyntax((SectionReferenceGreen)green, this, position),
             SyntaxKind.NavigationMark => new NavigationMarkSyntax((NavigationMarkGreen)green, this, position),
             SyntaxKind.RenderDeclaration => new RenderDeclarationSyntax((RenderDeclarationGreen)green, this, position),
+            SyntaxKind.StaffRender => new StaffRenderSyntax((StaffRenderGreen)green, this, position),
+            SyntaxKind.TabRender => new TabRenderSyntax((TabRenderGreen)green, this, position),
             
             _ => new GenericSyntaxNode(green, this, position)
         };
