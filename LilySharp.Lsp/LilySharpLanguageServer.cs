@@ -1519,8 +1519,15 @@ public sealed class LilySharpLanguageServer
         
         try
         {
-            var exporter = new SvgExporter();
-            var svg = exporter.Export(doc.Tree);
+            // New architecture: Collector -> Layout -> Renderer
+            var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
+            var score = collector.Collect(doc.Tree, null);
+            
+            var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
+            var layout = layoutEngine.Layout(score);
+            
+            var renderer = new LilySharp.Core.Svg.Renderer.SvgRenderer();
+            var svg = renderer.Render(score, layout);
             return new SvgResponse 
             { 
                 Svg = svg, 
