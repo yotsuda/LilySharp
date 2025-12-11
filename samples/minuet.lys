@@ -4,7 +4,7 @@ composer "J.S. Bach"
 
 tempo 108
 time 3/4
-key g major
+key des major
 
 // Sections
 section A {

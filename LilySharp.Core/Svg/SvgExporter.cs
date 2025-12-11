@@ -348,6 +348,12 @@ public class SvgExporter
         
         // Draw clef at the beginning of new system
         DrawClef();
+        
+        // Draw key signature if set
+        if (_keySignature != 0)
+        {
+            DrawKeySignature();
+        }
     }
     
 
