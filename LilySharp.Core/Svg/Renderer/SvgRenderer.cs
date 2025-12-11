@@ -218,11 +218,15 @@ public sealed class SvgRenderer
     
     private void DrawNote(NoteItem note, double x, double systemY)
     {
+        // x is the reference point (center of notehead in Spring-Rod model)
         double noteY = systemY + StaffHeight - (note.StaffPosition * SpaceHeight / 2);
         int noteValue = GetNoteValue(note.BaseDuration);
         double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
         
-        // Draw accidental
+        // Convert reference point to notehead left edge (SMuFL glyphs are drawn from left edge)
+        double noteheadLeftX = x - noteheadWidth / 2;
+        
+        // Draw accidental (to the left of notehead)
         if (note.Accidental != null)
         {
             char accGlyph = note.Accidental switch
@@ -233,23 +237,25 @@ public sealed class SvgRenderer
                 "doubleFlat" => SmuflGlyphs.AccidentalDoubleFlat,
                 _ => SmuflGlyphs.AccidentalNatural
             };
-            DrawGlyph(accGlyph, x - 12, noteY);
+            // Accidental is drawn to the left of notehead with a small gap
+            double accidentalX = noteheadLeftX - SpacingRules.AccidentalWidth - 2;
+            DrawGlyph(accGlyph, accidentalX, noteY);
         }
         
         // Draw ledger lines
         if (note.NeedsLedgerLines)
         {
-            DrawLedgerLines(note.StaffPosition, x, noteheadWidth, systemY);
+            DrawLedgerLines(note.StaffPosition, noteheadLeftX, noteheadWidth, systemY);
         }
         
         // Draw notehead
         char notehead = SmuflGlyphs.GetNotehead(noteValue);
-        DrawGlyph(notehead, x, noteY, note.SourcePosition);
+        DrawGlyph(notehead, noteheadLeftX, noteY, note.SourcePosition);
         
-        // Draw stem
+        // Draw stem (stem attachment is relative to notehead left edge)
         if (noteValue >= 2)
         {
-            double stemX = note.StemUp ? x + StemUpAttachX : x + StemDownAttachX;
+            double stemX = note.StemUp ? noteheadLeftX + StemUpAttachX : noteheadLeftX + StemDownAttachX;
             double stemAttachY = note.StemUp ? noteY - StemUpAttachY : noteY - StemDownAttachY;
             double stemEndY = note.StemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
             
@@ -263,10 +269,10 @@ public sealed class SvgRenderer
             }
         }
         
-        // Draw dots
+        // Draw dots (to the right of notehead)
         for (int d = 0; d < note.Dots; d++)
         {
-            DrawGlyph(SmuflGlyphs.AugmentationDot, x + noteheadWidth + 3 + (d * 6), noteY - 2);
+            DrawGlyph(SmuflGlyphs.AugmentationDot, noteheadLeftX + noteheadWidth + 3 + (d * 6), noteY - 2);
         }
     }
     

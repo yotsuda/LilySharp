@@ -155,8 +155,14 @@ public sealed class LayoutEngine
     }
     
     /// <summary>
-    /// Layouts items within a measure with proportional spacing.
+    /// Layouts items within a measure using the Spring-Rod model.
     /// </summary>
+    /// <remarks>
+    /// The Spring-Rod model:
+    /// 1. Creates springs between adjacent items (and between barlines and items)
+    /// 2. Each spring has an ideal distance (based on duration) and minimum distance (to avoid collision)
+    /// 3. A solver finds the force that achieves the target width while respecting constraints
+    /// </remarks>
     private ImmutableArray<ItemLayout> LayoutMeasureItems(Measure measure, double totalWidth)
     {
         if (measure.Items.Length == 0)
@@ -166,42 +172,35 @@ public sealed class LayoutEngine
         double startBarlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline);
         double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
         
-        // Available width for items
-        double contentWidth = totalWidth - startBarlineWidth - endBarlineWidth;
+        // Create springs for the measure
+        var springs = SpacingRules.CreateSpringsForMeasure(measure);
         
-        // Calculate minimum widths and stretch weights
-        double totalMinWidth = 0;
-        double totalStretchWeight = 0;
-        var itemInfo = new List<(double minWidth, double stretchWeight)>();
+        // Calculate target width for the spring chain
+        // This is the distance from after start barline to before end barline
+        double targetWidth = totalWidth - startBarlineWidth - endBarlineWidth;
         
-        foreach (var item in measure.Items)
-        {
-            double minWidth = SpacingRules.CalculateItemWidth(item);
-            double stretchWeight = SpacingRules.CalculateStretchWeight(item);
-            
-            itemInfo.Add((minWidth, stretchWeight));
-            totalMinWidth += minWidth;
-            totalStretchWeight += stretchWeight;
-        }
+        // Solve for the force that achieves target width
+        var solver = new SpringSolver(springs);
+        double force = solver.SolveForWidth(targetWidth);
         
-        // Calculate extra space and distribute proportionally
-        double extraSpace = Math.Max(0, contentWidth - totalMinWidth);
+        // Get positions (these are reference point positions relative to start barline)
+        var positions = solver.GetPositions(force, startX: 0);
         
-        // Layout items
+        // Convert to ItemLayout
+        // positions[0] = first item position
+        // positions[i + 1] = position of item i
+        // positions[N] = end position (should equal targetWidth)
         var layouts = new List<ItemLayout>();
-        double currentX = startBarlineWidth;
         
         for (int i = 0; i < measure.Items.Length; i++)
         {
-            double baseWidth = itemInfo[i].minWidth;
-            double stretch = totalStretchWeight > 0 
-                ? extraSpace * (itemInfo[i].stretchWeight / totalStretchWeight)
-                : extraSpace / measure.Items.Length;
+            // X position relative to measure start (add startBarlineWidth)
+            double x = startBarlineWidth + positions[i + 1];
             
-            double itemWidth = baseWidth + stretch;
+            // Width is distance to next position
+            double width = positions[i + 2] - positions[i + 1];
             
-            layouts.Add(new ItemLayout(i, currentX, itemWidth));
-            currentX += itemWidth;
+            layouts.Add(new ItemLayout(i, x, width));
         }
         
         return layouts.ToImmutableArray();

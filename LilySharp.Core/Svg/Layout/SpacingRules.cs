@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
@@ -43,18 +44,6 @@ public static class SpacingRules
     public const double TimeSignatureWidth = 25;
     
     /// <summary>
-    /// Calculates the minimum width for a music item based on its duration.
-    /// </summary>
-    public static double CalculateItemWidth(MusicItem item)
-    {
-        double baseWidth = CalculateDurationWidth(item.Duration);
-        double accidentalWidth = GetAccidentalWidth(item);
-        int dots = GetDots(item);
-        
-        return baseWidth + accidentalWidth + (dots * DotWidth);
-    }
-    
-    /// <summary>
     /// Calculates width based on duration using logarithmic scaling.
     /// </summary>
     /// <remarks>
@@ -82,31 +71,29 @@ public static class SpacingRules
     }
     
     /// <summary>
-    /// Calculates the stretch weight for a music item.
-    /// Longer notes have more weight and receive more extra space during justification.
+    /// Calculates the minimum width for a measure using the Spring-Rod model.
     /// </summary>
-    public static double CalculateStretchWeight(MusicItem item)
-    {
-        // Weight is proportional to duration
-        return item.Duration.ToDouble();
-    }
-    
-    /// <summary>
-    /// Calculates the minimum width for a measure.
-    /// </summary>
+    /// <remarks>
+    /// The minimum width is the sum of all spring MinDistances plus barline widths.
+    /// This ensures no visual collisions when the measure is at its minimum size.
+    /// </remarks>
     public static double CalculateMeasureMinWidth(Measure measure)
     {
         double width = 0;
         
-        // Start barline
+        // Barline widths
         width += GetBarlineWidth(measure.StartBarline);
-        
-        // Items
-        foreach (var item in measure.Items)
-            width += CalculateItemWidth(item);
-        
-        // End barline
         width += GetBarlineWidth(measure.EndBarline);
+        
+        // Spring minimum distances (content area)
+        if (measure.Items.Length > 0)
+        {
+            var springs = CreateSpringsForMeasure(measure);
+            foreach (var spring in springs)
+            {
+                width += spring.MinDistance;
+            }
+        }
         
         return width;
     }
@@ -157,5 +144,127 @@ public static class SpacingRules
             ChordItem chord => chord.Dots,
             _ => 0
         };
+    }
+
+    // ========================================
+    // Spring-Rod Model Support
+    // ========================================
+    
+    /// <summary>Notehead width (reference point is center).</summary>
+    public const double NoteheadWidth = 12;
+    
+    /// <summary>Rest width.</summary>
+    public const double RestWidth = 10;
+    
+    /// <summary>Minimum gap between items.</summary>
+    public const double MinItemGap = 4;
+    
+    /// <summary>Padding between barline and first/last item.</summary>
+    public const double BarlinePadding = 8;
+    
+    /// <summary>
+    /// Calculates the left extent of an item from its reference point.
+    /// This includes accidentals which are drawn to the left of the notehead.
+    /// </summary>
+    public static double CalculateLeftExtent(MusicItem item)
+    {
+        double extent = item switch
+        {
+            NoteItem => NoteheadWidth / 2,  // Half notehead to the left of center
+            ChordItem => NoteheadWidth / 2,
+            RestItem => RestWidth / 2,
+            _ => NoteheadWidth / 2
+        };
+        
+        // Add accidental width (accidentals are to the left of the notehead)
+        double accidentalExtent = item switch
+        {
+            NoteItem note => note.Accidental != null ? AccidentalWidth + 2 : 0,
+            ChordItem chord => chord.Notes.Any(n => n.Accidental != null) ? AccidentalWidth + 2 : 0,
+            _ => 0
+        };
+        
+        return extent + accidentalExtent;
+    }
+    
+    /// <summary>
+    /// Calculates the right extent of an item from its reference point.
+    /// This includes the notehead and any dots.
+    /// </summary>
+    public static double CalculateRightExtent(MusicItem item)
+    {
+        double extent = item switch
+        {
+            NoteItem => NoteheadWidth / 2,  // Half notehead to the right of center
+            ChordItem => NoteheadWidth / 2,
+            RestItem => RestWidth / 2,
+            _ => NoteheadWidth / 2
+        };
+        
+        // Add dot width
+        int dots = GetDots(item);
+        if (dots > 0)
+        {
+            extent += dots * DotWidth;
+        }
+        
+        return extent;
+    }
+    
+    /// <summary>
+    /// Creates a spring between two adjacent items.
+    /// </summary>
+    /// <param name="prevItem">The previous item (null for barline-to-first-item)</param>
+    /// <param name="nextItem">The next item (null for last-item-to-barline)</param>
+    /// <param name="prevDuration">Duration of previous item (for ideal distance calculation)</param>
+    public static Spring CreateSpring(MusicItem? prevItem, MusicItem? nextItem, Fraction prevDuration)
+    {
+        // Calculate ideal distance based on duration (Gourlay algorithm)
+        double idealDistance = CalculateDurationWidth(prevDuration);
+        
+        // Calculate minimum distance to avoid collision
+        double prevRightExtent = prevItem != null ? CalculateRightExtent(prevItem) : BarlinePadding;
+        double nextLeftExtent = nextItem != null ? CalculateLeftExtent(nextItem) : BarlinePadding;
+        double minDistance = prevRightExtent + nextLeftExtent + MinItemGap;
+        
+        // Ensure ideal is at least min
+        idealDistance = Math.Max(idealDistance, minDistance);
+        
+        // Calculate stiffness (inverse of duration - shorter notes are stiffer)
+        double durationValue = prevDuration.ToDouble();
+        double stiffness = durationValue > 0 ? 1.0 / durationValue : 10.0;
+        
+        return new Spring(idealDistance, minDistance, stiffness);
+    }
+    
+    /// <summary>
+    /// Creates all springs for a measure.
+    /// </summary>
+    /// <param name="measure">The measure to create springs for</param>
+    /// <returns>Array of springs (one between each pair of adjacent reference points)</returns>
+    public static ImmutableArray<Spring> CreateSpringsForMeasure(Measure measure)
+    {
+        if (measure.Items.Length == 0)
+            return ImmutableArray<Spring>.Empty;
+        
+        var springs = new List<Spring>();
+        
+        // Spring from start barline to first item
+        var firstItem = measure.Items[0];
+        springs.Add(CreateSpring(null, firstItem, Fraction.Quarter)); // Use quarter note as default
+        
+        // Springs between items
+        for (int i = 0; i < measure.Items.Length - 1; i++)
+        {
+            var prevItem = measure.Items[i];
+            var nextItem = measure.Items[i + 1];
+            springs.Add(CreateSpring(prevItem, nextItem, prevItem.Duration));
+        }
+        
+        // Spring from last item to end barline
+        var lastItem = measure.Items[^1];
+        springs.Add(CreateSpring(lastItem, null, lastItem.Duration));
+        
+        return springs.ToImmutableArray();
     }
 }
