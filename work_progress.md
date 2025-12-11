@@ -108,12 +108,14 @@ feature/smufl-spacing
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| BeamGroup.cs | 🔍 | High | 2h | 連桁グループモデル（BeamGroup, BeamMember, BeamLayout） |
-| BeamDetector.cs | 🔍 | High | 2h | 連桁検出（自動グループ化） |
-| BeamEngraver.cs | 🔍 | High | 4h | beam 位置計算（基本実装） |
-| LayoutEngine.cs (Beam統合) | 🔍 | High | 1h | LayoutEngine への Beam 統合 |
-| BeamQuanting.cs | 🚀 | High | 12h | beam-quanting.cc 完全再現（1200行） |
-| SvgRenderer.cs (連桁描画) | 🔍 | High | 2h | path 要素で描画 |
+| BeamGroup.cs | ✅ | High | 2h | 連桁グループモデル（BeamGroup, BeamMember, BeamLayout） |
+| BeamDetector.cs | ✅ | High | 2h | 連桁検出（自動グループ化） |
+| BeamEngraver.cs | ✅ | High | 4h | beam 位置計算（BeamScoringProblem 統合） |
+| LayoutEngine.cs (Beam統合) | ✅ | High | 1h | LayoutEngine への Beam 統合 |
+| SvgRenderer.cs (連桁描画) | ✅ | High | 2h | path 要素で描画 |
+| BeamQuantParameters.cs | 🔍 | High | 1h | Lilypond Beam_quant_parameters 移植 |
+| BeamConfiguration.cs | 🔍 | High | 1h | Lilypond Beam_configuration 移植 |
+| BeamScoringProblem.cs | 🔍 | High | 8h | Lilypond beam-quanting.cc 基本移植（7 scorers） |
 
 ## Phase 4: タイ・スラー 🚀
 

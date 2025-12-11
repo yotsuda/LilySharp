@@ -1,0 +1,105 @@
+using Xunit;
+using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Semantics;
+using System.Collections.Immutable;
+
+namespace LilySharp.Tests;
+
+public class BeamScoringTests
+{
+    private static NoteItem CreateNote(int staffPosition) 
+        => new(staffPosition, Fraction.Eighth, 0, null, false, 0);
+    
+    [Fact]
+    public void BeamScoringProblem_SolvesForTwoNotes()
+    {
+        // Arrange: Two 8th notes ascending (staff pos 0 to 4)
+        var members = ImmutableArray.Create(
+            new BeamMember(CreateNote(0), 1, 0, 1, 0, 0),
+            new BeamMember(CreateNote(4), 1, 1, 0, 4, 1)
+        );
+        var group = new BeamGroup(members, 0, 0, stemUp: true);
+        
+        var xPositions = new List<double> { 50.0, 100.0 };
+        var problem = new BeamScoringProblem(group, xPositions, 10.0);
+        
+        // Act
+        var (leftY, rightY) = problem.Solve();
+        
+        // Assert: Beam should be above notes (negative Y for stem up)
+        Assert.True(leftY < 0, "Left Y should be negative for stem up");
+    }
+    
+    [Fact]
+    public void BeamScoringProblem_StemDownBeamBelowNotes()
+    {
+        // Arrange: Two 8th notes, stem down
+        var members = ImmutableArray.Create(
+            new BeamMember(CreateNote(6), 1, 0, 1, 6, 0),
+            new BeamMember(CreateNote(3), 1, 1, 0, 3, 1)
+        );
+        var group = new BeamGroup(members, 0, 0, stemUp: false);
+        
+        var xPositions = new List<double> { 50.0, 100.0 };
+        var problem = new BeamScoringProblem(group, xPositions, 10.0);
+        
+        // Act
+        var (leftY, rightY) = problem.Solve();
+        
+        // Assert: Beam should be below notes (larger Y for stem down)
+        Assert.True(leftY > 6, "Left Y should be below the highest note for stem down");
+    }
+    
+    [Fact]
+    public void BeamScoringProblem_RespectsMinimumStemLength()
+    {
+        // Arrange: Notes with same pitch
+        var members = ImmutableArray.Create(
+            new BeamMember(CreateNote(0), 1, 0, 1, 0, 0),
+            new BeamMember(CreateNote(0), 1, 1, 0, 0, 1)
+        );
+        var group = new BeamGroup(members, 0, 0, stemUp: true);
+        
+        var xPositions = new List<double> { 50.0, 100.0 };
+        var problem = new BeamScoringProblem(group, xPositions, 10.0);
+        
+        // Act
+        var (leftY, rightY) = problem.Solve();
+        
+        // Assert: Stem length should be at least 2.5 staff spaces
+        double stemLength = 0 - leftY; // noteY - beamY for stem up
+        Assert.True(stemLength >= 2.5, $"Stem length {stemLength} should be >= 2.5");
+    }
+    
+    [Fact]
+    public void BeamConfiguration_CalculatesSlope()
+    {
+        var config = new BeamConfiguration(-3.5, -2.5);
+        double xSpan = 50.0;
+        
+        double slope = config.GetSlope(xSpan);
+        
+        Assert.Equal(0.02, slope, 3);
+    }
+    
+    [Fact]
+    public void BeamConfiguration_CalculatesYAtPosition()
+    {
+        var config = new BeamConfiguration(-4.0, -3.0);
+        double leftX = 50.0;
+        double xSpan = 50.0;
+        
+        // At left edge
+        double yAtLeft = config.GetYAt(50.0, leftX, xSpan);
+        Assert.Equal(-4.0, yAtLeft, 3);
+        
+        // At right edge
+        double yAtRight = config.GetYAt(100.0, leftX, xSpan);
+        Assert.Equal(-3.0, yAtRight, 3);
+        
+        // At midpoint
+        double yAtMid = config.GetYAt(75.0, leftX, xSpan);
+        Assert.Equal(-3.5, yAtMid, 3);
+    }
+}
