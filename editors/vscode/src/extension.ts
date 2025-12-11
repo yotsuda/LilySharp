@@ -14,6 +14,9 @@ const previewPanels = new Map<string, vscode.WebviewPanel>();
 let debounceTimers = new Map<string, NodeJS.Timeout>();
 const outputChannel = vscode.window.createOutputChannel('Lily# Extension');
 
+// Track selected render per document
+const selectedRenders = new Map<string, string>();
+
 // Constants
 const DEBOUNCE_DELAY_DEFAULT = 300;
 const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
@@ -156,6 +159,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
 
     panel.onDidDispose(() => {
         previewPanels.delete(uri);
+        selectedRenders.delete(uri);
         const timer = debounceTimers.get(uri);
         if (timer) {
             clearTimeout(timer);
@@ -179,6 +183,12 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     );
                     vscode.window.showTextDocument(targetEditor.document, targetEditor.viewColumn);
                 }
+            } else if (message.type === 'selectRender') {
+                selectedRenders.set(uri, message.renderName);
+                const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
+                if (doc) {
+                    updatePreviewContent(doc, panel);
+                }
             }
         },
         undefined,
@@ -197,38 +207,55 @@ async function updatePreviewContent(document: vscode.TextDocument, panel: vscode
         return;
     }
 
+    const uri = document.uri.toString();
+    const selectedRender = selectedRenders.get(uri);
+
     try {
         const response = await client.sendRequest<SvgResponse>('lilysharp/svg', {
-            textDocument: { uri: document.uri.toString() }
+            textDocument: { uri: uri },
+            renderName: selectedRender || null
         });
 
         // Panel may have been disposed during async request
-        if (!previewPanels.has(document.uri.toString())) return;
+        if (!previewPanels.has(uri)) return;
 
         if (response.Error) {
             panel.webview.postMessage({ 
                 type: 'updateContent', 
-                error: response.Error 
+                error: response.Error,
+                renders: response.Renders || [],
+                selectedRender: selectedRender || ''
             });
         } else if (response.Svg) {
             panel.webview.postMessage({ 
                 type: 'updateContent', 
-                svg: response.Svg 
+                svg: response.Svg,
+                renders: response.Renders || [],
+                selectedRender: selectedRender || ''
             });
         }
     } catch (error) {
-        if (previewPanels.has(document.uri.toString())) {
+        if (previewPanels.has(uri)) {
             panel.webview.postMessage({ 
                 type: 'updateContent', 
-                error: `Failed to generate preview: ${error}` 
+                error: `Failed to generate preview: ${error}`,
+                renders: [],
+                selectedRender: ''
             });
         }
     }
 }
 
+interface RenderInfo {
+    Name: string;
+    Type: string;
+    Filename: string;
+}
+
 interface SvgResponse {
     Svg: string | null;
     Error: string | null;
+    Renders: RenderInfo[] | null;
 }
 
 function getPreviewHtml(): string {
@@ -240,16 +267,44 @@ function getPreviewHtml(): string {
     <style>
         body {
             margin: 0;
-            padding: 20px;
+            padding: 0;
             background: white;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .toolbar {
+            padding: 8px 12px;
+            background: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .toolbar label {
+            font-family: system-ui, sans-serif;
+            font-size: 13px;
+            color: #333;
+        }
+        .toolbar select {
+            padding: 4px 8px;
+            font-size: 13px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            min-width: 150px;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
             display: flex;
             justify-content: center;
             align-items: flex-start;
-            min-height: 100vh;
+            overflow: auto;
         }
         .container {
             max-width: 100%;
-            overflow: auto;
         }
         #svgContainer {
             transform-origin: top left;
@@ -294,6 +349,18 @@ function getPreviewHtml(): string {
             body {
                 background: #1e1e1e;
             }
+            .toolbar {
+                background: #2d2d2d;
+                border-bottom-color: #444;
+            }
+            .toolbar label {
+                color: #ccc;
+            }
+            .toolbar select {
+                background: #3c3c3c;
+                color: #ccc;
+                border-color: #555;
+            }
             #svgContainer svg {
                 filter: invert(1) hue-rotate(180deg);
             }
@@ -312,9 +379,17 @@ function getPreviewHtml(): string {
     </style>
 </head>
 <body>
-    <div class="container">
-        <div id="svgContainer">
-            <div class="loading">Loading preview...</div>
+    <div class="toolbar">
+        <label for="renderSelect">Render:</label>
+        <select id="renderSelect">
+            <option value="">(Default)</option>
+        </select>
+    </div>
+    <div class="main-content">
+        <div class="container">
+            <div id="svgContainer">
+                <div class="loading">Loading preview...</div>
+            </div>
         </div>
     </div>
     <div class="zoom-info" id="zoomInfo">100%</div>
@@ -329,6 +404,7 @@ function getPreviewHtml(): string {
         
         const svgContainer = document.getElementById('svgContainer');
         const zoomInfo = document.getElementById('zoomInfo');
+        const renderSelect = document.getElementById('renderSelect');
         let hideTimeout;
         let lastHighlightPos = -1;
 
@@ -370,10 +446,34 @@ function getPreviewHtml(): string {
                 .replace(/"/g, '&quot;');
         }
 
+        function updateRenderSelect(renders, selectedRender) {
+            const currentValue = renderSelect.value;
+            renderSelect.innerHTML = '<option value="">(Default)</option>';
+            
+            if (renders && renders.length > 0) {
+                // Filter score renders only
+                const scoreRenders = renders.filter(r => r.Type === 'score');
+                scoreRenders.forEach(render => {
+                    const option = document.createElement('option');
+                    option.value = render.Name;
+                    option.textContent = render.Filename || render.Name;
+                    if (render.Name === selectedRender) {
+                        option.selected = true;
+                    }
+                    renderSelect.appendChild(option);
+                });
+            }
+        }
+
+        renderSelect.addEventListener('change', () => {
+            vscode.postMessage({ type: 'selectRender', renderName: renderSelect.value });
+        });
+
         window.addEventListener('message', event => {
             const message = event.data;
             switch (message.type) {
                 case 'updateContent':
+                    updateRenderSelect(message.renders, message.selectedRender);
                     if (message.error) {
                         svgContainer.innerHTML = '<div class="error">' + escapeHtml(message.error) + '</div>';
                     } else if (message.svg) {

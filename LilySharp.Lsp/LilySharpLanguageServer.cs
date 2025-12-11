@@ -1502,6 +1502,9 @@ public sealed class LilySharpLanguageServer
             };
         }
         
+        // Extract render definitions
+        var renders = ExtractRenderInfo(doc.Tree);
+        
         if (doc.Tree.HasErrors)
         {
             var errors = string.Join("\n", doc.Tree.Diagnostics
@@ -1513,15 +1516,23 @@ public sealed class LilySharpLanguageServer
             return new SvgResponse 
             { 
                 Svg = null, 
-                Error = errors 
+                Error = errors,
+                Renders = renders
             };
         }
         
         try
         {
+            // Find the voice name to render based on selected render
+            string? voiceName = null;
+            if (!string.IsNullOrEmpty(@params.RenderName))
+            {
+                voiceName = GetVoiceNameFromRender(doc.Tree, @params.RenderName);
+            }
+            
             // New architecture: Collector -> Layout -> Renderer
             var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
-            var score = collector.Collect(doc.Tree, null);
+            var score = collector.Collect(doc.Tree, voiceName);
             
             var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
             var layout = layoutEngine.Layout(score);
@@ -1531,7 +1542,8 @@ public sealed class LilySharpLanguageServer
             return new SvgResponse 
             { 
                 Svg = svg, 
-                Error = null 
+                Error = null,
+                Renders = renders
             };
         }
         catch (Exception ex)
@@ -1539,9 +1551,127 @@ public sealed class LilySharpLanguageServer
             return new SvgResponse 
             { 
                 Svg = null, 
-                Error = ex.Message 
+                Error = ex.Message,
+                Renders = renders
             };
         }
+    }
+    
+    /// <summary>
+    /// Extract render definitions from the syntax tree.
+    /// </summary>
+    private RenderInfo[] ExtractRenderInfo(SyntaxTree tree)
+    {
+        var renders = new List<RenderInfo>();
+        foreach (var node in tree.GetRoot().DescendantNodes())
+        {
+            if (node is RenderDeclarationSyntax render)
+            {
+                // Get children: render [type] "filename" { ... }
+                string type = "score";
+                string filename = "";
+                
+                // Iterate through children using GetChild
+                for (int i = 0; ; i++)
+                {
+                    var child = render.GetChild(i);
+                    if (child == null) break;
+                    
+                    if (child is SyntaxTokenNode token)
+                    {
+                        var text = token.Text;
+                        if (text == "score" || text == "audio")
+                        {
+                            type = text;
+                        }
+                        else if (text.StartsWith("\"") && text.EndsWith("\""))
+                        {
+                            filename = text.Trim('"');
+                        }
+                    }
+                }
+                
+                // Use filename (without extension) as the name
+                var name = Path.GetFileNameWithoutExtension(filename);
+                if (string.IsNullOrEmpty(name))
+                {
+                    name = $"render_{renders.Count + 1}";
+                }
+                
+                renders.Add(new RenderInfo
+                {
+                    Name = name,
+                    Type = type,
+                    Filename = filename
+                });
+            }
+        }
+        return renders.ToArray();
+    }
+    
+    /// <summary>
+    /// Get the voice name from a render declaration.
+    /// </summary>
+    private string? GetVoiceNameFromRender(SyntaxTree tree, string renderName)
+    {
+        foreach (var node in tree.GetRoot().DescendantNodes())
+        {
+            if (node is RenderDeclarationSyntax render)
+            {
+                string filename = "";
+                
+                // Find filename
+                for (int i = 0; ; i++)
+                {
+                    var child = render.GetChild(i);
+                    if (child == null) break;
+                    
+                    if (child is SyntaxTokenNode token)
+                    {
+                        var text = token.Text;
+                        if (text.StartsWith("\"") && text.EndsWith("\""))
+                        {
+                            filename = text.Trim('"');
+                            break;
+                        }
+                    }
+                }
+                
+                var name = Path.GetFileNameWithoutExtension(filename);
+                if (name == renderName)
+                {
+                    // Find the first staff voice name
+                    foreach (var item in render.DescendantNodes())
+                    {
+                        if (item is StaffRenderSyntax staff)
+                        {
+                            // Get voice name from staff { voiceName }
+                            for (int i = 0; ; i++)
+                            {
+                                var staffChild = staff.GetChild(i);
+                                if (staffChild == null) break;
+                                
+                                if (staffChild is SyntaxTokenNode t && 
+                                    t.Kind != SyntaxKind.StaffKeyword &&
+                                    t.Kind != SyntaxKind.OpenBrace &&
+                                    t.Kind != SyntaxKind.CloseBrace &&
+                                    !IsClefKeyword(t.Kind))
+                                {
+                                    return t.Text;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    
+    private bool IsClefKeyword(SyntaxKind kind)
+    {
+        return kind is SyntaxKind.TrebleKeyword or SyntaxKind.BassKeyword 
+            or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword;
     }
 }
 
@@ -1551,6 +1681,11 @@ public sealed class LilySharpLanguageServer
 public class SvgParams
 {
     public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    /// <summary>
+    /// Optional render name to select which render block to use.
+    /// If null, returns the first score render or default preview.
+    /// </summary>
+    public string? RenderName { get; set; }
 }
 
 /// <summary>
@@ -1560,4 +1695,18 @@ public class SvgResponse
 {
     public string? Svg { get; set; }
     public string? Error { get; set; }
+    /// <summary>
+    /// List of available render definitions in the document.
+    /// </summary>
+    public RenderInfo[]? Renders { get; set; }
+}
+
+/// <summary>
+/// Information about a render definition.
+/// </summary>
+public class RenderInfo
+{
+    public string Name { get; set; } = "";
+    public string Type { get; set; } = "";  // "score" or "audio"
+    public string Filename { get; set; } = "";
 }
