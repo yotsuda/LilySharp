@@ -26,7 +26,7 @@ public sealed class SvgRenderer
     private static double StemUpAttachY => SmuflDefaults.StemUpAttachY * SpaceHeight;
     private static double StemDownAttachX => SmuflDefaults.StemDownAttachX * SpaceHeight;
     private static double StemDownAttachY => SmuflDefaults.StemDownAttachY * SpaceHeight;
-    private static double StemHeight => 3.5 * SpaceHeight;
+    private static double StemHeight => EngravingDefaults.DefaultStemLength * SpaceHeight;
     
     private readonly StringBuilder _svg = new();
     private readonly LayoutOptions _layoutOptions;
@@ -607,11 +607,10 @@ public sealed class SvgRenderer
             .Replace("'", "&apos;");
     }
     
-    // Beam constants (matching Lilypond defaults)
-    private const double BeamThickness = 0.48; // staff spaces
-    private const double LineThickness = 0.1;  // staff spaces (approximate)
-    // beam_translation = (2 * staff_space + line - beam_thickness) / 2
-    private const double BeamTranslation = (2.0 + LineThickness - BeamThickness) / 2.0; // ≈ 0.81 staff spaces
+    // Beam constants from EngravingDefaults (in staff spaces)
+    private static double BeamThickness => EngravingDefaults.BeamThickness;
+    private static double BeamTranslation => EngravingDefaults.BeamTranslation;
+    private static double BeamletLength => EngravingDefaults.BeamletLength;
     
     private void DrawBeams(ScoreLayout layout)
     {
@@ -732,17 +731,17 @@ public sealed class SvgRenderer
             // Beamlet direction: extend toward the neighboring note
             // If there's a note to the left, extend left; otherwise extend right
             bool extendLeft = startIdx > 0;
-            double beamletLength = SpaceHeight * 1.0; // 1 staff space
+            double beamletLengthPx = BeamletLength * SpaceHeight;
             
             if (extendLeft)
             {
-                segLeftX = memberX - beamletLength;
+                segLeftX = memberX - beamletLengthPx;
                 segRightX = memberX;
             }
             else
             {
                 segLeftX = memberX;
-                segRightX = memberX + beamletLength;
+                segRightX = memberX + beamletLengthPx;
             }
         }
         else

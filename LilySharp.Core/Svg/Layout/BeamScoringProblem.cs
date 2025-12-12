@@ -22,11 +22,11 @@ public sealed class BeamScoringProblem
     private readonly int[] _staffPositions;
     private readonly int _maxBeamCount;
     
-    // Beam constants (in staff positions, where 1 staff space = 2 staff positions)
-    private const double BeamThickness = 0.48 * 2; // staff positions
-    private const double BeamTranslation = 0.58 * 2; // distance between beams in staff positions
-    private const double IdealStemLength = 3.5 * 2; // 7 staff positions
-    private const double MinStemLength = 2.5 * 2; // 5 staff positions
+    // Beam constants (in staff positions, converted from EngravingDefaults)
+    private static readonly double BeamThickness = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamThickness);
+    private static readonly double BeamTranslation = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamTranslation);
+    private static readonly double IdealStemLength = EngravingDefaults.ToStaffPositions(EngravingDefaults.IdealStemLength);
+    private static readonly double MinStemLength = EngravingDefaults.ToStaffPositions(EngravingDefaults.MinStemLength);
     
     public BeamScoringProblem(
         BeamGroup group,
