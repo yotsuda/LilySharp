@@ -30,6 +30,7 @@ public sealed class SvgRenderer
     
     private readonly StringBuilder _svg = new();
     private readonly LayoutOptions _layoutOptions;
+    private Dictionary<MusicItem, double> _beamedStemEndYs = new();
     
     public SvgRenderer(LayoutOptions? options = null)
     {
@@ -43,6 +44,73 @@ public sealed class SvgRenderer
     {
         _svg.Clear();
         
+        // Build measure to system mapping for beam processing
+        var measureToSystem = new Dictionary<int, SystemLayout>();
+        foreach (var system in layout.Systems)
+        {
+            foreach (var measure in system.Measures)
+            {
+                measureToSystem[measure.MeasureIndex] = system;
+            }
+        }
+        
+        // Calculate stem end Y positions for beamed notes (all in pixels)
+        _beamedStemEndYs.Clear();
+        foreach (var beamLayout in layout.BeamLayouts)
+        {
+            if (!measureToSystem.TryGetValue(beamLayout.Group.MeasureIndex, out var system))
+                continue;
+            
+            var group = beamLayout.Group;
+            double staffMiddleY = system.Y + StaffHeight / 2;
+            
+            // Stem X offset from note center
+            var noteheadBBox = GlyphMetrics.GetNoteheadBBox(3);
+            double noteheadCenterX = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+            double stemOffsetX = group.StemUp 
+                ? StemUpAttachX - noteheadCenterX 
+                : StemDownAttachX - noteheadCenterX;
+            
+            // Convert beam endpoints to pixel coordinates at stem X positions
+            double leftStemX = beamLayout.LeftX + stemOffsetX;
+            double rightStemX = beamLayout.RightX + stemOffsetX;
+            double leftBeamCenterY = staffMiddleY - beamLayout.LeftY * SpaceHeight / 2;
+            double rightBeamCenterY = staffMiddleY - beamLayout.RightY * SpaceHeight / 2;
+            
+            // Beam slope in pixels
+            double beamSpanX = rightStemX - leftStemX;
+            double slopePx = beamSpanX > 0.001 ? (rightBeamCenterY - leftBeamCenterY) / beamSpanX : 0;
+            
+            // Beam thickness (pixels)
+            double beamThicknessPx = BeamThickness * SpaceHeight;
+            
+            for (int i = 0; i < group.Members.Length; i++)
+            {
+                var member = group.Members[i];
+                
+                // This note's stem X position
+                double noteCenterX = beamLayout.LeftX + (beamLayout.RightX - beamLayout.LeftX) * i / Math.Max(1, group.Members.Length - 1);
+                double stemX = noteCenterX + stemOffsetX;
+                
+                // Primary beam Y at this stem X (center of beam)
+                double primaryBeamCenterY = leftBeamCenterY + slopePx * (stemX - leftStemX);
+                
+                // Stem extends to the far edge of the primary beam (away from notehead)
+                double stemEndY;
+                if (group.StemUp)
+                {
+                    // Stem goes up, extends to top edge of primary beam (smallest Y)
+                    stemEndY = primaryBeamCenterY - beamThicknessPx / 2;
+                }
+                else
+                {
+                    // Stem goes down, extends to bottom edge of primary beam (largest Y)
+                    stemEndY = primaryBeamCenterY + beamThicknessPx / 2;
+                }
+                
+                _beamedStemEndYs[member.Item] = stemEndY;
+            }
+        }
         WriteHeader(layout.Width, layout.Height);
         
         // Draw header (title/composer)
@@ -57,6 +125,15 @@ public sealed class SvgRenderer
             
             DrawSystem(score, system, isFirstSystem);
         }
+        
+        // Draw beams
+        DrawBeams(layout);
+        
+        // Draw ties
+        DrawTies(layout);
+        
+        // Draw slurs
+        DrawSlurs(layout);
         
         WriteFooter();
         
@@ -169,11 +246,11 @@ public sealed class SvgRenderer
         foreach (var measureLayout in system.Measures)
         {
             var measure = score.Voice.Measures[measureLayout.MeasureIndex];
-            DrawMeasure(measure, measureLayout, y);
+            DrawMeasure(measure, measureLayout, measureLayout.MeasureIndex, y);
         }
     }
     
-    private void DrawMeasure(Measure measure, MeasureLayout layout, double systemY)
+    private void DrawMeasure(Measure measure, MeasureLayout layout, int measureIndex, double systemY)
     {
         double x = layout.X;
         double staffBottom = systemY + StaffHeight;
@@ -218,11 +295,19 @@ public sealed class SvgRenderer
     
     private void DrawNote(NoteItem note, double x, double systemY)
     {
-        double noteY = systemY + StaffHeight - (note.StaffPosition * SpaceHeight / 2);
+        // x is the reference point (center of notehead in Spring-Rod model)
+        double noteY = systemY + StaffHeight / 2 - (note.StaffPosition * SpaceHeight / 2);
         int noteValue = GetNoteValue(note.BaseDuration);
-        double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
         
-        // Draw accidental
+        // Get notehead metrics from GlyphMetrics
+        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+        double noteheadWidth = GlyphMetrics.ToPixels(noteheadBBox.Width);
+        double noteheadCenterX = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+        
+        // Convert reference point to notehead left edge (SMuFL glyphs are drawn from left edge)
+        double noteheadLeftX = x - noteheadCenterX;
+        
+        // Draw accidental (to the left of notehead)
         if (note.Accidental != null)
         {
             char accGlyph = note.Accidental switch
@@ -233,40 +318,77 @@ public sealed class SvgRenderer
                 "doubleFlat" => SmuflGlyphs.AccidentalDoubleFlat,
                 _ => SmuflGlyphs.AccidentalNatural
             };
-            DrawGlyph(accGlyph, x - 12, noteY);
+            
+            // Get accidental metrics
+            var accBBox = GlyphMetrics.GetAccidentalBBox(note.Accidental);
+            double accWidth = GlyphMetrics.ToPixels(accBBox.Width);
+            double accNoteGap = GlyphMetrics.ToPixels(GlyphMetrics.AccidentalNoteGap);
+            
+            // Accidental is drawn to the left of notehead with a gap
+            double accidentalX = noteheadLeftX - accWidth - accNoteGap;
+            DrawGlyph(accGlyph, accidentalX, noteY);
         }
         
         // Draw ledger lines
         if (note.NeedsLedgerLines)
         {
-            DrawLedgerLines(note.StaffPosition, x, noteheadWidth, systemY);
+            DrawLedgerLines(note.StaffPosition, noteheadLeftX, noteheadWidth, systemY);
         }
         
         // Draw notehead
         char notehead = SmuflGlyphs.GetNotehead(noteValue);
-        DrawGlyph(notehead, x, noteY, note.SourcePosition);
+        DrawGlyph(notehead, noteheadLeftX, noteY, note.SourcePosition);
         
-        // Draw stem
+        // Draw stem using GlyphMetrics anchor points
         if (noteValue >= 2)
         {
-            double stemX = note.StemUp ? x + StemUpAttachX : x + StemDownAttachX;
-            double stemAttachY = note.StemUp ? noteY - StemUpAttachY : noteY - StemDownAttachY;
-            double stemEndY = note.StemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
+            var stemAnchor = note.StemUp ? GlyphMetrics.StemUpSE : GlyphMetrics.StemDownNW;
+            double stemX = noteheadLeftX + GlyphMetrics.ToPixels(stemAnchor.X);
+            double stemAttachY = noteY - GlyphMetrics.ToPixels(stemAnchor.Y);
+            
+            // Use beam-calculated stem end if part of a beam group, otherwise fixed length
+            double stemEndY;
+            if (_beamedStemEndYs.TryGetValue(note, out double beamStemEndY))
+            {
+                stemEndY = beamStemEndY;
+            }
+            else
+            {
+                stemEndY = note.StemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
+            }
             
             _svg.AppendLine($"""  <line class="stem" x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}"/>""");
             
-            // Draw flag
-            var flag = SmuflGlyphs.GetFlag(noteValue, note.StemUp);
-            if (flag.HasValue)
+            // Draw flag (only if not beamed)
+            if (!_beamedStemEndYs.ContainsKey(note))
             {
-                DrawGlyph(flag.Value, stemX, stemEndY);
+                var flag = SmuflGlyphs.GetFlag(noteValue, note.StemUp);
+                if (flag.HasValue)
+                {
+                    DrawGlyph(flag.Value, stemX, stemEndY);
+                }
             }
         }
         
-        // Draw dots
+        // Draw dots (to the right of notehead)
+        var dotBBox = GlyphMetrics.AugmentationDot;
+        double dotWidth = GlyphMetrics.ToPixels(dotBBox.Width);
+        double dotGap = GlyphMetrics.ToPixels(0.3);  // Gap between notehead and first dot
         for (int d = 0; d < note.Dots; d++)
         {
-            DrawGlyph(SmuflGlyphs.AugmentationDot, x + noteheadWidth + 3 + (d * 6), noteY - 2);
+            double dotX = noteheadLeftX + noteheadWidth + dotGap + d * (dotWidth + dotGap);
+            
+            // Dots must avoid staff lines
+            // If note is on a line (StaffPosition is even), shift dot up by half a space
+            double dotYOffset = 0;
+            if (note.StaffPosition % 2 == 0)
+            {
+                // On a staff line - shift dot up to sit in the space above
+                dotYOffset = -SpaceHeight / 2;
+            }
+            
+            double dotY = noteY + dotYOffset;
+            DrawGlyph(SmuflGlyphs.AugmentationDot, dotX, dotY);
         }
     }
     
@@ -290,12 +412,17 @@ public sealed class SvgRenderer
         double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
         char notehead = SmuflGlyphs.GetNotehead(noteValue);
         
+        // Calculate accidental positions
+        var accidentalPlacement = new AccidentalPlacement();
+        var accidentalLayouts = accidentalPlacement.CalculatePositions(chord.Notes, SpaceHeight);
+        var accidentalMap = accidentalLayouts.ToDictionary(a => a.StaffPosition);
+        
         foreach (var note in chord.Notes)
         {
-            double noteY = systemY + StaffHeight - (note.StaffPosition * SpaceHeight / 2);
+            double noteY = systemY + StaffHeight / 2 - (note.StaffPosition * SpaceHeight / 2);
             
-            // Draw accidental
-            if (note.Accidental != null)
+            // Draw accidental with calculated position
+            if (note.Accidental != null && accidentalMap.TryGetValue(note.StaffPosition, out var accLayout))
             {
                 char accGlyph = note.Accidental switch
                 {
@@ -305,7 +432,7 @@ public sealed class SvgRenderer
                     "doubleFlat" => SmuflGlyphs.AccidentalDoubleFlat,
                     _ => SmuflGlyphs.AccidentalNatural
                 };
-                DrawGlyph(accGlyph, x - 12, noteY);
+                DrawGlyph(accGlyph, x + accLayout.XOffset, noteY);
             }
             
             // Draw ledger lines
@@ -324,19 +451,32 @@ public sealed class SvgRenderer
             int stemNotePos = chord.StemUp
                 ? chord.Notes.Min(n => n.StaffPosition)
                 : chord.Notes.Max(n => n.StaffPosition);
-            double stemNoteY = systemY + StaffHeight - (stemNotePos * SpaceHeight / 2);
+            double stemNoteY = systemY + StaffHeight / 2 - (stemNotePos * SpaceHeight / 2);
             
             double stemX = chord.StemUp ? x + StemUpAttachX : x + StemDownAttachX;
             double stemAttachY = chord.StemUp ? stemNoteY - StemUpAttachY : stemNoteY - StemDownAttachY;
-            double stemEndY = chord.StemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
+            
+            // Use beam-calculated stem end if part of a beam group, otherwise fixed length
+            double stemEndY;
+            if (_beamedStemEndYs.TryGetValue(chord, out double beamStemEndY))
+            {
+                stemEndY = beamStemEndY;
+            }
+            else
+            {
+                stemEndY = chord.StemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
+            }
             
             _svg.AppendLine($"""  <line class="stem" x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}"/>""");
             
-            // Draw flag
-            var flag = SmuflGlyphs.GetFlag(noteValue, chord.StemUp);
-            if (flag.HasValue)
+            // Draw flag (only if not beamed)
+            if (!_beamedStemEndYs.ContainsKey(chord))
             {
-                DrawGlyph(flag.Value, stemX, stemEndY);
+                var flag = SmuflGlyphs.GetFlag(noteValue, chord.StemUp);
+                if (flag.HasValue)
+                {
+                    DrawGlyph(flag.Value, stemX, stemEndY);
+                }
             }
         }
     }
@@ -391,7 +531,7 @@ public sealed class SvgRenderer
         
         for (int i = 0; i < keySig.Count; i++)
         {
-            double accY = systemY + StaffHeight - (positions[i] * SpaceHeight / 2);
+            double accY = systemY + StaffHeight / 2 - (positions[i] * SpaceHeight / 2);
             DrawGlyph(glyph, x, accY);
             x += 10;
         }
@@ -426,7 +566,7 @@ public sealed class SvgRenderer
         {
             for (int pos = 10; pos <= staffPosition; pos += 2)
             {
-                double ledgerY = systemY + StaffHeight - (pos * SpaceHeight / 2);
+                double ledgerY = systemY + StaffHeight / 2 - (pos * SpaceHeight / 2);
                 _svg.AppendLine($"""  <line class="ledger" x1="{ledgerX1:F1}" y1="{ledgerY:F1}" x2="{ledgerX2:F1}" y2="{ledgerY:F1}"/>""");
             }
         }
@@ -436,7 +576,7 @@ public sealed class SvgRenderer
         {
             for (int pos = -2; pos >= staffPosition; pos -= 2)
             {
-                double ledgerY = systemY + StaffHeight - (pos * SpaceHeight / 2);
+                double ledgerY = systemY + StaffHeight / 2 - (pos * SpaceHeight / 2);
                 _svg.AppendLine($"""  <line class="ledger" x1="{ledgerX1:F1}" y1="{ledgerY:F1}" x2="{ledgerX2:F1}" y2="{ledgerY:F1}"/>""");
             }
         }
@@ -456,6 +596,7 @@ public sealed class SvgRenderer
     
     private static char GetTimeNumberGlyph(int number) => SmuflGlyphs.GetTimeSigDigit(number);
     
+    
     private static string EscapeXml(string text)
     {
         return text
@@ -464,5 +605,263 @@ public sealed class SvgRenderer
             .Replace(">", "&gt;")
             .Replace("\"", "&quot;")
             .Replace("'", "&apos;");
+    }
+    
+    // Beam constants (matching Lilypond defaults)
+    private const double BeamThickness = 0.48; // staff spaces
+    private const double LineThickness = 0.1;  // staff spaces (approximate)
+    // beam_translation = (2 * staff_space + line - beam_thickness) / 2
+    private const double BeamTranslation = (2.0 + LineThickness - BeamThickness) / 2.0; // ≈ 0.81 staff spaces
+    
+    private void DrawBeams(ScoreLayout layout)
+    {
+        if (layout.BeamLayouts.Length == 0)
+            return;
+        
+        // Build measure to system mapping
+        var measureToSystem = new Dictionary<int, SystemLayout>();
+        foreach (var system in layout.Systems)
+        {
+            foreach (var measure in system.Measures)
+            {
+                measureToSystem[measure.MeasureIndex] = system;
+            }
+        }
+        
+        foreach (var beamLayout in layout.BeamLayouts)
+        {
+            if (!measureToSystem.TryGetValue(beamLayout.Group.MeasureIndex, out var system))
+                continue;
+            
+            DrawBeamGroup(beamLayout, system);
+        }
+    }
+    
+    private void DrawBeamGroup(BeamLayout beamLayout, SystemLayout system)
+    {
+        var group = beamLayout.Group;
+        double staffMiddleY = system.Y + StaffHeight / 2;
+        
+        // Stem X offset from note center (same calculation as in Render)
+        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(3);
+        double noteheadCenterX = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+        double stemOffsetX = group.StemUp 
+            ? StemUpAttachX - noteheadCenterX 
+            : StemDownAttachX - noteheadCenterX;
+        
+        // Beam endpoints at stem X positions (in pixels)
+        double leftStemX = beamLayout.LeftX + stemOffsetX;
+        double rightStemX = beamLayout.RightX + stemOffsetX;
+        double leftBeamCenterY = staffMiddleY - beamLayout.LeftY * SpaceHeight / 2;
+        double rightBeamCenterY = staffMiddleY - beamLayout.RightY * SpaceHeight / 2;
+        
+        // Find max beam count
+        int maxBeamCount = 0;
+        foreach (var member in group.Members)
+        {
+            maxBeamCount = Math.Max(maxBeamCount, member.BeamCount);
+        }
+        
+        double beamThicknessPx = BeamThickness * SpaceHeight;
+        double beamTranslationPx = BeamTranslation * SpaceHeight;
+        
+        for (int level = 0; level < maxBeamCount; level++)
+        {
+            // Offset for this beam level (from primary beam center)
+            // StemUp: secondary beams stack toward notehead (larger Y = downward)
+            // StemDown: secondary beams stack toward notehead (smaller Y = upward)
+            double levelOffset = level * beamTranslationPx;
+            if (!group.StemUp)
+                levelOffset = -levelOffset;
+            
+            double levelLeftY = leftBeamCenterY + levelOffset;
+            double levelRightY = rightBeamCenterY + levelOffset;
+            
+            DrawBeamLevel(beamLayout, level, leftStemX, levelLeftY, rightStemX, levelRightY, beamThicknessPx, stemOffsetX);
+        }
+    }
+    
+    private void DrawBeamLevel(BeamLayout beamLayout, int level, double leftX, double leftY, double rightX, double rightY, double thickness, double stemOffset)
+    {
+        var group = beamLayout.Group;
+        var members = group.Members;
+        
+        // Find continuous segments at this beam level
+        int i = 0;
+        while (i < members.Length)
+        {
+            // Find start of a segment
+            while (i < members.Length && members[i].BeamCount <= level)
+                i++;
+            
+            if (i >= members.Length)
+                break;
+            
+            int segmentStart = i;
+            
+            // Find end of segment
+            while (i < members.Length && members[i].BeamCount > level)
+                i++;
+            
+            int segmentEnd = i - 1;
+            
+            // Draw this segment
+            if (segmentStart <= segmentEnd)
+            {
+                DrawBeamSegment(beamLayout, segmentStart, segmentEnd, leftX, leftY, rightX, rightY, thickness, stemOffset);
+            }
+        }
+    }
+    
+    private void DrawBeamSegment(BeamLayout beamLayout, int startIdx, int endIdx, double leftX, double leftY, double rightX, double rightY, double thickness, double stemOffset)
+    {
+        var group = beamLayout.Group;
+        var members = group.Members;
+        
+        // Calculate X positions for segment start and end
+        // Use the adjusted leftX/rightX which already include stem offset
+        double segLeftX, segRightX, segLeftY, segRightY;
+        
+        if (startIdx == endIdx)
+        {
+            // Single-note beamlet
+            double span = rightX - leftX;
+            double t = members.Length > 1 ? (double)startIdx / (members.Length - 1) : 0;
+            double memberX = leftX + span * t;
+            
+            // Beamlet direction: extend toward the neighboring note
+            // If there's a note to the left, extend left; otherwise extend right
+            bool extendLeft = startIdx > 0;
+            double beamletLength = SpaceHeight * 1.0; // 1 staff space
+            
+            if (extendLeft)
+            {
+                segLeftX = memberX - beamletLength;
+                segRightX = memberX;
+            }
+            else
+            {
+                segLeftX = memberX;
+                segRightX = memberX + beamletLength;
+            }
+        }
+        else
+        {
+            // Multi-note beam segment
+            double span = rightX - leftX;
+            double tStart = members.Length > 1 ? (double)startIdx / (members.Length - 1) : 0;
+            double tEnd = members.Length > 1 ? (double)endIdx / (members.Length - 1) : 0;
+            
+            segLeftX = leftX + span * tStart;
+            segRightX = leftX + span * tEnd;
+        }
+        
+        // Interpolate Y positions
+        double slope = (rightX - leftX) > 0.001 ? (rightY - leftY) / (rightX - leftX) : 0;
+        segLeftY = leftY + slope * (segLeftX - leftX);
+        segRightY = leftY + slope * (segRightX - leftX);
+        
+        // Draw beam as a polygon (quadrilateral)
+        double halfThickness = thickness / 2;
+        
+        // Four corners of the beam
+        double x1 = segLeftX, y1 = segLeftY - halfThickness;  // top-left
+        double x2 = segRightX, y2 = segRightY - halfThickness; // top-right
+        double x3 = segRightX, y3 = segRightY + halfThickness; // bottom-right
+        double x4 = segLeftX, y4 = segLeftY + halfThickness;  // bottom-left
+        
+        _svg.AppendLine($"  <polygon points=\"{x1:F1},{y1:F1} {x2:F1},{y2:F1} {x3:F1},{y3:F1} {x4:F1},{y4:F1}\" fill=\"black\"/>");
+    }
+    
+    private void DrawTies(ScoreLayout layout)
+    {
+        if (layout.TieLayouts.Length == 0)
+            return;
+        
+        foreach (var tieLayout in layout.TieLayouts)
+        {
+            DrawTie(tieLayout);
+        }
+    }
+    
+    private void DrawTie(TieLayout tieLayout)
+    {
+        // Draw tie as a cubic Bezier curve
+        // SVG path: M startX,startY C control1X,control1Y control2X,control2Y endX,endY
+        
+        double startX = tieLayout.StartX;
+        double startY = tieLayout.StartY;
+        double endX = tieLayout.EndX;
+        double endY = tieLayout.EndY;
+        double c1x = tieLayout.Control1.X;
+        double c1y = tieLayout.Control1.Y;
+        double c2x = tieLayout.Control2.X;
+        double c2y = tieLayout.Control2.Y;
+        
+        // Draw the tie as a filled shape (two Bezier curves)
+        // Outer curve and inner curve to create thickness
+        double thickness = 0.12 * SpaceHeight; // Tie thickness
+        
+        // Offset for inner curve (direction depends on curve direction)
+        double offsetY = tieLayout.CurveUp ? thickness : -thickness;
+        
+        // Outer curve
+        string outerPath = $"M {startX:F1},{startY:F1} C {c1x:F1},{c1y:F1} {c2x:F1},{c2y:F1} {endX:F1},{endY:F1}";
+        
+        // Inner curve (reversed, with offset)
+        double innerC1y = c1y + offsetY;
+        double innerC2y = c2y + offsetY;
+        string innerPath = $"C {c2x:F1},{innerC2y:F1} {c1x:F1},{innerC1y:F1} {startX:F1},{startY:F1}";
+        
+        // Combined path (closed shape)
+        string fullPath = $"{outerPath} {innerPath} Z";
+        
+        _svg.AppendLine($"  <path d=\"{fullPath}\" fill=\"black\"/>");
+    }
+    
+    private void DrawSlurs(ScoreLayout layout)
+    {
+        if (layout.SlurLayouts.Length == 0)
+            return;
+        
+        foreach (var slurLayout in layout.SlurLayouts)
+        {
+            DrawSlur(slurLayout);
+        }
+    }
+    
+    private void DrawSlur(SlurLayout slurLayout)
+    {
+        // Draw slur as a cubic Bezier curve
+        // SVG path: M startX,startY C control1X,control1Y control2X,control2Y endX,endY
+        
+        double startX = slurLayout.StartX;
+        double startY = slurLayout.StartY;
+        double endX = slurLayout.EndX;
+        double endY = slurLayout.EndY;
+        double c1x = slurLayout.Control1.X;
+        double c1y = slurLayout.Control1.Y;
+        double c2x = slurLayout.Control2.X;
+        double c2y = slurLayout.Control2.Y;
+        
+        // Draw the slur as a filled shape (two Bezier curves)
+        // Outer curve and inner curve to create thickness
+        double thickness = 0.15 * SpaceHeight; // Slur thickness (slightly thicker than tie)
+        
+        // Offset for inner curve (direction depends on curve direction)
+        double offsetY = slurLayout.CurveUp ? thickness : -thickness;
+        
+        // Outer curve
+        string outerPath = $"M {startX:F1},{startY:F1} C {c1x:F1},{c1y:F1} {c2x:F1},{c2y:F1} {endX:F1},{endY:F1}";
+        
+        // Inner curve (reversed, with offset)
+        double innerC1y = c1y + offsetY;
+        double innerC2y = c2y + offsetY;
+        string innerPath = $"C {c2x:F1},{innerC2y:F1} {c1x:F1},{innerC1y:F1} {startX:F1},{startY:F1}";
+        
+        // Combined path (closed shape)
+        string fullPath = $"{outerPath} {innerPath} Z";
+        
+        _svg.AppendLine($"  <path d=\"{fullPath}\" fill=\"black\"/>");
     }
 }

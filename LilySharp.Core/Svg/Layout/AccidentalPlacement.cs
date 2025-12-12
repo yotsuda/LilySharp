@@ -1,0 +1,190 @@
+using System.Collections.Immutable;
+using LilySharp.Core.Svg.Model;
+
+namespace LilySharp.Core.Svg.Layout;
+
+/// <summary>
+/// Information about a positioned accidental within a chord.
+/// </summary>
+public readonly record struct AccidentalLayout(
+    /// <summary>Staff position of the note.</summary>
+    int StaffPosition,
+    /// <summary>The accidental type (sharp, flat, natural, etc.).</summary>
+    string Accidental,
+    /// <summary>X offset from the note column (negative = left of note).</summary>
+    double XOffset
+);
+
+/// <summary>
+/// Parameters for accidental placement.
+/// Based on Lilypond's accidental-placement.cc
+/// </summary>
+public sealed record AccidentalPlacementParameters
+{
+    public static AccidentalPlacementParameters Default { get; } = new();
+    
+    /// <summary>Padding between accidentals.</summary>
+    public double Padding { get; init; } = 0.2;
+    
+    /// <summary>Padding from note head.</summary>
+    public double RightPadding { get; init; } = 0.15;
+    
+    /// <summary>Minimum distance for staggering.</summary>
+    public double StaggerThreshold { get; init; } = 6;
+}
+
+/// <summary>
+/// Calculates positions for accidentals in chords.
+/// Based on Lilypond's accidental-placement.cc
+/// 
+/// Algorithm:
+/// 1. Group accidentals by note name (for octave alignment)
+/// 2. Sort by staff position
+/// 3. Stack accidentals that are close together (within 6 staff positions)
+/// <summary>
+/// Calculates positions for accidentals in chords.
+/// Based on Lilypond's accidental-placement.cc
+/// 
+/// Algorithm:
+/// 1. Group accidentals by note name (for octave alignment)
+/// 2. Sort by staff position
+/// 3. Stack accidentals that are close together (within 6 staff positions)
+/// 4. Stagger accidentals to avoid collisions
+/// </summary>
+public sealed class AccidentalPlacement
+{
+    private readonly AccidentalPlacementParameters _params;
+    
+    public AccidentalPlacement(AccidentalPlacementParameters? parameters = null)
+    {
+        _params = parameters ?? AccidentalPlacementParameters.Default;
+    }
+    /// <summary>
+    /// Calculates accidental positions for a chord.
+    /// </summary>
+    public ImmutableArray<AccidentalLayout> CalculatePositions(
+        IReadOnlyList<ChordNoteInfo> notes,
+        double staffSpaceSize)
+    {
+        // Filter notes with accidentals
+        var accidentals = notes
+            .Where(n => !string.IsNullOrEmpty(n.Accidental))
+            .Select(n => (n.StaffPosition, Accidental: n.Accidental!))
+            .OrderByDescending(a => a.StaffPosition) // Top to bottom
+            .ToList();
+        
+        if (accidentals.Count == 0)
+            return ImmutableArray<AccidentalLayout>.Empty;
+        
+        if (accidentals.Count == 1)
+        {
+            // Single accidental: simple placement
+            var (pos, acc) = accidentals[0];
+            double width = GetAccidentalWidth(acc, staffSpaceSize);
+            return ImmutableArray.Create(new AccidentalLayout(pos, acc, -(width + _params.RightPadding * staffSpaceSize)));
+        }
+        
+        // Multiple accidentals: need to avoid collisions
+        return CalculateMultipleAccidentals(accidentals, staffSpaceSize);
+    }
+    
+    /// <summary>
+    /// Calculates positions for a single note's accidental.
+    /// </summary>
+    public AccidentalLayout? CalculateSinglePosition(NoteItem note, double staffSpaceSize)
+    {
+        if (string.IsNullOrEmpty(note.Accidental))
+            return null;
+        
+        double width = GetAccidentalWidth(note.Accidental, staffSpaceSize);
+        return new AccidentalLayout(
+            note.StaffPosition,
+            note.Accidental,
+            -(width + _params.RightPadding * staffSpaceSize));
+    }
+    
+    private ImmutableArray<AccidentalLayout> CalculateMultipleAccidentals(
+        List<(int StaffPosition, string Accidental)> accidentals,
+        double staffSpaceSize)
+    {
+        var layouts = new List<AccidentalLayout>();
+        var columns = new List<List<(int StaffPosition, string Accidental)>>();
+        
+        // Greedy column assignment:
+        // Place each accidental in the rightmost column where it doesn't collide
+        foreach (var acc in accidentals)
+        {
+            bool placed = false;
+            
+            for (int col = 0; col < columns.Count; col++)
+            {
+                if (CanPlaceInColumn(acc, columns[col]))
+                {
+                    columns[col].Add(acc);
+                    placed = true;
+                    break;
+                }
+            }
+            
+            if (!placed)
+            {
+                // Need new column
+                columns.Add(new List<(int, string)> { acc });
+            }
+        }
+        
+        // Calculate X offsets for each column
+        double currentX = -_params.RightPadding * staffSpaceSize;
+        
+        for (int col = 0; col < columns.Count; col++)
+        {
+            // Find widest accidental in this column
+            double maxWidth = columns[col].Max(a => GetAccidentalWidth(a.Accidental, staffSpaceSize));
+            currentX -= maxWidth;
+            
+            foreach (var acc in columns[col])
+            {
+                // Center accidental in column
+                double accWidth = GetAccidentalWidth(acc.Accidental, staffSpaceSize);
+                double offset = currentX + (maxWidth - accWidth) / 2;
+                layouts.Add(new AccidentalLayout(acc.StaffPosition, acc.Accidental, offset));
+            }
+            
+            currentX -= _params.Padding * staffSpaceSize;
+        }
+        
+        return layouts.ToImmutableArray();
+    }
+    
+    /// <summary>
+    /// Checks if an accidental can be placed in a column without collision.
+    /// Accidentals collide if they are within 6 staff positions of each other.
+    /// </summary>
+    private bool CanPlaceInColumn(
+        (int StaffPosition, string Accidental) acc,
+        List<(int StaffPosition, string Accidental)> column)
+    {
+        foreach (var existing in column)
+        {
+            int distance = Math.Abs(acc.StaffPosition - existing.StaffPosition);
+            if (distance < _params.StaggerThreshold)
+                return false;
+        }
+        return true;
+    }
+    
+    private static double GetAccidentalWidth(string accidental, double staffSpaceSize)
+    {
+        var bbox = accidental switch
+        {
+            "sharp" => GlyphMetrics.AccidentalSharp,
+            "flat" => GlyphMetrics.AccidentalFlat,
+            "natural" => GlyphMetrics.AccidentalNatural,
+            "double-sharp" or "x" => GlyphMetrics.AccidentalDoubleSharp,
+            "double-flat" => GlyphMetrics.AccidentalDoubleFlat,
+            _ => GlyphMetrics.AccidentalSharp
+        };
+        
+        return bbox.Width * staffSpaceSize;
+    }
+}

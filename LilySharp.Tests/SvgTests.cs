@@ -1,4 +1,5 @@
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Renderer;
@@ -133,5 +134,114 @@ render score ""test.svg"" {
         // RepeatLeft = U+E040, RepeatRight = U+E041
         Assert.Contains("\uE040", svg); // |: 
         Assert.Contains("\uE041", svg); // :|
+    }
+
+
+    [Fact]
+    public void AccidentalCollisionTest_SpringLayout()
+    {
+        // Test that accidentals don't overlap with previous notes
+        var source = @"{ c4 cis4 d4 dis4 | }";
+        var tree = SyntaxTree.Parse(source);
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, null);
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+        
+        var measure = layout.Systems[0].Measures[0];
+        Console.WriteLine("Accidental collision test:");
+        Console.WriteLine($"Measure width: {measure.Width:F1}");
+        
+        for (int i = 0; i < measure.Items.Length; i++)
+        {
+            var item = measure.Items[i];
+            var musicItem = score.Voice.Measures[0].Items[i];
+            var leftExtent = SpacingRules.CalculateLeftExtent(musicItem);
+            var rightExtent = SpacingRules.CalculateRightExtent(musicItem);
+            
+            string accidental = musicItem switch
+            {
+                NoteItem note => note.Accidental ?? "none",
+                _ => "n/a"
+            };
+            
+            double leftEdge = item.X - leftExtent;
+            double rightEdge = item.X + rightExtent;
+            
+            Console.WriteLine($"  Item {i}: X={item.X:F1}, W={item.Width:F1}, Acc={accidental}, LeftExt={leftExtent:F1}, RightExt={rightExtent:F1}");
+            Console.WriteLine($"          LeftEdge={leftEdge:F1}, RightEdge={rightEdge:F1}");
+            
+            // Check for collision with previous item
+            if (i > 0)
+            {
+                var prevItem = measure.Items[i - 1];
+                var prevMusicItem = score.Voice.Measures[0].Items[i - 1];
+                var prevRightExtent = SpacingRules.CalculateRightExtent(prevMusicItem);
+                double prevRightEdge = prevItem.X + prevRightExtent;
+                double gap = leftEdge - prevRightEdge;
+                Console.WriteLine($"          Gap from prev: {gap:F1}");
+                Assert.True(gap >= 0, $"Item {i} overlaps with item {i-1}! Gap={gap:F1}");
+            }
+        }
+    }
+
+    [Fact]
+    public void GenerateFurEliseSvg_Check()
+    {
+        var source = File.ReadAllText(@"C:\MyProj\LilySharp\samples\fur-elise.lys");
+        var tree = SyntaxTree.Parse(source);
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, "rightHand");
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+        var renderer = new SvgRenderer();
+        var svg = renderer.Render(score, layout);
+        File.WriteAllText(@"C:\MyProj\LilySharp\samples\fur-elise-check.svg", svg);
+    }
+
+    [Fact]
+    public void GenerateFurEliseSvg_ForVisualCheck()
+    {
+        var source = File.ReadAllText(@"C:\MyProj\LilySharp\samples\fur-elise.lys");
+        var tree = SyntaxTree.Parse(source);
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, "rightHand");
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+        var renderer = new SvgRenderer();
+        var svg = renderer.Render(score, layout);
+        
+        var outputPath = @"C:\MyProj\LilySharp\samples\fur-elise-smufl.svg";
+        File.WriteAllText(outputPath, svg);
+        Console.WriteLine($"SVG generated: {svg.Length} bytes at {outputPath}");
+    }
+
+    [Fact]
+    public void Benchmark_FurElise()
+    {
+        var source = File.ReadAllText(@"C:\MyProj\LilySharp\samples\fur-elise.lys");
+        
+        // Warm up
+        var tree = SyntaxTree.Parse(source);
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, "rightHand");
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+        var renderer = new SvgRenderer();
+        var svg = renderer.Render(score, layout);
+        
+        // Measure
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        for (int i = 0; i < 100; i++)
+        {
+            tree = SyntaxTree.Parse(source);
+            score = collector.Collect(tree, "rightHand");
+            layout = layoutEngine.Layout(score);
+            svg = renderer.Render(score, layout);
+        }
+        sw.Stop();
+        
+        Console.WriteLine($"LilySharp (100 iterations): {sw.ElapsedMilliseconds} ms");
+        Console.WriteLine($"Per iteration: {sw.ElapsedMilliseconds / 100.0:F2} ms");
     }
 }

@@ -7,6 +7,7 @@
 3. **Lazy Evaluation**: レイアウト計算は必要時に実行
 4. **Cacheability**: 小節単位でキャッシュ可能
 5. **Single Pass**: 構文木は1回だけ走査
+6. **Lilypond equality**: Lilipond のロジックと等価なものを実装
 
 ## 楽譜レイアウトの3レベル
 
@@ -378,3 +379,236 @@ LilySharp.Core/
 
 ### 学術参考文献
 - Gourlay (1987): "Spacing a Line of Music" - 音符間隔の対数スケーリング
+
+## Spring-Rod モデル（計画）
+
+現在の実装は「前から順に配置」するヒューリスティックベースですが、
+Lilypond のような高品質なレイアウトを実現するには、
+**制約ソルバー**ベースのアプローチが必要です。
+
+### 概念
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Spring（バネ）                                              │
+│  - 理想距離: 時間比例で計算                                 │
+│  - 伸縮性: 短い音符ほど硬い、長い音符ほど柔らかい           │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Rod（ロッド）                                               │
+│  - 最小距離: 視覚的な衝突を防ぐ                             │
+│  - 臨時記号、符頭、付点などの物理的な幅から計算             │
+└─────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────┐
+│  Constraint Solver                                          │
+│  - 全ての Rod 制約を満たしながら                            │
+│  - Spring の理想位置にできるだけ近い配置を計算              │
+│  - 行幅に応じて Force を調整して伸縮                        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Lilypond の実装（参考）
+
+| ファイル | 役割 |
+|---------|------|
+| `spring.cc` | バネの定義（理想距離、最小距離、伸縮性） |
+| `simple-spacer.cc` | 制約ソルバー（バネとロッドから位置計算） |
+| `spacing-spanner.cc` | バネとロッドの生成 |
+| `note-spacing.cc` | 音符間のバネ生成 |
+| `staff-spacing.cc` | 小節線と音符間のスペーシング |
+| `spacing-options.cc` | Gourlay アルゴリズムによる理想距離計算 |
+
+### Spring クラス（案）
+
+```csharp
+public sealed record Spring(
+    double IdealDistance,    // 理想距離（時間比例）
+    double MinDistance,      // 最小距離（衝突回避）
+    double Stiffness         // 剛性（短い音符ほど高い）
+)
+{
+    /// <summary>
+    /// 与えられた Force での実際の長さを計算
+    /// </summary>
+    public double Length(double force)
+    {
+        double result = IdealDistance + force / Stiffness;
+        return Math.Max(result, MinDistance);
+    }
+}
+```
+
+### 制約ソルバー（案）
+
+```csharp
+public sealed class SpringSolver
+{
+    private readonly List<Spring> _springs;
+    
+    /// <summary>
+    /// 目標の総幅を達成する Force を二分探索で計算
+    /// </summary>
+    public double SolveForWidth(double targetWidth)
+    {
+        // Binary search for the force that achieves target width
+        // while respecting all minimum distance constraints
+    }
+    
+    /// <summary>
+    /// 計算された Force で各位置を取得
+    /// </summary>
+    public ImmutableArray<double> GetPositions(double force)
+    {
+        var positions = new List<double>();
+        double currentX = 0;
+        
+        foreach (var spring in _springs)
+        {
+            positions.Add(currentX);
+            currentX += spring.Length(force);
+        }
+        
+        return positions.ToImmutableArray();
+    }
+}
+```
+
+### 移行計画
+
+1. **Phase A**: Spring と Rod の定義
+2. **Phase B**: SpringSolver の実装（二分探索）
+3. **Phase C**: SpacingRules から Spring/Rod を生成するロジック
+4. **Phase D**: LayoutEngine を SpringSolver ベースに置き換え
+5. **Phase E**: 微調整と最適化
+
+### 期待される効果
+
+- **一貫性**: 全ての衝突回避が統一されたロジックで処理
+- **拡張性**: 新しい要素（連桁、タイなど）も Rod として追加可能
+- **品質**: Lilypond に近いプロフェッショナルな出力
+- **保守性**: ヒューリスティックの積み重ねではなく、原理に基づいた実装
+
+## 実装ノート
+
+### 気づき 1: アイテム幅 vs 間隔距離
+
+現在の `CalculateItemWidth` は**アイテム自体の幅**を計算している：
+```
+itemWidth = baseWidth + accidentalWidth + dotWidth
+```
+
+しかし Spring-Rod モデルでは**隣接アイテム間の距離**を扱う：
+```
+spring[i] = distance between item[i] and item[i+1]
+```
+
+この違いは本質的。アイテム幅ベースの考え方では、臨時記号が**左側**に張り出す問題を正しく扱えない。
+
+```
+従来: [acc][note]────[note]────[note]
+       ↑ accidentalWidth がここに含まれるが、
+         実際には「前のアイテムとの距離」に影響する
+
+Spring-Rod:
+      item[0]──spring[0]──item[1]──spring[1]──item[2]
+                 ↑
+      spring[0].MinDistance = item[0].RightExtent + item[1].LeftExtent
+                              (符頭の右端)      (臨時記号の左端)
+```
+
+### 気づき 2: Reference Point の概念
+
+Lilypond では各アイテムに **reference point**（基準点）がある。
+- 音符: 符頭の中心
+- 休符: 中心
+
+Spring は reference point 間の距離を扱う。これにより：
+- LeftExtent: 基準点から左への張り出し（臨時記号）
+- RightExtent: 基準点から右への張り出し（符頭、付点）
+
+```
+      ←LeftExtent→←RightExtent→
+          ♯        ●    ・
+                   ↑
+            reference point
+```
+
+
+### 気づき 3: MinDistance による衝突回避
+
+Spring-Rod モデルでは、衝突回避が**暗黙的に**行われる：
+
+```
+MinDistance = PrevItem.RightExtent + NextItem.LeftExtent + MinGap
+```
+
+臨時記号付きの音符の場合：
+- `LeftExtent = NoteheadWidth/2 + AccidentalWidth + 2`
+
+この設計により：
+- 前のアイテムが何であれ、最小距離が保証される
+- 特別な「臨時記号衝突チェック」ロジックは不要
+- 新しい要素（連桁、タイなど）も同じパターンで追加可能
+
+### 気づき 4: Spring.Length() の動作
+
+```
+Length(force) = max(IdealDistance + force/Stiffness, MinDistance)
+```
+
+- **force > 0** (伸張): IdealDistance より長くなる
+- **force < 0** (圧縮): IdealDistance より短くなるが、MinDistance を下回らない
+- **force = 0**: IdealDistance と MinDistance の大きい方
+
+これにより、行幅に合わせて自然に伸縮しつつ、衝突は常に回避される。
+
+
+### 気づき 5: SpringSolver.GetPositions のインデックス
+
+GetPositions が返す配列は、Springs の数 + 1 の要素を持つ：
+
+```
+Springs:    [barline→item0] [item0→item1] [item1→item2] [item2→barline]
+                 ↓              ↓              ↓              ↓
+Positions:    pos[0]        pos[1]         pos[2]         pos[3]         pos[4]
+              (start)       (item0)        (item1)        (item2)        (end)
+```
+
+**重要**: `positions[i]` ではなく `positions[i+1]` が `item[i]` の位置。
+
+```csharp
+// 正しい使い方
+for (int i = 0; i < items.Length; i++)
+{
+    double x = positions[i + 1];        // item[i] の位置
+    double width = positions[i + 2] - positions[i + 1];  // item[i] の幅
+}
+```
+
+### 気づき 6: CalculateMeasureMinWidth の整合性 ✅ 完了
+
+~~現在の `CalculateMeasureMinWidth` は旧実装の `CalculateItemWidth` を使っている。~~
+~~Spring-Rod モデルとの一貫性のため、将来的には Spring の MinDistance の合計から~~
+~~計算するように変更すべき。~~
+
+**実装完了**: Spring の MinDistance 合計から計算するように変更済み。
+また、使われなくなった `CalculateItemWidth` と `CalculateStretchWeight` も削除済み。
+
+```csharp
+public static double CalculateMeasureMinWidth(Measure measure)
+{
+    double width = GetBarlineWidth(measure.StartBarline)
+                 + GetBarlineWidth(measure.EndBarline);
+    
+    if (measure.Items.Length > 0)
+    {
+        var springs = CreateSpringsForMeasure(measure);
+        foreach (var spring in springs)
+            width += spring.MinDistance;
+    }
+    
+    return width;
+}
+```

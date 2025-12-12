@@ -20,8 +20,11 @@ public sealed record LayoutOptions
     /// <summary>Staff height (distance from top to bottom line) in pixels.</summary>
     public double StaffHeight { get; init; } = 40;
     
-    /// <summary>Space between staff lines in pixels.</summary>
+    /// <summary>Space between staff lines in pixels (staff space size).</summary>
     public double SpaceHeight { get; init; } = 10;
+    
+    /// <summary>Staff space size - alias for SpaceHeight for clarity.</summary>
+    public double StaffSpaceSize => SpaceHeight;
     
     /// <summary>Vertical spacing between systems in pixels.</summary>
     public double SystemSpacing { get; init; } = 80;
