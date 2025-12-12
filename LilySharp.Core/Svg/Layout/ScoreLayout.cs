@@ -49,6 +49,11 @@ public sealed record PageLayout(
 public readonly record struct VoiceItemKey(int MeasureIndex, int VoiceId, int ItemIndex);
 
 /// <summary>
+/// Key for rest shift due to beam collision.
+/// </summary>
+public readonly record struct RestShiftKey(int MeasureIndex, int ItemIndex);
+
+/// <summary>
 /// Complete layout information for a score.
 /// </summary>
 public sealed record ScoreLayout(
@@ -57,7 +62,8 @@ public sealed record ScoreLayout(
     ImmutableArray<BeamLayout> BeamLayouts,
     ImmutableArray<TieLayout> TieLayouts,
     ImmutableArray<SlurLayout> SlurLayouts,
-    ImmutableDictionary<VoiceItemKey, double> VoiceOffsets
+    ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
+    ImmutableDictionary<RestShiftKey, double> RestShifts
 )
 {
     /// <summary>Total number of pages.</summary>
@@ -86,5 +92,15 @@ public sealed record ScoreLayout(
     {
         var key = new VoiceItemKey(measureIndex, voiceId, itemIndex);
         return VoiceOffsets.TryGetValue(key, out var offset) ? offset : 0;
+    }
+    
+    /// <summary>
+    /// Gets the Y shift for a rest due to beam collision.
+    /// Returns 0 if no shift is needed. Value is in staff positions.
+    /// </summary>
+    public double GetRestShift(int measureIndex, int itemIndex)
+    {
+        var key = new RestShiftKey(measureIndex, itemIndex);
+        return RestShifts.TryGetValue(key, out var shift) ? shift : 0;
     }
 }

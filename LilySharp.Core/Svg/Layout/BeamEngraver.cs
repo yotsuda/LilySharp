@@ -22,7 +22,8 @@ public sealed class BeamEngraver
     public BeamLayout CalculateBeamLayout(
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
-        double staffSpaceSize)
+        double staffSpaceSize,
+        IReadOnlyList<BeamCollision>? collisions = null)
     {
         if (group.Members.Length < 2)
             throw new ArgumentException("Beam group must have at least 2 members");
@@ -36,7 +37,8 @@ public sealed class BeamEngraver
         double rightX = memberXPositions[^1];
         
         // Use BeamScoringProblem to find optimal beam positions
-        var problem = new BeamScoringProblem(group, itemXPositions, staffSpaceSize, _parameters);
+        var problem = new BeamScoringProblem(
+            group, itemXPositions, staffSpaceSize, _parameters, collisions);
         var (leftY, rightY) = problem.Solve();
         
         return new BeamLayout(group, leftY, rightY, leftX, rightX, memberXPositions);

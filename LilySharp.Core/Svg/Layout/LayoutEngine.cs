@@ -80,13 +80,17 @@ public sealed class LayoutEngine
         // Calculate voice collision offsets for multi-voice scores
         var voiceOffsets = CalculateVoiceOffsets(score);
         
+        // Calculate rest shifts to avoid beam collisions
+        var restShifts = CalculateRestShifts(score, systemsArray, beamLayouts);
+        
         return new ScoreLayout(
             ImmutableArray.Create(page),
             systemsArray,
             beamLayouts,
             tieLayouts,
             slurLayouts,
-            voiceOffsets);
+            voiceOffsets,
+            restShifts);
     }
     
     /// <summary>
@@ -170,16 +174,208 @@ public sealed class LayoutEngine
                 itemXPositions.Add(measureLayout.X + itemLayout.X);
             }
             
+            // Collect collision objects (items in measure that are NOT part of this beam group)
+            var collisions = CollectBeamCollisions(
+                score.Voice.Measures[group.MeasureIndex],
+                group,
+                itemXPositions);
+            
             // Calculate beam layout
             var beamLayout = _beamEngraver.CalculateBeamLayout(
                 group,
                 itemXPositions,
-                _options.StaffSpaceSize);
+                _options.StaffSpaceSize,
+                collisions);
             
             beamLayouts.Add(beamLayout);
         }
         
         return beamLayouts.ToImmutableArray();
+    }
+    
+    /// <summary>
+    /// Collects collision objects for beam scoring.
+    /// These are items in the measure that are not part of the beam group
+    /// but could collide with the beam.
+    /// </summary>
+    private List<BeamCollision> CollectBeamCollisions(
+        Measure measure,
+        BeamGroup group,
+        IReadOnlyList<double> itemXPositions)
+    {
+        var collisions = new List<BeamCollision>();
+        
+        // Get the set of item indices that are part of this beam group
+        var beamMemberIndices = new HashSet<int>(group.Members.Select(m => m.ItemIndex));
+        
+        // Get beam X range
+        double beamLeftX = itemXPositions[group.Members[0].ItemIndex];
+        double beamRightX = itemXPositions[group.Members[^1].ItemIndex];
+        
+        for (int i = 0; i < measure.Items.Length; i++)
+        {
+            // Skip items that are part of this beam group
+            if (beamMemberIndices.Contains(i))
+                continue;
+            
+            var item = measure.Items[i];
+            double itemX = itemXPositions[i];
+            
+            // Skip items outside beam X range (with padding for object width)
+            // Objects have width, and beam extends slightly beyond stem positions
+            double xPadding = 20.0; // pixels - accounts for rest/note width and stem offset
+            if (itemX < beamLeftX - xPadding || itemX > beamRightX + xPadding)
+                continue;
+            
+            // Get staff position range for this item
+            int staffPosition;
+            double halfHeight;
+            
+            switch (item)
+            {
+                case RestItem rest:
+                    // Rests are typically centered on middle line (staff position 4)
+                    // and have a vertical extent of about 2 staff spaces
+                    staffPosition = 4;
+                    halfHeight = 2.0;
+                    break;
+                    
+                case NoteItem note:
+                    staffPosition = note.StaffPosition;
+                    halfHeight = 0.5; // Notehead is about 1 staff space tall
+                    break;
+                    
+                case ChordItem chord:
+                    // Use the extreme notes of the chord
+                    int minPos = chord.Notes.Min(n => n.StaffPosition);
+                    int maxPos = chord.Notes.Max(n => n.StaffPosition);
+                    staffPosition = (minPos + maxPos) / 2;
+                    halfHeight = (maxPos - minPos) / 2.0 + 0.5;
+                    break;
+                    
+                default:
+                    continue;
+            }
+            
+            collisions.Add(new BeamCollision(
+                X: itemX,
+                MinY: staffPosition - halfHeight,
+                MaxY: staffPosition + halfHeight,
+                BasePenalty: 1.0));
+        }
+        
+        return collisions;
+    }
+
+    /// <summary>
+    /// Calculates Y shifts for rests to avoid beam collisions.
+    /// Based on Lilypond's Beam::rest_collision_callback.
+    /// </summary>
+    private ImmutableDictionary<RestShiftKey, double> CalculateRestShifts(
+        Score score,
+        ImmutableArray<SystemLayout> systems,
+        ImmutableArray<BeamLayout> beamLayouts)
+    {
+        if (beamLayouts.Length == 0)
+            return ImmutableDictionary<RestShiftKey, double>.Empty;
+        
+        var shifts = new Dictionary<RestShiftKey, double>();
+        
+        // Build measure layout map
+        var measureMap = new Dictionary<int, MeasureLayout>();
+        foreach (var system in systems)
+        {
+            foreach (var measureLayout in system.Measures)
+            {
+                measureMap[measureLayout.MeasureIndex] = measureLayout;
+            }
+        }
+        
+        // Group beam layouts by measure
+        var beamsByMeasure = beamLayouts
+            .GroupBy(bl => bl.Group.MeasureIndex)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        
+        // Check each measure for rest-beam collisions
+        foreach (var kvp in beamsByMeasure)
+        {
+            int measureIndex = kvp.Key;
+            var measureBeams = kvp.Value;
+            
+            if (!measureMap.TryGetValue(measureIndex, out var measureLayout))
+                continue;
+            
+            var measure = score.Voice.Measures[measureIndex];
+            
+            // Get X positions
+            var itemXPositions = measureLayout.Items
+                .Select(item => measureLayout.X + item.X)
+                .ToList();
+            
+            // Check each item in measure
+            for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
+            {
+                if (measure.Items[itemIdx] is not RestItem)
+                    continue;
+                
+                double restX = itemXPositions[itemIdx];
+                
+                // Check against each beam in this measure
+                foreach (var beamLayout in measureBeams)
+                {
+                    // Rest is in the same measure as the beam - always check for collision
+                    // The sloped beam may extend beyond its stem positions
+                    
+                    // Use beam Y at the nearest stem position, not at rest X
+                    // (Following Lilypond: rest is associated with its stem, not an arbitrary X)
+                    double beamY;
+                    if (restX < beamLayout.LeftX)
+                        beamY = beamLayout.LeftY;  // Rest is to the left of beam
+                    else if (restX > beamLayout.RightX)
+                        beamY = beamLayout.RightY; // Rest is to the right of beam
+                    else
+                        beamY = beamLayout.GetYAtX(restX); // Rest is under beam
+                    
+                    // Direction: -1 for stems up (beam above), +1 for stems down (beam below)
+                    int d = beamLayout.Group.StemUp ? -1 : 1;
+                    
+                    // Beam thickness and translation (in staff positions)
+                    double beamThickness = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamThickness);
+                    double beamTranslation = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamTranslation);
+                    int beamCount = beamLayout.Group.Members.Max(m => m.BeamCount);
+                    
+                    // Height of beams from center
+                    double heightOfBeams = beamThickness / 2 + (beamCount - 1) * beamTranslation;
+                    
+                    // Beam edge Y (the edge facing the rest)
+                    double beamEdgeY = beamY + d * heightOfBeams;
+                    
+                    // Rest position: centered at staff position 4 (middle line B)
+                    // Rest extent: approximately 2 staff positions in each direction
+                    double restCenterY = 4.0;
+                    double restExtent = 2.0;
+                    double restEdgeY = restCenterY - d * restExtent; // Edge facing beam
+                    
+                    // Minimum distance (in staff positions)
+                    double minimumDistance = 1.0;
+                    
+                    // Calculate shift needed
+                    double gap = d * (beamEdgeY - d * minimumDistance - restEdgeY);
+                    double shift = d * Math.Min(gap, 0.0);
+                    
+                    if (Math.Abs(shift) > 0.1)
+                    {
+                        // Quantize to half staff spaces
+                        shift = Math.Ceiling(Math.Abs(shift) * 2) / 2.0 * Math.Sign(shift);
+                        
+                        var key = new RestShiftKey(measureIndex, itemIdx);
+                        shifts[key] = shift;
+                    }
+                }
+            }
+        }
+        
+        return shifts.ToImmutableDictionary();
     }
     
     /// <summary>

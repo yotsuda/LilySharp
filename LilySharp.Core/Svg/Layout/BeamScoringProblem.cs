@@ -21,6 +21,7 @@ public sealed class BeamScoringProblem
     private readonly double[] _stemXPositions;
     private readonly int[] _staffPositions;
     private readonly int _maxBeamCount;
+    private readonly IReadOnlyList<BeamCollision> _collisions;
     
     // Beam constants (in staff positions, converted from EngravingDefaults)
     private static readonly double BeamThickness = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamThickness);
@@ -32,12 +33,14 @@ public sealed class BeamScoringProblem
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
         double staffSpaceSize,
-        BeamQuantParameters? parameters = null)
+        BeamQuantParameters? parameters = null,
+        IReadOnlyList<BeamCollision>? collisions = null)
     {
         _group = group;
         _itemXPositions = itemXPositions;
         _staffSpaceSize = staffSpaceSize;
         _parameters = parameters ?? BeamQuantParameters.Default;
+        _collisions = collisions ?? Array.Empty<BeamCollision>();
         
         // Compute basic values
         var firstMember = group.Members[0];
@@ -358,5 +361,79 @@ public sealed class BeamScoringProblem
         }
         
         config.NextScorerTodo = (int)BeamScorer.Collisions;
+    }
+    
+    private void ScoreCollisions(BeamConfiguration config)
+    {
+        // Penalty for beam colliding with other objects (rests, notes outside beam group)
+        // Based on Lilypond's score_collisions from beam-quanting.cc
+        
+        if (_collisions.Count == 0)
+        {
+            config.NextScorerTodo = (int)BeamScorer.NumScorers;
+            return;
+        }
+        
+        double demerits = 0.0;
+        
+        foreach (var collision in _collisions)
+        {
+            // Skip collisions outside beam X range
+            if (collision.X < _leftX || collision.X > _rightX)
+                continue;
+            
+            // Get beam Y at collision X position
+            double beamCenterY = config.GetYAt(collision.X, _leftX, _xSpan);
+            
+            // Beam Y range (center ± half thickness, including all beam levels)
+            double beamHalfHeight = BeamThickness / 2 + (_maxBeamCount - 1) * BeamTranslation;
+            double beamMinY, beamMaxY;
+            if (_group.StemUp)
+            {
+                // Beam above notes: extends upward from center
+                beamMinY = beamCenterY - BeamThickness / 2;
+                beamMaxY = beamCenterY + beamHalfHeight;
+            }
+            else
+            {
+                // Beam below notes: extends downward from center
+                beamMinY = beamCenterY - beamHalfHeight;
+                beamMaxY = beamCenterY + BeamThickness / 2;
+            }
+            
+            // Calculate distance between beam and collision object
+            double dist;
+            bool intersects = beamMaxY >= collision.MinY && beamMinY <= collision.MaxY;
+            
+            if (intersects)
+            {
+                dist = 0.0;
+            }
+            else
+            {
+                // Distance to nearest edge
+                dist = Math.Min(
+                    Math.Abs(beamMinY - collision.MaxY),
+                    Math.Abs(beamMaxY - collision.MinY));
+            }
+            
+            // Calculate penalty using cubic falloff
+            double padding = _parameters.CollisionPadding;
+            if (dist < padding)
+            {
+                double scaleFree = (padding - dist) / padding;
+                double collisionDemerit = collision.BasePenalty 
+                    * Math.Pow(scaleFree, 3) 
+                    * _parameters.CollisionPenalty;
+                demerits += collisionDemerit;
+            }
+        }
+        
+        if (demerits > _parameters.BeamEps)
+        {
+            config.AddDemerit(demerits, "collision");
+        }
+        
+        config.NextScorerTodo = (int)BeamScorer.NumScorers;
     }
 }

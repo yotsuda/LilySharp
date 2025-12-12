@@ -81,3 +81,17 @@ public enum BeamScorer
     Collisions,
     NumScorers
 }
+
+/// <summary>
+/// Represents a potential collision object for beam scoring.
+/// Based on Lilypond's Beam_collision.
+/// </summary>
+public readonly record struct BeamCollision(
+    /// <summary>X position relative to beam start (in pixels).</summary>
+    double X,
+    /// <summary>Y range of the collision object (in staff positions, minY to maxY).</summary>
+    double MinY,
+    double MaxY,
+    /// <summary>Base penalty factor for this collision.</summary>
+    double BasePenalty = 1.0
+);

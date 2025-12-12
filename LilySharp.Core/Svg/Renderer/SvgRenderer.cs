@@ -296,7 +296,8 @@ public sealed class SvgRenderer
                     DrawNote(note, itemX, systemY, forcedStemUp);
                     break;
                 case RestItem rest:
-                    DrawRest(rest, itemX, systemY);
+                    double restShift = scoreLayout.GetRestShift(measureIndex, i);
+                    DrawRest(rest, itemX, systemY, restShift);
                     break;
                 case ChordItem chord:
                     DrawChord(chord, itemX, systemY, forcedStemUp);
@@ -415,7 +416,7 @@ public sealed class SvgRenderer
         }
     }
     
-    private void DrawRest(RestItem rest, double x, double systemY)
+    private void DrawRest(RestItem rest, double x, double systemY, double shiftStaffPositions = 0)
     {
         int noteValue = GetNoteValue(rest.BaseDuration);
         double restY = systemY + 2 * SpaceHeight;
@@ -424,6 +425,10 @@ public sealed class SvgRenderer
             restY = systemY + SpaceHeight;
         else if (noteValue == 2)
             restY = systemY + 2 * SpaceHeight;
+        
+        // Apply shift (positive shift = move down in staff positions, which is up in Y)
+        // Staff position increases upward, but Y increases downward
+        restY -= shiftStaffPositions * SpaceHeight / 2;
         
         char restGlyph = SmuflGlyphs.GetRest(noteValue);
         DrawGlyph(restGlyph, x, restY, rest.SourcePosition);
