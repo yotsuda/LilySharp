@@ -128,7 +128,7 @@ public class VoiceCollectorTests
         var voice2 = new Voice("lower", ImmutableArray.Create(measure2));
         
         var collector = new VoiceCollector();
-        var columns = collector.Collect(new[] { voice1, voice2 }, new TimeSignature(4, 4));
+        var columns = collector.Collect(ImmutableArray.Create(voice1, voice2), new TimeSignature(4, 4));
         
         Assert.Single(columns);
         Assert.Equal(2, columns[0].Entries.Length);
@@ -161,7 +161,7 @@ public class VoiceCollectorTests
         var voice2 = new Voice("lower", ImmutableArray.Create(measure2));
         
         var collector = new VoiceCollector();
-        var columns = collector.Collect(new[] { voice1, voice2 }, new TimeSignature(4, 4));
+        var columns = collector.Collect(ImmutableArray.Create(voice1, voice2), new TimeSignature(4, 4));
         
         // Should have 2 columns:
         // - Time 0: quarter from voice1, eighth from voice2

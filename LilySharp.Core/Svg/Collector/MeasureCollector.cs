@@ -6,6 +6,92 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
+/// Helper class for building measures from syntax nodes.
+/// </summary>
+internal sealed class MeasureBuilder
+{
+    private readonly List<Measure> _measures = new();
+    private readonly List<MusicItem> _currentItems = new();
+    private BarlineType _pendingStartBarline = BarlineType.None;
+    private string? _sectionLabel;
+    private int _measureSourceStart;
+    
+    public MeasureBuilder(int sourceStart = 0)
+    {
+        _measureSourceStart = sourceStart;
+    }
+    
+    public string? SectionLabel
+    {
+        get => _sectionLabel;
+        set => _sectionLabel = value;
+    }
+    
+    public void AddItem(MusicItem item) => _currentItems.Add(item);
+    
+    public void CompleteMeasure(BarlineType endBarline, int sourceEnd)
+    {
+        if (_currentItems.Count > 0 || _pendingStartBarline != BarlineType.None)
+        {
+            _measures.Add(new Measure(
+                _currentItems.ToImmutableArray(),
+                _pendingStartBarline,
+                endBarline,
+                _sectionLabel,
+                _measureSourceStart,
+                sourceEnd));
+            
+            _currentItems.Clear();
+            _sectionLabel = null;
+            _pendingStartBarline = BarlineType.None;
+            _measureSourceStart = sourceEnd;
+        }
+    }
+    
+    public void HandleBarline(BarlineType barType, int position)
+    {
+        if (barType == BarlineType.RepeatStart)
+        {
+            if (_currentItems.Count > 0)
+                CompleteMeasure(BarlineType.Single, position);
+            _pendingStartBarline = BarlineType.RepeatStart;
+            _measureSourceStart = position;
+        }
+        else if (barType == BarlineType.RepeatEnd && _currentItems.Count == 0 && _measures.Count > 0)
+        {
+            // :| after section end - modify last measure's end barline
+            var lastMeasure = _measures[^1];
+            _measures[^1] = new Measure(
+                lastMeasure.Items,
+                lastMeasure.StartBarline,
+                BarlineType.RepeatEnd,
+                lastMeasure.SectionLabel,
+                lastMeasure.SourceStart,
+                lastMeasure.SourceEnd);
+        }
+        else
+        {
+            CompleteMeasure(barType, position);
+        }
+    }
+    
+    public List<Measure> FinalizeMeasures()
+    {
+        if (_currentItems.Count > 0)
+        {
+            _measures.Add(new Measure(
+                _currentItems.ToImmutableArray(),
+                _pendingStartBarline,
+                BarlineType.Single,
+                _sectionLabel,
+                _measureSourceStart,
+                _measureSourceStart));
+        }
+        return _measures;
+    }
+}
+
+/// <summary>
 /// Collects measures from a syntax tree.
 /// </summary>
 public sealed class MeasureCollector
@@ -50,7 +136,6 @@ public sealed class MeasureCollector
         
         if (parallelExpr != null)
         {
-            // Multi-voice: collect each voice separately
             return CollectMultiVoiceScore(parallelExpr);
         }
         
@@ -68,9 +153,6 @@ public sealed class MeasureCollector
             _composer);
     }
     
-    /// <summary>
-    /// Collects a multi-voice score from a parallel expression.
-    /// </summary>
     private Score CollectMultiVoiceScore(ParallelExpressionSyntax parallelExpr)
     {
         var voices = new List<Voice>();
@@ -92,7 +174,6 @@ public sealed class MeasureCollector
             voices.Add(new Voice(voiceName, measures.ToImmutableArray()));
             voiceNumber++;
             
-            // Restore state (not strictly necessary but clean)
             _currentOctave = savedOctave;
             _lastPitchName = savedPitch;
             _defaultDuration = savedDuration;
@@ -108,88 +189,44 @@ public sealed class MeasureCollector
             _composer);
     }
     
-    /// <summary>
-    /// Collects measures from a specific syntax node (voice in parallel expression).
-    /// </summary>
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
     {
-        var measures = new List<Measure>();
-        var currentItems = new List<MusicItem>();
-        BarlineType pendingStartBarline = BarlineType.None;
-        int measureSourceStart = voiceNode.Position;
+        var builder = new MeasureBuilder(voiceNode.Position);
         
-        void CompleteMeasure(BarlineType endBarline, int sourceEnd)
-        {
-            if (currentItems.Count > 0 || pendingStartBarline != BarlineType.None)
-            {
-                measures.Add(new Measure(
-                    currentItems.ToImmutableArray(),
-                    pendingStartBarline,
-                    endBarline,
-                    null,
-                    measureSourceStart,
-                    sourceEnd));
-                
-                currentItems.Clear();
-                pendingStartBarline = BarlineType.None;
-                measureSourceStart = sourceEnd;
-            }
-        }
-        
-        // Process nodes within this voice
         foreach (var node in voiceNode.DescendantNodes())
         {
-            switch (node)
-            {
-                case RelativeExpressionSyntax relative:
-                    InitializeRelativeMode(relative.BasePitch);
-                    break;
-                    
-                case NoteSyntax note:
-                    currentItems.Add(CreateNoteItem(note));
-                    break;
-                    
-                case RestSyntax rest:
-                    currentItems.Add(CreateRestItem(rest));
-                    break;
-                    
-                case ChordSyntax chord:
-                    currentItems.Add(CreateChordItem(chord));
-                    break;
-                    
-                case BarlineSyntax barline:
-                    var barType = ParseBarlineType(barline.BarToken.Text);
-                    
-                    if (barType == BarlineType.RepeatStart)
-                    {
-                        if (currentItems.Count > 0)
-                            CompleteMeasure(BarlineType.Single, barline.Position);
-                        pendingStartBarline = BarlineType.RepeatStart;
-                        measureSourceStart = barline.Position;
-                    }
-                    else
-                    {
-                        CompleteMeasure(barType, barline.Position);
-                    }
-                    break;
-            }
+            ProcessMusicNode(node, builder);
         }
         
-        // Handle final measure without trailing barline
-        if (currentItems.Count > 0)
-        {
-            measures.Add(new Measure(
-                currentItems.ToImmutableArray(),
-                pendingStartBarline,
-                BarlineType.Single,
-                null,
-                measureSourceStart,
-                measureSourceStart));
-        }
-        
-        return measures;
+        return builder.FinalizeMeasures();
     }
-
+    
+    private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder)
+    {
+        switch (node)
+        {
+            case RelativeExpressionSyntax relative:
+                InitializeRelativeMode(relative.BasePitch);
+                break;
+                
+            case NoteSyntax note:
+                builder.AddItem(CreateNoteItem(note));
+                break;
+                
+            case RestSyntax rest:
+                builder.AddItem(CreateRestItem(rest));
+                break;
+                
+            case ChordSyntax chord:
+                builder.AddItem(CreateChordItem(chord));
+                break;
+                
+            case BarlineSyntax barline:
+                var barType = ParseBarlineType(barline.BarToken.Text);
+                builder.HandleBarline(barType, barline.Position);
+                break;
+        }
+    }
     
     private void Reset()
     {
@@ -332,122 +369,40 @@ public sealed class MeasureCollector
     
     private List<Measure> CollectMeasures()
     {
-        var measures = new List<Measure>();
-        var currentItems = new List<MusicItem>();
-        BarlineType pendingStartBarline = BarlineType.None;
-        string? sectionLabel = null;
-        int measureSourceStart = 0;
-        
-        void CompleteMeasure(BarlineType endBarline, int sourceEnd)
-        {
-            if (currentItems.Count > 0 || pendingStartBarline != BarlineType.None)
-            {
-                measures.Add(new Measure(
-                    currentItems.ToImmutableArray(),
-                    pendingStartBarline,
-                    endBarline,
-                    sectionLabel,
-                    measureSourceStart,
-                    sourceEnd));
-                
-                currentItems.Clear();
-                sectionLabel = null;
-                pendingStartBarline = BarlineType.None;
-                measureSourceStart = sourceEnd;
-            }
-        }
+        var builder = new MeasureBuilder();
         
         void ProcessNodes(IEnumerable<SyntaxNode> nodes)
         {
             foreach (var node in nodes)
             {
-                switch (node)
-                {
-                    case RelativeExpressionSyntax relative:
-                        InitializeRelativeMode(relative.BasePitch);
-                        break;
-                        
-                    case NoteSyntax note:
-                        currentItems.Add(CreateNoteItem(note));
-                        break;
-                        
-                    case RestSyntax rest:
-                        currentItems.Add(CreateRestItem(rest));
-                        break;
-                        
-                    case ChordSyntax chord:
-                        currentItems.Add(CreateChordItem(chord));
-                        break;
-                        
-                    case BarlineSyntax barline:
-                        var barType = ParseBarlineType(barline.BarToken.Text);
-                        
-                        if (barType == BarlineType.RepeatStart)
-                        {
-                            // |: starts a new measure
-                            if (currentItems.Count > 0)
-                                CompleteMeasure(BarlineType.Single, barline.Position);
-                            pendingStartBarline = BarlineType.RepeatStart;
-                            measureSourceStart = barline.Position;
-                        }
-                        else if (barType == BarlineType.RepeatEnd && currentItems.Count == 0 && measures.Count > 0)
-                        {
-                            // :| after section end - modify last measure's end barline
-                            var lastMeasure = measures[measures.Count - 1];
-                            measures[measures.Count - 1] = new Measure(
-                                lastMeasure.Items,
-                                lastMeasure.StartBarline,
-                                BarlineType.RepeatEnd,
-                                lastMeasure.SectionLabel,
-                                lastMeasure.SourceStart,
-                                lastMeasure.SourceEnd);
-                        }
-                        else
-                        {
-                            CompleteMeasure(barType, barline.Position);
-                        }
-                        break;
-                }
+                ProcessMusicNode(node, builder);
             }
         }
         
         // Process based on structure or sections
         if (_structure != null)
         {
-            ProcessStructure(ProcessNodes, ref sectionLabel);
+            ProcessStructure(ProcessNodes, builder);
         }
         else if (_sections.Count > 0)
         {
             foreach (var section in _sections.Values)
             {
-                sectionLabel = section.SectionName;
+                builder.SectionLabel = section.SectionName;
                 ProcessSection(section, ProcessNodes);
             }
         }
         else if (_root != null)
         {
-            // Fallback: process music nodes directly from root (for simple files)
             var musicNodes = _root.DescendantNodes()
                 .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or RelativeExpressionSyntax);
             ProcessNodes(musicNodes);
         }
         
-        // Handle final measure without trailing barline
-        if (currentItems.Count > 0)
-        {
-            measures.Add(new Measure(
-                currentItems.ToImmutableArray(),
-                pendingStartBarline,
-                BarlineType.Single,
-                sectionLabel,
-                measureSourceStart,
-                measureSourceStart));
-        }
-        
-        return measures;
+        return builder.FinalizeMeasures();
     }
     
-    private void ProcessStructure(Action<IEnumerable<SyntaxNode>> processNodes, ref string? sectionLabel)
+    private void ProcessStructure(Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
         foreach (var child in _structure!.DescendantNodes())
         {
@@ -456,19 +411,19 @@ public sealed class MeasureCollector
                 case SectionReferenceSyntax reference:
                     if (_sections.TryGetValue(reference.SectionName, out var section))
                     {
-                        sectionLabel = reference.SectionName;
+                        builder.SectionLabel = reference.SectionName;
                         ProcessSection(section, processNodes);
                     }
                     break;
                     
                 case StructureRepeatBlockSyntax repeat:
-                    ProcessRepeatBlock(repeat, processNodes, ref sectionLabel);
+                    ProcessRepeatBlock(repeat, processNodes, builder);
                     break;
             }
         }
     }
     
-    private void ProcessRepeatBlock(StructureRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, ref string? sectionLabel)
+    private void ProcessRepeatBlock(StructureRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
         bool afterRepeatStart = false;
         
@@ -480,7 +435,6 @@ public sealed class MeasureCollector
             {
                 if (token.Text == "|:")
                 {
-                    // Process as a repeat start barline
                     processNodes(new[] { CreateBarlineSyntax(token.Text, token.Position) });
                     afterRepeatStart = true;
                 }
@@ -495,7 +449,7 @@ public sealed class MeasureCollector
                 {
                     if (_sections.TryGetValue(reference.SectionName, out var section))
                     {
-                        sectionLabel = reference.SectionName;
+                        builder.SectionLabel = reference.SectionName;
                         ProcessSection(section, processNodes);
                     }
                 }
@@ -504,7 +458,7 @@ public sealed class MeasureCollector
                     string altSectionName = alt.SectionName.Text;
                     if (_sections.TryGetValue(altSectionName, out var section))
                     {
-                        sectionLabel = altSectionName;
+                        builder.SectionLabel = altSectionName;
                         ProcessSection(section, processNodes);
                     }
                 }

@@ -22,18 +22,18 @@ public sealed class VoiceCollector
     /// </summary>
     public ImmutableArray<VoiceColumn> Collect(Score score)
     {
-        return Collect(new[] { score.Voice }, score.TimeSignature);
+        return Collect(score.Voices, score.TimeSignature);
     }
     
     /// <summary>
     /// Collects voice columns from multiple voices.
     /// </summary>
-    public ImmutableArray<VoiceColumn> Collect(IReadOnlyList<Voice> voices, TimeSignature timeSignature)
+    public ImmutableArray<VoiceColumn> Collect(ImmutableArray<Voice> voices, TimeSignature timeSignature)
     {
-        if (voices.Count == 0)
+        if (voices.Length == 0)
             return ImmutableArray<VoiceColumn>.Empty;
         
-        if (voices.Count == 1)
+        if (voices.Length == 1)
             return CollectSingleVoice(voices[0]);
         
         return CollectMultipleVoices(voices, timeSignature);
@@ -55,19 +55,18 @@ public sealed class VoiceCollector
                 var item = measure.Items[itemIndex];
                 
                 // Skip rests for voice column generation (they don't collide)
-                // But we still track them for accurate time positioning
                 if (item is RestItem)
                     continue;
                 
                 var entry = new VoiceEntry(
                     voiceId: 1,
                     item: item,
+                    itemIndex: itemIndex,
                     forcedStemUp: null);
                 
                 var column = new VoiceColumn(
                     ImmutableArray.Create(entry),
-                    measureIndex,
-                    itemIndex);
+                    measureIndex);
                 
                 columns.Add(column);
             }
@@ -79,12 +78,12 @@ public sealed class VoiceCollector
     /// <summary>
     /// Collects voice columns from multiple voices, aligning by time position.
     /// </summary>
-    private ImmutableArray<VoiceColumn> CollectMultipleVoices(IReadOnlyList<Voice> voices, TimeSignature timeSignature)
+    private ImmutableArray<VoiceColumn> CollectMultipleVoices(ImmutableArray<Voice> voices, TimeSignature timeSignature)
     {
         // Build a timeline: map from (measureIndex, timeWithinMeasure) to entries
         var timeline = new SortedDictionary<TimelineKey, List<VoiceEntry>>();
         
-        for (int voiceIndex = 0; voiceIndex < voices.Count; voiceIndex++)
+        for (int voiceIndex = 0; voiceIndex < voices.Length; voiceIndex++)
         {
             var voice = voices[voiceIndex];
             int voiceId = voiceIndex + 1;
@@ -104,7 +103,7 @@ public sealed class VoiceCollector
                     // Add non-rest items to timeline
                     if (item is not RestItem)
                     {
-                        var key = new TimelineKey(measureIndex, timePosition, itemIndex);
+                        var key = new TimelineKey(measureIndex, timePosition);
                         
                         if (!timeline.TryGetValue(key, out var entries))
                         {
@@ -112,7 +111,7 @@ public sealed class VoiceCollector
                             timeline[key] = entries;
                         }
                         
-                        entries.Add(new VoiceEntry(voiceId, item, defaultStemUp));
+                        entries.Add(new VoiceEntry(voiceId, item, itemIndex, defaultStemUp));
                     }
                     
                     // Advance time position
@@ -128,8 +127,7 @@ public sealed class VoiceCollector
         {
             var column = new VoiceColumn(
                 kvp.Value.ToImmutableArray(),
-                kvp.Key.MeasureIndex,
-                kvp.Key.ItemIndex);
+                kvp.Key.MeasureIndex);
             
             columns.Add(column);
         }
@@ -144,13 +142,11 @@ public sealed class VoiceCollector
     {
         public int MeasureIndex { get; }
         public Fraction TimePosition { get; }
-        public int ItemIndex { get; }
         
-        public TimelineKey(int measureIndex, Fraction timePosition, int itemIndex)
+        public TimelineKey(int measureIndex, Fraction timePosition)
         {
             MeasureIndex = measureIndex;
             TimePosition = timePosition;
-            ItemIndex = itemIndex;
         }
         
         public int CompareTo(TimelineKey other)
@@ -161,18 +157,13 @@ public sealed class VoiceCollector
                 return measureCompare;
             
             // Then by time within measure
-            int timeCompare = TimePosition.CompareTo(other.TimePosition);
-            if (timeCompare != 0)
-                return timeCompare;
-            
-            // Finally by item index (for stable ordering)
-            return ItemIndex.CompareTo(other.ItemIndex);
+            return TimePosition.CompareTo(other.TimePosition);
         }
         
         public override bool Equals(object? obj) =>
             obj is TimelineKey other && CompareTo(other) == 0;
         
         public override int GetHashCode() =>
-            HashCode.Combine(MeasureIndex, TimePosition.GetHashCode(), ItemIndex);
+            HashCode.Combine(MeasureIndex, TimePosition.GetHashCode());
     }
 }

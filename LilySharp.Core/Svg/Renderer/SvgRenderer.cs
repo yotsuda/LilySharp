@@ -126,7 +126,7 @@ public sealed class SvgRenderer
             var system = layout.Systems[sysIdx];
             bool isFirstSystem = sysIdx == 0;
             
-            DrawSystem(score, system, isFirstSystem);
+            DrawSystem(score, layout, system, isFirstSystem);
         }
         
         // Draw beams
@@ -183,7 +183,7 @@ public sealed class SvgRenderer
         }
     }
     
-    private void DrawSystem(Score score, SystemLayout system, bool isFirstSystem)
+    private void DrawSystem(Score score, ScoreLayout scoreLayout, SystemLayout system, bool isFirstSystem)
     {
         double y = system.Y;
         double startX = _layoutOptions.MarginLeft;
@@ -257,13 +257,13 @@ public sealed class SvgRenderer
                     var measure = voice.Measures[measureLayout.MeasureIndex];
                     int voiceNumber = voiceIdx + 1;
                     bool? forcedStemUp = VoiceDefaults.GetDefaultStemUp(voiceNumber);
-                    DrawMeasure(measure, measureLayout, measureLayout.MeasureIndex, y, forcedStemUp, isFirstVoice: voiceIdx == 0);
+                    DrawMeasure(measure, measureLayout, measureLayout.MeasureIndex, voiceNumber, y, scoreLayout, forcedStemUp, isFirstVoice: voiceIdx == 0);
                 }
             }
         }
     }
     
-    private void DrawMeasure(Measure measure, MeasureLayout layout, int measureIndex, double systemY, bool? forcedStemUp = null, bool isFirstVoice = true)
+    private void DrawMeasure(Measure measure, MeasureLayout layout, int measureIndex, int voiceNumber, double systemY, ScoreLayout scoreLayout, bool? forcedStemUp = null, bool isFirstVoice = true)
     {
         double x = layout.X;
         double staffBottom = systemY + StaffHeight;
@@ -285,7 +285,10 @@ public sealed class SvgRenderer
         {
             var item = measure.Items[i];
             var itemLayout = layout.Items[i];
-            double itemX = x + itemLayout.X;
+            
+            // Get voice collision offset
+            double voiceOffset = scoreLayout.GetVoiceOffset(measureIndex, voiceNumber, i);
+            double itemX = x + itemLayout.X + voiceOffset;
             
             switch (item)
             {

@@ -33,6 +33,11 @@ public sealed record SystemLayout(
 );
 
 /// <summary>
+/// Key for voice-specific layout offsets in multi-voice scores.
+/// </summary>
+public readonly record struct VoiceItemKey(int MeasureIndex, int VoiceId, int ItemIndex);
+
+/// <summary>
 /// Complete layout information for a score.
 /// </summary>
 public sealed record ScoreLayout(
@@ -40,35 +45,22 @@ public sealed record ScoreLayout(
     double Height,
     double HeaderHeight,                     // Space for title/composer
     ImmutableArray<SystemLayout> Systems,
-    ImmutableArray<BeamLayout> BeamLayouts,  // Beam layout information
-    ImmutableArray<TieLayout> TieLayouts,    // Tie layout information
-    ImmutableArray<SlurLayout> SlurLayouts   // Slur layout information
+    ImmutableArray<BeamLayout> BeamLayouts,
+    ImmutableArray<TieLayout> TieLayouts,
+    ImmutableArray<SlurLayout> SlurLayouts,
+    ImmutableDictionary<VoiceItemKey, double> VoiceOffsets
 )
 {
     /// <summary>Total number of systems.</summary>
     public int SystemCount => Systems.Length;
     
-    /// <summary>Creates a ScoreLayout without beam/tie/slur layouts (for backward compatibility).</summary>
-    public ScoreLayout(double width, double height, double headerHeight, ImmutableArray<SystemLayout> systems)
-        : this(width, height, headerHeight, systems, 
-               ImmutableArray<BeamLayout>.Empty, 
-               ImmutableArray<TieLayout>.Empty,
-               ImmutableArray<SlurLayout>.Empty)
+    /// <summary>
+    /// Gets the X offset for a specific voice item due to collision handling.
+    /// Returns 0 if no offset is needed.
+    /// </summary>
+    public double GetVoiceOffset(int measureIndex, int voiceId, int itemIndex)
     {
-    }
-    
-    /// <summary>Creates a ScoreLayout without tie/slur layouts (for backward compatibility).</summary>
-    public ScoreLayout(double width, double height, double headerHeight, ImmutableArray<SystemLayout> systems, ImmutableArray<BeamLayout> beamLayouts)
-        : this(width, height, headerHeight, systems, beamLayouts, 
-               ImmutableArray<TieLayout>.Empty,
-               ImmutableArray<SlurLayout>.Empty)
-    {
-    }
-    
-    /// <summary>Creates a ScoreLayout without slur layouts (for backward compatibility).</summary>
-    public ScoreLayout(double width, double height, double headerHeight, ImmutableArray<SystemLayout> systems, ImmutableArray<BeamLayout> beamLayouts, ImmutableArray<TieLayout> tieLayouts)
-        : this(width, height, headerHeight, systems, beamLayouts, tieLayouts,
-               ImmutableArray<SlurLayout>.Empty)
-    {
+        var key = new VoiceItemKey(measureIndex, voiceId, itemIndex);
+        return VoiceOffsets.TryGetValue(key, out var offset) ? offset : 0;
     }
 }

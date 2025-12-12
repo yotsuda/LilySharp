@@ -72,8 +72,17 @@ public sealed record NoteCollisionParameters
     /// <summary>Whether to prefer dotted notes on the right side.</summary>
     public bool PreferDottedRight { get; init; } = true;
     
-    /// <summary>Horizontal shift amount (in notehead widths).</summary>
-    public double ShiftAmount { get; init; } = 1.0;
+    /// <summary>Horizontal shift amount for close half collision (in notehead widths).</summary>
+    public double CloseHalfShift { get; init; } = 1.0;
+    
+    /// <summary>Horizontal shift amount for distant half collision (in notehead widths).</summary>
+    public double DistantHalfShift { get; init; } = 1.0;
+    
+    /// <summary>Horizontal shift amount for full collision (in notehead widths).</summary>
+    public double FullCollideShift { get; init; } = 1.0;
+    
+    /// <summary>Horizontal shift amount for touch condition (in notehead widths).</summary>
+    public double TouchShift { get; init; } = 0.5;
 }
 
 /// <summary>
@@ -127,13 +136,14 @@ public sealed class NoteCollision
         fullCollide = fullCollide || (closeHalf && distantHalf) ||
                      (distantHalf && (upNoteValue <= 0 || downNoteValue <= 0));
         
-        // Determine shift direction
-        double shiftAmount = _params.ShiftAmount;
+        // Determine shift direction (Lilypond line 178-208)
+        // Default: up-stem shifts right
         bool shiftUpRight = true;
         
         if ((fullCollide || ((closeHalf || distantHalf) && _params.PreferDottedRight))
             && upDots < downDots)
         {
+            // Dotted down-stem: down-stem shifts right instead
             shiftUpRight = false;
         }
         
@@ -146,17 +156,39 @@ public sealed class NoteCollision
         
         if (touch && !fullCollide && !closeHalf && !distantHalf)
         {
-            // Just touching - stems can align
-            return new NoteCollisionInfo(CollisionType.Touch, 0, 0);
+            // Just touching - stems can align (with small shift per Lilypond line 295-296)
+            double touchShift = _params.TouchShift;
+            double upOffset = shiftUpRight ? touchShift : 0;
+            double downOffset = shiftUpRight ? 0 : -touchShift;
+            return new NoteCollisionInfo(CollisionType.Touch, upOffset, downOffset);
         }
         
         if (fullCollide || closeHalf || distantHalf)
         {
-            // Need horizontal shift
+            // Select shift amount based on collision type (Lilypond line 297-302)
+            double shiftAmount;
+            CollisionType type;
+            
+            if (fullCollide)
+            {
+                shiftAmount = _params.FullCollideShift;
+                type = CollisionType.Full;
+            }
+            else if (closeHalf)
+            {
+                shiftAmount = _params.CloseHalfShift;
+                type = CollisionType.CloseHalf;
+            }
+            else // distantHalf
+            {
+                shiftAmount = _params.DistantHalfShift;
+                type = CollisionType.CloseHalf; // Use CloseHalf type for distant too
+            }
+            
+            // Apply shift direction
             double upOffset = shiftUpRight ? shiftAmount : 0;
             double downOffset = shiftUpRight ? 0 : -shiftAmount;
             
-            var type = fullCollide ? CollisionType.Full : CollisionType.CloseHalf;
             return new NoteCollisionInfo(type, upOffset, downOffset);
         }
         
@@ -260,12 +292,13 @@ public sealed class NoteCollision
     
     /// <summary>
     /// Calculates collision info for a voice column with multiple voices.
+    /// Returns (VoiceId, ItemIndex, XOffset) for each entry in the column.
     /// </summary>
-    public ImmutableArray<(int VoiceId, double XOffset)> CalculateVoiceOffsets(
+    public ImmutableArray<(int VoiceId, int ItemIndex, double XOffset)> CalculateVoiceOffsets(
         VoiceColumn column,
         double noteheadWidth)
     {
-        var offsets = new List<(int VoiceId, double XOffset)>();
+        var offsets = new List<(int VoiceId, int ItemIndex, double XOffset)>();
         
         // Group entries by stem direction
         var upEntries = column.Entries.Where(e => GetStemDirection(e) == true).ToList();
@@ -276,7 +309,7 @@ public sealed class NoteCollision
             // No collision possible - all voices get 0 offset
             foreach (var entry in column.Entries)
             {
-                offsets.Add((entry.VoiceId, 0));
+                offsets.Add((entry.VoiceId, entry.ItemIndex, 0));
             }
             return offsets.ToImmutableArray();
         }
@@ -295,11 +328,11 @@ public sealed class NoteCollision
         // Apply offsets
         foreach (var entry in upEntries)
         {
-            offsets.Add((entry.VoiceId, collision.UpStemXOffset * noteheadWidth));
+            offsets.Add((entry.VoiceId, entry.ItemIndex, collision.UpStemXOffset * noteheadWidth));
         }
         foreach (var entry in downEntries)
         {
-            offsets.Add((entry.VoiceId, collision.DownStemXOffset * noteheadWidth));
+            offsets.Add((entry.VoiceId, entry.ItemIndex, collision.DownStemXOffset * noteheadWidth));
         }
         
         return offsets.ToImmutableArray();

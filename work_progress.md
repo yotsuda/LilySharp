@@ -33,9 +33,9 @@ master
 ### 次のタスク候補
 | 優先度 | タスク | 理由 |
 |:------:|--------|------|
-| 1 | Phase 6: VoiceCollector | 複数声部分離 |
-| 2 | Phase 6: 複数声部描画 | SvgRenderer での複数声部対応 |
-| 3 | Phase 7: 強弱記号 | 記譜記号の追加 |
+| 1 | Phase 9: Knuth-Plass 改行 | 長い楽譜の最適改行 |
+| 2 | Phase 2: 斜め Skyline | Lilypond 完全等価に必須 |
+| 3 | Phase 7: 強弱記号 | 表現力の追加 |
 
 ---
 ## 🎯 目標
@@ -61,12 +61,12 @@ master
 | 3 | 連桁（Beaming） | 5 | 5 | 100% |
 | 4 | タイ・スラー | 6 | 6 | 100% |
 | 5 | 和音内臨時記号 | 3 | 3 | 100% |
-| 6 | 複数声部 | 5 | 7 | 71% |
+| 6 | 複数声部 | 9 | 9 | 100% |
 | 7 | 記譜記号 | 0 | 3 | 0% |
 | 8 | 歌詞配置 | 0 | 4 | 0% |
 | 9 | ページレイアウト | 0 | 3 | 0% |
 | 10 | 高度な機能 | 0 | 6 | 0% |
-| **合計** | | **29** | **48** | **60%** |
+| **合計** | | **33** | **50** | **66%** |
 
 ## 📋 ステータス凡例
 
@@ -160,8 +160,10 @@ master
 | StemDirection.cs | ✅ | High | 3h | 自動符幹方向計算 |
 | NoteCollisionTests.cs | ✅ | High | 1h | 衝突テスト |
 | StemDirectionTests.cs | ✅ | High | 1h | 符幹方向テスト |
-| VoiceCollector.cs | ✅ | High | 3h | 声部分離 (実装・テスト済み) |
-| SvgRenderer.cs (複数声部) | ✅ | High | 4h | 複数声部描画（基本実装完了、衝突回避は声部ごとの符幹方向で対応） |
+| VoiceCollector.cs | ✅ | High | 3h | 声部分離 |
+| LayoutEngine.cs (声部統合) | ✅ | High | 2h | NoteCollision を LayoutEngine に統合、VoiceOffsets 計算 |
+| SvgRenderer.cs (複数声部) | ✅ | High | 4h | 複数声部描画、衝突回避オフセット適用 |
+| MeasureCollector.cs | ✅ | Medium | 1h | MeasureBuilder 抽出によるリファクタリング |
 
 ## Phase 7: 記譜記号 🚀
 
@@ -234,3 +236,4 @@ master
 |------|----------|
 | 2025-12-11 | Phase 1 完了。Phase 2 部分完了（矩形 Skyline 暫定実装） |
 | 2025-12-11 | 目標を「完全等価」に修正。工数見積もり上方修正 |
+| 2025-12-12 | Phase 6 完了。NoteCollision を LayoutEngine に統合、MeasureBuilder リファクタリング |

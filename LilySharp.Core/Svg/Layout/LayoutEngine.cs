@@ -16,6 +16,8 @@ public sealed class LayoutEngine
     private readonly TieEngraver _tieEngraver = new();
     private readonly SlurDetector _slurDetector = new();
     private readonly SlurEngraver _slurEngraver = new();
+    private readonly VoiceCollector _voiceCollector = new();
+    private readonly NoteCollision _noteCollision = new();
     
     public LayoutEngine(LayoutOptions? options = null)
     {
@@ -34,7 +36,7 @@ public sealed class LayoutEngine
         double headerHeight = (score.Title != null || score.Composer != null) ? 50 : 0;
         currentY += headerHeight;
         
-        // Break measures into systems
+        // Break measures into systems (using first voice as representative)
         var systemMeasures = BreakIntoSystems(score);
         
         // Layout each system
@@ -67,6 +69,9 @@ public sealed class LayoutEngine
         // Detect and layout slurs
         var slurLayouts = LayoutSlurs(score, systemsArray);
         
+        // Calculate voice collision offsets for multi-voice scores
+        var voiceOffsets = CalculateVoiceOffsets(score);
+        
         return new ScoreLayout(
             _options.PageWidth,
             totalHeight,
@@ -74,7 +79,50 @@ public sealed class LayoutEngine
             systemsArray,
             beamLayouts,
             tieLayouts,
-            slurLayouts);
+            slurLayouts,
+            voiceOffsets);
+    }
+    
+    /// <summary>
+    /// Calculates X offsets for notes that collide in multi-voice contexts.
+    /// </summary>
+    private ImmutableDictionary<VoiceItemKey, double> CalculateVoiceOffsets(Score score)
+    {
+        if (score.Voices.Length <= 1)
+            return ImmutableDictionary<VoiceItemKey, double>.Empty;
+        
+        // Collect voice columns (grouped by time position)
+        var voiceColumns = _voiceCollector.Collect(score);
+        
+        if (voiceColumns.Length == 0)
+            return ImmutableDictionary<VoiceItemKey, double>.Empty;
+        
+        // Calculate notehead width for offset calculation
+        double noteheadWidth = SmuflDefaults.NoteheadBlackWidth * _options.StaffSpaceSize;
+        
+        var builder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
+        
+        foreach (var column in voiceColumns)
+        {
+            // Skip single-voice columns (no collision possible)
+            if (column.Entries.Length <= 1)
+                continue;
+            
+            // Calculate collision offsets
+            var offsets = _noteCollision.CalculateVoiceOffsets(column, noteheadWidth);
+            
+            foreach (var (voiceId, itemIndex, xOffset) in offsets)
+            {
+                // Only store non-zero offsets
+                if (Math.Abs(xOffset) > 0.001)
+                {
+                    var key = new VoiceItemKey(column.MeasureIndex, voiceId, itemIndex);
+                    builder[key] = xOffset;
+                }
+            }
+        }
+        
+        return builder.ToImmutable();
     }
     
     /// <summary>
@@ -130,6 +178,7 @@ public sealed class LayoutEngine
     
     /// <summary>
     /// Breaks measures into systems using a greedy algorithm.
+    /// Uses the first voice as representative for measure widths.
     /// </summary>
     private List<List<Measure>> BreakIntoSystems(Score score)
     {
@@ -142,6 +191,7 @@ public sealed class LayoutEngine
         
         double currentWidth = firstPrefixWidth;
         
+        // Use first voice for measure breaking (all voices should have same measure count)
         foreach (var measure in score.Voice.Measures)
         {
             double measureWidth = SpacingRules.CalculateMeasureMinWidth(measure);
