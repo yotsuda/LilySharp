@@ -39,3 +39,8 @@ fonts/
 # Generated output files
 *.svg
 !editors/**/*.svg
+
+# Temporary sample files
+samples/test*.lys
+samples/simple-test.lys
+samples/feature-*.lys

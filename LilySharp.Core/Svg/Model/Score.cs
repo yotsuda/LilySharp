@@ -44,8 +44,11 @@ public sealed record Voice(
 /// </remarks>
 public sealed record Score
 {
-    /// <summary>The voice to render (single-staff scores have one voice).</summary>
-    public Voice Voice { get; }
+    /// <summary>All voices in the score.</summary>
+    public ImmutableArray<Voice> Voices { get; }
+    
+    /// <summary>The primary voice (first voice, for backward compatibility).</summary>
+    public Voice Voice => Voices[0];
     
     /// <summary>Time signature for the score.</summary>
     public TimeSignature TimeSignature { get; }
@@ -64,7 +67,13 @@ public sealed record Score
     
     /// <summary>Composer (optional).</summary>
     public string? Composer { get; }
+    
+    /// <summary>Whether this score has multiple voices.</summary>
+    public bool IsMultiVoice => Voices.Length > 1;
 
+    /// <summary>
+    /// Creates a single-voice score (backward compatible constructor).
+    /// </summary>
     public Score(
         Voice voice,
         TimeSignature timeSignature,
@@ -73,8 +82,26 @@ public sealed record Score
         int? tempo = null,
         string? title = null,
         string? composer = null)
+        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer)
     {
-        Voice = voice;
+    }
+    
+    /// <summary>
+    /// Creates a multi-voice score.
+    /// </summary>
+    public Score(
+        ImmutableArray<Voice> voices,
+        TimeSignature timeSignature,
+        KeySignature keySignature,
+        string clef,
+        int? tempo = null,
+        string? title = null,
+        string? composer = null)
+    {
+        if (voices.Length == 0)
+            throw new ArgumentException("Score must have at least one voice", nameof(voices));
+        
+        Voices = voices;
         TimeSignature = timeSignature;
         KeySignature = keySignature;
         Clef = clef;
@@ -83,6 +110,6 @@ public sealed record Score
         Composer = composer;
     }
     
-    /// <summary>Total number of measures in the score.</summary>
+    /// <summary>Total number of measures in the score (from primary voice).</summary>
     public int MeasureCount => Voice.Measures.Length;
 }
