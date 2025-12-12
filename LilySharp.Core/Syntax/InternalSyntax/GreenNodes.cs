@@ -659,6 +659,21 @@ internal sealed class StaffRenderGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Grand staff render: grandStaff { staff staff ... }
+/// </summary>
+internal sealed class GrandStaffRenderGreen : GreenSyntaxNode
+{
+    public GrandStaffRenderGreen(
+        SyntaxToken grandStaffKeyword,
+        SyntaxToken openBrace,
+        StaffRenderGreen[] staves,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.GrandStaffRender, [grandStaffKeyword, openBrace, ..staves, closeBrace])
+    {
+    }
+}
+
+/// <summary>
 /// Tab render: tab tuning { partName }
 /// </summary>
 internal sealed class TabRenderGreen : GreenSyntaxNode

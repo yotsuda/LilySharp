@@ -46,6 +46,7 @@ public enum SyntaxKind : ushort
     ScoreKeyword,       // score (legacy)
     PartKeyword,        // part (legacy)
     StaffKeyword,       // staff
+    GrandStaffKeyword,  // grandStaff
     TabKeyword,         // tab
     VoiceKeyword,       // voice
     RepeatKeyword,      // repeat (legacy)
@@ -161,6 +162,7 @@ public enum SyntaxKind : ushort
     RenderDeclaration,          // render Name "file.svg" { ... }
     PartBlock,                  // guitar { ... } inside section
     StaffRender,                // staff { guitar } inside render
+    GrandStaffRender,           // grandStaff { staff staff } inside render
     TabRender,                  // tab guitar { guitar } inside render
     MidiPartRender,             // guitar channel:1 inside render
     

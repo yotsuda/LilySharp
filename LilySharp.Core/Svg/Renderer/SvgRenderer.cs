@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 

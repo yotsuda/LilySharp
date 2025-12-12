@@ -1091,6 +1091,34 @@ public sealed partial class StaffRenderSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Represents a grand staff render item: grandStaff { staff staff ... }
+/// </summary>
+public sealed partial class GrandStaffRenderSyntax : SyntaxNode
+{
+    internal GrandStaffRenderSyntax(GrandStaffRenderGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode GrandStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
+    
+    /// <summary>
+    /// Gets the staff render items (at least 2 required, validated semantically).
+    /// </summary>
+    public IEnumerable<StaffRenderSyntax> Staves
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+            {
+                if (GetChild(i) is StaffRenderSyntax staff)
+                    yield return staff;
+            }
+        }
+    }
+}
+
+/// <summary>
 /// Represents a tab render item: tab tuning { partName }
 /// </summary>
 public sealed partial class TabRenderSyntax : SyntaxNode

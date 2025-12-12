@@ -1142,6 +1142,7 @@ private GreenNode?[] ParseArticulations()
         return Current.Kind switch
         {
             SyntaxKind.StaffKeyword => ParseStaffRender(),
+            SyntaxKind.GrandStaffKeyword => ParseGrandStaffRender(),
             SyntaxKind.TabKeyword => ParseTabRender(),
             _ when IsPartNameStart() => ParseMidiPartRender(),
             _ => null
@@ -1169,6 +1170,24 @@ private GreenNode?[] ParseArticulations()
         var partNameSimple = ExpectPartName();
         var closeBraceSimple = Expect(SyntaxKind.CloseBrace);
         return new StaffRenderGreen(staffKeyword, openBraceSimple, partNameSimple, closeBraceSimple);
+    }
+    
+    /// <summary>
+    /// Parse grand staff render: grandStaff { staff staff ... }
+    /// </summary>
+    private GrandStaffRenderGreen ParseGrandStaffRender()
+    {
+        var grandStaffKeyword = Expect(SyntaxKind.GrandStaffKeyword);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        
+        var staves = new List<StaffRenderGreen>();
+        while (Check(SyntaxKind.StaffKeyword))
+        {
+            staves.Add(ParseStaffRender());
+        }
+        
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new GrandStaffRenderGreen(grandStaffKeyword, openBrace, [.. staves], closeBrace);
     }
     
     private bool IsClefKeyword()

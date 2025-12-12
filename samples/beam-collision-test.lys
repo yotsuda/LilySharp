@@ -1,12 +1,7 @@
 title "Beam Collision Test"
-tempo 100
 time 4/4
-key c major
 
-test = {
-  c'8 d' e' f' r4 g'8 a' |
-  c'16 d' e' f' g' a' b' c'' r8 r |
-}
+test = { c'8 r e r g r b r | c''8[ d e f] r4 r | }
 
 section Main {
   melody { test }

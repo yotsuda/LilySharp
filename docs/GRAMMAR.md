@@ -1,4 +1,4 @@
-﻿# Lily# Grammar Specification
+# Lily# Grammar Specification
 # Version: 0.4.0
 # Date: 2025-12-09
 
@@ -302,7 +302,6 @@ NavigationMark = 'segno'                          (* 𝄋 sign *)
 ================================================================================
 
 ### 5.1 Render Declaration
-
 (* At least one render block required per file *)
 
 RenderDecl     = 'render' , Identifier , String , '{' , { RenderItem } , '}' ;
@@ -310,21 +309,20 @@ RenderDecl     = 'render' , Identifier , String , '{' , { RenderItem } , '}' ;
 (* Identifier = render name for --render command line option *)
 (* String = output filename, extension determines format *)
 
-RenderItem     = StaffRender | TabRender | MidiPart ;
+RenderItem     = StaffRender | GrandStaffRender | TabRender | MidiPart ;
 
-StaffRender    = 'staff' , [ ClefOption ] , '{' , PartRef , '}' ;
-TabRender      = 'tab' , TuningOption , '{' , PartRef , '}' ;
+StaffRender    = 'staff' , [ ClefName ] , '{' , PartRef , '}' ;
+
+(* Grand staff - multiple staves connected by brace (piano, harp, etc.) *)
+(* Semantic validation: requires at least 2 staves, each with explicit clef *)
+GrandStaffRender = 'grandStaff' , '{' , { StaffRender } , '}' ;
+
+TabRender      = 'tab' , TuningName , '{' , PartRef , '}' ;
 MidiPart       = PartRef , [ MidiOptions ] ;
 
-ClefOption     = Identifier                       (* bass, treble, etc. *)
-               | 'clef' , ':' , ClefValue
-               ;
+ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' ;
 
-TuningOption   = Identifier                       (* guitar, bass, ukulele *)
-               | 'tuning' , ':' , TuningValue
-               ;
-
-TuningValue    = 'guitar' | 'bass' | 'bass5' | 'ukulele' ;
+TuningName     = 'guitar' | 'bass' | 'bass5' | 'ukulele' ;
 
 PartRef        = Identifier ;                     (* part name from sections *)
 
@@ -349,12 +347,30 @@ MidiOption     = 'channel' , ':' , Integer        (* 1-16 *)
      tab guitar { guitar }
    }
 
+   // Piano score (grand staff)
+   render piano "piano.svg" {
+     grandStaff {
+       staff treble { rightHand }
+       staff bass { leftHand }
+     }
+   }
+
+   // Piano + vocal (grand staff with additional staff)
+   render pianoVocal "piano-vocal.svg" {
+     staff treble { vocal }
+     grandStaff {
+       staff treble { rightHand }
+       staff bass { leftHand }
+     }
+   }
+
    // MIDI output
    render audio "mysong.mid" {
      guitar channel:1 instrument:25
      bass channel:2 instrument:33 octave:-1
    }
 *)
+
 
 ### 5.2 Output Formats
 
