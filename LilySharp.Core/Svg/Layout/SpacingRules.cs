@@ -244,23 +244,52 @@ public static class SpacingRules
     /// <param name="prevItem">The previous item (null for barline-to-first-item)</param>
     /// <param name="nextItem">The next item (null for last-item-to-barline)</param>
     /// <param name="prevDuration">Duration of previous item (for ideal distance calculation)</param>
+    /// <remarks>
+    /// Following Lilypond's approach: ideal = minDistance + durationSpace
+    /// This ensures notes of the same duration have equal spacing increments.
+    /// </remarks>
     public static Spring CreateSpring(MusicItem? prevItem, MusicItem? nextItem, Fraction prevDuration)
     {
-        // Calculate ideal distance based on duration (Gourlay algorithm)
-        double idealDistance = CalculateDurationWidth(prevDuration);
-        
         // Calculate minimum distance using Skyline-based collision detection
-        // Use staffY = 0 as reference; actual Y positions come from StaffPosition
         double minDistance = CalculateSkylineDistance(prevItem, nextItem, staffY: 0);
         
-        // Ensure ideal is at least min
-        idealDistance = Math.Max(idealDistance, minDistance);
+        // Calculate duration-based space increment (following Lilypond)
+        // This is ADDED to minDistance, not used as a maximum
+        double durationSpace = CalculateDurationSpace(prevDuration);
+        
+        // Ideal = min + duration-based increment
+        double idealDistance = minDistance + durationSpace;
         
         // Calculate stiffness (inverse of duration - shorter notes are stiffer)
         double durationValue = prevDuration.ToDouble();
         double stiffness = durationValue > 0 ? 1.0 / durationValue : 10.0;
         
         return new Spring(idealDistance, minDistance, stiffness);
+    }
+    
+    /// <summary>
+    /// Calculates the duration-based space increment.
+    /// </summary>
+    /// <remarks>
+    /// This is the additional space beyond minimum collision avoidance.
+    /// Uses logarithmic scaling following Gourlay's algorithm.
+    /// </remarks>
+    public static double CalculateDurationSpace(Fraction duration)
+    {
+        double quarterValue = Fraction.Quarter.ToDouble();
+        double durationValue = duration.ToDouble();
+        
+        if (durationValue <= 0)
+            return 5.0; // Minimal space for zero duration
+        
+        // Base space for quarter note
+        const double quarterSpace = 15.0;
+        
+        // Logarithmic scaling
+        double ratio = durationValue / quarterValue;
+        double logFactor = 1.0 + Math.Log2(Math.Max(ratio, 0.0625));
+        
+        return Math.Max(5.0, quarterSpace * logFactor * 0.7);
     }
     
     /// <summary>
@@ -438,39 +467,53 @@ public static class SpacingRules
         
         return Skyline.FromBoxes(boxes, Skyline.Direction.Left);
     }
-    
     /// <summary>
-    /// Calculates the minimum distance between two items using their skylines.
+    /// Calculates the minimum distance between two items.
     /// </summary>
+    /// <remarks>
+    /// For horizontal spacing between notes, we use notehead-based calculation
+    /// (not including stems/flags which extend vertically and rarely collide horizontally).
+    /// This follows Lilypond's approach where note spacing is primarily based on noteheads.
+    /// </remarks>
     public static double CalculateSkylineDistance(MusicItem? prevItem, MusicItem? nextItem, 
                                                    double staffY)
     {
         // For barline-to-item or item-to-barline, use simple calculation
         if (prevItem == null || nextItem == null)
         {
-            double prevExtent = prevItem != null ? CalculateRightExtent(prevItem) : BarlinePadding;
+            double prevExtent = prevItem != null ? CalculateNoteheadRightExtent(prevItem) : BarlinePadding;
             double nextExtent = nextItem != null ? CalculateLeftExtent(nextItem) : BarlinePadding;
             return prevExtent + nextExtent + MinItemGap;
         }
         
-        // Create skylines (using 0 as reference X - we only care about relative distances)
-        var prevRightSkyline = CreateRightSkyline(prevItem, 0, staffY);
-        var nextLeftSkyline = CreateLeftSkyline(nextItem, 0, staffY);
+        // Use notehead-based calculation (excluding stems/flags)
+        double prevRightExtent = CalculateNoteheadRightExtent(prevItem);
+        double nextLeftExtent = CalculateLeftExtent(nextItem);
         
-        // Distance is negative of the skyline overlap
-        // We need: prevRight + gap + nextLeft >= 0
-        // So: minDistance = -skylineDistance + gap
-        double skylineDistance = prevRightSkyline.Distance(nextLeftSkyline);
+        return prevRightExtent + nextLeftExtent + MinItemGap;
+    }
+    
+    /// <summary>
+    /// Calculates the right extent from notehead center, excluding stems and flags.
+    /// </summary>
+    private static double CalculateNoteheadRightExtent(MusicItem item)
+    {
+        int noteValue = GetNoteValue(item);
+        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
         
-        // If skylines don't overlap vertically, use simple extent calculation
-        if (double.IsInfinity(skylineDistance))
+        // Right extent from center = width - centerX
+        double extent = GlyphMetrics.ToPixels(noteheadBBox.Width - noteheadBBox.CenterX);
+        
+        // Add dots if present
+        int dots = GetDots(item);
+        if (dots > 0)
         {
-            double prevExtent = CalculateRightExtent(prevItem);
-            double nextExtent = CalculateLeftExtent(nextItem);
-            return prevExtent + nextExtent + MinItemGap;
+            var dotBBox = GlyphMetrics.AugmentationDot;
+            double dotWidth = GlyphMetrics.ToPixels(dotBBox.Width);
+            double dotGap = GlyphMetrics.ToPixels(0.3);
+            extent += dotGap + dots * dotWidth + (dots - 1) * dotGap;
         }
         
-        // MinDistance = gap needed to separate skylines
-        return -skylineDistance + MinItemGap;
+        return extent;
     }
 }

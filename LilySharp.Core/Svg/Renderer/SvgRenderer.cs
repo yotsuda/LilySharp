@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 
@@ -31,6 +31,7 @@ public sealed class SvgRenderer
     private readonly StringBuilder _svg = new();
     private readonly LayoutOptions _layoutOptions;
     private Dictionary<MusicItem, double> _beamedStemEndYs = new();
+    private Dictionary<MusicItem, bool> _beamedStemUp = new();
     
     public SvgRenderer(LayoutOptions? options = null)
     {
@@ -56,6 +57,7 @@ public sealed class SvgRenderer
         
         // Calculate stem end Y positions for beamed notes (all in pixels)
         _beamedStemEndYs.Clear();
+        _beamedStemUp.Clear();
         foreach (var beamLayout in layout.BeamLayouts)
         {
             if (!measureToSystem.TryGetValue(beamLayout.Group.MeasureIndex, out var system))
@@ -109,6 +111,7 @@ public sealed class SvgRenderer
                 }
                 
                 _beamedStemEndYs[member.Item] = stemEndY;
+                _beamedStemUp[member.Item] = group.StemUp;
             }
         }
         WriteHeader(layout.Width, layout.Height);
@@ -342,7 +345,9 @@ public sealed class SvgRenderer
         // Draw stem using GlyphMetrics anchor points
         if (noteValue >= 2)
         {
-            var stemAnchor = note.StemUp ? GlyphMetrics.StemUpSE : GlyphMetrics.StemDownNW;
+            // Use beam group stem direction if part of a beam, otherwise note's own direction
+            bool stemUp = _beamedStemUp.TryGetValue(note, out bool beamStemUp) ? beamStemUp : note.StemUp;
+            var stemAnchor = stemUp ? GlyphMetrics.StemUpSE : GlyphMetrics.StemDownNW;
             double stemX = noteheadLeftX + GlyphMetrics.ToPixels(stemAnchor.X);
             double stemAttachY = noteY - GlyphMetrics.ToPixels(stemAnchor.Y);
             
@@ -354,7 +359,7 @@ public sealed class SvgRenderer
             }
             else
             {
-                stemEndY = note.StemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
+                stemEndY = stemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
             }
             
             _svg.AppendLine($"""  <line class="stem" x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}"/>""");
@@ -362,7 +367,7 @@ public sealed class SvgRenderer
             // Draw flag (only if not beamed)
             if (!_beamedStemEndYs.ContainsKey(note))
             {
-                var flag = SmuflGlyphs.GetFlag(noteValue, note.StemUp);
+                var flag = SmuflGlyphs.GetFlag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
                     DrawGlyph(flag.Value, stemX, stemEndY);
@@ -562,9 +567,9 @@ public sealed class SvgRenderer
         double ledgerX2 = x + noteheadWidth + extension;
         
         // Lines above staff
-        if (staffPosition >= 10)
+        if (staffPosition >= 6)
         {
-            for (int pos = 10; pos <= staffPosition; pos += 2)
+            for (int pos = 6; pos <= staffPosition; pos += 2)
             {
                 double ledgerY = systemY + StaffHeight / 2 - (pos * SpaceHeight / 2);
                 _svg.AppendLine($"""  <line class="ledger" x1="{ledgerX1:F1}" y1="{ledgerY:F1}" x2="{ledgerX2:F1}" y2="{ledgerY:F1}"/>""");
@@ -572,9 +577,9 @@ public sealed class SvgRenderer
         }
         
         // Lines below staff
-        if (staffPosition <= -2)
+        if (staffPosition <= -6)
         {
-            for (int pos = -2; pos >= staffPosition; pos -= 2)
+            for (int pos = -6; pos >= staffPosition; pos -= 2)
             {
                 double ledgerY = systemY + StaffHeight / 2 - (pos * SpaceHeight / 2);
                 _svg.AppendLine($"""  <line class="ledger" x1="{ledgerX1:F1}" y1="{ledgerY:F1}" x2="{ledgerX2:F1}" y2="{ledgerY:F1}"/>""");

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -26,16 +27,18 @@ public sealed class BeamEngraver
         if (group.Members.Length < 2)
             throw new ArgumentException("Beam group must have at least 2 members");
         
-        // Get X positions for the beam
-        var firstMember = group.Members[0];
-        var lastMember = group.Members[^1];
-        double leftX = itemXPositions[firstMember.ItemIndex];
-        double rightX = itemXPositions[lastMember.ItemIndex];
+        // Get X positions for each member
+        var memberXPositions = group.Members
+            .Select(m => itemXPositions[m.ItemIndex])
+            .ToImmutableArray();
+        
+        double leftX = memberXPositions[0];
+        double rightX = memberXPositions[^1];
         
         // Use BeamScoringProblem to find optimal beam positions
         var problem = new BeamScoringProblem(group, itemXPositions, staffSpaceSize, _parameters);
         var (leftY, rightY) = problem.Solve();
         
-        return new BeamLayout(group, leftY, rightY, leftX, rightX);
+        return new BeamLayout(group, leftY, rightY, leftX, rightX, memberXPositions);
     }
 }

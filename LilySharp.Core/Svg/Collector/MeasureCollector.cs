@@ -429,8 +429,14 @@ public sealed class MeasureCollector
     {
         if (!_variables.TryGetValue(name, out var expression))
             return;
-            
-        // Get music nodes from the variable expression
+        
+        // Include expression itself if it is a music node (e.g., RelativeExpressionSyntax)
+        if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or RelativeExpressionSyntax)
+        {
+            musicNodes.Add(expression);
+        }
+        
+        // Get music nodes from the variable expression descendants
         var nodes = expression.DescendantNodes()
             .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or RelativeExpressionSyntax);
         
@@ -469,7 +475,7 @@ public sealed class MeasureCollector
             _defaultDuration = Fraction.FromNoteValue(noteValue);
         
         int dots = note.Duration?.DotCount ?? 0;
-        bool needsLedger = staffPosition <= -2 || staffPosition >= 10;
+        bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
         
         string? accidental = note.Pitch.AccidentalOffset switch
         {
@@ -504,10 +510,21 @@ public sealed class MeasureCollector
     {
         var notes = new List<ChordNoteInfo>();
         
+        // Track first note's state for subsequent chord/note relative calculation
+        int firstOctave = _currentOctave;
+        char firstPitchName = _lastPitchName;
+        
         foreach (var pitch in chord.Pitches)
         {
             var (staffPosition, octave) = CalculateStaffPosition(pitch);
             _currentOctave = octave;
+            
+            // Remember first pitch's state
+            if (notes.Count == 0)
+            {
+                firstOctave = octave;
+                firstPitchName = pitch.PitchName.ToLowerInvariant()[0];
+            }
             
             string? accidental = pitch.AccidentalOffset switch
             {
@@ -518,9 +535,13 @@ public sealed class MeasureCollector
                 _ => null
             };
             
-            bool needsLedger = staffPosition <= -2 || staffPosition >= 10;
+            bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
             notes.Add(new ChordNoteInfo(staffPosition, accidental, needsLedger));
         }
+        
+        // Next chord/note is relative to first pitch of this chord (Lilypond spec)
+        _currentOctave = firstOctave;
+        _lastPitchName = firstPitchName;
         
         int noteValue = chord.Duration?.Value ?? (int)_defaultDuration.Denominator;
         if (chord.Duration != null)
@@ -534,23 +555,27 @@ public sealed class MeasureCollector
     private (int staffPosition, int octave) CalculateStaffPosition(PitchSyntax pitch)
     {
         char pitchName = pitch.PitchName.ToLowerInvariant()[0];
-        int octave = _currentOctave + pitch.OctaveOffset;
         
+        // Calculate base octave from interval (without OctaveOffset)
         int interval = GetPitchIndex(pitchName) - GetPitchIndex(_lastPitchName);
+        int baseOctave = _currentOctave;
+        if (interval > 3) baseOctave--;
+        else if (interval < -3) baseOctave++;
         
-        if (interval > 3) octave--;
-        else if (interval < -3) octave++;
+        // Apply OctaveOffset for this note only (does not affect next note)
+        int actualOctave = baseOctave + pitch.OctaveOffset;
         
         int basePosition = _clef switch
         {
-            "treble" => GetPitchIndex(pitchName) - GetPitchIndex('b') + (octave - 4) * 7,
-            "bass" => GetPitchIndex(pitchName) - GetPitchIndex('d') + (octave - 3) * 7,
-            _ => GetPitchIndex(pitchName) - GetPitchIndex('b') + (octave - 4) * 7
+            "treble" => GetPitchIndex(pitchName) - GetPitchIndex('b') + (actualOctave - 4) * 7,
+            "bass" => GetPitchIndex(pitchName) - GetPitchIndex('d') + (actualOctave - 3) * 7,
+            _ => GetPitchIndex(pitchName) - GetPitchIndex('b') + (actualOctave - 4) * 7
         };
         
         _lastPitchName = pitchName;
         
-        return (basePosition, octave);
+        // Return actualOctave - next note is calculated relative to actual pitch
+        return (basePosition, actualOctave);
     }
     
     private static int GetPitchIndex(char pitch) => pitch switch
