@@ -170,5 +170,6 @@
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
-  }
+  },
+  "icon": "icon.png"
 }
