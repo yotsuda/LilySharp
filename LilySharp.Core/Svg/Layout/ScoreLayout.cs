@@ -27,9 +27,20 @@ public sealed record MeasureLayout(
 /// </summary>
 public sealed record SystemLayout(
     int SystemIndex,
-    double Y,                              // Y position of system top
+    double Y,                              // Y position of system top (relative to page)
     double PrefixWidth,                    // Width of clef + key + time
     ImmutableArray<MeasureLayout> Measures // Measures in this system
+);
+
+/// <summary>
+/// Layout information for a single page.
+/// </summary>
+public sealed record PageLayout(
+    int PageIndex,
+    double Width,
+    double Height,
+    double HeaderHeight,                   // Space for title/composer (first page only)
+    ImmutableArray<SystemLayout> Systems   // Systems on this page
 );
 
 /// <summary>
@@ -41,18 +52,31 @@ public readonly record struct VoiceItemKey(int MeasureIndex, int VoiceId, int It
 /// Complete layout information for a score.
 /// </summary>
 public sealed record ScoreLayout(
-    double Width,
-    double Height,
-    double HeaderHeight,                     // Space for title/composer
-    ImmutableArray<SystemLayout> Systems,
+    ImmutableArray<PageLayout> Pages,
+    ImmutableArray<SystemLayout> AllSystems,
     ImmutableArray<BeamLayout> BeamLayouts,
     ImmutableArray<TieLayout> TieLayouts,
     ImmutableArray<SlurLayout> SlurLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets
 )
 {
-    /// <summary>Total number of systems.</summary>
-    public int SystemCount => Systems.Length;
+    /// <summary>Total number of pages.</summary>
+    public int PageCount => Pages.Length;
+    
+    /// <summary>Total number of systems across all pages.</summary>
+    public int SystemCount => AllSystems.Length;
+    
+    /// <summary>Width of the first page (for compatibility).</summary>
+    public double Width => Pages.Length > 0 ? Pages[0].Width : 0;
+    
+    /// <summary>Height of the first page (for compatibility).</summary>
+    public double Height => Pages.Length > 0 ? Pages[0].Height : 0;
+    
+    /// <summary>Header height of the first page (for compatibility).</summary>
+    public double HeaderHeight => Pages.Length > 0 ? Pages[0].HeaderHeight : 0;
+    
+    /// <summary>All systems from all pages (pre-computed for performance).</summary>
+    public ImmutableArray<SystemLayout> Systems => AllSystems;
     
     /// <summary>
     /// Gets the X offset for a specific voice item due to collision handling.

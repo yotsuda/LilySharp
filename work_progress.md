@@ -64,13 +64,6 @@ master
 | Builder パターン | ⚠️ | 拡大予定 |
 | Incremental 更新 | ❌ | 将来課題 |
 
-### リファクタリング予定
-
-| 優先度 | タスク | 理由 |
-|:------:|--------|------|
-| 1 | LayoutEngine 分割 | God Class 化を防止、Engraver 群を独立 |
-| 2 | Visitor パターン導入 | Collector 群の switch 文を統一 |
-| 3 | Incremental Layout | LSP プレビューの高速化 |
 
 ## 📊 全体進捗
 

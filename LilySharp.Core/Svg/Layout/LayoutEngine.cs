@@ -59,8 +59,16 @@ public sealed class LayoutEngine
         
         double totalHeight = currentY - _options.SystemSpacing + _options.MarginTop;
         
-        // Detect and layout beams
+        // Create single page (TODO: implement page breaking for multi-page scores)
         var systemsArray = systems.ToImmutableArray();
+        var page = new PageLayout(
+            PageIndex: 0,
+            Width: _options.PageWidth,
+            Height: totalHeight,
+            HeaderHeight: headerHeight,
+            Systems: systemsArray);
+        
+        // Detect and layout beams
         var beamLayouts = LayoutBeams(score, systemsArray);
         
         // Detect and layout ties
@@ -73,9 +81,7 @@ public sealed class LayoutEngine
         var voiceOffsets = CalculateVoiceOffsets(score);
         
         return new ScoreLayout(
-            _options.PageWidth,
-            totalHeight,
-            headerHeight,
+            ImmutableArray.Create(page),
             systemsArray,
             beamLayouts,
             tieLayouts,
