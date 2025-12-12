@@ -199,6 +199,7 @@ public sealed class BeamScoringProblem
         ScoreHorizontalInter(config);
         ScoreForbiddenQuants(config);
         ScoreStemLengths(config);
+        ScoreCollisions(config);
     }
     
     private void ScoreOriginalDistance(BeamConfiguration config)

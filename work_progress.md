@@ -33,7 +33,7 @@ master
 ### 次のタスク候補
 | 優先度 | タスク | 理由 |
 |:------:|--------|------|
-| 1 | Phase 3: ScoreCollision | 連桁と音符の衝突回避（ユーザー発見のバグ） |
+| 1 | Phase 11: グランドスタッフ | 大譜表（ピアノ譜）の基本実装 |
 | 2 | Phase 9: Knuth-Plass 改行 | 長い楽譜の最適改行 |
 | 3 | Phase 2: 斜め Skyline | Lilypond 完全等価に必須 |
 
@@ -71,7 +71,7 @@ master
 |-------|------|-----:|-----:|-----:|
 | 1 | 基本グリフ配置 | 6 | 6 | 100% |
 | 2 | Skyline 衝突回避 | 4 | 5 | 80% |
-| 3 | 連桁（Beaming） | 8 | 9 | 89% |
+| 3 | 連桁（Beaming） | 9 | 9 | 100% |
 | 4 | タイ・スラー | 6 | 6 | 100% |
 | 5 | 和音内臨時記号 | 3 | 3 | 100% |
 | 6 | 複数声部 | 9 | 9 | 100% |
@@ -80,7 +80,7 @@ master
 | 9 | ページレイアウト | 0 | 3 | 0% |
 | 10 | 高度な機能 | 0 | 6 | 0% |
 | 11 | グランドスタッフ | 0 | 8 | 0% |
-| **合計** | | **33** | **59** | **56%** |
+| **合計** | | **34** | **59** | **58%** |
 
 ## 📋 ステータス凡例
 
@@ -132,7 +132,7 @@ master
 | BeamQuantParameters.cs | ✅ | High | 1h | Lilypond Beam_quant_parameters 移植 |
 | BeamConfiguration.cs | ✅ | High | 1h | Lilypond Beam_configuration 移植 |
 | BeamScoringProblem.cs | ✅ | High | 8h | Lilypond beam-quanting.cc 基本移植（7 scorers） |
-| BeamScoringProblem.cs (Collision) | 🚀 | High | 4h | 連桁と音符の衝突回避スコアラー |
+| BeamScoringProblem.cs (Collision) | ✅ | High | 0.5h | 連桁と音符の衝突回避スコアラー（ScoreCollisions呼び出し追加） |
 
 ## Phase 4: タイ・スラー ✅ (基本実装完了)
 
@@ -268,3 +268,4 @@ master
 | 2025-12-12 | Phase 6 完了。NoteCollision を LayoutEngine に統合、MeasureBuilder リファクタリング |
 | 2025-12-12 | 目標を「LilyPond 等価品質」に再定義。Roslyn パターン採用方針を明確化 |
 | 2025-12-12 | Phase 11: グランドスタッフ（大譜表）を計画に追加 |
+| 2025-12-13 | Phase 3 完了。ScoreCollisions 呼び出し追加 |
