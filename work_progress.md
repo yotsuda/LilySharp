@@ -4,7 +4,7 @@
 
 ### ブランチ
 ```
-feature/smufl-spacing
+master
 ```
 
 ### 実装済みファイル
@@ -15,25 +15,27 @@ feature/smufl-spacing
 | SpacingRules.cs | `LilySharp.Core/Svg/Layout/` | Skyline 生成、MinDistance 計算 |
 | Spring.cs | `LilySharp.Core/Svg/Layout/` | Spring-Rod モデル |
 | SpringSolver.cs | `LilySharp.Core/Svg/Layout/` | 制約ソルバー |
+| BeamEngraver.cs | `LilySharp.Core/Svg/Layout/` | 連桁レイアウト |
+| BeamScoringProblem.cs | `LilySharp.Core/Svg/Layout/` | 連桁角度最適化 |
+| TieEngraver.cs | `LilySharp.Core/Svg/Layout/` | タイレイアウト |
+| SlurEngraver.cs | `LilySharp.Core/Svg/Layout/` | スラーレイアウト |
+| AccidentalPlacement.cs | `LilySharp.Core/Svg/Layout/` | 和音内臨時記号配置 |
+| NoteCollision.cs | `LilySharp.Core/Svg/Layout/` | 声部間ノート衝突検出 |
+| StemDirection.cs | `LilySharp.Core/Svg/Layout/` | 符幹方向自動計算 |
+| EngravingDefaults.cs | `LilySharp.Core/Svg/Layout/` | Lilypond互換定数 |
 
-### テストファイル
-| ファイル | 用途 |
+### ドキュメント
+| ファイル | 内容 |
 |----------|------|
-| `samples/fur-elise.lys` | 視覚テスト用入力 |
-| `samples/fur-elise-smufl.svg` | 生成された SVG（視覚確認用） |
-| `SvgTests.cs` の `GenerateFurEliseSvg_ForVisualCheck` | SVG 生成テスト |
-
-### 直近の解決済み問題（2025-12-11）
-1. ✅ 臨時記号と符頭の重なり → SMuFL metrics + 座標系統一
-2. ✅ 旗と臨時記号の重なり → Skyline で旗の extent を考慮
-3. ✅ 付点と五線の重なり → 線上なら半 space 上にシフト
+| docs/COORDINATE_SYSTEM.md | 座標系ガイドライン（staff positions/spaces/pixels） |
+| docs/SVG_LAYOUT_ARCHITECTURE.md | SVGレイアウトアーキテクチャ |
 
 ### 次のタスク候補
 | 優先度 | タスク | 理由 |
 |:------:|--------|------|
-| 1 | Phase 3: 連桁（Beaming） | fur-elise に連桁が多い |
-| 2 | Phase 2: Skyline 斜め対応 | 矩形近似でも現状動作するため後回し可 |
-| 3 | Phase 4: タイ | fur-elise にタイがある |
+| 1 | Phase 6: VoiceCollector | 複数声部分離 |
+| 2 | Phase 6: 複数声部描画 | SvgRenderer での複数声部対応 |
+| 3 | Phase 7: 強弱記号 | 記譜記号の追加 |
 
 ---
 ## 🎯 目標
@@ -55,16 +57,16 @@ feature/smufl-spacing
 | Phase | 項目 | 完了 | 合計 | 進捗 |
 |-------|------|-----:|-----:|-----:|
 | 1 | 基本グリフ配置 | 6 | 6 | 100% |
-| 2 | Skyline 衝突回避 | 2 | 5 | 40% |
-| 3 | 連桁（Beaming） | 0 | 5 | 0% |
-| 4 | タイ・スラー | 0 | 6 | 0% |
-| 5 | 和音内臨時記号 | 0 | 3 | 0% |
-| 6 | 複数声部 | 0 | 4 | 0% |
+| 2 | Skyline 衝突回避 | 4 | 5 | 80% |
+| 3 | 連桁（Beaming） | 5 | 5 | 100% |
+| 4 | タイ・スラー | 6 | 6 | 100% |
+| 5 | 和音内臨時記号 | 3 | 3 | 100% |
+| 6 | 複数声部 | 5 | 7 | 71% |
 | 7 | 記譜記号 | 0 | 3 | 0% |
 | 8 | 歌詞配置 | 0 | 4 | 0% |
 | 9 | ページレイアウト | 0 | 3 | 0% |
 | 10 | 高度な機能 | 0 | 6 | 0% |
-| **合計** | | **8** | **45** | **18%** |
+| **合計** | | **29** | **48** | **60%** |
 
 ## 📋 ステータス凡例
 

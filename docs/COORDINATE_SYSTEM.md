@@ -1,4 +1,4 @@
-# LilySharp 座標系ガイドライン
+﻿# LilySharp 座標系ガイドライン
 
 ## 概要
 
@@ -161,7 +161,22 @@ double pixelY = staffPos * SpaceHeight;
 double pixelY = staffPos * SpaceHeight / 2;
 ```
 
+## Lilypond 定義値
+
+調号の配置位置など、Lilypond の `define-grobs.scm` で定義されている値：
+
+```scheme
+;; 調号のシャープ位置（treble clef）: F#, C#, G#, D#, A#, E#, B#
+(sharp-positions . (4 5 4 2 3 2 3))
+
+;; 調号のフラット位置（treble clef）: Bb, Eb, Ab, Db, Gb, Cb, Fb  
+(flat-positions . (2 3 4 2 1 2 1))
+```
+
+Bass clef の場合は treble から -2 した位置。
+
 ## 参考資料
 
 - Lilypond Internals Reference: https://lilypond.org/doc/v2.24/Documentation/internals/
 - SMuFL Specification: https://w3c.github.io/smufl/latest/
+- Lilypond Source: `scm/define-grobs.scm` (調号位置など)
