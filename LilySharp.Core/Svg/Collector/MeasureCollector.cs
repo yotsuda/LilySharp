@@ -43,9 +43,19 @@ public sealed class MeasureCollector
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
         
-        // Phase 2: Collect measures
-        var measures = CollectMeasures();
+        // Phase 2: Check for parallel expression (multi-voice)
+        var parallelExpr = tree.GetRoot().DescendantNodes()
+            .OfType<ParallelExpressionSyntax>()
+            .FirstOrDefault();
         
+        if (parallelExpr != null)
+        {
+            // Multi-voice: collect each voice separately
+            return CollectMultiVoiceScore(parallelExpr);
+        }
+        
+        // Single voice
+        var measures = CollectMeasures();
         var voice = new Voice(_voiceName ?? "default", measures.ToImmutableArray());
         
         return new Score(
@@ -57,6 +67,129 @@ public sealed class MeasureCollector
             _title,
             _composer);
     }
+    
+    /// <summary>
+    /// Collects a multi-voice score from a parallel expression.
+    /// </summary>
+    private Score CollectMultiVoiceScore(ParallelExpressionSyntax parallelExpr)
+    {
+        var voices = new List<Voice>();
+        int voiceNumber = 1;
+        
+        foreach (var voiceNode in parallelExpr.Voices)
+        {
+            // Save and reset state for each voice
+            var savedOctave = _currentOctave;
+            var savedPitch = _lastPitchName;
+            var savedDuration = _defaultDuration;
+            
+            _currentOctave = 4;
+            _lastPitchName = 'c';
+            _defaultDuration = Fraction.Quarter;
+            
+            var measures = CollectMeasuresFromNode(voiceNode);
+            var voiceName = $"voice{voiceNumber}";
+            voices.Add(new Voice(voiceName, measures.ToImmutableArray()));
+            voiceNumber++;
+            
+            // Restore state (not strictly necessary but clean)
+            _currentOctave = savedOctave;
+            _lastPitchName = savedPitch;
+            _defaultDuration = savedDuration;
+        }
+        
+        return new Score(
+            voices.ToImmutableArray(),
+            new TimeSignature(_timeBeats, _timeBeatType),
+            new KeySignature(_keySharps),
+            _clef,
+            _tempo,
+            _title,
+            _composer);
+    }
+    
+    /// <summary>
+    /// Collects measures from a specific syntax node (voice in parallel expression).
+    /// </summary>
+    private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
+    {
+        var measures = new List<Measure>();
+        var currentItems = new List<MusicItem>();
+        BarlineType pendingStartBarline = BarlineType.None;
+        int measureSourceStart = voiceNode.Position;
+        
+        void CompleteMeasure(BarlineType endBarline, int sourceEnd)
+        {
+            if (currentItems.Count > 0 || pendingStartBarline != BarlineType.None)
+            {
+                measures.Add(new Measure(
+                    currentItems.ToImmutableArray(),
+                    pendingStartBarline,
+                    endBarline,
+                    null,
+                    measureSourceStart,
+                    sourceEnd));
+                
+                currentItems.Clear();
+                pendingStartBarline = BarlineType.None;
+                measureSourceStart = sourceEnd;
+            }
+        }
+        
+        // Process nodes within this voice
+        foreach (var node in voiceNode.DescendantNodes())
+        {
+            switch (node)
+            {
+                case RelativeExpressionSyntax relative:
+                    InitializeRelativeMode(relative.BasePitch);
+                    break;
+                    
+                case NoteSyntax note:
+                    currentItems.Add(CreateNoteItem(note));
+                    break;
+                    
+                case RestSyntax rest:
+                    currentItems.Add(CreateRestItem(rest));
+                    break;
+                    
+                case ChordSyntax chord:
+                    currentItems.Add(CreateChordItem(chord));
+                    break;
+                    
+                case BarlineSyntax barline:
+                    var barType = ParseBarlineType(barline.BarToken.Text);
+                    
+                    if (barType == BarlineType.RepeatStart)
+                    {
+                        if (currentItems.Count > 0)
+                            CompleteMeasure(BarlineType.Single, barline.Position);
+                        pendingStartBarline = BarlineType.RepeatStart;
+                        measureSourceStart = barline.Position;
+                    }
+                    else
+                    {
+                        CompleteMeasure(barType, barline.Position);
+                    }
+                    break;
+            }
+        }
+        
+        // Handle final measure without trailing barline
+        if (currentItems.Count > 0)
+        {
+            measures.Add(new Measure(
+                currentItems.ToImmutableArray(),
+                pendingStartBarline,
+                BarlineType.Single,
+                null,
+                measureSourceStart,
+                measureSourceStart));
+        }
+        
+        return measures;
+    }
+
     
     private void Reset()
     {

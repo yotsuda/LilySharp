@@ -151,7 +151,7 @@ master
 | SvgRenderer.cs (和音臨時記号) | ✅ | High | 2h | 複数臨時記号描画 |
 | AccidentalPlacementTests.cs | ✅ | High | 1h | テスト |
 
-## Phase 6: 複数声部 ⏳
+## Phase 6: 複数声部 ✅
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -161,7 +161,7 @@ master
 | NoteCollisionTests.cs | ✅ | High | 1h | 衝突テスト |
 | StemDirectionTests.cs | ✅ | High | 1h | 符幹方向テスト |
 | VoiceCollector.cs | ✅ | High | 3h | 声部分離 (実装・テスト済み) |
-| SvgRenderer.cs (複数声部) | ⏳ | High | 4h | 複数声部描画 |
+| SvgRenderer.cs (複数声部) | ✅ | High | 4h | 複数声部描画（基本実装完了、衝突回避は声部ごとの符幹方向で対応） |
 
 ## Phase 7: 記譜記号 🚀
 

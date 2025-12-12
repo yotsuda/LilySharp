@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 
@@ -245,27 +245,37 @@ public sealed class SvgRenderer
             DrawTempoMarking(score.Tempo.Value, startX, y);
         }
         
-        // Draw measures
+        // Draw measures (all voices)
         foreach (var measureLayout in system.Measures)
         {
-            var measure = score.Voice.Measures[measureLayout.MeasureIndex];
-            DrawMeasure(measure, measureLayout, measureLayout.MeasureIndex, y);
+            // Draw each voice
+            for (int voiceIdx = 0; voiceIdx < score.Voices.Length; voiceIdx++)
+            {
+                var voice = score.Voices[voiceIdx];
+                if (measureLayout.MeasureIndex < voice.Measures.Length)
+                {
+                    var measure = voice.Measures[measureLayout.MeasureIndex];
+                    int voiceNumber = voiceIdx + 1;
+                    bool? forcedStemUp = VoiceDefaults.GetDefaultStemUp(voiceNumber);
+                    DrawMeasure(measure, measureLayout, measureLayout.MeasureIndex, y, forcedStemUp, isFirstVoice: voiceIdx == 0);
+                }
+            }
         }
     }
     
-    private void DrawMeasure(Measure measure, MeasureLayout layout, int measureIndex, double systemY)
+    private void DrawMeasure(Measure measure, MeasureLayout layout, int measureIndex, double systemY, bool? forcedStemUp = null, bool isFirstVoice = true)
     {
         double x = layout.X;
         double staffBottom = systemY + StaffHeight;
         
-        // Draw section label if present
-        if (measure.SectionLabel != null)
+        // Draw section label if present (first voice only to avoid duplicates)
+        if (isFirstVoice && measure.SectionLabel != null)
         {
             DrawSectionLabel(measure.SectionLabel, x, systemY);
         }
         
-        // Draw start barline
-        if (measure.StartBarline != BarlineType.None)
+        // Draw start barline (first voice only to avoid duplicates)
+        if (isFirstVoice && measure.StartBarline != BarlineType.None)
         {
             DrawBarline(measure.StartBarline, x, systemY);
         }
@@ -280,23 +290,26 @@ public sealed class SvgRenderer
             switch (item)
             {
                 case NoteItem note:
-                    DrawNote(note, itemX, systemY);
+                    DrawNote(note, itemX, systemY, forcedStemUp);
                     break;
                 case RestItem rest:
                     DrawRest(rest, itemX, systemY);
                     break;
                 case ChordItem chord:
-                    DrawChord(chord, itemX, systemY);
+                    DrawChord(chord, itemX, systemY, forcedStemUp);
                     break;
             }
         }
         
-        // Draw end barline at the right edge of the measure
-        double endX = x + layout.Width;
-        DrawBarline(measure.EndBarline, endX, systemY);
+        // Draw end barline at the right edge of the measure (first voice only to avoid duplicates)
+        if (isFirstVoice)
+        {
+            double endX = x + layout.Width;
+            DrawBarline(measure.EndBarline, endX, systemY);
+        }
     }
     
-    private void DrawNote(NoteItem note, double x, double systemY)
+    private void DrawNote(NoteItem note, double x, double systemY, bool? forcedStemUp = null)
     {
         // x is the reference point (center of notehead in Spring-Rod model)
         double noteY = systemY + StaffHeight / 2 - (note.StaffPosition * SpaceHeight / 2);
@@ -345,8 +358,10 @@ public sealed class SvgRenderer
         // Draw stem using GlyphMetrics anchor points
         if (noteValue >= 2)
         {
-            // Use beam group stem direction if part of a beam, otherwise note's own direction
-            bool stemUp = _beamedStemUp.TryGetValue(note, out bool beamStemUp) ? beamStemUp : note.StemUp;
+            // Priority: beam direction > forced (voice) direction > note's own direction
+            bool stemUp = _beamedStemUp.TryGetValue(note, out bool beamStemUp) 
+                ? beamStemUp 
+                : forcedStemUp ?? note.StemUp;
             var stemAnchor = stemUp ? GlyphMetrics.StemUpSE : GlyphMetrics.StemDownNW;
             double stemX = noteheadLeftX + GlyphMetrics.ToPixels(stemAnchor.X);
             double stemAttachY = noteY - GlyphMetrics.ToPixels(stemAnchor.Y);
@@ -411,7 +426,7 @@ public sealed class SvgRenderer
         DrawGlyph(restGlyph, x, restY, rest.SourcePosition);
     }
     
-    private void DrawChord(ChordItem chord, double x, double systemY)
+    private void DrawChord(ChordItem chord, double x, double systemY, bool? forcedStemUp = null)
     {
         int noteValue = GetNoteValue(chord.BaseDuration);
         double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
@@ -453,13 +468,18 @@ public sealed class SvgRenderer
         // Draw single stem for chord
         if (noteValue >= 2 && chord.Notes.Length > 0)
         {
-            int stemNotePos = chord.StemUp
+            // Priority: beam direction > forced (voice) direction > chord's own direction
+            bool stemUp = _beamedStemUp.TryGetValue(chord, out bool beamStemUp) 
+                ? beamStemUp 
+                : forcedStemUp ?? chord.StemUp;
+            
+            int stemNotePos = stemUp
                 ? chord.Notes.Min(n => n.StaffPosition)
                 : chord.Notes.Max(n => n.StaffPosition);
             double stemNoteY = systemY + StaffHeight / 2 - (stemNotePos * SpaceHeight / 2);
             
-            double stemX = chord.StemUp ? x + StemUpAttachX : x + StemDownAttachX;
-            double stemAttachY = chord.StemUp ? stemNoteY - StemUpAttachY : stemNoteY - StemDownAttachY;
+            double stemX = stemUp ? x + StemUpAttachX : x + StemDownAttachX;
+            double stemAttachY = stemUp ? stemNoteY - StemUpAttachY : stemNoteY - StemDownAttachY;
             
             // Use beam-calculated stem end if part of a beam group, otherwise fixed length
             double stemEndY;
@@ -469,7 +489,7 @@ public sealed class SvgRenderer
             }
             else
             {
-                stemEndY = chord.StemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
+                stemEndY = stemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
             }
             
             _svg.AppendLine($"""  <line class="stem" x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}"/>""");
@@ -477,7 +497,7 @@ public sealed class SvgRenderer
             // Draw flag (only if not beamed)
             if (!_beamedStemEndYs.ContainsKey(chord))
             {
-                var flag = SmuflGlyphs.GetFlag(noteValue, chord.StemUp);
+                var flag = SmuflGlyphs.GetFlag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
                     DrawGlyph(flag.Value, stemX, stemEndY);
