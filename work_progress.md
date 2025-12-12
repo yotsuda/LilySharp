@@ -246,13 +246,14 @@ master
 | KnuthPlassBreaker.cs | page-layout-problem.cc | 1400 | **高** |
 
 
-## Phase 11: グランドスタッフ（大譜表） 🚀
+## Phase 11: グランドスタッフ（大譜表） ⏳
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| StaffGroup.cs | 🚀 | High | 2h | 譜表グループモデル（GrandStaff, StaffGroup） |
-| Staff.cs | 🚀 | High | 2h | 個別譜表モデル（音部記号、声部紐付け） |
-| GrandStaffLayout.cs | 🚀 | High | 3h | 大譜表レイアウト計算 |
+| Parser (GrandStaffRender) | ✅ | High | 1h | 構文解析対応 |
+| StaffGroup.cs | ✅ | High | 2h | 譜表グループモデル（GrandStaff, StaffGroup） |
+| Staff.cs | ✅ | High | 2h | 個別譜表モデル（音部記号、声部紐付け） |
+| GrandStaffLayout.cs | ✅ | High | 3h | 大譜表レイアウト計算 |
 | BraceRenderer.cs | 🚀 | High | 2h | 大括弧描画（SMuFL brace グリフ） |
 | SystemBarlineRenderer.cs | 🚀 | High | 2h | 譜表間を結ぶ小節線 |
 | LayoutEngine.cs (多譜表) | 🚀 | High | 4h | 複数譜表の垂直配置・間隔計算 |
@@ -269,3 +270,4 @@ master
 | 2025-12-12 | 目標を「LilyPond 等価品質」に再定義。Roslyn パターン採用方針を明確化 |
 | 2025-12-12 | Phase 11: グランドスタッフ（大譜表）を計画に追加 |
 | 2025-12-13 | Phase 3 完了。ScoreCollisions 呼び出し追加 |
+| 2025-12-13 | Phase 11 開始。Parser, Model, Layout 基盤完了 |

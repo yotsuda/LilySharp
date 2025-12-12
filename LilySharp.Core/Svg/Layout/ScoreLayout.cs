@@ -29,8 +29,20 @@ public sealed record SystemLayout(
     int SystemIndex,
     double Y,                              // Y position of system top (relative to page)
     double PrefixWidth,                    // Width of clef + key + time
-    ImmutableArray<MeasureLayout> Measures // Measures in this system
-);
+    ImmutableArray<MeasureLayout> Measures, // Measures in this system
+    ImmutableArray<StaffGroupLayout> StaffGroups = default  // Staff groups (optional, for multi-staff)
+)
+{
+    /// <summary>Whether this system has multiple staff groups.</summary>
+    public bool HasMultipleStaffGroups => !StaffGroups.IsDefaultOrEmpty && StaffGroups.Length > 1;
+    
+    /// <summary>Whether this system has a grand staff.</summary>
+    public bool HasGrandStaff => !StaffGroups.IsDefaultOrEmpty && 
+        StaffGroups.Any(g => g.Type == StaffGroupType.GrandStaff);
+    
+    /// <summary>Total height of all staff groups.</summary>
+    public double TotalStaffHeight => StaffGroups.IsDefaultOrEmpty ? 0 : StaffGroups.Sum(g => g.Height);
+}
 
 /// <summary>
 /// Layout information for a single page.
