@@ -7,7 +7,24 @@
 3. **Lazy Evaluation**: レイアウト計算は必要時に実行
 4. **Cacheability**: 小節単位でキャッシュ可能
 5. **Single Pass**: 構文木は1回だけ走査
-6. **Lilypond equality**: Lilipond のロジックと等価なものを実装
+6. **Algorithm Equality**: Lilypond の核心アルゴリズムを移植（パラメータは Bravura 向けに調整）
+
+### Roslyn から採用したパターン
+
+| パターン | 使用箇所 | 効果 |
+|----------|----------|------|
+| Immutable Records | MusicItem, Measure, ScoreLayout | スレッドセーフ、予測可能 |
+| ImmutableArray | 全コレクション | 防御的コピー不要 |
+| Red-Green Tree | 構文解析 (Syntax 層) | 効率的な増分更新 |
+| Builder パターン | MeasureBuilder | 複雑なオブジェクト構築 |
+
+### 今後採用予定
+
+| パターン | 対象 | 理由 |
+|----------|------|------|
+| Visitor パターン | MeasureCollector, VoiceCollector | switch 文の統一、拡張性 |
+| Incremental 更新 | LayoutEngine | LSP プレビュー高速化 |
+| ObjectPool | 頻繁に生成される一時オブジェクト | GC 負荷軽減 |
 
 ## 楽譜レイアウトの3レベル
 
