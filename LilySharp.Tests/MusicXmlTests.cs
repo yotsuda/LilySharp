@@ -123,14 +123,15 @@ c4 d4";
     [Fact]
     public void ExportRelativePitch()
     {
-        var source = @"relative c' { c d e f }";
+        var source = @"{ c d e f }";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
         
         var notes = xml.Parts[0].Measures[0].Notes;
         Assert.Equal(4, notes.Count);
-        Assert.Equal(5, notes[0].Octave); // c' = octave 5
+        // Default starts at C4
+        Assert.Equal(4, notes[0].Octave);
     }
 
     [Fact]

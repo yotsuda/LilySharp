@@ -65,11 +65,6 @@ public sealed class MidiExporter
                 ProcessChildren(staff, track, conductorTrack);
                 break;
                 
-            case RelativeExpressionSyntax relative:
-                InitializeRelativeMode(relative.BasePitch);
-                ProcessNode(relative.Body, track, conductorTrack);
-                break;
-                
             case MusicBlockSyntax block:
                 foreach (var item in block.Items)
                     ProcessNode(item, track, conductorTrack);

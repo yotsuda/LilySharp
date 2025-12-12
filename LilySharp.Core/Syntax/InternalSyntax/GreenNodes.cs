@@ -51,20 +51,6 @@ internal sealed class MusicBlockGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Relative expression: relative c' { ... }
-/// </summary>
-internal sealed class RelativeExpressionGreen : GreenSyntaxNode
-{
-    public RelativeExpressionGreen(
-        SyntaxToken relativeKeyword,
-        PitchGreen basePitch,
-        MusicBlockGreen body)
-        : base(SyntaxKind.RelativeExpression, [relativeKeyword, basePitch, body])
-    {
-    }
-}
-
-/// <summary>
 /// A pitch with optional octave marks: c, cis', des,,
 /// </summary>
 internal sealed class PitchGreen : GreenSyntaxNode

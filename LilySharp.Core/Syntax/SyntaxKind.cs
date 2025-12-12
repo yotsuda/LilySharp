@@ -48,9 +48,6 @@ public enum SyntaxKind : ushort
     StaffKeyword,       // staff
     TabKeyword,         // tab
     VoiceKeyword,       // voice
-    RelativeKeyword,    // relative
-    AbsoluteKeyword,    // absolute
-    FixedKeyword,       // fixed
     RepeatKeyword,      // repeat (legacy)
     VoltaKeyword,       // volta (legacy)
     AlternativeKeyword, // alternative (legacy)
@@ -181,8 +178,6 @@ public enum SyntaxKind : ushort
     
     // === Nodes: Music Content ===
     MusicBlock,
-    RelativeExpression,
-    AbsoluteExpression,
     
     // === Nodes: Notes and Rests ===
     Note,

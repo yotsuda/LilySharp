@@ -95,7 +95,6 @@ public abstract class SyntaxNode
         {
             SyntaxKind.CompilationUnit => new CompilationUnitSyntax((CompilationUnitGreen)green, this, position),
             SyntaxKind.MusicBlock => new MusicBlockSyntax((MusicBlockGreen)green, this, position),
-            SyntaxKind.RelativeExpression => new RelativeExpressionSyntax((RelativeExpressionGreen)green, this, position),
             SyntaxKind.Note => new NoteSyntax((NoteGreen)green, this, position),
             SyntaxKind.Rest => new RestSyntax((RestGreen)green, this, position),
             SyntaxKind.Chord => new ChordSyntax((ChordGreen)green, this, position),

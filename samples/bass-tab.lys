@@ -4,33 +4,28 @@
 tempo 100
 time 4/4
 
-// Sections
 section Main {
-    bass {
-        // Simple bass line
-        e,4 e, g, a, |
-        e,4 e, g, a, |
-        
-        // Walking bass
-        c4 d e f | g a b c' |
-        
-        // Octave pattern
-        e,4 e e, e |
-        a,4 a a, a |
-    }
+  bass {
+    // Simple bass line
+    e,4 e, g, a, |
+    e,4 e, g, a, |
+    
+    // Walking bass
+    c4 d e f | g a b c' |
+    
+    // Octave pattern
+    e,4 e e, e |
+    a,4 a a, a |
+  }
 }
 
-// Song structure
-structure {
-    Main
-}
+structure { Main }
 
-// Output definitions
 render score "bass-tab.svg" {
-    staff bass { bass }
-    tab bass { bass }
+  staff bass { bass }
+  tab bass { bass }
 }
 
 render audio "bass-tab.mid" {
-    bass channel:1 instrument:33
+  bass channel:1 instrument:33
 }

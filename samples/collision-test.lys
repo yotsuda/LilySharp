@@ -3,6 +3,12 @@ title "Collision Test"
 tempo 80
 time 4/4
 
-relative c' {
-    << { e2 f | g2 a | } \\ { d2 e | f2 g | } >>
+section Main {
+  melody { << { e2 f | g2 a | } \\ { d2 e | f2 g | } >> }
+}
+
+structure { Main }
+
+render score "collision-test.svg" {
+  staff { melody }
 }

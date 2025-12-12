@@ -97,21 +97,6 @@ public class SyntaxNodeTests
         
         Assert.Equal(3, block.Items.Count());
     }
-
-    [Fact]
-    public void RelativeExpression_HasBasePitchAndBody()
-    {
-        var tree = SyntaxTree.Parse("relative c' { d e f }");
-        var rel = tree.GetRoot().DescendantNodes<RelativeExpressionSyntax>().First();
-        
-        Assert.NotNull(rel.BasePitch);
-        Assert.Equal("c", rel.BasePitch.PitchName);
-        Assert.Equal(1, rel.BasePitch.OctaveOffset);
-        
-        Assert.NotNull(rel.Body);
-        Assert.Equal(3, rel.Body.Items.Count());
-    }
-
     [Fact]
     public void SlurSyntax_IsOpen()
     {
@@ -142,34 +127,28 @@ public class SyntaxNodeTests
     [Fact]
     public void ComplexStructure_NavigatesCorrectly()
     {
-        var tree = SyntaxTree.Parse(@"score {
-    part Piano {
-        relative c' { c d e f }
-    }
+        var tree = SyntaxTree.Parse(@"section Main {
+    melody { c d e f }
 }");
         var root = tree.GetRoot();
         
-        var scores = root.DescendantNodes<ScoreDeclarationSyntax>().ToList();
-        var parts = root.DescendantNodes<PartDeclarationSyntax>().ToList();
-        var relatives = root.DescendantNodes<RelativeExpressionSyntax>().ToList();
+        var sections = root.DescendantNodes<SectionDeclarationSyntax>().ToList();
+        var blocks = root.DescendantNodes<MusicBlockSyntax>().ToList();
         var notes = root.DescendantNodes<NoteSyntax>().ToList();
         
-        Assert.Single(scores);
-        Assert.Single(parts);
-        Assert.Single(relatives);
+        Assert.Single(sections);
+        Assert.True(blocks.Count >= 1);
         Assert.Equal(4, notes.Count);
     }
 
     [Fact]
     public void Parent_Navigation()
     {
-        var tree = SyntaxTree.Parse("relative c' { d e }");
+        var tree = SyntaxTree.Parse("{ d e }");
         var note = tree.GetRoot().DescendantNodes<NoteSyntax>().First();
         
-        // Note -> MusicBlock -> RelativeExpression -> CompilationUnit
+        // Note -> MusicBlock -> CompilationUnit
         Assert.NotNull(note.Parent);
         Assert.Equal(SyntaxKind.MusicBlock, note.Parent.Kind);
-        Assert.NotNull(note.Parent.Parent);
-        Assert.Equal(SyntaxKind.RelativeExpression, note.Parent.Parent.Kind);
     }
 }

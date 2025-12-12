@@ -122,32 +122,22 @@ public class ParserTests
     }
 
     [Fact]
-    public void ParseRelativeExpression()
-    {
-        var tree = SyntaxTree.Parse("relative c' { c d e f }");
-        var relative = tree.Root.GetSlot(0) as RelativeExpressionGreen;
-        
-        Assert.NotNull(relative);
-        Assert.Equal(SyntaxKind.RelativeExpression, relative.Kind);
-    }
-
-    [Fact]
     public void ParseComplexPhrase()
     {
-        var tree = SyntaxTree.Parse("relative c' { c4 d e f | g2 g | }");
-        var relative = tree.Root.GetSlot(0) as RelativeExpressionGreen;
+        var tree = SyntaxTree.Parse("{ c4 d e f | g2 g | }");
+        var block = tree.Root.GetSlot(0) as MusicBlockGreen;
         
-        Assert.NotNull(relative);
+        Assert.NotNull(block);
         
         // Check it round-trips
         var reconstructed = tree.ToFullString();
-        Assert.Equal("relative c' { c4 d e f | g2 g | }", reconstructed);
+        Assert.Equal("{ c4 d e f | g2 g | }", reconstructed);
     }
 
     [Fact]
     public void RoundTrip_PreservesText()
     {
-        var original = "relative c'' { c4 d8. e16 f4 | <c e g>2. r4 | }";
+        var original = "{ c4 d8. e16 f4 | <c e g>2. r4 | }";
         var tree = SyntaxTree.Parse(original);
         var reconstructed = tree.ToFullString();
         
@@ -432,9 +422,9 @@ score {
     }
 
     [Fact]
-    public void ParseParallelWithRelative()
+    public void ParseParallelWithMusicBlocks()
     {
-        var tree = SyntaxTree.Parse(@"<< relative c'' { c2 d } \\ relative c' { e2 f } >>");
+        var tree = SyntaxTree.Parse(@"<< { c2 d } \\ { e2 f } >>");
         Assert.False(tree.HasErrors);
     }
 
@@ -474,7 +464,7 @@ score {
     {
         var tree = SyntaxTree.Parse(@"part {
     staff {
-        << relative c'' { c2 d } \\ relative c' { e2 f } >>
+        << { c2 d } \\ { e2 f } >>
     }
 }");
         Assert.False(tree.HasErrors);

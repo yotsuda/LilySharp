@@ -114,7 +114,6 @@ internal sealed class Parser
             // Legacy structure
             SyntaxKind.ScoreKeyword => ParseScoreDeclaration(),
             SyntaxKind.PartKeyword => ParsePartDeclaration(),
-            SyntaxKind.RelativeKeyword => ParseRelativeExpression(),
             SyntaxKind.LetKeyword => ParseVariableDeclaration(),
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
@@ -196,7 +195,6 @@ internal sealed class Parser
         return Current.Kind switch
         {
             SyntaxKind.StaffKeyword => ParseStaffDeclaration(),
-            SyntaxKind.RelativeKeyword => ParseRelativeExpression(),
             SyntaxKind.ClefKeyword or SyntaxKind.KeyKeyword => ParsePropertyAssignment(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
@@ -360,21 +358,11 @@ internal sealed class Parser
     {
         return Current.Kind switch
         {
-            SyntaxKind.RelativeKeyword => ParseRelativeExpression(),
             SyntaxKind.OpenBrace => ParseMusicBlock(),
             _ => ParseMusicBlock() // fallback
         };
     }
 
-    // ========== Music Expressions ==========
-
-    private RelativeExpressionGreen ParseRelativeExpression()
-    {
-        var keyword = Expect(SyntaxKind.RelativeKeyword);
-        var basePitch = ParsePitch();
-        var body = ParseMusicBlock();
-        return new RelativeExpressionGreen(keyword, basePitch, body);
-    }
 
     private MusicBlockGreen ParseMusicBlock()
     {
@@ -695,11 +683,7 @@ private GreenNode?[] ParseArticulations()
 
     private GreenNode ParseVoiceContent()
     {
-        // A voice can be a relative expression, music block, or sequence of items
-        if (Check(SyntaxKind.RelativeKeyword))
-        {
-            return ParseRelativeExpression();
-        }
+        // A voice can be a music block or sequence of items
         if (Check(SyntaxKind.OpenBrace))
         {
             return ParseMusicBlock();
@@ -857,16 +841,8 @@ private GreenNode?[] ParseArticulations()
         var name = Expect(SyntaxKind.Identifier);
         var equals = Expect(SyntaxKind.Equals);
         
-        // Body can be: { ... } or relative c' { ... }
-        GreenNode body;
-        if (Check(SyntaxKind.RelativeKeyword))
-        {
-            body = ParseRelativeExpression();
-        }
-        else
-        {
-            body = ParseMusicBlock();
-        }
+        // Body is always a music block
+        var body = ParseMusicBlock();
         
         return new VariableDeclarationGreen(name, equals, body);
     }
@@ -935,13 +911,9 @@ private GreenNode?[] ParseArticulations()
             options.Add(ParsePartOption());
         }
         
-        // Body can be: { ... } or relative c' { ... } or variable reference
+        // Body can be: { ... } or variable reference
         GreenNode body;
-        if (Check(SyntaxKind.RelativeKeyword))
-        {
-            body = ParseRelativeExpression();
-        }
-        else if (Check(SyntaxKind.OpenBrace))
+        if (Check(SyntaxKind.OpenBrace))
         {
             body = ParseMusicBlock();
         }

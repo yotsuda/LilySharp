@@ -106,14 +106,13 @@ public class LexerTests
     [Fact]
     public void ScanKeywords()
     {
-        var lexer = new Lexer("relative c' { }");
+        var lexer = new Lexer("section Main { }");
         var tokens = lexer.ScanAllTokens().ToList();
 
-        Assert.Equal(SyntaxKind.RelativeKeyword, tokens[0].Kind);
-        Assert.Equal(SyntaxKind.PitchC, tokens[1].Kind);
-        Assert.Equal(SyntaxKind.Apostrophe, tokens[2].Kind);
-        Assert.Equal(SyntaxKind.OpenBrace, tokens[3].Kind);
-        Assert.Equal(SyntaxKind.CloseBrace, tokens[4].Kind);
+        Assert.Equal(SyntaxKind.SectionKeyword, tokens[0].Kind);
+        Assert.Equal(SyntaxKind.Identifier, tokens[1].Kind);
+        Assert.Equal(SyntaxKind.OpenBrace, tokens[2].Kind);
+        Assert.Equal(SyntaxKind.CloseBrace, tokens[3].Kind);
     }
 
     [Fact]

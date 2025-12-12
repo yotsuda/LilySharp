@@ -516,7 +516,6 @@ public sealed class LilySharpLanguageServer
             StaffDeclarationSyntax staff => (GetStaffName(staff), SymbolKind.Class),
 
             VariableDeclarationSyntax variable => (variable.Name.Text, SymbolKind.Variable),
-            RelativeExpressionSyntax => ("relative", SymbolKind.Namespace),
             RepeatExpressionSyntax repeat => ($"repeat {repeat.Count.Text}x", SymbolKind.Operator),
             ParallelExpressionSyntax => ("parallel", SymbolKind.Struct),
             TupletExpressionSyntax tuplet => ($"tuplet {tuplet.TupletRatio}/{tuplet.BaseDivision}", SymbolKind.Operator),
@@ -752,7 +751,7 @@ public sealed class LilySharpLanguageServer
             int? tokenType = kind switch
             {
                 // Keywords
-                SyntaxKind.RelativeKeyword or SyntaxKind.AbsoluteKeyword or SyntaxKind.RepeatKeyword or
+                SyntaxKind.RepeatKeyword or
                 SyntaxKind.AlternativeKeyword or SyntaxKind.LetKeyword or SyntaxKind.UseKeyword or
                 SyntaxKind.ScoreKeyword or SyntaxKind.PartKeyword or SyntaxKind.StaffKeyword or
                 SyntaxKind.VoiceKeyword or SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword or

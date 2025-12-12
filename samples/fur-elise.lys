@@ -7,38 +7,33 @@ time 3/8
 key a minor
 
 // Reusable theme
-mainTheme = relative c'' {
-    e8 dis e | dis e b | d c a~ |
-    a4. | r8 c e |
-    a4. | r8 e gis |
-    b4. | r8 e, gis |
-    a4. | r4 r8 |
+mainTheme = {
+  e8 dis e | dis e b | d c a~ |
+  a4. | r8 c e |
+  a4. | r8 e gis |
+  b4. | r8 e, gis |
+  a4. | r4 r8 |
 }
 
-// Sections
 section Main {
-    rightHand { mainTheme }
-    leftHand relative c {
-        r4. | a8 e' a |
-        c4. | r8 e, a |
-        c4. | r8 e, gis |
-        b4. | r8 e, gis |
-        a4. | a,8 c e |
-    }
+  rightHand { mainTheme }
+  leftHand clef:bass {
+    r4. | a,8 e a |
+    c4. | r8 e, a |
+    c4. | r8 e, gis |
+    b4. | r8 e, gis |
+    a4. | a,,8 c e |
+  }
 }
 
-// Song structure
-structure {
-    Main
-}
+structure { Main }
 
-// Output definitions
 render score "fur-elise.svg" {
-    staff treble { rightHand }
-    staff bass { leftHand }
+  staff { rightHand }
+  staff bass { leftHand }
 }
 
 render audio "fur-elise.mid" {
-    rightHand channel:1 instrument:1
-    leftHand channel:2 instrument:1
+  rightHand channel:1 instrument:1
+  leftHand channel:2 instrument:1
 }

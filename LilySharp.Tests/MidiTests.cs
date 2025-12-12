@@ -22,13 +22,14 @@ public class MidiTests
     [Fact]
     public void ExportRelativeMode()
     {
-        var source = "relative c' { c d e f g a b c' }";
+        var source = "{ c d e f g a b c' }";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MidiExporter();
         var midi = exporter.Export(tree);
         
         Assert.Equal(8, midi.Tracks[1].Notes.Count);
-        Assert.Equal(60, midi.Tracks[1].Notes[0].Pitch); // c = C4 (relative to c')
+        // Default starts at C4 = MIDI 60
+        Assert.Equal(60, midi.Tracks[1].Notes[0].Pitch); // c = C4
         Assert.Equal(62, midi.Tracks[1].Notes[1].Pitch); // d = D4
         Assert.Equal(64, midi.Tracks[1].Notes[2].Pitch); // e = E4
     }

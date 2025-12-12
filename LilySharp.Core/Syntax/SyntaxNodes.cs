@@ -58,21 +58,6 @@ public sealed class MusicBlockSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Relative expression: relative c' { ... }
-/// </summary>
-public sealed class RelativeExpressionSyntax : SyntaxNode
-{
-    internal RelativeExpressionSyntax(RelativeExpressionGreen green, SyntaxNode? parent, int position)
-        : base(green, parent, position)
-    {
-    }
-
-    public SyntaxTokenNode RelativeKeyword => (SyntaxTokenNode)GetChild(0)!;
-    public PitchSyntax BasePitch => (PitchSyntax)GetChild(1)!;
-    public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(2)!;
-}
-
-/// <summary>
 /// A pitch: c, cis', des,,
 /// </summary>
 public sealed class PitchSyntax : SyntaxNode
@@ -656,7 +641,7 @@ public sealed class ParallelExpressionSyntax : SyntaxNode
             for (int i = 1; i < SlotCount - 1; i++)
             {
                 var child = GetChild(i);
-                if (child is MusicBlockSyntax or RelativeExpressionSyntax)
+                if (child is MusicBlockSyntax)
                     yield return child;
             }
         }

@@ -97,10 +97,6 @@ public sealed class MusicXmlExporter
                 ProcessClef(clef);
                 break;
                 
-            case RelativeExpressionSyntax relative:
-                ProcessRelative(relative);
-                break;
-                
             case MusicBlockSyntax block:
                 foreach (var item in block.Items)
                     ProcessNode(item);
@@ -201,16 +197,6 @@ public sealed class MusicXmlExporter
             "tenor" => ("C", 4),
             _ => ("G", 2)
         };
-    }
-
-    private void ProcessRelative(RelativeExpressionSyntax relative)
-    {
-        var pitchText = relative.BasePitch.ToFullString();
-        var upCount = pitchText.Count(c => c == '\'');
-        var downCount = pitchText.Count(c => c == ',');
-        _currentOctave = 4 + upCount - downCount;
-        
-        ProcessNode(relative.Body);
     }
 
     private void ProcessNote(NoteSyntax note)

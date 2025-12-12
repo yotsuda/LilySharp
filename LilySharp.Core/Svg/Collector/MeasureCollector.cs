@@ -205,10 +205,6 @@ public sealed class MeasureCollector
     {
         switch (node)
         {
-            case RelativeExpressionSyntax relative:
-                InitializeRelativeMode(relative.BasePitch);
-                break;
-                
             case NoteSyntax note:
                 builder.AddItem(CreateNoteItem(note));
                 break;
@@ -395,7 +391,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or RelativeExpressionSyntax);
+                .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax);
             ProcessNodes(musicNodes);
         }
         
@@ -495,7 +491,6 @@ public sealed class MeasureCollector
                 case RestSyntax:
                 case ChordSyntax:
                 case BarlineSyntax:
-                case RelativeExpressionSyntax:
                     musicNodes.Add(node);
                     break;
                     
@@ -517,15 +512,15 @@ public sealed class MeasureCollector
         if (!_variables.TryGetValue(name, out var expression))
             return;
         
-        // Include expression itself if it is a music node (e.g., RelativeExpressionSyntax)
-        if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or RelativeExpressionSyntax)
+        // Include expression itself if it is a music node
+        if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax)
         {
             musicNodes.Add(expression);
         }
         
         // Get music nodes from the variable expression descendants
         var nodes = expression.DescendantNodes()
-            .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or RelativeExpressionSyntax);
+            .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax);
         
         musicNodes.AddRange(nodes);
     }

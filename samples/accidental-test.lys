@@ -1,5 +1,16 @@
-% Accidental collision test
-{
-  c4 cis4 d4 dis4 |
-  e4 eis4 fis4 gis4 |
+// Accidental collision test
+title "Accidental Test"
+time 4/4
+
+section Main {
+  melody {
+    c4 cis4 d4 dis4 |
+    e4 eis4 fis4 gis4 |
+  }
+}
+
+structure { Main }
+
+render score "accidental-test.svg" {
+  staff { melody }
 }

@@ -70,7 +70,6 @@ StructureKeyword = 'section' | 'structure' | 'render'
                  | 'staff' | 'tab' | 'voice'
                  | 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
                  | 'transpose' | 'octave' | 'instrument' | 'channel'
-                 | 'relative' | 'absolute' | 'fixed'
                  | 'major' | 'minor' | 'dorian' | 'phrygian' | 'lydian'
                  | 'mixolydian' | 'aeolian' | 'locrian'
                  | 'treble' | 'bass' | 'alto' | 'tenor' | 'percussion'
@@ -374,18 +373,30 @@ MidiOption     = 'channel' , ':' , Integer        (* 1-16 *)
 
 ### 6.1 Music Expression Types
 
-MusicExpr      = RelativeExpr
-               | AbsoluteExpr
-               | SequentialExpr
+MusicExpr      = SequentialExpr
                | ParallelExpr
                | VariableRef
                ;
 
-RelativeExpr   = 'relative' , PitchToken , MusicBlock ;
-AbsoluteExpr   = 'absolute' , MusicBlock
-               | 'fixed' , PitchToken , MusicBlock ;
 SequentialExpr = MusicBlock ;
 ParallelExpr   = '<<' , MusicExpr , { '\\' , MusicExpr } , '>>' ;
+
+### 6.2 Implicit Relative Mode
+
+(* All music is in relative mode. Reference pitch is determined by clef. *)
+(* Absolute pitch mode is NOT supported - all pitches are relative. *)
+
+| Clef       | Reference Pitch | Description        |
+|------------|-----------------|-------------------|
+| treble     | c' (middle C)   | Standard treble   |
+| bass       | c, (octave below)| Standard bass    |
+| alto       | c (middle C)    | Viola range       |
+| tenor      | c (middle C)    | Tenor range       |
+| percussion | (N/A)           | Unpitched         |
+
+(* Octave marks ' and , are relative to previous note, as in LilyPond *)
+(* The interval to the next note is always the smallest possible. *)
+(* Use ' to force up, , to force down when the interval is a 4th or more. *)
 
 MusicBlock     = '{' , { MusicItem } , '}' ;
 
@@ -420,7 +431,9 @@ RestType       = 'r'                              (* normal rest *)
 (* Chord *)
 Chord          = '<' , Pitch , { Pitch } , '>' , [ Duration ] , { Articulation } ;
 
-(* Barline *)
+(* Barline - REQUIRED, not optional *)
+(* Unlike LilyPond where barlines are hints, LilySharp requires explicit barlines. *)
+(* Parser will error if measure duration doesn't match time signature. *)
 Barline        = '|'                              (* normal *)
                | '||'                             (* double bar *)
                | '|.'                             (* final bar *)
@@ -468,8 +481,6 @@ BeamControl    = '[' | ']' ;
 | Time signature   | time                | time 3/4               |
 | Tempo            | tempo               | tempo 120              |
 | Clef             | clef                | clef bass              |
-| Relative mode    | relative            | relative c' { ... }    |
-| Absolute mode    | absolute / fixed    | absolute { ... }       |
 
 ================================================================================
 ## 8. Complete Example
