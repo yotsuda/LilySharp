@@ -33,9 +33,9 @@ master
 ### 次のタスク候補
 | 優先度 | タスク | 理由 |
 |:------:|--------|------|
-| 1 | Phase 9: Knuth-Plass 改行 | 長い楽譜の最適改行 |
-| 2 | Phase 2: 斜め Skyline | Lilypond 完全等価に必須 |
-| 3 | Phase 7: 強弱記号 | 表現力の追加 |
+| 1 | Phase 3: ScoreCollision | 連桁と音符の衝突回避（ユーザー発見のバグ） |
+| 2 | Phase 9: Knuth-Plass 改行 | 長い楽譜の最適改行 |
+| 3 | Phase 2: 斜め Skyline | Lilypond 完全等価に必須 |
 
 ---
 ## 🎯 目標
@@ -71,7 +71,7 @@ master
 |-------|------|-----:|-----:|-----:|
 | 1 | 基本グリフ配置 | 6 | 6 | 100% |
 | 2 | Skyline 衝突回避 | 4 | 5 | 80% |
-| 3 | 連桁（Beaming） | 5 | 5 | 100% |
+| 3 | 連桁（Beaming） | 8 | 9 | 89% |
 | 4 | タイ・スラー | 6 | 6 | 100% |
 | 5 | 和音内臨時記号 | 3 | 3 | 100% |
 | 6 | 複数声部 | 9 | 9 | 100% |
@@ -79,7 +79,7 @@ master
 | 8 | 歌詞配置 | 0 | 4 | 0% |
 | 9 | ページレイアウト | 0 | 3 | 0% |
 | 10 | 高度な機能 | 0 | 6 | 0% |
-| **合計** | | **33** | **50** | **66%** |
+| **合計** | | **33** | **51** | **65%** |
 
 ## 📋 ステータス凡例
 
@@ -119,7 +119,7 @@ master
 
 **注**: 現在の矩形近似 Skyline は暫定実装。Lilypond と等価にするには斜め Building 対応が必須。
 
-## Phase 3: 連桁（Beaming） ✅
+## Phase 3: 連桁（Beaming） ⏳
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -131,6 +131,7 @@ master
 | BeamQuantParameters.cs | ✅ | High | 1h | Lilypond Beam_quant_parameters 移植 |
 | BeamConfiguration.cs | ✅ | High | 1h | Lilypond Beam_configuration 移植 |
 | BeamScoringProblem.cs | ✅ | High | 8h | Lilypond beam-quanting.cc 基本移植（7 scorers） |
+| BeamScoringProblem.cs (Collision) | 🚀 | High | 4h | 連桁と音符の衝突回避スコアラー |
 
 ## Phase 4: タイ・スラー ✅ (基本実装完了)
 
