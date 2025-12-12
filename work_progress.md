@@ -79,7 +79,8 @@ master
 | 8 | 歌詞配置 | 0 | 4 | 0% |
 | 9 | ページレイアウト | 0 | 3 | 0% |
 | 10 | 高度な機能 | 0 | 6 | 0% |
-| **合計** | | **33** | **51** | **65%** |
+| 11 | グランドスタッフ | 0 | 8 | 0% |
+| **合計** | | **33** | **59** | **56%** |
 
 ## 📋 ステータス凡例
 
@@ -244,6 +245,20 @@ master
 | NoteCollision.cs | note-collision.cc | 600 | 中 |
 | KnuthPlassBreaker.cs | page-layout-problem.cc | 1400 | **高** |
 
+
+## Phase 11: グランドスタッフ（大譜表） 🚀
+
+| filename | status | priority | effort | notes |
+|----------|:------:|:--------:|-------:|-------|
+| StaffGroup.cs | 🚀 | High | 2h | 譜表グループモデル（GrandStaff, StaffGroup） |
+| Staff.cs | 🚀 | High | 2h | 個別譜表モデル（音部記号、声部紐付け） |
+| GrandStaffLayout.cs | 🚀 | High | 3h | 大譜表レイアウト計算 |
+| BraceRenderer.cs | 🚀 | High | 2h | 大括弧描画（SMuFL brace グリフ） |
+| SystemBarlineRenderer.cs | 🚀 | High | 2h | 譜表間を結ぶ小節線 |
+| LayoutEngine.cs (多譜表) | 🚀 | High | 4h | 複数譜表の垂直配置・間隔計算 |
+| SvgRenderer.cs (多譜表) | 🚀 | High | 4h | 複数譜表描画、Voice→Staff マッピング |
+| VoiceCollector.cs (Staff対応) | 🚀 | High | 2h | rightHand/leftHand → 上下譜表振り分け |
+
 ## 更新履歴
 
 | 日付 | 更新内容 |
@@ -252,3 +267,4 @@ master
 | 2025-12-11 | 目標を「完全等価」に修正。工数見積もり上方修正 |
 | 2025-12-12 | Phase 6 完了。NoteCollision を LayoutEngine に統合、MeasureBuilder リファクタリング |
 | 2025-12-12 | 目標を「LilyPond 等価品質」に再定義。Roslyn パターン採用方針を明確化 |
+| 2025-12-12 | Phase 11: グランドスタッフ（大譜表）を計画に追加 |
