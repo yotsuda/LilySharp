@@ -108,18 +108,23 @@ public sealed record BeamLayout
     /// <summary>X position of the last stem (in pixels).</summary>
     public double RightX { get; }
     
+    /// <summary>X positions for each member (in pixels).</summary>
+    public ImmutableArray<double> MemberXPositions { get; }
+    
     public BeamLayout(
         BeamGroup group,
         double leftY,
         double rightY,
         double leftX,
-        double rightX)
+        double rightX,
+        ImmutableArray<double> memberXPositions)
     {
         Group = group;
         LeftY = leftY;
         RightY = rightY;
         LeftX = leftX;
         RightX = rightX;
+        MemberXPositions = memberXPositions;
     }
     
     /// <summary>Gets the slope of the beam (rise per unit run).</summary>
