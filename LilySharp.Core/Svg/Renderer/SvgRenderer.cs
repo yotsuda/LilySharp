@@ -514,16 +514,18 @@ public sealed class SvgRenderer
     {
         if (keySig.Count == 0) return x;
         
+        // Sharp/flat positions from Lilypond define-grobs.scm
+        // Order: F#, C#, G#, D#, A#, E#, B# / Bb, Eb, Ab, Db, Gb, Cb, Fb
         int[] sharpPositions = clef switch
         {
-            "bass" => [4, 1, 5, 2, 6, 3, 0],
-            _ => [6, 3, 7, 4, 1, 5, 2]
+            "bass" => [2, 3, 2, 0, 1, 0, 1],  // treble positions - 2
+            _ => [4, 5, 4, 2, 3, 2, 3]        // Lilypond: (sharp-positions . (4 5 4 2 3 2 3))
         };
         
         int[] flatPositions = clef switch
         {
-            "bass" => [0, 3, -1, 2, 5, 1, 4],
-            _ => [2, 5, 1, 4, 0, 3, -1]
+            "bass" => [0, 1, 2, 0, -1, 0, -1],  // treble positions - 2
+            _ => [2, 3, 4, 2, 1, 2, 1]          // Lilypond: (flat-positions . (2 3 4 2 1 2 1))
         };
         
         char glyph = keySig.IsSharps ? SmuflGlyphs.AccidentalSharp : SmuflGlyphs.AccidentalFlat;
