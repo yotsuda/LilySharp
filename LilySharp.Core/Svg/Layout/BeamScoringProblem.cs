@@ -22,11 +22,11 @@ public sealed class BeamScoringProblem
     private readonly int[] _staffPositions;
     private readonly int _maxBeamCount;
     
-    // Beam constants
-    private const double BeamThickness = 0.48; // staff spaces
-    private const double BeamTranslation = 0.58; // distance between beams
-    private const double IdealStemLength = 3.5;
-    private const double MinStemLength = 2.5;
+    // Beam constants (in staff positions, where 1 staff space = 2 staff positions)
+    private const double BeamThickness = 0.48 * 2; // staff positions
+    private const double BeamTranslation = 0.58 * 2; // distance between beams in staff positions
+    private const double IdealStemLength = 3.5 * 2; // 7 staff positions
+    private const double MinStemLength = 2.5 * 2; // 5 staff positions
     
     public BeamScoringProblem(
         BeamGroup group,
@@ -105,8 +105,8 @@ public sealed class BeamScoringProblem
         
         if (_group.StemUp)
         {
-            // Beam above notes (smaller Y in staff coordinates)
-            leftY = firstPos - IdealStemLength;
+            // Beam above notes (higher staff position = more positive)
+            leftY = firstPos + IdealStemLength;
             rightY = leftY + naturalSlope * _xSpan;
             
             // Ensure minimum stem length
@@ -114,8 +114,8 @@ public sealed class BeamScoringProblem
         }
         else
         {
-            // Beam below notes (larger Y in staff coordinates)
-            leftY = firstPos + IdealStemLength;
+            // Beam below notes (lower staff position = more negative)
+            leftY = firstPos - IdealStemLength;
             rightY = leftY + naturalSlope * _xSpan;
             
             // Ensure minimum stem length
@@ -136,7 +136,9 @@ public sealed class BeamScoringProblem
             double beamY = leftY + slope * (x - _leftX);
             double noteY = _staffPositions[i];
             
-            double stemLength = stemUp ? noteY - beamY : beamY - noteY;
+            // stemUp: beam is above note (beamY > noteY in staff positions)
+            // stemDown: beam is below note (beamY < noteY in staff positions)
+            double stemLength = stemUp ? beamY - noteY : noteY - beamY;
             
             if (stemLength < MinStemLength)
             {
@@ -148,13 +150,15 @@ public sealed class BeamScoringProblem
         {
             if (stemUp)
             {
-                leftY -= maxAdjustment;
-                rightY -= maxAdjustment;
+                // Move beam further up (increase staff position)
+                leftY += maxAdjustment;
+                rightY += maxAdjustment;
             }
             else
             {
-                leftY += maxAdjustment;
-                rightY += maxAdjustment;
+                // Move beam further down (decrease staff position)
+                leftY -= maxAdjustment;
+                rightY -= maxAdjustment;
             }
         }
     }
@@ -335,7 +339,7 @@ public sealed class BeamScoringProblem
             double beamY = config.GetYAt(x, _leftX, _xSpan);
             double noteY = _staffPositions[i];
             
-            double stemLength = _group.StemUp ? noteY - beamY : beamY - noteY;
+            double stemLength = _group.StemUp ? beamY - noteY : noteY - beamY;
             
             // Hard penalty for stems that are too short
             if (stemLength < MinStemLength)

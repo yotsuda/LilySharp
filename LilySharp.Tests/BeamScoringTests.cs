@@ -27,8 +27,8 @@ public class BeamScoringTests
         // Act
         var (leftY, rightY) = problem.Solve();
         
-        // Assert: Beam should be above notes (negative Y for stem up)
-        Assert.True(leftY < 0, "Left Y should be negative for stem up");
+        // Assert: Beam should be above notes (higher staff position for stem up)
+        Assert.True(leftY > 0, $"Left Y {leftY} should be positive for stem up (beam above notes)");
     }
     
     [Fact]
@@ -47,8 +47,8 @@ public class BeamScoringTests
         // Act
         var (leftY, rightY) = problem.Solve();
         
-        // Assert: Beam should be below notes (larger Y for stem down)
-        Assert.True(leftY > 6, "Left Y should be below the highest note for stem down");
+        // Assert: Beam should be below notes (lower staff position for stem down)
+        Assert.True(leftY < 3, $"Left Y {leftY} should be below the lowest note (3) for stem down");
     }
     
     [Fact]
@@ -67,9 +67,9 @@ public class BeamScoringTests
         // Act
         var (leftY, rightY) = problem.Solve();
         
-        // Assert: Stem length should be at least 2.5 staff spaces
-        double stemLength = 0 - leftY; // noteY - beamY for stem up
-        Assert.True(stemLength >= 2.5, $"Stem length {stemLength} should be >= 2.5");
+        // Assert: Stem length should be at least 5 staff positions (2.5 * 2)
+        double stemLength = leftY - 0; // beamY - noteY for stem up
+        Assert.True(stemLength >= 5, $"Stem length {stemLength} should be >= 5 (2.5 staff spaces * 2)");
     }
     
     [Fact]

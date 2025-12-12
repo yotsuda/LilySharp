@@ -153,11 +153,11 @@ feature/smufl-spacing
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| VoiceColumn.cs | 🔍 | High | 2h | 声部列モデル |
-| NoteCollision.cs | 🔍 | High | 6h | Lilypond note-collision.cc 移植 |
-| StemDirection.cs | 🔍 | High | 3h | 自動符幹方向計算 |
-| NoteCollisionTests.cs | 🔍 | High | 1h | 衝突テスト |
-| StemDirectionTests.cs | 🔍 | High | 1h | 符幹方向テスト |
+| VoiceColumn.cs | ✅ | High | 2h | 声部列モデル |
+| NoteCollision.cs | ✅ | High | 6h | Lilypond note-collision.cc 移植 |
+| StemDirection.cs | ✅ | High | 3h | 自動符幹方向計算 |
+| NoteCollisionTests.cs | ✅ | High | 1h | 衝突テスト |
+| StemDirectionTests.cs | ✅ | High | 1h | 符幹方向テスト |
 | VoiceCollector.cs | 🚀 | High | 3h | 声部分離 |
 | SvgRenderer.cs (複数声部) | 🚀 | High | 4h | 複数声部描画 |
 

@@ -96,35 +96,30 @@ public sealed record BeamLayout
     /// <summary>The original beam group.</summary>
     public BeamGroup Group { get; }
     
-    /// <summary>Y position of the beam at the first stem (in staff spaces from middle line).</summary>
+    /// <summary>Y position of the beam at the first stem (in staff positions from middle line).</summary>
     public double LeftY { get; }
     
-    /// <summary>Y position of the beam at the last stem (in staff spaces from middle line).</summary>
+    /// <summary>Y position of the beam at the last stem (in staff positions from middle line).</summary>
     public double RightY { get; }
     
-    /// <summary>X position of the first stem.</summary>
+    /// <summary>X position of the first stem (in pixels).</summary>
     public double LeftX { get; }
     
-    /// <summary>X position of the last stem.</summary>
+    /// <summary>X position of the last stem (in pixels).</summary>
     public double RightX { get; }
-    
-    /// <summary>Calculated stem end Y positions for each member.</summary>
-    public ImmutableArray<double> StemEndYs { get; }
     
     public BeamLayout(
         BeamGroup group,
         double leftY,
         double rightY,
         double leftX,
-        double rightX,
-        ImmutableArray<double> stemEndYs)
+        double rightX)
     {
         Group = group;
         LeftY = leftY;
         RightY = rightY;
         LeftX = leftX;
         RightX = rightX;
-        StemEndYs = stemEndYs;
     }
     
     /// <summary>Gets the slope of the beam (rise per unit run).</summary>

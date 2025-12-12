@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -9,10 +8,6 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 public sealed class BeamEngraver
 {
-    // Constants matching Lilypond's defaults
-    private const double BeamThickness = 0.48; // staff spaces
-    private const double BeamTranslation = 0.58; // distance between multiple beams
-    
     private readonly BeamQuantParameters _parameters;
     
     public BeamEngraver(BeamQuantParameters? parameters = null)
@@ -41,57 +36,6 @@ public sealed class BeamEngraver
         var problem = new BeamScoringProblem(group, itemXPositions, staffSpaceSize, _parameters);
         var (leftY, rightY) = problem.Solve();
         
-        // Calculate stem end Y positions for each member
-        var stemEndYs = CalculateStemEndYs(group, leftX, leftY, rightX, rightY, itemXPositions);
-        
-        return new BeamLayout(group, leftY, rightY, leftX, rightX, stemEndYs);
+        return new BeamLayout(group, leftY, rightY, leftX, rightX);
     }
-    
-    private ImmutableArray<double> CalculateStemEndYs(
-        BeamGroup group,
-        double leftX,
-        double leftY,
-        double rightX,
-        double rightY,
-        IReadOnlyList<double> itemXPositions)
-    {
-        double xSpan = rightX - leftX;
-        double slope = xSpan > 0.001 ? (rightY - leftY) / xSpan : 0;
-        var stemEndYs = new double[group.Members.Length];
-        
-        for (int i = 0; i < group.Members.Length; i++)
-        {
-            var member = group.Members[i];
-            double memberX = itemXPositions[member.ItemIndex];
-            double beamY = leftY + slope * (memberX - leftX);
-            
-            // Stem ends at the beam (adjusted for beam thickness and multiple beams)
-            // For multiple beams, the stem connects to the outermost beam
-            int numBeams = member.BeamCount;
-            double beamOffset = (numBeams - 1) * BeamTranslation;
-            
-            if (group.StemUp)
-            {
-                // Stem goes up, beam is above, offset goes up (negative Y)
-                stemEndYs[i] = beamY - beamOffset;
-            }
-            else
-            {
-                // Stem goes down, beam is below, offset goes down (positive Y)
-                stemEndYs[i] = beamY + beamOffset;
-            }
-        }
-        
-        return stemEndYs.ToImmutableArray();
-    }
-    
-    /// <summary>
-    /// Gets the beam thickness in staff spaces.
-    /// </summary>
-    public double GetBeamThickness() => BeamThickness;
-    
-    /// <summary>
-    /// Gets the translation between multiple beams in staff spaces.
-    /// </summary>
-    public double GetBeamTranslation() => BeamTranslation;
 }
