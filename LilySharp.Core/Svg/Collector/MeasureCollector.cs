@@ -152,6 +152,61 @@ public sealed class MeasureCollector
             _title,
             _composer);
     }
+
+    /// <summary>
+    /// Collects a MultiStaffScore from a syntax tree based on a render specification.
+    /// </summary>
+    public MultiStaffScore CollectMultiStaff(SyntaxTree tree, RenderSpec renderSpec)
+    {
+        Reset();
+        
+        // Phase 1: Collect definitions
+        CollectDefinitions(tree.GetRoot());
+        
+        // Phase 2: Build voice dictionary
+        var voiceDict = new Dictionary<string, Voice>();
+        foreach (var voiceName in renderSpec.GetVoiceNames())
+        {
+            _voiceName = voiceName;
+            _currentOctave = 4;
+            _lastPitchName = 'c';
+            _defaultDuration = Fraction.Quarter;
+            
+            var measures = CollectMeasuresForVoice(voiceName);
+            voiceDict[voiceName] = new Voice(voiceName, measures.ToImmutableArray());
+        }
+        
+        // Phase 3: Build staff groups from render spec
+        var staffGroups = renderSpec.ToStaffGroups(name => 
+            voiceDict.TryGetValue(name, out var v) ? v : new Voice(name, ImmutableArray<Measure>.Empty))
+            .ToImmutableArray();
+        
+        return new MultiStaffScore(
+            staffGroups,
+            new TimeSignature(_timeBeats, _timeBeatType),
+            new KeySignature(_keySharps),
+            _tempo,
+            _title,
+            _composer);
+    }
+    
+    private List<Measure> CollectMeasuresForVoice(string voiceName)
+    {
+        // 1. Check variables first
+        if (_variables.TryGetValue(voiceName, out var variable))
+            return CollectMeasuresFromNode(variable);
+        
+        // 2. Search for PartBlock with matching name in all sections
+        foreach (var section in _sections.Values)
+        {
+            var partBlock = section.DescendantNodes<PartBlockSyntax>()
+                .FirstOrDefault(p => p.Name == voiceName);
+            if (partBlock != null)
+                return CollectMeasuresFromNode(partBlock);
+        }
+        
+        return [];
+    }
     
     private Score CollectMultiVoiceScore(ParallelExpressionSyntax parallelExpr)
     {
