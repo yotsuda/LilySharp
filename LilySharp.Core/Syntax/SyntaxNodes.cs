@@ -1025,7 +1025,7 @@ public sealed partial class StructureRepeatBlockSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Represents an alternative in structure: 1. SectionName
+/// Represents an alternative in structure: 1. SectionName or [1. SectionName] or [1-3. SectionName]
 /// </summary>
 public sealed partial class StructureAlternativeSyntax : SyntaxNode
 {
@@ -1034,8 +1034,32 @@ public sealed partial class StructureAlternativeSyntax : SyntaxNode
     {
     }
 
-    public SyntaxTokenNode Number => (SyntaxTokenNode)GetChild(0)!;
-    public SyntaxTokenNode SectionName => (SyntaxTokenNode)GetChild(2)!;
+    /// <summary>
+    /// True if this is bracket style [1. A], false if legacy style 1. A
+    /// </summary>
+    public bool HasBracket => ((SyntaxTokenNode)GetChild(0)!).Kind == SyntaxKind.OpenBracket;
+    
+    /// <summary>
+    /// True if this has a range separator (- or ,) like [1-3. A] or [1,3. A]
+    /// </summary>
+    public bool HasSeparator => HasBracket && SlotCount == 7;
+    
+    /// <summary>
+    /// Gets the number token.
+    /// Legacy: slot[0], Bracket: slot[1]
+    /// </summary>
+    public SyntaxTokenNode Number => (SyntaxTokenNode)GetChild(HasBracket ? 1 : 0)!;
+    
+    /// <summary>
+    /// Gets the section name token.
+    /// Legacy (3 slots): slot[2]
+    /// Bracket without separator (5 slots): slot[3]
+    /// Bracket with separator (7 slots): slot[5]
+    /// </summary>
+    public SyntaxTokenNode SectionName => (SyntaxTokenNode)GetChild(
+        HasBracket 
+            ? (HasSeparator ? 5 : 3) 
+            : 2)!;
     
     /// <summary>
     /// Gets the alternative number.
