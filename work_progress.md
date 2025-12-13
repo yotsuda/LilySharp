@@ -22,7 +22,8 @@ master
 | AccidentalPlacement.cs | `LilySharp.Core/Svg/Layout/` | 和音内臨時記号配置 |
 | NoteCollision.cs | `LilySharp.Core/Svg/Layout/` | 声部間ノート衝突検出 |
 | StemDirection.cs | `LilySharp.Core/Svg/Layout/` | 符幹方向自動計算 |
-| EngravingDefaults.cs | `LilySharp.Core/Svg/Layout/` | Lilypond互換定数 |
+| EngravingDefaults.cs | `LilySharp.Core/Svg/` | Emmentaler メトリクス定数 |
+| SvgRenderOptions.cs | `LilySharp.Core/Svg/Renderer/` | SVG レンダリングオプション |
 
 ### ドキュメント
 | ファイル | 内容 |
@@ -33,7 +34,7 @@ master
 ### 次のタスク候補
 | 優先度 | タスク | 理由 |
 |:------:|--------|------|
-| 1 | Phase 11: グランドスタッフ | 大譜表（ピアノ譜）の基本実装 |
+| 1 | Phase 11: グランドスタッフ (Renderer) | SvgRenderer での多譜表描画 |
 | 2 | Phase 9: Knuth-Plass 改行 | 長い楽譜の最適改行 |
 | 3 | Phase 2: 斜め Skyline | Lilypond 完全等価に必須 |
 
@@ -47,7 +48,7 @@ master
 | 項目 | 方針 |
 |------|------|
 | 品質 | Lilypond と視覚的に同等（ピクセル単位の一致は非目標） |
-| フォント | SMuFL 標準 (Bravura) を使用、Emmentaler パラメータは適宜調整 |
+| フォント | Emmentaler フォント使用（Lilypond 互換） |
 | 処理 | 高速化優先。Scheme 機能は移植しない |
 | 表記 | 処理時間短縮のため独自表記を採用可 |
 
@@ -79,8 +80,8 @@ master
 | 8 | 歌詞配置 | 0 | 4 | 0% |
 | 9 | ページレイアウト | 0 | 3 | 0% |
 | 10 | 高度な機能 | 0 | 6 | 0% |
-| 11 | グランドスタッフ | 0 | 8 | 0% |
-| **合計** | | **34** | **59** | **58%** |
+| 11 | グランドスタッフ | 7 | 8 | 88% |
+| **合計** | | **41** | **59** | **69%** |
 
 ## 📋 ステータス凡例
 
@@ -260,8 +261,8 @@ master
 | RenderSpecParser.cs | ✅ | High | 2h | RenderDeclarationSyntax → RenderSpec 変換 |
 | MultiStaffScore.cs | ✅ | High | 2h | 複数譜表のスコアモデル |
 | MeasureCollector (MultiStaff) | ✅ | High | 1h | CollectMultiStaff() メソッド追加 |
-| LayoutEngine.cs (多譜表) | 🚀 | High | 4h | 複数譜表の垂直配置・間隔計算 |
-| SvgRenderer.cs (多譜表) | 🚀 | High | 4h | 複数譜表描画 |
+| LayoutEngine.cs (多譜表) | ✅ | High | 4h | Layout(MultiStaffScore) メソッド追加 |
+| SvgRenderer.cs (多譜表) | ⏳ | High | 4h | 複数譜表描画 |
 
 ## 更新履歴
 
@@ -275,3 +276,6 @@ master
 | 2025-12-13 | Phase 3 完了。ScoreCollisions 呼び出し追加 |
 | 2025-12-13 | Phase 11: Model, Layout基盤, Renderer コンポーネント完了 |
 | 2025-12-13 | Phase 11: RenderSpec, MultiStaffScore, Collector 統合完了 |
+| 2025-12-13 | Emmentaler フォントに移行。EngravingDefaults/EngravingRules に整理 |
+| 2025-12-13 | SVG フォント埋め込みオプション追加（CLI --embed-font, VS Code プレビュー対応） |
+| 2025-12-13 | Phase 11: LayoutEngine.Layout(MultiStaffScore) 実装完了 |
