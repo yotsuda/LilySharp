@@ -563,6 +563,21 @@ public sealed class VariableDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Phrase declaration: phrase name { ... }
+/// </summary>
+public sealed class PhraseDeclarationSyntax : SyntaxNode
+{
+    internal PhraseDeclarationSyntax(PhraseDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
+    public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(2)!;
+}
+
+/// <summary>
 /// Variable reference: use name or $name
 /// </summary>
 public sealed class VariableReferenceSyntax : SyntaxNode

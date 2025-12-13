@@ -49,6 +49,7 @@ public enum SyntaxKind : ushort
     GrandStaffKeyword,  // grandStaff
     TabKeyword,         // tab
     VoiceKeyword,       // voice
+    PhraseKeyword,      // phrase
     RepeatKeyword,      // repeat (legacy)
     VoltaKeyword,       // volta (legacy)
     AlternativeKeyword, // alternative (legacy)
@@ -153,7 +154,8 @@ public enum SyntaxKind : ushort
     // === Nodes: Top Level ===
     CompilationUnit,
     MetadataDeclaration,
-    VariableDeclaration,
+    VariableDeclaration,    // (legacy) name = { ... }
+    PhraseDeclaration,      // phrase name { ... }
     VariableReference,
     
     // === Nodes: New Structure ===

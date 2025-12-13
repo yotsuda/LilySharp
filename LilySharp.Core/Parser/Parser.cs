@@ -107,8 +107,9 @@ internal sealed class Parser
             SyntaxKind.SectionKeyword => ParseSectionDeclaration(),
             SyntaxKind.StructureKeyword => ParseStructureDeclaration(),
             SyntaxKind.RenderKeyword => ParseRenderDeclaration(),
+            SyntaxKind.PhraseKeyword => ParsePhraseDeclaration(),
             
-            // Variable declaration: identifier = { ... }
+            // Variable declaration: identifier = { ... } (legacy)
             SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
             
             // Legacy structure
@@ -834,7 +835,7 @@ private GreenNode?[] ParseArticulations()
     // ========== New Section-Oriented Parsing ==========
     
     /// <summary>
-    /// Parse variable declaration: identifier = { ... }
+    /// Parse variable declaration: identifier = { ... } (legacy)
     /// </summary>
     private VariableDeclarationGreen ParseNewVariableDeclaration()
     {
@@ -845,6 +846,18 @@ private GreenNode?[] ParseArticulations()
         var body = ParseMusicBlock();
         
         return new VariableDeclarationGreen(name, equals, body);
+    }
+    
+    /// <summary>
+    /// Parse phrase declaration: phrase name { ... }
+    /// </summary>
+    private PhraseDeclarationGreen ParsePhraseDeclaration()
+    {
+        var keyword = Expect(SyntaxKind.PhraseKeyword);
+        var name = Expect(SyntaxKind.Identifier);
+        var body = ParseMusicBlock();
+        
+        return new PhraseDeclarationGreen(keyword, name, body);
     }
     
     /// <summary>

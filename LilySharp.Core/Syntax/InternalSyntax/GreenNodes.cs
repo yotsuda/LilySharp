@@ -262,6 +262,20 @@ internal sealed class VariableDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Phrase declaration: phrase name { ... }
+/// </summary>
+internal sealed class PhraseDeclarationGreen : GreenSyntaxNode
+{
+    public PhraseDeclarationGreen(
+        SyntaxToken keyword,
+        SyntaxToken name,
+        GreenNode body)
+        : base(SyntaxKind.PhraseDeclaration, [keyword, name, body])
+    {
+    }
+}
+
+/// <summary>
 /// Variable reference: use name or $name or just name
 /// </summary>
 internal sealed class VariableReferenceGreen : GreenSyntaxNode

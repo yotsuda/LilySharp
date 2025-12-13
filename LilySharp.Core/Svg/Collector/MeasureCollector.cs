@@ -337,6 +337,10 @@ public sealed class MeasureCollector
                 case VariableDeclarationSyntax varDecl:
                     _variables[varDecl.Name.Text] = varDecl.Expression;
                     break;
+                
+                case PhraseDeclarationSyntax phraseDecl:
+                    _variables[phraseDecl.Name.Text] = phraseDecl.Body;
+                    break;
                     
                 case RenderDeclarationSyntax render:
                     ExtractVoiceName(render);

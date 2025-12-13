@@ -401,6 +401,7 @@ internal sealed class Lexer
             "staff" => SyntaxKind.StaffKeyword,
             "grandStaff" or "grandstaff" => SyntaxKind.GrandStaffKeyword,
             "voice" => SyntaxKind.VoiceKeyword,
+            "phrase" => SyntaxKind.PhraseKeyword,
             "repeat" => SyntaxKind.RepeatKeyword,
             "volta" => SyntaxKind.VoltaKeyword,
             "alternative" => SyntaxKind.AlternativeKeyword,

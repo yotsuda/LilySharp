@@ -1,0 +1,29 @@
+// Compact Feature Demo
+title "Feature Demo"
+composer "LilySharp"
+tempo 100
+time 4/4
+key c major
+
+phrase demo {
+  // Notes + beams + dots
+  c4. d8 e8 f g a |
+  // Accidentals
+  cis4 des ees fis |
+  // Chords with accidentals
+  <c e g>4 <cis eis gis> <d f a> <des fes aes> |
+  // Ties and slurs
+  c4~ c4 d4( e) |
+  // Mixed beams
+  f8 g16 a b8. c'16 d'4 r |
+}
+
+section Main {
+  melody { demo }
+}
+
+structure { Main }
+
+render score "feature-demo.svg" {
+  staff { melody }
+}
