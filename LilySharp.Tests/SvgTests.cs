@@ -36,8 +36,8 @@ public class SvgTests
     {
         var svg = RenderSvg("{ cis4 }");
         
-        // Should contain sharp accidental (U+E262)
-        Assert.Contains("\uE262", svg);
+        // Emmentaler sharp accidental (U+E013)
+        Assert.Contains("\uE013", svg);
     }
     
     [Fact]
@@ -45,8 +45,8 @@ public class SvgTests
     {
         var svg = RenderSvg("{ r4 }");
         
-        // Should contain quarter rest (U+E4E5)
-        Assert.Contains("\uE4E5", svg);
+        // Emmentaler quarter rest (U+E008)
+        Assert.Contains("\uE008", svg);
     }
     
     [Fact]
@@ -54,8 +54,8 @@ public class SvgTests
     {
         var svg = RenderSvg("clef treble { c4 }");
         
-        // Should contain G clef (U+E050)
-        Assert.Contains("\uE050", svg);
+        // Emmentaler G clef (U+E085)
+        Assert.Contains("\uE085", svg);
     }
     
     [Fact]
@@ -63,8 +63,8 @@ public class SvgTests
     {
         var svg = RenderSvg("time 4/4 { c4 }");
         
-        // Should contain time sig digits (U+E084 = 4)
-        Assert.Contains("\uE084", svg);
+        // Emmentaler time sig 4 (U+E0B8)
+        Assert.Contains("\uE0B8", svg);
     }
     
     [Fact]
@@ -72,8 +72,8 @@ public class SvgTests
     {
         var svg = RenderSvg("{ <c e g>4 }");
         
-        // Should contain multiple noteheads
-        var noteheadCount = System.Text.RegularExpressions.Regex.Matches(svg, "\uE0A4").Count;
+        // Emmentaler black notehead (U+E0EA)
+        var noteheadCount = System.Text.RegularExpressions.Regex.Matches(svg, "\uE0EA").Count;
         Assert.True(noteheadCount >= 3);
     }
     
@@ -82,36 +82,36 @@ public class SvgTests
     {
         var svg = RenderSvg("{ c4 | d4 }");
         
-        // Barline is now drawn using SMuFL glyph (class="music")
-        Assert.Contains(SmuflGlyphs.BarlineSingle.ToString(), svg);
+        // Barline is now drawn as rect element
+        Assert.Contains("<rect", svg);
     }
     
     [Fact]
-    public void SmuflGlyphs_GetNotehead()
+    public void EmmentalerGlyphs_GetNotehead()
     {
-        Assert.Equal('\uE0A2', SmuflGlyphs.GetNotehead(1)); // Whole
-        Assert.Equal('\uE0A3', SmuflGlyphs.GetNotehead(2)); // Half
-        Assert.Equal('\uE0A4', SmuflGlyphs.GetNotehead(4)); // Quarter
-        Assert.Equal('\uE0A4', SmuflGlyphs.GetNotehead(8)); // Eighth
+        Assert.Equal('\uE0E8', EmmentalerGlyphs.GetNotehead(1)); // Whole
+        Assert.Equal('\uE0E9', EmmentalerGlyphs.GetNotehead(2)); // Half
+        Assert.Equal('\uE0EA', EmmentalerGlyphs.GetNotehead(4)); // Quarter
+        Assert.Equal('\uE0EA', EmmentalerGlyphs.GetNotehead(8)); // Eighth
     }
     
     [Fact]
-    public void SmuflGlyphs_GetRest()
+    public void EmmentalerGlyphs_GetRest()
     {
-        Assert.Equal('\uE4E3', SmuflGlyphs.GetRest(1));  // Whole
-        Assert.Equal('\uE4E4', SmuflGlyphs.GetRest(2));  // Half
-        Assert.Equal('\uE4E5', SmuflGlyphs.GetRest(4));  // Quarter
-        Assert.Equal('\uE4E6', SmuflGlyphs.GetRest(8));  // Eighth
-        Assert.Equal('\uE4E7', SmuflGlyphs.GetRest(16)); // 16th
+        Assert.Equal('\uE000', EmmentalerGlyphs.GetRest(1));  // Whole
+        Assert.Equal('\uE001', EmmentalerGlyphs.GetRest(2));  // Half
+        Assert.Equal('\uE008', EmmentalerGlyphs.GetRest(4));  // Quarter
+        Assert.Equal('\uE00B', EmmentalerGlyphs.GetRest(8));  // Eighth
+        Assert.Equal('\uE00C', EmmentalerGlyphs.GetRest(16)); // 16th
     }
     
     [Fact]
-    public void SmuflGlyphs_GetFlag()
+    public void EmmentalerGlyphs_GetFlag()
     {
-        Assert.Equal('\uE240', SmuflGlyphs.GetFlag(8, true));   // 8th up
-        Assert.Equal('\uE241', SmuflGlyphs.GetFlag(8, false));  // 8th down
-        Assert.Equal('\uE242', SmuflGlyphs.GetFlag(16, true));  // 16th up
-        Assert.Null(SmuflGlyphs.GetFlag(4, true));              // No flag for quarter
+        Assert.Equal('\uE0D2', EmmentalerGlyphs.GetFlag(8, true));   // 8th up
+        Assert.Equal('\uE0DA', EmmentalerGlyphs.GetFlag(8, false));  // 8th down
+        Assert.Equal('\uE0D3', EmmentalerGlyphs.GetFlag(16, true));  // 16th up
+        Assert.Null(EmmentalerGlyphs.GetFlag(4, true));              // No flag for quarter
     }
     
     [Fact]
@@ -130,10 +130,9 @@ render score ""test.svg"" {
 ";
         var svg = RenderSvg(source);
         
-        // Check for repeat barlines (SMuFL glyphs U+E040 and U+E041)
-        // RepeatLeft = U+E040, RepeatRight = U+E041
-        Assert.Contains("\uE040", svg); // |: 
-        Assert.Contains("\uE041", svg); // :|
+        // Repeat barlines drawn as shapes: circles for dots, rects for bars
+        Assert.Contains("<circle", svg);
+        Assert.Contains("<rect", svg);
     }
 
 

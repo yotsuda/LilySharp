@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 
@@ -148,8 +148,8 @@ public sealed class SvgRenderer
         _svg.AppendLine($"""<?xml version="1.0" encoding="UTF-8"?>""");
         _svg.AppendLine($"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">""");
         _svg.AppendLine("<style>");
-        _svg.AppendLine("  @font-face { font-family: 'Bravura'; src: url('https://cdn.jsdelivr.net/npm/bravura-font@1.0.0/fonts/bravura/Bravura.woff2') format('woff2'); }");
-        _svg.AppendLine("  .music { font-family: 'Bravura', serif; }");
+        _svg.AppendLine("  @font-face { font-family: 'Emmentaler'; src: url('emmentaler-20.woff2') format('woff2'); }");
+        _svg.AppendLine("  .music { font-family: 'Emmentaler', serif; }");
         _svg.AppendLine($"  .staff {{ stroke: black; stroke-width: {StaffLineThickness:F2}; }}");
         _svg.AppendLine($"  .stem {{ stroke: black; stroke-width: {StemThickness:F2}; }}");
         _svg.AppendLine($"  .barline {{ stroke: black; stroke-width: {ThinBarlineThickness:F2}; }}");
@@ -211,10 +211,10 @@ public sealed class SvgRenderer
         double currentX = startX;
         char clefGlyph = score.Clef switch
         {
-            "bass" => SmuflGlyphs.FClef,
-            "alto" => SmuflGlyphs.CClef,
-            "tenor" => SmuflGlyphs.CClef,
-            _ => SmuflGlyphs.GClef
+            "bass" => EmmentalerGlyphs.FClef,
+            "alto" => EmmentalerGlyphs.CClef,
+            "tenor" => EmmentalerGlyphs.CClef,
+            _ => EmmentalerGlyphs.GClef
         };
         double clefY = score.Clef switch
         {
@@ -332,11 +332,11 @@ public sealed class SvgRenderer
         {
             char accGlyph = note.Accidental switch
             {
-                "doubleSharp" => SmuflGlyphs.AccidentalDoubleSharp,
-                "sharp" => SmuflGlyphs.AccidentalSharp,
-                "flat" => SmuflGlyphs.AccidentalFlat,
-                "doubleFlat" => SmuflGlyphs.AccidentalDoubleFlat,
-                _ => SmuflGlyphs.AccidentalNatural
+                "doubleSharp" => EmmentalerGlyphs.AccidentalDoubleSharp,
+                "sharp" => EmmentalerGlyphs.AccidentalSharp,
+                "flat" => EmmentalerGlyphs.AccidentalFlat,
+                "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
+                _ => EmmentalerGlyphs.AccidentalNatural
             };
             
             // Get accidental metrics
@@ -356,7 +356,7 @@ public sealed class SvgRenderer
         }
         
         // Draw notehead
-        char notehead = SmuflGlyphs.GetNotehead(noteValue);
+        char notehead = EmmentalerGlyphs.GetNotehead(noteValue);
         DrawGlyph(notehead, noteheadLeftX, noteY, note.SourcePosition);
         
         // Draw stem using GlyphMetrics anchor points
@@ -386,7 +386,7 @@ public sealed class SvgRenderer
             // Draw flag (only if not beamed)
             if (!_beamedStemEndYs.ContainsKey(note))
             {
-                var flag = SmuflGlyphs.GetFlag(noteValue, stemUp);
+                var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
                     DrawGlyph(flag.Value, stemX, stemEndY);
@@ -412,7 +412,7 @@ public sealed class SvgRenderer
             }
             
             double dotY = noteY + dotYOffset;
-            DrawGlyph(SmuflGlyphs.AugmentationDot, dotX, dotY);
+            DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, dotY);
         }
     }
     
@@ -430,7 +430,7 @@ public sealed class SvgRenderer
         // Staff position increases upward, but Y increases downward
         restY -= shiftStaffPositions * SpaceHeight / 2;
         
-        char restGlyph = SmuflGlyphs.GetRest(noteValue);
+        char restGlyph = EmmentalerGlyphs.GetRest(noteValue);
         DrawGlyph(restGlyph, x, restY, rest.SourcePosition);
     }
     
@@ -438,7 +438,7 @@ public sealed class SvgRenderer
     {
         int noteValue = GetNoteValue(chord.BaseDuration);
         double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
-        char notehead = SmuflGlyphs.GetNotehead(noteValue);
+        char notehead = EmmentalerGlyphs.GetNotehead(noteValue);
         
         // Calculate accidental positions
         var accidentalPlacement = new AccidentalPlacement();
@@ -454,11 +454,11 @@ public sealed class SvgRenderer
             {
                 char accGlyph = note.Accidental switch
                 {
-                    "doubleSharp" => SmuflGlyphs.AccidentalDoubleSharp,
-                    "sharp" => SmuflGlyphs.AccidentalSharp,
-                    "flat" => SmuflGlyphs.AccidentalFlat,
-                    "doubleFlat" => SmuflGlyphs.AccidentalDoubleFlat,
-                    _ => SmuflGlyphs.AccidentalNatural
+                    "doubleSharp" => EmmentalerGlyphs.AccidentalDoubleSharp,
+                    "sharp" => EmmentalerGlyphs.AccidentalSharp,
+                    "flat" => EmmentalerGlyphs.AccidentalFlat,
+                    "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
+                    _ => EmmentalerGlyphs.AccidentalNatural
                 };
                 DrawGlyph(accGlyph, x + accLayout.XOffset, noteY);
             }
@@ -505,7 +505,7 @@ public sealed class SvgRenderer
             // Draw flag (only if not beamed)
             if (!_beamedStemEndYs.ContainsKey(chord))
             {
-                var flag = SmuflGlyphs.GetFlag(noteValue, stemUp);
+                var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
                     DrawGlyph(flag.Value, stemX, stemEndY);
@@ -518,18 +518,67 @@ public sealed class SvgRenderer
     {
         if (type == BarlineType.None) return;
         
-        double y = systemY + StaffHeight;
-        char glyph = type switch
-        {
-            BarlineType.RepeatStart => SmuflGlyphs.RepeatLeft,
-            BarlineType.RepeatEnd => SmuflGlyphs.RepeatRight,
-            BarlineType.RepeatBoth => SmuflGlyphs.RepeatRightLeft,
-            BarlineType.Double => SmuflGlyphs.BarlineDouble,
-            BarlineType.Final => SmuflGlyphs.BarlineFinal,
-            _ => SmuflGlyphs.BarlineSingle
-        };
+        double yTop = systemY;
+        double yBottom = systemY + StaffHeight;
+        double height = yBottom - yTop;
         
-        DrawGlyph(glyph, x, y);
+        double thinWidth = SmuflDefaults.ThinBarlineThickness * SpaceHeight;
+        double thickWidth = SmuflDefaults.ThickBarlineThickness * SpaceHeight;
+        double separation = SmuflDefaults.BarlineSeparation * SpaceHeight;
+        double dotSep = SmuflDefaults.RepeatBarlineDotSeparation * SpaceHeight;
+        
+        switch (type)
+        {
+            case BarlineType.Single:
+                DrawBarlineRect(x, yTop, thinWidth, height);
+                break;
+                
+            case BarlineType.Double:
+                DrawBarlineRect(x, yTop, thinWidth, height);
+                DrawBarlineRect(x + thinWidth + separation, yTop, thinWidth, height);
+                break;
+                
+            case BarlineType.Final:
+                DrawBarlineRect(x, yTop, thinWidth, height);
+                DrawBarlineRect(x + thinWidth + separation, yTop, thickWidth, height);
+                break;
+                
+            case BarlineType.RepeatStart:
+                DrawBarlineRect(x, yTop, thickWidth, height);
+                DrawBarlineRect(x + thickWidth + separation, yTop, thinWidth, height);
+                DrawRepeatDots(x + thickWidth + separation + thinWidth + dotSep, systemY);
+                break;
+                
+            case BarlineType.RepeatEnd:
+                DrawRepeatDots(x, systemY);
+                double afterDots = x + SpaceHeight * 0.6;
+                DrawBarlineRect(afterDots, yTop, thinWidth, height);
+                DrawBarlineRect(afterDots + thinWidth + separation, yTop, thickWidth, height);
+                break;
+                
+            case BarlineType.RepeatBoth:
+                DrawRepeatDots(x, systemY);
+                double pos = x + SpaceHeight * 0.6;
+                DrawBarlineRect(pos, yTop, thinWidth, height);
+                DrawBarlineRect(pos + thinWidth + separation, yTop, thickWidth, height);
+                DrawBarlineRect(pos + thinWidth + separation + thickWidth + separation, yTop, thinWidth, height);
+                DrawRepeatDots(pos + thinWidth + separation + thickWidth + separation + thinWidth + dotSep, systemY);
+                break;
+        }
+    }
+    
+    private void DrawBarlineRect(double x, double y, double width, double height)
+    {
+        _svg.AppendLine($"""  <rect x="{x:F2}" y="{y:F2}" width="{width:F2}" height="{height:F2}" fill="black"/>""");
+    }
+    
+    private void DrawRepeatDots(double x, double systemY)
+    {
+        double r = SpaceHeight * 0.2;
+        double dot1Y = systemY + SpaceHeight * 1.5;
+        double dot2Y = systemY + SpaceHeight * 2.5;
+        _svg.AppendLine($"""  <circle cx="{x + r:F2}" cy="{dot1Y:F2}" r="{r:F2}" fill="black"/>""");
+        _svg.AppendLine($"""  <circle cx="{x + r:F2}" cy="{dot2Y:F2}" r="{r:F2}" fill="black"/>""");
     }
     
     private void DrawSectionLabel(string label, double x, double systemY)
@@ -561,7 +610,7 @@ public sealed class SvgRenderer
             _ => [2, 3, 4, 2, 1, 2, 1]          // Lilypond: (flat-positions . (2 3 4 2 1 2 1))
         };
         
-        char glyph = keySig.IsSharps ? SmuflGlyphs.AccidentalSharp : SmuflGlyphs.AccidentalFlat;
+        char glyph = keySig.IsSharps ? EmmentalerGlyphs.AccidentalSharp : EmmentalerGlyphs.AccidentalFlat;
         int[] positions = keySig.IsSharps ? sharpPositions : flatPositions;
         
         for (int i = 0; i < keySig.Count; i++)
@@ -629,7 +678,7 @@ public sealed class SvgRenderer
         return (int)duration.Denominator;
     }
     
-    private static char GetTimeNumberGlyph(int number) => SmuflGlyphs.GetTimeSigDigit(number);
+    private static char GetTimeNumberGlyph(int number) => EmmentalerGlyphs.GetTimeSigDigit(number);
     
     
     private static string EscapeXml(string text)
