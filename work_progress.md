@@ -256,9 +256,12 @@ master
 | GrandStaffLayout.cs | ✅ | High | 3h | 大譜表レイアウト計算 |
 | BraceRenderer.cs | ✅ | High | 2h | 大括弧描画（ベジェ曲線） |
 | SystemBarlineRenderer.cs | ✅ | High | 2h | 譜表間を結ぶ小節線 |
+| RenderSpec.cs | ✅ | High | 1h | render ブロックの構造化表現 |
+| RenderSpecParser.cs | ✅ | High | 2h | RenderDeclarationSyntax → RenderSpec 変換 |
+| MultiStaffScore.cs | ✅ | High | 2h | 複数譜表のスコアモデル |
+| MeasureCollector (MultiStaff) | ✅ | High | 1h | CollectMultiStaff() メソッド追加 |
 | LayoutEngine.cs (多譜表) | 🚀 | High | 4h | 複数譜表の垂直配置・間隔計算 |
-| SvgRenderer.cs (多譜表) | 🚀 | High | 4h | 複数譜表描画、Voice→Staff マッピング |
-| VoiceCollector.cs (Staff対応) | 🚀 | High | 2h | rightHand/leftHand → 上下譜表振り分け |
+| SvgRenderer.cs (多譜表) | 🚀 | High | 4h | 複数譜表描画 |
 
 ## 更新履歴
 
@@ -271,3 +274,4 @@ master
 | 2025-12-12 | Phase 11: グランドスタッフ（大譜表）を計画に追加 |
 | 2025-12-13 | Phase 3 完了。ScoreCollisions 呼び出し追加 |
 | 2025-12-13 | Phase 11: Model, Layout基盤, Renderer コンポーネント完了 |
+| 2025-12-13 | Phase 11: RenderSpec, MultiStaffScore, Collector 統合完了 |
