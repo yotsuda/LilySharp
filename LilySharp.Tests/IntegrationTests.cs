@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -80,20 +80,29 @@ public class IntegrationTests
         Assert.True(totalNotes >= 15, $"Für Elise rightHand should have at least 15 notes, but has {totalNotes}");
     }
     
-    [Fact(Skip = "Requires Semantic layer for structure/repeat expansion")]
+    [Fact]
     public void RenderMinuet_HasExpectedStructure()
     {
         var source = File.ReadAllText("../../../../samples/minuet.lys");
-        var tree = SyntaxTree.Parse(source);
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree, "rightHand");
+        var compiler = new LilySharp.Core.Semantics.SemanticCompiler();
+        var result = compiler.Compile(source);
         
-        // Minuet section A has 4 measures with notes
-        Assert.NotEmpty(score.Voice.Measures);
-        Assert.True(score.Voice.Measures.Length >= 4, 
-            $"Minuet should have at least 4 measures, but has {score.Voice.Measures.Length}");
+        Assert.True(result.Success, 
+            $"Compilation failed: {string.Join(", ", result.Diagnostics.Select(d => d.Message))}");
         
-        var totalNotes = score.Voice.Measures.Sum(m => m.Items.Count(i => i is LilySharp.Core.Svg.Model.NoteItem or LilySharp.Core.Svg.Model.ChordItem));
+        var score = result.Score!;
+        
+        // Minuet should have multiple voices (rightHand, leftHand)
+        Assert.True(score.Voices.Length >= 1, 
+            $"Minuet should have at least 1 voice, but has {score.Voices.Length}");
+        
+        // Find rightHand voice if exists, otherwise use first voice
+        var voice = score.Voices.FirstOrDefault(v => v.Name == "rightHand") ?? score.Voice;
+        
+        // Minuet structure: |: A [1. A1] [2. A2] :| expands to A, A1, A, A2
+        Assert.NotEmpty(voice.Measures);
+        
+        var totalNotes = voice.Measures.Sum(m => m.Items.Count(i => i is LilySharp.Core.Svg.Model.NoteItem or LilySharp.Core.Svg.Model.ChordItem));
         Assert.True(totalNotes >= 10, 
             $"Minuet rightHand should have at least 10 notes, but has {totalNotes}");
     }

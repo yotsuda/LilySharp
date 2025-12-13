@@ -49,8 +49,8 @@ public sealed class SymbolCollector
                     CollectPhrase(phrase, table);
                     break;
                     
-                case PartBlockSyntax partBlock:
-                    CollectPart(partBlock, table);
+                case PartDeclarationSyntax partDecl:
+                    CollectPart(partDecl, table);
                     break;
                     
                 case VariableDeclarationSyntax variable:
@@ -94,18 +94,18 @@ public sealed class SymbolCollector
         }
     }
     
-    private void CollectPart(PartBlockSyntax partBlock, SymbolTable table)
+    private void CollectPart(PartDeclarationSyntax partDecl, SymbolTable table)
     {
-        var name = partBlock.Name;
-        var properties = CollectPartProperties(partBlock);
-        var symbol = new PartSymbol(name, partBlock, properties);
+        var name = partDecl.Name.Text;
+        var properties = CollectPartProperties(partDecl);
+        var symbol = new PartSymbol(name, partDecl, properties);
         
         if (!table.AddPart(symbol))
         {
             _diagnostics.Add(new SemanticDiagnostic(
                 DiagnosticSeverity.Error,
                 $"Duplicate part definition: '{name}'",
-                partBlock.Position));
+                partDecl.Position));
         }
     }
     
@@ -170,13 +170,13 @@ public sealed class SymbolCollector
     /// Collects properties from a part block.
     /// Currently returns empty dictionary as part properties parsing is TBD.
     /// </summary>
-    private static ImmutableDictionary<string, string> CollectPartProperties(PartBlockSyntax partBlock)
+    private static ImmutableDictionary<string, string> CollectPartProperties(PartDeclarationSyntax partDecl)
     {
         var builder = ImmutableDictionary.CreateBuilder<string, string>();
         
         // Part properties are collected from child nodes
         // For now, look for property-like patterns in descendants
-        foreach (var node in partBlock.DescendantNodes())
+        foreach (var node in partDecl.DescendantNodes())
         {
             // Look for clef, key, etc. declarations within the part
             switch (node)
