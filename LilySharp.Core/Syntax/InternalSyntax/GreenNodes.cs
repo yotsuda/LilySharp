@@ -604,7 +604,7 @@ internal sealed class MusicMarkGreen : GreenSyntaxNode
 
 
 /// <summary>
-/// Repeat block in structure: |: ... :| or |: ... | 1. A :| 2. B
+/// Repeat block in structure: |: ... :| or |: ... :| x3
 /// </summary>
 internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
 {
@@ -625,7 +625,21 @@ internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
         GreenNode?[] alternativesBeforeEnd,
         SyntaxToken repeatEnd,
         GreenNode? finalAlternative)
-        : base(SyntaxKind.StructureRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative))
+        : base(SyntaxKind.StructureRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, null, null))
+    {
+    }
+    
+    // Repeat with count: |: items :| x3
+    public StructureRepeatBlockGreen(
+        SyntaxToken repeatStart,
+        GreenNode?[] items,
+        SyntaxToken? barline,
+        GreenNode?[] alternativesBeforeEnd,
+        SyntaxToken repeatEnd,
+        GreenNode? finalAlternative,
+        SyntaxToken? xToken,
+        SyntaxToken? repeatCount)
+        : base(SyntaxKind.StructureRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, xToken, repeatCount))
     {
     }
     
@@ -635,7 +649,9 @@ internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
         SyntaxToken? barline,
         GreenNode?[] alternativesBeforeEnd,
         SyntaxToken repeatEnd,
-        GreenNode? finalAlternative)
+        GreenNode? finalAlternative,
+        SyntaxToken? xToken,
+        SyntaxToken? repeatCount)
     {
         var children = new List<GreenNode?> { repeatStart };
         children.AddRange(items);
@@ -649,9 +665,15 @@ internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
         {
             children.Add(finalAlternative);
         }
+        if (xToken != null)
+        {
+            children.Add(xToken);
+            children.Add(repeatCount);
+        }
         return [.. children];
     }
 }
+
 
 
 /// <summary>

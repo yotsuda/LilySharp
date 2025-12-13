@@ -1116,7 +1116,7 @@ private GreenNode?[] ParseArticulations()
     }
     
     /// <summary>
-    /// Parse repeat block: |: ... :| or |: ... | 1. A :| 2. B
+    /// Parse repeat block: |: ... :| or |: ... :| x3
     /// </summary>
     private StructureRepeatBlockGreen ParseStructureRepeatBlock()
     {
@@ -1160,7 +1160,16 @@ private GreenNode?[] ParseArticulations()
             finalAlternative = ParseStructureAlternative();
         }
         
-        return new StructureRepeatBlockGreen(startBar, [.. items], pipeBeforeAlternatives, [.. alternatives], endBar, finalAlternative);
+        // Parse repeat count: x3
+        SyntaxToken? xToken = null;
+        SyntaxToken? repeatCount = null;
+        if (Check(SyntaxKind.Identifier) && Current.Text == "x")
+        {
+            xToken = Advance();
+            repeatCount = Expect(SyntaxKind.IntegerLiteral);
+        }
+        
+        return new StructureRepeatBlockGreen(startBar, [.. items], pipeBeforeAlternatives, [.. alternatives], endBar, finalAlternative, xToken, repeatCount);
         
     }
     
