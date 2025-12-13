@@ -777,4 +777,34 @@ structure {
         // Check slots - should have |:, A (reference), and :|
         Assert.True(repeat!.SlotCount >= 3, $"Expected at least 3 slots but got {repeat.SlotCount}");
     }
+
+    [Fact]
+    public void ParseVoltaWithRange()
+    {
+        var source = @"
+section A { melody { c4 | } }
+section B { melody { d4 | } }
+structure {
+    |: A [1-3. B] :| x4
+}
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        Assert.Equal(source, tree.ToFullString());
+    }
+    
+    [Fact]
+    public void ParseVoltaWithList()
+    {
+        var source = @"
+section A { melody { c4 | } }
+section B { melody { d4 | } }
+structure {
+    |: A [1,3. B] :| x4
+}
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        Assert.Equal(source, tree.ToFullString());
+    }
 }

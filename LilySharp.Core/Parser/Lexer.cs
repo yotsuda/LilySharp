@@ -162,6 +162,7 @@ internal sealed class Lexer
             case '$': _position++; return (SyntaxKind.Dollar, "$");
             case '\'': _position++; return (SyntaxKind.Apostrophe, "'");
             case ',': _position++; return (SyntaxKind.Comma, ",");
+            case '-': _position++; return (SyntaxKind.Minus, "-");
             case '.': _position++; return (SyntaxKind.Dot, ".");
             case '\\':
                 if (Peek(1) >= '1' && Peek(1) <= '9')

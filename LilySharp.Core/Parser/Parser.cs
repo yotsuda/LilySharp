@@ -1102,17 +1102,27 @@ private GreenNode?[] ParseArticulations()
     }
     
     /// <summary>
-    /// Parse volta bracket: [1. Section]
+    /// Parse volta bracket: [1. Section] or [1,3. Section] or [1-3. Section]
     /// </summary>
     private StructureAlternativeGreen ParseVoltaBracket()
     {
         var openBracket = Expect(SyntaxKind.OpenBracket);
         var number = Expect(SyntaxKind.IntegerLiteral);
+        
+        // Check for range or list: [1-3. ] or [1,3. ]
+        SyntaxToken? separator = null;
+        SyntaxToken? endNumber = null;
+        if (Check(SyntaxKind.Minus) || Check(SyntaxKind.Comma))
+        {
+            separator = Advance();
+            endNumber = Expect(SyntaxKind.IntegerLiteral);
+        }
+        
         var dot = Expect(SyntaxKind.Dot);
         var section = Expect(SyntaxKind.Identifier);
         var closeBracket = Expect(SyntaxKind.CloseBracket);
         
-        return new StructureAlternativeGreen(openBracket, number, null, null, dot, section, closeBracket);
+        return new StructureAlternativeGreen(openBracket, number, separator, endNumber, dot, section, closeBracket);
     }
     
     /// <summary>

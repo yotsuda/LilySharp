@@ -126,6 +126,7 @@ public enum SyntaxKind : ushort
     Underscore,         // _
     Backslash,          // \
     Comma,              // ,
+    Minus,              // -
     Apostrophe,         // '
     Dollar,             // $
     DoubleOpenAngle,    // <<
