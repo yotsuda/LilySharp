@@ -33,8 +33,11 @@ Thumbs.db
 # Generated MIDI files
 *.mid
 
-# External fonts (downloaded separately)
-fonts/
+# Emmentaler font (SIL OFL licensed)
+# Only woff2 files needed for web rendering
+fonts/*
+!fonts/emmentaler-*.woff2
+!fonts/LICENSE.OFL
 
 # Generated output files
 *.svg
