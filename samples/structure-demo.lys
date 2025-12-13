@@ -43,7 +43,7 @@ section Outro {
 structure {
   Intro
   @segno
-  |: Verse [1. Bridge] [2. Chorus @fine] :|
+  |: Verse [1. Bridge] [2. Chorus] :| @fine
   ~Verse
   Outro _"molto rit."
   @ds.al.fine

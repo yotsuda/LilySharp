@@ -172,9 +172,13 @@ public enum SyntaxKind : ushort
     
     // === Nodes: Structure Block Items ===
     SectionReference,           // section name in structure
+    SilentSectionReference,     // ~section name (no label)
+    CustomText,                 // _"text" in structure
+    RepeatCount,                // x3 after repeat block
     StructureRepeatBlock,       // |: ... :| in structure
     StructureAlternative,       // 1. A, 2. B in structure
-    NavigationMark,             // segno, fine, coda, dc, ds
+    NavigationMark,             // segno, fine, coda, dc, ds (legacy)
+    MusicMark,                  // @segno, @fine, @ds.al.fine (new)
     
     // === Nodes: Legacy Structure ===
     ScoreDeclaration,

@@ -34,4 +34,13 @@ public class IntegrationTests
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.ToString())));
         Assert.Equal(source, tree.ToFullString());
     }
+    [Fact]
+    public void ParseStructureDemo()
+    {
+        var source = File.ReadAllText("../../../../samples/structure-demo.lys");
+        var tree = SyntaxTree.Parse(source);
+        
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.ToString())));
+        Assert.Equal(source, tree.ToFullString());
+    }
 }

@@ -558,6 +558,50 @@ internal sealed class SectionReferenceGreen : GreenSyntaxNode
     }
 }
 
+/// <summary>
+/// Silent section reference in structure: ~SectionName (no label displayed)
+/// </summary>
+internal sealed class SilentSectionReferenceGreen : GreenSyntaxNode
+{
+    public SilentSectionReferenceGreen(SyntaxToken tilde, SyntaxToken identifier)
+        : base(SyntaxKind.SilentSectionReference, [tilde, identifier])
+    {
+    }
+}
+
+/// <summary>
+/// Custom text in structure: _"text"
+/// </summary>
+internal sealed class CustomTextGreen : GreenSyntaxNode
+{
+    public CustomTextGreen(SyntaxToken underscore, SyntaxToken text)
+        : base(SyntaxKind.CustomText, [underscore, text])
+    {
+    }
+}
+
+/// <summary>
+/// Repeat count: x3
+/// </summary>
+internal sealed class RepeatCountGreen : GreenSyntaxNode
+{
+    public RepeatCountGreen(SyntaxToken x, SyntaxToken number)
+        : base(SyntaxKind.RepeatCount, [x, number])
+    {
+    }
+}
+
+/// <summary>
+/// Music mark: @segno, @fine, @ds.al.fine, etc.
+/// </summary>
+internal sealed class MusicMarkGreen : GreenSyntaxNode
+{
+    public MusicMarkGreen(GreenNode?[] parts)
+        : base(SyntaxKind.MusicMark, parts)
+    {
+    }
+}
+
 
 /// <summary>
 /// Repeat block in structure: |: ... :| or |: ... | 1. A :| 2. B

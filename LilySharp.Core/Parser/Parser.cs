@@ -1034,6 +1034,9 @@ private GreenNode?[] ParseArticulations()
         return Current.Kind switch
         {
             SyntaxKind.Identifier => new SectionReferenceGreen(Advance()),
+            SyntaxKind.Tilde => ParseSilentSectionReference(),
+            SyntaxKind.At => ParseMusicMark(),
+            SyntaxKind.Underscore => ParseCustomText(),
             SyntaxKind.RepeatStartBar => ParseStructureRepeatBlock(),
             SyntaxKind.OpenBracket => ParseVoltaBracket(),
             SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
@@ -1041,6 +1044,61 @@ private GreenNode?[] ParseArticulations()
                 => ParseNavigationMark(),
             _ => null
         };
+    }
+    
+    /// <summary>
+    /// Parse silent section reference: ~SectionName
+    /// </summary>
+    private SilentSectionReferenceGreen ParseSilentSectionReference()
+    {
+        var tilde = Expect(SyntaxKind.Tilde);
+        var name = Expect(SyntaxKind.Identifier);
+        return new SilentSectionReferenceGreen(tilde, name);
+    }
+    
+    /// <summary>
+    /// Parse music mark: @segno, @fine, @ds.al.fine, etc.
+    /// </summary>
+    private MusicMarkGreen ParseMusicMark()
+    {
+        var at = Expect(SyntaxKind.At);
+        var name = ExpectMarkName();
+        
+        // Handle compound marks like @ds.al.fine
+        var parts = new List<SyntaxToken> { at, name };
+        while (Check(SyntaxKind.Dot))
+        {
+            parts.Add(Advance()); // .
+            parts.Add(ExpectMarkName());
+        }
+        
+        return new MusicMarkGreen([.. parts]);
+    }
+    
+    /// <summary>
+    /// Expect a mark name (identifier or navigation keyword)
+    /// </summary>
+    private SyntaxToken ExpectMarkName()
+    {
+        // Navigation keywords can also appear as mark names
+        if (Current.Kind is SyntaxKind.Identifier 
+            or SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
+            or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword
+            or SyntaxKind.AlKeyword)
+        {
+            return Advance();
+        }
+        return Expect(SyntaxKind.Identifier);
+    }
+    
+    /// <summary>
+    /// Parse custom text: _"text"
+    /// </summary>
+    private CustomTextGreen ParseCustomText()
+    {
+        var underscore = Expect(SyntaxKind.Underscore);
+        var text = Expect(SyntaxKind.StringLiteral);
+        return new CustomTextGreen(underscore, text);
     }
     
     /// <summary>
