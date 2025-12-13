@@ -108,13 +108,13 @@ internal sealed class Parser
             SyntaxKind.StructureKeyword => ParseStructureDeclaration(),
             SyntaxKind.RenderKeyword => ParseRenderDeclaration(),
             SyntaxKind.PhraseKeyword => ParsePhraseDeclaration(),
+            SyntaxKind.PartKeyword => ParsePartDeclaration(),  // New part syntax
             
             // Variable declaration: identifier = { ... } (legacy)
             SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
             
             // Legacy structure
             SyntaxKind.ScoreKeyword => ParseScoreDeclaration(),
-            SyntaxKind.PartKeyword => ParsePartDeclaration(),
             SyntaxKind.LetKeyword => ParseVariableDeclaration(),
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
@@ -161,7 +161,7 @@ internal sealed class Parser
     {
         return Current.Kind switch
         {
-            SyntaxKind.PartKeyword => ParsePartDeclaration(),
+            SyntaxKind.PartKeyword => ParseLegacyPartDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.KeyKeyword => ParsePropertyAssignment(),
@@ -171,6 +171,36 @@ internal sealed class Parser
     }
 
     private PartDeclarationGreen ParsePartDeclaration()
+    {
+        var keyword = Expect(SyntaxKind.PartKeyword);
+        var name = Expect(SyntaxKind.Identifier);
+        
+        // Check if there's a body
+        if (!Check(SyntaxKind.OpenBrace))
+        {
+            // No body: part name
+            return new PartDeclarationGreen(keyword, name);
+        }
+        
+        // With body: part name { props }
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        
+        var properties = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var prop = ParsePartProperty();
+            if (prop != null)
+                properties.Add(prop);
+            else
+                Advance();
+        }
+        
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new PartDeclarationGreen(keyword, name, openBrace, [.. properties], closeBrace);
+    }
+    
+    // Legacy part inside score: part Name "display" { staff... }
+    private PartDeclarationGreen ParseLegacyPartDeclaration()
     {
         var keyword = Expect(SyntaxKind.PartKeyword);
         var name = TryConsume(SyntaxKind.Identifier);
@@ -189,6 +219,23 @@ internal sealed class Parser
         
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new PartDeclarationGreen(keyword, name, displayName, openBrace, [.. members], closeBrace);
+    }
+    
+    private PropertyAssignmentGreen? ParsePartProperty()
+    {
+        // clef: treble, instrument: "Violin", channel: 1, tuning: standard
+        if (Current.Kind == SyntaxKind.Identifier ||
+            Current.Kind == SyntaxKind.ClefKeyword ||
+            Current.Kind == SyntaxKind.InstrumentKeyword ||
+            Current.Kind == SyntaxKind.ChannelKeyword ||
+            Current.Kind == SyntaxKind.TuningKeyword)
+        {
+            var propName = Advance();
+            var colon = Expect(SyntaxKind.Colon);
+            var value = Advance(); // identifier, string, or number
+            return new PropertyAssignmentGreen(propName, colon, [value]);
+        }
+        return null;
     }
 
     private GreenNode? ParsePartMember()
@@ -988,11 +1035,26 @@ private GreenNode?[] ParseArticulations()
         {
             SyntaxKind.Identifier => new SectionReferenceGreen(Advance()),
             SyntaxKind.RepeatStartBar => ParseStructureRepeatBlock(),
+            SyntaxKind.OpenBracket => ParseVoltaBracket(),
             SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
                 or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword 
                 => ParseNavigationMark(),
             _ => null
         };
+    }
+    
+    /// <summary>
+    /// Parse volta bracket: [1. Section]
+    /// </summary>
+    private StructureAlternativeGreen ParseVoltaBracket()
+    {
+        var openBracket = Expect(SyntaxKind.OpenBracket);
+        var number = Expect(SyntaxKind.IntegerLiteral);
+        var dot = Expect(SyntaxKind.Dot);
+        var section = Expect(SyntaxKind.Identifier);
+        var closeBracket = Expect(SyntaxKind.CloseBracket);
+        
+        return new StructureAlternativeGreen(openBracket, number, null, null, dot, section, closeBracket);
     }
     
     /// <summary>

@@ -4,43 +4,53 @@ composer "J.S. Bach"
 
 tempo 108
 time 3/4
-key des major
+key g major
+
+part rightHand {
+  clef: treble
+}
+
+part leftHand {
+  clef: bass
+}
 
 section A {
   rightHand {
-    d'4 g8 a b c |
-    d4 g, g |
-    e4 c'8 b c a |
-    d,4 fis8 e fis d |
+    d'4 g8 a b c' |
+    d'4 g g |
+    e'4 c'8 b c' a |
+    d4 fis8 e fis d |
   }
-  leftHand clef:bass {
+  leftHand {
     << { g2 a4 } \\ { g,2. } >> |
-    << { b'2. } \\ { g2. } >> |
-    << { c2. } \\ { e,2. } >> |
-    << { d'2. } \\ { d,2. } >> |
+    << { b2. } \\ { g2. } >> |
+    << { c'2. } \\ { e2. } >> |
+    << { d'2. } \\ { d2. } >> |
   }
 }
 
 section A1 {
-  rightHand { g'4 g, g | }
-  leftHand clef:bass { g2. | }
+  rightHand { g'4 g g | }
+  leftHand { g2. | }
 }
 
 section A2 {
   rightHand { g'4 g2 | }
-  leftHand clef:bass { g2. | }
+  leftHand { g2. | }
 }
 
 structure {
-  |: A | 1. A1 :| 2. A2
+  |: A [1. A1] [2. A2] :|
 }
 
 render score "minuet.svg" {
-  staff { rightHand }
-  staff bass { leftHand }
+  grandStaff {
+    staff { rightHand }
+    staff { leftHand }
+  }
 }
 
-render audio "minuet.mid" {
-  rightHand channel:1 instrument:1
-  leftHand channel:2 instrument:1
+render midi "minuet.mid" {
+  rightHand channel: 1 instrument: 1
+  leftHand channel: 2 instrument: 1
 }

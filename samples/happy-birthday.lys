@@ -6,6 +6,8 @@ tempo 120
 time 3/4
 key g major
 
+part melody
+
 section Main {
   melody {
     // First phrase
@@ -32,6 +34,6 @@ render score "happy-birthday.svg" {
   staff { melody }
 }
 
-render audio "happy-birthday.mid" {
-  melody channel:1 instrument:74
+render midi "happy-birthday.mid" {
+  melody channel: 1 instrument: 74
 }

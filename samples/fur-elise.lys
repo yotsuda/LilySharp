@@ -6,22 +6,30 @@ tempo 76
 time 3/8
 key a minor
 
+part rightHand {
+  clef: treble
+}
+
+part leftHand {
+  clef: bass
+}
+
 // Reusable theme
-mainTheme = {
-  e8 dis e | dis e b | d c a~ |
-  a4. | r8 c e |
-  a4. | r8 e gis |
-  b4. | r8 e, gis |
-  a4. | r4 r8 |
+phrase mainTheme {
+  e''8 dis'' e'' | dis'' e'' b' | d'' c'' a'~ |
+  a'4. | r8 c'' e'' |
+  a''4. | r8 e'' gis'' |
+  b''4. | r8 e' gis' |
+  a'4. | r4 r8 |
 }
 
 section Main {
   rightHand { mainTheme }
-  leftHand clef:bass {
+  leftHand {
     r4. | a,8 e a |
-    c4. | r8 e, a |
-    c4. | r8 e, gis |
-    b4. | r8 e, gis |
+    c'4. | r8 e a |
+    c'4. | r8 e gis |
+    b4. | r8 e gis |
     a4. | a,,8 c e |
   }
 }
@@ -29,11 +37,13 @@ section Main {
 structure { Main }
 
 render score "fur-elise.svg" {
-  staff { rightHand }
-  staff bass { leftHand }
+  grandStaff {
+    staff { rightHand }
+    staff { leftHand }
+  }
 }
 
-render audio "fur-elise.mid" {
-  rightHand channel:1 instrument:1
-  leftHand channel:2 instrument:1
+render midi "fur-elise.mid" {
+  rightHand channel: 1 instrument: 1
+  leftHand channel: 2 instrument: 1
 }

@@ -1,15 +1,16 @@
 # Lily# Grammar Specification
-# Version: 0.4.0
-# Date: 2025-12-09
+# Version: 0.5.0
+# Date: 2025-12-13
 
 ## Design Principles
 
 1. Single-pass compilation  - No forward references, immediate error detection
-2. Explicit over implicit   - No hidden state, no optional structure
+2. Explicit over implicit   - No hidden state, clear structure
 3. Locality                 - Each element independently parsable
 4. Visual correspondence    - Corresponds to sheet music visually
 5. LilyPond inspiration     - Inherit practical conventions, not Scheme complexity
 6. Section-oriented         - Organize by musical sections, not just by parts
+7. AI-friendly              - Unambiguous grammar for both human and AI authoring
 
 ================================================================================
 ## 1. Lexical Grammar
@@ -39,21 +40,12 @@ IdentCont      = IdentStart | Digit | '-' ;
 
 ### Pitch Names
 
-(* Base pitch *)
 PitchBase      = 'c' | 'd' | 'e' | 'f' | 'g' | 'a' | 'b' ;
-
-(* Accidentals *)
-Accidental     = 'is' | 'ees' | 'isis' | 'eeses'
-               | 'aes'                            (* a-flat *)
-               | 'bes'                            (* b-flat *)
-               ;
-
-(* Octave marks *)
-OctaveUp       = { '\'' }+ ;                      (* ' = 1 octave up *)
-OctaveDown     = { ',' }+ ;                       (* , = 1 octave down *)
+Accidental     = 'is' | 'es' | 'isis' | 'eses'
+               | 'aes' | 'bes' ;
+OctaveUp       = { '\'' }+ ;
+OctaveDown     = { ',' }+ ;
 Octave         = OctaveUp | OctaveDown | ε ;
-
-(* Complete pitch token *)
 PitchToken     = PitchBase , [ Accidental ] , Octave ;
 
 ### Duration
@@ -65,58 +57,50 @@ DurationToken  = DurationBase , [ Dots ] ;
 
 ### Keywords
 
-(* Structure keywords - no backslash *)
-StructureKeyword = 'section' | 'structure' | 'render'
-                 | 'staff' | 'tab' | 'voice'
+StructureKeyword = 'part' | 'phrase' | 'section' | 'structure' | 'render'
+                 | 'staff' | 'grandStaff' | 'tab' | 'midi'
                  | 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
-                 | 'transpose' | 'octave' | 'instrument' | 'channel'
+                 | 'instrument' | 'channel'
                  | 'major' | 'minor' | 'dorian' | 'phrygian' | 'lydian'
                  | 'mixolydian' | 'aeolian' | 'locrian'
                  | 'treble' | 'bass' | 'alto' | 'tenor' | 'percussion'
-                 | 'r' | 's'                      (* rests *)
+                 | 'r' | 's'
                  ;
 
-(* Dynamic keywords - with backslash *)
 DynamicKeyword = '\p' | '\pp' | '\ppp' | '\mp'
                | '\f' | '\ff' | '\fff' | '\mf'
                | '\fp' | '\sf' | '\sfz' | '\rfz'
                | '\cresc' | '\decresc' | '\dim'
                ;
 
-(* Structure control *)
-StructureControl = 'segno' | 'fine' | 'coda' | 'dc' | 'ds' | 'al' | 'to' ;
-
 ### Operators & Punctuation
 
 Punctuation    = '{' | '}' | '(' | ')' | '<' | '>' | '[' | ']'
-               | '|' | '~' | ':' | '=' | '/' | '@' | '\' | '-'
-               | '|:' | ':|' | ':|:'              (* repeat signs *)
+               | '|' | '~' | ':' | '=' | '/' | '@' | '_' | '\' | '-' | '.'
+               | '|:' | ':|' | ':|:'
                ;
 
 ================================================================================
-## 2. File Structure (All Required)
+## 2. File Structure
 ================================================================================
 
 ### 2.1 Top-Level Structure
-
-(* A valid file MUST contain: at least one section, one structure, one render *)
 
 File           = { TopLevelItem } ;
 
 TopLevelItem   = MetadataDecl                     (* title, composer, etc. *)
                | GlobalSetting                    (* tempo, time, key *)
-               | VariableDecl                     (* reusable music fragments *)
+               | PartDecl                         (* part definitions *)
+               | PhraseDecl                       (* reusable music fragments *)
                | SectionDecl                      (* musical sections - REQUIRED *)
                | StructureDecl                    (* song form - REQUIRED *)
                | RenderDecl                       (* output definitions - REQUIRED *)
                ;
 
-(* Validation: File must contain at least one SectionDecl, one StructureDecl, one RenderDecl *)
-
 ### 2.2 Metadata
 
 MetadataDecl   = MetadataKey , String ;
-MetadataKey    = 'title' | 'composer' | 'arranger' | 'copyright' | 'tagline' ;
+MetadataKey    = 'title' | 'composer' | 'arranger' | 'copyright' ;
 
 (* Example:
    title "My Song"
@@ -127,7 +111,7 @@ MetadataKey    = 'title' | 'composer' | 'arranger' | 'copyright' | 'tagline' ;
 
 GlobalSetting  = TempoDecl | TimeDecl | KeyDecl ;
 
-TempoDecl      = 'tempo' , Integer ;              (* BPM *)
+TempoDecl      = 'tempo' , Integer ;
 TimeDecl       = 'time' , Integer , '/' , Integer ;
 KeyDecl        = 'key' , PitchToken , Mode ;
 
@@ -141,278 +125,257 @@ Mode           = 'major' | 'minor' | 'dorian' | 'phrygian'
 *)
 
 ================================================================================
-## 3. Variables
+## 3. Part Definition
 ================================================================================
 
-### 3.1 Variable Definition
+(* Parts define instruments/voices with their properties *)
+
+PartDecl       = 'part' , Identifier , [ PartBody ] ;
+
+PartBody       = '{' , { PartProperty } , '}' ;
+
+PartProperty   = PropertyKey , ':' , PropertyValue ;
+
+PropertyKey    = 'clef' | 'instrument' | 'channel' | 'tuning' ;
+
+PropertyValue  = Identifier | String | Integer ;
+
+(* Examples:
+
+   // Minimal
+   part melody
+
+   // With properties
+   part melody {
+     clef: treble
+     instrument: "Violin"
+   }
+
+   part bass {
+     clef: bass
+     instrument: "Cello"
+     channel: 2
+   }
+
+   part guitar {
+     clef: treble
+     instrument: "Acoustic Guitar"
+     tuning: standard
+   }
+*)
+
+================================================================================
+## 4. Phrase Definition
+================================================================================
 
 (* Reusable music fragments - must be defined before use *)
-(* Variables may NOT contain key/tempo/time/clef changes - pure music only *)
+(* Phrases may NOT contain key/tempo/time/clef changes - pure music only *)
 
-VariableDecl   = Identifier , '=' , MusicBlock ;
+PhraseDecl     = 'phrase' , Identifier , MusicBlock ;
 
 (* Example:
-   guitar_riff = { c4 d e f | g a b c' }
-   bass_line = { c,4 g, c, g, }
+   phrase theme { c4 d e f | g a b c' | }
+   phrase ending { g4 f e d | c1 | }
 *)
 
-(* Error: Variables cannot contain key/tempo/time/clef changes
-   bad_var = { c4 d | key g major | e4 f }   // ERROR
-*)
-
-### 3.2 Variable Reference
-
-VariableRef    = Identifier ;
-
-(* Variables can be referenced in section part blocks *)
-
 ================================================================================
-## 4. Section-Oriented Structure
+## 5. Section Definition
 ================================================================================
 
-### 4.1 Section Definition
+(* Musical sections - at least one required *)
 
-(* Musical sections with rehearsal marks - at least one required *)
 SectionDecl    = 'section' , Identifier , '{' , { SectionItem } , '}' ;
 
-SectionItem    = SectionSetting                   (* key, tempo at section start *)
-               | PartBlock                        (* instrument parts *)
+SectionItem    = SectionSetting
+               | PartBlock
                ;
 
 SectionSetting = KeyDecl | TempoDecl | TimeDecl ;
 
-PartBlock      = Identifier , [ PartOptions ] , MusicBlock ;
-
-PartOptions    = { PartOption } ;
-PartOption     = 'transpose' , ':' , TransposeValue
-               | 'octave' , ':' , Integer
-               | 'instrument' , ':' , InstrumentName
-               | 'clef' , ':' , ClefValue
-               ;
-
-TransposeValue = PitchToken                       (* transpose:bes for Bb instruments *)
-               | Integer                          (* transpose:-2 for semitones *)
-               ;
-
-InstrumentName = Identifier | String ;
-
-ClefValue      = 'treble' | 'bass' | 'alto' | 'tenor' | 'percussion' ;
+PartBlock      = Identifier , MusicBlock ;
 
 (* Example:
    section Intro {
-     key c major
-     tempo 120
-     guitar { c4 d e f | g a b c' }
-     bass { c,4 g, c, g, | c, g, c, g, }
+     melody { c4 d e f | g a b c' | }
+     bass { c2 g2 | c2 g2 | }
    }
 
-   section A {
+   section Verse {
      key g major
-     guitar { g4 a b c' | d' e' fis' g' }
-     bass { g,4 d, g, d, | g, d, g, d, }
+     tempo 140
+     melody { theme | ending | }
+     bass { g2 d2 | g2 d2 | }
    }
 *)
 
-### 4.2 Mid-Section Changes
+================================================================================
+## 6. Structure Definition
+================================================================================
 
-(* Key, tempo, time, clef can change mid-section inside part blocks *)
-(* Changes affect all parts from that point - parts should have matching bar positions *)
-(* Warning issued if key/tempo changes occur at different bar positions across parts *)
-
-MidSectionChange = 'key' , PitchToken , Mode
-                 | 'tempo' , Integer
-                 | 'time' , Integer , '/' , Integer
-                 | 'clef' , ClefValue
-                 ;
-
-(* Example - correct usage (changes at same bar position):
-   section A {
-     key c major
-     tempo 120
-     
-     guitar {
-       c4 d e f | g a b c' |
-       key g major                    // bar 3: key change
-       tempo 140                      // bar 3: tempo change
-       g4 a b c' | d' e' fis' g' |
-     }
-     
-     bass {
-       c,4 g, c, g, | c, g, c, g, |
-       key g major                    // bar 3: must match guitar
-       tempo 140
-       g,4 d, g, d, | g, d, g, d, |
-     }
-   }
-*)
-
-(* Warning example - mismatched bar positions:
-   section A {
-     guitar { c4 d e f | key g major | g4 a b c' | }    // key at bar 2
-     bass   { c,4 g, | c,4 g, | key g major | g,4 d, | } // key at bar 3
-   }
-   // Warning: Key change in 'guitar' at bar 2, but 'bass' at bar 3
-*)
-
-### 4.3 Structure Definition (Required)
-
-(* Song form with repeat signs - 1:1 correspondence with music notation *)
-(* Exactly one structure block required per file *)
+(* Song form with repeat signs - REQUIRED, exactly one per file *)
+(* Structure defines the visual appearance of the score *)
+(* Only section references allowed - no inline music { } *)
 
 StructureDecl  = 'structure' , '{' , { StructureItem } , '}' ;
 
-StructureItem  = SectionRef                       (* section name *)
-               | RepeatBlock                      (* |: ... :| *)
-               | NavigationMark                   (* segno, fine, coda, etc. *)
+StructureItem  = SectionRef
+               | SilentSectionRef
+               | RepeatBlock
+               | VoltaBlock
+               | MusicMark
+               | CustomText
                ;
 
-SectionRef     = Identifier ;
+### 6.1 Section References
 
-RepeatBlock    = '|:' , { StructureItem } , ':|'
-               | '|:' , { StructureItem } , '|' , Alternatives , ':|' , AlternativeEnd
+SectionRef       = Identifier ;                   (* displays section label *)
+SilentSectionRef = '~' , Identifier ;             (* no label displayed *)
+
+(* Example:
+   structure {
+     Intro                // "Intro" label displayed
+     Verse                // "Verse" label displayed
+     ~Verse               // same section, no label
+   }
+*)
+
+### 6.2 Repeat Blocks
+
+RepeatBlock    = '|:' , { StructureItem } , ':|' , [ RepeatCount ] ;
+
+RepeatCount    = 'x' , Integer ;                  (* default: x2 *)
+
+(* Example:
+   |: Verse Chorus :|           // repeat 2 times (default)
+   |: Verse Chorus :| x3        // repeat 3 times
+*)
+
+### 6.3 Volta Blocks
+
+VoltaBlock     = '[' , VoltaSpec , '.' , StructureItem , ']' ;
+
+VoltaSpec      = VoltaNumber , { ',' , VoltaNumber }
+               | VoltaRange
                ;
 
-Alternatives   = Alternative , { Alternative } ;
-Alternative    = Integer , '.' , SectionRef ;     (* 1. A, 2. B *)
-AlternativeEnd = Integer , '.' , SectionRef ;     (* final alternative *)
+VoltaNumber    = Integer ;
+VoltaRange     = Integer , '-' , Integer ;
 
-NavigationMark = 'segno'                          (* 𝄋 sign *)
-               | 'fine'                           (* Fine *)
-               | 'coda'                           (* ⊕ Coda *)
-               | 'to' , 'coda'                    (* To Coda *)
-               | 'dc'                             (* D.C. *)
-               | 'dc' , 'al' , 'fine'             (* D.C. al Fine *)
-               | 'dc' , 'al' , 'coda'             (* D.C. al Coda *)
-               | 'ds'                             (* D.S. *)
-               | 'ds' , 'al' , 'fine'             (* D.S. al Fine *)
-               | 'ds' , 'al' , 'coda'             (* D.S. al Coda *)
+(* Example:
+   |: Verse [1. Bridge] [2. Chorus] :|
+   |: Verse [1,3. Bridge] [2,4. Coda] :| x4
+   |: Verse [1-3. Bridge] [4. Coda] :| x4
+*)
+
+### 6.4 Music Marks
+
+(* Predefined music symbols - position determined automatically *)
+
+MusicMark      = '@' , MarkName ;
+
+MarkName       = 'segno'                          (* 𝄋 - beginning, above *)
+               | 'coda'                           (* Coda - beginning, above *)
+               | 'fine'                           (* Fine - end, above *)
+               | 'ds'                             (* D.S. - end, above *)
+               | 'dc'                             (* D.C. - end, above *)
+               | 'ds.al" .fine'                    (* D.S. al Fine - end, above *)
+               | 'ds.al.coda'                     (* D.S. al Coda - end, above *)
+               | 'dc.al.fine'                     (* D.C. al Fine - end, above *)
+               | 'dc.al.coda'                     (* D.C. al Coda - end, above *)
+               | 'rit'                            (* rit. - end, below *)
+               | 'accel'                          (* accel. - end, below *)
+               | 'cresc'                          (* cresc. - end, below *)
+               | 'decresc'                        (* decresc. - end, below *)
+               | 'dim'                            (* dim. - end, below *)
                ;
+
+(* Predefined mark positions:
+
+   | Mark           | Horizontal | Vertical |
+   |----------------|------------|----------|
+   | @segno         | beginning  | above    |
+   | @coda          | beginning  | above    |
+   | @fine          | end        | above    |
+   | @ds, @dc, etc. | end        | above    |
+   | @rit, @accel   | end        | below    |
+   | @cresc, etc.   | end        | below    |
+*)
+
+### 6.5 Custom Text
+
+(* Custom text with explicit position *)
+
+CustomText     = '_' , String ;                   (* end, below *)
 
 (* Example:
    structure {
      Intro
-     |: A :|
-     |: B | 1. A :| 2. C
-     fine
+     @segno
+     |: Verse [1. Bridge] [2. Chorus @fine] :|
+     Interlude _"molto rit."
+     @ds.al.fine
    }
 *)
 
 ================================================================================
-## 5. Output Definition (Required)
+## 7. Render Definition
 ================================================================================
 
-### 5.1 Render Declaration
-(* At least one render block required per file *)
+(* Output definitions - at least one required *)
 
-RenderDecl     = 'render' , Identifier , String , '{' , { RenderItem } , '}' ;
+RenderDecl     = 'render' , RenderType , String , RenderBody ;
 
-(* Identifier = render name for --render command line option *)
-(* String = output filename, extension determines format *)
+RenderType     = 'score' | 'midi' ;
+
+RenderBody     = '{' , { RenderItem } , '}' ;
+
+### 7.1 Score Render
 
 RenderItem     = StaffRender | GrandStaffRender | TabRender | MidiPart ;
 
-StaffRender    = 'staff' , [ ClefName ] , '{' , PartRef , '}' ;
+StaffRender    = 'staff' , '{' , PartRef , '}' ;
 
-(* Grand staff - multiple staves connected by brace (piano, harp, etc.) *)
-(* Semantic validation: requires at least 2 staves, each with explicit clef *)
 GrandStaffRender = 'grandStaff' , '{' , { StaffRender } , '}' ;
 
-TabRender      = 'tab' , TuningName , '{' , PartRef , '}' ;
-MidiPart       = PartRef , [ MidiOptions ] ;
+TabRender      = 'tab' , '{' , PartRef , '}' ;
 
-ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' ;
+PartRef        = Identifier ;
 
-TuningName     = 'guitar' | 'bass' | 'bass5' | 'ukulele' ;
-
-PartRef        = Identifier ;                     (* part name from sections *)
-
-MidiOptions    = { MidiOption } ;
-MidiOption     = 'channel' , ':' , Integer        (* 1-16 *)
-               | 'instrument' , ':' , Integer     (* GM program 1-128 *)
-               | 'octave' , ':' , Integer         (* octave shift for playback *)
-               ;
-
-(* Examples:
-
-   // Full band score
-   render full "mysong-full.svg" {
-     staff { guitar }
-     tab guitar { guitar }
-     staff bass { bass }
+(* Example:
+   render score "full-score.pdf" {
+     staff { melody }
+     staff { bass }
    }
 
-   // Guitar part only
-   render guitarPart "mysong-guitar.pdf" {
-     staff { guitar }
-     tab guitar { guitar }
-   }
-
-   // Piano score (grand staff)
-   render piano "piano.svg" {
+   render score "piano.pdf" {
      grandStaff {
-       staff treble { rightHand }
-       staff bass { leftHand }
+       staff { rightHand }
+       staff { leftHand }
      }
-   }
-
-   // Piano + vocal (grand staff with additional staff)
-   render pianoVocal "piano-vocal.svg" {
-     staff treble { vocal }
-     grandStaff {
-       staff treble { rightHand }
-       staff bass { leftHand }
-     }
-   }
-
-   // MIDI output
-   render audio "mysong.mid" {
-     guitar channel:1 instrument:25
-     bass channel:2 instrument:33 octave:-1
    }
 *)
 
+### 7.2 MIDI Render
 
-### 5.2 Output Formats
+MidiPart       = PartRef , [ MidiOptions ] ;
 
-(* Determined by file extension *)
-
-| Extension | Format | Description           |
-|-----------|--------|-----------------------|
-| .svg      | SVG    | Web display, preview  |
-| .pdf      | PDF    | Print                 |
-| .png      | PNG    | Image embedding       |
-| .mid      | MIDI   | Playback, DAW         |
-
-================================================================================
-## 6. Music Expression
-================================================================================
-
-### 6.1 Music Expression Types
-
-MusicExpr      = SequentialExpr
-               | ParallelExpr
-               | VariableRef
+MidiOptions    = { MidiOption } ;
+MidiOption     = 'channel' , ':' , Integer
+               | 'instrument' , ':' , Integer
                ;
 
-SequentialExpr = MusicBlock ;
-ParallelExpr   = '<<' , MusicExpr , { '\\' , MusicExpr } , '>>' ;
+(* Example:
+   render midi "song.mid" {
+     melody channel: 1 instrument: 41
+     bass channel: 2 instrument: 33
+   }
+*)
 
-### 6.2 Implicit Relative Mode
+================================================================================
+## 8. Music Expression
+================================================================================
 
-(* All music is in relative mode. Reference pitch is determined by clef. *)
-(* Absolute pitch mode is NOT supported - all pitches are relative. *)
-
-| Clef       | Reference Pitch | Description        |
-|------------|-----------------|-------------------|
-| treble     | c' (middle C)   | Standard treble   |
-| bass       | c, (octave below)| Standard bass    |
-| alto       | c (middle C)    | Viola range       |
-| tenor      | c (middle C)    | Tenor range       |
-| percussion | (N/A)           | Unpitched         |
-
-(* Octave marks ' and , are relative to previous note, as in LilyPond *)
-(* The interval to the next note is always the smallest possible. *)
-(* Use ' to force up, , to force down when the interval is a 4th or more. *)
+### 8.1 Music Block
 
 MusicBlock     = '{' , { MusicItem } , '}' ;
 
@@ -420,86 +383,63 @@ MusicItem      = Note
                | Rest
                | Chord
                | Barline
-               | MidSectionChange                 (* key, tempo, time, clef *)
+               | PhraseRef
+               | ParallelExpr
                | Slur
                | Tie
-               | VariableRef
                ;
 
-### 6.2 Notes, Rests, Chords
+### 8.2 Notes, Rests, Chords
 
-(* Note *)
 Note           = Pitch , [ Duration ] , { Articulation } ;
 
 Pitch          = PitchToken ;
 
-Duration       = DurationToken
-               | '*' , Fraction ;
-Fraction       = Integer , [ '/' , Integer ] ;
+Duration       = DurationToken ;
 
-(* Rest *)
 Rest           = RestType , [ Duration ] ;
-RestType       = 'r'                              (* normal rest *)
-               | 's'                              (* spacer rest - invisible *)
-               | 'R'                              (* full measure rest *)
-               ;
+RestType       = 'r' | 's' | 'R' ;
 
-(* Chord *)
 Chord          = '<' , Pitch , { Pitch } , '>' , [ Duration ] , { Articulation } ;
 
-(* Barline - REQUIRED, not optional *)
-(* Unlike LilyPond where barlines are hints, LilySharp requires explicit barlines. *)
-(* Parser will error if measure duration doesn't match time signature. *)
-Barline        = '|'                              (* normal *)
-               | '||'                             (* double bar *)
-               | '|.'                             (* final bar *)
-               ;
+Barline        = '|' | '||' | '|.' ;
 
-### 6.3 Articulations & Dynamics
+PhraseRef      = Identifier ;
+
+### 8.3 Parallel Voices
+
+ParallelExpr   = '<<' , MusicBlock , { '\\' , MusicBlock } , '>>' ;
+
+(* Example:
+   section Verse {
+     piano {
+       << { c'4 e' g' c'' } \\ { c4 e g c' } >>
+     }
+   }
+*)
+
+### 8.4 Articulations & Dynamics
 
 Articulation   = '@' , ArticulationName
                | DynamicMark
                ;
 
-ArticulationName = 'staccato' | 'stac'
-                 | 'accent' | 'acc'
-                 | 'tenuto' | 'ten'
-                 | 'marcato' | 'marc'
-                 | 'fermata' | 'ferm'
-                 | 'portato'
-                 | 'staccatissimo' | 'stacc'
-                 ;
+ArticulationName = 'staccato' | 'accent' | 'tenuto' | 'marcato' | 'fermata' ;
 
-(* Dynamics use backslash - visually distinct from structure *)
 DynamicMark    = '\' , DynamicLevel
                | '\' , DynamicChange
                ;
-DynamicLevel   = 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'f' | 'ff' | 'fff'
-               | 'fp' | 'sf' | 'sfz' | 'rfz' ;
+
+DynamicLevel   = 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'f' | 'ff' | 'fff' ;
 DynamicChange  = 'cresc' | 'decresc' | 'dim' ;
 
-### 6.4 Slurs, Ties, Beams
+### 8.5 Slurs & Ties
 
 Slur           = '(' | ')' ;
 Tie            = '~' ;
-BeamControl    = '[' | ']' ;
 
 ================================================================================
-## 7. Backslash Usage Summary
-================================================================================
-
-(* Only dynamics use backslash - everything else is plain keywords *)
-
-| Category         | Syntax              | Example                |
-|------------------|---------------------|------------------------|
-| Dynamics         | \p \f \ff \mf etc.  | c4\f d\p e\cresc       |
-| Key signature    | key                 | key g major            |
-| Time signature   | time                | time 3/4               |
-| Tempo            | tempo               | tempo 120              |
-| Clef             | clef                | clef bass              |
-
-================================================================================
-## 8. Complete Example
+## 9. Complete Example
 ================================================================================
 
 ```lilysharp
@@ -512,124 +452,132 @@ tempo 120
 time 4/4
 key c major
 
-// Reusable variables (pure music only, no key/tempo changes)
-guitar_riff = { e4 f g a | b c' d' e' }
-bass_groove = { c,4 g, c, g, | c, g, c, g, }
+// Part definitions
+part guitar {
+  clef: treble
+  instrument: "Electric Guitar"
+}
 
-// Sections (required - at least one)
+part bass {
+  clef: bass
+  instrument: "Bass Guitar"
+}
+
+// Reusable phrases
+phrase riff { e4 f g a | b c' d' e' | }
+phrase groove { c,4 g, c, g, | c, g, c, g, | }
+
+// Sections
 section Intro {
-  guitar { c4 d e f | g a b c' }
-  bass { bass_groove }
+  guitar { c4 d e f | g a b c' | }
+  bass { groove }
 }
 
-section A {
-  guitar { 
-    guitar_riff |
-    key g major                       // mid-section key change
-    tempo 140                         // mid-section tempo change
-    g4\f a b c' | d' e' fis' g' |
-  }
-  bass { 
-    e,4 b, e, b, | e, b, e, b, |
-    key g major                       // must match guitar's bar position
-    tempo 140
-    g,4 d, g, d, | g, d, g, d, |
-  }
+section Verse {
+  guitar { riff | g4 a b c' | d' e' f' g' | }
+  bass { groove | e,4 b, e, b, | e, b, e, b, | }
 }
 
-section B {
-  guitar { g8\ff a b c' d' e' fis' g' | a' g' fis' e' d' c' b a | }
-  bass { g,4 d, g, d, | g, d, g, d, | }
+section Chorus {
+  guitar { c'4\f b a g | f e d c | }
+  bass { c,4 g, c, g, | c,1 | }
+}
+
+section Bridge {
+  key g major
+  guitar { g4 a b c' | d' e' fis' g' | }
+  bass { g,4 d, g, d, | g,4 d, g, d, | }
 }
 
 section Outro {
   tempo 100
-  guitar { c'1\p }
-  bass { c,1 }
+  guitar { c'1\p~ | c'1 | }
+  bass { c,1~ | c,1 | }
 }
 
-// Song structure (required - exactly one)
+// Song structure
 structure {
   Intro
-  |: A :|
-  |: B | 1. A :| 2. Outro
-  fine
+  @segno
+  |: Verse [1. Bridge] [2. Chorus @fine] :|
+  ~Verse
+  Outro _"molto rit."
+  @ds.al.fine
 }
 
-// Output definitions (required - at least one)
-render full "rocksong-full.svg" {
+// Output definitions
+render score "rocksong-full.svg" {
   staff { guitar }
-  tab guitar { guitar }
-  staff bass { bass }
+  staff { bass }
 }
 
-render guitarPart "rocksong-guitar.pdf" {
+render score "guitar-part.pdf" {
   staff { guitar }
-  tab guitar { guitar }
 }
 
-render bassPart "rocksong-bass.pdf" {
-  staff bass { bass }
-}
-
-render bassTab "rocksong-bass-tab.pdf" {
-  tab bass { bass }
-}
-
-render audio "rocksong.mid" {
-  guitar channel:1 instrument:25 octave:-1
-  bass channel:2 instrument:33 octave:-1
+render midi "rocksong.mid" {
+  guitar channel: 1 instrument: 27
+  bass channel: 2 instrument: 33
 }
 ```
 
 ================================================================================
-## 9. Error Detection
+## 10. Symbol Summary
+================================================================================
+
+### Structure Symbols
+
+| Symbol     | Meaning                          | Example                |
+|------------|----------------------------------|------------------------|
+| `|: :|`    | Repeat block                     | `|: Verse :|`          |
+| `x3`       | Repeat count                     | `|: Verse :| x3`       |
+| `[1. ]`    | Volta (1st time)                 | `[1. Bridge]`          |
+| `[1,3. ]`  | Volta (1st and 3rd)              | `[1,3. Bridge]`        |
+| `[1-3. ]`  | Volta (1st through 3rd)          | `[1-3. Bridge]`        |
+| `@`        | Music mark                       | `@segno` `@fine`       |
+| `~`        | Silent section (no label)        | `~Verse`               |
+| `_"..."`   | Custom text (end, below)         | `_"molto rit."`        |
+
+### Music Mark Positions
+
+| Mark             | Horizontal | Vertical |
+|------------------|------------|----------|
+| `@segno`         | beginning  | above    |
+| `@coda`          | beginning  | above    |
+| `@fine`          | end        | above    |
+| `@ds` `@dc` etc. | end        | above    |
+| `@rit` `@accel`  | end        | below    |
+| `@cresc` etc.    | end        | below    |
+
+================================================================================
+## 11. Error Detection
 ================================================================================
 
 ### Required Elements
 
-| Error | Description |
-|-------|-------------|
-| No section | File must contain at least one `section` block |
-| No structure | File must contain exactly one `structure` block |
-| No render | File must contain at least one `render` block |
+| Error        | Description                                    |
+|--------------|------------------------------------------------|
+| No section   | File must contain at least one `section` block |
+| No structure | File must contain exactly one `structure` block|
+| No render    | File must contain at least one `render` block  |
 
 ### Compile-time Errors
 
-| Error | Description |
-|-------|-------------|
-| Undefined section | Section referenced in structure but not defined |
-| Undefined variable | Variable referenced but not defined |
-| Undefined part | Part referenced in render but not in sections |
-| Forward reference | Variable/section used before definition |
-| Variable with key/tempo | Variables cannot contain key/tempo/time/clef changes |
-| Missing fine | `dc al fine` without `fine` |
-| Missing segno | `ds` without `segno` |
-| Missing coda | `to coda` without `coda` |
-| Duplicate fine | Multiple `fine` marks |
-| Duplicate segno | Multiple `segno` marks (unnamed) |
-| Invalid alternative | Alternative outside repeat block |
-| Unreachable section | Section after `dc al fine` (except coda) |
+| Error                | Description                                    |
+|----------------------|------------------------------------------------|
+| Undefined section    | Section referenced in structure but not defined|
+| Undefined phrase     | Phrase referenced but not defined              |
+| Undefined part       | Part referenced in render but not in sections  |
+| Inline music         | `{ }` in structure (not allowed)               |
+| Forward reference    | Phrase/section used before definition          |
+| Missing fine         | `@dc.al.fine` without `@fine`                  |
+| Missing segno        | `@ds` without `@segno`                         |
+| Missing coda         | `to coda` without `@coda`                      |
 
 ### Warnings
 
-| Warning | Description |
-|---------|-------------|
-| Unused section | Section defined but not in structure |
-| Unused variable | Variable defined but never referenced |
-| Incomplete measure | Measure duration doesn't match time signature |
-| Missing alternative | `1.` without `2.` |
-| Mismatched key/tempo | Key/tempo change at different bar positions across parts |
-
-================================================================================
-## 10. Future Considerations
-================================================================================
-
-| Item | Status | Notes |
-|------|--------|-------|
-| Named segno/coda | Future | For complex navigation |
-| Custom tunings | Future | User-defined string tunings |
-| Lyrics | Planned | Verse/chorus lyrics alignment |
-| Chord symbols | Planned | Lead sheet style |
-| Drum notation | Future | Percussion staff |
-| Multi-language pitch | Future | do re mi support |
+| Warning            | Description                                      |
+|--------------------|--------------------------------------------------|
+| Unused section     | Section defined but not in structure             |
+| Unused phrase      | Phrase defined but never referenced              |
+| Incomplete measure | Measure duration doesn't match time signature    |

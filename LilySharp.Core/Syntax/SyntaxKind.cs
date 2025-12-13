@@ -156,6 +156,7 @@ public enum SyntaxKind : ushort
     MetadataDeclaration,
     VariableDeclaration,    // (legacy) name = { ... }
     PhraseDeclaration,      // phrase name { ... }
+    PartDeclaration,        // part name { props }
     VariableReference,
     
     // === Nodes: New Structure ===
@@ -176,7 +177,6 @@ public enum SyntaxKind : ushort
     
     // === Nodes: Legacy Structure ===
     ScoreDeclaration,
-    PartDeclaration,
     StaffDeclaration,
     VoiceDeclaration,
     

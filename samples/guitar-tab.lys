@@ -1,8 +1,14 @@
 // Guitar tablature example in Lily#
 // Standard tuning: E A D G B E
 
+title "Guitar Tab Demo"
 tempo 120
 time 4/4
+
+part guitar {
+  clef: treble
+  tuning: standard
+}
 
 section Main {
   guitar {
@@ -24,9 +30,9 @@ structure { Main }
 
 render score "guitar-tab.svg" {
   staff { guitar }
-  tab guitar { guitar }
+  tab { guitar }
 }
 
-render audio "guitar-tab.mid" {
-  guitar channel:1 instrument:25
+render midi "guitar-tab.mid" {
+  guitar channel: 1 instrument: 25
 }

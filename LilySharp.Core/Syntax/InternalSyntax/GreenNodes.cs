@@ -160,23 +160,6 @@ internal sealed class ScoreDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Part declaration: part Name "display" { ... }
-/// </summary>
-internal sealed class PartDeclarationGreen : GreenSyntaxNode
-{
-    public PartDeclarationGreen(
-        SyntaxToken partKeyword,
-        SyntaxToken? name,
-        SyntaxToken? displayName,
-        SyntaxToken openBrace,
-        GreenNode?[] members,
-        SyntaxToken closeBrace)
-        : base(SyntaxKind.PartDeclaration, [partKeyword, name, displayName, openBrace, .. members, closeBrace])
-    {
-    }
-}
-
-/// <summary>
 /// Staff declaration: staff Name { ... }
 /// </summary>
 internal sealed class StaffDeclarationGreen : GreenSyntaxNode
@@ -271,6 +254,43 @@ internal sealed class PhraseDeclarationGreen : GreenSyntaxNode
         SyntaxToken name,
         GreenNode body)
         : base(SyntaxKind.PhraseDeclaration, [keyword, name, body])
+    {
+    }
+}
+
+/// <summary>
+/// Part declaration: part name { props }
+/// </summary>
+internal sealed class PartDeclarationGreen : GreenSyntaxNode
+{
+    // With body: part name { ... }
+    public PartDeclarationGreen(
+        SyntaxToken keyword,
+        SyntaxToken name,
+        SyntaxToken openBrace,
+        GreenNode?[] properties,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.PartDeclaration, [keyword, name, openBrace, .. properties, closeBrace])
+    {
+    }
+    
+    // Without body: part name
+    public PartDeclarationGreen(
+        SyntaxToken keyword,
+        SyntaxToken name)
+        : base(SyntaxKind.PartDeclaration, [keyword, name])
+    {
+    }
+    
+    // Legacy: part name "display" { members }
+    public PartDeclarationGreen(
+        SyntaxToken keyword,
+        SyntaxToken? name,
+        SyntaxToken? displayName,
+        SyntaxToken openBrace,
+        GreenNode?[] members,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.PartDeclaration, [keyword, name, displayName, openBrace, .. members, closeBrace])
     {
     }
 }
@@ -591,15 +611,32 @@ internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
 
 
 /// <summary>
-/// Alternative in repeat: 1. A, 2. B
+/// Alternative in repeat: 1. A, 2. B or [1. A] or [1-3. A]
 /// </summary>
 internal sealed class StructureAlternativeGreen : GreenSyntaxNode
 {
+    // Legacy style: 1. A
     public StructureAlternativeGreen(
         SyntaxToken number,
         SyntaxToken dot,
         SyntaxToken sectionName)
         : base(SyntaxKind.StructureAlternative, [number, dot, sectionName])
+    {
+    }
+    
+    // Bracket style: [1. A] or [1-3. A] or [1,3. A]
+    public StructureAlternativeGreen(
+        SyntaxToken openBracket,
+        SyntaxToken number,
+        SyntaxToken? separator,
+        SyntaxToken? endNumber,
+        SyntaxToken dot,
+        SyntaxToken sectionName,
+        SyntaxToken closeBracket)
+        : base(SyntaxKind.StructureAlternative, 
+            separator != null 
+                ? [openBracket, number, separator, endNumber, dot, sectionName, closeBracket]
+                : [openBracket, number, dot, sectionName, closeBracket])
     {
     }
 }

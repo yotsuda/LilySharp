@@ -447,13 +447,15 @@ score {
     [Fact]
     public void ParseNestedRepeatInPart()
     {
-        var tree = SyntaxTree.Parse(@"part {
-    repeat volta 2 {
-        c4 d e f |
-    }
-    alternative {
-        { g2 g | }
-        { a2 a | }
+        var tree = SyntaxTree.Parse(@"section Main {
+    melody {
+        repeat volta 2 {
+            c4 d e f |
+        }
+        alternative {
+            { g2 g | }
+            { a2 a | }
+        }
     }
 }");
         Assert.False(tree.HasErrors);
@@ -462,8 +464,8 @@ score {
     [Fact]
     public void ParseParallelInStaff()
     {
-        var tree = SyntaxTree.Parse(@"part {
-    staff {
+        var tree = SyntaxTree.Parse(@"section Main {
+    melody {
         << { c2 d } \\ { e2 f } >>
     }
 }");

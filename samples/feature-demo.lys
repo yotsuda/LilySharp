@@ -5,6 +5,8 @@ tempo 100
 time 4/4
 key c major
 
+part melody
+
 phrase demo {
   // Notes + beams + dots
   c4. d8 e8 f g a |

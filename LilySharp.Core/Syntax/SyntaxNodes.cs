@@ -309,20 +309,6 @@ public sealed class ScoreDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Part declaration: part Name "display" { ... }
-/// </summary>
-public sealed class PartDeclarationSyntax : SyntaxNode
-{
-    internal PartDeclarationSyntax(PartDeclarationGreen green, SyntaxNode? parent, int position)
-        : base(green, parent, position)
-    {
-    }
-
-    public SyntaxTokenNode PartKeyword => (SyntaxTokenNode)GetChild(0)!;
-    public SyntaxTokenNode? Name => GetChild(1) as SyntaxTokenNode;
-}
-
-/// <summary>
 /// Staff declaration: staff Name { ... }
 /// </summary>
 public sealed class StaffDeclarationSyntax : SyntaxNode
@@ -575,6 +561,39 @@ public sealed class PhraseDeclarationSyntax : SyntaxNode
     public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
     public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(2)!;
+}
+
+/// <summary>
+/// Part declaration: part name { props }
+/// </summary>
+public sealed class PartDeclarationSyntax : SyntaxNode
+{
+    internal PartDeclarationSyntax(PartDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    // With body: keyword name { props } = 5+ slots
+    // Without body: keyword name = 2 slots
+    private bool HasBody => SlotCount > 2;
+    
+    public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
+    
+    // Properties are between braces if HasBody
+    public IEnumerable<PropertyAssignmentSyntax> Properties
+    {
+        get
+        {
+            if (!HasBody) yield break;
+            // Skip keyword, name, openBrace; stop before closeBrace
+            for (int i = 3; i < SlotCount - 1; i++)
+            {
+                if (GetChild(i) is PropertyAssignmentSyntax prop)
+                    yield return prop;
+            }
+        }
+    }
 }
 
 /// <summary>

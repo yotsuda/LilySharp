@@ -1,8 +1,14 @@
 // Bass tablature example in Lily#
 // 4-string bass: E A D G
 
+title "Bass Tab Demo"
 tempo 100
 time 4/4
+
+part bass {
+  clef: bass
+  tuning: bass
+}
 
 section Main {
   bass {
@@ -22,10 +28,10 @@ section Main {
 structure { Main }
 
 render score "bass-tab.svg" {
-  staff bass { bass }
-  tab bass { bass }
+  staff { bass }
+  tab { bass }
 }
 
-render audio "bass-tab.mid" {
-  bass channel:1 instrument:33
+render midi "bass-tab.mid" {
+  bass channel: 1 instrument: 33
 }

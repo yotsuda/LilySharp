@@ -1,0 +1,58 @@
+// Structure Demo - Demonstrates repeat and navigation syntax
+// Lily# Music Notation Compiler
+
+title "Structure Demo"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase intro { c'4 d' e' f' | g'2. r4 | }
+phrase verseA { c'8 d' e' f' g' f' e' d' | c'2. r4 | }
+phrase verseB { e'8 f' g' a' b' a' g' f' | e'2. r4 | }
+phrase chorusA { c''4 b' a' g' | f'4 e' d' c' | }
+phrase bridge { g'4 a' b' c'' | d''2. r4 | }
+phrase ending { c'1~ | c'1 | }
+
+section Intro {
+  melody { intro }
+}
+
+section Verse {
+  melody { verseA verseB }
+}
+
+section Chorus {
+  melody { chorusA }
+}
+
+section Bridge {
+  key g major
+  melody { bridge }
+}
+
+section Outro {
+  tempo 80
+  melody { ending }
+}
+
+// Song structure with repeats, volta, and navigation marks
+structure {
+  Intro
+  @segno
+  |: Verse [1. Bridge] [2. Chorus @fine] :|
+  ~Verse
+  Outro _"molto rit."
+  @ds.al.fine
+}
+
+render score "structure-demo.svg" {
+  staff { melody }
+}
+
+render midi "structure-demo.mid" {
+  melody channel: 1 instrument: 1
+}

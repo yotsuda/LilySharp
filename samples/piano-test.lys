@@ -2,19 +2,27 @@ title "Piano Test"
 time 4/4
 tempo 120
 
-rightHand = { c''4 d'' e'' f'' | g''2 g'' | }
-leftHand = { c4 e g c' | c2 c | }
+part rightHand {
+  clef: treble
+}
+
+part leftHand {
+  clef: bass
+}
+
+phrase rightHandMusic { c''4 d'' e'' f'' | g''2 g'' | }
+phrase leftHandMusic { c4 e g c' | c2 c | }
 
 section Main {
-  melody { rightHand }
-  bass { leftHand }
+  rightHand { rightHandMusic }
+  leftHand { leftHandMusic }
 }
 
 structure { Main }
 
-render piano "piano-test.svg" {
+render score "piano-test.svg" {
   grandStaff {
-    staff treble { melody }
-    staff bass { bass }
+    staff { rightHand }
+    staff { leftHand }
   }
 }

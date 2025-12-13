@@ -5,9 +5,11 @@ title "Multi-Voice Demo"
 tempo 80
 time 4/4
 
+part melody
+
 section Main {
   // Two voices: upper (stems up) and lower (stems down)
-  melody { << { c2 d | e2 f | g2 a | b2 c' | } \\ { e,2 f | g2 a | b2 c | d2 e | } >> }
+  melody { << { c''2 d'' | e''2 f'' | g''2 a'' | b''2 c''' | } \\ { e'2 f' | g'2 a' | b'2 c'' | d''2 e'' | } >> }
 }
 
 structure { Main }
