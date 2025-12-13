@@ -221,6 +221,13 @@ internal sealed class Lexer
             return ScanNumber();
         }
 
+        // Underscore followed by string: _"text" (custom text in structure)
+        if (Current == '_' && Peek() == '"')
+        {
+            _position++;
+            return (SyntaxKind.Underscore, "_");
+        }
+
         // Identifier or keyword or pitch
         if (char.IsLetter(Current) || Current == '_')
         {

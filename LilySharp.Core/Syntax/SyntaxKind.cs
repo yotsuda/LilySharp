@@ -123,6 +123,7 @@ public enum SyntaxKind : ushort
     Equals,             // =
     Slash,              // /
     At,                 // @
+    Underscore,         // _
     Backslash,          // \
     Comma,              // ,
     Apostrophe,         // '
