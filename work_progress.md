@@ -38,6 +38,16 @@ master
 | 2 | Phase 9: Knuth-Plass 改行 | 長い楽譜の最適改行 |
 | 3 | Phase 2: 斜め Skyline | Lilypond 完全等価に必須 |
 
+### ⚠️ アーキテクチャ課題
+
+現在の `MeasureCollector` は以下の問題を抱えている:
+- section/structure の展開が不完全
+- phrase 参照の解決が場当たり的
+- repeat/alternative の処理が未実装
+
+**根本解決**: Semantic Layer の導入が必要。詳細は `docs/ARCHITECTURE_REDESIGN.md` を参照。
+
+
 ---
 ## 🎯 目標
 
@@ -70,6 +80,7 @@ master
 
 | Phase | 項目 | 完了 | 合計 | 進捗 |
 |-------|------|-----:|-----:|-----:|
+| **0** | **Semantic Layer** | **0** | **12** | **0%** |
 | 1 | 基本グリフ配置 | 6 | 6 | 100% |
 | 2 | Skyline 衝突回避 | 4 | 5 | 80% |
 | 3 | 連桁（Beaming） | 9 | 9 | 100% |
@@ -81,7 +92,7 @@ master
 | 9 | ページレイアウト | 0 | 3 | 0% |
 | 10 | 高度な機能 | 0 | 6 | 0% |
 | 11 | グランドスタッフ | 7 | 8 | 88% |
-| **合計** | | **41** | **59** | **69%** |
+| **合計** | | **41** | **71** | **58%** |
 
 ## 📋 ステータス凡例
 
@@ -95,6 +106,58 @@ master
 | ❌ | Error | エラー |
 
 ワークフロー: 🚀→⏳→🔍→✅
+
+## Phase 0: Semantic Layer 🚀 **[最優先]**
+
+**ビジョン**: 世界でいちばん美しいデザインの楽譜作成ソフトウェア
+
+**目的**: MeasureCollector の責務を分離し、section/structure/phrase を正しく処理する
+
+**成功基準**: `RenderMinuet_HasExpectedStructure` テストがパスする
+
+### Phase 0-A: Symbol Collection (3-4日)
+
+| filename | status | priority | effort | notes |
+|----------|:------:|:--------:|-------:|-------|
+| Symbol.cs | 🚀 | Critical | 2h | シンボル基底クラス |
+| SectionSymbol.cs | 🚀 | Critical | 1h | section 定義 |
+| PhraseSymbol.cs | 🚀 | Critical | 1h | phrase 定義 |
+| SymbolTable.cs | 🚀 | Critical | 4h | シンボル管理 |
+| SymbolCollector.cs | 🚀 | Critical | 4h | 定義収集 (Pass 1) |
+
+### Phase 0-B: Binder + StructureExpander (4-5日)
+
+| filename | status | priority | effort | notes |
+|----------|:------:|:--------:|-------:|-------|
+| BoundMusic.cs | 🚀 | Critical | 4h | BoundNote, BoundRest, BoundChord |
+| BoundMeasure.cs | 🚀 | Critical | 2h | 展開済み小節 |
+| BoundScore.cs | 🚀 | Critical | 2h | 展開済みスコア |
+| Binder.cs | 🚀 | Critical | 8h | 参照解決、BoundScore 生成 |
+| StructureExpander.cs | 🚀 | Critical | 8h | repeat/alternative → flat sequence |
+| RelativePitchResolver.cs | 🚀 | Critical | 4h | relative { } 音程解決 |
+
+### Phase 0-C: 統合 (2-3日)
+
+| filename | status | priority | effort | notes |
+|----------|:------:|:--------:|-------:|-------|
+| MeasureCollector リファクタ | 🚀 | Critical | 8h | Binder を使用するよう書き換え |
+| SemanticDiagnostic.cs | 🚀 | Normal | 2h | エラーメッセージ |
+
+**詳細設計**: `docs/ARCHITECTURE_REDESIGN.md`
+
+**アーキテクチャ決定 (2025-12-13):**
+- MusicIterator は不採用 (LilyPond の Iterator は Scheme 遅延評価用、LilySharp には不要)
+- Structure は Binder 段階で事前展開 (高速化)
+- Grob 概念は不採用 (既存の Layout + Renderer で十分)
+
+**依存関係**:
+```
+SyntaxTree
+    → SymbolCollector (定義収集)
+        → Binder (参照解決 + Structure展開)
+            → BoundScore (展開済み)
+                → MeasureCollector (簡素化、BoundScore → Score 変換のみ)
+```
 
 ---
 
@@ -279,3 +342,5 @@ master
 | 2025-12-13 | Emmentaler フォントに移行。EngravingDefaults/EngravingRules に整理 |
 | 2025-12-13 | SVG フォント埋め込みオプション追加（CLI --embed-font, VS Code プレビュー対応） |
 | 2025-12-13 | Phase 11: LayoutEngine.Layout(MultiStaffScore) 実装完了 |
+| 2025-12-13 | Phase 0: Semantic Layer を追加。アーキテクチャ再設計計画を統合 |
+| 2025-12-13 | LilyPond/Roslyn ソースコード調査。MusicIterator 不採用を決定。Phase 0 を3段階に分割 |
