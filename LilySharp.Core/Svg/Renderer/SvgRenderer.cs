@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 
@@ -453,7 +453,7 @@ public sealed class SvgRenderer
         // Draw dots (to the right of notehead)
         var dotBBox = GlyphMetrics.AugmentationDot;
         double dotWidth = GlyphMetrics.ToPixels(dotBBox.Width);
-        double dotGap = GlyphMetrics.ToPixels(0.3);  // Gap between notehead and first dot
+        double dotGap = GlyphMetrics.ToPixels(EngravingDefaults.DotGap);  // Gap between notehead and first dot
         for (int d = 0; d < note.Dots; d++)
         {
             double dotX = noteheadLeftX + noteheadWidth + dotGap + d * (dotWidth + dotGap);
@@ -607,14 +607,14 @@ public sealed class SvgRenderer
                 
             case BarlineType.RepeatEnd:
                 DrawRepeatDots(x, systemY);
-                double afterDots = x + SpaceHeight * 0.6;
+                double afterDots = x + SpaceHeight * EngravingDefaults.RepeatDotsOffset;
                 DrawBarlineRect(afterDots, yTop, thinWidth, height);
                 DrawBarlineRect(afterDots + thinWidth + separation, yTop, thickWidth, height);
                 break;
                 
             case BarlineType.RepeatBoth:
                 DrawRepeatDots(x, systemY);
-                double pos = x + SpaceHeight * 0.6;
+                double pos = x + SpaceHeight * EngravingDefaults.RepeatDotsOffset;
                 DrawBarlineRect(pos, yTop, thinWidth, height);
                 DrawBarlineRect(pos + thinWidth + separation, yTop, thickWidth, height);
                 DrawBarlineRect(pos + thinWidth + separation + thickWidth + separation, yTop, thinWidth, height);
@@ -630,9 +630,9 @@ public sealed class SvgRenderer
     
     private void DrawRepeatDots(double x, double systemY)
     {
-        double r = SpaceHeight * 0.2;
-        double dot1Y = systemY + SpaceHeight * 1.5;
-        double dot2Y = systemY + SpaceHeight * 2.5;
+        double r = SpaceHeight * EngravingDefaults.RepeatDotRadius;
+        double dot1Y = systemY + SpaceHeight * EngravingDefaults.RepeatDotPosition1;
+        double dot2Y = systemY + SpaceHeight * EngravingDefaults.RepeatDotPosition2;
         _svg.AppendLine($"""  <circle cx="{x + r:F2}" cy="{dot1Y:F2}" r="{r:F2}" fill="black"/>""");
         _svg.AppendLine($"""  <circle cx="{x + r:F2}" cy="{dot2Y:F2}" r="{r:F2}" fill="black"/>""");
     }
@@ -939,7 +939,7 @@ public sealed class SvgRenderer
         
         // Draw the tie as a filled shape (two Bezier curves)
         // Outer curve and inner curve to create thickness
-        double thickness = 0.12 * SpaceHeight; // Tie thickness
+        double thickness = EngravingDefaults.TieRenderThickness * SpaceHeight; // Tie thickness
         
         // Offset for inner curve (direction depends on curve direction)
         double offsetY = tieLayout.CurveUp ? thickness : -thickness;
@@ -985,7 +985,7 @@ public sealed class SvgRenderer
         
         // Draw the slur as a filled shape (two Bezier curves)
         // Outer curve and inner curve to create thickness
-        double thickness = 0.15 * SpaceHeight; // Slur thickness (slightly thicker than tie)
+        double thickness = EngravingDefaults.SlurRenderThickness * SpaceHeight; // Slur thickness (slightly thicker than tie)
         
         // Offset for inner curve (direction depends on curve direction)
         double offsetY = slurLayout.CurveUp ? thickness : -thickness;

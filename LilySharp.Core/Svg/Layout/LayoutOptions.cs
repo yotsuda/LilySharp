@@ -29,6 +29,21 @@ public sealed record LayoutOptions
     /// <summary>Vertical spacing between systems in pixels.</summary>
     public double SystemSpacing { get; init; } = 80;
     
+    /// <summary>Header height when title or composer is present, in pixels.</summary>
+    public double HeaderHeight { get; init; } = 50;
+    
+    /// <summary>Spacing multiplier between staves in a grand staff.</summary>
+    public double GrandStaffSpacingMultiplier { get; init; } = 3;
+    
+    /// <summary>Spacing multiplier between staff groups.</summary>
+    public double StaffGroupSpacingMultiplier { get; init; } = 5;
+    
+    /// <summary>Horizontal padding for collision detection, in pixels.</summary>
+    public double CollisionXPadding { get; init; } = 20;
+    
+    /// <summary>Maximum stretch per measure during justification, in pixels.</summary>
+    public double MaxStretchPerMeasure { get; init; } = 50;
+    
     /// <summary>Available width for music content.</summary>
     public double ContentWidth => PageWidth - MarginLeft - MarginRight;
     

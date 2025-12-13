@@ -34,7 +34,7 @@ public sealed class LayoutEngine
         double currentY = _options.MarginTop;
         
         // Calculate header height
-        double headerHeight = (score.Title != null || score.Composer != null) ? 50 : 0;
+        double headerHeight = (score.Title != null || score.Composer != null) ? _options.HeaderHeight : 0;
         currentY += headerHeight;
         
         // Break measures into systems (using first voice as representative)
@@ -103,7 +103,7 @@ public sealed class LayoutEngine
         double currentY = _options.MarginTop;
         
         // Calculate header height
-        double headerHeight = (score.Title != null || score.Composer != null) ? 50 : 0;
+        double headerHeight = (score.Title != null || score.Composer != null) ? _options.HeaderHeight : 0;
         currentY += headerHeight;
         
         // For now, put all measures in one system per staff group
@@ -164,8 +164,8 @@ public sealed class LayoutEngine
     {
         double height = 0;
         double staffHeight = _options.StaffHeight;
-        double grandStaffSpacing = _options.StaffSpaceSize * 3; // Space between grand staff staves
-        double staffGroupSpacing = _options.StaffSpaceSize * 5; // Space between different staff groups
+        double grandStaffSpacing = _options.StaffSpaceSize * _options.GrandStaffSpacingMultiplier; // Space between grand staff staves
+        double staffGroupSpacing = _options.StaffSpaceSize * _options.StaffGroupSpacingMultiplier; // Space between different staff groups
         
         for (int i = 0; i < score.StaffGroups.Length; i++)
         {
@@ -199,8 +199,8 @@ public sealed class LayoutEngine
         var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
         double currentY = 0;
         double staffHeight = _options.StaffHeight;
-        double grandStaffSpacing = _options.StaffSpaceSize * 3;
-        double staffGroupSpacing = _options.StaffSpaceSize * 5;
+        double grandStaffSpacing = _options.StaffSpaceSize * _options.GrandStaffSpacingMultiplier;
+        double staffGroupSpacing = _options.StaffSpaceSize * _options.StaffGroupSpacingMultiplier;
         int globalStaffIndex = 0;
         
         foreach (var group in score.StaffGroups)
@@ -446,7 +446,7 @@ public sealed class LayoutEngine
             
             // Skip items outside beam X range (with padding for object width)
             // Objects have width, and beam extends slightly beyond stem positions
-            double xPadding = 20.0; // pixels - accounts for rest/note width and stem offset
+            double xPadding = _options.CollisionXPadding; // accounts for rest/note width and stem offset
             if (itemX < beamLeftX - xPadding || itemX > beamRightX + xPadding)
                 continue;
             
@@ -459,13 +459,13 @@ public sealed class LayoutEngine
                 case RestItem rest:
                     // Rests are typically centered on middle line (staff position 4)
                     // and have a vertical extent of about 2 staff spaces
-                    staffPosition = 4;
-                    halfHeight = 2.0;
+                    staffPosition = (int)EngravingDefaults.RestCenterPosition;
+                    halfHeight = EngravingDefaults.RestExtent;
                     break;
                     
                 case NoteItem note:
                     staffPosition = note.StaffPosition;
-                    halfHeight = 0.5; // Notehead is about 1 staff space tall
+                    halfHeight = EngravingDefaults.NoteheadHalfHeight; // Notehead is about 1 staff space tall
                     break;
                     
                 case ChordItem chord:
@@ -473,7 +473,7 @@ public sealed class LayoutEngine
                     int minPos = chord.Notes.Min(n => n.StaffPosition);
                     int maxPos = chord.Notes.Max(n => n.StaffPosition);
                     staffPosition = (minPos + maxPos) / 2;
-                    halfHeight = (maxPos - minPos) / 2.0 + 0.5;
+                    halfHeight = (maxPos - minPos) / 2.0 + EngravingDefaults.NoteheadHalfHeight;
                     break;
                     
                 default:
@@ -575,18 +575,18 @@ public sealed class LayoutEngine
                     
                     // Rest position: centered at staff position 4 (middle line B)
                     // Rest extent: approximately 2 staff positions in each direction
-                    double restCenterY = 4.0;
-                    double restExtent = 2.0;
+                    double restCenterY = EngravingDefaults.RestCenterPosition;
+                    double restExtent = EngravingDefaults.RestExtent;
                     double restEdgeY = restCenterY - d * restExtent; // Edge facing beam
                     
                     // Minimum distance (in staff positions)
-                    double minimumDistance = 1.0;
+                    double minimumDistance = EngravingDefaults.RestBeamMinDistance;
                     
                     // Calculate shift needed
                     double gap = d * (beamEdgeY - d * minimumDistance - restEdgeY);
                     double shift = d * Math.Min(gap, 0.0);
                     
-                    if (Math.Abs(shift) > 0.1)
+                    if (Math.Abs(shift) > EngravingDefaults.RestShiftThreshold)
                     {
                         // Quantize to half staff spaces
                         shift = Math.Ceiling(Math.Abs(shift) * 2) / 2.0 * Math.Sign(shift);
@@ -673,7 +673,7 @@ public sealed class LayoutEngine
         double stretchPerMeasure = measures.Count > 0 ? extraSpace / measures.Count : 0;
         
         // Clamp stretch to prevent excessive stretching
-        stretchPerMeasure = Math.Max(0, Math.Min(stretchPerMeasure, 50));
+        stretchPerMeasure = Math.Max(0, Math.Min(stretchPerMeasure, _options.MaxStretchPerMeasure));
         
         // Layout measures
         var measureLayouts = new List<MeasureLayout>();

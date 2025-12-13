@@ -67,7 +67,7 @@ public static class SpacingRules
         double ratio = durationValue / quarterValue;
         double logFactor = 1.0 + Math.Log2(Math.Max(ratio, 0.0625)); // Clamp to 1/16
         
-        return Math.Max(MinNoteWidth, QuarterNoteWidth * logFactor * 0.7);
+        return Math.Max(MinNoteWidth, QuarterNoteWidth * logFactor * EngravingDefaults.SpacingFactor);
     }
     
     /// <summary>
@@ -223,7 +223,7 @@ public static class SpacingRules
         {
             var dotBBox = GlyphMetrics.AugmentationDot;
             // Each dot plus a small gap
-            extent += dots * GlyphMetrics.ToPixels(dotBBox.Width + 0.3);
+            extent += dots * GlyphMetrics.ToPixels(dotBBox.Width + EngravingDefaults.DotGap);
         }
         
         return extent;
@@ -262,7 +262,7 @@ public static class SpacingRules
         
         // Calculate stiffness (inverse of duration - shorter notes are stiffer)
         double durationValue = prevDuration.ToDouble();
-        double stiffness = durationValue > 0 ? 1.0 / durationValue : 10.0;
+        double stiffness = durationValue > 0 ? 1.0 / durationValue : EngravingDefaults.MaxStiffness;
         
         return new Spring(idealDistance, minDistance, stiffness);
     }
@@ -280,16 +280,16 @@ public static class SpacingRules
         double durationValue = duration.ToDouble();
         
         if (durationValue <= 0)
-            return 5.0; // Minimal space for zero duration
+            return EngravingDefaults.MinimalSpace; // Minimal space for zero duration
         
         // Base space for quarter note
-        const double quarterSpace = 15.0;
+        double quarterSpace = EngravingDefaults.QuarterNoteSpace;
         
         // Logarithmic scaling
         double ratio = durationValue / quarterValue;
         double logFactor = 1.0 + Math.Log2(Math.Max(ratio, 0.0625));
         
-        return Math.Max(5.0, quarterSpace * logFactor * 0.7);
+        return Math.Max(EngravingDefaults.MinimalSpace, quarterSpace * logFactor * EngravingDefaults.SpacingFactor);
     }
     
     /// <summary>
@@ -363,7 +363,7 @@ public static class SpacingRules
             if (flagBBox != default)
             {
                 // Flag is attached to the stem end
-                double stemHeight = 3.5 * GlyphMetrics.SpaceHeight;
+                double stemHeight = EngravingDefaults.IdealStemLength * GlyphMetrics.SpaceHeight;
                 double stemEndY = note2.StemUp ? noteY - stemHeight : noteY + stemHeight;
                 
                 // Flag position (attached at stem)
@@ -397,7 +397,7 @@ public static class SpacingRules
         {
             var dotBBox = GlyphMetrics.AugmentationDot;
             double dotWidth = GlyphMetrics.ToPixels(dotBBox.Width);
-            double dotGap = GlyphMetrics.ToPixels(0.3);
+            double dotGap = GlyphMetrics.ToPixels(EngravingDefaults.DotGap);
             
             // Dots must avoid staff lines - if note is on a line, shift dot up
             int staffPosition = item switch
@@ -510,7 +510,7 @@ public static class SpacingRules
         {
             var dotBBox = GlyphMetrics.AugmentationDot;
             double dotWidth = GlyphMetrics.ToPixels(dotBBox.Width);
-            double dotGap = GlyphMetrics.ToPixels(0.3);
+            double dotGap = GlyphMetrics.ToPixels(EngravingDefaults.DotGap);
             extent += dotGap + dots * dotWidth + (dots - 1) * dotGap;
         }
         

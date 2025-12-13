@@ -43,6 +43,16 @@ public static class EngravingDefaults
     public const double TupletBracketThickness = 0.16;
     public const double BracketThickness = 0.5;
     
+    // Rest collision avoidance
+    /// <summary>Default staff position for rest center (middle line).</summary>
+    public const double RestCenterPosition = 4.0;
+    /// <summary>Extent of rest collision box in staff positions.</summary>
+    public const double RestExtent = 2.0;
+    /// <summary>Minimum distance between rest and beam in staff positions.</summary>
+    public const double RestBeamMinDistance = 1.0;
+    /// <summary>Threshold for applying rest shift (in staff positions).</summary>
+    public const double RestShiftThreshold = 0.1;
+    
     // === Notehead dimensions ===
     public const double NoteheadWholeWidth = 1.688;
     public const double NoteheadHalfWidth = 1.18;
@@ -55,6 +65,44 @@ public static class EngravingDefaults
     public const double StemDownAttachX = 0.0;
     public const double StemDownAttachY = -0.168;
     
+
+    // === Notehead collision ===
+    /// <summary>Half-height of notehead for collision detection (in staff positions).</summary>
+    public const double NoteheadHalfHeight = 0.5;
+    
+    // === Dots ===
+    /// <summary>Gap between notehead and augmentation dot (in staff spaces).</summary>
+    public const double DotGap = 0.3;
+    
+    // === Repeat dots ===
+    /// <summary>Radius of repeat barline dots (in staff spaces).</summary>
+    public const double RepeatDotRadius = 0.2;
+    /// <summary>Y position of upper repeat dot (in staff spaces from top).</summary>
+    public const double RepeatDotPosition1 = 1.5;
+    /// <summary>Y position of lower repeat dot (in staff spaces from top).</summary>
+    public const double RepeatDotPosition2 = 2.5;
+    
+    // === Spacing ===
+    /// <summary>Base spacing for quarter note (in pixels).</summary>
+    public const double QuarterNoteSpace = 15.0;
+    /// <summary>Minimum spacing for any duration (in pixels).</summary>
+    public const double MinimalSpace = 5.0;
+    /// <summary>Spacing compression factor for logarithmic scaling.</summary>
+    public const double SpacingFactor = 0.7;
+    /// <summary>Maximum stiffness for zero-duration items.</summary>
+    public const double MaxStiffness = 10.0;
+
+    // === Barline rendering ===
+    /// <summary>Space after repeat dots before barline (in staff spaces).</summary>
+    public const double RepeatDotsOffset = 0.6;
+    
+    // === Tie/Slur rendering ===
+    /// <summary>Tie thickness multiplier for rendering.</summary>
+    public const double TieRenderThickness = 0.12;
+    /// <summary>Slur thickness multiplier for rendering.</summary>
+    public const double SlurRenderThickness = 0.15;
+
+
     // === Conversion helpers ===
     
     /// <summary>Converts staff spaces to staff positions (1 space = 2 positions).</summary>
