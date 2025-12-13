@@ -95,6 +95,228 @@ public sealed class LayoutEngine
     }
     
     /// <summary>
+    /// Calculates the complete layout for a multi-staff score.
+    /// </summary>
+    public ScoreLayout Layout(MultiStaffScore score)
+    {
+        var systems = new List<SystemLayout>();
+        double currentY = _options.MarginTop;
+        
+        // Calculate header height
+        double headerHeight = (score.Title != null || score.Composer != null) ? 50 : 0;
+        currentY += headerHeight;
+        
+        // For now, put all measures in one system per staff group
+        // TODO: implement proper system breaking for multi-staff scores
+        
+        // Calculate total system height (all staff groups)
+        double systemHeight = CalculateMultiStaffSystemHeight(score);
+        
+        // Layout all staff groups as one system
+        var staffGroupLayouts = LayoutStaffGroups(score, currentY);
+        
+        // Get measures from the first voice of the first staff
+        var primaryVoice = score.StaffGroups[0].PrimaryStaff.PrimaryVoice;
+        var measureLayouts = LayoutMeasuresForVoice(primaryVoice, 0);
+        
+        var system = new SystemLayout(
+            SystemIndex: 0,
+            Y: currentY,
+            PrefixWidth: SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, true),
+            Measures: measureLayouts,
+            StaffGroups: staffGroupLayouts);
+        
+        systems.Add(system);
+        currentY += systemHeight + _options.SystemSpacing;
+        
+        double totalHeight = currentY - _options.SystemSpacing + _options.MarginTop;
+        
+        var systemsArray = systems.ToImmutableArray();
+        var page = new PageLayout(
+            PageIndex: 0,
+            Width: _options.PageWidth,
+            Height: totalHeight,
+            HeaderHeight: headerHeight,
+            Systems: systemsArray);
+        
+        // For multi-staff scores, beams/ties/slurs are per-voice
+        // TODO: implement proper beam/tie/slur detection for multi-staff
+        var beamLayouts = ImmutableArray<BeamLayout>.Empty;
+        var tieLayouts = ImmutableArray<TieLayout>.Empty;
+        var slurLayouts = ImmutableArray<SlurLayout>.Empty;
+        var voiceOffsets = ImmutableDictionary<VoiceItemKey, double>.Empty;
+        var restShifts = ImmutableDictionary<RestShiftKey, double>.Empty;
+        
+        return new ScoreLayout(
+            ImmutableArray.Create(page),
+            systemsArray,
+            beamLayouts,
+            tieLayouts,
+            slurLayouts,
+            voiceOffsets,
+            restShifts);
+    }
+    
+    /// <summary>
+    /// Calculates the total height of a multi-staff system.
+    /// </summary>
+    private double CalculateMultiStaffSystemHeight(MultiStaffScore score)
+    {
+        double height = 0;
+        double staffHeight = _options.StaffHeight;
+        double grandStaffSpacing = _options.StaffSpaceSize * 3; // Space between grand staff staves
+        double staffGroupSpacing = _options.StaffSpaceSize * 5; // Space between different staff groups
+        
+        for (int i = 0; i < score.StaffGroups.Length; i++)
+        {
+            var group = score.StaffGroups[i];
+            
+            if (group.IsGrandStaff)
+            {
+                // Grand staff: two staves with brace
+                height += staffHeight * 2 + grandStaffSpacing;
+            }
+            else
+            {
+                height += staffHeight * group.StaffCount;
+                if (group.StaffCount > 1)
+                    height += grandStaffSpacing * (group.StaffCount - 1);
+            }
+            
+            // Add spacing between staff groups (not after the last one)
+            if (i < score.StaffGroups.Length - 1)
+                height += staffGroupSpacing;
+        }
+        
+        return height;
+    }
+    
+    /// <summary>
+    /// Layouts all staff groups within a system.
+    /// </summary>
+    private ImmutableArray<StaffGroupLayout> LayoutStaffGroups(MultiStaffScore score, double systemY)
+    {
+        var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
+        double currentY = 0;
+        double staffHeight = _options.StaffHeight;
+        double grandStaffSpacing = _options.StaffSpaceSize * 3;
+        double staffGroupSpacing = _options.StaffSpaceSize * 5;
+        int globalStaffIndex = 0;
+        
+        foreach (var group in score.StaffGroups)
+        {
+            if (group.IsGrandStaff)
+            {
+                var layout = LayoutGrandStaffGroup(group, currentY, staffHeight, grandStaffSpacing, globalStaffIndex);
+                builder.Add(layout);
+                currentY += layout.Height + staffGroupSpacing;
+                globalStaffIndex += group.StaffCount;
+            }
+            else
+            {
+                var layout = LayoutSingleStaffGroup(group, currentY, staffHeight, grandStaffSpacing, globalStaffIndex);
+                builder.Add(layout);
+                currentY += layout.Height + staffGroupSpacing;
+                globalStaffIndex += group.StaffCount;
+            }
+        }
+        
+        return builder.ToImmutable();
+    }
+    
+    /// <summary>
+    /// Layouts a grand staff group (piano/organ style with brace).
+    /// </summary>
+    private StaffGroupLayout LayoutGrandStaffGroup(
+        StaffGroup group, double y, double staffHeight, double staffSpacing, int startIndex)
+    {
+        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
+        double currentY = y;
+        
+        for (int i = 0; i < group.Staves.Length; i++)
+        {
+            var staff = group.Staves[i];
+            staffLayouts.Add(new StaffLayout(
+                StaffIndex: startIndex + i,
+                Clef: staff.Clef,
+                Y: currentY,
+                Height: staffHeight));
+            
+            if (i < group.Staves.Length - 1)
+                currentY += staffHeight + staffSpacing;
+        }
+        
+        double totalHeight = currentY + staffHeight - y;
+        double braceX = _options.MarginLeft - _options.StaffSpaceSize * 2;
+        
+        var grandStaffLayout = new GrandStaffLayout(
+            Staves: staffLayouts.ToImmutable(),
+            BraceX: braceX,
+            BraceTop: y,
+            BraceBottom: y + totalHeight);
+        
+        return StaffGroupLayout.CreateGrandStaff(
+            staffLayouts.ToImmutable(),
+            y,
+            totalHeight,
+            grandStaffLayout);
+    }
+    
+    /// <summary>
+    /// Layouts a single staff or bracket group.
+    /// </summary>
+    private StaffGroupLayout LayoutSingleStaffGroup(
+        StaffGroup group, double y, double staffHeight, double staffSpacing, int startIndex)
+    {
+        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
+        double currentY = y;
+        
+        for (int i = 0; i < group.Staves.Length; i++)
+        {
+            var staff = group.Staves[i];
+            staffLayouts.Add(new StaffLayout(
+                StaffIndex: startIndex + i,
+                Clef: staff.Clef,
+                Y: currentY,
+                Height: staffHeight));
+            
+            if (i < group.Staves.Length - 1)
+                currentY += staffHeight + staffSpacing;
+        }
+        
+        double totalHeight = group.StaffCount == 1 
+            ? staffHeight 
+            : currentY + staffHeight - y;
+        
+        return StaffGroupLayout.CreateSingle(
+            staffLayouts[0],
+            y,
+            totalHeight);
+    }
+    
+    /// <summary>
+    /// Layouts measures for a single voice.
+    /// </summary>
+    private ImmutableArray<MeasureLayout> LayoutMeasuresForVoice(Voice voice, int systemIndex)
+    {
+        var layouts = ImmutableArray.CreateBuilder<MeasureLayout>();
+        double currentX = _options.MarginLeft + SpacingRules.CalculatePrefixWidth(0, systemIndex == 0);
+        
+        for (int i = 0; i < voice.Measures.Length; i++)
+        {
+            var measure = voice.Measures[i];
+            double measureWidth = SpacingRules.CalculateMeasureMinWidth(measure);
+            var itemLayouts = LayoutMeasureItems(measure, measureWidth);
+            
+            var measureLayout = new MeasureLayout(i, currentX, measureWidth, itemLayouts);
+            layouts.Add(measureLayout);
+            currentX += measureLayout.Width;
+        }
+        
+        return layouts.ToImmutable();
+    }
+    
+    /// <summary>
     /// Calculates X offsets for notes that collide in multi-voice contexts.
     /// </summary>
     private ImmutableDictionary<VoiceItemKey, double> CalculateVoiceOffsets(Score score)
