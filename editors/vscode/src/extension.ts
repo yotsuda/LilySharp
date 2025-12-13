@@ -198,8 +198,13 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         context.subscriptions
     );
 
-    // Set initial HTML structure
-    panel.webview.html = getPreviewHtml();
+    // Get font URI for HTML
+    const fontUri = panel.webview.asWebviewUri(
+        vscode.Uri.joinPath(context.extensionUri, 'media', 'fonts', 'emmentaler-20.woff2')
+    );
+    
+    // Set initial HTML structure with font
+    panel.webview.html = getPreviewHtml(fontUri.toString(), panel.webview.cspSource);
     
     // Then load content
     updatePreviewContent(document, panel, context);
@@ -271,13 +276,18 @@ interface SvgResponse {
     Renders: RenderInfo[] | null;
 }
 
-function getPreviewHtml(): string {
+function getPreviewHtml(fontUri: string, cspSource: string): string {
     return `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src ${cspSource}; script-src 'unsafe-inline';">
     <style>
+        @font-face {
+            font-family: 'Emmentaler';
+            src: url('${fontUri}') format('woff2');
+        }
         body {
             margin: 0;
             padding: 0;

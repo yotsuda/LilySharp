@@ -12,6 +12,11 @@ public sealed class SvgRenderOptions
     public bool EmbedFont { get; init; }
     
     /// <summary>
+    /// If true, skip @font-face in SVG (for external font loading).
+    /// </summary>
+    public bool SkipFontFace { get; init; }
+    
+    /// <summary>
     /// Full path to the font file (used when EmbedFont is false).
     /// This should be an absolute path or URI that the viewer can access.
     /// </summary>
@@ -38,11 +43,11 @@ public sealed class SvgRenderOptions
     };
     
     /// <summary>
-    /// Creates options for preview with a specific font path.
+    /// Creates options for preview (no @font-face in SVG, font loaded externally).
     /// </summary>
-    public static SvgRenderOptions Preview(string fontPath) => new() 
+    public static SvgRenderOptions Preview() => new() 
     { 
         EmbedFont = false, 
-        FontPath = fontPath 
+        SkipFontFace = true 
     };
 }

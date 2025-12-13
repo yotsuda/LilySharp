@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 
@@ -169,6 +169,12 @@ public sealed class SvgRenderer
     
     private string GetFontFaceRule()
     {
+        // Skip @font-face for preview mode (font loaded externally by HTML)
+        if (_renderOptions.SkipFontFace)
+        {
+            return "/* @font-face loaded externally */";
+        }
+        
         if (_renderOptions.EmbedFont)
         {
             // Embed font as Base64 - look for font file
@@ -182,7 +188,7 @@ public sealed class SvgRenderer
             // Fallback to path reference if font not found
         }
         
-        // Reference font by path (for preview)
+        // Reference font by path
         return $"@font-face {{ font-family: 'Emmentaler'; src: url('{_renderOptions.FontPath}') format('woff2'); }}";
     }
     

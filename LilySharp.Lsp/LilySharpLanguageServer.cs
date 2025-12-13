@@ -1539,7 +1539,7 @@ public sealed class LilySharpLanguageServer
             // Configure render options based on font path
             var renderOptions = string.IsNullOrEmpty(@params.FontPath)
                 ? LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default
-                : LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview(@params.FontPath);
+                : LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview();
             
             var renderer = new LilySharp.Core.Svg.Renderer.SvgRenderer(renderOptions: renderOptions);
             var svg = renderer.Render(score, layout);
