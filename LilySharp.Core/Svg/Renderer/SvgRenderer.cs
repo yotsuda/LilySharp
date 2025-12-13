@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 
@@ -30,12 +30,14 @@ public sealed class SvgRenderer
     
     private readonly StringBuilder _svg = new();
     private readonly LayoutOptions _layoutOptions;
+    private readonly SvgRenderOptions _renderOptions;
     private Dictionary<MusicItem, double> _beamedStemEndYs = new();
     private Dictionary<MusicItem, bool> _beamedStemUp = new();
     
-    public SvgRenderer(LayoutOptions? options = null)
+    public SvgRenderer(LayoutOptions? layoutOptions = null, SvgRenderOptions? renderOptions = null)
     {
-        _layoutOptions = options ?? LayoutOptions.Default;
+        _layoutOptions = layoutOptions ?? LayoutOptions.Default;
+        _renderOptions = renderOptions ?? SvgRenderOptions.Default;
     }
     
     /// <summary>
@@ -148,7 +150,11 @@ public sealed class SvgRenderer
         _svg.AppendLine($"""<?xml version="1.0" encoding="UTF-8"?>""");
         _svg.AppendLine($"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">""");
         _svg.AppendLine("<style>");
-        _svg.AppendLine("  @font-face { font-family: 'Emmentaler'; src: url('emmentaler-20.woff2') format('woff2'); }");
+        
+        // Font face - either embedded or referenced by path
+        var fontFace = GetFontFaceRule();
+        _svg.AppendLine($"  {fontFace}");
+        
         _svg.AppendLine("  .music { font-family: 'Emmentaler', serif; }");
         _svg.AppendLine($"  .staff {{ stroke: black; stroke-width: {StaffLineThickness:F2}; }}");
         _svg.AppendLine($"  .stem {{ stroke: black; stroke-width: {StemThickness:F2}; }}");
@@ -159,6 +165,56 @@ public sealed class SvgRenderer
         _svg.AppendLine("  .tempo { font-family: serif; font-size: 14px; }");
         _svg.AppendLine("  .section-label { font-family: serif; font-size: 16px; font-weight: bold; }");
         _svg.AppendLine("</style>");
+    }
+    
+    private string GetFontFaceRule()
+    {
+        if (_renderOptions.EmbedFont)
+        {
+            // Embed font as Base64 - look for font file
+            var fontPath = FindFontFile();
+            if (fontPath != null && File.Exists(fontPath))
+            {
+                var fontBytes = File.ReadAllBytes(fontPath);
+                var base64 = Convert.ToBase64String(fontBytes);
+                return $"@font-face {{ font-family: 'Emmentaler'; src: url('data:font/woff2;base64,{base64}') format('woff2'); }}";
+            }
+            // Fallback to path reference if font not found
+        }
+        
+        // Reference font by path (for preview)
+        return $"@font-face {{ font-family: 'Emmentaler'; src: url('{_renderOptions.FontPath}') format('woff2'); }}";
+    }
+    
+    private string? FindFontFile()
+    {
+        const string fontFileName = "emmentaler-20.woff2";
+        
+        // Check specified directory first
+        if (!string.IsNullOrEmpty(_renderOptions.FontDirectory))
+        {
+            var specifiedPath = Path.Combine(_renderOptions.FontDirectory, fontFileName);
+            if (File.Exists(specifiedPath))
+                return specifiedPath;
+        }
+        
+        // Search in common locations
+        var candidates = new[]
+        {
+            fontFileName,
+            $"fonts/{fontFileName}",
+            $"../fonts/{fontFileName}",
+            Path.Combine(AppContext.BaseDirectory, "fonts", fontFileName),
+            Path.Combine(AppContext.BaseDirectory, fontFileName)
+        };
+        
+        foreach (var candidate in candidates)
+        {
+            if (File.Exists(candidate))
+                return candidate;
+        }
+        
+        return null;
     }
     
     private void WriteFooter()

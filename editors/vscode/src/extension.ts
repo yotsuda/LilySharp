@@ -99,7 +99,7 @@ export function activate(context: vscode.ExtensionContext) {
                             clearTimeout(existingTimer);
                         }
                         debounceTimers.set(uri, setTimeout(() => {
-                            updatePreviewContent(event.document, panel);
+                            updatePreviewContent(event.document, panel, context);
                             debounceTimers.delete(uri);
                         }, delay));
                     }
@@ -139,19 +139,22 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     const existingPanel = previewPanels.get(uri);
     if (existingPanel) {
         existingPanel.reveal(viewColumn);
-        updatePreviewContent(document, existingPanel);
+        updatePreviewContent(document, existingPanel, context);
         return;
     }
 
-    // Create new preview panel
+    // Create new preview panel with access to font resources
     const fileName = path.basename(document.uri.fsPath);
+    const fontsUri = vscode.Uri.joinPath(context.extensionUri, 'media', 'fonts');
+    
     const panel = vscode.window.createWebviewPanel(
         'lilysharpPreview',
         `Preview: ${fileName}`,
         viewColumn,
         {
             enableScripts: true,
-            retainContextWhenHidden: true
+            retainContextWhenHidden: true,
+            localResourceRoots: [fontsUri]
         }
     );
 
@@ -187,7 +190,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 selectedRenders.set(uri, message.renderName);
                 const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
                 if (doc) {
-                    updatePreviewContent(doc, panel);
+                    updatePreviewContent(doc, panel, context);
                 }
             }
         },
@@ -199,21 +202,31 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     panel.webview.html = getPreviewHtml();
     
     // Then load content
-    updatePreviewContent(document, panel);
+    updatePreviewContent(document, panel, context);
 }
 
-async function updatePreviewContent(document: vscode.TextDocument, panel: vscode.WebviewPanel) {
+async function updatePreviewContent(
+    document: vscode.TextDocument, 
+    panel: vscode.WebviewPanel,
+    context: vscode.ExtensionContext
+) {
     if (!client || !clientReady) {
         return;
     }
 
     const uri = document.uri.toString();
     const selectedRender = selectedRenders.get(uri);
+    
+    // Get font URI for preview
+    const fontUri = panel.webview.asWebviewUri(
+        vscode.Uri.joinPath(context.extensionUri, 'media', 'fonts', 'emmentaler-20.woff2')
+    );
 
     try {
         const response = await client.sendRequest<SvgResponse>('lilysharp/svg', {
             textDocument: { uri: uri },
-            renderName: selectedRender || null
+            renderName: selectedRender || null,
+            fontPath: fontUri.toString()
         });
 
         // Panel may have been disposed during async request

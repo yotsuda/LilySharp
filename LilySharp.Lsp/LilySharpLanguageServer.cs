@@ -1536,7 +1536,12 @@ public sealed class LilySharpLanguageServer
             var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
             var layout = layoutEngine.Layout(score);
             
-            var renderer = new LilySharp.Core.Svg.Renderer.SvgRenderer();
+            // Configure render options based on font path
+            var renderOptions = string.IsNullOrEmpty(@params.FontPath)
+                ? LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default
+                : LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview(@params.FontPath);
+            
+            var renderer = new LilySharp.Core.Svg.Renderer.SvgRenderer(renderOptions: renderOptions);
             var svg = renderer.Render(score, layout);
             return new SvgResponse 
             { 
@@ -1685,6 +1690,11 @@ public class SvgParams
     /// If null, returns the first score render or default preview.
     /// </summary>
     public string? RenderName { get; set; }
+    /// <summary>
+    /// Optional font path for preview mode. 
+    /// When provided, the SVG will reference this path for the Emmentaler font.
+    /// </summary>
+    public string? FontPath { get; set; }
 }
 
 /// <summary>

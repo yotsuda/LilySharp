@@ -12,7 +12,7 @@ if (args.Length == 0)
     Console.WriteLine("  midi <input.lys> [output.mid]  Convert to MIDI");
     Console.WriteLine("  xml <input.lys> [output.xml]   Convert to MusicXML");
     Console.WriteLine("  check <input.lys>              Check syntax");
-    Console.WriteLine("  svg <input.lys> [output.svg]   Convert to SVG");
+    Console.WriteLine("  svg <input.lys> [output.svg] [-e]  Convert to SVG (-e: embed font)");
     return 0;
 }
 
@@ -181,21 +181,34 @@ static int ExportMusicXml(string[] args)
 
 static int ExportSvg(string[] args)
 {
-    if (args.Length == 0)
+    // Parse arguments
+    var embedFont = false;
+    var positionalArgs = new List<string>();
+    
+    foreach (var arg in args)
+    {
+        if (arg == "--embed-font" || arg == "-e")
+            embedFont = true;
+        else
+            positionalArgs.Add(arg);
+    }
+    
+    if (positionalArgs.Count == 0)
     {
         Console.Error.WriteLine("Error: Input file required");
+        Console.Error.WriteLine("Usage: lysc svg <input.lys> [output.svg] [--embed-font]");
         return 1;
     }
 
-    var inputPath = args[0];
+    var inputPath = positionalArgs[0];
     if (!File.Exists(inputPath))
     {
         Console.Error.WriteLine($"Error: File not found: {inputPath}");
         return 1;
     }
 
-    var outputPath = args.Length > 1 
-        ? args[1] 
+    var outputPath = positionalArgs.Count > 1 
+        ? positionalArgs[1] 
         : Path.ChangeExtension(inputPath, ".svg");
 
     try
@@ -220,11 +233,26 @@ static int ExportSvg(string[] args)
         var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
         var layout = layoutEngine.Layout(score);
         
-        var renderer = new LilySharp.Core.Svg.Renderer.SvgRenderer();
+        // Configure render options
+        LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
+        if (embedFont)
+        {
+            // Find font directory relative to output or executable
+            var fontDir = FindFontDirectory();
+            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(fontDir);
+        }
+        else
+        {
+            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
+        }
+        
+        var renderer = new LilySharp.Core.Svg.Renderer.SvgRenderer(renderOptions: renderOptions);
         var svg = renderer.Render(score, layout);
         File.WriteAllText(outputPath, svg);
 
         Console.WriteLine($"Created: {outputPath}");
+        if (embedFont)
+            Console.WriteLine("  Font embedded: Yes");
         return 0;
     }
     catch (Exception ex)
@@ -232,4 +260,27 @@ static int ExportSvg(string[] args)
         Console.Error.WriteLine($"Error: {ex.Message}");
         return 1;
     }
+}
+static string? FindFontDirectory()
+{
+    // Search in common locations
+    var candidates = new[]
+    {
+        "fonts",
+        "../fonts",
+        "editors/vscode/media/fonts",  // Development location
+        Path.Combine(AppContext.BaseDirectory, "fonts"),
+        Path.Combine(AppContext.BaseDirectory, "..", "fonts")
+    };
+    
+    foreach (var candidate in candidates)
+    {
+        if (Directory.Exists(candidate) && 
+            File.Exists(Path.Combine(candidate, "emmentaler-20.woff2")))
+        {
+            return Path.GetFullPath(candidate);
+        }
+    }
+    
+    return null;
 }
