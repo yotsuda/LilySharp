@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 
@@ -108,7 +109,7 @@ public sealed class LayoutEngine
             return ImmutableDictionary<VoiceItemKey, double>.Empty;
         
         // Calculate notehead width for offset calculation
-        double noteheadWidth = SmuflDefaults.NoteheadBlackWidth * _options.StaffSpaceSize;
+        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth * _options.StaffSpaceSize;
         
         var builder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
         

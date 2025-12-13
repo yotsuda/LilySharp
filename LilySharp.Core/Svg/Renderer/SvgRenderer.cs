@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 
@@ -15,18 +15,18 @@ public sealed class SvgRenderer
     private const double FontSize = 40;
     
     // Derived from SMuFL defaults
-    private static double StaffLineThickness => SmuflDefaults.StaffLineThickness * SpaceHeight;
-    private static double StemThickness => SmuflDefaults.StemThickness * SpaceHeight;
-    private static double ThinBarlineThickness => SmuflDefaults.ThinBarlineThickness * SpaceHeight;
-    private static double LegerLineExtension => SmuflDefaults.LegerLineExtension * SpaceHeight;
-    private static double LegerLineThickness => SmuflDefaults.LegerLineThickness * SpaceHeight;
+    private static double StaffLineThickness => EngravingDefaults.StaffLineThickness * SpaceHeight;
+    private static double StemThickness => EngravingDefaults.StemThickness * SpaceHeight;
+    private static double ThinBarlineThickness => EngravingDefaults.ThinBarlineThickness * SpaceHeight;
+    private static double LegerLineExtension => EngravingDefaults.LegerLineExtension * SpaceHeight;
+    private static double LegerLineThickness => EngravingDefaults.LegerLineThickness * SpaceHeight;
     
     // Stem attachment points
-    private static double StemUpAttachX => SmuflDefaults.StemUpAttachX * SpaceHeight;
-    private static double StemUpAttachY => SmuflDefaults.StemUpAttachY * SpaceHeight;
-    private static double StemDownAttachX => SmuflDefaults.StemDownAttachX * SpaceHeight;
-    private static double StemDownAttachY => SmuflDefaults.StemDownAttachY * SpaceHeight;
-    private static double StemHeight => EngravingDefaults.DefaultStemLength * SpaceHeight;
+    private static double StemUpAttachX => EngravingDefaults.StemUpAttachX * SpaceHeight;
+    private static double StemUpAttachY => EngravingDefaults.StemUpAttachY * SpaceHeight;
+    private static double StemDownAttachX => EngravingDefaults.StemDownAttachX * SpaceHeight;
+    private static double StemDownAttachY => EngravingDefaults.StemDownAttachY * SpaceHeight;
+    private static double StemHeight => EngravingRules.StandardStemLength * SpaceHeight;
     
     private readonly StringBuilder _svg = new();
     private readonly LayoutOptions _layoutOptions;
@@ -437,7 +437,7 @@ public sealed class SvgRenderer
     private void DrawChord(ChordItem chord, double x, double systemY, bool? forcedStemUp = null)
     {
         int noteValue = GetNoteValue(chord.BaseDuration);
-        double noteheadWidth = (noteValue == 1 ? SmuflDefaults.NoteheadWholeWidth : SmuflDefaults.NoteheadBlackWidth) * SpaceHeight;
+        double noteheadWidth = (noteValue == 1 ? EngravingDefaults.NoteheadWholeWidth : EngravingDefaults.NoteheadBlackWidth) * SpaceHeight;
         char notehead = EmmentalerGlyphs.GetNotehead(noteValue);
         
         // Calculate accidental positions
@@ -522,10 +522,10 @@ public sealed class SvgRenderer
         double yBottom = systemY + StaffHeight;
         double height = yBottom - yTop;
         
-        double thinWidth = SmuflDefaults.ThinBarlineThickness * SpaceHeight;
-        double thickWidth = SmuflDefaults.ThickBarlineThickness * SpaceHeight;
-        double separation = SmuflDefaults.BarlineSeparation * SpaceHeight;
-        double dotSep = SmuflDefaults.RepeatBarlineDotSeparation * SpaceHeight;
+        double thinWidth = EngravingDefaults.ThinBarlineThickness * SpaceHeight;
+        double thickWidth = EngravingDefaults.ThickBarlineThickness * SpaceHeight;
+        double separation = EngravingDefaults.BarlineSeparation * SpaceHeight;
+        double dotSep = EngravingDefaults.RepeatBarlineDotSeparation * SpaceHeight;
         
         switch (type)
         {
