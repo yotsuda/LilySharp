@@ -34,7 +34,7 @@ master
 ### 次のタスク候補
 | 優先度 | タスク | 理由 |
 |:------:|--------|------|
-| 1 | Phase 11: グランドスタッフ (Renderer) | SvgRenderer での多譜表描画 |
+| 1 | Phase 0: Semantic Layer | アーキテクチャ基盤。repeat/section 展開に必須 |
 | 2 | Phase 9: Knuth-Plass 改行 | 長い楽譜の最適改行 |
 | 3 | Phase 2: 斜め Skyline | Lilypond 完全等価に必須 |
 
@@ -310,7 +310,7 @@ SyntaxTree
 | KnuthPlassBreaker.cs | page-layout-problem.cc | 1400 | **高** |
 
 
-## Phase 11: グランドスタッフ（大譜表） ⏳
+## Phase 11: グランドスタッフ（大譜表） ✅
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -325,7 +325,7 @@ SyntaxTree
 | MultiStaffScore.cs | ✅ | High | 2h | 複数譜表のスコアモデル |
 | MeasureCollector (MultiStaff) | ✅ | High | 1h | CollectMultiStaff() メソッド追加 |
 | LayoutEngine.cs (多譜表) | ✅ | High | 4h | Layout(MultiStaffScore) メソッド追加 |
-| SvgRenderer.cs (多譜表) | ⏳ | High | 4h | 複数譜表描画 |
+| SvgRenderer.cs (多譜表) | ✅ | High | 4h | 複数譜表描画 |
 
 ## 更新履歴
 
@@ -343,4 +343,5 @@ SyntaxTree
 | 2025-12-13 | SVG フォント埋め込みオプション追加（CLI --embed-font, VS Code プレビュー対応） |
 | 2025-12-13 | Phase 11: LayoutEngine.Layout(MultiStaffScore) 実装完了 |
 | 2025-12-13 | Phase 0: Semantic Layer を追加。アーキテクチャ再設計計画を統合 |
+| 2025-12-14 | Phase 11 完了。SvgRenderer multi-staff 描画、CLI 統合 |
 | 2025-12-13 | LilyPond/Roslyn ソースコード調査。MusicIterator 不採用を決定。Phase 0 を3段階に分割 |

@@ -145,6 +145,235 @@ public sealed class SvgRenderer
         return _svg.ToString();
     }
     
+    /// <summary>
+    /// Renders a multi-staff score with its layout to SVG.
+    /// </summary>
+    public string Render(MultiStaffScore score, ScoreLayout layout)
+    {
+        _svg.Clear();
+        
+        // For multi-staff scores, beams are currently not supported
+        // TODO: Calculate beams per staff
+        _beamedStemEndYs.Clear();
+        _beamedStemUp.Clear();
+        
+        WriteHeader(layout.Width, layout.Height);
+        
+        // Draw header (title/composer)
+        if (score.Title != null || score.Composer != null)
+            DrawMultiStaffHeader(score, layout);
+        
+        // Draw each system
+        for (int sysIdx = 0; sysIdx < layout.Systems.Length; sysIdx++)
+        {
+            var system = layout.Systems[sysIdx];
+            bool isFirstSystem = sysIdx == 0;
+            
+            DrawMultiStaffSystem(score, layout, system, isFirstSystem);
+        }
+        
+        WriteFooter();
+        
+        return _svg.ToString();
+    }
+    
+    private void DrawMultiStaffHeader(MultiStaffScore score, ScoreLayout layout)
+    {
+        double centerX = layout.Width / 2;
+        double y = _layoutOptions.MarginTop;
+        
+        if (score.Title != null)
+        {
+            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle">{EscapeXml(score.Title)}</text>""");
+            y += 30;
+        }
+        
+        if (score.Composer != null)
+        {
+            _svg.AppendLine($"""  <text class="composer" x="{centerX}" y="{y}" text-anchor="middle">{EscapeXml(score.Composer)}</text>""");
+        }
+    }
+    
+    private void DrawMultiStaffSystem(MultiStaffScore score, ScoreLayout scoreLayout, SystemLayout system, bool isFirstSystem)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty)
+            return;
+        
+        double startX = _layoutOptions.MarginLeft;
+        
+        // Calculate the actual end of the system (right edge of last measure)
+        double endX;
+        if (system.Measures.Length > 0)
+        {
+            var lastMeasure = system.Measures[^1];
+            endX = lastMeasure.X + lastMeasure.Width;
+        }
+        else
+        {
+            endX = _layoutOptions.PageWidth - _layoutOptions.MarginRight;
+        }
+        
+        // Draw each staff group
+        foreach (var staffGroup in system.StaffGroups)
+        {
+            DrawStaffGroup(score, scoreLayout, system, staffGroup, startX, endX, isFirstSystem);
+        }
+        
+        // Draw system barlines (connecting all staves)
+        DrawSystemBarlines(system, scoreLayout, startX, endX);
+    }
+    
+    private void DrawStaffGroup(
+        MultiStaffScore score,
+        ScoreLayout scoreLayout,
+        SystemLayout system,
+        StaffGroupLayout staffGroup,
+        double startX,
+        double endX,
+        bool isFirstSystem)
+    {
+        // Draw brace if this is a grand staff
+        if (staffGroup.IsGrandStaff && staffGroup.GrandStaffLayout != null)
+        {
+            var grandStaff = staffGroup.GrandStaffLayout;
+            // Adjust Y positions relative to system
+            double braceTop = system.Y + grandStaff.BraceTop;
+            double braceBottom = system.Y + grandStaff.BraceBottom;
+            var braceSvg = BraceRenderer.RenderBrace(grandStaff.BraceX, braceTop, braceBottom, SpaceHeight);
+            _svg.AppendLine($"  {braceSvg}");
+        }
+        
+        // Draw each staff in the group
+        foreach (var staffLayout in staffGroup.Staves)
+        {
+            double staffY = system.Y + staffLayout.Y;
+            DrawStaff(score, scoreLayout, system, staffLayout, staffY, startX, endX, isFirstSystem);
+        }
+    }
+    
+    private void DrawStaff(
+        MultiStaffScore score,
+        ScoreLayout scoreLayout,
+        SystemLayout system,
+        StaffLayout staffLayout,
+        double staffY,
+        double startX,
+        double endX,
+        bool isFirstSystem)
+    {
+        // Draw 5 staff lines
+        for (int i = 0; i < 5; i++)
+        {
+            double lineY = staffY + i * SpaceHeight;
+            _svg.AppendLine($"""  <line class="staff" x1="{startX}" y1="{lineY}" x2="{endX}" y2="{lineY}"/>""");
+        }
+        
+        // Draw clef
+        double currentX = startX;
+        char clefGlyph = staffLayout.Clef switch
+        {
+            ClefType.Bass => EmmentalerGlyphs.FClef,
+            ClefType.Alto => EmmentalerGlyphs.CClef,
+            ClefType.Tenor => EmmentalerGlyphs.CClef,
+            _ => EmmentalerGlyphs.GClef
+        };
+        double clefY = staffLayout.Clef switch
+        {
+            ClefType.Bass => staffY + SpaceHeight,
+            ClefType.Alto => staffY + 2 * SpaceHeight,
+            ClefType.Tenor => staffY + SpaceHeight,
+            _ => staffY + 3 * SpaceHeight
+        };
+        DrawGlyph(clefGlyph, currentX, clefY);
+        currentX += 30;
+        
+        // Draw key signature
+        if (score.KeySignature.Count > 0)
+        {
+            string clefName = staffLayout.Clef switch
+            {
+                ClefType.Bass => "bass",
+                ClefType.Alto => "alto",
+                ClefType.Tenor => "tenor",
+                _ => "treble"
+            };
+            currentX = DrawKeySignature(score.KeySignature, clefName, currentX, staffY);
+        }
+        
+        // Draw time signature (first system only)
+        if (isFirstSystem)
+        {
+            DrawTimeSignature(score.TimeSignature, currentX, staffY);
+        }
+        
+        // Find the matching staff and voice in the score
+        var matchingStaff = FindStaffForLayout(score, staffLayout.StaffIndex);
+        if (matchingStaff == null)
+            return;
+        
+        // Draw measures for this staff's voices
+        foreach (var measureLayout in system.Measures)
+        {
+            foreach (var voice in matchingStaff.Voices)
+            {
+                if (measureLayout.MeasureIndex < voice.Measures.Length)
+                {
+                    var measure = voice.Measures[measureLayout.MeasureIndex];
+                    // For multi-staff, use auto stem direction based on clef
+                    bool? forcedStemUp = null;
+                    DrawMeasure(measure, measureLayout, measureLayout.MeasureIndex, 1, staffY, scoreLayout, forcedStemUp, isFirstVoice: true);
+                }
+            }
+        }
+    }
+    
+    private Staff? FindStaffForLayout(MultiStaffScore score, int staffIndex)
+    {
+        int currentIndex = 0;
+        foreach (var group in score.StaffGroups)
+        {
+            foreach (var staff in group.Staves)
+            {
+                if (currentIndex == staffIndex)
+                    return staff;
+                currentIndex++;
+            }
+        }
+        return null;
+    }
+    
+    private void DrawSystemBarlines(SystemLayout system, ScoreLayout scoreLayout, double startX, double endX)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty)
+            return;
+        
+        // Get the Y range for all staves
+        double topY = double.MaxValue;
+        double bottomY = double.MinValue;
+        
+        foreach (var staffGroup in system.StaffGroups)
+        {
+            foreach (var staff in staffGroup.Staves)
+            {
+                double staffTop = system.Y + staff.Y;
+                double staffBottom = staffTop + StaffHeight;
+                topY = Math.Min(topY, staffTop);
+                bottomY = Math.Max(bottomY, staffBottom);
+            }
+        }
+        
+        // Draw start barline (connecting all staves)
+        _svg.AppendLine($"""  <line class="barline" x1="{startX}" y1="{topY}" x2="{startX}" y2="{bottomY}"/>""");
+        
+        // Draw barlines at measure boundaries
+        foreach (var measureLayout in system.Measures)
+        {
+            double barlineX = measureLayout.X + measureLayout.Width;
+            _svg.AppendLine($"""  <line class="barline" x1="{barlineX}" y1="{topY}" x2="{barlineX}" y2="{bottomY}"/>""");
+        }
+    }
+
+    
     private void WriteHeader(double width, double height)
     {
         _svg.AppendLine($"""<?xml version="1.0" encoding="UTF-8"?>""");

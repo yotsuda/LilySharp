@@ -226,13 +226,6 @@ static int ExportSvg(string[] args)
             return 1;
         }
 
-        // New architecture: Collector -> Layout -> Renderer
-        var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
-        var score = collector.Collect(tree, null);
-        
-        var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-        
         // Configure render options
         LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
         if (embedFont)
@@ -247,7 +240,33 @@ static int ExportSvg(string[] args)
         }
         
         var renderer = new LilySharp.Core.Svg.Renderer.SvgRenderer(renderOptions: renderOptions);
-        var svg = renderer.Render(score, layout);
+        
+        // Check for multi-staff render specification
+        var renderSpec = LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
+        string svg;
+        
+        if (renderSpec != null && renderSpec.IsMultiStaff)
+        {
+            // Multi-staff render: Collector -> Layout -> Renderer
+            var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
+            var multiScore = collector.CollectMultiStaff(tree, renderSpec);
+            
+            var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
+            var layout = layoutEngine.Layout(multiScore);
+            
+            svg = renderer.Render(multiScore, layout);
+        }
+        else
+        {
+            // Single staff render
+            var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
+            var score = collector.Collect(tree, null);
+            
+            var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
+            var layout = layoutEngine.Layout(score);
+            
+            svg = renderer.Render(score, layout);
+        }
         File.WriteAllText(outputPath, svg);
 
         Console.WriteLine($"Created: {outputPath}");
