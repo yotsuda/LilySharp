@@ -248,7 +248,29 @@ public sealed class MeasureCollector
     {
         var builder = new MeasureBuilder(voiceNode.Position);
         
+        // Collect all music nodes, expanding variable references (same as ProcessPartBlock)
+        var musicNodes = new List<SyntaxNode>();
+        
         foreach (var node in voiceNode.DescendantNodes())
+        {
+            switch (node)
+            {
+                case NoteSyntax:
+                case RestSyntax:
+                case ChordSyntax:
+                case BarlineSyntax:
+                    musicNodes.Add(node);
+                    break;
+                    
+                case VariableReferenceSyntax varRef:
+                    // Expand variable reference
+                    ExpandVariable(varRef.Name.Text, musicNodes);
+                    break;
+            }
+        }
+        
+        // Process collected music nodes
+        foreach (var node in musicNodes)
         {
             ProcessMusicNode(node, builder);
         }

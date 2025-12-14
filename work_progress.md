@@ -345,3 +345,4 @@ SyntaxTree
 | 2025-12-13 | Phase 0: Semantic Layer を追加。アーキテクチャ再設計計画を統合 |
 | 2025-12-14 | Phase 11 完了。SvgRenderer multi-staff 描画、CLI 統合 |
 | 2025-12-13 | LilyPond/Roslyn ソースコード調査。MusicIterator 不採用を決定。Phase 0 を3段階に分割 |
+| 2025-12-14 | 🔍 音符間スペーシング修正。Lilypond spacing-options.cc アルゴリズム移植。CalculateDurationSpace/CalculateMeasureIdealWidth 実装 |

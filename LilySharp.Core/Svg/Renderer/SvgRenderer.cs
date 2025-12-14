@@ -919,8 +919,8 @@ public sealed class SvgRenderer
         char topGlyph = GetTimeNumberGlyph(timeSig.Beats);
         char bottomGlyph = GetTimeNumberGlyph(timeSig.BeatType);
         
-        DrawGlyph(topGlyph, x, y + SpaceHeight);
-        DrawGlyph(bottomGlyph, x, y + 3 * SpaceHeight);
+        DrawGlyph(topGlyph, x, y + 2 * SpaceHeight);
+        DrawGlyph(bottomGlyph, x, y + 4 * SpaceHeight);
     }
     
     private void DrawTempoMarking(int tempo, double x, double systemY)
