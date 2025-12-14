@@ -226,4 +226,300 @@ structure { Intro |: Verse [1. Bridge] [2. Chorus] :| }";
         Assert.True(rightHandNotes > 0, "rightHand should have notes");
         Assert.True(leftHandNotes > 0, "leftHand should have notes");
     }
+
+    [Fact]
+    public void Expand_ConsecutiveRepeatBlocks_ExpandsBothCorrectly()
+    {
+        // |: A :| |: B :| should expand to: A, A, B, B
+        var source = @"
+section A { melody { c4 | } }
+section B { melody { d4 | } }
+structure { |: A :| |: B :| }";
+        
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+        var result = collector.Collect(tree);
+        
+        Assert.True(result.Success);
+        
+        var diagnostics = new List<SemanticDiagnostic>();
+        var expander = new StructureExpander(result.Symbols, diagnostics);
+        var expanded = expander.Expand(result.Symbols.Structure!.DeclarationSyntax);
+        
+        Assert.Empty(diagnostics);
+        
+        // A(1) + A(1) + B(1) + B(1) = 4 notes
+        var totalNotes = expanded.PartNames.Sum(p => expanded.GetPart(p).Count(n => n is NoteSyntax));
+        Assert.Equal(4, totalNotes);
+    }
+    
+    [Fact]
+    public void Expand_VerifyNoteOrder_ExpandsInCorrectSequence()
+    {
+        // Verify the actual order of notes after expansion
+        var source = @"
+section A { melody { c4 | } }
+section B { melody { d4 | } }
+section C { melody { e4 | } }
+structure { A B C }";
+        
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+        var result = collector.Collect(tree);
+        
+        Assert.True(result.Success);
+        
+        var diagnostics = new List<SemanticDiagnostic>();
+        var expander = new StructureExpander(result.Symbols, diagnostics);
+        var expanded = expander.Expand(result.Symbols.Structure!.DeclarationSyntax);
+        
+        Assert.Empty(diagnostics);
+        
+        var melodyPart = expanded.PartNames.FirstOrDefault(p => !string.IsNullOrEmpty(p)) ?? "";
+        var notes = expanded.GetPart(melodyPart).OfType<NoteSyntax>().ToList();
+        
+        Assert.Equal(3, notes.Count);
+        // Notes should be in order: c, d, e
+        Assert.Equal("c", notes[0].Pitch.BaseName.ToString());
+        Assert.Equal("d", notes[1].Pitch.BaseName.ToString());
+        Assert.Equal("e", notes[2].Pitch.BaseName.ToString());
+    }
+    
+    [Fact]
+    public void Expand_RepeatWithAlternatives_VerifyOrder()
+    {
+        // |: A [1. B] [2. C] :| should produce: A, B, A, C in that order
+        var source = @"
+section A { melody { c4 | } }
+section B { melody { d4 | } }
+section C { melody { e4 | } }
+structure { |: A [1. B] [2. C] :| }";
+        
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+        var result = collector.Collect(tree);
+        
+        Assert.True(result.Success);
+        
+        var diagnostics = new List<SemanticDiagnostic>();
+        var expander = new StructureExpander(result.Symbols, diagnostics);
+        var expanded = expander.Expand(result.Symbols.Structure!.DeclarationSyntax);
+        
+        Assert.Empty(diagnostics);
+        
+        var melodyPart = expanded.PartNames.FirstOrDefault(p => !string.IsNullOrEmpty(p)) ?? "";
+        var notes = expanded.GetPart(melodyPart).OfType<NoteSyntax>().ToList();
+        
+        Assert.Equal(4, notes.Count);
+        // Order: A(c), B(d), A(c), C(e)
+        Assert.Equal("c", notes[0].Pitch.BaseName.ToString());
+        Assert.Equal("d", notes[1].Pitch.BaseName.ToString());
+        Assert.Equal("c", notes[2].Pitch.BaseName.ToString());
+        Assert.Equal("e", notes[3].Pitch.BaseName.ToString());
+    }
+    
+    [Fact]
+    public void Expand_EmptySection_HandlesGracefully()
+    {
+        var source = @"
+section Empty { melody { } }
+section A { melody { c4 | } }
+structure { Empty A }";
+        
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+        var result = collector.Collect(tree);
+        
+        Assert.True(result.Success);
+        
+        var diagnostics = new List<SemanticDiagnostic>();
+        var expander = new StructureExpander(result.Symbols, diagnostics);
+        var expanded = expander.Expand(result.Symbols.Structure!.DeclarationSyntax);
+        
+        Assert.Empty(diagnostics);
+        
+        // Only A has 1 note
+        var totalNotes = expanded.PartNames.Sum(p => expanded.GetPart(p).Count(n => n is NoteSyntax));
+        Assert.Equal(1, totalNotes);
+    }
+    
+    [Fact]
+    public void Expand_SingleSection_ExpandsOnce()
+    {
+        var source = @"
+section OnlySection { melody { c4 d4 e4 f4 | } }
+structure { OnlySection }";
+        
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+        var result = collector.Collect(tree);
+        
+        Assert.True(result.Success);
+        
+        var diagnostics = new List<SemanticDiagnostic>();
+        var expander = new StructureExpander(result.Symbols, diagnostics);
+        var expanded = expander.Expand(result.Symbols.Structure!.DeclarationSyntax);
+        
+        Assert.Empty(diagnostics);
+        
+        var totalNotes = expanded.PartNames.Sum(p => expanded.GetPart(p).Count(n => n is NoteSyntax));
+        Assert.Equal(4, totalNotes);
+    }
+    
+    [Fact]
+    public void Expand_WithNavigationMarks_IgnoresMarks()
+    {
+        // Navigation marks (@segno, @fine, etc.) should be ignored for now
+        var source = @"
+section A { melody { c4 | } }
+section B { melody { d4 | } }
+structure { @segno A @fine B }";
+        
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+        var result = collector.Collect(tree);
+        
+        Assert.True(result.Success);
+        
+        var diagnostics = new List<SemanticDiagnostic>();
+        var expander = new StructureExpander(result.Symbols, diagnostics);
+        var expanded = expander.Expand(result.Symbols.Structure!.DeclarationSyntax);
+        
+        // Should not error on navigation marks
+        Assert.Empty(diagnostics);
+        
+        // Both sections should be expanded
+        var totalNotes = expanded.PartNames.Sum(p => expanded.GetPart(p).Count(n => n is NoteSyntax));
+        Assert.Equal(2, totalNotes);
+    }
+    
+    [Fact]
+    public void Expand_RepeatedSameSectionMultipleTimes_ExpandsEachReference()
+    {
+        // A B A should expand A twice
+        var source = @"
+section A { melody { c4 | } }
+section B { melody { d4 | } }
+structure { A B A }";
+        
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+        var result = collector.Collect(tree);
+        
+        Assert.True(result.Success);
+        
+        var diagnostics = new List<SemanticDiagnostic>();
+        var expander = new StructureExpander(result.Symbols, diagnostics);
+        var expanded = expander.Expand(result.Symbols.Structure!.DeclarationSyntax);
+        
+        Assert.Empty(diagnostics);
+        
+        // A(1) + B(1) + A(1) = 3 notes
+        var totalNotes = expanded.PartNames.Sum(p => expanded.GetPart(p).Count(n => n is NoteSyntax));
+        Assert.Equal(3, totalNotes);
+    }
+    
+    [Fact]
+    public void Expand_WithBarlines_IncludesBarlines()
+    {
+        var source = @"
+section A { melody { c4 d4 | e4 f4 | } }
+structure { A }";
+        
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+        var result = collector.Collect(tree);
+        
+        Assert.True(result.Success);
+        
+        var diagnostics = new List<SemanticDiagnostic>();
+        var expander = new StructureExpander(result.Symbols, diagnostics);
+        var expanded = expander.Expand(result.Symbols.Structure!.DeclarationSyntax);
+        
+        Assert.Empty(diagnostics);
+        
+        var melodyPart = expanded.PartNames.FirstOrDefault(p => !string.IsNullOrEmpty(p)) ?? "";
+        var barlines = expanded.GetPart(melodyPart).Count(n => n is BarlineSyntax);
+        
+        Assert.Equal(2, barlines);
+    }
+    
+    [Fact]
+    public void Expand_WithRests_IncludesRests()
+    {
+        var source = @"
+section A { melody { c4 r4 d4 r4 | } }
+structure { A }";
+        
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+        var result = collector.Collect(tree);
+        
+        Assert.True(result.Success);
+        
+        var diagnostics = new List<SemanticDiagnostic>();
+        var expander = new StructureExpander(result.Symbols, diagnostics);
+        var expanded = expander.Expand(result.Symbols.Structure!.DeclarationSyntax);
+        
+        Assert.Empty(diagnostics);
+        
+        var melodyPart = expanded.PartNames.FirstOrDefault(p => !string.IsNullOrEmpty(p)) ?? "";
+        var rests = expanded.GetPart(melodyPart).Count(n => n is RestSyntax);
+        
+        Assert.Equal(2, rests);
+    }
+    
+    [Fact]
+    public void Expand_WithChords_IncludesChords()
+    {
+        var source = @"
+section A { melody { <c e g>4 <d f a>4 | } }
+structure { A }";
+        
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+        var result = collector.Collect(tree);
+        
+        Assert.True(result.Success);
+        
+        var diagnostics = new List<SemanticDiagnostic>();
+        var expander = new StructureExpander(result.Symbols, diagnostics);
+        var expanded = expander.Expand(result.Symbols.Structure!.DeclarationSyntax);
+        
+        Assert.Empty(diagnostics);
+        
+        var melodyPart = expanded.PartNames.FirstOrDefault(p => !string.IsNullOrEmpty(p)) ?? "";
+        var chords = expanded.GetPart(melodyPart).Count(n => n is ChordSyntax);
+        
+        Assert.Equal(2, chords);
+    }
+    
+    [Fact]
+    public void Expand_StructureDemo_HasExpectedParts()
+    {
+        // Note: structure-demo.lys uses phrase references which need phrase expansion
+        // For now, we just verify the structure expands without errors
+        var source = File.ReadAllText(@"C:\MyProj\LilySharp\samples\structure-demo.lys");
+        
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+        var result = collector.Collect(tree);
+        
+        Assert.True(result.Success, $"Symbol collection failed: {string.Join(", ", result.Diagnostics.Select(d => d.Message))}");
+        Assert.NotNull(result.Symbols.Structure);
+        
+        var diagnostics = new List<SemanticDiagnostic>();
+        var expander = new StructureExpander(result.Symbols, diagnostics);
+        var expanded = expander.Expand(result.Symbols.Structure!.DeclarationSyntax);
+        
+        // Check that no critical errors occurred
+        var errors = diagnostics.Where(d => d.Severity == LilySharp.Core.Semantics.DiagnosticSeverity.Error).ToList();
+        Assert.Empty(errors);
+        
+        // Should have melody part
+        Assert.Contains("melody", expanded.PartNames);
+        
+        // Note: phrase references (e.g., "intro", "verseA") are not yet expanded inline
+        // TODO: Add phrase expansion to StructureExpander
+    }
 }
