@@ -188,8 +188,8 @@ public sealed class SvgRenderer
             // Fallback to path reference if font not found
         }
         
-        // Reference font by path
-        return $"@font-face {{ font-family: 'Emmentaler'; src: url('{_renderOptions.FontPath}') format('woff2'); }}";
+        // Reference font by name (requires font to be installed on system)
+        return "@font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }";
     }
     
     private string? FindFontFile()

@@ -12,7 +12,7 @@ if (args.Length == 0)
     Console.WriteLine("  midi <input.lys> [output.mid]  Convert to MIDI");
     Console.WriteLine("  xml <input.lys> [output.xml]   Convert to MusicXML");
     Console.WriteLine("  check <input.lys>              Check syntax");
-    Console.WriteLine("  svg <input.lys> [output.svg] [-e]  Convert to SVG (-e: embed font)");
+    Console.WriteLine("  svg <input.lys> [output.svg] [-n]  Convert to SVG (-n: no embed font)");
     return 0;
 }
 
@@ -182,13 +182,13 @@ static int ExportMusicXml(string[] args)
 static int ExportSvg(string[] args)
 {
     // Parse arguments
-    var embedFont = false;
+    var embedFont = true;
     var positionalArgs = new List<string>();
     
     foreach (var arg in args)
     {
-        if (arg == "--embed-font" || arg == "-e")
-            embedFont = true;
+        if (arg == "--no-embed" || arg == "-n")
+            embedFont = false;
         else
             positionalArgs.Add(arg);
     }
@@ -196,7 +196,7 @@ static int ExportSvg(string[] args)
     if (positionalArgs.Count == 0)
     {
         Console.Error.WriteLine("Error: Input file required");
-        Console.Error.WriteLine("Usage: lysc svg <input.lys> [output.svg] [--embed-font]");
+        Console.Error.WriteLine("Usage: lysc svg <input.lys> [output.svg] [--no-embed]");
         return 1;
     }
 
@@ -251,8 +251,7 @@ static int ExportSvg(string[] args)
         File.WriteAllText(outputPath, svg);
 
         Console.WriteLine($"Created: {outputPath}");
-        if (embedFont)
-            Console.WriteLine("  Font embedded: Yes");
+        Console.WriteLine(embedFont ? "  Font embedded: Yes" : "  Font embedded: No");
         return 0;
     }
     catch (Exception ex)
