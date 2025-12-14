@@ -16,8 +16,8 @@ public readonly record struct AccidentalLayout(
 );
 
 /// <summary>
+/// LILYPOND-REF: lily/accidental-placement.cc:1-532 Accidental_placement
 /// Parameters for accidental placement.
-/// Based on Lilypond's accidental-placement.cc
 /// </summary>
 public sealed record AccidentalPlacementParameters
 {

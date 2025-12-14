@@ -44,34 +44,18 @@ public static class SpacingRules
     public const double TimeSignatureWidth = 25;
     
     /// <summary>
-    /// Calculates width based on duration using logarithmic scaling.
+    /// Calculates width based on duration using Lilypond's spacing algorithm.
     /// </summary>
     /// <remarks>
-    /// Formula: width = baseWidth * (1 + log2(duration / quarterNote))
-    /// This gives:
-    /// - Whole note:      ~72px (2x quarter)
-    /// - Half note:       ~54px (1.5x quarter)
-    /// - Quarter note:    ~36px (base)
-    /// - Eighth note:     ~27px (0.75x quarter)
-    /// - Sixteenth note:  ~22px (0.6x quarter)
+    /// Uses CalculateDurationSpace internally for consistency.
+    /// This is a convenience method for situations where only the width is needed.
     /// </remarks>
     public static double CalculateDurationWidth(Fraction duration)
     {
-        double quarterValue = Fraction.Quarter.ToDouble();
-        double durationValue = duration.ToDouble();
-        
-        if (durationValue <= 0)
-            return MinNoteWidth;
-        
-        // Logarithmic scaling: longer notes get more space, but not linearly
-        double ratio = durationValue / quarterValue;
-        double logFactor = 1.0 + Math.Log2(Math.Max(ratio, 0.0625)); // Clamp to 1/16
-        
-        return Math.Max(MinNoteWidth, QuarterNoteWidth * logFactor * EngravingDefaults.SpacingFactor);
+        return Math.Max(MinNoteWidth, CalculateDurationSpace(duration));
     }
-    
     /// <summary>
-    /// Calculates the minimum width for a measure using the Spring-Rod model.
+    /// Calculates the minimum width needed for a measure (collision avoidance only).
     /// </summary>
     /// <remarks>
     /// The minimum width is the sum of all spring MinDistances plus barline widths.
@@ -92,6 +76,35 @@ public static class SpacingRules
             foreach (var spring in springs)
             {
                 width += spring.MinDistance;
+            }
+        }
+        
+        return width;
+    }
+    
+    /// <summary>
+    /// Calculates the ideal width for a measure (includes duration-based spacing).
+    /// </summary>
+    /// <remarks>
+    /// The ideal width follows Lilypond's spacing algorithm where each duration
+    /// gets space proportional to its length (logarithmic scaling).
+    /// This is the width that produces visually pleasing spacing.
+    /// </remarks>
+    public static double CalculateMeasureIdealWidth(Measure measure)
+    {
+        double width = 0;
+        
+        // Barline widths
+        width += GetBarlineWidth(measure.StartBarline);
+        width += GetBarlineWidth(measure.EndBarline);
+        
+        // Spring ideal distances (content area) - includes duration space
+        if (measure.Items.Length > 0)
+        {
+            var springs = CreateSpringsForMeasure(measure);
+            foreach (var spring in springs)
+            {
+                width += spring.IdealDistance;
             }
         }
         
@@ -237,59 +250,72 @@ public static class SpacingRules
         var duration = item.Duration;
         return (int)duration.Denominator;
     }
-    
     /// <summary>
-    /// Creates a spring between two adjacent items.
+    /// Creates a spring between two music items.
     /// </summary>
-    /// <param name="prevItem">The previous item (null for barline-to-first-item)</param>
-    /// <param name="nextItem">The next item (null for last-item-to-barline)</param>
-    /// <param name="prevDuration">Duration of previous item (for ideal distance calculation)</param>
     /// <remarks>
-    /// Following Lilypond's approach: ideal = minDistance + durationSpace
-    /// This ensures notes of the same duration have equal spacing increments.
+    /// LILYPOND-REF: lily/spacing-basic.cc:100-130 note_spacing()
+    /// - ideal_distance = get_duration_space(duration)
+    /// - min_distance = max(increment, skyline_collision_distance)
+    /// - inverse_stretch_strength = max(0.1, ideal - min)
     /// </remarks>
     public static Spring CreateSpring(MusicItem? prevItem, MusicItem? nextItem, Fraction prevDuration)
     {
-        // Calculate minimum distance using Skyline-based collision detection
-        double minDistance = CalculateSkylineDistance(prevItem, nextItem, staffY: 0);
+        // LILYPOND-REF: lily/spacing-basic.cc:109 note_spacing() - increment
+        double defaultMin = EngravingDefaults.SpacingIncrement * GlyphMetrics.SpaceHeight;
         
-        // Calculate duration-based space increment (following Lilypond)
-        // This is ADDED to minDistance, not used as a maximum
-        double durationSpace = CalculateDurationSpace(prevDuration);
+        // Skyline-based collision distance (rod)
+        double skylineDistance = CalculateSkylineDistance(prevItem, nextItem, staffY: 0);
         
-        // Ideal = min + duration-based increment
-        double idealDistance = minDistance + durationSpace;
+        // min_distance = max(defaultMin, skylineDistance) - ensures no collision
+        double minDistance = Math.Max(defaultMin, skylineDistance);
         
-        // Calculate stiffness (inverse of duration - shorter notes are stiffer)
-        double durationValue = prevDuration.ToDouble();
-        double stiffness = durationValue > 0 ? 1.0 / durationValue : EngravingDefaults.MaxStiffness;
+        // LILYPOND-REF: lily/spacing-basic.cc:107 note_spacing() - duration space
+        double idealDistance = CalculateDurationSpace(prevDuration);
         
-        return new Spring(idealDistance, minDistance, stiffness);
+        // LILYPOND-REF: lily/spacing-basic.cc:115 note_spacing() - inverse_stretch
+        // This controls how much the spring can stretch
+        double inverseStretchStrength = Math.Max(0.1 * GlyphMetrics.SpaceHeight, idealDistance - minDistance);
+        
+        return new Spring(idealDistance, minDistance, inverseStretchStrength);
     }
     
     /// <summary>
-    /// Calculates the duration-based space increment.
+    /// Calculates the duration-based space.
     /// </summary>
     /// <remarks>
-    /// This is the additional space beyond minimum collision avoidance.
-    /// Uses logarithmic scaling following Gourlay's algorithm.
+    /// LILYPOND-REF: lily/spacing-options.cc:58-73 get_duration_space()
+    /// - ratio = duration / base_shortest_duration
+    /// - if ratio less than 1: space = (shortest_duration_space + ratio - 1) * increment
+    /// - if ratio >= 1: space = (shortest_duration_space + log2(ratio)) * increment
+    /// 
+    /// This gives consistent, proportional spacing that looks right visually.
     /// </remarks>
     public static double CalculateDurationSpace(Fraction duration)
     {
-        double quarterValue = Fraction.Quarter.ToDouble();
         double durationValue = duration.ToDouble();
         
         if (durationValue <= 0)
-            return EngravingDefaults.MinimalSpace; // Minimal space for zero duration
+            return EngravingDefaults.SpacingIncrement * GlyphMetrics.SpaceHeight;
         
-        // Base space for quarter note
-        double quarterSpace = EngravingDefaults.QuarterNoteSpace;
+        // Ratio of this duration to base shortest (typically 1/8)
+        double ratio = durationValue / EngravingDefaults.BaseShortestDuration;
         
-        // Logarithmic scaling
-        double ratio = durationValue / quarterValue;
-        double logFactor = 1.0 + Math.Log2(Math.Max(ratio, 0.0625));
+        // LILYPOND-REF: lily/spacing-options.cc:65-70 get_duration_space()
+        double spaceFactor;
+        if (ratio < 1.0)
+        {
+            // Linear scaling for very short notes
+            spaceFactor = EngravingDefaults.ShortestDurationSpace + ratio - 1.0;
+        }
+        else
+        {
+            // Logarithmic scaling (Gourlay algorithm)
+            spaceFactor = EngravingDefaults.ShortestDurationSpace + Math.Log2(ratio);
+        }
         
-        return Math.Max(EngravingDefaults.MinimalSpace, quarterSpace * logFactor * EngravingDefaults.SpacingFactor);
+        // Convert to pixels: spaceFactor * increment * staff_space
+        return spaceFactor * EngravingDefaults.SpacingIncrement * GlyphMetrics.SpaceHeight;
     }
     
     /// <summary>

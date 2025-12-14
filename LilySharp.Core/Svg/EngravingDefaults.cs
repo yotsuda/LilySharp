@@ -82,13 +82,27 @@ public static class EngravingDefaults
     /// <summary>Y position of lower repeat dot (in staff spaces from top).</summary>
     public const double RepeatDotPosition2 = 2.5;
     
-    // === Spacing ===
-    /// <summary>Base spacing for quarter note (in pixels).</summary>
-    public const double QuarterNoteSpace = 15.0;
-    /// <summary>Minimum spacing for any duration (in pixels).</summary>
-    public const double MinimalSpace = 5.0;
-    /// <summary>Spacing compression factor for logarithmic scaling.</summary>
-    public const double SpacingFactor = 0.7;
+    // === Spacing (Lilypond-compatible) ===
+    // See: lily/spacing-options.cc, lily/spacing-spanner.cc
+    
+    /// <summary>
+    /// Spacing increment, approximately notehead width.
+    /// Lilypond default: 1.2 staff spaces.
+    /// </summary>
+    public const double SpacingIncrement = 1.2;
+    
+    /// <summary>
+    /// Space for shortest duration.
+    /// Lilypond default: 2.0 (so shortest note gets 2.0 * increment space).
+    /// </summary>
+    public const double ShortestDurationSpace = 2.0;
+    
+    /// <summary>
+    /// Base shortest duration as fraction (1/8 = eighth note).
+    /// Notes shorter than this use linear spacing instead of logarithmic.
+    /// </summary>
+    public const double BaseShortestDuration = 0.125; // 1/8
+    
     /// <summary>Maximum stiffness for zero-duration items.</summary>
     public const double MaxStiffness = 10.0;
 

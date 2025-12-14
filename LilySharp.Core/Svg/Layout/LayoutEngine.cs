@@ -8,6 +8,10 @@ namespace LilySharp.Core.Svg.Layout;
 /// <summary>
 /// Engine for calculating score layout.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/spacing-spanner.cc:1-565 Spacing_spanner class
+/// LILYPOND-REF: lily/paper-column.cc:1-487 Paper_column class
+/// </remarks>
 public sealed class LayoutEngine
 {
     private readonly LayoutOptions _options;
@@ -305,7 +309,7 @@ public sealed class LayoutEngine
         for (int i = 0; i < voice.Measures.Length; i++)
         {
             var measure = voice.Measures[i];
-            double measureWidth = SpacingRules.CalculateMeasureMinWidth(measure);
+            double measureWidth = SpacingRules.CalculateMeasureIdealWidth(measure);
             var itemLayouts = LayoutMeasureItems(measure, measureWidth);
             
             var measureLayout = new MeasureLayout(i, currentX, measureWidth, itemLayouts);
@@ -619,7 +623,7 @@ public sealed class LayoutEngine
         // Use first voice for measure breaking (all voices should have same measure count)
         foreach (var measure in score.Voice.Measures)
         {
-            double measureWidth = SpacingRules.CalculateMeasureMinWidth(measure);
+            double measureWidth = SpacingRules.CalculateMeasureIdealWidth(measure);
             
             // Check if measure fits in current system
             if (currentSystem.Count > 0 && currentWidth + measureWidth > availableWidth)
@@ -663,7 +667,7 @@ public sealed class LayoutEngine
         
         foreach (var measure in measures)
         {
-            double minWidth = SpacingRules.CalculateMeasureMinWidth(measure);
+            double minWidth = SpacingRules.CalculateMeasureIdealWidth(measure);
             measureMinWidths.Add(minWidth);
             totalMinWidth += minWidth;
         }

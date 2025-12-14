@@ -82,6 +82,7 @@ public sealed class Skyline
         return new Skyline(merged.ToImmutableArray(), direction);
     }
     
+    // LILYPOND-REF: lily/skyline.cc:529-533 Skyline::distance()
     /// <summary>
     /// Calculates the minimum distance between this skyline and another.
     /// This skyline should be a RightSkyline, other should be a LeftSkyline.

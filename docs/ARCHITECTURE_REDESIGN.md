@@ -20,7 +20,7 @@ LilyPond の高品質レイアウトアルゴリズムを、Roslyn の美しい�
 
 ## 調査から得た学び
 
-### LilyPond のアーキテクチャ (C:\MyProj\lilypond-master)
+### LilyPond のアーキテクチャ (C:\MyProj\lilypond-src)
 
 ```
 Parser → Music Expression (SCM objects)

@@ -5,8 +5,11 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Calculates beam positions and slopes.
-/// Based on Lilypond's beam.cc and beam-quanting.cc.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/beam.cc:1-1554 Beam class
+/// LILYPOND-REF: lily/beam-quanting.cc:1-1397 Beam_scoring_problem class
+/// </remarks>
 public sealed class BeamEngraver
 {
     private readonly BeamQuantParameters _parameters;

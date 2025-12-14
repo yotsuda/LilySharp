@@ -87,8 +87,10 @@ public sealed record NoteCollisionParameters
 
 /// <summary>
 /// Handles note collisions in multi-voice contexts.
-/// Based on Lilypond's note-collision.cc
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/note-collision.cc:1-635 Note_collision_interface
+/// </remarks>
 public sealed class NoteCollision
 {
     private readonly NoteCollisionParameters _params;

@@ -2,7 +2,7 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Parameters for slur scoring.
-/// Based on Lilypond's Slur_score_parameters from slur-score-parameters.hh
+/// LILYPOND-REF: lily/include/slur-score-parameters.hh:1-57 Slur_score_parameters struct
 /// </summary>
 public sealed record SlurScoreParameters
 {

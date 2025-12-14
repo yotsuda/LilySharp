@@ -5,8 +5,11 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Calculates slur layout including Bezier control points.
-/// Based on Lilypond's slur-scoring.cc and bezier-bow.cc
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/slur-scoring.cc:1-906 Slur_scoring class
+/// LILYPOND-REF: lily/bezier-bow.cc:1-132 Bezier_bow class
+/// </remarks>
 public sealed class SlurEngraver
 {
     private readonly SlurScoreParameters _parameters;

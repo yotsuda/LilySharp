@@ -4,8 +4,10 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Calculates stem direction for notes and chords.
-/// Based on Lilypond's stem direction rules.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/stem.cc:698-717 Stem::calc_default_direction()
+/// </remarks>
 public static class StemDirection
 {
     /// <summary>

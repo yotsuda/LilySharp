@@ -5,8 +5,11 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Calculates tie layout including Bezier control points.
-/// Based on Lilypond's tie-formatting-problem.cc and bezier-bow.cc
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/tie-formatting-problem.cc:1-1286 Tie_formatting_problem class
+/// LILYPOND-REF: lily/bezier-bow.cc:1-132 Bezier_bow class
+/// </remarks>
 public sealed class TieEngraver
 {
     private readonly TieDetails _details;

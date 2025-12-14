@@ -44,7 +44,14 @@ public sealed record LayoutOptions
     /// <summary>Maximum stretch per measure during justification, in pixels.</summary>
     public double MaxStretchPerMeasure { get; init; } = 50;
     
-    /// <summary>Available width for music content.</summary>
+    
+    /// <summary>
+    /// If true, lines are not justified (stretched to fill width).
+    /// Measures are placed at their ideal width, left-aligned.
+    /// </summary>
+    public bool RaggedRight { get; init; } = false;
+
+        /// <summary>Available width for music content.</summary>
     public double ContentWidth => PageWidth - MarginLeft - MarginRight;
     
     /// <summary>Default options for standard layout.</summary>

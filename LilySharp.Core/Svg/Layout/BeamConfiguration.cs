@@ -2,7 +2,7 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Represents a beam configuration candidate with position and score.
-/// Based on Lilypond's Beam_configuration from beam-scoring-problem.hh
+/// LILYPOND-REF: lily/include/beam-scoring-problem.hh:1-203 Beam_configuration struct
 /// </summary>
 public sealed class BeamConfiguration
 {

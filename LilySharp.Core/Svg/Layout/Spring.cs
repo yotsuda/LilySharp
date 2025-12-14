@@ -2,37 +2,45 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// A spring connecting two adjacent items in a measure.
-/// Based on Lilypond's spacing model (spring.cc).
+/// LILYPOND-REF: lily/spring.cc:1-250 Spring class
 /// </summary>
 /// <remarks>
-/// The spring length formula:
-///   length = max(IdealDistance + Force / Stiffness, MinDistance)
+/// LILYPOND-REF: lily/spring.cc:218-236 Spring::length()
+///   length = max(ideal_distance + force * inverse_stretch_strength, min_distance)
 /// 
 /// Where:
-/// - IdealDistance: The preferred distance based on duration (time-proportional)
-/// - MinDistance: The minimum distance to avoid visual collision
-/// - Stiffness: How resistant the spring is to stretching (shorter notes = stiffer)
+/// - IdealDistance: The preferred distance based on duration
+/// - MinDistance: The minimum distance (rod constraint)
+/// - InverseStretchStrength: Controls how much the spring stretches per unit force
 /// - Force: Applied uniformly to all springs to achieve target width
 /// </remarks>
 public sealed record Spring
 {
     /// <summary>
-    /// The ideal distance between the reference points of two adjacent items.
+    /// The ideal distance between reference points.
     /// Calculated from duration using logarithmic scaling (Gourlay algorithm).
     /// </summary>
     public double IdealDistance { get; init; }
     
     /// <summary>
-    /// The minimum distance to avoid visual collision.
-    /// Calculated as: PreviousItem.RightExtent + NextItem.LeftExtent + MinGap
+    /// The minimum distance (rod constraint).
+    /// Calculated from collision avoidance or canonical notehead width.
     /// </summary>
     public double MinDistance { get; init; }
     
     /// <summary>
-    /// The stiffness of the spring. Higher values mean less stretching.
-    /// Calculated as inverse of duration: shorter notes are stiffer.
+    /// The inverse stretch strength (flexibility).
+    /// Higher values mean more stretching per unit force.
+    /// Lilypond default: ideal - min (at least 0.1).
     /// </summary>
-    public double Stiffness { get; init; }
+    public double InverseStretchStrength { get; init; }
+    
+    /// <summary>
+    /// The inverse compress strength.
+    /// Used when force is negative (compression).
+    /// Lilypond default: ideal - min (at least 0).
+    /// </summary>
+    public double InverseCompressStrength { get; init; }
     
     /// <summary>
     /// The force at which the spring transitions from compressed to stretched.
@@ -40,27 +48,29 @@ public sealed record Spring
     /// </summary>
     public double BlockingForce { get; }
     
-    public Spring(double idealDistance, double minDistance, double stiffness)
+    public Spring(double idealDistance, double minDistance, double inverseStretchStrength)
     {
         IdealDistance = idealDistance;
         MinDistance = minDistance;
-        Stiffness = stiffness;
+        InverseStretchStrength = inverseStretchStrength;
         
-        // Calculate blocking force (from Lilypond spring.cc)
-        // This is the force at which length equals MinDistance
-        if (MinDistance > IdealDistance && Stiffness > 0)
+        // Lilypond default: inverse_compress_strength = ideal - min (at least 0)
+        InverseCompressStrength = Math.Max(0, idealDistance - minDistance);
+        
+        // Calculate blocking force (from Lilypond spring.cc update_blocking_force)
+        if (minDistance > idealDistance)
         {
-            // Need positive force to reach MinDistance
-            BlockingForce = (MinDistance - IdealDistance) * Stiffness;
-        }
-        else if (Stiffness > 0)
-        {
-            // Need negative force (compression) to reach MinDistance
-            BlockingForce = (MinDistance - IdealDistance) * Stiffness;
+            if (inverseStretchStrength > 0)
+                BlockingForce = (minDistance - idealDistance) / inverseStretchStrength;
+            else
+                BlockingForce = 0;
         }
         else
         {
-            BlockingForce = 0;
+            if (InverseCompressStrength > 0)
+                BlockingForce = (minDistance - idealDistance) / InverseCompressStrength;
+            else
+                BlockingForce = 0;
         }
     }
     
@@ -71,10 +81,10 @@ public sealed record Spring
     /// <returns>The resulting length, never less than MinDistance</returns>
     public double Length(double force)
     {
-        if (Stiffness <= 0)
-            return Math.Max(IdealDistance, MinDistance);
+        // LILYPOND-REF: lily/spring.cc:218-236 Spring::length()
+        double effectiveForce = Math.Max(force, BlockingForce);
+        double invK = effectiveForce < 0 ? InverseCompressStrength : InverseStretchStrength;
         
-        double length = IdealDistance + force / Stiffness;
-        return Math.Max(length, MinDistance);
+        return Math.Max(MinDistance, IdealDistance + effectiveForce * invK);
     }
 }

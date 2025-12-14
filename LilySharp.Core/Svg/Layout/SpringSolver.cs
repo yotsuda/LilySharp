@@ -4,8 +4,10 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Solves spring-based spacing to achieve a target width.
-/// Based on Lilypond's simple-spacer.cc.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/simple-spacer.cc:1-578 Simple_spacer class
+/// </remarks>
 /// <remarks>
 /// The solver finds a force that, when applied uniformly to all springs,
 /// achieves the target width while respecting minimum distance constraints.
@@ -24,6 +26,7 @@ public sealed class SpringSolver
         _springs = springs;
     }
     
+    // LILYPOND-REF: lily/simple-spacer.cc:159-162 Simple_spacer::configuration_length()
     /// <summary>
     /// Gets the total length of all springs at the given force.
     /// </summary>
@@ -47,6 +50,7 @@ public sealed class SpringSolver
     /// </summary>
     public double IdealTotalLength => TotalLength(0);
     
+    // LILYPOND-REF: lily/simple-spacer.cc:175-205 Simple_spacer::solve() + range_solve()
     /// <summary>
     /// Finds the force needed to achieve the target total width.
     /// </summary>
@@ -100,6 +104,7 @@ public sealed class SpringSolver
         return (forceLow + forceHigh) / 2;
     }
     
+    // LILYPOND-REF: lily/simple-spacer.cc:295-305 Simple_spacer::spring_positions()
     /// <summary>
     /// Gets the positions of all items given the solved force.
     /// </summary>

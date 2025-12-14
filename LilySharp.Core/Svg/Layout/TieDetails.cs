@@ -2,7 +2,7 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Parameters for tie formatting.
-/// Based on Lilypond's Tie_details from tie-details.hh
+/// LILYPOND-REF: lily/include/tie-details.hh:1-63 Tie_details struct
 /// </summary>
 public sealed record TieDetails
 {

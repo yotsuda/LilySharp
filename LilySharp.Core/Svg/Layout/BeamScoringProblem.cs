@@ -66,6 +66,7 @@ public sealed class BeamScoringProblem
     /// <summary>
     /// Solves for the optimal beam position.
     /// </summary>
+    // LILYPOND-REF: lily/beam-quanting.cc:1017-1030 Beam_scoring_problem::solve()
     public (double leftY, double rightY) Solve()
     {
         // Generate initial position based on note positions
@@ -85,6 +86,7 @@ public sealed class BeamScoringProblem
         return (best?.LeftY ?? initialLeftY, best?.RightY ?? initialRightY);
     }
     
+    // LILYPOND-REF: lily/beam-quanting.cc:536-687 Beam_scoring_problem::least_squares_positions()
     private (double leftY, double rightY) CalculateInitialPosition()
     {
         // Calculate based on first and last note positions
@@ -166,6 +168,7 @@ public sealed class BeamScoringProblem
         }
     }
     
+    // LILYPOND-REF: lily/beam-quanting.cc:891-953 Beam_scoring_problem::generate_quants()
     private List<BeamConfiguration> GenerateQuantCandidates(double initialLeftY, double initialRightY)
     {
         var candidates = new List<BeamConfiguration>();
@@ -189,6 +192,7 @@ public sealed class BeamScoringProblem
         return candidates;
     }
     
+    // LILYPOND-REF: lily/beam-quanting.cc:955-988 Beam_scoring_problem::one_scorer()
     private void ScoreConfiguration(BeamConfiguration config)
     {
         // Apply all scorers in order

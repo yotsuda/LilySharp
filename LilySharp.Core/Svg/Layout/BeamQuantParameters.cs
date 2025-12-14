@@ -2,7 +2,7 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Parameters for beam quantization scoring.
-/// Based on Lilypond's Beam_quant_parameters from beam-scoring-problem.hh
+/// LILYPOND-REF: lily/include/beam-scoring-problem.hh:1-203 Beam_quant_parameters struct
 /// </summary>
 public sealed record BeamQuantParameters
 {
