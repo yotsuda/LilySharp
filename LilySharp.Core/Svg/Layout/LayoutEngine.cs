@@ -37,9 +37,10 @@ public sealed class LayoutEngine
         var systems = new List<SystemLayout>();
         double currentY = _options.MarginTop;
         
-        // Calculate header height
-        double headerHeight = (score.Title != null || score.Composer != null) ? _options.HeaderHeight : 0;
-        currentY += headerHeight;
+        // LILYPOND-REF: lily/page-layout-problem.cc:434
+        // Calculate actual header height based on title/composer presence
+        double headerHeight = CalculateHeaderHeight(score);
+        currentY += headerHeight + _options.TopSystemPadding;
         
         // Break measures into systems (using first voice as representative)
         var systemMeasures = BreakIntoSystems(score);
@@ -104,25 +105,43 @@ public sealed class LayoutEngine
     public ScoreLayout Layout(MultiStaffScore score)
     {
         var systems = new List<SystemLayout>();
-        double currentY = _options.MarginTop;
-        
-        // Calculate header height
-        double headerHeight = (score.Title != null || score.Composer != null) ? _options.HeaderHeight : 0;
-        currentY += headerHeight;
-        
-        // For now, put all measures in one system per staff group
-        // TODO: implement proper system breaking for multi-staff scores
-        
-        // Calculate total system height (all staff groups)
-        double systemHeight = CalculateMultiStaffSystemHeight(score);
-        
-        // Layout all staff groups as one system
-        var staffGroupLayouts = LayoutStaffGroups(score, currentY);
-        
+
+        // LILYPOND-REF: lily/page-layout-problem.cc:434
+        // header_height_ = head ? head->extent(Y_AXIS).length() : 0;
+        // Calculate actual header height based on title/composer presence
+        double headerHeight = CalculateHeaderHeight(score);
+
         // Get measures from the first voice of the first staff
         var primaryVoice = score.StaffGroups[0].PrimaryStaff.PrimaryVoice;
         var measureLayouts = LayoutMeasuresForVoice(primaryVoice, 0);
-        
+
+        // Calculate total system height (all staff groups)
+        double systemHeight = CalculateMultiStaffSystemHeight(score);
+
+        // LILYPOND-REF: lily/page-layout-problem.cc:440-443
+        // Initialize bottom_skyline to represent the top of the printable area
+        // (below the header). This forces the first system to start below the header.
+        double headerBottom = _options.MarginTop + headerHeight;
+        var bottomSkyline = new VerticalSkyline(VerticalDirection.Down);
+        bottomSkyline.SetMinimumHeight(headerBottom);
+
+        // Build system skylines using relative coordinates (staff top = 0)
+        var (systemUpSkyline, systemDownSkyline) = BuildSystemSkylines(score, measureLayouts);
+
+        // LILYPOND-REF: lily/page-layout-problem.cc:622-626
+        // MaxHeight() returns topmost Y in relative coords (negative for notes above staff)
+        // Convert to positive extent above staff top
+        double systemUpExtent = systemUpSkyline.IsEmpty ? 0 : Math.Max(0, -systemUpSkyline.MaxHeight());
+
+        // LILYPOND-REF: lily/page-layout-problem.cc:477-478, 984-985
+        // read_spacing_spec(top_system_spacing, &header_padding_, ly_symbol2scm("padding"));
+        // min_dist = header_padding_ + header_height_ + staff->extent(staff, Y_AXIS)[UP];
+        // The staff Y is positioned to leave room for: header + system extent + padding
+        double currentY = headerBottom + systemUpExtent + _options.TopSystemPadding;
+
+        // Layout all staff groups with the calculated Y position
+        var staffGroupLayouts = LayoutStaffGroups(score, currentY);
+
         var system = new SystemLayout(
             SystemIndex: 0,
             Y: currentY,
@@ -881,5 +900,203 @@ public sealed class LayoutEngine
         }
         
         return slurLayouts.ToImmutableArray();
+    }
+    
+    // ========== Vertical Skyline Methods ==========
+    // LILYPOND-REF: lily/page-layout-problem.cc:578-647 append_system()
+    // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()
+    
+    /// <summary>
+    /// Builds vertical skylines for a multi-staff system.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()
+    /// 
+    /// The skylines track the vertical extent of all music elements:
+    /// - UP skyline: highest point at each X position (notes above staff, stems up)
+    /// - DOWN skyline: lowest point at each X position (notes below staff, stems down)
+    /// </remarks>
+    private (VerticalSkyline Up, VerticalSkyline Down) BuildSystemSkylines(
+        MultiStaffScore score,
+        ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        var upSkyline = new VerticalSkyline(VerticalDirection.Up);
+        var downSkyline = new VerticalSkyline(VerticalDirection.Down);
+        
+        double spaceHeight = _options.StaffSpaceSize;
+        double staffHeight = _options.StaffHeight;
+        // Relative coordinates: staff top = 0, middle = staffHeight/2
+        double staffMiddleY = staffHeight / 2;
+        double stemLength = 3.5 * spaceHeight; // Standard stem length
+        double noteheadHeight = spaceHeight; // Approximately 1 staff space
+        
+        // Only process the first (topmost) staff for top margin calculation
+        // Other staves are below the first one, so they don't affect the top margin
+        var firstStaff = score.StaffGroups[0].PrimaryStaff;
+        foreach (var voice in firstStaff.Voices)
+        {
+            for (int measureIndex = 0; measureIndex < voice.Measures.Length; measureIndex++)
+            {
+                if (measureIndex >= measureLayouts.Length)
+                    continue;
+                
+                var measure = voice.Measures[measureIndex];
+                var measureLayout = measureLayouts[measureIndex];
+                for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
+                {
+                    if (itemIndex >= measureLayout.Items.Length)
+                        continue;
+                    
+                    var item = measure.Items[itemIndex];
+                    var itemLayout = measureLayout.Items[itemIndex];
+                    double itemX = measureLayout.X + itemLayout.X;
+                    
+                    switch (item)
+                    {
+                        case NoteItem note:
+                            AddNoteToSkylines(note, itemX, staffMiddleY, spaceHeight, 
+                                stemLength, noteheadHeight, upSkyline, downSkyline);
+                            break;
+                        case ChordItem chord:
+                            foreach (var chordNote in chord.Notes)
+                            {
+                                double noteY = staffMiddleY - chordNote.StaffPosition * spaceHeight / 2;
+                                bool stemUp = chordNote.StaffPosition < 4;
+                                AddNoteBoxToSkylines(chordNote.StaffPosition, itemX, noteY, 
+                                    spaceHeight, stemLength, noteheadHeight, stemUp, 
+                                    upSkyline, downSkyline);
+                            }
+                            break;
+                    }
+                }
+            }
+        }
+        
+        return (upSkyline, downSkyline);
+    }
+    
+    /// <summary>
+    /// Adds a note's bounding boxes to the skylines.
+    /// </summary>
+    private void AddNoteToSkylines(
+        NoteItem note, 
+        double x, 
+        double staffMiddleY,
+        double spaceHeight,
+        double stemLength,
+        double noteheadHeight,
+        VerticalSkyline upSkyline,
+        VerticalSkyline downSkyline)
+    {
+        double noteY = staffMiddleY - note.StaffPosition * spaceHeight / 2;
+        bool stemUp = note.StemUp;
+        
+        AddNoteBoxToSkylines(note.StaffPosition, x, noteY, spaceHeight, 
+            stemLength, noteheadHeight, stemUp, upSkyline, downSkyline);
+    }
+    
+    /// <summary>
+    /// Adds bounding boxes for a note at the given position.
+    /// </summary>
+    private void AddNoteBoxToSkylines(
+        int staffPosition,
+        double x,
+        double noteY,
+        double spaceHeight,
+        double stemLength,
+        double noteheadHeight,
+        bool stemUp,
+        VerticalSkyline upSkyline,
+        VerticalSkyline downSkyline)
+    {
+        double noteheadWidth = 1.18 * spaceHeight; // From GlyphMetrics
+        double halfNoteheadHeight = noteheadHeight / 2;
+        
+        // Notehead bounding box
+        double noteLeft = x - noteheadWidth / 2;
+        double noteRight = x + noteheadWidth / 2;
+        double noteTop = noteY - halfNoteheadHeight;  // Remember: Y increases downward
+        double noteBottom = noteY + halfNoteheadHeight;
+        
+        // Add notehead to both skylines
+        var noteheadUp = VerticalSkyline.FromBox(noteLeft, noteRight, noteBottom, noteTop, VerticalDirection.Up);
+        var noteheadDown = VerticalSkyline.FromBox(noteLeft, noteRight, noteBottom, noteTop, VerticalDirection.Down);
+        upSkyline.Merge(noteheadUp);
+        downSkyline.Merge(noteheadDown);
+        
+        // Stem bounding box (if applicable - quarter notes and shorter)
+        // For half notes and whole notes, no stem
+        if (stemUp)
+        {
+            // Stem goes up from notehead
+            double stemTop = noteY - stemLength;
+            double stemBottom = noteY;
+            var stemSkyline = VerticalSkyline.FromBox(noteRight - 1, noteRight + 1, stemBottom, stemTop, VerticalDirection.Up);
+            upSkyline.Merge(stemSkyline);
+        }
+        else
+        {
+            // Stem goes down from notehead
+            double stemTop = noteY;
+            double stemBottom = noteY + stemLength;
+            var stemSkyline = VerticalSkyline.FromBox(noteLeft - 1, noteLeft + 1, stemBottom, stemTop, VerticalDirection.Down);
+            downSkyline.Merge(stemSkyline);
+        }
+    }
+    
+    /// <summary>
+    /// Calculates the actual header height for single-staff scores.
+    /// </summary>
+    private double CalculateHeaderHeight(Score score)
+    {
+        return CalculateHeaderHeightCore(score.Title, score.Composer);
+    }
+    
+    
+    /// <summary>
+    /// Calculates the actual header height based on title and composer presence.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:434
+    /// header_height_ = head ? head->extent(Y_AXIS).length() : 0;
+    /// The header height is the actual size of the title/composer stencil,
+    /// not a fixed reserved space.
+    /// </remarks>
+    private double CalculateHeaderHeight(MultiStaffScore score)
+    {
+        return CalculateHeaderHeightCore(score.Title, score.Composer);
+    }
+    
+    /// <summary>
+    /// Core header height calculation used by both Score and MultiStaffScore.
+    /// </summary>
+    /// <remarks>
+    /// SVG text coordinates specify the baseline, which is approximately
+    /// the bottom of the text (excluding descenders). Therefore:
+    /// - Title at y=MarginTop has its bottom at MarginTop
+    /// - Composer follows with spacing from title baseline
+    /// - headerBottom = MarginTop + (vertical extent of all header elements)
+    /// </remarks>
+    private double CalculateHeaderHeightCore(string? title, string? composer)
+    {
+        // In SVG, text y is baseline (≈ bottom of text)
+        // Title is rendered at MarginTop, so title bottom ≈ MarginTop
+        // Only add height for elements BELOW the title baseline
+        double height = 0;
+        
+        if (title != null && composer != null)
+        {
+            // Composer is rendered below title with spacing
+            // DrawHeader: y += 25 after title, then composer
+            height = 25; // Gap between title baseline and composer baseline
+        }
+        else if (composer != null)
+        {
+            // Only composer, no extra height needed
+            height = 0;
+        }
+        // Title only: height = 0 (title bottom = MarginTop)
+        
+        return height;
     }
 }

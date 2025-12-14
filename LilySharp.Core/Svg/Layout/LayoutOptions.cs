@@ -29,8 +29,12 @@ public sealed record LayoutOptions
     /// <summary>Vertical spacing between systems in pixels.</summary>
     public double SystemSpacing { get; init; } = 80;
     
-    /// <summary>Header height when title or composer is present, in pixels.</summary>
-    public double HeaderHeight { get; init; } = 50;
+    /// <summary>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:477-478
+    /// Padding between header (title) bottom and first system's topmost element.
+    /// Equivalent to LilyPond's top-system-spacing.padding.
+    /// </summary>
+    public double TopSystemPadding { get; init; } = 10;
     
     /// <summary>Spacing multiplier between staves in a grand staff.</summary>
     public double GrandStaffSpacingMultiplier { get; init; } = 3;
