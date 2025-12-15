@@ -7,28 +7,26 @@ public sealed class SvgRenderOptions
 {
     /// <summary>
     /// If true, embed font data as Base64 in the SVG.
-    /// If false, reference font by name using local().
     /// </summary>
     public bool EmbedFont { get; init; }
     
     /// <summary>
-    /// If true, skip @font-face in SVG (for external font loading).
+    /// If true, omit @font-face from SVG (font defined externally in HTML).
     /// </summary>
-    public bool SkipFontFace { get; init; }
+    public bool OmitFontFace { get; init; }
     
     /// <summary>
     /// Directory containing font files (used when EmbedFont is true).
-    /// If not specified, searches in common locations.
     /// </summary>
     public string? FontDirectory { get; init; }
     
     /// <summary>
-    /// Default options (system font reference, no embedding).
+    /// Default options (reference font by name, requires font installed on system).
     /// </summary>
     public static SvgRenderOptions Default => new();
     
     /// <summary>
-    /// Options for export with embedded font.
+    /// Export mode: embed font as Base64 for standalone SVG.
     /// </summary>
     public static SvgRenderOptions Export(string? fontDirectory = null) => new() 
     { 
@@ -37,11 +35,10 @@ public sealed class SvgRenderOptions
     };
     
     /// <summary>
-    /// Creates options for preview (no @font-face in SVG, font loaded externally).
+    /// Preview mode: omit @font-face (font defined externally in HTML).
     /// </summary>
     public static SvgRenderOptions Preview() => new() 
     { 
-        EmbedFont = false, 
-        SkipFontFace = true 
+        OmitFontFace = true
     };
 }

@@ -398,15 +398,15 @@ public sealed class SvgRenderer
     
     private string GetFontFaceRule()
     {
-        // Skip @font-face for preview mode (font loaded externally by HTML)
-        if (_renderOptions.SkipFontFace)
+        // Preview mode: omit @font-face (font defined externally in HTML)
+        if (_renderOptions.OmitFontFace)
         {
-            return "/* @font-face loaded externally */";
+            return "";
         }
         
+        // Export mode: embed font as Base64
         if (_renderOptions.EmbedFont)
         {
-            // Embed font as Base64 - look for font file
             var fontPath = FindFontFile();
             if (fontPath != null && File.Exists(fontPath))
             {
@@ -414,10 +414,9 @@ public sealed class SvgRenderer
                 var base64 = Convert.ToBase64String(fontBytes);
                 return $"@font-face {{ font-family: 'Emmentaler'; src: url('data:font/woff2;base64,{base64}') format('woff2'); }}";
             }
-            // Fallback to path reference if font not found
         }
         
-        // Reference font by name (requires font to be installed on system)
+        // Default: reference font by name (requires font installed on system)
         return "@font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }";
     }
     

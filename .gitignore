@@ -47,3 +47,13 @@ fonts/*
 samples/test*.lys
 samples/simple-test.lys
 samples/feature-*.lys
+
+# VS Code extension build artifacts
+editors/vscode/*.vsix
+
+# Debug and temporary files
+*.csx
+build.log
+outerhtml.html
+sample.lys
+sample.lilys

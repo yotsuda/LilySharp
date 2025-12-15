@@ -198,7 +198,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         context.subscriptions
     );
 
-    // Get font URI for HTML
+    // Get font URI for HTML (must use webview URI for security)
     const fontUri = panel.webview.asWebviewUri(
         vscode.Uri.joinPath(context.extensionUri, 'media', 'fonts', 'emmentaler-20.woff2')
     );
@@ -221,17 +221,11 @@ async function updatePreviewContent(
 
     const uri = document.uri.toString();
     const selectedRender = selectedRenders.get(uri);
-    
-    // Get font URI for preview
-    const fontUri = panel.webview.asWebviewUri(
-        vscode.Uri.joinPath(context.extensionUri, 'media', 'fonts', 'emmentaler-20.woff2')
-    );
 
     try {
         const response = await client.sendRequest<SvgResponse>('lilysharp/svg', {
             textDocument: { uri: uri },
-            renderName: selectedRender || null,
-            fontPath: fontUri.toString()
+            renderName: selectedRender || null
         });
 
         // Panel may have been disposed during async request
