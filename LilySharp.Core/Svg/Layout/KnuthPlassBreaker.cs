@@ -69,11 +69,19 @@ public sealed class KnuthPlassBreaker
         if (measures.Count == 0)
             return new List<List<Measure>>();
 
+        // Collect forced break points (measures with HasBreakAfter = true)
+        var forcedBreaks = new HashSet<int>();
+        for (int i = 0; i < measures.Count; i++)
+        {
+            if (measures[i].HasBreakAfter)
+                forcedBreaks.Add(i + 1); // Break AFTER measure i means break point at i+1
+        }
+
         // Calculate ideal widths for each measure
         var widths = measures.Select(m => SpacingRules.CalculateMeasureIdealWidth(m)).ToArray();
 
         // Find optimal number of lines and break points
-        var breakPoints = FindOptimalBreaks(widths);
+        var breakPoints = FindOptimalBreaks(widths, forcedBreaks);
 
         // Convert break points to measure groups
         return CreateMeasureGroups(measures, breakPoints);
@@ -82,8 +90,11 @@ public sealed class KnuthPlassBreaker
     /// <summary>
     /// Finds optimal break points using dynamic programming.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/constrained-breaking.cc:83-126</remarks>
-    private List<int> FindOptimalBreaks(double[] widths)
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:83-126
+    /// Forced breaks are handled by only allowing transitions through forced break points.
+    /// </remarks>
+    private List<int> FindOptimalBreaks(double[] widths, HashSet<int> forcedBreaks)
     {
         int n = widths.Length;
 
@@ -103,6 +114,20 @@ public sealed class KnuthPlassBreaker
 
             for (int i = 0; i < j; i++)
             {
+                // Skip if there's a forced break between i and j-1 (exclusive)
+                // We can only transition from i if there are no forced breaks in (i, j)
+                bool hasForcedBreakInMiddle = false;
+                for (int k = i + 1; k < j; k++)
+                {
+                    if (forcedBreaks.Contains(k))
+                    {
+                        hasForcedBreakInMiddle = true;
+                        break;
+                    }
+                }
+                if (hasForcedBreakInMiddle)
+                    continue;
+
                 bool isFirstLine = i == 0;
                 double penalty = CalculateLinePenalty(lineWidths[i, j], isFirstLine);
 

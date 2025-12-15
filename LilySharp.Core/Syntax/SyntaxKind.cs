@@ -79,6 +79,7 @@ public enum SyntaxKind : ushort
     InstrumentKeyword,  // instrument
     ChannelKeyword,     // channel
     
+    
     // === Navigation Keywords (structure block) ===
     SegnoKeyword,       // segno
     FineKeyword,        // fine
@@ -118,6 +119,7 @@ public enum SyntaxKind : ushort
     FinalBar,           // |.
     RepeatStartBar,     // |:
     RepeatEndBar,       // :|
+    LineBreakBar,       // |/
     Tilde,              // ~
     Colon,              // :
     Equals,             // =

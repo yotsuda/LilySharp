@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
@@ -698,6 +698,14 @@ public sealed class LayoutEngine
 
             currentSystem.Add(measure);
             currentWidth += measureWidth;
+
+            // Force line break if measure has break keyword
+            if (measure.HasBreakAfter && currentSystem.Count > 0)
+            {
+                result.Add(currentSystem);
+                currentSystem = new List<Measure>();
+                currentWidth = continuationPrefixWidth;
+            }
         }
 
         // Add final system

@@ -200,13 +200,14 @@ internal sealed class Lexer
             return (SyntaxKind.CloseAngle, ">");
         }
 
-        // Barlines: |, ||, |., |:
+        // Barlines: |, ||, |., |:, |/
         if (Current == '|')
         {
             _position++;
             if (Current == '|') { _position++; return (SyntaxKind.DoubleBar, "||"); }
             if (Current == '.') { _position++; return (SyntaxKind.FinalBar, "|."); }
             if (Current == ':') { _position++; return (SyntaxKind.RepeatStartBar, "|:"); }
+            if (Current == '/') { _position++; return (SyntaxKind.LineBreakBar, "|/"); }
             return (SyntaxKind.Bar, "|");
         }
 
@@ -393,6 +394,7 @@ internal sealed class Lexer
             "octave" => SyntaxKind.OctaveKeyword,
             "instrument" => SyntaxKind.InstrumentKeyword,
             "channel" => SyntaxKind.ChannelKeyword,
+            
             
             // Navigation keywords (structure block)
             "segno" => SyntaxKind.SegnoKeyword,

@@ -441,7 +441,7 @@ internal sealed class Parser
             SyntaxKind.OpenAngle => true, // Chord
             SyntaxKind.DoubleOpenAngle => true, // Parallel <<
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
-            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => true,
+            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar or SyntaxKind.LineBreakBar => true,
             SyntaxKind.Tilde => true,
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => true,
             SyntaxKind.RepeatKeyword => true,
@@ -470,7 +470,7 @@ internal sealed class Parser
             SyntaxKind.DoubleOpenAngle => ParseParallelExpression(),
 
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
-            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => ParseBarline(),
+            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar or SyntaxKind.LineBreakBar => ParseBarline(),
 
             SyntaxKind.Tilde => ParseTie(),
 
@@ -488,6 +488,7 @@ internal sealed class Parser
             
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
                         SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
+            
             SyntaxKind.Identifier => new VariableReferenceGreen(Advance()), // Variable reference without 'use'
             _ => null
         };

@@ -14,6 +14,7 @@ internal sealed class MeasureBuilder
     private readonly List<MusicItem> _currentItems = new();
     private BarlineType _pendingStartBarline = BarlineType.None;
     private string? _sectionLabel;
+
     private int _measureSourceStart;
     
     public MeasureBuilder(int sourceStart = 0)
@@ -28,6 +29,23 @@ internal sealed class MeasureBuilder
     }
     
     public void AddItem(MusicItem item) => _currentItems.Add(item);
+
+    public void SetBreak()
+    {
+        // Apply break to the previous measure (break appears after barline)
+        if (_measures.Count > 0)
+        {
+            var last = _measures[^1];
+            _measures[^1] = new Measure(
+                last.Items,
+                last.StartBarline,
+                last.EndBarline,
+                last.SectionLabel,
+                last.SourceStart,
+                last.SourceEnd,
+                hasBreakAfter: true);
+        }
+    }
     
     public void CompleteMeasure(BarlineType endBarline, int sourceEnd)
     {
@@ -39,11 +57,13 @@ internal sealed class MeasureBuilder
                 endBarline,
                 _sectionLabel,
                 _measureSourceStart,
-                sourceEnd));
+                sourceEnd,
+                hasBreakAfter: false));
             
             _currentItems.Clear();
             _sectionLabel = null;
             _pendingStartBarline = BarlineType.None;
+            
             _measureSourceStart = sourceEnd;
         }
     }
@@ -297,6 +317,9 @@ public sealed class MeasureCollector
             case BarlineSyntax barline:
                 var barType = ParseBarlineType(barline.BarToken.Text);
                 builder.HandleBarline(barType, barline.Position);
+                // |/ triggers line break after this measure
+                if (barline.BarToken.Text == "|/")
+                    builder.SetBreak();
                 break;
         }
     }

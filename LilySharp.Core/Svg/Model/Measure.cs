@@ -39,6 +39,9 @@ public sealed record Measure
     
     /// <summary>Optional section label (e.g., "A", "B", "Coda").</summary>
     public string? SectionLabel { get; }
+
+    /// <summary>If true, force a line break after this measure.</summary>
+    public bool HasBreakAfter { get; }
     
     /// <summary>Source start position for caching and incremental updates.</summary>
     public int SourceStart { get; }
@@ -52,7 +55,8 @@ public sealed record Measure
         BarlineType endBarline,
         string? sectionLabel,
         int sourceStart,
-        int sourceEnd)
+        int sourceEnd,
+        bool hasBreakAfter = false)
     {
         Items = items;
         StartBarline = startBarline;
@@ -60,6 +64,7 @@ public sealed record Measure
         SectionLabel = sectionLabel;
         SourceStart = sourceStart;
         SourceEnd = sourceEnd;
+        HasBreakAfter = hasBreakAfter;
     }
     
     /// <summary>
