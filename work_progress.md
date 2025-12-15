@@ -177,7 +177,7 @@ SyntaxTree
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
 | Skyline.cs (矩形版) | ✅ | High | 3h | 矩形近似 - **要改修** |
-| Skyline.cs (斜め Building) | 🚀 | High | 4h | Lilypond 同様の slope 対応必須 |
+| Skyline.cs (斜め Building) | ✅ | High | 4h | LilyPond 符号規則で実装完了 |
 | GlyphMetrics.cs | ✅ | High | 2h | SMuFL bounding box |
 | SpacingRules.cs (Skyline 生成) | 🟡 | High | 2h | 斜め対応後に再実装 |
 | SpacingRules.cs (MinDistance) | 🟡 | High | 1h | 斜め対応後に再実装 |
@@ -349,3 +349,4 @@ SyntaxTree
 | 2025-12-14 | 🔍 音符間スペーシング修正。Lilypond spacing-options.cc アルゴリズム移植。CalculateDurationSpace/CalculateMeasureIdealWidth 実装 |
 | 2025-12-15 | 垂直レイアウト改善。LilyPond page-layout-problem.cc 参照。動的ヘッダー高さ計算、VerticalSkyline 実装。単一/マルチスタッフ両方でスカイラインベースの垂直配置 |
 | 2025-12-15 | Phase 9: Knuth-Plass 最適行分割アルゴリズム実装。LilyPond constrained-breaking.cc 参照。動的計画法でペナルティ最小化 |
+| 2025-12-15 | Phase 2: 斜め Building 実装。LilyPond skyline.cc 符号規則 (UP=-1, DOWN=+1) に統一 |
