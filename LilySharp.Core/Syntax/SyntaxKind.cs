@@ -78,6 +78,7 @@ public enum SyntaxKind : ushort
     OctaveKeyword,      // octave
     InstrumentKeyword,  // instrument
     ChannelKeyword,     // channel
+    BreakKeyword,       // break (line break)
     
     
     // === Navigation Keywords (structure block) ===
@@ -119,7 +120,7 @@ public enum SyntaxKind : ushort
     FinalBar,           // |.
     RepeatStartBar,     // |:
     RepeatEndBar,       // :|
-    LineBreakBar,       // |/
+    // LineBreakBar removed - use BreakKeyword instead
     Tilde,              // ~
     Colon,              // :
     Equals,             // =
@@ -204,6 +205,7 @@ public enum SyntaxKind : ushort
     
     // === Nodes: Other Music ===
     Barline,
+    Break,              // line break
     Tie,
     Slur,
     

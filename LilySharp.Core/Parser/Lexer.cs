@@ -207,7 +207,7 @@ internal sealed class Lexer
             if (Current == '|') { _position++; return (SyntaxKind.DoubleBar, "||"); }
             if (Current == '.') { _position++; return (SyntaxKind.FinalBar, "|."); }
             if (Current == ':') { _position++; return (SyntaxKind.RepeatStartBar, "|:"); }
-            if (Current == '/') { _position++; return (SyntaxKind.LineBreakBar, "|/"); }
+            // |/ removed - use 'break' keyword instead
             return (SyntaxKind.Bar, "|");
         }
 
@@ -450,6 +450,7 @@ internal sealed class Lexer
             "lyrics" => SyntaxKind.LyricsKeyword,
             "tabStaff" or "tabstaff" => SyntaxKind.TabStaffKeyword,
             "tuning" => SyntaxKind.TuningKeyword,
+            "break" => SyntaxKind.BreakKeyword,
 
             // Articulation names
             "staccato" or "stac" => SyntaxKind.StaccatoKeyword,

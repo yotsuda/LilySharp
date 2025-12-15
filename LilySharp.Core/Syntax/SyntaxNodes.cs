@@ -1201,3 +1201,17 @@ public sealed partial class MidiPartRenderSyntax : SyntaxNode
 
     public SyntaxTokenNode PartName => (SyntaxTokenNode)GetChild(0)!;
 }
+
+
+/// <summary>
+/// Represents a line break: break
+/// </summary>
+public sealed partial class BreakSyntax : SyntaxNode
+{
+    internal BreakSyntax(BreakGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode BreakKeyword => (SyntaxTokenNode)GetChild(0)!;
+}

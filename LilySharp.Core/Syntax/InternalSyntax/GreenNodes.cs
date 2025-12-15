@@ -818,3 +818,14 @@ internal sealed class MidiPartRenderGreen : GreenSyntaxNode
     {
     }
 }
+
+/// <summary>
+/// Line break: break
+/// </summary>
+internal sealed class BreakGreen : GreenSyntaxNode
+{
+    public BreakGreen(SyntaxToken breakKeyword)
+        : base(SyntaxKind.Break, [breakKeyword])
+    {
+    }
+}

@@ -127,6 +127,7 @@ internal sealed class Parser
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
             
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
+            SyntaxKind.BreakKeyword => ParseBreak(),
             SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
             SyntaxKind.OpenBrace => ParseMusicBlock(),
@@ -441,11 +442,12 @@ internal sealed class Parser
             SyntaxKind.OpenAngle => true, // Chord
             SyntaxKind.DoubleOpenAngle => true, // Parallel <<
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
-            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar or SyntaxKind.LineBreakBar => true,
+            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => true,
             SyntaxKind.Tilde => true,
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => true,
             SyntaxKind.RepeatKeyword => true,
             SyntaxKind.TupletKeyword => true,
+            SyntaxKind.BreakKeyword => true,
             SyntaxKind.KeyKeyword => true,
             SyntaxKind.ClefKeyword => true,
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or SyntaxKind.AppogiaturaKeyword => true,
@@ -470,7 +472,7 @@ internal sealed class Parser
             SyntaxKind.DoubleOpenAngle => ParseParallelExpression(),
 
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
-            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar or SyntaxKind.LineBreakBar => ParseBarline(),
+            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => ParseBarline(),
 
             SyntaxKind.Tilde => ParseTie(),
 
@@ -487,6 +489,7 @@ internal sealed class Parser
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
             
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
+            SyntaxKind.BreakKeyword => ParseBreak(),
                         SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
             
             SyntaxKind.Identifier => new VariableReferenceGreen(Advance()), // Variable reference without 'use'
@@ -569,6 +572,12 @@ internal sealed class Parser
     {
         var barToken = Advance();
         return new BarlineGreen(barToken);
+    }
+
+    private BreakGreen ParseBreak()
+    {
+        var breakKeyword = Expect(SyntaxKind.BreakKeyword);
+        return new BreakGreen(breakKeyword);
     }
 
     private TieGreen ParseTie()

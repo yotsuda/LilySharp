@@ -74,7 +74,7 @@ public class KnuthPlassBreakerTests
     public void BreakIntoLines_WithLineBreakBar_ForcesLineBreak()
     {
         // 4 measures with line break after measure 2
-        var source = "c4 d e f | g a b c' |/ d' c' b a | g f e d |";
+        var source = "c4 d e f | g a b c' | break d' c' b a | g f e d |";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -88,7 +88,7 @@ public class KnuthPlassBreakerTests
         
         // Should have at least 2 systems due to forced break
         Assert.True(layout.Systems.Length >= 2, 
-            $"Expected at least 2 systems due to |/, got {layout.Systems.Length}");
+            $"Expected at least 2 systems due to | break, got {layout.Systems.Length}");
         
         // First system should have exactly 2 measures (before break)
         Assert.Equal(2, layout.Systems[0].Measures.Length);
@@ -97,7 +97,7 @@ public class KnuthPlassBreakerTests
     [Fact]
     public void BreakIntoLines_GreedyWithLineBreakBar_ForcesLineBreak()
     {
-        var source = "c4 d e f |/ g a b c' |";
+        var source = "c4 d e f | break g a b c' |";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -107,7 +107,7 @@ public class KnuthPlassBreakerTests
         var engine = new LayoutEngine(options);
         var layout = engine.Layout(score);
         
-        // Should have 2 systems due to |/
+        // Should have 2 systems due to | break
         Assert.Equal(2, layout.Systems.Length);
         Assert.Single(layout.Systems[0].Measures);
     }

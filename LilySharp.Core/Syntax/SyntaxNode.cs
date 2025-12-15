@@ -101,6 +101,7 @@ public abstract class SyntaxNode
             SyntaxKind.Pitch => new PitchSyntax((PitchGreen)green, this, position),
             SyntaxKind.Duration => new DurationSyntax((DurationGreen)green, this, position),
             SyntaxKind.Barline => new BarlineSyntax((BarlineGreen)green, this, position),
+            SyntaxKind.Break => new BreakSyntax((BreakGreen)green, this, position),
             SyntaxKind.Tie => new TieSyntax((TieGreen)green, this, position),
             SyntaxKind.Slur => new SlurSyntax((SlurGreen)green, this, position),
             SyntaxKind.ScoreDeclaration => new ScoreDeclarationSyntax((ScoreDeclarationGreen)green, this, position),

@@ -30,6 +30,7 @@ internal sealed class MeasureBuilder
     private Fraction _defaultDuration = Fraction.Quarter;
     
     private BarlineType _pendingStartBarline = BarlineType.None;
+    private bool _pendingBreak = false;
     private string? _sectionLabel;
     private int _measureSourceStart;
     
@@ -106,6 +107,10 @@ internal sealed class MeasureBuilder
         
         if (_currentItems.Count > 0)
         {
+            // Apply pending break if any
+            bool hasBreak = _pendingBreak;
+            _pendingBreak = false;
+            
             _measures.Add(new Measure(
                 _currentItems.ToImmutableArray(),
                 _pendingStartBarline,
@@ -113,7 +118,7 @@ internal sealed class MeasureBuilder
                 _sectionLabel,
                 _measureSourceStart,
                 sourceEnd,
-                hasBreakAfter: false));
+                hasBreakAfter: hasBreak));
             
             // Record boundary
             _boundaries.Add(new MeasureBoundary(
@@ -139,9 +144,9 @@ internal sealed class MeasureBuilder
 
     public void SetBreak()
     {
-        // Apply break to the previous measure (break appears after barline)
-        if (_measures.Count > 0)
+        if (_currentItems.Count == 0 && _measures.Count > 0)
         {
+            // At measure boundary - apply break to previous measure
             var last = _measures[^1];
             _measures[^1] = new Measure(
                 last.Items,
@@ -151,6 +156,11 @@ internal sealed class MeasureBuilder
                 last.SourceStart,
                 last.SourceEnd,
                 hasBreakAfter: true);
+        }
+        else
+        {
+            // Mid-measure break - defer to next measure boundary
+            _pendingBreak = true;
         }
     }
     
@@ -190,6 +200,10 @@ internal sealed class MeasureBuilder
         
         if (_currentItems.Count > 0 || _pendingStartBarline != BarlineType.None)
         {
+            // Apply pending break if any
+            bool hasBreak = _pendingBreak;
+            _pendingBreak = false;
+            
             _measures.Add(new Measure(
                 _currentItems.ToImmutableArray(),
                 _pendingStartBarline,
@@ -197,7 +211,7 @@ internal sealed class MeasureBuilder
                 _sectionLabel,
                 _measureSourceStart,
                 sourceEnd,
-                hasBreakAfter: false));
+                hasBreakAfter: hasBreak));
             
             // Record boundary with explicit flag
             _boundaries.Add(new MeasureBoundary(
@@ -412,6 +426,7 @@ public sealed class MeasureCollector
                 case RestSyntax:
                 case ChordSyntax:
                 case BarlineSyntax:
+                case BreakSyntax:
                     musicNodes.Add(node);
                     break;
                     
@@ -449,9 +464,11 @@ public sealed class MeasureCollector
             case BarlineSyntax barline:
                 var barType = ParseBarlineType(barline.BarToken.Text);
                 builder.HandleBarline(barType, barline.Position);
-                // |/ triggers line break after this measure
-                if (barline.BarToken.Text == "|/")
-                    builder.SetBreak();
+                break;
+                
+            case BreakSyntax:
+                // 'break' keyword triggers line break
+                builder.SetBreak();
                 break;
         }
     }
@@ -627,7 +644,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax);
+                .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax);
             ProcessNodes(musicNodes);
         }
         
@@ -727,6 +744,7 @@ public sealed class MeasureCollector
                 case RestSyntax:
                 case ChordSyntax:
                 case BarlineSyntax:
+                case BreakSyntax:
                     musicNodes.Add(node);
                     break;
                     
