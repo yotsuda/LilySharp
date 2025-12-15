@@ -639,22 +639,51 @@ public sealed class LayoutEngine
     }
 
     /// <summary>
-    /// Breaks measures into systems using a greedy algorithm.
+    /// Breaks measures into systems.
     /// Uses the first voice as representative for measure widths.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc
+    /// Uses Knuth-Plass optimal algorithm when UseOptimalLineBreaking is true,
+    /// otherwise falls back to greedy first-fit algorithm.
+    /// </remarks>
     private List<List<Measure>> BreakIntoSystems(Score score)
+    {
+        var measures = score.Voice.Measures;
+        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true);
+        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false);
+
+        if (_options.UseOptimalLineBreaking)
+        {
+            // Use Knuth-Plass optimal line breaking
+            var breaker = new KnuthPlassBreaker(
+                _options.ContentWidth,
+                firstPrefixWidth,
+                continuationPrefixWidth,
+                _options.LineBreakingTolerance);
+
+            return breaker.BreakIntoLines(measures);
+        }
+
+        // Fallback to greedy first-fit algorithm
+        return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth);
+    }
+
+    /// <summary>
+    /// Breaks measures into systems using a greedy first-fit algorithm.
+    /// </summary>
+    private List<List<Measure>> BreakIntoSystemsGreedy(
+        ImmutableArray<Measure> measures,
+        double firstPrefixWidth,
+        double continuationPrefixWidth)
     {
         var result = new List<List<Measure>>();
         var currentSystem = new List<Measure>();
 
         double availableWidth = _options.ContentWidth;
-        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true);
-        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false);
-
         double currentWidth = firstPrefixWidth;
 
-        // Use first voice for measure breaking (all voices should have same measure count)
-        foreach (var measure in score.Voice.Measures)
+        foreach (var measure in measures)
         {
             double measureWidth = SpacingRules.CalculateMeasureIdealWidth(measure);
 

@@ -55,7 +55,21 @@ public sealed record LayoutOptions
     /// </summary>
     public bool RaggedRight { get; init; } = false;
 
-        /// <summary>Available width for music content.</summary>
+
+    /// <summary>
+    /// If true, uses Knuth-Plass optimal line breaking algorithm.
+    /// Otherwise uses greedy first-fit algorithm.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/constrained-breaking.cc</remarks>
+    public bool UseOptimalLineBreaking { get; init; } = true;
+
+    /// <summary>
+    /// Tolerance for line stretch/compression in optimal breaking.
+    /// Lines with ratio outside 1/tolerance to tolerance*2 are rejected.
+    /// </summary>
+    public double LineBreakingTolerance { get; init; } = 1.1;
+
+    /// <summary>Available width for music content.</summary>
     public double ContentWidth => PageWidth - MarginLeft - MarginRight;
     
     /// <summary>Default options for standard layout.</summary>

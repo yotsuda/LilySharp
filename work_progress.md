@@ -89,10 +89,10 @@ master
 | 6 | 複数声部 | 9 | 9 | 100% |
 | 7 | 記譜記号 | 0 | 3 | 0% |
 | 8 | 歌詞配置 | 0 | 4 | 0% |
-| 9 | ページレイアウト | 0 | 3 | 0% |
+| 9 | ページレイアウト | 2 | 4 | 50% |
 | 10 | 高度な機能 | 0 | 6 | 0% |
 | 11 | グランドスタッフ | 7 | 8 | 88% |
-| **合計** | | **41** | **71** | **58%** |
+| **合計** | | **43** | **72** | **60%** |
 
 ## 📋 ステータス凡例
 
@@ -107,7 +107,7 @@ master
 
 ワークフロー: 🚀→⏳→🔍→✅
 
-## Phase 0: Semantic Layer 🚀 **[最優先]**
+## Phase 0: Semantic Layer ✅ **[完了]**
 
 **ビジョン**: 世界でいちばん美しいデザインの楽譜作成ソフトウェア
 
@@ -119,29 +119,29 @@ master
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| Symbol.cs | 🚀 | Critical | 2h | シンボル基底クラス |
-| SectionSymbol.cs | 🚀 | Critical | 1h | section 定義 |
-| PhraseSymbol.cs | 🚀 | Critical | 1h | phrase 定義 |
-| SymbolTable.cs | 🚀 | Critical | 4h | シンボル管理 |
-| SymbolCollector.cs | 🚀 | Critical | 4h | 定義収集 (Pass 1) |
+| Symbol.cs | ✅ | Critical | 2h | シンボル基底クラス |
+| SectionSymbol.cs | ✅ | Critical | 1h | section 定義 |
+| PhraseSymbol.cs | ✅ | Critical | 1h | phrase 定義 |
+| SymbolTable.cs | ✅ | Critical | 4h | シンボル管理 |
+| SymbolCollector.cs | ✅ | Critical | 4h | 定義収集 (Pass 1) |
 
 ### Phase 0-B: Binder + StructureExpander (4-5日)
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| BoundMusic.cs | 🚀 | Critical | 4h | BoundNote, BoundRest, BoundChord |
-| BoundMeasure.cs | 🚀 | Critical | 2h | 展開済み小節 |
-| BoundScore.cs | 🚀 | Critical | 2h | 展開済みスコア |
-| Binder.cs | 🚀 | Critical | 8h | 参照解決、BoundScore 生成 |
-| StructureExpander.cs | 🚀 | Critical | 8h | repeat/alternative → flat sequence |
-| RelativePitchResolver.cs | 🚀 | Critical | 4h | relative { } 音程解決 |
+| BoundMusic.cs | ✅ | Critical | 4h | BoundNote, BoundRest, BoundChord |
+| BoundMeasure.cs | ✅ | Critical | 2h | 展開済み小節 |
+| BoundScore.cs | ✅ | Critical | 2h | 展開済みスコア |
+| Binder.cs | ✅ | Critical | 8h | 参照解決、BoundScore 生成 |
+| StructureExpander.cs | ✅ | Critical | 8h | repeat/alternative → flat sequence |
+| RelativePitchResolver.cs | ✅ | Critical | 4h | relative { } 音程解決 |
 
 ### Phase 0-C: 統合 (2-3日)
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| MeasureCollector リファクタ | 🚀 | Critical | 8h | Binder を使用するよう書き換え |
-| SemanticDiagnostic.cs | 🚀 | Normal | 2h | エラーメッセージ |
+| MeasureCollector リファクタ | ✅ | Critical | 8h | Binder を使用するよう書き換え |
+| SemanticDiagnostic.cs | ✅ | Normal | 2h | エラーメッセージ |
 
 **詳細設計**: `docs/ARCHITECTURE_REDESIGN.md`
 
@@ -181,6 +181,7 @@ SyntaxTree
 | GlyphMetrics.cs | ✅ | High | 2h | SMuFL bounding box |
 | SpacingRules.cs (Skyline 生成) | 🟡 | High | 2h | 斜め対応後に再実装 |
 | SpacingRules.cs (MinDistance) | 🟡 | High | 1h | 斜め対応後に再実装 |
+| VerticalSkyline.cs | ✅ | High | 3h | 垂直方向スカイライン（page-layout-problem.cc 参照） |
 
 **注**: 現在の矩形近似 Skyline は暫定実装。Lilypond と等価にするには斜め Building 対応が必須。
 
@@ -265,7 +266,7 @@ SyntaxTree
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| KnuthPlassBreaker.cs | 🚀 | High | 12h | page-layout-problem.cc 完全再現 |
+| KnuthPlassBreaker.cs | ✅ | High | 4h | constrained-breaking.cc 参照。動的計画法 |
 | PageBreaker.cs | 🚀 | High | 6h | page-spacing.cc 完全再現 |
 | ScoreLayout.cs (最適化) | 🚀 | High | 6h | 既存コードの Lilypond 等価化 |
 
@@ -346,3 +347,5 @@ SyntaxTree
 | 2025-12-14 | Phase 11 完了。SvgRenderer multi-staff 描画、CLI 統合 |
 | 2025-12-13 | LilyPond/Roslyn ソースコード調査。MusicIterator 不採用を決定。Phase 0 を3段階に分割 |
 | 2025-12-14 | 🔍 音符間スペーシング修正。Lilypond spacing-options.cc アルゴリズム移植。CalculateDurationSpace/CalculateMeasureIdealWidth 実装 |
+| 2025-12-15 | 垂直レイアウト改善。LilyPond page-layout-problem.cc 参照。動的ヘッダー高さ計算、VerticalSkyline 実装。単一/マルチスタッフ両方でスカイラインベースの垂直配置 |
+| 2025-12-15 | Phase 9: Knuth-Plass 最適行分割アルゴリズム実装。LilyPond constrained-breaking.cc 参照。動的計画法でペナルティ最小化 |
