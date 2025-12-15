@@ -72,6 +72,10 @@ public sealed class BeamScoringProblem
         // Generate initial position based on note positions
         var (initialLeftY, initialRightY) = CalculateInitialPosition();
         
+        // LILYPOND-REF: lily/beam-quanting.cc:440-443
+        // Apply slope damping based on concaveness
+        (initialLeftY, initialRightY) = ApplySlopeDamping(initialLeftY, initialRightY);
+        
         // Generate candidate configurations
         var candidates = GenerateQuantCandidates(initialLeftY, initialRightY);
         
@@ -440,5 +444,110 @@ public sealed class BeamScoringProblem
         }
         
         config.NextScorerTodo = (int)BeamScorer.NumScorers;
+    }
+
+    // ========================================
+    // Slope Damping
+    // ========================================
+    
+    /// <summary>
+    /// Applies slope damping based on concaveness.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:747-785 Beam_scoring_problem::slope_damping()
+    /// 
+    /// If the beam has high concaveness (notes form a "bowl" shape), the slope
+    /// is reduced to make the beam more horizontal. This improves readability.
+    /// </remarks>
+    private (double leftY, double rightY) ApplySlopeDamping(double leftY, double rightY)
+    {
+        if (_staffPositions.Length <= 1)
+            return (leftY, rightY);
+        
+        double concaveness = CalculateConcaveness();
+        double damping = _parameters.Damping;
+        
+        // If concaveness is very high, make the beam horizontal
+        if (concaveness >= 10000 || damping >= 10000)
+        {
+            double avgY = (leftY + rightY) / 2;
+            return (avgY, avgY);
+        }
+        
+        // Apply damping if either damping or concaveness is non-zero
+        if (damping > 0 && (damping + concaveness) > 0)
+        {
+            double dy = rightY - leftY;
+            double slope = (_xSpan > 0.001) ? dy / _xSpan : 0;
+            
+            // Dampen slope using tanh for smooth falloff
+            // LILYPOND-REF: lily/beam-quanting.cc:770
+            slope = 0.6 * Math.Tanh(slope) / (damping + concaveness);
+            
+            double dampedDy = slope * _xSpan;
+            double center = (leftY + rightY) / 2;
+            
+            leftY = center - dampedDy / 2;
+            rightY = center + dampedDy / 2;
+        }
+        
+        return (leftY, rightY);
+    }
+    
+    /// <summary>
+    /// Calculates the concaveness of the note pattern under the beam.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:695-746 Beam_scoring_problem::calc_concaveness()
+    /// LILYPOND-REF: lily/beam-quanting.cc:671-692 calc_positions_concaveness()
+    /// 
+    /// Concaveness measures how much the notes deviate from a straight line
+    /// in the "wrong" direction (creating a bowl shape). High concaveness
+    /// indicates the beam should be made more horizontal.
+    /// </remarks>
+    private double CalculateConcaveness()
+    {
+        if (_staffPositions.Length <= 2)
+            return 0;
+        
+        // Calculate concaveness for the note positions
+        var positions = _staffPositions.ToList();
+        int beamDir = _group.StemUp ? 1 : -1;
+        
+        return CalculatePositionsConcaveness(positions, beamDir);
+    }
+    
+    /// <summary>
+    /// Calculates concaveness for a list of positions.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:671-692 calc_positions_concaveness()
+    /// 
+    /// For each interior note, measures how far it deviates from the line
+    /// connecting the first and last notes, in the direction of the beam.
+    /// </remarks>
+    private static double CalculatePositionsConcaveness(List<int> positions, int beamDir)
+    {
+        if (positions.Count <= 2)
+            return 0;
+        
+        double dy = positions[^1] - positions[0];
+        double slope = dy / (positions.Count - 1);
+        double concaveness = 0;
+        
+        for (int i = 1; i < positions.Count - 1; i++)
+        {
+            double lineY = slope * i + positions[0];
+            // Deviation in beam direction counts toward concaveness
+            concaveness += Math.Max(beamDir * (positions[i] - lineY), 0);
+        }
+        
+        concaveness /= positions.Count;
+        
+        // Normalize by the total change
+        if (Math.Abs(dy) > 0.001)
+            concaveness /= Math.Abs(dy);
+        
+        return concaveness;
     }
 }

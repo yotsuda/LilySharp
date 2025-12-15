@@ -42,6 +42,13 @@ public sealed record BeamQuantParameters
     /// <summary>Slope threshold considered as zero.</summary>
     public double RoundToZeroSlope { get; init; } = 0.02;
     
+    // Damping
+    /// <summary>
+    /// Slope damping factor. Higher values result in flatter beams.
+    /// LILYPOND-REF: lily/beam-quanting.cc:754-755
+    /// </summary>
+    public double Damping { get; init; } = 1.0;
+    
     // Collision penalties
     /// <summary>Penalty for collision with other objects.</summary>
     public double CollisionPenalty { get; init; } = 500.0;
