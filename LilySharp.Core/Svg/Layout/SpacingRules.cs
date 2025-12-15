@@ -360,7 +360,7 @@ public static class SpacingRules
     /// <param name="item">The music item</param>
     /// <param name="referenceX">X coordinate of the reference point (notehead center)</param>
     /// <param name="staffY">Y coordinate of the staff's middle line</param>
-    public static Skyline CreateRightSkyline(MusicItem item, double referenceX, double staffY)
+    public static HorizontalSkyline CreateRightSkyline(MusicItem item, double referenceX, double staffY)
     {
         var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
         
@@ -442,14 +442,14 @@ public static class SpacingRules
             }
         }
         
-        return Skyline.FromBoxes(boxes, Skyline.Direction.Right);
+        return HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Right);
     }
     
     /// <summary>
     /// Creates the left skyline for a music item.
     /// The left skyline represents the leftmost extent at each Y coordinate.
     /// </summary>
-    public static Skyline CreateLeftSkyline(MusicItem item, double referenceX, double staffY)
+    public static HorizontalSkyline CreateLeftSkyline(MusicItem item, double referenceX, double staffY)
     {
         var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
         
@@ -491,7 +491,7 @@ public static class SpacingRules
             boxes.Add((accYBottom, accYTop, accX, accX + accWidth));
         }
         
-        return Skyline.FromBoxes(boxes, Skyline.Direction.Left);
+        return HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Left);
     }
     /// <summary>
     /// Calculates the minimum distance between two items.
