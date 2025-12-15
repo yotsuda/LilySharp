@@ -918,6 +918,9 @@ public sealed class SvgRenderer
         char topGlyph = GetTimeNumberGlyph(timeSig.Beats);
         char bottomGlyph = GetTimeNumberGlyph(timeSig.BeatType);
         
+        // Emmentaler time sig glyphs have baseline at bottom
+        // Top number spans lines 1-3, so baseline at line 3
+        // Bottom number spans lines 3-5, so baseline at line 5
         DrawGlyph(topGlyph, x, y + 2 * SpaceHeight);
         DrawGlyph(bottomGlyph, x, y + 4 * SpaceHeight);
     }
