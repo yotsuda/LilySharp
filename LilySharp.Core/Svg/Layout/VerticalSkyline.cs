@@ -468,23 +468,29 @@ public sealed class VerticalSkyline
     /// <summary>
     /// Returns true if height h1 is "better" than h2 for this skyline direction.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:170-176 Building::above()
+    /// With LilyPond sign convention (UP stores negative, DOWN stores positive),
+    /// "better" is always the larger internal height for both directions:
+    /// - UP: -10 > -20 means y=10 is "above" y=20 (closer to top)
+    /// - DOWN: 70 > 50 means y=70 is "below" y=50 (closer to bottom)
+    /// </remarks>
     private bool IsBetterHeight(double h1, double h2)
     {
-        if (_direction == VerticalDirection.Up)
-            return h1 > h2;  // Higher is better for UP
-        else
-            return h1 < h2;  // Lower (more negative) is better for DOWN
+        return h1 > h2;  // Same for both directions with LilyPond sign convention
     }
     
     /// <summary>
     /// Returns true if a is above b at x, considering skyline direction.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:170-176 Building::above()
+    /// With LilyPond sign convention, Building::Above() already works correctly
+    /// for both directions - it compares internal heights directly.
+    /// </remarks>
     private bool IsAbove(Building a, Building b, double x)
     {
-        if (_direction == VerticalDirection.Up)
-            return a.Above(b, x);  // Higher is "above"
-        else
-            return b.Above(a, x);  // Lower (more negative) is "above" for DOWN
+        return a.Above(b, x);  // Same for both directions with LilyPond sign convention
     }
     
     /// <summary>
