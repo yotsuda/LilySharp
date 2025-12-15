@@ -106,6 +106,40 @@ Show-TextFile LilySharp.Core/Svg/Layout/SpacingRules.cs -LineRange 260,290
 | Spring.cs:82-89 Length() | lily/spring.cc:218-236 Spring::length() |
 | SpringSolver.cs:55-101 SolveForWidth() | lily/simple-spacer.cc:150-200 solve() |
 
+
+## VS Code 拡張デプロイ
+
+### デプロイスクリプト
+
+```powershell
+# 開発デプロイ（バージョン自動インクリメント: 0.1.1-dev.1 → 0.1.1-dev.2）
+.\deploy-extension.ps1
+
+# リリースデプロイ（プレリリースタグ削除: 0.1.1-dev.2 → 0.1.1）
+.\deploy-extension.ps1 -Release
+```
+
+### デプロイ後の確認
+
+1. VS Code を**完全に閉じる**（タスクバーからも終了）
+2. VS Code を再起動
+3. `Ctrl+Shift+X` → `Lily#` 検索 → バージョン確認
+4. `.lys` ファイルを開いて `Ctrl+Shift+V` でプレビュー確認
+
+### バージョニング規則
+
+| 種別 | 形式 | 例 |
+|------|------|-----|
+| 開発ビルド | `major.minor.patch-dev.N` | `0.1.1-dev.5` |
+| リリース | `major.minor.patch` | `0.1.1` |
+
+### ビルド成果物
+
+| ファイル | 場所 |
+|---------|------|
+| LSP サーバー | `LilySharp.Lsp/bin/Debug/net10.0/lilysharp-lsp.exe` |
+| VSIX パッケージ | `editors/vscode/lilysharp-*.vsix` |
+
 ## 技術メモ
 
 ### 文法設計方針
