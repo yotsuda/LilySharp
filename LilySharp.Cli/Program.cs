@@ -276,6 +276,7 @@ static int ExportSvg(string[] args)
     catch (Exception ex)
     {
         Console.Error.WriteLine($"Error: {ex.Message}");
+        Console.Error.WriteLine(ex.StackTrace);
         return 1;
     }
 }

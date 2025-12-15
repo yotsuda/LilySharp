@@ -571,6 +571,12 @@ public sealed class SvgRenderer
         }
         
         // Draw items
+        if (measure.Items.Length != layout.Items.Length)
+        {
+            throw new InvalidOperationException(
+                $"Measure {measureIndex} items mismatch: measure has {measure.Items.Length} items, layout has {layout.Items.Length} items. " +
+                $"Voice={voiceNumber}, Measure items: [{string.Join(", ", measure.Items.Select(i => i.GetType().Name))}]");
+        }
         for (int i = 0; i < measure.Items.Length; i++)
         {
             var item = measure.Items[i];
