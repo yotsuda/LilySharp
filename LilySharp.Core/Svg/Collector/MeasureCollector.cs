@@ -6,21 +6,40 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
+/// Tracks measure boundary alignment status for incremental compilation.
+/// </summary>
+public record MeasureBoundary(
+    int SourcePosition,
+    Fraction AccumulatedDuration,
+    bool IsExplicit,  // true if there was an explicit barline
+    bool IsAligned    // true if duration matches time signature
+);
+
+/// <summary>
 /// Helper class for building measures from syntax nodes.
+/// Supports both explicit barlines and automatic measure detection based on time signature.
 /// </summary>
 internal sealed class MeasureBuilder
 {
     private readonly List<Measure> _measures = new();
     private readonly List<MusicItem> _currentItems = new();
+    private readonly List<MeasureBoundary> _boundaries = new();
+    
+    private readonly Fraction _timeSignature;
+    private Fraction _currentDuration = Fraction.Zero;
+    private Fraction _defaultDuration = Fraction.Quarter;
+    
     private BarlineType _pendingStartBarline = BarlineType.None;
     private string? _sectionLabel;
-
     private int _measureSourceStart;
     
-    public MeasureBuilder(int sourceStart = 0)
+    public MeasureBuilder(Fraction timeSignature, int sourceStart = 0)
     {
+        _timeSignature = timeSignature;
         _measureSourceStart = sourceStart;
     }
+    
+    public IReadOnlyList<MeasureBoundary> Boundaries => _boundaries;
     
     public string? SectionLabel
     {
@@ -28,7 +47,95 @@ internal sealed class MeasureBuilder
         set => _sectionLabel = value;
     }
     
-    public void AddItem(MusicItem item) => _currentItems.Add(item);
+    /// <summary>
+    /// Adds a music item and automatically completes the measure if duration is reached.
+    /// </summary>
+    public void AddItem(MusicItem item)
+    {
+        _currentItems.Add(item);
+        
+        // Track duration
+        var itemDuration = GetItemDuration(item);
+        _currentDuration += itemDuration;
+        
+        // Auto-complete measure if we've reached or exceeded time signature
+        if (_currentDuration >= _timeSignature)
+        {
+            AutoCompleteMeasure(item.SourcePosition + 1);
+        }
+    }
+    
+    private Fraction GetItemDuration(MusicItem item)
+    {
+        Fraction baseDuration = item switch
+        {
+            NoteItem note => note.Duration,
+            RestItem rest => rest.Duration,
+            ChordItem chord => chord.Duration,
+            _ => Fraction.Zero
+        };
+        
+        // Apply dots
+        int dots = item switch
+        {
+            NoteItem note => note.Dots,
+            RestItem rest => rest.Dots,
+            ChordItem chord => chord.Dots,
+            _ => 0
+        };
+        
+        var total = baseDuration;
+        var dotValue = baseDuration;
+        for (int i = 0; i < dots; i++)
+        {
+            dotValue = new Fraction(dotValue.Numerator, dotValue.Denominator * 2);
+            total += dotValue;
+        }
+        
+        // Update default duration
+        if (baseDuration != Fraction.Zero)
+            _defaultDuration = baseDuration;
+        
+        return total;
+    }
+    
+    private void AutoCompleteMeasure(int sourceEnd)
+    {
+        // Check if duration aligns with time signature
+        bool isAligned = _currentDuration == _timeSignature;
+        
+        if (_currentItems.Count > 0)
+        {
+            _measures.Add(new Measure(
+                _currentItems.ToImmutableArray(),
+                _pendingStartBarline,
+                BarlineType.Single,  // Auto-completed measures get single barline
+                _sectionLabel,
+                _measureSourceStart,
+                sourceEnd,
+                hasBreakAfter: false));
+            
+            // Record boundary
+            _boundaries.Add(new MeasureBoundary(
+                sourceEnd,
+                _currentDuration,
+                IsExplicit: false,
+                IsAligned: isAligned));
+            
+            _currentItems.Clear();
+            _sectionLabel = null;
+            _pendingStartBarline = BarlineType.None;
+            _measureSourceStart = sourceEnd;
+            
+            // Handle overflow: if we exceeded time signature, the excess carries over
+            if (_currentDuration > _timeSignature)
+            {
+                // Note: For now we don't handle splitting notes across barlines
+                // This would require more complex handling
+            }
+            _currentDuration = Fraction.Zero;
+        }
+    }
 
     public void SetBreak()
     {
@@ -47,33 +154,15 @@ internal sealed class MeasureBuilder
         }
     }
     
-    public void CompleteMeasure(BarlineType endBarline, int sourceEnd)
-    {
-        if (_currentItems.Count > 0 || _pendingStartBarline != BarlineType.None)
-        {
-            _measures.Add(new Measure(
-                _currentItems.ToImmutableArray(),
-                _pendingStartBarline,
-                endBarline,
-                _sectionLabel,
-                _measureSourceStart,
-                sourceEnd,
-                hasBreakAfter: false));
-            
-            _currentItems.Clear();
-            _sectionLabel = null;
-            _pendingStartBarline = BarlineType.None;
-            
-            _measureSourceStart = sourceEnd;
-        }
-    }
-    
+    /// <summary>
+    /// Handles an explicit barline, completing the current measure.
+    /// </summary>
     public void HandleBarline(BarlineType barType, int position)
     {
         if (barType == BarlineType.RepeatStart)
         {
             if (_currentItems.Count > 0)
-                CompleteMeasure(BarlineType.Single, position);
+                CompleteMeasureExplicit(BarlineType.Single, position);
             _pendingStartBarline = BarlineType.RepeatStart;
             _measureSourceStart = position;
         }
@@ -91,21 +180,60 @@ internal sealed class MeasureBuilder
         }
         else
         {
-            CompleteMeasure(barType, position);
+            CompleteMeasureExplicit(barType, position);
+        }
+    }
+    
+    private void CompleteMeasureExplicit(BarlineType endBarline, int sourceEnd)
+    {
+        bool isAligned = _currentDuration == _timeSignature;
+        
+        if (_currentItems.Count > 0 || _pendingStartBarline != BarlineType.None)
+        {
+            _measures.Add(new Measure(
+                _currentItems.ToImmutableArray(),
+                _pendingStartBarline,
+                endBarline,
+                _sectionLabel,
+                _measureSourceStart,
+                sourceEnd,
+                hasBreakAfter: false));
+            
+            // Record boundary with explicit flag
+            _boundaries.Add(new MeasureBoundary(
+                sourceEnd,
+                _currentDuration,
+                IsExplicit: true,
+                IsAligned: isAligned));
+            
+            _currentItems.Clear();
+            _sectionLabel = null;
+            _pendingStartBarline = BarlineType.None;
+            _measureSourceStart = sourceEnd;
+            _currentDuration = Fraction.Zero;
         }
     }
     
     public List<Measure> FinalizeMeasures()
     {
+        // Handle any remaining items as the final measure
         if (_currentItems.Count > 0)
         {
+            bool isAligned = _currentDuration == _timeSignature;
+            
             _measures.Add(new Measure(
                 _currentItems.ToImmutableArray(),
                 _pendingStartBarline,
                 BarlineType.Single,
                 _sectionLabel,
                 _measureSourceStart,
-                _measureSourceStart));
+                _measureSourceStart));  // End position same as start for incomplete
+            
+            _boundaries.Add(new MeasureBoundary(
+                _measureSourceStart,
+                _currentDuration,
+                IsExplicit: false,
+                IsAligned: isAligned));
         }
         return _measures;
     }
@@ -137,6 +265,11 @@ public sealed class MeasureCollector
     private int _timeBeatType = 4;
     private int _keySharps = 0;
     private string _clef = "treble";
+    
+    /// <summary>
+    /// Gets the time signature as a Fraction.
+    /// </summary>
+    private Fraction TimeSignatureFraction => new(_timeBeats, _timeBeatType);
     
     /// <summary>
     /// Collects a Score from a syntax tree.
@@ -266,9 +399,9 @@ public sealed class MeasureCollector
     
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
     {
-        var builder = new MeasureBuilder(voiceNode.Position);
+        var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.Position);
         
-        // Collect all music nodes, expanding variable references (same as ProcessPartBlock)
+        // Collect all music nodes, expanding variable references
         var musicNodes = new List<SyntaxNode>();
         
         foreach (var node in voiceNode.DescendantNodes())
@@ -283,7 +416,6 @@ public sealed class MeasureCollector
                     break;
                     
                 case VariableReferenceSyntax varRef:
-                    // Expand variable reference
                     ExpandVariable(varRef.Name.Text, musicNodes);
                     break;
             }
@@ -469,7 +601,7 @@ public sealed class MeasureCollector
     
     private List<Measure> CollectMeasures()
     {
-        var builder = new MeasureBuilder();
+        var builder = new MeasureBuilder(TimeSignatureFraction);
         
         void ProcessNodes(IEnumerable<SyntaxNode> nodes)
         {
@@ -599,12 +731,8 @@ public sealed class MeasureCollector
                     break;
                     
                 case VariableReferenceSyntax varRef:
-                    // Expand variable reference (handles both 'use name' and bare identifier)
                     ExpandVariable(varRef.Name.Text, musicNodes);
                     break;
-                    
-                // Note: SyntaxTokenNode with Identifier kind is NOT processed here
-                // because it's already wrapped in VariableReferenceSyntax by the parser
             }
         }
         

@@ -1,0 +1,17 @@
+// Test: No barlines - auto measure detection
+title "Auto Measure Test"
+time 4/4
+
+phrase test {
+  c4 d e f g a b c'
+}
+
+section Main {
+  melody { test }
+}
+
+structure { Main }
+
+render score "no-barline-test.svg" {
+  staff { melody }
+}
