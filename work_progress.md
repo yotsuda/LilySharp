@@ -172,18 +172,18 @@ SyntaxTree
 | SvgRenderer.cs (臨時記号) | ✅ | High | 2h | SMuFL metrics で配置 |
 | SvgRenderer.cs (付点) | ✅ | High | 1h | 線上回避（Lilypond 同様） |
 
-## Phase 2: Skyline ベース衝突回避 ⏳
+## Phase 2: Skyline ベース衝突回避 ✅
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
 | Skyline.cs (矩形版) | ✅ | High | 3h | 矩形近似 - **要改修** |
 | Skyline.cs (斜め Building) | ✅ | High | 4h | LilyPond 符号規則で実装完了 |
 | GlyphMetrics.cs | ✅ | High | 2h | SMuFL bounding box |
-| SpacingRules.cs (Skyline 生成) | 🟡 | High | 2h | 斜め対応後に再実装 |
-| SpacingRules.cs (MinDistance) | 🟡 | High | 1h | 斜め対応後に再実装 |
+| SpacingRules.cs (Skyline 生成) | ✅ | High | 2h | HorizontalSkyline に移行完了 |
+| SpacingRules.cs (MinDistance) | ✅ | High | 1h | HorizontalSkyline 対応完了 |
 | VerticalSkyline.cs | ✅ | High | 3h | 垂直方向スカイライン（page-layout-problem.cc 参照） |
 
-**注**: 現在の矩形近似 Skyline は暫定実装。Lilypond と等価にするには斜め Building 対応が必須。
+**完了**: VerticalSkyline/HorizontalSkyline 両方で斜め Building 対応済み。LilyPond 符号規則に統一。
 
 ## Phase 3: 連桁（Beaming） ⏳
 
@@ -350,3 +350,4 @@ SyntaxTree
 | 2025-12-15 | 垂直レイアウト改善。LilyPond page-layout-problem.cc 参照。動的ヘッダー高さ計算、VerticalSkyline 実装。単一/マルチスタッフ両方でスカイラインベースの垂直配置 |
 | 2025-12-15 | Phase 9: Knuth-Plass 最適行分割アルゴリズム実装。LilyPond constrained-breaking.cc 参照。動的計画法でペナルティ最小化 |
 | 2025-12-15 | Phase 2: 斜め Building 実装。LilyPond skyline.cc 符号規則 (UP=-1, DOWN=+1) に統一 |
+| 2025-12-15 | Phase 2: HorizontalSkyline 実装。SpacingRules.cs を斜め対応 Skyline に移行 |
