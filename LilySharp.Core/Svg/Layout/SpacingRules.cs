@@ -13,35 +13,35 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 public static class SpacingRules
 {
-    /// <summary>Base width for a quarter note in pixels.</summary>
-    public const double QuarterNoteWidth = 36;
+    /// <summary>Base width for a quarter note in staff spaces.</summary>
+    public const double QuarterNoteWidth = 3.6;
     
-    /// <summary>Minimum width for any note in pixels.</summary>
-    public const double MinNoteWidth = 20;
+    /// <summary>Minimum width for any note in staff spaces.</summary>
+    public const double MinNoteWidth = 2.0;
     
-    /// <summary>Width added for each accidental.</summary>
-    public const double AccidentalWidth = 12;
+    /// <summary>Width added for each accidental in staff spaces.</summary>
+    public const double AccidentalWidth = 1.2;
     
-    /// <summary>Width added for each dot.</summary>
-    public const double DotWidth = 6;
+    /// <summary>Width added for each dot in staff spaces.</summary>
+    public const double DotWidth = 0.6;
     
-    /// <summary>Width of a single barline.</summary>
-    public const double BarlineWidth = 8;
+    /// <summary>Width of a single barline in staff spaces.</summary>
+    public const double BarlineWidth = 0.8;
     
-    /// <summary>Width of a repeat barline.</summary>
-    public const double RepeatBarlineWidth = 16;
+    /// <summary>Width of a repeat barline in staff spaces.</summary>
+    public const double RepeatBarlineWidth = 1.6;
     
-    /// <summary>Width of a double or final barline.</summary>
-    public const double DoubleBarlineWidth = 12;
+    /// <summary>Width of a double or final barline in staff spaces.</summary>
+    public const double DoubleBarlineWidth = 1.2;
     
-    /// <summary>Width of clef.</summary>
-    public const double ClefWidth = 30;
+    /// <summary>Width of clef in staff spaces.</summary>
+    public const double ClefWidth = 3.0;
     
-    /// <summary>Width per accidental in key signature.</summary>
-    public const double KeySignatureAccidentalWidth = 10;
+    /// <summary>Width per accidental in key signature in staff spaces.</summary>
+    public const double KeySignatureAccidentalWidth = 1.0;
     
-    /// <summary>Width of time signature.</summary>
-    public const double TimeSignatureWidth = 25;
+    /// <summary>Width of time signature in staff spaces.</summary>
+    public const double TimeSignatureWidth = 2.5;
     
     /// <summary>
     /// Calculates width based on duration using Lilypond's spacing algorithm.
@@ -164,14 +164,14 @@ public static class SpacingRules
     // ========================================
     // Uses SMuFL metrics from GlyphMetrics for accurate spacing
     
-    /// <summary>Minimum gap between items in pixels.</summary>
-    public static double MinItemGap => GlyphMetrics.ToPixels(GlyphMetrics.MinItemGap);
+    /// <summary>Minimum gap between items in staff spaces.</summary>
+    public static double MinItemGap => GlyphMetrics.MinItemGap;
     
-    /// <summary>Padding between barline and first/last item in pixels.</summary>
-    public static double BarlinePadding => GlyphMetrics.ToPixels(GlyphMetrics.BarlinePadding);
+    /// <summary>Padding between barline and first/last item in staff spaces.</summary>
+    public static double BarlinePadding => GlyphMetrics.BarlinePadding;
     
-    /// <summary>Gap between accidental and notehead in pixels.</summary>
-    public static double AccidentalNoteGap => GlyphMetrics.ToPixels(GlyphMetrics.AccidentalNoteGap);
+    /// <summary>Gap between accidental and notehead in staff spaces.</summary>
+    public static double AccidentalNoteGap => GlyphMetrics.AccidentalNoteGap;
     
     /// <summary>
     /// Calculates the left extent of an item from its reference point (notehead center).
@@ -188,7 +188,7 @@ public static class SpacingRules
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
         
         // Base extent: from center to left edge of notehead
-        double extent = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+        double extent = noteheadBBox.CenterX;
         
         // For rests, use a simplified calculation
         if (item is RestItem)
@@ -207,7 +207,7 @@ public static class SpacingRules
         if (accidental != null)
         {
             var accBBox = GlyphMetrics.GetAccidentalBBox(accidental);
-            extent += GlyphMetrics.ToPixels(accBBox.Width) + AccidentalNoteGap;
+            extent += accBBox.Width + AccidentalNoteGap;
         }
         
         return extent;
@@ -228,7 +228,7 @@ public static class SpacingRules
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
         
         // Base extent: from center to right edge of notehead
-        double extent = GlyphMetrics.ToPixels(noteheadBBox.Width - noteheadBBox.CenterX);
+        double extent = noteheadBBox.Width - noteheadBBox.CenterX;
         
         // Add dot width
         int dots = GetDots(item);
@@ -236,7 +236,7 @@ public static class SpacingRules
         {
             var dotBBox = GlyphMetrics.AugmentationDot;
             // Each dot plus a small gap
-            extent += dots * GlyphMetrics.ToPixels(dotBBox.Width + EngravingDefaults.DotGap);
+            extent += dots * dotBBox.Width + EngravingDefaults.DotGap;
         }
         
         return extent;
@@ -262,7 +262,7 @@ public static class SpacingRules
     public static Spring CreateSpring(MusicItem? prevItem, MusicItem? nextItem, Fraction prevDuration)
     {
         // LILYPOND-REF: lily/spacing-basic.cc:109 note_spacing() - increment
-        double defaultMin = EngravingDefaults.SpacingIncrement * GlyphMetrics.SpaceHeight;
+        double defaultMin = EngravingDefaults.SpacingIncrement;
         
         // Skyline-based collision distance (rod)
         double skylineDistance = CalculateSkylineDistance(prevItem, nextItem, staffY: 0);
@@ -275,7 +275,7 @@ public static class SpacingRules
         
         // LILYPOND-REF: lily/spacing-basic.cc:115 note_spacing() - inverse_stretch
         // This controls how much the spring can stretch
-        double inverseStretchStrength = Math.Max(0.1 * GlyphMetrics.SpaceHeight, idealDistance - minDistance);
+        double inverseStretchStrength = Math.Max(0.1, idealDistance - minDistance);
         
         return new Spring(idealDistance, minDistance, inverseStretchStrength);
     }
@@ -296,7 +296,7 @@ public static class SpacingRules
         double durationValue = duration.ToDouble();
         
         if (durationValue <= 0)
-            return EngravingDefaults.SpacingIncrement * GlyphMetrics.SpaceHeight;
+            return EngravingDefaults.SpacingIncrement;
         
         // Ratio of this duration to base shortest (typically 1/8)
         double ratio = durationValue / EngravingDefaults.BaseShortestDuration;
@@ -314,8 +314,8 @@ public static class SpacingRules
             spaceFactor = EngravingDefaults.ShortestDurationSpace + Math.Log2(ratio);
         }
         
-        // Convert to pixels: spaceFactor * increment * staff_space
-        return spaceFactor * EngravingDefaults.SpacingIncrement * GlyphMetrics.SpaceHeight;
+        // Result in staff spaces: spaceFactor * increment
+        return spaceFactor * EngravingDefaults.SpacingIncrement;
     }
     
     /// <summary>
@@ -366,9 +366,9 @@ public static class SpacingRules
         
         int noteValue = GetNoteValue(item);
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
-        double noteheadCenterX = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+        double noteheadCenterX = noteheadBBox.CenterX;
         double noteheadLeftX = referenceX - noteheadCenterX;
-        double noteheadWidth = GlyphMetrics.ToPixels(noteheadBBox.Width);
+        double noteheadWidth = noteheadBBox.Width;
         
         // Get note Y position
         double noteY = item switch
@@ -378,8 +378,8 @@ public static class SpacingRules
         };
         
         // Add notehead box
-        double noteheadYBottom = noteY - GlyphMetrics.ToPixels(noteheadBBox.Top);
-        double noteheadYTop = noteY - GlyphMetrics.ToPixels(noteheadBBox.Bottom);
+        double noteheadYBottom = noteY - noteheadBBox.Top;
+        double noteheadYTop = noteY - noteheadBBox.Bottom;
         boxes.Add((noteheadYBottom, noteheadYTop, noteheadLeftX, noteheadLeftX + noteheadWidth));
         
         // Add flag if present (8th notes and shorter with stems)
@@ -394,24 +394,24 @@ public static class SpacingRules
                 
                 // Flag position (attached at stem)
                 double stemX = note2.StemUp 
-                    ? noteheadLeftX + GlyphMetrics.ToPixels(GlyphMetrics.StemUpSE.X)
-                    : noteheadLeftX + GlyphMetrics.ToPixels(GlyphMetrics.StemDownNW.X);
+                    ? noteheadLeftX + GlyphMetrics.StemUpSE.X
+                    : noteheadLeftX + GlyphMetrics.StemDownNW.X;
                 
                 double flagYBottom, flagYTop;
                 if (note2.StemUp)
                 {
                     // Flag extends downward from stem end
                     flagYBottom = stemEndY;
-                    flagYTop = stemEndY - GlyphMetrics.ToPixels(flagBBox.Bottom - flagBBox.Top);
+                    flagYTop = stemEndY - flagBBox.Bottom - flagBBox.Top;
                 }
                 else
                 {
                     // Flag extends upward from stem end  
                     flagYTop = stemEndY;
-                    flagYBottom = stemEndY + GlyphMetrics.ToPixels(flagBBox.Top - flagBBox.Bottom);
+                    flagYBottom = stemEndY + flagBBox.Top - flagBBox.Bottom;
                 }
                 
-                double flagWidth = GlyphMetrics.ToPixels(flagBBox.Width);
+                double flagWidth = flagBBox.Width;
                 boxes.Add((Math.Min(flagYBottom, flagYTop), Math.Max(flagYBottom, flagYTop), 
                            stemX, stemX + flagWidth));
             }
@@ -422,8 +422,8 @@ public static class SpacingRules
         if (dots > 0)
         {
             var dotBBox = GlyphMetrics.AugmentationDot;
-            double dotWidth = GlyphMetrics.ToPixels(dotBBox.Width);
-            double dotGap = GlyphMetrics.ToPixels(EngravingDefaults.DotGap);
+            double dotWidth = dotBBox.Width;
+            double dotGap = EngravingDefaults.DotGap;
             
             // Dots must avoid staff lines - if note is on a line, shift dot up
             int staffPosition = item switch
@@ -437,7 +437,7 @@ public static class SpacingRules
             {
                 double dotX = noteheadLeftX + noteheadWidth + dotGap + d * (dotWidth + dotGap);
                 double dotYCenter = noteY + dotYOffset;
-                double dotRadius = GlyphMetrics.ToPixels(dotBBox.Height / 2);
+                double dotRadius = dotBBox.Height / 2;
                 boxes.Add((dotYCenter - dotRadius, dotYCenter + dotRadius, dotX, dotX + dotWidth));
             }
         }
@@ -455,9 +455,9 @@ public static class SpacingRules
         
         int noteValue = GetNoteValue(item);
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
-        double noteheadCenterX = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+        double noteheadCenterX = noteheadBBox.CenterX;
         double noteheadLeftX = referenceX - noteheadCenterX;
-        double noteheadWidth = GlyphMetrics.ToPixels(noteheadBBox.Width);
+        double noteheadWidth = noteheadBBox.Width;
         
         // Get note Y position
         double noteY = item switch
@@ -467,8 +467,8 @@ public static class SpacingRules
         };
         
         // Add notehead box
-        double noteheadYBottom = noteY - GlyphMetrics.ToPixels(noteheadBBox.Top);
-        double noteheadYTop = noteY - GlyphMetrics.ToPixels(noteheadBBox.Bottom);
+        double noteheadYBottom = noteY - noteheadBBox.Top;
+        double noteheadYTop = noteY - noteheadBBox.Bottom;
         boxes.Add((noteheadYBottom, noteheadYTop, noteheadLeftX, noteheadLeftX + noteheadWidth));
         
         // Add accidental if present (to the left of notehead)
@@ -482,12 +482,12 @@ public static class SpacingRules
         if (accidental != null)
         {
             var accBBox = GlyphMetrics.GetAccidentalBBox(accidental);
-            double accWidth = GlyphMetrics.ToPixels(accBBox.Width);
-            double accNoteGap = GlyphMetrics.ToPixels(GlyphMetrics.AccidentalNoteGap);
+            double accWidth = accBBox.Width;
+            double accNoteGap = GlyphMetrics.AccidentalNoteGap;
             double accX = noteheadLeftX - accWidth - accNoteGap;
             
-            double accYBottom = noteY - GlyphMetrics.ToPixels(accBBox.Top);
-            double accYTop = noteY - GlyphMetrics.ToPixels(accBBox.Bottom);
+            double accYBottom = noteY - accBBox.Top;
+            double accYTop = noteY - accBBox.Bottom;
             boxes.Add((accYBottom, accYTop, accX, accX + accWidth));
         }
         
@@ -528,15 +528,15 @@ public static class SpacingRules
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
         
         // Right extent from center = width - centerX
-        double extent = GlyphMetrics.ToPixels(noteheadBBox.Width - noteheadBBox.CenterX);
+        double extent = noteheadBBox.Width - noteheadBBox.CenterX;
         
         // Add dots if present
         int dots = GetDots(item);
         if (dots > 0)
         {
             var dotBBox = GlyphMetrics.AugmentationDot;
-            double dotWidth = GlyphMetrics.ToPixels(dotBBox.Width);
-            double dotGap = GlyphMetrics.ToPixels(EngravingDefaults.DotGap);
+            double dotWidth = dotBBox.Width;
+            double dotGap = EngravingDefaults.DotGap;
             extent += dotGap + dots * dotWidth + (dots - 1) * dotGap;
         }
         

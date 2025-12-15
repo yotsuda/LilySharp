@@ -26,8 +26,7 @@ public class SlurTests
             startX: 50.0,
             startY: 100.0,
             endX: 200.0,
-            endY: 75.0,
-            staffSpaceSize: 10.0);
+            endY: 75.0);
         
         // Assert
         Assert.NotNull(layout);
@@ -51,8 +50,7 @@ public class SlurTests
             startX: 50.0,
             startY: 80.0,
             endX: 150.0,
-            endY: 90.0,
-            staffSpaceSize: 10.0);
+            endY: 90.0);
         
         // Assert
         double midY = (layout.StartY + layout.EndY) / 2;

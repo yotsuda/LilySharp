@@ -26,8 +26,7 @@ public class TieTests
             startX: 50.0,
             startY: 100.0,
             endX: 150.0,
-            endY: 100.0,
-            staffSpaceSize: 10.0);
+            endY: 100.0);
         
         // Assert
         Assert.NotNull(layout);
@@ -52,8 +51,7 @@ public class TieTests
             startX: 50.0,
             startY: 100.0,
             endX: 150.0,
-            endY: 100.0,
-            staffSpaceSize: 10.0);
+            endY: 100.0);
         
         // Assert
         Assert.True(layout.Control1.Y > layout.StartY, "Control point should be below for curve down");

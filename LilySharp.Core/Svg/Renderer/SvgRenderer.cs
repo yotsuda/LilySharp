@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 
@@ -27,6 +27,12 @@ public sealed class SvgRenderer
     private static double StemDownAttachX => EngravingDefaults.StemDownAttachX * SpaceHeight;
     private static double StemDownAttachY => EngravingDefaults.StemDownAttachY * SpaceHeight;
     private static double StemHeight => EngravingRules.StandardStemLength * SpaceHeight;
+    
+    /// <summary>
+    /// Converts staff spaces to pixels for SVG output.
+    /// Layout coordinates are in staff spaces; SVG needs pixels.
+    /// </summary>
+    private static double Px(double staffSpaces) => staffSpaces * SpaceHeight;
     
     private readonly StringBuilder _svg = new();
     private readonly LayoutOptions _layoutOptions;
@@ -116,7 +122,7 @@ public sealed class SvgRenderer
                 _beamedStemUp[member.Item] = group.StemUp;
             }
         }
-        WriteHeader(layout.Width, layout.Height);
+        WriteHeader(Px(layout.Width), Px(layout.Height));
         
         // Draw header (title/composer)
         if (score.Title != null || score.Composer != null)
@@ -157,7 +163,7 @@ public sealed class SvgRenderer
         _beamedStemEndYs.Clear();
         _beamedStemUp.Clear();
         
-        WriteHeader(layout.Width, layout.Height);
+        WriteHeader(Px(layout.Width), Px(layout.Height));
         
         // Draw header (title/composer)
         if (score.Title != null || score.Composer != null)
@@ -1247,3 +1253,5 @@ public sealed class SvgRenderer
         _svg.AppendLine($"  <path d=\"{fullPath}\" fill=\"black\"/>");
     }
 }
+
+

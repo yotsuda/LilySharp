@@ -201,8 +201,8 @@ public sealed class LayoutEngine
     {
         double height = 0;
         double staffHeight = _options.StaffHeight;
-        double grandStaffSpacing = _options.StaffSpaceSize * _options.GrandStaffSpacingMultiplier; // Space between grand staff staves
-        double staffGroupSpacing = _options.StaffSpaceSize * _options.StaffGroupSpacingMultiplier; // Space between different staff groups
+        double grandStaffSpacing = _options.GrandStaffSpacing; // Space between grand staff staves
+        double staffGroupSpacing = _options.StaffGroupSpacing; // Space between different staff groups
 
         for (int i = 0; i < score.StaffGroups.Length; i++)
         {
@@ -236,8 +236,8 @@ public sealed class LayoutEngine
         var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
         double currentY = 0;
         double staffHeight = _options.StaffHeight;
-        double grandStaffSpacing = _options.StaffSpaceSize * _options.GrandStaffSpacingMultiplier;
-        double staffGroupSpacing = _options.StaffSpaceSize * _options.StaffGroupSpacingMultiplier;
+        double grandStaffSpacing = _options.GrandStaffSpacing;
+        double staffGroupSpacing = _options.StaffGroupSpacing;
         int globalStaffIndex = 0;
 
         foreach (var group in score.StaffGroups)
@@ -284,7 +284,7 @@ public sealed class LayoutEngine
         }
 
         double totalHeight = currentY + staffHeight - y;
-        double braceX = _options.MarginLeft - _options.StaffSpaceSize * 2;
+        double braceX = _options.MarginLeft - 2;  // 2 staff spaces left of margin
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -368,7 +368,7 @@ public sealed class LayoutEngine
             return ImmutableDictionary<VoiceItemKey, double>.Empty;
 
         // Calculate notehead width for offset calculation
-        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth * _options.StaffSpaceSize;
+        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;  // Already in staff spaces
 
         var builder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
 
@@ -444,7 +444,6 @@ public sealed class LayoutEngine
             var beamLayout = _beamEngraver.CalculateBeamLayout(
                 group,
                 itemXPositions,
-                _options.StaffSpaceSize,
                 collisions);
 
             beamLayouts.Add(beamLayout);
@@ -922,7 +921,7 @@ public sealed class LayoutEngine
 
             // Calculate Y position (staff middle + staff position offset)
             double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
-            double y = staffMiddleY - tie.StaffPosition * _options.SpaceHeight / 2;
+            double y = staffMiddleY - tie.StaffPosition / 2;  // staff position → staff spaces
 
             // Calculate tie layout
             var tieLayout = _tieEngraver.CalculateTieLayout(
@@ -930,8 +929,7 @@ public sealed class LayoutEngine
                 startX,
                 y,
                 endX,
-                y,
-                _options.StaffSpaceSize);
+                y);
 
             tieLayouts.Add(tieLayout);
         }
@@ -985,8 +983,8 @@ public sealed class LayoutEngine
 
             // Calculate Y positions (staff middle + staff position offset)
             double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
-            double startY = staffMiddleY - slur.StartStaffPosition * _options.SpaceHeight / 2;
-            double endY = staffMiddleY - slur.EndStaffPosition * _options.SpaceHeight / 2;
+            double startY = staffMiddleY - slur.StartStaffPosition / 2;  // staff position → staff spaces
+            double endY = staffMiddleY - slur.EndStaffPosition / 2;
 
             // Calculate slur layout
             var slurLayout = _slurEngraver.CalculateSlurLayout(
@@ -994,8 +992,7 @@ public sealed class LayoutEngine
                 startX,
                 startY,
                 endX,
-                endY,
-                _options.StaffSpaceSize);
+                endY);
 
             slurLayouts.Add(slurLayout);
         }
@@ -1256,3 +1253,4 @@ public sealed class LayoutEngine
         return height;
     }
 }
+

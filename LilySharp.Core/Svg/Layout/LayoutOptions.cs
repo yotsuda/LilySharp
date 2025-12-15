@@ -2,59 +2,77 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Options for score layout.
+/// All dimensions are in staff spaces unless otherwise noted.
 /// </summary>
+/// <remarks>
+/// Staff space is the distance between two adjacent staff lines.
+/// This is the standard unit in LilyPond and music engraving.
+/// Pixel conversion happens only at render time using SpaceHeight.
+/// </remarks>
 public sealed record LayoutOptions
 {
-    /// <summary>Page width in pixels.</summary>
-    public double PageWidth { get; init; } = 800;
+    // === Output Scale ===
     
-    /// <summary>Left margin in pixels.</summary>
-    public double MarginLeft { get; init; } = 20;
-    
-    /// <summary>Right margin in pixels.</summary>
-    public double MarginRight { get; init; } = 20;
-    
-    /// <summary>Top margin in pixels.</summary>
-    public double MarginTop { get; init; } = 50;
-    
-    /// <summary>Staff height (distance from top to bottom line) in pixels.</summary>
-    public double StaffHeight { get; init; } = 40;
-    
-    /// <summary>Space between staff lines in pixels (staff space size).</summary>
+    /// <summary>
+    /// Pixels per staff space for SVG output.
+    /// This is the only pixel-related setting; all others are in staff spaces.
+    /// </summary>
     public double SpaceHeight { get; init; } = 10;
     
-    /// <summary>Staff space size - alias for SpaceHeight for clarity.</summary>
+    /// <summary>Alias for SpaceHeight (pixels per staff space). For backward compatibility.</summary>
     public double StaffSpaceSize => SpaceHeight;
     
-    /// <summary>Vertical spacing between systems in pixels.</summary>
-    public double SystemSpacing { get; init; } = 80;
+    // === Page Dimensions (in staff spaces) ===
+    
+    /// <summary>Page width in staff spaces.</summary>
+    public double PageWidth { get; init; } = 80;
+    
+    /// <summary>Left margin in staff spaces.</summary>
+    public double MarginLeft { get; init; } = 2;
+    
+    /// <summary>Right margin in staff spaces.</summary>
+    public double MarginRight { get; init; } = 2;
+    
+    /// <summary>Top margin in staff spaces.</summary>
+    public double MarginTop { get; init; } = 5;
+    
+    // === Staff Dimensions (in staff spaces) ===
+    
+    /// <summary>
+    /// Staff height in staff spaces (always 4 for standard 5-line staff).
+    /// </summary>
+    public double StaffHeight { get; init; } = 4;
+    
+    /// <summary>Vertical spacing between systems in staff spaces.</summary>
+    public double SystemSpacing { get; init; } = 8;
     
     /// <summary>
     /// LILYPOND-REF: lily/page-layout-problem.cc:477-478
     /// Padding between header (title) bottom and first system's topmost element.
-    /// Equivalent to LilyPond's top-system-spacing.padding.
     /// </summary>
-    public double TopSystemPadding { get; init; } = 10;
+    public double TopSystemPadding { get; init; } = 1;
     
-    /// <summary>Spacing multiplier between staves in a grand staff.</summary>
-    public double GrandStaffSpacingMultiplier { get; init; } = 3;
+    /// <summary>Spacing between staves in a grand staff (in staff spaces).</summary>
+    public double GrandStaffSpacing { get; init; } = 3;
     
-    /// <summary>Spacing multiplier between staff groups.</summary>
-    public double StaffGroupSpacingMultiplier { get; init; } = 5;
+    /// <summary>Spacing between staff groups (in staff spaces).</summary>
+    public double StaffGroupSpacing { get; init; } = 5;
     
-    /// <summary>Horizontal padding for collision detection, in pixels.</summary>
-    public double CollisionXPadding { get; init; } = 20;
+    // === Spacing Parameters (in staff spaces) ===
     
-    /// <summary>Maximum stretch per measure during justification, in pixels.</summary>
-    public double MaxStretchPerMeasure { get; init; } = 50;
+    /// <summary>Horizontal padding for collision detection in staff spaces.</summary>
+    public double CollisionXPadding { get; init; } = 2;
     
+    /// <summary>Maximum stretch per measure during justification in staff spaces.</summary>
+    public double MaxStretchPerMeasure { get; init; } = 5;
+    
+    // === Layout Algorithm Options ===
     
     /// <summary>
     /// If true, lines are not justified (stretched to fill width).
     /// Measures are placed at their ideal width, left-aligned.
     /// </summary>
     public bool RaggedRight { get; init; } = false;
-
 
     /// <summary>
     /// If true, uses Knuth-Plass optimal line breaking algorithm.
@@ -69,9 +87,21 @@ public sealed record LayoutOptions
     /// </summary>
     public double LineBreakingTolerance { get; init; } = 1.1;
 
-    /// <summary>Available width for music content.</summary>
+    // === Computed Properties ===
+    
+    /// <summary>Available width for music content in staff spaces.</summary>
     public double ContentWidth => PageWidth - MarginLeft - MarginRight;
+    
+    // === Pixel Conversion Helpers ===
+    // These are convenience methods for the renderer layer only.
+    
+    /// <summary>Converts staff spaces to pixels using this layout's SpaceHeight.</summary>
+    public double ToPixels(double staffSpaces) => staffSpaces * SpaceHeight;
+    
+    /// <summary>Converts staff positions to pixels using this layout's SpaceHeight.</summary>
+    public double PositionsToPixels(double staffPositions) => staffPositions * SpaceHeight / 2;
     
     /// <summary>Default options for standard layout.</summary>
     public static LayoutOptions Default { get; } = new();
 }
+

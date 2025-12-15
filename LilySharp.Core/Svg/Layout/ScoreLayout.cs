@@ -5,30 +5,33 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Layout information for a single music item within a measure.
+/// All coordinates are in staff spaces.
 /// </summary>
 public readonly record struct ItemLayout(
     int ItemIndex,
-    double X,       // X offset from measure start
-    double Width    // Allocated width (may include stretch)
+    double X,       // X offset from measure start (staff spaces)
+    double Width    // Allocated width (staff spaces)
 );
 
 /// <summary>
 /// Layout information for a single measure.
+/// All coordinates are in staff spaces.
 /// </summary>
 public sealed record MeasureLayout(
     int MeasureIndex,
-    double X,                              // X position of measure start
-    double Width,                          // Total measure width (including barlines)
+    double X,                              // X position of measure start (staff spaces)
+    double Width,                          // Total measure width (staff spaces)
     ImmutableArray<ItemLayout> Items       // Layout of items within the measure
 );
 
 /// <summary>
 /// Layout information for a single system (staff line).
+/// All coordinates are in staff spaces.
 /// </summary>
 public sealed record SystemLayout(
     int SystemIndex,
-    double Y,                              // Y position of system top (relative to page)
-    double PrefixWidth,                    // Width of clef + key + time
+    double Y,                              // Y position of system top (staff spaces from page top)
+    double PrefixWidth,                    // Width of clef + key + time (staff spaces)
     ImmutableArray<MeasureLayout> Measures, // Measures in this system
     ImmutableArray<StaffGroupLayout> StaffGroups = default  // Staff groups (optional, for multi-staff)
 )
@@ -40,18 +43,19 @@ public sealed record SystemLayout(
     public bool HasGrandStaff => !StaffGroups.IsDefaultOrEmpty && 
         StaffGroups.Any(g => g.Type == StaffGroupType.GrandStaff);
     
-    /// <summary>Total height of all staff groups.</summary>
+    /// <summary>Total height of all staff groups (staff spaces).</summary>
     public double TotalStaffHeight => StaffGroups.IsDefaultOrEmpty ? 0 : StaffGroups.Sum(g => g.Height);
 }
 
 /// <summary>
 /// Layout information for a single page.
+/// All coordinates are in staff spaces.
 /// </summary>
 public sealed record PageLayout(
     int PageIndex,
-    double Width,
-    double Height,
-    double HeaderHeight,                   // Space for title/composer (first page only)
+    double Width,                          // Page width (staff spaces)
+    double Height,                         // Page height (staff spaces)
+    double HeaderHeight,                   // Space for title/composer (staff spaces)
     ImmutableArray<SystemLayout> Systems   // Systems on this page
 );
 
@@ -67,6 +71,7 @@ public readonly record struct RestShiftKey(int MeasureIndex, int ItemIndex);
 
 /// <summary>
 /// Complete layout information for a score.
+/// All coordinates are in staff spaces unless otherwise noted.
 /// </summary>
 public sealed record ScoreLayout(
     ImmutableArray<PageLayout> Pages,
@@ -84,13 +89,13 @@ public sealed record ScoreLayout(
     /// <summary>Total number of systems across all pages.</summary>
     public int SystemCount => AllSystems.Length;
     
-    /// <summary>Width of the first page (for compatibility).</summary>
+    /// <summary>Width of the first page (staff spaces).</summary>
     public double Width => Pages.Length > 0 ? Pages[0].Width : 0;
     
-    /// <summary>Height of the first page (for compatibility).</summary>
+    /// <summary>Height of the first page (staff spaces).</summary>
     public double Height => Pages.Length > 0 ? Pages[0].Height : 0;
     
-    /// <summary>Header height of the first page (for compatibility).</summary>
+    /// <summary>Header height of the first page (staff spaces).</summary>
     public double HeaderHeight => Pages.Length > 0 ? Pages[0].HeaderHeight : 0;
     
     /// <summary>All systems from all pages (pre-computed for performance).</summary>
@@ -98,7 +103,7 @@ public sealed record ScoreLayout(
     
     /// <summary>
     /// Gets the X offset for a specific voice item due to collision handling.
-    /// Returns 0 if no offset is needed.
+    /// Returns 0 if no offset is needed. Value is in staff spaces.
     /// </summary>
     public double GetVoiceOffset(int measureIndex, int voiceId, int itemIndex)
     {

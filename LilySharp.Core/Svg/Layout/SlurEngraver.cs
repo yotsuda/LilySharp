@@ -5,6 +5,7 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Calculates slur layout including Bezier control points.
+/// All calculations are in staff spaces.
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/slur-scoring.cc:1-906 Slur_scoring class
@@ -21,45 +22,42 @@ public sealed class SlurEngraver
     
     /// <summary>
     /// Calculates the layout for a slur.
+    /// All coordinates are in staff spaces.
     /// </summary>
     public SlurLayout CalculateSlurLayout(
         SlurItem slur,
         double startX,
         double startY,
         double endX,
-        double endY,
-        double staffSpaceSize)
+        double endY)
     {
-        // Calculate slur dimensions
+        // Calculate slur dimensions (all in staff spaces)
         double width = endX - startX;
         double heightDiff = endY - startY;
         
         // Calculate arc height based on width (Lilypond's slur_height algorithm)
-        double heightLimit = _parameters.HeightLimit * staffSpaceSize;
-        double ratio = _parameters.Ratio;
-        double arcHeight = CalculateSlurHeight(width, heightLimit, ratio);
+        double arcHeight = CalculateSlurHeight(width, _parameters.HeightLimit, _parameters.Ratio);
         
         // Calculate indent for control points
-        double indent = CalculateIndent(width, heightLimit, ratio);
+        double indent = CalculateIndent(width, _parameters.HeightLimit, _parameters.Ratio);
         
         // Apply gap from noteheads
-        double xGap = _parameters.FreeHeadDistance * staffSpaceSize;
-        double adjustedStartX = startX + xGap;
-        double adjustedEndX = endX - xGap;
+        double adjustedStartX = startX + _parameters.FreeHeadDistance;
+        double adjustedEndX = endX - _parameters.FreeHeadDistance;
         double adjustedWidth = adjustedEndX - adjustedStartX;
         
         // Recalculate for adjusted width
         if (adjustedWidth > 0)
         {
-            arcHeight = CalculateSlurHeight(adjustedWidth, heightLimit, ratio);
-            indent = CalculateIndent(adjustedWidth, heightLimit, ratio);
+            arcHeight = CalculateSlurHeight(adjustedWidth, _parameters.HeightLimit, _parameters.Ratio);
+            indent = CalculateIndent(adjustedWidth, _parameters.HeightLimit, _parameters.Ratio);
         }
         
         // Direction: negative height for curve down
         double directedHeight = slur.CurveUp ? -arcHeight : arcHeight;
         
         // Calculate base Y positions with offset from noteheads
-        double offset = staffSpaceSize * 0.4;
+        double offset = 0.4;  // staff spaces
         double baseStartY = slur.CurveUp ? startY - offset : startY + offset;
         double baseEndY = slur.CurveUp ? endY - offset : endY + offset;
         
@@ -111,8 +109,7 @@ public sealed class SlurEngraver
         IReadOnlyList<double> startXPositions,
         IReadOnlyList<double> startYPositions,
         IReadOnlyList<double> endXPositions,
-        IReadOnlyList<double> endYPositions,
-        double staffSpaceSize)
+        IReadOnlyList<double> endYPositions)
     {
         var layouts = new List<SlurLayout>();
         
@@ -123,8 +120,7 @@ public sealed class SlurEngraver
                 startXPositions[i],
                 startYPositions[i],
                 endXPositions[i],
-                endYPositions[i],
-                staffSpaceSize);
+                endYPositions[i]);
             layouts.Add(layout);
         }
         
