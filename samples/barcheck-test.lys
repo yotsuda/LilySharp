@@ -1,0 +1,8 @@
+// Test bar check warning
+time 4/4
+
+phrase test {
+  c4 d e |  // Warning: 3拍しかない
+  c4 d e f g |  // Warning: 5拍ある
+  c4 d e f |  // OK: 4拍
+}
