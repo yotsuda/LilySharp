@@ -5,6 +5,7 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Calculates tie layout including Bezier control points.
+/// All calculations are in staff spaces.
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/tie-formatting-problem.cc:1-1286 Tie_formatting_problem class
@@ -21,42 +22,38 @@ public sealed class TieEngraver
     
     /// <summary>
     /// Calculates the layout for a tie.
+    /// All coordinates are in staff spaces.
     /// </summary>
     public TieLayout CalculateTieLayout(
         TieItem tie,
         double startX,
         double startY,
         double endX,
-        double endY,
-        double staffSpaceSize)
+        double endY)
     {
-        // Calculate tie dimensions
+        // Calculate tie dimensions (all in staff spaces)
         double width = endX - startX;
         
         // Ensure minimum length
-        double minLengthPx = _details.MinLength * staffSpaceSize;
-        if (width < minLengthPx)
-            width = minLengthPx;
+        if (width < _details.MinLength)
+            width = _details.MinLength;
         
         // Calculate height based on width (Lilypond's slur_height algorithm)
-        double heightLimit = _details.HeightLimit * staffSpaceSize;
-        double ratio = _details.Ratio;
-        double height = CalculateTieHeight(width, heightLimit, ratio);
+        double height = CalculateTieHeight(width, _details.HeightLimit, _details.Ratio);
         
         // Calculate indent for control points
-        double indent = CalculateIndent(width, heightLimit, ratio);
+        double indent = CalculateIndent(width, _details.HeightLimit, _details.Ratio);
         
         // Apply gap from noteheads
-        double xGap = _details.XGap * staffSpaceSize;
-        double adjustedStartX = startX + xGap;
-        double adjustedEndX = endX - xGap;
+        double adjustedStartX = startX + _details.XGap;
+        double adjustedEndX = endX - _details.XGap;
         double adjustedWidth = adjustedEndX - adjustedStartX;
         
         // Recalculate for adjusted width
         if (adjustedWidth > 0)
         {
-            height = CalculateTieHeight(adjustedWidth, heightLimit, ratio);
-            indent = CalculateIndent(adjustedWidth, heightLimit, ratio);
+            height = CalculateTieHeight(adjustedWidth, _details.HeightLimit, _details.Ratio);
+            indent = CalculateIndent(adjustedWidth, _details.HeightLimit, _details.Ratio);
         }
         
         // Direction: negative height for curve down
@@ -64,7 +61,8 @@ public sealed class TieEngraver
         
         // Calculate control points
         // The tie sits at the staff position, slightly offset
-        double baseY = tie.CurveUp ? startY - staffSpaceSize * 0.3 : startY + staffSpaceSize * 0.3;
+        double yOffset = 0.3;  // staff spaces
+        double baseY = tie.CurveUp ? startY - yOffset : startY + yOffset;
         
         var control1 = (X: adjustedStartX + indent, Y: baseY + directedHeight);
         var control2 = (X: adjustedEndX - indent, Y: baseY + directedHeight);
@@ -115,8 +113,7 @@ public sealed class TieEngraver
         IReadOnlyList<double> startXPositions,
         IReadOnlyList<double> startYPositions,
         IReadOnlyList<double> endXPositions,
-        IReadOnlyList<double> endYPositions,
-        double staffSpaceSize)
+        IReadOnlyList<double> endYPositions)
     {
         var layouts = new List<TieLayout>();
         
@@ -127,8 +124,7 @@ public sealed class TieEngraver
                 startXPositions[i],
                 startYPositions[i],
                 endXPositions[i],
-                endYPositions[i],
-                staffSpaceSize);
+                endYPositions[i]);
             layouts.Add(layout);
         }
         

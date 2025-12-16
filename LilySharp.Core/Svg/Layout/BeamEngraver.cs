@@ -5,6 +5,7 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Calculates beam positions and slopes.
+/// All calculations are in staff spaces/positions.
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/beam.cc:1-1554 Beam class
@@ -21,11 +22,11 @@ public sealed class BeamEngraver
     
     /// <summary>
     /// Calculates the layout for a beam group.
+    /// X positions are in staff spaces, Y positions are in staff positions.
     /// </summary>
     public BeamLayout CalculateBeamLayout(
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
-        double staffSpaceSize,
         IReadOnlyList<BeamCollision>? collisions = null)
     {
         if (group.Members.Length < 2)
@@ -41,7 +42,7 @@ public sealed class BeamEngraver
         
         // Use BeamScoringProblem to find optimal beam positions
         var problem = new BeamScoringProblem(
-            group, itemXPositions, staffSpaceSize, _parameters, collisions);
+            group, itemXPositions, _parameters, collisions);
         var (leftY, rightY) = problem.Solve();
         
         return new BeamLayout(group, leftY, rightY, leftX, rightX, memberXPositions);

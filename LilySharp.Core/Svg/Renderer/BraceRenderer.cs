@@ -4,6 +4,7 @@ namespace LilySharp.Core.Svg.Renderer;
 
 /// <summary>
 /// Renders brace (curly bracket) for grand staff using bezier curves.
+/// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
 /// The brace is drawn using cubic bezier curves to create the classic
@@ -20,24 +21,25 @@ public static class BraceRenderer
     private const double BraceWidth = 1.0;           // Horizontal extent
     private const double TipOffset = 0.8;            // How far the tip extends right
     private const double CurveControl = 0.4;         // Control point offset for bezier
+    private const double StrokeWidth = 0.15;         // Stroke width in staff spaces
     
     /// <summary>
     /// Renders a brace SVG path.
+    /// All coordinates are in staff spaces.
     /// </summary>
-    /// <param name="x">X position of the brace (left edge)</param>
-    /// <param name="yTop">Y position of the top of the brace</param>
-    /// <param name="yBottom">Y position of the bottom of the brace</param>
-    /// <param name="staffSpace">Staff space in pixels</param>
+    /// <param name="x">X position of the brace (left edge) in staff spaces</param>
+    /// <param name="yTop">Y position of the top of the brace in staff spaces</param>
+    /// <param name="yBottom">Y position of the bottom of the brace in staff spaces</param>
     /// <returns>SVG path element string</returns>
-    public static string RenderBrace(double x, double yTop, double yBottom, double staffSpace)
+    public static string RenderBrace(double x, double yTop, double yBottom)
     {
         double height = yBottom - yTop;
         double yMid = (yTop + yBottom) / 2;
         
-        // Scale parameters to pixels
-        double width = BraceWidth * staffSpace;
-        double tipX = x + TipOffset * staffSpace;
-        double controlOffset = CurveControl * staffSpace * (height / (8 * staffSpace)); // Scale with height
+        // Brace shape parameters
+        double width = BraceWidth;
+        double tipX = x + TipOffset;
+        double controlOffset = CurveControl * (height / 8); // Scale with height
         
         // Bezier control points
         // Top curve: from (x, yTop) to (tipX, yMid)
@@ -64,16 +66,16 @@ public static class BraceRenderer
         // Bottom curve from middle
         sb.Append($"C {botCtrl1X:F2} {botCtrl1Y:F2}, {botCtrl2X:F2} {botCtrl2Y:F2}, {x:F2} {yBottom:F2}");
         
-        sb.Append($"\" stroke=\"black\" stroke-width=\"{staffSpace * 0.15:F2}\" fill=\"none\" />");
+        sb.Append($"\" stroke=\"black\" stroke-width=\"{StrokeWidth:F2}\" fill=\"none\" />");
         
         return sb.ToString();
     }
     
     /// <summary>
-    /// Calculates the width required for a brace.
+    /// Calculates the width required for a brace in staff spaces.
     /// </summary>
-    public static double GetBraceWidth(double staffSpace)
+    public static double GetBraceWidth()
     {
-        return TipOffset * staffSpace + staffSpace * 0.5; // Extra padding
+        return TipOffset + 0.5; // Extra padding
     }
 }

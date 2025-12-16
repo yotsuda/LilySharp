@@ -351,3 +351,4 @@ SyntaxTree
 | 2025-12-15 | Phase 9: Knuth-Plass 最適行分割アルゴリズム実装。LilyPond constrained-breaking.cc 参照。動的計画法でペナルティ最小化 |
 | 2025-12-15 | Phase 2: 斜め Building 実装。LilyPond skyline.cc 符号規則 (UP=-1, DOWN=+1) に統一 |
 | 2025-12-15 | Phase 2: HorizontalSkyline 実装。SpacingRules.cs を斜め対応 Skyline に移行 |
+| 2025-12-16 | 🔍 座標系統一リファクタリング。SVG viewBox を staff spaces 単位に統一、内部計算をシンプル化 |

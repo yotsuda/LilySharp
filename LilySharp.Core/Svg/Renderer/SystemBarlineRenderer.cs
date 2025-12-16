@@ -18,7 +18,7 @@ public static class SystemBarlineRenderer
     /// <param name="x">X position of the barline</param>
     /// <param name="yTop">Top of the uppermost staff (top staff line)</param>
     /// <param name="yBottom">Bottom of the lowermost staff (bottom staff line)</param>
-    /// <param name="thickness">Line thickness in pixels</param>
+    /// <param name="thickness">Line thickness in staff spaces</param>
     /// <returns>SVG line element string</returns>
     public static string RenderSystemBarline(double x, double yTop, double yBottom, double thickness = 1.0)
     {

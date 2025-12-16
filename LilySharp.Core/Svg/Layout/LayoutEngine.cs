@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
@@ -125,9 +126,8 @@ public sealed class LayoutEngine
         // Calculate actual header height based on title/composer presence
         double headerHeight = CalculateHeaderHeight(score);
 
-        // Get measures from the first voice of the first staff
-        var primaryVoice = score.StaffGroups[0].PrimaryStaff.PrimaryVoice;
-        var measureLayouts = LayoutMeasuresForVoice(primaryVoice, 0);
+        // Layout measures with timing-based columns for multi-staff alignment
+        var measureLayouts = LayoutMeasuresForMultiStaff(score, 0);
 
         // Calculate total system height (all staff groups)
         double systemHeight = CalculateMultiStaffSystemHeight(score);
@@ -201,8 +201,8 @@ public sealed class LayoutEngine
     {
         double height = 0;
         double staffHeight = _options.StaffHeight;
-        double grandStaffSpacing = _options.StaffSpaceSize * _options.GrandStaffSpacingMultiplier; // Space between grand staff staves
-        double staffGroupSpacing = _options.StaffSpaceSize * _options.StaffGroupSpacingMultiplier; // Space between different staff groups
+        double grandStaffSpacing = _options.GrandStaffSpacing; // Space between grand staff staves
+        double staffGroupSpacing = _options.StaffGroupSpacing; // Space between different staff groups
 
         for (int i = 0; i < score.StaffGroups.Length; i++)
         {
@@ -236,8 +236,8 @@ public sealed class LayoutEngine
         var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
         double currentY = 0;
         double staffHeight = _options.StaffHeight;
-        double grandStaffSpacing = _options.StaffSpaceSize * _options.GrandStaffSpacingMultiplier;
-        double staffGroupSpacing = _options.StaffSpaceSize * _options.StaffGroupSpacingMultiplier;
+        double grandStaffSpacing = _options.GrandStaffSpacing;
+        double staffGroupSpacing = _options.StaffGroupSpacing;
         int globalStaffIndex = 0;
 
         foreach (var group in score.StaffGroups)
@@ -284,7 +284,7 @@ public sealed class LayoutEngine
         }
 
         double totalHeight = currentY + staffHeight - y;
-        double braceX = _options.MarginLeft - _options.StaffSpaceSize * 2;
+        double braceX = _options.MarginLeft - 2;  // 2 staff spaces left of margin
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -368,7 +368,7 @@ public sealed class LayoutEngine
             return ImmutableDictionary<VoiceItemKey, double>.Empty;
 
         // Calculate notehead width for offset calculation
-        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth * _options.StaffSpaceSize;
+        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;  // Already in staff spaces
 
         var builder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
 
@@ -444,7 +444,6 @@ public sealed class LayoutEngine
             var beamLayout = _beamEngraver.CalculateBeamLayout(
                 group,
                 itemXPositions,
-                _options.StaffSpaceSize,
                 collisions);
 
             beamLayouts.Add(beamLayout);
@@ -922,7 +921,7 @@ public sealed class LayoutEngine
 
             // Calculate Y position (staff middle + staff position offset)
             double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
-            double y = staffMiddleY - tie.StaffPosition * _options.SpaceHeight / 2;
+            double y = staffMiddleY - tie.StaffPosition / 2;  // staff position → staff spaces
 
             // Calculate tie layout
             var tieLayout = _tieEngraver.CalculateTieLayout(
@@ -930,8 +929,7 @@ public sealed class LayoutEngine
                 startX,
                 y,
                 endX,
-                y,
-                _options.StaffSpaceSize);
+                y);
 
             tieLayouts.Add(tieLayout);
         }
@@ -985,8 +983,8 @@ public sealed class LayoutEngine
 
             // Calculate Y positions (staff middle + staff position offset)
             double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
-            double startY = staffMiddleY - slur.StartStaffPosition * _options.SpaceHeight / 2;
-            double endY = staffMiddleY - slur.EndStaffPosition * _options.SpaceHeight / 2;
+            double startY = staffMiddleY - slur.StartStaffPosition / 2;  // staff position → staff spaces
+            double endY = staffMiddleY - slur.EndStaffPosition / 2;
 
             // Calculate slur layout
             var slurLayout = _slurEngraver.CalculateSlurLayout(
@@ -994,8 +992,7 @@ public sealed class LayoutEngine
                 startX,
                 startY,
                 endX,
-                endY,
-                _options.StaffSpaceSize);
+                endY);
 
             slurLayouts.Add(slurLayout);
         }
@@ -1024,12 +1021,12 @@ public sealed class LayoutEngine
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
 
-        double spaceHeight = _options.StaffSpaceSize;
+        // All dimensions in staff spaces (coordinate system is unified)
         double staffHeight = _options.StaffHeight;
         // Relative coordinates: staff top = 0, middle = staffHeight/2
         double staffMiddleY = staffHeight / 2;
-        double stemLength = 3.5 * spaceHeight; // Standard stem length
-        double noteheadHeight = spaceHeight; // Approximately 1 staff space
+        double stemLength = 3.5; // Standard stem length in staff spaces
+        double noteheadHeight = 1.0; // Approximately 1 staff space
 
         // Only process the first (topmost) staff for top margin calculation
         // Other staves are below the first one, so they don't affect the top margin
@@ -1055,16 +1052,16 @@ public sealed class LayoutEngine
                     switch (item)
                     {
                         case NoteItem note:
-                            AddNoteToSkylines(note, itemX, staffMiddleY, spaceHeight,
+                            AddNoteToSkylines(note, itemX, staffMiddleY,
                                 stemLength, noteheadHeight, upSkyline, downSkyline);
                             break;
                         case ChordItem chord:
                             foreach (var chordNote in chord.Notes)
                             {
-                                double noteY = staffMiddleY - chordNote.StaffPosition * spaceHeight / 2;
+                                double noteY = staffMiddleY - chordNote.StaffPosition / 2.0;
                                 bool stemUp = chordNote.StaffPosition < 4;
                                 AddNoteBoxToSkylines(chordNote.StaffPosition, itemX, noteY,
-                                    spaceHeight, stemLength, noteheadHeight, stemUp,
+                                    stemLength, noteheadHeight, stemUp,
                                     upSkyline, downSkyline);
                             }
                             break;
@@ -1085,11 +1082,11 @@ public sealed class LayoutEngine
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
 
-        double spaceHeight = _options.StaffSpaceSize;
+        // All dimensions in staff spaces (coordinate system is unified)
         double staffHeight = _options.StaffHeight;
         double staffMiddleY = staffHeight / 2;
-        double stemLength = 3.5 * spaceHeight;
-        double noteheadHeight = spaceHeight;
+        double stemLength = 3.5; // Standard stem length in staff spaces
+        double noteheadHeight = 1.0; // Approximately 1 staff space
 
         // Process measures in this system
         for (int measureIndex = 0; measureIndex < measures.Count; measureIndex++)
@@ -1111,16 +1108,16 @@ public sealed class LayoutEngine
                 switch (item)
                 {
                     case NoteItem note:
-                        AddNoteToSkylines(note, itemX, staffMiddleY, spaceHeight,
+                        AddNoteToSkylines(note, itemX, staffMiddleY,
                             stemLength, noteheadHeight, upSkyline, downSkyline);
                         break;
                     case ChordItem chord:
                         foreach (var chordNote in chord.Notes)
                         {
-                            double noteY = staffMiddleY - chordNote.StaffPosition * spaceHeight / 2;
+                            double noteY = staffMiddleY - chordNote.StaffPosition / 2.0;
                             bool stemUp = chordNote.StaffPosition < 4;
                             AddNoteBoxToSkylines(chordNote.StaffPosition, itemX, noteY,
-                                spaceHeight, stemLength, noteheadHeight, stemUp,
+                                stemLength, noteheadHeight, stemUp,
                                 upSkyline, downSkyline);
                         }
                         break;
@@ -1133,39 +1130,39 @@ public sealed class LayoutEngine
 
     /// <summary>
     /// Adds a note's bounding boxes to the skylines.
+    /// All coordinates in staff spaces.
     /// </summary>
     private void AddNoteToSkylines(
         NoteItem note,
         double x,
         double staffMiddleY,
-        double spaceHeight,
         double stemLength,
         double noteheadHeight,
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline)
     {
-        double noteY = staffMiddleY - note.StaffPosition * spaceHeight / 2;
+        double noteY = staffMiddleY - note.StaffPosition / 2.0;
         bool stemUp = note.StemUp;
 
-        AddNoteBoxToSkylines(note.StaffPosition, x, noteY, spaceHeight,
+        AddNoteBoxToSkylines(note.StaffPosition, x, noteY,
             stemLength, noteheadHeight, stemUp, upSkyline, downSkyline);
     }
 
     /// <summary>
     /// Adds bounding boxes for a note at the given position.
+    /// All coordinates in staff spaces.
     /// </summary>
     private void AddNoteBoxToSkylines(
         int staffPosition,
         double x,
         double noteY,
-        double spaceHeight,
         double stemLength,
         double noteheadHeight,
         bool stemUp,
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline)
     {
-        double noteheadWidth = 1.18 * spaceHeight; // From GlyphMetrics
+        double noteheadWidth = 1.18; // From GlyphMetrics (in staff spaces)
         double halfNoteheadHeight = noteheadHeight / 2;
 
         // Notehead bounding box
@@ -1243,8 +1240,8 @@ public sealed class LayoutEngine
         if (title != null && composer != null)
         {
             // Composer is rendered below title with spacing
-            // DrawHeader: y += 25 after title, then composer
-            height = 25; // Gap between title baseline and composer baseline
+            // DrawHeader: y += 3 after title, then composer
+            height = 3; // Gap between title baseline and composer baseline
         }
         else if (composer != null)
         {
@@ -1255,4 +1252,128 @@ public sealed class LayoutEngine
 
         return height;
     }
+
+    /// <summary>
+    /// Layouts measures for multi-staff scores with timing-based column information.
+    /// </summary>
+    private ImmutableArray<MeasureLayout> LayoutMeasuresForMultiStaff(MultiStaffScore score, int systemIndex)
+    {
+        // Get the primary voice for base layout calculation
+        var primaryVoice = score.StaffGroups[0].PrimaryStaff.PrimaryVoice;
+        
+        var layouts = ImmutableArray.CreateBuilder<MeasureLayout>();
+        double currentX = _options.MarginLeft + SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, systemIndex == 0);
+
+        for (int measureIndex = 0; measureIndex < primaryVoice.Measures.Length; measureIndex++)
+        {
+            // Collect all timings from all voices for this measure
+            var allTimings = CollectAllTimingsForMeasure(score, measureIndex);
+            
+            // Get the primary voice's measure for base calculations
+            var primaryMeasure = primaryVoice.Measures[measureIndex];
+            double measureWidth = SpacingRules.CalculateMeasureIdealWidth(primaryMeasure);
+            
+            // Calculate item layouts for the primary voice (for backward compatibility)
+            var itemLayouts = LayoutMeasureItems(primaryMeasure, measureWidth);
+            
+            // Calculate column layouts based on all timings
+            var columnLayouts = LayoutColumnsForMeasure(primaryMeasure, measureWidth, allTimings);
+            
+            var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts);
+            layouts.Add(measureLayout);
+            currentX += measureLayout.Width;
+        }
+
+        return layouts.ToImmutable();
+    }
+    
+    /// <summary>
+    /// Collects all unique timings from all voices for a specific measure.
+    /// </summary>
+    private List<Fraction> CollectAllTimingsForMeasure(MultiStaffScore score, int measureIndex)
+    {
+        var timings = new HashSet<Fraction>();
+        
+        foreach (var staffGroup in score.StaffGroups)
+        {
+            foreach (var staff in staffGroup.Staves)
+            {
+                foreach (var voice in staff.Voices)
+                {
+                    if (measureIndex < voice.Measures.Length)
+                    {
+                        var measure = voice.Measures[measureIndex];
+                        var currentTiming = Fraction.Zero;
+                        
+                        foreach (var item in measure.Items)
+                        {
+                            timings.Add(currentTiming);
+                            currentTiming += item.Duration;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Sort timings
+        var sortedTimings = timings.ToList();
+        sortedTimings.Sort();
+        return sortedTimings;
+    }
+    
+    /// <summary>
+    /// Calculates column layouts for a measure based on collected timings.
+    /// </summary>
+    private ImmutableArray<ColumnLayout> LayoutColumnsForMeasure(Measure measure, double totalWidth, List<Fraction> timings)
+    {
+        if (timings.Count == 0)
+            return ImmutableArray<ColumnLayout>.Empty;
+        
+        // Calculate barline widths
+        double startBarlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline);
+        double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
+        
+        // Available width for columns
+        double contentWidth = totalWidth - startBarlineWidth - endBarlineWidth;
+        
+        // Calculate total duration of the measure
+        var totalDuration = Fraction.Zero;
+        foreach (var item in measure.Items)
+        {
+            totalDuration += item.Duration;
+        }
+        
+        if (totalDuration == Fraction.Zero)
+            return ImmutableArray<ColumnLayout>.Empty;
+        
+        // Create columns with proportional spacing
+        var columns = ImmutableArray.CreateBuilder<ColumnLayout>();
+        
+        for (int i = 0; i < timings.Count; i++)
+        {
+            var timing = timings[i];
+            
+            // Calculate X position based on timing ratio
+            double timingRatio = timing.ToDouble() / totalDuration.ToDouble();
+            double x = startBarlineWidth + timingRatio * contentWidth;
+            
+            // Calculate width (distance to next column or end)
+            double width;
+            if (i < timings.Count - 1)
+            {
+                double nextRatio = timings[i + 1].ToDouble() / totalDuration.ToDouble();
+                double nextX = startBarlineWidth + nextRatio * contentWidth;
+                width = nextX - x;
+            }
+            else
+            {
+                width = contentWidth - (x - startBarlineWidth);
+            }
+            
+            columns.Add(new ColumnLayout(timing, x, width));
+        }
+        
+        return columns.ToImmutable();
+    }
 }
+

@@ -163,31 +163,4 @@ public static class GlyphMetrics
         (>= 32, false) => Flag16thDown,
         _ => default
     };
-
-    // ========== Pixel Conversion ==========
-    
-    /// <summary>
-    /// Height of one staff space in pixels.
-    /// This is the fundamental unit for converting staff spaces to pixels.
-    /// </summary>
-    public const double SpaceHeight = 10.0;
-    
-    /// <summary>
-    /// Converts staff spaces to pixels.
-    /// </summary>
-    public static double ToPixels(double staffSpaces) => staffSpaces * SpaceHeight;
-    
-    /// <summary>
-    /// Gets the width of a notehead in pixels.
-    /// </summary>
-    public static double GetNoteheadWidthPx(int noteValue) => ToPixels(GetNoteheadBBox(noteValue).Width);
-    
-    /// <summary>
-    /// Gets the accidental width in pixels.
-    /// </summary>
-    public static double GetAccidentalWidthPx(string? accidental)
-    {
-        var bbox = GetAccidentalBBox(accidental);
-        return bbox == default ? 0 : ToPixels(bbox.Width);
-    }
 }

@@ -87,7 +87,7 @@ public enum BeamScorer
 /// Based on Lilypond's Beam_collision.
 /// </summary>
 public readonly record struct BeamCollision(
-    /// <summary>X position relative to beam start (in pixels).</summary>
+    /// <summary>X position relative to beam start (in staff spaces).</summary>
     double X,
     /// <summary>Y range of the collision object (in staff positions, minY to maxY).</summary>
     double MinY,

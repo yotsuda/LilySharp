@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -11,7 +11,6 @@ public sealed class BeamScoringProblem
 {
     private readonly BeamGroup _group;
     private readonly IReadOnlyList<double> _itemXPositions;
-    private readonly double _staffSpaceSize;
     private readonly BeamQuantParameters _parameters;
     
     // Computed values
@@ -32,13 +31,11 @@ public sealed class BeamScoringProblem
     public BeamScoringProblem(
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
-        double staffSpaceSize,
         BeamQuantParameters? parameters = null,
         IReadOnlyList<BeamCollision>? collisions = null)
     {
         _group = group;
         _itemXPositions = itemXPositions;
-        _staffSpaceSize = staffSpaceSize;
         _parameters = parameters ?? BeamQuantParameters.Default;
         _collisions = collisions ?? Array.Empty<BeamCollision>();
         

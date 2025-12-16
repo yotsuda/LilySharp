@@ -22,7 +22,7 @@ public class BeamScoringTests
         var group = new BeamGroup(members, 0, 0, stemUp: true);
         
         var xPositions = new List<double> { 50.0, 100.0 };
-        var problem = new BeamScoringProblem(group, xPositions, 10.0);
+        var problem = new BeamScoringProblem(group, xPositions);
         
         // Act
         var (leftY, rightY) = problem.Solve();
@@ -42,7 +42,7 @@ public class BeamScoringTests
         var group = new BeamGroup(members, 0, 0, stemUp: false);
         
         var xPositions = new List<double> { 50.0, 100.0 };
-        var problem = new BeamScoringProblem(group, xPositions, 10.0);
+        var problem = new BeamScoringProblem(group, xPositions);
         
         // Act
         var (leftY, rightY) = problem.Solve();
@@ -62,7 +62,7 @@ public class BeamScoringTests
         var group = new BeamGroup(members, 0, 0, stemUp: true);
         
         var xPositions = new List<double> { 50.0, 100.0 };
-        var problem = new BeamScoringProblem(group, xPositions, 10.0);
+        var problem = new BeamScoringProblem(group, xPositions);
         
         // Act
         var (leftY, rightY) = problem.Solve();
@@ -116,7 +116,7 @@ public class BeamScoringTests
         var xPositions = new List<double> { 50.0, 75.0, 100.0 };
         
         // Without collision - solve normally
-        var problemWithout = new BeamScoringProblem(group, xPositions, 10.0, collisions: null);
+        var problemWithout = new BeamScoringProblem(group, xPositions);
         var (leftYWithout, _) = problemWithout.Solve();
         
         // With collision - rest at middle position in the beam's path
@@ -124,7 +124,7 @@ public class BeamScoringTests
         {
             new BeamCollision(X: 75.0, MinY: leftYWithout - 1, MaxY: leftYWithout + 1, BasePenalty: 1.0)
         };
-        var problemWith = new BeamScoringProblem(group, xPositions, 10.0, collisions: collisions);
+        var problemWith = new BeamScoringProblem(group, xPositions, collisions: collisions);
         var (leftYWith, _) = problemWith.Solve();
         
         // Assert: Beam with collision should move to avoid it
@@ -152,7 +152,7 @@ public class BeamScoringTests
         };
         
         // The collision scorer should add demerits when beam is near collision
-        var problem = new BeamScoringProblem(group, xPositions, 10.0, collisions: collisions);
+        var problem = new BeamScoringProblem(group, xPositions, collisions: collisions);
         var (leftY, rightY) = problem.Solve();
         
         // Beam should still produce valid output
@@ -160,3 +160,4 @@ public class BeamScoringTests
         Assert.True(rightY > 4, "Beam right should be above the highest note");
     }
 }
+
