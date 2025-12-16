@@ -1021,12 +1021,13 @@ public sealed class LayoutEngine
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
 
-        double spaceHeight = _options.StaffSpaceSize;
+        // All dimensions in staff spaces (coordinate system is unified)
+        const double spaceHeight = 1.0; // 1 staff space = 1 unit
         double staffHeight = _options.StaffHeight;
         // Relative coordinates: staff top = 0, middle = staffHeight/2
         double staffMiddleY = staffHeight / 2;
-        double stemLength = 3.5 * spaceHeight; // Standard stem length
-        double noteheadHeight = spaceHeight; // Approximately 1 staff space
+        double stemLength = 3.5; // Standard stem length in staff spaces
+        double noteheadHeight = 1.0; // Approximately 1 staff space
 
         // Only process the first (topmost) staff for top margin calculation
         // Other staves are below the first one, so they don't affect the top margin
@@ -1082,12 +1083,12 @@ public sealed class LayoutEngine
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
 
-        double spaceHeight = _options.StaffSpaceSize;
+        // All dimensions in staff spaces (coordinate system is unified)
+        const double spaceHeight = 1.0; // 1 staff space = 1 unit
         double staffHeight = _options.StaffHeight;
         double staffMiddleY = staffHeight / 2;
-        double stemLength = 3.5 * spaceHeight;
-        double noteheadHeight = spaceHeight;
-
+        double stemLength = 3.5; // Standard stem length in staff spaces
+        double noteheadHeight = 1.0; // Approximately 1 staff space
         // Process measures in this system
         for (int measureIndex = 0; measureIndex < measures.Count; measureIndex++)
         {
@@ -1240,8 +1241,8 @@ public sealed class LayoutEngine
         if (title != null && composer != null)
         {
             // Composer is rendered below title with spacing
-            // DrawHeader: y += 25 after title, then composer
-            height = 25; // Gap between title baseline and composer baseline
+            // DrawHeader: y += 3 after title, then composer
+            height = 3; // Gap between title baseline and composer baseline
         }
         else if (composer != null)
         {

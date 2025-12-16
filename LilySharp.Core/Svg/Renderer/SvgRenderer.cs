@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 
@@ -76,7 +76,7 @@ public sealed class SvgRenderer
             
             // Stem X offset from note center
             var noteheadBBox = GlyphMetrics.GetNoteheadBBox(3);
-            double noteheadCenterX = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+            double noteheadCenterX = noteheadBBox.CenterX;
             double stemOffsetX = group.StemUp 
                 ? StemUpAttachX - noteheadCenterX 
                 : StemDownAttachX - noteheadCenterX;
@@ -190,13 +190,13 @@ public sealed class SvgRenderer
         
         if (score.Title != null)
         {
-            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle">{EscapeXml(score.Title)}</text>""");
+            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle" font-size="2.5">{EscapeXml(score.Title)}</text>""");
             y += 3;  // 3 staff spaces
         }
         
         if (score.Composer != null)
         {
-            _svg.AppendLine($"""  <text class="composer" x="{centerX}" y="{y}" text-anchor="middle">{EscapeXml(score.Composer)}</text>""");
+            _svg.AppendLine($"""  <text class="composer" x="{centerX}" y="{y}" text-anchor="middle" font-size="1.5">{EscapeXml(score.Composer)}</text>""");
         }
     }
     
@@ -395,10 +395,10 @@ public sealed class SvgRenderer
         _svg.AppendLine($"  .stem {{ stroke: black; stroke-width: {StemThickness:F2}; }}");
         _svg.AppendLine($"  .barline {{ stroke: black; stroke-width: {ThinBarlineThickness:F2}; }}");
         _svg.AppendLine($"  .ledger {{ stroke: black; stroke-width: {LegerLineThickness:F2}; }}");
-        _svg.AppendLine("  .title { font-family: serif; font-size: 2.4; font-weight: bold; }");
-        _svg.AppendLine("  .composer { font-family: serif; font-size: 1.6; font-style: italic; }");
-        _svg.AppendLine("  .tempo { font-family: serif; font-size: 1.4; }");
-        _svg.AppendLine("  .section-label { font-family: serif; font-size: 1.6; font-weight: bold; }");
+        _svg.AppendLine("  .title { font-family: serif; font-size: 0.6; font-weight: bold; }");
+        _svg.AppendLine("  .composer { font-family: serif; font-size: 0.4; font-style: italic; }");
+        _svg.AppendLine("  .tempo { font-family: serif; font-size: 0.35; }");
+        _svg.AppendLine("  .section-label { font-family: serif; font-size: 0.4; font-weight: bold; }");
         _svg.AppendLine("</style>");
     }
     
@@ -469,13 +469,13 @@ public sealed class SvgRenderer
         
         if (score.Title != null)
         {
-            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle">{EscapeXml(score.Title)}</text>""");
+            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle" font-size="2.5">{EscapeXml(score.Title)}</text>""");
             y += 2.5;  // 2.5 staff spaces
         }
         
         if (score.Composer != null)
         {
-            _svg.AppendLine($"""  <text class="composer" x="{centerX}" y="{y}" text-anchor="middle">{EscapeXml(score.Composer)}</text>""");
+            _svg.AppendLine($"""  <text class="composer" x="{centerX}" y="{y}" text-anchor="middle" font-size="1.5">{EscapeXml(score.Composer)}</text>""");
         }
     }
     
@@ -623,8 +623,8 @@ public sealed class SvgRenderer
         
         // Get notehead metrics from GlyphMetrics
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
-        double noteheadWidth = GlyphMetrics.ToPixels(noteheadBBox.Width);
-        double noteheadCenterX = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+        double noteheadWidth = noteheadBBox.Width;
+        double noteheadCenterX = noteheadBBox.CenterX;
         
         // Convert reference point to notehead left edge (SMuFL glyphs are drawn from left edge)
         double noteheadLeftX = x - noteheadCenterX;
@@ -643,8 +643,8 @@ public sealed class SvgRenderer
             
             // Get accidental metrics
             var accBBox = GlyphMetrics.GetAccidentalBBox(note.Accidental);
-            double accWidth = GlyphMetrics.ToPixels(accBBox.Width);
-            double accNoteGap = GlyphMetrics.ToPixels(GlyphMetrics.AccidentalNoteGap);
+            double accWidth = accBBox.Width;
+            double accNoteGap = GlyphMetrics.AccidentalNoteGap;
             
             // Accidental is drawn to the left of notehead with a gap
             double accidentalX = noteheadLeftX - accWidth - accNoteGap;
@@ -669,8 +669,8 @@ public sealed class SvgRenderer
                 ? beamStemUp 
                 : forcedStemUp ?? note.StemUp;
             var stemAnchor = stemUp ? GlyphMetrics.StemUpSE : GlyphMetrics.StemDownNW;
-            double stemX = noteheadLeftX + GlyphMetrics.ToPixels(stemAnchor.X);
-            double stemAttachY = noteY - GlyphMetrics.ToPixels(stemAnchor.Y);
+            double stemX = noteheadLeftX + stemAnchor.X;
+            double stemAttachY = noteY - stemAnchor.Y;
             
             // Use beam-calculated stem end if part of a beam group, otherwise fixed length
             double stemEndY;
@@ -698,8 +698,8 @@ public sealed class SvgRenderer
         
         // Draw dots (to the right of notehead)
         var dotBBox = GlyphMetrics.AugmentationDot;
-        double dotWidth = GlyphMetrics.ToPixels(dotBBox.Width);
-        double dotGap = GlyphMetrics.ToPixels(EngravingDefaults.DotGap);  // Gap between notehead and first dot
+        double dotWidth = dotBBox.Width;
+        double dotGap = EngravingDefaults.DotGap;  // Gap between notehead and first dot
         for (int d = 0; d < note.Dots; d++)
         {
             double dotX = noteheadLeftX + noteheadWidth + dotGap + d * (dotWidth + dotGap);
@@ -891,7 +891,7 @@ public sealed class SvgRenderer
         double boxHeight = 2;  // staff spaces
         
         _svg.AppendLine($"""  <rect x="{x - padding}" y="{labelY - boxHeight + 0.5}" width="{boxWidth}" height="{boxHeight}" fill="none" stroke="black" stroke-width="0.1"/>""");
-        _svg.AppendLine($"""  <text class="section-label" x="{x}" y="{labelY}">{EscapeXml(label)}</text>""");
+        _svg.AppendLine($"""  <text class="section-label" font-size="1.5" x="{x}" y="{labelY}">{EscapeXml(label)}</text>""");
     }
     
     private double DrawKeySignature(KeySignature keySig, string clef, double x, double systemY)
@@ -941,7 +941,7 @@ public sealed class SvgRenderer
     {
         double tempoY = systemY - 2.5;  // 2.5 staff spaces above staff
         string tempoText = $"♩ = {tempo}";
-        _svg.AppendLine($"""  <text class="tempo" x="{x}" y="{tempoY}">{tempoText}</text>""");
+        _svg.AppendLine($"""  <text class="tempo" font-size="1.2" x="{x}" y="{tempoY}">{tempoText}</text>""");
     }
     
     private void DrawLedgerLines(int staffPosition, double x, double noteheadWidth, double systemY)
@@ -1032,7 +1032,7 @@ public sealed class SvgRenderer
         
         // Stem X offset from note center (same calculation as in Render)
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(3);
-        double noteheadCenterX = GlyphMetrics.ToPixels(noteheadBBox.CenterX);
+        double noteheadCenterX = noteheadBBox.CenterX;
         double stemOffsetX = group.StemUp 
             ? StemUpAttachX - noteheadCenterX 
             : StemDownAttachX - noteheadCenterX;
