@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -14,15 +15,87 @@ public readonly record struct ItemLayout(
 );
 
 /// <summary>
+/// Layout information for a timing column within a measure.
+/// A column represents a vertical slice of time where items may be placed.
+/// All coordinates are in staff spaces.
+/// </summary>
+public readonly record struct ColumnLayout(
+    Fraction Timing,  // Start time of this column (from measure start)
+    double X,         // X offset from measure start (staff spaces)
+    double Width      // Allocated width (staff spaces)
+);
+
+/// <summary>
 /// Layout information for a single measure.
 /// All coordinates are in staff spaces.
 /// </summary>
-public sealed record MeasureLayout(
-    int MeasureIndex,
-    double X,                              // X position of measure start (staff spaces)
-    double Width,                          // Total measure width (staff spaces)
-    ImmutableArray<ItemLayout> Items       // Layout of items within the measure
-);
+public sealed record MeasureLayout
+{
+    public int MeasureIndex { get; }
+    public double X { get; }                              // X position of measure start (staff spaces)
+    public double Width { get; }                          // Total measure width (staff spaces)
+    public ImmutableArray<ItemLayout> Items { get; }      // Layout of items within the measure (for single-staff)
+    public ImmutableArray<ColumnLayout> Columns { get; }  // Timing-based columns (for multi-staff)
+    
+    /// <summary>
+    /// Creates a MeasureLayout with item-based positioning (for single-staff scores).
+    /// </summary>
+    public MeasureLayout(int measureIndex, double x, double width, ImmutableArray<ItemLayout> items)
+    {
+        MeasureIndex = measureIndex;
+        X = x;
+        Width = width;
+        Items = items;
+        Columns = ImmutableArray<ColumnLayout>.Empty;
+    }
+    
+    /// <summary>
+    /// Creates a MeasureLayout with both item-based and column-based positioning (for multi-staff scores).
+    /// </summary>
+    public MeasureLayout(int measureIndex, double x, double width, ImmutableArray<ItemLayout> items, ImmutableArray<ColumnLayout> columns)
+    {
+        MeasureIndex = measureIndex;
+        X = x;
+        Width = width;
+        Items = items;
+        Columns = columns;
+    }
+    
+    /// <summary>
+    /// Gets the X coordinate for a given timing within this measure.
+    /// Uses column information if available, otherwise interpolates.
+    /// </summary>
+    public double GetXForTiming(Fraction timing)
+    {
+        if (Columns.IsDefaultOrEmpty || Columns.Length == 0)
+        {
+            // No column info - return start of measure as fallback
+            return 0;
+        }
+        
+        // Find the column with exact or closest timing
+        for (int i = 0; i < Columns.Length; i++)
+        {
+            if (Columns[i].Timing == timing)
+                return Columns[i].X;
+            
+            if (Columns[i].Timing > timing)
+            {
+                // Timing is between previous column and this one - interpolate
+                if (i == 0)
+                    return Columns[0].X;
+                
+                var prev = Columns[i - 1];
+                var curr = Columns[i];
+                var ratio = (timing - prev.Timing).ToDouble() / (curr.Timing - prev.Timing).ToDouble();
+                return prev.X + ratio * (curr.X - prev.X);
+            }
+        }
+        
+        // Timing is after all columns - return last column position
+        return Columns[^1].X;
+    }
+}
 
 /// <summary>
 /// Layout information for a single system (staff line).

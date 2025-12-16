@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
@@ -125,9 +126,8 @@ public sealed class LayoutEngine
         // Calculate actual header height based on title/composer presence
         double headerHeight = CalculateHeaderHeight(score);
 
-        // Get measures from the first voice of the first staff
-        var primaryVoice = score.StaffGroups[0].PrimaryStaff.PrimaryVoice;
-        var measureLayouts = LayoutMeasuresForVoice(primaryVoice, 0);
+        // Layout measures with timing-based columns for multi-staff alignment
+        var measureLayouts = LayoutMeasuresForMultiStaff(score, 0);
 
         // Calculate total system height (all staff groups)
         double systemHeight = CalculateMultiStaffSystemHeight(score);
@@ -1251,6 +1251,129 @@ public sealed class LayoutEngine
         // Title only: height = 0 (title bottom = MarginTop)
 
         return height;
+    }
+
+    /// <summary>
+    /// Layouts measures for multi-staff scores with timing-based column information.
+    /// </summary>
+    private ImmutableArray<MeasureLayout> LayoutMeasuresForMultiStaff(MultiStaffScore score, int systemIndex)
+    {
+        // Get the primary voice for base layout calculation
+        var primaryVoice = score.StaffGroups[0].PrimaryStaff.PrimaryVoice;
+        
+        var layouts = ImmutableArray.CreateBuilder<MeasureLayout>();
+        double currentX = _options.MarginLeft + SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, systemIndex == 0);
+
+        for (int measureIndex = 0; measureIndex < primaryVoice.Measures.Length; measureIndex++)
+        {
+            // Collect all timings from all voices for this measure
+            var allTimings = CollectAllTimingsForMeasure(score, measureIndex);
+            
+            // Get the primary voice's measure for base calculations
+            var primaryMeasure = primaryVoice.Measures[measureIndex];
+            double measureWidth = SpacingRules.CalculateMeasureIdealWidth(primaryMeasure);
+            
+            // Calculate item layouts for the primary voice (for backward compatibility)
+            var itemLayouts = LayoutMeasureItems(primaryMeasure, measureWidth);
+            
+            // Calculate column layouts based on all timings
+            var columnLayouts = LayoutColumnsForMeasure(primaryMeasure, measureWidth, allTimings);
+            
+            var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts);
+            layouts.Add(measureLayout);
+            currentX += measureLayout.Width;
+        }
+
+        return layouts.ToImmutable();
+    }
+    
+    /// <summary>
+    /// Collects all unique timings from all voices for a specific measure.
+    /// </summary>
+    private List<Fraction> CollectAllTimingsForMeasure(MultiStaffScore score, int measureIndex)
+    {
+        var timings = new HashSet<Fraction>();
+        
+        foreach (var staffGroup in score.StaffGroups)
+        {
+            foreach (var staff in staffGroup.Staves)
+            {
+                foreach (var voice in staff.Voices)
+                {
+                    if (measureIndex < voice.Measures.Length)
+                    {
+                        var measure = voice.Measures[measureIndex];
+                        var currentTiming = Fraction.Zero;
+                        
+                        foreach (var item in measure.Items)
+                        {
+                            timings.Add(currentTiming);
+                            currentTiming += item.Duration;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Sort timings
+        var sortedTimings = timings.ToList();
+        sortedTimings.Sort();
+        return sortedTimings;
+    }
+    
+    /// <summary>
+    /// Calculates column layouts for a measure based on collected timings.
+    /// </summary>
+    private ImmutableArray<ColumnLayout> LayoutColumnsForMeasure(Measure measure, double totalWidth, List<Fraction> timings)
+    {
+        if (timings.Count == 0)
+            return ImmutableArray<ColumnLayout>.Empty;
+        
+        // Calculate barline widths
+        double startBarlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline);
+        double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
+        
+        // Available width for columns
+        double contentWidth = totalWidth - startBarlineWidth - endBarlineWidth;
+        
+        // Calculate total duration of the measure
+        var totalDuration = Fraction.Zero;
+        foreach (var item in measure.Items)
+        {
+            totalDuration += item.Duration;
+        }
+        
+        if (totalDuration == Fraction.Zero)
+            return ImmutableArray<ColumnLayout>.Empty;
+        
+        // Create columns with proportional spacing
+        var columns = ImmutableArray.CreateBuilder<ColumnLayout>();
+        
+        for (int i = 0; i < timings.Count; i++)
+        {
+            var timing = timings[i];
+            
+            // Calculate X position based on timing ratio
+            double timingRatio = timing.ToDouble() / totalDuration.ToDouble();
+            double x = startBarlineWidth + timingRatio * contentWidth;
+            
+            // Calculate width (distance to next column or end)
+            double width;
+            if (i < timings.Count - 1)
+            {
+                double nextRatio = timings[i + 1].ToDouble() / totalDuration.ToDouble();
+                double nextX = startBarlineWidth + nextRatio * contentWidth;
+                width = nextX - x;
+            }
+            else
+            {
+                width = contentWidth - (x - startBarlineWidth);
+            }
+            
+            columns.Add(new ColumnLayout(timing, x, width));
+        }
+        
+        return columns.ToImmutable();
     }
 }
 

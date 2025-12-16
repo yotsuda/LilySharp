@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 
@@ -579,21 +580,33 @@ public sealed class SvgRenderer
             DrawBarline(measure.StartBarline, x, systemY);
         }
         
-        // Draw items
-        if (measure.Items.Length != layout.Items.Length)
-        {
-            throw new InvalidOperationException(
-                $"Measure {measureIndex} items mismatch: measure has {measure.Items.Length} items, layout has {layout.Items.Length} items. " +
-                $"Voice={voiceNumber}, Measure items: [{string.Join(", ", measure.Items.Select(i => i.GetType().Name))}]");
-        }
+        // Draw items using column-based timing for multi-staff alignment
+        var currentTiming = Fraction.Zero;
         for (int i = 0; i < measure.Items.Length; i++)
         {
             var item = measure.Items[i];
-            var itemLayout = layout.Items[i];
+            
+            // Calculate X position using timing-based columns
+            double itemX;
+            if (!layout.Columns.IsDefaultOrEmpty && layout.Columns.Length > 0)
+            {
+                // Use column-based positioning for multi-staff scores
+                itemX = x + layout.GetXForTiming(currentTiming);
+            }
+            else if (i < layout.Items.Length)
+            {
+                // Fallback to direct item layout for single-staff scores
+                itemX = x + layout.Items[i].X;
+            }
+            else
+            {
+                // Should not happen, but provide a reasonable fallback
+                itemX = x;
+            }
             
             // Get voice collision offset
             double voiceOffset = scoreLayout.GetVoiceOffset(measureIndex, voiceNumber, i);
-            double itemX = x + itemLayout.X + voiceOffset;
+            itemX += voiceOffset;
             
             switch (item)
             {
@@ -608,6 +621,8 @@ public sealed class SvgRenderer
                     DrawChord(chord, itemX, systemY, forcedStemUp);
                     break;
             }
+            
+            currentTiming += item.Duration;
         }
         
         // Draw end barline at the right edge of the measure (first voice only to avoid duplicates)
