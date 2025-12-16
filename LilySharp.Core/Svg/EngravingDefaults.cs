@@ -2,7 +2,7 @@ namespace LilySharp.Core.Svg;
 
 /// <summary>
 /// Default metrics for music engraving.
-/// All values are in staff spaces (multiply by staff space height for pixels).
+/// All values are in staff spaces.
 /// </summary>
 public static class EngravingDefaults
 {

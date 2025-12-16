@@ -102,13 +102,13 @@ public sealed record BeamLayout
     /// <summary>Y position of the beam at the last stem (in staff positions from middle line).</summary>
     public double RightY { get; }
     
-    /// <summary>X position of the first stem (in pixels).</summary>
+    /// <summary>X position of the first stem (in staff spaces).</summary>
     public double LeftX { get; }
     
-    /// <summary>X position of the last stem (in pixels).</summary>
+    /// <summary>X position of the last stem (in staff spaces).</summary>
     public double RightX { get; }
     
-    /// <summary>X positions for each member (in pixels).</summary>
+    /// <summary>X positions for each member (in staff spaces).</summary>
     public ImmutableArray<double> MemberXPositions { get; }
     
     public BeamLayout(

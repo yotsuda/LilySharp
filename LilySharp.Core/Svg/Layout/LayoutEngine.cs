@@ -1022,7 +1022,6 @@ public sealed class LayoutEngine
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
 
         // All dimensions in staff spaces (coordinate system is unified)
-        const double spaceHeight = 1.0; // 1 staff space = 1 unit
         double staffHeight = _options.StaffHeight;
         // Relative coordinates: staff top = 0, middle = staffHeight/2
         double staffMiddleY = staffHeight / 2;
@@ -1053,16 +1052,16 @@ public sealed class LayoutEngine
                     switch (item)
                     {
                         case NoteItem note:
-                            AddNoteToSkylines(note, itemX, staffMiddleY, spaceHeight,
+                            AddNoteToSkylines(note, itemX, staffMiddleY,
                                 stemLength, noteheadHeight, upSkyline, downSkyline);
                             break;
                         case ChordItem chord:
                             foreach (var chordNote in chord.Notes)
                             {
-                                double noteY = staffMiddleY - chordNote.StaffPosition * spaceHeight / 2;
+                                double noteY = staffMiddleY - chordNote.StaffPosition / 2.0;
                                 bool stemUp = chordNote.StaffPosition < 4;
                                 AddNoteBoxToSkylines(chordNote.StaffPosition, itemX, noteY,
-                                    spaceHeight, stemLength, noteheadHeight, stemUp,
+                                    stemLength, noteheadHeight, stemUp,
                                     upSkyline, downSkyline);
                             }
                             break;
@@ -1084,11 +1083,11 @@ public sealed class LayoutEngine
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
 
         // All dimensions in staff spaces (coordinate system is unified)
-        const double spaceHeight = 1.0; // 1 staff space = 1 unit
         double staffHeight = _options.StaffHeight;
         double staffMiddleY = staffHeight / 2;
         double stemLength = 3.5; // Standard stem length in staff spaces
         double noteheadHeight = 1.0; // Approximately 1 staff space
+
         // Process measures in this system
         for (int measureIndex = 0; measureIndex < measures.Count; measureIndex++)
         {
@@ -1109,16 +1108,16 @@ public sealed class LayoutEngine
                 switch (item)
                 {
                     case NoteItem note:
-                        AddNoteToSkylines(note, itemX, staffMiddleY, spaceHeight,
+                        AddNoteToSkylines(note, itemX, staffMiddleY,
                             stemLength, noteheadHeight, upSkyline, downSkyline);
                         break;
                     case ChordItem chord:
                         foreach (var chordNote in chord.Notes)
                         {
-                            double noteY = staffMiddleY - chordNote.StaffPosition * spaceHeight / 2;
+                            double noteY = staffMiddleY - chordNote.StaffPosition / 2.0;
                             bool stemUp = chordNote.StaffPosition < 4;
                             AddNoteBoxToSkylines(chordNote.StaffPosition, itemX, noteY,
-                                spaceHeight, stemLength, noteheadHeight, stemUp,
+                                stemLength, noteheadHeight, stemUp,
                                 upSkyline, downSkyline);
                         }
                         break;
@@ -1131,39 +1130,39 @@ public sealed class LayoutEngine
 
     /// <summary>
     /// Adds a note's bounding boxes to the skylines.
+    /// All coordinates in staff spaces.
     /// </summary>
     private void AddNoteToSkylines(
         NoteItem note,
         double x,
         double staffMiddleY,
-        double spaceHeight,
         double stemLength,
         double noteheadHeight,
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline)
     {
-        double noteY = staffMiddleY - note.StaffPosition * spaceHeight / 2;
+        double noteY = staffMiddleY - note.StaffPosition / 2.0;
         bool stemUp = note.StemUp;
 
-        AddNoteBoxToSkylines(note.StaffPosition, x, noteY, spaceHeight,
+        AddNoteBoxToSkylines(note.StaffPosition, x, noteY,
             stemLength, noteheadHeight, stemUp, upSkyline, downSkyline);
     }
 
     /// <summary>
     /// Adds bounding boxes for a note at the given position.
+    /// All coordinates in staff spaces.
     /// </summary>
     private void AddNoteBoxToSkylines(
         int staffPosition,
         double x,
         double noteY,
-        double spaceHeight,
         double stemLength,
         double noteheadHeight,
         bool stemUp,
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline)
     {
-        double noteheadWidth = 1.18 * spaceHeight; // From GlyphMetrics
+        double noteheadWidth = 1.18; // From GlyphMetrics (in staff spaces)
         double halfNoteheadHeight = noteheadHeight / 2;
 
         // Notehead bounding box

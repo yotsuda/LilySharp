@@ -207,14 +207,4 @@ public class PaperSettings
     /// Converts points to millimeters.
     /// </summary>
     public static double PointsToMm(double pt) => pt * MmPerPoint;
-    
-    /// <summary>
-    /// Converts millimeters to pixels at a given DPI.
-    /// </summary>
-    public static double MmToPixels(double mm, double dpi = 96.0) => mm / MmPerInch * dpi;
-    
-    /// <summary>
-    /// Converts pixels to millimeters at a given DPI.
-    /// </summary>
-    public static double PixelsToMm(double px, double dpi = 96.0) => px * MmPerInch / dpi;
 }

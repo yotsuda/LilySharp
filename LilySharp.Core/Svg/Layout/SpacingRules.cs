@@ -373,7 +373,7 @@ public static class SpacingRules
         // Get note Y position
         double noteY = item switch
         {
-            NoteItem note => staffY - note.StaffPosition * GlyphMetrics.SpaceHeight / 2,
+            NoteItem note => staffY - note.StaffPosition / 2.0,
             _ => staffY
         };
         
@@ -389,7 +389,7 @@ public static class SpacingRules
             if (flagBBox != default)
             {
                 // Flag is attached to the stem end
-                double stemHeight = EngravingDefaults.IdealStemLength * GlyphMetrics.SpaceHeight;
+                double stemHeight = EngravingDefaults.IdealStemLength;
                 double stemEndY = note2.StemUp ? noteY - stemHeight : noteY + stemHeight;
                 
                 // Flag position (attached at stem)
@@ -431,7 +431,7 @@ public static class SpacingRules
                 NoteItem note => note.StaffPosition,
                 _ => 1  // Default to odd (not on line)
             };
-            double dotYOffset = (staffPosition % 2 == 0) ? -GlyphMetrics.SpaceHeight / 2 : 0;
+            double dotYOffset = (staffPosition % 2 == 0) ? -0.5 : 0;
             
             for (int d = 0; d < dots; d++)
             {
@@ -462,7 +462,7 @@ public static class SpacingRules
         // Get note Y position
         double noteY = item switch
         {
-            NoteItem note => staffY - note.StaffPosition * GlyphMetrics.SpaceHeight / 2,
+            NoteItem note => staffY - note.StaffPosition / 2.0,
             _ => staffY
         };
         

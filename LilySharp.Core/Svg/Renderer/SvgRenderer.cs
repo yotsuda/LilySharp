@@ -9,28 +9,31 @@ namespace LilySharp.Core.Svg.Renderer;
 /// </summary>
 public sealed class SvgRenderer
 {
-    // Layout constants
+    // SVG output scale: pixels per staff space for the width/height attributes
+    // (viewBox uses staff spaces directly; this is only for the outer dimensions)
     private const double SpaceHeight = 10;
+    
+    // Layout constants (in staff spaces)
     private const double StaffHeight = 4;  // 4 staff spaces between top and bottom staff lines
-    private const double FontSize = 4;  // in staff spaces (4 staff spaces = 40px at SpaceHeight=10)
+    private const double FontSize = 4;  // 4 staff spaces for music glyphs
     
-    // Derived from SMuFL defaults
-    private static double StaffLineThickness => EngravingDefaults.StaffLineThickness;  // in staff spaces
-    private static double StemThickness => EngravingDefaults.StemThickness;  // in staff spaces
-    private static double ThinBarlineThickness => EngravingDefaults.ThinBarlineThickness;  // in staff spaces
-    private static double LegerLineExtension => EngravingDefaults.LegerLineExtension;  // in staff spaces
-    private static double LegerLineThickness => EngravingDefaults.LegerLineThickness;  // in staff spaces
+    // Derived from SMuFL defaults (all in staff spaces)
+    private static double StaffLineThickness => EngravingDefaults.StaffLineThickness;
+    private static double StemThickness => EngravingDefaults.StemThickness;
+    private static double ThinBarlineThickness => EngravingDefaults.ThinBarlineThickness;
+    private static double LegerLineExtension => EngravingDefaults.LegerLineExtension;
+    private static double LegerLineThickness => EngravingDefaults.LegerLineThickness;
     
-    // Stem attachment points
-    private static double StemUpAttachX => EngravingDefaults.StemUpAttachX;  // in staff spaces
-    private static double StemUpAttachY => EngravingDefaults.StemUpAttachY;  // in staff spaces
-    private static double StemDownAttachX => EngravingDefaults.StemDownAttachX;  // in staff spaces
-    private static double StemDownAttachY => EngravingDefaults.StemDownAttachY;  // in staff spaces
-    private static double StemHeight => EngravingRules.StandardStemLength;  // in staff spaces
+    // Stem attachment points (in staff spaces)
+    private static double StemUpAttachX => EngravingDefaults.StemUpAttachX;
+    private static double StemUpAttachY => EngravingDefaults.StemUpAttachY;
+    private static double StemDownAttachX => EngravingDefaults.StemDownAttachX;
+    private static double StemDownAttachY => EngravingDefaults.StemDownAttachY;
+    private static double StemHeight => EngravingRules.StandardStemLength;
     
     /// <summary>
-    /// Converts staff spaces to pixels for SVG output.
-    /// Layout coordinates are in staff spaces; SVG needs pixels.
+    /// Converts staff spaces to pixels for SVG width/height attributes only.
+    /// All internal coordinates use staff spaces directly via viewBox.
     /// </summary>
     private static double Px(double staffSpaces) => staffSpaces * SpaceHeight;
     
@@ -63,7 +66,7 @@ public sealed class SvgRenderer
             }
         }
         
-        // Calculate stem end Y positions for beamed notes (all in pixels)
+        // Calculate stem end Y positions for beamed notes (all in staff spaces)
         _beamedStemEndYs.Clear();
         _beamedStemUp.Clear();
         foreach (var beamLayout in layout.BeamLayouts)
@@ -81,17 +84,17 @@ public sealed class SvgRenderer
                 ? StemUpAttachX - noteheadCenterX 
                 : StemDownAttachX - noteheadCenterX;
             
-            // Convert beam endpoints to pixel coordinates at stem X positions
+            // Calculate beam endpoints at stem X positions
             double leftStemX = beamLayout.LeftX + stemOffsetX;
             double rightStemX = beamLayout.RightX + stemOffsetX;
             double leftBeamCenterY = staffMiddleY - beamLayout.LeftY / 2;  // staff positions to staff spaces
             double rightBeamCenterY = staffMiddleY - beamLayout.RightY / 2;  // staff positions to staff spaces
             
-            // Beam slope in pixels
+            // Beam slope
             double beamSpanX = rightStemX - leftStemX;
-            double slopePx = beamSpanX > 0.001 ? (rightBeamCenterY - leftBeamCenterY) / beamSpanX : 0;
+            double slope = beamSpanX > 0.001 ? (rightBeamCenterY - leftBeamCenterY) / beamSpanX : 0;
             
-            // Beam thickness (pixels)
+            // Beam thickness
             double beamThickness = BeamThickness;  // already in staff spaces
             
             for (int i = 0; i < group.Members.Length; i++)
@@ -103,7 +106,7 @@ public sealed class SvgRenderer
                 double stemX = noteCenterX + stemOffsetX;
                 
                 // Primary beam Y at this stem X (center of beam)
-                double primaryBeamCenterY = leftBeamCenterY + slopePx * (stemX - leftStemX);
+                double primaryBeamCenterY = leftBeamCenterY + slope * (stemX - leftStemX);
                 
                 // Stem extends to the far edge of the primary beam (away from notehead)
                 double stemEndY;
@@ -245,7 +248,7 @@ public sealed class SvgRenderer
             // Adjust Y positions relative to system
             double braceTop = system.Y + grandStaff.BraceTop;
             double braceBottom = system.Y + grandStaff.BraceBottom;
-            var braceSvg = BraceRenderer.RenderBrace(grandStaff.BraceX, braceTop, braceBottom, 1);  // scale=1 since viewBox is in staff spaces
+            var braceSvg = BraceRenderer.RenderBrace(grandStaff.BraceX, braceTop, braceBottom);
             _svg.AppendLine($"  {braceSvg}");
         }
         
@@ -744,7 +747,7 @@ public sealed class SvgRenderer
         
         // Calculate accidental positions
         var accidentalPlacement = new AccidentalPlacement();
-        var accidentalLayouts = accidentalPlacement.CalculatePositions(chord.Notes, 1);  // scale=1 since viewBox is in staff spaces
+        var accidentalLayouts = accidentalPlacement.CalculatePositions(chord.Notes);
         var accidentalMap = accidentalLayouts.ToDictionary(a => a.StaffPosition);
         
         foreach (var note in chord.Notes)
@@ -1037,7 +1040,7 @@ public sealed class SvgRenderer
             ? StemUpAttachX - noteheadCenterX 
             : StemDownAttachX - noteheadCenterX;
         
-        // Beam endpoints at stem X positions (in pixels)
+        // Beam endpoints at stem X positions (in staff spaces)
         double leftStemX = beamLayout.LeftX + stemOffsetX;
         double rightStemX = beamLayout.RightX + stemOffsetX;
         double leftBeamCenterY = staffMiddleY - beamLayout.LeftY / 2;  // staff positions to staff spaces
@@ -1051,14 +1054,14 @@ public sealed class SvgRenderer
         }
         
         double beamThickness = BeamThickness;  // already in staff spaces
-        double beamTranslationPx = BeamTranslation;
+        double beamTranslation = BeamTranslation;
         
         for (int level = 0; level < maxBeamCount; level++)
         {
             // Offset for this beam level (from primary beam center)
             // StemUp: secondary beams stack toward notehead (larger Y = downward)
             // StemDown: secondary beams stack toward notehead (smaller Y = upward)
-            double levelOffset = level * beamTranslationPx;
+            double levelOffset = level * beamTranslation;
             if (!group.StemUp)
                 levelOffset = -levelOffset;
             
@@ -1120,17 +1123,17 @@ public sealed class SvgRenderer
             // Beamlet direction: extend toward the neighboring note
             // If there's a note to the left, extend left; otherwise extend right
             bool extendLeft = startIdx > 0;
-            double beamletLengthPx = BeamletLength;
+            double beamletLength = BeamletLength;
             
             if (extendLeft)
             {
-                segLeftX = memberX - beamletLengthPx;
+                segLeftX = memberX - beamletLength;
                 segRightX = memberX;
             }
             else
             {
                 segLeftX = memberX;
-                segRightX = memberX + beamletLengthPx;
+                segRightX = memberX + beamletLength;
             }
         }
         else

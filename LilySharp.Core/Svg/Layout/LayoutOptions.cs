@@ -2,26 +2,14 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Options for score layout.
-/// All dimensions are in staff spaces unless otherwise noted.
+/// All dimensions are in staff spaces.
 /// </summary>
 /// <remarks>
 /// Staff space is the distance between two adjacent staff lines.
 /// This is the standard unit in LilyPond and music engraving.
-/// Pixel conversion happens only at render time using SpaceHeight.
 /// </remarks>
 public sealed record LayoutOptions
 {
-    // === Output Scale ===
-    
-    /// <summary>
-    /// Pixels per staff space for SVG output.
-    /// This is the only pixel-related setting; all others are in staff spaces.
-    /// </summary>
-    public double SpaceHeight { get; init; } = 10;
-    
-    /// <summary>Alias for SpaceHeight (pixels per staff space). For backward compatibility.</summary>
-    public double StaffSpaceSize => SpaceHeight;
-    
     // === Page Dimensions (in staff spaces) ===
     
     /// <summary>Page width in staff spaces.</summary>
@@ -92,16 +80,6 @@ public sealed record LayoutOptions
     /// <summary>Available width for music content in staff spaces.</summary>
     public double ContentWidth => PageWidth - MarginLeft - MarginRight;
     
-    // === Pixel Conversion Helpers ===
-    // These are convenience methods for the renderer layer only.
-    
-    /// <summary>Converts staff spaces to pixels using this layout's SpaceHeight.</summary>
-    public double ToPixels(double staffSpaces) => staffSpaces * SpaceHeight;
-    
-    /// <summary>Converts staff positions to pixels using this layout's SpaceHeight.</summary>
-    public double PositionsToPixels(double staffPositions) => staffPositions * SpaceHeight / 2;
-    
     /// <summary>Default options for standard layout.</summary>
     public static LayoutOptions Default { get; } = new();
 }
-
