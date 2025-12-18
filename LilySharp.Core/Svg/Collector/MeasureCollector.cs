@@ -343,9 +343,15 @@ public sealed class MeasureCollector
         foreach (var voiceName in renderSpec.GetVoiceNames())
         {
             _voiceName = voiceName;
-            _currentOctave = 4;
             _lastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
+            
+            // Set clef for this voice from part definition
+            var partClef = GetPartClef(tree.GetRoot(), voiceName);
+            _clef = partClef ?? "treble";
+            
+            // Set initial octave based on clef (bass clef starts at octave 3)
+            _currentOctave = _clef == "bass" ? 3 : 4;
             
             var measures = CollectMeasuresForVoice(voiceName);
             voiceDict[voiceName] = new Voice(voiceName, measures.ToImmutableArray());
@@ -932,6 +938,9 @@ public sealed class MeasureCollector
         // Apply OctaveOffset for this note only (does not affect next note)
         int actualOctave = baseOctave + pitch.OctaveOffset;
         
+        // Staff position 0 = middle line of the staff
+        // Treble clef: B4 = staff position 0
+        // Bass clef: D3 = staff position 0
         int basePosition = _clef switch
         {
             "treble" => GetPitchIndex(pitchName) - GetPitchIndex('b') + (actualOctave - 4) * 7,

@@ -1338,8 +1338,12 @@ public sealed class LayoutEngine
         double startBarlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline);
         double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
         
-        // Available width for columns
-        double contentWidth = totalWidth - startBarlineWidth - endBarlineWidth;
+        // Ensure minimum space after barline for first note
+        // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist (first-note . (fixed-space . 1.3))
+        double firstNoteOffset = Math.Max(startBarlineWidth, EngravingDefaults.BarLineToFirstNoteSpace);
+        
+        // Available width for columns (after first note offset and before end barline)
+        double contentWidth = totalWidth - firstNoteOffset - endBarlineWidth;
         
         // Calculate total duration of the measure
         var totalDuration = Fraction.Zero;
@@ -1360,19 +1364,19 @@ public sealed class LayoutEngine
             
             // Calculate X position based on timing ratio
             double timingRatio = timing.ToDouble() / totalDuration.ToDouble();
-            double x = startBarlineWidth + timingRatio * contentWidth;
+            double x = firstNoteOffset + timingRatio * contentWidth;
             
             // Calculate width (distance to next column or end)
             double width;
             if (i < timings.Count - 1)
             {
                 double nextRatio = timings[i + 1].ToDouble() / totalDuration.ToDouble();
-                double nextX = startBarlineWidth + nextRatio * contentWidth;
+                double nextX = firstNoteOffset + nextRatio * contentWidth;
                 width = nextX - x;
             }
             else
             {
-                width = contentWidth - (x - startBarlineWidth);
+                width = contentWidth - (x - firstNoteOffset);
             }
             
             columns.Add(new ColumnLayout(timing, x, width));

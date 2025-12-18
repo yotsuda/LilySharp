@@ -10,7 +10,7 @@ part leftHand {
   clef: bass
 }
 
-phrase rightHandMusic { c''4 d'' e'' f'' | g''2 g'' | }
+phrase rightHandMusic { c''4 d e f | g2 g | }
 phrase leftHandMusic { c4 e g c' | c2 c | }
 
 section Main {
