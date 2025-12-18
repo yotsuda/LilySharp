@@ -34,15 +34,6 @@ public static class SpacingRules
     /// <summary>Width of a double or final barline in staff spaces.</summary>
     public const double DoubleBarlineWidth = 1.2;
     
-    /// <summary>Width of clef in staff spaces.</summary>
-    public const double ClefWidth = 3.0;
-    
-    /// <summary>Width per accidental in key signature in staff spaces.</summary>
-    public const double KeySignatureAccidentalWidth = 1.0;
-    
-    /// <summary>Width of time signature in staff spaces.</summary>
-    public const double TimeSignatureWidth = 2.5;
-    
     /// <summary>
     /// Calculates width based on duration using Lilypond's spacing algorithm.
     /// </summary>
@@ -114,12 +105,28 @@ public static class SpacingRules
     /// <summary>
     /// Calculates the width of system prefix (clef + key + optional time signature).
     /// </summary>
+    /// <remarks>
+    /// Uses spacing constants from GlyphMetrics (see LILYPOND-REF comments there).
+    /// </remarks>
     public static double CalculatePrefixWidth(int keySharps, bool includeTimeSignature)
     {
-        double width = ClefWidth;
-        width += Math.Abs(keySharps) * KeySignatureAccidentalWidth;
+        // Clef width includes spacing to key signature
+        double width = GlyphMetrics.ClefToKeySignatureSpace;
+        
+        int keyAccidentals = Math.Abs(keySharps);
+        if (keyAccidentals > 0)
+        {
+            width += keyAccidentals * GlyphMetrics.KeySignatureAccidentalWidth;
+        }
+        
         if (includeTimeSignature)
-            width += TimeSignatureWidth;
+        {
+            // Add spacing from key signature (or clef) to time signature
+            if (keyAccidentals > 0)
+                width += GlyphMetrics.KeySignatureToTimeSignatureSpace;
+            width += GlyphMetrics.TimeSignatureWidth + GlyphMetrics.TimeSignatureToFirstNoteSpace;
+        }
+        
         return width;
     }
     

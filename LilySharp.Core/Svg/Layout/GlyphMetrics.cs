@@ -107,6 +107,73 @@ public static class GlyphMetrics
     /// </summary>
     public const double BarlinePadding = 0.8;
     
+    // ========== Clef and Signature Spacing ==========
+    // LILYPOND-REF: scm/define-grobs.scm:810-819 Clef space-alist
+    // LILYPOND-REF: scm/define-grobs.scm:1832-1839 KeySignature space-alist
+    // LILYPOND-REF: scm/define-grobs.scm:3596-3602 TimeSignature space-alist
+    
+    /// <summary>
+    /// G clef approximate width in staff spaces.
+    /// </summary>
+    public const double GClefWidth = 2.8;
+    
+    /// <summary>
+    /// F clef approximate width in staff spaces.
+    /// </summary>
+    public const double FClefWidth = 2.5;
+    
+    /// <summary>
+    /// C clef approximate width in staff spaces.
+    /// </summary>
+    public const double CClefWidth = 2.3;
+    
+    // LILYPOND-REF: scm/define-grobs.scm:815 (key-signature . (minimum-space . 3.5))
+    /// <summary>
+    /// Minimum space from clef to key signature.
+    /// </summary>
+    public const double ClefToKeySignatureSpace = 3.5;
+    
+    // LILYPOND-REF: scm/define-grobs.scm:816 (time-signature . (minimum-space . 4.2))
+    /// <summary>
+    /// Minimum space from clef to time signature.
+    /// </summary>
+    public const double ClefToTimeSignatureSpace = 4.2;
+    
+    // LILYPOND-REF: scm/define-grobs.scm:817 (first-note . (minimum-fixed-space . 5.0))
+    /// <summary>
+    /// Minimum space from clef to first note.
+    /// </summary>
+    public const double ClefToFirstNoteSpace = 5.0;
+    
+    // LILYPOND-REF: scm/define-grobs.scm:1834 (time-signature . (extra-space . 1.15))
+    /// <summary>
+    /// Extra space from key signature to time signature.
+    /// </summary>
+    public const double KeySignatureToTimeSignatureSpace = 1.15;
+    
+    // LILYPOND-REF: scm/define-grobs.scm:1839 (first-note . (fixed-space . 2.5))
+    /// <summary>
+    /// Fixed space from key signature to first note.
+    /// </summary>
+    public const double KeySignatureToFirstNoteSpace = 2.5;
+    
+    // LILYPOND-REF: scm/define-grobs.scm:3599 (first-note . (fixed-space . 2.0))
+    /// <summary>
+    /// Fixed space from time signature to first note.
+    /// </summary>
+    public const double TimeSignatureToFirstNoteSpace = 2.0;
+    
+    // LILYPOND-REF: scm/define-grobs.scm:1842 (extra-spacing-width . (0.0 . 1.0))
+    /// <summary>
+    /// Width of a single accidental in key signature including spacing.
+    /// </summary>
+    public const double KeySignatureAccidentalWidth = 1.0;
+    
+    /// <summary>
+    /// Time signature number width (approximate).
+    /// </summary>
+    public const double TimeSignatureWidth = 1.8;
+    
     // ========== Helper Methods ==========
     
     /// <summary>

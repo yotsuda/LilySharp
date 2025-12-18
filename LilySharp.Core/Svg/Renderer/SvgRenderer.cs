@@ -294,25 +294,41 @@ public sealed class SvgRenderer
             ClefType.Tenor => staffY + 1,
             _ => staffY + 3
         };
+        double clefWidth = staffLayout.Clef switch
+        {
+            ClefType.Bass => GlyphMetrics.FClefWidth,
+            ClefType.Alto or ClefType.Tenor => GlyphMetrics.CClefWidth,
+            _ => GlyphMetrics.GClefWidth
+        };
         DrawGlyph(clefGlyph, currentX, clefY);
-        currentX += 3;  // clef width in staff spaces
+        double clefRightEdge = currentX + clefWidth;
         
         // Draw key signature
-        if (score.KeySignature.Count > 0)
+        string clefName = staffLayout.Clef switch
         {
-            string clefName = staffLayout.Clef switch
-            {
-                ClefType.Bass => "bass",
-                ClefType.Alto => "alto",
-                ClefType.Tenor => "tenor",
-                _ => "treble"
-            };
+            ClefType.Bass => "bass",
+            ClefType.Alto => "alto",
+            ClefType.Tenor => "tenor",
+            _ => "treble"
+        };
+        bool hasKeySignature = score.KeySignature.Count > 0;
+        if (hasKeySignature)
+        {
+            currentX = clefRightEdge + (GlyphMetrics.ClefToKeySignatureSpace - clefWidth);
             currentX = DrawKeySignature(score.KeySignature, clefName, currentX, staffY);
         }
         
         // Draw time signature (first system only)
         if (isFirstSystem)
         {
+            if (hasKeySignature)
+            {
+                currentX += GlyphMetrics.KeySignatureToTimeSignatureSpace;
+            }
+            else
+            {
+                currentX = clefRightEdge + (GlyphMetrics.ClefToTimeSignatureSpace - clefWidth);
+            }
             DrawTimeSignature(score.TimeSignature, currentX, staffY);
         }
         
@@ -523,20 +539,49 @@ public sealed class SvgRenderer
             "tenor" => y + 1,
             _ => y + 3
         };
+        double clefWidth = score.Clef switch
+        {
+            "bass" => GlyphMetrics.FClefWidth,
+            "alto" or "tenor" => GlyphMetrics.CClefWidth,
+            _ => GlyphMetrics.GClefWidth
+        };
         DrawGlyph(clefGlyph, currentX, clefY);
-        currentX += 3;  // clef width in staff spaces
+        double clefRightEdge = currentX + clefWidth;
         
         // Draw key signature
-        if (score.KeySignature.Count > 0)
+        bool hasKeySignature = score.KeySignature.Count > 0;
+        if (hasKeySignature)
         {
+            currentX = clefRightEdge + (GlyphMetrics.ClefToKeySignatureSpace - clefWidth);
             currentX = DrawKeySignature(score.KeySignature, score.Clef, currentX, y);
         }
         
         // Draw time signature (first system only)
         if (isFirstSystem)
         {
+            if (hasKeySignature)
+            {
+                // Key signature already positioned currentX
+                currentX += GlyphMetrics.KeySignatureToTimeSignatureSpace;
+            }
+            else
+            {
+                currentX = clefRightEdge + (GlyphMetrics.ClefToTimeSignatureSpace - clefWidth);
+            }
             DrawTimeSignature(score.TimeSignature, currentX, y);
-            currentX += 25;
+            currentX += GlyphMetrics.TimeSignatureWidth + GlyphMetrics.TimeSignatureToFirstNoteSpace;
+        }
+        else
+        {
+            // Subsequent systems: no time signature, just spacing after clef/key
+            if (!hasKeySignature)
+            {
+                currentX = clefRightEdge + (GlyphMetrics.ClefToFirstNoteSpace - clefWidth);
+            }
+            else
+            {
+                currentX += GlyphMetrics.KeySignatureToFirstNoteSpace;
+            }
         }
         
         // Draw tempo marking (first system only)
@@ -916,31 +961,59 @@ public sealed class SvgRenderer
     {
         if (keySig.Count == 0) return x;
         
-        // Sharp/flat positions from Lilypond define-grobs.scm
-        // Order: F#, C#, G#, D#, A#, E#, B# / Bb, Eb, Ab, Db, Gb, Cb, Fb
-        int[] sharpPositions = clef switch
+        // LilyPond key signature position calculation
+        // Based on output-lib.scm: key-signature-interface::alteration-position
+        //
+        // c0-position: position of middle C for each clef
+        // - treble: -6 (C4 is one ledger line below staff)
+        // - bass: 6 (C4 is one ledger line above staff)
+        // - alto: 0 (C4 is on middle line)
+        // - tenor: 2 (C4 is on fourth line)
+        int c0Position = clef switch
         {
-            "bass" => [2, 3, 2, 0, 1, 0, 1],  // treble positions - 2
-            _ => [4, 5, 4, 2, 3, 2, 3]        // Lilypond: (sharp-positions . (4 5 4 2 3 2 3))
+            "bass" => 6,
+            "alto" => 0,
+            "tenor" => 2,
+            _ => -6  // treble
         };
         
-        int[] flatPositions = clef switch
-        {
-            "bass" => [0, 1, 2, 0, -1, 0, -1],  // treble positions - 2
-            _ => [2, 3, 4, 2, 1, 2, 1]          // Lilypond: (flat-positions . (2 3 4 2 1 2 1))
-        };
+        // LilyPond sharp-positions and flat-positions from define-grobs.scm
+        // These are indexed by (modulo c0-position 7)
+        int[] sharpPositions = [4, 5, 4, 2, 3, 2, 3];
+        int[] flatPositions = [2, 3, 4, 2, 1, 2, 1];
+        
+        // Order of accidentals in key signature:
+        // Sharps: F#, C#, G#, D#, A#, E#, B# → steps: 3, 0, 4, 1, 5, 2, 6
+        // Flats:  Bb, Eb, Ab, Db, Gb, Cb, Fb → steps: 6, 2, 5, 1, 4, 0, 3
+        int[] sharpSteps = [3, 0, 4, 1, 5, 2, 6];  // F, C, G, D, A, E, B
+        int[] flatSteps = [6, 2, 5, 1, 4, 0, 3];   // B, E, A, D, G, C, F
         
         char glyph = keySig.IsSharps ? EmmentalerGlyphs.AccidentalSharp : EmmentalerGlyphs.AccidentalFlat;
         int[] positions = keySig.IsSharps ? sharpPositions : flatPositions;
+        int[] steps = keySig.IsSharps ? sharpSteps : flatSteps;
+        
+        // c-pos: normalized position of C within octave (0-6)
+        int cPos = ((c0Position % 7) + 7) % 7;  // ensure positive modulo
+        int hi = positions[cPos];  // highest position for this clef
         
         for (int i = 0; i < keySig.Count; i++)
         {
-            double accY = systemY + StaffHeight / 2 - (positions[i] / 2);
+            int step = steps[i];
+            // LilyPond formula: hi - modulo(hi - (c-pos + step), 7)
+            int diff = hi - (cPos + step);
+            int modDiff = ((diff % 7) + 7) % 7;  // ensure positive modulo
+            int staffPosition = hi - modDiff;
+            
+            // Convert staff position to Y coordinate
+            // position 0 = middle line (systemY + 2)
+            // Each position unit = 0.5 staff spaces
+            double accY = systemY + StaffHeight / 2 - (staffPosition * 0.5);
             DrawGlyph(glyph, x, accY);
-            x += 1;  // 1 staff space
+            x += GlyphMetrics.KeySignatureAccidentalWidth;
         }
         
-        return x + 5;
+        // Return the right edge of the key signature (spacing is handled by caller)
+        return x;
     }
     
     private void DrawTimeSignature(TimeSignature timeSig, double x, double y)
