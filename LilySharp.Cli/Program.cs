@@ -1,57 +1,187 @@
+using System.Reflection;
 using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
 using LilySharp.Core.Syntax;
 
-if (args.Length == 0)
-{
-    Console.WriteLine("Lily# - Music notation compiler");
-    Console.WriteLine();
-    Console.WriteLine("Usage: lysc <command> [options]");
-    Console.WriteLine();
-    Console.WriteLine("Commands:");
-    Console.WriteLine("  midi <input.lys> [output.mid]  Convert to MIDI");
-    Console.WriteLine("  xml <input.lys> [output.xml]   Convert to MusicXML");
-    Console.WriteLine("  check <input.lys>              Check syntax");
-    Console.WriteLine("  svg <input.lys> [output.svg] [-n]  Convert to SVG (-n: no embed font)");
-    return 0;
-}
+return Run(args);
 
-var command = args[0].ToLowerInvariant();
-
-switch (command)
+static int Run(string[] args)
 {
-    case "midi":
-        return ExportMidi(args.Skip(1).ToArray());
-    case "xml":
-        return ExportMusicXml(args.Skip(1).ToArray());
-    case "check":
-        return CheckSyntax(args.Skip(1).ToArray());
-    case "svg":
-        return ExportSvg(args.Skip(1).ToArray());
-    default:
-        Console.Error.WriteLine($"Unknown command: {command}");
-        return 1;
-}
-
-static int ExportMidi(string[] args)
-{
+    // Handle empty args or global help
     if (args.Length == 0)
     {
-        Console.Error.WriteLine("Error: Input file required");
-        return 1;
+        ShowHelp();
+        return 0;
     }
 
-    var inputPath = args[0];
-    if (!File.Exists(inputPath))
+    var first = args[0].ToLowerInvariant();
+    
+    // Global options
+    if (first is "-h" or "--help")
     {
-        Console.Error.WriteLine($"Error: File not found: {inputPath}");
+        ShowHelp();
+        return 0;
+    }
+    
+    if (first is "-V" or "--version")
+    {
+        ShowVersion();
+        return 0;
+    }
+
+    // Commands
+    return first switch
+    {
+        "svg" => RunSvg(args.Skip(1).ToArray()),
+        "midi" => RunMidi(args.Skip(1).ToArray()),
+        "xml" => RunXml(args.Skip(1).ToArray()),
+        "check" => RunCheck(args.Skip(1).ToArray()),
+        _ => UnknownCommand(first)
+    };
+}
+
+static void ShowHelp()
+{
+    Console.WriteLine("""
+        Lily# - Music notation compiler
+
+        Usage: lysc <command> [options] <input> [output]
+               lysc [options]
+
+        Commands:
+          svg     Convert to SVG (sheet music)
+          midi    Convert to MIDI (audio)
+          xml     Convert to MusicXML
+          check   Check syntax without output
+
+        Global Options:
+          -h, --help       Show this help
+          -V, --version    Show version
+
+        Examples:
+          lysc svg score.lys                    # Output: score.svg
+          lysc svg score.lys output.svg         # Specify output file
+          lysc svg score.lys -o output.svg      # Same as above
+          lysc midi score.lys                   # Output: score.mid
+          lysc check score.lys                  # Syntax check only
+
+        Per-command help:
+          lysc svg --help
+          lysc midi --help
+        """);
+}
+
+static void ShowVersion()
+{
+    var version = Assembly.GetExecutingAssembly()
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+        ?.InformationalVersion ?? "unknown";
+    Console.WriteLine($"lysc {version}");
+}
+
+static int UnknownCommand(string command)
+{
+    Console.Error.WriteLine($"Error: Unknown command '{command}'");
+    Console.Error.WriteLine("Run 'lysc --help' for usage.");
+    return 1;
+}
+
+// ============ SVG Command ============
+
+static int RunSvg(string[] args)
+{
+    if (args.Contains("-h") || args.Contains("--help"))
+    {
+        ShowSvgHelp();
+        return 0;
+    }
+
+    var (inputPath, outputPath, embedFont, error) = ParseSvgOptions(args);
+    if (error != null)
+    {
+        Console.Error.WriteLine($"Error: {error}");
+        Console.Error.WriteLine("Run 'lysc svg --help' for usage.");
         return 1;
     }
 
-    var outputPath = args.Length > 1 
-        ? args[1] 
-        : Path.ChangeExtension(inputPath, ".mid");
+    return ExecuteSvg(inputPath!, outputPath!, embedFont);
+}
 
+static void ShowSvgHelp()
+{
+    Console.WriteLine("""
+        Convert Lily# source to SVG
+
+        Usage: lysc svg [options] <input.lys> [output.svg]
+
+        Arguments:
+          <input.lys>      Input Lily# source file
+          [output.svg]     Output SVG file (default: input with .svg extension)
+
+        Options:
+          -o, --output <file>    Output file path
+          --no-embed-font        Don't embed font (smaller file, requires font installed)
+          -h, --help             Show this help
+
+        Examples:
+          lysc svg score.lys
+          lysc svg score.lys sheet.svg
+          lysc svg -o sheet.svg score.lys
+          lysc svg score.lys --no-embed-font
+        """);
+}
+
+static (string? InputPath, string? OutputPath, bool EmbedFont, string? Error) ParseSvgOptions(string[] args)
+{
+    string? inputPath = null;
+    string? outputPath = null;
+    bool embedFont = true;
+
+    for (int i = 0; i < args.Length; i++)
+    {
+        var arg = args[i];
+        
+        if (arg is "-o" or "--output")
+        {
+            if (i + 1 >= args.Length)
+                return (null, null, false, "-o requires a file path");
+            outputPath = args[++i];
+        }
+        else if (arg is "--no-embed-font" or "-n")
+        {
+            embedFont = false;
+        }
+        else if (arg.StartsWith("-"))
+        {
+            return (null, null, false, $"Unknown option: {arg}");
+        }
+        else if (inputPath == null)
+        {
+            inputPath = arg;
+        }
+        else if (outputPath == null)
+        {
+            outputPath = arg;
+        }
+        else
+        {
+            return (null, null, false, $"Unexpected argument: {arg}");
+        }
+    }
+
+    if (inputPath == null)
+        return (null, null, false, "Input file required");
+
+    if (!File.Exists(inputPath))
+        return (null, null, false, $"File not found: {inputPath}");
+
+    outputPath ??= Path.ChangeExtension(inputPath, ".svg");
+    
+    return (inputPath, outputPath, embedFont, null);
+}
+
+static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
+{
     try
     {
         var source = File.ReadAllText(inputPath);
@@ -61,9 +191,116 @@ static int ExportMidi(string[] args)
         {
             Console.Error.WriteLine("Syntax errors:");
             foreach (var diag in tree.Diagnostics)
-            {
                 Console.Error.WriteLine($"  {diag}");
-            }
+            return 1;
+        }
+
+        // Configure render options
+        LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
+        if (embedFont)
+        {
+            var fontDir = FindFontDirectory();
+            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(fontDir);
+        }
+        else
+        {
+            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
+        }
+        
+        var renderer = new LilySharp.Core.Svg.Renderer.SvgRenderer(renderOptions: renderOptions);
+        
+        // Check for multi-staff render specification
+        var renderSpec = LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
+        string svg;
+        
+        if (renderSpec != null && renderSpec.IsMultiStaff)
+        {
+            var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
+            var multiScore = collector.CollectMultiStaff(tree, renderSpec);
+            
+            var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
+            var layout = layoutEngine.Layout(multiScore);
+            
+            svg = renderer.Render(multiScore, layout);
+        }
+        else
+        {
+            var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
+            var score = collector.Collect(tree, null);
+            
+            var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
+            var layout = layoutEngine.Layout(score);
+            
+            svg = renderer.Render(score, layout);
+        }
+        
+        File.WriteAllText(outputPath, svg);
+        Console.WriteLine($"Created: {outputPath}");
+        Console.WriteLine(embedFont ? "  Font embedded: Yes" : "  Font embedded: No");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        return 1;
+    }
+}
+
+// ============ MIDI Command ============
+
+static int RunMidi(string[] args)
+{
+    if (args.Contains("-h") || args.Contains("--help"))
+    {
+        ShowMidiHelp();
+        return 0;
+    }
+
+    var (inputPath, outputPath, error) = ParseSimpleOptions(args, ".mid");
+    if (error != null)
+    {
+        Console.Error.WriteLine($"Error: {error}");
+        Console.Error.WriteLine("Run 'lysc midi --help' for usage.");
+        return 1;
+    }
+
+    return ExecuteMidi(inputPath!, outputPath!);
+}
+
+static void ShowMidiHelp()
+{
+    Console.WriteLine("""
+        Convert Lily# source to MIDI
+
+        Usage: lysc midi [options] <input.lys> [output.mid]
+
+        Arguments:
+          <input.lys>      Input Lily# source file
+          [output.mid]     Output MIDI file (default: input with .mid extension)
+
+        Options:
+          -o, --output <file>    Output file path
+          -h, --help             Show this help
+
+        Examples:
+          lysc midi score.lys
+          lysc midi score.lys audio.mid
+          lysc midi -o audio.mid score.lys
+        """);
+}
+
+static int ExecuteMidi(string inputPath, string outputPath)
+{
+    try
+    {
+        var source = File.ReadAllText(inputPath);
+        var tree = SyntaxTree.Parse(source);
+
+        if (tree.HasErrors)
+        {
+            Console.Error.WriteLine("Syntax errors:");
+            foreach (var diag in tree.Diagnostics)
+                Console.Error.WriteLine($"  {diag}");
             return 1;
         }
 
@@ -83,11 +320,94 @@ static int ExportMidi(string[] args)
     }
 }
 
-static int CheckSyntax(string[] args)
+// ============ MusicXML Command ============
+
+static int RunXml(string[] args)
 {
+    if (args.Contains("-h") || args.Contains("--help"))
+    {
+        ShowXmlHelp();
+        return 0;
+    }
+
+    var (inputPath, outputPath, error) = ParseSimpleOptions(args, ".xml");
+    if (error != null)
+    {
+        Console.Error.WriteLine($"Error: {error}");
+        Console.Error.WriteLine("Run 'lysc xml --help' for usage.");
+        return 1;
+    }
+
+    return ExecuteXml(inputPath!, outputPath!);
+}
+
+static void ShowXmlHelp()
+{
+    Console.WriteLine("""
+        Convert Lily# source to MusicXML
+
+        Usage: lysc xml [options] <input.lys> [output.xml]
+
+        Arguments:
+          <input.lys>      Input Lily# source file
+          [output.xml]     Output MusicXML file (default: input with .xml extension)
+
+        Options:
+          -o, --output <file>    Output file path
+          -h, --help             Show this help
+
+        Examples:
+          lysc xml score.lys
+          lysc xml score.lys export.xml
+          lysc xml -o export.xml score.lys
+        """);
+}
+
+static int ExecuteXml(string inputPath, string outputPath)
+{
+    try
+    {
+        var source = File.ReadAllText(inputPath);
+        var tree = SyntaxTree.Parse(source);
+
+        if (tree.HasErrors)
+        {
+            Console.Error.WriteLine("Syntax errors:");
+            foreach (var diag in tree.Diagnostics)
+                Console.Error.WriteLine($"  {diag}");
+            return 1;
+        }
+
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+        xml.Save(outputPath);
+
+        Console.WriteLine($"Created: {outputPath}");
+        Console.WriteLine($"  Parts: {xml.Parts.Count}");
+        Console.WriteLine($"  Measures: {xml.Parts.Sum(p => p.Measures.Count)}");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        return 1;
+    }
+}
+
+// ============ Check Command ============
+
+static int RunCheck(string[] args)
+{
+    if (args.Contains("-h") || args.Contains("--help"))
+    {
+        ShowCheckHelp();
+        return 0;
+    }
+
     if (args.Length == 0)
     {
         Console.Error.WriteLine("Error: Input file required");
+        Console.Error.WriteLine("Run 'lysc check --help' for usage.");
         return 1;
     }
 
@@ -98,6 +418,29 @@ static int CheckSyntax(string[] args)
         return 1;
     }
 
+    return ExecuteCheck(inputPath);
+}
+
+static void ShowCheckHelp()
+{
+    Console.WriteLine("""
+        Check Lily# source syntax
+
+        Usage: lysc check <input.lys>
+
+        Arguments:
+          <input.lys>      Input Lily# source file
+
+        Options:
+          -h, --help       Show this help
+
+        Examples:
+          lysc check score.lys
+        """);
+}
+
+static int ExecuteCheck(string inputPath)
+{
     try
     {
         var source = File.ReadAllText(inputPath);
@@ -129,165 +472,59 @@ static int CheckSyntax(string[] args)
     }
 }
 
-static int ExportMusicXml(string[] args)
+// ============ Shared Utilities ============
+
+static (string? InputPath, string? OutputPath, string? Error) ParseSimpleOptions(string[] args, string defaultExt)
 {
-    if (args.Length == 0)
+    string? inputPath = null;
+    string? outputPath = null;
+
+    for (int i = 0; i < args.Length; i++)
     {
-        Console.Error.WriteLine("Error: Input file required");
-        return 1;
-    }
-
-    var inputPath = args[0];
-    if (!File.Exists(inputPath))
-    {
-        Console.Error.WriteLine($"Error: File not found: {inputPath}");
-        return 1;
-    }
-
-    var outputPath = args.Length > 1 
-        ? args[1] 
-        : Path.ChangeExtension(inputPath, ".xml");
-
-    try
-    {
-        var source = File.ReadAllText(inputPath);
-        var tree = SyntaxTree.Parse(source);
-
-        if (tree.HasErrors)
+        var arg = args[i];
+        
+        if (arg is "-o" or "--output")
         {
-            Console.Error.WriteLine("Syntax errors:");
-            foreach (var diag in tree.Diagnostics)
-            {
-                Console.Error.WriteLine($"  {diag}");
-            }
-            return 1;
+            if (i + 1 >= args.Length)
+                return (null, null, "-o requires a file path");
+            outputPath = args[++i];
         }
-
-        var exporter = new MusicXmlExporter();
-        var xml = exporter.Export(tree);
-        xml.Save(outputPath);
-
-        Console.WriteLine($"Created: {outputPath}");
-        Console.WriteLine($"  Parts: {xml.Parts.Count}");
-        Console.WriteLine($"  Measures: {xml.Parts.Sum(p => p.Measures.Count)}");
-        return 0;
+        else if (arg.StartsWith("-"))
+        {
+            return (null, null, $"Unknown option: {arg}");
+        }
+        else if (inputPath == null)
+        {
+            inputPath = arg;
+        }
+        else if (outputPath == null)
+        {
+            outputPath = arg;
+        }
+        else
+        {
+            return (null, null, $"Unexpected argument: {arg}");
+        }
     }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        return 1;
-    }
+
+    if (inputPath == null)
+        return (null, null, "Input file required");
+
+    if (!File.Exists(inputPath))
+        return (null, null, $"File not found: {inputPath}");
+
+    outputPath ??= Path.ChangeExtension(inputPath, defaultExt);
+    
+    return (inputPath, outputPath, null);
 }
 
-static int ExportSvg(string[] args)
-{
-    // Parse arguments
-    var embedFont = true;
-    var positionalArgs = new List<string>();
-    
-    foreach (var arg in args)
-    {
-        if (arg == "--no-embed" || arg == "-n")
-            embedFont = false;
-        else
-            positionalArgs.Add(arg);
-    }
-    
-    if (positionalArgs.Count == 0)
-    {
-        Console.Error.WriteLine("Error: Input file required");
-        Console.Error.WriteLine("Usage: lysc svg <input.lys> [output.svg] [--no-embed]");
-        return 1;
-    }
-
-    var inputPath = positionalArgs[0];
-    if (!File.Exists(inputPath))
-    {
-        Console.Error.WriteLine($"Error: File not found: {inputPath}");
-        return 1;
-    }
-
-    var outputPath = positionalArgs.Count > 1 
-        ? positionalArgs[1] 
-        : Path.ChangeExtension(inputPath, ".svg");
-
-    try
-    {
-        var source = File.ReadAllText(inputPath);
-        var tree = SyntaxTree.Parse(source);
-
-        if (tree.HasErrors)
-        {
-            Console.Error.WriteLine("Syntax errors:");
-            foreach (var diag in tree.Diagnostics)
-            {
-                Console.Error.WriteLine($"  {diag}");
-            }
-            return 1;
-        }
-
-        // Configure render options
-        LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
-        if (embedFont)
-        {
-            // Find font directory relative to output or executable
-            var fontDir = FindFontDirectory();
-            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(fontDir);
-        }
-        else
-        {
-            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
-        }
-        
-        var renderer = new LilySharp.Core.Svg.Renderer.SvgRenderer(renderOptions: renderOptions);
-        
-        // Check for multi-staff render specification
-        var renderSpec = LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
-        string svg;
-        
-        if (renderSpec != null && renderSpec.IsMultiStaff)
-        {
-            // Multi-staff render: Collector -> Layout -> Renderer
-            var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
-            var multiScore = collector.CollectMultiStaff(tree, renderSpec);
-            
-            var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
-            var layout = layoutEngine.Layout(multiScore);
-            
-            svg = renderer.Render(multiScore, layout);
-        }
-        else
-        {
-            // Single staff render
-            var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
-            var score = collector.Collect(tree, null);
-            
-            var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
-            var layout = layoutEngine.Layout(score);
-            
-            svg = renderer.Render(score, layout);
-        }
-        File.WriteAllText(outputPath, svg);
-
-        Console.WriteLine($"Created: {outputPath}");
-        Console.WriteLine(embedFont ? "  Font embedded: Yes" : "  Font embedded: No");
-        return 0;
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        Console.Error.WriteLine(ex.StackTrace);
-        return 1;
-    }
-}
 static string? FindFontDirectory()
 {
-    // Search in common locations
     var candidates = new[]
     {
         "fonts",
         "../fonts",
-        "editors/vscode/media/fonts",  // Development location
+        "editors/vscode/media/fonts",
         Path.Combine(AppContext.BaseDirectory, "fonts"),
         Path.Combine(AppContext.BaseDirectory, "..", "fonts")
     };

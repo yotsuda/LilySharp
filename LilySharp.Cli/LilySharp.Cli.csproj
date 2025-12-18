@@ -10,6 +10,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>lysc</AssemblyName>
+    <Version>0.2.0</Version>
+    <Description>Lily# - Music notation compiler</Description>
   </PropertyGroup>
 
 </Project>
