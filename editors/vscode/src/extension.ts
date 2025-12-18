@@ -10,6 +10,7 @@ import {
 
 let client: LanguageClient;
 let clientReady = false;
+let clientReadyPromise: Promise<void>;
 const previewPanels = new Map<string, vscode.WebviewPanel>();
 let debounceTimers = new Map<string, NodeJS.Timeout>();
 const outputChannel = vscode.window.createOutputChannel('Lily# Extension');
@@ -23,6 +24,7 @@ const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 
 export function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine('Lily# extension activating...');
+    outputChannel.show(true);  // Show output channel for debugging
     
     const config = vscode.workspace.getConfiguration('lilysharp');
     let serverPath = config.get<string>('serverPath');
@@ -65,9 +67,18 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     outputChannel.appendLine('Starting language client...');
-    client.start().then(() => {
+    clientReadyPromise = client.start().then(() => {
         clientReady = true;
         outputChannel.appendLine('Language client started successfully');
+        
+        // Update any open preview panels now that client is ready
+        previewPanels.forEach((panel, uri) => {
+            outputChannel.appendLine(`Updating preview for ${uri}`);
+            const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
+            if (doc) {
+                updatePreviewContent(doc, panel, context);
+            }
+        });
     }).catch((error) => {
         outputChannel.appendLine(`Failed to start language client: ${error}`);
     });
@@ -75,9 +86,11 @@ export function activate(context: vscode.ExtensionContext) {
     // Register preview commands
     context.subscriptions.push(
         vscode.commands.registerCommand('lilysharp.openPreview', () => {
+            outputChannel.appendLine('openPreview command triggered');
             openPreview(context, vscode.ViewColumn.Active);
         }),
         vscode.commands.registerCommand('lilysharp.openPreviewToSide', () => {
+            outputChannel.appendLine('openPreviewToSide command triggered');
             openPreview(context, vscode.ViewColumn.Beside);
         })
     );
@@ -134,10 +147,12 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
 
     const document = editor.document;
     const uri = document.uri.toString();
+    outputChannel.appendLine(`Opening preview for: ${uri}`);
 
     // Check if preview already exists for this document
     const existingPanel = previewPanels.get(uri);
     if (existingPanel) {
+        outputChannel.appendLine('Revealing existing panel');
         existingPanel.reveal(viewColumn);
         updatePreviewContent(document, existingPanel, context);
         return;
@@ -147,6 +162,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     const fileName = path.basename(document.uri.fsPath);
     const fontsUri = vscode.Uri.joinPath(context.extensionUri, 'media', 'fonts');
     
+    outputChannel.appendLine('Creating new preview panel');
     const panel = vscode.window.createWebviewPanel(
         'lilysharpPreview',
         `Preview: ${fileName}`,
@@ -161,6 +177,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     previewPanels.set(uri, panel);
 
     panel.onDidDispose(() => {
+        outputChannel.appendLine(`Preview panel disposed: ${uri}`);
         previewPanels.delete(uri);
         selectedRenders.delete(uri);
         const timer = debounceTimers.get(uri);
@@ -173,6 +190,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     // Handle messages from webview
     panel.webview.onDidReceiveMessage(
         message => {
+            outputChannel.appendLine(`Received message from webview: ${message.type}`);
             if (message.type === 'jumpToPosition') {
                 const targetEditor = vscode.window.visibleTextEditors.find(
                     e => e.document.uri.toString() === uri
@@ -204,9 +222,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     );
     
     // Set initial HTML structure with font
+    outputChannel.appendLine('Setting webview HTML');
     panel.webview.html = getPreviewHtml(fontUri.toString(), panel.webview.cspSource);
     
     // Then load content
+    outputChannel.appendLine('Calling updatePreviewContent');
     updatePreviewContent(document, panel, context);
 }
 
@@ -215,23 +235,65 @@ async function updatePreviewContent(
     panel: vscode.WebviewPanel,
     context: vscode.ExtensionContext
 ) {
-    if (!client || !clientReady) {
+    const uri = document.uri.toString();
+    const selectedRender = selectedRenders.get(uri);
+    
+    outputChannel.appendLine(`updatePreviewContent called for ${uri}, clientReady=${clientReady}`);
+
+    // Wait for client to be ready if not already
+    if (!clientReady) {
+        outputChannel.appendLine('Client not ready, sending loading message');
+        panel.webview.postMessage({ 
+            type: 'updateContent', 
+            loading: true,
+            renders: [],
+            selectedRender: ''
+        });
+        
+        outputChannel.appendLine('Waiting for clientReadyPromise...');
+        try {
+            await clientReadyPromise;
+            outputChannel.appendLine('clientReadyPromise resolved');
+        } catch (err) {
+            outputChannel.appendLine(`clientReadyPromise rejected: ${err}`);
+            panel.webview.postMessage({ 
+                type: 'updateContent', 
+                error: 'Language server failed to start',
+                renders: [],
+                selectedRender: ''
+            });
+            return;
+        }
+    }
+
+    if (!client) {
+        outputChannel.appendLine('ERROR: client is null');
+        panel.webview.postMessage({ 
+            type: 'updateContent', 
+            error: 'Language server not available',
+            renders: [],
+            selectedRender: ''
+        });
         return;
     }
 
-    const uri = document.uri.toString();
-    const selectedRender = selectedRenders.get(uri);
-
+    outputChannel.appendLine('Sending lilysharp/svg request...');
     try {
         const response = await client.sendRequest<SvgResponse>('lilysharp/svg', {
             textDocument: { uri: uri },
             renderName: selectedRender || null
         });
+        
+        outputChannel.appendLine(`Got response: error=${response.Error}, hasSvg=${!!response.Svg}`);
 
         // Panel may have been disposed during async request
-        if (!previewPanels.has(uri)) return;
+        if (!previewPanels.has(uri)) {
+            outputChannel.appendLine('Panel was disposed during request');
+            return;
+        }
 
         if (response.Error) {
+            outputChannel.appendLine(`Sending error to webview: ${response.Error}`);
             panel.webview.postMessage({ 
                 type: 'updateContent', 
                 error: response.Error,
@@ -239,14 +301,18 @@ async function updatePreviewContent(
                 selectedRender: selectedRender || ''
             });
         } else if (response.Svg) {
+            outputChannel.appendLine(`Sending SVG to webview (length=${response.Svg.length})`);
             panel.webview.postMessage({ 
                 type: 'updateContent', 
                 svg: response.Svg,
                 renders: response.Renders || [],
                 selectedRender: selectedRender || ''
             });
+        } else {
+            outputChannel.appendLine('Response has neither error nor SVG');
         }
     } catch (error) {
+        outputChannel.appendLine(`Request failed: ${error}`);
         if (previewPanels.has(uri)) {
             panel.webview.postMessage({ 
                 type: 'updateContent', 
@@ -488,10 +554,13 @@ function getPreviewHtml(fontUri: string, cspSource: string): string {
 
         window.addEventListener('message', event => {
             const message = event.data;
+            console.log('Webview received message:', message.type);
             switch (message.type) {
                 case 'updateContent':
                     updateRenderSelect(message.renders, message.selectedRender);
-                    if (message.error) {
+                    if (message.loading) {
+                        svgContainer.innerHTML = '<div class="loading">Waiting for language server...</div>';
+                    } else if (message.error) {
                         svgContainer.innerHTML = '<div class="error">' + escapeHtml(message.error) + '</div>';
                     } else if (message.svg) {
                         svgContainer.innerHTML = message.svg;
