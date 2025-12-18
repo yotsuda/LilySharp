@@ -296,6 +296,14 @@ public sealed class MeasureCollector
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
         
+        // Phase 1.5: If voiceName specified, look up clef from part definition
+        if (voiceName != null)
+        {
+            var partClef = GetPartClef(tree.GetRoot(), voiceName);
+            if (partClef != null)
+                _clef = partClef;
+        }
+        
         // Phase 2: Check for parallel expression (multi-voice)
         var parallelExpr = tree.GetRoot().DescendantNodes()
             .OfType<ParallelExpressionSyntax>()
@@ -489,6 +497,33 @@ public sealed class MeasureCollector
         _timeBeatType = 4;
         _keySharps = 0;
         _clef = "treble";
+    }
+    
+    /// <summary>
+    /// Looks up the clef from a part definition by name.
+    /// </summary>
+    private static string? GetPartClef(SyntaxNode root, string partName)
+    {
+        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        {
+            if (partDecl.Name.Text != partName)
+                continue;
+            
+            // Check properties for clef
+            foreach (var prop in partDecl.Properties)
+            {
+                if (prop.NameToken.Text.ToLowerInvariant() == "clef")
+                {
+                    // Value is at index 2 (after name and colon)
+                    var valueToken = prop.GetChild(2) as SyntaxTokenNode;
+                    if (valueToken == null) continue;
+                    
+                    return valueToken.Text.ToLowerInvariant();
+                }
+            }
+        }
+        
+        return null;
     }
     
     private void CollectDefinitions(SyntaxNode root)

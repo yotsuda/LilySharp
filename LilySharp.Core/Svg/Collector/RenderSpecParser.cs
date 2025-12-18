@@ -128,7 +128,7 @@ public static class RenderSpecParser
     
     private static StaffSpec? ParseStaff(StaffRenderSyntax staff)
     {
-        ClefType clef = ClefType.Treble;
+        ClefType? explicitClef = null;
         string? voiceName = null;
         bool foundOpenBrace = false;
         
@@ -153,16 +153,16 @@ public static class RenderSpecParser
                     switch (token.Kind)
                     {
                         case SyntaxKind.TrebleKeyword:
-                            clef = ClefType.Treble;
+                            explicitClef = ClefType.Treble;
                             break;
                         case SyntaxKind.BassKeyword:
-                            clef = ClefType.Bass;
+                            explicitClef = ClefType.Bass;
                             break;
                         case SyntaxKind.AltoKeyword:
-                            clef = ClefType.Alto;
+                            explicitClef = ClefType.Alto;
                             break;
                         case SyntaxKind.TenorKeyword:
-                            clef = ClefType.Tenor;
+                            explicitClef = ClefType.Tenor;
                             break;
                     }
                 }
@@ -180,8 +180,50 @@ public static class RenderSpecParser
         
         if (voiceName == null)
             return null;
+        
+        // If no explicit clef in render block, look up part definition
+        ClefType clef = explicitClef ?? GetPartClef(staff, voiceName) ?? ClefType.Treble;
             
         return new StaffSpec(clef, voiceName);
+    }
+    /// <summary>
+    /// Looks up the clef from a part definition by name.
+    /// </summary>
+    private static ClefType? GetPartClef(SyntaxNode node, string partName)
+    {
+        // Navigate to root
+        var root = node;
+        while (root.Parent != null)
+            root = root.Parent;
+        
+        // Search for part declaration with matching name
+        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        {
+            if (partDecl.Name.Text != partName)
+                continue;
+            
+            // Check properties for clef
+            foreach (var prop in partDecl.Properties)
+            {
+                if (prop.NameToken.Text.ToLowerInvariant() == "clef")
+                {
+                    // Value is at index 2 (after name and colon)
+                    var valueToken = prop.GetChild(2) as SyntaxTokenNode;
+                    if (valueToken == null) continue;
+                    
+                    var value = valueToken.Text.ToLowerInvariant();
+                    return value switch
+                    {
+                        "bass" => ClefType.Bass,
+                        "alto" => ClefType.Alto,
+                        "tenor" => ClefType.Tenor,
+                        _ => ClefType.Treble
+                    };
+                }
+            }
+        }
+        
+        return null;
     }
     
     private static bool IsInsideGrandStaff(StaffRenderSyntax staff)

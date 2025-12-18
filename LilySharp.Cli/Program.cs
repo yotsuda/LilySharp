@@ -225,8 +225,16 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
         }
         else
         {
+            // Single staff - get voiceName from renderSpec if available
+            string? voiceName = null;
+            if (renderSpec != null && renderSpec.Items.Length == 1 && 
+                renderSpec.Items[0] is LilySharp.Core.Svg.Collector.SingleStaffSpec single)
+            {
+                voiceName = single.Staff.VoiceName;
+            }
+            
             var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
-            var score = collector.Collect(tree, null);
+            var score = collector.Collect(tree, voiceName);
             
             var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
             var layout = layoutEngine.Layout(score);
