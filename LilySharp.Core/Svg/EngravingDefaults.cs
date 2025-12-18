@@ -4,6 +4,10 @@ namespace LilySharp.Core.Svg;
 /// Default metrics for music engraving.
 /// All values are in staff spaces.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/spacing-options.cc:52-63 Spacing_options constructor (defaults)
+/// LILYPOND-REF: scm/define-grobs.scm (space-alist for Clef, BarLine, TimeSignature, StaffGrouper)
+/// </remarks>
 public static class EngravingDefaults
 {
     // === Staff and lines ===
@@ -90,6 +94,35 @@ public static class EngravingDefaults
     /// Lilypond default: 1.2 staff spaces.
     /// </summary>
     public const double SpacingIncrement = 1.2;
+    // === Element spacing (from scm/define-grobs.scm) ===
+    // Clef space-alist
+    /// <summary>Space from clef to time-signature.</summary>
+    public const double ClefToTimeSignatureSpace = 4.2;
+    /// <summary>Space from clef to first-note.</summary>
+    public const double ClefToFirstNoteSpace = 5.0;
+    /// <summary>Space from clef to next-note.</summary>
+    public const double ClefToNextNoteSpace = 1.0;
+    
+    // TimeSignature space-alist
+    /// <summary>Space from time-signature to first-note.</summary>
+    public const double TimeSignatureToFirstNoteSpace = 2.0;
+    /// <summary>Space from time-signature to right-edge.</summary>
+    public const double TimeSignatureToRightEdgeSpace = 0.5;
+    
+    // BarLine space-alist
+    /// <summary>Space from bar-line to first-note.</summary>
+    public const double BarLineToFirstNoteSpace = 1.3;
+    /// <summary>Space from bar-line to clef.</summary>
+    public const double BarLineToClefSpace = 1.0;
+    
+    // === Staff spacing (from scm/define-grobs.scm StaffGrouper) ===
+    /// <summary>Basic distance between staves in a group (center to center).</summary>
+    public const double StaffStaffBasicDistance = 9.0;
+    /// <summary>Minimum distance between staves in a group.</summary>
+    public const double StaffStaffMinimumDistance = 7.0;
+    /// <summary>Padding between staves.</summary>
+    public const double StaffStaffPadding = 1.0;
+    
     
     /// <summary>
     /// Space for shortest duration.

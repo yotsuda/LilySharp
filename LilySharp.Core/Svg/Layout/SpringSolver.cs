@@ -6,16 +6,16 @@ namespace LilySharp.Core.Svg.Layout;
 /// Solves spring-based spacing to achieve a target width.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/simple-spacer.cc:1-578 Simple_spacer class
-/// </remarks>
-/// <remarks>
+/// LILYPOND-REF: lily/simple-spacer.cc:1-300 Simple_spacer class
+/// 
 /// The solver finds a force that, when applied uniformly to all springs,
 /// achieves the target width while respecting minimum distance constraints.
 /// 
-/// Algorithm:
-/// 1. Calculate the minimum possible width (all springs at MinDistance)
-/// 2. Calculate the ideal width (all springs at IdealDistance)
-/// 3. Binary search for the force that achieves target width
+/// Algorithm (analytical solution, same as LilyPond):
+/// 1. Calculate max_block_force (maximum blocking force among all springs)
+/// 2. Calculate length at max_block_force
+/// 3. If target > length: expand_line (simple linear calculation)
+/// 4. If target &lt; length: compress_line (iterative blocking)
 /// </remarks>
 public sealed class SpringSolver
 {
@@ -50,7 +50,61 @@ public sealed class SpringSolver
     /// </summary>
     public double IdealTotalLength => TotalLength(0);
     
+    // LILYPOND-REF: lily/simple-spacer.cc:165-172 Simple_spacer::range_max_block_force()
+    /// <summary>
+    /// Gets the maximum blocking force among all springs.
+    /// </summary>
+    private double MaxBlockingForce()
+    {
+        double result = 0.0;
+        foreach (var spring in _springs)
+        {
+            result = Math.Max(result, spring.BlockingForce);
+        }
+        return result;
+    }
+    
     // LILYPOND-REF: lily/simple-spacer.cc:175-205 Simple_spacer::solve() + range_solve()
+    /// <summary>
+    /// Finds the force needed to achieve the target total width.
+    /// </summary>
+    /// <param name="targetWidth">The desired total width</param>
+    /// <param name="ragged">If true, negative force means the line doesn't fit</param>
+    /// <returns>Solution containing force and whether the line fits</returns>
+    public (double Force, bool Fits) Solve(double targetWidth, bool ragged = false)
+    {
+        if (_springs.Length == 0)
+            return (0, true);
+        
+        double maxBlockForce = MaxBlockingForce();
+        double maxBlockForceLen = TotalLength(maxBlockForce);
+        
+        double force;
+        bool fits;
+        
+        if (maxBlockForceLen < targetWidth)
+        {
+            // Need to expand
+            (force, fits) = ExpandLine(targetWidth, maxBlockForceLen, maxBlockForce);
+        }
+        else if (maxBlockForceLen > targetWidth)
+        {
+            // Need to compress
+            (force, fits) = CompressLine(targetWidth, maxBlockForceLen, maxBlockForce);
+        }
+        else
+        {
+            force = maxBlockForce;
+            fits = true;
+        }
+        
+        // LILYPOND-REF: lily/simple-spacer.cc:201-202
+        if (ragged && force < 0)
+            fits = false;
+        
+        return (force, fits);
+    }
+    
     /// <summary>
     /// Finds the force needed to achieve the target total width.
     /// </summary>
@@ -58,50 +112,85 @@ public sealed class SpringSolver
     /// <returns>The force to apply to all springs</returns>
     public double SolveForWidth(double targetWidth)
     {
-        if (_springs.Length == 0)
-            return 0;
-        
-        double minLength = MinTotalLength;
-        double idealLength = IdealTotalLength;
-        
-        // If target is less than minimum, we can't compress further
-        if (targetWidth <= minLength)
-            return double.NegativeInfinity;
-        
-        // If target equals ideal, no force needed
-        if (Math.Abs(targetWidth - idealLength) < 0.001)
-            return 0;
-        
-        // Binary search for the correct force
-        // Force range: large negative (compress) to large positive (stretch)
-        double forceLow = -1000;
-        double forceHigh = 1000;
-        
-        // Expand range if needed
-        while (TotalLength(forceLow) > targetWidth && forceLow > -1e6)
-            forceLow *= 2;
-        while (TotalLength(forceHigh) < targetWidth && forceHigh < 1e6)
-            forceHigh *= 2;
-        
-        // Binary search
-        const int maxIterations = 50;
-        const double tolerance = 0.1;
-        
-        for (int i = 0; i < maxIterations; i++)
+        return Solve(targetWidth).Force;
+    }
+    
+    // LILYPOND-REF: lily/simple-spacer.cc:207-225 Simple_spacer::expand_line()
+    /// <summary>
+    /// Calculates force when expanding the line (target > max_block_force_len).
+    /// </summary>
+    private (double Force, bool Fits) ExpandLine(double targetLen, double maxBlockForceLen, double maxBlockForce)
+    {
+        // Sum of all inverse stretch strengths
+        double invHooke = 0;
+        foreach (var spring in _springs)
         {
-            double forceMid = (forceLow + forceHigh) / 2;
-            double length = TotalLength(forceMid);
-            
-            if (Math.Abs(length - targetWidth) < tolerance)
-                return forceMid;
-            
-            if (length < targetWidth)
-                forceLow = forceMid;
-            else
-                forceHigh = forceMid;
+            invHooke += spring.InverseStretchStrength;
         }
         
-        return (forceLow + forceHigh) / 2;
+        // Avoid division by zero - if springs are infinitely stiff, report very large force
+        if (invHooke == 0.0)
+            invHooke = 1e-6;
+        
+        // Linear calculation: force = (targetLen - currentLen) / totalFlexibility + currentForce
+        double force = (targetLen - maxBlockForceLen) / invHooke + maxBlockForce;
+        return (force, true);
+    }
+    
+    // LILYPOND-REF: lily/simple-spacer.cc:233-288 Simple_spacer::compress_line()
+    /// <summary>
+    /// Calculates force when compressing the line (target &lt; max_block_force_len).
+    /// </summary>
+    private (double Force, bool Fits) CompressLine(double targetLen, double maxBlockForceLen, double maxBlockForce)
+    {
+        // Check whether we will actually be compressed (negative force) or just less stretched
+        double neutralLength = TotalLength(0.0);
+        bool compressed = (neutralLength > targetLen);
+        
+        double curForce = compressed ? 0.0 : maxBlockForce;
+        double curLen = compressed ? neutralLength : maxBlockForceLen;
+        
+        // Sort springs by blocking force (descending)
+        var sortedSprings = _springs.OrderByDescending(s => s.BlockingForce).ToList();
+        
+        // inv_hooke is the total flexibility of currently-active springs
+        double invHooke = 0;
+        int i = sortedSprings.Count;
+        
+        // Add springs that are already active (blocking_force < current_force)
+        for (; i > 0 && sortedSprings[i - 1].BlockingForce < curForce; i--)
+        {
+            invHooke += compressed 
+                ? sortedSprings[i - 1].InverseCompressStrength 
+                : sortedSprings[i - 1].InverseStretchStrength;
+        }
+        
+        // Process remaining springs in order
+        for (; i < sortedSprings.Count; i++)
+        {
+            var sp = sortedSprings[i];
+            
+            if (double.IsPositiveInfinity(sp.BlockingForce))
+                break;
+            
+            // Distance the line would shrink before this spring blocks
+            double blockDist = (curForce - sp.BlockingForce) * invHooke;
+            
+            // Check if we reach target before this spring blocks
+            if (curLen - blockDist < targetLen)
+            {
+                curForce += (targetLen - curLen) / invHooke;
+                return (curForce, true);
+            }
+            
+            // This spring blocks - update state
+            curLen -= blockDist;
+            invHooke -= compressed ? sp.InverseCompressStrength : sp.InverseStretchStrength;
+            curForce = sp.BlockingForce;
+        }
+        
+        // Couldn't fit
+        return (curForce, false);
     }
     
     // LILYPOND-REF: lily/simple-spacer.cc:295-305 Simple_spacer::spring_positions()

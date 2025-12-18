@@ -81,10 +81,19 @@ public sealed record Spring
     /// <returns>The resulting length, never less than MinDistance</returns>
     public double Length(double force)
     {
-        // LILYPOND-REF: lily/spring.cc:218-236 Spring::length()
+        // LILYPOND-REF: lily/spring.cc:218-239 Spring::length()
         double effectiveForce = Math.Max(force, BlockingForce);
         double invK = effectiveForce < 0 ? InverseCompressStrength : InverseStretchStrength;
         
+        // LILYPOND-REF: lily/spring.cc:228-234 - handle +Inf case
+        // +Inf can happen; -Inf is impossible as BlockingForce is finite
+        if (double.IsPositiveInfinity(effectiveForce))
+        {
+            effectiveForce = 0.0;
+        }
+        
+        // Corner case: if min_distance > ideal_distance but spring is fixed (inv_k = 0),
+        // we must return min_distance
         return Math.Max(MinDistance, IdealDistance + effectiveForce * invK);
     }
 }
