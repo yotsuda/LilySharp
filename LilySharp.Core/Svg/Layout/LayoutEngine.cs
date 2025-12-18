@@ -50,11 +50,15 @@ public sealed class LayoutEngine
         var firstSystemMeasureLayouts = LayoutMeasuresForSystem(firstSystemMeasures, score.KeySignature.Sharps, true, 0);
 
         // Build skylines for the first system
-        var (systemUpSkyline, _) = BuildSystemSkylines(firstSystemMeasures, firstSystemMeasureLayouts);
+        var (systemUpSkyline, systemDownSkyline) = BuildSystemSkylines(firstSystemMeasures, firstSystemMeasureLayouts);
 
         // LILYPOND-REF: lily/page-layout-problem.cc:622-626
         // Calculate extent above staff top
         double systemUpExtent = systemUpSkyline.IsEmpty ? 0 : Math.Max(0, -systemUpSkyline.MaxHeight());
+        
+        // Calculate extent below staff bottom (staff bottom is at StaffHeight)
+        // LILYPOND-REF: lily/skyline.cc:667-680 - MaxHeight for DOWN skyline returns largest Y
+        double systemDownExtent = systemDownSkyline.IsEmpty ? 0 : Math.Max(0, systemDownSkyline.MaxHeight() - _options.StaffHeight);
 
         // LILYPOND-REF: lily/page-layout-problem.cc:477-478, 984-985
         // The staff Y is positioned to leave room for: header + system extent + padding
@@ -78,7 +82,8 @@ public sealed class LayoutEngine
             firstMeasureIndex += systemMeasures[sysIdx].Count;
         }
 
-        double totalHeight = currentY - _options.SystemSpacing + _options.MarginTop;
+        // Total height includes: systems + bottom extent for notes below staff + margin
+        double totalHeight = currentY - _options.SystemSpacing + _options.MarginTop + systemDownExtent;
 
         // Create single page (TODO: implement page breaking for multi-page scores)
         var systemsArray = systems.ToImmutableArray();
