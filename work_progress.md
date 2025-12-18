@@ -34,9 +34,9 @@ master
 ### 次のタスク候補
 | 優先度 | タスク | 理由 |
 |:------:|--------|------|
-| 1 | Phase 0: Semantic Layer | アーキテクチャ基盤。repeat/section 展開に必須 |
-| 2 | Phase 9: Knuth-Plass 改行 | 長い楽譜の最適改行 |
-| 3 | Phase 2: 斜め Skyline | Lilypond 完全等価に必須 |
+| 1 | Phase 9: PageBreaker | 最適ページ分割 |
+| 2 | Phase 8: 歌詞配置 | ユーザー向け機能 |
+| 3 | VSCode 拡張デプロイ手順確立 | net9.0/net10.0 問題、VSIX パッケージング |
 
 ### ⚠️ アーキテクチャ課題
 
@@ -87,12 +87,12 @@ master
 | 4 | タイ・スラー | 6 | 6 | 100% |
 | 5 | 和音内臨時記号 | 3 | 3 | 100% |
 | 6 | 複数声部 | 9 | 9 | 100% |
-| 7 | 記譜記号 | 0 | 3 | 0% |
+| 7 | 記譜記号 | 4 | 4 | 100% |
 | 8 | 歌詞配置 | 0 | 4 | 0% |
 | 9 | ページレイアウト | 2 | 4 | 50% |
 | 10 | 高度な機能 | 0 | 6 | 0% |
 | 11 | グランドスタッフ | 7 | 8 | 88% |
-| **合計** | | **43** | **72** | **60%** |
+| **合計** | | **47** | **75** | **63%** |
 
 ## 📋 ステータス凡例
 
@@ -245,13 +245,14 @@ SyntaxTree
 | SvgRenderer.cs (複数声部) | ✅ | High | 4h | 複数声部描画、衝突回避オフセット適用 |
 | MeasureCollector.cs | ✅ | Medium | 1h | MeasureBuilder 抽出によるリファクタリング |
 
-## Phase 7: 記譜記号 🚀
+## Phase 7: 記譜記号 ✅
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| ClefRenderer.cs | 🚀 | Normal | 3h | 音部記号描画（位置完全一致） |
-| KeySignatureRenderer.cs | 🚀 | Normal | 4h | 調号描画（位置完全一致） |
-| TimeSignatureRenderer.cs | 🚀 | Normal | 3h | 拍子記号描画（位置完全一致） |
+| SvgRenderer.cs (ClefSpacing) | ✅ | Normal | 1h | 音部記号幅を正確に計算 |
+| SvgRenderer.cs (KeySigSpacing) | ✅ | Normal | 4h | LilyPond c0-position アルゴリズム移植 |
+| SvgRenderer.cs (TimeSigSpacing) | ✅ | Normal | 1h | 拍子記号スペーシング改善 |
+| GlyphMetrics.cs (SignatureSpacing) | ✅ | Normal | 1h | LilyPond define-grobs.scm 定数追加 |
 
 ## Phase 8: 歌詞配置 🚀
 
@@ -352,3 +353,4 @@ SyntaxTree
 | 2025-12-15 | Phase 2: 斜め Building 実装。LilyPond skyline.cc 符号規則 (UP=-1, DOWN=+1) に統一 |
 | 2025-12-15 | Phase 2: HorizontalSkyline 実装。SpacingRules.cs を斜め対応 Skyline に移行 |
 | 2025-12-16 | 🔍 座標系統一リファクタリング。SVG viewBox を staff spaces 単位に統一、内部計算をシンプル化 |
+| 2025-12-18 | ⏳ Phase 7: 記譜記号スペーシング改善。LilyPond define-grobs.scm/space-alist 参照。音部記号・調号・拍子記号の配置を LilyPond 等価に |
