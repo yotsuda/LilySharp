@@ -7,21 +7,21 @@ namespace LilySharp.Core.Svg.Renderer;
 /// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
+/// Based on LilyPond's feta-braces.mf design.
 /// The brace is drawn using cubic bezier curves to create the classic
 /// curly bracket shape used in piano/organ scores.
 /// 
-/// Brace anatomy:
-/// - Top curve: from top endpoint curving inward
-/// - Middle point: the sharp tip pointing right
-/// - Bottom curve: from middle curving to bottom endpoint
+/// LILYPOND-REF: mf/feta-braces.mf
+/// Brace parameters scale with height to maintain proportions.
 /// </remarks>
 public static class BraceRenderer
 {
-    // Brace shape parameters (in staff spaces)
-    private const double BraceWidth = 1.0;           // Horizontal extent
-    private const double TipOffset = 0.8;            // How far the tip extends right
-    private const double CurveControl = 0.4;         // Control point offset for bezier
-    private const double StrokeWidth = 0.15;         // Stroke width in staff spaces
+    // Brace shape parameters based on LilyPond defaults (in staff spaces)
+    // LILYPOND-REF: mf/feta-braces.mf lines 93-96
+    private const double MinWidth = 0.5;              // Minimum width for small braces
+    private const double MaxWidth = 5.0;              // Maximum width for large braces
+    private const double MinThin = 0.05;              // Minimum stroke thickness
+    private const double MaxThin = 0.3125;            // Maximum stroke thickness
     
     /// <summary>
     /// Renders a brace SVG path.
@@ -36,23 +36,33 @@ public static class BraceRenderer
         double height = yBottom - yTop;
         double yMid = (yTop + yBottom) / 2;
         
-        // Brace shape parameters
-        double width = BraceWidth;
-        double tipX = x + TipOffset;
-        double controlOffset = CurveControl * (height / 8); // Scale with height
+        // Scale width and thickness based on height (like LilyPond)
+        // LILYPOND-REF: mf/feta-braces.mf line 115
+        double heightRatio = Math.Clamp(height / 20.0, 0.0, 1.0);
+        double width = MinWidth + (MaxWidth - MinWidth) * heightRatio;
+        double strokeWidth = MinThin + (MaxThin - MinThin) * heightRatio;
         
-        // Bezier control points
-        // Top curve: from (x, yTop) to (tipX, yMid)
+        // LILYPOND-REF: mf/feta-braces.mf lines 44-45
+        double thin = 2 * strokeWidth;
+        double thick = 0.5 * width;
+        
+        // Key points
+        double tipX = x + width;  // The rightmost point (tip)
+        
+        // Bezier control points based on LilyPond's algorithm
+        // The brace has two symmetric halves meeting at the tip
+        
+        // Top half: from (x, yTop) curving to (tipX, yMid)
         double topCtrl1X = x + width * 0.2;
-        double topCtrl1Y = yTop + height * 0.1;
-        double topCtrl2X = tipX;
-        double topCtrl2Y = yMid - height * 0.2;
+        double topCtrl1Y = yTop + height * 0.08;
+        double topCtrl2X = tipX - width * 0.1;
+        double topCtrl2Y = yMid - height * 0.15;
         
-        // Bottom curve: from (tipX, yMid) to (x, yBottom)
-        double botCtrl1X = tipX;
-        double botCtrl1Y = yMid + height * 0.2;
+        // Bottom half: from (tipX, yMid) curving to (x, yBottom)
+        double botCtrl1X = tipX - width * 0.1;
+        double botCtrl1Y = yMid + height * 0.15;
         double botCtrl2X = x + width * 0.2;
-        double botCtrl2Y = yBottom - height * 0.1;
+        double botCtrl2Y = yBottom - height * 0.08;
         
         var sb = new StringBuilder();
         sb.Append($"<path d=\"");
@@ -60,13 +70,13 @@ public static class BraceRenderer
         // Move to top
         sb.Append($"M {x:F2} {yTop:F2} ");
         
-        // Top curve to middle
+        // Top curve to middle tip
         sb.Append($"C {topCtrl1X:F2} {topCtrl1Y:F2}, {topCtrl2X:F2} {topCtrl2Y:F2}, {tipX:F2} {yMid:F2} ");
         
-        // Bottom curve from middle
+        // Bottom curve from middle tip
         sb.Append($"C {botCtrl1X:F2} {botCtrl1Y:F2}, {botCtrl2X:F2} {botCtrl2Y:F2}, {x:F2} {yBottom:F2}");
         
-        sb.Append($"\" stroke=\"black\" stroke-width=\"{StrokeWidth:F2}\" fill=\"none\" />");
+        sb.Append($"\" stroke=\"black\" stroke-width=\"{strokeWidth:F2}\" fill=\"none\" />");
         
         return sb.ToString();
     }
@@ -74,8 +84,20 @@ public static class BraceRenderer
     /// <summary>
     /// Calculates the width required for a brace in staff spaces.
     /// </summary>
+    /// <param name="height">Height of the brace in staff spaces.</param>
+    public static double GetBraceWidth(double height = 11.0)
+    {
+        // Default height is approximately two staves (4 + 5 + 4 = 13, but usually 11)
+        double heightRatio = Math.Clamp(height / 20.0, 0.0, 1.0);
+        double width = MinWidth + (MaxWidth - MinWidth) * heightRatio;
+        return width + 0.5; // Extra padding
+    }
+    
+    /// <summary>
+    /// Calculates the width required for a brace in staff spaces.
+    /// </summary>
     public static double GetBraceWidth()
     {
-        return TipOffset + 0.5; // Extra padding
+        return GetBraceWidth(11.0);
     }
 }
