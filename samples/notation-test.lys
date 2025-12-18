@@ -1,0 +1,25 @@
+// Key Signature and Time Signature Test
+title "Notation Test"
+composer "LilySharp"
+
+tempo 120
+time 3/4
+key d major
+
+part melody {
+  clef: treble
+}
+
+phrase test {
+  d'4 e' fis' | g'4 a' b' | cis''2 d'' |
+}
+
+section Main {
+  melody { test }
+}
+
+structure { Main }
+
+render score "notation-test.svg" {
+  staff { melody }
+}

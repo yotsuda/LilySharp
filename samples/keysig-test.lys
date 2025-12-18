@@ -1,0 +1,25 @@
+// Key Signature Test - G major
+title "Key Sig Test"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key g major
+
+part melody {
+  clef: treble
+}
+
+phrase test {
+  g4 a b c' | d'4 e' fis' g' |
+}
+
+section Main {
+  melody { test }
+}
+
+structure { Main }
+
+render score "keysig-test.svg" {
+  staff { melody }
+}

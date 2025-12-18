@@ -1,0 +1,25 @@
+// Key Signature Test - D major (2 sharps)
+title "D Major Test"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key d major
+
+part melody {
+  clef: treble
+}
+
+phrase test {
+  d'4 e' fis' g' | a'4 b' cis'' d'' |
+}
+
+section Main {
+  melody { test }
+}
+
+structure { Main }
+
+render score "keysig-d-major.svg" {
+  staff { melody }
+}

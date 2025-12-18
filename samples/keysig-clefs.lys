@@ -1,0 +1,35 @@
+// Key Signature Test - All Clefs
+title "Key Sig All Clefs"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key d major  // 2 sharps: F#, C#
+
+part treblePart {
+  clef: treble
+}
+part bassPart {
+  clef: bass
+}
+
+phrase treblePhrase {
+  d'4 e' fis' g' |
+}
+phrase bassPhrase {
+  d4 e fis g |
+}
+
+section Main {
+  treblePart { treblePhrase }
+  bassPart { bassPhrase }
+}
+
+structure { Main }
+
+render score "keysig-clefs.svg" {
+  grandStaff {
+    staff { treblePart }
+    staff { bassPart }
+  }
+}

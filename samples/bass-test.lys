@@ -1,0 +1,25 @@
+// Bass Clef Key Signature Test
+title "Bass Test"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key f major
+
+part bass_part {
+  clef: bass
+}
+
+phrase test {
+  f,4 g, a, bes, | c4 d e f |
+}
+
+section Main {
+  bass_part { test }
+}
+
+structure { Main }
+
+render score "bass-test.svg" {
+  staff { bass_part }
+}
