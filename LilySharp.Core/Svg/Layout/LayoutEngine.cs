@@ -134,6 +134,15 @@ public sealed class LayoutEngine
         // Layout measures with timing-based columns for multi-staff alignment
         var measureLayouts = LayoutMeasuresForMultiStaff(score, 0);
 
+        // Calculate actual page width based on content
+        double actualPageWidth = _options.PageWidth;
+        if (measureLayouts.Length > 0)
+        {
+            var lastMeasure = measureLayouts[measureLayouts.Length - 1];
+            double contentRight = lastMeasure.X + lastMeasure.Width + _options.MarginRight;
+            actualPageWidth = Math.Max(_options.PageWidth, contentRight);
+        }
+
         // Calculate total system height (all staff groups)
         double systemHeight = CalculateMultiStaffSystemHeight(score);
 
@@ -176,7 +185,7 @@ public sealed class LayoutEngine
         var systemsArray = systems.ToImmutableArray();
         var page = new PageLayout(
             PageIndex: 0,
-            Width: _options.PageWidth,
+            Width: actualPageWidth,
             Height: totalHeight,
             HeaderHeight: headerHeight,
             Systems: systemsArray);

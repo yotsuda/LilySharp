@@ -16,11 +16,11 @@ part leftHand {
 
 // Reusable theme
 phrase mainTheme {
-  e''8 dis'' e'' | dis'' e'' b' | d'' c'' a'~ |
-  a'4. | r8 c'' e'' |
-  a''4. | r8 e'' gis'' |
-  b''4. | r8 e' gis' |
-  a'4. | r4 r8 |
+  e8 dis e | dis e b | d c a~ |
+  a4. | r8 c e |
+  a4. | r8 e gis |
+  b4. | r8 e gis |
+  a4. | r4 r8 |
 }
 
 section Main {
