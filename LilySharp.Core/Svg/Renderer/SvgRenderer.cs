@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
@@ -681,7 +681,7 @@ public sealed class SvgRenderer
     private void DrawNote(NoteItem note, double x, double systemY, bool? forcedStemUp = null)
     {
         // x is the reference point (center of notehead in Spring-Rod model)
-        double noteY = systemY + StaffHeight / 2 - (note.StaffPosition / 2);
+        double noteY = systemY + StaffHeight / 2 - (note.StaffPosition / 2.0);
         int noteValue = GetNoteValue(note.BaseDuration);
         
         // Get notehead metrics from GlyphMetrics
@@ -812,7 +812,7 @@ public sealed class SvgRenderer
         
         foreach (var note in chord.Notes)
         {
-            double noteY = systemY + StaffHeight / 2 - (note.StaffPosition / 2);
+            double noteY = systemY + StaffHeight / 2 - (note.StaffPosition / 2.0);
             
             // Draw accidental with calculated position
             if (note.Accidental != null && accidentalMap.TryGetValue(note.StaffPosition, out var accLayout))
@@ -849,7 +849,7 @@ public sealed class SvgRenderer
             int stemNotePos = stemUp
                 ? chord.Notes.Min(n => n.StaffPosition)
                 : chord.Notes.Max(n => n.StaffPosition);
-            double stemNoteY = systemY + StaffHeight / 2 - (stemNotePos / 2);
+            double stemNoteY = systemY + StaffHeight / 2 - (stemNotePos / 2.0);
             
             double stemX = stemUp ? x + StemUpAttachX : x + StemDownAttachX;
             double stemAttachY = stemUp ? stemNoteY - StemUpAttachY : stemNoteY - StemDownAttachY;
@@ -1046,7 +1046,7 @@ public sealed class SvgRenderer
         {
             for (int pos = 6; pos <= staffPosition; pos += 2)
             {
-                double ledgerY = systemY + StaffHeight / 2 - (pos / 2);
+                double ledgerY = systemY + StaffHeight / 2 - (pos / 2.0);
                 _svg.AppendLine($"""  <line class="ledger" x1="{ledgerX1:F1}" y1="{ledgerY:F1}" x2="{ledgerX2:F1}" y2="{ledgerY:F1}"/>""");
             }
         }
@@ -1056,7 +1056,7 @@ public sealed class SvgRenderer
         {
             for (int pos = -6; pos >= staffPosition; pos -= 2)
             {
-                double ledgerY = systemY + StaffHeight / 2 - (pos / 2);
+                double ledgerY = systemY + StaffHeight / 2 - (pos / 2.0);
                 _svg.AppendLine($"""  <line class="ledger" x1="{ledgerX1:F1}" y1="{ledgerY:F1}" x2="{ledgerX2:F1}" y2="{ledgerY:F1}"/>""");
             }
         }
@@ -1344,3 +1344,4 @@ public sealed class SvgRenderer
         _svg.AppendLine($"  <path d=\"{fullPath}\" fill=\"black\"/>");
     }
 }
+

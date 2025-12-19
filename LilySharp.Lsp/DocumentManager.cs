@@ -51,20 +51,24 @@ public sealed class DocumentManager
             throw new InvalidOperationException($"Document not found: {uri}");
 
         var tree = doc.Tree;
+        var currentText = doc.Text;
+        
         foreach (var change in changes)
         {
             if (change.Range != null)
             {
-                // Incremental change
-                var start = GetOffset(doc.Text, change.Range.Start);
-                var end = GetOffset(doc.Text, change.Range.End);
+                // Incremental change - use current text for offset calculation
+                var start = GetOffset(currentText, change.Range.Start);
+                var end = GetOffset(currentText, change.Range.End);
                 var textChange = new TextChange(new TextSpan(start, end - start), change.Text);
                 tree = tree.WithChange(textChange);
+                currentText = tree.Text; // Update text for next change
             }
             else
             {
                 // Full replacement
                 tree = SyntaxTree.Parse(change.Text);
+                currentText = tree.Text;
             }
         }
 
@@ -116,3 +120,5 @@ public sealed class Document
         Version = version;
     }
 }
+
+

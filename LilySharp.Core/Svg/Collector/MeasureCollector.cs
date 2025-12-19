@@ -970,3 +970,5 @@ public sealed class MeasureCollector
         _ => BarlineType.Single
     };
 }
+
+
