@@ -46,9 +46,54 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }
 
+    // Determine how to run the server
+    let serverCommand: string;
+    let serverArgs: string[];
+    let serverEnv: { [key: string]: string } | undefined;
+    
+    if (serverPath.endsWith('.exe')) {
+        // For .exe, use dotnet to run the corresponding .dll
+        // This ensures the correct .NET runtime is used
+        const dllPath = serverPath.replace(/\.exe$/, '.dll');
+        if (fs.existsSync(dllPath)) {
+            // Try to find user-installed dotnet first (has newer .NET versions)
+            const userDotnetPath = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'dotnet');
+            const userDotnetExe = path.join(userDotnetPath, 'dotnet.exe');
+            
+            if (fs.existsSync(userDotnetExe)) {
+                serverCommand = userDotnetExe;
+                serverArgs = [dllPath];
+                // Set DOTNET_ROOT to ensure correct runtime is found
+                serverEnv = { ...process.env, DOTNET_ROOT: userDotnetPath } as { [key: string]: string };
+                outputChannel.appendLine(`Running via user dotnet: ${userDotnetExe}`);
+                outputChannel.appendLine(`DOTNET_ROOT: ${userDotnetPath}`);
+            } else {
+                // Fallback to system dotnet
+                serverCommand = 'dotnet';
+                serverArgs = [dllPath];
+                outputChannel.appendLine(`Running via system dotnet: ${dllPath}`);
+            }
+        } else {
+            // Fallback to direct execution
+            serverCommand = serverPath;
+            serverArgs = [];
+            outputChannel.appendLine(`Running directly: ${serverPath}`);
+        }
+    } else {
+        serverCommand = serverPath;
+        serverArgs = [];
+    }
+
+    const runOptions = {
+        command: serverCommand,
+        args: serverArgs,
+        transport: TransportKind.stdio,
+        options: serverEnv ? { env: serverEnv } : undefined
+    };
+
     const serverOptions: ServerOptions = {
-        run: { command: serverPath, transport: TransportKind.stdio },
-        debug: { command: serverPath, transport: TransportKind.stdio }
+        run: runOptions,
+        debug: runOptions
     };
 
     const clientOptions: LanguageClientOptions = {
@@ -607,3 +652,5 @@ export function deactivate(): Thenable<void> | undefined {
     }
     return client.stop();
 }
+
+

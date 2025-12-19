@@ -129,7 +129,21 @@ Show-TextFile LilySharp.Core/Svg/Layout/SpacingRules.cs -LineRange 260,290
 
 # リリースデプロイ（プレリリースタグ削除: 0.1.1-dev.2 → 0.1.1）
 .\deploy-extension.ps1 -Release
+
+# VS Code 設定更新をスキップ
+.\deploy-extension.ps1 -SkipVSCodeSettings
 ```
+
+### スクリプトの機能
+
+1. LSP プロセス停止（ファイルロック解除）
+2. バージョン自動インクリメント
+3. 古い VSIX ファイルのクリーンアップ（最新2つを残す）
+4. LSP サーバービルド
+5. TypeScript コンパイル
+6. VSIX パッケージ作成
+7. VS Code 設定の自動更新（`lilysharp.serverPath`）
+8. 拡張機能のアンインストール・インストール
 
 ### デプロイ後の確認
 
@@ -137,6 +151,15 @@ Show-TextFile LilySharp.Core/Svg/Layout/SpacingRules.cs -LineRange 260,290
 2. VS Code を再起動
 3. `Ctrl+Shift+X` → `Lily#` 検索 → バージョン確認
 4. `.lys` ファイルを開いて `Ctrl+Shift+V` でプレビュー確認
+
+### トラブルシューティング
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| プレビューが表示されない | LSP サーバーパスが古い | `.\deploy-extension.ps1` で設定を自動更新 |
+| "Language server not found" | .NET ランタイムがない | `dotnet --list-runtimes` で確認 |
+| 拡張機能が古いまま | VS Code が再起動されていない | タスクバーからも終了して再起動 |
+| ビルドエラー | DLL ロック | VS Code を閉じてから再実行 |
 
 ### バージョニング規則
 

@@ -34,9 +34,9 @@ master
 ### 次のタスク候補
 | 優先度 | タスク | 理由 |
 |:------:|--------|------|
-| 1 | Phase 9: PageBreaker | 最適ページ分割 |
-| 2 | Phase 8: 歌詞配置 | ユーザー向け機能 |
-| 3 | VSCode 拡張デプロイ手順確立 | net9.0/net10.0 問題、VSIX パッケージング |
+| 1 | Phase 9: PageBreaker 設計 | 統合設計が必要、アドホック実装を避ける |
+| 2 | Phase 10: 強弱記号・アーティキュレーション | 文法定義済み、パーサー実装が必要 |
+| 3 | Phase 8: 歌詞配置 | 文法設計が必要 |
 
 ### ⚠️ アーキテクチャ課題
 
@@ -353,4 +353,5 @@ SyntaxTree
 | 2025-12-15 | Phase 2: 斜め Building 実装。LilyPond skyline.cc 符号規則 (UP=-1, DOWN=+1) に統一 |
 | 2025-12-15 | Phase 2: HorizontalSkyline 実装。SpacingRules.cs を斜め対応 Skyline に移行 |
 | 2025-12-16 | 🔍 座標系統一リファクタリング。SVG viewBox を staff spaces 単位に統一、内部計算をシンプル化 |
-| 2025-12-18 | ⏳ Phase 7: 記譜記号スペーシング改善。LilyPond define-grobs.scm/space-alist 参照。音部記号・調号・拍子記号の配置を LilyPond 等価に |
+| 2025-12-18 | ✅ Phase 7: 記譜記号スペーシング完了。LilyPond define-grobs.scm/space-alist 参照。音部記号・調号・拍子記号の配置を LilyPond 等価に |
+| 2025-12-19 | ✅ VSCode 拡張デプロイ手順改善。deploy-extension.ps1 に VS Code 設定自動更新、古い VSIX クリーンアップ、TargetFramework 自動検出を追加 |
