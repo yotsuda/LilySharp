@@ -829,3 +829,17 @@ internal sealed class BreakGreen : GreenSyntaxNode
     {
     }
 }
+
+/// <summary>
+/// Marker indicating the start of a new section.
+/// Used to reset relative pitch resolver at section boundaries.
+/// </summary>
+internal sealed class SectionStartMarkerGreen : GreenSyntaxNode
+{
+    public static readonly SectionStartMarkerGreen Instance = new();
+    
+    private SectionStartMarkerGreen()
+        : base(SyntaxKind.SectionStartMarker, [])
+    {
+    }
+}

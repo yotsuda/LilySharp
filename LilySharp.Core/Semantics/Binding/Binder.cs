@@ -121,6 +121,11 @@ public sealed class Binder
         {
             switch (node)
             {
+                case SectionStartMarkerSyntax:
+                    // Reset pitch resolver at section boundaries
+                    _pitchResolver.Reset();
+                    break;
+                    
                 case NoteSyntax note:
                     measureStartSyntax ??= note;
                     currentItems.Add(BindNote(note));

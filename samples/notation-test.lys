@@ -11,7 +11,7 @@ part melody {
 }
 
 phrase test {
-  d'4 e' fis' | g'4 a' b' | cis''2 d'' |
+  d4 e fis | g4 a b | cis2 d |
 }
 
 section Main {

@@ -1215,3 +1215,21 @@ public sealed partial class BreakSyntax : SyntaxNode
 
     public SyntaxTokenNode BreakKeyword => (SyntaxTokenNode)GetChild(0)!;
 }
+
+/// <summary>
+/// Marker indicating the start of a new section.
+/// Used to reset relative pitch resolver at section boundaries.
+/// </summary>
+public sealed class SectionStartMarkerSyntax : SyntaxNode
+{
+    internal SectionStartMarkerSyntax(SectionStartMarkerGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+    
+    /// <summary>
+    /// Creates a new instance of SectionStartMarkerSyntax.
+    /// </summary>
+    public static SectionStartMarkerSyntax Create(int position)
+        => new(SectionStartMarkerGreen.Instance, null, position);
+}

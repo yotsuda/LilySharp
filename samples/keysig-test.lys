@@ -7,11 +7,11 @@ time 4/4
 key g major
 
 part melody {
-  clef: treble
+  clef: bass
 }
 
 phrase test {
-  g4 a b c' | d'4 e' fis' g' |
+  g,4 a b c | d4 e fis g, |
 }
 
 section Main {

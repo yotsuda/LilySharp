@@ -134,7 +134,19 @@ public sealed class StructureExpander
     
     private void AddSectionContent(SectionSymbol section, Dictionary<string, List<SyntaxNode>> parts)
     {
+        // Add section start marker to reset pitch resolver
         // Section can contain multiple part blocks (e.g., rightHand, leftHand)
+        var hasPartBlocks = section.Body.Any(n => n is PartBlockSyntax);
+        
+        if (!hasPartBlocks)
+        {
+            // Add marker to default part
+            const string defaultPart = "";
+            if (!parts.ContainsKey(defaultPart))
+                parts[defaultPart] = new List<SyntaxNode>();
+            parts[defaultPart].Add(SectionStartMarkerSyntax.Create(section.DeclarationSyntax.Position));
+        }
+        
         foreach (var node in section.Body)
         {
             if (node is PartBlockSyntax partBlock)
@@ -142,6 +154,9 @@ public sealed class StructureExpander
                 var partName = partBlock.Name;
                 if (!parts.ContainsKey(partName))
                     parts[partName] = new List<SyntaxNode>();
+                
+                // Add section start marker for this part
+                parts[partName].Add(SectionStartMarkerSyntax.Create(section.DeclarationSyntax.Position));
                 
                 // Add the music content from the part block
                 foreach (var child in partBlock.DescendantNodes())

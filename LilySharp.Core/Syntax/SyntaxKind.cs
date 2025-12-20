@@ -175,6 +175,7 @@ public enum SyntaxKind : ushort
     MidiPartRender,             // guitar channel:1 inside render
     
     // === Nodes: Structure Block Items ===
+    SectionStartMarker,         // marker to reset pitch resolver at section boundaries
     SectionReference,           // section name in structure
     SilentSectionReference,     // ~section name (no label)
     CustomText,                 // _"text" in structure
