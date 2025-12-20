@@ -1,11 +1,15 @@
 .vscode/**
-node_modules/**
 src/**
 *.ts
 *.map
 .gitignore
 tsconfig.json
 *.vsix
+
+# Exclude dev dependencies but include production dependencies
+node_modules/.bin/**
+node_modules/@types/**
+node_modules/typescript/**
 
 # Include server directory (LSP)
 !server/**
