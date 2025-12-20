@@ -15,6 +15,9 @@ namespace LilySharp.Lsp;
 /// </summary>
 public sealed class LilySharpLanguageServer
 {
+    // Version: increment this when making changes to verify deployment
+    public const string Version = "0.1.1-20251220-1";
+
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
 
@@ -138,7 +141,7 @@ public sealed class LilySharpLanguageServer
         {
             // Check if any change has a Range (incremental) or not (full)
             var hasRange = @params.ContentChanges.Any(c => c.Range != null);
-            
+
             Document doc;
             if (hasRange)
             {
@@ -159,7 +162,7 @@ public sealed class LilySharpLanguageServer
     public void DidClose(DidCloseTextDocumentParams @params)
     {
         _documentManager.Close(@params.TextDocument.Uri);
-        
+
         // Clear diagnostics
         _rpc.NotifyAsync(Methods.TextDocumentPublishDiagnosticsName, new PublishDiagnosticParams
         {
@@ -529,7 +532,7 @@ public sealed class LilySharpLanguageServer
 
         var (startLine, startCol) = GetLineAndColumn(text, node.Position);
         var (endLine, endCol) = GetLineAndColumn(text, node.Position + node.FullWidth);
-        
+
         return new DocumentSymbol
         {
             Name = name,
@@ -587,7 +590,7 @@ public sealed class LilySharpLanguageServer
         var position = @params.Position;
         var offset = GetOffset(doc.Text, position.Line, position.Character);
         var node = doc.Tree.FindNode(offset);
-        
+
         if (node == null) return null;
 
         // Find variable reference
@@ -631,7 +634,7 @@ public sealed class LilySharpLanguageServer
     {
         var (startLine, startCol) = GetLineAndColumn(text, node.Position);
         var (endLine, endCol) = GetLineAndColumn(text, node.Position + node.FullWidth);
-        
+
         return new Location
         {
             Uri = uri,
@@ -655,7 +658,7 @@ public sealed class LilySharpLanguageServer
         var position = @params.Position;
         var offset = GetOffset(doc.Text, position.Line, position.Character);
         var node = doc.Tree.FindNode(offset);
-        
+
         if (node == null) return null;
 
         string? name = null;
@@ -678,7 +681,7 @@ public sealed class LilySharpLanguageServer
         if (name == null) return null;
 
         var locations = new List<Location>();
-        
+
         // Include declaration if requested
         if (@params.Context.IncludeDeclaration)
         {
@@ -718,13 +721,13 @@ public sealed class LilySharpLanguageServer
         {
             int deltaLine = token.Line - prevLine;
             int deltaChar = deltaLine == 0 ? token.Character - prevChar : token.Character;
-            
+
             tokens.Add(deltaLine);
             tokens.Add(deltaChar);
             tokens.Add(token.Length);
             tokens.Add(token.TokenType);
             tokens.Add(0); // No modifiers
-            
+
             prevLine = token.Line;
             prevChar = token.Character;
         }
@@ -744,7 +747,7 @@ public sealed class LilySharpLanguageServer
     private void CollectTokensRecursive(SyntaxNode node, string text, List<SemanticToken> tokens)
     {
         // Token types: 0=keyword, 1=variable, 2=number, 3=string, 4=comment, 5=operator, 6=pitch, 7=articulation, 8=dynamic
-        
+
         if (node is SyntaxTokenNode tokenNode)
         {
             var kind = tokenNode.Kind;
@@ -758,32 +761,32 @@ public sealed class LilySharpLanguageServer
                 SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or SyntaxKind.KeyKeyword or
                 SyntaxKind.ClefKeyword or SyntaxKind.TupletKeyword or SyntaxKind.GraceKeyword or
                 SyntaxKind.MajorKeyword or SyntaxKind.MinorKeyword or SyntaxKind.LyricsKeyword => 0,
-                
+
                 // Numbers
                 SyntaxKind.IntegerLiteral => 2,
-                
+
                 // Strings
                 SyntaxKind.StringLiteral => 3,
-                
+
                 // Pitches
                 SyntaxKind.PitchC or SyntaxKind.PitchD or SyntaxKind.PitchE or SyntaxKind.PitchF or
                 SyntaxKind.PitchG or SyntaxKind.PitchA or SyntaxKind.PitchB => 6,
-                
+
                 // Rest
                 SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full => 6,
-                
+
                 // Articulation names
                 SyntaxKind.StaccatoKeyword or SyntaxKind.AccentKeyword or SyntaxKind.TenutoKeyword or
                 SyntaxKind.MarcatoKeyword or SyntaxKind.FermataKeyword or SyntaxKind.PortatoKeyword => 7,
-                
+
                 // Dynamic names
                 SyntaxKind.DynamicPPP or SyntaxKind.DynamicPP or SyntaxKind.DynamicP or
                 SyntaxKind.DynamicMP or SyntaxKind.DynamicMF or SyntaxKind.DynamicF or
                 SyntaxKind.DynamicFF or SyntaxKind.DynamicFFF => 8,
-                
+
                 _ => null
             };
-            
+
             if (tokenType.HasValue)
             {
                 var (line, character) = GetLineAndCharacter(text, node.Position);
@@ -804,7 +807,7 @@ public sealed class LilySharpLanguageServer
             var (line, character) = GetLineAndCharacter(text, nameNode.Position);
             tokens.Add(new SemanticToken(line, character, nameNode.FullWidth, 1));
         }
-        
+
         // Recurse into children
         for (int i = 0; i < node.SlotCount; i++)
         {
@@ -818,7 +821,7 @@ public sealed class LilySharpLanguageServer
     {
         int line = 0;
         int lastLineStart = 0;
-        
+
         for (int i = 0; i < position && i < text.Length; i++)
         {
             if (text[i] == '\n')
@@ -834,7 +837,7 @@ public sealed class LilySharpLanguageServer
                 lastLineStart = i + 1;
             }
         }
-        
+
         return (line, position - lastLineStart);
     }
 
@@ -855,7 +858,7 @@ public sealed class LilySharpLanguageServer
     private void CollectFoldingRanges(SyntaxNode node, string text, List<FoldingRange> ranges)
     {
         // Foldable node types: MusicBlock, ScoreDeclaration, PartDeclaration, etc.
-        bool isFoldable = node is MusicBlockSyntax or ScoreDeclarationSyntax or 
+        bool isFoldable = node is MusicBlockSyntax or ScoreDeclarationSyntax or
                           PartDeclarationSyntax or StaffDeclarationSyntax or
                           RepeatExpressionSyntax or ParallelExpressionSyntax or
                           TupletExpressionSyntax or GraceExpressionSyntax or
@@ -865,10 +868,10 @@ public sealed class LilySharpLanguageServer
         {
             var startPos = node.Position;
             var endPos = node.Position + node.FullWidth - 1;
-            
+
             var (startLine, _) = GetLineAndCharacter(text, startPos);
             var (endLine, endChar) = GetLineAndCharacter(text, endPos);
-            
+
             // Only create fold if it spans multiple lines
             if (endLine > startLine)
             {
@@ -901,7 +904,7 @@ public sealed class LilySharpLanguageServer
 
         var position = @params.Position;
         var newName = @params.NewName;
-        
+
         // Find the node at position
         int offset = GetOffset(doc.Text, position.Line, position.Character);
         var node = doc.Tree.FindNode(offset);
@@ -909,7 +912,7 @@ public sealed class LilySharpLanguageServer
 
         // Find variable name at position
         string? variableName = null;
-        
+
         if (node is VariableReferenceSyntax varRef)
         {
             variableName = varRef.Name.Text;
@@ -931,7 +934,7 @@ public sealed class LilySharpLanguageServer
 
         // Find all references and the declaration
         var edits = new List<TextEdit>();
-        
+
         // Find declaration
         foreach (var decl in doc.Tree.GetNodes<VariableDeclarationSyntax>())
         {
@@ -994,7 +997,7 @@ public sealed class LilySharpLanguageServer
         var indentStr = insertSpaces ? new string(' ', tabSize) : "\t";
 
         var formatted = FormatSource(doc.Text, indentStr);
-        
+
         // Return a single edit replacing the entire document
         var lines = doc.Text.Split('\n');
         var lastLine = lines.Length - 1;
@@ -1019,27 +1022,27 @@ public sealed class LilySharpLanguageServer
         var sb = new System.Text.StringBuilder();
         int depth = 0;
         var lines = source.Split('\n');
-        
+
         foreach (var rawLine in lines)
         {
             var line = rawLine.TrimEnd('\r').Trim();
-            
+
             if (string.IsNullOrEmpty(line))
             {
                 sb.AppendLine();
                 continue;
             }
-            
+
             // Adjust depth for closing braces at start of line
             if (line.StartsWith('}') || line.StartsWith(">>"))
             {
                 depth = Math.Max(0, depth - 1);
             }
-            
+
             // Write indented line
             var indent = string.Concat(Enumerable.Repeat(indentStr, depth));
             sb.AppendLine($"{indent}{line}");
-            
+
             // Adjust depth for opening braces at end of line
             if (line.EndsWith('{') || line.EndsWith("<<"))
             {
@@ -1055,7 +1058,7 @@ public sealed class LilySharpLanguageServer
                 // Already handled above
             }
         }
-        
+
         return sb.ToString().TrimEnd();
     }
 
@@ -1070,11 +1073,11 @@ public sealed class LilySharpLanguageServer
 
         var actions = new List<CodeAction>();
         var range = @params.Range;
-        
+
         // Get diagnostics in range
         var startOffset = GetOffset(doc.Text, range.Start.Line, range.Start.Character);
         var endOffset = GetOffset(doc.Text, range.End.Line, range.End.Character);
-        
+
         foreach (var diagnostic in doc.Tree.Diagnostics)
         {
             if (diagnostic.Span.Start >= startOffset && diagnostic.Span.Start <= endOffset)
@@ -1084,7 +1087,7 @@ public sealed class LilySharpLanguageServer
                 actions.AddRange(fixes);
             }
         }
-        
+
         // Add refactoring actions for valid selections
         var node = doc.Tree.FindNode(startOffset);
         if (node != null)
@@ -1092,7 +1095,7 @@ public sealed class LilySharpLanguageServer
             var refactorings = GenerateRefactorings(doc, node, uri);
             actions.AddRange(refactorings);
         }
-        
+
         return actions.ToArray();
     }
 
@@ -1100,7 +1103,7 @@ public sealed class LilySharpLanguageServer
     {
         var actions = new List<CodeAction>();
         var message = diagnostic.Message;
-        
+
         // Fix: Unknown pitch - suggest valid pitches
         if (message.Contains("Unknown") || message.Contains("Expected"))
         {
@@ -1130,14 +1133,14 @@ public sealed class LilySharpLanguageServer
                 }
             });
         }
-        
+
         // Fix: Unclosed brace
         if (message.Contains("Expected '}'") || message.Contains("unclosed"))
         {
             var lines = doc.Text.Split('\n');
             var lastLine = lines.Length - 1;
             var lastChar = lines[lastLine].TrimEnd('\r').Length;
-            
+
             actions.Add(new CodeAction
             {
                 Title = "Add closing brace",
@@ -1162,21 +1165,21 @@ public sealed class LilySharpLanguageServer
                 }
             });
         }
-        
+
         return actions;
     }
 
     private IEnumerable<CodeAction> GenerateRefactorings(Document doc, SyntaxNode node, Uri uri)
     {
         var actions = new List<CodeAction>();
-        
+
         // Refactor: Extract variable from music block
         if (node is MusicBlockSyntax block && block.Items.Any())
         {
             var blockText = block.ToFullString().Trim();
             var (line, character) = GetLineAndCharacter(doc.Text, block.Position);
             var (endLine, endChar) = GetLineAndCharacter(doc.Text, block.Position + block.FullWidth);
-            
+
             actions.Add(new CodeAction
             {
                 Title = "Extract to variable",
@@ -1212,14 +1215,14 @@ public sealed class LilySharpLanguageServer
                 }
             });
         }
-        
+
         // Refactor: Wrap in relative
         if (node is NoteSyntax note)
         {
             var noteText = note.ToFullString().Trim();
             var (line, character) = GetLineAndCharacter(doc.Text, note.Position);
             var (endLine, endChar) = GetLineAndCharacter(doc.Text, note.Position + note.FullWidth);
-            
+
             actions.Add(new CodeAction
             {
                 Title = "Wrap in relative block",
@@ -1244,7 +1247,7 @@ public sealed class LilySharpLanguageServer
                 }
             });
         }
-        
+
         return actions;
     }
 
@@ -1259,20 +1262,20 @@ public sealed class LilySharpLanguageServer
 
         var position = @params.Position;
         var offset = GetOffset(doc.Text, position.Line, position.Character);
-        
+
         // Look backwards for a keyword
         var lineStart = doc.Text.LastIndexOf('\n', Math.Max(0, offset - 1)) + 1;
         var lineText = doc.Text[lineStart..offset];
-        
+
         // Check for keywords that have signatures
         var signatures = new List<SignatureInformation>();
         int activeParameter = 0;
-        
+
         if (lineText.Contains("relative"))
         {
             var paramIndex = lineText.IndexOf("relative") + "relative".Length;
             activeParameter = CountSpaces(lineText[paramIndex..]);
-            
+
             signatures.Add(new SignatureInformation
             {
                 Label = "relative pitch { music }",
@@ -1288,7 +1291,7 @@ public sealed class LilySharpLanguageServer
         {
             var paramIndex = lineText.IndexOf("repeat") + "repeat".Length;
             activeParameter = CountSpaces(lineText[paramIndex..]);
-            
+
             signatures.Add(new SignatureInformation
             {
                 Label = "repeat count { music } [alternative { ... }]",
@@ -1305,7 +1308,7 @@ public sealed class LilySharpLanguageServer
         {
             var paramIndex = lineText.IndexOf("tempo") + "tempo".Length;
             activeParameter = CountSpaces(lineText[paramIndex..]);
-            
+
             signatures.Add(new SignatureInformation
             {
                 Label = "tempo \"marking\" duration = bpm",
@@ -1322,7 +1325,7 @@ public sealed class LilySharpLanguageServer
         {
             var paramIndex = lineText.IndexOf("time") + "time".Length;
             activeParameter = CountSpaces(lineText[paramIndex..]);
-            
+
             signatures.Add(new SignatureInformation
             {
                 Label = "time numerator/denominator",
@@ -1337,7 +1340,7 @@ public sealed class LilySharpLanguageServer
         {
             var paramIndex = lineText.IndexOf("key") + "key".Length;
             activeParameter = CountSpaces(lineText[paramIndex..]);
-            
+
             signatures.Add(new SignatureInformation
             {
                 Label = "key pitch major|minor",
@@ -1353,7 +1356,7 @@ public sealed class LilySharpLanguageServer
         {
             var paramIndex = lineText.IndexOf("tuplet") + "tuplet".Length;
             activeParameter = CountSpaces(lineText[paramIndex..]);
-            
+
             signatures.Add(new SignatureInformation
             {
                 Label = "tuplet ratio { music }",
@@ -1369,7 +1372,7 @@ public sealed class LilySharpLanguageServer
         {
             var paramIndex = lineText.IndexOf("let") + "let".Length;
             activeParameter = CountSpaces(lineText[paramIndex..]);
-            
+
             signatures.Add(new SignatureInformation
             {
                 Label = "let name = expression",
@@ -1381,10 +1384,10 @@ public sealed class LilySharpLanguageServer
                 }
             });
         }
-        
+
         if (signatures.Count == 0)
             return null;
-            
+
         return new SignatureHelp
         {
             Signatures = signatures.ToArray(),
@@ -1419,7 +1422,7 @@ public sealed class LilySharpLanguageServer
 
         // Find variable name at position
         string? variableName = null;
-        
+
         if (node is VariableReferenceSyntax varRef)
         {
             variableName = varRef.Name.Text;
@@ -1483,7 +1486,16 @@ public sealed class LilySharpLanguageServer
     // ============================================================
     // Custom: SVG Preview
     // ============================================================
-    
+
+    /// <summary>
+    /// Returns the server version for debugging deployment issues.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/version")]
+    public string GetVersion()
+    {
+        return Version;
+    }
+
     /// <summary>
     /// Custom request to generate SVG from a document.
     /// Used for real-time preview in VS Code.
@@ -1494,16 +1506,16 @@ public sealed class LilySharpLanguageServer
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
         {
-            return new SvgResponse 
-            { 
-                Svg = null, 
-                Error = "Document not found" 
+            return new SvgResponse
+            {
+                Svg = null,
+                Error = "Document not found"
             };
         }
-        
+
         // Extract render definitions
         var renders = ExtractRenderInfo(doc.Tree);
-        
+
         if (doc.Tree.HasErrors)
         {
             var errors = string.Join("\n", doc.Tree.Diagnostics
@@ -1512,40 +1524,40 @@ public sealed class LilySharpLanguageServer
                     var (line, col) = GetLineAndColumn(doc.Tree.Text, d.Span.Start);
                     return $"Line {line}, Col {col}: {d.Message}";
                 }));
-            return new SvgResponse 
-            { 
-                Svg = null, 
+            return new SvgResponse
+            {
+                Svg = null,
                 Error = errors,
                 Renders = renders
             };
         }
-        
+
         try
         {
             // Preview mode: @font-face is defined in HTML, not in SVG
             var renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview();
-            
+
             // Generate SVG using shared generator (same code path as CLI)
             var svg = LilySharp.Core.Svg.SvgGenerator.Generate(doc.Tree, renderOptions, @params.RenderName);
-            
-            return new SvgResponse 
-            { 
-                Svg = svg, 
+
+            return new SvgResponse
+            {
+                Svg = svg,
                 Error = null,
                 Renders = renders
             };
         }
         catch (Exception ex)
         {
-            return new SvgResponse 
-            { 
-                Svg = null, 
+            return new SvgResponse
+            {
+                Svg = null,
                 Error = ex.Message,
                 Renders = renders
             };
         }
     }
-    
+
     /// <summary>
     /// Extract render definitions from the syntax tree.
     /// </summary>
@@ -1559,17 +1571,17 @@ public sealed class LilySharpLanguageServer
                 // Get children: render [type] "filename" { ... }
                 string type = "score";
                 string filename = "";
-                
+
                 // Iterate through children using GetChild
                 for (int i = 0; ; i++)
                 {
                     var child = render.GetChild(i);
                     if (child == null) break;
-                    
+
                     if (child is SyntaxTokenNode token)
                     {
                         var text = token.Text;
-                        if (text == "score" || text == "audio")
+                        if (text == "score" || text == "audio" || text == "midi")
                         {
                             type = text;
                         }
@@ -1579,14 +1591,14 @@ public sealed class LilySharpLanguageServer
                         }
                     }
                 }
-                
-                // Use filename (without extension) as the name
-                var name = Path.GetFileNameWithoutExtension(filename);
+
+                // Use full filename as the name (to distinguish fur-elise.svg from fur-elise.mid)
+                var name = filename;
                 if (string.IsNullOrEmpty(name))
                 {
                     name = $"render_{renders.Count + 1}";
                 }
-                
+
                 renders.Add(new RenderInfo
                 {
                     Name = name,
@@ -1597,7 +1609,7 @@ public sealed class LilySharpLanguageServer
         }
         return renders.ToArray();
     }
-    
+
     /// <summary>
     /// Get the voice name from a render declaration.
     /// </summary>
@@ -1608,13 +1620,13 @@ public sealed class LilySharpLanguageServer
             if (node is RenderDeclarationSyntax render)
             {
                 string filename = "";
-                
+
                 // Find filename
                 for (int i = 0; ; i++)
                 {
                     var child = render.GetChild(i);
                     if (child == null) break;
-                    
+
                     if (child is SyntaxTokenNode token)
                     {
                         var text = token.Text;
@@ -1625,7 +1637,7 @@ public sealed class LilySharpLanguageServer
                         }
                     }
                 }
-                
+
                 var name = Path.GetFileNameWithoutExtension(filename);
                 if (name == renderName)
                 {
@@ -1639,8 +1651,8 @@ public sealed class LilySharpLanguageServer
                             {
                                 var staffChild = staff.GetChild(i);
                                 if (staffChild == null) break;
-                                
-                                if (staffChild is SyntaxTokenNode t && 
+
+                                if (staffChild is SyntaxTokenNode t &&
                                     t.Kind != SyntaxKind.StaffKeyword &&
                                     t.Kind != SyntaxKind.OpenBrace &&
                                     t.Kind != SyntaxKind.CloseBrace &&
@@ -1656,10 +1668,10 @@ public sealed class LilySharpLanguageServer
         }
         return null;
     }
-    
+
     private bool IsClefKeyword(SyntaxKind kind)
     {
-        return kind is SyntaxKind.TrebleKeyword or SyntaxKind.BassKeyword 
+        return kind is SyntaxKind.TrebleKeyword or SyntaxKind.BassKeyword
             or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword;
     }
 }

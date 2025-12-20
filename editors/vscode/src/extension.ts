@@ -25,12 +25,12 @@ const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 export function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine('Lily# extension activating...');
     outputChannel.show(true);  // Show output channel for debugging
-    
+
     const config = vscode.workspace.getConfiguration('lilysharp');
     let serverPath = config.get<string>('serverPath');
-    
+
     outputChannel.appendLine(`Config serverPath: "${serverPath}"`);
-    
+
     // Priority: 1. User-configured path, 2. Bundled server, 3. PATH
     if (!serverPath || serverPath.trim() === '') {
         // Look for bundled server in extension directory
@@ -46,7 +46,7 @@ export function activate(context: vscode.ExtensionContext) {
     } else {
         outputChannel.appendLine(`Using configured path: ${serverPath}`);
     }
-    
+
     if (path.isAbsolute(serverPath)) {
         if (fs.existsSync(serverPath)) {
             outputChannel.appendLine(`Server executable found: ${serverPath}`);
@@ -61,7 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
     let serverCommand: string;
     let serverArgs: string[];
     let serverEnv: { [key: string]: string } | undefined;
-    
+
     if (serverPath.endsWith('.exe')) {
         // For .exe, use dotnet to run the corresponding .dll
         // This ensures the correct .NET runtime is used
@@ -70,7 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
             // Try to find user-installed dotnet first (has newer .NET versions)
             const userDotnetPath = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'dotnet');
             const userDotnetExe = path.join(userDotnetPath, 'dotnet.exe');
-            
+
             if (fs.existsSync(userDotnetExe)) {
                 serverCommand = userDotnetExe;
                 serverArgs = [dllPath];
@@ -126,7 +126,14 @@ export function activate(context: vscode.ExtensionContext) {
     clientReadyPromise = client.start().then(() => {
         clientReady = true;
         outputChannel.appendLine('Language client started successfully');
-        
+
+        // Get and display server version
+        client.sendRequest<string>('lilysharp/version').then(version => {
+            outputChannel.appendLine(`Language server version: ${version}`);
+        }).catch(err => {
+            outputChannel.appendLine(`Failed to get server version: ${err}`);
+        });
+
         // Update any open preview panels now that client is ready
         previewPanels.forEach((panel, uri) => {
             outputChannel.appendLine(`Updating preview for ${uri}`);
@@ -161,7 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
                     const cfg = vscode.workspace.getConfiguration('lilysharp');
                     const autoRefresh = cfg.get<boolean>('preview.autoRefresh', true);
                     const delay = cfg.get<number>('preview.refreshDelay', DEBOUNCE_DELAY_DEFAULT);
-                    
+
                     if (autoRefresh) {
                         const existingTimer = debounceTimers.get(uri);
                         if (existingTimer) {
@@ -190,7 +197,7 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
-    
+
     outputChannel.appendLine('Lily# extension activated');
 }
 
@@ -217,7 +224,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     // Create new preview panel with access to font resources
     const fileName = path.basename(document.uri.fsPath);
     const fontsUri = vscode.Uri.joinPath(context.extensionUri, 'media', 'fonts');
-    
+
     outputChannel.appendLine('Creating new preview panel');
     const panel = vscode.window.createWebviewPanel(
         'lilysharpPreview',
@@ -276,44 +283,44 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     const fontUri = panel.webview.asWebviewUri(
         vscode.Uri.joinPath(context.extensionUri, 'media', 'fonts', 'emmentaler-20.woff2')
     );
-    
+
     // Set initial HTML structure with font
     outputChannel.appendLine('Setting webview HTML');
     panel.webview.html = getPreviewHtml(fontUri.toString(), panel.webview.cspSource);
-    
+
     // Then load content
     outputChannel.appendLine('Calling updatePreviewContent');
     updatePreviewContent(document, panel, context);
 }
 
 async function updatePreviewContent(
-    document: vscode.TextDocument, 
+    document: vscode.TextDocument,
     panel: vscode.WebviewPanel,
     context: vscode.ExtensionContext
 ) {
     const uri = document.uri.toString();
     const selectedRender = selectedRenders.get(uri);
-    
+
     outputChannel.appendLine(`updatePreviewContent called for ${uri}, clientReady=${clientReady}`);
 
     // Wait for client to be ready if not already
     if (!clientReady) {
         outputChannel.appendLine('Client not ready, sending loading message');
-        panel.webview.postMessage({ 
-            type: 'updateContent', 
+        panel.webview.postMessage({
+            type: 'updateContent',
             loading: true,
             renders: [],
             selectedRender: ''
         });
-        
+
         outputChannel.appendLine('Waiting for clientReadyPromise...');
         try {
             await clientReadyPromise;
             outputChannel.appendLine('clientReadyPromise resolved');
         } catch (err) {
             outputChannel.appendLine(`clientReadyPromise rejected: ${err}`);
-            panel.webview.postMessage({ 
-                type: 'updateContent', 
+            panel.webview.postMessage({
+                type: 'updateContent',
                 error: 'Language server failed to start',
                 renders: [],
                 selectedRender: ''
@@ -324,8 +331,8 @@ async function updatePreviewContent(
 
     if (!client) {
         outputChannel.appendLine('ERROR: client is null');
-        panel.webview.postMessage({ 
-            type: 'updateContent', 
+        panel.webview.postMessage({
+            type: 'updateContent',
             error: 'Language server not available',
             renders: [],
             selectedRender: ''
@@ -339,7 +346,7 @@ async function updatePreviewContent(
             textDocument: { uri: uri },
             renderName: selectedRender || null
         });
-        
+
         outputChannel.appendLine(`Got response: error=${response.Error}, hasSvg=${!!response.Svg}`);
 
         // Panel may have been disposed during async request
@@ -350,16 +357,16 @@ async function updatePreviewContent(
 
         if (response.Error) {
             outputChannel.appendLine(`Sending error to webview: ${response.Error}`);
-            panel.webview.postMessage({ 
-                type: 'updateContent', 
+            panel.webview.postMessage({
+                type: 'updateContent',
                 error: response.Error,
                 renders: response.Renders || [],
                 selectedRender: selectedRender || ''
             });
         } else if (response.Svg) {
             outputChannel.appendLine(`Sending SVG to webview (length=${response.Svg.length})`);
-            panel.webview.postMessage({ 
-                type: 'updateContent', 
+            panel.webview.postMessage({
+                type: 'updateContent',
                 svg: response.Svg,
                 renders: response.Renders || [],
                 selectedRender: selectedRender || ''
@@ -370,8 +377,8 @@ async function updatePreviewContent(
     } catch (error) {
         outputChannel.appendLine(`Request failed: ${error}`);
         if (previewPanels.has(uri)) {
-            panel.webview.postMessage({ 
-                type: 'updateContent', 
+            panel.webview.postMessage({
+                type: 'updateContent',
                 error: `Failed to generate preview: ${error}`,
                 renders: [],
                 selectedRender: ''
@@ -535,12 +542,12 @@ function getPreviewHtml(fontUri: string, cspSource: string): string {
     <script>
         const vscode = acquireVsCodeApi();
         const HIGHLIGHT_THRESHOLD = ${HIGHLIGHT_DISTANCE_THRESHOLD};
-        
+
         let scale = 1;
         const minScale = 0.25;
         const maxScale = 4;
         const scaleStep = 0.1;
-        
+
         const svgContainer = document.getElementById('svgContainer');
         const zoomInfo = document.getElementById('zoomInfo');
         const renderSelect = document.getElementById('renderSelect');
@@ -588,7 +595,7 @@ function getPreviewHtml(fontUri: string, cspSource: string): string {
         function updateRenderSelect(renders, selectedRender) {
             const currentValue = renderSelect.value;
             renderSelect.innerHTML = '<option value="">(Default)</option>';
-            
+
             if (renders && renders.length > 0) {
                 // Filter score renders only
                 const scoreRenders = renders.filter(r => r.Type === 'score');
@@ -657,7 +664,7 @@ export function deactivate(): Thenable<void> | undefined {
     // Clear all debounce timers
     debounceTimers.forEach(timer => clearTimeout(timer));
     debounceTimers.clear();
-    
+
     if (!client) {
         return undefined;
     }

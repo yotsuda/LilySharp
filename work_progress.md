@@ -268,7 +268,7 @@ SyntaxTree
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
 | KnuthPlassBreaker.cs | ✅ | High | 4h | constrained-breaking.cc 参照。動的計画法 |
-| PageBreaker.cs | 🚀 | High | 6h | page-spacing.cc 完全再現 |
+| PageBreaker.cs | 🔍 | High | 6h | page-spacing.cc 完全再現 |
 | ScoreLayout.cs (最適化) | 🚀 | High | 6h | 既存コードの Lilypond 等価化 |
 
 ## Phase 10: 高度な機能 🚀
@@ -355,3 +355,4 @@ SyntaxTree
 | 2025-12-16 | 🔍 座標系統一リファクタリング。SVG viewBox を staff spaces 単位に統一、内部計算をシンプル化 |
 | 2025-12-18 | ✅ Phase 7: 記譜記号スペーシング完了。LilyPond define-grobs.scm/space-alist 参照。音部記号・調号・拍子記号の配置を LilyPond 等価に |
 | 2025-12-19 | ✅ VSCode 拡張デプロイ手順改善。deploy-extension.ps1 に VS Code 設定自動更新、古い VSIX クリーンアップ、TargetFramework 自動検出を追加 |
+| 2025-12-20 | 🔍 Phase 9: PageBreaker.cs 実装。LilyPond page-spacing.cc 参照。SystemDetails, PageSpacing, PageBreaker クラス追加。動的計画法でページ分割最適化 |
