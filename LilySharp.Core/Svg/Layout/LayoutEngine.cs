@@ -1338,21 +1338,25 @@ public sealed class LayoutEngine
     /// <summary>
     /// Calculates column layouts for a measure based on collected timings.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/paper-column.cc - Each musical moment becomes a paper column
+    /// LILYPOND-REF: lily/spacing-spanner.cc - Springs connect adjacent columns
+    /// 
+    /// This creates springs between each timing point (column) in the measure,
+    /// using the same Spring-Rod model as single-staff layout.
+    /// </remarks>
     private ImmutableArray<ColumnLayout> LayoutColumnsForMeasure(Measure measure, double totalWidth, List<Fraction> timings)
     {
         if (timings.Count == 0)
             return ImmutableArray<ColumnLayout>.Empty;
         
         // Calculate barline widths
+        // LILYPOND-REF: lily/spacing-basic.cc:50-52 barline dimensions
         double startBarlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline);
         double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
         
-        // Ensure minimum space after barline for first note
         // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist (first-note . (fixed-space . 1.3))
         double firstNoteOffset = Math.Max(startBarlineWidth, EngravingDefaults.BarLineToFirstNoteSpace);
-        
-        // Available width for columns (after first note offset and before end barline)
-        double contentWidth = totalWidth - firstNoteOffset - endBarlineWidth;
         
         // Calculate total duration of the measure
         var totalDuration = Fraction.Zero;
@@ -1364,29 +1368,50 @@ public sealed class LayoutEngine
         if (totalDuration == Fraction.Zero)
             return ImmutableArray<ColumnLayout>.Empty;
         
-        // Create columns with proportional spacing
+        // LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
+        // Create springs between adjacent timing columns
+        var springs = new List<Spring>();
+        
+        // Spring from start to first timing
+        var firstDuration = timings.Count > 1 ? timings[1] - timings[0] : totalDuration;
+        springs.Add(SpacingRules.CreateTimingSpring(firstDuration));
+        
+        // Springs between timing columns
+        for (int i = 1; i < timings.Count; i++)
+        {
+            Fraction segmentDuration;
+            if (i < timings.Count - 1)
+            {
+                segmentDuration = timings[i + 1] - timings[i];
+            }
+            else
+            {
+                segmentDuration = totalDuration - timings[i];
+            }
+            springs.Add(SpacingRules.CreateTimingSpring(segmentDuration));
+        }
+        
+        // Spring from last timing to end
+        springs.Add(SpacingRules.CreateTimingSpring(Fraction.Zero)); // End spring
+        
+        // Available width for columns (after first note offset and before end barline)
+        double targetWidth = totalWidth - firstNoteOffset - endBarlineWidth;
+        
+        // LILYPOND-REF: lily/simple-spacer.cc:175-205 solve for force
+        var solver = new SpringSolver(springs.ToImmutableArray());
+        double force = solver.SolveForWidth(targetWidth);
+        
+        // Get positions from spring solver
+        var positions = solver.GetPositions(force, startX: 0);
+        
+        // Create columns with solved positions
         var columns = ImmutableArray.CreateBuilder<ColumnLayout>();
         
         for (int i = 0; i < timings.Count; i++)
         {
             var timing = timings[i];
-            
-            // Calculate X position based on timing ratio
-            double timingRatio = timing.ToDouble() / totalDuration.ToDouble();
-            double x = firstNoteOffset + timingRatio * contentWidth;
-            
-            // Calculate width (distance to next column or end)
-            double width;
-            if (i < timings.Count - 1)
-            {
-                double nextRatio = timings[i + 1].ToDouble() / totalDuration.ToDouble();
-                double nextX = firstNoteOffset + nextRatio * contentWidth;
-                width = nextX - x;
-            }
-            else
-            {
-                width = contentWidth - (x - firstNoteOffset);
-            }
+            double x = firstNoteOffset + positions[i + 1];
+            double width = positions[i + 2] - positions[i + 1];
             
             columns.Add(new ColumnLayout(timing, x, width));
         }
@@ -1394,4 +1419,3 @@ public sealed class LayoutEngine
         return columns.ToImmutable();
     }
 }
-

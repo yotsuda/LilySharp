@@ -1522,25 +1522,12 @@ public sealed class LilySharpLanguageServer
         
         try
         {
-            // Find the voice name to render based on selected render
-            string? voiceName = null;
-            if (!string.IsNullOrEmpty(@params.RenderName))
-            {
-                voiceName = GetVoiceNameFromRender(doc.Tree, @params.RenderName);
-            }
-            
-            // New architecture: Collector -> Layout -> Renderer
-            var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
-            var score = collector.Collect(doc.Tree, voiceName);
-            
-            var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
-            var layout = layoutEngine.Layout(score);
-            
             // Preview mode: @font-face is defined in HTML, not in SVG
             var renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview();
             
-            var renderer = new LilySharp.Core.Svg.Renderer.SvgRenderer(renderOptions: renderOptions);
-            var svg = renderer.Render(score, layout);
+            // Generate SVG using shared generator (same code path as CLI)
+            var svg = LilySharp.Core.Svg.SvgGenerator.Generate(doc.Tree, renderOptions, @params.RenderName);
+            
             return new SvgResponse 
             { 
                 Svg = svg, 

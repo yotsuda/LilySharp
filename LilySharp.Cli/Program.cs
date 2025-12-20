@@ -207,40 +207,8 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
             renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
         }
         
-        var renderer = new LilySharp.Core.Svg.Renderer.SvgRenderer(renderOptions: renderOptions);
-        
-        // Check for multi-staff render specification
-        var renderSpec = LilySharp.Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
-        string svg;
-        
-        if (renderSpec != null && renderSpec.IsMultiStaff)
-        {
-            var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
-            var multiScore = collector.CollectMultiStaff(tree, renderSpec);
-            
-            var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
-            var layout = layoutEngine.Layout(multiScore);
-            
-            svg = renderer.Render(multiScore, layout);
-        }
-        else
-        {
-            // Single staff - get voiceName from renderSpec if available
-            string? voiceName = null;
-            if (renderSpec != null && renderSpec.Items.Length == 1 && 
-                renderSpec.Items[0] is LilySharp.Core.Svg.Collector.SingleStaffSpec single)
-            {
-                voiceName = single.Staff.VoiceName;
-            }
-            
-            var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
-            var score = collector.Collect(tree, voiceName);
-            
-            var layoutEngine = new LilySharp.Core.Svg.Layout.LayoutEngine();
-            var layout = layoutEngine.Layout(score);
-            
-            svg = renderer.Render(score, layout);
-        }
+        // Generate SVG using shared generator
+        var svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, renderOptions);
         
         File.WriteAllText(outputPath, svg);
         Console.WriteLine($"Created: {outputPath}");

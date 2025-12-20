@@ -326,6 +326,35 @@ public static class SpacingRules
     }
     
     /// <summary>
+    /// Creates a spring for a timing column based on duration.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
+    /// Simplified spring creation for timing-based columns without skyline collision detection.
+    /// Uses duration-based spacing for ideal distance.
+    /// </remarks>
+    public static Spring CreateTimingSpring(Fraction duration)
+    {
+        // LILYPOND-REF: lily/spacing-basic.cc:109 note_spacing() - increment
+        double defaultMin = EngravingDefaults.SpacingIncrement;
+        
+        // LILYPOND-REF: lily/spacing-basic.cc:107 note_spacing() - duration space
+        double idealDistance = CalculateDurationSpace(duration);
+        
+        // Ensure minimum distance
+        idealDistance = Math.Max(idealDistance, defaultMin);
+        
+        // min_distance for timing springs (no skyline collision)
+        double minDistance = defaultMin;
+        
+        // LILYPOND-REF: lily/spacing-basic.cc:115 note_spacing() - inverse_stretch
+        double inverseStretchStrength = Math.Max(0.1, idealDistance - minDistance);
+        
+        return new Spring(idealDistance, minDistance, inverseStretchStrength);
+    }
+
+    
+    /// <summary>
     /// Creates all springs for a measure.
     /// </summary>
     /// <param name="measure">The measure to create springs for</param>

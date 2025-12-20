@@ -93,7 +93,7 @@ public static class RenderSpecParser
     }
     
     /// <summary>
-    /// Finds a render declaration by name.
+    /// Finds a render declaration by name or output filename (without extension).
     /// </summary>
     public static RenderSpec? FindByName(SyntaxTree tree, string name)
     {
@@ -102,7 +102,14 @@ public static class RenderSpecParser
             if (node is RenderDeclarationSyntax render)
             {
                 var spec = Parse(render);
-                if (spec?.Name == name)
+                if (spec == null) continue;
+                
+                // Match by Name or by output filename (without extension)
+                if (spec.Name == name)
+                    return spec;
+                
+                var filenameWithoutExt = System.IO.Path.GetFileNameWithoutExtension(spec.OutputFile);
+                if (filenameWithoutExt == name)
                     return spec;
             }
         }

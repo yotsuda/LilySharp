@@ -31,9 +31,20 @@ export function activate(context: vscode.ExtensionContext) {
     
     outputChannel.appendLine(`Config serverPath: "${serverPath}"`);
     
+    // Priority: 1. User-configured path, 2. Bundled server, 3. PATH
     if (!serverPath || serverPath.trim() === '') {
-        serverPath = 'lilysharp-lsp';
-        outputChannel.appendLine(`Using default: ${serverPath}`);
+        // Look for bundled server in extension directory
+        const bundledServer = path.join(context.extensionPath, 'server', 'lilysharp-lsp.exe');
+        if (fs.existsSync(bundledServer)) {
+            serverPath = bundledServer;
+            outputChannel.appendLine(`Using bundled server: ${serverPath}`);
+        } else {
+            // Fallback to PATH
+            serverPath = 'lilysharp-lsp';
+            outputChannel.appendLine(`Using PATH: ${serverPath}`);
+        }
+    } else {
+        outputChannel.appendLine(`Using configured path: ${serverPath}`);
     }
     
     if (path.isAbsolute(serverPath)) {
