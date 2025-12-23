@@ -863,6 +863,14 @@ public sealed class LayoutEngine
         for (int i = 0; i < measures.Count; i++)
         {
             double measureWidth = measureMinWidths[i] + stretchPerMeasure;
+            
+            // Adjust last measure to reach right edge (justification)
+            if (i == measures.Count - 1 && !_options.RaggedRight)
+            {
+                double targetEnd = rightEdge;
+                measureWidth = targetEnd - currentX;
+            }
+            
             var itemLayouts = LayoutMeasureItems(measures[i], measureWidth);
 
             measureLayouts.Add(new MeasureLayout(

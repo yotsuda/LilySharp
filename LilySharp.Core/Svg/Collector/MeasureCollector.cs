@@ -701,6 +701,9 @@ public sealed class MeasureCollector
             switch (child)
             {
                 case SectionReferenceSyntax reference:
+                    // Skip if inside a repeat block (will be handled by ProcessRepeatBlock)
+                    if (IsInsideRepeatBlock(reference))
+                        break;
                     if (_sections.TryGetValue(reference.SectionName, out var section))
                     {
                         builder.SectionLabel = reference.SectionName;
@@ -713,6 +716,18 @@ public sealed class MeasureCollector
                     break;
             }
         }
+    }
+    
+    private static bool IsInsideRepeatBlock(SyntaxNode node)
+    {
+        var parent = node.Parent;
+        while (parent != null)
+        {
+            if (parent is StructureRepeatBlockSyntax)
+                return true;
+            parent = parent.Parent;
+        }
+        return false;
     }
     
     private void ProcessRepeatBlock(StructureRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
