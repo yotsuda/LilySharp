@@ -275,7 +275,7 @@ SyntaxTree
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| DynamicsRenderer.cs | 🚀 | Normal | 4h | 強弱記号（位置完全一致） |
+| DynamicsRenderer.cs | ⏳ | Normal | 4h | 強弱記号（位置完全一致） |
 | ArticulationRenderer.cs | 🚀 | Normal | 4h | アーティキュレーション |
 | GraceNoteRenderer.cs | 🚀 | Normal | 6h | 装飾音 |
 | RepeatRenderer.cs | 🚀 | Normal | 4h | 繰り返し記号 |

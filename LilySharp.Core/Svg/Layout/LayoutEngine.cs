@@ -1,4 +1,5 @@
 ﻿using System.Collections.Immutable;
+using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
@@ -121,12 +122,16 @@ public sealed class LayoutEngine
         // Calculate rest shifts to avoid beam collisions
         var restShifts = CalculateRestShifts(score, systemsArray, beamLayouts);
 
+        // TODO: Collect and layout dynamics from score
+        var dynamicLayouts = ImmutableArray<DynamicLayout>.Empty;
+
         return new ScoreLayout(
             pages,
             systemsArray,
             beamLayouts,
             tieLayouts,
             slurLayouts,
+            dynamicLayouts,
             voiceOffsets,
             restShifts);
     }
@@ -298,6 +303,7 @@ public sealed class LayoutEngine
             beamLayouts,
             tieLayouts,
             slurLayouts,
+            ImmutableArray<DynamicLayout>.Empty,
             voiceOffsets,
             restShifts);
     }
@@ -838,37 +844,46 @@ public sealed class LayoutEngine
         double rightEdge = _options.PageWidth - _options.MarginRight;
         double availableWidth = rightEdge - startX;
 
-        // Calculate minimum widths
-        double totalMinWidth = 0;
-        var measureMinWidths = new List<double>();
+        // Collect springs and barline widths for each measure
+        // LILYPOND-REF: lily/simple-spacer.cc - spring-based justification
+        var measureSprings = new List<ImmutableArray<Spring>>();
+        var measureBarlineWidths = new List<double>();
+        double totalBarlineWidth = 0;
 
         foreach (var measure in measures)
         {
-            double minWidth = SpacingRules.CalculateMeasureIdealWidth(measure);
-            measureMinWidths.Add(minWidth);
-            totalMinWidth += minWidth;
+            var springs = SpacingRules.CreateSpringsForMeasure(measure);
+            measureSprings.Add(springs);
+            
+            double barlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline)
+                                + SpacingRules.GetBarlineWidth(measure.EndBarline);
+            measureBarlineWidths.Add(barlineWidth);
+            totalBarlineWidth += barlineWidth;
         }
 
-        // Calculate stretch factor for justification
-        double extraSpace = availableWidth - totalMinWidth;
-        double stretchPerMeasure = measures.Count > 0 ? extraSpace / measures.Count : 0;
+        // Collect all springs and solve for target width
+        var allSprings = measureSprings.SelectMany(s => s).ToImmutableArray();
+        double springTargetWidth = availableWidth - totalBarlineWidth;
+        
+        double force = 0;
+        if (allSprings.Length > 0)
+        {
+            var solver = new SpringSolver(allSprings);
+            var (solvedForce, fits) = solver.Solve(springTargetWidth, _options.RaggedRight);
+            force = fits ? solvedForce : 0; // Use ideal spacing if doesn't fit
+        }
 
-        // Clamp stretch to prevent excessive stretching
-        stretchPerMeasure = Math.Max(0, Math.Min(stretchPerMeasure, _options.MaxStretchPerMeasure));
-
-        // Layout measures
+        // Layout measures using the solved force
         var measureLayouts = new List<MeasureLayout>();
         double currentX = startX;
 
         for (int i = 0; i < measures.Count; i++)
         {
-            double measureWidth = measureMinWidths[i] + stretchPerMeasure;
-            
-            // Adjust last measure to reach right edge (justification)
-            if (i == measures.Count - 1 && !_options.RaggedRight)
+            // Calculate measure width: barline widths + spring lengths at force
+            double measureWidth = measureBarlineWidths[i];
+            foreach (var spring in measureSprings[i])
             {
-                double targetEnd = rightEdge;
-                measureWidth = targetEnd - currentX;
+                measureWidth += spring.Length(force);
             }
             
             var itemLayouts = LayoutMeasureItems(measures[i], measureWidth);
@@ -902,29 +917,46 @@ public sealed class LayoutEngine
         double rightEdge = _options.PageWidth - _options.MarginRight;
         double availableWidth = rightEdge - startX;
 
-        // Calculate minimum widths
-        double totalMinWidth = 0;
-        var measureMinWidths = new List<double>();
+        // Collect springs and barline widths for each measure
+        var measureSprings = new List<ImmutableArray<Spring>>();
+        var measureBarlineWidths = new List<double>();
+        double totalBarlineWidth = 0;
 
         foreach (var measure in measures)
         {
-            double minWidth = SpacingRules.CalculateMeasureIdealWidth(measure);
-            measureMinWidths.Add(minWidth);
-            totalMinWidth += minWidth;
+            var springs = SpacingRules.CreateSpringsForMeasure(measure);
+            measureSprings.Add(springs);
+            
+            double barlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline)
+                                + SpacingRules.GetBarlineWidth(measure.EndBarline);
+            measureBarlineWidths.Add(barlineWidth);
+            totalBarlineWidth += barlineWidth;
         }
 
-        // Calculate stretch factor
-        double extraSpace = availableWidth - totalMinWidth;
-        double stretchPerMeasure = measures.Count > 0 ? extraSpace / measures.Count : 0;
-        stretchPerMeasure = Math.Max(0, Math.Min(stretchPerMeasure, _options.MaxStretchPerMeasure));
+        // Collect all springs and solve for target width
+        var allSprings = measureSprings.SelectMany(s => s).ToImmutableArray();
+        double springTargetWidth = availableWidth - totalBarlineWidth;
+        
+        double force = 0;
+        if (allSprings.Length > 0)
+        {
+            var solver = new SpringSolver(allSprings);
+            var (solvedForce, fits) = solver.Solve(springTargetWidth, _options.RaggedRight);
+            force = fits ? solvedForce : 0;
+        }
 
-        // Layout measures
+        // Layout measures using the solved force
         var measureLayouts = new List<MeasureLayout>();
         double currentX = startX;
 
         for (int i = 0; i < measures.Count; i++)
         {
-            double measureWidth = measureMinWidths[i] + stretchPerMeasure;
+            double measureWidth = measureBarlineWidths[i];
+            foreach (var spring in measureSprings[i])
+            {
+                measureWidth += spring.Length(force);
+            }
+            
             var itemLayouts = LayoutMeasureItems(measures[i], measureWidth);
 
             measureLayouts.Add(new MeasureLayout(
@@ -1521,3 +1553,5 @@ public sealed class LayoutEngine
         return columns.ToImmutable();
     }
 }
+
+
