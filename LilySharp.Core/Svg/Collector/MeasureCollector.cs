@@ -268,6 +268,8 @@ public sealed class MeasureCollector
     private int _currentOctave = 4;
     private char _lastPitchName = 'c';
     
+    // Dynamic markings
+    private readonly List<DynamicItem> _dynamics = new();
     // Default duration
     private Fraction _defaultDuration = Fraction.Quarter;
     
@@ -325,7 +327,8 @@ public sealed class MeasureCollector
             _clef,
             _tempo,
             _title,
-            _composer);
+            _composer,
+            _dynamics.ToImmutableArray());
     }
 
     /// <summary>
@@ -424,7 +427,8 @@ public sealed class MeasureCollector
             _clef,
             _tempo,
             _title,
-            _composer);
+            _composer,
+            _dynamics.ToImmutableArray());
     }
     
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
@@ -853,6 +857,34 @@ public sealed class MeasureCollector
     {
         _lastPitchName = basePitch.PitchName[0];
         _currentOctave = 4 + basePitch.OctaveOffset;
+    }
+    
+    /// <summary>
+    /// Collects dynamic markings from note/chord modifiers.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: dynamic-engraver.cc:36-61 Dynamic_engraver::listen_dynamic
+    /// </remarks>
+    private void CollectDynamics(SyntaxNode node, int measureIndex, int itemIndex)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+        
+        foreach (var articulation in articulations)
+        {
+            if (articulation is DynamicSyntax dynamicSyntax)
+            {
+                var level = dynamicSyntax.Level;
+                if (level != DynamicLevel.None)
+                {
+                    _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.Position));
+                }
+            }
+        }
     }
     
     private NoteItem CreateNoteItem(NoteSyntax note)

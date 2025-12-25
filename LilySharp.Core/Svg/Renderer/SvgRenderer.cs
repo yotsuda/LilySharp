@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
@@ -150,6 +150,8 @@ public sealed class SvgRenderer
         // Draw slurs
         DrawSlurs(layout);
         
+        // Draw dynamics
+        DrawDynamics(layout);
         WriteFooter();
         
         return _svg.ToString();
@@ -1343,5 +1345,80 @@ public sealed class SvgRenderer
         
         _svg.AppendLine($"  <path d=\"{fullPath}\" fill=\"black\"/>");
     }
+    
+    /// <summary>
+    /// Draws all dynamic markings.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: define-grobs.scm:1298-1327 DynamicText grob
+    /// LILYPOND-REF: output-lib.scm:348-365 dynamic glyph rendering
+    /// Dynamics are rendered using SMuFL dynamic glyphs (U+E520-U+E52F).
+    /// </remarks>
+    private void DrawDynamics(ScoreLayout layout)
+    {
+        if (layout.DynamicLayouts.IsDefaultOrEmpty)
+            return;
+        
+        foreach (var dynamicLayout in layout.DynamicLayouts)
+        {
+            DrawDynamic(dynamicLayout);
+        }
+    }
+    
+    /// <summary>
+    /// Draws a single dynamic marking.
+    /// </summary>
+    private void DrawDynamic(DynamicLayout dynamicLayout)
+    {
+        // SMuFL dynamic glyphs
+        // LILYPOND-REF: define-grobs.scm:1317 font-encoding = fetaText
+        string glyph = GetDynamicGlyph(dynamicLayout.Text);
+        
+        double x = dynamicLayout.X;
+        double y = dynamicLayout.Y;
+        
+        // Center the dynamic horizontally
+        // LILYPOND-REF: define-grobs.scm:1311 self-alignment-X = CENTER
+        double glyphWidth = EstimateDynamicWidth(dynamicLayout.Text);
+        x -= glyphWidth / 2;
+        
+        // Dynamic font size is slightly smaller than regular music glyphs
+        // LILYPOND-REF: define-grobs.scm:1317 Y-offset = (scale-by-font-size -0.6)
+        double fontSize = FontSize * 0.85;
+        
+        _svg.AppendLine($"  <text x=\"{x:F2}\" y=\"{y:F2}\" font-family=\"Emmentaler\" font-size=\"{fontSize:F1}\" fill=\"black\" data-pos=\"{dynamicLayout.SourcePosition}\">{glyph}</text>");
+    }
+    
+    /// <summary>
+    /// Gets the SMuFL glyph string for a dynamic marking.
+    /// </summary>
+    private static string GetDynamicGlyph(string text) => text switch
+    {
+        // SMuFL dynamic glyphs (U+E520-U+E52F)
+        "ppp" => "\uE52A",  // dynamicPPP
+        "pp" => "\uE52B",   // dynamicPP
+        "p" => "\uE520",    // dynamicPiano
+        "mp" => "\uE52C",   // dynamicMP
+        "mf" => "\uE52D",   // dynamicMF
+        "f" => "\uE522",    // dynamicForte
+        "ff" => "\uE52F",   // dynamicFF
+        "fff" => "\uE530",  // dynamicFFF
+        _ => text           // Fallback to text
+    };
+    
+    /// <summary>
+    /// Estimates the width of a dynamic marking for centering.
+    /// </summary>
+    private static double EstimateDynamicWidth(string text) => text switch
+    {
+        "ppp" => 2.5,
+        "pp" => 1.8,
+        "p" => 0.9,
+        "mp" => 1.8,
+        "mf" => 1.8,
+        "f" => 0.9,
+        "ff" => 1.8,
+        "fff" => 2.5,
+        _ => text.Length * 0.8
+    };
 }
-

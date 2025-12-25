@@ -122,8 +122,10 @@ public sealed class LayoutEngine
         // Calculate rest shifts to avoid beam collisions
         var restShifts = CalculateRestShifts(score, systemsArray, beamLayouts);
 
-        // TODO: Collect and layout dynamics from score
-        var dynamicLayouts = ImmutableArray<DynamicLayout>.Empty;
+        // Calculate dynamic layouts
+        // LILYPOND-REF: dynamic-engraver.cc - dynamic positioning
+        var measureLayouts = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
+        var dynamicLayouts = DynamicEngraver.Calculate(score, score.Dynamics, systemsArray, measureLayouts);
 
         return new ScoreLayout(
             pages,
