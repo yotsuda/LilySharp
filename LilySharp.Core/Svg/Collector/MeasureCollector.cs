@@ -964,9 +964,19 @@ public sealed class MeasureCollector
                     // Articulations go opposite to stem direction by default
                     bool isAbove = !stemUp;
                     
-                    // Fermata always goes above
-                    if (type == ArticulationType.Fermata)
+                    // Fermata and ornaments always go above
+                    // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
+                    // LILYPOND-REF: define-grobs.scm:2175 ornaments: direction = UP
+                    if (type == ArticulationType.Fermata ||
+                        type == ArticulationType.Trill ||
+                        type == ArticulationType.Mordent ||
+                        type == ArticulationType.Prall ||
+                        type == ArticulationType.Turn ||
+                        type == ArticulationType.InvertedTurn ||
+                        type == ArticulationType.PrallTriller)
+                    {
                         isAbove = true;
+                    }
                     
                     _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove, articulationSyntax.Position));
                 }
