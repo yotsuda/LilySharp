@@ -277,7 +277,7 @@ SyntaxTree
 |----------|:------:|:--------:|-------:|-------|
 | DynamicsRenderer.cs | 🔍 | Normal | 4h | 強弱記号（基本実装完了、skyline 衝突回避は TODO） |
 | ArticulationRenderer.cs | 🔍 | Normal | 4h | staccato/accent/tenuto/marcato/fermata/portato 実装完了 |
-| GraceNoteRenderer.cs | 🚀 | Normal | 6h | 装飾音 |
+| GraceNoteRenderer.cs | 🔍 | Normal | 6h | grace/acciaccatura/appoggiatura 実装完了 |
 | RepeatRenderer.cs | 🚀 | Normal | 4h | 繰り返し記号 |
 | TremoloRenderer.cs | 🚀 | Normal | 4h | トレモロ |
 | OrnamentRenderer.cs | 🚀 | Normal | 4h | 装飾記号 |
@@ -359,3 +359,4 @@ SyntaxTree
 | 2025-12-20 | 🔍 Phase 9: LayoutEngine に PageBreaker 統合。UseOptimalPageBreaking フラグで複数ページ分割対応。LilyPond page-spacing.cc 参照 |
 | 2025-12-26 | 🔍 Phase 10: DynamicsRenderer 基本実装。DynamicItem/DynamicEngraver/SvgRenderer 統合。SMuFL dynamic グリフ使用 |
 | 2025-12-26 | 🔍 Phase 10: ArticulationEngraver 実装。staccato/accent/tenuto/marcato/fermata/portato サポート |
+| 2025-12-26 | 🔍 Phase 10: GraceNoteEngraver 実装。grace/acciaccatura/appoggiatura サポート。65% スケール、slashサポート |
