@@ -815,6 +815,12 @@ public sealed class ArticulationSyntax : SyntaxNode
         SyntaxKind.MarcatoKeyword => ArticulationType.Marcato,
         SyntaxKind.FermataKeyword => ArticulationType.Fermata,
         SyntaxKind.PortatoKeyword => ArticulationType.Portato,
+        SyntaxKind.TrillKeyword => ArticulationType.Trill,
+        SyntaxKind.MordentKeyword => ArticulationType.Mordent,
+        SyntaxKind.PrallKeyword => ArticulationType.Prall,
+        SyntaxKind.TurnKeyword => ArticulationType.Turn,
+        SyntaxKind.InvertedTurnKeyword => ArticulationType.InvertedTurn,
+        SyntaxKind.PrallTrillKeyword => ArticulationType.PrallTriller,
         _ => ArticulationType.None
     };
 }

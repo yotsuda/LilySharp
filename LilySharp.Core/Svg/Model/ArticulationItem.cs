@@ -44,12 +44,27 @@ public sealed record ArticulationItem
     /// </remarks>
     public string GetGlyph() => Type switch
     {
+        // Articulations
         ArticulationType.Staccato => "\uE4A2",   // articStaccatoAbove/Below
         ArticulationType.Accent => "\uE4A0",     // articAccentAbove/Below
         ArticulationType.Tenuto => "\uE4A4",     // articTenutoAbove/Below
         ArticulationType.Marcato => "\uE4AC",    // articMarcatoAbove/Below
         ArticulationType.Fermata => "\uE4C0",    // fermataAbove
         ArticulationType.Portato => "\uE4B2",    // articTenutoStaccatoAbove/Below
+        // Ornaments (SMuFL U+E560-U+E56F)
+        ArticulationType.Trill => "\uE566",          // ornamentTrill
+        ArticulationType.Mordent => "\uE56C",        // ornamentMordent
+        ArticulationType.Prall => "\uE56D",          // ornamentMordentInverted
+        ArticulationType.Turn => "\uE567",           // ornamentTurn
+        ArticulationType.InvertedTurn => "\uE568",   // ornamentTurnInverted
+        ArticulationType.PrallTriller => "\uE56B",   // ornamentShortTrill
         _ => ""
     };
+    
+    /// <summary>
+    /// Whether this is an ornament (always placed above the note).
+    /// </summary>
+    public bool IsOrnament => Type is ArticulationType.Trill or ArticulationType.Mordent or
+        ArticulationType.Prall or ArticulationType.Turn or ArticulationType.InvertedTurn or
+        ArticulationType.PrallTriller;
 }

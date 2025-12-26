@@ -6,12 +6,20 @@ namespace LilySharp.Core.Syntax;
 public enum ArticulationType
 {
     None,
+    // Articulations
     Staccato,
     Accent,
     Tenuto,
     Marcato,
     Fermata,
-    Portato
+    Portato,
+    // Ornaments
+    Trill,
+    Mordent,
+    Prall,
+    Turn,
+    InvertedTurn,
+    PrallTriller
 }
 
 /// <summary>

@@ -143,6 +143,14 @@ public enum SyntaxKind : ushort
     FermataKeyword,
     PortatoKeyword,
     
+    // === Ornament Names ===
+    TrillKeyword,       // @trill
+    MordentKeyword,     // @mordent
+    PrallKeyword,       // @prall (inverted mordent)
+    TurnKeyword,        // @turn
+    InvertedTurnKeyword, // @invertedturn
+    PrallTrillKeyword,  // @pralltriller (short trill)
+    
     // === Dynamics (with backslash) ===
     DynamicPPP,         // \ppp
     DynamicPP,          // \pp

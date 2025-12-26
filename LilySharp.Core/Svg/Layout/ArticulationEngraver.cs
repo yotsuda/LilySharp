@@ -100,8 +100,10 @@ public static class ArticulationEngraver
                 y = StaffBottom + StaffPadding + Padding;
             }
             
-            // Special handling for fermata (always above for now)
-            if (articulation.Type == ArticulationType.Fermata)
+            // Special handling for fermata and ornaments (always above)
+            // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
+            // LILYPOND-REF: define-grobs.scm:2175 TrillSpanner: direction = UP
+            if (articulation.Type == ArticulationType.Fermata || articulation.IsOrnament)
             {
                 y = StaffTop - StaffPadding - Padding - ArticulationHeight;
             }

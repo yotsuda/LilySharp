@@ -646,6 +646,10 @@ private GreenNode?[] ParseArticulations()
         return Current.Kind is SyntaxKind.StaccatoKeyword or SyntaxKind.AccentKeyword or
             SyntaxKind.TenutoKeyword or SyntaxKind.MarcatoKeyword or
             SyntaxKind.FermataKeyword or SyntaxKind.PortatoKeyword or
+            // Ornaments
+            SyntaxKind.TrillKeyword or SyntaxKind.MordentKeyword or
+            SyntaxKind.PrallKeyword or SyntaxKind.TurnKeyword or
+            SyntaxKind.InvertedTurnKeyword or SyntaxKind.PrallTrillKeyword or
             SyntaxKind.Identifier; // Allow custom articulation names
     }
 

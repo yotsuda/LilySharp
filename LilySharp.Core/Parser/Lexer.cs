@@ -460,6 +460,14 @@ internal sealed class Lexer
             "fermata" or "ferm" => SyntaxKind.FermataKeyword,
             "portato" => SyntaxKind.PortatoKeyword,
 
+            // Ornament names
+            "trill" or "tr" => SyntaxKind.TrillKeyword,
+            "mordent" => SyntaxKind.MordentKeyword,
+            "prall" => SyntaxKind.PrallKeyword,
+            "turn" => SyntaxKind.TurnKeyword,
+            "invertedturn" => SyntaxKind.InvertedTurnKeyword,
+            "pralltriller" => SyntaxKind.PrallTrillKeyword,
+
             // Dynamics
             "ppp" => SyntaxKind.DynamicPPP,
             "pp" => SyntaxKind.DynamicPP,
