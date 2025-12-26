@@ -279,8 +279,8 @@ SyntaxTree
 | ArticulationRenderer.cs | 🔍 | Normal | 4h | staccato/accent/tenuto/marcato/fermata/portato 実装完了 |
 | GraceNoteRenderer.cs | ✅ | Normal | 6h | grace/acciaccatura/appoggiatura 実装完了 |
 | RepeatRenderer.cs | ✅ | Normal | 4h | 繰り返し小節線実装済み（BarlineType.RepeatStart/End） |
-| TremoloRenderer.cs | 🔍 | Normal | 4h | TremoloItem/TremoloEngraver 基盤作成（パーサー対応待ち） |
-| OrnamentRenderer.cs | 🔍 | Normal | 4h | OrnamentItem/OrnamentEngraver 基盤作成（trill/mordent/turn/prall） |
+| TremoloRenderer.cs | 🚀 | Normal | 4h | TremoloEngraver 基盤作成済み。パーサー対応待ち（c4:16 構文） |
+| OrnamentRenderer.cs | ✅ | Normal | 4h | ArticulationItem 統合完了（@trill/@mordent/@turn/@prall） |
 
 ---
 
@@ -361,3 +361,4 @@ SyntaxTree
 | 2025-12-26 | 🔍 Phase 10: ArticulationEngraver 実装。staccato/accent/tenuto/marcato/fermata/portato サポート |
 | 2025-12-26 | 🔍 Phase 10: GraceNoteEngraver 実装。grace/acciaccatura/appoggiatura サポート。65% スケール、slashサポート |
 | 2025-12-26 | 🔍 Phase 10: TremoloEngraver/OrnamentEngraver 基盤実装。SMuFL グリフマッピング追加 |
+| 2025-12-26 | ✅ Phase 10: Ornament パーサー統合完了。@trill/@mordent/@turn/@prall をArticulationItemに統合 |
