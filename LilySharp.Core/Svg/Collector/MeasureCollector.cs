@@ -278,6 +278,10 @@ public sealed class MeasureCollector
     private readonly List<DynamicItem> _dynamics = new();
     // Articulation marks
     private readonly List<ArticulationItem> _articulations = new();
+    // Grace notes
+    private readonly List<GraceNoteItem> _graceNotes = new();
+    // Pending grace notes to attach to the next main note
+    private GraceExpressionSyntax? _pendingGrace = null;
     // Default duration
     private Fraction _defaultDuration = Fraction.Quarter;
     
@@ -337,7 +341,8 @@ public sealed class MeasureCollector
             _title,
             _composer,
             _dynamics.ToImmutableArray(),
-            _articulations.ToImmutableArray());
+            _articulations.ToImmutableArray(),
+            _graceNotes.ToImmutableArray());
     }
 
     /// <summary>
@@ -438,7 +443,8 @@ public sealed class MeasureCollector
             _title,
             _composer,
             _dynamics.ToImmutableArray(),
-            _articulations.ToImmutableArray());
+            _articulations.ToImmutableArray(),
+            _graceNotes.ToImmutableArray());
     }
     
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
@@ -479,6 +485,11 @@ public sealed class MeasureCollector
     {
         switch (node)
         {
+            case GraceExpressionSyntax grace:
+                // Store grace expression to attach to the next note
+                _pendingGrace = grace;
+                break;
+                
             case NoteSyntax note:
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
@@ -487,6 +498,12 @@ public sealed class MeasureCollector
                     builder.AddItem(noteItem);
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp);
+                    // Attach any pending grace notes
+                    if (_pendingGrace != null)
+                    {
+                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        _pendingGrace = null;
+                    }
                 }
                 break;
                 
@@ -503,6 +520,12 @@ public sealed class MeasureCollector
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
                     CollectArticulations(chord, measureIndex, itemIndex, chordItem.StemUp);
+                    // Attach any pending grace notes
+                    if (_pendingGrace != null)
+                    {
+                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        _pendingGrace = null;
+                    }
                 }
                 break;
                 
@@ -524,6 +547,7 @@ public sealed class MeasureCollector
         _variables.Clear();
         _dynamics.Clear();
         _articulations.Clear();
+        _graceNotes.Clear();
         _structure = null;
         _root = null;
         _currentOctave = 4;
@@ -949,6 +973,54 @@ public sealed class MeasureCollector
             }
         }
     }
+    
+    /// <summary>
+    /// Collects grace notes from a grace expression.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: grace-engraver.cc:36-80 Grace_engraver class
+    /// </remarks>
+    private void CollectGraceNotes(GraceExpressionSyntax grace, int measureIndex, int mainNoteItemIndex)
+    {
+        var type = grace.IsAcciaccatura ? GraceNoteType.Acciaccatura
+                 : grace.IsAppoggiatura ? GraceNoteType.Appoggiatura
+                 : GraceNoteType.Grace;
+        
+        // Collect notes from the grace body
+        var graceNoteInfos = new List<GraceNoteInfo>();
+        
+        foreach (var item in grace.Body.Items)
+        {
+            if (item is NoteSyntax note)
+            {
+                var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);
+                _currentOctave = octave;
+                
+                bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
+                string? accidental = note.Pitch.AccidentalOffset switch
+                {
+                    2 => "doubleSharp",
+                    1 => "sharp",
+                    -1 => "flat",
+                    -2 => "doubleFlat",
+                    _ => null
+                };
+                
+                graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger));
+            }
+        }
+        
+        if (graceNoteInfos.Count > 0)
+        {
+            _graceNotes.Add(new GraceNoteItem(
+                type,
+                graceNoteInfos.ToImmutableArray(),
+                measureIndex,
+                mainNoteItemIndex,
+                grace.Position));
+        }
+    }
+
     private NoteItem CreateNoteItem(NoteSyntax note)
     {
         var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);

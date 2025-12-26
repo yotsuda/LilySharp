@@ -131,6 +131,10 @@ public sealed class LayoutEngine
         // LILYPOND-REF: script-engraver.cc - articulation positioning
         var articulationLayouts = ArticulationEngraver.Calculate(score, score.Articulations, systemsArray, measureLayouts);
 
+        // Calculate grace note layouts
+        // LILYPOND-REF: grace-engraver.cc - grace note positioning
+        var graceNoteLayouts = GraceNoteEngraver.Calculate(score, score.GraceNotes, systemsArray, measureLayouts);
+
         return new ScoreLayout(
             pages,
             systemsArray,
@@ -139,6 +143,7 @@ public sealed class LayoutEngine
             slurLayouts,
             dynamicLayouts,
             articulationLayouts,
+            graceNoteLayouts,
             voiceOffsets,
             restShifts);
     }
@@ -312,6 +317,7 @@ public sealed class LayoutEngine
             slurLayouts,
             ImmutableArray<DynamicLayout>.Empty,
             ImmutableArray<ArticulationLayout>.Empty,
+            ImmutableArray<GraceNoteLayout>.Empty,
             voiceOffsets,
             restShifts);
     }

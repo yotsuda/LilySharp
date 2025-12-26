@@ -154,6 +154,7 @@ public sealed record ScoreLayout(
     ImmutableArray<SlurLayout> SlurLayouts,
     ImmutableArray<DynamicLayout> DynamicLayouts,
     ImmutableArray<ArticulationLayout> ArticulationLayouts,
+    ImmutableArray<GraceNoteLayout> GraceNoteLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
     ImmutableDictionary<RestShiftKey, double> RestShifts
 )

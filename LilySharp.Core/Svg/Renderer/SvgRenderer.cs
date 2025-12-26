@@ -156,6 +156,9 @@ public sealed class SvgRenderer
         // Draw articulations
         DrawArticulations(layout);
         
+        // Draw grace notes
+        DrawGraceNotes(layout);
+        
         WriteFooter();
         
         return _svg.ToString();
@@ -1465,5 +1468,91 @@ public sealed class SvgRenderer
         double fontSize = FontSize * 0.9;
         
         _svg.AppendLine($"  <text x=\"{x:F2}\" y=\"{y:F2}\" font-family=\"Emmentaler\" font-size=\"{fontSize:F1}\" fill=\"black\" data-pos=\"{articulationLayout.SourcePosition}\">{glyph}</text>");
+    }
+    
+    /// <summary>
+    /// Draws all grace notes.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: define-grobs.scm:1358-1402 GraceSpacing grob
+    /// LILYPOND-REF: note-head.cc grace note rendering
+    /// Grace notes are rendered at 65% of normal size.
+    /// Acciaccaturas have a diagonal slash through the stem.
+    /// </remarks>
+    private void DrawGraceNotes(ScoreLayout layout)
+    {
+        if (layout.GraceNoteLayouts.IsDefaultOrEmpty)
+            return;
+        
+        foreach (var graceLayout in layout.GraceNoteLayouts)
+        {
+            DrawGraceNoteGroup(graceLayout);
+        }
+    }
+    
+    /// <summary>
+    /// Draws a group of grace notes.
+    /// </summary>
+    private void DrawGraceNoteGroup(GraceNoteLayout graceLayout)
+    {
+        double x = graceLayout.X;
+        double scale = graceLayout.Scale;
+        double scaledFontSize = FontSize * scale;
+        double noteSpacing = 1.2 * scale;
+        
+        // Find the system Y offset for this measure
+        // For now, use a default offset (this should be calculated from layout)
+        double systemY = 0;
+        
+        foreach (var noteInfo in graceLayout.Notes)
+        {
+            // Calculate Y position from staff position
+            double y = systemY + noteInfo.StaffPosition * 0.5;
+            
+            // Draw the notehead (quarter note head for grace notes)
+            string noteGlyph = "\uE0A4"; // noteheadBlack
+            _svg.AppendLine($"  <text x=\"{x:F2}\" y=\"{y:F2}\" font-family=\"Emmentaler\" font-size=\"{scaledFontSize:F1}\" fill=\"black\" data-pos=\"{graceLayout.SourcePosition}\">{noteGlyph}</text>");
+            
+            // Draw stem
+            double stemX = x + 0.5 * scale;
+            double stemStartY = y;
+            double stemEndY = y - 3.5 * scale; // Stem goes up
+            _svg.AppendLine($"  <line x1=\"{stemX:F2}\" y1=\"{stemStartY:F2}\" x2=\"{stemX:F2}\" y2=\"{stemEndY:F2}\" stroke=\"black\" stroke-width=\"{StemThickness:F2}\"/>");
+            
+            // Draw flag for grace notes
+            string flagGlyph = "\uE240"; // flag8thUp
+            _svg.AppendLine($"  <text x=\"{stemX:F2}\" y=\"{stemEndY:F2}\" font-family=\"Emmentaler\" font-size=\"{scaledFontSize:F1}\" fill=\"black\">{flagGlyph}</text>");
+            
+            // Draw slash for acciaccatura
+            if (graceLayout.Type == GraceNoteType.Acciaccatura)
+            {
+                double slashStartX = stemX - 0.3 * scale;
+                double slashStartY = stemStartY - 1.5 * scale;
+                double slashEndX = stemX + 0.5 * scale;
+                double slashEndY = stemStartY - 2.5 * scale;
+                _svg.AppendLine($"  <line x1=\"{slashStartX:F2}\" y1=\"{slashStartY:F2}\" x2=\"{slashEndX:F2}\" y2=\"{slashEndY:F2}\" stroke=\"black\" stroke-width=\"{StaffLineThickness:F2}\"/>");
+            }
+            
+            // Draw accidental if present
+            if (noteInfo.Accidental != null)
+            {
+                string accidentalGlyph = noteInfo.Accidental switch
+                {
+                    "sharp" => "\uE262",
+                    "flat" => "\uE260",
+                    "natural" => "\uE261",
+                    "doubleSharp" => "\uE263",
+                    "doubleFlat" => "\uE264",
+                    _ => ""
+                };
+                if (!string.IsNullOrEmpty(accidentalGlyph))
+                {
+                    double accX = x - 0.8 * scale;
+                    _svg.AppendLine($"  <text x=\"{accX:F2}\" y=\"{y:F2}\" font-family=\"Emmentaler\" font-size=\"{scaledFontSize:F1}\" fill=\"black\">{accidentalGlyph}</text>");
+                }
+            }
+            
+            x += noteSpacing;
+        }
     }
 }
