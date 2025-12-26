@@ -152,6 +152,10 @@ public sealed class SvgRenderer
         
         // Draw dynamics
         DrawDynamics(layout);
+        
+        // Draw articulations
+        DrawArticulations(layout);
+        
         WriteFooter();
         
         return _svg.ToString();
@@ -1421,4 +1425,45 @@ public sealed class SvgRenderer
         "fff" => 2.5,
         _ => text.Length * 0.8
     };
+    
+    /// <summary>
+    /// Draws all articulation marks.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: define-grobs.scm:2268-2310 Script grob
+    /// LILYPOND-REF: output-lib.scm:305-320 script glyph rendering
+    /// </remarks>
+    private void DrawArticulations(ScoreLayout layout)
+    {
+        if (layout.ArticulationLayouts.IsDefaultOrEmpty)
+            return;
+        
+        foreach (var articulationLayout in layout.ArticulationLayouts)
+        {
+            DrawArticulation(articulationLayout);
+        }
+    }
+    
+    /// <summary>
+    /// Draws a single articulation mark.
+    /// </summary>
+    private void DrawArticulation(ArticulationLayout articulationLayout)
+    {
+        double x = articulationLayout.X;
+        double y = articulationLayout.Y;
+        string glyph = articulationLayout.Glyph;
+        
+        if (string.IsNullOrEmpty(glyph))
+            return;
+        
+        // Center the articulation horizontally
+        // LILYPOND-REF: define-grobs.scm:2289 self-alignment-X = CENTER
+        double glyphWidth = 0.6; // Approximate width
+        x -= glyphWidth / 2;
+        
+        // Articulation font size (slightly smaller than notes)
+        double fontSize = FontSize * 0.9;
+        
+        _svg.AppendLine($"  <text x=\"{x:F2}\" y=\"{y:F2}\" font-family=\"Emmentaler\" font-size=\"{fontSize:F1}\" fill=\"black\" data-pos=\"{articulationLayout.SourcePosition}\">{glyph}</text>");
+    }
 }

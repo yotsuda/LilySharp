@@ -42,12 +42,18 @@ internal sealed class MeasureBuilder
     
     public IReadOnlyList<MeasureBoundary> Boundaries => _boundaries;
     
+    /// <summary>Current measure index (completed measures count).</summary>
+    public int CurrentMeasureIndex => _measures.Count;
+    
+    /// <summary>Current item count within the current measure.</summary>
+    public int CurrentItemCount => _currentItems.Count;
+    
     public string? SectionLabel
     {
         get => _sectionLabel;
         set => _sectionLabel = value;
     }
-    
+
     /// <summary>
     /// Adds a music item and automatically completes the measure if duration is reached.
     /// </summary>
@@ -270,6 +276,8 @@ public sealed class MeasureCollector
     
     // Dynamic markings
     private readonly List<DynamicItem> _dynamics = new();
+    // Articulation marks
+    private readonly List<ArticulationItem> _articulations = new();
     // Default duration
     private Fraction _defaultDuration = Fraction.Quarter;
     
@@ -328,7 +336,8 @@ public sealed class MeasureCollector
             _tempo,
             _title,
             _composer,
-            _dynamics.ToImmutableArray());
+            _dynamics.ToImmutableArray(),
+            _articulations.ToImmutableArray());
     }
 
     /// <summary>
@@ -428,7 +437,8 @@ public sealed class MeasureCollector
             _tempo,
             _title,
             _composer,
-            _dynamics.ToImmutableArray());
+            _dynamics.ToImmutableArray(),
+            _articulations.ToImmutableArray());
     }
     
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
@@ -470,7 +480,14 @@ public sealed class MeasureCollector
         switch (node)
         {
             case NoteSyntax note:
-                builder.AddItem(CreateNoteItem(note));
+                {
+                    int measureIndex = builder.CurrentMeasureIndex;
+                    int itemIndex = builder.CurrentItemCount;
+                    var noteItem = CreateNoteItem(note);
+                    builder.AddItem(noteItem);
+                    CollectDynamics(note, measureIndex, itemIndex);
+                    CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp);
+                }
                 break;
                 
             case RestSyntax rest:
@@ -478,7 +495,15 @@ public sealed class MeasureCollector
                 break;
                 
             case ChordSyntax chord:
-                builder.AddItem(CreateChordItem(chord));
+                {
+                    int measureIndex = builder.CurrentMeasureIndex;
+                    int itemIndex = builder.CurrentItemCount;
+                    var chordItem = CreateChordItem(chord);
+                    builder.AddItem(chordItem);
+                    CollectDynamics(chord, measureIndex, itemIndex);
+                    // Use chord stem direction for articulation placement
+                    CollectArticulations(chord, measureIndex, itemIndex, chordItem.StemUp);
+                }
                 break;
                 
             case BarlineSyntax barline:
@@ -497,6 +522,8 @@ public sealed class MeasureCollector
     {
         _sections.Clear();
         _variables.Clear();
+        _dynamics.Clear();
+        _articulations.Clear();
         _structure = null;
         _root = null;
         _currentOctave = 4;
@@ -887,6 +914,41 @@ public sealed class MeasureCollector
         }
     }
     
+    /// <summary>
+    /// Collects articulation marks from note/chord modifiers.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: script-engraver.cc:92-125 Script_engraver::acknowledge_note_head
+    /// </remarks>
+    private void CollectArticulations(SyntaxNode node, int measureIndex, int itemIndex, bool stemUp)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+        
+        foreach (var articulation in articulations)
+        {
+            if (articulation is ArticulationSyntax articulationSyntax)
+            {
+                var type = articulationSyntax.Type;
+                if (type != ArticulationType.None)
+                {
+                    // LILYPOND-REF: script-interface.cc:23-45 direction calculation
+                    // Articulations go opposite to stem direction by default
+                    bool isAbove = !stemUp;
+                    
+                    // Fermata always goes above
+                    if (type == ArticulationType.Fermata)
+                        isAbove = true;
+                    
+                    _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove, articulationSyntax.Position));
+                }
+            }
+        }
+    }
     private NoteItem CreateNoteItem(NoteSyntax note)
     {
         var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);

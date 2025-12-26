@@ -71,6 +71,9 @@ public sealed record Score
     /// <summary>Dynamic markings in the score.</summary>
     public ImmutableArray<DynamicItem> Dynamics { get; }
     
+    /// <summary>Articulation marks in the score.</summary>
+    public ImmutableArray<ArticulationItem> Articulations { get; }
+    
     /// <summary>Whether this score has multiple voices.</summary>
     public bool IsMultiVoice => Voices.Length > 1;
 
@@ -85,8 +88,9 @@ public sealed record Score
         int? tempo = null,
         string? title = null,
         string? composer = null,
-        ImmutableArray<DynamicItem>? dynamics = null)
-        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics)
+        ImmutableArray<DynamicItem>? dynamics = null,
+        ImmutableArray<ArticulationItem>? articulations = null)
+        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations)
     {
     }
     
@@ -101,7 +105,8 @@ public sealed record Score
         int? tempo = null,
         string? title = null,
         string? composer = null,
-        ImmutableArray<DynamicItem>? dynamics = null)
+        ImmutableArray<DynamicItem>? dynamics = null,
+        ImmutableArray<ArticulationItem>? articulations = null)
     {
         if (voices.Length == 0)
             throw new ArgumentException("Score must have at least one voice", nameof(voices));
@@ -114,6 +119,7 @@ public sealed record Score
         Title = title;
         Composer = composer;
         Dynamics = dynamics ?? ImmutableArray<DynamicItem>.Empty;
+        Articulations = articulations ?? ImmutableArray<ArticulationItem>.Empty;
     }
     
     /// <summary>Total number of measures in the score (from primary voice).</summary>

@@ -275,7 +275,7 @@ SyntaxTree
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| DynamicsRenderer.cs | ⏳ | Normal | 4h | 強弱記号（位置完全一致） |
+| DynamicsRenderer.cs | 🔍 | Normal | 4h | 強弱記号（基本実装完了、skyline 衝突回避は TODO） |
 | ArticulationRenderer.cs | 🚀 | Normal | 4h | アーティキュレーション |
 | GraceNoteRenderer.cs | 🚀 | Normal | 6h | 装飾音 |
 | RepeatRenderer.cs | 🚀 | Normal | 4h | 繰り返し記号 |
@@ -357,3 +357,4 @@ SyntaxTree
 | 2025-12-19 | ✅ VSCode 拡張デプロイ手順改善。deploy-extension.ps1 に VS Code 設定自動更新、古い VSIX クリーンアップ、TargetFramework 自動検出を追加 |
 | 2025-12-20 | 🔍 Phase 9: PageBreaker.cs 実装。LilyPond page-spacing.cc 参照。SystemDetails, PageSpacing, PageBreaker クラス追加。動的計画法でページ分割最適化 |
 | 2025-12-20 | 🔍 Phase 9: LayoutEngine に PageBreaker 統合。UseOptimalPageBreaking フラグで複数ページ分割対応。LilyPond page-spacing.cc 参照 |
+| 2025-12-26 | 🔍 Phase 10: DynamicsRenderer 基本実装。DynamicItem/DynamicEngraver/SvgRenderer 統合。SMuFL dynamic グリフ使用 |

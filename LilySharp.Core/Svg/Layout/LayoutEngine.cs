@@ -127,6 +127,10 @@ public sealed class LayoutEngine
         var measureLayouts = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
         var dynamicLayouts = DynamicEngraver.Calculate(score, score.Dynamics, systemsArray, measureLayouts);
 
+        // Calculate articulation layouts
+        // LILYPOND-REF: script-engraver.cc - articulation positioning
+        var articulationLayouts = ArticulationEngraver.Calculate(score, score.Articulations, systemsArray, measureLayouts);
+
         return new ScoreLayout(
             pages,
             systemsArray,
@@ -134,6 +138,7 @@ public sealed class LayoutEngine
             tieLayouts,
             slurLayouts,
             dynamicLayouts,
+            articulationLayouts,
             voiceOffsets,
             restShifts);
     }
@@ -306,6 +311,7 @@ public sealed class LayoutEngine
             tieLayouts,
             slurLayouts,
             ImmutableArray<DynamicLayout>.Empty,
+            ImmutableArray<ArticulationLayout>.Empty,
             voiceOffsets,
             restShifts);
     }

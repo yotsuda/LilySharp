@@ -153,6 +153,7 @@ public sealed record ScoreLayout(
     ImmutableArray<TieLayout> TieLayouts,
     ImmutableArray<SlurLayout> SlurLayouts,
     ImmutableArray<DynamicLayout> DynamicLayouts,
+    ImmutableArray<ArticulationLayout> ArticulationLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
     ImmutableDictionary<RestShiftKey, double> RestShifts
 )
