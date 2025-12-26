@@ -277,10 +277,10 @@ SyntaxTree
 |----------|:------:|:--------:|-------:|-------|
 | DynamicsRenderer.cs | 🔍 | Normal | 4h | 強弱記号（基本実装完了、skyline 衝突回避は TODO） |
 | ArticulationRenderer.cs | 🔍 | Normal | 4h | staccato/accent/tenuto/marcato/fermata/portato 実装完了 |
-| GraceNoteRenderer.cs | 🔍 | Normal | 6h | grace/acciaccatura/appoggiatura 実装完了 |
-| RepeatRenderer.cs | 🚀 | Normal | 4h | 繰り返し記号 |
-| TremoloRenderer.cs | 🚀 | Normal | 4h | トレモロ |
-| OrnamentRenderer.cs | 🚀 | Normal | 4h | 装飾記号 |
+| GraceNoteRenderer.cs | ✅ | Normal | 6h | grace/acciaccatura/appoggiatura 実装完了 |
+| RepeatRenderer.cs | ✅ | Normal | 4h | 繰り返し小節線実装済み（BarlineType.RepeatStart/End） |
+| TremoloRenderer.cs | 🔍 | Normal | 4h | TremoloItem/TremoloEngraver 基盤作成（パーサー対応待ち） |
+| OrnamentRenderer.cs | 🔍 | Normal | 4h | OrnamentItem/OrnamentEngraver 基盤作成（trill/mordent/turn/prall） |
 
 ---
 
@@ -360,3 +360,4 @@ SyntaxTree
 | 2025-12-26 | 🔍 Phase 10: DynamicsRenderer 基本実装。DynamicItem/DynamicEngraver/SvgRenderer 統合。SMuFL dynamic グリフ使用 |
 | 2025-12-26 | 🔍 Phase 10: ArticulationEngraver 実装。staccato/accent/tenuto/marcato/fermata/portato サポート |
 | 2025-12-26 | 🔍 Phase 10: GraceNoteEngraver 実装。grace/acciaccatura/appoggiatura サポート。65% スケール、slashサポート |
+| 2025-12-26 | 🔍 Phase 10: TremoloEngraver/OrnamentEngraver 基盤実装。SMuFL グリフマッピング追加 |
