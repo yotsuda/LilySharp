@@ -56,6 +56,13 @@ public static class DynamicEngraver
     /// <summary>
     /// Calculates layout for all dynamics in a score.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: side-position-interface.cc:193-400 aligned_side()
+    /// LILYPOND-REF: dynamic-align-engraver.cc:120-180 process_acknowledged()
+    /// 
+    /// Dynamics are placed below the staff, avoiding collision with notes
+    /// that extend below the staff (low notes, stems down).
+    /// </remarks>
     public static ImmutableArray<DynamicLayout> Calculate(
         Score score,
         ImmutableArray<DynamicItem> dynamics,
@@ -67,14 +74,9 @@ public static class DynamicEngraver
         
         var layouts = ImmutableArray.CreateBuilder<DynamicLayout>(dynamics.Length);
         
-        // Calculate Y position for dynamics
-        // LILYPOND-REF: side-position-interface.cc:92-111 axis_aligned_side_helper
-        // Dynamics are placed below the staff with padding
+        // LILYPOND-REF: side-position-interface.cc:323-337 staff padding
+        // Base Y position: below staff with padding
         double baseY = StaffBottom + StaffPadding + Padding;
-        
-        // Track maximum extent for collision avoidance
-        double currentMaxY = baseY;
-        int lastMeasureIndex = -1;
         
         foreach (var dynamic in dynamics)
         {
@@ -90,22 +92,18 @@ public static class DynamicEngraver
             
             var itemLayout = measureLayout.Items[dynamic.ItemIndex];
             
+            // Get the music item to determine if we need to avoid collision
+            // LILYPOND-REF: dynamic-align-engraver.cc:92-110 acknowledge_note_head
+            var measure = score.Voice.Measures[dynamic.MeasureIndex];
+            var item = measure.Items[dynamic.ItemIndex];
+            
             // Calculate X position (centered on the note)
             // LILYPOND-REF: define-grobs.scm:1311 self-alignment-X = CENTER
             double x = measureLayout.X + itemLayout.X;
             
-            // Calculate Y position
-            // LILYPOND-REF: side-position-interface.cc:128-136 y_aligned_side
-            // For now, use a simple placement below the staff
-            // TODO: Implement skyline-based collision avoidance
-            double y = baseY;
-            
-            // Reset Y tracking for new measure (simple approach)
-            if (dynamic.MeasureIndex != lastMeasureIndex)
-            {
-                currentMaxY = baseY;
-                lastMeasureIndex = dynamic.MeasureIndex;
-            }
+            // Calculate Y position with collision avoidance
+            // LILYPOND-REF: side-position-interface.cc:266-320 skyline-based positioning
+            double y = CalculateYPosition(item, baseY);
             
             layouts.Add(new DynamicLayout(
                 dynamic.MeasureIndex,
@@ -118,5 +116,75 @@ public static class DynamicEngraver
         }
         
         return layouts.ToImmutable();
+    }
+    
+    /// <summary>
+    /// Calculates Y position for a dynamic, avoiding collision with the note.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
+    /// 
+    /// Simple collision avoidance: if the note extends below the staff
+    /// (low notes or stem-down notes), push the dynamic further down.
+    /// </remarks>
+    private static double CalculateYPosition(MusicItem item, double baseY)
+    {
+        // Get the lowest extent of the note/chord
+        double lowestY = GetLowestExtent(item);
+        
+        // If the note extends below the staff, push the dynamic down
+        // LILYPOND-REF: side-position-interface.cc:330-337 include_staff
+        double requiredY = lowestY + Padding + DynamicTextHeight * 0.5;
+        
+        return Math.Max(baseY, requiredY);
+    }
+    
+    /// <summary>
+    /// Gets the lowest Y extent of a music item (in staff spaces from top).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: stem.cc:876-920 calc_stem_end_position
+    /// Accounts for note position and stem direction.
+    /// </remarks>
+    private static double GetLowestExtent(MusicItem item)
+    {
+        switch (item)
+        {
+            case NoteItem note:
+                // Note Y position
+                double noteY = note.StaffPosition * 0.5;
+                
+                // If stem down, add stem length
+                if (!note.StemUp)
+                {
+                    // LILYPOND-REF: stem.cc:93 stem-length = 3.5
+                    double stemLength = 3.5;
+                    return noteY + stemLength;
+                }
+                
+                // Half a notehead height below center
+                return noteY + 0.5;
+                
+            case ChordItem chord:
+                // Find lowest note in chord
+                int lowestPos = chord.Notes.Max(n => n.StaffPosition); // Higher position = lower on staff
+                double lowestNoteY = lowestPos * 0.5;
+                
+                // If stem down, add stem length from lowest note
+                if (!chord.StemUp)
+                {
+                    double stemLength = 3.5;
+                    return lowestNoteY + stemLength;
+                }
+                
+                return lowestNoteY + 0.5;
+                
+            case RestItem:
+                // Rest is typically around middle of staff
+                return StaffBottom * 0.5 + 1.0;
+                
+            default:
+                return StaffBottom;
+        }
     }
 }
