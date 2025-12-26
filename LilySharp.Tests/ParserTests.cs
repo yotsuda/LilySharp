@@ -363,6 +363,27 @@ score {
         Assert.False(tree.HasErrors);
     }
 
+    [Fact]
+    public void ParseNoteWithTrill()
+    {
+        var tree = SyntaxTree.Parse("{ c4@trill }");
+        Assert.False(tree.HasErrors);
+    }
+
+    [Fact]
+    public void ParseNoteWithMultipleOrnaments()
+    {
+        var tree = SyntaxTree.Parse("{ c4@trill d4@mordent e4@turn f4@prall }");
+        Assert.False(tree.HasErrors);
+    }
+
+    [Fact]
+    public void ParseNoteWithOrnamentAndDynamic()
+    {
+        var tree = SyntaxTree.Parse(@"{ c4@trill\p }");
+        Assert.False(tree.HasErrors);
+    }
+
     // ========== Repeat Tests ==========
 
     [Fact]

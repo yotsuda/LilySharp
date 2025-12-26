@@ -467,6 +467,7 @@ internal sealed class Lexer
             "turn" => SyntaxKind.TurnKeyword,
             "invertedturn" => SyntaxKind.InvertedTurnKeyword,
             "pralltriller" => SyntaxKind.PrallTrillKeyword,
+            "tremolo" => SyntaxKind.TremoloKeyword,
 
             // Dynamics
             "ppp" => SyntaxKind.DynamicPPP,

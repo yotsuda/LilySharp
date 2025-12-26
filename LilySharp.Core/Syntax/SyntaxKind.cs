@@ -150,6 +150,7 @@ public enum SyntaxKind : ushort
     TurnKeyword,        // @turn
     InvertedTurnKeyword, // @invertedturn
     PrallTrillKeyword,  // @pralltriller (short trill)
+    TremoloKeyword,     // @tremolo (stem tremolo)
     
     // === Dynamics (with backslash) ===
     DynamicPPP,         // \ppp

@@ -650,6 +650,8 @@ private GreenNode?[] ParseArticulations()
             SyntaxKind.TrillKeyword or SyntaxKind.MordentKeyword or
             SyntaxKind.PrallKeyword or SyntaxKind.TurnKeyword or
             SyntaxKind.InvertedTurnKeyword or SyntaxKind.PrallTrillKeyword or
+            // Tremolo
+            SyntaxKind.TremoloKeyword or
             SyntaxKind.Identifier; // Allow custom articulation names
     }
 
