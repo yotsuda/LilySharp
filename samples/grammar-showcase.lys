@@ -1,0 +1,90 @@
+// LilySharp 文法サンプル - 全機能
+title "Grammar Showcase"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key g major
+
+// === part 定義（clef オプション付き）===
+part melody { clef: treble }
+part bassLine { clef: bass }
+
+// === phrase 定義（再利用可能なフレーズ）===
+phrase intro {
+  c4 d e f |          // 基本音符
+  g8 a b c' d' c' b a | // 8分音符（連桁自動）
+  <c e g>4 <d f a>2. |  // 和音
+}
+
+phrase verse {
+  c4. d8 e4 f |        // 付点音符
+  g4~ g4 a2 |          // タイ
+  c4( d e f) |         // スラー
+  g4@staccato a@accent b@tenuto c@marcato |  // アーティキュレーション
+}
+
+phrase dynamics {
+  c4\p d\cresc e f\f | // ダイナミクス
+  g4@trill a@mordent b@turn c@prall |  // 装飾音
+  grace { d16 e } f4 g2 |  // 装飾音符
+  acciaccatura { a16 } b4 r2 |  // 短前打音
+}
+
+phrase accidentals {
+  c4 cis d dis |       // シャープ
+  e4 ees d des |       // フラット
+  fis4 ges a bes |     // その他
+}
+
+phrase tuplets {
+  tuplet 3/2 { c4 d e } f2 |  // 連符
+  r4 r8 r16 r16 r2 |   // 休符
+}
+
+// === 複声部（parallel expression）===
+phrase polyphony {
+  << { c'2 d' } \\ { e2 f } >> |  // 2声
+  << { g'2 } \\ { b2 } \\ { d2 } >> r2 |  // 3声
+}
+
+// === section 定義 ===
+section Intro {
+  melody { intro }
+  bassLine { c2 g | c2. r4 | c1 | }
+}
+
+section Verse {
+  melody { verse dynamics }
+  bassLine { c2 g2 | c2 g2 | c1 | c1 | }
+}
+
+section Bridge {
+  key d major  // セクション内調号変更
+  melody { accidentals tuplets }
+  bassLine { d2 a2 | d2 a2 | }
+}
+
+section Coda {
+  melody { polyphony }
+  bassLine { c1 | g1 | }
+}
+
+// === structure（リピート、ボルタ）===
+structure {
+  Intro
+  |: Verse [1. Bridge] [2. Coda] :|
+}
+
+// === render 出力 ===
+render score "output.svg" {
+  grandStaff {
+    staff { melody }
+    staff { bassLine }
+  }
+}
+
+render midi "output.mid" {
+  melody channel: 1 instrument: 1
+  bassLine channel: 2 instrument: 33
+}

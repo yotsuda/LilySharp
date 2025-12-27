@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
@@ -83,8 +83,32 @@ public sealed class LayoutEngine
             firstMeasureIndex += systemMeasures[sysIdx].Count;
         }
 
-        // Total height includes: systems + bottom extent for notes below staff + margin
-        double totalHeight = currentY - _options.SystemSpacing + _options.MarginTop + systemDownExtent;
+        // LILYPOND-REF: lily/page-layout-problem.cc:596-644
+        // Build skylines for each system and track the maximum extent
+        // Each system's down skyline gives us the bottommost point of musical elements
+        double maxSystemBottomY = 0;
+        for (int sysIdx = 0; sysIdx < systems.Count; sysIdx++)
+        {
+            var system = systems[sysIdx];
+            var measureList = systemMeasures[sysIdx];
+            
+            // Build skylines for this system (relative to staff top = 0)
+            var (_, downSkyline) = BuildSystemSkylines(measureList, system.Measures);
+            
+            // LILYPOND-REF: lily/skyline.cc:667-680 Skyline::max_height()
+            // DOWN skyline's MaxHeight() returns the bottommost Y in real coordinates
+            double systemBottomExtent = downSkyline.IsEmpty 
+                ? _options.StaffHeight 
+                : Math.Max(_options.StaffHeight, downSkyline.MaxHeight());
+            
+            // Convert relative extent to absolute Y position
+            double absoluteBottomY = system.Y + systemBottomExtent;
+            maxSystemBottomY = Math.Max(maxSystemBottomY, absoluteBottomY);
+        }
+        
+        // LILYPOND-REF: lily/page-layout-problem.cc:542
+        // Total height includes the bottommost element plus bottom margin
+        double totalHeight = maxSystemBottomY + _options.MarginBottom;
 
         // LILYPOND-REF: lily/page-spacing.cc
         // Create pages using optimal page breaking if enabled
@@ -1267,6 +1291,7 @@ public sealed class LayoutEngine
                 var itemLayout = measureLayout.Items[itemIndex];
                 double itemX = measureLayout.X + itemLayout.X;
 
+                // LILYPOND-REF: lily/grob.cc:85-89 - Each grob contributes to skyline
                 switch (item)
                 {
                     case NoteItem note:
@@ -1282,6 +1307,19 @@ public sealed class LayoutEngine
                                 stemLength, noteheadHeight, stemUp,
                                 upSkyline, downSkyline);
                         }
+                        break;
+                    case RestItem rest:
+                        // LILYPOND-REF: lily/rest.cc:61-77 - Rest vertical extent
+                        // Rests are centered on the staff middle line
+                        double restHeight = 1.0; // Approximate rest height in staff spaces
+                        double restWidth = 1.0;
+                        double restY = staffMiddleY; // Rests centered vertically
+                        double restTop = restY - restHeight / 2;
+                        double restBottom = restY + restHeight / 2;
+                        var restUp = VerticalSkyline.FromBox(itemX - restWidth / 2, itemX + restWidth / 2, restBottom, restTop, VerticalDirection.Up);
+                        var restDown = VerticalSkyline.FromBox(itemX - restWidth / 2, itemX + restWidth / 2, restBottom, restTop, VerticalDirection.Down);
+                        upSkyline.Merge(restUp);
+                        downSkyline.Merge(restDown);
                         break;
                 }
             }
@@ -1312,8 +1350,14 @@ public sealed class LayoutEngine
 
     /// <summary>
     /// Adds bounding boxes for a note at the given position.
+    /// Includes notehead, stem, and ledger lines.
     /// All coordinates in staff spaces.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents
+    /// LILYPOND-REF: lily/stencil-integral.cc:55-62 add_*_segments functions
+    /// Each graphical element contributes its bounding box to the vertical skyline.
+    /// </remarks>
     private void AddNoteBoxToSkylines(
         int staffPosition,
         double x,
@@ -1338,6 +1382,39 @@ public sealed class LayoutEngine
         var noteheadDown = VerticalSkyline.FromBox(noteLeft, noteRight, noteBottom, noteTop, VerticalDirection.Down);
         upSkyline.Merge(noteheadUp);
         downSkyline.Merge(noteheadDown);
+
+        // LILYPOND-REF: lily/ledger-line-engraver.cc:82-127
+        // Ledger lines extend horizontally from the note
+        double ledgerExtension = 0.35; // Extension beyond notehead (staff spaces)
+        double ledgerThickness = 0.16; // Thickness of ledger line
+        double ledgerLeft = x - noteheadWidth / 2 - ledgerExtension;
+        double ledgerRight = x + noteheadWidth / 2 + ledgerExtension;
+        
+        // Ledger lines above staff (staffPosition >= 6)
+        if (staffPosition >= 6)
+        {
+            for (int pos = 6; pos <= staffPosition; pos += 2)
+            {
+                double ledgerY = _options.StaffHeight / 2 - (pos / 2.0);
+                double ledgerTop = ledgerY - ledgerThickness / 2;
+                double ledgerBottom = ledgerY + ledgerThickness / 2;
+                var ledgerUp = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ledgerBottom, ledgerTop, VerticalDirection.Up);
+                upSkyline.Merge(ledgerUp);
+            }
+        }
+        
+        // Ledger lines below staff (staffPosition <= -6)
+        if (staffPosition <= -6)
+        {
+            for (int pos = -6; pos >= staffPosition; pos -= 2)
+            {
+                double ledgerY = _options.StaffHeight / 2 - (pos / 2.0);
+                double ledgerTop = ledgerY - ledgerThickness / 2;
+                double ledgerBottom = ledgerY + ledgerThickness / 2;
+                var ledgerDown = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ledgerBottom, ledgerTop, VerticalDirection.Down);
+                downSkyline.Merge(ledgerDown);
+            }
+        }
 
         // Stem bounding box (if applicable - quarter notes and shorter)
         // For half notes and whole notes, no stem

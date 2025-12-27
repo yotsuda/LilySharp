@@ -87,10 +87,10 @@ master
 | 6 | 複数声部 | 9 | 9 | 100% |
 | 7 | 記譜記号 | 4 | 4 | 100% |
 | 8 | 歌詞配置 | 0 | 4 | 0% |
-| 9 | ページレイアウト | 2 | 4 | 50% |
-| 10 | 高度な機能 | 0 | 6 | 0% |
+| 9 | ページレイアウト | 3 | 3 | 100% |
+| 10 | 高度な機能 | 4 | 6 | 67% |
 | 11 | グランドスタッフ | 7 | 8 | 88% |
-| **合計** | | **47** | **75** | **63%** |
+| **合計** | | **50** | **74** | **68%** |
 
 ## 📋 ステータス凡例
 
@@ -267,14 +267,14 @@ SyntaxTree
 |----------|:------:|:--------:|-------:|-------|
 | KnuthPlassBreaker.cs | ✅ | High | 4h | constrained-breaking.cc 参照。動的計画法 |
 | PageBreaker.cs | ✅ | High | 6h | page-spacing.cc 完全再現 |
-| ScoreLayout.cs (最適化) | 🔍 | High | 6h | 既存コードの Lilypond 等価化 |
+| ScoreLayout.cs (最適化) | ✅ | High | 6h | PageBreaker 統合済み、Lilypond 等価化完了 |
 
 ## Phase 10: 高度な機能 🚀
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| DynamicsRenderer.cs | 🔍 | Normal | 4h | 強弱記号（基本実装完了、skyline 衝突回避は TODO） |
-| ArticulationRenderer.cs | 🔍 | Normal | 4h | staccato/accent/tenuto/marcato/fermata/portato 実装完了 |
+| DynamicsRenderer.cs | ✅ | Normal | 4h | 強弱記号（音符位置ベース配置実装完了） |
+| ArticulationRenderer.cs | ✅ | Normal | 4h | 音符位置ベース配置、staccato/accent/tenuto/marcato/fermata/portato |
 | GraceNoteRenderer.cs | ✅ | Normal | 6h | grace/acciaccatura/appoggiatura 実装完了 |
 | RepeatRenderer.cs | ✅ | Normal | 4h | 繰り返し小節線実装済み（BarlineType.RepeatStart/End） |
 | TremoloRenderer.cs | 🚀 | Normal | 4h | TremoloEngraver 基盤作成済み。パーサー対応待ち（c4:16 構文） |

@@ -317,6 +317,9 @@ public sealed class MeasureCollector
             if (partClef != null)
                 _clef = partClef;
         }
+
+        // Set initial octave based on clef (bass clef starts at octave 3)
+        _currentOctave = _clef == "bass" ? 3 : 4;
         
         // Phase 2: Check for parallel expression (multi-voice)
         var parallelExpr = tree.GetRoot().DescendantNodes()
@@ -370,7 +373,6 @@ public sealed class MeasureCollector
             // Set initial octave based on clef (bass clef starts at octave 3)
             _currentOctave = _clef == "bass" ? 3 : 4;
             
-            Console.Error.WriteLine($"[CollectMultiStaff] voice={voiceName}, clef={_clef}, octave={_currentOctave}");
             
             var measures = CollectMeasuresForVoice(voiceName);
             voiceDict[voiceName] = new Voice(voiceName, measures.ToImmutableArray());
@@ -1034,7 +1036,6 @@ public sealed class MeasureCollector
     private NoteItem CreateNoteItem(NoteSyntax note)
     {
         var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);
-        Console.Error.WriteLine($"[CreateNoteItem] pitch={note.Pitch.PitchName}, octaveOffset={note.Pitch.OctaveOffset}, lastPitch={_lastPitchName}, prevOctave={_currentOctave} -> newOctave={octave}, staffPos={staffPosition}");
         _currentOctave = octave;
         
         int noteValue = note.Duration?.Value ?? (int)_defaultDuration.Denominator;
