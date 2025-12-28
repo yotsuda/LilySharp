@@ -53,17 +53,9 @@ public sealed class LayoutEngine
         // Build skylines for the first system
         var (systemUpSkyline, systemDownSkyline) = BuildSystemSkylines(firstSystemMeasures, firstSystemMeasureLayouts);
 
-        // LILYPOND-REF: lily/page-layout-problem.cc:622-626
-        // Calculate extent above staff top
-        double systemUpExtent = systemUpSkyline.IsEmpty ? 0 : Math.Max(0, -systemUpSkyline.MaxHeight());
-        
-        // Calculate extent below staff bottom (staff bottom is at StaffHeight)
-        // LILYPOND-REF: lily/skyline.cc:667-680 - MaxHeight for DOWN skyline returns largest Y
-        double systemDownExtent = systemDownSkyline.IsEmpty ? 0 : Math.Max(0, systemDownSkyline.MaxHeight() - _options.StaffHeight);
-
-        // LILYPOND-REF: lily/page-layout-problem.cc:477-478, 984-985
-        // The staff Y is positioned to leave room for: header + system extent + padding
-        double currentY = headerBottom + systemUpExtent + _options.TopSystemPadding;
+        double systemUpExtent = CalculateUpExtent(systemUpSkyline);
+        double systemDownExtent = CalculateDownExtent(systemDownSkyline);
+        double currentY = CalculateFirstSystemY(headerBottom, systemUpExtent);
 
         // Layout each system
         int firstMeasureIndex = 0;
@@ -291,16 +283,8 @@ public sealed class LayoutEngine
         // Build system skylines using relative coordinates (staff top = 0)
         var (systemUpSkyline, systemDownSkyline) = BuildSystemSkylines(score, measureLayouts);
 
-        // LILYPOND-REF: lily/page-layout-problem.cc:622-626
-        // MaxHeight() returns topmost Y in relative coords (negative for notes above staff)
-        // Convert to positive extent above staff top
-        double systemUpExtent = systemUpSkyline.IsEmpty ? 0 : Math.Max(0, -systemUpSkyline.MaxHeight());
-
-        // LILYPOND-REF: lily/page-layout-problem.cc:477-478, 984-985
-        // read_spacing_spec(top_system_spacing, &header_padding_, ly_symbol2scm("padding"));
-        // min_dist = header_padding_ + header_height_ + staff->extent(staff, Y_AXIS)[UP];
-        // The staff Y is positioned to leave room for: header + system extent + padding
-        double currentY = headerBottom + systemUpExtent + _options.TopSystemPadding;
+        double systemUpExtent = CalculateUpExtent(systemUpSkyline);
+        double currentY = CalculateFirstSystemY(headerBottom, systemUpExtent);
 
         // Layout all staff groups with the calculated Y position
         var staffGroupLayouts = LayoutStaffGroups(score, currentY);
@@ -1659,6 +1643,43 @@ public sealed class LayoutEngine
             }
         }
         return map;
+    }
+
+    /// <summary>
+    /// Calculates the upward extent of a system skyline.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:622-626
+    /// MaxHeight() returns topmost Y in relative coords (negative for notes above staff).
+    /// Convert to positive extent above staff top.
+    /// </remarks>
+    private static double CalculateUpExtent(VerticalSkyline upSkyline)
+    {
+        return upSkyline.IsEmpty ? 0 : Math.Max(0, -upSkyline.MaxHeight());
+    }
+
+    /// <summary>
+    /// Calculates the downward extent of a system skyline.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:667-680 Skyline::max_height()
+    /// DOWN skyline's MaxHeight() returns the bottommost Y in real coordinates.
+    /// </remarks>
+    private double CalculateDownExtent(VerticalSkyline downSkyline)
+    {
+        return downSkyline.IsEmpty ? 0 : Math.Max(0, downSkyline.MaxHeight() - _options.StaffHeight);
+    }
+
+    /// <summary>
+    /// Calculates the initial Y position for the first system.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:477-478, 984-985
+    /// The staff Y is positioned to leave room for: header + system extent + padding.
+    /// </remarks>
+    private double CalculateFirstSystemY(double headerBottom, double systemUpExtent)
+    {
+        return headerBottom + systemUpExtent + _options.TopSystemPadding;
     }
 }
 
