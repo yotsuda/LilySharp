@@ -558,15 +558,7 @@ public sealed class LayoutEngine
         if (beamGroups.Length == 0)
             return ImmutableArray<BeamLayout>.Empty;
 
-        // Build a map from measure index to (system, measureLayout)
-        var measureMap = new Dictionary<int, (SystemLayout system, MeasureLayout measure)>();
-        foreach (var system in systems)
-        {
-            foreach (var measureLayout in system.Measures)
-            {
-                measureMap[measureLayout.MeasureIndex] = (system, measureLayout);
-            }
-        }
+        var measureMap = BuildMeasureMap(systems);
 
         // Calculate layout for each beam group
         var beamLayouts = new List<BeamLayout>();
@@ -692,15 +684,7 @@ public sealed class LayoutEngine
 
         var shifts = new Dictionary<RestShiftKey, double>();
 
-        // Build measure layout map
-        var measureMap = new Dictionary<int, MeasureLayout>();
-        foreach (var system in systems)
-        {
-            foreach (var measureLayout in system.Measures)
-            {
-                measureMap[measureLayout.MeasureIndex] = measureLayout;
-            }
-        }
+        var measureMap = BuildMeasureLayoutMap(systems);
 
         // Group beam layouts by measure
         var beamsByMeasure = beamLayouts
@@ -944,7 +928,7 @@ public sealed class LayoutEngine
                 measureWidth += spring.Length(force);
             }
             
-            var itemLayouts = LayoutMeasureItems(measures[i], measureWidth);
+            var itemLayouts = LayoutMeasureItems(measures[i], measureWidth, measureSprings[i]);
 
             measureLayouts.Add(new MeasureLayout(
                 firstMeasureIndex + i,
@@ -967,7 +951,10 @@ public sealed class LayoutEngine
     /// 2. Each spring has an ideal distance (based on duration) and minimum distance (to avoid collision)
     /// 3. A solver finds the force that achieves the target width while respecting constraints
     /// </remarks>
-    private ImmutableArray<ItemLayout> LayoutMeasureItems(Measure measure, double totalWidth)
+    private ImmutableArray<ItemLayout> LayoutMeasureItems(
+        Measure measure,
+        double totalWidth,
+        ImmutableArray<Spring>? precomputedSprings = null)
     {
         if (measure.Items.Length == 0)
             return ImmutableArray<ItemLayout>.Empty;
@@ -976,8 +963,8 @@ public sealed class LayoutEngine
         double startBarlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline);
         double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
 
-        // Create springs for the measure
-        var springs = SpacingRules.CreateSpringsForMeasure(measure);
+        // Use precomputed springs if available, otherwise calculate
+        var springs = precomputedSprings ?? SpacingRules.CreateSpringsForMeasure(measure);
 
         // Calculate target width for the spring chain
         // This is the distance from after start barline to before end barline
@@ -1021,15 +1008,7 @@ public sealed class LayoutEngine
         if (ties.Length == 0)
             return ImmutableArray<TieLayout>.Empty;
 
-        // Build a map from measure index to (system, measureLayout)
-        var measureMap = new Dictionary<int, (SystemLayout system, MeasureLayout measure)>();
-        foreach (var system in systems)
-        {
-            foreach (var measureLayout in system.Measures)
-            {
-                measureMap[measureLayout.MeasureIndex] = (system, measureLayout);
-            }
-        }
+        var measureMap = BuildMeasureMap(systems);
 
         // Calculate layout for each tie
         var tieLayouts = new List<TieLayout>();
@@ -1083,15 +1062,7 @@ public sealed class LayoutEngine
         if (slurs.Length == 0)
             return ImmutableArray<SlurLayout>.Empty;
 
-        // Build a map from measure index to (system, measureLayout)
-        var measureMap = new Dictionary<int, (SystemLayout system, MeasureLayout measure)>();
-        foreach (var system in systems)
-        {
-            foreach (var measureLayout in system.Measures)
-            {
-                measureMap[measureLayout.MeasureIndex] = (system, measureLayout);
-            }
-        }
+        var measureMap = BuildMeasureMap(systems);
 
         // Calculate layout for each slur
         var slurLayouts = new List<SlurLayout>();
@@ -1160,7 +1131,7 @@ public sealed class LayoutEngine
         double staffHeight = _options.StaffHeight;
         double staffMiddleY = staffHeight / 2;
         double stemLength = EngravingDefaults.DefaultStemLength;
-        double noteheadHeight = 1.0; // Approximately 1 staff space
+        double noteheadHeight = EngravingDefaults.NoteheadHeight;
 
         // Only process the first (topmost) staff for top margin calculation
         // Other staves are below the first one, so they don't affect the top margin
@@ -1205,7 +1176,7 @@ public sealed class LayoutEngine
         double staffHeight = _options.StaffHeight;
         double staffMiddleY = staffHeight / 2;
         double stemLength = EngravingDefaults.DefaultStemLength;
-        double noteheadHeight = 1.0; // Approximately 1 staff space
+        double noteheadHeight = EngravingDefaults.NoteheadHeight;
 
         // Process measures in this system
         for (int measureIndex = 0; measureIndex < measures.Count; measureIndex++)
@@ -1266,8 +1237,8 @@ public sealed class LayoutEngine
             case RestItem:
                 // LILYPOND-REF: lily/rest.cc:61-77 - Rest vertical extent
                 // Rests are centered on the staff middle line
-                double restHeight = 1.0; // Approximate rest height in staff spaces
-                double restWidth = 1.0;
+                double restHeight = EngravingDefaults.RestHeight;
+                double restWidth = EngravingDefaults.RestWidth;
                 double restY = staffMiddleY; // Rests centered vertically
                 double restTop = restY - restHeight / 2;
                 double restBottom = restY + restHeight / 2;
@@ -1654,6 +1625,40 @@ public sealed class LayoutEngine
         }
         
         return columns.ToImmutable();
+    }
+
+    /// <summary>
+    /// Builds a map from measure index to (system, measureLayout) for quick lookup.
+    /// </summary>
+    private static Dictionary<int, (SystemLayout System, MeasureLayout Measure)> BuildMeasureMap(
+        ImmutableArray<SystemLayout> systems)
+    {
+        var map = new Dictionary<int, (SystemLayout, MeasureLayout)>();
+        foreach (var system in systems)
+        {
+            foreach (var measureLayout in system.Measures)
+            {
+                map[measureLayout.MeasureIndex] = (system, measureLayout);
+            }
+        }
+        return map;
+    }
+
+    /// <summary>
+    /// Builds a map from measure index to measureLayout for quick lookup.
+    /// </summary>
+    private static Dictionary<int, MeasureLayout> BuildMeasureLayoutMap(
+        ImmutableArray<SystemLayout> systems)
+    {
+        var map = new Dictionary<int, MeasureLayout>();
+        foreach (var system in systems)
+        {
+            foreach (var measureLayout in system.Measures)
+            {
+                map[measureLayout.MeasureIndex] = measureLayout;
+            }
+        }
+        return map;
     }
 }
 

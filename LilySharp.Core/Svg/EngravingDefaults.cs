@@ -81,6 +81,14 @@ public static class EngravingDefaults
     // === Notehead collision ===
     /// <summary>Half-height of notehead for collision detection (in staff positions).</summary>
     public const double NoteheadHalfHeight = 0.5;
+    /// <summary>Height of notehead for skyline calculation (in staff spaces).</summary>
+    public const double NoteheadHeight = 1.0;
+    
+    // === Rest dimensions ===
+    /// <summary>Approximate height of rest glyph for skyline calculation (in staff spaces).</summary>
+    public const double RestHeight = 1.0;
+    /// <summary>Approximate width of rest glyph for skyline calculation (in staff spaces).</summary>
+    public const double RestWidth = 1.0;
     
     // === Dots ===
     /// <summary>Gap between notehead and augmentation dot (in staff spaces).</summary>
