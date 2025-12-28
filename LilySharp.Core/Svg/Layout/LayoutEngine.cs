@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
@@ -869,6 +869,10 @@ public sealed class LayoutEngine
     /// <summary>
     /// Layouts a single system with justification.
     /// </summary>
+    /// <remarks>
+    /// Delegates to LayoutMeasuresForSystem for actual layout calculation,
+    /// then wraps the result in a SystemLayout.
+    /// </remarks>
     private SystemLayout LayoutSystem(
         int systemIndex,
         List<Measure> measures,
@@ -878,68 +882,13 @@ public sealed class LayoutEngine
         int firstMeasureIndex)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        double startX = _options.MarginLeft + prefixWidth;
-        double rightEdge = _options.PageWidth - _options.MarginRight;
-        double availableWidth = rightEdge - startX;
-
-        // Collect springs and barline widths for each measure
-        // LILYPOND-REF: lily/simple-spacer.cc - spring-based justification
-        var measureSprings = new List<ImmutableArray<Spring>>();
-        var measureBarlineWidths = new List<double>();
-        double totalBarlineWidth = 0;
-
-        foreach (var measure in measures)
-        {
-            var springs = SpacingRules.CreateSpringsForMeasure(measure);
-            measureSprings.Add(springs);
-            
-            double barlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline)
-                                + SpacingRules.GetBarlineWidth(measure.EndBarline);
-            measureBarlineWidths.Add(barlineWidth);
-            totalBarlineWidth += barlineWidth;
-        }
-
-        // Collect all springs and solve for target width
-        var allSprings = measureSprings.SelectMany(s => s).ToImmutableArray();
-        double springTargetWidth = availableWidth - totalBarlineWidth;
+        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex);
         
-        double force = 0;
-        if (allSprings.Length > 0)
-        {
-            var solver = new SpringSolver(allSprings);
-            var (solvedForce, fits) = solver.Solve(springTargetWidth, _options.RaggedRight);
-            force = fits ? solvedForce : 0; // Use ideal spacing if doesn't fit
-        }
-
-        // Layout measures using the solved force
-        var measureLayouts = new List<MeasureLayout>();
-        double currentX = startX;
-
-        for (int i = 0; i < measures.Count; i++)
-        {
-            // Calculate measure width: barline widths + spring lengths at force
-            double measureWidth = measureBarlineWidths[i];
-            foreach (var spring in measureSprings[i])
-            {
-                measureWidth += spring.Length(force);
-            }
-            
-            var itemLayouts = LayoutMeasureItems(measures[i], measureWidth);
-
-            measureLayouts.Add(new MeasureLayout(
-                firstMeasureIndex + i,
-                currentX,
-                measureWidth,
-                itemLayouts));
-
-            currentX += measureWidth;
-        }
-
         return new SystemLayout(
             systemIndex,
             y,
             prefixWidth,
-            measureLayouts.ToImmutableArray());
+            measureLayouts);
     }
     /// <summary>
     /// Pre-calculates measure layouts for skyline building (without creating full SystemLayout).
@@ -1209,9 +1158,8 @@ public sealed class LayoutEngine
 
         // All dimensions in staff spaces (coordinate system is unified)
         double staffHeight = _options.StaffHeight;
-        // Relative coordinates: staff top = 0, middle = staffHeight/2
         double staffMiddleY = staffHeight / 2;
-        double stemLength = 3.5; // Standard stem length in staff spaces
+        double stemLength = EngravingDefaults.DefaultStemLength;
         double noteheadHeight = 1.0; // Approximately 1 staff space
 
         // Only process the first (topmost) staff for top margin calculation
@@ -1235,23 +1183,8 @@ public sealed class LayoutEngine
                     var itemLayout = measureLayout.Items[itemIndex];
                     double itemX = measureLayout.X + itemLayout.X;
 
-                    switch (item)
-                    {
-                        case NoteItem note:
-                            AddNoteToSkylines(note, itemX, staffMiddleY,
-                                stemLength, noteheadHeight, upSkyline, downSkyline);
-                            break;
-                        case ChordItem chord:
-                            foreach (var chordNote in chord.Notes)
-                            {
-                                double noteY = staffMiddleY - chordNote.StaffPosition / 2.0;
-                                bool stemUp = chordNote.StaffPosition < 4;
-                                AddNoteBoxToSkylines(chordNote.StaffPosition, itemX, noteY,
-                                    stemLength, noteheadHeight, stemUp,
-                                    upSkyline, downSkyline);
-                            }
-                            break;
-                    }
+                    AddMusicItemToSkylines(item, itemX, staffMiddleY,
+                        stemLength, noteheadHeight, upSkyline, downSkyline);
                 }
             }
         }
@@ -1271,7 +1204,7 @@ public sealed class LayoutEngine
         // All dimensions in staff spaces (coordinate system is unified)
         double staffHeight = _options.StaffHeight;
         double staffMiddleY = staffHeight / 2;
-        double stemLength = 3.5; // Standard stem length in staff spaces
+        double stemLength = EngravingDefaults.DefaultStemLength;
         double noteheadHeight = 1.0; // Approximately 1 staff space
 
         // Process measures in this system
@@ -1292,40 +1225,58 @@ public sealed class LayoutEngine
                 double itemX = measureLayout.X + itemLayout.X;
 
                 // LILYPOND-REF: lily/grob.cc:85-89 - Each grob contributes to skyline
-                switch (item)
-                {
-                    case NoteItem note:
-                        AddNoteToSkylines(note, itemX, staffMiddleY,
-                            stemLength, noteheadHeight, upSkyline, downSkyline);
-                        break;
-                    case ChordItem chord:
-                        foreach (var chordNote in chord.Notes)
-                        {
-                            double noteY = staffMiddleY - chordNote.StaffPosition / 2.0;
-                            bool stemUp = chordNote.StaffPosition < 4;
-                            AddNoteBoxToSkylines(chordNote.StaffPosition, itemX, noteY,
-                                stemLength, noteheadHeight, stemUp,
-                                upSkyline, downSkyline);
-                        }
-                        break;
-                    case RestItem rest:
-                        // LILYPOND-REF: lily/rest.cc:61-77 - Rest vertical extent
-                        // Rests are centered on the staff middle line
-                        double restHeight = 1.0; // Approximate rest height in staff spaces
-                        double restWidth = 1.0;
-                        double restY = staffMiddleY; // Rests centered vertically
-                        double restTop = restY - restHeight / 2;
-                        double restBottom = restY + restHeight / 2;
-                        var restUp = VerticalSkyline.FromBox(itemX - restWidth / 2, itemX + restWidth / 2, restBottom, restTop, VerticalDirection.Up);
-                        var restDown = VerticalSkyline.FromBox(itemX - restWidth / 2, itemX + restWidth / 2, restBottom, restTop, VerticalDirection.Down);
-                        upSkyline.Merge(restUp);
-                        downSkyline.Merge(restDown);
-                        break;
-                }
+                AddMusicItemToSkylines(item, itemX, staffMiddleY,
+                    stemLength, noteheadHeight, upSkyline, downSkyline);
             }
         }
 
         return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// Adds a music item's bounding boxes to the skylines.
+    /// Dispatches to appropriate handler based on item type.
+    /// </summary>
+    private void AddMusicItemToSkylines(
+        MusicItem item,
+        double x,
+        double staffMiddleY,
+        double stemLength,
+        double noteheadHeight,
+        VerticalSkyline upSkyline,
+        VerticalSkyline downSkyline)
+    {
+        switch (item)
+        {
+            case NoteItem note:
+                AddNoteToSkylines(note, x, staffMiddleY,
+                    stemLength, noteheadHeight, upSkyline, downSkyline);
+                break;
+            case ChordItem chord:
+                int chordNoteValue = GetNoteValueFromFraction(chord.BaseDuration);
+                foreach (var chordNote in chord.Notes)
+                {
+                    double noteY = staffMiddleY - chordNote.StaffPosition / 2.0;
+                    bool stemUp = chordNote.StaffPosition < 4;
+                    AddNoteBoxToSkylines(chordNote.StaffPosition, x, noteY,
+                        stemLength, noteheadHeight, stemUp, chordNoteValue,
+                        upSkyline, downSkyline);
+                }
+                break;
+            case RestItem:
+                // LILYPOND-REF: lily/rest.cc:61-77 - Rest vertical extent
+                // Rests are centered on the staff middle line
+                double restHeight = 1.0; // Approximate rest height in staff spaces
+                double restWidth = 1.0;
+                double restY = staffMiddleY; // Rests centered vertically
+                double restTop = restY - restHeight / 2;
+                double restBottom = restY + restHeight / 2;
+                var restUp = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Up);
+                var restDown = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Down);
+                upSkyline.Merge(restUp);
+                downSkyline.Merge(restDown);
+                break;
+        }
     }
 
     /// <summary>
@@ -1342,10 +1293,11 @@ public sealed class LayoutEngine
         VerticalSkyline downSkyline)
     {
         double noteY = staffMiddleY - note.StaffPosition / 2.0;
+        int noteValue = GetNoteValueFromFraction(note.BaseDuration);
         bool stemUp = note.StemUp;
 
         AddNoteBoxToSkylines(note.StaffPosition, x, noteY,
-            stemLength, noteheadHeight, stemUp, upSkyline, downSkyline);
+            stemLength, noteheadHeight, stemUp, noteValue, upSkyline, downSkyline);
     }
 
     /// <summary>
@@ -1365,10 +1317,11 @@ public sealed class LayoutEngine
         double stemLength,
         double noteheadHeight,
         bool stemUp,
+        int noteValue,
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline)
     {
-        double noteheadWidth = 1.18; // From GlyphMetrics (in staff spaces)
+        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
         double halfNoteheadHeight = noteheadHeight / 2;
 
         // Notehead bounding box
@@ -1385,8 +1338,8 @@ public sealed class LayoutEngine
 
         // LILYPOND-REF: lily/ledger-line-engraver.cc:82-127
         // Ledger lines extend horizontally from the note
-        double ledgerExtension = 0.35; // Extension beyond notehead (staff spaces)
-        double ledgerThickness = 0.16; // Thickness of ledger line
+        double ledgerExtension = EngravingDefaults.LegerLineExtension;
+        double ledgerThickness = EngravingDefaults.LegerLineThickness;
         double ledgerLeft = x - noteheadWidth / 2 - ledgerExtension;
         double ledgerRight = x + noteheadWidth / 2 + ledgerExtension;
         
@@ -1425,6 +1378,20 @@ public sealed class LayoutEngine
             double stemBottom = noteY;
             var stemSkyline = VerticalSkyline.FromBox(noteRight - 1, noteRight + 1, stemBottom, stemTop, VerticalDirection.Up);
             upSkyline.Merge(stemSkyline);
+
+            // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
+            // Flag for eighth notes and shorter (noteValue >= 8)
+            if (noteValue >= 8)
+            {
+                // Flag extends from stem top, curving down-right
+                double flagHeight = CalculateFlagHeight(noteValue);
+                double flagLeft = x;
+                double flagRight = x + EngravingDefaults.FlagWidth;
+                double flagTop = stemTop;
+                double flagBottom = stemTop + flagHeight;
+                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, flagBottom, flagTop, VerticalDirection.Up);
+                upSkyline.Merge(flagSkyline);
+            }
         }
         else
         {
@@ -1433,8 +1400,53 @@ public sealed class LayoutEngine
             double stemBottom = noteY + stemLength;
             var stemSkyline = VerticalSkyline.FromBox(noteLeft - 1, noteLeft + 1, stemBottom, stemTop, VerticalDirection.Down);
             downSkyline.Merge(stemSkyline);
+
+            // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
+            // Flag for eighth notes and shorter (noteValue >= 8)
+            if (noteValue >= 8)
+            {
+                // Flag extends from stem bottom, curving up-right
+                double flagHeight = CalculateFlagHeight(noteValue);
+                double flagLeft = x;
+                double flagRight = x + EngravingDefaults.FlagWidth;
+                double flagTop = stemBottom - flagHeight;
+                double flagBottom = stemBottom;
+                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, flagBottom, flagTop, VerticalDirection.Down);
+                downSkyline.Merge(flagSkyline);
+            }
         }
     }
+
+    /// <summary>
+    /// Converts a duration fraction to note value (4 = quarter, 8 = eighth, etc.)
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:274 Stem::duration_log
+    /// Duration log: 0=whole, 1=half, 2=quarter, 3=eighth, etc.
+    /// Note value: 1=whole, 2=half, 4=quarter, 8=eighth, etc.
+    /// </remarks>
+    private static int GetNoteValueFromFraction(Fraction duration)
+    {
+        // duration = 1/1 for whole, 1/2 for half, 1/4 for quarter, 1/8 for eighth, etc.
+        if (duration.Numerator == 0) return 4; // Default to quarter
+        return (int)(duration.Denominator / duration.Numerator);
+    }
+
+    /// <summary>
+    /// Calculates the flag height based on note value.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/flag.cc:80-95 Flag::internal_print
+    /// Flag height increases with shorter note values (more beams/flags).
+    /// </remarks>
+    private static double CalculateFlagHeight(int noteValue)
+    {
+        double height = EngravingDefaults.FlagBaseHeight;
+        if (noteValue >= 16) height += EngravingDefaults.FlagHeightIncrement;
+        if (noteValue >= 32) height += EngravingDefaults.FlagHeightIncrement;
+        return height;
+    }
+
 
     /// <summary>
     /// Calculates the actual header height for single-staff scores.

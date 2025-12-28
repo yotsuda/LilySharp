@@ -57,6 +57,14 @@ public static class EngravingDefaults
     /// <summary>Threshold for applying rest shift (in staff positions).</summary>
     public const double RestShiftThreshold = 0.1;
     
+    // === Flags ===
+    /// <summary>Width of a flag glyph (in staff spaces).</summary>
+    public const double FlagWidth = 1.2;
+    /// <summary>Base height of a flag (eighth note flag, in staff spaces).</summary>
+    public const double FlagBaseHeight = 2.5;
+    /// <summary>Additional height per beam level (in staff spaces).</summary>
+    public const double FlagHeightIncrement = 0.5;
+    
     // === Notehead dimensions ===
     public const double NoteheadWholeWidth = 1.688;
     public const double NoteheadHalfWidth = 1.18;
