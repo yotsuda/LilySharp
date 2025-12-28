@@ -177,11 +177,30 @@ internal sealed class Lexer
             case '/': _position++; return (SyntaxKind.Slash, "/");
         }
 
-        // Colon: : or :|
+        // Colon: : or :| or :8/:16/:32 (tremolo)
         if (Current == ':')
         {
             _position++;
             if (Current == '|') { _position++; return (SyntaxKind.RepeatEndBar, ":|"); }
+            
+            // Check for tremolo suffix (:8, :16, :32 only)
+            if (char.IsDigit(Current))
+            {
+                int numStart = _position;
+                while (_position < _text.Length && char.IsDigit(_text[_position]))
+                    _position++;
+                string numText = _text.Substring(numStart, _position - numStart);
+                
+                // Only valid tremolo values: 8, 16, 32
+                if (numText == "8" || numText == "16" || numText == "32")
+                {
+                    return (SyntaxKind.TremoloSuffix, ":" + numText);
+                }
+                
+                // Not a valid tremolo - backtrack and return just the colon
+                _position = numStart;
+            }
+            
             return (SyntaxKind.Colon, ":");
         }
 

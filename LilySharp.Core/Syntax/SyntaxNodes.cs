@@ -147,7 +147,8 @@ public sealed class DurationSyntax : SyntaxNode
 }
 
 /// <summary>
-/// A note: pitch + optional duration + articulations
+/// <summary>
+/// A note: pitch + optional duration + optional tremolo + articulations
 /// </summary>
 public sealed class NoteSyntax : SyntaxNode
 {
@@ -160,13 +161,18 @@ public sealed class NoteSyntax : SyntaxNode
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
     
     /// <summary>
+    /// Gets the tremolo suffix (:8, :16, :32) if present.
+    /// </summary>
+    public SyntaxTokenNode? Tremolo => GetChild(2) as SyntaxTokenNode;
+    
+    /// <summary>
     /// Gets the articulations and dynamics attached to this note.
     /// </summary>
     public IEnumerable<SyntaxNode> Articulations
     {
         get
         {
-            for (int i = 2; i < Green.SlotCount; i++)
+            for (int i = 3; i < Green.SlotCount; i++)
             {
                 var child = GetChild(i);
                 if (child != null)
@@ -223,6 +229,23 @@ public sealed class ChordSyntax : SyntaxNode
             {
                 if (GetChild(i) is DurationSyntax duration)
                     return duration;
+            }
+            return null;
+        }
+    }
+    
+    /// <summary>
+    /// Gets the tremolo suffix (:8, :16, :32) if present.
+    /// </summary>
+    public SyntaxTokenNode? Tremolo
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child is SyntaxTokenNode token && token.Kind == SyntaxKind.TremoloSuffix)
+                    return token;
             }
             return null;
         }

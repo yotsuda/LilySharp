@@ -540,8 +540,9 @@ internal sealed class Parser
     {
         var pitch = ParsePitch();
         var duration = ParseOptionalDuration();
+        var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
         var articulations = ParseArticulations();
-        return new NoteGreen(pitch, duration, articulations);
+        return new NoteGreen(pitch, duration, tremolo, articulations);
     }
 
     private RestGreen ParseRest()
@@ -563,9 +564,10 @@ internal sealed class Parser
 
         var closeAngle = Expect(SyntaxKind.CloseAngle);
         var duration = ParseOptionalDuration();
+        var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
         var articulations = ParseArticulations();
 
-        return new ChordGreen(openAngle, [.. pitches], closeAngle, duration, articulations);
+        return new ChordGreen(openAngle, [.. pitches], closeAngle, duration, tremolo, articulations);
     }
 
     private BarlineGreen ParseBarline()

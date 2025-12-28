@@ -1,3 +1,4 @@
+using System.Linq;
 using Xunit;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Syntax.InternalSyntax;
@@ -827,5 +828,49 @@ structure {
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         Assert.Equal(source, tree.ToFullString());
+    }
+
+    [Fact]
+    public void ParseTremolo()
+    {
+        var source = @"
+section A {
+    melody {
+        c4:8 d4:16 e4:32 |
+    }
+}
+structure { A }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        Assert.Equal(source, tree.ToFullString());
+        
+        // Verify tremolo is parsed
+        var noteNodes = tree.GetRoot().DescendantNodes().OfType<NoteSyntax>().ToList();
+        Assert.Equal(3, noteNodes.Count);
+        Assert.NotNull(noteNodes[0].Tremolo);
+        Assert.Equal(":8", noteNodes[0].Tremolo!.Text);
+        Assert.Equal(":16", noteNodes[1].Tremolo!.Text);
+        Assert.Equal(":32", noteNodes[2].Tremolo!.Text);
+    }
+    
+    [Fact]
+    public void ParseTremoloChord()
+    {
+        var source = @"
+section A {
+    melody {
+        <c e g>4:16 |
+    }
+}
+structure { A }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        
+        var chordNodes = tree.GetRoot().DescendantNodes().OfType<ChordSyntax>().ToList();
+        Assert.Single(chordNodes);
+        Assert.NotNull(chordNodes[0].Tremolo);
+        Assert.Equal(":16", chordNodes[0].Tremolo!.Text);
     }
 }

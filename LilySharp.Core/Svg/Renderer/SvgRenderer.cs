@@ -765,6 +765,12 @@ public sealed class SvgRenderer
                 {
                     DrawGlyph(flag.Value, stemX, stemEndY);
                 }
+            
+            // Draw tremolo (if present)
+            if (note.HasTremolo)
+            {
+                DrawTremolo(stemX, stemAttachY, stemEndY, stemUp, note.TremoloBeams);
+            }
             }
         }
         
@@ -884,6 +890,12 @@ public sealed class SvgRenderer
                 {
                     DrawGlyph(flag.Value, stemX, stemEndY);
                 }
+            
+            // Draw tremolo (if present)
+            if (chord.HasTremolo)
+            {
+                DrawTremolo(stemX, stemAttachY, stemEndY, stemUp, chord.TremoloBeams);
+            }
             }
         }
     }
@@ -1471,6 +1483,49 @@ public sealed class SvgRenderer
     }
     
     /// <summary>
+    /// <summary>
+    /// Draws tremolo beams on a stem.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: stem-tremolo.cc:129-150 Stem_tremolo::raw_stencil
+    /// Tremolo beams are short, angled strokes across the stem.
+    /// </remarks>
+    private void DrawTremolo(double stemX, double stemAttachY, double stemEndY, bool stemUp, int beamCount)
+    {
+        if (beamCount <= 0)
+            return;
+        
+        // Tremolo parameters (in staff spaces)
+        // LILYPOND-REF: define-grobs.scm:2780-2790 beam-width, beam-gap, slope
+        const double beamWidth = 1.2;
+        const double beamThickness = 0.48;
+        const double beamGap = 0.8;
+        const double slope = 0.25;
+        
+        // Position tremolo at center of stem
+        double stemMidY = (stemAttachY + stemEndY) / 2;
+        
+        // Adjust position based on number of beams
+        double totalHeight = beamCount * beamThickness + (beamCount - 1) * beamGap;
+        double startY = stemMidY - totalHeight / 2 + beamThickness / 2;
+        
+        for (int i = 0; i < beamCount; i++)
+        {
+            double y = startY + i * (beamThickness + beamGap);
+            double halfWidth = beamWidth / 2;
+            
+            // Calculate sloped endpoints
+            double dy = halfWidth * slope;
+            double x1 = stemX - halfWidth;
+            double x2 = stemX + halfWidth;
+            double y1 = stemUp ? y + dy : y - dy;
+            double y2 = stemUp ? y - dy : y + dy;
+            
+            // Draw as a thick line (tremolo beam)
+            _svg.AppendLine($"""  <line class="tremolo" x1="{x1:F2}" y1="{y1:F2}" x2="{x2:F2}" y2="{y2:F2}" stroke="black" stroke-width="{beamThickness:F2}"/>""");
+        }
+    }
+    
     /// Draws all grace notes.
     /// </summary>
     /// <remarks>

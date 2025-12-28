@@ -53,7 +53,8 @@ PitchToken     = PitchBase , [ Accidental ] , Octave ;
 DurationBase   = '1' | '2' | '4' | '8' | '16' | '32' | '64' | '128'
                | 'breve' | 'longa' ;
 Dots           = { '.' }+ ;
-DurationToken  = DurationBase , [ Dots ] ;
+Tremolo        = ':' , ( '8' | '16' | '32' ) ;    // Stem tremolo: 1-3 beams
+DurationToken  = DurationBase , [ Dots ] , [ Tremolo ] ;
 
 ### Keywords
 

@@ -73,12 +73,12 @@ internal sealed class DurationGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// A note: pitch + optional duration + articulations
+/// A note: pitch + optional duration + optional tremolo + articulations
 /// </summary>
 internal sealed class NoteGreen : GreenSyntaxNode
 {
-    public NoteGreen(PitchGreen pitch, DurationGreen? duration, GreenNode?[] articulations)
-        : base(SyntaxKind.Note, [pitch, duration, .. articulations])
+    public NoteGreen(PitchGreen pitch, DurationGreen? duration, SyntaxToken? tremolo, GreenNode?[] articulations)
+        : base(SyntaxKind.Note, [pitch, duration, tremolo, .. articulations])
     {
     }
 }
@@ -95,7 +95,7 @@ internal sealed class RestGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// A chord: < pitch pitch ... > + optional duration
+/// A chord: < pitch pitch ... > + optional duration + optional tremolo
 /// </summary>
 internal sealed class ChordGreen : GreenSyntaxNode
 {
@@ -104,8 +104,9 @@ internal sealed class ChordGreen : GreenSyntaxNode
         GreenNode?[] pitches,
         SyntaxToken closeAngle,
         DurationGreen? duration,
+        SyntaxToken? tremolo,
         GreenNode?[] articulations)
-        : base(SyntaxKind.Chord, [openAngle, .. pitches, closeAngle, duration, .. articulations])
+        : base(SyntaxKind.Chord, [openAngle, .. pitches, closeAngle, duration, tremolo, .. articulations])
     {
     }
 }

@@ -1045,6 +1045,9 @@ public sealed class MeasureCollector
         int dots = note.Duration?.DotCount ?? 0;
         bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
         
+        // Parse tremolo suffix (:8 = 1 beam, :16 = 2 beams, :32 = 3 beams)
+        int tremoloBeams = ParseTremoloBeams(note.Tremolo);
+        
         string? accidental = note.Pitch.AccidentalOffset switch
         {
             2 => "doubleSharp",
@@ -1060,7 +1063,8 @@ public sealed class MeasureCollector
             dots,
             accidental,
             needsLedger,
-            note.Position);
+            note.Position,
+            tremoloBeams);
     }
     
     private RestItem CreateRestItem(RestSyntax rest)
@@ -1072,6 +1076,29 @@ public sealed class MeasureCollector
         int dots = rest.Duration?.DotCount ?? 0;
         
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, rest.Position);
+    }
+
+    /// <summary>
+    /// Parses tremolo suffix into beam count.
+    /// :8 = 1 beam, :16 = 2 beams, :32 = 3 beams
+    /// </summary>
+    private static int ParseTremoloBeams(SyntaxTokenNode? tremolo)
+    {
+        if (tremolo == null)
+            return 0;
+        
+        // Tremolo text is ":8", ":16", or ":32"
+        var text = tremolo.Text;
+        if (text.Length < 2 || text[0] != ':')
+            return 0;
+        
+        return text[1..] switch
+        {
+            "8" => 1,
+            "16" => 2,
+            "32" => 3,
+            _ => 0
+        };
     }
     
     private ChordItem CreateChordItem(ChordSyntax chord)
@@ -1116,8 +1143,9 @@ public sealed class MeasureCollector
             _defaultDuration = Fraction.FromNoteValue(noteValue);
         
         int dots = chord.Duration?.DotCount ?? 0;
+        int tremoloBeams = ParseTremoloBeams(chord.Tremolo);
         
-        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position);
+        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams);
     }
     
     private (int staffPosition, int octave) CalculateStaffPosition(PitchSyntax pitch)

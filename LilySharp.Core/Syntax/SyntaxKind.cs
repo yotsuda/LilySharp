@@ -123,6 +123,7 @@ public enum SyntaxKind : ushort
     // LineBreakBar removed - use BreakKeyword instead
     Tilde,              // ~
     Colon,              // :
+    TremoloSuffix,      // :8, :16, :32 (tremolo beams)
     Equals,             // =
     Slash,              // /
     At,                 // @
