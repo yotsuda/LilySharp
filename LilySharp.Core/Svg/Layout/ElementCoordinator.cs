@@ -84,11 +84,25 @@ public sealed class ElementCoordinator
                 continue;
 
             var (system, measureLayout) = measureInfo;
+            var measure = score.Voice.Measures[group.MeasureIndex];
 
             var itemXPositions = new List<double>();
-            foreach (var itemLayout in measureLayout.Items)
+            if (!measureLayout.Columns.IsDefaultOrEmpty && measureLayout.Columns.Length > 0)
             {
-                itemXPositions.Add(measureLayout.X + itemLayout.X);
+                var currentTiming = Fraction.Zero;
+                foreach (var item in measure.Items)
+                {
+                    double itemX = measureLayout.X + measureLayout.GetXForTiming(currentTiming);
+                    itemXPositions.Add(itemX);
+                    currentTiming = currentTiming + item.Duration;
+                }
+            }
+            else
+            {
+                foreach (var itemLayout in measureLayout.Items)
+                {
+                    itemXPositions.Add(measureLayout.X + itemLayout.X);
+                }
             }
 
             var collisions = CollectBeamCollisions(
@@ -329,3 +343,16 @@ public sealed class ElementCoordinator
         return slurLayouts.ToImmutableArray();
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

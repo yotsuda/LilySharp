@@ -171,10 +171,10 @@ public sealed class SvgRenderer
     {
         _svg.Clear();
         
-        // For multi-staff scores, beams are currently not supported
-        // TODO: Calculate beams per staff
+        // Calculate stem end Y positions for beamed notes
         _beamedStemEndYs.Clear();
         _beamedStemUp.Clear();
+        CalculateMultiStaffBeamStemPositions(score, layout);
         
         WriteHeader(layout.Width, layout.Height);
         
@@ -191,6 +191,9 @@ public sealed class SvgRenderer
             DrawMultiStaffSystem(score, layout, system, isFirstSystem);
         }
         
+        // Draw beams
+        DrawMultiStaffBeams(score, layout);
+
         WriteFooter();
         
         return _svg.ToString();
@@ -1184,6 +1187,186 @@ public sealed class SvgRenderer
         }
     }
     
+    /// <summary>
+    /// Calculates stem end Y positions for beamed notes in multi-staff scores.
+    /// </summary>
+    private void CalculateMultiStaffBeamStemPositions(MultiStaffScore score, ScoreLayout layout)
+    {
+        if (layout.BeamLayouts.Length == 0)
+            return;
+        
+        // Build measure to system mapping
+        var measureToSystem = new Dictionary<int, SystemLayout>();
+        foreach (var system in layout.Systems)
+        {
+            foreach (var measure in system.Measures)
+            {
+                measureToSystem[measure.MeasureIndex] = system;
+            }
+        }
+        
+        // Build staff Y positions from staff groups
+        var staffYPositions = new Dictionary<int, double>();
+        foreach (var system in layout.Systems)
+        {
+            if (system.StaffGroups.IsDefaultOrEmpty)
+                continue;
+            
+            foreach (var staffGroup in system.StaffGroups)
+            {
+                foreach (var staffLayout in staffGroup.Staves)
+                {
+                    staffYPositions[staffLayout.StaffIndex] = system.Y + staffLayout.Y;
+                }
+            }
+        }
+        
+        // Get staff index for each beam based on measure index mapping
+        // For now, use a simple heuristic: beam index / staves count
+        int staffCount = score.EnumerateStaves().Count();
+        int beamIndex = 0;
+        
+        foreach (var beamLayout in layout.BeamLayouts)
+        {
+            if (!measureToSystem.TryGetValue(beamLayout.Group.MeasureIndex, out var system))
+                continue;
+            
+            // Determine which staff this beam belongs to
+            int staffIndex = beamIndex % staffCount;
+            double staffY = staffYPositions.TryGetValue(staffIndex, out var y) ? y : system.Y;
+            double staffMiddleY = staffY + StaffHeight / 2;
+            
+            var group = beamLayout.Group;
+            
+            var noteheadBBox = GlyphMetrics.GetNoteheadBBox(3);
+            double noteheadCenterX = noteheadBBox.CenterX;
+            double stemOffsetX = group.StemUp 
+                ? StemUpAttachX - noteheadCenterX 
+                : StemDownAttachX - noteheadCenterX;
+            
+            double leftStemX = beamLayout.LeftX + stemOffsetX;
+            double rightStemX = beamLayout.RightX + stemOffsetX;
+            double leftBeamCenterY = staffMiddleY - beamLayout.LeftY / 2;
+            double rightBeamCenterY = staffMiddleY - beamLayout.RightY / 2;
+            
+            double beamSpanX = rightStemX - leftStemX;
+            double slope = beamSpanX > 0.001 ? (rightBeamCenterY - leftBeamCenterY) / beamSpanX : 0;
+            double beamThickness = BeamThickness;
+            
+            for (int i = 0; i < group.Members.Length; i++)
+            {
+                var member = group.Members[i];
+                double noteCenterX = beamLayout.MemberXPositions[i];
+                double stemX = noteCenterX + stemOffsetX;
+                double primaryBeamCenterY = leftBeamCenterY + slope * (stemX - leftStemX);
+                
+                double stemEndY = group.StemUp
+                    ? primaryBeamCenterY - beamThickness / 2
+                    : primaryBeamCenterY + beamThickness / 2;
+                
+                _beamedStemEndYs[member.Item] = stemEndY;
+                _beamedStemUp[member.Item] = group.StemUp;
+            }
+            
+            beamIndex++;
+        }
+    }
+    
+    /// <summary>
+    /// Draws beams for multi-staff scores.
+    /// </summary>
+    private void DrawMultiStaffBeams(MultiStaffScore score, ScoreLayout layout)
+    {
+        if (layout.BeamLayouts.Length == 0)
+            return;
+        
+        // Build measure to system mapping
+        var measureToSystem = new Dictionary<int, SystemLayout>();
+        foreach (var system in layout.Systems)
+        {
+            foreach (var measure in system.Measures)
+            {
+                measureToSystem[measure.MeasureIndex] = system;
+            }
+        }
+        
+        // Build staff Y positions from staff groups
+        var staffYPositions = new Dictionary<int, double>();
+        foreach (var system in layout.Systems)
+        {
+            if (system.StaffGroups.IsDefaultOrEmpty)
+                continue;
+            
+            foreach (var staffGroup in system.StaffGroups)
+            {
+                foreach (var staffLayout in staffGroup.Staves)
+                {
+                    staffYPositions[staffLayout.StaffIndex] = system.Y + staffLayout.Y;
+                }
+            }
+        }
+        
+        // Get staff index for each beam based on measure index mapping
+        int staffCount = score.EnumerateStaves().Count();
+        int beamIndex = 0;
+        
+        foreach (var beamLayout in layout.BeamLayouts)
+        {
+            if (!measureToSystem.TryGetValue(beamLayout.Group.MeasureIndex, out var system))
+                continue;
+            
+            // Determine which staff this beam belongs to
+            int staffIndex = beamIndex % staffCount;
+            double staffY = staffYPositions.TryGetValue(staffIndex, out var y) ? y : system.Y;
+            DrawBeamGroupAtStaffY(beamLayout, staffY);
+            
+            beamIndex++;
+        }
+    }
+    
+    private void DrawBeamGroupAtStaffY(BeamLayout beamLayout, double staffY)
+    {
+        var group = beamLayout.Group;
+        double staffMiddleY = staffY + StaffHeight / 2;
+        
+        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(3);
+        double noteheadCenterX = noteheadBBox.CenterX;
+        var stemAnchor = group.StemUp ? GlyphMetrics.StemUpSE : GlyphMetrics.StemDownNW;
+        
+        double stemOffsetFromRef = -noteheadCenterX + stemAnchor.X;
+        var memberStemXPositions = new double[group.Members.Length];
+        for (int i = 0; i < group.Members.Length; i++)
+        {
+            memberStemXPositions[i] = beamLayout.MemberXPositions[i] + stemOffsetFromRef;
+        }
+        
+        double leftStemX = memberStemXPositions[0];
+        double rightStemX = memberStemXPositions[^1];
+        double leftBeamCenterY = staffMiddleY - beamLayout.LeftY / 2;
+        double rightBeamCenterY = staffMiddleY - beamLayout.RightY / 2;
+        
+        int maxBeamCount = 0;
+        foreach (var member in group.Members)
+        {
+            maxBeamCount = Math.Max(maxBeamCount, member.BeamCount);
+        }
+        
+        double beamThickness = BeamThickness;
+        double beamTranslation = BeamTranslation;
+        
+        for (int level = 0; level < maxBeamCount; level++)
+        {
+            double levelOffset = level * beamTranslation;
+            if (!group.StemUp)
+                levelOffset = -levelOffset;
+            
+            double levelLeftY = leftBeamCenterY + levelOffset;
+            double levelRightY = rightBeamCenterY + levelOffset;
+            
+            DrawBeamLevel(beamLayout, level, leftStemX, levelLeftY, rightStemX, levelRightY, beamThickness, memberStemXPositions);
+        }
+    }
+    
     private void DrawBeamLevel(BeamLayout beamLayout, int level, double leftX, double leftY, double rightX, double rightY, double thickness, double[] memberStemXPositions)
     {
         var members = beamLayout.Group.Members;
@@ -1597,6 +1780,15 @@ public sealed class SvgRenderer
         }
     }
 }
+
+
+
+
+
+
+
+
+
 
 
 

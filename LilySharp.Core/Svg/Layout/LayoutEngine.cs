@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
@@ -233,11 +233,44 @@ public sealed class LayoutEngine
             HeaderHeight: headerHeight,
             Systems: systemsArray);
 
-        // For multi-staff scores, beams/ties/slurs are per-voice
-        // TODO: implement proper beam/tie/slur detection for multi-staff
-        var beamLayouts = ImmutableArray<BeamLayout>.Empty;
-        var tieLayouts = ImmutableArray<TieLayout>.Empty;
-        var slurLayouts = ImmutableArray<SlurLayout>.Empty;
+        // For multi-staff scores, calculate beams/ties/slurs for each staff
+        var allBeamLayouts = new List<BeamLayout>();
+        var allTieLayouts = new List<TieLayout>();
+        var allSlurLayouts = new List<SlurLayout>();
+        
+        foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
+        {
+            // Create a temporary Score for each staff to reuse existing logic
+            var clefString = staff.Clef switch
+            {
+                ClefType.Treble => "treble",
+                ClefType.Bass => "bass",
+                ClefType.Alto => "alto",
+                ClefType.Tenor => "tenor",
+                _ => "treble"
+            };
+            
+            var staffScore = new Score(
+                staff.PrimaryVoice,
+                score.TimeSignature,
+                score.KeySignature,
+                clefString,
+                score.Tempo,
+                score.Title,
+                score.Composer);
+            
+            var staffBeams = _elementCoordinator.LayoutBeams(staffScore, systemsArray);
+            var staffTies = _elementCoordinator.LayoutTies(staffScore, systemsArray);
+            var staffSlurs = _elementCoordinator.LayoutSlurs(staffScore, systemsArray);
+            
+            allBeamLayouts.AddRange(staffBeams);
+            allTieLayouts.AddRange(staffTies);
+            allSlurLayouts.AddRange(staffSlurs);
+        }
+        
+        var beamLayouts = allBeamLayouts.ToImmutableArray();
+        var tieLayouts = allTieLayouts.ToImmutableArray();
+        var slurLayouts = allSlurLayouts.ToImmutableArray();
         var voiceOffsets = ImmutableDictionary<VoiceItemKey, double>.Empty;
         var restShifts = ImmutableDictionary<RestShiftKey, double>.Empty;
 
@@ -256,5 +289,13 @@ public sealed class LayoutEngine
 
 
 }
+
+
+
+
+
+
+
+
 
 

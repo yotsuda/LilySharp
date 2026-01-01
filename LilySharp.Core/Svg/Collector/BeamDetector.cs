@@ -24,12 +24,20 @@ public sealed class BeamDetector
     /// </summary>
     public ImmutableArray<BeamGroup> DetectBeamGroups(Score score)
     {
+        return DetectBeamGroups(score.Voice, score.TimeSignature);
+    }
+    
+    /// <summary>
+    /// Detects all beam groups in a voice.
+    /// </summary>
+    public ImmutableArray<BeamGroup> DetectBeamGroups(Voice voice, TimeSignature timeSignature)
+    {
         var beamGroups = new List<BeamGroup>();
         
-        for (int measureIndex = 0; measureIndex < score.Voice.Measures.Length; measureIndex++)
+        for (int measureIndex = 0; measureIndex < voice.Measures.Length; measureIndex++)
         {
-            var measure = score.Voice.Measures[measureIndex];
-            DetectBeamGroupsInMeasure(measure, measureIndex, score.TimeSignature, beamGroups);
+            var measure = voice.Measures[measureIndex];
+            DetectBeamGroupsInMeasure(measure, measureIndex, timeSignature, beamGroups);
         }
         
         return beamGroups.ToImmutableArray();
@@ -116,8 +124,17 @@ public sealed class BeamDetector
     }
     
     /// <summary>
-    /// Merges consecutive pure-8th-note groups that fall within the same half-measure.
+    /// Merges consecutive pure-8th-note groups that fall within the same grouping unit.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beaming-pattern.cc
+    /// 
+    /// 8th note grouping rules:
+    /// - 4/4: group per half-measure (2 beats)
+    /// - 3/4: group per full measure (all 3 beats)
+    /// - 2/4: group per full measure (both beats)
+    /// - 6/8, 9/8, 12/8: group per dotted quarter (already handled)
+    /// </remarks>
     private List<List<(MusicItem item, int index, Fraction startPos)>> MergePureEighthNoteGroups(
         List<List<(MusicItem item, int index, Fraction startPos)>> beatGroups,
         TimeSignature timeSig)
@@ -129,18 +146,18 @@ public sealed class BeamDetector
         if (timeSig.BeatType == 8 && timeSig.Beats % 3 == 0)
             return beatGroups;
         
-        // Calculate half-measure length
-        Fraction halfMeasure;
+        // Calculate grouping length for 8th notes
+        Fraction groupLength;
         if (timeSig.Beats >= 4)
         {
-            halfMeasure = new Fraction(timeSig.Beats / 2, timeSig.BeatType);
+            // 4/4 or larger: half measure
+            groupLength = new Fraction(timeSig.Beats / 2, timeSig.BeatType);
         }
         else
         {
-            // For 2/4, 3/4, use full measure (no merging needed beyond beat)
-            return beatGroups;
+            // 2/4, 3/4: full measure
+            groupLength = new Fraction(timeSig.Beats, timeSig.BeatType);
         }
-        
         var result = new List<List<(MusicItem item, int index, Fraction startPos)>>();
         var currentMerged = new List<(MusicItem item, int index, Fraction startPos)>();
         Fraction mergeStartPos = Fraction.Zero;
@@ -148,18 +165,17 @@ public sealed class BeamDetector
         foreach (var group in beatGroups)
         {
             bool isPureEighths = group.All(g => GetBeamCount(g.item) == 1);
-            Fraction groupStart = group[0].startPos;
-            
+            Fraction groupStart = group[0].startPos;            
             if (isPureEighths)
             {
                 // Check if we can merge with current
                 if (currentMerged.Count > 0)
                 {
-                    // Check if in same half-measure
-                    bool sameHalfMeasure = !CrossesGroupBoundary(mergeStartPos, groupStart, halfMeasure);
+                    // Check if in same group
+                    bool sameGroup = !CrossesGroupBoundary(mergeStartPos, groupStart, groupLength);
                     bool currentIsPureEighths = currentMerged.All(g => GetBeamCount(g.item) == 1);
                     
-                    if (sameHalfMeasure && currentIsPureEighths)
+                    if (sameGroup && currentIsPureEighths)
                     {
                         // Merge
                         currentMerged.AddRange(group);
@@ -331,3 +347,9 @@ public sealed class BeamDetector
         return (int)chord.Notes.Average(n => n.StaffPosition);
     }
 }
+
+
+
+
+
+
