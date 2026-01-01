@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
@@ -359,7 +359,7 @@ public sealed class SvgRenderer
                     var measure = voice.Measures[measureLayout.MeasureIndex];
                     // For multi-staff, use auto stem direction based on clef
                     bool? forcedStemUp = null;
-                    DrawMeasure(measure, measureLayout, measureLayout.MeasureIndex, 1, staffY, scoreLayout, forcedStemUp, isFirstVoice: true);
+                    DrawMeasure(measure, measureLayout, measureLayout.MeasureIndex, 1, staffY, scoreLayout, forcedStemUp, isFirstVoice: true, skipBarlines: true);
                 }
             }
         }
@@ -620,7 +620,7 @@ public sealed class SvgRenderer
         }
     }
     
-    private void DrawMeasure(Measure measure, MeasureLayout layout, int measureIndex, int voiceNumber, double systemY, ScoreLayout scoreLayout, bool? forcedStemUp = null, bool isFirstVoice = true)
+    private void DrawMeasure(Measure measure, MeasureLayout layout, int measureIndex, int voiceNumber, double systemY, ScoreLayout scoreLayout, bool? forcedStemUp = null, bool isFirstVoice = true, bool skipBarlines = false)
     {
         double x = layout.X;
         double staffBottom = systemY + StaffHeight;
@@ -631,8 +631,8 @@ public sealed class SvgRenderer
             DrawSectionLabel(measure.SectionLabel, x, systemY);
         }
         
-        // Draw start barline (first voice only to avoid duplicates)
-        if (isFirstVoice && measure.StartBarline != BarlineType.None)
+        // Draw start barline (first voice only to avoid duplicates, skip for multi-staff)
+        if (isFirstVoice && !skipBarlines && measure.StartBarline != BarlineType.None)
         {
             DrawBarline(measure.StartBarline, x, systemY);
         }
@@ -682,8 +682,8 @@ public sealed class SvgRenderer
             currentTiming += item.Duration;
         }
         
-        // Draw end barline at the right edge of the measure (first voice only to avoid duplicates)
-        if (isFirstVoice)
+        // Draw end barline at the right edge of the measure (first voice only, skip for multi-staff)
+        if (isFirstVoice && !skipBarlines)
         {
             double endX = x + layout.Width;
             DrawBarline(measure.EndBarline, endX, systemY);
@@ -1771,6 +1771,10 @@ public sealed class SvgRenderer
         }
     }
 }
+
+
+
+
 
 
 
