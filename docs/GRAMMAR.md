@@ -189,11 +189,21 @@ SectionDecl    = 'section' , Identifier , '{' , { SectionItem } , '}' ;
 
 SectionItem    = SectionSetting
                | PartBlock
+               | LyricsBlock
                ;
 
 SectionSetting = KeyDecl | TempoDecl | TimeDecl ;
 
 PartBlock      = Identifier , MusicBlock ;
+
+(* Lyrics blocks - multiple allowed for verses *)
+LyricsBlock    = 'lyrics' , '{' , { LyricMeasure } , '}' ;
+LyricMeasure   = { LyricSyllable } , '|' ;
+LyricSyllable  = LyricText
+               | '~' | '～'      (* melisma continuation *)
+               | '_'               (* rest/skip *)
+               ;
+LyricText      = { any except whitespace | '|' | '{' | '}' } , [ '-' ] ;
 
 (* Example:
    section Intro {
@@ -204,9 +214,17 @@ PartBlock      = Identifier , MusicBlock ;
    section Verse {
      key g major
      tempo 140
-     melody { theme | ending | }
-     bass { g2 d2 | g2 d2 | }
+     melody { c4 d4 e4 f4 | g2 g2 | a1 | }
+     lyrics { き ら き ら | ひ か | る | }
+     lyrics { ま ば た き | し て | は | }
    }
+
+   (* Lyric notation: *)
+   (* - space separates syllables (each maps to next note) *)
+   (* - hyphen at end connects syllables: "twi-" "nkle" *)
+   (* - ~ starts melisma (syllable extends to next note) *)
+   (* - ～ continues melisma *)
+   (* - _ skips a note (rest or no lyric) *)
 *)
 
 ================================================================================

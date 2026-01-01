@@ -835,28 +835,6 @@ private GreenNode?[] ParseArticulations()
         return new GraceExpressionGreen(keyword, body);
     }
 
-    private LyricsBlockGreen ParseLyricsBlock()
-    {
-        var lyricsKeyword = Expect(SyntaxKind.LyricsKeyword);
-        var openBrace = Expect(SyntaxKind.OpenBrace);
-        
-        var syllables = new List<GreenNode?>();
-        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
-        {
-            // Parse syllables (identifiers, strings, or -- for extenders)
-            if (Check(SyntaxKind.Identifier) || Check(SyntaxKind.StringLiteral))
-            {
-                syllables.Add(Advance());
-            }
-            else
-            {
-                Advance(); // Skip unexpected tokens
-            }
-        }
-        
-        var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new LyricsBlockGreen(lyricsKeyword, openBrace, [.. syllables], closeBrace);
-    }
 
     // ========== Tablature ==========
 
@@ -955,6 +933,7 @@ private GreenNode?[] ParseArticulations()
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
+            SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             // Allow identifier or instrument keywords (bass, guitar-like names) as part names
             SyntaxKind.Identifier => ParsePartBlock(),
             // bass, treble etc. can also be part names
@@ -973,6 +952,108 @@ private GreenNode?[] ParseArticulations()
         var partName = Advance(); // bass, treble, etc. as identifier
         var body = ParseMusicBlock();
         return new PartBlockGreen(partName, [], body);
+    }
+
+    /// <summary>
+    /// Parse lyrics block: lyrics { syllable syllable | syllable | }
+    /// </summary>
+    /// <remarks>
+    /// Lyrics are aligned with notes by measure:
+    /// - Space separates syllables (each maps to next note)
+    /// - Hyphen at end connects syllables within a word
+    /// - ~ indicates melisma (syllable extends to next note)
+    /// - _ skips a note (no lyric)
+    /// - | marks measure boundary
+    /// </remarks>
+    private LyricsBlockGreen ParseLyricsBlock()
+    {
+        var keyword = Expect(SyntaxKind.LyricsKeyword);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        
+        var measures = new List<GreenNode?>();
+        
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var measure = ParseLyricMeasure();
+            if (measure != null)
+                measures.Add(measure);
+        }
+        
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        
+        return new LyricsBlockGreen(keyword, openBrace, [.. measures], closeBrace);
+    }
+    
+    /// <summary>
+    /// Parse a single lyric measure: syllable syllable ... |
+    /// </summary>
+    private LyricMeasureGreen? ParseLyricMeasure()
+    {
+        var syllables = new List<GreenNode?>();
+        
+        while (!Check(SyntaxKind.Bar) && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var syllable = ParseLyricSyllable();
+            if (syllable != null)
+                syllables.Add(syllable);
+            else
+                break;
+        }
+        
+        if (Check(SyntaxKind.Bar))
+        {
+            var barline = Advance();
+            return new LyricMeasureGreen([.. syllables], barline);
+        }
+        
+        // No barline found - might be at end of block
+        if (syllables.Count > 0)
+        {
+            // Create a synthetic barline token
+            var syntheticBar = new SyntaxToken(SyntaxKind.Bar, "|");
+            return new LyricMeasureGreen([.. syllables], syntheticBar);
+        }
+        
+        return null;
+    }
+    
+    /// <summary>
+    /// Parse a single lyric syllable.
+    /// </summary>
+    private LyricSyllableGreen? ParseLyricSyllable()
+    {
+        // Melisma: ~
+        if (Check(SyntaxKind.Tilde))
+        {
+            return new LyricSyllableGreen(Advance());
+        }
+        
+        // Skip: _
+        if (Check(SyntaxKind.Underscore))
+        {
+            return new LyricSyllableGreen(Advance());
+        }
+        
+        // Text syllable: identifier (possibly with hyphen)
+        if (Check(SyntaxKind.Identifier))
+        {
+            var text = Advance();
+            
+            // Check for trailing hyphen (word continuation)
+            if (Check(SyntaxKind.Minus))
+            {
+                var hyphen = Advance();
+                // Combine text and hyphen into one token
+                var combined = new SyntaxToken(
+                    SyntaxKind.Identifier,
+                    text.Text + hyphen.Text);
+                return new LyricSyllableGreen(combined);
+            }
+            
+            return new LyricSyllableGreen(text);
+        }
+        
+        return null;
     }
     
     /// <summary>

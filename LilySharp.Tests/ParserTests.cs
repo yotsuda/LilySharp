@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using Xunit;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Syntax.InternalSyntax;
@@ -872,5 +872,63 @@ structure { A }
         Assert.Single(chordNodes);
         Assert.NotNull(chordNodes[0].Tremolo);
         Assert.Equal(":16", chordNodes[0].Tremolo!.Text);
+    }
+
+    [Fact]
+    public void ParseLyrics()
+    {
+        var source = @"
+section Verse {
+    melody { c4 d4 e4 f4 | g2 g2 | }
+    lyrics { き ら き ら | ひ か | }
+}
+structure { Verse }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        Assert.Equal(source, tree.ToFullString());
+    }
+
+    [Fact]
+    public void ParseLyricsWithHyphens()
+    {
+        var source = @"
+section Verse {
+    melody { c4 d4 e4 f4 | g2 g2 | }
+    lyrics { twi- nkle twi- nkle | li- tle | }
+}
+structure { Verse }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+    }
+
+    [Fact]
+    public void ParseLyricsWithMelisma()
+    {
+        var source = @"
+section Verse {
+    melody { c4 d4 e4 f4 | g2 g2 | }
+    lyrics { Glo~ ~ ri- a | in ex- | }
+}
+structure { Verse }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+    }
+
+    [Fact]
+    public void ParseMultipleVerses()
+    {
+        var source = @"
+section Verse {
+    melody { c4 d4 e4 f4 | g2 g2 | }
+    lyrics { き ら き ら | ひ か | }
+    lyrics { ま ば た き | し て | }
+}
+structure { Verse }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
 }

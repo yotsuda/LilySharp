@@ -435,21 +435,6 @@ internal sealed class GraceExpressionGreen : GreenSyntaxNode
     }
 }
 
-/// <summary>
-/// Lyrics block: lyrics { text -- text }
-/// </summary>
-internal sealed class LyricsBlockGreen : GreenSyntaxNode
-{
-    public LyricsBlockGreen(
-        SyntaxToken lyricsKeyword,
-        SyntaxToken openBrace,
-        GreenNode?[] syllables,
-        SyntaxToken closeBrace)
-        : base(SyntaxKind.LyricsBlock, [lyricsKeyword, openBrace, .. syllables, closeBrace])
-    {
-    }
-}
-
 // ============================================================
 // Tablature Green Nodes
 // ============================================================
@@ -841,6 +826,47 @@ internal sealed class SectionStartMarkerGreen : GreenSyntaxNode
     
     private SectionStartMarkerGreen()
         : base(SyntaxKind.SectionStartMarker, [])
+    {
+    }
+}
+
+// ================================================================================
+// Lyrics
+// ================================================================================
+
+/// <summary>
+/// A lyrics block: lyrics { syllable syllable | syllable | }
+/// </summary>
+internal sealed class LyricsBlockGreen : GreenSyntaxNode
+{
+    public LyricsBlockGreen(
+        SyntaxToken lyricsKeyword,
+        SyntaxToken openBrace,
+        GreenNode?[] measures,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.LyricsBlock, [lyricsKeyword, openBrace, .. measures, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// A lyric measure: syllable syllable syllable |
+/// </summary>
+internal sealed class LyricMeasureGreen : GreenSyntaxNode
+{
+    public LyricMeasureGreen(GreenNode?[] syllables, SyntaxToken barline)
+        : base(SyntaxKind.LyricMeasure, [.. syllables, barline])
+    {
+    }
+}
+
+/// <summary>
+/// A lyric syllable: text, melisma (~), or skip (_)
+/// </summary>
+internal sealed class LyricSyllableGreen : GreenSyntaxNode
+{
+    public LyricSyllableGreen(SyntaxToken token)
+        : base(SyntaxKind.LyricSyllable, [token])
     {
     }
 }

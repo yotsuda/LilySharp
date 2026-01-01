@@ -179,11 +179,13 @@ public enum SyntaxKind : ushort
     StructureDeclaration,       // structure { ... }
     RenderDeclaration,          // render Name "file.svg" { ... }
     PartBlock,                  // guitar { ... } inside section
+    LyricsBlock,                // lyrics { ... } inside section
+    LyricMeasure,               // syllable syllable | inside lyrics
+    LyricSyllable,              // single lyric syllable
     StaffRender,                // staff { guitar } inside render
     GrandStaffRender,           // grandStaff { staff staff } inside render
     TabRender,                  // tab guitar { guitar } inside render
     MidiPartRender,             // guitar channel:1 inside render
-    
     // === Nodes: Structure Block Items ===
     SectionStartMarker,         // marker to reset pitch resolver at section boundaries
     SectionReference,           // section name in structure
@@ -235,7 +237,6 @@ public enum SyntaxKind : ushort
     // === Nodes: Tuplet and Grace ===
     TupletExpression,
     GraceExpression,
-    LyricsBlock,
     
     // === Nodes: Tablature ===
     TabStaffDeclaration,
