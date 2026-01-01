@@ -17,27 +17,23 @@ namespace LilySharp.Core.Svg.Layout;
 public sealed class LayoutEngine
 {
     private readonly LayoutOptions _options;
-    private readonly BeamDetector _beamDetector = new();
-    private readonly BeamEngraver _beamEngraver = new();
-    private readonly TieDetector _tieDetector = new();
-    private readonly TieEngraver _tieEngraver = new();
-    private readonly SlurDetector _slurDetector = new();
-    private readonly SlurEngraver _slurEngraver = new();
-    private readonly VoiceCollector _voiceCollector = new();
-    private readonly NoteCollision _noteCollision = new();
+    private readonly ElementCoordinator _elementCoordinator;
     private readonly SkylineBuilder _skylineBuilder;
     private readonly MeasureLayouter _measureLayouter = new();
     private readonly SystemLayouter _systemLayouter;
     private readonly PageLayouter _pageLayouter;
     private readonly SystemBreaker _systemBreaker;
+    private readonly MultiStaffLayouter _multiStaffLayouter;
 
     public LayoutEngine(LayoutOptions? options = null)
     {
         _options = options ?? LayoutOptions.Default;
+        _elementCoordinator = new ElementCoordinator(_options);
         _skylineBuilder = new SkylineBuilder(_options.StaffHeight);
         _systemLayouter = new SystemLayouter(_options, _measureLayouter);
         _pageLayouter = new PageLayouter(_options);
         _systemBreaker = new SystemBreaker(_options);
+        _multiStaffLayouter = new MultiStaffLayouter(_options, _measureLayouter);
     }
 
     /// <summary>
@@ -49,7 +45,7 @@ public sealed class LayoutEngine
 
         // LILYPOND-REF: lily/page-layout-problem.cc:434
         // Calculate actual header height based on title/composer presence
-        double headerHeight = CalculateHeaderHeight(score);
+        double headerHeight = LayoutUtilities.CalculateHeaderHeight(score.Title, score.Composer);
         double headerBottom = _options.MarginTop + headerHeight;
 
         // Break measures into systems (using first voice as representative)
@@ -133,19 +129,19 @@ public sealed class LayoutEngine
         }
 
         // Detect and layout beams
-        var beamLayouts = LayoutBeams(score, systemsArray);
+        var beamLayouts = _elementCoordinator.LayoutBeams(score, systemsArray);
 
         // Detect and layout ties
-        var tieLayouts = LayoutTies(score, systemsArray);
+        var tieLayouts = _elementCoordinator.LayoutTies(score, systemsArray);
 
         // Detect and layout slurs
-        var slurLayouts = LayoutSlurs(score, systemsArray);
+        var slurLayouts = _elementCoordinator.LayoutSlurs(score, systemsArray);
 
         // Calculate voice collision offsets for multi-voice scores
-        var voiceOffsets = CalculateVoiceOffsets(score);
+        var voiceOffsets = _elementCoordinator.CalculateVoiceOffsets(score);
 
         // Calculate rest shifts to avoid beam collisions
-        var restShifts = CalculateRestShifts(score, systemsArray, beamLayouts);
+        var restShifts = _elementCoordinator.CalculateRestShifts(score, systemsArray, beamLayouts);
 
         // Calculate dynamic layouts
         // LILYPOND-REF: dynamic-engraver.cc - dynamic positioning
@@ -184,10 +180,10 @@ public sealed class LayoutEngine
         // LILYPOND-REF: lily/page-layout-problem.cc:434
         // header_height_ = head ? head->extent(Y_AXIS).length() : 0;
         // Calculate actual header height based on title/composer presence
-        double headerHeight = CalculateHeaderHeight(score);
+        double headerHeight = LayoutUtilities.CalculateHeaderHeight(score.Title, score.Composer);
 
         // Layout measures with timing-based columns for multi-staff alignment
-        var measureLayouts = LayoutMeasuresForMultiStaff(score, 0);
+        var measureLayouts = _multiStaffLayouter.LayoutMeasures(score, 0);
 
         // Calculate actual page width based on content
         double actualPageWidth = _options.PageWidth;
@@ -199,7 +195,7 @@ public sealed class LayoutEngine
         }
 
         // Calculate total system height (all staff groups)
-        double systemHeight = CalculateMultiStaffSystemHeight(score);
+        double systemHeight = _multiStaffLayouter.CalculateSystemHeight(score);
 
         // LILYPOND-REF: lily/page-layout-problem.cc:440-443
         // Initialize bottom_skyline to represent the top of the printable area
@@ -215,7 +211,7 @@ public sealed class LayoutEngine
         double currentY = LayoutUtilities.CalculateFirstSystemY(headerBottom, systemUpExtent, _options.TopSystemPadding);
 
         // Layout all staff groups with the calculated Y position
-        var staffGroupLayouts = LayoutStaffGroups(score, currentY);
+        var staffGroupLayouts = _multiStaffLayouter.LayoutStaffGroups(score, currentY);
 
         var system = new SystemLayout(
             SystemIndex: 0,
@@ -258,668 +254,6 @@ public sealed class LayoutEngine
             restShifts);
     }
 
-    /// <summary>
-    /// Calculates the total height of a multi-staff system.
-    /// </summary>
-    private double CalculateMultiStaffSystemHeight(MultiStaffScore score)
-    {
-        double height = 0;
-        double staffHeight = _options.StaffHeight;
-        double grandStaffSpacing = _options.GrandStaffSpacing; // Space between grand staff staves
-        double staffGroupSpacing = _options.StaffGroupSpacing; // Space between different staff groups
-
-        for (int i = 0; i < score.StaffGroups.Length; i++)
-        {
-            var group = score.StaffGroups[i];
-
-            if (group.IsGrandStaff)
-            {
-                // Grand staff: two staves with brace
-                height += staffHeight * 2 + grandStaffSpacing;
-            }
-            else
-            {
-                height += staffHeight * group.StaffCount;
-                if (group.StaffCount > 1)
-                    height += grandStaffSpacing * (group.StaffCount - 1);
-            }
-
-            // Add spacing between staff groups (not after the last one)
-            if (i < score.StaffGroups.Length - 1)
-                height += staffGroupSpacing;
-        }
-
-        return height;
-    }
-
-    /// <summary>
-    /// Layouts all staff groups within a system.
-    /// </summary>
-    private ImmutableArray<StaffGroupLayout> LayoutStaffGroups(MultiStaffScore score, double systemY)
-    {
-        var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
-        double currentY = 0;
-        double staffHeight = _options.StaffHeight;
-        double grandStaffSpacing = _options.GrandStaffSpacing;
-        double staffGroupSpacing = _options.StaffGroupSpacing;
-        int globalStaffIndex = 0;
-
-        foreach (var group in score.StaffGroups)
-        {
-            if (group.IsGrandStaff)
-            {
-                var layout = LayoutGrandStaffGroup(group, currentY, staffHeight, grandStaffSpacing, globalStaffIndex);
-                builder.Add(layout);
-                currentY += layout.Height + staffGroupSpacing;
-                globalStaffIndex += group.StaffCount;
-            }
-            else
-            {
-                var layout = LayoutSingleStaffGroup(group, currentY, staffHeight, grandStaffSpacing, globalStaffIndex);
-                builder.Add(layout);
-                currentY += layout.Height + staffGroupSpacing;
-                globalStaffIndex += group.StaffCount;
-            }
-        }
-
-        return builder.ToImmutable();
-    }
-
-    /// <summary>
-    /// Layouts a grand staff group (piano/organ style with brace).
-    /// </summary>
-    private StaffGroupLayout LayoutGrandStaffGroup(
-        StaffGroup group, double y, double staffHeight, double staffSpacing, int startIndex)
-    {
-        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
-        double currentY = y;
-
-        for (int i = 0; i < group.Staves.Length; i++)
-        {
-            var staff = group.Staves[i];
-            staffLayouts.Add(new StaffLayout(
-                StaffIndex: startIndex + i,
-                Clef: staff.Clef,
-                Y: currentY,
-                Height: staffHeight));
-
-            if (i < group.Staves.Length - 1)
-                currentY += staffHeight + staffSpacing;
-        }
-
-        double totalHeight = currentY + staffHeight - y;
-        double braceX = _options.MarginLeft - 2;  // 2 staff spaces left of margin
-
-        var grandStaffLayout = new GrandStaffLayout(
-            Staves: staffLayouts.ToImmutable(),
-            BraceX: braceX,
-            BraceTop: y,
-            BraceBottom: y + totalHeight);
-
-        return StaffGroupLayout.CreateGrandStaff(
-            staffLayouts.ToImmutable(),
-            y,
-            totalHeight,
-            grandStaffLayout);
-    }
-
-    /// <summary>
-    /// Layouts a single staff or bracket group.
-    /// </summary>
-    private StaffGroupLayout LayoutSingleStaffGroup(
-        StaffGroup group, double y, double staffHeight, double staffSpacing, int startIndex)
-    {
-        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
-        double currentY = y;
-
-        for (int i = 0; i < group.Staves.Length; i++)
-        {
-            var staff = group.Staves[i];
-            staffLayouts.Add(new StaffLayout(
-                StaffIndex: startIndex + i,
-                Clef: staff.Clef,
-                Y: currentY,
-                Height: staffHeight));
-
-            if (i < group.Staves.Length - 1)
-                currentY += staffHeight + staffSpacing;
-        }
-
-        double totalHeight = group.StaffCount == 1
-            ? staffHeight
-            : currentY + staffHeight - y;
-
-        return StaffGroupLayout.CreateSingle(
-            staffLayouts[0],
-            y,
-            totalHeight);
-    }
-
-    /// <summary>
-    /// Layouts measures for a single voice.
-    /// </summary>
-    private ImmutableArray<MeasureLayout> LayoutMeasuresForVoice(Voice voice, int systemIndex)
-    {
-        var layouts = ImmutableArray.CreateBuilder<MeasureLayout>();
-        double currentX = _options.MarginLeft + SpacingRules.CalculatePrefixWidth(0, systemIndex == 0);
-
-        for (int i = 0; i < voice.Measures.Length; i++)
-        {
-            var measure = voice.Measures[i];
-            double measureWidth = SpacingRules.CalculateMeasureIdealWidth(measure);
-            var itemLayouts = _measureLayouter.LayoutItems(measure, measureWidth);
-
-            var measureLayout = new MeasureLayout(i, currentX, measureWidth, itemLayouts);
-            layouts.Add(measureLayout);
-            currentX += measureLayout.Width;
-        }
-
-        return layouts.ToImmutable();
-    }
-
-    /// <summary>
-    /// Calculates X offsets for notes that collide in multi-voice contexts.
-    /// </summary>
-    private ImmutableDictionary<VoiceItemKey, double> CalculateVoiceOffsets(Score score)
-    {
-        if (score.Voices.Length <= 1)
-            return ImmutableDictionary<VoiceItemKey, double>.Empty;
-
-        // Collect voice columns (grouped by time position)
-        var voiceColumns = _voiceCollector.Collect(score);
-
-        if (voiceColumns.Length == 0)
-            return ImmutableDictionary<VoiceItemKey, double>.Empty;
-
-        // Calculate notehead width for offset calculation
-        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;  // Already in staff spaces
-
-        var builder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
-
-        foreach (var column in voiceColumns)
-        {
-            // Skip single-voice columns (no collision possible)
-            if (column.Entries.Length <= 1)
-                continue;
-
-            // Calculate collision offsets
-            var offsets = _noteCollision.CalculateVoiceOffsets(column, noteheadWidth);
-
-            foreach (var (voiceId, itemIndex, xOffset) in offsets)
-            {
-                // Only store non-zero offsets
-                if (Math.Abs(xOffset) > 0.001)
-                {
-                    var key = new VoiceItemKey(column.MeasureIndex, voiceId, itemIndex);
-                    builder[key] = xOffset;
-                }
-            }
-        }
-
-        return builder.ToImmutable();
-    }
-
-    /// <summary>
-    /// Detects beam groups and calculates their layouts.
-    /// </summary>
-    private ImmutableArray<BeamLayout> LayoutBeams(Score score, ImmutableArray<SystemLayout> systems)
-    {
-        // Detect beam groups
-        var beamGroups = _beamDetector.DetectBeamGroups(score);
-
-        if (beamGroups.Length == 0)
-            return ImmutableArray<BeamLayout>.Empty;
-
-        var measureMap = LayoutUtilities.BuildMeasureMap(systems);
-
-        // Calculate layout for each beam group
-        var beamLayouts = new List<BeamLayout>();
-
-        foreach (var group in beamGroups)
-        {
-            if (!measureMap.TryGetValue(group.MeasureIndex, out var measureInfo))
-                continue;
-
-            var (system, measureLayout) = measureInfo;
-
-            // Get X positions for all items in this measure
-            var itemXPositions = new List<double>();
-            foreach (var itemLayout in measureLayout.Items)
-            {
-                // Absolute X position = measure X + item X offset
-                itemXPositions.Add(measureLayout.X + itemLayout.X);
-            }
-
-            // Collect collision objects (items in measure that are NOT part of this beam group)
-            var collisions = CollectBeamCollisions(
-                score.Voice.Measures[group.MeasureIndex],
-                group,
-                itemXPositions);
-
-            // Calculate beam layout
-            var beamLayout = _beamEngraver.CalculateBeamLayout(
-                group,
-                itemXPositions,
-                collisions);
-
-            beamLayouts.Add(beamLayout);
-        }
-
-        return beamLayouts.ToImmutableArray();
-    }
-
-    /// <summary>
-    /// Collects collision objects for beam scoring.
-    /// These are items in the measure that are not part of the beam group
-    /// but could collide with the beam.
-    /// </summary>
-    private List<BeamCollision> CollectBeamCollisions(
-        Measure measure,
-        BeamGroup group,
-        IReadOnlyList<double> itemXPositions)
-    {
-        var collisions = new List<BeamCollision>();
-
-        // Get the set of item indices that are part of this beam group
-        var beamMemberIndices = new HashSet<int>(group.Members.Select(m => m.ItemIndex));
-
-        // Get beam X range
-        double beamLeftX = itemXPositions[group.Members[0].ItemIndex];
-        double beamRightX = itemXPositions[group.Members[^1].ItemIndex];
-
-        for (int i = 0; i < measure.Items.Length; i++)
-        {
-            // Skip items that are part of this beam group
-            if (beamMemberIndices.Contains(i))
-                continue;
-
-            var item = measure.Items[i];
-            double itemX = itemXPositions[i];
-
-            // Skip items outside beam X range (with padding for object width)
-            // Objects have width, and beam extends slightly beyond stem positions
-            double xPadding = _options.CollisionXPadding; // accounts for rest/note width and stem offset
-            if (itemX < beamLeftX - xPadding || itemX > beamRightX + xPadding)
-                continue;
-
-            // Get staff position range for this item
-            int staffPosition;
-            double halfHeight;
-
-            switch (item)
-            {
-                case RestItem rest:
-                    // Rests are typically centered on middle line (staff position 4)
-                    // and have a vertical extent of about 2 staff spaces
-                    staffPosition = (int)EngravingDefaults.RestCenterPosition;
-                    halfHeight = EngravingDefaults.RestExtent;
-                    break;
-
-                case NoteItem note:
-                    staffPosition = note.StaffPosition;
-                    halfHeight = EngravingDefaults.NoteheadHalfHeight; // Notehead is about 1 staff space tall
-                    break;
-
-                case ChordItem chord:
-                    // Use the extreme notes of the chord
-                    int minPos = chord.Notes.Min(n => n.StaffPosition);
-                    int maxPos = chord.Notes.Max(n => n.StaffPosition);
-                    staffPosition = (minPos + maxPos) / 2;
-                    halfHeight = (maxPos - minPos) / 2.0 + EngravingDefaults.NoteheadHalfHeight;
-                    break;
-
-                default:
-                    continue;
-            }
-
-            collisions.Add(new BeamCollision(
-                X: itemX,
-                MinY: staffPosition - halfHeight,
-                MaxY: staffPosition + halfHeight,
-                BasePenalty: 1.0));
-        }
-
-        return collisions;
-    }
-
-    /// <summary>
-    /// Calculates Y shifts for rests to avoid beam collisions.
-    /// Based on Lilypond's Beam::rest_collision_callback.
-    /// </summary>
-    private ImmutableDictionary<RestShiftKey, double> CalculateRestShifts(
-        Score score,
-        ImmutableArray<SystemLayout> systems,
-        ImmutableArray<BeamLayout> beamLayouts)
-    {
-        if (beamLayouts.Length == 0)
-            return ImmutableDictionary<RestShiftKey, double>.Empty;
-
-        var shifts = new Dictionary<RestShiftKey, double>();
-
-        var measureMap = LayoutUtilities.BuildMeasureLayoutMap(systems);
-
-        // Group beam layouts by measure
-        var beamsByMeasure = beamLayouts
-            .GroupBy(bl => bl.Group.MeasureIndex)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        // Check each measure for rest-beam collisions
-        foreach (var kvp in beamsByMeasure)
-        {
-            int measureIndex = kvp.Key;
-            var measureBeams = kvp.Value;
-
-            if (!measureMap.TryGetValue(measureIndex, out var measureLayout))
-                continue;
-
-            var measure = score.Voice.Measures[measureIndex];
-
-            // Get X positions
-            var itemXPositions = measureLayout.Items
-                .Select(item => measureLayout.X + item.X)
-                .ToList();
-
-            // Check each item in measure
-            for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
-            {
-                if (measure.Items[itemIdx] is not RestItem)
-                    continue;
-
-                double restX = itemXPositions[itemIdx];
-
-                // Check against each beam in this measure
-                foreach (var beamLayout in measureBeams)
-                {
-                    // Rest is in the same measure as the beam - always check for collision
-                    // The sloped beam may extend beyond its stem positions
-
-                    // Use beam Y at the nearest stem position, not at rest X
-                    // (Following Lilypond: rest is associated with its stem, not an arbitrary X)
-                    double beamY;
-                    if (restX < beamLayout.LeftX)
-                        beamY = beamLayout.LeftY;  // Rest is to the left of beam
-                    else if (restX > beamLayout.RightX)
-                        beamY = beamLayout.RightY; // Rest is to the right of beam
-                    else
-                        beamY = beamLayout.GetYAtX(restX); // Rest is under beam
-
-                    // Direction: -1 for stems up (beam above), +1 for stems down (beam below)
-                    int d = beamLayout.Group.StemUp ? -1 : 1;
-
-                    // Beam thickness and translation (in staff positions)
-                    double beamThickness = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamThickness);
-                    double beamTranslation = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamTranslation);
-                    int beamCount = beamLayout.Group.Members.Max(m => m.BeamCount);
-
-                    // Height of beams from center
-                    double heightOfBeams = beamThickness / 2 + (beamCount - 1) * beamTranslation;
-
-                    // Beam edge Y (the edge facing the rest)
-                    double beamEdgeY = beamY + d * heightOfBeams;
-
-                    // Rest position: centered at staff position 4 (middle line B)
-                    // Rest extent: approximately 2 staff positions in each direction
-                    double restCenterY = EngravingDefaults.RestCenterPosition;
-                    double restExtent = EngravingDefaults.RestExtent;
-                    double restEdgeY = restCenterY - d * restExtent; // Edge facing beam
-
-                    // Minimum distance (in staff positions)
-                    double minimumDistance = EngravingDefaults.RestBeamMinDistance;
-
-                    // Calculate shift needed
-                    double gap = d * (beamEdgeY - d * minimumDistance - restEdgeY);
-                    double shift = d * Math.Min(gap, 0.0);
-
-                    if (Math.Abs(shift) > EngravingDefaults.RestShiftThreshold)
-                    {
-                        // Quantize to half staff spaces
-                        shift = Math.Ceiling(Math.Abs(shift) * 2) / 2.0 * Math.Sign(shift);
-
-                        var key = new RestShiftKey(measureIndex, itemIdx);
-                        shifts[key] = shift;
-                    }
-                }
-            }
-        }
-
-        return shifts.ToImmutableDictionary();
-    }
-
-
-    /// <summary>
-    /// Detects ties and calculates their layouts.
-    /// </summary>
-    private ImmutableArray<TieLayout> LayoutTies(Score score, ImmutableArray<SystemLayout> systems)
-    {
-        // Detect ties in the score
-        var ties = _tieDetector.DetectTies(score);
-
-        if (ties.Length == 0)
-            return ImmutableArray<TieLayout>.Empty;
-
-        var measureMap = LayoutUtilities.BuildMeasureMap(systems);
-
-        // Calculate layout for each tie
-        var tieLayouts = new List<TieLayout>();
-
-        foreach (var tie in ties)
-        {
-            // Get layout info for start and end measures
-            if (!measureMap.TryGetValue(tie.StartMeasureIndex, out var startInfo))
-                continue;
-            if (!measureMap.TryGetValue(tie.EndMeasureIndex, out var endInfo))
-                continue;
-
-            var (startSystem, startMeasure) = startInfo;
-            var (endSystem, endMeasure) = endInfo;
-
-            // Calculate X positions
-            double startX = startMeasure.X;
-            double endX = endMeasure.X;
-
-            if (tie.StartItemIndex < startMeasure.Items.Length)
-                startX += startMeasure.Items[tie.StartItemIndex].X;
-            if (tie.EndItemIndex < endMeasure.Items.Length)
-                endX += endMeasure.Items[tie.EndItemIndex].X;
-
-            // Calculate Y position (staff middle + staff position offset)
-            double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
-            double y = staffMiddleY - tie.StaffPosition / 2;  // staff position → staff spaces
-
-            // Calculate tie layout
-            var tieLayout = _tieEngraver.CalculateTieLayout(
-                tie,
-                startX,
-                y,
-                endX,
-                y);
-
-            tieLayouts.Add(tieLayout);
-        }
-
-        return tieLayouts.ToImmutableArray();
-    }
-
-    /// <summary>
-    /// Detects slurs and calculates their layouts.
-    /// </summary>
-    private ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems)
-    {
-        // Detect slurs in the score
-        var slurs = _slurDetector.DetectSlurs(score);
-
-        if (slurs.Length == 0)
-            return ImmutableArray<SlurLayout>.Empty;
-
-        var measureMap = LayoutUtilities.BuildMeasureMap(systems);
-
-        // Calculate layout for each slur
-        var slurLayouts = new List<SlurLayout>();
-
-        foreach (var slur in slurs)
-        {
-            // Get layout info for start and end measures
-            if (!measureMap.TryGetValue(slur.StartMeasureIndex, out var startInfo))
-                continue;
-            if (!measureMap.TryGetValue(slur.EndMeasureIndex, out var endInfo))
-                continue;
-
-            var (startSystem, startMeasure) = startInfo;
-            var (endSystem, endMeasure) = endInfo;
-
-            // Calculate X positions
-            double startX = startMeasure.X;
-            double endX = endMeasure.X;
-
-            if (slur.StartItemIndex < startMeasure.Items.Length)
-                startX += startMeasure.Items[slur.StartItemIndex].X;
-            if (slur.EndItemIndex < endMeasure.Items.Length)
-                endX += endMeasure.Items[slur.EndItemIndex].X;
-
-            // Calculate Y positions (staff middle + staff position offset)
-            double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
-            double startY = staffMiddleY - slur.StartStaffPosition / 2;  // staff position → staff spaces
-            double endY = staffMiddleY - slur.EndStaffPosition / 2;
-
-            // Calculate slur layout
-            var slurLayout = _slurEngraver.CalculateSlurLayout(
-                slur,
-                startX,
-                startY,
-                endX,
-                endY);
-
-            slurLayouts.Add(slurLayout);
-        }
-
-        return slurLayouts.ToImmutableArray();
-    }
-
-
-    /// <summary>
-    /// Calculates the actual header height for single-staff scores.
-    /// </summary>
-    private double CalculateHeaderHeight(Score score)
-    {
-        return CalculateHeaderHeightCore(score.Title, score.Composer);
-    }
-
-
-    /// <summary>
-    /// Calculates the actual header height based on title and composer presence.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:434
-    /// header_height_ = head ? head->extent(Y_AXIS).length() : 0;
-    /// The header height is the actual size of the title/composer stencil,
-    /// not a fixed reserved space.
-    /// </remarks>
-    private double CalculateHeaderHeight(MultiStaffScore score)
-    {
-        return CalculateHeaderHeightCore(score.Title, score.Composer);
-    }
-
-    /// <summary>
-    /// Core header height calculation used by both Score and MultiStaffScore.
-    /// </summary>
-    /// <remarks>
-    /// SVG text coordinates specify the baseline, which is approximately
-    /// the bottom of the text (excluding descenders). Therefore:
-    /// - Title at y=MarginTop has its bottom at MarginTop
-    /// - Composer follows with spacing from title baseline
-    /// - headerBottom = MarginTop + (vertical extent of all header elements)
-    /// </remarks>
-    private double CalculateHeaderHeightCore(string? title, string? composer)
-    {
-        // In SVG, text y is baseline (≈ bottom of text)
-        // Title is rendered at MarginTop, so title bottom ≈ MarginTop
-        // Only add height for elements BELOW the title baseline
-        double height = 0;
-
-        if (title != null && composer != null)
-        {
-            // Composer is rendered below title with spacing
-            // DrawHeader: y += 3 after title, then composer
-            height = 3; // Gap between title baseline and composer baseline
-        }
-        else if (composer != null)
-        {
-            // Only composer, no extra height needed
-            height = 0;
-        }
-        // Title only: height = 0 (title bottom = MarginTop)
-
-        return height;
-    }
-
-    /// <summary>
-    /// Layouts measures for multi-staff scores with timing-based column information.
-    /// </summary>
-    private ImmutableArray<MeasureLayout> LayoutMeasuresForMultiStaff(MultiStaffScore score, int systemIndex)
-    {
-        // Get the primary voice for base layout calculation
-        var primaryVoice = score.StaffGroups[0].PrimaryStaff.PrimaryVoice;
-        
-        var layouts = ImmutableArray.CreateBuilder<MeasureLayout>();
-        double currentX = _options.MarginLeft + SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, systemIndex == 0);
-
-        for (int measureIndex = 0; measureIndex < primaryVoice.Measures.Length; measureIndex++)
-        {
-            // Collect all timings from all voices for this measure
-            var allTimings = CollectAllTimingsForMeasure(score, measureIndex);
-            
-            // Get the primary voice's measure for base calculations
-            var primaryMeasure = primaryVoice.Measures[measureIndex];
-            double measureWidth = SpacingRules.CalculateMeasureIdealWidth(primaryMeasure);
-            
-            // Calculate item layouts for the primary voice (for backward compatibility)
-            var itemLayouts = _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
-            
-            // Calculate column layouts based on all timings
-            var columnLayouts = _measureLayouter.LayoutColumns(primaryMeasure, measureWidth, allTimings);
-            
-            var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts);
-            layouts.Add(measureLayout);
-            currentX += measureLayout.Width;
-        }
-
-        return layouts.ToImmutable();
-    }
-    
-    /// <summary>
-    /// Collects all unique timings from all voices for a specific measure.
-    /// </summary>
-    private List<Fraction> CollectAllTimingsForMeasure(MultiStaffScore score, int measureIndex)
-    {
-        var timings = new HashSet<Fraction>();
-        
-        foreach (var staffGroup in score.StaffGroups)
-        {
-            foreach (var staff in staffGroup.Staves)
-            {
-                foreach (var voice in staff.Voices)
-                {
-                    if (measureIndex < voice.Measures.Length)
-                    {
-                        var measure = voice.Measures[measureIndex];
-                        var currentTiming = Fraction.Zero;
-                        
-                        foreach (var item in measure.Items)
-                        {
-                            timings.Add(currentTiming);
-                            currentTiming += item.Duration;
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Sort timings
-        var sortedTimings = timings.ToList();
-        sortedTimings.Sort();
-        return sortedTimings;
-    }
-    
 
 }
 

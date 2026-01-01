@@ -109,4 +109,41 @@ public static class LayoutUtilities
     {
         return headerBottom + systemUpExtent + topSystemPadding;
     }
+
+    /// <summary>
+    /// Calculates the actual header height based on title and composer presence.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:434
+    /// header_height_ = head ? head->extent(Y_AXIS).length() : 0;
+    /// 
+    /// SVG text coordinates specify the baseline, which is approximately
+    /// the bottom of the text (excluding descenders). Therefore:
+    /// - Title at y=MarginTop has its bottom at MarginTop
+    /// - Composer follows with spacing from title baseline
+    /// - headerBottom = MarginTop + (vertical extent of all header elements)
+    /// </remarks>
+    public static double CalculateHeaderHeight(string? title, string? composer)
+    {
+        // In SVG, text y is baseline (≈ bottom of text)
+        // Title is rendered at MarginTop, so title bottom ≈ MarginTop
+        // Only add height for elements BELOW the title baseline
+        double height = 0;
+
+        if (title != null && composer != null)
+        {
+            // Composer is rendered below title with spacing
+            // DrawHeader: y += 3 after title, then composer
+            height = 3; // Gap between title baseline and composer baseline
+        }
+        else if (composer != null)
+        {
+            // Only composer, no extra height needed
+            height = 0;
+        }
+        // Title only: height = 0 (title bottom = MarginTop)
+
+        return height;
+    }
 }
+
