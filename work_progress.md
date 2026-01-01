@@ -171,10 +171,10 @@ SyntaxTree
 | R-1 | LayoutUtilities.cs 抽出 | ✅ | 1h | 静的ユーティリティ |
 | R-2 | SkylineBuilder.cs 抽出 | ✅ | 2h | スカイライン構築 |
 | R-3 | MeasureLayouter.cs 抽出 | ✅ | 2h | 小節内レイアウト |
-| R-4 | SystemLayouter.cs 抽出 | ⏳ | 3h | システムレイアウト |
-| R-5 | PageLayouter.cs 抽出 | 🚀 | 2h | ページレイアウト |
-| R-6 | SystemBreaker.cs 抽出 | 🚀 | 2h | 行分割 |
-| R-7 | ElementCoordinator.cs 抽出 | 🚀 | 3h | Beam/Tie/Slur統合 |
+| R-4 | SystemLayouter.cs 抽出 | ✅ | 3h | システムレイアウト |
+| R-5 | PageLayouter.cs 抽出 | ✅ | 2h | ページレイアウト |
+| R-6 | SystemBreaker.cs 抽出 | ✅ | 2h | 行分割 |
+| R-7 | ElementCoordinator.cs 抽出 | ⏳ | 3h | Beam/Tie/Slur統合 |
 | R-8 | MultiStaffLayouter.cs 抽出 | 🚀 | 2h | 多譜表 |
 | R-9 | LayoutEngine ファサード化 | 🚀 | 1h | 統合 |
 
@@ -380,6 +380,9 @@ SyntaxTree
 | 2025-12-26 | 🔍 Phase 10: GraceNoteEngraver 実装。grace/acciaccatura/appoggiatura サポート。65% スケール、slashサポート |
 | 2025-12-26 | 🔍 Phase 10: TremoloEngraver/OrnamentEngraver 基盤実装。SMuFL グリフマッピング追加 |
 | 2025-12-26 | ✅ Phase 10: Ornament パーサー統合完了。@trill/@mordent/@turn/@prall をArticulationItemに統合 |
+
+
+
 
 
 

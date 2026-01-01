@@ -27,11 +27,17 @@ public sealed class LayoutEngine
     private readonly NoteCollision _noteCollision = new();
     private readonly SkylineBuilder _skylineBuilder;
     private readonly MeasureLayouter _measureLayouter = new();
+    private readonly SystemLayouter _systemLayouter;
+    private readonly PageLayouter _pageLayouter;
+    private readonly SystemBreaker _systemBreaker;
 
     public LayoutEngine(LayoutOptions? options = null)
     {
         _options = options ?? LayoutOptions.Default;
         _skylineBuilder = new SkylineBuilder(_options.StaffHeight);
+        _systemLayouter = new SystemLayouter(_options, _measureLayouter);
+        _pageLayouter = new PageLayouter(_options);
+        _systemBreaker = new SystemBreaker(_options);
     }
 
     /// <summary>
@@ -47,11 +53,11 @@ public sealed class LayoutEngine
         double headerBottom = _options.MarginTop + headerHeight;
 
         // Break measures into systems (using first voice as representative)
-        var systemMeasures = BreakIntoSystems(score);
+        var systemMeasures = _systemBreaker.BreakIntoSystems(score);
 
         // Pre-calculate measure layouts for first system to build skylines
         var firstSystemMeasures = systemMeasures.Count > 0 ? systemMeasures[0] : new List<Measure>();
-        var firstSystemMeasureLayouts = LayoutMeasuresForSystem(firstSystemMeasures, score.KeySignature.Sharps, true, 0);
+        var firstSystemMeasureLayouts = _systemLayouter.LayoutMeasuresForSystem(firstSystemMeasures, score.KeySignature.Sharps, true, 0);
 
         // Build skylines for the first system
         var (systemUpSkyline, systemDownSkyline) = _skylineBuilder.BuildSystemSkylines(firstSystemMeasures, firstSystemMeasureLayouts);
@@ -65,7 +71,7 @@ public sealed class LayoutEngine
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
             bool isFirstSystem = sysIdx == 0;
-            var system = LayoutSystem(
+            var system = _systemLayouter.LayoutSystem(
                 sysIdx,
                 systemMeasures[sysIdx],
                 currentY,
@@ -111,7 +117,7 @@ public sealed class LayoutEngine
         ImmutableArray<PageLayout> pages;
         if (_options.UseOptimalPageBreaking && _options.PageHeight > 0)
         {
-            pages = CreatePagesWithOptimalBreaking(
+            pages = _pageLayouter.CreatePagesWithOptimalBreaking(
                 systemsArray, headerHeight, systemUpExtent, systemDownExtent);
         }
         else
@@ -167,87 +173,6 @@ public sealed class LayoutEngine
             restShifts);
     }
 
-    /// <summary>
-    /// Creates pages using optimal page breaking algorithm.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-spacing.cc Page_spacer class
-    /// Uses dynamic programming to find optimal page breaks.
-    /// </remarks>
-    private ImmutableArray<PageLayout> CreatePagesWithOptimalBreaking(
-        ImmutableArray<SystemLayout> systems,
-        double headerHeight,
-        double systemUpExtent,
-        double systemDownExtent)
-    {
-        if (systems.Length == 0)
-        {
-            return ImmutableArray<PageLayout>.Empty;
-        }
-
-        // Create SystemDetails for each system
-        var systemDetails = new List<SystemDetails>();
-        foreach (var system in systems)
-        {
-            // Calculate system height (staff + extents)
-            double staffHeight = _options.StaffHeight;
-
-            // For now, use simple estimates for extents
-            // TODO: Calculate actual skyline extents per system
-            double topExtent = systemUpExtent;
-            double bottomExtent = systemDownExtent;
-
-            systemDetails.Add(PageBreaker.CreateFromLayout(
-                staffHeight: staffHeight,
-                topExtent: topExtent,
-                bottomExtent: bottomExtent,
-                padding: _options.SystemSpacing * 0.5,
-                springLength: _options.SystemSpacing * 0.5));
-        }
-
-        // Run page breaker
-        var breaker = new PageBreaker(
-            pageHeight: _options.PageHeight,
-            topMargin: _options.MarginTop,
-            bottomMargin: _options.MarginBottom,
-            headerHeight: headerHeight);
-
-        var breakPoints = breaker.BreakIntoPages(systemDetails);
-
-        // Create pages from break points
-        var pages = new List<PageLayout>();
-        int systemStart = 0;
-
-        for (int pageIdx = 0; pageIdx < breakPoints.Count; pageIdx++)
-        {
-            int systemEnd = breakPoints[pageIdx];
-            bool isFirstPage = pageIdx == 0;
-
-            // Collect systems for this page
-            var pageSystems = new List<SystemLayout>();
-            double currentY = _options.MarginTop + (isFirstPage ? headerHeight + systemUpExtent + _options.TopSystemPadding : _options.TopSystemPadding);
-
-            for (int sysIdx = systemStart; sysIdx < systemEnd; sysIdx++)
-            {
-                // Create new SystemLayout with updated Y position
-                var original = systems[sysIdx];
-                var updated = original with { Y = currentY };
-                pageSystems.Add(updated);
-                currentY += _options.StaffHeight + _options.SystemSpacing;
-            }
-
-            pages.Add(new PageLayout(
-                PageIndex: pageIdx,
-                Width: _options.PageWidth,
-                Height: _options.PageHeight,
-                HeaderHeight: isFirstPage ? headerHeight : 0,
-                Systems: pageSystems.ToImmutableArray()));
-
-            systemStart = systemEnd;
-        }
-
-        return pages.ToImmutableArray();
-    }
 
     /// <summary>
     /// Calculates the complete layout for a multi-staff score.
@@ -758,175 +683,6 @@ public sealed class LayoutEngine
         }
 
         return shifts.ToImmutableDictionary();
-    }
-
-    /// <summary>
-    /// Breaks measures into systems.
-    /// Uses the first voice as representative for measure widths.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/constrained-breaking.cc
-    /// Uses Knuth-Plass optimal algorithm when UseOptimalLineBreaking is true,
-    /// otherwise falls back to greedy first-fit algorithm.
-    /// </remarks>
-    private List<List<Measure>> BreakIntoSystems(Score score)
-    {
-        var measures = score.Voice.Measures;
-        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true);
-        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false);
-
-        if (_options.UseOptimalLineBreaking)
-        {
-            // Use Knuth-Plass optimal line breaking
-            var breaker = new KnuthPlassBreaker(
-                _options.ContentWidth,
-                firstPrefixWidth,
-                continuationPrefixWidth,
-                _options.LineBreakingTolerance);
-
-            return breaker.BreakIntoLines(measures);
-        }
-
-        // Fallback to greedy first-fit algorithm
-        return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth);
-    }
-
-    /// <summary>
-    /// Breaks measures into systems using a greedy first-fit algorithm.
-    /// </summary>
-    private List<List<Measure>> BreakIntoSystemsGreedy(
-        ImmutableArray<Measure> measures,
-        double firstPrefixWidth,
-        double continuationPrefixWidth)
-    {
-        var result = new List<List<Measure>>();
-        var currentSystem = new List<Measure>();
-
-        double availableWidth = _options.ContentWidth;
-        double currentWidth = firstPrefixWidth;
-
-        foreach (var measure in measures)
-        {
-            double measureWidth = SpacingRules.CalculateMeasureIdealWidth(measure);
-
-            // Check if measure fits in current system
-            if (currentSystem.Count > 0 && currentWidth + measureWidth > availableWidth)
-            {
-                // Start new system
-                result.Add(currentSystem);
-                currentSystem = new List<Measure>();
-                currentWidth = continuationPrefixWidth;
-            }
-
-            currentSystem.Add(measure);
-            currentWidth += measureWidth;
-
-            // Force line break if measure has break keyword
-            if (measure.HasBreakAfter && currentSystem.Count > 0)
-            {
-                result.Add(currentSystem);
-                currentSystem = new List<Measure>();
-                currentWidth = continuationPrefixWidth;
-            }
-        }
-
-        // Add final system
-        if (currentSystem.Count > 0)
-            result.Add(currentSystem);
-
-        return result;
-    }
-
-    /// <summary>
-    /// Layouts a single system with justification.
-    /// </summary>
-    /// <remarks>
-    /// Delegates to LayoutMeasuresForSystem for actual layout calculation,
-    /// then wraps the result in a SystemLayout.
-    /// </remarks>
-    private SystemLayout LayoutSystem(
-        int systemIndex,
-        List<Measure> measures,
-        double y,
-        int keySharps,
-        bool isFirstSystem,
-        int firstMeasureIndex)
-    {
-        double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex);
-        
-        return new SystemLayout(
-            systemIndex,
-            y,
-            prefixWidth,
-            measureLayouts);
-    }
-    /// <summary>
-    /// Pre-calculates measure layouts for skyline building (without creating full SystemLayout).
-    /// </summary>
-    private ImmutableArray<MeasureLayout> LayoutMeasuresForSystem(
-        List<Measure> measures,
-        int keySharps,
-        bool isFirstSystem,
-        int firstMeasureIndex)
-    {
-        double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        double startX = _options.MarginLeft + prefixWidth;
-        double rightEdge = _options.PageWidth - _options.MarginRight;
-        double availableWidth = rightEdge - startX;
-
-        // Collect springs and barline widths for each measure
-        var measureSprings = new List<ImmutableArray<Spring>>();
-        var measureBarlineWidths = new List<double>();
-        double totalBarlineWidth = 0;
-
-        foreach (var measure in measures)
-        {
-            var springs = SpacingRules.CreateSpringsForMeasure(measure);
-            measureSprings.Add(springs);
-            
-            double barlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline)
-                                + SpacingRules.GetBarlineWidth(measure.EndBarline);
-            measureBarlineWidths.Add(barlineWidth);
-            totalBarlineWidth += barlineWidth;
-        }
-
-        // Collect all springs and solve for target width
-        var allSprings = measureSprings.SelectMany(s => s).ToImmutableArray();
-        double springTargetWidth = availableWidth - totalBarlineWidth;
-        
-        double force = 0;
-        if (allSprings.Length > 0)
-        {
-            var solver = new SpringSolver(allSprings);
-            var (solvedForce, fits) = solver.Solve(springTargetWidth, _options.RaggedRight);
-            force = fits ? solvedForce : 0;
-        }
-
-        // Layout measures using the solved force
-        var measureLayouts = new List<MeasureLayout>();
-        double currentX = startX;
-
-        for (int i = 0; i < measures.Count; i++)
-        {
-            double measureWidth = measureBarlineWidths[i];
-            foreach (var spring in measureSprings[i])
-            {
-                measureWidth += spring.Length(force);
-            }
-            
-            var itemLayouts = _measureLayouter.LayoutItems(measures[i], measureWidth, measureSprings[i]);
-
-            measureLayouts.Add(new MeasureLayout(
-                firstMeasureIndex + i,
-                currentX,
-                measureWidth,
-                itemLayouts));
-
-            currentX += measureWidth;
-        }
-
-        return measureLayouts.ToImmutableArray();
     }
 
 
