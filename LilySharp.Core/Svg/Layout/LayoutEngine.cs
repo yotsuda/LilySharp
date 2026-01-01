@@ -25,10 +25,13 @@ public sealed class LayoutEngine
     private readonly SlurEngraver _slurEngraver = new();
     private readonly VoiceCollector _voiceCollector = new();
     private readonly NoteCollision _noteCollision = new();
+    private readonly SkylineBuilder _skylineBuilder;
+    private readonly MeasureLayouter _measureLayouter = new();
 
     public LayoutEngine(LayoutOptions? options = null)
     {
         _options = options ?? LayoutOptions.Default;
+        _skylineBuilder = new SkylineBuilder(_options.StaffHeight);
     }
 
     /// <summary>
@@ -51,11 +54,11 @@ public sealed class LayoutEngine
         var firstSystemMeasureLayouts = LayoutMeasuresForSystem(firstSystemMeasures, score.KeySignature.Sharps, true, 0);
 
         // Build skylines for the first system
-        var (systemUpSkyline, systemDownSkyline) = BuildSystemSkylines(firstSystemMeasures, firstSystemMeasureLayouts);
+        var (systemUpSkyline, systemDownSkyline) = _skylineBuilder.BuildSystemSkylines(firstSystemMeasures, firstSystemMeasureLayouts);
 
-        double systemUpExtent = CalculateUpExtent(systemUpSkyline);
-        double systemDownExtent = CalculateDownExtent(systemDownSkyline);
-        double currentY = CalculateFirstSystemY(headerBottom, systemUpExtent);
+        double systemUpExtent = LayoutUtilities.CalculateUpExtent(systemUpSkyline);
+        double systemDownExtent = LayoutUtilities.CalculateDownExtent(systemDownSkyline, _options.StaffHeight);
+        double currentY = LayoutUtilities.CalculateFirstSystemY(headerBottom, systemUpExtent, _options.TopSystemPadding);
 
         // Layout each system
         int firstMeasureIndex = 0;
@@ -85,7 +88,7 @@ public sealed class LayoutEngine
             var measureList = systemMeasures[sysIdx];
             
             // Build skylines for this system (relative to staff top = 0)
-            var (_, downSkyline) = BuildSystemSkylines(measureList, system.Measures);
+            var (_, downSkyline) = _skylineBuilder.BuildSystemSkylines(measureList, system.Measures);
             
             // LILYPOND-REF: lily/skyline.cc:667-680 Skyline::max_height()
             // DOWN skyline's MaxHeight() returns the bottommost Y in real coordinates
@@ -281,10 +284,10 @@ public sealed class LayoutEngine
         bottomSkyline.SetMinimumHeight(headerBottom);
 
         // Build system skylines using relative coordinates (staff top = 0)
-        var (systemUpSkyline, systemDownSkyline) = BuildSystemSkylines(score, measureLayouts);
+        var (systemUpSkyline, systemDownSkyline) = _skylineBuilder.BuildSystemSkylines(score, measureLayouts);
 
-        double systemUpExtent = CalculateUpExtent(systemUpSkyline);
-        double currentY = CalculateFirstSystemY(headerBottom, systemUpExtent);
+        double systemUpExtent = LayoutUtilities.CalculateUpExtent(systemUpSkyline);
+        double currentY = LayoutUtilities.CalculateFirstSystemY(headerBottom, systemUpExtent, _options.TopSystemPadding);
 
         // Layout all staff groups with the calculated Y position
         var staffGroupLayouts = LayoutStaffGroups(score, currentY);
@@ -479,7 +482,7 @@ public sealed class LayoutEngine
         {
             var measure = voice.Measures[i];
             double measureWidth = SpacingRules.CalculateMeasureIdealWidth(measure);
-            var itemLayouts = LayoutMeasureItems(measure, measureWidth);
+            var itemLayouts = _measureLayouter.LayoutItems(measure, measureWidth);
 
             var measureLayout = new MeasureLayout(i, currentX, measureWidth, itemLayouts);
             layouts.Add(measureLayout);
@@ -542,7 +545,7 @@ public sealed class LayoutEngine
         if (beamGroups.Length == 0)
             return ImmutableArray<BeamLayout>.Empty;
 
-        var measureMap = BuildMeasureMap(systems);
+        var measureMap = LayoutUtilities.BuildMeasureMap(systems);
 
         // Calculate layout for each beam group
         var beamLayouts = new List<BeamLayout>();
@@ -668,7 +671,7 @@ public sealed class LayoutEngine
 
         var shifts = new Dictionary<RestShiftKey, double>();
 
-        var measureMap = BuildMeasureLayoutMap(systems);
+        var measureMap = LayoutUtilities.BuildMeasureLayoutMap(systems);
 
         // Group beam layouts by measure
         var beamsByMeasure = beamLayouts
@@ -912,7 +915,7 @@ public sealed class LayoutEngine
                 measureWidth += spring.Length(force);
             }
             
-            var itemLayouts = LayoutMeasureItems(measures[i], measureWidth, measureSprings[i]);
+            var itemLayouts = _measureLayouter.LayoutItems(measures[i], measureWidth, measureSprings[i]);
 
             measureLayouts.Add(new MeasureLayout(
                 firstMeasureIndex + i,
@@ -926,60 +929,6 @@ public sealed class LayoutEngine
         return measureLayouts.ToImmutableArray();
     }
 
-    /// <summary>
-    /// Layouts items within a measure using the Spring-Rod model.
-    /// </summary>
-    /// <remarks>
-    /// The Spring-Rod model:
-    /// 1. Creates springs between adjacent items (and between barlines and items)
-    /// 2. Each spring has an ideal distance (based on duration) and minimum distance (to avoid collision)
-    /// 3. A solver finds the force that achieves the target width while respecting constraints
-    /// </remarks>
-    private ImmutableArray<ItemLayout> LayoutMeasureItems(
-        Measure measure,
-        double totalWidth,
-        ImmutableArray<Spring>? precomputedSprings = null)
-    {
-        if (measure.Items.Length == 0)
-            return ImmutableArray<ItemLayout>.Empty;
-
-        // Calculate barline widths
-        double startBarlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline);
-        double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
-
-        // Use precomputed springs if available, otherwise calculate
-        var springs = precomputedSprings ?? SpacingRules.CreateSpringsForMeasure(measure);
-
-        // Calculate target width for the spring chain
-        // This is the distance from after start barline to before end barline
-        double targetWidth = totalWidth - startBarlineWidth - endBarlineWidth;
-
-        // Solve for the force that achieves target width
-        var solver = new SpringSolver(springs);
-        double force = solver.SolveForWidth(targetWidth);
-
-        // Get positions (these are reference point positions relative to start barline)
-        var positions = solver.GetPositions(force, startX: 0);
-
-        // Convert to ItemLayout
-        // positions[0] = first item position
-        // positions[i + 1] = position of item i
-        // positions[N] = end position (should equal targetWidth)
-        var layouts = new List<ItemLayout>();
-
-        for (int i = 0; i < measure.Items.Length; i++)
-        {
-            // X position relative to measure start (add startBarlineWidth)
-            double x = startBarlineWidth + positions[i + 1];
-
-            // Width is distance to next position
-            double width = positions[i + 2] - positions[i + 1];
-
-            layouts.Add(new ItemLayout(i, x, width));
-        }
-
-        return layouts.ToImmutableArray();
-    }
 
     /// <summary>
     /// Detects ties and calculates their layouts.
@@ -992,7 +941,7 @@ public sealed class LayoutEngine
         if (ties.Length == 0)
             return ImmutableArray<TieLayout>.Empty;
 
-        var measureMap = BuildMeasureMap(systems);
+        var measureMap = LayoutUtilities.BuildMeasureMap(systems);
 
         // Calculate layout for each tie
         var tieLayouts = new List<TieLayout>();
@@ -1046,7 +995,7 @@ public sealed class LayoutEngine
         if (slurs.Length == 0)
             return ImmutableArray<SlurLayout>.Empty;
 
-        var measureMap = BuildMeasureMap(systems);
+        var measureMap = LayoutUtilities.BuildMeasureMap(systems);
 
         // Calculate layout for each slur
         var slurLayouts = new List<SlurLayout>();
@@ -1088,318 +1037,6 @@ public sealed class LayoutEngine
         }
 
         return slurLayouts.ToImmutableArray();
-    }
-
-    // ========== Vertical Skyline Methods ==========
-    // LILYPOND-REF: lily/page-layout-problem.cc:578-647 append_system()
-    // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()
-
-    /// <summary>
-    /// Builds vertical skylines for a multi-staff system.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()
-    ///
-    /// The skylines track the vertical extent of all music elements:
-    /// - UP skyline: highest point at each X position (notes above staff, stems up)
-    /// - DOWN skyline: lowest point at each X position (notes below staff, stems down)
-    /// </remarks>
-    private (VerticalSkyline Up, VerticalSkyline Down) BuildSystemSkylines(
-        MultiStaffScore score,
-        ImmutableArray<MeasureLayout> measureLayouts)
-    {
-        var upSkyline = new VerticalSkyline(VerticalDirection.Up);
-        var downSkyline = new VerticalSkyline(VerticalDirection.Down);
-
-        // All dimensions in staff spaces (coordinate system is unified)
-        double staffHeight = _options.StaffHeight;
-        double staffMiddleY = staffHeight / 2;
-        double stemLength = EngravingDefaults.DefaultStemLength;
-        double noteheadHeight = EngravingDefaults.NoteheadHeight;
-
-        // Only process the first (topmost) staff for top margin calculation
-        // Other staves are below the first one, so they don't affect the top margin
-        var firstStaff = score.StaffGroups[0].PrimaryStaff;
-        foreach (var voice in firstStaff.Voices)
-        {
-            for (int measureIndex = 0; measureIndex < voice.Measures.Length; measureIndex++)
-            {
-                if (measureIndex >= measureLayouts.Length)
-                    continue;
-
-                var measure = voice.Measures[measureIndex];
-                var measureLayout = measureLayouts[measureIndex];
-                for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
-                {
-                    if (itemIndex >= measureLayout.Items.Length)
-                        continue;
-
-                    var item = measure.Items[itemIndex];
-                    var itemLayout = measureLayout.Items[itemIndex];
-                    double itemX = measureLayout.X + itemLayout.X;
-
-                    AddMusicItemToSkylines(item, itemX, staffMiddleY,
-                        stemLength, noteheadHeight, upSkyline, downSkyline);
-                }
-            }
-        }
-
-        return (upSkyline, downSkyline);
-    }
-    /// <summary>
-    /// Builds vertical skylines for a single-staff system.
-    /// </summary>
-    private (VerticalSkyline Up, VerticalSkyline Down) BuildSystemSkylines(
-        List<Measure> measures,
-        ImmutableArray<MeasureLayout> measureLayouts)
-    {
-        var upSkyline = new VerticalSkyline(VerticalDirection.Up);
-        var downSkyline = new VerticalSkyline(VerticalDirection.Down);
-
-        // All dimensions in staff spaces (coordinate system is unified)
-        double staffHeight = _options.StaffHeight;
-        double staffMiddleY = staffHeight / 2;
-        double stemLength = EngravingDefaults.DefaultStemLength;
-        double noteheadHeight = EngravingDefaults.NoteheadHeight;
-
-        // Process measures in this system
-        for (int measureIndex = 0; measureIndex < measures.Count; measureIndex++)
-        {
-            if (measureIndex >= measureLayouts.Length)
-                continue;
-
-            var measure = measures[measureIndex];
-            var measureLayout = measureLayouts[measureIndex];
-            for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
-            {
-                if (itemIndex >= measureLayout.Items.Length)
-                    continue;
-
-                var item = measure.Items[itemIndex];
-                var itemLayout = measureLayout.Items[itemIndex];
-                double itemX = measureLayout.X + itemLayout.X;
-
-                // LILYPOND-REF: lily/grob.cc:85-89 - Each grob contributes to skyline
-                AddMusicItemToSkylines(item, itemX, staffMiddleY,
-                    stemLength, noteheadHeight, upSkyline, downSkyline);
-            }
-        }
-
-        return (upSkyline, downSkyline);
-    }
-
-    /// <summary>
-    /// Adds a music item's bounding boxes to the skylines.
-    /// Dispatches to appropriate handler based on item type.
-    /// </summary>
-    private void AddMusicItemToSkylines(
-        MusicItem item,
-        double x,
-        double staffMiddleY,
-        double stemLength,
-        double noteheadHeight,
-        VerticalSkyline upSkyline,
-        VerticalSkyline downSkyline)
-    {
-        switch (item)
-        {
-            case NoteItem note:
-                AddNoteToSkylines(note, x, staffMiddleY,
-                    stemLength, noteheadHeight, upSkyline, downSkyline);
-                break;
-            case ChordItem chord:
-                int chordNoteValue = GetNoteValueFromFraction(chord.BaseDuration);
-                foreach (var chordNote in chord.Notes)
-                {
-                    double noteY = staffMiddleY - chordNote.StaffPosition / 2.0;
-                    bool stemUp = chordNote.StaffPosition < 4;
-                    AddNoteBoxToSkylines(chordNote.StaffPosition, x, noteY,
-                        stemLength, noteheadHeight, stemUp, chordNoteValue,
-                        upSkyline, downSkyline);
-                }
-                break;
-            case RestItem:
-                // LILYPOND-REF: lily/rest.cc:61-77 - Rest vertical extent
-                // Rests are centered on the staff middle line
-                double restHeight = EngravingDefaults.RestHeight;
-                double restWidth = EngravingDefaults.RestWidth;
-                double restY = staffMiddleY; // Rests centered vertically
-                double restTop = restY - restHeight / 2;
-                double restBottom = restY + restHeight / 2;
-                var restUp = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Up);
-                var restDown = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Down);
-                upSkyline.Merge(restUp);
-                downSkyline.Merge(restDown);
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Adds a note's bounding boxes to the skylines.
-    /// All coordinates in staff spaces.
-    /// </summary>
-    private void AddNoteToSkylines(
-        NoteItem note,
-        double x,
-        double staffMiddleY,
-        double stemLength,
-        double noteheadHeight,
-        VerticalSkyline upSkyline,
-        VerticalSkyline downSkyline)
-    {
-        double noteY = staffMiddleY - note.StaffPosition / 2.0;
-        int noteValue = GetNoteValueFromFraction(note.BaseDuration);
-        bool stemUp = note.StemUp;
-
-        AddNoteBoxToSkylines(note.StaffPosition, x, noteY,
-            stemLength, noteheadHeight, stemUp, noteValue, upSkyline, downSkyline);
-    }
-
-    /// <summary>
-    /// Adds bounding boxes for a note at the given position.
-    /// Includes notehead, stem, and ledger lines.
-    /// All coordinates in staff spaces.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents
-    /// LILYPOND-REF: lily/stencil-integral.cc:55-62 add_*_segments functions
-    /// Each graphical element contributes its bounding box to the vertical skyline.
-    /// </remarks>
-    private void AddNoteBoxToSkylines(
-        int staffPosition,
-        double x,
-        double noteY,
-        double stemLength,
-        double noteheadHeight,
-        bool stemUp,
-        int noteValue,
-        VerticalSkyline upSkyline,
-        VerticalSkyline downSkyline)
-    {
-        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
-        double halfNoteheadHeight = noteheadHeight / 2;
-
-        // Notehead bounding box
-        double noteLeft = x - noteheadWidth / 2;
-        double noteRight = x + noteheadWidth / 2;
-        double noteTop = noteY - halfNoteheadHeight;  // Remember: Y increases downward
-        double noteBottom = noteY + halfNoteheadHeight;
-
-        // Add notehead to both skylines
-        var noteheadUp = VerticalSkyline.FromBox(noteLeft, noteRight, noteBottom, noteTop, VerticalDirection.Up);
-        var noteheadDown = VerticalSkyline.FromBox(noteLeft, noteRight, noteBottom, noteTop, VerticalDirection.Down);
-        upSkyline.Merge(noteheadUp);
-        downSkyline.Merge(noteheadDown);
-
-        // LILYPOND-REF: lily/ledger-line-engraver.cc:82-127
-        // Ledger lines extend horizontally from the note
-        double ledgerExtension = EngravingDefaults.LegerLineExtension;
-        double ledgerThickness = EngravingDefaults.LegerLineThickness;
-        double ledgerLeft = x - noteheadWidth / 2 - ledgerExtension;
-        double ledgerRight = x + noteheadWidth / 2 + ledgerExtension;
-        
-        // Ledger lines above staff (staffPosition >= 6)
-        if (staffPosition >= 6)
-        {
-            for (int pos = 6; pos <= staffPosition; pos += 2)
-            {
-                double ledgerY = _options.StaffHeight / 2 - (pos / 2.0);
-                double ledgerTop = ledgerY - ledgerThickness / 2;
-                double ledgerBottom = ledgerY + ledgerThickness / 2;
-                var ledgerUp = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ledgerBottom, ledgerTop, VerticalDirection.Up);
-                upSkyline.Merge(ledgerUp);
-            }
-        }
-        
-        // Ledger lines below staff (staffPosition <= -6)
-        if (staffPosition <= -6)
-        {
-            for (int pos = -6; pos >= staffPosition; pos -= 2)
-            {
-                double ledgerY = _options.StaffHeight / 2 - (pos / 2.0);
-                double ledgerTop = ledgerY - ledgerThickness / 2;
-                double ledgerBottom = ledgerY + ledgerThickness / 2;
-                var ledgerDown = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ledgerBottom, ledgerTop, VerticalDirection.Down);
-                downSkyline.Merge(ledgerDown);
-            }
-        }
-
-        // Stem bounding box (if applicable - quarter notes and shorter)
-        // For half notes and whole notes, no stem
-        if (stemUp)
-        {
-            // Stem goes up from notehead
-            double stemTop = noteY - stemLength;
-            double stemBottom = noteY;
-            var stemSkyline = VerticalSkyline.FromBox(noteRight - 1, noteRight + 1, stemBottom, stemTop, VerticalDirection.Up);
-            upSkyline.Merge(stemSkyline);
-
-            // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
-            // Flag for eighth notes and shorter (noteValue >= 8)
-            if (noteValue >= 8)
-            {
-                // Flag extends from stem top, curving down-right
-                double flagHeight = CalculateFlagHeight(noteValue);
-                double flagLeft = x;
-                double flagRight = x + EngravingDefaults.FlagWidth;
-                double flagTop = stemTop;
-                double flagBottom = stemTop + flagHeight;
-                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, flagBottom, flagTop, VerticalDirection.Up);
-                upSkyline.Merge(flagSkyline);
-            }
-        }
-        else
-        {
-            // Stem goes down from notehead
-            double stemTop = noteY;
-            double stemBottom = noteY + stemLength;
-            var stemSkyline = VerticalSkyline.FromBox(noteLeft - 1, noteLeft + 1, stemBottom, stemTop, VerticalDirection.Down);
-            downSkyline.Merge(stemSkyline);
-
-            // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
-            // Flag for eighth notes and shorter (noteValue >= 8)
-            if (noteValue >= 8)
-            {
-                // Flag extends from stem bottom, curving up-right
-                double flagHeight = CalculateFlagHeight(noteValue);
-                double flagLeft = x;
-                double flagRight = x + EngravingDefaults.FlagWidth;
-                double flagTop = stemBottom - flagHeight;
-                double flagBottom = stemBottom;
-                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, flagBottom, flagTop, VerticalDirection.Down);
-                downSkyline.Merge(flagSkyline);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Converts a duration fraction to note value (4 = quarter, 8 = eighth, etc.)
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/stem.cc:274 Stem::duration_log
-    /// Duration log: 0=whole, 1=half, 2=quarter, 3=eighth, etc.
-    /// Note value: 1=whole, 2=half, 4=quarter, 8=eighth, etc.
-    /// </remarks>
-    private static int GetNoteValueFromFraction(Fraction duration)
-    {
-        // duration = 1/1 for whole, 1/2 for half, 1/4 for quarter, 1/8 for eighth, etc.
-        if (duration.Numerator == 0) return 4; // Default to quarter
-        return (int)(duration.Denominator / duration.Numerator);
-    }
-
-    /// <summary>
-    /// Calculates the flag height based on note value.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/flag.cc:80-95 Flag::internal_print
-    /// Flag height increases with shorter note values (more beams/flags).
-    /// </remarks>
-    private static double CalculateFlagHeight(int noteValue)
-    {
-        double height = EngravingDefaults.FlagBaseHeight;
-        if (noteValue >= 16) height += EngravingDefaults.FlagHeightIncrement;
-        if (noteValue >= 32) height += EngravingDefaults.FlagHeightIncrement;
-        return height;
     }
 
 
@@ -1480,10 +1117,10 @@ public sealed class LayoutEngine
             double measureWidth = SpacingRules.CalculateMeasureIdealWidth(primaryMeasure);
             
             // Calculate item layouts for the primary voice (for backward compatibility)
-            var itemLayouts = LayoutMeasureItems(primaryMeasure, measureWidth);
+            var itemLayouts = _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
             
             // Calculate column layouts based on all timings
-            var columnLayouts = LayoutColumnsForMeasure(primaryMeasure, measureWidth, allTimings);
+            var columnLayouts = _measureLayouter.LayoutColumns(primaryMeasure, measureWidth, allTimings);
             
             var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts);
             layouts.Add(measureLayout);
@@ -1527,160 +1164,7 @@ public sealed class LayoutEngine
         return sortedTimings;
     }
     
-    /// <summary>
-    /// Calculates column layouts for a measure based on collected timings.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/paper-column.cc - Each musical moment becomes a paper column
-    /// LILYPOND-REF: lily/spacing-spanner.cc - Springs connect adjacent columns
-    /// 
-    /// This creates springs between each timing point (column) in the measure,
-    /// using the same Spring-Rod model as single-staff layout.
-    /// </remarks>
-    private ImmutableArray<ColumnLayout> LayoutColumnsForMeasure(Measure measure, double totalWidth, List<Fraction> timings)
-    {
-        if (timings.Count == 0)
-            return ImmutableArray<ColumnLayout>.Empty;
-        
-        // Calculate barline widths
-        // LILYPOND-REF: lily/spacing-basic.cc:50-52 barline dimensions
-        double startBarlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline);
-        double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
-        
-        // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist (first-note . (fixed-space . 1.3))
-        double firstNoteOffset = Math.Max(startBarlineWidth, EngravingDefaults.BarLineToFirstNoteSpace);
-        
-        // Calculate total duration of the measure
-        var totalDuration = Fraction.Zero;
-        foreach (var item in measure.Items)
-        {
-            totalDuration += item.Duration;
-        }
-        
-        if (totalDuration == Fraction.Zero)
-            return ImmutableArray<ColumnLayout>.Empty;
-        
-        // LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
-        // Create springs between adjacent timing columns
-        var springs = new List<Spring>();
-        
-        // Spring from start to first timing
-        var firstDuration = timings.Count > 1 ? timings[1] - timings[0] : totalDuration;
-        springs.Add(SpacingRules.CreateTimingSpring(firstDuration));
-        
-        // Springs between timing columns
-        for (int i = 1; i < timings.Count; i++)
-        {
-            Fraction segmentDuration;
-            if (i < timings.Count - 1)
-            {
-                segmentDuration = timings[i + 1] - timings[i];
-            }
-            else
-            {
-                segmentDuration = totalDuration - timings[i];
-            }
-            springs.Add(SpacingRules.CreateTimingSpring(segmentDuration));
-        }
-        
-        // Spring from last timing to end
-        springs.Add(SpacingRules.CreateTimingSpring(Fraction.Zero)); // End spring
-        
-        // Available width for columns (after first note offset and before end barline)
-        double targetWidth = totalWidth - firstNoteOffset - endBarlineWidth;
-        
-        // LILYPOND-REF: lily/simple-spacer.cc:175-205 solve for force
-        var solver = new SpringSolver(springs.ToImmutableArray());
-        double force = solver.SolveForWidth(targetWidth);
-        
-        // Get positions from spring solver
-        var positions = solver.GetPositions(force, startX: 0);
-        
-        // Create columns with solved positions
-        var columns = ImmutableArray.CreateBuilder<ColumnLayout>();
-        
-        for (int i = 0; i < timings.Count; i++)
-        {
-            var timing = timings[i];
-            double x = firstNoteOffset + positions[i + 1];
-            double width = positions[i + 2] - positions[i + 1];
-            
-            columns.Add(new ColumnLayout(timing, x, width));
-        }
-        
-        return columns.ToImmutable();
-    }
 
-    /// <summary>
-    /// Builds a map from measure index to (system, measureLayout) for quick lookup.
-    /// </summary>
-    private static Dictionary<int, (SystemLayout System, MeasureLayout Measure)> BuildMeasureMap(
-        ImmutableArray<SystemLayout> systems)
-    {
-        var map = new Dictionary<int, (SystemLayout, MeasureLayout)>();
-        foreach (var system in systems)
-        {
-            foreach (var measureLayout in system.Measures)
-            {
-                map[measureLayout.MeasureIndex] = (system, measureLayout);
-            }
-        }
-        return map;
-    }
-
-    /// <summary>
-    /// Builds a map from measure index to measureLayout for quick lookup.
-    /// </summary>
-    private static Dictionary<int, MeasureLayout> BuildMeasureLayoutMap(
-        ImmutableArray<SystemLayout> systems)
-    {
-        var map = new Dictionary<int, MeasureLayout>();
-        foreach (var system in systems)
-        {
-            foreach (var measureLayout in system.Measures)
-            {
-                map[measureLayout.MeasureIndex] = measureLayout;
-            }
-        }
-        return map;
-    }
-
-    /// <summary>
-    /// Calculates the upward extent of a system skyline.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:622-626
-    /// MaxHeight() returns topmost Y in relative coords (negative for notes above staff).
-    /// Convert to positive extent above staff top.
-    /// </remarks>
-    private static double CalculateUpExtent(VerticalSkyline upSkyline)
-    {
-        return upSkyline.IsEmpty ? 0 : Math.Max(0, -upSkyline.MaxHeight());
-    }
-
-    /// <summary>
-    /// Calculates the downward extent of a system skyline.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/skyline.cc:667-680 Skyline::max_height()
-    /// DOWN skyline's MaxHeight() returns the bottommost Y in real coordinates.
-    /// </remarks>
-    private double CalculateDownExtent(VerticalSkyline downSkyline)
-    {
-        return downSkyline.IsEmpty ? 0 : Math.Max(0, downSkyline.MaxHeight() - _options.StaffHeight);
-    }
-
-    /// <summary>
-    /// Calculates the initial Y position for the first system.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:477-478, 984-985
-    /// The staff Y is positioned to leave room for: header + system extent + padding.
-    /// </remarks>
-    private double CalculateFirstSystemY(double headerBottom, double systemUpExtent)
-    {
-        return headerBottom + systemUpExtent + _options.TopSystemPadding;
-    }
 }
 
 
