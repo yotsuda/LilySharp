@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
@@ -6,8 +6,17 @@ namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
 /// Detects beam groups from measures.
-/// Based on Lilypond's beaming-pattern.cc.
+/// Based on Lilypond's beaming-pattern.cc and auto-beam-engraver.cc.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/beaming-pattern.cc
+/// LILYPOND-REF: lily/auto-beam-engraver.cc
+/// 
+/// Beams are grouped according to the time signature's beat structure.
+/// Mixed durations (8th + 16th) within the same beat are beamed together.
+/// - Pure 8th notes: grouped per half-measure (4 notes in 4/4)
+/// - 16th notes or mixed: grouped per beat
+/// </remarks>
 public sealed class BeamDetector
 {
     /// <summary>
@@ -20,48 +29,196 @@ public sealed class BeamDetector
         for (int measureIndex = 0; measureIndex < score.Voice.Measures.Length; measureIndex++)
         {
             var measure = score.Voice.Measures[measureIndex];
-            DetectBeamGroupsInMeasure(measure, measureIndex, beamGroups);
+            DetectBeamGroupsInMeasure(measure, measureIndex, score.TimeSignature, beamGroups);
         }
         
         return beamGroups.ToImmutableArray();
     }
     
-    private void DetectBeamGroupsInMeasure(Measure measure, int measureIndex, List<BeamGroup> beamGroups)
+    private void DetectBeamGroupsInMeasure(
+        Measure measure, 
+        int measureIndex, 
+        TimeSignature timeSig,
+        List<BeamGroup> beamGroups)
     {
-        var currentGroup = new List<(MusicItem item, int index)>();
+        // First pass: collect groups at beat boundaries
+        var beatGroups = new List<List<(MusicItem item, int index, Fraction startPos)>>();
+        var currentGroup = new List<(MusicItem item, int index, Fraction startPos)>();
+        Fraction currentPosition = Fraction.Zero;
+        Fraction groupStartPosition = Fraction.Zero;
+        
+        // Calculate beat length
+        Fraction beatLength;
+        if (timeSig.BeatType == 8 && timeSig.Beats % 3 == 0)
+        {
+            // Compound meter: dotted quarter
+            beatLength = new Fraction(3, 8);
+        }
+        else
+        {
+            // Simple meter: one beat
+            beatLength = new Fraction(1, timeSig.BeatType);
+        }
         
         for (int i = 0; i < measure.Items.Length; i++)
         {
             var item = measure.Items[i];
+            var duration = GetDuration(item);
             
             if (IsBeamable(item))
             {
-                currentGroup.Add((item, i));
+                if (currentGroup.Count > 0 && CrossesGroupBoundary(groupStartPosition, currentPosition, beatLength))
+                {
+                    // Flush current group at beat boundary
+                    if (currentGroup.Count >= 2)
+                    {
+                        beatGroups.Add(new List<(MusicItem, int, Fraction)>(currentGroup));
+                    }
+                    currentGroup.Clear();
+                    groupStartPosition = currentPosition;
+                }
+                
+                if (currentGroup.Count == 0)
+                {
+                    groupStartPosition = currentPosition;
+                }
+                
+                currentGroup.Add((item, i, currentPosition));
             }
             else
             {
-                // Non-beamable item (rest, whole/half/quarter note) breaks the beam
-                FlushBeamGroup(currentGroup, measureIndex, beamGroups);
+                // Non-beamable item breaks the beam
+                if (currentGroup.Count >= 2)
+                {
+                    beatGroups.Add(new List<(MusicItem, int, Fraction)>(currentGroup));
+                }
                 currentGroup.Clear();
             }
+            
+            currentPosition = currentPosition + duration;
         }
         
         // Flush any remaining group
-        FlushBeamGroup(currentGroup, measureIndex, beamGroups);
+        if (currentGroup.Count >= 2)
+        {
+            beatGroups.Add(new List<(MusicItem, int, Fraction)>(currentGroup));
+        }
+        
+        // Second pass: merge consecutive pure-8th-note groups in same half-measure
+        var mergedGroups = MergePureEighthNoteGroups(beatGroups, timeSig);
+        
+        // Convert to BeamGroups
+        foreach (var group in mergedGroups)
+        {
+            var beamGroup = CreateBeamGroup(group, measureIndex);
+            beamGroups.Add(beamGroup);
+        }
     }
     
-    private void FlushBeamGroup(List<(MusicItem item, int index)> group, int measureIndex, List<BeamGroup> beamGroups)
+    /// <summary>
+    /// Merges consecutive pure-8th-note groups that fall within the same half-measure.
+    /// </summary>
+    private List<List<(MusicItem item, int index, Fraction startPos)>> MergePureEighthNoteGroups(
+        List<List<(MusicItem item, int index, Fraction startPos)>> beatGroups,
+        TimeSignature timeSig)
     {
-        if (group.Count < 2)
-            return; // Need at least 2 notes to form a beam
+        if (beatGroups.Count == 0)
+            return beatGroups;
         
+        // For compound meter, don't merge (already grouped correctly)
+        if (timeSig.BeatType == 8 && timeSig.Beats % 3 == 0)
+            return beatGroups;
+        
+        // Calculate half-measure length
+        Fraction halfMeasure;
+        if (timeSig.Beats >= 4)
+        {
+            halfMeasure = new Fraction(timeSig.Beats / 2, timeSig.BeatType);
+        }
+        else
+        {
+            // For 2/4, 3/4, use full measure (no merging needed beyond beat)
+            return beatGroups;
+        }
+        
+        var result = new List<List<(MusicItem item, int index, Fraction startPos)>>();
+        var currentMerged = new List<(MusicItem item, int index, Fraction startPos)>();
+        Fraction mergeStartPos = Fraction.Zero;
+        
+        foreach (var group in beatGroups)
+        {
+            bool isPureEighths = group.All(g => GetBeamCount(g.item) == 1);
+            Fraction groupStart = group[0].startPos;
+            
+            if (isPureEighths)
+            {
+                // Check if we can merge with current
+                if (currentMerged.Count > 0)
+                {
+                    // Check if in same half-measure
+                    bool sameHalfMeasure = !CrossesGroupBoundary(mergeStartPos, groupStart, halfMeasure);
+                    bool currentIsPureEighths = currentMerged.All(g => GetBeamCount(g.item) == 1);
+                    
+                    if (sameHalfMeasure && currentIsPureEighths)
+                    {
+                        // Merge
+                        currentMerged.AddRange(group);
+                        continue;
+                    }
+                    else
+                    {
+                        // Flush current and start new
+                        result.Add(new List<(MusicItem, int, Fraction)>(currentMerged));
+                        currentMerged.Clear();
+                    }
+                }
+                
+                currentMerged.AddRange(group);
+                mergeStartPos = groupStart;
+            }
+            else
+            {
+                // Not pure eighths - flush current and add this group separately
+                if (currentMerged.Count > 0)
+                {
+                    result.Add(new List<(MusicItem, int, Fraction)>(currentMerged));
+                    currentMerged.Clear();
+                }
+                result.Add(group);
+            }
+        }
+        
+        // Flush remaining
+        if (currentMerged.Count > 0)
+        {
+            result.Add(currentMerged);
+        }
+        
+        return result;
+    }
+    
+    /// <summary>
+    /// Checks if the current position crosses a group boundary from the group start.
+    /// </summary>
+    private bool CrossesGroupBoundary(Fraction groupStart, Fraction currentPos, Fraction groupLength)
+    {
+        long startGroup = (groupStart.Numerator * groupLength.Denominator) / 
+                          (groupStart.Denominator * groupLength.Numerator);
+        long currentGroup = (currentPos.Numerator * groupLength.Denominator) / 
+                            (currentPos.Denominator * groupLength.Numerator);
+        
+        return currentGroup > startGroup;
+    }
+    
+    private BeamGroup CreateBeamGroup(List<(MusicItem item, int index, Fraction startPos)> group, int measureIndex)
+    {
         var members = new List<BeamMember>();
         int totalPosition = 0;
         int noteCount = 0;
         
         for (int i = 0; i < group.Count; i++)
         {
-            var (item, itemIndex) = group[i];
+            var (item, itemIndex, _) = group[i];
             int beamCount = GetBeamCount(item);
             int staffPosition = GetStaffPosition(item);
             
@@ -73,27 +230,21 @@ public sealed class BeamDetector
             
             if (i == 0)
             {
-                // First note: no beams on left
                 beamCountLeft = 0;
                 beamCountRight = beamCount;
             }
             else if (i == group.Count - 1)
             {
-                // Last note: no beams on right
                 int prevBeamCount = GetBeamCount(group[i - 1].item);
                 beamCountLeft = Math.Min(beamCount, prevBeamCount);
                 beamCountRight = 0;
             }
             else
             {
-                // Middle notes
                 int prevBeamCount = GetBeamCount(group[i - 1].item);
                 int nextBeamCount = GetBeamCount(group[i + 1].item);
                 
-                // Continuous beams
                 int continuousBeams = Math.Min(Math.Min(beamCount, prevBeamCount), nextBeamCount);
-                
-                // Beamlets (partial beams)
                 int leftBeamlets = Math.Max(0, Math.Min(beamCount, prevBeamCount) - continuousBeams);
                 int rightBeamlets = Math.Max(0, Math.Min(beamCount, nextBeamCount) - continuousBeams);
                 
@@ -110,20 +261,26 @@ public sealed class BeamDetector
                 itemIndex));
         }
         
-        // Determine stem direction for the entire group
-        // Rule: average position < 4 (middle line) → stem up
         bool stemUp = noteCount > 0 && (double)totalPosition / noteCount < 4;
         
-        beamGroups.Add(new BeamGroup(
+        return new BeamGroup(
             members.ToImmutableArray(),
             measureIndex,
             group[0].index,
-            stemUp));
+            stemUp);
     }
     
-    /// <summary>
-    /// Determines if an item can be beamed (8th note or shorter).
-    /// </summary>
+    private Fraction GetDuration(MusicItem item)
+    {
+        return item switch
+        {
+            NoteItem note => note.Duration,
+            ChordItem chord => chord.Duration,
+            RestItem rest => rest.Duration,
+            _ => Fraction.Zero
+        };
+    }
+    
     private bool IsBeamable(MusicItem item)
     {
         var baseDuration = item switch
@@ -133,14 +290,9 @@ public sealed class BeamDetector
             _ => Fraction.Whole
         };
         
-        // Beamable if duration <= 1/8 (8th note or shorter)
-        // Denominator >= 8 means 8th, 16th, 32nd, etc.
         return baseDuration.Denominator >= 8;
     }
     
-    /// <summary>
-    /// Gets the number of beams for a note based on its duration.
-    /// </summary>
     private int GetBeamCount(MusicItem item)
     {
         var baseDuration = item switch
@@ -150,8 +302,6 @@ public sealed class BeamDetector
             _ => Fraction.Quarter
         };
         
-        // 8th=1, 16th=2, 32nd=3, 64th=4, 128th=5
-        // Formula: log2(denominator) - 2 (since 8=2^3, so 3-2=1)
         int log2 = 0;
         long denom = baseDuration.Denominator;
         while (denom > 1)
@@ -163,17 +313,13 @@ public sealed class BeamDetector
         return Math.Max(0, log2 - 2);
     }
     
-    /// <summary>
-    /// Gets the staff position of a note or chord.
-    /// For chords, returns the position furthest from the middle line (for stem direction).
-    /// </summary>
     private int GetStaffPosition(MusicItem item)
     {
         return item switch
         {
             NoteItem note => note.StaffPosition,
             ChordItem chord => GetChordStaffPosition(chord),
-            _ => 4 // Default to middle line
+            _ => 4
         };
     }
     
@@ -182,8 +328,6 @@ public sealed class BeamDetector
         if (chord.Notes.Length == 0)
             return 4;
         
-        // For stem direction calculation, use average position
-        // (same logic as StemUp property in ChordItem)
         return (int)chord.Notes.Average(n => n.StaffPosition);
     }
 }
