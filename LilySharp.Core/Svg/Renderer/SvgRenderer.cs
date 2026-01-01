@@ -1266,10 +1266,7 @@ public sealed class SvgRenderer
                 
                 _beamedStemEndYs[member.Item] = stemEndY;
                 _beamedStemUp[member.Item] = group.StemUp;
-            }
-            
-            beamIndex++;
-        }
+            }        }
     }
     
     /// <summary>
@@ -1306,21 +1303,15 @@ public sealed class SvgRenderer
             }
         }
         
-        // Get staff index for each beam based on measure index mapping
-        int staffCount = score.EnumerateStaves().Count();
-        int beamIndex = 0;
         
         foreach (var beamLayout in layout.BeamLayouts)
         {
             if (!measureToSystem.TryGetValue(beamLayout.Group.MeasureIndex, out var system))
                 continue;
             
-            // Determine which staff this beam belongs to
-            int staffIndex = beamIndex % staffCount;
-            double staffY = staffYPositions.TryGetValue(staffIndex, out var y) ? y : system.Y;
+            // Use staff index from BeamLayout
+            double staffY = staffYPositions.TryGetValue(beamLayout.StaffIndex, out var y) ? y : system.Y;
             DrawBeamGroupAtStaffY(beamLayout, staffY);
-            
-            beamIndex++;
         }
     }
     
@@ -1780,6 +1771,9 @@ public sealed class SvgRenderer
         }
     }
 }
+
+
+
 
 
 

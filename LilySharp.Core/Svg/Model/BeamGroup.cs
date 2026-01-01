@@ -111,13 +111,17 @@ public sealed record BeamLayout
     /// <summary>X positions for each member (in staff spaces).</summary>
     public ImmutableArray<double> MemberXPositions { get; }
     
+    /// <summary>Staff index for multi-staff scores (-1 for single-staff).</summary>
+    public int StaffIndex { get; }
+    
     public BeamLayout(
         BeamGroup group,
         double leftY,
         double rightY,
         double leftX,
         double rightX,
-        ImmutableArray<double> memberXPositions)
+        ImmutableArray<double> memberXPositions,
+        int staffIndex = -1)
     {
         Group = group;
         LeftY = leftY;
@@ -125,6 +129,7 @@ public sealed record BeamLayout
         LeftX = leftX;
         RightX = rightX;
         MemberXPositions = memberXPositions;
+        StaffIndex = staffIndex;
     }
     
     /// <summary>Gets the slope of the beam (rise per unit run).</summary>
