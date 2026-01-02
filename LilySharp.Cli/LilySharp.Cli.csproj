@@ -15,4 +15,10 @@
     <RollForward>LatestMajor</RollForward>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Update="fonts\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
