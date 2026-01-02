@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
@@ -442,26 +442,39 @@ public sealed class SvgRenderer
             return "";
         }
         
-        // Export mode: embed font as Base64
+        var sb = new StringBuilder();
+        
+        // Export mode: embed fonts as Base64
         if (_renderOptions.EmbedFont)
         {
-            var fontPath = FindFontFile();
-            if (fontPath != null && File.Exists(fontPath))
+            // Embed Emmentaler (music notation) font
+            var musicFontPath = FindFontFile("emmentaler-20.woff2");
+            if (musicFontPath != null && File.Exists(musicFontPath))
             {
-                var fontBytes = File.ReadAllBytes(fontPath);
+                var fontBytes = File.ReadAllBytes(musicFontPath);
                 var base64 = Convert.ToBase64String(fontBytes);
-                return $"@font-face {{ font-family: 'Emmentaler'; src: url('data:font/woff2;base64,{base64}') format('woff2'); }}";
+                sb.AppendLine($"@font-face {{ font-family: 'Emmentaler'; src: url('data:font/woff2;base64,{base64}') format('woff2'); }}");
             }
+            
+            // Embed Emmentaler-Brace font
+            var braceFontPath = FindFontFile("emmentaler-brace.woff");
+            if (braceFontPath != null && File.Exists(braceFontPath))
+            {
+                var fontBytes = File.ReadAllBytes(braceFontPath);
+                var base64 = Convert.ToBase64String(fontBytes);
+                sb.AppendLine($"  @font-face {{ font-family: 'Emmentaler-Brace'; src: url('data:font/woff;base64,{base64}') format('woff'); }}");
+            }
+            
+            if (sb.Length > 0)
+                return sb.ToString().TrimEnd();
         }
         
-        // Default: reference font by name (requires font installed on system)
-        return "@font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }";
+        // Default: reference fonts by name (requires fonts installed on system)
+        return "@font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }\n  @font-face { font-family: 'Emmentaler-Brace'; src: local('Emmentaler-Brace'); }";
     }
     
-    private string? FindFontFile()
+    private string? FindFontFile(string fontFileName)
     {
-        const string fontFileName = "emmentaler-20.woff2";
-        
         // Check specified directory first
         if (!string.IsNullOrEmpty(_renderOptions.FontDirectory))
         {
@@ -1771,6 +1784,9 @@ public sealed class SvgRenderer
         }
     }
 }
+
+
+
 
 
 
