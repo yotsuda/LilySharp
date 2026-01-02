@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
@@ -1101,7 +1101,7 @@ public sealed class SvgRenderer
     
     private void DrawGlyph(char glyph, double x, double y, int? sourcePosition = null)
     {
-        string dataAttr = sourcePosition.HasValue ? $" data-source=\"{sourcePosition}\"" : "";
+        string dataAttr = sourcePosition.HasValue ? $" data-pos=\"{sourcePosition}\"" : "";
         _svg.AppendLine($"  <text class=\"music\" x=\"{x:F1}\" y=\"{y:F1}\" font-size=\"{FontSize}\"{dataAttr}>{glyph}</text>");
     }
     
