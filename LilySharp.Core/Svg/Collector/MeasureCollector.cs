@@ -64,6 +64,7 @@ internal sealed class MeasureBuilder
         // Track duration
         var itemDuration = GetItemDuration(item);
         _currentDuration += itemDuration;
+        Console.WriteLine($"DEBUG AddItem: {item.GetType().Name} duration={itemDuration} total={_currentDuration} timeSig={_timeSignature}");
         
         // Auto-complete measure if we've reached or exceeded time signature
         if (_currentDuration >= _timeSignature)
@@ -74,7 +75,8 @@ internal sealed class MeasureBuilder
     
     private Fraction GetItemDuration(MusicItem item)
     {
-        Fraction baseDuration = item switch
+        // Duration already includes dots (BaseDuration.Dotted(Dots))
+        Fraction duration = item switch
         {
             NoteItem note => note.Duration,
             RestItem rest => rest.Duration,
@@ -82,28 +84,18 @@ internal sealed class MeasureBuilder
             _ => Fraction.Zero
         };
         
-        // Apply dots
-        int dots = item switch
+        // Update default duration (use base duration without dots)
+        Fraction baseDuration = item switch
         {
-            NoteItem note => note.Dots,
-            RestItem rest => rest.Dots,
-            ChordItem chord => chord.Dots,
-            _ => 0
+            NoteItem note => note.BaseDuration,
+            RestItem rest => rest.BaseDuration,
+            ChordItem chord => chord.BaseDuration,
+            _ => Fraction.Zero
         };
-        
-        var total = baseDuration;
-        var dotValue = baseDuration;
-        for (int i = 0; i < dots; i++)
-        {
-            dotValue = new Fraction(dotValue.Numerator, dotValue.Denominator * 2);
-            total += dotValue;
-        }
-        
-        // Update default duration
         if (baseDuration != Fraction.Zero)
             _defaultDuration = baseDuration;
         
-        return total;
+        return duration;
     }
     
     private void AutoCompleteMeasure(int sourceEnd)
@@ -1193,6 +1185,8 @@ public sealed class MeasureCollector
         _ => BarlineType.Single
     };
 }
+
+
 
 
 
