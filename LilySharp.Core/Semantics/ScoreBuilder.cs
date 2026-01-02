@@ -94,14 +94,17 @@ public sealed class ScoreBuilder
             -2 => "doubleFlat",
             _ => null
         };
-        
         return new NoteItem(
             staffPosition,
             note.BaseDuration,
             note.Dots,
             accidental,
             needsLedger,
-            note.SourcePosition);
+            note.SourcePosition,
+            tremoloBeams: 0,
+            hasTieStart: note.HasTieStart,
+            hasSlurStart: note.HasSlurStart,
+            hasSlurEnd: note.HasSlurEnd);
     }
     
     private RestItem BuildRestItem(BoundRest rest)

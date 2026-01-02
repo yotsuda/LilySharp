@@ -52,7 +52,6 @@ public sealed class Binder
         var expanded = expander.Expand(symbols.Structure!.DeclarationSyntax);
         
         var voices = new List<BoundVoice>();
-        
         foreach (var partName in expanded.PartNames)
         {
             var nodes = expanded.GetPart(partName);
@@ -97,6 +96,14 @@ public sealed class Binder
                 case BarlineSyntax barline:
                     musicNodes.Add(barline);
                     break;
+                    
+                case TieSyntax tie:
+                    musicNodes.Add(tie);
+                    break;
+                    
+                case SlurSyntax slur:
+                    musicNodes.Add(slur);
+                    break;
             }
         }
         
@@ -116,9 +123,16 @@ public sealed class Binder
         var startBarline = BarlineType.None;
         string? sectionLabel = null;
         SyntaxNode? measureStartSyntax = null;
-        
-        foreach (var node in nodes)
+        for (int i = 0; i < nodes.Length; i++)
         {
+            var node = nodes[i];
+            
+            // Check if next node is a tie
+            bool hasTieAfter = i + 1 < nodes.Length && nodes[i + 1] is TieSyntax;
+            // Check for slur markers
+            bool hasSlurStartAfter = i + 1 < nodes.Length && nodes[i + 1] is SlurSyntax slurS && slurS.IsOpen;
+            bool hasSlurEndAfter = i + 1 < nodes.Length && nodes[i + 1] is SlurSyntax slurE && !slurE.IsOpen;
+            
             switch (node)
             {
                 case SectionStartMarkerSyntax:
@@ -128,7 +142,13 @@ public sealed class Binder
                     
                 case NoteSyntax note:
                     measureStartSyntax ??= note;
-                    currentItems.Add(BindNote(note));
+                    // Use hasTieAfter (next node is ~) or check articulations
+                    bool hasTie = hasTieAfter || note.Articulations.OfType<TieSyntax>().Any();
+                    // Check for slur start (from following '(' node or in articulations)
+                    bool slurStartHere = hasSlurStartAfter || note.Articulations.OfType<SlurSyntax>().Any(s => s.IsOpen);
+                    // Check for slur end (from following ')' node or in articulations)
+                    bool slurEndHere = hasSlurEndAfter || note.Articulations.OfType<SlurSyntax>().Any(s => !s.IsOpen);
+                    currentItems.Add(BindNote(note, hasTie, slurStartHere, slurEndHere));
                     break;
                     
                 case RestSyntax rest:
@@ -139,6 +159,11 @@ public sealed class Binder
                 case ChordSyntax chord:
                     measureStartSyntax ??= chord;
                     currentItems.Add(BindChord(chord));
+                    break;
+                    
+                case TieSyntax:
+                case SlurSyntax:
+                    // Already processed with the note
                     break;
                     
                 case BarlineSyntax barline:
@@ -193,7 +218,7 @@ public sealed class Binder
         return measures.ToImmutableArray();
     }
     
-    private BoundNote BindNote(NoteSyntax note)
+private BoundNote BindNote(NoteSyntax note, bool hasTieAfter, bool slurOpen, bool hasSlurEnd)
     {
         var pitch = _pitchResolver.Resolve(note.Pitch);
         
@@ -203,9 +228,12 @@ public sealed class Binder
         
         int dots = note.Duration?.DotCount ?? 0;
         
-        // TODO: Tie detection from articulations
-        bool hasTieStart = false;
+        // Detect tie from following ~ syntax
+        bool hasTieStart = hasTieAfter;
         bool hasTieEnd = false;
+        
+        // Detect slur from ( and ) markers
+        bool hasSlurStart = slurOpen;
         
         return new BoundNote(
             note,
@@ -213,7 +241,9 @@ public sealed class Binder
             Fraction.FromNoteValue(noteValue),
             dots,
             hasTieStart,
-            hasTieEnd);
+            hasTieEnd,
+            hasSlurStart,
+            hasSlurEnd);
     }
     
     private BoundRest BindRest(RestSyntax rest)

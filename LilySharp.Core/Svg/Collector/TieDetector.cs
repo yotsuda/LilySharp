@@ -4,20 +4,15 @@ using LilySharp.Core.Svg.Model;
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
-/// Detects ties between notes in a score.
-/// A tie connects two consecutive notes of the same pitch.
+/// Detects ties between notes of the same pitch.
 /// </summary>
 public sealed class TieDetector
 {
-    /// <summary>
-    /// Detects all ties in a score.
-    /// </summary>
     public ImmutableArray<TieItem> DetectTies(Score score)
     {
         var ties = new List<TieItem>();
         var measures = score.Voice.Measures;
         
-        // Iterate through all measures to find consecutive notes of same pitch
         for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
         {
             var measure = measures[measureIdx];
@@ -27,14 +22,15 @@ public sealed class TieDetector
                 if (measure.Items[itemIdx] is not NoteItem startNote)
                     continue;
                 
-                // Look for a tie to the next note
-                var endNote = FindTiedNote(score, measureIdx, itemIdx, startNote);
+                if (!startNote.HasTieStart)
+                    continue;
+                
+                var endNote = FindNextSamePitchNote(score, measureIdx, itemIdx, startNote);
                 if (endNote != null)
                 {
                     var (endMeasureIdx, endItemIdx, note) = endNote.Value;
                     
-                    // Determine curve direction
-                    // Default: curve opposite to stem direction
+                    // Tie curves opposite to stem direction
                     bool curveUp = !startNote.StemUp;
                     
                     ties.Add(new TieItem(
@@ -53,31 +49,39 @@ public sealed class TieDetector
         return ties.ToImmutableArray();
     }
     
-    /// <summary>
-    /// Finds a note tied to the given note.
-    /// Returns null if no tie exists.
-    /// </summary>
-    private (int measureIdx, int itemIdx, NoteItem note)? FindTiedNote(
+    private (int measureIdx, int itemIdx, NoteItem note)? FindNextSamePitchNote(
         Score score,
         int startMeasureIdx,
         int startItemIdx,
         NoteItem startNote)
     {
-        // For now, we don't have explicit tie syntax in the parser
-        // This is a placeholder that will be enhanced when tie syntax is added
-        // Currently returns null (no automatic tie detection)
+        var measures = score.Voice.Measures;
         
-        // In the future, this will check if the note has a tie marker (~)
-        // and find the next note with the same pitch
+        // Search in current measure first
+        var currentMeasure = measures[startMeasureIdx];
+        for (int i = startItemIdx + 1; i < currentMeasure.Items.Length; i++)
+        {
+            if (currentMeasure.Items[i] is NoteItem candidate && 
+                candidate.StaffPosition == startNote.StaffPosition)
+            {
+                return (startMeasureIdx, i, candidate);
+            }
+        }
+        
+        // Search in subsequent measures
+        for (int m = startMeasureIdx + 1; m < measures.Length; m++)
+        {
+            var measure = measures[m];
+            for (int i = 0; i < measure.Items.Length; i++)
+            {
+                if (measure.Items[i] is NoteItem candidate &&
+                    candidate.StaffPosition == startNote.StaffPosition)
+                {
+                    return (m, i, candidate);
+                }
+            }
+        }
         
         return null;
-    }
-    
-    /// <summary>
-    /// Checks if two notes can be tied (same pitch).
-    /// </summary>
-    private static bool CanTie(NoteItem a, NoteItem b)
-    {
-        return a.StaffPosition == b.StaffPosition;
     }
 }

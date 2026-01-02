@@ -333,8 +333,26 @@ public sealed class ElementCoordinator
                 endX += endMeasure.Items[slur.EndItemIndex].X;
 
             double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
-            double startY = staffMiddleY - slur.StartStaffPosition / 2;
-            double endY = staffMiddleY - slur.EndStaffPosition / 2;
+            double startY = staffMiddleY - slur.StartStaffPosition / 2.0;
+            double endY = staffMiddleY - slur.EndStaffPosition / 2.0;
+            
+            // Offset slur endpoints to the opposite side of the stem
+            // CurveUp = true means slur curves upward (above the notes, stems down)
+            // CurveUp = false means slur curves downward (below the notes, stems up)
+            // Offset by approximately half a staff space from the notehead
+            double slurOffset = 0.6;  // staff spaces
+            if (slur.CurveUp)
+            {
+                // Curve up: position above noteheads (smaller Y in SVG)
+                startY -= slurOffset;
+                endY -= slurOffset;
+            }
+            else
+            {
+                // Curve down: position below noteheads (larger Y in SVG)
+                startY += slurOffset;
+                endY += slurOffset;
+            }
 
             var slurLayout = _slurEngraver.CalculateSlurLayout(slur, startX, startY, endX, endY);
             slurLayouts.Add(slurLayout);
@@ -343,16 +361,3 @@ public sealed class ElementCoordinator
         return slurLayouts.ToImmutableArray();
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

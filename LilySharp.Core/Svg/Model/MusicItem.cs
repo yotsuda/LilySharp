@@ -27,6 +27,12 @@ public sealed record NoteItem : MusicItem
     public bool NeedsLedgerLines { get; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
     public int TremoloBeams { get; }
+    /// <summary>Whether this note starts a tie to the next note.</summary>
+    public bool HasTieStart { get; }
+    /// <summary>Whether this note starts a slur.</summary>
+    public bool HasSlurStart { get; }
+    /// <summary>Whether this note ends a slur.</summary>
+    public bool HasSlurEnd { get; }
     private readonly int _sourcePosition;
     
     public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
@@ -38,7 +44,7 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this note has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
     
-    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0)
+    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false)
     {
         StaffPosition = staffPosition;
         BaseDuration = baseDuration;
@@ -46,6 +52,9 @@ public sealed record NoteItem : MusicItem
         Accidental = accidental;
         NeedsLedgerLines = needsLedgerLines;
         TremoloBeams = Math.Clamp(tremoloBeams, 0, 3);
+        HasTieStart = hasTieStart;
+        HasSlurStart = hasSlurStart;
+        HasSlurEnd = hasSlurEnd;
         _sourcePosition = sourcePosition;
     }
 }

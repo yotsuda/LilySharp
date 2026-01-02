@@ -626,7 +626,10 @@ public sealed class SvgRenderer
                 {
                     var measure = voice.Measures[measureLayout.MeasureIndex];
                     int voiceNumber = voiceIdx + 1;
-                    bool? forcedStemUp = VoiceDefaults.GetDefaultStemUp(voiceNumber);
+                    // Only force stem direction for multi-voice scores
+                    bool? forcedStemUp = score.Voices.Length > 1 
+                        ? VoiceDefaults.GetDefaultStemUp(voiceNumber) 
+                        : null;
                     DrawMeasure(measure, measureLayout, measureLayout.MeasureIndex, voiceNumber, y, scoreLayout, forcedStemUp, isFirstVoice: voiceIdx == 0);
                 }
             }
@@ -1459,8 +1462,9 @@ public sealed class SvgRenderer
     
     private void DrawTie(TieLayout tieLayout)
     {
-        // Draw tie as a cubic Bezier curve
-        // SVG path: M startX,startY C control1X,control1Y control2X,control2Y endX,endY
+        // Draw tie using LilyPond-style variable thickness
+        // Endpoints are thin (pointed), middle is thickest
+        // Reference: LilyPond's thickness and line-thickness properties
         
         double startX = tieLayout.StartX;
         double startY = tieLayout.StartY;
@@ -1471,22 +1475,24 @@ public sealed class SvgRenderer
         double c2x = tieLayout.Control2.X;
         double c2y = tieLayout.Control2.Y;
         
-        // Draw the tie as a filled shape (two Bezier curves)
-        // Outer curve and inner curve to create thickness
-        double thickness = EngravingDefaults.TieRenderThickness; // Tie thickness
+        // LilyPond-style parameters
+        double midThickness = EngravingDefaults.TieMidThickness;  // Maximum thickness at middle
+        double direction = tieLayout.CurveUp ? -1.0 : 1.0;
         
-        // Offset for inner curve (direction depends on curve direction)
-        double offsetY = tieLayout.CurveUp ? thickness : -thickness;
+        // Inner curve control points are offset toward the curve interior
+        // Control points get more offset to create bulge in the middle
+        double innerC1x = c1x;
+        double innerC1y = c1y + direction * midThickness * 0.9;
+        double innerC2x = c2x;
+        double innerC2y = c2y + direction * midThickness * 0.9;
         
-        // Outer curve
+        // Outer curve: start → c1,c2 → end
         string outerPath = $"M {startX:F1},{startY:F1} C {c1x:F1},{c1y:F1} {c2x:F1},{c2y:F1} {endX:F1},{endY:F1}";
         
-        // Inner curve (reversed, with offset)
-        double innerC1y = c1y + offsetY;
-        double innerC2y = c2y + offsetY;
-        string innerPath = $"C {c2x:F1},{innerC2y:F1} {c1x:F1},{innerC1y:F1} {startX:F1},{startY:F1}";
+        // Inner curve: end → c2',c1' → start (reversed direction, endpoints shared)
+        string innerPath = $"C {innerC2x:F1},{innerC2y:F1} {innerC1x:F1},{innerC1y:F1} {startX:F1},{startY:F1}";
         
-        // Combined path (closed shape)
+        // Combined path creates tapered shape (pointed at endpoints)
         string fullPath = $"{outerPath} {innerPath} Z";
         
         _svg.AppendLine($"  <path d=\"{fullPath}\" fill=\"black\"/>");
@@ -1505,8 +1511,9 @@ public sealed class SvgRenderer
     
     private void DrawSlur(SlurLayout slurLayout)
     {
-        // Draw slur as a cubic Bezier curve
-        // SVG path: M startX,startY C control1X,control1Y control2X,control2Y endX,endY
+        // Draw slur using LilyPond-style variable thickness
+        // Endpoints are thin (pointed), middle is thickest
+        // Reference: LilyPond's thickness and line-thickness properties
         
         double startX = slurLayout.StartX;
         double startY = slurLayout.StartY;
@@ -1517,22 +1524,24 @@ public sealed class SvgRenderer
         double c2x = slurLayout.Control2.X;
         double c2y = slurLayout.Control2.Y;
         
-        // Draw the slur as a filled shape (two Bezier curves)
-        // Outer curve and inner curve to create thickness
-        double thickness = EngravingDefaults.SlurRenderThickness; // Slur thickness (slightly thicker than tie)
+        // LilyPond-style parameters
+        double midThickness = EngravingDefaults.SlurMidThickness;  // Maximum thickness at middle
+        double direction = slurLayout.CurveUp ? -1.0 : 1.0;
         
-        // Offset for inner curve (direction depends on curve direction)
-        double offsetY = slurLayout.CurveUp ? thickness : -thickness;
+        // Inner curve control points are offset toward the curve interior
+        // Control points get more offset to create bulge in the middle
+        double innerC1x = c1x;
+        double innerC1y = c1y + direction * midThickness * 0.9;
+        double innerC2x = c2x;
+        double innerC2y = c2y + direction * midThickness * 0.9;
         
-        // Outer curve
+        // Outer curve: start → c1,c2 → end
         string outerPath = $"M {startX:F1},{startY:F1} C {c1x:F1},{c1y:F1} {c2x:F1},{c2y:F1} {endX:F1},{endY:F1}";
         
-        // Inner curve (reversed, with offset)
-        double innerC1y = c1y + offsetY;
-        double innerC2y = c2y + offsetY;
-        string innerPath = $"C {c2x:F1},{innerC2y:F1} {c1x:F1},{innerC1y:F1} {startX:F1},{startY:F1}";
+        // Inner curve: end → c2',c1' → start (reversed direction, endpoints shared)
+        string innerPath = $"C {innerC2x:F1},{innerC2y:F1} {innerC1x:F1},{innerC1y:F1} {startX:F1},{startY:F1}";
         
-        // Combined path (closed shape)
+        // Combined path creates tapered shape (pointed at endpoints)
         string fullPath = $"{outerPath} {innerPath} Z";
         
         _svg.AppendLine($"  <path d=\"{fullPath}\" fill=\"black\"/>");

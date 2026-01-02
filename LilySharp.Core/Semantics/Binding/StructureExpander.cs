@@ -161,7 +161,7 @@ public sealed class StructureExpander
                 // Add the music content from the part block
                 foreach (var child in partBlock.DescendantNodes())
                 {
-                    if (child is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax)
+                    if (child is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax)
                     {
                         parts[partName].Add(child);
                     }
@@ -174,7 +174,7 @@ public sealed class StructureExpander
                 if (!parts.ContainsKey(defaultPart))
                     parts[defaultPart] = new List<SyntaxNode>();
                     
-                if (node is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax)
+                if (node is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax)
                 {
                     parts[defaultPart].Add(node);
                 }

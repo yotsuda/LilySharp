@@ -5,43 +5,51 @@ namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
 /// Detects slurs between notes in a score.
-/// A slur connects notes for phrasing (legato).
 /// </summary>
 public sealed class SlurDetector
 {
-    /// <summary>
-    /// Detects all slurs in a score.
-    /// </summary>
     public ImmutableArray<SlurItem> DetectSlurs(Score score)
     {
         var slurs = new List<SlurItem>();
+        var measures = score.Voice.Measures;
+        var openSlurs = new Stack<(int measureIdx, int itemIdx, NoteItem note)>();
         
-        // For now, this is a placeholder implementation
-        // Slurs will be detected when slur syntax is added to the parser
-        // Slur syntax in LilyPond: c'( d' e' f')
-        
-        // In the future, this will:
-        // 1. Detect '(' marking slur start
-        // 2. Track notes until ')' marking slur end
-        // 3. Determine curve direction based on stem direction
+        for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
+        {
+            var measure = measures[measureIdx];
+            
+            for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
+            {
+                if (measure.Items[itemIdx] is not NoteItem note)
+                    continue;
+                
+                if (note.HasSlurStart)
+                {
+                    openSlurs.Push((measureIdx, itemIdx, note));
+                }
+                
+                if (note.HasSlurEnd && openSlurs.Count > 0)
+                {
+                    var (startMeasureIdx, startItemIdx, startNote) = openSlurs.Pop();
+                    
+                    // Slur curves opposite to stem direction
+                    // NoteItem.StemUp: true = stem visually UP, false = stem visually DOWN
+                    bool curveUp = !startNote.StemUp;
+                    
+                    slurs.Add(new SlurItem(
+                        startNote,
+                        note,
+                        startNote.StaffPosition,
+                        note.StaffPosition,
+                        curveUp,
+                        startMeasureIdx,
+                        measureIdx,
+                        startItemIdx,
+                        itemIdx));
+                }
+            }
+        }
         
         return slurs.ToImmutableArray();
-    }
-    
-    /// <summary>
-    /// Determines default slur direction based on note positions.
-    /// </summary>
-    private static bool DetermineSlurDirection(NoteItem startNote, NoteItem endNote)
-    {
-        // Default: curve opposite to average stem direction
-        // If both stems up, slur curves down
-        // If both stems down, slur curves up
-        // If mixed, use the majority or default to up
-        
-        int avgPosition = (startNote.StaffPosition + endNote.StaffPosition) / 2;
-        bool avgStemUp = avgPosition < 4;
-        
-        // Curve opposite to stem direction
-        return !avgStemUp;
     }
 }

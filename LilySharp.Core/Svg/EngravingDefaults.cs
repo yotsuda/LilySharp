@@ -160,10 +160,20 @@ public static class EngravingDefaults
     public const double RepeatDotsOffset = 0.6;
     
     // === Tie/Slur rendering ===
-    /// <summary>Tie thickness multiplier for rendering.</summary>
+    /// <summary>Tie thickness multiplier for rendering (deprecated, use TieMidThickness).</summary>
     public const double TieRenderThickness = 0.12;
-    /// <summary>Slur thickness multiplier for rendering.</summary>
+    /// <summary>Slur thickness multiplier for rendering (deprecated, use SlurMidThickness).</summary>
     public const double SlurRenderThickness = 0.15;
+    
+    // LilyPond-style variable thickness parameters
+    // Reference: LilyPond's 'thickness' property (distance between arcs at thickest point)
+    // and 'line-thickness' property (diameter of virtual pen at endpoints)
+    
+    /// <summary>Maximum thickness of tie at the middle (in staff spaces). Endpoints are thin.</summary>
+    public const double TieMidThickness = 0.25;
+    
+    /// <summary>Maximum thickness of slur at the middle (in staff spaces). Endpoints are thin.</summary>
+    public const double SlurMidThickness = 0.30;
 
 
     // === Conversion helpers ===

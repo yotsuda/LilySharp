@@ -64,7 +64,6 @@ internal sealed class MeasureBuilder
         // Track duration
         var itemDuration = GetItemDuration(item);
         _currentDuration += itemDuration;
-        Console.WriteLine($"DEBUG AddItem: {item.GetType().Name} duration={itemDuration} total={_currentDuration} timeSig={_timeSignature}");
         
         // Auto-complete measure if we've reached or exceeded time signature
         if (_currentDuration >= _timeSignature)
@@ -457,6 +456,8 @@ public sealed class MeasureCollector
                 case ChordSyntax:
                 case BarlineSyntax:
                 case BreakSyntax:
+                case TieSyntax:
+                case SlurSyntax:
                     musicNodes.Add(node);
                     break;
                     
@@ -466,16 +467,21 @@ public sealed class MeasureCollector
             }
         }
         
-        // Process collected music nodes
-        foreach (var node in musicNodes)
+        // Process collected music nodes (with lookahead for ties/slurs)
+        for (int i = 0; i < musicNodes.Count; i++)
         {
-            ProcessMusicNode(node, builder);
+            var node = musicNodes[i];
+            // Check if next node is a tie or slur
+            bool hasTieAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is TieSyntax;
+            bool hasSlurStartAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is SlurSyntax slurS && slurS.IsOpen;
+            bool hasSlurEndAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is SlurSyntax slurE && !slurE.IsOpen;
+            ProcessMusicNode(node, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
         }
         
         return builder.FinalizeMeasures();
     }
     
-    private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder)
+    private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false)
     {
         switch (node)
         {
@@ -488,7 +494,7 @@ public sealed class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
-                    var noteItem = CreateNoteItem(note);
+                    var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
                     builder.AddItem(noteItem);
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp);
@@ -531,6 +537,11 @@ public sealed class MeasureCollector
             case BreakSyntax:
                 // 'break' keyword triggers line break
                 builder.SetBreak();
+                break;
+            
+            case TieSyntax:
+            case SlurSyntax:
+                // Already processed with the preceding note
                 break;
         }
     }
@@ -714,9 +725,15 @@ public sealed class MeasureCollector
         
         void ProcessNodes(IEnumerable<SyntaxNode> nodes)
         {
-            foreach (var node in nodes)
+            var nodeList = nodes.ToList();
+            for (int i = 0; i < nodeList.Count; i++)
             {
-                ProcessMusicNode(node, builder);
+                var node = nodeList[i];
+                // Check if next node is a tie or slur
+                bool hasTieAfter = i + 1 < nodeList.Count && nodeList[i + 1] is TieSyntax;
+                bool hasSlurStartAfter = i + 1 < nodeList.Count && nodeList[i + 1] is SlurSyntax slurS && slurS.IsOpen;
+                bool hasSlurEndAfter = i + 1 < nodeList.Count && nodeList[i + 1] is SlurSyntax slurE && !slurE.IsOpen;
+                ProcessMusicNode(node, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
             }
         }
         
@@ -736,7 +753,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax);
+                .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax);
             ProcessNodes(musicNodes);
         }
         
@@ -852,6 +869,8 @@ public sealed class MeasureCollector
                 case ChordSyntax:
                 case BarlineSyntax:
                 case BreakSyntax:
+                case TieSyntax:
+                case SlurSyntax:
                     musicNodes.Add(node);
                     break;
                     
@@ -870,14 +889,14 @@ public sealed class MeasureCollector
             return;
         
         // Include expression itself if it is a music node
-        if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax)
+        if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax)
         {
             musicNodes.Add(expression);
         }
         
         // Get music nodes from the variable expression descendants
         var nodes = expression.DescendantNodes()
-            .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax);
+            .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax);
         
         musicNodes.AddRange(nodes);
     }
@@ -1025,7 +1044,7 @@ public sealed class MeasureCollector
         }
     }
 
-    private NoteItem CreateNoteItem(NoteSyntax note)
+    private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false)
     {
         var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);
         _currentOctave = octave;
@@ -1056,7 +1075,10 @@ public sealed class MeasureCollector
             accidental,
             needsLedger,
             note.Position,
-            tremoloBeams);
+            tremoloBeams,
+            hasTieStart: hasTieAfter,
+            hasSlurStart: hasSlurStartAfter,
+            hasSlurEnd: hasSlurEndAfter);
     }
     
     private RestItem CreateRestItem(RestSyntax rest)
@@ -1185,9 +1207,3 @@ public sealed class MeasureCollector
         _ => BarlineType.Single
     };
 }
-
-
-
-
-
-

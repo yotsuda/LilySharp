@@ -17,7 +17,9 @@ public sealed record BoundNote : BoundMusic
         Fraction duration,
         int dots,
         bool hasTieStart,
-        bool hasTieEnd)
+        bool hasTieEnd,
+        bool hasSlurStart = false,
+        bool hasSlurEnd = false)
     {
         _syntax = syntax;
         Pitch = pitch;
@@ -25,6 +27,8 @@ public sealed record BoundNote : BoundMusic
         Dots = dots;
         HasTieStart = hasTieStart;
         HasTieEnd = hasTieEnd;
+        HasSlurStart = hasSlurStart;
+        HasSlurEnd = hasSlurEnd;
     }
     
     private readonly SyntaxNode? _syntax;
@@ -46,6 +50,12 @@ public sealed record BoundNote : BoundMusic
     
     /// <summary>Whether this note ends a tie.</summary>
     public bool HasTieEnd { get; }
+    
+    /// <summary>Whether this note starts a slur.</summary>
+    public bool HasSlurStart { get; }
+    
+    /// <summary>Whether this note ends a slur.</summary>
+    public bool HasSlurEnd { get; }
     
     /// <summary>The total duration including dots.</summary>
     public Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;

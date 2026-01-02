@@ -57,3 +57,6 @@ build.log
 outerhtml.html
 sample.lys
 sample.lilys
+
+# Output folder (generated files)
+output/
