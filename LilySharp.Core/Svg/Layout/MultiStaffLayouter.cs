@@ -110,7 +110,7 @@ public sealed class MultiStaffLayouter
         }
 
         double totalHeight = currentY + staffHeight - y;
-        double braceX = _options.MarginLeft - 2;
+        double braceX = _options.MarginLeft - 1.0;  // Add spacing between brace and staff
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
