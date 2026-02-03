@@ -73,7 +73,8 @@ public sealed class LayoutEngine
                 currentY,
                 score.KeySignature.Sharps,
                 isFirstSystem,
-                firstMeasureIndex);
+                firstMeasureIndex,
+                score.Lyrics);
 
             systems.Add(system);
             currentY += _options.StaffHeight + _options.SystemSpacing;
@@ -88,21 +89,21 @@ public sealed class LayoutEngine
         {
             var system = systems[sysIdx];
             var measureList = systemMeasures[sysIdx];
-            
+
             // Build skylines for this system (relative to staff top = 0)
             var (_, downSkyline) = _skylineBuilder.BuildSystemSkylines(measureList, system.Measures);
-            
+
             // LILYPOND-REF: lily/skyline.cc:667-680 Skyline::max_height()
             // DOWN skyline's MaxHeight() returns the bottommost Y in real coordinates
-            double systemBottomExtent = downSkyline.IsEmpty 
-                ? _options.StaffHeight 
+            double systemBottomExtent = downSkyline.IsEmpty
+                ? _options.StaffHeight
                 : Math.Max(_options.StaffHeight, downSkyline.MaxHeight());
-            
+
             // Convert relative extent to absolute Y position
             double absoluteBottomY = system.Y + systemBottomExtent;
             maxSystemBottomY = Math.Max(maxSystemBottomY, absoluteBottomY);
         }
-        
+
         // LILYPOND-REF: lily/page-layout-problem.cc:542
         // Total height includes the bottommost element plus bottom margin
         double totalHeight = maxSystemBottomY + _options.MarginBottom;
@@ -244,7 +245,7 @@ public sealed class LayoutEngine
         var allBeamLayouts = new List<BeamLayout>();
         var allTieLayouts = new List<TieLayout>();
         var allSlurLayouts = new List<SlurLayout>();
-        
+
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
             // Create a temporary Score for each staff to reuse existing logic
@@ -256,7 +257,7 @@ public sealed class LayoutEngine
                 ClefType.Tenor => "tenor",
                 _ => "treble"
             };
-            
+
             var staffScore = new Score(
                 staff.PrimaryVoice,
                 score.TimeSignature,
@@ -265,16 +266,16 @@ public sealed class LayoutEngine
                 score.Tempo,
                 score.Title,
                 score.Composer);
-            
+
             var staffBeams = _elementCoordinator.LayoutBeams(staffScore, systemsArray, staffIndex);
             var staffTies = _elementCoordinator.LayoutTies(staffScore, systemsArray);
             var staffSlurs = _elementCoordinator.LayoutSlurs(staffScore, systemsArray);
-            
+
             allBeamLayouts.AddRange(staffBeams);
             allTieLayouts.AddRange(staffTies);
             allSlurLayouts.AddRange(staffSlurs);
         }
-        
+
         var beamLayouts = allBeamLayouts.ToImmutableArray();
         var tieLayouts = allTieLayouts.ToImmutableArray();
         var slurLayouts = allSlurLayouts.ToImmutableArray();
