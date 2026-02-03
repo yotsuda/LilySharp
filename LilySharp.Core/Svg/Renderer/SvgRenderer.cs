@@ -1883,14 +1883,30 @@ public sealed class SvgRenderer
         if (layout.LyricLayouts.IsDefaultOrEmpty)
             return;
 
+        // Build measure to system Y mapping
+        var measureToSystemY = new Dictionary<int, double>();
+        foreach (var system in layout.Systems)
+        {
+            foreach (var measure in system.Measures)
+            {
+                measureToSystemY[measure.MeasureIndex] = system.Y;
+            }
+        }
+
         // Lyric font size: slightly smaller than music font
         // LILYPOND-REF: scm/define-grobs.scm:3025 font-size = -1
         double lyricFontSize = FontSize * 0.8;
 
         foreach (var lyricLayout in layout.LyricLayouts)
         {
-            // Draw the syllable text (coordinates in staff spaces)
-            _svg.AppendLine($"  <text x=\"{lyricLayout.X:F2}\" y=\"{lyricLayout.Y:F2}\" " +
+            // Get system Y offset for this lyric's measure
+            double systemY = measureToSystemY.TryGetValue(lyricLayout.Item.MeasureIndex, out var y) ? y : 0;
+
+            // Calculate absolute Y position (lyricLayout.Y is relative to staff top)
+            double absoluteY = systemY + lyricLayout.Y;
+
+            // Draw the syllable text
+            _svg.AppendLine($"  <text x=\"{lyricLayout.X:F2}\" y=\"{absoluteY:F2}\" " +
                 $"font-family=\"serif\" font-size=\"{lyricFontSize:F1}\" " +
                 $"text-anchor=\"middle\" dominant-baseline=\"hanging\" class=\"lyric\">" +
                 $"{EscapeXml(lyricLayout.Item.Text)}</text>");
@@ -1898,7 +1914,7 @@ public sealed class SvgRenderer
             // Draw hyphen if needed
             if (lyricLayout.DrawHyphen)
             {
-                double hyphenY = lyricLayout.Y + 0.5;  // Slightly below text baseline
+                double hyphenY = absoluteY + 0.5;  // Slightly below text baseline
                 _svg.AppendLine($"  <text x=\"{lyricLayout.HyphenX:F2}\" y=\"{hyphenY:F2}\" " +
                     $"font-family=\"serif\" font-size=\"{lyricFontSize:F1}\" " +
                     $"text-anchor=\"middle\" class=\"lyric-hyphen\">-</text>");
@@ -1907,7 +1923,7 @@ public sealed class SvgRenderer
             // Draw extender line if needed
             if (lyricLayout.DrawExtender)
             {
-                double extenderY = lyricLayout.Y + 0.8;  // Below text
+                double extenderY = absoluteY + 0.8;  // Below text
                 double startX = lyricLayout.X + lyricLayout.Width / 2 + 0.2;
                 _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{extenderY:F2}\" " +
                     $"x2=\"{lyricLayout.ExtenderEndX:F2}\" y2=\"{extenderY:F2}\" " +
