@@ -75,8 +75,26 @@ public sealed class SvgRenderer
             if (!measureToSystem.TryGetValue(beamLayout.Group.MeasureIndex, out var system))
                 continue;
             
+            // Find the staff Y position for this beam
+            double staffY = system.Y;  // Default to system top
+            if (!system.StaffGroups.IsDefaultOrEmpty && beamLayout.StaffIndex >= 0)
+            {
+                // Find the staff layout for this beam
+                foreach (var staffGroup in system.StaffGroups)
+                {
+                    foreach (var staff in staffGroup.Staves)
+                    {
+                        if (staff.StaffIndex == beamLayout.StaffIndex)
+                        {
+                            staffY = system.Y + staff.Y;
+                            goto foundStaff;
+                        }
+                    }
+                }
+                foundStaff:;
+            }
+            double staffMiddleY = staffY + StaffHeight / 2;
             var group = beamLayout.Group;
-            double staffMiddleY = system.Y + StaffHeight / 2;
             
             // Stem X offset from note center
             var noteheadBBox = GlyphMetrics.GetNoteheadBBox(3);
@@ -158,7 +176,10 @@ public sealed class SvgRenderer
         
         // Draw grace notes
         DrawGraceNotes(layout);
-        
+
+        // Draw lyrics
+        DrawLyrics(layout);
+
         WriteFooter();
         
         return _svg.ToString();
@@ -763,7 +784,7 @@ public sealed class SvgRenderer
             double stemX = noteheadLeftX + stemAnchor.X;
             double stemAttachY = noteY - stemAnchor.Y;
             
-            // Use beam-calculated stem end if part of a beam group, otherwise fixed length
+            // Use beam-calculated stem end if part of a beam group, otherwise calculate based on position
             double stemEndY;
             if (_beamedStemEndYs.TryGetValue(note, out double beamStemEndY))
             {
@@ -771,7 +792,7 @@ public sealed class SvgRenderer
             }
             else
             {
-                stemEndY = stemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
+                stemEndY = CalculateStemEndY(stemAttachY, stemUp, systemY);
             }
             
             _svg.AppendLine($"""  <line class="stem" x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}"/>""");
@@ -888,7 +909,7 @@ public sealed class SvgRenderer
             double stemX = stemUp ? x + StemUpAttachX : x + StemDownAttachX;
             double stemAttachY = stemUp ? stemNoteY - StemUpAttachY : stemNoteY - StemDownAttachY;
             
-            // Use beam-calculated stem end if part of a beam group, otherwise fixed length
+            // Use beam-calculated stem end if part of a beam group, otherwise calculate based on position
             double stemEndY;
             if (_beamedStemEndYs.TryGetValue(chord, out double beamStemEndY))
             {
@@ -896,7 +917,7 @@ public sealed class SvgRenderer
             }
             else
             {
-                stemEndY = stemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
+                stemEndY = CalculateStemEndY(stemAttachY, stemUp, systemY);
             }
             
             _svg.AppendLine($"""  <line class="stem" x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}"/>""");
@@ -1159,7 +1180,26 @@ public sealed class SvgRenderer
     private void DrawBeamGroup(BeamLayout beamLayout, SystemLayout system)
     {
         var group = beamLayout.Group;
-        double staffMiddleY = system.Y + StaffHeight / 2;
+        
+        // Find the correct staff Y position for this beam
+        double staffY = system.Y;  // Default to system top
+        if (!system.StaffGroups.IsDefaultOrEmpty && beamLayout.StaffIndex >= 0)
+        {
+            // Find the staff layout for this beam
+            foreach (var staffGroup in system.StaffGroups)
+            {
+                foreach (var staff in staffGroup.Staves)
+                {
+                    if (staff.StaffIndex == beamLayout.StaffIndex)
+                    {
+                        staffY = system.Y + staff.Y;
+                        goto foundStaff;
+                    }
+                }
+            }
+            foundStaff:;
+        }
+        double staffMiddleY = staffY + StaffHeight / 2;
         
         // Calculate stem X positions for each member using the same logic as DrawNote
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(3);
@@ -1237,18 +1277,13 @@ public sealed class SvgRenderer
             }
         }
         
-        // Get staff index for each beam based on measure index mapping
-        // For now, use a simple heuristic: beam index / staves count
-        int staffCount = score.EnumerateStaves().Count();
-        int beamIndex = 0;
-        
         foreach (var beamLayout in layout.BeamLayouts)
         {
             if (!measureToSystem.TryGetValue(beamLayout.Group.MeasureIndex, out var system))
                 continue;
             
-            // Determine which staff this beam belongs to
-            int staffIndex = beamIndex % staffCount;
+            // Use the staff index from beam layout
+            int staffIndex = beamLayout.StaffIndex;
             double staffY = staffYPositions.TryGetValue(staffIndex, out var y) ? y : system.Y;
             double staffMiddleY = staffY + StaffHeight / 2;
             
@@ -1665,7 +1700,6 @@ public sealed class SvgRenderer
     }
     
     /// <summary>
-    /// <summary>
     /// Draws tremolo beams on a stem.
     /// </summary>
     /// <remarks>
@@ -1790,6 +1824,95 @@ public sealed class SvgRenderer
             }
             
             x += noteSpacing;
+        }
+    }
+
+    /// <summary>
+    /// Calculate stem end Y position, ensuring it reaches but doesn't exceed the staff middle line.
+    /// Based on LilyPond's stem length rules.
+    /// </summary>
+    private double CalculateStemEndY(double stemAttachY, bool stemUp, double systemY)
+    {
+        double staffMiddleY = systemY + StaffHeight / 2;  // Middle line of staff
+        double minStemLength = EngravingRules.MinimumStemLength;  // 2.5 staff spaces
+        
+        // Calculate default stem end position
+        double defaultStemEndY = stemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
+        
+        if (stemUp)
+        {
+            // Stem goes up (smaller Y values)
+            // If stem would go past the middle line, stop at middle line
+            // But ensure minimum stem length
+            double minStemEndY = stemAttachY - minStemLength;
+            if (defaultStemEndY < staffMiddleY)
+            {
+                // Stem reaches past middle line - clamp to middle line (unless that would make stem too short)
+                return Math.Min(staffMiddleY, minStemEndY);
+            }
+            return defaultStemEndY;
+        }
+        else
+        {
+            // Stem goes down (larger Y values)
+            // If stem would go past the middle line, stop at middle line
+            // But ensure minimum stem length
+            double minStemEndY = stemAttachY + minStemLength;
+            if (defaultStemEndY > staffMiddleY)
+            {
+                // Stem reaches past middle line - clamp to middle line (unless that would make stem too short)
+                return Math.Max(staffMiddleY, minStemEndY);
+            }
+            return defaultStemEndY;
+        }
+    }
+
+    /// <summary>
+    /// Draw lyrics below the staff.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-engraver.cc:60-150 process_music
+    /// LILYPOND-REF: scm/define-grobs.scm:3020-3060 LyricText grob
+    ///
+    /// Lyrics are rendered as text elements centered under their associated notes.
+    /// Hyphens (-) connect syllables of the same word.
+    /// Extender lines (___) indicate melisma.
+    /// </remarks>
+    private void DrawLyrics(ScoreLayout layout)
+    {
+        if (layout.LyricLayouts.IsDefaultOrEmpty)
+            return;
+
+        // Lyric font size: slightly smaller than music font
+        // LILYPOND-REF: scm/define-grobs.scm:3025 font-size = -1
+        double lyricFontSize = FontSize * 0.8;
+
+        foreach (var lyricLayout in layout.LyricLayouts)
+        {
+            // Draw the syllable text (coordinates in staff spaces)
+            _svg.AppendLine($"  <text x=\"{lyricLayout.X:F2}\" y=\"{lyricLayout.Y:F2}\" " +
+                $"font-family=\"serif\" font-size=\"{lyricFontSize:F1}\" " +
+                $"text-anchor=\"middle\" dominant-baseline=\"hanging\" class=\"lyric\">" +
+                $"{EscapeXml(lyricLayout.Item.Text)}</text>");
+
+            // Draw hyphen if needed
+            if (lyricLayout.DrawHyphen)
+            {
+                double hyphenY = lyricLayout.Y + 0.5;  // Slightly below text baseline
+                _svg.AppendLine($"  <text x=\"{lyricLayout.HyphenX:F2}\" y=\"{hyphenY:F2}\" " +
+                    $"font-family=\"serif\" font-size=\"{lyricFontSize:F1}\" " +
+                    $"text-anchor=\"middle\" class=\"lyric-hyphen\">-</text>");
+            }
+
+            // Draw extender line if needed
+            if (lyricLayout.DrawExtender)
+            {
+                double extenderY = lyricLayout.Y + 0.8;  // Below text
+                double startX = lyricLayout.X + lyricLayout.Width / 2 + 0.2;
+                _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{extenderY:F2}\" " +
+                    $"x2=\"{lyricLayout.ExtenderEndX:F2}\" y2=\"{extenderY:F2}\" " +
+                    $"stroke=\"black\" stroke-width=\"0.04\" class=\"lyric-extender\" />");
+            }
         }
     }
 }

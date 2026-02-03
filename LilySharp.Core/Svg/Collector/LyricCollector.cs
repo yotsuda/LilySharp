@@ -75,57 +75,106 @@ public sealed class LyricCollector
     /// <summary>
     /// Parses syllables from a lyrics block, handling hyphens and extenders.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-engraver.cc:40-60 syllable parsing
+    ///
+    /// Structure: LyricsBlock contains LyricMeasure nodes, each containing LyricSyllable nodes.
+    /// </remarks>
     private List<(string Text, LyricConnectorType Connector)> ParseSyllables(LyricsBlockSyntax lyricsBlock)
     {
         var result = new List<(string, LyricConnectorType)>();
-        var tokens = lyricsBlock.Syllables.ToList();
-        
-        for (int i = 0; i < tokens.Count; i++)
+
+        // Collect all syllable tokens from all measures
+        var allTokens = new List<string>();
+        foreach (var measureNode in lyricsBlock.Syllables)
         {
-            var token = tokens[i];
-            var text = GetTokenText(token);
-            
+            // Each child of lyrics block is a LyricMeasure (Kind = LyricMeasure)
+            // LyricMeasure contains LyricSyllable nodes and a barline
+            for (int i = 0; i < measureNode.SlotCount; i++)
+            {
+                var syllableNode = measureNode.GetChild(i);
+                if (syllableNode == null) continue;
+
+                var text = GetTokenText(syllableNode);
+                if (!string.IsNullOrEmpty(text) && text != "|")
+                {
+                    allTokens.Add(text);
+                }
+            }
+        }
+
+        // Process tokens with connector detection
+        for (int i = 0; i < allTokens.Count; i++)
+        {
+            var text = allTokens[i];
+
             // Check if next token is a connector
             LyricConnectorType connector = LyricConnectorType.None;
-            if (i + 1 < tokens.Count)
+            if (i + 1 < allTokens.Count)
             {
-                var nextText = GetTokenText(tokens[i + 1]);
+                var nextText = allTokens[i + 1];
                 if (nextText == "--")
                 {
                     connector = LyricConnectorType.Hyphen;
                     i++; // Skip the connector token
                 }
-                else if (nextText == "__")
+                else if (nextText == "__" || nextText == "_")
                 {
                     connector = LyricConnectorType.Extender;
                     i++; // Skip the connector token
                 }
             }
-            
-            // Skip pure connector tokens
-            if (text == "--" || text == "__")
+
+            // Skip pure connector tokens and standalone hyphens
+            if (text == "--" || text == "__" || text == "_" || text == "~" || text == "-")
             {
                 continue;
             }
-            
+
             result.Add((text, connector));
         }
-        
+
         return result;
     }
-    
+
     private string GetTokenText(SyntaxNode node)
     {
-        if (node is SyntaxTokenNode tokenNode)
+        // For LyricSyllable nodes, get the child token's text
+        if (node.Kind == SyntaxKind.LyricSyllable)
         {
-            var text = tokenNode.Text;
-            // Remove quotes from string literals
-            if (text.StartsWith("\"") && text.EndsWith("\"") && text.Length >= 2)
+            var child = node.GetChild(0);
+            if (child is SyntaxTokenNode tokenNode)
             {
-                return text.Substring(1, text.Length - 2);
+                return GetCleanText(tokenNode.Text);
             }
-            return text;
         }
-        return node.ToString();
+
+        // Direct token node
+        if (node is SyntaxTokenNode directToken)
+        {
+            return GetCleanText(directToken.Text);
+        }
+
+        // Fallback: try to get text from first child token
+        for (int i = 0; i < node.SlotCount; i++)
+        {
+            var child = node.GetChild(i);
+            if (child is SyntaxTokenNode childToken)
+            {
+                return GetCleanText(childToken.Text);
+            }
+        }
+
+        return "";
+    }
+
+    private static string GetCleanText(string text)
+    {
+        // Remove quotes from string literals
+        if (text.StartsWith("\"") && text.EndsWith("\"") && text.Length >= 2)
+        {
+            return text.Substring(1, text.Length - 2);
+        }
+        return text;
     }
 }

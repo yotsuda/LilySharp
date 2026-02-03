@@ -49,8 +49,9 @@ public class GrandStaffRenderTests
         var renderer = new SvgRenderer();
         var svg = renderer.Render(score, layout);
         
-        // Should contain brace path
-        Assert.Contains("<path", svg);
+        // Should contain brace (rendered using Emmentaler-Brace font)
+        Assert.Contains("<text", svg);
+        Assert.Contains("Emmentaler-Brace", svg);
         
         // Should contain two sets of staff lines (10 lines total)
         var staffLineCount = System.Text.RegularExpressions.Regex.Matches(svg, @"<line class=""staff""").Count;

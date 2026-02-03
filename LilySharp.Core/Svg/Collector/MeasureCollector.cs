@@ -271,6 +271,8 @@ public sealed class MeasureCollector
     private readonly List<ArticulationItem> _articulations = new();
     // Grace notes
     private readonly List<GraceNoteItem> _graceNotes = new();
+    // Lyrics
+    private readonly List<LyricItem> _lyrics = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
     // Default duration
@@ -325,7 +327,10 @@ public sealed class MeasureCollector
         // Single voice
         var measures = CollectMeasures();
         var voice = new Voice(_voiceName ?? "default", measures.ToImmutableArray());
-        
+
+        // Collect lyrics
+        CollectLyrics(tree.GetRoot(), measures);
+
         return new Score(
             voice,
             new TimeSignature(_timeBeats, _timeBeatType),
@@ -336,7 +341,8 @@ public sealed class MeasureCollector
             _composer,
             _dynamics.ToImmutableArray(),
             _articulations.ToImmutableArray(),
-            _graceNotes.ToImmutableArray());
+            _graceNotes.ToImmutableArray(),
+            lyrics: _lyrics.ToImmutableArray());
     }
 
     /// <summary>
@@ -404,29 +410,37 @@ public sealed class MeasureCollector
     private Score CollectMultiVoiceScore(ParallelExpressionSyntax parallelExpr)
     {
         var voices = new List<Voice>();
+        List<Measure>? firstVoiceMeasures = null;
         int voiceNumber = 1;
-        
+
         foreach (var voiceNode in parallelExpr.Voices)
         {
             // Save and reset state for each voice
             var savedOctave = _currentOctave;
             var savedPitch = _lastPitchName;
             var savedDuration = _defaultDuration;
-            
+
             _currentOctave = 4;
             _lastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
-            
+
             var measures = CollectMeasuresFromNode(voiceNode);
+            if (firstVoiceMeasures == null)
+                firstVoiceMeasures = measures;
+
             var voiceName = $"voice{voiceNumber}";
             voices.Add(new Voice(voiceName, measures.ToImmutableArray()));
             voiceNumber++;
-            
+
             _currentOctave = savedOctave;
             _lastPitchName = savedPitch;
             _defaultDuration = savedDuration;
         }
-        
+
+        // Collect lyrics (aligned with first voice)
+        if (firstVoiceMeasures != null)
+            CollectLyrics(parallelExpr, firstVoiceMeasures);
+
         return new Score(
             voices.ToImmutableArray(),
             new TimeSignature(_timeBeats, _timeBeatType),
@@ -437,7 +451,8 @@ public sealed class MeasureCollector
             _composer,
             _dynamics.ToImmutableArray(),
             _articulations.ToImmutableArray(),
-            _graceNotes.ToImmutableArray());
+            _graceNotes.ToImmutableArray(),
+            lyrics: _lyrics.ToImmutableArray());
     }
     
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
@@ -1206,4 +1221,48 @@ public sealed class MeasureCollector
         "|." => BarlineType.Final,
         _ => BarlineType.Single
     };
+
+    /// <summary>
+    /// Collects lyrics from LyricsBlockSyntax nodes and associates them with notes.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-engraver.cc:60-88 process_music
+    /// LILYPOND-REF: lily/lyric-combine-music-iterator.cc:100-150 note association
+    /// </remarks>
+    private void CollectLyrics(SyntaxNode root, List<Measure> measures)
+    {
+        // Find all LyricsBlockSyntax nodes
+        var lyricsBlocks = root.DescendantNodes()
+            .OfType<LyricsBlockSyntax>()
+            .ToList();
+
+        if (lyricsBlocks.Count == 0)
+            return;
+
+        // Build note indices: (measureIndex, itemIndex) for each note/chord
+        var noteIndices = new List<(int MeasureIndex, int ItemIndex)>();
+        for (int m = 0; m < measures.Count; m++)
+        {
+            var measure = measures[m];
+            for (int i = 0; i < measure.Items.Length; i++)
+            {
+                var item = measure.Items[i];
+                // Only notes and chords get lyrics (not rests)
+                if (item is NoteItem or ChordItem)
+                {
+                    noteIndices.Add((m, i));
+                }
+            }
+        }
+
+        // Collect lyrics from each block
+        var lyricCollector = new LyricCollector();
+        int verseNumber = 1;
+        foreach (var lyricsBlock in lyricsBlocks)
+        {
+            var lyrics = lyricCollector.Collect(lyricsBlock, noteIndices, voiceId: 0, verseNumber);
+            _lyrics.AddRange(lyrics);
+            verseNumber++;
+        }
+    }
 }

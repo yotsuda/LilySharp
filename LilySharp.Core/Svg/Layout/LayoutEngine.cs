@@ -156,6 +156,12 @@ public sealed class LayoutEngine
         // LILYPOND-REF: grace-engraver.cc - grace note positioning
         var graceNoteLayouts = GraceNoteEngraver.Calculate(score, score.GraceNotes, systemsArray, measureLayouts);
 
+        // Calculate lyric layouts
+        // LILYPOND-REF: lily/lyric-engraver.cc:60-150 process_music
+        var lyricEngraver = new LyricEngraver();
+        double staffBottom = _options.StaffHeight;  // Bottom of staff in staff spaces (typically 4)
+        var lyricLayouts = lyricEngraver.CalculateLayouts(score.Lyrics, measureLayouts, staffBottom);
+
         return new ScoreLayout(
             pages,
             systemsArray,
@@ -165,6 +171,7 @@ public sealed class LayoutEngine
             dynamicLayouts,
             articulationLayouts,
             graceNoteLayouts,
+            lyricLayouts,
             voiceOffsets,
             restShifts);
     }
@@ -259,7 +266,7 @@ public sealed class LayoutEngine
                 score.Title,
                 score.Composer);
             
-            var staffBeams = _elementCoordinator.LayoutBeams(staffScore, systemsArray);
+            var staffBeams = _elementCoordinator.LayoutBeams(staffScore, systemsArray, staffIndex);
             var staffTies = _elementCoordinator.LayoutTies(staffScore, systemsArray);
             var staffSlurs = _elementCoordinator.LayoutSlurs(staffScore, systemsArray);
             
@@ -283,6 +290,7 @@ public sealed class LayoutEngine
             ImmutableArray<DynamicLayout>.Empty,
             ImmutableArray<ArticulationLayout>.Empty,
             ImmutableArray<GraceNoteLayout>.Empty,
+            ImmutableArray<LyricLayout>.Empty,  // TODO: Implement lyrics for multi-staff
             voiceOffsets,
             restShifts);
     }

@@ -987,17 +987,25 @@ private GreenNode?[] ParseArticulations()
     /// <summary>
     /// Parse a single lyric measure: syllable syllable ... |
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-engraver.cc:90-120 stop_translation_timestep
+    /// </remarks>
     private LyricMeasureGreen? ParseLyricMeasure()
     {
         var syllables = new List<GreenNode?>();
-        
+
         while (!Check(SyntaxKind.Bar) && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
             var syllable = ParseLyricSyllable();
             if (syllable != null)
+            {
                 syllables.Add(syllable);
+            }
             else
-                break;
+            {
+                // Unknown token - skip to prevent infinite loop (error recovery)
+                Advance();
+            }
         }
         
         if (Check(SyntaxKind.Bar))
@@ -1020,6 +1028,16 @@ private GreenNode?[] ParseArticulations()
     /// <summary>
     /// Parse a single lyric syllable.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-engraver.cc:60-88 process_music
+    ///
+    /// Handles:
+    /// - Identifier: syllable text (e.g., "Hap", "py")
+    /// - Identifier + Minus: word continuation (e.g., "Hap-")
+    /// - Minus Minus: syllable break marker (--)
+    /// - Tilde: melisma (~)
+    /// - Underscore: extender (_)
+    /// </remarks>
     private LyricSyllableGreen? ParseLyricSyllable()
     {
         // Melisma: ~
@@ -1027,19 +1045,35 @@ private GreenNode?[] ParseArticulations()
         {
             return new LyricSyllableGreen(Advance());
         }
-        
-        // Skip: _
+
+        // Skip/Extender: _
         if (Check(SyntaxKind.Underscore))
         {
             return new LyricSyllableGreen(Advance());
         }
-        
-        // Text syllable: identifier (possibly with hyphen)
+
+        // Hyphen connector: -- (syllable break marker)
+        // In Lilypond, -- separates syllables within a word
+        if (Check(SyntaxKind.Minus))
+        {
+            var first = Advance();
+            if (Check(SyntaxKind.Minus))
+            {
+                Advance(); // consume second minus
+                // Return as special marker token
+                return new LyricSyllableGreen(
+                    new SyntaxToken(SyntaxKind.Identifier, "--"));
+            }
+            // Single minus - treat as connector (rare but handle gracefully)
+            return new LyricSyllableGreen(first);
+        }
+
+        // Text syllable: identifier (possibly with trailing hyphen)
         if (Check(SyntaxKind.Identifier))
         {
             var text = Advance();
-            
-            // Check for trailing hyphen (word continuation)
+
+            // Check for trailing hyphen (word continuation, e.g., "Hap-")
             if (Check(SyntaxKind.Minus))
             {
                 var hyphen = Advance();
@@ -1049,10 +1083,10 @@ private GreenNode?[] ParseArticulations()
                     text.Text + hyphen.Text);
                 return new LyricSyllableGreen(combined);
             }
-            
+
             return new LyricSyllableGreen(text);
         }
-        
+
         return null;
     }
     

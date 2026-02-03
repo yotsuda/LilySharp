@@ -79,6 +79,10 @@ public sealed record Score
     
     /// <summary>Tremolo markings in the score.</summary>
     public ImmutableArray<TremoloItem> Tremolos { get; }
+
+    /// <summary>Lyrics in the score.</summary>
+    public ImmutableArray<LyricItem> Lyrics { get; }
+
     /// <summary>Whether this score has multiple voices.</summary>
     public bool IsMultiVoice => Voices.Length > 1;
 
@@ -96,8 +100,9 @@ public sealed record Score
         ImmutableArray<DynamicItem>? dynamics = null,
         ImmutableArray<ArticulationItem>? articulations = null,
         ImmutableArray<GraceNoteItem>? graceNotes = null,
-        ImmutableArray<TremoloItem>? tremolos = null)
-        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos)
+        ImmutableArray<TremoloItem>? tremolos = null,
+        ImmutableArray<LyricItem>? lyrics = null)
+        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics)
     {
     }
     
@@ -115,11 +120,12 @@ public sealed record Score
         ImmutableArray<DynamicItem>? dynamics = null,
         ImmutableArray<ArticulationItem>? articulations = null,
         ImmutableArray<GraceNoteItem>? graceNotes = null,
-        ImmutableArray<TremoloItem>? tremolos = null)
+        ImmutableArray<TremoloItem>? tremolos = null,
+        ImmutableArray<LyricItem>? lyrics = null)
     {
         if (voices.Length == 0)
             throw new ArgumentException("Score must have at least one voice", nameof(voices));
-        
+
         Voices = voices;
         TimeSignature = timeSignature;
         KeySignature = keySignature;
@@ -131,6 +137,7 @@ public sealed record Score
         Articulations = articulations ?? ImmutableArray<ArticulationItem>.Empty;
         GraceNotes = graceNotes ?? ImmutableArray<GraceNoteItem>.Empty;
         Tremolos = tremolos ?? ImmutableArray<TremoloItem>.Empty;
+        Lyrics = lyrics ?? ImmutableArray<LyricItem>.Empty;
     }
     
     /// <summary>Total number of measures in the score (from primary voice).</summary>
