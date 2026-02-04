@@ -1860,41 +1860,44 @@ public sealed class SvgRenderer
     }
 
     /// <summary>
-    /// Calculate stem end Y position, ensuring it reaches but doesn't exceed the staff middle line.
-    /// Based on LilyPond's stem length rules.
+    /// Calculate stem end Y position based on LilyPond's stem length rules.
+    /// For notes outside the staff on the stem side, use standard length.
+    /// For notes outside the staff on the opposite side, extend to middle line.
     /// </summary>
     private double CalculateStemEndY(double stemAttachY, bool stemUp, double systemY)
     {
         double staffMiddleY = systemY + StaffHeight / 2;  // Middle line of staff
         double minStemLength = EngravingRules.MinimumStemLength;  // 2.5 staff spaces
 
-        // Calculate default stem end position
+        // Calculate default stem end position (standard length of 3.5 staff spaces)
         double defaultStemEndY = stemUp ? stemAttachY - StemHeight : stemAttachY + StemHeight;
 
         if (stemUp)
         {
             // Stem goes up (smaller Y values)
-            // If stem would go past the middle line, stop at middle line
-            // But ensure minimum stem length
-            double minStemEndY = stemAttachY - minStemLength;
-            if (defaultStemEndY < staffMiddleY)
+            // Only extend to middle line if note is BELOW the middle line
+            if (stemAttachY > staffMiddleY)
             {
-                // Stem reaches past middle line - clamp to middle line (unless that would make stem too short)
-                return Math.Min(staffMiddleY, minStemEndY);
+                // Note is below middle line - extend stem to reach middle line
+                double targetStemEndY = Math.Min(defaultStemEndY, staffMiddleY);
+                double minStemEndY = stemAttachY - minStemLength;
+                return Math.Min(targetStemEndY, minStemEndY);
             }
+            // Note is on or above middle line - use standard length
             return defaultStemEndY;
         }
         else
         {
             // Stem goes down (larger Y values)
-            // If stem would go past the middle line, stop at middle line
-            // But ensure minimum stem length
-            double minStemEndY = stemAttachY + minStemLength;
-            if (defaultStemEndY > staffMiddleY)
+            // Only extend to middle line if note is ABOVE the middle line
+            if (stemAttachY < staffMiddleY)
             {
-                // Stem reaches past middle line - clamp to middle line (unless that would make stem too short)
-                return Math.Max(staffMiddleY, minStemEndY);
+                // Note is above middle line - extend stem to reach middle line
+                double targetStemEndY = Math.Max(defaultStemEndY, staffMiddleY);
+                double minStemEndY = stemAttachY + minStemLength;
+                return Math.Max(targetStemEndY, minStemEndY);
             }
+            // Note is on or below middle line - use standard length
             return defaultStemEndY;
         }
     }
