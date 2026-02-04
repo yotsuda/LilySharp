@@ -68,7 +68,7 @@ public sealed class ElementCoordinator
     /// <summary>
     /// Detects beam groups and calculates their layouts.
     /// </summary>
-    public ImmutableArray<BeamLayout> LayoutBeams(Score score, ImmutableArray<SystemLayout> systems)
+    public ImmutableArray<BeamLayout> LayoutBeams(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
     {
         var beamGroups = _beamDetector.DetectBeamGroups(score);
 
@@ -113,7 +113,8 @@ public sealed class ElementCoordinator
             var beamLayout = _beamEngraver.CalculateBeamLayout(
                 group,
                 itemXPositions,
-                collisions);
+                collisions,
+                staffIndex);
 
             beamLayouts.Add(beamLayout);
         }
@@ -294,7 +295,13 @@ public sealed class ElementCoordinator
             double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
             double y = staffMiddleY - tie.StaffPosition / 2;
 
-            var tieLayout = _tieEngraver.CalculateTieLayout(tie, startX, y, endX, y);
+            // Use TieFormattingProblem for optimal tie positioning
+            // LILYPOND-REF: lily/tie-formatting-problem.cc
+            var problem = new TieFormattingProblem(
+                tie, startX, y, endX, y,
+                existingTies: tieLayouts,
+                staffHeight: _options.StaffHeight);
+            var tieLayout = problem.Solve();
             tieLayouts.Add(tieLayout);
         }
 
@@ -335,7 +342,7 @@ public sealed class ElementCoordinator
             double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
             double startY = staffMiddleY - slur.StartStaffPosition / 2.0;
             double endY = staffMiddleY - slur.EndStaffPosition / 2.0;
-            
+
             // Offset slur endpoints to the opposite side of the stem
             // CurveUp = true means slur curves upward (above the notes, stems down)
             // CurveUp = false means slur curves downward (below the notes, stems up)
