@@ -11,12 +11,12 @@ namespace LilySharp.Core.Semantics;
 public sealed class ScoreBuilder
 {
     private readonly string _clef;
-    
+
     public ScoreBuilder(string clef = "treble")
     {
         _clef = clef;
     }
-    
+
     /// <summary>
     /// Builds a Score from a BoundScore.
     /// </summary>
@@ -25,12 +25,12 @@ public sealed class ScoreBuilder
         var voices = boundScore.Voices
             .Select(BuildVoice)
             .ToImmutableArray();
-        
+
         if (voices.Length == 0)
         {
             voices = ImmutableArray.Create(new Voice("", ImmutableArray<Measure>.Empty));
         }
-        
+
         return new Score(
             voices,
             boundScore.Metadata.TimeSignature,
@@ -40,27 +40,27 @@ public sealed class ScoreBuilder
             boundScore.Metadata.Title,
             boundScore.Metadata.Composer);
     }
-    
+
     private Voice BuildVoice(BoundVoice boundVoice)
     {
         var measures = boundVoice.Measures
             .Select(BuildMeasure)
             .ToImmutableArray();
-        
+
         return new Voice(boundVoice.Name, measures);
     }
-    
+
     private Measure BuildMeasure(BoundMeasure boundMeasure)
     {
         var items = boundMeasure.Items
             .Select(BuildMusicItem)
             .ToImmutableArray();
-        
+
         int sourceStart = boundMeasure.Syntax?.Position ?? 0;
-        int sourceEnd = boundMeasure.Syntax != null 
-            ? boundMeasure.Syntax.Position + boundMeasure.Syntax.FullWidth 
+        int sourceEnd = boundMeasure.Syntax != null
+            ? boundMeasure.Syntax.Position + boundMeasure.Syntax.FullWidth
             : 0;
-        
+
         return new Measure(
             items,
             boundMeasure.StartBarline,
@@ -69,7 +69,7 @@ public sealed class ScoreBuilder
             sourceStart,
             sourceEnd);
     }
-    
+
     private MusicItem BuildMusicItem(BoundMusic boundMusic)
     {
         return boundMusic switch
@@ -80,12 +80,12 @@ public sealed class ScoreBuilder
             _ => throw new InvalidOperationException($"Unknown bound music type: {boundMusic.GetType().Name}")
         };
     }
-    
+
     private NoteItem BuildNoteItem(BoundNote note)
     {
         var staffPosition = CalculateStaffPosition(note.Pitch);
         bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-        
+
         string? accidental = note.Pitch.Alteration switch
         {
             2 => "doubleSharp",
@@ -101,17 +101,17 @@ public sealed class ScoreBuilder
             accidental,
             needsLedger,
             note.SourcePosition,
-            tremoloBeams: 0,
+            tremoloBeams: note.TremoloBeams,
             hasTieStart: note.HasTieStart,
             hasSlurStart: note.HasSlurStart,
             hasSlurEnd: note.HasSlurEnd);
     }
-    
+
     private RestItem BuildRestItem(BoundRest rest)
     {
         return new RestItem(rest.BaseDuration, rest.Dots, rest.SourcePosition);
     }
-    
+
     private ChordItem BuildChordItem(BoundChord chord)
     {
         var notes = chord.Notes
@@ -129,10 +129,10 @@ public sealed class ScoreBuilder
                 return new ChordNoteInfo(staffPosition, accidental, needsLedger);
             })
             .ToImmutableArray();
-        
-        return new ChordItem(notes, chord.BaseDuration, chord.Dots, chord.SourcePosition);
+
+        return new ChordItem(notes, chord.BaseDuration, chord.Dots, chord.SourcePosition, chord.TremoloBeams);
     }
-    
+
     private int CalculateStaffPosition(Pitch pitch)
     {
         // Staff position calculation depends on clef

@@ -19,7 +19,8 @@ public sealed record BoundNote : BoundMusic
         bool hasTieStart,
         bool hasTieEnd,
         bool hasSlurStart = false,
-        bool hasSlurEnd = false)
+        bool hasSlurEnd = false,
+        int tremoloBeams = 0)
     {
         _syntax = syntax;
         Pitch = pitch;
@@ -29,40 +30,43 @@ public sealed record BoundNote : BoundMusic
         HasTieEnd = hasTieEnd;
         HasSlurStart = hasSlurStart;
         HasSlurEnd = hasSlurEnd;
+        TremoloBeams = tremoloBeams;
     }
-    
+
     private readonly SyntaxNode? _syntax;
-    
+
     /// <inheritdoc/>
     public override SyntaxNode? Syntax => _syntax;
-    
+
     /// <summary>The absolute pitch (relative mode resolved).</summary>
     public Pitch Pitch { get; }
-    
+
     /// <summary>The base duration without dots.</summary>
     public Fraction BaseDuration { get; }
-    
+
     /// <summary>Number of dots.</summary>
     public int Dots { get; }
-    
+
     /// <summary>Whether this note starts a tie.</summary>
     public bool HasTieStart { get; }
-    
+
     /// <summary>Whether this note ends a tie.</summary>
     public bool HasTieEnd { get; }
-    
+
     /// <summary>Whether this note starts a slur.</summary>
     public bool HasSlurStart { get; }
-    
+
     /// <summary>Whether this note ends a slur.</summary>
     public bool HasSlurEnd { get; }
-    
+
+    /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo strokes).</summary>
+    public int TremoloBeams { get; }
     /// <summary>The total duration including dots.</summary>
     public Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
-    
+
     /// <summary>The staff position for rendering.</summary>
     public int StaffPosition => Pitch.StaffPosition;
-    
+
     /// <summary>The accidental string, or null if natural.</summary>
     public string? Accidental => Pitch.AccidentalString;
 }
@@ -81,18 +85,18 @@ public sealed record BoundRest : BoundMusic
         BaseDuration = duration;
         Dots = dots;
     }
-    
+
     private readonly SyntaxNode? _syntax;
-    
+
     /// <inheritdoc/>
     public override SyntaxNode? Syntax => _syntax;
-    
+
     /// <summary>The base duration without dots.</summary>
     public Fraction BaseDuration { get; }
-    
+
     /// <summary>Number of dots.</summary>
     public int Dots { get; }
-    
+
     /// <summary>The total duration including dots.</summary>
     public Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
 }
@@ -107,7 +111,7 @@ public readonly record struct BoundChordNote(
 {
     /// <summary>The staff position for rendering.</summary>
     public int StaffPosition => Pitch.StaffPosition;
-    
+
     /// <summary>The accidental string, or null if natural.</summary>
     public string? Accidental => Pitch.AccidentalString;
 }
@@ -124,28 +128,33 @@ public sealed record BoundChord : BoundMusic
         SyntaxNode? syntax,
         IReadOnlyList<BoundChordNote> notes,
         Fraction duration,
-        int dots)
+        int dots,
+        int tremoloBeams = 0)
     {
         _syntax = syntax;
         Notes = notes;
         BaseDuration = duration;
         Dots = dots;
+        TremoloBeams = tremoloBeams;
     }
-    
+
     private readonly SyntaxNode? _syntax;
-    
+
     /// <inheritdoc/>
     public override SyntaxNode? Syntax => _syntax;
-    
+
     /// <summary>The notes in this chord.</summary>
     public IReadOnlyList<BoundChordNote> Notes { get; }
-    
+
     /// <summary>The base duration without dots.</summary>
     public Fraction BaseDuration { get; }
-    
+
     /// <summary>Number of dots.</summary>
     public int Dots { get; }
-    
+
+    /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo strokes).</summary>
+    public int TremoloBeams { get; }
+
     /// <summary>The total duration including dots.</summary>
     public Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
 }

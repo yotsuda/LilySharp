@@ -88,9 +88,9 @@ master
 | 7 | 記譜記号 | 4 | 4 | 100% |
 | 8 | 歌詞配置 | 4 | 4 | 100% |
 | 9 | ページレイアウト | 3 | 3 | 100% |
-| 10 | 高度な機能 | 4 | 6 | 67% |
+| 10 | 高度な機能 | 5 | 6 | 83% |
 | 11 | グランドスタッフ | 7 | 8 | 88% |
-| **合計** | | **51** | **74** | **69%** |
+| **合計** | | **52** | **74** | **70%** |
 
 ## 📋 ステータス凡例
 
@@ -297,7 +297,7 @@ SyntaxTree
 | ArticulationRenderer.cs | ✅ | Normal | 4h | 音符位置ベース配置、staccato/accent/tenuto/marcato/fermata/portato |
 | GraceNoteRenderer.cs | ✅ | Normal | 6h | grace/acciaccatura/appoggiatura 実装完了 |
 | RepeatRenderer.cs | ✅ | Normal | 4h | 繰り返し小節線実装済み（BarlineType.RepeatStart/End） |
-| TremoloRenderer.cs | 🚀 | Normal | 4h | TremoloEngraver 基盤作成済み。パーサー対応待ち（c4:16 構文） |
+| TremoloRenderer.cs | ✅ | Normal | 4h | Binder/ScoreBuilder 連携完了。パーサー→レンダラーのパイプライン完成 |
 | OrnamentRenderer.cs | ✅ | Normal | 4h | ArticulationItem 統合完了（@trill/@mordent/@turn/@prall） |
 
 ---
@@ -386,6 +386,7 @@ SyntaxTree
 | 2026-02-04 | ✅ LyricEngraver に衝突回避機能追加。LILYPOND-REF: lyric-engraver.cc:120-140 |
 | 2026-02-04 | 🔧 lyrics-test.lys 修正: 未サポートの `\relative` 構文を削除。LilySharp はデフォルトで相対モード |
 | 2026-02-04 | ✅ Phase 8 完了: LyricHyphen.cs 実装。複数ハイフン対応、システム改行時のエクステンダー分割。LILYPOND-REF: lyric-hyphen.cc |
+| 2026-02-04 | ✅ Phase 10: Tremolo パイプライン完成。BoundNote/BoundChord に TremoloBeams 追加、Binder/ScoreBuilder 連携。:8/:16/:32 構文が NoteItem/ChordItem に伝播 |
 
 ### ⚠️ 構文注意事項
 
