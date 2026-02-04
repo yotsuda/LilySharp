@@ -119,16 +119,19 @@ public class SvgTests
     {
         var source = @"
 section A {
-    melody relative c' { c4 d e | }
+    melody { c4 d4 e4 f4 | }
 }
 structure {
     |: A :|
 }
-render score ""test.svg"" {
-    staff treble { melody }
-}
 ";
-        var svg = RenderSvg(source);
+        var tree = SyntaxTree.Parse(source);
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, "melody");
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+        var renderer = new SvgRenderer();
+        var svg = renderer.Render(score, layout);
 
         // Repeat barlines drawn as shapes: circles for dots, rects for bars
         Assert.Contains("<circle", svg);

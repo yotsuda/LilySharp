@@ -16,6 +16,15 @@ public record MeasureBoundary(
 );
 
 /// <summary>
+/// Represents a bar check warning when barline position doesn't match time signature.
+/// </summary>
+public record BarCheckWarning(
+    int SourcePosition,
+    Fraction ExpectedDuration,
+    Fraction ActualDuration
+);
+
+/// <summary>
 /// Helper class for building measures from syntax nodes.
 /// Supports both explicit barlines and automatic measure detection based on time signature.
 /// </summary>
@@ -24,12 +33,14 @@ internal sealed class MeasureBuilder
     private readonly List<Measure> _measures = new();
     private readonly List<MusicItem> _currentItems = new();
     private readonly List<MeasureBoundary> _boundaries = new();
+    private readonly List<BarCheckWarning> _barCheckWarnings = new();
 
     private readonly Fraction _timeSignature;
     private Fraction _currentDuration = Fraction.Zero;
     private Fraction _defaultDuration = Fraction.Quarter;
 
     private BarlineType _pendingStartBarline = BarlineType.None;
+    private BarlineType _pendingEndBarline = BarlineType.None;
     private bool _pendingBreak = false;
     private string? _sectionLabel;
     private int _measureSourceStart;
@@ -41,6 +52,7 @@ internal sealed class MeasureBuilder
     }
 
     public IReadOnlyList<MeasureBoundary> Boundaries => _boundaries;
+    public IReadOnlyList<BarCheckWarning> BarCheckWarnings => _barCheckWarnings;
 
     /// <summary>Current measure index (completed measures count).</summary>
     public int CurrentMeasureIndex => _measures.Count;
@@ -111,7 +123,7 @@ internal sealed class MeasureBuilder
             _measures.Add(new Measure(
                 _currentItems.ToImmutableArray(),
                 _pendingStartBarline,
-                BarlineType.Single,  // Auto-completed measures get single barline
+                _pendingEndBarline != BarlineType.None ? _pendingEndBarline : BarlineType.Single,
                 _sectionLabel,
                 _measureSourceStart,
                 sourceEnd,
@@ -127,6 +139,7 @@ internal sealed class MeasureBuilder
             _currentItems.Clear();
             _sectionLabel = null;
             _pendingStartBarline = BarlineType.None;
+            _pendingEndBarline = BarlineType.None;
             _measureSourceStart = sourceEnd;
 
             // Handle overflow: if we exceeded time signature, the excess carries over
@@ -162,68 +175,66 @@ internal sealed class MeasureBuilder
     }
 
     /// <summary>
-    /// Handles an explicit barline, completing the current measure.
+    /// Handles an explicit barline as a bar check (LilyPond style).
+    /// Does not create measures - measures are created automatically based on time signature.
+    /// Emits warnings if barline position doesn't match expected measure boundary.
     /// </summary>
     public void HandleBarline(BarlineType barType, int position)
     {
-        if (barType == BarlineType.RepeatStart)
+        // Bar check: verify current position is at a measure boundary
+        bool isAligned = _currentDuration == Fraction.Zero || _currentDuration == _timeSignature;
+
+        if (!isAligned)
         {
-            if (_currentItems.Count > 0)
-                CompleteMeasureExplicit(BarlineType.Single, position);
-            _pendingStartBarline = BarlineType.RepeatStart;
-            _measureSourceStart = position;
+            // Emit warning: barline position doesn't match time signature
+            _barCheckWarnings.Add(new BarCheckWarning(
+                position,
+                _timeSignature,
+                _currentDuration));
         }
-        else if (barType == BarlineType.RepeatEnd && _currentItems.Count == 0 && _measures.Count > 0)
+
+        // Handle special barlines by setting pending barline types
+        switch (barType)
         {
-            // :| after section end - modify last measure's end barline
-            var lastMeasure = _measures[^1];
-            _measures[^1] = new Measure(
-                lastMeasure.Items,
-                lastMeasure.StartBarline,
-                BarlineType.RepeatEnd,
-                lastMeasure.SectionLabel,
-                lastMeasure.SourceStart,
-                lastMeasure.SourceEnd);
-        }
-        else
-        {
-            CompleteMeasureExplicit(barType, position);
-        }
-    }
+            case BarlineType.RepeatStart:
+                _pendingStartBarline = BarlineType.RepeatStart;
+                break;
 
-    private void CompleteMeasureExplicit(BarlineType endBarline, int sourceEnd)
-    {
-        bool isAligned = _currentDuration == _timeSignature;
+            case BarlineType.RepeatEnd:
+                if (_currentDuration == Fraction.Zero && _measures.Count > 0)
+                {
+                    // :| at measure boundary - modify last measure's end barline
+                    var lastMeasure = _measures[^1];
+                    _measures[^1] = new Measure(
+                        lastMeasure.Items,
+                        lastMeasure.StartBarline,
+                        BarlineType.RepeatEnd,
+                        lastMeasure.SectionLabel,
+                        lastMeasure.SourceStart,
+                        lastMeasure.SourceEnd);
+                }
+                else
+                {
+                    // :| in middle of measure - set pending end barline
+                    _pendingEndBarline = BarlineType.RepeatEnd;
+                }
+                break;
 
-        if (_currentItems.Count > 0 || _pendingStartBarline != BarlineType.None)
-        {
-            // Apply pending break if any
-            bool hasBreak = _pendingBreak;
-            _pendingBreak = false;
+            case BarlineType.Double:
+                _pendingEndBarline = BarlineType.Double;
+                break;
 
-            _measures.Add(new Measure(
-                _currentItems.ToImmutableArray(),
-                _pendingStartBarline,
-                endBarline,
-                _sectionLabel,
-                _measureSourceStart,
-                sourceEnd,
-                hasBreakAfter: hasBreak));
+            case BarlineType.Final:
+                _pendingEndBarline = BarlineType.Final;
+                break;
 
-            // Record boundary with explicit flag
-            _boundaries.Add(new MeasureBoundary(
-                sourceEnd,
-                _currentDuration,
-                IsExplicit: true,
-                IsAligned: isAligned));
-
-            _currentItems.Clear();
-            _sectionLabel = null;
-            _pendingStartBarline = BarlineType.None;
-            _measureSourceStart = sourceEnd;
-            _currentDuration = Fraction.Zero;
+            // Single barline is just a check, no action needed
+            case BarlineType.Single:
+            default:
+                break;
         }
     }
+
 
     public List<Measure> FinalizeMeasures()
     {
@@ -235,7 +246,7 @@ internal sealed class MeasureBuilder
             _measures.Add(new Measure(
                 _currentItems.ToImmutableArray(),
                 _pendingStartBarline,
-                BarlineType.Single,
+                _pendingEndBarline != BarlineType.None ? _pendingEndBarline : BarlineType.Single,
                 _sectionLabel,
                 _measureSourceStart,
                 _measureSourceStart));  // End position same as start for incomplete
