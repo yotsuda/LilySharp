@@ -18,32 +18,32 @@ public sealed class SymbolTable
     private readonly Dictionary<string, PartSymbol> _parts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, VariableSymbol> _variables = new(StringComparer.Ordinal);
     private StructureSymbol? _structure;
-    
+
     /// <summary>
     /// Gets all section symbols.
     /// </summary>
     public IReadOnlyDictionary<string, SectionSymbol> Sections => _sections;
-    
+
     /// <summary>
     /// Gets all phrase symbols.
     /// </summary>
     public IReadOnlyDictionary<string, PhraseSymbol> Phrases => _phrases;
-    
+
     /// <summary>
     /// Gets all part symbols.
     /// </summary>
     public IReadOnlyDictionary<string, PartSymbol> Parts => _parts;
-    
+
     /// <summary>
     /// Gets all variable symbols.
     /// </summary>
     public IReadOnlyDictionary<string, VariableSymbol> Variables => _variables;
-    
+
     /// <summary>
     /// Gets the structure symbol, if defined.
     /// </summary>
     public StructureSymbol? Structure => _structure;
-    
+
     /// <summary>
     /// Adds a section symbol.
     /// </summary>
@@ -55,7 +55,7 @@ public sealed class SymbolTable
         _sections[symbol.Name] = symbol;
         return true;
     }
-    
+
     /// <summary>
     /// Adds a phrase symbol.
     /// </summary>
@@ -67,7 +67,7 @@ public sealed class SymbolTable
         _phrases[symbol.Name] = symbol;
         return true;
     }
-    
+
     /// <summary>
     /// Adds a part symbol.
     /// </summary>
@@ -79,7 +79,7 @@ public sealed class SymbolTable
         _parts[symbol.Name] = symbol;
         return true;
     }
-    
+
     /// <summary>
     /// Adds a variable symbol.
     /// </summary>
@@ -91,7 +91,7 @@ public sealed class SymbolTable
         _variables[symbol.Name] = symbol;
         return true;
     }
-    
+
     /// <summary>
     /// Sets the structure symbol.
     /// </summary>
@@ -103,31 +103,31 @@ public sealed class SymbolTable
         _structure = symbol;
         return true;
     }
-    
+
     /// <summary>
     /// Tries to get a section by name.
     /// </summary>
     public bool TryGetSection(string name, [NotNullWhen(true)] out SectionSymbol? symbol)
         => _sections.TryGetValue(name, out symbol);
-    
+
     /// <summary>
     /// Tries to get a phrase by name.
     /// </summary>
     public bool TryGetPhrase(string name, [NotNullWhen(true)] out PhraseSymbol? symbol)
         => _phrases.TryGetValue(name, out symbol);
-    
+
     /// <summary>
     /// Tries to get a part by name.
     /// </summary>
     public bool TryGetPart(string name, [NotNullWhen(true)] out PartSymbol? symbol)
         => _parts.TryGetValue(name, out symbol);
-    
+
     /// <summary>
     /// Tries to get a variable by name.
     /// </summary>
     public bool TryGetVariable(string name, [NotNullWhen(true)] out VariableSymbol? symbol)
         => _variables.TryGetValue(name, out symbol);
-    
+
     /// <summary>
     /// Looks up a symbol by name, searching all symbol kinds.
     /// </summary>
@@ -144,7 +144,7 @@ public sealed class SymbolTable
             return variable;
         return null;
     }
-    
+
     /// <summary>
     /// Gets all symbols as a flat collection.
     /// </summary>
@@ -156,7 +156,7 @@ public sealed class SymbolTable
         foreach (var s in _variables.Values) yield return s;
         if (_structure != null) yield return _structure;
     }
-    
+
     /// <summary>
     /// Creates an immutable snapshot of this symbol table.
     /// </summary>
@@ -187,7 +187,7 @@ public sealed record ImmutableSymbolTable(
         ImmutableDictionary<string, PartSymbol>.Empty,
         ImmutableDictionary<string, VariableSymbol>.Empty,
         null);
-    
+
     /// <summary>
     /// Looks up a symbol by name, searching all symbol kinds.
     /// </summary>

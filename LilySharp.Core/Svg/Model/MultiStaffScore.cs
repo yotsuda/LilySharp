@@ -10,38 +10,38 @@ namespace LilySharp.Core.Svg.Model;
 /// - Multiple staff groups (single staves, grand staves, bracketed groups)
 /// - Different clefs per staff
 /// - Voice-to-staff mapping
-/// 
+///
 /// This is the primary model for rendering piano, organ, and orchestral scores.
 /// </remarks>
 public sealed record MultiStaffScore
 {
     /// <summary>Staff groups in this score.</summary>
     public ImmutableArray<StaffGroup> StaffGroups { get; }
-    
+
     /// <summary>Time signature for the score.</summary>
     public TimeSignature TimeSignature { get; }
-    
+
     /// <summary>Key signature for the score.</summary>
     public KeySignature KeySignature { get; }
-    
+
     /// <summary>Tempo in BPM (optional).</summary>
     public int? Tempo { get; }
-    
+
     /// <summary>Title (optional).</summary>
     public string? Title { get; }
-    
+
     /// <summary>Composer (optional).</summary>
     public string? Composer { get; }
-    
+
     /// <summary>Whether this score has a grand staff.</summary>
     public bool HasGrandStaff => StaffGroups.Any(g => g.IsGrandStaff);
-    
+
     /// <summary>Whether this score has multiple staff groups.</summary>
     public bool IsMultiStaff => StaffGroups.Length > 1 || HasGrandStaff;
-    
+
     /// <summary>Total number of individual staves.</summary>
     public int TotalStaffCount => StaffGroups.Sum(g => g.StaffCount);
-    
+
     public MultiStaffScore(
         ImmutableArray<StaffGroup> staffGroups,
         TimeSignature timeSignature,
@@ -52,7 +52,7 @@ public sealed record MultiStaffScore
     {
         if (staffGroups.Length == 0)
             throw new ArgumentException("Score must have at least one staff group", nameof(staffGroups));
-        
+
         StaffGroups = staffGroups;
         TimeSignature = timeSignature;
         KeySignature = keySignature;
@@ -60,7 +60,7 @@ public sealed record MultiStaffScore
         Title = title;
         Composer = composer;
     }
-    
+
     /// <summary>
     /// Creates a MultiStaffScore from a single-voice Score (for backward compatibility).
     /// </summary>
@@ -69,7 +69,7 @@ public sealed record MultiStaffScore
         var clef = Staff.ParseClef(score.Clef);
         var staff = Staff.Create(clef, score.Voice);
         var staffGroup = StaffGroup.CreateSingle(staff);
-        
+
         return new MultiStaffScore(
             ImmutableArray.Create(staffGroup),
             score.TimeSignature,
@@ -78,10 +78,10 @@ public sealed record MultiStaffScore
             score.Title,
             score.Composer);
     }
-    
+
     /// <summary>Number of measures (from first staff of first group).</summary>
     public int MeasureCount => StaffGroups[0].PrimaryStaff.MeasureCount;
-    
+
     /// <summary>Gets all voices across all staves.</summary>
     public IEnumerable<Voice> AllVoices
     {
@@ -93,7 +93,7 @@ public sealed record MultiStaffScore
                 yield return voice;
         }
     }
-    
+
     /// <summary>
     /// Iterates over all staves with their group context.
     /// </summary>

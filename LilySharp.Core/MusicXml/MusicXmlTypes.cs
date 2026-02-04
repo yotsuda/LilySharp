@@ -10,7 +10,7 @@ public sealed class MusicXmlDocument
     public string? Title { get; set; }
     public string? Composer { get; set; }
     public List<MusicXmlPart> Parts { get; } = new();
-    
+
     /// <summary>
     /// Converts to XML document.
     /// </summary>
@@ -18,21 +18,21 @@ public sealed class MusicXmlDocument
     {
         var scorePartwise = new XElement("score-partwise",
             new XAttribute("version", "4.0"));
-        
+
         // Work info
         if (!string.IsNullOrEmpty(Title))
         {
             scorePartwise.Add(new XElement("work",
                 new XElement("work-title", Title)));
         }
-        
+
         // Identification
         if (!string.IsNullOrEmpty(Composer))
         {
             scorePartwise.Add(new XElement("identification",
                 new XElement("creator", new XAttribute("type", "composer"), Composer)));
         }
-        
+
         // Part list
         var partList = new XElement("part-list");
         for (int i = 0; i < Parts.Count; i++)
@@ -43,20 +43,20 @@ public sealed class MusicXmlDocument
                 new XElement("part-name", part.Name ?? $"Part {i + 1}")));
         }
         scorePartwise.Add(partList);
-        
+
         // Parts
         for (int i = 0; i < Parts.Count; i++)
         {
             scorePartwise.Add(Parts[i].ToXml($"P{i + 1}"));
         }
-        
+
         return new XDocument(
             new XDeclaration("1.0", "UTF-8", null),
             new XDocumentType("score-partwise", "-//Recordare//DTD MusicXML 4.0 Partwise//EN",
                 "http://www.musicxml.org/dtds/partwise.dtd", null),
             scorePartwise);
     }
-    
+
     /// <summary>
     /// Saves to file.
     /// </summary>
@@ -73,7 +73,7 @@ public sealed class MusicXmlPart
 {
     public string? Name { get; set; }
     public List<MusicXmlMeasure> Measures { get; } = new();
-    
+
     public XElement ToXml(string id)
     {
         var part = new XElement("part", new XAttribute("id", id));
@@ -94,20 +94,20 @@ public sealed class MusicXmlMeasure
     public MusicXmlAttributes? Attributes { get; set; }
     public MusicXmlDirection? Direction { get; set; }
     public List<MusicXmlNote> Notes { get; } = new();
-    
+
     public XElement ToXml()
     {
         var measure = new XElement("measure", new XAttribute("number", Number));
-        
+
         if (Attributes != null)
             measure.Add(Attributes.ToXml());
-        
+
         if (Direction != null)
             measure.Add(Direction.ToXml());
-        
+
         foreach (var note in Notes)
             measure.Add(note.ToXml());
-        
+
         return measure;
     }
 }
@@ -124,33 +124,33 @@ public sealed class MusicXmlAttributes
     public int? TimeBeatType { get; set; }
     public string? ClefSign { get; set; }
     public int? ClefLine { get; set; }
-    
+
     public XElement ToXml()
     {
         var attrs = new XElement("attributes",
             new XElement("divisions", Divisions));
-        
+
         if (KeyFifths.HasValue)
         {
             attrs.Add(new XElement("key",
                 new XElement("fifths", KeyFifths.Value),
                 KeyMode != null ? new XElement("mode", KeyMode) : null));
         }
-        
+
         if (TimeBeats.HasValue && TimeBeatType.HasValue)
         {
             attrs.Add(new XElement("time",
                 new XElement("beats", TimeBeats.Value),
                 new XElement("beat-type", TimeBeatType.Value)));
         }
-        
+
         if (ClefSign != null)
         {
             attrs.Add(new XElement("clef",
                 new XElement("sign", ClefSign),
                 ClefLine.HasValue ? new XElement("line", ClefLine.Value) : null));
         }
-        
+
         return attrs;
     }
 }
@@ -162,18 +162,18 @@ public sealed class MusicXmlDirection
 {
     public string? DynamicType { get; set; }
     public int? Tempo { get; set; }
-    
+
     public XElement ToXml()
     {
         var direction = new XElement("direction", new XAttribute("placement", "above"));
-        
+
         if (DynamicType != null)
         {
             direction.Add(new XElement("direction-type",
                 new XElement("dynamics",
                     new XElement(DynamicType))));
         }
-        
+
         if (Tempo.HasValue)
         {
             direction.Add(new XElement("direction-type",
@@ -182,7 +182,7 @@ public sealed class MusicXmlDirection
                     new XElement("per-minute", Tempo.Value))));
             direction.Add(new XElement("sound", new XAttribute("tempo", Tempo.Value)));
         }
-        
+
         return direction;
     }
 }
@@ -203,17 +203,17 @@ public sealed class MusicXmlNote
     public string? Dynamic { get; set; }
     public List<string> Articulations { get; } = new();
     public bool IsGrace { get; set; }
-    
+
     public XElement ToXml()
     {
         var note = new XElement("note");
-        
+
         if (IsGrace)
             note.Add(new XElement("grace"));
-        
+
         if (IsChord)
             note.Add(new XElement("chord"));
-        
+
         if (IsRest)
         {
             note.Add(new XElement("rest"));
@@ -226,16 +226,16 @@ public sealed class MusicXmlNote
                 new XElement("octave", Octave));
             note.Add(pitch);
         }
-        
+
         if (!IsGrace)
             note.Add(new XElement("duration", Duration));
-        
+
         if (Type != null)
             note.Add(new XElement("type", Type));
-        
+
         for (int i = 0; i < Dots; i++)
             note.Add(new XElement("dot"));
-        
+
         // Notations (articulations)
         if (Articulations.Count > 0)
         {
@@ -246,7 +246,7 @@ public sealed class MusicXmlNote
             notations.Add(artics);
             note.Add(notations);
         }
-        
+
         return note;
     }
 }

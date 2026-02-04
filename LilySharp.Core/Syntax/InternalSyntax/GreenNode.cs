@@ -24,7 +24,7 @@ internal abstract class GreenNode
     {
         _kind = kind;
         _children = children;
-        
+
         int width = 0;
         foreach (var child in children)
         {

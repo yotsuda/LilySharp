@@ -14,7 +14,7 @@ public sealed class RelativePitchResolver
 {
     private int _currentOctave = 4;
     private int _lastStep = 0; // C=0, D=1, ..., B=6
-    
+
     /// <summary>
     /// Initializes the resolver with a base pitch.
     /// </summary>
@@ -24,7 +24,7 @@ public sealed class RelativePitchResolver
         _lastStep = GetPitchStep(basePitch.PitchName[0]);
         _currentOctave = 4 + basePitch.OctaveOffset;
     }
-    
+
     /// <summary>
     /// Initializes the resolver with a specific pitch.
     /// </summary>
@@ -33,7 +33,7 @@ public sealed class RelativePitchResolver
         _lastStep = pitch.Step;
         _currentOctave = pitch.Octave;
     }
-    
+
     /// <summary>
     /// Resets to default state (middle C).
     /// </summary>
@@ -42,7 +42,7 @@ public sealed class RelativePitchResolver
         _currentOctave = 4;
         _lastStep = 0;
     }
-    
+
     /// <summary>
     /// Resolves a pitch syntax to an absolute pitch.
     /// </summary>
@@ -51,48 +51,48 @@ public sealed class RelativePitchResolver
     public Pitch Resolve(PitchSyntax pitch)
     {
         var step = GetPitchStep(pitch.PitchName[0]);
-        
+
         // Calculate base octave from interval (without OctaveOffset)
         // If interval > 3 (more than a fourth up), go down an octave
         // If interval < -3 (more than a fourth down), go up an octave
         int interval = step - _lastStep;
         int baseOctave = _currentOctave;
-        
+
         if (interval > 3)
             baseOctave--;
         else if (interval < -3)
             baseOctave++;
-        
+
         // Apply explicit octave markers
         int actualOctave = baseOctave + pitch.OctaveOffset;
-        
+
         // Update state for next pitch
         _lastStep = step;
         _currentOctave = actualOctave;
-        
+
         return new Pitch(step, actualOctave, pitch.AccidentalOffset);
     }
-    
+
     /// <summary>
     /// Resolves a pitch without updating state (for chord notes after the first).
     /// </summary>
     public Pitch ResolveWithoutUpdate(PitchSyntax pitch)
     {
         var step = GetPitchStep(pitch.PitchName[0]);
-        
+
         int interval = step - _lastStep;
         int baseOctave = _currentOctave;
-        
+
         if (interval > 3)
             baseOctave--;
         else if (interval < -3)
             baseOctave++;
-        
+
         int actualOctave = baseOctave + pitch.OctaveOffset;
-        
+
         return new Pitch(step, actualOctave, pitch.AccidentalOffset);
     }
-    
+
     /// <summary>
     /// Resolves multiple pitches (for chords), using the first pitch for state update.
     /// </summary>
@@ -100,7 +100,7 @@ public sealed class RelativePitchResolver
     {
         var result = new List<Pitch>();
         bool first = true;
-        
+
         foreach (var pitch in pitches)
         {
             if (first)
@@ -113,15 +113,15 @@ public sealed class RelativePitchResolver
                 result.Add(ResolveWithoutUpdate(pitch));
             }
         }
-        
+
         return result;
     }
-    
+
     /// <summary>
     /// Gets the current state as a Pitch (for debugging/testing).
     /// </summary>
     public Pitch CurrentPitch => new(_lastStep, _currentOctave, 0);
-    
+
     private static int GetPitchStep(char pitch) => char.ToLower(pitch) switch
     {
         'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3, 'g' => 4, 'a' => 5, 'b' => 6,

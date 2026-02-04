@@ -17,7 +17,7 @@ public class StemDirectionTests
         bool result = StemDirection.GetStemUp(staffPosition);
         Assert.Equal(expectedStemUp, result);
     }
-    
+
     [Theory]
     [InlineData(1, true)]   // Voice 1: always up
     [InlineData(2, false)]  // Voice 2: always down
@@ -29,19 +29,19 @@ public class StemDirectionTests
         bool result = StemDirection.GetStemUp(staffPosition: 8, voiceNumber);
         Assert.Equal(expectedStemUp, result);
     }
-    
+
     [Fact]
     public void Chord_DirectionBasedOnExtremeNotes()
     {
         // Chord spanning below middle
         var positions1 = new[] { 0, 2, 4 };
         Assert.True(StemDirection.GetStemUp(positions1));
-        
+
         // Chord spanning above middle
         var positions2 = new[] { 4, 6, 8 };
         Assert.False(StemDirection.GetStemUp(positions2));
     }
-    
+
     [Fact]
     public void Chord_BalancedAcrossMiddle_PrefersStemDown()
     {

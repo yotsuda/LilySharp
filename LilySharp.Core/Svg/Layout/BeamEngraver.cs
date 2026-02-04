@@ -14,12 +14,12 @@ namespace LilySharp.Core.Svg.Layout;
 public sealed class BeamEngraver
 {
     private readonly BeamQuantParameters _parameters;
-    
+
     public BeamEngraver(BeamQuantParameters? parameters = null)
     {
         _parameters = parameters ?? BeamQuantParameters.Default;
     }
-    
+
     /// <summary>
     /// Calculates the layout for a beam group.
     /// X positions are in staff spaces, Y positions are in staff positions.
@@ -27,24 +27,25 @@ public sealed class BeamEngraver
     public BeamLayout CalculateBeamLayout(
         BeamGroup group,
         IReadOnlyList<double> itemXPositions,
-        IReadOnlyList<BeamCollision>? collisions = null)
+        IReadOnlyList<BeamCollision>? collisions = null,
+        int staffIndex = -1)
     {
         if (group.Members.Length < 2)
             throw new ArgumentException("Beam group must have at least 2 members");
-        
+
         // Get X positions for each member
         var memberXPositions = group.Members
             .Select(m => itemXPositions[m.ItemIndex])
             .ToImmutableArray();
-        
+
         double leftX = memberXPositions[0];
         double rightX = memberXPositions[^1];
-        
+
         // Use BeamScoringProblem to find optimal beam positions
         var problem = new BeamScoringProblem(
             group, itemXPositions, _parameters, collisions);
         var (leftY, rightY) = problem.Solve();
-        
-        return new BeamLayout(group, leftY, rightY, leftX, rightX, memberXPositions);
+
+        return new BeamLayout(group, leftY, rightY, leftX, rightX, memberXPositions, staffIndex);
     }
 }

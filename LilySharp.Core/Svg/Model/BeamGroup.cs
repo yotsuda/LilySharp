@@ -10,16 +10,16 @@ public sealed record BeamGroup
 {
     /// <summary>The notes in this beam group (NoteItem or ChordItem).</summary>
     public ImmutableArray<BeamMember> Members { get; }
-    
+
     /// <summary>The measure index containing this beam group.</summary>
     public int MeasureIndex { get; }
-    
+
     /// <summary>The start index within the measure's items.</summary>
     public int StartIndex { get; }
-    
+
     /// <summary>Stem direction for the entire beam group (true = up, false = down).</summary>
     public bool StemUp { get; }
-    
+
     public BeamGroup(
         ImmutableArray<BeamMember> members,
         int measureIndex,
@@ -31,7 +31,7 @@ public sealed record BeamGroup
         StartIndex = startIndex;
         StemUp = stemUp;
     }
-    
+
     /// <summary>Gets the number of notes in this beam group.</summary>
     public int Count => Members.Length;
 }
@@ -43,34 +43,34 @@ public sealed record BeamMember
 {
     /// <summary>The underlying music item (NoteItem or ChordItem).</summary>
     public MusicItem Item { get; }
-    
+
     /// <summary>
     /// Number of beam lines at this stem.
     /// 8th=1, 16th=2, 32nd=3, 64th=4, etc.
     /// </summary>
     public int BeamCount { get; }
-    
+
     /// <summary>
     /// Number of beam lines on the left side of this stem.
     /// Used for partial beams (beamlets).
     /// </summary>
     public int BeamCountLeft { get; }
-    
+
     /// <summary>
     /// Number of beam lines on the right side of this stem.
     /// Used for partial beams (beamlets).
     /// </summary>
     public int BeamCountRight { get; }
-    
+
     /// <summary>
     /// Staff position of the note (or lowest note in chord).
     /// Used for beam slope calculation.
     /// </summary>
     public int StaffPosition { get; }
-    
+
     /// <summary>Index of this member in the measure's items.</summary>
     public int ItemIndex { get; }
-    
+
     public BeamMember(
         MusicItem item,
         int beamCount,
@@ -95,25 +95,25 @@ public sealed record BeamLayout
 {
     /// <summary>The original beam group.</summary>
     public BeamGroup Group { get; }
-    
+
     /// <summary>Y position of the beam at the first stem (in staff positions from middle line).</summary>
     public double LeftY { get; }
-    
+
     /// <summary>Y position of the beam at the last stem (in staff positions from middle line).</summary>
     public double RightY { get; }
-    
+
     /// <summary>X position of the first stem (in staff spaces).</summary>
     public double LeftX { get; }
-    
+
     /// <summary>X position of the last stem (in staff spaces).</summary>
     public double RightX { get; }
-    
+
     /// <summary>X positions for each member (in staff spaces).</summary>
     public ImmutableArray<double> MemberXPositions { get; }
-    
+
     /// <summary>Staff index for multi-staff scores (-1 for single-staff).</summary>
     public int StaffIndex { get; }
-    
+
     public BeamLayout(
         BeamGroup group,
         double leftY,
@@ -131,12 +131,12 @@ public sealed record BeamLayout
         MemberXPositions = memberXPositions;
         StaffIndex = staffIndex;
     }
-    
+
     /// <summary>Gets the slope of the beam (rise per unit run).</summary>
-    public double Slope => (RightX - LeftX) > 0.001 
-        ? (RightY - LeftY) / (RightX - LeftX) 
+    public double Slope => (RightX - LeftX) > 0.001
+        ? (RightY - LeftY) / (RightX - LeftX)
         : 0;
-    
+
     /// <summary>Gets the Y position at a given X position.</summary>
     public double GetYAtX(double x) => LeftY + Slope * (x - LeftX);
 }

@@ -70,7 +70,7 @@ public sealed class MeasureValidator
         foreach (var measure in measures)
         {
             var duration = CalculateMeasureDuration(measure.Items, ref defaultDuration);
-            
+
             if (duration != _timeSignature && duration != Fraction.Zero)
             {
                 if (duration < _timeSignature)

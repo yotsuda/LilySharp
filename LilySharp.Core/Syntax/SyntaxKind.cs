@@ -9,20 +9,20 @@ public enum SyntaxKind : ushort
     None = 0,
     EndOfFile,
     BadToken,
-    
+
     // === Trivia ===
     WhitespaceTrivia,
     LineCommentTrivia,
     BlockCommentTrivia,
     EndOfLineTrivia,
-    
+
     // === Literals ===
     IntegerLiteral,
     StringLiteral,
-    
+
     // === Identifiers ===
     Identifier,
-    
+
     // === Pitch Names ===
     PitchC,
     PitchD,
@@ -31,14 +31,14 @@ public enum SyntaxKind : ushort
     PitchG,
     PitchA,
     PitchB,
-    
+
     // === Accidentals (suffixes, not separate tokens) ===
     // Handled as part of pitch token
-    
+
     // === Duration ===
     DurationNumber,     // 1, 2, 4, 8, 16, 32, 64, 128
     Dot,                // .
-    
+
     // === Structure Keywords (no backslash) ===
     SectionKeyword,     // section
     StructureKeyword,   // structure
@@ -79,8 +79,8 @@ public enum SyntaxKind : ushort
     InstrumentKeyword,  // instrument
     ChannelKeyword,     // channel
     BreakKeyword,       // break (line break)
-    
-    
+
+
     // === Navigation Keywords (structure block) ===
     SegnoKeyword,       // segno
     FineKeyword,        // fine
@@ -89,7 +89,7 @@ public enum SyntaxKind : ushort
     DsKeyword,          // ds
     AlKeyword,          // al
     ToKeyword,          // to
-    
+
     // === Mode Keywords ===
     DorianKeyword,      // dorian
     PhrygianKeyword,    // phrygian
@@ -97,15 +97,15 @@ public enum SyntaxKind : ushort
     MixolydianKeyword,  // mixolydian
     AeolianKeyword,     // aeolian
     LocrianKeyword,     // locrian
-    
+
     // === Rest ===
     RestR,              // r
     RestS,              // s (spacer)
     RestR_Full,         // R (full measure)
-    
+
     // === String Number (for tablature) ===
     StringNumber,       // \1, \2, \3, \4, \5, \6
-    
+
     // === Punctuation ===
     OpenBrace,          // {
     CloseBrace,         // }
@@ -135,7 +135,7 @@ public enum SyntaxKind : ushort
     Dollar,             // $
     DoubleOpenAngle,    // <<
     DoubleCloseAngle,   // >>
-    
+
     // === Articulation Names ===
     StaccatoKeyword,
     AccentKeyword,
@@ -143,7 +143,7 @@ public enum SyntaxKind : ushort
     MarcatoKeyword,
     FermataKeyword,
     PortatoKeyword,
-    
+
     // === Ornament Names ===
     TrillKeyword,       // @trill
     MordentKeyword,     // @mordent
@@ -152,7 +152,7 @@ public enum SyntaxKind : ushort
     InvertedTurnKeyword, // @invertedturn
     PrallTrillKeyword,  // @pralltriller (short trill)
     TremoloKeyword,     // @tremolo (stem tremolo)
-    
+
     // === Dynamics (with backslash) ===
     DynamicPPP,         // \ppp
     DynamicPP,          // \pp
@@ -165,7 +165,7 @@ public enum SyntaxKind : ushort
     CrescKeyword,       // \cresc
     DecrescKeyword,     // \decresc
     DimKeyword,         // \dim
-    
+
     // === Nodes: Top Level ===
     CompilationUnit,
     MetadataDeclaration,
@@ -173,7 +173,7 @@ public enum SyntaxKind : ushort
     PhraseDeclaration,      // phrase name { ... }
     PartDeclaration,        // part name { props }
     VariableReference,
-    
+
     // === Nodes: New Structure ===
     SectionDeclaration,         // section Name { ... }
     StructureDeclaration,       // structure { ... }
@@ -196,48 +196,48 @@ public enum SyntaxKind : ushort
     StructureAlternative,       // 1. A, 2. B in structure
     NavigationMark,             // segno, fine, coda, dc, ds (legacy)
     MusicMark,                  // @segno, @fine, @ds.al.fine (new)
-    
+
     // === Nodes: Legacy Structure ===
     ScoreDeclaration,
     StaffDeclaration,
     VoiceDeclaration,
-    
+
     // === Nodes: Music Content ===
     MusicBlock,
-    
+
     // === Nodes: Notes and Rests ===
     Note,
     Rest,
     Chord,
     Pitch,
     Duration,
-    
+
     // === Nodes: Articulations ===
     Articulation,
     Dynamic,
-    
+
     // === Nodes: Other Music ===
     Barline,
     Break,              // line break
     Tie,
     Slur,
-    
+
     // === Nodes: Repeat and Parallel ===
     RepeatExpression,
     AlternativeClause,
     ParallelExpression,
-    
+
     // === Nodes: Properties ===
     PropertyAssignment,
     TimeSignature,
     TempoDeclaration,
     KeySignature,
     ClefDeclaration,
-    
+
     // === Nodes: Tuplet and Grace ===
     TupletExpression,
     GraceExpression,
-    
+
     // === Nodes: Tablature ===
     TabStaffDeclaration,
     TuningDeclaration,

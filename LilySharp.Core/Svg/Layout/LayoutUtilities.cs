@@ -116,7 +116,7 @@ public static class LayoutUtilities
     /// <remarks>
     /// LILYPOND-REF: lily/page-layout-problem.cc:434
     /// header_height_ = head ? head->extent(Y_AXIS).length() : 0;
-    /// 
+    ///
     /// SVG text coordinates specify the baseline, which is approximately
     /// the bottom of the text (excluding descenders). Therefore:
     /// - Title at y=MarginTop has its bottom at MarginTop

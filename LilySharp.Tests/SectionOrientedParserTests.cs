@@ -12,7 +12,7 @@ public class SectionOrientedParserTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseSectionDeclaration_Simple()
     {
@@ -23,7 +23,7 @@ section Intro {
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseSectionDeclaration_WithKeyAndTempo()
     {
@@ -37,7 +37,7 @@ section A {
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseStructureDeclaration_Simple()
     {
@@ -50,7 +50,7 @@ structure {
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseStructureDeclaration_WithNavigation()
     {
@@ -66,7 +66,7 @@ structure {
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseRenderDeclaration_Staff()
     {
@@ -77,7 +77,7 @@ render full ""output.svg"" {
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseRenderDeclaration_Tab()
     {
@@ -89,7 +89,7 @@ render guitarTab ""guitar.svg"" {
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseRenderDeclaration_Midi()
     {
@@ -101,7 +101,7 @@ render audio ""song.mid"" {
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseCompleteFile_NewStyle()
     {

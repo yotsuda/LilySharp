@@ -17,13 +17,13 @@ public sealed class StructureExpander
 {
     private readonly ImmutableSymbolTable _symbols;
     private readonly List<SemanticDiagnostic> _diagnostics;
-    
+
     public StructureExpander(ImmutableSymbolTable symbols, List<SemanticDiagnostic> diagnostics)
     {
         _symbols = symbols;
         _diagnostics = diagnostics;
     }
-    
+
     /// <summary>
     /// Expands a structure declaration into a flat sequence of music nodes.
     /// </summary>
@@ -32,7 +32,7 @@ public sealed class StructureExpander
     public ExpandedStructure Expand(StructureDeclarationSyntax structure)
     {
         var parts = new Dictionary<string, List<SyntaxNode>>();
-        
+
         foreach (var child in structure.DescendantNodes())
         {
             switch (child)
@@ -40,26 +40,26 @@ public sealed class StructureExpander
                 case StructureRepeatBlockSyntax repeatBlock:
                     ExpandRepeatBlock(repeatBlock, parts);
                     break;
-                    
+
                 case SectionReferenceSyntax sectionRef when child.Parent is StructureDeclarationSyntax:
                     // Direct section reference (not inside repeat block)
                     ExpandSectionReference(sectionRef, parts);
                     break;
             }
         }
-        
+
         return new ExpandedStructure(
             parts.ToImmutableDictionary(
-                kv => kv.Key, 
+                kv => kv.Key,
                 kv => kv.Value.ToImmutableArray()));
     }
-    
+
     private void ExpandRepeatBlock(StructureRepeatBlockSyntax repeatBlock, Dictionary<string, List<SyntaxNode>> parts)
     {
         // Collect sections and alternatives from the repeat block
         var sections = new List<SectionReferenceSyntax>();
         var alternatives = new List<StructureAlternativeSyntax>();
-        
+
         foreach (var child in repeatBlock.DescendantNodes())
         {
             switch (child)
@@ -72,7 +72,7 @@ public sealed class StructureExpander
                     break;
             }
         }
-        
+
         // Remove sections that are part of alternatives
         var sectionsInAlternatives = alternatives
             .Select(a => a.SectionName.Text)
@@ -80,12 +80,12 @@ public sealed class StructureExpander
         var mainSections = sections
             .Where(s => !sectionsInAlternatives.Contains(s.SectionName))
             .ToList();
-        
+
         // Determine repeat count based on alternatives
-        int repeatCount = alternatives.Count > 0 
-            ? alternatives.Max(a => a.AlternativeNumber) 
+        int repeatCount = alternatives.Count > 0
+            ? alternatives.Max(a => a.AlternativeNumber)
             : 2;
-        
+
         // Expand: main sections + appropriate alternative for each iteration
         for (int iteration = 1; iteration <= repeatCount; iteration++)
         {
@@ -94,7 +94,7 @@ public sealed class StructureExpander
             {
                 ExpandSectionReference(section, parts);
             }
-            
+
             // Add appropriate alternative
             var alt = alternatives.FirstOrDefault(a => a.AlternativeNumber == iteration);
             if (alt != null)
@@ -114,11 +114,11 @@ public sealed class StructureExpander
             }
         }
     }
-    
+
     private void ExpandSectionReference(SectionReferenceSyntax sectionRef, Dictionary<string, List<SyntaxNode>> parts)
     {
         var sectionName = sectionRef.SectionName;
-        
+
         if (_symbols.Sections.TryGetValue(sectionName, out var section))
         {
             AddSectionContent(section, parts);
@@ -131,13 +131,13 @@ public sealed class StructureExpander
                 sectionRef.Position));
         }
     }
-    
+
     private void AddSectionContent(SectionSymbol section, Dictionary<string, List<SyntaxNode>> parts)
     {
         // Add section start marker to reset pitch resolver
         // Section can contain multiple part blocks (e.g., rightHand, leftHand)
         var hasPartBlocks = section.Body.Any(n => n is PartBlockSyntax);
-        
+
         if (!hasPartBlocks)
         {
             // Add marker to default part
@@ -146,7 +146,7 @@ public sealed class StructureExpander
                 parts[defaultPart] = new List<SyntaxNode>();
             parts[defaultPart].Add(SectionStartMarkerSyntax.Create(section.DeclarationSyntax.Position));
         }
-        
+
         foreach (var node in section.Body)
         {
             if (node is PartBlockSyntax partBlock)
@@ -154,10 +154,10 @@ public sealed class StructureExpander
                 var partName = partBlock.Name;
                 if (!parts.ContainsKey(partName))
                     parts[partName] = new List<SyntaxNode>();
-                
+
                 // Add section start marker for this part
                 parts[partName].Add(SectionStartMarkerSyntax.Create(section.DeclarationSyntax.Position));
-                
+
                 // Add the music content from the part block
                 foreach (var child in partBlock.DescendantNodes())
                 {
@@ -173,7 +173,7 @@ public sealed class StructureExpander
                 const string defaultPart = "";
                 if (!parts.ContainsKey(defaultPart))
                     parts[defaultPart] = new List<SyntaxNode>();
-                    
+
                 if (node is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax)
                 {
                     parts[defaultPart].Add(node);
@@ -194,22 +194,22 @@ public sealed record ExpandedStructure(
     /// </summary>
     public ImmutableArray<SyntaxNode> GetPart(string partName)
         => Parts.TryGetValue(partName, out var nodes) ? nodes : ImmutableArray<SyntaxNode>.Empty;
-    
+
     /// <summary>
     /// Gets all part names.
     /// </summary>
     public IEnumerable<string> PartNames => Parts.Keys;
-    
+
     /// <summary>
     /// True if this is a single-part (non-multi-staff) score.
     /// </summary>
     public bool IsSinglePart => Parts.Count <= 1;
-    
+
     /// <summary>
     /// Gets the default part (empty name) or the first part.
     /// </summary>
-    public ImmutableArray<SyntaxNode> DefaultPart 
-        => Parts.TryGetValue("", out var nodes) ? nodes 
-         : Parts.Count > 0 ? Parts.Values.First() 
+    public ImmutableArray<SyntaxNode> DefaultPart
+        => Parts.TryGetValue("", out var nodes) ? nodes
+         : Parts.Count > 0 ? Parts.Values.First()
          : ImmutableArray<SyntaxNode>.Empty;
 }

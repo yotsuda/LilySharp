@@ -5,11 +5,11 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/skyline.cc:32-46, 98-176 Building struct
-/// 
+///
 /// A building is defined by:
 /// - X range: [XLeft, XRight]
 /// - Roof line: y = Slope * x + YIntercept
-/// 
+///
 /// The height at any x is: Height(x) = Slope * x + YIntercept
 /// For horizontal buildings (most common), Slope = 0.
 /// </remarks>
@@ -19,7 +19,7 @@ public readonly struct Building
     public double XRight { get; }
     public double Slope { get; }
     public double YIntercept { get; }
-    
+
     /// <summary>
     /// Creates a sloped building.
     /// </summary>
@@ -32,7 +32,7 @@ public readonly struct Building
     {
         XLeft = xLeft;
         XRight = xRight;
-        
+
         // LILYPOND-REF: lily/skyline.cc:116-138 precompute()
         if (double.IsInfinity(xLeft) || double.IsInfinity(xRight))
         {
@@ -57,7 +57,7 @@ public readonly struct Building
             else
             {
                 Slope = (endHeight - startHeight) / length;
-                
+
                 // Too steep - treat as horizontal at max height
                 if (Math.Abs(Slope) > 1e6)
                 {
@@ -71,7 +71,7 @@ public readonly struct Building
             }
         }
     }
-    
+
     /// <summary>
     /// Creates a horizontal building (constant height).
     /// </summary>
@@ -79,7 +79,7 @@ public readonly struct Building
         : this(xLeft, height, height, xRight)
     {
     }
-    
+
     /// <summary>
     /// Creates a building from a bounding box.
     /// </summary>
@@ -97,7 +97,7 @@ public readonly struct Building
         double height = direction == VerticalDirection.Up ? -yTop : yBottom;
         return new Building(xLeft, xRight, height);
     }
-    
+
     /// <summary>
     /// Returns the height of the building at the given x coordinate.
     /// </summary>
@@ -106,7 +106,7 @@ public readonly struct Building
     {
         return double.IsInfinity(x) ? YIntercept : Slope * x + YIntercept;
     }
-    
+
     /// <summary>
     /// Computes the x coordinate where this building intersects with another.
     /// </summary>
@@ -114,14 +114,14 @@ public readonly struct Building
     public double IntersectionX(Building other)
     {
         double slopeDelta = other.Slope - Slope;
-        
+
         // If slopes are very close, avoid division by small number
         if (Math.Abs(slopeDelta) < 1e-4)
             return Math.Max(XLeft, other.XLeft);
-        
+
         return (YIntercept - other.YIntercept) / slopeDelta;
     }
-    
+
     /// <summary>
     /// Returns true if this building is above the other at the given x coordinate.
     /// </summary>
@@ -130,10 +130,10 @@ public readonly struct Building
     {
         if (double.IsInfinity(YIntercept) || double.IsInfinity(other.YIntercept) || double.IsInfinity(x))
             return YIntercept > other.YIntercept;
-        
+
         return (Slope - other.Slope) * x + YIntercept > other.YIntercept;
     }
-    
+
     /// <summary>
     /// Creates a copy with modified X range.
     /// </summary>
@@ -144,7 +144,7 @@ public readonly struct Building
         double endHeight = Height(newRight);
         return new Building(newLeft, startHeight, endHeight, newRight);
     }
-    
+
     public override string ToString()
         => $"Building[{XLeft:F2}, {XRight:F2}] y = {Slope:F4}x + {YIntercept:F2}";
 }
@@ -168,7 +168,7 @@ public enum VerticalDirection
 /// <remarks>
 /// LILYPOND-REF: lily/skyline.hh:48-100 Skyline class
 /// LILYPOND-REF: lily/skyline.cc:1-700 Skyline implementation
-/// 
+///
 /// A skyline is a sequence of non-overlapping buildings covering [-∞, +∞].
 /// For UP skylines, we keep the highest roof at each x.
 /// For DOWN skylines, we keep the lowest floor at each x.
@@ -177,26 +177,26 @@ public sealed class VerticalSkyline
 {
     private readonly List<Building> _buildings;
     private readonly VerticalDirection _direction;
-    
+
     private const double NegativeInfinity = double.NegativeInfinity;
     private const double PositiveInfinity = double.PositiveInfinity;
-    
+
     public VerticalSkyline(VerticalDirection direction)
     {
         _buildings = new List<Building>();
         _direction = direction;
     }
-    
+
     private VerticalSkyline(List<Building> buildings, VerticalDirection direction)
     {
         _buildings = buildings;
         _direction = direction;
     }
-    
+
     public VerticalDirection Direction => _direction;
     public bool IsEmpty => _buildings.Count == 0;
     public IReadOnlyList<Building> Buildings => _buildings;
-    
+
     /// <summary>
     /// Creates a skyline from a single bounding box.
     /// </summary>
@@ -207,22 +207,22 @@ public sealed class VerticalSkyline
         skyline.AddBuilding(building);
         return skyline;
     }
-    
+
     /// <summary>
     /// Creates a skyline from a sloped region (e.g., beam).
     /// </summary>
     /// <remarks>
     /// Uses LilyPond sign convention: UP heights are negative, DOWN heights are positive.
     /// </remarks>
-    public static VerticalSkyline FromSlope(double xLeft, double yLeft, double xRight, double yRight, 
+    public static VerticalSkyline FromSlope(double xLeft, double yLeft, double xRight, double yRight,
         double thickness, VerticalDirection direction)
     {
         if (direction == VerticalDirection.Up)
         {
             // UP skyline: top edge with negative heights (LilyPond convention)
-            return new VerticalSkyline(new List<Building> 
-            { 
-                new Building(xLeft, -yLeft, -yRight, xRight) 
+            return new VerticalSkyline(new List<Building>
+            {
+                new Building(xLeft, -yLeft, -yRight, xRight)
             }, direction);
         }
         else
@@ -230,13 +230,13 @@ public sealed class VerticalSkyline
             // DOWN skyline: bottom edge with positive heights (LilyPond convention)
             double bottomLeft = yLeft + thickness;
             double bottomRight = yRight + thickness;
-            return new VerticalSkyline(new List<Building> 
-            { 
-                new Building(xLeft, bottomLeft, bottomRight, xRight) 
+            return new VerticalSkyline(new List<Building>
+            {
+                new Building(xLeft, bottomLeft, bottomRight, xRight)
             }, direction);
         }
     }
-    
+
     /// <summary>
     /// Adds a building to the skyline, merging as necessary.
     /// </summary>
@@ -258,7 +258,7 @@ public sealed class VerticalSkyline
             MergeInternal(other._buildings);
         }
     }
-    
+
     /// <summary>
     /// Merges another skyline into this one.
     /// </summary>
@@ -267,24 +267,24 @@ public sealed class VerticalSkyline
     {
         if (other._direction != _direction)
             throw new ArgumentException("Cannot merge skylines with different directions");
-        
+
         if (other.IsEmpty) return;
-        
+
         if (IsEmpty)
         {
             _buildings.AddRange(other._buildings);
             return;
         }
-        
+
         MergeInternal(other._buildings);
     }
-    
+
     /// <summary>
     /// Core merge algorithm - merges another building list into this skyline.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/skyline.cc:178-260 internal_merge_skyline()
-    /// 
+    ///
     /// Simplified approach: collect all buildings, sort by X, and rebuild
     /// keeping the "above" one at each point. This is O(n log n) instead of
     /// LilyPond's O(n) but simpler and correct.
@@ -297,15 +297,15 @@ public sealed class VerticalSkyline
             _buildings.AddRange(otherBuildings);
             return;
         }
-        
+
         // Collect all buildings and sort by left X
         var allBuildings = new List<Building>(_buildings);
         allBuildings.AddRange(otherBuildings);
         allBuildings.Sort((a, b) => a.XLeft.CompareTo(b.XLeft));
-        
+
         // Rebuild skyline keeping highest at each point
         var result = new List<Building>();
-        
+
         foreach (var building in allBuildings)
         {
             if (double.IsNegativeInfinity(building.Height(building.XLeft)) &&
@@ -314,16 +314,16 @@ public sealed class VerticalSkyline
                 // Empty building, skip
                 continue;
             }
-            
+
             if (result.Count == 0)
             {
                 result.Add(building);
                 continue;
             }
-            
+
             // Try to merge with last building
             var last = result[^1];
-            
+
             if (building.XLeft >= last.XRight)
             {
                 // No overlap, just add
@@ -335,11 +335,11 @@ public sealed class VerticalSkyline
                 MergeOverlapping(result, building);
             }
         }
-        
+
         _buildings.Clear();
         _buildings.AddRange(result);
     }
-    
+
     /// <summary>
     /// Merges a new building with the existing result, handling overlaps.
     /// </summary>
@@ -354,31 +354,31 @@ public sealed class VerticalSkyline
             else
                 break;
         }
-        
+
         if (firstOverlap < 0)
         {
             result.Add(newBuilding);
             return;
         }
-        
+
         // Extract overlapping buildings
         var overlapping = new List<Building>();
         for (int i = firstOverlap; i < result.Count; i++)
             overlapping.Add(result[i]);
         result.RemoveRange(firstOverlap, result.Count - firstOverlap);
-        
+
         // Merge newBuilding with overlapping buildings
         var merged = MergeBuildingSet(overlapping, newBuilding);
         result.AddRange(merged);
     }
-    
+
     /// <summary>
     /// Merges a set of overlapping buildings with a new building.
     /// </summary>
     private List<Building> MergeBuildingSet(List<Building> existing, Building newBuilding)
     {
         var result = new List<Building>();
-        
+
         // Collect all boundary points
         var boundaries = new SortedSet<double>();
         foreach (var b in existing)
@@ -388,34 +388,34 @@ public sealed class VerticalSkyline
         }
         if (!double.IsInfinity(newBuilding.XLeft)) boundaries.Add(newBuilding.XLeft);
         if (!double.IsInfinity(newBuilding.XRight)) boundaries.Add(newBuilding.XRight);
-        
+
         // Add intersection points
         foreach (var b in existing)
         {
             if (Math.Abs(b.Slope - newBuilding.Slope) > 1e-6)
             {
                 double ix = b.IntersectionX(newBuilding);
-                if (ix > Math.Max(b.XLeft, newBuilding.XLeft) && 
+                if (ix > Math.Max(b.XLeft, newBuilding.XLeft) &&
                     ix < Math.Min(b.XRight, newBuilding.XRight))
                 {
                     boundaries.Add(ix);
                 }
             }
         }
-        
+
         var boundaryList = boundaries.ToList();
-        
+
         // For each interval, find the "above" building
         for (int i = 0; i < boundaryList.Count - 1; i++)
         {
             double left = boundaryList[i];
             double right = boundaryList[i + 1];
             double mid = (left + right) / 2;
-            
+
             // Find highest building at midpoint
             Building? best = null;
             double bestHeight = double.NegativeInfinity;
-            
+
             foreach (var b in existing)
             {
                 if (b.XLeft <= mid && mid <= b.XRight)
@@ -428,7 +428,7 @@ public sealed class VerticalSkyline
                     }
                 }
             }
-            
+
             if (newBuilding.XLeft <= mid && mid <= newBuilding.XRight)
             {
                 double h = newBuilding.Height(mid);
@@ -438,11 +438,11 @@ public sealed class VerticalSkyline
                     bestHeight = h;
                 }
             }
-            
+
             if (best.HasValue)
             {
                 var segment = best.Value.WithXRange(left, right);
-                
+
                 // Try to merge with previous segment
                 if (result.Count > 0)
                 {
@@ -452,19 +452,19 @@ public sealed class VerticalSkyline
                         Math.Abs(last.Height(last.XRight) - segment.Height(segment.XLeft)) < 1e-10)
                     {
                         // Continuous - merge
-                        result[^1] = new Building(last.XLeft, last.Height(last.XLeft), 
+                        result[^1] = new Building(last.XLeft, last.Height(last.XLeft),
                             segment.Height(segment.XRight), segment.XRight);
                         continue;
                     }
                 }
-                
+
                 result.Add(segment);
             }
         }
-        
+
         return result;
     }
-    
+
     /// <summary>
     /// Returns true if height h1 is "better" than h2 for this skyline direction.
     /// </summary>
@@ -479,7 +479,7 @@ public sealed class VerticalSkyline
     {
         return h1 > h2;  // Same for both directions with LilyPond sign convention
     }
-    
+
     /// <summary>
     /// Returns true if a is above b at x, considering skyline direction.
     /// </summary>
@@ -492,7 +492,7 @@ public sealed class VerticalSkyline
     {
         return a.Above(b, x);  // Same for both directions with LilyPond sign convention
     }
-    
+
     /// <summary>
     /// Raises the skyline by the given amount.
     /// </summary>
@@ -505,7 +505,7 @@ public sealed class VerticalSkyline
             _buildings[i] = new Building(b.XLeft, b.XRight, b.YIntercept + delta);
         }
     }
-    
+
     /// <summary>
     /// Shifts the skyline horizontally.
     /// </summary>
@@ -522,26 +522,26 @@ public sealed class VerticalSkyline
             _buildings[i] = new Building(newLeft, heightAtNewLeft, heightAtNewRight, newRight);
         }
     }
-    
+
     /// <summary>
     /// Sets a minimum height for the skyline.
     /// </summary>
     public void SetMinimumHeight(double height)
     {
         double targetHeight = (int)_direction * height;
-        
+
         if (_buildings.Count == 0)
         {
             _buildings.Add(new Building(NegativeInfinity, PositiveInfinity, targetHeight));
             return;
         }
-        
+
         for (int i = 0; i < _buildings.Count; i++)
         {
             var b = _buildings[i];
             double leftHeight = b.Height(b.XLeft);
             double rightHeight = b.Height(b.XRight);
-            
+
             if (_direction == VerticalDirection.Up)
             {
                 leftHeight = Math.Max(leftHeight, targetHeight);
@@ -552,11 +552,11 @@ public sealed class VerticalSkyline
                 leftHeight = Math.Min(leftHeight, targetHeight);
                 rightHeight = Math.Min(rightHeight, targetHeight);
             }
-            
+
             _buildings[i] = new Building(b.XLeft, leftHeight, rightHeight, b.XRight);
         }
     }
-    
+
     /// <summary>
     /// Calculates the distance between this skyline and another of opposite direction.
     /// </summary>
@@ -565,12 +565,12 @@ public sealed class VerticalSkyline
     {
         if (_direction == other._direction)
             throw new ArgumentException("Distance requires skylines with opposite directions");
-        
+
         if (IsEmpty || other.IsEmpty)
             return NegativeInfinity;
-        
+
         double maxDistance = NegativeInfinity;
-        
+
         foreach (var b1 in _buildings)
         {
             foreach (var b2 in other._buildings)
@@ -578,13 +578,13 @@ public sealed class VerticalSkyline
                 // Find X overlap
                 double overlapLeft = Math.Max(b1.XLeft, b2.XLeft);
                 double overlapRight = Math.Min(b1.XRight, b2.XRight);
-                
+
                 if (overlapLeft < overlapRight)
                 {
                     // Sample heights at key points within overlap
-                    double[] xSamples = { overlapLeft, overlapRight, 
+                    double[] xSamples = { overlapLeft, overlapRight,
                         (overlapLeft + overlapRight) / 2 };
-                    
+
                     foreach (double x in xSamples)
                     {
                         if (x >= overlapLeft && x <= overlapRight)
@@ -595,7 +595,7 @@ public sealed class VerticalSkyline
                             maxDistance = Math.Max(maxDistance, dist);
                         }
                     }
-                    
+
                     // Also check intersection point if slopes differ
                     if (Math.Abs(b1.Slope - b2.Slope) > 1e-6)
                     {
@@ -610,10 +610,10 @@ public sealed class VerticalSkyline
                 }
             }
         }
-        
+
         return maxDistance;
     }
-    
+
     /// <summary>
     /// Returns the extreme height of this skyline in real Y coordinates.
     /// </summary>
@@ -626,29 +626,29 @@ public sealed class VerticalSkyline
     /// </remarks>
     public double MaxHeight()
     {
-        if (IsEmpty) 
+        if (IsEmpty)
             return _direction == VerticalDirection.Up ? PositiveInfinity : NegativeInfinity;
-        
+
         // Find maximum internal height across all buildings
         double maxInternalHeight = NegativeInfinity;
         foreach (var b in _buildings)
         {
             double hLeft = b.Height(b.XLeft);
             double hRight = b.Height(b.XRight);
-            
+
             if (!double.IsNegativeInfinity(hLeft))
                 maxInternalHeight = Math.Max(maxInternalHeight, hLeft);
             if (!double.IsNegativeInfinity(hRight))
                 maxInternalHeight = Math.Max(maxInternalHeight, hRight);
         }
-        
+
         // Convert to real Y coordinate: sky * internal_height
         // UP (sky=-1): negative internal -> positive real Y (but we want smallest Y)
         // DOWN (sky=+1): positive internal -> positive real Y
         int sky = (int)_direction;  // UP=-1, DOWN=+1
         return sky * maxInternalHeight;
     }
-    
+
     /// <summary>
     /// Returns the height at a specific x coordinate in real Y coordinates.
     /// </summary>
@@ -666,7 +666,7 @@ public sealed class VerticalSkyline
                 return sky * b.Height(x);
             }
         }
-        
+
         return _direction == VerticalDirection.Up ? PositiveInfinity : NegativeInfinity;
     }
 }

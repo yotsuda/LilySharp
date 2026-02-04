@@ -24,7 +24,7 @@ public sealed class SemanticCompiler
         // Phase 1: Symbol Collection
         var collector = new SymbolCollector();
         var symbolResult = collector.Collect(tree);
-        
+
         if (!symbolResult.Success)
         {
             return new CompilationResult(
@@ -32,11 +32,11 @@ public sealed class SemanticCompiler
                 symbolResult.Diagnostics,
                 symbolResult.Symbols);
         }
-        
+
         // Phase 2: Binding
         var binder = new Binder();
         var boundScore = binder.Bind(tree, symbolResult.Symbols);
-        
+
         if (!boundScore.Success)
         {
             return new CompilationResult(
@@ -44,18 +44,18 @@ public sealed class SemanticCompiler
                 boundScore.Diagnostics,
                 symbolResult.Symbols);
         }
-        
+
         // Phase 3: Score Building
         var clef = boundScore.Metadata.Clef;
         var builder = new ScoreBuilder(clef);
         var score = builder.Build(boundScore);
-        
+
         return new CompilationResult(
             score,
             boundScore.Diagnostics,
             symbolResult.Symbols);
     }
-    
+
     /// <summary>
     /// Compiles source code to a Score.
     /// </summary>

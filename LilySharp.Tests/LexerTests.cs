@@ -123,7 +123,7 @@ public class LexerTests
 
         Assert.Equal(SyntaxKind.PitchC, tokens[0].Kind);
         Assert.Equal(SyntaxKind.PitchD, tokens[1].Kind);
-        
+
         // Comment should be in trivia
         var firstToken = tokens[0];
         Assert.NotNull(firstToken.TrailingTrivia);

@@ -9,14 +9,14 @@ namespace LilySharp.Core.MusicXml;
 public sealed class MusicXmlExporter
 {
     private const int DivisionsPerQuarter = 4;
-    
+
     private int _currentOctave = 4;
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _measureNumber = 1;
     private MusicXmlMeasure? _currentMeasure;
     private MusicXmlPart? _currentPart;
     private MusicXmlDocument? _document;
-    
+
     private int _tempo = 120;
     private int _timeNumerator = 4;
     private int _timeDenominator = 4;
@@ -31,25 +31,25 @@ public sealed class MusicXmlExporter
         _document = new MusicXmlDocument();
         _currentPart = new MusicXmlPart { Name = "Part 1" };
         _document.Parts.Add(_currentPart);
-        
+
         StartNewMeasure();
-        
+
         var root = tree.GetRoot();
         ProcessNode(root);
-        
+
         // Ensure last measure is added
         if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
         {
             _currentPart.Measures.Add(_currentMeasure);
         }
-        
+
         return _document;
     }
 
     private void StartNewMeasure()
     {
         _currentMeasure = new MusicXmlMeasure { Number = _measureNumber++ };
-        
+
         // Add attributes on first measure
         if (_measureNumber == 2)
         {
@@ -63,7 +63,7 @@ public sealed class MusicXmlExporter
                 ClefSign = _clefSign,
                 ClefLine = _clefLine
             };
-            
+
             _currentMeasure.Direction = new MusicXmlDirection { Tempo = _tempo };
         }
     }
@@ -76,44 +76,44 @@ public sealed class MusicXmlExporter
                 foreach (var member in unit.Members)
                     ProcessNode(member);
                 break;
-                
+
             case TimeSignatureSyntax timeSig:
                 ProcessTimeSignature(timeSig);
                 break;
-                
+
             case TempoDeclarationSyntax tempo:
                 ProcessTempo(tempo);
                 break;
-                
+
             case MetadataDeclarationSyntax metadata:
                 ProcessMetadata(metadata);
                 break;
-                
+
             case KeySignatureSyntax key:
                 ProcessKeySignature(key);
                 break;
-                
+
             case ClefDeclarationSyntax clef:
                 ProcessClef(clef);
                 break;
-                
+
             case MusicBlockSyntax block:
                 foreach (var item in block.Items)
                     ProcessNode(item);
                 break;
-                
+
             case NoteSyntax note:
                 ProcessNote(note);
                 break;
-                
+
             case ChordSyntax chord:
                 ProcessChord(chord);
                 break;
-                
+
             case RestSyntax rest:
                 ProcessRest(rest);
                 break;
-                
+
             case BarlineSyntax:
                 if (_currentMeasure != null && _currentPart != null)
                 {
@@ -121,11 +121,11 @@ public sealed class MusicXmlExporter
                     StartNewMeasure();
                 }
                 break;
-                
+
             case DynamicSyntax dynamic:
                 _currentDynamic = dynamic.DynamicToken.Text;
                 break;
-                
+
             default:
                 for (int i = 0; i < node.SlotCount; i++)
                 {
@@ -152,9 +152,9 @@ public sealed class MusicXmlExporter
     private void ProcessMetadata(MetadataDeclarationSyntax metadata)
     {
         if (_document == null) return;
-        
+
         var keyword = metadata.Keyword.ToLowerInvariant();
-        
+
         if (keyword == "title" && metadata.StringValue is string title)
             _document.Title = title;
         else if (keyword == "composer" && metadata.StringValue is string composer)
@@ -165,7 +165,7 @@ public sealed class MusicXmlExporter
     {
         var pitch = key.Pitch?.ToFullString().Trim().ToLower();
         var isMajor = key.IsMajor;
-        
+
         _keyFifths = pitch switch
         {
             "c" => isMajor ? 0 : -3,
@@ -202,16 +202,16 @@ public sealed class MusicXmlExporter
     private void ProcessNote(NoteSyntax note)
     {
         if (_currentMeasure == null) return;
-        
+
         var (step, alter) = ParsePitch(note.Pitch);
         int octaveChange = note.Pitch.OctaveOffset;
         int targetOctave = _currentOctave + octaveChange;
         _currentOctave = targetOctave;
-        
+
         var duration = GetDuration(note.Duration);
         int durationTicks = FractionToTicks(duration);
         var (type, dots) = GetNoteType(duration);
-        
+
         var xmlNote = new MusicXmlNote
         {
             Step = step,
@@ -222,7 +222,7 @@ public sealed class MusicXmlExporter
             Dots = dots,
             Dynamic = _currentDynamic
         };
-        
+
         foreach (var artic in note.Articulations)
         {
             if (artic is ArticulationSyntax articulation)
@@ -244,28 +244,28 @@ public sealed class MusicXmlExporter
                 _currentDynamic = dynamic.DynamicToken.Text;
             }
         }
-        
+
         _currentMeasure.Notes.Add(xmlNote);
     }
 
     private void ProcessChord(ChordSyntax chord)
     {
         if (_currentMeasure == null) return;
-        
+
         var pitches = chord.Pitches.ToList();
         if (pitches.Count == 0) return;
-        
+
         var duration = GetDuration(chord.Duration);
         int durationTicks = FractionToTicks(duration);
         var (type, dots) = GetNoteType(duration);
-        
+
         bool isFirst = true;
         foreach (var pitch in pitches)
         {
             var (step, alter) = ParsePitch(pitch);
             int octaveChange = pitch.OctaveOffset;
             int targetOctave = _currentOctave + octaveChange;
-            
+
             var xmlNote = new MusicXmlNote
             {
                 Step = step,
@@ -277,7 +277,7 @@ public sealed class MusicXmlExporter
                 IsChord = !isFirst,
                 Dynamic = isFirst ? _currentDynamic : null
             };
-            
+
             // Add articulations only to the first note
             if (isFirst)
             {
@@ -303,9 +303,9 @@ public sealed class MusicXmlExporter
                     }
                 }
             }
-            
+
             _currentMeasure.Notes.Add(xmlNote);
-            
+
             if (isFirst)
             {
                 _currentOctave = targetOctave;
@@ -317,11 +317,11 @@ public sealed class MusicXmlExporter
     private void ProcessRest(RestSyntax rest)
     {
         if (_currentMeasure == null) return;
-        
+
         var duration = GetDuration(rest.Duration);
         int durationTicks = FractionToTicks(duration);
         var (type, dots) = GetNoteType(duration);
-        
+
         var xmlNote = new MusicXmlNote
         {
             IsRest = true,
@@ -329,7 +329,7 @@ public sealed class MusicXmlExporter
             Type = type,
             Dots = dots
         };
-        
+
         _currentMeasure.Notes.Add(xmlNote);
     }
 
@@ -355,14 +355,14 @@ public sealed class MusicXmlExporter
     {
         int dots = 0;
         int baseDenom = (int)duration.Denominator;
-        
+
         // Check for dotted notes
         if (duration.Numerator == 3 && duration.Denominator % 2 == 0)
         {
             dots = 1;
             baseDenom = (int)(duration.Denominator / 2);
         }
-        
+
         string type = baseDenom switch
         {
             1 => "whole",
@@ -374,7 +374,7 @@ public sealed class MusicXmlExporter
             64 => "64th",
             _ => "quarter"
         };
-        
+
         return (type, dots);
     }
 }

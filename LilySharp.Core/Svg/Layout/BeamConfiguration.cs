@@ -8,19 +8,19 @@ public sealed class BeamConfiguration
 {
     /// <summary>Y position at left end (in staff spaces).</summary>
     public double LeftY { get; set; }
-    
+
     /// <summary>Y position at right end (in staff spaces).</summary>
     public double RightY { get; set; }
-    
+
     /// <summary>Total demerit score (lower is better).</summary>
     public double Demerits { get; set; }
-    
+
     /// <summary>Score breakdown for debugging.</summary>
     public string ScoreCard { get; set; } = string.Empty;
-    
+
     /// <summary>Next scorer to evaluate.</summary>
     internal int NextScorerTodo { get; set; }
-    
+
     /// <summary>Creates a new beam configuration.</summary>
     public BeamConfiguration(double leftY, double rightY)
     {
@@ -29,10 +29,10 @@ public sealed class BeamConfiguration
         Demerits = 0.0;
         NextScorerTodo = 0;
     }
-    
+
     /// <summary>Checks if all scorers have been applied.</summary>
     public bool IsDone => NextScorerTodo >= (int)BeamScorer.NumScorers;
-    
+
     /// <summary>Adds a demerit with reason for debugging.</summary>
     public void AddDemerit(double demerit, string reason)
     {
@@ -41,13 +41,13 @@ public sealed class BeamConfiguration
             ScoreCard += "; ";
         ScoreCard += $"{reason}: {demerit:F2}";
     }
-    
+
     /// <summary>Creates a new configuration with offset.</summary>
     public static BeamConfiguration CreateWithOffset(double leftY, double rightY, double leftOffset, double rightOffset)
     {
         return new BeamConfiguration(leftY + leftOffset, rightY + rightOffset);
     }
-    
+
     /// <summary>Gets the slope of this beam configuration.</summary>
     public double GetSlope(double xSpan)
     {
@@ -55,7 +55,7 @@ public sealed class BeamConfiguration
             return 0.0;
         return (RightY - LeftY) / xSpan;
     }
-    
+
     /// <summary>Gets Y position at a given X coordinate.</summary>
     public double GetYAt(double x, double leftX, double xSpan)
     {

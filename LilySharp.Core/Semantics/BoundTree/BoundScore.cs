@@ -54,22 +54,22 @@ public sealed record BoundScore
         Metadata = metadata;
         Diagnostics = diagnostics;
     }
-    
+
     /// <summary>All voices in the score.</summary>
     public ImmutableArray<BoundVoice> Voices { get; }
-    
+
     /// <summary>The primary voice (first voice).</summary>
     public BoundVoice PrimaryVoice => Voices.Length > 0 ? Voices[0] : new BoundVoice("", ImmutableArray<BoundMeasure>.Empty);
-    
+
     /// <summary>Score metadata (title, tempo, etc.).</summary>
     public BoundScoreMetadata Metadata { get; }
-    
+
     /// <summary>Diagnostic messages from semantic analysis.</summary>
     public ImmutableArray<SemanticDiagnostic> Diagnostics { get; }
-    
+
     /// <summary>Whether binding succeeded without errors.</summary>
     public bool Success => !Diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
-    
+
     /// <summary>Creates an empty score.</summary>
     public static BoundScore Empty => new(
         ImmutableArray<BoundVoice>.Empty,

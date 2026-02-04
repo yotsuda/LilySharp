@@ -12,7 +12,7 @@ public class SectionOrientedTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
-    
+
     [Fact]
     public void ParseSectionDeclaration()
     {
@@ -24,7 +24,7 @@ public class SectionOrientedTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
-    
+
     [Fact]
     public void ParseSectionWithMultipleParts()
     {
@@ -37,7 +37,7 @@ public class SectionOrientedTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
-    
+
     [Fact]
     public void ParseSectionWithKeyAndTempo()
     {
@@ -51,7 +51,7 @@ public class SectionOrientedTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
-    
+
     [Fact]
     public void ParseStructureDeclaration()
     {
@@ -64,7 +64,7 @@ public class SectionOrientedTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
-    
+
     [Fact]
     public void ParseStructureWithNavigationMarks()
     {
@@ -82,7 +82,7 @@ public class SectionOrientedTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
-    
+
     [Fact]
     public void ParseRenderDeclaration()
     {
@@ -96,7 +96,7 @@ public class SectionOrientedTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
-    
+
     [Fact]
     public void ParseRenderWithTabAndStaff()
     {
@@ -111,7 +111,7 @@ public class SectionOrientedTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
-    
+
     [Fact]
     public void ParseRenderMidi()
     {
@@ -125,7 +125,7 @@ public class SectionOrientedTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
-    
+
     [Fact]
     public void ParseCompleteFile()
     {
@@ -134,26 +134,26 @@ public class SectionOrientedTests
             tempo 120
             time 4/4
             key c major
-            
+
             guitar_riff = { c4 d e f }
-            
+
             section Intro {
                 guitar { guitar_riff }
                 bass { c,4 g, c, g, }
             }
-            
+
             section A {
                 key g major
                 guitar { g4 a b c' }
                 bass { g,4 d, g, d, }
             }
-            
+
             structure {
                 Intro
                 A
                 fine
             }
-            
+
             render full "test.svg" {
                 staff { guitar }
                 tab guitar { guitar }

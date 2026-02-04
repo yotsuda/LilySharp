@@ -127,7 +127,7 @@ public abstract class SyntaxNode
             SyntaxKind.TabStaffDeclaration => new TabStaffDeclarationSyntax((TabStaffDeclarationGreen)green, this, position),
             SyntaxKind.TuningDeclaration => new TuningDeclarationSyntax((TuningDeclarationGreen)green, this, position),
             SyntaxKind.StringNumberAnnotation => new StringNumberAnnotationSyntax((StringNumberAnnotationGreen)green, this, position),
-            
+
             // Section/Structure/Render declarations
             SyntaxKind.SectionDeclaration => new SectionDeclarationSyntax((SectionDeclarationGreen)green, this, position),
             SyntaxKind.PartBlock => new PartBlockSyntax((PartBlockGreen)green, this, position),
@@ -140,7 +140,7 @@ public abstract class SyntaxNode
             SyntaxKind.StaffRender => new StaffRenderSyntax((StaffRenderGreen)green, this, position),
             SyntaxKind.GrandStaffRender => new GrandStaffRenderSyntax((GrandStaffRenderGreen)green, this, position),
             SyntaxKind.TabRender => new TabRenderSyntax((TabRenderGreen)green, this, position),
-            
+
             _ => new GenericSyntaxNode(green, this, position)
         };
     }

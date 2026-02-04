@@ -12,7 +12,7 @@ public class BenchmarkTest
 {
     private readonly ITestOutputHelper _output;
     public BenchmarkTest(ITestOutputHelper output) => _output = output;
-    
+
     private static string RenderSvg(SyntaxTree tree)
     {
         var collector = new MeasureCollector();
@@ -23,17 +23,18 @@ public class BenchmarkTest
         return renderer.Render(score, layout);
     }
 
-    [Fact]
+    [Fact(Skip = "Benchmark test - run manually")]
+    [Trait("Category", "Benchmark")]
     public void BenchmarkFurElise()
     {
         var source = File.ReadAllText(@"../../../../samples/fur-elise.lys");
-        
+
         // Warmup
         for (int i = 0; i < 3; i++) {
             var tree = SyntaxTree.Parse(source);
             var svg = RenderSvg(tree);
         }
-        
+
         // Benchmark
         var times = new List<double>();
         for (int i = 0; i < 10; i++) {
@@ -43,7 +44,7 @@ public class BenchmarkTest
             sw.Stop();
             times.Add(sw.Elapsed.TotalMilliseconds);
         }
-        
+
         _output.WriteLine($"Parse + SVG Export (fur-elise.lys, 10 runs):");
         _output.WriteLine($"  Min: {times.Min():F2} ms");
         _output.WriteLine($"  Max: {times.Max():F2} ms");

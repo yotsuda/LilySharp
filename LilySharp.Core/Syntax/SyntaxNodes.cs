@@ -98,12 +98,12 @@ public sealed class PitchSyntax : SyntaxNode
     /// The base pitch letter (c, d, e, f, g, a, b) without accidentals.
     /// </summary>
     public char BaseName => char.ToLower(PitchName[0]);
-    
+
     /// <summary>
     /// The accidental suffix (is, es, isis, eses, s, as) or empty string.
     /// </summary>
     public string Accidental => PitchName.Length > 1 ? PitchName[1..] : string.Empty;
-    
+
     /// <summary>
     /// Gets the accidental as semitone offset (-2 to +2).
     /// </summary>
@@ -139,7 +139,7 @@ public sealed class DurationSyntax : SyntaxNode
     /// Number of dots.
     /// </summary>
     public int DotCount => SlotCount - 1;
-    
+
     /// <summary>
     /// Converts to a Fraction representing the duration.
     /// </summary>
@@ -159,12 +159,12 @@ public sealed class NoteSyntax : SyntaxNode
 
     public PitchSyntax Pitch => (PitchSyntax)GetChild(0)!;
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
-    
+
     /// <summary>
     /// Gets the tremolo suffix (:8, :16, :32) if present.
     /// </summary>
     public SyntaxTokenNode? Tremolo => GetChild(2) as SyntaxTokenNode;
-    
+
     /// <summary>
     /// Gets the articulations and dynamics attached to this note.
     /// </summary>
@@ -217,7 +217,7 @@ public sealed class ChordSyntax : SyntaxNode
             }
         }
     }
-    
+
     /// <summary>
     /// Gets the duration of the chord (after the closing angle bracket).
     /// </summary>
@@ -233,7 +233,7 @@ public sealed class ChordSyntax : SyntaxNode
             return null;
         }
     }
-    
+
     /// <summary>
     /// Gets the tremolo suffix (:8, :16, :32) if present.
     /// </summary>
@@ -250,7 +250,7 @@ public sealed class ChordSyntax : SyntaxNode
             return null;
         }
     }
-    
+
     /// <summary>
     /// Gets the articulations attached to this chord.
     /// </summary>
@@ -373,12 +373,12 @@ public sealed class TimeSignatureSyntax : SyntaxNode
     public SyntaxTokenNode Numerator => (SyntaxTokenNode)GetChild(1)!;
     public SyntaxTokenNode Slash => (SyntaxTokenNode)GetChild(2)!;
     public SyntaxTokenNode Denominator => (SyntaxTokenNode)GetChild(3)!;
-    
+
     /// <summary>
     /// Gets the numerator value (e.g., 4 for 4/4).
     /// </summary>
     public int Beats => int.TryParse(Numerator.Text, out var n) ? n : 4;
-    
+
     /// <summary>
     /// Gets the denominator value (e.g., 4 for 4/4).
     /// </summary>
@@ -396,7 +396,7 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode TempoKeyword => (SyntaxTokenNode)GetChild(0)!;
-    
+
     /// <summary>
     /// Gets all value tokens after the keyword.
     /// </summary>
@@ -412,7 +412,7 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
             }
         }
     }
-    
+
     /// <summary>
     /// Gets the tempo marking string (e.g., "Allegro"), if present.
     /// </summary>
@@ -428,7 +428,7 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
             return null;
         }
     }
-    
+
     /// <summary>
     /// Gets the BPM value, if present.
     /// </summary>
@@ -440,7 +440,7 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
             int? lastInt = null;
             foreach (var value in Values)
             {
-                if (value is SyntaxTokenNode token && 
+                if (value is SyntaxTokenNode token &&
                     (token.Kind == SyntaxKind.IntegerLiteral || token.Kind == SyntaxKind.DurationNumber))
                 {
                     if (int.TryParse(token.Text, out var n))
@@ -450,7 +450,7 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
             return lastInt;
         }
     }
-    
+
     /// <summary>
     /// Gets the beat unit (e.g., 4 for quarter note), if present.
     /// </summary>
@@ -492,12 +492,12 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
-    
+
     /// <summary>
     /// Gets the keyword text (e.g., "title", "tempo", "time").
     /// </summary>
     public string Keyword => KeywordToken.Text;
-    
+
     /// <summary>
     /// Gets all value tokens after the keyword.
     /// </summary>
@@ -513,7 +513,7 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
             }
         }
     }
-    
+
     /// <summary>
     /// Gets the first string literal value, if any.
     /// </summary>
@@ -529,7 +529,7 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
             return null;
         }
     }
-    
+
     /// <summary>
     /// Gets the first integer value, if any.
     /// </summary>
@@ -539,7 +539,7 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
         {
             foreach (var value in Values)
             {
-                if (value is SyntaxTokenNode token && 
+                if (value is SyntaxTokenNode token &&
                     (token.Kind == SyntaxKind.IntegerLiteral || token.Kind == SyntaxKind.DurationNumber))
                 {
                     if (int.TryParse(token.Text, out var result))
@@ -564,7 +564,7 @@ public sealed class VariableDeclarationSyntax : SyntaxNode
     // New style (3 slots): name = expression
     // Legacy style (4 slots): let name = expression
     private bool IsLegacyStyle => SlotCount == 4;
-    
+
     public SyntaxTokenNode? LetKeyword => IsLegacyStyle ? (SyntaxTokenNode)GetChild(0)! : null;
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(IsLegacyStyle ? 1 : 0)!;
     public SyntaxTokenNode EqualsToken => (SyntaxTokenNode)GetChild(IsLegacyStyle ? 2 : 1)!;
@@ -599,10 +599,10 @@ public sealed class PartDeclarationSyntax : SyntaxNode
     // With body: keyword name { props } = 5+ slots
     // Without body: keyword name = 2 slots
     private bool HasBody => SlotCount > 2;
-    
+
     public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
-    
+
     // Properties are between braces if HasBody
     public IEnumerable<PropertyAssignmentSyntax> Properties
     {
@@ -661,7 +661,7 @@ public sealed class AlternativeClauseSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode AlternativeKeyword => (SyntaxTokenNode)GetChild(0)!;
-    
+
     public IEnumerable<MusicBlockSyntax> Alternatives
     {
         get
@@ -687,7 +687,7 @@ public sealed class ParallelExpressionSyntax : SyntaxNode
 
     public SyntaxTokenNode OpenAngle => (SyntaxTokenNode)GetChild(0)!;
     public SyntaxTokenNode CloseAngle => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
-    
+
     /// <summary>
     /// Gets the voice expressions (music blocks or relative expressions between \\).
     /// </summary>
@@ -718,7 +718,7 @@ public sealed class KeySignatureSyntax : SyntaxNode
     public SyntaxTokenNode KeyKeyword => (SyntaxTokenNode)GetChild(0)!;
     public PitchSyntax Pitch => (PitchSyntax)GetChild(1)!;
     public SyntaxTokenNode Mode => (SyntaxTokenNode)GetChild(2)!;
-    
+
     public bool IsMajor => Mode.Kind == SyntaxKind.MajorKeyword;
 }
 
@@ -751,12 +751,12 @@ public sealed class TupletExpressionSyntax : SyntaxNode
     public SyntaxTokenNode Slash => (SyntaxTokenNode)GetChild(2)!;
     public SyntaxTokenNode Denominator => (SyntaxTokenNode)GetChild(3)!;
     public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(4)!;
-    
+
     /// <summary>
     /// Gets the tuplet ratio (e.g., 3 for triplets)
     /// </summary>
     public int TupletRatio => int.TryParse(Numerator.Text, out int n) ? n : 3;
-    
+
     /// <summary>
     /// Gets the base division (e.g., 2 for triplets in place of 2)
     /// </summary>
@@ -775,12 +775,12 @@ public sealed class GraceExpressionSyntax : SyntaxNode
 
     public SyntaxTokenNode GraceKeyword => (SyntaxTokenNode)GetChild(0)!;
     public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(1)!;
-    
+
     /// <summary>
     /// True if this is an acciaccatura (slashed grace note)
     /// </summary>
     public bool IsAcciaccatura => GraceKeyword.Kind == SyntaxKind.AcciaccaturaKeyword;
-    
+
     /// <summary>
     /// True if this is an appoggiatura (unslashed grace note)
     /// </summary>
@@ -826,7 +826,7 @@ public sealed class ArticulationSyntax : SyntaxNode
 
     public SyntaxTokenNode AtToken => (SyntaxTokenNode)GetChild(0)!;
     public SyntaxTokenNode NameToken => (SyntaxTokenNode)GetChild(1)!;
-    
+
     /// <summary>
     /// Gets the articulation type.
     /// </summary>
@@ -860,7 +860,7 @@ public sealed class DynamicSyntax : SyntaxNode
 
     public SyntaxTokenNode BackslashToken => (SyntaxTokenNode)GetChild(0)!;
     public SyntaxTokenNode DynamicToken => (SyntaxTokenNode)GetChild(1)!;
-    
+
     /// <summary>
     /// Gets the dynamic level.
     /// </summary>
@@ -881,9 +881,9 @@ public sealed class DynamicSyntax : SyntaxNode
                 SyntaxKind.DynamicFFF => DynamicLevel.FFF,
                 _ => DynamicLevel.None
             };
-            
+
             if (byKind != DynamicLevel.None) return byKind;
-            
+
             // Fallback to text matching (for pitch tokens used as dynamics like \f)
             return DynamicToken.Text switch
             {
@@ -899,7 +899,7 @@ public sealed class DynamicSyntax : SyntaxNode
             };
         }
     }
-    
+
     /// <summary>
     /// Gets the MIDI velocity value for this dynamic.
     /// </summary>
@@ -938,7 +938,7 @@ public sealed partial class TuningDeclarationSyntax : SyntaxNode
     public SyntaxTokenNode BackslashToken => (SyntaxTokenNode)GetChild(0)!;
     public SyntaxTokenNode TuningKeyword => (SyntaxTokenNode)GetChild(1)!;
     public SyntaxTokenNode TuningName => (SyntaxTokenNode)GetChild(2)!;
-    
+
     /// <summary>
     /// Gets the tuning type.
     /// </summary>
@@ -963,7 +963,7 @@ public sealed partial class StringNumberAnnotationSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode StringNumberToken => (SyntaxTokenNode)GetChild(0)!;
-    
+
     /// <summary>
     /// Gets the string number (1-based).
     /// </summary>
@@ -986,7 +986,7 @@ public sealed partial class SectionDeclarationSyntax : SyntaxNode
 
     public SyntaxTokenNode SectionKeyword => (SyntaxTokenNode)GetChild(0)!;
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
-    
+
     /// <summary>
     /// Gets the section name as a string.
     /// </summary>
@@ -1004,7 +1004,7 @@ public sealed partial class PartBlockSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode PartName => (SyntaxTokenNode)GetChild(0)!;
-    
+
     /// <summary>
     /// Gets the part name as a string.
     /// </summary>
@@ -1035,7 +1035,7 @@ public sealed partial class SectionReferenceSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode Identifier => (SyntaxTokenNode)GetChild(0)!;
-    
+
     /// <summary>
     /// Gets the referenced section name.
     /// </summary>
@@ -1067,18 +1067,18 @@ public sealed partial class StructureAlternativeSyntax : SyntaxNode
     /// True if this is bracket style [1. A], false if legacy style 1. A
     /// </summary>
     public bool HasBracket => ((SyntaxTokenNode)GetChild(0)!).Kind == SyntaxKind.OpenBracket;
-    
+
     /// <summary>
     /// True if this has a range separator (- or ,) like [1-3. A] or [1,3. A]
     /// </summary>
     public bool HasSeparator => HasBracket && SlotCount == 7;
-    
+
     /// <summary>
     /// Gets the number token.
     /// Legacy: slot[0], Bracket: slot[1]
     /// </summary>
     public SyntaxTokenNode Number => (SyntaxTokenNode)GetChild(HasBracket ? 1 : 0)!;
-    
+
     /// <summary>
     /// Gets the section name token.
     /// Legacy (3 slots): slot[2]
@@ -1086,10 +1086,10 @@ public sealed partial class StructureAlternativeSyntax : SyntaxNode
     /// Bracket with separator (7 slots): slot[5]
     /// </summary>
     public SyntaxTokenNode SectionName => (SyntaxTokenNode)GetChild(
-        HasBracket 
-            ? (HasSeparator ? 5 : 3) 
+        HasBracket
+            ? (HasSeparator ? 5 : 3)
             : 2)!;
-    
+
     /// <summary>
     /// Gets the alternative number.
     /// </summary>
@@ -1105,7 +1105,7 @@ public sealed partial class NavigationMarkSyntax : SyntaxNode
         : base(green, parent, position)
     {
     }
-    
+
     /// <summary>
     /// Gets the type of navigation mark.
     /// </summary>
@@ -1121,12 +1121,12 @@ public sealed partial class NavigationMarkSyntax : SyntaxNode
                 SyntaxKind.CodaKeyword => NavigationMarkType.Coda,
                 SyntaxKind.ToKeyword => NavigationMarkType.ToCoda,
                 SyntaxKind.DcKeyword => SlotCount == 1 ? NavigationMarkType.DaCapo :
-                    ((SyntaxTokenNode)GetChild(2)!).Kind == SyntaxKind.FineKeyword 
-                        ? NavigationMarkType.DaCapoAlFine 
+                    ((SyntaxTokenNode)GetChild(2)!).Kind == SyntaxKind.FineKeyword
+                        ? NavigationMarkType.DaCapoAlFine
                         : NavigationMarkType.DaCapoAlCoda,
                 SyntaxKind.DsKeyword => SlotCount == 1 ? NavigationMarkType.DalSegno :
-                    ((SyntaxTokenNode)GetChild(2)!).Kind == SyntaxKind.FineKeyword 
-                        ? NavigationMarkType.DalSegnoAlFine 
+                    ((SyntaxTokenNode)GetChild(2)!).Kind == SyntaxKind.FineKeyword
+                        ? NavigationMarkType.DalSegnoAlFine
                         : NavigationMarkType.DalSegnoAlCoda,
                 _ => NavigationMarkType.Segno
             };
@@ -1188,7 +1188,7 @@ public sealed partial class GrandStaffRenderSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode GrandStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
-    
+
     /// <summary>
     /// Gets the staff render items (at least 2 required, validated semantically).
     /// </summary>
@@ -1255,7 +1255,7 @@ public sealed class SectionStartMarkerSyntax : SyntaxNode
         : base(green, parent, position)
     {
     }
-    
+
     /// <summary>
     /// Creates a new instance of SectionStartMarkerSyntax.
     /// </summary>

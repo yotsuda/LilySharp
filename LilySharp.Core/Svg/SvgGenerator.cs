@@ -22,39 +22,39 @@ public static class SvgGenerator
     {
         options ??= SvgRenderOptions.Default;
         var renderer = new SvgRenderer(renderOptions: options);
-        
+
         // Find render specification - by name if specified, otherwise first
-        var renderSpec = string.IsNullOrEmpty(renderName) 
+        var renderSpec = string.IsNullOrEmpty(renderName)
             ? RenderSpecParser.FindFirst(tree)
             : RenderSpecParser.FindByName(tree, renderName);
-        
+
         if (renderSpec != null && renderSpec.IsMultiStaff)
         {
             // Multi-staff rendering (grandStaff, etc.)
             var collector = new MeasureCollector();
             var multiScore = collector.CollectMultiStaff(tree, renderSpec);
-            
+
             var layoutEngine = new LayoutEngine();
             var layout = layoutEngine.Layout(multiScore);
-            
+
             return renderer.Render(multiScore, layout);
         }
         else
         {
             // Single staff - get voiceName from renderSpec if available
             string? voiceName = null;
-            if (renderSpec != null && renderSpec.Items.Length == 1 && 
+            if (renderSpec != null && renderSpec.Items.Length == 1 &&
                 renderSpec.Items[0] is SingleStaffSpec single)
             {
                 voiceName = single.Staff.VoiceName;
             }
-            
+
             var collector = new MeasureCollector();
             var score = collector.Collect(tree, voiceName);
-            
+
             var layoutEngine = new LayoutEngine();
             var layout = layoutEngine.Layout(score);
-            
+
             return renderer.Render(score, layout);
         }
     }

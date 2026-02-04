@@ -17,13 +17,13 @@ public static class EmmentalerGlyphs
     public const char FClef8vb = '\uE084';        // clefs.F_change
     public const char FClef8va = '\uE083';        // same as FClef
     public const char CClef = '\uE07F';           // clefs.C
-    
+
     // === Note heads ===
     public const char NoteheadWhole = '\uE0E8';       // noteheads.s0
     public const char NoteheadHalf = '\uE0E9';        // noteheads.s1
     public const char NoteheadBlack = '\uE0EA';       // noteheads.s2
     public const char NoteheadDoubleWhole = '\uE0E6'; // noteheads.sM1
-    
+
     // === Rests ===
     public const char RestMaxima = '\uE004';      // rests.M3
     public const char RestLonga = '\uE005';       // rests.M2
@@ -36,14 +36,14 @@ public static class EmmentalerGlyphs
     public const char Rest32nd = '\uE00D';        // rests.5
     public const char Rest64th = '\uE00E';        // rests.6
     public const char Rest128th = '\uE00F';       // rests.7
-    
+
     // === Accidentals ===
     public const char AccidentalFlat = '\uE021';         // accidentals.flat
     public const char AccidentalNatural = '\uE01D';      // accidentals.natural
     public const char AccidentalSharp = '\uE013';        // accidentals.sharp
     public const char AccidentalDoubleSharp = '\uE01C';  // accidentals.doublesharp
     public const char AccidentalDoubleFlat = '\uE02A';   // accidentals.flatflat
-    
+
     // === Flags ===
     public const char Flag8thUp = '\uE0D2';       // flags.u3
     public const char Flag8thDown = '\uE0DA';     // flags.d3
@@ -55,10 +55,10 @@ public static class EmmentalerGlyphs
     public const char Flag64thDown = '\uE0DD';    // flags.d6
     public const char Flag128thUp = '\uE0D6';     // flags.u7
     public const char Flag128thDown = '\uE0DE';   // flags.d7
-    
+
     // === Augmentation dot ===
     public const char AugmentationDot = '\uE038'; // dots.dot
-    
+
     // === Time signatures (fattened digits) ===
     public const char TimeSig0 = '\uE0B4';        // fattened.zero
     public const char TimeSig1 = '\uE0B5';        // fattened.one
@@ -72,7 +72,7 @@ public static class EmmentalerGlyphs
     public const char TimeSig9 = '\uE0BF';        // fattened.nine
     public const char TimeSigCommon = '\uE091';   // timesig.C44
     public const char TimeSigCutCommon = '\uE092'; // timesig.C22
-    
+
     // === Dynamics (text-based in Emmentaler) ===
     public const char DynamicPiano = 'p';
     public const char DynamicMezzo = 'm';
@@ -80,7 +80,7 @@ public static class EmmentalerGlyphs
     public const char DynamicRinforzando = 'r';
     public const char DynamicSforzando = 's';
     public const char DynamicZ = 'z';
-    
+
     // === Articulations ===
     public const char ArticAccentAbove = '\uE048';
     public const char ArticAccentBelow = '\uE048';
@@ -90,7 +90,7 @@ public static class EmmentalerGlyphs
     public const char ArticTenutoBelow = '\uE04D';
     public const char ArticMarcatoAbove = '\uE050';
     public const char ArticMarcatoBelow = '\uE051';
-    
+
     // === Metronome (use regular noteheads) ===
     public const char MetNoteDoubleWhole = '\uE0E6';
     public const char MetNoteWhole = '\uE0E8';
@@ -98,10 +98,10 @@ public static class EmmentalerGlyphs
     public const char MetNoteQuarterUp = '\uE0EA';
     public const char MetNote8thUp = '\uE0EA';
     public const char MetNote16thUp = '\uE0EA';
-    
+
     // === Repeat dots ===
     public const char RepeatDots = '\uE038';
-    
+
     /// <summary>Gets the time signature digit glyph.</summary>
     public static char GetTimeSigDigit(int digit) => digit switch
     {
@@ -109,7 +109,7 @@ public static class EmmentalerGlyphs
         5 => TimeSig5, 6 => TimeSig6, 7 => TimeSig7, 8 => TimeSig8, 9 => TimeSig9,
         _ => TimeSig0
     };
-    
+
     /// <summary>Gets the rest glyph for a given note value.</summary>
     public static char GetRest(int noteValue) => noteValue switch
     {
@@ -117,13 +117,13 @@ public static class EmmentalerGlyphs
         16 => Rest16th, 32 => Rest32nd, 64 => Rest64th, 128 => Rest128th,
         _ => RestQuarter
     };
-    
+
     /// <summary>Gets the notehead glyph for a given note value.</summary>
     public static char GetNotehead(int noteValue) => noteValue switch
     {
         1 => NoteheadWhole, 2 => NoteheadHalf, _ => NoteheadBlack
     };
-    
+
     /// <summary>Gets the flag glyph for a given note value and stem direction.</summary>
     public static char? GetFlag(int noteValue, bool stemUp) => noteValue switch
     {

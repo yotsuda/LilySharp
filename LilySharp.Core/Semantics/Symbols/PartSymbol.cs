@@ -29,27 +29,27 @@ public sealed record PartSymbol : Symbol
         _declaringSyntax = declaringSyntax;
         Properties = properties;
     }
-    
+
     private readonly string _name;
     private readonly SyntaxNode _declaringSyntax;
-    
+
     /// <inheritdoc/>
     public override string Name => _name;
-    
+
     /// <inheritdoc/>
     public override SymbolKind Kind => SymbolKind.Part;
-    
+
     /// <inheritdoc/>
     public override SyntaxNode DeclaringSyntax => _declaringSyntax;
-    
+
     /// <summary>
     /// The properties defined for this part (e.g., clef, key).
     /// </summary>
     public ImmutableDictionary<string, string> Properties { get; }
-    
+
     /// <summary>
     /// Gets a property value, or null if not defined.
     /// </summary>
-    public string? GetProperty(string name) => 
+    public string? GetProperty(string name) =>
         Properties.TryGetValue(name, out var value) ? value : null;
 }

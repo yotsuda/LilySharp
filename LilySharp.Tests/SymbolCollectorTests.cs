@@ -13,9 +13,9 @@ public class SymbolCollectorTests
         var source = "";
         var tree = SyntaxTree.Parse(source);
         var collector = new SymbolCollector();
-        
+
         var result = collector.Collect(tree);
-        
+
         Assert.True(result.Success);
         Assert.Empty(result.Symbols.Sections);
         Assert.Empty(result.Symbols.Phrases);
@@ -23,7 +23,7 @@ public class SymbolCollectorTests
         Assert.Empty(result.Symbols.Variables);
         Assert.Null(result.Symbols.Structure);
     }
-    
+
     [Fact]
     public void Collect_SingleSection_AddsToTable()
     {
@@ -33,19 +33,19 @@ section A {
 }";
         var tree = SyntaxTree.Parse(source);
         var collector = new SymbolCollector();
-        
+
         var result = collector.Collect(tree);
-        
+
         Assert.True(result.Success);
         Assert.Single(result.Symbols.Sections);
         Assert.True(result.Symbols.Sections.ContainsKey("A"));
-        
+
         var section = result.Symbols.Sections["A"];
         Assert.Equal("A", section.Name);
         Assert.Equal(SymbolKind.Section, section.Kind);
         Assert.NotEmpty(section.Body);
     }
-    
+
     [Fact]
     public void Collect_MultipleSections_AddsAllToTable()
     {
@@ -63,16 +63,16 @@ section Chorus {
 }";
         var tree = SyntaxTree.Parse(source);
         var collector = new SymbolCollector();
-        
+
         var result = collector.Collect(tree);
-        
+
         Assert.True(result.Success);
         Assert.Equal(3, result.Symbols.Sections.Count);
         Assert.True(result.Symbols.Sections.ContainsKey("A"));
         Assert.True(result.Symbols.Sections.ContainsKey("B"));
         Assert.True(result.Symbols.Sections.ContainsKey("Chorus"));
     }
-    
+
     [Fact]
     public void Collect_DuplicateSection_ReportsError()
     {
@@ -86,15 +86,15 @@ section A {
 }";
         var tree = SyntaxTree.Parse(source);
         var collector = new SymbolCollector();
-        
+
         var result = collector.Collect(tree);
-        
+
         Assert.False(result.Success);
         Assert.Single(result.Diagnostics);
         Assert.Equal(LilySharp.Core.Semantics.DiagnosticSeverity.Error, result.Diagnostics[0].Severity);
         Assert.Contains("Duplicate section", result.Diagnostics[0].Message);
     }
-    
+
     [Fact]
     public void Collect_PhraseDefinition_AddsToTable()
     {
@@ -104,36 +104,36 @@ phrase melody = {
 }";
         var tree = SyntaxTree.Parse(source);
         var collector = new SymbolCollector();
-        
+
         var result = collector.Collect(tree);
-        
+
         Assert.True(result.Success);
         Assert.Single(result.Symbols.Phrases);
         Assert.True(result.Symbols.Phrases.ContainsKey("melody"));
-        
+
         var phrase = result.Symbols.Phrases["melody"];
         Assert.Equal("melody", phrase.Name);
         Assert.Equal(SymbolKind.Phrase, phrase.Kind);
     }
-    
+
     [Fact]
     public void Collect_VariableDefinition_AddsToTable()
     {
         var source = @"theme = c4 d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new SymbolCollector();
-        
+
         var result = collector.Collect(tree);
-        
+
         Assert.True(result.Success);
         Assert.Single(result.Symbols.Variables);
         Assert.True(result.Symbols.Variables.ContainsKey("theme"));
-        
+
         var variable = result.Symbols.Variables["theme"];
         Assert.Equal("theme", variable.Name);
         Assert.Equal(SymbolKind.Variable, variable.Kind);
     }
-    
+
     [Fact]
     public void Collect_Structure_AddsToTable()
     {
@@ -145,14 +145,14 @@ structure {
 }";
         var tree = SyntaxTree.Parse(source);
         var collector = new SymbolCollector();
-        
+
         var result = collector.Collect(tree);
-        
+
         Assert.True(result.Success);
         Assert.NotNull(result.Symbols.Structure);
         Assert.Equal(SymbolKind.Structure, result.Symbols.Structure.Kind);
     }
-    
+
     [Fact]
     public void Collect_MultipleStructures_ReportsError()
     {
@@ -163,14 +163,14 @@ structure { A }
 structure { A }";
         var tree = SyntaxTree.Parse(source);
         var collector = new SymbolCollector();
-        
+
         var result = collector.Collect(tree);
-        
+
         Assert.False(result.Success);
         Assert.Single(result.Diagnostics);
         Assert.Contains("Multiple structure", result.Diagnostics[0].Message);
     }
-    
+
     [Fact]
     public void Lookup_ExistingSymbol_ReturnsSymbol()
     {
@@ -180,43 +180,45 @@ phrase melody = { d4 | }
 theme = e4";
         var tree = SyntaxTree.Parse(source);
         var collector = new SymbolCollector();
-        
+
         var result = collector.Collect(tree);
         var symbols = result.Symbols;
-        
+
         Assert.NotNull(symbols.Lookup("A"));
         Assert.IsType<SectionSymbol>(symbols.Lookup("A"));
-        
+
         Assert.NotNull(symbols.Lookup("melody"));
         Assert.IsType<PhraseSymbol>(symbols.Lookup("melody"));
-        
+
         Assert.NotNull(symbols.Lookup("theme"));
         Assert.IsType<VariableSymbol>(symbols.Lookup("theme"));
     }
-    
+
     [Fact]
     public void Lookup_NonExistingSymbol_ReturnsNull()
     {
         var source = @"section A { c4 | }";
         var tree = SyntaxTree.Parse(source);
         var collector = new SymbolCollector();
-        
+
         var result = collector.Collect(tree);
-        
+
         Assert.Null(result.Symbols.Lookup("NonExisting"));
     }
-    
+
     [Fact]
-    public void Collect_HappyBirthday_CollectsAllSymbols()
+    public void Collect_ComplexSource_CollectsAllSymbols()
     {
-        // Test with a real-world example
-        var source = File.ReadAllText(@"C:\MyProj\LilySharp\samples\happy-birthday.lys");
+        var source = @"
+section A { melody { c4 d e f | } }
+structure { A }
+render score ""test.svg"" { staff treble { melody } }
+";
         var tree = SyntaxTree.Parse(source);
         var collector = new SymbolCollector();
-        
+
         var result = collector.Collect(tree);
-        
-        // Should have no errors
+
         Assert.True(result.Success);
     }
 }

@@ -30,22 +30,22 @@ public sealed record Measure
 {
     /// <summary>The music items in this measure.</summary>
     public ImmutableArray<MusicItem> Items { get; }
-    
+
     /// <summary>Barline at the start of this measure (for repeat starts).</summary>
     public BarlineType StartBarline { get; }
-    
+
     /// <summary>Barline at the end of this measure.</summary>
     public BarlineType EndBarline { get; }
-    
+
     /// <summary>Optional section label (e.g., "A", "B", "Coda").</summary>
     public string? SectionLabel { get; }
 
     /// <summary>If true, force a line break after this measure.</summary>
     public bool HasBreakAfter { get; }
-    
+
     /// <summary>Source start position for caching and incremental updates.</summary>
     public int SourceStart { get; }
-    
+
     /// <summary>Source end position for caching and incremental updates.</summary>
     public int SourceEnd { get; }
 
@@ -66,7 +66,7 @@ public sealed record Measure
         SourceEnd = sourceEnd;
         HasBreakAfter = hasBreakAfter;
     }
-    
+
     /// <summary>
     /// Total duration of all items in this measure.
     /// </summary>
@@ -80,7 +80,7 @@ public sealed record Measure
             return total;
         }
     }
-    
+
     /// <summary>
     /// Validates that the measure duration matches the expected time signature.
     /// </summary>

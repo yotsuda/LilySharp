@@ -25,24 +25,24 @@ public sealed record VariableSymbol : Symbol
         _declaringSyntax = declaringSyntax;
         Value = value;
     }
-    
+
     private readonly string _name;
     private readonly VariableDeclarationSyntax _declaringSyntax;
-    
+
     /// <inheritdoc/>
     public override string Name => _name;
-    
+
     /// <inheritdoc/>
     public override SymbolKind Kind => SymbolKind.Variable;
-    
+
     /// <inheritdoc/>
     public override SyntaxNode DeclaringSyntax => _declaringSyntax;
-    
+
     /// <summary>
     /// The syntax node that declares this variable (typed).
     /// </summary>
     public VariableDeclarationSyntax DeclarationSyntax => _declaringSyntax;
-    
+
     /// <summary>
     /// The expression assigned to this variable.
     /// </summary>

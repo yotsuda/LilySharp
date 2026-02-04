@@ -12,7 +12,7 @@ public class FontDebugTest
 {
     private readonly ITestOutputHelper _output;
     public FontDebugTest(ITestOutputHelper output) => _output = output;
-    
+
     [Fact]
     public void Preview_OmitsFontFace()
     {
@@ -20,16 +20,16 @@ public class FontDebugTest
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
         var layout = new LayoutEngine().Layout(score);
-        
+
         var renderer = new SvgRenderer(renderOptions: SvgRenderOptions.Preview());
         var svg = renderer.Render(score, layout);
-        
+
         // Preview mode should NOT contain @font-face
         Assert.DoesNotContain("@font-face", svg);
         // But should still reference the font family
         Assert.Contains("font-family: 'Emmentaler'", svg);
     }
-    
+
     [Fact]
     public void Default_UsesLocalFont()
     {
@@ -37,14 +37,14 @@ public class FontDebugTest
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
         var layout = new LayoutEngine().Layout(score);
-        
+
         var renderer = new SvgRenderer(renderOptions: SvgRenderOptions.Default);
         var svg = renderer.Render(score, layout);
-        
+
         // Default mode should reference local font
         Assert.Contains("src: local('Emmentaler')", svg);
     }
-    
+
     [Fact]
     public void SvgContainsGlyphCharacters()
     {
@@ -52,12 +52,12 @@ public class FontDebugTest
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
         var layout = new LayoutEngine().Layout(score);
-        
+
         var renderer = new SvgRenderer(renderOptions: SvgRenderOptions.Preview());
         var svg = renderer.Render(score, layout);
-        
+
         // Should contain music glyph characters
-        Assert.True(svg.Contains(EmmentalerGlyphs.NoteheadBlack) || 
+        Assert.True(svg.Contains(EmmentalerGlyphs.NoteheadBlack) ||
                    svg.Contains(EmmentalerGlyphs.GClef),
                    "SVG should contain music glyph characters");
     }

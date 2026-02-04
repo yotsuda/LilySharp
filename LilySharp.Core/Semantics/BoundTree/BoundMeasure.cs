@@ -25,21 +25,21 @@ public sealed record BoundMeasure : BoundMusic
         EndBarline = endBarline;
         SectionLabel = sectionLabel;
     }
-    
+
     private readonly SyntaxNode? _syntax;
-    
+
     /// <inheritdoc/>
     public override SyntaxNode? Syntax => _syntax;
-    
+
     /// <summary>The music items in this measure.</summary>
     public ImmutableArray<BoundMusic> Items { get; }
-    
+
     /// <summary>The barline at the start of this measure.</summary>
     public BarlineType StartBarline { get; }
-    
+
     /// <summary>The barline at the end of this measure.</summary>
     public BarlineType EndBarline { get; }
-    
+
     /// <summary>Optional section label for this measure.</summary>
     public string? SectionLabel { get; }
 }

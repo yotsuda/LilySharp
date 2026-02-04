@@ -71,7 +71,7 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
     public Fraction Dotted(int dots)
     {
         if (dots == 0) return this;
-        
+
         // Dotted value = original * (2 - 1/2^dots)
         // For 1 dot: 3/2 of original
         // For 2 dots: 7/4 of original

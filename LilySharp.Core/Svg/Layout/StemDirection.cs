@@ -15,7 +15,7 @@ public static class StemDirection
     /// Notes at or above this position have stems down by default.
     /// </summary>
     private const int MiddleLine = 4;
-    
+
     /// <summary>
     /// Determines stem direction for a single note.
     /// </summary>
@@ -33,11 +33,11 @@ public static class StemDirection
                 _ => staffPosition < MiddleLine
             };
         }
-        
+
         // Automatic: notes below middle line have stems up
         return staffPosition < MiddleLine;
     }
-    
+
     /// <summary>
     /// Determines stem direction for a chord based on average position.
     /// </summary>
@@ -45,7 +45,7 @@ public static class StemDirection
     {
         if (staffPositions.Count == 0)
             return true;
-        
+
         // Voice number overrides automatic direction
         if (voiceNumber.HasValue)
         {
@@ -58,10 +58,10 @@ public static class StemDirection
                 _ => CalculateChordStemDirection(staffPositions)
             };
         }
-        
+
         return CalculateChordStemDirection(staffPositions);
     }
-    
+
     /// <summary>
     /// Calculates stem direction for a chord based on note positions.
     /// Uses the "majority rule" - direction that minimizes stem length.
@@ -70,14 +70,14 @@ public static class StemDirection
     {
         if (staffPositions.Count == 0)
             return true;
-        
+
         // Calculate distance of extreme notes from middle line
         int lowest = staffPositions.Min();
         int highest = staffPositions.Max();
-        
+
         int distanceFromTop = highest - MiddleLine;
         int distanceFromBottom = MiddleLine - lowest;
-        
+
         // Stem goes in direction that minimizes total stem length
         // If furthest note is above middle, stem down
         // If furthest note is below middle, stem up
@@ -85,11 +85,11 @@ public static class StemDirection
             return false;  // Stem down
         if (distanceFromBottom > distanceFromTop)
             return true;   // Stem up
-        
+
         // Tie: prefer stems down (traditional convention)
         return false;
     }
-    
+
     /// <summary>
     /// Gets stem direction for a note item.
     /// </summary>
@@ -97,7 +97,7 @@ public static class StemDirection
     {
         return GetStemUp(note.StaffPosition, voiceNumber);
     }
-    
+
     /// <summary>
     /// Gets stem direction for a chord item.
     /// </summary>
@@ -106,7 +106,7 @@ public static class StemDirection
         var positions = chord.Notes.Select(n => n.StaffPosition).ToList();
         return GetStemUp(positions, voiceNumber);
     }
-    
+
     /// <summary>
     /// Gets stem direction for any music item.
     /// </summary>

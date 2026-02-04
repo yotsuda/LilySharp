@@ -16,7 +16,7 @@ namespace LilySharp.Core.Semantics;
 public sealed class SymbolCollector
 {
     private readonly List<SemanticDiagnostic> _diagnostics = new();
-    
+
     /// <summary>
     /// Collects all symbol definitions from the syntax tree.
     /// </summary>
@@ -26,15 +26,15 @@ public sealed class SymbolCollector
     {
         var table = new SymbolTable();
         _diagnostics.Clear();
-        
+
         var root = tree.GetRoot();
         CollectSymbols(root, table);
-        
+
         return new SymbolCollectionResult(
             table.ToImmutable(),
             _diagnostics.ToImmutableArray());
     }
-    
+
     private void CollectSymbols(SyntaxNode root, SymbolTable table)
     {
         foreach (var node in root.DescendantNodes())
@@ -44,32 +44,32 @@ public sealed class SymbolCollector
                 case SectionDeclarationSyntax section:
                     CollectSection(section, table);
                     break;
-                    
+
                 case PhraseDeclarationSyntax phrase:
                     CollectPhrase(phrase, table);
                     break;
-                    
+
                 case PartDeclarationSyntax partDecl:
                     CollectPart(partDecl, table);
                     break;
-                    
+
                 case VariableDeclarationSyntax variable:
                     CollectVariable(variable, table);
                     break;
-                    
+
                 case StructureDeclarationSyntax structure:
                     CollectStructure(structure, table);
                     break;
             }
         }
     }
-    
+
     private void CollectSection(SectionDeclarationSyntax section, SymbolTable table)
     {
         var name = section.SectionName;
         var body = CollectChildNodes(section);
         var symbol = new SectionSymbol(name, section, body);
-        
+
         if (!table.AddSection(symbol))
         {
             _diagnostics.Add(new SemanticDiagnostic(
@@ -78,13 +78,13 @@ public sealed class SymbolCollector
                 section.Position));
         }
     }
-    
+
     private void CollectPhrase(PhraseDeclarationSyntax phrase, SymbolTable table)
     {
         var name = phrase.Name.Text;
         var body = CollectChildNodes(phrase.Body);
         var symbol = new PhraseSymbol(name, phrase, body);
-        
+
         if (!table.AddPhrase(symbol))
         {
             _diagnostics.Add(new SemanticDiagnostic(
@@ -93,13 +93,13 @@ public sealed class SymbolCollector
                 phrase.Position));
         }
     }
-    
+
     private void CollectPart(PartDeclarationSyntax partDecl, SymbolTable table)
     {
         var name = partDecl.Name.Text;
         var properties = CollectPartProperties(partDecl);
         var symbol = new PartSymbol(name, partDecl, properties);
-        
+
         if (!table.AddPart(symbol))
         {
             _diagnostics.Add(new SemanticDiagnostic(
@@ -108,12 +108,12 @@ public sealed class SymbolCollector
                 partDecl.Position));
         }
     }
-    
+
     private void CollectVariable(VariableDeclarationSyntax variable, SymbolTable table)
     {
         var name = variable.Name.Text;
         var symbol = new VariableSymbol(name, variable, variable.Expression);
-        
+
         if (!table.AddVariable(symbol))
         {
             _diagnostics.Add(new SemanticDiagnostic(
@@ -122,11 +122,11 @@ public sealed class SymbolCollector
                 variable.Position));
         }
     }
-    
+
     private void CollectStructure(StructureDeclarationSyntax structure, SymbolTable table)
     {
         var symbol = new StructureSymbol(structure);
-        
+
         if (!table.SetStructure(symbol))
         {
             _diagnostics.Add(new SemanticDiagnostic(
@@ -135,37 +135,37 @@ public sealed class SymbolCollector
                 structure.Position));
         }
     }
-    
+
     /// <summary>
     /// Collects child nodes from a container, excluding structural tokens.
     /// </summary>
     private static ImmutableArray<SyntaxNode> CollectChildNodes(SyntaxNode container)
     {
         var builder = ImmutableArray.CreateBuilder<SyntaxNode>();
-        
+
         for (int i = 0; i < container.SlotCount; i++)
         {
             var child = container.GetChild(i);
             if (child == null) continue;
-            
+
             // Skip structural tokens like braces and keywords
             if (child is SyntaxTokenNode token)
             {
                 var kind = token.Kind;
-                if (kind == SyntaxKind.OpenBrace || 
+                if (kind == SyntaxKind.OpenBrace ||
                     kind == SyntaxKind.CloseBrace ||
                     kind == SyntaxKind.SectionKeyword ||
                     kind == SyntaxKind.PhraseKeyword ||
                     kind == SyntaxKind.Equals)
                     continue;
             }
-            
+
             builder.Add(child);
         }
-        
+
         return builder.ToImmutable();
     }
-    
+
     /// <summary>
     /// Collects properties from a part block.
     /// Currently returns empty dictionary as part properties parsing is TBD.
@@ -173,7 +173,7 @@ public sealed class SymbolCollector
     private static ImmutableDictionary<string, string> CollectPartProperties(PartDeclarationSyntax partDecl)
     {
         var builder = ImmutableDictionary.CreateBuilder<string, string>();
-        
+
         // Part properties are collected from child nodes
         // For now, look for property-like patterns in descendants
         foreach (var node in partDecl.DescendantNodes())
@@ -184,17 +184,17 @@ public sealed class SymbolCollector
                 case ClefDeclarationSyntax clef:
                     builder["clef"] = clef.ClefName.Text.ToLowerInvariant();
                     break;
-                    
+
                 case KeySignatureSyntax key:
                     builder["key"] = key.ToString();
                     break;
-                    
+
                 case TimeSignatureSyntax time:
                     builder["time"] = $"{time.Beats}/{time.BeatType}";
                     break;
             }
         }
-        
+
         return builder.ToImmutable();
     }
 }
@@ -227,10 +227,10 @@ public enum DiagnosticSeverity
 {
     /// <summary>Informational message.</summary>
     Info,
-    
+
     /// <summary>Warning that doesn't prevent compilation.</summary>
     Warning,
-    
+
     /// <summary>Error that prevents successful compilation.</summary>
     Error
 }

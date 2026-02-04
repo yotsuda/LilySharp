@@ -10,7 +10,7 @@ public readonly record struct TimeSignature(int Beats, int BeatType)
 {
     /// <summary>Duration of one full measure.</summary>
     public Fraction MeasureDuration => new(Beats, BeatType);
-    
+
     public override string ToString() => $"{Beats}/{BeatType}";
 }
 
@@ -23,7 +23,7 @@ public readonly record struct KeySignature(int Sharps)
     public bool IsSharps => Sharps > 0;
     public bool IsFlats => Sharps < 0;
     public int Count => Math.Abs(Sharps);
-    
+
     public static readonly KeySignature CMajor = new(0);
 }
 
@@ -46,37 +46,37 @@ public sealed record Score
 {
     /// <summary>All voices in the score.</summary>
     public ImmutableArray<Voice> Voices { get; }
-    
+
     /// <summary>The primary voice (first voice, for backward compatibility).</summary>
     public Voice Voice => Voices[0];
-    
+
     /// <summary>Time signature for the score.</summary>
     public TimeSignature TimeSignature { get; }
-    
+
     /// <summary>Key signature for the score.</summary>
     public KeySignature KeySignature { get; }
-    
+
     /// <summary>Clef type ("treble", "bass", "alto", "tenor").</summary>
     public string Clef { get; }
-    
+
     /// <summary>Tempo in BPM (optional).</summary>
     public int? Tempo { get; }
-    
+
     /// <summary>Title (optional).</summary>
     public string? Title { get; }
-    
+
     /// <summary>Composer (optional).</summary>
     public string? Composer { get; }
-    
+
     /// <summary>Dynamic markings in the score.</summary>
     public ImmutableArray<DynamicItem> Dynamics { get; }
-    
+
     /// <summary>Articulation marks in the score.</summary>
     public ImmutableArray<ArticulationItem> Articulations { get; }
-    
+
     /// <summary>Grace notes in the score.</summary>
     public ImmutableArray<GraceNoteItem> GraceNotes { get; }
-    
+
     /// <summary>Tremolo markings in the score.</summary>
     public ImmutableArray<TremoloItem> Tremolos { get; }
 
@@ -105,7 +105,7 @@ public sealed record Score
         : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics)
     {
     }
-    
+
     /// <summary>
     /// Creates a multi-voice score.
     /// </summary>
@@ -139,7 +139,7 @@ public sealed record Score
         Tremolos = tremolos ?? ImmutableArray<TremoloItem>.Empty;
         Lyrics = lyrics ?? ImmutableArray<LyricItem>.Empty;
     }
-    
+
     /// <summary>Total number of measures in the score (from primary voice).</summary>
     public int MeasureCount => Voice.Measures.Length;
 }

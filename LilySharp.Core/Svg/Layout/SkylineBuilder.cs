@@ -222,7 +222,7 @@ public sealed class SkylineBuilder
         double ledgerThickness = EngravingDefaults.LegerLineThickness;
         double ledgerLeft = x - noteheadWidth / 2 - ledgerExtension;
         double ledgerRight = x + noteheadWidth / 2 + ledgerExtension;
-        
+
         // Ledger lines above staff (staffPosition >= 6)
         if (staffPosition >= 6)
         {
@@ -235,7 +235,7 @@ public sealed class SkylineBuilder
                 upSkyline.Merge(ledgerUp);
             }
         }
-        
+
         // Ledger lines below staff (staffPosition <= -6)
         if (staffPosition <= -6)
         {

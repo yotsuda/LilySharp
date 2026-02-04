@@ -12,27 +12,27 @@ public sealed class TieDetector
     {
         var ties = new List<TieItem>();
         var measures = score.Voice.Measures;
-        
+
         for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
         {
             var measure = measures[measureIdx];
-            
+
             for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
             {
                 if (measure.Items[itemIdx] is not NoteItem startNote)
                     continue;
-                
+
                 if (!startNote.HasTieStart)
                     continue;
-                
+
                 var endNote = FindNextSamePitchNote(score, measureIdx, itemIdx, startNote);
                 if (endNote != null)
                 {
                     var (endMeasureIdx, endItemIdx, note) = endNote.Value;
-                    
+
                     // Tie curves opposite to stem direction
                     bool curveUp = !startNote.StemUp;
-                    
+
                     ties.Add(new TieItem(
                         startNote,
                         note,
@@ -45,10 +45,10 @@ public sealed class TieDetector
                 }
             }
         }
-        
+
         return ties.ToImmutableArray();
     }
-    
+
     private (int measureIdx, int itemIdx, NoteItem note)? FindNextSamePitchNote(
         Score score,
         int startMeasureIdx,
@@ -56,18 +56,18 @@ public sealed class TieDetector
         NoteItem startNote)
     {
         var measures = score.Voice.Measures;
-        
+
         // Search in current measure first
         var currentMeasure = measures[startMeasureIdx];
         for (int i = startItemIdx + 1; i < currentMeasure.Items.Length; i++)
         {
-            if (currentMeasure.Items[i] is NoteItem candidate && 
+            if (currentMeasure.Items[i] is NoteItem candidate &&
                 candidate.StaffPosition == startNote.StaffPosition)
             {
                 return (startMeasureIdx, i, candidate);
             }
         }
-        
+
         // Search in subsequent measures
         for (int m = startMeasureIdx + 1; m < measures.Length; m++)
         {
@@ -81,7 +81,7 @@ public sealed class TieDetector
                 }
             }
         }
-        
+
         return null;
     }
 }

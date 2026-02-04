@@ -9,10 +9,10 @@ public sealed record VoiceColumn
 {
     /// <summary>The voices present at this time point.</summary>
     public ImmutableArray<VoiceEntry> Entries { get; }
-    
+
     /// <summary>Measure index.</summary>
     public int MeasureIndex { get; }
-    
+
     public VoiceColumn(ImmutableArray<VoiceEntry> entries, int measureIndex)
     {
         Entries = entries;
@@ -27,16 +27,16 @@ public sealed record VoiceEntry
 {
     /// <summary>The voice this entry belongs to (1-based).</summary>
     public int VoiceId { get; }
-    
+
     /// <summary>The music item at this position.</summary>
     public MusicItem Item { get; }
-    
+
     /// <summary>Item index within the measure for this voice.</summary>
     public int ItemIndex { get; }
-    
+
     /// <summary>Forced stem direction (null = use voice default or auto).</summary>
     public bool? ForcedStemUp { get; }
-    
+
     public VoiceEntry(int voiceId, MusicItem item, int itemIndex, bool? forcedStemUp = null)
     {
         VoiceId = voiceId;

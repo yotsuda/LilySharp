@@ -10,7 +10,7 @@ public abstract record MusicItem
 {
     /// <summary>The duration of this item as a fraction of a whole note.</summary>
     public abstract Fraction Duration { get; }
-    
+
     /// <summary>Source position in the syntax tree for click-to-source mapping.</summary>
     public abstract int SourcePosition { get; }
 }
@@ -34,16 +34,16 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this note ends a slur.</summary>
     public bool HasSlurEnd { get; }
     private readonly int _sourcePosition;
-    
+
     public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
     public override int SourcePosition => _sourcePosition;
-    
+
     /// <summary>Determines stem direction based on staff position.</summary>
-    public bool StemUp => StaffPosition < 4;
-    
+    public bool StemUp => StaffPosition < 0;
+
     /// <summary>Whether this note has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
-    
+
     public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false)
     {
         StaffPosition = staffPosition;
@@ -67,10 +67,10 @@ public sealed record RestItem : MusicItem
     public Fraction BaseDuration { get; }
     public int Dots { get; }
     private readonly int _sourcePosition;
-    
+
     public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
     public override int SourcePosition => _sourcePosition;
-    
+
     public RestItem(Fraction baseDuration, int dots, int sourcePosition)
     {
         BaseDuration = baseDuration;
@@ -99,16 +99,16 @@ public sealed record ChordItem : MusicItem
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
     public int TremoloBeams { get; }
     private readonly int _sourcePosition;
-    
+
     public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
     public override int SourcePosition => _sourcePosition;
-    
+
     /// <summary>Determines stem direction based on average staff position.</summary>
-    public bool StemUp => Notes.Length > 0 && Notes.Average(n => n.StaffPosition) < 4;
-    
+    public bool StemUp => Notes.Length > 0 && Notes.Average(n => n.StaffPosition) < 0;
+
     /// <summary>Whether this chord has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
-    
+
     public ChordItem(ImmutableArray<ChordNoteInfo> notes, Fraction baseDuration, int dots, int sourcePosition, int tremoloBeams = 0)
     {
         Notes = notes;

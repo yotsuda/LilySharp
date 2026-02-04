@@ -28,24 +28,24 @@ public sealed record SectionSymbol : Symbol
         _declaringSyntax = declaringSyntax;
         Body = body;
     }
-    
+
     private readonly string _name;
     private readonly SectionDeclarationSyntax _declaringSyntax;
-    
+
     /// <inheritdoc/>
     public override string Name => _name;
-    
+
     /// <inheritdoc/>
     public override SymbolKind Kind => SymbolKind.Section;
-    
+
     /// <inheritdoc/>
     public override SyntaxNode DeclaringSyntax => _declaringSyntax;
-    
+
     /// <summary>
     /// The syntax node that declares this section (typed).
     /// </summary>
     public SectionDeclarationSyntax DeclarationSyntax => _declaringSyntax;
-    
+
     /// <summary>
     /// The music content of this section.
     /// </summary>

@@ -31,7 +31,7 @@ public readonly record struct GraceNoteInfo(
 /// <remarks>
 /// LILYPOND-REF: grace-engraver.cc:36-80 Grace_engraver class
 /// LILYPOND-REF: define-grobs.scm:1358-1402 GraceSpacing grob definition
-/// 
+///
 /// Grace notes are rendered smaller (typically 65% of normal size) and
 /// placed before their main note. Acciaccaturas have a diagonal slash
 /// through the stem.
@@ -40,19 +40,19 @@ public sealed record GraceNoteItem
 {
     /// <summary>The type of grace note.</summary>
     public GraceNoteType Type { get; }
-    
+
     /// <summary>The notes in this grace group.</summary>
     public ImmutableArray<GraceNoteInfo> Notes { get; }
-    
+
     /// <summary>The measure index where this grace note appears.</summary>
     public int MeasureIndex { get; }
-    
+
     /// <summary>The item index of the main note this grace is attached to.</summary>
     public int MainNoteItemIndex { get; }
-    
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
-    
+
     public GraceNoteItem(
         GraceNoteType type,
         ImmutableArray<GraceNoteInfo> notes,
@@ -66,7 +66,7 @@ public sealed record GraceNoteItem
         MainNoteItemIndex = mainNoteItemIndex;
         SourcePosition = sourcePosition;
     }
-    
+
     /// <summary>
     /// Scale factor for grace notes relative to normal notes.
     /// </summary>

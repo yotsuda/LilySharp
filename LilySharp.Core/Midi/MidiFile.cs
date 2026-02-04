@@ -19,10 +19,10 @@ public class MidiTrack
 public class MidiFile
 {
     public const int DefaultTicksPerQuarter = 480;
-    
+
     public int TicksPerQuarterNote { get; set; } = DefaultTicksPerQuarter;
     public List<MidiTrack> Tracks { get; } = [];
-    
+
     /// <summary>
     /// Writes the MIDI file to a stream.
     /// </summary>
@@ -35,7 +35,7 @@ public class MidiFile
             WriteTrack(writer, track);
         }
     }
-    
+
     /// <summary>
     /// Saves the MIDI file to disk.
     /// </summary>
@@ -44,7 +44,7 @@ public class MidiFile
         using var stream = File.Create(path);
         WriteTo(stream);
     }
-    
+
     private void WriteHeader(BinaryWriter writer)
     {
         writer.Write((byte)'M');
@@ -56,20 +56,20 @@ public class MidiFile
         WriteBigEndian16(writer, (ushort)Tracks.Count);
         WriteBigEndian16(writer, (ushort)TicksPerQuarterNote);
     }
-    
+
     private void WriteTrack(BinaryWriter writer, MidiTrack track)
     {
         using var trackStream = new MemoryStream();
         using var trackWriter = new BinaryWriter(trackStream);
-        
+
         var events = BuildEventList(track);
-        
+
         int lastTick = 0;
         foreach (var evt in events)
         {
             int delta = evt.Tick - lastTick;
             WriteVariableLength(trackWriter, delta);
-            
+
             switch (evt.Type)
             {
                 case MidiEventType.NoteOn:
@@ -116,12 +116,12 @@ public class MidiFile
             }
             lastTick = evt.Tick;
         }
-        
+
         WriteVariableLength(trackWriter, 0);
         trackWriter.Write((byte)0xFF);
         trackWriter.Write((byte)0x2F);
         trackWriter.Write((byte)0x00);
-        
+
         writer.Write((byte)'M');
         writer.Write((byte)'T');
         writer.Write((byte)'r');
@@ -129,47 +129,47 @@ public class MidiFile
         WriteBigEndian32(writer, (int)trackStream.Length);
         writer.Write(trackStream.ToArray());
     }
-    
+
     private List<MidiEvent> BuildEventList(MidiTrack track)
     {
         var events = new List<MidiEvent>();
-        
+
         if (!string.IsNullOrEmpty(track.Name))
             events.Add(new MidiEvent(0, MidiEventType.TrackName, track.Channel, 0, 0));
-        
+
         foreach (var tempo in track.TempoChanges)
             events.Add(new MidiEvent(tempo.Tick, MidiEventType.Tempo, 0, tempo.MicrosecondsPerBeat, 0));
-        
+
         foreach (var ts in track.TimeSignatures)
         {
             int denomPow = (int)Math.Log2(ts.Denominator);
             events.Add(new MidiEvent(ts.Tick, MidiEventType.TimeSignature, 0, ts.Numerator, denomPow));
         }
-        
+
         foreach (var note in track.Notes)
         {
             events.Add(new MidiEvent(note.StartTick, MidiEventType.NoteOn, note.Channel, note.Pitch, note.Velocity));
             events.Add(new MidiEvent(note.StartTick + note.DurationTicks, MidiEventType.NoteOff, note.Channel, note.Pitch, 0));
         }
-        
+
         foreach (var lyric in track.Lyrics)
             events.Add(new MidiEvent(lyric.Tick, MidiEventType.Lyric, 0, 0, 0, lyric.Text));
-        
+
         events.Sort((a, b) =>
         {
             int cmp = a.Tick.CompareTo(b.Tick);
             return cmp != 0 ? cmp : a.Type.CompareTo(b.Type);
         });
-        
+
         return events;
     }
-    
+
     private static void WriteBigEndian16(BinaryWriter writer, int value)
     {
         writer.Write((byte)((value >> 8) & 0xFF));
         writer.Write((byte)(value & 0xFF));
     }
-    
+
     private static void WriteBigEndian32(BinaryWriter writer, int value)
     {
         writer.Write((byte)((value >> 24) & 0xFF));
@@ -177,7 +177,7 @@ public class MidiFile
         writer.Write((byte)((value >> 8) & 0xFF));
         writer.Write((byte)(value & 0xFF));
     }
-    
+
     private static void WriteVariableLength(BinaryWriter writer, int value)
     {
         if (value < 0) value = 0;
@@ -191,7 +191,7 @@ public class MidiFile
         bytes.Reverse();
         foreach (var b in bytes) writer.Write(b);
     }
-    
+
     private enum MidiEventType { NoteOff = 0, NoteOn = 1, Tempo = 2, TimeSignature = 3, TrackName = 4, Lyric = 5 }
     private readonly record struct MidiEvent(int Tick, MidiEventType Type, int Channel, int Data1, int Data2, string? Text = null);
 }

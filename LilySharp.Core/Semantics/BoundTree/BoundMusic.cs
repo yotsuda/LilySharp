@@ -16,7 +16,7 @@ public abstract record BoundMusic
     /// The syntax node from which this bound node was created.
     /// </summary>
     public abstract SyntaxNode? Syntax { get; }
-    
+
     /// <summary>
     /// The source position for error reporting and click-to-source mapping.
     /// </summary>
@@ -33,18 +33,18 @@ public readonly record struct Pitch(int Step, int Octave, int Alteration)
 {
     /// <summary>Middle C.</summary>
     public static Pitch MiddleC => new(0, 4, 0);
-    
+
     /// <summary>
     /// Gets the MIDI note number (Middle C = 60).
     /// </summary>
     public int MidiNote => (Octave + 1) * 12 + StepToSemitone(Step) + Alteration;
-    
+
     /// <summary>
     /// Gets the staff position relative to middle C (0 = middle C line).
     /// Each step is one staff position.
     /// </summary>
     public int StaffPosition => (Octave - 4) * 7 + Step;
-    
+
     /// <summary>
     /// Gets the accidental string for rendering, or null if natural.
     /// </summary>
@@ -57,7 +57,7 @@ public readonly record struct Pitch(int Step, int Octave, int Alteration)
         2 => "##",
         _ => null
     };
-    
+
     /// <summary>
     /// Creates a pitch from a pitch name character and octave.
     /// </summary>
@@ -71,12 +71,12 @@ public readonly record struct Pitch(int Step, int Octave, int Alteration)
         };
         return new Pitch(step, octave, alteration);
     }
-    
+
     /// <summary>
     /// Gets the pitch name character.
     /// </summary>
     public char Name => (char)('c' + (Step < 5 ? Step : Step - 7));
-    
+
     private static int StepToSemitone(int step) => step switch
     {
         0 => 0,  // C
@@ -88,7 +88,7 @@ public readonly record struct Pitch(int Step, int Octave, int Alteration)
         6 => 11, // B
         _ => 0
     };
-    
+
     public override string ToString()
     {
         var alt = Alteration switch

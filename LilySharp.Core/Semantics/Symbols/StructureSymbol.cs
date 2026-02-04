@@ -20,18 +20,18 @@ public sealed record StructureSymbol : Symbol
     {
         _declaringSyntax = declaringSyntax;
     }
-    
+
     private readonly StructureDeclarationSyntax _declaringSyntax;
-    
+
     /// <inheritdoc/>
     public override string Name => "structure";
-    
+
     /// <inheritdoc/>
     public override SymbolKind Kind => SymbolKind.Structure;
-    
+
     /// <inheritdoc/>
     public override SyntaxNode DeclaringSyntax => _declaringSyntax;
-    
+
     /// <summary>
     /// The syntax node that declares this structure (typed).
     /// </summary>

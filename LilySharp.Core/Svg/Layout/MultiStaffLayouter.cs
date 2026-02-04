@@ -163,7 +163,7 @@ public sealed class MultiStaffLayouter
     public ImmutableArray<MeasureLayout> LayoutMeasures(MultiStaffScore score, int systemIndex)
     {
         var primaryVoice = score.StaffGroups[0].PrimaryStaff.PrimaryVoice;
-        
+
         var layouts = ImmutableArray.CreateBuilder<MeasureLayout>();
         double currentX = _options.MarginLeft + SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, systemIndex == 0);
 
@@ -172,10 +172,10 @@ public sealed class MultiStaffLayouter
             var allTimings = CollectAllTimingsForMeasure(score, measureIndex);
             var primaryMeasure = primaryVoice.Measures[measureIndex];
             double measureWidth = SpacingRules.CalculateMeasureIdealWidth(primaryMeasure);
-            
+
             var itemLayouts = _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
             var columnLayouts = _measureLayouter.LayoutColumns(primaryMeasure, measureWidth, allTimings);
-            
+
             var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts);
             layouts.Add(measureLayout);
             currentX += measureLayout.Width;
@@ -183,14 +183,14 @@ public sealed class MultiStaffLayouter
 
         return layouts.ToImmutable();
     }
-    
+
     /// <summary>
     /// Collects all unique timings from all voices for a specific measure.
     /// </summary>
     private List<Fraction> CollectAllTimingsForMeasure(MultiStaffScore score, int measureIndex)
     {
         var timings = new HashSet<Fraction>();
-        
+
         foreach (var staffGroup in score.StaffGroups)
         {
             foreach (var staff in staffGroup.Staves)
@@ -201,7 +201,7 @@ public sealed class MultiStaffLayouter
                     {
                         var measure = voice.Measures[measureIndex];
                         var currentTiming = Fraction.Zero;
-                        
+
                         foreach (var item in measure.Items)
                         {
                             timings.Add(currentTiming);
@@ -211,7 +211,7 @@ public sealed class MultiStaffLayouter
                 }
             }
         }
-        
+
         var sortedTimings = timings.ToList();
         sortedTimings.Sort();
         return sortedTimings;

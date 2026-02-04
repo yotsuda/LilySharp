@@ -10,7 +10,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// <remarks>
 /// LILYPOND-REF: lily/lyric-engraver.cc:60-88 Lyric_engraver::process_music
 /// LILYPOND-REF: lily/lyric-combine-music-iterator.cc:1-200
-/// 
+///
 /// Lyrics are associated with notes by position. Each syllable corresponds
 /// to one note in the melody. Hyphens (--) indicate word continuation,
 /// extenders (__) indicate melisma (single syllable over multiple notes).
@@ -36,27 +36,27 @@ public sealed class LyricCollector
     {
         var lyrics = ImmutableArray.CreateBuilder<LyricItem>();
         var syllables = ParseSyllables(lyricsBlock);
-        
+
         int noteIndex = 0;
         for (int i = 0; i < syllables.Count && noteIndex < noteItemIndices.Count; i++)
         {
             var (text, connectorType) = syllables[i];
-            
+
             // Skip extender markers - they indicate previous syllable continues
             if (text == "__")
             {
                 // Don't consume a note for pure extenders
                 continue;
             }
-            
+
             // Handle empty text with extender (melisma continuation)
             if (string.IsNullOrWhiteSpace(text))
             {
                 continue;
             }
-            
+
             var (measureIndex, itemIndex) = noteItemIndices[noteIndex];
-            
+
             lyrics.Add(new LyricItem(
                 Text: text,
                 MeasureIndex: measureIndex,
@@ -65,13 +65,13 @@ public sealed class LyricCollector
                 VoiceId: voiceId,
                 VerseNumber: verseNumber
             ));
-            
+
             noteIndex++;
         }
-        
+
         return lyrics.ToImmutable();
     }
-    
+
     /// <summary>
     /// Parses syllables from a lyrics block, handling hyphens and extenders.
     /// </summary>

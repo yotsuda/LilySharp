@@ -34,16 +34,16 @@ public sealed record OrnamentItem
 {
     /// <summary>The ornament type.</summary>
     public OrnamentType Type { get; }
-    
+
     /// <summary>The measure index where this ornament appears.</summary>
     public int MeasureIndex { get; }
-    
+
     /// <summary>The item index within the measure.</summary>
     public int ItemIndex { get; }
-    
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
-    
+
     public OrnamentItem(OrnamentType type, int measureIndex, int itemIndex, int sourcePosition)
     {
         Type = type;
@@ -51,7 +51,7 @@ public sealed record OrnamentItem
         ItemIndex = itemIndex;
         SourcePosition = sourcePosition;
     }
-    
+
     /// <summary>
     /// Gets the SMuFL codepoint for this ornament.
     /// </summary>

@@ -1,4 +1,4 @@
-﻿namespace LilySharp.Core.Svg.Renderer;
+namespace LilySharp.Core.Svg.Renderer;
 
 /// <summary>
 /// Renders brace (curly bracket) for grand staff using Emmentaler-Brace font glyphs.
@@ -13,16 +13,16 @@ public static class BraceRenderer
     // Brace glyph range in Emmentaler-Brace font
     private const int BraceGlyphStart = 0xE000;  // brace0
     private const int BraceGlyphCount = 576;     // brace0 to brace575
-    
+
     // Font metrics (from emmentaler-brace.svg)
     private const double UnitsPerEm = 1000.0;
-    
+
     // Approximate glyph heights in font units (from SVG font analysis)
     // These values are derived from the bounding box of each glyph
     // brace0 ≈ 263, brace575 ≈ 11493
     private const double MinGlyphHeight = 263.0;   // brace0 height in font units
     private const double MaxGlyphHeight = 11493.0; // brace575 height in font units
-    
+
     /// <summary>
     /// Renders a brace as an SVG text element using Emmentaler-Brace font.
     /// </summary>
@@ -34,14 +34,14 @@ public static class BraceRenderer
     {
         double height = yBottom - yTop;
         double yMid = (yTop + yBottom) / 2;
-        
+
         // Select appropriate brace glyph based on height
         int glyphIndex = SelectBraceGlyph(height);
         int codePoint = BraceGlyphStart + glyphIndex;
-        
+
         // Use XML numeric character reference for PUA characters
         string braceGlyph = $"&#x{codePoint:X4};";
-        
+
         // Calculate font-size based on the glyph's native height
         // The glyph height in em units = glyphHeightUnits / unitsPerEm
         // font-size = desiredHeight / glyphHeightInEm
@@ -50,13 +50,13 @@ public static class BraceRenderer
         double glyphHeightUnits = GetGlyphHeight(glyphIndex);
         double glyphHeightEm = glyphHeightUnits / UnitsPerEm;
         double fontSize = (height / glyphHeightEm) * ScaleFactor;
-        
+
         // X position: brace tip is at left, connects to staff at right
         double braceX = x;
-        
+
         return $"<text x=\"{braceX:F2}\" y=\"{yMid:F2}\" font-family=\"Emmentaler-Brace\" font-size=\"{fontSize:F2}\" dominant-baseline=\"middle\" text-anchor=\"end\">{braceGlyph}</text>";
     }
-    
+
     /// <summary>
     /// Selects the appropriate brace glyph index based on desired height.
     /// </summary>
@@ -66,19 +66,19 @@ public static class BraceRenderer
     {
         // Convert desired height to font units (assuming font-size = 1)
         double targetHeightUnits = height * UnitsPerEm;
-        
+
         // Find the best matching glyph
         // Use linear interpolation between min and max glyph heights
         double ratio = (targetHeightUnits - MinGlyphHeight) / (MaxGlyphHeight - MinGlyphHeight);
         ratio = Math.Clamp(ratio, 0.0, 1.0);
-        
+
         // Apply slight non-linear adjustment for better matching
         double adjustedRatio = Math.Pow(ratio, 0.8);
-        
+
         int glyphIndex = (int)(adjustedRatio * (BraceGlyphCount - 1));
         return Math.Clamp(glyphIndex, 0, BraceGlyphCount - 1);
     }
-    
+
     /// <summary>
     /// Gets the approximate height of a brace glyph in font units.
     /// </summary>
@@ -88,7 +88,7 @@ public static class BraceRenderer
         double ratio = glyphIndex / (double)(BraceGlyphCount - 1);
         return MinGlyphHeight + ratio * (MaxGlyphHeight - MinGlyphHeight);
     }
-    
+
     /// <summary>
     /// Calculates the width required for a brace in staff spaces.
     /// </summary>
@@ -98,7 +98,7 @@ public static class BraceRenderer
         double heightRatio = Math.Clamp(height / 20.0, 0.0, 1.0);
         return 1.5 + 1.0 * heightRatio;
     }
-    
+
     /// <summary>
     /// Calculates the width required for a brace in staff spaces.
     /// </summary>

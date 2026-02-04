@@ -13,7 +13,7 @@ public class MusicXmlTests
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         Assert.Single(xml.Parts);
         Assert.True(xml.Parts[0].Measures.Count >= 1);
         Assert.Equal(4, xml.Parts[0].Measures[0].Notes.Count);
@@ -28,7 +28,7 @@ c4 d4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         Assert.Equal("Test Song", xml.Title);
     }
 
@@ -41,7 +41,7 @@ c4 d4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         Assert.Equal("J.S. Bach", xml.Composer);
     }
 
@@ -52,7 +52,7 @@ c4 d4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         var notes = xml.Parts[0].Measures[0].Notes;
         Assert.Equal(3, notes.Count);
         Assert.False(notes[0].IsRest);
@@ -67,14 +67,14 @@ c4 d4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         var notes = xml.Parts[0].Measures[0].Notes;
         Assert.Equal("C", notes[0].Step);
         Assert.Equal(0, notes[0].Alter);
-        
+
         Assert.Equal("C", notes[1].Step);
         Assert.Equal(1, notes[1].Alter);
-        
+
         Assert.Equal("D", notes[2].Step);
         Assert.Equal(-1, notes[2].Alter);
     }
@@ -86,7 +86,7 @@ c4 d4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         var notes = xml.Parts[0].Measures[0].Notes;
         Assert.Equal("whole", notes[0].Type);
         Assert.Equal("half", notes[1].Type);
@@ -101,7 +101,7 @@ c4 d4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         Assert.Equal(2, xml.Parts[0].Measures.Count);
         Assert.Equal(2, xml.Parts[0].Measures[0].Notes.Count);
         Assert.Equal(2, xml.Parts[0].Measures[1].Notes.Count);
@@ -114,7 +114,7 @@ c4 d4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         var notes = xml.Parts[0].Measures[0].Notes;
         Assert.Contains("staccato", notes[0].Articulations);
         Assert.Contains("accent", notes[1].Articulations);
@@ -127,7 +127,7 @@ c4 d4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         var notes = xml.Parts[0].Measures[0].Notes;
         Assert.Equal(4, notes.Count);
         // Default starts at C4
@@ -144,7 +144,7 @@ c4 d4 e4 f4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         var doc = xml.ToXml();
         Assert.NotNull(doc);
         Assert.Equal("score-partwise", doc.Root?.Name.LocalName);
@@ -157,7 +157,7 @@ c4 d4 e4 f4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         var attrs = xml.Parts[0].Measures[0].Attributes;
         Assert.NotNull(attrs);
         Assert.Equal(4, attrs.Divisions);
@@ -172,18 +172,18 @@ c4 d4 e4 f4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
-        
+
         var notes = xml.Parts[0].Measures[0].Notes;
         Assert.Equal(3, notes.Count);
-        
+
         // First note should not have chord flag
         Assert.False(notes[0].IsChord);
         Assert.Equal("C", notes[0].Step);
-        
+
         // Second and third notes should have chord flag
         Assert.True(notes[1].IsChord);
         Assert.Equal("E", notes[1].Step);
-        
+
         Assert.True(notes[2].IsChord);
         Assert.Equal("G", notes[2].Step);
     }

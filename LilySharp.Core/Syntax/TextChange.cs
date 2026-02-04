@@ -9,7 +9,7 @@ public readonly struct TextChange
     /// The span of text being replaced.
     /// </summary>
     public TextSpan Span { get; }
-    
+
     /// <summary>
     /// The new text to insert.
     /// </summary>

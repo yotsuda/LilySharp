@@ -233,7 +233,7 @@ internal sealed class VariableDeclarationGreen : GreenSyntaxNode
         : base(SyntaxKind.VariableDeclaration, [name, equals, expression])
     {
     }
-    
+
     // Legacy style: let name = expr
     public VariableDeclarationGreen(
         SyntaxToken letKeyword,
@@ -274,7 +274,7 @@ internal sealed class PartDeclarationGreen : GreenSyntaxNode
         : base(SyntaxKind.PartDeclaration, [keyword, name, openBrace, .. properties, closeBrace])
     {
     }
-    
+
     // Without body: part name
     public PartDeclarationGreen(
         SyntaxToken keyword,
@@ -282,7 +282,7 @@ internal sealed class PartDeclarationGreen : GreenSyntaxNode
         : base(SyntaxKind.PartDeclaration, [keyword, name])
     {
     }
-    
+
     // Legacy: part name "display" { members }
     public PartDeclarationGreen(
         SyntaxToken keyword,
@@ -305,7 +305,7 @@ internal sealed class VariableReferenceGreen : GreenSyntaxNode
         : base(SyntaxKind.VariableReference, [keyword, name])
     {
     }
-    
+
     public VariableReferenceGreen(SyntaxToken name)
         : base(SyntaxKind.VariableReference, [name])
     {
@@ -450,7 +450,7 @@ internal sealed class TabStaffDeclarationGreen : GreenSyntaxNode
         : base(SyntaxKind.TabStaffDeclaration, [tabStaffKeyword, body])
     {
     }
-    
+
     public TabStaffDeclarationGreen(
         SyntaxToken tabStaffKeyword,
         GreenNode tuning,
@@ -602,7 +602,7 @@ internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
         : base(SyntaxKind.StructureRepeatBlock, [repeatStart, .. items, repeatEnd])
     {
     }
-    
+
     // Repeat with alternatives: |: items | 1. A :| 2. B
     public StructureRepeatBlockGreen(
         SyntaxToken repeatStart,
@@ -614,7 +614,7 @@ internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
         : base(SyntaxKind.StructureRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, null, null))
     {
     }
-    
+
     // Repeat with count: |: items :| x3
     public StructureRepeatBlockGreen(
         SyntaxToken repeatStart,
@@ -628,7 +628,7 @@ internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
         : base(SyntaxKind.StructureRepeatBlock, BuildChildren(repeatStart, items, barline, alternativesBeforeEnd, repeatEnd, finalAlternative, xToken, repeatCount))
     {
     }
-    
+
     private static GreenNode?[] BuildChildren(
         SyntaxToken repeatStart,
         GreenNode?[] items,
@@ -675,7 +675,7 @@ internal sealed class StructureAlternativeGreen : GreenSyntaxNode
         : base(SyntaxKind.StructureAlternative, [number, dot, sectionName])
     {
     }
-    
+
     // Bracket style: [1. A] or [1-3. A] or [1,3. A]
     public StructureAlternativeGreen(
         SyntaxToken openBracket,
@@ -685,8 +685,8 @@ internal sealed class StructureAlternativeGreen : GreenSyntaxNode
         SyntaxToken dot,
         SyntaxToken sectionName,
         SyntaxToken closeBracket)
-        : base(SyntaxKind.StructureAlternative, 
-            separator != null 
+        : base(SyntaxKind.StructureAlternative,
+            separator != null
                 ? [openBracket, number, separator, endNumber, dot, sectionName, closeBracket]
                 : [openBracket, number, dot, sectionName, closeBracket])
     {
@@ -703,13 +703,13 @@ internal sealed class NavigationMarkGreen : GreenSyntaxNode
         : base(SyntaxKind.NavigationMark, [keyword])
     {
     }
-    
+
     // Two parts: to coda, dc al, ds al
     public NavigationMarkGreen(SyntaxToken keyword1, SyntaxToken keyword2)
         : base(SyntaxKind.NavigationMark, [keyword1, keyword2])
     {
     }
-    
+
     // Three parts: dc al fine, dc al coda, ds al fine, ds al coda
     public NavigationMarkGreen(SyntaxToken keyword1, SyntaxToken keyword2, SyntaxToken keyword3)
         : base(SyntaxKind.NavigationMark, [keyword1, keyword2, keyword3])
@@ -729,7 +729,7 @@ internal sealed class RenderDeclarationGreen : GreenSyntaxNode
         SyntaxToken openBrace,
         GreenNode?[] items,
         SyntaxToken closeBrace)
-        : base(SyntaxKind.RenderDeclaration, name != null 
+        : base(SyntaxKind.RenderDeclaration, name != null
             ? [renderKeyword, name, filename, openBrace, .. items, closeBrace]
             : [renderKeyword, filename, openBrace, .. items, closeBrace])
     {
@@ -749,7 +749,7 @@ internal sealed class StaffRenderGreen : GreenSyntaxNode
         : base(SyntaxKind.StaffRender, [staffKeyword, openBrace, partName, closeBrace])
     {
     }
-    
+
     public StaffRenderGreen(
         SyntaxToken staffKeyword,
         SyntaxToken clefName,
@@ -823,7 +823,7 @@ internal sealed class BreakGreen : GreenSyntaxNode
 internal sealed class SectionStartMarkerGreen : GreenSyntaxNode
 {
     public static readonly SectionStartMarkerGreen Instance = new();
-    
+
     private SectionStartMarkerGreen()
         : base(SyntaxKind.SectionStartMarker, [])
     {

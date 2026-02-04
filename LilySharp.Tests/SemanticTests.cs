@@ -40,7 +40,7 @@ public class SemanticTests
     {
         var quarter = Fraction.Quarter;
         var dotted = quarter.Dotted(1);
-        
+
         // Dotted quarter = 1/4 + 1/8 = 3/8
         Assert.Equal(new Fraction(3, 8), dotted);
     }
@@ -50,7 +50,7 @@ public class SemanticTests
     {
         var quarter = Fraction.Quarter;
         var doubleDotted = quarter.Dotted(2);
-        
+
         // Double-dotted quarter = 1/4 + 1/8 + 1/16 = 7/16
         Assert.Equal(new Fraction(7, 16), doubleDotted);
     }
@@ -71,7 +71,7 @@ public class SemanticTests
         var tree = SyntaxTree.Parse("c4");
         var root = tree.GetRoot();
         var note = root.DescendantNodes<NoteSyntax>().First();
-        
+
         var duration = DurationCalculator.GetDuration(note, Fraction.Quarter);
         Assert.Equal(Fraction.Quarter, duration);
     }
@@ -82,7 +82,7 @@ public class SemanticTests
         var tree = SyntaxTree.Parse("c2");
         var root = tree.GetRoot();
         var note = root.DescendantNodes<NoteSyntax>().First();
-        
+
         var duration = DurationCalculator.GetDuration(note, Fraction.Quarter);
         Assert.Equal(Fraction.Half, duration);
     }
@@ -93,7 +93,7 @@ public class SemanticTests
         var tree = SyntaxTree.Parse("c4.");
         var root = tree.GetRoot();
         var note = root.DescendantNodes<NoteSyntax>().First();
-        
+
         var duration = DurationCalculator.GetDuration(note, Fraction.Quarter);
         Assert.Equal(new Fraction(3, 8), duration);
     }
@@ -104,10 +104,10 @@ public class SemanticTests
         var tree = SyntaxTree.Parse("c4 d e f");
         var root = tree.GetRoot();
         var notes = root.DescendantNodes<NoteSyntax>().ToList();
-        
+
         // First note has explicit duration
         Assert.Equal(Fraction.Quarter, DurationCalculator.GetDuration(notes[0], Fraction.Whole));
-        
+
         // Subsequent notes inherit (no Duration node)
         Assert.Null(notes[1].Duration);
         Assert.Null(notes[2].Duration);
@@ -122,7 +122,7 @@ public class SemanticTests
         var tree = SyntaxTree.Parse("{ c4 d e f | }");
         var validator = new MeasureValidator();
         validator.Validate(tree);
-        
+
         // 4 quarter notes = 1 whole = 4/4 time - no warnings
         Assert.Empty(validator.Diagnostics);
     }
@@ -133,7 +133,7 @@ public class SemanticTests
         var tree = SyntaxTree.Parse("{ c4 d e | }");
         var validator = new MeasureValidator();
         validator.Validate(tree);
-        
+
         // 3 quarter notes < 4/4 time
         Assert.Single(validator.Diagnostics);
         Assert.Contains("less than", validator.Diagnostics[0].Message);
@@ -145,7 +145,7 @@ public class SemanticTests
         var tree = SyntaxTree.Parse("{ c4 d e f g | }");
         var validator = new MeasureValidator();
         validator.Validate(tree);
-        
+
         // 5 quarter notes > 4/4 time
         Assert.Single(validator.Diagnostics);
         Assert.Contains("exceeds", validator.Diagnostics[0].Message);
@@ -158,7 +158,7 @@ public class SemanticTests
         var validator = new MeasureValidator();
         validator.SetTimeSignature(3, 4);
         validator.Validate(tree);
-        
+
         // 3 quarter notes = 3/4 time - no warnings
         Assert.Empty(validator.Diagnostics);
     }
@@ -169,7 +169,7 @@ public class SemanticTests
         var tree = SyntaxTree.Parse("{ c4 d e f | g2 g | }");
         var validator = new MeasureValidator();
         validator.Validate(tree);
-        
+
         // Both measures are complete in 4/4
         Assert.Empty(validator.Diagnostics);
     }
@@ -180,7 +180,7 @@ public class SemanticTests
         var tree = SyntaxTree.Parse("{ c2 d4 e | }");
         var validator = new MeasureValidator();
         validator.Validate(tree);
-        
+
         // c2 (1/2) + d4 (1/4) + e (1/4) = 1 whole = 4/4
         Assert.Empty(validator.Diagnostics);
     }
@@ -191,7 +191,7 @@ public class SemanticTests
         var tree = SyntaxTree.Parse("{ c4. d8 e4 f | }");
         var validator = new MeasureValidator();
         validator.Validate(tree);
-        
+
         // c4. (3/8) + d8 (1/8) + e4 (1/4) + f (1/4) = 3/8 + 1/8 + 1/4 + 1/4 = 1
         Assert.Empty(validator.Diagnostics);
     }
@@ -202,7 +202,7 @@ public class SemanticTests
         var tree = SyntaxTree.Parse("{ c4 r d r | }");
         var validator = new MeasureValidator();
         validator.Validate(tree);
-        
+
         // c4 + r4 + d4 + r4 = 4 quarters = 4/4
         Assert.Empty(validator.Diagnostics);
     }

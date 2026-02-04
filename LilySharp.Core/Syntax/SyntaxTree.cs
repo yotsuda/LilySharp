@@ -111,7 +111,7 @@ public sealed class SyntaxTree
     {
         // Sort changes by position descending to apply from end to start
         var sortedChanges = changes.OrderByDescending(c => c.Span.Start).ToArray();
-        
+
         var result = text;
         foreach (var change in sortedChanges)
         {
@@ -119,7 +119,7 @@ public sealed class SyntaxTree
             var suffix = result[(change.Span.Start + change.Span.Length)..];
             result = prefix + change.NewText + suffix;
         }
-        
+
         return result;
     }
 }

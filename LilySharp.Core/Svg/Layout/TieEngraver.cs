@@ -14,12 +14,12 @@ namespace LilySharp.Core.Svg.Layout;
 public sealed class TieEngraver
 {
     private readonly TieDetails _details;
-    
+
     public TieEngraver(TieDetails? details = null)
     {
         _details = details ?? TieDetails.Default;
     }
-    
+
     /// <summary>
     /// Calculates the layout for a tie.
     /// All coordinates are in staff spaces.
@@ -33,40 +33,40 @@ public sealed class TieEngraver
     {
         // Calculate tie dimensions (all in staff spaces)
         double width = endX - startX;
-        
+
         // Ensure minimum length
         if (width < _details.MinLength)
             width = _details.MinLength;
-        
+
         // Calculate height based on width (Lilypond's slur_height algorithm)
         double height = CalculateTieHeight(width, _details.HeightLimit, _details.Ratio);
-        
+
         // Calculate indent for control points
         double indent = CalculateIndent(width, _details.HeightLimit, _details.Ratio);
-        
+
         // Apply gap from noteheads
         double adjustedStartX = startX + _details.XGap;
         double adjustedEndX = endX - _details.XGap;
         double adjustedWidth = adjustedEndX - adjustedStartX;
-        
+
         // Recalculate for adjusted width
         if (adjustedWidth > 0)
         {
             height = CalculateTieHeight(adjustedWidth, _details.HeightLimit, _details.Ratio);
             indent = CalculateIndent(adjustedWidth, _details.HeightLimit, _details.Ratio);
         }
-        
+
         // Direction: negative height for curve down
         double directedHeight = tie.CurveUp ? -height : height;
-        
+
         // Calculate control points
         // The tie sits at the staff position, slightly offset
         double yOffset = 0.3;  // staff spaces
         double baseY = tie.CurveUp ? startY - yOffset : startY + yOffset;
-        
+
         var control1 = (X: adjustedStartX + indent, Y: baseY + directedHeight);
         var control2 = (X: adjustedEndX - indent, Y: baseY + directedHeight);
-        
+
         return new TieLayout(
             tie,
             adjustedStartX,
@@ -76,7 +76,7 @@ public sealed class TieEngraver
             control1,
             control2);
     }
-    
+
     /// <summary>
     /// Calculates tie height based on width.
     /// Based on Lilypond's slur_height function in bezier-bow.cc
@@ -86,14 +86,14 @@ public sealed class TieEngraver
         // h = h_inf * tanh(r * w / h_inf)
         // For small w: h ≈ r * w
         // For large w: h → h_inf
-        
+
         if (heightLimit < 0.001)
             return 0;
-        
+
         double x = ratio * width / heightLimit;
         return heightLimit * Math.Tanh(x);
     }
-    
+
     /// <summary>
     /// Calculates indent for control points.
     /// Based on Lilypond's get_slur_indent_height function.
@@ -104,7 +104,7 @@ public sealed class TieEngraver
         double q = 2 * heightLimit / maxFraction;
         return 2 * heightLimit - q * q * maxFraction / (width + q);
     }
-    
+
     /// <summary>
     /// Calculates layouts for multiple ties.
     /// </summary>
@@ -116,7 +116,7 @@ public sealed class TieEngraver
         IReadOnlyList<double> endYPositions)
     {
         var layouts = new List<TieLayout>();
-        
+
         for (int i = 0; i < ties.Count; i++)
         {
             var layout = CalculateTieLayout(
@@ -127,7 +127,7 @@ public sealed class TieEngraver
                 endYPositions[i]);
             layouts.Add(layout);
         }
-        
+
         return layouts.ToImmutableArray();
     }
 }

@@ -13,19 +13,19 @@ public sealed record ArticulationItem
 {
     /// <summary>The articulation type.</summary>
     public ArticulationType Type { get; }
-    
+
     /// <summary>The measure index where this articulation appears.</summary>
     public int MeasureIndex { get; }
-    
+
     /// <summary>The item index within the measure.</summary>
     public int ItemIndex { get; }
-    
+
     /// <summary>Whether this articulation should be placed above the note.</summary>
     public bool IsAbove { get; }
-    
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
-    
+
     public ArticulationItem(ArticulationType type, int measureIndex, int itemIndex, bool isAbove, int sourcePosition)
     {
         Type = type;
@@ -34,7 +34,7 @@ public sealed record ArticulationItem
         IsAbove = isAbove;
         SourcePosition = sourcePosition;
     }
-    
+
     /// <summary>
     /// Gets the SMuFL codepoint for this articulation.
     /// </summary>
@@ -60,7 +60,7 @@ public sealed record ArticulationItem
         ArticulationType.PrallTriller => "\uE56B",   // ornamentShortTrill
         _ => ""
     };
-    
+
     /// <summary>
     /// Whether this is an ornament (always placed above the note).
     /// </summary>

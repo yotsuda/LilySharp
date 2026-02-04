@@ -24,7 +24,7 @@ public static class SystemBarlineRenderer
     {
         return $"""<line x1="{x:F2}" y1="{yTop:F2}" x2="{x:F2}" y2="{yBottom:F2}" stroke="black" stroke-width="{thickness:F2}" />""";
     }
-    
+
     /// <summary>
     /// Renders a double barline (end of section/piece).
     /// </summary>
@@ -35,18 +35,18 @@ public static class SystemBarlineRenderer
         sb.AppendLine(RenderSystemBarline(x + spacing, yTop, yBottom, thickness * 2));
         return sb.ToString();
     }
-    
+
     /// <summary>
     /// Renders a repeat barline (with dots).
     /// </summary>
-    public static string RenderRepeatBarline(double x, double yTop, double yBottom, 
+    public static string RenderRepeatBarline(double x, double yTop, double yBottom,
         double staffSpace, bool dotsOnLeft = false, double thickness = 1.0)
     {
         var sb = new StringBuilder();
         double midY = (yTop + yBottom) / 2;
         double dotRadius = staffSpace * 0.2;
         double dotSpacing = staffSpace * 0.5;
-        
+
         // Barlines
         if (dotsOnLeft)
         {
@@ -66,7 +66,7 @@ public static class SystemBarlineRenderer
             sb.AppendLine($"""<circle cx="{dotX:F2}" cy="{midY - dotSpacing:F2}" r="{dotRadius:F2}" fill="black" />""");
             sb.AppendLine($"""<circle cx="{dotX:F2}" cy="{midY + dotSpacing:F2}" r="{dotRadius:F2}" fill="black" />""");
         }
-        
+
         return sb.ToString();
     }
 }

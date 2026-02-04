@@ -24,8 +24,8 @@ internal class SyntaxToken : GreenNode
 
     private static int ComputeFullWidth(string text, GreenNode? leading, GreenNode? trailing)
     {
-        return text.Length 
-             + (leading?.FullWidth ?? 0) 
+        return text.Length
+             + (leading?.FullWidth ?? 0)
              + (trailing?.FullWidth ?? 0);
     }
 

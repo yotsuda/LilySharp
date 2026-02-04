@@ -11,31 +11,31 @@ public sealed record SlurItem
 {
     /// <summary>The starting note of the slur.</summary>
     public NoteItem StartNote { get; }
-    
+
     /// <summary>The ending note of the slur.</summary>
     public NoteItem EndNote { get; }
-    
+
     /// <summary>Staff position at start.</summary>
     public int StartStaffPosition { get; }
-    
+
     /// <summary>Staff position at end.</summary>
     public int EndStaffPosition { get; }
-    
+
     /// <summary>Direction of the slur curve (up or down).</summary>
     public bool CurveUp { get; }
-    
+
     /// <summary>Measure index where the slur starts.</summary>
     public int StartMeasureIndex { get; }
-    
+
     /// <summary>Measure index where the slur ends.</summary>
     public int EndMeasureIndex { get; }
-    
+
     /// <summary>Index of the start note within its measure.</summary>
     public int StartItemIndex { get; }
-    
+
     /// <summary>Index of the end note within its measure.</summary>
     public int EndItemIndex { get; }
-    
+
     public SlurItem(
         NoteItem startNote,
         NoteItem endNote,

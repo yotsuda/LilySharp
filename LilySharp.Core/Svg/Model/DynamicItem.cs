@@ -13,19 +13,19 @@ public sealed record DynamicItem
 {
     /// <summary>The dynamic level (ppp to fff).</summary>
     public DynamicLevel Level { get; }
-    
+
     /// <summary>The text representation of this dynamic.</summary>
     public string Text { get; }
-    
+
     /// <summary>The measure index where this dynamic appears.</summary>
     public int MeasureIndex { get; }
-    
+
     /// <summary>The item index within the measure.</summary>
     public int ItemIndex { get; }
-    
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
-    
+
     public DynamicItem(DynamicLevel level, int measureIndex, int itemIndex, int sourcePosition)
     {
         Level = level;
@@ -34,7 +34,7 @@ public sealed record DynamicItem
         ItemIndex = itemIndex;
         SourcePosition = sourcePosition;
     }
-    
+
     private static string GetDynamicText(DynamicLevel level) => level switch
     {
         DynamicLevel.PPP => "ppp",

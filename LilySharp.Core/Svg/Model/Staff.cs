@@ -29,19 +29,19 @@ public sealed record Staff(
 {
     /// <summary>The primary voice (first voice).</summary>
     public Voice PrimaryVoice => Voices[0];
-    
+
     /// <summary>Whether this staff has multiple voices.</summary>
     public bool IsMultiVoice => Voices.Length > 1;
-    
+
     /// <summary>Number of measures (from primary voice).</summary>
     public int MeasureCount => PrimaryVoice.Measures.Length;
-    
+
     /// <summary>
     /// Creates a single-voice staff.
     /// </summary>
     public static Staff Create(ClefType clef, Voice voice)
         => new(clef, ImmutableArray.Create(voice));
-    
+
     /// <summary>
     /// Parses a clef string to ClefType.
     /// </summary>
@@ -53,7 +53,7 @@ public sealed record Staff(
         "tenor" => ClefType.Tenor,
         _ => ClefType.Treble
     };
-    
+
     /// <summary>
     /// Parses a SyntaxKind to ClefType.
     /// </summary>

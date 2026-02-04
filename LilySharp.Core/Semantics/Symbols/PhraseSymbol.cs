@@ -28,24 +28,24 @@ public sealed record PhraseSymbol : Symbol
         _declaringSyntax = declaringSyntax;
         Body = body;
     }
-    
+
     private readonly string _name;
     private readonly PhraseDeclarationSyntax _declaringSyntax;
-    
+
     /// <inheritdoc/>
     public override string Name => _name;
-    
+
     /// <inheritdoc/>
     public override SymbolKind Kind => SymbolKind.Phrase;
-    
+
     /// <inheritdoc/>
     public override SyntaxNode DeclaringSyntax => _declaringSyntax;
-    
+
     /// <summary>
     /// The syntax node that declares this phrase (typed).
     /// </summary>
     public PhraseDeclarationSyntax DeclarationSyntax => _declaringSyntax;
-    
+
     /// <summary>
     /// The music content of this phrase.
     /// </summary>

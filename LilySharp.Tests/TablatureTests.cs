@@ -13,7 +13,7 @@ public class TablatureTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseTabStaff_WithGuitarTuning()
     {
@@ -21,7 +21,7 @@ public class TablatureTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseTabStaff_WithBassTuning()
     {
@@ -29,7 +29,7 @@ public class TablatureTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseTabStaff_WithBass5Tuning()
     {
@@ -37,7 +37,7 @@ public class TablatureTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void ParseTabStaff_WithUkuleleTuning()
     {
@@ -45,7 +45,7 @@ public class TablatureTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
-    
+
     [Fact]
     public void Tunings_CalculateFret_OpenLowE()
     {
@@ -54,7 +54,7 @@ public class TablatureTests
         Assert.Equal(6, stringNum);  // 6th string (lowest)
         Assert.Equal(0, fret);       // open string
     }
-    
+
     [Fact]
     public void Tunings_CalculateFret_FrettedNote()
     {
@@ -62,7 +62,7 @@ public class TablatureTests
         var (stringNum, fret) = Tunings.CalculateFret(43, Tunings.Guitar);
         Assert.Equal(3, fret);
     }
-    
+
     [Fact]
     public void Tunings_CalculateFret_OpenHighE()
     {
@@ -71,7 +71,7 @@ public class TablatureTests
         Assert.Equal(1, stringNum);  // 1st string (highest)
         Assert.Equal(0, fret);       // open string
     }
-    
+
     [Fact]
     public void Tunings_CalculateFret_PreferredString()
     {
@@ -80,7 +80,7 @@ public class TablatureTests
         Assert.Equal(5, stringNum);
         Assert.Equal(0, fret);
     }
-    
+
     [Fact]
     public void Tunings_Bass_CalculateFret()
     {

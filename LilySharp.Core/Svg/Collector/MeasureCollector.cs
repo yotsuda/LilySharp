@@ -24,30 +24,30 @@ internal sealed class MeasureBuilder
     private readonly List<Measure> _measures = new();
     private readonly List<MusicItem> _currentItems = new();
     private readonly List<MeasureBoundary> _boundaries = new();
-    
+
     private readonly Fraction _timeSignature;
     private Fraction _currentDuration = Fraction.Zero;
     private Fraction _defaultDuration = Fraction.Quarter;
-    
+
     private BarlineType _pendingStartBarline = BarlineType.None;
     private bool _pendingBreak = false;
     private string? _sectionLabel;
     private int _measureSourceStart;
-    
+
     public MeasureBuilder(Fraction timeSignature, int sourceStart = 0)
     {
         _timeSignature = timeSignature;
         _measureSourceStart = sourceStart;
     }
-    
+
     public IReadOnlyList<MeasureBoundary> Boundaries => _boundaries;
-    
+
     /// <summary>Current measure index (completed measures count).</summary>
     public int CurrentMeasureIndex => _measures.Count;
-    
+
     /// <summary>Current item count within the current measure.</summary>
     public int CurrentItemCount => _currentItems.Count;
-    
+
     public string? SectionLabel
     {
         get => _sectionLabel;
@@ -60,18 +60,18 @@ internal sealed class MeasureBuilder
     public void AddItem(MusicItem item)
     {
         _currentItems.Add(item);
-        
+
         // Track duration
         var itemDuration = GetItemDuration(item);
         _currentDuration += itemDuration;
-        
+
         // Auto-complete measure if we've reached or exceeded time signature
         if (_currentDuration >= _timeSignature)
         {
             AutoCompleteMeasure(item.SourcePosition + 1);
         }
     }
-    
+
     private Fraction GetItemDuration(MusicItem item)
     {
         // Duration already includes dots (BaseDuration.Dotted(Dots))
@@ -82,7 +82,7 @@ internal sealed class MeasureBuilder
             ChordItem chord => chord.Duration,
             _ => Fraction.Zero
         };
-        
+
         // Update default duration (use base duration without dots)
         Fraction baseDuration = item switch
         {
@@ -93,21 +93,21 @@ internal sealed class MeasureBuilder
         };
         if (baseDuration != Fraction.Zero)
             _defaultDuration = baseDuration;
-        
+
         return duration;
     }
-    
+
     private void AutoCompleteMeasure(int sourceEnd)
     {
         // Check if duration aligns with time signature
         bool isAligned = _currentDuration == _timeSignature;
-        
+
         if (_currentItems.Count > 0)
         {
             // Apply pending break if any
             bool hasBreak = _pendingBreak;
             _pendingBreak = false;
-            
+
             _measures.Add(new Measure(
                 _currentItems.ToImmutableArray(),
                 _pendingStartBarline,
@@ -116,19 +116,19 @@ internal sealed class MeasureBuilder
                 _measureSourceStart,
                 sourceEnd,
                 hasBreakAfter: hasBreak));
-            
+
             // Record boundary
             _boundaries.Add(new MeasureBoundary(
                 sourceEnd,
                 _currentDuration,
                 IsExplicit: false,
                 IsAligned: isAligned));
-            
+
             _currentItems.Clear();
             _sectionLabel = null;
             _pendingStartBarline = BarlineType.None;
             _measureSourceStart = sourceEnd;
-            
+
             // Handle overflow: if we exceeded time signature, the excess carries over
             if (_currentDuration > _timeSignature)
             {
@@ -160,7 +160,7 @@ internal sealed class MeasureBuilder
             _pendingBreak = true;
         }
     }
-    
+
     /// <summary>
     /// Handles an explicit barline, completing the current measure.
     /// </summary>
@@ -190,17 +190,17 @@ internal sealed class MeasureBuilder
             CompleteMeasureExplicit(barType, position);
         }
     }
-    
+
     private void CompleteMeasureExplicit(BarlineType endBarline, int sourceEnd)
     {
         bool isAligned = _currentDuration == _timeSignature;
-        
+
         if (_currentItems.Count > 0 || _pendingStartBarline != BarlineType.None)
         {
             // Apply pending break if any
             bool hasBreak = _pendingBreak;
             _pendingBreak = false;
-            
+
             _measures.Add(new Measure(
                 _currentItems.ToImmutableArray(),
                 _pendingStartBarline,
@@ -209,14 +209,14 @@ internal sealed class MeasureBuilder
                 _measureSourceStart,
                 sourceEnd,
                 hasBreakAfter: hasBreak));
-            
+
             // Record boundary with explicit flag
             _boundaries.Add(new MeasureBoundary(
                 sourceEnd,
                 _currentDuration,
                 IsExplicit: true,
                 IsAligned: isAligned));
-            
+
             _currentItems.Clear();
             _sectionLabel = null;
             _pendingStartBarline = BarlineType.None;
@@ -224,14 +224,14 @@ internal sealed class MeasureBuilder
             _currentDuration = Fraction.Zero;
         }
     }
-    
+
     public List<Measure> FinalizeMeasures()
     {
         // Handle any remaining items as the final measure
         if (_currentItems.Count > 0)
         {
             bool isAligned = _currentDuration == _timeSignature;
-            
+
             _measures.Add(new Measure(
                 _currentItems.ToImmutableArray(),
                 _pendingStartBarline,
@@ -239,7 +239,7 @@ internal sealed class MeasureBuilder
                 _sectionLabel,
                 _measureSourceStart,
                 _measureSourceStart));  // End position same as start for incomplete
-            
+
             _boundaries.Add(new MeasureBoundary(
                 _measureSourceStart,
                 _currentDuration,
@@ -260,11 +260,11 @@ public sealed class MeasureCollector
     private StructureDeclarationSyntax? _structure;
     private string? _voiceName;
     private SyntaxNode? _root;
-    
+
     // State for relative pitch mode
     private int _currentOctave = 4;
     private char _lastPitchName = 'c';
-    
+
     // Dynamic markings
     private readonly List<DynamicItem> _dynamics = new();
     // Articulation marks
@@ -277,7 +277,7 @@ public sealed class MeasureCollector
     private GraceExpressionSyntax? _pendingGrace = null;
     // Default duration
     private Fraction _defaultDuration = Fraction.Quarter;
-    
+
     // Metadata
     private string? _title;
     private string? _composer;
@@ -286,12 +286,12 @@ public sealed class MeasureCollector
     private int _timeBeatType = 4;
     private int _keySharps = 0;
     private string _clef = "treble";
-    
+
     /// <summary>
     /// Gets the time signature as a Fraction.
     /// </summary>
     private Fraction TimeSignatureFraction => new(_timeBeats, _timeBeatType);
-    
+
     /// <summary>
     /// Collects a Score from a syntax tree.
     /// </summary>
@@ -299,10 +299,10 @@ public sealed class MeasureCollector
     {
         _voiceName = voiceName;
         Reset();
-        
+
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
-        
+
         // Phase 1.5: If voiceName specified, look up clef from part definition
         if (voiceName != null)
         {
@@ -313,17 +313,17 @@ public sealed class MeasureCollector
 
         // Set initial octave based on clef (bass clef starts at octave 3)
         _currentOctave = _clef == "bass" ? 3 : 4;
-        
+
         // Phase 2: Check for parallel expression (multi-voice)
         var parallelExpr = tree.GetRoot().DescendantNodes()
             .OfType<ParallelExpressionSyntax>()
             .FirstOrDefault();
-        
+
         if (parallelExpr != null)
         {
             return CollectMultiVoiceScore(parallelExpr);
         }
-        
+
         // Single voice
         var measures = CollectMeasures();
         var voice = new Voice(_voiceName ?? "default", measures.ToImmutableArray());
@@ -351,10 +351,10 @@ public sealed class MeasureCollector
     public MultiStaffScore CollectMultiStaff(SyntaxTree tree, RenderSpec renderSpec)
     {
         Reset();
-        
+
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
-        
+
         // Phase 2: Build voice dictionary
         var voiceDict = new Dictionary<string, Voice>();
         foreach (var voiceName in renderSpec.GetVoiceNames())
@@ -362,24 +362,24 @@ public sealed class MeasureCollector
             _voiceName = voiceName;
             _lastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
-            
+
             // Set clef for this voice from part definition
             var partClef = GetPartClef(tree.GetRoot(), voiceName);
             _clef = partClef ?? "treble";
-            
+
             // Set initial octave based on clef (bass clef starts at octave 3)
             _currentOctave = _clef == "bass" ? 3 : 4;
-            
-            
+
+
             var measures = CollectMeasuresForVoice(voiceName);
             voiceDict[voiceName] = new Voice(voiceName, measures.ToImmutableArray());
         }
-        
+
         // Phase 3: Build staff groups from render spec
-        var staffGroups = renderSpec.ToStaffGroups(name => 
+        var staffGroups = renderSpec.ToStaffGroups(name =>
             voiceDict.TryGetValue(name, out var v) ? v : new Voice(name, ImmutableArray<Measure>.Empty))
             .ToImmutableArray();
-        
+
         return new MultiStaffScore(
             staffGroups,
             new TimeSignature(_timeBeats, _timeBeatType),
@@ -388,13 +388,13 @@ public sealed class MeasureCollector
             _title,
             _composer);
     }
-    
+
     private List<Measure> CollectMeasuresForVoice(string voiceName)
     {
         // 1. Check variables first
         if (_variables.TryGetValue(voiceName, out var variable))
             return CollectMeasuresFromNode(variable);
-        
+
         // 2. Search for PartBlock with matching name in all sections
         foreach (var section in _sections.Values)
         {
@@ -403,10 +403,10 @@ public sealed class MeasureCollector
             if (partBlock != null)
                 return CollectMeasuresFromNode(partBlock);
         }
-        
+
         return [];
     }
-    
+
     private Score CollectMultiVoiceScore(ParallelExpressionSyntax parallelExpr)
     {
         var voices = new List<Voice>();
@@ -454,14 +454,14 @@ public sealed class MeasureCollector
             _graceNotes.ToImmutableArray(),
             lyrics: _lyrics.ToImmutableArray());
     }
-    
+
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
     {
         var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.Position);
-        
+
         // Collect all music nodes, expanding variable references
         var musicNodes = new List<SyntaxNode>();
-        
+
         foreach (var node in voiceNode.DescendantNodes())
         {
             switch (node)
@@ -475,13 +475,13 @@ public sealed class MeasureCollector
                 case SlurSyntax:
                     musicNodes.Add(node);
                     break;
-                    
+
                 case VariableReferenceSyntax varRef:
                     ExpandVariable(varRef.Name.Text, musicNodes);
                     break;
             }
         }
-        
+
         // Process collected music nodes (with lookahead for ties/slurs)
         for (int i = 0; i < musicNodes.Count; i++)
         {
@@ -492,10 +492,10 @@ public sealed class MeasureCollector
             bool hasSlurEndAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is SlurSyntax slurE && !slurE.IsOpen;
             ProcessMusicNode(node, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
         }
-        
+
         return builder.FinalizeMeasures();
     }
-    
+
     private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false)
     {
         switch (node)
@@ -504,7 +504,7 @@ public sealed class MeasureCollector
                 // Store grace expression to attach to the next note
                 _pendingGrace = grace;
                 break;
-                
+
             case NoteSyntax note:
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
@@ -521,11 +521,11 @@ public sealed class MeasureCollector
                     }
                 }
                 break;
-                
+
             case RestSyntax rest:
                 builder.AddItem(CreateRestItem(rest));
                 break;
-                
+
             case ChordSyntax chord:
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
@@ -543,24 +543,24 @@ public sealed class MeasureCollector
                     }
                 }
                 break;
-                
+
             case BarlineSyntax barline:
                 var barType = ParseBarlineType(barline.BarToken.Text);
                 builder.HandleBarline(barType, barline.Position);
                 break;
-                
+
             case BreakSyntax:
                 // 'break' keyword triggers line break
                 builder.SetBreak();
                 break;
-            
+
             case TieSyntax:
             case SlurSyntax:
                 // Already processed with the preceding note
                 break;
         }
     }
-    
+
     private void Reset()
     {
         _sections.Clear();
@@ -581,7 +581,7 @@ public sealed class MeasureCollector
         _keySharps = 0;
         _clef = "treble";
     }
-    
+
     /// <summary>
     /// Looks up the clef from a part definition by name.
     /// </summary>
@@ -591,7 +591,7 @@ public sealed class MeasureCollector
         {
             if (partDecl.Name.Text != partName)
                 continue;
-            
+
             // Check properties for clef
             foreach (var prop in partDecl.Properties)
             {
@@ -600,19 +600,19 @@ public sealed class MeasureCollector
                     // Value is at index 2 (after name and colon)
                     var valueToken = prop.GetChild(2) as SyntaxTokenNode;
                     if (valueToken == null) continue;
-                    
+
                     return valueToken.Text.ToLowerInvariant();
                 }
             }
         }
-        
+
         return null;
     }
-    
+
     private void CollectDefinitions(SyntaxNode root)
     {
         _root = root;
-        
+
         foreach (var node in root.DescendantNodes())
         {
             switch (node)
@@ -620,52 +620,52 @@ public sealed class MeasureCollector
                 case MetadataDeclarationSyntax metadata:
                     CollectMetadata(metadata);
                     break;
-                    
+
                 case TempoDeclarationSyntax tempoDecl:
                     CollectTempo(tempoDecl);
                     break;
-                    
+
                 case TimeSignatureSyntax timeSig:
                     _timeBeats = timeSig.Beats;
                     _timeBeatType = timeSig.BeatType;
                     break;
-                    
+
                 case KeySignatureSyntax key:
                     _keySharps = CalculateKeySharps(key);
                     break;
-                    
+
                 case ClefDeclarationSyntax clef:
                     _clef = clef.ClefName.Text.ToLowerInvariant();
                     break;
-                    
+
                 case SectionDeclarationSyntax section:
                     _sections[section.SectionName] = section;
                     break;
-                    
+
                 case StructureDeclarationSyntax structure:
                     _structure = structure;
                     break;
-                    
+
                 case VariableDeclarationSyntax varDecl:
                     _variables[varDecl.Name.Text] = varDecl.Expression;
                     break;
-                
+
                 case PhraseDeclarationSyntax phraseDecl:
                     _variables[phraseDecl.Name.Text] = phraseDecl.Body;
                     break;
-                    
+
                 case RenderDeclarationSyntax render:
                     ExtractVoiceName(render);
                     break;
             }
         }
     }
-    
+
     private void CollectMetadata(MetadataDeclarationSyntax metadata)
     {
         var keyword = metadata.Keyword.ToLowerInvariant();
         var values = metadata.Values.ToList();
-        
+
         switch (keyword)
         {
             case "title":
@@ -678,43 +678,43 @@ public sealed class MeasureCollector
                 break;
         }
     }
-    
+
     private void CollectTempo(TempoDeclarationSyntax tempoDecl)
     {
         var values = tempoDecl.Values.ToList();
         if (values.Count > 0 && values[0] is SyntaxTokenNode token && int.TryParse(token.Text, out int tempo))
             _tempo = tempo;
     }
-    
+
     private int CalculateKeySharps(KeySignatureSyntax key)
     {
         string pitchName = key.Pitch.PitchName.ToLowerInvariant();
         string mode = key.Mode.Text.ToLowerInvariant();
-        
+
         var majorKeys = new Dictionary<string, int>
         {
             ["c"] = 0, ["g"] = 1, ["d"] = 2, ["a"] = 3, ["e"] = 4, ["b"] = 5,
             ["f"] = -1, ["bes"] = -2, ["ees"] = -3, ["aes"] = -4, ["des"] = -5, ["ges"] = -6
         };
-        
+
         string keyName = pitchName;
         if (key.Pitch.AccidentalOffset > 0) keyName += "is";
         else if (key.Pitch.AccidentalOffset < 0) keyName += "es";
-        
+
         if (majorKeys.TryGetValue(keyName, out int sharps))
         {
             if (mode == "minor") sharps -= 3;
             return sharps;
         }
-        
+
         return 0;
     }
-    
+
     private void ExtractVoiceName(RenderDeclarationSyntax render)
     {
         if (render.GetChild(1) is not SyntaxTokenNode outputType || outputType.Text != "score")
             return;
-        
+
         foreach (var child in render.DescendantNodes())
         {
             if (child is StaffRenderSyntax staff)
@@ -733,11 +733,11 @@ public sealed class MeasureCollector
             }
         }
     }
-    
+
     private List<Measure> CollectMeasures()
     {
         var builder = new MeasureBuilder(TimeSignatureFraction);
-        
+
         void ProcessNodes(IEnumerable<SyntaxNode> nodes)
         {
             var nodeList = nodes.ToList();
@@ -751,7 +751,7 @@ public sealed class MeasureCollector
                 ProcessMusicNode(node, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
             }
         }
-        
+
         // Process based on structure or sections
         if (_structure != null)
         {
@@ -771,10 +771,10 @@ public sealed class MeasureCollector
                 .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax);
             ProcessNodes(musicNodes);
         }
-        
+
         return builder.FinalizeMeasures();
     }
-    
+
     private void ProcessStructure(Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
         foreach (var child in _structure!.DescendantNodes())
@@ -791,14 +791,14 @@ public sealed class MeasureCollector
                         ProcessSection(section, processNodes);
                     }
                     break;
-                    
+
                 case StructureRepeatBlockSyntax repeat:
                     ProcessRepeatBlock(repeat, processNodes, builder);
                     break;
             }
         }
     }
-    
+
     private static bool IsInsideRepeatBlock(SyntaxNode node)
     {
         var parent = node.Parent;
@@ -810,15 +810,15 @@ public sealed class MeasureCollector
         }
         return false;
     }
-    
+
     private void ProcessRepeatBlock(StructureRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
         bool afterRepeatStart = false;
-        
+
         for (int i = 0; i < repeat.SlotCount; i++)
         {
             var child = repeat.GetChild(i);
-            
+
             if (child is SyntaxTokenNode token)
             {
                 if (token.Text == "|:")
@@ -853,7 +853,7 @@ public sealed class MeasureCollector
             }
         }
     }
-    
+
     private void ProcessSection(SectionDeclarationSyntax section, Action<IEnumerable<SyntaxNode>> processNodes)
     {
         foreach (var child in section.DescendantNodes())
@@ -863,18 +863,18 @@ public sealed class MeasureCollector
                 if (_voiceName == null || partBlock.Name == _voiceName)
                 {
                     ProcessPartBlock(partBlock, processNodes);
-                    
+
                     if (_voiceName != null) return;
                 }
             }
         }
     }
-    
+
     private void ProcessPartBlock(PartBlockSyntax partBlock, Action<IEnumerable<SyntaxNode>> processNodes)
     {
         // Collect all music nodes, expanding variable references
         var musicNodes = new List<SyntaxNode>();
-        
+
         foreach (var node in partBlock.DescendantNodes())
         {
             switch (node)
@@ -888,34 +888,34 @@ public sealed class MeasureCollector
                 case SlurSyntax:
                     musicNodes.Add(node);
                     break;
-                    
+
                 case VariableReferenceSyntax varRef:
                     ExpandVariable(varRef.Name.Text, musicNodes);
                     break;
             }
         }
-        
+
         processNodes(musicNodes);
     }
-    
+
     private void ExpandVariable(string name, List<SyntaxNode> musicNodes)
     {
         if (!_variables.TryGetValue(name, out var expression))
             return;
-        
+
         // Include expression itself if it is a music node
         if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax)
         {
             musicNodes.Add(expression);
         }
-        
+
         // Get music nodes from the variable expression descendants
         var nodes = expression.DescendantNodes()
             .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax);
-        
+
         musicNodes.AddRange(nodes);
     }
-    
+
     private static BarlineSyntax CreateBarlineSyntax(string barText, int position)
     {
         var kind = barText switch
@@ -926,18 +926,18 @@ public sealed class MeasureCollector
             "|." => SyntaxKind.FinalBar,
             _ => SyntaxKind.Bar
         };
-        
+
         var token = new LilySharp.Core.Syntax.InternalSyntax.SyntaxToken(kind, barText);
         var green = new LilySharp.Core.Syntax.InternalSyntax.BarlineGreen(token);
         return new BarlineSyntax(green, null, position);
     }
-    
+
     private void InitializeRelativeMode(PitchSyntax basePitch)
     {
         _lastPitchName = basePitch.PitchName[0];
         _currentOctave = 4 + basePitch.OctaveOffset;
     }
-    
+
     /// <summary>
     /// Collects dynamic markings from note/chord modifiers.
     /// </summary>
@@ -952,7 +952,7 @@ public sealed class MeasureCollector
             ChordSyntax chord => chord.Articulations,
             _ => Enumerable.Empty<SyntaxNode>()
         };
-        
+
         foreach (var articulation in articulations)
         {
             if (articulation is DynamicSyntax dynamicSyntax)
@@ -965,7 +965,7 @@ public sealed class MeasureCollector
             }
         }
     }
-    
+
     /// <summary>
     /// Collects articulation marks from note/chord modifiers.
     /// </summary>
@@ -980,7 +980,7 @@ public sealed class MeasureCollector
             ChordSyntax chord => chord.Articulations,
             _ => Enumerable.Empty<SyntaxNode>()
         };
-        
+
         foreach (var articulation in articulations)
         {
             if (articulation is ArticulationSyntax articulationSyntax)
@@ -991,7 +991,7 @@ public sealed class MeasureCollector
                     // LILYPOND-REF: script-interface.cc:23-45 direction calculation
                     // Articulations go opposite to stem direction by default
                     bool isAbove = !stemUp;
-                    
+
                     // Fermata and ornaments always go above
                     // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
                     // LILYPOND-REF: define-grobs.scm:2175 ornaments: direction = UP
@@ -1005,13 +1005,13 @@ public sealed class MeasureCollector
                     {
                         isAbove = true;
                     }
-                    
+
                     _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove, articulationSyntax.Position));
                 }
             }
         }
     }
-    
+
     /// <summary>
     /// Collects grace notes from a grace expression.
     /// </summary>
@@ -1023,17 +1023,17 @@ public sealed class MeasureCollector
         var type = grace.IsAcciaccatura ? GraceNoteType.Acciaccatura
                  : grace.IsAppoggiatura ? GraceNoteType.Appoggiatura
                  : GraceNoteType.Grace;
-        
+
         // Collect notes from the grace body
         var graceNoteInfos = new List<GraceNoteInfo>();
-        
+
         foreach (var item in grace.Body.Items)
         {
             if (item is NoteSyntax note)
             {
                 var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);
                 _currentOctave = octave;
-                
+
                 bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
                 string? accidental = note.Pitch.AccidentalOffset switch
                 {
@@ -1043,11 +1043,11 @@ public sealed class MeasureCollector
                     -2 => "doubleFlat",
                     _ => null
                 };
-                
+
                 graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger));
             }
         }
-        
+
         if (graceNoteInfos.Count > 0)
         {
             _graceNotes.Add(new GraceNoteItem(
@@ -1063,17 +1063,17 @@ public sealed class MeasureCollector
     {
         var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);
         _currentOctave = octave;
-        
+
         int noteValue = note.Duration?.Value ?? (int)_defaultDuration.Denominator;
         if (note.Duration != null)
             _defaultDuration = Fraction.FromNoteValue(noteValue);
-        
+
         int dots = note.Duration?.DotCount ?? 0;
         bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-        
+
         // Parse tremolo suffix (:8 = 1 beam, :16 = 2 beams, :32 = 3 beams)
         int tremoloBeams = ParseTremoloBeams(note.Tremolo);
-        
+
         string? accidental = note.Pitch.AccidentalOffset switch
         {
             2 => "doubleSharp",
@@ -1082,7 +1082,7 @@ public sealed class MeasureCollector
             -2 => "doubleFlat",
             _ => null
         };
-        
+
         return new NoteItem(
             staffPosition,
             Fraction.FromNoteValue(noteValue),
@@ -1095,15 +1095,15 @@ public sealed class MeasureCollector
             hasSlurStart: hasSlurStartAfter,
             hasSlurEnd: hasSlurEndAfter);
     }
-    
+
     private RestItem CreateRestItem(RestSyntax rest)
     {
         int noteValue = rest.Duration?.Value ?? (int)_defaultDuration.Denominator;
         if (rest.Duration != null)
             _defaultDuration = Fraction.FromNoteValue(noteValue);
-        
+
         int dots = rest.Duration?.DotCount ?? 0;
-        
+
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, rest.Position);
     }
 
@@ -1115,12 +1115,12 @@ public sealed class MeasureCollector
     {
         if (tremolo == null)
             return 0;
-        
+
         // Tremolo text is ":8", ":16", or ":32"
         var text = tremolo.Text;
         if (text.Length < 2 || text[0] != ':')
             return 0;
-        
+
         return text[1..] switch
         {
             "8" => 1,
@@ -1129,27 +1129,27 @@ public sealed class MeasureCollector
             _ => 0
         };
     }
-    
+
     private ChordItem CreateChordItem(ChordSyntax chord)
     {
         var notes = new List<ChordNoteInfo>();
-        
+
         // Track first note's state for subsequent chord/note relative calculation
         int firstOctave = _currentOctave;
         char firstPitchName = _lastPitchName;
-        
+
         foreach (var pitch in chord.Pitches)
         {
             var (staffPosition, octave) = CalculateStaffPosition(pitch);
             _currentOctave = octave;
-            
+
             // Remember first pitch's state
             if (notes.Count == 0)
             {
                 firstOctave = octave;
                 firstPitchName = pitch.PitchName.ToLowerInvariant()[0];
             }
-            
+
             string? accidental = pitch.AccidentalOffset switch
             {
                 2 => "doubleSharp",
@@ -1158,38 +1158,38 @@ public sealed class MeasureCollector
                 -2 => "doubleFlat",
                 _ => null
             };
-            
+
             bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
             notes.Add(new ChordNoteInfo(staffPosition, accidental, needsLedger));
         }
-        
+
         // Next chord/note is relative to first pitch of this chord (Lilypond spec)
         _currentOctave = firstOctave;
         _lastPitchName = firstPitchName;
-        
+
         int noteValue = chord.Duration?.Value ?? (int)_defaultDuration.Denominator;
         if (chord.Duration != null)
             _defaultDuration = Fraction.FromNoteValue(noteValue);
-        
+
         int dots = chord.Duration?.DotCount ?? 0;
         int tremoloBeams = ParseTremoloBeams(chord.Tremolo);
-        
+
         return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams);
     }
-    
+
     private (int staffPosition, int octave) CalculateStaffPosition(PitchSyntax pitch)
     {
         char pitchName = pitch.PitchName.ToLowerInvariant()[0];
-        
+
         // Calculate base octave from interval (without OctaveOffset)
         int interval = GetPitchIndex(pitchName) - GetPitchIndex(_lastPitchName);
         int baseOctave = _currentOctave;
         if (interval > 3) baseOctave--;
         else if (interval < -3) baseOctave++;
-        
+
         // Apply OctaveOffset for this note only (does not affect next note)
         int actualOctave = baseOctave + pitch.OctaveOffset;
-        
+
         // Staff position 0 = middle line of the staff
         // Treble clef: B4 = staff position 0
         // Bass clef: D3 = staff position 0
@@ -1199,19 +1199,19 @@ public sealed class MeasureCollector
             "bass" => GetPitchIndex(pitchName) - GetPitchIndex('d') + (actualOctave - 3) * 7,
             _ => GetPitchIndex(pitchName) - GetPitchIndex('b') + (actualOctave - 4) * 7
         };
-        
+
         _lastPitchName = pitchName;
-        
+
         // Return actualOctave - next note is calculated relative to actual pitch
         return (basePosition, actualOctave);
     }
-    
+
     private static int GetPitchIndex(char pitch) => pitch switch
     {
         'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3, 'g' => 4, 'a' => 5, 'b' => 6,
         _ => 0
     };
-    
+
     private static BarlineType ParseBarlineType(string text) => text switch
     {
         "|:" => BarlineType.RepeatStart,

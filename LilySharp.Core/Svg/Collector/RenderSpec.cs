@@ -47,10 +47,10 @@ public sealed record RenderSpec(
 {
     /// <summary>Whether this render contains a grand staff.</summary>
     public bool HasGrandStaff => Items.Any(i => i is GrandStaffRenderSpec);
-    
+
     /// <summary>Whether this is a multi-staff render.</summary>
     public bool IsMultiStaff => Items.Length > 1 || HasGrandStaff;
-    
+
     /// <summary>Gets all voice names referenced in this render.</summary>
     public IEnumerable<string> GetVoiceNames()
     {
@@ -68,7 +68,7 @@ public sealed record RenderSpec(
             }
         }
     }
-    
+
     /// <summary>Gets all staff groups for layout.</summary>
     public IEnumerable<StaffGroup> ToStaffGroups(Func<string, Voice> getVoice)
     {
@@ -80,7 +80,7 @@ public sealed record RenderSpec(
                     var singleStaff = Staff.Create(single.Staff.Clef, getVoice(single.Staff.VoiceName));
                     yield return StaffGroup.CreateSingle(singleStaff);
                     break;
-                    
+
                 case GrandStaffRenderSpec grand:
                     var staves = grand.GrandStaff.Staves
                         .Select(s => Staff.Create(s.Clef, getVoice(s.VoiceName)))

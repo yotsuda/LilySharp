@@ -14,12 +14,12 @@ namespace LilySharp.Core.Svg.Layout;
 public sealed class SlurEngraver
 {
     private readonly SlurScoreParameters _parameters;
-    
+
     public SlurEngraver(SlurScoreParameters? parameters = null)
     {
         _parameters = parameters ?? SlurScoreParameters.Default;
     }
-    
+
     /// <summary>
     /// Calculates the layout for a slur.
     /// All coordinates are in staff spaces.
@@ -34,40 +34,40 @@ public sealed class SlurEngraver
         // Calculate slur dimensions (all in staff spaces)
         double width = endX - startX;
         double heightDiff = endY - startY;
-        
+
         // Calculate arc height based on width (Lilypond's slur_height algorithm)
         double arcHeight = CalculateSlurHeight(width, _parameters.HeightLimit, _parameters.Ratio);
-        
+
         // Calculate indent for control points
         double indent = CalculateIndent(width, _parameters.HeightLimit, _parameters.Ratio);
-        
+
         // Apply gap from noteheads
         double adjustedStartX = startX + _parameters.FreeHeadDistance;
         double adjustedEndX = endX - _parameters.FreeHeadDistance;
         double adjustedWidth = adjustedEndX - adjustedStartX;
-        
+
         // Recalculate for adjusted width
         if (adjustedWidth > 0)
         {
             arcHeight = CalculateSlurHeight(adjustedWidth, _parameters.HeightLimit, _parameters.Ratio);
             indent = CalculateIndent(adjustedWidth, _parameters.HeightLimit, _parameters.Ratio);
         }
-        
+
         // Direction: negative height for curve down
         double directedHeight = slur.CurveUp ? -arcHeight : arcHeight;
-        
+
         // Calculate base Y positions with offset from noteheads
         double offset = 0.4;  // staff spaces
         double baseStartY = slur.CurveUp ? startY - offset : startY + offset;
         double baseEndY = slur.CurveUp ? endY - offset : endY + offset;
-        
+
         // Calculate midpoint Y for control point height
         double midY = (baseStartY + baseEndY) / 2;
-        
+
         // Control points
         var control1 = (X: adjustedStartX + indent, Y: midY + directedHeight);
         var control2 = (X: adjustedEndX - indent, Y: midY + directedHeight);
-        
+
         return new SlurLayout(
             slur,
             adjustedStartX,
@@ -77,7 +77,7 @@ public sealed class SlurEngraver
             control1,
             control2);
     }
-    
+
     /// <summary>
     /// Calculates slur arc height based on width.
     /// Based on Lilypond's slur_height function in bezier-bow.cc
@@ -86,11 +86,11 @@ public sealed class SlurEngraver
     {
         if (heightLimit < 0.001)
             return 0;
-        
+
         double x = ratio * width / heightLimit;
         return heightLimit * Math.Tanh(x);
     }
-    
+
     /// <summary>
     /// Calculates indent for control points.
     /// </summary>
@@ -100,7 +100,7 @@ public sealed class SlurEngraver
         double q = 2 * heightLimit / maxFraction;
         return 2 * heightLimit - q * q * maxFraction / (width + q);
     }
-    
+
     /// <summary>
     /// Calculates layouts for multiple slurs.
     /// </summary>
@@ -112,7 +112,7 @@ public sealed class SlurEngraver
         IReadOnlyList<double> endYPositions)
     {
         var layouts = new List<SlurLayout>();
-        
+
         for (int i = 0; i < slurs.Count; i++)
         {
             var layout = CalculateSlurLayout(
@@ -123,7 +123,7 @@ public sealed class SlurEngraver
                 endYPositions[i]);
             layouts.Add(layout);
         }
-        
+
         return layouts.ToImmutableArray();
     }
 }
