@@ -554,8 +554,8 @@ public sealed class SvgRenderer
         double endX;
         if (system.Measures.Length > 0)
         {
-            var lastMeasure = system.Measures[^1];
-            endX = lastMeasure.X + lastMeasure.Width;
+            var lastMeasureLayout = system.Measures[^1];
+            endX = lastMeasureLayout.X + lastMeasureLayout.Width;
         }
         else
         {
@@ -723,8 +723,8 @@ public sealed class SvgRenderer
         if (isFirstVoice && !skipBarlines)
         {
             double endX = x + layout.Width;
-            // Subtract barline width so the barline ENDS at the measure boundary, not starts there
-            double barlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
+            // Draw barline so it ENDS at measure boundary (endX), not starts there
+            double barlineWidth = GetVisualBarlineWidth(measure.EndBarline);
             DrawBarline(measure.EndBarline, endX - barlineWidth, systemY);
         }
     }
@@ -941,6 +941,30 @@ public sealed class SvgRenderer
             }
         }
     }
+
+    /// <summary>
+    /// Gets the visual (drawn) width of a barline type, as opposed to layout allocation width.
+    /// </summary>
+    private static double GetVisualBarlineWidth(BarlineType type)
+    {
+        double thin = EngravingDefaults.ThinBarlineThickness;
+        double thick = EngravingDefaults.ThickBarlineThickness;
+        double sep = EngravingDefaults.BarlineSeparation;
+        double dotsOffset = EngravingDefaults.RepeatDotsOffset;
+        
+        return type switch
+        {
+            BarlineType.None => 0,
+            BarlineType.Single => thin,
+            BarlineType.Double => thin + sep + thin,
+            BarlineType.Final => thin + sep + thick,
+            BarlineType.RepeatStart => thick + sep + thin + dotsOffset,
+            BarlineType.RepeatEnd => dotsOffset + thin + sep + thick,
+            BarlineType.RepeatBoth => dotsOffset + thin + sep + thick + sep + thin + dotsOffset,
+            _ => thin
+        };
+    }
+
 
     private void DrawBarline(BarlineType type, double x, double systemY)
     {
