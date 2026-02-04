@@ -389,6 +389,7 @@ SyntaxTree
 | 2026-02-04 | ✅ Phase 10: Tremolo パイプライン完成。BoundNote/BoundChord に TremoloBeams 追加、Binder/ScoreBuilder 連携。:8/:16/:32 構文が NoteItem/ChordItem に伝播 |
 | 2026-02-04 | ✅ Phase 4: TieFormattingProblem.cs 実装。BeamScoringProblemパターンで制約ベース最適化、スタッフライン/タイ間衝突回避。LILYPOND-REF: tie-formatting-problem.cc |
 | 2026-02-04 | ✅ Phase 4 完了: SlurScoringProblem.cs 実装。制約ベース最適化、スタッフライン/スラー間衝突回避、傾斜ペナルティ。LILYPOND-REF: slur-scoring.cc |
+| 2026-02-04 | ✅ LilyPond スタイルバーチェック実装。| は小節確認のみ（小節作成しない）、拍子記号に基づいて自動分割。BarCheckWarning で不一致警告 |
 
 ### ⚠️ 構文注意事項
 
