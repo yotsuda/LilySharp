@@ -49,7 +49,7 @@ public static class EngravingDefaults
 
     // Rest collision avoidance
     /// <summary>Default staff position for rest center (middle line).</summary>
-    public const double RestCenterPosition = 4.0;
+    public const double RestCenterPosition = 0.0;
     /// <summary>Extent of rest collision box in staff positions.</summary>
     public const double RestExtent = 2.0;
     /// <summary>Minimum distance between rest and beam in staff positions.</summary>
