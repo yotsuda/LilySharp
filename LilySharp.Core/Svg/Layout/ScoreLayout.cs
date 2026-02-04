@@ -36,7 +36,7 @@ public sealed record MeasureLayout
     public double Width { get; }                          // Total measure width (staff spaces)
     public ImmutableArray<ItemLayout> Items { get; }      // Layout of items within the measure (for single-staff)
     public ImmutableArray<ColumnLayout> Columns { get; }  // Timing-based columns (for multi-staff)
-    
+
     /// <summary>
     /// Creates a MeasureLayout with item-based positioning (for single-staff scores).
     /// </summary>
@@ -48,7 +48,7 @@ public sealed record MeasureLayout
         Items = items;
         Columns = ImmutableArray<ColumnLayout>.Empty;
     }
-    
+
     /// <summary>
     /// Creates a MeasureLayout with both item-based and column-based positioning (for multi-staff scores).
     /// </summary>
@@ -60,7 +60,7 @@ public sealed record MeasureLayout
         Items = items;
         Columns = columns;
     }
-    
+
     /// <summary>
     /// Gets X positions for all items (convenience accessor for LyricEngraver).
     /// </summary>
@@ -78,26 +78,26 @@ public sealed record MeasureLayout
             // No column info - return start of measure as fallback
             return 0;
         }
-        
+
         // Find the column with exact or closest timing
         for (int i = 0; i < Columns.Length; i++)
         {
             if (Columns[i].Timing == timing)
                 return Columns[i].X;
-            
+
             if (Columns[i].Timing > timing)
             {
                 // Timing is between previous column and this one - interpolate
                 if (i == 0)
                     return Columns[0].X;
-                
+
                 var prev = Columns[i - 1];
                 var curr = Columns[i];
                 var ratio = (timing - prev.Timing).ToDouble() / (curr.Timing - prev.Timing).ToDouble();
                 return prev.X + ratio * (curr.X - prev.X);
             }
         }
-        
+
         // Timing is after all columns - return last column position
         return Columns[^1].X;
     }
@@ -117,11 +117,11 @@ public sealed record SystemLayout(
 {
     /// <summary>Whether this system has multiple staff groups.</summary>
     public bool HasMultipleStaffGroups => !StaffGroups.IsDefaultOrEmpty && StaffGroups.Length > 1;
-    
+
     /// <summary>Whether this system has a grand staff.</summary>
-    public bool HasGrandStaff => !StaffGroups.IsDefaultOrEmpty && 
+    public bool HasGrandStaff => !StaffGroups.IsDefaultOrEmpty &&
         StaffGroups.Any(g => g.Type == StaffGroupType.GrandStaff);
-    
+
     /// <summary>Total height of all staff groups (staff spaces).</summary>
     public double TotalStaffHeight => StaffGroups.IsDefaultOrEmpty ? 0 : StaffGroups.Sum(g => g.Height);
 }
@@ -162,28 +162,29 @@ public sealed record ScoreLayout(
     ImmutableArray<ArticulationLayout> ArticulationLayouts,
     ImmutableArray<GraceNoteLayout> GraceNoteLayouts,
     ImmutableArray<LyricLayout> LyricLayouts,
+    ImmutableArray<LyricHyphenLayout> LyricHyphenLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
     ImmutableDictionary<RestShiftKey, double> RestShifts
 )
 {
     /// <summary>Total number of pages.</summary>
     public int PageCount => Pages.Length;
-    
+
     /// <summary>Total number of systems across all pages.</summary>
     public int SystemCount => AllSystems.Length;
-    
+
     /// <summary>Width of the first page (staff spaces).</summary>
     public double Width => Pages.Length > 0 ? Pages[0].Width : 0;
-    
+
     /// <summary>Height of the first page (staff spaces).</summary>
     public double Height => Pages.Length > 0 ? Pages[0].Height : 0;
-    
+
     /// <summary>Header height of the first page (staff spaces).</summary>
     public double HeaderHeight => Pages.Length > 0 ? Pages[0].HeaderHeight : 0;
-    
+
     /// <summary>All systems from all pages (pre-computed for performance).</summary>
     public ImmutableArray<SystemLayout> Systems => AllSystems;
-    
+
     /// <summary>
     /// Gets the X offset for a specific voice item due to collision handling.
     /// Returns 0 if no offset is needed. Value is in staff spaces.
@@ -193,7 +194,7 @@ public sealed record ScoreLayout(
         var key = new VoiceItemKey(measureIndex, voiceId, itemIndex);
         return VoiceOffsets.TryGetValue(key, out var offset) ? offset : 0;
     }
-    
+
     /// <summary>
     /// Gets the Y shift for a rest due to beam collision.
     /// Returns 0 if no shift is needed. Value is in staff positions.

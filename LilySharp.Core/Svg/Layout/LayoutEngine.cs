@@ -163,6 +163,11 @@ public sealed class LayoutEngine
         double staffBottom = _options.StaffHeight;  // Bottom of staff in staff spaces (typically 4)
         var lyricLayouts = lyricEngraver.CalculateLayouts(score.Lyrics, measureLayouts, staffBottom);
 
+        // Calculate lyric hyphen/extender layouts
+        // LILYPOND-REF: lily/lyric-hyphen.cc:1-150
+        var lyricHyphenEngraver = new LyricHyphenEngraver();
+        var lyricHyphenLayouts = lyricHyphenEngraver.CalculateLayouts(lyricLayouts, systemsArray);
+
         return new ScoreLayout(
             pages,
             systemsArray,
@@ -173,6 +178,7 @@ public sealed class LayoutEngine
             articulationLayouts,
             graceNoteLayouts,
             lyricLayouts,
+            lyricHyphenLayouts,
             voiceOffsets,
             restShifts);
     }
@@ -292,20 +298,8 @@ public sealed class LayoutEngine
             ImmutableArray<ArticulationLayout>.Empty,
             ImmutableArray<GraceNoteLayout>.Empty,
             ImmutableArray<LyricLayout>.Empty,  // TODO: Implement lyrics for multi-staff
+            ImmutableArray<LyricHyphenLayout>.Empty,
             voiceOffsets,
             restShifts);
     }
-
-
 }
-
-
-
-
-
-
-
-
-
-
-

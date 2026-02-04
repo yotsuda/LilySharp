@@ -1,0 +1,319 @@
+using System.Collections.Immutable;
+using LilySharp.Core.Svg.Model;
+
+namespace LilySharp.Core.Svg.Layout;
+
+/// <summary>
+/// Parameters for lyric hyphen and extender layout.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/lyric-hyphen.cc:20-50 default parameters
+/// LILYPOND-REF: scm/define-grobs.scm:3080-3120 LyricHyphen grob
+/// </remarks>
+public sealed record LyricHyphenParameters
+{
+    /// <summary>Minimum length of a single hyphen dash (in staff spaces).</summary>
+    public double MinDashLength { get; init; } = 0.4;
+
+    /// <summary>Maximum length before adding additional hyphens (in staff spaces).</summary>
+    public double MaxDashLength { get; init; } = 3.0;
+
+    /// <summary>Dash thickness for hyphen (in staff spaces).</summary>
+    public double DashThickness { get; init; } = 0.12;
+
+    /// <summary>Padding between syllable edge and hyphen start (in staff spaces).</summary>
+    public double HyphenPadding { get; init; } = 0.3;
+
+    /// <summary>Minimum gap required to draw a hyphen (in staff spaces).</summary>
+    public double MinGapForHyphen { get; init; } = 0.8;
+
+    /// <summary>Vertical offset from text baseline for hyphen (in staff spaces).</summary>
+    public double HyphenYOffset { get; init; } = 0.4;
+
+    /// <summary>Extender line thickness (in staff spaces).</summary>
+    public double ExtenderThickness { get; init; } = 0.08;
+
+    /// <summary>Vertical offset from text baseline for extender (in staff spaces).</summary>
+    public double ExtenderYOffset { get; init; } = 0.7;
+
+    /// <summary>Padding between syllable and extender start (in staff spaces).</summary>
+    public double ExtenderPadding { get; init; } = 0.2;
+
+    /// <summary>Minimum extender length to be drawn (in staff spaces).</summary>
+    public double MinExtenderLength { get; init; } = 0.5;
+
+    public static LyricHyphenParameters Default { get; } = new();
+}
+
+/// <summary>
+/// Represents a single hyphen dash segment.
+/// </summary>
+public sealed record HyphenDash(
+    /// <summary>Start X position (in staff spaces).</summary>
+    double X1,
+    /// <summary>End X position (in staff spaces).</summary>
+    double X2,
+    /// <summary>Y position (in staff spaces).</summary>
+    double Y
+);
+
+/// <summary>
+/// Layout information for lyric hyphen or extender.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/lyric-hyphen.cc:60-100
+/// </remarks>
+public sealed record LyricHyphenLayout(
+    /// <summary>Index of the source lyric in the lyrics array.</summary>
+    int LyricIndex,
+
+    /// <summary>Type of connector.</summary>
+    LyricConnectorType Type,
+
+    /// <summary>Hyphen dashes (may be multiple for wide gaps).</summary>
+    ImmutableArray<HyphenDash> Dashes,
+
+    /// <summary>For extenders: start X position.</summary>
+    double ExtenderStartX = 0,
+
+    /// <summary>For extenders: end X position.</summary>
+    double ExtenderEndX = 0,
+
+    /// <summary>For extenders: Y position.</summary>
+    double ExtenderY = 0,
+
+    /// <summary>Whether this connector crosses a system break.</summary>
+    bool CrossesSystemBreak = false,
+
+    /// <summary>For system-crossing extenders: end of first segment.</summary>
+    double FirstSegmentEndX = 0,
+
+    /// <summary>For system-crossing extenders: start of second segment.</summary>
+    double SecondSegmentStartX = 0
+);
+
+/// <summary>
+/// Calculates positions for lyric hyphens and extenders.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/lyric-hyphen.cc:1-150
+/// LILYPOND-REF: lily/lyric-extender-engraver.cc:1-100
+///
+/// LilyPond distributes multiple hyphens evenly across wide gaps.
+/// Extenders can cross system breaks, requiring two separate line segments.
+/// </remarks>
+public sealed class LyricHyphenEngraver
+{
+    private readonly LyricHyphenParameters _params;
+
+    public LyricHyphenEngraver(LyricHyphenParameters? parameters = null)
+    {
+        _params = parameters ?? LyricHyphenParameters.Default;
+    }
+
+    /// <summary>
+    /// Calculate hyphen and extender layouts for all lyrics.
+    /// </summary>
+    public ImmutableArray<LyricHyphenLayout> CalculateLayouts(
+        IReadOnlyList<LyricLayout> lyricLayouts,
+        IReadOnlyList<SystemLayout> systems)
+    {
+        if (lyricLayouts.Count == 0)
+            return ImmutableArray<LyricHyphenLayout>.Empty;
+
+        // Build measure to system mapping
+        var measureToSystem = new Dictionary<int, (int systemIndex, double systemEndX, double systemStartX)>();
+        for (int i = 0; i < systems.Count; i++)
+        {
+            var system = systems[i];
+            // Calculate system bounds from measures
+            double systemStartX = system.Measures.Length > 0 ? system.Measures[0].X : 0;
+            double systemEndX = system.Measures.Length > 0
+                ? system.Measures[^1].X + system.Measures[^1].Width
+                : 0;
+            foreach (var measure in system.Measures)
+            {
+                measureToSystem[measure.MeasureIndex] = (i, systemEndX, systemStartX);
+            }
+        }
+
+        var layouts = new List<LyricHyphenLayout>();
+
+        for (int i = 0; i < lyricLayouts.Count; i++)
+        {
+            var current = lyricLayouts[i];
+            if (current.Item.ConnectorType == LyricConnectorType.None)
+                continue;
+
+            // Find the next lyric in the same verse
+            LyricLayout? next = null;
+            for (int j = i + 1; j < lyricLayouts.Count; j++)
+            {
+                if (lyricLayouts[j].Item.VerseNumber == current.Item.VerseNumber)
+                {
+                    next = lyricLayouts[j];
+                    break;
+                }
+            }
+
+            if (next == null)
+                continue;
+
+            // Check if crossing system break
+            bool crossesSystem = false;
+            double systemEndX = 0;
+            double nextSystemStartX = 0;
+
+            if (measureToSystem.TryGetValue(current.Item.MeasureIndex, out var currentSystem) &&
+                measureToSystem.TryGetValue(next.Item.MeasureIndex, out var nextSystem))
+            {
+                crossesSystem = currentSystem.systemIndex != nextSystem.systemIndex;
+                if (crossesSystem)
+                {
+                    systemEndX = currentSystem.systemEndX;
+                    nextSystemStartX = nextSystem.systemStartX;
+                }
+            }
+
+            var layout = current.Item.ConnectorType switch
+            {
+                LyricConnectorType.Hyphen => CalculateHyphenLayout(i, current, next, crossesSystem, systemEndX, nextSystemStartX),
+                LyricConnectorType.Extender => CalculateExtenderLayout(i, current, next, crossesSystem, systemEndX, nextSystemStartX),
+                _ => null
+            };
+
+            if (layout != null)
+                layouts.Add(layout);
+        }
+
+        return layouts.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Calculate hyphen layout with support for multiple dashes.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-hyphen.cc:80-120
+    ///
+    /// For wide gaps, LilyPond distributes multiple hyphens evenly.
+    /// </remarks>
+    private LyricHyphenLayout? CalculateHyphenLayout(
+        int index,
+        LyricLayout current,
+        LyricLayout next,
+        bool crossesSystem,
+        double systemEndX,
+        double nextSystemStartX)
+    {
+        double startX = current.X + current.Width / 2 + _params.HyphenPadding;
+        double endX = next.X - next.Width / 2 - _params.HyphenPadding;
+
+        if (crossesSystem)
+        {
+            // Hyphen at end of current system, hyphen at start of next system
+            var dashes = ImmutableArray.Create(
+                new HyphenDash(startX, systemEndX - 0.5, current.Y + _params.HyphenYOffset),
+                new HyphenDash(nextSystemStartX + 0.5, endX, next.Y + _params.HyphenYOffset)
+            );
+
+            return new LyricHyphenLayout(
+                index,
+                LyricConnectorType.Hyphen,
+                dashes,
+                CrossesSystemBreak: true
+            );
+        }
+
+        double gap = endX - startX;
+        if (gap < _params.MinGapForHyphen)
+            return null;
+
+        double y = current.Y + _params.HyphenYOffset;
+        var dashList = new List<HyphenDash>();
+
+        // Calculate number of hyphens needed
+        int numHyphens = 1;
+        if (gap > _params.MaxDashLength)
+        {
+            numHyphens = (int)Math.Ceiling(gap / _params.MaxDashLength);
+        }
+
+        if (numHyphens == 1)
+        {
+            // Single hyphen centered in gap
+            double dashLength = Math.Min(gap * 0.6, _params.MinDashLength * 2);
+            double center = (startX + endX) / 2;
+            dashList.Add(new HyphenDash(center - dashLength / 2, center + dashLength / 2, y));
+        }
+        else
+        {
+            // Multiple hyphens evenly distributed
+            double spacing = gap / (numHyphens + 1);
+            double dashLength = Math.Min(spacing * 0.5, _params.MinDashLength * 2);
+
+            for (int i = 1; i <= numHyphens; i++)
+            {
+                double center = startX + spacing * i;
+                dashList.Add(new HyphenDash(center - dashLength / 2, center + dashLength / 2, y));
+            }
+        }
+
+        return new LyricHyphenLayout(
+            index,
+            LyricConnectorType.Hyphen,
+            dashList.ToImmutableArray()
+        );
+    }
+
+    /// <summary>
+    /// Calculate extender layout with system break support.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-extender-engraver.cc:50-100
+    /// </remarks>
+    private LyricHyphenLayout? CalculateExtenderLayout(
+        int index,
+        LyricLayout current,
+        LyricLayout next,
+        bool crossesSystem,
+        double systemEndX,
+        double nextSystemStartX)
+    {
+        double startX = current.X + current.Width / 2 + _params.ExtenderPadding;
+        double endX = next.X - next.Width / 2 - _params.ExtenderPadding;
+        double y = current.Y + _params.ExtenderYOffset;
+
+        if (crossesSystem)
+        {
+            return new LyricHyphenLayout(
+                index,
+                LyricConnectorType.Extender,
+                ImmutableArray<HyphenDash>.Empty,
+                ExtenderStartX: startX,
+                ExtenderEndX: endX,
+                ExtenderY: y,
+                CrossesSystemBreak: true,
+                FirstSegmentEndX: systemEndX - 0.5,
+                SecondSegmentStartX: nextSystemStartX + 0.5
+            );
+        }
+
+        double length = endX - startX;
+        if (length < _params.MinExtenderLength)
+            return null;
+
+        return new LyricHyphenLayout(
+            index,
+            LyricConnectorType.Extender,
+            ImmutableArray<HyphenDash>.Empty,
+            ExtenderStartX: startX,
+            ExtenderEndX: endX,
+            ExtenderY: y
+        );
+    }
+
+    /// <summary>
+    /// Get the configured parameters.
+    /// </summary>
+    public LyricHyphenParameters Parameters => _params;
+}

@@ -86,11 +86,11 @@ master
 | 5 | 和音内臨時記号 | 3 | 3 | 100% |
 | 6 | 複数声部 | 9 | 9 | 100% |
 | 7 | 記譜記号 | 4 | 4 | 100% |
-| 8 | 歌詞配置 | 0 | 4 | 0% |
+| 8 | 歌詞配置 | 4 | 4 | 100% |
 | 9 | ページレイアウト | 3 | 3 | 100% |
 | 10 | 高度な機能 | 4 | 6 | 67% |
 | 11 | グランドスタッフ | 7 | 8 | 88% |
-| **合計** | | **50** | **74** | **68%** |
+| **合計** | | **51** | **74** | **69%** |
 
 ## 📋 ステータス凡例
 
@@ -160,7 +160,7 @@ SyntaxTree
 ---
 
 
-## Phase R: LayoutEngine リファクタリング ⏳
+## Phase R: LayoutEngine リファクタリング ✅
 
 **目的**: LayoutEngine (68KB, 33メソッド) を責務別に分割し、保守性・テスト容易性を向上
 
@@ -176,7 +176,7 @@ SyntaxTree
 | R-6 | SystemBreaker.cs 抽出 | ✅ | 2h | 行分割 |
 | R-7 | ElementCoordinator.cs 抽出 | ✅ | 3h | Beam/Tie/Slur統合 |
 | R-8 | MultiStaffLayouter.cs 抽出 | ✅ | 2h | 多譜表 |
-| R-9 | LayoutEngine ファサード化 | 🚀 | 1h | 統合 |
+| R-9 | LayoutEngine ファサード化 | ✅ | 1h | 統合完了（305行、元1,686行から82%削減） |
 
 ---
 ## Phase 1: 基本グリフ配置 ✅
@@ -272,14 +272,14 @@ SyntaxTree
 | SvgRenderer.cs (TimeSigSpacing) | ✅ | Normal | 1h | 拍子記号スペーシング改善 |
 | GlyphMetrics.cs (SignatureSpacing) | ✅ | Normal | 1h | LilyPond define-grobs.scm 定数追加 |
 
-## Phase 8: 歌詞配置 🚀
+## Phase 8: 歌詞配置 ✅
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
-| LyricItem.cs | 🚀 | Normal | 1h | 歌詞モデル |
-| LyricCollector.cs | 🚀 | Normal | 3h | 歌詞と音符の紐付け（Lilypond 同様） |
-| LyricHyphen.cs | 🚀 | Normal | 3h | ハイフン・エクステンダー |
-| SvgRenderer.cs (歌詞描画) | 🚀 | Normal | 3h | テキスト配置（位置完全一致） |
+| LyricItem.cs | ✅ | Normal | 1h | 歌詞モデル |
+| LyricCollector.cs | ✅ | Normal | 3h | 歌詞と音符の紐付け（Lilypond 同様） |
+| LyricHyphen.cs | ✅ | Normal | 3h | ハイフン・エクステンダー（複数ハイフン、システム改行対応） |
+| SvgRenderer.cs (歌詞描画) | ✅ | Normal | 3h | テキスト配置（位置完全一致） |
 
 ## Phase 9: ページレイアウト最適化 🚀
 
@@ -381,11 +381,53 @@ SyntaxTree
 | 2025-12-26 | 🔍 Phase 10: TremoloEngraver/OrnamentEngraver 基盤実装。SMuFL グリフマッピング追加 |
 | 2025-12-26 | ✅ Phase 10: Ornament パーサー統合完了。@trill/@mordent/@turn/@prall をArticulationItemに統合 |
 
+| 2026-02-04 | ✅ Phase 8: 歌詞配置基盤実装。LyricLayout/LyricEngraver/SvgRenderer 統合。LILYPOND-REF: lyric-engraver.cc |
+| 2026-02-04 | ✅ レイアウト一貫性改善。SystemLayouter から MeasureLayouter へ precomputed force を渡すように修正。LILYPOND-REF: simple-spacer.cc |
+| 2026-02-04 | ✅ LyricEngraver に衝突回避機能追加。LILYPOND-REF: lyric-engraver.cc:120-140 |
+| 2026-02-04 | 🔧 lyrics-test.lys 修正: 未サポートの `\relative` 構文を削除。LilySharp はデフォルトで相対モード |
+| 2026-02-04 | ✅ Phase 8 完了: LyricHyphen.cs 実装。複数ハイフン対応、システム改行時のエクステンダー分割。LILYPOND-REF: lyric-hyphen.cc |
 
+### ⚠️ 構文注意事項
 
+**`\relative` キーワードは LilySharp ではサポートされていない**
 
+LilySharp はすべて相対モードで動作するため、`\relative c' { ... }` ではなく単に `{ ... }` と記述する。
 
+誤った例:
+```
+\relative c' {
+  c4 d e f |
+}
+```
 
+正しい例:
+```
+{
+  c4 d e f |
+}
+```
 
+`\relative c'` を使用すると、`c'` が余分な音符として解析され、小節配置が崩れる。
 
+## ⏳ 調査中: テスト実行速度
 
+### 問題
+- テスト実行が遅い（365テスト、並列無効）
+- 単一テスト実行: 2-3秒（正常）
+- 全テスト実行: 8分以上経過（調査中）
+
+### 調査結果
+| 条件 | 実行時間 |
+|------|----------|
+| 単一テスト初回 | ~10秒 |
+| 単一テスト2回目以降 | 2-3秒 |
+| 全テスト（並列無効）| 調査中 |
+
+### 仮説
+1. JIT コンパイル: 初回のみ遅い（確認済み）
+2. 並列無効: 365テストを逐次実行 → 時間がかかる
+3. テスト内で重い処理がある可能性
+
+### 次のアクション
+- 全テスト完了を待って実行時間を確認
+- 個別テストの実行時間を計測してボトルネックを特定
