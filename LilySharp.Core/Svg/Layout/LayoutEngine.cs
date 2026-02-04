@@ -74,7 +74,8 @@ public sealed class LayoutEngine
                 score.KeySignature.Sharps,
                 isFirstSystem,
                 firstMeasureIndex,
-                score.Lyrics);
+                score.Lyrics,
+                isLastSystem: sysIdx == systemMeasures.Count - 1);
 
             systems.Add(system);
             currentY += _options.StaffHeight + _options.SystemSpacing;

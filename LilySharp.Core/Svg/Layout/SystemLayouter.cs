@@ -35,10 +35,11 @@ public sealed class SystemLayouter
         double y,
         int keySharps,
         bool isFirstSystem,
-        int firstMeasureIndex)
+        int firstMeasureIndex,
+        bool isLastSystem = false)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex);
+        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, isLastSystem);
 
         return new SystemLayout(
             systemIndex,
@@ -54,7 +55,8 @@ public sealed class SystemLayouter
         List<Measure> measures,
         int keySharps,
         bool isFirstSystem,
-        int firstMeasureIndex)
+        int firstMeasureIndex,
+        bool isLastSystem = false)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
         double startX = _options.MarginLeft + prefixWidth;
@@ -85,8 +87,30 @@ public sealed class SystemLayouter
         if (allSprings.Length > 0)
         {
             var solver = new SpringSolver(allSprings);
-            var (solvedForce, fits) = solver.Solve(springTargetWidth, _options.RaggedRight);
-            force = fits ? solvedForce : 0;
+            
+            // LILYPOND-REF: lily/page-spacing.cc ragged-right handling
+            // In ragged mode, don't stretch lines that are shorter than available width
+            if (_options.RaggedRight || isLastSystem)
+            {
+                double naturalLength = solver.IdealTotalLength;
+                if (naturalLength < springTargetWidth)
+                {
+                    // Line is shorter than available - use natural spacing (force = 0)
+                    force = 0;
+                }
+                else
+                {
+                    // Line is too long - solve normally (may need compression)
+                    var (solvedForce, fits) = solver.Solve(springTargetWidth, ragged: true);
+                    force = fits ? solvedForce : 0;
+                }
+            }
+            else
+            {
+                // Non-ragged: justify to fill available width
+                var (solvedForce, fits) = solver.Solve(springTargetWidth, ragged: false);
+                force = fits ? solvedForce : 0;
+            }
         }
 
         // Layout measures using the solved force
@@ -129,10 +153,11 @@ public sealed class SystemLayouter
         int keySharps,
         bool isFirstSystem,
         int firstMeasureIndex,
-        IReadOnlyList<LyricItem> lyrics)
+        IReadOnlyList<LyricItem> lyrics,
+        bool isLastSystem = false)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, lyrics);
+        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, lyrics, isLastSystem);
 
         return new SystemLayout(
             systemIndex,
@@ -153,7 +178,8 @@ public sealed class SystemLayouter
         int keySharps,
         bool isFirstSystem,
         int firstMeasureIndex,
-        IReadOnlyList<LyricItem> lyrics)
+        IReadOnlyList<LyricItem> lyrics,
+        bool isLastSystem = false)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
         double startX = _options.MarginLeft + prefixWidth;
@@ -190,8 +216,30 @@ public sealed class SystemLayouter
         if (allSprings.Length > 0)
         {
             var solver = new SpringSolver(allSprings);
-            var (solvedForce, fits) = solver.Solve(springTargetWidth, _options.RaggedRight);
-            force = fits ? solvedForce : 0;
+            
+            // LILYPOND-REF: lily/page-spacing.cc ragged-right handling
+            // In ragged mode, don't stretch lines that are shorter than available width
+            if (_options.RaggedRight || isLastSystem)
+            {
+                double naturalLength = solver.IdealTotalLength;
+                if (naturalLength < springTargetWidth)
+                {
+                    // Line is shorter than available - use natural spacing (force = 0)
+                    force = 0;
+                }
+                else
+                {
+                    // Line is too long - solve normally (may need compression)
+                    var (solvedForce, fits) = solver.Solve(springTargetWidth, ragged: true);
+                    force = fits ? solvedForce : 0;
+                }
+            }
+            else
+            {
+                // Non-ragged: justify to fill available width
+                var (solvedForce, fits) = solver.Solve(springTargetWidth, ragged: false);
+                force = fits ? solvedForce : 0;
+            }
         }
 
         // Layout measures using the solved force
