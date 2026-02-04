@@ -238,7 +238,7 @@ SyntaxTree
 | LayoutEngine.cs (Slur統合) | ✅ | High | 1h | LayoutEngine への Slur 統合 |
 | SvgRenderer.cs (スラー描画) | ✅ | High | 2h | ベジェ曲線描画 |
 | TieFormattingProblem.cs | ✅ | Low | 10h | 制約ベース最適化、衝突回避スコアリング実装。LILYPOND-REF: tie-formatting-problem.cc |
-| SlurScoring.cs | 🚀 | Low | 12h | slur-scoring.cc 完全再現（800行） |
+| SlurScoringProblem.cs | ✅ | Low | 12h | 制約ベース最適化、衝突回避スコアリング。LILYPOND-REF: slur-scoring.cc |
 
 ## Phase 5: 和音内臨時記号 ✅
 
@@ -388,6 +388,7 @@ SyntaxTree
 | 2026-02-04 | ✅ Phase 8 完了: LyricHyphen.cs 実装。複数ハイフン対応、システム改行時のエクステンダー分割。LILYPOND-REF: lyric-hyphen.cc |
 | 2026-02-04 | ✅ Phase 10: Tremolo パイプライン完成。BoundNote/BoundChord に TremoloBeams 追加、Binder/ScoreBuilder 連携。:8/:16/:32 構文が NoteItem/ChordItem に伝播 |
 | 2026-02-04 | ✅ Phase 4: TieFormattingProblem.cs 実装。BeamScoringProblemパターンで制約ベース最適化、スタッフライン/タイ間衝突回避。LILYPOND-REF: tie-formatting-problem.cc |
+| 2026-02-04 | ✅ Phase 4 完了: SlurScoringProblem.cs 実装。制約ベース最適化、スタッフライン/スラー間衝突回避、傾斜ペナルティ。LILYPOND-REF: slur-scoring.cc |
 
 ### ⚠️ 構文注意事項
 

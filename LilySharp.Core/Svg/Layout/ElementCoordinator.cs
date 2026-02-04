@@ -19,7 +19,6 @@ public sealed class ElementCoordinator
     private readonly TieDetector _tieDetector = new();
     private readonly TieEngraver _tieEngraver = new();
     private readonly SlurDetector _slurDetector = new();
-    private readonly SlurEngraver _slurEngraver = new();
     private readonly VoiceCollector _voiceCollector = new();
     private readonly NoteCollision _noteCollision = new();
 
@@ -361,7 +360,11 @@ public sealed class ElementCoordinator
                 endY += slurOffset;
             }
 
-            var slurLayout = _slurEngraver.CalculateSlurLayout(slur, startX, startY, endX, endY);
+            var problem = new SlurScoringProblem(
+                slur, startX, startY, endX, endY,
+                existingSlurs: slurLayouts,
+                staffHeight: _options.StaffHeight);
+            var slurLayout = problem.Solve();
             slurLayouts.Add(slurLayout);
         }
 
