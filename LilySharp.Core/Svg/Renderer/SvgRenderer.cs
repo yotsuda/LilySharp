@@ -244,20 +244,16 @@ public sealed class SvgRenderer
 
         double startX = _layoutOptions.MarginLeft;
 
-        // Calculate the actual end of the system (right edge including end barline)
+        // Calculate the actual end of the system (right edge of last measure)
         double endX;
-        double pageRightEdge = _layoutOptions.PageWidth - _layoutOptions.MarginRight;
         if (system.Measures.Length > 0)
         {
             var lastMeasure = system.Measures[^1];
-            // The barline is drawn starting at the measure end position and extends rightward.
-            // Add extra space for the largest possible barline (RepeatBoth).
-            double maxBarlineWidth = SpacingRules.GetBarlineWidth(BarlineType.RepeatBoth);
-            endX = Math.Min(lastMeasure.X + lastMeasure.Width + maxBarlineWidth, pageRightEdge);
+            endX = lastMeasure.X + lastMeasure.Width;
         }
         else
         {
-            endX = pageRightEdge;
+            endX = _layoutOptions.PageWidth - _layoutOptions.MarginRight;
         }
 
         // Draw each staff group
@@ -554,20 +550,16 @@ public sealed class SvgRenderer
         double y = system.Y;
         double startX = _layoutOptions.MarginLeft;
 
-        // Calculate the actual end of the system (right edge including end barline)
+        // Calculate the actual end of the system (right edge of last measure)
         double endX;
-        double pageRightEdge = _layoutOptions.PageWidth - _layoutOptions.MarginRight;
         if (system.Measures.Length > 0)
         {
             var lastMeasure = system.Measures[^1];
-            // The barline is drawn starting at the measure end position and extends rightward.
-            // Add extra space for the largest possible barline (RepeatBoth).
-            double maxBarlineWidth = SpacingRules.GetBarlineWidth(BarlineType.RepeatBoth);
-            endX = Math.Min(lastMeasure.X + lastMeasure.Width + maxBarlineWidth, pageRightEdge);
+            endX = lastMeasure.X + lastMeasure.Width;
         }
         else
         {
-            endX = pageRightEdge;
+            endX = _layoutOptions.PageWidth - _layoutOptions.MarginRight;
         }
 
         // Draw staff lines
