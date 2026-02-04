@@ -44,6 +44,7 @@ public sealed class SystemLayouter
         return new SystemLayout(
             systemIndex,
             y,
+            _options.PageWidth - _options.MarginLeft - _options.MarginRight,
             prefixWidth,
             measureLayouts);
     }
@@ -162,6 +163,7 @@ public sealed class SystemLayouter
         return new SystemLayout(
             systemIndex,
             y,
+            _options.PageWidth - _options.MarginLeft - _options.MarginRight,
             prefixWidth,
             measureLayouts);
     }

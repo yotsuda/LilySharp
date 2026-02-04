@@ -231,6 +231,7 @@ public sealed class LayoutEngine
         var system = new SystemLayout(
             SystemIndex: 0,
             Y: currentY,
+            Width: _options.PageWidth - _options.MarginLeft - _options.MarginRight,
             PrefixWidth: SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, true),
             Measures: measureLayouts,
             StaffGroups: staffGroupLayouts);

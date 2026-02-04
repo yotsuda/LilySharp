@@ -244,26 +244,29 @@ public sealed class SvgRenderer
 
         double startX = _layoutOptions.MarginLeft;
 
-        // Calculate the actual end of the system (right edge of last measure)
-        double endX;
+        // Staff lines always extend to full system width (LilyPond behavior)
+        double staffEndX = startX + system.Width;
+
+        // Calculate the actual end of notated content (for barline positioning)
+        double contentEndX;
         if (system.Measures.Length > 0)
         {
             var lastMeasure = system.Measures[^1];
-            endX = lastMeasure.X + lastMeasure.Width;
+            contentEndX = lastMeasure.X + lastMeasure.Width;
         }
         else
         {
-            endX = _layoutOptions.PageWidth - _layoutOptions.MarginRight;
+            contentEndX = staffEndX;
         }
 
-        // Draw each staff group
+        // Draw each staff group (staff lines extend to full system width)
         foreach (var staffGroup in system.StaffGroups)
         {
-            DrawStaffGroup(score, scoreLayout, system, staffGroup, startX, endX, isFirstSystem);
+            DrawStaffGroup(score, scoreLayout, system, staffGroup, startX, staffEndX, isFirstSystem);
         }
 
-        // Draw system barlines (connecting all staves)
-        DrawSystemBarlines(system, scoreLayout, startX, endX);
+        // Draw system barlines at content end (not staff end)
+        DrawSystemBarlines(system, scoreLayout, startX, contentEndX);
     }
 
     private void DrawStaffGroup(
@@ -550,23 +553,26 @@ public sealed class SvgRenderer
         double y = system.Y;
         double startX = _layoutOptions.MarginLeft;
 
-        // Calculate the actual end of the system (right edge of last measure)
-        double endX;
+        // Staff lines always extend to full system width (LilyPond behavior)
+        double staffEndX = startX + system.Width;
+
+        // Calculate the actual end of notated content (for barline positioning)
+        double contentEndX;
         if (system.Measures.Length > 0)
         {
             var lastMeasureLayout = system.Measures[^1];
-            endX = lastMeasureLayout.X + lastMeasureLayout.Width;
+            contentEndX = lastMeasureLayout.X + lastMeasureLayout.Width;
         }
         else
         {
-            endX = _layoutOptions.PageWidth - _layoutOptions.MarginRight;
+            contentEndX = staffEndX;
         }
 
-        // Draw staff lines
+        // Draw staff lines to full system width
         for (int i = 0; i < 5; i++)
         {
             double lineY = y + i;  // 1 staff space between lines
-            _svg.AppendLine($"""  <line class="staff" x1="{startX}" y1="{lineY}" x2="{endX}" y2="{lineY}"/>""");
+            _svg.AppendLine($"""  <line class="staff" x1="{startX}" y1="{lineY}" x2="{staffEndX}" y2="{lineY}"/>""");
         }
 
         // Draw clef

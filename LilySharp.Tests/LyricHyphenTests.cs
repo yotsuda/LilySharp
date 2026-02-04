@@ -30,7 +30,7 @@ public class LyricHyphenTests
             new MeasureLayout(m.measureIndex, m.x, m.width, ImmutableArray<ItemLayout>.Empty))
             .ToImmutableArray();
 
-        var system = new SystemLayout(0, 0, 0, measureLayouts);
+        var system = new SystemLayout(0, 0, 76, 0, measureLayouts);
         return ImmutableArray.Create(system);
     }
 

@@ -110,6 +110,7 @@ public sealed record MeasureLayout
 public sealed record SystemLayout(
     int SystemIndex,
     double Y,                              // Y position of system top (staff spaces from page top)
+    double Width,                          // Fixed system width (staff spaces) - staff lines always extend to this
     double PrefixWidth,                    // Width of clef + key + time (staff spaces)
     ImmutableArray<MeasureLayout> Measures, // Measures in this system
     ImmutableArray<StaffGroupLayout> StaffGroups = default  // Staff groups (optional, for multi-staff)
