@@ -25,7 +25,8 @@ public sealed class MeasureLayouter
     public ImmutableArray<ItemLayout> LayoutItems(
         Measure measure,
         double totalWidth,
-        ImmutableArray<Spring>? precomputedSprings = null)
+        ImmutableArray<Spring>? precomputedSprings = null,
+        double? precomputedForce = null)
     {
         if (measure.Items.Length == 0)
             return ImmutableArray<ItemLayout>.Empty;
@@ -37,16 +38,22 @@ public sealed class MeasureLayouter
         // Use precomputed springs if available, otherwise calculate
         var springs = precomputedSprings ?? SpacingRules.CreateSpringsForMeasure(measure);
 
-        // Calculate target width for the spring chain
-        // This is the distance from after start barline to before end barline
-        double targetWidth = totalWidth - startBarlineWidth - endBarlineWidth;
-
-        // Solve for the force that achieves target width
-        var solver = new SpringSolver(springs);
-        double force = solver.SolveForWidth(targetWidth);
+        // Use precomputed force if available, otherwise solve for it
+        double force;
+        if (precomputedForce.HasValue)
+        {
+            force = precomputedForce.Value;
+        }
+        else
+        {
+            // Calculate target width for the spring chain
+            double targetWidth = totalWidth - startBarlineWidth - endBarlineWidth;
+            var solver = new SpringSolver(springs);
+            force = solver.SolveForWidth(targetWidth);
+        }
 
         // Get positions (these are reference point positions relative to start barline)
-        var positions = solver.GetPositions(force, startX: 0);
+        var positions = new SpringSolver(springs).GetPositions(force, startX: 0);
 
         // Convert to ItemLayout
         // positions[0] = first item position

@@ -5,7 +5,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/spring.cc:1-250 Spring class
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/spring.cc:218-236 Spring::length()
+/// LILYPOND-REF: lily/spring.cc:220-240 Spring::length()
 ///   length = max(ideal_distance + force * inverse_stretch_strength, min_distance)
 /// 
 /// Where:
@@ -81,7 +81,7 @@ public sealed record Spring
     /// <returns>The resulting length, never less than MinDistance</returns>
     public double Length(double force)
     {
-        // LILYPOND-REF: lily/spring.cc:218-239 Spring::length()
+        // LILYPOND-REF: lily/spring.cc:220-240 Spring::length()
         double effectiveForce = Math.Max(force, BlockingForce);
         double invK = effectiveForce < 0 ? InverseCompressStrength : InverseStretchStrength;
         

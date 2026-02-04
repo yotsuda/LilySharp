@@ -101,7 +101,7 @@ public sealed class SystemLayouter
                 measureWidth += spring.Length(force);
             }
 
-            var itemLayouts = _measureLayouter.LayoutItems(measures[i], measureWidth, measureSprings[i]);
+            var itemLayouts = _measureLayouter.LayoutItems(measures[i], measureWidth, measureSprings[i], force);
 
             measureLayouts.Add(new MeasureLayout(
                 firstMeasureIndex + i,
@@ -206,7 +206,7 @@ public sealed class SystemLayouter
                 measureWidth += spring.Length(force);
             }
 
-            var itemLayouts = _measureLayouter.LayoutItems(measures[i], measureWidth, measureSprings[i]);
+            var itemLayouts = _measureLayouter.LayoutItems(measures[i], measureWidth, measureSprings[i], force);
 
             measureLayouts.Add(new MeasureLayout(
                 firstMeasureIndex + i,

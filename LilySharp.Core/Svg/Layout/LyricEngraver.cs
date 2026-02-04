@@ -78,7 +78,7 @@ public sealed class LyricEngraver
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
 
-        var layouts = ImmutableArray.CreateBuilder<LyricLayout>(lyrics.Count);
+        var layouts = new List<LyricLayout>();
 
         // Group lyrics by verse number
         var verseGroups = lyrics.GroupBy(l => l.VerseNumber).OrderBy(g => g.Key);
@@ -93,6 +93,7 @@ public sealed class LyricEngraver
             double verseY = staffBottom + _params.StaffPadding +
                            (verseNumber - 1) * _params.VerseSpacing;
 
+            var verseLayouts = new List<LyricLayout>();
             for (int i = 0; i < verseLyrics.Count; i++)
             {
                 var lyric = verseLyrics[i];
@@ -103,11 +104,69 @@ public sealed class LyricEngraver
                     i + 1 < verseLyrics.Count ? verseLyrics[i + 1] : null);
 
                 if (layout != null)
-                    layouts.Add(layout);
+                    verseLayouts.Add(layout);
             }
+
+            // Apply collision avoidance for this verse
+            // LILYPOND-REF: lily/lyric-engraver.cc:120-140 collision handling
+            verseLayouts = ResolveOverlaps(verseLayouts);
+            layouts.AddRange(verseLayouts);
         }
 
-        return layouts.ToImmutable();
+        return layouts.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Resolves overlapping syllables by shifting them apart.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-engraver.cc:150-180 horizontal spacing
+    ///
+    /// Strategy: Limit shifts to prevent lyrics from drifting too far from their notes.
+    /// If a large shift would be needed, reduce the effective width estimate instead.
+    /// </remarks>
+    private List<LyricLayout> ResolveOverlaps(List<LyricLayout> layouts)
+    {
+        if (layouts.Count < 2)
+            return layouts;
+
+        // Maximum shift allowed (prevents lyrics from drifting too far from notes)
+        const double maxShift = 2.0;
+
+        var result = new List<LyricLayout>(layouts.Count);
+
+        for (int i = 0; i < layouts.Count; i++)
+        {
+            var current = layouts[i];
+
+            if (i == 0)
+            {
+                result.Add(current);
+                continue;
+            }
+
+            var previous = result[i - 1];
+
+            // Use reduced width for collision detection (allows some overlap)
+            // This keeps lyrics closer to their notes while still readable
+            double effectiveWidth = 0.6; // Use a smaller effective width for collision
+
+            double prevRight = previous.X + effectiveWidth;
+            double currLeft = current.X - effectiveWidth;
+            double gap = currLeft - prevRight;
+
+            // If there's not enough gap, shift current syllable to the right
+            if (gap < _params.MinSyllableSpacing)
+            {
+                double neededShift = _params.MinSyllableSpacing - gap;
+                double shift = Math.Min(neededShift, maxShift);
+                current = current with { X = current.X + shift };
+            }
+
+            result.Add(current);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -201,22 +260,30 @@ public sealed class LyricEngraver
     /// </summary>
     /// <remarks>
     /// This is a rough approximation. For accurate width calculation,
-    /// we would need font metrics. Average character width is ~0.5 staff spaces.
+    /// we would need font metrics.
+    ///
+    /// LILYPOND-REF: lily/font-metric.cc:100-120 text extent calculation
+    ///
+    /// The SVG renderer uses font-size = 4 * 0.8 = 3.2 staff spaces.
+    /// For a serif font at this size, character width is typically 50-60% of height.
+    /// So average character width ≈ 3.2 * 0.55 ≈ 1.7 staff spaces.
     /// </remarks>
     private double EstimateTextWidth(string text)
     {
-        // Simple estimation: ~0.5 staff spaces per character
-        // Adjust for common narrow/wide characters
+        // Character width estimation at rendered font size (3.2 staff spaces)
+        // Width ≈ fontSize * characterWidthRatio
+        const double fontSize = 3.2;
         double width = 0;
         foreach (char c in text)
         {
-            width += c switch
+            double ratio = c switch
             {
-                'i' or 'l' or 'I' or '!' or '.' or '\'' => 0.3,
+                'i' or 'l' or 'I' or '!' or '.' or '\'' or '-' => 0.3,
                 'm' or 'w' or 'M' or 'W' => 0.7,
                 _ => 0.5
             };
+            width += fontSize * ratio;
         }
-        return width * _params.FontSize;
+        return width;
     }
 }

@@ -2,7 +2,7 @@
 \title "Lyrics Test"
 \composer "LilySharp"
 
-\relative c' {
+{
   \time 4/4
   c4 d e f |
   g2 g |
