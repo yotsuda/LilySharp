@@ -723,7 +723,9 @@ public sealed class SvgRenderer
         if (isFirstVoice && !skipBarlines)
         {
             double endX = x + layout.Width;
-            DrawBarline(measure.EndBarline, endX, systemY);
+            // Subtract barline width so the barline ENDS at the measure boundary, not starts there
+            double barlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
+            DrawBarline(measure.EndBarline, endX - barlineWidth, systemY);
         }
     }
 
