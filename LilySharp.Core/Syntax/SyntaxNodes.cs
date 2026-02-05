@@ -1110,6 +1110,33 @@ public sealed partial class StructureAlternativeSyntax : SyntaxNode
     /// Gets the alternative number.
     /// </summary>
     public int AlternativeNumber => int.Parse(Number.Text);
+
+    /// <summary>
+    /// Gets the separator token (- or ,) if present.
+    /// Only valid when HasBracket and HasSeparator are true.
+    /// Slot[2] when HasSeparator.
+    /// </summary>
+    public SyntaxTokenNode? Separator => HasSeparator ? (SyntaxTokenNode?)GetChild(2) : null;
+
+    /// <summary>
+    /// Gets the end number token (e.g., "3" in [1-3. A]).
+    /// Only valid when HasBracket and HasSeparator are true.
+    /// Slot[3] when HasSeparator.
+    /// </summary>
+    public SyntaxTokenNode? EndNumber => HasSeparator ? (SyntaxTokenNode?)GetChild(3) : null;
+
+    /// <summary>
+    /// Gets the volta text for display (e.g., "1.", "1-3.", "1,3.").
+    /// </summary>
+    public string VoltaText
+    {
+        get
+        {
+            if (!HasBracket) return $"{Number.Text}.";
+            if (!HasSeparator) return $"{Number.Text}.";
+            return $"{Number.Text}{Separator!.Text}{EndNumber!.Text}.";
+        }
+    }
 }
 
 /// <summary>

@@ -103,4 +103,37 @@ render score ""test.svg"" { staff treble { melody } }
         Assert.NotNull(chord);
         Assert.Equal(2, chord!.TremoloBeams);  // :16 = 2 beams
     }
+
+        [Fact]
+    public void Compile_VoltaBracket_CollectsBrackets()
+    {
+        var source = @"
+time 4/4
+part melody
+phrase A { c4 d e f | }
+phrase B { g4 a b c' | }
+section Main { melody { A } }
+section Alt1 { melody { A } }
+section Alt2 { melody { B } }
+structure {
+  |: Main [1. Alt1] [2. Alt2] :|
+}
+";
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(source);
+        var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
+        var score = collector.Collect(tree);
+        
+        // Should have 2 volta brackets
+        Assert.Equal(2, score.VoltaBrackets.Length);
+        
+        // First volta bracket: "1."
+        var volta1 = score.VoltaBrackets[0];
+        Assert.Equal("1.", volta1.VoltaText);
+        Assert.False(volta1.IsClosed);  // First ending is open
+        
+        // Second volta bracket: "2."
+        var volta2 = score.VoltaBrackets[1];
+        Assert.Equal("2.", volta2.VoltaText);
+        Assert.True(volta2.IsClosed);  // Last ending is closed
+    }
 }

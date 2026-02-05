@@ -166,6 +166,7 @@ public sealed record ScoreLayout(
     ImmutableArray<LyricHyphenLayout> LyricHyphenLayouts,
     ImmutableArray<MusicMarkLayout> MusicMarkLayouts,
     ImmutableArray<CustomTextLayout> CustomTextLayouts,
+    ImmutableArray<VoltaBracketLayout> VoltaBracketLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
     ImmutableDictionary<RestShiftKey, double> RestShifts
 )

@@ -186,6 +186,9 @@ public sealed class SvgRenderer
         // Draw custom text
         DrawCustomTexts(layout);
 
+        // Draw volta brackets
+        DrawVoltaBrackets(layout);
+
         WriteFooter();
 
         return _svg.ToString();
@@ -2128,6 +2131,78 @@ public sealed class SvgRenderer
                 $"font-style=\"italic\" " +
                 $"text-anchor=\"start\" dominant-baseline=\"hanging\" " +
                 $"class=\"custom-text\">{EscapeXml(textLayout.Text)}</text>");
+        }
+    }
+
+    /// <summary>
+    /// Draws volta brackets (first/second ending brackets).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/volta-bracket.cc:60-120 print method
+    /// LILYPOND-REF: scm/define-grobs.scm:4850-4900 VoltaBracket grob
+    ///
+    /// Volta brackets consist of:
+    /// - Horizontal line at top
+    /// - Left vertical hook (always)
+    /// - Right vertical hook (if closed)
+    /// - Number text (e.g., "1.", "2.")
+    /// </remarks>
+    private void DrawVoltaBrackets(ScoreLayout layout)
+    {
+        if (layout.VoltaBracketLayouts.IsDefaultOrEmpty)
+            return;
+
+        // Build measure to system Y mapping
+        var measureToSystemY = new Dictionary<int, double>();
+        foreach (var system in layout.Systems)
+        {
+            foreach (var measure in system.Measures)
+            {
+                measureToSystemY[measure.MeasureIndex] = system.Y;
+            }
+        }
+
+        // Bracket line thickness
+        const double lineThickness = 0.13;
+        // Edge height (vertical hook)
+        double edgeHeight = VoltaBracketEngraver.GetEdgeHeight();
+
+        foreach (var bracketLayout in layout.VoltaBracketLayouts)
+        {
+            // Get system Y for this bracket
+            double systemY = measureToSystemY.TryGetValue(bracketLayout.StartMeasureIndex, out var y) ? y : 0;
+            double absoluteY = systemY + bracketLayout.Y;
+
+            double startX = bracketLayout.StartX;
+            double endX = bracketLayout.EndX;
+
+            // Draw left vertical hook (downward from line)
+            _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{absoluteY:F2}\" " +
+                $"x2=\"{startX:F2}\" y2=\"{absoluteY + edgeHeight:F2}\" " +
+                $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"volta-bracket\" />");
+
+            // Draw horizontal line
+            _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{absoluteY:F2}\" " +
+                $"x2=\"{endX:F2}\" y2=\"{absoluteY:F2}\" " +
+                $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"volta-bracket\" />");
+
+            // Draw right vertical hook if closed
+            if (bracketLayout.IsClosed)
+            {
+                _svg.AppendLine($"  <line x1=\"{endX:F2}\" y1=\"{absoluteY:F2}\" " +
+                    $"x2=\"{endX:F2}\" y2=\"{absoluteY + edgeHeight:F2}\" " +
+                    $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"volta-bracket\" />");
+            }
+
+            // Draw volta number text
+            double textX = startX + 0.5;
+            double textY = absoluteY + 0.3;
+            double textFontSize = FontSize * 0.6;
+            _svg.AppendLine($"  <text x=\"{textX:F2}\" y=\"{textY:F2}\" " +
+                $"font-family=\"serif\" font-size=\"{textFontSize:F1}\" " +
+                $"font-weight=\"bold\" " +
+                $"text-anchor=\"start\" dominant-baseline=\"hanging\" " +
+                $"class=\"volta-text\">{EscapeXml(bracketLayout.VoltaText)}</text>");
         }
     }
 }

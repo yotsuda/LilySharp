@@ -89,6 +89,9 @@ public sealed record Score
     /// <summary>Custom text annotations in the score.</summary>
     public ImmutableArray<CustomTextItem> CustomTexts { get; }
 
+    /// <summary>Volta brackets (first/second ending) in the score.</summary>
+    public ImmutableArray<VoltaBracketItem> VoltaBrackets { get; }
+
     /// <summary>Whether this score has multiple voices.</summary>
     public bool IsMultiVoice => Voices.Length > 1;
 
@@ -109,8 +112,9 @@ public sealed record Score
         ImmutableArray<TremoloItem>? tremolos = null,
         ImmutableArray<LyricItem>? lyrics = null,
         ImmutableArray<MusicMarkItem>? musicMarks = null,
-        ImmutableArray<CustomTextItem>? customTexts = null)
-        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts)
+        ImmutableArray<CustomTextItem>? customTexts = null,
+        ImmutableArray<VoltaBracketItem>? voltaBrackets = null)
+        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts, voltaBrackets)
     {
     }
 
@@ -131,7 +135,8 @@ public sealed record Score
         ImmutableArray<TremoloItem>? tremolos = null,
         ImmutableArray<LyricItem>? lyrics = null,
         ImmutableArray<MusicMarkItem>? musicMarks = null,
-        ImmutableArray<CustomTextItem>? customTexts = null)
+        ImmutableArray<CustomTextItem>? customTexts = null,
+        ImmutableArray<VoltaBracketItem>? voltaBrackets = null)
     {
         if (voices.Length == 0)
             throw new ArgumentException("Score must have at least one voice", nameof(voices));
@@ -150,6 +155,7 @@ public sealed record Score
         Lyrics = lyrics ?? ImmutableArray<LyricItem>.Empty;
         MusicMarks = musicMarks ?? ImmutableArray<MusicMarkItem>.Empty;
         CustomTexts = customTexts ?? ImmutableArray<CustomTextItem>.Empty;
+        VoltaBrackets = voltaBrackets ?? ImmutableArray<VoltaBracketItem>.Empty;
     }
 
     /// <summary>Total number of measures in the score (from primary voice).</summary>

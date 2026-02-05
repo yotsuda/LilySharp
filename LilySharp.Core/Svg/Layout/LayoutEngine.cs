@@ -177,6 +177,10 @@ public sealed class LayoutEngine
         // LILYPOND-REF: lily/text-interface.cc - text rendering
         var customTextLayouts = CustomTextEngraver.Calculate(score, score.CustomTexts, systemsArray, measureLayouts);
 
+        // Calculate volta bracket layouts
+        // LILYPOND-REF: lily/volta-bracket.cc - volta bracket rendering
+        var voltaBracketLayouts = VoltaBracketEngraver.Calculate(score.VoltaBrackets, systemsArray, measureLayouts);
+
         return new ScoreLayout(
             pages,
             systemsArray,
@@ -190,6 +194,7 @@ public sealed class LayoutEngine
             lyricHyphenLayouts,
             musicMarkLayouts,
             customTextLayouts,
+            voltaBracketLayouts,
             voiceOffsets,
             restShifts);
     }
@@ -315,6 +320,9 @@ public sealed class LayoutEngine
         // Calculate custom text layouts
         var customTextLayouts = CustomTextEngraver.Calculate(null, score.CustomTexts, systemsArray, measureLayouts);
 
+        // Calculate volta bracket layouts
+        var voltaBracketLayouts = VoltaBracketEngraver.Calculate(score.VoltaBrackets, systemsArray, measureLayouts);
+
         return new ScoreLayout(
             ImmutableArray.Create(page),
             systemsArray,
@@ -328,6 +336,7 @@ public sealed class LayoutEngine
             lyricHyphenLayouts,
             musicMarkLayouts,
             customTextLayouts,
+            voltaBracketLayouts,
             voiceOffsets,
             restShifts);
     }

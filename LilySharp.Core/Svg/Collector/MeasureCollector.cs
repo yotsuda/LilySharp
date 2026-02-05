@@ -288,6 +288,8 @@ public sealed class MeasureCollector
     private readonly List<MusicMarkItem> _musicMarks = new();
     // Custom text annotations
     private readonly List<CustomTextItem> _customTexts = new();
+    // Volta brackets (first/second ending)
+    private readonly List<VoltaBracketItem> _voltaBrackets = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
     // Default duration
@@ -359,7 +361,8 @@ public sealed class MeasureCollector
             _graceNotes.ToImmutableArray(),
             lyrics: _lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
-            customTexts: _customTexts.ToImmutableArray());
+            customTexts: _customTexts.ToImmutableArray(),
+            voltaBrackets: _voltaBrackets.ToImmutableArray());
     }
 
     /// <summary>
@@ -406,7 +409,8 @@ public sealed class MeasureCollector
             _composer,
             lyrics: _lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
-            customTexts: _customTexts.ToImmutableArray());
+            customTexts: _customTexts.ToImmutableArray(),
+            voltaBrackets: _voltaBrackets.ToImmutableArray());
     }
 
     private List<Measure> CollectMeasuresForVoice(string voiceName)
@@ -474,7 +478,8 @@ public sealed class MeasureCollector
             _graceNotes.ToImmutableArray(),
             lyrics: _lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
-            customTexts: _customTexts.ToImmutableArray());
+            customTexts: _customTexts.ToImmutableArray(),
+            voltaBrackets: _voltaBrackets.ToImmutableArray());
     }
 
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
@@ -836,6 +841,7 @@ public sealed class MeasureCollector
     private void ProcessRepeatBlock(StructureRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
         bool afterRepeatStart = false;
+        var pendingVoltaBrackets = new List<(int startMeasure, int endMeasure, string voltaText, int sourcePosition)>();
 
         for (int i = 0; i < repeat.SlotCount; i++)
         {
@@ -868,11 +874,34 @@ public sealed class MeasureCollector
                     string altSectionName = alt.SectionName.Text;
                     if (_sections.TryGetValue(altSectionName, out var section))
                     {
+                        // Track measure index before processing this alternative
+                        int startMeasureIndex = builder.CurrentMeasureIndex;
+
                         builder.SectionLabel = altSectionName;
                         ProcessSection(section, processNodes);
+
+                        // Track measure index after processing
+                        int endMeasureIndex = builder.CurrentMeasureIndex;
+                        // If we're mid-measure, include that measure
+                        if (builder.CurrentItemCount > 0)
+                            endMeasureIndex++;
+
+                        // Collect volta bracket info if bracket style
+                        if (alt.HasBracket && !alt.IsSilent)
+                        {
+                            pendingVoltaBrackets.Add((startMeasureIndex, endMeasureIndex, alt.VoltaText, alt.Position));
+                        }
                     }
                 }
             }
+        }
+
+        // Add all volta brackets - last one is closed, others are open
+        for (int i = 0; i < pendingVoltaBrackets.Count; i++)
+        {
+            var (startMeasure, endMeasure, voltaText, sourcePosition) = pendingVoltaBrackets[i];
+            bool isClosed = (i == pendingVoltaBrackets.Count - 1);
+            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
         }
     }
 

@@ -42,6 +42,9 @@ public sealed record MultiStaffScore
     /// <summary>Custom text annotations.</summary>
     public ImmutableArray<CustomTextItem> CustomTexts { get; }
 
+    /// <summary>Volta brackets (first/second ending).</summary>
+    public ImmutableArray<VoltaBracketItem> VoltaBrackets { get; }
+
     /// <summary>Whether this score has a grand staff.</summary>
     public bool HasGrandStaff => StaffGroups.Any(g => g.IsGrandStaff);
 
@@ -60,7 +63,8 @@ public sealed record MultiStaffScore
         string? composer = null,
         ImmutableArray<LyricItem>? lyrics = null,
         ImmutableArray<MusicMarkItem>? musicMarks = null,
-        ImmutableArray<CustomTextItem>? customTexts = null)
+        ImmutableArray<CustomTextItem>? customTexts = null,
+        ImmutableArray<VoltaBracketItem>? voltaBrackets = null)
     {
         if (staffGroups.Length == 0)
             throw new ArgumentException("Score must have at least one staff group", nameof(staffGroups));
@@ -74,6 +78,7 @@ public sealed record MultiStaffScore
         Lyrics = lyrics ?? ImmutableArray<LyricItem>.Empty;
         MusicMarks = musicMarks ?? ImmutableArray<MusicMarkItem>.Empty;
         CustomTexts = customTexts ?? ImmutableArray<CustomTextItem>.Empty;
+        VoltaBrackets = voltaBrackets ?? ImmutableArray<VoltaBracketItem>.Empty;
     }
 
     /// <summary>
@@ -94,7 +99,8 @@ public sealed record MultiStaffScore
             score.Composer,
             score.Lyrics,
             score.MusicMarks,
-            score.CustomTexts);
+            score.CustomTexts,
+            score.VoltaBrackets);
     }
 
     /// <summary>Number of measures (from first staff of first group).</summary>
