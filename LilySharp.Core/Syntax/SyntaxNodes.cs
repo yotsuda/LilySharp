@@ -1054,7 +1054,7 @@ public sealed partial class StructureRepeatBlockSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Represents an alternative in structure: 1. SectionName or [1. SectionName] or [1-3. SectionName]
+/// Represents an alternative in structure: 1. SectionName or [1. SectionName] or [1-3. SectionName] or [1. ~SectionName]
 /// </summary>
 public sealed partial class StructureAlternativeSyntax : SyntaxNode
 {
@@ -1070,8 +1070,24 @@ public sealed partial class StructureAlternativeSyntax : SyntaxNode
 
     /// <summary>
     /// True if this has a range separator (- or ,) like [1-3. A] or [1,3. A]
+    /// Slot layout: Bracket with separator has 8 slots, without has 6 slots
     /// </summary>
-    public bool HasSeparator => HasBracket && SlotCount == 7;
+    public bool HasSeparator => HasBracket && SlotCount == 8;
+
+    /// <summary>
+    /// True if this is a silent section reference [1. ~A] (no label displayed)
+    /// </summary>
+    public bool IsSilent
+    {
+        get
+        {
+            if (!HasBracket) return false;
+            // Tilde is at slot[3] for without separator, slot[5] for with separator
+            var tildeSlot = HasSeparator ? 5 : 3;
+            var child = GetChild(tildeSlot);
+            return child != null && child is SyntaxTokenNode token && token.Kind == SyntaxKind.Tilde;
+        }
+    }
 
     /// <summary>
     /// Gets the number token.
@@ -1082,12 +1098,12 @@ public sealed partial class StructureAlternativeSyntax : SyntaxNode
     /// <summary>
     /// Gets the section name token.
     /// Legacy (3 slots): slot[2]
-    /// Bracket without separator (5 slots): slot[3]
-    /// Bracket with separator (7 slots): slot[5]
+    /// Bracket without separator (6 slots): slot[4]
+    /// Bracket with separator (8 slots): slot[6]
     /// </summary>
     public SyntaxTokenNode SectionName => (SyntaxTokenNode)GetChild(
         HasBracket
-            ? (HasSeparator ? 5 : 3)
+            ? (HasSeparator ? 6 : 4)
             : 2)!;
 
     /// <summary>
@@ -1149,6 +1165,68 @@ public enum NavigationMarkType
     DalSegno,
     DalSegnoAlFine,
     DalSegnoAlCoda
+}
+
+/// <summary>
+/// Represents a music mark: @segno, @fine, @ds.al.fine, etc.
+/// </summary>
+public sealed partial class MusicMarkSyntax : SyntaxNode
+{
+    internal MusicMarkSyntax(MusicMarkGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>
+    /// Gets the mark name by combining all parts.
+    /// For example: "@ds.al.fine" returns "ds.al.fine"
+    /// </summary>
+    public string MarkName
+    {
+        get
+        {
+            var parts = new List<string>();
+            for (int i = 0; i < SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child is SyntaxTokenNode token && token.Kind != SyntaxKind.At && token.Kind != SyntaxKind.Dot)
+                {
+                    parts.Add(token.Text);
+                }
+            }
+            return string.Join(".", parts);
+        }
+    }
+}
+
+/// <summary>
+/// Represents a custom text annotation: _"text"
+/// </summary>
+public sealed partial class CustomTextSyntax : SyntaxNode
+{
+    internal CustomTextSyntax(CustomTextGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>
+    /// Gets the text content without quotes.
+    /// </summary>
+    public string Text
+    {
+        get
+        {
+            // Slot 0: underscore, Slot 1: string literal
+            var textToken = (SyntaxTokenNode)GetChild(1)!;
+            var text = textToken.Text;
+            // Remove surrounding quotes
+            if (text.StartsWith("\"") && text.EndsWith("\""))
+            {
+                return text.Substring(1, text.Length - 2);
+            }
+            return text;
+        }
+    }
 }
 
 /// <summary>

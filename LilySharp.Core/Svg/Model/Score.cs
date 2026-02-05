@@ -83,6 +83,12 @@ public sealed record Score
     /// <summary>Lyrics in the score.</summary>
     public ImmutableArray<LyricItem> Lyrics { get; }
 
+    /// <summary>Music marks (segno, coda, fine, D.S., D.C., etc.) in the score.</summary>
+    public ImmutableArray<MusicMarkItem> MusicMarks { get; }
+
+    /// <summary>Custom text annotations in the score.</summary>
+    public ImmutableArray<CustomTextItem> CustomTexts { get; }
+
     /// <summary>Whether this score has multiple voices.</summary>
     public bool IsMultiVoice => Voices.Length > 1;
 
@@ -101,8 +107,10 @@ public sealed record Score
         ImmutableArray<ArticulationItem>? articulations = null,
         ImmutableArray<GraceNoteItem>? graceNotes = null,
         ImmutableArray<TremoloItem>? tremolos = null,
-        ImmutableArray<LyricItem>? lyrics = null)
-        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics)
+        ImmutableArray<LyricItem>? lyrics = null,
+        ImmutableArray<MusicMarkItem>? musicMarks = null,
+        ImmutableArray<CustomTextItem>? customTexts = null)
+        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts)
     {
     }
 
@@ -121,7 +129,9 @@ public sealed record Score
         ImmutableArray<ArticulationItem>? articulations = null,
         ImmutableArray<GraceNoteItem>? graceNotes = null,
         ImmutableArray<TremoloItem>? tremolos = null,
-        ImmutableArray<LyricItem>? lyrics = null)
+        ImmutableArray<LyricItem>? lyrics = null,
+        ImmutableArray<MusicMarkItem>? musicMarks = null,
+        ImmutableArray<CustomTextItem>? customTexts = null)
     {
         if (voices.Length == 0)
             throw new ArgumentException("Score must have at least one voice", nameof(voices));
@@ -138,6 +148,8 @@ public sealed record Score
         GraceNotes = graceNotes ?? ImmutableArray<GraceNoteItem>.Empty;
         Tremolos = tremolos ?? ImmutableArray<TremoloItem>.Empty;
         Lyrics = lyrics ?? ImmutableArray<LyricItem>.Empty;
+        MusicMarks = musicMarks ?? ImmutableArray<MusicMarkItem>.Empty;
+        CustomTexts = customTexts ?? ImmutableArray<CustomTextItem>.Empty;
     }
 
     /// <summary>Total number of measures in the score (from primary voice).</summary>

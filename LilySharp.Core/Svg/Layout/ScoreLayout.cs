@@ -164,6 +164,8 @@ public sealed record ScoreLayout(
     ImmutableArray<GraceNoteLayout> GraceNoteLayouts,
     ImmutableArray<LyricLayout> LyricLayouts,
     ImmutableArray<LyricHyphenLayout> LyricHyphenLayouts,
+    ImmutableArray<MusicMarkLayout> MusicMarkLayouts,
+    ImmutableArray<CustomTextLayout> CustomTextLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
     ImmutableDictionary<RestShiftKey, double> RestShifts
 )

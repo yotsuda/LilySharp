@@ -663,7 +663,7 @@ internal sealed class StructureRepeatBlockGreen : GreenSyntaxNode
 
 
 /// <summary>
-/// Alternative in repeat: 1. A, 2. B or [1. A] or [1-3. A]
+/// Alternative in repeat: 1. A, 2. B or [1. A] or [1-3. A] or [1. ~A]
 /// </summary>
 internal sealed class StructureAlternativeGreen : GreenSyntaxNode
 {
@@ -676,20 +676,42 @@ internal sealed class StructureAlternativeGreen : GreenSyntaxNode
     {
     }
 
-    // Bracket style: [1. A] or [1-3. A] or [1,3. A]
+    // Bracket style: [1. A] or [1-3. A] or [1,3. A] or [1. ~A]
     public StructureAlternativeGreen(
         SyntaxToken openBracket,
         SyntaxToken number,
         SyntaxToken? separator,
         SyntaxToken? endNumber,
         SyntaxToken dot,
+        SyntaxToken? tilde,
         SyntaxToken sectionName,
         SyntaxToken closeBracket)
         : base(SyntaxKind.StructureAlternative,
-            separator != null
-                ? [openBracket, number, separator, endNumber, dot, sectionName, closeBracket]
-                : [openBracket, number, dot, sectionName, closeBracket])
+            BuildSlots(openBracket, number, separator, endNumber, dot, tilde, sectionName, closeBracket))
     {
+    }
+
+    private static GreenNode?[] BuildSlots(
+        SyntaxToken openBracket,
+        SyntaxToken number,
+        SyntaxToken? separator,
+        SyntaxToken? endNumber,
+        SyntaxToken dot,
+        SyntaxToken? tilde,
+        SyntaxToken sectionName,
+        SyntaxToken closeBracket)
+    {
+        // Slot layout (always include tilde slot for consistent indexing):
+        // With separator: [openBracket, number, separator, endNumber, dot, tilde?, sectionName, closeBracket]
+        // Without separator: [openBracket, number, dot, tilde?, sectionName, closeBracket]
+        if (separator != null)
+        {
+            return [openBracket, number, separator, endNumber, dot, tilde, sectionName, closeBracket];
+        }
+        else
+        {
+            return [openBracket, number, dot, tilde, sectionName, closeBracket];
+        }
     }
 }
 

@@ -284,6 +284,10 @@ public sealed class MeasureCollector
     private readonly List<GraceNoteItem> _graceNotes = new();
     // Lyrics
     private readonly List<LyricItem> _lyrics = new();
+    // Music marks (segno, coda, fine, D.S., D.C., etc.)
+    private readonly List<MusicMarkItem> _musicMarks = new();
+    // Custom text annotations
+    private readonly List<CustomTextItem> _customTexts = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
     // Default duration
@@ -353,7 +357,9 @@ public sealed class MeasureCollector
             _dynamics.ToImmutableArray(),
             _articulations.ToImmutableArray(),
             _graceNotes.ToImmutableArray(),
-            lyrics: _lyrics.ToImmutableArray());
+            lyrics: _lyrics.ToImmutableArray(),
+            musicMarks: _musicMarks.ToImmutableArray(),
+            customTexts: _customTexts.ToImmutableArray());
     }
 
     /// <summary>
@@ -463,7 +469,9 @@ public sealed class MeasureCollector
             _dynamics.ToImmutableArray(),
             _articulations.ToImmutableArray(),
             _graceNotes.ToImmutableArray(),
-            lyrics: _lyrics.ToImmutableArray());
+            lyrics: _lyrics.ToImmutableArray(),
+            musicMarks: _musicMarks.ToImmutableArray(),
+            customTexts: _customTexts.ToImmutableArray());
     }
 
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)

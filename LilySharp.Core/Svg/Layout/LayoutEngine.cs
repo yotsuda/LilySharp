@@ -169,6 +169,14 @@ public sealed class LayoutEngine
         var lyricHyphenEngraver = new LyricHyphenEngraver();
         var lyricHyphenLayouts = lyricHyphenEngraver.CalculateLayouts(lyricLayouts, systemsArray);
 
+        // Calculate music mark layouts
+        // LILYPOND-REF: mark-engraver.cc - segno, coda, fine, D.S., D.C. positioning
+        var musicMarkLayouts = MusicMarkEngraver.Calculate(score, score.MusicMarks, systemsArray, measureLayouts);
+
+        // Calculate custom text layouts
+        // LILYPOND-REF: lily/text-interface.cc - text rendering
+        var customTextLayouts = CustomTextEngraver.Calculate(score, score.CustomTexts, systemsArray, measureLayouts);
+
         return new ScoreLayout(
             pages,
             systemsArray,
@@ -180,6 +188,8 @@ public sealed class LayoutEngine
             graceNoteLayouts,
             lyricLayouts,
             lyricHyphenLayouts,
+            musicMarkLayouts,
+            customTextLayouts,
             voiceOffsets,
             restShifts);
     }
@@ -301,6 +311,8 @@ public sealed class LayoutEngine
             ImmutableArray<GraceNoteLayout>.Empty,
             ImmutableArray<LyricLayout>.Empty,  // TODO: Implement lyrics for multi-staff
             ImmutableArray<LyricHyphenLayout>.Empty,
+            ImmutableArray<MusicMarkLayout>.Empty,  // TODO: Implement music marks for multi-staff
+            ImmutableArray<CustomTextLayout>.Empty,  // TODO: Implement custom text for multi-staff
             voiceOffsets,
             restShifts);
     }

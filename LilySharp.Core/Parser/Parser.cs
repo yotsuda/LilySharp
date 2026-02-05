@@ -1235,7 +1235,7 @@ private GreenNode?[] ParseArticulations()
     }
 
     /// <summary>
-    /// Parse volta bracket: [1. Section] or [1,3. Section] or [1-3. Section]
+    /// Parse volta bracket: [1. Section] or [1,3. Section] or [1-3. Section] or [1. ~Section]
     /// </summary>
     private StructureAlternativeGreen ParseVoltaBracket()
     {
@@ -1252,10 +1252,18 @@ private GreenNode?[] ParseArticulations()
         }
 
         var dot = Expect(SyntaxKind.Dot);
+
+        // Check for silent section reference: [1. ~Section]
+        SyntaxToken? tilde = null;
+        if (Check(SyntaxKind.Tilde))
+        {
+            tilde = Advance();
+        }
+
         var section = Expect(SyntaxKind.Identifier);
         var closeBracket = Expect(SyntaxKind.CloseBracket);
 
-        return new StructureAlternativeGreen(openBracket, number, separator, endNumber, dot, section, closeBracket);
+        return new StructureAlternativeGreen(openBracket, number, separator, endNumber, dot, tilde, section, closeBracket);
     }
 
     /// <summary>

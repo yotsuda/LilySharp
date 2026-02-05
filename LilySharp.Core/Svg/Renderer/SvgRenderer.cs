@@ -180,6 +180,12 @@ public sealed class SvgRenderer
         // Draw lyrics
         DrawLyrics(layout);
 
+        // Draw music marks (segno, coda, D.S., etc.)
+        DrawMusicMarks(layout);
+
+        // Draw custom text
+        DrawCustomTexts(layout);
+
         WriteFooter();
 
         return _svg.ToString();
@@ -2028,6 +2034,100 @@ public sealed class SvgRenderer
                         $"stroke=\"black\" stroke-width=\"0.08\" class=\"lyric-extender\" />");
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Draws music marks (segno, coda, D.S., D.C., Fine, etc.).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/mark-engraver.cc - mark engraver
+    /// LILYPOND-REF: scm/define-grobs.scm:2100-2150 RehearsalMark grob
+    /// </remarks>
+    private void DrawMusicMarks(ScoreLayout layout)
+    {
+        if (layout.MusicMarkLayouts.IsDefaultOrEmpty)
+            return;
+
+        // Build measure to system Y mapping
+        var measureToSystemY = new Dictionary<int, double>();
+        foreach (var system in layout.Systems)
+        {
+            foreach (var measure in system.Measures)
+            {
+                measureToSystemY[measure.MeasureIndex] = system.Y;
+            }
+        }
+
+        foreach (var markLayout in layout.MusicMarkLayouts)
+        {
+            double systemY = measureToSystemY.TryGetValue(markLayout.MeasureIndex, out var y) ? y : 0;
+            double absoluteY = systemY + markLayout.Y;
+
+            if (markLayout.IsSymbol)
+            {
+                // Draw symbol glyph (segno or coda)
+                string glyph = GetMusicMarkGlyph(markLayout.MarkType);
+                _svg.AppendLine($"  <text x=\"{markLayout.X:F2}\" y=\"{absoluteY:F2}\" " +
+                    $"font-family=\"Emmentaler\" font-size=\"{FontSize:F1}\" " +
+                    $"text-anchor=\"middle\" dominant-baseline=\"central\" " +
+                    $"class=\"music-mark-symbol\">{glyph}</text>");
+            }
+            else
+            {
+                // Draw text (D.S., D.C., Fine, etc.) in italic bold
+                _svg.AppendLine($"  <text x=\"{markLayout.X:F2}\" y=\"{absoluteY:F2}\" " +
+                    $"font-family=\"serif\" font-size=\"{FontSize * 0.7:F1}\" " +
+                    $"font-style=\"italic\" font-weight=\"bold\" " +
+                    $"text-anchor=\"middle\" dominant-baseline=\"central\" " +
+                    $"class=\"music-mark-text\">{EscapeXml(markLayout.Text)}</text>");
+            }
+        }
+    }
+
+    private static string GetMusicMarkGlyph(MusicMarkType type) => type switch
+    {
+        MusicMarkType.Segno => "\uE047",  // SMuFL segno
+        MusicMarkType.Coda => "\uE048",   // SMuFL coda
+        _ => ""
+    };
+
+    /// <summary>
+    /// Draws custom text annotations (e.g., "molto rit.", "a tempo").
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/text-interface.cc - text rendering
+    /// LILYPOND-REF: scm/define-grobs.scm:3600-3650 TextScript grob
+    /// </remarks>
+    private void DrawCustomTexts(ScoreLayout layout)
+    {
+        if (layout.CustomTextLayouts.IsDefaultOrEmpty)
+            return;
+
+        // Build measure to system Y mapping
+        var measureToSystemY = new Dictionary<int, double>();
+        foreach (var system in layout.Systems)
+        {
+            foreach (var measure in system.Measures)
+            {
+                measureToSystemY[measure.MeasureIndex] = system.Y;
+            }
+        }
+
+        // Custom text font size: similar to dynamics
+        double textFontSize = FontSize * 0.7;
+
+        foreach (var textLayout in layout.CustomTextLayouts)
+        {
+            double systemY = measureToSystemY.TryGetValue(textLayout.MeasureIndex, out var y) ? y : 0;
+            double absoluteY = systemY + textLayout.Y;
+
+            // Draw custom text in italic (standard for expression markings)
+            _svg.AppendLine($"  <text x=\"{textLayout.X:F2}\" y=\"{absoluteY:F2}\" " +
+                $"font-family=\"serif\" font-size=\"{textFontSize:F1}\" " +
+                $"font-style=\"italic\" " +
+                $"text-anchor=\"start\" dominant-baseline=\"hanging\" " +
+                $"class=\"custom-text\">{EscapeXml(textLayout.Text)}</text>");
         }
     }
 }

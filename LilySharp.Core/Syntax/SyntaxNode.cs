@@ -136,6 +136,8 @@ public abstract class SyntaxNode
             SyntaxKind.StructureAlternative => new StructureAlternativeSyntax((StructureAlternativeGreen)green, this, position),
             SyntaxKind.SectionReference => new SectionReferenceSyntax((SectionReferenceGreen)green, this, position),
             SyntaxKind.NavigationMark => new NavigationMarkSyntax((NavigationMarkGreen)green, this, position),
+            SyntaxKind.MusicMark => new MusicMarkSyntax((MusicMarkGreen)green, this, position),
+            SyntaxKind.CustomText => new CustomTextSyntax((CustomTextGreen)green, this, position),
             SyntaxKind.RenderDeclaration => new RenderDeclarationSyntax((RenderDeclarationGreen)green, this, position),
             SyntaxKind.StaffRender => new StaffRenderSyntax((StaffRenderGreen)green, this, position),
             SyntaxKind.GrandStaffRender => new GrandStaffRenderSyntax((GrandStaffRenderGreen)green, this, position),
