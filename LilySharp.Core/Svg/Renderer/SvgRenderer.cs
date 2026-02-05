@@ -1667,7 +1667,9 @@ public sealed class SvgRenderer
         // LILYPOND-REF: define-grobs.scm:1317 Y-offset = (scale-by-font-size -0.6)
         double fontSize = FontSize * 0.85;
 
-        _svg.AppendLine($"  <text x=\"{x:F2}\" y=\"{y:F2}\" font-family=\"Emmentaler\" font-size=\"{fontSize:F1}\" fill=\"black\" data-pos=\"{dynamicLayout.SourcePosition}\">{glyph}</text>");
+        // Dynamics use serif italic font (not Emmentaler which is for music symbols)
+        // LILYPOND-REF: define-grobs.scm:1315 font-series = bold, font-shape = italic
+        _svg.AppendLine($"  <text x=\"{x:F2}\" y=\"{y:F2}\" font-family=\"serif\" font-size=\"{fontSize:F1}\" font-style=\"italic\" font-weight=\"bold\" fill=\"black\" data-pos=\"{dynamicLayout.SourcePosition}\">{glyph}</text>");
     }
 
     /// <summary>
@@ -1675,16 +1677,20 @@ public sealed class SvgRenderer
     /// </summary>
     private static string GetDynamicGlyph(string text) => text switch
     {
-        // SMuFL dynamic glyphs (U+E520-U+E52F)
-        "ppp" => "\uE52A",  // dynamicPPP
-        "pp" => "\uE52B",   // dynamicPP
-        "p" => "\uE520",    // dynamicPiano
-        "mp" => "\uE52C",   // dynamicMP
-        "mf" => "\uE52D",   // dynamicMF
-        "f" => "\uE522",    // dynamicForte
-        "ff" => "\uE52F",   // dynamicFF
-        "fff" => "\uE530",  // dynamicFFF
-        _ => text           // Fallback to text
+        // Emmentaler uses regular italic letters for dynamics, not SMuFL glyphs
+        // LILYPOND-REF: define-grobs.scm:1317 font-encoding = fetaText
+        "ppp" => "ppp",
+        "pp" => "pp",
+        "p" => "p",
+        "mp" => "mp",
+        "mf" => "mf",
+        "f" => "f",
+        "ff" => "ff",
+        "fff" => "fff",
+        "cresc" => "cresc.",
+        "decresc" => "decresc.",
+        "dim" => "dim.",
+        _ => text
     };
 
     /// <summary>
