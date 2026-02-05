@@ -181,6 +181,10 @@ public sealed class LayoutEngine
         // LILYPOND-REF: lily/volta-bracket.cc - volta bracket rendering
         var voltaBracketLayouts = VoltaBracketEngraver.Calculate(score.VoltaBrackets, systemsArray, measureLayouts);
 
+        // Calculate tuplet bracket layouts
+        // LILYPOND-REF: lily/tuplet-bracket.cc - tuplet bracket rendering
+        var tupletBracketLayouts = TupletBracketEngraver.Calculate(score.TupletBrackets, systemsArray, measureLayouts, score.Voice.Measures);
+
         return new ScoreLayout(
             pages,
             systemsArray,
@@ -195,6 +199,7 @@ public sealed class LayoutEngine
             musicMarkLayouts,
             customTextLayouts,
             voltaBracketLayouts,
+            tupletBracketLayouts,
             voiceOffsets,
             restShifts);
     }
@@ -323,6 +328,9 @@ public sealed class LayoutEngine
         // Calculate volta bracket layouts
         var voltaBracketLayouts = VoltaBracketEngraver.Calculate(score.VoltaBrackets, systemsArray, measureLayouts);
 
+        // Calculate tuplet bracket layouts
+        var tupletBracketLayouts = TupletBracketEngraver.Calculate(score.TupletBrackets, systemsArray, measureLayouts, score.StaffGroups[0].PrimaryStaff.PrimaryVoice.Measures);
+
         return new ScoreLayout(
             ImmutableArray.Create(page),
             systemsArray,
@@ -337,6 +345,7 @@ public sealed class LayoutEngine
             musicMarkLayouts,
             customTextLayouts,
             voltaBracketLayouts,
+            tupletBracketLayouts,
             voiceOffsets,
             restShifts);
     }

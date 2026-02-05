@@ -54,6 +54,9 @@ internal sealed class MeasureBuilder
     public IReadOnlyList<MeasureBoundary> Boundaries => _boundaries;
     public IReadOnlyList<BarCheckWarning> BarCheckWarnings => _barCheckWarnings;
 
+    /// <summary>Gets the current accumulated duration within the measure.</summary>
+    public Fraction CurrentDuration => _currentDuration;
+
     /// <summary>Current measure index (completed measures count).</summary>
     public int CurrentMeasureIndex => _measures.Count;
 
@@ -81,6 +84,40 @@ internal sealed class MeasureBuilder
         if (_currentDuration >= _timeSignature)
         {
             AutoCompleteMeasure(item.SourcePosition + 1);
+        }
+    }
+
+    /// <summary>
+    /// Adds a music item without affecting duration tracking.
+    /// Used for tuplet notes where duration is calculated separately.
+    /// </summary>
+    public void AddItemWithoutDuration(MusicItem item)
+    {
+        _currentItems.Add(item);
+
+        // Update default duration (for subsequent notes)
+        Fraction baseDuration = item switch
+        {
+            NoteItem note => note.BaseDuration,
+            RestItem rest => rest.BaseDuration,
+            ChordItem chord => chord.BaseDuration,
+            _ => Fraction.Zero
+        };
+        if (baseDuration != Fraction.Zero)
+            _defaultDuration = baseDuration;
+    }
+
+    /// <summary>
+    /// Adds duration and triggers auto-completion if time signature is reached.
+    /// Used after processing tuplet notes with scaled duration.
+    /// </summary>
+    public void AddDuration(Fraction duration, int sourcePosition)
+    {
+        _currentDuration += duration;
+
+        if (_currentDuration >= _timeSignature)
+        {
+            AutoCompleteMeasure(sourcePosition);
         }
     }
 
@@ -290,6 +327,8 @@ public sealed class MeasureCollector
     private readonly List<CustomTextItem> _customTexts = new();
     // Volta brackets (first/second ending)
     private readonly List<VoltaBracketItem> _voltaBrackets = new();
+    // Tuplet brackets
+    private readonly List<TupletBracketItem> _tupletBrackets = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
     // Default duration
@@ -362,7 +401,8 @@ public sealed class MeasureCollector
             lyrics: _lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
-            voltaBrackets: _voltaBrackets.ToImmutableArray());
+            voltaBrackets: _voltaBrackets.ToImmutableArray(),
+            tupletBrackets: _tupletBrackets.ToImmutableArray());
     }
 
     /// <summary>
@@ -410,7 +450,8 @@ public sealed class MeasureCollector
             lyrics: _lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
-            voltaBrackets: _voltaBrackets.ToImmutableArray());
+            voltaBrackets: _voltaBrackets.ToImmutableArray(),
+            tupletBrackets: _tupletBrackets.ToImmutableArray());
     }
 
     private List<Measure> CollectMeasuresForVoice(string voiceName)
@@ -479,7 +520,8 @@ public sealed class MeasureCollector
             lyrics: _lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
-            voltaBrackets: _voltaBrackets.ToImmutableArray());
+            voltaBrackets: _voltaBrackets.ToImmutableArray(),
+            tupletBrackets: _tupletBrackets.ToImmutableArray());
     }
 
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
@@ -491,6 +533,10 @@ public sealed class MeasureCollector
 
         foreach (var node in voiceNode.DescendantNodes())
         {
+            // Skip nodes that are inside a tuplet (they'll be processed by the tuplet)
+            if (IsInsideTuplet(node))
+                continue;
+
             switch (node)
             {
                 case NoteSyntax:
@@ -500,6 +546,7 @@ public sealed class MeasureCollector
                 case BreakSyntax:
                 case TieSyntax:
                 case SlurSyntax:
+                case TupletExpressionSyntax:
                     musicNodes.Add(node);
                     break;
 
@@ -585,6 +632,83 @@ public sealed class MeasureCollector
             case SlurSyntax:
                 // Already processed with the preceding note
                 break;
+
+            case TupletExpressionSyntax tuplet:
+                // LILYPOND-REF: lily/tuplet-engraver.cc - process tuplet as a unit
+                ProcessTuplet(tuplet, builder);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Processes a tuplet expression, collecting notes and creating a bracket item.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-engraver.cc - Tuplet_engraver class
+    /// Processes notes within a tuplet expression and creates a bracket item.
+    /// </remarks>
+    private void ProcessTuplet(TupletExpressionSyntax tuplet, MeasureBuilder builder)
+    {
+        int measureIndex = builder.CurrentMeasureIndex;
+        int startNoteIndex = builder.CurrentItemCount;
+
+        // Track written duration of all items in the tuplet
+        Fraction writtenDuration = Fraction.Zero;
+        int lastSourcePosition = tuplet.Position;
+
+        // Process all notes inside the tuplet body using Items property
+        // (not DescendantNodes which includes all nested nodes)
+        // Use AddItemWithoutDuration to avoid incorrect auto-completion
+        foreach (var item in tuplet.Body.Items)
+        {
+            if (item is NoteSyntax note)
+            {
+                var noteItem = CreateNoteItem(note, false, false, false);
+                builder.AddItemWithoutDuration(noteItem);
+                writtenDuration += noteItem.Duration;
+                lastSourcePosition = note.Position;
+            }
+            else if (item is RestSyntax rest)
+            {
+                var restItem = CreateRestItem(rest);
+                builder.AddItemWithoutDuration(restItem);
+                writtenDuration += restItem.Duration;
+                lastSourcePosition = rest.Position;
+            }
+            else if (item is ChordSyntax chord)
+            {
+                var chordItem = CreateChordItem(chord);
+                builder.AddItemWithoutDuration(chordItem);
+                writtenDuration += chordItem.Duration;
+                lastSourcePosition = chord.Position;
+            }
+        }
+
+        // Calculate actual duration: written × base / ratio
+        // e.g., tuplet 3/2: 3 quarters (3/4) → actual 2/4
+        // LILYPOND-REF: lily/tuplet-bracket.cc - tuplet duration scaling
+        int ratio = tuplet.TupletRatio;   // e.g., 3 (play 3 notes)
+        int @base = tuplet.BaseDivision;  // e.g., 2 (in time of 2)
+        Fraction actualDuration = new Fraction(
+            writtenDuration.Numerator * @base,
+            writtenDuration.Denominator * ratio);
+
+        // Add the actual duration (may trigger auto-completion)
+        builder.AddDuration(actualDuration, lastSourcePosition + 1);
+
+        int endNoteIndex = builder.CurrentItemCount - 1;
+
+        // Only add bracket if we have at least 2 notes
+        if (endNoteIndex >= startNoteIndex)
+        {
+            _tupletBrackets.Add(new TupletBracketItem(
+                tuplet.TupletRatio,
+                tuplet.BaseDivision,
+                startNoteIndex,
+                endNoteIndex,
+                measureIndex,
+                tuplet.Position
+            ));
         }
     }
 
@@ -795,7 +919,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax);
+                .Where(n => !IsInsideTuplet(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or TupletExpressionSyntax);
             ProcessNodes(musicNodes);
         }
 
@@ -832,6 +956,28 @@ public sealed class MeasureCollector
         while (parent != null)
         {
             if (parent is StructureRepeatBlockSyntax)
+                return true;
+            parent = parent.Parent;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a node is inside a TupletExpression (to avoid double-counting).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-bracket.cc - notes inside tuplets are processed together
+    /// </remarks>
+    private static bool IsInsideTuplet(SyntaxNode node)
+    {
+        // TupletExpressionSyntax itself is not "inside" a tuplet
+        if (node is TupletExpressionSyntax)
+            return false;
+
+        var parent = node.Parent;
+        while (parent != null)
+        {
+            if (parent is TupletExpressionSyntax)
                 return true;
             parent = parent.Parent;
         }
@@ -928,6 +1074,10 @@ public sealed class MeasureCollector
 
         foreach (var node in partBlock.DescendantNodes())
         {
+            // Skip nodes inside tuplets (they'll be processed by the tuplet)
+            if (IsInsideTuplet(node))
+                continue;
+
             switch (node)
             {
                 case NoteSyntax:
@@ -937,6 +1087,7 @@ public sealed class MeasureCollector
                 case BreakSyntax:
                 case TieSyntax:
                 case SlurSyntax:
+                case TupletExpressionSyntax:
                     musicNodes.Add(node);
                     break;
 

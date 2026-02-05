@@ -189,6 +189,10 @@ public sealed class SvgRenderer
         // Draw volta brackets
         DrawVoltaBrackets(layout);
 
+        // Draw tuplet brackets
+        // LILYPOND-REF: lily/tuplet-bracket.cc - tuplet bracket rendering
+        DrawTupletBrackets(layout);
+
         WriteFooter();
 
         return _svg.ToString();
@@ -2203,6 +2207,83 @@ public sealed class SvgRenderer
                 $"font-weight=\"bold\" " +
                 $"text-anchor=\"start\" dominant-baseline=\"hanging\" " +
                 $"class=\"volta-text\">{EscapeXml(bracketLayout.VoltaText)}</text>");
+        }
+    }
+
+    /// <summary>
+    /// Draws tuplet brackets with numbers.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:200-350 print method
+    /// LILYPOND-REF: scm/define-grobs.scm TupletBracket defaults
+    ///
+    /// Tuplet brackets consist of:
+    /// - Horizontal line
+    /// - Small hooks at both ends
+    /// - Number centered on the bracket
+    /// </remarks>
+    private void DrawTupletBrackets(ScoreLayout layout)
+    {
+        if (layout.TupletBracketLayouts.IsDefaultOrEmpty)
+            return;
+
+        // Build measure to system Y mapping
+        var measureToSystemY = new Dictionary<int, double>();
+        foreach (var system in layout.Systems)
+        {
+            foreach (var measure in system.Measures)
+            {
+                measureToSystemY[measure.MeasureIndex] = system.Y;
+            }
+        }
+
+        // Bracket line thickness
+        const double lineThickness = 0.13;
+        // Edge height (vertical hook)
+        double edgeHeight = TupletBracketEngraver.GetEdgeHeight();
+
+        foreach (var bracketLayout in layout.TupletBracketLayouts)
+        {
+            // Get system Y for this bracket
+            double systemY = measureToSystemY.TryGetValue(bracketLayout.MeasureIndex, out var y) ? y : 0;
+            double absoluteY = systemY + bracketLayout.Y;
+
+            double startX = bracketLayout.StartX;
+            double endX = bracketLayout.EndX;
+            double midX = (startX + endX) / 2;
+
+            // Hook direction based on stem direction
+            double hookDir = bracketLayout.IsStemUp ? 1 : -1;
+
+            // Draw left vertical hook
+            _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{absoluteY:F2}\" " +
+                $"x2=\"{startX:F2}\" y2=\"{absoluteY + edgeHeight * hookDir:F2}\" " +
+                $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
+
+            // Draw horizontal line (left part, up to number gap)
+            double numberGap = 1.0;
+            _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{absoluteY:F2}\" " +
+                $"x2=\"{midX - numberGap:F2}\" y2=\"{absoluteY:F2}\" " +
+                $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
+
+            // Draw horizontal line (right part, after number gap)
+            _svg.AppendLine($"  <line x1=\"{midX + numberGap:F2}\" y1=\"{absoluteY:F2}\" " +
+                $"x2=\"{endX:F2}\" y2=\"{absoluteY:F2}\" " +
+                $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
+
+            // Draw right vertical hook
+            _svg.AppendLine($"  <line x1=\"{endX:F2}\" y1=\"{absoluteY:F2}\" " +
+                $"x2=\"{endX:F2}\" y2=\"{absoluteY + edgeHeight * hookDir:F2}\" " +
+                $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
+
+            // Draw tuplet number text centered
+            double textFontSize = FontSize * 0.6;
+            double textY = bracketLayout.IsStemUp ? absoluteY - 0.3 : absoluteY + 0.8;
+            _svg.AppendLine($"  <text x=\"{midX:F2}\" y=\"{textY:F2}\" " +
+                $"font-family=\"serif\" font-size=\"{textFontSize:F1}\" " +
+                $"font-weight=\"bold\" " +
+                $"text-anchor=\"middle\" dominant-baseline=\"middle\" " +
+                $"class=\"tuplet-number\">{EscapeXml(bracketLayout.NumberText)}</text>");
         }
     }
 }

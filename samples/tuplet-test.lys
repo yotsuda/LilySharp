@@ -1,0 +1,14 @@
+// Tuplet Test - Demonstrates bracket direction based on stem direction
+// LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
+time 4/4
+key c major
+
+// High notes (stem down) - bracket should go below
+// 3/2 triplet = 2 beats, + 2 quarter notes = 4 beats total
+tuplet 3/2 { c4 d e } f4 g4 |
+
+// Low notes (stem up) - bracket should go above  
+tuplet 3/2 { c4 d e } f4 g4 |
+
+// Mixed notes - majority decides
+tuplet 3/2 { c4 d e } f4 g4 |
