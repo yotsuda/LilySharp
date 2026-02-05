@@ -33,6 +33,15 @@ public sealed record MultiStaffScore
     /// <summary>Composer (optional).</summary>
     public string? Composer { get; }
 
+    /// <summary>Lyrics in the score.</summary>
+    public ImmutableArray<LyricItem> Lyrics { get; }
+
+    /// <summary>Music marks (segno, coda, fine, D.S., etc.).</summary>
+    public ImmutableArray<MusicMarkItem> MusicMarks { get; }
+
+    /// <summary>Custom text annotations.</summary>
+    public ImmutableArray<CustomTextItem> CustomTexts { get; }
+
     /// <summary>Whether this score has a grand staff.</summary>
     public bool HasGrandStaff => StaffGroups.Any(g => g.IsGrandStaff);
 
@@ -48,7 +57,10 @@ public sealed record MultiStaffScore
         KeySignature keySignature,
         int? tempo = null,
         string? title = null,
-        string? composer = null)
+        string? composer = null,
+        ImmutableArray<LyricItem>? lyrics = null,
+        ImmutableArray<MusicMarkItem>? musicMarks = null,
+        ImmutableArray<CustomTextItem>? customTexts = null)
     {
         if (staffGroups.Length == 0)
             throw new ArgumentException("Score must have at least one staff group", nameof(staffGroups));
@@ -59,6 +71,9 @@ public sealed record MultiStaffScore
         Tempo = tempo;
         Title = title;
         Composer = composer;
+        Lyrics = lyrics ?? ImmutableArray<LyricItem>.Empty;
+        MusicMarks = musicMarks ?? ImmutableArray<MusicMarkItem>.Empty;
+        CustomTexts = customTexts ?? ImmutableArray<CustomTextItem>.Empty;
     }
 
     /// <summary>
@@ -76,7 +91,10 @@ public sealed record MultiStaffScore
             score.KeySignature,
             score.Tempo,
             score.Title,
-            score.Composer);
+            score.Composer,
+            score.Lyrics,
+            score.MusicMarks,
+            score.CustomTexts);
     }
 
     /// <summary>Number of measures (from first staff of first group).</summary>

@@ -300,6 +300,21 @@ public sealed class LayoutEngine
         var voiceOffsets = ImmutableDictionary<VoiceItemKey, double>.Empty;
         var restShifts = ImmutableDictionary<RestShiftKey, double>.Empty;
 
+        // Calculate lyric layouts
+        var lyricEngraver = new LyricEngraver();
+        double staffBottom = _options.StaffHeight;
+        var lyricLayouts = lyricEngraver.CalculateLayouts(score.Lyrics, measureLayouts, staffBottom);
+
+        // Calculate lyric hyphen/extender layouts
+        var lyricHyphenEngraver = new LyricHyphenEngraver();
+        var lyricHyphenLayouts = lyricHyphenEngraver.CalculateLayouts(lyricLayouts, systemsArray);
+
+        // Calculate music mark layouts
+        var musicMarkLayouts = MusicMarkEngraver.Calculate(null, score.MusicMarks, systemsArray, measureLayouts);
+
+        // Calculate custom text layouts
+        var customTextLayouts = CustomTextEngraver.Calculate(null, score.CustomTexts, systemsArray, measureLayouts);
+
         return new ScoreLayout(
             ImmutableArray.Create(page),
             systemsArray,
@@ -309,10 +324,10 @@ public sealed class LayoutEngine
             ImmutableArray<DynamicLayout>.Empty,
             ImmutableArray<ArticulationLayout>.Empty,
             ImmutableArray<GraceNoteLayout>.Empty,
-            ImmutableArray<LyricLayout>.Empty,  // TODO: Implement lyrics for multi-staff
-            ImmutableArray<LyricHyphenLayout>.Empty,
-            ImmutableArray<MusicMarkLayout>.Empty,  // TODO: Implement music marks for multi-staff
-            ImmutableArray<CustomTextLayout>.Empty,  // TODO: Implement custom text for multi-staff
+            lyricLayouts,
+            lyricHyphenLayouts,
+            musicMarkLayouts,
+            customTextLayouts,
             voiceOffsets,
             restShifts);
     }

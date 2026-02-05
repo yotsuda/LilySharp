@@ -403,7 +403,10 @@ public sealed class MeasureCollector
             new KeySignature(_keySharps),
             _tempo,
             _title,
-            _composer);
+            _composer,
+            lyrics: _lyrics.ToImmutableArray(),
+            musicMarks: _musicMarks.ToImmutableArray(),
+            customTexts: _customTexts.ToImmutableArray());
     }
 
     private List<Measure> CollectMeasuresForVoice(string voiceName)

@@ -57,7 +57,7 @@ public static class MusicMarkEngraver
     /// Calculates layout for all music marks in a score.
     /// </summary>
     public static ImmutableArray<MusicMarkLayout> Calculate(
-        Score score,
+        Score? score,
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts)

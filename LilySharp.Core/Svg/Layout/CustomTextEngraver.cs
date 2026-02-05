@@ -44,7 +44,7 @@ public static class CustomTextEngraver
     /// Calculates layout for all custom text items in a score.
     /// </summary>
     public static ImmutableArray<CustomTextLayout> Calculate(
-        Score score,
+        Score? score,
         ImmutableArray<CustomTextItem> customTexts,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts)
