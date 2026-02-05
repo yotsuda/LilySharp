@@ -385,6 +385,30 @@ score {
         Assert.False(tree.HasErrors);
     }
 
+    [Fact]
+    public void ParseNoteWithDynamicAtPrefix()
+    {
+        // New @ prefix for dynamics
+        var tree = SyntaxTree.Parse(@"{ c4@p d@f e@mf }");
+        Assert.False(tree.HasErrors);
+    }
+
+    [Fact]
+    public void ParseNoteWithMixedDynamicSyntax()
+    {
+        // Both old (\p) and new (@p) syntax should work
+        var tree = SyntaxTree.Parse(@"{ c4@p d\f e@ff }");
+        Assert.False(tree.HasErrors);
+    }
+
+    [Fact]
+    public void ParseNoteWithArticulationAndDynamicAtPrefix()
+    {
+        // Articulation and dynamic both with @ prefix
+        var tree = SyntaxTree.Parse(@"{ c4@staccato@p d@accent@f }");
+        Assert.False(tree.HasErrors);
+    }
+
     // ========== Repeat Tests ==========
 
     [Fact]

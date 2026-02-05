@@ -602,19 +602,26 @@ private GreenNode?[] ParseArticulations()
         {
             if (Check(SyntaxKind.At))
             {
-                // @staccato, @accent, etc.
+                // @staccato, @accent, @p, @f, etc.
                 var at = Advance();
-                if (IsArticulationName())
+                if (IsDynamicName())
                 {
+                    // @p, @f, @mf, @cresc, etc. - dynamics with @ prefix (new style)
+                    var name = Advance();
+                    articulations.Add(new DynamicGreen(at, name));
+                }
+                else if (IsArticulationName())
+                {
+                    // @staccato, @accent, @trill, etc.
                     var name = Advance();
                     articulations.Add(new ArticulationGreen(at, name));
                 }
                 else
                 {
-                    // Error: expected articulation name after @
+                    // Error: expected articulation or dynamic name after @
                     var span = new TextSpan(_textPosition, Current.FullWidth);
                     _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                        $"Expected articulation name after '@', found '{Current.Kind}'");
+                        $"Expected articulation or dynamic name after '@', found '{Current.Kind}'");
                 }
             }
             else if (Check(SyntaxKind.Backslash))

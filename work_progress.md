@@ -4,7 +4,7 @@
 
 | フェーズ | 状態 | 完了 | 合計 | 進捗率 |
 |----------|:----:|-----:|-----:|-------:|
-| Phase 1: ダイナミクス (`@p`) | 🚀 | 0 | 4 | 0% |
+| Phase 1: ダイナミクス (`@p`) | ⏳ | 2 | 4 | 50% |
 | Phase 2: 変数参照 (`$name`) | 🚀 | 0 | 4 | 0% |
 | Phase 3: オクターブ管理 | 🚀 | 0 | 4 | 0% |
 | **合計** | | 0 | 12 | 0% |
@@ -31,9 +31,9 @@
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
 | LilySharp.Core/Parser/Lexer.cs | 🚀 | High | 2h | @p, @f 等のトークン追加 |
-| LilySharp.Core/Parser/Parser.cs | 🚀 | High | 1h | ダイナミクス構文パース |
+| LilySharp.Core/Parser/Parser.cs | ✅ | High | 1h | @p, @f 対応完了 |
 | LilySharp.Core/Syntax/SyntaxKind.cs | 🚀 | High | 0.5h | 新トークン種別追加 |
-| LilySharp.Tests/LexerTests.cs | 🚀 | Normal | 1h | 新構文のテスト |
+| LilySharp.Tests/ParserTests.cs | ✅ | Normal | 1h | 新構文テスト3件追加 |
 
 ---
 
@@ -65,3 +65,5 @@
 |------|------|
 | 2026-02-06 | Tuplet Bracket 実装完了 |
 | 2026-02-06 | GRAMMAR_ANALYSIS.md 作成 |
+
+
