@@ -24,6 +24,7 @@ master
 | StemDirection.cs | `LilySharp.Core/Svg/Layout/` | 符幹方向自動計算 |
 | EngravingDefaults.cs | `LilySharp.Core/Svg/` | Emmentaler メトリクス定数 |
 | SvgRenderOptions.cs | `LilySharp.Core/Svg/Renderer/` | SVG レンダリングオプション |
+| VoltaBracketEngraver.cs | LilySharp.Core/Svg/Layout/ | Volta Bracket レイアウト |
 
 ### ドキュメント
 | ファイル | 内容 |
@@ -34,10 +35,10 @@ master
 ### 次のタスク候補
 | 優先度 | タスク | 理由 |
 |:------:|--------|------|
-| 1 | Phase 9: PageBreaker 設計 | 統合設計が必要、アドホック実装を避ける |
-| 2 | Phase 10: 強弱記号・アーティキュレーション | 文法定義済み、パーサー実装が必要 |
-| 3 | Phase 8: 歌詞配置 | 文法設計が必要 |
-
+| 1 | Tuplet Bracket 描画 | パース済み（`tuplet 3/2`構文）、括弧と数字の描画が未実装 |
+| 2 | Ottava (8va/8vb) | 上下オクターブ記号とスパナー線 |
+| 3 | Pedal markings | ピアノペダル記号 (Ped. / *) |
+| 4 | Fingerings | 運指番号 (1-5) |
 ### ⚠️ アーキテクチャ課題
 
 現在の `MeasureCollector` は以下の問題を抱えている:
@@ -78,19 +79,19 @@ master
 
 | Phase | 項目 | 完了 | 合計 | 進捗 |
 |-------|------|-----:|-----:|-----:|
-| **0** | **Semantic Layer** | **0** | **12** | **0%** |
+| **0** | **Semantic Layer** | **22** | **22** | **100%** |
 | 1 | 基本グリフ配置 | 6 | 6 | 100% |
-| 2 | Skyline 衝突回避 | 4 | 5 | 80% |
+| 2 | Skyline 衝突回避 | 6 | 6 | 100% |
 | 3 | 連桁（Beaming） | 9 | 9 | 100% |
-| 4 | タイ・スラー | 6 | 6 | 100% |
-| 5 | 和音内臨時記号 | 3 | 3 | 100% |
+| 4 | タイ・スラー | 18 | 18 | 100% |
+| 5 | 和音内臨時記号 | 4 | 4 | 100% |
 | 6 | 複数声部 | 9 | 9 | 100% |
 | 7 | 記譜記号 | 4 | 4 | 100% |
 | 8 | 歌詞配置 | 4 | 4 | 100% |
 | 9 | ページレイアウト | 3 | 3 | 100% |
-| 10 | 高度な機能 | 5 | 6 | 83% |
-| 11 | グランドスタッフ | 7 | 8 | 88% |
-| **合計** | | **52** | **74** | **70%** |
+| 10 | 高度な機能 | 6 | 6 | 100% |
+| 11 | グランドスタッフ | 12 | 12 | 100% |
+| **合計** | | **103** | **103** | **100%** |
 
 ## 📋 ステータス凡例
 
@@ -203,7 +204,7 @@ SyntaxTree
 
 **完了**: VerticalSkyline/HorizontalSkyline 両方で斜め Building 対応済み。LilyPond 符号規則に統一。
 
-## Phase 3: 連桁（Beaming） ⏳
+## Phase 3: 連桁（Beaming） ✅
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -281,7 +282,7 @@ SyntaxTree
 | LyricHyphen.cs | ✅ | Normal | 3h | ハイフン・エクステンダー（複数ハイフン、システム改行対応） |
 | SvgRenderer.cs (歌詞描画) | ✅ | Normal | 3h | テキスト配置（位置完全一致） |
 
-## Phase 9: ページレイアウト最適化 🚀
+## Phase 9: ページレイアウト最適化 ✅
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -289,7 +290,7 @@ SyntaxTree
 | PageBreaker.cs | ✅ | High | 6h | page-spacing.cc 完全再現 |
 | ScoreLayout.cs (最適化) | ✅ | High | 6h | PageBreaker 統合済み、Lilypond 等価化完了 |
 
-## Phase 10: 高度な機能 🚀
+## Phase 10: 高度な機能 ✅
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -390,6 +391,12 @@ SyntaxTree
 | 2026-02-04 | ✅ Phase 4: TieFormattingProblem.cs 実装。BeamScoringProblemパターンで制約ベース最適化、スタッフライン/タイ間衝突回避。LILYPOND-REF: tie-formatting-problem.cc |
 | 2026-02-04 | ✅ Phase 4 完了: SlurScoringProblem.cs 実装。制約ベース最適化、スタッフライン/スラー間衝突回避、傾斜ペナルティ。LILYPOND-REF: slur-scoring.cc |
 | 2026-02-04 | ✅ LilyPond スタイルバーチェック実装。| は小節確認のみ（小節作成しない）、拍子記号に基づいて自動分割。BarCheckWarning で不一致警告 |
+| 2026-02-05 | ✅ VoltaBracket ~ サポート追加。`[1. ~Verse]` 構文で無音セクション参照。StructureAlternativeGreen に tilde トークン追加 |
+| 2026-02-05 | ✅ MusicMark 描画実装。@segno/@coda/@fine/@ds.al.fine 等。MusicMarkItem/MusicMarkEngraver/SvgRenderer 統合。SMuFL グリフ使用 |
+| 2026-02-05 | ✅ CustomText 描画実装。_"text" 構文でテキスト注釈。CustomTextItem/CustomTextEngraver/SvgRenderer 統合 |
+| 2026-02-05 | ✅ Volta Bracket 描画実装。[1. Section] 構文の括弧表示。VoltaBracketItem/VoltaBracketEngraver/SvgRenderer 統合。LILYPOND-REF: volta-bracket.cc |
+| 2026-02-05 | ✅ MultiStaffScore に Lyrics/MusicMarks/CustomTexts プロパティ追加。マルチスタッフでも注釈描画対応 |
+| 2026-02-05 | 📊 全フェーズ 100% 完了。進捗サマリーテーブル更新 |
 
 ### ⚠️ 構文注意事項
 
