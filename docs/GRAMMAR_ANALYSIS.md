@@ -364,7 +364,7 @@ render midi "output.mid" {
 | `\key g \major` | `key g major` | 自然な英語 |
 | `\clef treble` | `clef: treble` (in part) | パート属性として |
 | `\relative c' { }` | 暗黙（パート+セクションで管理） | 明示的宣言不要 |
-| `\repeat volta 2 { }` | `\|: ... :\|` | 視覚的 |
+| `\repeat volta 2 { }` | `|: ... :|` | 視覚的 |
 | `\alternative { { } { } }` | `[1. A] [2. B]` | 簡潔 |
 | `name = { ... }` | `phrase name { ... }` | 意図が明確 |
 | `\name` (変数参照) | `$name` | プレフィックスで明確 |
