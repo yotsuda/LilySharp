@@ -1663,9 +1663,9 @@ public sealed class SvgRenderer
         double glyphWidth = EstimateDynamicWidth(dynamicLayout.Text);
         x -= glyphWidth / 2;
 
-        // Dynamic font size is slightly smaller than regular music glyphs
-        // LILYPOND-REF: define-grobs.scm:1317 Y-offset = (scale-by-font-size -0.6)
-        double fontSize = FontSize * 0.85;
+        // Dynamic font size: 2 staff spaces (FontSize * 0.5) to match LilyPond sizing
+        // LILYPOND-REF: define-grobs.scm DynamicText font-size = 2 (relative units)
+        double fontSize = FontSize * 0.5;
 
         // Dynamics use serif italic font (not Emmentaler which is for music symbols)
         // LILYPOND-REF: define-grobs.scm:1315 font-series = bold, font-shape = italic
@@ -1698,15 +1698,16 @@ public sealed class SvgRenderer
     /// </summary>
     private static double EstimateDynamicWidth(string text) => text switch
     {
-        "ppp" => 2.5,
-        "pp" => 1.8,
-        "p" => 0.9,
-        "mp" => 1.8,
-        "mf" => 1.8,
-        "f" => 0.9,
-        "ff" => 1.8,
-        "fff" => 2.5,
-        _ => text.Length * 0.8
+        // Width estimates scaled for FontSize * 0.5 font size
+        "ppp" => 1.5,
+        "pp" => 1.1,
+        "p" => 0.5,
+        "mp" => 1.1,
+        "mf" => 1.1,
+        "f" => 0.5,
+        "ff" => 1.1,
+        "fff" => 1.5,
+        _ => text.Length * 0.5
     };
 
     /// <summary>
