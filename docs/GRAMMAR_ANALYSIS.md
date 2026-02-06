@@ -77,7 +77,7 @@ structure {
 // 楽器指定 → clef と octave が自動設定
 part melody { instrument: violin }    // → clef: treble, octave: 4
 part bass { instrument: cello }       // → clef: bass, octave: 3
-part lead { instrument: guitar }      // → clef: treble, octave: 3
+part lead { instrument: guitar }      // → clef: treble_8, octave: 4
 
 // 明示的に上書き可能
 part special { instrument: violin, octave: 5 }
@@ -97,7 +97,7 @@ part bass { clef: bass }              // → octave: 3
 | bass / contrabass | bass | 2 | コントラバス |
 | piano-right | treble | 4 | |
 | piano-left | bass | 3 | |
-| guitar | treble | 3 | 記譜は実音1オクターブ上 |
+| guitar | treble_8 | 4 | treble_8 clef (8vb) |
 | flute | treble | 5 | |
 | oboe | treble | 4 | |
 | clarinet | treble | 4 | |
@@ -108,7 +108,7 @@ part bass { clef: bass }              // → octave: 3
 | tuba | bass | 2 | |
 | voice-soprano | treble | 4 | |
 | voice-alto | treble | 4 | |
-| voice-tenor | treble | 3 | オクターブ記号付き |
+| voice-tenor | treble_8 | 4 | treble_8 clef (8vb) |
 | voice-bass | bass | 3 | |
 
 ### clef→既定オクターブ（楽器未指定時）
