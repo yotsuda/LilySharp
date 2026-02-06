@@ -21,6 +21,7 @@ public sealed class Binder
     private readonly List<SemanticDiagnostic> _diagnostics = new();
     private readonly RelativePitchResolver _pitchResolver = new();
     private Fraction _defaultDuration = Fraction.Quarter;
+    private int _baseOctave = 4; // Base octave for section resets (from part/clef)
 
     /// <summary>
     /// Binds a syntax tree to produce a bound score.
@@ -55,7 +56,10 @@ public sealed class Binder
         foreach (var partName in expanded.PartNames)
         {
             var nodes = expanded.GetPart(partName);
-            _pitchResolver.Reset(); // Reset for each voice
+            
+            // Determine base octave from part definition
+            _baseOctave = GetBaseOctaveForPart(partName, symbols);
+            _pitchResolver.Reset(_baseOctave); // Reset for each voice with part's base octave
             var measures = BindMeasures(nodes);
             voices.Add(new BoundVoice(partName, measures));
         }
@@ -136,8 +140,8 @@ public sealed class Binder
             switch (node)
             {
                 case SectionStartMarkerSyntax:
-                    // Reset pitch resolver at section boundaries
-                    _pitchResolver.Reset();
+                    // Reset pitch resolver at section boundaries using part's base octave
+                    _pitchResolver.Reset(_baseOctave);
                     break;
 
                 case NoteSyntax note:
@@ -392,4 +396,45 @@ public sealed class Binder
         "|." => BarlineType.Final,
         _ => BarlineType.Single
     };
+
+    /// <summary>
+    /// Gets the base octave for a part based on its instrument or clef definition.
+    /// </summary>
+    private static int GetBaseOctaveForPart(string partName, ImmutableSymbolTable symbols)
+    {
+        // Try to find the part in the symbol table
+        if (symbols.Parts.TryGetValue(partName, out var part))
+        {
+            // Check for explicit octave property
+            var octaveStr = part.GetProperty("octave");
+            if (octaveStr != null && int.TryParse(octaveStr, out var explicitOctave))
+                return explicitOctave;
+
+            // Check for instrument and derive octave from it
+            var instrument = part.GetProperty("instrument");
+            if (instrument != null)
+            {
+                var (_, octave) = InstrumentDefaults.GetDefaults(instrument);
+                return octave;
+            }
+
+            // Check for clef and derive octave from it
+            var clefStr = part.GetProperty("clef");
+            if (clefStr != null)
+            {
+                var clefType = clefStr.ToLowerInvariant() switch
+                {
+                    "treble" => ClefType.Treble,
+                    "bass" => ClefType.Bass,
+                    "alto" => ClefType.Alto,
+                    "tenor" => ClefType.Tenor,
+                    _ => ClefType.Treble
+                };
+                return InstrumentDefaults.GetDefaultOctave(clefType);
+            }
+        }
+
+        // Default to octave 4 (middle C region)
+        return 4;
+    }
 }

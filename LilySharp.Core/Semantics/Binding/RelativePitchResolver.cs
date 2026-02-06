@@ -39,7 +39,16 @@ public sealed class RelativePitchResolver
     /// </summary>
     public void Reset()
     {
-        _currentOctave = 4;
+        Reset(4);
+    }
+
+    /// <summary>
+    /// Resets to a specific base octave.
+    /// </summary>
+    /// <param name="baseOctave">The octave to reset to.</param>
+    public void Reset(int baseOctave)
+    {
+        _currentOctave = baseOctave;
         _lastStep = 0;
     }
 

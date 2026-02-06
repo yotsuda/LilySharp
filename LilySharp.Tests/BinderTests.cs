@@ -202,6 +202,40 @@ public class RelativePitchResolverTests
         Assert.Equal(3, pitch.Step); // F
         Assert.Equal(1, pitch.Alteration); // Sharp
     }
+
+    [Fact]
+    public void Reset_WithBaseOctave_SetsCorrectOctave()
+    {
+        var resolver = new RelativePitchResolver();
+        
+        // Reset to octave 3 (like bass clef)
+        resolver.Reset(3);
+
+        var source = "c4";
+        var tree = SyntaxTree.Parse(source);
+        var note = tree.GetRoot().DescendantNodes().OfType<NoteSyntax>().First();
+
+        var pitch = resolver.Resolve(note.Pitch);
+
+        Assert.Equal(0, pitch.Step); // C
+        Assert.Equal(3, pitch.Octave); // Octave 3
+    }
+
+    [Fact]
+    public void Reset_DefaultsToOctave4()
+    {
+        var resolver = new RelativePitchResolver();
+        resolver.Reset(); // Default reset
+
+        var source = "c4";
+        var tree = SyntaxTree.Parse(source);
+        var note = tree.GetRoot().DescendantNodes().OfType<NoteSyntax>().First();
+
+        var pitch = resolver.Resolve(note.Pitch);
+
+        Assert.Equal(0, pitch.Step); // C
+        Assert.Equal(4, pitch.Octave); // Default octave 4
+    }
 }
 
 public class PitchTests
