@@ -366,8 +366,9 @@ render midi "output.mid" {
 | `\relative c' { }` | 暗黙（パート+セクションで管理） | 明示的宣言不要 |
 | `\repeat volta 2 { }` | `|: ... :|` | 視覚的 |
 | `\alternative { { } { } }` | `[1. A] [2. B]` | 簡潔 |
-| `name = { ... }` | `phrase name { ... }` | 意図が明確 |
-| `\name` (変数参照) | `$name` | プレフィックスで明確 |
+| `name = { ... }` | `&name { ... }` | フレーズは & プレフィックス |
+| `\name` (変数参照) | `$name` | 変数は $ プレフィックス |
+| `\name` (フレーズ参照) | `&name` | フレーズは & プレフィックス |
 | `c-^` | `c@accent` | 名前で意味明確 |
 | `c-.` | `c@staccato` | 名前で意味明確 |
 | `\p`, `\f` | `@p`, `@f` | @ に統一 |
@@ -383,8 +384,12 @@ render midi "output.mid" {
 // @ = アノテーション（音符への付加情報）
 c4@staccato@p@trill
 
-// $ = 参照（変数・フレーズの展開）
-melody { $intro $theme }
+// $ = 変数（設定値の参照）
+tempo $baseTempo
+
+// & = フレーズ（音楽構造の定義・参照）
+&intro { c4 d e f | g2 g | }
+melody { &intro &theme &intro }
 
 // ~ = タイ
 c4~ c4
@@ -398,9 +403,11 @@ c4( d e f)
 // << >> = 複声部
 << { voice1 } \\ { voice2 } >>
 
-// { } = ブロック
-phrase name { ... }
+// { } = ブロック（セクション定義）
 section Name { ... }
+
+// &name { } = フレーズ定義
+&intro { c4 d e f | }
 
 // | = 小節線（バーチェック）
 c4 d e f |
