@@ -394,8 +394,11 @@ internal sealed class Parser
     {
         if (Check(SyntaxKind.UseKeyword))
         {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
             var use = Advance();
             var name = Expect(SyntaxKind.Identifier);
+            _diagnostics.Warning(span, DiagnosticCodes.DeprecatedUseKeyword,
+                $"Use '${name.Text}' instead of 'use {name.Text}' for variable references");
             return new VariableReferenceGreen(use, name);
         }
         else // $name
@@ -406,6 +409,15 @@ internal sealed class Parser
         }
     }
 
+
+    private VariableReferenceGreen ParseBareVariableReference()
+    {
+        var span = new TextSpan(_textPosition, Current.FullWidth);
+        var name = Advance();
+        _diagnostics.Warning(span, DiagnosticCodes.DeprecatedBareReference,
+            $"Use '${name.Text}' instead of '{name.Text}' for variable references");
+        return new VariableReferenceGreen(name);
+    }
 
     private GreenNode ParseMusicExpression()
     {
@@ -497,7 +509,7 @@ internal sealed class Parser
             SyntaxKind.BreakKeyword => ParseBreak(),
                         SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
 
-            SyntaxKind.Identifier => new VariableReferenceGreen(Advance()), // Variable reference without 'use'
+            SyntaxKind.Identifier => ParseBareVariableReference(), // Variable reference without '$' (deprecated)
             _ => null
         };
     }

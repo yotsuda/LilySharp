@@ -50,23 +50,23 @@ phrase polyphony {
 
 // === section 定義 ===
 section Intro {
-  melody { intro }
+  melody { $intro }
   bassLine { c2 g | c2. r4 | c1 | }
 }
 
 section Verse {
-  melody { verse dynamics }
+  melody { $verse $dynamics }
   bassLine { c2 g2 | c2 g2 | c1 | c1 | }
 }
 
 section Bridge {
   key d major  // セクション内調号変更
-  melody { accidentals tuplets }
+  melody { $accidentals $tuplets }
   bassLine { d2 a2 | d2 a2 | }
 }
 
 section Coda {
-  melody { polyphony }
+  melody { $polyphony }
   bassLine { c1 | g1 | }
 }
 

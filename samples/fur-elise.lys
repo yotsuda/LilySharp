@@ -24,7 +24,7 @@ phrase mainTheme {
 }
 
 section Main {
-  rightHand { mainTheme }
+  rightHand { $mainTheme }
   leftHand {
     r4. | a,8 e a |
     c4. | r8 e a |

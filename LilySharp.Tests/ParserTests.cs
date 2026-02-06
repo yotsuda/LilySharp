@@ -955,4 +955,62 @@ structure { Verse }
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
+
+    [Fact]
+    public void ParseDollarVariableReference()
+    {
+        var tree = SyntaxTree.Parse(@"let theme = { c d e f }
+$theme");
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        var varRef = tree.Root.GetSlot(1) as VariableReferenceGreen;
+        Assert.NotNull(varRef);
+        Assert.Equal(SyntaxKind.VariableReference, varRef.Kind);
+        // $name should not produce deprecation warnings
+        Assert.Empty(tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.DeprecatedBareReference));
+    }
+
+    [Fact]
+    public void ParseDollarPhraseReferenceInSection()
+    {
+        var source = @"time 4/4
+part melody
+phrase intro { c4 d e f | }
+section Main {
+  melody { $intro }
+}
+structure { Main }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        Assert.Empty(tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.DeprecatedBareReference));
+    }
+
+    [Fact]
+    public void BareNameReferenceEmitsDeprecationWarning()
+    {
+        var source = @"time 4/4
+part melody
+phrase intro { c4 d e f | }
+section Main {
+  melody { intro }
+}
+structure { Main }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        var warnings = tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.DeprecatedBareReference).ToList();
+        Assert.Single(warnings);
+        Assert.Contains("$intro", warnings[0].Message);
+    }
+
+    [Fact]
+    public void UseKeywordEmitsDeprecationWarning()
+    {
+        var tree = SyntaxTree.Parse(@"let theme = { c d e f }
+use theme");
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        var warnings = tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.DeprecatedUseKeyword).ToList();
+        Assert.Single(warnings);
+        Assert.Contains("$theme", warnings[0].Message);
+    }
 }

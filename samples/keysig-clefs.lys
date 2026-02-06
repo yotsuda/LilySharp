@@ -21,8 +21,8 @@ phrase bassPhrase {
 }
 
 section Main {
-  treblePart { treblePhrase }
-  bassPart { bassPhrase }
+  treblePart { $treblePhrase }
+  bassPart { $bassPhrase }
 }
 
 structure { Main }

@@ -14,8 +14,8 @@ phrase rightHandMusic { c''4 d e f | g2 g | }
 phrase leftHandMusic { c,4 e g c' | c2 c | }
 
 section Main {
-  rightHand { rightHandMusic }
-  leftHand { leftHandMusic }
+  rightHand { $rightHandMusic }
+  leftHand { $leftHandMusic }
 }
 
 structure { Main }

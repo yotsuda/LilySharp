@@ -115,6 +115,10 @@ public static class DiagnosticCodes
     public const string UndefinedPhrase = "LYS1006";
     public const string UndefinedPart = "LYS1007";
 
+    // Deprecation warnings (LYS3xxx)
+    public const string DeprecatedBareReference = "LYS3001";
+    public const string DeprecatedUseKeyword = "LYS3002";
+
     // Measure errors (LYS2xxx)
     public const string MeasureIncomplete = "LYS2001";
     public const string MeasureOverflow = "LYS2002";

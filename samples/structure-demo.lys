@@ -18,25 +18,25 @@ phrase bridge { g'4 a' b' c'' | d''2. r4 | }
 phrase ending { c'1~ | c'1 | }
 
 section Intro {
-  melody { intro }
+  melody { $intro }
 }
 
 section Verse {
-  melody { verseA verseB }
+  melody { $verseA $verseB }
 }
 
 section Chorus {
-  melody { chorusA }
+  melody { $chorusA }
 }
 
 section Bridge {
   key g major
-  melody { bridge }
+  melody { $bridge }
 }
 
 section Outro {
   tempo 80
-  melody { ending }
+  melody { $ending }
 }
 
 // Song structure with repeats, volta, and navigation marks
