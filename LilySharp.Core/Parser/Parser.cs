@@ -117,6 +117,7 @@ internal sealed class Parser
             SyntaxKind.ScoreKeyword => ParseScoreDeclaration(),
             SyntaxKind.LetKeyword => ParseVariableDeclaration(),
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
+
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
@@ -248,6 +249,7 @@ internal sealed class Parser
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
+
             SyntaxKind.OpenBrace => ParseMusicBlock(),
             _ when IsMusicItemStart() => ParseMusicItem(),
             _ => null
@@ -403,6 +405,7 @@ internal sealed class Parser
         }
     }
 
+
     private GreenNode ParseMusicExpression()
     {
         return Current.Kind switch
@@ -479,6 +482,7 @@ internal sealed class Parser
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => ParseSlur(),
 
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
+
 
             SyntaxKind.RepeatKeyword => ParseRepeatExpression(),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
@@ -909,6 +913,7 @@ private GreenNode?[] ParseArticulations()
 
         return new PhraseDeclarationGreen(keyword, name, body);
     }
+
 
     /// <summary>
     /// Parse section declaration: section Name { ... }

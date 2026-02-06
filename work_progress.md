@@ -4,10 +4,9 @@
 
 | フェーズ | 状態 | 完了 | 合計 | 進捗率 |
 |----------|:----:|-----:|-----:|-------:|
-| Phase 1: ダイナミクス (`@p`) | ⏳ | 2 | 4 | 50% |
-| Phase 2: 変数参照 (`$name`) | 🚀 | 0 | 4 | 0% |
-| Phase 3: オクターブ管理 | 🚀 | 0 | 4 | 0% |
-| **合計** | | 0 | 12 | 0% |
+| Phase 1: ダイナミクス (`@p`) | ✅ | 4 | 4 | 100% |
+| Phase 2: オクターブ管理 | 🚀 | 0 | 4 | 0% |
+| **合計** | | 4 | 8 | 50% |
 
 ---
 
@@ -26,29 +25,18 @@
 
 ---
 
-## Phase 1: ダイナミクス表記変更 (`\p` → `@p`)
+## Phase 1: ダイナミクス表記変更 (`\p` → `@p`) ✅完了
 
-| filename | status | priority | effort | notes |
-|----------|:------:|:--------:|-------:|-------|
-| LilySharp.Core/Parser/Lexer.cs | 🚀 | High | 2h | @p, @f 等のトークン追加 |
-| LilySharp.Core/Parser/Parser.cs | ✅ | High | 1h | @p, @f 対応完了 |
-| LilySharp.Core/Syntax/SyntaxKind.cs | 🚀 | High | 0.5h | 新トークン種別追加 |
-| LilySharp.Tests/ParserTests.cs | ✅ | Normal | 1h | 新構文テスト3件追加 |
-
----
-
-## Phase 2: 変数参照変更 (`name` → `$name`)
-
-| filename | status | priority | effort | notes |
-|----------|:------:|:--------:|-------:|-------|
-| LilySharp.Core/Parser/Lexer.cs | 🚀 | High | 1h | $プレフィックス認識 |
-| LilySharp.Core/Parser/Parser.cs | 🚀 | High | 1h | 変数参照構文更新 |
-| LilySharp.Core/Svg/Collector/MeasureCollector.cs | 🚀 | High | 1h | 参照展開ロジック |
-| samples/*.lys | 🚀 | Normal | 2h | サンプルファイル更新 |
+| filename | status | notes |
+|----------|:------:|-------|
+| LilySharp.Core/Parser/Parser.cs | ✅ | @p, @f 対応完了 |
+| LilySharp.Core/Svg/Renderer/SvgRenderer.cs | ✅ | フォントサイズ調整完了 |
+| LilySharp.Tests/ParserTests.cs | ✅ | 新構文テスト3件追加 |
+| samples/dynamics-test.lys | ✅ | テストサンプル作成 |
 
 ---
 
-## Phase 3: オクターブ管理改善
+## Phase 2: オクターブ管理改善
 
 | filename | status | priority | effort | notes |
 |----------|:------:|:--------:|-------:|-------|
@@ -63,7 +51,8 @@
 
 | 日付 | 内容 |
 |------|------|
+| 2026-02-06 | Phase 1完了: ダイナミクス @p 記法 |
+| 2026-02-06 | 文法設計見直し: プレフィックス廃止、キーワード採用 |
+| 2026-02-06 | GRAMMAR_ANALYSIS.md 更新 |
 | 2026-02-06 | Tuplet Bracket 実装完了 |
-| 2026-02-06 | GRAMMAR_ANALYSIS.md 作成 |
-
 
