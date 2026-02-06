@@ -4,6 +4,8 @@
     "patterns": [
         { "include": "#comments" },
         { "include": "#strings" },
+        { "include": "#section-declaration" },
+        { "include": "#phrase-declaration" },
         { "include": "#keywords" },
         { "include": "#structures" },
         { "include": "#pitches" },
@@ -43,15 +45,37 @@
                 }
             ]
         },
+        "section-declaration": {
+            "patterns": [
+                {
+                    "match": "\\b(section)\\s+([A-Za-z_][A-Za-z0-9_]*)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.control.section.lilysharp" },
+                        "2": { "name": "entity.name.section.lilysharp" }
+                    }
+                }
+            ]
+        },
+        "phrase-declaration": {
+            "patterns": [
+                {
+                    "match": "\\b(phrase)\\s+([A-Za-z_][A-Za-z0-9_]*)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.control.phrase.lilysharp" },
+                        "2": { "name": "entity.name.function.phrase.lilysharp" }
+                    }
+                }
+            ]
+        },
         "keywords": {
             "patterns": [
                 {
                     "name": "keyword.control.lilysharp",
-                    "match": "\\b(score|part|staff|voice|relative|absolute|fixed|repeat|volta|alternative|let|use)\\b"
+                    "match": "\\b(score|part|staff|voice|relative|absolute|fixed|repeat|volta|alternative|let|use|structure|render|grace|tuplet)\\b"
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|key|clef|major|minor)\\b"
+                    "match": "\\b(title|composer|tempo|time|key|clef|major|minor|instrument|octave|channel|tuning)\\b"
                 }
             ]
         },
@@ -107,6 +131,11 @@
             "patterns": [
                 {
                     "name": "keyword.other.dynamic.lilysharp",
+                    "match": "@(ppp|pp|p|mp|mf|f|ff|fff|sfz|sfp|fp|cresc|decresc|dim)\\b"
+                },
+                {
+                    "comment": "Legacy backslash dynamics for backwards compatibility",
+                    "name": "keyword.other.dynamic.legacy.lilysharp",
                     "match": "\\\\(ppp|pp|p|mp|mf|f|ff|fff|cresc|decresc|dim)\\b"
                 }
             ]
@@ -115,7 +144,7 @@
             "patterns": [
                 {
                     "name": "keyword.other.articulation.lilysharp",
-                    "match": "@(staccato|accent|tenuto|marcato|fermata|portato)\\b"
+                    "match": "@(staccato|accent|tenuto|marcato|fermata|portato|trill|mordent|prall|turn)\\b"
                 }
             ]
         },

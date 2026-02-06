@@ -49,7 +49,17 @@
       {
         "id": "dynamic",
         "superType": "modifier",
-        "description": "Dynamic marks (\\p, \\f)"
+        "description": "Dynamic marks (@p, @f)"
+      },
+      {
+        "id": "section",
+        "superType": "class",
+        "description": "Section names"
+      },
+      {
+        "id": "phrase",
+        "superType": "function",
+        "description": "Phrase names"
       }
     ],
     "semanticTokenScopes": [
@@ -63,6 +73,12 @@
           ],
           "dynamic": [
             "keyword.control.dynamic.lilysharp"
+          ],
+          "section": [
+            "entity.name.section.lilysharp"
+          ],
+          "phrase": [
+            "entity.name.function.phrase.lilysharp"
           ]
         }
       }
@@ -73,7 +89,9 @@
           "rules": {
             "pitch": "#4EC9B0",
             "articulation": "#DCDCAA",
-            "dynamic": "#C586C0"
+            "dynamic": "#C586C0",
+            "section": "#4FC1FF",
+            "phrase": "#DCDCAA"
           }
         }
       }
