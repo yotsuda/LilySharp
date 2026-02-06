@@ -60,3 +60,6 @@ sample.lilys
 
 # Output folder (generated files)
 output/
+
+# Claude Code local files
+work_progress.md
