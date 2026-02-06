@@ -11,7 +11,7 @@ part bass_part {
 }
 
 phrase test {
-  f,4 g, a, bes, | c4 d e f |
+  f4 g a bes | c4 d e f |
 }
 
 section Main {

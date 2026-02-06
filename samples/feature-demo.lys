@@ -17,7 +17,7 @@ phrase demo {
   // Ties and slurs
   c4~ c4 d4( e) |
   // Mixed beams
-  f8 g16 a b8. c'16 d'4 r |
+  f8 g16 a b8. c16 d4 r |
 }
 
 section Main {

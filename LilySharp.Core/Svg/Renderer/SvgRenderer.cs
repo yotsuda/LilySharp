@@ -334,7 +334,7 @@ public sealed class SvgRenderer
             ClefType.Bass => EmmentalerGlyphs.FClef,
             ClefType.Alto => EmmentalerGlyphs.CClef,
             ClefType.Tenor => EmmentalerGlyphs.CClef,
-            _ => EmmentalerGlyphs.GClef
+            _ => EmmentalerGlyphs.GClef  // Treble and Treble8Below both use GClef
         };
         double clefY = staffLayout.Clef switch
         {
@@ -350,6 +350,21 @@ public sealed class SvgRenderer
             _ => GlyphMetrics.GClefWidth
         };
         DrawGlyph(clefGlyph, currentX, clefY);
+        // Draw "8" below G-clef for treble_8 clef
+        // Cross-ref: LilyPond ClefModifier grob in lilypond-src/scm/define-grobs.scm L836-867
+        //   font-shape: italic, font-size: -4 (≈63% of text size)
+        //   staff-padding: 0.7, clef-alignments G: (below: -0.2, above: 0.1)
+        //   X-offset: self-alignment CENTER with parent-alignment from clef-modifier.cc
+        //   Y-offset: side-position-interface::y-aligned-side
+        // See also: lilypond-src/scm/translation-functions.scm L82-94 (clef-transposition-markup)
+        if (staffLayout.Clef == ClefType.Treble8Below)
+        {
+            // X: clef center (GClefWidth/2) + LilyPond G-clef alignment (-0.2)
+            double eightX = currentX + GlyphMetrics.GClefWidth / 2.0 - 0.2;
+            // Y: staff bottom (staffY+4) + staff-padding (0.7) + vcenter offset (~0.5)
+            double eightY = staffY + 5.2;
+            _svg.AppendLine($"""  <text class="clef8" x="{eightX:F1}" y="{eightY:F1}" text-anchor="middle" font-size="1.4" font-style="italic">8</text>""");
+        }
         double clefRightEdge = currentX + clefWidth;
 
         // Draw key signature
@@ -358,6 +373,7 @@ public sealed class SvgRenderer
             ClefType.Bass => "bass",
             ClefType.Alto => "alto",
             ClefType.Tenor => "tenor",
+            ClefType.Treble8Below => "treble",  // treble_8 uses same key signature positions as treble
             _ => "treble"
         };
         bool hasKeySignature = score.KeySignature.Count > 0;
@@ -468,6 +484,9 @@ public sealed class SvgRenderer
         _svg.AppendLine("  .composer { font-family: serif; font-size: 0.4; font-style: italic; }");
         _svg.AppendLine("  .tempo { font-family: serif; font-size: 0.35; }");
         _svg.AppendLine("  .section-label { font-family: serif; font-size: 0.4; font-weight: bold; }");
+        // clef8: treble_8 "8" text. Ref: LilyPond ClefModifier font-size:-4 font-shape:italic
+        // See: lilypond-src/scm/define-grobs.scm L836-867
+        _svg.AppendLine("  .clef8 { font-family: serif; font-size: 1.4; font-style: italic; }");
         _svg.AppendLine("</style>");
     }
 
@@ -611,6 +630,15 @@ public sealed class SvgRenderer
             _ => GlyphMetrics.GClefWidth
         };
         DrawGlyph(clefGlyph, currentX, clefY);
+        // Draw "8" below G-clef for treble_8 clef
+        // Cross-ref: LilyPond ClefModifier grob in lilypond-src/scm/define-grobs.scm L836-867
+        // See multi-staff version above for full parameter reference
+        if (score.Clef == "treble_8")
+        {
+            double eightX = currentX + GlyphMetrics.GClefWidth / 2.0 - 0.2;
+            double eightY = y + 5.2;
+            _svg.AppendLine($"""  <text class="clef8" x="{eightX:F1}" y="{eightY:F1}" text-anchor="middle" font-size="1.4" font-style="italic">8</text>""");
+        }
         double clefRightEdge = currentX + clefWidth;
 
         // Draw key signature

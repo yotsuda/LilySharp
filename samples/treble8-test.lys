@@ -1,0 +1,37 @@
+// treble_8 clef rendering test
+
+title "Treble 8 Clef Test"
+tempo 120
+time 4/4
+
+part gtr {
+  instrument: guitar
+}
+
+part tnr {
+  instrument: tenor
+}
+
+part t8 {
+  clef: treble_8
+}
+
+section Main {
+  gtr {
+    c4 d e f | g a b c' |
+  }
+  tnr {
+    c4 d e f | g a b c' |
+  }
+  t8 {
+    c4 d e f | g a b c' |
+  }
+}
+
+structure { Main }
+
+render score "treble8-test.svg" {
+  staff { gtr }
+  staff { tnr }
+  staff { t8 }
+}

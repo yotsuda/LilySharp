@@ -1,18 +1,28 @@
-// Accidental collision test
-title "Accidental Test"
+// Accidental spacing test
+title "Accidental Spacing Test"
+
 time 4/4
+key c major
 
-part melody
+part test {
+  clef: treble
+}
 
-section Main {
-  melody {
-    c4 cis4 d4 dis4 |
-    e4 eis4 fis4 gis4 |
+section Test {
+  test {
+    // Single accidental
+    fis4 gis4 ais4 bis4 |
+    // Consecutive accidentals
+    dis4 dis4 dis4 dis4 |
+    // Chord with accidentals - this should test stacking
+    <cis e gis>1 |
+    // Close accidentals
+    <fis gis>2 <ais bis>2 |
   }
 }
 
-structure { Main }
+structure { Test }
 
 render score "accidental-test.svg" {
-  staff { melody }
+  staff { test }
 }

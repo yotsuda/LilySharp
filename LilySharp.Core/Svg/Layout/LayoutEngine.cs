@@ -283,6 +283,7 @@ public sealed class LayoutEngine
                 ClefType.Bass => "bass",
                 ClefType.Alto => "alto",
                 ClefType.Tenor => "tenor",
+                ClefType.Treble8Below => "treble_8",
                 _ => "treble"
             };
 

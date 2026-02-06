@@ -294,6 +294,19 @@ internal sealed class MeasureBuilder
                 IsExplicit: false,
                 IsAligned: isAligned));
         }
+
+        // Auto-set final barline on the last measure (music convention)
+        if (_measures.Count > 0)
+        {
+            var last = _measures[^1];
+            if (last.EndBarline == BarlineType.Single)
+            {
+                _measures[^1] = new Measure(
+                    last.Items, last.StartBarline, BarlineType.Final,
+                    last.SectionLabel, last.SourceStart, last.SourceEnd, last.HasBreakAfter);
+            }
+        }
+
         return _measures;
     }
 }
@@ -311,6 +324,7 @@ public sealed class MeasureCollector
 
     // State for relative pitch mode
     private int _currentOctave = 4;
+    private int _initialOctave = 4;  // Reset target for section boundaries
     private char _lastPitchName = 'c';
 
     // Dynamic markings
@@ -359,16 +373,19 @@ public sealed class MeasureCollector
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
 
-        // Phase 1.5: If voiceName specified, look up clef from part definition
+        // Phase 1.5: If voiceName specified, look up clef and octave from part definition
         if (voiceName != null)
         {
-            var partClef = GetPartClef(tree.GetRoot(), voiceName);
+            var (partClef, partOctave) = GetPartDefaults(tree.GetRoot(), voiceName);
             if (partClef != null)
                 _clef = partClef;
+            _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
         }
-
-        // Set initial octave based on clef (bass clef starts at octave 3)
-        _currentOctave = _clef == "bass" ? 3 : 4;
+        else
+        {
+            _currentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+        }
+        _initialOctave = _currentOctave;
 
         // Phase 2: Check for parallel expression (multi-voice)
         var parallelExpr = tree.GetRoot().DescendantNodes()
@@ -423,13 +440,13 @@ public sealed class MeasureCollector
             _lastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
 
-            // Set clef for this voice from part definition
-            var partClef = GetPartClef(tree.GetRoot(), voiceName);
+            // Set clef and octave for this voice from part definition
+            var (partClef, partOctave) = GetPartDefaults(tree.GetRoot(), voiceName);
             _clef = partClef ?? "treble";
 
-            // Set initial octave based on clef (bass clef starts at octave 3)
-            _currentOctave = _clef == "bass" ? 3 : 4;
-
+            // Set initial octave: explicit > instrument default > clef default
+            _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+            _initialOctave = _currentOctave;
 
             var measures = CollectMeasuresForVoice(voiceName);
             voiceDict[voiceName] = new Voice(voiceName, measures.ToImmutableArray());
@@ -722,6 +739,7 @@ public sealed class MeasureCollector
         _structure = null;
         _root = null;
         _currentOctave = 4;
+        _initialOctave = 4;
         _lastPitchName = 'c';
         _defaultDuration = Fraction.Quarter;
         _title = null;
@@ -734,30 +752,58 @@ public sealed class MeasureCollector
     }
 
     /// <summary>
-    /// Looks up the clef from a part definition by name.
+    /// Looks up clef and octave defaults from a part definition by name.
+    /// Priority: explicit attributes > instrument defaults > clef-based defaults.
     /// </summary>
-    private static string? GetPartClef(SyntaxNode root, string partName)
+    private static (string? clef, int? octave) GetPartDefaults(SyntaxNode root, string partName)
     {
         foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
         {
             if (partDecl.Name.Text != partName)
                 continue;
 
-            // Check properties for clef
+            string? clef = null;
+            string? instrument = null;
+            int? octave = null;
+
+            // Check properties for clef, instrument, and octave
             foreach (var prop in partDecl.Properties)
             {
-                if (prop.NameToken.Text.ToLowerInvariant() == "clef")
-                {
-                    // Value is at index 2 (after name and colon)
-                    var valueToken = prop.GetChild(2) as SyntaxTokenNode;
-                    if (valueToken == null) continue;
+                var propName = prop.NameToken.Text.ToLowerInvariant();
+                var valueToken = prop.GetChild(2) as SyntaxTokenNode;
+                if (valueToken == null) continue;
 
-                    return valueToken.Text.ToLowerInvariant();
-                }
+                if (propName == "clef")
+                    clef = valueToken.Text.ToLowerInvariant();
+                else if (propName == "instrument")
+                    instrument = valueToken.Text.ToLowerInvariant();
+                else if (propName == "octave" && int.TryParse(valueToken.Text, out var oct))
+                    octave = oct;
             }
+
+            // Resolve clef: explicit > instrument > null
+            string? resolvedClef = clef;
+            int? resolvedOctave = octave;
+
+            if (instrument != null)
+            {
+                var (defaultClef, defaultOctave) = InstrumentDefaults.GetDefaults(instrument);
+                resolvedClef ??= defaultClef switch
+                {
+                    ClefType.Treble => "treble",
+                    ClefType.Bass => "bass",
+                    ClefType.Alto => "alto",
+                    ClefType.Tenor => "tenor",
+                    ClefType.Treble8Below => "treble_8",
+                    _ => "treble"
+                };
+                resolvedOctave ??= defaultOctave;
+            }
+
+            return (resolvedClef, resolvedOctave);
         }
 
-        return null;
+        return (null, null);
     }
 
     private void CollectDefinitions(SyntaxNode root)
@@ -1053,6 +1099,10 @@ public sealed class MeasureCollector
 
     private void ProcessSection(SectionDeclarationSyntax section, Action<IEnumerable<SyntaxNode>> processNodes)
     {
+        // Reset octave to initial value at each section boundary
+        _currentOctave = _initialOctave;
+        _lastPitchName = 'c';
+
         foreach (var child in section.DescendantNodes())
         {
             if (child is PartBlockSyntax partBlock)
@@ -1397,7 +1447,7 @@ public sealed class MeasureCollector
         // Bass clef: D3 = staff position 0
         int basePosition = _clef switch
         {
-            "treble" => GetPitchIndex(pitchName) - GetPitchIndex('b') + (actualOctave - 4) * 7,
+            "treble" or "treble_8" => GetPitchIndex(pitchName) - GetPitchIndex('b') + (actualOctave - 4) * 7,
             "bass" => GetPitchIndex(pitchName) - GetPitchIndex('d') + (actualOctave - 3) * 7,
             _ => GetPitchIndex(pitchName) - GetPitchIndex('b') + (actualOctave - 4) * 7
         };
@@ -1412,6 +1462,15 @@ public sealed class MeasureCollector
     {
         'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3, 'g' => 4, 'a' => 5, 'b' => 6,
         _ => 0
+    };
+
+    private static ClefType ParseClefType(string clef) => clef switch
+    {
+        "bass" => ClefType.Bass,
+        "alto" => ClefType.Alto,
+        "tenor" => ClefType.Tenor,
+        "treble_8" => ClefType.Treble8Below,
+        _ => ClefType.Treble
     };
 
     private static BarlineType ParseBarlineType(string text) => text switch

@@ -11,7 +11,8 @@ public enum ClefType
     Treble,
     Bass,
     Alto,
-    Tenor
+    Tenor,
+    Treble8Below
 }
 
 /// <summary>
@@ -51,6 +52,7 @@ public sealed record Staff(
         "bass" => ClefType.Bass,
         "alto" => ClefType.Alto,
         "tenor" => ClefType.Tenor,
+        "treble_8" => ClefType.Treble8Below,
         _ => ClefType.Treble
     };
 
@@ -63,6 +65,7 @@ public sealed record Staff(
         SyntaxKind.BassKeyword => ClefType.Bass,
         SyntaxKind.AltoKeyword => ClefType.Alto,
         SyntaxKind.TenorKeyword => ClefType.Tenor,
+        SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
         _ => ClefType.Treble
     };
 }

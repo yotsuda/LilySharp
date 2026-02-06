@@ -68,6 +68,7 @@ public enum SyntaxKind : ushort
     BassKeyword,        // bass
     AltoKeyword,        // alto
     TenorKeyword,       // tenor
+    Treble8Keyword,     // treble_8
     GraceKeyword,       // grace
     AcciaccaturaKeyword,
     AppogiaturaKeyword,

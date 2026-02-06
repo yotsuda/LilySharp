@@ -176,6 +176,9 @@ public static class RenderSpecParser
                         case SyntaxKind.TenorKeyword:
                             explicitClef = ClefType.Tenor;
                             break;
+                        case SyntaxKind.Treble8Keyword:
+                            explicitClef = ClefType.Treble8Below;
+                            break;
                     }
                 }
                 else
@@ -229,8 +232,22 @@ public static class RenderSpecParser
                         "bass" => ClefType.Bass,
                         "alto" => ClefType.Alto,
                         "tenor" => ClefType.Tenor,
+                        "treble_8" => ClefType.Treble8Below,
                         _ => ClefType.Treble
                     };
+                }
+            }
+
+            // No explicit clef - check for instrument property to infer clef
+            foreach (var prop in partDecl.Properties)
+            {
+                if (prop.NameToken.Text.ToLowerInvariant() == "instrument")
+                {
+                    var valueToken = prop.GetChild(2) as SyntaxTokenNode;
+                    if (valueToken == null) continue;
+
+                    var (clef, _) = InstrumentDefaults.GetDefaults(valueToken.Text);
+                    return clef;
                 }
             }
         }

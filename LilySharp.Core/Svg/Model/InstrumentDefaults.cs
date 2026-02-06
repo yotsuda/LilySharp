@@ -29,7 +29,7 @@ public static class InstrumentDefaults
             "piano-left" or "piano-bass" => (ClefType.Bass, 3),
             
             // Guitar (written octave higher than sounds)
-            "guitar" or "acoustic-guitar" or "electric-guitar" => (ClefType.Treble, 3),
+            "guitar" or "acoustic-guitar" or "electric-guitar" => (ClefType.Treble8Below, 4),
             
             // Woodwinds
             "flute" or "piccolo" => (ClefType.Treble, 5),
@@ -46,8 +46,8 @@ public static class InstrumentDefaults
             // Voice
             "soprano" or "voice-soprano" => (ClefType.Treble, 4),
             "alto" or "voice-alto" => (ClefType.Treble, 4),
-            "tenor" or "voice-tenor" => (ClefType.Treble, 3),  // with octave sign
-            "bass" or "voice-bass" => (ClefType.Bass, 3),
+            "tenor" or "voice-tenor" => (ClefType.Treble8Below, 4),  // treble_8 clef
+            "voice-bass" => (ClefType.Bass, 3),
             
             // Default
             _ => (ClefType.Treble, 4)
@@ -68,6 +68,7 @@ public static class InstrumentDefaults
             ClefType.Bass => 3,   // One octave below middle C
             ClefType.Alto => 3,   // Middle C on middle line
             ClefType.Tenor => 3,  // Middle C on 4th line
+            ClefType.Treble8Below => 4,  // Same written pitch as treble
             _ => 4
         };
     }

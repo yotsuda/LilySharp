@@ -1501,7 +1501,8 @@ private GreenNode?[] ParseArticulations()
         return Current.Kind is SyntaxKind.TrebleKeyword
             or SyntaxKind.BassKeyword
             or SyntaxKind.AltoKeyword
-            or SyntaxKind.TenorKeyword;
+            or SyntaxKind.TenorKeyword
+            or SyntaxKind.Treble8Keyword;
     }
 
     /// <summary>

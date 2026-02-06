@@ -10,11 +10,14 @@ namespace LilySharp.Core.Svg;
 public static class EmmentalerGlyphs
 {
     // === Clefs ===
+    // Note: treble_8 "8" is NOT a glyph - it's rendered as text by ClefModifier.
+    // See: lilypond-src/scm/define-grobs.scm L836-867 (ClefModifier grob)
+    // G_change is a smaller G clef for mid-staff clef changes, NOT 8vb.
     public const char GClef = '\uE085';           // clefs.G
-    public const char GClef8vb = '\uE086';        // clefs.G_change
+    public const char GClef8vb = '\uE086';        // clefs.G_change (smaller, for clef changes)
     public const char GClef8va = '\uE085';        // same as GClef
     public const char FClef = '\uE083';           // clefs.F
-    public const char FClef8vb = '\uE084';        // clefs.F_change
+    public const char FClef8vb = '\uE084';        // clefs.F_change (smaller, for clef changes)
     public const char FClef8va = '\uE083';        // same as FClef
     public const char CClef = '\uE07F';           // clefs.C
 

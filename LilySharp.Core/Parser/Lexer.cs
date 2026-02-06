@@ -460,6 +460,7 @@ internal sealed class Lexer
             "bass" => SyntaxKind.BassKeyword,
             "alto" => SyntaxKind.AltoKeyword,
             "tenor" => SyntaxKind.TenorKeyword,
+            "treble_8" => SyntaxKind.Treble8Keyword,
 
             // Other keywords
             "tuplet" => SyntaxKind.TupletKeyword,
