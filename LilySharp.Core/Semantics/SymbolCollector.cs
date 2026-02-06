@@ -175,12 +175,19 @@ public sealed class SymbolCollector
         var builder = ImmutableDictionary.CreateBuilder<string, string>();
 
         // Part properties are collected from child nodes
-        // For now, look for property-like patterns in descendants
         foreach (var node in partDecl.DescendantNodes())
         {
-            // Look for clef, key, etc. declarations within the part
             switch (node)
             {
+                // New style: property assignments like instrument: violin, clef: treble
+                case PropertyAssignmentSyntax prop:
+                    var propName = prop.NameToken.Text.ToLowerInvariant();
+                    var propValue = prop.ValueText;
+                    if (propValue != null)
+                        builder[propName] = propValue;
+                    break;
+                
+                // Legacy style: clef declarations
                 case ClefDeclarationSyntax clef:
                     builder["clef"] = clef.ClefName.Text.ToLowerInvariant();
                     break;

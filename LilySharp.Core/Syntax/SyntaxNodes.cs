@@ -357,6 +357,36 @@ public sealed class PropertyAssignmentSyntax : SyntaxNode
 
     public SyntaxTokenNode NameToken => (SyntaxTokenNode)GetChild(0)!;
     public SyntaxTokenNode Colon => (SyntaxTokenNode)GetChild(1)!;
+    /// <summary>
+    /// Gets the value tokens (everything after the colon).
+    /// </summary>
+    public IEnumerable<SyntaxNode> Values
+    {
+        get
+        {
+            // Skip name (0) and colon (1), return rest
+            for (int i = 2; i < SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Gets the first value token text, or null if none.
+    /// </summary>
+    public string? ValueText
+    {
+        get
+        {
+            var firstValue = Values.FirstOrDefault();
+            if (firstValue is SyntaxTokenNode token)
+                return token.Text.Trim('"');
+            return firstValue?.ToString();
+        }
+    }
 }
 
 /// <summary>

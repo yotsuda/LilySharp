@@ -230,7 +230,8 @@ internal sealed class Parser
             Current.Kind == SyntaxKind.ClefKeyword ||
             Current.Kind == SyntaxKind.InstrumentKeyword ||
             Current.Kind == SyntaxKind.ChannelKeyword ||
-            Current.Kind == SyntaxKind.TuningKeyword)
+            Current.Kind == SyntaxKind.TuningKeyword ||
+            Current.Kind == SyntaxKind.OctaveKeyword)
         {
             var propName = Advance();
             var colon = Expect(SyntaxKind.Colon);

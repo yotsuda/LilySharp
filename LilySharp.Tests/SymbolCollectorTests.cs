@@ -221,4 +221,45 @@ render score ""test.svg"" { staff treble { melody } }
 
         Assert.True(result.Success);
     }
+
+    [Fact]
+    public void Collect_PartWithInstrument_CollectsProperties()
+    {
+        var source = @"
+part violin {
+    instrument: violin
+    clef: treble
+}";
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+
+        var result = collector.Collect(tree);
+
+        Assert.True(result.Success);
+        Assert.Single(result.Symbols.Parts);
+        Assert.True(result.Symbols.Parts.ContainsKey("violin"));
+
+        var part = result.Symbols.Parts["violin"];
+        Assert.Equal("violin", part.GetProperty("instrument"));
+        Assert.Equal("treble", part.GetProperty("clef"));
+    }
+
+    [Fact]
+    public void Collect_PartWithOctave_CollectsOctaveProperty()
+    {
+        var source = @"
+part cello {
+    clef: bass
+    octave: 3
+}";
+        var tree = SyntaxTree.Parse(source);
+        var collector = new SymbolCollector();
+
+        var result = collector.Collect(tree);
+
+        Assert.True(result.Success);
+        var part = result.Symbols.Parts["cello"];
+        Assert.Equal("bass", part.GetProperty("clef"));
+        Assert.Equal("3", part.GetProperty("octave"));
+    }
 }
