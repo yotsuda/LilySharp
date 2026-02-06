@@ -111,6 +111,9 @@ public static class DiagnosticCodes
     public const string DuplicateVariable = "LYS1002";
     public const string InvalidPitch = "LYS1003";
     public const string InvalidDuration = "LYS1004";
+    public const string UndefinedSection = "LYS1005";
+    public const string UndefinedPhrase = "LYS1006";
+    public const string UndefinedPart = "LYS1007";
 
     // Measure errors (LYS2xxx)
     public const string MeasureIncomplete = "LYS2001";

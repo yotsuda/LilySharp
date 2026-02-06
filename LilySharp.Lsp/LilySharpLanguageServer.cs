@@ -201,6 +201,14 @@ public sealed class LilySharpLanguageServer
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
 
+        // Symbol reference validation (undefined variables, phrases, sections)
+        var symbolValidator = new SymbolReferenceValidator();
+        symbolValidator.Validate(doc.Tree);
+        foreach (var d in symbolValidator.Diagnostics)
+        {
+            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+        }
+
         _rpc.NotifyAsync(Methods.TextDocumentPublishDiagnosticsName, new PublishDiagnosticParams
         {
             Uri = doc.Uri,
