@@ -1,0 +1,42 @@
+// Accidental Test
+// Consolidates: test2, accidental-test
+title "Accidentals"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase sharps {
+  // Sharps ascending (C4 range)
+  c4 cis d dis |
+}
+
+phrase flats {
+  // Flats descending
+  e4 ees d des |
+}
+
+phrase consecutive {
+  // Repeated accidentals
+  fis4 gis ais bis |
+  dis4 dis dis dis |
+}
+
+phrase chordAccidentals {
+  // Accidentals in chords
+  <cis e gis>1 |
+  <fis gis>2 <ais bis>2 |
+}
+
+section Main {
+  melody { $sharps $flats $consecutive $chordAccidentals }
+}
+
+structure { Main }
+
+render score "accidentals.svg" {
+  staff { melody }
+}

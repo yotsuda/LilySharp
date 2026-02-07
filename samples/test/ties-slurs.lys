@@ -1,0 +1,41 @@
+// Ties and Slurs Test
+// Consolidates: tie-test, tie-slur-test
+title "Ties and Slurs"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase ties {
+  // Basic tie
+  c4~ c4 d2 |
+  // Tie across barline
+  d2 e2~ | e4 f g a |
+}
+
+phrase slurs {
+  // Basic slur
+  c4( d e f) |
+  // Descending slur
+  g4( f e d) c2 r2 |
+}
+
+phrase tieDirection {
+  // Low note (stem up) - tie curves down
+  c4~ c4 r2 |
+  // High note (stem down) - tie curves up
+  b'4~ b4 r2 |
+}
+
+section Main {
+  melody { $ties $slurs $tieDirection }
+}
+
+structure { Main }
+
+render score "ties-slurs.svg" {
+  staff { melody }
+}

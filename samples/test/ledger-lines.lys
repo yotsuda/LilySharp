@@ -1,0 +1,38 @@
+// Ledger Lines Test
+// Based on: test4
+title "Ledger Lines"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase highNotes {
+  // Above staff (C6 range)
+  c''4 d e f |
+  g4 a b c' |
+}
+
+phrase lowNotes {
+  // Below staff (ledger lines below)
+  c,4 d e f |
+  g4 a b c' |
+}
+
+phrase extreme {
+  // Wide range passage
+  c,2 c''2 |
+  c4 d e f |
+}
+
+section Main {
+  melody { $highNotes $lowNotes $extreme }
+}
+
+structure { Main }
+
+render score "ledger-lines.svg" {
+  staff { melody }
+}

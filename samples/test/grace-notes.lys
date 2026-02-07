@@ -1,0 +1,40 @@
+// Grace Notes Test
+// Tests grace, acciaccatura, appoggiatura
+title "Grace Notes"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase graceBasic {
+  // Basic grace notes before main note
+  grace { d16 e } f4 g2 r4 |
+}
+
+phrase acciaccaturaTest {
+  // Acciaccatura (short grace note with slash)
+  acciaccatura { a16 } b4 r2 r4 |
+}
+
+phrase appoggiaturaTest {
+  // Appoggiatura (long grace note, no slash)
+  appoggiatura { c8 } d4 e2 r4 |
+}
+
+phrase graceChord {
+  // Grace note before chord
+  grace { e16 } <c e g>4 r2 r4 |
+}
+
+section Main {
+  melody { $graceBasic $acciaccaturaTest $appoggiaturaTest $graceChord }
+}
+
+structure { Main }
+
+render score "grace-notes.svg" {
+  staff { melody }
+}

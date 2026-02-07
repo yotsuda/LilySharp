@@ -20,6 +20,6 @@ section Main {
 
 structure { Main }
 
-render score "bass-test.svg" {
+render score "bass-clef.svg" {
   staff { bass_part }
 }

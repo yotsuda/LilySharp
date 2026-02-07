@@ -1,4 +1,4 @@
-// Guitar tablature example in Lily#
+// Guitar Tablature Example in Lily#
 // Standard tuning: E A D G B E
 
 title "Guitar Tab Demo"
@@ -12,17 +12,17 @@ part guitar {
 
 section Main {
   guitar {
-    // Open strings (low to high)
+    // Open strings (low to high) - uses , for low E
     e,4 a, d g b e' |
-    
-    // Simple melody on high E string
-    e'4 fis' gis' a' | b' cis'' d'' e'' |
-    
+
+    // Simple melody on high E string (start at E5)
+    e'4 fis gis a | b4 cis' d e |
+
     // Power chord pattern (E5)
     <e, b,>4 <e, b,> <e, b,> <e, b,> |
-    
+
     // A minor chord arpeggio
-    a,4 e a c' | e' a' e' c' |
+    a,4 e a c' | e a e c |
   }
 }
 
@@ -30,7 +30,7 @@ structure { Main }
 
 render score "guitar-tab.svg" {
   staff { guitar }
-  tab { guitar }
+  tab standard { guitar }
 }
 
 render midi "guitar-tab.mid" {

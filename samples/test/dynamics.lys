@@ -1,0 +1,36 @@
+// Dynamics Test
+title "Dynamics"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase basicDynamics {
+  // @ prefix dynamics
+  c4@p d@mp e@mf f@f |
+  g4@ff a@fff b@pp c@ppp |
+}
+
+phrase crescDecres {
+  // Crescendo / Decrescendo
+  c4@p d@cresc e f@f |
+  g4@f a@decresc b c@p |
+}
+
+phrase withArticulations {
+  // Combined dynamics + articulations
+  c4@staccato@p d@accent@f e@tenuto@mf f@fermata |
+}
+
+section Main {
+  melody { $basicDynamics $crescDecres $withArticulations }
+}
+
+structure { Main }
+
+render score "dynamics.svg" {
+  staff { melody }
+}

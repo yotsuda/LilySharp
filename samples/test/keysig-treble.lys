@@ -1,0 +1,47 @@
+// Key Signature Test - Treble Clef
+// Consolidates: keysig-d, keysig-d-major
+title "Key Signatures (Treble)"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+
+part melody {
+  clef: treble
+}
+
+// D major scale (2 sharps: F#, C#)
+phrase dMajor {
+  d4 e fis g | a4 b cis' d |
+}
+
+// G major scale (1 sharp: F#)
+phrase gMajor {
+  g4 a b c' | d4 e fis g |
+}
+
+// F major scale (1 flat: Bb)
+phrase fMajor {
+  f4 g a bes | c4 d e f |
+}
+
+section DMajor {
+  key d major
+  melody { $dMajor }
+}
+
+section GMajor {
+  key g major
+  melody { $gMajor }
+}
+
+section FMajor {
+  key f major
+  melody { $fMajor }
+}
+
+structure { DMajor GMajor FMajor }
+
+render score "keysig-treble.svg" {
+  staff { melody }
+}

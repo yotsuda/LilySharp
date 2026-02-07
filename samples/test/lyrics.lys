@@ -1,0 +1,30 @@
+// Lyrics Test (LilySharp format)
+// Rewritten from: lyrics-test (was LilyPond format)
+title "Lyrics Test"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+
+part melody
+
+section Main {
+  melody {
+    c4 d e f |
+    g2 g |
+    a4 a a a |
+    g1 |
+  }
+  lyrics {
+    Twin- kle twin- kle |
+    lit- tle |
+    how I won- der |
+    star~ |
+  }
+}
+
+structure { Main }
+
+render score "lyrics.svg" {
+  staff { melody }
+}

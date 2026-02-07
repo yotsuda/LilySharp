@@ -30,7 +30,7 @@ section Main {
 
 structure { Main }
 
-render score "treble8-test.svg" {
+render score "treble8.svg" {
   staff { gtr }
   staff { tnr }
   staff { t8 }

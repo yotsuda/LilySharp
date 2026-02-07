@@ -1,0 +1,31 @@
+// $name Phrase Reference Test
+// Tests the $ syntax for phrase references
+title "Dollar Reference"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+// Define reusable phrases
+phrase motifA { c4 d e f | }
+phrase motifB { g4 a b c' | }
+phrase motifC { c4 e g c' | }
+
+// Reference phrases with $name in sections
+section First {
+  melody { $motifA $motifB }
+}
+
+section Second {
+  melody { $motifC $motifA }
+}
+
+// Reuse sections
+structure { First Second First }
+
+render score "dollar-ref.svg" {
+  staff { melody }
+}

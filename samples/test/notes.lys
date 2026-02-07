@@ -1,0 +1,52 @@
+// Basic Note Values Test
+// Consolidates: test-basic, test-notes, test1
+title "Basic Notes"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase wholeAndHalf {
+  c1 |                    // Whole note (C4)
+  c2 d2 |                // Half notes
+}
+
+phrase quarters {
+  c4 d e f |              // Quarter notes (C4 D4 E4 F4)
+  g4 a b c' |            // Up to C5
+}
+
+phrase eighths {
+  c8 d e f g f e d |     // 8th notes beamed
+}
+
+phrase sixteenths {
+  c16 d e f g f e d c d e f g f e d | // 16th notes
+}
+
+phrase dotted {
+  c4. d8 e4. f8 |        // Dotted quarter + eighth
+  g2. r4 |                // Dotted half + rest
+}
+
+phrase rests {
+  r1 |                     // Whole rest
+  r2 r4 r8 r8 |            // Various rests
+}
+
+phrase mixed {
+  c8 d16 e f8 g16 a g8 f16 e d4 | // Mixed beams
+}
+
+section Main {
+  melody { $wholeAndHalf $quarters $eighths $sixteenths $dotted $rests $mixed }
+}
+
+structure { Main }
+
+render score "notes.svg" {
+  staff { melody }
+}

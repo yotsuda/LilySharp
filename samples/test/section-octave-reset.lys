@@ -1,0 +1,39 @@
+// Section Boundary Octave Reset Test
+// Verifies that octave resets to default at section boundaries
+title "Section Octave Reset"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+// Section A ends in high register
+phrase highPhrase {
+  c4 d e f | g4 a b c' |
+}
+
+// Section B should start fresh at C4 (octave reset)
+phrase lowPhrase {
+  c4 d e f | g2. r4 |
+}
+
+// Deliberately end high, then verify next section resets
+section A {
+  melody { $highPhrase }
+}
+
+section B {
+  melody { $lowPhrase }
+}
+
+section C {
+  melody { $highPhrase $lowPhrase }
+}
+
+structure { A B C }
+
+render score "section-octave-reset.svg" {
+  staff { melody }
+}

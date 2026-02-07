@@ -1,0 +1,26 @@
+// Line Break Test
+// Tests the 'break' keyword for forced line breaks
+title "Line Break"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+section Main {
+  melody {
+    c4 d e f | g4 a b c' |
+    break
+    c4 d e f | g2. r4 |
+    break
+    e4 f g a | b2. r4 |
+  }
+}
+
+structure { Main }
+
+render score "break.svg" {
+  staff { melody }
+}

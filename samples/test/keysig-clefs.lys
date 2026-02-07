@@ -1,5 +1,6 @@
-// Key Signature Test - All Clefs
-title "Key Sig All Clefs"
+// Key Signature Test - Multiple Clefs
+// Based on: keysig-clefs
+title "Key Signatures (Multiple Clefs)"
 composer "LilySharp"
 
 tempo 120
@@ -14,10 +15,10 @@ part bassPart {
 }
 
 phrase treblePhrase {
-  d'4 e' fis' g' |
+  d4 e fis g | a4 b cis' d |
 }
 phrase bassPhrase {
-  d4 e fis g |
+  d4 e fis g | a4 b cis d |
 }
 
 section Main {

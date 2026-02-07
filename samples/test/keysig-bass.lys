@@ -1,0 +1,37 @@
+// Key Signature Test - Bass Clef
+// Consolidates: keysig-bass, keysig-test
+title "Key Signatures (Bass)"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+
+part bassLine {
+  clef: bass
+}
+
+// F major in bass clef (1 flat: Bb)
+phrase fMajorBass {
+  f,4 g, a, bes, | c4 d e f |
+}
+
+// G major in bass clef (1 sharp: F#)
+phrase gMajorBass {
+  g,4 a b c | d4 e fis g, |
+}
+
+section FMajor {
+  key f major
+  bassLine { $fMajorBass }
+}
+
+section GMajor {
+  key g major
+  bassLine { $gMajorBass }
+}
+
+structure { FMajor GMajor }
+
+render score "keysig-bass.svg" {
+  staff { bassLine }
+}

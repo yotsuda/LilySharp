@@ -1,0 +1,38 @@
+// Ornaments Test
+// Tests @trill, @mordent, @prall, @turn, @invertedturn, @pralltriller, @tremolo
+title "Ornaments"
+composer "LilySharp"
+
+tempo 100
+time 4/4
+key c major
+
+part melody
+
+phrase trills {
+  c2@trill d2@trill |
+  e2@trill f2 |
+}
+
+phrase mordentPrall {
+  c4@mordent d@prall e@mordent f@prall |
+}
+
+phrase turns {
+  c2@turn d2@invertedturn |
+  e2@pralltriller f2 |
+}
+
+phrase tremoloTest {
+  c2@tremolo d2@tremolo |
+}
+
+section Main {
+  melody { $trills $mordentPrall $turns $tremoloTest }
+}
+
+structure { Main }
+
+render score "ornaments.svg" {
+  staff { melody }
+}

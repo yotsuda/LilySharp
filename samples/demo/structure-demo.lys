@@ -10,12 +10,12 @@ key c major
 
 part melody
 
-phrase intro { c'4 d' e' f' | g'2. r4 | }
-phrase verseA { c'8 d' e' f' g' f' e' d' | c'2. r4 | }
-phrase verseB { e'8 f' g' a' b' a' g' f' | e'2. r4 | }
-phrase chorusA { c''4 b' a' g' | f'4 e' d' c' | }
-phrase bridge { g'4 a' b' c'' | d''2. r4 | }
-phrase ending { c'1~ | c'1 | }
+phrase intro { c4 d e f | g2. r4 | }
+phrase verseA { c8 d e f g f e d | c2. r4 | }
+phrase verseB { e8 f g a b a g f | e2. r4 | }
+phrase chorusA { c'4 b a g | f4 e d c | }
+phrase bridge { g4 a b c' | d2. r4 | }
+phrase ending { c1~ | c1 | }
 
 section Intro {
   melody { $intro }

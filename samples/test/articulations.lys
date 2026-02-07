@@ -1,0 +1,40 @@
+// Articulations Test
+// Tests @staccato, @accent, @tenuto, @marcato, @fermata, @portato
+title "Articulations"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase staccatoAccent {
+  c4@staccato d@staccato e@staccato f@staccato |
+  g4@accent a@accent b@accent c@accent |
+}
+
+phrase tenutoMarcato {
+  c4@tenuto d@tenuto e@tenuto f@tenuto |
+  g4@marcato a@marcato b@marcato c@marcato |
+}
+
+phrase fermataPortato {
+  c4@fermata r r r |
+  c4@portato d@portato e@portato f@portato |
+}
+
+phrase mixed {
+  // Different articulations on each note
+  c4@staccato d@accent e@tenuto f@marcato |
+}
+
+section Main {
+  melody { $staccatoAccent $tenutoMarcato $fermataPortato $mixed }
+}
+
+structure { Main }
+
+render score "articulations.svg" {
+  staff { melody }
+}

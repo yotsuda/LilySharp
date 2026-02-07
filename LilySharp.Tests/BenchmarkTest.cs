@@ -27,7 +27,7 @@ public class BenchmarkTest
     [Trait("Category", "Benchmark")]
     public void BenchmarkFurElise()
     {
-        var source = File.ReadAllText(@"../../../../samples/fur-elise.lys");
+        var source = File.ReadAllText(@"../../../../samples/music/fur-elise.lys");
 
         // Warmup
         for (int i = 0; i < 3; i++) {

@@ -1,4 +1,4 @@
-// Ukulele tablature example in Lily#
+// Ukulele Tablature Example in Lily#
 // Standard tuning: G C E A
 
 title "Ukulele Tab Demo"
@@ -13,10 +13,10 @@ part ukulele {
 section Main {
   ukulele {
     // C major chord strum
-    <c' e' g' c''>4 <c' e' g' c''> <c' e' g' c''> <c' e' g' c''> |
-    
-    // Simple melody
-    c'4 d' e' f' | g' a' b' c'' |
+    <c e g c'>4 <c e g c'> <c e g c'> <c e g c'> |
+
+    // Simple melody (C4 range, ascending scale)
+    c4 d e f | g4 a b c' |
   }
 }
 
@@ -24,7 +24,7 @@ structure { Main }
 
 render score "ukulele-tab.svg" {
   staff { ukulele }
-  tab { ukulele }
+  tab ukulele { ukulele }
 }
 
 render midi "ukulele-tab.mid" {

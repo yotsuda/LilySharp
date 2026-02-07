@@ -1,0 +1,34 @@
+// Phrase Definition and Reference Test
+// Consolidates: phrase-test, test5, test7
+title "Phrases"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+// Phrase definitions using $name reference syntax
+phrase intro {
+  c4 d e f | g2 g |
+}
+
+phrase verse {
+  a4 b c' d' | e'2 e |
+}
+
+phrase chorus {
+  c4 d e f | g1 |
+}
+
+// Multiple phrase references in one section
+section Main {
+  melody { $intro $verse $chorus }
+}
+
+structure { Main }
+
+render score "phrases.svg" {
+  staff { melody }
+}

@@ -1,0 +1,36 @@
+// Collision Test
+// Consolidates: collision-test, accidental-collision-test
+title "Collision Test"
+composer "LilySharp"
+
+tempo 80
+time 4/4
+key c major
+
+part melody
+
+phrase voiceCollision {
+  // Adjacent pitch voices
+  << { e2 f | g2 a | } \\ { d2 e | f2 g | } >>
+}
+
+phrase accidentalCollision {
+  // Single note with accidental
+  fis4 r r r |
+  // Chord with multiple accidentals
+  <fis gis>4 r r r |
+  // Three accidentals in chord
+  <dis fis gis>4 r r r |
+  // Close interval accidentals (seconds)
+  <fis gis ais>4 r r r |
+}
+
+section Main {
+  melody { $voiceCollision $accidentalCollision }
+}
+
+structure { Main }
+
+render score "collision.svg" {
+  staff { melody }
+}

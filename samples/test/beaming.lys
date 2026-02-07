@@ -1,0 +1,40 @@
+// Beaming Test
+// Based on: beam-collision-test
+title "Beaming"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+
+part melody
+
+phrase beamsWithRests {
+  // Beams broken by rests
+  c8 r e r g r b r |
+  c8 d e f r4 r |
+}
+
+phrase eighthBeams {
+  // Continuous 8th beams
+  c8 d e f g f e d |
+}
+
+phrase sixteenthBeams {
+  // 16th note beams
+  c16 d e f g f e d c d e f g f e d |
+}
+
+phrase mixedBeams {
+  // Mixed durations in beams
+  c8 d16 e f8 g16 a g8 f16 e d4 |
+}
+
+section Main {
+  melody { $beamsWithRests $eighthBeams $sixteenthBeams $mixedBeams }
+}
+
+structure { Main }
+
+render score "beaming.svg" {
+  staff { melody }
+}

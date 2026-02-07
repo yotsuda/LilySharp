@@ -1,0 +1,61 @@
+// Instrument Defaults Test
+// Tests automatic clef/octave setting by instrument property
+title "Instrument Defaults"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+
+// Guitar: should default to treble_8, octave 4
+part guitar {
+  instrument: guitar
+}
+
+// Tenor: should default to treble_8, octave 4
+part tenorVoice {
+  instrument: tenor
+}
+
+// Piano right hand: treble clef
+part pianoRH {
+  clef: treble
+}
+
+// Piano left hand: bass clef
+part pianoLH {
+  clef: bass
+}
+
+phrase guitarLine {
+  c4 d e f | g4 a b c' |
+}
+
+phrase tenorLine {
+  c4 d e f | g2. r4 |
+}
+
+phrase trebleLine {
+  c4 d e f | g4 a b c' |
+}
+
+phrase bassLine {
+  c4 d e f | g2. r4 |
+}
+
+section Main {
+  guitar { $guitarLine }
+  tenorVoice { $tenorLine }
+  pianoRH { $trebleLine }
+  pianoLH { $bassLine }
+}
+
+structure { Main }
+
+render score "instrument-defaults.svg" {
+  staff { guitar }
+  staff { tenorVoice }
+  grandStaff {
+    staff { pianoRH }
+    staff { pianoLH }
+  }
+}

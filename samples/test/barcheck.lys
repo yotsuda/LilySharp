@@ -1,0 +1,36 @@
+// Bar Check Test
+// Based on: barcheck-test
+title "Bar Check"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase correct {
+  // Correct: exactly 4 beats
+  c4 d e f |
+  g4 a b c' |
+}
+
+phrase tooShort {
+  // Warning: only 3 beats
+  c4 d e |
+}
+
+phrase tooLong {
+  // Warning: 5 beats
+  c4 d e f g |
+}
+
+section Main {
+  melody { $correct $tooShort $tooLong }
+}
+
+structure { Main }
+
+render score "barcheck.svg" {
+  staff { melody }
+}

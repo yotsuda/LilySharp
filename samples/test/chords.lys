@@ -1,0 +1,41 @@
+// Chord Test
+// Consolidates: test3, test-chords, test6
+title "Chords"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase basicTriads {
+  // C E G → D F A → E G B → F A C (within octave 4)
+  <c e g>4 <d f a> <e g b> <f a c'> |
+}
+
+phrase accidentalChords {
+  // Chords with sharps/flats
+  <c eis gis>4 <des f aes> <d fis a> <ees g bes> |
+}
+
+phrase seventhChords {
+  // 7th chords
+  <c e g b>2 <d fis a cis'>2 |
+}
+
+phrase mixedChords {
+  <cis eis gis>4 <des fes aes> <d f a> <c e g> |
+  <c e g>2 <d f a>2 |
+  <e g b>2 <c e g>2 |
+}
+
+section Main {
+  melody { $basicTriads $accidentalChords $seventhChords $mixedChords }
+}
+
+structure { Main }
+
+render score "chords.svg" {
+  staff { melody }
+}

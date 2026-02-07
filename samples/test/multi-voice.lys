@@ -1,0 +1,28 @@
+// Multi-Voice Test
+title "Multi-Voice"
+composer "LilySharp"
+
+tempo 80
+time 4/4
+
+part melody
+
+phrase twoVoices {
+  // Two voices: upper (stems up) and lower (stems down)
+  << { c'2 d | e2 f | } \\ { e2 f | g2 a | } >>
+}
+
+phrase threeVoices {
+  // Three voices
+  << { c'2 d } \\ { g2 a } \\ { e2 f } >> |
+}
+
+section Main {
+  melody { $twoVoices $threeVoices }
+}
+
+structure { Main }
+
+render score "multi-voice.svg" {
+  staff { melody }
+}

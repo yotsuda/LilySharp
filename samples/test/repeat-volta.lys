@@ -1,0 +1,41 @@
+// Repeat and Volta Test
+// Tests |: :| repeat markers and [1. ] [2. ] volta brackets
+title "Repeat and Volta"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase themeA { c4 d e f | g2. r4 | }
+phrase themeB { a4 g f e | d2. r4 | }
+phrase ending1 { e4 f g a | g2. r4 | }
+phrase ending2 { c4 d e f | c1 | }
+
+section A {
+  melody { $themeA }
+}
+
+section B {
+  melody { $themeB }
+}
+
+section Ending1 {
+  melody { $ending1 }
+}
+
+section Ending2 {
+  melody { $ending2 }
+}
+
+// Structure with repeat and volta
+structure {
+  A
+  |: B [1. Ending1] [2. Ending2] :|
+}
+
+render score "repeat-volta.svg" {
+  staff { melody }
+}
