@@ -145,5 +145,24 @@ public static class LayoutUtilities
 
         return height;
     }
-}
 
+    /// <summary>
+    /// Finds the absolute Y position of a staff within a specific system.
+    /// Returns system.Y if no matching staff is found (single-staff fallback).
+    /// </summary>
+    public static double FindStaffYInSystem(SystemLayout system, int staffIndex)
+    {
+        if (!system.StaffGroups.IsDefaultOrEmpty && staffIndex >= 0)
+        {
+            foreach (var staffGroup in system.StaffGroups)
+            {
+                foreach (var staff in staffGroup.Staves)
+                {
+                    if (staff.StaffIndex == staffIndex)
+                        return system.Y + staff.Y;
+                }
+            }
+        }
+        return system.Y;
+    }
+}

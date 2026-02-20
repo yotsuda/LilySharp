@@ -1317,6 +1317,12 @@ public sealed class SvgRenderer
     }
 
     /// <summary>
+    /// Finds the absolute Y position of a staff within a specific system.
+    /// </summary>
+    private static double FindStaffYInSystem(SystemLayout system, int staffIndex)
+        => LayoutUtilities.FindStaffYInSystem(system, staffIndex);
+
+    /// <summary>
     /// Calculates stem end Y positions for beamed notes in multi-staff scores.
     /// </summary>
     private void CalculateMultiStaffBeamStemPositions(MultiStaffScore score, ScoreLayout layout)
@@ -1334,30 +1340,13 @@ public sealed class SvgRenderer
             }
         }
 
-        // Build staff Y positions from staff groups
-        var staffYPositions = new Dictionary<int, double>();
-        foreach (var system in layout.Systems)
-        {
-            if (system.StaffGroups.IsDefaultOrEmpty)
-                continue;
-
-            foreach (var staffGroup in system.StaffGroups)
-            {
-                foreach (var staffLayout in staffGroup.Staves)
-                {
-                    staffYPositions[staffLayout.StaffIndex] = system.Y + staffLayout.Y;
-                }
-            }
-        }
-
         foreach (var beamLayout in layout.BeamLayouts)
         {
             if (!measureToSystem.TryGetValue(beamLayout.Group.MeasureIndex, out var system))
                 continue;
 
-            // Use the staff index from beam layout
-            int staffIndex = beamLayout.StaffIndex;
-            double staffY = staffYPositions.TryGetValue(staffIndex, out var y) ? y : system.Y;
+            // Find staff Y within THIS system (not from a flat dictionary)
+            double staffY = FindStaffYInSystem(system, beamLayout.StaffIndex);
             double staffMiddleY = staffY + StaffHeight / 2;
 
             var group = beamLayout.Group;
@@ -1411,30 +1400,14 @@ public sealed class SvgRenderer
             }
         }
 
-        // Build staff Y positions from staff groups
-        var staffYPositions = new Dictionary<int, double>();
-        foreach (var system in layout.Systems)
-        {
-            if (system.StaffGroups.IsDefaultOrEmpty)
-                continue;
-
-            foreach (var staffGroup in system.StaffGroups)
-            {
-                foreach (var staffLayout in staffGroup.Staves)
-                {
-                    staffYPositions[staffLayout.StaffIndex] = system.Y + staffLayout.Y;
-                }
-            }
-        }
-
-
         foreach (var beamLayout in layout.BeamLayouts)
         {
             if (!measureToSystem.TryGetValue(beamLayout.Group.MeasureIndex, out var system))
                 continue;
 
-            // Use staff index from BeamLayout
-            double staffY = staffYPositions.TryGetValue(beamLayout.StaffIndex, out var y) ? y : system.Y;
+            // Find staff Y within THIS system (not from a flat dictionary)
+            double staffY = FindStaffYInSystem(system, beamLayout.StaffIndex);
+            double staffMiddleY = staffY + StaffHeight / 2;
             DrawBeamGroupAtStaffY(beamLayout, staffY);
         }
     }

@@ -52,6 +52,30 @@ public sealed class SystemBreaker
     }
 
     /// <summary>
+    /// Breaks measures into systems for a multi-staff score.
+    /// Uses the primary voice of the first staff group for measure widths.
+    /// </summary>
+    public List<List<Measure>> BreakIntoSystems(MultiStaffScore score)
+    {
+        var measures = score.StaffGroups[0].PrimaryStaff.PrimaryVoice.Measures;
+        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true);
+        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false);
+
+        if (_options.UseOptimalLineBreaking)
+        {
+            var breaker = new KnuthPlassBreaker(
+                _options.ContentWidth,
+                firstPrefixWidth,
+                continuationPrefixWidth,
+                _options.LineBreakingTolerance);
+
+            return breaker.BreakIntoLines(measures);
+        }
+
+        return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth);
+    }
+
+    /// <summary>
     /// Breaks measures into systems using a greedy first-fit algorithm.
     /// </summary>
     private List<List<Measure>> BreakIntoSystemsGreedy(

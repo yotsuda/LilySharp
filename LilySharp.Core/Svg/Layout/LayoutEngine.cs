@@ -213,58 +213,58 @@ public sealed class LayoutEngine
         var systems = new List<SystemLayout>();
 
         // LILYPOND-REF: lily/page-layout-problem.cc:434
-        // header_height_ = head ? head->extent(Y_AXIS).length() : 0;
-        // Calculate actual header height based on title/composer presence
         double headerHeight = LayoutUtilities.CalculateHeaderHeight(score.Title, score.Composer);
+        double headerBottom = _options.MarginTop + headerHeight;
 
-        // Layout measures with timing-based columns for multi-staff alignment
-        var measureLayouts = _multiStaffLayouter.LayoutMeasures(score, 0);
+        // Break measures into systems using the primary voice
+        var systemMeasures = _systemBreaker.BreakIntoSystems(score);
 
-        // Calculate actual page width based on content
-        double actualPageWidth = _options.PageWidth;
-        if (measureLayouts.Length > 0)
-        {
-            var lastMeasure = measureLayouts[measureLayouts.Length - 1];
-            double contentRight = lastMeasure.X + lastMeasure.Width + _options.MarginRight;
-            actualPageWidth = Math.Max(_options.PageWidth, contentRight);
-        }
-
-        // Calculate total system height (all staff groups)
+        // Calculate system height (all staff groups)
         double systemHeight = _multiStaffLayouter.CalculateSystemHeight(score);
 
-        // LILYPOND-REF: lily/page-layout-problem.cc:440-443
-        // Initialize bottom_skyline to represent the top of the printable area
-        // (below the header). This forces the first system to start below the header.
-        double headerBottom = _options.MarginTop + headerHeight;
-        var bottomSkyline = new VerticalSkyline(VerticalDirection.Down);
-        bottomSkyline.SetMinimumHeight(headerBottom);
+        // Staff group layouts are the same for every system (relative positions)
+        var staffGroupLayouts = _multiStaffLayouter.LayoutStaffGroups(score, 0);
 
-        // Build system skylines using relative coordinates (staff top = 0)
-        var (systemUpSkyline, systemDownSkyline) = _skylineBuilder.BuildSystemSkylines(score, measureLayouts);
+        // Pre-calculate first system's measure layouts for skyline building
+        var firstSystemMeasureLayouts = systemMeasures.Count > 0
+            ? _multiStaffLayouter.LayoutMeasures(score, 0, 0, systemMeasures[0].Count)
+            : ImmutableArray<MeasureLayout>.Empty;
 
+        var (systemUpSkyline, systemDownSkyline) = _skylineBuilder.BuildSystemSkylines(score, firstSystemMeasureLayouts);
         double systemUpExtent = LayoutUtilities.CalculateUpExtent(systemUpSkyline);
         double currentY = LayoutUtilities.CalculateFirstSystemY(headerBottom, systemUpExtent, _options.TopSystemPadding);
 
-        // Layout all staff groups with the calculated Y position
-        var staffGroupLayouts = _multiStaffLayouter.LayoutStaffGroups(score, currentY);
+        // Layout each system
+        int firstMeasureIndex = 0;
+        for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
+        {
+            bool isFirstSystem = sysIdx == 0;
+            bool isLastSystem = sysIdx == systemMeasures.Count - 1;
+            int measureCount = systemMeasures[sysIdx].Count;
 
-        var system = new SystemLayout(
-            SystemIndex: 0,
-            Y: currentY,
-            Width: actualPageWidth - _options.MarginLeft - _options.MarginRight,
-            PrefixWidth: SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, true),
-            Measures: measureLayouts,
-            StaffGroups: staffGroupLayouts);
+            var measureLayouts = isFirstSystem
+                ? firstSystemMeasureLayouts
+                : _multiStaffLayouter.LayoutMeasures(score, sysIdx, firstMeasureIndex, measureCount, isLastSystem);
 
-        systems.Add(system);
-        currentY += systemHeight + _options.SystemSpacing;
+            var system = new SystemLayout(
+                SystemIndex: sysIdx,
+                Y: currentY,
+                Width: _options.ContentWidth,
+                PrefixWidth: SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, isFirstSystem),
+                Measures: measureLayouts,
+                StaffGroups: staffGroupLayouts);
+
+            systems.Add(system);
+            currentY += systemHeight + _options.SystemSpacing;
+            firstMeasureIndex += measureCount;
+        }
 
         double totalHeight = currentY - _options.SystemSpacing + _options.MarginTop;
 
         var systemsArray = systems.ToImmutableArray();
         var page = new PageLayout(
             PageIndex: 0,
-            Width: actualPageWidth,
+            Width: _options.PageWidth,
             Height: totalHeight,
             HeaderHeight: headerHeight,
             Systems: systemsArray);
@@ -276,7 +276,6 @@ public sealed class LayoutEngine
 
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
-            // Create a temporary Score for each staff to reuse existing logic
             var clefString = staff.Clef switch
             {
                 ClefType.Treble => "treble",
@@ -297,8 +296,8 @@ public sealed class LayoutEngine
                 score.Composer);
 
             var staffBeams = _elementCoordinator.LayoutBeams(staffScore, systemsArray, staffIndex);
-            var staffTies = _elementCoordinator.LayoutTies(staffScore, systemsArray);
-            var staffSlurs = _elementCoordinator.LayoutSlurs(staffScore, systemsArray);
+            var staffTies = _elementCoordinator.LayoutTies(staffScore, systemsArray, staffIndex);
+            var staffSlurs = _elementCoordinator.LayoutSlurs(staffScore, systemsArray, staffIndex);
 
             allBeamLayouts.AddRange(staffBeams);
             allTieLayouts.AddRange(staffTies);
@@ -311,26 +310,29 @@ public sealed class LayoutEngine
         var voiceOffsets = ImmutableDictionary<VoiceItemKey, double>.Empty;
         var restShifts = ImmutableDictionary<RestShiftKey, double>.Empty;
 
+        // Collect all measure layouts across systems for engravers
+        var allMeasureLayouts = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
+
         // Calculate lyric layouts
         var lyricEngraver = new LyricEngraver();
         double staffBottom = _options.StaffHeight;
-        var lyricLayouts = lyricEngraver.CalculateLayouts(score.Lyrics, measureLayouts, staffBottom);
+        var lyricLayouts = lyricEngraver.CalculateLayouts(score.Lyrics, allMeasureLayouts, staffBottom);
 
         // Calculate lyric hyphen/extender layouts
         var lyricHyphenEngraver = new LyricHyphenEngraver();
         var lyricHyphenLayouts = lyricHyphenEngraver.CalculateLayouts(lyricLayouts, systemsArray);
 
         // Calculate music mark layouts
-        var musicMarkLayouts = MusicMarkEngraver.Calculate(null, score.MusicMarks, systemsArray, measureLayouts);
+        var musicMarkLayouts = MusicMarkEngraver.Calculate(null, score.MusicMarks, systemsArray, allMeasureLayouts);
 
         // Calculate custom text layouts
-        var customTextLayouts = CustomTextEngraver.Calculate(null, score.CustomTexts, systemsArray, measureLayouts);
+        var customTextLayouts = CustomTextEngraver.Calculate(null, score.CustomTexts, systemsArray, allMeasureLayouts);
 
         // Calculate volta bracket layouts
-        var voltaBracketLayouts = VoltaBracketEngraver.Calculate(score.VoltaBrackets, systemsArray, measureLayouts);
+        var voltaBracketLayouts = VoltaBracketEngraver.Calculate(score.VoltaBrackets, systemsArray, allMeasureLayouts);
 
         // Calculate tuplet bracket layouts
-        var tupletBracketLayouts = TupletBracketEngraver.Calculate(score.TupletBrackets, systemsArray, measureLayouts, score.StaffGroups[0].PrimaryStaff.PrimaryVoice.Measures);
+        var tupletBracketLayouts = TupletBracketEngraver.Calculate(score.TupletBrackets, systemsArray, allMeasureLayouts, score.StaffGroups[0].PrimaryStaff.PrimaryVoice.Measures);
 
         return new ScoreLayout(
             ImmutableArray.Create(page),

@@ -263,7 +263,7 @@ public sealed class ElementCoordinator
     /// <summary>
     /// Detects ties and calculates their layouts.
     /// </summary>
-    public ImmutableArray<TieLayout> LayoutTies(Score score, ImmutableArray<SystemLayout> systems)
+    public ImmutableArray<TieLayout> LayoutTies(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
     {
         var ties = _tieDetector.DetectTies(score);
 
@@ -291,7 +291,8 @@ public sealed class ElementCoordinator
             if (tie.EndItemIndex < endMeasure.Items.Length)
                 endX += endMeasure.Items[tie.EndItemIndex].X;
 
-            double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
+            double staffY = LayoutUtilities.FindStaffYInSystem(startSystem, staffIndex);
+            double staffMiddleY = staffY + _options.StaffHeight / 2;
             double y = staffMiddleY - tie.StaffPosition / 2;
 
             // Use TieFormattingProblem for optimal tie positioning
@@ -310,7 +311,7 @@ public sealed class ElementCoordinator
     /// <summary>
     /// Detects slurs and calculates their layouts.
     /// </summary>
-    public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems)
+    public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
     {
         var slurs = _slurDetector.DetectSlurs(score);
 
@@ -338,24 +339,20 @@ public sealed class ElementCoordinator
             if (slur.EndItemIndex < endMeasure.Items.Length)
                 endX += endMeasure.Items[slur.EndItemIndex].X;
 
-            double staffMiddleY = startSystem.Y + _options.StaffHeight / 2;
+            double staffY = LayoutUtilities.FindStaffYInSystem(startSystem, staffIndex);
+            double staffMiddleY = staffY + _options.StaffHeight / 2;
             double startY = staffMiddleY - slur.StartStaffPosition / 2.0;
             double endY = staffMiddleY - slur.EndStaffPosition / 2.0;
 
             // Offset slur endpoints to the opposite side of the stem
-            // CurveUp = true means slur curves upward (above the notes, stems down)
-            // CurveUp = false means slur curves downward (below the notes, stems up)
-            // Offset by approximately half a staff space from the notehead
             double slurOffset = 0.6;  // staff spaces
             if (slur.CurveUp)
             {
-                // Curve up: position above noteheads (smaller Y in SVG)
                 startY -= slurOffset;
                 endY -= slurOffset;
             }
             else
             {
-                // Curve down: position below noteheads (larger Y in SVG)
                 startY += slurOffset;
                 endY += slurOffset;
             }

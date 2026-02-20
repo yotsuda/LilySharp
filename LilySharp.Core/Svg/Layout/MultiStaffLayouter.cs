@@ -159,19 +159,49 @@ public sealed class MultiStaffLayouter
 
     /// <summary>
     /// Layouts measures for multi-staff scores with timing-based column information.
+    /// Supports measure ranges for system breaking and proportional justification.
     /// </summary>
-    public ImmutableArray<MeasureLayout> LayoutMeasures(MultiStaffScore score, int systemIndex)
+    public ImmutableArray<MeasureLayout> LayoutMeasures(
+        MultiStaffScore score, int systemIndex,
+        int startMeasureIndex = 0, int? measureCount = null,
+        bool isLastSystem = false)
     {
         var primaryVoice = score.StaffGroups[0].PrimaryStaff.PrimaryVoice;
+        int endMeasureIndex = measureCount.HasValue
+            ? startMeasureIndex + measureCount.Value
+            : primaryVoice.Measures.Length;
 
-        var layouts = ImmutableArray.CreateBuilder<MeasureLayout>();
-        double currentX = _options.MarginLeft + SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, systemIndex == 0);
+        double prefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, systemIndex == 0);
+        double startX = _options.MarginLeft + prefixWidth;
+        double availableWidth = _options.PageWidth - _options.MarginLeft - _options.MarginRight - prefixWidth;
 
-        for (int measureIndex = 0; measureIndex < primaryVoice.Measures.Length; measureIndex++)
+        // First pass: calculate ideal widths
+        var idealWidths = new List<double>();
+        double totalIdealWidth = 0;
+
+        for (int i = startMeasureIndex; i < endMeasureIndex; i++)
         {
+            double w = SpacingRules.CalculateMeasureIdealWidth(primaryVoice.Measures[i]);
+            idealWidths.Add(w);
+            totalIdealWidth += w;
+        }
+
+        // Scale factor: justify to fill available width (except last system)
+        double scaleFactor = (!isLastSystem && totalIdealWidth > 0 && totalIdealWidth < availableWidth)
+            ? availableWidth / totalIdealWidth
+            : 1.0;
+
+        // Second pass: layout with scaled widths
+        var layouts = ImmutableArray.CreateBuilder<MeasureLayout>();
+        double currentX = startX;
+
+        for (int i = 0; i < idealWidths.Count; i++)
+        {
+            int measureIndex = startMeasureIndex + i;
+            double measureWidth = idealWidths[i] * scaleFactor;
+
             var allTimings = CollectAllTimingsForMeasure(score, measureIndex);
             var primaryMeasure = primaryVoice.Measures[measureIndex];
-            double measureWidth = SpacingRules.CalculateMeasureIdealWidth(primaryMeasure);
 
             var itemLayouts = _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
             var columnLayouts = _measureLayouter.LayoutColumns(primaryMeasure, measureWidth, allTimings);
