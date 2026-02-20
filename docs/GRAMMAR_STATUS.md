@@ -14,19 +14,19 @@
 ### 2. 構造宣言
 | 機能 | 構文 | 状況 | 備考 |
 |------|------|------|------|
-| パート定義 | `part name { clef: treble }` | ❓ | 要確認 |
-| フレーズ定義 | `phrase name { notes }` | ❓ | 要確認 |
-| セクション | `section Name { part { } }` | ❓ | 要確認 |
-| 構造 | `structure { Section }` | ❓ | 要確認 |
+| パート定義 | `part name { clef: treble }` | ✅ | instrument/octave 属性対応 |
+| フレーズ定義 | `phrase name { notes }` | ✅ | |
+| セクション | `section Name { part { } }` | ✅ | |
+| 構造 | `structure { Section }` | ✅ | |
 
 ### 3. レンダリング指定
 | 機能 | 構文 | 状況 | 備考 |
 |------|------|------|------|
-| スコア | `render score "file.svg" { }` | ❓ | 要確認 |
-| 譜表 | `staff { part }` | ❓ | 要確認 |
-| 大譜表 | `grandStaff { staff staff }` | ❓ | fur-elise でエラー |
-| タブ譜 | `tab { }` | ❓ | 要確認 |
-| MIDI | `render midi "file.mid" { }` | ❓ | 要確認 |
+| スコア | `render score "file.svg" { }` | ✅ | |
+| 譜表 | `staff { part }` | ✅ | |
+| 大譜表 | `grandStaff { staff staff }` | ✅ | |
+| タブ譜 | `tab { }` | ⚠️ | パース可、SVG描画未実装 |
+| MIDI | `render midi "file.mid" { }` | ✅ | |
 
 ### 4. 音楽要素
 | 機能 | 構文 | 状況 | 備考 |
@@ -37,54 +37,45 @@
 | オクターブ | `c' c''` / `c, c,,` | ✅ | |
 | 臨時記号 | `cis dis ees` | ✅ | |
 | 付点 | `c4. c4..` | ✅ | |
-| タイ | `c4~ c4` | ❓ | fur-elise でエラー？ |
-| スラー | `c4( d e)` | ❓ | 要確認 |
-| 連符 | `tuplet 3/2 { c8 d e }` | ❓ | 要確認 |
-| 装飾音 | `grace { c16 d }` | ❓ | 要確認 |
-| 連桁 | 自動 | ✅ | |
+| タイ | `c4~ c4` | ✅ | |
+| スラー | `c4( d e)` | ✅ | |
+| 連符 | `tuplet 3/2 { c8 d e }` | ✅ | |
+| 装飾音 | `grace { c16 d }` | ✅ | |
+| 連桁 | 自動 | ✅ | 手動制御は未実装 |
 
 ### 5. アーティキュレーション/ダイナミクス
 | 機能 | 構文 | 状況 |
 |------|------|------|
-| スタッカート | `c4-staccato` | ❓ |
-| アクセント | `c4-accent` | ❓ |
-| フォルテ | `\f` | ❓ |
-| ピアノ | `\p` | ❓ |
+| スタッカート | `c4@staccato` | ✅ |
+| アクセント | `c4@accent` | ✅ |
+| フェルマータ | `c4@fermata` | ✅ |
+| テヌート | `c4@tenuto` | ✅ |
+| マルカート | `c4@marcato` | ✅ |
+| フォルテ | `c4@f` | ✅ |
+| ピアノ | `c4@p` | ✅ |
+| その他ダイナミクス | `@pp @ff @mf @mp` 等 | ✅ |
 
 ### 6. リピート/ナビゲーション
 | 機能 | 構文 | 状況 |
 |------|------|------|
-| リピート | `|: ... :|` | ❓ |
-| 1st/2nd ending | structure内で定義 | ❓ |
-| D.C. / D.S. | `dc`, `ds al fine` | ❓ |
+| リピート | `\|: ... :\|` | ✅ |
+| 1st/2nd ending | `[1. A] [2. B]` | ✅ |
+| D.S. / D.C. | `@segno @coda @fine` 等 | ✅ |
+
+### 7. その他
+| 機能 | 構文 | 状況 |
+|------|------|------|
+| 歌詞 | `lyrics { Hap -- py }` | ✅ |
+| 複声部 | `<< { } \\ { } >>` | ✅ |
+| 段改行 | `break` | ✅ |
+| 楽曲記号 | `@segno @coda @fine` | ✅ |
+| カスタムテキスト | `_"text"` | ✅ |
+| 変数参照 | `$name` | ✅ |
 
 ---
 
-## 優先度
+## 既知の問題
 
-### P0: 基本機能（動作確認必須）
-- [ ] 単一譜表の基本音符
-- [ ] phrase 定義と参照
-- [ ] section/structure の解釈
-
-### P1: 中核機能
-- [ ] grandStaff（ピアノ譜）
-- [ ] タイ/スラー
-- [ ] 連符
-
-### P2: 拡張機能
-- [ ] リピート
-- [ ] アーティキュレーション
-- [ ] ダイナミクス
-- [ ] タブ譜
-
----
-
-## 既知のバグ
-
-### fur-elise.lys
-```
-Error: Measure 0 items mismatch: measure has 1 items, layout has 3 items.
-Voice=1, Measure items: [RestItem]
-```
-原因: 小節の解釈とレイアウトが不一致
+1. **VoltaBracket 内の `~` がパースエラー**: `[2. ~Verse]` → Tilde が未対応
+2. **タブ譜の SVG 描画**: パースとフレット計算は実装済み、SVG レンダリングが未実装
+3. **連桁の手動制御**: `c8[ d e f]` 構文が未実装

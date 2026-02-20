@@ -36,9 +36,9 @@
 | phrase参照解決 | ✅ | |
 | section参照解決 | ✅ | |
 | repeat展開 | ✅ | |
-| volta展開 | ✅ | 基本動作 |
+| volta展開 | ✅ | |
 | SilentSectionRef | ⚠️ | 未確認 |
-| MusicMark | ⚠️ | 未確認 |
+| MusicMark | ✅ | |
 | relative pitch | ✅ | |
 
 ### 3. Layout/Renderer
@@ -55,11 +55,16 @@
 | Tempo | ✅ | |
 | MultiStaff | ✅ | |
 | GrandStaff | ✅ | |
-| MusicMark (@) | ⚠️ | 未実装? |
-| CustomText | ⚠️ | 未実装? |
-| Dynamics | ❌ | 未実装 |
-| Articulations | ❌ | 未実装 |
-| Lyrics | ❌ | 未実装 |
+| MusicMark (@) | ✅ | @segno @coda @fine 等 |
+| CustomText | ✅ | _"text" |
+| Dynamics | ✅ | @p @f @ff @mf 等 |
+| Articulations | ✅ | @staccato @accent @fermata 等 |
+| Lyrics | ✅ | ハイフン・エクステンダー対応 |
+| VoltaBracket | ✅ | |
+| TupletBracket | ✅ | |
+| GraceNote | ✅ | 65%スケール |
+| MultiVoice | ✅ | |
+| SystemBreak | ✅ | Knuth-Plass最適改行 |
 
 ## 発見した問題
 
@@ -72,7 +77,7 @@
 | 優先度 | タスク | 工数 |
 |:------:|--------|------|
 | 1 | VoltaBracket内~対応 (Parser) | 1h |
-| 2 | MusicMark描画実装 | 2h |
-| 3 | CustomText描画実装 | 1h |
-| 4 | Dynamics実装 | 4h |
-| 5 | Articulations実装 | 4h |
+| 2 | タブ譜SVGレンダリング | 4h |
+| 3 | 連桁の手動制御 c8[ d e f] | 2h |
+| 4 | MusicXML エクスポート (section/structure対応) | 8h |
+| 5 | LilyPond → LilySharp 変換ツール | 16h+ |
