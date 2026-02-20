@@ -20,7 +20,7 @@ LilySharp/
 │   └── Midi/                # MIDI export
 ├── LilySharp.Cli/           # Command-line interface
 ├── LilySharp.Lsp/           # Language Server Protocol implementation
-├── LilySharp.Tests/         # Unit tests (140+ tests)
+├── LilySharp.Tests/         # Unit tests (450+ tests)
 ├── editors/
 │   └── vscode/              # VS Code extension
 ├── samples/                 # Example .lys files
@@ -73,7 +73,7 @@ Standard pitch names with accidentals:
 
 ```lilysharp
 c4@staccato d@accent e@fermata f@tenuto
-c4\p d\f e\ff f\mf
+c4@p d@f e@ff f@mf
 ```
 
 ### Tuplets
@@ -129,7 +129,7 @@ score {
 
 ### Requirements
 
-- .NET 10 SDK
+- .NET 9 SDK
 - Node.js (for VS Code extension)
 
 ### Build
@@ -223,14 +223,18 @@ The LSP server supports incremental text synchronization:
 - [x] Key signatures, clefs, tuplets
 - [x] Grace notes
 - [x] Lyrics support
+- [x] SVG music engraving (Emmentaler font, beams, ties, slurs, tuplets, volta brackets)
+- [x] Multi-system layout with Knuth-Plass line breaking
+- [x] Multi-staff / GrandStaff rendering
 - [x] CLI tool
 
 ### Planned
 
-- [ ] Music engraving (PDF/SVG output with Emmentaler font)
-- [ ] MusicXML export
+- [ ] SVG dynamics/articulations/lyrics rendering
+- [ ] MusicXML export (full section/structure support)
 - [ ] Chord notation
 - [ ] Multi-file projects
+- [ ] LilyPond → LilySharp conversion tool
 
 ## License
 
