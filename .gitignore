@@ -57,9 +57,21 @@ build.log
 outerhtml.html
 sample.lys
 sample.lilys
+temp-*.cs
+temp_*/
+debug-*.cs
+test-*.html
+*.bak
+
+# Test diagnostic logs
+test_diag.*
+vstest_diag.*
+*.host.*_5
+*.host.*_5.log
 
 # Output folder (generated files)
 output/
 
 # Claude Code local files
 work_progress.md
+.claude/
