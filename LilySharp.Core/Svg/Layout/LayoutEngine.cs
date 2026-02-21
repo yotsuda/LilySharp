@@ -192,7 +192,8 @@ public sealed class LayoutEngine
                 skylineY += minDistance;
             }
         }
-        double totalHeight = skylineY + systemHeight + _options.MarginBottom;
+        double lastDownExtent = perSystemExtents[systems.Length - 1].downExtent;
+        double totalHeight = skylineY + systemHeight + lastDownExtent + _options.MarginBottom;
         var systemsArray = updatedSystems.ToImmutableArray();
         var page = new PageLayout(0, _options.PageWidth, totalHeight, headerHeight, systemsArray);
         return (ImmutableArray.Create(page), systemsArray);
