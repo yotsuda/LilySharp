@@ -461,6 +461,7 @@ internal sealed class Parser
             SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => true,
             SyntaxKind.Tilde => true,
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => true,
+            SyntaxKind.OpenBracket or SyntaxKind.CloseBracket => true,
             SyntaxKind.RepeatKeyword => true,
             SyntaxKind.TupletKeyword => true,
             SyntaxKind.BreakKeyword => true,
@@ -493,6 +494,8 @@ internal sealed class Parser
             SyntaxKind.Tilde => ParseTie(),
 
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => ParseSlur(),
+
+            SyntaxKind.OpenBracket or SyntaxKind.CloseBracket => ParseBeamMarker(),
 
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
 
@@ -609,6 +612,12 @@ internal sealed class Parser
     {
         var paren = Advance();
         return new SlurGreen(paren);
+    }
+
+    private BeamMarkerGreen ParseBeamMarker()
+    {
+        var bracket = Advance();
+        return new BeamMarkerGreen(bracket);
     }
 
 private GreenNode?[] ParseArticulations()

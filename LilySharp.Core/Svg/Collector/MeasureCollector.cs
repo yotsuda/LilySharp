@@ -563,6 +563,7 @@ public sealed class MeasureCollector
                 case BreakSyntax:
                 case TieSyntax:
                 case SlurSyntax:
+                case BeamMarkerSyntax:
                 case TupletExpressionSyntax:
                     musicNodes.Add(node);
                     break;
@@ -573,7 +574,7 @@ public sealed class MeasureCollector
             }
         }
 
-        // Process collected music nodes (with lookahead for ties/slurs)
+        // Process collected music nodes (with lookahead for ties/slurs/beams)
         for (int i = 0; i < musicNodes.Count; i++)
         {
             var node = musicNodes[i];
@@ -581,13 +582,15 @@ public sealed class MeasureCollector
             bool hasTieAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is TieSyntax;
             bool hasSlurStartAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is SlurSyntax slurS && slurS.IsOpen;
             bool hasSlurEndAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is SlurSyntax slurE && !slurE.IsOpen;
-            ProcessMusicNode(node, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
+            bool hasBeamStartAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is BeamMarkerSyntax beamS && beamS.IsStart;
+            bool hasBeamEndAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is BeamMarkerSyntax beamE && !beamE.IsStart;
+            ProcessMusicNode(node, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
         }
 
         return builder.FinalizeMeasures();
     }
 
-    private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false)
+    private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
     {
         switch (node)
         {
@@ -600,7 +603,7 @@ public sealed class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
-                    var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
+                    var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
                     builder.AddItem(noteItem);
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp);
@@ -621,7 +624,7 @@ public sealed class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
-                    var chordItem = CreateChordItem(chord);
+                    var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter);
                     builder.AddItem(chordItem);
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
@@ -647,6 +650,7 @@ public sealed class MeasureCollector
 
             case TieSyntax:
             case SlurSyntax:
+            case BeamMarkerSyntax:
                 // Already processed with the preceding note
                 break;
 
@@ -941,11 +945,13 @@ public sealed class MeasureCollector
             for (int i = 0; i < nodeList.Count; i++)
             {
                 var node = nodeList[i];
-                // Check if next node is a tie or slur
+                // Check if next node is a tie, slur, or beam marker
                 bool hasTieAfter = i + 1 < nodeList.Count && nodeList[i + 1] is TieSyntax;
                 bool hasSlurStartAfter = i + 1 < nodeList.Count && nodeList[i + 1] is SlurSyntax slurS && slurS.IsOpen;
                 bool hasSlurEndAfter = i + 1 < nodeList.Count && nodeList[i + 1] is SlurSyntax slurE && !slurE.IsOpen;
-                ProcessMusicNode(node, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
+                bool hasBeamStartAfter = i + 1 < nodeList.Count && nodeList[i + 1] is BeamMarkerSyntax beamS && beamS.IsStart;
+                bool hasBeamEndAfter = i + 1 < nodeList.Count && nodeList[i + 1] is BeamMarkerSyntax beamE && !beamE.IsStart;
+                ProcessMusicNode(node, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
             }
         }
 
@@ -965,7 +971,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => !IsInsideTuplet(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or TupletExpressionSyntax);
+                .Where(n => !IsInsideTuplet(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or TupletExpressionSyntax);
             ProcessNodes(musicNodes);
         }
 
@@ -1137,6 +1143,7 @@ public sealed class MeasureCollector
                 case BreakSyntax:
                 case TieSyntax:
                 case SlurSyntax:
+                case BeamMarkerSyntax:
                 case TupletExpressionSyntax:
                     musicNodes.Add(node);
                     break;
@@ -1156,14 +1163,14 @@ public sealed class MeasureCollector
             return;
 
         // Include expression itself if it is a music node
-        if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax)
+        if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax)
         {
             musicNodes.Add(expression);
         }
 
         // Get music nodes from the variable expression descendants
         var nodes = expression.DescendantNodes()
-            .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax);
+            .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax);
 
         musicNodes.AddRange(nodes);
     }
@@ -1311,7 +1318,7 @@ public sealed class MeasureCollector
         }
     }
 
-    private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false)
+    private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
     {
         var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);
         _currentOctave = octave;
@@ -1345,7 +1352,9 @@ public sealed class MeasureCollector
             tremoloBeams,
             hasTieStart: hasTieAfter,
             hasSlurStart: hasSlurStartAfter,
-            hasSlurEnd: hasSlurEndAfter);
+            hasSlurEnd: hasSlurEndAfter,
+            hasBeamStart: hasBeamStartAfter,
+            hasBeamEnd: hasBeamEndAfter);
     }
 
     private RestItem CreateRestItem(RestSyntax rest)
@@ -1382,7 +1391,7 @@ public sealed class MeasureCollector
         };
     }
 
-    private ChordItem CreateChordItem(ChordSyntax chord)
+    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
     {
         var notes = new List<ChordNoteInfo>();
 
@@ -1426,7 +1435,7 @@ public sealed class MeasureCollector
         int dots = chord.Duration?.DotCount ?? 0;
         int tremoloBeams = ParseTremoloBeams(chord.Tremolo);
 
-        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams);
+        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter);
     }
 
     private (int staffPosition, int octave) CalculateStaffPosition(PitchSyntax pitch)

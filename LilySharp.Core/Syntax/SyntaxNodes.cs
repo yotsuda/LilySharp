@@ -306,6 +306,19 @@ public sealed class SlurSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Beam markers: [ or ]
+/// </summary>
+public sealed class BeamMarkerSyntax : SyntaxNode
+{
+    internal BeamMarkerSyntax(BeamMarkerGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public bool IsStart => ((SyntaxTokenNode)GetChild(0)!).Kind == SyntaxKind.OpenBracket;
+}
+
+/// <summary>
 /// Score declaration: score "title" { ... }
 /// </summary>
 public sealed class ScoreDeclarationSyntax : SyntaxNode

@@ -222,6 +222,7 @@ public enum SyntaxKind : ushort
     Break,              // line break
     Tie,
     Slur,
+    BeamMarker,
 
     // === Nodes: Repeat and Parallel ===
     RepeatExpression,

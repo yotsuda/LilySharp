@@ -49,6 +49,9 @@ public sealed class BeamDetector
         TimeSignature timeSig,
         List<BeamGroup> beamGroups)
     {
+        // Phase 0: Detect manual beam groups (c8[ d e f])
+        var manualRanges = DetectManualBeamGroups(measure, measureIndex, beamGroups);
+
         // First pass: collect groups at beat boundaries
         var beatGroups = new List<List<(MusicItem item, int index, Fraction startPos)>>();
         var currentGroup = new List<(MusicItem item, int index, Fraction startPos)>();
@@ -72,6 +75,19 @@ public sealed class BeamDetector
         {
             var item = measure.Items[i];
             var duration = GetDuration(item);
+
+            // Skip items covered by manual beam groups
+            if (IsInManualRange(i, manualRanges))
+            {
+                // Non-beamable break logic still applies for position tracking
+                if (currentGroup.Count >= 2)
+                {
+                    beatGroups.Add(new List<(MusicItem, int, Fraction)>(currentGroup));
+                }
+                currentGroup.Clear();
+                currentPosition = currentPosition + duration;
+                continue;
+            }
 
             if (IsBeamable(item))
             {
@@ -345,6 +361,84 @@ public sealed class BeamDetector
             return 4;
 
         return (int)chord.Notes.Average(n => n.StaffPosition);
+    }
+
+    /// <summary>
+    /// Detects manual beam groups from HasBeamStart/HasBeamEnd flags on notes/chords.
+    /// Returns the list of (startIndex, endIndex) ranges that are manually beamed.
+    /// </summary>
+    private List<(int start, int end)> DetectManualBeamGroups(
+        Measure measure,
+        int measureIndex,
+        List<BeamGroup> beamGroups)
+    {
+        var ranges = new List<(int start, int end)>();
+        int? beamStart = null;
+
+        for (int i = 0; i < measure.Items.Length; i++)
+        {
+            var item = measure.Items[i];
+            bool hasStart = item switch
+            {
+                NoteItem note => note.HasBeamStart,
+                ChordItem chord => chord.HasBeamStart,
+                _ => false
+            };
+            bool hasEnd = item switch
+            {
+                NoteItem note => note.HasBeamEnd,
+                ChordItem chord => chord.HasBeamEnd,
+                _ => false
+            };
+
+            if (hasStart)
+            {
+                beamStart = i;
+            }
+
+            if (hasEnd && beamStart != null)
+            {
+                int start = beamStart.Value;
+                int end = i;
+
+                // Collect beamable items in this range
+                var group = new List<(MusicItem item, int index, Fraction startPos)>();
+                Fraction pos = Fraction.Zero;
+                // Calculate starting position
+                for (int j = 0; j < start; j++)
+                    pos = pos + GetDuration(measure.Items[j]);
+
+                for (int j = start; j <= end; j++)
+                {
+                    var groupItem = measure.Items[j];
+                    if (IsBeamable(groupItem))
+                    {
+                        group.Add((groupItem, j, pos));
+                    }
+                    pos = pos + GetDuration(groupItem);
+                }
+
+                if (group.Count >= 2)
+                {
+                    beamGroups.Add(CreateBeamGroup(group, measureIndex));
+                    ranges.Add((start, end));
+                }
+
+                beamStart = null;
+            }
+        }
+
+        return ranges;
+    }
+
+    private static bool IsInManualRange(int index, List<(int start, int end)> ranges)
+    {
+        foreach (var (start, end) in ranges)
+        {
+            if (index >= start && index <= end)
+                return true;
+        }
+        return false;
     }
 }
 

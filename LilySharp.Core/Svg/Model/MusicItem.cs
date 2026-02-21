@@ -33,6 +33,10 @@ public sealed record NoteItem : MusicItem
     public bool HasSlurStart { get; }
     /// <summary>Whether this note ends a slur.</summary>
     public bool HasSlurEnd { get; }
+    /// <summary>Whether this note starts a manual beam group.</summary>
+    public bool HasBeamStart { get; }
+    /// <summary>Whether this note ends a manual beam group.</summary>
+    public bool HasBeamEnd { get; }
     private readonly int _sourcePosition;
 
     public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
@@ -44,7 +48,7 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this note has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
 
-    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false)
+    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false)
     {
         StaffPosition = staffPosition;
         BaseDuration = baseDuration;
@@ -55,6 +59,8 @@ public sealed record NoteItem : MusicItem
         HasTieStart = hasTieStart;
         HasSlurStart = hasSlurStart;
         HasSlurEnd = hasSlurEnd;
+        HasBeamStart = hasBeamStart;
+        HasBeamEnd = hasBeamEnd;
         _sourcePosition = sourcePosition;
     }
 }
@@ -98,6 +104,10 @@ public sealed record ChordItem : MusicItem
     public int Dots { get; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
     public int TremoloBeams { get; }
+    /// <summary>Whether this chord starts a manual beam group.</summary>
+    public bool HasBeamStart { get; }
+    /// <summary>Whether this chord ends a manual beam group.</summary>
+    public bool HasBeamEnd { get; }
     private readonly int _sourcePosition;
 
     public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
@@ -109,12 +119,14 @@ public sealed record ChordItem : MusicItem
     /// <summary>Whether this chord has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
 
-    public ChordItem(ImmutableArray<ChordNoteInfo> notes, Fraction baseDuration, int dots, int sourcePosition, int tremoloBeams = 0)
+    public ChordItem(ImmutableArray<ChordNoteInfo> notes, Fraction baseDuration, int dots, int sourcePosition, int tremoloBeams = 0, bool hasBeamStart = false, bool hasBeamEnd = false)
     {
         Notes = notes;
         BaseDuration = baseDuration;
         Dots = dots;
         TremoloBeams = Math.Clamp(tremoloBeams, 0, 3);
+        HasBeamStart = hasBeamStart;
+        HasBeamEnd = hasBeamEnd;
         _sourcePosition = sourcePosition;
     }
 }

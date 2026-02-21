@@ -145,6 +145,15 @@ internal sealed class SlurGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Beam markers: [ or ]
+/// </summary>
+internal sealed class BeamMarkerGreen : GreenSyntaxNode
+{
+    public BeamMarkerGreen(SyntaxToken bracketToken)
+        : base(SyntaxKind.BeamMarker, [bracketToken]) { }
+}
+
+/// <summary>
 /// Score declaration: score "title" { ... }
 /// </summary>
 internal sealed class ScoreDeclarationGreen : GreenSyntaxNode
