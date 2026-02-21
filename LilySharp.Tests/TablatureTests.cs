@@ -125,11 +125,8 @@ public class TablatureTests
         var renderer = new SvgRenderer();
         var svg = renderer.Render(score, layout);
 
-        // Should contain TAB clef text
-        Assert.Contains("class=\"tab-clef\"", svg);
-        Assert.Contains(">T<", svg);
-        Assert.Contains(">A<", svg);
-        Assert.Contains(">B<", svg);
+        // Should contain TAB clef glyph (Emmentaler clefs.tab = U+E08F)
+        Assert.Contains("\uE08F", svg);
 
         // Should contain fret numbers
         Assert.Contains("class=\"tab-fret\"", svg);
@@ -216,7 +213,7 @@ public class TablatureTests
         Assert.Contains("</svg>", svg);
 
         // Tab-specific elements
-        Assert.Contains("class=\"tab-clef\"", svg);
+        Assert.Contains("\uE08F", svg);  // TAB clef glyph
         Assert.Contains("class=\"tab-fret\"", svg);
         Assert.Contains("class=\"tab-bg\"", svg);
     }

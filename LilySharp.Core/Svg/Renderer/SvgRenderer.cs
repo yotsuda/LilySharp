@@ -466,17 +466,15 @@ public sealed class SvgRenderer
             _svg.AppendLine($"""  <line class="staff" x1="{startX}" y1="{lineY}" x2="{endX}" y2="{lineY}"/>""");
         }
 
-        // Draw "TAB" clef text (vertically centered on the staff)
+        // Draw TAB clef using Emmentaler font glyph (clefs.tab = U+E08F)
+        // Glyph metrics (at font-size 4): height=5.78ss, vertically centered at origin (±2.89ss)
+        // Width: 2.62ss. The glyph is designed for a 6-string (5ss) staff.
         double tabHeight = stringCount - 1;
         double tabCenterY = staffY + tabHeight / 2.0;
-        double tabFontSize = Math.Min(tabHeight * 0.38, 1.8);
-        double tabX = startX + 1.0;
-
-        // Draw T, A, B stacked vertically
-        double lineSpacing = tabHeight / 3.0;
-        _svg.AppendLine($"""  <text class="tab-clef" x="{tabX:F1}" y="{tabCenterY - lineSpacing + 0.3:F1}" text-anchor="middle" font-size="{tabFontSize:F1}" font-weight="bold" font-family="serif">T</text>""");
-        _svg.AppendLine($"""  <text class="tab-clef" x="{tabX:F1}" y="{tabCenterY + 0.3:F1}" text-anchor="middle" font-size="{tabFontSize:F1}" font-weight="bold" font-family="serif">A</text>""");
-        _svg.AppendLine($"""  <text class="tab-clef" x="{tabX:F1}" y="{tabCenterY + lineSpacing + 0.3:F1}" text-anchor="middle" font-size="{tabFontSize:F1}" font-weight="bold" font-family="serif">B</text>""");
+        // Scale font-size so glyph height matches staff height
+        // At font-size 4, glyph height = 5.78ss. We want it to fit tabHeight.
+        double tabClefFontSize = FontSize * (tabHeight / 5.78);
+        DrawGlyph(EmmentalerGlyphs.TabClef, startX, tabCenterY, fontSize: tabClefFontSize);
 
         // Find the matching staff and voice in the score
         var matchingStaff = FindStaffForLayout(score, staffLayout.StaffIndex);
@@ -1373,10 +1371,11 @@ public sealed class SvgRenderer
         }
     }
 
-    private void DrawGlyph(char glyph, double x, double y, int? sourcePosition = null)
+    private void DrawGlyph(char glyph, double x, double y, int? sourcePosition = null, double? fontSize = null)
     {
+        double fs = fontSize ?? FontSize;
         string dataAttr = sourcePosition.HasValue ? $" data-pos=\"{sourcePosition}\"" : "";
-        _svg.AppendLine($"  <text class=\"music\" x=\"{x:F1}\" y=\"{y:F1}\" font-size=\"{FontSize}\"{dataAttr}>{glyph}</text>");
+        _svg.AppendLine($"  <text class=\"music\" x=\"{x:F1}\" y=\"{y:F1}\" font-size=\"{fs:F2}\"{dataAttr}>{glyph}</text>");
     }
 
     private static int GetNoteValue(Semantics.Fraction duration)

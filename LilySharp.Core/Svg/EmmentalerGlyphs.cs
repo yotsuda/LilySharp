@@ -20,6 +20,8 @@ public static class EmmentalerGlyphs
     public const char FClef8vb = '\uE084';        // clefs.F_change (smaller, for clef changes)
     public const char FClef8va = '\uE083';        // same as FClef
     public const char CClef = '\uE07F';           // clefs.C
+    public const char TabClef = '\uE08F';          // clefs.tab (6-string TAB)
+    public const char TabClefChange = '\uE090';    // clefs.tab_change (smaller)
 
     // === Note heads ===
     public const char NoteheadWhole = '\uE0E8';       // noteheads.s0
