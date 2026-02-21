@@ -24,30 +24,26 @@ public sealed class PageLayouter
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-spacing.cc Page_spacer class
-    /// Uses dynamic programming to find optimal page breaks.
+    /// Uses dynamic programming to find optimal page breaks,
+    /// then applies force-based vertical spacing within each page.
     /// </remarks>
     public ImmutableArray<PageLayout> CreatePagesWithOptimalBreaking(
         ImmutableArray<SystemLayout> systems,
         double headerHeight,
-        double systemUpExtent,
-        double systemDownExtent)
+        ImmutableArray<(double upExtent, double downExtent)> systemExtents)
     {
         if (systems.Length == 0)
         {
             return ImmutableArray<PageLayout>.Empty;
         }
 
-        // Create SystemDetails for each system
+        // Create SystemDetails for each system using per-system skyline extents
         var systemDetails = new List<SystemDetails>();
-        foreach (var system in systems)
+        for (int i = 0; i < systems.Length; i++)
         {
-            // Calculate system height (staff + extents)
             double staffHeight = _options.StaffHeight;
-
-            // For now, use simple estimates for extents
-            // TODO: Calculate actual skyline extents per system
-            double topExtent = systemUpExtent;
-            double bottomExtent = systemDownExtent;
+            double topExtent = systemExtents[i].upExtent;
+            double bottomExtent = systemExtents[i].downExtent;
 
             systemDetails.Add(PageBreaker.CreateFromLayout(
                 staffHeight: staffHeight,
@@ -66,7 +62,7 @@ public sealed class PageLayouter
 
         var breakPoints = breaker.BreakIntoPages(systemDetails);
 
-        // Create pages from break points
+        // Create pages from break points with force-based Y positioning
         var pages = new List<PageLayout>();
         int systemStart = 0;
 
@@ -75,17 +71,37 @@ public sealed class PageLayouter
             int systemEnd = breakPoints[pageIdx];
             bool isFirstPage = pageIdx == 0;
 
-            // Collect systems for this page
+            // Reconstruct PageSpacing for this page to get the force
+            double topMargin = isFirstPage
+                ? _options.MarginTop + headerHeight
+                : _options.MarginTop;
+            var pageSpacing = new PageSpacing(_options.PageHeight, topMargin, _options.MarginBottom);
+            for (int sysIdx = systemStart; sysIdx < systemEnd; sysIdx++)
+                pageSpacing.AppendSystem(systemDetails[sysIdx]);
+
+            // Clamp force: don't compress below minimum spacing on overfull pages
+            double force = Math.Max(0, pageSpacing.Force);
+            if (double.IsNegativeInfinity(pageSpacing.Force) || double.IsNaN(pageSpacing.Force))
+                force = 0;
+
+            // Position systems using force-based spacing
             var pageSystems = new List<SystemLayout>();
-            double currentY = _options.MarginTop + (isFirstPage ? headerHeight + systemUpExtent + _options.TopSystemPadding : _options.TopSystemPadding);
+            double currentY = _options.MarginTop
+                + (isFirstPage ? headerHeight + systemExtents[systemStart].upExtent + _options.TopSystemPadding
+                               : systemExtents[systemStart].upExtent + _options.TopSystemPadding);
 
             for (int sysIdx = systemStart; sysIdx < systemEnd; sysIdx++)
             {
-                // Create new SystemLayout with updated Y position
-                var original = systems[sysIdx];
-                var updated = original with { Y = currentY };
-                pageSystems.Add(updated);
-                currentY += _options.StaffHeight + _options.SystemSpacing;
+                pageSystems.Add(systems[sysIdx] with { Y = currentY });
+
+                if (sysIdx < systemEnd - 1)
+                {
+                    var d = systemDetails[sysIdx];
+                    // Distance = staffHeight + bottomExtent + padding + springLength + force*flexibility + nextTopExtent
+                    currentY += _options.StaffHeight + d.BottomExtent
+                              + d.Padding + d.SpringLength + force * d.InverseHooke
+                              + systemExtents[sysIdx + 1].upExtent;
+                }
             }
 
             pages.Add(new PageLayout(

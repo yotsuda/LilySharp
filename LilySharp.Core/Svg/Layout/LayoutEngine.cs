@@ -86,13 +86,18 @@ public sealed class LayoutEngine
         // Build skylines for each system and track the maximum extent
         // Each system's down skyline gives us the bottommost point of musical elements
         double maxSystemBottomY = 0;
+        var perSystemExtents = new List<(double upExtent, double downExtent)>();
         for (int sysIdx = 0; sysIdx < systems.Count; sysIdx++)
         {
             var system = systems[sysIdx];
             var measureList = systemMeasures[sysIdx];
 
             // Build skylines for this system (relative to staff top = 0)
-            var (_, downSkyline) = _skylineBuilder.BuildSystemSkylines(measureList, system.Measures);
+            var (upSkyline, downSkyline) = _skylineBuilder.BuildSystemSkylines(measureList, system.Measures);
+
+            double upExt = LayoutUtilities.CalculateUpExtent(upSkyline);
+            double downExt = LayoutUtilities.CalculateDownExtent(downSkyline, _options.StaffHeight);
+            perSystemExtents.Add((upExt, downExt));
 
             // LILYPOND-REF: lily/skyline.cc:667-680 Skyline::max_height()
             // DOWN skyline's MaxHeight() returns the bottommost Y in real coordinates
@@ -116,7 +121,10 @@ public sealed class LayoutEngine
         if (_options.UseOptimalPageBreaking && _options.PageHeight > 0)
         {
             pages = _pageLayouter.CreatePagesWithOptimalBreaking(
-                systemsArray, headerHeight, systemUpExtent, systemDownExtent);
+                systemsArray, headerHeight, perSystemExtents.ToImmutableArray());
+
+            // Rebuild systemsArray from pages to use final Y positions
+            systemsArray = pages.SelectMany(p => p.Systems).ToImmutableArray();
         }
         else
         {
@@ -234,8 +242,9 @@ public sealed class LayoutEngine
         double systemUpExtent = LayoutUtilities.CalculateUpExtent(systemUpSkyline);
         double currentY = LayoutUtilities.CalculateFirstSystemY(headerBottom, systemUpExtent, _options.TopSystemPadding);
 
-        // Layout each system
+        // Layout each system (draft Y positions for measure layout)
         int firstMeasureIndex = 0;
+        var perSystemExtents = new List<(double upExtent, double downExtent)>();
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
             bool isFirstSystem = sysIdx == 0;
@@ -245,6 +254,12 @@ public sealed class LayoutEngine
             var measureLayouts = isFirstSystem
                 ? firstSystemMeasureLayouts
                 : _multiStaffLayouter.LayoutMeasures(score, sysIdx, firstMeasureIndex, measureCount, isLastSystem);
+
+            // Build per-system skyline extents
+            var (upSky, downSky) = _skylineBuilder.BuildSystemSkylines(score, measureLayouts);
+            double upExt = LayoutUtilities.CalculateUpExtent(upSky);
+            double downExt = LayoutUtilities.CalculateDownExtent(downSky, systemHeight);
+            perSystemExtents.Add((upExt, downExt));
 
             var system = new SystemLayout(
                 SystemIndex: sysIdx,
@@ -259,15 +274,40 @@ public sealed class LayoutEngine
             firstMeasureIndex += measureCount;
         }
 
-        double totalHeight = currentY - _options.SystemSpacing + _options.MarginTop;
-
         var systemsArray = systems.ToImmutableArray();
-        var page = new PageLayout(
-            PageIndex: 0,
-            Width: _options.PageWidth,
-            Height: totalHeight,
-            HeaderHeight: headerHeight,
-            Systems: systemsArray);
+        ImmutableArray<PageLayout> pages;
+        if (_options.UseOptimalPageBreaking && _options.PageHeight > 0)
+        {
+            pages = _pageLayouter.CreatePagesWithOptimalBreaking(
+                systemsArray, headerHeight, perSystemExtents.ToImmutableArray());
+        }
+        else
+        {
+            // Single page with content-driven height using skyline-based spacing
+            double skylineY = LayoutUtilities.CalculateFirstSystemY(headerBottom, perSystemExtents[0].upExtent, _options.TopSystemPadding);
+            var updatedSystems = new List<SystemLayout>();
+            for (int sysIdx = 0; sysIdx < systems.Count; sysIdx++)
+            {
+                updatedSystems.Add(systems[sysIdx] with { Y = skylineY });
+                if (sysIdx < systems.Count - 1)
+                {
+                    double downExtent = perSystemExtents[sysIdx].downExtent;
+                    double nextUpExtent = perSystemExtents[sysIdx + 1].upExtent;
+                    double padding = _options.SystemSpacing * 0.5;
+                    double minDistance = systemHeight + Math.Max(_options.SystemSpacing, downExtent + nextUpExtent + padding);
+                    skylineY += minDistance;
+                }
+            }
+            double totalHeight = skylineY + systemHeight + _options.MarginBottom;
+            systemsArray = updatedSystems.ToImmutableArray();
+            var page = new PageLayout(
+                PageIndex: 0,
+                Width: _options.PageWidth,
+                Height: totalHeight,
+                HeaderHeight: headerHeight,
+                Systems: systemsArray);
+            pages = ImmutableArray.Create(page);
+        }
 
         // For multi-staff scores, calculate beams/ties/slurs for each staff
         var allBeamLayouts = new List<BeamLayout>();
@@ -335,7 +375,7 @@ public sealed class LayoutEngine
         var tupletBracketLayouts = TupletBracketEngraver.Calculate(score.TupletBrackets, systemsArray, allMeasureLayouts, score.StaffGroups[0].PrimaryStaff.PrimaryVoice.Measures);
 
         return new ScoreLayout(
-            ImmutableArray.Create(page),
+            pages,
             systemsArray,
             beamLayouts,
             tieLayouts,
