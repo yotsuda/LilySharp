@@ -49,7 +49,6 @@ public sealed class LayoutEngine
         // Layout systems and build skylines in a single pass
         var systems = new List<SystemLayout>();
         var perSystemExtents = new List<(double upExtent, double downExtent)>();
-        double maxSystemBottomY = 0;
         int firstMeasureIndex = 0;
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
@@ -63,17 +62,13 @@ public sealed class LayoutEngine
             perSystemExtents.Add((
                 LayoutUtilities.CalculateUpExtent(upSkyline),
                 LayoutUtilities.CalculateDownExtent(downSkyline, _options.StaffHeight)));
-            double bottomExtent = downSkyline.IsEmpty
-                ? _options.StaffHeight : Math.Max(_options.StaffHeight, downSkyline.MaxHeight());
-            maxSystemBottomY = Math.Max(maxSystemBottomY, system.Y + bottomExtent);
 
             currentY += _options.StaffHeight + _options.SystemSpacing;
             firstMeasureIndex += systemMeasures[sysIdx].Count;
         }
 
         var (pages, systemsArray) = CreatePages(
-            systems.ToImmutableArray(), headerHeight, perSystemExtents,
-            maxSystemBottomY + _options.MarginBottom);
+            systems.ToImmutableArray(), headerHeight, perSystemExtents, _options.StaffHeight);
 
         var beamLayouts = _elementCoordinator.LayoutBeams(score, systemsArray);
         var tieLayouts = _elementCoordinator.LayoutTies(score, systemsArray);
@@ -134,18 +129,8 @@ public sealed class LayoutEngine
             firstMeasureIndex += measureCount;
         }
 
-        var systemsArray = systems.ToImmutableArray();
-        ImmutableArray<PageLayout> pages;
-        if (_options.UseOptimalPageBreaking && _options.PageHeight > 0)
-        {
-            pages = _pageLayouter.CreatePagesWithOptimalBreaking(
-                systemsArray, headerHeight, perSystemExtents.ToImmutableArray());
-        }
-        else
-        {
-            (pages, systemsArray) = CreateMultiStaffPages(
-                systems, headerHeight, perSystemExtents, systemHeight);
-        }
+        var (pages, systemsArray) = CreatePages(
+            systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight);
 
         // Calculate beams/ties/slurs per staff
         var allBeamLayouts = new List<BeamLayout>();
@@ -182,7 +167,7 @@ public sealed class LayoutEngine
 
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
         ImmutableArray<SystemLayout> systems, double headerHeight,
-        List<(double upExtent, double downExtent)> perSystemExtents, double totalHeight)
+        List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight)
     {
         if (_options.UseOptimalPageBreaking && _options.PageHeight > 0)
         {
@@ -190,22 +175,16 @@ public sealed class LayoutEngine
                 systems, headerHeight, perSystemExtents.ToImmutableArray());
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
-        var page = new PageLayout(0, _options.PageWidth, totalHeight, headerHeight, systems);
-        return (ImmutableArray.Create(page), systems);
-    }
 
-    private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreateMultiStaffPages(
-        List<SystemLayout> systems, double headerHeight,
-        List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight)
-    {
+        // Recalculate Y positions using skyline extents to avoid overlaps
         double headerBottom = _options.MarginTop + headerHeight;
         double skylineY = LayoutUtilities.CalculateFirstSystemY(
             headerBottom, perSystemExtents[0].upExtent, _options.TopSystemPadding);
         var updatedSystems = new List<SystemLayout>();
-        for (int i = 0; i < systems.Count; i++)
+        for (int i = 0; i < systems.Length; i++)
         {
             updatedSystems.Add(systems[i] with { Y = skylineY });
-            if (i < systems.Count - 1)
+            if (i < systems.Length - 1)
             {
                 double padding = _options.SystemSpacing * 0.5;
                 double minDistance = systemHeight + Math.Max(_options.SystemSpacing,
