@@ -476,7 +476,6 @@ function getPreviewHtml(fontUri: string, cspSource: string): string {
             opacity: 1;
         }
         .highlight {
-            fill: #ff6600 !important;
             filter: drop-shadow(0 0 4px #ff6600);
         }
         .error {
@@ -511,7 +510,6 @@ function getPreviewHtml(fontUri: string, cspSource: string): string {
                 filter: invert(1) hue-rotate(180deg);
             }
             .highlight {
-                fill: #00ccff !important;
                 filter: drop-shadow(0 0 4px #00ccff);
             }
             .error {
@@ -564,10 +562,24 @@ function getPreviewHtml(fontUri: string, cspSource: string): string {
             }, 1500);
         }
 
+        function getHighlightColor() {
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? '#00ccff' : '#ff6600';
+        }
+
         function highlightNearestElement(cursorPos) {
-            document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+            // Clear previous highlights
+            document.querySelectorAll('.highlight').forEach(el => {
+                el.classList.remove('highlight');
+                if (el.tagName.toLowerCase() === 'line') {
+                    el.setAttribute('stroke', 'black');
+                } else {
+                    el.removeAttribute('fill');
+                }
+            });
+
+            // Find nearest data-pos value
             const elements = document.querySelectorAll('[data-pos]');
-            let nearest = null;
+            let nearestPos = -1;
             let nearestDist = Infinity;
             elements.forEach(el => {
                 const pos = parseInt(el.getAttribute('data-pos'), 10);
@@ -575,12 +587,23 @@ function getPreviewHtml(fontUri: string, cspSource: string): string {
                     const dist = cursorPos - pos;
                     if (dist < nearestDist) {
                         nearestDist = dist;
-                        nearest = el;
+                        nearestPos = pos;
                     }
                 }
             });
-            if (nearest && nearestDist < HIGHLIGHT_THRESHOLD) {
-                nearest.classList.add('highlight');
+
+            // Highlight ALL elements with that data-pos
+            if (nearestPos >= 0 && nearestDist < HIGHLIGHT_THRESHOLD) {
+                const color = getHighlightColor();
+                const matches = document.querySelectorAll('[data-pos="' + nearestPos + '"]');
+                matches.forEach(el => {
+                    el.classList.add('highlight');
+                    if (el.tagName.toLowerCase() === 'line') {
+                        el.setAttribute('stroke', color);
+                    } else {
+                        el.setAttribute('fill', color);
+                    }
+                });
             }
         }
 

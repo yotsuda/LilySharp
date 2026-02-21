@@ -651,7 +651,6 @@ public sealed class SvgRenderer
 
         _svg.AppendLine("  .music { font-family: 'Emmentaler', serif; }");
         _svg.AppendLine($"  .staff {{ stroke: black; stroke-width: {StaffLineThickness:F2}; }}");
-        _svg.AppendLine($"  .stem {{ stroke: black; stroke-width: {StemThickness:F2}; }}");
         _svg.AppendLine($"  .barline {{ stroke: black; stroke-width: {ThinBarlineThickness:F2}; }}");
         _svg.AppendLine($"  .ledger {{ stroke: black; stroke-width: {LegerLineThickness:F2}; }}");
         _svg.AppendLine("  .title { font-family: serif; font-size: 0.6; font-weight: bold; }");
@@ -983,7 +982,7 @@ public sealed class SvgRenderer
 
             // Accidental is drawn to the left of notehead with a gap
             double accidentalX = noteheadLeftX - accWidth - accNoteGap;
-            DrawGlyph(accGlyph, accidentalX, noteY);
+            DrawGlyph(accGlyph, accidentalX, noteY, note.SourcePosition);
         }
 
         // Draw ledger lines
@@ -1018,7 +1017,7 @@ public sealed class SvgRenderer
                 stemEndY = CalculateStemEndY(stemAttachY, stemUp, systemY);
             }
 
-            _svg.AppendLine($"""  <line class="stem" x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}"/>""");
+            _svg.AppendLine($"""  <line x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}" stroke="black" stroke-width="{StemThickness:F2}" data-pos="{note.SourcePosition}"/>""");
 
             // Draw flag (only if not beamed)
             if (!_beamedStemEndYs.ContainsKey(note))
@@ -1026,7 +1025,7 @@ public sealed class SvgRenderer
                 var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
-                    DrawGlyph(flag.Value, stemX, stemEndY);
+                    DrawGlyph(flag.Value, stemX, stemEndY, note.SourcePosition);
                 }
 
             // Draw tremolo (if present)
@@ -1055,7 +1054,7 @@ public sealed class SvgRenderer
             }
 
             double dotY = noteY + dotYOffset;
-            DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, dotY);
+            DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, dotY, note.SourcePosition);
         }
     }
 
@@ -1103,7 +1102,7 @@ public sealed class SvgRenderer
                     "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
                     _ => EmmentalerGlyphs.AccidentalNatural
                 };
-                DrawGlyph(accGlyph, x + accLayout.XOffset, noteY);
+                DrawGlyph(accGlyph, x + accLayout.XOffset, noteY, chord.SourcePosition);
             }
 
             // Draw ledger lines
@@ -1143,7 +1142,7 @@ public sealed class SvgRenderer
                 stemEndY = CalculateStemEndY(stemAttachY, stemUp, systemY);
             }
 
-            _svg.AppendLine($"""  <line class="stem" x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}"/>""");
+            _svg.AppendLine($"""  <line x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}" stroke="black" stroke-width="{StemThickness:F2}" data-pos="{chord.SourcePosition}"/>""");
 
             // Draw flag (only if not beamed)
             if (!_beamedStemEndYs.ContainsKey(chord))
@@ -1151,7 +1150,7 @@ public sealed class SvgRenderer
                 var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
-                    DrawGlyph(flag.Value, stemX, stemEndY);
+                    DrawGlyph(flag.Value, stemX, stemEndY, chord.SourcePosition);
                 }
 
             // Draw tremolo (if present)
