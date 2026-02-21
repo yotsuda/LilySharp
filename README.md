@@ -230,9 +230,7 @@ The LSP server supports incremental text synchronization:
 
 ### Planned
 
-- [ ] SVG dynamics/articulations/lyrics rendering
 - [ ] MusicXML export (full section/structure support)
-- [ ] Chord notation
 - [ ] Multi-file projects
 - [ ] LilyPond → LilySharp conversion tool
 

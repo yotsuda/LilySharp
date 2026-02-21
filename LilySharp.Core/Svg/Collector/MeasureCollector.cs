@@ -468,7 +468,10 @@ public sealed class MeasureCollector
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
             voltaBrackets: _voltaBrackets.ToImmutableArray(),
-            tupletBrackets: _tupletBrackets.ToImmutableArray());
+            tupletBrackets: _tupletBrackets.ToImmutableArray(),
+            dynamics: _dynamics.ToImmutableArray(),
+            articulations: _articulations.ToImmutableArray(),
+            graceNotes: _graceNotes.ToImmutableArray());
     }
 
     private List<Measure> CollectMeasuresForVoice(string voiceName)

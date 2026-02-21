@@ -48,6 +48,15 @@ public sealed record MultiStaffScore
     /// <summary>Tuplet brackets.</summary>
     public ImmutableArray<TupletBracketItem> TupletBrackets { get; }
 
+    /// <summary>Dynamic markings.</summary>
+    public ImmutableArray<DynamicItem> Dynamics { get; }
+
+    /// <summary>Articulation marks.</summary>
+    public ImmutableArray<ArticulationItem> Articulations { get; }
+
+    /// <summary>Grace notes.</summary>
+    public ImmutableArray<GraceNoteItem> GraceNotes { get; }
+
     /// <summary>Whether this score has a grand staff.</summary>
     public bool HasGrandStaff => StaffGroups.Any(g => g.IsGrandStaff);
 
@@ -68,7 +77,10 @@ public sealed record MultiStaffScore
         ImmutableArray<MusicMarkItem>? musicMarks = null,
         ImmutableArray<CustomTextItem>? customTexts = null,
         ImmutableArray<VoltaBracketItem>? voltaBrackets = null,
-        ImmutableArray<TupletBracketItem>? tupletBrackets = null)
+        ImmutableArray<TupletBracketItem>? tupletBrackets = null,
+        ImmutableArray<DynamicItem>? dynamics = null,
+        ImmutableArray<ArticulationItem>? articulations = null,
+        ImmutableArray<GraceNoteItem>? graceNotes = null)
     {
         if (staffGroups.Length == 0)
             throw new ArgumentException("Score must have at least one staff group", nameof(staffGroups));
@@ -84,6 +96,9 @@ public sealed record MultiStaffScore
         CustomTexts = customTexts ?? ImmutableArray<CustomTextItem>.Empty;
         VoltaBrackets = voltaBrackets ?? ImmutableArray<VoltaBracketItem>.Empty;
         TupletBrackets = tupletBrackets ?? ImmutableArray<TupletBracketItem>.Empty;
+        Dynamics = dynamics ?? ImmutableArray<DynamicItem>.Empty;
+        Articulations = articulations ?? ImmutableArray<ArticulationItem>.Empty;
+        GraceNotes = graceNotes ?? ImmutableArray<GraceNoteItem>.Empty;
     }
 
     /// <summary>
@@ -106,7 +121,10 @@ public sealed record MultiStaffScore
             score.MusicMarks,
             score.CustomTexts,
             score.VoltaBrackets,
-            score.TupletBrackets);
+            score.TupletBrackets,
+            score.Dynamics,
+            score.Articulations,
+            score.GraceNotes);
     }
 
     /// <summary>Number of measures (from first staff of first group).</summary>
