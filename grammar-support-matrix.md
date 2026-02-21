@@ -27,7 +27,7 @@
 | SilentSectionRef (~) | ✅ | structure直下のみ |
 | MusicMark (@) | ✅ | |
 | CustomText (_"") | ✅ | |
-| VoltaBracket [1. ] | ⚠️ | ~がパースエラー |
+| VoltaBracket [1. ] | ✅ | ~対応済み |
 | RepeatBlock |: :| | ✅ | |
 
 ### 2. Semantic Layer (Binder/StructureExpander)
@@ -66,18 +66,11 @@
 | MultiVoice | ✅ | |
 | SystemBreak | ✅ | Knuth-Plass最適改行 |
 
-## 発見した問題
-
-1. **VoltaBracket内の~がパースエラー**
-   - `[2. ~Verse]` → "Expected 'Identifier', found 'Tilde'"
-   - 文法定義では許可されているがパーサーが未対応
-
 ## 次のアクション候補
 
 | 優先度 | タスク | 工数 |
 |:------:|--------|------|
-| 1 | VoltaBracket内~対応 (Parser) | 1h |
-| 2 | タブ譜SVGレンダリング | 4h |
-| 3 | 連桁の手動制御 c8[ d e f] | 2h |
-| 4 | MusicXML エクスポート (section/structure対応) | 8h |
-| 5 | LilyPond → LilySharp 変換ツール | 16h+ |
+| 1 | タブ譜SVGレンダリング | 4h |
+| 2 | 連桁の手動制御 c8[ d e f] | 2h |
+| 3 | MusicXML エクスポート (section/structure対応) | 8h |
+| 4 | LilyPond → LilySharp 変換ツール | 16h+ |
