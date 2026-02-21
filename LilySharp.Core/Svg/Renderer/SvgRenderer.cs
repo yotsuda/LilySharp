@@ -1258,12 +1258,52 @@ public sealed class SvgRenderer
     {
         double labelY = systemY - 1.5;  // 1.5 staff spaces above
         double padding = 0.4;  // staff spaces
-        double boxWidth = label.Length * 0.6 + padding * 2;  // rough estimate in staff spaces
+        double textWidth = MeasureSerifBoldText(label, fontSize: 1.5);
+        double boxWidth = textWidth + padding * 2;
         double boxHeight = 2;  // staff spaces
 
-        _svg.AppendLine($"""  <rect x="{x - padding}" y="{labelY - boxHeight + 0.5}" width="{boxWidth}" height="{boxHeight}" fill="none" stroke="black" stroke-width="0.1"/>""");
+        _svg.AppendLine($"""  <rect x="{x - padding:F2}" y="{labelY - boxHeight + 0.5:F2}" width="{boxWidth:F2}" height="{boxHeight:F2}" fill="none" stroke="black" stroke-width="0.1"/>""");
         _svg.AppendLine($"""  <text class="section-label" font-size="1.5" x="{x}" y="{labelY}">{EscapeXml(label)}</text>""");
     }
+
+    /// <summary>
+    /// Measures text width using Times New Roman Bold advance widths (per 1000 em units).
+    /// This is the standard fallback for CSS <c>font-family: serif; font-weight: bold</c>.
+    /// </summary>
+    private static double MeasureSerifBoldText(string text, double fontSize)
+    {
+        double totalAdvance = 0;
+        foreach (char c in text)
+            totalAdvance += GetSerifBoldAdvanceWidth(c);
+        return totalAdvance / 1000.0 * fontSize;
+    }
+
+    private static int GetSerifBoldAdvanceWidth(char c) => c switch
+    {
+        // Times New Roman Bold — advance widths per 1000 em units
+        // Uppercase
+        'A' => 722, 'B' => 667, 'C' => 722, 'D' => 722, 'E' => 667,
+        'F' => 611, 'G' => 778, 'H' => 778, 'I' => 389, 'J' => 500,
+        'K' => 778, 'L' => 667, 'M' => 944, 'N' => 722, 'O' => 778,
+        'P' => 611, 'Q' => 778, 'R' => 722, 'S' => 556, 'T' => 667,
+        'U' => 722, 'V' => 722, 'W' => 1000, 'X' => 722, 'Y' => 722,
+        'Z' => 667,
+        // Lowercase
+        'a' => 500, 'b' => 556, 'c' => 444, 'd' => 556, 'e' => 444,
+        'f' => 333, 'g' => 500, 'h' => 556, 'i' => 278, 'j' => 333,
+        'k' => 556, 'l' => 278, 'm' => 833, 'n' => 556, 'o' => 500,
+        'p' => 556, 'q' => 556, 'r' => 444, 's' => 389, 't' => 333,
+        'u' => 556, 'v' => 500, 'w' => 722, 'x' => 500, 'y' => 500,
+        'z' => 444,
+        // Digits
+        '0' => 500, '1' => 500, '2' => 500, '3' => 500, '4' => 500,
+        '5' => 500, '6' => 500, '7' => 500, '8' => 500, '9' => 500,
+        // Common punctuation
+        ' ' => 250, '.' => 250, ',' => 250, ':' => 333, ';' => 333,
+        '-' => 333, '\'' => 278, '"' => 500, '(' => 333, ')' => 333,
+        '!' => 333, '?' => 500,
+        _ => 500, // fallback: median width
+    };
 
     private double DrawKeySignature(KeySignature keySig, string clef, double x, double systemY)
     {
