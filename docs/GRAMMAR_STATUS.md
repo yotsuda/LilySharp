@@ -25,7 +25,7 @@
 | スコア | `render score "file.svg" { }` | ✅ | |
 | 譜表 | `staff { part }` | ✅ | |
 | 大譜表 | `grandStaff { staff staff }` | ✅ | |
-| タブ譜 | `tab { }` | ⚠️ | パース可、SVG描画未実装 |
+| タブ譜 | `tab standard { part }` | ✅ | Guitar/Bass/Bass5/Ukulele対応 |
 | MIDI | `render midi "file.mid" { }` | ✅ | |
 
 ### 4. 音楽要素
@@ -76,5 +76,4 @@
 
 ## 既知の問題
 
-1. **タブ譜の SVG 描画**: パースとフレット計算は実装済み、SVG レンダリングが未実装
-2. **連桁の手動制御**: `c8[ d e f]` 構文が未実装
+1. **連桁の手動制御**: `c8[ d e f]` 構文が未実装

@@ -467,13 +467,12 @@ public sealed class SvgRenderer
         }
 
         // Draw TAB clef using Emmentaler font glyph (clefs.tab = U+E08F)
-        // Glyph metrics (at font-size 4): height=5.78ss, vertically centered at origin (±2.89ss)
-        // Width: 2.62ss. The glyph is designed for a 6-string (5ss) staff.
+        // The glyph is designed for 6-string staves (5ss height at font-size 4).
+        // LilyPond always renders it at the same size, centered on the staff.
+        // For fewer strings (e.g., 4-string bass), the glyph overflows above/below.
         double tabHeight = stringCount - 1;
         double tabCenterY = staffY + tabHeight / 2.0;
-        // Scale font-size so glyph height matches staff height
-        // At font-size 4, glyph height = 5.78ss. We want it to fit tabHeight.
-        double tabClefFontSize = FontSize * (tabHeight / 5.78);
+        double tabClefFontSize = FontSize * (5.0 / 5.78);
         DrawGlyph(EmmentalerGlyphs.TabClef, startX, tabCenterY, fontSize: tabClefFontSize);
 
         // Find the matching staff and voice in the score
