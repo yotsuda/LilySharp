@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -10,7 +11,8 @@ public sealed record StaffLayout(
     int StaffIndex,
     ClefType Clef,
     double Y,           // Y position relative to system top
-    double Height       // Staff height (typically 4 * staffSpace)
+    double Height,      // Staff height (typically 4 * staffSpace)
+    TuningType? Tuning = null  // Tuning for tablature staves
 );
 
 /// <summary>

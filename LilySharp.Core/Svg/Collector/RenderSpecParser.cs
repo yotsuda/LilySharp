@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
+using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Collector;
 
@@ -62,6 +63,12 @@ public static class RenderSpecParser
                     var staffSpec = ParseStaff(staff);
                     if (staffSpec != null)
                         items.Add(new SingleStaffSpec(staffSpec));
+                    break;
+
+                case TabRenderSyntax tab:
+                    var tabSpec = ParseTab(tab);
+                    if (tabSpec != null)
+                        items.Add(tabSpec);
                     break;
             }
         }
@@ -201,6 +208,31 @@ public static class RenderSpecParser
 
         return new StaffSpec(clef, voiceName);
     }
+    private static TabStaffSpec? ParseTab(TabRenderSyntax tab)
+    {
+        // TabRenderGreen children: [tabKeyword, tuning, openBrace, partName, closeBrace]
+        var tuningToken = tab.GetChild(1) as SyntaxTokenNode;
+        var partNameToken = tab.GetChild(3) as SyntaxTokenNode;
+
+        if (tuningToken == null || partNameToken == null)
+            return null;
+
+        string tuningName = tuningToken.Text.ToLowerInvariant();
+        string voiceName = partNameToken.Text;
+
+        TuningType tuning = tuningName switch
+        {
+            "standard" or "guitar" => TuningType.Guitar,
+            "bass" => TuningType.Bass,
+            "bass5" => TuningType.Bass5,
+            "ukulele" or "uke" => TuningType.Ukulele,
+            _ => TuningType.Guitar
+        };
+
+        var staffSpec = new StaffSpec(ClefType.Tab, voiceName);
+        return new TabStaffSpec(staffSpec, tuning);
+    }
+
     /// <summary>
     /// Looks up the clef from a part definition by name.
     /// </summary>

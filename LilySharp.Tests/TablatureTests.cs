@@ -1,3 +1,6 @@
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Tablature;
 using Xunit;
@@ -87,5 +90,134 @@ public class TablatureTests
         // E1 (28) on low E string = fret 0
         var (stringNum, fret) = Tunings.CalculateFret(28, Tunings.Bass);
         Assert.Equal(0, fret);
+    }
+
+    [Fact]
+    public void RenderTabStaff_ContainsTabClefAndFretNumbers()
+    {
+        var source = """
+            section Main {
+                guitar {
+                    e,4 a, d g |
+                }
+            }
+
+            structure { Main }
+
+            render score "test.svg" {
+                staff treble { guitar }
+                tab standard { guitar }
+            }
+            """;
+
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
+
+        var renderSpec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(renderSpec);
+
+        var collector = new MeasureCollector();
+        var score = collector.CollectMultiStaff(tree, renderSpec);
+
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+
+        var renderer = new SvgRenderer();
+        var svg = renderer.Render(score, layout);
+
+        // Should contain TAB clef text
+        Assert.Contains("class=\"tab-clef\"", svg);
+        Assert.Contains(">T<", svg);
+        Assert.Contains(">A<", svg);
+        Assert.Contains(">B<", svg);
+
+        // Should contain fret numbers
+        Assert.Contains("class=\"tab-fret\"", svg);
+
+        // Should contain 6 staff lines for guitar tab (in addition to 5 for treble)
+        var staffLineCount = System.Text.RegularExpressions.Regex.Matches(svg, "class=\"staff\"").Count;
+        Assert.True(staffLineCount >= 11, $"Expected at least 11 staff lines (5 treble + 6 tab), got {staffLineCount}");
+    }
+
+    [Fact]
+    public void RenderTabStaff_HasCorrectNumberOfStrings()
+    {
+        var source = """
+            section Main {
+                melody {
+                    e,4 a, d g |
+                }
+            }
+
+            structure { Main }
+
+            render score "test.svg" {
+                tab standard { melody }
+            }
+            """;
+
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
+
+        var renderSpec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(renderSpec);
+
+        // Verify the render spec contains a tab item
+        Assert.Contains(renderSpec.Items, i => i is TabStaffSpec);
+        var tabItem = renderSpec.Items.OfType<TabStaffSpec>().First();
+        Assert.Equal(Core.Syntax.TuningType.Guitar, tabItem.Tuning);
+    }
+
+    [Fact]
+    public void GuitarTabSample_EndToEnd()
+    {
+        // Simplified version of guitar-tab.lys
+        var source = """
+            title "Guitar Tab Demo"
+            tempo 120
+            time 4/4
+
+            part guitar {
+              clef: treble
+            }
+
+            section Main {
+              guitar {
+                e,4 a, d g | b4 e' a b |
+              }
+            }
+
+            structure { Main }
+
+            render score "guitar-tab.svg" {
+              staff { guitar }
+              tab standard { guitar }
+            }
+            """;
+
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
+
+        var renderSpec = RenderSpecParser.FindByName(tree, "score");
+        Assert.NotNull(renderSpec);
+        Assert.Equal(2, renderSpec.Items.Length); // staff + tab
+
+        var collector = new MeasureCollector();
+        var score = collector.CollectMultiStaff(tree, renderSpec);
+
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+
+        var renderer = new SvgRenderer();
+        var svg = renderer.Render(score, layout);
+
+        // Basic SVG structure
+        Assert.Contains("<svg", svg);
+        Assert.Contains("</svg>", svg);
+
+        // Tab-specific elements
+        Assert.Contains("class=\"tab-clef\"", svg);
+        Assert.Contains("class=\"tab-fret\"", svg);
+        Assert.Contains("class=\"tab-bg\"", svg);
     }
 }

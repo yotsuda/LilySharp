@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Svg.Collector;
 
@@ -37,6 +38,11 @@ public sealed record SingleStaffSpec(StaffSpec Staff) : RenderItemSpec;
 public sealed record GrandStaffRenderSpec(GrandStaffSpec GrandStaff) : RenderItemSpec;
 
 /// <summary>
+/// Tablature staff render item.
+/// </summary>
+public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning) : RenderItemSpec;
+
+/// <summary>
 /// Complete render specification parsed from a render block.
 /// </summary>
 public sealed record RenderSpec(
@@ -65,6 +71,9 @@ public sealed record RenderSpec(
                     foreach (var staff in grand.GrandStaff.Staves)
                         yield return staff.VoiceName;
                     break;
+                case TabStaffSpec tab:
+                    yield return tab.Staff.VoiceName;
+                    break;
             }
         }
     }
@@ -86,6 +95,11 @@ public sealed record RenderSpec(
                         .Select(s => Staff.Create(s.Clef, getVoice(s.VoiceName)))
                         .ToArray();
                     yield return StaffGroup.CreateGrandStaff(staves);
+                    break;
+
+                case TabStaffSpec tab:
+                    var tabStaff = Staff.CreateTab(tab.Tuning, getVoice(tab.Staff.VoiceName));
+                    yield return StaffGroup.CreateSingle(tabStaff);
                     break;
             }
         }

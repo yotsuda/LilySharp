@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -42,7 +43,10 @@ public sealed class MultiStaffLayouter
             }
             else
             {
-                height += staffHeight * group.StaffCount;
+                foreach (var staff in group.Staves)
+                {
+                    height += GetStaffHeight(staff);
+                }
                 if (group.StaffCount > 1)
                     height += grandStaffSpacing * (group.StaffCount - 1);
             }
@@ -52,6 +56,21 @@ public sealed class MultiStaffLayouter
         }
 
         return height;
+    }
+
+    /// <summary>
+    /// Gets the height of a staff in staff spaces.
+    /// Standard staves have 4 staff spaces (5 lines).
+    /// Tab staves have (stringCount - 1) staff spaces.
+    /// </summary>
+    private double GetStaffHeight(Staff staff)
+    {
+        if (staff.IsTab && staff.Tuning.HasValue)
+        {
+            int stringCount = Tunings.GetStringCount(staff.Tuning.Value);
+            return stringCount - 1; // e.g., Guitar: 5, Bass: 3
+        }
+        return _options.StaffHeight;
     }
 
     /// <summary>
@@ -103,7 +122,8 @@ public sealed class MultiStaffLayouter
                 StaffIndex: startIndex + i,
                 Clef: staff.Clef,
                 Y: currentY,
-                Height: staffHeight));
+                Height: staffHeight,
+                Tuning: staff.Tuning));
 
             if (i < group.Staves.Length - 1)
                 currentY += staffHeight + staffSpacing;
@@ -137,19 +157,22 @@ public sealed class MultiStaffLayouter
         for (int i = 0; i < group.Staves.Length; i++)
         {
             var staff = group.Staves[i];
+            double thisStaffHeight = GetStaffHeight(staff);
             staffLayouts.Add(new StaffLayout(
                 StaffIndex: startIndex + i,
                 Clef: staff.Clef,
                 Y: currentY,
-                Height: staffHeight));
+                Height: thisStaffHeight,
+                Tuning: staff.Tuning));
 
             if (i < group.Staves.Length - 1)
-                currentY += staffHeight + staffSpacing;
+                currentY += thisStaffHeight + staffSpacing;
         }
 
+        double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
         double totalHeight = group.StaffCount == 1
-            ? staffHeight
-            : currentY + staffHeight - y;
+            ? lastStaffHeight
+            : currentY + lastStaffHeight - y;
 
         return StaffGroupLayout.CreateSingle(
             staffLayouts[0],

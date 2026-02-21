@@ -12,7 +12,8 @@ public enum ClefType
     Bass,
     Alto,
     Tenor,
-    Treble8Below
+    Treble8Below,
+    Tab
 }
 
 /// <summary>
@@ -25,7 +26,8 @@ public enum ClefType
 /// </remarks>
 public sealed record Staff(
     ClefType Clef,
-    ImmutableArray<Voice> Voices
+    ImmutableArray<Voice> Voices,
+    TuningType? Tuning = null
 )
 {
     /// <summary>The primary voice (first voice).</summary>
@@ -37,11 +39,20 @@ public sealed record Staff(
     /// <summary>Number of measures (from primary voice).</summary>
     public int MeasureCount => PrimaryVoice.Measures.Length;
 
+    /// <summary>Whether this is a tablature staff.</summary>
+    public bool IsTab => Clef == ClefType.Tab;
+
     /// <summary>
     /// Creates a single-voice staff.
     /// </summary>
     public static Staff Create(ClefType clef, Voice voice)
         => new(clef, ImmutableArray.Create(voice));
+
+    /// <summary>
+    /// Creates a tablature staff with the specified tuning.
+    /// </summary>
+    public static Staff CreateTab(TuningType tuning, Voice voice)
+        => new(ClefType.Tab, ImmutableArray.Create(voice), tuning);
 
     /// <summary>
     /// Parses a clef string to ClefType.
@@ -53,6 +64,7 @@ public sealed record Staff(
         "alto" => ClefType.Alto,
         "tenor" => ClefType.Tenor,
         "treble_8" => ClefType.Treble8Below,
+        "tab" => ClefType.Tab,
         _ => ClefType.Treble
     };
 

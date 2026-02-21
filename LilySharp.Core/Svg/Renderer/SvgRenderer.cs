@@ -2,6 +2,8 @@ using System.Text;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
+using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Renderer;
 
@@ -320,6 +322,13 @@ public sealed class SvgRenderer
         double endX,
         bool isFirstSystem)
     {
+        // Route tab staves to dedicated method
+        if (staffLayout.Clef == ClefType.Tab)
+        {
+            DrawTabStaff(score, scoreLayout, system, staffLayout, staffY, startX, endX);
+            return;
+        }
+
         // Draw 5 staff lines
         for (int i = 0; i < 5; i++)
         {
@@ -433,6 +442,174 @@ public sealed class SvgRenderer
         return null;
     }
 
+    // =====================================================
+    // Tablature rendering
+    // =====================================================
+
+    private void DrawTabStaff(
+        MultiStaffScore score,
+        ScoreLayout scoreLayout,
+        SystemLayout system,
+        StaffLayout staffLayout,
+        double staffY,
+        double startX,
+        double endX)
+    {
+        var tuning = staffLayout.Tuning ?? TuningType.Guitar;
+        int stringCount = Tunings.GetStringCount(tuning);
+        int[] tuningArray = Tunings.GetTuning(tuning);
+
+        // Draw staff lines (one per string)
+        for (int i = 0; i < stringCount; i++)
+        {
+            double lineY = staffY + i;
+            _svg.AppendLine($"""  <line class="staff" x1="{startX}" y1="{lineY}" x2="{endX}" y2="{lineY}"/>""");
+        }
+
+        // Draw "TAB" clef text (vertically centered on the staff)
+        double tabHeight = stringCount - 1;
+        double tabCenterY = staffY + tabHeight / 2.0;
+        double tabFontSize = Math.Min(tabHeight * 0.38, 1.8);
+        double tabX = startX + 1.0;
+
+        // Draw T, A, B stacked vertically
+        double lineSpacing = tabHeight / 3.0;
+        _svg.AppendLine($"""  <text class="tab-clef" x="{tabX:F1}" y="{tabCenterY - lineSpacing + 0.3:F1}" text-anchor="middle" font-size="{tabFontSize:F1}" font-weight="bold" font-family="serif">T</text>""");
+        _svg.AppendLine($"""  <text class="tab-clef" x="{tabX:F1}" y="{tabCenterY + 0.3:F1}" text-anchor="middle" font-size="{tabFontSize:F1}" font-weight="bold" font-family="serif">A</text>""");
+        _svg.AppendLine($"""  <text class="tab-clef" x="{tabX:F1}" y="{tabCenterY + lineSpacing + 0.3:F1}" text-anchor="middle" font-size="{tabFontSize:F1}" font-weight="bold" font-family="serif">B</text>""");
+
+        // Find the matching staff and voice in the score
+        var matchingStaff = FindStaffForLayout(score, staffLayout.StaffIndex);
+        if (matchingStaff == null)
+            return;
+
+        // Draw measures
+        foreach (var measureLayout in system.Measures)
+        {
+            foreach (var voice in matchingStaff.Voices)
+            {
+                if (measureLayout.MeasureIndex < voice.Measures.Length)
+                {
+                    var measure = voice.Measures[measureLayout.MeasureIndex];
+                    DrawTabMeasure(measure, measureLayout, staffY, tuningArray, stringCount);
+                }
+            }
+        }
+    }
+
+    private void DrawTabMeasure(
+        Measure measure,
+        MeasureLayout layout,
+        double staffY,
+        int[] tuning,
+        int stringCount)
+    {
+        double x = layout.X;
+        var currentTiming = Fraction.Zero;
+
+        for (int i = 0; i < measure.Items.Length; i++)
+        {
+            var item = measure.Items[i];
+
+            // Calculate X position using timing-based columns
+            double itemX;
+            if (!layout.Columns.IsDefaultOrEmpty && layout.Columns.Length > 0)
+            {
+                itemX = x + layout.GetXForTiming(currentTiming);
+            }
+            else if (i < layout.Items.Length)
+            {
+                itemX = x + layout.Items[i].X;
+            }
+            else
+            {
+                itemX = x;
+            }
+
+            switch (item)
+            {
+                case NoteItem note:
+                    DrawTabNote(note.StaffPosition, note.Accidental, itemX, staffY, tuning, stringCount);
+                    break;
+                case ChordItem chord:
+                    foreach (var chordNote in chord.Notes)
+                    {
+                        DrawTabNote(chordNote.StaffPosition, chordNote.Accidental, itemX, staffY, tuning, stringCount);
+                    }
+                    break;
+                    // RestItem: no rendering needed on tab staff
+            }
+
+            currentTiming += item.Duration;
+        }
+    }
+
+    private void DrawTabNote(
+        int staffPosition,
+        string? accidental,
+        double x,
+        double staffY,
+        int[] tuning,
+        int stringCount)
+    {
+        int midiPitch = StaffPositionToMidi(staffPosition, accidental);
+        var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning);
+
+        // stringNum: 1 = highest pitch string (top line in standard notation, but BOTTOM line in tab)
+        // In tab notation: string 1 (highest) is at the top, string N (lowest) at the bottom
+        // So string 1 → Y = staffY + 0, string N → Y = staffY + (N-1)
+        // Wait - actually in standard tab notation, the highest string is at the TOP
+        // String 1 (highest pitch, e.g., high E on guitar) = top line
+        // String 6 (lowest pitch, e.g., low E on guitar) = bottom line
+        double noteY = staffY + (stringNum - 1);
+
+        // Draw fret number with a white background to occlude the staff line
+        string fretText = fret.ToString();
+        double fontSize = 1.6;
+        double bgWidth = fretText.Length == 1 ? 1.0 : 1.6;
+        double bgHeight = 1.1;
+
+        // White background rectangle to hide staff line behind the number
+        _svg.AppendLine($"""  <rect class="tab-bg" x="{x - bgWidth / 2:F2}" y="{noteY - bgHeight / 2:F2}" width="{bgWidth:F2}" height="{bgHeight:F2}" fill="white" stroke="none"/>""");
+        // Fret number text
+        _svg.AppendLine($"""  <text class="tab-fret" x="{x:F1}" y="{noteY + fontSize * 0.32:F1}" text-anchor="middle" font-size="{fontSize:F1}" font-family="serif">{fretText}</text>""");
+    }
+
+    /// <summary>
+    /// Converts a staff position and accidental back to a MIDI note number.
+    /// Staff position 0 = middle C (C4 = MIDI 60).
+    /// </summary>
+    private static int StaffPositionToMidi(int staffPosition, string? accidental)
+    {
+        // staffPosition = (Octave - 4) * 7 + Step
+        // We need to recover Step and Octave
+        int step = ((staffPosition % 7) + 7) % 7;  // Ensure positive modulo
+        int octave = 4 + (staffPosition - step) / 7;
+
+        int semitone = step switch
+        {
+            0 => 0,  // C
+            1 => 2,  // D
+            2 => 4,  // E
+            3 => 5,  // F
+            4 => 7,  // G
+            5 => 9,  // A
+            6 => 11, // B
+            _ => 0
+        };
+
+        int alteration = accidental switch
+        {
+            "sharp" => 1,
+            "flat" => -1,
+            "doubleSharp" => 2,
+            "doubleFlat" => -2,
+            _ => 0
+        };
+
+        return (octave + 1) * 12 + semitone + alteration;
+    }
+
     private void DrawSystemBarlines(SystemLayout system, ScoreLayout scoreLayout, double startX, double endX)
     {
         if (system.StaffGroups.IsDefaultOrEmpty)
@@ -447,7 +624,7 @@ public sealed class SvgRenderer
             foreach (var staff in staffGroup.Staves)
             {
                 double staffTop = system.Y + staff.Y;
-                double staffBottom = staffTop + StaffHeight;
+                double staffBottom = staffTop + staff.Height;
                 topY = Math.Min(topY, staffTop);
                 bottomY = Math.Max(bottomY, staffBottom);
             }
