@@ -1033,6 +1033,61 @@ public sealed class MeasureCollector
         return 0;
     }
 
+    // LILYPOND-REF: lily/accidental-engraver.cc
+    // Sharp order: F C G D A E B (steps 3,0,4,1,5,2,6)
+    // Flat order:  B E A D G C F (steps 6,2,5,1,4,0,3)
+    private static readonly int[] SharpOrder = { 3, 0, 4, 1, 5, 2, 6 };
+    private static readonly int[] FlatOrder = { 6, 2, 5, 1, 4, 0, 3 };
+
+    /// <summary>
+    /// Gets the expected alteration for a pitch step based on the current key signature.
+    /// </summary>
+    private int GetKeySignatureAlteration(int step)
+    {
+        if (_keySharps > 0)
+        {
+            for (int i = 0; i < _keySharps && i < SharpOrder.Length; i++)
+                if (SharpOrder[i] == step) return 1;
+        }
+        else if (_keySharps < 0)
+        {
+            int flatCount = -_keySharps;
+            for (int i = 0; i < flatCount && i < FlatOrder.Length; i++)
+                if (FlatOrder[i] == step) return -1;
+        }
+        return 0;
+    }
+
+    /// <summary>
+    /// Determines the displayed accidental for a pitch, considering the key signature.
+    /// Returns null if the pitch's alteration matches the key signature (no accidental needed).
+    /// </summary>
+    private string? GetDisplayAccidental(PitchSyntax pitch)
+    {
+        int step = PitchNameToStep(pitch.BaseName);
+        int expected = GetKeySignatureAlteration(step);
+        int actual = pitch.AccidentalOffset;
+
+        if (actual == expected)
+            return null;
+
+        return actual switch
+        {
+            2 => "doubleSharp",
+            1 => "sharp",
+            0 => "natural",
+            -1 => "flat",
+            -2 => "doubleFlat",
+            _ => null
+        };
+    }
+
+    private static int PitchNameToStep(char name) => char.ToLower(name) switch
+    {
+        'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3, 'g' => 4, 'a' => 5, 'b' => 6,
+        _ => 0
+    };
+
     private void ExtractVoiceName(RenderDeclarationSyntax render)
     {
         if (render.GetChild(1) is not SyntaxTokenNode outputType || outputType.Text != "score")
@@ -1751,14 +1806,7 @@ public sealed class MeasureCollector
                 _currentOctave = octave;
 
                 bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-                string? accidental = note.Pitch.AccidentalOffset switch
-                {
-                    2 => "doubleSharp",
-                    1 => "sharp",
-                    -1 => "flat",
-                    -2 => "doubleFlat",
-                    _ => null
-                };
+                string? accidental = GetDisplayAccidental(note.Pitch);
 
                 graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger));
             }
@@ -1790,14 +1838,7 @@ public sealed class MeasureCollector
         // Parse tremolo suffix (:8 = 1 beam, :16 = 2 beams, :32 = 3 beams)
         int tremoloBeams = ParseTremoloBeams(note.Tremolo);
 
-        string? accidental = note.Pitch.AccidentalOffset switch
-        {
-            2 => "doubleSharp",
-            1 => "sharp",
-            -1 => "flat",
-            -2 => "doubleFlat",
-            _ => null
-        };
+        string? accidental = GetDisplayAccidental(note.Pitch);
 
         return new NoteItem(
             staffPosition,
@@ -1870,14 +1911,7 @@ public sealed class MeasureCollector
                 firstPitchName = pitch.PitchName.ToLowerInvariant()[0];
             }
 
-            string? accidental = pitch.AccidentalOffset switch
-            {
-                2 => "doubleSharp",
-                1 => "sharp",
-                -1 => "flat",
-                -2 => "doubleFlat",
-                _ => null
-            };
+            string? accidental = GetDisplayAccidental(pitch);
 
             bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
             notes.Add(new ChordNoteInfo(staffPosition, accidental, needsLedger));
