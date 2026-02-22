@@ -57,6 +57,27 @@ public sealed record MultiStaffScore
     /// <summary>Grace notes.</summary>
     public ImmutableArray<GraceNoteItem> GraceNotes { get; }
 
+    /// <summary>Arpeggio markings.</summary>
+    public ImmutableArray<ArpeggioItem> Arpeggios { get; }
+
+    /// <summary>Figured bass annotations.</summary>
+    public ImmutableArray<FiguredBassItem> FiguredBasses { get; }
+
+    /// <summary>Chord name symbols.</summary>
+    public ImmutableArray<ChordNameItem> ChordNames { get; }
+
+    /// <summary>Percent repeat markers.</summary>
+    public ImmutableArray<PercentRepeatItem> PercentRepeats { get; }
+
+    /// <summary>Cross-staff note assignments for grand staff rendering.</summary>
+    public ImmutableArray<CrossStaffItem> CrossStaffItems { get; }
+
+    /// <summary>Grob property overrides.</summary>
+    public ImmutableArray<GrobOverride> GrobOverrides { get; }
+
+    /// <summary>Grob property reverts.</summary>
+    public ImmutableArray<GrobRevert> GrobReverts { get; }
+
     /// <summary>Whether this score has a grand staff.</summary>
     public bool HasGrandStaff => StaffGroups.Any(g => g.IsGrandStaff);
 
@@ -80,7 +101,14 @@ public sealed record MultiStaffScore
         ImmutableArray<TupletBracketItem>? tupletBrackets = null,
         ImmutableArray<DynamicItem>? dynamics = null,
         ImmutableArray<ArticulationItem>? articulations = null,
-        ImmutableArray<GraceNoteItem>? graceNotes = null)
+        ImmutableArray<GraceNoteItem>? graceNotes = null,
+        ImmutableArray<ArpeggioItem>? arpeggios = null,
+        ImmutableArray<FiguredBassItem>? figuredBasses = null,
+        ImmutableArray<ChordNameItem>? chordNames = null,
+        ImmutableArray<PercentRepeatItem>? percentRepeats = null,
+        ImmutableArray<CrossStaffItem>? crossStaffItems = null,
+        ImmutableArray<GrobOverride>? grobOverrides = null,
+        ImmutableArray<GrobRevert>? grobReverts = null)
     {
         if (staffGroups.Length == 0)
             throw new ArgumentException("Score must have at least one staff group", nameof(staffGroups));
@@ -99,6 +127,13 @@ public sealed record MultiStaffScore
         Dynamics = dynamics ?? ImmutableArray<DynamicItem>.Empty;
         Articulations = articulations ?? ImmutableArray<ArticulationItem>.Empty;
         GraceNotes = graceNotes ?? ImmutableArray<GraceNoteItem>.Empty;
+        Arpeggios = arpeggios ?? ImmutableArray<ArpeggioItem>.Empty;
+        FiguredBasses = figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty;
+        ChordNames = chordNames ?? ImmutableArray<ChordNameItem>.Empty;
+        PercentRepeats = percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty;
+        CrossStaffItems = crossStaffItems ?? ImmutableArray<CrossStaffItem>.Empty;
+        GrobOverrides = grobOverrides ?? ImmutableArray<GrobOverride>.Empty;
+        GrobReverts = grobReverts ?? ImmutableArray<GrobRevert>.Empty;
     }
 
     /// <summary>
@@ -124,7 +159,13 @@ public sealed record MultiStaffScore
             score.TupletBrackets,
             score.Dynamics,
             score.Articulations,
-            score.GraceNotes);
+            score.GraceNotes,
+            figuredBasses: score.FiguredBasses,
+            chordNames: score.ChordNames,
+            percentRepeats: score.PercentRepeats,
+            crossStaffItems: score.CrossStaffItems,
+            grobOverrides: score.GrobOverrides,
+            grobReverts: score.GrobReverts);
     }
 
     /// <summary>Number of measures (from first staff of first group).</summary>

@@ -901,3 +901,51 @@ internal sealed class LyricSyllableGreen : GreenSyntaxNode
     {
     }
 }
+
+/// <summary>
+/// Override declaration: override Grob.property = value
+/// LILYPOND-REF: lily/context-property.cc (push)
+/// </summary>
+internal sealed class OverrideDeclarationGreen : GreenSyntaxNode
+{
+    public OverrideDeclarationGreen(
+        SyntaxToken overrideKeyword,
+        SyntaxToken grobName,
+        SyntaxToken dot,
+        SyntaxToken propertyName,
+        SyntaxToken equals,
+        SyntaxToken value)
+        : base(SyntaxKind.OverrideDeclaration, [overrideKeyword, grobName, dot, propertyName, equals, value])
+    {
+    }
+}
+
+/// <summary>
+/// Revert declaration: revert Grob.property
+/// LILYPOND-REF: lily/context-property.cc (pop)
+/// </summary>
+internal sealed class RevertDeclarationGreen : GreenSyntaxNode
+{
+    public RevertDeclarationGreen(
+        SyntaxToken revertKeyword,
+        SyntaxToken grobName,
+        SyntaxToken dot,
+        SyntaxToken propertyName)
+        : base(SyntaxKind.RevertDeclaration, [revertKeyword, grobName, dot, propertyName])
+    {
+    }
+}
+
+/// <summary>
+/// Once modifier: once override/revert ...
+/// LILYPOND-REF: lily/context-property.cc (temporary_override)
+/// </summary>
+internal sealed class OnceModifierGreen : GreenSyntaxNode
+{
+    public OnceModifierGreen(
+        SyntaxToken onceKeyword,
+        GreenNode command)
+        : base(SyntaxKind.OnceModifier, [onceKeyword, command])
+    {
+    }
+}

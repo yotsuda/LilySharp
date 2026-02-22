@@ -75,6 +75,83 @@ public sealed record Spring
     }
 
     /// <summary>
+    /// Full constructor with explicit compress strength.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/spring.cc:29-35</remarks>
+    public Spring(double idealDistance, double minDistance,
+                  double inverseStretchStrength, double inverseCompressStrength)
+    {
+        IdealDistance = idealDistance;
+        MinDistance = minDistance;
+        InverseStretchStrength = inverseStretchStrength;
+        InverseCompressStrength = inverseCompressStrength;
+
+        if (minDistance > idealDistance)
+        {
+            BlockingForce = inverseStretchStrength > 0
+                ? (minDistance - idealDistance) / inverseStretchStrength
+                : 0;
+        }
+        else
+        {
+            BlockingForce = inverseCompressStrength > 0
+                ? (minDistance - idealDistance) / inverseCompressStrength
+                : 0;
+        }
+    }
+
+    /// <summary>
+    /// Merges two springs by averaging their properties.
+    /// Used when multiple spacing wishes exist for the same column pair.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spring.cc:105-131 Spring::merge()
+    /// - Ideal distances and stretch strengths are averaged
+    /// - Compress strengths use harmonic mean (1/avg(1/k))
+    /// - Headroom: avg_distance = max(min_distance + 0.3, avg_distance)
+    /// </remarks>
+    public static Spring Merge(Spring a, Spring b)
+    {
+        double avgIdeal = (a.IdealDistance + b.IdealDistance) / 2;
+        double maxMin = Math.Max(a.MinDistance, b.MinDistance);
+
+        // Headroom: ensure some stretch room above min_distance
+        // LILYPOND-REF: spring.cc:122
+        avgIdeal = Math.Max(maxMin + 0.3, avgIdeal);
+
+        // Average stretch strength
+        double avgStretch = (a.InverseStretchStrength + b.InverseStretchStrength) / 2;
+
+        // Harmonic mean of compress strength
+        // LILYPOND-REF: spring.cc:126-128
+        double avgCompress;
+        if (a.InverseCompressStrength > 0 && b.InverseCompressStrength > 0)
+        {
+            avgCompress = 2.0 / (1.0 / a.InverseCompressStrength + 1.0 / b.InverseCompressStrength);
+        }
+        else
+        {
+            avgCompress = Math.Max(0, avgIdeal - maxMin);
+        }
+
+        return new Spring(avgIdeal, maxMin, avgStretch, avgCompress);
+    }
+
+    /// <summary>
+    /// Scales the spring by a factor (e.g., for grace notes).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spring.cc:88-95 Spring::operator*=()
+    /// </remarks>
+    public Spring Scale(double factor)
+    {
+        double newIdeal = Math.Max(MinDistance, IdealDistance * factor);
+        double newCompress = Math.Max(0, newIdeal - MinDistance);
+        double newStretch = InverseStretchStrength * factor;
+        return new Spring(newIdeal, MinDistance, newStretch, newCompress);
+    }
+
+    /// <summary>
     /// Calculates the spring length for a given force.
     /// </summary>
     /// <param name="force">The force applied (positive = stretch, negative = compress)</param>

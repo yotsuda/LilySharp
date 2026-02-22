@@ -101,4 +101,67 @@ public class TieFormattingProblemTests
         Assert.NotNull(layout);
         Assert.True(layout.EndX > layout.StartX);
     }
+
+    // --- Helper function tests ---
+
+    [Theory]
+    [InlineData(0.0, 1.0)]     // At zero → 1.0
+    [InlineData(0.5, 0.0)]     // At threshold → 0.0
+    [InlineData(1.0, 0.0)]     // Beyond threshold → 0.0
+    public void PeakAround_ReturnsExpectedValues(double x, double expected)
+    {
+        // LILYPOND-REF: lily/misc.cc:48-55
+        double result = TieFormattingProblem.PeakAround(0.05, 0.5, x);
+        Assert.Equal(expected, result, 3);
+    }
+
+    [Fact]
+    public void PeakAround_NegativeX_ReturnsOne()
+    {
+        Assert.Equal(1.0, TieFormattingProblem.PeakAround(0.1, 0.5, -0.1));
+    }
+
+    [Theory]
+    [InlineData(0.0, 0.0)]     // At zero → 0.0
+    [InlineData(1.0, 1.0)]     // At standard_x → 1.0
+    public void ConvexAmplifier_ReturnsExpectedValues(double x, double expected)
+    {
+        // LILYPOND-REF: lily/misc.cc:60-65
+        double result = TieFormattingProblem.ConvexAmplifier(1.0, 0.9, x);
+        Assert.Equal(expected, result, 3);
+    }
+
+    [Fact]
+    public void ConvexAmplifier_BeyondStandard_GreaterThanOne()
+    {
+        double result = TieFormattingProblem.ConvexAmplifier(1.0, 0.9, 2.0);
+        Assert.True(result > 1.0, $"ConvexAmplifier at 2*standard should be > 1.0, got {result}");
+    }
+
+    [Fact]
+    public void TieDetails_Default_MatchesLilyPondDefineGrobs()
+    {
+        var d = TieDetails.Default;
+
+        // define-grobs.scm values
+        Assert.Equal(1.0, d.HeightLimit);
+        Assert.Equal(0.333, d.Ratio);
+        Assert.Equal(0.2, d.XGap);
+        Assert.Equal(0.35, d.StemGap);
+        Assert.Equal(0.225, d.TipStaffLineClearance);   // 0.45 half-spaces / 2
+        Assert.Equal(0.3, d.CenterStaffLineClearance);   // 0.6 half-spaces / 2
+        Assert.Equal(10.0, d.HorizontalDistancePenaltyFactor);
+        Assert.Equal(8.0, d.SameDirAsStemPenalty);
+        Assert.Equal(26.0, d.MinLengthPenaltyFactor);
+        Assert.Equal(0.45, d.TieTieCollisionDistance);
+        Assert.Equal(25.0, d.TieTieCollisionPenalty);
+        Assert.Equal(1.25, d.IntraSpaceThreshold);
+        Assert.Equal(10.0, d.OuterTieVerticalDistanceSymmetryPenaltyFactor);
+        Assert.Equal(10.0, d.OuterTieLengthSymmetryPenaltyFactor);
+        Assert.Equal(7.0, d.VerticalDistancePenaltyFactor);
+        Assert.Equal(0.25, d.OuterTieVerticalGap);
+        Assert.Equal(3, d.MultiTieRegionSize);
+        Assert.Equal(4, d.SingleTieRegionSize);
+        Assert.Equal(100.0, d.TieColumnMonotonicityPenalty);
+    }
 }

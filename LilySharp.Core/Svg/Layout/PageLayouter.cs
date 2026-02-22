@@ -8,7 +8,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/page-spacing.cc Page_spacer class
-/// LILYPOND-REF: lily/page-layout-problem.cc
+/// LILYPOND-REF: lily/page-layout-problem.cc vertical justification
 /// </remarks>
 public sealed class PageLayouter
 {
@@ -37,7 +37,10 @@ public sealed class PageLayouter
             return ImmutableArray<PageLayout>.Empty;
         }
 
+        var vs = _options.VerticalSpacing;
+
         // Create SystemDetails for each system using per-system skyline extents
+        // and context-dependent spacing specs
         var systemDetails = new List<SystemDetails>();
         for (int i = 0; i < systems.Length; i++)
         {
@@ -45,12 +48,25 @@ public sealed class PageLayouter
             double topExtent = systemExtents[i].upExtent;
             double bottomExtent = systemExtents[i].downExtent;
 
-            systemDetails.Add(PageBreaker.CreateFromLayout(
-                staffHeight: staffHeight,
-                topExtent: topExtent,
-                bottomExtent: bottomExtent,
-                padding: _options.SystemSpacing * 0.5,
-                springLength: _options.SystemSpacing * 0.5));
+            // Select spacing spec based on context
+            // (for page breaker, we use system-system as default;
+            //  actual per-pair spacing is applied during positioning)
+            var spec = vs.SystemSystem;
+
+            // Skyline-based minimum distance
+            double skylineDistance = staffHeight + bottomExtent;
+            double minDistance = Math.Max(skylineDistance, spec.MinimumDistance);
+
+            systemDetails.Add(new SystemDetails
+            {
+                Height = topExtent + staffHeight + bottomExtent,
+                TopExtent = topExtent,
+                BottomExtent = bottomExtent,
+                StaffHeight = staffHeight,
+                Padding = spec.Padding,
+                SpringLength = Math.Max(0, spec.BasicDistance - minDistance),
+                InverseHooke = Math.Max(0.1, spec.Stretchability > 0 ? spec.Stretchability / 60.0 : 0.1),
+            });
         }
 
         // Run page breaker
@@ -58,11 +74,12 @@ public sealed class PageLayouter
             pageHeight: _options.PageHeight,
             topMargin: _options.MarginTop,
             bottomMargin: _options.MarginBottom,
-            headerHeight: headerHeight);
+            headerHeight: headerHeight,
+            parameters: _options.PageBreaking);
 
         var breakPoints = breaker.BreakIntoPages(systemDetails);
 
-        // Create pages from break points with force-based Y positioning
+        // Create pages from break points with context-aware Y positioning
         var pages = new List<PageLayout>();
         int systemStart = 0;
 
@@ -70,6 +87,7 @@ public sealed class PageLayouter
         {
             int systemEnd = breakPoints[pageIdx];
             bool isFirstPage = pageIdx == 0;
+            bool isLastPage = pageIdx == breakPoints.Count - 1;
 
             // Reconstruct PageSpacing for this page to get the force
             double topMargin = isFirstPage
@@ -79,41 +97,94 @@ public sealed class PageLayouter
             for (int sysIdx = systemStart; sysIdx < systemEnd; sysIdx++)
                 pageSpacing.AppendSystem(systemDetails[sysIdx]);
 
-            // Clamp force: don't compress below minimum spacing on overfull pages
-            double force = Math.Max(0, pageSpacing.Force);
-            if (double.IsNegativeInfinity(pageSpacing.Force) || double.IsNaN(pageSpacing.Force))
+            // Determine if this page uses ragged spacing
+            bool isRagged = _options.PageBreaking.RaggedBottom
+                || (isLastPage && _options.PageBreaking.RaggedLastBottom);
+
+            // Clamp force
+            double force = pageSpacing.Force;
+            if (double.IsNegativeInfinity(force) || double.IsNaN(force))
                 force = 0;
+            else if (isRagged)
+                force = Math.Max(0, Math.Min(force, 0)); // No stretching for ragged
+            else
+                force = Math.Max(0, force); // No compression
 
-            // Position systems using force-based spacing
-            var pageSystems = new List<SystemLayout>();
-            double currentY = _options.MarginTop
-                + (isFirstPage ? headerHeight + systemExtents[systemStart].upExtent + _options.TopSystemPadding
-                               : systemExtents[systemStart].upExtent + _options.TopSystemPadding);
-
-            for (int sysIdx = systemStart; sysIdx < systemEnd; sysIdx++)
-            {
-                pageSystems.Add(systems[sysIdx] with { Y = currentY });
-
-                if (sysIdx < systemEnd - 1)
-                {
-                    var d = systemDetails[sysIdx];
-                    // Distance = staffHeight + bottomExtent + padding + springLength + force*flexibility + nextTopExtent
-                    currentY += _options.StaffHeight + d.BottomExtent
-                              + d.Padding + d.SpringLength + force * d.InverseHooke
-                              + systemExtents[sysIdx + 1].upExtent;
-                }
-            }
+            // Position systems using context-aware spacing specs
+            var pageSystems = PositionSystemsOnPage(
+                systems, systemExtents, systemDetails, systemStart, systemEnd,
+                isFirstPage, headerHeight, force, vs);
 
             pages.Add(new PageLayout(
                 PageIndex: pageIdx,
                 Width: _options.PageWidth,
                 Height: _options.PageHeight,
                 HeaderHeight: isFirstPage ? headerHeight : 0,
-                Systems: pageSystems.ToImmutableArray()));
+                Systems: pageSystems));
 
             systemStart = systemEnd;
         }
 
         return pages.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Positions systems on a page using context-aware vertical spacing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:488-535 spacing spec selection
+    /// LILYPOND-REF: lily/page-layout-problem.cc:622-646 minimum distance from skylines
+    /// </remarks>
+    private ImmutableArray<SystemLayout> PositionSystemsOnPage(
+        ImmutableArray<SystemLayout> allSystems,
+        ImmutableArray<(double upExtent, double downExtent)> systemExtents,
+        List<SystemDetails> systemDetails,
+        int startIdx, int endIdx,
+        bool isFirstPage, double headerHeight,
+        double force, VerticalSpacingParameters vs)
+    {
+        var pageSystems = new List<SystemLayout>();
+
+        // First system Y position
+        var topSpec = vs.TopSystem;
+        double currentY = isFirstPage
+            ? _options.MarginTop + headerHeight + systemExtents[startIdx].upExtent + topSpec.Padding
+            : _options.MarginTop + systemExtents[startIdx].upExtent + topSpec.Padding;
+
+        for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
+        {
+            pageSystems.Add(allSystems[sysIdx] with { Y = currentY });
+
+            if (sysIdx < endIdx - 1)
+            {
+                // Select spacing spec for this pair
+                bool isFirst = sysIdx == startIdx;
+                var spec = vs.SelectSpec(
+                    isFirstOnPage: false, // Not first — we already placed first
+                    isLastOnPage: false,
+                    prevIsTitle: systemDetails[sysIdx].IsTitle,
+                    currentIsTitle: systemDetails[sysIdx + 1].IsTitle,
+                    currentIsNewScore: false);
+
+                var d = systemDetails[sysIdx];
+
+                // Skyline-based minimum distance
+                double skylineDistance = _options.StaffHeight + d.BottomExtent
+                    + systemExtents[sysIdx + 1].upExtent;
+                double minDistance = Math.Max(skylineDistance, spec.MinimumDistance) + spec.Padding;
+
+                // Spring-based ideal distance
+                double springDistance = Math.Max(spec.BasicDistance, minDistance);
+
+                // Apply force-based stretching
+                double inverseHooke = spec.Stretchability > 0 ? spec.Stretchability / 60.0 : 0.1;
+                double distance = springDistance + force * inverseHooke;
+
+                // Never go below minimum
+                currentY += Math.Max(distance, minDistance);
+            }
+        }
+
+        return pageSystems.ToImmutableArray();
     }
 }

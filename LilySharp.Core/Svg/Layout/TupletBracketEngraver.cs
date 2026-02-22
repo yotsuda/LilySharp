@@ -43,6 +43,15 @@ public static class TupletBracketEngraver
     private const double YOffsetBelow = 5.5;   // Below staff
 
     /// <summary>
+    /// Y offset per nesting depth level for stacked nested tuplet brackets.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:400-500 nested bracket stacking
+    /// LILYPOND-REF: scm/define-grobs.scm TupletBracket.outside-staff-priority
+    /// </remarks>
+    private const double NestingDepthOffset = 2.0;
+
+    /// <summary>
     /// Calculates layout for all tuplet brackets.
     /// </summary>
     /// <remarks>
@@ -89,9 +98,13 @@ public static class TupletBracketEngraver
             // LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
             // Determine bracket direction based on stem directions of notes
             bool isStemUp = CalculateDirection(tuplet, measures);
-            
-            // Y position based on stem direction
-            double y = isStemUp ? YOffsetAbove : YOffsetBelow;
+
+            // Y position based on stem direction, offset by nesting depth
+            // LILYPOND-REF: lily/tuplet-bracket.cc:400-500 nested bracket stacking
+            double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
+            double y = isStemUp
+                ? YOffsetAbove - nestingOffset   // Deeper nesting → further above
+                : YOffsetBelow + nestingOffset;  // Deeper nesting → further below
 
             layouts.Add(new TupletBracketLayout(
                 tuplet.MeasureIndex,

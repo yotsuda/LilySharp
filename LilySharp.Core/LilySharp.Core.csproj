@@ -11,4 +11,8 @@
     <InternalsVisibleTo Include="LilySharp.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="PdfSharpCore" Version="1.3.65" />
+  </ItemGroup>
+
 </Project>

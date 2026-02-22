@@ -5,8 +5,20 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Solves the beam positioning problem by finding optimal quantized positions.
-/// Based on Lilypond's Beam_scoring_problem from beam-quanting.cc
+/// Faithful port of LilyPond's Beam_scoring_problem.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/beam-quanting.cc (full file)
+/// LILYPOND-REF: lily/include/beam-scoring-problem.hh
+///
+/// The algorithm:
+/// 1. Calculate initial (unquanted) position via least-squares fit
+/// 2. Apply slope damping based on concaveness
+/// 3. Shift region to valid range (avoid large collisions)
+/// 4. Generate quantized candidates at straddle/sit/inter/hang positions
+/// 5. Score candidates using priority queue (lazy evaluation)
+/// 6. Return best candidate
+/// </remarks>
 public sealed class BeamScoringProblem
 {
     private readonly BeamGroup _group;
@@ -22,11 +34,28 @@ public sealed class BeamScoringProblem
     private readonly int _maxBeamCount;
     private readonly IReadOnlyList<BeamCollision> _collisions;
 
-    // Beam constants (in staff positions, converted from EngravingDefaults)
-    private static readonly double BeamThickness = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamThickness);
-    private static readonly double BeamTranslation = EngravingDefaults.ToStaffPositions(EngravingDefaults.BeamTranslation);
-    private static readonly double IdealStemLength = EngravingDefaults.ToStaffPositions(EngravingDefaults.IdealStemLength);
-    private static readonly double MinStemLength = EngravingDefaults.ToStaffPositions(EngravingDefaults.MinStemLength);
+    // LILYPOND-REF: lily/beam-quanting.cc:236 beam_thickness_, line_thickness_
+    // All calculations are in staff-space units (not staff positions)
+    private readonly double _beamThickness;
+    private readonly double _lineThickness;
+    private readonly double _beamTranslation;
+
+    // Stem info
+    private readonly double _idealStemLength;
+    private readonly double _minStemLength;
+
+    // Direction
+    private readonly int _beamDir; // +1 for stem up, -1 for stem down
+
+    // Staff radius (half staff height in half-spaces = 2.0 for 5-line staff)
+    private const double StaffRadius = 2.0;
+
+    // Musical dy (least-squares slope * xSpan, used by scorers)
+    private double _musicalDy;
+
+    // Unquanted Y positions (modified by damping and shift)
+    private double _unquantedLeftY;
+    private double _unquantedRightY;
 
     public BeamScoringProblem(
         BeamGroup group,
@@ -46,7 +75,7 @@ public sealed class BeamScoringProblem
         _rightX = itemXPositions[lastMember.ItemIndex];
         _xSpan = _rightX - _leftX;
 
-        // Extract stem positions
+        // Extract stem positions (in staff positions)
         _stemXPositions = new double[group.Members.Length];
         _staffPositions = new int[group.Members.Length];
         _maxBeamCount = 0;
@@ -54,479 +83,191 @@ public sealed class BeamScoringProblem
         for (int i = 0; i < group.Members.Length; i++)
         {
             var member = group.Members[i];
-            _stemXPositions[i] = itemXPositions[member.ItemIndex];
+            _stemXPositions[i] = itemXPositions[member.ItemIndex] - _leftX; // relative to left
             _staffPositions[i] = member.StaffPosition;
             _maxBeamCount = Math.Max(_maxBeamCount, member.BeamCount);
         }
+
+        _beamDir = group.StemUp ? 1 : -1;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:236-238
+        // Calculations are in staff-space units
+        _beamThickness = EngravingDefaults.BeamThickness;  // 0.48 staff spaces
+        _lineThickness = EngravingDefaults.StaffLineThickness;  // 0.13 staff spaces
+        _beamTranslation = EngravingDefaults.BeamTranslation;
+        _idealStemLength = EngravingDefaults.IdealStemLength;  // 3.5 staff spaces
+        _minStemLength = EngravingDefaults.MinStemLength;      // 2.5 staff spaces
     }
 
     /// <summary>
     /// Solves for the optimal beam position.
+    /// Returns Y positions in staff positions (half staff-spaces).
     /// </summary>
-    // LILYPOND-REF: lily/beam-quanting.cc:1017-1030 Beam_scoring_problem::solve()
+    // LILYPOND-REF: lily/beam-quanting.cc:1022-1114 Beam_scoring_problem::solve()
     public (double leftY, double rightY) Solve()
     {
-        // Generate initial position based on note positions
+        // Phase 1: Calculate initial position via least-squares
         var (initialLeftY, initialRightY) = CalculateInitialPosition();
+        _unquantedLeftY = initialLeftY;
+        _unquantedRightY = initialRightY;
+        _musicalDy = _unquantedRightY - _unquantedLeftY;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:440-443
-        // Apply slope damping based on concaveness
-        (initialLeftY, initialRightY) = ApplySlopeDamping(initialLeftY, initialRightY);
+        // Phase 2: Apply slope damping based on concaveness
+        // LILYPOND-REF: lily/beam-quanting.cc:748-779
+        ApplySlopeDamping();
 
-        // Generate candidate configurations
-        var candidates = GenerateQuantCandidates(initialLeftY, initialRightY);
+        // Phase 3: Shift region to valid (avoid large collision objects)
+        // LILYPOND-REF: lily/beam-quanting.cc:781-894
+        ShiftRegionToValid();
 
-        // Score all candidates
+        // Phase 4: Generate quantized candidates
+        // LILYPOND-REF: lily/beam-quanting.cc:896-958
+        var candidates = GenerateQuantCandidates();
+
+        if (candidates.Count == 0)
+            return (_unquantedLeftY, _unquantedRightY);
+
+        // Phase 5: Score using priority queue (lazy evaluation)
+        // LILYPOND-REF: lily/beam-quanting.cc:1050-1083
+        var queue = new PriorityQueue<BeamConfiguration, double>();
         foreach (var config in candidates)
+            queue.Enqueue(config, config.Demerits);
+
+        BeamConfiguration best;
+        while (true)
         {
-            ScoreConfiguration(config);
+            best = queue.Dequeue();
+            if (best.IsDone)
+                break;
+
+            OneScorer(best);
+            queue.Enqueue(best, best.Demerits);
         }
 
-        // Find best configuration
-        var best = candidates.MinBy(c => c.Demerits);
-        return (best?.LeftY ?? initialLeftY, best?.RightY ?? initialRightY);
+        return (best.LeftY, best.RightY);
     }
 
-    // LILYPOND-REF: lily/beam-quanting.cc:536-687 Beam_scoring_problem::least_squares_positions()
+    // ========================================
+    // Initial Position (Least-Squares)
+    // ========================================
+
+    /// <summary>
+    /// Calculates initial beam position based on stem ideal lengths.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:543-608 least_squares_positions()
+    ///
+    /// In staff-position units (half staff-spaces).
+    /// For stem up, ideal Y = staffPos + idealStemLength * 2 (converted to staff positions).
+    /// For stem down, ideal Y = staffPos - idealStemLength * 2.
+    /// Then least-squares fit through all ideal endpoints.
+    /// </remarks>
     private (double leftY, double rightY) CalculateInitialPosition()
     {
-        // Calculate based on first and last note positions
-        int firstPos = _staffPositions[0];
-        int lastPos = _staffPositions[^1];
+        if (_staffPositions.Length < 1)
+            return (0, 0);
 
-        // Find extremal positions
-        int minPos = _staffPositions.Min();
-        int maxPos = _staffPositions.Max();
+        // Compute ideal Y for each stem (in staff positions)
+        double idealStemLenPos = _idealStemLength * 2; // Convert staff spaces → staff positions
+        double minStemLenPos = _minStemLength * 2;
 
-        // Calculate natural slope
-        double naturalSlope = 0;
-        if (_xSpan > 0.001)
+        // Least-squares: find best fit line through ideal positions
+        // LILYPOND-REF: lily/beam-quanting.cc:588-603
+        var ideals = new List<(double x, double y)>();
+        for (int i = 0; i < _staffPositions.Length; i++)
         {
-            naturalSlope = (double)(lastPos - firstPos) / _xSpan;
-            // Clamp to reasonable slope (0.5 staff spaces per staff space)
-            naturalSlope = Math.Clamp(naturalSlope, -0.5, 0.5);
+            double idealY = _staffPositions[i] + _beamDir * idealStemLenPos;
+            ideals.Add((_stemXPositions[i], idealY));
         }
 
-        double leftY, rightY;
-
-        if (_group.StemUp)
+        double slope, intercept;
+        if (ideals.Count == 1 || _xSpan < 0.001)
         {
-            // Beam above notes (higher staff position = more positive)
-            leftY = firstPos + IdealStemLength;
-            rightY = leftY + naturalSlope * _xSpan;
-
-            // Ensure minimum stem length
-            AdjustForMinimumStemLength(ref leftY, ref rightY, stemUp: true);
-
-            // Clamp to staff middle line (position 0) if beam would exceed it
-            // This prevents excessively long stems for notes on ledger lines above the staff
-            ClampToMiddleLine(ref leftY, ref rightY, stemUp: true);
+            slope = 0;
+            intercept = ideals[0].y;
         }
         else
         {
-            // Beam below notes (lower staff position = more negative)
-            leftY = firstPos - IdealStemLength;
-            rightY = leftY + naturalSlope * _xSpan;
-
-            // Ensure minimum stem length
-            AdjustForMinimumStemLength(ref leftY, ref rightY, stemUp: false);
-
-            // Clamp to staff middle line (position 0) if beam would exceed it
-            // This prevents excessively long stems for notes on ledger lines below the staff
-            ClampToMiddleLine(ref leftY, ref rightY, stemUp: false);
+            // Least-squares linear regression
+            MinimiseLeastSquares(ideals, out slope, out intercept);
         }
+
+        double leftY = intercept;
+        double rightY = intercept + slope * _xSpan;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:470-489 set_minimum_dy()
+        // Ensure dy is not smaller than the smallest quant step
+        double dy = rightY - leftY;
+        if (Math.Abs(dy) > 0.001)
+        {
+            double sit = (_beamThickness - _lineThickness) / 2 * 2; // In staff positions
+            double inter = 1.0; // 0.5 staff spaces = 1 staff position
+            double hang = (1.0 - (_beamThickness - _lineThickness) / 2) * 2;
+            double minDy = Math.Min(Math.Min(sit, inter), hang);
+            dy = Math.Sign(dy) * Math.Max(Math.Abs(dy), minDy);
+
+            double center = (leftY + rightY) / 2;
+            leftY = center - dy / 2;
+            rightY = center + dy / 2;
+        }
+
+        _musicalDy = rightY - leftY;
+
+        // Ensure minimum stem length for all notes
+        EnsureMinimumStemLength(ref leftY, ref rightY, minStemLenPos);
 
         return (leftY, rightY);
     }
 
-    private void AdjustForMinimumStemLength(ref double leftY, ref double rightY, bool stemUp)
-    {
-        double slope = _xSpan > 0.001 ? (rightY - leftY) / _xSpan : 0;
-        double maxAdjustment = 0;
-
-        for (int i = 0; i < _staffPositions.Length; i++)
-        {
-            double x = _stemXPositions[i];
-            double beamY = leftY + slope * (x - _leftX);
-            double noteY = _staffPositions[i];
-
-            // stemUp: beam is above note (beamY > noteY in staff positions)
-            // stemDown: beam is below note (beamY < noteY in staff positions)
-            double stemLength = stemUp ? beamY - noteY : noteY - beamY;
-
-            if (stemLength < MinStemLength)
-            {
-                maxAdjustment = Math.Max(maxAdjustment, MinStemLength - stemLength);
-            }
-        }
-
-        if (maxAdjustment > 0)
-        {
-            if (stemUp)
-            {
-                // Move beam further up (increase staff position)
-                leftY += maxAdjustment;
-                rightY += maxAdjustment;
-            }
-            else
-            {
-                // Move beam further down (decrease staff position)
-                leftY -= maxAdjustment;
-                rightY -= maxAdjustment;
-            }
-        }
-    }
-
     /// <summary>
-    /// Clamps beam position to not exceed the staff middle line (position 0).
-    /// For notes on ledger lines, this prevents stems from being excessively long.
+    /// Least-squares linear regression.
     /// </summary>
-    private void ClampToMiddleLine(ref double leftY, ref double rightY, bool stemUp)
+    // LILYPOND-REF: lily/least-squares.cc minimise_least_squares()
+    private static void MinimiseLeastSquares(
+        List<(double x, double y)> points, out double slope, out double intercept)
     {
-        const double staffMiddle = 0;  // Middle line of staff is position 0
-
-        if (stemUp)
+        int n = points.Count;
+        double sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+        for (int i = 0; i < n; i++)
         {
-            // For stem up (beam above notes), clamp beam to not exceed middle line
-            // Check if beam endpoints exceed middle line
-            double maxBeamY = Math.Max(leftY, rightY);
-            if (maxBeamY <= staffMiddle) return;  // Beam doesn't exceed middle line
+            sumX += points[i].x;
+            sumY += points[i].y;
+            sumXY += points[i].x * points[i].y;
+            sumX2 += points[i].x * points[i].x;
+        }
 
-            // Calculate how much to clamp, but ensure minimum stem length for all notes
-            double slope = _xSpan > 0.001 ? (rightY - leftY) / _xSpan : 0;
-            double maxAllowedClamp = double.MaxValue;
-
-            for (int i = 0; i < _staffPositions.Length; i++)
-            {
-                double x = _stemXPositions[i];
-                double beamY = leftY + slope * (x - _leftX);
-                double noteY = _staffPositions[i];
-                double currentStemLength = beamY - noteY;
-                double allowedClamp = currentStemLength - MinStemLength;
-                if (allowedClamp < maxAllowedClamp)
-                {
-                    maxAllowedClamp = allowedClamp;
-                }
-            }
-
-            // Clamp the beam down towards middle line
-            double neededClamp = maxBeamY - staffMiddle;
-            double actualClamp = Math.Min(neededClamp, Math.Max(0, maxAllowedClamp));
-
-            if (actualClamp > 0)
-            {
-                leftY -= actualClamp;
-                rightY -= actualClamp;
-            }
+        double denom = n * sumX2 - sumX * sumX;
+        if (Math.Abs(denom) < 1e-10)
+        {
+            slope = 0;
+            intercept = sumY / n;
         }
         else
         {
-            // For stem down (beam below notes), clamp beam to not exceed middle line
-            // Check if beam endpoints exceed middle line
-            double minBeamY = Math.Min(leftY, rightY);
-            if (minBeamY >= staffMiddle) return;  // Beam doesn't exceed middle line
-
-            // Calculate how much to clamp, but ensure minimum stem length for all notes
-            double slope = _xSpan > 0.001 ? (rightY - leftY) / _xSpan : 0;
-            double maxAllowedClamp = double.MaxValue;
-
-            for (int i = 0; i < _staffPositions.Length; i++)
-            {
-                double x = _stemXPositions[i];
-                double beamY = leftY + slope * (x - _leftX);
-                double noteY = _staffPositions[i];
-                double currentStemLength = noteY - beamY;
-                double allowedClamp = currentStemLength - MinStemLength;
-                if (allowedClamp < maxAllowedClamp)
-                {
-                    maxAllowedClamp = allowedClamp;
-                }
-            }
-
-            // Clamp the beam up towards middle line
-            double neededClamp = staffMiddle - minBeamY;
-            double actualClamp = Math.Min(neededClamp, Math.Max(0, maxAllowedClamp));
-
-            if (actualClamp > 0)
-            {
-                leftY += actualClamp;
-                rightY += actualClamp;
-            }
+            slope = (n * sumXY - sumX * sumY) / denom;
+            intercept = (sumY - slope * sumX) / n;
         }
     }
 
-    // LILYPOND-REF: lily/beam-quanting.cc:891-953 Beam_scoring_problem::generate_quants()
-    private List<BeamConfiguration> GenerateQuantCandidates(double initialLeftY, double initialRightY)
+    private void EnsureMinimumStemLength(ref double leftY, ref double rightY, double minStemLenPos)
     {
-        var candidates = new List<BeamConfiguration>();
+        double slope = _xSpan > 0.001 ? (rightY - leftY) / _xSpan : 0;
+        double maxShortage = 0;
 
-        // Generate candidates in a region around the initial position
-        // Quantize to half staff spaces (0.5 units)
-        double quantStep = 0.5;
-        double regionSize = _parameters.RegionSize;
-
-        for (double leftOffset = -regionSize; leftOffset <= regionSize; leftOffset += quantStep)
+        for (int i = 0; i < _staffPositions.Length; i++)
         {
-            for (double rightOffset = -regionSize; rightOffset <= regionSize; rightOffset += quantStep)
-            {
-                var config = new BeamConfiguration(
-                    initialLeftY + leftOffset,
-                    initialRightY + rightOffset);
-                candidates.Add(config);
-            }
+            double beamY = leftY + slope * _stemXPositions[i];
+            double stemLength = _beamDir * (beamY - _staffPositions[i]);
+
+            if (stemLength < minStemLenPos)
+                maxShortage = Math.Max(maxShortage, minStemLenPos - stemLength);
         }
 
-        return candidates;
-    }
-
-    // LILYPOND-REF: lily/beam-quanting.cc:955-988 Beam_scoring_problem::one_scorer()
-    private void ScoreConfiguration(BeamConfiguration config)
-    {
-        // Apply all scorers in order
-        ScoreOriginalDistance(config);
-        ScoreSlopeIdeal(config);
-        ScoreSlopeMusical(config);
-        ScoreSlopeDirection(config);
-        ScoreHorizontalInter(config);
-        ScoreForbiddenQuants(config);
-        ScoreStemLengths(config);
-        ScoreCollisions(config);
-    }
-
-    private void ScoreOriginalDistance(BeamConfiguration config)
-    {
-        // Penalty for deviating from ideal position
-        // This is handled implicitly by generating candidates around the initial position
-        config.NextScorerTodo = (int)BeamScorer.SlopeIdeal;
-    }
-
-    private void ScoreSlopeIdeal(BeamConfiguration config)
-    {
-        // Penalty for non-ideal slope
-        double slope = config.GetSlope(_xSpan);
-
-        // Ideal slope based on note positions
-        int firstPos = _staffPositions[0];
-        int lastPos = _staffPositions[^1];
-        double idealSlope = _xSpan > 0.001 ? (double)(lastPos - firstPos) / _xSpan : 0;
-        idealSlope = Math.Clamp(idealSlope, -0.5, 0.5);
-
-        double slopeDiff = Math.Abs(slope - idealSlope);
-        double demerit = slopeDiff * _parameters.IdealSlopeFactor;
-
-        if (demerit > _parameters.BeamEps)
-            config.AddDemerit(demerit, "slope_ideal");
-
-        config.NextScorerTodo = (int)BeamScorer.SlopeMusical;
-    }
-
-    private void ScoreSlopeMusical(BeamConfiguration config)
-    {
-        // Penalty when slope direction doesn't match musical direction
-        double slope = config.GetSlope(_xSpan);
-
-        int firstPos = _staffPositions[0];
-        int lastPos = _staffPositions[^1];
-        int musicalDirection = Math.Sign(lastPos - firstPos);
-        int slopeDirection = Math.Sign(slope);
-
-        if (musicalDirection != 0 && slopeDirection != 0 && musicalDirection != slopeDirection)
+        if (maxShortage > 0)
         {
-            config.AddDemerit(_parameters.MusicalDirectionFactor, "slope_musical");
+            leftY += _beamDir * maxShortage;
+            rightY += _beamDir * maxShortage;
         }
-
-        config.NextScorerTodo = (int)BeamScorer.SlopeDirection;
-    }
-
-    private void ScoreSlopeDirection(BeamConfiguration config)
-    {
-        // Penalty for slope opposing stem direction
-        double slope = config.GetSlope(_xSpan);
-
-        // For stem up, we generally want flat or downward slope
-        // For stem down, we generally want flat or upward slope
-        if (_group.StemUp && slope > _parameters.RoundToZeroSlope)
-        {
-            double demerit = slope * _parameters.DampingDirectionPenalty;
-            config.AddDemerit(demerit, "slope_dir");
-        }
-        else if (!_group.StemUp && slope < -_parameters.RoundToZeroSlope)
-        {
-            double demerit = -slope * _parameters.DampingDirectionPenalty;
-            config.AddDemerit(demerit, "slope_dir");
-        }
-
-        config.NextScorerTodo = (int)BeamScorer.HorizontalInter;
-    }
-
-    private void ScoreHorizontalInter(BeamConfiguration config)
-    {
-        // Penalty for beam crossing staff lines at awkward positions
-        // Simplified: penalize if beam Y is very close to a staff line
-
-        double leftY = config.LeftY;
-        double rightY = config.RightY;
-
-        // Check both ends
-        foreach (var y in new[] { leftY, rightY })
-        {
-            // Staff lines are at even positions (0, 2, 4, 6, 8)
-            // Penalize if beam is within 0.1 of a staff line (inter-line)
-            double distToLine = Math.Abs(y - Math.Round(y / 2) * 2);
-            if (distToLine < 0.1)
-            {
-                config.AddDemerit(_parameters.HorizontalInterQuantPenalty * (0.1 - distToLine), "horiz_inter");
-            }
-        }
-
-        config.NextScorerTodo = (int)BeamScorer.Forbidden;
-    }
-
-    private void ScoreForbiddenQuants(BeamConfiguration config)
-    {
-        // Penalize secondary beams on staff lines
-        // For 16th notes and shorter, the secondary beam shouldn't sit exactly on a line
-
-        if (_maxBeamCount < 2)
-        {
-            config.NextScorerTodo = (int)BeamScorer.StemLengths;
-            return;
-        }
-
-        double slope = config.GetSlope(_xSpan);
-
-        for (int i = 0; i < _stemXPositions.Length; i++)
-        {
-            var member = _group.Members[i];
-            if (member.BeamCount < 2)
-                continue;
-
-            double x = _stemXPositions[i];
-            double beamY = config.GetYAt(x, _leftX, _xSpan);
-
-            // Check secondary beam positions
-            for (int level = 1; level < member.BeamCount; level++)
-            {
-                double secondaryY = _group.StemUp
-                    ? beamY + level * BeamTranslation
-                    : beamY - level * BeamTranslation;
-
-                // Check if on staff line (even positions 0, 2, 4, 6, 8)
-                double distToLine = Math.Abs(secondaryY - Math.Round(secondaryY / 2) * 2);
-                if (distToLine < BeamThickness / 2)
-                {
-                    config.AddDemerit(_parameters.SecondaryBeamDemerit, "forbidden");
-                }
-            }
-        }
-
-        config.NextScorerTodo = (int)BeamScorer.StemLengths;
-    }
-
-    private void ScoreStemLengths(BeamConfiguration config)
-    {
-        // Penalize stems that are too short or too long
-        double slope = config.GetSlope(_xSpan);
-
-        for (int i = 0; i < _stemXPositions.Length; i++)
-        {
-            double x = _stemXPositions[i];
-            double beamY = config.GetYAt(x, _leftX, _xSpan);
-            double noteY = _staffPositions[i];
-
-            double stemLength = _group.StemUp ? beamY - noteY : noteY - beamY;
-
-            // Hard penalty for stems that are too short
-            if (stemLength < MinStemLength)
-            {
-                double shortage = MinStemLength - stemLength;
-                config.AddDemerit(shortage * _parameters.StemLengthLimitPenalty, "stem_short");
-            }
-
-            // Soft penalty for deviation from ideal
-            double lengthDiff = Math.Abs(stemLength - IdealStemLength);
-            double demerit = lengthDiff * _parameters.StemLengthDemeritFactor;
-            if (demerit > _parameters.BeamEps)
-            {
-                config.AddDemerit(demerit, "stem_len");
-            }
-        }
-
-        config.NextScorerTodo = (int)BeamScorer.Collisions;
-    }
-
-    private void ScoreCollisions(BeamConfiguration config)
-    {
-        // Penalty for beam colliding with other objects (rests, notes outside beam group)
-        // Based on Lilypond's score_collisions from beam-quanting.cc
-
-        if (_collisions.Count == 0)
-        {
-            config.NextScorerTodo = (int)BeamScorer.NumScorers;
-            return;
-        }
-
-        double demerits = 0.0;
-
-        foreach (var collision in _collisions)
-        {
-            // Skip collisions outside beam X range
-            if (collision.X < _leftX || collision.X > _rightX)
-                continue;
-
-            // Get beam Y at collision X position
-            double beamCenterY = config.GetYAt(collision.X, _leftX, _xSpan);
-
-            // Beam Y range (center ± half thickness, including all beam levels)
-            double beamHalfHeight = BeamThickness / 2 + (_maxBeamCount - 1) * BeamTranslation;
-            double beamMinY, beamMaxY;
-            if (_group.StemUp)
-            {
-                // Beam above notes: extends upward from center
-                beamMinY = beamCenterY - BeamThickness / 2;
-                beamMaxY = beamCenterY + beamHalfHeight;
-            }
-            else
-            {
-                // Beam below notes: extends downward from center
-                beamMinY = beamCenterY - beamHalfHeight;
-                beamMaxY = beamCenterY + BeamThickness / 2;
-            }
-
-            // Calculate distance between beam and collision object
-            double dist;
-            bool intersects = beamMaxY >= collision.MinY && beamMinY <= collision.MaxY;
-
-            if (intersects)
-            {
-                dist = 0.0;
-            }
-            else
-            {
-                // Distance to nearest edge
-                dist = Math.Min(
-                    Math.Abs(beamMinY - collision.MaxY),
-                    Math.Abs(beamMaxY - collision.MinY));
-            }
-
-            // Calculate penalty using cubic falloff
-            double padding = _parameters.CollisionPadding;
-            if (dist < padding)
-            {
-                double scaleFree = (padding - dist) / padding;
-                double collisionDemerit = collision.BasePenalty
-                    * Math.Pow(scaleFree, 3)
-                    * _parameters.CollisionPenalty;
-                demerits += collisionDemerit;
-            }
-        }
-
-        if (demerits > _parameters.BeamEps)
-        {
-            config.AddDemerit(demerits, "collision");
-        }
-
-        config.NextScorerTodo = (int)BeamScorer.NumScorers;
     }
 
     // ========================================
@@ -537,100 +278,614 @@ public sealed class BeamScoringProblem
     /// Applies slope damping based on concaveness.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:747-785 Beam_scoring_problem::slope_damping()
-    ///
-    /// If the beam has high concaveness (notes form a "bowl" shape), the slope
-    /// is reduced to make the beam more horizontal. This improves readability.
+    /// LILYPOND-REF: lily/beam-quanting.cc:748-779 slope_damping()
     /// </remarks>
-    private (double leftY, double rightY) ApplySlopeDamping(double leftY, double rightY)
+    private void ApplySlopeDamping()
     {
         if (_staffPositions.Length <= 1)
-            return (leftY, rightY);
+            return;
 
-        double concaveness = CalculateConcaveness();
         double damping = _parameters.Damping;
+        double concaveness = CalculateConcaveness();
 
-        // If concaveness is very high, make the beam horizontal
         if (concaveness >= 10000 || damping >= 10000)
         {
-            double avgY = (leftY + rightY) / 2;
-            return (avgY, avgY);
+            // Make beam horizontal
+            // LILYPOND-REF: lily/beam-quanting.cc:757-762
+            _unquantedRightY = _unquantedLeftY;
+            _musicalDy = 0;
+            return;
         }
 
-        // Apply damping if either damping or concaveness is non-zero
         if (damping > 0 && (damping + concaveness) > 0)
         {
-            double dy = rightY - leftY;
+            double dy = _unquantedRightY - _unquantedLeftY;
             double slope = (_xSpan > 0.001) ? dy / _xSpan : 0;
 
-            // Dampen slope using tanh for smooth falloff
             // LILYPOND-REF: lily/beam-quanting.cc:770
             slope = 0.6 * Math.Tanh(slope) / (damping + concaveness);
 
             double dampedDy = slope * _xSpan;
-            double center = (leftY + rightY) / 2;
 
-            leftY = center - dampedDy / 2;
-            rightY = center + dampedDy / 2;
+            // LILYPOND-REF: lily/beam-quanting.cc:776-777
+            _unquantedLeftY += (dy - dampedDy) / 2;
+            _unquantedRightY -= (dy - dampedDy) / 2;
         }
-
-        return (leftY, rightY);
     }
 
     /// <summary>
-    /// Calculates the concaveness of the note pattern under the beam.
+    /// Calculates beam concaveness.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:695-746 Beam_scoring_problem::calc_concaveness()
+    /// LILYPOND-REF: lily/beam-quanting.cc:694-746 calc_concaveness()
+    /// LILYPOND-REF: lily/beam-quanting.cc:624-669 is_concave_single_notes()
     /// LILYPOND-REF: lily/beam-quanting.cc:671-692 calc_positions_concaveness()
-    ///
-    /// Concaveness measures how much the notes deviate from a straight line
-    /// in the "wrong" direction (creating a bowl shape). High concaveness
-    /// indicates the beam should be made more horizontal.
     /// </remarks>
     private double CalculateConcaveness()
     {
         if (_staffPositions.Length <= 2)
             return 0;
 
-        // Calculate concaveness for the note positions
-        var positions = _staffPositions.ToList();
-        int beamDir = _group.StemUp ? 1 : -1;
+        // LILYPOND-REF: lily/beam-quanting.cc:733-737
+        // Check if notes form a concave pattern
+        if (IsConcaveSingleNotes(_staffPositions, _beamDir))
+            return 10000;
 
-        return CalculatePositionsConcaveness(positions, beamDir);
+        // LILYPOND-REF: lily/beam-quanting.cc:740-743
+        return CalcPositionsConcaveness(_staffPositions, _beamDir);
     }
 
     /// <summary>
-    /// Calculates concaveness for a list of positions.
+    /// Determines whether notes form a concave pattern (bowl shape).
     /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:671-692 calc_positions_concaveness()
-    ///
-    /// For each interior note, measures how far it deviates from the line
-    /// connecting the first and last notes, in the direction of the beam.
-    /// </remarks>
-    private static double CalculatePositionsConcaveness(List<int> positions, int beamDir)
+    // LILYPOND-REF: lily/beam-quanting.cc:624-669
+    private static bool IsConcaveSingleNotes(int[] positions, int beamDir)
     {
-        if (positions.Count <= 2)
-            return 0;
+        int first = positions[0];
+        int last = positions[^1];
+        int coveringUp = Math.Max(first, last);
+        int coveringDown = Math.Min(first, last);
 
-        double dy = positions[^1] - positions[0];
-        double slope = dy / (positions.Count - 1);
-        double concaveness = 0;
+        bool above = false;
+        bool below = false;
 
-        for (int i = 1; i < positions.Count - 1; i++)
+        // Check if interior notes go above and below the covering interval
+        for (int i = 1; i < positions.Length - 1; i++)
         {
-            double lineY = slope * i + positions[0];
-            // Deviation in beam direction counts toward concaveness
-            concaveness += Math.Max(beamDir * (positions[i] - lineY), 0);
+            above = above || (positions[i] > coveringUp);
+            below = below || (positions[i] < coveringDown);
         }
 
-        concaveness /= positions.Count;
+        // Both above and below = concave
+        if (above && below)
+            return true;
 
-        // Normalize by the total change
+        // Check for direction reversal near extremes
+        int dy = last - first;
+        int closest = Math.Max(beamDir * last, beamDir * first);
+        for (int i = 2; i < positions.Length - 1; i++)
+        {
+            int innerDy = positions[i] - positions[i - 1];
+            if (Math.Sign(innerDy) != Math.Sign(dy)
+                && (beamDir * positions[i] >= closest
+                    || beamDir * positions[i - 1] >= closest))
+                return true;
+        }
+
+        // Check if all interior notes are closer to beam than endpoints
+        bool allCloser = true;
+        for (int i = 1; i < positions.Length - 1; i++)
+        {
+            if (beamDir * positions[i] <= closest)
+            {
+                allCloser = false;
+                break;
+            }
+        }
+
+        return allCloser;
+    }
+
+    /// <summary>
+    /// Calculates numerical concaveness for a set of positions.
+    /// </summary>
+    // LILYPOND-REF: lily/beam-quanting.cc:671-692
+    private static double CalcPositionsConcaveness(int[] positions, int beamDir)
+    {
+        double dy = positions[^1] - positions[0];
+        double slope = dy / (positions.Length - 1);
+        double concaveness = 0.0;
+
+        for (int i = 1; i < positions.Length - 1; i++)
+        {
+            double lineY = slope * i + positions[0];
+            concaveness += Math.Max(beamDir * (positions[i] - lineY), 0.0);
+        }
+
+        concaveness /= positions.Length;
+
         if (Math.Abs(dy) > 0.001)
             concaveness /= Math.Abs(dy);
 
         return concaveness;
+    }
+
+    // ========================================
+    // Shift Region to Valid
+    // ========================================
+
+    /// <summary>
+    /// Shifts the beam position to avoid large collision objects.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:781-894 shift_region_to_valid()
+    ///
+    /// Ensures all stems can reach minimum length, and avoids
+    /// overlapping with large objects like key/time signatures.
+    /// </remarks>
+    private void ShiftRegionToValid()
+    {
+        if (_staffPositions.Length == 0)
+            return;
+
+        double beamDy = _unquantedRightY - _unquantedLeftY;
+        double slope = _xSpan > 0.001 ? beamDy / _xSpan : 0;
+
+        // Calculate feasible left point based on stem length constraints
+        // LILYPOND-REF: lily/beam-quanting.cc:794-812
+        double feasibleMin = double.NegativeInfinity;
+        double feasibleMax = double.PositiveInfinity;
+
+        double minStemLenPos = _minStemLength * 2; // Convert to staff positions
+
+        for (int i = 0; i < _staffPositions.Length; i++)
+        {
+            // The minimum beam Y at this stem position, to satisfy min stem length
+            double minBeamY = _staffPositions[i] + _beamDir * minStemLenPos;
+            // Convert to left Y: leftY = beamAtStem - slope * stemX
+            double leftYForMin = minBeamY - slope * _stemXPositions[i];
+
+            if (_beamDir > 0) // stem up: beam must be above minimum
+                feasibleMin = Math.Max(feasibleMin, leftYForMin);
+            else // stem down: beam must be below minimum
+                feasibleMax = Math.Min(feasibleMax, leftYForMin);
+        }
+
+        // Clamp to feasible region
+        double beamLeftY = _unquantedLeftY;
+        if (_beamDir > 0 && beamLeftY < feasibleMin)
+            beamLeftY = feasibleMin;
+        else if (_beamDir < 0 && beamLeftY > feasibleMax)
+            beamLeftY = feasibleMax;
+
+        _unquantedLeftY = beamLeftY;
+        _unquantedRightY = beamLeftY + beamDy;
+    }
+
+    // ========================================
+    // Quant Generation
+    // ========================================
+
+    /// <summary>
+    /// Generates quantized beam position candidates.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:896-958 generate_quants()
+    ///
+    /// LilyPond uses 4 base quant positions per half-space:
+    /// - straddle (0.0): beam center on staff line
+    /// - sit: beam edge just touches staff line from above
+    /// - inter (0.5): beam center between staff lines
+    /// - hang: beam edge just touches staff line from below
+    ///
+    /// These ensure beams relate properly to staff lines.
+    /// </remarks>
+    private List<BeamConfiguration> GenerateQuantCandidates()
+    {
+        var regionSize = (int)_parameters.RegionSize;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:903-906
+        if (_collisions.Count > 0)
+            regionSize += 2;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:908-912
+        // The 4 base quant positions (in staff spaces, relative to staff line)
+        double straddle = 0.0;
+        double sit = (_beamThickness - _lineThickness) / 2;
+        double inter = 0.5;
+        double hang = 1.0 - (_beamThickness - _lineThickness) / 2;
+        double[] baseQuants = { straddle, sit, inter, hang };
+
+        // Convert unquanted_y from staff positions to staff spaces for quanting
+        double unquantedLeftSS = _unquantedLeftY / 2.0;
+        double unquantedRightSS = _unquantedRightY / 2.0;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:927-932
+        var unshiftedQuants = new List<double>();
+        for (int i = -regionSize; i < regionSize; i++)
+        {
+            foreach (double bq in baseQuants)
+                unshiftedQuants.Add(i + bq);
+        }
+
+        // LILYPOND-REF: lily/beam-quanting.cc:934-957
+        var candidates = new List<BeamConfiguration>();
+        for (int i = 0; i < unshiftedQuants.Count; i++)
+        {
+            for (int j = 0; j < unshiftedQuants.Count; j++)
+            {
+                // New config: truncate to integer + add quant offset
+                // LILYPOND-REF: lily/beam-quanting.cc:161
+                double leftYSS = (int)unquantedLeftSS + unshiftedQuants[i];
+                double rightYSS = (int)unquantedRightSS + unshiftedQuants[j];
+
+                // Convert back to staff positions
+                double leftY = leftYSS * 2.0;
+                double rightY = rightYSS * 2.0;
+
+                // LILYPOND-REF: lily/beam-quanting.cc:166-167
+                // Initial demerit based on distance from ideal (closer = better)
+                double startScore = Math.Abs(unshiftedQuants[j]) + Math.Abs(unshiftedQuants[i]);
+                var config = new BeamConfiguration(leftY, rightY)
+                {
+                    Demerits = startScore / 1000.0,
+                    NextScorerTodo = (int)BeamScorer.SlopeIdeal
+                };
+
+                candidates.Add(config);
+            }
+        }
+
+        return candidates;
+    }
+
+    // ========================================
+    // Scoring
+    // ========================================
+
+    /// <summary>
+    /// Applies the next scorer to a configuration.
+    /// </summary>
+    // LILYPOND-REF: lily/beam-quanting.cc:960-993 one_scorer()
+    private void OneScorer(BeamConfiguration config)
+    {
+        switch ((BeamScorer)config.NextScorerTodo)
+        {
+            case BeamScorer.SlopeIdeal:
+                ScoreSlopeIdeal(config);
+                break;
+            case BeamScorer.SlopeDirection:
+                ScoreSlopeDirection(config);
+                break;
+            case BeamScorer.SlopeMusical:
+                ScoreSlopeMusical(config);
+                break;
+            case BeamScorer.HorizontalInter:
+                ScoreHorizontalInter(config);
+                break;
+            case BeamScorer.Forbidden:
+                ScoreForbiddenQuants(config);
+                break;
+            case BeamScorer.StemLengths:
+                ScoreStemLengths(config);
+                break;
+            case BeamScorer.Collisions:
+                ScoreCollisions(config);
+                break;
+        }
+        config.NextScorerTodo++;
+    }
+
+    /// <summary>
+    /// Penalizes deviation from ideal slope.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:1217-1235 score_slope_ideal()
+    ///
+    /// Uses shrink_extra_weight: |x| * (x &lt; 0 ? 1.5 : 1.0)
+    /// to penalize being too flat more than too steep.
+    /// </remarks>
+    private void ScoreSlopeIdeal(BeamConfiguration config)
+    {
+        double dy = config.RightY - config.LeftY;
+        double dampedDy = _unquantedRightY - _unquantedLeftY;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:1231-1232
+        double diff = Math.Abs(dampedDy) - Math.Abs(dy);
+        double dem = ShrinkExtraWeight(diff, 1.5) * _parameters.IdealSlopeFactor;
+
+        config.AddDemerit(dem, "Si");
+    }
+
+    /// <summary>
+    /// Penalizes slope direction opposing damped direction.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:1177-1203 score_slope_direction()
+    /// </remarks>
+    private void ScoreSlopeDirection(BeamConfiguration config)
+    {
+        double dy = config.RightY - config.LeftY;
+        double dampedDy = _unquantedRightY - _unquantedLeftY;
+        double dem = 0.0;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:1189-1200
+        if (Math.Sign(dampedDy) != Math.Sign(dy))
+        {
+            if (Math.Abs(dy) < 0.001) // dy == 0 (horizontal candidate)
+            {
+                if (Math.Abs(dampedDy / Math.Max(_xSpan, 0.001)) > _parameters.RoundToZeroSlope)
+                    dem += _parameters.DampingDirectionPenalty;
+                else
+                    dem += _parameters.HintDirectionPenalty;
+            }
+            else
+            {
+                dem += _parameters.DampingDirectionPenalty;
+            }
+        }
+
+        config.AddDemerit(dem, "Sd");
+    }
+
+    /// <summary>
+    /// Penalizes slope exceeding musical direction.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:1206-1213 score_slope_musical()
+    /// </remarks>
+    private void ScoreSlopeMusical(BeamConfiguration config)
+    {
+        double dy = config.RightY - config.LeftY;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:1210-1211
+        double dem = _parameters.MusicalDirectionFactor
+                     * Math.Max(0.0, Math.Abs(dy) - Math.Abs(_musicalDy));
+
+        config.AddDemerit(dem, "Sm");
+    }
+
+    /// <summary>
+    /// Penalizes horizontal beams landing between staff lines.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:1247-1257 score_horizontal_inter_quants()
+    ///
+    /// Only applies to horizontal beams (dy == 0) within the staff.
+    /// Penalizes beams positioned exactly between two staff lines.
+    /// </remarks>
+    private void ScoreHorizontalInter(BeamConfiguration config)
+    {
+        double dy = config.RightY - config.LeftY;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:1250-1251
+        // Only penalize horizontal beams within staff
+        if (Math.Abs(dy) < 0.001 && Math.Abs(config.LeftY) < StaffRadius * 2)
+        {
+            // config.LeftY is in staff positions. Staff lines at even positions.
+            // Check if beam is at half-integer position (between lines) = 0.5 staff spaces
+            double yInStaffSpaces = config.LeftY / 2.0;
+            double yShifted = yInStaffSpaces - 0.5;
+            double rounded = Math.Round(yShifted);
+            if (Math.Abs(rounded - yShifted) < 0.01)
+            {
+                config.AddDemerit(_parameters.HorizontalInterQuantPenalty, "H");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Penalizes beams where secondary beams (16th+) sit on staff lines.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:1264-1369 score_forbidden_quants()
+    ///
+    /// For each beam end, checks whether the gap between adjacent beams
+    /// contains a staff line. If so, adds a demerit.
+    /// </remarks>
+    private void ScoreForbiddenQuants(BeamConfiguration config)
+    {
+        // LILYPOND-REF: lily/beam-quanting.cc:1270-1271
+        int maxEdgeBeamCount = _maxBeamCount;
+        double extraDemerit = _parameters.SecondaryBeamDemerit / Math.Max(maxEdgeBeamCount, 1);
+
+        double dem = 0.0;
+        double eps = _parameters.BeamEps;
+
+        // Check each beam end (left and right)
+        // LILYPOND-REF: lily/beam-quanting.cc:1276-1325
+        foreach (double endY in new[] { config.LeftY, config.RightY })
+        {
+            double endYSS = endY / 2.0; // Convert staff positions → staff spaces
+
+            for (int j = 1; j <= maxEdgeBeamCount; j++)
+            {
+                // LILYPOND-REF: lily/beam-quanting.cc:1289-1297
+                double fudgeFactor = 2.2;
+                double gap1 = endYSS
+                    - _beamDir * ((j - 1) * _beamTranslation + _beamThickness / 2
+                                  - _lineThickness / fudgeFactor);
+                double gap2 = endYSS
+                    - _beamDir * (j * _beamTranslation - _beamThickness / 2
+                                  + _lineThickness / fudgeFactor);
+
+                double gapMin = Math.Min(gap1, gap2);
+                double gapMax = Math.Max(gap1, gap2);
+                double gapLength = gapMax - gapMin;
+
+                // LILYPOND-REF: lily/beam-quanting.cc:1303-1323
+                // Check if any staff line falls within the gap
+                for (double k = -StaffRadius; k <= StaffRadius + eps; k += 1.0)
+                {
+                    if (k >= gapMin && k <= gapMax)
+                    {
+                        double dist = Math.Min(Math.Abs(gapMax - k), Math.Abs(gapMin - k));
+                        double fixedDemerit = 0.39;
+                        dem += extraDemerit
+                               * (fixedDemerit + (1 - fixedDemerit) * (dist / Math.Max(gapLength, eps)) * 2);
+                    }
+                }
+            }
+        }
+
+        config.AddDemerit(dem, "Fl");
+
+        // LILYPOND-REF: lily/beam-quanting.cc:1329-1366
+        // Additional forbidden quants for 2+ beam counts
+        dem = 0.0;
+        if (maxEdgeBeamCount >= 2)
+        {
+            double sit = (_beamThickness - _lineThickness) / 2;
+            double hang = 1.0 - (_beamThickness - _lineThickness) / 2;
+            double dy = config.RightY - config.LeftY;
+
+            foreach (double endY in new[] { config.LeftY, config.RightY })
+            {
+                double endYSS = endY / 2.0;
+
+                if (maxEdgeBeamCount >= 2
+                    && Math.Abs(endYSS - _beamDir * _beamTranslation) < StaffRadius + 0.5)
+                {
+                    double frac = endYSS - Math.Floor(endYSS);
+                    if (_beamDir > 0 && dy <= eps && Math.Abs(frac - sit) < eps)
+                        dem += extraDemerit;
+                    if (_beamDir < 0 && dy >= eps && Math.Abs(frac - hang) < eps)
+                        dem += extraDemerit;
+                }
+
+                if (maxEdgeBeamCount >= 3
+                    && Math.Abs(endYSS - 2 * _beamDir * _beamTranslation) < StaffRadius + 0.5)
+                {
+                    double frac = endYSS - Math.Floor(endYSS);
+                    if (Math.Abs(frac) < eps)
+                        dem += extraDemerit;
+                }
+            }
+        }
+
+        config.AddDemerit(dem, "Fs");
+    }
+
+    /// <summary>
+    /// Penalizes stems that are too short or deviate from ideal length.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:1117-1174 score_stem_lengths()
+    ///
+    /// Uses asymmetric penalty (shrink_extra_weight) and divides by
+    /// stem count for scale-free measurement.
+    /// </remarks>
+    private void ScoreStemLengths(BeamConfiguration config)
+    {
+        double limitPenalty = _parameters.StemLengthLimitPenalty;
+        double lengthPen = _parameters.StemLengthDemeritFactor;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:1120-1121
+        double[] score = { 0, 0 }; // [DOWN=0, UP=1]
+        int[] count = { 0, 0 };
+
+        double idealStemLenPos = _idealStemLength * 2;
+        double minStemLenPos = _minStemLength * 2;
+
+        for (int i = 0; i < _stemXPositions.Length; i++)
+        {
+            double x = _stemXPositions[i];
+            // LILYPOND-REF: lily/beam-quanting.cc:1130-1133
+            double beamY = _xSpan > 0.001
+                ? config.RightY * x / _xSpan + config.LeftY * (_xSpan - x) / _xSpan
+                : (config.RightY + config.LeftY) / 2;
+
+            double currentY = beamY;  // beam Y at this stem
+            int d = _beamDir > 0 ? 1 : 0; // index into score array
+
+            // LILYPOND-REF: lily/beam-quanting.cc:1139-1140
+            // Penalty for stems shorter than minimum
+            double shortage = _beamDir * (_staffPositions[i] + _beamDir * minStemLenPos - currentY);
+            score[d] += limitPenalty * Math.Max(0.0, shortage);
+
+            // LILYPOND-REF: lily/beam-quanting.cc:1142-1143
+            // Penalty for deviation from ideal
+            double idealY = _staffPositions[i] + _beamDir * idealStemLenPos;
+            double idealDiff = _beamDir * (currentY - idealY);
+            double idealScore = ShrinkExtraWeight(idealDiff, 1.5);
+            score[d] += lengthPen * idealScore;
+
+            count[d]++;
+        }
+
+        // LILYPOND-REF: lily/beam-quanting.cc:1156-1157
+        for (int d = 0; d < 2; d++)
+            score[d] /= Math.Max(count[d], 1);
+
+        config.AddDemerit(score[0] + score[1], "L");
+    }
+
+    /// <summary>
+    /// Penalizes beam collisions with other objects.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:1372-1403 score_collisions()
+    ///
+    /// Uses cubic falloff: penalty * ((padding - dist) / padding)^3
+    /// </remarks>
+    private void ScoreCollisions(BeamConfiguration config)
+    {
+        if (_collisions.Count == 0)
+            return;
+
+        double demerits = 0.0;
+
+        foreach (var collision in _collisions)
+        {
+            if (collision.X < 0 || collision.X > _xSpan)
+                continue;
+
+            // LILYPOND-REF: lily/beam-quanting.cc:1380
+            double centerBeamY = config.GetYAt(collision.X + _leftX, _leftX, _xSpan);
+
+            // Convert collision Y to staff positions if needed
+            double beamYMin = centerBeamY - _beamThickness;  // Approximate beam extent
+            double beamYMax = centerBeamY + _beamThickness;
+
+            double dist;
+            bool intersects = beamYMax >= collision.MinY && beamYMin <= collision.MaxY;
+
+            if (intersects)
+            {
+                dist = 0.0;
+            }
+            else
+            {
+                dist = Math.Min(
+                    Math.Abs(beamYMin - collision.MaxY),
+                    Math.Abs(beamYMax - collision.MinY));
+            }
+
+            // LILYPOND-REF: lily/beam-quanting.cc:1390-1394
+            double padding = _parameters.CollisionPadding * 2; // Convert to staff positions
+            double scaleFree = Math.Max(padding - dist, 0.0) / Math.Max(padding, 0.001);
+            double collisionDemerit = collision.BasePenalty
+                                     * Math.Pow(scaleFree, 3)
+                                     * _parameters.CollisionPenalty;
+
+            if (collisionDemerit > 0)
+                demerits += collisionDemerit;
+        }
+
+        if (demerits > _parameters.BeamEps)
+            config.AddDemerit(demerits, "C");
+    }
+
+    // ========================================
+    // Utility
+    // ========================================
+
+    /// <summary>
+    /// Asymmetric weight function: |x| if x >= 0, |x| * fac if x &lt; 0.
+    /// </summary>
+    // LILYPOND-REF: lily/beam-quanting.cc:128-132 shrink_extra_weight()
+    private static double ShrinkExtraWeight(double x, double fac)
+    {
+        return Math.Abs(x) * (x < 0 ? fac : 1.0);
     }
 }

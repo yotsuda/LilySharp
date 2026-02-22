@@ -108,7 +108,8 @@ public static class SpacingRules
     /// <remarks>
     /// Uses spacing constants from GlyphMetrics (see LILYPOND-REF comments there).
     /// </remarks>
-    public static double CalculatePrefixWidth(int keySharps, bool includeTimeSignature)
+    public static double CalculatePrefixWidth(int keySharps, bool includeTimeSignature,
+        int timeSigBeats = 4, int timeSigBeatType = 4)
     {
         // Clef width includes spacing to key signature
         double width = GlyphMetrics.ClefToKeySignatureSpace;
@@ -116,7 +117,9 @@ public static class SpacingRules
         int keyAccidentals = Math.Abs(keySharps);
         if (keyAccidentals > 0)
         {
-            width += keyAccidentals * GlyphMetrics.KeySignatureAccidentalWidth;
+            // Use actual Emmentaler glyph width: sharps=1.1ss, flats=0.8ss
+            double accWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(keySharps > 0);
+            width += keyAccidentals * accWidth;
         }
 
         if (includeTimeSignature)
@@ -124,7 +127,8 @@ public static class SpacingRules
             // Add spacing from key signature (or clef) to time signature
             if (keyAccidentals > 0)
                 width += GlyphMetrics.KeySignatureToTimeSignatureSpace;
-            width += GlyphMetrics.TimeSignatureWidth + GlyphMetrics.TimeSignatureToFirstNoteSpace;
+            double timeSigWidth = GlyphMetrics.GetTimeSigWidth(timeSigBeats, timeSigBeatType);
+            width += timeSigWidth + GlyphMetrics.TimeSignatureToFirstNoteSpace;
         }
 
         return width;
@@ -276,12 +280,17 @@ public static class SpacingRules
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/spacing-basic.cc:100-130 note_spacing()
+    /// LILYPOND-REF: lily/note-spacing.cc:119-199 stem_dir_correction()
     /// - ideal_distance = get_duration_space(duration)
     /// - min_distance = max(increment, skyline_collision_distance)
     /// - inverse_stretch_strength = max(0.1, ideal - min)
+    /// - stem direction optical correction applied to ideal
     /// </remarks>
-    public static Spring CreateSpring(MusicItem? prevItem, MusicItem? nextItem, Fraction prevDuration)
+    public static Spring CreateSpring(MusicItem? prevItem, MusicItem? nextItem, Fraction prevDuration,
+                                      NoteSpacingParameters? noteParams = null)
     {
+        var np = noteParams ?? NoteSpacingParameters.Default;
+
         // LILYPOND-REF: lily/spacing-basic.cc:109 note_spacing() - increment
         double defaultMin = EngravingDefaults.SpacingIncrement;
 
@@ -294,11 +303,60 @@ public static class SpacingRules
         // LILYPOND-REF: lily/spacing-basic.cc:107 note_spacing() - duration space
         double idealDistance = CalculateDurationSpace(prevDuration);
 
+        // --- Stem direction optical correction ---
+        // LILYPOND-REF: lily/note-spacing.cc:119-199 stem_dir_correction
+        idealDistance += CalculateStemCorrection(prevItem, nextItem, np);
+
         // LILYPOND-REF: lily/spacing-basic.cc:115 note_spacing() - inverse_stretch
         // This controls how much the spring can stretch
         double inverseStretchStrength = Math.Max(0.1, idealDistance - minDistance);
 
         return new Spring(idealDistance, minDistance, inverseStretchStrength);
+    }
+
+    /// <summary>
+    /// Calculates stem direction optical correction for spacing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:119-199 stem_dir_correction
+    /// - Opposite stem directions: increase space to avoid visual collision
+    /// - Same stem direction: decrease space for tighter appearance
+    /// </remarks>
+    private static double CalculateStemCorrection(MusicItem? prevItem, MusicItem? nextItem,
+                                                   NoteSpacingParameters noteParams)
+    {
+        bool? prevStemUp = prevItem switch
+        {
+            NoteItem n => n.StemUp,
+            ChordItem c => c.StemUp,
+            _ => null
+        };
+
+        bool? nextStemUp = nextItem switch
+        {
+            NoteItem n => n.StemUp,
+            ChordItem c => c.StemUp,
+            _ => null
+        };
+
+        if (!prevStemUp.HasValue || !nextStemUp.HasValue)
+            return 0;
+
+        double increment = EngravingDefaults.SpacingIncrement;
+
+        if (prevStemUp.Value != nextStemUp.Value)
+        {
+            // Different stem directions: stems may cross → increase space
+            // LILYPOND-REF: note-spacing.cc:141-162 (different direction correction)
+            // Simplified: apply stem_spacing_correction as fraction of increment
+            return noteParams.StemSpacingCorrection * increment * 0.5;
+        }
+        else
+        {
+            // Same stem direction: can be tighter
+            // LILYPOND-REF: note-spacing.cc:164-199 (same direction correction)
+            return -noteParams.SameDirectionCorrection * increment * 0.5;
+        }
     }
 
     /// <summary>
@@ -337,6 +395,58 @@ public static class SpacingRules
 
         // Result in staff spaces: spaceFactor * increment
         return spaceFactor * EngravingDefaults.SpacingIncrement;
+    }
+
+    /// <summary>
+    /// Creates a spring for grace note spacing with tighter parameters.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-basic.cc:140-155 grace note spring
+    /// LILYPOND-REF: scm/define-grobs.scm:1585-1598 GraceSpacing
+    /// Grace notes use: spacing-increment=0.8, shortest-duration-space=1.6,
+    /// inverse_stretch_strength = increment / 2.0
+    /// </remarks>
+    public static Spring CreateGraceSpring(Fraction graceDuration,
+                                            GraceSpacingParameters? graceParams = null)
+    {
+        var gp = graceParams ?? GraceSpacingParameters.Default;
+
+        double durationValue = graceDuration.ToDouble();
+        if (durationValue <= 0)
+            durationValue = gp.BaseShortestDuration;
+
+        // Same Gourlay formula as regular notes, but with grace parameters
+        double ratio = durationValue / gp.BaseShortestDuration;
+        double spaceFactor = ratio < 1.0
+            ? gp.ShortestDurationSpace + ratio - 1.0
+            : gp.ShortestDurationSpace + Math.Log2(ratio);
+
+        double idealDistance = spaceFactor * gp.SpacingIncrement;
+        double minDistance = gp.SpacingIncrement;
+
+        // LILYPOND-REF: spacing-basic.cc:153
+        // inverse_stretch_strength = increment / 2.0 (more rigid than normal)
+        double inverseStretchStrength = gp.SpacingIncrement / 2.0;
+
+        return new Spring(idealDistance, minDistance, inverseStretchStrength);
+    }
+
+    /// <summary>
+    /// Adjusts a spring's MinDistance to accommodate grace notes before the next item.
+    /// </summary>
+    /// <param name="spring">The original spring between items.</param>
+    /// <param name="graceNoteCount">Number of grace notes before the next item.</param>
+    /// <returns>Spring with adjusted MinDistance to reserve space for grace notes.</returns>
+    public static Spring AdjustSpringForGraceNotes(Spring spring, int graceNoteCount)
+    {
+        if (graceNoteCount <= 0)
+            return spring;
+
+        double graceWidth = GraceNoteEngraver.GetGraceGroupWidth(graceNoteCount);
+        double newMin = Math.Max(spring.MinDistance, spring.MinDistance + graceWidth);
+        double newIdeal = Math.Max(spring.IdealDistance, newMin);
+
+        return new Spring(newIdeal, newMin, spring.InverseStretchStrength);
     }
 
     /// <summary>

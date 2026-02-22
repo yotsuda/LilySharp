@@ -1,6 +1,8 @@
 using System.Reflection;
 using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
+using LilySharp.Core.Pdf;
+using LilySharp.Core.Pdf.Renderer;
 using LilySharp.Core.Syntax;
 
 return Run(args);
@@ -33,6 +35,7 @@ static int Run(string[] args)
     return first switch
     {
         "svg" => RunSvg(args.Skip(1).ToArray()),
+        "pdf" => RunPdf(args.Skip(1).ToArray()),
         "midi" => RunMidi(args.Skip(1).ToArray()),
         "xml" => RunXml(args.Skip(1).ToArray()),
         "check" => RunCheck(args.Skip(1).ToArray()),
@@ -50,6 +53,7 @@ static void ShowHelp()
 
         Commands:
           svg     Convert to SVG (sheet music)
+          pdf     Convert to PDF (sheet music)
           midi    Convert to MIDI (audio)
           xml     Convert to MusicXML
           check   Check syntax without output
@@ -62,11 +66,13 @@ static void ShowHelp()
           lysc svg score.lys                    # Output: score.svg
           lysc svg score.lys output.svg         # Specify output file
           lysc svg score.lys -o output.svg      # Same as above
+          lysc pdf score.lys                    # Output: score.pdf
           lysc midi score.lys                   # Output: score.mid
           lysc check score.lys                  # Syntax check only
 
         Per-command help:
           lysc svg --help
+          lysc pdf --help
           lysc midi --help
         """);
 }
@@ -213,6 +219,78 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
         File.WriteAllText(outputPath, svg);
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine(embedFont ? "  Font embedded: Yes" : "  Font embedded: No");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        return 1;
+    }
+}
+
+// ============ PDF Command ============
+
+static int RunPdf(string[] args)
+{
+    if (args.Contains("-h") || args.Contains("--help"))
+    {
+        ShowPdfHelp();
+        return 0;
+    }
+
+    var (inputPath, outputPath, error) = ParseSimpleOptions(args, ".pdf");
+    if (error != null)
+    {
+        Console.Error.WriteLine($"Error: {error}");
+        Console.Error.WriteLine("Run 'lysc pdf --help' for usage.");
+        return 1;
+    }
+
+    return ExecutePdf(inputPath!, outputPath!);
+}
+
+static void ShowPdfHelp()
+{
+    Console.WriteLine("""
+        Convert Lily# source to PDF
+
+        Usage: lysc pdf [options] <input.lys> [output.pdf]
+
+        Arguments:
+          <input.lys>      Input Lily# source file
+          [output.pdf]     Output PDF file (default: input with .pdf extension)
+
+        Options:
+          -o, --output <file>    Output file path
+          -h, --help             Show this help
+
+        Examples:
+          lysc pdf score.lys
+          lysc pdf score.lys sheet.pdf
+          lysc pdf -o sheet.pdf score.lys
+        """);
+}
+
+static int ExecutePdf(string inputPath, string outputPath)
+{
+    try
+    {
+        var source = File.ReadAllText(inputPath);
+        var tree = SyntaxTree.Parse(source);
+
+        if (tree.HasErrors)
+        {
+            Console.Error.WriteLine("Syntax errors:");
+            foreach (var diag in tree.Diagnostics)
+                Console.Error.WriteLine($"  {diag}");
+            return 1;
+        }
+
+        var pdfBytes = PdfGenerator.Generate(tree);
+        File.WriteAllBytes(outputPath, pdfBytes);
+
+        Console.WriteLine($"Created: {outputPath}");
+        Console.WriteLine($"  Size: {pdfBytes.Length / 1024.0:F1} KB");
         return 0;
     }
     catch (Exception ex)

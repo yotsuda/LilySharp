@@ -12,38 +12,51 @@ public readonly record struct AccidentalLayout(
     /// <summary>The accidental type (sharp, flat, natural, etc.).</summary>
     string Accidental,
     /// <summary>X offset from the note column in staff spaces (negative = left of note).</summary>
-    double XOffset
+    double XOffset,
+    /// <summary>Whether this is a courtesy (cautionary) accidental.</summary>
+    bool IsCourtesy = false
 );
 
 /// <summary>
-/// LILYPOND-REF: lily/accidental-placement.cc:1-532 Accidental_placement
 /// Parameters for accidental placement. All dimensions in staff spaces.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/accidental-placement.cc:393-439 position_apes
+/// LILYPOND-REF: scm/define-grobs.scm:84 AccidentalPlacement
+/// </remarks>
 public sealed record AccidentalPlacementParameters
 {
     public static AccidentalPlacementParameters Default { get; } = new();
 
-    /// <summary>Padding between accidentals in staff spaces.</summary>
+    /// <summary>Padding between accidental columns in staff spaces.</summary>
+    /// <remarks>LILYPOND-REF: accidental-placement.cc:398,505 (hardcoded 0.2)</remarks>
     public double Padding { get; init; } = 0.2;
 
-    /// <summary>Padding from note head in staff spaces.</summary>
+    /// <summary>Extra padding from note head in staff spaces.</summary>
+    /// <remarks>LILYPOND-REF: define-grobs.scm:84 AccidentalPlacement.right-padding</remarks>
     public double RightPadding { get; init; } = 0.15;
 
-    /// <summary>Minimum distance for staggering in staff positions.</summary>
-    public double StaggerThreshold { get; init; } = 6;
+    /// <summary>Y-axis padding for overlap detection in staff spaces.</summary>
+    /// <remarks>LILYPOND-REF: accidental-placement.cc:413 horizon_padding</remarks>
+    public double HorizonPadding { get; init; } = 0.1;
 }
 
 /// <summary>
-/// Calculates positions for accidentals in chords.
-/// Based on Lilypond's accidental-placement.cc
-/// All coordinates are in staff spaces.
+/// Calculates accidental positions for chords following LilyPond's algorithm.
+/// Uses bounding-box collision detection with glyph Y-extents (equivalent to
+/// skylines for rectangular shapes).
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/accidental-placement.cc
 ///
 /// Algorithm:
-/// 1. Group accidentals by note name (for octave alignment)
-/// 2. Sort by staff position
-/// 3. Stack accidentals that are close together (within 6 staff positions)
-/// 4. Stagger accidentals to avoid collisions
-/// </summary>
+/// 1. Build entries with glyph Y-extents at each note's staff position
+/// 2. Sort by alteration priority (naturals rightmost, flats leftmost)
+///    LILYPOND-REF: accidental-placement.cc:164-184 acc_less
+/// 3. Position right-to-left: each accidental placed as close to notes
+///    as possible without Y-overlapping previously placed accidentals
+///    LILYPOND-REF: accidental-placement.cc:393-439 position_apes
+/// </remarks>
 public sealed class AccidentalPlacement
 {
     private readonly AccidentalPlacementParameters _params;
@@ -53,16 +66,30 @@ public sealed class AccidentalPlacement
         _params = parameters ?? AccidentalPlacementParameters.Default;
     }
 
+    /// <summary>Internal entry for positioning calculations.</summary>
+    private readonly record struct PlacementEntry(
+        int StaffPosition,
+        string Accidental,
+        double YBottom,     // Lower bound in staff spaces
+        double YTop,        // Upper bound in staff spaces
+        double Width,       // Glyph width in staff spaces
+        int Priority        // Sorting priority: lower = rightmost
+    );
+
+    /// <summary>Tracks a placed accidental for collision detection.</summary>
+    private readonly record struct PlacedBox(
+        double LeftEdge,    // X position of left edge
+        double YBottom,
+        double YTop
+    );
+
     /// <summary>
     /// Calculates accidental positions for a chord.
     /// </summary>
     public ImmutableArray<AccidentalLayout> CalculatePositions(IReadOnlyList<ChordNoteInfo> notes)
     {
-        // Filter notes with accidentals
         var accidentals = notes
             .Where(n => !string.IsNullOrEmpty(n.Accidental))
-            .Select(n => (n.StaffPosition, Accidental: n.Accidental!))
-            .OrderByDescending(a => a.StaffPosition) // Top to bottom
             .ToList();
 
         if (accidentals.Count == 0)
@@ -70,18 +97,17 @@ public sealed class AccidentalPlacement
 
         if (accidentals.Count == 1)
         {
-            // Single accidental: simple placement
-            var (pos, acc) = accidentals[0];
-            double width = GetAccidentalWidth(acc);
-            return ImmutableArray.Create(new AccidentalLayout(pos, acc, -(width + _params.RightPadding)));
+            var n = accidentals[0];
+            double width = GetAccidentalWidth(n.Accidental!);
+            return ImmutableArray.Create(new AccidentalLayout(
+                n.StaffPosition, n.Accidental!, -(width + _params.RightPadding)));
         }
 
-        // Multiple accidentals: need to avoid collisions
         return CalculateMultipleAccidentals(accidentals);
     }
 
     /// <summary>
-    /// Calculates positions for a single note's accidental.
+    /// Calculates position for a single note's accidental.
     /// </summary>
     public AccidentalLayout? CalculateSinglePosition(NoteItem note)
     {
@@ -96,87 +122,88 @@ public sealed class AccidentalPlacement
     }
 
     private ImmutableArray<AccidentalLayout> CalculateMultipleAccidentals(
-        List<(int StaffPosition, string Accidental)> accidentals)
+        List<ChordNoteInfo> accidentals)
     {
-        var layouts = new List<AccidentalLayout>();
-        var columns = new List<List<(int StaffPosition, string Accidental)>>();
-
-        // Greedy column assignment:
-        // Place each accidental in the rightmost column where it doesn't collide
-        foreach (var acc in accidentals)
+        // Build entries with glyph Y-extents
+        var entries = new List<PlacementEntry>(accidentals.Count);
+        foreach (var n in accidentals)
         {
-            bool placed = false;
+            var bbox = GetAccidentalBBox(n.Accidental!);
+            // Staff position is in half-spaces; convert to staff spaces
+            double yCenterSS = n.StaffPosition / 2.0;
+            // BBox: Bottom is negative (below baseline), Top is positive (above)
+            double yBottom = yCenterSS + bbox.Bottom;
+            double yTop = yCenterSS + bbox.Top;
+            int priority = GetAlterationPriority(n.Accidental!);
+            entries.Add(new PlacementEntry(
+                n.StaffPosition, n.Accidental!, yBottom, yTop, bbox.Width, priority));
+        }
 
-            for (int col = 0; col < columns.Count; col++)
+        // Sort by alteration priority: naturals rightmost, flats leftmost
+        // LILYPOND-REF: accidental-placement.cc:164-184 acc_less
+        entries.Sort((a, b) => a.Priority.CompareTo(b.Priority));
+
+        // Position right-to-left with collision avoidance
+        // LILYPOND-REF: accidental-placement.cc:393-439 position_apes
+        var placed = new List<PlacedBox>();
+        var layouts = new List<AccidentalLayout>(entries.Count);
+
+        foreach (var entry in entries)
+        {
+            // Start with rightmost possible position
+            double xRight = -_params.RightPadding;
+
+            // Check collision with each placed accidental
+            foreach (var box in placed)
             {
-                if (CanPlaceInColumn(acc, columns[col]))
+                // Check Y overlap with horizon padding
+                // LILYPOND-REF: accidental-placement.cc:413
+                if (entry.YBottom - _params.HorizonPadding < box.YTop &&
+                    box.YBottom - _params.HorizonPadding < entry.YTop)
                 {
-                    columns[col].Add(acc);
-                    placed = true;
-                    break;
+                    // Y extents overlap: must be further left
+                    double maxRight = box.LeftEdge - _params.Padding;
+                    if (maxRight < xRight)
+                        xRight = maxRight;
                 }
             }
 
-            if (!placed)
-            {
-                // Need new column
-                columns.Add(new List<(int, string)> { acc });
-            }
-        }
-
-        // Calculate X offsets for each column
-        double currentX = -_params.RightPadding;
-
-        for (int col = 0; col < columns.Count; col++)
-        {
-            // Find widest accidental in this column
-            double maxWidth = columns[col].Max(a => GetAccidentalWidth(a.Accidental));
-            currentX -= maxWidth;
-
-            foreach (var acc in columns[col])
-            {
-                // Center accidental in column
-                double accWidth = GetAccidentalWidth(acc.Accidental);
-                double offset = currentX + (maxWidth - accWidth) / 2;
-                layouts.Add(new AccidentalLayout(acc.StaffPosition, acc.Accidental, offset));
-            }
-
-            currentX -= _params.Padding;
+            double xLeft = xRight - entry.Width;
+            placed.Add(new PlacedBox(xLeft, entry.YBottom, entry.YTop));
+            layouts.Add(new AccidentalLayout(entry.StaffPosition, entry.Accidental, xLeft));
         }
 
         return layouts.ToImmutableArray();
     }
 
     /// <summary>
-    /// Checks if an accidental can be placed in a column without collision.
-    /// Accidentals collide if they are within 6 staff positions of each other.
+    /// Gets alteration sorting priority.
+    /// Lower values are placed first (rightmost, closest to notes).
     /// </summary>
-    private bool CanPlaceInColumn(
-        (int StaffPosition, string Accidental) acc,
-        List<(int StaffPosition, string Accidental)> column)
+    /// <remarks>
+    /// LILYPOND-REF: accidental-placement.cc:164-184 acc_less
+    /// Naturals are safest (rightmost). Sharps next, then flats (leftmost).
+    /// </remarks>
+    private static int GetAlterationPriority(string accidental) => accidental switch
     {
-        foreach (var existing in column)
-        {
-            int distance = Math.Abs(acc.StaffPosition - existing.StaffPosition);
-            if (distance < _params.StaggerThreshold)
-                return false;
-        }
-        return true;
-    }
+        "natural" => 0,
+        "sharp" => 1,
+        "doubleSharp" => 2,
+        "flat" => 3,
+        "doubleFlat" => 4,
+        _ => 2
+    };
 
-    private static double GetAccidentalWidth(string accidental)
+    private static double GetAccidentalWidth(string accidental) =>
+        GetAccidentalBBox(accidental).Width;
+
+    private static GlyphMetrics.BBox GetAccidentalBBox(string accidental) => accidental switch
     {
-        var bbox = accidental switch
-        {
-            "sharp" => GlyphMetrics.AccidentalSharp,
-            "flat" => GlyphMetrics.AccidentalFlat,
-            "natural" => GlyphMetrics.AccidentalNatural,
-            "double-sharp" or "x" => GlyphMetrics.AccidentalDoubleSharp,
-            "double-flat" => GlyphMetrics.AccidentalDoubleFlat,
-            _ => GlyphMetrics.AccidentalSharp
-        };
-
-        // Width is already in staff spaces from GlyphMetrics
-        return bbox.Width;
-    }
+        "sharp" => GlyphMetrics.AccidentalSharp,
+        "flat" => GlyphMetrics.AccidentalFlat,
+        "natural" => GlyphMetrics.AccidentalNatural,
+        "doubleSharp" => GlyphMetrics.AccidentalDoubleSharp,
+        "doubleFlat" => GlyphMetrics.AccidentalDoubleFlat,
+        _ => GlyphMetrics.AccidentalSharp
+    };
 }

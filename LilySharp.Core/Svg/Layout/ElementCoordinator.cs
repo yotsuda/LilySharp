@@ -19,6 +19,7 @@ public sealed class ElementCoordinator
     private readonly TieDetector _tieDetector = new();
     private readonly TieEngraver _tieEngraver = new();
     private readonly SlurDetector _slurDetector = new();
+    private readonly GlissandoDetector _glissandoDetector = new();
     private readonly VoiceCollector _voiceCollector = new();
     private readonly NoteCollision _noteCollision = new();
 
@@ -366,5 +367,21 @@ public sealed class ElementCoordinator
         }
 
         return slurLayouts.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Detects glissandos and calculates their layouts.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/glissando-engraver.cc
+    /// </remarks>
+    public ImmutableArray<GlissandoLayout> LayoutGlissandos(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
+    {
+        var glissandos = _glissandoDetector.DetectGlissandos(score);
+
+        if (glissandos.Length == 0)
+            return ImmutableArray<GlissandoLayout>.Empty;
+
+        return GlissandoEngraver.Calculate(glissandos, systems, _options.StaffHeight, staffIndex);
     }
 }

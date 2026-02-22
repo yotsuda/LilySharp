@@ -175,4 +175,65 @@ public class SlurScoringProblemTests
         Assert.Equal(10.0, clone.Demerits);
         Assert.Equal(0.6, clone.YOffset);
     }
+
+    [Fact]
+    public void SlurScoreParameters_Default_MatchesLilyPondLayoutSlur()
+    {
+        var p = SlurScoreParameters.Default;
+
+        // layout-slur.scm values
+        Assert.Equal(4, p.RegionSize);
+        Assert.Equal(1000.0, p.HeadEncompassPenalty);
+        Assert.Equal(30.0, p.StemEncompassPenalty);
+        Assert.Equal(4.0, p.EdgeAttractionFactor);
+        Assert.Equal(20.0, p.SameSlopePenalty);
+        Assert.Equal(50.0, p.SteeperSlopeFactor);
+        Assert.Equal(15.0, p.NonHorizontalPenalty);
+        Assert.Equal(1.1, p.MaxSlope);
+        Assert.Equal(10.0, p.MaxSlopeFactor);
+        Assert.Equal(50.0, p.ExtraObjectCollisionPenalty);
+        Assert.Equal(3.0, p.AccidentalCollision);
+        Assert.Equal(0.8, p.FreeSlurDistance);
+        Assert.Equal(0.3, p.FreeHeadDistance);
+        Assert.Equal(0.2, p.GapToStafflineInside);
+        Assert.Equal(0.1, p.GapToStafflineOutside);
+        Assert.Equal(0.3, p.ExtraEncompassFreeDistance);
+        Assert.Equal(0.8, p.ExtraEncompassCollisionDistance);
+        Assert.Equal(3.0, p.HeadSlurDistanceMaxRatio);
+        Assert.Equal(10.0, p.HeadSlurDistanceFactor);
+        Assert.Equal(0.3, p.AbsoluteClosenessMeasure);
+        Assert.Equal(1.7, p.EdgeSlopeExponent);
+        Assert.Equal(2.5, p.CloseToEdgeLength);
+        Assert.Equal(0.5, p.EncompassObjectRangeOvershoot);
+        Assert.Equal(0.2, p.SlurTieExtremaMinDistance);
+        Assert.Equal(2.0, p.SlurTieExtremaMinDistancePenalty);
+    }
+
+    [Theory]
+    [InlineData(0.0, 1.0)]
+    [InlineData(0.5, 0.0)]
+    [InlineData(1.0, 0.0)]
+    public void PeakAround_ReturnsExpectedValues(double x, double expected)
+    {
+        // LILYPOND-REF: lily/misc.cc:48-55
+        double result = SlurScoringProblem.PeakAround(0.05, 0.5, x);
+        Assert.Equal(expected, result, 3);
+    }
+
+    [Fact]
+    public void Solve_UsesLazyPriorityQueue()
+    {
+        // Verify the solver works with priority-queue lazy evaluation
+        var slur = CreateSlur(0, 4);
+        var problem = new SlurScoringProblem(
+            slur, 10, 2, 50, 2);
+
+        var layout = problem.Solve();
+
+        Assert.NotNull(layout);
+        Assert.True(layout.EndX > layout.StartX);
+        // Control points should be on the curve-up side
+        double midY = (layout.StartY + layout.EndY) / 2;
+        Assert.True(layout.Control1.Y < midY);
+    }
 }

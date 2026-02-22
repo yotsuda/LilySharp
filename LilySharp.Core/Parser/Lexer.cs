@@ -489,6 +489,11 @@ internal sealed class Lexer
             "pralltriller" => SyntaxKind.PrallTrillKeyword,
             "tremolo" => SyntaxKind.TremoloKeyword,
 
+            // Override/Revert
+            "override" => SyntaxKind.OverrideKeyword,
+            "revert" => SyntaxKind.RevertKeyword,
+            "once" => SyntaxKind.OnceKeyword,
+
             // Dynamics
             "ppp" => SyntaxKind.DynamicPPP,
             "pp" => SyntaxKind.DynamicPP,

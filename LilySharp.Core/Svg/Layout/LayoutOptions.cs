@@ -94,6 +94,24 @@ public sealed record LayoutOptions
     /// <remarks>LILYPOND-REF: lily/page-spacing.cc</remarks>
     public bool UseOptimalPageBreaking { get; init; } = false;
 
+    /// <summary>
+    /// Parameters for page breaking optimization.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/page-breaking.cc:256-310</remarks>
+    public PageBreakingParameters PageBreaking { get; init; } = PageBreakingParameters.Default;
+
+    /// <summary>
+    /// Parameters for vertical spacing between systems, markups, and page edges.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly:64-89</remarks>
+    public VerticalSpacingParameters VerticalSpacing { get; init; } = VerticalSpacingParameters.Default;
+
+    /// <summary>
+    /// Parameters for spacing between staves within a system.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3040-3054 StaffGrouper</remarks>
+    public StaffSpacingParameters StaffSpacing { get; init; } = StaffSpacingParameters.Default;
+
     // === Computed Properties ===
 
     /// <summary>Available width for music content in staff spaces.</summary>

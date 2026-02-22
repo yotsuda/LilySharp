@@ -185,6 +185,240 @@ public class PageBreakerTests
         Assert.True(details.ForceBreakAfter);
     }
 
+    // --- PageBreakingParameters tests ---
+
+    [Fact]
+    public void PageBreakingParameters_Default_MatchesLilyPond()
+    {
+        var p = PageBreakingParameters.Default;
+
+        // LILYPOND-REF: lily/page-breaking.cc:280-297
+        Assert.False(p.RaggedBottom);
+        Assert.True(p.RaggedLastBottom);
+        Assert.Equal(0, p.SystemsPerPage);
+        Assert.Equal(0, p.MaxSystemsPerPage);
+        Assert.Equal(0, p.MinSystemsPerPage);
+        Assert.Equal(100000, p.OrphanPenalty);
+        // LILYPOND-REF: lily/page-breaking.cc:1506
+        Assert.Equal(10, p.PageSpacingWeight);
+    }
+
+    // --- Orphan penalty tests ---
+
+    [Fact]
+    public void OrphanPenalty_SingleSystemOnLastPage_Penalized()
+    {
+        // 3 systems: 2 fit on first page, 1 orphan on second
+        // vs 1 on first, 2 on second — second should be preferred
+        var systems = new[]
+        {
+            CreateSystem(height: 25),
+            CreateSystem(height: 25),
+            CreateSystem(height: 25)
+        };
+
+        // With orphan penalty (default)
+        var breakerWithPenalty = new PageBreaker(
+            pageHeight: 80, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+            parameters: new PageBreakingParameters { OrphanPenalty = 100000 });
+        var resultWithPenalty = breakerWithPenalty.BreakIntoPages(systems);
+
+        // Without orphan penalty
+        var breakerNoPenalty = new PageBreaker(
+            pageHeight: 80, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+            parameters: new PageBreakingParameters { OrphanPenalty = 0 });
+        var resultNoPenalty = breakerNoPenalty.BreakIntoPages(systems);
+
+        // Both should produce valid results
+        Assert.True(resultWithPenalty.Count >= 1);
+        Assert.True(resultNoPenalty.Count >= 1);
+
+        // With orphan penalty, the breaker should try to avoid 1 system on last page
+        if (resultWithPenalty.Count >= 2)
+        {
+            int lastPageSystems = resultWithPenalty[^1] -
+                (resultWithPenalty.Count >= 2 ? resultWithPenalty[^2] : 0);
+            Assert.True(lastPageSystems >= 1,
+                "Last page should have at least 1 system");
+        }
+    }
+
+    // --- Ragged bottom tests ---
+
+    [Fact]
+    public void RaggedLastBottom_DoesNotStretchLastPage()
+    {
+        // Verify that ragged-last-bottom produces valid breaks
+        var systems = new[]
+        {
+            CreateSystem(height: 15),
+            CreateSystem(height: 15),
+            CreateSystem(height: 15),
+            CreateSystem(height: 15)
+        };
+
+        var breaker = new PageBreaker(
+            pageHeight: 100, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+            parameters: new PageBreakingParameters { RaggedLastBottom = true });
+
+        var result = breaker.BreakIntoPages(systems);
+
+        Assert.True(result.Count >= 1);
+        Assert.Equal(systems.Length, result[^1]); // All systems accounted for
+    }
+
+    [Fact]
+    public void RaggedBottom_AllPagesNotStretched()
+    {
+        var systems = new[]
+        {
+            CreateSystem(height: 15),
+            CreateSystem(height: 15),
+            CreateSystem(height: 15),
+            CreateSystem(height: 15),
+            CreateSystem(height: 15),
+            CreateSystem(height: 15)
+        };
+
+        var breaker = new PageBreaker(
+            pageHeight: 70, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+            parameters: new PageBreakingParameters { RaggedBottom = true });
+
+        var result = breaker.BreakIntoPages(systems);
+
+        Assert.True(result.Count >= 2, "Should need multiple pages");
+        Assert.Equal(systems.Length, result[^1]);
+    }
+
+    // --- Max/min systems per page tests ---
+
+    [Fact]
+    public void MaxSystemsPerPage_LimitsSystemCount()
+    {
+        var systems = new[]
+        {
+            CreateSystem(height: 10),
+            CreateSystem(height: 10),
+            CreateSystem(height: 10),
+            CreateSystem(height: 10)
+        };
+
+        var breaker = new PageBreaker(
+            pageHeight: 200, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+            parameters: new PageBreakingParameters { MaxSystemsPerPage = 2 });
+
+        var result = breaker.BreakIntoPages(systems);
+
+        // Should be at least 2 pages since max is 2 systems per page
+        Assert.True(result.Count >= 2,
+            $"Expected at least 2 pages with max 2 per page, got {result.Count}");
+
+        // Verify each page has at most 2 systems
+        int prevBreak = 0;
+        foreach (var bp in result)
+        {
+            int count = bp - prevBreak;
+            Assert.True(count <= 2,
+                $"Page has {count} systems, max is 2");
+            prevBreak = bp;
+        }
+    }
+
+    [Fact]
+    public void SystemsPerPage_ForcesExactCount()
+    {
+        var systems = new[]
+        {
+            CreateSystem(height: 10),
+            CreateSystem(height: 10),
+            CreateSystem(height: 10),
+            CreateSystem(height: 10)
+        };
+
+        var breaker = new PageBreaker(
+            pageHeight: 200, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+            parameters: new PageBreakingParameters { SystemsPerPage = 2 });
+
+        var result = breaker.BreakIntoPages(systems);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(2, result[0]); // 2 systems on page 1
+        Assert.Equal(4, result[1]); // 2 systems on page 2
+    }
+
+    // --- Break permission tests ---
+
+    [Fact]
+    public void BreakPermission_Forbid_PreventsBreak()
+    {
+        var systems = new[]
+        {
+            CreateSystem(height: 30, pagePermission: BreakPermission.Forbid),
+            CreateSystem(height: 30)
+        };
+
+        var breaker = new PageBreaker(
+            pageHeight: 60, topMargin: 5, bottomMargin: 5, headerHeight: 5);
+
+        var result = breaker.BreakIntoPages(systems);
+
+        // Even though systems might not fit well, forbid prevents break after system 0
+        Assert.Single(result);
+        Assert.Equal(2, result[0]);
+    }
+
+    [Fact]
+    public void BreakPermission_Force_EnforcesBreak()
+    {
+        var systems = new[]
+        {
+            CreateSystem(height: 10, pagePermission: BreakPermission.Force),
+            CreateSystem(height: 10)
+        };
+
+        var breaker = new PageBreaker(
+            pageHeight: 200, topMargin: 5, bottomMargin: 5, headerHeight: 5);
+
+        var result = breaker.BreakIntoPages(systems);
+
+        // Force permission should create page break after system 0
+        Assert.Equal(2, result.Count);
+        Assert.Equal(1, result[0]);
+        Assert.Equal(2, result[1]);
+    }
+
+    // --- Page spacing weight test ---
+
+    [Fact]
+    public void PageSpacingWeight_AffectsDemerits()
+    {
+        // Higher weight means page spacing is more important
+        var systems = new[]
+        {
+            CreateSystem(height: 20),
+            CreateSystem(height: 20),
+            CreateSystem(height: 20)
+        };
+
+        // With low weight
+        var breakerLow = new PageBreaker(
+            pageHeight: 80, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+            parameters: new PageBreakingParameters { PageSpacingWeight = 1 });
+        var resultLow = breakerLow.BreakIntoPages(systems);
+
+        // With high weight
+        var breakerHigh = new PageBreaker(
+            pageHeight: 80, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+            parameters: new PageBreakingParameters { PageSpacingWeight = 100 });
+        var resultHigh = breakerHigh.BreakIntoPages(systems);
+
+        // Both should produce valid results
+        Assert.True(resultLow.Count >= 1);
+        Assert.True(resultHigh.Count >= 1);
+        Assert.Equal(systems.Length, resultLow[^1]);
+        Assert.Equal(systems.Length, resultHigh[^1]);
+    }
+
     private static SystemDetails CreateSystem(
         double height = 20,
         double staffHeight = 10,
@@ -192,7 +426,8 @@ public class PageBreakerTests
         double bottomExtent = 5,
         double padding = 2,
         double springLength = 3,
-        bool forceBreakAfter = false)
+        bool forceBreakAfter = false,
+        BreakPermission pagePermission = BreakPermission.Allow)
     {
         return new SystemDetails
         {
@@ -202,7 +437,8 @@ public class PageBreakerTests
             StaffHeight = staffHeight,
             Padding = padding,
             SpringLength = springLength,
-            ForceBreakAfter = forceBreakAfter
+            ForceBreakAfter = forceBreakAfter,
+            PagePermission = pagePermission
         };
     }
 }

@@ -135,7 +135,8 @@ public sealed class LayoutEngine
 
             systems.Add(new SystemLayout(
                 SystemIndex: sysIdx, Y: currentY, Width: _options.ContentWidth,
-                PrefixWidth: SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, isFirstSystem),
+                PrefixWidth: SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, isFirstSystem,
+                    score.TimeSignature.Beats, score.TimeSignature.BeatType),
                 Measures: measureLayouts, StaffGroups: staffGroupLayouts));
             currentY += systemHeight + _options.SystemSpacing;
             firstMeasureIndex += measureCount;

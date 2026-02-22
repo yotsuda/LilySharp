@@ -32,7 +32,8 @@ public sealed class SystemBreaker
     public List<List<Measure>> BreakIntoSystems(Score score)
     {
         var measures = score.Voice.Measures;
-        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true);
+        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true,
+            score.TimeSignature.Beats, score.TimeSignature.BeatType);
         double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false);
 
         if (_options.UseOptimalLineBreaking)
@@ -58,7 +59,8 @@ public sealed class SystemBreaker
     public List<List<Measure>> BreakIntoSystems(MultiStaffScore score)
     {
         var measures = score.StaffGroups[0].PrimaryStaff.PrimaryVoice.Measures;
-        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true);
+        double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true,
+            score.TimeSignature.Beats, score.TimeSignature.BeatType);
         double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false);
 
         if (_options.UseOptimalLineBreaking)

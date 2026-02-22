@@ -135,20 +135,23 @@ public static class GlyphMetrics
     // LILYPOND-REF: scm/define-grobs.scm:1832-1839 KeySignature space-alist
     // LILYPOND-REF: scm/define-grobs.scm:3596-3602 TimeSignature space-alist
 
-    /// <summary>
-    /// G clef approximate width in staff spaces.
-    /// </summary>
-    public const double GClefWidth = 2.8;
+    // Clef widths measured from emmentaler-20.woff2 advance widths (hmtx table)
+    // 1 staff space = unitsPerEm / 4 = 250 font units
 
     /// <summary>
-    /// F clef approximate width in staff spaces.
+    /// G clef width in staff spaces (advance_width=641, 641/250=2.564).
     /// </summary>
-    public const double FClefWidth = 2.5;
+    public const double GClefWidth = 2.564;
 
     /// <summary>
-    /// C clef approximate width in staff spaces.
+    /// F clef width in staff spaces (advance_width=670, 670/250=2.680).
     /// </summary>
-    public const double CClefWidth = 2.3;
+    public const double FClefWidth = 2.680;
+
+    /// <summary>
+    /// C clef width in staff spaces (advance_width=680, 680/250=2.720).
+    /// </summary>
+    public const double CClefWidth = 2.720;
 
     // LILYPOND-REF: scm/define-grobs.scm:815 (key-signature . (minimum-space . 3.5))
     /// <summary>
@@ -186,16 +189,53 @@ public static class GlyphMetrics
     /// </summary>
     public const double TimeSignatureToFirstNoteSpace = 2.0;
 
-    // LILYPOND-REF: scm/define-grobs.scm:1842 (extra-spacing-width . (0.0 . 1.0))
-    /// <summary>
-    /// Width of a single accidental in key signature including spacing.
-    /// </summary>
-    public const double KeySignatureAccidentalWidth = 1.0;
+    // Key signature accidental widths measured from emmentaler-20.woff2 advance widths.
+    // LilyPond key-signature-interface.cc uses add_at_edge(padding=0) which places
+    // accidentals edge-to-edge based on stencil (=advance) width.
 
     /// <summary>
-    /// Time signature number width (approximate).
+    /// Width of a sharp accidental in key signature (advance_width=275, 275/250=1.100).
     /// </summary>
-    public const double TimeSignatureWidth = 1.8;
+    public const double KeySignatureSharpWidth = 1.1;
+
+    /// <summary>
+    /// Width of a flat accidental in key signature (advance_width=200, 200/250=0.800).
+    /// </summary>
+    public const double KeySignatureFlatWidth = 0.8;
+
+    /// <summary>
+    /// Gets the per-accidental width for a key signature based on accidental type.
+    /// </summary>
+    public static double GetKeySignatureAccidentalWidth(bool isSharps) =>
+        isSharps ? KeySignatureSharpWidth : KeySignatureFlatWidth;
+
+    // Time signature digit widths from emmentaler-20.woff2 advance widths.
+    // The time signature stencil width = max(top digit width, bottom digit width).
+
+    /// <summary>
+    /// Gets the width of a time signature based on its digit widths.
+    /// </summary>
+    public static double GetTimeSigWidth(int beats, int beatType) =>
+        Math.Max(GetTimeSigDigitWidth(beats), GetTimeSigDigitWidth(beatType));
+
+    /// <summary>
+    /// Gets the advance width of a single time signature digit.
+    /// Measured from emmentaler-20.woff2 fattened digit glyphs.
+    /// </summary>
+    public static double GetTimeSigDigitWidth(int digit) => digit switch
+    {
+        0 => 1.464,  // fattened.zero
+        1 => 1.292,  // fattened.one
+        2 => 1.464,  // fattened.two
+        3 => 1.332,  // fattened.three
+        4 => 1.600,  // fattened.four
+        5 => 1.348,  // fattened.five
+        6 => 1.356,  // fattened.six
+        7 => 1.288,  // fattened.seven
+        8 => 1.464,  // fattened.eight
+        9 => 1.356,  // fattened.nine
+        _ => 1.464   // fallback to widest common digit
+    };
 
     // ========== Helper Methods ==========
 

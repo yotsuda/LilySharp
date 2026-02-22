@@ -154,6 +154,11 @@ public enum SyntaxKind : ushort
     PrallTrillKeyword,  // @pralltriller (short trill)
     TremoloKeyword,     // @tremolo (stem tremolo)
 
+    // === Override/Revert Keywords (no backslash, follows LilySharp convention) ===
+    OverrideKeyword,    // override
+    RevertKeyword,      // revert
+    OnceKeyword,        // once
+
     // === Dynamics (with backslash) ===
     DynamicPPP,         // \ppp
     DynamicPP,          // \pp
@@ -244,4 +249,9 @@ public enum SyntaxKind : ushort
     TabStaffDeclaration,
     TuningDeclaration,
     StringNumberAnnotation,
+
+    // === Nodes: Override/Revert ===
+    OverrideDeclaration,    // override Grob.property = value
+    RevertDeclaration,      // revert Grob.property
+    OnceModifier,           // once override/revert ...
 }

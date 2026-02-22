@@ -20,20 +20,73 @@ public sealed record BeamGroup
     /// <summary>Stem direction for the entire beam group (true = up, false = down).</summary>
     public bool StemUp { get; }
 
+    /// <summary>
+    /// Feathered beam grow direction: 0=none, 1=right (accel), -1=left (rit).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: beam.cc:1039-1082 grow-direction
+    /// LILYPOND-REF: define-grobs.scm Beam.grow-direction
+    /// </remarks>
+    public int GrowDirection { get; }
+
     public BeamGroup(
         ImmutableArray<BeamMember> members,
         int measureIndex,
         int startIndex,
-        bool stemUp)
+        bool stemUp,
+        int growDirection = 0)
     {
         Members = members;
         MeasureIndex = measureIndex;
         StartIndex = startIndex;
         StemUp = stemUp;
+        GrowDirection = Math.Clamp(growDirection, -1, 1);
+    }
+
+    /// <summary>
+    /// Whether this beam group spans multiple staves (cross-staff beam).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: beam.cc:1451-1459 - Beam::is_cross_staff
+    /// A beam is cross-staff if any member has a different TargetStaffIndex.
+    /// </remarks>
+    public bool IsCrossStaff
+    {
+        get
+        {
+            if (Members.Length < 2) return false;
+            for (int i = 0; i < Members.Length; i++)
+            {
+                if (Members[i].TargetStaffIndex >= 0)
+                    return true;
+            }
+            return false;
+        }
     }
 
     /// <summary>Gets the number of notes in this beam group.</summary>
     public int Count => Members.Length;
+
+    /// <summary>
+    /// Whether this beam is a kneed beam (stems change direction within the group).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: beam.cc:1425-1448 is_knee
+    /// </remarks>
+    public bool IsKnee
+    {
+        get
+        {
+            if (Members.Length < 2) return false;
+            bool firstUp = Members[0].MemberStemUp;
+            for (int i = 1; i < Members.Length; i++)
+            {
+                if (Members[i].MemberStemUp != firstUp)
+                    return true;
+            }
+            return false;
+        }
+    }
 }
 
 /// <summary>
@@ -71,13 +124,32 @@ public sealed record BeamMember
     /// <summary>Index of this member in the measure's items.</summary>
     public int ItemIndex { get; }
 
+    /// <summary>
+    /// Per-member stem direction for kneed beams.
+    /// For non-kneed beams, matches the group's StemUp.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: beam.cc:894-982 consider_auto_knees
+    /// </remarks>
+    public bool MemberStemUp { get; }
+
+    /// <summary>
+    /// Target staff index for cross-staff notes (-1 = same staff as voice).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: beam.cc:1451-1459 - cross-staff detection via staff symbol comparison
+    /// </remarks>
+    public int TargetStaffIndex { get; }
+
     public BeamMember(
         MusicItem item,
         int beamCount,
         int beamCountLeft,
         int beamCountRight,
         int staffPosition,
-        int itemIndex)
+        int itemIndex,
+        bool memberStemUp = true,
+        int targetStaffIndex = -1)
     {
         Item = item;
         BeamCount = beamCount;
@@ -85,6 +157,8 @@ public sealed record BeamMember
         BeamCountRight = beamCountRight;
         StaffPosition = staffPosition;
         ItemIndex = itemIndex;
+        MemberStemUp = memberStemUp;
+        TargetStaffIndex = targetStaffIndex;
     }
 }
 
@@ -114,6 +188,21 @@ public sealed record BeamLayout
     /// <summary>Staff index for multi-staff scores (-1 for single-staff).</summary>
     public int StaffIndex { get; }
 
+    /// <summary>Whether this beam is a cross-staff beam.</summary>
+    public bool IsCrossStaff => Group.IsCrossStaff;
+
+    /// <summary>
+    /// Per-member staff indices for cross-staff beams.
+    /// Each element is the actual staff index for that beam member.
+    /// Empty for non-cross-staff beams.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: beam.cc:1451-1459 - staff symbol comparison per stem
+    /// For cross-staff beams, each member may be on a different staff.
+    /// The beam line is computed in system-global coordinates.
+    /// </remarks>
+    public ImmutableArray<int> MemberStaffIndices { get; }
+
     public BeamLayout(
         BeamGroup group,
         double leftY,
@@ -121,7 +210,8 @@ public sealed record BeamLayout
         double leftX,
         double rightX,
         ImmutableArray<double> memberXPositions,
-        int staffIndex = -1)
+        int staffIndex = -1,
+        ImmutableArray<int> memberStaffIndices = default)
     {
         Group = group;
         LeftY = leftY;
@@ -130,6 +220,7 @@ public sealed record BeamLayout
         RightX = rightX;
         MemberXPositions = memberXPositions;
         StaffIndex = staffIndex;
+        MemberStaffIndices = memberStaffIndices.IsDefault ? ImmutableArray<int>.Empty : memberStaffIndices;
     }
 
     /// <summary>Gets the slope of the beam (rise per unit run).</summary>

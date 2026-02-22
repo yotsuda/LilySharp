@@ -26,12 +26,15 @@ public sealed class MultiStaffLayouter
     /// <summary>
     /// Calculates the total height of a multi-staff system.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc internal_get_minimum_translations()
+    /// Uses StaffSpacingParameters for intra-group and inter-group spacing.
+    /// </remarks>
     public double CalculateSystemHeight(MultiStaffScore score)
     {
         double height = 0;
         double staffHeight = _options.StaffHeight;
-        double grandStaffSpacing = _options.GrandStaffSpacing;
-        double staffGroupSpacing = _options.StaffGroupSpacing;
+        var sp = _options.StaffSpacing;
 
         for (int i = 0; i < score.StaffGroups.Length; i++)
         {
@@ -39,7 +42,8 @@ public sealed class MultiStaffLayouter
 
             if (group.IsGrandStaff)
             {
-                height += staffHeight * 2 + grandStaffSpacing;
+                // Intra-group: staff-staff-spacing basic distance
+                height += staffHeight * 2 + (sp.StaffStaff.BasicDistance - staffHeight);
             }
             else
             {
@@ -48,11 +52,18 @@ public sealed class MultiStaffLayouter
                     height += GetStaffHeight(staff);
                 }
                 if (group.StaffCount > 1)
-                    height += grandStaffSpacing * (group.StaffCount - 1);
+                {
+                    // Intra-group spacing for each pair
+                    double intraSpacing = sp.StaffStaff.BasicDistance - staffHeight;
+                    height += Math.Max(0, intraSpacing) * (group.StaffCount - 1);
+                }
             }
 
             if (i < score.StaffGroups.Length - 1)
-                height += staffGroupSpacing;
+            {
+                // Inter-group: staffgroup-staff-spacing basic distance
+                height += sp.StaffGroupStaff.BasicDistance - staffHeight;
+            }
         }
 
         return height;
@@ -76,31 +87,42 @@ public sealed class MultiStaffLayouter
     /// <summary>
     /// Layouts all staff groups within a system.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc internal_get_minimum_translations()
+    /// Uses StaffSpacingParameters for intra-group and inter-group spacing.
+    /// </remarks>
     public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(MultiStaffScore score, double systemY)
     {
         var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
         double currentY = 0;
         double staffHeight = _options.StaffHeight;
-        double grandStaffSpacing = _options.GrandStaffSpacing;
-        double staffGroupSpacing = _options.StaffGroupSpacing;
+        var sp = _options.StaffSpacing;
         int globalStaffIndex = 0;
 
-        foreach (var group in score.StaffGroups)
+        for (int i = 0; i < score.StaffGroups.Length; i++)
         {
+            var group = score.StaffGroups[i];
+
             if (group.IsGrandStaff)
             {
-                var layout = LayoutGrandStaffGroup(group, currentY, staffHeight, grandStaffSpacing, globalStaffIndex);
+                var layout = LayoutGrandStaffGroup(group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
                 builder.Add(layout);
-                currentY += layout.Height + staffGroupSpacing;
-                globalStaffIndex += group.StaffCount;
+                currentY += layout.Height;
             }
             else
             {
-                var layout = LayoutSingleStaffGroup(group, currentY, staffHeight, grandStaffSpacing, globalStaffIndex);
+                var layout = LayoutSingleStaffGroup(group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
                 builder.Add(layout);
-                currentY += layout.Height + staffGroupSpacing;
-                globalStaffIndex += group.StaffCount;
+                currentY += layout.Height;
             }
+
+            if (i < score.StaffGroups.Length - 1)
+            {
+                // Inter-group gap: staffgroup-staff basic distance (from bottom of last staff to top of next)
+                currentY += sp.StaffGroupStaff.BasicDistance - staffHeight;
+            }
+
+            globalStaffIndex += group.StaffCount;
         }
 
         return builder.ToImmutable();
@@ -109,11 +131,17 @@ public sealed class MultiStaffLayouter
     /// <summary>
     /// Layouts a grand staff group (piano/organ style with brace).
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3042-3045 staff-staff-spacing
+    /// </remarks>
     private StaffGroupLayout LayoutGrandStaffGroup(
-        StaffGroup group, double y, double staffHeight, double staffSpacing, int startIndex)
+        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec, int startIndex)
     {
         var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
         double currentY = y;
+
+        // Intra-group spacing: staff-staff basic distance is center-to-center
+        double staffSpacing = staffSpec.BasicDistance - staffHeight;
 
         for (int i = 0; i < group.Staves.Length; i++)
         {
@@ -126,11 +154,11 @@ public sealed class MultiStaffLayouter
                 Tuning: staff.Tuning));
 
             if (i < group.Staves.Length - 1)
-                currentY += staffHeight + staffSpacing;
+                currentY += staffHeight + Math.Max(0, staffSpacing);
         }
 
         double totalHeight = currentY + staffHeight - y;
-        double braceX = _options.MarginLeft - 1.0;  // Add spacing between brace and staff
+        double braceX = _options.MarginLeft - 1.0;
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -148,11 +176,17 @@ public sealed class MultiStaffLayouter
     /// <summary>
     /// Layouts a single staff or bracket group.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3042-3045 staff-staff-spacing
+    /// </remarks>
     private StaffGroupLayout LayoutSingleStaffGroup(
-        StaffGroup group, double y, double staffHeight, double staffSpacing, int startIndex)
+        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec, int startIndex)
     {
         var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
         double currentY = y;
+
+        // Intra-group spacing: staff-staff basic distance is center-to-center
+        double staffSpacing = staffSpec.BasicDistance - staffHeight;
 
         for (int i = 0; i < group.Staves.Length; i++)
         {
@@ -166,7 +200,7 @@ public sealed class MultiStaffLayouter
                 Tuning: staff.Tuning));
 
             if (i < group.Staves.Length - 1)
-                currentY += thisStaffHeight + staffSpacing;
+                currentY += thisStaffHeight + Math.Max(0, staffSpacing);
         }
 
         double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
@@ -194,7 +228,8 @@ public sealed class MultiStaffLayouter
             ? startMeasureIndex + measureCount.Value
             : primaryVoice.Measures.Length;
 
-        double prefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, systemIndex == 0);
+        double prefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, systemIndex == 0,
+            score.TimeSignature.Beats, score.TimeSignature.BeatType);
         double startX = _options.MarginLeft + prefixWidth;
         double availableWidth = _options.PageWidth - _options.MarginLeft - _options.MarginRight - prefixWidth;
 

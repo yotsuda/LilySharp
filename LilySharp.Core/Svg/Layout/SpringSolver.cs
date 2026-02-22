@@ -213,4 +213,110 @@ public sealed class SpringSolver
 
         return positions.ToImmutableArray();
     }
+
+    /// <summary>
+    /// Calculates the force penalty for line-breaking optimization.
+    /// Compression (negative force) is penalized more heavily than stretching.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:309-321 Simple_spacer::force_penalty()
+    /// For justified text: penalty = force - (force^4 * 2) if force &lt; 0
+    /// For ragged right: penalty = max(0, idealLength - solvedLength)
+    /// </remarks>
+    public double ForcePenalty(double targetWidth, bool ragged = false)
+    {
+        var (force, _) = Solve(targetWidth, ragged);
+
+        if (ragged)
+        {
+            // Ragged: penalize unused space
+            return Math.Max(0, TotalLength(0) - targetWidth);
+        }
+
+        // Justified: convex compression penalty
+        // LILYPOND-REF: simple-spacer.cc:316-320
+        double f = force;
+        return f - (f < 0 ? f * f * f * f * 2 : 0);
+    }
+
+    /// <summary>
+    /// Applies multi-column rod constraints to a set of springs.
+    /// A rod enforces a minimum total distance across a span of springs.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:92-128 Simple_spacer::add_rod()
+    ///
+    /// If the rod's distance exceeds what the springs can provide at maximum compression,
+    /// the springs' ideal distances are scaled up proportionally.
+    /// Otherwise, blocking forces are updated to enforce the constraint.
+    /// </remarks>
+    public static ImmutableArray<Spring> ApplyRods(
+        ImmutableArray<Spring> springs,
+        IReadOnlyList<(int Left, int Right, double Distance)> rods)
+    {
+        if (rods.Count == 0)
+            return springs;
+
+        var result = springs.ToArray();
+
+        foreach (var (left, right, dist) in rods)
+        {
+            if (left < 0 || right > result.Length || left >= right)
+                continue;
+
+            // Check if rod is already satisfied at maximum compression
+            double minLen = 0;
+            for (int i = left; i < right; i++)
+                minLen += result[i].MinDistance;
+
+            if (minLen >= dist)
+                continue; // Rod already satisfied
+
+            // Calculate ideal length of springs in range
+            double idealLen = 0;
+            for (int i = left; i < right; i++)
+                idealLen += result[i].IdealDistance;
+
+            if (idealLen < dist)
+            {
+                // Need to scale up ideal distances
+                double factor = dist / idealLen;
+                for (int i = left; i < right; i++)
+                {
+                    var s = result[i];
+                    result[i] = new Spring(
+                        s.IdealDistance * factor,
+                        s.MinDistance,
+                        s.InverseStretchStrength);
+                }
+            }
+            else
+            {
+                // Calculate blocking force for this rod
+                // Sum flexibility in the range
+                double invK = 0;
+                for (int i = left; i < right; i++)
+                    invK += result[i].InverseCompressStrength;
+
+                if (invK > 0)
+                {
+                    double blockForce = (dist - idealLen) / invK;
+                    for (int i = left; i < right; i++)
+                    {
+                        var s = result[i];
+                        double newBlockForce = Math.Max(blockForce, s.BlockingForce);
+                        if (newBlockForce > s.BlockingForce)
+                        {
+                            // Recreate spring with updated blocking force via higher min distance
+                            double newMin = Math.Max(s.MinDistance,
+                                s.IdealDistance + newBlockForce * s.InverseCompressStrength);
+                            result[i] = new Spring(s.IdealDistance, newMin, s.InverseStretchStrength);
+                        }
+                    }
+                }
+            }
+        }
+
+        return result.ToImmutableArray();
+    }
 }

@@ -117,19 +117,20 @@ public class BeamScoringTests
 
         // Without collision - solve normally
         var problemWithout = new BeamScoringProblem(group, xPositions);
-        var (leftYWithout, _) = problemWithout.Solve();
+        var (leftYWithout, rightYWithout) = problemWithout.Solve();
 
-        // With collision - rest at middle position in the beam's path
+        // With collision - place a large collision object directly at the beam position
+        // Use high base penalty to ensure the collision scorer triggers movement
         var collisions = new List<BeamCollision>
         {
-            new BeamCollision(X: 75.0, MinY: leftYWithout - 1, MaxY: leftYWithout + 1, BasePenalty: 1.0)
+            new BeamCollision(X: 75.0 - 50.0, MinY: leftYWithout - 0.5, MaxY: leftYWithout + 0.5, BasePenalty: 5.0)
         };
         var problemWith = new BeamScoringProblem(group, xPositions, collisions: collisions);
         var (leftYWith, _) = problemWith.Solve();
 
         // Assert: Beam with collision should move to avoid it
         // The beam may move up or down depending on which direction has less penalty
-        Assert.True(Math.Abs(leftYWith - leftYWithout) > 0.1 || leftYWith != leftYWithout,
+        Assert.True(Math.Abs(leftYWith - leftYWithout) > 0.01,
             $"Beam should adjust position due to collision. Without: {leftYWithout}, With: {leftYWith}");
     }
 

@@ -307,8 +307,8 @@ public sealed class SvgRenderer
         {
             // LILYPOND-REF: ly/titling-init.ly:79-108 \huge \larger \larger \bold = font-size +4
             // font-size 4 → base(11pt) * 2^(4/6) ≈ 17.46pt ≈ 3.49 staff spaces
-            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle" font-size="3.5">{EscapeXml(score.Title)}</text>""");
-            y += 3.5;
+            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle" font-size="3.49">{EscapeXml(score.Title)}</text>""");
+            y += 3.49;
         }
 
         if (score.Composer != null)
@@ -813,8 +813,8 @@ public sealed class SvgRenderer
         {
             // LILYPOND-REF: ly/titling-init.ly:79-108 \huge \larger \larger \bold = font-size +4
             // font-size 4 → base(11pt) * 2^(4/6) ≈ 17.46pt ≈ 3.49 staff spaces
-            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle" font-size="3.5">{EscapeXml(score.Title)}</text>""");
-            y += 3.5;
+            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle" font-size="3.49">{EscapeXml(score.Title)}</text>""");
+            y += 3.49;
         }
 
         if (score.Composer != null)
@@ -907,7 +907,8 @@ public sealed class SvgRenderer
                 currentX = clefRightEdge + (GlyphMetrics.ClefToTimeSignatureSpace - clefWidth);
             }
             DrawTimeSignature(score.TimeSignature, currentX, y);
-            currentX += GlyphMetrics.TimeSignatureWidth + GlyphMetrics.TimeSignatureToFirstNoteSpace;
+            double timeSigWidth = GlyphMetrics.GetTimeSigWidth(score.TimeSignature.Beats, score.TimeSignature.BeatType);
+            currentX += timeSigWidth + GlyphMetrics.TimeSignatureToFirstNoteSpace;
         }
         else
         {
@@ -1401,6 +1402,10 @@ public sealed class SvgRenderer
         int cPos = ((c0Position % 7) + 7) % 7;  // ensure positive modulo
         int hi = positions[cPos];  // highest position for this clef
 
+        // Per-accidental advance width from Emmentaler font metrics
+        // LILYPOND-REF: key-signature-interface.cc uses add_at_edge(padding=0)
+        double accidentalWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(keySig.IsSharps);
+
         for (int i = 0; i < keySig.Count; i++)
         {
             int step = steps[i];
@@ -1414,7 +1419,7 @@ public sealed class SvgRenderer
             // Each position unit = 0.5 staff spaces
             double accY = systemY + StaffHeight / 2 - (staffPosition * 0.5);
             DrawGlyph(glyph, x, accY);
-            x += GlyphMetrics.KeySignatureAccidentalWidth;
+            x += accidentalWidth;
         }
 
         // Return the right edge of the key signature (spacing is handled by caller)

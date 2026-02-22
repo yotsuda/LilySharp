@@ -21,7 +21,14 @@ public sealed record TupletBracketItem(
     /// <summary>Measure index containing this tuplet.</summary>
     int MeasureIndex,
     /// <summary>Source position for click-to-source mapping.</summary>
-    int SourcePosition
+    int SourcePosition,
+    /// <summary>
+    /// Nesting depth for nested tuplets (0 = top-level, 1 = first nesting, etc.).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:400-500 nested bracket stacking
+    /// </remarks>
+    int NestingDepth = 0
 )
 {
     /// <summary>

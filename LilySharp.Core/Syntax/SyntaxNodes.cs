@@ -1410,3 +1410,57 @@ public sealed class SectionStartMarkerSyntax : SyntaxNode
     public static SectionStartMarkerSyntax Create(int position)
         => new(SectionStartMarkerGreen.Instance, null, position);
 }
+
+/// <summary>
+/// Override declaration: override Grob.property = value
+/// LILYPOND-REF: lily/context-property.cc (push/override)
+/// </summary>
+public sealed class OverrideDeclarationSyntax : SyntaxNode
+{
+    internal OverrideDeclarationSyntax(InternalSyntax.OverrideDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>Grob type name (e.g., "Stem", "Beam").</summary>
+    public SyntaxTokenNode GrobName => (SyntaxTokenNode)GetChild(1)!;
+
+    /// <summary>Property name (e.g., "length", "thickness").</summary>
+    public SyntaxTokenNode PropertyName => (SyntaxTokenNode)GetChild(3)!;
+
+    /// <summary>Value token.</summary>
+    public SyntaxTokenNode ValueToken => (SyntaxTokenNode)GetChild(5)!;
+}
+
+/// <summary>
+/// Revert declaration: revert Grob.property
+/// LILYPOND-REF: lily/context-property.cc (pop/revert)
+/// </summary>
+public sealed class RevertDeclarationSyntax : SyntaxNode
+{
+    internal RevertDeclarationSyntax(InternalSyntax.RevertDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>Grob type name.</summary>
+    public SyntaxTokenNode GrobName => (SyntaxTokenNode)GetChild(1)!;
+
+    /// <summary>Property name.</summary>
+    public SyntaxTokenNode PropertyName => (SyntaxTokenNode)GetChild(3)!;
+}
+
+/// <summary>
+/// Once modifier: once override/revert ...
+/// LILYPOND-REF: lily/context-property.cc (temporary_override/revert)
+/// </summary>
+public sealed class OnceModifierSyntax : SyntaxNode
+{
+    internal OnceModifierSyntax(InternalSyntax.OnceModifierGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The command modified by once (override or revert).</summary>
+    public SyntaxNode Command => GetChild(1)!;
+}

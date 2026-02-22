@@ -78,20 +78,20 @@ public sealed class TieEngraver
     }
 
     /// <summary>
-    /// Calculates tie height based on width.
-    /// Based on Lilypond's slur_height function in bezier-bow.cc
+    /// Calculates tie height based on width using LilyPond's atan formula.
+    /// F0_1(x) = (2/π) * atan(π*x/2), then h = h_inf * F0_1(w * r_0 / h_inf).
+    /// For small w: h ≈ r_0 * w. For large w: h → h_inf.
     /// </summary>
-    private double CalculateTieHeight(double width, double heightLimit, double ratio)
+    /// <remarks>
+    /// LILYPOND-REF: lily/bezier-bow.cc:28-38 F0_1() + slur_height()
+    /// </remarks>
+    private static double CalculateTieHeight(double width, double heightLimit, double ratio)
     {
-        // h = h_inf * tanh(r * w / h_inf)
-        // For small w: h ≈ r * w
-        // For large w: h → h_inf
-
         if (heightLimit < 0.001)
             return 0;
 
-        double x = ratio * width / heightLimit;
-        return heightLimit * Math.Tanh(x);
+        double x = width * ratio / heightLimit;
+        return heightLimit * (2.0 / Math.PI) * Math.Atan(Math.PI * x / 2.0);
     }
 
     /// <summary>

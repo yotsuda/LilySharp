@@ -59,6 +59,9 @@ public sealed record BeamQuantParameters
     /// <summary>Penalty for horizontal inter-quant positioning.</summary>
     public double HorizontalInterQuantPenalty { get; init; } = 500.0;
 
-    /// <summary>Factor for stem collision scoring.</summary>
-    public double StemCollisionFactor { get; init; } = 1.0;
+    /// <summary>
+    /// Factor for stem collision scoring.
+    /// LILYPOND-REF: lily/beam-quanting.cc:123-124
+    /// </summary>
+    public double StemCollisionFactor { get; init; } = 0.1;
 }

@@ -131,6 +131,9 @@ internal sealed class Parser
             SyntaxKind.BreakKeyword => ParseBreak(),
             SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
+            SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
+            SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
+            SyntaxKind.OnceKeyword => ParseOnceModifier(),
             SyntaxKind.OpenBrace => ParseMusicBlock(),
             _ when IsMusicItemStart() => ParseMusicItem(),
             _ => null
@@ -469,6 +472,7 @@ internal sealed class Parser
             SyntaxKind.ClefKeyword => true,
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or SyntaxKind.AppogiaturaKeyword => true,
             SyntaxKind.LyricsKeyword => true,
+            SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword or SyntaxKind.OnceKeyword => true,
             SyntaxKind.Identifier => true, // Variable reference
             _ => false
         };
@@ -511,6 +515,9 @@ internal sealed class Parser
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             SyntaxKind.BreakKeyword => ParseBreak(),
                         SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
+            SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
+            SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
+            SyntaxKind.OnceKeyword => ParseOnceModifier(),
 
             SyntaxKind.Identifier => ParseBareVariableReference(), // Variable reference without '$' (deprecated)
             _ => null
@@ -602,6 +609,87 @@ internal sealed class Parser
         return new BreakGreen(breakKeyword);
     }
 
+    // ========== Override/Revert ==========
+
+    /// <summary>
+    /// Parses: override Grob.property = value
+    /// LILYPOND-REF: lily/context-property.cc (push)
+    /// </summary>
+    private OverrideDeclarationGreen ParseOverrideDeclaration()
+    {
+        var overrideKeyword = Expect(SyntaxKind.OverrideKeyword);
+        var grobName = Expect(SyntaxKind.Identifier);
+        var dot = Expect(SyntaxKind.Dot);
+        var propertyName = Expect(SyntaxKind.Identifier);
+        var equals = Expect(SyntaxKind.Equals);
+
+        // Value: integer literal or identifier (for symbolic values)
+        var value = Current.Kind switch
+        {
+            SyntaxKind.IntegerLiteral => Advance(),
+            SyntaxKind.Identifier => Advance(),
+            SyntaxKind.Minus => CombineNegativeNumber(),
+            _ => Expect(SyntaxKind.IntegerLiteral) // error recovery
+        };
+
+        return new OverrideDeclarationGreen(overrideKeyword, grobName, dot, propertyName, equals, value);
+    }
+
+    /// <summary>
+    /// Combines a minus sign with following integer into a negative number token.
+    /// </summary>
+    private SyntaxToken CombineNegativeNumber()
+    {
+        var minus = Advance(); // consume -
+        if (Current.Kind == SyntaxKind.IntegerLiteral)
+        {
+            var num = Advance();
+            // Create a combined token with the negative value
+            return new SyntaxToken(SyntaxKind.IntegerLiteral, "-" + num.Text,
+                minus.LeadingTrivia, num.TrailingTrivia);
+        }
+        // Error: minus not followed by number
+        return minus;
+    }
+
+    /// <summary>
+    /// Parses: revert Grob.property
+    /// LILYPOND-REF: lily/context-property.cc (pop)
+    /// </summary>
+    private RevertDeclarationGreen ParseRevertDeclaration()
+    {
+        var revertKeyword = Expect(SyntaxKind.RevertKeyword);
+        var grobName = Expect(SyntaxKind.Identifier);
+        var dot = Expect(SyntaxKind.Dot);
+        var propertyName = Expect(SyntaxKind.Identifier);
+        return new RevertDeclarationGreen(revertKeyword, grobName, dot, propertyName);
+    }
+
+    /// <summary>
+    /// Parses: once override/revert ...
+    /// LILYPOND-REF: lily/context-property.cc (temporary_override/revert)
+    /// </summary>
+    private OnceModifierGreen ParseOnceModifier()
+    {
+        var onceKeyword = Expect(SyntaxKind.OnceKeyword);
+
+        GreenNode command;
+        if (Current.Kind == SyntaxKind.OverrideKeyword)
+            command = ParseOverrideDeclaration();
+        else if (Current.Kind == SyntaxKind.RevertKeyword)
+            command = ParseRevertDeclaration();
+        else
+        {
+            // Error: once must be followed by override or revert
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                "Expected 'override' or 'revert' after 'once'");
+            command = ParseOverrideDeclaration(); // attempt error recovery
+        }
+
+        return new OnceModifierGreen(onceKeyword, command);
+    }
+
     private TieGreen ParseTie()
     {
         var tilde = Expect(SyntaxKind.Tilde);
@@ -638,9 +726,26 @@ private GreenNode?[] ParseArticulations()
                 }
                 else if (IsArticulationName())
                 {
-                    // @staccato, @accent, @trill, etc.
-                    var name = Advance();
-                    articulations.Add(new ArticulationGreen(at, name));
+                    // Check for compound mark name: @name.part (e.g., @fig.6, @feather.right)
+                    // If current is a plain Identifier followed by a dot, parse as MusicMark
+                    if (Current.Kind == SyntaxKind.Identifier && Peek(1)?.Kind == SyntaxKind.Dot)
+                    {
+                        // Compound music mark - reuse ParseMusicMark logic
+                        var name = Advance();
+                        var parts = new List<SyntaxToken> { at, name };
+                        while (Check(SyntaxKind.Dot))
+                        {
+                            parts.Add(Advance()); // .
+                            parts.Add(ExpectMarkName());
+                        }
+                        articulations.Add(new MusicMarkGreen([.. parts]));
+                    }
+                    else
+                    {
+                        // @staccato, @accent, @trill, etc.
+                        var name = Advance();
+                        articulations.Add(new ArticulationGreen(at, name));
+                    }
                 }
                 else
                 {
@@ -1247,11 +1352,17 @@ private GreenNode?[] ParseArticulations()
     /// </summary>
     private SyntaxToken ExpectMarkName()
     {
-        // Navigation keywords can also appear as mark names
+        // Navigation keywords, integers, and pitch/rest tokens can appear as mark names
+        // LILYPOND-REF: lily/figured-bass-engraver.cc - figure numbers (e.g., @fig.6)
+        // Figured bass alterations: @fig.6.s (sharp), @fig.4.f (flat), @fig.7.n (natural)
+        // 's' → RestS, 'f' → PitchF, 'n' → Identifier (handled naturally)
         if (Current.Kind is SyntaxKind.Identifier
             or SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
             or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword
-            or SyntaxKind.AlKeyword)
+            or SyntaxKind.AlKeyword
+            or SyntaxKind.IntegerLiteral  // For figured bass numbers (e.g., @fig.6)
+            or SyntaxKind.RestS           // For figured bass sharp suffix (e.g., @fig.6.s)
+            or SyntaxKind.PitchF)         // For figured bass flat suffix (e.g., @fig.4.f)
         {
             return Advance();
         }

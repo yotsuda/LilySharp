@@ -1,0 +1,50 @@
+// Showcase 2: Ornaments & Extended Techniques
+// Grace notes, glissando, arpeggio, tuplets, ties, slurs
+title "Ornaments & Techniques"
+composer "LilySharp Showcase"
+
+tempo 100
+time 4/4
+key g major
+
+part melody
+
+phrase graceDemo {
+  // Grace notes + acciaccatura
+  acciaccatura { fis16 g } a4 b2 r4 |
+  acciaccatura { e16 } fis4 g2 r4 |
+}
+
+phrase slurTie {
+  // Slurs and ties
+  g4( a b c) |
+  d,2~ d4 r |
+}
+
+phrase tupletDemo {
+  // Triplets
+  tuplet 3/2 { g4 a b } c4 d |
+  tuplet 3/2 { e4 d c } b4 a |
+}
+
+phrase glissDemo {
+  // Glissando
+  g4@gliss d r2 |
+  e'4@gliss b r2 |
+}
+
+phrase arpeggioDemo {
+  // Arpeggio on chords
+  <g b d'>4@arpeggio r <a c' e'>@arpeggio r |
+  <b d' fis'>2@arpeggio <g b d'>@arpeggio |
+}
+
+section Main {
+  melody { $graceDemo $slurTie $tupletDemo $glissDemo $arpeggioDemo }
+}
+
+structure { Main }
+
+render score "02-ornaments.svg" {
+  staff { melody }
+}

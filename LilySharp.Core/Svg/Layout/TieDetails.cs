@@ -2,73 +2,196 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// Parameters for tie formatting.
-/// LILYPOND-REF: lily/include/tie-details.hh:1-63 Tie_details struct
+/// Values from define-grobs.scm (Tie.details) override C++ defaults in tie-details.cc.
+/// Staff-line clearances are stored in staff spaces (LilyPond stores in half-spaces,
+/// divide by 2 for staff-space equivalent).
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/tie-details.cc:37-93 Tie_details::from_grob()
+/// LILYPOND-REF: scm/define-grobs.scm:3537-3575 Tie grob definition
+/// </remarks>
 public sealed record TieDetails
 {
-    /// <summary>Default parameters matching Lilypond defaults.</summary>
+    /// <summary>Default parameters matching LilyPond effective defaults.</summary>
     public static TieDetails Default { get; } = new();
 
-    /// <summary>Maximum height of tie arc (staff spaces).</summary>
+    // --- Shape parameters ---
+
+    /// <summary>
+    /// Maximum height of tie arc (staff spaces).
+    /// LILYPOND-REF: define-grobs.scm: height-limit = 1.0
+    /// </summary>
     public double HeightLimit { get; init; } = 1.0;
 
-    /// <summary>Ratio for determining tie height based on length.</summary>
+    /// <summary>
+    /// Ratio for determining tie height based on length.
+    /// LILYPOND-REF: define-grobs.scm: ratio = 0.333
+    /// </summary>
     public double Ratio { get; init; } = 0.333;
 
-    /// <summary>Gap between tie endpoint and notehead (staff spaces).</summary>
+    /// <summary>
+    /// Gap between tie endpoint and notehead (staff spaces).
+    /// LILYPOND-REF: define-grobs.scm: note-head-gap = 0.2
+    /// </summary>
     public double XGap { get; init; } = 0.2;
 
-    /// <summary>Gap between tie and stem (staff spaces).</summary>
-    public double StemGap { get; init; } = 0.3;
+    /// <summary>
+    /// Gap between tie and stem (staff spaces).
+    /// LILYPOND-REF: define-grobs.scm: stem-gap = 0.35
+    /// </summary>
+    public double StemGap { get; init; } = 0.35;
 
-    /// <summary>Minimum tie length (staff spaces).</summary>
+    /// <summary>
+    /// Minimum tie length (staff spaces).
+    /// LILYPOND-REF: tie-details.cc: min-length default = 1.0
+    /// </summary>
     public double MinLength { get; init; } = 1.0;
 
-    /// <summary>Clearance from staff lines at tip (staff spaces).</summary>
-    public double TipStaffLineClearance { get; init; } = 0.15;
+    /// <summary>
+    /// Length limit for ties between notes (staff spaces).
+    /// LILYPOND-REF: define-grobs.scm: between-length-limit = 1.0
+    /// </summary>
+    public double BetweenLengthLimit { get; init; } = 1.0;
 
-    /// <summary>Clearance from staff lines at center (staff spaces).</summary>
-    public double CenterStaffLineClearance { get; init; } = 0.35;
+    // --- Staff line collision ---
 
-    /// <summary>Penalty for collision with staff line.</summary>
-    public double StaffLineCollisionPenalty { get; init; } = 10.0;
+    /// <summary>
+    /// Clearance from staff lines at tip (staff spaces).
+    /// LilyPond: 0.45 half-spaces / 2 = 0.225 staff spaces.
+    /// LILYPOND-REF: define-grobs.scm: tip-staff-line-clearance = 0.45 (half-spaces)
+    /// </summary>
+    public double TipStaffLineClearance { get; init; } = 0.225;
 
-    /// <summary>Clearance from dots (staff spaces).</summary>
-    public double DotCollisionClearance { get; init; } = 0.3;
+    /// <summary>
+    /// Clearance from staff lines at center (staff spaces).
+    /// LilyPond: 0.6 half-spaces / 2 = 0.3 staff spaces.
+    /// LILYPOND-REF: define-grobs.scm: center-staff-line-clearance = 0.6 (half-spaces)
+    /// </summary>
+    public double CenterStaffLineClearance { get; init; } = 0.3;
 
-    /// <summary>Penalty for collision with dots.</summary>
-    public double DotCollisionPenalty { get; init; } = 20.0;
+    /// <summary>
+    /// Penalty for collision with staff line.
+    /// LILYPOND-REF: tie-details.cc: staff-line-collision-penalty default = 5
+    /// </summary>
+    public double StaffLineCollisionPenalty { get; init; } = 5.0;
 
-    /// <summary>Penalty for tie going in wrong direction.</summary>
+    // --- Dot collision ---
+
+    /// <summary>
+    /// Clearance from dots (staff spaces).
+    /// LILYPOND-REF: tie-details.cc: dot-collision-clearance default = 0.25
+    /// </summary>
+    public double DotCollisionClearance { get; init; } = 0.25;
+
+    /// <summary>
+    /// Penalty for collision with dots.
+    /// LILYPOND-REF: tie-details.cc: dot-collision-penalty default = 0.25
+    /// </summary>
+    public double DotCollisionPenalty { get; init; } = 0.25;
+
+    // --- Direction penalties ---
+
+    /// <summary>
+    /// Penalty for tie going in wrong direction.
+    /// LILYPOND-REF: tie-details.cc: wrong-direction-offset-penalty default = 10
+    /// </summary>
     public double WrongDirectionOffsetPenalty { get; init; } = 10.0;
 
-    /// <summary>Penalty for tie direction same as stem.</summary>
+    /// <summary>
+    /// Penalty for tie direction same as stem.
+    /// LILYPOND-REF: define-grobs.scm: same-dir-as-stem-penalty = 8
+    /// </summary>
     public double SameDirAsStemPenalty { get; init; } = 8.0;
 
-    /// <summary>Factor for min length penalty.</summary>
-    public double MinLengthPenaltyFactor { get; init; } = 2.0;
+    // --- Length penalties ---
 
-    /// <summary>Padding for skyline collision detection.</summary>
+    /// <summary>
+    /// Factor for min length penalty.
+    /// LILYPOND-REF: define-grobs.scm: min-length-penalty-factor = 26
+    /// </summary>
+    public double MinLengthPenaltyFactor { get; init; } = 26.0;
+
+    // --- Skyline ---
+
+    /// <summary>
+    /// Padding for skyline collision detection.
+    /// LILYPOND-REF: tie-details.cc: skyline-padding default = 0.05
+    /// </summary>
     public double SkylinePadding { get; init; } = 0.05;
 
-    /// <summary>Penalty for tie-tie collision.</summary>
-    public double TieTieCollisionPenalty { get; init; } = 30.0;
+    // --- Tie-tie collision ---
 
-    /// <summary>Distance threshold for tie-tie collision.</summary>
-    public double TieTieCollisionDistance { get; init; } = 0.5;
+    /// <summary>
+    /// Penalty for tie-tie collision.
+    /// LILYPOND-REF: define-grobs.scm: tie-tie-collision-penalty = 25.0
+    /// </summary>
+    public double TieTieCollisionPenalty { get; init; } = 25.0;
 
-    /// <summary>Penalty factor for horizontal distance.</summary>
-    public double HorizontalDistancePenaltyFactor { get; init; } = 5.0;
+    /// <summary>
+    /// Distance threshold for tie-tie collision (staff spaces).
+    /// LILYPOND-REF: define-grobs.scm: tie-tie-collision-distance = 0.45
+    /// </summary>
+    public double TieTieCollisionDistance { get; init; } = 0.45;
 
-    /// <summary>Penalty factor for vertical distance.</summary>
-    public double VerticalDistancePenaltyFactor { get; init; } = 5.0;
+    // --- Distance penalties ---
 
-    /// <summary>Threshold for intra-space positioning.</summary>
-    public double IntraSpaceThreshold { get; init; } = 1.0;
+    /// <summary>
+    /// Penalty factor for horizontal distance.
+    /// LILYPOND-REF: define-grobs.scm: horizontal-distance-penalty-factor = 10
+    /// </summary>
+    public double HorizontalDistancePenaltyFactor { get; init; } = 10.0;
 
-    /// <summary>Search region size for single ties.</summary>
-    public int SingleTieRegionSize { get; init; } = 3;
+    /// <summary>
+    /// Penalty factor for vertical distance.
+    /// LILYPOND-REF: define-grobs.scm: vertical-distance-penalty-factor = 7
+    /// </summary>
+    public double VerticalDistancePenaltyFactor { get; init; } = 7.0;
 
-    /// <summary>Search region size for multiple ties.</summary>
-    public int MultiTieRegionSize { get; init; } = 1;
+    // --- Intra-space ---
+
+    /// <summary>
+    /// Threshold for intra-space positioning.
+    /// LILYPOND-REF: define-grobs.scm: intra-space-threshold = 1.25
+    /// </summary>
+    public double IntraSpaceThreshold { get; init; } = 1.25;
+
+    // --- Region sizes ---
+
+    /// <summary>
+    /// Search region size for single ties.
+    /// LILYPOND-REF: define-grobs.scm: single-tie-region-size = 4
+    /// </summary>
+    public int SingleTieRegionSize { get; init; } = 4;
+
+    /// <summary>
+    /// Search region size for multiple ties.
+    /// LILYPOND-REF: define-grobs.scm: multi-tie-region-size = 3
+    /// </summary>
+    public int MultiTieRegionSize { get; init; } = 3;
+
+    // --- Multi-tie scoring ---
+
+    /// <summary>
+    /// Penalty for non-monotonic tie column (edges/centers must increase).
+    /// LILYPOND-REF: tie-details.cc: tie-column-monotonicity-penalty default = 100
+    /// </summary>
+    public double TieColumnMonotonicityPenalty { get; init; } = 100.0;
+
+    /// <summary>
+    /// Vertical gap between outer ties and notes (staff spaces).
+    /// LILYPOND-REF: define-grobs.scm: outer-tie-vertical-gap = 0.25
+    /// </summary>
+    public double OuterTieVerticalGap { get; init; } = 0.25;
+
+    /// <summary>
+    /// Penalty factor for asymmetric outer tie lengths.
+    /// LILYPOND-REF: define-grobs.scm: outer-tie-length-symmetry-penalty-factor = 10
+    /// </summary>
+    public double OuterTieLengthSymmetryPenaltyFactor { get; init; } = 10.0;
+
+    /// <summary>
+    /// Penalty factor for asymmetric outer tie vertical distances.
+    /// LILYPOND-REF: define-grobs.scm: outer-tie-vertical-distance-symmetry-penalty-factor = 10
+    /// </summary>
+    public double OuterTieVerticalDistanceSymmetryPenaltyFactor { get; init; } = 10.0;
 }

@@ -1,0 +1,58 @@
+// Showcase 3: Piano Grand Staff
+// Grand staff, pedal, ottava, chords, dynamics
+title "Piano Etude"
+composer "LilySharp Showcase"
+
+tempo 108
+time 4/4
+key c major
+
+part rightHand {
+  clef: treble
+}
+
+part leftHand {
+  clef: bass
+}
+
+phrase rhTheme {
+  c'4@p e g e |
+  f4 a g f |
+  e8@cresc f g a g f e d |
+  c2.@f r4 |
+}
+
+phrase rhOttava {
+  c,4@ottava e g c |
+  d4 f a d |
+  c2@loco g |
+  e2. r4 |
+}
+
+phrase lhAccomp {
+  <c e>2 <c g> |
+  <f a>2 <d f> |
+  <c e>2 <c g> |
+  <c e g>2. r4 |
+}
+
+phrase lhPedal {
+  <c e>2@ped <c g> |
+  <f, a>2@ped.off@ped <d f> |
+  <c, e>2@ped.off@ped <c g> |
+  <c, e g>2.@ped.off r4 |
+}
+
+section Main {
+  rightHand { $rhTheme $rhOttava }
+  leftHand { $lhAccomp $lhPedal }
+}
+
+structure { Main }
+
+render score "03-piano.svg" {
+  grandStaff {
+    staff { rightHand }
+    staff { leftHand }
+  }
+}

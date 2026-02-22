@@ -290,16 +290,70 @@ public sealed class BeamDetector
                 beamCountLeft,
                 beamCountRight,
                 staffPosition,
-                itemIndex));
+                itemIndex,
+                memberStemUp: staffPosition < 0)); // Temporary: per-member direction based on position
         }
 
         bool stemUp = noteCount > 0 && (double)totalPosition / noteCount < 0;  // stem up if below middle line
+
+        // Check if first note has feathered beam direction
+        // LILYPOND-REF: beam.cc:1039-1082 grow-direction
+        int growDirection = group[0].item is NoteItem firstNote ? firstNote.FeatherDirection : 0;
+
+        // Auto-knee detection: check if notes span a large gap
+        // LILYPOND-REF: beam.cc:894-982 consider_auto_knees
+        // LILYPOND-REF: define-grobs.scm:437 auto-knee-gap = 5.5
+        bool useKnee = ShouldAutoKnee(members);
+
+        if (!useKnee)
+        {
+            // All members use the group's overall stem direction
+            for (int i = 0; i < members.Count; i++)
+            {
+                var m = members[i];
+                members[i] = new BeamMember(m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
+                    m.StaffPosition, m.ItemIndex, stemUp);
+            }
+        }
+        // If useKnee, keep per-member directions based on staff position
 
         return new BeamGroup(
             members.ToImmutableArray(),
             measureIndex,
             group[0].index,
-            stemUp);
+            stemUp,
+            growDirection);
+    }
+
+    /// <summary>
+    /// Determines if a beam group should use kneed beams based on gap analysis.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: beam.cc:894-982 consider_auto_knees
+    /// LILYPOND-REF: define-grobs.scm:437 auto-knee-gap = 5.5
+    ///
+    /// If notes span more than AutoKneeGap staff positions with a clear gap
+    /// in between, the beam should be kneed.
+    /// </remarks>
+    private const double AutoKneeGap = 5.5;
+
+    private static bool ShouldAutoKnee(List<BeamMember> members)
+    {
+        if (members.Count < 2) return false;
+
+        // Sort positions to find the largest gap
+        var positions = members.Select(m => m.StaffPosition).OrderBy(p => p).ToList();
+
+        double maxGap = 0;
+        for (int i = 1; i < positions.Count; i++)
+        {
+            double gap = positions[i] - positions[i - 1];
+            maxGap = Math.Max(maxGap, gap);
+        }
+
+        // If the largest gap between adjacent notes exceeds the threshold,
+        // use kneed beams with per-member stem directions
+        return maxGap >= AutoKneeGap;
     }
 
     private Fraction GetDuration(MusicItem item)

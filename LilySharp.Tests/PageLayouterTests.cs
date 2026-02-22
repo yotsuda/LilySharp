@@ -79,7 +79,11 @@ public class PageLayouterTests
     public void ForceDistribution_StretchesSpacing()
     {
         // Two small systems on a large page should have spacing larger than minimum
-        var options = CreateOptions(pageHeight: 200, staffHeight: 4, systemSpacing: 8);
+        // Disable ragged-last-bottom to allow vertical justification
+        var options = CreateOptions(pageHeight: 200, staffHeight: 4, systemSpacing: 8) with
+        {
+            PageBreaking = new PageBreakingParameters { RaggedLastBottom = false }
+        };
         var layouter = new PageLayouter(options);
         var systems = CreateDummySystems(2);
 
@@ -93,10 +97,14 @@ public class PageLayouterTests
         var pageSystems = pages[0].Systems;
         double gap = pageSystems[1].Y - pageSystems[0].Y;
 
-        // Minimum distance: staffHeight + bottomExtent + padding + springLength + nextTopExtent
-        // = 4 + 1 + 4 + 4 + 1 = 14 (at force=0)
-        // With positive force the gap should be larger
-        double minGap = options.StaffHeight + 1.0 + options.SystemSpacing * 0.5 + options.SystemSpacing * 0.5 + 1.0;
+        // Minimum distance: skyline + padding
+        // skylineDist = staffHeight + bottomExtent + nextTopExtent = 4 + 1 + 1 = 6
+        // minDist = max(6, 8) + 1 = 9 (min-distance=8 from system-system default)
+        // basicDist = max(12, 9) = 12
+        // With positive force the gap should be larger than basicDist
+        var spec = options.VerticalSpacing.SystemSystem;
+        double skylineDist = options.StaffHeight + 1.0 + 1.0;
+        double minGap = Math.Max(Math.Max(skylineDist, spec.MinimumDistance) + spec.Padding, spec.BasicDistance);
         Assert.True(gap > minGap,
             $"Expected gap ({gap:F2}) > minimum ({minGap:F2}) due to force stretching");
     }
@@ -105,8 +113,6 @@ public class PageLayouterTests
     public void OverfullPage_ClampsForce_MaintainsMinSpacing()
     {
         // Systems barely fit on page — force should be clamped to 0 (no compression)
-        // Available: 50 - 5 - 5 = 40. Two systems need at least ~14 each ≈ 28 total, fits
-        // But make it tighter: staffHeight=10, extents large
         var options = CreateOptions(pageHeight: 60, staffHeight: 10, systemSpacing: 4, marginTop: 3, marginBottom: 3);
         var layouter = new PageLayouter(options);
         var systems = CreateDummySystems(2);
@@ -122,9 +128,12 @@ public class PageLayouterTests
         var pageSystems = pages[0].Systems;
         double gap = pageSystems[1].Y - pageSystems[0].Y;
 
-        // Minimum gap at force=0: staffHeight + bottomExtent + padding + springLength + nextTopExtent
-        // = 10 + 6 + 2 + 2 + 3 = 23
-        double expectedMinGap = options.StaffHeight + 6.0 + options.SystemSpacing * 0.5 + options.SystemSpacing * 0.5 + 3.0;
+        // Minimum gap: skylineDistance + padding
+        // skylineDistance = staffHeight + bottomExtent + nextTopExtent = 10 + 6 + 3 = 19
+        // minDistance = max(skylineDistance, spec.MinimumDistance) + spec.Padding = max(19, 8) + 1 = 20
+        double skylineDist = options.StaffHeight + 6.0 + 3.0;
+        double vs = options.VerticalSpacing.SystemSystem.MinimumDistance;
+        double expectedMinGap = Math.Max(skylineDist, vs) + options.VerticalSpacing.SystemSystem.Padding;
         Assert.True(gap >= expectedMinGap - 0.01,
             $"Expected gap ({gap:F2}) >= minimum ({expectedMinGap:F2}), systems should not overlap");
     }
@@ -140,5 +149,152 @@ public class PageLayouterTests
         var pages = layouter.CreatePagesWithOptimalBreaking(systems, headerHeight: 3, extents);
 
         Assert.Empty(pages);
+    }
+
+    // --- VerticalSpacingParameters tests ---
+
+    [Fact]
+    public void VerticalSpacingParameters_Default_MatchesLilyPond()
+    {
+        var p = VerticalSpacingParameters.Default;
+
+        // LILYPOND-REF: ly/paper-defaults-init.ly:64-89
+        Assert.Equal(12, p.SystemSystem.BasicDistance);
+        Assert.Equal(8, p.SystemSystem.MinimumDistance);
+        Assert.Equal(1, p.SystemSystem.Padding);
+        Assert.Equal(60, p.SystemSystem.Stretchability);
+
+        Assert.Equal(14, p.ScoreSystem.BasicDistance);
+        Assert.Equal(120, p.ScoreSystem.Stretchability);
+
+        Assert.Equal(5, p.MarkupSystem.BasicDistance);
+        Assert.Equal(0.5, p.MarkupSystem.Padding);
+
+        Assert.Equal(1, p.TopSystem.BasicDistance);
+        Assert.Equal(1, p.TopSystem.Padding);
+
+        Assert.Equal(1, p.LastBottom.BasicDistance);
+        Assert.Equal(30, p.LastBottom.Stretchability);
+    }
+
+    [Fact]
+    public void VerticalSpacing_SelectSpec_FirstOnPage_ReturnsTopSystem()
+    {
+        var p = VerticalSpacingParameters.Default;
+
+        var spec = p.SelectSpec(
+            isFirstOnPage: true, isLastOnPage: false,
+            prevIsTitle: false, currentIsTitle: false,
+            currentIsNewScore: false);
+
+        Assert.Equal(p.TopSystem.BasicDistance, spec.BasicDistance);
+    }
+
+    [Fact]
+    public void VerticalSpacing_SelectSpec_SystemAfterTitle_ReturnsMarkupSystem()
+    {
+        var p = VerticalSpacingParameters.Default;
+
+        var spec = p.SelectSpec(
+            isFirstOnPage: false, isLastOnPage: false,
+            prevIsTitle: true, currentIsTitle: false,
+            currentIsNewScore: false);
+
+        Assert.Equal(p.MarkupSystem.BasicDistance, spec.BasicDistance);
+    }
+
+    [Fact]
+    public void VerticalSpacing_SelectSpec_NewScore_ReturnsScoreSystem()
+    {
+        var p = VerticalSpacingParameters.Default;
+
+        var spec = p.SelectSpec(
+            isFirstOnPage: false, isLastOnPage: false,
+            prevIsTitle: false, currentIsTitle: false,
+            currentIsNewScore: true);
+
+        Assert.Equal(p.ScoreSystem.BasicDistance, spec.BasicDistance);
+    }
+
+    [Fact]
+    public void VerticalSpacing_SelectSpec_NormalSystems_ReturnsSystemSystem()
+    {
+        var p = VerticalSpacingParameters.Default;
+
+        var spec = p.SelectSpec(
+            isFirstOnPage: false, isLastOnPage: false,
+            prevIsTitle: false, currentIsTitle: false,
+            currentIsNewScore: false);
+
+        Assert.Equal(p.SystemSystem.BasicDistance, spec.BasicDistance);
+    }
+
+    [Fact]
+    public void VerticalSpacing_SelectSpec_TitleAfterSystem_ReturnsScoreMarkup()
+    {
+        var p = VerticalSpacingParameters.Default;
+
+        var spec = p.SelectSpec(
+            isFirstOnPage: false, isLastOnPage: false,
+            prevIsTitle: false, currentIsTitle: true,
+            currentIsNewScore: false);
+
+        Assert.Equal(p.ScoreMarkup.BasicDistance, spec.BasicDistance);
+    }
+
+    [Fact]
+    public void VerticalSpacing_SelectSpec_TitleAfterTitle_ReturnsMarkupMarkup()
+    {
+        var p = VerticalSpacingParameters.Default;
+
+        var spec = p.SelectSpec(
+            isFirstOnPage: false, isLastOnPage: false,
+            prevIsTitle: true, currentIsTitle: true,
+            currentIsNewScore: false);
+
+        Assert.Equal(p.MarkupMarkup.BasicDistance, spec.BasicDistance);
+    }
+
+    [Fact]
+    public void VerticalSpacing_CustomParameters_AffectSpacing()
+    {
+        // Tighter system-system spacing
+        var customVs = new VerticalSpacingParameters
+        {
+            SystemSystem = new VerticalSpacingSpec
+            {
+                BasicDistance = 8,
+                MinimumDistance = 6,
+                Padding = 0.5,
+                Stretchability = 30
+            }
+        };
+        var options = CreateOptions(pageHeight: 200) with
+        {
+            VerticalSpacing = customVs,
+            PageBreaking = new PageBreakingParameters { RaggedLastBottom = false }
+        };
+        var defaultOptions = CreateOptions(pageHeight: 200) with
+        {
+            PageBreaking = new PageBreakingParameters { RaggedLastBottom = false }
+        };
+
+        var layouterCustom = new PageLayouter(options);
+        var layouterDefault = new PageLayouter(defaultOptions);
+        var systems = CreateDummySystems(3);
+        var extents = ImmutableArray.Create(
+            (upExtent: 1.0, downExtent: 1.0),
+            (upExtent: 1.0, downExtent: 1.0),
+            (upExtent: 1.0, downExtent: 1.0));
+
+        var customPages = layouterCustom.CreatePagesWithOptimalBreaking(systems, 0, extents);
+        var defaultPages = layouterDefault.CreatePagesWithOptimalBreaking(systems, 0, extents);
+
+        double customGap = customPages[0].Systems[1].Y - customPages[0].Systems[0].Y;
+        double defaultGap = defaultPages[0].Systems[1].Y - defaultPages[0].Systems[0].Y;
+
+        // Custom has smaller basic-distance (8 vs 12), so gap should be smaller
+        Assert.True(customGap < defaultGap,
+            $"Custom gap ({customGap:F2}) should be < default ({defaultGap:F2})");
     }
 }

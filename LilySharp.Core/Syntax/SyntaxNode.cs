@@ -144,6 +144,11 @@ public abstract class SyntaxNode
             SyntaxKind.GrandStaffRender => new GrandStaffRenderSyntax((GrandStaffRenderGreen)green, this, position),
             SyntaxKind.TabRender => new TabRenderSyntax((TabRenderGreen)green, this, position),
 
+            // Override/Revert
+            SyntaxKind.OverrideDeclaration => new OverrideDeclarationSyntax((OverrideDeclarationGreen)green, this, position),
+            SyntaxKind.RevertDeclaration => new RevertDeclarationSyntax((RevertDeclarationGreen)green, this, position),
+            SyntaxKind.OnceModifier => new OnceModifierSyntax((OnceModifierGreen)green, this, position),
+
             _ => new GenericSyntaxNode(green, this, position)
         };
     }
