@@ -42,6 +42,7 @@ fonts/*
 # Generated output files
 *.svg
 !editors/**/*.svg
+!LilySharp.Tests/Snapshots/**/*.svg
 
 # Temporary sample files
 samples/test*.lys

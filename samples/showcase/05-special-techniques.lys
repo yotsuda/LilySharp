@@ -1,0 +1,47 @@
+// Showcase 5: Special Techniques
+// Feathered beams, nested tuplets, percent repeats, kneed beams
+title "Special Techniques"
+composer "LilySharp Showcase"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase featheredAccel {
+  // Feathered beams: accelerando (notes get closer)
+  c16@feather.right d e f g a b c' |
+}
+
+phrase featheredRit {
+  // Feathered beams: ritardando (notes spread out)
+  c'16@feather.left b a g f e d c |
+}
+
+phrase nestedTuplet {
+  // Nested tuplets: triplet containing triplet
+  tuplet 3/2 { c8 tuplet 3/2 { d8 e f } g } a4 g |
+  tuplet 3/2 { e8 tuplet 3/2 { f8 g a } b } c'4 b |
+}
+
+phrase percentRepeat {
+  // Percent repeat: play pattern then repeat it
+  repeat percent 2 { c4 e g e } |
+  d4 f a f |
+}
+
+phrase kneedBeam {
+  // Wide-interval beaming that triggers auto-knee
+  c,8 c'' c, c'' c, c'' c, c'' |
+}
+
+section Main {
+  melody { $featheredAccel $featheredRit $nestedTuplet $percentRepeat $kneedBeam }
+}
+
+structure { Main }
+
+render score "05-special-techniques.svg" {
+  staff { melody }
+}

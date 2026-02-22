@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="250" viewBox="0 0 80 25">
+<style>
+  @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
+  @font-face { font-family: 'Emmentaler-Brace'; src: local('Emmentaler-Brace'); }
+  .music { font-family: 'Emmentaler', serif; }
+  .staff { stroke: black; stroke-width: 0.13; }
+  .barline { stroke: black; stroke-width: 0.16; }
+  .ledger { stroke: black; stroke-width: 0.16; }
+  .title { font-family: serif; font-weight: bold; }
+  .composer { font-family: serif; font-style: italic; }
+  .tempo { font-family: serif; }
+  .section-label { font-family: serif; font-weight: bold; }
+  .clef8 { font-family: serif; font-size: 1.4; font-style: italic; }
+</style>
+  <text class="title" x="40" y="5" text-anchor="middle" font-size="3.49">Line Break</text>
+  <text class="composer" x="78" y="8.49" text-anchor="end" font-size="2.2">LilySharp</text>
+  <line class="staff" x1="2" y1="14.5" x2="78" y2="14.5"/>
+  <line class="staff" x1="2" y1="15.5" x2="78" y2="15.5"/>
+  <line class="staff" x1="2" y1="16.5" x2="78" y2="16.5"/>
+  <line class="staff" x1="2" y1="17.5" x2="78" y2="17.5"/>
+  <line class="staff" x1="2" y1="18.5" x2="78" y2="18.5"/>
+  <text class="music" x="2.0" y="17.5" font-size="4.00"></text>
+  <text class="music" x="6.2" y="16.5" font-size="4.00"></text>
+  <text class="music" x="6.2" y="18.5" font-size="4.00"></text>
+  <text x="2.00" y="12.00" font-family="Emmentaler" font-size="1.6"></text>
+  <line x1="2.51" y1="12.00" x2="2.51" y2="10.60" stroke="black" stroke-width="0.10"/>
+  <text class="tempo" font-size="1.8" x="3.10" y="12.00">= 120</text>
+  <line class="ledger" x1="11.7" y1="19.5" x2="13.7" y2="19.5"/>
+  <text class="music" x="12.1" y="19.5" font-size="4.00" data-pos="196"></text>
+  <line x1="13.3" y1="19.3" x2="13.3" y2="15.8" stroke="black" stroke-width="0.12" data-pos="196"/>
+  <text class="music" x="15.6" y="19.0" font-size="4.00" data-pos="203"></text>
+  <line x1="16.7" y1="18.8" x2="16.7" y2="15.3" stroke="black" stroke-width="0.12" data-pos="203"/>
+  <text class="music" x="19.0" y="18.5" font-size="4.00" data-pos="205"></text>
+  <line x1="20.2" y1="18.3" x2="20.2" y2="14.8" stroke="black" stroke-width="0.12" data-pos="205"/>
+  <text class="music" x="22.5" y="18.0" font-size="4.00" data-pos="207"></text>
+  <line x1="23.6" y1="17.8" x2="23.6" y2="14.3" stroke="black" stroke-width="0.12" data-pos="207"/>
+  <rect x="27.29" y="14.50" width="0.16" height="4.00" fill="black"/>
+  <text class="music" x="30.5" y="17.5" font-size="4.00" data-pos="211"></text>
+  <line x1="31.6" y1="17.3" x2="31.6" y2="13.8" stroke="black" stroke-width="0.12" data-pos="211"/>
+  <text class="music" x="33.9" y="17.0" font-size="4.00" data-pos="214"></text>
+  <line x1="35.1" y1="16.8" x2="35.1" y2="13.3" stroke="black" stroke-width="0.12" data-pos="214"/>
+  <text class="music" x="37.8" y="16.5" font-size="4.00" data-pos="216"></text>
+  <line x1="37.8" y1="16.7" x2="37.8" y2="20.2" stroke="black" stroke-width="0.12" data-pos="216"/>
+  <line class="ledger" x1="40.9" y1="13.5" x2="42.8" y2="13.5"/>
+  <line class="ledger" x1="40.9" y1="12.5" x2="42.8" y2="12.5"/>
+  <text class="music" x="41.3" y="12.5" font-size="4.00" data-pos="218"></text>
+  <line x1="41.3" y1="12.7" x2="41.3" y2="16.5" stroke="black" stroke-width="0.12" data-pos="218"/>
+  <rect x="46.09" y="14.50" width="0.16" height="4.00" fill="black"/>
+  <line class="ledger" x1="48.9" y1="13.5" x2="50.8" y2="13.5"/>
+  <line class="ledger" x1="48.9" y1="12.5" x2="50.8" y2="12.5"/>
+  <text class="music" x="49.3" y="12.5" font-size="4.00" data-pos="235"></text>
+  <line x1="49.3" y1="12.7" x2="49.3" y2="16.5" stroke="black" stroke-width="0.12" data-pos="235"/>
+  <line class="ledger" x1="52.3" y1="13.5" x2="54.3" y2="13.5"/>
+  <line class="ledger" x1="52.3" y1="12.5" x2="54.3" y2="12.5"/>
+  <text class="music" x="52.7" y="12.0" font-size="4.00" data-pos="242"></text>
+  <line x1="52.7" y1="12.2" x2="52.7" y2="16.5" stroke="black" stroke-width="0.12" data-pos="242"/>
+  <line class="ledger" x1="55.8" y1="13.5" x2="57.7" y2="13.5"/>
+  <line class="ledger" x1="55.8" y1="12.5" x2="57.7" y2="12.5"/>
+  <line class="ledger" x1="55.8" y1="11.5" x2="57.7" y2="11.5"/>
+  <text class="music" x="56.2" y="11.5" font-size="4.00" data-pos="244"></text>
+  <line x1="56.2" y1="11.7" x2="56.2" y2="16.5" stroke="black" stroke-width="0.12" data-pos="244"/>
+  <line class="ledger" x1="59.2" y1="13.5" x2="61.2" y2="13.5"/>
+  <line class="ledger" x1="59.2" y1="12.5" x2="61.2" y2="12.5"/>
+  <line class="ledger" x1="59.2" y1="11.5" x2="61.2" y2="11.5"/>
+  <text class="music" x="59.6" y="11.0" font-size="4.00" data-pos="246"></text>
+  <line x1="59.6" y1="11.2" x2="59.6" y2="16.5" stroke="black" stroke-width="0.12" data-pos="246"/>
+  <rect x="64.44" y="14.50" width="0.16" height="4.00" fill="black"/>
+  <line class="ledger" x1="67.2" y1="13.5" x2="69.2" y2="13.5"/>
+  <line class="ledger" x1="67.2" y1="12.5" x2="69.2" y2="12.5"/>
+  <line class="ledger" x1="67.2" y1="11.5" x2="69.2" y2="11.5"/>
+  <line class="ledger" x1="67.2" y1="10.5" x2="69.2" y2="10.5"/>
+  <text class="music" x="67.6" y="10.5" font-size="4.00" data-pos="250"></text>
+  <line x1="67.6" y1="10.7" x2="67.6" y2="16.5" stroke="black" stroke-width="0.12" data-pos="250"/>
+  <text class="music" x="69.1" y="10.0" font-size="4.00" data-pos="250"></text>
+  <text class="music" x="73.7" y="16.5" font-size="4.00" data-pos="254"></text>
+  <rect x="77.94" y="14.50" width="0.16" height="4.00" fill="black"/>
+  <line class="ledger" x1="80.7" y1="13.5" x2="82.7" y2="13.5"/>
+  <line class="ledger" x1="80.7" y1="12.5" x2="82.7" y2="12.5"/>
+  <line class="ledger" x1="80.7" y1="11.5" x2="82.7" y2="11.5"/>
+  <text class="music" x="81.1" y="11.5" font-size="4.00" data-pos="271"></text>
+  <line x1="81.1" y1="11.7" x2="81.1" y2="16.5" stroke="black" stroke-width="0.12" data-pos="271"/>
+  <line class="ledger" x1="84.2" y1="13.5" x2="86.1" y2="13.5"/>
+  <line class="ledger" x1="84.2" y1="12.5" x2="86.1" y2="12.5"/>
+  <line class="ledger" x1="84.2" y1="11.5" x2="86.1" y2="11.5"/>
+  <text class="music" x="84.6" y="11.0" font-size="4.00" data-pos="278"></text>
+  <line x1="84.6" y1="11.2" x2="84.6" y2="16.5" stroke="black" stroke-width="0.12" data-pos="278"/>
+  <line class="ledger" x1="87.6" y1="13.5" x2="89.6" y2="13.5"/>
+  <line class="ledger" x1="87.6" y1="12.5" x2="89.6" y2="12.5"/>
+  <line class="ledger" x1="87.6" y1="11.5" x2="89.6" y2="11.5"/>
+  <line class="ledger" x1="87.6" y1="10.5" x2="89.6" y2="10.5"/>
+  <text class="music" x="88.0" y="10.5" font-size="4.00" data-pos="280"></text>
+  <line x1="88.0" y1="10.7" x2="88.0" y2="16.5" stroke="black" stroke-width="0.12" data-pos="280"/>
+  <line class="ledger" x1="91.1" y1="13.5" x2="93.0" y2="13.5"/>
+  <line class="ledger" x1="91.1" y1="12.5" x2="93.0" y2="12.5"/>
+  <line class="ledger" x1="91.1" y1="11.5" x2="93.0" y2="11.5"/>
+  <line class="ledger" x1="91.1" y1="10.5" x2="93.0" y2="10.5"/>
+  <text class="music" x="91.5" y="10.0" font-size="4.00" data-pos="282"></text>
+  <line x1="91.5" y1="10.2" x2="91.5" y2="16.5" stroke="black" stroke-width="0.12" data-pos="282"/>
+  <rect x="96.29" y="14.50" width="0.16" height="4.00" fill="black"/>
+  <line class="ledger" x1="99.1" y1="13.5" x2="101.0" y2="13.5"/>
+  <line class="ledger" x1="99.1" y1="12.5" x2="101.0" y2="12.5"/>
+  <line class="ledger" x1="99.1" y1="11.5" x2="101.0" y2="11.5"/>
+  <line class="ledger" x1="99.1" y1="10.5" x2="101.0" y2="10.5"/>
+  <line class="ledger" x1="99.1" y1="9.5" x2="101.0" y2="9.5"/>
+  <text class="music" x="99.5" y="9.5" font-size="4.00" data-pos="286"></text>
+  <line x1="99.5" y1="9.7" x2="99.5" y2="16.5" stroke="black" stroke-width="0.12" data-pos="286"/>
+  <text class="music" x="100.9" y="9.0" font-size="4.00" data-pos="286"></text>
+  <text class="music" x="105.6" y="16.5" font-size="4.00" data-pos="290"></text>
+  <rect x="109.29" y="14.50" width="0.16" height="4.00" fill="black"/>
+  <rect x="109.85" y="14.50" width="0.50" height="4.00" fill="black"/>
+  <rect x="6.89" y="10.70" width="5.41" height="2.60" fill="white" stroke="black" stroke-width="0.10" class="section-label-box" />
+  <text x="9.60" y="12.00" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">Main</text>
+</svg>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 80 40">
+<style>
+  @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
+  @font-face { font-family: 'Emmentaler-Brace'; src: local('Emmentaler-Brace'); }
+  .music { font-family: 'Emmentaler', serif; }
+  .staff { stroke: black; stroke-width: 0.13; }
+  .barline { stroke: black; stroke-width: 0.16; }
+  .ledger { stroke: black; stroke-width: 0.16; }
+  .title { font-family: serif; font-weight: bold; }
+  .composer { font-family: serif; font-style: italic; }
+  .tempo { font-family: serif; }
+  .section-label { font-family: serif; font-weight: bold; }
+  .clef8 { font-family: serif; font-size: 1.4; font-style: italic; }
+</style>
+  <text class="title" x="40" y="5" text-anchor="middle" font-size="3.49">Treble 8 Clef Test</text>
+  <line class="staff" x1="2" y1="8.5" x2="78" y2="8.5"/>
+  <line class="staff" x1="2" y1="9.5" x2="78" y2="9.5"/>
+  <line class="staff" x1="2" y1="10.5" x2="78" y2="10.5"/>
+  <line class="staff" x1="2" y1="11.5" x2="78" y2="11.5"/>
+  <line class="staff" x1="2" y1="12.5" x2="78" y2="12.5"/>
+  <text class="music" x="2.0" y="11.5" font-size="4.00"></text>
+  <text class="clef8" x="3.1" y="13.7" text-anchor="middle" font-size="1.4" font-style="italic">8</text>
+  <text class="music" x="6.2" y="10.5" font-size="4.00"></text>
+  <text class="music" x="6.2" y="12.5" font-size="4.00"></text>
+  <line class="ledger" x1="14.7" y1="13.5" x2="16.7" y2="13.5"/>
+  <text class="music" x="15.1" y="13.5" font-size="4.00" data-pos="222"></text>
+  <line x1="16.3" y1="13.3" x2="16.3" y2="9.8" stroke="black" stroke-width="0.12" data-pos="222"/>
+  <text class="music" x="21.7" y="13.0" font-size="4.00" data-pos="229"></text>
+  <line x1="22.8" y1="12.8" x2="22.8" y2="9.3" stroke="black" stroke-width="0.12" data-pos="229"/>
+  <text class="music" x="28.2" y="12.5" font-size="4.00" data-pos="231"></text>
+  <line x1="29.4" y1="12.3" x2="29.4" y2="8.8" stroke="black" stroke-width="0.12" data-pos="231"/>
+  <text class="music" x="34.8" y="12.0" font-size="4.00" data-pos="233"></text>
+  <line x1="36.0" y1="11.8" x2="36.0" y2="8.3" stroke="black" stroke-width="0.12" data-pos="233"/>
+  <text class="music" x="49.0" y="11.5" font-size="4.00" data-pos="237"></text>
+  <line x1="50.2" y1="11.3" x2="50.2" y2="7.8" stroke="black" stroke-width="0.12" data-pos="237"/>
+  <text class="music" x="55.8" y="11.0" font-size="4.00" data-pos="239"></text>
+  <line x1="57.0" y1="10.8" x2="57.0" y2="7.3" stroke="black" stroke-width="0.12" data-pos="239"/>
+  <text class="music" x="62.6" y="10.5" font-size="4.00" data-pos="241"></text>
+  <line x1="62.6" y1="10.7" x2="62.6" y2="14.2" stroke="black" stroke-width="0.12" data-pos="241"/>
+  <line class="ledger" x1="69.0" y1="7.5" x2="71.0" y2="7.5"/>
+  <line class="ledger" x1="69.0" y1="6.5" x2="71.0" y2="6.5"/>
+  <text class="music" x="69.4" y="6.5" font-size="4.00" data-pos="243"></text>
+  <line x1="69.4" y1="6.7" x2="69.4" y2="10.5" stroke="black" stroke-width="0.12" data-pos="243"/>
+  <line class="staff" x1="2" y1="19" x2="78" y2="19"/>
+  <line class="staff" x1="2" y1="20" x2="78" y2="20"/>
+  <line class="staff" x1="2" y1="21" x2="78" y2="21"/>
+  <line class="staff" x1="2" y1="22" x2="78" y2="22"/>
+  <line class="staff" x1="2" y1="23" x2="78" y2="23"/>
+  <text class="music" x="2.0" y="22.0" font-size="4.00"></text>
+  <text class="clef8" x="3.1" y="24.2" text-anchor="middle" font-size="1.4" font-style="italic">8</text>
+  <text class="music" x="6.2" y="21.0" font-size="4.00"></text>
+  <text class="music" x="6.2" y="23.0" font-size="4.00"></text>
+  <line class="ledger" x1="14.7" y1="24.0" x2="16.7" y2="24.0"/>
+  <text class="music" x="15.1" y="24.0" font-size="4.00" data-pos="263"></text>
+  <line x1="16.3" y1="23.8" x2="16.3" y2="20.3" stroke="black" stroke-width="0.12" data-pos="263"/>
+  <text class="music" x="21.7" y="23.5" font-size="4.00" data-pos="270"></text>
+  <line x1="22.8" y1="23.3" x2="22.8" y2="19.8" stroke="black" stroke-width="0.12" data-pos="270"/>
+  <text class="music" x="28.2" y="23.0" font-size="4.00" data-pos="272"></text>
+  <line x1="29.4" y1="22.8" x2="29.4" y2="19.3" stroke="black" stroke-width="0.12" data-pos="272"/>
+  <text class="music" x="34.8" y="22.5" font-size="4.00" data-pos="274"></text>
+  <line x1="36.0" y1="22.3" x2="36.0" y2="18.8" stroke="black" stroke-width="0.12" data-pos="274"/>
+  <text class="music" x="49.0" y="22.0" font-size="4.00" data-pos="278"></text>
+  <line x1="50.2" y1="21.8" x2="50.2" y2="18.3" stroke="black" stroke-width="0.12" data-pos="278"/>
+  <text class="music" x="55.8" y="21.5" font-size="4.00" data-pos="280"></text>
+  <line x1="57.0" y1="21.3" x2="57.0" y2="17.8" stroke="black" stroke-width="0.12" data-pos="280"/>
+  <text class="music" x="62.6" y="21.0" font-size="4.00" data-pos="282"></text>
+  <line x1="62.6" y1="21.2" x2="62.6" y2="24.7" stroke="black" stroke-width="0.12" data-pos="282"/>
+  <line class="ledger" x1="69.0" y1="18.0" x2="71.0" y2="18.0"/>
+  <line class="ledger" x1="69.0" y1="17.0" x2="71.0" y2="17.0"/>
+  <text class="music" x="69.4" y="17.0" font-size="4.00" data-pos="284"></text>
+  <line x1="69.4" y1="17.2" x2="69.4" y2="21.0" stroke="black" stroke-width="0.12" data-pos="284"/>
+  <line class="staff" x1="2" y1="29.5" x2="78" y2="29.5"/>
+  <line class="staff" x1="2" y1="30.5" x2="78" y2="30.5"/>
+  <line class="staff" x1="2" y1="31.5" x2="78" y2="31.5"/>
+  <line class="staff" x1="2" y1="32.5" x2="78" y2="32.5"/>
+  <line class="staff" x1="2" y1="33.5" x2="78" y2="33.5"/>
+  <text class="music" x="2.0" y="32.5" font-size="4.00"></text>
+  <text class="clef8" x="3.1" y="34.7" text-anchor="middle" font-size="1.4" font-style="italic">8</text>
+  <text class="music" x="6.2" y="31.5" font-size="4.00"></text>
+  <text class="music" x="6.2" y="33.5" font-size="4.00"></text>
+  <line class="ledger" x1="14.7" y1="34.5" x2="16.7" y2="34.5"/>
+  <text class="music" x="15.1" y="34.5" font-size="4.00" data-pos="303"></text>
+  <line x1="16.3" y1="34.3" x2="16.3" y2="30.8" stroke="black" stroke-width="0.12" data-pos="303"/>
+  <text class="music" x="21.7" y="34.0" font-size="4.00" data-pos="310"></text>
+  <line x1="22.8" y1="33.8" x2="22.8" y2="30.3" stroke="black" stroke-width="0.12" data-pos="310"/>
+  <text class="music" x="28.2" y="33.5" font-size="4.00" data-pos="312"></text>
+  <line x1="29.4" y1="33.3" x2="29.4" y2="29.8" stroke="black" stroke-width="0.12" data-pos="312"/>
+  <text class="music" x="34.8" y="33.0" font-size="4.00" data-pos="314"></text>
+  <line x1="36.0" y1="32.8" x2="36.0" y2="29.3" stroke="black" stroke-width="0.12" data-pos="314"/>
+  <text class="music" x="49.0" y="32.5" font-size="4.00" data-pos="318"></text>
+  <line x1="50.2" y1="32.3" x2="50.2" y2="28.8" stroke="black" stroke-width="0.12" data-pos="318"/>
+  <text class="music" x="55.8" y="32.0" font-size="4.00" data-pos="320"></text>
+  <line x1="57.0" y1="31.8" x2="57.0" y2="28.3" stroke="black" stroke-width="0.12" data-pos="320"/>
+  <text class="music" x="62.6" y="31.5" font-size="4.00" data-pos="322"></text>
+  <line x1="62.6" y1="31.7" x2="62.6" y2="35.2" stroke="black" stroke-width="0.12" data-pos="322"/>
+  <line class="ledger" x1="69.0" y1="28.5" x2="71.0" y2="28.5"/>
+  <line class="ledger" x1="69.0" y1="27.5" x2="71.0" y2="27.5"/>
+  <text class="music" x="69.4" y="27.5" font-size="4.00" data-pos="324"></text>
+  <line x1="69.4" y1="27.7" x2="69.4" y2="31.5" stroke="black" stroke-width="0.12" data-pos="324"/>
+  <line class="barline" x1="2" y1="8.5" x2="2" y2="33.5"/>
+  <line class="barline" x1="42.77017310252997" y1="8.5" x2="42.77017310252997" y2="33.5"/>
+  <line class="barline" x1="78" y1="8.5" x2="78" y2="33.5"/>
+</svg>
