@@ -44,8 +44,12 @@ public static class ArticulationEngraver
     // LILYPOND-REF: define-grobs.scm:2295 staff-padding = 0.25
     private const double StaffPadding = 0.25;
 
-    // Approximate height of articulation glyphs in staff spaces
-    private const double ArticulationHeight = 0.8;
+    // Notehead vertical half-extent (from GlyphMetrics.NoteheadBlack.Top)
+    // LILYPOND-REF: the support skyline of a notehead extends ±0.5 staff spaces from center
+    private const double NoteheadHalfHeight = 0.5;
+
+    // LILYPOND-REF: stem.cc:93 default stem-length = 3.5
+    private const double DefaultStemLength = 3.5;
 
     // Staff middle line position
     private const double StaffMiddle = 2.0;
@@ -129,7 +133,7 @@ public static class ArticulationEngraver
         ChordItem chord => chord.Notes.Length > 0
             ? (chord.Notes.Max(n => n.StaffPosition) + chord.Notes.Min(n => n.StaffPosition)) / 2
             : 4,
-        _ => 4 // Default to middle line
+        _ => 0 // Default to middle line (StaffPosition 0 = B4 in treble clef)
     };
 
     /// <summary>
@@ -139,21 +143,62 @@ public static class ArticulationEngraver
     {
         NoteItem note => note.StemUp,
         ChordItem chord => chord.StemUp,
-        _ => staffPosition >= 4 // Default: stem down for notes on/above middle line
+        _ => staffPosition < 0 // Default: stem up for notes below middle line
     };
 
     /// <summary>
-    /// Calculates Y position for an articulation.
+    /// Gets the glyph bounding box for an articulation type.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: side-position-interface.cc:323-337 staff padding
-    /// LILYPOND-REF: define-grobs.scm:2280 padding = 0.2
-    ///
-    /// Articulations are placed:
-    /// - On the opposite side of the stem (except fermata/ornaments)
-    /// - With padding from the note/staff
-    /// - Ensuring they stay outside the staff if necessary
+    /// LILYPOND-REF: mf/feta-scripts.mf set_char_box() for each script glyph
     /// </remarks>
+    private static GlyphMetrics.BBox GetGlyphBBox(ArticulationType type) => type switch
+    {
+        ArticulationType.Staccato => GlyphMetrics.ArticStaccato,
+        ArticulationType.Accent => GlyphMetrics.ArticAccent,
+        ArticulationType.Tenuto => GlyphMetrics.ArticTenuto,
+        ArticulationType.Marcato => GlyphMetrics.ArticMarcatoAbove, // direction handled separately
+        _ => new GlyphMetrics.BBox(-0.5, -0.5, 0.5, 0.5) // fallback for fermata, ornaments
+    };
+
+    /// <summary>
+    /// Gets the full vertical extent (total height) of an articulation glyph.
+    /// Used for non-quantized articulations in the extent+padding positioning model.
+    /// </summary>
+    private static double GetArticulationExtent(ArticulationType type)
+    {
+        var bbox = GetGlyphBBox(type);
+        return type switch
+        {
+            // Fermata and ornaments: use larger values since glyph BBox not defined
+            ArticulationType.Fermata => 1.5,
+            ArticulationType.Trill or ArticulationType.Mordent or ArticulationType.Prall
+                or ArticulationType.Turn or ArticulationType.InvertedTurn
+                or ArticulationType.PrallTriller => 1.0,
+            _ => bbox.Height
+        };
+    }
+
+    /// <summary>
+    /// Gets the vertical extent of the glyph in the direction toward the note
+    /// (the "near side" extent used in skyline distance calculation).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: side-position-interface.cc:229-264 my_dim skyline is the articulation's
+    /// extent in the -dir direction (toward the support/note).
+    ///
+    /// For symmetric glyphs (staccato, tenuto): near extent = half height.
+    /// For asymmetric glyphs (marcato): near extent = 0 (tip points toward note).
+    /// </remarks>
+    private static double GetNearExtent(ArticulationType type, bool isAbove)
+    {
+        var bbox = GetGlyphBBox(type);
+        // "Near extent" = how far the glyph extends toward the note from its reference point.
+        // For above placement: the glyph's bottom extent (positive = extends downward toward note)
+        // For below placement: the glyph's top extent (positive = extends upward toward note)
+        return isAbove ? -bbox.Bottom : bbox.Top;
+    }
+
     private static double CalculateYPosition(ArticulationItem articulation, int staffPosition, bool stemUp)
     {
         // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
@@ -161,30 +206,182 @@ public static class ArticulationEngraver
         bool forceAbove = articulation.Type == ArticulationType.Fermata || articulation.IsOrnament;
         bool isAbove = forceAbove || articulation.IsAbove;
 
-        // Convert staff position to Y coordinate
-        // Staff position 0 = top line (staff spaces * 0.5)
+        // Convert staff position to Y coordinate (staff spaces from top).
+        // StaffPosition: 0 = middle line, positive = up, negative = down.
+        // Canonical formula used by note rendering: Y = StaffMiddle - StaffPosition * 0.5
         // LILYPOND-REF: staff-symbol-referencer.cc:76-89 staff_symbol_referencer::get_position
-        double noteY = staffPosition * 0.5;
+        double noteY = StaffMiddle - staffPosition * 0.5;
+
+        // Use quantize-position for staccato, marcato, tenuto
+        // LILYPOND-REF: scm/script.scm staccato/marcato/tenuto: (quantize-position . #t)
+        if (ShouldQuantize(articulation.Type))
+        {
+            return QuantizedYPosition(noteY, isAbove, stemUp, articulation.Type);
+        }
+
+        // Non-quantized path: fermata, ornaments, accent, portato
+        // LILYPOND-REF: side-position-interface.cc:360-378 total_off calculation
+        // LILYPOND-REF: side-position-interface.cc:426-445 staff-padding clamp
+        //
+        // include_staff = true (staff-padding exists AND quantize-position = false)
+        // The staff is included in the support skyline, then staff-padding is applied.
+
+        double glyphNearExtent = GetNearExtent(articulation.Type, isAbove);
+        double supportExtent = isAbove
+            ? (stemUp ? DefaultStemLength : NoteheadHalfHeight)
+            : (!stemUp ? DefaultStemLength : NoteheadHalfHeight);
+
+        // dist = skyline distance; total_off = dist + padding
+        double totalOff = supportExtent + glyphNearExtent + Padding;
+        double targetY = isAbove ? noteY - totalOff : noteY + totalOff;
 
         if (isAbove)
         {
-            // Place above the note
-            // LILYPOND-REF: side-position-interface.cc:330-337 include_staff
-            double targetY = noteY - ArticulationHeight - Padding;
-
-            // Ensure articulation is above staff (with staff-padding)
-            // LILYPOND-REF: define-grobs.scm:2295 staff-padding = 0.25
-            double minY = StaffTop - StaffPadding - ArticulationHeight;
-            return Math.Min(targetY, minY);
+            // LILYPOND-REF: side-position-interface.cc:426-445 staff-padding clamp
+            // Ensure the glyph's bottom edge clears the staff top by staff-padding
+            double glyphBottom = targetY + glyphNearExtent; // glyph's edge toward staff
+            double staffEdge = StaffTop - StaffPadding;
+            if (glyphBottom > staffEdge)
+                targetY = staffEdge - glyphNearExtent;
+            return targetY;
         }
         else
         {
-            // Place below the note
-            double targetY = noteY + Padding + ArticulationHeight;
-
-            // Ensure articulation is below staff (with staff-padding)
-            double maxY = StaffBottom + StaffPadding;
-            return Math.Max(targetY, maxY);
+            // Ensure the glyph's top edge clears the staff bottom by staff-padding
+            double glyphTop = targetY - glyphNearExtent; // glyph's edge toward staff
+            double staffEdge = StaffBottom + StaffPadding;
+            if (glyphTop < staffEdge)
+                targetY = staffEdge + glyphNearExtent;
+            return targetY;
         }
+    }
+
+    /// <summary>
+    /// Returns true for articulation types that use LilyPond's quantize-position algorithm.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/script.scm — these scripts have (quantize-position . #t)
+    /// </remarks>
+    private static bool ShouldQuantize(ArticulationType type) => type switch
+    {
+        ArticulationType.Staccato => true,
+        ArticulationType.Marcato => true,
+        ArticulationType.Tenuto => true,
+        _ => false
+    };
+
+    /// <summary>
+    /// Calculates Y position using LilyPond's quantize-position algorithm.
+    /// Follows the aligned_side() flow from side-position-interface.cc:
+    ///   1. Calculate skyline distance (support extent + glyph extent)
+    ///   2. Add padding to get total_off
+    ///   3. Convert to LP staff position and apply quantize-position
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: side-position-interface.cc:193-448 aligned_side() full flow
+    /// LILYPOND-REF: side-position-interface.cc:360-378 total_off = dir * dist + dir * ss * padding
+    /// LILYPOND-REF: side-position-interface.cc:402-425 quantize-position
+    /// LILYPOND-REF: misc.cc directed_round() — ceil for UP, floor for DOWN
+    ///
+    /// LP staff positions for 5-line staff:
+    ///   Lines: -4 (bottom), -2, 0 (middle), 2, 4 (top)
+    ///   Spaces: -5, -3, -1, 1, 3, 5
+    ///
+    /// Conversion: lpPos = (StaffMiddle - Y) * 2;  Y = StaffMiddle - lpPos / 2
+    /// </remarks>
+    private static double QuantizedYPosition(double noteY, bool isAbove, bool stemUp, ArticulationType type)
+    {
+        // ── Stage 4-5 (aligned_side): Calculate total_off ──
+        //
+        // LILYPOND-REF: side-position-interface.cc:266-328 build support skylines
+        // The support skyline for a Script grob is the notehead (+ stem if same direction).
+        // Stems pointing AWAY from the articulation are skipped:
+        //   LILYPOND-REF: side-position-interface.cc:279-284
+        //   if (dir == -get_grob_direction(e)) continue;
+        //
+        // For staccato (side-relative-direction = DOWN):
+        //   stem UP → staccato dir=DOWN → stem dir=UP → dir != -stem_dir → stem SKIPPED
+        //   stem DOWN → staccato dir=UP → stem dir=DOWN → dir != -stem_dir → stem SKIPPED
+        // In both normal cases, only the notehead is in the support.
+        // Stem is only included when direction is forced (e.g., fermata above with stem up).
+
+        double supportExtent; // Support (notehead/stem) extent in the direction of placement
+        if (isAbove)
+        {
+            // For above: support's UP extent (top of notehead, or stem tip if stem goes up)
+            // Stem is included only when stem direction matches placement direction
+            supportExtent = stemUp ? (noteY - (noteY - DefaultStemLength)) : NoteheadHalfHeight;
+            // ↑ if stemUp AND isAbove: stem IS in support (forced above case), use stem length
+            // ↑ if !stemUp AND isAbove: stem skipped, just notehead top = 0.5
+        }
+        else
+        {
+            // For below: support's DOWN extent
+            supportExtent = !stemUp ? (noteY + DefaultStemLength - noteY) : NoteheadHalfHeight;
+            // ↑ if !stemUp AND !isAbove: stem IS in support (forced below case), use stem length
+            // ↑ if stemUp AND !isAbove: stem skipped, just notehead bottom = 0.5
+        }
+
+        // LILYPOND-REF: side-position-interface.cc:229-264 my_dim skyline (-dir direction)
+        // The glyph's "near extent" = how far it extends toward the note from its reference point
+        double glyphNearExtent = GetNearExtent(type, isAbove);
+
+        // LILYPOND-REF: side-position-interface.cc:360-365
+        // dist = dim.distance(my_dim, horizon_padding)
+        // For simple bounding boxes: dist = supportExtent + glyphNearExtent
+        double dist = supportExtent + glyphNearExtent;
+
+        // LILYPOND-REF: side-position-interface.cc:366-370
+        // total_off = dir * dist + dir * ss * padding
+        // (ss = staff_space = 1.0 in our coordinate system)
+        double totalOff = dist + Padding;
+
+        // Convert total_off to target Y position
+        double targetY = isAbove ? noteY - totalOff : noteY + totalOff;
+
+        // ── Stage 7 (aligned_side): Apply quantize-position ──
+        //
+        // LILYPOND-REF: side-position-interface.cc:402-425
+        // Note: include_staff = false when quantize-position = true (line 222-226)
+        // So staff-padding is NOT applied before quantization.
+
+        // Convert to LP staff position
+        // LP: 0 = middle line (our Y=2.0), positive = up, negative = down
+        double lpPosition = (StaffMiddle - targetY) * 2.0;
+
+        // Directed round (away from the note)
+        // LILYPOND-REF: misc.cc directed_round(): ceil for UP, floor for DOWN
+        double rounded = isAbove ? Math.Ceiling(lpPosition) : Math.Floor(lpPosition);
+
+        // Check if quantization applies
+        // LILYPOND-REF: side-position-interface.cc:414-424
+        // Staff line span for 5-line staff: [-4, 4], widened by 1: [-5, 5]
+        const double StaffSpanMin = -5.0;
+        const double StaffSpanMax = 5.0;
+        bool inStaffSpan = lpPosition >= StaffSpanMin && lpPosition <= StaffSpanMax;
+        // LILYPOND-REF: side-position-interface.cc:418
+        // has_interface<Note_head>(head) && dir * position < 0
+        // Articulation is between note and staff center (ledger line note case)
+        bool betweenNoteAndStaff = isAbove ? lpPosition < 0 : lpPosition > 0;
+
+        if (inStaffSpan || betweenNoteAndStaff)
+        {
+            // LILYPOND-REF: side-position-interface.cc:420
+            // total_off += (rounded - position) * 0.5 * ss;
+            // Equivalent: snap targetY to the rounded LP position
+            targetY = StaffMiddle - rounded / 2.0;
+
+            // LILYPOND-REF: side-position-interface.cc:421-422
+            // if (Staff_symbol_referencer::on_line(me, int(rounded)))
+            //     total_off += dir * 0.5 * ss;
+            // Even LP positions within staff lines [−4, 4] are on lines
+            int roundedInt = (int)rounded;
+            if (roundedInt >= -4 && roundedInt <= 4 && roundedInt % 2 == 0)
+            {
+                targetY += isAbove ? -0.5 : 0.5;
+            }
+        }
+
+        return targetY;
     }
 }

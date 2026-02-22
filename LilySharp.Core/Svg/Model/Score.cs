@@ -95,6 +95,27 @@ public sealed record Score
     /// <summary>Tuplet brackets in the score.</summary>
     public ImmutableArray<TupletBracketItem> TupletBrackets { get; }
 
+    /// <summary>Arpeggio markings in the score.</summary>
+    public ImmutableArray<ArpeggioItem> Arpeggios { get; }
+
+    /// <summary>Figured bass annotations in the score.</summary>
+    public ImmutableArray<FiguredBassItem> FiguredBasses { get; }
+
+    /// <summary>Chord name symbols in the score.</summary>
+    public ImmutableArray<ChordNameItem> ChordNames { get; }
+
+    /// <summary>Percent repeat markers in the score.</summary>
+    public ImmutableArray<PercentRepeatItem> PercentRepeats { get; }
+
+    /// <summary>Cross-staff note assignments for grand staff rendering.</summary>
+    public ImmutableArray<CrossStaffItem> CrossStaffItems { get; }
+
+    /// <summary>Grob property overrides from override declarations.</summary>
+    public ImmutableArray<GrobOverride> GrobOverrides { get; }
+
+    /// <summary>Grob property reverts from revert declarations.</summary>
+    public ImmutableArray<GrobRevert> GrobReverts { get; }
+
     /// <summary>Whether this score has multiple voices.</summary>
     public bool IsMultiVoice => Voices.Length > 1;
 
@@ -117,8 +138,15 @@ public sealed record Score
         ImmutableArray<MusicMarkItem>? musicMarks = null,
         ImmutableArray<CustomTextItem>? customTexts = null,
         ImmutableArray<VoltaBracketItem>? voltaBrackets = null,
-        ImmutableArray<TupletBracketItem>? tupletBrackets = null)
-        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts, voltaBrackets, tupletBrackets)
+        ImmutableArray<TupletBracketItem>? tupletBrackets = null,
+        ImmutableArray<ArpeggioItem>? arpeggios = null,
+        ImmutableArray<FiguredBassItem>? figuredBasses = null,
+        ImmutableArray<ChordNameItem>? chordNames = null,
+        ImmutableArray<PercentRepeatItem>? percentRepeats = null,
+        ImmutableArray<CrossStaffItem>? crossStaffItems = null,
+        ImmutableArray<GrobOverride>? grobOverrides = null,
+        ImmutableArray<GrobRevert>? grobReverts = null)
+        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts, voltaBrackets, tupletBrackets, arpeggios, figuredBasses, chordNames, percentRepeats, crossStaffItems, grobOverrides, grobReverts)
     {
     }
 
@@ -141,7 +169,14 @@ public sealed record Score
         ImmutableArray<MusicMarkItem>? musicMarks = null,
         ImmutableArray<CustomTextItem>? customTexts = null,
         ImmutableArray<VoltaBracketItem>? voltaBrackets = null,
-        ImmutableArray<TupletBracketItem>? tupletBrackets = null)
+        ImmutableArray<TupletBracketItem>? tupletBrackets = null,
+        ImmutableArray<ArpeggioItem>? arpeggios = null,
+        ImmutableArray<FiguredBassItem>? figuredBasses = null,
+        ImmutableArray<ChordNameItem>? chordNames = null,
+        ImmutableArray<PercentRepeatItem>? percentRepeats = null,
+        ImmutableArray<CrossStaffItem>? crossStaffItems = null,
+        ImmutableArray<GrobOverride>? grobOverrides = null,
+        ImmutableArray<GrobRevert>? grobReverts = null)
     {
         if (voices.Length == 0)
             throw new ArgumentException("Score must have at least one voice", nameof(voices));
@@ -162,6 +197,13 @@ public sealed record Score
         CustomTexts = customTexts ?? ImmutableArray<CustomTextItem>.Empty;
         VoltaBrackets = voltaBrackets ?? ImmutableArray<VoltaBracketItem>.Empty;
         TupletBrackets = tupletBrackets ?? ImmutableArray<TupletBracketItem>.Empty;
+        Arpeggios = arpeggios ?? ImmutableArray<ArpeggioItem>.Empty;
+        FiguredBasses = figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty;
+        ChordNames = chordNames ?? ImmutableArray<ChordNameItem>.Empty;
+        PercentRepeats = percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty;
+        CrossStaffItems = crossStaffItems ?? ImmutableArray<CrossStaffItem>.Empty;
+        GrobOverrides = grobOverrides ?? ImmutableArray<GrobOverride>.Empty;
+        GrobReverts = grobReverts ?? ImmutableArray<GrobRevert>.Empty;
     }
 
     /// <summary>Total number of measures in the score (from primary voice).</summary>

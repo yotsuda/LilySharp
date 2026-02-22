@@ -67,6 +67,29 @@ public static class GlyphMetrics
     /// <summary>Double flat accidental</summary>
     public static readonly BBox AccidentalDoubleFlat = new(0, -0.7, 1.644, 1.748);
 
+    // ========== Articulations ==========
+    // LILYPOND-REF: mf/feta-scripts.mf glyph definitions with set_char_box
+
+    /// <summary>Staccato dot. Symmetric circle, radius = 0.20 staff spaces.</summary>
+    /// <remarks>LILYPOND-REF: feta-scripts.mf:628-637 radius# = 0.20 * staff_space#</remarks>
+    public static readonly BBox ArticStaccato = new(-0.20, -0.20, 0.20, 0.20);
+
+    /// <summary>Accent/Sforzato. Symmetric V shape.</summary>
+    /// <remarks>LILYPOND-REF: feta-scripts.mf:607-615 set_char_box(0.75, 0.75, 0.42, 0.42)</remarks>
+    public static readonly BBox ArticAccent = new(-0.75, -0.42, 0.75, 0.42);
+
+    /// <summary>Tenuto. Horizontal line, thick = 1.6 * linethickness.</summary>
+    /// <remarks>LILYPOND-REF: feta-scripts.mf:665-674 set_char_box(.6, .6, thick#/2, thick#/2)</remarks>
+    public static readonly BBox ArticTenuto = new(-0.60, -0.10, 0.60, 0.10);
+
+    /// <summary>Marcato above (upward V). Reference point at bottom tip.</summary>
+    /// <remarks>LILYPOND-REF: feta-scripts.mf:704-746 set_char_box(0.5, 0.5, 0, 1.1)</remarks>
+    public static readonly BBox ArticMarcatoAbove = new(-0.50, 0.0, 0.50, 1.10);
+
+    /// <summary>Marcato below (downward V). Reference point at top tip.</summary>
+    /// <remarks>LILYPOND-REF: feta-scripts.mf:761-764 xy_mirror_char</remarks>
+    public static readonly BBox ArticMarcatoBelow = new(-0.50, -1.10, 0.50, 0.0);
+
     // ========== Other Glyphs ==========
 
     /// <summary>Augmentation dot</summary>

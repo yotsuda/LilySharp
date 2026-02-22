@@ -168,6 +168,17 @@ public sealed record ScoreLayout(
     ImmutableArray<CustomTextLayout> CustomTextLayouts,
     ImmutableArray<VoltaBracketLayout> VoltaBracketLayouts,
     ImmutableArray<TupletBracketLayout> TupletBracketLayouts,
+    ImmutableArray<HairpinLayout> HairpinLayouts,
+    ImmutableArray<TextSpannerLayout> TextSpannerLayouts,
+    ImmutableArray<OttavaBracketLayout> OttavaBracketLayouts,
+    ImmutableArray<GlissandoLayout> GlissandoLayouts,
+    ImmutableArray<ArpeggioLayout> ArpeggioLayouts,
+    ImmutableArray<PedalBracketLayout> PedalBracketLayouts,
+    ImmutableArray<FiguredBassLayout> FiguredBassLayouts,
+    ImmutableArray<ChordNameLayout> ChordNameLayouts,
+    ImmutableArray<PercentRepeatLayout> PercentRepeatLayouts,
+    ImmutableArray<CrossStaffLayout> CrossStaffLayouts,
+    ImmutableArray<PartCombineLayout> PartCombineLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
     ImmutableDictionary<RestShiftKey, double> RestShifts
 )

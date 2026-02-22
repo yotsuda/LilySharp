@@ -73,6 +73,7 @@ public sealed class LayoutEngine
         var beamLayouts = _elementCoordinator.LayoutBeams(score, systemsArray);
         var tieLayouts = _elementCoordinator.LayoutTies(score, systemsArray);
         var slurLayouts = _elementCoordinator.LayoutSlurs(score, systemsArray);
+        var glissandoLayouts = _elementCoordinator.LayoutGlissandos(score, systemsArray);
         var voiceOffsets = _elementCoordinator.CalculateVoiceOffsets(score);
         var restShifts = _elementCoordinator.CalculateRestShifts(score, systemsArray, beamLayouts);
 
@@ -80,10 +81,21 @@ public sealed class LayoutEngine
             score, systemsArray,
             score.Dynamics, score.Articulations, score.GraceNotes,
             score.Lyrics, score.MusicMarks, score.CustomTexts,
-            score.VoltaBrackets, score.TupletBrackets, score.Voice.Measures);
+            score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
+            score.Voice.Measures, score.FiguredBasses, score.ChordNames, score.PercentRepeats);
+
+        // Calculate part combination layouts for multi-voice scores
+        var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
+        if (score.IsMultiVoice && score.Voices.Length >= 2)
+        {
+            var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
+            var combineItems = PartCombineAnalyzer.Analyze(
+                score.Voices[0], score.Voices[1], score.TimeSignature);
+            partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml);
+        }
 
         return BuildScoreLayout(pages, systemsArray, beamLayouts, tieLayouts, slurLayouts,
-            annotations, voiceOffsets, restShifts);
+            glissandoLayouts, annotations, voiceOffsets, restShifts, partCombineLayouts);
     }
 
     /// <summary>Calculates the complete layout for a multi-staff score.</summary>
@@ -132,10 +144,11 @@ public sealed class LayoutEngine
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight);
 
-        // Calculate beams/ties/slurs per staff
+        // Calculate beams/ties/slurs/glissandos per staff
         var allBeamLayouts = new List<BeamLayout>();
         var allTieLayouts = new List<TieLayout>();
         var allSlurLayouts = new List<SlurLayout>();
+        var allGlissandoLayouts = new List<GlissandoLayout>();
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
             var staffScore = new Score(
@@ -144,6 +157,19 @@ public sealed class LayoutEngine
             allBeamLayouts.AddRange(_elementCoordinator.LayoutBeams(staffScore, systemsArray, staffIndex));
             allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffScore, systemsArray, staffIndex));
             allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffScore, systemsArray, staffIndex));
+            allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffScore, systemsArray, staffIndex));
+        }
+
+        // Resolve cross-staff layouts per voice
+        var crossStaffLayouts = ImmutableArray<CrossStaffLayout>.Empty;
+        if (!score.CrossStaffItems.IsDefaultOrEmpty)
+        {
+            // Use primary staff index (0) as default source; in full multi-voice,
+            // each voice would have its own staff index.
+            int primaryStaffIdx = 0;
+            int staffCount = score.StaffGroups.Sum(g => g.StaffCount);
+            crossStaffLayouts = CrossStaffEngraver.Calculate(
+                score.CrossStaffItems, primaryStaffIdx, staffCount);
         }
 
         // Create primary staff Score for annotation engravers
@@ -156,13 +182,35 @@ public sealed class LayoutEngine
             primaryScore, systemsArray,
             score.Dynamics, score.Articulations, score.GraceNotes,
             score.Lyrics, score.MusicMarks, score.CustomTexts,
-            score.VoltaBrackets, score.TupletBrackets, primaryStaff.PrimaryVoice.Measures);
+            score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
+            primaryStaff.PrimaryVoice.Measures, score.FiguredBasses, score.ChordNames,
+            score.PercentRepeats, crossStaffLayouts);
+
+        // Calculate part combination layouts for staves with multiple voices
+        var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
+        foreach (var group in score.StaffGroups)
+        {
+            foreach (var staff in group.Staves)
+            {
+                if (staff.Voices.Length >= 2)
+                {
+                    var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
+                    var combineItems = PartCombineAnalyzer.Analyze(
+                        staff.Voices[0], staff.Voices[1], score.TimeSignature);
+                    partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml);
+                    break; // Only first multi-voice staff for now
+                }
+            }
+            if (!partCombineLayouts.IsEmpty) break;
+        }
 
         return BuildScoreLayout(pages, systemsArray,
             allBeamLayouts.ToImmutableArray(), allTieLayouts.ToImmutableArray(),
-            allSlurLayouts.ToImmutableArray(), annotations,
+            allSlurLayouts.ToImmutableArray(), allGlissandoLayouts.ToImmutableArray(),
+            annotations,
             ImmutableDictionary<VoiceItemKey, double>.Empty,
-            ImmutableDictionary<RestShiftKey, double>.Empty);
+            ImmutableDictionary<RestShiftKey, double>.Empty,
+            partCombineLayouts);
     }
 
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
@@ -205,12 +253,57 @@ public sealed class LayoutEngine
         ImmutableArray<GraceNoteItem> graceNotes, ImmutableArray<LyricItem> lyrics,
         ImmutableArray<MusicMarkItem> musicMarks, ImmutableArray<CustomTextItem> customTexts,
         ImmutableArray<VoltaBracketItem> voltaBrackets, ImmutableArray<TupletBracketItem> tupletBrackets,
-        ImmutableArray<Measure> measures)
+        ImmutableArray<ArpeggioItem> arpeggios, ImmutableArray<Measure> measures,
+        ImmutableArray<FiguredBassItem>? figuredBasses = null,
+        ImmutableArray<ChordNameItem>? chordNames = null,
+        ImmutableArray<PercentRepeatItem>? percentRepeats = null,
+        ImmutableArray<CrossStaffLayout>? crossStaffLayouts = null)
     {
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
         var lyricLayouts = new LyricEngraver().CalculateLayouts(lyrics, ml, _options.StaffHeight);
+
+        // LILYPOND-REF: axis-group-interface.cc skyline_spacing
+        // Outside-staff elements are placed in priority order (lower priority = closer to staff).
+        // DynamicLineSpanner (250) must be calculated before TextSpanner (350)
+        // so text spanners can be placed below dynamics.
+
+        // Dynamics first (outside-staff-priority: 250)
+        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, systems, ml) : ImmutableArray<DynamicLayout>.Empty;
+
+        // Detect and layout hairpins from cresc/decresc marks
+        var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics);
+        var hairpinLayouts = HairpinEngraver.Calculate(hairpinItems, systems, ml);
+
+        // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
+        // Pass dynamic layouts so text spanners can stack below them
+        var textSpannerItems = TextSpannerEngraver.DetectTextSpanners(musicMarks);
+        var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts);
+
+        // Detect and layout ottava brackets from ottava/loco marks
+        var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
+        var ottavaLayouts = OttavaBracketEngraver.Calculate(ottavaItems, systems, ml);
+
+        // Layout arpeggio markings
+        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, ml, _options.StaffHeight);
+
+        // Detect and layout pedal brackets from sustain/sostenuto/una corda marks
+        var pedalBracketItems = PedalEngraver.DetectPedalBrackets(musicMarks);
+        var pedalBracketLayouts = PedalEngraver.Calculate(pedalBracketItems, systems, ml);
+
+        // Layout figured bass
+        var figuredBassLayouts = FiguredBassEngraver.Calculate(
+            figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml);
+
+        // Layout chord names
+        var chordNameLayouts = ChordNameEngraver.Calculate(
+            chordNames ?? ImmutableArray<ChordNameItem>.Empty, systems, ml);
+
+        // Layout percent repeats
+        var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
+            percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml);
+
         return new AnnotationLayouts(
-            Dynamics: score != null ? DynamicEngraver.Calculate(score, dynamics, systems, ml) : ImmutableArray<DynamicLayout>.Empty,
+            Dynamics: dynamicLayouts,
             Articulations: score != null ? ArticulationEngraver.Calculate(score, articulations, systems, ml) : ImmutableArray<ArticulationLayout>.Empty,
             GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, systems, ml) : ImmutableArray<GraceNoteLayout>.Empty,
             Lyrics: lyricLayouts,
@@ -218,20 +311,36 @@ public sealed class LayoutEngine
             MusicMarks: MusicMarkEngraver.Calculate(score, musicMarks, systems, ml),
             CustomTexts: CustomTextEngraver.Calculate(score, customTexts, systems, ml),
             VoltaBrackets: VoltaBracketEngraver.Calculate(voltaBrackets, systems, ml),
-            TupletBrackets: TupletBracketEngraver.Calculate(tupletBrackets, systems, ml, measures));
+            TupletBrackets: TupletBracketEngraver.Calculate(tupletBrackets, systems, ml, measures),
+            Hairpins: hairpinLayouts,
+            TextSpanners: textSpannerLayouts,
+            OttavaBrackets: ottavaLayouts,
+            Arpeggios: arpeggioLayouts,
+            PedalBrackets: pedalBracketLayouts,
+            FiguredBasses: figuredBassLayouts,
+            ChordNames: chordNameLayouts,
+            PercentRepeats: percentRepeatLayouts,
+            CrossStaffs: crossStaffLayouts ?? ImmutableArray<CrossStaffLayout>.Empty);
     }
 
     private static ScoreLayout BuildScoreLayout(
         ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems,
         ImmutableArray<BeamLayout> beams, ImmutableArray<TieLayout> ties,
-        ImmutableArray<SlurLayout> slurs, AnnotationLayouts a,
+        ImmutableArray<SlurLayout> slurs, ImmutableArray<GlissandoLayout> glissandos,
+        AnnotationLayouts a,
         ImmutableDictionary<VoiceItemKey, double> voiceOffsets,
-        ImmutableDictionary<RestShiftKey, double> restShifts)
+        ImmutableDictionary<RestShiftKey, double> restShifts,
+        ImmutableArray<PartCombineLayout> partCombineLayouts = default)
     {
         return new ScoreLayout(pages, systems, beams, ties, slurs,
             a.Dynamics, a.Articulations, a.GraceNotes,
             a.Lyrics, a.LyricHyphens, a.MusicMarks,
             a.CustomTexts, a.VoltaBrackets, a.TupletBrackets,
+            a.Hairpins, a.TextSpanners, a.OttavaBrackets,
+            glissandos, a.Arpeggios, a.PedalBrackets,
+            a.FiguredBasses, a.ChordNames, a.PercentRepeats,
+            a.CrossStaffs,
+            partCombineLayouts.IsDefault ? ImmutableArray<PartCombineLayout>.Empty : partCombineLayouts,
             voiceOffsets, restShifts);
     }
 
@@ -254,5 +363,14 @@ public sealed class LayoutEngine
         ImmutableArray<MusicMarkLayout> MusicMarks,
         ImmutableArray<CustomTextLayout> CustomTexts,
         ImmutableArray<VoltaBracketLayout> VoltaBrackets,
-        ImmutableArray<TupletBracketLayout> TupletBrackets);
+        ImmutableArray<TupletBracketLayout> TupletBrackets,
+        ImmutableArray<HairpinLayout> Hairpins,
+        ImmutableArray<TextSpannerLayout> TextSpanners,
+        ImmutableArray<OttavaBracketLayout> OttavaBrackets,
+        ImmutableArray<ArpeggioLayout> Arpeggios,
+        ImmutableArray<PedalBracketLayout> PedalBrackets,
+        ImmutableArray<FiguredBassLayout> FiguredBasses,
+        ImmutableArray<ChordNameLayout> ChordNames,
+        ImmutableArray<PercentRepeatLayout> PercentRepeats,
+        ImmutableArray<CrossStaffLayout> CrossStaffs);
 }

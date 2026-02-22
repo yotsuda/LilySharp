@@ -86,15 +86,24 @@ public static class EmmentalerGlyphs
     public const char DynamicSforzando = 's';
     public const char DynamicZ = 'z';
 
-    // === Articulations ===
-    public const char ArticAccentAbove = '\uE048';
-    public const char ArticAccentBelow = '\uE048';
-    public const char ArticStaccatoAbove = '\uE04A';
-    public const char ArticStaccatoBelow = '\uE04A';
-    public const char ArticTenutoAbove = '\uE04D';
-    public const char ArticTenutoBelow = '\uE04D';
-    public const char ArticMarcatoAbove = '\uE050';
-    public const char ArticMarcatoBelow = '\uE051';
+    // === Articulations (verified against emmentaler-20.woff2 cmap) ===
+    public const char FermataAbove = '\uE039';         // scripts.ufermata
+    public const char FermataBelow = '\uE03A';         // scripts.dfermata
+    public const char ArticAccentAbove = '\uE048';     // scripts.sforzato
+    public const char ArticStaccatoAbove = '\uE04A';   // scripts.staccato
+    public const char ArticTenutoAbove = '\uE04D';     // scripts.tenuto
+    public const char ArticPortatoAbove = '\uE04E';    // scripts.uportato
+    public const char ArticPortatoBelow = '\uE04F';    // scripts.dportato
+    public const char ArticMarcatoAbove = '\uE050';    // scripts.umarcato
+    public const char ArticMarcatoBelow = '\uE051';    // scripts.dmarcato
+
+    // === Ornaments (verified against emmentaler-20.woff2 cmap) ===
+    public const char OrnReverseTurn = '\uE058';       // scripts.reverseturn
+    public const char OrnTurn = '\uE059';              // scripts.turn
+    public const char OrnTrill = '\uE05C';             // scripts.trill
+    public const char OrnPrall = '\uE070';             // scripts.prall
+    public const char OrnMordent = '\uE071';           // scripts.mordent
+    public const char OrnPrallPrall = '\uE072';        // scripts.prallprall
 
     // === Metronome (use regular noteheads) ===
     public const char MetNoteDoubleWhole = '\uE0E6';

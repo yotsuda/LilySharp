@@ -1,3 +1,5 @@
+using LilySharp.Core.Svg;
+
 namespace LilySharp.Core.Svg.Model;
 
 /// <summary>
@@ -53,19 +55,19 @@ public sealed record OrnamentItem
     }
 
     /// <summary>
-    /// Gets the SMuFL codepoint for this ornament.
+    /// Gets the Emmentaler font glyph for this ornament.
     /// </summary>
     /// <remarks>
-    /// SMuFL ornaments: U+E560-U+E56F
+    /// Codepoints verified against emmentaler-20.woff2 cmap table.
     /// </remarks>
     public string GetGlyph() => Type switch
     {
-        OrnamentType.Trill => "\uE566",          // ornamentTrill
-        OrnamentType.Mordent => "\uE56C",        // ornamentMordent
-        OrnamentType.Prall => "\uE56D",          // ornamentMordentInverted
-        OrnamentType.Turn => "\uE567",           // ornamentTurn
-        OrnamentType.InvertedTurn => "\uE568",   // ornamentTurnInverted
-        OrnamentType.PrallTriller => "\uE56B",   // ornamentShortTrill
+        OrnamentType.Trill => EmmentalerGlyphs.OrnTrill.ToString(),
+        OrnamentType.Mordent => EmmentalerGlyphs.OrnMordent.ToString(),
+        OrnamentType.Prall => EmmentalerGlyphs.OrnPrall.ToString(),
+        OrnamentType.Turn => EmmentalerGlyphs.OrnTurn.ToString(),
+        OrnamentType.InvertedTurn => EmmentalerGlyphs.OrnReverseTurn.ToString(),
+        OrnamentType.PrallTriller => EmmentalerGlyphs.OrnPrallPrall.ToString(),
         _ => ""
     };
 }

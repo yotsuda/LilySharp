@@ -44,14 +44,16 @@ public static class DynamicEngraver
     private const double Padding = 0.6;
 
     // LILYPOND-REF: define-grobs.scm:1280 staff-padding = 0.1
-    private const double StaffPadding = 0.1;
+    private const double StaffPadding = 0.2;
 
-    // Height of dynamic text in staff spaces (approximate)
-    // LILYPOND-REF: define-grobs.scm:1317 Y-offset = (scale-by-font-size -0.6)
-    private const double DynamicTextHeight = 1.5;
-
-    // Base Y offset from staff bottom (5 lines = 4 staff spaces, so bottom is at 4.0)
+    // Staff geometry (5 lines = 4 staff spaces)
     private const double StaffBottom = 4.0;
+    private const double StaffMiddle = 2.0;  // StaffBottom / 2
+
+    // Text ascent above baseline for dynamic text (font-size 2.0, bold italic serif).
+    // Approximate cap-height ratio ~0.6 × font-size.
+    // LILYPOND-REF: define-grobs.scm:1317 Y-offset = (scale-by-font-size -0.6)
+    private const double TextAscent = 1.2;
 
     /// <summary>
     /// Calculates layout for all dynamics in a score.
@@ -75,8 +77,9 @@ public static class DynamicEngraver
         var layouts = ImmutableArray.CreateBuilder<DynamicLayout>(dynamics.Length);
 
         // LILYPOND-REF: side-position-interface.cc:323-337 staff padding
-        // Base Y position: below staff with padding
-        double baseY = StaffBottom + StaffPadding + Padding;
+        // Base Y position: dynamic text baseline must be low enough that the
+        // visual top of the text (baseline - TextAscent) clears the staff bottom.
+        double baseY = StaffBottom + StaffPadding + Padding + TextAscent;
 
         foreach (var dynamic in dynamics)
         {
@@ -129,12 +132,13 @@ public static class DynamicEngraver
     /// </remarks>
     private static double CalculateYPosition(MusicItem item, double baseY)
     {
-        // Get the lowest extent of the note/chord
+        // Get the lowest extent of the note/chord (Y in staff spaces from top, positive = down)
         double lowestY = GetLowestExtent(item);
 
-        // If the note extends below the staff, push the dynamic down
+        // The dynamic text baseline must be low enough that the visual top
+        // (baseline - TextAscent) clears the lowest extent of the note with Padding gap.
         // LILYPOND-REF: side-position-interface.cc:330-337 include_staff
-        double requiredY = lowestY + Padding + DynamicTextHeight * 0.5;
+        double requiredY = lowestY + Padding + TextAscent;
 
         return Math.Max(baseY, requiredY);
     }
@@ -151,10 +155,13 @@ public static class DynamicEngraver
         switch (item)
         {
             case NoteItem note:
-                // Note Y position
-                double noteY = note.StaffPosition * 0.5;
+                // Convert StaffPosition to Y in staff spaces from top.
+                // StaffPosition convention: 0 = middle line, positive = up, negative = down.
+                // Canonical formula: Y = StaffMiddle - StaffPosition * 0.5
+                // LILYPOND-REF: staff-symbol-referencer.cc:76-89 get_position
+                double noteY = StaffMiddle - note.StaffPosition * 0.5;
 
-                // If stem down, add stem length
+                // If stem down, add stem length below the notehead
                 if (!note.StemUp)
                 {
                     // LILYPOND-REF: stem.cc:93 stem-length = 3.5
@@ -166,9 +173,9 @@ public static class DynamicEngraver
                 return noteY + 0.5;
 
             case ChordItem chord:
-                // Find lowest note in chord
-                int lowestPos = chord.Notes.Max(n => n.StaffPosition); // Higher position = lower on staff
-                double lowestNoteY = lowestPos * 0.5;
+                // Find lowest note in chord (most negative StaffPosition = lowest on staff)
+                int lowestPos = chord.Notes.Min(n => n.StaffPosition);
+                double lowestNoteY = StaffMiddle - lowestPos * 0.5;
 
                 // If stem down, add stem length from lowest note
                 if (!chord.StemUp)
@@ -181,7 +188,7 @@ public static class DynamicEngraver
 
             case RestItem:
                 // Rest is typically around middle of staff
-                return StaffBottom * 0.5 + 1.0;
+                return StaffMiddle + 1.0;
 
             default:
                 return StaffBottom;

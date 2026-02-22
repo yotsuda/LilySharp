@@ -1,3 +1,4 @@
+using LilySharp.Core.Svg;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Svg.Model;
@@ -36,28 +37,26 @@ public sealed record ArticulationItem
     }
 
     /// <summary>
-    /// Gets the SMuFL codepoint for this articulation.
+    /// Gets the Emmentaler font glyph for this articulation.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: feta-scripts.mf - articulation glyph definitions
-    /// SMuFL codepoints: U+E4A0-U+E4BF articulation marks
+    /// Codepoints verified against emmentaler-20.woff2 cmap table.
     /// </remarks>
     public string GetGlyph() => Type switch
     {
-        // Articulations
-        ArticulationType.Staccato => "\uE4A2",   // articStaccatoAbove/Below
-        ArticulationType.Accent => "\uE4A0",     // articAccentAbove/Below
-        ArticulationType.Tenuto => "\uE4A4",     // articTenutoAbove/Below
-        ArticulationType.Marcato => "\uE4AC",    // articMarcatoAbove/Below
-        ArticulationType.Fermata => "\uE4C0",    // fermataAbove
-        ArticulationType.Portato => "\uE4B2",    // articTenutoStaccatoAbove/Below
-        // Ornaments (SMuFL U+E560-U+E56F)
-        ArticulationType.Trill => "\uE566",          // ornamentTrill
-        ArticulationType.Mordent => "\uE56C",        // ornamentMordent
-        ArticulationType.Prall => "\uE56D",          // ornamentMordentInverted
-        ArticulationType.Turn => "\uE567",           // ornamentTurn
-        ArticulationType.InvertedTurn => "\uE568",   // ornamentTurnInverted
-        ArticulationType.PrallTriller => "\uE56B",   // ornamentShortTrill
+        ArticulationType.Staccato => EmmentalerGlyphs.ArticStaccatoAbove.ToString(),
+        ArticulationType.Accent => EmmentalerGlyphs.ArticAccentAbove.ToString(),
+        ArticulationType.Tenuto => EmmentalerGlyphs.ArticTenutoAbove.ToString(),
+        ArticulationType.Marcato => (IsAbove ? EmmentalerGlyphs.ArticMarcatoAbove : EmmentalerGlyphs.ArticMarcatoBelow).ToString(),
+        ArticulationType.Fermata => (IsAbove ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow).ToString(),
+        ArticulationType.Portato => (IsAbove ? EmmentalerGlyphs.ArticPortatoAbove : EmmentalerGlyphs.ArticPortatoBelow).ToString(),
+        ArticulationType.Trill => EmmentalerGlyphs.OrnTrill.ToString(),
+        ArticulationType.Mordent => EmmentalerGlyphs.OrnMordent.ToString(),
+        ArticulationType.Prall => EmmentalerGlyphs.OrnPrall.ToString(),
+        ArticulationType.Turn => EmmentalerGlyphs.OrnTurn.ToString(),
+        ArticulationType.InvertedTurn => EmmentalerGlyphs.OrnReverseTurn.ToString(),
+        ArticulationType.PrallTriller => EmmentalerGlyphs.OrnPrallPrall.ToString(),
         _ => ""
     };
 

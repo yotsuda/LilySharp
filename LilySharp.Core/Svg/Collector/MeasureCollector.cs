@@ -343,6 +343,19 @@ public sealed class MeasureCollector
     private readonly List<VoltaBracketItem> _voltaBrackets = new();
     // Tuplet brackets
     private readonly List<TupletBracketItem> _tupletBrackets = new();
+    // Arpeggio markings
+    private readonly List<ArpeggioItem> _arpeggios = new();
+    // Figured bass
+    private readonly List<FiguredBassItem> _figuredBasses = new();
+    // Chord names
+    private readonly List<ChordNameItem> _chordNames = new();
+    // Percent repeats
+    private readonly List<PercentRepeatItem> _percentRepeats = new();
+    // Cross-staff items
+    private readonly List<CrossStaffItem> _crossStaffItems = new();
+    // Grob property overrides and reverts
+    private readonly List<GrobOverride> _grobOverrides = new();
+    private readonly List<GrobRevert> _grobReverts = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
     // Default duration
@@ -419,7 +432,14 @@ public sealed class MeasureCollector
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
             voltaBrackets: _voltaBrackets.ToImmutableArray(),
-            tupletBrackets: _tupletBrackets.ToImmutableArray());
+            tupletBrackets: _tupletBrackets.ToImmutableArray(),
+            arpeggios: _arpeggios.ToImmutableArray(),
+            figuredBasses: _figuredBasses.ToImmutableArray(),
+            chordNames: _chordNames.ToImmutableArray(),
+            percentRepeats: _percentRepeats.ToImmutableArray(),
+            crossStaffItems: _crossStaffItems.ToImmutableArray(),
+            grobOverrides: _grobOverrides.ToImmutableArray(),
+            grobReverts: _grobReverts.ToImmutableArray());
     }
 
     /// <summary>
@@ -471,7 +491,12 @@ public sealed class MeasureCollector
             tupletBrackets: _tupletBrackets.ToImmutableArray(),
             dynamics: _dynamics.ToImmutableArray(),
             articulations: _articulations.ToImmutableArray(),
-            graceNotes: _graceNotes.ToImmutableArray());
+            graceNotes: _graceNotes.ToImmutableArray(),
+            arpeggios: _arpeggios.ToImmutableArray(),
+            figuredBasses: _figuredBasses.ToImmutableArray(),
+            chordNames: _chordNames.ToImmutableArray(),
+            percentRepeats: _percentRepeats.ToImmutableArray(),
+            crossStaffItems: _crossStaffItems.ToImmutableArray());
     }
 
     private List<Measure> CollectMeasuresForVoice(string voiceName)
@@ -541,7 +566,11 @@ public sealed class MeasureCollector
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
             voltaBrackets: _voltaBrackets.ToImmutableArray(),
-            tupletBrackets: _tupletBrackets.ToImmutableArray());
+            tupletBrackets: _tupletBrackets.ToImmutableArray(),
+            arpeggios: _arpeggios.ToImmutableArray(),
+            figuredBasses: _figuredBasses.ToImmutableArray(),
+            grobOverrides: _grobOverrides.ToImmutableArray(),
+            grobReverts: _grobReverts.ToImmutableArray());
     }
 
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
@@ -553,8 +582,8 @@ public sealed class MeasureCollector
 
         foreach (var node in voiceNode.DescendantNodes())
         {
-            // Skip nodes that are inside a tuplet (they'll be processed by the tuplet)
-            if (IsInsideTuplet(node))
+            // Skip nodes that are inside a tuplet or repeat (they'll be processed by those handlers)
+            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideOnce(node))
                 continue;
 
             switch (node)
@@ -568,6 +597,11 @@ public sealed class MeasureCollector
                 case SlurSyntax:
                 case BeamMarkerSyntax:
                 case TupletExpressionSyntax:
+                case RepeatExpressionSyntax:
+                case MusicMarkSyntax:
+                case OverrideDeclarationSyntax:
+                case RevertDeclarationSyntax:
+                case OnceModifierSyntax:
                     musicNodes.Add(node);
                     break;
 
@@ -606,10 +640,15 @@ public sealed class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
-                    var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
+                    bool hasGliss = HasGlissandoArticulation(note);
+                    int featherDir = GetFeatherDirection(note);
+                    var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir);
                     builder.AddItem(noteItem);
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp);
+                    CollectFiguredBass(note, measureIndex, itemIndex);
+                    CollectChordNames(note, measureIndex, itemIndex);
+                    CollectCrossStaff(note, measureIndex, itemIndex);
                     // Attach any pending grace notes
                     if (_pendingGrace != null)
                     {
@@ -627,11 +666,22 @@ public sealed class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
-                    var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter);
+                    bool hasArpeggio = HasArpeggioArticulation(chord);
+                    var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio);
                     builder.AddItem(chordItem);
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
                     CollectArticulations(chord, measureIndex, itemIndex, chordItem.StemUp);
+                    CollectFiguredBass(chord, measureIndex, itemIndex);
+                    CollectChordNames(chord, measureIndex, itemIndex);
+                    CollectCrossStaff(chord, measureIndex, itemIndex);
+                    // Collect arpeggio if present
+                    if (hasArpeggio && chordItem.Notes.Length > 0)
+                    {
+                        int minPos = chordItem.Notes.Min(n => n.StaffPosition);
+                        int maxPos = chordItem.Notes.Max(n => n.StaffPosition);
+                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, chord.Position));
+                    }
                     // Attach any pending grace notes
                     if (_pendingGrace != null)
                     {
@@ -651,6 +701,24 @@ public sealed class MeasureCollector
                 builder.SetBreak();
                 break;
 
+            case MusicMarkSyntax mark:
+                {
+                    var markType = MusicMarkItem.ParseMarkName(mark.MarkName);
+                    if (markType != null)
+                    {
+                        if (markType.Value == MusicMarkType.Rehearsal)
+                        {
+                            string text = MusicMarkItem.ParseRehearsalText(mark.MarkName);
+                            _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, text, builder.CurrentMeasureIndex, mark.Position));
+                        }
+                        else
+                        {
+                            _musicMarks.Add(new MusicMarkItem(markType.Value, builder.CurrentMeasureIndex, mark.Position));
+                        }
+                    }
+                }
+                break;
+
             case TieSyntax:
             case SlurSyntax:
             case BeamMarkerSyntax:
@@ -659,19 +727,46 @@ public sealed class MeasureCollector
 
             case TupletExpressionSyntax tuplet:
                 // LILYPOND-REF: lily/tuplet-engraver.cc - process tuplet as a unit
-                ProcessTuplet(tuplet, builder);
+                ProcessTuplet(tuplet, builder, nestingDepth: 0);
+                break;
+
+            case RepeatExpressionSyntax repeat:
+                // LILYPOND-REF: lily/percent-repeat-engraver.cc - percent repeat handling
+                ProcessRepeatExpression(repeat, builder);
+                break;
+
+            case OverrideDeclarationSyntax overrideDecl:
+                CollectOverride(overrideDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: false);
+                break;
+
+            case RevertDeclarationSyntax revertDecl:
+                CollectRevert(revertDecl, builder.CurrentMeasureIndex, builder.CurrentItemCount);
+                break;
+
+            case OnceModifierSyntax onceModifier:
+                if (onceModifier.Command is OverrideDeclarationSyntax innerOverride)
+                    CollectOverride(innerOverride, builder.CurrentMeasureIndex, builder.CurrentItemCount, isOnce: true);
+                else if (onceModifier.Command is RevertDeclarationSyntax innerRevert)
+                    CollectRevert(innerRevert, builder.CurrentMeasureIndex, builder.CurrentItemCount);
                 break;
         }
     }
 
     /// <summary>
     /// Processes a tuplet expression, collecting notes and creating a bracket item.
+    /// Supports nested tuplets via recursive calls with increasing nesting depth.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/tuplet-engraver.cc - Tuplet_engraver class
-    /// Processes notes within a tuplet expression and creates a bracket item.
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:400-500 - nested bracket stacking
+    ///
+    /// For nested tuplets, duration scaling compounds:
+    /// outer 3/2 containing inner 3/2 { e8 f g } →
+    /// inner actual = 3/8 * 2/3 = 1/4, then outer scales again.
+    /// Only the top-level tuplet (nestingDepth=0) adds duration to the measure.
     /// </remarks>
-    private void ProcessTuplet(TupletExpressionSyntax tuplet, MeasureBuilder builder)
+    /// <returns>The actual (scaled) duration of this tuplet.</returns>
+    private Fraction ProcessTuplet(TupletExpressionSyntax tuplet, MeasureBuilder builder, int nestingDepth)
     {
         int measureIndex = builder.CurrentMeasureIndex;
         int startNoteIndex = builder.CurrentItemCount;
@@ -706,6 +801,15 @@ public sealed class MeasureCollector
                 writtenDuration += chordItem.Duration;
                 lastSourcePosition = chord.Position;
             }
+            else if (item is TupletExpressionSyntax nestedTuplet)
+            {
+                // LILYPOND-REF: lily/tuplet-bracket.cc - nested tuplet processing
+                // Recursively process nested tuplet; its actual duration
+                // counts as "written" duration for this outer tuplet
+                Fraction nestedActualDuration = ProcessTuplet(nestedTuplet, builder, nestingDepth + 1);
+                writtenDuration += nestedActualDuration;
+                lastSourcePosition = nestedTuplet.Position;
+            }
         }
 
         // Calculate actual duration: written × base / ratio
@@ -717,8 +821,12 @@ public sealed class MeasureCollector
             writtenDuration.Numerator * @base,
             writtenDuration.Denominator * ratio);
 
-        // Add the actual duration (may trigger auto-completion)
-        builder.AddDuration(actualDuration, lastSourcePosition + 1);
+        // Only add duration to the measure at the top level
+        // Nested tuplets return their duration to the parent for compounding
+        if (nestingDepth == 0)
+        {
+            builder.AddDuration(actualDuration, lastSourcePosition + 1);
+        }
 
         int endNoteIndex = builder.CurrentItemCount - 1;
 
@@ -731,9 +839,12 @@ public sealed class MeasureCollector
                 startNoteIndex,
                 endNoteIndex,
                 measureIndex,
-                tuplet.Position
+                tuplet.Position,
+                nestingDepth
             ));
         }
+
+        return actualDuration;
     }
 
     private void Reset()
@@ -743,6 +854,13 @@ public sealed class MeasureCollector
         _dynamics.Clear();
         _articulations.Clear();
         _graceNotes.Clear();
+        _arpeggios.Clear();
+        _figuredBasses.Clear();
+        _chordNames.Clear();
+        _percentRepeats.Clear();
+        _crossStaffItems.Clear();
+        _grobOverrides.Clear();
+        _grobReverts.Clear();
         _structure = null;
         _root = null;
         _currentOctave = 4;
@@ -974,7 +1092,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => !IsInsideTuplet(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or TupletExpressionSyntax);
+                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax);
             ProcessNodes(musicNodes);
         }
 
@@ -1019,20 +1137,50 @@ public sealed class MeasureCollector
 
     /// <summary>
     /// Checks if a node is inside a TupletExpression (to avoid double-counting).
+    /// Top-level TupletExpressionSyntax nodes pass through (processed by main loop).
+    /// Nested TupletExpressionSyntax nodes are filtered (processed recursively by ProcessTuplet).
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/tuplet-bracket.cc - notes inside tuplets are processed together
     /// </remarks>
     private static bool IsInsideTuplet(SyntaxNode node)
     {
-        // TupletExpressionSyntax itself is not "inside" a tuplet
-        if (node is TupletExpressionSyntax)
-            return false;
-
         var parent = node.Parent;
         while (parent != null)
         {
             if (parent is TupletExpressionSyntax)
+                return true;
+            parent = parent.Parent;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a node is inside an OnceModifierSyntax.
+    /// Prevents double-processing of inner override/revert in once modifier.
+    /// </summary>
+    private static bool IsInsideOnce(SyntaxNode node)
+    {
+        var parent = node.Parent;
+        while (parent != null)
+        {
+            if (parent is OnceModifierSyntax)
+                return true;
+            parent = parent.Parent;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a node is inside a RepeatExpressionSyntax.
+    /// Prevents double-processing of notes inside repeat expressions.
+    /// </summary>
+    private static bool IsInsideRepeat(SyntaxNode node)
+    {
+        var parent = node.Parent;
+        while (parent != null)
+        {
+            if (parent is RepeatExpressionSyntax)
                 return true;
             parent = parent.Parent;
         }
@@ -1133,8 +1281,8 @@ public sealed class MeasureCollector
 
         foreach (var node in partBlock.DescendantNodes())
         {
-            // Skip nodes inside tuplets (they'll be processed by the tuplet)
-            if (IsInsideTuplet(node))
+            // Skip nodes inside tuplets or repeats (they'll be processed by those handlers)
+            if (IsInsideTuplet(node) || IsInsideRepeat(node))
                 continue;
 
             switch (node)
@@ -1148,6 +1296,8 @@ public sealed class MeasureCollector
                 case SlurSyntax:
                 case BeamMarkerSyntax:
                 case TupletExpressionSyntax:
+                case RepeatExpressionSyntax:
+                case MusicMarkSyntax:
                     musicNodes.Add(node);
                     break;
 
@@ -1224,8 +1374,270 @@ public sealed class MeasureCollector
                 {
                     _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.Position));
                 }
+                else
+                {
+                    // @cresc, @decresc, @dim — parsed as DynamicSyntax but Level=None
+                    // Collect as MusicMark for hairpin detection
+                    var markName = dynamicSyntax.DynamicToken.Text;
+                    var markType = MusicMarkItem.ParseMarkName(markName);
+                    if (markType != null)
+                    {
+                        _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, dynamicSyntax.Position));
+                    }
+                }
             }
         }
+    }
+
+    /// <summary>
+    /// Checks if a chord has an @arpeggio articulation.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio.cc - arpeggio marking
+    /// </remarks>
+    private static bool HasArpeggioArticulation(SyntaxNode node)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+
+        foreach (var art in articulations)
+        {
+            if (art is ArticulationSyntax artSyntax &&
+                artSyntax.NameToken.Text == "arpeggio")
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a note or chord has a @gliss articulation.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/glissando-engraver.cc - Glissando_engraver::listen_glissando
+    /// </remarks>
+    private static bool HasGlissandoArticulation(SyntaxNode node)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+
+        foreach (var art in articulations)
+        {
+            if (art is ArticulationSyntax artSyntax &&
+                artSyntax.NameToken.Text == "gliss")
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Processes a repeat expression (volta, unfold, percent, tremolo).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/percent-repeat-engraver.cc - percent repeat handling
+    /// LILYPOND-REF: lily/percent-repeat-iterator.cc - type determination
+    ///
+    /// For percent repeats: body is unfolded N times, iterations 2+ marked with PercentRepeatItem.
+    /// For volta/unfold: body is simply unfolded N times (basic implementation).
+    /// </remarks>
+    private void ProcessRepeatExpression(RepeatExpressionSyntax repeat, MeasureBuilder builder)
+    {
+        string type = repeat.RepeatType.Text;
+        int count = int.TryParse(repeat.Count.Text, out int c) ? c : 2;
+
+        if (type == "percent")
+        {
+            // First iteration: process body normally
+            int startMeasure = builder.CurrentMeasureIndex;
+            foreach (var item in repeat.Body.Items)
+                ProcessMusicNode(item, builder);
+            int bodyMeasureCount = builder.CurrentMeasureIndex - startMeasure;
+
+            // Additional iterations: process body again but mark as percent repeat
+            for (int iter = 1; iter < count; iter++)
+            {
+                int iterStart = builder.CurrentMeasureIndex;
+                foreach (var item in repeat.Body.Items)
+                    ProcessMusicNode(item, builder);
+
+                // Mark all measures in this iteration as percent repeats
+                for (int m = 0; m < bodyMeasureCount; m++)
+                {
+                    _percentRepeats.Add(new PercentRepeatItem(
+                        iterStart + m,
+                        repeat.Position));
+                }
+            }
+        }
+        else
+        {
+            // For volta/unfold/tremolo: unfold body count times (basic implementation)
+            for (int i = 0; i < count; i++)
+            {
+                foreach (var item in repeat.Body.Items)
+                    ProcessMusicNode(item, builder);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Collects figured bass annotations from note/chord modifiers.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/figured-bass-engraver.cc - listen_bass_figure
+    /// Syntax: @fig.6 (single), @fig.6.4 (two figures), @fig.6.s (with sharp)
+    /// </remarks>
+    private void CollectFiguredBass(SyntaxNode node, int measureIndex, int itemIndex)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+
+        foreach (var child in articulations)
+        {
+            if (child is MusicMarkSyntax markSyntax)
+            {
+                var figures = FiguredBassItem.ParseFigures(markSyntax.MarkName);
+                if (figures != null)
+                {
+                    _figuredBasses.Add(new FiguredBassItem(
+                        figures.Value,
+                        measureIndex,
+                        itemIndex,
+                        markSyntax.Position));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Collects chord name annotations (@chord.TEXT) from a note or chord's articulations.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/scheme-engravers.scm:1309 - Current_chord_text_engraver
+    /// Syntax: @chord.Cm7, @chord.Bb7, @chord.Am
+    /// </remarks>
+    private void CollectChordNames(SyntaxNode node, int measureIndex, int itemIndex)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+
+        foreach (var child in articulations)
+        {
+            if (child is MusicMarkSyntax markSyntax)
+            {
+                var chordText = ChordNameItem.ParseChordName(markSyntax.MarkName);
+                if (chordText != null)
+                {
+                    _chordNames.Add(new ChordNameItem(
+                        chordText,
+                        measureIndex,
+                        itemIndex,
+                        markSyntax.Position));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Detects @cross annotation on a note or chord for cross-staff rendering.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc:1451-1459 - cross-staff detection
+    /// Syntax: @cross marks a note for rendering on the other staff in a grand staff.
+    ///
+    /// In a grand staff context:
+    /// - If voice is on staff 0 (treble), @cross moves to staff 1 (bass)
+    /// - If voice is on staff 1 (bass), @cross moves to staff 0 (treble)
+    /// The TargetStaffIndex is resolved later during layout based on voice assignment.
+    /// Here we use 0 as a placeholder (actual target resolved by layout engine).
+    /// </remarks>
+    private void CollectCrossStaff(SyntaxNode node, int measureIndex, int itemIndex)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+
+        foreach (var child in articulations)
+        {
+            // @cross is parsed as ArticulationSyntax (single Identifier, no dot)
+            if (child is ArticulationSyntax artSyntax && artSyntax.NameToken.Text == "cross")
+            {
+                _crossStaffItems.Add(new CrossStaffItem(
+                    measureIndex,
+                    itemIndex,
+                    0,
+                    artSyntax.Position));
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Collects a grob property override from an OverrideDeclarationSyntax.
+    /// LILYPOND-REF: lily/context-property.cc (push)
+    /// </summary>
+    private void CollectOverride(OverrideDeclarationSyntax node, int measureIndex, int itemIndex, bool isOnce)
+    {
+        string grobType = node.GrobName.Text;
+        string propertyName = node.PropertyName.Text;
+        string value = node.ValueToken.Text;
+        _grobOverrides.Add(new GrobOverride(grobType, propertyName, value, measureIndex, itemIndex, isOnce));
+    }
+
+    /// <summary>
+    /// Collects a grob property revert from a RevertDeclarationSyntax.
+    /// LILYPOND-REF: lily/context-property.cc (pop)
+    /// </summary>
+    private void CollectRevert(RevertDeclarationSyntax node, int measureIndex, int itemIndex)
+    {
+        string grobType = node.GrobName.Text;
+        string propertyName = node.PropertyName.Text;
+        _grobReverts.Add(new GrobRevert(grobType, propertyName, measureIndex, itemIndex));
+    }
+
+    /// <summary>
+    /// Gets the feathered beam direction from a note's articulations.
+    /// Returns 0 (none), 1 (right/accel), or -1 (left/rit).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: beam.cc:1039-1082 grow-direction
+    /// Syntax: @feather.right (accelerando) or @feather.left (ritardando)
+    /// </remarks>
+    private static int GetFeatherDirection(SyntaxNode node)
+    {
+        if (node is not NoteSyntax note)
+            return 0;
+
+        foreach (var child in note.Articulations)
+        {
+            if (child is MusicMarkSyntax markSyntax)
+            {
+                var name = markSyntax.MarkName.ToLowerInvariant();
+                if (name == "feather.right" || name == "feather.accel")
+                    return 1;
+                if (name == "feather.left" || name == "feather.rit")
+                    return -1;
+            }
+        }
+        return 0;
     }
 
     /// <summary>
@@ -1269,6 +1681,24 @@ public sealed class MeasureCollector
                     }
 
                     _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove, articulationSyntax.Position));
+                }
+                else
+                {
+                    // Check if this articulation is a MusicMark (cresc, rit, mark.A, ottava, ped, etc.)
+                    var markName = articulationSyntax.NameToken.Text;
+                    var markType = MusicMarkItem.ParseMarkName(markName);
+                    if (markType != null)
+                    {
+                        if (markType.Value == MusicMarkType.Rehearsal)
+                        {
+                            string text = MusicMarkItem.ParseRehearsalText(markName);
+                            _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, text, measureIndex, articulationSyntax.Position));
+                        }
+                        else
+                        {
+                            _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.Position));
+                        }
+                    }
                 }
             }
         }
@@ -1321,7 +1751,7 @@ public sealed class MeasureCollector
         }
     }
 
-    private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
+    private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasGlissando = false, int featherDirection = 0)
     {
         var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);
         _currentOctave = octave;
@@ -1357,7 +1787,9 @@ public sealed class MeasureCollector
             hasSlurStart: hasSlurStartAfter,
             hasSlurEnd: hasSlurEndAfter,
             hasBeamStart: hasBeamStartAfter,
-            hasBeamEnd: hasBeamEndAfter);
+            hasBeamEnd: hasBeamEndAfter,
+            hasGlissando: hasGlissando,
+            featherDirection: featherDirection);
     }
 
     private RestItem CreateRestItem(RestSyntax rest)
@@ -1394,7 +1826,7 @@ public sealed class MeasureCollector
         };
     }
 
-    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
+    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false)
     {
         var notes = new List<ChordNoteInfo>();
 
@@ -1438,7 +1870,7 @@ public sealed class MeasureCollector
         int dots = chord.Duration?.DotCount ?? 0;
         int tremoloBeams = ParseTremoloBeams(chord.Tremolo);
 
-        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter);
+        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio);
     }
 
     private (int staffPosition, int octave) CalculateStaffPosition(PitchSyntax pitch)

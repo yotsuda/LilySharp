@@ -41,6 +41,30 @@ public enum MusicMarkType
     Decresc,
     /// <summary>dim. (diminuendo)</summary>
     Dim,
+    /// <summary>8va (ottava alta - up one octave)</summary>
+    OttavaUp,
+    /// <summary>8vb (ottava bassa - down one octave)</summary>
+    OttavaDown,
+    /// <summary>15ma (quindicesima alta - up two octaves)</summary>
+    QuindicesUp,
+    /// <summary>15mb (quindicesima bassa - down two octaves)</summary>
+    QuindicesDown,
+    /// <summary>loco (return to normal pitch)</summary>
+    Loco,
+    /// <summary>Rehearsal mark (boxed letter/number above staff)</summary>
+    Rehearsal,
+    /// <summary>Sustain pedal on (Ped.)</summary>
+    SustainOn,
+    /// <summary>Sustain pedal off (*)</summary>
+    SustainOff,
+    /// <summary>Sostenuto pedal on (Sost. Ped.)</summary>
+    SostenutoOn,
+    /// <summary>Sostenuto pedal off (*)</summary>
+    SostenutoOff,
+    /// <summary>Una corda pedal on (una corda)</summary>
+    UnaCordaOn,
+    /// <summary>Una corda pedal off (tre corde)</summary>
+    UnaCordaOff,
 }
 
 /// <summary>
@@ -112,11 +136,33 @@ public sealed record MusicMarkItem
     }
 
     /// <summary>
+    /// Creates a music mark with custom text (for rehearsal marks).
+    /// </summary>
+    public MusicMarkItem(MusicMarkType type, string text, int measureIndex, int sourcePosition)
+    {
+        Type = type;
+        Text = text;
+        Position = GetMarkPosition(type);
+        Vertical = GetMarkVertical(type);
+        IsSymbol = false;
+        MeasureIndex = measureIndex;
+        SourcePosition = sourcePosition;
+    }
+
+    /// <summary>
     /// Parses a mark name string into a MusicMarkType.
+    /// Returns null if the name is not recognized.
+    /// For rehearsal marks (@mark.A, @mark.1), returns Rehearsal.
+    /// Use ParseRehearsalText to get the display text for rehearsal marks.
     /// </summary>
     public static MusicMarkType? ParseMarkName(string name)
     {
-        return name.ToLowerInvariant() switch
+        // Check for rehearsal marks: @mark.A, @mark.B, @mark.1, etc.
+        var lower = name.ToLowerInvariant();
+        if (lower.StartsWith("mark.") && name.Length > 5)
+            return MusicMarkType.Rehearsal;
+
+        return lower switch
         {
             "segno" => MusicMarkType.Segno,
             "coda" => MusicMarkType.Coda,
@@ -133,8 +179,30 @@ public sealed record MusicMarkItem
             "cresc" => MusicMarkType.Cresc,
             "decresc" => MusicMarkType.Decresc,
             "dim" => MusicMarkType.Dim,
+            "ottava" or "8va" => MusicMarkType.OttavaUp,
+            "ottava.bassa" or "8vb" => MusicMarkType.OttavaDown,
+            "quindicesima" or "15ma" => MusicMarkType.QuindicesUp,
+            "quindicesima.bassa" or "15mb" => MusicMarkType.QuindicesDown,
+            "loco" => MusicMarkType.Loco,
+            "ped" or "sustain" => MusicMarkType.SustainOn,
+            "ped.off" or "sustain.off" => MusicMarkType.SustainOff,
+            "sost.ped" or "sostenuto" => MusicMarkType.SostenutoOn,
+            "sost.ped.off" or "sostenuto.off" => MusicMarkType.SostenutoOff,
+            "una.corda" => MusicMarkType.UnaCordaOn,
+            "tre.corde" => MusicMarkType.UnaCordaOff,
             _ => null
         };
+    }
+
+    /// <summary>
+    /// Extracts the rehearsal mark display text from a mark name.
+    /// For example: "mark.A" returns "A", "mark.1" returns "1".
+    /// </summary>
+    public static string ParseRehearsalText(string name)
+    {
+        if (name.Length > 5 && name.StartsWith("mark.", StringComparison.OrdinalIgnoreCase))
+            return name.Substring(5).ToUpperInvariant();
+        return name;
     }
 
     /// <summary>
@@ -165,6 +233,18 @@ public sealed record MusicMarkItem
         MusicMarkType.Cresc => "cresc.",
         MusicMarkType.Decresc => "decresc.",
         MusicMarkType.Dim => "dim.",
+        MusicMarkType.OttavaUp => "8va",
+        MusicMarkType.OttavaDown => "8vb",
+        MusicMarkType.QuindicesUp => "15ma",
+        MusicMarkType.QuindicesDown => "15mb",
+        MusicMarkType.Loco => "loco",
+        MusicMarkType.Rehearsal => "?",  // Rehearsal text set via constructor overload
+        MusicMarkType.SustainOn => "Ped.",
+        MusicMarkType.SustainOff => "*",
+        MusicMarkType.SostenutoOn => "Sost. Ped.",
+        MusicMarkType.SostenutoOff => "*",
+        MusicMarkType.UnaCordaOn => "una corda",
+        MusicMarkType.UnaCordaOff => "tre corde",
         _ => type.ToString()
     };
 
@@ -172,6 +252,11 @@ public sealed record MusicMarkItem
     {
         MusicMarkType.Segno => MusicMarkPosition.Beginning,
         MusicMarkType.Coda => MusicMarkPosition.Beginning,
+        MusicMarkType.Rehearsal => MusicMarkPosition.Beginning,
+        // LILYPOND-REF: piano-pedal-engraver.cc - pedal marks at note position
+        MusicMarkType.SustainOn or MusicMarkType.SustainOff => MusicMarkPosition.Beginning,
+        MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff => MusicMarkPosition.Beginning,
+        MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff => MusicMarkPosition.Beginning,
         _ => MusicMarkPosition.End
     };
 
@@ -182,6 +267,14 @@ public sealed record MusicMarkItem
         MusicMarkType.Cresc => MusicMarkVertical.Below,
         MusicMarkType.Decresc => MusicMarkVertical.Below,
         MusicMarkType.Dim => MusicMarkVertical.Below,
+        // 8va/15ma are above staff; 8vb/15mb are below staff
+        MusicMarkType.OttavaUp or MusicMarkType.QuindicesUp => MusicMarkVertical.Above,
+        MusicMarkType.OttavaDown or MusicMarkType.QuindicesDown => MusicMarkVertical.Below,
+        MusicMarkType.Loco => MusicMarkVertical.Above,
+        // LILYPOND-REF: define-grobs.scm:3275-3296 SustainPedalLineSpanner direction = DOWN
+        MusicMarkType.SustainOn or MusicMarkType.SustainOff => MusicMarkVertical.Below,
+        MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff => MusicMarkVertical.Below,
+        MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff => MusicMarkVertical.Below,
         _ => MusicMarkVertical.Above
     };
 }
