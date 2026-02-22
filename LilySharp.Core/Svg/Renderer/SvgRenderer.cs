@@ -305,14 +305,17 @@ public sealed class SvgRenderer
 
         if (score.Title != null)
         {
-            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle" font-size="2.5">{EscapeXml(score.Title)}</text>""");
-            y += 3;  // 3 staff spaces
+            // LILYPOND-REF: ly/titling-init.ly:79-108 \huge \larger \larger \bold = font-size +4
+            // font-size 4 → base(11pt) * 2^(4/6) ≈ 17.46pt ≈ 3.49 staff spaces
+            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle" font-size="3.5">{EscapeXml(score.Title)}</text>""");
+            y += 3.5;
         }
 
         if (score.Composer != null)
         {
-            // LILYPOND-REF: ly/titling-init.ly:79-108 composer is right-aligned in fill-line
-            _svg.AppendLine($"""  <text class="composer" x="{rightX}" y="{y}" text-anchor="end" font-size="1.5">{EscapeXml(score.Composer)}</text>""");
+            // LILYPOND-REF: ly/titling-init.ly:100 composer has no size modifiers (font-size = 0)
+            // font-size 0 → base(11pt) = 2.20 staff spaces
+            _svg.AppendLine($"""  <text class="composer" x="{rightX}" y="{y}" text-anchor="end" font-size="2.2">{EscapeXml(score.Composer)}</text>""");
         }
     }
 
@@ -808,14 +811,17 @@ public sealed class SvgRenderer
 
         if (score.Title != null)
         {
-            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle" font-size="2.5">{EscapeXml(score.Title)}</text>""");
-            y += 2.5;  // 2.5 staff spaces
+            // LILYPOND-REF: ly/titling-init.ly:79-108 \huge \larger \larger \bold = font-size +4
+            // font-size 4 → base(11pt) * 2^(4/6) ≈ 17.46pt ≈ 3.49 staff spaces
+            _svg.AppendLine($"""  <text class="title" x="{centerX}" y="{y}" text-anchor="middle" font-size="3.5">{EscapeXml(score.Title)}</text>""");
+            y += 3.5;
         }
 
         if (score.Composer != null)
         {
-            // LILYPOND-REF: ly/titling-init.ly:79-108 composer is right-aligned in fill-line
-            _svg.AppendLine($"""  <text class="composer" x="{rightX}" y="{y}" text-anchor="end" font-size="1.5">{EscapeXml(score.Composer)}</text>""");
+            // LILYPOND-REF: ly/titling-init.ly:100 composer has no size modifiers (font-size = 0)
+            // font-size 0 → base(11pt) = 2.20 staff spaces
+            _svg.AppendLine($"""  <text class="composer" x="{rightX}" y="{y}" text-anchor="end" font-size="2.2">{EscapeXml(score.Composer)}</text>""");
         }
     }
 
@@ -948,11 +954,7 @@ public sealed class SvgRenderer
         double x = layout.X;
         double staffBottom = systemY + StaffHeight;
 
-        // Draw section label if present (first voice only to avoid duplicates)
-        if (isFirstVoice && measure.SectionLabel != null)
-        {
-            DrawSectionLabel(measure.SectionLabel, x, systemY);
-        }
+        // Section labels are now routed through MusicMarkEngraver for proper stacking.
 
         // Draw start barline (first voice only to avoid duplicates, skip for multi-staff)
         if (isFirstVoice && !skipBarlines && measure.StartBarline != BarlineType.None)
@@ -1319,18 +1321,6 @@ public sealed class SvgRenderer
         double dot2Y = systemY + EngravingDefaults.RepeatDotPosition2;
         _svg.AppendLine($"""  <circle cx="{x + r:F2}" cy="{dot1Y:F2}" r="{r:F2}" fill="black"/>""");
         _svg.AppendLine($"""  <circle cx="{x + r:F2}" cy="{dot2Y:F2}" r="{r:F2}" fill="black"/>""");
-    }
-
-    private void DrawSectionLabel(string label, double x, double systemY)
-    {
-        double labelY = systemY - 1.5;  // 1.5 staff spaces above
-        double padding = 0.4;  // staff spaces
-        double textWidth = MeasureSerifBoldText(label, fontSize: 1.5);
-        double boxWidth = textWidth + padding * 2;
-        double boxHeight = 2;  // staff spaces
-
-        _svg.AppendLine($"""  <rect x="{x - padding:F2}" y="{labelY - boxHeight + 0.5:F2}" width="{boxWidth:F2}" height="{boxHeight:F2}" fill="none" stroke="black" stroke-width="0.1"/>""");
-        _svg.AppendLine($"""  <text class="section-label" font-size="1.5" x="{x}" y="{labelY}">{EscapeXml(label)}</text>""");
     }
 
     /// <summary>
@@ -2625,10 +2615,11 @@ public sealed class SvgRenderer
             {
                 // LILYPOND-REF: define-grobs.scm:2607-2636 RehearsalMark
                 // Draw boxed rehearsal mark (rect + bold text centered inside)
-                // font-size = 2 relative → FontSize * 0.85; padding = 0.8
-                double rehearsalFontSize = FontSize * 0.85;
-                double boxPadding = 0.8;
-                double textWidth = markLayout.Text.Length * rehearsalFontSize * 0.6;
+                // font-size = 2 → base(11pt) * 2^(2/6) ≈ 2.77 staff spaces
+                // LILYPOND-REF: define-markup-commands.scm box-padding = 0.2
+                double rehearsalFontSize = FontSize * 0.6;
+                double boxPadding = 0.2;
+                double textWidth = MeasureSerifBoldText(markLayout.Text, rehearsalFontSize);
                 double boxWidth = textWidth + boxPadding * 2;
                 double boxHeight = rehearsalFontSize + boxPadding * 2;
                 double boxX = markLayout.X - boxWidth / 2;
@@ -2643,6 +2634,30 @@ public sealed class SvgRenderer
                     $"font-weight=\"bold\" " +
                     $"text-anchor=\"middle\" dominant-baseline=\"central\" " +
                     $"class=\"rehearsal-mark-text\">{EscapeXml(markLayout.Text)}</text>");
+            }
+            else if (markLayout.MarkType == MusicMarkType.SectionLabel)
+            {
+                // LILYPOND-REF: define-grobs.scm:2764-2802 SectionLabel
+                // font-size = 1.5 → base(11pt) * 2^(1.5/6) ≈ 2.62 staff spaces
+                // outside-staff-priority = 1450 (closer to staff than RehearsalMark at 1500)
+                // LILYPOND-REF: define-markup-commands.scm box-padding = 0.2
+                double sectionFontSize = FontSize * 0.55;
+                double boxPadding = 0.2;
+                double textWidth = MeasureSerifBoldText(markLayout.Text, sectionFontSize);
+                double boxWidth = textWidth + boxPadding * 2;
+                double boxHeight = sectionFontSize + boxPadding * 2;
+                double boxX = markLayout.X - boxWidth / 2;
+                double boxY = absoluteY - boxHeight / 2;
+
+                _svg.AppendLine($"  <rect x=\"{boxX:F2}\" y=\"{boxY:F2}\" " +
+                    $"width=\"{boxWidth:F2}\" height=\"{boxHeight:F2}\" " +
+                    $"fill=\"white\" stroke=\"black\" stroke-width=\"0.10\" " +
+                    $"class=\"section-label-box\" />");
+                _svg.AppendLine($"  <text x=\"{markLayout.X:F2}\" y=\"{absoluteY:F2}\" " +
+                    $"font-family=\"serif\" font-size=\"{sectionFontSize:F1}\" " +
+                    $"font-weight=\"bold\" " +
+                    $"text-anchor=\"middle\" dominant-baseline=\"central\" " +
+                    $"class=\"section-label-text\">{EscapeXml(markLayout.Text)}</text>");
             }
             else if (IsPedalMark(markLayout.MarkType))
             {

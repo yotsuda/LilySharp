@@ -308,7 +308,7 @@ public sealed class LayoutEngine
             GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, systems, ml) : ImmutableArray<GraceNoteLayout>.Empty,
             Lyrics: lyricLayouts,
             LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(lyricLayouts, systems),
-            MusicMarks: MusicMarkEngraver.Calculate(score, musicMarks, systems, ml),
+            MusicMarks: MusicMarkEngraver.Calculate(score, musicMarks, systems, ml, measures),
             CustomTexts: CustomTextEngraver.Calculate(score, customTexts, systems, ml),
             VoltaBrackets: VoltaBracketEngraver.Calculate(voltaBrackets, systems, ml),
             TupletBrackets: TupletBracketEngraver.Calculate(tupletBrackets, systems, ml, measures),

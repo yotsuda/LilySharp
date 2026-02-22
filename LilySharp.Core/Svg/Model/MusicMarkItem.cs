@@ -53,6 +53,8 @@ public enum MusicMarkType
     Loco,
     /// <summary>Rehearsal mark (boxed letter/number above staff)</summary>
     Rehearsal,
+    /// <summary>Section label (boxed section name above staff)</summary>
+    SectionLabel,
     /// <summary>Sustain pedal on (Ped.)</summary>
     SustainOn,
     /// <summary>Sustain pedal off (*)</summary>
@@ -239,6 +241,7 @@ public sealed record MusicMarkItem
         MusicMarkType.QuindicesDown => "15mb",
         MusicMarkType.Loco => "loco",
         MusicMarkType.Rehearsal => "?",  // Rehearsal text set via constructor overload
+        MusicMarkType.SectionLabel => "?",  // Section label text set via constructor overload
         MusicMarkType.SustainOn => "Ped.",
         MusicMarkType.SustainOff => "*",
         MusicMarkType.SostenutoOn => "Sost. Ped.",
@@ -253,6 +256,7 @@ public sealed record MusicMarkItem
         MusicMarkType.Segno => MusicMarkPosition.Beginning,
         MusicMarkType.Coda => MusicMarkPosition.Beginning,
         MusicMarkType.Rehearsal => MusicMarkPosition.Beginning,
+        MusicMarkType.SectionLabel => MusicMarkPosition.Beginning,
         // LILYPOND-REF: piano-pedal-engraver.cc - pedal marks at note position
         MusicMarkType.SustainOn or MusicMarkType.SustainOff => MusicMarkPosition.Beginning,
         MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff => MusicMarkPosition.Beginning,

@@ -23,29 +23,27 @@ public readonly record struct MusicMarkLayout(
 
 /// <summary>
 /// Calculates positions for music marks.
-/// Implements LilyPond's mark positioning algorithm.
+/// Implements LilyPond's mark positioning algorithm with outside-staff-priority stacking.
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: mark-engraver.cc:46-89 Mark creation
 /// LILYPOND-REF: side-position-interface.cc:92-111 axis_aligned_side_helper
+/// LILYPOND-REF: axis-group-interface.cc:865-984 skyline_spacing / outside-staff-priority stacking
 ///
 /// LilyPond places marks:
 /// - Above staff (direction = UP) for most marks
 /// - Below staff (direction = DOWN) for expression marks (rit., accel., etc.)
 /// - At beginning of measure for segno/coda
 /// - At end of measure for fine/D.S./D.C.
+///
+/// When multiple marks appear at the same position, they are stacked using
+/// outside-staff-priority: lower priority marks are placed closer to the staff,
+/// higher priority marks are placed farther away.
 /// </remarks>
 public static class MusicMarkEngraver
 {
-    // LILYPOND-REF: define-grobs.scm:3660 direction = UP
-    private const int DirectionUp = -1;  // UP = -1 (negative Y = up in our coordinate system)
-    private const int DirectionDown = 1; // DOWN = 1
-
     // LILYPOND-REF: define-grobs.scm:3665 padding = 0.5
     private const double Padding = 0.5;
-
-    // LILYPOND-REF: define-grobs.scm:3670 outside-staff-priority = 1500 (high, above dynamics)
-    private const double StaffTop = 0.0;
 
     // Y offset above staff for marks
     private const double AboveStaffOffset = -2.0;
@@ -53,48 +51,188 @@ public static class MusicMarkEngraver
     // Y offset below staff for expression marks
     private const double BelowStaffOffset = 5.5;
 
+    // Gap between stacked marks
+    // LILYPOND-REF: axis-group-interface.cc:924 padding between outside-staff elements
+    private const double StackGap = 0.3;
+
     /// <summary>
-    /// Calculates layout for all music marks in a score.
+    /// Calculates layout for all music marks in a score, including section labels.
+    /// Section labels from measures are merged with explicit music marks and
+    /// stacked using outside-staff-priority when they overlap.
     /// </summary>
     public static ImmutableArray<MusicMarkLayout> Calculate(
         Score? score,
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<Measure> measures = default)
     {
-        if (musicMarks.IsDefaultOrEmpty)
+        // Merge section labels from measures into the mark list
+        var allMarks = MergeSectionLabels(musicMarks, measures);
+
+        if (allMarks.Length == 0)
             return ImmutableArray<MusicMarkLayout>.Empty;
 
-        var layouts = ImmutableArray.CreateBuilder<MusicMarkLayout>(musicMarks.Length);
-
-        foreach (var mark in musicMarks)
+        // Calculate X positions and group marks that need stacking
+        var markEntries = new List<(MusicMarkItem Mark, double X)>();
+        foreach (var mark in allMarks)
         {
-            // Find the measure layout
             if (mark.MeasureIndex >= measureLayouts.Length)
                 continue;
 
             var measureLayout = measureLayouts[mark.MeasureIndex];
-
-            // Calculate X position based on mark type
-            // LILYPOND-REF: mark-engraver.cc:75-80 break-align-symbol
             double x = CalculateXPosition(mark, measureLayout);
+            markEntries.Add((mark, x));
+        }
 
-            // Calculate Y position based on mark type
-            double y = CalculateYPosition(mark);
+        // LILYPOND-REF: axis-group-interface.cc:865-984 skyline_spacing
+        // Group by (MeasureIndex, Position) for collision stacking.
+        // Marks at the same measure+position are sorted by outside-staff-priority
+        // and stacked outward from the staff.
+        var groups = markEntries
+            .GroupBy(e => (e.Mark.MeasureIndex, e.Mark.Position))
+            .ToList();
 
-            layouts.Add(new MusicMarkLayout(
-                mark.MeasureIndex,
-                x,
-                y,
-                mark.Type,
-                mark.Text,
-                mark.IsSymbol,
-                mark.SourcePosition
-            ));
+        var layouts = ImmutableArray.CreateBuilder<MusicMarkLayout>();
+
+        foreach (var group in groups)
+        {
+            // Separate above-staff and below-staff marks
+            var aboveMarks = group
+                .Where(e => e.Mark.Vertical == MusicMarkVertical.Above)
+                .OrderBy(e => GetOutsideStaffPriority(e.Mark.Type))
+                .ToList();
+
+            var belowMarks = group
+                .Where(e => e.Mark.Vertical == MusicMarkVertical.Below)
+                .OrderBy(e => GetOutsideStaffPriority(e.Mark.Type))
+                .ToList();
+
+            // Stack above-staff marks (lower priority = closer to staff)
+            double stackTopY = AboveStaffOffset;
+            for (int i = 0; i < aboveMarks.Count; i++)
+            {
+                var (mark, x) = aboveMarks[i];
+                double halfExtent = GetMarkHalfExtent(mark.Type);
+
+                double y;
+                if (i == 0)
+                {
+                    // First mark: use standard offset (backward compatible)
+                    y = AboveStaffOffset - Padding;
+                    stackTopY = y - halfExtent;
+                }
+                else
+                {
+                    // Subsequent marks: stack above previous
+                    y = stackTopY - StackGap - halfExtent;
+                    stackTopY = y - halfExtent;
+                }
+
+                layouts.Add(new MusicMarkLayout(
+                    mark.MeasureIndex, x, y, mark.Type, mark.Text,
+                    mark.IsSymbol, mark.SourcePosition));
+            }
+
+            // Stack below-staff marks (lower priority = closer to staff)
+            double stackBottomY = BelowStaffOffset;
+            for (int i = 0; i < belowMarks.Count; i++)
+            {
+                var (mark, x) = belowMarks[i];
+                double halfExtent = GetMarkHalfExtent(mark.Type);
+
+                double y;
+                if (i == 0)
+                {
+                    y = BelowStaffOffset + Padding;
+                    stackBottomY = y + halfExtent;
+                }
+                else
+                {
+                    y = stackBottomY + StackGap + halfExtent;
+                    stackBottomY = y + halfExtent;
+                }
+
+                layouts.Add(new MusicMarkLayout(
+                    mark.MeasureIndex, x, y, mark.Type, mark.Text,
+                    mark.IsSymbol, mark.SourcePosition));
+            }
         }
 
         return layouts.ToImmutable();
     }
+
+    /// <summary>
+    /// Merges section labels from measures into the music marks list.
+    /// Section labels become MusicMarkType.SectionLabel entries.
+    /// </summary>
+    private static ImmutableArray<MusicMarkItem> MergeSectionLabels(
+        ImmutableArray<MusicMarkItem> musicMarks,
+        ImmutableArray<Measure> measures)
+    {
+        if (measures.IsDefaultOrEmpty)
+            return musicMarks.IsDefaultOrEmpty ? ImmutableArray<MusicMarkItem>.Empty : musicMarks;
+
+        // Collect section labels from measures
+        var sectionLabels = new List<MusicMarkItem>();
+        for (int i = 0; i < measures.Length; i++)
+        {
+            var measure = measures[i];
+            if (measure.SectionLabel != null)
+            {
+                sectionLabels.Add(new MusicMarkItem(
+                    MusicMarkType.SectionLabel, measure.SectionLabel, i, measure.SourceStart));
+            }
+        }
+
+        if (sectionLabels.Count == 0)
+            return musicMarks.IsDefaultOrEmpty ? ImmutableArray<MusicMarkItem>.Empty : musicMarks;
+
+        // Merge: existing marks + section labels
+        var builder = ImmutableArray.CreateBuilder<MusicMarkItem>();
+        if (!musicMarks.IsDefaultOrEmpty)
+            builder.AddRange(musicMarks);
+        builder.AddRange(sectionLabels);
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Gets the outside-staff-priority for a mark type.
+    /// Lower values are placed closer to the staff.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: define-grobs.scm
+    /// - SectionLabel: outside-staff-priority = 1450
+    /// - RehearsalMark: outside-staff-priority = 1500
+    /// - SegnoMark/CodaMark: outside-staff-priority = 1500
+    /// </remarks>
+    private static int GetOutsideStaffPriority(MusicMarkType type) => type switch
+    {
+        MusicMarkType.SectionLabel => 1450,
+        MusicMarkType.Rehearsal => 1500,
+        MusicMarkType.Segno => 1500,
+        MusicMarkType.Coda => 1500,
+        _ => 1500
+    };
+
+    /// <summary>
+    /// Gets the approximate half-height of a mark's visual extent in staff spaces.
+    /// Used for collision avoidance stacking between marks.
+    /// </summary>
+    /// <remarks>
+    /// These values match the rendering sizes in SvgRenderer:
+    /// - Boxed marks (Rehearsal/SectionLabel): (fontSize + boxPadding*2) / 2
+    ///   where boxPadding = 0.2 (LILYPOND-REF: define-markup-commands.scm)
+    /// - Symbol marks (Segno/Coda): symbol glyph height / 2
+    /// - Text marks (D.S./Fine/etc.): fontSize / 2
+    /// </remarks>
+    private static double GetMarkHalfExtent(MusicMarkType type) => type switch
+    {
+        MusicMarkType.Rehearsal => 1.4,       // (FontSize*0.6 + 0.2*2) / 2 = (2.4+0.4)/2
+        MusicMarkType.SectionLabel => 1.3,    // (FontSize*0.55 + 0.2*2) / 2 = (2.2+0.4)/2
+        MusicMarkType.Segno or MusicMarkType.Coda => 2.0,
+        _ => 1.0
+    };
 
     /// <summary>
     /// Calculates X position for a mark.
@@ -111,24 +249,6 @@ public static class MusicMarkEngraver
             MusicMarkPosition.Beginning => measureLayout.X + 0.5, // Small offset from barline
             MusicMarkPosition.End => measureLayout.X + measureLayout.Width - 0.5, // Before end barline
             _ => measureLayout.X + measureLayout.Width / 2 // Center (fallback)
-        };
-    }
-
-    /// <summary>
-    /// Calculates Y position for a mark.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: define-grobs.scm:3660-3675 direction and padding
-    /// - Above staff for navigation marks (segno, coda, fine, D.S., D.C.)
-    /// - Below staff for expression marks (rit., accel., cresc., dim.)
-    /// </remarks>
-    private static double CalculateYPosition(MusicMarkItem mark)
-    {
-        return mark.Vertical switch
-        {
-            MusicMarkVertical.Above => AboveStaffOffset - Padding,
-            MusicMarkVertical.Below => BelowStaffOffset + Padding,
-            _ => AboveStaffOffset - Padding
         };
     }
 }
