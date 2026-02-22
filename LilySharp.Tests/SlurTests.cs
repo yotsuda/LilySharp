@@ -52,9 +52,12 @@ public class SlurTests
             endX: 150.0,
             endY: 90.0);
 
-        // Assert
-        double midY = (layout.StartY + layout.EndY) / 2;
-        Assert.True(layout.Control1.Y > midY, "Control point should be below midpoint for curve down");
+        // Assert: control points should be below the line connecting start to end
+        double width = layout.EndX - layout.StartX;
+        double t1 = (layout.Control1.X - layout.StartX) / width;
+        double linearY1 = layout.StartY + t1 * (layout.EndY - layout.StartY);
+        Assert.True(layout.Control1.Y > linearY1,
+            $"Control point 1 Y ({layout.Control1.Y:F2}) should be below linear interpolation ({linearY1:F2}) for curve down");
     }
 
     [Fact]

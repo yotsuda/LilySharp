@@ -61,12 +61,12 @@ public sealed class SlurEngraver
         double baseStartY = slur.CurveUp ? startY - offset : startY + offset;
         double baseEndY = slur.CurveUp ? endY - offset : endY + offset;
 
-        // Calculate midpoint Y for control point height
-        double midY = (baseStartY + baseEndY) / 2;
-
-        // Control points
-        var control1 = (X: adjustedStartX + indent, Y: midY + directedHeight);
-        var control2 = (X: adjustedEndX - indent, Y: midY + directedHeight);
+        // Control points: Y follows the start-end line with arc height offset
+        // LILYPOND-REF: lily/bezier-bow.cc creates flat bow then applies shear for dy
+        double cpT1 = (adjustedWidth > 0) ? indent / adjustedWidth : 0;
+        double cpT2 = (adjustedWidth > 0) ? 1 - indent / adjustedWidth : 1;
+        var control1 = (X: adjustedStartX + indent, Y: baseStartY + cpT1 * (baseEndY - baseStartY) + directedHeight);
+        var control2 = (X: adjustedEndX - indent, Y: baseStartY + cpT2 * (baseEndY - baseStartY) + directedHeight);
 
         return new SlurLayout(
             slur,
@@ -79,16 +79,19 @@ public sealed class SlurEngraver
     }
 
     /// <summary>
-    /// Calculates slur arc height based on width.
-    /// Based on Lilypond's slur_height function in bezier-bow.cc
+    /// Calculates slur arc height using LilyPond's atan formula.
+    /// F0_1(x) = (2/π) * atan(π*x/2), then h = h_inf * F0_1(w * r_0 / h_inf).
     /// </summary>
-    private double CalculateSlurHeight(double width, double heightLimit, double ratio)
+    /// <remarks>
+    /// LILYPOND-REF: lily/bezier-bow.cc:28-38 F0_1() + slur_height()
+    /// </remarks>
+    private static double CalculateSlurHeight(double width, double heightLimit, double ratio)
     {
         if (heightLimit < 0.001)
             return 0;
 
-        double x = ratio * width / heightLimit;
-        return heightLimit * Math.Tanh(x);
+        double x = width * ratio / heightLimit;
+        return heightLimit * (2.0 / Math.PI) * Math.Atan(Math.PI * x / 2.0);
     }
 
     /// <summary>

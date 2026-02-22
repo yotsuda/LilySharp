@@ -2287,30 +2287,34 @@ public sealed class SvgRenderer
         if (layout.GraceNoteLayouts.IsDefaultOrEmpty)
             return;
 
+        // Build measure → system lookup
+        var measureToSystem = new Dictionary<int, SystemLayout>();
+        foreach (var system in layout.Systems)
+            foreach (var measure in system.Measures)
+                measureToSystem[measure.MeasureIndex] = system;
+
         foreach (var graceLayout in layout.GraceNoteLayouts)
         {
-            DrawGraceNoteGroup(graceLayout);
+            if (!measureToSystem.TryGetValue(graceLayout.MeasureIndex, out var system))
+                continue;
+            DrawGraceNoteGroup(graceLayout, system.Y);
         }
     }
 
     /// <summary>
     /// Draws a group of grace notes.
     /// </summary>
-    private void DrawGraceNoteGroup(GraceNoteLayout graceLayout)
+    private void DrawGraceNoteGroup(GraceNoteLayout graceLayout, double systemY)
     {
         double x = graceLayout.X;
         double scale = graceLayout.Scale;
         double scaledFontSize = FontSize * scale;
         double noteSpacing = 1.2 * scale;
 
-        // Find the system Y offset for this measure
-        // For now, use a default offset (this should be calculated from layout)
-        double systemY = 0;
-
         foreach (var noteInfo in graceLayout.Notes)
         {
-            // Calculate Y position from staff position
-            double y = systemY + noteInfo.StaffPosition * 0.5;
+            // Calculate Y position from staff position (same formula as regular notes)
+            double y = systemY + StaffHeight / 2 - (noteInfo.StaffPosition / 2.0);
 
             // Draw the notehead (quarter note head for grace notes)
             string noteGlyph = "\uE0A4"; // noteheadBlack

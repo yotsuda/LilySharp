@@ -582,8 +582,8 @@ public sealed class MeasureCollector
 
         foreach (var node in voiceNode.DescendantNodes())
         {
-            // Skip nodes that are inside a tuplet or repeat (they'll be processed by those handlers)
-            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideOnce(node))
+            // Skip nodes that are inside a tuplet, repeat, grace, or once (they'll be processed by those handlers)
+            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideOnce(node) || IsInsideGrace(node))
                 continue;
 
             switch (node)
@@ -596,6 +596,7 @@ public sealed class MeasureCollector
                 case TieSyntax:
                 case SlurSyntax:
                 case BeamMarkerSyntax:
+                case GraceExpressionSyntax:
                 case TupletExpressionSyntax:
                 case RepeatExpressionSyntax:
                 case MusicMarkSyntax:
@@ -640,6 +641,12 @@ public sealed class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
+                    // Process grace notes BEFORE the main note so they get correct octave context
+                    if (_pendingGrace != null)
+                    {
+                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        _pendingGrace = null;
+                    }
                     bool hasGliss = HasGlissandoArticulation(note);
                     int featherDir = GetFeatherDirection(note);
                     var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir);
@@ -649,12 +656,6 @@ public sealed class MeasureCollector
                     CollectFiguredBass(note, measureIndex, itemIndex);
                     CollectChordNames(note, measureIndex, itemIndex);
                     CollectCrossStaff(note, measureIndex, itemIndex);
-                    // Attach any pending grace notes
-                    if (_pendingGrace != null)
-                    {
-                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
-                        _pendingGrace = null;
-                    }
                 }
                 break;
 
@@ -666,6 +667,12 @@ public sealed class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex;
                     int itemIndex = builder.CurrentItemCount;
+                    // Process grace notes BEFORE the main chord so they get correct octave context
+                    if (_pendingGrace != null)
+                    {
+                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
+                        _pendingGrace = null;
+                    }
                     bool hasArpeggio = HasArpeggioArticulation(chord);
                     var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio);
                     builder.AddItem(chordItem);
@@ -681,12 +688,6 @@ public sealed class MeasureCollector
                         int minPos = chordItem.Notes.Min(n => n.StaffPosition);
                         int maxPos = chordItem.Notes.Max(n => n.StaffPosition);
                         _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, chord.Position));
-                    }
-                    // Attach any pending grace notes
-                    if (_pendingGrace != null)
-                    {
-                        CollectGraceNotes(_pendingGrace, measureIndex, itemIndex);
-                        _pendingGrace = null;
                     }
                 }
                 break;
@@ -1092,7 +1093,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax);
+                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax);
             ProcessNodes(musicNodes);
         }
 
@@ -1175,6 +1176,22 @@ public sealed class MeasureCollector
     /// Checks if a node is inside a RepeatExpressionSyntax.
     /// Prevents double-processing of notes inside repeat expressions.
     /// </summary>
+    /// <summary>
+    /// Checks if a node is inside a GraceExpressionSyntax.
+    /// Prevents double-processing of notes inside grace expressions.
+    /// </summary>
+    private static bool IsInsideGrace(SyntaxNode node)
+    {
+        var parent = node.Parent;
+        while (parent != null)
+        {
+            if (parent is GraceExpressionSyntax)
+                return true;
+            parent = parent.Parent;
+        }
+        return false;
+    }
+
     private static bool IsInsideRepeat(SyntaxNode node)
     {
         var parent = node.Parent;
@@ -1281,8 +1298,8 @@ public sealed class MeasureCollector
 
         foreach (var node in partBlock.DescendantNodes())
         {
-            // Skip nodes inside tuplets or repeats (they'll be processed by those handlers)
-            if (IsInsideTuplet(node) || IsInsideRepeat(node))
+            // Skip nodes inside tuplets, repeats, or grace expressions (they'll be processed by those handlers)
+            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node))
                 continue;
 
             switch (node)
@@ -1295,6 +1312,7 @@ public sealed class MeasureCollector
                 case TieSyntax:
                 case SlurSyntax:
                 case BeamMarkerSyntax:
+                case GraceExpressionSyntax:
                 case TupletExpressionSyntax:
                 case RepeatExpressionSyntax:
                 case MusicMarkSyntax:
@@ -1316,14 +1334,20 @@ public sealed class MeasureCollector
             return;
 
         // Include expression itself if it is a music node
-        if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax)
+        if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
+            or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
+            or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax)
         {
             musicNodes.Add(expression);
         }
 
         // Get music nodes from the variable expression descendants
+        // Skip nodes inside containers (grace, tuplet, repeat, once) - they'll be processed by those handlers
         var nodes = expression.DescendantNodes()
-            .Where(n => n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax);
+            .Where(n => !IsInsideGrace(n) && !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n)
+                && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
+                or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
+                or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax);
 
         musicNodes.AddRange(nodes);
     }
