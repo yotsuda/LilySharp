@@ -1200,10 +1200,11 @@ public sealed class SvgRenderer
         // Draw single stem for chord
         if (noteValue >= 2 && chord.Notes.Length > 0)
         {
-            int stemNotePos = stemUp
+            // Stem attach note: bottom note for stem up, top note for stem down
+            int stemAttachPos = stemUp
                 ? chord.Notes.Min(n => n.StaffPosition)
                 : chord.Notes.Max(n => n.StaffPosition);
-            double stemNoteY = systemY + StaffHeight / 2 - (stemNotePos / 2.0);
+            double stemNoteY = systemY + StaffHeight / 2 - (stemAttachPos / 2.0);
 
             double stemX = stemUp ? x + StemUpAttachX : x + StemDownAttachX;
             double stemAttachY = stemUp ? stemNoteY - StemUpAttachY : stemNoteY - StemDownAttachY;
@@ -1216,8 +1217,16 @@ public sealed class SvgRenderer
             }
             else
             {
+                // LILYPOND-REF: lily/stem.cc:425 — stem length uses the note at the stem tip side
+                // Stem tip note: top note for stem up, bottom note for stem down
+                int stemTipPos = stemUp
+                    ? chord.Notes.Max(n => n.StaffPosition)
+                    : chord.Notes.Min(n => n.StaffPosition);
+                double stemTipNoteY = systemY + StaffHeight / 2 - (stemTipPos / 2.0);
+                double stemTipAttachY = stemUp ? stemTipNoteY - StemUpAttachY : stemTipNoteY - StemDownAttachY;
+
                 int durLog = StemCalculator.GetDurationLog(noteValue);
-                stemEndY = CalculateStemEndY(stemAttachY, stemUp, systemY, durLog, stemNotePos);
+                stemEndY = CalculateStemEndY(stemTipAttachY, stemUp, systemY, durLog, stemTipPos);
             }
 
             _svg.AppendLine($"""  <line x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}" stroke="black" stroke-width="{StemThickness:F2}" data-pos="{chord.SourcePosition}"/>""");
