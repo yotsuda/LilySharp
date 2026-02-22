@@ -18,7 +18,7 @@ phrase intro {
 phrase theme {
   // Hairpin decresc + articulations
   d4@ff@accent cis@staccato b@staccato a@staccato |
-  g4@decpresc fis e d@pp |
+  g4@decresc fis e d@pp |
 }
 
 phrase bridge {

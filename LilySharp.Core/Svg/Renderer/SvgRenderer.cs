@@ -2871,10 +2871,14 @@ public sealed class SvgRenderer
             double startX = bracketLayout.StartX;
             double endX = bracketLayout.EndX;
 
-            // Draw left vertical hook (downward from line)
-            _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{absoluteY:F2}\" " +
-                $"x2=\"{startX:F2}\" y2=\"{absoluteY + edgeHeight:F2}\" " +
-                $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"volta-bracket\" />");
+            // Draw left vertical hook (only on first segment — indicated by non-empty VoltaText)
+            bool hasText = !string.IsNullOrEmpty(bracketLayout.VoltaText);
+            if (hasText)
+            {
+                _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{absoluteY:F2}\" " +
+                    $"x2=\"{startX:F2}\" y2=\"{absoluteY + edgeHeight:F2}\" " +
+                    $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"volta-bracket\" />");
+            }
 
             // Draw horizontal line
             _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{absoluteY:F2}\" " +
@@ -2889,15 +2893,18 @@ public sealed class SvgRenderer
                     $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"volta-bracket\" />");
             }
 
-            // Draw volta number text
-            double textX = startX + 0.5;
-            double textY = absoluteY + 0.3;
-            double textFontSize = FontSize * 0.6;
-            _svg.AppendLine($"  <text x=\"{textX:F2}\" y=\"{textY:F2}\" " +
-                $"font-family=\"serif\" font-size=\"{textFontSize:F1}\" " +
-                $"font-weight=\"bold\" " +
-                $"text-anchor=\"start\" dominant-baseline=\"hanging\" " +
-                $"class=\"volta-text\">{EscapeXml(bracketLayout.VoltaText)}</text>");
+            // Draw volta number text (only on first segment)
+            if (hasText)
+            {
+                double textX = startX + 0.5;
+                double textY = absoluteY + 0.3;
+                double textFontSize = FontSize * 0.6;
+                _svg.AppendLine($"  <text x=\"{textX:F2}\" y=\"{textY:F2}\" " +
+                    $"font-family=\"serif\" font-size=\"{textFontSize:F1}\" " +
+                    $"font-weight=\"bold\" " +
+                    $"text-anchor=\"start\" dominant-baseline=\"hanging\" " +
+                    $"class=\"volta-text\">{EscapeXml(bracketLayout.VoltaText)}</text>");
+            }
         }
     }
 
@@ -3191,12 +3198,16 @@ public sealed class SvgRenderer
             // Draw end hook (vertical line at the right end)
             // LILYPOND-REF: scm/define-grobs.scm:2451 (edge-height . (0 . 0.8))
             // Hook direction: towards the staff (down for above, up for below)
-            double hookDir = bracket.IsAbove ? 1 : -1;
-            double hookEndY = absoluteY + bracket.EdgeHeight * hookDir;
-            _svg.AppendLine($"  <line x1=\"{bracket.EndX:F2}\" y1=\"{absoluteY:F2}\" " +
-                $"x2=\"{bracket.EndX:F2}\" y2=\"{hookEndY:F2}\" " +
-                $"stroke=\"black\" stroke-width=\"{lineThickness:F3}\" " +
-                $"class=\"ottava-bracket-hook\" data-pos=\"{bracket.SourcePosition}\" />");
+            // EdgeHeight=0 means no hook (open end at system break)
+            if (bracket.EdgeHeight > 0)
+            {
+                double hookDir = bracket.IsAbove ? 1 : -1;
+                double hookEndY = absoluteY + bracket.EdgeHeight * hookDir;
+                _svg.AppendLine($"  <line x1=\"{bracket.EndX:F2}\" y1=\"{absoluteY:F2}\" " +
+                    $"x2=\"{bracket.EndX:F2}\" y2=\"{hookEndY:F2}\" " +
+                    $"stroke=\"black\" stroke-width=\"{lineThickness:F3}\" " +
+                    $"class=\"ottava-bracket-hook\" data-pos=\"{bracket.SourcePosition}\" />");
+            }
         }
     }
 
@@ -3306,21 +3317,8 @@ public sealed class SvgRenderer
 
         foreach (var bracket in layout.PedalBracketLayouts)
         {
-            // Use the first system Y as the baseline (bracket Y is relative)
-            double systemY = 0;
-            foreach (var system in layout.Systems)
-            {
-                foreach (var measure in system.Measures)
-                {
-                    if (measure.MeasureIndex >= 0)
-                    {
-                        systemY = system.Y;
-                        goto foundSystem;
-                    }
-                }
-            }
-            foundSystem:
-
+            // Look up the system Y for this bracket's start measure
+            double systemY = measureToSystemY.TryGetValue(bracket.StartMeasureIndex, out var sy) ? sy : 0;
             double absoluteY = systemY + bracket.Y;
 
             // Draw horizontal bracket line

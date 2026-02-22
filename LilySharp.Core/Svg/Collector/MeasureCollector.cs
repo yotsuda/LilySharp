@@ -1308,9 +1308,12 @@ public sealed class MeasureCollector
                             endMeasureIndex++;
 
                         // Collect volta bracket info if bracket style
+                        // endMeasureIndex is exclusive (one-past-end); convert to inclusive
+                        // for VoltaBracketItem which stores the last measure index
                         if (alt.HasBracket && !alt.IsSilent)
                         {
-                            pendingVoltaBrackets.Add((startMeasureIndex, endMeasureIndex, alt.VoltaText, alt.Position));
+                            int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
+                            pendingVoltaBrackets.Add((startMeasureIndex, lastMeasure, alt.VoltaText, alt.Position));
                         }
                     }
                 }

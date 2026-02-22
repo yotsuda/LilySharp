@@ -11,11 +11,12 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: define-grobs.scm:2586-2605 PianoPedalBracket grob
 /// </remarks>
 public readonly record struct PedalBracketLayout(
-    double StartX,       // Start X position (at "Ped." text)
-    double EndX,         // End X position (at "*" release)
-    double Y,            // Y position below staff
-    double EdgeHeight,   // Height of the end hook (vertical line at release)
-    int SourcePosition   // For click-to-source mapping
+    double StartX,           // Start X position (at "Ped." text)
+    double EndX,             // End X position (at "*" release)
+    double Y,                // Y position below staff (relative to system top)
+    double EdgeHeight,       // Height of the end hook (vertical line at release)
+    int StartMeasureIndex,   // For system Y lookup in renderer
+    int SourcePosition       // For click-to-source mapping
 );
 
 /// <summary>
@@ -118,6 +119,11 @@ public static class PedalEngraver
     /// <summary>
     /// Calculates layout positions for pedal brackets.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: piano-pedal-bracket.cc — bracket Y is below the lowest staff
+    /// In grand staff context, the pedal bracket is placed below the bass (lower) staff,
+    /// not below the treble (upper) staff.
+    /// </remarks>
     public static ImmutableArray<PedalBracketLayout> Calculate(
         ImmutableArray<PedalBracketItem> brackets,
         ImmutableArray<SystemLayout> systems,
@@ -128,13 +134,32 @@ public static class PedalEngraver
 
         var layouts = ImmutableArray.CreateBuilder<PedalBracketLayout>(brackets.Length);
 
-        // Build measure-to-system mapping for Y coordinates
-        var measureToSystemY = new Dictionary<int, double>();
+        // Build measure-to-system mapping
+        var measureToSystem = new Dictionary<int, SystemLayout>();
         foreach (var system in systems)
         {
             foreach (var measure in system.Measures)
             {
-                measureToSystemY[measure.MeasureIndex] = system.Y;
+                measureToSystem[measure.MeasureIndex] = system;
+            }
+        }
+
+        // Determine the Y offset for pedal brackets:
+        // In grand staff, bracket goes below the bass (lowest) staff.
+        // LILYPOND-REF: piano-pedal-bracket.cc — Y relative to lowest staff bottom
+        double bracketY = BracketY;  // Default: single staff
+        if (systems.Length > 0 && !systems[0].StaffGroups.IsDefaultOrEmpty)
+        {
+            // Find the grand staff group — pedal is below its lowest staff
+            foreach (var group in systems[0].StaffGroups)
+            {
+                if (group.IsGrandStaff && group.GrandStaffLayout != null)
+                {
+                    // Bass staff bottom Y (relative to system top) + padding
+                    var lowerStaff = group.GrandStaffLayout.LowerStaff;
+                    bracketY = lowerStaff.Y + lowerStaff.Height + StaffPadding + EdgeHeight;
+                    break;
+                }
             }
         }
 
@@ -160,8 +185,9 @@ public static class PedalEngraver
             layouts.Add(new PedalBracketLayout(
                 startX,
                 endX,
-                BracketY,
+                bracketY,
                 EdgeHeight,
+                bracket.StartMeasureIndex,
                 bracket.SourcePosition));
         }
 
