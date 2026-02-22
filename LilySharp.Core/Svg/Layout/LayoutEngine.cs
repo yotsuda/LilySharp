@@ -111,7 +111,7 @@ public sealed class LayoutEngine
         var firstSystemMeasureLayouts = systemMeasures.Count > 0
             ? _multiStaffLayouter.LayoutMeasures(score, 0, 0, systemMeasures[0].Count)
             : ImmutableArray<MeasureLayout>.Empty;
-        var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(score, firstSystemMeasureLayouts);
+        var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(score, firstSystemMeasureLayouts, systemHeight);
         double currentY = LayoutUtilities.CalculateFirstSystemY(
             headerBottom, LayoutUtilities.CalculateUpExtent(firstUpSkyline), _options.TopSystemPadding);
 
@@ -128,7 +128,7 @@ public sealed class LayoutEngine
                 : _multiStaffLayouter.LayoutMeasures(score, sysIdx, firstMeasureIndex, measureCount,
                     sysIdx == systemMeasures.Count - 1);
 
-            var (upSky, downSky) = _skylineBuilder.BuildSystemSkylines(score, measureLayouts);
+            var (upSky, downSky) = _skylineBuilder.BuildSystemSkylines(score, measureLayouts, systemHeight);
             perSystemExtents.Add((
                 LayoutUtilities.CalculateUpExtent(upSky),
                 LayoutUtilities.CalculateDownExtent(downSky, systemHeight)));

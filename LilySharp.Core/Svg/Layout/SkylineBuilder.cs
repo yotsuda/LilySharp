@@ -32,28 +32,56 @@ public sealed class SkylineBuilder
     /// </remarks>
     public (VerticalSkyline Up, VerticalSkyline Down) BuildSystemSkylines(
         MultiStaffScore score,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        double systemHeight = 0)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
 
         // All dimensions in staff spaces (coordinate system is unified)
-        double staffMiddleY = _staffHeight / 2;
         double stemLength = EngravingDefaults.DefaultStemLength;
         double noteheadHeight = EngravingDefaults.NoteheadHeight;
 
-        // Only process the first (topmost) staff for top margin calculation
-        // Other staves are below the first one, so they don't affect the top margin
+        // Process topmost staff for UP skyline (elements above the system)
         var firstStaff = score.StaffGroups[0].PrimaryStaff;
-        foreach (var voice in firstStaff.Voices)
+        double firstStaffMiddleY = _staffHeight / 2;
+        AddStaffToSkylines(firstStaff, measureLayouts, firstStaffMiddleY,
+            stemLength, noteheadHeight, upSkyline, downSkyline);
+
+        // Process bottommost staff for DOWN skyline (elements below the system)
+        // LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline
+        // Both top and bottom staves contribute to the system's vertical extent.
+        var lastGroup = score.StaffGroups[^1];
+        var lastStaff = lastGroup.Staves[^1];
+        if (lastStaff != firstStaff && systemHeight > 0)
         {
-            for (int measureIndex = 0; measureIndex < voice.Measures.Length; measureIndex++)
+            // Bottom staff's top line is at systemHeight - staffHeight from system reference
+            double lastStaffMiddleY = systemHeight - _staffHeight / 2;
+            AddStaffToSkylines(lastStaff, measureLayouts, lastStaffMiddleY,
+                stemLength, noteheadHeight, upSkyline, downSkyline);
+        }
+
+        return (upSkyline, downSkyline);
+    }
+
+    private void AddStaffToSkylines(
+        Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
+        double staffMiddleY, double stemLength, double noteheadHeight,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        foreach (var voice in staff.Voices)
+        {
+            // Iterate over measureLayouts (which are for the current system only).
+            // Use MeasureLayout.MeasureIndex to look up the correct voice measure.
+            for (int layoutIndex = 0; layoutIndex < measureLayouts.Length; layoutIndex++)
             {
-                if (measureIndex >= measureLayouts.Length)
+                var measureLayout = measureLayouts[layoutIndex];
+                int measureIndex = measureLayout.MeasureIndex;
+
+                if (measureIndex >= voice.Measures.Length)
                     continue;
 
                 var measure = voice.Measures[measureIndex];
-                var measureLayout = measureLayouts[measureIndex];
                 for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
                 {
                     if (itemIndex >= measureLayout.Items.Length)
@@ -68,8 +96,6 @@ public sealed class SkylineBuilder
                 }
             }
         }
-
-        return (upSkyline, downSkyline);
     }
 
     /// <summary>
@@ -224,11 +250,13 @@ public sealed class SkylineBuilder
         double ledgerRight = x + noteheadWidth / 2 + ledgerExtension;
 
         // Ledger lines above staff (staffPosition >= 6)
+        // Use noteY-based calculation to correctly handle any staff position
         if (staffPosition >= 6)
         {
             for (int pos = 6; pos <= staffPosition; pos += 2)
             {
-                double ledgerY = _staffHeight / 2 - (pos / 2.0);
+                // Ledger Y is at the same position as a note at this staff position
+                double ledgerY = noteY + (staffPosition - pos) / 2.0;
                 double ledgerTop = ledgerY - ledgerThickness / 2;
                 double ledgerBottom = ledgerY + ledgerThickness / 2;
                 var ledgerUp = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ledgerBottom, ledgerTop, VerticalDirection.Up);
@@ -241,7 +269,7 @@ public sealed class SkylineBuilder
         {
             for (int pos = -6; pos >= staffPosition; pos -= 2)
             {
-                double ledgerY = _staffHeight / 2 - (pos / 2.0);
+                double ledgerY = noteY + (staffPosition - pos) / 2.0;
                 double ledgerTop = ledgerY - ledgerThickness / 2;
                 double ledgerBottom = ledgerY + ledgerThickness / 2;
                 var ledgerDown = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ledgerBottom, ledgerTop, VerticalDirection.Down);
