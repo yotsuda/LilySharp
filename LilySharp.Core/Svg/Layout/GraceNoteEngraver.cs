@@ -81,9 +81,24 @@ public static class GraceNoteEngraver
             double graceGroupWidth = grace.Notes.Length * GraceNoteWidth * GraceScale
                                    + (grace.Notes.Length - 1) * GraceNoteSpacing * GraceScale;
 
-            // Position grace notes to the left of the main note
+            // Account for main note's accidental width
+            // The layout reference point is at the notehead CENTER, but accidentals are
+            // drawn from the notehead LEFT edge. We need: centerX + accWidth + gap.
             // LILYPOND-REF: grace-spacing.cc:65-80 positioning before main note
-            double x = measureLayout.X + mainNoteLayout.X - graceGroupWidth - GraceToMainSpacing;
+            double accidentalExtent = 0;
+            var measure = score.Voice.Measures[grace.MeasureIndex];
+            if (grace.MainNoteItemIndex < measure.Items.Length
+                && measure.Items[grace.MainNoteItemIndex] is NoteItem mainNote
+                && mainNote.Accidental != null)
+            {
+                var noteheadBBox = GlyphMetrics.GetNoteheadBBox(
+                    mainNote.BaseDuration.Denominator <= 1 ? 1 : mainNote.BaseDuration.Denominator <= 2 ? 2 : 4);
+                var accBBox = GlyphMetrics.GetAccidentalBBox(mainNote.Accidental);
+                accidentalExtent = noteheadBBox.CenterX + accBBox.Width + GlyphMetrics.AccidentalNoteGap;
+            }
+
+            // Position grace notes to the left of the main note (including accidental)
+            double x = measureLayout.X + mainNoteLayout.X - accidentalExtent - graceGroupWidth - GraceToMainSpacing;
 
             // Y position based on first note's staff position
             double y = 0;

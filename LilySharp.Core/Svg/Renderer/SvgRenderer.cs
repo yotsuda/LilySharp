@@ -182,7 +182,7 @@ public sealed class SvgRenderer
         DrawArticulations(layout);
 
         // Draw grace notes
-        DrawGraceNotes(layout);
+        DrawGraceNotes(score, layout);
 
         // Draw lyrics
         DrawLyrics(layout);
@@ -2282,43 +2282,70 @@ public sealed class SvgRenderer
     /// Grace notes are rendered at 65% of normal size.
     /// Acciaccaturas have a diagonal slash through the stem.
     /// </remarks>
-    private void DrawGraceNotes(ScoreLayout layout)
+    private void DrawGraceNotes(Score score, ScoreLayout layout)
     {
         if (layout.GraceNoteLayouts.IsDefaultOrEmpty)
             return;
 
-        // Build measure → system lookup
-        var measureToSystem = new Dictionary<int, SystemLayout>();
+        // Build measure → (system, measureLayout) lookup
+        var measureToInfo = new Dictionary<int, (SystemLayout System, MeasureLayout Measure)>();
         foreach (var system in layout.Systems)
             foreach (var measure in system.Measures)
-                measureToSystem[measure.MeasureIndex] = system;
+                measureToInfo[measure.MeasureIndex] = (system, measure);
 
         foreach (var graceLayout in layout.GraceNoteLayouts)
         {
-            if (!measureToSystem.TryGetValue(graceLayout.MeasureIndex, out var system))
+            if (!measureToInfo.TryGetValue(graceLayout.MeasureIndex, out var info))
                 continue;
-            DrawGraceNoteGroup(graceLayout, system.Y);
+
+            // Get main note absolute X and Y
+            double mainNoteX = info.Measure.X;
+            if (graceLayout.MainNoteItemIndex < info.Measure.Items.Length)
+                mainNoteX = info.Measure.X + info.Measure.Items[graceLayout.MainNoteItemIndex].X;
+
+            double mainNoteY = info.System.Y + StaffHeight / 2;
+            var measures = score.Voice.Measures;
+            if (graceLayout.MeasureIndex < measures.Length)
+            {
+                var measure = measures[graceLayout.MeasureIndex];
+                if (graceLayout.MainNoteItemIndex < measure.Items.Length
+                    && measure.Items[graceLayout.MainNoteItemIndex] is NoteItem mainNote)
+                {
+                    mainNoteY = info.System.Y + StaffHeight / 2 - (mainNote.StaffPosition / 2.0);
+                }
+            }
+
+            DrawGraceNoteGroup(graceLayout, info.System.Y, mainNoteX, mainNoteY);
         }
     }
 
     /// <summary>
-    /// Draws a group of grace notes.
+    /// Draws a group of grace notes with optional slur to main note.
     /// </summary>
-    private void DrawGraceNoteGroup(GraceNoteLayout graceLayout, double systemY)
+    /// <remarks>
+    /// LILYPOND-REF: ly/grace-init.ly:21-48 acciaccatura/appoggiatura auto-slur
+    /// Acciaccatura and appoggiatura automatically get a small slur connecting
+    /// the last grace note to the main note.
+    /// </remarks>
+    private void DrawGraceNoteGroup(GraceNoteLayout graceLayout, double systemY,
+        double mainNoteX, double mainNoteY)
     {
         double x = graceLayout.X;
         double scale = graceLayout.Scale;
         double scaledFontSize = FontSize * scale;
         double noteSpacing = 1.2 * scale;
 
+        double lastNoteX = x;
+        double lastNoteY = systemY + StaffHeight / 2;
+
         foreach (var noteInfo in graceLayout.Notes)
         {
             // Calculate Y position from staff position (same formula as regular notes)
             double y = systemY + StaffHeight / 2 - (noteInfo.StaffPosition / 2.0);
 
-            // Draw the notehead (quarter note head for grace notes)
-            string noteGlyph = "\uE0A4"; // noteheadBlack
-            _svg.AppendLine($"  <text x=\"{x:F2}\" y=\"{y:F2}\" font-family=\"Emmentaler\" font-size=\"{scaledFontSize:F1}\" fill=\"black\" data-pos=\"{graceLayout.SourcePosition}\">{noteGlyph}</text>");
+            // Draw the notehead using Emmentaler glyph
+            char noteGlyph = EmmentalerGlyphs.NoteheadBlack;
+            _svg.AppendLine($"  <text class=\"music\" x=\"{x:F2}\" y=\"{y:F2}\" font-size=\"{scaledFontSize:F1}\" data-pos=\"{graceLayout.SourcePosition}\">{noteGlyph}</text>");
 
             // Draw stem
             double stemX = x + 0.5 * scale;
@@ -2326,9 +2353,9 @@ public sealed class SvgRenderer
             double stemEndY = y - 3.5 * scale; // Stem goes up
             _svg.AppendLine($"  <line x1=\"{stemX:F2}\" y1=\"{stemStartY:F2}\" x2=\"{stemX:F2}\" y2=\"{stemEndY:F2}\" stroke=\"black\" stroke-width=\"{StemThickness:F2}\"/>");
 
-            // Draw flag for grace notes
-            string flagGlyph = "\uE240"; // flag8thUp
-            _svg.AppendLine($"  <text x=\"{stemX:F2}\" y=\"{stemEndY:F2}\" font-family=\"Emmentaler\" font-size=\"{scaledFontSize:F1}\" fill=\"black\">{flagGlyph}</text>");
+            // Draw flag for grace notes using Emmentaler glyph
+            char flagGlyph = EmmentalerGlyphs.Flag8thUp;
+            _svg.AppendLine($"  <text class=\"music\" x=\"{stemX:F2}\" y=\"{stemEndY:F2}\" font-size=\"{scaledFontSize:F1}\">{flagGlyph}</text>");
 
             // Draw slash for acciaccatura
             if (graceLayout.Type == GraceNoteType.Acciaccatura)
@@ -2343,24 +2370,69 @@ public sealed class SvgRenderer
             // Draw accidental if present
             if (noteInfo.Accidental != null)
             {
-                string accidentalGlyph = noteInfo.Accidental switch
+                char? accidentalGlyph = noteInfo.Accidental switch
                 {
-                    "sharp" => "\uE262",
-                    "flat" => "\uE260",
-                    "natural" => "\uE261",
-                    "doubleSharp" => "\uE263",
-                    "doubleFlat" => "\uE264",
-                    _ => ""
+                    "sharp" => EmmentalerGlyphs.AccidentalSharp,
+                    "flat" => EmmentalerGlyphs.AccidentalFlat,
+                    "natural" => EmmentalerGlyphs.AccidentalNatural,
+                    "doubleSharp" => EmmentalerGlyphs.AccidentalDoubleSharp,
+                    "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
+                    _ => null
                 };
-                if (!string.IsNullOrEmpty(accidentalGlyph))
+                if (accidentalGlyph != null)
                 {
                     double accX = x - 0.8 * scale;
-                    _svg.AppendLine($"  <text x=\"{accX:F2}\" y=\"{y:F2}\" font-family=\"Emmentaler\" font-size=\"{scaledFontSize:F1}\" fill=\"black\">{accidentalGlyph}</text>");
+                    _svg.AppendLine($"  <text class=\"music\" x=\"{accX:F2}\" y=\"{y:F2}\" font-size=\"{scaledFontSize:F1}\">{accidentalGlyph}</text>");
                 }
             }
 
+            lastNoteX = x;
+            lastNoteY = y;
             x += noteSpacing;
         }
+
+        // Draw grace slur for acciaccatura and appoggiatura
+        // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur
+        if (graceLayout.Type is GraceNoteType.Acciaccatura or GraceNoteType.Appoggiatura)
+        {
+            DrawGraceSlur(lastNoteX, lastNoteY, mainNoteX, mainNoteY, scale);
+        }
+    }
+
+    /// <summary>
+    /// Draws a small slur from the last grace note to the main note.
+    /// </summary>
+    private void DrawGraceSlur(double graceX, double graceY, double mainNoteX, double mainNoteY, double scale)
+    {
+        // Grace notes have stems up, so slur curves below (positive Y in SVG)
+        // LILYPOND-REF: ly/grace-init.ly — slur arcs from grace notehead to main notehead
+        // Position at notehead centers, not edges, to ensure visible width
+        double startX = graceX + GlyphMetrics.NoteheadBlack.CenterX * scale;
+        double startY = graceY + 0.5;
+
+        double endX = mainNoteX + GlyphMetrics.NoteheadBlack.CenterX;
+        double endY = mainNoteY + 0.5;
+
+        double dx = endX - startX;
+        if (dx < 0.5) return; // Safety: skip degenerate slurs
+
+        double arcHeight = Math.Min(dx * 0.25, 1.2);
+
+        double cpT1 = 0.3;
+        double cpT2 = 0.7;
+        double c1x = startX + dx * cpT1;
+        double c1y = startY + cpT1 * (endY - startY) + arcHeight;
+        double c2x = startX + dx * cpT2;
+        double c2y = startY + cpT2 * (endY - startY) + arcHeight;
+
+        // Draw tapered slur (same technique as regular slurs but thinner)
+        double midThickness = EngravingDefaults.SlurMidThickness * scale;
+        double innerC1y = c1y - midThickness * 0.9;
+        double innerC2y = c2y - midThickness * 0.9;
+
+        string outerPath = $"M {startX:F1},{startY:F1} C {c1x:F1},{c1y:F1} {c2x:F1},{c2y:F1} {endX:F1},{endY:F1}";
+        string innerPath = $"C {c2x:F1},{innerC2y:F1} {c1x:F1},{innerC1y:F1} {startX:F1},{startY:F1}";
+        _svg.AppendLine($"  <path d=\"{outerPath} {innerPath} Z\" fill=\"black\"/>");
     }
 
     /// <summary>
