@@ -95,9 +95,6 @@ public sealed class MeasureLayouter
         double startBarlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline);
         double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
 
-        // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist (first-note . (fixed-space . 1.3))
-        double firstNoteOffset = Math.Max(startBarlineWidth, EngravingDefaults.BarLineToFirstNoteSpace);
-
         // Calculate total duration of the measure
         var totalDuration = Fraction.Zero;
         foreach (var item in measure.Items)
@@ -109,14 +106,22 @@ public sealed class MeasureLayouter
             return ImmutableArray<ColumnLayout>.Empty;
 
         // LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
-        // Create springs between adjacent timing columns
+        // Spring chain: [barline] → [col₀] → [col₁] → ... → [colₙ] → [end barline]
+        // All springs participate in the solver uniformly, just like LayoutItems.
         var springs = new List<Spring>();
 
-        // Spring from start to first timing
+        // Spring 0: barline → first column
+        // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist (first-note . (fixed-space . 1.3))
+        // Uses duration-based ideal but enforces BarLineToFirstNoteSpace as minimum.
         var firstDuration = timings.Count > 1 ? timings[1] - timings[0] : totalDuration;
-        springs.Add(SpacingRules.CreateTimingSpring(firstDuration));
+        var firstSpring = SpacingRules.CreateTimingSpring(firstDuration);
+        double firstNoteMin = EngravingDefaults.BarLineToFirstNoteSpace;
+        springs.Add(new Spring(
+            Math.Max(firstSpring.IdealDistance, firstNoteMin),
+            firstNoteMin,
+            firstSpring.InverseStretchStrength));
 
-        // Springs between timing columns
+        // Springs between adjacent timing columns (duration-proportional)
         for (int i = 1; i < timings.Count; i++)
         {
             Fraction segmentDuration;
@@ -131,11 +136,12 @@ public sealed class MeasureLayouter
             springs.Add(SpacingRules.CreateTimingSpring(segmentDuration));
         }
 
-        // Spring from last timing to end
-        springs.Add(SpacingRules.CreateTimingSpring(Fraction.Zero)); // End spring
+        // End spring: last column → barline (remaining duration)
+        var endDuration = totalDuration - timings[^1];
+        springs.Add(SpacingRules.CreateTimingSpring(endDuration));
 
-        // Available width for columns (after first note offset and before end barline)
-        double targetWidth = totalWidth - firstNoteOffset - endBarlineWidth;
+        // Available width for the entire spring chain
+        double targetWidth = totalWidth - startBarlineWidth - endBarlineWidth;
 
         // LILYPOND-REF: lily/simple-spacer.cc:175-205 solve for force
         var solver = new SpringSolver(springs.ToImmutableArray());
@@ -150,7 +156,7 @@ public sealed class MeasureLayouter
         for (int i = 0; i < timings.Count; i++)
         {
             var timing = timings[i];
-            double x = firstNoteOffset + positions[i + 1];
+            double x = startBarlineWidth + positions[i + 1];
             double width = positions[i + 2] - positions[i + 1];
 
             columns.Add(new ColumnLayout(timing, x, width));
