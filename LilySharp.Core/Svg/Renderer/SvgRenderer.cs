@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Layout;
@@ -1152,6 +1153,16 @@ public sealed class SvgRenderer
         double noteheadWidth = (noteValue == 1 ? EngravingDefaults.NoteheadWholeWidth : EngravingDefaults.NoteheadBlackWidth);
         char notehead = EmmentalerGlyphs.GetNotehead(noteValue);
 
+        // Determine stem direction early (needed for notehead side assignment)
+        // Priority: beam direction > forced (voice) direction > chord's own direction
+        bool stemUp = _beamedStemUp.TryGetValue(chord, out bool beamStemUp)
+            ? beamStemUp
+            : forcedStemUp ?? chord.StemUp;
+
+        // Calculate notehead x-offsets for seconds (adjacent staff positions)
+        // LILYPOND-REF: lily/note-column.cc — notehead side assignment
+        var noteOffsets = CalculateChordNoteOffsets(chord.Notes, stemUp, noteheadWidth);
+
         // Calculate accidental positions
         var accidentalPlacement = new AccidentalPlacement();
         var accidentalLayouts = accidentalPlacement.CalculatePositions(chord.Notes);
@@ -1176,23 +1187,19 @@ public sealed class SvgRenderer
             }
 
             // Draw ledger lines
+            double noteXOffset = noteOffsets.GetValueOrDefault(note.StaffPosition, 0);
             if (note.NeedsLedgerLines)
             {
-                DrawLedgerLines(note.StaffPosition, x, noteheadWidth, systemY);
+                DrawLedgerLines(note.StaffPosition, x + noteXOffset, noteheadWidth, systemY);
             }
 
             // Draw notehead
-            DrawGlyph(notehead, x, noteY, chord.SourcePosition);
+            DrawGlyph(notehead, x + noteXOffset, noteY, chord.SourcePosition);
         }
 
         // Draw single stem for chord
         if (noteValue >= 2 && chord.Notes.Length > 0)
         {
-            // Priority: beam direction > forced (voice) direction > chord's own direction
-            bool stemUp = _beamedStemUp.TryGetValue(chord, out bool beamStemUp)
-                ? beamStemUp
-                : forcedStemUp ?? chord.StemUp;
-
             int stemNotePos = stemUp
                 ? chord.Notes.Min(n => n.StaffPosition)
                 : chord.Notes.Max(n => n.StaffPosition);
@@ -1231,6 +1238,66 @@ public sealed class SvgRenderer
             }
             }
         }
+    }
+
+    /// <summary>
+    /// Calculates x-offsets for noteheads in a chord to handle seconds (adjacent staff positions).
+    /// LILYPOND-REF: lily/note-column.cc — notehead side assignment
+    /// When two notes are a second apart (adjacent staff positions), one notehead is shifted
+    /// to the opposite side of the stem to avoid overlap.
+    /// Stem up: lower note of the pair shifts right. Stem down: upper note shifts right.
+    /// </summary>
+    private static Dictionary<int, double> CalculateChordNoteOffsets(
+        ImmutableArray<ChordNoteInfo> notes, bool stemUp, double noteheadWidth)
+    {
+        var offsets = new Dictionary<int, double>();
+        if (notes.Length < 2)
+            return offsets;
+
+        // Sort staff positions (ascending = bottom to top of staff)
+        var sorted = notes.OrderBy(n => n.StaffPosition).Select(n => n.StaffPosition).ToList();
+
+        // Scan for adjacent pairs (staff position difference == 1)
+        // Process from the stem end so that overlapping pairs are resolved correctly
+        var shifted = new HashSet<int>();
+        if (stemUp)
+        {
+            // Stem up: process from bottom (stem end is at the bottom note)
+            for (int i = 0; i < sorted.Count - 1; i++)
+            {
+                if (sorted[i + 1] - sorted[i] == 1)
+                {
+                    // Shift the lower note to the right
+                    if (!shifted.Contains(sorted[i]))
+                    {
+                        offsets[sorted[i]] = noteheadWidth;
+                        shifted.Add(sorted[i]);
+                    }
+                    // Skip the next note to avoid double-shifting in clusters
+                    i++;
+                }
+            }
+        }
+        else
+        {
+            // Stem down: process from top (stem end is at the top note)
+            for (int i = sorted.Count - 1; i > 0; i--)
+            {
+                if (sorted[i] - sorted[i - 1] == 1)
+                {
+                    // Shift the upper note to the right
+                    if (!shifted.Contains(sorted[i]))
+                    {
+                        offsets[sorted[i]] = noteheadWidth;
+                        shifted.Add(sorted[i]);
+                    }
+                    // Skip the next note to avoid double-shifting in clusters
+                    i--;
+                }
+            }
+        }
+
+        return offsets;
     }
 
     /// <summary>
