@@ -159,6 +159,16 @@ public static class SpacingRules
         };
     }
 
+    private static bool HasAccidental(MusicItem? item)
+    {
+        return item switch
+        {
+            NoteItem note => note.Accidental != null,
+            ChordItem chord => chord.Notes.Any(n => n.Accidental != null),
+            _ => false
+        };
+    }
+
     private static int GetDots(MusicItem item)
     {
         return item switch
@@ -307,9 +317,13 @@ public static class SpacingRules
         // LILYPOND-REF: lily/note-spacing.cc:119-199 stem_dir_correction
         idealDistance += CalculateStemCorrection(prevItem, nextItem, np);
 
-        // LILYPOND-REF: lily/spacing-basic.cc:115 note_spacing() - inverse_stretch
-        // This controls how much the spring can stretch
-        double inverseStretchStrength = Math.Max(0.1, idealDistance - minDistance);
+        // LILYPOND-REF: lily/spacing-basic.cc note_spacing()
+        //   ret.set_inverse_stretch_strength(fraction * std::max(0.1, (len - min)));
+        // where min = increment_ (NOT skyline min_distance).
+        // Skyline min_distance is set later via set_min_distance() but does NOT
+        // affect inverse_stretch_strength. This ensures accidentals (which increase
+        // skyline min_distance) don't make springs stiffer — they stretch equally.
+        double inverseStretchStrength = Math.Max(0.1, idealDistance - defaultMin);
 
         return new Spring(idealDistance, minDistance, inverseStretchStrength);
     }
@@ -354,7 +368,11 @@ public static class SpacingRules
         else
         {
             // Same stem direction: can be tighter
-            // LILYPOND-REF: note-spacing.cc:164-199 (same direction correction)
+            // LILYPOND-REF: note-spacing.cc:305-310
+            // Only apply same direction correction if there are no
+            // accidentals sticking out of the right hand side.
+            if (HasAccidental(nextItem))
+                return 0;
             return -noteParams.SameDirectionCorrection * increment * 0.5;
         }
     }
