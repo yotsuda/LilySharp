@@ -9,7 +9,8 @@ namespace LilySharp.Core.Svg.Collector;
 /// </summary>
 public sealed record StaffSpec(
     ClefType Clef,
-    string VoiceName
+    string VoiceName,
+    string? InstrumentName = null
 );
 
 /// <summary>
@@ -86,13 +87,19 @@ public sealed record RenderSpec(
             switch (item)
             {
                 case SingleStaffSpec single:
-                    var singleStaff = Staff.Create(single.Staff.Clef, getVoice(single.Staff.VoiceName));
+                    var singleStaff = Staff.Create(
+                        single.Staff.Clef,
+                        getVoice(single.Staff.VoiceName),
+                        single.Staff.InstrumentName);
                     yield return StaffGroup.CreateSingle(singleStaff);
                     break;
 
                 case GrandStaffRenderSpec grand:
                     var staves = grand.GrandStaff.Staves
-                        .Select(s => Staff.Create(s.Clef, getVoice(s.VoiceName)))
+                        .Select(s => Staff.Create(
+                            s.Clef,
+                            getVoice(s.VoiceName),
+                            s.InstrumentName))
                         .ToArray();
                     yield return StaffGroup.CreateGrandStaff(staves);
                     break;

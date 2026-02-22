@@ -151,7 +151,8 @@ public sealed class MultiStaffLayouter
                 Clef: staff.Clef,
                 Y: currentY,
                 Height: staffHeight,
-                Tuning: staff.Tuning));
+                Tuning: staff.Tuning,
+                InstrumentName: staff.InstrumentName));
 
             if (i < group.Staves.Length - 1)
                 currentY += staffHeight + Math.Max(0, staffSpacing);
@@ -197,7 +198,8 @@ public sealed class MultiStaffLayouter
                 Clef: staff.Clef,
                 Y: currentY,
                 Height: thisStaffHeight,
-                Tuning: staff.Tuning));
+                Tuning: staff.Tuning,
+                InstrumentName: staff.InstrumentName));
 
             if (i < group.Staves.Length - 1)
                 currentY += thisStaffHeight + Math.Max(0, staffSpacing);

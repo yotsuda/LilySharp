@@ -206,7 +206,11 @@ public static class RenderSpecParser
         // If no explicit clef in render block, look up part definition
         ClefType clef = explicitClef ?? GetPartClef(staff, voiceName) ?? ClefType.Treble;
 
-        return new StaffSpec(clef, voiceName);
+        // Look up instrument name from part definition
+        string? instrumentName = GetPartProperty(staff, voiceName, "name")
+                              ?? GetPartProperty(staff, voiceName, "instrument");
+
+        return new StaffSpec(clef, voiceName, instrumentName);
     }
     private static TabStaffSpec? ParseTab(TabRenderSyntax tab)
     {
@@ -280,6 +284,39 @@ public static class RenderSpecParser
 
                     var (clef, _) = InstrumentDefaults.GetDefaults(valueToken.Text);
                     return clef;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Looks up an arbitrary string property from a part definition.
+    /// </summary>
+    private static string? GetPartProperty(SyntaxNode node, string partName, string propertyName)
+    {
+        var root = node;
+        while (root.Parent != null)
+            root = root.Parent;
+
+        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        {
+            if (partDecl.Name.Text != partName)
+                continue;
+
+            foreach (var prop in partDecl.Properties)
+            {
+                if (prop.NameToken.Text.ToLowerInvariant() == propertyName)
+                {
+                    var valueToken = prop.GetChild(2) as SyntaxTokenNode;
+                    if (valueToken == null) continue;
+
+                    // Handle string literals (strip quotes) and identifiers
+                    var text = valueToken.Text;
+                    if (text.Length >= 2 && text[0] == '"' && text[^1] == '"')
+                        text = text[1..^1];
+                    return text;
                 }
             }
         }

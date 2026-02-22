@@ -12,7 +12,8 @@ public sealed record StaffLayout(
     ClefType Clef,
     double Y,           // Y position relative to system top
     double Height,      // Staff height (typically 4 * staffSpace)
-    TuningType? Tuning = null  // Tuning for tablature staves
+    TuningType? Tuning = null,  // Tuning for tablature staves
+    string? InstrumentName = null  // Display name for this staff
 );
 
 /// <summary>

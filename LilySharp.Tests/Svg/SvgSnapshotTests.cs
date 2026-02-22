@@ -79,6 +79,7 @@ public class SvgSnapshotTests
         yield return new object[] { "test/grammar-test" };
         yield return new object[] { "test/instrument-defaults" };
         yield return new object[] { "test/section-octave-reset" };
+        yield return new object[] { "test/instrument-names" };
     }
 
     /// <summary>

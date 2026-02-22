@@ -249,7 +249,9 @@ public sealed class SvgRenderer
         _beamedStemUp.Clear();
         CalculateMultiStaffBeamStemPositions(score, layout);
 
-        WriteHeader(layout.Width, layout.Height);
+        // Estimate left extension for instrument names
+        double leftExtension = EstimateInstrumentNameWidth(layout);
+        WriteHeader(layout.Width + leftExtension, layout.Height, leftExtension);
 
         // Draw header (title/composer)
         if (score.Title != null || score.Composer != null)
@@ -372,11 +374,122 @@ public sealed class SvgRenderer
             _svg.AppendLine($"  {braceSvg}");
         }
 
+        // Draw instrument names
+        // LILYPOND-REF: lily/instrument-name-engraver.cc — first system uses long name, subsequent use short
+        // LILYPOND-REF: scm/define-grobs.scm:1711-1728 InstrumentName grob
+        DrawInstrumentNames(system, staffGroup);
+
         // Draw each staff in the group
         foreach (var staffLayout in staffGroup.Staves)
         {
             double staffY = system.Y + staffLayout.Y;
             DrawStaff(score, scoreLayout, system, staffLayout, staffY, startX, endX, isFirstSystem);
+        }
+    }
+
+    /// <summary>
+    /// Estimates the width needed for instrument names (in staff spaces).
+    /// </summary>
+    private static double EstimateInstrumentNameWidth(ScoreLayout layout)
+    {
+        double maxWidth = 0;
+        const double charWidth = 0.5; // Approximate width per char in staff spaces at 0.75 fontSize
+        const double padding = 0.8;   // Extra padding
+
+        foreach (var system in layout.Systems)
+        {
+            if (system.StaffGroups.IsDefaultOrEmpty) continue;
+            foreach (var group in system.StaffGroups)
+            {
+                foreach (var staff in group.Staves)
+                {
+                    if (!string.IsNullOrEmpty(staff.InstrumentName))
+                    {
+                        double width = staff.InstrumentName.Length * charWidth + padding;
+                        if (width > maxWidth) maxWidth = width;
+                    }
+                }
+            }
+        }
+        return maxWidth;
+    }
+
+    /// <summary>
+    /// Renders instrument names to the left of a staff group.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/instrument-name-engraver.cc
+    /// LILYPOND-REF: scm/define-grobs.scm:1711-1728 InstrumentName
+    /// - padding: 0.3 from system delimiter
+    /// - self-alignment-Y: CENTER (vertically centered on staff)
+    /// - font: serif
+    /// </remarks>
+    private void DrawInstrumentNames(SystemLayout system, StaffGroupLayout staffGroup)
+    {
+        // Check if any staff in this group has an instrument name
+        bool hasAnyName = false;
+        foreach (var sl in staffGroup.Staves)
+        {
+            if (!string.IsNullOrEmpty(sl.InstrumentName))
+            {
+                hasAnyName = true;
+                break;
+            }
+        }
+        if (!hasAnyName) return;
+
+        // LILYPOND-REF: scm/define-grobs.scm:1711 padding = 0.3
+        const double padding = 0.3;
+        const double fontSize = 0.75; // Relative to staff space FontSize
+
+        // X position: left of the brace/system start
+        double nameX;
+        if (staffGroup.IsGrandStaff && staffGroup.GrandStaffLayout != null)
+            nameX = staffGroup.GrandStaffLayout.BraceX - padding;
+        else
+            nameX = _layoutOptions.MarginLeft - padding;
+
+        double actualFontSize = FontSize * fontSize;
+
+        // For grand staff with only one named staff: center across the entire group
+        // LILYPOND-REF: lily/instrument-name-engraver.cc — centers on spanned staves
+        if (staffGroup.IsGrandStaff && staffGroup.GrandStaffLayout != null)
+        {
+            // Collect all unique names; if only one staff is named,
+            // center that name across the grand staff group
+            var namedStaves = staffGroup.Staves
+                .Where(s => !string.IsNullOrEmpty(s.InstrumentName))
+                .ToList();
+
+            if (namedStaves.Count == 1)
+            {
+                // Single name for entire grand staff: center vertically
+                var gs = staffGroup.GrandStaffLayout;
+                double centerY = system.Y + (gs.BraceTop + gs.BraceBottom) / 2.0;
+                _svg.AppendLine(
+                    $"""  <text x="{nameX:F2}" y="{centerY:F2}" """ +
+                    $"""font-family="serif" font-size="{actualFontSize:F2}" """ +
+                    $"""text-anchor="end" dominant-baseline="central">""" +
+                    $"""{EscapeXml(namedStaves[0].InstrumentName!)}</text>""");
+                return;
+            }
+            // Multiple named staves: fall through to per-staff rendering
+        }
+
+        // Per-staff rendering
+        foreach (var staffLayout in staffGroup.Staves)
+        {
+            if (string.IsNullOrEmpty(staffLayout.InstrumentName))
+                continue;
+
+            double staffY = system.Y + staffLayout.Y;
+            double centerY = staffY + staffLayout.Height / 2.0;
+
+            _svg.AppendLine(
+                $"""  <text x="{nameX:F2}" y="{centerY:F2}" """ +
+                $"""font-family="serif" font-size="{actualFontSize:F2}" """ +
+                $"""text-anchor="end" dominant-baseline="central">""" +
+                $"""{EscapeXml(staffLayout.InstrumentName)}</text>""");
         }
     }
 
@@ -707,10 +820,11 @@ public sealed class SvgRenderer
     }
 
 
-    private void WriteHeader(double width, double height)
+    private void WriteHeader(double width, double height, double leftExtension = 0)
     {
         _svg.AppendLine($"""<?xml version="1.0" encoding="UTF-8"?>""");
-        _svg.AppendLine($"""<svg xmlns="http://www.w3.org/2000/svg" width="{Px(width)}" height="{Px(height)}" viewBox="0 0 {width} {height}">""");
+        double viewBoxX = -leftExtension;
+        _svg.AppendLine($"""<svg xmlns="http://www.w3.org/2000/svg" width="{Px(width)}" height="{Px(height)}" viewBox="{viewBoxX} 0 {width} {height}">""");
         _svg.AppendLine("<style>");
 
         // Font face - either embedded or referenced by path

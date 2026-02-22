@@ -1,0 +1,151 @@
+using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Svg.Renderer;
+using LilySharp.Core.Syntax;
+using Xunit;
+
+namespace LilySharp.Tests;
+
+/// <summary>
+/// Tests for instrument name display.
+/// LILYPOND-REF: lily/instrument-name-engraver.cc
+/// </summary>
+public class InstrumentNameTests
+{
+    [Fact]
+    public void StaffSpec_InstrumentName_FromPartProperty()
+    {
+        var source = @"
+part violin { name: Violin }
+phrase m { c4 d e f }
+section A { violin { $m } }
+structure { A }
+render score ""test.svg"" { staff { violin } }
+";
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        var single = Assert.IsType<SingleStaffSpec>(spec.Items[0]);
+        Assert.Equal("Violin", single.Staff.InstrumentName);
+    }
+
+    [Fact]
+    public void StaffSpec_InstrumentName_StringLiteral()
+    {
+        var source = @"
+part vln1 { name: ""Violin I"" }
+phrase m { c4 d e f }
+section A { vln1 { $m } }
+structure { A }
+render score ""test.svg"" { staff { vln1 } }
+";
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        var single = Assert.IsType<SingleStaffSpec>(spec.Items[0]);
+        Assert.Equal("Violin I", single.Staff.InstrumentName);
+    }
+
+    [Fact]
+    public void StaffSpec_NoInstrumentName_ReturnsNull()
+    {
+        var source = @"
+part melody { clef: treble }
+phrase m { c4 d e f }
+section A { melody { $m } }
+structure { A }
+render score ""test.svg"" { staff { melody } }
+";
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        var single = Assert.IsType<SingleStaffSpec>(spec.Items[0]);
+        Assert.Null(single.Staff.InstrumentName);
+    }
+
+    [Fact]
+    public void GrandStaff_InstrumentName_CenteredInSvg()
+    {
+        var source = @"
+part rh { clef: treble  name: Piano }
+part lh { clef: bass }
+phrase rhM { c4 d e f }
+phrase lhM { c,4 d e f }
+section A { rh { $rhM } lh { $lhM } }
+structure { A }
+render score ""test.svg"" { grandStaff { staff { rh } staff { lh } } }
+";
+        var tree = SyntaxTree.Parse(source);
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var svg = SvgGenerator.Generate(tree, options);
+
+        // Should contain "Piano" text
+        Assert.Contains("Piano", svg);
+        Assert.Contains("font-family=\"serif\"", svg);
+        Assert.Contains("text-anchor=\"end\"", svg);
+    }
+
+    [Fact]
+    public void MultiStaff_EachStaffHasOwnName()
+    {
+        var source = @"
+part vln { clef: treble  name: Violin }
+part vla { clef: alto  name: Viola }
+phrase m { c4 d e f }
+section A { vln { $m } vla { $m } }
+structure { A }
+render score ""test.svg"" { staff { vln } staff { vla } }
+";
+        var tree = SyntaxTree.Parse(source);
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var svg = SvgGenerator.Generate(tree, options);
+
+        Assert.Contains("Violin", svg);
+        Assert.Contains("Viola", svg);
+    }
+
+    [Fact]
+    public void ViewBox_ExtendedForInstrumentNames()
+    {
+        var source = @"
+part vln { clef: treble  name: ""Violin I"" }
+phrase m { c4 d e f }
+section A { vln { $m } }
+structure { A }
+render score ""test.svg"" { staff { vln } }
+";
+        var tree = SyntaxTree.Parse(source);
+        var options = new SvgRenderOptions { EmbedFont = false };
+        var svg = SvgGenerator.Generate(tree, options);
+
+        // ViewBox should have negative X to make room for instrument name
+        Assert.Contains("viewBox=\"-", svg);
+    }
+
+    [Fact]
+    public void Staff_InstrumentName_PropagatedFromStaffSpec()
+    {
+        // Use MeasureCollector to create a valid voice
+        var tree = SyntaxTree.Parse("{ c4 }");
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, null);
+        var voice = score.Voice;
+
+        var staff = Staff.Create(ClefType.Treble, voice, "Violin");
+        Assert.Equal("Violin", staff.InstrumentName);
+    }
+
+    [Fact]
+    public void Staff_InstrumentName_DefaultNull()
+    {
+        var tree = SyntaxTree.Parse("{ c4 }");
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, null);
+        var voice = score.Voice;
+
+        var staff = Staff.Create(ClefType.Treble, voice);
+        Assert.Null(staff.InstrumentName);
+    }
+}

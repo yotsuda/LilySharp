@@ -27,7 +27,8 @@ public enum ClefType
 public sealed record Staff(
     ClefType Clef,
     ImmutableArray<Voice> Voices,
-    TuningType? Tuning = null
+    TuningType? Tuning = null,
+    string? InstrumentName = null
 )
 {
     /// <summary>The primary voice (first voice).</summary>
@@ -45,8 +46,8 @@ public sealed record Staff(
     /// <summary>
     /// Creates a single-voice staff.
     /// </summary>
-    public static Staff Create(ClefType clef, Voice voice)
-        => new(clef, ImmutableArray.Create(voice));
+    public static Staff Create(ClefType clef, Voice voice, string? instrumentName = null)
+        => new(clef, ImmutableArray.Create(voice), null, instrumentName);
 
     /// <summary>
     /// Creates a tablature staff with the specified tuning.

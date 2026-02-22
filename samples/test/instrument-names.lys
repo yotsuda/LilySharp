@@ -1,0 +1,59 @@
+// Instrument Names Test
+// Tests instrument name display at left of staves
+title "Instrument Names"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+
+part violin1 {
+  clef: treble
+  name: "Violin I"
+}
+
+part violin2 {
+  clef: treble
+  name: "Violin II"
+}
+
+part viola {
+  clef: alto
+  name: Viola
+}
+
+part cello {
+  clef: bass
+  name: Cello
+}
+
+phrase vln1Line {
+  c'4 d e f | g4 a b c' |
+}
+
+phrase vln2Line {
+  e4 f g a | b4 c' d e |
+}
+
+phrase vlaLine {
+  c4 d e f | g4 a b c |
+}
+
+phrase vcLine {
+  c,4 d e f | g4 a b c |
+}
+
+section Main {
+  violin1 { $vln1Line }
+  violin2 { $vln2Line }
+  viola { $vlaLine }
+  cello { $vcLine }
+}
+
+structure { Main }
+
+render score "instrument-names.svg" {
+  staff { violin1 }
+  staff { violin2 }
+  staff { viola }
+  staff { cello }
+}
