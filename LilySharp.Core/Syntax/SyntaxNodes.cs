@@ -252,7 +252,7 @@ public sealed class ChordSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// Gets the articulations attached to this chord.
+    /// Gets the articulations, dynamics, and music marks attached to this chord.
     /// </summary>
     public IEnumerable<SyntaxNode> Articulations
     {
@@ -261,7 +261,7 @@ public sealed class ChordSyntax : SyntaxNode
             for (int i = 0; i < Green.SlotCount; i++)
             {
                 var child = GetChild(i);
-                if (child is ArticulationSyntax or DynamicSyntax)
+                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax)
                     yield return child;
             }
         }
