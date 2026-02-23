@@ -1345,11 +1345,8 @@ public sealed class SvgRenderer
             }
         }
 
-        // Draw tempo marking (first system only)
-        if (isFirstSystem && score.Tempo.HasValue)
-        {
-            DrawTempoMarking(score.Tempo.Value, startX, y);
-        }
+        // Tempo marking is now rendered via DrawMusicMarks (outside-staff-priority stacking)
+        // LILYPOND-REF: define-grobs.scm:1835 MetronomeMark outside-staff-priority = 1000
 
         // Draw measures (all voices)
         foreach (var measureLayout in system.Measures)
@@ -3388,6 +3385,28 @@ public sealed class SvgRenderer
                     $"font-weight=\"bold\" " +
                     $"text-anchor=\"middle\" dominant-baseline=\"central\" " +
                     $"class=\"section-label-text\">{EscapeXml(markLayout.Text)}</text>");
+            }
+            else if (markLayout.MarkType == MusicMarkType.Tempo)
+            {
+                // LILYPOND-REF: define-grobs.scm:1835 MetronomeMark
+                // LILYPOND-REF: metronome-engraver.cc — notehead + stem + " = NNN"
+                double noteSize = 1.6;
+                double textSize = 1.8;
+
+                // Draw notehead (filled black noteheads.s2)
+                char notehead = EmmentalerGlyphs.NoteheadBlack;
+                _svg.AppendLine($"  <text x=\"{markLayout.X:F2}\" y=\"{absoluteY:F2}\" font-family=\"Emmentaler\" font-size=\"{noteSize:F1}\">{notehead}</text>");
+
+                // Draw stem (upward from notehead right edge)
+                // LILYPOND-REF: stem.cc default stem-length = 3.5 staff spaces at FontSize 4.0
+                double stemX = markLayout.X + noteSize * 0.32;
+                double stemLength = 3.5 * (noteSize / FontSize);
+                double stemTop = absoluteY - stemLength;
+                _svg.AppendLine($"  <line x1=\"{stemX:F2}\" y1=\"{absoluteY:F2}\" x2=\"{stemX:F2}\" y2=\"{stemTop:F2}\" stroke=\"black\" stroke-width=\"0.10\"/>");
+
+                // Draw text " = NNN" to the right
+                double textX = markLayout.X + noteSize * 0.5 + 0.3;
+                _svg.AppendLine($"""  <text class="tempo" font-size="{textSize:F1}" x="{textX:F2}" y="{absoluteY:F2}">= {EscapeXml(markLayout.Text)}</text>""");
             }
             else if (IsPedalMark(markLayout.MarkType))
             {
