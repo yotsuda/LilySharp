@@ -32,7 +32,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20251227-1633";
+    public const string Version = "0.1.1-20260223-1940";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -225,6 +225,14 @@ public sealed class LilySharpLanguageServer
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
 
+        // Duration validation (invalid note values like 5, 3, 6)
+        var durationValidator = new DurationValidator();
+        durationValidator.Validate(doc.Tree);
+        foreach (var d in durationValidator.Diagnostics)
+        {
+            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+        }
+
         _rpc.NotifyAsync(Methods.TextDocumentPublishDiagnosticsName, new PublishDiagnosticParams
         {
             Uri = doc.Uri,
@@ -253,7 +261,7 @@ public sealed class LilySharpLanguageServer
                 _ => LspDiagnosticSeverity.Hint
             },
             Code = d.Code,
-            Source = "lilysharp",
+            Source = "Lily#",
             Message = d.Message
         };
     }
@@ -1892,6 +1900,9 @@ public class RenderInfo
     public string Type { get; set; } = "";  // "score" or "audio"
     public string Filename { get; set; } = "";
 }
+
+
+
 
 
 
