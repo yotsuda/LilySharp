@@ -3,6 +3,7 @@ using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
 using LilySharp.Core.Pdf;
 using LilySharp.Core.Pdf.Renderer;
+using LilySharp.Core.Png;
 using LilySharp.Core.Syntax;
 
 return Run(args);
@@ -36,6 +37,7 @@ static int Run(string[] args)
     {
         "svg" => RunSvg(args.Skip(1).ToArray()),
         "pdf" => RunPdf(args.Skip(1).ToArray()),
+        "png" => RunPng(args.Skip(1).ToArray()),
         "midi" => RunMidi(args.Skip(1).ToArray()),
         "xml" => RunXml(args.Skip(1).ToArray()),
         "check" => RunCheck(args.Skip(1).ToArray()),
@@ -54,6 +56,7 @@ static void ShowHelp()
         Commands:
           svg     Convert to SVG (sheet music)
           pdf     Convert to PDF (sheet music)
+          png     Convert to PNG (raster image)
           midi    Convert to MIDI (audio)
           xml     Convert to MusicXML
           check   Check syntax without output
@@ -291,6 +294,111 @@ static int ExecutePdf(string inputPath, string outputPath)
 
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine($"  Size: {pdfBytes.Length / 1024.0:F1} KB");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        return 1;
+    }
+}
+
+// ============ PNG Command ============
+
+static int RunPng(string[] args)
+{
+    if (args.Contains("-h") || args.Contains("--help"))
+    {
+        ShowPngHelp();
+        return 0;
+    }
+
+    // Parse options with optional --scale flag
+    string? inputPath = null;
+    string? outputPath = null;
+    float scale = 2.0f;
+
+    for (int i = 0; i < args.Length; i++)
+    {
+        var arg = args[i];
+        if (arg is "-o" or "--output")
+        {
+            if (i + 1 >= args.Length) { Console.Error.WriteLine("Error: -o requires a file path"); return 1; }
+            outputPath = args[++i];
+        }
+        else if (arg is "--scale")
+        {
+            if (i + 1 >= args.Length) { Console.Error.WriteLine("Error: --scale requires a number"); return 1; }
+            if (!float.TryParse(args[++i], out scale) || scale <= 0)
+            {
+                Console.Error.WriteLine("Error: --scale must be a positive number");
+                return 1;
+            }
+        }
+        else if (arg.StartsWith("-"))
+        {
+            Console.Error.WriteLine($"Error: Unknown option: {arg}");
+            Console.Error.WriteLine("Run 'lysc png --help' for usage.");
+            return 1;
+        }
+        else if (inputPath == null) inputPath = arg;
+        else if (outputPath == null) outputPath = arg;
+    }
+
+    if (inputPath == null) { Console.Error.WriteLine("Error: Input file required"); return 1; }
+    if (!File.Exists(inputPath)) { Console.Error.WriteLine($"Error: File not found: {inputPath}"); return 1; }
+    outputPath ??= Path.ChangeExtension(inputPath, ".png");
+
+    return ExecutePng(inputPath, outputPath, scale);
+}
+
+static void ShowPngHelp()
+{
+    Console.WriteLine("""
+        Convert Lily# source to PNG
+
+        Usage: lysc png [options] <input.lys> [output.png]
+
+        Arguments:
+          <input.lys>      Input Lily# source file
+          [output.png]     Output PNG file (default: input with .png extension)
+
+        Options:
+          -o, --output <file>    Output file path
+          --scale <factor>       Scale factor (default: 2.0 = 192 DPI)
+          -h, --help             Show this help
+
+        Examples:
+          lysc png score.lys
+          lysc png score.lys sheet.png
+          lysc png --scale 3.0 score.lys    # High DPI (288 DPI)
+          lysc png --scale 1.0 score.lys    # Standard DPI (96 DPI)
+        """);
+}
+
+static int ExecutePng(string inputPath, string outputPath, float scale)
+{
+    try
+    {
+        var source = File.ReadAllText(inputPath);
+        var tree = SyntaxTree.Parse(source);
+
+        if (tree.HasErrors)
+        {
+            Console.Error.WriteLine("Syntax errors:");
+            foreach (var diag in tree.Diagnostics)
+                Console.Error.WriteLine($"  {diag}");
+            return 1;
+        }
+
+        var fontDir = FindFontDirectory();
+        var pngOptions = new PngRenderOptions { Scale = scale, FontDirectory = fontDir };
+        var pngBytes = PngGenerator.Generate(tree, pngOptions);
+        File.WriteAllBytes(outputPath, pngBytes);
+
+        Console.WriteLine($"Created: {outputPath}");
+        Console.WriteLine($"  Size: {pngBytes.Length / 1024.0:F1} KB");
+        Console.WriteLine($"  Scale: {scale:F1}x");
         return 0;
     }
     catch (Exception ex)
@@ -576,17 +684,18 @@ static string? FindFontDirectory()
 {
     var candidates = new[]
     {
+        Path.Combine(AppContext.BaseDirectory, "fonts"),
+        Path.Combine(AppContext.BaseDirectory, "..", "fonts"),
         "fonts",
         "../fonts",
-        "editors/vscode/media/fonts",
-        Path.Combine(AppContext.BaseDirectory, "fonts"),
-        Path.Combine(AppContext.BaseDirectory, "..", "fonts")
+        "editors/vscode/media/fonts"
     };
     
     foreach (var candidate in candidates)
     {
-        if (Directory.Exists(candidate) && 
-            File.Exists(Path.Combine(candidate, "emmentaler-20.woff2")))
+        if (Directory.Exists(candidate) &&
+            (File.Exists(Path.Combine(candidate, "emmentaler-20.otf")) ||
+             File.Exists(Path.Combine(candidate, "emmentaler-20.woff2"))))
         {
             return Path.GetFullPath(candidate);
         }

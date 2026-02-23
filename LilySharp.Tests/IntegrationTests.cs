@@ -1,5 +1,6 @@
 using Xunit;
 using Xunit.Abstractions;
+using LilySharp.Core.Png;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -164,5 +165,26 @@ render score ""test.svg"" {
         var maxDynY = overlappingDynamics.Max(d => d.Y);
         Assert.True(ritSpanner.Y > maxDynY,
             $"rit. Y ({ritSpanner.Y:F2}) should be below max overlapping dynamic Y ({maxDynY:F2})");
+    }
+
+    [Fact]
+    public void PngGenerator_ProducesValidPng()
+    {
+        var source = "{ c4 d e f | g a b c' | }";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+
+        var fontDir = Path.Combine(AppContext.BaseDirectory, "fonts");
+        var options = new PngRenderOptions { Scale = 1.0f, FontDirectory = fontDir };
+        var pngBytes = PngGenerator.Generate(tree, options);
+
+        // PNG magic bytes: 0x89 'P' 'N' 'G'
+        Assert.True(pngBytes.Length > 100, $"PNG too small: {pngBytes.Length} bytes");
+        Assert.Equal(0x89, pngBytes[0]);
+        Assert.Equal((byte)'P', pngBytes[1]);
+        Assert.Equal((byte)'N', pngBytes[2]);
+        Assert.Equal((byte)'G', pngBytes[3]);
+
+        _output.WriteLine($"PNG size: {pngBytes.Length} bytes");
     }
 }
