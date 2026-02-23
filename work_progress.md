@@ -1,0 +1,194 @@
+# LilySharp レイアウトエンジン実装 — 作業進捗
+
+## 全体進捗
+
+- **総タスク数:** 52 (Phase 1-5: 28 / Phase 6-9: 24)
+- **完了 ✅:** 37 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.2 + Phase 8.1-8.2)
+- **レビュー待ち 🔍:** 0
+- **作業中 ⏳:** 0
+- **未着手 🚀:** 15 (Phase 5.1 + Phase 7.3-7.8 + Phase 8.3-8.5 + Phase 9)
+- **進捗率:** 71% (37/52)
+
+## ステータス凡例
+
+| ステータス | 意味 | ワークフロー |
+|-----------|------|-------------|
+| 🚀 | NotStarted（未着手） | → |
+| ⏳ | Working（AI作業中） | → |
+| 🔍 | Review（レビュー待ち） | → |
+| ✅ | Complete（完了） | |
+| 🟡 | Hold（保留） | |
+| ❌ | Error（エラー） | |
+
+---
+
+## Phase 1: 既存機能の品質向上（LilyPond アルゴリズム完全準拠）
+
+| タスク | ステータス | 優先度 | 工数見込 | LilyPond 参照 | 備考 |
+|--------|:------:|:------:|------:|--------------|------|
+| 1.1 Beam quanting 強化 | ✅ | High | 8h | beam.cc + beam-quanting.cc | LilyPond 完全移植済み (635→530行, 品質向上) |
+| 1.2 Tie formatting 強化 | ✅ | High | 6h | tie-formatting-problem.cc | atan Bezier, peak_around/convex_amplifier scoring, パラメータ完全準拠, multi-tie monotonicity |
+| 1.3 Slur scoring 強化 | ✅ | High | 4h | slur-scoring.cc | atan Bezier, priority queue, 4 scorer (SLOPE/EDGES/EXTRA_ENCOMPASS/ENCOMPASS), peak_around, variance penalty, 全パラメータ layout-slur.scm 準拠 |
+| 1.4 Stem 長計算の精密化 | ✅ | Medium | 3h | stem.cc | StemCalculator新規作成, duration別長さ/unnatural shortening/beamed stem info, SvgRenderer統合済み |
+| 1.5 Accidental placement 完全準拠 | ✅ | Medium | 3h | accidental-placement.cc | glyph Y-extent衝突検出, alteration priority sort, horizon padding, IsCourtesy field |
+
+---
+
+## Phase 2: スペーシングとレイアウトの完全化
+
+| タスク | ステータス | 優先度 | 工数見込 | LilyPond 参照 | 備考 |
+|--------|:------:|:------:|------:|--------------|------|
+| 2.1 Spring-Rod モデル完全実装 | ✅ | High | 6h | simple-spacer.cc, spacing-spanner.cc | Spring.Merge/Scale, NoteSpacingParameters, stem direction correction, ForcePenalty, ApplyRods |
+| 2.2 Grace note spacing | ✅ | Medium | 2h | grace-spacing.cc | GraceSpacingParameters (3パラメータ define-grobs.scm準拠), CreateGraceSpring, AdjustSpringForGraceNotes |
+| 2.3 Page breaking 最適化 | ✅ | High | 8h | page-breaking.cc (1768行) | PageBreakingParameters, orphan penalty, ragged bottom/last, min/max systems/page, BreakPermission, line count penalty, page spacing weight |
+| 2.4 Vertical justification | ✅ | Medium | 4h | page-layout-problem.cc (1369行) | VerticalSpacingSpec/Parameters (7コンテキスト paper-defaults-init.ly準拠), コンテキスト依存SelectSpec, skylineベースminDistance |
+| 2.5 System spacing | ✅ | Medium | 4h | system.cc (1060行) | StaffSpacingParameters (staff-staff/staffgroup-staff define-grobs.scm準拠), MultiStaffLayouter パラメータ化 |
+
+---
+
+## Phase 3: 未実装の主要浄書機能
+
+| タスク | ステータス | 優先度 | 工数見込 | LilyPond 参照 | 備考 |
+|--------|:------:|:------:|------:|--------------|------|
+| 3.1 Hairpin (cresc/decresc) | ✅ | High | 4h | hairpin.cc | HairpinItem/HairpinLayout/HairpinEngraver, DetectHairpins (cresc/decresc/dim→HairpinItem span), wedge SVG描画, LilyPondパラメータ準拠 (height=0.6666, bound-padding=1.0, minimum-length=2.0, thickness=1.0), テスト15件追加 |
+| 3.2 Text spanners | ✅ | High | 3h | text-spanner.cc, line-spanner.cc, define-grobs.scm | TextSpannerItem (text+style+span), TextSpannerLayout (+LineStartX for text/line boundary), DetectTextSpanners (rit/accel→span), LilyPondパラメータ準拠 (dash-period=3.0, dash-fraction=0.2, bound-padding=0.25, italic), SVG dashed line描画 (stroke-dasharray), テスト13件追加 |
+| 3.3 Ottava brackets | ✅ | High | 3h | ottava-bracket.cc, ottava-engraver.cc, define-grobs.scm | OttavaBracketItem (OttavaType/Start-End), OttavaBracketLayout (text+dashed line+end hook), MusicMarkType拡張 (OttavaUp/Down, QuindicesUp/Down, Loco), DetectOttavaBrackets (ottava→loco span), LilyPondパラメータ準拠 (dash-fraction=0.3, edge-height=0.8, staff-padding=2.0, bold italic), SVG描画 (text+dashed line+hook), テスト18件追加 |
+| 3.4 Glissando | ✅ | Medium | 3h | glissando-engraver.cc, define-grobs.scm | GlissandoItem (Start/End MeasureIndex+ItemIndex+StaffPosition), GlissandoDetector (HasGlissando flag→next note span), GlissandoEngraver.Calculate (padding=0.5, gap=0.5), NoteItem.HasGlissando追加, MeasureCollector @gliss検出, ElementCoordinator.LayoutGlissandos, SVG line描画 (style=line), テスト17件追加 |
+| 3.5 Arpeggio | ✅ | Medium | 3h | arpeggio.cc, define-grobs.scm | ArpeggioItem (MeasureIndex/ItemIndex/Min-MaxStaffPosition), ChordItem.HasArpeggio追加, MeasureCollector @arpeggio検出, Score/MultiStaffScore.Arpeggios追加, ArpeggioEngraver.Calculate (padding=0.5, direction=LEFT), SVG wavy path描画 (Bezierベース squiggle), テスト12件追加 |
+| 3.6 Rehearsal marks | ✅ | Medium | 2h | mark-engraver.cc | MusicMarkType.Rehearsal追加, ParseMarkName "mark.*"パターン, ParseRehearsalText, MusicMarkItem custom text constructor, MusicMarkSyntax collection gap修正 (ProcessMusicNode追加), SvgRenderer boxed rehearsal mark描画 (rect+bold text, font-size=0.85, padding=0.8, define-grobs.scm:2607-2636準拠), テスト15件追加 |
+| 3.7 Piano pedal | ✅ | Medium | 4h | piano-pedal-engraver.cc | MusicMarkType拡張 (SustainOn/Off, SostenutoOn/Off, UnaCordaOn/Off), ParseMarkName対応 (@ped/@ped.off/@sost.ped/@sostenuto/@una.corda/@tre.corde), PedalType enum, PedalBracketItem model, PedalEngraver (DetectPedalBrackets ON/OFF pairing + Calculate bracket layout), PedalBracketLayout (StartX/EndX/Y/EdgeHeight), SvgRenderer pedal text styling (sustain=upright bold, sostenuto/una corda=italic), SVG bracket line+end hook描画, ScoreLayout/LayoutEngine統合, テスト24件追加 |
+| 3.8 Feathered beams | ✅ | Low | 3h | beam.cc | NoteItem.FeatherDirection追加 (0=none, 1=right/accel, -1=left/rit, backward-compatible), BeamGroup.GrowDirection追加 (beam.cc:1039-1082 grow-direction), BeamDetector FirstNote FeatherDirection→BeamGroup伝播, MeasureCollector GetFeatherDirection helper (@feather.right/@feather.left検出), SvgRenderer feather_factor適用 (DrawBeamGroup/DrawBeamGroupAtStaffY: leftFeather/rightFeather per level, 二次beam wedge形状), テスト12件追加 |
+| 3.9 Kneed beams | ✅ | Low | 3h | beam.cc | BeamMember.MemberStemUp追加 (per-member stem direction), BeamGroup.IsKnee property (mixed direction検出, beam.cc:1425-1448), BeamDetector.ShouldAutoKnee (gap analysis, AutoKneeGap=5.5 define-grobs.scm:437準拠), per-member direction assignment (staffPosition<0→stemUp), SvgRenderer kneed beam対応 (stem position/beam drawing: per-member stemAnchor, single-staff+multi-staff両方), テスト12件追加 |
+| 3.10 Nested tuplets | ✅ | Low | 3h | tuplet-bracket.cc (891行) | TupletBracketItem.NestingDepth追加 (default=0, backward-compatible), IsInsideTuplet修正 (nested TupletExpressionSyntax→main loop除外), ProcessTuplet再帰対応 (nested→inner actual duration返却, top-levelのみAddDuration), TupletBracketEngraver NestingDepthOffset=2.0 (depth毎にY offset), テスト16件追加 |
+
+---
+
+## Phase 4: 高度な記法と出力
+
+| タスク | ステータス | 優先度 | 工数見込 | LilyPond 参照 | 備考 |
+|--------|:------:|:------:|------:|--------------|------|
+| 4.1 Figured bass | ✅ | Medium | 6h | figured-bass-engraver.cc | FiguredBassFigure/FiguredBassItem model, @fig.N.M構文 (dot-separated, alteration: s/f/n), ParseFigures state machine, FiguredBassEngraver.Calculate (BelowStaffY=5.0, FigureSpacing=1.5, StaffPadding=1.0), Parser fix (compound mark detection in ParseArticulations, ExpectMarkName IntegerLiteral/RestS/PitchF対応), Score/MultiStaffScore/ScoreLayout/LayoutEngine/SvgRenderer統合, テスト21件追加 |
+| 4.2 Chord names | ✅ | Medium | 4h | chord-name.cc, chord-ignatzek-names.scm, define-grobs.scm | ChordNameItem model (@chord.TEXT構文, root flat自動変換 Bb→B♭), ChordNameEngraver.Calculate (AboveStaffY=-2.0, staff上部配置), Parser compound mark活用 (Phase 4.1のIdentifier+Dot→MusicMark), Score/MultiStaffScore/ScoreLayout/LayoutEngine/SvgRenderer統合, sans-serif bold描画 (font-size=0.85x), テスト20件追加 |
+| 4.3 Percent/Tremolo repeats | ✅ | Medium | 4h | percent-repeat-engraver.cc | PercentRepeatItem model, ProcessRepeatExpression (percent/volta/unfold), IsInsideRepeat guard, CollectMeasures修正, SVG slash+dots描画, テスト11件追加 |
+| 4.4 Cross-staff notation | ✅ | Medium | 6h | beam.cc:1451, stem.cc:1168 | CrossStaffItem model, @cross annotation, BeamMember.TargetStaffIndex, BeamGroup.IsCrossStaff, BeamLayout.MemberStaffIndices, CrossStaffEngraver, SvgRenderer cross-staff beam描画, テスト18件追加 |
+| 4.5 PDF 出力 | ✅ | High | 8h | cairo.cc (1535行) | PdfSharpCore v1.3.65, PdfRenderer+PdfGenerator+CLI "pdf"コマンド, テスト12件追加 |
+
+---
+
+## Phase 5: 特殊記法とプロパティシステム
+
+| タスク | ステータス | 優先度 | 工数見込 | LilyPond 参照 | 備考 |
+|--------|:------:|:------:|------:|--------------|------|
+| 5.1 Ancient notation | 🚀 | Low | 8h | gregorian/vaticana/mensural/kievan | ニッチ機能 |
+| 5.2 Part combination | ✅ | Low | 4h | part-combine.cc | PartCombineState enum (Apart/Unison/Solo1/Solo2/Silence), PartCombineItem/PartCombineLayout records, PartCombineAnalyzer.Analyze (2-voice time-aligned walk, ClassifyTimePoint unison/solo/apart検出, state変化のみemit), PartCombineAnalyzer.Calculate (MeasureLayout X position lookup, aboveStaffY=-1.5), AreUnison (NoteItem: staffPosition+duration, ChordItem: sorted positions), LayoutEngine統合 (single-staff multi-voice + multi-staff), SvgRenderer.DrawPartCombine (italic serif text "a2"/"Solo"/"Solo II"), テスト19件追加 |
+| 5.3 Grob property override system | ✅ | High | 8h | grob.cc + define-grobs.scm | override/revert/once構文, GrobPropertyResolver, テスト24件追加 |
+
+---
+
+## Phase 6: SVG 視覚検証 & 回帰テスト基盤
+
+**目的:** Phase 1-5 の全実装を SVG 出力で検証し、自動回帰テスト基盤を構築
+
+| タスク | ステータス | 優先度 | LilyPond 参照 | 備考 |
+|--------|:------:|:------:|--------------|------|
+| 6.1 Phase 1 SVG検証 (Beam/Tie/Slur/Stem/Accidental) | ✅ | Critical | 各タスクの参照元 | 27テスト+4ショーケースSVG全件検証済み、問題なし |
+| 6.2 Phase 2 SVG検証 (Spacing/Grace/PageBreak/Vertical/System) | ✅ | Critical | 各タスクの参照元 | 全SVG検証済み、問題なし |
+| 6.3 Phase 3 SVG検証 (Hairpin/TextSpanner/Ottava/Glissando/Arpeggio/Mark/Pedal/Feather/Knee/Tuplet) | ✅ | Critical | 各タスクの参照元 | 全SVG検証済み。Volta/Pedal/Ottava cross-system bug修正済み (commit 93c3013) |
+| 6.4 Phase 4-5 SVG検証 (FiguredBass/ChordName/Percent/CrossStaff/PDF/PartCombine/GrobOverride) | ✅ | Critical | 各タスクの参照元 | 全SVG検証済み。ChordSyntax MusicMarkSyntax bug修正済み (commit 62761e8) |
+| 6.5 SVG スナップショットテスト基盤 | ✅ | High | — | SvgSnapshotTests.cs: 31テスト (27test+4showcase), Snapshots/ディレクトリにベースラインSVG保存, LILYSHARP_UPDATE_SNAPSHOTS=1で更新 |
+| 6.6 showcase サンプル更新 | ✅ | Medium | — | 05-special-techniques.lys新規作成 (feathered beams, nested tuplets, percent repeats, kneed beams)。スナップショットテスト追加 |
+
+---
+
+## Phase 7: 記法の補完
+
+**目的:** 実用上不足している記法機能を追加
+
+| タスク | ステータス | 優先度 | LilyPond 参照 | 備考 |
+|--------|:------:|:------:|--------------|------|
+| 7.1 楽器名表示 | ✅ | High | lily/instrument-name-engraver.cc | Part `name:` property→StaffSpec→Staff→StaffLayout→SVG text。Grand staff名centering。viewBox negative X拡張。serif font, text-anchor=end, padding=0.3。テスト8件+スナップショット1件追加 |
+| 7.2 小節途中の音部記号変更 | ✅ | High | lily/clef-engraver.cc, lily/clef.cc | ClefChangeItem (zero-duration MusicItem), MeasureCollector ClefDeclarationSyntax handling (5箇所のtype filter), EmmentalerGlyphs _change glyphs (G/F/C), GlyphMetrics change widths (75%), SpacingRules ClefChangeItem対応, SvgRenderer DrawClefChange + GetActiveClefForSystem/GetActiveClefStringForSystem (system-start clef tracking), Score.Clef _initialClef fix, テスト5件+スナップショット1件追加。913全テスト通過 |
+| 7.3 小節途中の調号/拍子変更 | 🚀 | High | lily/key-engraver.cc, lily/time-signature-engraver.cc | mid-measure の key/time 変更。courtesy naturals 表示 |
+| 7.4 キューノート | 🚀 | Medium | lily/cue-clef-engraver.cc | 小サイズのキュー音符。別パートからの引用表示 |
+| 7.5 Ossia 譜表 | 🚀 | Medium | lily/keep-alive-together-engraver.cc | 一時的な代替パッセージ用の小譜表 |
+| 7.6 マルチムーブメント | 🚀 | Medium | — | 複数楽章の明示的サポート。楽章間のページ区切り・タイトル |
+| 7.7 Courtesy accidentals 描画 | 🚀 | Medium | lily/accidental-engraver.cc | IsCourtesy フィールドは実装済み。括弧付き臨時記号の SVG 描画 |
+| 7.8 トリル記号 + 装飾音 | 🚀 | Medium | lily/trill-spanner-engraver.cc | トリルスパナー (tr~~~)、ターン、モルデント等の装飾記号 |
+
+---
+
+## Phase 8: 開発基盤強化
+
+**目的:** CI/CD・品質保証・パフォーマンスの基盤を整備
+
+| タスク | ステータス | 優先度 | 備考 |
+|--------|:------:|:------:|------|
+| 8.1 GitHub Actions CI | ✅ | High | .github/workflows/ci.yml: ubuntu+windows matrix, .NET 9, build+test。.gitignore snapshot SVG例外追加 |
+| 8.2 コードカバレッジ | ✅ | Medium | coverlet.collector 6.0.2 追加。CI coverage upload。83%行/74%分岐 |
+| 8.3 BenchmarkDotNet 導入 | 🚀 | Medium | 現在の手動 Stopwatch → BenchmarkDotNet。パフォーマンス回帰検出 |
+| 8.4 テストカテゴリ整理 | 🚀 | Low | [Trait] によるカテゴリ分類 (Unit/Integration/Visual/Benchmark) |
+| 8.5 NuGet パッケージ化 | 🚀 | Low | LilySharp.Core を NuGet パッケージとして配布可能に |
+
+---
+
+## Phase 9: 出力形式拡張 & ドキュメント
+
+**目的:** 出力の多様化とユーザー向けドキュメントの整備
+
+| タスク | ステータス | 優先度 | LilyPond 参照 | 備考 |
+|--------|:------:|:------:|--------------|------|
+| 9.1 PNG 出力 | 🚀 | Medium | — | SVG → PNG 変換 (SkiaSharp or ImageSharp) |
+| 9.2 MusicXML エクスポート完全化 | 🚀 | Medium | — | マルチセクション、アーティキュレーション、ダイナミクス対応 |
+| 9.3 ユーザードキュメント | 🚀 | High | — | .lys 文法リファレンス、チュートリアル、コマンドリファレンス |
+| 9.4 LSP 機能拡充 | 🚀 | Medium | — | 新構文 (override/revert, Phase 3-5 記法) の補完・診断対応 |
+| 9.5 VS Code 拡張更新 | 🚀 | Medium | — | シンタックスハイライト更新、スニペット追加、プレビュー機能 |
+
+---
+
+## 変更履歴
+
+| 日付 | 変更内容 |
+|------|---------|
+| 2026-02-22 | 初版作成 — LilyPond ソース分析に基づきロードマップ策定 |
+| 2026-02-22 | 1.1 Beam quanting: LilyPond 完全準拠に書き換え (straddle/sit/inter/hang quant, priority queue, 全scorer移植) |
+| 2026-02-22 | 1.2 Tie formatting: LilyPond 完全準拠 (atan Bezier, peak_around/convex_amplifier, 全パラメータ define-grobs.scm 準拠, multi-tie monotonicity/symmetry) |
+| 2026-02-22 | 1.3 Slur scoring: LilyPond 完全準拠 (atan Bezier, priority queue lazy eval, 4 scorer移植, 1/dist head penalty + variance, peak_around, 全25パラメータ layout-slur.scm 準拠) |
+| 2026-02-22 | 1.4 Stem 長計算: StemCalculator新規作成 (duration別base length [3.5→9.0], unnatural direction shortening, beamed stem info [ideal/shortest], staff extension rule, SvgRenderer統合) |
+| 2026-02-22 | 1.5 Accidental placement: glyph Y-extent衝突検出に書き換え (固定閾値6→BBox overlap), alteration priority sort (natural右→doubleFlat左), horizon padding 0.1, IsCourtesy field追加, 命名不整合修正 |
+| 2026-02-22 | 2.1 Spring-Rod モデル強化: Spring.Merge (harmonic mean compress, headroom), Spring.Scale (grace note用), NoteSpacingParameters (4パラメータ define-grobs.scm準拠), stem direction optical correction, SpringSolver.ForcePenalty (convex圧縮ペナルティ), SpringSolver.ApplyRods (複数カラムrod制約) |
+| 2026-02-22 | 2.2 Grace note spacing: GraceSpacingParameters (increment=0.8, shortestDurationSpace=1.6, baseShortestDuration=0.125), CreateGraceSpring (Gourlay式+inverseStretch=increment/2), AdjustSpringForGraceNotes (graceWidth加算), テスト8件追加 |
+| 2026-02-22 | 2.3 Page breaking 最適化: PageBreakingParameters (raggedBottom/Last, orphanPenalty=100000, pageSpacingWeight=10, min/maxSystemsPerPage), BreakPermission enum (Allow/Forbid/Force), orphan penalty, ragged bottom, line count penalty, SystemDetails拡張 (PagePermission/IsTitle/MinDistance/BottomPadding), テスト11件追加 |
+| 2026-02-22 | 2.4 Vertical justification: VerticalSpacingSpec (basicDistance/minimumDistance/padding/stretchability), VerticalSpacingParameters (7コンテキスト: system-system/score-system/markup-system/score-markup/markup-markup/top-system/last-bottom, 全パラメータ paper-defaults-init.ly準拠), SelectSpec コンテキスト選択, PageLayouter skylineベース最小距離+force伸縮, テスト8件追加 |
+| 2026-02-22 | 2.5 System spacing: StaffSpacingParameters (staff-staff: basic=9/min=7/padding=1/stretch=5, staffgroup-staff: basic=10.5/min=8/padding=1/stretch=9, define-grobs.scm StaffGrouper準拠), MultiStaffLayouter パラメータベース化 (固定GrandStaffSpacing/StaffGroupSpacing→VerticalSpacingSpec), LayoutOptions.StaffSpacing追加, テスト7件追加 |
+| 2026-02-22 | 3.1 Hairpin: HairpinItem (Direction/Start-End MeasureIndex+ItemIndex), HairpinLayout (+StartMeasureIndex for system Y lookup), HairpinEngraver.DetectHairpins (cresc/decresc/dim MusicMark→HairpinItem span detection, end=次dynamic/次cresc/次measure), HairpinEngraver.Calculate (bound-padding=1.0配置, minimum-length=2.0強制, height=0.6666/2 opening), SVG wedge描画 (crescendo=<, decresc=>, thickness=StaffLineThickness), ScoreLayout/LayoutEngine/SvgRenderer統合, テスト15件追加 |
+| 2026-02-22 | 3.2 Text spanners: TextSpannerItem (Text/Style/Start-End span), TextSpannerLayout (+LineStartX for text/line boundary, DashPeriod=3.0, DashFraction=0.2), DetectTextSpanners (rit/accel MusicMark→TextSpannerItem span), TextSpannerEngraver.Calculate (bound-padding=0.25, CharWidth=0.55, TextLinePadding=0.5), SVG italic text + stroke-dasharray dashed line描画, ScoreLayout/LayoutEngine/SvgRenderer統合 (single+multi-staff), テスト13件追加 |
+| 2026-02-22 | 3.3 Ottava brackets: OttavaBracketItem (OttavaType enum: 8va/8vb/15ma/15mb), OttavaBracketLayout (text+dashed line+end hook+IsAbove), MusicMarkType拡張 (OttavaUp/Down, QuindicesUp/Down, Loco + ParseMarkName対応 "ottava"/"ottava.bassa"/"loco"), MusicMarkItem positioning (8va=Above, 8vb=Below), DetectOttavaBrackets (ottava→loco/次ottava span), OttavaBracketEngraver.Calculate (dash-fraction=0.3, edge-height=0.8, staff-padding=2.0, shorten-pair=-0.8/-0.6), SVG bold italic text + dashed line + end hook描画, テスト18件追加 |
+| 2026-02-22 | 3.4 Glissando: NoteItem.HasGlissando追加 (backward-compatible default=false), MeasureCollector @gliss articulation検出 (HasGlissandoArticulation helper), GlissandoItem model (Start/End MeasureIndex+ItemIndex+StaffPosition, GlissandoStyle enum), GlissandoDetector (tie/slurパターン準拠, next note任意pitch span), GlissandoEngraver.Calculate (padding=0.5, gap=0.5 define-grobs.scm:1557-1577準拠, staffPosition→Y変換), ElementCoordinator.LayoutGlissandos (single+multi-staff), ScoreLayout/LayoutEngine/SvgRenderer統合, SVG line描画 (style=line), テスト17件追加 |
+| 2026-02-22 | 3.5 Arpeggio: ChordItem.HasArpeggio追加 (backward-compatible default=false), MeasureCollector @arpeggio検出 (HasArpeggioArticulation helper, chord note range収集), ArpeggioItem model (MeasureIndex/ItemIndex/Min-MaxStaffPosition), Score/MultiStaffScore.Arpeggios property追加, ArpeggioEngraver.Calculate (padding=0.5, direction=LEFT define-grobs.scm:201-224準拠), SVG wavy path描画 (Cubic Bezier squiggle pattern, waveWidth=0.35, wavePeriod=0.6), AnnotationLayouts/ScoreLayout/LayoutEngine/SvgRenderer統合 (single+multi-staff), テスト12件追加 |
+| 2026-02-22 | 3.6 Rehearsal marks: MusicMarkType.Rehearsal追加, MusicMarkItem custom text constructor (text引数付き), ParseMarkName "mark.*"パターン→Rehearsal, ParseRehearsalText (mark.A→"A"), MusicMarkSyntax collection gap修正 (MeasureCollector ProcessMusicNode追加, 全MusicMark収集が有効化), SvgRenderer boxed rehearsal mark描画 (SVG rect+bold text centered, rehearsalFontSize=FontSize*0.85, boxPadding=0.8, define-grobs.scm:2607-2636準拠), テスト15件追加 |
+| 2026-02-22 | 3.7 Piano pedal: MusicMarkType拡張 (SustainOn/Off, SostenutoOn/Off, UnaCordaOn/Off 6値追加), ParseMarkName対応 (@ped/@ped.off/@sost.ped/@sostenuto/@una.corda/@tre.corde), PedalType enum (Sustain/Sostenuto/UnaCorda), PedalBracketItem model (Type/Start-EndMeasureIndex), PedalEngraver.DetectPedalBrackets (ON/OFF pairing, consecutive ON→前bracket終了, pedal type独立処理), PedalEngraver.Calculate (BoundPadding=1.0, EdgeHeight=1.0, BracketY=6.5 define-grobs.scm:2586-2605準拠), SvgRenderer pedal text styling (sustain=upright bold, sostenuto/unaCorda=italic, define-grobs.scm:3255準拠), SVG bracket line+end hook描画 (horizontal line + vertical hook at release), ScoreLayout/LayoutEngine/SvgRenderer統合, テスト24件追加 |
+| 2026-02-22 | 3.8 Feathered beams: NoteItem.FeatherDirection追加 (0=none, 1=right/accel, -1=left/rit, Clamp(-1,1), backward-compatible default=0), BeamGroup.GrowDirection追加 (beam.cc:1039-1082 grow-direction準拠, Clamp(-1,1)), BeamDetector.CreateBeamGroup firstNote.FeatherDirection→BeamGroup.GrowDirection伝播, MeasureCollector.GetFeatherDirection helper (@feather.right/@feather.accel→1, @feather.left/@feather.rit→-1), SvgRenderer feather_factor適用 (DrawBeamGroup/DrawBeamGroupAtStaffY両方: growDir=RIGHT→leftFeather=0/rightFeather=1, growDir=LEFT→leftFeather=1/rightFeather=0, levelOffset*feather per level → 二次beam wedge形状), テスト12件追加 |
+| 2026-02-22 | 3.10 Nested tuplets: TupletBracketItem.NestingDepth追加 (int, default=0, backward-compatible positional record param), IsInsideTuplet修正 (TupletExpressionSyntax特殊ケース削除→nested tupletもparent chain検出でmain loop除外, top-level tupletのみ通過), ProcessTuplet再帰対応 (Fraction返却値に変更, Body.Items内TupletExpressionSyntax→nestingDepth+1で再帰呼出, inner actual durationをouter writtenDurationに加算, top-level(depth=0)のみAddDuration→measure完了, compound duration scaling正確), TupletBracketEngraver.NestingDepthOffset=2.0 (depth毎にY上方/下方offset, tuplet-bracket.cc:400-500準拠), テスト16件追加 (NestingDepth default/explicit, parser nested/ratio, collector 2/3-level bracket detection/note coverage/rest/regression) |
+| 2026-02-22 | 3.9 Kneed beams: BeamMember.MemberStemUp追加 (per-member stem direction, backward-compatible default=true), BeamGroup.IsKnee derived property (mixed MemberStemUp検出, beam.cc:1425-1448準拠), BeamDetector.ShouldAutoKnee (gap analysis: sorted positions間max gap >= AutoKneeGap=5.5, define-grobs.scm:437準拠), per-member direction assignment (staffPosition<0→stemUp=true, gap>=threshold時のみ有効), SvgRenderer kneed beam対応 (stem Y計算: per-member stemAnchor/stemOffsetX, memberUp個別判定, single-staff CalculateBeamStemPositions + multi-staff CalculateMultiStaffBeamStemPositions両方), テスト12件追加 |
+| 2026-02-22 | 4.1 Figured bass: FiguredBassFigure record struct (Number/Alteration, DisplayText with ♯♭♮), FiguredBassItem model (Figures/MeasureIndex/ItemIndex), @fig.N.M.L dot-separated構文 (alteration: .s=sharp, .f=flat, .n=natural), ParseFigures state machine (数字→new figure, 文字→alteration of current), Parser修正 (ParseArticulations compound mark検出: Identifier+Dot→MusicMark parse, ExpectMarkName: IntegerLiteral/RestS/PitchF追加), FiguredBassEngraver.Calculate (BelowStaffY=5.0, FigureSpacing=1.5, StaffPadding=1.0 define-grobs.scm:362-380準拠), FiguredBassLayout record struct, MeasureCollector CollectFiguredBass (Note/Chord annotation検出), Score/MultiStaffScore.FiguredBasses property, ScoreLayout.FiguredBassLayouts field, LayoutEngine/AnnotationLayouts統合, SvgRenderer.DrawFiguredBass (serif font, 0.75x size, stacked text), テスト21件追加 |
+| 2026-02-22 | 4.4 Cross-staff notation: CrossStaffItem record (MeasureIndex/ItemIndex/TargetStaffIndex/SourcePosition), @cross annotation検出 (ArticulationSyntax "cross" → CrossStaffItem, postfix: 前ノートに付与), BeamMember.TargetStaffIndex追加 (default=-1, same staff), BeamGroup.IsCrossStaff derived property (any member with TargetStaffIndex≥0), BeamLayout.MemberStaffIndices追加 (per-member staff index for cross-staff beams), CrossStaffEngraver.Calculate (voiceStaffIndex→TargetStaff flip: 2-staff grand staff flip, N-staff wrapping), CrossStaffEngraver.BuildCrossStaffLookup/GetTargetStaffIndex utility, MeasureCollector.CollectCrossStaff (Note/Chord ArticulationSyntax検出), Score/MultiStaffScore.CrossStaffItems property, ScoreLayout.CrossStaffLayouts field, LayoutEngine/AnnotationLayouts.CrossStaffs統合, SvgRenderer.DrawCrossStaffBeamGroup (per-member staff Y in system-global coordinates, beam line interpolation, stem from notehead to beam), SvgRenderer.CalculateCrossStaffBeamStemPositions (per-member stem end Y), テスト18件追加 (Engraver9+Model4+Collector5) |
+| 2026-02-22 | 4.3 Percent/Tremolo repeats: PercentRepeatItem record (MeasureIndex/SourcePosition), ProcessRepeatExpression (RepeatExpressionSyntax handler: percent→body×N展開+iteration2+にPercentRepeatItem追加, volta/unfold→body×N展開のみ), IsInsideRepeat guard (DescendantNodes traversal double-processing防止, IsInsideTupletと同パターン), CollectMeasures修正 (single-voice path: RepeatExpressionSyntax type filter+IsInsideRepeat guard追加), PercentRepeatEngraver.Calculate (measure center配置: x=ml.X+ml.Width/2, y=2.0 staff center), PercentRepeatLayout record struct, MeasureCollector統合 (_percentRepeats field, ProcessRepeatExpression, CollectMeasuresFromNode+CollectMeasures両パス対応), Score/MultiStaffScore.PercentRepeats property, ScoreLayout.PercentRepeatLayouts field, LayoutEngine/AnnotationLayouts統合, SvgRenderer.DrawPercentRepeats (SVG slash line+2 circle dots, slope=1.0, thickness=0.48, dotRadius=0.15, percent-repeat-interface.cc準拠), テスト11件追加 (Engraver3+Collector integration8) |
+| 2026-02-22 | 5.3 Grob property override system: SyntaxKind拡張 (OverrideKeyword/RevertKeyword/OnceKeyword + OverrideDeclaration/RevertDeclaration/OnceModifier node kinds), Lexer GetKeywordKind追加 ("override"/"revert"/"once"), Green nodes (OverrideDeclarationGreen: keyword+grobName+dot+propertyName+equals+value, RevertDeclarationGreen: keyword+grobName+dot+propertyName, OnceModifierGreen: keyword+command), Red tree nodes (OverrideDeclarationSyntax: GrobName/PropertyName/ValueToken properties, RevertDeclarationSyntax: GrobName/PropertyName, OnceModifierSyntax: Command), SyntaxNode.CreateNode factory追加, Parser methods (ParseOverrideDeclaration: Identifier value+negative number CombineNegativeNumber helper, ParseRevertDeclaration, ParseOnceModifier: override/revert dispatch+error recovery), IsMusicItemStart/ParseMusicItem 3箇所のswitch更新 (section block+main music+multi-voice), GrobOverride/GrobRevert record models, GrobPropertyResolver (AdvanceTo position-based state machine, once override auto-clear, GetDouble/GetInt/GetString/GetBool/IsOverridden typed accessors, Empty singleton), Score/MultiStaffScore.GrobOverrides+GrobReverts properties追加 (backward-compatible default params), MeasureCollector統合 (_grobOverrides/_grobReverts fields, CollectOverride/CollectRevert methods, ProcessMusicNode OverrideDeclarationSyntax/RevertDeclarationSyntax/OnceModifierSyntax cases, IsInsideOnce guard: OnceModifier inner node double-processing防止, CollectMeasuresFromNode+CollectMeasures両パスtype filter更新), テスト24件追加 (parser 7: basic/revert/once/identifier value/negative value/multiple/override+revert, collector 5: basic/revert/once/no overrides/across measures/override+revert, resolver 12: empty/getDouble/not yet active/revert removes/once clears/isOverridden/getString/getBool/getInt/multiple same grob/replace previous) |
+| 2026-02-22 | 4.5 PDF出力: PdfSharpCore v1.3.65 (MIT, cross-platform) NuGet追加, PdfRenderOptions (A4/Letter page size, StaffSpacePt scaling, EmbedFont, FontDirectory), PdfRenderer (~580行, XGraphics描画: staff lines, barlines, noteheads (filled/open ellipse), stems, beams (primary+secondary+slope), rests, chords, ledger lines, dots, header text, single-staff+multi-staff Systems), PdfGenerator (SvgGenerator mirror: SyntaxTree→Collect→Layout→Render pipeline, RenderSpec single/multi-staff判定), CLI "pdf"コマンド追加 (RunPdf/ShowPdfHelp/ExecutePdf, ParseSimpleOptions再利用, .pdf extension, file size表示), テスト12件追加 (PDF magic bytes検証, 8th+beams/chords/rests/dotted/multiple measures/letter size/custom options/ledger lines/renderer direct/options defaults) |
+| 2026-02-22 | 5.2 Part combination: PartCombineState enum, PartCombineAnalyzer (Analyze+Calculate), LayoutEngine+SvgRenderer統合, テスト19件追加 |
+| 2026-02-22 | 4.2 Chord names: ChordNameItem model (@chord.TEXT annotation構文, root flat自動変換: Bb→B♭/Eb→E♭ etc. chord-name.scm:58-85準拠), ParseChordName (markName→display text, dot-separated parts joined without dots), ChordNameEngraver.Calculate (AboveStaffY=-2.0 staff上部配置, ly/engraver-init.ly:588準拠), ChordNameLayout record struct, MeasureCollector.CollectChordNames (Note/Chord MusicMark annotation検出), Score/MultiStaffScore.ChordNames property, ScoreLayout.ChordNameLayouts field, LayoutEngine/AnnotationLayouts統合, SvgRenderer.DrawChordNames (sans-serif bold, font-size=0.85x, define-grobs.scm ChordName: font-family=sans準拠), テスト20件追加 |
+| 2026-02-23 | Chord notehead side assignment: 2度音程（隣接staff position）のノートヘッド重なり修正。CalculateChordNoteOffsets新規追加 (stem up→下側ノート右シフト, stem down→上側ノート右シフト, シフト量=noteheadWidth), DrawChord notehead/ledger line描画にxOffset適用。LILYPOND-REF: lily/note-column.cc notehead side assignment |
+| 2026-02-23 | Chord stem length fix: コードのstem長がtip側ノートを基準に計算されるよう修正。修正前はattach側（stem up時の最低音）から3.5 staff space固定だったため、音域の広いコードでstemが短すぎた。stemTipPos（stem up→最高音, stem down→最低音）をCalculateStemEndYに渡すよう変更。LILYPOND-REF: lily/stem.cc:515 stem_end = hp[dir] + dir * length |
+| 2026-02-23 | Phase 6-9 ロードマップ追加: 6=SVG視覚検証&回帰テスト基盤(6件), 7=記法補完(8件), 8=開発基盤強化(5件), 9=出力拡張&ドキュメント(5件), 計24タスク追加 |
+| 2026-02-23 | Volta bracket "2." fix: MeasureCollector endMeasureIndex exclusive→inclusive変換修正 (VoltaBracketItem contract mismatch), 最終小節のvolta bracketがskipされていた問題を解消 |
+| 2026-02-23 | Pedal bracket grand staff Y fix: PedalEngraver.BracketY固定値6.5→bass staff bottom+padding動的計算。DrawPedalBrackets goto foundSystem→measureToSystemY lookup修正。LILYPOND-REF: piano-pedal-bracket.cc |
+| 2026-02-23 | Ottava/Volta cross-system split: OttavaBracketEngraver/VoltaBracketEngraver に measure-to-system mapping追加。system break跨ぎ時にsegment分割 (first=text+open end, continuation=no hook, last=dashed line+hook)。SvgRenderer EdgeHeight=0 hook抑制, volta text empty時left hook抑制。LILYPOND-REF: volta-bracket.cc, ottava-bracket.cc |
+| 2026-02-23 | 01-expressions.lys typo fix: @decpresc→@decresc |
+| 2026-02-23 | Chord names on chord syntax fix: ChordSyntax.Articulations was missing MusicMarkSyntax yield。@chord.C等のcompound annotation（MusicMarkSyntax）がchord syntax上で検出されず、chord names未表示だった。ArticulationSyntax/DynamicSyntax に加え MusicMarkSyntax も yield するよう修正 |
+| 2026-02-23 | Phase 6 SVG視覚検証完了 (6.1-6.4): 27テストSVG + 4ショーケースSVG = 全31ファイル検証済み。Phase 1-5 全27タスクを🔍→✅に更新。バッチ3分割の並列subagent検証で全件問題なし確認 |
+| 2026-02-23 | Phase 6.5 SVGスナップショットテスト基盤: SvgSnapshotTests.cs新規作成。31サンプル全件のベースラインSVGをSnapshots/ディレクトリに保存。EmbedFont=false で安定比較。LILYSHARP_UPDATE_SNAPSHOTS=1 環境変数でベースライン更新。全テスト896件パス |
+| 2026-02-23 | Phase 6.6 showcaseサンプル更新: 05-special-techniques.lys新規作成 (feathered beams accel/rit, nested tuplets 2-level, percent repeat, kneed beams wide-interval)。スナップショットテストに追加 (32テスト)。全テスト897件パス |
+| 2026-02-23 | Phase 8.1 GitHub Actions CI: .github/workflows/ci.yml新規作成 (ubuntu+windows matrix, .NET 9.0, build+test on push/PR)。.gitignore にスナップショットSVG例外追加 |
+| 2026-02-23 | Phase 8.2 コードカバレッジ: coverlet.collector 6.0.2追加。XPlat Code Coverage収集+CI artifact upload。現在の達成率: line 83.3%, branch 74.5% |
+| 2026-02-23 | Phase 7.1 楽器名表示: Part `name:` property parse (identifier/string literal), StaffSpec/Staff/StaffLayout.InstrumentName propagation, SvgRenderer.DrawInstrumentNames (serif font, text-anchor=end, padding=0.3 define-grobs.scm:1711-1728準拠), EstimateInstrumentNameWidth (viewBox negative X extension), Grand staff centering (single named staff→brace span center), instrument-names.lys sample, InstrumentNameTests 8件, スナップショット33件全更新。LILYPOND-REF: lily/instrument-name-engraver.cc |
+| 2026-02-23 | Phase 7.2 小節途中の音部記号変更: ClefChangeItem model (zero-duration MusicItem, NewClef property), MeasureCollector ClefDeclarationSyntax handling (ProcessMusicNode+5箇所type filter追加: CollectMeasuresFromNode/ProcessPartBlock/ExpandVariable×2), EmmentalerGlyphs _change glyphs (GClefChange=U+E086, FClefChange=U+E084, CClefChange=U+E080), GlyphMetrics change widths (×0.75+padding=0.5), SpacingRules ClefChangeItem対応 (CalculateLeft/RightExtent, GetNoteValue), SvgRenderer DrawClefChange (smaller glyph描画), GetActiveClefForSystem/GetActiveClefStringForSystem (system-start clef tracking: scan preceding measures+leading items in first measure), Score.Clef _initialClef fix (mid-measure clef changes no longer corrupt Score.Clef), ClefTypeToString helper, clef-change.lys sample, ClefChangeTests 5件+スナップショット34件全通過。913全テスト通過。LILYPOND-REF: lily/clef-engraver.cc, lily/clef.cc |

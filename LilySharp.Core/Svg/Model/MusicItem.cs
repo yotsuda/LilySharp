@@ -140,3 +140,29 @@ public sealed record ChordItem : MusicItem
         _sourcePosition = sourcePosition;
     }
 }
+
+/// <summary>
+/// A mid-measure clef change. Has zero duration — occupies horizontal space
+/// but does not advance the timing position.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/clef-engraver.cc — mid-measure clef changes use smaller
+/// "_change" glyph variants (e.g., clefs.G_change instead of clefs.G).
+/// LILYPOND-REF: lily/clef.cc:29-52 — calc_glyph_name appends "_change" suffix.
+/// </remarks>
+public sealed record ClefChangeItem : MusicItem
+{
+    /// <summary>The new clef type after the change.</summary>
+    public ClefType NewClef { get; }
+
+    private readonly int _sourcePosition;
+
+    public override Fraction Duration => Fraction.Zero;
+    public override int SourcePosition => _sourcePosition;
+
+    public ClefChangeItem(ClefType newClef, int sourcePosition)
+    {
+        NewClef = newClef;
+        _sourcePosition = sourcePosition;
+    }
+}

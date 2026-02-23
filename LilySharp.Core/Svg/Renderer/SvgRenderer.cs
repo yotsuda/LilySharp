@@ -517,23 +517,28 @@ public sealed class SvgRenderer
             _svg.AppendLine($"""  <line class="staff" x1="{startX}" y1="{lineY}" x2="{endX}" y2="{lineY}"/>""");
         }
 
+        // Determine the active clef at the start of this system
+        // LILYPOND-REF: lily/clef-engraver.cc — clef at system start reflects last clef change
+        var matchingStaffForClef = FindStaffForLayout(score, staffLayout.StaffIndex);
+        ClefType activeClef = GetActiveClefForSystem(staffLayout.Clef, matchingStaffForClef, system);
+
         // Draw clef
         double currentX = startX;
-        char clefGlyph = staffLayout.Clef switch
+        char clefGlyph = activeClef switch
         {
             ClefType.Bass => EmmentalerGlyphs.FClef,
             ClefType.Alto => EmmentalerGlyphs.CClef,
             ClefType.Tenor => EmmentalerGlyphs.CClef,
             _ => EmmentalerGlyphs.GClef  // Treble and Treble8Below both use GClef
         };
-        double clefY = staffLayout.Clef switch
+        double clefY = activeClef switch
         {
             ClefType.Bass => staffY + 1,
             ClefType.Alto => staffY + 2,
             ClefType.Tenor => staffY + 1,
             _ => staffY + 3
         };
-        double clefWidth = staffLayout.Clef switch
+        double clefWidth = activeClef switch
         {
             ClefType.Bass => GlyphMetrics.FClefWidth,
             ClefType.Alto or ClefType.Tenor => GlyphMetrics.CClefWidth,
@@ -547,7 +552,7 @@ public sealed class SvgRenderer
         //   X-offset: self-alignment CENTER with parent-alignment from clef-modifier.cc
         //   Y-offset: side-position-interface::y-aligned-side
         // See also: lilypond-src/scm/translation-functions.scm L82-94 (clef-transposition-markup)
-        if (staffLayout.Clef == ClefType.Treble8Below)
+        if (activeClef == ClefType.Treble8Below)
         {
             // X: clef center (GClefWidth/2) + LilyPond G-clef alignment (-0.2)
             double eightX = currentX + GlyphMetrics.GClefWidth / 2.0 - 0.2;
@@ -557,8 +562,8 @@ public sealed class SvgRenderer
         }
         double clefRightEdge = currentX + clefWidth;
 
-        // Draw key signature
-        string clefName = staffLayout.Clef switch
+        // Draw key signature (uses active clef for accidental positions)
+        string clefName = activeClef switch
         {
             ClefType.Bass => "bass",
             ClefType.Alto => "alto",
@@ -587,8 +592,8 @@ public sealed class SvgRenderer
             DrawTimeSignature(score.TimeSignature, currentX, staffY);
         }
 
-        // Find the matching staff and voice in the score
-        var matchingStaff = FindStaffForLayout(score, staffLayout.StaffIndex);
+        // Use the staff found earlier for clef (avoids double lookup)
+        var matchingStaff = matchingStaffForClef;
         if (matchingStaff == null)
             return;
 
@@ -622,6 +627,133 @@ public sealed class SvgRenderer
         }
         return null;
     }
+
+    /// <summary>
+    /// Determines the active clef at the start of a system by scanning for
+    /// ClefChangeItem in preceding measures.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/clef-engraver.cc — the clef displayed at the start of a system
+    /// reflects the last clef change before that system's first measure.
+    /// </remarks>
+    private static ClefType GetActiveClefForSystem(ClefType initialClef, Staff? staff, SystemLayout system)
+    {
+        if (staff == null || system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return initialClef;
+
+        int firstMeasureIndex = system.Measures[0].MeasureIndex;
+        if (firstMeasureIndex == 0)
+        {
+            // First system: check for leading clef changes at the very start of measure 0
+            foreach (var voice in staff.Voices)
+            {
+                if (voice.Measures.Length > 0)
+                {
+                    foreach (var item in voice.Measures[0].Items)
+                    {
+                        if (item is ClefChangeItem clefChange)
+                            return clefChange.NewClef;
+                        if (item.Duration > Fraction.Zero)
+                            break;
+                    }
+                }
+            }
+            return initialClef;
+        }
+
+        // Scan all measures before this system for clef changes
+        ClefType activeClef = initialClef;
+        foreach (var voice in staff.Voices)
+        {
+            for (int m = 0; m < firstMeasureIndex && m < voice.Measures.Length; m++)
+            {
+                foreach (var item in voice.Measures[m].Items)
+                {
+                    if (item is ClefChangeItem clefChange)
+                        activeClef = clefChange.NewClef;
+                }
+            }
+
+            // Also scan leading ClefChangeItems in the first measure of this system
+            // LILYPOND-REF: lily/clef-engraver.cc — clef changes at measure start become system-start clefs
+            if (firstMeasureIndex < voice.Measures.Length)
+            {
+                foreach (var item in voice.Measures[firstMeasureIndex].Items)
+                {
+                    if (item is ClefChangeItem clefChange)
+                        activeClef = clefChange.NewClef;
+                    else if (item.Duration > Fraction.Zero)
+                        break;
+                }
+            }
+        }
+
+        return activeClef;
+    }
+
+    /// <summary>
+    /// Gets the active clef string for a system-start clef in single-staff scores.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/clef-engraver.cc — system-start clef reflects last clef change
+    /// </remarks>
+    private static string GetActiveClefStringForSystem(string initialClef, Voice voice, SystemLayout system)
+    {
+        if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return initialClef;
+
+        int firstMeasureIndex = system.Measures[0].MeasureIndex;
+        if (firstMeasureIndex == 0)
+        {
+            // First system: check for leading clef changes at the very start of measure 0
+            if (voice.Measures.Length > 0)
+            {
+                foreach (var item in voice.Measures[0].Items)
+                {
+                    if (item is ClefChangeItem clefChange)
+                        return ClefTypeToString(clefChange.NewClef);
+                    if (item.Duration > Fraction.Zero)
+                        break; // Stop at first sounding item
+                }
+            }
+            return initialClef;
+        }
+
+        // Scan all measures before this system for clef changes
+        string activeClef = initialClef;
+        for (int m = 0; m < firstMeasureIndex && m < voice.Measures.Length; m++)
+        {
+            foreach (var item in voice.Measures[m].Items)
+            {
+                if (item is ClefChangeItem clefChange)
+                    activeClef = ClefTypeToString(clefChange.NewClef);
+            }
+        }
+
+        // Also scan leading ClefChangeItems in the first measure of this system
+        // LILYPOND-REF: lily/clef-engraver.cc — clef changes at measure start become system-start clefs
+        if (firstMeasureIndex < voice.Measures.Length)
+        {
+            foreach (var item in voice.Measures[firstMeasureIndex].Items)
+            {
+                if (item is ClefChangeItem clefChange)
+                    activeClef = ClefTypeToString(clefChange.NewClef);
+                else if (item.Duration > Fraction.Zero)
+                    break; // Stop at first sounding item
+            }
+        }
+
+        return activeClef;
+    }
+
+    private static string ClefTypeToString(ClefType clef) => clef switch
+    {
+        ClefType.Bass => "bass",
+        ClefType.Alto => "alto",
+        ClefType.Tenor => "tenor",
+        ClefType.Treble8Below => "treble_8",
+        _ => "treble"
+    };
 
     // =====================================================
     // Tablature rendering
@@ -967,23 +1099,27 @@ public sealed class SvgRenderer
             _svg.AppendLine($"""  <line class="staff" x1="{startX}" y1="{lineY}" x2="{staffEndX}" y2="{lineY}"/>""");
         }
 
+        // Determine the active clef at the start of this system
+        // LILYPOND-REF: lily/clef-engraver.cc — clef at system start reflects last clef change
+        string activeClefStr = GetActiveClefStringForSystem(score.Clef, score.Voice, system);
+
         // Draw clef
         double currentX = startX;
-        char clefGlyph = score.Clef switch
+        char clefGlyph = activeClefStr switch
         {
             "bass" => EmmentalerGlyphs.FClef,
             "alto" => EmmentalerGlyphs.CClef,
             "tenor" => EmmentalerGlyphs.CClef,
             _ => EmmentalerGlyphs.GClef
         };
-        double clefY = score.Clef switch
+        double clefY = activeClefStr switch
         {
             "bass" => y + 1,
             "alto" => y + 2,
             "tenor" => y + 1,
             _ => y + 3
         };
-        double clefWidth = score.Clef switch
+        double clefWidth = activeClefStr switch
         {
             "bass" => GlyphMetrics.FClefWidth,
             "alto" or "tenor" => GlyphMetrics.CClefWidth,
@@ -993,7 +1129,7 @@ public sealed class SvgRenderer
         // Draw "8" below G-clef for treble_8 clef
         // Cross-ref: LilyPond ClefModifier grob in lilypond-src/scm/define-grobs.scm L836-867
         // See multi-staff version above for full parameter reference
-        if (score.Clef == "treble_8")
+        if (activeClefStr == "treble_8")
         {
             double eightX = currentX + GlyphMetrics.GClefWidth / 2.0 - 0.2;
             double eightY = y + 5.2;
@@ -1006,7 +1142,7 @@ public sealed class SvgRenderer
         if (hasKeySignature)
         {
             currentX = clefRightEdge + (GlyphMetrics.ClefToKeySignatureSpace - clefWidth);
-            currentX = DrawKeySignature(score.KeySignature, score.Clef, currentX, y);
+            currentX = DrawKeySignature(score.KeySignature, activeClefStr, currentX, y);
         }
 
         // Draw time signature (first system only)
@@ -1117,6 +1253,9 @@ public sealed class SvgRenderer
                     break;
                 case ChordItem chord:
                     DrawChord(chord, itemX, systemY, forcedStemUp);
+                    break;
+                case ClefChangeItem clefChange:
+                    DrawClefChange(clefChange, itemX, systemY);
                     break;
             }
 
@@ -1421,6 +1560,36 @@ public sealed class SvgRenderer
         }
 
         return offsets;
+    }
+
+    /// <summary>
+    /// Draws a mid-measure clef change using the smaller "_change" glyph variant.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/clef.cc:29-52 — calc_glyph_name appends "_change" suffix
+    /// for non-default clefs that are not at start-of-line.
+    /// LILYPOND-REF: lily/clef-engraver.cc — create_clef() for clef creation logic.
+    /// </remarks>
+    private void DrawClefChange(ClefChangeItem clefChange, double x, double systemY)
+    {
+        // Select the change (smaller) glyph variant
+        char glyph = clefChange.NewClef switch
+        {
+            ClefType.Bass => EmmentalerGlyphs.FClefChange,
+            ClefType.Alto or ClefType.Tenor => EmmentalerGlyphs.CClefChange,
+            _ => EmmentalerGlyphs.GClefChange  // Treble and Treble8Below
+        };
+
+        // Y position for the clef (same as start-of-system clef)
+        double clefY = clefChange.NewClef switch
+        {
+            ClefType.Bass => systemY + 1,
+            ClefType.Alto => systemY + 2,
+            ClefType.Tenor => systemY + 1,
+            _ => systemY + 3
+        };
+
+        DrawGlyph(glyph, x, clefY, clefChange.SourcePosition);
     }
 
     /// <summary>

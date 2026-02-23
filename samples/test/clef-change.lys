@@ -1,0 +1,30 @@
+// Mid-Measure Clef Change Test
+// Tests clef changes within measures using smaller "_change" glyph variants
+title "Clef Changes"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody {
+  clef: treble
+}
+
+// Phrase with mid-measure clef change: treble → bass → treble
+phrase clefChanges {
+  c'4 d e f |
+  g4 a clef bass c,4 d |
+  e4 f g a |
+  clef treble c'2 r2 |
+}
+
+section Main {
+  melody { $clefChanges }
+}
+
+structure { Main }
+
+render score "clef-change.svg" {
+  staff { melody }
+}

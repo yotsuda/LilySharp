@@ -180,6 +180,19 @@ public static class SpacingRules
         };
     }
 
+    /// <summary>
+    /// Gets the width of a change (mid-measure) clef glyph.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/clef.cc:29-52 — "_change" suffix glyphs are smaller variants.
+    /// </remarks>
+    private static double GetClefChangeWidth(ClefType clef) => clef switch
+    {
+        ClefType.Bass => GlyphMetrics.FClefChangeWidth,
+        ClefType.Alto or ClefType.Tenor => GlyphMetrics.CClefChangeWidth,
+        _ => GlyphMetrics.GClefChangeWidth
+    };
+
     // ========================================
     // Spring-Rod Model Support
     // ========================================
@@ -208,6 +221,14 @@ public static class SpacingRules
     /// </remarks>
     public static double CalculateLeftExtent(MusicItem item)
     {
+        // Clef change items use their own width calculation
+        // LILYPOND-REF: lily/clef.cc — change clefs are smaller variants
+        if (item is ClefChangeItem clefChange)
+        {
+            double clefWidth = GetClefChangeWidth(clefChange.NewClef);
+            return clefWidth / 2.0 + GlyphMetrics.ClefChangePadding;
+        }
+
         // Get notehead metrics (note value determines which notehead glyph)
         int noteValue = GetNoteValue(item);
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
@@ -258,6 +279,13 @@ public static class SpacingRules
     /// </remarks>
     public static double CalculateRightExtent(MusicItem item)
     {
+        // Clef change items use their own width calculation
+        if (item is ClefChangeItem clefChange)
+        {
+            double clefWidth = GetClefChangeWidth(clefChange.NewClef);
+            return clefWidth / 2.0 + GlyphMetrics.ClefChangePadding;
+        }
+
         // Get notehead metrics
         int noteValue = GetNoteValue(item);
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
@@ -282,6 +310,9 @@ public static class SpacingRules
     /// </summary>
     private static int GetNoteValue(MusicItem item)
     {
+        // Clef change items have zero duration — treat as quarter note for glyph lookup
+        if (item is ClefChangeItem)
+            return 4;
         var duration = item.Duration;
         return (int)duration.Denominator;
     }
@@ -928,6 +959,12 @@ public static class SpacingRules
     /// </summary>
     private static double CalculateNoteheadRightExtent(MusicItem item)
     {
+        if (item is ClefChangeItem clefChange)
+        {
+            double clefWidth = GetClefChangeWidth(clefChange.NewClef);
+            return clefWidth / 2.0 + GlyphMetrics.ClefChangePadding;
+        }
+
         int noteValue = GetNoteValue(item);
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
 

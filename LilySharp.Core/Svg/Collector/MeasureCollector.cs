@@ -369,6 +369,7 @@ public sealed class MeasureCollector
     private int _timeBeatType = 4;
     private int _keySharps = 0;
     private string _clef = "treble";
+    private string _initialClef = "treble"; // Preserved for Score.Clef (not mutated by mid-measure clef changes)
 
     /// <summary>
     /// Gets the time signature as a Fraction.
@@ -399,6 +400,7 @@ public sealed class MeasureCollector
             _currentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
         }
         _initialOctave = _currentOctave;
+        _initialClef = _clef; // Preserve initial clef before music processing
 
         // Phase 2: Check for parallel expression (multi-voice)
         var parallelExpr = tree.GetRoot().DescendantNodes()
@@ -421,7 +423,7 @@ public sealed class MeasureCollector
             voice,
             new TimeSignature(_timeBeats, _timeBeatType),
             new KeySignature(_keySharps),
-            _clef,
+            _initialClef, // Use initial clef, not the final state after clef changes
             _tempo,
             _title,
             _composer,
@@ -555,7 +557,7 @@ public sealed class MeasureCollector
             voices.ToImmutableArray(),
             new TimeSignature(_timeBeats, _timeBeatType),
             new KeySignature(_keySharps),
-            _clef,
+            _initialClef, // Use initial clef, not the final state after clef changes
             _tempo,
             _title,
             _composer,
@@ -603,6 +605,7 @@ public sealed class MeasureCollector
                 case OverrideDeclarationSyntax:
                 case RevertDeclarationSyntax:
                 case OnceModifierSyntax:
+                case ClefDeclarationSyntax:
                     musicNodes.Add(node);
                     break;
 
@@ -717,6 +720,18 @@ public sealed class MeasureCollector
                             _musicMarks.Add(new MusicMarkItem(markType.Value, builder.CurrentMeasureIndex, mark.Position));
                         }
                     }
+                }
+                break;
+
+            case ClefDeclarationSyntax clefDecl:
+                {
+                    // Mid-measure clef change
+                    // LILYPOND-REF: lily/clef-engraver.cc — inspect_clef_properties()
+                    string newClef = clefDecl.ClefName.Text.ToLowerInvariant();
+                    _clef = newClef;
+                    _currentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+                    var clefChange = new ClefChangeItem(ParseClefType(newClef), clefDecl.Position);
+                    builder.AddItem(clefChange);
                 }
                 break;
 
@@ -875,6 +890,7 @@ public sealed class MeasureCollector
         _timeBeatType = 4;
         _keySharps = 0;
         _clef = "treble";
+        _initialClef = "treble";
     }
 
     /// <summary>
@@ -1374,6 +1390,7 @@ public sealed class MeasureCollector
                 case TupletExpressionSyntax:
                 case RepeatExpressionSyntax:
                 case MusicMarkSyntax:
+                case ClefDeclarationSyntax:
                     musicNodes.Add(node);
                     break;
 
@@ -1394,7 +1411,8 @@ public sealed class MeasureCollector
         // Include expression itself if it is a music node
         if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
-            or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax)
+            or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
+            or ClefDeclarationSyntax)
         {
             musicNodes.Add(expression);
         }
@@ -1405,7 +1423,8 @@ public sealed class MeasureCollector
             .Where(n => !IsInsideGrace(n) && !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n)
                 && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
                 or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
-                or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax);
+                or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
+                or ClefDeclarationSyntax);
 
         musicNodes.AddRange(nodes);
     }

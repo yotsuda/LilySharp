@@ -153,6 +153,31 @@ public static class GlyphMetrics
     /// </summary>
     public const double CClefWidth = 2.720;
 
+    // Change (mid-measure) clef widths - smaller "_change" variants
+    // LILYPOND-REF: lily/clef.cc:29-52 — "_change" suffix glyphs are ~75% of full size
+
+    /// <summary>
+    /// G clef change width in staff spaces (approximately 75% of full G clef).
+    /// </summary>
+    public const double GClefChangeWidth = GClefWidth * 0.75;
+
+    /// <summary>
+    /// F clef change width in staff spaces (approximately 75% of full F clef).
+    /// </summary>
+    public const double FClefChangeWidth = FClefWidth * 0.75;
+
+    /// <summary>
+    /// C clef change width in staff spaces (approximately 75% of full C clef).
+    /// LILYPOND-REF: C clef has no separate _change glyph in Emmentaler; drawn at reduced font-size.
+    /// </summary>
+    public const double CClefChangeWidth = CClefWidth * 0.75;
+
+    /// <summary>
+    /// Padding before and after a mid-measure clef change.
+    /// LILYPOND-REF: scm/define-grobs.scm:800-834 — Clef space-alist
+    /// </summary>
+    public const double ClefChangePadding = 0.5;
+
     // LILYPOND-REF: scm/define-grobs.scm:815 (key-signature . (minimum-space . 3.5))
     /// <summary>
     /// Minimum space from clef to key signature.

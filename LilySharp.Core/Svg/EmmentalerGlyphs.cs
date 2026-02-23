@@ -12,14 +12,16 @@ public static class EmmentalerGlyphs
     // === Clefs ===
     // Note: treble_8 "8" is NOT a glyph - it's rendered as text by ClefModifier.
     // See: lilypond-src/scm/define-grobs.scm L836-867 (ClefModifier grob)
-    // G_change is a smaller G clef for mid-staff clef changes, NOT 8vb.
+    // _change variants are smaller glyphs for mid-staff clef changes (base + 1).
+    // LILYPOND-REF: lily/clef.cc:29-52 — calc_glyph_name appends "_change" suffix
     public const char GClef = '\uE085';           // clefs.G
-    public const char GClef8vb = '\uE086';        // clefs.G_change (smaller, for clef changes)
+    public const char GClefChange = '\uE086';     // clefs.G_change (smaller, for clef changes)
     public const char GClef8va = '\uE085';        // same as GClef
     public const char FClef = '\uE083';           // clefs.F
-    public const char FClef8vb = '\uE084';        // clefs.F_change (smaller, for clef changes)
+    public const char FClefChange = '\uE084';     // clefs.F_change (smaller, for clef changes)
     public const char FClef8va = '\uE083';        // same as FClef
     public const char CClef = '\uE07F';           // clefs.C
+    public const char CClefChange = '\uE080';     // clefs.C_change (smaller, for clef changes)
     public const char TabClef = '\uE08F';          // clefs.tab (6-string TAB)
     public const char TabClefChange = '\uE090';    // clefs.tab_change (smaller)
 
