@@ -1,0 +1,450 @@
+# Lily# Syntax Reference
+
+Complete reference for the `.lys` music notation language.
+
+## Pitches
+
+### Basic Pitch Names
+
+| Pitch | Name |
+|-------|------|
+| `c` | C |
+| `d` | D |
+| `e` | E |
+| `f` | F |
+| `g` | G |
+| `a` | A |
+| `b` | B |
+
+### Accidentals
+
+| Suffix | Meaning | Example |
+|--------|---------|---------|
+| `is` | Sharp | `cis` = C# |
+| `es` | Flat | `ees` = Eb |
+| `isis` | Double sharp | `cisis` = C## |
+| `eses` | Double flat | `deses` = Dbb |
+
+Special forms: `ees` (Eb), `aes` (Ab), `bes` (Bb).
+
+### Octave Marks
+
+| Mark | Meaning |
+|------|---------|
+| `'` | One octave up |
+| `''` | Two octaves up |
+| `,` | One octave down |
+| `,,` | Two octaves down |
+
+Default starting octave is C4 (middle C). Octave is relative to the previous note.
+
+```
+c d e f g a b c'   % C4 D4 E4 F4 G4 A4 B4 C5
+c' c''              % C5 C6
+c, c,,              % C3 C2
+```
+
+## Durations
+
+| Value | Name | Beats (in 4/4) |
+|-------|------|-----------------|
+| `1` | Whole | 4 |
+| `2` | Half | 2 |
+| `4` | Quarter | 1 |
+| `8` | Eighth | 1/2 |
+| `16` | Sixteenth | 1/4 |
+| `32` | Thirty-second | 1/8 |
+| `64` | Sixty-fourth | 1/16 |
+| `128` | One-twenty-eighth | 1/32 |
+
+### Dotted Notes
+
+| Notation | Effect |
+|----------|--------|
+| `4.` | Dotted quarter (1.5 beats) |
+| `2.` | Dotted half (3 beats) |
+| `4..` | Double-dotted quarter (1.75 beats) |
+
+### Default Duration
+
+If no duration is specified, the previous note's duration is used:
+
+```
+c4 d e f    % All quarter notes
+c8 d e f    % All eighth notes
+```
+
+## Notes, Rests, and Chords
+
+### Notes
+
+```
+c4          % C quarter note
+fis8        % F# eighth note
+bes2.       % Bb dotted half note
+```
+
+### Rests
+
+| Syntax | Meaning |
+|--------|---------|
+| `r4` | Quarter rest |
+| `r2` | Half rest |
+| `s4` | Spacer rest (invisible) |
+| `R1` | Full-measure rest |
+
+### Chords
+
+Notes enclosed in angle brackets share a duration:
+
+```
+<c e g>4        % C major triad, quarter note
+<d fis a>2      % D major triad, half note
+<c e g b>1      % C major 7th, whole note
+```
+
+## Articulations
+
+Articulations are attached to notes with the `@` prefix:
+
+```
+c4@staccato     % Staccato
+d4@accent       % Accent
+e4@tenuto       % Tenuto
+f4@marcato      % Marcato
+g4@fermata      % Fermata
+a4@portato      % Portato (tenuto + staccato)
+```
+
+## Ornaments
+
+```
+c4@trill          % Trill
+d4@mordent        % Mordent
+e4@prall          % Inverted mordent (pralltriller)
+f4@turn           % Turn
+g4@invertedturn   % Inverted turn
+```
+
+## Dynamics
+
+Dynamics use `@` prefix (or `\` for LilyPond compatibility):
+
+```
+c4@ppp    % Pianississimo
+c4@pp     % Pianissimo
+c4@p      % Piano
+c4@mp     % Mezzo piano
+c4@mf     % Mezzo forte
+c4@f      % Forte
+c4@ff     % Fortissimo
+c4@fff    % Fortississimo
+```
+
+### Hairpins (Crescendo/Decrescendo)
+
+```
+c4@p @cresc d e f |
+g4@f @decresc a b c |
+```
+
+## Ties and Slurs
+
+### Ties
+
+Connect notes of the same pitch with `~`:
+
+```
+c4~ | c4 d e f    % C tied across barline
+```
+
+### Slurs
+
+Connect different pitches with `(` and `)`:
+
+```
+c4( d e f)         % Slur over four notes
+c4( d) e( f)       % Two separate slurs
+```
+
+## Barlines
+
+| Syntax | Type |
+|--------|------|
+| `\|` | Single barline |
+| `\|\|` | Double barline |
+| `\|.` | Final barline |
+| `\|:` | Repeat start |
+| `:\|` | Repeat end |
+
+## Key Signature
+
+```
+key c major       % C major (no accidentals)
+key g major       % G major (1 sharp)
+key f major       % F major (1 flat)
+key a minor       % A minor (no accidentals)
+key d minor       % D minor (1 flat)
+```
+
+## Clef
+
+```
+clef treble       % Treble clef (G clef)
+clef bass         % Bass clef (F clef)
+clef alto         % Alto clef (C clef, line 3)
+clef tenor        % Tenor clef (C clef, line 4)
+```
+
+## Time Signature
+
+```
+time 4/4          % Common time
+time 3/4          % Waltz time
+time 6/8          % Compound duple
+time 2/2          % Cut time
+```
+
+## Tempo
+
+```
+tempo 120              % Quarter = 120 BPM
+tempo "Allegro" 4 = 120   % With text marking
+```
+
+## Metadata
+
+```
+title "Sonata in C"
+composer "W.A. Mozart"
+```
+
+## Grace Notes
+
+```
+grace { d16 e } f4           % Grace notes before F
+acciaccatura { a16 } b4      % Slashed grace (takes no time)
+appoggiatura { c8 } d4       % Unslashed grace
+```
+
+## Tuplets
+
+```
+tuplet 3/2 { c8 d e }        % Triplet: 3 eighth notes in time of 2
+tuplet 5/4 { c16 d e f g }   % Quintuplet
+```
+
+Nested tuplets are supported:
+
+```
+tuplet 3/2 {
+  c8 d tuplet 3/2 { e16 f g } |
+}
+```
+
+## Repeats
+
+### Volta Repeats
+
+```
+repeat volta 2 {
+  c4 d e f |
+}
+alternative {
+  { g2 g | }     % First ending
+  { a2 a | }     % Second ending
+}
+```
+
+### Percent Repeats
+
+Use the percent repeat syntax to repeat the previous measure:
+
+```
+c4 d e f |
+repeat percent 2 { c4 d e f | }
+```
+
+## Beaming
+
+Beams are automatic for eighth notes and shorter. Manual beam control:
+
+```
+c8[ d e f]     % Beam these four notes together
+```
+
+## Parallel Voices (Multi-Voice)
+
+```
+<< { c'2 d } \\ { e2 f } >>
+```
+
+The `\\` separator creates a second voice on the same staff.
+
+## Variables and Phrases
+
+### Variable Declaration
+
+```
+melody = { c4 d e f | g2 g | }
+```
+
+### Phrase Declaration
+
+```
+phrase theme {
+  c4 d e f | g2 g |
+}
+```
+
+### Variable Reference
+
+```
+$theme              % Insert phrase content here
+$melody             % Insert variable content
+```
+
+## Sections and Parts
+
+### Part Declaration
+
+```
+part rightHand {
+  clef: treble
+}
+
+part leftHand {
+  clef: bass
+}
+```
+
+### Section with Parts
+
+```
+section Main {
+  rightHand { c4 d e f | }
+  leftHand { c2 c | }
+}
+```
+
+### Structure (Playback Order)
+
+```
+structure { Intro Main Main Coda }
+```
+
+## Render Block
+
+Controls output layout:
+
+```
+render score {
+  grandStaff {
+    staff treble { rightHand }
+    staff bass { leftHand }
+  }
+}
+```
+
+## Override/Revert
+
+Modify engraving properties:
+
+```
+override Stem.length = 7
+c4 d e f |
+revert Stem.length
+
+once override NoteHead.color = "red"
+c4 d e f |        % Only first note is red
+```
+
+## Lyrics
+
+```
+section Main {
+  melody { c4 d e f | g2 g | }
+  lyrics {
+    Hap- py birth- day |
+    to you |
+  }
+}
+```
+
+## Music Marks
+
+### Rehearsal Marks
+
+```
+c4@mark.A d e f |
+```
+
+### Navigation Marks
+
+```
+c4@segno d e f |
+c4@coda d e f |
+c4@fine
+c4@dc
+c4@ds.al.fine
+```
+
+### Text Spanners
+
+```
+c4@rit d e f |         % Ritardando
+c4@accel d e f |       % Accelerando
+```
+
+### Ottava Brackets
+
+```
+c4@ottava d e f |      % 8va bracket
+c4@loco d e f |        % End ottava
+```
+
+### Pedal Markings
+
+```
+c4@ped d e f@ped.off |        % Sustain pedal
+c4@sost.ped d@sostenuto |     % Sostenuto pedal
+c4@una.corda d@tre.corde |    % Una corda pedal
+```
+
+### Trill Spanners
+
+```
+c4@startTrillSpan d e@stopTrillSpan f |
+```
+
+## Glissando
+
+```
+c4@gliss d |           % Glissando from C to D
+```
+
+## Arpeggio
+
+```
+<c e g>4@arpeggio      % Arpeggiate chord
+```
+
+## Figured Bass
+
+```
+c4@fig.6 d@fig.6.4 e@fig.5.3 |
+```
+
+## Chord Names
+
+```
+c4@chord.C d@chord.Dm e@chord.Em f@chord.F |
+```
+
+## Comments
+
+```
+// This is a line comment
+/* This is a
+   block comment */
+```

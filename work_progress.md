@@ -3,11 +3,11 @@
 ## 全体進捗
 
 - **総タスク数:** 52 (Phase 1-5: 28 / Phase 6-9: 24)
-- **完了 ✅:** 45 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.3, 7.7-7.8 + Phase 8 全5件 + Phase 9.1-9.2)
+- **完了 ✅:** 46 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.3, 7.7-7.8 + Phase 8 全5件 + Phase 9.1-9.3)
 - **レビュー待ち 🔍:** 0
 - **作業中 ⏳:** 0
-- **未着手 🚀:** 7 (Phase 5.1 + Phase 7.4-7.6 + Phase 9.3-9.5)
-- **進捗率:** 87% (45/52)
+- **未着手 🚀:** 6 (Phase 5.1 + Phase 7.4-7.6 + Phase 9.4-9.5)
+- **進捗率:** 88% (46/52)
 
 ## ステータス凡例
 
@@ -139,7 +139,7 @@
 |--------|:------:|:------:|--------------|------|
 | 9.1 PNG 出力 | ✅ | Medium | — | Svg.Skia 3.4.1 (SkiaSharp 2.88.9) SVG→PNG変換。EmmentalerTypefaceProvider (ITypefaceProvider: CSS font-family list parsing, quote stripping, family name/actual font name dual matching), OTF font format (WOFF2/WOFF非対応のためfonttools変換), PngGenerator/PngRenderOptions (Scale=2.0 default, Quality=100), CLI `png`コマンド (`--scale` option), FindFontDirectory OTF優先。テスト1件追加 |
 | 9.2 MusicXML エクスポート完全化 | ✅ | Medium | — | Multi-section/multi-part (SectionDeclaration+PartBlock→multiple MusicXml parts), variable/phrase resolution (PhraseDeclaration/VariableDeclaration→inline expansion), ties (TieSyntax→tie+tied elements), slurs (SlurSyntax→slur elements), grace notes (GraceExpressionSyntax→grace+slash), dynamics as direction elements, ornaments (trill-mark/mordent/inverted-mordent/turn/inverted-turn), portato (detached-legato), metadata pre-collection (key/time/tempo resolved before first measure), テスト11件追加 (計23件) |
-| 9.3 ユーザードキュメント | 🚀 | High | — | .lys 文法リファレンス、チュートリアル、コマンドリファレンス |
+| 9.3 ユーザードキュメント | ✅ | High | — | docs/SYNTAX_REFERENCE.md (全構文要素: ピッチ/臨時記号/音価/連符/タイ/スラー/アーティキュレーション/装飾音/ダイナミクス/grace/repeat/lyrics/override等), docs/CLI_REFERENCE.md (全6コマンド: svg/pdf/png/midi/xml/check + オプション), docs/TUTORIAL.md (入門チュートリアル: 基本→メタデータ→和音→ダイナミクス→グランドスタッフ→フレーズ再利用→リピート) |
 | 9.4 LSP 機能拡充 | 🚀 | Medium | — | 新構文 (override/revert, Phase 3-5 記法) の補完・診断対応 |
 | 9.5 VS Code 拡張更新 | 🚀 | Medium | — | シンタックスハイライト更新、スニペット追加、プレビュー機能 |
 
