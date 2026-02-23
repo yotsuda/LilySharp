@@ -1,0 +1,29 @@
+// Trill Spanner Test
+// Tests trill spanners (tr + wavy line extension)
+title "Trill Spanners"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody {
+  clef: treble
+}
+
+// Simple trill spanner across two notes
+phrase m1 { c'4@startTrillSpan d e f@stopTrillSpan | g4 a b c' | }
+
+// Trill spanner spanning a full measure
+phrase m2 { c'4@startTrillSpan d e f | g4 a b c'@stopTrillSpan | }
+
+// Multiple trill spanners
+phrase m3 { c'4@startTrillSpan d@stopTrillSpan e4@startTrillSpan f@stopTrillSpan | g4 a b c' | }
+
+section A { melody { $m1 } }
+section B { melody { $m2 } }
+section C { melody { $m3 } }
+
+structure { A B C }
+
+render score "trill-spanner.svg" { staff { melody } }

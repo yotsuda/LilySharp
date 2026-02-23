@@ -210,6 +210,10 @@ public sealed class SvgRenderer
         // LILYPOND-REF: lily/line-spanner.cc - text + dashed line rendering
         DrawTextSpanners(layout);
 
+        // Draw trill spanners
+        // LILYPOND-REF: lily/trill-spanner-engraver.cc - trill + wavy line rendering
+        DrawTrillSpanners(layout);
+
         // Draw ottava brackets
         // LILYPOND-REF: lily/ottava-bracket.cc - ottava bracket rendering
         DrawOttavaBrackets(layout);
@@ -275,6 +279,9 @@ public sealed class SvgRenderer
 
         // Draw text spanners
         DrawTextSpanners(layout);
+
+        // Draw trill spanners
+        DrawTrillSpanners(layout);
 
         // Draw ottava brackets
         DrawOttavaBrackets(layout);
@@ -3672,6 +3679,78 @@ public sealed class SvgRenderer
                         $"stroke=\"black\" stroke-width=\"{lineThickness:F3}\" " +
                         $"class=\"text-spanner-line\" data-pos=\"{spanner.SourcePosition}\" />");
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Draws all trill spanners ("tr" glyph + wavy line extension).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/trill-spanner-engraver.cc Trill_spanner_engraver
+    /// LILYPOND-REF: scm/define-grobs.scm:2175-2230 TrillSpanner grob
+    ///
+    /// A trill spanner consists of:
+    /// - "tr" symbol (scripts.trill glyph U+E05C) at the start
+    /// - Wavy line extension (style = trill) to the end point
+    ///
+    /// The wavy line uses zigzag segments matching LilyPond's trill style.
+    /// </remarks>
+    private void DrawTrillSpanners(ScoreLayout layout)
+    {
+        if (layout.TrillSpannerLayouts.IsDefaultOrEmpty)
+            return;
+
+        // Build measure to system Y mapping
+        var measureToSystemY = new Dictionary<int, double>();
+        foreach (var system in layout.Systems)
+            foreach (var measure in system.Measures)
+                measureToSystemY[measure.MeasureIndex] = system.Y;
+
+        // LILYPOND-REF: scm/define-grobs.scm:2228 (style . trill)
+        // Wavy line parameters
+        const double wavePeriod = 0.8;   // Staff spaces per full wave cycle
+        const double waveAmplitude = 0.2; // Half-height of wave in staff spaces
+        double lineThickness = StaffLineThickness;
+
+        foreach (var spanner in layout.TrillSpannerLayouts)
+        {
+            double systemY = measureToSystemY.TryGetValue(spanner.StartMeasureIndex, out var y) ? y : 0;
+            double absoluteY = systemY + spanner.Y;
+
+            // Draw "tr" glyph (scripts.trill = U+E05C)
+            // Continuation segments (cross-system) have GlyphX == LineStartX — no glyph needed
+            bool isContinuation = Math.Abs(spanner.GlyphX - spanner.LineStartX) < 0.01;
+            if (!isContinuation)
+            {
+                DrawGlyph(EmmentalerGlyphs.OrnTrill, spanner.GlyphX, absoluteY, spanner.SourcePosition);
+            }
+
+            // Draw wavy line extension
+            if (spanner.LineStartX < spanner.LineEndX)
+            {
+                double lineY = absoluteY;
+                double length = spanner.LineEndX - spanner.LineStartX;
+                int segments = Math.Max(1, (int)(length / (wavePeriod / 2)));
+
+                // Build SVG path for wavy line using quadratic Bezier curves
+                var path = new System.Text.StringBuilder();
+                double segmentWidth = length / segments;
+                double currentX = spanner.LineStartX;
+
+                path.Append($"M {currentX:F2} {lineY:F2}");
+                for (int i = 0; i < segments; i++)
+                {
+                    double nextX = currentX + segmentWidth;
+                    double cpX = currentX + segmentWidth / 2;
+                    double cpY = (i % 2 == 0) ? lineY - waveAmplitude : lineY + waveAmplitude;
+                    path.Append($" Q {cpX:F2} {cpY:F2} {nextX:F2} {lineY:F2}");
+                    currentX = nextX;
+                }
+
+                _svg.AppendLine($"  <path d=\"{path}\" " +
+                    $"fill=\"none\" stroke=\"black\" stroke-width=\"{lineThickness:F3}\" " +
+                    $"class=\"trill-spanner-line\" data-pos=\"{spanner.SourcePosition}\" />");
             }
         }
     }

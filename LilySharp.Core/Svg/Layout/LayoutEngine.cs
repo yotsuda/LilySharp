@@ -82,7 +82,8 @@ public sealed class LayoutEngine
             score.Dynamics, score.Articulations, score.GraceNotes,
             score.Lyrics, score.MusicMarks, score.CustomTexts,
             score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
-            score.Voice.Measures, score.FiguredBasses, score.ChordNames, score.PercentRepeats);
+            score.Voice.Measures, score.FiguredBasses, score.ChordNames, score.PercentRepeats,
+            trillSpanners: score.TrillSpanners);
 
         // Calculate part combination layouts for multi-voice scores
         var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
@@ -185,7 +186,8 @@ public sealed class LayoutEngine
             score.Lyrics, score.MusicMarks, score.CustomTexts,
             score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
             primaryStaff.PrimaryVoice.Measures, score.FiguredBasses, score.ChordNames,
-            score.PercentRepeats, crossStaffLayouts);
+            score.PercentRepeats, crossStaffLayouts,
+            trillSpanners: score.TrillSpanners);
 
         // Calculate part combination layouts for staves with multiple voices
         var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
@@ -258,7 +260,8 @@ public sealed class LayoutEngine
         ImmutableArray<FiguredBassItem>? figuredBasses = null,
         ImmutableArray<ChordNameItem>? chordNames = null,
         ImmutableArray<PercentRepeatItem>? percentRepeats = null,
-        ImmutableArray<CrossStaffLayout>? crossStaffLayouts = null)
+        ImmutableArray<CrossStaffLayout>? crossStaffLayouts = null,
+        ImmutableArray<TrillSpannerItem>? trillSpanners = null)
     {
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
         var lyricLayouts = new LyricEngraver().CalculateLayouts(lyrics, ml, _options.StaffHeight);
@@ -303,6 +306,11 @@ public sealed class LayoutEngine
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
             percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml);
 
+        // Layout trill spanners (tr + wavy line)
+        // LILYPOND-REF: lily/trill-spanner-engraver.cc — trill spanner positioning
+        var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
+            trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml);
+
         return new AnnotationLayouts(
             Dynamics: dynamicLayouts,
             Articulations: score != null ? ArticulationEngraver.Calculate(score, articulations, systems, ml) : ImmutableArray<ArticulationLayout>.Empty,
@@ -321,7 +329,8 @@ public sealed class LayoutEngine
             FiguredBasses: figuredBassLayouts,
             ChordNames: chordNameLayouts,
             PercentRepeats: percentRepeatLayouts,
-            CrossStaffs: crossStaffLayouts ?? ImmutableArray<CrossStaffLayout>.Empty);
+            CrossStaffs: crossStaffLayouts ?? ImmutableArray<CrossStaffLayout>.Empty,
+            TrillSpanners: trillSpannerLayouts);
     }
 
     private static ScoreLayout BuildScoreLayout(
@@ -342,6 +351,7 @@ public sealed class LayoutEngine
             a.FiguredBasses, a.ChordNames, a.PercentRepeats,
             a.CrossStaffs,
             partCombineLayouts.IsDefault ? ImmutableArray<PartCombineLayout>.Empty : partCombineLayouts,
+            a.TrillSpanners,
             voiceOffsets, restShifts);
     }
 
@@ -373,5 +383,6 @@ public sealed class LayoutEngine
         ImmutableArray<FiguredBassLayout> FiguredBasses,
         ImmutableArray<ChordNameLayout> ChordNames,
         ImmutableArray<PercentRepeatLayout> PercentRepeats,
-        ImmutableArray<CrossStaffLayout> CrossStaffs);
+        ImmutableArray<CrossStaffLayout> CrossStaffs,
+        ImmutableArray<TrillSpannerLayout> TrillSpanners);
 }

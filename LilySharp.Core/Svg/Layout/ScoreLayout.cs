@@ -179,6 +179,7 @@ public sealed record ScoreLayout(
     ImmutableArray<PercentRepeatLayout> PercentRepeatLayouts,
     ImmutableArray<CrossStaffLayout> CrossStaffLayouts,
     ImmutableArray<PartCombineLayout> PartCombineLayouts,
+    ImmutableArray<TrillSpannerLayout> TrillSpannerLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
     ImmutableDictionary<RestShiftKey, double> RestShifts
 )

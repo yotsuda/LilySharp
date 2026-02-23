@@ -82,6 +82,7 @@ public class SvgSnapshotTests
         yield return new object[] { "test/instrument-names" };
         yield return new object[] { "test/clef-change" };
         yield return new object[] { "test/keysig-change" };
+        yield return new object[] { "test/trill-spanner" };
     }
 
     /// <summary>

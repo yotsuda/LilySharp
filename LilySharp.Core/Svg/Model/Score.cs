@@ -116,6 +116,9 @@ public sealed record Score
     /// <summary>Grob property reverts from revert declarations.</summary>
     public ImmutableArray<GrobRevert> GrobReverts { get; }
 
+    /// <summary>Trill spanners (tr + wavy line) in the score.</summary>
+    public ImmutableArray<TrillSpannerItem> TrillSpanners { get; }
+
     /// <summary>Whether this score has multiple voices.</summary>
     public bool IsMultiVoice => Voices.Length > 1;
 
@@ -145,8 +148,9 @@ public sealed record Score
         ImmutableArray<PercentRepeatItem>? percentRepeats = null,
         ImmutableArray<CrossStaffItem>? crossStaffItems = null,
         ImmutableArray<GrobOverride>? grobOverrides = null,
-        ImmutableArray<GrobRevert>? grobReverts = null)
-        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts, voltaBrackets, tupletBrackets, arpeggios, figuredBasses, chordNames, percentRepeats, crossStaffItems, grobOverrides, grobReverts)
+        ImmutableArray<GrobRevert>? grobReverts = null,
+        ImmutableArray<TrillSpannerItem>? trillSpanners = null)
+        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts, voltaBrackets, tupletBrackets, arpeggios, figuredBasses, chordNames, percentRepeats, crossStaffItems, grobOverrides, grobReverts, trillSpanners)
     {
     }
 
@@ -176,7 +180,8 @@ public sealed record Score
         ImmutableArray<PercentRepeatItem>? percentRepeats = null,
         ImmutableArray<CrossStaffItem>? crossStaffItems = null,
         ImmutableArray<GrobOverride>? grobOverrides = null,
-        ImmutableArray<GrobRevert>? grobReverts = null)
+        ImmutableArray<GrobRevert>? grobReverts = null,
+        ImmutableArray<TrillSpannerItem>? trillSpanners = null)
     {
         if (voices.Length == 0)
             throw new ArgumentException("Score must have at least one voice", nameof(voices));
@@ -204,6 +209,7 @@ public sealed record Score
         CrossStaffItems = crossStaffItems ?? ImmutableArray<CrossStaffItem>.Empty;
         GrobOverrides = grobOverrides ?? ImmutableArray<GrobOverride>.Empty;
         GrobReverts = grobReverts ?? ImmutableArray<GrobRevert>.Empty;
+        TrillSpanners = trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty;
     }
 
     /// <summary>Total number of measures in the score (from primary voice).</summary>

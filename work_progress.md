@@ -3,11 +3,11 @@
 ## 全体進捗
 
 - **総タスク数:** 52 (Phase 1-5: 28 / Phase 6-9: 24)
-- **完了 ✅:** 38 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.3 + Phase 8.1-8.2)
+- **完了 ✅:** 39 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.3, 7.8 + Phase 8.1-8.2)
 - **レビュー待ち 🔍:** 0
 - **作業中 ⏳:** 0
-- **未着手 🚀:** 14 (Phase 5.1 + Phase 7.4-7.8 + Phase 8.3-8.5 + Phase 9)
-- **進捗率:** 73% (38/52)
+- **未着手 🚀:** 13 (Phase 5.1 + Phase 7.4-7.7 + Phase 8.3-8.5 + Phase 9)
+- **進捗率:** 75% (39/52)
 
 ## ステータス凡例
 
@@ -113,7 +113,7 @@
 | 7.5 Ossia 譜表 | 🚀 | Medium | lily/keep-alive-together-engraver.cc | 一時的な代替パッセージ用の小譜表 |
 | 7.6 マルチムーブメント | 🚀 | Medium | — | 複数楽章の明示的サポート。楽章間のページ区切り・タイトル |
 | 7.7 Courtesy accidentals 描画 | 🚀 | Medium | lily/accidental-engraver.cc | IsCourtesy フィールドは実装済み。括弧付き臨時記号の SVG 描画 |
-| 7.8 トリル記号 + 装飾音 | 🚀 | Medium | lily/trill-spanner-engraver.cc | トリルスパナー (tr~~~)、ターン、モルデント等の装飾記号 |
+| 7.8 トリルスパナー | ✅ | Medium | lily/trill-spanner-engraver.cc | TrillSpannerItem model, @startTrillSpan/@stopTrillSpan + @trillSpan.start/.stop両構文対応, MeasureCollector trill event収集+PairTrillSpannerEvents pairing, TrillSpannerEngraver.Calculate (BoundPadding=0.5, StaffPadding=1.0, TrillGlyphWidth=1.6, GlyphLinePadding=0.3), cross-system spanner splitting (measure-to-system mapping, first=glyph+line to edge, continuation=line only), SvgRenderer DrawTrillSpanners ("tr" glyph U+E05C + wavy line quadratic Bezier, wavePeriod=0.8, waveAmplitude=0.2), trill-spanner.lys sample (single/cross-measure/multiple trills), テスト8件+スナップショット追加。931全テスト通過。LILYPOND-REF: lily/trill-spanner-engraver.cc, scm/define-grobs.scm:2175-2230 |
 
 ---
 
@@ -192,4 +192,5 @@
 | 2026-02-23 | Phase 8.2 コードカバレッジ: coverlet.collector 6.0.2追加。XPlat Code Coverage収集+CI artifact upload。現在の達成率: line 83.3%, branch 74.5% |
 | 2026-02-23 | Phase 7.1 楽器名表示: Part `name:` property parse (identifier/string literal), StaffSpec/Staff/StaffLayout.InstrumentName propagation, SvgRenderer.DrawInstrumentNames (serif font, text-anchor=end, padding=0.3 define-grobs.scm:1711-1728準拠), EstimateInstrumentNameWidth (viewBox negative X extension), Grand staff centering (single named staff→brace span center), instrument-names.lys sample, InstrumentNameTests 8件, スナップショット33件全更新。LILYPOND-REF: lily/instrument-name-engraver.cc |
 | 2026-02-23 | Phase 7.2 小節途中の音部記号変更: ClefChangeItem model (zero-duration MusicItem, NewClef property), MeasureCollector ClefDeclarationSyntax handling (ProcessMusicNode+5箇所type filter追加: CollectMeasuresFromNode/ProcessPartBlock/ExpandVariable×2), EmmentalerGlyphs _change glyphs (GClefChange=U+E086, FClefChange=U+E084, CClefChange=U+E080), GlyphMetrics change widths (×0.75+padding=0.5), SpacingRules ClefChangeItem対応 (CalculateLeft/RightExtent, GetNoteValue), SvgRenderer DrawClefChange (smaller glyph描画), GetActiveClefForSystem/GetActiveClefStringForSystem (system-start clef tracking: scan preceding measures+leading items in first measure), Score.Clef _initialClef fix (mid-measure clef changes no longer corrupt Score.Clef), ClefTypeToString helper, clef-change.lys sample, ClefChangeTests 5件+スナップショット34件全通過。913全テスト通過。LILYPOND-REF: lily/clef-engraver.cc, lily/clef.cc |
+| 2026-02-23 | Phase 7.8 トリルスパナー: TrillSpannerItem model (StartMeasureIndex/StartItemIndex/EndMeasureIndex/EndItemIndex/SourcePosition), @startTrillSpan/@stopTrillSpan (ArticulationSyntax Type=None, name検出) + @trillSpan.start/.stop (MusicMarkSyntax compound form) 両構文対応, MeasureCollector _trillSpannerEvents収集+PairTrillSpannerEvents start/stop pairing, TrillSpannerEngraver.Calculate (BoundPadding=0.5, StaffPadding=1.0, TrillGlyphWidth=1.6, TrillGlyphHeight=1.2, GlyphLinePadding=0.3 define-grobs.scm:2175-2230準拠), cross-system spanner splitting (measure-to-system mapping, startSys≠endSys時: first system=glyph+line to system edge, continuation=line only GlyphX==LineStartX signal, line-spanner.cc:526-648準拠), TrillSpannerLayout record struct, ScoreLayout/LayoutEngine/AnnotationLayouts統合, SvgRenderer.DrawTrillSpanners ("tr" glyph U+E05C OrnTrill + wavy line SVG quadratic Bezier Q command, wavePeriod=0.8, waveAmplitude=0.2, isContinuation判定でglyph抑制), Score/MultiStaffScore.TrillSpanners property追加, trill-spanner.lys sample (section A: single measure trill, section B: cross-measure/cross-system trill, section C: multiple trills), TrillSpannerTests 7件 + スナップショット1件追加。931全テスト通過。LILYPOND-REF: lily/trill-spanner-engraver.cc, scm/define-grobs.scm:2175-2230 |
 | 2026-02-23 | Phase 7.3 小節途中の調号変更: KeySignatureChangeItem model (zero-duration MusicItem, NewKey/PreviousKey for cancellation), MeasureCollector KeySignatureSyntax handling (5箇所type filter+ProcessMusicNode case追加), _initialKeySharps field (Score.KeySignature initial value preservation), IsInsideMusicContent guard (CollectDefinitions: phrase/section内のkey宣言を除外), CalculateKeySharps bug fix (PitchName既にaccidental含む→二重suffix追加の修正+fis/cis/ces追加), SpacingRules KeySignatureChangeItem対応 (GetKeySignatureChangeWidth: cancellation naturals+new accidentals width計算), GlyphMetrics.KeySignatureNaturalWidth=0.8追加, SvgRenderer DrawKeySignatureChange (DrawCancellationNaturals/DrawPartialCancellationNaturals), GetActiveKeySignatureForSystem/GetActiveKeySignatureForMultiStaff (system-start key tracking), _currentDrawClef field (clef-aware Y positioning), keysig-change.lys sample (G→C, C→F, G→Eb), KeySignatureChangeTests 8件+スナップショット35件全通過。923全テスト通過。LILYPOND-REF: lily/key-engraver.cc |

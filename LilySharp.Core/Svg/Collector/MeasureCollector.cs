@@ -356,6 +356,8 @@ public sealed class MeasureCollector
     // Grob property overrides and reverts
     private readonly List<GrobOverride> _grobOverrides = new();
     private readonly List<GrobRevert> _grobReverts = new();
+    // Trill spanner start/stop events (paired into TrillSpannerItems after collection)
+    private readonly List<(bool isStart, int measureIndex, int itemIndex, int sourcePosition)> _trillSpannerEvents = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
     // Default duration
@@ -443,7 +445,8 @@ public sealed class MeasureCollector
             percentRepeats: _percentRepeats.ToImmutableArray(),
             crossStaffItems: _crossStaffItems.ToImmutableArray(),
             grobOverrides: _grobOverrides.ToImmutableArray(),
-            grobReverts: _grobReverts.ToImmutableArray());
+            grobReverts: _grobReverts.ToImmutableArray(),
+            trillSpanners: PairTrillSpannerEvents());
     }
 
     /// <summary>
@@ -501,7 +504,8 @@ public sealed class MeasureCollector
             figuredBasses: _figuredBasses.ToImmutableArray(),
             chordNames: _chordNames.ToImmutableArray(),
             percentRepeats: _percentRepeats.ToImmutableArray(),
-            crossStaffItems: _crossStaffItems.ToImmutableArray());
+            crossStaffItems: _crossStaffItems.ToImmutableArray(),
+            trillSpanners: PairTrillSpannerEvents());
     }
 
     private List<Measure> CollectMeasuresForVoice(string voiceName)
@@ -575,7 +579,8 @@ public sealed class MeasureCollector
             arpeggios: _arpeggios.ToImmutableArray(),
             figuredBasses: _figuredBasses.ToImmutableArray(),
             grobOverrides: _grobOverrides.ToImmutableArray(),
-            grobReverts: _grobReverts.ToImmutableArray());
+            grobReverts: _grobReverts.ToImmutableArray(),
+            trillSpanners: PairTrillSpannerEvents());
     }
 
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
@@ -894,6 +899,7 @@ public sealed class MeasureCollector
         _crossStaffItems.Clear();
         _grobOverrides.Clear();
         _grobReverts.Clear();
+        _trillSpannerEvents.Clear();
         _structure = null;
         _root = null;
         _currentOctave = 4;
@@ -1821,24 +1827,86 @@ public sealed class MeasureCollector
                 }
                 else
                 {
-                    // Check if this articulation is a MusicMark (cresc, rit, mark.A, ottava, ped, etc.)
-                    var markName = articulationSyntax.NameToken.Text;
-                    var markType = MusicMarkItem.ParseMarkName(markName);
-                    if (markType != null)
+                    // Check for trill spanner start/stop
+                    // LILYPOND-REF: lily/trill-spanner-engraver.cc — \startTrillSpan / \stopTrillSpan
+                    var nameText = articulationSyntax.NameToken.Text;
+                    var nameLower = nameText.ToLowerInvariant();
+                    if (nameLower == "starttrillspan")
                     {
-                        if (markType.Value == MusicMarkType.Rehearsal)
+                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.Position));
+                    }
+                    else if (nameLower == "stoptrillspan")
+                    {
+                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.Position));
+                    }
+                    else
+                    {
+                        // Check if this articulation is a MusicMark (cresc, rit, mark.A, ottava, ped, etc.)
+                        var markType = MusicMarkItem.ParseMarkName(nameText);
+                        if (markType != null)
                         {
-                            string text = MusicMarkItem.ParseRehearsalText(markName);
-                            _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, text, measureIndex, articulationSyntax.Position));
-                        }
-                        else
-                        {
-                            _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.Position));
+                            if (markType.Value == MusicMarkType.Rehearsal)
+                            {
+                                string text = MusicMarkItem.ParseRehearsalText(nameText);
+                                _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, text, measureIndex, articulationSyntax.Position));
+                            }
+                            else
+                            {
+                                _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.Position));
+                            }
                         }
                     }
                 }
             }
+            else if (articulation is MusicMarkSyntax markSyntax)
+            {
+                // Handle compound mark syntax: @trillSpan.start / @trillSpan.stop
+                var markName = markSyntax.MarkName.ToLowerInvariant();
+                if (markName == "trillspan.start")
+                {
+                    _trillSpannerEvents.Add((true, measureIndex, itemIndex, markSyntax.Position));
+                }
+                else if (markName == "trillspan.stop")
+                {
+                    _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position));
+                }
+            }
         }
+    }
+
+    /// <summary>
+    /// Pairs trill spanner start/stop events into TrillSpannerItems.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/trill-spanner-engraver.cc:47-85 start/stop pairing
+    /// </remarks>
+    private ImmutableArray<TrillSpannerItem> PairTrillSpannerEvents()
+    {
+        if (_trillSpannerEvents.Count == 0)
+            return ImmutableArray<TrillSpannerItem>.Empty;
+
+        var items = ImmutableArray.CreateBuilder<TrillSpannerItem>();
+        (bool isStart, int measureIndex, int itemIndex, int sourcePosition)? pendingStart = null;
+
+        foreach (var evt in _trillSpannerEvents)
+        {
+            if (evt.isStart)
+            {
+                pendingStart = evt;
+            }
+            else if (pendingStart != null)
+            {
+                items.Add(new TrillSpannerItem(
+                    pendingStart.Value.measureIndex,
+                    pendingStart.Value.itemIndex,
+                    evt.measureIndex,
+                    evt.itemIndex,
+                    pendingStart.Value.sourcePosition));
+                pendingStart = null;
+            }
+        }
+
+        return items.ToImmutable();
     }
 
     /// <summary>

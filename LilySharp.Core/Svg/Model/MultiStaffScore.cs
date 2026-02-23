@@ -78,6 +78,9 @@ public sealed record MultiStaffScore
     /// <summary>Grob property reverts.</summary>
     public ImmutableArray<GrobRevert> GrobReverts { get; }
 
+    /// <summary>Trill spanners (tr + wavy line).</summary>
+    public ImmutableArray<TrillSpannerItem> TrillSpanners { get; }
+
     /// <summary>Whether this score has a grand staff.</summary>
     public bool HasGrandStaff => StaffGroups.Any(g => g.IsGrandStaff);
 
@@ -108,7 +111,8 @@ public sealed record MultiStaffScore
         ImmutableArray<PercentRepeatItem>? percentRepeats = null,
         ImmutableArray<CrossStaffItem>? crossStaffItems = null,
         ImmutableArray<GrobOverride>? grobOverrides = null,
-        ImmutableArray<GrobRevert>? grobReverts = null)
+        ImmutableArray<GrobRevert>? grobReverts = null,
+        ImmutableArray<TrillSpannerItem>? trillSpanners = null)
     {
         if (staffGroups.Length == 0)
             throw new ArgumentException("Score must have at least one staff group", nameof(staffGroups));
@@ -134,6 +138,7 @@ public sealed record MultiStaffScore
         CrossStaffItems = crossStaffItems ?? ImmutableArray<CrossStaffItem>.Empty;
         GrobOverrides = grobOverrides ?? ImmutableArray<GrobOverride>.Empty;
         GrobReverts = grobReverts ?? ImmutableArray<GrobRevert>.Empty;
+        TrillSpanners = trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty;
     }
 
     /// <summary>
@@ -165,7 +170,8 @@ public sealed record MultiStaffScore
             percentRepeats: score.PercentRepeats,
             crossStaffItems: score.CrossStaffItems,
             grobOverrides: score.GrobOverrides,
-            grobReverts: score.GrobReverts);
+            grobReverts: score.GrobReverts,
+            trillSpanners: score.TrillSpanners);
     }
 
     /// <summary>Number of measures (from first staff of first group).</summary>
