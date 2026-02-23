@@ -332,15 +332,23 @@ public sealed class LilySharpLanguageServer
         {
             Items =
             [
-                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertText = "score {\n\t$0\n}" },
-                new CompletionItem { Label = "part", Kind = CompletionItemKind.Keyword, InsertText = "part {\n\t$0\n}" },
-                new CompletionItem { Label = "relative", Kind = CompletionItemKind.Keyword, InsertText = "relative c' {\n\t$0\n}" },
-                new CompletionItem { Label = "let", Kind = CompletionItemKind.Keyword, InsertText = "let $1 = $0" },
-                new CompletionItem { Label = "title", Kind = CompletionItemKind.Keyword, InsertText = "title \"$0\"" },
-                new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertText = "composer \"$0\"" },
-                new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertText = "tempo $0" },
-                new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertText = "time $0" },
-                new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertText = "key $0" }
+                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertText = "score {\n\t$0\n}", Detail = "Score block" },
+                new CompletionItem { Label = "part", Kind = CompletionItemKind.Keyword, InsertText = "part $1 {\n\t$0\n}", Detail = "Part declaration" },
+                new CompletionItem { Label = "section", Kind = CompletionItemKind.Keyword, InsertText = "section $1 {\n\t$0\n}", Detail = "Section declaration" },
+                new CompletionItem { Label = "phrase", Kind = CompletionItemKind.Keyword, InsertText = "phrase $1 {\n\t$0\n}", Detail = "Reusable phrase" },
+                new CompletionItem { Label = "structure", Kind = CompletionItemKind.Keyword, InsertText = "structure { $0 }", Detail = "Playback order" },
+                new CompletionItem { Label = "render", Kind = CompletionItemKind.Keyword, InsertText = "render score {\n\t$0\n}", Detail = "Output layout" },
+                new CompletionItem { Label = "relative", Kind = CompletionItemKind.Keyword, InsertText = "relative c' {\n\t$0\n}", Detail = "Relative pitch mode" },
+                new CompletionItem { Label = "let", Kind = CompletionItemKind.Keyword, InsertText = "let $1 = $0", Detail = "Variable declaration" },
+                new CompletionItem { Label = "title", Kind = CompletionItemKind.Keyword, InsertText = "title \"$0\"", Detail = "Title metadata" },
+                new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertText = "composer \"$0\"", Detail = "Composer metadata" },
+                new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertText = "tempo $0", Detail = "Tempo (BPM)" },
+                new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertText = "time $0", Detail = "Time signature" },
+                new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertText = "key $0", Detail = "Key signature" },
+                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertText = "clef $0", Detail = "Clef (treble/bass/alto/tenor)" },
+                new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertText = "override $1.$2 = $0", Detail = "Override grob property" },
+                new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertText = "revert $1.$0", Detail = "Revert grob property" },
+                new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertText = "once override $1.$2 = $0", Detail = "One-time override" }
             ]
         };
     }
@@ -351,15 +359,36 @@ public sealed class LilySharpLanguageServer
         {
             Items =
             [
-                new CompletionItem { Label = "c", Kind = CompletionItemKind.Value, Detail = "C pitch" },
-                new CompletionItem { Label = "d", Kind = CompletionItemKind.Value, Detail = "D pitch" },
-                new CompletionItem { Label = "e", Kind = CompletionItemKind.Value, Detail = "E pitch" },
-                new CompletionItem { Label = "f", Kind = CompletionItemKind.Value, Detail = "F pitch" },
-                new CompletionItem { Label = "g", Kind = CompletionItemKind.Value, Detail = "G pitch" },
-                new CompletionItem { Label = "a", Kind = CompletionItemKind.Value, Detail = "A pitch" },
-                new CompletionItem { Label = "b", Kind = CompletionItemKind.Value, Detail = "B pitch" },
-                new CompletionItem { Label = "r", Kind = CompletionItemKind.Value, Detail = "Rest" },
-                new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertText = "repeat volta 2 {\n\t$0\n}" }
+                // Pitches
+                new CompletionItem { Label = "c", Kind = CompletionItemKind.Value, Detail = "C pitch", SortText = "0c" },
+                new CompletionItem { Label = "d", Kind = CompletionItemKind.Value, Detail = "D pitch", SortText = "0d" },
+                new CompletionItem { Label = "e", Kind = CompletionItemKind.Value, Detail = "E pitch", SortText = "0e" },
+                new CompletionItem { Label = "f", Kind = CompletionItemKind.Value, Detail = "F pitch", SortText = "0f" },
+                new CompletionItem { Label = "g", Kind = CompletionItemKind.Value, Detail = "G pitch", SortText = "0g" },
+                new CompletionItem { Label = "a", Kind = CompletionItemKind.Value, Detail = "A pitch", SortText = "0a" },
+                new CompletionItem { Label = "b", Kind = CompletionItemKind.Value, Detail = "B pitch", SortText = "0b" },
+
+                // Rests
+                new CompletionItem { Label = "r", Kind = CompletionItemKind.Value, Detail = "Rest", SortText = "1r" },
+                new CompletionItem { Label = "s", Kind = CompletionItemKind.Value, Detail = "Spacer rest (invisible)", SortText = "1s" },
+                new CompletionItem { Label = "R", Kind = CompletionItemKind.Value, Detail = "Full-measure rest", SortText = "1R" },
+
+                // Structures
+                new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertText = "repeat volta 2 {\n\t$0\n}", Detail = "Repeat block", SortText = "2repeat" },
+                new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "2tuplet" },
+                new CompletionItem { Label = "grace", Kind = CompletionItemKind.Keyword, InsertText = "grace { $0 }", Detail = "Grace notes", SortText = "2grace" },
+                new CompletionItem { Label = "acciaccatura", Kind = CompletionItemKind.Keyword, InsertText = "acciaccatura { $0 }", Detail = "Slashed grace note", SortText = "2acciaccatura" },
+                new CompletionItem { Label = "appoggiatura", Kind = CompletionItemKind.Keyword, InsertText = "appoggiatura { $0 }", Detail = "Unslashed grace note", SortText = "2appoggiatura" },
+
+                // Mid-measure declarations
+                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertText = "clef $0", Detail = "Change clef", SortText = "3clef" },
+                new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertText = "key $0", Detail = "Change key signature", SortText = "3key" },
+                new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertText = "time $0", Detail = "Change time signature", SortText = "3time" },
+
+                // Grob overrides
+                new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertText = "override $1.$2 = $0", Detail = "Override grob property", SortText = "4override" },
+                new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertText = "revert $1.$0", Detail = "Revert grob property", SortText = "4revert" },
+                new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertText = "once override $1.$2 = $0", Detail = "One-time override", SortText = "4once" }
             ]
         };
     }
@@ -370,12 +399,69 @@ public sealed class LilySharpLanguageServer
         {
             Items =
             [
-                new CompletionItem { Label = "staccato", Kind = CompletionItemKind.Value, Detail = "Staccato articulation" },
-                new CompletionItem { Label = "accent", Kind = CompletionItemKind.Value, Detail = "Accent" },
-                new CompletionItem { Label = "tenuto", Kind = CompletionItemKind.Value, Detail = "Tenuto" },
-                new CompletionItem { Label = "marcato", Kind = CompletionItemKind.Value, Detail = "Marcato" },
-                new CompletionItem { Label = "fermata", Kind = CompletionItemKind.Value, Detail = "Fermata" },
-                new CompletionItem { Label = "portato", Kind = CompletionItemKind.Value, Detail = "Portato" }
+                // Articulations
+                new CompletionItem { Label = "staccato", Kind = CompletionItemKind.Value, Detail = "Staccato articulation", SortText = "0staccato" },
+                new CompletionItem { Label = "accent", Kind = CompletionItemKind.Value, Detail = "Accent", SortText = "0accent" },
+                new CompletionItem { Label = "tenuto", Kind = CompletionItemKind.Value, Detail = "Tenuto", SortText = "0tenuto" },
+                new CompletionItem { Label = "marcato", Kind = CompletionItemKind.Value, Detail = "Marcato", SortText = "0marcato" },
+                new CompletionItem { Label = "fermata", Kind = CompletionItemKind.Value, Detail = "Fermata", SortText = "0fermata" },
+                new CompletionItem { Label = "portato", Kind = CompletionItemKind.Value, Detail = "Portato (tenuto + staccato)", SortText = "0portato" },
+
+                // Ornaments
+                new CompletionItem { Label = "trill", Kind = CompletionItemKind.Value, Detail = "Trill ornament", SortText = "1trill" },
+                new CompletionItem { Label = "mordent", Kind = CompletionItemKind.Value, Detail = "Mordent ornament", SortText = "1mordent" },
+                new CompletionItem { Label = "prall", Kind = CompletionItemKind.Value, Detail = "Inverted mordent (pralltriller)", SortText = "1prall" },
+                new CompletionItem { Label = "turn", Kind = CompletionItemKind.Value, Detail = "Turn ornament", SortText = "1turn" },
+                new CompletionItem { Label = "invertedturn", Kind = CompletionItemKind.Value, Detail = "Inverted turn", SortText = "1invertedturn" },
+
+                // Dynamics (@ prefix style)
+                new CompletionItem { Label = "p", Kind = CompletionItemKind.Value, Detail = "Piano (soft)", SortText = "2p" },
+                new CompletionItem { Label = "f", Kind = CompletionItemKind.Value, Detail = "Forte (loud)", SortText = "2f" },
+                new CompletionItem { Label = "pp", Kind = CompletionItemKind.Value, Detail = "Pianissimo", SortText = "2pp" },
+                new CompletionItem { Label = "ff", Kind = CompletionItemKind.Value, Detail = "Fortissimo", SortText = "2ff" },
+                new CompletionItem { Label = "mp", Kind = CompletionItemKind.Value, Detail = "Mezzo-piano", SortText = "2mp" },
+                new CompletionItem { Label = "mf", Kind = CompletionItemKind.Value, Detail = "Mezzo-forte", SortText = "2mf" },
+                new CompletionItem { Label = "cresc", Kind = CompletionItemKind.Value, Detail = "Crescendo hairpin", SortText = "2cresc" },
+                new CompletionItem { Label = "decresc", Kind = CompletionItemKind.Value, Detail = "Decrescendo hairpin", SortText = "2decresc" },
+
+                // Music navigation marks
+                new CompletionItem { Label = "segno", Kind = CompletionItemKind.Value, Detail = "Segno sign", SortText = "3segno" },
+                new CompletionItem { Label = "coda", Kind = CompletionItemKind.Value, Detail = "Coda sign", SortText = "3coda" },
+                new CompletionItem { Label = "fine", Kind = CompletionItemKind.Value, Detail = "Fine (end)", SortText = "3fine" },
+                new CompletionItem { Label = "dc", Kind = CompletionItemKind.Value, Detail = "Da Capo", SortText = "3dc" },
+                new CompletionItem { Label = "ds.al.fine", Kind = CompletionItemKind.Value, Detail = "Dal Segno al Fine", SortText = "3ds.al.fine" },
+                new CompletionItem { Label = "ds.al.coda", Kind = CompletionItemKind.Value, Detail = "Dal Segno al Coda", SortText = "3ds.al.coda" },
+                new CompletionItem { Label = "mark.A", Kind = CompletionItemKind.Value, Detail = "Rehearsal mark A", SortText = "3mark" },
+
+                // Spanners and brackets
+                new CompletionItem { Label = "rit", Kind = CompletionItemKind.Value, Detail = "Ritardando text spanner", SortText = "4rit" },
+                new CompletionItem { Label = "accel", Kind = CompletionItemKind.Value, Detail = "Accelerando text spanner", SortText = "4accel" },
+                new CompletionItem { Label = "ottava", Kind = CompletionItemKind.Value, Detail = "Ottava (8va) bracket", SortText = "4ottava" },
+                new CompletionItem { Label = "loco", Kind = CompletionItemKind.Value, Detail = "End ottava bracket", SortText = "4loco" },
+                new CompletionItem { Label = "startTrillSpan", Kind = CompletionItemKind.Value, Detail = "Start trill spanner", SortText = "4startTrillSpan" },
+                new CompletionItem { Label = "stopTrillSpan", Kind = CompletionItemKind.Value, Detail = "Stop trill spanner", SortText = "4stopTrillSpan" },
+
+                // Pedal markings
+                new CompletionItem { Label = "ped", Kind = CompletionItemKind.Value, Detail = "Sustain pedal on", SortText = "5ped" },
+                new CompletionItem { Label = "ped.off", Kind = CompletionItemKind.Value, Detail = "Sustain pedal off", SortText = "5ped.off" },
+                new CompletionItem { Label = "sost.ped", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal on", SortText = "5sost.ped" },
+                new CompletionItem { Label = "sostenuto", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal off", SortText = "5sostenuto" },
+                new CompletionItem { Label = "una.corda", Kind = CompletionItemKind.Value, Detail = "Una corda pedal on", SortText = "5una.corda" },
+                new CompletionItem { Label = "tre.corde", Kind = CompletionItemKind.Value, Detail = "Una corda pedal off", SortText = "5tre.corde" },
+
+                // Notation marks
+                new CompletionItem { Label = "gliss", Kind = CompletionItemKind.Value, Detail = "Glissando to next note", SortText = "6gliss" },
+                new CompletionItem { Label = "arpeggio", Kind = CompletionItemKind.Value, Detail = "Arpeggiate chord", SortText = "6arpeggio" },
+                new CompletionItem { Label = "courtesy", Kind = CompletionItemKind.Value, Detail = "Force courtesy accidental", SortText = "6courtesy" },
+
+                // Figured bass
+                new CompletionItem { Label = "fig.6", Kind = CompletionItemKind.Value, Detail = "Figured bass: 6", SortText = "7fig" },
+                new CompletionItem { Label = "fig.6.4", Kind = CompletionItemKind.Value, Detail = "Figured bass: 6/4", SortText = "7fig" },
+                new CompletionItem { Label = "fig.5.3", Kind = CompletionItemKind.Value, Detail = "Figured bass: 5/3", SortText = "7fig" },
+
+                // Chord names
+                new CompletionItem { Label = "chord.C", Kind = CompletionItemKind.Value, Detail = "Chord name: C major", SortText = "8chord" },
+                new CompletionItem { Label = "chord.Am", Kind = CompletionItemKind.Value, Detail = "Chord name: A minor", SortText = "8chord" }
             ]
         };
     }
@@ -447,13 +533,26 @@ public sealed class LilySharpLanguageServer
             ChordSyntax => "**Chord**",
             BarlineSyntax => "**Barline**",
             TieSyntax => "**Tie**: Connects two notes of the same pitch",
-            SlurSyntax slur => slur.IsOpen ? "**Slur start**" : "**Slur end**",
+            SlurSyntax slur => slur.IsOpen ? "**Slur start**: `(`" : "**Slur end**: `)`",
             RepeatExpressionSyntax => "**Repeat**: Repeats the enclosed music",
             ParallelExpressionSyntax => "**Parallel**: Multiple voices played simultaneously",
             TimeSignatureSyntax ts => $"**Time Signature**: {ts.Beats}/{ts.BeatType}",
             TempoDeclarationSyntax tempo => $"**Tempo**: {tempo.Marking ?? ""} {(tempo.BeatUnit != null ? $"{tempo.BeatUnit} = " : "")}{tempo.Bpm ?? 120} BPM".Trim(),
             KeySignatureSyntax key => $"**Key Signature**: {key.Pitch?.PitchName} {(key.IsMajor ? "major" : "minor")}",
             ClefDeclarationSyntax clef => $"**Clef**: {clef.ClefName.Text}",
+            GraceExpressionSyntax grace => $"**Grace notes**: {(grace.IsAcciaccatura ? "Acciaccatura (slashed)" : grace.IsAppoggiatura ? "Appoggiatura" : "Grace")}",
+            TupletExpressionSyntax tuplet => $"**Tuplet**: {tuplet.TupletRatio} in the time of {tuplet.BaseDivision}",
+            OverrideDeclarationSyntax ovr => $"**Override**: `{ovr.GrobName.Text}.{ovr.PropertyName.Text}` = `{ovr.ValueToken.Text}`",
+            RevertDeclarationSyntax rev => $"**Revert**: `{rev.GrobName.Text}.{rev.PropertyName.Text}`",
+            OnceModifierSyntax => "**Once**: Applies override/revert for one note only",
+            PhraseDeclarationSyntax phrase => $"**Phrase**: `{phrase.Name.Text}` — Reusable music block",
+            SectionDeclarationSyntax section => $"**Section**: `{section.SectionName}` — Groups parts for a musical section",
+            StructureDeclarationSyntax => "**Structure**: Defines playback order of sections",
+            RenderDeclarationSyntax => "**Render**: Controls output layout (staff assignment)",
+            VariableDeclarationSyntax varDecl => $"**Variable**: `{varDecl.Name.Text}`",
+            VariableReferenceSyntax varRef => $"**Variable reference**: `${varRef.Name.Text}`",
+            LyricsBlockSyntax => "**Lyrics**: Text aligned to notes",
+            ArticulationSyntax art => $"**Articulation**: @{art.NameToken.Text}",
             _ => null
         };
     }
@@ -527,12 +626,17 @@ public sealed class LilySharpLanguageServer
             StaffDeclarationSyntax staff => (GetStaffName(staff), SymbolKind.Class),
 
             VariableDeclarationSyntax variable => (variable.Name.Text, SymbolKind.Variable),
+            PhraseDeclarationSyntax phrase => ($"phrase {phrase.Name.Text}", SymbolKind.Function),
+            SectionDeclarationSyntax section => ($"section {section.SectionName}", SymbolKind.Namespace),
+            StructureDeclarationSyntax => ("structure", SymbolKind.Struct),
+            RenderDeclarationSyntax => ("render", SymbolKind.Module),
             RepeatExpressionSyntax repeat => ($"repeat {repeat.Count.Text}x", SymbolKind.Operator),
             ParallelExpressionSyntax => ("parallel", SymbolKind.Struct),
             TupletExpressionSyntax tuplet => ($"tuplet {tuplet.TupletRatio}/{tuplet.BaseDivision}", SymbolKind.Operator),
             KeySignatureSyntax key => ($"key {key.Pitch.PitchName} {(key.IsMajor ? "major" : "minor")}", SymbolKind.Key),
             ClefDeclarationSyntax clef => ($"clef {clef.ClefName.Text}", SymbolKind.Key),
             LyricsBlockSyntax => ("lyrics", SymbolKind.String),
+            OverrideDeclarationSyntax ovr => ($"override {ovr.GrobName.Text}.{ovr.PropertyName.Text}", SymbolKind.Property),
             _ => (null, SymbolKind.Null)
         };
 
@@ -768,7 +872,10 @@ public sealed class LilySharpLanguageServer
                 SyntaxKind.VoiceKeyword or SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword or
                 SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or SyntaxKind.KeyKeyword or
                 SyntaxKind.ClefKeyword or SyntaxKind.TupletKeyword or SyntaxKind.GraceKeyword or
-                SyntaxKind.MajorKeyword or SyntaxKind.MinorKeyword or SyntaxKind.LyricsKeyword => 0,
+                SyntaxKind.MajorKeyword or SyntaxKind.MinorKeyword or SyntaxKind.LyricsKeyword or
+                SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword or SyntaxKind.OnceKeyword or
+                SyntaxKind.PhraseKeyword or SyntaxKind.SectionKeyword or SyntaxKind.StructureKeyword or
+                SyntaxKind.RenderKeyword => 0,
 
                 // Numbers
                 SyntaxKind.IntegerLiteral => 2,
@@ -870,7 +977,9 @@ public sealed class LilySharpLanguageServer
                           PartDeclarationSyntax or StaffDeclarationSyntax or
                           RepeatExpressionSyntax or ParallelExpressionSyntax or
                           TupletExpressionSyntax or GraceExpressionSyntax or
-                          LyricsBlockSyntax or AlternativeClauseSyntax;
+                          LyricsBlockSyntax or AlternativeClauseSyntax or
+                          SectionDeclarationSyntax or PhraseDeclarationSyntax or
+                          StructureDeclarationSyntax or RenderDeclarationSyntax;
 
         if (isFoldable && node.FullWidth > 0)
         {
@@ -1389,6 +1498,54 @@ public sealed class LilySharpLanguageServer
                 {
                     new ParameterInformation { Label = "name", Documentation = "Variable name (identifier)" },
                     new ParameterInformation { Label = "expression", Documentation = "Value to assign" }
+                }
+            });
+        }
+        else if (lineText.Contains("override"))
+        {
+            var paramIndex = lineText.IndexOf("override") + "override".Length;
+            activeParameter = CountSpaces(lineText[paramIndex..]);
+
+            signatures.Add(new SignatureInformation
+            {
+                Label = "override Grob.property = value",
+                Documentation = "Overrides a grob (graphical object) property.",
+                Parameters = new[]
+                {
+                    new ParameterInformation { Label = "Grob.property", Documentation = "Grob name and property (e.g., Stem.length, NoteHead.color)" },
+                    new ParameterInformation { Label = "value", Documentation = "New value (number, string, or identifier)" }
+                }
+            });
+        }
+        else if (lineText.Contains("phrase"))
+        {
+            var paramIndex = lineText.IndexOf("phrase") + "phrase".Length;
+            activeParameter = CountSpaces(lineText[paramIndex..]);
+
+            signatures.Add(new SignatureInformation
+            {
+                Label = "phrase name { music }",
+                Documentation = "Declares a reusable musical phrase. Reference with $name.",
+                Parameters = new[]
+                {
+                    new ParameterInformation { Label = "name", Documentation = "Phrase name (identifier)" },
+                    new ParameterInformation { Label = "{ music }", Documentation = "Music content" }
+                }
+            });
+        }
+        else if (lineText.Contains("section"))
+        {
+            var paramIndex = lineText.IndexOf("section") + "section".Length;
+            activeParameter = CountSpaces(lineText[paramIndex..]);
+
+            signatures.Add(new SignatureInformation
+            {
+                Label = "section Name { parts... }",
+                Documentation = "Declares a section grouping multiple parts.",
+                Parameters = new[]
+                {
+                    new ParameterInformation { Label = "Name", Documentation = "Section name (identifier)" },
+                    new ParameterInformation { Label = "{ parts... }", Documentation = "Part blocks with music" }
                 }
             });
         }
