@@ -83,6 +83,7 @@ public class SvgSnapshotTests
         yield return new object[] { "test/clef-change" };
         yield return new object[] { "test/keysig-change" };
         yield return new object[] { "test/trill-spanner" };
+        yield return new object[] { "test/courtesy-accidentals" };
     }
 
     /// <summary>

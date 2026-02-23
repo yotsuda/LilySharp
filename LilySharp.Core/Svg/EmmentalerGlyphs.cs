@@ -51,6 +51,12 @@ public static class EmmentalerGlyphs
     public const char AccidentalDoubleSharp = '\uE01C';  // accidentals.doublesharp
     public const char AccidentalDoubleFlat = '\uE02A';   // accidentals.flatflat
 
+    // === Accidental Parentheses (for courtesy/cautionary accidentals) ===
+    // LILYPOND-REF: lily/accidental.cc:35-46 parenthesize() uses these glyphs
+    // LILYPOND-REF: mf/feta-parenthesis.mf — leftparen/rightparen glyph definitions
+    public const char AccidentalLeftParen = '\uE02F';    // accidentals.leftparen
+    public const char AccidentalRightParen = '\uE02E';   // accidentals.rightparen
+
     // === Flags ===
     public const char Flag8thUp = '\uE0D2';       // flags.u3
     public const char Flag8thDown = '\uE0DA';     // flags.d3

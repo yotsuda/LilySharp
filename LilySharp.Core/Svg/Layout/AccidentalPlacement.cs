@@ -72,8 +72,9 @@ public sealed class AccidentalPlacement
         string Accidental,
         double YBottom,     // Lower bound in staff spaces
         double YTop,        // Upper bound in staff spaces
-        double Width,       // Glyph width in staff spaces
-        int Priority        // Sorting priority: lower = rightmost
+        double Width,       // Glyph width in staff spaces (includes paren width if courtesy)
+        int Priority,       // Sorting priority: lower = rightmost
+        bool IsCourtesy     // Whether this is a courtesy accidental
     );
 
     /// <summary>Tracks a placed accidental for collision detection.</summary>
@@ -99,8 +100,12 @@ public sealed class AccidentalPlacement
         {
             var n = accidentals[0];
             double width = GetAccidentalWidth(n.Accidental!);
+            double totalWidth = n.IsCourtesy
+                ? width + 2 * GlyphMetrics.AccidentalParenWidth
+                : width;
             return ImmutableArray.Create(new AccidentalLayout(
-                n.StaffPosition, n.Accidental!, -(width + _params.RightPadding)));
+                n.StaffPosition, n.Accidental!, -(totalWidth + _params.RightPadding),
+                n.IsCourtesy));
         }
 
         return CalculateMultipleAccidentals(accidentals);
@@ -115,10 +120,14 @@ public sealed class AccidentalPlacement
             return null;
 
         double width = GetAccidentalWidth(note.Accidental);
+        double totalWidth = note.IsCourtesy
+            ? width + 2 * GlyphMetrics.AccidentalParenWidth
+            : width;
         return new AccidentalLayout(
             note.StaffPosition,
             note.Accidental,
-            -(width + _params.RightPadding));
+            -(totalWidth + _params.RightPadding),
+            note.IsCourtesy);
     }
 
     private ImmutableArray<AccidentalLayout> CalculateMultipleAccidentals(
@@ -135,8 +144,11 @@ public sealed class AccidentalPlacement
             double yBottom = yCenterSS + bbox.Bottom;
             double yTop = yCenterSS + bbox.Top;
             int priority = GetAlterationPriority(n.Accidental!);
+            double width = n.IsCourtesy
+                ? bbox.Width + 2 * GlyphMetrics.AccidentalParenWidth
+                : bbox.Width;
             entries.Add(new PlacementEntry(
-                n.StaffPosition, n.Accidental!, yBottom, yTop, bbox.Width, priority));
+                n.StaffPosition, n.Accidental!, yBottom, yTop, width, priority, n.IsCourtesy));
         }
 
         // Sort by alteration priority: naturals rightmost, flats leftmost
@@ -170,7 +182,7 @@ public sealed class AccidentalPlacement
 
             double xLeft = xRight - entry.Width;
             placed.Add(new PlacedBox(xLeft, entry.YBottom, entry.YTop));
-            layouts.Add(new AccidentalLayout(entry.StaffPosition, entry.Accidental, xLeft));
+            layouts.Add(new AccidentalLayout(entry.StaffPosition, entry.Accidental, xLeft, entry.IsCourtesy));
         }
 
         return layouts.ToImmutableArray();

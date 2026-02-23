@@ -67,6 +67,16 @@ public static class GlyphMetrics
     /// <summary>Double flat accidental</summary>
     public static readonly BBox AccidentalDoubleFlat = new(0, -0.7, 1.644, 1.748);
 
+    /// <summary>
+    /// Width of accidental parenthesis glyph (left or right) in staff spaces.
+    /// Measured from emmentaler-20.woff2: rightparen advance=150 (150/250=0.600 ss).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: mf/feta-parenthesis.mf — set_char_box(0, .5*ss + slt, ss, ss)
+    /// LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize() adds parens with 0 padding
+    /// </remarks>
+    public const double AccidentalParenWidth = 0.6;
+
     // ========== Articulations ==========
     // LILYPOND-REF: mf/feta-scripts.mf glyph definitions with set_char_box
 

@@ -1421,23 +1421,28 @@ public sealed class SvgRenderer
         // Draw accidental (to the left of notehead)
         if (note.Accidental != null)
         {
-            char accGlyph = note.Accidental switch
-            {
-                "doubleSharp" => EmmentalerGlyphs.AccidentalDoubleSharp,
-                "sharp" => EmmentalerGlyphs.AccidentalSharp,
-                "flat" => EmmentalerGlyphs.AccidentalFlat,
-                "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
-                _ => EmmentalerGlyphs.AccidentalNatural
-            };
-
-            // Get accidental metrics
+            char accGlyph = GetAccidentalGlyph(note.Accidental);
             var accBBox = GlyphMetrics.GetAccidentalBBox(note.Accidental);
             double accWidth = accBBox.Width;
             double accNoteGap = GlyphMetrics.AccidentalNoteGap;
 
-            // Accidental is drawn to the left of notehead with a gap
-            double accidentalX = noteheadLeftX - accWidth - accNoteGap;
-            DrawGlyph(accGlyph, accidentalX, noteY, note.SourcePosition);
+            if (note.IsCourtesy)
+            {
+                // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize()
+                // Draw: [leftParen][accidental][rightParen] positioned left of notehead
+                double parenWidth = GlyphMetrics.AccidentalParenWidth;
+                double totalWidth = parenWidth + accWidth + parenWidth;
+                double startX = noteheadLeftX - totalWidth - accNoteGap;
+
+                DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen, startX + parenWidth, noteY, note.SourcePosition);
+                DrawGlyph(accGlyph, startX + parenWidth, noteY, note.SourcePosition);
+                DrawGlyph(EmmentalerGlyphs.AccidentalRightParen, startX + parenWidth + accWidth, noteY, note.SourcePosition);
+            }
+            else
+            {
+                double accidentalX = noteheadLeftX - accWidth - accNoteGap;
+                DrawGlyph(accGlyph, accidentalX, noteY, note.SourcePosition);
+            }
         }
 
         // Draw ledger lines
@@ -1560,15 +1565,23 @@ public sealed class SvgRenderer
             // Draw accidental with calculated position
             if (note.Accidental != null && accidentalMap.TryGetValue(note.StaffPosition, out var accLayout))
             {
-                char accGlyph = note.Accidental switch
+                char accGlyph = GetAccidentalGlyph(note.Accidental);
+
+                if (accLayout.IsCourtesy)
                 {
-                    "doubleSharp" => EmmentalerGlyphs.AccidentalDoubleSharp,
-                    "sharp" => EmmentalerGlyphs.AccidentalSharp,
-                    "flat" => EmmentalerGlyphs.AccidentalFlat,
-                    "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
-                    _ => EmmentalerGlyphs.AccidentalNatural
-                };
-                DrawGlyph(accGlyph, x + accLayout.XOffset, noteY, chord.SourcePosition);
+                    // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize()
+                    double parenWidth = GlyphMetrics.AccidentalParenWidth;
+                    double accWidth = GlyphMetrics.GetAccidentalBBox(note.Accidental).Width;
+                    double accX = x + accLayout.XOffset;
+
+                    DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen, accX + parenWidth, noteY, chord.SourcePosition);
+                    DrawGlyph(accGlyph, accX + parenWidth, noteY, chord.SourcePosition);
+                    DrawGlyph(EmmentalerGlyphs.AccidentalRightParen, accX + parenWidth + accWidth, noteY, chord.SourcePosition);
+                }
+                else
+                {
+                    DrawGlyph(accGlyph, x + accLayout.XOffset, noteY, chord.SourcePosition);
+                }
             }
 
             // Draw ledger lines
@@ -2132,6 +2145,17 @@ public sealed class SvgRenderer
 
     private static char GetTimeNumberGlyph(int number) => EmmentalerGlyphs.GetTimeSigDigit(number);
 
+    /// <summary>
+    /// Gets the Emmentaler glyph character for an accidental name.
+    /// </summary>
+    private static char GetAccidentalGlyph(string accidental) => accidental switch
+    {
+        "doubleSharp" => EmmentalerGlyphs.AccidentalDoubleSharp,
+        "sharp" => EmmentalerGlyphs.AccidentalSharp,
+        "flat" => EmmentalerGlyphs.AccidentalFlat,
+        "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
+        _ => EmmentalerGlyphs.AccidentalNatural
+    };
 
     private static string EscapeXml(string text)
     {

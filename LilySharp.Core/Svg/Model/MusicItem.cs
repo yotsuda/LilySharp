@@ -42,6 +42,9 @@ public sealed record NoteItem : MusicItem
     /// <summary>Feathered beam direction: 0=none, 1=right (accel), -1=left (rit).</summary>
     /// <remarks>LILYPOND-REF: beam.cc:1039-1082 grow-direction</remarks>
     public int FeatherDirection { get; }
+    /// <summary>Whether this accidental is a courtesy (cautionary) accidental shown in parentheses.</summary>
+    /// <remarks>LILYPOND-REF: lily/accidental.cc:147-148 parenthesized property</remarks>
+    public bool IsCourtesy { get; }
     private readonly int _sourcePosition;
 
     public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
@@ -53,7 +56,7 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this note has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
 
-    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasGlissando = false, int featherDirection = 0)
+    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasGlissando = false, int featherDirection = 0, bool isCourtesy = false)
     {
         StaffPosition = staffPosition;
         BaseDuration = baseDuration;
@@ -68,6 +71,7 @@ public sealed record NoteItem : MusicItem
         HasBeamEnd = hasBeamEnd;
         HasGlissando = hasGlissando;
         FeatherDirection = Math.Clamp(featherDirection, -1, 1);
+        IsCourtesy = isCourtesy;
         _sourcePosition = sourcePosition;
     }
 }
@@ -98,7 +102,9 @@ public sealed record RestItem : MusicItem
 public readonly record struct ChordNoteInfo(
     int StaffPosition,
     string? Accidental,
-    bool NeedsLedgerLines
+    bool NeedsLedgerLines,
+    /// <summary>Whether this accidental is a courtesy (cautionary) accidental shown in parentheses.</summary>
+    bool IsCourtesy = false
 );
 
 /// <summary>

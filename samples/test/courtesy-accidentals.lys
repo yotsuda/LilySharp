@@ -1,0 +1,43 @@
+// Courtesy Accidentals Test
+// Tests parenthesized accidentals shown after barlines
+// LILYPOND-REF: lily/accidental-engraver.cc
+
+title "Courtesy Accidentals"
+composer "LilySharp"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase autoCourtesy {
+  // Auto-detection: cis in measure 1, then c natural in measure 2
+  // should show courtesy natural (parenthesized)
+  c'4 cis d e | c4 d e f |
+}
+
+phrase explicitCourtesy {
+  // Explicit @courtesy annotation forces parenthesized accidental
+  c'4@courtesy d e f |
+}
+
+phrase noCourtesy {
+  // No courtesy needed: same accidental context
+  c'4 d e f | g4 a b c' |
+}
+
+phrase flatCourtesy {
+  // Flats: bes in measure 1, then b natural in measure 2
+  c'4 d bes a | b4 c' d e |
+}
+
+section Main {
+  melody { $autoCourtesy $explicitCourtesy $noCourtesy $flatCourtesy }
+}
+
+structure { Main }
+
+render score "courtesy-accidentals.svg" {
+  staff { melody }
+}

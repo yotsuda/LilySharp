@@ -358,6 +358,12 @@ public sealed class MeasureCollector
     private readonly List<GrobRevert> _grobReverts = new();
     // Trill spanner start/stop events (paired into TrillSpannerItems after collection)
     private readonly List<(bool isStart, int measureIndex, int itemIndex, int sourcePosition)> _trillSpannerEvents = new();
+    // Courtesy accidental tracking: (step, octave) → alteration for current and previous measures
+    // LILYPOND-REF: lily/accidental-engraver.cc — tracks alterations per measure for cautionary accidentals
+    private readonly Dictionary<(int step, int octave), int> _currentMeasureAlterations = new();
+    private readonly Dictionary<(int step, int octave), int> _previousMeasureAlterations = new();
+    // Notes explicitly marked with @courtesy annotation
+    private readonly HashSet<int> _courtesySourcePositions = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
     // Default duration
@@ -661,6 +667,9 @@ public sealed class MeasureCollector
                     }
                     bool hasGliss = HasGlissandoArticulation(note);
                     int featherDir = GetFeatherDirection(note);
+                    // Pre-scan for @courtesy annotation before creating note
+                    if (HasCourtesyAnnotation(note))
+                        _courtesySourcePositions.Add(note.Position);
                     var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir);
                     builder.AddItem(noteItem);
                     CollectDynamics(note, measureIndex, itemIndex);
@@ -707,6 +716,7 @@ public sealed class MeasureCollector
             case BarlineSyntax barline:
                 var barType = ParseBarlineType(barline.BarToken.Text);
                 builder.HandleBarline(barType, barline.Position);
+                RotateMeasureAlterations();
                 break;
 
             case BreakSyntax:
@@ -900,6 +910,9 @@ public sealed class MeasureCollector
         _grobOverrides.Clear();
         _grobReverts.Clear();
         _trillSpannerEvents.Clear();
+        _currentMeasureAlterations.Clear();
+        _previousMeasureAlterations.Clear();
+        _courtesySourcePositions.Clear();
         _structure = null;
         _root = null;
         _currentOctave = 4;
@@ -1100,26 +1113,70 @@ public sealed class MeasureCollector
 
     /// <summary>
     /// Determines the displayed accidental for a pitch, considering the key signature.
-    /// Returns null if the pitch's alteration matches the key signature (no accidental needed).
+    /// Returns (null, false) if the pitch's alteration matches the key signature and
+    /// no courtesy accidental is needed.
     /// </summary>
-    private string? GetDisplayAccidental(PitchSyntax pitch)
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-engraver.cc — courtesy (cautionary) accidentals
+    /// are shown when a note returns to key signature after being altered in a previous measure.
+    /// </remarks>
+    private (string? accidental, bool isCourtesy) GetDisplayAccidentalWithCourtesy(PitchSyntax pitch, int octave)
     {
         int step = PitchNameToStep(pitch.BaseName);
         int expected = GetKeySignatureAlteration(step);
         int actual = pitch.AccidentalOffset;
+        var key = (step, octave);
 
-        if (actual == expected)
-            return null;
-
-        return actual switch
+        if (actual != expected)
         {
-            2 => "doubleSharp",
-            1 => "sharp",
-            0 => "natural",
-            -1 => "flat",
-            -2 => "doubleFlat",
-            _ => null
-        };
+            // Normal accidental: differs from key signature
+            // Track this alteration for courtesy detection in subsequent measures
+            _currentMeasureAlterations[key] = actual;
+
+            return (actual switch
+            {
+                2 => "doubleSharp",
+                1 => "sharp",
+                0 => "natural",
+                -1 => "flat",
+                -2 => "doubleFlat",
+                _ => null
+            }, false);
+        }
+
+        // Matches key signature — check if courtesy accidental needed
+        // LILYPOND-REF: lily/accidental-engraver.cc — cautionary accidental when
+        // same pitch was altered differently in previous measure
+        if (_previousMeasureAlterations.TryGetValue(key, out int prevAlt) && prevAlt != expected)
+        {
+            string? courtesyAcc = actual switch
+            {
+                2 => "doubleSharp",
+                1 => "sharp",
+                0 => "natural",
+                -1 => "flat",
+                -2 => "doubleFlat",
+                _ => null
+            };
+            return (courtesyAcc, courtesyAcc != null);
+        }
+
+        return (null, false);
+    }
+
+    /// <summary>
+    /// Rotates measure alteration tracking at a barline boundary.
+    /// Previous measure alterations are replaced with current, and current is cleared.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental-engraver.cc — accidental state resets at barlines
+    /// </remarks>
+    private void RotateMeasureAlterations()
+    {
+        _previousMeasureAlterations.Clear();
+        foreach (var kvp in _currentMeasureAlterations)
+            _previousMeasureAlterations[kvp.Key] = kvp.Value;
+        _currentMeasureAlterations.Clear();
     }
 
     private static int PitchNameToStep(char name) => char.ToLower(name) switch
@@ -1562,6 +1619,28 @@ public sealed class MeasureCollector
     /// <remarks>
     /// LILYPOND-REF: lily/glissando-engraver.cc - Glissando_engraver::listen_glissando
     /// </remarks>
+    /// <summary>
+    /// Checks if a note/chord has an explicit @courtesy annotation.
+    /// </summary>
+    private static bool HasCourtesyAnnotation(SyntaxNode node)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+
+        foreach (var art in articulations)
+        {
+            if (art is ArticulationSyntax artSyntax &&
+                artSyntax.Type == ArticulationType.None &&
+                artSyntax.NameToken.Text.Equals("courtesy", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
     private static bool HasGlissandoArticulation(SyntaxNode node)
     {
         var articulations = node switch
@@ -1839,6 +1918,12 @@ public sealed class MeasureCollector
                     {
                         _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.Position));
                     }
+                    else if (nameLower == "courtesy")
+                    {
+                        // LILYPOND-REF: lily/accidental.cc:147-148 — parenthesized property
+                        // Explicit @courtesy annotation forces courtesy (parenthesized) accidental
+                        _courtesySourcePositions.Add(node.Position);
+                    }
                     else
                     {
                         // Check if this articulation is a MusicMark (cresc, rit, mark.A, ottava, ped, etc.)
@@ -1932,7 +2017,7 @@ public sealed class MeasureCollector
                 _currentOctave = octave;
 
                 bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-                string? accidental = GetDisplayAccidental(note.Pitch);
+                var (accidental, _) = GetDisplayAccidentalWithCourtesy(note.Pitch, octave);
 
                 graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger));
             }
@@ -1964,7 +2049,23 @@ public sealed class MeasureCollector
         // Parse tremolo suffix (:8 = 1 beam, :16 = 2 beams, :32 = 3 beams)
         int tremoloBeams = ParseTremoloBeams(note.Tremolo);
 
-        string? accidental = GetDisplayAccidental(note.Pitch);
+        var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(note.Pitch, octave);
+
+        // Check for explicit @courtesy annotation
+        if (!isCourtesy && _courtesySourcePositions.Contains(note.Position))
+        {
+            isCourtesy = true;
+            // If no accidental shown, force the key-signature-matching accidental
+            if (accidental == null)
+            {
+                int step = PitchNameToStep(note.Pitch.BaseName);
+                int alt = GetKeySignatureAlteration(step);
+                accidental = alt switch
+                {
+                    1 => "sharp", -1 => "flat", _ => "natural"
+                };
+            }
+        }
 
         return new NoteItem(
             staffPosition,
@@ -1980,7 +2081,8 @@ public sealed class MeasureCollector
             hasBeamStart: hasBeamStartAfter,
             hasBeamEnd: hasBeamEndAfter,
             hasGlissando: hasGlissando,
-            featherDirection: featherDirection);
+            featherDirection: featherDirection,
+            isCourtesy: isCourtesy);
     }
 
     private RestItem CreateRestItem(RestSyntax rest)
@@ -2037,10 +2139,10 @@ public sealed class MeasureCollector
                 firstPitchName = pitch.PitchName.ToLowerInvariant()[0];
             }
 
-            string? accidental = GetDisplayAccidental(pitch);
+            var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(pitch, octave);
 
             bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-            notes.Add(new ChordNoteInfo(staffPosition, accidental, needsLedger));
+            notes.Add(new ChordNoteInfo(staffPosition, accidental, needsLedger, isCourtesy));
         }
 
         // Next chord/note is relative to first pitch of this chord (Lilypond spec)
