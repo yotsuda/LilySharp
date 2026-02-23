@@ -427,12 +427,38 @@ public sealed class SvgRenderer
                 double ossiaCenterX = (startX + endX) / 2;
                 _svg.AppendLine($"""  <g transform="translate({ossiaCenterX:F2},{ossiaCenterY:F2}) scale({OssiaScaleFactor}) translate({-ossiaCenterX:F2},{-ossiaCenterY:F2})">""");
                 DrawStaff(score, scoreLayout, system, staffLayout, staffY, startX, endX, isFirstSystem);
+                // LILYPOND-REF: ly/engraver-init.ly — ossia staves have independent barlines
+                // Use unscaled StaffHeight since we're inside the scale transform group
+                DrawOssiaBarlines(system, staffY, StaffHeight, startX);
                 _svg.AppendLine("  </g>");
             }
             else
             {
                 DrawStaff(score, scoreLayout, system, staffLayout, staffY, startX, endX, isFirstSystem);
             }
+        }
+    }
+
+    /// <summary>
+    /// Draws independent barlines for an ossia staff.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly — ossia staves have their own barlines,
+    /// not connected to the main staff system barlines.
+    /// </remarks>
+    private void DrawOssiaBarlines(SystemLayout system, double staffY, double staffHeight, double startX)
+    {
+        double topY = staffY;
+        double bottomY = staffY + staffHeight;
+
+        // Start barline
+        _svg.AppendLine($"""  <line class="barline" x1="{startX:F2}" y1="{topY:F2}" x2="{startX:F2}" y2="{bottomY:F2}"/>""");
+
+        // Barlines at measure boundaries
+        foreach (var measureLayout in system.Measures)
+        {
+            double barlineX = measureLayout.X + measureLayout.Width;
+            _svg.AppendLine($"""  <line class="barline" x1="{barlineX:F2}" y1="{topY:F2}" x2="{barlineX:F2}" y2="{bottomY:F2}"/>""");
         }
     }
 
