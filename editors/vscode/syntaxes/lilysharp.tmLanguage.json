@@ -4,8 +4,10 @@
     "patterns": [
         { "include": "#comments" },
         { "include": "#strings" },
+        { "include": "#override-declaration" },
         { "include": "#section-declaration" },
         { "include": "#phrase-declaration" },
+        { "include": "#variable-reference" },
         { "include": "#keywords" },
         { "include": "#structures" },
         { "include": "#pitches" },
@@ -13,6 +15,7 @@
         { "include": "#durations" },
         { "include": "#barlines" },
         { "include": "#dynamics" },
+        { "include": "#music-marks" },
         { "include": "#articulations" },
         { "include": "#numbers" }
     ],
@@ -45,6 +48,29 @@
                 }
             ]
         },
+        "override-declaration": {
+            "patterns": [
+                {
+                    "match": "\\b(once\\s+)?(override)\\s+([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*)\\s*(=)",
+                    "captures": {
+                        "1": { "name": "keyword.control.once.lilysharp" },
+                        "2": { "name": "keyword.control.override.lilysharp" },
+                        "3": { "name": "entity.name.type.grob.lilysharp" },
+                        "4": { "name": "variable.other.property.lilysharp" },
+                        "5": { "name": "keyword.operator.assignment.lilysharp" }
+                    }
+                },
+                {
+                    "match": "\\b(once\\s+)?(revert)\\s+([A-Za-z_][A-Za-z0-9_]*)\\.([A-Za-z_][A-Za-z0-9_]*)\\b",
+                    "captures": {
+                        "1": { "name": "keyword.control.once.lilysharp" },
+                        "2": { "name": "keyword.control.revert.lilysharp" },
+                        "3": { "name": "entity.name.type.grob.lilysharp" },
+                        "4": { "name": "variable.other.property.lilysharp" }
+                    }
+                }
+            ]
+        },
         "section-declaration": {
             "patterns": [
                 {
@@ -67,15 +93,26 @@
                 }
             ]
         },
+        "variable-reference": {
+            "patterns": [
+                {
+                    "match": "(\\$)([A-Za-z_][A-Za-z0-9_]*)",
+                    "captures": {
+                        "1": { "name": "punctuation.definition.variable.lilysharp" },
+                        "2": { "name": "variable.other.reference.lilysharp" }
+                    }
+                }
+            ]
+        },
         "keywords": {
             "patterns": [
                 {
                     "name": "keyword.control.lilysharp",
-                    "match": "\\b(score|part|staff|voice|relative|absolute|fixed|repeat|volta|alternative|let|use|structure|render|grace|tuplet)\\b"
+                    "match": "\\b(score|part|staff|voice|relative|absolute|fixed|repeat|volta|alternative|let|use|structure|render|grace|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics)\\b"
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|key|clef|major|minor|instrument|octave|channel|tuning)\\b"
+                    "match": "\\b(title|composer|tempo|time|key|clef|major|minor|instrument|octave|channel|tuning|treble|bass|alto|tenor|percent|unfold)\\b"
                 }
             ]
         },
@@ -84,6 +121,10 @@
                 {
                     "name": "punctuation.definition.block.lilysharp",
                     "match": "[{}]"
+                },
+                {
+                    "name": "punctuation.definition.chord.lilysharp",
+                    "match": "<(?!<)|>(?!>)"
                 },
                 {
                     "name": "punctuation.definition.parallel.lilysharp",
@@ -140,11 +181,60 @@
                 }
             ]
         },
+        "music-marks": {
+            "patterns": [
+                {
+                    "comment": "Navigation marks",
+                    "name": "keyword.other.mark.lilysharp",
+                    "match": "@(segno|coda|fine|dc|ds\\.al\\.fine|ds\\.al\\.coda)\\b"
+                },
+                {
+                    "comment": "Rehearsal marks",
+                    "name": "keyword.other.mark.lilysharp",
+                    "match": "@mark\\.[A-Za-z0-9]+"
+                },
+                {
+                    "comment": "Pedal markings",
+                    "name": "keyword.other.pedal.lilysharp",
+                    "match": "@(ped|ped\\.off|sost\\.ped|sostenuto|una\\.corda|tre\\.corde)\\b"
+                },
+                {
+                    "comment": "Ottava brackets",
+                    "name": "keyword.other.ottava.lilysharp",
+                    "match": "@(ottava|ottava\\.bassa|loco)\\b"
+                },
+                {
+                    "comment": "Text spanners",
+                    "name": "keyword.other.spanner.lilysharp",
+                    "match": "@(rit|accel|startTrillSpan|stopTrillSpan)\\b"
+                },
+                {
+                    "comment": "Figured bass",
+                    "name": "keyword.other.figuredbass.lilysharp",
+                    "match": "@fig(\\.[0-9sfn]+)+"
+                },
+                {
+                    "comment": "Chord names",
+                    "name": "keyword.other.chordname.lilysharp",
+                    "match": "@chord\\.[A-Za-z0-9#b/]+"
+                },
+                {
+                    "comment": "Feathered beams",
+                    "name": "keyword.other.feather.lilysharp",
+                    "match": "@feather\\.(right|left|accel|rit)\\b"
+                },
+                {
+                    "comment": "Cross-staff and other annotations",
+                    "name": "keyword.other.annotation.lilysharp",
+                    "match": "@(cross|gliss|arpeggio|courtesy)\\b"
+                }
+            ]
+        },
         "articulations": {
             "patterns": [
                 {
                     "name": "keyword.other.articulation.lilysharp",
-                    "match": "@(staccato|accent|tenuto|marcato|fermata|portato|trill|mordent|prall|turn)\\b"
+                    "match": "@(staccato|accent|tenuto|marcato|fermata|portato|trill|mordent|prall|turn|invertedturn|pralltriller)\\b"
                 }
             ]
         },

@@ -2,7 +2,7 @@
   "name": "lilysharp",
   "displayName": "Lily#",
   "description": "Language support for Lily# music notation",
-  "version": "0.1.1-dev.36",
+  "version": "0.1.2-dev.1",
   "publisher": "lilysharp",
   "engines": {
     "vscode": "^1.85.0"
@@ -33,6 +33,12 @@
         "language": "lilysharp",
         "scopeName": "source.lilysharp",
         "path": "./syntaxes/lilysharp.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "lilysharp",
+        "path": "./snippets/lilysharp.json"
       }
     ],
     "semanticTokenTypes": [
