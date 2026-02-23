@@ -3,6 +3,7 @@ using Xunit;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class SectionOrientedTests
 {
     [Fact]

@@ -3,6 +3,7 @@ using LilySharp.Core.Semantics;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class SemanticCompilerTests
 {
     [Fact]

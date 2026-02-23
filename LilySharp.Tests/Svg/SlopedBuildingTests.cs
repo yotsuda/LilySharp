@@ -7,6 +7,7 @@ namespace LilySharp.Tests.Svg;
 /// Tests for sloped Building support in VerticalSkyline.
 /// LILYPOND-REF: lily/skyline.cc Building struct
 /// </summary>
+[Trait("Category", "Unit")]
 public class SlopedBuildingTests
 {
     private const double Epsilon = 1e-6;

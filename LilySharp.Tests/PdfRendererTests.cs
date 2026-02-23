@@ -7,6 +7,7 @@ using Xunit;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Integration")]
 public class PdfRendererTests
 {
     [Fact]

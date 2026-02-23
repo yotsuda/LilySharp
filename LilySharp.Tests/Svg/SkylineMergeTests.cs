@@ -8,6 +8,7 @@ namespace LilySharp.Tests.Svg;
 /// Tests for skyline merge algorithm - the core functionality.
 /// Verifies that intersection points are correctly computed when merging.
 /// </summary>
+[Trait("Category", "Unit")]
 public class SkylineMergeTests
 {
     private readonly ITestOutputHelper _output;

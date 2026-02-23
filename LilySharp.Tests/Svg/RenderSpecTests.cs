@@ -5,6 +5,7 @@ using LilySharp.Core.Syntax;
 
 namespace LilySharp.Tests.Svg;
 
+[Trait("Category", "Unit")]
 public class RenderSpecTests
 {
     [Fact]

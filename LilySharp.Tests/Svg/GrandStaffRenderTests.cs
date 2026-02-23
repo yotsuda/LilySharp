@@ -7,6 +7,7 @@ using LilySharp.Core.Syntax;
 
 namespace LilySharp.Tests.Svg;
 
+[Trait("Category", "Integration")]
 public class GrandStaffRenderTests
 {
     [Fact]

@@ -5,6 +5,7 @@ using LilySharp.Core.Svg.Layout;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class KnuthPlassBreakerTests
 {
     [Fact]

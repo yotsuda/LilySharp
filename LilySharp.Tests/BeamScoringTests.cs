@@ -6,6 +6,7 @@ using System.Collections.Immutable;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class BeamScoringTests
 {
     private static NoteItem CreateNote(int staffPosition)

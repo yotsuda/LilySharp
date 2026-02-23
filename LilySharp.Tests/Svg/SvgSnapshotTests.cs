@@ -13,6 +13,7 @@ namespace LilySharp.Tests.Svg;
 ///   set LILYSHARP_UPDATE_SNAPSHOTS=1
 ///   dotnet test --filter "FullyQualifiedName~SvgSnapshotTests"
 /// </summary>
+[Trait("Category", "Visual")]
 public class SvgSnapshotTests
 {
     private static readonly string SamplesDir = FindSamplesDir();

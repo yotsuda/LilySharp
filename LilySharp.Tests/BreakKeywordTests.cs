@@ -5,6 +5,7 @@ using LilySharp.Core.Svg.Collector;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class BreakKeywordTests
 {
     private readonly ITestOutputHelper _output;

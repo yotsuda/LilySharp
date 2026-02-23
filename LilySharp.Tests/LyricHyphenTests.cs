@@ -8,6 +8,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// Tests for LyricHyphenEngraver - hyphen and extender layout calculation.
 /// </summary>
+[Trait("Category", "Unit")]
 public class LyricHyphenTests
 {
     private static LyricLayout CreateLyricLayout(

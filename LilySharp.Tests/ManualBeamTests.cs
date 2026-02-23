@@ -8,6 +8,7 @@ using LilySharp.Core.Svg.Renderer;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class ManualBeamTests
 {
     // ========== Parser Tests ==========

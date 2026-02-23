@@ -6,6 +6,7 @@ using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class VoiceCollectorTests
 {
     [Fact]

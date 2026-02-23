@@ -10,6 +10,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// Tests for multi-voice rendering functionality.
 /// </summary>
+[Trait("Category", "Integration")]
 public class MultiVoiceRenderingTests
 {
     [Fact]

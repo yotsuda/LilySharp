@@ -12,6 +12,7 @@ namespace LilySharp.Tests;
 /// Tests for instrument name display.
 /// LILYPOND-REF: lily/instrument-name-engraver.cc
 /// </summary>
+[Trait("Category", "Unit")]
 public class InstrumentNameTests
 {
     [Fact]

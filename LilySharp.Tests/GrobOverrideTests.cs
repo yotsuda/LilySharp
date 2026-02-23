@@ -6,6 +6,7 @@ using Xunit;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class GrobOverrideTests
 {
     // --- Parser Tests ---

@@ -5,6 +5,7 @@ using LilySharp.Core.Syntax;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class SymbolCollectorTests
 {
     [Fact]

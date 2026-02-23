@@ -7,6 +7,7 @@ namespace LilySharp.Tests.Svg;
 /// Tests for sloped HorizontalBuilding support in HorizontalSkyline.
 /// LILYPOND-REF: lily/skyline.cc Building struct (horizontal axis variant)
 /// </summary>
+[Trait("Category", "Unit")]
 public class HorizontalSkylineTests
 {
     private const double Epsilon = 1e-6;

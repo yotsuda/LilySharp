@@ -4,6 +4,7 @@ using LilySharp.Core.MusicXml;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Integration")]
 public class MusicXmlTests
 {
     [Fact]

@@ -13,6 +13,7 @@ namespace LilySharp.Tests;
 /// Tests for mid-measure clef changes.
 /// LILYPOND-REF: lily/clef-engraver.cc, lily/clef.cc
 /// </summary>
+[Trait("Category", "Unit")]
 public class ClefChangeTests
 {
     private readonly ITestOutputHelper _output;

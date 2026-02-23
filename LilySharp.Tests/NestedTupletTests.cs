@@ -5,6 +5,7 @@ using Xunit;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class NestedTupletTests
 {
     // --- TupletBracketItem.NestingDepth ---

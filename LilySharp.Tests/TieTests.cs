@@ -5,6 +5,7 @@ using LilySharp.Core.Semantics;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class TieTests
 {
     private static NoteItem CreateNote(int staffPosition)

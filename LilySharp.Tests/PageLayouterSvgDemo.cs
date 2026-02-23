@@ -7,6 +7,7 @@ using LilySharp.Core.Svg.Renderer;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Integration")]
 public class PageLayouterSvgDemo
 {
     private const string DemoSource = """

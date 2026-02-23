@@ -13,6 +13,7 @@ namespace LilySharp.Tests;
 /// Tests for mid-measure key signature changes.
 /// LILYPOND-REF: lily/key-engraver.cc
 /// </summary>
+[Trait("Category", "Unit")]
 public class KeySignatureChangeTests
 {
     private readonly ITestOutputHelper _output;

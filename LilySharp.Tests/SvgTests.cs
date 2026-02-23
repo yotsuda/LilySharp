@@ -8,6 +8,7 @@ using Xunit;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Integration")]
 public class SvgTests
 {
     private static string RenderSvg(string source)

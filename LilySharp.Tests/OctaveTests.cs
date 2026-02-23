@@ -5,6 +5,7 @@ using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class OctaveTests
 {
     private static List<NoteItem> CollectNotes(string source, string? voiceName = null)

@@ -6,6 +6,7 @@ using Xunit;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class PartCombineTests
 {
     private static readonly TimeSignature FourFour = new(4, 4);

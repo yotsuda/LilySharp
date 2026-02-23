@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class AccidentalPlacementTests
 {
     [Fact]

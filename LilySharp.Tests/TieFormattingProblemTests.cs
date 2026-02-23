@@ -8,6 +8,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// Tests for TieFormattingProblem - constraint-based tie positioning.
 /// </summary>
+[Trait("Category", "Unit")]
 public class TieFormattingProblemTests
 {
     private static NoteItem CreateNote(int staffPosition) =>

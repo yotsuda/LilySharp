@@ -8,6 +8,7 @@ using LilySharp.Core.Svg;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class FontDebugTest
 {
     private readonly ITestOutputHelper _output;

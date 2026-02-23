@@ -7,6 +7,7 @@ using Xunit;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class GlissandoTests
 {
     // Helper to create a Measure with minimal required parameters

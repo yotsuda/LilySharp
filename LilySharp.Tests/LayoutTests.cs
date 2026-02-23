@@ -3,6 +3,7 @@ using LilySharp.Core.Svg;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class LayoutTests
 {
     [Fact]

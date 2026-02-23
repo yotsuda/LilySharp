@@ -5,6 +5,7 @@ using LilySharp.Core.Syntax.InternalSyntax;
 
 namespace LilySharp.Tests;
 
+[Trait("Category", "Unit")]
 public class ParserTests
 {
     [Fact]

@@ -13,6 +13,7 @@ namespace LilySharp.Tests;
 /// Tests for courtesy (cautionary) accidental rendering.
 /// LILYPOND-REF: lily/accidental-engraver.cc, lily/accidental.cc:35-46
 /// </summary>
+[Trait("Category", "Unit")]
 public class CourtesyAccidentalTests
 {
     private readonly ITestOutputHelper _output;

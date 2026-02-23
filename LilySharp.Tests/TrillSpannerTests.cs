@@ -12,6 +12,7 @@ namespace LilySharp.Tests;
 /// Tests for trill spanner functionality.
 /// LILYPOND-REF: lily/trill-spanner-engraver.cc
 /// </summary>
+[Trait("Category", "Unit")]
 public class TrillSpannerTests
 {
     private readonly ITestOutputHelper _output;
