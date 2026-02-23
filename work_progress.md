@@ -3,11 +3,11 @@
 ## 全体進捗
 
 - **総タスク数:** 52 (Phase 1-5: 28 / Phase 6-9: 24)
-- **完了 ✅:** 44 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.3, 7.7-7.8 + Phase 8 全5件 + Phase 9.1)
+- **完了 ✅:** 45 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.3, 7.7-7.8 + Phase 8 全5件 + Phase 9.1-9.2)
 - **レビュー待ち 🔍:** 0
 - **作業中 ⏳:** 0
-- **未着手 🚀:** 8 (Phase 5.1 + Phase 7.4-7.6 + Phase 9.2-9.5)
-- **進捗率:** 85% (44/52)
+- **未着手 🚀:** 7 (Phase 5.1 + Phase 7.4-7.6 + Phase 9.3-9.5)
+- **進捗率:** 87% (45/52)
 
 ## ステータス凡例
 
@@ -138,7 +138,7 @@
 | タスク | ステータス | 優先度 | LilyPond 参照 | 備考 |
 |--------|:------:|:------:|--------------|------|
 | 9.1 PNG 出力 | ✅ | Medium | — | Svg.Skia 3.4.1 (SkiaSharp 2.88.9) SVG→PNG変換。EmmentalerTypefaceProvider (ITypefaceProvider: CSS font-family list parsing, quote stripping, family name/actual font name dual matching), OTF font format (WOFF2/WOFF非対応のためfonttools変換), PngGenerator/PngRenderOptions (Scale=2.0 default, Quality=100), CLI `png`コマンド (`--scale` option), FindFontDirectory OTF優先。テスト1件追加 |
-| 9.2 MusicXML エクスポート完全化 | 🚀 | Medium | — | マルチセクション、アーティキュレーション、ダイナミクス対応 |
+| 9.2 MusicXML エクスポート完全化 | ✅ | Medium | — | Multi-section/multi-part (SectionDeclaration+PartBlock→multiple MusicXml parts), variable/phrase resolution (PhraseDeclaration/VariableDeclaration→inline expansion), ties (TieSyntax→tie+tied elements), slurs (SlurSyntax→slur elements), grace notes (GraceExpressionSyntax→grace+slash), dynamics as direction elements, ornaments (trill-mark/mordent/inverted-mordent/turn/inverted-turn), portato (detached-legato), metadata pre-collection (key/time/tempo resolved before first measure), テスト11件追加 (計23件) |
 | 9.3 ユーザードキュメント | 🚀 | High | — | .lys 文法リファレンス、チュートリアル、コマンドリファレンス |
 | 9.4 LSP 機能拡充 | 🚀 | Medium | — | 新構文 (override/revert, Phase 3-5 記法) の補完・診断対応 |
 | 9.5 VS Code 拡張更新 | 🚀 | Medium | — | シンタックスハイライト更新、スニペット追加、プレビュー機能 |
@@ -197,5 +197,6 @@
 | 2026-02-23 | Phase 8.5 NuGetパッケージ化: LilySharp.Core.csproj にNuGetメタデータ追加 (PackageId=LilySharp.Core, Version=0.1.0, Authors=Yoshifumi Tsuda, GPL-3.0 license, music/notation/engraving tags)。Emmentaler フォント (emmentaler-20.woff2, emmentaler-brace.woff) を contentFiles/content として同梱。LICENSE+README.md Pack=true。GenerateDocumentationFile Release限定 (Debug時の870警告回避)。`dotnet pack -c Release` で LilySharp.Core.0.1.0.nupkg (597KB) 生成確認。939全テスト通過 |
 | 2026-02-23 | Phase 8.4 テストカテゴリ整理: 全71テストファイルに [Trait("Category", "X")] クラスレベル属性追加。4カテゴリ: Unit (59ファイル/825テスト), Integration (8ファイル/66テスト), Visual (1ファイル/37テスト), Benchmark (1ファイル/1テスト)。`dotnet test --filter "Category=Unit"` でカテゴリ選択実行可能。939全テスト通過 |
 | 2026-02-23 | Phase 8.3 BenchmarkDotNet導入: LilySharp.Benchmarks新規プロジェクト (net9.0, BenchmarkDotNet 0.14.0, MemoryDiagnoser)。RenderPipelineBenchmark (Full pipeline×3曲: FurElise/Minuet/HappyBirthday + Stage別4段階: Parse/Collect/Layout/RenderSvg)。MultiStaffBenchmark (03-piano grand staff, 04-advanced showcase)。InternalsVisibleTo追加。ベースライン計測: FurElise full=6.2ms/2.3MB, Layout stage=1.8ms/800KB (最重量)。939全テスト通過 |
+| 2026-02-23 | Phase 9.2 MusicXMLエクスポート完全化: Multi-section/multi-part対応 (SectionDeclarationSyntax→PartBlockSyntax→separate MusicXmlPart, _partsByName dictionary for part continuation), Variable/phrase resolution (PhraseDeclarationSyntax/VariableDeclarationSyntax→_variables dictionary, VariableReferenceSyntax→inline expansion), Tie export (TieSyntax as sibling node→前note.TieStart=true, MusicXmlNote.TieStart/TieStop→<tie>+<tied> elements), Slur export (SlurSyntax as sibling node→前note.SlurStart/SlurStop=true, <slur type=start/stop number=1>), Grace notes (GraceExpressionSyntax→IsGrace+IsSlash with <grace slash=yes>), Dynamics as direction elements (EmitPendingDynamic→MusicXmlDirection with placement=below, <direction><dynamics><f/> etc.), Ornament support (trill→trill-mark, mordent→mordent, prall→inverted-mordent, turn→turn, inverted-turn→inverted-turn, <ornaments> element), Portato (→detached-legato articulation), Metadata pre-collection (CollectMetadata first pass: key/time/tempo/clef resolved before StartNewMeasure), MusicXmlNote.Ornaments/SlurStart/SlurStop/TieStart/TieStop/IsSlash追加, MusicXmlMeasure.Directions list追加, Declaration skip (PhraseDeclaration/VariableDeclaration/PartDeclaration/SectionDeclaration/StructureDeclaration), テスト11件追加 (dynamics direction/ornament trill/portato/slur/grace acciaccatura/multi-section parts/part measures/dotted note/key signature/slur number/grace slash)。951全テスト通過 |
 | 2026-02-23 | Phase 9.1 PNG出力: Svg.Skia 3.4.1 (SkiaSharp 2.88.9) PackageReference追加。PngGenerator (SVG→SKSvg→SKSurface→PNG pipeline, RegisterMusicFonts: OTF優先/WOFF2 fallback, FindFontDirectory: AppContext.BaseDirectory優先)。PngRenderOptions (Scale=2.0f default, Quality=100, FontDirectory optional)。EmmentalerTypefaceProvider (ITypefaceProvider実装: CSS font-family comma-separated parsing, single/double quote stripping, family name+actual font name dual matching)。emmentaler-20.otf/emmentaler-brace.otf (WOFF2/WOFF→OTF fonttools変換, SkiaSharp 2.88.x WOFF2非対応のため)。CLI `png`コマンド追加 (--scale option, default 2.0x)。CLI FindFontDirectory修正 (AppContext.BaseDirectory優先+OTF検出)。IntegrationTests PNG magic bytes検証追加。temp FontLoadTest.cs/fonttest.csx削除。940全テスト通過 |
 | 2026-02-23 | Phase 7.3 小節途中の調号変更: KeySignatureChangeItem model (zero-duration MusicItem, NewKey/PreviousKey for cancellation), MeasureCollector KeySignatureSyntax handling (5箇所type filter+ProcessMusicNode case追加), _initialKeySharps field (Score.KeySignature initial value preservation), IsInsideMusicContent guard (CollectDefinitions: phrase/section内のkey宣言を除外), CalculateKeySharps bug fix (PitchName既にaccidental含む→二重suffix追加の修正+fis/cis/ces追加), SpacingRules KeySignatureChangeItem対応 (GetKeySignatureChangeWidth: cancellation naturals+new accidentals width計算), GlyphMetrics.KeySignatureNaturalWidth=0.8追加, SvgRenderer DrawKeySignatureChange (DrawCancellationNaturals/DrawPartialCancellationNaturals), GetActiveKeySignatureForSystem/GetActiveKeySignatureForMultiStaff (system-start key tracking), _currentDrawClef field (clef-aware Y positioning), keysig-change.lys sample (G→C, C→F, G→Eb), KeySignatureChangeTests 8件+スナップショット35件全通過。923全テスト通過。LILYPOND-REF: lily/key-engraver.cc |

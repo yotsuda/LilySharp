@@ -1,10 +1,12 @@
-using LilySharp.Core.Syntax;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.MusicXml;
 
 /// <summary>
 /// Exports a syntax tree to MusicXML format.
+/// Supports multi-section/multi-part scores, ties, slurs, grace notes,
+/// dynamics, and ornaments.
 /// </summary>
 public sealed class MusicXmlExporter
 {
@@ -24,34 +26,153 @@ public sealed class MusicXmlExporter
     private string _keyMode = "major";
     private string _clefSign = "G";
     private int _clefLine = 2;
-    private string? _currentDynamic;
+    private string? _pendingDynamic;
+
+    // Track parts across sections for multi-section support
+    private readonly Dictionary<string, MusicXmlPart> _partsByName = new();
+
+    // Variable/phrase resolution
+    private readonly Dictionary<string, SyntaxNode> _variables = new();
 
     public MusicXmlDocument Export(SyntaxTree tree)
     {
         _document = new MusicXmlDocument();
-        _currentPart = new MusicXmlPart { Name = "Part 1" };
-        _document.Parts.Add(_currentPart);
-
-        StartNewMeasure();
 
         var root = tree.GetRoot();
-        ProcessNode(root);
 
-        // Ensure last measure is added
-        if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
+        // Check if there are section declarations (multi-part)
+        var hasSections = root.DescendantNodes().OfType<SectionDeclarationSyntax>().Any();
+
+        if (!hasSections)
         {
-            _currentPart.Measures.Add(_currentMeasure);
+            // Simple single-part mode — collect metadata first, then process music
+            CollectMetadata(root);
+            _currentPart = new MusicXmlPart { Name = "Part 1" };
+            _document.Parts.Add(_currentPart);
+            StartNewMeasure(addAttributes: true);
+            ProcessNode(root);
+            FlushCurrentMeasure();
+        }
+        else
+        {
+            // Multi-section mode: collect metadata first, then process sections
+            CollectMetadata(root);
+            ProcessSections(root);
         }
 
         return _document;
     }
 
-    private void StartNewMeasure()
+    private void CollectMetadata(SyntaxNode root)
+    {
+        foreach (var node in root.DescendantNodes())
+        {
+            switch (node)
+            {
+                case MetadataDeclarationSyntax metadata:
+                    ProcessMetadata(metadata);
+                    break;
+                case TimeSignatureSyntax timeSig:
+                    ProcessTimeSignature(timeSig);
+                    break;
+                case TempoDeclarationSyntax tempo:
+                    ProcessTempo(tempo);
+                    break;
+                case KeySignatureSyntax key:
+                    ProcessKeySignature(key);
+                    break;
+                case ClefDeclarationSyntax clef:
+                    ProcessClef(clef);
+                    break;
+                case PhraseDeclarationSyntax phrase:
+                    _variables[phrase.Name.Text] = phrase.Body;
+                    break;
+                case VariableDeclarationSyntax varDecl:
+                    _variables[varDecl.Name.Text] = varDecl.Expression;
+                    break;
+            }
+        }
+    }
+
+    private void ProcessSections(SyntaxNode root)
+    {
+        foreach (var section in root.DescendantNodes().OfType<SectionDeclarationSyntax>())
+        {
+            // Each section may contain part blocks
+            var partBlocks = section.DescendantNodes().OfType<PartBlockSyntax>().ToList();
+
+            if (partBlocks.Count > 0)
+            {
+                foreach (var partBlock in partBlocks)
+                {
+                    ProcessPartBlock(partBlock);
+                }
+            }
+            else
+            {
+                // Section without named parts → treat as default part
+                EnsurePart("Part 1");
+                ProcessNode(section);
+                FlushCurrentMeasure();
+            }
+        }
+    }
+
+    private void ProcessPartBlock(PartBlockSyntax partBlock)
+    {
+        var partName = partBlock.Name;
+        EnsurePart(partName);
+
+        // Reset state for this part's continuation
+        _currentOctave = 4;
+        _defaultDuration = Fraction.Quarter;
+        _pendingDynamic = null;
+
+        // If this is the first measure for this part, add attributes
+        bool isFirst = _currentPart!.Measures.Count == 0;
+        StartNewMeasure(addAttributes: isFirst);
+
+        // Process the content inside the part block
+        for (int i = 0; i < partBlock.SlotCount; i++)
+        {
+            var child = partBlock.GetChild(i);
+            if (child != null && child is not SyntaxTokenNode)
+                ProcessNode(child);
+        }
+
+        FlushCurrentMeasure();
+    }
+
+    private void EnsurePart(string name)
+    {
+        if (_partsByName.TryGetValue(name, out var existing))
+        {
+            _currentPart = existing;
+            _measureNumber = existing.Measures.Count + 1;
+        }
+        else
+        {
+            _currentPart = new MusicXmlPart { Name = name };
+            _document!.Parts.Add(_currentPart);
+            _partsByName[name] = _currentPart;
+            _measureNumber = 1;
+        }
+    }
+
+    private void FlushCurrentMeasure()
+    {
+        if (_currentMeasure != null && _currentMeasure.Notes.Count > 0 && _currentPart != null)
+        {
+            _currentPart.Measures.Add(_currentMeasure);
+        }
+        _currentMeasure = null;
+    }
+
+    private void StartNewMeasure(bool addAttributes = false)
     {
         _currentMeasure = new MusicXmlMeasure { Number = _measureNumber++ };
 
-        // Add attributes on first measure
-        if (_measureNumber == 2)
+        if (addAttributes)
         {
             _currentMeasure.Attributes = new MusicXmlAttributes
             {
@@ -123,7 +244,41 @@ public sealed class MusicXmlExporter
                 break;
 
             case DynamicSyntax dynamic:
-                _currentDynamic = dynamic.DynamicToken.Text;
+                _pendingDynamic = dynamic.DynamicToken.Text;
+                break;
+
+            case TieSyntax:
+                // Tie follows a note — mark the last note as tie start
+                if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
+                    _currentMeasure.Notes[^1].TieStart = true;
+                break;
+
+            case SlurSyntax slur:
+                // Slur follows a note — mark start/stop on the last note
+                if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
+                {
+                    if (slur.IsOpen)
+                        _currentMeasure.Notes[^1].SlurStart = true;
+                    else
+                        _currentMeasure.Notes[^1].SlurStop = true;
+                }
+                break;
+
+            case GraceExpressionSyntax grace:
+                ProcessGraceNotes(grace);
+                break;
+
+            case VariableReferenceSyntax varRef:
+                if (_variables.TryGetValue(varRef.Name.Text, out var varBody))
+                    ProcessNode(varBody);
+                break;
+
+            case PhraseDeclarationSyntax:
+            case VariableDeclarationSyntax:
+            case PartDeclarationSyntax:
+            case SectionDeclarationSyntax:
+            case StructureDeclarationSyntax:
+                // Skip declarations — they're handled elsewhere
                 break;
 
             default:
@@ -175,6 +330,7 @@ public sealed class MusicXmlExporter
             "e" => isMajor ? 4 : 1,
             "b" => isMajor ? 5 : 2,
             "fis" => isMajor ? 6 : 3,
+            "cis" => isMajor ? 7 : 4,
             "f" => isMajor ? -1 : -4,
             "bes" => isMajor ? -2 : -5,
             "ees" => isMajor ? -3 : -6,
@@ -212,6 +368,9 @@ public sealed class MusicXmlExporter
         int durationTicks = FractionToTicks(duration);
         var (type, dots) = GetNoteType(duration);
 
+        // Emit pending dynamic as direction before the note
+        EmitPendingDynamic();
+
         var xmlNote = new MusicXmlNote
         {
             Step = step,
@@ -219,31 +378,11 @@ public sealed class MusicXmlExporter
             Octave = targetOctave,
             Duration = durationTicks,
             Type = type,
-            Dots = dots,
-            Dynamic = _currentDynamic
+            Dots = dots
         };
 
-        foreach (var artic in note.Articulations)
-        {
-            if (artic is ArticulationSyntax articulation)
-            {
-                var articName = articulation.Type switch
-                {
-                    ArticulationType.Staccato => "staccato",
-                    ArticulationType.Accent => "accent",
-                    ArticulationType.Tenuto => "tenuto",
-                    ArticulationType.Marcato => "strong-accent",
-                    ArticulationType.Fermata => "fermata",
-                    _ => null
-                };
-                if (articName != null)
-                    xmlNote.Articulations.Add(articName);
-            }
-            else if (artic is DynamicSyntax dynamic)
-            {
-                _currentDynamic = dynamic.DynamicToken.Text;
-            }
-        }
+        // Process articulations and slurs
+        ProcessArticulations(note.Articulations, xmlNote);
 
         _currentMeasure.Notes.Add(xmlNote);
     }
@@ -258,6 +397,9 @@ public sealed class MusicXmlExporter
         var duration = GetDuration(chord.Duration);
         int durationTicks = FractionToTicks(duration);
         var (type, dots) = GetNoteType(duration);
+
+        // Emit pending dynamic as direction before the chord
+        EmitPendingDynamic();
 
         bool isFirst = true;
         foreach (var pitch in pitches)
@@ -274,34 +416,13 @@ public sealed class MusicXmlExporter
                 Duration = durationTicks,
                 Type = type,
                 Dots = dots,
-                IsChord = !isFirst,
-                Dynamic = isFirst ? _currentDynamic : null
+                IsChord = !isFirst
             };
 
             // Add articulations only to the first note
             if (isFirst)
             {
-                foreach (var artic in chord.Articulations)
-                {
-                    if (artic is ArticulationSyntax articulation)
-                    {
-                        var articName = articulation.Type switch
-                        {
-                            ArticulationType.Staccato => "staccato",
-                            ArticulationType.Accent => "accent",
-                            ArticulationType.Tenuto => "tenuto",
-                            ArticulationType.Marcato => "strong-accent",
-                            ArticulationType.Fermata => "fermata",
-                            _ => null
-                        };
-                        if (articName != null)
-                            xmlNote.Articulations.Add(articName);
-                    }
-                    else if (artic is DynamicSyntax dynamic)
-                    {
-                        _currentDynamic = dynamic.DynamicToken.Text;
-                    }
-                }
+                ProcessArticulations(chord.Articulations, xmlNote);
             }
 
             _currentMeasure.Notes.Add(xmlNote);
@@ -333,6 +454,108 @@ public sealed class MusicXmlExporter
         _currentMeasure.Notes.Add(xmlNote);
     }
 
+    private void ProcessGraceNotes(GraceExpressionSyntax grace)
+    {
+        if (_currentMeasure == null) return;
+
+        bool isAcciaccatura = grace.IsAcciaccatura;
+
+        foreach (var item in grace.Body.Items)
+        {
+            if (item is NoteSyntax note)
+            {
+                var (step, alter) = ParsePitch(note.Pitch);
+                int octaveChange = note.Pitch.OctaveOffset;
+                int targetOctave = _currentOctave + octaveChange;
+                _currentOctave = targetOctave;
+
+                var duration = GetDuration(note.Duration);
+                var (type, _) = GetNoteType(duration);
+
+                var xmlNote = new MusicXmlNote
+                {
+                    IsGrace = true,
+                    IsSlash = isAcciaccatura,
+                    Step = step,
+                    Alter = alter,
+                    Octave = targetOctave,
+                    Type = type
+                };
+
+                _currentMeasure.Notes.Add(xmlNote);
+            }
+        }
+    }
+
+    private void ProcessArticulations(IEnumerable<SyntaxNode> articulations, MusicXmlNote xmlNote)
+    {
+        foreach (var artic in articulations)
+        {
+            if (artic is ArticulationSyntax articulation)
+            {
+                var articName = MapArticulation(articulation.Type);
+                if (articName != null)
+                    xmlNote.Articulations.Add(articName);
+
+                var ornamentName = MapOrnament(articulation.Type);
+                if (ornamentName != null)
+                    xmlNote.Ornaments.Add(ornamentName);
+            }
+            else if (artic is DynamicSyntax dynamic)
+            {
+                _pendingDynamic = dynamic.DynamicToken.Text;
+            }
+            else if (artic is SlurSyntax slur)
+            {
+                if (slur.IsOpen)
+                    xmlNote.SlurStart = true;
+                else
+                    xmlNote.SlurStop = true;
+            }
+        }
+    }
+
+    private void EmitPendingDynamic()
+    {
+        if (_pendingDynamic != null && _currentMeasure != null)
+        {
+            _currentMeasure.Directions.Add(new MusicXmlDirection
+            {
+                DynamicType = _pendingDynamic,
+                Placement = "below"
+            });
+            _pendingDynamic = null;
+        }
+    }
+
+    private static string? MapArticulation(ArticulationType type)
+    {
+        return type switch
+        {
+            ArticulationType.Staccato => "staccato",
+            ArticulationType.Accent => "accent",
+            ArticulationType.Tenuto => "tenuto",
+            ArticulationType.Marcato => "strong-accent",
+            ArticulationType.Fermata => "fermata",
+            ArticulationType.Portato => "detached-legato",
+            _ => null
+        };
+    }
+
+    private static string? MapOrnament(ArticulationType type)
+    {
+        return type switch
+        {
+            ArticulationType.Trill => "trill-mark",
+            ArticulationType.Mordent => "mordent",
+            ArticulationType.Prall => "inverted-mordent",
+            ArticulationType.Turn => "turn",
+            ArticulationType.InvertedTurn => "inverted-turn",
+            ArticulationType.PrallTriller => "inverted-mordent",
+            _ => null
+        };
+    }
+
     private (string step, int alter) ParsePitch(PitchSyntax pitch)
     {
         string step = char.ToUpper(pitch.BaseName).ToString();
@@ -356,11 +579,18 @@ public sealed class MusicXmlExporter
         int dots = 0;
         int baseDenom = (int)duration.Denominator;
 
-        // Check for dotted notes
+        // Check for dotted notes (3/8 = dotted quarter, 3/4 = dotted half, etc.)
         if (duration.Numerator == 3 && duration.Denominator % 2 == 0)
         {
             dots = 1;
             baseDenom = (int)(duration.Denominator / 2);
+        }
+
+        // Check for double-dotted notes (7/16 = double-dotted quarter, etc.)
+        if (duration.Numerator == 7 && duration.Denominator % 4 == 0)
+        {
+            dots = 2;
+            baseDenom = (int)(duration.Denominator / 4);
         }
 
         string type = baseDenom switch
@@ -372,6 +602,7 @@ public sealed class MusicXmlExporter
             16 => "16th",
             32 => "32nd",
             64 => "64th",
+            128 => "128th",
             _ => "quarter"
         };
 

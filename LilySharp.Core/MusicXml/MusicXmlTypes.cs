@@ -93,6 +93,7 @@ public sealed class MusicXmlMeasure
     public int Number { get; set; }
     public MusicXmlAttributes? Attributes { get; set; }
     public MusicXmlDirection? Direction { get; set; }
+    public List<MusicXmlDirection> Directions { get; } = new();
     public List<MusicXmlNote> Notes { get; } = new();
 
     public XElement ToXml()
@@ -102,8 +103,13 @@ public sealed class MusicXmlMeasure
         if (Attributes != null)
             measure.Add(Attributes.ToXml());
 
+        // Legacy single direction (tempo)
         if (Direction != null)
             measure.Add(Direction.ToXml());
+
+        // Interleave directions with notes by emitting all directions first
+        foreach (var dir in Directions)
+            measure.Add(dir.ToXml());
 
         foreach (var note in Notes)
             measure.Add(note.ToXml());
@@ -156,16 +162,18 @@ public sealed class MusicXmlAttributes
 }
 
 /// <summary>
-/// Direction (tempo, dynamics).
+/// Direction element for dynamics, tempo, and other performance indications.
 /// </summary>
 public sealed class MusicXmlDirection
 {
     public string? DynamicType { get; set; }
     public int? Tempo { get; set; }
+    public string? Placement { get; set; }
 
     public XElement ToXml()
     {
-        var direction = new XElement("direction", new XAttribute("placement", "above"));
+        var placement = Placement ?? "above";
+        var direction = new XElement("direction", new XAttribute("placement", placement));
 
         if (DynamicType != null)
         {
@@ -200,16 +208,29 @@ public sealed class MusicXmlNote
     public int Duration { get; set; }
     public string? Type { get; set; }
     public int Dots { get; set; }
-    public string? Dynamic { get; set; }
     public List<string> Articulations { get; } = new();
+    public List<string> Ornaments { get; } = new();
     public bool IsGrace { get; set; }
+    public bool IsSlash { get; set; }
+    public bool TieStart { get; set; }
+    public bool TieStop { get; set; }
+    public bool SlurStart { get; set; }
+    public bool SlurStop { get; set; }
+
+    // Legacy property for backward compatibility
+    public string? Dynamic { get; set; }
 
     public XElement ToXml()
     {
         var note = new XElement("note");
 
         if (IsGrace)
-            note.Add(new XElement("grace"));
+        {
+            var graceEl = new XElement("grace");
+            if (IsSlash)
+                graceEl.Add(new XAttribute("slash", "yes"));
+            note.Add(graceEl);
+        }
 
         if (IsChord)
             note.Add(new XElement("chord"));
@@ -230,20 +251,56 @@ public sealed class MusicXmlNote
         if (!IsGrace)
             note.Add(new XElement("duration", Duration));
 
+        // Ties (before type)
+        if (TieStart)
+            note.Add(new XElement("tie", new XAttribute("type", "start")));
+        if (TieStop)
+            note.Add(new XElement("tie", new XAttribute("type", "stop")));
+
         if (Type != null)
             note.Add(new XElement("type", Type));
 
         for (int i = 0; i < Dots; i++)
             note.Add(new XElement("dot"));
 
-        // Notations (articulations)
-        if (Articulations.Count > 0)
+        // Notations (articulations, ornaments, ties, slurs)
+        var hasNotations = Articulations.Count > 0 || Ornaments.Count > 0 ||
+                          TieStart || TieStop || SlurStart || SlurStop;
+
+        if (hasNotations)
         {
             var notations = new XElement("notations");
-            var artics = new XElement("articulations");
-            foreach (var a in Articulations)
-                artics.Add(new XElement(a));
-            notations.Add(artics);
+
+            // Tied notations
+            if (TieStart)
+                notations.Add(new XElement("tied", new XAttribute("type", "start")));
+            if (TieStop)
+                notations.Add(new XElement("tied", new XAttribute("type", "stop")));
+
+            // Slur notations
+            if (SlurStart)
+                notations.Add(new XElement("slur", new XAttribute("type", "start"), new XAttribute("number", "1")));
+            if (SlurStop)
+                notations.Add(new XElement("slur", new XAttribute("type", "stop"), new XAttribute("number", "1")));
+
+            // Articulations
+            if (Articulations.Count > 0)
+            {
+                var artics = new XElement("articulations");
+                foreach (var a in Articulations)
+                    artics.Add(new XElement(a));
+                notations.Add(artics);
+            }
+
+            // Ornaments
+            if (Ornaments.Count > 0)
+            {
+                var orns = new XElement("ornaments");
+                foreach (var o in Ornaments)
+                    orns.Add(new XElement(o));
+                notations.Add(orns);
+            }
+
             note.Add(notations);
         }
 

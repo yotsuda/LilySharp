@@ -188,4 +188,160 @@ c4 d4 e4 f4";
         Assert.True(notes[2].IsChord);
         Assert.Equal("G", notes[2].Step);
     }
+
+    [Fact]
+    public void ExportWithDynamics_CreatesDirection()
+    {
+        var source = "c4\\f d4";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+
+        var doc = xml.ToXml();
+        var directions = doc.Descendants("dynamics").ToList();
+        Assert.NotEmpty(directions);
+        Assert.NotNull(directions[0].Element("f"));
+    }
+
+    [Fact]
+    public void ExportWithOrnament_Trill()
+    {
+        var source = "c4@trill d4";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+
+        var notes = xml.Parts[0].Measures[0].Notes;
+        Assert.Contains("trill-mark", notes[0].Ornaments);
+    }
+
+    [Fact]
+    public void ExportWithPortato()
+    {
+        var source = "c4@portato";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+
+        var notes = xml.Parts[0].Measures[0].Notes;
+        Assert.Contains("detached-legato", notes[0].Articulations);
+    }
+
+    [Fact]
+    public void ExportWithSlur()
+    {
+        var source = "c4( d4 e4)";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+
+        var notes = xml.Parts[0].Measures[0].Notes;
+        Assert.True(notes[0].SlurStart);
+        Assert.True(notes[2].SlurStop);
+    }
+
+    [Fact]
+    public void ExportGraceNotes()
+    {
+        var source = @"acciaccatura { d8 } c4";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+
+        var notes = xml.Parts[0].Measures[0].Notes;
+        Assert.True(notes[0].IsGrace);
+        Assert.True(notes[0].IsSlash); // acciaccatura = slashed
+        Assert.False(notes[1].IsGrace);
+    }
+
+    [Fact]
+    public void ExportMultiSection_CreatesMultipleParts()
+    {
+        var source = @"
+section A {
+    melody { c4 d e f | }
+    bass { c2 c | }
+}";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+
+        Assert.Equal(2, xml.Parts.Count);
+        Assert.Equal("melody", xml.Parts[0].Name);
+        Assert.Equal("bass", xml.Parts[1].Name);
+    }
+
+    [Fact]
+    public void ExportMultiSection_PartMeasures()
+    {
+        var source = @"
+section A {
+    melody { c4 d e f | g a b c' | }
+}";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+
+        Assert.Single(xml.Parts);
+        Assert.Equal("melody", xml.Parts[0].Name);
+        Assert.Equal(2, xml.Parts[0].Measures.Count);
+    }
+
+    [Fact]
+    public void ExportDottedNote()
+    {
+        var source = "c4. d8";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+
+        var notes = xml.Parts[0].Measures[0].Notes;
+        Assert.Equal("quarter", notes[0].Type);
+        Assert.Equal(1, notes[0].Dots);
+    }
+
+    [Fact]
+    public void ExportKeySignature_InAttributes()
+    {
+        var source = @"
+key g major
+c4 d e f";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+
+        var attrs = xml.Parts[0].Measures[0].Attributes;
+        Assert.NotNull(attrs);
+        Assert.Equal(1, attrs.KeyFifths); // G major = 1 sharp
+        Assert.Equal("major", attrs.KeyMode);
+    }
+
+    [Fact]
+    public void ToXml_SlurHasNumberAttribute()
+    {
+        var source = "c4( d4)";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+        var doc = xml.ToXml();
+
+        var slurs = doc.Descendants("slur").ToList();
+        Assert.Equal(2, slurs.Count);
+        Assert.Equal("start", slurs[0].Attribute("type")?.Value);
+        Assert.Equal("stop", slurs[1].Attribute("type")?.Value);
+    }
+
+    [Fact]
+    public void ToXml_GraceWithSlash()
+    {
+        var source = @"acciaccatura { c8 } d4";
+        var tree = SyntaxTree.Parse(source);
+        var exporter = new MusicXmlExporter();
+        var xml = exporter.Export(tree);
+        var doc = xml.ToXml();
+
+        var graces = doc.Descendants("grace").ToList();
+        Assert.NotEmpty(graces);
+        Assert.Equal("yes", graces[0].Attribute("slash")?.Value);
+    }
 }
