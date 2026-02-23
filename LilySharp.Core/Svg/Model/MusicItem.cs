@@ -45,6 +45,9 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this accidental is a courtesy (cautionary) accidental shown in parentheses.</summary>
     /// <remarks>LILYPOND-REF: lily/accidental.cc:147-148 parenthesized property</remarks>
     public bool IsCourtesy { get; }
+    /// <summary>Whether this note is a cue note (drawn at reduced size).</summary>
+    /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4, magstep(-4) ≈ 0.66</remarks>
+    public bool IsCue { get; }
     private readonly int _sourcePosition;
 
     public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
@@ -56,7 +59,7 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this note has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
 
-    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasGlissando = false, int featherDirection = 0, bool isCourtesy = false)
+    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasGlissando = false, int featherDirection = 0, bool isCourtesy = false, bool isCue = false)
     {
         StaffPosition = staffPosition;
         BaseDuration = baseDuration;
@@ -72,6 +75,7 @@ public sealed record NoteItem : MusicItem
         HasGlissando = hasGlissando;
         FeatherDirection = Math.Clamp(featherDirection, -1, 1);
         IsCourtesy = isCourtesy;
+        IsCue = isCue;
         _sourcePosition = sourcePosition;
     }
 }
@@ -123,6 +127,9 @@ public sealed record ChordItem : MusicItem
     public bool HasBeamEnd { get; }
     /// <summary>Whether this chord has an arpeggio marking.</summary>
     public bool HasArpeggio { get; }
+    /// <summary>Whether this chord is a cue chord (drawn at reduced size).</summary>
+    /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4, magstep(-4) ≈ 0.66</remarks>
+    public bool IsCue { get; }
     private readonly int _sourcePosition;
 
     public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
@@ -134,7 +141,7 @@ public sealed record ChordItem : MusicItem
     /// <summary>Whether this chord has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
 
-    public ChordItem(ImmutableArray<ChordNoteInfo> notes, Fraction baseDuration, int dots, int sourcePosition, int tremoloBeams = 0, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasArpeggio = false)
+    public ChordItem(ImmutableArray<ChordNoteInfo> notes, Fraction baseDuration, int dots, int sourcePosition, int tremoloBeams = 0, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasArpeggio = false, bool isCue = false)
     {
         Notes = notes;
         BaseDuration = baseDuration;
@@ -143,6 +150,7 @@ public sealed record ChordItem : MusicItem
         HasBeamStart = hasBeamStart;
         HasBeamEnd = hasBeamEnd;
         HasArpeggio = hasArpeggio;
+        IsCue = isCue;
         _sourcePosition = sourcePosition;
     }
 }

@@ -20,6 +20,11 @@ public sealed class SvgRenderer
     // Layout constants (in staff spaces)
     private const double StaffHeight = 4;  // 4 staff spaces between top and bottom staff lines
     private const double FontSize = 4;  // 4 staff spaces for music glyphs
+    /// <summary>
+    /// Scale factor for cue notes: magstep(-4) = 2^(-4/6) ≈ 0.66.
+    /// LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4
+    /// </summary>
+    private const double CueScaleFactor = 0.66;
 
     // Derived from SMuFL defaults (all in staff spaces)
     private static double StaffLineThickness => EngravingDefaults.StaffLineThickness;
@@ -1373,14 +1378,39 @@ public sealed class SvgRenderer
             switch (item)
             {
                 case NoteItem note:
-                    DrawNote(note, itemX, systemY, forcedStemUp);
+                    if (note.IsCue)
+                    {
+                        // LILYPOND-REF: ly/engraver-init.ly CueVoice context
+                        // Scale around the notehead center point
+                        double cueNoteY = systemY + StaffHeight / 2 - (note.StaffPosition / 2.0);
+                        _svg.AppendLine($"""  <g transform="translate({itemX:F2},{cueNoteY:F2}) scale({CueScaleFactor}) translate({-itemX:F2},{-cueNoteY:F2})">""");
+                        DrawNote(note, itemX, systemY, forcedStemUp);
+                        _svg.AppendLine("  </g>");
+                    }
+                    else
+                    {
+                        DrawNote(note, itemX, systemY, forcedStemUp);
+                    }
                     break;
                 case RestItem rest:
                     double restShift = scoreLayout.GetRestShift(measureIndex, i);
                     DrawRest(rest, itemX, systemY, restShift);
                     break;
                 case ChordItem chord:
-                    DrawChord(chord, itemX, systemY, forcedStemUp);
+                    if (chord.IsCue)
+                    {
+                        // LILYPOND-REF: ly/engraver-init.ly CueVoice context
+                        // Scale around the chord center point (average of all note Y positions)
+                        double avgStaffPos = chord.Notes.Length > 0 ? chord.Notes.Average(n => n.StaffPosition) : 0;
+                        double cueChordY = systemY + StaffHeight / 2 - (avgStaffPos / 2.0);
+                        _svg.AppendLine($"""  <g transform="translate({itemX:F2},{cueChordY:F2}) scale({CueScaleFactor}) translate({-itemX:F2},{-cueChordY:F2})">""");
+                        DrawChord(chord, itemX, systemY, forcedStemUp);
+                        _svg.AppendLine("  </g>");
+                    }
+                    else
+                    {
+                        DrawChord(chord, itemX, systemY, forcedStemUp);
+                    }
                     break;
                 case ClefChangeItem clefChange:
                     DrawClefChange(clefChange, itemX, systemY);

@@ -667,10 +667,11 @@ public sealed class MeasureCollector
                     }
                     bool hasGliss = HasGlissandoArticulation(note);
                     int featherDir = GetFeatherDirection(note);
+                    bool isCue = HasCueAnnotation(note);
                     // Pre-scan for @courtesy annotation before creating note
                     if (HasCourtesyAnnotation(note))
                         _courtesySourcePositions.Add(note.Position);
-                    var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir);
+                    var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue);
                     builder.AddItem(noteItem);
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp);
@@ -695,7 +696,8 @@ public sealed class MeasureCollector
                         _pendingGrace = null;
                     }
                     bool hasArpeggio = HasArpeggioArticulation(chord);
-                    var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio);
+                    bool isCue = HasCueAnnotation(chord);
+                    var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue);
                     builder.AddItem(chordItem);
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
@@ -1660,6 +1662,29 @@ public sealed class MeasureCollector
     }
 
     /// <summary>
+    /// Checks if a note/chord has a @cue annotation.
+    /// LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4
+    /// </summary>
+    private static bool HasCueAnnotation(SyntaxNode node)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+
+        foreach (var art in articulations)
+        {
+            if (art is ArticulationSyntax artSyntax &&
+                artSyntax.Type == ArticulationType.None &&
+                artSyntax.NameToken.Text.Equals("cue", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Processes a repeat expression (volta, unfold, percent, tremolo).
     /// </summary>
     /// <remarks>
@@ -2034,7 +2059,7 @@ public sealed class MeasureCollector
         }
     }
 
-    private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasGlissando = false, int featherDirection = 0)
+    private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasGlissando = false, int featherDirection = 0, bool isCue = false)
     {
         var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);
         _currentOctave = octave;
@@ -2082,7 +2107,8 @@ public sealed class MeasureCollector
             hasBeamEnd: hasBeamEndAfter,
             hasGlissando: hasGlissando,
             featherDirection: featherDirection,
-            isCourtesy: isCourtesy);
+            isCourtesy: isCourtesy,
+            isCue: isCue);
     }
 
     private RestItem CreateRestItem(RestSyntax rest)
@@ -2119,7 +2145,7 @@ public sealed class MeasureCollector
         };
     }
 
-    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false)
+    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false)
     {
         var notes = new List<ChordNoteInfo>();
 
@@ -2156,7 +2182,7 @@ public sealed class MeasureCollector
         int dots = chord.Duration?.DotCount ?? 0;
         int tremoloBeams = ParseTremoloBeams(chord.Tremolo);
 
-        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio);
+        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue);
     }
 
     private (int staffPosition, int octave) CalculateStaffPosition(PitchSyntax pitch)

@@ -305,4 +305,73 @@ render score ""third"" { staff treble { rh } }
         Assert.Equal("second", specs[1].OutputFile);
         Assert.Equal("third", specs[2].OutputFile);
     }
+
+    [Fact]
+    public void CueNotes_RenderedWithScaleTransform()
+    {
+        // LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4
+        var source = "{ c'4 d' e'@cue f'@cue | g'1 | }";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, null);
+
+        // Verify cue flag on collected items
+        var items = score.Voice.Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.NoteItem>().ToList();
+        Assert.True(items.Count >= 4, $"Should have at least 4 notes, but has {items.Count}");
+        Assert.False(items[0].IsCue, "c' should not be cue");
+        Assert.False(items[1].IsCue, "d' should not be cue");
+        Assert.True(items[2].IsCue, "e'@cue should be cue");
+        Assert.True(items[3].IsCue, "f'@cue should be cue");
+
+        // Verify SVG contains scale transforms for cue notes
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+        var renderer = new SvgRenderer();
+        var svg = renderer.Render(score, layout);
+
+        var scaleCount = System.Text.RegularExpressions.Regex.Matches(svg, @"scale\(0\.66\)").Count;
+        Assert.True(scaleCount >= 2,
+            $"Should have at least 2 scale(0.66) transforms (one per cue note), but has {scaleCount}");
+    }
+
+    [Fact]
+    public void CueChords_RenderedWithScaleTransform()
+    {
+        var source = "{ <c' e'>4 <d' f'>@cue | <c' e' g'>1 | }";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, null);
+
+        var chords = score.Voice.Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.ChordItem>().ToList();
+        Assert.True(chords.Count >= 2, $"Should have at least 2 chords, but has {chords.Count}");
+        Assert.False(chords[0].IsCue, "First chord should not be cue");
+        Assert.True(chords[1].IsCue, "Second chord @cue should be cue");
+    }
+
+    [Fact]
+    public void CueNotes_NonCueNotesUnaffected()
+    {
+        // Ensure @cue doesn't affect non-annotated notes
+        var source = "{ c'4 d' e' f' | g'1 | }";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree, null);
+
+        var items = score.Voice.Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.NoteItem>().ToList();
+        Assert.All(items, note => Assert.False(note.IsCue));
+
+        // SVG should have no scale(0.66) transforms
+        var layoutEngine = new LayoutEngine();
+        var layout = layoutEngine.Layout(score);
+        var renderer = new SvgRenderer();
+        var svg = renderer.Render(score, layout);
+
+        Assert.DoesNotContain("scale(0.66)", svg);
+    }
 }
