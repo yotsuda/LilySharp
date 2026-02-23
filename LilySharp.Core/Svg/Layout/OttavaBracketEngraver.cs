@@ -277,10 +277,15 @@ public static class OttavaBracketEngraver
             };
 
             // Find the end: next ottava/loco mark
+            // LILYPOND-REF: lily/ottava-engraver.cc — bracket ends just before the
+            // terminating mark (loco or next ottava), so use measure - 1.
             int endMeasure;
             if (i + 1 < ottavaMarks.Count)
             {
-                endMeasure = ottavaMarks[i + 1].MeasureIndex;
+                // Bracket covers up to the measure before the terminator
+                endMeasure = ottavaMarks[i + 1].MeasureIndex - 1;
+                if (endMeasure < mark.MeasureIndex)
+                    endMeasure = mark.MeasureIndex; // at minimum, cover the start measure
             }
             else
             {
@@ -288,7 +293,7 @@ public static class OttavaBracketEngraver
                 endMeasure = mark.MeasureIndex + 1;
             }
 
-            if (endMeasure > mark.MeasureIndex)
+            if (endMeasure >= mark.MeasureIndex)
             {
                 brackets.Add(new OttavaBracketItem(
                     Type: type,

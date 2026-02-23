@@ -4106,8 +4106,9 @@ public sealed class SvgRenderer
             }
         }
 
-        // LILYPOND-REF: scm/define-grobs.scm - ChordName font-size=1.5 (relative)
-        double chordFontSize = FontSize * 0.85;
+        // LILYPOND-REF: scm/define-grobs.scm:764 (font-size . 1.5)
+        // magstep(1.5) = 2^(1.5/6) ≈ 1.189; base text ≈ 2.2ss → 2.2 * 1.189 ≈ 2.6ss
+        double chordFontSize = FontSize * 0.65;
 
         foreach (var chord in layout.ChordNameLayouts)
         {

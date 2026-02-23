@@ -83,7 +83,7 @@ public class OttavaBracketTests
         Assert.Single(result);
         Assert.Equal(OttavaType.Ottava8va, result[0].Type);
         Assert.Equal(1, result[0].StartMeasureIndex);
-        Assert.Equal(4, result[0].EndMeasureIndex);
+        Assert.Equal(3, result[0].EndMeasureIndex); // ends at measure before loco
         Assert.Equal(42, result[0].SourcePosition);
     }
 
@@ -151,10 +151,10 @@ public class OttavaBracketTests
         Assert.Equal(2, result.Length);
         Assert.Equal(OttavaType.Ottava8va, result[0].Type);
         Assert.Equal(0, result[0].StartMeasureIndex);
-        Assert.Equal(3, result[0].EndMeasureIndex); // ends at next ottava
+        Assert.Equal(2, result[0].EndMeasureIndex); // ends at measure before next ottava
         Assert.Equal(OttavaType.Ottava8vb, result[1].Type);
         Assert.Equal(3, result[1].StartMeasureIndex);
-        Assert.Equal(5, result[1].EndMeasureIndex); // ends at loco
+        Assert.Equal(4, result[1].EndMeasureIndex); // ends at measure before loco
     }
 
     // --- OttavaBracketEngraver.Calculate ---

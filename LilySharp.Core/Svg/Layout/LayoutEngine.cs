@@ -311,15 +311,19 @@ public sealed class LayoutEngine
         var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
             trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml);
 
+        // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
+        // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority
+        var voltaBracketLayouts = VoltaBracketEngraver.Calculate(voltaBrackets, systems, ml);
+
         return new AnnotationLayouts(
             Dynamics: dynamicLayouts,
             Articulations: score != null ? ArticulationEngraver.Calculate(score, articulations, systems, ml) : ImmutableArray<ArticulationLayout>.Empty,
             GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, systems, ml) : ImmutableArray<GraceNoteLayout>.Empty,
             Lyrics: lyricLayouts,
             LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(lyricLayouts, systems),
-            MusicMarks: MusicMarkEngraver.Calculate(score, musicMarks, systems, ml, measures),
+            MusicMarks: MusicMarkEngraver.Calculate(score, musicMarks, systems, ml, measures, voltaBracketLayouts),
             CustomTexts: CustomTextEngraver.Calculate(score, customTexts, systems, ml),
-            VoltaBrackets: VoltaBracketEngraver.Calculate(voltaBrackets, systems, ml),
+            VoltaBrackets: voltaBracketLayouts,
             TupletBrackets: TupletBracketEngraver.Calculate(tupletBrackets, systems, ml, measures),
             Hairpins: hairpinLayouts,
             TextSpanners: textSpannerLayouts,

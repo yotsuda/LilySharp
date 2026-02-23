@@ -45,8 +45,12 @@ public static class MusicMarkEngraver
     // LILYPOND-REF: define-grobs.scm:3665 padding = 0.5
     private const double Padding = 0.5;
 
-    // Y offset above staff for marks
+    // Y offset above staff for marks (when no volta brackets present)
+    // LILYPOND-REF: define-grobs.scm RehearsalMark padding=0.8
     private const double AboveStaffOffset = -2.0;
+
+    // LILYPOND-REF: axis-group-interface.cc:50 default_outside_staff_padding_ = 0.46
+    private const double OutsideStaffPadding = 0.46;
 
     // Y offset below staff for expression marks
     private const double BelowStaffOffset = 5.5;
@@ -65,7 +69,8 @@ public static class MusicMarkEngraver
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        ImmutableArray<Measure> measures = default)
+        ImmutableArray<Measure> measures = default,
+        ImmutableArray<VoltaBracketLayout> voltaBrackets = default)
     {
         // Merge section labels from measures into the mark list
         var allMarks = MergeSectionLabels(musicMarks, measures);
@@ -89,6 +94,23 @@ public static class MusicMarkEngraver
         // Group by (MeasureIndex, Position) for collision stacking.
         // Marks at the same measure+position are sorted by outside-staff-priority
         // and stacked outward from the staff.
+
+        // Build volta bracket coverage: measure indices that have a volta bracket above
+        // LILYPOND-REF: define-grobs.scm:3943 VoltaBracketSpanner outside-staff-priority=600
+        var voltaMeasures = new HashSet<int>();
+        double voltaTopY = 0;
+        if (!voltaBrackets.IsDefaultOrEmpty)
+        {
+            foreach (var vb in voltaBrackets)
+            {
+                for (int mi = vb.StartMeasureIndex; mi <= vb.EndMeasureIndex; mi++)
+                    voltaMeasures.Add(mi);
+                // Track the highest (most negative) volta Y
+                if (vb.Y < voltaTopY)
+                    voltaTopY = vb.Y;
+            }
+        }
+
         var groups = markEntries
             .GroupBy(e => (e.Mark.MeasureIndex, e.Mark.Position))
             .ToList();
@@ -108,8 +130,21 @@ public static class MusicMarkEngraver
                 .OrderBy(e => GetOutsideStaffPriority(e.Mark.Type))
                 .ToList();
 
+            // Check if any mark in this group overlaps with a volta bracket
+            bool hasVoltaOverlap = aboveMarks.Any(e => voltaMeasures.Contains(e.Mark.MeasureIndex));
+
+            // LILYPOND-REF: axis-group-interface.cc:652-681 avoid_outside_staff_collisions
+            // Marks with priority > 600 (VoltaBracketSpanner) must be placed above volta.
+            // Base Y for above-staff stacking: if volta present, start above volta top.
+            double baseAboveY = AboveStaffOffset;
+            if (hasVoltaOverlap)
+            {
+                // Place marks above volta bracket with outside-staff padding
+                baseAboveY = voltaTopY - OutsideStaffPadding;
+            }
+
             // Stack above-staff marks (lower priority = closer to staff)
-            double stackTopY = AboveStaffOffset;
+            double stackTopY = baseAboveY;
             for (int i = 0; i < aboveMarks.Count; i++)
             {
                 var (mark, x) = aboveMarks[i];
@@ -118,8 +153,7 @@ public static class MusicMarkEngraver
                 double y;
                 if (i == 0)
                 {
-                    // First mark: use standard offset (backward compatible)
-                    y = AboveStaffOffset - Padding;
+                    y = baseAboveY - Padding;
                     stackTopY = y - halfExtent;
                 }
                 else

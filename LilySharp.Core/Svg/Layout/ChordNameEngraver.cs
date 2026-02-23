@@ -30,11 +30,17 @@ public readonly record struct ChordNameLayout(
 /// </remarks>
 public static class ChordNameEngraver
 {
-    /// <summary>Padding above the top of the staff (staff spaces).</summary>
+    /// <summary>Distance from staff center to ChordNames context reference point.</summary>
     /// <remarks>
     /// LILYPOND-REF: ly/engraver-init.ly:588 - nonstaff-relatedstaff-spacing.padding = 0.5
+    /// LILYPOND-REF: scm/define-grobs.scm - VerticalAxisGroup nonstaff-relatedstaff-spacing
+    ///   basic-distance = 5.5 (center-to-center from staff)
+    /// ChordNames is a separate non-staff context above the staff; positioned using
+    /// basic-distance from the staff center (StaffHeight/2 = 2.0).
+    /// Y offset from staff top = StaffHeight/2 + basic-distance = 2.0 + 5.5 = 7.5
+    /// but adjusted for text being positioned at baseline, not center.
     /// </remarks>
-    private const double StaffPadding = 2.0;
+    private const double StaffPadding = 5.5;
 
     /// <summary>
     /// Calculates chord name layouts from collected items.
