@@ -85,9 +85,10 @@ public class KneedBeamTests
     }
 
     [Fact]
-    public void BeamDetector_LargeGap_AutoKnee()
+    public void BeamDetector_LargeGap_UnifiedDirection()
     {
         // Notes far apart: staff positions -6 and 6 (gap = 12, exceeds threshold 5.5)
+        // Kneed beam rendering is not yet implemented, so all members use group direction.
         var notes = new MusicItem[]
         {
             new NoteItem(-6, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
@@ -100,13 +101,14 @@ public class KneedBeamTests
         var groups = detector.DetectBeamGroups(voice, new TimeSignature(4, 4));
 
         Assert.NotEmpty(groups);
-        Assert.True(groups[0].IsKnee, "Large gap (12) should create knee");
+        Assert.False(groups[0].IsKnee, "Kneed beam disabled — all members use unified direction");
     }
 
     [Fact]
-    public void BeamDetector_KneedBeam_PerMemberDirections()
+    public void BeamDetector_LargeGap_AllMembersUseGroupDirection()
     {
-        // Low note (staff pos -6) should be stem up, high note (6) should be stem down
+        // Even with large gap, all members use the group's unified stem direction
+        // (kneed beam rendering not yet implemented)
         var notes = new MusicItem[]
         {
             new NoteItem(-6, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
@@ -120,11 +122,12 @@ public class KneedBeamTests
 
         Assert.NotEmpty(groups);
         var group = groups[0];
-        Assert.True(group.IsKnee);
-        // Low note (-6) is below middle line → stem up
-        Assert.True(group.Members[0].MemberStemUp, "Low note should have stem up");
-        // High note (6) is above middle line → stem down
-        Assert.False(group.Members[1].MemberStemUp, "High note should have stem down");
+        Assert.False(group.IsKnee);
+        // All members should have the same direction as the group
+        foreach (var member in group.Members)
+        {
+            Assert.Equal(group.StemUp, member.MemberStemUp);
+        }
     }
 
     [Fact]
@@ -154,9 +157,10 @@ public class KneedBeamTests
     }
 
     [Fact]
-    public void BeamDetector_ThreeNotes_MiddleKnee()
+    public void BeamDetector_ThreeNotes_LargeGap_UnifiedDirection()
     {
         // Three notes with large gap: low, high, low
+        // Kneed beam disabled — all members use group direction
         var notes = new MusicItem[]
         {
             new NoteItem(-6, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
@@ -170,10 +174,12 @@ public class KneedBeamTests
         var groups = detector.DetectBeamGroups(voice, new TimeSignature(4, 4));
 
         Assert.NotEmpty(groups);
-        Assert.True(groups[0].IsKnee);
-        Assert.True(groups[0].Members[0].MemberStemUp);   // -6: below → up
-        Assert.False(groups[0].Members[1].MemberStemUp);  // 6: above → down
-        Assert.True(groups[0].Members[2].MemberStemUp);   // -6: below → up
+        Assert.False(groups[0].IsKnee);
+        // All members use group direction (average of -6, 6, -6 = -2 → stem up)
+        foreach (var member in groups[0].Members)
+        {
+            Assert.Equal(groups[0].StemUp, member.MemberStemUp);
+        }
     }
 
     [Fact]
@@ -196,9 +202,9 @@ public class KneedBeamTests
     }
 
     [Fact]
-    public void BeamDetector_ExactThreshold_Knee()
+    public void BeamDetector_AboveThreshold_UnifiedDirection()
     {
-        // Gap above threshold with notes on opposite sides: positions -1 and 6 (gap=7 > 5.5)
+        // Gap above threshold (7 > 5.5) but kneed beam disabled — unified direction
         var notes = new MusicItem[]
         {
             new NoteItem(-1, Fraction.Eighth, 0, null, false, 0, hasBeamStart: true),
@@ -211,6 +217,6 @@ public class KneedBeamTests
         var groups = detector.DetectBeamGroups(voice, new TimeSignature(4, 4));
 
         Assert.NotEmpty(groups);
-        Assert.True(groups[0].IsKnee, "Gap of 7 (above 5.5) with notes on opposite sides should trigger knee");
+        Assert.False(groups[0].IsKnee, "Kneed beam disabled — all members use unified direction");
     }
 }

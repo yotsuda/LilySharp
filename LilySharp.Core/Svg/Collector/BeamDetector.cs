@@ -303,19 +303,20 @@ public sealed class BeamDetector
         // Auto-knee detection: check if notes span a large gap
         // LILYPOND-REF: beam.cc:894-982 consider_auto_knees
         // LILYPOND-REF: define-grobs.scm:437 auto-knee-gap = 5.5
-        bool useKnee = ShouldAutoKnee(members);
+        // NOTE: Kneed beam rendering is not yet implemented (beam scoring does not
+        // position the beam inside the gap). Until BeamScoringProblem supports kneed
+        // beam placement, always use the group's unified stem direction to avoid
+        // stem-side mismatches (e.g., stem drawn on right side when beam is below).
+        // TODO: Implement kneed beam positioning in BeamScoringProblem, then
+        // re-enable per-member directions here.
 
-        if (!useKnee)
+        // All members use the group's overall stem direction
+        for (int i = 0; i < members.Count; i++)
         {
-            // All members use the group's overall stem direction
-            for (int i = 0; i < members.Count; i++)
-            {
-                var m = members[i];
-                members[i] = new BeamMember(m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
-                    m.StaffPosition, m.ItemIndex, stemUp);
-            }
+            var m = members[i];
+            members[i] = new BeamMember(m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
+                m.StaffPosition, m.ItemIndex, stemUp);
         }
-        // If useKnee, keep per-member directions based on staff position
 
         return new BeamGroup(
             members.ToImmutableArray(),
