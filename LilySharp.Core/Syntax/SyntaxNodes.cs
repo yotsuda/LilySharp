@@ -1354,6 +1354,20 @@ public sealed partial class GrandStaffRenderSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Represents an ossia render item: ossia [clef] { partName }
+/// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
+/// </summary>
+public sealed partial class OssiaRenderSyntax : SyntaxNode
+{
+    internal OssiaRenderSyntax(OssiaRenderGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode OssiaKeyword => (SyntaxTokenNode)GetChild(0)!;
+}
+
+/// <summary>
 /// Represents a tab render item: tab tuning { partName }
 /// </summary>
 public sealed partial class TabRenderSyntax : SyntaxNode

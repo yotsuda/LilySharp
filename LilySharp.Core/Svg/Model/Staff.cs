@@ -28,7 +28,10 @@ public sealed record Staff(
     ClefType Clef,
     ImmutableArray<Voice> Voices,
     TuningType? Tuning = null,
-    string? InstrumentName = null
+    string? InstrumentName = null,
+    /// <summary>Whether this is an ossia staff (rendered at reduced size).</summary>
+    /// <remarks>LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize</remarks>
+    bool IsOssia = false
 )
 {
     /// <summary>The primary voice (first voice).</summary>
@@ -54,6 +57,13 @@ public sealed record Staff(
     /// </summary>
     public static Staff CreateTab(TuningType tuning, Voice voice)
         => new(ClefType.Tab, ImmutableArray.Create(voice), tuning);
+
+    /// <summary>
+    /// Creates an ossia staff (small alternative passage).
+    /// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
+    /// </summary>
+    public static Staff CreateOssia(ClefType clef, Voice voice, string? instrumentName = null)
+        => new(clef, ImmutableArray.Create(voice), null, instrumentName, IsOssia: true);
 
     /// <summary>
     /// Parses a clef string to ClefType.

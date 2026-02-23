@@ -808,6 +808,32 @@ internal sealed class GrandStaffRenderGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Ossia render: ossia [clef] { partName }
+/// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
+/// </summary>
+internal sealed class OssiaRenderGreen : GreenSyntaxNode
+{
+    public OssiaRenderGreen(
+        SyntaxToken ossiaKeyword,
+        SyntaxToken openBrace,
+        SyntaxToken partName,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.OssiaRender, [ossiaKeyword, openBrace, partName, closeBrace])
+    {
+    }
+
+    public OssiaRenderGreen(
+        SyntaxToken ossiaKeyword,
+        SyntaxToken clefName,
+        SyntaxToken openBrace,
+        SyntaxToken partName,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.OssiaRender, [ossiaKeyword, clefName, openBrace, partName, closeBrace])
+    {
+    }
+}
+
+/// <summary>
 /// Tab render: tab tuning { partName }
 /// </summary>
 internal sealed class TabRenderGreen : GreenSyntaxNode

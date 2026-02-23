@@ -1582,6 +1582,7 @@ private GreenNode?[] ParseArticulations()
             SyntaxKind.StaffKeyword => ParseStaffRender(),
             SyntaxKind.GrandStaffKeyword => ParseGrandStaffRender(),
             SyntaxKind.TabKeyword => ParseTabRender(),
+            SyntaxKind.OssiaKeyword => ParseOssiaRender(),
             _ when IsPartNameStart() => ParseMidiPartRender(),
             _ => null
         };
@@ -1635,6 +1636,30 @@ private GreenNode?[] ParseArticulations()
             or SyntaxKind.AltoKeyword
             or SyntaxKind.TenorKeyword
             or SyntaxKind.Treble8Keyword;
+    }
+
+    /// <summary>
+    /// Parse ossia render: ossia [clef] { partName }
+    /// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
+    /// </summary>
+    private OssiaRenderGreen ParseOssiaRender()
+    {
+        var ossiaKeyword = Expect(SyntaxKind.OssiaKeyword);
+
+        // Check for optional clef (bass, treble, alto, tenor)
+        if (IsClefKeyword())
+        {
+            var clef = Advance();
+            var openBrace = Expect(SyntaxKind.OpenBrace);
+            var partName = ExpectPartName();
+            var closeBrace = Expect(SyntaxKind.CloseBrace);
+            return new OssiaRenderGreen(ossiaKeyword, clef, openBrace, partName, closeBrace);
+        }
+
+        var openBraceSimple = Expect(SyntaxKind.OpenBrace);
+        var partNameSimple = ExpectPartName();
+        var closeBraceSimple = Expect(SyntaxKind.CloseBrace);
+        return new OssiaRenderGreen(ossiaKeyword, openBraceSimple, partNameSimple, closeBraceSimple);
     }
 
     /// <summary>

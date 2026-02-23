@@ -3,11 +3,11 @@
 ## 全体進捗
 
 - **総タスク数:** 52 (Phase 1-5: 28 / Phase 6-9: 24)
-- **完了 ✅:** 50 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.4, 7.6-7.8 + Phase 8 全5件 + Phase 9.1-9.5)
+- **完了 ✅:** 51 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.8 全8件 + Phase 8 全5件 + Phase 9.1-9.5)
 - **レビュー待ち 🔍:** 0
 - **作業中 ⏳:** 0
-- **未着手 🚀:** 2 (Phase 5.1 + Phase 7.5)
-- **進捗率:** 96% (50/52)
+- **未着手 🚀:** 1 (Phase 5.1)
+- **進捗率:** 98% (51/52)
 
 ## ステータス凡例
 
@@ -110,7 +110,7 @@
 | 7.2 小節途中の音部記号変更 | ✅ | High | lily/clef-engraver.cc, lily/clef.cc | ClefChangeItem (zero-duration MusicItem), MeasureCollector ClefDeclarationSyntax handling (5箇所のtype filter), EmmentalerGlyphs _change glyphs (G/F/C), GlyphMetrics change widths (75%), SpacingRules ClefChangeItem対応, SvgRenderer DrawClefChange + GetActiveClefForSystem/GetActiveClefStringForSystem (system-start clef tracking), Score.Clef _initialClef fix, テスト5件+スナップショット1件追加。913全テスト通過 |
 | 7.3 小節途中の調号変更 | ✅ | High | lily/key-engraver.cc | KeySignatureChangeItem (zero-duration MusicItem, NewKey/PreviousKey), MeasureCollector KeySignatureSyntax handling (5箇所type filter+ProcessMusicNode), _initialKeySharps field, IsInsideMusicContent guard (CollectDefinitions filter), CalculateKeySharps bug fix (PitchName already includes accidental), SpacingRules KeySignatureChangeItem対応 (GetKeySignatureChangeWidth), GlyphMetrics.KeySignatureNaturalWidth追加, SvgRenderer DrawKeySignatureChange (cancellation naturals+new key accidentals), DrawCancellationNaturals/DrawPartialCancellationNaturals, GetActiveKeySignatureForSystem/GetActiveKeySignatureForMultiStaff (system-start key tracking), _currentDrawClef tracking, keysig-change.lys sample, KeySignatureChangeTests 8件+スナップショット35件全通過。923全テスト通過。LILYPOND-REF: lily/key-engraver.cc |
 | 7.4 キューノート | ✅ | Medium | ly/engraver-init.ly CueVoice | NoteItem.IsCue+ChordItem.IsCue追加 (bool, default=false, backward-compatible), MeasureCollector HasCueAnnotation検出 (@cue ArticulationSyntax), CreateNoteItem/CreateChordItem isCueパラメータ追加, SvgRenderer CueScaleFactor=0.66 (magstep(-4)=2^(-4/6)≈0.66), SVG `<g transform="translate(cx,cy) scale(0.66) translate(-cx,-cy)">` wrap (notehead center基準スケーリング, single note+chord両対応), cue-notes.lys sample (single notes+chords with @cue annotation), テスト3件追加。958全テスト通過。LILYPOND-REF: ly/engraver-init.ly CueVoice context fontSize=#-4 |
-| 7.5 Ossia 譜表 | 🚀 | Medium | lily/keep-alive-together-engraver.cc | 一時的な代替パッセージ用の小譜表 |
+| 7.5 Ossia 譜表 | ✅ | Medium | lily/keep-alive-together-engraver.cc | ossia構文+パーサー+縮小描画+テスト完了, magstep(-3)≈0.70 |
 | 7.6 マルチムーブメント | ✅ | Medium | — | RenderSpecParser.FindAll() (全render spec検索), SvgGenerator.GenerateAll() (複数render block→separate SVG files, Dictionary<filename, svg>), SvgGenerator.GenerateMultiMovement() (複数render block→combined SVG, movement title+translate offset), CLI --all flag (lysc svg --all score.lys → 各render blockを個別SVGファイル出力), ExecuteSvgAll (inputDir+filename.svg per render block), multi-movement.lys sample (Sonatina: 3 movements with separate variables per movement), テスト4件追加 (GenerateAll multi/fallback, GenerateMultiMovement combined, FindAll count)。955全テスト通過。LILYPOND-REF: lily/book.cc bookpart/movement grouping |
 | 7.7 Courtesy accidentals 描画 | ✅ | Medium | lily/accidental-engraver.cc | AccidentalLeftParen U+E02F / AccidentalRightParen U+E02E glyph追加, AccidentalParenWidth=0.6, NoteItem.IsCourtesy+ChordNoteInfo.IsCourtesy追加, MeasureCollector自動courtesy検出 (previous measure alteration tracking, RotateMeasureAlterations), @courtesy explicit annotation, HasCourtesyAnnotation pre-scan, AccidentalPlacement width拡張 (paren width含む), SvgRenderer parenthesized accidental描画 (leftparen+glyph+rightparen), GetAccidentalGlyph helper, courtesy-accidentals.lys sample, テスト9件+スナップショット追加。939全テスト通過。LILYPOND-REF: lily/accidental.cc:35-46, lily/accidental-engraver.cc |
 | 7.8 トリルスパナー | ✅ | Medium | lily/trill-spanner-engraver.cc | TrillSpannerItem model, @startTrillSpan/@stopTrillSpan + @trillSpan.start/.stop両構文対応, MeasureCollector trill event収集+PairTrillSpannerEvents pairing, TrillSpannerEngraver.Calculate (BoundPadding=0.5, StaffPadding=1.0, TrillGlyphWidth=1.6, GlyphLinePadding=0.3), cross-system spanner splitting (measure-to-system mapping, first=glyph+line to edge, continuation=line only), SvgRenderer DrawTrillSpanners ("tr" glyph U+E05C + wavy line quadratic Bezier, wavePeriod=0.8, waveAmplitude=0.2), trill-spanner.lys sample (single/cross-measure/multiple trills), テスト8件+スナップショット追加。931全テスト通過。LILYPOND-REF: lily/trill-spanner-engraver.cc, scm/define-grobs.scm:2175-2230 |

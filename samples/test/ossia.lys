@@ -1,0 +1,22 @@
+// Ossia staves test
+// Tests ossia (reduced-size alternative passage) rendering
+// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize and magnifyStaff
+
+key C major
+time 4/4
+
+section Main {
+    melody {
+        | c5/4 d5 e5 f5 | g5/2 e5 | c5/1 |
+    }
+    ossia_melody {
+        | c5/4 e5 g5 e5 | a5/2 f5 | e5/1 |
+    }
+}
+
+structure { Main }
+
+render score "ossia.svg" {
+    staff { melody }
+    ossia { ossia_melody }
+}

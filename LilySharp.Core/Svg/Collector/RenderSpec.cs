@@ -44,6 +44,12 @@ public sealed record GrandStaffRenderSpec(GrandStaffSpec GrandStaff) : RenderIte
 public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning) : RenderItemSpec;
 
 /// <summary>
+/// Ossia staff render item (small alternative passage above/below main staff).
+/// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize and magnifyStaff
+/// </summary>
+public sealed record OssiaStaffSpec(StaffSpec Staff) : RenderItemSpec;
+
+/// <summary>
 /// Complete render specification parsed from a render block.
 /// </summary>
 public sealed record RenderSpec(
@@ -74,6 +80,9 @@ public sealed record RenderSpec(
                     break;
                 case TabStaffSpec tab:
                     yield return tab.Staff.VoiceName;
+                    break;
+                case OssiaStaffSpec ossia:
+                    yield return ossia.Staff.VoiceName;
                     break;
             }
         }
@@ -107,6 +116,14 @@ public sealed record RenderSpec(
                 case TabStaffSpec tab:
                     var tabStaff = Staff.CreateTab(tab.Tuning, getVoice(tab.Staff.VoiceName));
                     yield return StaffGroup.CreateSingle(tabStaff);
+                    break;
+
+                case OssiaStaffSpec ossia:
+                    var ossiaStaff = Staff.CreateOssia(
+                        ossia.Staff.Clef,
+                        getVoice(ossia.Staff.VoiceName),
+                        ossia.Staff.InstrumentName);
+                    yield return StaffGroup.CreateSingle(ossiaStaff);
                     break;
             }
         }

@@ -48,6 +48,7 @@ public enum SyntaxKind : ushort
     StaffKeyword,       // staff
     GrandStaffKeyword,  // grandStaff
     TabKeyword,         // tab
+    OssiaKeyword,       // ossia
     VoiceKeyword,       // voice
     PhraseKeyword,      // phrase
     RepeatKeyword,      // repeat (legacy)
@@ -191,6 +192,7 @@ public enum SyntaxKind : ushort
     StaffRender,                // staff { guitar } inside render
     GrandStaffRender,           // grandStaff { staff staff } inside render
     TabRender,                  // tab guitar { guitar } inside render
+    OssiaRender,                // ossia treble { alternative } inside render
     MidiPartRender,             // guitar channel:1 inside render
     // === Nodes: Structure Block Items ===
     SectionStartMarker,         // marker to reset pitch resolver at section boundaries

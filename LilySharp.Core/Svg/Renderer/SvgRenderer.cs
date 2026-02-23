@@ -25,6 +25,11 @@ public sealed class SvgRenderer
     /// LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4
     /// </summary>
     private const double CueScaleFactor = 0.66;
+    /// <summary>
+    /// Scale factor for ossia staves: magstep(-3) = 2^(-3/6) ≈ 0.70.
+    /// LILYPOND-REF: ly/engraver-init.ly — ossia staves typically use fontSize = #-3
+    /// </summary>
+    private const double OssiaScaleFactor = 0.70;
 
     // Derived from SMuFL defaults (all in staff spaces)
     private static double StaffLineThickness => EngravingDefaults.StaffLineThickness;
@@ -396,7 +401,20 @@ public sealed class SvgRenderer
         foreach (var staffLayout in staffGroup.Staves)
         {
             double staffY = system.Y + staffLayout.Y;
-            DrawStaff(score, scoreLayout, system, staffLayout, staffY, startX, endX, isFirstSystem);
+            if (staffLayout.IsOssia)
+            {
+                // LILYPOND-REF: ly/engraver-init.ly — ossia staves rendered at reduced size
+                // Scale around the staff center point
+                double ossiaCenterY = staffY + staffLayout.Height / 2;
+                double ossiaCenterX = (startX + endX) / 2;
+                _svg.AppendLine($"""  <g transform="translate({ossiaCenterX:F2},{ossiaCenterY:F2}) scale({OssiaScaleFactor}) translate({-ossiaCenterX:F2},{-ossiaCenterY:F2})">""");
+                DrawStaff(score, scoreLayout, system, staffLayout, staffY, startX, endX, isFirstSystem);
+                _svg.AppendLine("  </g>");
+            }
+            else
+            {
+                DrawStaff(score, scoreLayout, system, staffLayout, staffY, startX, endX, isFirstSystem);
+            }
         }
     }
 
@@ -1061,6 +1079,8 @@ public sealed class SvgRenderer
         {
             foreach (var staff in staffGroup.Staves)
             {
+                // Exclude ossia staves from system barline connections
+                if (staff.IsOssia) continue;
                 double staffTop = system.Y + staff.Y;
                 double staffBottom = staffTop + staff.Height;
                 topY = Math.Min(topY, staffTop);

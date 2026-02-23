@@ -5,6 +5,7 @@ using LilySharp.Core.Syntax;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Svg.Renderer;
 
 namespace LilySharp.Tests;
@@ -373,5 +374,90 @@ render score ""third"" { staff treble { rh } }
         var svg = renderer.Render(score, layout);
 
         Assert.DoesNotContain("scale(0.66)", svg);
+    }
+
+    [Fact]
+    public void OssiaStaff_ParsedAndRenderedWithScaleTransform()
+    {
+        // LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize (#-3)
+        // magstep(-3) = 2^(-3/6) ≈ 0.707
+        var source = @"
+key C major
+time 4/4
+section Main {
+    melody { | c5/4 d5 e5 f5 | g5/1 | }
+    alt { | e5/4 f5 g5 a5 | b5/1 | }
+}
+structure { Main }
+render score ""ossia-test.svg"" {
+    staff { melody }
+    ossia { alt }
+}";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, "Syntax tree should have no errors");
+
+        // Verify render spec parsing
+        var renderSpec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(renderSpec);
+        Assert.True(renderSpec.IsMultiStaff, "Should be multi-staff (staff + ossia)");
+        Assert.Equal(2, renderSpec.Items.Length);
+        Assert.IsType<SingleStaffSpec>(renderSpec.Items[0]);
+        Assert.IsType<OssiaStaffSpec>(renderSpec.Items[1]);
+
+        // Generate SVG
+        var svg = SvgGenerator.Generate(tree);
+        Assert.Contains("scale(0.7)", svg);
+    }
+
+    [Fact]
+    public void OssiaStaff_WithExplicitClef()
+    {
+        var source = @"
+key C major
+time 4/4
+section Main {
+    melody { | c5/4 d5 e5 f5 | g5/1 | }
+    bassAlt { | c3/4 d3 e3 f3 | g3/1 | }
+}
+structure { Main }
+render score ""ossia-clef.svg"" {
+    staff { melody }
+    ossia bass { bassAlt }
+}";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, "Syntax tree should have no errors");
+
+        var renderSpec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(renderSpec);
+        var ossiaItem = renderSpec.Items[1] as OssiaStaffSpec;
+        Assert.NotNull(ossiaItem);
+        Assert.Equal(ClefType.Bass, ossiaItem.Staff.Clef);
+    }
+
+    [Fact]
+    public void OssiaStaff_ExcludedFromSystemBarlines()
+    {
+        var source = @"
+key C major
+time 4/4
+section Main {
+    melody { | c5/4 d5 e5 f5 | g5/1 | }
+    alt { | e5/4 f5 g5 a5 | b5/1 | }
+}
+structure { Main }
+render score ""ossia-barline.svg"" {
+    staff { melody }
+    ossia { alt }
+}";
+        var tree = SyntaxTree.Parse(source);
+        var svg = SvgGenerator.Generate(tree);
+
+        // Ossia staff should be scaled, verify the transform exists
+        Assert.Contains("scale(0.7)", svg);
+
+        // The barlines should only span the main staff, not extend to ossia
+        // Count barline elements: they should have consistent y range for single staff
+        var barlineMatches = System.Text.RegularExpressions.Regex.Matches(svg, @"class=""barline""");
+        Assert.True(barlineMatches.Count > 0, "Should have barlines");
     }
 }

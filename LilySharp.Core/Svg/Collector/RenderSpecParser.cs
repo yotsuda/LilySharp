@@ -70,6 +70,12 @@ public static class RenderSpecParser
                     if (tabSpec != null)
                         items.Add(tabSpec);
                     break;
+
+                case OssiaRenderSyntax ossia:
+                    var ossiaSpec = ParseOssia(ossia);
+                    if (ossiaSpec != null)
+                        items.Add(ossiaSpec);
+                    break;
             }
         }
 
@@ -340,6 +346,57 @@ public static class RenderSpecParser
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Parses an ossia render item: ossia [clef] { partName }
+    /// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
+    /// </summary>
+    private static OssiaStaffSpec? ParseOssia(OssiaRenderSyntax ossia)
+    {
+        ClefType? explicitClef = null;
+        string? voiceName = null;
+        bool foundOpenBrace = false;
+
+        for (int i = 0; i < ossia.SlotCount; i++)
+        {
+            var child = ossia.GetChild(i);
+            if (child is SyntaxTokenNode token)
+            {
+                if (token.Kind == SyntaxKind.OssiaKeyword)
+                    continue;
+                if (token.Kind == SyntaxKind.OpenBrace)
+                {
+                    foundOpenBrace = true;
+                    continue;
+                }
+                if (token.Kind == SyntaxKind.CloseBrace)
+                    break;
+
+                if (!foundOpenBrace)
+                {
+                    // Clef before open brace
+                    switch (token.Kind)
+                    {
+                        case SyntaxKind.TrebleKeyword: explicitClef = ClefType.Treble; break;
+                        case SyntaxKind.BassKeyword: explicitClef = ClefType.Bass; break;
+                        case SyntaxKind.AltoKeyword: explicitClef = ClefType.Alto; break;
+                        case SyntaxKind.TenorKeyword: explicitClef = ClefType.Tenor; break;
+                        case SyntaxKind.Treble8Keyword: explicitClef = ClefType.Treble8Below; break;
+                    }
+                }
+                else
+                {
+                    voiceName = token.Text;
+                }
+            }
+        }
+
+        if (voiceName == null)
+            return null;
+
+        ClefType clef = explicitClef ?? GetPartClef(ossia, voiceName) ?? ClefType.Treble;
+        return new OssiaStaffSpec(new StaffSpec(clef, voiceName));
     }
 
     private static bool IsInsideGrandStaff(StaffRenderSyntax staff)

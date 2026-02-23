@@ -13,7 +13,9 @@ public sealed record StaffLayout(
     double Y,           // Y position relative to system top
     double Height,      // Staff height (typically 4 * staffSpace)
     TuningType? Tuning = null,  // Tuning for tablature staves
-    string? InstrumentName = null  // Display name for this staff
+    string? InstrumentName = null,  // Display name for this staff
+    /// <summary>Whether this staff is an ossia (rendered at reduced size).</summary>
+    bool IsOssia = false
 );
 
 /// <summary>

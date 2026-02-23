@@ -407,6 +407,7 @@ internal sealed class Lexer
             "structure" => SyntaxKind.StructureKeyword,
             "render" => SyntaxKind.RenderKeyword,
             "tab" => SyntaxKind.TabKeyword,
+            "ossia" => SyntaxKind.OssiaKeyword,
 
             // Part options
             "transpose" => SyntaxKind.TransposeKeyword,

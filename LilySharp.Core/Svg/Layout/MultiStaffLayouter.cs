@@ -62,7 +62,12 @@ public sealed class MultiStaffLayouter
             if (i < score.StaffGroups.Length - 1)
             {
                 // Inter-group: staffgroup-staff-spacing basic distance
-                height += sp.StaffGroupStaff.BasicDistance - staffHeight;
+                double interGroupGap = sp.StaffGroupStaff.BasicDistance - staffHeight;
+                bool nextIsOssia = score.StaffGroups[i + 1].Staves.Any(s => s.IsOssia);
+                bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
+                if (nextIsOssia || currentIsOssia)
+                    interGroupGap *= OssiaScaleFactor;
+                height += interGroupGap;
             }
         }
 
@@ -70,9 +75,17 @@ public sealed class MultiStaffLayouter
     }
 
     /// <summary>
+    /// Scale factor for ossia staves: magstep(-3) = 2^(-3/6) ≈ 0.707.
+    /// LILYPOND-REF: ly/engraver-init.ly — ossia staves typically use fontSize = #-3
+    /// with \override StaffSymbol.staff-space = #(magstep -3)
+    /// </summary>
+    private const double OssiaScaleFactor = 0.70;
+
+    /// <summary>
     /// Gets the height of a staff in staff spaces.
     /// Standard staves have 4 staff spaces (5 lines).
     /// Tab staves have (stringCount - 1) staff spaces.
+    /// Ossia staves are scaled down.
     /// </summary>
     private double GetStaffHeight(Staff staff)
     {
@@ -81,6 +94,8 @@ public sealed class MultiStaffLayouter
             int stringCount = Tunings.GetStringCount(staff.Tuning.Value);
             return stringCount - 1; // e.g., Guitar: 5, Bass: 3
         }
+        if (staff.IsOssia)
+            return _options.StaffHeight * OssiaScaleFactor;
         return _options.StaffHeight;
     }
 
@@ -118,8 +133,14 @@ public sealed class MultiStaffLayouter
 
             if (i < score.StaffGroups.Length - 1)
             {
-                // Inter-group gap: staffgroup-staff basic distance (from bottom of last staff to top of next)
-                currentY += sp.StaffGroupStaff.BasicDistance - staffHeight;
+                // Inter-group gap: staffgroup-staff basic distance
+                // Reduce spacing when adjacent to an ossia staff
+                double interGroupGap = sp.StaffGroupStaff.BasicDistance - staffHeight;
+                bool nextIsOssia = score.StaffGroups[i + 1].Staves.Any(s => s.IsOssia);
+                bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
+                if (nextIsOssia || currentIsOssia)
+                    interGroupGap *= OssiaScaleFactor;
+                currentY += interGroupGap;
             }
 
             globalStaffIndex += group.StaffCount;
@@ -199,7 +220,8 @@ public sealed class MultiStaffLayouter
                 Y: currentY,
                 Height: thisStaffHeight,
                 Tuning: staff.Tuning,
-                InstrumentName: staff.InstrumentName));
+                InstrumentName: staff.InstrumentName,
+                IsOssia: staff.IsOssia));
 
             if (i < group.Staves.Length - 1)
                 currentY += thisStaffHeight + Math.Max(0, staffSpacing);
