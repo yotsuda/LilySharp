@@ -166,3 +166,32 @@ public sealed record ClefChangeItem : MusicItem
         _sourcePosition = sourcePosition;
     }
 }
+
+/// <summary>
+/// A mid-measure key signature change. Has zero duration — occupies horizontal space
+/// but does not advance the timing position.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/key-engraver.cc — process_music() creates KeySignature grob
+/// when keyAlterations changes. Cancellation naturals show notes removed from previous key.
+/// </remarks>
+public sealed record KeySignatureChangeItem : MusicItem
+{
+    /// <summary>The new key signature after the change.</summary>
+    public KeySignature NewKey { get; }
+
+    /// <summary>The previous key signature (for cancellation naturals).</summary>
+    public KeySignature PreviousKey { get; }
+
+    private readonly int _sourcePosition;
+
+    public override Fraction Duration => Fraction.Zero;
+    public override int SourcePosition => _sourcePosition;
+
+    public KeySignatureChangeItem(KeySignature newKey, KeySignature previousKey, int sourcePosition)
+    {
+        NewKey = newKey;
+        PreviousKey = previousKey;
+        _sourcePosition = sourcePosition;
+    }
+}

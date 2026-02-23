@@ -3,11 +3,11 @@
 ## 全体進捗
 
 - **総タスク数:** 52 (Phase 1-5: 28 / Phase 6-9: 24)
-- **完了 ✅:** 37 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.2 + Phase 8.1-8.2)
+- **完了 ✅:** 38 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.3 + Phase 8.1-8.2)
 - **レビュー待ち 🔍:** 0
 - **作業中 ⏳:** 0
-- **未着手 🚀:** 15 (Phase 5.1 + Phase 7.3-7.8 + Phase 8.3-8.5 + Phase 9)
-- **進捗率:** 71% (37/52)
+- **未着手 🚀:** 14 (Phase 5.1 + Phase 7.4-7.8 + Phase 8.3-8.5 + Phase 9)
+- **進捗率:** 73% (38/52)
 
 ## ステータス凡例
 
@@ -108,7 +108,7 @@
 |--------|:------:|:------:|--------------|------|
 | 7.1 楽器名表示 | ✅ | High | lily/instrument-name-engraver.cc | Part `name:` property→StaffSpec→Staff→StaffLayout→SVG text。Grand staff名centering。viewBox negative X拡張。serif font, text-anchor=end, padding=0.3。テスト8件+スナップショット1件追加 |
 | 7.2 小節途中の音部記号変更 | ✅ | High | lily/clef-engraver.cc, lily/clef.cc | ClefChangeItem (zero-duration MusicItem), MeasureCollector ClefDeclarationSyntax handling (5箇所のtype filter), EmmentalerGlyphs _change glyphs (G/F/C), GlyphMetrics change widths (75%), SpacingRules ClefChangeItem対応, SvgRenderer DrawClefChange + GetActiveClefForSystem/GetActiveClefStringForSystem (system-start clef tracking), Score.Clef _initialClef fix, テスト5件+スナップショット1件追加。913全テスト通過 |
-| 7.3 小節途中の調号/拍子変更 | 🚀 | High | lily/key-engraver.cc, lily/time-signature-engraver.cc | mid-measure の key/time 変更。courtesy naturals 表示 |
+| 7.3 小節途中の調号変更 | ✅ | High | lily/key-engraver.cc | KeySignatureChangeItem (zero-duration MusicItem, NewKey/PreviousKey), MeasureCollector KeySignatureSyntax handling (5箇所type filter+ProcessMusicNode), _initialKeySharps field, IsInsideMusicContent guard (CollectDefinitions filter), CalculateKeySharps bug fix (PitchName already includes accidental), SpacingRules KeySignatureChangeItem対応 (GetKeySignatureChangeWidth), GlyphMetrics.KeySignatureNaturalWidth追加, SvgRenderer DrawKeySignatureChange (cancellation naturals+new key accidentals), DrawCancellationNaturals/DrawPartialCancellationNaturals, GetActiveKeySignatureForSystem/GetActiveKeySignatureForMultiStaff (system-start key tracking), _currentDrawClef tracking, keysig-change.lys sample, KeySignatureChangeTests 8件+スナップショット35件全通過。923全テスト通過。LILYPOND-REF: lily/key-engraver.cc |
 | 7.4 キューノート | 🚀 | Medium | lily/cue-clef-engraver.cc | 小サイズのキュー音符。別パートからの引用表示 |
 | 7.5 Ossia 譜表 | 🚀 | Medium | lily/keep-alive-together-engraver.cc | 一時的な代替パッセージ用の小譜表 |
 | 7.6 マルチムーブメント | 🚀 | Medium | — | 複数楽章の明示的サポート。楽章間のページ区切り・タイトル |
@@ -192,3 +192,4 @@
 | 2026-02-23 | Phase 8.2 コードカバレッジ: coverlet.collector 6.0.2追加。XPlat Code Coverage収集+CI artifact upload。現在の達成率: line 83.3%, branch 74.5% |
 | 2026-02-23 | Phase 7.1 楽器名表示: Part `name:` property parse (identifier/string literal), StaffSpec/Staff/StaffLayout.InstrumentName propagation, SvgRenderer.DrawInstrumentNames (serif font, text-anchor=end, padding=0.3 define-grobs.scm:1711-1728準拠), EstimateInstrumentNameWidth (viewBox negative X extension), Grand staff centering (single named staff→brace span center), instrument-names.lys sample, InstrumentNameTests 8件, スナップショット33件全更新。LILYPOND-REF: lily/instrument-name-engraver.cc |
 | 2026-02-23 | Phase 7.2 小節途中の音部記号変更: ClefChangeItem model (zero-duration MusicItem, NewClef property), MeasureCollector ClefDeclarationSyntax handling (ProcessMusicNode+5箇所type filter追加: CollectMeasuresFromNode/ProcessPartBlock/ExpandVariable×2), EmmentalerGlyphs _change glyphs (GClefChange=U+E086, FClefChange=U+E084, CClefChange=U+E080), GlyphMetrics change widths (×0.75+padding=0.5), SpacingRules ClefChangeItem対応 (CalculateLeft/RightExtent, GetNoteValue), SvgRenderer DrawClefChange (smaller glyph描画), GetActiveClefForSystem/GetActiveClefStringForSystem (system-start clef tracking: scan preceding measures+leading items in first measure), Score.Clef _initialClef fix (mid-measure clef changes no longer corrupt Score.Clef), ClefTypeToString helper, clef-change.lys sample, ClefChangeTests 5件+スナップショット34件全通過。913全テスト通過。LILYPOND-REF: lily/clef-engraver.cc, lily/clef.cc |
+| 2026-02-23 | Phase 7.3 小節途中の調号変更: KeySignatureChangeItem model (zero-duration MusicItem, NewKey/PreviousKey for cancellation), MeasureCollector KeySignatureSyntax handling (5箇所type filter+ProcessMusicNode case追加), _initialKeySharps field (Score.KeySignature initial value preservation), IsInsideMusicContent guard (CollectDefinitions: phrase/section内のkey宣言を除外), CalculateKeySharps bug fix (PitchName既にaccidental含む→二重suffix追加の修正+fis/cis/ces追加), SpacingRules KeySignatureChangeItem対応 (GetKeySignatureChangeWidth: cancellation naturals+new accidentals width計算), GlyphMetrics.KeySignatureNaturalWidth=0.8追加, SvgRenderer DrawKeySignatureChange (DrawCancellationNaturals/DrawPartialCancellationNaturals), GetActiveKeySignatureForSystem/GetActiveKeySignatureForMultiStaff (system-start key tracking), _currentDrawClef field (clef-aware Y positioning), keysig-change.lys sample (G→C, C→F, G→Eb), KeySignatureChangeTests 8件+スナップショット35件全通過。923全テスト通過。LILYPOND-REF: lily/key-engraver.cc |

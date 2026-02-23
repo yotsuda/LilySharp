@@ -368,6 +368,7 @@ public sealed class MeasureCollector
     private int _timeBeats = 4;
     private int _timeBeatType = 4;
     private int _keySharps = 0;
+    private int _initialKeySharps = 0; // Preserved for Score.KeySignature (not mutated by mid-measure key changes)
     private string _clef = "treble";
     private string _initialClef = "treble"; // Preserved for Score.Clef (not mutated by mid-measure clef changes)
 
@@ -401,6 +402,7 @@ public sealed class MeasureCollector
         }
         _initialOctave = _currentOctave;
         _initialClef = _clef; // Preserve initial clef before music processing
+        _initialKeySharps = _keySharps; // Preserve initial key before music processing
 
         // Phase 2: Check for parallel expression (multi-voice)
         var parallelExpr = tree.GetRoot().DescendantNodes()
@@ -422,7 +424,7 @@ public sealed class MeasureCollector
         return new Score(
             voice,
             new TimeSignature(_timeBeats, _timeBeatType),
-            new KeySignature(_keySharps),
+            new KeySignature(_initialKeySharps), // Use initial key, not the final state after key changes
             _initialClef, // Use initial clef, not the final state after clef changes
             _tempo,
             _title,
@@ -453,6 +455,7 @@ public sealed class MeasureCollector
 
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
+        _initialKeySharps = _keySharps; // Preserve initial key before music processing
 
         // Phase 2: Build voice dictionary
         var voiceDict = new Dictionary<string, Voice>();
@@ -482,7 +485,7 @@ public sealed class MeasureCollector
         return new MultiStaffScore(
             staffGroups,
             new TimeSignature(_timeBeats, _timeBeatType),
-            new KeySignature(_keySharps),
+            new KeySignature(_initialKeySharps), // Use initial key, not the final state after key changes
             _tempo,
             _title,
             _composer,
@@ -556,7 +559,7 @@ public sealed class MeasureCollector
         return new Score(
             voices.ToImmutableArray(),
             new TimeSignature(_timeBeats, _timeBeatType),
-            new KeySignature(_keySharps),
+            new KeySignature(_initialKeySharps), // Use initial key, not the final state after key changes
             _initialClef, // Use initial clef, not the final state after clef changes
             _tempo,
             _title,
@@ -606,6 +609,7 @@ public sealed class MeasureCollector
                 case RevertDeclarationSyntax:
                 case OnceModifierSyntax:
                 case ClefDeclarationSyntax:
+                case KeySignatureSyntax:
                     musicNodes.Add(node);
                     break;
 
@@ -732,6 +736,19 @@ public sealed class MeasureCollector
                     _currentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
                     var clefChange = new ClefChangeItem(ParseClefType(newClef), clefDecl.Position);
                     builder.AddItem(clefChange);
+                }
+                break;
+
+            case KeySignatureSyntax keySig:
+                {
+                    // Mid-measure key signature change
+                    // LILYPOND-REF: lily/key-engraver.cc — process_music() creates KeySignature grob
+                    var previousKey = new KeySignature(_keySharps);
+                    int newSharps = CalculateKeySharps(keySig);
+                    _keySharps = newSharps;
+                    var newKey = new KeySignature(newSharps);
+                    var keyChange = new KeySignatureChangeItem(newKey, previousKey, keySig.Position);
+                    builder.AddItem(keyChange);
                 }
                 break;
 
@@ -889,6 +906,7 @@ public sealed class MeasureCollector
         _timeBeats = 4;
         _timeBeatType = 4;
         _keySharps = 0;
+        _initialKeySharps = 0;
         _clef = "treble";
         _initialClef = "treble";
     }
@@ -970,7 +988,9 @@ public sealed class MeasureCollector
                     break;
 
                 case KeySignatureSyntax key:
-                    _keySharps = CalculateKeySharps(key);
+                    // Only process top-level key declarations (not inside phrases/sections)
+                    if (!IsInsideMusicContent(key))
+                        _keySharps = CalculateKeySharps(key);
                     break;
 
                 case ClefDeclarationSyntax clef:
@@ -1027,18 +1047,16 @@ public sealed class MeasureCollector
 
     private int CalculateKeySharps(KeySignatureSyntax key)
     {
-        string pitchName = key.Pitch.PitchName.ToLowerInvariant();
+        // PitchName already includes accidental suffix (e.g., "bes", "fis")
+        string keyName = key.Pitch.PitchName.ToLowerInvariant();
         string mode = key.Mode.Text.ToLowerInvariant();
 
         var majorKeys = new Dictionary<string, int>
         {
             ["c"] = 0, ["g"] = 1, ["d"] = 2, ["a"] = 3, ["e"] = 4, ["b"] = 5,
-            ["f"] = -1, ["bes"] = -2, ["ees"] = -3, ["aes"] = -4, ["des"] = -5, ["ges"] = -6
+            ["fis"] = 6, ["cis"] = 7,
+            ["f"] = -1, ["bes"] = -2, ["ees"] = -3, ["aes"] = -4, ["des"] = -5, ["ges"] = -6, ["ces"] = -7
         };
-
-        string keyName = pitchName;
-        if (key.Pitch.AccidentalOffset > 0) keyName += "is";
-        else if (key.Pitch.AccidentalOffset < 0) keyName += "es";
 
         if (majorKeys.TryGetValue(keyName, out int sharps))
         {
@@ -1164,7 +1182,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax);
+                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or KeySignatureSyntax);
             ProcessNodes(musicNodes);
         }
 
@@ -1201,6 +1219,23 @@ public sealed class MeasureCollector
         while (parent != null)
         {
             if (parent is StructureRepeatBlockSyntax)
+                return true;
+            parent = parent.Parent;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a node is inside music content (phrase/section/variable body).
+    /// Used by CollectDefinitions to distinguish top-level declarations from mid-music changes.
+    /// </summary>
+    private static bool IsInsideMusicContent(SyntaxNode node)
+    {
+        var parent = node.Parent;
+        while (parent != null)
+        {
+            if (parent is PhraseDeclarationSyntax or SectionDeclarationSyntax
+                or VariableDeclarationSyntax or PartBlockSyntax)
                 return true;
             parent = parent.Parent;
         }
@@ -1391,6 +1426,7 @@ public sealed class MeasureCollector
                 case RepeatExpressionSyntax:
                 case MusicMarkSyntax:
                 case ClefDeclarationSyntax:
+                case KeySignatureSyntax:
                     musicNodes.Add(node);
                     break;
 
@@ -1412,7 +1448,7 @@ public sealed class MeasureCollector
         if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-            or ClefDeclarationSyntax)
+            or ClefDeclarationSyntax or KeySignatureSyntax)
         {
             musicNodes.Add(expression);
         }
@@ -1424,7 +1460,7 @@ public sealed class MeasureCollector
                 && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
                 or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
                 or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-                or ClefDeclarationSyntax);
+                or ClefDeclarationSyntax or KeySignatureSyntax);
 
         musicNodes.AddRange(nodes);
     }

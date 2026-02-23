@@ -208,6 +208,44 @@ public static class SpacingRules
     public static double AccidentalNoteGap => GlyphMetrics.AccidentalNoteGap;
 
     /// <summary>
+    /// Gets the width of a mid-measure key signature change.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/key-engraver.cc — key signature width depends on accidental count.
+    /// Includes cancellation naturals from previous key.
+    /// </remarks>
+    private static double GetKeySignatureChangeWidth(KeySignatureChangeItem keyChange)
+    {
+        double width = 0;
+
+        // Cancellation naturals (from previous key)
+        int prevCount = keyChange.PreviousKey.Count;
+        int newCount = keyChange.NewKey.Count;
+        bool sameType = (keyChange.PreviousKey.IsSharps == keyChange.NewKey.IsSharps) ||
+                        keyChange.PreviousKey.Sharps == 0 || keyChange.NewKey.Sharps == 0;
+
+        // LILYPOND-REF: lily/key-engraver.cc:67-125 — cancellation logic
+        if (!sameType && prevCount > 0)
+        {
+            // Different type (sharps→flats or flats→sharps): cancel all previous
+            width += prevCount * GlyphMetrics.KeySignatureNaturalWidth;
+        }
+        else if (sameType && prevCount > newCount && keyChange.PreviousKey.Sharps != 0)
+        {
+            // Same type but fewer: cancel the difference
+            width += (prevCount - newCount) * GlyphMetrics.KeySignatureNaturalWidth;
+        }
+
+        // New key accidentals
+        if (newCount > 0)
+        {
+            width += newCount * GlyphMetrics.GetKeySignatureAccidentalWidth(keyChange.NewKey.IsSharps);
+        }
+
+        return Math.Max(width, GlyphMetrics.KeySignatureNaturalWidth); // minimum width
+    }
+
+    /// <summary>
     /// Calculates the left extent of an item from its reference point (notehead center).
     /// This includes accidentals which are drawn to the left of the notehead.
     /// </summary>
@@ -227,6 +265,13 @@ public static class SpacingRules
         {
             double clefWidth = GetClefChangeWidth(clefChange.NewClef);
             return clefWidth / 2.0 + GlyphMetrics.ClefChangePadding;
+        }
+
+        // Key signature change items
+        if (item is KeySignatureChangeItem keyChange)
+        {
+            double keyWidth = GetKeySignatureChangeWidth(keyChange);
+            return keyWidth / 2.0 + GlyphMetrics.ClefChangePadding;
         }
 
         // Get notehead metrics (note value determines which notehead glyph)
@@ -286,6 +331,13 @@ public static class SpacingRules
             return clefWidth / 2.0 + GlyphMetrics.ClefChangePadding;
         }
 
+        // Key signature change items
+        if (item is KeySignatureChangeItem keyChange)
+        {
+            double keyWidth = GetKeySignatureChangeWidth(keyChange);
+            return keyWidth / 2.0 + GlyphMetrics.ClefChangePadding;
+        }
+
         // Get notehead metrics
         int noteValue = GetNoteValue(item);
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
@@ -310,8 +362,8 @@ public static class SpacingRules
     /// </summary>
     private static int GetNoteValue(MusicItem item)
     {
-        // Clef change items have zero duration — treat as quarter note for glyph lookup
-        if (item is ClefChangeItem)
+        // Clef/key change items have zero duration — treat as quarter note for glyph lookup
+        if (item is ClefChangeItem or KeySignatureChangeItem)
             return 4;
         var duration = item.Duration;
         return (int)duration.Denominator;
@@ -963,6 +1015,12 @@ public static class SpacingRules
         {
             double clefWidth = GetClefChangeWidth(clefChange.NewClef);
             return clefWidth / 2.0 + GlyphMetrics.ClefChangePadding;
+        }
+
+        if (item is KeySignatureChangeItem keyChange)
+        {
+            double keyWidth = GetKeySignatureChangeWidth(keyChange);
+            return keyWidth / 2.0 + GlyphMetrics.ClefChangePadding;
         }
 
         int noteValue = GetNoteValue(item);

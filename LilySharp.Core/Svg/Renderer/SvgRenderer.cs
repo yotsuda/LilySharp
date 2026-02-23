@@ -46,6 +46,7 @@ public sealed class SvgRenderer
     private readonly SvgRenderOptions _renderOptions;
     private Dictionary<MusicItem, double> _beamedStemEndYs = new();
     private Dictionary<MusicItem, bool> _beamedStemUp = new();
+    private string? _currentDrawClef; // Tracks active clef during rendering (for key signature Y positioning)
 
     public SvgRenderer(LayoutOptions? layoutOptions = null, SvgRenderOptions? renderOptions = null)
     {
@@ -517,10 +518,13 @@ public sealed class SvgRenderer
             _svg.AppendLine($"""  <line class="staff" x1="{startX}" y1="{lineY}" x2="{endX}" y2="{lineY}"/>""");
         }
 
-        // Determine the active clef at the start of this system
+        // Determine the active clef and key at the start of this system
         // LILYPOND-REF: lily/clef-engraver.cc — clef at system start reflects last clef change
         var matchingStaffForClef = FindStaffForLayout(score, staffLayout.StaffIndex);
         ClefType activeClef = GetActiveClefForSystem(staffLayout.Clef, matchingStaffForClef, system);
+
+        // LILYPOND-REF: lily/key-engraver.cc — key at system start reflects last key change
+        var activeKeySig = GetActiveKeySignatureForMultiStaff(score.KeySignature, matchingStaffForClef, system);
 
         // Draw clef
         double currentX = startX;
@@ -571,11 +575,12 @@ public sealed class SvgRenderer
             ClefType.Treble8Below => "treble",  // treble_8 uses same key signature positions as treble
             _ => "treble"
         };
-        bool hasKeySignature = score.KeySignature.Count > 0;
+        _currentDrawClef = clefName; // Track for mid-measure key signature rendering
+        bool hasKeySignature = activeKeySig.Count > 0;
         if (hasKeySignature)
         {
             currentX = clefRightEdge + (GlyphMetrics.ClefToKeySignatureSpace - clefWidth);
-            currentX = DrawKeySignature(score.KeySignature, clefName, currentX, staffY);
+            currentX = DrawKeySignature(activeKeySig, clefName, currentX, staffY);
         }
 
         // Draw time signature (first system only)
@@ -754,6 +759,117 @@ public sealed class SvgRenderer
         ClefType.Treble8Below => "treble_8",
         _ => "treble"
     };
+
+    /// <summary>
+    /// Gets the active key signature at the start of a system by scanning previous measures.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/key-engraver.cc — key signature at system start reflects last key change.
+    /// </remarks>
+    private static KeySignature GetActiveKeySignatureForSystem(KeySignature initialKey, Voice voice, SystemLayout system)
+    {
+        if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return initialKey;
+
+        int firstMeasureIndex = system.Measures[0].MeasureIndex;
+        if (firstMeasureIndex == 0)
+        {
+            // First system: check for leading key changes at the very start of measure 0
+            if (voice.Measures.Length > 0)
+            {
+                foreach (var item in voice.Measures[0].Items)
+                {
+                    if (item is KeySignatureChangeItem keyChange)
+                        return keyChange.NewKey;
+                    if (item.Duration > Fraction.Zero)
+                        break;
+                }
+            }
+            return initialKey;
+        }
+
+        // Scan all measures before this system for key changes
+        var activeKey = initialKey;
+        for (int m = 0; m < firstMeasureIndex && m < voice.Measures.Length; m++)
+        {
+            foreach (var item in voice.Measures[m].Items)
+            {
+                if (item is KeySignatureChangeItem keyChange)
+                    activeKey = keyChange.NewKey;
+            }
+        }
+
+        // Also scan leading KeySignatureChangeItems in the first measure of this system
+        if (firstMeasureIndex < voice.Measures.Length)
+        {
+            foreach (var item in voice.Measures[firstMeasureIndex].Items)
+            {
+                if (item is KeySignatureChangeItem keyChange)
+                    activeKey = keyChange.NewKey;
+                else if (item.Duration > Fraction.Zero)
+                    break;
+            }
+        }
+
+        return activeKey;
+    }
+
+    /// <summary>
+    /// Gets the active key signature at the start of a system for multi-staff scores.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/key-engraver.cc — key signature at system start reflects last key change.
+    /// </remarks>
+    private static KeySignature GetActiveKeySignatureForMultiStaff(KeySignature initialKey, Staff? staff, SystemLayout system)
+    {
+        if (staff == null || system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return initialKey;
+
+        int firstMeasureIndex = system.Measures[0].MeasureIndex;
+        if (firstMeasureIndex == 0)
+        {
+            foreach (var voice in staff.Voices)
+            {
+                if (voice.Measures.Length > 0)
+                {
+                    foreach (var item in voice.Measures[0].Items)
+                    {
+                        if (item is KeySignatureChangeItem keyChange)
+                            return keyChange.NewKey;
+                        if (item.Duration > Fraction.Zero)
+                            break;
+                    }
+                }
+            }
+            return initialKey;
+        }
+
+        var activeKey = initialKey;
+        foreach (var voice in staff.Voices)
+        {
+            for (int m = 0; m < firstMeasureIndex && m < voice.Measures.Length; m++)
+            {
+                foreach (var item in voice.Measures[m].Items)
+                {
+                    if (item is KeySignatureChangeItem keyChange)
+                        activeKey = keyChange.NewKey;
+                }
+            }
+
+            if (firstMeasureIndex < voice.Measures.Length)
+            {
+                foreach (var item in voice.Measures[firstMeasureIndex].Items)
+                {
+                    if (item is KeySignatureChangeItem keyChange)
+                        activeKey = keyChange.NewKey;
+                    else if (item.Duration > Fraction.Zero)
+                        break;
+                }
+            }
+        }
+
+        return activeKey;
+    }
 
     // =====================================================
     // Tablature rendering
@@ -1102,6 +1218,11 @@ public sealed class SvgRenderer
         // Determine the active clef at the start of this system
         // LILYPOND-REF: lily/clef-engraver.cc — clef at system start reflects last clef change
         string activeClefStr = GetActiveClefStringForSystem(score.Clef, score.Voice, system);
+        _currentDrawClef = activeClefStr;
+
+        // Also determine the active key signature at the start of this system
+        // LILYPOND-REF: lily/key-engraver.cc — key at system start reflects last key change
+        var activeKeySig = GetActiveKeySignatureForSystem(score.KeySignature, score.Voice, system);
 
         // Draw clef
         double currentX = startX;
@@ -1137,12 +1258,12 @@ public sealed class SvgRenderer
         }
         double clefRightEdge = currentX + clefWidth;
 
-        // Draw key signature
-        bool hasKeySignature = score.KeySignature.Count > 0;
+        // Draw key signature (using active key for this system)
+        bool hasKeySignature = activeKeySig.Count > 0;
         if (hasKeySignature)
         {
             currentX = clefRightEdge + (GlyphMetrics.ClefToKeySignatureSpace - clefWidth);
-            currentX = DrawKeySignature(score.KeySignature, activeClefStr, currentX, y);
+            currentX = DrawKeySignature(activeKeySig, activeClefStr, currentX, y);
         }
 
         // Draw time signature (first system only)
@@ -1256,6 +1377,10 @@ public sealed class SvgRenderer
                     break;
                 case ClefChangeItem clefChange:
                     DrawClefChange(clefChange, itemX, systemY);
+                    _currentDrawClef = ClefTypeToString(clefChange.NewClef);
+                    break;
+                case KeySignatureChangeItem keyChange:
+                    DrawKeySignatureChange(keyChange, itemX, systemY);
                     break;
             }
 
@@ -1591,6 +1716,141 @@ public sealed class SvgRenderer
 
         DrawGlyph(glyph, x, clefY, clefChange.SourcePosition);
     }
+
+    /// <summary>
+    /// Draws a mid-measure key signature change, including cancellation naturals.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/key-engraver.cc:67-125 — create_key() with cancellation logic.
+    /// When key changes, naturals cancel notes no longer in the key, then new accidentals
+    /// are drawn for the new key.
+    /// </remarks>
+    private void DrawKeySignatureChange(KeySignatureChangeItem keyChange, double x, double systemY)
+    {
+        // Determine active clef for Y positioning
+        // For mid-measure changes, use the current clef context
+        string clef = _currentDrawClef ?? "treble";
+
+        double currentX = x - GetKeySignatureChangeHalfWidth(keyChange);
+
+        // Draw cancellation naturals
+        // LILYPOND-REF: lily/key-engraver.cc — cancellation when key type changes
+        int prevCount = keyChange.PreviousKey.Count;
+        int newCount = keyChange.NewKey.Count;
+        bool sameType = (keyChange.PreviousKey.IsSharps == keyChange.NewKey.IsSharps) ||
+                        keyChange.PreviousKey.Sharps == 0 || keyChange.NewKey.Sharps == 0;
+
+        if (!sameType && prevCount > 0)
+        {
+            // Different type: cancel all previous accidentals with naturals
+            currentX = DrawCancellationNaturals(keyChange.PreviousKey, clef, currentX, systemY);
+        }
+        else if (sameType && prevCount > newCount && keyChange.PreviousKey.Sharps != 0)
+        {
+            // Same type but fewer: cancel removed accidentals
+            var cancelKey = new KeySignature(
+                keyChange.PreviousKey.IsSharps
+                    ? keyChange.PreviousKey.Sharps  // will draw naturals for positions newCount..prevCount
+                    : keyChange.PreviousKey.Sharps);
+            currentX = DrawPartialCancellationNaturals(cancelKey, newCount, clef, currentX, systemY);
+        }
+
+        // Draw new key signature accidentals
+        if (keyChange.NewKey.Count > 0)
+        {
+            DrawKeySignature(keyChange.NewKey, clef, currentX, systemY);
+        }
+    }
+
+    /// <summary>
+    /// Draws cancellation naturals for all accidentals in the previous key.
+    /// </summary>
+    private double DrawCancellationNaturals(KeySignature prevKey, string clef, double x, double systemY)
+    {
+        int c0Position = GetC0Position(clef);
+        int[] positions = prevKey.IsSharps ? SharpPositions : FlatPositions;
+        int[] steps = prevKey.IsSharps ? SharpSteps : FlatSteps;
+        int cPos = ((c0Position % 7) + 7) % 7;
+        int hi = positions[cPos];
+
+        for (int i = 0; i < prevKey.Count; i++)
+        {
+            int step = steps[i];
+            int diff = hi - (cPos + step);
+            int modDiff = ((diff % 7) + 7) % 7;
+            int staffPosition = hi - modDiff;
+
+            double accY = systemY + StaffHeight / 2 - (staffPosition * 0.5);
+            DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x, accY);
+            x += GlyphMetrics.KeySignatureNaturalWidth;
+        }
+
+        return x;
+    }
+
+    /// <summary>
+    /// Draws cancellation naturals for removed accidentals (same type, fewer count).
+    /// </summary>
+    private double DrawPartialCancellationNaturals(KeySignature prevKey, int keepCount, string clef, double x, double systemY)
+    {
+        int c0Position = GetC0Position(clef);
+        int[] positions = prevKey.IsSharps ? SharpPositions : FlatPositions;
+        int[] steps = prevKey.IsSharps ? SharpSteps : FlatSteps;
+        int cPos = ((c0Position % 7) + 7) % 7;
+        int hi = positions[cPos];
+
+        // Draw naturals only for positions that are being removed (index keepCount..prevCount-1)
+        for (int i = keepCount; i < prevKey.Count; i++)
+        {
+            int step = steps[i];
+            int diff = hi - (cPos + step);
+            int modDiff = ((diff % 7) + 7) % 7;
+            int staffPosition = hi - modDiff;
+
+            double accY = systemY + StaffHeight / 2 - (staffPosition * 0.5);
+            DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x, accY);
+            x += GlyphMetrics.KeySignatureNaturalWidth;
+        }
+
+        return x;
+    }
+
+    /// <summary>
+    /// Gets the half-width of a key signature change for centering on the reference point.
+    /// </summary>
+    private static double GetKeySignatureChangeHalfWidth(KeySignatureChangeItem keyChange)
+    {
+        double width = 0;
+        int prevCount = keyChange.PreviousKey.Count;
+        int newCount = keyChange.NewKey.Count;
+        bool sameType = (keyChange.PreviousKey.IsSharps == keyChange.NewKey.IsSharps) ||
+                        keyChange.PreviousKey.Sharps == 0 || keyChange.NewKey.Sharps == 0;
+
+        if (!sameType && prevCount > 0)
+            width += prevCount * GlyphMetrics.KeySignatureNaturalWidth;
+        else if (sameType && prevCount > newCount && keyChange.PreviousKey.Sharps != 0)
+            width += (prevCount - newCount) * GlyphMetrics.KeySignatureNaturalWidth;
+
+        if (newCount > 0)
+            width += newCount * GlyphMetrics.GetKeySignatureAccidentalWidth(keyChange.NewKey.IsSharps);
+
+        return Math.Max(width, GlyphMetrics.KeySignatureNaturalWidth) / 2.0;
+    }
+
+    // Key signature position constants (shared between DrawKeySignature and key change methods)
+    // LILYPOND-REF: output-lib.scm: key-signature-interface::alteration-position
+    private static readonly int[] SharpPositions = [4, 5, 4, 2, 3, 2, 3];
+    private static readonly int[] FlatPositions = [2, 3, 4, 2, 1, 2, 1];
+    private static readonly int[] SharpSteps = [3, 0, 4, 1, 5, 2, 6];
+    private static readonly int[] FlatSteps = [6, 2, 5, 1, 4, 0, 3];
+
+    private static int GetC0Position(string clef) => clef switch
+    {
+        "bass" => 6,
+        "alto" => 0,
+        "tenor" => 2,
+        _ => -6  // treble
+    };
 
     /// <summary>
     /// Gets the visual (drawn) width of a barline type, as opposed to layout allocation width.

@@ -229,6 +229,12 @@ public static class GlyphMetrics
     public const double KeySignatureFlatWidth = 0.8;
 
     /// <summary>
+    /// Width of a natural accidental in key signature (advance_width=200, 200/250=0.800).
+    /// Used for key cancellation naturals.
+    /// </summary>
+    public const double KeySignatureNaturalWidth = 0.8;
+
+    /// <summary>
     /// Gets the per-accidental width for a key signature based on accidental type.
     /// </summary>
     public static double GetKeySignatureAccidentalWidth(bool isSharps) =>
