@@ -3,4 +3,5 @@
   <Project Path="LilySharp.Lsp/LilySharp.Lsp.csproj" />
   <Project Path="LilySharp.Cli/LilySharp.Cli.csproj" />
   <Project Path="LilySharp.Tests/LilySharp.Tests.csproj" />
+  <Project Path="LilySharp.Benchmarks/LilySharp.Benchmarks.csproj" />
 </Solution>
