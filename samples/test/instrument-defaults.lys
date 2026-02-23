@@ -1,7 +1,7 @@
 // Instrument Defaults Test
 // Tests automatic clef/octave setting by instrument property
 title "Instrument Defaults"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

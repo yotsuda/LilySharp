@@ -1,7 +1,7 @@
 // Trill Spanner Test
 // Tests trill spanners (tr + wavy line extension)
 title "Trill Spanners"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

@@ -1,7 +1,7 @@
 // Showcase 4: Advanced Notation
 // Chord names, figured bass, volta, overrides
 title "Advanced Notation"
-composer "LilySharp Showcase"
+composer "Lily# Showcase"
 
 tempo 120
 time 4/4

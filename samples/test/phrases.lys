@@ -1,7 +1,7 @@
 // Phrase Definition and Reference Test
 // Consolidates: phrase-test, test5, test7
 title "Phrases"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

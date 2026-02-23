@@ -3,7 +3,7 @@
 // LILYPOND-REF: lily/accidental-engraver.cc
 
 title "Courtesy Accidentals"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

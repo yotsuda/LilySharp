@@ -1,7 +1,7 @@
 // Showcase 1: Expressions & Dynamics
 // Hairpins, dynamics, text spanners, rehearsal marks
 title "Expressions & Dynamics"
-composer "LilySharp Showcase"
+composer "Lily# Showcase"
 
 tempo 120
 time 4/4

@@ -1,7 +1,7 @@
 // Key Signature Test - Bass Clef
 // Consolidates: keysig-bass, keysig-test
 title "Key Signatures (Bass)"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

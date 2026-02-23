@@ -1,7 +1,7 @@
 // Chord Test
 // Consolidates: test3, test-chords, test6
 title "Chords"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

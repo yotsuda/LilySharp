@@ -1,7 +1,7 @@
 // Mid-Measure Clef Change Test
 // Tests clef changes within measures using smaller "_change" glyph variants
 title "Clef Changes"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

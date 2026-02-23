@@ -1,7 +1,7 @@
 // Section Boundary Octave Reset Test
 // Verifies that octave resets to default at section boundaries
 title "Section Octave Reset"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

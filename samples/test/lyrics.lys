@@ -1,7 +1,7 @@
-// Lyrics Test (LilySharp format)
+// Lyrics Test (Lily# format)
 // Rewritten from: lyrics-test (was LilyPond format)
 title "Lyrics Test"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

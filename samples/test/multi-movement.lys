@@ -8,15 +8,15 @@ time 4/4
 key c major
 
 // Movement I: Allegro
-rh_allegro = { c'4 e' g' e' | f' a' g' e' | d' f' e' c' | d'2 g | c'4 e' g' c'' | b'4 g' e' c' | d'2 g2 | c'1 | }
-lh_allegro = { c2 e | f a, | g c | g, g, | c e | g, c | g, g, | c,1 | }
+rh_allegro = { c'4 e g e | f a g e | d f e c | d2 g | c,4 e g c | b4 g e c | d2 g2 | c1 | }
+lh_allegro = { c2 e | f a | g c | g g | c, e | g c | g g | c1 | }
 
 // Movement II: Andante
-rh_andante = { e'4 d' c' d' | e' e' e'2 | d'4 d' d'2 | e'4 g' g'2 | e'4 d' c' d' | e' e' e'2 | d'4 d' e' d' | c'1 | }
-lh_andante = { c2 g, | c g, | g, g, | c g, | c g, | c g, | g, g, | c,1 | }
+rh_andante = { e4 d c d | e e e2 | d4 d d2 | e4 g g2 | e4 d c d | e e e2 | d4 d e d | c1 | }
+lh_andante = { c'2 g | c g | g g | c g | c g | c g | g g | c1 | }
 
 // Movement III: Rondo
-rh_rondo = { c'8 d' e' f' g'4 g' | a'8 g' f' e' d'4 d' | e'8 d' c' d' e'4 g' | c''2 r2 | }
+rh_rondo = { c8 d' e f g4 g | a8 g f e d4 d | e,8 d c d e4 g | c2 r2 | }
 lh_rondo = { c2 e | f d | c e | c r | }
 
 // Each render block = one movement, referencing different variables

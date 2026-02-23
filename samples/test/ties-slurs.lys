@@ -1,7 +1,7 @@
 // Ties and Slurs Test
 // Consolidates: tie-test, tie-slur-test
 title "Ties and Slurs"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

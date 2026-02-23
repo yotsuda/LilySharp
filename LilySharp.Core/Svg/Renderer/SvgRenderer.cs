@@ -1,3 +1,19 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 using System.Collections.Immutable;
 using System.Text;
 using LilySharp.Core.Semantics;
@@ -146,17 +162,19 @@ public sealed class SvgRenderer
                 // Primary beam Y at this stem X (center of beam)
                 double primaryBeamCenterY = leftBeamCenterY + slope * (stemX - leftStemX);
 
-                // Stem extends to the far edge of the primary beam (away from notehead)
+                // Stem always extends to the outer edge of the primary beam (level 0).
+                // LILYPOND-REF: beam.cc:1058-1069 — feathering affects secondary beam levels,
+                // not the primary beam position, so stem extension is constant.
+                double stemExtension = beamThickness / 2;
+
                 double stemEndY;
                 if (memberUp)
                 {
-                    // Stem goes up, extends to top edge of primary beam (smallest Y)
-                    stemEndY = primaryBeamCenterY - beamThickness / 2;
+                    stemEndY = primaryBeamCenterY - stemExtension;
                 }
                 else
                 {
-                    // Stem goes down, extends to bottom edge of primary beam (largest Y)
-                    stemEndY = primaryBeamCenterY + beamThickness / 2;
+                    stemEndY = primaryBeamCenterY + stemExtension;
                 }
 
                 _beamedStemEndYs[member.Item] = stemEndY;
@@ -2271,18 +2289,21 @@ public sealed class SvgRenderer
         double staffMiddleY = staffY + StaffHeight / 2;
 
         // Calculate stem X positions for each member using the same logic as DrawNote
+        // LILYPOND-REF: beam.cc:1425-1448 is_knee
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(3);
         double noteheadCenterX = noteheadBBox.CenterX;
-        var stemAnchor = group.StemUp ? GlyphMetrics.StemUpSE : GlyphMetrics.StemDownNW;
+        double stemUpOffset = -noteheadCenterX + GlyphMetrics.StemUpSE.X;
+        double stemDownOffset = -noteheadCenterX + GlyphMetrics.StemDownNW.X;
+        double groupStemOffset = group.StemUp ? stemUpOffset : stemDownOffset;
 
-        // stemX = itemX - noteheadCenterX + stemAnchor.X (same as DrawNote)
-        double stemOffsetFromRef = -noteheadCenterX + stemAnchor.X;
-
-        // DEBUG output
         var memberStemXPositions = new double[group.Members.Length];
         for (int i = 0; i < group.Members.Length; i++)
         {
-            memberStemXPositions[i] = beamLayout.MemberXPositions[i] + stemOffsetFromRef;
+            // For kneed beams, use per-member stem side; otherwise use group direction
+            double offset = group.IsKnee
+                ? (group.Members[i].MemberStemUp ? stemUpOffset : stemDownOffset)
+                : groupStemOffset;
+            memberStemXPositions[i] = beamLayout.MemberXPositions[i] + offset;
         }
 
         double leftStemX = memberStemXPositions[0];
@@ -2306,10 +2327,13 @@ public sealed class SvgRenderer
             if (!group.StemUp)
                 levelOffset = -levelOffset;
 
-            // LILYPOND-REF: beam.cc:1039-1082 feather_factor
-            // For feathered beams, apply different offsets at left and right ends
-            double leftFeather = growDir == 0 ? 1.0 : (growDir > 0 ? 0.0 : 1.0);
-            double rightFeather = growDir == 0 ? 1.0 : (growDir > 0 ? 1.0 : 0.0);
+            // LILYPOND-REF: beam.cc:1058-1069 calc_stem_y feather_factor
+            // feather_factor = relx for grow-dir RIGHT, (1-relx) for LEFT.
+            // Our growDir +1 = accel (LilyPond LEFT): factor goes 1→0 (left=fan-out, right=convergence)
+            // Our growDir -1 = rit (LilyPond RIGHT): factor goes 0→1 (left=convergence, right=fan-out)
+            // Secondary beams converge fully onto the primary beam at the convergence end.
+            double leftFeather = growDir == 0 ? 1.0 : (growDir > 0 ? 1.0 : 0.0);
+            double rightFeather = growDir == 0 ? 1.0 : (growDir > 0 ? 0.0 : 1.0);
 
             double levelLeftY = leftBeamCenterY + levelOffset * leftFeather;
             double levelRightY = rightBeamCenterY + levelOffset * rightFeather;
@@ -2604,9 +2628,10 @@ public sealed class SvgRenderer
             if (!group.StemUp)
                 levelOffset = -levelOffset;
 
-            // LILYPOND-REF: beam.cc:1039-1082 feather_factor
-            double leftFeather = growDir == 0 ? 1.0 : (growDir > 0 ? 0.0 : 1.0);
-            double rightFeather = growDir == 0 ? 1.0 : (growDir > 0 ? 1.0 : 0.0);
+            // LILYPOND-REF: beam.cc:1058-1069 calc_stem_y feather_factor
+            // Same feather factors as single-staff beams
+            double leftFeather = growDir == 0 ? 1.0 : (growDir > 0 ? 1.0 : 0.0);
+            double rightFeather = growDir == 0 ? 1.0 : (growDir > 0 ? 0.0 : 1.0);
 
             double levelLeftY = leftBeamCenterY + levelOffset * leftFeather;
             double levelRightY = rightBeamCenterY + levelOffset * rightFeather;

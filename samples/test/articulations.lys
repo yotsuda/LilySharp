@@ -1,7 +1,7 @@
 // Articulations Test
 // Tests @staccato, @accent, @tenuto, @marcato, @fermata, @portato
 title "Articulations"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

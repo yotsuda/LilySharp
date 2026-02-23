@@ -1,3 +1,19 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
 
@@ -47,6 +63,12 @@ public sealed class BeamScoringProblem
     // Direction
     private readonly int _beamDir; // +1 for stem up, -1 for stem down
 
+    // LILYPOND-REF: beam-quanting.cc:338 is_knee_
+    private readonly bool _isKnee;
+
+    // Per-member stem directions (needed for kneed beams)
+    private readonly int[] _memberBeamDirs;
+
     // Staff radius (half staff height in half-spaces = 2.0 for 5-line staff)
     private const double StaffRadius = 2.0;
 
@@ -89,6 +111,16 @@ public sealed class BeamScoringProblem
         }
 
         _beamDir = group.StemUp ? 1 : -1;
+
+        // LILYPOND-REF: beam-quanting.cc:338 is_knee_
+        _isKnee = group.IsKnee;
+
+        // Per-member beam directions for kneed beams
+        _memberBeamDirs = new int[group.Members.Length];
+        for (int i = 0; i < group.Members.Length; i++)
+        {
+            _memberBeamDirs[i] = group.Members[i].MemberStemUp ? 1 : -1;
+        }
 
         // LILYPOND-REF: lily/beam-quanting.cc:236-238
         // Calculations are in staff-space units
@@ -173,10 +205,13 @@ public sealed class BeamScoringProblem
 
         // Least-squares: find best fit line through ideal positions
         // LILYPOND-REF: lily/beam-quanting.cc:588-603
+        // For kneed beams, use per-member stem direction so the ideal positions
+        // naturally cluster in the gap between the two pitch groups.
         var ideals = new List<(double x, double y)>();
         for (int i = 0; i < _staffPositions.Length; i++)
         {
-            double idealY = _staffPositions[i] + _beamDir * idealStemLenPos;
+            int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
+            double idealY = _staffPositions[i] + dir * idealStemLenPos;
             ideals.Add((_stemXPositions[i], idealY));
         }
 
@@ -251,6 +286,12 @@ public sealed class BeamScoringProblem
 
     private void EnsureMinimumStemLength(ref double leftY, ref double rightY, double minStemLenPos)
     {
+        // For kneed beams, skip the uniform shift — per-member directions
+        // mean there's no single shift direction that helps all stems.
+        // The quanting scorer handles stem length penalties instead.
+        if (_isKnee)
+            return;
+
         double slope = _xSpan > 0.001 ? (rightY - leftY) / _xSpan : 0;
         double maxShortage = 0;
 
@@ -484,7 +525,10 @@ public sealed class BeamScoringProblem
     {
         var regionSize = (int)_parameters.RegionSize;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:903-906
+        // LILYPOND-REF: lily/beam-quanting.cc:901-906
+        // Knees and collisions are harder, try more possibilities
+        if (_isKnee)
+            regionSize += 2;
         if (_collisions.Count > 0)
             regionSize += 2;
 
@@ -796,18 +840,28 @@ public sealed class BeamScoringProblem
                 : (config.RightY + config.LeftY) / 2;
 
             double currentY = beamY;  // beam Y at this stem
-            int d = _beamDir > 0 ? 1 : 0; // index into score array
+
+            // For kneed beams, use per-member stem direction
+            int memberDir = _isKnee ? _memberBeamDirs[i] : _beamDir;
+            int d = memberDir > 0 ? 1 : 0; // index into score array
 
             // LILYPOND-REF: lily/beam-quanting.cc:1139-1140
             // Penalty for stems shorter than minimum
-            double shortage = _beamDir * (_staffPositions[i] + _beamDir * minStemLenPos - currentY);
+            double shortage = memberDir * (_staffPositions[i] + memberDir * minStemLenPos - currentY);
             score[d] += limitPenalty * Math.Max(0.0, shortage);
 
             // LILYPOND-REF: lily/beam-quanting.cc:1142-1143
             // Penalty for deviation from ideal
-            double idealY = _staffPositions[i] + _beamDir * idealStemLenPos;
-            double idealDiff = _beamDir * (currentY - idealY);
+            double idealY = _staffPositions[i] + memberDir * idealStemLenPos;
+            double idealDiff = memberDir * (currentY - idealY);
             double idealScore = ShrinkExtraWeight(idealDiff, 1.5);
+
+            // LILYPOND-REF: lily/beam-quanting.cc:1145-1149
+            // Power function for knees: makes scoring strictly convex so that
+            // symmetric knee beams have a unique optimum in the gap center.
+            if (_isKnee)
+                idealScore = Math.Pow(idealScore, 1.1);
+
             score[d] += lengthPen * idealScore;
 
             count[d]++;

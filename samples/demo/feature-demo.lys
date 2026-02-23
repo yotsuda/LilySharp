@@ -1,6 +1,6 @@
 // Compact Feature Demo
 title "Feature Demo"
-composer "LilySharp"
+composer "Lily#"
 tempo 100
 time 4/4
 key c major

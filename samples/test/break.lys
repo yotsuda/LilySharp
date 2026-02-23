@@ -1,7 +1,7 @@
 // Line Break Test
 // Tests the 'break' keyword for forced line breaks
 title "Line Break"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

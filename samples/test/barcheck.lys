@@ -1,7 +1,7 @@
 // Bar Check Test
 // Based on: barcheck-test
 title "Bar Check"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

@@ -1,7 +1,7 @@
 // Collision Test
 // Consolidates: collision-test, accidental-collision-test
 title "Collision Test"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 80
 time 4/4

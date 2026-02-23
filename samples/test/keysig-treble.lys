@@ -1,7 +1,7 @@
 // Key Signature Test - Treble Clef
 // Consolidates: keysig-d, keysig-d-major
 title "Key Signatures (Treble)"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

@@ -1,6 +1,6 @@
 // Bass Clef Key Signature Test
 title "Bass Test"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

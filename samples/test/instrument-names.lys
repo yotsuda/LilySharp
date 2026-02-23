@@ -1,7 +1,7 @@
 // Instrument Names Test
 // Tests instrument name display at left of staves
 title "Instrument Names"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

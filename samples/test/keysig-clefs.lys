@@ -1,7 +1,7 @@
 // Key Signature Test - Multiple Clefs
 // Based on: keysig-clefs
 title "Key Signatures (Multiple Clefs)"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

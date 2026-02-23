@@ -1,7 +1,7 @@
 // Repeat and Volta Test
 // Tests |: :| repeat markers and [1. ] [2. ] volta brackets
 title "Repeat and Volta"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

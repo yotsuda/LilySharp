@@ -1,3 +1,19 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
@@ -303,20 +319,19 @@ public sealed class BeamDetector
         // Auto-knee detection: check if notes span a large gap
         // LILYPOND-REF: beam.cc:894-982 consider_auto_knees
         // LILYPOND-REF: define-grobs.scm:437 auto-knee-gap = 5.5
-        // NOTE: Kneed beam rendering is not yet implemented (beam scoring does not
-        // position the beam inside the gap). Until BeamScoringProblem supports kneed
-        // beam placement, always use the group's unified stem direction to avoid
-        // stem-side mismatches (e.g., stem drawn on right side when beam is below).
-        // TODO: Implement kneed beam positioning in BeamScoringProblem, then
-        // re-enable per-member directions here.
+        bool useKnee = ShouldAutoKnee(members);
 
-        // All members use the group's overall stem direction
-        for (int i = 0; i < members.Count; i++)
+        if (!useKnee)
+        {
+            // All members use the group's overall stem direction
+            for (int i = 0; i < members.Count; i++)
         {
             var m = members[i];
             members[i] = new BeamMember(m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
                 m.StaffPosition, m.ItemIndex, stemUp);
+            }
         }
+        // If useKnee, keep per-member directions based on staff position
 
         return new BeamGroup(
             members.ToImmutableArray(),
@@ -333,10 +348,11 @@ public sealed class BeamDetector
     /// LILYPOND-REF: beam.cc:894-982 consider_auto_knees
     /// LILYPOND-REF: define-grobs.scm:437 auto-knee-gap = 5.5
     ///
-    /// If notes span more than AutoKneeGap staff positions with a clear gap
+    /// If notes span more than AutoKneeGap staff spaces with a clear gap
     /// in between, the beam should be kneed.
+    /// Note: auto-knee-gap is in staff spaces; staff positions are in half-spaces.
     /// </remarks>
-    private const double AutoKneeGap = 5.5;
+    private const double AutoKneeGap = 5.5; // in staff spaces
 
     private static bool ShouldAutoKnee(List<BeamMember> members)
     {
@@ -352,9 +368,10 @@ public sealed class BeamDetector
             maxGap = Math.Max(maxGap, gap);
         }
 
-        // If the largest gap between adjacent notes exceeds the threshold,
-        // use kneed beams with per-member stem directions
-        return maxGap >= AutoKneeGap;
+        // Convert from staff positions (half-spaces) to staff spaces
+        // LILYPOND-REF: define-grobs.scm:437 auto-knee-gap = 5.5 (staff spaces)
+        double maxGapInStaffSpaces = maxGap / 2.0;
+        return maxGapInStaffSpaces >= AutoKneeGap;
     }
 
     private Fraction GetDuration(MusicItem item)

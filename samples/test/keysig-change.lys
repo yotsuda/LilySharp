@@ -1,7 +1,7 @@
 // Key Signature Change Test
 // Tests mid-measure key signature changes with cancellation naturals
 title "Key Signature Changes"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

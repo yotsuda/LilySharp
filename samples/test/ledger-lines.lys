@@ -1,7 +1,7 @@
 // Ledger Lines Test
 // Based on: test4
 title "Ledger Lines"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

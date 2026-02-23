@@ -1,7 +1,7 @@
 // Accidental Test
 // Consolidates: test2, accidental-test
 title "Accidentals"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

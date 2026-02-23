@@ -1,7 +1,7 @@
 // Ornaments Test
 // Tests @trill, @mordent, @prall, @turn, @invertedturn, @pralltriller, @tremolo
 title "Ornaments"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 100
 time 4/4

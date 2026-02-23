@@ -1,6 +1,6 @@
 // 基本文法テスト
 title "Grammar Test"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

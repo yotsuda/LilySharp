@@ -1,7 +1,7 @@
 // Grace Notes Test
 // Tests grace, acciaccatura, appoggiatura
 title "Grace Notes"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4

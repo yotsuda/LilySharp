@@ -1,7 +1,7 @@
 // $name Phrase Reference Test
 // Tests the $ syntax for phrase references
 title "Dollar Reference"
-composer "LilySharp"
+composer "Lily#"
 
 tempo 120
 time 4/4
