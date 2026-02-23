@@ -105,7 +105,7 @@ static int RunSvg(string[] args)
         return 0;
     }
 
-    var (inputPath, outputPath, embedFont, error) = ParseSvgOptions(args);
+    var (inputPath, outputPath, embedFont, allMovements, error) = ParseSvgOptions(args);
     if (error != null)
     {
         Console.Error.WriteLine($"Error: {error}");
@@ -113,7 +113,10 @@ static int RunSvg(string[] args)
         return 1;
     }
 
-    return ExecuteSvg(inputPath!, outputPath!, embedFont);
+    if (allMovements)
+        return ExecuteSvgAll(inputPath!, embedFont);
+    else
+        return ExecuteSvg(inputPath!, outputPath!, embedFont);
 }
 
 static void ShowSvgHelp()
@@ -130,6 +133,7 @@ static void ShowSvgHelp()
         Options:
           -o, --output <file>    Output file path
           --no-embed-font        Don't embed font (smaller file, requires font installed)
+          --all                  Generate all render blocks as separate SVG files
           -h, --help             Show this help
 
         Examples:
@@ -137,32 +141,38 @@ static void ShowSvgHelp()
           lysc svg score.lys sheet.svg
           lysc svg -o sheet.svg score.lys
           lysc svg score.lys --no-embed-font
+          lysc svg --all multi-movement.lys
         """);
 }
 
-static (string? InputPath, string? OutputPath, bool EmbedFont, string? Error) ParseSvgOptions(string[] args)
+static (string? InputPath, string? OutputPath, bool EmbedFont, bool AllMovements, string? Error) ParseSvgOptions(string[] args)
 {
     string? inputPath = null;
     string? outputPath = null;
     bool embedFont = true;
+    bool allMovements = false;
 
     for (int i = 0; i < args.Length; i++)
     {
         var arg = args[i];
-        
+
         if (arg is "-o" or "--output")
         {
             if (i + 1 >= args.Length)
-                return (null, null, false, "-o requires a file path");
+                return (null, null, false, false, "-o requires a file path");
             outputPath = args[++i];
         }
         else if (arg is "--no-embed-font" or "-n")
         {
             embedFont = false;
         }
+        else if (arg is "--all")
+        {
+            allMovements = true;
+        }
         else if (arg.StartsWith("-"))
         {
-            return (null, null, false, $"Unknown option: {arg}");
+            return (null, null, false, false, $"Unknown option: {arg}");
         }
         else if (inputPath == null)
         {
@@ -174,19 +184,19 @@ static (string? InputPath, string? OutputPath, bool EmbedFont, string? Error) Pa
         }
         else
         {
-            return (null, null, false, $"Unexpected argument: {arg}");
+            return (null, null, false, false, $"Unexpected argument: {arg}");
         }
     }
 
     if (inputPath == null)
-        return (null, null, false, "Input file required");
+        return (null, null, false, false, "Input file required");
 
     if (!File.Exists(inputPath))
-        return (null, null, false, $"File not found: {inputPath}");
+        return (null, null, false, false, $"File not found: {inputPath}");
 
     outputPath ??= Path.ChangeExtension(inputPath, ".svg");
-    
-    return (inputPath, outputPath, embedFont, null);
+
+    return (inputPath, outputPath, embedFont, allMovements, null);
 }
 
 static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
@@ -222,6 +232,60 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
         File.WriteAllText(outputPath, svg);
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine(embedFont ? "  Font embedded: Yes" : "  Font embedded: No");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        return 1;
+    }
+}
+
+static int ExecuteSvgAll(string inputPath, bool embedFont)
+{
+    try
+    {
+        var source = File.ReadAllText(inputPath);
+        var tree = SyntaxTree.Parse(source);
+
+        if (tree.HasErrors)
+        {
+            Console.Error.WriteLine("Syntax errors:");
+            foreach (var diag in tree.Diagnostics)
+                Console.Error.WriteLine($"  {diag}");
+            return 1;
+        }
+
+        LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
+        if (embedFont)
+        {
+            var fontDir = FindFontDirectory();
+            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(fontDir);
+        }
+        else
+        {
+            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
+        }
+
+        var results = LilySharp.Core.Svg.SvgGenerator.GenerateAll(tree, renderOptions);
+        var inputDir = Path.GetDirectoryName(inputPath) ?? ".";
+
+        Console.WriteLine($"Generating {results.Count} movement(s):");
+
+        foreach (var (filename, svg) in results)
+        {
+            var outputPath = string.IsNullOrEmpty(filename)
+                ? Path.ChangeExtension(inputPath, ".svg")
+                : Path.Combine(inputDir, filename);
+
+            // Ensure .svg extension
+            if (!outputPath.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+                outputPath = Path.ChangeExtension(outputPath, ".svg");
+
+            File.WriteAllText(outputPath, svg);
+            Console.WriteLine($"  Created: {outputPath}");
+        }
+
         return 0;
     }
     catch (Exception ex)

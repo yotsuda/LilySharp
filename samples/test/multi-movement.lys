@@ -1,0 +1,42 @@
+// Multi-movement example: Sonatina in C
+// Each movement uses separate variables for its music content
+
+title "Sonatina in C"
+composer "Example"
+tempo 120
+time 4/4
+key c major
+
+// Movement I: Allegro
+rh_allegro = { c'4 e' g' e' | f' a' g' e' | d' f' e' c' | d'2 g | c'4 e' g' c'' | b'4 g' e' c' | d'2 g2 | c'1 | }
+lh_allegro = { c2 e | f a, | g c | g, g, | c e | g, c | g, g, | c,1 | }
+
+// Movement II: Andante
+rh_andante = { e'4 d' c' d' | e' e' e'2 | d'4 d' d'2 | e'4 g' g'2 | e'4 d' c' d' | e' e' e'2 | d'4 d' e' d' | c'1 | }
+lh_andante = { c2 g, | c g, | g, g, | c g, | c g, | c g, | g, g, | c,1 | }
+
+// Movement III: Rondo
+rh_rondo = { c'8 d' e' f' g'4 g' | a'8 g' f' e' d'4 d' | e'8 d' c' d' e'4 g' | c''2 r2 | }
+lh_rondo = { c2 e | f d | c e | c r | }
+
+// Each render block = one movement, referencing different variables
+render score "movement1-allegro" {
+  grandStaff {
+    staff treble { rh_allegro }
+    staff bass { lh_allegro }
+  }
+}
+
+render score "movement2-andante" {
+  grandStaff {
+    staff treble { rh_andante }
+    staff bass { lh_andante }
+  }
+}
+
+render score "movement3-rondo" {
+  grandStaff {
+    staff treble { rh_rondo }
+    staff bass { lh_rondo }
+  }
+}

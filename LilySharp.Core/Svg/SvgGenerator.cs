@@ -1,3 +1,4 @@
+using System.Text;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -57,5 +58,209 @@ public static class SvgGenerator
 
             return renderer.Render(score, layout);
         }
+    }
+
+    /// <summary>
+    /// Generates all render blocks as separate SVG files.
+    /// Returns a list of (filename, svgContent) tuples.
+    /// If only one render block exists, returns a single item with that filename.
+    /// </summary>
+    public static IReadOnlyList<(string Filename, string Svg)> GenerateAll(
+        SyntaxTree tree, SvgRenderOptions? options = null)
+    {
+        options ??= SvgRenderOptions.Default;
+        var allSpecs = RenderSpecParser.FindAll(tree);
+
+        if (allSpecs.Count == 0)
+        {
+            // No render blocks — fallback to default single-voice rendering
+            var svg = Generate(tree, options);
+            return [(string.Empty, svg)];
+        }
+
+        var results = new List<(string, string)>();
+        foreach (var spec in allSpecs)
+        {
+            var renderer = new SvgRenderer(renderOptions: options);
+            var collector = new MeasureCollector();
+            var layoutEngine = new LayoutEngine();
+
+            string svg;
+            if (spec.IsMultiStaff)
+            {
+                var multiScore = collector.CollectMultiStaff(tree, spec);
+                var layout = layoutEngine.Layout(multiScore);
+                svg = renderer.Render(multiScore, layout);
+            }
+            else
+            {
+                string? voiceName = null;
+                if (spec.Items.Length == 1 && spec.Items[0] is SingleStaffSpec single)
+                    voiceName = single.Staff.VoiceName;
+
+                var score = collector.Collect(tree, voiceName);
+                var layout = layoutEngine.Layout(score);
+                svg = renderer.Render(score, layout);
+            }
+
+            results.Add((spec.OutputFile, svg));
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Generates a multi-movement combined SVG from all render blocks.
+    /// Each render block becomes a movement with a title and forced page break.
+    /// LILYPOND-REF: lily/book.cc — bookpart/movement grouping
+    /// </summary>
+    public static string GenerateMultiMovement(SyntaxTree tree, SvgRenderOptions? options = null)
+    {
+        options ??= SvgRenderOptions.Default;
+        var allSpecs = RenderSpecParser.FindAll(tree);
+
+        if (allSpecs.Count <= 1)
+        {
+            // Single or no render block — use standard rendering
+            return Generate(tree, options);
+        }
+
+        // Render each movement independently and combine
+        var movements = new List<(string Title, string SvgContent, double Width, double Height)>();
+
+        foreach (var spec in allSpecs)
+        {
+            var renderer = new SvgRenderer(renderOptions: options);
+            var collector = new MeasureCollector();
+            var layoutEngine = new LayoutEngine();
+
+            string svg;
+            double width, height;
+
+            if (spec.IsMultiStaff)
+            {
+                var multiScore = collector.CollectMultiStaff(tree, spec);
+                var layout = layoutEngine.Layout(multiScore);
+                svg = renderer.Render(multiScore, layout);
+                width = layout.Width;
+                height = layout.Height;
+            }
+            else
+            {
+                string? voiceName = null;
+                if (spec.Items.Length == 1 && spec.Items[0] is SingleStaffSpec single)
+                    voiceName = single.Staff.VoiceName;
+
+                var score = collector.Collect(tree, voiceName);
+                var layout = layoutEngine.Layout(score);
+                svg = renderer.Render(score, layout);
+                width = layout.Width;
+                height = layout.Height;
+            }
+
+            // Movement title from output filename (without extension)
+            var title = System.IO.Path.GetFileNameWithoutExtension(spec.OutputFile);
+            movements.Add((title, svg, width, height));
+        }
+
+        return CombineMovements(movements, options);
+    }
+
+    /// <summary>
+    /// Combines multiple movement SVGs into a single document.
+    /// Extracts content from each SVG and places them vertically with spacing.
+    /// </summary>
+    private static string CombineMovements(
+        List<(string Title, string SvgContent, double Width, double Height)> movements,
+        SvgRenderOptions options)
+    {
+        // Movement separator spacing (staff spaces)
+        const double movementSpacing = 6.0;
+        const double movementTitleFontSize = 2.0;
+        const double movementTitleSpacing = 3.0;
+
+        // Calculate total dimensions
+        double maxWidth = 0;
+        double totalHeight = 0;
+
+        for (int i = 0; i < movements.Count; i++)
+        {
+            var m = movements[i];
+            if (m.Width > maxWidth) maxWidth = m.Width;
+
+            if (i > 0)
+            {
+                totalHeight += movementSpacing;
+                totalHeight += movementTitleSpacing;
+            }
+            totalHeight += m.Height;
+        }
+
+        // Build combined SVG
+        var sb = new StringBuilder();
+        var px = (double v) => (v * 4).ToString("F1");
+
+        sb.AppendLine("""<?xml version="1.0" encoding="UTF-8"?>""");
+        sb.AppendLine($"""<svg xmlns="http://www.w3.org/2000/svg" width="{px(maxWidth)}" height="{px(totalHeight)}" viewBox="0 0 {maxWidth} {totalHeight}">""");
+
+        // Common styles
+        sb.AppendLine("<style>");
+        sb.AppendLine("  .movement-title { font-family: serif; font-weight: bold; text-anchor: middle; }");
+        sb.AppendLine("</style>");
+
+        double yOffset = 0;
+
+        for (int i = 0; i < movements.Count; i++)
+        {
+            var (title, svgContent, width, height) = movements[i];
+
+            // Add movement title (except for first if the movement already has a header)
+            if (i > 0)
+            {
+                yOffset += movementSpacing;
+
+                // Draw movement title
+                double titleX = maxWidth / 2;
+                double titleY = yOffset + movementTitleFontSize;
+                sb.AppendLine($"""  <text x="{titleX}" y="{titleY}" class="movement-title" font-size="{movementTitleFontSize}">{EscapeXml(title)}</text>""");
+                yOffset += movementTitleSpacing;
+            }
+
+            // Extract content between <svg> and </svg> tags
+            var content = ExtractSvgContent(svgContent);
+            if (!string.IsNullOrEmpty(content))
+            {
+                sb.AppendLine($"""  <g transform="translate(0, {yOffset})">""");
+                sb.AppendLine(content);
+                sb.AppendLine("  </g>");
+            }
+
+            yOffset += height;
+        }
+
+        sb.AppendLine("</svg>");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Extracts the content between the opening &lt;svg&gt; tag and closing &lt;/svg&gt; tag.
+    /// Also extracts and preserves style blocks.
+    /// </summary>
+    private static string ExtractSvgContent(string svg)
+    {
+        // Find end of opening <svg ...> tag
+        int svgTagEnd = svg.IndexOf('>', svg.IndexOf("<svg"));
+        if (svgTagEnd < 0) return string.Empty;
+
+        // Find </svg>
+        int svgCloseStart = svg.LastIndexOf("</svg>");
+        if (svgCloseStart < 0) return string.Empty;
+
+        return svg[(svgTagEnd + 1)..svgCloseStart].Trim();
+    }
+
+    private static string EscapeXml(string text)
+    {
+        return text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
     }
 }

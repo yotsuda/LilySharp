@@ -100,6 +100,24 @@ public static class RenderSpecParser
     }
 
     /// <summary>
+    /// Finds all score-type render declarations in a syntax tree.
+    /// </summary>
+    public static IReadOnlyList<RenderSpec> FindAll(SyntaxTree tree)
+    {
+        var specs = new List<RenderSpec>();
+        foreach (var node in tree.GetRoot().DescendantNodes())
+        {
+            if (node is RenderDeclarationSyntax render)
+            {
+                var spec = Parse(render);
+                if (spec != null)
+                    specs.Add(spec);
+            }
+        }
+        return specs;
+    }
+
+    /// <summary>
     /// Finds a render declaration by name, output filename, or filename without extension.
     /// </summary>
     public static RenderSpec? FindByName(SyntaxTree tree, string name)

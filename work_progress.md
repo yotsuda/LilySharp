@@ -3,11 +3,11 @@
 ## 全体進捗
 
 - **総タスク数:** 52 (Phase 1-5: 28 / Phase 6-9: 24)
-- **完了 ✅:** 48 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.3, 7.7-7.8 + Phase 8 全5件 + Phase 9.1-9.5)
+- **完了 ✅:** 49 (Phase 1-5 全27実装 + Phase 6 全6件 + Phase 7.1-7.3, 7.6-7.8 + Phase 8 全5件 + Phase 9.1-9.5)
 - **レビュー待ち 🔍:** 0
 - **作業中 ⏳:** 0
-- **未着手 🚀:** 4 (Phase 5.1 + Phase 7.4-7.6)
-- **進捗率:** 92% (48/52)
+- **未着手 🚀:** 3 (Phase 5.1 + Phase 7.4-7.5)
+- **進捗率:** 94% (49/52)
 
 ## ステータス凡例
 
@@ -111,7 +111,7 @@
 | 7.3 小節途中の調号変更 | ✅ | High | lily/key-engraver.cc | KeySignatureChangeItem (zero-duration MusicItem, NewKey/PreviousKey), MeasureCollector KeySignatureSyntax handling (5箇所type filter+ProcessMusicNode), _initialKeySharps field, IsInsideMusicContent guard (CollectDefinitions filter), CalculateKeySharps bug fix (PitchName already includes accidental), SpacingRules KeySignatureChangeItem対応 (GetKeySignatureChangeWidth), GlyphMetrics.KeySignatureNaturalWidth追加, SvgRenderer DrawKeySignatureChange (cancellation naturals+new key accidentals), DrawCancellationNaturals/DrawPartialCancellationNaturals, GetActiveKeySignatureForSystem/GetActiveKeySignatureForMultiStaff (system-start key tracking), _currentDrawClef tracking, keysig-change.lys sample, KeySignatureChangeTests 8件+スナップショット35件全通過。923全テスト通過。LILYPOND-REF: lily/key-engraver.cc |
 | 7.4 キューノート | 🚀 | Medium | lily/cue-clef-engraver.cc | 小サイズのキュー音符。別パートからの引用表示 |
 | 7.5 Ossia 譜表 | 🚀 | Medium | lily/keep-alive-together-engraver.cc | 一時的な代替パッセージ用の小譜表 |
-| 7.6 マルチムーブメント | 🚀 | Medium | — | 複数楽章の明示的サポート。楽章間のページ区切り・タイトル |
+| 7.6 マルチムーブメント | ✅ | Medium | — | RenderSpecParser.FindAll() (全render spec検索), SvgGenerator.GenerateAll() (複数render block→separate SVG files, Dictionary<filename, svg>), SvgGenerator.GenerateMultiMovement() (複数render block→combined SVG, movement title+translate offset), CLI --all flag (lysc svg --all score.lys → 各render blockを個別SVGファイル出力), ExecuteSvgAll (inputDir+filename.svg per render block), multi-movement.lys sample (Sonatina: 3 movements with separate variables per movement), テスト4件追加 (GenerateAll multi/fallback, GenerateMultiMovement combined, FindAll count)。955全テスト通過。LILYPOND-REF: lily/book.cc bookpart/movement grouping |
 | 7.7 Courtesy accidentals 描画 | ✅ | Medium | lily/accidental-engraver.cc | AccidentalLeftParen U+E02F / AccidentalRightParen U+E02E glyph追加, AccidentalParenWidth=0.6, NoteItem.IsCourtesy+ChordNoteInfo.IsCourtesy追加, MeasureCollector自動courtesy検出 (previous measure alteration tracking, RotateMeasureAlterations), @courtesy explicit annotation, HasCourtesyAnnotation pre-scan, AccidentalPlacement width拡張 (paren width含む), SvgRenderer parenthesized accidental描画 (leftparen+glyph+rightparen), GetAccidentalGlyph helper, courtesy-accidentals.lys sample, テスト9件+スナップショット追加。939全テスト通過。LILYPOND-REF: lily/accidental.cc:35-46, lily/accidental-engraver.cc |
 | 7.8 トリルスパナー | ✅ | Medium | lily/trill-spanner-engraver.cc | TrillSpannerItem model, @startTrillSpan/@stopTrillSpan + @trillSpan.start/.stop両構文対応, MeasureCollector trill event収集+PairTrillSpannerEvents pairing, TrillSpannerEngraver.Calculate (BoundPadding=0.5, StaffPadding=1.0, TrillGlyphWidth=1.6, GlyphLinePadding=0.3), cross-system spanner splitting (measure-to-system mapping, first=glyph+line to edge, continuation=line only), SvgRenderer DrawTrillSpanners ("tr" glyph U+E05C + wavy line quadratic Bezier, wavePeriod=0.8, waveAmplitude=0.2), trill-spanner.lys sample (single/cross-measure/multiple trills), テスト8件+スナップショット追加。931全テスト通過。LILYPOND-REF: lily/trill-spanner-engraver.cc, scm/define-grobs.scm:2175-2230 |
 

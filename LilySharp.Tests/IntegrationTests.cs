@@ -2,6 +2,7 @@ using Xunit;
 using Xunit.Abstractions;
 using LilySharp.Core.Png;
 using LilySharp.Core.Syntax;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Renderer;
@@ -186,5 +187,122 @@ render score ""test.svg"" {
         Assert.Equal((byte)'G', pngBytes[3]);
 
         _output.WriteLine($"PNG size: {pngBytes.Length} bytes");
+    }
+
+    [Fact]
+    public void GenerateAll_MultipleRenderBlocks_ProducesSeparateOutputs()
+    {
+        var source = @"
+title ""Test""
+tempo 120
+time 4/4
+
+rh1 = { c'4 d' e' f' | g'2 g' | }
+lh1 = { c2 e | g g, | }
+rh2 = { e'4 d' c' d' | e'1 | }
+lh2 = { c2 g, | c1 | }
+
+render score ""mvt1"" {
+  grandStaff {
+    staff treble { rh1 }
+    staff bass { lh1 }
+  }
+}
+
+render score ""mvt2"" {
+  grandStaff {
+    staff treble { rh2 }
+    staff bass { lh2 }
+  }
+}
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+
+        var results = SvgGenerator.GenerateAll(tree);
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal("mvt1", results[0].Filename);
+        Assert.Equal("mvt2", results[1].Filename);
+        Assert.Contains("<svg", results[0].Svg);
+        Assert.Contains("<svg", results[1].Svg);
+        // Content should differ because they reference different variables
+        Assert.NotEqual(results[0].Svg, results[1].Svg);
+    }
+
+    [Fact]
+    public void GenerateMultiMovement_CombinesMovements()
+    {
+        var source = @"
+title ""Test""
+tempo 120
+time 4/4
+
+rh1 = { c'4 d' e' f' | g'2 g' | }
+lh1 = { c2 e | g g, | }
+rh2 = { e'4 d' c' d' | e'1 | }
+lh2 = { c2 g, | c1 | }
+
+render score ""movement1"" {
+  grandStaff {
+    staff treble { rh1 }
+    staff bass { lh1 }
+  }
+}
+
+render score ""movement2"" {
+  grandStaff {
+    staff treble { rh2 }
+    staff bass { lh2 }
+  }
+}
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+
+        var svg = SvgGenerator.GenerateMultiMovement(tree);
+
+        Assert.Contains("<svg", svg);
+        Assert.Contains("</svg>", svg);
+        // Should contain movement title for second movement
+        Assert.Contains("movement2", svg);
+        // Should have transform groups for each movement
+        Assert.Contains("translate", svg);
+    }
+
+    [Fact]
+    public void GenerateAll_NoRenderBlocks_FallsBackToDefault()
+    {
+        var source = "{ c4 d e f | g a b c' | }";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+
+        var results = SvgGenerator.GenerateAll(tree);
+
+        Assert.Single(results);
+        Assert.Equal(string.Empty, results[0].Filename);
+        Assert.Contains("<svg", results[0].Svg);
+    }
+
+    [Fact]
+    public void FindAll_ReturnsAllRenderSpecs()
+    {
+        var source = @"
+rh = { c'4 d' e' f' | }
+lh = { c2 e | }
+
+render score ""first"" { staff treble { rh } }
+render score ""second"" { staff treble { lh } }
+render score ""third"" { staff treble { rh } }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+
+        var specs = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree);
+
+        Assert.Equal(3, specs.Count);
+        Assert.Equal("first", specs[0].OutputFile);
+        Assert.Equal("second", specs[1].OutputFile);
+        Assert.Equal("third", specs[2].OutputFile);
     }
 }
