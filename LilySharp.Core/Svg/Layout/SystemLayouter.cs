@@ -109,6 +109,9 @@ public sealed class SystemLayouter
             
             // LILYPOND-REF: lily/page-spacing.cc ragged-right handling
             // In ragged mode, don't stretch lines that are shorter than available width
+            // LILYPOND-REF: lily/simple-spacer.cc:175-205 Simple_spacer::solve()
+            // LilyPond always applies the solved force, even for overfull lines.
+            // An overfull system uses maximum compression force (not natural spacing).
             if (_options.RaggedRight || isLastSystem)
             {
                 double naturalLength = solver.IdealTotalLength;
@@ -120,15 +123,15 @@ public sealed class SystemLayouter
                 else
                 {
                     // Line is too long - solve normally (may need compression)
-                    var (solvedForce, fits) = solver.Solve(springTargetWidth, ragged: true);
-                    force = fits ? solvedForce : 0;
+                    var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: true);
+                    force = solvedForce;
                 }
             }
             else
             {
                 // Non-ragged: justify to fill available width
-                var (solvedForce, fits) = solver.Solve(springTargetWidth, ragged: false);
-                force = fits ? solvedForce : 0;
+                var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: false);
+                force = solvedForce;
             }
         }
 
@@ -238,9 +241,10 @@ public sealed class SystemLayouter
         if (allSprings.Length > 0)
         {
             var solver = new SpringSolver(allSprings);
-            
-            // LILYPOND-REF: lily/page-spacing.cc ragged-right handling
-            // In ragged mode, don't stretch lines that are shorter than available width
+
+            // LILYPOND-REF: lily/simple-spacer.cc:175-205 Simple_spacer::solve()
+            // LilyPond always applies the solved force, even for overfull lines.
+            // An overfull system uses maximum compression force (not natural spacing).
             if (_options.RaggedRight || isLastSystem)
             {
                 double naturalLength = solver.IdealTotalLength;
@@ -252,15 +256,15 @@ public sealed class SystemLayouter
                 else
                 {
                     // Line is too long - solve normally (may need compression)
-                    var (solvedForce, fits) = solver.Solve(springTargetWidth, ragged: true);
-                    force = fits ? solvedForce : 0;
+                    var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: true);
+                    force = solvedForce;
                 }
             }
             else
             {
                 // Non-ragged: justify to fill available width
-                var (solvedForce, fits) = solver.Solve(springTargetWidth, ragged: false);
-                force = fits ? solvedForce : 0;
+                var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: false);
+                force = solvedForce;
             }
         }
 
