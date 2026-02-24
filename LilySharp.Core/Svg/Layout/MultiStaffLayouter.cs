@@ -686,37 +686,85 @@ public sealed class MultiStaffLayouter
         double startX = _options.MarginLeft + CurrentIndent + prefixWidth;
         double availableWidth = _options.PageWidth - _options.MarginLeft - _options.MarginRight - CurrentIndent - prefixWidth;
 
-        // First pass: calculate ideal widths
-        var idealWidths = new List<double>();
-        double totalIdealWidth = 0;
+        // LILYPOND-REF: lily/spacing-spanner.cc — collect springs from ALL columns across
+        // the entire system, then solve with a single SpringSolver for uniform force.
+        // This matches SystemLayouter's approach for single-staff scores.
+
+        // First pass: collect timing springs and barline widths per measure
+        var measureSprings = new List<ImmutableArray<Spring>>();
+        var measureTimings = new List<List<Fraction>>();
+        var measureAllMeasures = new List<List<Measure>>();
+        var measureBarlineWidths = new List<double>();
+        double totalBarlineWidth = 0;
 
         for (int i = startMeasureIndex; i < endMeasureIndex; i++)
         {
-            double w = SpacingRules.CalculateMeasureIdealWidth(primaryVoice.Measures[i], baseShortestDuration);
-            idealWidths.Add(w);
-            totalIdealWidth += w;
+            var primaryMeasure = primaryVoice.Measures[i];
+            var allTimings = CollectAllTimingsForMeasure(score, i);
+            var allMeasures = CollectAllMeasuresAtIndex(score, i);
+
+            var springs = _measureLayouter.CreateTimingSprings(primaryMeasure, allTimings, baseShortestDuration, allMeasures);
+            measureSprings.Add(springs);
+            measureTimings.Add(allTimings);
+            measureAllMeasures.Add(allMeasures);
+
+            double barlineWidth = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
+                                + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
+            measureBarlineWidths.Add(barlineWidth);
+            totalBarlineWidth += barlineWidth;
         }
 
-        // Scale factor: justify to fill available width (except last system)
-        double scaleFactor = (!isLastSystem && totalIdealWidth > 0 && totalIdealWidth < availableWidth)
-            ? availableWidth / totalIdealWidth
-            : 1.0;
+        // Concatenate all springs and solve for a single force across the system
+        var allSprings = measureSprings.SelectMany(s => s).ToImmutableArray();
+        double springTargetWidth = availableWidth - totalBarlineWidth;
 
-        // Second pass: layout with scaled widths
+        double force = 0;
+        if (allSprings.Length > 0)
+        {
+            var solver = new SpringSolver(allSprings);
+
+            // LILYPOND-REF: lily/simple-spacer.cc:175-205 Simple_spacer::solve()
+            if (_options.RaggedRight || isLastSystem)
+            {
+                double naturalLength = solver.IdealTotalLength;
+                if (naturalLength < springTargetWidth)
+                {
+                    force = 0;
+                }
+                else
+                {
+                    var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: true);
+                    force = solvedForce;
+                }
+            }
+            else
+            {
+                var (solvedForce, _) = solver.Solve(springTargetWidth, ragged: false);
+                force = solvedForce;
+            }
+        }
+
+        // Second pass: layout measures using the solved force
         var layouts = ImmutableArray.CreateBuilder<MeasureLayout>();
         double currentX = startX;
 
-        for (int i = 0; i < idealWidths.Count; i++)
+        for (int i = 0; i < measureSprings.Count; i++)
         {
             int measureIndex = startMeasureIndex + i;
-            double measureWidth = idealWidths[i] * scaleFactor;
-
-            var allTimings = CollectAllTimingsForMeasure(score, measureIndex);
             var primaryMeasure = primaryVoice.Measures[measureIndex];
-            var allMeasures = CollectAllMeasuresAtIndex(score, measureIndex);
+
+            // Measure width = barline widths + sum of spring lengths at solved force
+            double measureWidth = measureBarlineWidths[i];
+            foreach (var spring in measureSprings[i])
+            {
+                measureWidth += spring.Length(force);
+            }
 
             var itemLayouts = _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
-            var columnLayouts = _measureLayouter.LayoutColumns(primaryMeasure, measureWidth, allTimings, baseShortestDuration, allMeasures);
+            var columnLayouts = _measureLayouter.LayoutColumns(
+                primaryMeasure, measureWidth, measureTimings[i],
+                baseShortestDuration, measureAllMeasures[i],
+                measureSprings[i], force);
 
             var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts);
             layouts.Add(measureLayout);

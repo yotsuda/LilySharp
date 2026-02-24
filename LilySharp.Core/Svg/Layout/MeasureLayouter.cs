@@ -92,32 +92,22 @@ public sealed class MeasureLayouter
     }
 
     /// <summary>
-    /// Calculates column layouts for a measure based on collected timings.
+    /// Creates timing-based springs for a measure, considering items from all voices.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/paper-column.cc - Each musical moment becomes a paper column
     /// LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
+    /// LILYPOND-REF: lily/paper-column.cc — paper columns aggregate grobs from all staves.
     ///
-    /// Creates springs between each timing point (column) in the measure.
-    /// Springs include skyline-based minimum distances (rods) to prevent
-    /// accidental/notehead collisions. When allMeasures is provided, rods
-    /// consider items from ALL voices (not just the primary voice).
-    ///
-    /// LILYPOND-REF: lily/spacing-spanner.cc — paper columns are shared across
-    /// all staves; the rod between adjacent columns uses skylines from all grobs
-    /// at those columns.
+    /// Spring chain: [barline] → [col₀] → [col₁] → ... → [colₙ] → [end barline]
+    /// Each spring's minimum distance (rod) accounts for skyline collisions from ALL voices.
     /// </remarks>
-    public ImmutableArray<ColumnLayout> LayoutColumns(Measure measure, double totalWidth, List<Fraction> timings,
-                                                      double? baseShortestDuration = null,
-                                                      IReadOnlyList<Measure>? allMeasures = null)
+    public ImmutableArray<Spring> CreateTimingSprings(
+        Measure measure, List<Fraction> timings,
+        double? baseShortestDuration = null,
+        IReadOnlyList<Measure>? allMeasures = null)
     {
         if (timings.Count == 0)
-            return ImmutableArray<ColumnLayout>.Empty;
-
-        // Calculate barline widths
-        // LILYPOND-REF: lily/spacing-basic.cc:50-52 barline dimensions
-        double startBarlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline);
-        double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
+            return ImmutableArray<Spring>.Empty;
 
         // Calculate total duration of the measure
         var totalDuration = Fraction.Zero;
@@ -127,7 +117,7 @@ public sealed class MeasureLayouter
         }
 
         if (totalDuration == Fraction.Zero)
-            return ImmutableArray<ColumnLayout>.Empty;
+            return ImmutableArray<Spring>.Empty;
 
         // LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
         // Build a map from timing → items for skyline-based rod calculation.
@@ -151,14 +141,10 @@ public sealed class MeasureLayouter
             }
         }
 
-        // LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
-        // Spring chain: [barline] → [col₀] → [col₁] → ... → [colₙ] → [end barline]
-        // All springs participate in the solver uniformly, just like LayoutItems.
         var springs = new List<Spring>();
 
         // Spring 0: barline → first column
         // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist (first-note . (fixed-space . 1.3))
-        // Uses duration-based ideal but enforces BarLineToFirstNoteSpace as minimum.
         var firstDuration = timings.Count > 1 ? timings[1] - timings[0] : totalDuration;
         var firstSpring = SpacingRules.CreateTimingSpring(firstDuration, baseShortestDuration);
         double firstNoteMin = EngravingDefaults.BarLineToFirstNoteSpace;
@@ -245,15 +231,53 @@ public sealed class MeasureLayouter
         }
         springs.Add(endSpring);
 
-        // Available width for the entire spring chain
-        double targetWidth = totalWidth - startBarlineWidth - endBarlineWidth;
+        return springs.ToImmutableArray();
+    }
 
-        // LILYPOND-REF: lily/simple-spacer.cc:175-205 solve for force
-        var solver = new SpringSolver(springs.ToImmutableArray());
-        double force = solver.SolveForWidth(targetWidth);
+    /// <summary>
+    /// Calculates column layouts for a measure based on collected timings.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/paper-column.cc - Each musical moment becomes a paper column
+    /// LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
+    ///
+    /// When precomputedSprings and precomputedForce are provided (from system-level solving),
+    /// uses those directly. Otherwise creates springs and solves internally.
+    /// </remarks>
+    public ImmutableArray<ColumnLayout> LayoutColumns(Measure measure, double totalWidth, List<Fraction> timings,
+                                                      double? baseShortestDuration = null,
+                                                      IReadOnlyList<Measure>? allMeasures = null,
+                                                      ImmutableArray<Spring>? precomputedSprings = null,
+                                                      double? precomputedForce = null)
+    {
+        if (timings.Count == 0)
+            return ImmutableArray<ColumnLayout>.Empty;
+
+        // Calculate barline widths
+        // LILYPOND-REF: lily/spacing-basic.cc:50-52 barline dimensions
+        double startBarlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline);
+        double endBarlineWidth = SpacingRules.GetBarlineWidth(measure.EndBarline);
+
+        // Use precomputed springs or create them
+        var springs = precomputedSprings ?? CreateTimingSprings(measure, timings, baseShortestDuration, allMeasures);
+        if (springs.Length == 0)
+            return ImmutableArray<ColumnLayout>.Empty;
+
+        // Use precomputed force or solve internally
+        double force;
+        if (precomputedForce.HasValue)
+        {
+            force = precomputedForce.Value;
+        }
+        else
+        {
+            double targetWidth = totalWidth - startBarlineWidth - endBarlineWidth;
+            var solver = new SpringSolver(springs);
+            force = solver.SolveForWidth(targetWidth);
+        }
 
         // Get positions from spring solver
-        var positions = solver.GetPositions(force, startX: 0);
+        var positions = new SpringSolver(springs).GetPositions(force, startX: 0);
 
         // Create columns with solved positions
         var columns = ImmutableArray.CreateBuilder<ColumnLayout>();
