@@ -92,14 +92,14 @@
   <text class="music" x="35.2" y="22.5" font-size="4.00" data-pos="430"></text>
   <text class="music" x="32.6" y="22.0" font-size="4.00" data-pos="430"></text>
   <text class="music" x="36.6" y="22.0" font-size="4.00" data-pos="430"></text>
-  <line x1="35.2" y1="22.2" x2="35.2" y2="26.2" stroke="black" stroke-width="0.12" data-pos="430"/>
+  <line x1="35.2" y1="22.7" x2="35.2" y2="26.2" stroke="black" stroke-width="0.12" data-pos="430"/>
   <text class="music" x="39.5" y="21.5" font-size="4.00" data-pos="443"></text>
   <line class="ledger" x1="40.5" y1="21.5" x2="42.7" y2="21.5"/>
   <text class="music" x="40.9" y="21.5" font-size="4.00" data-pos="443"></text>
   <text class="music" x="38.3" y="21.0" font-size="4.00" data-pos="443"></text>
   <line class="ledger" x1="41.9" y1="21.5" x2="44.0" y2="21.5"/>
   <text class="music" x="42.3" y="21.0" font-size="4.00" data-pos="443"></text>
-  <line x1="40.9" y1="21.2" x2="40.9" y2="25.2" stroke="black" stroke-width="0.12" data-pos="443"/>
+  <line x1="40.9" y1="21.7" x2="40.9" y2="25.2" stroke="black" stroke-width="0.12" data-pos="443"/>
   <rect x="44.62" y="22.50" width="0.16" height="4.00" fill="black"/>
   <rect x="45.18" y="22.50" width="0.50" height="4.00" fill="black"/>
   <text x="10.30" y="7.50" font-family="Emmentaler" font-size="1.6"></text>

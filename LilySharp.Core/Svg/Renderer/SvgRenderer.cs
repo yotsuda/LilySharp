@@ -1865,10 +1865,13 @@ public sealed class SvgRenderer
         // Draw single stem for chord
         if (noteValue >= 2 && chord.Notes.Length > 0)
         {
-            // Stem attach note: bottom note for stem up, top note for stem down
+            // LILYPOND-REF: lily/stem.cc — stem attaches to noteheads on the stem side
+            // Displaced noteheads (from seconds) are on the opposite side of the stem,
+            // so the stem y-start should use the extremal NON-displaced notehead.
+            var nonDisplaced = chord.Notes.Where(n => !noteOffsets.ContainsKey(n.StaffPosition));
             int stemAttachPos = stemUp
-                ? chord.Notes.Min(n => n.StaffPosition)
-                : chord.Notes.Max(n => n.StaffPosition);
+                ? (nonDisplaced.Any() ? nonDisplaced.Min(n => n.StaffPosition) : chord.Notes.Min(n => n.StaffPosition))
+                : (nonDisplaced.Any() ? nonDisplaced.Max(n => n.StaffPosition) : chord.Notes.Max(n => n.StaffPosition));
             double stemNoteY = systemY + StaffHeight / 2 - (stemAttachPos / 2.0);
 
             // LILYPOND-REF: lily/stem.cc — stem at notehead.extent(X_AXIS)[d]
