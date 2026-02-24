@@ -1092,80 +1092,183 @@ public static class SpacingRules
         double noteheadCenterX = noteheadBBox.CenterX;
         double noteheadLeftX = referenceX - noteheadCenterX;
         double noteheadWidth = noteheadBBox.Width;
+        double maxNoteheadRightX = noteheadLeftX + noteheadWidth;
 
-        // Get note Y position
-        double noteY = item switch
+        if (item is ChordItem chord)
         {
-            NoteItem note => staffY - note.StaffPosition / 2.0,
-            _ => staffY
-        };
+            // LILYPOND-REF: lily/note-column.cc — notehead side assignment for seconds
+            // When two notes are a second apart (staff position diff = 1), one notehead
+            // shifts right. The right skyline must include these displaced noteheads.
+            var displacements = CalculateChordDisplacements(chord.Notes, chord.StemUp, noteheadWidth);
 
-        // Add notehead box
-        double noteheadYBottom = noteY - noteheadBBox.Top;
-        double noteheadYTop = noteY - noteheadBBox.Bottom;
-        boxes.Add((noteheadYBottom, noteheadYTop, noteheadLeftX, noteheadLeftX + noteheadWidth));
-
-        // Add flag if present (8th notes and shorter with stems)
-        if (item is NoteItem note2 && noteValue >= 8)
-        {
-            var flagBBox = GlyphMetrics.GetFlagBBox(noteValue, note2.StemUp);
-            if (flagBBox != default)
+            foreach (var noteInfo in chord.Notes)
             {
-                // Flag is attached to the stem end
-                double stemHeight = EngravingDefaults.IdealStemLength;
-                double stemEndY = note2.StemUp ? noteY - stemHeight : noteY + stemHeight;
+                double noteY = staffY - noteInfo.StaffPosition / 2.0;
+                double noteheadYBottom = noteY - noteheadBBox.Top;
+                double noteheadYTop = noteY - noteheadBBox.Bottom;
 
-                // Flag position (attached at stem)
-                double stemX = note2.StemUp
-                    ? noteheadLeftX + GlyphMetrics.StemUpSE.X
-                    : noteheadLeftX + GlyphMetrics.StemDownNW.X;
+                double xOffset = displacements.GetValueOrDefault(noteInfo.StaffPosition, 0);
+                double thisLeftX = noteheadLeftX + xOffset;
+                double thisRightX = thisLeftX + noteheadWidth;
 
-                double flagYBottom, flagYTop;
-                if (note2.StemUp)
+                boxes.Add((noteheadYBottom, noteheadYTop, thisLeftX, thisRightX));
+                maxNoteheadRightX = Math.Max(maxNoteheadRightX, thisRightX);
+            }
+
+            // Add dots for chord notes (placed after rightmost notehead)
+            int chordDots = GetDots(item);
+            if (chordDots > 0)
+            {
+                var dotBBox = GlyphMetrics.AugmentationDot;
+                double dotWidth = dotBBox.Width;
+                double dotGap = EngravingDefaults.DotGap;
+
+                foreach (var noteInfo in chord.Notes)
                 {
-                    // Flag extends downward from stem end
-                    flagYBottom = stemEndY;
-                    flagYTop = stemEndY - flagBBox.Bottom - flagBBox.Top;
+                    double dotYOffset = (noteInfo.StaffPosition % 2 == 0) ? -0.5 : 0;
+                    double noteY = staffY - noteInfo.StaffPosition / 2.0;
+                    for (int d = 0; d < chordDots; d++)
+                    {
+                        double dotX = maxNoteheadRightX + dotGap + d * (dotWidth + dotGap);
+                        double dotYCenter = noteY + dotYOffset;
+                        double dotRadius = dotBBox.Height / 2;
+                        boxes.Add((dotYCenter - dotRadius, dotYCenter + dotRadius, dotX, dotX + dotWidth));
+                    }
                 }
-                else
-                {
-                    // Flag extends upward from stem end
-                    flagYTop = stemEndY;
-                    flagYBottom = stemEndY + flagBBox.Top - flagBBox.Bottom;
-                }
-
-                double flagWidth = flagBBox.Width;
-                boxes.Add((Math.Min(flagYBottom, flagYTop), Math.Max(flagYBottom, flagYTop),
-                           stemX, stemX + flagWidth));
             }
         }
-
-        // Add dots if present
-        int dots = GetDots(item);
-        if (dots > 0)
+        else
         {
-            var dotBBox = GlyphMetrics.AugmentationDot;
-            double dotWidth = dotBBox.Width;
-            double dotGap = EngravingDefaults.DotGap;
-
-            // Dots must avoid staff lines - if note is on a line, shift dot up
-            int staffPosition = item switch
+            // Get note Y position
+            double noteY = item switch
             {
-                NoteItem note => note.StaffPosition,
-                _ => 1  // Default to odd (not on line)
+                NoteItem note => staffY - note.StaffPosition / 2.0,
+                _ => staffY
             };
-            double dotYOffset = (staffPosition % 2 == 0) ? -0.5 : 0;
 
-            for (int d = 0; d < dots; d++)
+            // Add notehead box
+            double noteheadYBottom = noteY - noteheadBBox.Top;
+            double noteheadYTop = noteY - noteheadBBox.Bottom;
+            boxes.Add((noteheadYBottom, noteheadYTop, noteheadLeftX, noteheadLeftX + noteheadWidth));
+
+            // Add flag if present (8th notes and shorter with stems)
+            if (item is NoteItem note2 && noteValue >= 8)
             {
-                double dotX = noteheadLeftX + noteheadWidth + dotGap + d * (dotWidth + dotGap);
-                double dotYCenter = noteY + dotYOffset;
-                double dotRadius = dotBBox.Height / 2;
-                boxes.Add((dotYCenter - dotRadius, dotYCenter + dotRadius, dotX, dotX + dotWidth));
+                var flagBBox = GlyphMetrics.GetFlagBBox(noteValue, note2.StemUp);
+                if (flagBBox != default)
+                {
+                    // Flag is attached to the stem end
+                    double stemHeight = EngravingDefaults.IdealStemLength;
+                    double stemEndY = note2.StemUp ? noteY - stemHeight : noteY + stemHeight;
+
+                    // Flag position (attached at stem)
+                    double stemX = note2.StemUp
+                        ? noteheadLeftX + GlyphMetrics.StemUpSE.X
+                        : noteheadLeftX + GlyphMetrics.StemDownNW.X;
+
+                    double flagYBottom, flagYTop;
+                    if (note2.StemUp)
+                    {
+                        // Flag extends downward from stem end
+                        flagYBottom = stemEndY;
+                        flagYTop = stemEndY - flagBBox.Bottom - flagBBox.Top;
+                    }
+                    else
+                    {
+                        // Flag extends upward from stem end
+                        flagYTop = stemEndY;
+                        flagYBottom = stemEndY + flagBBox.Top - flagBBox.Bottom;
+                    }
+
+                    double flagWidth = flagBBox.Width;
+                    boxes.Add((Math.Min(flagYBottom, flagYTop), Math.Max(flagYBottom, flagYTop),
+                               stemX, stemX + flagWidth));
+                }
+            }
+
+            // Add dots if present
+            int dots = GetDots(item);
+            if (dots > 0)
+            {
+                var dotBBox = GlyphMetrics.AugmentationDot;
+                double dotWidth = dotBBox.Width;
+                double dotGap = EngravingDefaults.DotGap;
+
+                // Dots must avoid staff lines - if note is on a line, shift dot up
+                int staffPosition = item switch
+                {
+                    NoteItem note => note.StaffPosition,
+                    _ => 1  // Default to odd (not on line)
+                };
+                double dotYOffset = (staffPosition % 2 == 0) ? -0.5 : 0;
+
+                for (int d = 0; d < dots; d++)
+                {
+                    double dotX = maxNoteheadRightX + dotGap + d * (dotWidth + dotGap);
+                    double dotYCenter = noteY + dotYOffset;
+                    double dotRadius = dotBBox.Height / 2;
+                    boxes.Add((dotYCenter - dotRadius, dotYCenter + dotRadius, dotX, dotX + dotWidth));
+                }
             }
         }
 
         return HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Right);
+    }
+
+    /// <summary>
+    /// Calculates horizontal displacement offsets for chord noteheads with seconds.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-column.cc — notehead side assignment
+    /// When two notes are a second apart (adjacent staff positions), one notehead
+    /// shifts to the opposite side of the stem:
+    /// - Stem up: lower note of the pair shifts right by noteheadWidth
+    /// - Stem down: upper note of the pair shifts right by noteheadWidth
+    /// </remarks>
+    internal static Dictionary<int, double> CalculateChordDisplacements(
+        ImmutableArray<ChordNoteInfo> notes, bool stemUp, double noteheadWidth)
+    {
+        var offsets = new Dictionary<int, double>();
+        if (notes.Length < 2)
+            return offsets;
+
+        var sorted = notes.OrderBy(n => n.StaffPosition).Select(n => n.StaffPosition).ToList();
+        var shifted = new HashSet<int>();
+
+        if (stemUp)
+        {
+            // Stem up: lower note of adjacent pair shifts right
+            for (int i = 0; i < sorted.Count - 1; i++)
+            {
+                if (sorted[i + 1] - sorted[i] == 1)
+                {
+                    if (!shifted.Contains(sorted[i]))
+                    {
+                        offsets[sorted[i]] = noteheadWidth;
+                        shifted.Add(sorted[i]);
+                    }
+                    i++; // Skip next to avoid double-shifting in clusters
+                }
+            }
+        }
+        else
+        {
+            // Stem down: upper note of adjacent pair shifts right
+            for (int i = sorted.Count - 1; i > 0; i--)
+            {
+                if (sorted[i] - sorted[i - 1] == 1)
+                {
+                    if (!shifted.Contains(sorted[i]))
+                    {
+                        offsets[sorted[i]] = noteheadWidth;
+                        shifted.Add(sorted[i]);
+                    }
+                    i--; // Skip next to avoid double-shifting in clusters
+                }
+            }
+        }
+
+        return offsets;
     }
 
     /// <summary>

@@ -229,30 +229,39 @@ public sealed class KnuthPlassBreaker
                 double invStretchSum = cumInvStretch[j] - cumInvStretch[i];
                 double minSum = cumMin[j] - cumMin[i];
 
-                // Check overfull: if minimum width exceeds available
-                if (minSum > availableWidth * _tolerance)
-                    continue;
+                // LILYPOND-REF: lily/constrained-breaking.cc — no hard reject;
+                // all transitions are evaluated via penalty. This ensures the DP
+                // always finds a valid solution (possibly overfull) rather than
+                // falling back to putting everything on one system.
 
-                // Check severely underfull (but allow lines adjacent to forced breaks)
+                // Check severely underfull (but allow last line and lines adjacent to forced breaks)
                 // LILYPOND-REF: lily/constrained-breaking.cc — \break is an absolute constraint
-                // A line ending at or starting from a forced break must be allowed
-                if (idealSum < availableWidth / (_tolerance * 2) && idealSum > 0
+                // LILYPOND-REF: lily/page-spacing.cc — last system is allowed to be underfull (ragged-last)
+                bool isLastLine = (j == n);
+                if (!isLastLine && idealSum < availableWidth / (_tolerance * 2) && idealSum > 0
                     && !forcedBreaks.Contains(j) && !forcedBreaks.Contains(i))
                     continue;
 
                 // LILYPOND-REF: lily/simple-spacer.cc:267-300
-                double force = CalculateLineForce(availableWidth, idealSum, invStretchSum);
+                // Use max(idealSum, minSum) as effective width for force calculation.
+                // The SpringSolver enforces minimum distances (blocking forces from
+                // accidentals, collision avoidance), so when minSum > idealSum the
+                // springs cannot compress below minSum. The DP must account for this
+                // to avoid choosing lines that look good by ideal width but overflow
+                // due to minimum distance constraints.
+                double effectiveWidth = Math.Max(idealSum, minSum);
+                double force = CalculateLineForce(availableWidth, effectiveWidth, invStretchSum);
 
-                // Overfull line that can't be compressed
+                // Handle degenerate case: springs have zero flexibility
                 if (double.IsNegativeInfinity(force))
-                    continue;
+                    force = -(effectiveWidth - availableWidth) * 1000;
 
                 // LILYPOND-REF: lily/constrained-breaking.cc:224-232
                 // demerits = force² + Δforce²
                 double penalty;
                 if (force < 0)
                 {
-                    // Compressed line: use force² + overfull penalty
+                    // Compressed/overfull line: use force² + overfull penalty
                     penalty = force * force + OverfullPenalty * Math.Abs(force);
                 }
                 else
@@ -285,9 +294,47 @@ public sealed class KnuthPlassBreaker
         {
             breaks.Add(current);
             current = prev[current];
+            if (current < 0)
+            {
+                // DP failed to find a valid path — fall back to greedy breaking
+                return GreedyBreak(springData, cumMin);
+            }
         }
 
         breaks.Reverse();
+        return breaks;
+    }
+
+    /// <summary>
+    /// Greedy fallback when DP fails to find a valid path.
+    /// Fills each system until the next measure would exceed available width.
+    /// </summary>
+    private List<int> GreedyBreak(MeasureSpringData[] springData, double[] cumMin)
+    {
+        int n = springData.Length;
+        var breaks = new List<int>();
+        int lineStart = 0;
+
+        while (lineStart < n)
+        {
+            bool isFirstLine = lineStart == 0;
+            double prefixWidth = isFirstLine ? _firstPrefixWidth : _continuationPrefixWidth;
+            double availableWidth = _lineWidth - prefixWidth;
+
+            // Find how many measures fit on this line
+            int lineEnd = lineStart + 1; // At least one measure per line
+            while (lineEnd < n)
+            {
+                double minSum = cumMin[lineEnd + 1] - cumMin[lineStart];
+                if (minSum > availableWidth)
+                    break;
+                lineEnd++;
+            }
+
+            breaks.Add(lineEnd);
+            lineStart = lineEnd;
+        }
+
         return breaks;
     }
 
