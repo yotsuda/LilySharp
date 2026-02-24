@@ -178,13 +178,13 @@ public class NoteCollisionTests
     public void Meshing_SecondInterval_UsesGeneralShift()
     {
         // LILYPOND-REF: lily/note-collision-interface.cc:180-230 check_meshing_chords()
-        // Two single quarter notes a second apart should mesh with 0.17 shift
+        // Meshing requires different head groups: half (open) + quarter (filled)
         var collision = new NoteCollision();
         var ups = new[] { 5 };    // One position above
         var downs = new[] { 4 };  // Adjacent position
 
         var result = collision.AnalyzeCollision(ups, downs,
-            upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 0);
+            upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
 
         Assert.Equal(0.17, result.UpStemXOffset, 2);
     }
@@ -193,13 +193,13 @@ public class NoteCollisionTests
     public void Meshing_SecondInterval_DottedNote_UsesDottedShift()
     {
         // LILYPOND-REF: lily/note-collision-interface.cc:180-230
-        // Dotted notes use MeshingDottedShift (0.1)
+        // Dotted notes with different head groups use MeshingDottedShift (0.1)
         var collision = new NoteCollision();
         var ups = new[] { 5 };
         var downs = new[] { 4 };
 
         var result = collision.AnalyzeCollision(ups, downs,
-            upNoteValue: 4, downNoteValue: 4, upDots: 1, downDots: 0);
+            upNoteValue: 2, downNoteValue: 4, upDots: 1, downDots: 0);
 
         Assert.Equal(0.1, result.UpStemXOffset, 2);
     }
@@ -239,10 +239,11 @@ public class NoteCollisionTests
     }
 
     [Fact]
-    public void Meshing_HalfNotes_CanMesh()
+    public void Meshing_HalfNotes_CannotMesh_SameHeadGroup()
     {
         // LILYPOND-REF: lily/note-collision-interface.cc:180-230
-        // Half notes (noteValue=2) can mesh (open noteheads)
+        // Two half notes have the same head group (open) — cannot mesh.
+        // LilyPond requires head_group_up != head_group_down for meshing.
         var collision = new NoteCollision();
         var ups = new[] { 5 };
         var downs = new[] { 4 };
@@ -250,7 +251,8 @@ public class NoteCollisionTests
         var result = collision.AnalyzeCollision(ups, downs,
             upNoteValue: 2, downNoteValue: 2, upDots: 0, downDots: 0);
 
-        Assert.Equal(0.17, result.UpStemXOffset, 2);
+        // Same head groups require full displacement (1.0), not meshing (0.17)
+        Assert.Equal(1.0, result.UpStemXOffset, 2);
     }
 
     [Fact]

@@ -322,12 +322,20 @@ public sealed class NoteCollision
             else if (closeHalf || distantHalf)
             {
                 // LILYPOND-REF: lily/note-collision-interface.cc:180-230 check_meshing_chords()
-                // Check if noteheads can mesh (interlock) at second intervals.
-                // Meshing is possible when:
+                // Meshing (interlocking noteheads) requires ALL of:
                 // - Notes are a second apart (already guaranteed by closeHalf/distantHalf)
                 // - Neither note is a whole note (round noteheads can't mesh)
                 // - Single notes in each voice (chords with multiple seconds don't mesh cleanly)
+                // - Different head groups (one open, one filled)
+                //   LilyPond checks: head_group_up != head_group_down
+                //   Open (half=2) vs filled (quarter=4, eighth=8, etc.) can interlock;
+                //   same group (half+half or quarter+quarter) cannot.
+                bool upIsOpen = upNoteValue == 2;   // half note = open notehead
+                bool downIsOpen = downNoteValue == 2;
+                bool differentHeadGroups = upIsOpen != downIsOpen;
+
                 bool canMesh = upNoteValue >= 2 && downNoteValue >= 2
+                             && differentHeadGroups
                              && upStaffPositions.Count == 1 && downStaffPositions.Count == 1;
 
                 if (canMesh)
@@ -339,12 +347,26 @@ public sealed class NoteCollision
                         : _params.MeshingGeneralShift;
                     type = CollisionType.CloseHalf;
                 }
-                else
+                else if (differentHeadGroups)
                 {
-                    // Standard half collision shift
+                    // LILYPOND-REF: lily/note-collision-interface.cc:297-312
+                    // Different head groups but chords (can't fully mesh):
+                    // partial interlocking with standard half collision shift.
                     shiftAmount = closeHalf
                         ? _params.CloseHalfShift
                         : _params.DistantHalfShift;
+                    type = CollisionType.CloseHalf;
+                }
+                else
+                {
+                    // LILYPOND-REF: lily/note-collision-interface.cc:180-230
+                    // Same head groups: noteheads cannot interlock at all.
+                    // In LilyPond's stem-reference coordinate system, close_half_collide
+                    // (0.52) produces visual separation because up/down stems place
+                    // noteheads on opposite sides of the reference point.
+                    // In Lily#'s left-edge coordinate system, we need 1.0 (full notehead
+                    // width) to achieve the same side-by-side placement.
+                    shiftAmount = 1.0;
                     type = CollisionType.CloseHalf;
                 }
             }
