@@ -60,7 +60,7 @@ public static class DynamicEngraver
     private const double Padding = 0.6;
 
     // LILYPOND-REF: define-grobs.scm:1280 staff-padding = 0.1
-    private const double StaffPadding = 0.2;
+    private const double StaffPadding = 0.1;
 
     // Staff geometry (5 lines = 4 staff spaces)
     private const double StaffBottom = 4.0;

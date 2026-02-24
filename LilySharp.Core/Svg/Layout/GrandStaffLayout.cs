@@ -31,17 +31,56 @@ public sealed record StaffLayout(
     TuningType? Tuning = null,  // Tuning for tablature staves
     string? InstrumentName = null,  // Display name for this staff
     /// <summary>Whether this staff is an ossia (rendered at reduced size).</summary>
-    bool IsOssia = false
+    bool IsOssia = false,
+    /// <summary>
+    /// Whether this staff is hidden due to hara-kiri (empty staff removal).
+    /// LILYPOND-REF: lily/hara-kiri-group-spanner.cc — consider_suicide()
+    /// When true, the staff and its contents should not be rendered.
+    /// </summary>
+    bool IsHidden = false
 );
 
 /// <summary>
-/// Layout information for a grand staff (brace-connected staves).
+/// Type of system-start delimiter for staff groups.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/system-start-delimiter.cc — print() dispatches on style property
+/// LILYPOND-REF: scm/define-grobs.scm — SystemStartBrace, SystemStartBracket, SystemStartBar, SystemStartSquare
+/// </remarks>
+public enum SystemStartDelimiterType
+{
+    /// <summary>No delimiter.</summary>
+    None,
+
+    /// <summary>Curly brace (PianoStaff, GrandStaff). Style: 'brace.</summary>
+    Brace,
+
+    /// <summary>Thick angular bracket with serifs (StaffGroup, ChoirStaff). Style: 'bracket.</summary>
+    Bracket,
+
+    /// <summary>Thin L-shaped bracket without serifs (SystemStartSquare). Style: 'line-bracket.</summary>
+    LineBracket,
+
+    /// <summary>Simple vertical bar line. Style: 'bar-line.</summary>
+    BarLine
+}
+
+/// <summary>
+/// Layout information for a multi-staff group with a system-start delimiter.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/system-start-delimiter.cc — brace/bracket/bar-line/line-bracket rendering
+/// LILYPOND-REF: scm/define-grobs.scm:3042-3045 staff-staff-spacing
+///
+/// IMPLEMENTED — bracket/brace collapse-height check (system-start-delimiter.cc:127-129)
+/// IMPLEMENTED — bracket, line-bracket, and bar-line delimiter types
+/// </remarks>
 public sealed record GrandStaffLayout(
     ImmutableArray<StaffLayout> Staves,
-    double BraceX,      // X position of the brace
-    double BraceTop,    // Top Y of the brace
-    double BraceBottom  // Bottom Y of the brace
+    double BraceX,      // X position of the delimiter
+    double BraceTop,    // Top Y of the delimiter
+    double BraceBottom, // Bottom Y of the delimiter
+    SystemStartDelimiterType DelimiterType = SystemStartDelimiterType.Brace
 )
 {
     /// <summary>Number of staves in this grand staff.</summary>
@@ -60,16 +99,23 @@ public sealed record GrandStaffLayout(
 /// <summary>
 /// Layout information for a staff group within a system.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/axis-group-interface.cc — VerticalAxisGroup
+/// LILYPOND-REF: lily/staff-grouper-interface.cc — staff-staff-spacing, staffgroup-staff-spacing
+/// </remarks>
 public sealed record StaffGroupLayout(
     StaffGroupType Type,
     ImmutableArray<StaffLayout> Staves,
     double Y,           // Y position of the group
     double Height,      // Total height of the group
-    GrandStaffLayout? GrandStaffLayout  // Only for GrandStaff type
+    GrandStaffLayout? GrandStaffLayout  // Multi-staff delimiter layout (brace, bracket, etc.)
 )
 {
     /// <summary>Whether this is a grand staff.</summary>
     public bool IsGrandStaff => Type == StaffGroupType.GrandStaff;
+
+    /// <summary>Whether this group has a delimiter.</summary>
+    public bool HasDelimiter => GrandStaffLayout != null;
 
     /// <summary>
     /// Creates a single staff layout.
@@ -78,7 +124,7 @@ public sealed record StaffGroupLayout(
         => new(StaffGroupType.Single, ImmutableArray.Create(staff), y, height, null);
 
     /// <summary>
-    /// Creates a grand staff layout.
+    /// Creates a grand staff layout (brace delimiter).
     /// </summary>
     public static StaffGroupLayout CreateGrandStaff(
         ImmutableArray<StaffLayout> staves,
@@ -86,4 +132,18 @@ public sealed record StaffGroupLayout(
         double height,
         GrandStaffLayout grandStaffLayout)
         => new(StaffGroupType.GrandStaff, staves, y, height, grandStaffLayout);
+
+    /// <summary>
+    /// Creates a bracket group layout (StaffGroup with bracket delimiter).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly — StaffGroup uses SystemStartBracket
+    /// </remarks>
+    public static StaffGroupLayout CreateBracketGroup(
+        StaffGroupType type,
+        ImmutableArray<StaffLayout> staves,
+        double y,
+        double height,
+        GrandStaffLayout delimiterLayout)
+        => new(type, staves, y, height, delimiterLayout);
 }

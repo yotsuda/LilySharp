@@ -23,14 +23,24 @@ namespace LilySharp.Core.Svg.Layout;
 /// as seen from the left (LeftSkyline) or right (RightSkyline).
 /// </summary>
 /// <remarks>
+/// LILYPOND-REF: lily/skyline.cc — Skyline class (simplified version)
+///
 /// A skyline is represented as a series of Y-intervals, each with an X boundary.
 /// For a RightSkyline (looking from the right), X is the rightmost edge at each Y.
 /// For a LeftSkyline (looking from the left), X is the leftmost edge at each Y.
 ///
-/// This is a simplified version of Lilypond's Skyline that uses only horizontal
-/// segments (no slopes). This is sufficient for LilySharp because:
-/// 1. Bar lines are explicit, so collision detection is within measures only
-/// 2. Rectangular approximation is accurate enough for most music elements
+/// This is a simplified version of LilyPond's Skyline that uses only horizontal
+/// segments (no slopes). See HorizontalSkyline.cs and VerticalSkyline.cs for the
+/// slope-intercept implementations closer to LilyPond's Building model.
+///
+/// NOTE: LilyPond uses a slope-intercept Building model (skyline.cc:32-46)
+/// with O(n+m) plane-sweep merge and 45° sloped padding.
+/// This class uses flat segments with O(n log n) sort-based merge — adequate for
+/// rectangular bounding box collision within measures.
+///
+/// IMPLEMENTED — horizon_padding parameter (skyline.cc:530-554) on VerticalSkyline
+/// IMPLEMENTED — padded() with 45° sloped edges (skyline.cc:558-615) on VerticalSkyline
+/// This simplified Skyline class supports horizon_padding via Y-range extension.
 /// </remarks>
 public sealed class Skyline
 {
@@ -109,6 +119,21 @@ public sealed class Skyline
     /// </returns>
     public double Distance(Skyline other)
     {
+        return Distance(other, 0.0);
+    }
+
+    /// <summary>
+    /// Calculates the minimum distance with horizon_padding.
+    /// Horizon padding extends each segment's Y range by the padding amount,
+    /// so that nearby objects in the Y direction also affect the distance.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:530-554 Skyline::distance(other, horizon_padding)
+    /// In this simplified flat-segment model, horizon_padding is applied by
+    /// extending Y ranges rather than creating 45° slopes.
+    /// </remarks>
+    public double Distance(Skyline other, double horizonPadding)
+    {
         if (_segments.Length == 0 || other._segments.Length == 0)
             return double.PositiveInfinity;
 
@@ -119,9 +144,9 @@ public sealed class Skyline
         {
             foreach (var seg2 in other._segments)
             {
-                // Check if Y intervals overlap
-                double overlapBottom = Math.Max(seg1.YBottom, seg2.YBottom);
-                double overlapTop = Math.Min(seg1.YTop, seg2.YTop);
+                // Check if Y intervals overlap (with horizon padding)
+                double overlapBottom = Math.Max(seg1.YBottom - horizonPadding, seg2.YBottom - horizonPadding);
+                double overlapTop = Math.Min(seg1.YTop + horizonPadding, seg2.YTop + horizonPadding);
 
                 if (overlapBottom < overlapTop)
                 {
@@ -201,6 +226,33 @@ public sealed class Skyline
         }
 
         result.Add(current);
+        return result;
+    }
+
+    /// <summary>
+    /// Queries the extreme X value within a Y range.
+    /// For LeftSkyline: returns the minimum (leftmost) X.
+    /// For RightSkyline: returns the maximum (rightmost) X.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc — used in accidental-placement for collision queries
+    /// </remarks>
+    public double QueryXInRange(double yBottom, double yTop)
+    {
+        double result = _direction == Direction.Right
+            ? double.NegativeInfinity
+            : double.PositiveInfinity;
+
+        foreach (var seg in _segments)
+        {
+            if (seg.YBottom < yTop && yBottom < seg.YTop)
+            {
+                result = _direction == Direction.Right
+                    ? Math.Max(result, seg.X)
+                    : Math.Min(result, seg.X);
+            }
+        }
+
         return result;
     }
 

@@ -574,6 +574,126 @@ public sealed class VerticalSkyline
     }
 
     /// <summary>
+    /// Creates a padded copy of this skyline with 45° sloped edges.
+    /// Each building gets flat+sloped extensions on both sides.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:558-615 Skyline::padded()
+    ///
+    /// For each building, 4 padding buildings are created:
+    /// - Left-outer: 45° slope from (x-2P, h-P) to (x-P, h)
+    /// - Left-inner: flat from (x-P, h) to (x, h)
+    /// - Right-inner: flat from (xR, h) to (xR+P, h)
+    /// - Right-outer: 45° slope from (xR+P, h) to (xR+2P, h-P)
+    /// These are merged with the original to form the padded skyline.
+    /// </remarks>
+    public VerticalSkyline Padded(double horizonPadding)
+    {
+        if (horizonPadding <= 0.0)
+            return this;
+
+        var padBuildings = new List<Building>(_buildings.Count * 4);
+
+        foreach (var b in _buildings)
+        {
+            if (!double.IsInfinity(b.XLeft))
+            {
+                double height = b.Height(b.XLeft);
+                if (!double.IsNegativeInfinity(height))
+                {
+                    // Left-outer: sloped 45° (slope = +1 in internal coordinates)
+                    double start = b.XLeft - 2 * horizonPadding;
+                    double end = b.XLeft - horizonPadding;
+                    padBuildings.Add(new Building(start, height - horizonPadding, height, end));
+
+                    // Left-inner: flat at same height
+                    padBuildings.Add(new Building(end, height, height, b.XLeft));
+                }
+            }
+
+            if (!double.IsInfinity(b.XRight))
+            {
+                double height = b.Height(b.XRight);
+                if (!double.IsNegativeInfinity(height))
+                {
+                    // Right-inner: flat at same height
+                    double start = b.XRight;
+                    double end = start + horizonPadding;
+                    padBuildings.Add(new Building(start, height, height, end));
+
+                    // Right-outer: sloped 45° (slope = -1 in internal coordinates)
+                    padBuildings.Add(new Building(end, height, height - horizonPadding, end + horizonPadding));
+                }
+            }
+        }
+
+        if (padBuildings.Count == 0)
+            return this;
+
+        // Build a skyline from padding buildings
+        var padSkyline = new VerticalSkyline(_direction);
+        foreach (var pb in padBuildings)
+            padSkyline._buildings.Add(pb);
+
+        // Resolve overlaps among padding buildings
+        padSkyline.SortAndResolve();
+
+        // Merge padding with original
+        var result = new VerticalSkyline(new List<Building>(_buildings), _direction);
+        result.MergeInternal(padSkyline._buildings);
+        return result;
+    }
+
+    /// <summary>
+    /// Sorts buildings and resolves overlaps to form a valid skyline.
+    /// </summary>
+    private void SortAndResolve()
+    {
+        if (_buildings.Count <= 1)
+            return;
+
+        _buildings.Sort((a, b) => a.XLeft.CompareTo(b.XLeft));
+
+        var resolved = new List<Building>();
+        resolved.Add(_buildings[0]);
+
+        for (int i = 1; i < _buildings.Count; i++)
+        {
+            var b = _buildings[i];
+            if (b.XLeft >= resolved[^1].XRight)
+            {
+                resolved.Add(b);
+            }
+            else
+            {
+                MergeOverlapping(resolved, b);
+            }
+        }
+
+        _buildings.Clear();
+        _buildings.AddRange(resolved);
+    }
+
+    /// <summary>
+    /// Calculates the distance between this skyline and another of opposite direction,
+    /// with horizon_padding applied to this skyline.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/skyline.cc:530-554 Skyline::distance(other, horizon_padding)
+    /// Only this skyline is padded (not other). The comment in LilyPond states:
+    /// "it is not necessary to build a padded version of other, because the same
+    /// effect can be achieved just by doubling horizon_padding."
+    /// </remarks>
+    public double Distance(VerticalSkyline other, double horizonPadding)
+    {
+        if (horizonPadding <= 0.0)
+            return Distance(other);
+
+        var paddedThis = Padded(horizonPadding);
+        return paddedThis.Distance(other);
+    }
+
+    /// <summary>
     /// Calculates the distance between this skyline and another of opposite direction.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/skyline.cc:529-533 Skyline::distance()</remarks>

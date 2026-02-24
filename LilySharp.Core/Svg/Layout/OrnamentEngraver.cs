@@ -38,28 +38,44 @@ public readonly record struct OrnamentLayout(
 );
 
 /// <summary>
-/// Calculates positions for ornament marks.
-/// Implements LilyPond's ornament positioning algorithm.
+/// Calculates positions for ornament marks using LilyPond's side-position-interface algorithm.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: trill-spanner-engraver.cc:92-125 positioning
-/// LILYPOND-REF: side-position-interface.cc:92-111 axis_aligned_side_helper
+/// LILYPOND-REF: lily/script-interface.cc — script positioning
+/// LILYPOND-REF: lily/side-position-interface.cc:360-378 total_off calculation
+/// LILYPOND-REF: lily/side-position-interface.cc:426-445 staff-padding clamp
 ///
-/// Ornaments are placed above the note with:
-/// - outside-staff-priority: 50
-/// - direction: UP
-/// - padding: 0.5 staff spaces
+/// Ornaments are always placed above the note with:
+/// - direction: UP (always)
+/// - padding: 0.5 staff spaces (define-grobs.scm:2195)
+/// - staff-padding: 0.25 staff spaces
+///
+/// Uses the same non-quantized positioning as ArticulationEngraver for fermata/ornaments:
+///   1. Calculate support extent (stem length or notehead height)
+///   2. Add ornament near-extent + padding = total_off
+///   3. Apply staff-padding clamp
 /// </remarks>
 public static class OrnamentEngraver
 {
     // LILYPOND-REF: define-grobs.scm:2195 padding = 0.5
     private const double Padding = 0.5;
 
-    // Height of ornament glyphs in staff spaces
-    private const double OrnamentHeight = 1.2;
+    // LILYPOND-REF: define-grobs.scm:2295 staff-padding = 0.25
+    private const double StaffPadding = 0.25;
 
-    // Staff top position
+    // Ornament glyph near-extent (half-height, how far glyph extends toward note)
+    // LILYPOND-REF: feta-scripts.mf — ornament glyph vertical extent ≈ 1.0 staff space total
+    private const double OrnamentNearExtent = 0.5;
+
+    // Staff positions
+    private const double StaffMiddle = 2.0;
     private const double StaffTop = 0.0;
+
+    // Notehead vertical half-extent
+    private const double NoteheadHalfHeight = 0.5;
+
+    // LILYPOND-REF: stem.cc:93 default stem-length = 3.5
+    private const double DefaultStemLength = 3.5;
 
     /// <summary>
     /// Calculates layout for all ornaments in a score.
@@ -77,13 +93,11 @@ public static class OrnamentEngraver
 
         foreach (var ornament in ornaments)
         {
-            // Find the measure layout
             if (ornament.MeasureIndex >= measureLayouts.Length)
                 continue;
 
             var measureLayout = measureLayouts[ornament.MeasureIndex];
 
-            // Find the item layout within the measure
             if (ornament.ItemIndex >= measureLayout.Items.Length)
                 continue;
 
@@ -92,10 +106,24 @@ public static class OrnamentEngraver
             // Calculate X position (centered on the note)
             double x = measureLayout.X + itemLayout.X;
 
-            // Calculate Y position (above the staff)
-            // LILYPOND-REF: side-position-interface.cc:128-136 y_aligned_side
-            // Ornaments are placed above the staff with padding
-            double y = StaffTop - Padding - OrnamentHeight;
+            // Get staff position and stem direction from the music item
+            // LILYPOND-REF: script-engraver.cc:92-125 acknowledge_note_head
+            int staffPosition = 0;
+            bool stemUp = true;
+            if (ornament.MeasureIndex < score.Voice.Measures.Length)
+            {
+                var measure = score.Voice.Measures[ornament.MeasureIndex];
+                if (ornament.ItemIndex < measure.Items.Length)
+                {
+                    var item = measure.Items[ornament.ItemIndex];
+                    staffPosition = GetStaffPosition(item);
+                    stemUp = GetStemUp(item, staffPosition);
+                }
+            }
+
+            // Calculate Y position using side-position-interface algorithm
+            // LILYPOND-REF: side-position-interface.cc:360-378 total_off calculation
+            double y = CalculateYPosition(staffPosition, stemUp);
 
             layouts.Add(new OrnamentLayout(
                 ornament.MeasureIndex,
@@ -110,4 +138,51 @@ public static class OrnamentEngraver
 
         return layouts.ToImmutable();
     }
+
+    /// <summary>
+    /// Calculates Y position using the non-quantized path from side-position-interface.
+    /// Ornaments are always placed above the note.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:360-378 total_off calculation
+    /// LILYPOND-REF: lily/side-position-interface.cc:426-445 staff-padding clamp
+    /// </remarks>
+    private static double CalculateYPosition(int staffPosition, bool stemUp)
+    {
+        // Convert staff position to Y coordinate
+        double noteY = StaffMiddle - staffPosition * 0.5;
+
+        // Support extent: how far the note+stem extends above
+        // LILYPOND-REF: side-position-interface.cc:229-264 support skyline
+        double supportExtent = stemUp ? DefaultStemLength : NoteheadHalfHeight;
+
+        // total_off = support extent + glyph near extent + padding
+        double totalOff = supportExtent + OrnamentNearExtent + Padding;
+        double targetY = noteY - totalOff;
+
+        // Staff-padding clamp: ensure glyph clears staff top
+        // LILYPOND-REF: side-position-interface.cc:426-445
+        double glyphBottom = targetY + OrnamentNearExtent;
+        double staffEdge = StaffTop - StaffPadding;
+        if (glyphBottom > staffEdge)
+            targetY = staffEdge - OrnamentNearExtent;
+
+        return targetY;
+    }
+
+    private static int GetStaffPosition(MusicItem item) => item switch
+    {
+        NoteItem note => note.StaffPosition,
+        ChordItem chord => chord.Notes.Length > 0
+            ? (chord.Notes.Max(n => n.StaffPosition) + chord.Notes.Min(n => n.StaffPosition)) / 2
+            : 4,
+        _ => 0
+    };
+
+    private static bool GetStemUp(MusicItem item, int staffPosition) => item switch
+    {
+        NoteItem note => note.StemUp,
+        ChordItem chord => chord.StemUp,
+        _ => staffPosition < 0
+    };
 }

@@ -128,6 +128,28 @@ public sealed record LayoutOptions
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3040-3054 StaffGrouper</remarks>
     public StaffSpacingParameters StaffSpacing { get; init; } = StaffSpacingParameters.Default;
 
+    // === Indent (in staff spaces) ===
+
+    /// <summary>
+    /// Indentation for the first system in staff spaces.
+    /// Creates space for instrument names to the left of staff lines.
+    /// Default 0 = auto-calculate from instrument names if present.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly — indent default 15\mm
+    /// LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset uses indent
+    /// </remarks>
+    public double Indent { get; init; } = 0;
+
+    /// <summary>
+    /// Indentation for subsequent systems in staff spaces.
+    /// Default 0 = no indent (matching LilyPond's short-indent default).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly — short-indent default 0\mm
+    /// </remarks>
+    public double ShortIndent { get; init; } = 0;
+
     // === Computed Properties ===
 
     /// <summary>Available width for music content in staff spaces.</summary>

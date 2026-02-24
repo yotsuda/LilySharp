@@ -272,6 +272,201 @@ public class PageLayouterTests
         Assert.Equal(p.MarkupMarkup.BasicDistance, spec.BasicDistance);
     }
 
+    // --- System skyline tests (G-1: build_system_skyline) ---
+
+    [Fact]
+    public void SystemSkylines_ProduceDifferentSpacingThanScalarExtents()
+    {
+        // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
+        // When skylines have a narrow tall protrusion, Distance() should give a
+        // different (potentially smaller) result than worst-case scalar extents.
+        var options = CreateOptions(pageHeight: 200) with
+        {
+            PageBreaking = new PageBreakingParameters { RaggedLastBottom = false }
+        };
+        var layouter = new PageLayouter(options);
+        var systems = CreateDummySystems(2);
+
+        // Scalar extents: large bottomExtent on system 0, large upExtent on system 1
+        var extents = ImmutableArray.Create(
+            (upExtent: 1.0, downExtent: 8.0),
+            (upExtent: 8.0, downExtent: 1.0));
+
+        // Skylines: the tall parts are at different X positions, so they don't collide
+        // System 0 DOWN: tall protrusion at X=[0,10], short elsewhere
+        var sys0Down = new VerticalSkyline(VerticalDirection.Down);
+        sys0Down.Merge(VerticalSkyline.FromBox(0, 10, 0, 8.0, VerticalDirection.Down));   // tall at left
+        sys0Down.Merge(VerticalSkyline.FromBox(10, 70, 0, 2.0, VerticalDirection.Down));  // short at right
+
+        // System 1 UP: tall protrusion at X=[60,70], short elsewhere
+        var sys1Up = new VerticalSkyline(VerticalDirection.Up);
+        sys1Up.Merge(VerticalSkyline.FromBox(0, 60, -2.0, 0, VerticalDirection.Up));      // short at left
+        sys1Up.Merge(VerticalSkyline.FromBox(60, 70, -8.0, 0, VerticalDirection.Up));     // tall at right
+
+        var skylines = ImmutableArray.Create(
+            (up: new VerticalSkyline(VerticalDirection.Up), down: sys0Down),
+            (up: sys1Up, down: new VerticalSkyline(VerticalDirection.Down)));
+
+        var pagesWithSkylines = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents, skylines);
+        var pagesWithoutSkylines = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents);
+
+        double gapWithSkylines = pagesWithSkylines[0].Systems[1].Y - pagesWithSkylines[0].Systems[0].Y;
+        double gapWithoutSkylines = pagesWithoutSkylines[0].Systems[1].Y - pagesWithoutSkylines[0].Systems[0].Y;
+
+        // Skyline distance should be smaller because tall parts don't overlap in X
+        // This means systems can be placed closer together
+        Assert.True(gapWithSkylines <= gapWithoutSkylines,
+            $"Skyline gap ({gapWithSkylines:F2}) should be <= scalar gap ({gapWithoutSkylines:F2})");
+    }
+
+    [Fact]
+    public void SystemSkylines_NullFallsBackToScalarExtents()
+    {
+        // When systemSkylines is null, behavior should match the original scalar-only path
+        var options = CreateOptions(pageHeight: 200);
+        var layouter = new PageLayouter(options);
+        var systems = CreateDummySystems(2);
+
+        var extents = ImmutableArray.Create(
+            (upExtent: 2.0, downExtent: 3.0),
+            (upExtent: 2.0, downExtent: 3.0));
+
+        var pagesNull = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents, systemSkylines: null);
+        var pagesOmitted = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents);
+
+        Assert.Equal(pagesNull[0].Systems[0].Y, pagesOmitted[0].Systems[0].Y, 3);
+        Assert.Equal(pagesNull[0].Systems[1].Y, pagesOmitted[0].Systems[1].Y, 3);
+    }
+
+    [Fact]
+    public void SystemSkylines_EmptySkylinesFallBackToScalar()
+    {
+        // LILYPOND-REF: lily/skyline.cc:529-533 Distance() returns -inf for empty skylines
+        // PageLayouter should fall back to scalar when Distance() is -inf
+        var options = CreateOptions(pageHeight: 200);
+        var layouter = new PageLayouter(options);
+        var systems = CreateDummySystems(2);
+
+        var extents = ImmutableArray.Create(
+            (upExtent: 2.0, downExtent: 3.0),
+            (upExtent: 2.0, downExtent: 3.0));
+
+        // Empty skylines — Distance() will return negative infinity
+        var skylines = ImmutableArray.Create(
+            (up: new VerticalSkyline(VerticalDirection.Up), down: new VerticalSkyline(VerticalDirection.Down)),
+            (up: new VerticalSkyline(VerticalDirection.Up), down: new VerticalSkyline(VerticalDirection.Down)));
+
+        var pagesWithEmpty = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents, skylines);
+        var pagesWithout = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents);
+
+        // Should produce same positioning as scalar-only
+        Assert.Equal(pagesWithout[0].Systems[0].Y, pagesWithEmpty[0].Systems[0].Y, 3);
+        Assert.Equal(pagesWithout[0].Systems[1].Y, pagesWithEmpty[0].Systems[1].Y, 3);
+    }
+
+    [Fact]
+    public void SystemSkylines_CollidingProfilesEnforceMinDistance()
+    {
+        // When skyline profiles fully overlap in X, Distance() should produce
+        // a result >= the scalar extent calculation
+        var options = CreateOptions(pageHeight: 200, staffHeight: 4);
+        var layouter = new PageLayouter(options);
+        var systems = CreateDummySystems(2);
+
+        var extents = ImmutableArray.Create(
+            (upExtent: 1.0, downExtent: 5.0),
+            (upExtent: 5.0, downExtent: 1.0));
+
+        // Full-width boxes matching the scalar extents
+        var sys0Down = VerticalSkyline.FromBox(0, 70, 0, 5.0, VerticalDirection.Down);
+        var sys1Up = VerticalSkyline.FromBox(0, 70, -5.0, 0, VerticalDirection.Up);
+
+        var skylines = ImmutableArray.Create(
+            (up: new VerticalSkyline(VerticalDirection.Up), down: sys0Down),
+            (up: sys1Up, down: new VerticalSkyline(VerticalDirection.Down)));
+
+        var pages = layouter.CreatePagesWithOptimalBreaking(systems, 0, extents, skylines);
+
+        double gap = pages[0].Systems[1].Y - pages[0].Systems[0].Y;
+        var spec = options.VerticalSpacing.SystemSystem;
+        double minGap = Math.Max(5.0 + 5.0, spec.MinimumDistance) + spec.Padding;
+
+        Assert.True(gap >= minGap - 0.01,
+            $"Gap ({gap:F2}) should enforce minimum distance ({minGap:F2})");
+    }
+
+    // --- In-note-system-padding tests (page-layout-problem.cc:483) ---
+
+    [Fact]
+    public void InNoteSystemPadding_DefaultValue_Is1Point5()
+    {
+        // LILYPOND-REF: ly/paper-defaults-init.ly — default 1.5 staff spaces
+        var p = VerticalSpacingParameters.Default;
+        Assert.Equal(1.5, p.InNoteSystemPadding);
+    }
+
+    [Fact]
+    public void InNoteSystemPadding_IncreasesMinDistance_WhenSkylineDistancePlusPaddingExceedsSpec()
+    {
+        // LILYPOND-REF: lily/page-layout-problem.cc:483 in-note-system-padding
+        // When skylineDistance + InNoteSystemPadding > spec-based minDistance,
+        // the note padding should enforce a larger inter-system gap.
+        var vsWithPadding = new VerticalSpacingParameters { InNoteSystemPadding = 10 };
+        var vsWithout = new VerticalSpacingParameters { InNoteSystemPadding = 0 };
+
+        var optionsWith = CreateOptions(pageHeight: 200) with { VerticalSpacing = vsWithPadding };
+        var optionsWithout = CreateOptions(pageHeight: 200) with { VerticalSpacing = vsWithout };
+
+        var systems = CreateDummySystems(2);
+        var extents = ImmutableArray.Create(
+            (upExtent: 1.0, downExtent: 1.0),
+            (upExtent: 1.0, downExtent: 1.0));
+
+        var pagesWith = new PageLayouter(optionsWith)
+            .CreatePagesWithOptimalBreaking(systems, 0, extents);
+        var pagesWithout = new PageLayouter(optionsWithout)
+            .CreatePagesWithOptimalBreaking(systems, 0, extents);
+
+        double gapWith = pagesWith[0].Systems[1].Y - pagesWith[0].Systems[0].Y;
+        double gapWithout = pagesWithout[0].Systems[1].Y - pagesWithout[0].Systems[0].Y;
+
+        // skylineDistance = staffHeight + 1 + 1 = 6
+        // With padding=10: noteDistance = 6+10 = 16, which exceeds spec minDistance (max(6,8)+1=9)
+        // Without padding=0: noteDistance = 6+0 = 6, below spec minDistance
+        Assert.True(gapWith > gapWithout,
+            $"Gap with InNoteSystemPadding=10 ({gapWith:F2}) should be > without ({gapWithout:F2})");
+    }
+
+    [Fact]
+    public void InNoteSystemPadding_NoEffect_WhenSpecMinDistanceAlreadyLarger()
+    {
+        // When spec-based minimum distance already exceeds skylineDistance + InNoteSystemPadding,
+        // the note padding has no effect
+        var vsSmall = new VerticalSpacingParameters { InNoteSystemPadding = 0.5 };
+        var vsNone = new VerticalSpacingParameters { InNoteSystemPadding = 0 };
+
+        // staffHeight=4, extents=(1,1): skylineDistance = 4+1+1 = 6
+        // noteDistance = 6+0.5 = 6.5
+        // spec minDistance = max(6, 8) + 1 = 9 → 9 > 6.5, so padding doesn't affect
+        var optionsSmall = CreateOptions(pageHeight: 200) with { VerticalSpacing = vsSmall };
+        var optionsNone = CreateOptions(pageHeight: 200) with { VerticalSpacing = vsNone };
+
+        var systems = CreateDummySystems(2);
+        var extents = ImmutableArray.Create(
+            (upExtent: 1.0, downExtent: 1.0),
+            (upExtent: 1.0, downExtent: 1.0));
+
+        var pagesSmall = new PageLayouter(optionsSmall)
+            .CreatePagesWithOptimalBreaking(systems, 0, extents);
+        var pagesNone = new PageLayouter(optionsNone)
+            .CreatePagesWithOptimalBreaking(systems, 0, extents);
+
+        double gapSmall = pagesSmall[0].Systems[1].Y - pagesSmall[0].Systems[0].Y;
+        double gapNone = pagesNone[0].Systems[1].Y - pagesNone[0].Systems[0].Y;
+
+        Assert.Equal(gapSmall, gapNone, 3);
+    }
+
     [Fact]
     public void VerticalSpacing_CustomParameters_AffectSpacing()
     {

@@ -46,6 +46,28 @@ public sealed class SvgRenderer
     /// LILYPOND-REF: ly/engraver-init.ly — ossia staves typically use fontSize = #-3
     /// </summary>
     private const double OssiaScaleFactor = 0.70;
+    /// <summary>
+    /// Collapse height for SystemStartBrace: brace is suppressed when its height is less than this.
+    /// LILYPOND-REF: scm/define-grobs.scm SystemStartBrace collapse-height = 5
+    /// LILYPOND-REF: lily/system-start-delimiter.cc:127-129 — if (height &lt; collapse_height) me->suicide()
+    /// A single staff (4 staff spaces) is below this threshold, so a brace is hidden.
+    /// </summary>
+    private const double BraceCollapseHeight = 5;
+    /// <summary>
+    /// Collapse height for SystemStartBracket: bracket is suppressed when its height is less than this.
+    /// LILYPOND-REF: scm/define-grobs.scm SystemStartBracket collapse-height = 5
+    /// </summary>
+    private const double BracketCollapseHeight = 5;
+    /// <summary>
+    /// Bracket thickness as a multiple of staff-line-thickness.
+    /// LILYPOND-REF: scm/define-grobs.scm SystemStartBracket thickness = 0.45
+    /// </summary>
+    private const double BracketThickness = 0.45;
+    /// <summary>
+    /// Bracket padding from staff start.
+    /// LILYPOND-REF: scm/define-grobs.scm SystemStartBracket padding = 0.8
+    /// </summary>
+    private const double BracketPadding = 0.8;
 
     // Derived from SMuFL defaults (all in staff spaces)
     private static double StaffLineThickness => EngravingDefaults.StaffLineThickness;
@@ -72,7 +94,15 @@ public sealed class SvgRenderer
     private readonly SvgRenderOptions _renderOptions;
     private Dictionary<MusicItem, double> _beamedStemEndYs = new();
     private Dictionary<MusicItem, bool> _beamedStemUp = new();
+    private bool _currentHeadWiped; // Set true when current item's notehead should be hidden (head wipe)
+    private bool _currentDotForceDown; // Set true when dots should shift down instead of up (multi-voice)
     private string? _currentDrawClef; // Tracks active clef during rendering (for key signature Y positioning)
+
+    /// <summary>
+    /// Active grob property resolver for user \override / \revert.
+    /// LILYPOND-REF: lily/grob-property.cc — property resolution chain
+    /// </summary>
+    private GrobPropertyResolver _resolver = GrobPropertyResolver.Empty;
 
     public SvgRenderer(LayoutOptions? layoutOptions = null, SvgRenderOptions? renderOptions = null)
     {
@@ -86,6 +116,7 @@ public sealed class SvgRenderer
     public string Render(Score score, ScoreLayout layout)
     {
         _svg.Clear();
+        _resolver = layout.GrobPropertyResolver;
 
         // Build measure to system mapping for beam processing
         var measureToSystem = new Dictionary<int, SystemLayout>();
@@ -276,15 +307,16 @@ public sealed class SvgRenderer
     public string Render(MultiStaffScore score, ScoreLayout layout)
     {
         _svg.Clear();
+        _resolver = layout.GrobPropertyResolver;
 
         // Calculate stem end Y positions for beamed notes
         _beamedStemEndYs.Clear();
         _beamedStemUp.Clear();
         CalculateMultiStaffBeamStemPositions(score, layout);
 
-        // Estimate left extension for instrument names
-        double leftExtension = EstimateInstrumentNameWidth(layout);
-        WriteHeader(layout.Width + leftExtension, layout.Height, leftExtension);
+        // LILYPOND-REF: ly/paper-defaults-init.ly — indent creates space for instrument names
+        // No negative viewBox needed: indent space is within the normal page coordinates
+        WriteHeader(layout.Width, layout.Height);
 
         // Draw header (title/composer)
         if (score.Title != null || score.Composer != null)
@@ -363,9 +395,10 @@ public sealed class SvgRenderer
         if (system.StaffGroups.IsDefaultOrEmpty)
             return;
 
-        double startX = _layoutOptions.MarginLeft;
+        // LILYPOND-REF: ly/paper-defaults-init.ly — indent shifts staff lines right
+        double startX = _layoutOptions.MarginLeft + system.Indent;
 
-        // Staff lines always extend to full system width (LilyPond behavior)
+        // Staff lines extend from indent to system width (LilyPond behavior)
         double staffEndX = startX + system.Width;
 
         // Calculate the actual end of notated content (for barline positioning)
@@ -399,15 +432,48 @@ public sealed class SvgRenderer
         double endX,
         bool isFirstSystem)
     {
-        // Draw brace if this is a grand staff
-        if (staffGroup.IsGrandStaff && staffGroup.GrandStaffLayout != null)
+        // Draw system-start delimiter (brace, bracket, line-bracket, bar-line)
+        // LILYPOND-REF: lily/system-start-delimiter.cc:127-129
+        //   if (height < collapse_height) me->suicide();
+        if (staffGroup.GrandStaffLayout != null)
         {
-            var grandStaff = staffGroup.GrandStaffLayout;
-            // Adjust Y positions relative to system
-            double braceTop = system.Y + grandStaff.BraceTop;
-            double braceBottom = system.Y + grandStaff.BraceBottom;
-            var braceSvg = BraceRenderer.RenderBrace(grandStaff.BraceX, braceTop, braceBottom);
-            _svg.AppendLine($"  {braceSvg}");
+            var delimLayout = staffGroup.GrandStaffLayout;
+            double delimTop = system.Y + delimLayout.BraceTop;
+            double delimBottom = system.Y + delimLayout.BraceBottom;
+            double delimHeight = delimBottom - delimTop;
+
+            switch (delimLayout.DelimiterType)
+            {
+                case SystemStartDelimiterType.Brace:
+                    // LILYPOND-REF: scm/define-grobs.scm SystemStartBrace collapse-height = 5
+                    if (delimHeight >= BraceCollapseHeight)
+                    {
+                        var braceSvg = BraceRenderer.RenderBrace(delimLayout.BraceX, delimTop, delimBottom);
+                        _svg.AppendLine($"  {braceSvg}");
+                    }
+                    break;
+
+                case SystemStartDelimiterType.Bracket:
+                    // LILYPOND-REF: scm/define-grobs.scm SystemStartBracket collapse-height = 5
+                    if (delimHeight >= BracketCollapseHeight)
+                    {
+                        DrawSystemStartBracket(delimLayout.BraceX, delimTop, delimBottom);
+                    }
+                    break;
+
+                case SystemStartDelimiterType.LineBracket:
+                    // LILYPOND-REF: scm/define-grobs.scm SystemStartSquare — line-bracket style
+                    if (delimHeight >= BracketCollapseHeight)
+                    {
+                        DrawSystemStartLineBracket(delimLayout.BraceX, delimTop, delimBottom);
+                    }
+                    break;
+
+                case SystemStartDelimiterType.BarLine:
+                    // LILYPOND-REF: scm/define-grobs.scm SystemStartBar — simple vertical line
+                    DrawSystemStartBarLine(delimLayout.BraceX, delimTop, delimBottom);
+                    break;
+            }
         }
 
         // Draw instrument names
@@ -418,6 +484,11 @@ public sealed class SvgRenderer
         // Draw each staff in the group
         foreach (var staffLayout in staffGroup.Staves)
         {
+            // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — consider_suicide()
+            // Skip rendering of hidden (hara-kiri'd) staves
+            if (staffLayout.IsHidden)
+                continue;
+
             double staffY = system.Y + staffLayout.Y;
             if (staffLayout.IsOssia)
             {
@@ -437,6 +508,89 @@ public sealed class SvgRenderer
                 DrawStaff(score, scoreLayout, system, staffLayout, staffY, startX, endX, isFirstSystem);
             }
         }
+    }
+
+    /// <summary>
+    /// Draws a SystemStartBracket (thick angular bracket with decorative serifs).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc — bracket style
+    /// LILYPOND-REF: scm/define-grobs.scm SystemStartBracket thickness = 0.45
+    ///
+    /// The bracket consists of:
+    /// - A thick vertical line on the left
+    /// - Decorative serif tips at top and bottom (small horizontal lines + triangular tips)
+    /// </remarks>
+    private void DrawSystemStartBracket(double x, double top, double bottom)
+    {
+        double thickness = BracketThickness * StaffLineThickness * 10; // Scale to staff spaces
+        double serifHeight = 0.4; // Height of serif tip
+        double serifWidth = 0.6;  // How far serif extends to the right
+
+        // Main vertical bracket line
+        _svg.AppendLine($"  <line x1=\"{x:F2}\" y1=\"{top:F2}\" " +
+            $"x2=\"{x:F2}\" y2=\"{bottom:F2}\" " +
+            $"stroke=\"black\" stroke-width=\"{thickness:F3}\" " +
+            $"class=\"system-bracket\" />");
+
+        // Top serif: horizontal line + triangular tip pointing down-right
+        _svg.AppendLine($"  <path d=\"M {x:F2},{top:F2} " +
+            $"L {x + serifWidth:F2},{top:F2} " +
+            $"L {x + serifWidth * 0.3:F2},{top + serifHeight:F2} Z\" " +
+            $"fill=\"black\" class=\"system-bracket-serif\" />");
+
+        // Bottom serif: horizontal line + triangular tip pointing up-right
+        _svg.AppendLine($"  <path d=\"M {x:F2},{bottom:F2} " +
+            $"L {x + serifWidth:F2},{bottom:F2} " +
+            $"L {x + serifWidth * 0.3:F2},{bottom - serifHeight:F2} Z\" " +
+            $"fill=\"black\" class=\"system-bracket-serif\" />");
+    }
+
+    /// <summary>
+    /// Draws a SystemStartSquare (thin L-shaped bracket without serifs).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc — line-bracket style
+    /// LILYPOND-REF: scm/define-grobs.scm SystemStartSquare
+    /// </remarks>
+    private void DrawSystemStartLineBracket(double x, double top, double bottom)
+    {
+        double thickness = StaffLineThickness;
+        double hookWidth = 0.5; // Short horizontal hooks at top and bottom
+
+        // Vertical line
+        _svg.AppendLine($"  <line x1=\"{x:F2}\" y1=\"{top:F2}\" " +
+            $"x2=\"{x:F2}\" y2=\"{bottom:F2}\" " +
+            $"stroke=\"black\" stroke-width=\"{thickness:F3}\" " +
+            $"class=\"system-line-bracket\" />");
+
+        // Top horizontal hook
+        _svg.AppendLine($"  <line x1=\"{x:F2}\" y1=\"{top:F2}\" " +
+            $"x2=\"{x + hookWidth:F2}\" y2=\"{top:F2}\" " +
+            $"stroke=\"black\" stroke-width=\"{thickness:F3}\" " +
+            $"class=\"system-line-bracket\" />");
+
+        // Bottom horizontal hook
+        _svg.AppendLine($"  <line x1=\"{x:F2}\" y1=\"{bottom:F2}\" " +
+            $"x2=\"{x + hookWidth:F2}\" y2=\"{bottom:F2}\" " +
+            $"stroke=\"black\" stroke-width=\"{thickness:F3}\" " +
+            $"class=\"system-line-bracket\" />");
+    }
+
+    /// <summary>
+    /// Draws a SystemStartBar (simple vertical bar line at system start).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc — bar-line style
+    /// LILYPOND-REF: scm/define-grobs.scm SystemStartBar
+    /// </remarks>
+    private void DrawSystemStartBarLine(double x, double top, double bottom)
+    {
+        double thickness = StaffLineThickness * 1.6; // Slightly thicker than staff line
+        _svg.AppendLine($"  <line x1=\"{x:F2}\" y1=\"{top:F2}\" " +
+            $"x2=\"{x:F2}\" y2=\"{bottom:F2}\" " +
+            $"stroke=\"black\" stroke-width=\"{thickness:F3}\" " +
+            $"class=\"system-start-bar\" />");
     }
 
     /// <summary>
@@ -463,33 +617,6 @@ public sealed class SvgRenderer
     }
 
     /// <summary>
-    /// Estimates the width needed for instrument names (in staff spaces).
-    /// </summary>
-    private static double EstimateInstrumentNameWidth(ScoreLayout layout)
-    {
-        double maxWidth = 0;
-        const double charWidth = 0.5; // Approximate width per char in staff spaces at 0.75 fontSize
-        const double padding = 0.8;   // Extra padding
-
-        foreach (var system in layout.Systems)
-        {
-            if (system.StaffGroups.IsDefaultOrEmpty) continue;
-            foreach (var group in system.StaffGroups)
-            {
-                foreach (var staff in group.Staves)
-                {
-                    if (!string.IsNullOrEmpty(staff.InstrumentName))
-                    {
-                        double width = staff.InstrumentName.Length * charWidth + padding;
-                        if (width > maxWidth) maxWidth = width;
-                    }
-                }
-            }
-        }
-        return maxWidth;
-    }
-
-    /// <summary>
     /// Renders instrument names to the left of a staff group.
     /// </summary>
     /// <remarks>
@@ -501,6 +628,12 @@ public sealed class SvgRenderer
     /// </remarks>
     private void DrawInstrumentNames(SystemLayout system, StaffGroupLayout staffGroup)
     {
+        // LILYPOND-REF: scm/output-lib.scm — system-start-text::print
+        // When short-indent = 0, only the first system shows instrument names
+        // (subsequent systems have indent = 0, so no space for names)
+        if (system.Indent <= 0)
+            return;
+
         // Check if any staff in this group has an instrument name
         bool hasAnyName = false;
         foreach (var sl in staffGroup.Staves)
@@ -514,21 +647,20 @@ public sealed class SvgRenderer
         if (!hasAnyName) return;
 
         // LILYPOND-REF: scm/define-grobs.scm:1711 padding = 0.3
-        const double padding = 0.3;
         const double fontSize = 0.75; // Relative to staff space FontSize
 
-        // X position: left of the brace/system start
-        double nameX;
-        if (staffGroup.IsGrandStaff && staffGroup.GrandStaffLayout != null)
-            nameX = staffGroup.GrandStaffLayout.BraceX - padding;
-        else
-            nameX = _layoutOptions.MarginLeft - padding;
+        // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
+        // LILYPOND-REF: scm/define-grobs.scm:1711 — self-alignment-X = CENTER
+        // Name is centered horizontally within the indent space.
+        // padding = min(0, text_width - indent); when text fits, padding = 0.
+        // With CENTER alignment: nameX = MarginLeft + indent / 2.
+        double nameX = _layoutOptions.MarginLeft + system.Indent / 2.0;
 
         double actualFontSize = FontSize * fontSize;
 
-        // For grand staff with only one named staff: center across the entire group
+        // For multi-staff group with only one named staff: center across the entire group
         // LILYPOND-REF: lily/instrument-name-engraver.cc — centers on spanned staves
-        if (staffGroup.IsGrandStaff && staffGroup.GrandStaffLayout != null)
+        if (staffGroup.HasDelimiter)
         {
             // Collect all unique names; if only one staff is named,
             // center that name across the grand staff group
@@ -539,22 +671,22 @@ public sealed class SvgRenderer
             if (namedStaves.Count == 1)
             {
                 // Single name for entire grand staff: center vertically
-                var gs = staffGroup.GrandStaffLayout;
+                var gs = staffGroup.GrandStaffLayout!;
                 double centerY = system.Y + (gs.BraceTop + gs.BraceBottom) / 2.0;
                 _svg.AppendLine(
                     $"""  <text x="{nameX:F2}" y="{centerY:F2}" """ +
                     $"""font-family="serif" font-size="{actualFontSize:F2}" """ +
-                    $"""text-anchor="end" dominant-baseline="central">""" +
+                    $"""text-anchor="middle" dominant-baseline="central">""" +
                     $"""{EscapeXml(namedStaves[0].InstrumentName!)}</text>""");
                 return;
             }
             // Multiple named staves: fall through to per-staff rendering
         }
 
-        // Per-staff rendering
+        // Per-staff rendering (skip hidden staves)
         foreach (var staffLayout in staffGroup.Staves)
         {
-            if (string.IsNullOrEmpty(staffLayout.InstrumentName))
+            if (string.IsNullOrEmpty(staffLayout.InstrumentName) || staffLayout.IsHidden)
                 continue;
 
             double staffY = system.Y + staffLayout.Y;
@@ -563,7 +695,7 @@ public sealed class SvgRenderer
             _svg.AppendLine(
                 $"""  <text x="{nameX:F2}" y="{centerY:F2}" """ +
                 $"""font-family="serif" font-size="{actualFontSize:F2}" """ +
-                $"""text-anchor="end" dominant-baseline="central">""" +
+                $"""text-anchor="middle" dominant-baseline="central">""" +
                 $"""{EscapeXml(staffLayout.InstrumentName)}</text>""");
         }
     }
@@ -1123,8 +1255,9 @@ public sealed class SvgRenderer
         {
             foreach (var staff in staffGroup.Staves)
             {
-                // Exclude ossia staves from system barline connections
-                if (staff.IsOssia) continue;
+                // Exclude ossia and hidden (hara-kiri'd) staves from system barline connections
+                // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — hidden staves are excluded from system extent
+                if (staff.IsOssia || staff.IsHidden) continue;
                 double staffTop = system.Y + staff.Y;
                 double staffBottom = staffTop + staff.Height;
                 topY = Math.Min(topY, staffTop);
@@ -1144,11 +1277,10 @@ public sealed class SvgRenderer
     }
 
 
-    private void WriteHeader(double width, double height, double leftExtension = 0)
+    private void WriteHeader(double width, double height)
     {
         _svg.AppendLine($"""<?xml version="1.0" encoding="UTF-8"?>""");
-        double viewBoxX = -leftExtension;
-        _svg.AppendLine($"""<svg xmlns="http://www.w3.org/2000/svg" width="{Px(width)}" height="{Px(height)}" viewBox="{viewBoxX} 0 {width} {height}">""");
+        _svg.AppendLine($"""<svg xmlns="http://www.w3.org/2000/svg" width="{Px(width)}" height="{Px(height)}" viewBox="0 0 {width} {height}">""");
         _svg.AppendLine("<style>");
 
         // Font face - either embedded or referenced by path
@@ -1267,9 +1399,9 @@ public sealed class SvgRenderer
     private void DrawSystem(Score score, ScoreLayout scoreLayout, SystemLayout system, bool isFirstSystem)
     {
         double y = system.Y;
-        double startX = _layoutOptions.MarginLeft;
+        double startX = _layoutOptions.MarginLeft + system.Indent;
 
-        // Staff lines always extend to full system width (LilyPond behavior)
+        // Staff lines extend from indent to system width (LilyPond behavior)
         double staffEndX = startX + system.Width;
 
         // Calculate the actual end of notated content (for barline positioning)
@@ -1414,6 +1546,9 @@ public sealed class SvgRenderer
         {
             var item = measure.Items[i];
 
+            // LILYPOND-REF: lily/grob-property.cc — advance resolver to apply overrides/reverts at this position
+            _resolver.AdvanceTo(measureIndex, i);
+
             // Calculate X position using timing-based columns
             double itemX;
             if (!layout.Columns.IsDefaultOrEmpty && layout.Columns.Length > 0)
@@ -1435,6 +1570,11 @@ public sealed class SvgRenderer
             // Get voice collision offset
             double voiceOffset = scoreLayout.GetVoiceOffset(measureIndex, voiceNumber, i);
             itemX += voiceOffset;
+
+            // LILYPOND-REF: lily/note-collision-interface.cc:381-407 — head wipe
+            _currentHeadWiped = scoreLayout.IsHeadWiped(measureIndex, voiceNumber, i);
+            // LILYPOND-REF: lily/note-collision-interface.cc:411-448 — dot direction
+            _currentDotForceDown = scoreLayout.IsDotForcedDown(measureIndex, voiceNumber, i);
 
             switch (item)
             {
@@ -1543,16 +1683,26 @@ public sealed class SvgRenderer
         }
 
         // Draw notehead
+        // LILYPOND-REF: lily/grob-property.cc — NoteHead.color, NoteHead.transparent
+        // LILYPOND-REF: lily/note-collision-interface.cc:381-407 — head wipe
         char notehead = EmmentalerGlyphs.GetNotehead(noteValue);
-        DrawGlyph(notehead, noteheadLeftX, noteY, note.SourcePosition);
+        string? noteheadColor = GetResolvedColor("NoteHead");
+        bool noteheadTransparent = _resolver.GetBool("NoteHead", "transparent") == true
+                                 || _currentHeadWiped;
+        if (!noteheadTransparent)
+        {
+            DrawGlyphColored(notehead, noteheadLeftX, noteY, noteheadColor, note.SourcePosition);
+        }
 
         // Draw stem using GlyphMetrics anchor points
         if (noteValue >= 2)
         {
-            // Priority: beam direction > forced (voice) direction > note's own direction
+            // LILYPOND-REF: lily/grob-property.cc — Stem.direction override
+            // Priority: beam direction > resolver override > forced (voice) direction > note's own direction
+            var resolvedDir = GetResolvedStemDirection();
             bool stemUp = _beamedStemUp.TryGetValue(note, out bool beamStemUp)
                 ? beamStemUp
-                : forcedStemUp ?? note.StemUp;
+                : resolvedDir ?? forcedStemUp ?? note.StemUp;
             var stemAnchor = stemUp ? GlyphMetrics.StemUpSE : GlyphMetrics.StemDownNW;
             double stemX = noteheadLeftX + stemAnchor.X;
             double stemAttachY = noteY - stemAnchor.Y;
@@ -1567,9 +1717,16 @@ public sealed class SvgRenderer
             {
                 int durLog = StemCalculator.GetDurationLog(noteValue);
                 stemEndY = CalculateStemEndY(stemAttachY, stemUp, systemY, durLog, note.StaffPosition);
+
+                // LILYPOND-REF: stem-tremolo.cc:314-369 — extend stem for tremolo beams
+                if (note.HasTremolo)
+                    stemEndY = ExtendStemForTremolo(stemAttachY, stemEndY, stemUp, note.TremoloBeams);
             }
 
-            _svg.AppendLine($"""  <line x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}" stroke="black" stroke-width="{StemThickness:F2}" data-pos="{note.SourcePosition}"/>""");
+            // LILYPOND-REF: lily/grob-property.cc — Stem.color, Stem.thickness
+            string stemColor = GetResolvedColor("Stem") ?? "black";
+            double stemThickness = _resolver.GetDouble("Stem", "thickness") ?? StemThickness;
+            _svg.AppendLine($"""  <line x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}" stroke="{stemColor}" stroke-width="{stemThickness:F2}" data-pos="{note.SourcePosition}"/>""");
 
             // Draw flag (only if not beamed)
             if (!_beamedStemEndYs.ContainsKey(note))
@@ -1577,13 +1734,13 @@ public sealed class SvgRenderer
                 var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
-                    DrawGlyph(flag.Value, stemX, stemEndY, note.SourcePosition);
+                    DrawGlyphColored(flag.Value, stemX, stemEndY, GetResolvedColor("Stem"), note.SourcePosition);
                 }
 
             // Draw tremolo (if present)
             if (note.HasTremolo)
             {
-                DrawTremolo(stemX, stemAttachY, stemEndY, stemUp, note.TremoloBeams);
+                DrawTremolo(stemX, stemAttachY, stemEndY, stemUp, note.TremoloBeams, flag.HasValue);
             }
             }
         }
@@ -1597,12 +1754,14 @@ public sealed class SvgRenderer
             double dotX = noteheadLeftX + noteheadWidth + dotGap + d * (dotWidth + dotGap);
 
             // Dots must avoid staff lines
-            // If note is on a line (StaffPosition is even), shift dot up by half a space
+            // LILYPOND-REF: lily/dots.cc:62-80 — dot avoids staff lines
+            // LILYPOND-REF: lily/note-collision-interface.cc:411-448 — dot direction in multi-voice
             double dotYOffset = 0;
             if (note.StaffPosition % 2 == 0)
             {
-                // On a staff line - shift dot up to sit in the space above
-                dotYOffset = -0.5;
+                // On a staff line - shift dot to sit in an adjacent space
+                // Default: shift up. In multi-voice collision: down-stem dots shift down.
+                dotYOffset = _currentDotForceDown ? 0.5 : -0.5;
             }
 
             double dotY = noteY + dotYOffset;
@@ -1635,10 +1794,12 @@ public sealed class SvgRenderer
         char notehead = EmmentalerGlyphs.GetNotehead(noteValue);
 
         // Determine stem direction early (needed for notehead side assignment)
-        // Priority: beam direction > forced (voice) direction > chord's own direction
+        // LILYPOND-REF: lily/grob-property.cc — Stem.direction override
+        // Priority: beam direction > resolver override > forced (voice) direction > chord's own direction
+        var resolvedDir = GetResolvedStemDirection();
         bool stemUp = _beamedStemUp.TryGetValue(chord, out bool beamStemUp)
             ? beamStemUp
-            : forcedStemUp ?? chord.StemUp;
+            : resolvedDir ?? forcedStemUp ?? chord.StemUp;
 
         // Calculate notehead x-offsets for seconds (adjacent staff positions)
         // LILYPOND-REF: lily/note-column.cc — notehead side assignment
@@ -1683,7 +1844,15 @@ public sealed class SvgRenderer
             }
 
             // Draw notehead
-            DrawGlyph(notehead, x + noteXOffset, noteY, chord.SourcePosition);
+            // LILYPOND-REF: lily/grob-property.cc — NoteHead.color, NoteHead.transparent
+            // LILYPOND-REF: lily/note-collision-interface.cc:381-407 — head wipe
+            string? noteheadColor = GetResolvedColor("NoteHead");
+            bool noteheadTransparent = _resolver.GetBool("NoteHead", "transparent") == true
+                                     || _currentHeadWiped;
+            if (!noteheadTransparent)
+            {
+                DrawGlyphColored(notehead, x + noteXOffset, noteY, noteheadColor, chord.SourcePosition);
+            }
         }
 
         // Draw single stem for chord
@@ -1716,9 +1885,16 @@ public sealed class SvgRenderer
 
                 int durLog = StemCalculator.GetDurationLog(noteValue);
                 stemEndY = CalculateStemEndY(stemTipAttachY, stemUp, systemY, durLog, stemTipPos);
+
+                // LILYPOND-REF: stem-tremolo.cc:314-369 — extend stem for tremolo beams
+                if (chord.HasTremolo)
+                    stemEndY = ExtendStemForTremolo(stemAttachY, stemEndY, stemUp, chord.TremoloBeams);
             }
 
-            _svg.AppendLine($"""  <line x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}" stroke="black" stroke-width="{StemThickness:F2}" data-pos="{chord.SourcePosition}"/>""");
+            // LILYPOND-REF: lily/grob-property.cc — Stem.color, Stem.thickness
+            string stemColor = GetResolvedColor("Stem") ?? "black";
+            double stemThickness = _resolver.GetDouble("Stem", "thickness") ?? StemThickness;
+            _svg.AppendLine($"""  <line x1="{stemX:F1}" y1="{stemAttachY:F1}" x2="{stemX:F1}" y2="{stemEndY:F1}" stroke="{stemColor}" stroke-width="{stemThickness:F2}" data-pos="{chord.SourcePosition}"/>""");
 
             // Draw flag (only if not beamed)
             if (!_beamedStemEndYs.ContainsKey(chord))
@@ -1726,13 +1902,13 @@ public sealed class SvgRenderer
                 var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
-                    DrawGlyph(flag.Value, stemX, stemEndY, chord.SourcePosition);
+                    DrawGlyphColored(flag.Value, stemX, stemEndY, GetResolvedColor("Stem"), chord.SourcePosition);
                 }
 
             // Draw tremolo (if present)
             if (chord.HasTremolo)
             {
-                DrawTremolo(stemX, stemAttachY, stemEndY, stemUp, chord.TremoloBeams);
+                DrawTremolo(stemX, stemAttachY, stemEndY, stemUp, chord.TremoloBeams, flag.HasValue);
             }
             }
         }
@@ -2228,6 +2404,49 @@ public sealed class SvgRenderer
         _svg.AppendLine($"  <text class=\"music\" x=\"{x:F1}\" y=\"{y:F1}\" font-size=\"{fs:F2}\"{dataAttr}>{glyph}</text>");
     }
 
+    /// <summary>
+    /// Draws a glyph with an optional fill color override.
+    /// LILYPOND-REF: lily/grob-property.cc — color property on grob
+    /// </summary>
+    private void DrawGlyphColored(char glyph, double x, double y, string? color, int? sourcePosition = null, double? fontSize = null)
+    {
+        if (color == null)
+        {
+            DrawGlyph(glyph, x, y, sourcePosition, fontSize);
+            return;
+        }
+        double fs = fontSize ?? FontSize;
+        string dataAttr = sourcePosition.HasValue ? $" data-pos=\"{sourcePosition}\"" : "";
+        _svg.AppendLine($"  <text class=\"music\" x=\"{x:F1}\" y=\"{y:F1}\" font-size=\"{fs:F2}\" fill=\"{color}\"{dataAttr}>{glyph}</text>");
+    }
+
+    /// <summary>Gets the resolved color for a grob type, or null for default (black).</summary>
+    private string? GetResolvedColor(string grobType)
+    {
+        var color = _resolver.GetString(grobType, "color");
+        if (color == null) return null;
+        // LILYPOND-REF: scm/output-lib.scm — x11-color mapping
+        // Accept simple color names and hex codes
+        return color.ToLowerInvariant() switch
+        {
+            "black" => null, // default, no override needed
+            _ => color
+        };
+    }
+
+    /// <summary>Gets the resolved stem direction override, or null if not overridden.</summary>
+    private bool? GetResolvedStemDirection()
+    {
+        var dir = _resolver.GetString("Stem", "direction");
+        if (dir == null) return null;
+        return dir.ToLowerInvariant() switch
+        {
+            "up" or "1" => true,
+            "down" or "-1" => false,
+            _ => null
+        };
+    }
+
     private static int GetNoteValue(Semantics.Fraction duration)
     {
         // Convert fraction to note value (1=whole, 2=half, 4=quarter, etc.)
@@ -2340,7 +2559,8 @@ public sealed class SvgRenderer
             maxBeamCount = Math.Max(maxBeamCount, member.BeamCount);
         }
 
-        double beamThickness = BeamThickness;
+        // LILYPOND-REF: lily/grob-property.cc — Beam.beam-thickness override
+        double beamThickness = _resolver.GetDouble("Beam", "beam-thickness") ?? BeamThickness;
         double beamTranslation = BeamTranslation;
         int growDir = group.GrowDirection;
 
@@ -2641,7 +2861,8 @@ public sealed class SvgRenderer
             maxBeamCount = Math.Max(maxBeamCount, member.BeamCount);
         }
 
-        double beamThickness = BeamThickness;
+        // LILYPOND-REF: lily/grob-property.cc — Beam.beam-thickness override
+        double beamThickness = _resolver.GetDouble("Beam", "beam-thickness") ?? BeamThickness;
         double beamTranslation = BeamTranslation;
         int growDir = group.GrowDirection;
 
@@ -2979,19 +3200,24 @@ public sealed class SvgRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: stem-tremolo.cc:129-150 Stem_tremolo::raw_stencil
+    /// LILYPOND-REF: stem-tremolo.cc:81-94 calc-width: flag → 1.0, otherwise → 1.5
+    /// LILYPOND-REF: stem-tremolo.cc:45-79 calc-slope: down stem with flag → 0.40, otherwise → 0.25
     /// Tremolo beams are short, angled strokes across the stem.
     /// </remarks>
-    private void DrawTremolo(double stemX, double stemAttachY, double stemEndY, bool stemUp, int beamCount)
+    private void DrawTremolo(double stemX, double stemAttachY, double stemEndY, bool stemUp, int beamCount, bool hasFlag)
     {
         if (beamCount <= 0)
             return;
 
         // Tremolo parameters (in staff spaces)
-        // LILYPOND-REF: define-grobs.scm:2780-2790 beam-width, beam-gap, slope
-        const double beamWidth = 1.2;
+        // LILYPOND-REF: define-grobs.scm:2780 beam-gap = 0.8
+        // LILYPOND-REF: define-grobs.scm:2785 beam-thickness = 0.48
+        // LILYPOND-REF: stem-tremolo.cc:81-94 width depends on flag presence
+        double beamWidth = hasFlag ? 1.0 : 1.5;
         const double beamThickness = 0.48;
         const double beamGap = 0.8;
-        const double slope = 0.25;
+        // LILYPOND-REF: stem-tremolo.cc:45-79 steeper slope for down stems with flags
+        double slope = (!stemUp && hasFlag) ? 0.40 : 0.25;
 
         // Position tremolo at center of stem
         double stemMidY = (stemAttachY + stemEndY) / 2;
@@ -3015,6 +3241,33 @@ public sealed class SvgRenderer
             // Draw as a thick line (tremolo beam)
             _svg.AppendLine($"""  <line class="tremolo" x1="{x1:F2}" y1="{y1:F2}" x2="{x2:F2}" y2="{y2:F2}" stroke="black" stroke-width="{beamThickness:F2}"/>""");
         }
+    }
+
+    /// <summary>
+    /// Extends the stem when tremolo beams require more space.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: stem-tremolo.cc:314-369 calc_y_offset — ensures tremolo fits on stem
+    /// The tremolo group (beamCount * thickness + gaps) plus padding above and below
+    /// must fit within the stem length. If not, the stem is extended.
+    /// </remarks>
+    private static double ExtendStemForTremolo(double stemAttachY, double stemEndY, bool stemUp, int beamCount)
+    {
+        const double beamThickness = 0.48;
+        const double beamGap = 0.8;
+        const double padding = 0.8; // minimum clearance from notehead/flag to tremolo edge
+
+        double tremoloHeight = beamCount * beamThickness + (beamCount - 1) * beamGap;
+        double requiredStemLength = tremoloHeight + 2 * padding;
+        double currentStemLength = Math.Abs(stemEndY - stemAttachY);
+
+        if (currentStemLength < requiredStemLength)
+        {
+            double extension = requiredStemLength - currentStemLength;
+            return stemUp ? stemEndY - extension : stemEndY + extension;
+        }
+
+        return stemEndY;
     }
 
     /// Draws all grace notes.
@@ -3638,39 +3891,52 @@ public sealed class SvgRenderer
         {
             // Get system Y for this bracket
             double systemY = measureToSystemY.TryGetValue(bracketLayout.MeasureIndex, out var y) ? y : 0;
-            double absoluteY = systemY + bracketLayout.Y;
+            double absoluteStartY = systemY + bracketLayout.StartY;
+            double absoluteEndY = systemY + bracketLayout.EndY;
 
             double startX = bracketLayout.StartX;
             double endX = bracketLayout.EndX;
             double midX = (startX + endX) / 2;
+            // Interpolate Y at midpoint for sloped bracket
+            double midY = (absoluteStartY + absoluteEndY) / 2;
 
             // Hook direction based on stem direction
             double hookDir = bracketLayout.IsStemUp ? 1 : -1;
 
-            // Draw left vertical hook
-            _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{absoluteY:F2}\" " +
-                $"x2=\"{startX:F2}\" y2=\"{absoluteY + edgeHeight * hookDir:F2}\" " +
-                $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
+            if (bracketLayout.ShowBracket)
+            {
+                // Draw left vertical hook
+                _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{absoluteStartY:F2}\" " +
+                    $"x2=\"{startX:F2}\" y2=\"{absoluteStartY + edgeHeight * hookDir:F2}\" " +
+                    $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
 
-            // Draw horizontal line (left part, up to number gap)
-            double numberGap = 1.0;
-            _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{absoluteY:F2}\" " +
-                $"x2=\"{midX - numberGap:F2}\" y2=\"{absoluteY:F2}\" " +
-                $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
+                // Y at number gap edges (interpolated for slope)
+                double numberGap = 1.0;
+                double totalWidth = endX - startX;
+                double leftGapFrac = totalWidth > 0 ? (midX - numberGap - startX) / totalWidth : 0.5;
+                double rightGapFrac = totalWidth > 0 ? (midX + numberGap - startX) / totalWidth : 0.5;
+                double leftGapY = absoluteStartY + (absoluteEndY - absoluteStartY) * leftGapFrac;
+                double rightGapY = absoluteStartY + (absoluteEndY - absoluteStartY) * rightGapFrac;
 
-            // Draw horizontal line (right part, after number gap)
-            _svg.AppendLine($"  <line x1=\"{midX + numberGap:F2}\" y1=\"{absoluteY:F2}\" " +
-                $"x2=\"{endX:F2}\" y2=\"{absoluteY:F2}\" " +
-                $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
+                // Draw sloped line (left part, up to number gap)
+                _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{absoluteStartY:F2}\" " +
+                    $"x2=\"{midX - numberGap:F2}\" y2=\"{leftGapY:F2}\" " +
+                    $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
 
-            // Draw right vertical hook
-            _svg.AppendLine($"  <line x1=\"{endX:F2}\" y1=\"{absoluteY:F2}\" " +
-                $"x2=\"{endX:F2}\" y2=\"{absoluteY + edgeHeight * hookDir:F2}\" " +
-                $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
+                // Draw sloped line (right part, after number gap)
+                _svg.AppendLine($"  <line x1=\"{midX + numberGap:F2}\" y1=\"{rightGapY:F2}\" " +
+                    $"x2=\"{endX:F2}\" y2=\"{absoluteEndY:F2}\" " +
+                    $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
 
-            // Draw tuplet number text centered
+                // Draw right vertical hook
+                _svg.AppendLine($"  <line x1=\"{endX:F2}\" y1=\"{absoluteEndY:F2}\" " +
+                    $"x2=\"{endX:F2}\" y2=\"{absoluteEndY + edgeHeight * hookDir:F2}\" " +
+                    $"stroke=\"black\" stroke-width=\"{lineThickness:F2}\" class=\"tuplet-bracket\" />");
+            }
+
+            // Draw tuplet number text centered (always shown, even when bracket hidden)
             double textFontSize = FontSize * 0.6;
-            double textY = bracketLayout.IsStemUp ? absoluteY - 0.3 : absoluteY + 0.8;
+            double textY = bracketLayout.IsStemUp ? midY - 0.3 : midY + 0.8;
             _svg.AppendLine($"  <text x=\"{midX:F2}\" y=\"{textY:F2}\" " +
                 $"font-family=\"serif\" font-size=\"{textFontSize:F1}\" " +
                 $"font-weight=\"bold\" " +
@@ -3715,31 +3981,16 @@ public sealed class SvgRenderer
         {
             double systemY = measureToSystemY.TryGetValue(hairpin.StartMeasureIndex, out var y) ? y : 0;
             double absoluteY = systemY + hairpin.Y;
-            double opening = hairpin.Opening;
 
             double startX = hairpin.StartX;
             double endX = hairpin.EndX;
 
-            // Crescendo: point on left, open on right
-            // Decrescendo: open on left, point on right
-            double leftTopY, leftBottomY, rightTopY, rightBottomY;
-
-            if (hairpin.Direction == HairpinDirection.Crescendo)
-            {
-                // < shape: converges at left
-                leftTopY = absoluteY;
-                leftBottomY = absoluteY;
-                rightTopY = absoluteY - opening;
-                rightBottomY = absoluteY + opening;
-            }
-            else
-            {
-                // > shape: converges at right
-                leftTopY = absoluteY - opening;
-                leftBottomY = absoluteY + opening;
-                rightTopY = absoluteY;
-                rightBottomY = absoluteY;
-            }
+            // LILYPOND-REF: lily/hairpin.cc:180-220 — StartOpening/EndOpening handle
+            // broken hairpin heights (continued 2/3, continuing 1/3)
+            double leftTopY = absoluteY - hairpin.StartOpening;
+            double leftBottomY = absoluteY + hairpin.StartOpening;
+            double rightTopY = absoluteY - hairpin.EndOpening;
+            double rightBottomY = absoluteY + hairpin.EndOpening;
 
             // Draw upper line of wedge
             _svg.AppendLine($"  <line x1=\"{startX:F2}\" y1=\"{leftTopY:F2}\" " +

@@ -27,11 +27,34 @@ namespace LilySharp.Core.Svg.Layout;
 /// <remarks>
 /// LILYPOND-REF: lily/system.cc
 /// LILYPOND-REF: lily/staff-spacing.cc
+/// LILYPOND-REF: lily/align-interface.cc — internal_get_minimum_translations()
+/// LILYPOND-REF: lily/staff-grouper-interface.cc — staff-staff-spacing, staffgroup-staff-spacing
+///
+/// Skyline-based staff spacing (align-interface.cc:217-268):
+///   when measure layouts are provided, uses skyline distance between staves for collision avoidance;
+///   falls back to fixed formula (BasicDistance - staffHeight) when skylines are unavailable
+/// IMPLEMENTED — pure height estimation (axis-group-interface.cc:138-173) via CalculatePureSystemHeight
+/// NOT YET IMPLEMENTED — staff-affinity for non-spaceable staves (align-interface.cc:240-252)
+/// IMPLEMENTED — hara-kiri auto-hide empty staves (hara-kiri-group-spanner.cc)
+/// IMPLEMENTED — alignment-distances manual override (StaffSpacingParameters.ApplyOverrides)
+/// Outside-staff-priority stacking: implemented in OutsideStaffStacker.cs (axis-group-interface.cc:359-474)
+/// IMPLEMENTED — brace collapse-height (system-start-delimiter.cc:127-129)
+/// IMPLEMENTED — ChoirStaff/bracket delimiter variants (system-start-delimiter.cc)
 /// </remarks>
 public sealed class MultiStaffLayouter
 {
     private readonly LayoutOptions _options;
     private readonly MeasureLayouter _measureLayouter;
+
+    /// <summary>
+    /// Current indent for the system being laid out (in staff spaces).
+    /// Set by LayoutEngine before each system's layout calls.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly — indent / short-indent
+    /// LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset uses indent
+    /// </remarks>
+    internal double CurrentIndent { get; set; }
 
     public MultiStaffLayouter(LayoutOptions options, MeasureLayouter measureLayouter)
     {
@@ -91,6 +114,24 @@ public sealed class MultiStaffLayouter
     }
 
     /// <summary>
+    /// Estimates pure system height including content-dependent loose line extents.
+    /// Used for page breaking optimization before full layout.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:138-173 pure_height
+    ///
+    /// Pure height = base staff spacing + estimated loose line heights (lyrics, dynamics, etc.)
+    /// This allows the page breaker to account for variable system heights without
+    /// requiring full layout. The base height comes from CalculateSystemHeight;
+    /// the loose line extents are provided by the caller (from LayoutEngine.EstimateLooseLineExtents).
+    /// </remarks>
+    public double CalculatePureSystemHeight(MultiStaffScore score, double looseDownExtent, double looseUpExtent)
+    {
+        double baseHeight = CalculateSystemHeight(score);
+        return baseHeight + looseDownExtent + looseUpExtent;
+    }
+
+    /// <summary>
     /// Scale factor for ossia staves: magstep(-3) = 2^(-3/6) ≈ 0.707.
     /// LILYPOND-REF: ly/engraver-init.ly — ossia staves typically use fontSize = #-3
     /// with \override StaffSymbol.staff-space = #(magstep -3)
@@ -140,6 +181,12 @@ public sealed class MultiStaffLayouter
                 builder.Add(layout);
                 currentY += layout.Height;
             }
+            else if (group.HasDelimiter)
+            {
+                var layout = LayoutBracketGroup(group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
+                builder.Add(layout);
+                currentY += layout.Height;
+            }
             else
             {
                 var layout = LayoutSingleStaffGroup(group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex);
@@ -163,6 +210,319 @@ public sealed class MultiStaffLayouter
         }
 
         return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Layouts all staff groups with hara-kiri support (empty staff auto-hiding).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hara-kiri-group-spanner.cc — consider_suicide()
+    /// LILYPOND-REF: lily/align-interface.cc internal_get_minimum_translations()
+    ///
+    /// Checks each staff's content in the given measure range. Staves with
+    /// RemoveEmpty=true that contain no notes/chords are hidden (Height=0, IsHidden=true).
+    /// Hidden staves contribute no height or inter-group spacing.
+    /// </remarks>
+    public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
+        MultiStaffScore score, double systemY,
+        int startMeasure, int endMeasure, bool isFirstSystem)
+    {
+        var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
+        double currentY = 0;
+        double staffHeight = _options.StaffHeight;
+        var sp = _options.StaffSpacing;
+        int globalStaffIndex = 0;
+
+        // Track which groups are entirely hidden for inter-group spacing
+        int lastVisibleGroupIndex = -1;
+
+        for (int i = 0; i < score.StaffGroups.Length; i++)
+        {
+            var group = score.StaffGroups[i];
+            StaffGroupLayout layout;
+
+            if (group.IsGrandStaff)
+            {
+                layout = LayoutGrandStaffGroupWithHaraKiri(
+                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
+                    startMeasure, endMeasure, isFirstSystem);
+            }
+            else if (group.HasDelimiter)
+            {
+                layout = LayoutBracketGroupWithHaraKiri(
+                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
+                    startMeasure, endMeasure, isFirstSystem);
+            }
+            else
+            {
+                layout = LayoutSingleStaffGroupWithHaraKiri(
+                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
+                    startMeasure, endMeasure, isFirstSystem);
+            }
+
+            builder.Add(layout);
+
+            bool groupIsHidden = layout.Staves.All(s => s.IsHidden);
+            if (!groupIsHidden)
+            {
+                currentY += layout.Height;
+                lastVisibleGroupIndex = i;
+            }
+
+            // Inter-group gap: only add between visible groups
+            if (i < score.StaffGroups.Length - 1 && !groupIsHidden)
+            {
+                // Check if next visible group exists
+                bool nextGroupVisible = false;
+                for (int j = i + 1; j < score.StaffGroups.Length; j++)
+                {
+                    bool allHidden = true;
+                    foreach (var staff in score.StaffGroups[j].Staves)
+                    {
+                        if (!HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem))
+                        {
+                            allHidden = false;
+                            break;
+                        }
+                    }
+                    if (!allHidden) { nextGroupVisible = true; break; }
+                }
+
+                if (nextGroupVisible)
+                {
+                    double interGroupGap = sp.StaffGroupStaff.BasicDistance - staffHeight;
+                    bool nextIsOssia = score.StaffGroups[i + 1].Staves.Any(s => s.IsOssia);
+                    bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
+                    if (nextIsOssia || currentIsOssia)
+                        interGroupGap *= OssiaScaleFactor;
+                    currentY += interGroupGap;
+                }
+            }
+
+            globalStaffIndex += group.StaffCount;
+        }
+
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Layouts a grand staff group with hara-kiri support.
+    /// </summary>
+    private StaffGroupLayout LayoutGrandStaffGroupWithHaraKiri(
+        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
+        int startIndex, int startMeasure, int endMeasure, bool isFirstSystem)
+    {
+        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
+        double currentY = y;
+        double staffSpacing = staffSpec.BasicDistance - staffHeight;
+        bool anyVisible = false;
+
+        for (int i = 0; i < group.Staves.Length; i++)
+        {
+            var staff = group.Staves[i];
+            bool hidden = HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem);
+
+            if (hidden)
+            {
+                staffLayouts.Add(new StaffLayout(
+                    StaffIndex: startIndex + i,
+                    Clef: staff.Clef,
+                    Y: currentY,
+                    Height: 0,
+                    Tuning: staff.Tuning,
+                    InstrumentName: staff.InstrumentName,
+                    IsHidden: true));
+            }
+            else
+            {
+                if (anyVisible)
+                    currentY += staffHeight + Math.Max(0, staffSpacing);
+
+                staffLayouts.Add(new StaffLayout(
+                    StaffIndex: startIndex + i,
+                    Clef: staff.Clef,
+                    Y: currentY,
+                    Height: staffHeight,
+                    Tuning: staff.Tuning,
+                    InstrumentName: staff.InstrumentName));
+                anyVisible = true;
+            }
+        }
+
+        if (!anyVisible)
+        {
+            // All staves hidden — zero-height group
+            return StaffGroupLayout.CreateGrandStaff(
+                staffLayouts.ToImmutable(), y, 0,
+                new GrandStaffLayout(staffLayouts.ToImmutable(), 0, 0, 0));
+        }
+
+        double totalHeight = currentY + staffHeight - y;
+        double braceX = _options.MarginLeft + CurrentIndent - 1.0;
+
+        var grandStaffLayout = new GrandStaffLayout(
+            Staves: staffLayouts.ToImmutable(),
+            BraceX: braceX,
+            BraceTop: y,
+            BraceBottom: y + totalHeight);
+
+        return StaffGroupLayout.CreateGrandStaff(
+            staffLayouts.ToImmutable(), y, totalHeight, grandStaffLayout);
+    }
+
+    /// <summary>
+    /// Layouts a single staff group with hara-kiri support.
+    /// </summary>
+    private StaffGroupLayout LayoutSingleStaffGroupWithHaraKiri(
+        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
+        int startIndex, int startMeasure, int endMeasure, bool isFirstSystem)
+    {
+        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
+        double currentY = y;
+        double staffSpacing = staffSpec.BasicDistance - staffHeight;
+        bool anyVisible = false;
+
+        for (int i = 0; i < group.Staves.Length; i++)
+        {
+            var staff = group.Staves[i];
+            bool hidden = HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem);
+            double thisStaffHeight = GetStaffHeight(staff);
+
+            if (hidden)
+            {
+                staffLayouts.Add(new StaffLayout(
+                    StaffIndex: startIndex + i,
+                    Clef: staff.Clef,
+                    Y: currentY,
+                    Height: 0,
+                    Tuning: staff.Tuning,
+                    InstrumentName: staff.InstrumentName,
+                    IsOssia: staff.IsOssia,
+                    IsHidden: true));
+            }
+            else
+            {
+                if (anyVisible)
+                    currentY += thisStaffHeight + Math.Max(0, staffSpacing);
+
+                staffLayouts.Add(new StaffLayout(
+                    StaffIndex: startIndex + i,
+                    Clef: staff.Clef,
+                    Y: currentY,
+                    Height: thisStaffHeight,
+                    Tuning: staff.Tuning,
+                    InstrumentName: staff.InstrumentName,
+                    IsOssia: staff.IsOssia));
+                anyVisible = true;
+            }
+        }
+
+        if (!anyVisible)
+        {
+            // All staves hidden — zero-height group
+            return StaffGroupLayout.CreateSingle(
+                staffLayouts[0], y, 0);
+        }
+
+        double lastVisibleHeight = 0;
+        for (int i = staffLayouts.Count - 1; i >= 0; i--)
+        {
+            if (!staffLayouts[i].IsHidden)
+            {
+                lastVisibleHeight = staffLayouts[i].Height;
+                break;
+            }
+        }
+
+        double totalHeight = group.StaffCount == 1 || !anyVisible
+            ? lastVisibleHeight
+            : currentY + lastVisibleHeight - y;
+
+        return StaffGroupLayout.CreateSingle(
+            staffLayouts[0], y, totalHeight);
+    }
+
+    /// <summary>
+    /// Layouts a bracket group with hara-kiri support.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc — bracket rendering with collapse-height
+    /// </remarks>
+    private StaffGroupLayout LayoutBracketGroupWithHaraKiri(
+        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
+        int startIndex, int startMeasure, int endMeasure, bool isFirstSystem)
+    {
+        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
+        double currentY = y;
+        double staffSpacing = staffSpec.BasicDistance - staffHeight;
+        bool anyVisible = false;
+
+        for (int i = 0; i < group.Staves.Length; i++)
+        {
+            var staff = group.Staves[i];
+            bool hidden = HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem);
+            double thisStaffHeight = GetStaffHeight(staff);
+
+            if (hidden)
+            {
+                staffLayouts.Add(new StaffLayout(
+                    StaffIndex: startIndex + i,
+                    Clef: staff.Clef,
+                    Y: currentY,
+                    Height: 0,
+                    Tuning: staff.Tuning,
+                    InstrumentName: staff.InstrumentName,
+                    IsOssia: staff.IsOssia,
+                    IsHidden: true));
+            }
+            else
+            {
+                if (anyVisible)
+                    currentY += thisStaffHeight + Math.Max(0, staffSpacing);
+
+                staffLayouts.Add(new StaffLayout(
+                    StaffIndex: startIndex + i,
+                    Clef: staff.Clef,
+                    Y: currentY,
+                    Height: thisStaffHeight,
+                    Tuning: staff.Tuning,
+                    InstrumentName: staff.InstrumentName,
+                    IsOssia: staff.IsOssia));
+                anyVisible = true;
+            }
+        }
+
+        if (!anyVisible)
+        {
+            return StaffGroupLayout.CreateBracketGroup(
+                group.Type,
+                staffLayouts.ToImmutable(), y, 0,
+                new GrandStaffLayout(staffLayouts.ToImmutable(), 0, 0, 0, SystemStartDelimiterType.Bracket));
+        }
+
+        double lastVisibleHeight = 0;
+        for (int i = staffLayouts.Count - 1; i >= 0; i--)
+        {
+            if (!staffLayouts[i].IsHidden)
+            {
+                lastVisibleHeight = staffLayouts[i].Height;
+                break;
+            }
+        }
+
+        double totalHeight = currentY + lastVisibleHeight - y;
+        double bracketX = _options.MarginLeft + CurrentIndent - 1.0;
+
+        var delimiterLayout = new GrandStaffLayout(
+            Staves: staffLayouts.ToImmutable(),
+            BraceX: bracketX,
+            BraceTop: y,
+            BraceBottom: y + totalHeight,
+            DelimiterType: SystemStartDelimiterType.Bracket);
+
+        return StaffGroupLayout.CreateBracketGroup(
+            group.Type,
+            staffLayouts.ToImmutable(), y, totalHeight, delimiterLayout);
     }
 
     /// <summary>
@@ -196,7 +556,7 @@ public sealed class MultiStaffLayouter
         }
 
         double totalHeight = currentY + staffHeight - y;
-        double braceX = _options.MarginLeft - 1.0;
+        double braceX = _options.MarginLeft + CurrentIndent - 1.0;
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -255,13 +615,64 @@ public sealed class MultiStaffLayouter
     }
 
     /// <summary>
+    /// Layouts a bracket group (StaffGroup or ChoirStaff with bracket delimiter).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc — bracket rendering
+    /// LILYPOND-REF: ly/engraver-init.ly — StaffGroup/ChoirStaff use SystemStartBracket
+    /// </remarks>
+    private StaffGroupLayout LayoutBracketGroup(
+        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec, int startIndex)
+    {
+        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
+        double currentY = y;
+        double staffSpacing = staffSpec.BasicDistance - staffHeight;
+
+        for (int i = 0; i < group.Staves.Length; i++)
+        {
+            var staff = group.Staves[i];
+            double thisStaffHeight = GetStaffHeight(staff);
+            staffLayouts.Add(new StaffLayout(
+                StaffIndex: startIndex + i,
+                Clef: staff.Clef,
+                Y: currentY,
+                Height: thisStaffHeight,
+                Tuning: staff.Tuning,
+                InstrumentName: staff.InstrumentName,
+                IsOssia: staff.IsOssia));
+
+            if (i < group.Staves.Length - 1)
+                currentY += thisStaffHeight + Math.Max(0, staffSpacing);
+        }
+
+        double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
+        double totalHeight = currentY + lastStaffHeight - y;
+        double bracketX = _options.MarginLeft + CurrentIndent - 1.0;
+
+        var delimiterLayout = new GrandStaffLayout(
+            Staves: staffLayouts.ToImmutable(),
+            BraceX: bracketX,
+            BraceTop: y,
+            BraceBottom: y + totalHeight,
+            DelimiterType: SystemStartDelimiterType.Bracket);
+
+        return StaffGroupLayout.CreateBracketGroup(
+            group.Type,
+            staffLayouts.ToImmutable(),
+            y,
+            totalHeight,
+            delimiterLayout);
+    }
+
+    /// <summary>
     /// Layouts measures for multi-staff scores with timing-based column information.
     /// Supports measure ranges for system breaking and proportional justification.
     /// </summary>
     public ImmutableArray<MeasureLayout> LayoutMeasures(
         MultiStaffScore score, int systemIndex,
         int startMeasureIndex = 0, int? measureCount = null,
-        bool isLastSystem = false)
+        bool isLastSystem = false,
+        double? baseShortestDuration = null)
     {
         var primaryVoice = score.StaffGroups[0].PrimaryStaff.PrimaryVoice;
         int endMeasureIndex = measureCount.HasValue
@@ -270,8 +681,10 @@ public sealed class MultiStaffLayouter
 
         double prefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, systemIndex == 0,
             score.TimeSignature.Beats, score.TimeSignature.BeatType);
-        double startX = _options.MarginLeft + prefixWidth;
-        double availableWidth = _options.PageWidth - _options.MarginLeft - _options.MarginRight - prefixWidth;
+        // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
+        // Staff lines start at MarginLeft + indent; music starts after prefix
+        double startX = _options.MarginLeft + CurrentIndent + prefixWidth;
+        double availableWidth = _options.PageWidth - _options.MarginLeft - _options.MarginRight - CurrentIndent - prefixWidth;
 
         // First pass: calculate ideal widths
         var idealWidths = new List<double>();
@@ -279,7 +692,7 @@ public sealed class MultiStaffLayouter
 
         for (int i = startMeasureIndex; i < endMeasureIndex; i++)
         {
-            double w = SpacingRules.CalculateMeasureIdealWidth(primaryVoice.Measures[i]);
+            double w = SpacingRules.CalculateMeasureIdealWidth(primaryVoice.Measures[i], baseShortestDuration);
             idealWidths.Add(w);
             totalIdealWidth += w;
         }
@@ -302,7 +715,7 @@ public sealed class MultiStaffLayouter
             var primaryMeasure = primaryVoice.Measures[measureIndex];
 
             var itemLayouts = _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
-            var columnLayouts = _measureLayouter.LayoutColumns(primaryMeasure, measureWidth, allTimings);
+            var columnLayouts = _measureLayouter.LayoutColumns(primaryMeasure, measureWidth, allTimings, baseShortestDuration);
 
             var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts);
             layouts.Add(measureLayout);
@@ -343,5 +756,350 @@ public sealed class MultiStaffLayouter
         var sortedTimings = timings.ToList();
         sortedTimings.Sort();
         return sortedTimings;
+    }
+
+    // --- Skyline-based staff spacing ---
+
+    /// <summary>
+    /// Calculates the total height of a multi-staff system using skyline distances.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:217-268 internal_get_minimum_translations()
+    /// Uses per-staff skylines to determine actual spacing needed, instead of fixed formula.
+    /// </remarks>
+    public double CalculateSystemHeight(
+        MultiStaffScore score, SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        double height = 0;
+        double staffHeight = _options.StaffHeight;
+        var sp = _options.StaffSpacing;
+
+        // Build per-staff skylines
+        var staffSkylines = BuildAllStaffSkylines(score, skylineBuilder, measureLayouts);
+
+        int globalStaffIdx = 0;
+        for (int i = 0; i < score.StaffGroups.Length; i++)
+        {
+            var group = score.StaffGroups[i];
+            int staffCount = group.StaffCount;
+
+            if (group.IsGrandStaff)
+            {
+                double groupHeight = staffHeight; // first staff
+                for (int s = 1; s < group.Staves.Length; s++)
+                {
+                    int upperIdx = globalStaffIdx + s - 1;
+                    int lowerIdx = globalStaffIdx + s;
+                    double gap = CalculateStaffGapWithSkylines(
+                        sp.StaffStaff, staffHeight, staffSkylines, upperIdx, lowerIdx);
+                    groupHeight += gap + staffHeight;
+                }
+                height += groupHeight;
+            }
+            else
+            {
+                for (int s = 0; s < group.Staves.Length; s++)
+                {
+                    height += GetStaffHeight(group.Staves[s]);
+                    if (s < group.Staves.Length - 1)
+                    {
+                        int upperIdx = globalStaffIdx + s;
+                        int lowerIdx = globalStaffIdx + s + 1;
+                        double gap = CalculateStaffGapWithSkylines(
+                            sp.StaffStaff, staffHeight, staffSkylines, upperIdx, lowerIdx);
+                        height += gap;
+                    }
+                }
+            }
+
+            if (i < score.StaffGroups.Length - 1)
+            {
+                int lastOfGroup = globalStaffIdx + staffCount - 1;
+                int firstOfNext = globalStaffIdx + staffCount;
+                double interGroupGap = CalculateStaffGapWithSkylines(
+                    sp.StaffGroupStaff, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
+
+                bool nextIsOssia = score.StaffGroups[i + 1].Staves.Any(s => s.IsOssia);
+                bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
+                if (nextIsOssia || currentIsOssia)
+                    interGroupGap *= OssiaScaleFactor;
+                height += interGroupGap;
+            }
+
+            globalStaffIdx += staffCount;
+        }
+
+        return height;
+    }
+
+    /// <summary>
+    /// Layouts all staff groups using skyline-based spacing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:217-268 internal_get_minimum_translations()
+    /// </remarks>
+    public ImmutableArray<StaffGroupLayout> LayoutStaffGroups(
+        MultiStaffScore score, double systemY,
+        SkylineBuilder skylineBuilder, ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        var builder = ImmutableArray.CreateBuilder<StaffGroupLayout>();
+        double currentY = 0;
+        double staffHeight = _options.StaffHeight;
+        var sp = _options.StaffSpacing;
+        int globalStaffIndex = 0;
+
+        var staffSkylines = BuildAllStaffSkylines(score, skylineBuilder, measureLayouts);
+
+        for (int i = 0; i < score.StaffGroups.Length; i++)
+        {
+            var group = score.StaffGroups[i];
+
+            if (group.IsGrandStaff)
+            {
+                var layout = LayoutGrandStaffGroupWithSkylines(
+                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
+                    staffSkylines);
+                builder.Add(layout);
+                currentY += layout.Height;
+            }
+            else if (group.HasDelimiter)
+            {
+                var layout = LayoutBracketGroupWithSkylines(
+                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
+                    staffSkylines);
+                builder.Add(layout);
+                currentY += layout.Height;
+            }
+            else
+            {
+                var layout = LayoutSingleStaffGroupWithSkylines(
+                    group, currentY, staffHeight, sp.StaffStaff, globalStaffIndex,
+                    staffSkylines);
+                builder.Add(layout);
+                currentY += layout.Height;
+            }
+
+            if (i < score.StaffGroups.Length - 1)
+            {
+                int lastOfGroup = globalStaffIndex + group.StaffCount - 1;
+                int firstOfNext = globalStaffIndex + group.StaffCount;
+                double interGroupGap = CalculateStaffGapWithSkylines(
+                    sp.StaffGroupStaff, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
+
+                bool nextIsOssia = score.StaffGroups[i + 1].Staves.Any(s => s.IsOssia);
+                bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
+                if (nextIsOssia || currentIsOssia)
+                    interGroupGap *= OssiaScaleFactor;
+                currentY += interGroupGap;
+            }
+
+            globalStaffIndex += group.StaffCount;
+        }
+
+        return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Layouts a grand staff group using skyline-based spacing.
+    /// </summary>
+    private StaffGroupLayout LayoutGrandStaffGroupWithSkylines(
+        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
+        int startIndex, List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines)
+    {
+        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
+        double currentY = y;
+
+        for (int i = 0; i < group.Staves.Length; i++)
+        {
+            var staff = group.Staves[i];
+            staffLayouts.Add(new StaffLayout(
+                StaffIndex: startIndex + i,
+                Clef: staff.Clef,
+                Y: currentY,
+                Height: staffHeight,
+                Tuning: staff.Tuning,
+                InstrumentName: staff.InstrumentName));
+
+            if (i < group.Staves.Length - 1)
+            {
+                int upperIdx = startIndex + i;
+                int lowerIdx = startIndex + i + 1;
+                double gap = CalculateStaffGapWithSkylines(
+                    staffSpec, staffHeight, staffSkylines, upperIdx, lowerIdx);
+                currentY += staffHeight + gap;
+            }
+        }
+
+        double totalHeight = currentY + staffHeight - y;
+        double braceX = _options.MarginLeft + CurrentIndent - 1.0;
+
+        var grandStaffLayout = new GrandStaffLayout(
+            Staves: staffLayouts.ToImmutable(),
+            BraceX: braceX,
+            BraceTop: y,
+            BraceBottom: y + totalHeight);
+
+        return StaffGroupLayout.CreateGrandStaff(
+            staffLayouts.ToImmutable(),
+            y,
+            totalHeight,
+            grandStaffLayout);
+    }
+
+    /// <summary>
+    /// Layouts a single staff group using skyline-based spacing.
+    /// </summary>
+    private StaffGroupLayout LayoutSingleStaffGroupWithSkylines(
+        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
+        int startIndex, List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines)
+    {
+        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
+        double currentY = y;
+
+        for (int i = 0; i < group.Staves.Length; i++)
+        {
+            var staff = group.Staves[i];
+            double thisStaffHeight = GetStaffHeight(staff);
+            staffLayouts.Add(new StaffLayout(
+                StaffIndex: startIndex + i,
+                Clef: staff.Clef,
+                Y: currentY,
+                Height: thisStaffHeight,
+                Tuning: staff.Tuning,
+                InstrumentName: staff.InstrumentName,
+                IsOssia: staff.IsOssia));
+
+            if (i < group.Staves.Length - 1)
+            {
+                int upperIdx = startIndex + i;
+                int lowerIdx = startIndex + i + 1;
+                double gap = CalculateStaffGapWithSkylines(
+                    staffSpec, thisStaffHeight, staffSkylines, upperIdx, lowerIdx);
+                currentY += thisStaffHeight + gap;
+            }
+        }
+
+        double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
+        double totalHeight = group.StaffCount == 1
+            ? lastStaffHeight
+            : currentY + lastStaffHeight - y;
+
+        return StaffGroupLayout.CreateSingle(
+            staffLayouts[0],
+            y,
+            totalHeight);
+    }
+
+    /// <summary>
+    /// Layouts a bracket group using skyline-based spacing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc — bracket rendering
+    /// </remarks>
+    private StaffGroupLayout LayoutBracketGroupWithSkylines(
+        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
+        int startIndex, List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines)
+    {
+        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
+        double currentY = y;
+
+        for (int i = 0; i < group.Staves.Length; i++)
+        {
+            var staff = group.Staves[i];
+            double thisStaffHeight = GetStaffHeight(staff);
+            staffLayouts.Add(new StaffLayout(
+                StaffIndex: startIndex + i,
+                Clef: staff.Clef,
+                Y: currentY,
+                Height: thisStaffHeight,
+                Tuning: staff.Tuning,
+                InstrumentName: staff.InstrumentName,
+                IsOssia: staff.IsOssia));
+
+            if (i < group.Staves.Length - 1)
+            {
+                int upperIdx = startIndex + i;
+                int lowerIdx = startIndex + i + 1;
+                double gap = CalculateStaffGapWithSkylines(
+                    staffSpec, thisStaffHeight, staffSkylines, upperIdx, lowerIdx);
+                currentY += thisStaffHeight + gap;
+            }
+        }
+
+        double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
+        double totalHeight = currentY + lastStaffHeight - y;
+        double bracketX = _options.MarginLeft + CurrentIndent - 1.0;
+
+        var delimiterLayout = new GrandStaffLayout(
+            Staves: staffLayouts.ToImmutable(),
+            BraceX: bracketX,
+            BraceTop: y,
+            BraceBottom: y + totalHeight,
+            DelimiterType: SystemStartDelimiterType.Bracket);
+
+        return StaffGroupLayout.CreateBracketGroup(
+            group.Type,
+            staffLayouts.ToImmutable(),
+            y,
+            totalHeight,
+            delimiterLayout);
+    }
+
+    /// <summary>
+    /// Builds UP/DOWN skylines for every staff in the score.
+    /// Returns a list indexed by global staff index.
+    /// </summary>
+    private List<(VerticalSkyline Up, VerticalSkyline Down)> BuildAllStaffSkylines(
+        MultiStaffScore score, SkylineBuilder skylineBuilder,
+        ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        var result = new List<(VerticalSkyline Up, VerticalSkyline Down)>();
+
+        foreach (var group in score.StaffGroups)
+        {
+            foreach (var staff in group.Staves)
+            {
+                result.Add(skylineBuilder.BuildStaffSkylines(staff, measureLayouts));
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Calculates the gap between two adjacent staves using skyline distances.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:217-268 internal_get_minimum_translations()
+    ///
+    /// Formula: gap = max(skyline_distance + padding, minimum_distance, basic_distance) - upper_staff_height
+    ///
+    /// The skyline distance gives the minimum center-to-center distance needed to avoid collisions.
+    /// We then take the maximum of that (with padding), the minimum-distance, and basic-distance,
+    /// then subtract the upper staff height to get the gap between bottom of upper and top of lower.
+    /// </remarks>
+    private static double CalculateStaffGapWithSkylines(
+        VerticalSpacingSpec spec, double upperStaffHeight,
+        List<(VerticalSkyline Up, VerticalSkyline Down)> staffSkylines,
+        int upperStaffIndex, int lowerStaffIndex)
+    {
+        if (upperStaffIndex >= staffSkylines.Count || lowerStaffIndex >= staffSkylines.Count)
+            return Math.Max(0, spec.BasicDistance - upperStaffHeight);
+
+        var upperDown = staffSkylines[upperStaffIndex].Down;
+        var lowerUp = staffSkylines[lowerStaffIndex].Up;
+
+        if (upperDown.IsEmpty || lowerUp.IsEmpty)
+            return Math.Max(0, spec.BasicDistance - upperStaffHeight);
+
+        double skyDistance = upperDown.Distance(lowerUp);
+
+        // LILYPOND-REF: lily/align-interface.cc:247-260
+        // center_to_center = max(skyline_distance + padding, minimum_distance, basic_distance)
+        double centerToCenter = Math.Max(
+            Math.Max(skyDistance + spec.Padding, spec.MinimumDistance),
+            spec.BasicDistance);
+
+        return Math.Max(0, centerToCenter - upperStaffHeight);
     }
 }

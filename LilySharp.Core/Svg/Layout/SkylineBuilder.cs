@@ -115,6 +115,30 @@ public sealed class SkylineBuilder
     }
 
     /// <summary>
+    /// Builds vertical skylines for a single staff, relative to its own origin (Y=0 at top line).
+    /// Used for staff-to-staff spacing within a multi-staff system.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:217-268 — per-staff skylines for spacing
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()
+    /// </remarks>
+    public (VerticalSkyline Up, VerticalSkyline Down) BuildStaffSkylines(
+        Staff staff, ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        var upSkyline = new VerticalSkyline(VerticalDirection.Up);
+        var downSkyline = new VerticalSkyline(VerticalDirection.Down);
+
+        double staffMiddleY = _staffHeight / 2;
+        double stemLength = EngravingDefaults.DefaultStemLength;
+        double noteheadHeight = EngravingDefaults.NoteheadHeight;
+
+        AddStaffToSkylines(staff, measureLayouts, staffMiddleY,
+            stemLength, noteheadHeight, upSkyline, downSkyline);
+
+        return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
     /// Builds vertical skylines for a single-staff system.
     /// </summary>
     public (VerticalSkyline Up, VerticalSkyline Down) BuildSystemSkylines(

@@ -210,8 +210,9 @@ public class PageBreakerTests
         var p = PageBreakingParameters.Default;
 
         // LILYPOND-REF: lily/page-breaking.cc:280-297
+        // LILYPOND-REF: ly/paper-defaults-init.ly ragged-last-bottom = ##f
         Assert.False(p.RaggedBottom);
-        Assert.True(p.RaggedLastBottom);
+        Assert.False(p.RaggedLastBottom);
         Assert.Equal(0, p.SystemsPerPage);
         Assert.Equal(0, p.MaxSystemsPerPage);
         Assert.Equal(0, p.MinSystemsPerPage);
@@ -434,6 +435,91 @@ public class PageBreakerTests
         Assert.True(resultHigh.Count >= 1);
         Assert.Equal(systems.Length, resultLow[^1]);
         Assert.Equal(systems.Length, resultHigh[^1]);
+    }
+
+    // --- fixed_force_solution tests ---
+
+    [Fact]
+    public void RaggedLastBottom_FixedForceSolution_NoPenaltyForUnderfull()
+    {
+        // LILYPOND-REF: lily/page-layout-problem.cc:808-823 fixed_force_solution
+        // For ragged pages, underfull pages should have no spacing penalty.
+        // Systems are placed at natural positions; remaining space at bottom.
+        var systems = new[]
+        {
+            CreateSystem(height: 15),
+            CreateSystem(height: 15)
+        };
+
+        // Page height=200 → lots of unused space, but ragged shouldn't penalize
+        var breaker = new PageBreaker(
+            pageHeight: 200, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+            parameters: new PageBreakingParameters { RaggedLastBottom = true });
+
+        var result = breaker.BreakIntoPages(systems);
+
+        // All systems on one page (no reason to split)
+        Assert.Single(result);
+        Assert.Equal(2, result[0]);
+    }
+
+    [Fact]
+    public void RaggedBottom_OverfullPage_Rejected()
+    {
+        // LILYPOND-REF: lily/page-layout-problem.cc:808-823
+        // Overfull ragged pages should be rejected (systems don't fit at natural spacing)
+        var systems = new[]
+        {
+            CreateSystem(height: 40),
+            CreateSystem(height: 40),
+            CreateSystem(height: 40)
+        };
+
+        // Page too small for 3 systems
+        var breaker = new PageBreaker(
+            pageHeight: 70, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+            parameters: new PageBreakingParameters { RaggedBottom = true });
+
+        var result = breaker.BreakIntoPages(systems);
+
+        // Must use multiple pages since 3 systems don't fit
+        Assert.True(result.Count >= 2, "Overfull ragged page should force page break");
+    }
+
+    [Fact]
+    public void RaggedBottom_FourCombinations_AllValid()
+    {
+        // LILYPOND-REF: ly/paper-defaults-init.ly — ragged-bottom / ragged-last-bottom
+        // All 4 combinations should produce valid breaks
+        var systems = new[]
+        {
+            CreateSystem(height: 15),
+            CreateSystem(height: 15),
+            CreateSystem(height: 15),
+            CreateSystem(height: 15),
+            CreateSystem(height: 15)
+        };
+
+        var combinations = new[]
+        {
+            new PageBreakingParameters { RaggedBottom = false, RaggedLastBottom = false },
+            new PageBreakingParameters { RaggedBottom = false, RaggedLastBottom = true },
+            new PageBreakingParameters { RaggedBottom = true, RaggedLastBottom = false },
+            new PageBreakingParameters { RaggedBottom = true, RaggedLastBottom = true }
+        };
+
+        foreach (var combo in combinations)
+        {
+            var breaker = new PageBreaker(
+                pageHeight: 80, topMargin: 5, bottomMargin: 5, headerHeight: 5,
+                parameters: combo);
+
+            var result = breaker.BreakIntoPages(systems);
+
+            Assert.True(result.Count >= 1,
+                $"RaggedBottom={combo.RaggedBottom}, RaggedLastBottom={combo.RaggedLastBottom} failed");
+            Assert.Equal(systems.Length, result[^1]);
+        }
     }
 
     private static SystemDetails CreateSystem(

@@ -83,6 +83,7 @@ public sealed class TieFormattingProblem
     private readonly TieDetails _details;
     private readonly IReadOnlyList<TieLayout>? _existingTies;
     private readonly double _staffHeight;
+    private readonly int _startDots;
 
     // Staff line positions (in staff spaces from bottom line)
     private static readonly double[] StaffLinePositions = { 0, 1, 2, 3, 4 };
@@ -95,7 +96,8 @@ public sealed class TieFormattingProblem
         double endY,
         TieDetails? details = null,
         IReadOnlyList<TieLayout>? existingTies = null,
-        double staffHeight = 4.0)
+        double staffHeight = 4.0,
+        int startDots = 0)
     {
         _tie = tie;
         _startX = startX;
@@ -105,6 +107,7 @@ public sealed class TieFormattingProblem
         _details = details ?? TieDetails.Default;
         _existingTies = existingTies;
         _staffHeight = staffHeight;
+        _startDots = startDots;
     }
 
     // ---------------------------------------------------------------
@@ -357,7 +360,7 @@ public sealed class TieFormattingProblem
 
         // --- Dot collision ---
         // LILYPOND-REF: tie-formatting-problem.cc:795-818
-        // (Simplified: no dot position tracking yet)
+        ScoreDotCollision(config);
 
         config.IsScored = true;
     }
@@ -403,6 +406,38 @@ public sealed class TieFormattingProblem
                     0.1 * _details.CenterStaffLineClearance,
                     _details.CenterStaffLineClearance,
                     distance);
+        }
+    }
+
+    /// <summary>
+    /// Penalizes tie configurations that conflict with augmentation dots.
+    /// A dot conflicts with the tie when it lies in the direction of the tie's curve
+    /// from the tie's attachment position, within the clearance threshold.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:795-818 dot collision scoring
+    /// LILYPOND-REF: lily/dots.cc:62-80 dot position avoids staff lines
+    /// </remarks>
+    private void ScoreDotCollision(TieCandidate config)
+    {
+        if (_startDots <= 0)
+            return;
+
+        // Dot position in half-staff-positions
+        // If note is on a staff line (even staff position), dot shifts up by 1 half-space
+        int dotPosition = _tie.StaffPosition;
+        if (_tie.StaffPosition % 2 == 0)
+            dotPosition += 1;
+
+        // Check if the dot is in the curve's direction from the tie position
+        // CurveUp (dir=+1): collision if dot is above (dotPosition > config.Position)
+        // CurveDown (dir=-1): collision if dot is below (dotPosition < config.Position)
+        int dir = config.CurveUp ? 1 : -1;
+        int diff = dotPosition - config.Position;
+
+        if (dir * diff > 0 && Math.Abs(diff) * 0.5 <= _details.DotCollisionClearance)
+        {
+            config.Demerits += _details.DotCollisionPenalty;
         }
     }
 

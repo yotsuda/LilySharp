@@ -25,6 +25,20 @@ namespace LilySharp.Core.Svg.Layout;
 /// <remarks>
 /// LILYPOND-REF: lily/page-spacing.cc Page_spacer class
 /// LILYPOND-REF: lily/page-layout-problem.cc vertical justification
+/// LILYPOND-REF: ly/paper-defaults-init.ly:64-89 — default spacing specs
+///
+/// Loose line distribution (page-layout-problem.cc:1025-1054):
+///   lyrics, dynamics, and figured bass heights are estimated and added to system extents
+///   in LayoutEngine.AugmentExtentsWithLooseLines() before page breaking
+/// build_system_skyline (page-layout-problem.cc:1070-1127):
+///   per-system UP/DOWN skylines are passed to PositionSystemsOnPage for inter-system collision avoidance
+/// IMPLEMENTED — fixed_force_solution for ragged-last (page-layout-problem.cc:808-823)
+/// NOT YET IMPLEMENTED — footnote heights (page-layout-problem.cc:186-310)
+/// IMPLEMENTED — in-note-system-padding (page-layout-problem.cc:483)
+/// IMPLEMENTED — hara-kiri auto-hide empty staves (MultiStaffLayouter + LayoutEngine)
+/// IMPLEMENTED — alignment-distances manual override (StaffSpacingParameters.ApplyOverrides)
+/// IMPLEMENTED — pure height estimation for pre-breaking optimization
+///   via LayoutEngine.AugmentExtentsWithLooseLines + MultiStaffLayouter.CalculatePureSystemHeight
 /// </remarks>
 public sealed class PageLayouter
 {
@@ -36,17 +50,22 @@ public sealed class PageLayouter
     }
 
     /// <summary>
-    /// Creates pages using optimal page breaking algorithm.
+    /// Creates pages using optimal page breaking algorithm with full skyline collision detection.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-spacing.cc Page_spacer class
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
     /// Uses dynamic programming to find optimal page breaks,
     /// then applies force-based vertical spacing within each page.
+    /// When per-system skylines are provided, inter-system distances use
+    /// VerticalSkyline.Distance() for X-dependent collision avoidance
+    /// instead of scalar extents.
     /// </remarks>
     public ImmutableArray<PageLayout> CreatePagesWithOptimalBreaking(
         ImmutableArray<SystemLayout> systems,
         double headerHeight,
-        ImmutableArray<(double upExtent, double downExtent)> systemExtents)
+        ImmutableArray<(double upExtent, double downExtent)> systemExtents,
+        ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
     {
         if (systems.Length == 0)
         {
@@ -114,22 +133,28 @@ public sealed class PageLayouter
                 pageSpacing.AppendSystem(systemDetails[sysIdx]);
 
             // Determine if this page uses ragged spacing
+            // LILYPOND-REF: ly/paper-defaults-init.ly — ragged-bottom / ragged-last-bottom
+            // 4 combinations: both false (justify all), last-only, all ragged, both true (≡ ragged-bottom)
             bool isRagged = _options.PageBreaking.RaggedBottom
                 || (isLastPage && _options.PageBreaking.RaggedLastBottom);
 
-            // Clamp force
+            // LILYPOND-REF: lily/page-layout-problem.cc:808-823 fixed_force_solution
+            // For ragged pages: force=0 (systems at natural spring positions, space at bottom).
+            // For justified pages: use the calculated force to stretch systems to fill the page.
             double force = pageSpacing.Force;
             if (double.IsNegativeInfinity(force) || double.IsNaN(force))
                 force = 0;
             else if (isRagged)
-                force = Math.Max(0, Math.Min(force, 0)); // No stretching for ragged
+                force = 0; // fixed_force_solution: no stretching, remaining space at bottom
             else
-                force = Math.Max(0, force); // No compression
+                force = Math.Max(0, force); // Justified: stretch but don't compress
 
             // Position systems using context-aware spacing specs
+            // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
+            // When skylines are available, use Distance() for X-dependent collision detection
             var pageSystems = PositionSystemsOnPage(
                 systems, systemExtents, systemDetails, systemStart, systemEnd,
-                isFirstPage, headerHeight, force, vs);
+                isFirstPage, headerHeight, force, vs, systemSkylines);
 
             pages.Add(new PageLayout(
                 PageIndex: pageIdx,
@@ -150,6 +175,12 @@ public sealed class PageLayouter
     /// <remarks>
     /// LILYPOND-REF: lily/page-layout-problem.cc:488-535 spacing spec selection
     /// LILYPOND-REF: lily/page-layout-problem.cc:622-646 minimum distance from skylines
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
+    ///
+    /// When per-system skylines are available, uses VerticalSkyline.Distance()
+    /// for X-dependent inter-system collision detection. This gives more accurate
+    /// minimum distances than scalar extents because it considers the full
+    /// horizontal profile of each system.
     /// </remarks>
     private ImmutableArray<SystemLayout> PositionSystemsOnPage(
         ImmutableArray<SystemLayout> allSystems,
@@ -157,7 +188,8 @@ public sealed class PageLayouter
         List<SystemDetails> systemDetails,
         int startIdx, int endIdx,
         bool isFirstPage, double headerHeight,
-        double force, VerticalSpacingParameters vs)
+        double force, VerticalSpacingParameters vs,
+        ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
     {
         var pageSystems = new List<SystemLayout>();
 
@@ -174,7 +206,6 @@ public sealed class PageLayouter
             if (sysIdx < endIdx - 1)
             {
                 // Select spacing spec for this pair
-                bool isFirst = sysIdx == startIdx;
                 var spec = vs.SelectSpec(
                     isFirstOnPage: false, // Not first — we already placed first
                     isLastOnPage: false,
@@ -184,10 +215,37 @@ public sealed class PageLayouter
 
                 var d = systemDetails[sysIdx];
 
-                // Skyline-based minimum distance
-                double skylineDistance = _options.StaffHeight + d.BottomExtent
-                    + systemExtents[sysIdx + 1].upExtent;
+                // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
+                // Use full skyline Distance() when available for X-dependent collision detection;
+                // fall back to scalar extents when skylines are not provided.
+                double skylineDistance;
+                if (systemSkylines.HasValue
+                    && sysIdx < systemSkylines.Value.Length
+                    && sysIdx + 1 < systemSkylines.Value.Length)
+                {
+                    var prevDown = systemSkylines.Value[sysIdx].down;
+                    var nextUp = systemSkylines.Value[sysIdx + 1].up;
+                    double dist = prevDown.Distance(nextUp);
+                    // Distance() returns negative infinity for empty skylines;
+                    // fall back to scalar calculation in that case
+                    skylineDistance = double.IsNegativeInfinity(dist)
+                        ? _options.StaffHeight + d.BottomExtent + systemExtents[sysIdx + 1].upExtent
+                        : dist;
+                }
+                else
+                {
+                    skylineDistance = _options.StaffHeight + d.BottomExtent
+                        + systemExtents[sysIdx + 1].upExtent;
+                }
+
                 double minDistance = Math.Max(skylineDistance, spec.MinimumDistance) + spec.Padding;
+
+                // LILYPOND-REF: lily/page-layout-problem.cc:483 in-note-system-padding
+                // Ensure minimum gap between note extents of adjacent systems.
+                // This provides extra padding specifically for note content, beyond
+                // the general spacing spec padding.
+                double noteDistance = skylineDistance + vs.InNoteSystemPadding;
+                minDistance = Math.Max(minDistance, noteDistance);
 
                 // Spring-based ideal distance
                 double springDistance = Math.Max(spec.BasicDistance, minDistance);

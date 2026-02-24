@@ -101,7 +101,8 @@ public sealed class MeasureLayouter
     /// This creates springs between each timing point (column) in the measure,
     /// using the same Spring-Rod model as single-staff layout.
     /// </remarks>
-    public ImmutableArray<ColumnLayout> LayoutColumns(Measure measure, double totalWidth, List<Fraction> timings)
+    public ImmutableArray<ColumnLayout> LayoutColumns(Measure measure, double totalWidth, List<Fraction> timings,
+                                                      double? baseShortestDuration = null)
     {
         if (timings.Count == 0)
             return ImmutableArray<ColumnLayout>.Empty;
@@ -130,7 +131,7 @@ public sealed class MeasureLayouter
         // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist (first-note . (fixed-space . 1.3))
         // Uses duration-based ideal but enforces BarLineToFirstNoteSpace as minimum.
         var firstDuration = timings.Count > 1 ? timings[1] - timings[0] : totalDuration;
-        var firstSpring = SpacingRules.CreateTimingSpring(firstDuration);
+        var firstSpring = SpacingRules.CreateTimingSpring(firstDuration, baseShortestDuration);
         double firstNoteMin = EngravingDefaults.BarLineToFirstNoteSpace;
         springs.Add(new Spring(
             Math.Max(firstSpring.IdealDistance, firstNoteMin),
@@ -149,12 +150,12 @@ public sealed class MeasureLayouter
             {
                 segmentDuration = totalDuration - timings[i];
             }
-            springs.Add(SpacingRules.CreateTimingSpring(segmentDuration));
+            springs.Add(SpacingRules.CreateTimingSpring(segmentDuration, baseShortestDuration));
         }
 
         // End spring: last column → barline (remaining duration)
         var endDuration = totalDuration - timings[^1];
-        springs.Add(SpacingRules.CreateTimingSpring(endDuration));
+        springs.Add(SpacingRules.CreateTimingSpring(endDuration, baseShortestDuration));
 
         // Available width for the entire spring chain
         double targetWidth = totalWidth - startBarlineWidth - endBarlineWidth;

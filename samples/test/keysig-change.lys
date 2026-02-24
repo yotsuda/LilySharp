@@ -12,13 +12,13 @@ part melody {
 }
 
 // Phrase with mid-measure key change: G major → C major (cancel F#)
-phrase m1 { g4 a b c' | d'4 e' key c major fis4 g | c'4 d e f | g4 a b c' | }
+phrase m1 { g4 a b c' | d4 e key c major fis4 g | c,,4 d e f | g4 a b c | }
 
 // Phrase with key change to flats: C major → F major (1 flat: Bb)
-phrase m2 { c'4 d e f | key f major bes4 a g f | c'4 d e f | }
+phrase m2 { c4 d e f | key f major bes4 a g f | c'4 d e f | }
 
 // Phrase with sharps to flats: G major → Eb major (cancel F#, add Bb Eb Ab)
-phrase m3 { g4 a b c' | key ees major bes4 aes g f | ees4 f g aes | bes4 c' d ees | }
+phrase m3 { g'4 a b c | key ees major bes4 aes g f | ees4 f g aes | bes4 c' d ees | }
 
 section A { melody { $m1 } }
 section B { melody { $m2 } }

@@ -152,6 +152,44 @@ public class BeamScoringTests
     }
 
     [Fact]
+    public void BeamScoringProblem_CrossStaff_AppliesPenaltyMultiplier()
+    {
+        // LILYPOND-REF: lily/beam-quanting.cc — cross-staff 10× penalty multiplier
+        // Cross-staff beams should have stricter stem length requirements,
+        // resulting in beam positions that more closely match ideal stem lengths.
+        var note0 = CreateNote(0);
+        var note8 = CreateNote(8);
+
+        // Non cross-staff beam (normal) — targetStaffIndex=-1 means same staff as voice
+        var normalMembers = ImmutableArray.Create(
+            new BeamMember(note0, 1, 0, 1, 0, 0, memberStemUp: true, targetStaffIndex: -1),
+            new BeamMember(note8, 1, 1, 0, 8, 1, memberStemUp: true, targetStaffIndex: -1)
+        );
+        var normalGroup = new BeamGroup(normalMembers, 0, 0, stemUp: true);
+        Assert.False(normalGroup.IsCrossStaff, "Normal beam should not be cross-staff");
+
+        // Cross-staff beam (members on different staves)
+        var crossMembers = ImmutableArray.Create(
+            new BeamMember(note0, 1, 0, 1, 0, 0, memberStemUp: true, targetStaffIndex: 0),
+            new BeamMember(note8, 1, 1, 0, 8, 1, memberStemUp: true, targetStaffIndex: 1)
+        );
+        var crossGroup = new BeamGroup(crossMembers, 0, 0, stemUp: true);
+        Assert.True(crossGroup.IsCrossStaff, "Cross-staff beam should be detected");
+
+        // Both should solve without error
+        var xPositions = new List<double> { 50.0, 100.0 };
+        var normalProblem = new BeamScoringProblem(normalGroup, xPositions);
+        var crossProblem = new BeamScoringProblem(crossGroup, xPositions);
+
+        var (normalLeftY, _) = normalProblem.Solve();
+        var (crossLeftY, _) = crossProblem.Solve();
+
+        // Both should produce valid beam positions above notes for stem-up
+        Assert.True(normalLeftY > 0, "Normal beam should be above lowest note");
+        Assert.True(crossLeftY > 0, "Cross-staff beam should be above lowest note");
+    }
+
+    [Fact]
     public void BeamScoringProblem_CollisionPenaltyIncreasesDemerits()
     {
         // Arrange

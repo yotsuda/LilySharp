@@ -35,8 +35,17 @@ public readonly record struct HairpinLayout(
     double EndX,
     /// <summary>Y position (center line of the wedge, staff spaces from staff top).</summary>
     double Y,
-    /// <summary>Opening at the wide end (half-height, in staff spaces).</summary>
-    double Opening,
+    /// <summary>
+    /// Opening at the start (left) end (half-height, in staff spaces).
+    /// LILYPOND-REF: lily/hairpin.cc:180-220 — continued/continuing height fractions
+    /// For crescendo: 0 (point). For decrescendo: full or fractional opening.
+    /// </summary>
+    double StartOpening,
+    /// <summary>
+    /// Opening at the end (right) end (half-height, in staff spaces).
+    /// For crescendo: full or fractional opening. For decrescendo: 0 (point).
+    /// </summary>
+    double EndOpening,
     /// <summary>Crescendo or decrescendo.</summary>
     HairpinDirection Direction,
     /// <summary>Source position for click-to-source mapping.</summary>
@@ -82,8 +91,27 @@ public static class HairpinEngraver
     private const double BaseY = 5.2;
 
     /// <summary>
-    /// Calculates layout for all hairpins in a score.
+    /// Height fraction for the broken end of a continued hairpin (right edge at line break).
     /// </summary>
+    /// <remarks>LILYPOND-REF: lily/hairpin.cc:180-220 — broken hairpin height fractions</remarks>
+    private const double ContinuedFraction = 2.0 / 3.0;
+
+    /// <summary>
+    /// Height fraction for the broken end of a continuing hairpin (left edge at line start).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/hairpin.cc:180-220 — broken hairpin height fractions</remarks>
+    private const double ContinuingFraction = 1.0 / 3.0;
+
+    /// <summary>
+    /// Calculates layout for all hairpins in a score.
+    /// Handles broken hairpins across system breaks with correct height fractions.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hairpin.cc:180-220 — broken hairpin height calculation
+    /// When a hairpin crosses a system break:
+    /// - continued (end of first system): opening = height * 2/3
+    /// - continuing (start of next system): opening = height * 1/3
+    /// </remarks>
     public static ImmutableArray<HairpinLayout> Calculate(
         ImmutableArray<HairpinItem> hairpins,
         ImmutableArray<SystemLayout> systems,
@@ -92,7 +120,15 @@ public static class HairpinEngraver
         if (hairpins.IsDefaultOrEmpty)
             return ImmutableArray<HairpinLayout>.Empty;
 
-        var layouts = ImmutableArray.CreateBuilder<HairpinLayout>(hairpins.Length);
+        // Build measure → system index mapping
+        var measureToSystemIdx = new Dictionary<int, int>();
+        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
+        {
+            foreach (var ml in systems[sysIdx].Measures)
+                measureToSystemIdx[ml.MeasureIndex] = sysIdx;
+        }
+
+        var layouts = ImmutableArray.CreateBuilder<HairpinLayout>();
 
         foreach (var hairpin in hairpins)
         {
@@ -100,51 +136,122 @@ public static class HairpinEngraver
                 hairpin.EndMeasureIndex >= measureLayouts.Length)
                 continue;
 
-            var startMeasure = measureLayouts[hairpin.StartMeasureIndex];
-            var endMeasure = measureLayouts[hairpin.EndMeasureIndex];
+            if (!measureToSystemIdx.TryGetValue(hairpin.StartMeasureIndex, out int startSysIdx) ||
+                !measureToSystemIdx.TryGetValue(hairpin.EndMeasureIndex, out int endSysIdx))
+                continue;
 
-            // Calculate start X: after the start note with padding
-            double startX;
-            if (hairpin.StartItemIndex < startMeasure.Items.Length)
+            double fullOpening = Height / 2.0;
+
+            if (startSysIdx == endSysIdx)
             {
-                var startItem = startMeasure.Items[hairpin.StartItemIndex];
-                startX = startMeasure.X + startItem.X + startItem.Width + BoundPadding * 0.5;
+                // Same system: normal hairpin
+                var (startX, endX) = CalculateEndpoints(hairpin, measureLayouts);
+                double startOpening, endOpening;
+                if (hairpin.Direction == HairpinDirection.Crescendo)
+                {
+                    startOpening = 0;
+                    endOpening = fullOpening;
+                }
+                else
+                {
+                    startOpening = fullOpening;
+                    endOpening = 0;
+                }
+
+                layouts.Add(new HairpinLayout(
+                    hairpin.StartMeasureIndex, startX, endX, BaseY,
+                    startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition));
             }
             else
             {
-                startX = startMeasure.X + BoundPadding;
-            }
+                // LILYPOND-REF: lily/hairpin.cc:180-220 — broken hairpin across system(s)
+                double continuedOpening = fullOpening * ContinuedFraction;
+                double continuingOpening = fullOpening * ContinuingFraction;
 
-            // Calculate end X: before the end note with padding
-            double endX;
-            if (hairpin.EndItemIndex < endMeasure.Items.Length)
-            {
-                var endItem = endMeasure.Items[hairpin.EndItemIndex];
-                endX = endMeasure.X + endItem.X - BoundPadding * 0.5;
-            }
-            else
-            {
-                endX = endMeasure.X + endMeasure.Width - BoundPadding;
-            }
+                for (int sysIdx = startSysIdx; sysIdx <= endSysIdx; sysIdx++)
+                {
+                    bool isFirst = sysIdx == startSysIdx;
+                    bool isLast = sysIdx == endSysIdx;
+                    var system = systems[sysIdx];
 
-            // Enforce minimum length
-            if (endX - startX < MinimumLength)
-            {
-                endX = startX + MinimumLength;
-            }
+                    double segStartX, segEndX;
+                    int segStartMeasure;
 
-            layouts.Add(new HairpinLayout(
-                StartMeasureIndex: hairpin.StartMeasureIndex,
-                StartX: startX,
-                EndX: endX,
-                Y: BaseY,
-                Opening: Height / 2.0,
-                Direction: hairpin.Direction,
-                SourcePosition: hairpin.SourcePosition
-            ));
+                    if (isFirst)
+                    {
+                        segStartX = CalculateStartX(hairpin, measureLayouts);
+                        segEndX = system.Measures[^1].X + system.Measures[^1].Width;
+                        segStartMeasure = hairpin.StartMeasureIndex;
+                    }
+                    else if (isLast)
+                    {
+                        segStartX = system.Measures[0].X;
+                        segEndX = CalculateEndX(hairpin, measureLayouts);
+                        segStartMeasure = system.Measures[0].MeasureIndex;
+                    }
+                    else
+                    {
+                        // Middle system: spans entire system
+                        segStartX = system.Measures[0].X;
+                        segEndX = system.Measures[^1].X + system.Measures[^1].Width;
+                        segStartMeasure = system.Measures[0].MeasureIndex;
+                    }
+
+                    if (segEndX - segStartX < MinimumLength)
+                        segEndX = segStartX + MinimumLength;
+
+                    double startOpening, endOpening;
+                    if (hairpin.Direction == HairpinDirection.Crescendo)
+                    {
+                        startOpening = isFirst ? 0 : continuingOpening;
+                        endOpening = isLast ? fullOpening : continuedOpening;
+                    }
+                    else
+                    {
+                        startOpening = isFirst ? fullOpening : continuingOpening;
+                        endOpening = isLast ? 0 : continuedOpening;
+                    }
+
+                    layouts.Add(new HairpinLayout(
+                        segStartMeasure, segStartX, segEndX, BaseY,
+                        startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition));
+                }
+            }
         }
 
         return layouts.ToImmutable();
+    }
+
+    private static (double startX, double endX) CalculateEndpoints(
+        HairpinItem hairpin, ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        double startX = CalculateStartX(hairpin, measureLayouts);
+        double endX = CalculateEndX(hairpin, measureLayouts);
+        if (endX - startX < MinimumLength)
+            endX = startX + MinimumLength;
+        return (startX, endX);
+    }
+
+    private static double CalculateStartX(HairpinItem hairpin, ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        var startMeasure = measureLayouts[hairpin.StartMeasureIndex];
+        if (hairpin.StartItemIndex < startMeasure.Items.Length)
+        {
+            var startItem = startMeasure.Items[hairpin.StartItemIndex];
+            return startMeasure.X + startItem.X + startItem.Width + BoundPadding * 0.5;
+        }
+        return startMeasure.X + BoundPadding;
+    }
+
+    private static double CalculateEndX(HairpinItem hairpin, ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        var endMeasure = measureLayouts[hairpin.EndMeasureIndex];
+        if (hairpin.EndItemIndex < endMeasure.Items.Length)
+        {
+            var endItem = endMeasure.Items[hairpin.EndItemIndex];
+            return endMeasure.X + endItem.X - BoundPadding * 0.5;
+        }
+        return endMeasure.X + endMeasure.Width - BoundPadding;
     }
 
     /// <summary>

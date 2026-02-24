@@ -70,7 +70,8 @@ public sealed record BeamQuantParameters
     public double CollisionPenalty { get; init; } = 500.0;
 
     /// <summary>Padding for collision detection.</summary>
-    public double CollisionPadding { get; init; } = 0.5;
+    /// <remarks>LILYPOND-REF: lily/beam-quanting.cc:1390 collision_padding = 0.35</remarks>
+    public double CollisionPadding { get; init; } = 0.35;
 
     /// <summary>Penalty for horizontal inter-quant positioning.</summary>
     public double HorizontalInterQuantPenalty { get; init; } = 500.0;

@@ -16,7 +16,9 @@
 
 using System.Collections.Immutable;
 using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -327,5 +329,113 @@ public class GrobOverrideTests
 
         resolver.AdvanceTo(0, 2);
         Assert.Equal(7.0, resolver.GetDouble("Stem", "length"));
+    }
+
+    // --- Pipeline Integration Tests ---
+    // LILYPOND-REF: lily/grob-property.cc — end-to-end override/revert pipeline
+
+    private static string RenderToSvg(string input)
+    {
+        var tree = SyntaxTree.Parse(input);
+        Assert.False(tree.HasErrors, $"Parse errors: {string.Join(", ", tree.Diagnostics)}");
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree);
+        var engine = new LayoutEngine();
+        var layout = engine.Layout(score);
+        var renderer = new SvgRenderer();
+        return renderer.Render(score, layout);
+    }
+
+    [Fact]
+    public void Pipeline_Override_NoteHeadColor_AppearsInSvg()
+    {
+        var svg = RenderToSvg("override NoteHead.color = red c4 d e f");
+        // All noteheads should have fill="red"
+        Assert.Contains("fill=\"red\"", svg);
+    }
+
+    [Fact]
+    public void Pipeline_Override_StemColor_AppearsInSvg()
+    {
+        var svg = RenderToSvg("override Stem.color = blue c4 d e f");
+        // Stems should have stroke="blue"
+        Assert.Contains("stroke=\"blue\"", svg);
+    }
+
+    [Fact]
+    public void Pipeline_OnceOverride_NoteHeadColor_OnlyFirstNote()
+    {
+        var svg = RenderToSvg("once override NoteHead.color = red c4 d e f");
+        // Only one note should have fill="red" (the first one)
+        int count = CountOccurrences(svg, "fill=\"red\"");
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
+    public void Pipeline_Override_ThenRevert_NoteHeadColor()
+    {
+        var svg = RenderToSvg("override NoteHead.color = red c4 d revert NoteHead.color e f");
+        // First two notes have red, last two don't
+        int count = CountOccurrences(svg, "fill=\"red\"");
+        Assert.Equal(2, count);
+    }
+
+    [Fact]
+    public void Pipeline_NoOverrides_NoColorAttributes()
+    {
+        var svg = RenderToSvg("c4 d e f");
+        // No fill="..." on noteheads (default rendering)
+        Assert.DoesNotContain("fill=\"red\"", svg);
+        Assert.DoesNotContain("fill=\"blue\"", svg);
+    }
+
+    [Fact]
+    public void Pipeline_Override_NoteHeadTransparent_HidesNoteheads()
+    {
+        var svgWithTransparent = RenderToSvg("override NoteHead.transparent = true c4 d e f");
+        var svgNormal = RenderToSvg("c4 d e f");
+        // Transparent score should have fewer music text elements (noteheads hidden)
+        int transparentGlyphs = CountOccurrences(svgWithTransparent, "class=\"music\"");
+        int normalGlyphs = CountOccurrences(svgNormal, "class=\"music\"");
+        Assert.True(transparentGlyphs < normalGlyphs,
+            $"Transparent ({transparentGlyphs}) should have fewer glyphs than normal ({normalGlyphs})");
+    }
+
+    [Fact]
+    public void Pipeline_GrobPropertyResolver_InScoreLayout()
+    {
+        var tree = SyntaxTree.Parse("override Stem.color = red c4 d e f");
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree);
+        var engine = new LayoutEngine();
+        var layout = engine.Layout(score);
+
+        // Verify resolver is attached to layout
+        Assert.True(layout.GrobPropertyResolver.HasOverrides);
+    }
+
+    [Fact]
+    public void Pipeline_NoOverrides_EmptyResolver()
+    {
+        var tree = SyntaxTree.Parse("c4 d e f");
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree);
+        var engine = new LayoutEngine();
+        var layout = engine.Layout(score);
+
+        // No overrides → empty resolver
+        Assert.False(layout.GrobPropertyResolver.HasOverrides);
+    }
+
+    private static int CountOccurrences(string text, string pattern)
+    {
+        int count = 0;
+        int index = 0;
+        while ((index = text.IndexOf(pattern, index, StringComparison.Ordinal)) != -1)
+        {
+            count++;
+            index += pattern.Length;
+        }
+        return count;
     }
 }

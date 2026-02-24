@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="195" viewBox="-0 0 80 19.5">
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="195" viewBox="0 0 80 19.5">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   @font-face { font-family: 'Emmentaler-Brace'; src: local('Emmentaler-Brace'); }
@@ -23,26 +23,26 @@
   <text class="music" x="2.0" y="13.0" font-size="4.00"></text>
   <text class="music" x="6.2" y="12.0" font-size="4.00"></text>
   <text class="music" x="6.2" y="14.0" font-size="4.00"></text>
-  <text x="2.00" y="7.50" font-family="Emmentaler" font-size="1.6"></text>
-  <line x1="2.51" y1="7.50" x2="2.51" y2="6.10" stroke="black" stroke-width="0.10"/>
-  <text class="tempo" font-size="1.8" x="3.10" y="7.50">= 80</text>
-  <text class="music" x="13.3" y="14.0" font-size="4.00" data-pos="220"></text>
-  <line x1="14.5" y1="13.8" x2="14.5" y2="10.3" stroke="black" stroke-width="0.12" data-pos="220"/>
-  <text class="music" x="17.9" y="13.5" font-size="4.00" data-pos="223"></text>
-  <line x1="19.1" y1="13.3" x2="19.1" y2="9.8" stroke="black" stroke-width="0.12" data-pos="223"/>
-  <rect x="22.79" y="10.00" width="0.16" height="4.00" fill="black"/>
-  <text class="music" x="12.1" y="14.5" font-size="4.00" data-pos="241"></text>
-  <line x1="12.1" y1="14.7" x2="12.1" y2="17.2" stroke="black" stroke-width="0.12" data-pos="241"/>
-  <text class="music" x="16.8" y="14.0" font-size="4.00" data-pos="244"></text>
-  <line x1="16.8" y1="14.2" x2="16.8" y2="16.7" stroke="black" stroke-width="0.12" data-pos="244"/>
-  <text class="music" x="27.1" y="13.0" font-size="4.00" data-pos="227"></text>
-  <line x1="28.3" y1="12.8" x2="28.3" y2="9.3" stroke="black" stroke-width="0.12" data-pos="227"/>
-  <text class="music" x="31.8" y="12.5" font-size="4.00" data-pos="230"></text>
-  <line x1="33.0" y1="12.3" x2="33.0" y2="8.8" stroke="black" stroke-width="0.12" data-pos="230"/>
-  <rect x="36.14" y="10.00" width="0.16" height="4.00" fill="black"/>
-  <rect x="36.70" y="10.00" width="0.50" height="4.00" fill="black"/>
-  <text class="music" x="26.0" y="13.5" font-size="4.00" data-pos="248"></text>
-  <line x1="26.0" y1="13.7" x2="26.0" y2="16.2" stroke="black" stroke-width="0.12" data-pos="248"/>
-  <text class="music" x="30.6" y="13.0" font-size="4.00" data-pos="251"></text>
-  <line x1="30.6" y1="13.2" x2="30.6" y2="15.9" stroke="black" stroke-width="0.12" data-pos="251"/>
+  <text class="music" x="11.3" y="14.0" font-size="4.00" data-pos="220"></text>
+  <line x1="12.5" y1="13.8" x2="12.5" y2="10.3" stroke="black" stroke-width="0.12" data-pos="220"/>
+  <text class="music" x="13.6" y="13.5" font-size="4.00" data-pos="223"></text>
+  <line x1="14.7" y1="13.3" x2="14.7" y2="9.8" stroke="black" stroke-width="0.12" data-pos="223"/>
+  <rect x="16.98" y="10.00" width="0.16" height="4.00" fill="black"/>
+  <text class="music" x="11.1" y="14.5" font-size="4.00" data-pos="241"></text>
+  <line x1="11.1" y1="14.7" x2="11.1" y2="17.2" stroke="black" stroke-width="0.12" data-pos="241"/>
+  <text class="music" x="13.4" y="14.0" font-size="4.00" data-pos="244"></text>
+  <line x1="13.4" y1="14.2" x2="13.4" y2="16.7" stroke="black" stroke-width="0.12" data-pos="244"/>
+  <text class="music" x="18.6" y="13.0" font-size="4.00" data-pos="227"></text>
+  <line x1="19.8" y1="12.8" x2="19.8" y2="9.3" stroke="black" stroke-width="0.12" data-pos="227"/>
+  <text class="music" x="20.9" y="12.5" font-size="4.00" data-pos="230"></text>
+  <line x1="22.1" y1="12.3" x2="22.1" y2="8.8" stroke="black" stroke-width="0.12" data-pos="230"/>
+  <rect x="23.82" y="10.00" width="0.16" height="4.00" fill="black"/>
+  <rect x="24.38" y="10.00" width="0.50" height="4.00" fill="black"/>
+  <text class="music" x="18.4" y="13.5" font-size="4.00" data-pos="248"></text>
+  <line x1="18.4" y1="13.7" x2="18.4" y2="16.2" stroke="black" stroke-width="0.12" data-pos="248"/>
+  <text class="music" x="20.7" y="13.0" font-size="4.00" data-pos="251"></text>
+  <line x1="20.7" y1="13.2" x2="20.7" y2="15.9" stroke="black" stroke-width="0.12" data-pos="251"/>
+  <text x="10.30" y="7.50" font-family="Emmentaler" font-size="1.6"></text>
+  <line x1="10.81" y1="7.50" x2="10.81" y2="6.10" stroke="black" stroke-width="0.10"/>
+  <text class="tempo" font-size="1.8" x="11.40" y="7.50">= 80</text>
 </svg>

@@ -327,6 +327,41 @@ public class GlissandoTests
     }
 
     [Fact]
+    public void Calculate_GapApplied_AlongLineDirection_AdjustsY()
+    {
+        // LILYPOND-REF: lily/line-spanner.cc:457 — gap applied along line direction
+        // For a steep ascending glissando, the gap should adjust Y as well as X
+        var systems = CreateSingleSystem(2);
+        var glissandos = ImmutableArray.Create(new GlissandoItem(
+            StartMeasureIndex: 0,
+            StartItemIndex: 0,
+            StartStaffPosition: -4,   // Low note (below staff)
+            EndMeasureIndex: 0,
+            EndItemIndex: 2,
+            EndStaffPosition: 8,      // High note (above staff) — ascending
+            Style: GlissandoStyle.Line,
+            SourcePosition: 0));
+
+        var result = GlissandoEngraver.Calculate(glissandos, systems, 4.0);
+
+        Assert.Single(result);
+        // System Y = 10.0, staffHeight = 4.0, staffMiddleY = 12.0
+        // For ascending glissando: startY > endY (Y increases downward)
+        // Gap should make startY decrease (move up slightly) and endY increase (move down slightly)
+        double systemY = 10.0;
+        double staffMiddleY = systemY + 4.0 / 2.0; // = 12.0
+        double rawStartY = staffMiddleY - (-4) / 2.0; // = 14.0 (low note = high Y)
+        double rawEndY = staffMiddleY - 8 / 2.0;       // = 8.0 (high note = low Y)
+
+        // After gap along line direction, start Y should move toward end (decrease)
+        Assert.True(result[0].StartY < rawStartY,
+            $"Start Y ({result[0].StartY:F2}) should be < raw ({rawStartY:F2}) — gap moves along line");
+        // After gap, end Y should move toward start (increase)
+        Assert.True(result[0].EndY > rawEndY,
+            $"End Y ({result[0].EndY:F2}) should be > raw ({rawEndY:F2}) — gap moves along line");
+    }
+
+    [Fact]
     public void Calculate_CrossMeasureGlissando_UsesCorrectMeasureX()
     {
         var systems = CreateSingleSystem(3);

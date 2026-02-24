@@ -66,4 +66,50 @@ public class StemDirectionTests
         var positions = new[] { 2, 6 };  // 2 below, 2 above middle (4)
         Assert.False(StemDirection.GetStemUp(positions));
     }
+
+    // LILYPOND-REF: stem.cc:670-671 neutral-direction property
+
+    [Fact]
+    public void NeutralDirection_Default_StemDown()
+    {
+        // Note on middle line (staffPos=4): default neutral direction is DOWN
+        Assert.False(StemDirection.GetStemUp(4));
+        Assert.False(StemDirection.GetStemUp(4, neutralStemUp: false));
+    }
+
+    [Fact]
+    public void NeutralDirection_StemUp_OverridesTieBreak()
+    {
+        // Note on middle line with neutralStemUp=true: stem UP
+        Assert.True(StemDirection.GetStemUp(4, neutralStemUp: true));
+    }
+
+    [Fact]
+    public void NeutralDirection_NoEffectOnNonMiddleNotes()
+    {
+        // Notes NOT on middle line are unaffected by neutral direction
+        Assert.True(StemDirection.GetStemUp(2, neutralStemUp: true));   // below middle = stem up regardless
+        Assert.False(StemDirection.GetStemUp(6, neutralStemUp: true));  // above middle = stem down regardless
+    }
+
+    [Fact]
+    public void NeutralDirection_Chord_TieBreak()
+    {
+        // Balanced chord: equally distant from middle
+        var positions = new[] { 2, 6 };  // 2 below, 2 above
+
+        // Default: stem down
+        Assert.False(StemDirection.GetStemUp(positions, neutralStemUp: false));
+
+        // With neutralStemUp: stem up
+        Assert.True(StemDirection.GetStemUp(positions, neutralStemUp: true));
+    }
+
+    [Fact]
+    public void NeutralDirection_VoiceNumber_StillOverrides()
+    {
+        // Voice number always takes priority over neutral direction
+        Assert.True(StemDirection.GetStemUp(4, voiceNumber: 1, neutralStemUp: false));   // Voice 1 = always up
+        Assert.False(StemDirection.GetStemUp(4, voiceNumber: 2, neutralStemUp: true));   // Voice 2 = always down
+    }
 }

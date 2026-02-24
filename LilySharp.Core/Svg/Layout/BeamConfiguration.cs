@@ -85,6 +85,14 @@ public sealed class BeamConfiguration
 /// Scorer types for beam quantization.
 /// Ordered by increasing expensiveness.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/beam-quanting.cc:624-651 — scorer ordering
+/// NOTE: LilyPond evaluates scorers in a different order than listed here.
+/// LP order: STEM_LENGTHS, ORIGINAL, SLOPE_IDEAL, SLOPE_MUSICAL, SLOPE_DIRECTION,
+///           HORIZONTAL_INTER, FORBIDDEN, COLLISIONS
+/// IMPLEMENTED — forbidden quants constants (FIXED_DEMERIT=0.39, FUDGE=2.2) in ScoreForbiddenQuants
+/// IMPLEMENTED — cross-staff 10× penalty multiplier
+/// </remarks>
 public enum BeamScorer
 {
     OriginalDistance,
@@ -100,8 +108,10 @@ public enum BeamScorer
 
 /// <summary>
 /// Represents a potential collision object for beam scoring.
-/// Based on Lilypond's Beam_collision.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/beam-quanting.cc:69-77 Beam_collision struct
+/// </remarks>
 public readonly record struct BeamCollision(
     /// <summary>X position relative to beam start (in staff spaces).</summary>
     double X,

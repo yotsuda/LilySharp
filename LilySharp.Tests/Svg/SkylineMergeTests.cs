@@ -145,6 +145,100 @@ public class SkylineMergeTests
     }
 
     /// <summary>
+    /// Padded skyline extends buildings with 45° slopes.
+    /// </summary>
+    [Fact]
+    public void Padded_ExtendsBuildingsWithSlopes()
+    {
+        // A single building at x=[20,80], yTop=10 (UP skyline, internal height = -10)
+        var skyline = VerticalSkyline.FromBox(20, 80, 0, 10, VerticalDirection.Up);
+
+        double padding = 5.0;
+        var padded = skyline.Padded(padding);
+
+        // Original region should keep same height
+        Assert.Equal(10, padded.Height(50), Epsilon);
+
+        // Flat padding region: [20-P, 20] = [15, 20] and [80, 80+P] = [80, 85]
+        // Should have same height as building edge
+        Assert.Equal(10, padded.Height(17), Epsilon);  // Left flat padding
+        Assert.Equal(10, padded.Height(82), Epsilon);  // Right flat padding
+
+        // Sloped region: [20-2P, 20-P] = [10, 15] and [80+P, 80+2P] = [85, 90]
+        // At outer tip (x=10 for left, x=90 for right), height decreases by P
+        // For UP skyline: real height at tip = 10 + 5 = 15 (less extreme, farther from top)
+        double leftTipHeight = padded.Height(10);
+        double rightTipHeight = padded.Height(90);
+        _output.WriteLine($"Left tip height: {leftTipHeight}, Right tip height: {rightTipHeight}");
+
+        // The 45° slope means for each unit of X from the flat zone edge, height increases by 1
+        // (less "extreme" = worse for collision detection)
+        Assert.True(leftTipHeight > 10, $"Left tip {leftTipHeight} should be > 10 (slope reduces effectiveness)");
+        Assert.True(rightTipHeight > 10, $"Right tip {rightTipHeight} should be > 10 (slope reduces effectiveness)");
+    }
+
+    /// <summary>
+    /// Distance with horizon_padding is larger than without.
+    /// </summary>
+    [Fact]
+    public void Distance_WithHorizonPadding_IsLargerOrEqual()
+    {
+        // Two skylines that barely overlap in X
+        var up = VerticalSkyline.FromBox(0, 50, 0, 20, VerticalDirection.Up);
+        var down = VerticalSkyline.FromBox(45, 100, 50, 60, VerticalDirection.Down);
+
+        double distNopad = up.Distance(down);
+        double distPadded = up.Distance(down, 10.0);
+
+        _output.WriteLine($"Distance without padding: {distNopad}");
+        _output.WriteLine($"Distance with padding 10: {distPadded}");
+
+        // Padded skyline covers more X range, so distance should be >= unpadded
+        Assert.True(distPadded >= distNopad - Epsilon,
+            $"Padded distance {distPadded} should be >= unpadded {distNopad}");
+    }
+
+    /// <summary>
+    /// Distance with horizon_padding detects proximity for non-overlapping skylines.
+    /// </summary>
+    [Fact]
+    public void Distance_HorizonPadding_DetectsNearbyNonOverlapping()
+    {
+        // Two skylines that DON'T overlap in X (gap of 5)
+        var up = VerticalSkyline.FromBox(0, 40, 0, 20, VerticalDirection.Up);
+        var down = VerticalSkyline.FromBox(45, 100, 50, 60, VerticalDirection.Down);
+
+        double distNopad = up.Distance(down);
+        double distPadded = up.Distance(down, 10.0);
+
+        _output.WriteLine($"Distance without padding: {distNopad}");
+        _output.WriteLine($"Distance with padding 10: {distPadded}");
+
+        // Without padding, no overlap so distance = -inf
+        Assert.Equal(double.NegativeInfinity, distNopad, Epsilon);
+
+        // With padding 10, the padded UP skyline extends to x=40+2*10=60,
+        // which overlaps with DOWN starting at x=45. Distance should be finite.
+        Assert.True(!double.IsNegativeInfinity(distPadded),
+            $"Padded distance should be finite, but got {distPadded}");
+    }
+
+    /// <summary>
+    /// Zero horizon_padding returns same result as no-padding overload.
+    /// </summary>
+    [Fact]
+    public void Distance_ZeroPadding_SameAsNoPadding()
+    {
+        var up = VerticalSkyline.FromBox(0, 100, 0, 20, VerticalDirection.Up);
+        var down = VerticalSkyline.FromBox(0, 100, 50, 60, VerticalDirection.Down);
+
+        double distNone = up.Distance(down);
+        double distZero = up.Distance(down, 0.0);
+
+        Assert.Equal(distNone, distZero, Epsilon);
+    }
+
+    /// <summary>
     /// Multiple merges build up correct skyline.
     /// </summary>
     [Fact]
@@ -162,5 +256,27 @@ public class SkylineMergeTests
         Assert.Equal(10, skyline.Height(30), Epsilon);  // First and second overlap, keep 10
         Assert.Equal(10, skyline.Height(55), Epsilon);  // Second and third overlap, keep 10
         Assert.Equal(25, skyline.Height(80), Epsilon);  // Only third
+    }
+
+    /// <summary>
+    /// Simplified Skyline: Distance with horizon_padding extends Y ranges.
+    /// </summary>
+    [Fact]
+    public void SimplifiedSkyline_Distance_WithHorizonPadding()
+    {
+        // Right skyline: segment at Y=[10,20], X=30
+        var right = Skyline.FromBox(10, 20, 0, 30, Skyline.Direction.Right);
+
+        // Left skyline: segment at Y=[25,35], X=50 (no Y overlap with right)
+        var left = Skyline.FromBox(25, 35, 50, 100, Skyline.Direction.Left);
+
+        // Without padding: no Y overlap → PositiveInfinity
+        double distNopad = right.Distance(left, 0.0);
+        Assert.Equal(double.PositiveInfinity, distNopad);
+
+        // With horizon_padding 6: Y ranges become [10-6,20+6]=[4,26] and [25-6,35+6]=[19,41]
+        // Overlap: [19,26], distance = 50 - 30 = 20
+        double distPadded = right.Distance(left, 6.0);
+        Assert.Equal(20.0, distPadded, Epsilon);
     }
 }

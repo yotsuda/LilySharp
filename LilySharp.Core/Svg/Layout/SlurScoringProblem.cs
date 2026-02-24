@@ -77,11 +77,11 @@ public enum SlurObstacleType
 /// <summary>
 /// Solves the slur positioning problem using LilyPond's priority-queue
 /// scoring approach with lazy scorer evaluation.
-/// Scorers (ordered by computational cost):
+/// Scorers (in LilyPond order):
 ///   1. SLOPE - slope penalties
-///   2. EDGES - edge attraction
+///   2. ENCOMPASS - note head/stem encompass + variance
 ///   3. EXTRA_ENCOMPASS - staff lines, accidentals, ties
-///   4. ENCOMPASS - note head/stem encompass + variance
+///   4. EDGES - edge attraction
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/slur-scoring.cc:1-906 Slur_scoring class
@@ -228,10 +228,12 @@ public sealed class SlurScoringProblem
 
     /// <summary>
     /// Runs the next scorer on a configuration.
-    /// Scorer order matches LilyPond: SLOPE → EDGES → EXTRA_ENCOMPASS → ENCOMPASS.
+    /// Scorer order matches LilyPond: SLOPE → ENCOMPASS → EXTRA_ENCOMPASS → EDGES.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/slur-configuration.cc:531-558 run_next_scorer()
+    /// LILYPOND-REF: lily/include/slur-configuration.hh Slur_scorers enum
+    /// Order: INITIAL_SCORE, SLOPE, ENCOMPASS, EXTRA_ENCOMPASS, EDGES
     /// </remarks>
     private void RunNextScorer(SlurCandidate config)
     {
@@ -240,14 +242,14 @@ public sealed class SlurScoringProblem
             case 1: // SLOPE
                 ScoreSlopes(config);
                 break;
-            case 2: // EDGES
-                ScoreEdges(config);
+            case 2: // ENCOMPASS
+                ScoreEncompass(config);
                 break;
             case 3: // EXTRA_ENCOMPASS
                 ScoreExtraEncompass(config);
                 break;
-            case 4: // ENCOMPASS
-                ScoreEncompass(config);
+            case 4: // EDGES
+                ScoreEdges(config);
                 break;
         }
         config.NextScorerTodo++;

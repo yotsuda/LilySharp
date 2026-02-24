@@ -85,9 +85,9 @@ public static class ArpeggioEngraver
             double topY = staffMiddleY - arp.MaxStaffPosition / 2.0;
             double bottomY = staffMiddleY - arp.MinStaffPosition / 2.0;
 
-            // Extend slightly beyond the note range for visual clarity
-            topY -= 0.3;
-            bottomY += 0.3;
+            // LILYPOND-REF: scm/define-grobs.scm:211 (protrusion . 0.4)
+            topY -= 0.4;
+            bottomY += 0.4;
 
             layouts.Add(new ArpeggioLayout(
                 X: arpeggioX,

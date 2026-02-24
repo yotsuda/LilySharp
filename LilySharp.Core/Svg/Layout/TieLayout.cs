@@ -20,6 +20,11 @@ namespace LilySharp.Core.Svg.Layout;
 /// Layout information for a tie, including Bezier control points.
 /// A tie is drawn as a cubic Bezier curve with 4 control points.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/tie.cc — Tie grob (Bezier control points)
+/// LILYPOND-REF: lily/tie-formatting-problem.cc — optimization of tie shape
+/// Control points are computed by TieFormattingProblem; this record stores the result.
+/// </remarks>
 public sealed record TieLayout
 {
     /// <summary>The tie model.</summary>

@@ -44,13 +44,14 @@ public readonly record struct FiguredBassLayout(
 /// LILYPOND-REF: scm/define-grobs.scm:362-380 BassFigure defaults
 ///
 /// Figured bass appears below the staff, with figures stacked vertically.
-/// Each figure occupies approximately 1.5 staff spaces of vertical height.
+/// Each figure occupies 1.6 staff spaces of vertical height (baseline-skip).
 /// </remarks>
 public static class FiguredBassEngraver
 {
     // LILYPOND-REF: scm/define-grobs.scm:362 BassFigure defaults
     private const double StaffPadding = 1.0;   // Padding below staff bottom
-    private const double FigureSpacing = 1.5;  // Vertical spacing between stacked figures
+    // LILYPOND-REF: scm/define-grobs.scm:369 (baseline-skip . 1.6)
+    private const double FigureSpacing = 1.6;  // Vertical spacing between stacked figures
     private const double BelowStaffY = 5.0;    // Y offset below staff (staff bottom = 4.0)
 
     /// <summary>

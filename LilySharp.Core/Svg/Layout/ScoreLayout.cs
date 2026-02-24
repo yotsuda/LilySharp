@@ -126,10 +126,11 @@ public sealed record MeasureLayout
 public sealed record SystemLayout(
     int SystemIndex,
     double Y,                              // Y position of system top (staff spaces from page top)
-    double Width,                          // Fixed system width (staff spaces) - staff lines always extend to this
+    double Width,                          // System width (staff spaces) - staff lines extend to this
     double PrefixWidth,                    // Width of clef + key + time (staff spaces)
     ImmutableArray<MeasureLayout> Measures, // Measures in this system
-    ImmutableArray<StaffGroupLayout> StaffGroups = default  // Staff groups (optional, for multi-staff)
+    ImmutableArray<StaffGroupLayout> StaffGroups = default,  // Staff groups (optional, for multi-staff)
+    double Indent = 0                      // LILYPOND-REF: ly/paper-defaults-init.ly — indent for instrument names
 )
 {
     /// <summary>Whether this system has multiple staff groups.</summary>
@@ -197,9 +198,17 @@ public sealed record ScoreLayout(
     ImmutableArray<PartCombineLayout> PartCombineLayouts,
     ImmutableArray<TrillSpannerLayout> TrillSpannerLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
+    ImmutableHashSet<VoiceItemKey> HeadWipeEntries,
+    ImmutableHashSet<VoiceItemKey> DotForceDownEntries,
     ImmutableDictionary<RestShiftKey, double> RestShifts
 )
 {
+    /// <summary>
+    /// Grob property resolver for user \override / \revert.
+    /// LILYPOND-REF: lily/grob-property.cc — property resolution chain
+    /// </summary>
+    public GrobPropertyResolver GrobPropertyResolver { get; init; } = GrobPropertyResolver.Empty;
+
     /// <summary>Total number of pages.</summary>
     public int PageCount => Pages.Length;
 
@@ -229,6 +238,19 @@ public sealed record ScoreLayout(
     }
 
     /// <summary>
+    /// Checks if dots should be forced downward for this voice item.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:411-448
+    /// In multi-voice collision, down-stem dots on staff lines shift below the line.
+    /// </remarks>
+    public bool IsDotForcedDown(int measureIndex, int voiceId, int itemIndex)
+    {
+        var key = new VoiceItemKey(measureIndex, voiceId, itemIndex);
+        return DotForceDownEntries.Contains(key);
+    }
+
+    /// <summary>
     /// Gets the Y shift for a rest due to beam collision.
     /// Returns 0 if no shift is needed. Value is in staff positions.
     /// </summary>
@@ -236,5 +258,18 @@ public sealed record ScoreLayout(
     {
         var key = new RestShiftKey(measureIndex, itemIndex);
         return RestShifts.TryGetValue(key, out var shift) ? shift : 0;
+    }
+
+    /// <summary>
+    /// Checks if a notehead should be hidden due to head wipe (merge collision).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:381-407
+    /// Head wipe hides the down-stem notehead when two voices merge at the same pitch.
+    /// </remarks>
+    public bool IsHeadWiped(int measureIndex, int voiceId, int itemIndex)
+    {
+        var key = new VoiceItemKey(measureIndex, voiceId, itemIndex);
+        return HeadWipeEntries.Contains(key);
     }
 }

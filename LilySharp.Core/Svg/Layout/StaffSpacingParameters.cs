@@ -64,4 +64,73 @@ public sealed record StaffSpacingParameters
         Padding = 1,
         Stretchability = 9
     };
+
+    /// <summary>
+    /// Applies user overrides from \override StaffGrouper.* properties.
+    /// Returns a new StaffSpacingParameters with overridden values.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:656-717 alignment_distances
+    /// LILYPOND-REF: lily/staff-grouper-interface.cc — staff-staff-spacing, staffgroup-staff-spacing
+    ///
+    /// LilyPond syntax:
+    ///   \override StaffGrouper.staff-staff-spacing.basic-distance = #10
+    ///   \override StaffGrouper.staffgroup-staff-spacing.padding = #2
+    ///
+    /// Supports all 4 sub-properties: basic-distance, minimum-distance, padding, stretchability
+    /// for both staff-staff-spacing and staffgroup-staff-spacing.
+    /// </remarks>
+    public StaffSpacingParameters ApplyOverrides(
+        System.Collections.Immutable.ImmutableArray<LilySharp.Core.Svg.Model.GrobOverride> overrides)
+    {
+        if (overrides.IsDefaultOrEmpty)
+            return this;
+
+        var staffStaff = StaffStaff;
+        var staffGroupStaff = StaffGroupStaff;
+
+        foreach (var ovr in overrides)
+        {
+            if (ovr.GrobType != "StaffGrouper")
+                continue;
+
+            // Parse dotted property names: "staff-staff-spacing.basic-distance"
+            var parts = ovr.PropertyName.Split('.', 2);
+            if (parts.Length != 2)
+                continue;
+
+            string spacingType = parts[0];
+            string subProperty = parts[1];
+
+            if (!double.TryParse(ovr.Value, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double value))
+                continue;
+
+            if (spacingType == "staff-staff-spacing")
+            {
+                staffStaff = ApplySubProperty(staffStaff, subProperty, value);
+            }
+            else if (spacingType == "staffgroup-staff-spacing")
+            {
+                staffGroupStaff = ApplySubProperty(staffGroupStaff, subProperty, value);
+            }
+        }
+
+        if (staffStaff == StaffStaff && staffGroupStaff == StaffGroupStaff)
+            return this;
+
+        return this with { StaffStaff = staffStaff, StaffGroupStaff = staffGroupStaff };
+    }
+
+    private static VerticalSpacingSpec ApplySubProperty(VerticalSpacingSpec spec, string subProperty, double value)
+    {
+        return subProperty switch
+        {
+            "basic-distance" => spec with { BasicDistance = value },
+            "minimum-distance" => spec with { MinimumDistance = value },
+            "padding" => spec with { Padding = value },
+            "stretchability" => spec with { Stretchability = value },
+            _ => spec
+        };
+    }
 }

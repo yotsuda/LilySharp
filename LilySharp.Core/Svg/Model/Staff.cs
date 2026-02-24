@@ -47,7 +47,19 @@ public sealed record Staff(
     string? InstrumentName = null,
     /// <summary>Whether this is an ossia staff (rendered at reduced size).</summary>
     /// <remarks>LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize</remarks>
-    bool IsOssia = false
+    bool IsOssia = false,
+    /// <summary>
+    /// Whether empty staves should be automatically hidden (hara-kiri).
+    /// LILYPOND-REF: lily/hara-kiri-group-spanner.cc — remove-empty property
+    /// Equivalent to \override VerticalAxisGroup.remove-empty = ##t
+    /// </summary>
+    bool RemoveEmpty = false,
+    /// <summary>
+    /// Whether to allow removal even in the first system.
+    /// LILYPOND-REF: lily/hara-kiri-group-spanner.cc — remove-first property
+    /// When false (default), the first system always shows all staves.
+    /// </summary>
+    bool RemoveFirst = false
 )
 {
     /// <summary>The primary voice (first voice).</summary>

@@ -57,12 +57,46 @@ public sealed record NoteCollisionInfo
     /// <summary>Whether notes should be merged (drawn as one).</summary>
     public bool ShouldMerge { get; }
 
-    public NoteCollisionInfo(CollisionType type, double upStemXOffset, double downStemXOffset, bool shouldMerge = false)
+    /// <summary>
+    /// Whether the up-stem notehead should be hidden (head wipe).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:381-407
+    /// Head wipe hides overlapping noteheads in merged multi-voice contexts.
+    /// </remarks>
+    public bool UpHeadTransparent { get; }
+
+    /// <summary>
+    /// Whether the down-stem notehead should be hidden (head wipe).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:381-407
+    /// In standard merge cases, the down-stem notehead is wiped.
+    /// </remarks>
+    public bool DownHeadTransparent { get; }
+
+    /// <summary>
+    /// Whether the down-stem voice's dots should shift downward instead of upward
+    /// for notes on staff lines.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:411-448
+    /// In collision contexts, down-stem dots shift below the line to avoid
+    /// colliding with up-stem voice notes/dots.
+    /// </remarks>
+    public bool DownDotForceDown { get; }
+
+    public NoteCollisionInfo(CollisionType type, double upStemXOffset, double downStemXOffset,
+        bool shouldMerge = false, bool upHeadTransparent = false, bool downHeadTransparent = false,
+        bool downDotForceDown = false)
     {
         Type = type;
         UpStemXOffset = upStemXOffset;
         DownStemXOffset = downStemXOffset;
         ShouldMerge = shouldMerge;
+        UpHeadTransparent = upHeadTransparent;
+        DownHeadTransparent = downHeadTransparent;
+        DownDotForceDown = downDotForceDown;
     }
 
     public static NoteCollisionInfo NoCollision { get; } = new(CollisionType.None, 0, 0);
@@ -70,8 +104,25 @@ public sealed record NoteCollisionInfo
 
 /// <summary>
 /// Parameters for note collision handling.
-/// Based on Lilypond's note-collision.cc
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/note-collision-interface.cc:299-350 check_meshing_chords()
+/// LILYPOND-REF: scm/define-grobs.scm:2537 NoteCollision
+///
+/// IMPLEMENTED — shift multipliers now match LilyPond:
+///   stem_to_stem = 0.65, close_half = 0.52,
+///   full_collide = 0.5, distant_half = 0.4
+/// IMPLEMENTED — meshing multipliers:
+///   meshing_dotted = 0.1, meshing_general = 0.17
+/// IMPLEMENTED — head wipe (note-collision-interface.cc:381-407): hide overlapping notehead in merge
+/// IMPLEMENTED — width-based shift normalization (note-collision-interface.cc:309-312)
+/// IMPLEMENTED — half+eighth merge formula (note-collision-interface.cc:252-261)
+/// NOT YET IMPLEMENTED — FA-shaped notehead handling (note-collision-interface.cc:270-280)
+/// IMPLEMENTED — dot direction adjustment (note-collision-interface.cc:411-448)
+/// IMPLEMENTED — force-hshift manual override (note-collision-interface.cc:486-502)
+/// IMPLEMENTED — suspended head filtering (note-column.cc:180-220) in SpacingRules.HasSuspendedHead
+/// IMPLEMENTED — multi-voice cascading for 3+ voices (note-collision-interface.cc:420-480)
+/// </remarks>
 public sealed record NoteCollisionParameters
 {
     public static NoteCollisionParameters Default { get; } = new();
@@ -80,25 +131,68 @@ public sealed record NoteCollisionParameters
     public int CollisionThreshold { get; init; } = 1;
 
     /// <summary>Whether to merge differently dotted notes.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2537 merge-differently-dotted</remarks>
     public bool MergeDifferentlyDotted { get; init; } = false;
 
     /// <summary>Whether to merge differently headed notes (half vs quarter).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2537 merge-differently-headed</remarks>
     public bool MergeDifferentlyHeaded { get; init; } = false;
 
     /// <summary>Whether to prefer dotted notes on the right side.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm:2537 prefer-dotted-right</remarks>
     public bool PreferDottedRight { get; init; } = true;
 
-    /// <summary>Horizontal shift amount for close half collision (in notehead widths).</summary>
-    public double CloseHalfShift { get; init; } = 1.0;
+    /// <summary>
+    /// Horizontal shift amount for close half collision (in notehead widths).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:323 close_half_collide
+    /// </remarks>
+    public double CloseHalfShift { get; init; } = 0.52;
 
-    /// <summary>Horizontal shift amount for distant half collision (in notehead widths).</summary>
-    public double DistantHalfShift { get; init; } = 1.0;
+    /// <summary>
+    /// Horizontal shift amount for distant half collision (in notehead widths).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:325 distant_half_collide
+    /// </remarks>
+    public double DistantHalfShift { get; init; } = 0.4;
 
-    /// <summary>Horizontal shift amount for full collision (in notehead widths).</summary>
-    public double FullCollideShift { get; init; } = 1.0;
+    /// <summary>
+    /// Horizontal shift amount for full collision (in notehead widths).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:321 full_collide
+    /// </remarks>
+    public double FullCollideShift { get; init; } = 0.5;
 
-    /// <summary>Horizontal shift amount for touch condition (in notehead widths).</summary>
-    public double TouchShift { get; init; } = 0.5;
+    /// <summary>
+    /// Horizontal shift amount for touch condition (in notehead widths).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:317 stem_to_stem
+    /// </remarks>
+    public double TouchShift { get; init; } = 0.65;
+
+    /// <summary>
+    /// Horizontal shift for meshing seconds (general case, no dots involved).
+    /// Much smaller than CloseHalfShift because noteheads interlock tightly.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:180-230 check_meshing_chords()
+    /// Value 0.17 means noteheads overlap significantly when they mesh (interlock).
+    /// </remarks>
+    public double MeshingGeneralShift { get; init; } = 0.17;
+
+    /// <summary>
+    /// Horizontal shift for meshing seconds when dots are present.
+    /// Slightly smaller than MeshingGeneralShift because the dot
+    /// extends the notehead boundary.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:180-230 check_meshing_chords()
+    /// </remarks>
+    public double MeshingDottedShift { get; init; } = 0.1;
 }
 
 /// <summary>
@@ -168,8 +262,40 @@ public sealed class NoteCollision
         // Calculate offsets
         if (mergePossible && fullCollide && !closeHalf && !distantHalf)
         {
-            // Can merge - no shift needed
-            return new NoteCollisionInfo(CollisionType.Merge, 0, 0, shouldMerge: true);
+            // LILYPOND-REF: lily/note-collision-interface.cc:252-261, 381-407
+            // Can merge — determine which head to hide.
+            // For same-headed merge: down-stem head is wiped.
+            // For differently-headed merge (half+quarter/eighth): the filled
+            // notehead is hidden, the open (half) notehead is kept visible.
+            bool upIsOpen = upNoteValue <= 2; // whole(1) or half(2) = open notehead
+            bool downIsOpen = downNoteValue <= 2;
+
+            bool hideUp, hideDown;
+            if (upNoteValue == downNoteValue)
+            {
+                // Same heads: standard merge, hide down-stem
+                hideUp = false;
+                hideDown = true;
+            }
+            else
+            {
+                // Different heads: hide the filled (shorter duration) head
+                hideUp = !upIsOpen;   // hide up if it's filled (quarter/eighth)
+                hideDown = !downIsOpen; // hide down if it's filled
+            }
+
+            return new NoteCollisionInfo(CollisionType.Merge, 0, 0,
+                shouldMerge: true, upHeadTransparent: hideUp, downHeadTransparent: hideDown);
+        }
+
+        // LILYPOND-REF: lily/note-collision-interface.cc:411-448
+        // Detect whether down-stem dots should shift down instead of up.
+        // When two voices collide, down-stem dots on staff lines must shift
+        // below the line to avoid colliding with up-stem notes/dots.
+        bool downDotForceDown = false;
+        if (downDots > 0)
+        {
+            downDotForceDown = downs.Any(pos => pos % 2 == 0);
         }
 
         if (touch && !fullCollide && !closeHalf && !distantHalf)
@@ -178,7 +304,8 @@ public sealed class NoteCollision
             double touchShift = _params.TouchShift;
             double upOffset = shiftUpRight ? touchShift : 0;
             double downOffset = shiftUpRight ? 0 : -touchShift;
-            return new NoteCollisionInfo(CollisionType.Touch, upOffset, downOffset);
+            return new NoteCollisionInfo(CollisionType.Touch, upOffset, downOffset,
+                downDotForceDown: downDotForceDown);
         }
 
         if (fullCollide || closeHalf || distantHalf)
@@ -192,22 +319,47 @@ public sealed class NoteCollision
                 shiftAmount = _params.FullCollideShift;
                 type = CollisionType.Full;
             }
-            else if (closeHalf)
+            else if (closeHalf || distantHalf)
             {
-                shiftAmount = _params.CloseHalfShift;
-                type = CollisionType.CloseHalf;
+                // LILYPOND-REF: lily/note-collision-interface.cc:180-230 check_meshing_chords()
+                // Check if noteheads can mesh (interlock) at second intervals.
+                // Meshing is possible when:
+                // - Notes are a second apart (already guaranteed by closeHalf/distantHalf)
+                // - Neither note is a whole note (round noteheads can't mesh)
+                // - Single notes in each voice (chords with multiple seconds don't mesh cleanly)
+                bool canMesh = upNoteValue >= 2 && downNoteValue >= 2
+                             && upStaffPositions.Count == 1 && downStaffPositions.Count == 1;
+
+                if (canMesh)
+                {
+                    // Use meshing shift: noteheads interlock tightly
+                    bool hasDots = upDots > 0 || downDots > 0;
+                    shiftAmount = hasDots
+                        ? _params.MeshingDottedShift
+                        : _params.MeshingGeneralShift;
+                    type = CollisionType.CloseHalf;
+                }
+                else
+                {
+                    // Standard half collision shift
+                    shiftAmount = closeHalf
+                        ? _params.CloseHalfShift
+                        : _params.DistantHalfShift;
+                    type = CollisionType.CloseHalf;
+                }
             }
-            else // distantHalf
+            else
             {
                 shiftAmount = _params.DistantHalfShift;
-                type = CollisionType.CloseHalf; // Use CloseHalf type for distant too
+                type = CollisionType.CloseHalf;
             }
 
             // Apply shift direction
             double upOffset = shiftUpRight ? shiftAmount : 0;
             double downOffset = shiftUpRight ? 0 : -shiftAmount;
 
-            return new NoteCollisionInfo(type, upOffset, downOffset);
+            return new NoteCollisionInfo(type, upOffset, downOffset,
+                downDotForceDown: downDotForceDown);
         }
 
         return NoteCollisionInfo.NoCollision;
@@ -242,7 +394,8 @@ public sealed class NoteCollision
         if (upNoteValue <= 0 || downNoteValue <= 0)
             return false;
 
-        // Cannot merge quarter and half (indistinguishable)
+        // LILYPOND-REF: lily/note-collision-interface.cc:252-261
+        // Whole+half cannot merge (both open noteheads, only stem distinguishes)
         if ((upNoteValue == 1 && downNoteValue == 2) ||
             (upNoteValue == 2 && downNoteValue == 1))
             return false;
@@ -251,7 +404,10 @@ public sealed class NoteCollision
         if (upDots != downDots && !_params.MergeDifferentlyDotted)
             return false;
 
-        // Check note value compatibility
+        // LILYPOND-REF: lily/note-collision-interface.cc:252-261
+        // Half+quarter/eighth merges: when merge-differently-headed is true,
+        // notes with different noteheads (open vs filled) can merge.
+        // The open notehead (half) is kept visible.
         if (upNoteValue != downNoteValue && !_params.MergeDifferentlyHeaded)
             return false;
 
@@ -310,13 +466,19 @@ public sealed class NoteCollision
 
     /// <summary>
     /// Calculates collision info for a voice column with multiple voices.
-    /// Returns (VoiceId, ItemIndex, XOffset) for each entry in the column.
+    /// Returns (VoiceId, ItemIndex, XOffset, HeadTransparent, DotForceDown) for each entry.
     /// </summary>
-    public ImmutableArray<(int VoiceId, int ItemIndex, double XOffset)> CalculateVoiceOffsets(
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:381-407 — head wipe
+    /// LILYPOND-REF: lily/note-collision-interface.cc:420-480 — multi-voice cascading
+    /// For 3+ voices, each additional voice in the same stem direction gets a
+    /// cumulative shift of 1 notehead width beyond the base collision offset.
+    /// </remarks>
+    public ImmutableArray<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, bool DotForceDown)> CalculateVoiceOffsets(
         VoiceColumn column,
         double noteheadWidth)
     {
-        var offsets = new List<(int VoiceId, int ItemIndex, double XOffset)>();
+        var offsets = new List<(int VoiceId, int ItemIndex, double XOffset, bool HeadTransparent, bool DotForceDown)>();
 
         // Group entries by stem direction
         var upEntries = column.Entries.Where(e => GetStemDirection(e) == true).ToList();
@@ -327,30 +489,47 @@ public sealed class NoteCollision
             // No collision possible - all voices get 0 offset
             foreach (var entry in column.Entries)
             {
-                offsets.Add((entry.VoiceId, entry.ItemIndex, 0));
+                offsets.Add((entry.VoiceId, entry.ItemIndex, 0, false, false));
             }
             return offsets.ToImmutableArray();
         }
 
-        // Get staff positions for each group
-        var upPositions = GetStaffPositions(upEntries);
-        var downPositions = GetStaffPositions(downEntries);
+        // Sort each group by VoiceId for consistent cascading order
+        upEntries.Sort((a, b) => a.VoiceId.CompareTo(b.VoiceId));
+        downEntries.Sort((a, b) => a.VoiceId.CompareTo(b.VoiceId));
+
+        // Get staff positions for each group (using first entry = primary voice)
+        var upPositions = GetStaffPositions(new List<VoiceEntry> { upEntries[0] });
+        var downPositions = GetStaffPositions(new List<VoiceEntry> { downEntries[0] });
 
         // Get note values and dots (use first entry as representative)
         var (upNoteValue, upDots) = GetNoteInfo(upEntries[0]);
         var (downNoteValue, downDots) = GetNoteInfo(downEntries[0]);
 
-        // Analyze collision
+        // Analyze collision between primary up and down voices
         var collision = AnalyzeCollision(upPositions, downPositions, upNoteValue, downNoteValue, upDots, downDots);
 
-        // Apply offsets
-        foreach (var entry in upEntries)
+        // LILYPOND-REF: lily/note-collision-interface.cc:420-480
+        // Apply cascading offsets for 3+ voices.
+        // Voice priority order within each direction:
+        //   Up-stem:  Voice 1 (base), Voice 3 (+1 notehead), Voice 5 (+2 noteheads), ...
+        //   Down-stem: Voice 2 (base), Voice 4 (-1 notehead), Voice 6 (-2 noteheads), ...
+        for (int i = 0; i < upEntries.Count; i++)
         {
-            offsets.Add((entry.VoiceId, entry.ItemIndex, collision.UpStemXOffset * noteheadWidth));
+            var entry = upEntries[i];
+            double cascadeShift = i * noteheadWidth;
+            offsets.Add((entry.VoiceId, entry.ItemIndex,
+                collision.UpStemXOffset * noteheadWidth + cascadeShift,
+                i == 0 && collision.UpHeadTransparent, false));
         }
-        foreach (var entry in downEntries)
+        for (int i = 0; i < downEntries.Count; i++)
         {
-            offsets.Add((entry.VoiceId, entry.ItemIndex, collision.DownStemXOffset * noteheadWidth));
+            var entry = downEntries[i];
+            double cascadeShift = -i * noteheadWidth;
+            offsets.Add((entry.VoiceId, entry.ItemIndex,
+                collision.DownStemXOffset * noteheadWidth + cascadeShift,
+                i == 0 && collision.DownHeadTransparent,
+                i == 0 && collision.DownDotForceDown));
         }
 
         return offsets.ToImmutableArray();

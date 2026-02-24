@@ -30,9 +30,11 @@ public readonly record struct TupletBracketLayout(
     int MeasureIndex,           // Measure containing this tuplet
     double StartX,              // X position of bracket start
     double EndX,                // X position of bracket end
-    double Y,                   // Y position (above or below notes)
+    double StartY,              // Y position at bracket start (supports slope)
+    double EndY,                // Y position at bracket end (supports slope)
     string NumberText,          // Text to display (e.g., "3")
     bool IsStemUp,              // Whether bracket goes above (true) or below (false)
+    bool ShowBracket,           // False = all notes beamed, show number only
     int SourcePosition          // For click-to-source mapping
 );
 
@@ -57,6 +59,13 @@ public static class TupletBracketEngraver
     private const double EdgeHeight = 0.7;
     private const double YOffsetAbove = -2.5;  // Above staff
     private const double YOffsetBelow = 5.5;   // Below staff
+    private const double HalfNoteheadWidth = 0.59;  // NoteheadBlackWidth / 2
+
+    // LILYPOND-REF: scm/define-grobs.scm TupletBracket.max-slope
+    private const double MaxSlope = 0.5;
+
+    // LILYPOND-REF: stem.cc:93 default stem-length = 3.5
+    private const double DefaultStemLength = 3.5;
 
     /// <summary>
     /// Y offset per nesting depth level for stacked nested tuplet brackets.
@@ -72,16 +81,25 @@ public static class TupletBracketEngraver
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:200-350 calc_position_and_height (slope)
+    /// LILYPOND-REF: scm/define-grobs.scm TupletBracket.bracket-visibility = if-no-beam
+    ///
     /// Direction is determined by counting stem directions:
     /// - If stems UP > stems DOWN, bracket goes above (UP)
     /// - If stems DOWN > stems UP, bracket goes below (DOWN)
     /// - If equal, default to above (UP)
+    ///
+    /// bracket-visibility: if all notes in the tuplet are beamed, the bracket
+    /// is hidden but the number is still shown.
+    ///
+    /// Slope: bracket follows the contour of the first and last note's staff position.
     /// </remarks>
     public static ImmutableArray<TupletBracketLayout> Calculate(
         ImmutableArray<TupletBracketItem> tuplets,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        ImmutableArray<Measure> measures)
+        ImmutableArray<Measure> measures,
+        ImmutableArray<BeamGroup> beamGroups = default)
     {
         if (tuplets.IsDefaultOrEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
@@ -95,7 +113,7 @@ public static class TupletBracketEngraver
                 continue;
 
             var measureLayout = measureLayouts[tuplet.MeasureIndex];
-            
+
             // Find start and end X positions from item layouts
             if (tuplet.StartNoteIndex >= measureLayout.Items.Length ||
                 tuplet.EndNoteIndex >= measureLayout.Items.Length)
@@ -105,30 +123,28 @@ public static class TupletBracketEngraver
             var endItem = measureLayout.Items[tuplet.EndNoteIndex];
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:145-180 calc_x_positions
-            // ItemLayout.X is the CENTER of the notehead (Spring-Rod reference point)
-            // Bracket should span from left edge of first note to right edge of last note
-            const double HalfNoteheadWidth = 0.59;  // NoteheadBlackWidth / 2 = 1.18 / 2
             double startX = measureLayout.X + startItem.X - HalfNoteheadWidth;
             double endX = measureLayout.X + endItem.X + HalfNoteheadWidth;
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
-            // Determine bracket direction based on stem directions of notes
             bool isStemUp = CalculateDirection(tuplet, measures);
 
-            // Y position based on stem direction, offset by nesting depth
-            // LILYPOND-REF: lily/tuplet-bracket.cc:400-500 nested bracket stacking
-            double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
-            double y = isStemUp
-                ? YOffsetAbove - nestingOffset   // Deeper nesting → further above
-                : YOffsetBelow + nestingOffset;  // Deeper nesting → further below
+            // LILYPOND-REF: scm/define-grobs.scm bracket-visibility = if-no-beam
+            bool showBracket = !AreAllNotesBeamed(tuplet, beamGroups);
+
+            // LILYPOND-REF: lily/tuplet-bracket.cc:200-350 slope calculation
+            // Calculate slope based on first/last note staff positions
+            var (startY, endY) = CalculateSlope(tuplet, measures, isStemUp);
 
             layouts.Add(new TupletBracketLayout(
                 tuplet.MeasureIndex,
                 startX,
                 endX,
-                y,
+                startY,
+                endY,
                 tuplet.DisplayText,
                 isStemUp,
+                showBracket,
                 tuplet.SourcePosition
             ));
         }
@@ -137,7 +153,7 @@ public static class TupletBracketEngraver
     }
 
     /// <summary>
-    /// Overload for backward compatibility (defaults to stems up).
+    /// Overload for backward compatibility (defaults to stems up, no beam info).
     /// </summary>
     public static ImmutableArray<TupletBracketLayout> Calculate(
         ImmutableArray<TupletBracketItem> tuplets,
@@ -145,6 +161,18 @@ public static class TupletBracketEngraver
         ImmutableArray<MeasureLayout> measureLayouts)
     {
         return Calculate(tuplets, systems, measureLayouts, ImmutableArray<Measure>.Empty);
+    }
+
+    /// <summary>
+    /// Overload with measures but no beam info.
+    /// </summary>
+    public static ImmutableArray<TupletBracketLayout> Calculate(
+        ImmutableArray<TupletBracketItem> tuplets,
+        ImmutableArray<SystemLayout> systems,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<Measure> measures)
+    {
+        return Calculate(tuplets, systems, measureLayouts, measures, default);
     }
 
     /// <summary>
@@ -190,6 +218,130 @@ public static class TupletBracketEngraver
         // LILYPOND-REF: lily/tuplet-bracket.cc:627-629
         // Return majority direction, or UP if equal
         return stemsUp >= stemsDown;
+    }
+
+    /// <summary>
+    /// Checks whether all notes in the tuplet are covered by a beam group.
+    /// If so, the bracket can be hidden (bracket-visibility = if-no-beam).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm TupletBracket.bracket-visibility = if-no-beam
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:79-95 bracket visibility check
+    /// </remarks>
+    private static bool AreAllNotesBeamed(TupletBracketItem tuplet, ImmutableArray<BeamGroup> beamGroups)
+    {
+        if (beamGroups.IsDefaultOrEmpty)
+            return false;
+
+        // Find a beam group in the same measure that covers the entire tuplet range
+        foreach (var beam in beamGroups)
+        {
+            if (beam.MeasureIndex != tuplet.MeasureIndex)
+                continue;
+
+            int beamEnd = beam.StartIndex + beam.Members.Length - 1;
+
+            // Check if the beam completely covers the tuplet's note range
+            if (beam.StartIndex <= tuplet.StartNoteIndex && beamEnd >= tuplet.EndNoteIndex)
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Calculates the Y positions (with slope) for the tuplet bracket
+    /// based on the staff positions of the first and last notes.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:200-350 calc_position_and_height
+    /// The bracket follows the contour of the notes. The slope is limited
+    /// to avoid excessively tilted brackets.
+    /// </remarks>
+    private static (double startY, double endY) CalculateSlope(
+        TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp)
+    {
+        double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
+        double baseY = isStemUp
+            ? YOffsetAbove - nestingOffset
+            : YOffsetBelow + nestingOffset;
+
+        if (measures.IsDefaultOrEmpty || tuplet.MeasureIndex >= measures.Length)
+            return (baseY, baseY);
+
+        var measure = measures[tuplet.MeasureIndex];
+
+        // Get staff positions of first and last notes
+        int? firstPos = null, lastPos = null;
+        int? highestPos = null, lowestPos = null;
+
+        for (int i = tuplet.StartNoteIndex; i <= tuplet.EndNoteIndex && i < measure.Items.Length; i++)
+        {
+            int? pos = measure.Items[i] switch
+            {
+                NoteItem note => note.StaffPosition,
+                ChordItem chord when chord.Notes.Length > 0 =>
+                    isStemUp ? chord.Notes.Max(n => n.StaffPosition)
+                             : chord.Notes.Min(n => n.StaffPosition),
+                _ => null
+            };
+
+            if (pos == null) continue;
+
+            firstPos ??= pos;
+            lastPos = pos;
+            highestPos = highestPos == null ? pos : Math.Max(highestPos.Value, pos.Value);
+            lowestPos = lowestPos == null ? pos : Math.Min(lowestPos.Value, pos.Value);
+        }
+
+        if (firstPos == null || lastPos == null)
+            return (baseY, baseY);
+
+        // LILYPOND-REF: lily/tuplet-bracket.cc:270-310 slope calculation
+        // Convert staff position difference to slope (half staff spaces)
+        double positionDiff = (lastPos.Value - firstPos.Value) * 0.5;
+
+        // Limit slope to MaxSlope staff spaces per bracket width
+        // LILYPOND-REF: scm/define-grobs.scm TupletBracket.max-slope = 0.5
+        double slope = positionDiff;
+        if (Math.Abs(slope) > MaxSlope)
+            slope = Math.Sign(slope) * MaxSlope;
+
+        // Direction: bracket above → negative slope follows ascending pitch;
+        // bracket below → positive slope follows ascending pitch
+        double slopeDir = isStemUp ? -slope : slope;
+
+        double startY = baseY + slopeDir * 0.5;
+        double endY = baseY - slopeDir * 0.5;
+
+        // Ensure bracket clears all notes in the range
+        // LILYPOND-REF: lily/tuplet-bracket.cc:320-340 collision avoidance
+        if (isStemUp)
+        {
+            // Bracket above: ensure it's above the highest note
+            double highestNoteY = YOffsetAbove - nestingOffset;
+            if (highestPos != null)
+            {
+                double noteEdge = -(highestPos.Value * 0.5) - DefaultStemLength - BracketPadding;
+                highestNoteY = Math.Min(highestNoteY, noteEdge);
+            }
+            if (startY > highestNoteY) startY = highestNoteY;
+            if (endY > highestNoteY) endY = highestNoteY;
+        }
+        else
+        {
+            // Bracket below: ensure it's below the lowest note
+            double lowestNoteY = YOffsetBelow + nestingOffset;
+            if (lowestPos != null)
+            {
+                double noteEdge = -(lowestPos.Value * 0.5) + DefaultStemLength + BracketPadding;
+                lowestNoteY = Math.Max(lowestNoteY, noteEdge);
+            }
+            if (startY < lowestNoteY) startY = lowestNoteY;
+            if (endY < lowestNoteY) endY = lowestNoteY;
+        }
+
+        return (startY, endY);
     }
 
     /// <summary>

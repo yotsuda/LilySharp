@@ -259,8 +259,8 @@ public sealed class PageBreaker
     /// <summary>
     /// Penalty for bad spacing (overflow or extreme stretch).
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/include/page-spacing.hh:45</remarks>
-    private const double BadSpacingPenalty = 1e6;
+    /// <remarks>LILYPOND-REF: lily/include/page-spacing.hh:45 BAD_SPACING_PENALTY = 1e4</remarks>
+    private const double BadSpacingPenalty = 1e4;
 
     /// <summary>
     /// Penalty for terrible spacing (ignoring user constraints).
@@ -447,20 +447,20 @@ public sealed class PageBreaker
         if (isRagged)
         {
             // LILYPOND-REF: lily/page-spacing.cc:345-355
-            // For ragged bottom: penalty based on how much the page is underfilled
+            // LILYPOND-REF: lily/page-layout-problem.cc:808-823 fixed_force_solution
+            //
+            // For ragged pages, use fixed_force_solution (force=0):
+            // - Overfull (force < 0): impossible, reject this page configuration
+            // - Underfull (force >= 0): no spacing penalty; systems placed at natural
+            //   spring positions with remaining space at the bottom.
+            //   Distribution across pages is determined by page/orphan/line-count penalties.
             if (force < 0)
             {
-                // Compressed page — bad even for ragged
-                demerits = -force * -force + BadSpacingPenalty;
+                return double.MaxValue;
             }
             else
             {
-                // Ragged: penalize unused space mildly
-                // Ideal length at force 0 vs page height
-                double idealLength = spacing.RodHeight + spacing.SpringLength;
-                double availableHeight = _pageHeight - topMargin - _bottomMargin;
-                double unusedRatio = (availableHeight - idealLength) / Math.Max(1, availableHeight);
-                demerits = unusedRatio * unusedRatio * _params.PageSpacingWeight;
+                demerits = 0;
             }
         }
         else

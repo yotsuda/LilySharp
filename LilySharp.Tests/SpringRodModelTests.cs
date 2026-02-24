@@ -258,4 +258,50 @@ public class SpringRodModelTests
         double totalMin = result[0].MinDistance + result[1].MinDistance;
         Assert.True(totalMin >= 4.0, "Min distances should be at least original");
     }
+
+    // --- CalculateDurationSpace with custom baseShortestDuration ---
+
+    [Fact]
+    public void CalculateDurationSpace_WithBaseShortestDuration_MatchesDefault()
+    {
+        // LILYPOND-REF: lily/spacing-options.cc:68-104
+        // Calling with the default value should produce the same result
+        var quarter = Fraction.Quarter;
+        double defaultResult = SpacingRules.CalculateDurationSpace(quarter);
+        double explicitResult = SpacingRules.CalculateDurationSpace(quarter, 0.125);
+
+        Assert.Equal(defaultResult, explicitResult, 6);
+    }
+
+    [Fact]
+    public void CalculateDurationSpace_ShorterBase_GivesLessSpaceForShortNotes()
+    {
+        // LILYPOND-REF: lily/spacing-determine-shortest-duration-op.cc
+        // When the score has 16th notes as shortest, the base is 1/16 = 0.0625.
+        // A 16th note with base=1/16 gets ratio=1 (shortest_duration_space * increment).
+        // A 16th note with base=1/8 gets ratio=0.5 (linear, less space).
+        var sixteenth = Fraction.Sixteenth;
+
+        double spaceWithEighthBase = SpacingRules.CalculateDurationSpace(sixteenth, 0.125);
+        double spaceWithSixteenthBase = SpacingRules.CalculateDurationSpace(sixteenth, 0.0625);
+
+        // With sixteenth base, the 16th note is the reference and gets more space
+        Assert.True(spaceWithSixteenthBase > spaceWithEighthBase,
+            $"16th note space with base=1/16 ({spaceWithSixteenthBase:F3}) should be > " +
+            $"with base=1/8 ({spaceWithEighthBase:F3})");
+    }
+
+    [Fact]
+    public void CalculateDurationSpace_QuarterBase_QuarterNoteGetsBaseSpace()
+    {
+        // LILYPOND-REF: lily/spacing-options.cc:68-104
+        // When quarter note is the shortest, ratio = 0.25/0.25 = 1.0
+        // space = (ShortestDurationSpace + log2(1)) * increment = 2.0 * 1.2 = 2.4
+        var quarter = Fraction.Quarter;
+        double space = SpacingRules.CalculateDurationSpace(quarter, 0.25);
+
+        double expected = LilySharp.Core.Svg.EngravingDefaults.ShortestDurationSpace
+                        * LilySharp.Core.Svg.EngravingDefaults.SpacingIncrement;
+        Assert.Equal(expected, space, 6);
+    }
 }

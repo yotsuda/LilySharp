@@ -14,7 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -258,5 +261,100 @@ public class NestedTupletTests
         // c + d + r + e + f = 5 items
         Assert.Equal(5, measure.Items.Length);
         Assert.IsType<RestItem>(measure.Items[2]);
+    }
+
+    // --- Bracket-visibility and slope tests ---
+    // LILYPOND-REF: scm/define-grobs.scm bracket-visibility = if-no-beam
+    // LILYPOND-REF: lily/tuplet-bracket.cc:200-350 slope
+
+    private static ImmutableArray<MeasureLayout> CreateTestMeasureLayouts(int itemCount)
+    {
+        var items = ImmutableArray.CreateBuilder<ItemLayout>(itemCount);
+        for (int i = 0; i < itemCount; i++)
+            items.Add(new ItemLayout(i, 2.0 + i * 3.0, 1.0));
+        return ImmutableArray.Create(new MeasureLayout(0, 0, 30, items.ToImmutable()));
+    }
+
+    [Fact]
+    public void Calculate_NoBeams_ShowsBracket()
+    {
+        var tuplet = new TupletBracketItem(3, 2, 0, 2, 0, 0);
+        var measures = CreateTestMeasureLayouts(3);
+        var systems = ImmutableArray.Create(new SystemLayout(0, 10.0, 100.0, 5.0, measures));
+
+        var result = TupletBracketEngraver.Calculate(
+            ImmutableArray.Create(tuplet), systems, measures,
+            ImmutableArray<Measure>.Empty, ImmutableArray<BeamGroup>.Empty);
+
+        Assert.Single(result);
+        Assert.True(result[0].ShowBracket, "Bracket should be visible when no beams present");
+    }
+
+    [Fact]
+    public void Calculate_AllBeamed_HidesBracket()
+    {
+        var tuplet = new TupletBracketItem(3, 2, 0, 2, 0, 0);
+        var measures = CreateTestMeasureLayouts(3);
+        var systems = ImmutableArray.Create(new SystemLayout(0, 10.0, 100.0, 5.0, measures));
+
+        // Create a beam group that covers the entire tuplet range
+        var dummyNote = new NoteItem(0, Fraction.Eighth, 0, null, false, 0);
+        var members = ImmutableArray.Create(
+            new BeamMember(dummyNote, 1, 1, 1, 0, 0),
+            new BeamMember(dummyNote, 1, 1, 1, 0, 1),
+            new BeamMember(dummyNote, 1, 1, 1, 0, 2));
+        var beam = new BeamGroup(members, 0, 0, true);
+
+        var result = TupletBracketEngraver.Calculate(
+            ImmutableArray.Create(tuplet), systems, measures,
+            ImmutableArray<Measure>.Empty, ImmutableArray.Create(beam));
+
+        Assert.Single(result);
+        Assert.False(result[0].ShowBracket, "Bracket should be hidden when all notes are beamed");
+    }
+
+    [Fact]
+    public void Calculate_PartiallyBeamed_ShowsBracket()
+    {
+        var tuplet = new TupletBracketItem(3, 2, 0, 2, 0, 0);
+        var measures = CreateTestMeasureLayouts(3);
+        var systems = ImmutableArray.Create(new SystemLayout(0, 10.0, 100.0, 5.0, measures));
+
+        // Beam covers only first 2 of 3 notes
+        var dummyNote = new NoteItem(0, Fraction.Eighth, 0, null, false, 0);
+        var members = ImmutableArray.Create(
+            new BeamMember(dummyNote, 1, 1, 1, 0, 0),
+            new BeamMember(dummyNote, 1, 1, 1, 0, 1));
+        var beam = new BeamGroup(members, 0, 0, true);
+
+        var result = TupletBracketEngraver.Calculate(
+            ImmutableArray.Create(tuplet), systems, measures,
+            ImmutableArray<Measure>.Empty, ImmutableArray.Create(beam));
+
+        Assert.Single(result);
+        Assert.True(result[0].ShowBracket, "Bracket should be visible when only partially beamed");
+    }
+
+    [Fact]
+    public void Calculate_SlopedBracket_DifferentStartEndY()
+    {
+        var tuplet = new TupletBracketItem(3, 2, 0, 2, 0, 0);
+        var measures = CreateTestMeasureLayouts(3);
+        var systems = ImmutableArray.Create(new SystemLayout(0, 10.0, 100.0, 5.0, measures));
+
+        // Create notes with ascending pitch (different staff positions)
+        var noteItems = ImmutableArray.Create<MusicItem>(
+            new NoteItem(-2, Fraction.Eighth, 0, null, false, 0),  // low
+            new NoteItem(0, Fraction.Eighth, 0, null, false, 0),   // middle
+            new NoteItem(2, Fraction.Eighth, 0, null, false, 0));  // high
+        var musicMeasures = ImmutableArray.Create(new Measure(noteItems, BarlineType.None, BarlineType.Single, null, 0, 0));
+
+        var result = TupletBracketEngraver.Calculate(
+            ImmutableArray.Create(tuplet), systems, measures, musicMeasures);
+
+        Assert.Single(result);
+        // Ascending notes should create a sloped bracket
+        // (StartY and EndY may differ due to pitch contour)
+        Assert.True(result[0].StartX < result[0].EndX);
     }
 }

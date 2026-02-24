@@ -2050,6 +2050,10 @@ public sealed class MeasureCollector
         // Collect notes from the grace body
         var graceNoteInfos = new List<GraceNoteInfo>();
 
+        // LILYPOND-REF: lily/grace-spacing.cc — grace notes carry their own durations
+        // Default to eighth note if no explicit duration (LilyPond grace note default)
+        Fraction graceDefaultDuration = Fraction.Eighth;
+
         foreach (var item in grace.Body.Items)
         {
             if (item is NoteSyntax note)
@@ -2060,7 +2064,12 @@ public sealed class MeasureCollector
                 bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
                 var (accidental, _) = GetDisplayAccidentalWithCourtesy(note.Pitch, octave);
 
-                graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger));
+                // Resolve grace note duration (inherit previous grace duration if not specified)
+                int noteValue = note.Duration?.Value ?? (int)graceDefaultDuration.Denominator;
+                var baseDuration = Fraction.FromNoteValue(noteValue);
+                graceDefaultDuration = baseDuration;
+
+                graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger, baseDuration));
             }
         }
 

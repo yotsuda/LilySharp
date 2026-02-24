@@ -272,31 +272,43 @@ public sealed class LyricEngraver
     }
 
     /// <summary>
-    /// Estimate text width in staff spaces.
+    /// Estimate text width in staff spaces using serif font character width ratios.
     /// </summary>
     /// <remarks>
-    /// This is a rough approximation. For accurate width calculation,
-    /// we would need font metrics.
-    ///
     /// LILYPOND-REF: lily/font-metric.cc:100-120 text extent calculation
     ///
     /// The SVG renderer uses font-size = 4 * 0.8 = 3.2 staff spaces.
-    /// For a serif font at this size, character width is typically 50-60% of height.
-    /// So average character width ≈ 3.2 * 0.55 ≈ 1.7 staff spaces.
+    /// Character widths are approximated using Times New Roman proportions (em fractions).
+    /// Width classes are grouped by similar advance widths in standard serif fonts.
     /// </remarks>
     private double EstimateTextWidth(string text)
     {
         // Character width estimation at rendered font size (3.2 staff spaces)
-        // Width ≈ fontSize * characterWidthRatio
+        // Width ≈ fontSize * characterWidthRatio (em fraction)
         const double fontSize = 3.2;
         double width = 0;
         foreach (char c in text)
         {
+            // Width ratios based on Times New Roman advance widths (em fractions)
             double ratio = c switch
             {
-                'i' or 'l' or 'I' or '!' or '.' or '\'' or '-' => 0.3,
-                'm' or 'w' or 'M' or 'W' => 0.7,
-                _ => 0.5
+                ' ' => 0.25,
+                '!' or '.' or ',' or ':' or ';' or '\'' or '|' => 0.25,
+                'i' or 'l' or 'j' => 0.28,
+                'f' or 't' or 'r' => 0.33,
+                's' or 'z' => 0.39,
+                'a' or 'c' or 'e' => 0.44,
+                'b' or 'd' or 'g' or 'h' or 'k' or 'n' or 'o' or 'p' or 'q' or 'u' or 'v' or 'x' or 'y' => 0.50,
+                'w' => 0.72,
+                'm' => 0.78,
+                'I' => 0.33,
+                'J' => 0.39,
+                'A' or 'B' or 'C' or 'D' or 'E' or 'F' or 'G' or 'H' or 'K' or 'L'
+                    or 'N' or 'O' or 'P' or 'Q' or 'R' or 'S' or 'T' or 'U' or 'V'
+                    or 'X' or 'Y' or 'Z' => 0.61,
+                'M' or 'W' => 0.83,
+                '-' => 0.33,
+                _ => 0.50
             };
             width += fontSize * ratio;
         }

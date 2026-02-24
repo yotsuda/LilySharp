@@ -7,10 +7,10 @@ time 4/4
 
 section Main {
     melody {
-        | c5/4 d5 e5 f5 | g5/2 e5 | c5/1 |
+        | c'4 d e f | g2 e | c1 |
     }
     ossia_melody {
-        | c5/4 e5 g5 e5 | a5/2 f5 | e5/1 |
+        | c'4 e g e | a2 f | e1 |
     }
 }
 

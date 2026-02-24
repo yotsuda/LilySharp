@@ -52,10 +52,11 @@ public sealed class SystemLayouter
         int keySharps,
         bool isFirstSystem,
         int firstMeasureIndex,
-        bool isLastSystem = false)
+        bool isLastSystem = false,
+        double? baseShortestDuration = null)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, isLastSystem);
+        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, isLastSystem, baseShortestDuration);
 
         return new SystemLayout(
             systemIndex,
@@ -73,7 +74,8 @@ public sealed class SystemLayouter
         int keySharps,
         bool isFirstSystem,
         int firstMeasureIndex,
-        bool isLastSystem = false)
+        bool isLastSystem = false,
+        double? baseShortestDuration = null)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
         double startX = _options.MarginLeft + prefixWidth;
@@ -87,7 +89,7 @@ public sealed class SystemLayouter
 
         foreach (var measure in measures)
         {
-            var springs = SpacingRules.CreateSpringsForMeasure(measure);
+            var springs = SpacingRules.CreateSpringsForMeasure(measure, baseShortestDuration);
             measureSprings.Add(springs);
 
             double barlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline)
@@ -171,10 +173,11 @@ public sealed class SystemLayouter
         bool isFirstSystem,
         int firstMeasureIndex,
         IReadOnlyList<LyricItem> lyrics,
-        bool isLastSystem = false)
+        bool isLastSystem = false,
+        double? baseShortestDuration = null)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, lyrics, isLastSystem);
+        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, lyrics, isLastSystem, baseShortestDuration);
 
         return new SystemLayout(
             systemIndex,
@@ -197,7 +200,8 @@ public sealed class SystemLayouter
         bool isFirstSystem,
         int firstMeasureIndex,
         IReadOnlyList<LyricItem> lyrics,
-        bool isLastSystem = false)
+        bool isLastSystem = false,
+        double? baseShortestDuration = null)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
         double startX = _options.MarginLeft + prefixWidth;
@@ -216,8 +220,8 @@ public sealed class SystemLayouter
 
             // Use lyrics-aware spring creation if lyrics exist
             var springs = lyrics.Count > 0
-                ? SpacingRules.CreateSpringsForMeasureWithLyrics(measure, measureIndex, lyrics)
-                : SpacingRules.CreateSpringsForMeasure(measure);
+                ? SpacingRules.CreateSpringsForMeasureWithLyrics(measure, measureIndex, lyrics, baseShortestDuration)
+                : SpacingRules.CreateSpringsForMeasure(measure, baseShortestDuration);
             measureSprings.Add(springs);
 
             double barlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline)

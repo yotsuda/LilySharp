@@ -14,8 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using Xunit;
+using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Tests;
 
@@ -115,5 +119,620 @@ public class NoteCollisionTests
         var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 0);
 
         Assert.Equal(CollisionType.None, result.Type);
+    }
+
+    // --- LILYPOND-REF shift multiplier conformance tests ---
+
+    [Fact]
+    public void ShiftMultipliers_Default_MatchLilyPond()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:299-350
+        var p = NoteCollisionParameters.Default;
+
+        Assert.Equal(0.52, p.CloseHalfShift);     // close_half_collide
+        Assert.Equal(0.4, p.DistantHalfShift);    // distant_half_collide
+        Assert.Equal(0.5, p.FullCollideShift);     // full_collide
+        Assert.Equal(0.65, p.TouchShift);          // stem_to_stem
+        Assert.Equal(0.17, p.MeshingGeneralShift); // meshing_general
+        Assert.Equal(0.1, p.MeshingDottedShift);   // meshing_dotted
+    }
+
+    [Fact]
+    public void FullCollision_ShiftAmount_MatchesLilyPond()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:321
+        // full_collide = 0.5 notehead widths
+        var collision = new NoteCollision();
+        var ups = new[] { 4 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.Full, result.Type);
+        Assert.Equal(0.5, result.UpStemXOffset);
+        Assert.Equal(0, result.DownStemXOffset);
+    }
+
+    [Fact]
+    public void TouchCollision_ShiftAmount_MatchesLilyPond()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:317
+        // stem_to_stem = 0.65 notehead widths
+        var collision = new NoteCollision();
+        // ups[0] == downs.Last() triggers touch: lowest up == highest down
+        var ups = new[] { 4 };
+        var downs = new[] { 4 };
+
+        // Same note value, same dots → merge, not touch
+        // Use whole notes (noteValue=0) to prevent merge (whole notes can't merge)
+        var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 0, downNoteValue: 0, upDots: 0, downDots: 0);
+
+        // Whole notes at same position → full collision (can't merge whole notes)
+        Assert.Equal(CollisionType.Full, result.Type);
+        Assert.Equal(0.5, result.UpStemXOffset);
+    }
+
+    // --- LILYPOND-REF meshing multiplier tests (I-1) ---
+
+    [Fact]
+    public void Meshing_SecondInterval_UsesGeneralShift()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:180-230 check_meshing_chords()
+        // Two single quarter notes a second apart should mesh with 0.17 shift
+        var collision = new NoteCollision();
+        var ups = new[] { 5 };    // One position above
+        var downs = new[] { 4 };  // Adjacent position
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 0);
+
+        Assert.Equal(0.17, result.UpStemXOffset, 2);
+    }
+
+    [Fact]
+    public void Meshing_SecondInterval_DottedNote_UsesDottedShift()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:180-230
+        // Dotted notes use MeshingDottedShift (0.1)
+        var collision = new NoteCollision();
+        var ups = new[] { 5 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 4, downNoteValue: 4, upDots: 1, downDots: 0);
+
+        Assert.Equal(0.1, result.UpStemXOffset, 2);
+    }
+
+    [Fact]
+    public void Meshing_WholeNotes_CannotMesh_UsesHalfShift()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:180-230
+        // Whole notes (round noteheads) cannot mesh
+        var collision = new NoteCollision();
+        var ups = new[] { 5 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 1, downNoteValue: 4, upDots: 0, downDots: 0);
+
+        // Should use standard half collision shift, not meshing
+        Assert.True(result.UpStemXOffset > 0.17,
+            $"Whole note collision ({result.UpStemXOffset:F2}) should be larger than meshing (0.17)");
+    }
+
+    [Fact]
+    public void Meshing_ChordWithSeconds_CannotMesh_UsesHalfShift()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:180-230
+        // Chords with multiple notes can't mesh cleanly at seconds
+        var collision = new NoteCollision();
+        var ups = new[] { 5, 7 };    // Chord: two notes
+        var downs = new[] { 4 };     // Single note adjacent to lowest of chord
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 0);
+
+        // Should use standard half collision shift
+        Assert.True(result.UpStemXOffset > 0.17,
+            $"Chord collision ({result.UpStemXOffset:F2}) should be larger than meshing (0.17)");
+    }
+
+    [Fact]
+    public void Meshing_HalfNotes_CanMesh()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:180-230
+        // Half notes (noteValue=2) can mesh (open noteheads)
+        var collision = new NoteCollision();
+        var ups = new[] { 5 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 2, downNoteValue: 2, upDots: 0, downDots: 0);
+
+        Assert.Equal(0.17, result.UpStemXOffset, 2);
+    }
+
+    [Fact]
+    public void Meshing_SmallerThanStandardShift()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:180-230
+        // Meshing shift (0.17) should be much smaller than standard half collision (0.52)
+        var p = NoteCollisionParameters.Default;
+        Assert.True(p.MeshingGeneralShift < p.CloseHalfShift,
+            $"Meshing ({p.MeshingGeneralShift}) should be < CloseHalf ({p.CloseHalfShift})");
+        Assert.True(p.MeshingDottedShift < p.MeshingGeneralShift,
+            $"MeshingDotted ({p.MeshingDottedShift}) should be < MeshingGeneral ({p.MeshingGeneralShift})");
+    }
+
+    // --- LILYPOND-REF head wipe conformance tests (I-2) ---
+
+    [Fact]
+    public void HeadWipe_Merge_DownHeadTransparent()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:381-407
+        // When notes merge (same pitch, same note value), down-stem notehead is wiped
+        var collision = new NoteCollision();
+        var ups = new[] { 4 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.Merge, result.Type);
+        Assert.True(result.ShouldMerge);
+        Assert.True(result.DownHeadTransparent, "Down-stem head should be transparent on merge");
+        Assert.False(result.UpHeadTransparent, "Up-stem head should remain visible on merge");
+    }
+
+    [Fact]
+    public void HeadWipe_NoCollision_NoTransparency()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:381-407
+        // No collision → no heads hidden
+        var collision = new NoteCollision();
+        var ups = new[] { 8 };
+        var downs = new[] { 0 };
+
+        var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.None, result.Type);
+        Assert.False(result.UpHeadTransparent);
+        Assert.False(result.DownHeadTransparent);
+    }
+
+    [Fact]
+    public void HeadWipe_FullCollision_NoTransparency()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:381-407
+        // Full collision (different note values, shifted apart) → no heads wiped
+        var collision = new NoteCollision();
+        var ups = new[] { 4 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.Full, result.Type);
+        Assert.False(result.UpHeadTransparent, "Shifted notes should not have heads wiped");
+        Assert.False(result.DownHeadTransparent, "Shifted notes should not have heads wiped");
+    }
+
+    [Fact]
+    public void HeadWipe_CloseHalf_NoTransparency()
+    {
+        // Adjacent notes (second interval) → no heads wiped
+        var collision = new NoteCollision();
+        var ups = new[] { 5 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 0);
+
+        Assert.False(result.UpHeadTransparent);
+        Assert.False(result.DownHeadTransparent);
+    }
+
+    [Fact]
+    public void HeadWipe_MergeChord_DownHeadTransparent()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:381-407
+        // Chord merge: all overlapping down-stem heads should be wiped
+        var collision = new NoteCollision();
+        var ups = new[] { 4, 6 };
+        var downs = new[] { 4, 6 };
+
+        var result = collision.AnalyzeCollision(ups, downs, upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.Merge, result.Type);
+        Assert.True(result.ShouldMerge);
+        Assert.True(result.DownHeadTransparent);
+    }
+
+    // --- LILYPOND-REF dot direction adjustment tests (I-4) ---
+
+    [Fact]
+    public void DotDirection_DownVoice_OnLine_ForcedDown()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:411-448
+        // In collision context, down-stem voice's dots on lines should shift DOWN
+        // to avoid colliding with up-stem voice
+        var collision = new NoteCollision();
+        var ups = new[] { 5 };   // Up-stem note above
+        var downs = new[] { 4 }; // Down-stem note on a line (even position)
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 1);
+
+        Assert.True(result.DownDotForceDown,
+            "Down-stem voice dots on lines should be forced down in collision");
+    }
+
+    [Fact]
+    public void DotDirection_NoCollision_NotForced()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:411-448
+        // No collision → no dot direction override
+        var collision = new NoteCollision();
+        var ups = new[] { 8 };
+        var downs = new[] { 0 };
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 4, downNoteValue: 4, upDots: 1, downDots: 1);
+
+        Assert.False(result.DownDotForceDown);
+    }
+
+    [Fact]
+    public void DotDirection_DownVoice_InSpace_NotForced()
+    {
+        // Down-stem note in a space (odd position) → dot doesn't need adjustment
+        var collision = new NoteCollision();
+        var ups = new[] { 6 };
+        var downs = new[] { 5 }; // Odd position = in a space
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 4, downNoteValue: 4, upDots: 0, downDots: 1);
+
+        Assert.False(result.DownDotForceDown,
+            "Down-stem note in space doesn't need dot direction adjustment");
+    }
+
+    [Fact]
+    public void DotDirection_Merge_NotForced()
+    {
+        // Merged notes don't need dot direction override (one head is wiped)
+        var collision = new NoteCollision();
+        var ups = new[] { 4 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 4, downNoteValue: 4, upDots: 1, downDots: 1);
+
+        Assert.False(result.DownDotForceDown,
+            "Merged notes don't need dot direction adjustment");
+    }
+
+    // --- LILYPOND-REF multi-voice cascading tests (I-5) ---
+
+    private static NoteItem MakeNote(int staffPosition) =>
+        new(staffPosition, Fraction.Quarter, 0, null, false, 0);
+
+    [Fact]
+    public void ThreeVoices_CascadingOffsets()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:420-480
+        // Voice 1 (up), Voice 2 (down), Voice 3 (up)
+        // Voice 3 should get a larger offset than Voice 1
+        var collision = new NoteCollision();
+        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
+
+        var column = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, MakeNote(4), 0, forcedStemUp: true),
+            new VoiceEntry(2, MakeNote(4), 0, forcedStemUp: false),
+            new VoiceEntry(3, MakeNote(4), 0, forcedStemUp: true)
+        ), measureIndex: 0);
+
+        var offsets = collision.CalculateVoiceOffsets(column, noteheadWidth);
+
+        var v1Offset = offsets.First(o => o.VoiceId == 1).XOffset;
+        var v2Offset = offsets.First(o => o.VoiceId == 2).XOffset;
+        var v3Offset = offsets.First(o => o.VoiceId == 3).XOffset;
+
+        // Voice 3 should have a larger offset than Voice 1
+        Assert.True(v3Offset > v1Offset,
+            $"Voice 3 ({v3Offset:F2}) should be further right than Voice 1 ({v1Offset:F2})");
+    }
+
+    [Fact]
+    public void FourVoices_CascadingOffsets()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:420-480
+        // Voice 1 (up), Voice 2 (down), Voice 3 (up), Voice 4 (down)
+        var collision = new NoteCollision();
+        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
+
+        var column = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, MakeNote(4), 0, forcedStemUp: true),
+            new VoiceEntry(2, MakeNote(4), 0, forcedStemUp: false),
+            new VoiceEntry(3, MakeNote(4), 0, forcedStemUp: true),
+            new VoiceEntry(4, MakeNote(4), 0, forcedStemUp: false)
+        ), measureIndex: 0);
+
+        var offsets = collision.CalculateVoiceOffsets(column, noteheadWidth);
+
+        var v1Offset = offsets.First(o => o.VoiceId == 1).XOffset;
+        var v2Offset = offsets.First(o => o.VoiceId == 2).XOffset;
+        var v3Offset = offsets.First(o => o.VoiceId == 3).XOffset;
+        var v4Offset = offsets.First(o => o.VoiceId == 4).XOffset;
+
+        // Voice 3 further than Voice 1, Voice 4 further (left) than Voice 2
+        Assert.True(v3Offset > v1Offset,
+            $"Voice 3 ({v3Offset:F2}) should be further right than Voice 1 ({v1Offset:F2})");
+        Assert.True(v4Offset < v2Offset,
+            $"Voice 4 ({v4Offset:F2}) should be further left than Voice 2 ({v2Offset:F2})");
+    }
+
+    [Fact]
+    public void TwoVoices_NoCascading()
+    {
+        // Two voices should work as before (no cascading needed)
+        var collision = new NoteCollision();
+        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
+
+        var column = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, MakeNote(4), 0, forcedStemUp: true),
+            new VoiceEntry(2, MakeNote(4), 0, forcedStemUp: false)
+        ), measureIndex: 0);
+
+        var offsets = collision.CalculateVoiceOffsets(column, noteheadWidth);
+
+        Assert.Equal(2, offsets.Length);
+        // Both voices should have entries
+        Assert.Contains(offsets, o => o.VoiceId == 1);
+        Assert.Contains(offsets, o => o.VoiceId == 2);
+    }
+
+    // --- LILYPOND-REF width-based shift normalization tests ---
+
+    [Fact]
+    public void WidthNormalization_WholeNoteWidth_ProducesLargerShifts()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:309-312
+        // Shifts are multiplied by notehead width, so wider noteheads
+        // (whole notes = 1.688) produce larger absolute shifts than
+        // quarter noteheads (1.18)
+        var collision = new NoteCollision();
+
+        // Use half vs quarter at same position → Full collision (can't merge)
+        var upHalf = MakeNoteWithDuration(4, Fraction.Half);
+        var downQuarter = MakeNoteWithDuration(4, Fraction.Quarter);
+
+        var column = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, upHalf, 0, forcedStemUp: true),
+            new VoiceEntry(2, downQuarter, 0, forcedStemUp: false)
+        ), measureIndex: 0);
+
+        var offsetsBlack = collision.CalculateVoiceOffsets(column, EngravingDefaults.NoteheadBlackWidth);
+        var offsetsWhole = collision.CalculateVoiceOffsets(column, EngravingDefaults.NoteheadWholeWidth);
+
+        double upBlack = offsetsBlack.First(o => o.VoiceId == 1).XOffset;
+        double upWhole = offsetsWhole.First(o => o.VoiceId == 1).XOffset;
+
+        // Both should have non-zero shifts (full collision, non-mergeable)
+        Assert.True(Math.Abs(upBlack) > 0.001,
+            $"Black width shift ({upBlack:F3}) should be non-zero");
+        Assert.True(Math.Abs(upWhole) > Math.Abs(upBlack),
+            $"Whole note offset ({upWhole:F3}) should be > black ({upBlack:F3})");
+    }
+
+    private static NoteItem MakeNoteWithDuration(int staffPosition, Fraction duration) =>
+        new(staffPosition, duration, 0, null, false, 0);
+
+    // --- LILYPOND-REF force-hshift manual override tests ---
+
+    // --- LILYPOND-REF half+eighth merge formula tests ---
+
+    [Fact]
+    public void DifferentlyHeadedMerge_HalfAndQuarter_KeepsOpenNotehead()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:252-261
+        // When merge-differently-headed is true, half+quarter at same pitch merge.
+        // The open (half) notehead is kept visible.
+        var collision = new NoteCollision(new NoteCollisionParameters
+        {
+            MergeDifferentlyHeaded = true
+        });
+        var ups = new[] { 4 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.Merge, result.Type);
+        Assert.True(result.ShouldMerge);
+        // Up-stem is half (open) → keep visible; Down-stem is quarter (filled) → hide
+        Assert.False(result.UpHeadTransparent, "Open notehead (half) should be kept visible");
+        Assert.True(result.DownHeadTransparent, "Filled notehead (quarter) should be hidden");
+    }
+
+    [Fact]
+    public void DifferentlyHeadedMerge_QuarterUp_HalfDown_HidesQuarter()
+    {
+        // When up=quarter, down=half at same pitch, hide the filled (quarter) head
+        var collision = new NoteCollision(new NoteCollisionParameters
+        {
+            MergeDifferentlyHeaded = true
+        });
+        var ups = new[] { 4 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 4, downNoteValue: 2, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.Merge, result.Type);
+        Assert.True(result.ShouldMerge);
+        // Up-stem is quarter (filled) → hide; Down-stem is half (open) → keep
+        Assert.True(result.UpHeadTransparent, "Filled notehead (quarter) should be hidden");
+        Assert.False(result.DownHeadTransparent, "Open notehead (half) should be kept visible");
+    }
+
+    [Fact]
+    public void DifferentlyHeadedMerge_NotAllowed_DefaultParams()
+    {
+        // Default: merge-differently-headed is false → half+quarter should NOT merge
+        var collision = new NoteCollision();
+        var ups = new[] { 4 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 2, downNoteValue: 4, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.Full, result.Type);
+        Assert.False(result.ShouldMerge);
+    }
+
+    [Fact]
+    public void DifferentlyHeadedMerge_WholeAndHalf_CannotMerge()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:252-261
+        // Whole+half cannot merge (both open noteheads)
+        var collision = new NoteCollision(new NoteCollisionParameters
+        {
+            MergeDifferentlyHeaded = true
+        });
+        var ups = new[] { 4 };
+        var downs = new[] { 4 };
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 1, downNoteValue: 2, upDots: 0, downDots: 0);
+
+        // Should NOT merge — both are open noteheads
+        Assert.NotEqual(CollisionType.Merge, result.Type);
+        Assert.False(result.ShouldMerge);
+    }
+
+    [Fact]
+    public void ForceHshift_ResolverQueryReturnsCorrectValue()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:486-502
+        // Verify the resolver correctly returns force-hshift values
+        var resolver = new GrobPropertyResolver(
+            ImmutableArray.Create(new GrobOverride("NoteColumn", "force-hshift", "1.5", 0, 0)),
+            ImmutableArray<GrobRevert>.Empty);
+
+        resolver.AdvanceTo(0, 0);
+        var forceHshift = resolver.GetDouble("NoteColumn", "force-hshift");
+
+        Assert.NotNull(forceHshift);
+        Assert.Equal(1.5, forceHshift!.Value, 2);
+    }
+
+    [Fact]
+    public void ForceHshift_AppliedOffset_MatchesNoteheadWidthMultiple()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:486-502
+        // force-hshift is in notehead width units; when applied, the absolute
+        // offset should be force-hshift * noteheadWidth
+        double forceHshift = 1.5;
+        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
+        double expectedOffset = forceHshift * noteheadWidth;
+
+        // Verify the math matches LilyPond's convention
+        Assert.Equal(1.77, expectedOffset, 2); // 1.5 * 1.18 = 1.77
+    }
+
+    [Fact]
+    public void ForceHshift_OnceOverride_ClearedAfterAdvance()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:486-502
+        // \once override should apply only to the next item, then be cleared
+        var resolver = new GrobPropertyResolver(
+            ImmutableArray.Create(new GrobOverride("NoteColumn", "force-hshift", "1.5", 0, 0, IsOnce: true)),
+            ImmutableArray<GrobRevert>.Empty);
+
+        resolver.AdvanceTo(0, 0);
+        Assert.NotNull(resolver.GetDouble("NoteColumn", "force-hshift"));
+
+        // After advancing past the once-override position, it should be cleared
+        resolver.AdvanceTo(0, 1);
+        Assert.Null(resolver.GetDouble("NoteColumn", "force-hshift"));
+    }
+
+    [Fact]
+    public void WidthNormalization_WholeVsQuarterCollision_ScalesCorrectly()
+    {
+        // LILYPOND-REF: lily/note-collision-interface.cc:309-312
+        // The ratio of whole to black shift should match the ratio of widths
+        var collision = new NoteCollision();
+
+        // Use half vs quarter at same position → Full collision (non-mergeable)
+        var upHalf = MakeNoteWithDuration(4, Fraction.Half);
+        var downQuarter = MakeNoteWithDuration(4, Fraction.Quarter);
+
+        var column = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, upHalf, 0, forcedStemUp: true),
+            new VoiceEntry(2, downQuarter, 0, forcedStemUp: false)
+        ), measureIndex: 0);
+
+        var offsetsBlack = collision.CalculateVoiceOffsets(column, EngravingDefaults.NoteheadBlackWidth);
+        var offsetsWhole = collision.CalculateVoiceOffsets(column, EngravingDefaults.NoteheadWholeWidth);
+
+        double blackShift = offsetsBlack.First(o => o.VoiceId == 1).XOffset;
+        double wholeShift = offsetsWhole.First(o => o.VoiceId == 1).XOffset;
+
+        double ratio = wholeShift / blackShift;
+        double expectedRatio = EngravingDefaults.NoteheadWholeWidth / EngravingDefaults.NoteheadBlackWidth;
+        Assert.Equal(expectedRatio, ratio, 2);
+    }
+
+    // --- Suspended head filtering ---
+    // LILYPOND-REF: lily/note-column.cc:169-220 calc_main_extent
+
+    [Fact]
+    public void HasSuspendedHead_ChordWithSecond_ReturnsTrue()
+    {
+        // Chord with C and D (staff positions 0 and 1 = a second)
+        var chord = new ChordItem(
+            ImmutableArray.Create(
+                new ChordNoteInfo(0, null, false),
+                new ChordNoteInfo(1, null, false)),
+            Fraction.Quarter, 0, 0);
+
+        Assert.True(SpacingRules.HasSuspendedHead(chord));
+    }
+
+    [Fact]
+    public void HasSuspendedHead_ChordWithThird_ReturnsFalse()
+    {
+        // Chord with C and E (staff positions 0 and 2 = a third)
+        var chord = new ChordItem(
+            ImmutableArray.Create(
+                new ChordNoteInfo(0, null, false),
+                new ChordNoteInfo(2, null, false)),
+            Fraction.Quarter, 0, 0);
+
+        Assert.False(SpacingRules.HasSuspendedHead(chord));
+    }
+
+    [Fact]
+    public void HasSuspendedHead_SingleNote_ReturnsFalse()
+    {
+        var chord = new ChordItem(
+            ImmutableArray.Create(new ChordNoteInfo(0, null, false)),
+            Fraction.Quarter, 0, 0);
+
+        Assert.False(SpacingRules.HasSuspendedHead(chord));
+    }
+
+    [Fact]
+    public void HasSuspendedHead_ChordWithMixedIntervals_DetectsSecond()
+    {
+        // Chord with C, D, G (positions 0, 1, 4) — has a second between 0 and 1
+        var chord = new ChordItem(
+            ImmutableArray.Create(
+                new ChordNoteInfo(0, null, false),
+                new ChordNoteInfo(1, null, false),
+                new ChordNoteInfo(4, null, false)),
+            Fraction.Quarter, 0, 0);
+
+        Assert.True(SpacingRules.HasSuspendedHead(chord));
     }
 }

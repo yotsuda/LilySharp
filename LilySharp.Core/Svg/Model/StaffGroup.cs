@@ -21,6 +21,9 @@ namespace LilySharp.Core.Svg.Model;
 /// <summary>
 /// Type of staff grouping.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: ly/engraver-init.ly — context definitions for each staff group type
+/// </remarks>
 public enum StaffGroupType
 {
     /// <summary>Single staff (no grouping).</summary>
@@ -29,8 +32,11 @@ public enum StaffGroupType
     /// <summary>Grand staff with brace (piano, harp, organ).</summary>
     GrandStaff,
 
-    /// <summary>Staff group with bracket (orchestral sections).</summary>
-    StaffGroup
+    /// <summary>Staff group with bracket (orchestral sections). Barlines span all staves.</summary>
+    StaffGroup,
+
+    /// <summary>Choir staff with bracket (vocal sections). Barlines are separate per staff.</summary>
+    ChoirStaff
 }
 
 /// <summary>
@@ -58,8 +64,18 @@ public sealed record StaffGroup(
     /// <summary>Whether this is a grand staff (brace-connected).</summary>
     public bool IsGrandStaff => Type == StaffGroupType.GrandStaff;
 
+    /// <summary>Whether this is a choir staff (bracket-connected, separate barlines).</summary>
+    public bool IsChoirStaff => Type == StaffGroupType.ChoirStaff;
+
+    /// <summary>Whether this is a staff group (bracket-connected, spanning barlines).</summary>
+    public bool IsBracketGroup => Type == StaffGroupType.StaffGroup;
+
     /// <summary>Whether this is a single staff.</summary>
     public bool IsSingle => Type == StaffGroupType.Single;
+
+    /// <summary>Whether this group has a delimiter (brace/bracket) at the left.</summary>
+    public bool HasDelimiter => Type is StaffGroupType.GrandStaff
+        or StaffGroupType.StaffGroup or StaffGroupType.ChoirStaff;
 
     /// <summary>The first (or only) staff.</summary>
     public Staff PrimaryStaff => Staves[0];
@@ -88,5 +104,33 @@ public sealed record StaffGroup(
         if (staves.Length < 2)
             throw new ArgumentException("Grand staff requires at least 2 staves", nameof(staves));
         return new(StaffGroupType.GrandStaff, staves);
+    }
+
+    /// <summary>
+    /// Creates a choir staff (bracket-connected, separate barlines).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly — ChoirStaff uses SystemStartBracket
+    /// with disconnected barlines (each staff has its own barlines).
+    /// </remarks>
+    public static StaffGroup CreateChoirStaff(params Staff[] staves)
+    {
+        if (staves.Length < 2)
+            throw new ArgumentException("Choir staff requires at least 2 staves", nameof(staves));
+        return new(StaffGroupType.ChoirStaff, [.. staves]);
+    }
+
+    /// <summary>
+    /// Creates a bracket group (orchestral sections with spanning barlines).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: ly/engraver-init.ly — StaffGroup uses SystemStartBracket
+    /// with connected barlines (barlines span all staves in the group).
+    /// </remarks>
+    public static StaffGroup CreateBracketGroup(params Staff[] staves)
+    {
+        if (staves.Length < 2)
+            throw new ArgumentException("Bracket group requires at least 2 staves", nameof(staves));
+        return new(StaffGroupType.StaffGroup, [.. staves]);
     }
 }

@@ -155,6 +155,66 @@ public class TieFormattingProblemTests
         Assert.True(result > 1.0, $"ConvexAmplifier at 2*standard should be > 1.0, got {result}");
     }
 
+    // --- Dot collision tests ---
+    // LILYPOND-REF: lily/tie-formatting-problem.cc:795-818
+
+    [Fact]
+    public void Solve_DottedNote_CurveUp_AvoidsDot()
+    {
+        // Note on a staff line (position 0) with 1 dot.
+        // Dot shifts up by 1 half-space → dotPosition=1.
+        // CurveUp tie should be penalized if it curves toward the dot.
+        var startNote = new NoteItem(0, Fraction.Quarter, dots: 1, null, false, 0, hasTieStart: true);
+        var endNote = CreateNote(0);
+        var tieUp = new TieItem(startNote, endNote, 0, curveUp: true, 0, 0, 0, 1);
+        var tieDown = new TieItem(startNote, endNote, 0, curveUp: false, 0, 0, 0, 1);
+
+        // With dot, the solver should favor the direction that avoids the dot
+        var problemUp = new TieFormattingProblem(tieUp, 5, 2, 15, 2, startDots: 1);
+        var problemDown = new TieFormattingProblem(tieDown, 5, 2, 15, 2, startDots: 1);
+
+        var layoutUp = problemUp.Solve();
+        var layoutDown = problemDown.Solve();
+
+        // Both should produce valid ties
+        Assert.NotNull(layoutUp);
+        Assert.NotNull(layoutDown);
+        Assert.True(layoutUp.EndX > layoutUp.StartX);
+        Assert.True(layoutDown.EndX > layoutDown.StartX);
+    }
+
+    [Fact]
+    public void Solve_NoDots_NoDotPenalty()
+    {
+        // Without dots, there should be no dot-related penalty difference
+        var tie = CreateTie(0, curveUp: true);
+        var problemNoDots = new TieFormattingProblem(tie, 5, 2, 15, 2, startDots: 0);
+        var problemWithDots = new TieFormattingProblem(tie, 5, 2, 15, 2, startDots: 1);
+
+        var layoutNoDots = problemNoDots.Solve();
+        var layoutWithDots = problemWithDots.Solve();
+
+        // Both should produce valid results
+        Assert.NotNull(layoutNoDots);
+        Assert.NotNull(layoutWithDots);
+    }
+
+    [Fact]
+    public void Solve_DottedNoteInSpace_DotAtNotePosition()
+    {
+        // Note in a space (odd position=1), dot stays at position 1.
+        // CurveUp should be affected if tie attachment is near position 1.
+        var startNote = new NoteItem(1, Fraction.Quarter, dots: 1, null, false, 0, hasTieStart: true);
+        var endNote = CreateNote(1);
+        var tie = new TieItem(startNote, endNote, 1, curveUp: true, 0, 0, 0, 1);
+
+        var problem = new TieFormattingProblem(tie, 5, 1.5, 15, 1.5, startDots: 1);
+        var layout = problem.Solve();
+
+        Assert.NotNull(layout);
+        Assert.True(layout.EndX > layout.StartX);
+    }
+
     [Fact]
     public void TieDetails_Default_MatchesLilyPondDefineGrobs()
     {

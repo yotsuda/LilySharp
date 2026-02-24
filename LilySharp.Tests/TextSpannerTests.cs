@@ -319,4 +319,113 @@ public class TextSpannerTests
         Assert.True(result[0].LineStartX < result[0].EndX,
             "Line should have space to be drawn");
     }
+
+    // --- Cross-system text spanner continuation ---
+    // LILYPOND-REF: line-spanner.cc:577-600 broken pieces at system boundaries
+
+    private static (ImmutableArray<MeasureLayout> measures, ImmutableArray<SystemLayout> systems)
+        CreateTwoSystems()
+    {
+        var measures = CreateMeasureLayouts(8);
+        var sys0measures = ImmutableArray.Create(measures[0], measures[1], measures[2], measures[3]);
+        var sys1measures = ImmutableArray.Create(measures[4], measures[5], measures[6], measures[7]);
+        var systems = ImmutableArray.Create(
+            new SystemLayout(0, 10.0, 200.0, 5.0, sys0measures),
+            new SystemLayout(1, 30.0, 200.0, 5.0, sys1measures));
+        return (measures, systems);
+    }
+
+    [Fact]
+    public void Calculate_CrossSystem_ProducesTwoLayouts()
+    {
+        // Spanner from measure 2 (system 0) to measure 5 (system 1)
+        var (measures, systems) = CreateTwoSystems();
+        var spanners = ImmutableArray.Create(new TextSpannerItem(
+            "rit.", 2, 0, 5, 0, TextSpannerStyle.DashedLine, 42));
+
+        var result = TextSpannerEngraver.Calculate(spanners, systems, measures, ImmutableArray<DynamicLayout>.Empty);
+
+        Assert.Equal(2, result.Length);
+        // First segment: starts at measure 2 with text
+        Assert.Equal(2, result[0].StartMeasureIndex);
+        Assert.Equal("rit.", result[0].Text);
+        Assert.Equal(42, result[0].SourcePosition);
+        // Second segment: starts at measure 4 (system 1 first measure) with no text
+        Assert.Equal(4, result[1].StartMeasureIndex);
+        Assert.Equal("", result[1].Text);
+        Assert.Equal(42, result[1].SourcePosition);
+    }
+
+    [Fact]
+    public void Calculate_CrossSystem_FirstSegment_EndsAtSystemEdge()
+    {
+        var (measures, systems) = CreateTwoSystems();
+        var spanners = ImmutableArray.Create(new TextSpannerItem(
+            "rit.", 1, 0, 6, 0, TextSpannerStyle.DashedLine, 0));
+
+        var result = TextSpannerEngraver.Calculate(spanners, systems, measures, ImmutableArray<DynamicLayout>.Empty);
+
+        Assert.Equal(2, result.Length);
+        // First segment endX should extend to system 0's last measure edge
+        // Measure 3: X=60, Width=20, so right edge = 80 - 0.25 padding = 79.75
+        Assert.True(result[0].EndX > 70.0, "First segment should extend toward system edge");
+    }
+
+    [Fact]
+    public void Calculate_CrossSystem_ContinuationSegment_NoText_LineFromStart()
+    {
+        var (measures, systems) = CreateTwoSystems();
+        var spanners = ImmutableArray.Create(new TextSpannerItem(
+            "accel.", 1, 0, 6, 0, TextSpannerStyle.DashedLine, 0));
+
+        var result = TextSpannerEngraver.Calculate(spanners, systems, measures, ImmutableArray<DynamicLayout>.Empty);
+
+        Assert.Equal(2, result.Length);
+        // Continuation segment: no text, so LineStartX == StartX
+        Assert.Equal("", result[1].Text);
+        Assert.Equal(result[1].StartX, result[1].LineStartX);
+    }
+
+    [Fact]
+    public void Calculate_CrossSystem_LastSegment_EndsAtEndNote()
+    {
+        var (measures, systems) = CreateTwoSystems();
+        // End at measure 5 item 1 (X = 5*20 + 5.0 = 105.0, minus padding)
+        var spanners = ImmutableArray.Create(new TextSpannerItem(
+            "rit.", 1, 0, 5, 1, TextSpannerStyle.DashedLine, 0));
+
+        var result = TextSpannerEngraver.Calculate(spanners, systems, measures, ImmutableArray<DynamicLayout>.Empty);
+
+        Assert.Equal(2, result.Length);
+        // Last segment endX should be at the end note position (not system edge)
+        double expectedEndX = measures[5].X + measures[5].Items[1].X - 0.25; // BoundPadding
+        Assert.Equal(expectedEndX, result[1].EndX, 2);
+    }
+
+    [Fact]
+    public void Calculate_ThreeSystemSpanner_ProducesThreeLayouts()
+    {
+        var measures = CreateMeasureLayouts(12);
+        var sys0 = ImmutableArray.Create(measures[0], measures[1], measures[2], measures[3]);
+        var sys1 = ImmutableArray.Create(measures[4], measures[5], measures[6], measures[7]);
+        var sys2 = ImmutableArray.Create(measures[8], measures[9], measures[10], measures[11]);
+        var systems = ImmutableArray.Create(
+            new SystemLayout(0, 10.0, 200.0, 5.0, sys0),
+            new SystemLayout(1, 30.0, 200.0, 5.0, sys1),
+            new SystemLayout(2, 50.0, 200.0, 5.0, sys2));
+
+        // Spanner from measure 2 to measure 9 (spans all 3 systems)
+        var spanners = ImmutableArray.Create(new TextSpannerItem(
+            "rit.", 2, 0, 9, 0, TextSpannerStyle.DashedLine, 0));
+
+        var result = TextSpannerEngraver.Calculate(spanners, systems, measures, ImmutableArray<DynamicLayout>.Empty);
+
+        Assert.Equal(3, result.Length);
+        // First: has text
+        Assert.Equal("rit.", result[0].Text);
+        // Middle: no text
+        Assert.Equal("", result[1].Text);
+        // Last: no text
+        Assert.Equal("", result[2].Text);
+    }
 }

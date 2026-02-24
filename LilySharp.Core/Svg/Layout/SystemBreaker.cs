@@ -45,7 +45,8 @@ public sealed class SystemBreaker
     /// Uses Knuth-Plass optimal algorithm when UseOptimalLineBreaking is true,
     /// otherwise falls back to greedy first-fit algorithm.
     /// </remarks>
-    public List<List<Measure>> BreakIntoSystems(Score score)
+    public List<List<Measure>> BreakIntoSystems(Score score,
+                                                double? baseShortestDuration = null)
     {
         var measures = score.Voice.Measures;
         double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true,
@@ -61,18 +62,19 @@ public sealed class SystemBreaker
                 continuationPrefixWidth,
                 _options.LineBreakingTolerance);
 
-            return breaker.BreakIntoLines(measures);
+            return breaker.BreakIntoLines(measures, baseShortestDuration);
         }
 
         // Fallback to greedy first-fit algorithm
-        return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth);
+        return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);
     }
 
     /// <summary>
     /// Breaks measures into systems for a multi-staff score.
     /// Uses the primary voice of the first staff group for measure widths.
     /// </summary>
-    public List<List<Measure>> BreakIntoSystems(MultiStaffScore score)
+    public List<List<Measure>> BreakIntoSystems(MultiStaffScore score,
+                                                double? baseShortestDuration = null)
     {
         var measures = score.StaffGroups[0].PrimaryStaff.PrimaryVoice.Measures;
         double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true,
@@ -87,10 +89,10 @@ public sealed class SystemBreaker
                 continuationPrefixWidth,
                 _options.LineBreakingTolerance);
 
-            return breaker.BreakIntoLines(measures);
+            return breaker.BreakIntoLines(measures, baseShortestDuration);
         }
 
-        return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth);
+        return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);
     }
 
     /// <summary>
@@ -99,7 +101,8 @@ public sealed class SystemBreaker
     private List<List<Measure>> BreakIntoSystemsGreedy(
         ImmutableArray<Measure> measures,
         double firstPrefixWidth,
-        double continuationPrefixWidth)
+        double continuationPrefixWidth,
+        double? baseShortestDuration = null)
     {
         var result = new List<List<Measure>>();
         var currentSystem = new List<Measure>();
@@ -109,7 +112,7 @@ public sealed class SystemBreaker
 
         foreach (var measure in measures)
         {
-            double measureWidth = SpacingRules.CalculateMeasureIdealWidth(measure);
+            double measureWidth = SpacingRules.CalculateMeasureIdealWidth(measure, baseShortestDuration);
 
             // Check if measure fits in current system
             if (currentSystem.Count > 0 && currentWidth + measureWidth > availableWidth)

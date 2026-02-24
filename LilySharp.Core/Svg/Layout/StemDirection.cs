@@ -22,7 +22,16 @@ namespace LilySharp.Core.Svg.Layout;
 /// Calculates stem direction for notes and chords.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/stem.cc:698-717 Stem::calc_default_direction()
+/// LILYPOND-REF: lily/stem.cc:681-701 Stem::calc_default_direction()
+/// LILYPOND-REF: lily/stem.cc:665-680 Stem::calc_direction() (voice-based override)
+///
+/// IMPLEMENTED — neutral direction from context (stem.cc:670-671):
+///   When default-direction is CENTER (note on middle line), use neutral-direction property.
+///   LilyPond default: DOWN. Configurable via neutralStemUp parameter.
+/// IMPLEMENTED (in SvgRenderer) — cross-staff stem direction (stem.cc:672-676):
+///   Cross-staff stems get direction from their beam. Handled by _beamedStemUp in SvgRenderer.
+/// IMPLEMENTED (in SvgRenderer) — beam-member stem direction override (stem.cc:672-676):
+///   Beam members inherit the beam's direction. Handled by _beamedStemUp in SvgRenderer.
 /// </remarks>
 public static class StemDirection
 {
@@ -35,7 +44,11 @@ public static class StemDirection
     /// <summary>
     /// Determines stem direction for a single note.
     /// </summary>
-    public static bool GetStemUp(int staffPosition, int? voiceNumber = null)
+    /// <param name="staffPosition">Staff position of the note.</param>
+    /// <param name="voiceNumber">Voice number (1-4) for forced direction, or null for auto.</param>
+    /// <param name="neutralStemUp">Direction when note is on middle line (tie-break).
+    /// LILYPOND-REF: stem.cc:670-671 neutral-direction property. LP default: DOWN (false).</param>
+    public static bool GetStemUp(int staffPosition, int? voiceNumber = null, bool neutralStemUp = false)
     {
         // Voice number overrides automatic direction
         if (voiceNumber.HasValue)
@@ -46,18 +59,25 @@ public static class StemDirection
                 2 => false,  // Voice 2: always stems down
                 3 => true,   // Voice 3: stems up
                 4 => false,  // Voice 4: stems down
-                _ => staffPosition < MiddleLine
+                _ => staffPosition == MiddleLine ? neutralStemUp : staffPosition < MiddleLine
             };
         }
 
         // Automatic: notes below middle line have stems up
+        // On middle line: use neutral direction
+        if (staffPosition == MiddleLine)
+            return neutralStemUp;
         return staffPosition < MiddleLine;
     }
 
     /// <summary>
     /// Determines stem direction for a chord based on average position.
     /// </summary>
-    public static bool GetStemUp(IReadOnlyList<int> staffPositions, int? voiceNumber = null)
+    /// <param name="staffPositions">Staff positions of chord notes.</param>
+    /// <param name="voiceNumber">Voice number (1-4) for forced direction, or null for auto.</param>
+    /// <param name="neutralStemUp">Direction when chord is centered on middle line (tie-break).
+    /// LILYPOND-REF: stem.cc:670-671 neutral-direction property. LP default: DOWN (false).</param>
+    public static bool GetStemUp(IReadOnlyList<int> staffPositions, int? voiceNumber = null, bool neutralStemUp = false)
     {
         if (staffPositions.Count == 0)
             return true;
@@ -71,18 +91,23 @@ public static class StemDirection
                 2 => false,
                 3 => true,
                 4 => false,
-                _ => CalculateChordStemDirection(staffPositions)
+                _ => CalculateChordStemDirection(staffPositions, neutralStemUp)
             };
         }
 
-        return CalculateChordStemDirection(staffPositions);
+        return CalculateChordStemDirection(staffPositions, neutralStemUp);
     }
 
     /// <summary>
     /// Calculates stem direction for a chord based on note positions.
-    /// Uses the "majority rule" - direction that minimizes stem length.
+    /// Uses the extremal note distance rule.
     /// </summary>
-    private static bool CalculateChordStemDirection(IReadOnlyList<int> staffPositions)
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc:681-701 Stem::calc_default_direction()
+    /// Compares distance of highest and lowest note from middle line.
+    /// Tie-break: uses neutral-direction (LP default: DOWN).
+    /// </remarks>
+    private static bool CalculateChordStemDirection(IReadOnlyList<int> staffPositions, bool neutralStemUp = false)
     {
         if (staffPositions.Count == 0)
             return true;
@@ -102,8 +127,9 @@ public static class StemDirection
         if (distanceFromBottom > distanceFromTop)
             return true;   // Stem up
 
-        // Tie: prefer stems down (traditional convention)
-        return false;
+        // LILYPOND-REF: stem.cc:670-671 neutral-direction property
+        // Tie: use neutral direction (LP default: DOWN)
+        return neutralStemUp;
     }
 
     /// <summary>

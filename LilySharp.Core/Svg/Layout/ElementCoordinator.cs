@@ -45,41 +45,129 @@ public sealed class ElementCoordinator
     }
 
     /// <summary>
-    /// Calculates X offsets for notes that collide in multi-voice contexts.
+    /// Calculates X offsets and head wipe flags for notes that collide in multi-voice contexts.
     /// </summary>
-    public ImmutableDictionary<VoiceItemKey, double> CalculateVoiceOffsets(Score score)
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:381-407 — head wipe
+    /// LILYPOND-REF: lily/note-collision-interface.cc:486-502 — force-hshift manual override
+    /// Returns both voice offsets and head wipe entries (noteheads to hide on merge).
+    /// </remarks>
+    public (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
+            ImmutableHashSet<VoiceItemKey> HeadWipeEntries,
+            ImmutableHashSet<VoiceItemKey> DotForceDownEntries) CalculateVoiceOffsets(
+        Score score, GrobPropertyResolver? resolver = null)
     {
         if (score.Voices.Length <= 1)
-            return ImmutableDictionary<VoiceItemKey, double>.Empty;
+            return (ImmutableDictionary<VoiceItemKey, double>.Empty,
+                    ImmutableHashSet<VoiceItemKey>.Empty,
+                    ImmutableHashSet<VoiceItemKey>.Empty);
 
         var voiceColumns = _voiceCollector.Collect(score);
 
         if (voiceColumns.Length == 0)
-            return ImmutableDictionary<VoiceItemKey, double>.Empty;
+            return (ImmutableDictionary<VoiceItemKey, double>.Empty,
+                    ImmutableHashSet<VoiceItemKey>.Empty,
+                    ImmutableHashSet<VoiceItemKey>.Empty);
 
-        double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
-
-        var builder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
+        var offsetBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
+        var headWipeBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
+        var dotForceDownBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
 
         foreach (var column in voiceColumns)
         {
             if (column.Entries.Length <= 1)
                 continue;
 
+            // LILYPOND-REF: lily/note-collision-interface.cc:309-312
+            // Width-based shift normalization: use the widest notehead width
+            // in the column so shifts scale correctly for whole/breve noteheads.
+            double noteheadWidth = GetColumnNoteheadWidth(column);
+
+            // LILYPOND-REF: lily/note-collision-interface.cc:486-502
+            // Check for force-hshift manual override before auto-calculation.
+            // When active, force-hshift replaces the auto-calculated offset.
+            double? forceHshift = null;
+            if (resolver != null)
+            {
+                // Advance resolver to the first entry's position in this column
+                int minItemIndex = column.Entries.Min(e => e.ItemIndex);
+                resolver.AdvanceTo(column.MeasureIndex, minItemIndex);
+                forceHshift = resolver.GetDouble("NoteColumn", "force-hshift");
+            }
+
             var offsets = _noteCollision.CalculateVoiceOffsets(column, noteheadWidth);
 
-            foreach (var (voiceId, itemIndex, xOffset) in offsets)
+            foreach (var (voiceId, itemIndex, xOffset, headTransparent, dotForceDown) in offsets)
             {
-                if (Math.Abs(xOffset) > 0.001)
+                var key = new VoiceItemKey(column.MeasureIndex, voiceId, itemIndex);
+
+                // LILYPOND-REF: lily/note-collision-interface.cc:486-502
+                // force-hshift overrides auto-calculated offsets for all columns at this position.
+                double effectiveOffset = forceHshift.HasValue
+                    ? forceHshift.Value * noteheadWidth
+                    : xOffset;
+
+                if (Math.Abs(effectiveOffset) > 0.001)
                 {
-                    var key = new VoiceItemKey(column.MeasureIndex, voiceId, itemIndex);
-                    builder[key] = xOffset;
+                    offsetBuilder[key] = effectiveOffset;
+                }
+
+                if (headTransparent)
+                {
+                    headWipeBuilder.Add(key);
+                }
+
+                if (dotForceDown)
+                {
+                    dotForceDownBuilder.Add(key);
                 }
             }
         }
 
-        return builder.ToImmutable();
+        return (offsetBuilder.ToImmutable(), headWipeBuilder.ToImmutable(), dotForceDownBuilder.ToImmutable());
     }
+
+    /// <summary>
+    /// Determines the widest notehead width in a voice column.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-collision-interface.cc:309-312
+    /// LilyPond normalizes collision shifts by the first head's width.
+    /// We use the widest notehead to ensure sufficient displacement.
+    /// Whole notes (1.688) are wider than half/quarter (1.18).
+    /// </remarks>
+    private static double GetColumnNoteheadWidth(VoiceColumn column)
+    {
+        double maxWidth = EngravingDefaults.NoteheadBlackWidth;
+        foreach (var entry in column.Entries)
+        {
+            var duration = entry.Item switch
+            {
+                NoteItem note => note.BaseDuration,
+                ChordItem chord => chord.BaseDuration,
+                _ => default
+            };
+            if (duration.Numerator > 0)
+            {
+                int noteValue = duration.Denominator / duration.Numerator;
+                double width = noteValue switch
+                {
+                    <= 0 => EngravingDefaults.NoteheadDoubleWholeWidth, // breve or longer
+                    1 => EngravingDefaults.NoteheadWholeWidth,          // whole note
+                    _ => EngravingDefaults.NoteheadBlackWidth            // half, quarter, etc.
+                };
+                if (width > maxWidth) maxWidth = width;
+            }
+        }
+        return maxWidth;
+    }
+
+    /// <summary>
+    /// Detects beam groups (raw, without layout calculation).
+    /// Used for tuplet bracket-visibility checks.
+    /// </summary>
+    public ImmutableArray<BeamGroup> DetectBeamGroups(Score score)
+        => _beamDetector.DetectBeamGroups(score);
 
     /// <summary>
     /// Detects beam groups and calculates their layouts.
@@ -314,10 +402,12 @@ public sealed class ElementCoordinator
 
             // Use TieFormattingProblem for optimal tie positioning
             // LILYPOND-REF: lily/tie-formatting-problem.cc
+            int startDots = tie.StartNote.Dots;
             var problem = new TieFormattingProblem(
                 tie, startX, y, endX, y,
                 existingTies: tieLayouts,
-                staffHeight: _options.StaffHeight);
+                staffHeight: _options.StaffHeight,
+                startDots: startDots);
             var tieLayout = problem.Solve();
             tieLayouts.Add(tieLayout);
         }

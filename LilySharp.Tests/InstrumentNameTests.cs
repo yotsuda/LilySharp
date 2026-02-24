@@ -101,7 +101,8 @@ render score ""test.svg"" { grandStaff { staff { rh } staff { lh } } }
         // Should contain "Piano" text
         Assert.Contains("Piano", svg);
         Assert.Contains("font-family=\"serif\"", svg);
-        Assert.Contains("text-anchor=\"end\"", svg);
+        // LILYPOND-REF: scm/define-grobs.scm:1711 — self-alignment-X = CENTER
+        Assert.Contains("text-anchor=\"middle\"", svg);
     }
 
     [Fact]
@@ -124,21 +125,27 @@ render score ""test.svg"" { staff { vln } staff { vla } }
     }
 
     [Fact]
-    public void ViewBox_ExtendedForInstrumentNames()
+    public void ViewBox_UsesIndentForInstrumentNames()
     {
+        // Multi-staff render spec needed for instrument name display
         var source = @"
 part vln { clef: treble  name: ""Violin I"" }
+part vla { clef: alto  name: Viola }
 phrase m { c4 d e f }
-section A { vln { $m } }
+section A { vln { $m } vla { $m } }
 structure { A }
-render score ""test.svg"" { staff { vln } }
+render score ""test.svg"" { staff { vln } staff { vla } }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
         var svg = SvgGenerator.Generate(tree, options);
 
-        // ViewBox should have negative X to make room for instrument name
-        Assert.Contains("viewBox=\"-", svg);
+        // LILYPOND-REF: ly/paper-defaults-init.ly — indent creates space for instrument names
+        // ViewBox starts at 0 (no negative X); indent shifts staff lines right
+        Assert.Contains("viewBox=\"0 0", svg);
+        // Instrument name text should be present
+        Assert.Contains("Violin I", svg);
+        Assert.Contains("Viola", svg);
     }
 
     [Fact]

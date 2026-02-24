@@ -32,8 +32,9 @@ public class HairpinTests
     {
         // LILYPOND-REF: scm/define-grobs.scm:1655 (height . 0.6666)
         // Opening = Height / 2 = 0.6666 / 2 = 0.3333
-        var layout = new HairpinLayout(0, 0, 10, 5.2, 0.3333, HairpinDirection.Crescendo, 0);
-        Assert.Equal(0.3333, layout.Opening);
+        var layout = new HairpinLayout(0, 0, 10, 5.2, 0, 0.3333, HairpinDirection.Crescendo, 0);
+        Assert.Equal(0.0, layout.StartOpening);   // Crescendo: point at start
+        Assert.Equal(0.3333, layout.EndOpening);   // Crescendo: open at end
         Assert.Equal(5.2, layout.Y);
     }
 
@@ -245,7 +246,8 @@ public class HairpinTests
         var result = HairpinEngraver.Calculate(hairpins, systems, measures);
 
         Assert.Single(result);
-        Assert.Equal(0.6666 / 2.0, result[0].Opening, 4);
+        Assert.Equal(0.0, result[0].StartOpening, 4);  // Crescendo: point at start
+        Assert.Equal(0.6666 / 2.0, result[0].EndOpening, 4);  // Full opening at end
     }
 
     [Fact]
@@ -260,6 +262,91 @@ public class HairpinTests
         var result = HairpinEngraver.Calculate(hairpins, systems, measures);
 
         Assert.Equal(5.2, result[0].Y);
+    }
+
+    // --- Broken hairpin (cross-system) tests ---
+
+    private static (ImmutableArray<MeasureLayout> measures, ImmutableArray<SystemLayout> systems)
+        CreateTwoSystemLayout()
+    {
+        // System 0: measures 0,1 (each 20 wide, starting at 0)
+        // System 1: measures 2,3 (each 20 wide, starting at 0)
+        var allMeasures = ImmutableArray.CreateBuilder<MeasureLayout>(4);
+        for (int i = 0; i < 4; i++)
+        {
+            var items = ImmutableArray.Create(
+                new ItemLayout(0, 1.0, 2.0),
+                new ItemLayout(1, 5.0, 2.0));
+            allMeasures.Add(new MeasureLayout(i, (i % 2) * 20.0, 20.0, items));
+        }
+        var measures = allMeasures.ToImmutable();
+        var sys0Measures = ImmutableArray.Create(measures[0], measures[1]);
+        var sys1Measures = ImmutableArray.Create(measures[2], measures[3]);
+        var systems = ImmutableArray.Create(
+            new SystemLayout(0, 10.0, 80.0, 5.0, sys0Measures),
+            new SystemLayout(1, 30.0, 80.0, 5.0, sys1Measures));
+        return (measures, systems);
+    }
+
+    [Fact]
+    public void Calculate_BrokenCrescendo_ContinuedHasTwoThirdsOpening()
+    {
+        // LILYPOND-REF: lily/hairpin.cc:180-220 — continued = 2/3 height
+        var (measures, systems) = CreateTwoSystemLayout();
+        var hairpins = ImmutableArray.Create(new HairpinItem(
+            HairpinDirection.Crescendo, 0, 0, 3, 0, 0));
+
+        var result = HairpinEngraver.Calculate(hairpins, systems, measures);
+
+        // Should produce 2 segments (one per system)
+        Assert.Equal(2, result.Length);
+
+        // First segment (continued): point at left, 2/3 opening at right
+        double fullOpening = 0.6666 / 2.0;
+        Assert.Equal(0.0, result[0].StartOpening, 4);
+        Assert.Equal(fullOpening * 2.0 / 3.0, result[0].EndOpening, 4);
+
+        // Second segment (continuing): 1/3 opening at left, full opening at right
+        Assert.Equal(fullOpening * 1.0 / 3.0, result[1].StartOpening, 4);
+        Assert.Equal(fullOpening, result[1].EndOpening, 4);
+    }
+
+    [Fact]
+    public void Calculate_BrokenDecrescendo_ContinuedHasTwoThirdsOpening()
+    {
+        // LILYPOND-REF: lily/hairpin.cc:180-220 — continued = 2/3 height
+        var (measures, systems) = CreateTwoSystemLayout();
+        var hairpins = ImmutableArray.Create(new HairpinItem(
+            HairpinDirection.Decrescendo, 0, 0, 3, 0, 0));
+
+        var result = HairpinEngraver.Calculate(hairpins, systems, measures);
+
+        Assert.Equal(2, result.Length);
+
+        double fullOpening = 0.6666 / 2.0;
+        // First segment (continued): full opening at left, 2/3 at right
+        Assert.Equal(fullOpening, result[0].StartOpening, 4);
+        Assert.Equal(fullOpening * 2.0 / 3.0, result[0].EndOpening, 4);
+
+        // Second segment (continuing): 1/3 at left, point at right
+        Assert.Equal(fullOpening * 1.0 / 3.0, result[1].StartOpening, 4);
+        Assert.Equal(0.0, result[1].EndOpening, 4);
+    }
+
+    [Fact]
+    public void Calculate_SameSystem_NormalOpenings()
+    {
+        // Hairpin within one system should have normal openings
+        var measures = CreateMeasureLayouts(4);
+        var systems = CreateSingleSystem(4);
+        var hairpins = ImmutableArray.Create(new HairpinItem(
+            HairpinDirection.Crescendo, 0, 0, 2, 0, 0));
+
+        var result = HairpinEngraver.Calculate(hairpins, systems, measures);
+
+        Assert.Single(result);
+        Assert.Equal(0.0, result[0].StartOpening, 4);
+        Assert.Equal(0.6666 / 2.0, result[0].EndOpening, 4);
     }
 
     // --- HairpinDirection enum ---

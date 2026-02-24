@@ -52,8 +52,8 @@ public sealed record PageBreakingParameters
     /// <summary>
     /// Don't justify vertically on the last page only.
     /// </summary>
-    /// <remarks>LILYPOND-REF: lily/page-breaking.cc:281 ragged_last_</remarks>
-    public bool RaggedLastBottom { get; init; } = true;
+    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly ragged-last-bottom = ##f</remarks>
+    public bool RaggedLastBottom { get; init; } = false;
 
     /// <summary>
     /// Force exactly this many systems per page (0 = auto).

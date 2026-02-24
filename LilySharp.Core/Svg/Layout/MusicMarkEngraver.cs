@@ -72,8 +72,8 @@ public static class MusicMarkEngraver
     private const double BelowStaffOffset = 5.5;
 
     // Gap between stacked marks
-    // LILYPOND-REF: axis-group-interface.cc:924 padding between outside-staff elements
-    private const double StackGap = 0.3;
+    // LILYPOND-REF: axis-group-interface.cc:50 default_outside_staff_padding_ = 0.46
+    private const double StackGap = 0.46;
 
     /// <summary>
     /// Calculates layout for all music marks in a score, including section labels.

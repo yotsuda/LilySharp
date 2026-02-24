@@ -20,6 +20,11 @@ namespace LilySharp.Core.Svg.Layout;
 /// Layout information for a slur, including Bezier control points.
 /// A slur is drawn as a cubic Bezier curve with 4 control points.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/slur.cc — Slur grob (Bezier control points)
+/// LILYPOND-REF: lily/slur-scoring.cc — scoring/optimization of slur shape
+/// Control points are computed by SlurScoringProblem; this record stores the result.
+/// </remarks>
 public sealed record SlurLayout
 {
     /// <summary>The slur model.</summary>

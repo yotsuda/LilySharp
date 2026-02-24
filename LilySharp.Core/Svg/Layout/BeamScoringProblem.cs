@@ -871,7 +871,14 @@ public sealed class BeamScoringProblem
         for (int d = 0; d < 2; d++)
             score[d] /= Math.Max(count[d], 1);
 
-        config.AddDemerit(score[0] + score[1], "L");
+        double totalScore = score[0] + score[1];
+
+        // LILYPOND-REF: lily/beam-quanting.cc — cross-staff beams get 10× penalty
+        // to strongly prefer configurations with good stem lengths across staves
+        if (_group.IsCrossStaff)
+            totalScore *= 10;
+
+        config.AddDemerit(totalScore, "L");
     }
 
     /// <summary>

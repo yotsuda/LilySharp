@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="205" viewBox="-0 0 80 20.5">
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="227" viewBox="0 0 80 22.7">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   @font-face { font-family: 'Emmentaler-Brace'; src: local('Emmentaler-Brace'); }
@@ -23,47 +23,47 @@
   <text class="music" x="2.0" y="13.0" font-size="4.00"></text>
   <text class="music" x="6.2" y="12.0" font-size="4.00"></text>
   <text class="music" x="6.2" y="14.0" font-size="4.00"></text>
-  <text x="2.00" y="7.50" font-family="Emmentaler" font-size="1.6"></text>
-  <line x1="2.51" y1="7.50" x2="2.51" y2="6.10" stroke="black" stroke-width="0.10"/>
-  <text class="tempo" font-size="1.8" x="3.10" y="7.50">= 120</text>
-  <line class="ledger" x1="12.2" y1="15.0" x2="14.2" y2="15.0"/>
-  <text class="music" x="12.6" y="15.0" font-size="4.00" data-pos="180"></text>
-  <line x1="13.8" y1="14.8" x2="13.8" y2="11.3" stroke="black" stroke-width="0.12" data-pos="180"/>
-  <text class="music" x="18.8" y="14.5" font-size="4.00" data-pos="187"></text>
-  <line x1="20.0" y1="14.3" x2="20.0" y2="10.8" stroke="black" stroke-width="0.12" data-pos="187"/>
-  <text class="music" x="25.1" y="14.0" font-size="4.00" data-pos="189"></text>
-  <line x1="26.3" y1="13.8" x2="26.3" y2="10.3" stroke="black" stroke-width="0.12" data-pos="189"/>
-  <text class="music" x="31.4" y="13.5" font-size="4.00" data-pos="191"></text>
-  <line x1="32.6" y1="13.3" x2="32.6" y2="9.8" stroke="black" stroke-width="0.12" data-pos="191"/>
-  <rect x="36.20" y="10.00" width="0.16" height="4.00" fill="black"/>
-  <text class="music" x="39.4" y="13.0" font-size="4.00" data-pos="195"></text>
-  <line x1="40.5" y1="12.8" x2="40.5" y2="9.3" stroke="black" stroke-width="0.12" data-pos="195"/>
-  <text class="music" x="44.2" y="13.0" font-size="4.00" data-pos="202"></text>
-  <line x1="45.4" y1="12.8" x2="45.4" y2="9.3" stroke="black" stroke-width="0.12" data-pos="202"/>
-  <rect x="50.22" y="10.00" width="0.16" height="4.00" fill="black"/>
-  <text class="music" x="53.4" y="12.5" font-size="4.00" data-pos="206"></text>
-  <line x1="54.6" y1="12.3" x2="54.6" y2="8.8" stroke="black" stroke-width="0.12" data-pos="206"/>
-  <text class="music" x="57.1" y="12.5" font-size="4.00" data-pos="213"></text>
-  <line x1="58.3" y1="12.3" x2="58.3" y2="8.8" stroke="black" stroke-width="0.12" data-pos="213"/>
-  <text class="music" x="61.3" y="12.5" font-size="4.00" data-pos="215"></text>
-  <line x1="62.4" y1="12.3" x2="62.4" y2="8.8" stroke="black" stroke-width="0.12" data-pos="215"/>
-  <text class="music" x="67.4" y="12.5" font-size="4.00" data-pos="217"></text>
-  <line x1="68.5" y1="12.3" x2="68.5" y2="8.8" stroke="black" stroke-width="0.12" data-pos="217"/>
-  <rect x="72.20" y="10.00" width="0.16" height="4.00" fill="black"/>
-  <text class="music" x="75.1" y="13.0" font-size="4.00" data-pos="221"></text>
-  <rect x="82.10" y="10.00" width="0.16" height="4.00" fill="black"/>
-  <rect x="82.66" y="10.00" width="0.50" height="4.00" fill="black"/>
-  <text x="13.18" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">Twin-</text>
-  <text x="19.44" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">kle</text>
-  <text x="25.70" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">twin-</text>
-  <text x="31.96" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">kle</text>
-  <text x="39.96" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">lit-</text>
-  <text x="44.78" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">tle</text>
-  <text x="53.98" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">how</text>
-  <text x="57.68" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">I</text>
-  <text x="61.86" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">won-</text>
-  <text x="67.96" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">der</text>
-  <text x="75.96" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">star</text>
-  <rect x="6.89" y="6.20" width="5.41" height="2.60" fill="white" stroke="black" stroke-width="0.10" class="section-label-box" />
-  <text x="9.60" y="7.50" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">Main</text>
+  <line class="ledger" x1="12.9" y1="15.0" x2="14.9" y2="15.0"/>
+  <text class="music" x="13.3" y="15.0" font-size="4.00" data-pos="180"></text>
+  <line x1="14.5" y1="14.8" x2="14.5" y2="11.3" stroke="black" stroke-width="0.12" data-pos="180"/>
+  <text class="music" x="19.6" y="14.5" font-size="4.00" data-pos="187"></text>
+  <line x1="20.7" y1="14.3" x2="20.7" y2="10.8" stroke="black" stroke-width="0.12" data-pos="187"/>
+  <text class="music" x="25.8" y="14.0" font-size="4.00" data-pos="189"></text>
+  <line x1="27.0" y1="13.8" x2="27.0" y2="10.3" stroke="black" stroke-width="0.12" data-pos="189"/>
+  <text class="music" x="32.1" y="13.5" font-size="4.00" data-pos="191"></text>
+  <line x1="33.2" y1="13.3" x2="33.2" y2="9.8" stroke="black" stroke-width="0.12" data-pos="191"/>
+  <rect x="35.78" y="10.00" width="0.16" height="4.00" fill="black"/>
+  <text class="music" x="38.0" y="13.0" font-size="4.00" data-pos="195"></text>
+  <line x1="39.2" y1="12.8" x2="39.2" y2="9.3" stroke="black" stroke-width="0.12" data-pos="195"/>
+  <text class="music" x="42.8" y="13.0" font-size="4.00" data-pos="202"></text>
+  <line x1="44.0" y1="12.8" x2="44.0" y2="9.3" stroke="black" stroke-width="0.12" data-pos="202"/>
+  <rect x="47.64" y="10.00" width="0.16" height="4.00" fill="black"/>
+  <text class="music" x="50.3" y="12.5" font-size="4.00" data-pos="206"></text>
+  <line x1="51.5" y1="12.3" x2="51.5" y2="8.8" stroke="black" stroke-width="0.12" data-pos="206"/>
+  <text class="music" x="54.0" y="12.5" font-size="4.00" data-pos="213"></text>
+  <line x1="55.2" y1="12.3" x2="55.2" y2="8.8" stroke="black" stroke-width="0.12" data-pos="213"/>
+  <text class="music" x="58.2" y="12.5" font-size="4.00" data-pos="215"></text>
+  <line x1="59.4" y1="12.3" x2="59.4" y2="8.8" stroke="black" stroke-width="0.12" data-pos="215"/>
+  <text class="music" x="64.3" y="12.5" font-size="4.00" data-pos="217"></text>
+  <line x1="65.5" y1="12.3" x2="65.5" y2="8.8" stroke="black" stroke-width="0.12" data-pos="217"/>
+  <rect x="68.34" y="10.00" width="0.16" height="4.00" fill="black"/>
+  <text class="music" x="71.3" y="13.0" font-size="4.00" data-pos="221"></text>
+  <rect x="77.04" y="10.00" width="0.16" height="4.00" fill="black"/>
+  <rect x="77.60" y="10.00" width="0.50" height="4.00" fill="black"/>
+  <text x="13.88" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">Twin-</text>
+  <text x="20.14" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">kle</text>
+  <text x="26.40" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">twin-</text>
+  <text x="32.66" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">kle</text>
+  <text x="38.58" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">lit-</text>
+  <text x="43.40" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">tle</text>
+  <text x="50.92" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">how</text>
+  <text x="54.62" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">I</text>
+  <text x="58.80" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">won-</text>
+  <text x="64.90" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">der</text>
+  <text x="72.10" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">star</text>
+  <text x="10.30" y="7.50" font-family="Emmentaler" font-size="1.6"></text>
+  <line x1="10.81" y1="7.50" x2="10.81" y2="6.10" stroke="black" stroke-width="0.10"/>
+  <text class="tempo" font-size="1.8" x="11.40" y="7.50">= 120</text>
+  <rect x="7.59" y="2.64" width="5.41" height="2.60" fill="white" stroke="black" stroke-width="0.10" class="section-label-box" />
+  <text x="10.30" y="3.94" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">Main</text>
 </svg>

@@ -35,10 +35,15 @@ public enum GraceNoteType
 /// <summary>
 /// Information about a single note within a grace note group.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/grace-spacing.cc — each grace note has its own duration
+/// for spring-based spacing calculation.
+/// </remarks>
 public readonly record struct GraceNoteInfo(
     int StaffPosition,      // Staff position (-6 = middle C in treble clef)
     string? Accidental,     // "sharp", "flat", "natural", "doubleSharp", "doubleFlat", or null
-    bool NeedsLedger        // Whether ledger lines are needed
+    bool NeedsLedger,       // Whether ledger lines are needed
+    Fraction BaseDuration   // Duration of this grace note (for spacing calculation)
 );
 
 /// <summary>

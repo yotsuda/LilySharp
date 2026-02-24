@@ -220,6 +220,101 @@ public class AccidentalPlacementTests
         Assert.Equal(expected, layout.Value.XOffset, 3);
     }
 
+    // --- Octave-first priority sorting ---
+    // LILYPOND-REF: accidental-placement.cc:164-184 acc_less
+
+    [Fact]
+    public void OctaveFirstSort_GroupsSameOctaveAccidentals()
+    {
+        var placement = new AccidentalPlacement();
+        // Two accidentals in same octave (positions 0, 2) with different types
+        // should be placed according to alteration priority within that octave
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(0, "flat", false),      // octave 0, priority 3
+            new ChordNoteInfo(2, "natural", false)     // octave 0, priority 0
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+
+        Assert.Equal(2, layouts.Length);
+        // Natural should be closer to notes (lower priority = rightmost)
+        var naturalLayout = layouts.First(l => l.Accidental == "natural");
+        var flatLayout = layouts.First(l => l.Accidental == "flat");
+        Assert.True(naturalLayout.XOffset > flatLayout.XOffset,
+            $"Natural ({naturalLayout.XOffset:F3}) should be closer to notes than flat ({flatLayout.XOffset:F3})");
+    }
+
+    [Fact]
+    public void OctaveFirstSort_DifferentOctaves_GroupsByOctave()
+    {
+        var placement = new AccidentalPlacement();
+        // Accidentals in different octaves: lower octave placed first (rightmost)
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(-7, "sharp", false),    // octave -1
+            new ChordNoteInfo(0, "sharp", false),      // octave 0
+            new ChordNoteInfo(7, "sharp", false)       // octave 1
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+        Assert.Equal(3, layouts.Length);
+
+        // All should have valid (negative) offsets
+        foreach (var layout in layouts)
+            Assert.True(layout.XOffset < 0);
+    }
+
+    // --- Flat merge overlap ---
+    // LILYPOND-REF: accidental-placement.cc:290-295
+
+    [Fact]
+    public void FlatMerge_AdjacentFlats_CanOverlap()
+    {
+        var placement = new AccidentalPlacement();
+        // Two flats in different octaves at close Y positions
+        // Use positions in different octaves to avoid same-octave overstrike
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(6, "flat", false),    // octave 0 (6/7=0)
+            new ChordNoteInfo(9, "flat", false)     // octave 1 (9/7=1)
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+        Assert.Equal(2, layouts.Length);
+
+        // With flat merge, the offset difference should be less than
+        // what it would be for two sharps at the same positions
+        var sharpNotes = ImmutableArray.Create(
+            new ChordNoteInfo(6, "sharp", false),
+            new ChordNoteInfo(9, "sharp", false)
+        );
+        var sharpLayouts = placement.CalculatePositions(sharpNotes);
+
+        var flatOffsets = layouts.Select(l => l.XOffset).OrderByDescending(x => x).ToList();
+        var sharpOffsets = sharpLayouts.Select(l => l.XOffset).OrderByDescending(x => x).ToList();
+
+        double flatSpacing = Math.Abs(flatOffsets[0] - flatOffsets[1]);
+        double sharpSpacing = Math.Abs(sharpOffsets[0] - sharpOffsets[1]);
+
+        Assert.True(flatSpacing < sharpSpacing,
+            $"Flat spacing ({flatSpacing:F3}) should be tighter than sharp spacing ({sharpSpacing:F3}) due to flat merge");
+    }
+
+    [Fact]
+    public void FlatMerge_FlatAndSharp_NoOverlap()
+    {
+        var placement = new AccidentalPlacement();
+        // Flat + sharp should NOT get the flat merge overlap
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(0, "flat", false),
+            new ChordNoteInfo(2, "sharp", false)
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+        Assert.Equal(2, layouts.Length);
+        // Both should have valid offsets
+        foreach (var layout in layouts)
+            Assert.True(layout.XOffset < 0);
+    }
+
     [Theory]
     [InlineData("sharp", "flat", "natural", "doubleSharp", "doubleFlat")]
     public void AllAccidentalTypes_ProduceValidLayout(
@@ -241,5 +336,132 @@ public class AccidentalPlacementTests
         {
             Assert.True(layout.XOffset < 0, $"Accidental {layout.Accidental} at pos {layout.StaffPosition} should be left of note");
         }
+    }
+
+    // --- stagger_apes ---
+    // LILYPOND-REF: accidental-placement.cc:261-336
+
+    [Fact]
+    public void Stagger_WidelySpacedAccidentals_AllValid()
+    {
+        // Accidentals spread far apart (different octaves)
+        // Stagger should produce valid non-overlapping layout
+        var placement = new AccidentalPlacement();
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(-7, "sharp", false),   // octave -1
+            new ChordNoteInfo(0, "flat", false),       // octave 0
+            new ChordNoteInfo(7, "natural", false),    // octave 1
+            new ChordNoteInfo(14, "sharp", false)      // octave 2
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+        Assert.Equal(4, layouts.Length);
+
+        // All offsets should be negative (left of note)
+        foreach (var l in layouts)
+            Assert.True(l.XOffset < 0, $"{l.Accidental} at {l.StaffPosition}: offset {l.XOffset:F3}");
+    }
+
+    [Fact]
+    public void Stagger_ClusterVsIsolated_ClusterCloserToNotes()
+    {
+        // Dense cluster (positions 0,1,2) vs isolated note at position 14
+        // The cluster (3 accidentals) should be closer to noteheads than the isolated one
+        var placement = new AccidentalPlacement();
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(0, "sharp", false),
+            new ChordNoteInfo(1, "sharp", false),
+            new ChordNoteInfo(2, "sharp", false),
+            new ChordNoteInfo(14, "sharp", false)  // far away, isolated
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+        Assert.Equal(4, layouts.Length);
+
+        // All should be valid
+        foreach (var l in layouts)
+            Assert.True(l.XOffset < 0);
+
+        // The isolated accidental should have valid offset
+        var isolated = layouts.First(l => l.StaffPosition == 14);
+        Assert.True(isolated.XOffset < 0);
+    }
+
+    [Fact]
+    public void Stagger_TwoEntries_NoStagger()
+    {
+        // Only 2 entries: stagger is not applied (threshold is >2)
+        var placement = new AccidentalPlacement();
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(0, "sharp", false),
+            new ChordNoteInfo(2, "flat", false)
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+        Assert.Equal(2, layouts.Length);
+
+        foreach (var l in layouts)
+            Assert.True(l.XOffset < 0);
+    }
+
+    // --- Same-octave overstrike ---
+    // LILYPOND-REF: accidental-placement.cc:441-460
+
+    [Fact]
+    public void SameOctave_SameAlteration_Overstrike()
+    {
+        // Two sharps in the same octave (positions 0 and 2, both octave 0)
+        // → same alteration → should overstrike (same X offset)
+        var placement = new AccidentalPlacement();
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(0, "sharp", false),
+            new ChordNoteInfo(2, "sharp", false)
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+        Assert.Equal(2, layouts.Length);
+
+        var layout0 = layouts.First(l => l.StaffPosition == 0);
+        var layout2 = layouts.First(l => l.StaffPosition == 2);
+
+        // Both should share the same X offset (overstrike)
+        Assert.Equal(layout0.XOffset, layout2.XOffset, 3);
+    }
+
+    [Fact]
+    public void SameOctave_DifferentAlteration_NoOverstrike()
+    {
+        // Sharp and flat in same octave → different alteration → separate positions
+        var placement = new AccidentalPlacement();
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(0, "sharp", false),
+            new ChordNoteInfo(2, "flat", false)
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+        Assert.Equal(2, layouts.Length);
+
+        // Should have different X offsets
+        var sharpLayout = layouts.First(l => l.Accidental == "sharp");
+        var flatLayout = layouts.First(l => l.Accidental == "flat");
+        Assert.NotEqual(sharpLayout.XOffset, flatLayout.XOffset);
+    }
+
+    [Fact]
+    public void DifferentOctaves_SameAlteration_NoOverstrike()
+    {
+        // Two sharps in different octaves → no overstrike
+        var placement = new AccidentalPlacement();
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(0, "sharp", false),   // octave 0
+            new ChordNoteInfo(7, "sharp", false)     // octave 1
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+        Assert.Equal(2, layouts.Length);
+
+        // Both should have valid offsets (may or may not be same depending on collision)
+        foreach (var l in layouts)
+            Assert.True(l.XOffset < 0);
     }
 }

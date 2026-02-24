@@ -86,18 +86,6 @@ public static class GlissandoEngraver
             startX += Padding;
             endX -= Padding;
 
-            // Apply gap: shorten both ends slightly
-            // LILYPOND-REF: scm/define-grobs.scm:1570 (gap . 0.5)
-            double dx = endX - startX;
-            double dy = (gliss.StartStaffPosition - gliss.EndStaffPosition) / 2.0;
-            double length = Math.Sqrt(dx * dx + dy * dy);
-            if (length > Gap * 2)
-            {
-                double gapRatio = Gap / length;
-                startX += dx * gapRatio;
-                endX -= dx * gapRatio;
-            }
-
             // Calculate Y positions from staff positions
             double staffY = LayoutUtilities.FindStaffYInSystem(startSystem, staffIndex);
             double staffMiddleY = staffY + staffHeight / 2;
@@ -110,6 +98,21 @@ public static class GlissandoEngraver
                 double endStaffY = LayoutUtilities.FindStaffYInSystem(endSystem, staffIndex);
                 double endStaffMiddleY = endStaffY + staffHeight / 2;
                 endY = endStaffMiddleY - gliss.EndStaffPosition / 2.0;
+            }
+
+            // Apply gap: shorten both ends along the line direction
+            // LILYPOND-REF: lily/line-spanner.cc:457 span_points[d] += -d * gaps[d] * magstep * dz.direction()
+            // LILYPOND-REF: scm/define-grobs.scm:1570 (gap . 0.5)
+            double dx = endX - startX;
+            double dy = endY - startY;
+            double length = Math.Sqrt(dx * dx + dy * dy);
+            if (length > Gap * 2)
+            {
+                double gapRatio = Gap / length;
+                startX += dx * gapRatio;
+                startY += dy * gapRatio;
+                endX -= dx * gapRatio;
+                endY -= dy * gapRatio;
             }
 
             layouts.Add(new GlissandoLayout(

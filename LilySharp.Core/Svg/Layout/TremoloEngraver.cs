@@ -58,11 +58,15 @@ public static class TremoloEngraver
     // LILYPOND-REF: define-grobs.scm:2785 beam-thickness = 0.48
     private const double BeamThickness = 0.48;
 
-    // LILYPOND-REF: define-grobs.scm:2790 slope = 0.25
-    private const double BeamSlope = 0.25;
+    // LILYPOND-REF: stem-tremolo.cc:45-79 calc-slope
+    // Default slope; steeper (0.40) for down stems with flags
+    private const double DefaultBeamSlope = 0.25;
+    private const double FlagDownStemSlope = 0.40;
 
-    // Width of tremolo beam in staff spaces
-    private const double BeamWidth = 1.2;
+    // LILYPOND-REF: stem-tremolo.cc:81-94 calc-width
+    // Width depends on flag presence: 1.0 with flag, 1.5 without
+    private const double FlagBeamWidth = 1.0;
+    private const double NoFlagBeamWidth = 1.5;
 
     /// <summary>
     /// Calculates layout for all tremolos in a score.
@@ -136,9 +140,16 @@ public static class TremoloEngraver
     /// <summary>Gets the gap between beams.</summary>
     public static double GetBeamGap() => BeamGap;
 
-    /// <summary>Gets the beam width.</summary>
-    public static double GetBeamWidth() => BeamWidth;
+    /// <summary>
+    /// Gets the beam width based on flag presence.
+    /// LILYPOND-REF: stem-tremolo.cc:81-94 calc-width
+    /// </summary>
+    public static double GetBeamWidth(bool hasFlag) => hasFlag ? FlagBeamWidth : NoFlagBeamWidth;
 
-    /// <summary>Gets the beam slope.</summary>
-    public static double GetBeamSlope() => BeamSlope;
+    /// <summary>
+    /// Gets the beam slope based on stem direction and flag presence.
+    /// LILYPOND-REF: stem-tremolo.cc:45-79 calc-slope
+    /// </summary>
+    public static double GetBeamSlope(bool stemUp, bool hasFlag) =>
+        (!stemUp && hasFlag) ? FlagDownStemSlope : DefaultBeamSlope;
 }

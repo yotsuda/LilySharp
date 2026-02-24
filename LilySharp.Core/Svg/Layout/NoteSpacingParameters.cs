@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Svg;
+
 namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
@@ -52,4 +54,27 @@ public sealed record NoteSpacingParameters
     /// LILYPOND-REF: define-grobs.scm:2430 (space-to-barline . #t)
     /// </summary>
     public bool SpaceToBarline { get; init; } = true;
+
+    /// <summary>
+    /// When true, enforces strictly proportional spacing based on duration.
+    /// In strict mode, the minimum distance equals the duration-based ideal distance,
+    /// preventing compression below proportional spacing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:229-264 strict_note_spacing
+    /// Used with \set SpacingSpanner.strict-note-spacing = ##t
+    /// Commonly used in multi-voice scores for uniform column alignment.
+    /// </remarks>
+    public bool StrictNoteSpacing { get; init; } = false;
+
+    /// <summary>
+    /// Base note space: the minimum space for the shortest note in strict mode.
+    /// Equals ShortestDurationSpace * SpacingIncrement in LilyPond.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:229-264
+    /// LILYPOND-REF: scm/define-grobs.scm SpacingSpanner.base-shortest-duration
+    /// </remarks>
+    public double BaseNoteSpace { get; init; } = EngravingDefaults.ShortestDurationSpace
+                                                  * EngravingDefaults.SpacingIncrement;
 }

@@ -19,6 +19,17 @@ using LilySharp.Core.Svg.Model;
 namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
+/// Per-measure spring data for line-breaking force calculations.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/simple-spacer.cc — each column's spring contributes to line force
+/// </remarks>
+internal readonly record struct MeasureSpringData(
+    double IdealWidth,
+    double MinWidth,
+    double InverseStretchStrength);
+
+/// <summary>
 /// Knuth-Plass optimal line breaking algorithm for music scores.
 /// </summary>
 /// <remarks>
@@ -30,9 +41,10 @@ namespace LilySharp.Core.Svg.Layout;
 /// Let D(n,k) be the minimum total penalty for breaking the first n measures into k lines.
 /// Then: D(n,k) = min over j { D(j,k-1) + W(j+1,n) }
 ///
-/// The penalty function considers:
-/// - Line stretch/compression (badness)
-/// - Break penalties at specific measure boundaries
+/// LILYPOND-REF: lily/constrained-breaking.cc:224-232
+/// Demerits = force² + Δforce² where:
+/// - force = (available - ideal_sum) / inverse_stretch_sum
+/// - Δforce = force_current - force_previous
 /// </remarks>
 public sealed class KnuthPlassBreaker
 {
@@ -80,7 +92,8 @@ public sealed class KnuthPlassBreaker
     /// </summary>
     /// <param name="measures">Measures to break into lines.</param>
     /// <returns>List of measure groups, each representing one line.</returns>
-    public List<List<Measure>> BreakIntoLines(IReadOnlyList<Measure> measures)
+    public List<List<Measure>> BreakIntoLines(IReadOnlyList<Measure> measures,
+                                               double? baseShortestDuration = null)
     {
         if (measures.Count == 0)
             return new List<List<Measure>>();
@@ -93,36 +106,100 @@ public sealed class KnuthPlassBreaker
                 forcedBreaks.Add(i + 1); // Break AFTER measure i means break point at i+1
         }
 
-        // Calculate ideal widths for each measure
-        var widths = measures.Select(m => SpacingRules.CalculateMeasureIdealWidth(m)).ToArray();
+        // Calculate spring data for each measure
+        var springData = ComputeMeasureSpringData(measures, baseShortestDuration);
 
         // Find optimal number of lines and break points
-        var breakPoints = FindOptimalBreaks(widths, forcedBreaks);
+        var breakPoints = FindOptimalBreaks(springData, forcedBreaks);
 
         // Convert break points to measure groups
         return CreateMeasureGroups(measures, breakPoints);
     }
 
     /// <summary>
-    /// Finds optimal break points using dynamic programming.
+    /// Computes spring data for each measure from its internal springs.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/constrained-breaking.cc:83-126
+    /// LILYPOND-REF: lily/simple-spacer.cc — spring parameters for force calculation
+    /// Each measure's springs are summed to produce aggregate spring data.
+    /// </remarks>
+    private static MeasureSpringData[] ComputeMeasureSpringData(IReadOnlyList<Measure> measures,
+                                                                double? baseShortestDuration = null)
+    {
+        var data = new MeasureSpringData[measures.Count];
+        for (int i = 0; i < measures.Count; i++)
+        {
+            var m = measures[i];
+            double idealWidth = SpacingRules.CalculateMeasureIdealWidth(m, baseShortestDuration);
+
+            // Sum inverse stretch strengths from the measure's springs
+            double inverseStretch = 0;
+            double minWidth = 0;
+            var springs = SpacingRules.CreateSpringsForMeasure(m, baseShortestDuration);
+            foreach (var spring in springs)
+            {
+                inverseStretch += spring.InverseStretchStrength;
+                minWidth += spring.MinDistance;
+            }
+
+            // Add barline widths to min
+            minWidth += SpacingRules.GetBarlineWidth(m.StartBarline);
+            minWidth += SpacingRules.GetBarlineWidth(m.EndBarline);
+
+            data[i] = new MeasureSpringData(idealWidth, minWidth, inverseStretch);
+        }
+        return data;
+    }
+
+    /// <summary>
+    /// Calculates the force for a line containing the given spring data.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:267-300 solve()
+    /// force = (available_width - ideal_sum) / inverse_stretch_sum
+    /// Positive force = stretch, negative = compress.
+    /// </remarks>
+    internal static double CalculateLineForce(
+        double availableWidth, double idealSum, double inverseStretchSum)
+    {
+        if (inverseStretchSum < 1e-6)
+            return availableWidth >= idealSum ? 0 : double.NegativeInfinity;
+
+        return (availableWidth - idealSum) / inverseStretchSum;
+    }
+
+    /// <summary>
+    /// Finds optimal break points using dynamic programming with force-based demerits.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:83-126, 224-232
+    /// Demerits = force² + (force - prevForce)²
     /// Forced breaks are handled by only allowing transitions through forced break points.
     /// </remarks>
-    private List<int> FindOptimalBreaks(double[] widths, HashSet<int> forcedBreaks)
+    private List<int> FindOptimalBreaks(MeasureSpringData[] springData, HashSet<int> forcedBreaks)
     {
-        int n = widths.Length;
+        int n = springData.Length;
 
-        // Precompute line widths for all (i,j) pairs
-        var lineWidths = PrecomputeLineWidths(widths);
+        // Precompute cumulative sums for fast range queries
+        var cumIdeal = new double[n + 1];
+        var cumInvStretch = new double[n + 1];
+        var cumMin = new double[n + 1];
+        for (int i = 0; i < n; i++)
+        {
+            cumIdeal[i + 1] = cumIdeal[i] + springData[i].IdealWidth;
+            cumInvStretch[i + 1] = cumInvStretch[i] + springData[i].InverseStretchStrength;
+            cumMin[i + 1] = cumMin[i] + springData[i].MinWidth;
+        }
 
         // D[j] = minimum penalty to break measures 0..j-1
         // prev[j] = previous break point for optimal solution ending at j
+        // lineForce[j] = force of the last line in optimal solution ending at j
         var d = new double[n + 1];
         var prev = new int[n + 1];
+        var lineForce = new double[n + 1];
 
         d[0] = 0;
+        lineForce[0] = 0; // No previous line
         for (int j = 1; j <= n; j++)
         {
             d[j] = Infinity;
@@ -131,7 +208,6 @@ public sealed class KnuthPlassBreaker
             for (int i = 0; i < j; i++)
             {
                 // Skip if there's a forced break between i and j-1 (exclusive)
-                // We can only transition from i if there are no forced breaks in (i, j)
                 bool hasForcedBreakInMiddle = false;
                 for (int k = i + 1; k < j; k++)
                 {
@@ -145,7 +221,49 @@ public sealed class KnuthPlassBreaker
                     continue;
 
                 bool isFirstLine = i == 0;
-                double penalty = CalculateLinePenalty(lineWidths[i, j], isFirstLine);
+                double prefixWidth = isFirstLine ? _firstPrefixWidth : _continuationPrefixWidth;
+                double availableWidth = _lineWidth - prefixWidth;
+
+                // Compute line spring totals via cumulative sums
+                double idealSum = cumIdeal[j] - cumIdeal[i];
+                double invStretchSum = cumInvStretch[j] - cumInvStretch[i];
+                double minSum = cumMin[j] - cumMin[i];
+
+                // Check overfull: if minimum width exceeds available
+                if (minSum > availableWidth * _tolerance)
+                    continue;
+
+                // Check severely underfull (but allow lines adjacent to forced breaks)
+                // LILYPOND-REF: lily/constrained-breaking.cc — \break is an absolute constraint
+                // A line ending at or starting from a forced break must be allowed
+                if (idealSum < availableWidth / (_tolerance * 2) && idealSum > 0
+                    && !forcedBreaks.Contains(j) && !forcedBreaks.Contains(i))
+                    continue;
+
+                // LILYPOND-REF: lily/simple-spacer.cc:267-300
+                double force = CalculateLineForce(availableWidth, idealSum, invStretchSum);
+
+                // Overfull line that can't be compressed
+                if (double.IsNegativeInfinity(force))
+                    continue;
+
+                // LILYPOND-REF: lily/constrained-breaking.cc:224-232
+                // demerits = force² + Δforce²
+                double penalty;
+                if (force < 0)
+                {
+                    // Compressed line: use force² + overfull penalty
+                    penalty = force * force + OverfullPenalty * Math.Abs(force);
+                }
+                else
+                {
+                    penalty = force * force;
+                }
+
+                // Δforce² : penalize force difference between consecutive lines
+                double prevF = lineForce[i];
+                double deltaForce = force - prevF;
+                penalty += deltaForce * deltaForce;
 
                 if (penalty < Infinity)
                 {
@@ -154,6 +272,7 @@ public sealed class KnuthPlassBreaker
                     {
                         d[j] = totalPenalty;
                         prev[j] = i;
+                        lineForce[j] = force;
                     }
                 }
             }
@@ -170,67 +289,6 @@ public sealed class KnuthPlassBreaker
 
         breaks.Reverse();
         return breaks;
-    }
-
-    /// <summary>
-    /// Precomputes cumulative line widths for all (start, end) pairs.
-    /// </summary>
-    private double[,] PrecomputeLineWidths(double[] widths)
-    {
-        int n = widths.Length;
-        var result = new double[n + 1, n + 1];
-
-        for (int i = 0; i < n; i++)
-        {
-            double sum = 0;
-            for (int j = i; j < n; j++)
-            {
-                sum += widths[j];
-                result[i, j + 1] = sum;
-            }
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// Calculates the penalty (badness) for a line with given content width.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/simple-spacer.cc:267-300
-    /// LILYPOND-REF: lily/constrained-breaking.cc:114-115
-    ///
-    /// The penalty is based on how much the line needs to stretch or compress.
-    /// Badness = 100 * |ratio - 1|^3 where ratio = actual/ideal
-    /// </remarks>
-    private double CalculateLinePenalty(double contentWidth, bool isFirstLine)
-    {
-        double prefixWidth = isFirstLine ? _firstPrefixWidth : _continuationPrefixWidth;
-        double availableWidth = _lineWidth - prefixWidth;
-
-        if (contentWidth <= 0)
-            return Infinity;
-
-        double ratio = availableWidth / contentWidth;
-
-        // Overfull line (content wider than available)
-        if (ratio < 1.0 / _tolerance)
-            return Infinity;
-
-        // Severely stretched line
-        if (ratio > _tolerance * 2)
-            return Infinity;
-
-        // Calculate badness using cubic formula
-        // LILYPOND-REF: lily/simple-spacer.cc:291
-        double deviation = Math.Abs(ratio - 1.0);
-        double badness = 100 * Math.Pow(deviation, 3);
-
-        // Add overfull penalty for lines that need compression
-        if (ratio < 1.0)
-            badness += OverfullPenalty * (1.0 - ratio);
-
-        return badness;
     }
 
     /// <summary>
