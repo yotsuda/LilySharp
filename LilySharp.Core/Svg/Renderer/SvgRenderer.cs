@@ -1703,9 +1703,11 @@ public sealed class SvgRenderer
             bool stemUp = _beamedStemUp.TryGetValue(note, out bool beamStemUp)
                 ? beamStemUp
                 : resolvedDir ?? forcedStemUp ?? note.StemUp;
-            var stemAnchor = stemUp ? GlyphMetrics.StemUpSE : GlyphMetrics.StemDownNW;
-            double stemX = noteheadLeftX + stemAnchor.X;
-            double stemAttachY = noteY - stemAnchor.Y;
+            // LILYPOND-REF: lily/stem.cc — stem at notehead.extent(X_AXIS)[d]
+            // Use actual notehead width (half noteheads are wider than filled)
+            double stemX = stemUp ? noteheadLeftX + noteheadBBox.Right : noteheadLeftX;
+            var stemAnchorY = stemUp ? GlyphMetrics.StemUpSE.Y : GlyphMetrics.StemDownNW.Y;
+            double stemAttachY = noteY - stemAnchorY;
 
             // Use beam-calculated stem end if part of a beam group, otherwise calculate based on position
             double stemEndY;
@@ -1790,7 +1792,12 @@ public sealed class SvgRenderer
     private void DrawChord(ChordItem chord, double x, double systemY, bool? forcedStemUp = null)
     {
         int noteValue = GetNoteValue(chord.BaseDuration);
-        double noteheadWidth = (noteValue == 1 ? EngravingDefaults.NoteheadWholeWidth : EngravingDefaults.NoteheadBlackWidth);
+        double noteheadWidth = noteValue switch
+        {
+            1 => EngravingDefaults.NoteheadWholeWidth,
+            2 => EngravingDefaults.NoteheadHalfWidth,
+            _ => EngravingDefaults.NoteheadBlackWidth
+        };
         char notehead = EmmentalerGlyphs.GetNotehead(noteValue);
 
         // Determine stem direction early (needed for notehead side assignment)
@@ -1864,7 +1871,9 @@ public sealed class SvgRenderer
                 : chord.Notes.Max(n => n.StaffPosition);
             double stemNoteY = systemY + StaffHeight / 2 - (stemAttachPos / 2.0);
 
-            double stemX = stemUp ? x + StemUpAttachX : x + StemDownAttachX;
+            // LILYPOND-REF: lily/stem.cc — stem at notehead.extent(X_AXIS)[d]
+            // Use actual notehead width for stem attachment (half noteheads are wider)
+            double stemX = stemUp ? x + noteheadWidth : x + StemDownAttachX;
             double stemAttachY = stemUp ? stemNoteY - StemUpAttachY : stemNoteY - StemDownAttachY;
 
             // Use beam-calculated stem end if part of a beam group, otherwise calculate based on position

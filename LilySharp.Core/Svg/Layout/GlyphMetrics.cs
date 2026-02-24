@@ -50,18 +50,26 @@ public static class GlyphMetrics
     // ========== Noteheads ==========
 
     /// <summary>Black (filled) notehead - quarter note and shorter</summary>
-    public static readonly BBox NoteheadBlack = new(0, -0.5, 1.18, 0.5);
+    /// <remarks>Measured from emmentaler-20.otf: advance=326, bbox xMax=326 (326/250=1.304 ss)</remarks>
+    public static readonly BBox NoteheadBlack = new(0, -0.544, 1.304, 0.544);
 
     /// <summary>Half (hollow) notehead</summary>
-    public static readonly BBox NoteheadHalf = new(0, -0.5, 1.18, 0.5);
+    /// <remarks>Measured from emmentaler-20.otf: advance=344, bbox xMax=344 (344/250=1.376 ss)</remarks>
+    public static readonly BBox NoteheadHalf = new(0, -0.544, 1.376, 0.544);
 
     /// <summary>Whole notehead</summary>
-    public static readonly BBox NoteheadWhole = new(0, -0.5, 1.688, 0.5);
+    /// <remarks>Measured from emmentaler-20.otf: advance=400, bbox xMax=400 (400/250=1.600 ss)</remarks>
+    public static readonly BBox NoteheadWhole = new(0, -0.544, 1.600, 0.544);
 
     // ========== Stem Anchors ==========
 
-    /// <summary>Stem attachment point for upward stem (right side of notehead)</summary>
-    public static readonly Anchor StemUpSE = new(1.18, 0.168);
+    /// <summary>Stem attachment point for upward stem (right side of filled notehead)</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem.cc — stem attaches at notehead.extent(X_AXIS)[RIGHT]
+    /// X = NoteheadBlack.Right (1.304), Y offset from Emmentaler stem anchor.
+    /// For half noteheads, use NoteheadHalf.Right (1.376) instead.
+    /// </remarks>
+    public static readonly Anchor StemUpSE = new(1.304, 0.168);
 
     /// <summary>Stem attachment point for downward stem (left side of notehead)</summary>
     public static readonly Anchor StemDownNW = new(0, -0.168);

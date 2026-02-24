@@ -82,13 +82,15 @@ public static class EngravingDefaults
     public const double FlagHeightIncrement = 0.5;
 
     // === Notehead dimensions ===
-    public const double NoteheadWholeWidth = 1.688;
-    public const double NoteheadHalfWidth = 1.18;
-    public const double NoteheadBlackWidth = 1.18;
+    // Measured from emmentaler-20.otf advance widths (fu/250 = staff spaces)
+    public const double NoteheadWholeWidth = 1.600;
+    public const double NoteheadHalfWidth = 1.376;
+    public const double NoteheadBlackWidth = 1.304;
     public const double NoteheadDoubleWholeWidth = 2.296;
 
     // === Stem attachment points ===
-    public const double StemUpAttachX = 1.18;
+    // LILYPOND-REF: lily/stem.cc — stem attaches at notehead extent RIGHT edge
+    public const double StemUpAttachX = 1.304;  // = NoteheadBlackWidth (default for filled noteheads)
     public const double StemUpAttachY = 0.168;
     public const double StemDownAttachX = 0.0;
     public const double StemDownAttachY = -0.168;

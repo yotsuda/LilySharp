@@ -638,7 +638,7 @@ public class NoteCollisionTests
         double expectedOffset = forceHshift * noteheadWidth;
 
         // Verify the math matches LilyPond's convention
-        Assert.Equal(1.77, expectedOffset, 2); // 1.5 * 1.18 = 1.77
+        Assert.Equal(1.956, expectedOffset, 2); // 1.5 * 1.304 = 1.956
     }
 
     [Fact]
