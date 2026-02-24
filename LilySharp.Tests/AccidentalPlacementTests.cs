@@ -405,13 +405,37 @@ public class AccidentalPlacementTests
     }
 
     // --- Same-octave overstrike ---
-    // LILYPOND-REF: accidental-placement.cc:441-460
+    // LILYPOND-REF: accidental-placement.cc set_ape_skylines()
+    // Overstrike only applies within the same note-name group (APE).
 
     [Fact]
-    public void SameOctave_SameAlteration_Overstrike()
+    public void SameNoteName_SameOctave_SameAlteration_Overstrike()
     {
-        // Two sharps in the same octave (positions 0 and 2, both octave 0)
-        // → same alteration → should overstrike (same X offset)
+        // Two sharps on the same note name in the same octave group
+        // (positions -5 and 2: both note-name class 2, both octave 0 via staffPos/7)
+        // → same note name + same octave + same alteration → overstrike
+        var placement = new AccidentalPlacement();
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(-5, "sharp", false),
+            new ChordNoteInfo(2, "sharp", false)
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+        Assert.Equal(2, layouts.Length);
+
+        var layoutLow = layouts.First(l => l.StaffPosition == -5);
+        var layoutHigh = layouts.First(l => l.StaffPosition == 2);
+
+        // Both should share the same X offset (overstrike)
+        Assert.Equal(layoutLow.XOffset, layoutHigh.XOffset, 3);
+    }
+
+    [Fact]
+    public void DifferentNoteName_SameOctave_SameAlteration_NoOverstrike()
+    {
+        // Two sharps on DIFFERENT note names (positions 0 and 2: note-name classes 0 and 2)
+        // → different note names → no overstrike, positioned by skyline collision
+        // LILYPOND-REF: In LilyPond, these would be in separate APEs
         var placement = new AccidentalPlacement();
         var notes = ImmutableArray.Create(
             new ChordNoteInfo(0, "sharp", false),
@@ -424,8 +448,30 @@ public class AccidentalPlacementTests
         var layout0 = layouts.First(l => l.StaffPosition == 0);
         var layout2 = layouts.First(l => l.StaffPosition == 2);
 
-        // Both should share the same X offset (overstrike)
-        Assert.Equal(layout0.XOffset, layout2.XOffset, 3);
+        // Should have different X offsets (no overstrike between different note names)
+        Assert.NotEqual(layout0.XOffset, layout2.XOffset);
+    }
+
+    [Fact]
+    public void ThreeNaturals_DifferentNoteNames_AllSeparated()
+    {
+        // Three naturals on D, F, A (different note names) should NOT overstrike
+        // LILYPOND-REF: Each would be in a separate APE → positioned by skyline collision
+        var placement = new AccidentalPlacement();
+        var notes = ImmutableArray.Create(
+            new ChordNoteInfo(-5, "natural", false),  // D4
+            new ChordNoteInfo(-3, "natural", false),  // F4
+            new ChordNoteInfo(-1, "natural", false)   // A4
+        );
+
+        var layouts = placement.CalculatePositions(notes);
+        Assert.Equal(3, layouts.Length);
+
+        // All three should have different X offsets — NO overstrike across note names
+        var xOffsets = layouts.Select(l => l.XOffset).Distinct().ToList();
+        Assert.True(xOffsets.Count >= 2,
+            $"Expected at least 2 distinct X offsets for 3 naturals on different note names, got {xOffsets.Count}: " +
+            string.Join(", ", layouts.Select(l => $"pos={l.StaffPosition} x={l.XOffset:F3}")));
     }
 
     [Fact]

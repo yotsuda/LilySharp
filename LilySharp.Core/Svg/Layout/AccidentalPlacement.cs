@@ -78,8 +78,8 @@ public sealed record AccidentalPlacementParameters
 /// IMPLEMENTED — octave-first priority sorting (accidental-placement.cc:164-184)
 /// IMPLEMENTED — stagger_apes (accidental-placement.cc:261-336):
 ///   group accidentals by vertical proximity, reorder by group size, zigzag within size groups
-/// IMPLEMENTED — same-note octave handling (accidental-placement.cc:441-460):
-///   overstrike when same alteration in same octave, shift when different alteration
+/// IMPLEMENTED — same-note-name overstrike (accidental-placement.cc set_ape_skylines):
+///   overstrike when same note name + same octave + same alteration
 /// NOT YET IMPLEMENTED — AccidentalSuggestion/editorial (accidental.cc:130-166)
 /// </remarks>
 public sealed class AccidentalPlacement
@@ -212,19 +212,27 @@ public sealed class AccidentalPlacement
         // Track placed accidentals for flat-merge overlap (special case not in skyline)
         var placedEntries = new List<(double LeftEdge, double YBottom, double YTop, string Accidental, double Width)>();
 
-        // LILYPOND-REF: accidental-placement.cc:441-460 same-octave overstrike tracking
+        // LILYPOND-REF: accidental-placement.cc set_ape_skylines()
+        // In LilyPond, overstrike only applies WITHIN the same note-name group (APE).
+        // Accidentals on different note names (e.g. D♮ vs F♮) are never overstriked.
         int lastOctave = int.MinValue;
         string lastAlteration = "";
         double lastXLeft = 0;
+        int lastNoteName = int.MinValue;
 
         foreach (var entry in entries)
         {
             int octave = entry.StaffPosition / 7;
+            // Note name class: staff positions with same value mod 7 are the same note name
+            // in different octaves (e.g. D4 and D5)
+            int noteName = ((entry.StaffPosition % 7) + 7) % 7;
             bool sameOctave = (octave == lastOctave);
+            bool sameNoteName = (noteName == lastNoteName);
 
-            // LILYPOND-REF: accidental-placement.cc:441-460 same-octave overstrike
-            // Same octave + same alteration → overstrike (share X position)
-            if (sameOctave && entry.Accidental == lastAlteration)
+            // LILYPOND-REF: accidental-placement.cc set_ape_skylines()
+            // Same note name + same octave + same alteration → overstrike (share X position)
+            // This only applies within the same note-name group, matching LilyPond's APE architecture.
+            if (sameNoteName && sameOctave && entry.Accidental == lastAlteration)
             {
                 // Still add to skyline so future accidentals see this extent
                 var overSkyline = Skyline.FromBox(
@@ -232,7 +240,10 @@ public sealed class AccidentalPlacement
                 referenceSkyline = referenceSkyline.Merge(overSkyline);
 
                 layouts.Add(new AccidentalLayout(entry.StaffPosition, entry.Accidental, lastXLeft, entry.IsCourtesy));
+                // LILYPOND-REF: last_octave and last_alteration always updated unconditionally
                 lastOctave = octave;
+                lastAlteration = entry.Accidental;
+                lastNoteName = noteName;
                 continue;
             }
 
@@ -278,6 +289,7 @@ public sealed class AccidentalPlacement
             lastOctave = octave;
             lastAlteration = entry.Accidental;
             lastXLeft = xLeft;
+            lastNoteName = noteName;
         }
 
         return layouts.ToImmutableArray();
@@ -386,8 +398,13 @@ public sealed class AccidentalPlacement
     /// Lower values are placed first (rightmost, closest to notes).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: accidental-placement.cc:164-184 acc_less
-    /// Naturals are safest (rightmost). Sharps next, then flats (leftmost).
+    /// LILYPOND-REF: accidental-placement.cc acc_less(), set_ape_skylines()
+    /// In LilyPond, acc_less sorts within APEs (same note-name groups):
+    ///   naturals sort LAST, processed FIRST (rightmost) via backward iteration.
+    /// For cross-note-name ordering, LilyPond uses stagger_apes (group size +
+    /// skyline position), not alteration priority.
+    /// In Lily#'s forward iteration, lower priority = processed first = rightmost.
+    /// Naturals get priority 0 (rightmost) to match LilyPond's effective placement.
     /// </remarks>
     private static int GetAlterationPriority(string accidental) => accidental switch
     {
