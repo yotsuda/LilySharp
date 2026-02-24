@@ -173,7 +173,7 @@
   <line x1="29.7" y1="64.2" x2="29.7" y2="68.2" stroke="black" stroke-width="0.12" data-pos="552"/>
   <text class="music" x="34.1" y="65.0" font-size="4.00" data-pos="573"></text>
   <text class="music" x="34.1" y="66.5" font-size="4.00" data-pos="573"></text>
-  <line x1="35.4" y1="66.3" x2="35.4" y2="61.3" stroke="black" stroke-width="0.12" data-pos="573"/>
+  <line x1="35.5" y1="66.3" x2="35.5" y2="61.3" stroke="black" stroke-width="0.12" data-pos="573"/>
   <text class="music" x="44.7" y="65.0" font-size="4.00" data-pos="581"></text>
   <text class="music" x="44.7" y="64.0" font-size="4.00" data-pos="581"></text>
   <text class="music" x="44.7" y="63.0" font-size="4.00" data-pos="581"></text>

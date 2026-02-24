@@ -96,10 +96,11 @@ public sealed class MeasureLayouter
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/paper-column.cc - Each musical moment becomes a paper column
-    /// LILYPOND-REF: lily/spacing-spanner.cc - Springs connect adjacent columns
+    /// LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
     ///
-    /// This creates springs between each timing point (column) in the measure,
-    /// using the same Spring-Rod model as single-staff layout.
+    /// Creates springs between each timing point (column) in the measure.
+    /// Springs include skyline-based minimum distances (rods) from the primary
+    /// voice's items to prevent accidental/notehead collisions.
     /// </remarks>
     public ImmutableArray<ColumnLayout> LayoutColumns(Measure measure, double totalWidth, List<Fraction> timings,
                                                       double? baseShortestDuration = null)
@@ -123,6 +124,21 @@ public sealed class MeasureLayouter
             return ImmutableArray<ColumnLayout>.Empty;
 
         // LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
+        // Build a map from timing → item for skyline-based rod calculation.
+        // Each column's minimum distance must account for collisions between
+        // items at adjacent timing points (e.g., accidentals, noteheads).
+        var timingToItem = new Dictionary<Fraction, MusicItem>();
+        {
+            var t = Fraction.Zero;
+            foreach (var item in measure.Items)
+            {
+                if (!timingToItem.ContainsKey(t))
+                    timingToItem[t] = item;
+                t += item.Duration;
+            }
+        }
+
+        // LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
         // Spring chain: [barline] → [col₀] → [col₁] → ... → [colₙ] → [end barline]
         // All springs participate in the solver uniformly, just like LayoutItems.
         var springs = new List<Spring>();
@@ -133,12 +149,20 @@ public sealed class MeasureLayouter
         var firstDuration = timings.Count > 1 ? timings[1] - timings[0] : totalDuration;
         var firstSpring = SpacingRules.CreateTimingSpring(firstDuration, baseShortestDuration);
         double firstNoteMin = EngravingDefaults.BarLineToFirstNoteSpace;
+
+        // Apply skyline rod: barline → first item
+        if (timingToItem.TryGetValue(timings[0], out var firstItem))
+        {
+            double skyDist = SpacingRules.CalculateSkylineDistance(null, firstItem, staffY: 0);
+            firstNoteMin = Math.Max(firstNoteMin, skyDist);
+        }
+
         springs.Add(new Spring(
             Math.Max(firstSpring.IdealDistance, firstNoteMin),
             firstNoteMin,
             firstSpring.InverseStretchStrength));
 
-        // Springs between adjacent timing columns (duration-proportional)
+        // Springs between adjacent timing columns (duration-proportional + skyline rods)
         for (int i = 1; i < timings.Count; i++)
         {
             Fraction segmentDuration;
@@ -150,12 +174,44 @@ public sealed class MeasureLayouter
             {
                 segmentDuration = totalDuration - timings[i];
             }
-            springs.Add(SpacingRules.CreateTimingSpring(segmentDuration, baseShortestDuration));
+            var spring = SpacingRules.CreateTimingSpring(segmentDuration, baseShortestDuration);
+
+            // LILYPOND-REF: lily/spacing-spanner.cc — apply rod from skyline collision
+            // between items at adjacent timing points
+            timingToItem.TryGetValue(timings[i - 1], out var prevItem);
+            timingToItem.TryGetValue(timings[i], out var nextItem);
+            if (prevItem != null && nextItem != null)
+            {
+                double skyDist = SpacingRules.CalculateSkylineDistance(prevItem, nextItem, staffY: 0);
+                if (skyDist > spring.MinDistance)
+                {
+                    spring = new Spring(
+                        Math.Max(spring.IdealDistance, skyDist),
+                        skyDist,
+                        spring.InverseStretchStrength);
+                }
+            }
+
+            springs.Add(spring);
         }
 
         // End spring: last column → barline (remaining duration)
         var endDuration = totalDuration - timings[^1];
-        springs.Add(SpacingRules.CreateTimingSpring(endDuration, baseShortestDuration));
+        var endSpring = SpacingRules.CreateTimingSpring(endDuration, baseShortestDuration);
+
+        // Apply skyline rod: last item → barline
+        if (timingToItem.TryGetValue(timings[^1], out var lastItem))
+        {
+            double skyDist = SpacingRules.CalculateSkylineDistance(lastItem, null, staffY: 0);
+            if (skyDist > endSpring.MinDistance)
+            {
+                endSpring = new Spring(
+                    Math.Max(endSpring.IdealDistance, skyDist),
+                    skyDist,
+                    endSpring.InverseStretchStrength);
+            }
+        }
+        springs.Add(endSpring);
 
         // Available width for the entire spring chain
         double targetWidth = totalWidth - startBarlineWidth - endBarlineWidth;
