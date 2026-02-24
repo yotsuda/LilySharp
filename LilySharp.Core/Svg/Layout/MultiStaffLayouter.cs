@@ -713,9 +713,10 @@ public sealed class MultiStaffLayouter
 
             var allTimings = CollectAllTimingsForMeasure(score, measureIndex);
             var primaryMeasure = primaryVoice.Measures[measureIndex];
+            var allMeasures = CollectAllMeasuresAtIndex(score, measureIndex);
 
             var itemLayouts = _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
-            var columnLayouts = _measureLayouter.LayoutColumns(primaryMeasure, measureWidth, allTimings, baseShortestDuration);
+            var columnLayouts = _measureLayouter.LayoutColumns(primaryMeasure, measureWidth, allTimings, baseShortestDuration, allMeasures);
 
             var measureLayout = new MeasureLayout(measureIndex, currentX, measureWidth, itemLayouts, columnLayouts);
             layouts.Add(measureLayout);
@@ -756,6 +757,34 @@ public sealed class MultiStaffLayouter
         var sortedTimings = timings.ToList();
         sortedTimings.Sort();
         return sortedTimings;
+    }
+
+    /// <summary>
+    /// Collects all measures from all voices at a specific measure index.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/paper-column.cc — paper columns aggregate grobs from all staves.
+    /// Column spacing rods must consider skyline collisions from ALL voices.
+    /// </remarks>
+    private List<Measure> CollectAllMeasuresAtIndex(MultiStaffScore score, int measureIndex)
+    {
+        var measures = new List<Measure>();
+
+        foreach (var staffGroup in score.StaffGroups)
+        {
+            foreach (var staff in staffGroup.Staves)
+            {
+                foreach (var voice in staff.Voices)
+                {
+                    if (measureIndex < voice.Measures.Length)
+                    {
+                        measures.Add(voice.Measures[measureIndex]);
+                    }
+                }
+            }
+        }
+
+        return measures;
     }
 
     // --- Skyline-based staff spacing ---

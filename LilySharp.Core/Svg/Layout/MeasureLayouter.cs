@@ -99,11 +99,17 @@ public sealed class MeasureLayouter
     /// LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
     ///
     /// Creates springs between each timing point (column) in the measure.
-    /// Springs include skyline-based minimum distances (rods) from the primary
-    /// voice's items to prevent accidental/notehead collisions.
+    /// Springs include skyline-based minimum distances (rods) to prevent
+    /// accidental/notehead collisions. When allMeasures is provided, rods
+    /// consider items from ALL voices (not just the primary voice).
+    ///
+    /// LILYPOND-REF: lily/spacing-spanner.cc — paper columns are shared across
+    /// all staves; the rod between adjacent columns uses skylines from all grobs
+    /// at those columns.
     /// </remarks>
     public ImmutableArray<ColumnLayout> LayoutColumns(Measure measure, double totalWidth, List<Fraction> timings,
-                                                      double? baseShortestDuration = null)
+                                                      double? baseShortestDuration = null,
+                                                      IReadOnlyList<Measure>? allMeasures = null)
     {
         if (timings.Count == 0)
             return ImmutableArray<ColumnLayout>.Empty;
@@ -124,16 +130,23 @@ public sealed class MeasureLayouter
             return ImmutableArray<ColumnLayout>.Empty;
 
         // LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
-        // Build a map from timing → item for skyline-based rod calculation.
+        // Build a map from timing → items for skyline-based rod calculation.
         // Each column's minimum distance must account for collisions between
-        // items at adjacent timing points (e.g., accidentals, noteheads).
-        var timingToItem = new Dictionary<Fraction, MusicItem>();
+        // items at adjacent timing points across ALL voices (e.g., accidentals, noteheads).
+        // LILYPOND-REF: lily/paper-column.cc — paper columns aggregate grobs from all staves
+        var timingToItems = new Dictionary<Fraction, List<MusicItem>>();
+        var measuresToScan = allMeasures ?? new[] { measure };
+        foreach (var m in measuresToScan)
         {
             var t = Fraction.Zero;
-            foreach (var item in measure.Items)
+            foreach (var item in m.Items)
             {
-                if (!timingToItem.ContainsKey(t))
-                    timingToItem[t] = item;
+                if (!timingToItems.TryGetValue(t, out var items))
+                {
+                    items = new List<MusicItem>();
+                    timingToItems[t] = items;
+                }
+                items.Add(item);
                 t += item.Duration;
             }
         }
@@ -150,11 +163,14 @@ public sealed class MeasureLayouter
         var firstSpring = SpacingRules.CreateTimingSpring(firstDuration, baseShortestDuration);
         double firstNoteMin = EngravingDefaults.BarLineToFirstNoteSpace;
 
-        // Apply skyline rod: barline → first item
-        if (timingToItem.TryGetValue(timings[0], out var firstItem))
+        // Apply skyline rod: barline → first item (max across all voices)
+        if (timingToItems.TryGetValue(timings[0], out var firstItems))
         {
-            double skyDist = SpacingRules.CalculateSkylineDistance(null, firstItem, staffY: 0);
-            firstNoteMin = Math.Max(firstNoteMin, skyDist);
+            foreach (var item in firstItems)
+            {
+                double skyDist = SpacingRules.CalculateSkylineDistance(null, item, staffY: 0);
+                firstNoteMin = Math.Max(firstNoteMin, skyDist);
+            }
         }
 
         springs.Add(new Spring(
@@ -177,17 +193,27 @@ public sealed class MeasureLayouter
             var spring = SpacingRules.CreateTimingSpring(segmentDuration, baseShortestDuration);
 
             // LILYPOND-REF: lily/spacing-spanner.cc — apply rod from skyline collision
-            // between items at adjacent timing points
-            timingToItem.TryGetValue(timings[i - 1], out var prevItem);
-            timingToItem.TryGetValue(timings[i], out var nextItem);
-            if (prevItem != null && nextItem != null)
+            // between items at adjacent timing points across ALL voices.
+            // Take the maximum skyline distance across all voice pairs.
+            timingToItems.TryGetValue(timings[i - 1], out var prevItems);
+            timingToItems.TryGetValue(timings[i], out var nextItems);
+            if (prevItems != null && nextItems != null)
             {
-                double skyDist = SpacingRules.CalculateSkylineDistance(prevItem, nextItem, staffY: 0);
-                if (skyDist > spring.MinDistance)
+                double maxSkyDist = 0;
+                foreach (var prev in prevItems)
+                {
+                    foreach (var next in nextItems)
+                    {
+                        double skyDist = SpacingRules.CalculateSkylineDistance(prev, next, staffY: 0);
+                        maxSkyDist = Math.Max(maxSkyDist, skyDist);
+                    }
+                }
+
+                if (maxSkyDist > spring.MinDistance)
                 {
                     spring = new Spring(
-                        Math.Max(spring.IdealDistance, skyDist),
-                        skyDist,
+                        Math.Max(spring.IdealDistance, maxSkyDist),
+                        maxSkyDist,
                         spring.InverseStretchStrength);
                 }
             }
@@ -199,15 +225,21 @@ public sealed class MeasureLayouter
         var endDuration = totalDuration - timings[^1];
         var endSpring = SpacingRules.CreateTimingSpring(endDuration, baseShortestDuration);
 
-        // Apply skyline rod: last item → barline
-        if (timingToItem.TryGetValue(timings[^1], out var lastItem))
+        // Apply skyline rod: last item → barline (max across all voices)
+        if (timingToItems.TryGetValue(timings[^1], out var lastItems))
         {
-            double skyDist = SpacingRules.CalculateSkylineDistance(lastItem, null, staffY: 0);
-            if (skyDist > endSpring.MinDistance)
+            double maxSkyDist = 0;
+            foreach (var item in lastItems)
+            {
+                double skyDist = SpacingRules.CalculateSkylineDistance(item, null, staffY: 0);
+                maxSkyDist = Math.Max(maxSkyDist, skyDist);
+            }
+
+            if (maxSkyDist > endSpring.MinDistance)
             {
                 endSpring = new Spring(
-                    Math.Max(endSpring.IdealDistance, skyDist),
-                    skyDist,
+                    Math.Max(endSpring.IdealDistance, maxSkyDist),
+                    maxSkyDist,
                     endSpring.InverseStretchStrength);
             }
         }
