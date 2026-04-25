@@ -82,15 +82,17 @@ public static class EngravingDefaults
     public const double FlagHeightIncrement = 0.5;
 
     // === Notehead dimensions ===
-    // Measured from emmentaler-20.otf advance widths (fu/250 = staff spaces)
-    public const double NoteheadWholeWidth = 1.600;
-    public const double NoteheadHalfWidth = 1.376;
-    public const double NoteheadBlackWidth = 1.304;
+    // Aliases to the auto-extracted GlyphMetrics constants (Emmentaler advance widths).
+    // Existing call sites use these names; new code should prefer GlyphMetrics directly.
+    public const double NoteheadWholeWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadWholeAdvance;
+    public const double NoteheadHalfWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadHalfAdvance;
+    public const double NoteheadBlackWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadBlackAdvance;
+    /// <summary>Double-whole notehead is hand-tuned (no glyph in extracted set).</summary>
     public const double NoteheadDoubleWholeWidth = 2.296;
 
     // === Stem attachment points ===
     // LILYPOND-REF: lily/stem.cc — stem attaches at notehead extent RIGHT edge
-    public const double StemUpAttachX = 1.304;  // = NoteheadBlackWidth (default for filled noteheads)
+    public const double StemUpAttachX = NoteheadBlackWidth;
     public const double StemUpAttachY = 0.168;
     public const double StemDownAttachX = 0.0;
     public const double StemDownAttachY = -0.168;
