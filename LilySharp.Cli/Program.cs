@@ -222,12 +222,15 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
         var source = File.ReadAllText(inputPath);
         var tree = SyntaxTree.Parse(source);
 
-        if (tree.HasErrors)
+        // Always surface diagnostics — warnings are emitted to stderr even when
+        // the build proceeds, so silent typos (e.g. `es` masquerading as a
+        // bare variable reference) are visible to the user.
+        if (tree.Diagnostics.Count > 0)
         {
-            Console.Error.WriteLine("Syntax errors:");
+            Console.Error.WriteLine(tree.HasErrors ? "Syntax errors:" : "Diagnostics:");
             foreach (var diag in tree.Diagnostics)
                 Console.Error.WriteLine($"  {diag}");
-            return 1;
+            if (tree.HasErrors) return 1;
         }
 
         // Configure render options
