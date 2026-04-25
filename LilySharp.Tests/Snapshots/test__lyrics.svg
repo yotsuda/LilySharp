@@ -47,7 +47,7 @@
   <text class="music" x="64.2" y="12.5" font-size="4.00" data-pos="217"></text>
   <line x1="65.5" y1="12.3" x2="65.5" y2="8.8" stroke="black" stroke-width="0.12" data-pos="217"/>
   <rect x="68.29" y="10.00" width="0.16" height="4.00" fill="black"/>
-  <text class="music" x="71.3" y="13.0" font-size="4.00" data-pos="221"></text>
+  <text class="music" x="71.1" y="13.0" font-size="4.00" data-pos="221"></text>
   <rect x="76.94" y="10.00" width="0.16" height="4.00" fill="black"/>
   <rect x="77.50" y="10.00" width="0.50" height="4.00" fill="black"/>
   <text x="13.88" y="16.50" font-family="serif" font-size="3.2" text-anchor="middle" dominant-baseline="hanging" class="lyric">Twin-</text>

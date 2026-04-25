@@ -79,110 +79,110 @@
   <line class="staff" x1="2" y1="36.5" x2="78" y2="36.5"/>
   <text class="music" x="2.0" y="35.5" font-size="4.00"></text>
   <text class="music" x="5.5" y="32.5" font-size="4.00"></text>
-  <line class="ledger" x1="10.4" y1="31.5" x2="12.6" y2="31.5"/>
-  <line class="ledger" x1="10.4" y1="30.5" x2="12.6" y2="30.5"/>
-  <line class="ledger" x1="10.4" y1="29.5" x2="12.6" y2="29.5"/>
-  <text class="music" x="10.8" y="29.5" font-size="4.00" data-pos="485"></text>
-  <line x1="10.8" y1="29.7" x2="10.8" y2="34.5" stroke="black" stroke-width="0.12" data-pos="485"/>
-  <line class="ledger" x1="12.7" y1="31.5" x2="14.8" y2="31.5"/>
-  <line class="ledger" x1="12.7" y1="30.5" x2="14.8" y2="30.5"/>
-  <text class="music" x="13.1" y="30.0" font-size="4.00" data-pos="488"></text>
-  <line x1="13.1" y1="30.2" x2="13.1" y2="34.5" stroke="black" stroke-width="0.12" data-pos="488"/>
-  <line class="ledger" x1="14.9" y1="31.5" x2="17.1" y2="31.5"/>
-  <line class="ledger" x1="14.9" y1="30.5" x2="17.1" y2="30.5"/>
-  <text class="music" x="15.3" y="30.5" font-size="4.00" data-pos="490"></text>
-  <line x1="15.3" y1="30.7" x2="15.3" y2="34.5" stroke="black" stroke-width="0.12" data-pos="490"/>
-  <line class="ledger" x1="17.2" y1="31.5" x2="19.3" y2="31.5"/>
-  <text class="music" x="17.6" y="31.0" font-size="4.00" data-pos="494"></text>
-  <line x1="17.6" y1="31.2" x2="17.6" y2="34.7" stroke="black" stroke-width="0.12" data-pos="494"/>
-  <line class="ledger" x1="19.4" y1="31.5" x2="21.6" y2="31.5"/>
-  <text class="music" x="19.8" y="31.5" font-size="4.00" data-pos="497"></text>
-  <line x1="19.8" y1="31.7" x2="19.8" y2="35.2" stroke="black" stroke-width="0.12" data-pos="497"/>
-  <rect x="23.54" y="32.50" width="0.16" height="4.00" fill="black"/>
-  <text class="music" x="25.4" y="32.0" font-size="4.00" data-pos="523"></text>
-  <line x1="25.4" y1="32.2" x2="25.4" y2="35.7" stroke="black" stroke-width="0.12" data-pos="523"/>
-  <text class="music" x="27.7" y="33.5" font-size="4.00" data-pos="549"></text>
-  <line x1="27.7" y1="33.7" x2="27.7" y2="37.2" stroke="black" stroke-width="0.12" data-pos="549"/>
-  <text class="music" x="30.8" y="34.5" font-size="4.00" data-pos="551"></text>
-  <rect x="34.99" y="32.50" width="0.16" height="4.00" fill="black"/>
-  <line class="ledger" x1="36.5" y1="31.5" x2="38.6" y2="31.5"/>
-  <line class="ledger" x1="36.5" y1="30.5" x2="38.6" y2="30.5"/>
-  <line class="ledger" x1="36.5" y1="29.5" x2="38.6" y2="29.5"/>
-  <text class="music" x="36.9" y="29.5" font-size="4.00" data-pos="556"></text>
-  <line x1="36.9" y1="29.7" x2="36.9" y2="34.5" stroke="black" stroke-width="0.12" data-pos="556"/>
-  <line class="ledger" x1="38.7" y1="31.5" x2="40.9" y2="31.5"/>
-  <text class="music" x="39.1" y="31.0" font-size="4.00" data-pos="568"></text>
-  <line x1="39.1" y1="31.2" x2="39.1" y2="34.7" stroke="black" stroke-width="0.12" data-pos="568"/>
-  <text class="music" x="42.2" y="34.5" font-size="4.00" data-pos="570"></text>
-  <rect x="46.44" y="32.50" width="0.16" height="4.00" fill="black"/>
-  <text class="music" x="49.0" y="32.0" font-size="4.00" data-pos="600"></text>
-  <line class="ledger" x1="48.6" y1="31.5" x2="50.7" y2="31.5"/>
-  <text class="music" x="49.0" y="31.0" font-size="4.00" data-pos="600"></text>
-  <line class="ledger" x1="48.6" y1="31.5" x2="50.7" y2="31.5"/>
-  <line class="ledger" x1="48.6" y1="30.5" x2="50.7" y2="30.5"/>
-  <line class="ledger" x1="48.6" y1="29.5" x2="50.7" y2="29.5"/>
-  <line class="ledger" x1="48.6" y1="28.5" x2="50.7" y2="28.5"/>
-  <line class="ledger" x1="48.6" y1="27.5" x2="50.7" y2="27.5"/>
-  <line class="ledger" x1="48.6" y1="26.5" x2="50.7" y2="26.5"/>
-  <text class="music" x="49.0" y="26.5" font-size="4.00" data-pos="600"></text>
-  <line x1="49.0" y1="26.7" x2="49.0" y2="35.7" stroke="black" stroke-width="0.12" data-pos="600"/>
-  <text class="music" x="51.4" y="34.5" font-size="4.00" data-pos="645"></text>
-  <line class="ledger" x1="53.4" y1="31.5" x2="55.5" y2="31.5"/>
-  <text class="music" x="53.8" y="31.5" font-size="4.00" data-pos="647"></text>
-  <line class="ledger" x1="53.4" y1="31.5" x2="55.5" y2="31.5"/>
-  <line class="ledger" x1="53.4" y1="30.5" x2="55.5" y2="30.5"/>
-  <line class="ledger" x1="53.4" y1="29.5" x2="55.5" y2="29.5"/>
-  <line class="ledger" x1="53.4" y1="28.5" x2="55.5" y2="28.5"/>
-  <line class="ledger" x1="53.4" y1="27.5" x2="55.5" y2="27.5"/>
-  <text class="music" x="53.8" y="27.0" font-size="4.00" data-pos="647"></text>
-  <line class="ledger" x1="53.4" y1="31.5" x2="55.5" y2="31.5"/>
-  <line class="ledger" x1="53.4" y1="30.5" x2="55.5" y2="30.5"/>
-  <line class="ledger" x1="53.4" y1="29.5" x2="55.5" y2="29.5"/>
-  <line class="ledger" x1="53.4" y1="28.5" x2="55.5" y2="28.5"/>
-  <line class="ledger" x1="53.4" y1="27.5" x2="55.5" y2="27.5"/>
-  <line class="ledger" x1="53.4" y1="26.5" x2="55.5" y2="26.5"/>
-  <line class="ledger" x1="53.4" y1="25.5" x2="55.5" y2="25.5"/>
-  <line class="ledger" x1="53.4" y1="24.5" x2="55.5" y2="24.5"/>
-  <line class="ledger" x1="53.4" y1="23.5" x2="55.5" y2="23.5"/>
-  <line class="ledger" x1="53.4" y1="22.5" x2="55.5" y2="22.5"/>
-  <text class="music" x="53.8" y="22.5" font-size="4.00" data-pos="647"></text>
-  <line x1="53.8" y1="22.7" x2="53.8" y2="35.2" stroke="black" stroke-width="0.12" data-pos="647"/>
-  <text class="music" x="56.2" y="34.5" font-size="4.00" data-pos="666"></text>
-  <rect x="59.24" y="32.50" width="0.16" height="4.00" fill="black"/>
-  <line class="ledger" x1="61.4" y1="31.5" x2="63.6" y2="31.5"/>
-  <text class="music" x="61.8" y="31.0" font-size="4.00" data-pos="670"></text>
-  <line class="ledger" x1="61.4" y1="31.5" x2="63.6" y2="31.5"/>
-  <line class="ledger" x1="61.4" y1="30.5" x2="63.6" y2="30.5"/>
-  <line class="ledger" x1="61.4" y1="29.5" x2="63.6" y2="29.5"/>
-  <line class="ledger" x1="61.4" y1="28.5" x2="63.6" y2="28.5"/>
-  <line class="ledger" x1="61.4" y1="27.5" x2="63.6" y2="27.5"/>
-  <line class="ledger" x1="61.4" y1="26.5" x2="63.6" y2="26.5"/>
-  <text class="music" x="61.8" y="26.5" font-size="4.00" data-pos="670"></text>
-  <line class="ledger" x1="61.4" y1="31.5" x2="63.6" y2="31.5"/>
-  <line class="ledger" x1="61.4" y1="30.5" x2="63.6" y2="30.5"/>
-  <line class="ledger" x1="61.4" y1="29.5" x2="63.6" y2="29.5"/>
-  <line class="ledger" x1="61.4" y1="28.5" x2="63.6" y2="28.5"/>
-  <line class="ledger" x1="61.4" y1="27.5" x2="63.6" y2="27.5"/>
-  <line class="ledger" x1="61.4" y1="26.5" x2="63.6" y2="26.5"/>
-  <line class="ledger" x1="61.4" y1="25.5" x2="63.6" y2="25.5"/>
-  <line class="ledger" x1="61.4" y1="24.5" x2="63.6" y2="24.5"/>
-  <line class="ledger" x1="61.4" y1="23.5" x2="63.6" y2="23.5"/>
-  <line class="ledger" x1="61.4" y1="22.5" x2="63.6" y2="22.5"/>
-  <text class="music" x="61.8" y="22.0" font-size="4.00" data-pos="670"></text>
-  <line x1="61.8" y1="22.2" x2="61.8" y2="34.7" stroke="black" stroke-width="0.12" data-pos="670"/>
-  <text class="music" x="65.2" y="32.0" font-size="4.00" data-pos="694"></text>
-  <line class="ledger" x1="64.8" y1="31.5" x2="67.0" y2="31.5"/>
-  <text class="music" x="65.2" y="31.0" font-size="4.00" data-pos="694"></text>
-  <line class="ledger" x1="64.8" y1="31.5" x2="67.0" y2="31.5"/>
-  <line class="ledger" x1="64.8" y1="30.5" x2="67.0" y2="30.5"/>
-  <line class="ledger" x1="64.8" y1="29.5" x2="67.0" y2="29.5"/>
-  <line class="ledger" x1="64.8" y1="28.5" x2="67.0" y2="28.5"/>
-  <line class="ledger" x1="64.8" y1="27.5" x2="67.0" y2="27.5"/>
-  <line class="ledger" x1="64.8" y1="26.5" x2="67.0" y2="26.5"/>
-  <text class="music" x="65.2" y="26.5" font-size="4.00" data-pos="694"></text>
-  <line x1="65.2" y1="26.7" x2="65.2" y2="35.7" stroke="black" stroke-width="0.12" data-pos="694"/>
-  <rect x="68.99" y="32.50" width="0.16" height="4.00" fill="black"/>
-  <rect x="69.55" y="32.50" width="0.50" height="4.00" fill="black"/>
+  <line class="ledger" x1="10.8" y1="31.5" x2="12.9" y2="31.5"/>
+  <line class="ledger" x1="10.8" y1="30.5" x2="12.9" y2="30.5"/>
+  <line class="ledger" x1="10.8" y1="29.5" x2="12.9" y2="29.5"/>
+  <text class="music" x="11.2" y="29.5" font-size="4.00" data-pos="485"></text>
+  <line x1="11.2" y1="29.7" x2="11.2" y2="34.5" stroke="black" stroke-width="0.12" data-pos="485"/>
+  <line class="ledger" x1="13.3" y1="31.5" x2="15.4" y2="31.5"/>
+  <line class="ledger" x1="13.3" y1="30.5" x2="15.4" y2="30.5"/>
+  <text class="music" x="13.7" y="30.0" font-size="4.00" data-pos="488"></text>
+  <line x1="13.7" y1="30.2" x2="13.7" y2="34.5" stroke="black" stroke-width="0.12" data-pos="488"/>
+  <line class="ledger" x1="15.8" y1="31.5" x2="17.9" y2="31.5"/>
+  <line class="ledger" x1="15.8" y1="30.5" x2="17.9" y2="30.5"/>
+  <text class="music" x="16.2" y="30.5" font-size="4.00" data-pos="490"></text>
+  <line x1="16.2" y1="30.7" x2="16.2" y2="34.5" stroke="black" stroke-width="0.12" data-pos="490"/>
+  <line class="ledger" x1="18.3" y1="31.5" x2="20.4" y2="31.5"/>
+  <text class="music" x="18.7" y="31.0" font-size="4.00" data-pos="494"></text>
+  <line x1="18.7" y1="31.2" x2="18.7" y2="34.7" stroke="black" stroke-width="0.12" data-pos="494"/>
+  <line class="ledger" x1="20.9" y1="31.5" x2="23.0" y2="31.5"/>
+  <text class="music" x="21.3" y="31.5" font-size="4.00" data-pos="497"></text>
+  <line x1="21.3" y1="31.7" x2="21.3" y2="35.2" stroke="black" stroke-width="0.12" data-pos="497"/>
+  <rect x="25.28" y="32.50" width="0.16" height="4.00" fill="black"/>
+  <text class="music" x="27.5" y="32.0" font-size="4.00" data-pos="523"></text>
+  <line x1="27.5" y1="32.2" x2="27.5" y2="35.7" stroke="black" stroke-width="0.12" data-pos="523"/>
+  <text class="music" x="30.0" y="33.5" font-size="4.00" data-pos="549"></text>
+  <line x1="30.0" y1="33.7" x2="30.0" y2="37.2" stroke="black" stroke-width="0.12" data-pos="549"/>
+  <text class="music" x="33.4" y="34.5" font-size="4.00" data-pos="551"></text>
+  <rect x="38.27" y="32.50" width="0.16" height="4.00" fill="black"/>
+  <line class="ledger" x1="40.1" y1="31.5" x2="42.2" y2="31.5"/>
+  <line class="ledger" x1="40.1" y1="30.5" x2="42.2" y2="30.5"/>
+  <line class="ledger" x1="40.1" y1="29.5" x2="42.2" y2="29.5"/>
+  <text class="music" x="40.5" y="29.5" font-size="4.00" data-pos="556"></text>
+  <line x1="40.5" y1="29.7" x2="40.5" y2="34.5" stroke="black" stroke-width="0.12" data-pos="556"/>
+  <line class="ledger" x1="42.6" y1="31.5" x2="44.7" y2="31.5"/>
+  <text class="music" x="43.0" y="31.0" font-size="4.00" data-pos="568"></text>
+  <line x1="43.0" y1="31.2" x2="43.0" y2="34.7" stroke="black" stroke-width="0.12" data-pos="568"/>
+  <text class="music" x="46.4" y="34.5" font-size="4.00" data-pos="570"></text>
+  <rect x="51.27" y="32.50" width="0.16" height="4.00" fill="black"/>
+  <text class="music" x="54.1" y="32.0" font-size="4.00" data-pos="600"></text>
+  <line class="ledger" x1="53.7" y1="31.5" x2="55.8" y2="31.5"/>
+  <text class="music" x="54.1" y="31.0" font-size="4.00" data-pos="600"></text>
+  <line class="ledger" x1="53.7" y1="31.5" x2="55.8" y2="31.5"/>
+  <line class="ledger" x1="53.7" y1="30.5" x2="55.8" y2="30.5"/>
+  <line class="ledger" x1="53.7" y1="29.5" x2="55.8" y2="29.5"/>
+  <line class="ledger" x1="53.7" y1="28.5" x2="55.8" y2="28.5"/>
+  <line class="ledger" x1="53.7" y1="27.5" x2="55.8" y2="27.5"/>
+  <line class="ledger" x1="53.7" y1="26.5" x2="55.8" y2="26.5"/>
+  <text class="music" x="54.1" y="26.5" font-size="4.00" data-pos="600"></text>
+  <line x1="54.1" y1="26.7" x2="54.1" y2="35.7" stroke="black" stroke-width="0.12" data-pos="600"/>
+  <text class="music" x="56.9" y="34.5" font-size="4.00" data-pos="645"></text>
+  <line class="ledger" x1="59.2" y1="31.5" x2="61.3" y2="31.5"/>
+  <text class="music" x="59.6" y="31.5" font-size="4.00" data-pos="647"></text>
+  <line class="ledger" x1="59.2" y1="31.5" x2="61.3" y2="31.5"/>
+  <line class="ledger" x1="59.2" y1="30.5" x2="61.3" y2="30.5"/>
+  <line class="ledger" x1="59.2" y1="29.5" x2="61.3" y2="29.5"/>
+  <line class="ledger" x1="59.2" y1="28.5" x2="61.3" y2="28.5"/>
+  <line class="ledger" x1="59.2" y1="27.5" x2="61.3" y2="27.5"/>
+  <text class="music" x="59.6" y="27.0" font-size="4.00" data-pos="647"></text>
+  <line class="ledger" x1="59.2" y1="31.5" x2="61.3" y2="31.5"/>
+  <line class="ledger" x1="59.2" y1="30.5" x2="61.3" y2="30.5"/>
+  <line class="ledger" x1="59.2" y1="29.5" x2="61.3" y2="29.5"/>
+  <line class="ledger" x1="59.2" y1="28.5" x2="61.3" y2="28.5"/>
+  <line class="ledger" x1="59.2" y1="27.5" x2="61.3" y2="27.5"/>
+  <line class="ledger" x1="59.2" y1="26.5" x2="61.3" y2="26.5"/>
+  <line class="ledger" x1="59.2" y1="25.5" x2="61.3" y2="25.5"/>
+  <line class="ledger" x1="59.2" y1="24.5" x2="61.3" y2="24.5"/>
+  <line class="ledger" x1="59.2" y1="23.5" x2="61.3" y2="23.5"/>
+  <line class="ledger" x1="59.2" y1="22.5" x2="61.3" y2="22.5"/>
+  <text class="music" x="59.6" y="22.5" font-size="4.00" data-pos="647"></text>
+  <line x1="59.6" y1="22.7" x2="59.6" y2="35.2" stroke="black" stroke-width="0.12" data-pos="647"/>
+  <text class="music" x="62.3" y="34.5" font-size="4.00" data-pos="666"></text>
+  <rect x="65.65" y="32.50" width="0.16" height="4.00" fill="black"/>
+  <line class="ledger" x1="68.1" y1="31.5" x2="70.3" y2="31.5"/>
+  <text class="music" x="68.5" y="31.0" font-size="4.00" data-pos="670"></text>
+  <line class="ledger" x1="68.1" y1="31.5" x2="70.3" y2="31.5"/>
+  <line class="ledger" x1="68.1" y1="30.5" x2="70.3" y2="30.5"/>
+  <line class="ledger" x1="68.1" y1="29.5" x2="70.3" y2="29.5"/>
+  <line class="ledger" x1="68.1" y1="28.5" x2="70.3" y2="28.5"/>
+  <line class="ledger" x1="68.1" y1="27.5" x2="70.3" y2="27.5"/>
+  <line class="ledger" x1="68.1" y1="26.5" x2="70.3" y2="26.5"/>
+  <text class="music" x="68.5" y="26.5" font-size="4.00" data-pos="670"></text>
+  <line class="ledger" x1="68.1" y1="31.5" x2="70.3" y2="31.5"/>
+  <line class="ledger" x1="68.1" y1="30.5" x2="70.3" y2="30.5"/>
+  <line class="ledger" x1="68.1" y1="29.5" x2="70.3" y2="29.5"/>
+  <line class="ledger" x1="68.1" y1="28.5" x2="70.3" y2="28.5"/>
+  <line class="ledger" x1="68.1" y1="27.5" x2="70.3" y2="27.5"/>
+  <line class="ledger" x1="68.1" y1="26.5" x2="70.3" y2="26.5"/>
+  <line class="ledger" x1="68.1" y1="25.5" x2="70.3" y2="25.5"/>
+  <line class="ledger" x1="68.1" y1="24.5" x2="70.3" y2="24.5"/>
+  <line class="ledger" x1="68.1" y1="23.5" x2="70.3" y2="23.5"/>
+  <line class="ledger" x1="68.1" y1="22.5" x2="70.3" y2="22.5"/>
+  <text class="music" x="68.5" y="22.0" font-size="4.00" data-pos="670"></text>
+  <line x1="68.5" y1="22.2" x2="68.5" y2="34.7" stroke="black" stroke-width="0.12" data-pos="670"/>
+  <text class="music" x="72.6" y="32.0" font-size="4.00" data-pos="694"></text>
+  <line class="ledger" x1="72.2" y1="31.5" x2="74.3" y2="31.5"/>
+  <text class="music" x="72.6" y="31.0" font-size="4.00" data-pos="694"></text>
+  <line class="ledger" x1="72.2" y1="31.5" x2="74.3" y2="31.5"/>
+  <line class="ledger" x1="72.2" y1="30.5" x2="74.3" y2="30.5"/>
+  <line class="ledger" x1="72.2" y1="29.5" x2="74.3" y2="29.5"/>
+  <line class="ledger" x1="72.2" y1="28.5" x2="74.3" y2="28.5"/>
+  <line class="ledger" x1="72.2" y1="27.5" x2="74.3" y2="27.5"/>
+  <line class="ledger" x1="72.2" y1="26.5" x2="74.3" y2="26.5"/>
+  <text class="music" x="72.6" y="26.5" font-size="4.00" data-pos="694"></text>
+  <line x1="72.6" y1="26.7" x2="72.6" y2="35.7" stroke="black" stroke-width="0.12" data-pos="694"/>
+  <rect x="76.94" y="32.50" width="0.16" height="4.00" fill="black"/>
+  <rect x="77.50" y="32.50" width="0.50" height="4.00" fill="black"/>
   <path d="M 52.7,12.7 C 53.4,12.0 55.4,12.0 56.1,12.7 C 55.4,11.8 53.4,11.8 52.7,12.7 Z" fill="black"/>
   <path d="M 39.6,10.6 C 41.0,9.1 44.8,8.2 46.2,9.1 C 44.8,7.9 41.0,8.8 39.6,10.6 Z" fill="black"/>
   <text class="music" x="10.99" y="15.50" font-size="2.6" data-pos="227"></text>
@@ -209,16 +209,16 @@
   <line x1="68.34" y1="17.58" x2="70.35" y2="17.50" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
   <line x1="70.35" y1="17.50" x2="70.35" y2="16.80" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
   <text x="67.34" y="18.43" font-family="serif" font-size="2.4" font-weight="bold" text-anchor="middle" dominant-baseline="middle" class="tuplet-number">3</text>
-  <line x1="10.91" y1="38.00" x2="10.91" y2="37.30" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
-  <line x1="10.91" y1="38.00" x2="12.75" y2="38.08" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
-  <line x1="14.75" y1="38.17" x2="16.59" y2="38.25" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
-  <line x1="16.59" y1="38.25" x2="16.59" y2="37.55" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
-  <text x="13.75" y="38.92" font-family="serif" font-size="2.4" font-weight="bold" text-anchor="middle" dominant-baseline="middle" class="tuplet-number">3</text>
+  <line x1="11.23" y1="38.00" x2="11.23" y2="37.30" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
+  <line x1="11.23" y1="38.00" x2="13.34" y2="38.08" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
+  <line x1="15.34" y1="38.17" x2="17.46" y2="38.25" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
+  <line x1="17.46" y1="38.25" x2="17.46" y2="37.55" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
+  <text x="14.34" y="38.92" font-family="serif" font-size="2.4" font-weight="bold" text-anchor="middle" dominant-baseline="middle" class="tuplet-number">3</text>
   <text class="bar-number" x="9.10" y="31.50" font-family="serif" font-size="1.80" font-weight="bold">6</text>
-  <line x1="26.92" y1="32.38" x2="27.53" y2="33.12" stroke="black" stroke-width="0.130" class="glissando" data-pos="523" />
-  <line x1="38.37" y1="29.88" x2="38.98" y2="30.62" stroke="black" stroke-width="0.130" class="glissando" data-pos="556" />
-  <path d="M 48.50 26.10 C 48.85 26.19 48.85 26.32 48.50 26.42 C 48.15 26.51 48.15 26.64 48.50 26.73 C 48.85 26.82 48.85 26.95 48.50 27.05 C 48.15 27.14 48.15 27.27 48.50 27.36 C 48.85 27.45 48.85 27.58 48.50 27.68 C 48.15 27.77 48.15 27.90 48.50 27.99 C 48.85 28.08 48.85 28.21 48.50 28.30 C 48.15 28.40 48.15 28.53 48.50 28.62 C 48.85 28.71 48.85 28.84 48.50 28.93 C 48.15 29.03 48.15 29.16 48.50 29.25 C 48.85 29.34 48.85 29.47 48.50 29.56 C 48.15 29.66 48.15 29.79 48.50 29.88 C 48.85 29.97 48.85 30.10 48.50 30.19 C 48.15 30.29 48.15 30.42 48.50 30.51 C 48.85 30.60 48.85 30.73 48.50 30.82 C 48.15 30.92 48.15 31.05 48.50 31.14 C 48.85 31.23 48.85 31.36 48.50 31.45 C 48.15 31.55 48.15 31.68 48.50 31.77 C 48.85 31.86 48.85 31.99 48.50 32.08 C 48.15 32.18 48.15 32.31 48.50 32.40" fill="none" stroke="black" stroke-width="0.130" class="arpeggio" data-pos="600" />
-  <path d="M 53.30 22.10 C 53.65 22.19 53.65 22.31 53.30 22.41 C 52.95 22.50 52.95 22.62 53.30 22.71 C 53.65 22.80 53.65 22.93 53.30 23.02 C 52.95 23.11 52.95 23.23 53.30 23.33 C 53.65 23.42 53.65 23.54 53.30 23.63 C 52.95 23.72 52.95 23.85 53.30 23.94 C 53.65 24.03 53.65 24.15 53.30 24.24 C 52.95 24.34 52.95 24.46 53.30 24.55 C 53.65 24.64 53.65 24.76 53.30 24.86 C 52.95 24.95 52.95 25.07 53.30 25.16 C 53.65 25.25 53.65 25.38 53.30 25.47 C 52.95 25.56 52.95 25.68 53.30 25.78 C 53.65 25.87 53.65 25.99 53.30 26.08 C 52.95 26.17 52.95 26.30 53.30 26.39 C 53.65 26.48 53.65 26.60 53.30 26.69 C 52.95 26.79 52.95 26.91 53.30 27.00 C 53.65 27.09 53.65 27.21 53.30 27.31 C 52.95 27.40 52.95 27.52 53.30 27.61 C 53.65 27.70 53.65 27.83 53.30 27.92 C 52.95 28.01 52.95 28.13 53.30 28.23 C 53.65 28.32 53.65 28.44 53.30 28.53 C 52.95 28.62 52.95 28.75 53.30 28.84 C 53.65 28.93 53.65 29.05 53.30 29.14 C 52.95 29.24 52.95 29.36 53.30 29.45 C 53.65 29.54 53.65 29.66 53.30 29.76 C 52.95 29.85 52.95 29.97 53.30 30.06 C 53.65 30.15 53.65 30.28 53.30 30.37 C 52.95 30.46 52.95 30.58 53.30 30.68 C 53.65 30.77 53.65 30.89 53.30 30.98 C 52.95 31.07 52.95 31.20 53.30 31.29 C 53.65 31.38 53.65 31.50 53.30 31.59 C 52.95 31.69 52.95 31.81 53.30 31.90" fill="none" stroke="black" stroke-width="0.130" class="arpeggio" data-pos="647" />
-  <path d="M 61.30 21.60 C 61.65 21.69 61.65 21.81 61.30 21.91 C 60.95 22.00 60.95 22.12 61.30 22.21 C 61.65 22.30 61.65 22.43 61.30 22.52 C 60.95 22.61 60.95 22.73 61.30 22.83 C 61.65 22.92 61.65 23.04 61.30 23.13 C 60.95 23.22 60.95 23.35 61.30 23.44 C 61.65 23.53 61.65 23.65 61.30 23.74 C 60.95 23.84 60.95 23.96 61.30 24.05 C 61.65 24.14 61.65 24.26 61.30 24.36 C 60.95 24.45 60.95 24.57 61.30 24.66 C 61.65 24.75 61.65 24.88 61.30 24.97 C 60.95 25.06 60.95 25.18 61.30 25.28 C 61.65 25.37 61.65 25.49 61.30 25.58 C 60.95 25.67 60.95 25.80 61.30 25.89 C 61.65 25.98 61.65 26.10 61.30 26.19 C 60.95 26.29 60.95 26.41 61.30 26.50 C 61.65 26.59 61.65 26.71 61.30 26.81 C 60.95 26.90 60.95 27.02 61.30 27.11 C 61.65 27.20 61.65 27.33 61.30 27.42 C 60.95 27.51 60.95 27.63 61.30 27.73 C 61.65 27.82 61.65 27.94 61.30 28.03 C 60.95 28.12 60.95 28.25 61.30 28.34 C 61.65 28.43 61.65 28.55 61.30 28.64 C 60.95 28.74 60.95 28.86 61.30 28.95 C 61.65 29.04 61.65 29.16 61.30 29.26 C 60.95 29.35 60.95 29.47 61.30 29.56 C 61.65 29.65 61.65 29.78 61.30 29.87 C 60.95 29.96 60.95 30.08 61.30 30.18 C 61.65 30.27 61.65 30.39 61.30 30.48 C 60.95 30.57 60.95 30.70 61.30 30.79 C 61.65 30.88 61.65 31.00 61.30 31.09 C 60.95 31.19 60.95 31.31 61.30 31.40" fill="none" stroke="black" stroke-width="0.130" class="arpeggio" data-pos="670" />
-  <path d="M 64.75 26.10 C 65.10 26.19 65.10 26.32 64.75 26.42 C 64.40 26.51 64.40 26.64 64.75 26.73 C 65.10 26.82 65.10 26.95 64.75 27.05 C 64.40 27.14 64.40 27.27 64.75 27.36 C 65.10 27.45 65.10 27.58 64.75 27.68 C 64.40 27.77 64.40 27.90 64.75 27.99 C 65.10 28.08 65.10 28.21 64.75 28.30 C 64.40 28.40 64.40 28.53 64.75 28.62 C 65.10 28.71 65.10 28.84 64.75 28.93 C 64.40 29.03 64.40 29.16 64.75 29.25 C 65.10 29.34 65.10 29.47 64.75 29.56 C 64.40 29.66 64.40 29.79 64.75 29.88 C 65.10 29.97 65.10 30.10 64.75 30.19 C 64.40 30.29 64.40 30.42 64.75 30.51 C 65.10 30.60 65.10 30.73 64.75 30.82 C 64.40 30.92 64.40 31.05 64.75 31.14 C 65.10 31.23 65.10 31.36 64.75 31.45 C 64.40 31.55 64.40 31.68 64.75 31.77 C 65.10 31.86 65.10 31.99 64.75 32.08 C 64.40 32.18 64.40 32.31 64.75 32.40" fill="none" stroke="black" stroke-width="0.130" class="arpeggio" data-pos="694" />
+  <line x1="29.01" y1="32.35" x2="29.83" y2="33.15" stroke="black" stroke-width="0.130" class="glissando" data-pos="523" />
+  <line x1="42.01" y1="29.85" x2="42.82" y2="30.65" stroke="black" stroke-width="0.130" class="glissando" data-pos="556" />
+  <path d="M 53.64 26.10 C 53.99 26.19 53.99 26.32 53.64 26.42 C 53.29 26.51 53.29 26.64 53.64 26.73 C 53.99 26.82 53.99 26.95 53.64 27.05 C 53.29 27.14 53.29 27.27 53.64 27.36 C 53.99 27.45 53.99 27.58 53.64 27.68 C 53.29 27.77 53.29 27.90 53.64 27.99 C 53.99 28.08 53.99 28.21 53.64 28.30 C 53.29 28.40 53.29 28.53 53.64 28.62 C 53.99 28.71 53.99 28.84 53.64 28.93 C 53.29 29.03 53.29 29.16 53.64 29.25 C 53.99 29.34 53.99 29.47 53.64 29.56 C 53.29 29.66 53.29 29.79 53.64 29.88 C 53.99 29.97 53.99 30.10 53.64 30.19 C 53.29 30.29 53.29 30.42 53.64 30.51 C 53.99 30.60 53.99 30.73 53.64 30.82 C 53.29 30.92 53.29 31.05 53.64 31.14 C 53.99 31.23 53.99 31.36 53.64 31.45 C 53.29 31.55 53.29 31.68 53.64 31.77 C 53.99 31.86 53.99 31.99 53.64 32.08 C 53.29 32.18 53.29 32.31 53.64 32.40" fill="none" stroke="black" stroke-width="0.130" class="arpeggio" data-pos="600" />
+  <path d="M 59.07 22.10 C 59.42 22.19 59.42 22.31 59.07 22.41 C 58.72 22.50 58.72 22.62 59.07 22.71 C 59.42 22.80 59.42 22.93 59.07 23.02 C 58.72 23.11 58.72 23.23 59.07 23.33 C 59.42 23.42 59.42 23.54 59.07 23.63 C 58.72 23.72 58.72 23.85 59.07 23.94 C 59.42 24.03 59.42 24.15 59.07 24.24 C 58.72 24.34 58.72 24.46 59.07 24.55 C 59.42 24.64 59.42 24.76 59.07 24.86 C 58.72 24.95 58.72 25.07 59.07 25.16 C 59.42 25.25 59.42 25.38 59.07 25.47 C 58.72 25.56 58.72 25.68 59.07 25.78 C 59.42 25.87 59.42 25.99 59.07 26.08 C 58.72 26.17 58.72 26.30 59.07 26.39 C 59.42 26.48 59.42 26.60 59.07 26.69 C 58.72 26.79 58.72 26.91 59.07 27.00 C 59.42 27.09 59.42 27.21 59.07 27.31 C 58.72 27.40 58.72 27.52 59.07 27.61 C 59.42 27.70 59.42 27.83 59.07 27.92 C 58.72 28.01 58.72 28.13 59.07 28.23 C 59.42 28.32 59.42 28.44 59.07 28.53 C 58.72 28.62 58.72 28.75 59.07 28.84 C 59.42 28.93 59.42 29.05 59.07 29.14 C 58.72 29.24 58.72 29.36 59.07 29.45 C 59.42 29.54 59.42 29.66 59.07 29.76 C 58.72 29.85 58.72 29.97 59.07 30.06 C 59.42 30.15 59.42 30.28 59.07 30.37 C 58.72 30.46 58.72 30.58 59.07 30.68 C 59.42 30.77 59.42 30.89 59.07 30.98 C 58.72 31.07 58.72 31.20 59.07 31.29 C 59.42 31.38 59.42 31.50 59.07 31.59 C 58.72 31.69 58.72 31.81 59.07 31.90" fill="none" stroke="black" stroke-width="0.130" class="arpeggio" data-pos="647" />
+  <path d="M 68.02 21.60 C 68.37 21.69 68.37 21.81 68.02 21.91 C 67.67 22.00 67.67 22.12 68.02 22.21 C 68.37 22.30 68.37 22.43 68.02 22.52 C 67.67 22.61 67.67 22.73 68.02 22.83 C 68.37 22.92 68.37 23.04 68.02 23.13 C 67.67 23.22 67.67 23.35 68.02 23.44 C 68.37 23.53 68.37 23.65 68.02 23.74 C 67.67 23.84 67.67 23.96 68.02 24.05 C 68.37 24.14 68.37 24.26 68.02 24.36 C 67.67 24.45 67.67 24.57 68.02 24.66 C 68.37 24.75 68.37 24.88 68.02 24.97 C 67.67 25.06 67.67 25.18 68.02 25.28 C 68.37 25.37 68.37 25.49 68.02 25.58 C 67.67 25.67 67.67 25.80 68.02 25.89 C 68.37 25.98 68.37 26.10 68.02 26.19 C 67.67 26.29 67.67 26.41 68.02 26.50 C 68.37 26.59 68.37 26.71 68.02 26.81 C 67.67 26.90 67.67 27.02 68.02 27.11 C 68.37 27.20 68.37 27.33 68.02 27.42 C 67.67 27.51 67.67 27.63 68.02 27.73 C 68.37 27.82 68.37 27.94 68.02 28.03 C 67.67 28.12 67.67 28.25 68.02 28.34 C 68.37 28.43 68.37 28.55 68.02 28.64 C 67.67 28.74 67.67 28.86 68.02 28.95 C 68.37 29.04 68.37 29.16 68.02 29.26 C 67.67 29.35 67.67 29.47 68.02 29.56 C 68.37 29.65 68.37 29.78 68.02 29.87 C 67.67 29.96 67.67 30.08 68.02 30.18 C 68.37 30.27 68.37 30.39 68.02 30.48 C 67.67 30.57 67.67 30.70 68.02 30.79 C 68.37 30.88 68.37 31.00 68.02 31.09 C 67.67 31.19 67.67 31.31 68.02 31.40" fill="none" stroke="black" stroke-width="0.130" class="arpeggio" data-pos="670" />
+  <path d="M 72.07 26.10 C 72.42 26.19 72.42 26.32 72.07 26.42 C 71.72 26.51 71.72 26.64 72.07 26.73 C 72.42 26.82 72.42 26.95 72.07 27.05 C 71.72 27.14 71.72 27.27 72.07 27.36 C 72.42 27.45 72.42 27.58 72.07 27.68 C 71.72 27.77 71.72 27.90 72.07 27.99 C 72.42 28.08 72.42 28.21 72.07 28.30 C 71.72 28.40 71.72 28.53 72.07 28.62 C 72.42 28.71 72.42 28.84 72.07 28.93 C 71.72 29.03 71.72 29.16 72.07 29.25 C 72.42 29.34 72.42 29.47 72.07 29.56 C 71.72 29.66 71.72 29.79 72.07 29.88 C 72.42 29.97 72.42 30.10 72.07 30.19 C 71.72 30.29 71.72 30.42 72.07 30.51 C 72.42 30.60 72.42 30.73 72.07 30.82 C 71.72 30.92 71.72 31.05 72.07 31.14 C 72.42 31.23 72.42 31.36 72.07 31.45 C 71.72 31.55 71.72 31.68 72.07 31.77 C 72.42 31.86 72.42 31.99 72.07 32.08 C 71.72 32.18 71.72 32.31 72.07 32.40" fill="none" stroke="black" stroke-width="0.130" class="arpeggio" data-pos="694" />
 </svg>
