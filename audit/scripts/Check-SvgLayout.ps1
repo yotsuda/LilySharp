@@ -224,7 +224,11 @@ foreach ($box in $boxes) {
 # R7: malformed_bezier_path
 # A tie/slur path's bbox should not be much wider than its endpoint span.
 # When control points are placed wildly (e.g., outside the page), the bbox blows up.
-foreach ($p in $all | Where-Object { $_.Element -eq 'path' -and $null -ne $_.PathEndX }) {
+# Excludes wavy-line spanners (trill, vibrato) where the path uses chained Q commands
+# whose effective extent is larger than any single segment — they have a single short
+# "tip" plus a long wavy continuation, which is intentional, not a bug.
+$wavyLineClasses = @('trill-spanner-line', 'vibrato-line', 'glissando-wavy')
+foreach ($p in $all | Where-Object { $_.Element -eq 'path' -and $null -ne $_.PathEndX -and $_.Kind -notin $wavyLineClasses }) {
     $span = [Math]::Abs($p.PathEndX - $p.PathStartX)
     $bboxW = $p.MaxX - $p.MinX
     # Require span >= 0.5sp so we don't flag tiny ties; bbox/span ratio < 3 is reasonable.
