@@ -4120,16 +4120,53 @@ public sealed class SvgRenderer
         const double waveAmplitude = 0.2; // Half-height of wave in staff spaces
         double lineThickness = StaffLineThickness;
 
+        // Collect tempo marks for skyline-style collision avoidance.
+        // The tempo mark sits above the staff in the same Y band as the trill "tr"
+        // glyph; without intervention the tr can land on top of "= 120". When their
+        // x-extents overlap, lift the trill above the tempo by its height + padding.
+        // LILYPOND-REF: axis-group-interface.cc — outside-staff-priority stacking
+        // (proper skyline implementation is V4 Sprint 5 territory; this is a focused
+        // workaround for the most visible single-system collision).
+        const double TempoTextSize = 1.8;       // Matches DrawTempoMarking
+        const double TempoNoteSize = 1.6;
+        const double TempoCharWidthFraction = 0.6;
+        const double TrillLiftPadding = 0.6;
+        var tempoExtents = new List<(int MeasureIndex, double X1, double X2, double Y, double Height)>();
+        if (!layout.MusicMarkLayouts.IsDefaultOrEmpty)
+        {
+            foreach (var mark in layout.MusicMarkLayouts)
+            {
+                if (mark.MarkType != MusicMarkType.Tempo) continue;
+                // Width = notehead glyph + " = NNN" text (proportional approximation)
+                double textWidth = TempoTextSize * Math.Max(1, mark.Text.Length + 2) * TempoCharWidthFraction;
+                double totalWidth = TempoNoteSize * 0.5 + 0.3 + textWidth;
+                tempoExtents.Add((mark.MeasureIndex, mark.X, mark.X + totalWidth,
+                    mark.Y, TempoTextSize + TempoNoteSize * 0.5));
+            }
+        }
+
         foreach (var spanner in layout.TrillSpannerLayouts)
         {
             double systemY = measureToSystemY.TryGetValue(spanner.StartMeasureIndex, out var y) ? y : 0;
             double absoluteY = systemY + spanner.Y;
 
-            // Draw "tr" glyph (scripts.trill = U+E05C)
+            // Tempo collision avoidance — applies only to the first segment ("tr" glyph),
+            // since continuation segments cannot collide with the tempo (different system).
             // Continuation segments (cross-system) have GlyphX == LineStartX — no glyph needed
             bool isContinuation = Math.Abs(spanner.GlyphX - spanner.LineStartX) < 0.01;
             if (!isContinuation)
             {
+                double trillRight = spanner.GlyphX + 1.6;
+                foreach (var t in tempoExtents)
+                {
+                    bool xOverlap = !(trillRight < t.X1 || spanner.GlyphX > t.X2);
+                    if (!xOverlap) continue;
+                    double tempoAbsY = systemY + t.Y;
+                    bool yOverlap = Math.Abs(tempoAbsY - absoluteY) < t.Height;
+                    if (!yOverlap) continue;
+                    double newY = tempoAbsY - t.Height - TrillLiftPadding;
+                    if (newY < absoluteY) absoluteY = newY;
+                }
                 DrawGlyph(EmmentalerGlyphs.OrnTrill, spanner.GlyphX, absoluteY, spanner.SourcePosition);
             }
 
