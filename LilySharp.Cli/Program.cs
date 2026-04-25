@@ -221,16 +221,19 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
     {
         var source = File.ReadAllText(inputPath);
         var tree = SyntaxTree.Parse(source);
+        var allDiagnostics = CollectDiagnostics(tree);
 
         // Always surface diagnostics — warnings are emitted to stderr even when
         // the build proceeds, so silent typos (e.g. `es` masquerading as a
-        // bare variable reference) are visible to the user.
-        if (tree.Diagnostics.Count > 0)
+        // bare variable reference, or a misspelled phrase name) are visible
+        // to the user.
+        if (allDiagnostics.Count > 0)
         {
-            Console.Error.WriteLine(tree.HasErrors ? "Syntax errors:" : "Diagnostics:");
-            foreach (var diag in tree.Diagnostics)
+            bool hasErrors = allDiagnostics.Any(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
+            Console.Error.WriteLine(hasErrors ? "Syntax errors:" : "Diagnostics:");
+            foreach (var diag in allDiagnostics)
                 Console.Error.WriteLine($"  {diag}");
-            if (tree.HasErrors) return 1;
+            if (hasErrors) return 1;
         }
 
         // Configure render options
@@ -690,14 +693,16 @@ static int ExecuteCheck(string inputPath)
     {
         var source = File.ReadAllText(inputPath);
         var tree = SyntaxTree.Parse(source);
+        var allDiagnostics = CollectDiagnostics(tree);
 
-        if (tree.Diagnostics.Count == 0)
+        if (allDiagnostics.Count == 0)
         {
             Console.WriteLine("No errors found.");
             return 0;
         }
 
-        foreach (var diag in tree.Diagnostics)
+        bool hasErrors = false;
+        foreach (var diag in allDiagnostics)
         {
             var severity = diag.Severity switch
             {
@@ -705,16 +710,30 @@ static int ExecuteCheck(string inputPath)
                 DiagnosticSeverity.Warning => "warning",
                 _ => "info"
             };
+            if (diag.Severity == DiagnosticSeverity.Error) hasErrors = true;
             Console.WriteLine($"{inputPath}({diag.Span.Start}): {severity}: {diag.Message}");
         }
 
-        return tree.HasErrors ? 1 : 0;
+        return hasErrors ? 1 : 0;
     }
     catch (Exception ex)
     {
         Console.Error.WriteLine($"Error: {ex.Message}");
         return 1;
     }
+}
+
+/// <summary>
+/// Combines syntax-tree diagnostics with semantic-validator diagnostics
+/// (e.g. undefined variable / phrase / section references).
+/// </summary>
+static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(SyntaxTree tree)
+{
+    var combined = new List<LilySharp.Core.Syntax.Diagnostic>(tree.Diagnostics);
+    var validator = new LilySharp.Core.Semantics.SymbolReferenceValidator();
+    validator.Validate(tree);
+    combined.AddRange(validator.Diagnostics);
+    return combined;
 }
 
 // ============ Shared Utilities ============
