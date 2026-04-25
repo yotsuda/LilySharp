@@ -61,9 +61,9 @@
   <text class="music" x="63.9" y="21.5" font-size="4.00" data-pos="440"></text>
   <text class="music" x="63.9" y="20.5" font-size="4.00" data-pos="440"></text>
   <line x1="63.9" y1="20.7" x2="63.9" y2="25.2" stroke="black" stroke-width="0.12" data-pos="440"/>
-  <line class="barline" x1="2" y1="10.5" x2="2" y2="23.5"/>
-  <line class="barline" x1="43.900000000000006" y1="10.5" x2="43.900000000000006" y2="23.5"/>
-  <line class="barline" x1="78" y1="10.5" x2="78" y2="23.5"/>
+  <line class="barline" x1="2.00" y1="10.50" x2="2.00" y2="23.50"/>
+  <rect x="43.74" y="10.50" width="0.16" height="13.00" fill="black"/>
+  <rect x="77.84" y="10.50" width="0.16" height="13.00" fill="black"/>
   <text x="1.00" y="38.00" font-family="Emmentaler-Brace" font-size="0.86" dominant-baseline="middle" text-anchor="end">&#xE23F;</text>
   <line class="staff" x1="2" y1="31.5" x2="78" y2="31.5"/>
   <line class="staff" x1="2" y1="32.5" x2="78" y2="32.5"/>
@@ -124,10 +124,10 @@
   <text class="music" x="67.5" y="43.0" font-size="4.00" data-pos="515"></text>
   <text class="music" x="67.5" y="44.5" font-size="4.00" data-pos="515"></text>
   <line x1="68.9" y1="44.3" x2="68.9" y2="39.3" stroke="black" stroke-width="0.12" data-pos="515"/>
-  <line class="barline" x1="2" y1="31.5" x2="2" y2="44.5"/>
-  <line class="barline" x1="34.9174952753171" y1="31.5" x2="34.9174952753171" y2="44.5"/>
-  <line class="barline" x1="53.069449694092086" y1="31.5" x2="53.069449694092086" y2="44.5"/>
-  <line class="barline" x1="77.99999999999997" y1="31.5" x2="77.99999999999997" y2="44.5"/>
+  <line class="barline" x1="2.00" y1="31.50" x2="2.00" y2="44.50"/>
+  <rect x="34.76" y="31.50" width="0.16" height="13.00" fill="black"/>
+  <rect x="52.91" y="31.50" width="0.16" height="13.00" fill="black"/>
+  <rect x="77.84" y="31.50" width="0.16" height="13.00" fill="black"/>
   <text x="1.00" y="60.00" font-family="Emmentaler-Brace" font-size="0.86" dominant-baseline="middle" text-anchor="end">&#xE23F;</text>
   <line class="staff" x1="2" y1="53.5" x2="78" y2="53.5"/>
   <line class="staff" x1="2" y1="54.5" x2="78" y2="54.5"/>
@@ -179,12 +179,25 @@
   <text class="music" x="46.5" y="63.0" font-size="4.00" data-pos="581"></text>
   <line x1="46.5" y1="63.2" x2="46.5" y2="68.2" stroke="black" stroke-width="0.12" data-pos="581"/>
   <text class="music" x="50.1" y="64.5" font-size="4.00" data-pos="601"></text>
-  <line class="barline" x1="2" y1="53.5" x2="2" y2="66.5"/>
-  <line class="barline" x1="25.799999999999997" y1="53.5" x2="25.799999999999997" y2="66.5"/>
-  <line class="barline" x1="41" y1="53.5" x2="41" y2="66.5"/>
-  <line class="barline" x1="54.901955000865385" y1="53.5" x2="54.901955000865385" y2="66.5"/>
+  <line class="barline" x1="2.00" y1="53.50" x2="2.00" y2="66.50"/>
+  <rect x="25.64" y="53.50" width="0.16" height="13.00" fill="black"/>
+  <rect x="40.84" y="53.50" width="0.16" height="13.00" fill="black"/>
+  <rect x="53.84" y="53.50" width="0.16" height="13.00" fill="black"/>
+  <rect x="54.40" y="53.50" width="0.50" height="13.00" fill="black"/>
   <polygon points="9.4,35.1 18.4,34.3 18.4,34.7 9.4,35.6" fill="black"/>
   <polygon points="21.4,34.4 30.5,35.3 30.5,35.7 21.4,34.9" fill="black"/>
+  <text x="16.42" y="17.30" font-family="serif" font-size="2.0" font-style="italic" font-weight="bold" fill="black" data-pos="249">p</text>
+  <text x="39.49" y="38.30" font-family="serif" font-size="2.0" font-style="italic" font-weight="bold" fill="black" data-pos="305">f</text>
+  <text x="53.57" y="37.50" font-family="serif" font-size="2.8" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="pedal-mark-text">Ped.</text>
+  <text x="7.50" y="59.50" font-family="serif" font-size="2.8" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="pedal-mark-text">Ped.</text>
+  <text x="7.50" y="61.96" font-family="serif" font-size="2.8" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="pedal-mark-text">*</text>
+  <text x="26.30" y="59.50" font-family="serif" font-size="2.8" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="pedal-mark-text">Ped.</text>
+  <text x="26.30" y="61.96" font-family="serif" font-size="2.8" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="pedal-mark-text">*</text>
+  <text x="41.50" y="59.50" font-family="serif" font-size="2.8" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="pedal-mark-text">*</text>
+  <rect x="7.59" y="6.70" width="5.41" height="2.60" fill="white" stroke="black" stroke-width="0.10" class="section-label-box" />
+  <text x="10.30" y="8.00" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">Main</text>
+  <text class="bar-number" x="7.00" y="30.50" font-family="serif" font-size="1.80" font-weight="bold">3</text>
+  <text class="bar-number" x="7.00" y="52.50" font-family="serif" font-size="1.80" font-weight="bold">6</text>
   <line x1="15.04" y1="39.39" x2="39.24" y2="39.06" stroke="black" stroke-width="0.130" class="hairpin" data-pos="277" />
   <line x1="15.04" y1="39.39" x2="39.24" y2="39.73" stroke="black" stroke-width="0.130" class="hairpin" data-pos="277" />
   <text x="52.27" y="29.50" font-family="serif" font-size="1.8" font-style="italic" font-weight="bold" fill="black" class="ottava-bracket" data-pos="339">8va</text>

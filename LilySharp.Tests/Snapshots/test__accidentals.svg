@@ -41,7 +41,7 @@
   <text class="music" x="39.0" y="14.0" font-size="4.00" data-pos="253"></text>
   <text class="music" x="40.1" y="14.0" font-size="4.00" data-pos="253"></text>
   <line x1="41.4" y1="13.8" x2="41.4" y2="10.3" stroke="black" stroke-width="0.12" data-pos="253"/>
-  <text class="music" x="43.0" y="14.5" font-size="4.00" data-pos="257"></text>
+  <text class="music" x="42.4" y="14.5" font-size="4.00" data-pos="257"></text>
   <text class="music" x="43.0" y="14.5" font-size="4.00" data-pos="257"></text>
   <text class="music" x="43.6" y="14.5" font-size="4.00" data-pos="257"></text>
   <text class="music" x="44.4" y="14.5" font-size="4.00" data-pos="257"></text>
@@ -107,4 +107,5 @@
   <text class="tempo" font-size="1.8" x="11.40" y="7.50">= 120</text>
   <rect x="7.59" y="2.64" width="5.41" height="2.60" fill="white" stroke="black" stroke-width="0.10" class="section-label-box" />
   <text x="10.30" y="3.94" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">Main</text>
+  <text class="bar-number" x="7.00" y="21.50" font-family="serif" font-size="1.80" font-weight="bold">4</text>
 </svg>

@@ -254,6 +254,10 @@
   <line x1="63.24" y1="31.10" x2="67.73" y2="31.00" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
   <line x1="67.73" y1="31.00" x2="67.73" y2="30.30" stroke="black" stroke-width="0.13" class="tuplet-bracket" />
   <text x="62.24" y="31.93" font-family="serif" font-size="2.4" font-weight="bold" text-anchor="middle" dominant-baseline="middle" class="tuplet-number">3</text>
+  <text class="bar-number" x="7.00" y="22.50" font-family="serif" font-size="1.80" font-weight="bold">2</text>
+  <text class="bar-number" x="7.00" y="36.00" font-family="serif" font-size="1.80" font-weight="bold">3</text>
+  <text class="bar-number" x="7.00" y="49.00" font-family="serif" font-size="1.80" font-weight="bold">5</text>
+  <text class="bar-number" x="7.00" y="68.00" font-family="serif" font-size="1.80" font-weight="bold">7</text>
   <line x1="59.25" y1="40.00" x2="61.25" y2="38.00" stroke="black" stroke-width="0.48" stroke-linecap="round" class="percent-repeat" data-pos="625"/>
   <circle cx="60.55" cy="38.00" r="0.25" fill="black" class="percent-dot"/>
   <circle cx="59.95" cy="40.00" r="0.25" fill="black" class="percent-dot"/>

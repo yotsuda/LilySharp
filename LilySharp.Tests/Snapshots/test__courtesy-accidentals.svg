@@ -33,7 +33,7 @@
   <text class="music" x="22.2" y="17.0" font-size="4.00" data-pos="374"></text>
   <line x1="22.2" y1="17.2" x2="22.2" y2="20.7" stroke="black" stroke-width="0.12" data-pos="374"/>
   <rect x="26.90" y="16.50" width="0.16" height="4.00" fill="black"/>
-  <text class="music" x="28.3" y="18.0" font-size="4.00" data-pos="378"></text>
+  <text class="music" x="27.7" y="18.0" font-size="4.00" data-pos="378"></text>
   <text class="music" x="28.3" y="18.0" font-size="4.00" data-pos="378"></text>
   <text class="music" x="29.0" y="18.0" font-size="4.00" data-pos="378"></text>
   <text class="music" x="29.8" y="18.0" font-size="4.00" data-pos="378"></text>
@@ -45,7 +45,7 @@
   <text class="music" x="39.2" y="16.5" font-size="4.00" data-pos="385"></text>
   <line x1="39.2" y1="16.7" x2="39.2" y2="20.2" stroke="black" stroke-width="0.12" data-pos="385"/>
   <rect x="43.88" y="16.50" width="0.16" height="4.00" fill="black"/>
-  <text class="music" x="45.3" y="14.5" font-size="4.00" data-pos="418"></text>
+  <text class="music" x="44.7" y="14.5" font-size="4.00" data-pos="418"></text>
   <text class="music" x="45.3" y="14.5" font-size="4.00" data-pos="418"></text>
   <text class="music" x="46.0" y="14.5" font-size="4.00" data-pos="418"></text>
   <line class="ledger" x1="46.4" y1="15.5" x2="48.5" y2="15.5"/>
@@ -222,7 +222,7 @@
   <text class="music" x="28.4" y="31.5" font-size="4.00" data-pos="701"></text>
   <line x1="28.4" y1="31.7" x2="28.4" y2="48.5" stroke="black" stroke-width="0.12" data-pos="701"/>
   <rect x="32.05" y="46.50" width="0.16" height="4.00" fill="black"/>
-  <text class="music" x="32.9" y="31.0" font-size="4.00" data-pos="705"></text>
+  <text class="music" x="32.3" y="31.0" font-size="4.00" data-pos="705"></text>
   <text class="music" x="32.9" y="31.0" font-size="4.00" data-pos="705"></text>
   <text class="music" x="33.6" y="31.0" font-size="4.00" data-pos="705"></text>
   <line class="ledger" x1="34.0" y1="45.5" x2="36.1" y2="45.5"/>
@@ -314,4 +314,5 @@
   <text class="tempo" font-size="1.8" x="11.40" y="14.00">= 120</text>
   <rect x="7.59" y="9.14" width="5.41" height="2.60" fill="white" stroke="black" stroke-width="0.10" class="section-label-box" />
   <text x="10.30" y="10.44" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">Main</text>
+  <text class="bar-number" x="7.00" y="45.50" font-family="serif" font-size="1.80" font-weight="bold">5</text>
 </svg>

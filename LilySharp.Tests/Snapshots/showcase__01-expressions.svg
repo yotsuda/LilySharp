@@ -128,6 +128,7 @@
   <text x="12.95" y="2.78" font-family="serif" font-size="2.4" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="rehearsal-mark-text">A</text>
   <rect x="9.70" y="21.10" width="2.00" height="2.80" fill="white" stroke="black" stroke-width="0.10" class="rehearsal-mark-box" />
   <text x="10.70" y="22.50" font-family="serif" font-size="2.4" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="rehearsal-mark-text">B</text>
+  <text class="bar-number" x="10.20" y="24.00" font-family="serif" font-size="1.80" font-weight="bold">5</text>
   <line x1="35.85" y1="19.39" x2="40.73" y2="19.06" stroke="black" stroke-width="0.130" class="hairpin" data-pos="299" />
   <line x1="35.85" y1="19.39" x2="40.73" y2="19.73" stroke="black" stroke-width="0.130" class="hairpin" data-pos="299" />
   <line x1="68.62" y1="19.56" x2="73.51" y2="19.89" stroke="black" stroke-width="0.130" class="hairpin" data-pos="429" />

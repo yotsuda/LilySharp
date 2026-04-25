@@ -536,16 +536,11 @@ public sealed class MeasureCollector
         if (_variables.TryGetValue(voiceName, out var variable))
             return CollectMeasuresFromNode(variable);
 
-        // 2. Search for PartBlock with matching name in all sections
-        foreach (var section in _sections.Values)
-        {
-            var partBlock = section.DescendantNodes<PartBlockSyntax>()
-                .FirstOrDefault(p => p.Name == voiceName);
-            if (partBlock != null)
-                return CollectMeasuresFromNode(partBlock);
-        }
-
-        return [];
+        // 2. Delegate to the structure-aware CollectMeasures path so that
+        //    structure { A B C ... } expansion concatenates all sections'
+        //    PartBlocks for this voice. ProcessSection filters by _voiceName
+        //    (already set by the caller) so only matching PartBlocks are taken.
+        return CollectMeasures();
     }
 
     private Score CollectMultiVoiceScore(ParallelExpressionSyntax parallelExpr)

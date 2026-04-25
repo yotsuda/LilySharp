@@ -112,4 +112,5 @@
   <text x="55.36" y="9.00" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">Second</text>
   <rect x="17.39" y="21.20" width="4.92" height="2.60" fill="white" stroke="black" stroke-width="0.10" class="section-label-box" />
   <text x="19.85" y="22.50" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">First</text>
+  <text class="bar-number" x="7.00" y="24.00" font-family="serif" font-size="1.80" font-weight="bold">4</text>
 </svg>

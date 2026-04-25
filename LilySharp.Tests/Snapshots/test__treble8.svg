@@ -100,7 +100,10 @@
   <line class="ledger" x1="70.2" y1="27.5" x2="72.3" y2="27.5"/>
   <text class="music" x="70.6" y="27.5" font-size="4.00" data-pos="324"></text>
   <line x1="70.6" y1="27.7" x2="70.6" y2="31.5" stroke="black" stroke-width="0.12" data-pos="324"/>
-  <line class="barline" x1="12.5" y1="8.5" x2="12.5" y2="33.5"/>
-  <line class="barline" x1="48.95" y1="8.5" x2="48.95" y2="33.5"/>
-  <line class="barline" x1="78" y1="8.5" x2="78" y2="33.5"/>
+  <line class="barline" x1="12.50" y1="8.50" x2="12.50" y2="33.50"/>
+  <rect x="48.79" y="8.50" width="0.16" height="25.00" fill="black"/>
+  <rect x="76.94" y="8.50" width="0.16" height="25.00" fill="black"/>
+  <rect x="77.50" y="8.50" width="0.50" height="25.00" fill="black"/>
+  <rect x="18.09" y="4.70" width="5.41" height="2.60" fill="white" stroke="black" stroke-width="0.10" class="section-label-box" />
+  <text x="20.80" y="6.00" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">Main</text>
 </svg>

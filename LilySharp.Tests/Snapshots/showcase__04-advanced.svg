@@ -191,6 +191,8 @@
   <line x1="27.65" y1="40.50" x2="48.65" y2="40.50" stroke="black" stroke-width="0.13" class="volta-bracket" />
   <line x1="48.65" y1="40.50" x2="48.65" y2="42.50" stroke="black" stroke-width="0.13" class="volta-bracket" />
   <text x="28.15" y="40.80" font-family="serif" font-size="2.4" font-weight="bold" text-anchor="start" dominant-baseline="hanging" class="volta-text">2.</text>
+  <text class="bar-number" x="7.00" y="30.50" font-family="serif" font-size="1.80" font-weight="bold">5</text>
+  <text class="bar-number" x="7.00" y="42.50" font-family="serif" font-size="1.80" font-weight="bold">9</text>
   <text x="47.68" y="22.00" font-size="3.00" text-anchor="middle" font-family="serif" class="figured-bass" data-pos="418">5</text>
   <text x="47.68" y="23.50" font-size="3.00" text-anchor="middle" font-family="serif" class="figured-bass" data-pos="418">3</text>
   <text x="50.78" y="22.00" font-size="3.00" text-anchor="middle" font-family="serif" class="figured-bass" data-pos="428">6</text>

@@ -130,4 +130,5 @@
   <line x1="29.90" y1="21.00" x2="52.70" y2="21.00" stroke="black" stroke-width="0.13" class="volta-bracket" />
   <line x1="52.70" y1="21.00" x2="52.70" y2="23.00" stroke="black" stroke-width="0.13" class="volta-bracket" />
   <text x="30.40" y="21.30" font-family="serif" font-size="2.4" font-weight="bold" text-anchor="start" dominant-baseline="hanging" class="volta-text">2.</text>
+  <text class="bar-number" x="7.00" y="23.00" font-family="serif" font-size="1.80" font-weight="bold">5</text>
 </svg>

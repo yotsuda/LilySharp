@@ -114,6 +114,7 @@
   <text x="55.77" y="12.50" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">B</text>
   <rect x="18.86" y="26.20" width="1.99" height="2.60" fill="white" stroke="black" stroke-width="0.10" class="section-label-box" />
   <text x="19.85" y="27.50" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">C</text>
+  <text class="bar-number" x="7.00" y="29.00" font-family="serif" font-size="1.80" font-weight="bold">4</text>
   <text class="music" x="14.4" y="12.8" font-size="4.00" data-pos="234"></text>
   <path d="M 16.35 12.80 Q 16.55 12.60 16.75 12.80 Q 16.96 13.00 17.16 12.80 Q 17.37 12.60 17.57 12.80 Q 17.78 13.00 17.98 12.80 Q 18.19 12.60 18.39 12.80 Q 18.60 13.00 18.80 12.80 Q 19.01 12.60 19.21 12.80 Q 19.42 13.00 19.62 12.80 Q 19.83 12.60 20.03 12.80 Q 20.24 13.00 20.44 12.80 Q 20.65 12.60 20.85 12.80 Q 21.06 13.00 21.26 12.80 Q 21.47 12.60 21.67 12.80 Q 21.88 13.00 22.08 12.80 Q 22.29 12.60 22.49 12.80 Q 22.70 13.00 22.90 12.80 Q 23.11 12.60 23.31 12.80 Q 23.52 13.00 23.72 12.80 Q 23.93 12.60 24.13 12.80 Q 24.33 13.00 24.54 12.80 Q 24.74 12.60 24.95 12.80 Q 25.15 13.00 25.36 12.80 Q 25.56 12.60 25.77 12.80 Q 25.97 13.00 26.18 12.80 Q 26.38 12.60 26.59 12.80" fill="none" stroke="black" stroke-width="0.130" class="trill-spanner-line" data-pos="234" />
   <text class="music" x="59.9" y="12.8" font-size="4.00" data-pos="343"></text>

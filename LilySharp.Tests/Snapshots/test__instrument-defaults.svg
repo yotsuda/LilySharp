@@ -115,7 +115,10 @@
   <line x1="53.8" y1="42.2" x2="53.8" y2="45.7" stroke="black" stroke-width="0.12" data-pos="628"/>
   <text class="music" x="55.5" y="42.0" font-size="4.00" data-pos="628"></text>
   <text class="music" x="71.2" y="43.5" font-size="4.00" data-pos="632"></text>
-  <line class="barline" x1="12.5" y1="11.5" x2="12.5" y2="45.5"/>
-  <line class="barline" x1="48.94800000000001" y1="11.5" x2="48.94800000000001" y2="45.5"/>
-  <line class="barline" x1="78.00000000000001" y1="11.5" x2="78.00000000000001" y2="45.5"/>
+  <line class="barline" x1="12.50" y1="11.50" x2="12.50" y2="45.50"/>
+  <rect x="48.79" y="11.50" width="0.16" height="34.00" fill="black"/>
+  <rect x="76.94" y="11.50" width="0.16" height="34.00" fill="black"/>
+  <rect x="77.50" y="11.50" width="0.50" height="34.00" fill="black"/>
+  <rect x="18.09" y="7.70" width="5.41" height="2.60" fill="white" stroke="black" stroke-width="0.10" class="section-label-box" />
+  <text x="20.80" y="9.00" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">Main</text>
 </svg>

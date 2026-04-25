@@ -137,7 +137,6 @@
   <text class="music" x="45.3" y="44.5" font-size="4.00" data-pos="585"></text>
   <text class="music" x="53.6" y="47.0" font-size="4.00" data-pos="591"></text>
   <rect x="60.66" y="45.00" width="0.16" height="4.00" fill="black"/>
-  <text class="music" x="67.3" y="46.0" font-size="4.00" data-pos="650"></text>
   <rect x="77.84" y="45.00" width="0.16" height="4.00" fill="black"/>
   <line class="staff" x1="2" y1="57" x2="78" y2="57"/>
   <line class="staff" x1="2" y1="58" x2="78" y2="58"/>
@@ -194,4 +193,9 @@
   <text class="tempo" font-size="1.8" x="11.40" y="6.50">= 120</text>
   <rect x="7.59" y="1.64" width="5.41" height="2.60" fill="white" stroke="black" stroke-width="0.10" class="section-label-box" />
   <text x="10.30" y="2.94" font-family="serif" font-size="2.2" font-weight="bold" text-anchor="middle" dominant-baseline="central" class="section-label-text">Main</text>
+  <text class="music" x="69.4" y="46.5" font-size="4.00" data-pos="0"></text>
+  <text class="bar-number" x="7.00" y="20.00" font-family="serif" font-size="1.80" font-weight="bold">4</text>
+  <text class="bar-number" x="7.00" y="32.00" font-family="serif" font-size="1.80" font-weight="bold">6</text>
+  <text class="bar-number" x="7.00" y="44.00" font-family="serif" font-size="1.80" font-weight="bold">7</text>
+  <text class="bar-number" x="7.00" y="56.00" font-family="serif" font-size="1.80" font-weight="bold">10</text>
 </svg>
