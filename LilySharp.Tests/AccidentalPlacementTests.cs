@@ -149,34 +149,37 @@ public class AccidentalPlacementTests
             $"Natural ({naturalLayout.XOffset:F3}) should be closer to notes than sharp ({sharpLayout.XOffset:F3})");
     }
 
-    // After Bravura→Emmentaler glyph metric extraction, the Sharp BBox grew
-    // (height 2.792→3.000) and now overlaps the DoubleSharp at staff position 4.
-    // The collision logic kicks in correctly with the new BBoxes — the test just
-    // needs a new scenario that's marginal under Emmentaler dimensions. Tracked
-    // as a follow-up to the Bravura removal.
-    [Fact(Skip = "Original margins built around Bravura BBoxes; needs re-tuning for Emmentaler.")]
+    [Fact]
     public void GlyphExtent_CollisionDetection_UsesActualHeight()
     {
         var placement = new AccidentalPlacement();
-        // Double-sharp is very short (height ~1.0 ss), so it can share column with
-        // accidentals that are further apart than a sharp could
-        // Sharp at pos 0: Y extent [-1.392, 1.4] → total height 2.792
-        // DoubleSharp at pos 4: Y extent [1.5, 2.508] → does NOT overlap with sharp's [−1.392, 1.4]
+        // Double-sharp is very short (height ~1.08 ss), so it can share a column
+        // with accidentals that are far enough away in Y. Compute the marginal
+        // separation from the live Emmentaler BBoxes so this stays font-accurate.
+        // Sharp at pos 0:    Y extent [Sharp.Bottom, Sharp.Top]
+        // DoubleSharp at K:  Y extent [K/2 + DSharp.Bottom, K/2 + DSharp.Top]
+        // Pick K so DoubleSharp.Bottom_at_K > Sharp.Top + horizon_padding (0.1).
+        var sharp = LilySharp.Core.Svg.Layout.GlyphMetrics.AccidentalSharp;
+        var dsharp = LilySharp.Core.Svg.Layout.GlyphMetrics.AccidentalDoubleSharp;
+        const double horizonPadding = 0.1;
+        // Need: K/2 + dsharp.Bottom > sharp.Top + horizonPadding
+        // → K > 2 * (sharp.Top + horizonPadding - dsharp.Bottom)
+        int marginalPos = (int)Math.Ceiling(2 * (sharp.Top + horizonPadding - dsharp.Bottom)) + 1;
+
         var notes = ImmutableArray.Create(
             new ChordNoteInfo(0, "sharp", false),
-            new ChordNoteInfo(4, "doubleSharp", false)
+            new ChordNoteInfo(marginalPos, "doubleSharp", false)
         );
 
         var layouts = placement.CalculatePositions(notes);
         Assert.Equal(2, layouts.Length);
 
-        // Position 4 → Y center = 2.0, doubleSharp bottom = 2.0 + (-0.5) = 1.5
-        // Sharp top = 0 + 1.4 = 1.4, with horizon_padding 0.1: 1.5 - 0.1 = 1.4
-        // Marginal: 1.4 < 1.4 is false → no collision → same column
         var sharpLayout = layouts.First(l => l.Accidental == "sharp");
         var dsLayout = layouts.First(l => l.Accidental == "doubleSharp");
         double xDiff = Math.Abs(sharpLayout.XOffset - dsLayout.XOffset);
-        Assert.True(xDiff < 0.5, $"DoubleSharp at pos 4 should not collide with sharp at pos 0, xDiff={xDiff}");
+        Assert.True(xDiff < 0.5,
+            $"DoubleSharp at pos {marginalPos} should not collide with sharp at pos 0 (xDiff={xDiff}); " +
+            $"sharp.Top={sharp.Top}, dsharp.Bottom_at_pos={marginalPos / 2.0 + dsharp.Bottom}");
     }
 
     [Fact]

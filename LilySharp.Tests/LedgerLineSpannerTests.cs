@@ -62,17 +62,22 @@ public class LedgerLineSpannerTests
         }
     }
 
-    // After Bravura→Emmentaler glyph metric extraction (commit aXXXXX), accidental
-    // BBox dimensions widened slightly (Sharp 0.996→1.100, etc.). Two consecutive
-    // c''' notes now space far enough apart that their ledger spans no longer fall
-    // within MergeThreshold. Likely needs threshold re-tuning OR the test scenario
-    // adjusted to a tighter pair. Tracked as a follow-up to the Bravura removal.
-    [Fact(Skip = "Spacing changed after Emmentaler-accurate metrics; needs investigation.")]
+    // The merger uses MergeThreshold = 1.5 ss — only ledger entries whose
+    // adjacent edges are within ~1.5 ss collapse into one span. Sequential
+    // notes laid out by the spring solver land 4–7 ss apart even when packed
+    // tightly (8 eighths still leave ~5 ss gaps), so the merger never fires
+    // for sequential notes under the default spacing model.
+    //
+    // The original test was authored as `c''' c''' |` and relied on (a) the
+    // two notes being interpreted as the same pitch — which LilySharp's
+    // relative mode does NOT do — and (b) on the spring solver placing them
+    // close enough to merge. Both assumptions are now invalid; the merger is
+    // only reachable via simultaneous (chord) or near-touching (grace) notes,
+    // which need a separate test scenario.
+    [Fact(Skip = "Original assumption (sequential notes merge) is incompatible with MergeThreshold = 1.5; needs a chord-or-grace scenario.")]
     public void TwoCloseHighNotes_MergeIntoSingleSpan()
     {
-        // Two consecutive c''' notes share the same ledger position. The engraver
-        // should merge them into a single span (one entry per staff position).
-        var layout = BuildLayout("c''' c''' |");
+        var layout = BuildLayout("c'''8 c c c c c c c |");
         // Group spans by staff position; each unique position should appear once.
         var byPosition = layout.LedgerLineSpans
             .GroupBy(s => s.StaffPosition)
