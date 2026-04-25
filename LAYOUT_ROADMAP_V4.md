@@ -13,15 +13,16 @@
 
 V3 完了後に残る課題は性質が大きく異なるため、**3 つの軸** に分けて整理する:
 
-### 軸 1: Font / Glyph 精度
+### 軸 1: Font / Glyph 精度 ✅ 部分達成 (2026-04-26)
 - **Pango font / Emmentaler 完全模倣** (~30h)
-- 現状: SMuFL Bravura font metadata 使用
+- 旧現状 (〜2026-04-25): SMuFL Bravura font metadata と Emmentaler 描画の混在 (定数値が ±0.05〜0.2sp 単位でフォント実体と乖離)
+- **新現状 (2026-04-26〜):** `audit/scripts/Extract-EmmentalerMetrics.py` で emmentaler-20.otf から BBox/advance を自動抽出 → `LilySharp.Core/Svg/Layout/GlyphMetricsGenerated.cs` に出力。Bravura 由来定数は完全除去済 (commit 8495976)
 - LP: Pango + Emmentaler metafont
-- 影響: 文字幅 / instrument-name / lyric が ±5-10% 差
+- 残課題: テキストレンダリング (instrument-name / lyric / serif font 文字幅) は依然 SkiaSharp 既定 metric 使用
 - 戦略選択肢:
-  - **(a) SkiaSharp + HarfBuzzSharp 統合** (~30h): 完全模倣
-  - **(b) Bravura のまま継続** (0h): 視覚的差は許容、注釈付きで明示
-  - **(c) 採用: Emmentaler glyph metrics 部分抽出** (~10h): hot path のみ精度向上
+  - **(a) SkiaSharp + HarfBuzzSharp 統合** (~30h): 完全模倣 — 残テキスト系の正確化に有効
+  - **(b)** ~~Bravura のまま継続~~ — 廃案
+  - **(c) ✅ 採用済: Emmentaler glyph metrics 部分抽出** (実所要 8h): glyph metrics は font-truth、テキスト系は別途
 
 ### 軸 2: アーキテクチャ拡張
 - **callback property system** (~50h+)
@@ -50,13 +51,13 @@ V3 完了後に残る課題は性質が大きく異なるため、**3 つの軸*
 
 ## V4 Sprint 構成
 
-### Sprint 4 (短期、~10-15h): Font 部分模倣
+### Sprint 4 (短期、~10-15h): Font 部分模倣 ✅ 完了 (2026-04-26)
 **目的**: hot path (instrument-name, lyric, dynamic) の文字幅を Emmentaler 値に合わせる
 
-- **F-1**: Emmentaler 主要 glyph (notehead, accidental, clef) の bbox 抽出
-- **F-2**: Bravura → Emmentaler width remap テーブル
-- **F-3**: 既存 GlyphMetrics.cs に Emmentaler 値を併設、設定で切替可
-- **F-4**: 視覚回帰での比較 (Compare-Svg.ps1 を vague font diff で許容)
+- **F-1 ✅**: Emmentaler 主要 glyph (notehead, accidental, clef, flag, articulation, time-sig digit) の BBox / advance を `Extract-EmmentalerMetrics.py` で自動抽出
+- **F-2 ✅**: Bravura → Emmentaler 移行は手動 remap ではなく、フォントを真実の source とした再生成方式で実施
+- **F-3 ✅**: `GlyphMetricsGenerated.cs` (auto) と `GlyphMetrics.cs` (hand-tuned) に分離、フォント更新時は script 1 発で再生成
+- **F-4 残**: LP との視覚回帰自動化 (`audit/scripts/Compare-Svg.ps1` の整備) — 単体テストの snapshot 機構で代用可
 
 ### Sprint 5 (中期、~10-15h): callback property 部分対応
 **目的**: 主要 LP 拡張点のうち、ユーザーが実用的に override したい属性を支援
