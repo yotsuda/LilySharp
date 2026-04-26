@@ -270,7 +270,7 @@ public sealed class SvgRenderer
         DrawTextSpanners(layout);
 
         // Draw trill spanners
-        // LILYPOND-REF: lily/trill-spanner-engraver.cc - trill + wavy line rendering
+        // LILYPOND-REF: scm/scheme-engravers.scm - trill + wavy line rendering
         DrawTrillSpanners(layout);
 
         // Draw ottava brackets
@@ -278,7 +278,7 @@ public sealed class SvgRenderer
         DrawOttavaBrackets(layout);
 
         // Draw glissandos
-        // LILYPOND-REF: lily/glissando-engraver.cc - glissando line rendering
+        // LILYPOND-REF: scm/scheme-engravers.scm - glissando line rendering
         DrawGlissandos(layout);
 
         // Draw arpeggios
@@ -1571,9 +1571,9 @@ public sealed class SvgRenderer
             double voiceOffset = scoreLayout.GetVoiceOffset(measureIndex, voiceNumber, i);
             itemX += voiceOffset;
 
-            // LILYPOND-REF: lily/note-collision-interface.cc:381-407 — head wipe
+            // LILYPOND-REF: lily/note-collision.cc:381-407 — head wipe
             _currentHeadWiped = scoreLayout.IsHeadWiped(measureIndex, voiceNumber, i);
-            // LILYPOND-REF: lily/note-collision-interface.cc:411-448 — dot direction
+            // LILYPOND-REF: lily/note-collision.cc:411-448 — dot direction
             _currentDotForceDown = scoreLayout.IsDotForcedDown(measureIndex, voiceNumber, i);
 
             switch (item)
@@ -1684,7 +1684,7 @@ public sealed class SvgRenderer
 
         // Draw notehead
         // LILYPOND-REF: lily/grob-property.cc — NoteHead.color, NoteHead.transparent
-        // LILYPOND-REF: lily/note-collision-interface.cc:381-407 — head wipe
+        // LILYPOND-REF: lily/note-collision.cc:381-407 — head wipe
         char notehead = EmmentalerGlyphs.GetNotehead(noteValue);
         string? noteheadColor = GetResolvedColor("NoteHead");
         bool noteheadTransparent = _resolver.GetBool("NoteHead", "transparent") == true
@@ -1756,8 +1756,8 @@ public sealed class SvgRenderer
             double dotX = noteheadLeftX + noteheadWidth + dotGap + d * (dotWidth + dotGap);
 
             // Dots must avoid staff lines
-            // LILYPOND-REF: lily/dots.cc:62-80 — dot avoids staff lines
-            // LILYPOND-REF: lily/note-collision-interface.cc:411-448 — dot direction in multi-voice
+            // LILYPOND-REF: lily/dots-engraver.cc:62-80 — dot avoids staff lines
+            // LILYPOND-REF: lily/note-collision.cc:411-448 — dot direction in multi-voice
             double dotYOffset = 0;
             if (note.StaffPosition % 2 == 0)
             {
@@ -1852,7 +1852,7 @@ public sealed class SvgRenderer
 
             // Draw notehead
             // LILYPOND-REF: lily/grob-property.cc — NoteHead.color, NoteHead.transparent
-            // LILYPOND-REF: lily/note-collision-interface.cc:381-407 — head wipe
+            // LILYPOND-REF: lily/note-collision.cc:381-407 — head wipe
             string? noteheadColor = GetResolvedColor("NoteHead");
             bool noteheadTransparent = _resolver.GetBool("NoteHead", "transparent") == true
                                      || _currentHeadWiped;
@@ -4094,7 +4094,7 @@ public sealed class SvgRenderer
     /// Draws all trill spanners ("tr" glyph + wavy line extension).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/trill-spanner-engraver.cc Trill_spanner_engraver
+    /// LILYPOND-REF: scm/scheme-engravers.scm Trill_spanner_engraver
     /// LILYPOND-REF: scm/define-grobs.scm:2175-2230 TrillSpanner grob
     ///
     /// A trill spanner consists of:
@@ -4281,7 +4281,7 @@ public sealed class SvgRenderer
     /// Draws glissando lines between notes.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/glissando-engraver.cc, scm/define-grobs.scm:1557-1577
+    /// LILYPOND-REF: scm/scheme-engravers.scm, scm/define-grobs.scm Glissando grob
     /// Renders a straight line connecting two notes of different pitch.
     /// </remarks>
     private void DrawGlissandos(ScoreLayout layout)

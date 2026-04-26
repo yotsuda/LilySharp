@@ -69,7 +69,7 @@ public sealed class TieCandidate
 /// monotonicity/symmetry penalties.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/tie-formatting-problem.cc:1-1286 Tie_formatting_problem class
+/// LILYPOND-REF: lily/tie-formatting-problem.cc:1-1285 Tie_formatting_problem class
 /// LILYPOND-REF: lily/tie-configuration.cc Tie_configuration class
 /// LILYPOND-REF: lily/misc.cc:48-65 peak_around(), convex_amplifier()
 /// </remarks>
@@ -416,7 +416,7 @@ public sealed class TieFormattingProblem
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/tie-formatting-problem.cc:795-818 dot collision scoring
-    /// LILYPOND-REF: lily/dots.cc:62-80 dot position avoids staff lines
+    /// LILYPOND-REF: lily/dots-engraver.cc:62-80 dot position avoids staff lines
     /// </remarks>
     private void ScoreDotCollision(TieCandidate config)
     {

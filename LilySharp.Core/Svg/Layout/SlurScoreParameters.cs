@@ -23,7 +23,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/include/slur-score-parameters.hh:26-56 Slur_score_parameters struct
-/// LILYPOND-REF: scm/layout-slur.scm:19-45 default-slur-details
+/// LILYPOND-REF: scm/layout-slur.scm:19-44 default-slur-details
 /// </remarks>
 public sealed record SlurScoreParameters
 {

@@ -22,8 +22,8 @@ namespace LilySharp.Core.Svg.Model;
 /// Represents a volta bracket (first/second ending bracket).
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/volta-bracket.cc:1-200 Volta_bracket_interface
-/// LILYPOND-REF: scm/define-grobs.scm:4850-4900 VoltaBracket grob
+/// LILYPOND-REF: lily/volta-bracket.cc:1-170 Volta_bracket_interface
+/// LILYPOND-REF: scm/define-grobs.scm:4292-4317 VoltaBracket grob
 ///
 /// Volta brackets show which measures to play on each repeat:
 /// - [1. ] = first ending (play on first time through)

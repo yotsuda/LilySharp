@@ -18,10 +18,10 @@ namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
 /// A spring connecting two adjacent items in a measure.
-/// LILYPOND-REF: lily/spring.cc:1-250 Spring class
+/// LILYPOND-REF: lily/spring.cc:1-237 Spring class
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/spring.cc:220-240 Spring::length()
+/// LILYPOND-REF: lily/spring.cc:219-237 Spring::length()
 ///   length = max(ideal_distance + force * inverse_stretch_strength, min_distance)
 ///
 /// Where:
@@ -174,7 +174,7 @@ public sealed record Spring
     /// <returns>The resulting length, never less than MinDistance</returns>
     public double Length(double force)
     {
-        // LILYPOND-REF: lily/spring.cc:220-240 Spring::length()
+        // LILYPOND-REF: lily/spring.cc:219-237 Spring::length()
         double effectiveForce = Math.Max(force, BlockingForce);
         double invK = effectiveForce < 0 ? InverseCompressStrength : InverseStretchStrength;
 

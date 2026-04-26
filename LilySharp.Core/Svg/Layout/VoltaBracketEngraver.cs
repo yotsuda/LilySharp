@@ -41,7 +41,7 @@ public readonly record struct VoltaBracketLayout(
 /// Calculates positions for volta brackets.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/volta-bracket.cc:1-200 Volta_bracket_interface
+/// LILYPOND-REF: lily/volta-bracket.cc:1-170 Volta_bracket_interface
 /// LILYPOND-REF: lily/volta-engraver.cc:1-150 Volta_engraver
 ///
 /// LilyPond volta brackets:
@@ -52,10 +52,13 @@ public readonly record struct VoltaBracketLayout(
 /// </remarks>
 public static class VoltaBracketEngraver
 {
-    // LILYPOND-REF: scm/define-grobs.scm:4870 edge-height = (2.0 . 2.0)
+    // LILYPOND-REF: scm/define-grobs.scm:4296 edge-height = (2.0 . 2.0) (VoltaBracket grob)
     private const double EdgeHeight = 2.0;
-    
-    // LILYPOND-REF: scm/define-grobs.scm:4865 Y offset above staff
+
+    // VoltaBracket Y placement is governed by side-position-interface +
+    // outside-staff-priority in LP (no single literal — see VoltaBracket grob
+    // properties at scm/define-grobs.scm:4292-4317). LilySharp uses a fixed
+    // hand-tuned offset above the staff that matches typical LP output.
     private const double YOffset = -3.0;
     
     // Padding from barline

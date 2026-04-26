@@ -885,7 +885,7 @@ public sealed class BeamScoringProblem
     /// Penalizes beam collisions with other objects.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/beam-quanting.cc:1372-1403 score_collisions()
+    /// LILYPOND-REF: lily/beam-quanting.cc:1370-1401 score_collisions()
     ///
     /// Uses cubic falloff: penalty * ((padding - dist) / padding)^3
     /// </remarks>

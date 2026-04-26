@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// All calculations are in staff spaces.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/tie-formatting-problem.cc:1-1286 Tie_formatting_problem class
+/// LILYPOND-REF: lily/tie-formatting-problem.cc:1-1285 Tie_formatting_problem class
 /// LILYPOND-REF: lily/bezier-bow.cc:1-132 Bezier_bow class
 /// </remarks>
 public sealed class TieEngraver
