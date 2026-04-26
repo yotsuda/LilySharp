@@ -112,9 +112,10 @@ public sealed class SystemLayouter
             // LILYPOND-REF: lily/simple-spacer.cc:175-205 Simple_spacer::solve()
             // LilyPond always applies the solved force, even for overfull lines.
             // An overfull system uses maximum compression force (not natural spacing).
-            // LILYPOND-REF: scm/paper-defaults.scm — default ragged-last = ##f, so the
-            // last system is justified like the others. RaggedRight (when set globally)
-            // still skips justification for every system.
+            // LILYPOND-REF: scm/define-paper-variables.scm:472-474 — `ragged-last`
+            // default is #f, so the last system is justified like the others.
+            // RaggedRight (when set globally) still skips justification for every
+            // system.
             if (_options.RaggedRight)
             {
                 double naturalLength = solver.IdealTotalLength;
@@ -248,9 +249,10 @@ public sealed class SystemLayouter
             // LILYPOND-REF: lily/simple-spacer.cc:175-205 Simple_spacer::solve()
             // LilyPond always applies the solved force, even for overfull lines.
             // An overfull system uses maximum compression force (not natural spacing).
-            // LILYPOND-REF: scm/paper-defaults.scm — default ragged-last = ##f, so the
-            // last system is justified like the others. RaggedRight (when set globally)
-            // still skips justification for every system.
+            // LILYPOND-REF: scm/define-paper-variables.scm:472-474 — `ragged-last`
+            // default is #f, so the last system is justified like the others.
+            // RaggedRight (when set globally) still skips justification for every
+            // system.
             if (_options.RaggedRight)
             {
                 double naturalLength = solver.IdealTotalLength;
