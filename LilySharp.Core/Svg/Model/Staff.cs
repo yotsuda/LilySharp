@@ -59,7 +59,16 @@ public sealed record Staff(
     /// LILYPOND-REF: lily/hara-kiri-group-spanner.cc — remove-first property
     /// When false (default), the first system always shows all staves.
     /// </summary>
-    bool RemoveFirst = false
+    bool RemoveFirst = false,
+    /// <summary>
+    /// Staff affinity direction for non-spaceable staves.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:240-252 staff-affinity
+    /// null = normal spaceable staff, UP = attach to staff above, DOWN = attach to staff below.
+    /// Used for ossia and cue staves.
+    /// </remarks>
+    int? StaffAffinity = null
 )
 {
     /// <summary>The primary voice (first voice).</summary>

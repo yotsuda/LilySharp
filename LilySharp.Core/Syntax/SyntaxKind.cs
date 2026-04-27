@@ -140,6 +140,7 @@ public enum SyntaxKind : ushort
     RepeatEndBar,       // :|
     // LineBreakBar removed - use BreakKeyword instead
     Tilde,              // ~
+    Asterisk,           // * (multi-measure rest count: R1*N)
     Colon,              // :
     TremoloSuffix,      // :8, :16, :32 (tremolo beams)
     Equals,             // =

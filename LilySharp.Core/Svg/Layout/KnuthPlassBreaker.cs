@@ -27,7 +27,9 @@ namespace LilySharp.Core.Svg.Layout;
 internal readonly record struct MeasureSpringData(
     double IdealWidth,
     double MinWidth,
-    double InverseStretchStrength);
+    double InverseStretchStrength,
+    double BreakPenalty = 0,
+    BreakPermission BreakPermission = BreakPermission.Allow);
 
 /// <summary>
 /// Knuth-Plass optimal line breaking algorithm for music scores.
@@ -53,6 +55,7 @@ public sealed class KnuthPlassBreaker
     private readonly double _continuationPrefixWidth;
     private readonly double _tolerance;
     private readonly double _looseness;
+    private readonly bool _raggedRight;
 
     /// <summary>
     /// Penalty for infinite badness (line cannot be set).
@@ -73,18 +76,21 @@ public sealed class KnuthPlassBreaker
     /// <param name="continuationPrefixWidth">Width of prefix on continuation lines (clef, key).</param>
     /// <param name="tolerance">Acceptable ratio deviation from 1.0 (default 1.1).</param>
     /// <param name="looseness">Prefer more lines (positive) or fewer (negative).</param>
+    /// <param name="raggedRight">If true, exclude Δforce² from demerits (ragged-right mode).</param>
     public KnuthPlassBreaker(
         double lineWidth,
         double firstPrefixWidth,
         double continuationPrefixWidth,
         double tolerance = 1.1,
-        double looseness = 0)
+        double looseness = 0,
+        bool raggedRight = false)
     {
         _lineWidth = lineWidth;
         _firstPrefixWidth = firstPrefixWidth;
         _continuationPrefixWidth = continuationPrefixWidth;
         _tolerance = tolerance;
         _looseness = looseness;
+        _raggedRight = raggedRight;
     }
 
     /// <summary>
@@ -98,19 +104,11 @@ public sealed class KnuthPlassBreaker
         if (measures.Count == 0)
             return new List<List<Measure>>();
 
-        // Collect forced break points (measures with HasBreakAfter = true)
-        var forcedBreaks = new HashSet<int>();
-        for (int i = 0; i < measures.Count; i++)
-        {
-            if (measures[i].HasBreakAfter)
-                forcedBreaks.Add(i + 1); // Break AFTER measure i means break point at i+1
-        }
-
-        // Calculate spring data for each measure
+        // Calculate spring data for each measure (includes break permission/penalty)
         var springData = ComputeMeasureSpringData(measures, baseShortestDuration);
 
         // Find optimal number of lines and break points
-        var breakPoints = FindOptimalBreaks(springData, forcedBreaks);
+        var breakPoints = FindOptimalBreaks(springData);
 
         // Convert break points to measure groups
         return CreateMeasureGroups(measures, breakPoints);
@@ -146,7 +144,9 @@ public sealed class KnuthPlassBreaker
             minWidth += SpacingRules.GetBarlineWidth(m.StartBarline);
             minWidth += SpacingRules.GetBarlineWidth(m.EndBarline);
 
-            data[i] = new MeasureSpringData(idealWidth, minWidth, inverseStretch);
+            // LILYPOND-REF: lily/constrained-breaking.cc:112-113 — break_penalty_ propagation
+            data[i] = new MeasureSpringData(idealWidth, minWidth, inverseStretch,
+                m.BreakPenalty, m.LineBreakPermission);
         }
         return data;
     }
@@ -173,10 +173,14 @@ public sealed class KnuthPlassBreaker
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/constrained-breaking.cc:83-126, 224-232
-    /// Demerits = force² + (force - prevForce)²
-    /// Forced breaks are handled by only allowing transitions through forced break points.
+    /// Demerits = force² + Δforce² + break_penalty_
+    ///
+    /// 1-1: ragged_right excludes Δforce² (lily/constrained-breaking.cc:568-573)
+    /// 1-2: break_penalty_ from Measure added to demerits (lily/constrained-breaking.cc:112-113)
+    /// 1-3: looseness selects solution with line_count closest to optimal+looseness
+    /// 1-4: break permission forbid/force (lily/include/constrained-breaking.hh:74)
     /// </remarks>
-    private List<int> FindOptimalBreaks(MeasureSpringData[] springData, HashSet<int> forcedBreaks)
+    private List<int> FindOptimalBreaks(MeasureSpringData[] springData)
     {
         int n = springData.Length;
 
@@ -194,12 +198,15 @@ public sealed class KnuthPlassBreaker
         // D[j] = minimum penalty to break measures 0..j-1
         // prev[j] = previous break point for optimal solution ending at j
         // lineForce[j] = force of the last line in optimal solution ending at j
+        // lineCount[j] = number of lines in optimal solution ending at j
         var d = new double[n + 1];
         var prev = new int[n + 1];
         var lineForce = new double[n + 1];
+        var lineCount = new int[n + 1];
 
         d[0] = 0;
         lineForce[0] = 0; // No previous line
+        lineCount[0] = 0;
         for (int j = 1; j <= n; j++)
         {
             d[j] = Infinity;
@@ -207,11 +214,17 @@ public sealed class KnuthPlassBreaker
 
             for (int i = 0; i < j; i++)
             {
+                // 1-4: Check break permission — skip if Forbid at break point i (except start)
+                // LILYPOND-REF: lily/include/constrained-breaking.hh:74 break_permission_
+                if (i > 0 && springData[i - 1].BreakPermission == BreakPermission.Forbid)
+                    continue;
+
                 // Skip if there's a forced break between i and j-1 (exclusive)
+                // 1-4: Also skip if there's a Force permission in the middle
                 bool hasForcedBreakInMiddle = false;
-                for (int k = i + 1; k < j; k++)
+                for (int k = i; k < j - 1; k++)
                 {
-                    if (forcedBreaks.Contains(k))
+                    if (springData[k].BreakPermission == BreakPermission.Force)
                     {
                         hasForcedBreakInMiddle = true;
                         break;
@@ -234,21 +247,18 @@ public sealed class KnuthPlassBreaker
                 // always finds a valid solution (possibly overfull) rather than
                 // falling back to putting everything on one system.
 
-                // Check severely underfull (but allow last line and lines adjacent to forced breaks)
+                // Check severely underfull (but allow last line and lines adjacent to forced/forbid breaks)
                 // LILYPOND-REF: lily/constrained-breaking.cc — \break is an absolute constraint
                 // LILYPOND-REF: lily/page-spacing.cc — last system is allowed to be underfull (ragged-last)
                 bool isLastLine = (j == n);
+                bool hasForceAtJ = j <= n && j > 0 && springData[j - 1].BreakPermission == BreakPermission.Force;
+                bool hasForceAtI = i > 0 && springData[i - 1].BreakPermission == BreakPermission.Force;
                 if (!isLastLine && idealSum < availableWidth / (_tolerance * 2) && idealSum > 0
-                    && !forcedBreaks.Contains(j) && !forcedBreaks.Contains(i))
+                    && !hasForceAtJ && !hasForceAtI)
                     continue;
 
                 // LILYPOND-REF: lily/simple-spacer.cc:267-300
                 // Use max(idealSum, minSum) as effective width for force calculation.
-                // The SpringSolver enforces minimum distances (blocking forces from
-                // accidentals, collision avoidance), so when minSum > idealSum the
-                // springs cannot compress below minSum. The DP must account for this
-                // to avoid choosing lines that look good by ideal width but overflow
-                // due to minimum distance constraints.
                 double effectiveWidth = Math.Max(idealSum, minSum);
                 double force = CalculateLineForce(availableWidth, effectiveWidth, invStretchSum);
 
@@ -257,7 +267,7 @@ public sealed class KnuthPlassBreaker
                     force = -(effectiveWidth - availableWidth) * 1000;
 
                 // LILYPOND-REF: lily/constrained-breaking.cc:224-232
-                // demerits = force² + Δforce²
+                // demerits = force² + Δforce² + break_penalty_
                 double penalty;
                 if (force < 0)
                 {
@@ -269,10 +279,22 @@ public sealed class KnuthPlassBreaker
                     penalty = force * force;
                 }
 
-                // Δforce² : penalize force difference between consecutive lines
-                double prevF = lineForce[i];
-                double deltaForce = force - prevF;
-                penalty += deltaForce * deltaForce;
+                // 1-1: LILYPOND-REF: lily/constrained-breaking.cc:568-573
+                // ragged_right: only force², no Δforce² (consecutive line uniformity
+                // doesn't matter when lines aren't justified)
+                if (!_raggedRight)
+                {
+                    double prevF = lineForce[i];
+                    double deltaForce = force - prevF;
+                    penalty += deltaForce * deltaForce;
+                }
+
+                // 1-2: LILYPOND-REF: lily/constrained-breaking.cc:112-113
+                // Add break_penalty_ from the measure at the break point
+                if (j < n)
+                {
+                    penalty += springData[j - 1].BreakPenalty;
+                }
 
                 if (penalty < Infinity)
                 {
@@ -282,12 +304,47 @@ public sealed class KnuthPlassBreaker
                         d[j] = totalPenalty;
                         prev[j] = i;
                         lineForce[j] = force;
+                        lineCount[j] = lineCount[i] + 1;
                     }
                 }
             }
         }
 
         // Backtrack to find break points
+        var breaks = BacktrackBreaks(n, prev, d);
+        if (breaks == null)
+        {
+            // DP failed — fall back to greedy
+            return GreedyBreak(springData, cumMin);
+        }
+
+        // 1-3: LILYPOND-REF: lily/constrained-breaking.cc looseness parameter
+        // If looseness != 0, find the solution with line count closest to
+        // optimal + looseness that has the minimum demerits among candidates.
+        if (_looseness != 0)
+        {
+            int optimalLines = lineCount[n];
+            int targetLines = optimalLines + (int)_looseness;
+            if (targetLines < 1) targetLines = 1;
+
+            // Re-run DP tracking all solutions by line count
+            var bestByLineCount = FindBreaksByLineCount(springData, cumIdeal, cumInvStretch, cumMin, targetLines);
+            if (bestByLineCount != null)
+                return bestByLineCount;
+        }
+
+        return breaks;
+    }
+
+    /// <summary>
+    /// Backtracks through the DP prev[] array to extract break points.
+    /// Returns null if the path is invalid.
+    /// </summary>
+    private static List<int>? BacktrackBreaks(int n, int[] prev, double[] d)
+    {
+        if (d[n] >= Infinity)
+            return null;
+
         var breaks = new List<int>();
         int current = n;
         while (current > 0)
@@ -295,10 +352,109 @@ public sealed class KnuthPlassBreaker
             breaks.Add(current);
             current = prev[current];
             if (current < 0)
+                return null;
+        }
+
+        breaks.Reverse();
+        return breaks;
+    }
+
+    /// <summary>
+    /// Finds optimal breaks for a specific target line count (for looseness).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc — looseness biases line count
+    /// Uses 2D DP: dp[j, k] = min demerits for measures 0..j-1 in exactly k lines.
+    /// </remarks>
+    private List<int>? FindBreaksByLineCount(
+        MeasureSpringData[] springData,
+        double[] cumIdeal, double[] cumInvStretch, double[] cumMin,
+        int targetLines)
+    {
+        int n = springData.Length;
+        if (targetLines > n || targetLines < 1)
+            return null;
+
+        // dp[j, k] = min demerits for measures 0..j-1 in exactly k lines
+        // Store as flat array: dp[j * (targetLines+1) + k]
+        int cols = targetLines + 1;
+        var dp = new double[(n + 1) * cols];
+        var prev = new int[(n + 1) * cols];
+        Array.Fill(dp, Infinity);
+        Array.Fill(prev, -1);
+        dp[0] = 0; // 0 measures in 0 lines
+
+        for (int j = 1; j <= n; j++)
+        {
+            for (int i = 0; i < j; i++)
             {
-                // DP failed to find a valid path — fall back to greedy breaking
-                return GreedyBreak(springData, cumMin);
+                // Check break permission
+                if (i > 0 && springData[i - 1].BreakPermission == BreakPermission.Forbid)
+                    continue;
+
+                bool hasForcedInMiddle = false;
+                for (int m = i; m < j - 1; m++)
+                {
+                    if (springData[m].BreakPermission == BreakPermission.Force)
+                    { hasForcedInMiddle = true; break; }
+                }
+                if (hasForcedInMiddle) continue;
+
+                bool isFirstLine = i == 0;
+                double prefixWidth = isFirstLine ? _firstPrefixWidth : _continuationPrefixWidth;
+                double availableWidth = _lineWidth - prefixWidth;
+
+                double idealSum = cumIdeal[j] - cumIdeal[i];
+                double invStretchSum = cumInvStretch[j] - cumInvStretch[i];
+                double minSum = cumMin[j] - cumMin[i];
+
+                double effectiveWidth = Math.Max(idealSum, minSum);
+                double force = CalculateLineForce(availableWidth, effectiveWidth, invStretchSum);
+                if (double.IsNegativeInfinity(force))
+                    force = -(effectiveWidth - availableWidth) * 1000;
+
+                double penalty;
+                if (force < 0)
+                    penalty = force * force + OverfullPenalty * Math.Abs(force);
+                else
+                    penalty = force * force;
+
+                if (j < n)
+                    penalty += springData[j - 1].BreakPenalty;
+
+                if (penalty >= Infinity) continue;
+
+                for (int k = 1; k <= targetLines; k++)
+                {
+                    int prevIdx = i * cols + (k - 1);
+                    if (dp[prevIdx] >= Infinity) continue;
+
+                    double total = dp[prevIdx] + penalty;
+                    int curIdx = j * cols + k;
+                    if (total < dp[curIdx])
+                    {
+                        dp[curIdx] = total;
+                        prev[curIdx] = i;
+                    }
+                }
             }
+        }
+
+        // Check if target line count is achievable
+        int finalIdx = n * cols + targetLines;
+        if (dp[finalIdx] >= Infinity)
+            return null;
+
+        // Backtrack
+        var breaks = new List<int>();
+        int cur = n;
+        int curK = targetLines;
+        while (cur > 0 && curK > 0)
+        {
+            breaks.Add(cur);
+            cur = prev[cur * cols + curK];
+            curK--;
+            if (cur < 0) return null;
         }
 
         breaks.Reverse();

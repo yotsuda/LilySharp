@@ -60,61 +60,68 @@ public class SpacingSpec
 /// Settings for vertical spacing between systems and page elements.
 /// All spacing values are in staff-spaces following LilyPond conventions.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: ly/paper-defaults-init.ly:62-83  All defaults below are
+/// transcribed verbatim from LilyPond's paper-defaults-init.ly definitions
+/// of system-system-spacing, score-system-spacing, markup-system-spacing,
+/// score-markup-spacing, markup-markup-spacing, top-system-spacing,
+/// top-markup-spacing, and last-bottom-spacing.
+/// </remarks>
 public class SpacingSettings
 {
     /// <summary>
     /// Spacing between two systems in the same score.
-    /// Default: basic=12, min=8, padding=1, stretch=60
     /// </summary>
+    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly:62-65 system-system-spacing (basic=12, min=8, padding=1, stretch=60)</remarks>
     public SpacingSpec SystemSystem { get; set; }
         = new(basicDistance: 12, minimumDistance: 8, padding: 1, stretchability: 60);
 
     /// <summary>
     /// Spacing between the last system of a score and the first system of the next score.
-    /// Default: basic=14, min=8, padding=1, stretch=120
     /// </summary>
+    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly:66-69 score-system-spacing (basic=14, min=8, padding=1, stretch=120)</remarks>
     public SpacingSpec ScoreSystem { get; set; }
         = new(basicDistance: 14, minimumDistance: 8, padding: 1, stretchability: 120);
 
     /// <summary>
     /// Spacing between a markup (title) and the following system.
-    /// Default: basic=5, padding=0.5, stretch=30
     /// </summary>
+    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly:70-72 markup-system-spacing (basic=5, padding=0.5, stretch=30)</remarks>
     public SpacingSpec MarkupSystem { get; set; }
         = new(basicDistance: 5, padding: 0.5, stretchability: 30);
 
     /// <summary>
     /// Spacing between a score's last system and the following markup.
-    /// Default: basic=12, padding=0.5, stretch=60
     /// </summary>
+    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly:73-75 score-markup-spacing (basic=12, padding=0.5, stretch=60)</remarks>
     public SpacingSpec ScoreMarkup { get; set; }
         = new(basicDistance: 12, padding: 0.5, stretchability: 60);
 
     /// <summary>
     /// Spacing between two consecutive markups (titles).
-    /// Default: basic=1, padding=0.5
     /// </summary>
+    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly:76-77 markup-markup-spacing (basic=1, padding=0.5)</remarks>
     public SpacingSpec MarkupMarkup { get; set; }
         = new(basicDistance: 1, padding: 0.5);
 
     /// <summary>
     /// Spacing from the top of the printable area to the first system.
-    /// Default: basic=6, min=0, padding=1
     /// </summary>
+    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly:78-80 top-system-spacing (basic=6, min=0, padding=1)</remarks>
     public SpacingSpec TopSystem { get; set; }
         = new(basicDistance: 6, minimumDistance: 0, padding: 1);
 
     /// <summary>
     /// Spacing from the top of the printable area to the first markup.
-    /// Default: basic=4, min=0, padding=1
     /// </summary>
+    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly:81-83 top-markup-spacing (basic=4, min=0, padding=1)</remarks>
     public SpacingSpec TopMarkup { get; set; }
         = new(basicDistance: 4, minimumDistance: 0, padding: 1);
 
     /// <summary>
     /// Spacing from the last system to the bottom of the printable area.
-    /// Default: basic=1, min=0, padding=1, stretch=30
     /// </summary>
+    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly:84-87 last-bottom-spacing (basic=1, min=0, padding=1, stretch=30)</remarks>
     public SpacingSpec LastBottom { get; set; }
         = new(basicDistance: 1, minimumDistance: 0, padding: 1, stretchability: 30);
 

@@ -206,15 +206,20 @@ public sealed record MultiStaffScore
     }
 
     /// <summary>
-    /// Iterates over all staves with their group context.
+    /// Iterates over all staves with their group context. The yielded
+    /// <c>GlobalStaffIndex</c> is the score-wide staff index used by
+    /// <c>StaffLayout.StaffIndex</c> and <c>FindStaffYInSystem</c>; it
+    /// continues across <see cref="StaffGroups"/> boundaries.
     /// </summary>
-    public IEnumerable<(StaffGroup Group, Staff Staff, int StaffIndexInGroup)> EnumerateStaves()
+    public IEnumerable<(StaffGroup Group, Staff Staff, int GlobalStaffIndex)> EnumerateStaves()
     {
+        int globalIndex = 0;
         foreach (var group in StaffGroups)
         {
             for (int i = 0; i < group.Staves.Length; i++)
             {
-                yield return (group, group.Staves[i], i);
+                yield return (group, group.Staves[i], globalIndex);
+                globalIndex++;
             }
         }
     }

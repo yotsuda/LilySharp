@@ -46,7 +46,7 @@ public readonly record struct TrillSpannerLayout(
 /// Handles cross-system spanners by extending to system edge.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/trill-spanner-engraver.cc Trill_spanner_engraver class
+/// LILYPOND-REF: scm/scheme-engravers.scm Trill_spanner_engraver class
 /// LILYPOND-REF: scm/define-grobs.scm:2175-2230 TrillSpanner grob defaults
 ///
 /// TrillSpanner parameters from LilyPond:
@@ -94,7 +94,7 @@ public static class TrillSpannerEngraver
     /// Handles cross-system spanners by extending the wavy line to the system edge.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/trill-spanner-engraver.cc:92-125 positioning
+    /// LILYPOND-REF: scm/scheme-engravers.scm:92-125 positioning
     /// LILYPOND-REF: lily/line-spanner.cc:526-648 cross-system spanner handling
     /// </remarks>
     public static ImmutableArray<TrillSpannerLayout> Calculate(
@@ -105,17 +105,14 @@ public static class TrillSpannerEngraver
         if (trillSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TrillSpannerLayout>.Empty;
 
-        // Build measure-to-system mapping
-        var measureToSystem = new Dictionary<int, int>();
-        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
-            foreach (var m in systems[sysIdx].Measures)
-                measureToSystem[m.MeasureIndex] = sysIdx;
-
+        var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var layouts = ImmutableArray.CreateBuilder<TrillSpannerLayout>();
+
+        // Y position: above staff with padding (LILYPOND-REF: scm/define-grobs.scm:2213)
+        double y = -StaffPadding - TrillGlyphHeight;
 
         foreach (var spanner in trillSpanners)
         {
-            // Find start position
             if (spanner.StartMeasureIndex >= measureLayouts.Length)
                 continue;
 
@@ -126,73 +123,46 @@ public static class TrillSpannerEngraver
             var startItem = startMeasure.Items[spanner.StartItemIndex];
             double startX = startMeasure.X + startItem.X;
 
-            // Determine which system start and end are on
-            int startSys = measureToSystem.GetValueOrDefault(spanner.StartMeasureIndex, 0);
-            int endSys = measureToSystem.GetValueOrDefault(spanner.EndMeasureIndex, startSys);
+            // LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
+            var segments = SpannerBreakSubstitution.Split(
+                spanner.StartMeasureIndex, spanner.EndMeasureIndex, systems, measureToSystem);
+            if (segments.IsEmpty)
+                continue;
 
-            // Y position: above staff with padding
-            // LILYPOND-REF: scm/define-grobs.scm:2213 (staff-padding . 1.0)
-            double y = -StaffPadding - TrillGlyphHeight;
-
-            if (startSys == endSys)
+            foreach (var segment in segments)
             {
-                // Same system — simple case
-                double endX = GetEndX(spanner, measureLayouts);
-                double glyphX = startX;
-                double lineStartX = startX + TrillGlyphWidth + GlyphLinePadding;
+                var system = systems[segment.SystemIndex];
 
-                if (endX > glyphX)
+                // First segment carries the "tr" glyph; continuation segments draw line only.
+                double glyphX, lineStartX;
+                if (segment.IsFirst)
                 {
-                    layouts.Add(new TrillSpannerLayout(
-                        spanner.StartMeasureIndex, glyphX, lineStartX, endX, y,
-                        spanner.SourcePosition));
+                    glyphX = startX;
+                    lineStartX = startX + TrillGlyphWidth + GlyphLinePadding;
                 }
-            }
-            else
-            {
-                // Cross-system spanner: emit one layout per system
-                // First system: "tr" glyph + wavy line to system edge
-                double systemEdgeX = systems[startSys].Width - BoundPadding;
-                double glyphX = startX;
-                double lineStartX = startX + TrillGlyphWidth + GlyphLinePadding;
-
-                if (systemEdgeX > glyphX)
+                else
                 {
-                    layouts.Add(new TrillSpannerLayout(
-                        spanner.StartMeasureIndex, glyphX, lineStartX, systemEdgeX, y,
-                        spanner.SourcePosition));
+                    // No glyph on continuation — set GlyphX == LineStartX so the renderer suppresses it.
+                    glyphX = system.PrefixWidth + BoundPadding;
+                    lineStartX = glyphX;
                 }
 
-                // Continuation systems: wavy line only (no "tr" glyph)
-                for (int sys = startSys + 1; sys <= endSys && sys < systems.Length; sys++)
+                double endX;
+                if (segment.IsLast)
                 {
-                    double contStartX = systems[sys].PrefixWidth + BoundPadding;
-                    double contEndX;
-
-                    if (sys == endSys)
-                    {
-                        // Final system: end at the stop note
-                        contEndX = GetEndX(spanner, measureLayouts);
-                    }
-                    else
-                    {
-                        // Middle system: extend to system edge
-                        contEndX = systems[sys].Width - BoundPadding;
-                    }
-
-                    if (contEndX > contStartX)
-                    {
-                        // Use measure index of the first measure in this system for Y lookup
-                        int contMeasureIdx = systems[sys].Measures.Length > 0
-                            ? systems[sys].Measures[0].MeasureIndex
-                            : spanner.StartMeasureIndex;
-
-                        // No glyph on continuation — set GlyphX = LineStartX to suppress glyph
-                        layouts.Add(new TrillSpannerLayout(
-                            contMeasureIdx, contStartX, contStartX, contEndX, y,
-                            spanner.SourcePosition));
-                    }
+                    endX = GetEndX(spanner, measureLayouts);
                 }
+                else
+                {
+                    endX = system.Width - BoundPadding;
+                }
+
+                if (endX <= glyphX)
+                    continue;
+
+                layouts.Add(new TrillSpannerLayout(
+                    segment.StartMeasureIndex, glyphX, lineStartX, endX, y,
+                    spanner.SourcePosition));
             }
         }
 

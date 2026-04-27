@@ -20,20 +20,33 @@ namespace LilySharp.Core.Svg;
 /// Music engraving rules based on standard practices.
 /// Reference: "Behind Bars" by Elaine Gould.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: scm/define-grobs.scm Stem / SpacingSpanner / NonMusicalPaperColumn
+/// LP origin for individual constants is annotated per-member below.
+/// </remarks>
 public static class EngravingRules
 {
     // === Stem lengths (in staff spaces) ===
 
     /// <summary>Standard stem length is 3.5 staff spaces (one octave).</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm Stem.length default 3.5.</remarks>
     public const double StandardStemLength = 3.5;
 
     /// <summary>Minimum stem length is 2.5 staff spaces.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm Stem property defaults; LP also uses
+    /// stem-length-tuning callbacks via lily/stem.cc.
+    /// </remarks>
     public const double MinimumStemLength = 2.5;
 
     // === Note Spacing ===
-    // Based on LilyPond's Gourlay algorithm
-    // Reference: John S. Gourlay, "Spacing a Line of Music"
-    // OSU-CISRC-10/87-TR35, 1987
+    // LILYPOND-REF: scm/define-grobs.scm:3239-3247 SpacingSpanner defaults
+    //   shortest-duration-space = 2.0
+    //   spacing-increment = 1.2
+    //   base-shortest-duration = 3/16  (NOTE: Lily# currently uses 1/8 — see H-1
+    //   in LAYOUT_ROADMAP_V3.md for the multi-voice tracking work that supersedes
+    //   this static reference)
+    // The duration→space formula itself follows lily/spacing-basic.cc:109-183.
 
     private const double ShortestDurationSpace = 2.0;
     private const double SpacingIncrement = 1.2;
@@ -61,20 +74,28 @@ public static class EngravingRules
     }
 
     /// <summary>Minimum spacing between notes (in staff spaces).</summary>
+    /// <remarks>LILYPOND-REF: lily/note-spacing.cc minimum-distance derivation.</remarks>
     public const double MinimumNoteSpacing = 1.5;
 
     // === Break-aligned spacing ===
-    // Based on LilyPond's space-alist
+    // LILYPOND-REF: scm/define-grobs.scm space-alist entries on
+    //   NonMusicalPaperColumn / Clef / KeySignature / TimeSignature / BarLine.
+    // The values below are LilyPond's space-alist defaults; concrete entries
+    // live near grob definitions in define-grobs.scm.
 
     /// <summary>Space after barline to first note.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm BarLine.space-alist (first-note ~1.3 ss).</remarks>
     public const double SpaceAfterBarline = 1.3;
 
     /// <summary>Space after clef to next element.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm Clef.space-alist (first-note 1.0 ss).</remarks>
     public const double SpaceAfterClef = 1.0;
 
     /// <summary>Space after time signature to first note.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm TimeSignature.space-alist (first-note 2.0 ss).</remarks>
     public const double SpaceAfterTimeSignature = 2.0;
 
     /// <summary>Space after key signature to first note.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm KeySignature.space-alist (first-note 2.5 ss).</remarks>
     public const double SpaceAfterKeySignature = 2.5;
 }

@@ -54,7 +54,7 @@ public sealed class LayoutEngine
         double headerHeight = LayoutUtilities.CalculateHeaderHeight(score.Title, score.Composer);
         double headerBottom = _options.MarginTop + headerHeight;
 
-        // LILYPOND-REF: lily/spacing-determine-shortest-duration-op.cc
+        // LILYPOND-REF: lily/spacing-spanner.cc
         // Calculate the common shortest duration across all voices for Gourlay spacing
         double commonShortestDuration = SpacingRules.CalculateCommonShortestDuration(score);
 
@@ -113,7 +113,7 @@ public sealed class LayoutEngine
         var tieLayouts = _elementCoordinator.LayoutTies(score, systemsArray);
         var slurLayouts = _elementCoordinator.LayoutSlurs(score, systemsArray);
         var glissandoLayouts = _elementCoordinator.LayoutGlissandos(score, systemsArray);
-        // LILYPOND-REF: lily/note-collision-interface.cc:486-502
+        // LILYPOND-REF: lily/note-collision.cc:486-502
         // Create a resolver for force-hshift manual override during collision calculation
         GrobPropertyResolver? collisionResolver = null;
         if (!score.GrobOverrides.IsDefaultOrEmpty || !score.GrobReverts.IsDefaultOrEmpty)
@@ -181,7 +181,7 @@ public sealed class LayoutEngine
             }
         }
 
-        // LILYPOND-REF: lily/spacing-determine-shortest-duration-op.cc
+        // LILYPOND-REF: lily/spacing-spanner.cc
         // Calculate the common shortest duration across all voices for Gourlay spacing
         double commonShortestDuration = SpacingRules.CalculateCommonShortestDuration(score);
 
@@ -639,7 +639,7 @@ public sealed class LayoutEngine
             percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml);
 
         // Layout trill spanners (tr + wavy line)
-        // LILYPOND-REF: lily/trill-spanner-engraver.cc — trill spanner positioning
+        // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning
         var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
             trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml);
 
@@ -673,7 +673,27 @@ public sealed class LayoutEngine
             ChordNames: chordNameLayouts,
             PercentRepeats: percentRepeatLayouts,
             CrossStaffs: crossStaffLayouts ?? ImmutableArray<CrossStaffLayout>.Empty,
-            TrillSpanners: trillSpannerLayouts);
+            TrillSpanners: trillSpannerLayouts,
+            // LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob.
+            Fingerings: score != null
+                ? FingeringEngraver.Calculate(score, systems)
+                : ImmutableArray<FingeringLayout>.Empty,
+            // LILYPOND-REF: lily/laissez-vibrer-engraver.cc + repeat-tie-engraver.cc — half-ties.
+            TieVariants: score != null
+                ? TieVariantEngraver.Calculate(score, systems)
+                : ImmutableArray<TieVariantLayout>.Empty,
+            // LILYPOND-REF: lily/multi-measure-rest.cc — Multi_measure_rest grob.
+            MultiMeasureRests: score != null
+                ? MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight)
+                : ImmutableArray<MultiMeasureRestLayout>.Empty,
+            // LILYPOND-REF: lily/ledger-line-spanner.cc — LedgerLineSpanner grob.
+            LedgerLineSpans: score != null
+                ? LedgerLineSpannerEngraver.Calculate(score, systems, _options.StaffHeight)
+                : ImmutableArray<LedgerLineSpan>.Empty,
+            // LILYPOND-REF: lily/bar-number-engraver.cc — BarNumber grob.
+            BarNumbers: BarNumberEngraver.Calculate(systems),
+            // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.
+            StanzaNumbers: StanzaNumberEngraver.Calculate(lyricLayouts, systems));
     }
 
     private static ScoreLayout BuildScoreLayout(
@@ -697,6 +717,12 @@ public sealed class LayoutEngine
             a.CrossStaffs,
             partCombineLayouts.IsDefault ? ImmutableArray<PartCombineLayout>.Empty : partCombineLayouts,
             a.TrillSpanners,
+            a.Fingerings,
+            a.TieVariants,
+            a.MultiMeasureRests,
+            a.LedgerLineSpans,
+            a.BarNumbers,
+            a.StanzaNumbers,
             voiceOffsets, headWipeEntries, dotForceDownEntries, restShifts);
     }
 
@@ -773,5 +799,11 @@ public sealed class LayoutEngine
         ImmutableArray<ChordNameLayout> ChordNames,
         ImmutableArray<PercentRepeatLayout> PercentRepeats,
         ImmutableArray<CrossStaffLayout> CrossStaffs,
-        ImmutableArray<TrillSpannerLayout> TrillSpanners);
+        ImmutableArray<TrillSpannerLayout> TrillSpanners,
+        ImmutableArray<FingeringLayout> Fingerings,
+        ImmutableArray<TieVariantLayout> TieVariants,
+        ImmutableArray<MultiMeasureRestLayout> MultiMeasureRests,
+        ImmutableArray<LedgerLineSpan> LedgerLineSpans,
+        ImmutableArray<BarNumberLayout> BarNumbers,
+        ImmutableArray<StanzaNumberLayout> StanzaNumbers);
 }

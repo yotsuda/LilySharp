@@ -113,7 +113,7 @@ public sealed record LyricHyphenLayout(
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/lyric-hyphen.cc:1-150
-/// LILYPOND-REF: lily/lyric-extender-engraver.cc:1-100
+/// LILYPOND-REF: lily/extender-engraver.cc:1-100
 ///
 /// LilyPond distributes multiple hyphens evenly across wide gaps.
 /// Extenders can cross system breaks, requiring two separate line segments.
@@ -285,7 +285,7 @@ public sealed class LyricHyphenEngraver
     /// Calculate extender layout with system break support.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/lyric-extender-engraver.cc:50-100
+    /// LILYPOND-REF: lily/extender-engraver.cc:50-100
     /// </remarks>
     private LyricHyphenLayout? CalculateExtenderLayout(
         int index,

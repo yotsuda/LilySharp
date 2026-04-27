@@ -128,6 +128,18 @@ public sealed record LayoutOptions
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm:3040-3054 StaffGrouper</remarks>
     public StaffSpacingParameters StaffSpacing { get; init; } = StaffSpacingParameters.Default;
 
+    // === Spacing Parameters ===
+
+    /// <summary>
+    /// Spacing increment, approximately notehead width.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1550-1580 SpacingSpanner.spacing-increment
+    /// Configurable per-score. Default 1.2 staff spaces matches LilyPond.
+    /// When set, overrides EngravingDefaults.SpacingIncrement for all spacing calculations.
+    /// </remarks>
+    public double SpacingIncrement { get; init; } = EngravingDefaults.SpacingIncrement;
+
     // === Indent (in staff spaces) ===
 
     /// <summary>

@@ -197,6 +197,12 @@ public sealed record ScoreLayout(
     ImmutableArray<CrossStaffLayout> CrossStaffLayouts,
     ImmutableArray<PartCombineLayout> PartCombineLayouts,
     ImmutableArray<TrillSpannerLayout> TrillSpannerLayouts,
+    ImmutableArray<FingeringLayout> FingeringLayouts,
+    ImmutableArray<TieVariantLayout> TieVariantLayouts,
+    ImmutableArray<MultiMeasureRestLayout> MultiMeasureRestLayouts,
+    ImmutableArray<LedgerLineSpan> LedgerLineSpans,
+    ImmutableArray<BarNumberLayout> BarNumberLayouts,
+    ImmutableArray<StanzaNumberLayout> StanzaNumberLayouts,
     ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
     ImmutableHashSet<VoiceItemKey> HeadWipeEntries,
     ImmutableHashSet<VoiceItemKey> DotForceDownEntries,
@@ -241,7 +247,7 @@ public sealed record ScoreLayout(
     /// Checks if dots should be forced downward for this voice item.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:411-448
+    /// LILYPOND-REF: lily/note-collision.cc:411-448
     /// In multi-voice collision, down-stem dots on staff lines shift below the line.
     /// </remarks>
     public bool IsDotForcedDown(int measureIndex, int voiceId, int itemIndex)
@@ -264,7 +270,7 @@ public sealed record ScoreLayout(
     /// Checks if a notehead should be hidden due to head wipe (merge collision).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:381-407
+    /// LILYPOND-REF: lily/note-collision.cc:381-407
     /// Head wipe hides the down-stem notehead when two voices merge at the same pitch.
     /// </remarks>
     public bool IsHeadWiped(int measureIndex, int voiceId, int itemIndex)

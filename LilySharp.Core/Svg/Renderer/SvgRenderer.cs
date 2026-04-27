@@ -104,6 +104,12 @@ public sealed class SvgRenderer
     /// </summary>
     private GrobPropertyResolver _resolver = GrobPropertyResolver.Empty;
 
+    /// <summary>
+    /// Currently rendered multi-staff score (used by <see cref="DrawSystemBarlines"/>
+    /// to look up per-measure barline types). Null for single-staff renders.
+    /// </summary>
+    private MultiStaffScore? _currentMultiStaffScore;
+
     public SvgRenderer(LayoutOptions? layoutOptions = null, SvgRenderOptions? renderOptions = null)
     {
         _layoutOptions = layoutOptions ?? LayoutOptions.Default;
@@ -261,6 +267,18 @@ public sealed class SvgRenderer
         // LILYPOND-REF: lily/tuplet-bracket.cc - tuplet bracket rendering
         DrawTupletBrackets(layout);
 
+        // Draw multi-measure rests (replace individual rest rendering for consecutive R1 runs)
+        // LILYPOND-REF: lily/multi-measure-rest.cc
+        DrawMultiMeasureRests(layout);
+
+        // Draw bar numbers above system starts.
+        // LILYPOND-REF: lily/bar-number-engraver.cc
+        DrawBarNumbers(layout);
+
+        // Draw stanza numbers ("1.", "2.") to the left of multi-verse lyrics.
+        // LILYPOND-REF: lily/stanza-number-engraver.cc
+        DrawStanzaNumbers(layout);
+
         // Draw hairpins
         // LILYPOND-REF: lily/hairpin.cc - hairpin wedge rendering
         DrawHairpins(layout);
@@ -308,6 +326,7 @@ public sealed class SvgRenderer
     {
         _svg.Clear();
         _resolver = layout.GrobPropertyResolver;
+        _currentMultiStaffScore = score;
 
         // Calculate stem end Y positions for beamed notes
         _beamedStemEndYs.Clear();
@@ -333,6 +352,26 @@ public sealed class SvgRenderer
 
         // Draw beams
         DrawMultiStaffBeams(score, layout);
+
+        // The following annotation draws were previously single-staff-only;
+        // they are layout-driven (operate purely on ScoreLayout fields) and
+        // work just as well for multi-staff scores.
+        DrawTies(layout);
+        DrawSlurs(layout);
+        DrawDynamics(layout);
+        DrawArticulations(layout);
+        DrawMultiStaffGraceNotes(score, layout);
+        DrawLyrics(layout);
+        DrawMusicMarks(layout);
+        DrawCustomTexts(layout);
+        DrawVoltaBrackets(layout);
+        DrawTupletBrackets(layout);
+        // LILYPOND-REF: lily/multi-measure-rest.cc — MMR replaces per-measure rests.
+        DrawMultiMeasureRests(layout);
+        // LILYPOND-REF: lily/bar-number-engraver.cc — system-start bar numbers.
+        DrawBarNumbers(layout);
+        // LILYPOND-REF: lily/stanza-number-engraver.cc — multi-verse "1.", "2." prefixes.
+        DrawStanzaNumbers(layout);
 
         // Draw hairpins
         DrawHairpins(layout);
@@ -366,6 +405,57 @@ public sealed class SvgRenderer
         WriteFooter();
 
         return _svg.ToString();
+    }
+
+    /// <summary>
+    /// Multi-staff variant of <see cref="DrawGraceNotes(Score, ScoreLayout)"/>: the
+    /// host note is looked up by scanning every voice in every staff for a note at
+    /// the recorded measure / item index, falling back to staff-middle Y when not found.
+    /// </summary>
+    private void DrawMultiStaffGraceNotes(MultiStaffScore score, ScoreLayout layout)
+    {
+        if (layout.GraceNoteLayouts.IsDefaultOrEmpty)
+            return;
+
+        var measureToInfo = new Dictionary<int, (SystemLayout System, MeasureLayout Measure)>();
+        foreach (var system in layout.Systems)
+            foreach (var measure in system.Measures)
+                measureToInfo[measure.MeasureIndex] = (system, measure);
+
+        foreach (var graceLayout in layout.GraceNoteLayouts)
+        {
+            if (!measureToInfo.TryGetValue(graceLayout.MeasureIndex, out var info))
+                continue;
+
+            double mainNoteX = info.Measure.X;
+            if (graceLayout.MainNoteItemIndex < info.Measure.Items.Length)
+                mainNoteX = info.Measure.X + info.Measure.Items[graceLayout.MainNoteItemIndex].X;
+
+            double mainNoteY = info.System.Y + StaffHeight / 2;
+
+            // Search all voices in all staves for the host note's StaffPosition.
+            foreach (var staffGroup in score.StaffGroups)
+            {
+                foreach (var staff in staffGroup.Staves)
+                {
+                    foreach (var voice in staff.Voices)
+                    {
+                        if (graceLayout.MeasureIndex >= voice.Measures.Length)
+                            continue;
+                        var measure = voice.Measures[graceLayout.MeasureIndex];
+                        if (graceLayout.MainNoteItemIndex < measure.Items.Length &&
+                            measure.Items[graceLayout.MainNoteItemIndex] is NoteItem n)
+                        {
+                            mainNoteY = info.System.Y + StaffHeight / 2 - (n.StaffPosition / 2.0);
+                            goto found;
+                        }
+                    }
+                }
+            }
+            found:
+
+            DrawGraceNoteGroup(graceLayout, info.System.Y, mainNoteX, mainNoteY);
+        }
     }
 
     private void DrawMultiStaffHeader(MultiStaffScore score, ScoreLayout layout)
@@ -1242,6 +1332,16 @@ public sealed class SvgRenderer
         return (octave + 1) * 12 + semitone + alteration;
     }
 
+    /// <summary>
+    /// Draws the connected barlines that span all staves of a multi-staff
+    /// system (LP SpanBar). Honours each measure's <see cref="BarlineType"/> so
+    /// Final / Repeat / Double barlines render correctly across the staff group.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/span-bar-engraver.cc — SpanBar replaces individual barlines
+    /// within a connected staff group with a single barline running through
+    /// every staff.
+    /// </remarks>
     private void DrawSystemBarlines(SystemLayout system, ScoreLayout scoreLayout, double startX, double endX)
     {
         if (system.StaffGroups.IsDefaultOrEmpty)
@@ -1265,15 +1365,82 @@ public sealed class SvgRenderer
             }
         }
 
-        // Draw start barline (connecting all staves)
-        _svg.AppendLine($"""  <line class="barline" x1="{startX}" y1="{topY}" x2="{startX}" y2="{bottomY}"/>""");
+        if (topY > bottomY) return; // no visible staves
 
-        // Draw barlines at measure boundaries
+        double height = bottomY - topY;
+
+        // LILYPOND-REF: lily/span-bar-engraver.cc — system-start barline (first measure's StartBarline).
+        if (system.Measures.Length > 0)
+        {
+            var firstMeasure = system.Measures[0];
+            var startBarline = ResolveSystemStartBarline(scoreLayout, firstMeasure.MeasureIndex);
+            if (startBarline != BarlineType.None)
+                DrawBarline(startBarline, startX, topY, height);
+            else
+                // Default: draw a thin line so the system starts cleanly.
+                _svg.AppendLine($"""  <line class="barline" x1="{startX:F2}" y1="{topY:F2}" x2="{startX:F2}" y2="{bottomY:F2}"/>""");
+        }
+
+        // LILYPOND-REF: lily/span-bar-engraver.cc — per-measure span barlines using each measure's EndBarline.
         foreach (var measureLayout in system.Measures)
         {
+            var endBarline = ResolveMeasureEndBarline(scoreLayout, measureLayout.MeasureIndex);
             double barlineX = measureLayout.X + measureLayout.Width;
-            _svg.AppendLine($"""  <line class="barline" x1="{barlineX}" y1="{topY}" x2="{barlineX}" y2="{bottomY}"/>""");
+            // Some final/repeat barlines have a thicker piece that visually starts
+            // a small width to the LEFT of the column boundary; DrawBarline lays it
+            // out from the supplied x going right, so adjust to keep the right edge
+            // aligned with the measure end.
+            double adjustedX = AdjustSpanBarlineX(endBarline, barlineX);
+            if (endBarline == BarlineType.None)
+            {
+                _svg.AppendLine($"""  <line class="barline" x1="{barlineX:F2}" y1="{topY:F2}" x2="{barlineX:F2}" y2="{bottomY:F2}"/>""");
+            }
+            else
+            {
+                DrawBarline(endBarline, adjustedX, topY, height);
+            }
         }
+    }
+
+    private static double AdjustSpanBarlineX(BarlineType type, double rightEdge)
+    {
+        double thin = EngravingDefaults.ThinBarlineThickness;
+        double thick = EngravingDefaults.ThickBarlineThickness;
+        double sep = EngravingDefaults.BarlineSeparation;
+        return type switch
+        {
+            BarlineType.Final => rightEdge - (thin + sep + thick),
+            BarlineType.Double => rightEdge - (thin + sep + thin),
+            BarlineType.RepeatEnd => rightEdge - (thin + sep + thick),
+            _ => rightEdge - thin,
+        };
+    }
+
+    /// <summary>
+    /// Looks up the start-barline for the system that begins at <paramref name="measureIndex"/>,
+    /// preferring the measure's explicit StartBarline.
+    /// </summary>
+    private static BarlineType ResolveSystemStartBarline(ScoreLayout scoreLayout, int measureIndex)
+    {
+        // ScoreLayout doesn't carry per-measure barline metadata directly; fall
+        // back to None so the legacy thin-line behaviour applies. A future
+        // refinement could plumb the Measure's StartBarline through to here.
+        return BarlineType.None;
+    }
+
+    /// <summary>
+    /// Looks up the end-barline for the measure at <paramref name="measureIndex"/>.
+    /// </summary>
+    private BarlineType ResolveMeasureEndBarline(ScoreLayout scoreLayout, int measureIndex)
+    {
+        if (_currentMultiStaffScore != null)
+        {
+            // Use the primary voice's barline (first staff's first voice).
+            var primaryVoice = _currentMultiStaffScore.StaffGroups[0].PrimaryStaff.PrimaryVoice;
+            if (measureIndex >= 0 && measureIndex < primaryVoice.Measures.Length)
+                return primaryVoice.Measures[measureIndex].EndBarline;
+        }
+        return BarlineType.None;
     }
 
 
@@ -1594,6 +1761,10 @@ public sealed class SvgRenderer
                     }
                     break;
                 case RestItem rest:
+                    // LILYPOND-REF: lily/multi-measure-rest.cc — skip per-measure rest rendering
+                    // when this measure is part of a detected MMR run; the MMR symbol replaces it.
+                    if (IsInsideMmrRun(scoreLayout, measureIndex))
+                        break;
                     double restShift = scoreLayout.GetRestShift(measureIndex, i);
                     DrawRest(rest, itemX, systemY, restShift);
                     break;
@@ -1665,7 +1836,7 @@ public sealed class SvgRenderer
                 double totalWidth = parenWidth + accWidth + parenWidth;
                 double startX = noteheadLeftX - totalWidth - accNoteGap;
 
-                DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen, startX + parenWidth, noteY, note.SourcePosition);
+                DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen, startX, noteY, note.SourcePosition);
                 DrawGlyph(accGlyph, startX + parenWidth, noteY, note.SourcePosition);
                 DrawGlyph(EmmentalerGlyphs.AccidentalRightParen, startX + parenWidth + accWidth, noteY, note.SourcePosition);
             }
@@ -1833,7 +2004,7 @@ public sealed class SvgRenderer
                     double accWidth = GlyphMetrics.GetAccidentalBBox(note.Accidental).Width;
                     double accX = x + accLayout.XOffset;
 
-                    DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen, accX + parenWidth, noteY, chord.SourcePosition);
+                    DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen, accX, noteY, chord.SourcePosition);
                     DrawGlyph(accGlyph, accX + parenWidth, noteY, chord.SourcePosition);
                     DrawGlyph(EmmentalerGlyphs.AccidentalRightParen, accX + parenWidth + accWidth, noteY, chord.SourcePosition);
                 }
@@ -2175,13 +2346,27 @@ public sealed class SvgRenderer
     }
 
 
+    /// <summary>
+    /// Draws a barline of the given <paramref name="type"/> spanning the staff
+    /// height that starts at <paramref name="systemY"/>.
+    /// </summary>
     private void DrawBarline(BarlineType type, double x, double systemY)
+        => DrawBarline(type, x, systemY, StaffHeight);
+
+    /// <summary>
+    /// Draws a barline of the given <paramref name="type"/> with an explicit
+    /// vertical span. Used by <see cref="DrawSystemBarlines"/> to draw a single
+    /// connected barline across multiple staves (LP SpanBar).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/span-bar-engraver.cc — SpanBar replaces individual staff
+    /// barlines in a connected staff group with a single tall barline.
+    /// </remarks>
+    private void DrawBarline(BarlineType type, double x, double systemY, double height)
     {
         if (type == BarlineType.None) return;
 
         double yTop = systemY;
-        double yBottom = systemY + StaffHeight;
-        double height = yBottom - yTop;
 
         double thinWidth = EngravingDefaults.ThinBarlineThickness;
         double thickWidth = EngravingDefaults.ThickBarlineThickness;
@@ -3793,7 +3978,7 @@ public sealed class SvgRenderer
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/volta-bracket.cc:60-120 print method
-    /// LILYPOND-REF: scm/define-grobs.scm:4850-4900 VoltaBracket grob
+    /// LILYPOND-REF: scm/define-grobs.scm:4292-4317 VoltaBracket grob
     ///
     /// Volta brackets consist of:
     /// - Horizontal line at top
@@ -4103,6 +4288,224 @@ public sealed class SvgRenderer
     ///
     /// The wavy line uses zigzag segments matching LilyPond's trill style.
     /// </remarks>
+    /// <summary>
+    /// Draws bar numbers above each system's first measure (and the first
+    /// measure of the score when explicitly configured).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/bar-number-engraver.cc — BarNumber grob
+    /// LILYPOND-REF: scm/define-grobs.scm BarNumber font-size = -2 (~70% of normal)
+    /// </remarks>
+    private void DrawBarNumbers(ScoreLayout layout)
+    {
+        if (layout.BarNumberLayouts.IsDefaultOrEmpty)
+            return;
+
+        // LP BarNumber font-size = -2 ⇒ magstep(-2) ≈ 0.794 of normal text size.
+        // Use a small bold size for visibility above the staff.
+        const double FontSize = 1.8;
+
+        foreach (var bn in layout.BarNumberLayouts)
+        {
+            _svg.AppendLine(
+                $"""  <text class="bar-number" x="{bn.X:F2}" y="{bn.Y:F2}" font-family="serif" font-size="{FontSize:F2}" font-weight="bold">{bn.Text}</text>""");
+        }
+    }
+
+    /// <summary>
+    /// Draws stanza numbers ("1.", "2.") at the left edge of each verse line on
+    /// every system. Only emitted for multi-verse scores.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob
+    /// </remarks>
+    private void DrawStanzaNumbers(ScoreLayout layout)
+    {
+        if (layout.StanzaNumberLayouts.IsDefaultOrEmpty)
+            return;
+
+        // LP StanzaNumber font-size = -1, font-series = bold.
+        const double FontSize = 2.4;
+        foreach (var sn in layout.StanzaNumberLayouts)
+        {
+            _svg.AppendLine(
+                $"""  <text class="stanza-number" x="{sn.X:F2}" y="{sn.Y:F2}" font-family="serif" font-size="{FontSize:F2}" font-weight="bold">{sn.Text}</text>""");
+        }
+    }
+
+    /// <summary>
+    /// Returns true iff <paramref name="measureIndex"/> is part of a detected
+    /// multi-measure rest run (so per-measure rest rendering should be skipped).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest.cc — MMR replaces per-measure rests.
+    /// </remarks>
+    private static bool IsInsideMmrRun(ScoreLayout layout, int measureIndex)
+    {
+        if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty)
+            return false;
+        foreach (var mmr in layout.MultiMeasureRestLayouts)
+        {
+            if (measureIndex >= mmr.StartMeasureIndex &&
+                measureIndex < mmr.StartMeasureIndex + mmr.MeasureCount)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Draws all detected multi-measure rests. For runs of 1..ExpandLimit (10) we
+    /// emit the LP-faithful church_rest (a greedy decomposition into long/breve/
+    /// whole rest glyphs); above that we fall back to a big_rest H-bar.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:225-300 church_rest
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:194-220 big_rest (H-bar)
+    /// church_rest decomposes the count using duration-log values:
+    ///   dl=-3 ⇒ 8 measures (longa stack), dl=-2 ⇒ 4 (long), dl=-1 ⇒ 2 (breve), dl=0 ⇒ 1 (whole)
+    /// We use the practical [4, 2, 1] decomposition (LP allows 8 via two long stacks).
+    /// </remarks>
+    private void DrawMultiMeasureRests(ScoreLayout layout)
+    {
+        if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty)
+            return;
+
+        foreach (var mmr in layout.MultiMeasureRestLayouts)
+        {
+            if (mmr.UseChurchRest)
+                DrawChurchRest(mmr);
+            else
+                DrawBigRest(mmr);
+        }
+    }
+
+    /// <summary>
+    /// Draws a church_rest: combines whole/breve/long rest glyphs (greedy
+    /// decomposition of the measure count into [4, 2, 1] units).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:225-300 church_rest
+    /// </remarks>
+    private void DrawChurchRest(MultiMeasureRestLayout mmr)
+    {
+        // LP places whole rest hanging from line 4 (top), breve sitting on line 3,
+        // long between lines 3 and 4. We use the staff middle (mmr.Y) as a uniform
+        // baseline for visual consistency; future work could split the Y per glyph.
+        double cx = (mmr.StartX + mmr.EndX) / 2.0;
+        double cy = mmr.Y;
+
+        // Greedy decomposition: 4 (long), 2 (breve), 1 (whole).
+        var pieces = new List<(int Span, char Glyph)>();
+        int remaining = mmr.MeasureCount;
+        foreach (var (span, glyph) in new[]
+        {
+            (4, EmmentalerGlyphs.RestLonga),
+            (2, EmmentalerGlyphs.RestDoubleWhole),
+            (1, EmmentalerGlyphs.RestWhole),
+        })
+        {
+            while (remaining >= span)
+            {
+                pieces.Add((span, glyph));
+                remaining -= span;
+            }
+        }
+
+        if (pieces.Count == 0)
+            return;
+
+        // Approximate widths in staff spaces (Emmentaler church-rest glyphs).
+        // Long rest is ~2.0 ss wide, breve ~1.5 ss, whole ~1.5 ss. Keep small
+        // gaps so adjacent glyphs don't visually merge.
+        const double LongWidth = 2.0;
+        const double BreveWidth = 1.5;
+        const double WholeWidth = 1.5;
+        const double Gap = 0.4;
+
+        double totalWidth = 0;
+        foreach (var (span, _) in pieces)
+        {
+            totalWidth += span switch
+            {
+                4 => LongWidth,
+                2 => BreveWidth,
+                _ => WholeWidth,
+            };
+        }
+        totalWidth += Gap * (pieces.Count - 1);
+
+        double startX = cx - totalWidth / 2.0;
+        double x = startX;
+        foreach (var (span, glyph) in pieces)
+        {
+            double w = span switch
+            {
+                4 => LongWidth,
+                2 => BreveWidth,
+                _ => WholeWidth,
+            };
+            // Whole rest hangs from a line; breve/long sit on a line. Approximate.
+            double glyphY = span switch
+            {
+                4 => cy,           // long: between lines 3 and 4
+                2 => cy,           // breve: sits on line 3
+                _ => cy - 0.5,     // whole: hangs from line 4 (slightly higher Y)
+            };
+            DrawGlyph(glyph, x + w / 2.0, glyphY, 0);
+            x += w + Gap;
+        }
+
+        // LILYPOND-REF: lily/multi-measure-rest.cc — measure-count text shown above
+        // when count > 1.
+        if (mmr.MeasureCount > 1)
+        {
+            double textY = cy - 2.5;
+            _svg.AppendLine(
+                $"""  <text x="{cx:F2}" y="{textY:F2}" text-anchor="middle" font-family="serif" font-size="2.4" font-weight="bold">{mmr.MeasureCount}</text>""");
+        }
+    }
+
+    /// <summary>
+    /// Draws a big_rest H-bar with the measure count printed above. Used for runs
+    /// exceeding the church_rest expand-limit (default 10 measures).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:194-220 big_rest
+    /// LILYPOND-REF: scm/define-grobs.scm MultiMeasureRest — thick-thickness=3.0,
+    ///   hair-thickness=2.2 (in staff-line widths)
+    /// </remarks>
+    private void DrawBigRest(MultiMeasureRestLayout mmr)
+    {
+        double thickness = 0.5;     // body height in staff spaces
+        double endCapHeight = 0.8;  // vertical end cap half-height
+        double padding = 1.0;       // horizontal padding from measure edges
+
+        double left = mmr.StartX + padding;
+        double right = mmr.EndX - padding;
+        if (right <= left)
+            return;
+
+        double cy = mmr.Y;
+        double top = cy - thickness / 2.0;
+
+        // Body (H-bar)
+        _svg.AppendLine(
+            $"""  <rect x="{left:F2}" y="{top:F2}" width="{right - left:F2}" height="{thickness:F2}" fill="black"/>""");
+
+        // End caps
+        double capThickness = 0.18;
+        _svg.AppendLine(
+            $"""  <rect x="{left - capThickness / 2.0:F2}" y="{cy - endCapHeight:F2}" width="{capThickness:F2}" height="{2 * endCapHeight:F2}" fill="black"/>""");
+        _svg.AppendLine(
+            $"""  <rect x="{right - capThickness / 2.0:F2}" y="{cy - endCapHeight:F2}" width="{capThickness:F2}" height="{2 * endCapHeight:F2}" fill="black"/>""");
+
+        // Measure-count text
+        double textX = (left + right) / 2.0;
+        double textY = cy - endCapHeight - 0.5;
+        _svg.AppendLine(
+            $"""  <text x="{textX:F2}" y="{textY:F2}" text-anchor="middle" font-family="serif" font-size="2.4" font-weight="bold">{mmr.MeasureCount}</text>""");
+    }
+
     private void DrawTrillSpanners(ScoreLayout layout)
     {
         if (layout.TrillSpannerLayouts.IsDefaultOrEmpty)
@@ -4281,7 +4684,7 @@ public sealed class SvgRenderer
     /// Draws glissando lines between notes.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: scm/scheme-engravers.scm, scm/define-grobs.scm Glissando grob
+    /// LILYPOND-REF: scm/scheme-engravers.scm, scm/define-grobs.scm:1557-1577
     /// Renders a straight line connecting two notes of different pitch.
     /// </remarks>
     private void DrawGlissandos(ScoreLayout layout)

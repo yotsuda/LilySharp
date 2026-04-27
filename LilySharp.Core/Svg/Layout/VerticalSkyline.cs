@@ -182,7 +182,7 @@ public enum VerticalDirection
 /// A vertical skyline - the outline of a set of buildings as seen from above (UP) or below (DOWN).
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/skyline.hh:48-100 Skyline class
+/// LILYPOND-REF: lily/include/skyline.hh:48-100 Skyline class
 /// LILYPOND-REF: lily/skyline.cc:1-700 Skyline implementation
 ///
 /// A skyline is a sequence of non-overlapping buildings covering [-∞, +∞].

@@ -1,0 +1,42 @@
+// Multi-line Spanner Test
+// Verifies that slurs, ties, and hairpins are correctly split at system breaks
+// (cross-system break-substitution: lily/break-substitution.cc + lily/spanner.cc).
+title "Multi-line Spanners"
+composer "Lily#"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase slurAcrossBreak {
+  // A slur that begins before the break and ends after it.
+  c4( d e f | g4 a b c |
+  break
+  d4 c b a) | g4 f e d |
+}
+
+phrase tieAcrossBreak {
+  // A tie crossing the line break.
+  c2 e2~ |
+  break
+  e4 f g a |
+}
+
+phrase hairpinAcrossBreak {
+  // Hairpin that grows across the break.
+  c4@p d@cresc e f |
+  break
+  g4 a b c@f |
+}
+
+section Main {
+  melody { $slurAcrossBreak $tieAcrossBreak $hairpinAcrossBreak }
+}
+
+structure { Main }
+
+render score "multi-line-spanners.svg" {
+  staff { melody }
+}

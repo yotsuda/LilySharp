@@ -23,7 +23,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// Detects glissandos between notes marked with HasGlissando.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/glissando-engraver.cc - Glissando_engraver
+/// LILYPOND-REF: scm/scheme-engravers.scm - Glissando_engraver
 /// Unlike ties (same pitch), glissandos connect to the next note of any pitch.
 /// </remarks>
 public sealed class GlissandoDetector

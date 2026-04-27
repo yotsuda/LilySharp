@@ -1,0 +1,162 @@
+// Lily# Feature Tour
+// =========================================================================
+// 1ファイルで Lily# の主要機能を一望できるサンプル。各 phrase が独立した
+// トピックを示すので、欲しい機能だけ参照しても OK。
+//
+// カバー範囲:
+//   - 基本記譜 (ピッチ、オクターブ、付点、和音)
+//   - リズム要素 (連符、装飾音、トレモロ)
+//   - 表情 (アーティキュレーション、ダイナミクス、ヘアピン)
+//   - 結合線 (タイ、スラー、ビーム手動)
+//   - 多段譜 (グランドスタッフ、声部、歌詞)
+//   - 構造 (反復、ボルタ、改行)
+//   - 拡張 (MMR、運指、L.V./リピートタイ、装飾、グリッサンド)
+// =========================================================================
+
+title "Lily# Feature Tour"
+composer "LilySharp Showcase"
+
+tempo 100
+time 4/4
+key g major
+
+part melody
+part lh {
+  clef: bass
+}
+
+// ---- 1. 基本記譜 -----------------------------------------------------------
+// ピッチ (c d e f g a b)、オクターブ (' ,)、付点 (.)、和音 (< >)
+phrase basics {
+  g4 a b c |              // 単音
+  d4. e8 d c b a |     // 付点 + 8分
+  <g b d>4 <a c e> <g b d> r |   // 和音
+}
+
+// ---- 2. アクシデンタル ------------------------------------------------------
+// シャープ (is), フラット (es), ナチュラル (自動), 編集臨時記号 (@editorial)
+phrase accidentals {
+  fis4 g a bes |           // F# G A Bb
+  c4 cis d es |        // C C# D Eb
+  a4@courtesy bes c@editorial r |   // 注意 / 編集臨時記号
+}
+
+// ---- 3. アーティキュレーション + ダイナミクス -----------------------------
+// @p @mp @mf @f @ff、@cresc @decresc、@staccato @accent @tenuto @marcato
+phrase expression {
+  g4@p@staccato a@accent b@tenuto c@marcato |
+  d4@cresc e fis g@f |
+  fis4@decresc e d c@p |
+  b2. r4@fermata |
+}
+
+// ---- 4. タイとスラー --------------------------------------------------------
+// ~ でタイ (同音連結)、( ) でスラー (フレージング)
+phrase tiesSlurs {
+  g2~ g4 a |               // タイ
+  b4( c d e) |          // スラー (4音)
+  d2~( d4 c) | b1 |     // ネスト (タイ + スラー)
+}
+
+// ---- 5. ビーム (自動 + 手動 [ ]) ------------------------------------------
+// 自動ビームは拍ごとに分割。[ ... ] で手動指定 (拍をまたぐ)
+phrase beams {
+  g8 a b c d e fis g |    // 自動 (4+4)
+  g8[ a b c d e fis g] |  // 手動 (8音 1グループ)
+  g8[ a, b c | d8 e fis g] | // 小節をまたぐ手動ビーム (K-1b)
+}
+
+// ---- 6. 連符 (3連符・5連符) ------------------------------------------------
+phrase tuplets {
+  tuplet 3/2 { g8 a b } tuplet 3/2 { c d e } d2 |
+  tuplet 5/4 { g16 a b c d } e4 d c |
+  b2. r4 |
+}
+
+// ---- 7. 多小節休符 (L-1: R<dur>*N) ---------------------------------------
+// R1*N は LP 仕様の "N 小節フル休符"。1-10 は教会休符 (whole/breve/long
+// 組み合わせ)、11+ は H-bar に measure count 表示。
+phrase mmr {
+  R1*4 |                    // 4小節フル休符 (church rest = long rest)
+  c4 d e f |            // 復帰
+}
+
+// ---- 8. 運指 (L-2: 単音 + L-2 ext: 和音内ピッチごと) -----------------------
+// @finger.N: 1=親指 ... 5=小指。和音内では <ピッチ@finger.N ...> で個別指定
+phrase fingering {
+  g4@finger.1 a@finger.2 b@finger.3 c@finger.4 |
+  <c@finger.1 e@finger.3 g@finger.5>4 <d@finger.2 f@finger.4 a@finger.5> r2 |
+}
+
+// ---- 9. ハーフタイ (L-3: laissezVibrer / repeatTie) -----------------------
+// l.v. = "let ring" (右に伸びるハーフタイ)、repeatTie = リピート後の入りタイ
+phrase halfTies {
+  g4@laissezVibrer r r r |          // 主音 → 残響
+  g4@repeatTie a b c |             // リピート明け、g に入りタイ
+}
+
+// ---- 10. 和音タイ (L-3 ext: TieColumn) -------------------------------------
+// <c e g>~ <c e g> でマッチするピッチ全てがタイに。一部不一致なら共通分のみ。
+phrase chordTies {
+  <g b d>2~ <g b d> |             // 全 3 ピッチタイ
+  <g b d>2~ <g b e> |             // g, b のみタイ (d'≠e')
+}
+
+// ---- 11. 装飾音・オーナメント ----------------------------------------------
+// @trill @mordent @turn、グレースノート、トレモロ (:8 :16 :32)
+phrase ornaments {
+  g4@trill a@mordent b@turn c |
+  grace { d8 } e4 grace { fis8 } g4 r2 |   // 装飾音
+  c2:8 d4 e |                                // トレモロ (8分)
+}
+
+// ---- 12. グリッサンド --------------------------------------------------------
+phrase gliss {
+  g4@glissando c e@glissando b r |
+}
+
+// ---- 13. 改行をまたぐスパナー (K-1: break-substitution) ------------------
+// 強制改行 (break) で slur/tie/hairpin が正しく分割される
+phrase crossLine {
+  g4(@cresc a b c | break d e fis g)@f |   // 段またぎスラー + ヘアピン
+  g2~ |
+  break
+  g4 a b c |                                   // 段またぎタイ
+}
+
+// ---- 14. ベース声部 ---------------------------------------------------------
+phrase bassLine {
+  g2 d |
+  g4 a b c |
+  g2~ g4 r |
+  d2 g |
+}
+
+// ---- 15. 構造: セクションとリピート --------------------------------------
+section A {
+  melody { $basics $accidentals $expression }
+  lh     { $bassLine $bassLine $bassLine }
+}
+
+section B {
+  melody { $tiesSlurs $beams $tuplets }
+  lh     { $bassLine $bassLine $bassLine }
+}
+
+section C {
+  melody { $mmr $fingering $halfTies $chordTies }
+  lh     { $bassLine $bassLine $bassLine $bassLine }
+}
+
+section D {
+  melody { $ornaments $gliss $crossLine }
+  lh     { $bassLine $bassLine $bassLine $bassLine }
+}
+
+structure { A B C D }
+
+// ---- 16. レンダリング (グランドスタッフ) ----------------------------------
+render score "feature-tour.svg" {
+  staff { melody }
+  staff { lh }
+}

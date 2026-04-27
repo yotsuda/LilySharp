@@ -552,7 +552,7 @@ public static class SpacingRules
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/spacing-options.cc:68-104 get_duration_space()
-    /// LILYPOND-REF: lily/spacing-determine-shortest-duration-op.cc
+    /// LILYPOND-REF: lily/spacing-spanner.cc
     /// - ratio = duration / base_shortest_duration
     /// - if ratio less than 1: space = (shortest_duration_space + ratio - 1) * increment
     /// - if ratio >= 1: space = (shortest_duration_space + log2(ratio)) * increment
@@ -588,10 +588,42 @@ public static class SpacingRules
     }
 
     /// <summary>
+    /// Calculates duration space using packed-spacing mode.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:140-180
+    /// In packed-spacing mode, each column uses its own shortest duration
+    /// rather than the global score-wide shortest. This produces tighter spacing
+    /// for passages with mixed note values (e.g., whole notes next to eighth notes).
+    /// </remarks>
+    public static double CalculateDurationSpacePacked(Fraction duration, Fraction localShortestDuration)
+    {
+        double durationValue = duration.ToDouble();
+        if (durationValue <= 0)
+            return EngravingDefaults.SpacingIncrement;
+
+        double localShortest = localShortestDuration.ToDouble();
+        if (localShortest <= 0)
+            localShortest = EngravingDefaults.BaseShortestDuration;
+
+        // Use local shortest for ratio calculation
+        double ratio = durationValue / localShortest;
+
+        // Same formula as normal, but with local base
+        double spaceFactor;
+        if (ratio < 1.0)
+            spaceFactor = EngravingDefaults.ShortestDurationSpace + ratio - 1.0;
+        else
+            spaceFactor = EngravingDefaults.ShortestDurationSpace + Math.Log2(ratio);
+
+        return spaceFactor * EngravingDefaults.SpacingIncrement;
+    }
+
+    /// <summary>
     /// Calculates the common shortest duration across all voices in a multi-staff score.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spacing-determine-shortest-duration-op.cc
+    /// LILYPOND-REF: lily/spacing-spanner.cc
     ///
     /// LilyPond determines the base shortest duration dynamically by scanning all
     /// musical columns in the score. The common shortest duration is used as the
@@ -620,7 +652,7 @@ public static class SpacingRules
     /// Calculates the common shortest duration across all voices in a single-staff score.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spacing-determine-shortest-duration-op.cc
+    /// LILYPOND-REF: lily/spacing-spanner.cc
     /// </remarks>
     public static double CalculateCommonShortestDuration(Model.Score score)
     {
@@ -676,7 +708,7 @@ public static class SpacingRules
         if (durationValue <= 0)
             durationValue = gp.BaseShortestDuration;
 
-        // LILYPOND-REF: lily/grace-spacing.cc — use per-group common shortest duration
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc — use per-group common shortest duration
         double bsd = baseShortestDuration ?? gp.BaseShortestDuration;
 
         // Same Gourlay formula as regular notes, but with grace parameters
@@ -699,7 +731,7 @@ public static class SpacingRules
     /// Calculates the common shortest duration within a grace note group.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/grace-spacing.cc — common-shortest-duration per grace sequence
+    /// LILYPOND-REF: lily/grace-spacing-engraver.cc — common-shortest-duration per grace sequence
     /// Each grace group independently determines its base shortest duration,
     /// rather than using a global default. This ensures that a group of sixteenth
     /// grace notes spaces differently from a group of eighth grace notes.
@@ -726,7 +758,7 @@ public static class SpacingRules
     /// Calculates the total width of a grace note group using spring-based spacing.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/grace-spacing.cc:36-80 Grace_spacing::calc_springs
+    /// LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 Grace_spacing::calc_springs
     /// Creates individual springs for each grace note using per-group common shortest
     /// duration, then sums the minimum distances to get the rod (minimum width).
     /// The grace→main junction adds GraceToMainRod padding.
@@ -743,13 +775,13 @@ public static class SpacingRules
 
         var gp = graceParams ?? GraceSpacingParameters.Default;
 
-        // LILYPOND-REF: lily/grace-spacing.cc — per-group common shortest duration
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc — per-group common shortest duration
         double bsd = CalculateGraceGroupShortestDuration(notes);
 
         double totalIdealDistance = 0;
 
         // Create a spring for each grace note and sum ideal distances
-        // LILYPOND-REF: lily/grace-spacing.cc:36-80 Grace_spacing::calc_springs
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 Grace_spacing::calc_springs
         // Grace columns are positioned at ideal distances (not compressed to min)
         for (int i = 0; i < notes.Length; i++)
         {
@@ -757,7 +789,7 @@ public static class SpacingRules
             totalIdealDistance += spring.IdealDistance;
         }
 
-        // LILYPOND-REF: lily/grace-spacing.cc:65-80
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc:65-80
         // Add rod from grace group to main note (junction padding)
         totalIdealDistance += GraceToMainRod;
 
@@ -768,7 +800,7 @@ public static class SpacingRules
     /// Rod distance from last grace note to the main note.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/grace-spacing.cc — distance from grace column to main column
+    /// LILYPOND-REF: lily/grace-spacing-engraver.cc — distance from grace column to main column
     /// </remarks>
     public const double GraceToMainRod = 0.4;
 
@@ -776,7 +808,7 @@ public static class SpacingRules
     /// Adjusts a spring's MinDistance to accommodate grace notes before the next item.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/grace-spacing.cc:36-80 Grace_spacing::calc_springs
+    /// LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 Grace_spacing::calc_springs
     /// Uses spring-based grace group width when note info is available,
     /// falls back to fixed-width calculation for backward compatibility.
     /// </remarks>
@@ -796,7 +828,7 @@ public static class SpacingRules
     /// Adjusts a spring's MinDistance using spring-based grace note width calculation.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/grace-spacing.cc:36-80 Grace_spacing::calc_springs
+    /// LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 Grace_spacing::calc_springs
     /// Uses per-group common shortest duration and individual grace springs
     /// to calculate the rod (minimum distance) more accurately than fixed widths.
     /// </remarks>
@@ -853,6 +885,100 @@ public static class SpacingRules
         return new Spring(idealDistance, minDistance, inverseStretchStrength);
     }
 
+    /// <summary>
+    /// Creates a spring scaled by the shortest currently-playing note duration across all voices.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-basic.cc:107-162 Spacing_spanner::note_spacing
+    /// LILYPOND-REF: lily/spacing-engraver.cc:200-253 stop_translation_timestep
+    ///
+    /// LP's per-column spring formula:
+    ///   <c>fraction = delta_t / shortest_playing</c>
+    ///   <c>len = options-&gt;get_duration_space(shortest_playing)</c>
+    ///   <c>spring = Spring(fraction * len, fraction * min)</c>
+    /// where <c>shortest_playing</c> is the min duration over all voices' notes that are
+    /// playing at the left column of the spring (NOT just the time delta to the next column).
+    /// In monophonic music <c>shortest_playing == delta_t</c> and this collapses to the
+    /// existing <see cref="CreateTimingSpring(Fraction, double?, NoteSpacingParameters?)"/>;
+    /// in polyphonic music it produces tighter springs when a faster voice is sounding
+    /// underneath a slower voice.
+    /// </remarks>
+    public static Spring CreateTimingSpringMultiVoice(
+        Fraction segmentDuration,
+        Fraction shortestPlayingDuration,
+        double? baseShortestDuration = null,
+        NoteSpacingParameters? noteParams = null)
+    {
+        // LILYPOND-REF: lily/spacing-basic.cc:113-119 — fall back to delta_t when no playing duration is known.
+        if (shortestPlayingDuration <= Fraction.Zero)
+            shortestPlayingDuration = segmentDuration;
+        if (shortestPlayingDuration <= Fraction.Zero)
+            return CreateTimingSpring(segmentDuration, baseShortestDuration, noteParams);
+
+        // LILYPOND-REF: lily/spacing-basic.cc:144 — clamp shortest_playing to the segment's
+        // actual delta when the latter is shorter (avoids over-shrinking on rests).
+        Fraction effectivePlaying = shortestPlayingDuration;
+        if (segmentDuration > Fraction.Zero && segmentDuration < effectivePlaying)
+            effectivePlaying = segmentDuration;
+
+        double defaultMin = EngravingDefaults.SpacingIncrement;
+        double bsd = baseShortestDuration ?? EngravingDefaults.BaseShortestDuration;
+
+        // LILYPOND-REF: lily/spacing-basic.cc:151 — len = get_duration_space(shortest_playing)
+        double len = CalculateDurationSpace(effectivePlaying, bsd);
+        // LILYPOND-REF: lily/spacing-basic.cc:155-156 — fraction = delta_t / shortest_playing
+        double fraction = segmentDuration.ToDouble() / effectivePlaying.ToDouble();
+
+        // LILYPOND-REF: lily/spacing-basic.cc:157 — Spring(fraction * len, fraction * min)
+        double idealDistance = Math.Max(fraction * len, defaultMin);
+        double minDistance = defaultMin;
+
+        var np = noteParams ?? NoteSpacingParameters.Default;
+        if (np.StrictNoteSpacing)
+            minDistance = Math.Max(minDistance, idealDistance);
+
+        // LILYPOND-REF: lily/spacing-basic.cc:160-161 — inverse_stretch_strength = fraction * max(0.1, len - min)
+        double inverseStretchStrength = Math.Max(0.1, fraction * Math.Max(0.1, len - defaultMin));
+
+        return new Spring(idealDistance, minDistance, inverseStretchStrength);
+    }
+
+    /// <summary>
+    /// Computes the shortest playing duration across all voices at a given musical timing,
+    /// matching LP's <c>shortest-playing-duration</c> column property.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-engraver.cc:200-253 stop_translation_timestep
+    /// "playing" = a note that started at or before <paramref name="timing"/> and ends strictly after it.
+    /// Returns <c>Fraction.Zero</c> if no voice has a note playing at <paramref name="timing"/>.
+    /// </remarks>
+    public static Fraction ComputeShortestPlayingAt(Fraction timing, IEnumerable<Measure> allMeasures)
+    {
+        Fraction shortest = Fraction.Zero;
+        bool found = false;
+
+        foreach (var m in allMeasures)
+        {
+            Fraction t = Fraction.Zero;
+            foreach (var item in m.Items)
+            {
+                Fraction end = t + item.Duration;
+                // The note "plays" at `timing` iff t <= timing < end.
+                if (t <= timing && timing < end && item.Duration > Fraction.Zero)
+                {
+                    if (!found || item.Duration < shortest)
+                    {
+                        shortest = item.Duration;
+                        found = true;
+                    }
+                }
+                t = end;
+            }
+        }
+
+        return shortest;
+    }
+
 
     /// <summary>
     /// Creates all springs for a measure.
@@ -865,28 +991,89 @@ public static class SpacingRules
         if (measure.Items.Length == 0)
             return ImmutableArray<Spring>.Empty;
 
+        // LILYPOND-REF: lily/spacing-spanner.cc:200-280
+        // Filter out loose items (tuplet brackets, fermata marks, etc.)
+        // that don't participate in horizontal spacing
+        var spacingItems = new List<MusicItem>();
+        foreach (var item in measure.Items)
+        {
+            if (!item.IsLoose)
+                spacingItems.Add(item);
+        }
+
+        if (spacingItems.Count == 0)
+            return ImmutableArray<Spring>.Empty;
+
         var springs = new List<Spring>();
 
         // Spring from start barline to first item
-        var firstItem = measure.Items[0];
+        var firstItem = spacingItems[0];
         springs.Add(CreateSpring(null, firstItem, Fraction.Quarter,
             baseShortestDuration: baseShortestDuration));
 
         // Springs between items
-        for (int i = 0; i < measure.Items.Length - 1; i++)
+        for (int i = 0; i < spacingItems.Count - 1; i++)
         {
-            var prevItem = measure.Items[i];
-            var nextItem = measure.Items[i + 1];
+            var prevItem = spacingItems[i];
+            var nextItem = spacingItems[i + 1];
             springs.Add(CreateSpring(prevItem, nextItem, prevItem.Duration,
                 baseShortestDuration: baseShortestDuration));
         }
 
         // Spring from last item to end barline
-        var lastItem = measure.Items[^1];
+        var lastItem = spacingItems[^1];
         springs.Add(CreateSpring(lastItem, null, lastItem.Duration,
             baseShortestDuration: baseShortestDuration));
 
         return springs.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Merges springs from multiple voices at the same column positions.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:100-140 — spacing wishes
+    /// When multiple voices share the same time positions, their springs are
+    /// merged using weighted averaging via Spring.Merge() to produce a single
+    /// spring per column pair.
+    /// </remarks>
+    public static ImmutableArray<Spring> MergeSpringsMultiVoice(
+        IReadOnlyList<ImmutableArray<Spring>> voiceSprings)
+    {
+        if (voiceSprings.Count == 0)
+            return ImmutableArray<Spring>.Empty;
+
+        if (voiceSprings.Count == 1)
+            return voiceSprings[0];
+
+        // Use the longest spring array as the reference
+        int maxLen = 0;
+        foreach (var vs in voiceSprings)
+            maxLen = Math.Max(maxLen, vs.Length);
+
+        if (maxLen == 0)
+            return ImmutableArray<Spring>.Empty;
+
+        var result = new Spring[maxLen];
+
+        // Initialize with the first voice's springs
+        var first = voiceSprings[0];
+        for (int i = 0; i < maxLen; i++)
+            result[i] = i < first.Length ? first[i] : first[^1];
+
+        // Merge remaining voices
+        for (int v = 1; v < voiceSprings.Count; v++)
+        {
+            var vs = voiceSprings[v];
+            int len = Math.Min(maxLen, vs.Length);
+            for (int i = 0; i < len; i++)
+            {
+                // LILYPOND-REF: lily/spacing-spanner.cc:100-140 — merge spacing wishes
+                result[i] = Spring.Merge(result[i], vs[i]);
+            }
+        }
+
+        return result.ToImmutableArray();
     }
 
     /// <summary>
@@ -1407,8 +1594,15 @@ public static class SpacingRules
     }
 
     public static double CalculateSkylineDistance(MusicItem? prevItem, MusicItem? nextItem,
-                                                   double staffY)
+                                                   double staffY,
+                                                   NoteSpacingParameters? noteParams = null)
     {
+        // LILYPOND-REF: scm/define-grobs.scm — skyline-horizontal-padding (LP default 0.1).
+        // LilySharp historically used GlyphMetrics.MinItemGap (0.4) as the static
+        // constant; the parameter override path lets callers tune it down for
+        // tighter LP-style proportional spacing.
+        double minItemGap = noteParams?.MinItemGap ?? MinItemGap;
+
         // For barline-to-item or item-to-barline, use LP space-alist based calculation
         // LILYPOND-REF: lily/separation-item.cc:49-70 set_distance()
         if (prevItem == null || nextItem == null)
@@ -1430,7 +1624,7 @@ public static class SpacingRules
             else
             {
                 // Both null (shouldn't happen): return default
-                return BarlinePadding * 2 + MinItemGap;
+                return BarlinePadding * 2 + minItemGap;
             }
         }
 
@@ -1446,11 +1640,11 @@ public static class SpacingRules
         {
             double prevRightExtent = CalculateNoteheadRightExtent(prevItem);
             double nextLeftExtent = CalculateLeftExtent(nextItem);
-            return prevRightExtent + nextLeftExtent + MinItemGap;
+            return prevRightExtent + nextLeftExtent + minItemGap;
         }
 
         // Add minimum gap padding
-        return Math.Max(skylineDistance + MinItemGap, MinItemGap);
+        return Math.Max(skylineDistance + minItemGap, minItemGap);
     }
 
     /// <summary>

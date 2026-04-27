@@ -48,8 +48,8 @@ public sealed class ElementCoordinator
     /// Calculates X offsets and head wipe flags for notes that collide in multi-voice contexts.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:381-407 — head wipe
-    /// LILYPOND-REF: lily/note-collision-interface.cc:486-502 — force-hshift manual override
+    /// LILYPOND-REF: lily/note-collision.cc:381-407 — head wipe
+    /// LILYPOND-REF: lily/note-collision.cc:486-502 — force-hshift manual override
     /// Returns both voice offsets and head wipe entries (noteheads to hide on merge).
     /// </remarks>
     public (ImmutableDictionary<VoiceItemKey, double> VoiceOffsets,
@@ -78,12 +78,12 @@ public sealed class ElementCoordinator
             if (column.Entries.Length <= 1)
                 continue;
 
-            // LILYPOND-REF: lily/note-collision-interface.cc:309-312
+            // LILYPOND-REF: lily/note-collision.cc:309-312
             // Width-based shift normalization: use the widest notehead width
             // in the column so shifts scale correctly for whole/breve noteheads.
             double noteheadWidth = GetColumnNoteheadWidth(column);
 
-            // LILYPOND-REF: lily/note-collision-interface.cc:486-502
+            // LILYPOND-REF: lily/note-collision.cc:486-502
             // Check for force-hshift manual override before auto-calculation.
             // When active, force-hshift replaces the auto-calculated offset.
             double? forceHshift = null;
@@ -101,7 +101,7 @@ public sealed class ElementCoordinator
             {
                 var key = new VoiceItemKey(column.MeasureIndex, voiceId, itemIndex);
 
-                // LILYPOND-REF: lily/note-collision-interface.cc:486-502
+                // LILYPOND-REF: lily/note-collision.cc:486-502
                 // force-hshift overrides auto-calculated offsets for all columns at this position.
                 double effectiveOffset = forceHshift.HasValue
                     ? forceHshift.Value * noteheadWidth
@@ -131,7 +131,7 @@ public sealed class ElementCoordinator
     /// Determines the widest notehead width in a voice column.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:309-312
+    /// LILYPOND-REF: lily/note-collision.cc:309-312
     /// LilyPond normalizes collision shifts by the first head's width.
     /// We use the widest notehead to ensure sufficient displacement.
     /// Whole notes (1.688) are wider than half/quarter (1.18).
@@ -172,6 +172,13 @@ public sealed class ElementCoordinator
     /// <summary>
     /// Detects beam groups and calculates their layouts.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc — beam grobs (single-measure and multi-measure).
+    /// Multi-measure beams (BeamMember.MeasureIndex != group.MeasureIndex for any
+    /// member) are handled via <see cref="LayoutCrossMeasureBeamPieces"/>: each
+    /// member's X position is resolved against its OWN measure's layout, and
+    /// cross-system spans are split into broken pieces per system.
+    /// </remarks>
     public ImmutableArray<BeamLayout> LayoutBeams(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
     {
         var beamGroups = _beamDetector.DetectBeamGroups(score);
@@ -184,6 +191,14 @@ public sealed class ElementCoordinator
 
         foreach (var group in beamGroups)
         {
+            // LILYPOND-REF: lily/beam.cc — multi-measure beams get a dedicated path.
+            if (IsCrossMeasureGroup(group))
+            {
+                foreach (var crossLayout in LayoutCrossMeasureBeamPieces(score, group, measureMap, staffIndex))
+                    beamLayouts.Add(crossLayout);
+                continue;
+            }
+
             if (!measureMap.TryGetValue(group.MeasureIndex, out var measureInfo))
                 continue;
 
@@ -225,6 +240,159 @@ public sealed class ElementCoordinator
 
         return beamLayouts.ToImmutableArray();
     }
+
+    /// <summary>
+    /// True iff any member of <paramref name="group"/> declares a measure index
+    /// different from the group's own MeasureIndex.
+    /// </summary>
+    private static bool IsCrossMeasureGroup(BeamGroup group)
+    {
+        foreach (var m in group.Members)
+        {
+            int resolved = m.ResolveMeasureIndex(group.MeasureIndex);
+            if (resolved != group.MeasureIndex)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Computes one or more beam layouts for a multi-measure beam group.
+    /// When all members share a system, returns a single layout. When members
+    /// span a system break (cross-system case), splits into "broken pieces" —
+    /// one BeamLayout per system, each anchored to that system's measure layout
+    /// and Y reference.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc — multi-measure beams.
+    /// LILYPOND-REF: lily/break-substitution.cc — cross-system spanner break_substitute.
+    /// LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing (general split pattern).
+    /// </remarks>
+    private IEnumerable<BeamLayout> LayoutCrossMeasureBeamPieces(
+        Score score, BeamGroup group,
+        Dictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
+        int staffIndex)
+    {
+        // Group members by their system index. Members of the same system stay
+        // on the same beam piece; the break happens between systems.
+        var bySystem = new Dictionary<int, List<BeamMember>>();
+        foreach (var m in group.Members)
+        {
+            int memberMeasure = m.ResolveMeasureIndex(group.MeasureIndex);
+            if (!measureMap.TryGetValue(memberMeasure, out var info))
+                yield break; // missing measure; abort
+            int sysIdx = info.System.SystemIndex;
+            if (!bySystem.TryGetValue(sysIdx, out var list))
+            {
+                list = new List<BeamMember>();
+                bySystem[sysIdx] = list;
+            }
+            list.Add(m);
+        }
+
+        if (bySystem.Count == 0)
+            yield break;
+
+        // Emit one piece per system (in system-index order). Each piece is built
+        // from the original group's metadata but only the members in that system.
+        foreach (var sysIdx in bySystem.Keys.OrderBy(k => k))
+        {
+            var pieceMembers = bySystem[sysIdx];
+            if (pieceMembers.Count < 2)
+                continue; // single-member fragments aren't beams.
+
+            // The piece's "anchor measure" = first member's actual measure (so the
+            // renderer's measureToSystem lookup picks the right system).
+            int anchorMeasure = pieceMembers[0].ResolveMeasureIndex(group.MeasureIndex);
+
+            var subGroup = new BeamGroup(
+                pieceMembers.ToImmutableArray(),
+                measureIndex: anchorMeasure,
+                startIndex: pieceMembers[0].ItemIndex,
+                group.StemUp,
+                group.GrowDirection);
+
+            var pieceLayout = LayoutSingleSystemBeamPiece(score, subGroup, measureMap, staffIndex);
+            if (pieceLayout != null)
+                yield return pieceLayout;
+        }
+    }
+
+    /// <summary>
+    /// Lays out a beam piece whose members are all within a single system but
+    /// may span multiple measures inside that system.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc — single beam, possibly across measures within one system.
+    /// </remarks>
+    private BeamLayout? LayoutSingleSystemBeamPiece(
+        Score score, BeamGroup group,
+        Dictionary<int, (SystemLayout System, MeasureLayout Measure)> measureMap,
+        int staffIndex)
+    {
+        // Resolve each member's X position via its OWN measure layout.
+        var memberXs = new List<double>(group.Members.Length);
+        var renumbered = new List<BeamMember>(group.Members.Length);
+        for (int i = 0; i < group.Members.Length; i++)
+        {
+            var m = group.Members[i];
+            int memberMeasure = m.ResolveMeasureIndex(group.MeasureIndex);
+            if (!measureMap.TryGetValue(memberMeasure, out var info))
+                return null;
+            var (_, measureLayout) = info;
+            if (m.ItemIndex >= measureLayout.Items.Length)
+                return null;
+
+            double x;
+            var measure = score.Voice.Measures[memberMeasure];
+            if (!measureLayout.Columns.IsDefaultOrEmpty && measureLayout.Columns.Length > 0)
+            {
+                Fraction t = Fraction.Zero;
+                for (int k = 0; k < m.ItemIndex; k++)
+                    t += GetItemDuration(measure.Items[k]);
+                x = measureLayout.X + measureLayout.GetXForTiming(t);
+            }
+            else
+            {
+                x = measureLayout.X + measureLayout.Items[m.ItemIndex].X;
+            }
+
+            memberXs.Add(x);
+
+            // Renumber member.ItemIndex to its index in the dense list so
+            // BeamScoringProblem's itemXPositions[member.ItemIndex] resolves.
+            renumbered.Add(new BeamMember(
+                m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
+                m.StaffPosition, itemIndex: i,
+                memberStemUp: m.MemberStemUp,
+                targetStaffIndex: m.TargetStaffIndex,
+                measureIndex: m.MeasureIndex));
+        }
+
+        var renumberedGroup = new BeamGroup(
+            renumbered.ToImmutableArray(),
+            group.MeasureIndex,
+            startIndex: 0,
+            group.StemUp,
+            group.GrowDirection);
+
+        // Cross-measure collision detection is deferred — pass empty list for now.
+        var beamLayout = _beamEngraver.CalculateBeamLayout(
+            renumberedGroup,
+            memberXs,
+            collisions: null,
+            staffIndex: staffIndex);
+
+        return beamLayout;
+    }
+
+    private static Fraction GetItemDuration(MusicItem item) => item switch
+    {
+        NoteItem n => n.Duration,
+        ChordItem c => c.Duration,
+        RestItem r => r.Duration,
+        _ => Fraction.Zero,
+    };
 
     /// <summary>
     /// Collects collision objects for beam scoring.
@@ -366,8 +534,55 @@ public sealed class ElementCoordinator
     }
 
     /// <summary>
-    /// Detects ties and calculates their layouts.
+    /// Computes the X offset (within the measure) of the item at <paramref name="itemIndex"/>
+    /// in the given voice. For multi-staff scores, <see cref="MeasureLayout.Items"/> contains only
+    /// the primary staff's items, so per-voice spanners (ties/slurs in non-primary staves) must
+    /// instead resolve their X via timing → <see cref="MeasureLayout.Columns"/>.
     /// </summary>
+    private static double GetItemXOffset(
+        Voice voice, int measureIndex, int itemIndex, MeasureLayout measureLayout)
+    {
+        // Single-staff path: MeasureLayout.Items aligns with this voice. Use it directly.
+        if (measureLayout.Columns.IsDefaultOrEmpty)
+        {
+            if (itemIndex < measureLayout.Items.Length)
+                return measureLayout.Items[itemIndex].X;
+            return 0;
+        }
+
+        // Multi-staff path: walk this voice's items to compute the timing of the
+        // requested item, then look up the matching column.
+        if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
+            return 0;
+        var measure = voice.Measures[measureIndex];
+        var timing = Fraction.Zero;
+        for (int i = 0; i < itemIndex && i < measure.Items.Length; i++)
+            timing = timing + measure.Items[i].Duration;
+
+        // Find the column whose Timing matches (columns are sorted by Timing).
+        // Fall back to nearest column if no exact match (defensive — should not normally hit).
+        double targetT = timing.ToDouble();
+        ColumnLayout? best = null;
+        double bestDiff = double.MaxValue;
+        foreach (var col in measureLayout.Columns)
+        {
+            if (col.Timing == timing) return col.X;
+            double diff = Math.Abs(col.Timing.ToDouble() - targetT);
+            if (diff < bestDiff) { best = col; bestDiff = diff; }
+        }
+        return best?.X ?? 0;
+    }
+
+    /// <summary>
+    /// Detects ties and calculates their layouts, splitting cross-system ties into broken pieces.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc
+    /// LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
+    /// LILYPOND-REF: lily/break-substitution.cc:67-153 — substitute_grob &amp; do_break_substitution
+    /// A tie that crosses one or more system breaks is split into per-system pieces.
+    /// Each piece's bound on the broken side is reattached to the system edge.
+    /// </remarks>
     public ImmutableArray<TieLayout> LayoutTies(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
     {
         var ties = _tieDetector.DetectTies(score);
@@ -376,6 +591,7 @@ public sealed class ElementCoordinator
             return ImmutableArray<TieLayout>.Empty;
 
         var measureMap = LayoutUtilities.BuildMeasureMap(systems);
+        var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var tieLayouts = new List<TieLayout>();
 
         foreach (var tie in ties)
@@ -385,39 +601,75 @@ public sealed class ElementCoordinator
             if (!measureMap.TryGetValue(tie.EndMeasureIndex, out var endInfo))
                 continue;
 
-            var (startSystem, startMeasure) = startInfo;
-            var (endSystem, endMeasure) = endInfo;
+            var (_, startMeasure) = startInfo;
+            var (_, endMeasure) = endInfo;
 
-            double startX = startMeasure.X;
-            double endX = endMeasure.X;
+            var segments = SpannerBreakSubstitution.Split(
+                tie.StartMeasureIndex, tie.EndMeasureIndex, systems, measureToSystemIdx);
 
-            if (tie.StartItemIndex < startMeasure.Items.Length)
-                startX += startMeasure.Items[tie.StartItemIndex].X;
-            if (tie.EndItemIndex < endMeasure.Items.Length)
-                endX += endMeasure.Items[tie.EndItemIndex].X;
+            if (segments.IsEmpty)
+                continue;
 
-            double staffY = LayoutUtilities.FindStaffYInSystem(startSystem, staffIndex);
-            double staffMiddleY = staffY + _options.StaffHeight / 2;
-            double y = staffMiddleY - tie.StaffPosition / 2;
-
-            // Use TieFormattingProblem for optimal tie positioning
-            // LILYPOND-REF: lily/tie-formatting-problem.cc
             int startDots = tie.StartNote.Dots;
-            var problem = new TieFormattingProblem(
-                tie, startX, y, endX, y,
-                existingTies: tieLayouts,
-                staffHeight: _options.StaffHeight,
-                startDots: startDots);
-            var tieLayout = problem.Solve();
-            tieLayouts.Add(tieLayout);
+
+            foreach (var segment in segments)
+            {
+                var segSystem = systems[segment.SystemIndex];
+
+                // LILYPOND-REF: lily/spanner.cc:124-137 — bounds reattached to system edges for broken pieces.
+                double segStartX;
+                if (segment.IsFirst)
+                {
+                    segStartX = startMeasure.X
+                        + GetItemXOffset(score.Voice, tie.StartMeasureIndex, tie.StartItemIndex, startMeasure);
+                }
+                else
+                {
+                    segStartX = segSystem.Measures[0].X;
+                }
+
+                double segEndX;
+                if (segment.IsLast)
+                {
+                    segEndX = endMeasure.X
+                        + GetItemXOffset(score.Voice, tie.EndMeasureIndex, tie.EndItemIndex, endMeasure);
+                }
+                else
+                {
+                    var lastMeasure = segSystem.Measures[^1];
+                    segEndX = lastMeasure.X + lastMeasure.Width;
+                }
+
+                // Tie Y position is uniform (same pitch on both ends).
+                double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex);
+                double staffMiddleY = staffY + _options.StaffHeight / 2;
+                double y = staffMiddleY - tie.StaffPosition / 2;
+
+                var problem = new TieFormattingProblem(
+                    tie, segStartX, y, segEndX, y,
+                    existingTies: tieLayouts,
+                    staffHeight: _options.StaffHeight,
+                    startDots: segment.IsFirst ? startDots : 0,
+                    isBrokenLeft: !segment.IsFirst,
+                    isBrokenRight: !segment.IsLast);
+                tieLayouts.Add(problem.Solve());
+            }
         }
 
         return tieLayouts.ToImmutableArray();
     }
 
     /// <summary>
-    /// Detects slurs and calculates their layouts.
+    /// Detects slurs and calculates their layouts, splitting cross-system slurs into broken pieces.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur.cc, lily/slur-scoring.cc
+    /// LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
+    /// LILYPOND-REF: lily/break-substitution.cc:67-153 — substitute_grob &amp; do_break_substitution
+    /// A slur that crosses one or more system breaks is split into per-system pieces.
+    /// Each piece is scored independently with its bounds reattached to the system edges
+    /// (LP-faithful: each broken piece gets its own SlurScoringProblem invocation).
+    /// </remarks>
     public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
     {
         var slurs = _slurDetector.DetectSlurs(score);
@@ -426,7 +678,11 @@ public sealed class ElementCoordinator
             return ImmutableArray<SlurLayout>.Empty;
 
         var measureMap = LayoutUtilities.BuildMeasureMap(systems);
+        var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var slurLayouts = new List<SlurLayout>();
+
+        // Offset slur endpoints to the opposite side of the stem.
+        const double slurOffset = 0.6; // staff spaces
 
         foreach (var slur in slurs)
         {
@@ -435,41 +691,82 @@ public sealed class ElementCoordinator
             if (!measureMap.TryGetValue(slur.EndMeasureIndex, out var endInfo))
                 continue;
 
-            var (startSystem, startMeasure) = startInfo;
-            var (endSystem, endMeasure) = endInfo;
+            var (_, startMeasure) = startInfo;
+            var (_, endMeasure) = endInfo;
 
-            double startX = startMeasure.X;
-            double endX = endMeasure.X;
+            var segments = SpannerBreakSubstitution.Split(
+                slur.StartMeasureIndex, slur.EndMeasureIndex, systems, measureToSystemIdx);
 
-            if (slur.StartItemIndex < startMeasure.Items.Length)
-                startX += startMeasure.Items[slur.StartItemIndex].X;
-            if (slur.EndItemIndex < endMeasure.Items.Length)
-                endX += endMeasure.Items[slur.EndItemIndex].X;
+            if (segments.IsEmpty)
+                continue;
 
-            double staffY = LayoutUtilities.FindStaffYInSystem(startSystem, staffIndex);
-            double staffMiddleY = staffY + _options.StaffHeight / 2;
-            double startY = staffMiddleY - slur.StartStaffPosition / 2.0;
-            double endY = staffMiddleY - slur.EndStaffPosition / 2.0;
-
-            // Offset slur endpoints to the opposite side of the stem
-            double slurOffset = 0.6;  // staff spaces
-            if (slur.CurveUp)
+            foreach (var segment in segments)
             {
-                startY -= slurOffset;
-                endY -= slurOffset;
-            }
-            else
-            {
-                startY += slurOffset;
-                endY += slurOffset;
-            }
+                var segSystem = systems[segment.SystemIndex];
 
-            var problem = new SlurScoringProblem(
-                slur, startX, startY, endX, endY,
-                existingSlurs: slurLayouts,
-                staffHeight: _options.StaffHeight);
-            var slurLayout = problem.Solve();
-            slurLayouts.Add(slurLayout);
+                // LILYPOND-REF: lily/spanner.cc:124-137 — bounds reattached to system edges for broken pieces.
+                double segStartX;
+                if (segment.IsFirst)
+                {
+                    segStartX = startMeasure.X
+                        + GetItemXOffset(score.Voice, slur.StartMeasureIndex, slur.StartItemIndex, startMeasure);
+                }
+                else
+                {
+                    segStartX = segSystem.Measures[0].X;
+                }
+
+                double segEndX;
+                if (segment.IsLast)
+                {
+                    segEndX = endMeasure.X
+                        + GetItemXOffset(score.Voice, slur.EndMeasureIndex, slur.EndItemIndex, endMeasure);
+                }
+                else
+                {
+                    var lastMeasure = segSystem.Measures[^1];
+                    segEndX = lastMeasure.X + lastMeasure.Width;
+                }
+
+                // Y at the broken edge anchors at the connected side's staff position
+                // (the segment continues horizontally off-system).
+                double startStaffPos, endStaffPos;
+                if (segment.IsMiddle)
+                {
+                    double mid = (slur.StartStaffPosition + slur.EndStaffPosition) / 2.0;
+                    startStaffPos = mid;
+                    endStaffPos = mid;
+                }
+                else
+                {
+                    startStaffPos = segment.IsFirst ? slur.StartStaffPosition : slur.EndStaffPosition;
+                    endStaffPos = segment.IsLast ? slur.EndStaffPosition : slur.StartStaffPosition;
+                }
+
+                double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex);
+                double staffMiddleY = staffY + _options.StaffHeight / 2;
+                double segStartY = staffMiddleY - startStaffPos / 2.0;
+                double segEndY = staffMiddleY - endStaffPos / 2.0;
+
+                if (slur.CurveUp)
+                {
+                    segStartY -= slurOffset;
+                    segEndY -= slurOffset;
+                }
+                else
+                {
+                    segStartY += slurOffset;
+                    segEndY += slurOffset;
+                }
+
+                var problem = new SlurScoringProblem(
+                    slur, segStartX, segStartY, segEndX, segEndY,
+                    existingSlurs: slurLayouts,
+                    staffHeight: _options.StaffHeight,
+                    isBrokenLeft: !segment.IsFirst,
+                    isBrokenRight: !segment.IsLast);
+                slurLayouts.Add(problem.Solve());
+            }
         }
 
         return slurLayouts.ToImmutableArray();
@@ -479,7 +776,7 @@ public sealed class ElementCoordinator
     /// Detects glissandos and calculates their layouts.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/glissando-engraver.cc
+    /// LILYPOND-REF: scm/scheme-engravers.scm
     /// </remarks>
     public ImmutableArray<GlissandoLayout> LayoutGlissandos(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
     {

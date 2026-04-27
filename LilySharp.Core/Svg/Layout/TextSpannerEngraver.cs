@@ -156,12 +156,7 @@ public static class TextSpannerEngraver
         if (textSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TextSpannerLayout>.Empty;
 
-        // Build measure-to-system index mapping for comparing elements in the same system
-        var measureToSystem = new Dictionary<int, int>();
-        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
-            foreach (var m in systems[sysIdx].Measures)
-                measureToSystem[m.MeasureIndex] = sysIdx;
-
+        var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var layouts = ImmutableArray.CreateBuilder<TextSpannerLayout>(textSpanners.Length);
 
         foreach (var spanner in textSpanners)
@@ -170,167 +165,85 @@ public static class TextSpannerEngraver
                 spanner.EndMeasureIndex >= measureLayouts.Length)
                 continue;
 
-            // Determine which systems the spanner spans.
-            // Each system's MeasureLayout.X resets from the left margin, so we cannot
-            // mix X coordinates from different systems.
-            // LILYPOND-REF: line-spanner.cc:546-600 Line_spanner breaks at system boundaries
-            if (!measureToSystem.TryGetValue(spanner.StartMeasureIndex, out int startSys) ||
-                !measureToSystem.TryGetValue(spanner.EndMeasureIndex, out int endSys))
+            // LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
+            // LILYPOND-REF: lily/line-spanner.cc:546-600 — Line_spanner breaks at system boundaries
+            var segments = SpannerBreakSubstitution.Split(
+                spanner.StartMeasureIndex, spanner.EndMeasureIndex, systems, measureToSystem);
+            if (segments.IsEmpty)
                 continue;
 
-            if (startSys == endSys)
+            foreach (var segment in segments)
             {
-                // Same system — single layout
-                var layout = CalculateSingleSystemLayout(spanner, measureLayouts, dynamicLayouts, measureToSystem);
-                if (layout.HasValue)
-                    layouts.Add(layout.Value);
-            }
-            else
-            {
-                // Cross-system: split into one layout per system
-                // LILYPOND-REF: line-spanner.cc:577-600 broken pieces at system boundaries
-                for (int si = startSys; si <= endSys; si++)
+                if (segment.StartMeasureIndex >= measureLayouts.Length ||
+                    segment.EndMeasureIndex >= measureLayouts.Length)
+                    continue;
+
+                var system = systems[segment.SystemIndex];
+                if (system.Measures.IsDefaultOrEmpty)
+                    continue;
+
+                double startX;
+                if (segment.IsFirst && spanner.StartItemIndex < measureLayouts[segment.StartMeasureIndex].Items.Length)
                 {
-                    var system = systems[si];
-                    if (system.Measures.IsDefaultOrEmpty)
-                        continue;
-
-                    int sysFirstMeasure = system.Measures[0].MeasureIndex;
-                    int sysLastMeasure = system.Measures[^1].MeasureIndex;
-
-                    // Segment bounds within this system
-                    int segStartMeasure = si == startSys ? spanner.StartMeasureIndex : sysFirstMeasure;
-                    int segEndMeasure = si == endSys ? spanner.EndMeasureIndex : sysLastMeasure;
-
-                    if (segStartMeasure >= measureLayouts.Length || segEndMeasure >= measureLayouts.Length)
-                        continue;
-
-                    bool isFirst = (si == startSys);
-                    bool isLast = (si == endSys);
-
-                    // Calculate start X
-                    double startX;
-                    if (isFirst && spanner.StartItemIndex < measureLayouts[segStartMeasure].Items.Length)
-                    {
-                        var startItem = measureLayouts[segStartMeasure].Items[spanner.StartItemIndex];
-                        startX = measureLayouts[segStartMeasure].X + startItem.X;
-                    }
-                    else
-                    {
-                        startX = measureLayouts[segStartMeasure].X + BoundPadding;
-                    }
-
-                    // Calculate end X
-                    double endX;
-                    if (isLast)
-                    {
-                        var endMeasure = measureLayouts[segEndMeasure];
-                        if (spanner.EndItemIndex < endMeasure.Items.Length)
-                        {
-                            var endItem = endMeasure.Items[spanner.EndItemIndex];
-                            endX = endMeasure.X + endItem.X - BoundPadding;
-                        }
-                        else
-                        {
-                            endX = endMeasure.X + endMeasure.Width - BoundPadding;
-                        }
-                    }
-                    else
-                    {
-                        // Extend to system edge
-                        var lastMeasure = measureLayouts[sysLastMeasure];
-                        endX = lastMeasure.X + lastMeasure.Width - BoundPadding;
-                    }
-
-                    // First segment: show text; continuation segments: line only
-                    string segText = isFirst ? spanner.Text : "";
-                    double textWidth = segText.Length * CharWidth;
-                    double lineStartX = segText.Length > 0
-                        ? startX + textWidth + TextLinePadding
-                        : startX;
-
-                    if (lineStartX > endX - MinimumLineLength)
-                        lineStartX = endX;
-
-                    // Calculate Y position for this system's segment
-                    double y = CalculateYWithPriorityStacking(
-                        startX, endX, segStartMeasure,
-                        dynamicLayouts, measureToSystem);
-
-                    layouts.Add(new TextSpannerLayout(
-                        StartMeasureIndex: segStartMeasure,
-                        StartX: startX,
-                        EndX: endX,
-                        LineStartX: lineStartX,
-                        Y: y,
-                        Text: segText,
-                        Style: spanner.Style,
-                        DashPeriod: DashPeriod,
-                        DashFraction: DashFraction,
-                        SourcePosition: spanner.SourcePosition
-                    ));
+                    var startItem = measureLayouts[segment.StartMeasureIndex].Items[spanner.StartItemIndex];
+                    startX = measureLayouts[segment.StartMeasureIndex].X + startItem.X;
                 }
+                else
+                {
+                    startX = measureLayouts[segment.StartMeasureIndex].X + BoundPadding;
+                }
+
+                double endX;
+                if (segment.IsLast)
+                {
+                    var endMeasure = measureLayouts[segment.EndMeasureIndex];
+                    if (spanner.EndItemIndex < endMeasure.Items.Length)
+                    {
+                        var endItem = endMeasure.Items[spanner.EndItemIndex];
+                        endX = endMeasure.X + endItem.X - BoundPadding;
+                    }
+                    else
+                    {
+                        endX = endMeasure.X + endMeasure.Width - BoundPadding;
+                    }
+                }
+                else
+                {
+                    // LILYPOND-REF: lily/line-spanner.cc:577-600 — extend to system edge for broken right.
+                    var lastMeasure = system.Measures[^1];
+                    endX = lastMeasure.X + lastMeasure.Width - BoundPadding;
+                }
+
+                // First segment shows the text; continuation segments draw line only.
+                string segText = segment.IsFirst ? spanner.Text : "";
+                double textWidth = segText.Length * CharWidth;
+                double lineStartX = segText.Length > 0
+                    ? startX + textWidth + TextLinePadding
+                    : startX;
+
+                if (lineStartX > endX - MinimumLineLength)
+                    lineStartX = endX;
+
+                double y = CalculateYWithPriorityStacking(
+                    startX, endX, segment.StartMeasureIndex,
+                    dynamicLayouts, measureToSystem);
+
+                layouts.Add(new TextSpannerLayout(
+                    StartMeasureIndex: segment.StartMeasureIndex,
+                    StartX: startX,
+                    EndX: endX,
+                    LineStartX: lineStartX,
+                    Y: y,
+                    Text: segText,
+                    Style: spanner.Style,
+                    DashPeriod: DashPeriod,
+                    DashFraction: DashFraction,
+                    SourcePosition: spanner.SourcePosition
+                ));
             }
         }
 
         return layouts.ToImmutable();
-    }
-
-    /// <summary>
-    /// Calculates layout for a single-system (non-broken) text spanner.
-    /// </summary>
-    private static TextSpannerLayout? CalculateSingleSystemLayout(
-        TextSpannerItem spanner,
-        ImmutableArray<MeasureLayout> measureLayouts,
-        ImmutableArray<DynamicLayout> dynamicLayouts,
-        Dictionary<int, int> measureToSystem)
-    {
-        var startMeasure = measureLayouts[spanner.StartMeasureIndex];
-
-        double startX;
-        if (spanner.StartItemIndex < startMeasure.Items.Length)
-        {
-            var startItem = startMeasure.Items[spanner.StartItemIndex];
-            startX = startMeasure.X + startItem.X;
-        }
-        else
-        {
-            startX = startMeasure.X + BoundPadding;
-        }
-
-        var endMeasure = measureLayouts[spanner.EndMeasureIndex];
-        double endX;
-        if (spanner.EndItemIndex < endMeasure.Items.Length)
-        {
-            var endItem = endMeasure.Items[spanner.EndItemIndex];
-            endX = endMeasure.X + endItem.X - BoundPadding;
-        }
-        else
-        {
-            endX = endMeasure.X + endMeasure.Width - BoundPadding;
-        }
-
-        double textWidth = spanner.Text.Length * CharWidth;
-        double lineStartX = startX + textWidth + TextLinePadding;
-        if (lineStartX > endX - MinimumLineLength)
-            lineStartX = endX;
-
-        double y = CalculateYWithPriorityStacking(
-            startX, endX, spanner.StartMeasureIndex,
-            dynamicLayouts, measureToSystem);
-
-        return new TextSpannerLayout(
-            StartMeasureIndex: spanner.StartMeasureIndex,
-            StartX: startX,
-            EndX: endX,
-            LineStartX: lineStartX,
-            Y: y,
-            Text: spanner.Text,
-            Style: spanner.Style,
-            DashPeriod: DashPeriod,
-            DashFraction: DashFraction,
-            SourcePosition: spanner.SourcePosition
-        );
     }
 
     /// <summary>

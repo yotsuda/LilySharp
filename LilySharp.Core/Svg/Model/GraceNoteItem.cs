@@ -36,7 +36,7 @@ public enum GraceNoteType
 /// Information about a single note within a grace note group.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/grace-spacing.cc — each grace note has its own duration
+/// LILYPOND-REF: lily/grace-spacing-engraver.cc — each grace note has its own duration
 /// for spring-based spacing calculation.
 /// </remarks>
 public readonly record struct GraceNoteInfo(

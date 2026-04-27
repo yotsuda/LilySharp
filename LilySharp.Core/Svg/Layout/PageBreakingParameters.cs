@@ -33,6 +33,48 @@ public enum BreakPermission
 }
 
 /// <summary>
+/// Helpers for combining break permissions across the line/page/page-turn hierarchy.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/constrained-breaking.cc:378-386 — min_permission
+/// LILYPOND-REF: lily/constrained-breaking.cc:530-535 — chained application
+/// </remarks>
+public static class BreakPermissionExtensions
+{
+    /// <summary>
+    /// LP's <c>min_permission</c>: combines two permissions, where the result reflects
+    /// LP's asymmetric "the more restrictive line permission constrains the broader one"
+    /// rule.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:378-386
+    /// Truth table (perm1 = outer e.g. line perm, perm2 = inner e.g. page perm):
+    /// <code>
+    ///   force, force   → force
+    ///   force, allow   → allow
+    ///   force, forbid  → forbid
+    ///   allow, force   → forbid (asymmetric: cannot upgrade allow → force here)
+    ///   allow, allow   → allow
+    ///   allow, forbid  → forbid
+    ///   forbid, *      → forbid
+    /// </code>
+    /// </remarks>
+    public static BreakPermission MinPermission(BreakPermission perm1, BreakPermission perm2)
+    {
+        // LILYPOND-REF: lily/constrained-breaking.cc:380-381
+        if (perm1 == BreakPermission.Force)
+            return perm2;
+
+        // LILYPOND-REF: lily/constrained-breaking.cc:382-384
+        if (perm1 == BreakPermission.Allow && perm2 != BreakPermission.Force)
+            return perm2;
+
+        // LILYPOND-REF: lily/constrained-breaking.cc:385 — fallthrough returns SCM_EOL = forbid.
+        return BreakPermission.Forbid;
+    }
+}
+
+/// <summary>
 /// Parameters controlling page breaking optimization.
 /// </summary>
 /// <remarks>
@@ -85,4 +127,23 @@ public sealed record PageBreakingParameters
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/page-breaking.cc:1506 page_spacing_weight = 10</remarks>
     public double PageSpacingWeight { get; init; } = 10;
+
+    /// <summary>
+    /// Whether to use tight spacing (emergency compression when pages overflow).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/include/constrained-breaking.hh tight_spacing_
+    /// When enabled, spacing between systems is reduced to fit more content
+    /// on each page, preventing overflow at the cost of tighter layout.
+    /// </remarks>
+    public bool TightSpacing { get; init; } = false;
+
+    /// <summary>
+    /// Compression factor for tight spacing mode (0..1, where 1 = no compression).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc — tight spacing multiplier
+    /// Applied to basic-distance and padding when TightSpacing is active.
+    /// </remarks>
+    public double TightSpacingFactor { get; init; } = 0.7;
 }

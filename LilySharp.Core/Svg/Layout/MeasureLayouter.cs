@@ -145,8 +145,11 @@ public sealed class MeasureLayouter
 
         // Spring 0: barline → first column
         // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist (first-note . (fixed-space . 1.3))
+        // LILYPOND-REF: lily/spacing-engraver.cc:200-253 — shortest-playing-duration aggregated across voices.
         var firstDuration = timings.Count > 1 ? timings[1] - timings[0] : totalDuration;
-        var firstSpring = SpacingRules.CreateTimingSpring(firstDuration, baseShortestDuration);
+        var firstShortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[0], measuresToScan);
+        var firstSpring = SpacingRules.CreateTimingSpringMultiVoice(
+            firstDuration, firstShortestPlaying, baseShortestDuration);
         double firstNoteMin = EngravingDefaults.BarLineToFirstNoteSpace;
 
         // Apply skyline rod: barline → first item (max across all voices)
@@ -165,6 +168,7 @@ public sealed class MeasureLayouter
             firstSpring.InverseStretchStrength));
 
         // Springs between adjacent timing columns (duration-proportional + skyline rods)
+        // LILYPOND-REF: lily/spacing-basic.cc:107-162 — note_spacing uses left column's shortest-playing-duration.
         for (int i = 1; i < timings.Count; i++)
         {
             Fraction segmentDuration;
@@ -176,7 +180,10 @@ public sealed class MeasureLayouter
             {
                 segmentDuration = totalDuration - timings[i];
             }
-            var spring = SpacingRules.CreateTimingSpring(segmentDuration, baseShortestDuration);
+            // LILYPOND-REF: lily/spacing-engraver.cc:200-253 — shortest_playing aggregated at the LEFT column.
+            var shortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[i - 1], measuresToScan);
+            var spring = SpacingRules.CreateTimingSpringMultiVoice(
+                segmentDuration, shortestPlaying, baseShortestDuration);
 
             // LILYPOND-REF: lily/spacing-spanner.cc — apply rod from skyline collision
             // between items at adjacent timing points across ALL voices.
@@ -208,8 +215,11 @@ public sealed class MeasureLayouter
         }
 
         // End spring: last column → barline (remaining duration)
+        // LILYPOND-REF: lily/spacing-basic.cc:107-162 — note_spacing uses left column's shortest-playing-duration.
         var endDuration = totalDuration - timings[^1];
-        var endSpring = SpacingRules.CreateTimingSpring(endDuration, baseShortestDuration);
+        var endShortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[^1], measuresToScan);
+        var endSpring = SpacingRules.CreateTimingSpringMultiVoice(
+            endDuration, endShortestPlaying, baseShortestDuration);
 
         // Apply skyline rod: last item → barline (max across all voices)
         if (timingToItems.TryGetValue(timings[^1], out var lastItems))

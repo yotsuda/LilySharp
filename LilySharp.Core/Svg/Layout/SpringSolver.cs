@@ -37,9 +37,22 @@ public sealed class SpringSolver
 {
     private readonly ImmutableArray<Spring> _springs;
 
-    public SpringSolver(ImmutableArray<Spring> springs)
+    /// <summary>
+    /// Maximum compression force (negative value). Forces more negative than this are clamped.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/simple-spacer.cc:250-275 force_limit</remarks>
+    private readonly double _forceLimit;
+
+    /// <summary>
+    /// Default force limit: allow substantial but not unlimited compression.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/simple-spacer.cc — default force_limit</remarks>
+    private const double DefaultForceLimit = -1e6;
+
+    public SpringSolver(ImmutableArray<Spring> springs, double forceLimit = DefaultForceLimit)
     {
         _springs = springs;
+        _forceLimit = forceLimit;
     }
 
     // LILYPOND-REF: lily/simple-spacer.cc:159-162 Simple_spacer::configuration_length()
@@ -157,6 +170,9 @@ public sealed class SpringSolver
     /// <summary>
     /// Calculates force when compressing the line (target &lt; max_block_force_len).
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:250-275 — force_limit clamps maximum compression
+    /// </remarks>
     private (double Force, bool Fits) CompressLine(double targetLen, double maxBlockForceLen, double maxBlockForce)
     {
         // Check whether we will actually be compressed (negative force) or just less stretched
@@ -196,6 +212,15 @@ public sealed class SpringSolver
             if (curLen - blockDist < targetLen)
             {
                 curForce += (targetLen - curLen) / invHooke;
+
+                // LILYPOND-REF: lily/simple-spacer.cc:250-275
+                // Clamp force to maximum compression limit
+                if (curForce < _forceLimit)
+                {
+                    curForce = _forceLimit;
+                    return (curForce, false);
+                }
+
                 return (curForce, true);
             }
 
@@ -205,7 +230,11 @@ public sealed class SpringSolver
             curForce = sp.BlockingForce;
         }
 
-        // Couldn't fit
+        // Couldn't fit — clamp to force limit
+        // LILYPOND-REF: lily/simple-spacer.cc:250-275
+        if (curForce < _forceLimit)
+            curForce = _forceLimit;
+
         return (curForce, false);
     }
 
@@ -266,6 +295,17 @@ public sealed class SpringSolver
     /// the springs' ideal distances are scaled up proportionally.
     /// Otherwise, blocking forces are updated to enforce the constraint.
     /// </remarks>
+    /// <summary>
+    /// Applies multi-column rod constraints to a set of springs with blocking force propagation.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/simple-spacer.cc:92-128 Simple_spacer::add_rod()
+    ///
+    /// After processing all rods, re-checks satisfaction in a convergence loop.
+    /// When a rod increases a spring's blocking force, overlapping rods that share
+    /// those springs may become unsatisfied, requiring re-propagation.
+    /// LILYPOND-REF: lily/simple-spacer.cc:92-128 — rod adding triggers cascade
+    /// </remarks>
     public static ImmutableArray<Spring> ApplyRods(
         ImmutableArray<Spring> springs,
         IReadOnlyList<(int Left, int Right, double Distance)> rods)
@@ -275,62 +315,74 @@ public sealed class SpringSolver
 
         var result = springs.ToArray();
 
-        foreach (var (left, right, dist) in rods)
+        // LILYPOND-REF: lily/simple-spacer.cc:92-128
+        // Convergence loop: re-apply rods until no changes occur,
+        // because updating blocking forces for one rod may invalidate others.
+        const int maxIterations = 10;
+        for (int iteration = 0; iteration < maxIterations; iteration++)
         {
-            if (left < 0 || right > result.Length || left >= right)
-                continue;
+            bool changed = false;
 
-            // Check if rod is already satisfied at maximum compression
-            double minLen = 0;
-            for (int i = left; i < right; i++)
-                minLen += result[i].MinDistance;
-
-            if (minLen >= dist)
-                continue; // Rod already satisfied
-
-            // Calculate ideal length of springs in range
-            double idealLen = 0;
-            for (int i = left; i < right; i++)
-                idealLen += result[i].IdealDistance;
-
-            if (idealLen < dist)
+            foreach (var (left, right, dist) in rods)
             {
-                // Need to scale up ideal distances
-                double factor = dist / idealLen;
-                for (int i = left; i < right; i++)
-                {
-                    var s = result[i];
-                    result[i] = new Spring(
-                        s.IdealDistance * factor,
-                        s.MinDistance,
-                        s.InverseStretchStrength);
-                }
-            }
-            else
-            {
-                // Calculate blocking force for this rod
-                // Sum flexibility in the range
-                double invK = 0;
-                for (int i = left; i < right; i++)
-                    invK += result[i].InverseCompressStrength;
+                if (left < 0 || right > result.Length || left >= right)
+                    continue;
 
-                if (invK > 0)
+                // Check if rod is already satisfied at maximum compression
+                double minLen = 0;
+                for (int i = left; i < right; i++)
+                    minLen += result[i].MinDistance;
+
+                if (minLen >= dist)
+                    continue; // Rod already satisfied
+
+                // Calculate ideal length of springs in range
+                double idealLen = 0;
+                for (int i = left; i < right; i++)
+                    idealLen += result[i].IdealDistance;
+
+                if (idealLen < dist)
                 {
-                    double blockForce = (dist - idealLen) / invK;
+                    // Need to scale up ideal distances
+                    double factor = dist / idealLen;
                     for (int i = left; i < right; i++)
                     {
                         var s = result[i];
-                        double newBlockForce = Math.Max(blockForce, s.BlockingForce);
-                        if (newBlockForce > s.BlockingForce)
+                        result[i] = new Spring(
+                            s.IdealDistance * factor,
+                            s.MinDistance,
+                            s.InverseStretchStrength);
+                    }
+                    changed = true;
+                }
+                else
+                {
+                    // Calculate blocking force for this rod
+                    double invK = 0;
+                    for (int i = left; i < right; i++)
+                        invK += result[i].InverseCompressStrength;
+
+                    if (invK > 0)
+                    {
+                        double blockForce = (dist - idealLen) / invK;
+                        for (int i = left; i < right; i++)
                         {
-                            // Recreate spring with updated blocking force via higher min distance
-                            double newMin = Math.Max(s.MinDistance,
-                                s.IdealDistance + newBlockForce * s.InverseCompressStrength);
-                            result[i] = new Spring(s.IdealDistance, newMin, s.InverseStretchStrength);
+                            var s = result[i];
+                            double newBlockForce = Math.Max(blockForce, s.BlockingForce);
+                            if (newBlockForce > s.BlockingForce)
+                            {
+                                double newMin = Math.Max(s.MinDistance,
+                                    s.IdealDistance + newBlockForce * s.InverseCompressStrength);
+                                result[i] = new Spring(s.IdealDistance, newMin, s.InverseStretchStrength);
+                                changed = true;
+                            }
                         }
                     }
                 }
             }
+
+            if (!changed)
+                break;
         }
 
         return result.ToImmutableArray();

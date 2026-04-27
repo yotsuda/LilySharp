@@ -20,7 +20,7 @@ namespace LilySharp.Core.Svg.Model;
 /// Represents a trill spanner (tr symbol with wavy line extension).
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/trill-spanner-engraver.cc Trill_spanner_engraver class
+/// LILYPOND-REF: scm/scheme-engravers.scm Trill_spanner_engraver class
 /// LILYPOND-REF: scm/define-grobs.scm:2175-2230 TrillSpanner grob definition
 ///
 /// Trill spanners display "tr" at the start point with a wavy line

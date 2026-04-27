@@ -163,7 +163,7 @@ public enum HorizontalDirection
 /// A horizontal skyline - the outline of a set of buildings as seen from the right or left.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/skyline.hh:48-100 Skyline class
+/// LILYPOND-REF: lily/include/skyline.hh:48-100 Skyline class
 ///
 /// Used for note spacing collision detection.
 /// - RIGHT skyline: rightmost X at each Y position

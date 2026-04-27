@@ -1,0 +1,24 @@
+// Multi-Measure Rest Test
+// Tests R<dur>*N syntax for multi-measure rests.
+title "Multi-Measure Rest"
+composer "Lily#"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+section Main {
+  melody {
+    c4 d e f |
+    R1*4 |
+    g4 a b c |
+  }
+}
+
+structure { Main }
+
+render score "multi-measure-rest.svg" {
+  staff { melody }
+}

@@ -60,7 +60,8 @@ public sealed class SystemBreaker
                 _options.ContentWidth,
                 firstPrefixWidth,
                 continuationPrefixWidth,
-                _options.LineBreakingTolerance);
+                _options.LineBreakingTolerance,
+                raggedRight: _options.RaggedRight);
 
             return breaker.BreakIntoLines(measures, baseShortestDuration);
         }
@@ -87,7 +88,8 @@ public sealed class SystemBreaker
                 _options.ContentWidth,
                 firstPrefixWidth,
                 continuationPrefixWidth,
-                _options.LineBreakingTolerance);
+                _options.LineBreakingTolerance,
+                raggedRight: _options.RaggedRight);
 
             return breaker.BreakIntoLines(measures, baseShortestDuration);
         }

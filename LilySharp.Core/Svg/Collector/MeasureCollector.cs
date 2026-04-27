@@ -380,6 +380,11 @@ public sealed class MeasureCollector
     private readonly Dictionary<(int step, int octave), int> _previousMeasureAlterations = new();
     // Notes explicitly marked with @courtesy annotation
     private readonly HashSet<int> _courtesySourcePositions = new();
+    /// <summary>
+    /// Maps a note's source position to its finger number (extracted from <c>@finger.N</c>).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/fingering-engraver.cc — finger-number event handling.</remarks>
+    private readonly Dictionary<int, int> _fingeringByPosition = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
     // Default duration
@@ -693,7 +698,23 @@ public sealed class MeasureCollector
                 break;
 
             case RestSyntax rest:
-                builder.AddItem(CreateRestItem(rest));
+                {
+                    var restItem = CreateRestItem(rest);
+                    int count = rest.MeasureCount;
+                    if (count <= 1)
+                    {
+                        builder.AddItem(restItem);
+                    }
+                    else
+                    {
+                        // LILYPOND-REF: lily/lily-parser.yy — R<dur>*N expands to N
+                        // consecutive measure-rests semantically. The MeasureBuilder
+                        // auto-completes each measure when its duration reaches the
+                        // time signature.
+                        for (int i = 0; i < count; i++)
+                            builder.AddItem(restItem);
+                    }
+                }
                 break;
 
             case ChordSyntax chord:
@@ -708,7 +729,7 @@ public sealed class MeasureCollector
                     }
                     bool hasArpeggio = HasArpeggioArticulation(chord);
                     bool isCue = HasCueAnnotation(chord);
-                    var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue);
+                    var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter);
                     builder.AddItem(chordItem);
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
@@ -926,6 +947,7 @@ public sealed class MeasureCollector
         _currentMeasureAlterations.Clear();
         _previousMeasureAlterations.Clear();
         _courtesySourcePositions.Clear();
+        _fingeringByPosition.Clear();
         _structure = null;
         _root = null;
         _currentOctave = 4;
@@ -1630,7 +1652,7 @@ public sealed class MeasureCollector
     /// Checks if a note or chord has a @gliss articulation.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/glissando-engraver.cc - Glissando_engraver::listen_glissando
+    /// LILYPOND-REF: scm/scheme-engravers.scm - Glissando_engraver::listen_glissando
     /// </remarks>
     /// <summary>
     /// Checks if a note/chord has an explicit @courtesy annotation.
@@ -1652,6 +1674,95 @@ public sealed class MeasureCollector
                 return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Detects whether a note carries a <c>@laissezVibrer</c> articulation.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/laissez-vibrer-engraver.cc — l.v. tie attachment.</remarks>
+    private static bool HasLaissezVibrerAnnotation(SyntaxNode node)
+        => HasNamedArticulation(node, "laissezvibrer");
+
+    /// <summary>
+    /// Detects whether a note carries a <c>@repeatTie</c> articulation.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/repeat-tie-engraver.cc — repeat-tie attachment.</remarks>
+    private static bool HasRepeatTieAnnotation(SyntaxNode node)
+        => HasNamedArticulation(node, "repeattie");
+
+    private static bool HasNamedArticulation(SyntaxNode node, string lowerName)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+
+        foreach (var art in articulations)
+        {
+            if (art is ArticulationSyntax artSyntax &&
+                artSyntax.Type == ArticulationType.None &&
+                artSyntax.NameToken.Text.Equals(lowerName, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Extracts a finger number from a single pitch's articulations (used for
+    /// per-pitch fingerings inside chord brackets).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/fingering-engraver.cc — finger event on chord pitch.</remarks>
+    private static int? ExtractPitchFingering(PitchSyntax pitch)
+    {
+        foreach (var art in pitch.Articulations)
+        {
+            if (art is MusicMarkSyntax markSyntax)
+            {
+                var name = markSyntax.MarkName.ToLowerInvariant();
+                if (name.StartsWith("finger.") &&
+                    int.TryParse(name.AsSpan(7), out int finger) &&
+                    finger >= 0)
+                {
+                    return finger;
+                }
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Extracts the finger number from a note's articulations, looking for
+    /// <c>@finger.N</c> compound music marks.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/fingering-engraver.cc — finger event handling.
+    /// Returns null when no fingering is attached.
+    /// </remarks>
+    private static int? ExtractFingering(SyntaxNode node)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+
+        foreach (var art in articulations)
+        {
+            if (art is MusicMarkSyntax markSyntax)
+            {
+                var name = markSyntax.MarkName.ToLowerInvariant();
+                if (name.StartsWith("finger.") &&
+                    int.TryParse(name.AsSpan(7), out int finger) &&
+                    finger >= 0)
+                {
+                    return finger;
+                }
+            }
+        }
+        return null;
     }
 
     private static bool HasGlissandoArticulation(SyntaxNode node)
@@ -1943,7 +2054,7 @@ public sealed class MeasureCollector
                 else
                 {
                     // Check for trill spanner start/stop
-                    // LILYPOND-REF: lily/trill-spanner-engraver.cc — \startTrillSpan / \stopTrillSpan
+                    // LILYPOND-REF: scm/scheme-engravers.scm — \startTrillSpan / \stopTrillSpan
                     var nameText = articulationSyntax.NameToken.Text;
                     var nameLower = nameText.ToLowerInvariant();
                     if (nameLower == "starttrillspan")
@@ -1991,6 +2102,16 @@ public sealed class MeasureCollector
                 {
                     _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position));
                 }
+                else if (markName.StartsWith("finger."))
+                {
+                    // LILYPOND-REF: lily/fingering-engraver.cc — finger event attaches to the host note.
+                    if (int.TryParse(markName.AsSpan(7), out int finger) && finger >= 0)
+                    {
+                        // The fingering applies to the host note (the one this articulation
+                        // is attached to). Use the note's source position as the key.
+                        _fingeringByPosition[node.Position] = finger;
+                    }
+                }
             }
         }
     }
@@ -1999,7 +2120,7 @@ public sealed class MeasureCollector
     /// Pairs trill spanner start/stop events into TrillSpannerItems.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/trill-spanner-engraver.cc:47-85 start/stop pairing
+    /// LILYPOND-REF: scm/scheme-engravers.scm:47-85 start/stop pairing
     /// </remarks>
     private ImmutableArray<TrillSpannerItem> PairTrillSpannerEvents()
     {
@@ -2045,7 +2166,7 @@ public sealed class MeasureCollector
         // Collect notes from the grace body
         var graceNoteInfos = new List<GraceNoteInfo>();
 
-        // LILYPOND-REF: lily/grace-spacing.cc — grace notes carry their own durations
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc — grace notes carry their own durations
         // Default to eighth note if no explicit duration (LilyPond grace note default)
         Fraction graceDefaultDuration = Fraction.Eighth;
 
@@ -2112,6 +2233,13 @@ public sealed class MeasureCollector
             }
         }
 
+        // LILYPOND-REF: lily/fingering-engraver.cc — finger event lookup at note creation.
+        // CollectArticulations runs after CreateNoteItem, so we scan the note's
+        // articulations directly here (mirroring HasCourtesyAnnotation's pattern).
+        int? fingering = ExtractFingering(note);
+        bool hasLv = HasLaissezVibrerAnnotation(note);
+        bool hasRepeatTie = HasRepeatTieAnnotation(note);
+
         return new NoteItem(
             staffPosition,
             Fraction.FromNoteValue(noteValue),
@@ -2128,7 +2256,10 @@ public sealed class MeasureCollector
             hasGlissando: hasGlissando,
             featherDirection: featherDirection,
             isCourtesy: isCourtesy,
-            isCue: isCue);
+            isCue: isCue,
+            fingering: fingering,
+            hasLaissezVibrer: hasLv,
+            hasRepeatTie: hasRepeatTie);
     }
 
     private RestItem CreateRestItem(RestSyntax rest)
@@ -2165,7 +2296,7 @@ public sealed class MeasureCollector
         };
     }
 
-    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false)
+    private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false)
     {
         var notes = new List<ChordNoteInfo>();
 
@@ -2188,7 +2319,14 @@ public sealed class MeasureCollector
             var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(pitch, octave);
 
             bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-            notes.Add(new ChordNoteInfo(staffPosition, accidental, needsLedger, isCourtesy));
+
+            // LILYPOND-REF: lily/fingering-engraver.cc — per-pitch finger via <c@finger.N>.
+            int? pitchFingering = ExtractPitchFingering(pitch);
+
+            notes.Add(new ChordNoteInfo(
+                staffPosition, accidental, needsLedger,
+                IsCourtesy: isCourtesy,
+                Fingering: pitchFingering));
         }
 
         // Next chord/note is relative to first pitch of this chord (Lilypond spec)
@@ -2202,7 +2340,7 @@ public sealed class MeasureCollector
         int dots = chord.Duration?.DotCount ?? 0;
         int tremoloBeams = ParseTremoloBeams(chord.Tremolo);
 
-        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue);
+        return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter);
     }
 
     private (int staffPosition, int octave) CalculateStaffPosition(PitchSyntax pitch)

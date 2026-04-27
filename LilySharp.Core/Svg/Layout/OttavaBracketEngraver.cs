@@ -135,15 +135,8 @@ public static class OttavaBracketEngraver
         if (ottavaBrackets.IsDefaultOrEmpty)
             return ImmutableArray<OttavaBracketLayout>.Empty;
 
-        // Build measure-to-system-index mapping
-        // LILYPOND-REF: lily/ottava-bracket.cc — brackets split at system breaks
-        var measureToSystemIdx = new Dictionary<int, int>();
-        for (int si = 0; si < systems.Length; si++)
-        {
-            foreach (var m in systems[si].Measures)
-                measureToSystemIdx[m.MeasureIndex] = si;
-        }
-
+        // LILYPOND-REF: lily/ottava-bracket.cc — brackets split at system breaks.
+        var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var layouts = ImmutableArray.CreateBuilder<OttavaBracketLayout>();
 
         foreach (var bracket in ottavaBrackets)
@@ -153,12 +146,10 @@ public static class OttavaBracketEngraver
 
             int endMeasureIdx = Math.Min(bracket.EndMeasureIndex, measureLayouts.Length - 1);
 
-            // Determine vertical position and direction
             bool isAbove = bracket.Type == OttavaType.Ottava8va ||
                            bracket.Type == OttavaType.Quindicesima15ma;
             double y = isAbove ? AboveStaffY : BelowStaffY;
 
-            // Display text
             string text = bracket.Type switch
             {
                 OttavaType.Ottava8va => "8va",
@@ -168,80 +159,41 @@ public static class OttavaBracketEngraver
                 _ => "8va"
             };
 
-            // Determine which systems the bracket spans
-            int startSystemIdx = measureToSystemIdx.GetValueOrDefault(bracket.StartMeasureIndex, 0);
-            int endSystemIdx = measureToSystemIdx.GetValueOrDefault(endMeasureIdx, startSystemIdx);
+            // LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
+            var segments = SpannerBreakSubstitution.Split(
+                bracket.StartMeasureIndex, endMeasureIdx, systems, measureToSystemIdx);
+            if (segments.IsEmpty)
+                continue;
 
-            if (startSystemIdx == endSystemIdx)
+            foreach (var segment in segments)
             {
-                // Same system — single bracket
-                var startMeasure = measureLayouts[bracket.StartMeasureIndex];
-                var endMeasure = measureLayouts[endMeasureIdx];
+                if (segment.StartMeasureIndex >= measureLayouts.Length ||
+                    segment.EndMeasureIndex >= measureLayouts.Length)
+                    continue;
+
+                var segStartMeasure = measureLayouts[segment.StartMeasureIndex];
+                var segEndMeasure = measureLayouts[segment.EndMeasureIndex];
+
+                double startX = segStartMeasure.X + LeftShorten;
+                double endX = segEndMeasure.X + segEndMeasure.Width + RightShorten;
+
+                // First segment shows the bare text ("8va"); continuation pieces use "(8va)".
+                // Last segment carries the hook; non-last ends are open.
+                string segText = segment.IsFirst ? text : $"({text})";
+                double segEdgeHeight = segment.IsLast ? EndEdgeHeight : 0;
+
                 layouts.Add(new OttavaBracketLayout(
-                    StartMeasureIndex: bracket.StartMeasureIndex,
-                    StartX: startMeasure.X + LeftShorten,
-                    EndX: endMeasure.X + endMeasure.Width + RightShorten,
+                    StartMeasureIndex: segment.StartMeasureIndex,
+                    StartX: startX,
+                    EndX: endX,
                     Y: y,
-                    Text: text,
+                    Text: segText,
                     IsAbove: isAbove,
-                    EdgeHeight: EndEdgeHeight,
+                    EdgeHeight: segEdgeHeight,
                     DashPeriod: DashPeriod,
                     DashFraction: DashFraction,
                     SourcePosition: bracket.SourcePosition
                 ));
-            }
-            else
-            {
-                // Cross-system: split into one bracket per system
-                for (int si = startSystemIdx; si <= endSystemIdx; si++)
-                {
-                    var system = systems[si];
-                    if (system.Measures.IsDefaultOrEmpty)
-                        continue;
-
-                    // Find this system's first and last measure indices
-                    int sysFirstMeasure = system.Measures[0].MeasureIndex;
-                    int sysLastMeasure = system.Measures[^1].MeasureIndex;
-
-                    // Bracket start/end within this system
-                    int segStart = si == startSystemIdx ? bracket.StartMeasureIndex : sysFirstMeasure;
-                    int segEnd = si == endSystemIdx ? endMeasureIdx : sysLastMeasure;
-
-                    if (segStart >= measureLayouts.Length || segEnd >= measureLayouts.Length)
-                        continue;
-
-                    var segStartMeasure = measureLayouts[segStart];
-                    var segEndMeasure = measureLayouts[segEnd];
-
-                    // First segment: show text + open end (no hook)
-                    // Continuation segments: show "(8va)" text + open start
-                    // Last segment: dashed line + hook
-                    bool isFirst = (si == startSystemIdx);
-                    bool isLast = (si == endSystemIdx);
-
-                    double startX = isFirst
-                        ? segStartMeasure.X + LeftShorten
-                        : segStartMeasure.X + LeftShorten;
-                    double endX = isLast
-                        ? segEndMeasure.X + segEndMeasure.Width + RightShorten
-                        : segEndMeasure.X + segEndMeasure.Width + RightShorten;
-
-                    string segText = isFirst ? text : $"({text})";
-                    double segEdgeHeight = isLast ? EndEdgeHeight : 0;
-
-                    layouts.Add(new OttavaBracketLayout(
-                        StartMeasureIndex: segStart,
-                        StartX: startX,
-                        EndX: endX,
-                        Y: y,
-                        Text: segText,
-                        IsAbove: isAbove,
-                        EdgeHeight: segEdgeHeight,
-                        DashPeriod: DashPeriod,
-                        DashFraction: DashFraction,
-                        SourcePosition: bracket.SourcePosition
-                    ));
-                }
             }
         }
 

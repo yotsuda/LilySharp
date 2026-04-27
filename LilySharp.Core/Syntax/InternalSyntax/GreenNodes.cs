@@ -75,6 +75,19 @@ internal sealed class PitchGreen : GreenSyntaxNode
         : base(SyntaxKind.Pitch, [pitchToken, .. octaveMarks])
     {
     }
+
+    /// <summary>
+    /// Pitch + articulations (used inside chord brackets for per-pitch annotations
+    /// like fingering or ties).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lily-parser.yy — chord_body grammar accepts post-event
+    /// articulations on each pitch.
+    /// </remarks>
+    public PitchGreen(SyntaxToken pitchToken, GreenNode?[] octaveMarks, GreenNode?[] articulations)
+        : base(SyntaxKind.Pitch, [pitchToken, .. octaveMarks, .. articulations])
+    {
+    }
 }
 
 /// <summary>
@@ -100,12 +113,19 @@ internal sealed class NoteGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// A rest: r, s, R + optional duration
+/// A rest: r, s, R + optional duration + optional <c>*N</c> measure-count multiplier.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/lily-parser.yy — multi-measure rest grammar (R1*N)
+/// LILYPOND-REF: lily/multi-measure-rest.cc — Multi_measure_rest grob
+/// The <c>*N</c> multiplier applies only to <c>R</c> (full-measure rest) and
+/// expands into N consecutive measure-rests semantically.
+/// </remarks>
 internal sealed class RestGreen : GreenSyntaxNode
 {
-    public RestGreen(SyntaxToken restToken, DurationGreen? duration)
-        : base(SyntaxKind.Rest, [restToken, duration])
+    public RestGreen(SyntaxToken restToken, DurationGreen? duration,
+                     SyntaxToken? asterisk = null, SyntaxToken? measureCount = null)
+        : base(SyntaxKind.Rest, [restToken, duration, asterisk, measureCount])
     {
     }
 }

@@ -34,7 +34,7 @@ public enum GlissandoStyle
 /// Represents a glissando connecting two notes.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/glissando-engraver.cc - Glissando_engraver
+/// LILYPOND-REF: scm/scheme-engravers.scm - Glissando_engraver
 /// A glissando is a sliding line between two notes of different pitch.
 /// </remarks>
 public readonly record struct GlissandoItem(

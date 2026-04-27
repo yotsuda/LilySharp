@@ -16,6 +16,7 @@
 
 using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg.Layout;
 
 namespace LilySharp.Core.Svg.Model;
 
@@ -59,6 +60,67 @@ public sealed record Measure
     /// <summary>If true, force a line break after this measure.</summary>
     public bool HasBreakAfter { get; }
 
+    /// <summary>
+    /// Line break permission after this measure.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/include/constrained-breaking.hh:74 break_permission_
+    /// LILYPOND-REF: scm/define-grob-properties.scm — line-break-permission
+    /// Allow = normal break point, Forbid = cannot break here, Force = must break here.
+    /// When Force, HasBreakAfter is also true for backward compatibility.
+    /// </remarks>
+    public BreakPermission LineBreakPermission { get; }
+
+    /// <summary>
+    /// Page break permission after this measure (raw, before <c>min_permission</c> propagation).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/include/constrained-breaking.hh:75 page_permission_
+    /// LILYPOND-REF: scm/define-grob-properties.scm — page-break-permission
+    /// Use <see cref="EffectivePagePermission"/> to obtain the value after LP's
+    /// <c>min_permission(line, page)</c> chain.
+    /// </remarks>
+    public BreakPermission PageBreakPermission { get; }
+
+    /// <summary>
+    /// Page turn permission after this measure (raw, before <c>min_permission</c> propagation).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/include/constrained-breaking.hh:76 turn_permission_
+    /// LILYPOND-REF: scm/define-grob-properties.scm — page-turn-permission
+    /// Use <see cref="EffectiveTurnPermission"/> to obtain the value after LP's
+    /// <c>min_permission(page, turn)</c> chain (which itself derives from line).
+    /// </remarks>
+    public BreakPermission PageTurnPermission { get; }
+
+    /// <summary>
+    /// Page break permission after applying LP's chained <c>min_permission(line, page)</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:530-535 — page perm constrained by line perm.
+    /// </remarks>
+    public BreakPermission EffectivePagePermission =>
+        Layout.BreakPermissionExtensions.MinPermission(LineBreakPermission, PageBreakPermission);
+
+    /// <summary>
+    /// Page turn permission after applying LP's chained <c>min_permission</c>:
+    /// turn perm is constrained by the (already chained) page perm, which is constrained by line perm.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:534-535 — turn perm constrained by chained page perm.
+    /// </remarks>
+    public BreakPermission EffectiveTurnPermission =>
+        Layout.BreakPermissionExtensions.MinPermission(EffectivePagePermission, PageTurnPermission);
+
+    /// <summary>
+    /// Penalty for breaking the line after this measure.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc:112-113 break_penalty_
+    /// Added to demerits in the DP when a break occurs after this measure.
+    /// </remarks>
+    public double BreakPenalty { get; }
+
     /// <summary>Source start position for caching and incremental updates.</summary>
     public int SourceStart { get; }
 
@@ -72,7 +134,11 @@ public sealed record Measure
         string? sectionLabel,
         int sourceStart,
         int sourceEnd,
-        bool hasBreakAfter = false)
+        bool hasBreakAfter = false,
+        BreakPermission lineBreakPermission = BreakPermission.Allow,
+        double breakPenalty = 0,
+        BreakPermission pageBreakPermission = BreakPermission.Allow,
+        BreakPermission pageTurnPermission = BreakPermission.Allow)
     {
         Items = items;
         StartBarline = startBarline;
@@ -80,7 +146,12 @@ public sealed record Measure
         SectionLabel = sectionLabel;
         SourceStart = sourceStart;
         SourceEnd = sourceEnd;
-        HasBreakAfter = hasBreakAfter;
+        // Derive permission: hasBreakAfter implies Force for backward compatibility
+        LineBreakPermission = hasBreakAfter ? BreakPermission.Force : lineBreakPermission;
+        HasBreakAfter = hasBreakAfter || LineBreakPermission == BreakPermission.Force;
+        BreakPenalty = breakPenalty;
+        PageBreakPermission = pageBreakPermission;
+        PageTurnPermission = pageTurnPermission;
     }
 
     /// <summary>

@@ -121,6 +121,26 @@ public sealed class PitchSyntax : SyntaxNode
     public string Accidental => PitchName.Length > 1 ? PitchName[1..] : string.Empty;
 
     /// <summary>
+    /// Per-pitch articulations attached inside a chord (e.g., <c>&lt;c@finger.1&gt;</c>).
+    /// Returns the syntax-level articulation nodes after the octave marks.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lily-parser.yy chord_body grammar — post-event articulations.
+    /// </remarks>
+    public IEnumerable<SyntaxNode> Articulations
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax)
+                    yield return child;
+            }
+        }
+    }
+
+    /// <summary>
     /// Gets the accidental as semitone offset (-2 to +2).
     /// </summary>
     public int AccidentalOffset => Accidental switch
@@ -199,8 +219,12 @@ public sealed class NoteSyntax : SyntaxNode
 }
 
 /// <summary>
-/// A rest: r, s, R + optional duration
+/// A rest: <c>r</c>, <c>s</c>, <c>R</c> + optional duration, with optional
+/// <c>*N</c> multi-measure count.
 /// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/multi-measure-rest.cc — multi-measure rest grob.
+/// </remarks>
 public sealed class RestSyntax : SyntaxNode
 {
     internal RestSyntax(RestGreen green, SyntaxNode? parent, int position)
@@ -210,6 +234,26 @@ public sealed class RestSyntax : SyntaxNode
 
     public SyntaxTokenNode RestToken => (SyntaxTokenNode)GetChild(0)!;
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+
+    /// <summary>
+    /// Multi-measure rest count (the N in <c>R1*N</c>). Returns 1 when no
+    /// <c>*N</c> multiplier was provided.
+    /// </summary>
+    public int MeasureCount
+    {
+        get
+        {
+            if (GetChild(3) is SyntaxTokenNode countToken &&
+                int.TryParse(countToken.Text, out int n) && n >= 1)
+            {
+                return n;
+            }
+            return 1;
+        }
+    }
+
+    /// <summary>True iff this rest carries a <c>*N</c> multi-measure multiplier.</summary>
+    public bool IsMultiMeasure => MeasureCount > 1;
 }
 
 /// <summary>

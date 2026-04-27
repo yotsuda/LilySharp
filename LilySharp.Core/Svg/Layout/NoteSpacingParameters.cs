@@ -77,4 +77,19 @@ public sealed record NoteSpacingParameters
     /// </remarks>
     public double BaseNoteSpace { get; init; } = EngravingDefaults.ShortestDurationSpace
                                                   * EngravingDefaults.SpacingIncrement;
+
+    /// <summary>
+    /// Minimum padding between adjacent items in the spring/rod model after
+    /// skyline-based collision detection. Mirrors LP's
+    /// <c>skyline-horizontal-padding</c> grob property.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm — skyline-horizontal-padding default 0.1
+    /// LILYPOND-REF: lily/separation-item.cc:49-68 — set_distance(padding)
+    /// LilySharp's compiled default <c>0.4</c> (= <see cref="GlyphMetrics.MinItemGap"/>)
+    /// is intentionally wider than LP's 0.1; expose the parameter so callers can
+    /// dial it down for tighter LP-style proportional spacing while keeping the
+    /// historical default for the existing snapshots.
+    /// </remarks>
+    public double MinItemGap { get; init; } = GlyphMetrics.MinItemGap;
 }

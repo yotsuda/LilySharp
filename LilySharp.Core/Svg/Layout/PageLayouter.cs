@@ -33,7 +33,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// build_system_skyline (page-layout-problem.cc:1070-1127):
 ///   per-system UP/DOWN skylines are passed to PositionSystemsOnPage for inter-system collision avoidance
 /// IMPLEMENTED — fixed_force_solution for ragged-last (page-layout-problem.cc:808-823)
-/// NOT YET IMPLEMENTED — footnote heights (page-layout-problem.cc:186-310)
+/// PARTIAL — footnote heights via SystemDetails.FootnoteHeight (page-layout-problem.cc:186-310)
 /// IMPLEMENTED — in-note-system-padding (page-layout-problem.cc:483)
 /// IMPLEMENTED — hara-kiri auto-hide empty staves (MultiStaffLayouter + LayoutEngine)
 /// IMPLEMENTED — alignment-distances manual override (StaffSpacingParameters.ApplyOverrides)
@@ -83,10 +83,26 @@ public sealed class PageLayouter
             double topExtent = systemExtents[i].upExtent;
             double bottomExtent = systemExtents[i].downExtent;
 
-            // Select spacing spec based on context
-            // (for page breaker, we use system-system as default;
-            //  actual per-pair spacing is applied during positioning)
-            var spec = vs.SystemSystem;
+            // LILYPOND-REF: lily/page-layout-problem.cc:488-535
+            // Select spacing spec based on pair context.
+            // Title/markup distinction is handled via SystemDetails.IsTitle when
+            // the caller provides it (future extension).
+            // For now, determine spec from the pair relationship:
+            VerticalSpacingSpec spec;
+            if (i == 0)
+            {
+                // First system uses top-system spec (applied during positioning)
+                spec = vs.SystemSystem;
+            }
+            else
+            {
+                spec = vs.SelectSpec(
+                    isFirstOnPage: false,
+                    isLastOnPage: false,
+                    prevIsTitle: false,
+                    currentIsTitle: false,
+                    currentIsNewScore: false);
+            }
 
             // Skyline-based minimum distance
             double skylineDistance = staffHeight + bottomExtent;
@@ -238,7 +254,18 @@ public sealed class PageLayouter
                         + systemExtents[sysIdx + 1].upExtent;
                 }
 
-                double minDistance = Math.Max(skylineDistance, spec.MinimumDistance) + spec.Padding;
+                // LILYPOND-REF: lily/include/constrained-breaking.hh tight_spacing_
+                // In tight spacing mode, compress basic distance and padding
+                double basicDist = spec.BasicDistance;
+                double padding = spec.Padding;
+                if (_options.PageBreaking.TightSpacing)
+                {
+                    double factor = _options.PageBreaking.TightSpacingFactor;
+                    basicDist *= factor;
+                    padding *= factor;
+                }
+
+                double minDistance = Math.Max(skylineDistance, spec.MinimumDistance) + padding;
 
                 // LILYPOND-REF: lily/page-layout-problem.cc:483 in-note-system-padding
                 // Ensure minimum gap between note extents of adjacent systems.
@@ -248,7 +275,7 @@ public sealed class PageLayouter
                 minDistance = Math.Max(minDistance, noteDistance);
 
                 // Spring-based ideal distance
-                double springDistance = Math.Max(spec.BasicDistance, minDistance);
+                double springDistance = Math.Max(basicDist, minDistance);
 
                 // Apply force-based stretching
                 double inverseHooke = spec.Stretchability > 0 ? spec.Stretchability / 60.0 : 0.1;

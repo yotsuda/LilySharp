@@ -35,7 +35,7 @@ public readonly record struct GlissandoLayout(
 /// Calculates glissando layouts from detected glissando items.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/glissando-engraver.cc, scm/define-grobs.scm:1557-1577
+/// LILYPOND-REF: scm/scheme-engravers.scm, scm/define-grobs.scm:1557-1577
 /// Parameters: style=line, gap=0.5, padding=0.5, zigzag-width=0.75
 /// </remarks>
 public static class GlissandoEngraver
@@ -47,8 +47,13 @@ public static class GlissandoEngraver
     private const double Padding = 0.5;
 
     /// <summary>
-    /// Calculates layout positions for all glissando items.
+    /// Calculates layout positions for all glissando items, splitting cross-system
+    /// glissandos into broken pieces (one per system).
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
+    /// LILYPOND-REF: scm/scheme-engravers.scm — Glissando_engraver
+    /// </remarks>
     public static ImmutableArray<GlissandoLayout> Calculate(
         ImmutableArray<GlissandoItem> glissandos,
         ImmutableArray<SystemLayout> systems,
@@ -59,6 +64,7 @@ public static class GlissandoEngraver
             return ImmutableArray<GlissandoLayout>.Empty;
 
         var measureMap = LayoutUtilities.BuildMeasureMap(systems);
+        var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var layouts = new List<GlissandoLayout>();
 
         foreach (var gliss in glissandos)
@@ -68,60 +74,97 @@ public static class GlissandoEngraver
             if (!measureMap.TryGetValue(gliss.EndMeasureIndex, out var endInfo))
                 continue;
 
-            var (startSystem, startMeasure) = startInfo;
-            var (endSystem, endMeasure) = endInfo;
+            var (_, startMeasure) = startInfo;
+            var (_, endMeasure) = endInfo;
 
-            // Get X positions from item layouts
-            double startX = startMeasure.X;
-            double endX = endMeasure.X;
-
-            if (gliss.StartItemIndex < startMeasure.Items.Length)
-                startX += startMeasure.Items[gliss.StartItemIndex].X;
-            if (gliss.EndItemIndex < endMeasure.Items.Length)
-                endX += endMeasure.Items[gliss.EndItemIndex].X;
-
-            // Apply padding: start from right side of start note, end at left side of end note
+            // Real start/end X derived from note attachment.
             // LILYPOND-REF: scm/define-grobs.scm:1560 left attach-dir = RIGHT
             // LILYPOND-REF: scm/define-grobs.scm:1563 right attach-dir = LEFT
-            startX += Padding;
-            endX -= Padding;
+            double realStartX = startMeasure.X;
+            double realEndX = endMeasure.X;
+            if (gliss.StartItemIndex < startMeasure.Items.Length)
+                realStartX += startMeasure.Items[gliss.StartItemIndex].X;
+            if (gliss.EndItemIndex < endMeasure.Items.Length)
+                realEndX += endMeasure.Items[gliss.EndItemIndex].X;
+            realStartX += Padding;
+            realEndX -= Padding;
 
-            // Calculate Y positions from staff positions
-            double staffY = LayoutUtilities.FindStaffYInSystem(startSystem, staffIndex);
-            double staffMiddleY = staffY + staffHeight / 2;
-            double startY = staffMiddleY - gliss.StartStaffPosition / 2.0;
-            double endY = staffMiddleY - gliss.EndStaffPosition / 2.0;
+            var segments = SpannerBreakSubstitution.Split(
+                gliss.StartMeasureIndex, gliss.EndMeasureIndex, systems, measureToSystemIdx);
+            if (segments.IsEmpty)
+                continue;
 
-            // For cross-system glissandos, use endSystem Y
-            if (startSystem.SystemIndex != endSystem.SystemIndex)
+            foreach (var segment in segments)
             {
-                double endStaffY = LayoutUtilities.FindStaffYInSystem(endSystem, staffIndex);
-                double endStaffMiddleY = endStaffY + staffHeight / 2;
-                endY = endStaffMiddleY - gliss.EndStaffPosition / 2.0;
-            }
+                var system = systems[segment.SystemIndex];
+                double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
+                double staffMiddleY = staffY + staffHeight / 2;
+                double startStaffYAbs = staffMiddleY - gliss.StartStaffPosition / 2.0;
+                double endStaffYAbs = staffMiddleY - gliss.EndStaffPosition / 2.0;
 
-            // Apply gap: shorten both ends along the line direction
-            // LILYPOND-REF: lily/line-spanner.cc:457 span_points[d] += -d * gaps[d] * magstep * dz.direction()
-            // LILYPOND-REF: scm/define-grobs.scm:1570 (gap . 0.5)
-            double dx = endX - startX;
-            double dy = endY - startY;
-            double length = Math.Sqrt(dx * dx + dy * dy);
-            if (length > Gap * 2)
-            {
-                double gapRatio = Gap / length;
-                startX += dx * gapRatio;
-                startY += dy * gapRatio;
-                endX -= dx * gapRatio;
-                endY -= dy * gapRatio;
-            }
+                // Resolve segment-local X bounds against the system's measure layouts.
+                // LILYPOND-REF: lily/spanner.cc:124-137 — bounds reattached to system edges.
+                double segStartX, segEndX;
+                if (segment.IsFirst)
+                {
+                    segStartX = realStartX;
+                }
+                else
+                {
+                    segStartX = system.Measures[0].X;
+                }
 
-            layouts.Add(new GlissandoLayout(
-                StartX: startX,
-                StartY: startY,
-                EndX: endX,
-                EndY: endY,
-                Style: gliss.Style,
-                SourcePosition: gliss.SourcePosition));
+                if (segment.IsLast)
+                {
+                    segEndX = realEndX;
+                }
+                else
+                {
+                    var lastMeasure = system.Measures[^1];
+                    segEndX = lastMeasure.X + lastMeasure.Width;
+                }
+
+                // Y at the broken edge "freezes" at the destination pitch — visual cue
+                // that the slide continues on the adjacent system.
+                double segStartY = segment.IsFirst ? startStaffYAbs : endStaffYAbs;
+                double segEndY = segment.IsLast ? endStaffYAbs : startStaffYAbs;
+                if (segment.IsMiddle)
+                {
+                    double mid = (startStaffYAbs + endStaffYAbs) / 2.0;
+                    segStartY = mid;
+                    segEndY = mid;
+                }
+
+                // Apply gap: shorten along the line direction.
+                // LILYPOND-REF: lily/line-spanner.cc:457 span_points[d] += -d * gaps[d] * magstep * dz.direction()
+                // LILYPOND-REF: scm/define-grobs.scm:1570 (gap . 0.5)
+                // Gap is applied only at real-note bounds (not at system-edge cuts).
+                double dx = segEndX - segStartX;
+                double dy = segEndY - segStartY;
+                double length = Math.Sqrt(dx * dx + dy * dy);
+                if (length > Gap * 2)
+                {
+                    double gapRatio = Gap / length;
+                    if (segment.IsFirst)
+                    {
+                        segStartX += dx * gapRatio;
+                        segStartY += dy * gapRatio;
+                    }
+                    if (segment.IsLast)
+                    {
+                        segEndX -= dx * gapRatio;
+                        segEndY -= dy * gapRatio;
+                    }
+                }
+
+                layouts.Add(new GlissandoLayout(
+                    StartX: segStartX,
+                    StartY: segStartY,
+                    EndX: segEndX,
+                    EndY: segEndY,
+                    Style: gliss.Style,
+                    SourcePosition: gliss.SourcePosition));
+            }
         }
 
         return layouts.ToImmutableArray();

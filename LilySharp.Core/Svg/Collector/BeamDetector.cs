@@ -46,24 +46,191 @@ public sealed class BeamDetector
     /// <summary>
     /// Detects all beam groups in a voice.
     /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc — beams may span barlines via manual <c>[</c>/<c>]</c>.
+    /// Two passes:
+    ///   1. Pre-pass: <see cref="DetectCrossMeasureManualBeams"/> scans the voice for
+    ///      manual brackets that open in measure N and close in measure N+M, building
+    ///      one cross-measure <see cref="BeamGroup"/> per matched pair.
+    ///   2. Per-measure pass: <see cref="DetectBeamGroupsInMeasure"/> handles
+    ///      single-measure manual + automatic beaming, skipping items already
+    ///      consumed by the cross-measure pass.
+    /// </remarks>
     public ImmutableArray<BeamGroup> DetectBeamGroups(Voice voice, TimeSignature timeSignature)
     {
         var beamGroups = new List<BeamGroup>();
+        var consumed = new HashSet<(int measureIndex, int itemIndex)>();
 
+        // Pass 1: cross-measure manual beams.
+        DetectCrossMeasureManualBeams(voice, beamGroups, consumed);
+
+        // Pass 2: single-measure detection (skipping consumed items).
         for (int measureIndex = 0; measureIndex < voice.Measures.Length; measureIndex++)
         {
             var measure = voice.Measures[measureIndex];
-            DetectBeamGroupsInMeasure(measure, measureIndex, timeSignature, beamGroups);
+            DetectBeamGroupsInMeasure(measure, measureIndex, timeSignature, beamGroups, consumed);
         }
 
         return beamGroups.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// First pass: identifies <c>[ ... ]</c> ranges that span multiple measures
+    /// and builds a single multi-measure <see cref="BeamGroup"/> for each.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc — multi-measure manual beams.
+    /// Pairs are matched in order: the i-th open <c>[</c> matches the i-th close
+    /// <c>]</c>. When the pair lies entirely within one measure we leave it for
+    /// the per-measure pass; only true cross-measure pairs are handled here.
+    /// </remarks>
+    private void DetectCrossMeasureManualBeams(
+        Voice voice,
+        List<BeamGroup> beamGroups,
+        HashSet<(int, int)> consumed)
+    {
+        // Collect every (measureIndex, itemIndex, isStart) marker.
+        var markers = new List<(int Measure, int Item, bool IsStart)>();
+        for (int mi = 0; mi < voice.Measures.Length; mi++)
+        {
+            var measure = voice.Measures[mi];
+            for (int ii = 0; ii < measure.Items.Length; ii++)
+            {
+                var item = measure.Items[ii];
+                bool hasStart = item switch
+                {
+                    NoteItem n => n.HasBeamStart,
+                    ChordItem c => c.HasBeamStart,
+                    _ => false,
+                };
+                bool hasEnd = item switch
+                {
+                    NoteItem n => n.HasBeamEnd,
+                    ChordItem c => c.HasBeamEnd,
+                    _ => false,
+                };
+                if (hasStart) markers.Add((mi, ii, IsStart: true));
+                if (hasEnd) markers.Add((mi, ii, IsStart: false));
+            }
+        }
+
+        // Match in order using a stack.
+        var openStack = new Stack<(int Measure, int Item)>();
+        foreach (var (mi, ii, isStart) in markers)
+        {
+            if (isStart)
+            {
+                openStack.Push((mi, ii));
+            }
+            else if (openStack.Count > 0)
+            {
+                var (startM, startI) = openStack.Pop();
+                if (startM == mi)
+                    continue; // within-measure: per-measure pass handles it.
+
+                BuildCrossMeasureBeamGroup(voice, startM, startI, mi, ii, beamGroups, consumed);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Constructs a single <see cref="BeamGroup"/> spanning <paramref name="startMeasure"/>
+    /// to <paramref name="endMeasure"/> from a manual <c>[</c>...<c>]</c> pair.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc — cross-bar beam group.
+    /// Each <see cref="BeamMember"/> carries its actual measure index so the
+    /// engraver can resolve per-member X positions against the right MeasureLayout.
+    /// </remarks>
+    private void BuildCrossMeasureBeamGroup(
+        Voice voice,
+        int startMeasure, int startItem,
+        int endMeasure, int endItem,
+        List<BeamGroup> beamGroups,
+        HashSet<(int, int)> consumed)
+    {
+        var allEntries = new List<(MusicItem Item, int Index, Fraction StartPos, int Measure)>();
+        Fraction running = Fraction.Zero;
+
+        for (int mi = startMeasure; mi <= endMeasure; mi++)
+        {
+            var measure = voice.Measures[mi];
+            int firstItem = (mi == startMeasure) ? startItem : 0;
+            int lastItem = (mi == endMeasure) ? endItem : measure.Items.Length - 1;
+
+            // Recompute running position from the start of the measure for accuracy.
+            Fraction positionInMeasure = Fraction.Zero;
+            for (int j = 0; j < firstItem; j++)
+                positionInMeasure += GetDuration(measure.Items[j]);
+
+            for (int ii = firstItem; ii <= lastItem; ii++)
+            {
+                var item = measure.Items[ii];
+                if (IsBeamable(item))
+                {
+                    allEntries.Add((item, ii, positionInMeasure, mi));
+                }
+                positionInMeasure += GetDuration(item);
+                consumed.Add((mi, ii));
+            }
+        }
+
+        if (allEntries.Count < 2)
+            return;
+
+        // Build per-member metadata mirroring CreateBeamGroup but with explicit measure index.
+        var members = new List<BeamMember>(allEntries.Count);
+        int totalPosition = 0;
+        int noteCount = 0;
+        for (int i = 0; i < allEntries.Count; i++)
+        {
+            var (item, itemIdx, _, mi) = allEntries[i];
+            int beamCount = GetBeamCount(item);
+            int staffPosition = GetStaffPosition(item);
+            int beamCountLeft = beamCount;
+            int beamCountRight = beamCount;
+
+            if (i == 0)
+                beamCountLeft = 0;
+            if (i == allEntries.Count - 1)
+                beamCountRight = 0;
+
+            members.Add(new BeamMember(
+                item, beamCount, beamCountLeft, beamCountRight,
+                staffPosition, itemIdx,
+                memberStemUp: staffPosition < 0,
+                measureIndex: mi));
+
+            totalPosition += staffPosition;
+            noteCount++;
+        }
+
+        bool stemUp = noteCount > 0 && (double)totalPosition / noteCount < 0;
+        for (int i = 0; i < members.Count; i++)
+        {
+            var m = members[i];
+            members[i] = new BeamMember(
+                m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
+                m.StaffPosition, m.ItemIndex,
+                memberStemUp: stemUp,
+                targetStaffIndex: m.TargetStaffIndex,
+                measureIndex: m.MeasureIndex);
+        }
+
+        beamGroups.Add(new BeamGroup(
+            members.ToImmutableArray(),
+            measureIndex: startMeasure,
+            startIndex: allEntries[0].Index,
+            stemUp,
+            growDirection: 0));
     }
 
     private void DetectBeamGroupsInMeasure(
         Measure measure,
         int measureIndex,
         TimeSignature timeSig,
-        List<BeamGroup> beamGroups)
+        List<BeamGroup> beamGroups,
+        HashSet<(int, int)>? consumed = null)
     {
         // Phase 0: Detect manual beam groups (c8[ d e f])
         var manualRanges = DetectManualBeamGroups(measure, measureIndex, beamGroups);
@@ -92,8 +259,9 @@ public sealed class BeamDetector
             var item = measure.Items[i];
             var duration = GetDuration(item);
 
-            // Skip items covered by manual beam groups
-            if (IsInManualRange(i, manualRanges))
+            // Skip items covered by manual beam groups (single-measure or cross-measure)
+            if (IsInManualRange(i, manualRanges) ||
+                (consumed != null && consumed.Contains((measureIndex, i))))
             {
                 // Non-beamable break logic still applies for position tracking
                 if (currentGroup.Count >= 2)

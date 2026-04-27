@@ -66,6 +66,71 @@ public sealed record StaffSpacingParameters
     };
 
     /// <summary>
+    /// Spacing for non-spaceable (loose) staves that use staff-affinity.
+    /// Kept for backward compatibility; equivalent to <see cref="NonStaffRelatedStaff"/>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:240-252 staff-affinity
+    /// </remarks>
+    public VerticalSpacingSpec NonStaff { get; init; } = new()
+    {
+        BasicDistance = 5,
+        MinimumDistance = 3,
+        Padding = 0.5,
+        Stretchability = 2
+    };
+
+    /// <summary>
+    /// Spacing between a non-staff line and the nearest staff in the direction of its
+    /// <c>staff-affinity</c> ("close" / related direction).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grob-properties.scm:826-833 nonstaff-relatedstaff-spacing
+    /// LILYPOND-REF: ly/engraver-init.ly:649-652 Lyrics defaults
+    /// (basic-distance . 5.5) (padding . 0.5) (stretchability . 1)
+    /// </remarks>
+    public VerticalSpacingSpec NonStaffRelatedStaff { get; init; } = new()
+    {
+        BasicDistance = 5.5,
+        MinimumDistance = 0,
+        Padding = 0.5,
+        Stretchability = 1
+    };
+
+    /// <summary>
+    /// Spacing between a non-staff line and the staff in the direction opposite to
+    /// its <c>staff-affinity</c> ("far" / unrelated direction).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grob-properties.scm:837-841 nonstaff-unrelatedstaff-spacing
+    /// LILYPOND-REF: scm/define-grobs.scm:4239 VerticalAxisGroup default (padding . 0.5)
+    /// LILYPOND-REF: ly/engraver-init.ly:658 Lyrics override padding=1.5
+    /// </remarks>
+    public VerticalSpacingSpec NonStaffUnrelatedStaff { get; init; } = new()
+    {
+        BasicDistance = 0,
+        MinimumDistance = 0,
+        Padding = 1.5,
+        Stretchability = 0
+    };
+
+    /// <summary>
+    /// Spacing between two adjacent non-staff lines (e.g., two consecutive Lyrics lines).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grob-properties.scm:819-823 nonstaff-nonstaff-spacing
+    /// LILYPOND-REF: ly/engraver-init.ly:653-657 Lyrics defaults
+    /// (basic-distance . 0) (minimum-distance . 2.8) (padding . 0.2) (stretchability . 0)
+    /// </remarks>
+    public VerticalSpacingSpec NonStaffNonStaff { get; init; } = new()
+    {
+        BasicDistance = 0,
+        MinimumDistance = 2.8,
+        Padding = 0.2,
+        Stretchability = 0
+    };
+
+    /// <summary>
     /// Applies user overrides from \override StaffGrouper.* properties.
     /// Returns a new StaffSpacingParameters with overridden values.
     /// </summary>

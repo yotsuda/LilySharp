@@ -120,15 +120,14 @@ public static class HairpinEngraver
         if (hairpins.IsDefaultOrEmpty)
             return ImmutableArray<HairpinLayout>.Empty;
 
-        // Build measure → system index mapping
-        var measureToSystemIdx = new Dictionary<int, int>();
-        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
-        {
-            foreach (var ml in systems[sysIdx].Measures)
-                measureToSystemIdx[ml.MeasureIndex] = sysIdx;
-        }
-
+        // LILYPOND-REF: lily/system.cc:143-192 — fixup_refpoints walks all systems once.
+        var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var layouts = ImmutableArray.CreateBuilder<HairpinLayout>();
+
+        double fullOpening = Height / 2.0;
+        // LILYPOND-REF: lily/hairpin.cc:180-220 — broken hairpin height fractions
+        double continuedOpening = fullOpening * ContinuedFraction;
+        double continuingOpening = fullOpening * ContinuingFraction;
 
         foreach (var hairpin in hairpins)
         {
@@ -136,86 +135,42 @@ public static class HairpinEngraver
                 hairpin.EndMeasureIndex >= measureLayouts.Length)
                 continue;
 
-            if (!measureToSystemIdx.TryGetValue(hairpin.StartMeasureIndex, out int startSysIdx) ||
-                !measureToSystemIdx.TryGetValue(hairpin.EndMeasureIndex, out int endSysIdx))
+            // LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing splits the
+            // spanner once per system; bounds are reattached to the system edges.
+            var segments = SpannerBreakSubstitution.Split(
+                hairpin.StartMeasureIndex, hairpin.EndMeasureIndex, systems, measureToSystemIdx);
+            if (segments.IsEmpty)
                 continue;
 
-            double fullOpening = Height / 2.0;
-
-            if (startSysIdx == endSysIdx)
+            foreach (var segment in segments)
             {
-                // Same system: normal hairpin
-                var (startX, endX) = CalculateEndpoints(hairpin, measureLayouts);
+                var system = systems[segment.SystemIndex];
+
+                double segStartX = segment.IsFirst
+                    ? CalculateStartX(hairpin, measureLayouts)
+                    : system.Measures[0].X;
+                double segEndX = segment.IsLast
+                    ? CalculateEndX(hairpin, measureLayouts)
+                    : system.Measures[^1].X + system.Measures[^1].Width;
+
+                if (segEndX - segStartX < MinimumLength)
+                    segEndX = segStartX + MinimumLength;
+
                 double startOpening, endOpening;
                 if (hairpin.Direction == HairpinDirection.Crescendo)
                 {
-                    startOpening = 0;
-                    endOpening = fullOpening;
+                    startOpening = segment.IsFirst ? 0 : continuingOpening;
+                    endOpening = segment.IsLast ? fullOpening : continuedOpening;
                 }
                 else
                 {
-                    startOpening = fullOpening;
-                    endOpening = 0;
+                    startOpening = segment.IsFirst ? fullOpening : continuingOpening;
+                    endOpening = segment.IsLast ? 0 : continuedOpening;
                 }
 
                 layouts.Add(new HairpinLayout(
-                    hairpin.StartMeasureIndex, startX, endX, BaseY,
+                    segment.StartMeasureIndex, segStartX, segEndX, BaseY,
                     startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition));
-            }
-            else
-            {
-                // LILYPOND-REF: lily/hairpin.cc:180-220 — broken hairpin across system(s)
-                double continuedOpening = fullOpening * ContinuedFraction;
-                double continuingOpening = fullOpening * ContinuingFraction;
-
-                for (int sysIdx = startSysIdx; sysIdx <= endSysIdx; sysIdx++)
-                {
-                    bool isFirst = sysIdx == startSysIdx;
-                    bool isLast = sysIdx == endSysIdx;
-                    var system = systems[sysIdx];
-
-                    double segStartX, segEndX;
-                    int segStartMeasure;
-
-                    if (isFirst)
-                    {
-                        segStartX = CalculateStartX(hairpin, measureLayouts);
-                        segEndX = system.Measures[^1].X + system.Measures[^1].Width;
-                        segStartMeasure = hairpin.StartMeasureIndex;
-                    }
-                    else if (isLast)
-                    {
-                        segStartX = system.Measures[0].X;
-                        segEndX = CalculateEndX(hairpin, measureLayouts);
-                        segStartMeasure = system.Measures[0].MeasureIndex;
-                    }
-                    else
-                    {
-                        // Middle system: spans entire system
-                        segStartX = system.Measures[0].X;
-                        segEndX = system.Measures[^1].X + system.Measures[^1].Width;
-                        segStartMeasure = system.Measures[0].MeasureIndex;
-                    }
-
-                    if (segEndX - segStartX < MinimumLength)
-                        segEndX = segStartX + MinimumLength;
-
-                    double startOpening, endOpening;
-                    if (hairpin.Direction == HairpinDirection.Crescendo)
-                    {
-                        startOpening = isFirst ? 0 : continuingOpening;
-                        endOpening = isLast ? fullOpening : continuedOpening;
-                    }
-                    else
-                    {
-                        startOpening = isFirst ? fullOpening : continuingOpening;
-                        endOpening = isLast ? 0 : continuedOpening;
-                    }
-
-                    layouts.Add(new HairpinLayout(
-                        segStartMeasure, segStartX, segEndX, BaseY,
-                        startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition));
-                }
             }
         }
 

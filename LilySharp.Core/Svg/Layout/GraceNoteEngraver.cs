@@ -93,7 +93,7 @@ public static class GraceNoteEngraver
 
             var mainNoteLayout = measureLayout.Items[grace.MainNoteItemIndex];
 
-            // LILYPOND-REF: lily/grace-spacing.cc:36-80 — spring-based grace group width
+            // LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 — spring-based grace group width
             double graceGroupWidth = SpacingRules.CalculateGraceGroupSpringWidth(grace.Notes)
                                    - SpacingRules.GraceToMainRod;  // Exclude junction rod (added separately below)
 
@@ -155,7 +155,7 @@ public static class GraceNoteEngraver
     /// Gets the total width required for a grace note group using spring-based calculation.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/grace-spacing.cc:36-80 Grace_spacing::calc_springs
+    /// LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 Grace_spacing::calc_springs
     /// Uses per-group common shortest duration for LP-compliant spacing.
     /// </remarks>
     public static double GetGraceGroupWidth(ImmutableArray<GraceNoteInfo> notes)

@@ -61,7 +61,7 @@ public sealed record NoteCollisionInfo
     /// Whether the up-stem notehead should be hidden (head wipe).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:381-407
+    /// LILYPOND-REF: lily/note-collision.cc:381-407
     /// Head wipe hides overlapping noteheads in merged multi-voice contexts.
     /// </remarks>
     public bool UpHeadTransparent { get; }
@@ -70,7 +70,7 @@ public sealed record NoteCollisionInfo
     /// Whether the down-stem notehead should be hidden (head wipe).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:381-407
+    /// LILYPOND-REF: lily/note-collision.cc:381-407
     /// In standard merge cases, the down-stem notehead is wiped.
     /// </remarks>
     public bool DownHeadTransparent { get; }
@@ -80,7 +80,7 @@ public sealed record NoteCollisionInfo
     /// for notes on staff lines.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:411-448
+    /// LILYPOND-REF: lily/note-collision.cc:411-448
     /// In collision contexts, down-stem dots shift below the line to avoid
     /// colliding with up-stem voice notes/dots.
     /// </remarks>
@@ -106,7 +106,7 @@ public sealed record NoteCollisionInfo
 /// Parameters for note collision handling.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/note-collision-interface.cc:299-350 check_meshing_chords()
+/// LILYPOND-REF: lily/note-collision.cc:299-350 check_meshing_chords()
 /// LILYPOND-REF: scm/define-grobs.scm:2537 NoteCollision
 ///
 /// IMPLEMENTED — shift multipliers now match LilyPond:
@@ -146,7 +146,7 @@ public sealed record NoteCollisionParameters
     /// Horizontal shift amount for close half collision (in notehead widths).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:323 close_half_collide
+    /// LILYPOND-REF: lily/note-collision.cc:323 close_half_collide
     /// </remarks>
     public double CloseHalfShift { get; init; } = 0.52;
 
@@ -154,7 +154,7 @@ public sealed record NoteCollisionParameters
     /// Horizontal shift amount for distant half collision (in notehead widths).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:325 distant_half_collide
+    /// LILYPOND-REF: lily/note-collision.cc:325 distant_half_collide
     /// </remarks>
     public double DistantHalfShift { get; init; } = 0.4;
 
@@ -162,7 +162,7 @@ public sealed record NoteCollisionParameters
     /// Horizontal shift amount for full collision (in notehead widths).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:321 full_collide
+    /// LILYPOND-REF: lily/note-collision.cc:321 full_collide
     /// </remarks>
     public double FullCollideShift { get; init; } = 0.5;
 
@@ -170,7 +170,7 @@ public sealed record NoteCollisionParameters
     /// Horizontal shift amount for touch condition (in notehead widths).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:317 stem_to_stem
+    /// LILYPOND-REF: lily/note-collision.cc:317 stem_to_stem
     /// </remarks>
     public double TouchShift { get; init; } = 0.65;
 
@@ -179,7 +179,7 @@ public sealed record NoteCollisionParameters
     /// Much smaller than CloseHalfShift because noteheads interlock tightly.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:180-230 check_meshing_chords()
+    /// LILYPOND-REF: lily/note-collision.cc:180-230 check_meshing_chords()
     /// Value 0.17 means noteheads overlap significantly when they mesh (interlock).
     /// </remarks>
     public double MeshingGeneralShift { get; init; } = 0.17;
@@ -190,7 +190,7 @@ public sealed record NoteCollisionParameters
     /// extends the notehead boundary.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:180-230 check_meshing_chords()
+    /// LILYPOND-REF: lily/note-collision.cc:180-230 check_meshing_chords()
     /// </remarks>
     public double MeshingDottedShift { get; init; } = 0.1;
 }
@@ -262,7 +262,7 @@ public sealed class NoteCollision
         // Calculate offsets
         if (mergePossible && fullCollide && !closeHalf && !distantHalf)
         {
-            // LILYPOND-REF: lily/note-collision-interface.cc:252-261, 381-407
+            // LILYPOND-REF: lily/note-collision.cc:252-261, 381-407
             // Can merge — determine which head to hide.
             // For same-headed merge: down-stem head is wiped.
             // For differently-headed merge (half+quarter/eighth): the filled
@@ -288,7 +288,7 @@ public sealed class NoteCollision
                 shouldMerge: true, upHeadTransparent: hideUp, downHeadTransparent: hideDown);
         }
 
-        // LILYPOND-REF: lily/note-collision-interface.cc:411-448
+        // LILYPOND-REF: lily/note-collision.cc:411-448
         // Detect whether down-stem dots should shift down instead of up.
         // When two voices collide, down-stem dots on staff lines must shift
         // below the line to avoid colliding with up-stem notes/dots.
@@ -321,7 +321,7 @@ public sealed class NoteCollision
             }
             else if (closeHalf || distantHalf)
             {
-                // LILYPOND-REF: lily/note-collision-interface.cc:180-230 check_meshing_chords()
+                // LILYPOND-REF: lily/note-collision.cc:180-230 check_meshing_chords()
                 // Meshing (interlocking noteheads) requires ALL of:
                 // - Notes are a second apart (already guaranteed by closeHalf/distantHalf)
                 // - Neither note is a whole note (round noteheads can't mesh)
@@ -349,7 +349,7 @@ public sealed class NoteCollision
                 }
                 else if (differentHeadGroups)
                 {
-                    // LILYPOND-REF: lily/note-collision-interface.cc:297-312
+                    // LILYPOND-REF: lily/note-collision.cc:297-312
                     // Different head groups but chords (can't fully mesh):
                     // partial interlocking with standard half collision shift.
                     shiftAmount = closeHalf
@@ -359,7 +359,7 @@ public sealed class NoteCollision
                 }
                 else
                 {
-                    // LILYPOND-REF: lily/note-collision-interface.cc:180-230
+                    // LILYPOND-REF: lily/note-collision.cc:180-230
                     // Same head groups: noteheads cannot interlock at all.
                     // In LilyPond's stem-reference coordinate system, close_half_collide
                     // (0.52) produces visual separation because up/down stems place
@@ -416,7 +416,7 @@ public sealed class NoteCollision
         if (upNoteValue <= 0 || downNoteValue <= 0)
             return false;
 
-        // LILYPOND-REF: lily/note-collision-interface.cc:252-261
+        // LILYPOND-REF: lily/note-collision.cc:252-261
         // Whole+half cannot merge (both open noteheads, only stem distinguishes)
         if ((upNoteValue == 1 && downNoteValue == 2) ||
             (upNoteValue == 2 && downNoteValue == 1))
@@ -426,7 +426,7 @@ public sealed class NoteCollision
         if (upDots != downDots && !_params.MergeDifferentlyDotted)
             return false;
 
-        // LILYPOND-REF: lily/note-collision-interface.cc:252-261
+        // LILYPOND-REF: lily/note-collision.cc:252-261
         // Half+quarter/eighth merges: when merge-differently-headed is true,
         // notes with different noteheads (open vs filled) can merge.
         // The open notehead (half) is kept visible.
@@ -491,8 +491,8 @@ public sealed class NoteCollision
     /// Returns (VoiceId, ItemIndex, XOffset, HeadTransparent, DotForceDown) for each entry.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision-interface.cc:381-407 — head wipe
-    /// LILYPOND-REF: lily/note-collision-interface.cc:420-480 — multi-voice cascading
+    /// LILYPOND-REF: lily/note-collision.cc:381-407 — head wipe
+    /// LILYPOND-REF: lily/note-collision.cc:420-480 — multi-voice cascading
     /// For 3+ voices, each additional voice in the same stem direction gets a
     /// cumulative shift of 1 notehead width beyond the base collision offset.
     /// </remarks>
@@ -531,7 +531,7 @@ public sealed class NoteCollision
         // Analyze collision between primary up and down voices
         var collision = AnalyzeCollision(upPositions, downPositions, upNoteValue, downNoteValue, upDots, downDots);
 
-        // LILYPOND-REF: lily/note-collision-interface.cc:420-480
+        // LILYPOND-REF: lily/note-collision.cc:420-480
         // Apply cascading offsets for 3+ voices.
         // Voice priority order within each direction:
         //   Up-stem:  Voice 1 (base), Voice 3 (+1 notehead), Voice 5 (+2 noteheads), ...

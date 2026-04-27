@@ -141,6 +141,16 @@ public sealed record BeamMember
     public int ItemIndex { get; }
 
     /// <summary>
+    /// Measure that this beam member lives in. Defaults to <c>-1</c> meaning
+    /// "same as the parent <see cref="BeamGroup.MeasureIndex"/>" — the
+    /// canonical single-measure beam case. Cross-measure manual beams (via
+    /// <c>c8[ ... | ... ]</c>) set this explicitly so the engraver can resolve
+    /// each member's X position against the correct MeasureLayout.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/beam.cc — beams may span barlines.</remarks>
+    public int MeasureIndex { get; }
+
+    /// <summary>
     /// Per-member stem direction for kneed beams.
     /// For non-kneed beams, matches the group's StemUp.
     /// </summary>
@@ -165,7 +175,8 @@ public sealed record BeamMember
         int staffPosition,
         int itemIndex,
         bool memberStemUp = true,
-        int targetStaffIndex = -1)
+        int targetStaffIndex = -1,
+        int measureIndex = -1)
     {
         Item = item;
         BeamCount = beamCount;
@@ -175,7 +186,15 @@ public sealed record BeamMember
         ItemIndex = itemIndex;
         MemberStemUp = memberStemUp;
         TargetStaffIndex = targetStaffIndex;
+        MeasureIndex = measureIndex;
     }
+
+    /// <summary>
+    /// Resolves the actual measure index for this member, falling back to the
+    /// supplied default when <see cref="MeasureIndex"/> is the sentinel <c>-1</c>.
+    /// </summary>
+    public int ResolveMeasureIndex(int defaultMeasureIndex)
+        => MeasureIndex >= 0 ? MeasureIndex : defaultMeasureIndex;
 }
 
 /// <summary>

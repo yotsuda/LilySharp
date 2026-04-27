@@ -29,6 +29,17 @@ public abstract record MusicItem
 
     /// <summary>Source position in the syntax tree for click-to-source mapping.</summary>
     public abstract int SourcePosition { get; }
+
+    /// <summary>
+    /// Whether this item is a "loose" column that does not participate in spacing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:200-280
+    /// Loose grobs (tuplet brackets, fermata marks, etc.) are skipped during
+    /// spring creation. They are positioned relative to their parent columns
+    /// rather than being spacing contributors.
+    /// </remarks>
+    public virtual bool IsLoose => false;
 }
 
 /// <summary>
@@ -64,6 +75,45 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this note is a cue note (drawn at reduced size).</summary>
     /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4, magstep(-4) ≈ 0.66</remarks>
     public bool IsCue { get; }
+    /// <summary>
+    /// Whether this accidental is editorial (suggestion), rendered in parentheses with smaller size.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/accidental.cc:130-166 — AccidentalSuggestion
+    /// Different from IsCourtesy: editorial accidentals are musicological suggestions
+    /// (e.g., musica ficta), while courtesy accidentals are reminders of canceled accidentals.
+    /// </remarks>
+    public bool IsEditorial { get; }
+    /// <summary>
+    /// Optional finger number (1..5) attached to this note. Null when no fingering.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob from finger event
+    /// LilyPond syntax: <c>c4-1</c>; LilySharp surface: <c>c4@finger.1</c> via the
+    /// existing compound-mark parser (no parser change required).
+    /// </remarks>
+    public int? Fingering { get; }
+
+    /// <summary>
+    /// True when this note has a laissez-vibrer (l.v.) tie — a half-tie pointing
+    /// to the right from the note, indicating "let ring".
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/laissez-vibrer-engraver.cc — LaissezVibrerTie grob
+    /// LilyPond syntax: <c>c4\laissezVibrer</c>; LilySharp surface: <c>c4@laissezVibrer</c>.
+    /// </remarks>
+    public bool HasLaissezVibrer { get; }
+
+    /// <summary>
+    /// True when this note has a repeat-tie — a half-tie pointing in from the LEFT,
+    /// typically used after a repeat barline to indicate continuation from the
+    /// previous volta.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/repeat-tie-engraver.cc — RepeatTie grob
+    /// LilyPond syntax: <c>c4\repeatTie</c>; LilySharp surface: <c>c4@repeatTie</c>.
+    /// </remarks>
+    public bool HasRepeatTie { get; }
     private readonly int _sourcePosition;
 
     public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
@@ -75,7 +125,7 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this note has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
 
-    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasGlissando = false, int featherDirection = 0, bool isCourtesy = false, bool isCue = false)
+    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasGlissando = false, int featherDirection = 0, bool isCourtesy = false, bool isCue = false, bool isEditorial = false, int? fingering = null, bool hasLaissezVibrer = false, bool hasRepeatTie = false)
     {
         StaffPosition = staffPosition;
         BaseDuration = baseDuration;
@@ -92,6 +142,10 @@ public sealed record NoteItem : MusicItem
         FeatherDirection = Math.Clamp(featherDirection, -1, 1);
         IsCourtesy = isCourtesy;
         IsCue = isCue;
+        IsEditorial = isEditorial;
+        Fingering = fingering;
+        HasLaissezVibrer = hasLaissezVibrer;
+        HasRepeatTie = hasRepeatTie;
         _sourcePosition = sourcePosition;
     }
 }
@@ -124,7 +178,17 @@ public readonly record struct ChordNoteInfo(
     string? Accidental,
     bool NeedsLedgerLines,
     /// <summary>Whether this accidental is a courtesy (cautionary) accidental shown in parentheses.</summary>
-    bool IsCourtesy = false
+    bool IsCourtesy = false,
+    /// <summary>
+    /// Whether this accidental is editorial (suggestion), rendered in parentheses with smaller size.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/accidental.cc:130-166 — AccidentalSuggestion</remarks>
+    bool IsEditorial = false,
+    /// <summary>
+    /// Optional per-pitch finger number attached via <c>@finger.N</c> inside a chord.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/fingering-engraver.cc — FingeringColumn stacking.</remarks>
+    int? Fingering = null
 );
 
 /// <summary>
@@ -157,7 +221,14 @@ public sealed record ChordItem : MusicItem
     /// <summary>Whether this chord has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
 
-    public ChordItem(ImmutableArray<ChordNoteInfo> notes, Fraction baseDuration, int dots, int sourcePosition, int tremoloBeams = 0, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasArpeggio = false, bool isCue = false)
+    /// <summary>
+    /// True when the chord is followed by <c>~</c>: every matching pitch in the
+    /// next chord/note is tied (LP TieColumn behaviour).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/tie-column.cc — TieColumn groups chord ties.</remarks>
+    public bool HasTieStart { get; }
+
+    public ChordItem(ImmutableArray<ChordNoteInfo> notes, Fraction baseDuration, int dots, int sourcePosition, int tremoloBeams = 0, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasArpeggio = false, bool isCue = false, bool hasTieStart = false)
     {
         Notes = notes;
         BaseDuration = baseDuration;
@@ -167,6 +238,7 @@ public sealed record ChordItem : MusicItem
         HasBeamEnd = hasBeamEnd;
         HasArpeggio = hasArpeggio;
         IsCue = isCue;
+        HasTieStart = hasTieStart;
         _sourcePosition = sourcePosition;
     }
 }

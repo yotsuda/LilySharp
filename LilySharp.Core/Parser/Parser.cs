@@ -549,7 +549,7 @@ internal sealed class Parser
             SyntaxKind.PitchA or SyntaxKind.PitchB;
     }
 
-    private PitchGreen ParsePitch()
+    private PitchGreen ParsePitch(bool inChord = false)
     {
         var pitchToken = Advance(); // Consume pitch token (c, cis, des, etc.)
         var octaveMarks = new List<GreenNode?>();
@@ -560,7 +560,18 @@ internal sealed class Parser
             octaveMarks.Add(Advance());
         }
 
-        return new PitchGreen(pitchToken, [.. octaveMarks]);
+        // LILYPOND-REF: lily/lily-parser.yy — chord_body grammar accepts post-event
+        // articulations on each pitch (e.g., <c@finger.1 e@finger.3>). Outside of
+        // chord brackets, articulations belong to the surrounding NoteSyntax and
+        // are consumed by ParseNote's own ParseArticulations call — we must NOT
+        // pre-consume them here or they'd never reach the note.
+        if (!inChord)
+            return new PitchGreen(pitchToken, [.. octaveMarks]);
+
+        var articulations = ParseArticulations();
+        if (articulations.Length == 0)
+            return new PitchGreen(pitchToken, [.. octaveMarks]);
+        return new PitchGreen(pitchToken, [.. octaveMarks], articulations);
     }
 
     private DurationGreen? ParseOptionalDuration()
@@ -592,7 +603,28 @@ internal sealed class Parser
     {
         var restToken = Advance();
         var duration = ParseOptionalDuration();
-        return new RestGreen(restToken, duration);
+
+        // LILYPOND-REF: lily/lily-parser.yy — R<dur>*N grammar.
+        // Only valid for full-measure rests (R), but we accept the syntax for any
+        // rest token and let semantic analysis enforce the constraint if needed.
+        SyntaxToken? asterisk = null;
+        SyntaxToken? measureCount = null;
+        if (Check(SyntaxKind.Asterisk))
+        {
+            asterisk = Advance();
+            if (Check(SyntaxKind.IntegerLiteral))
+            {
+                measureCount = Advance();
+            }
+            else
+            {
+                var span = new TextSpan(_textPosition, Current.FullWidth);
+                _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                    $"Expected integer measure-count after '*', found '{Current.Kind}'");
+            }
+        }
+
+        return new RestGreen(restToken, duration, asterisk, measureCount);
     }
 
     private ChordGreen ParseChord()
@@ -602,7 +634,8 @@ internal sealed class Parser
 
         while (IsPitchStart())
         {
-            pitches.Add(ParsePitch());
+            // LILYPOND-REF: lily/lily-parser.yy chord_body — per-pitch articulations.
+            pitches.Add(ParsePitch(inChord: true));
         }
 
         var closeAngle = Expect(SyntaxKind.CloseAngle);

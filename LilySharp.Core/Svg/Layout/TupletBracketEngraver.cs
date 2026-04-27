@@ -20,11 +20,17 @@ using LilySharp.Core.Svg.Model;
 namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
-/// Layout information for a tuplet bracket.
+/// Layout information for a tuplet bracket together with its number.
 /// All coordinates are in staff spaces.
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: lily/tuplet-bracket.cc:200-350 print method
+/// LILYPOND-REF: lily/tuplet-number.cc — TupletNumber grob (LP keeps it as its
+/// own grob, but the rendered stencil is always centered on the bracket).
+/// LilySharp combines bracket + number into one Layout record; the number's
+/// position derives from the bracket midpoint and ShowBracket=false suppresses
+/// the bracket lines (number-only display, matching LP's standard appearance
+/// for fully beamed tuplets).
 /// </remarks>
 public readonly record struct TupletBracketLayout(
     int MeasureIndex,           // Measure containing this tuplet
@@ -36,7 +42,21 @@ public readonly record struct TupletBracketLayout(
     bool IsStemUp,              // Whether bracket goes above (true) or below (false)
     bool ShowBracket,           // False = all notes beamed, show number only
     int SourcePosition          // For click-to-source mapping
-);
+)
+{
+    /// <summary>
+    /// X coordinate of the tuplet number's visual center (LP TupletNumber X).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-number.cc — TupletNumber sits at bracket midpoint.
+    /// </remarks>
+    public double NumberX => (StartX + EndX) / 2.0;
+
+    /// <summary>
+    /// Y coordinate of the tuplet number's visual center (LP TupletNumber Y).
+    /// </summary>
+    public double NumberY => (StartY + EndY) / 2.0;
+}
 
 /// <summary>
 /// Calculates positions for tuplet brackets.

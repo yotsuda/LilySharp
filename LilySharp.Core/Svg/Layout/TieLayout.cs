@@ -51,6 +51,20 @@ public sealed record TieLayout
     /// <summary>Direction: true = curve up, false = curve down.</summary>
     public bool CurveUp => Tie.CurveUp;
 
+    /// <summary>
+    /// True if this layout is the right-side piece of a tie split at a system break
+    /// (the left bound has been reattached to the system's left edge).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/item.cc:127-135 — break_status_dir == LEFT broken piece.</remarks>
+    public bool IsBrokenLeft { get; }
+
+    /// <summary>
+    /// True if this layout is the left-side piece of a tie split at a system break
+    /// (the right bound has been reattached to the system's right edge).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/item.cc:127-135 — break_status_dir == RIGHT broken piece.</remarks>
+    public bool IsBrokenRight { get; }
+
     public TieLayout(
         Model.TieItem tie,
         double startX,
@@ -58,7 +72,9 @@ public sealed record TieLayout
         double endX,
         double endY,
         (double X, double Y) control1,
-        (double X, double Y) control2)
+        (double X, double Y) control2,
+        bool isBrokenLeft = false,
+        bool isBrokenRight = false)
     {
         Tie = tie;
         StartX = startX;
@@ -67,5 +83,7 @@ public sealed record TieLayout
         EndY = endY;
         Control1 = control1;
         Control2 = control2;
+        IsBrokenLeft = isBrokenLeft;
+        IsBrokenRight = isBrokenRight;
     }
 }

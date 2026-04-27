@@ -99,6 +99,8 @@ public sealed class SlurScoringProblem
     private readonly IReadOnlyList<SlurObstacle>? _obstacles;
     private readonly IReadOnlyList<SlurLayout>? _existingSlurs;
     private readonly double _staffHeight;
+    private readonly bool _isBrokenLeft;
+    private readonly bool _isBrokenRight;
 
     // Musical dy: pitch difference in staff spaces
     private readonly double _musicalDy;
@@ -115,7 +117,9 @@ public sealed class SlurScoringProblem
         SlurScoreParameters? parameters = null,
         IReadOnlyList<SlurObstacle>? obstacles = null,
         IReadOnlyList<SlurLayout>? existingSlurs = null,
-        double staffHeight = 4.0)
+        double staffHeight = 4.0,
+        bool isBrokenLeft = false,
+        bool isBrokenRight = false)
     {
         _slur = slur;
         _startX = startX;
@@ -126,6 +130,8 @@ public sealed class SlurScoringProblem
         _obstacles = obstacles;
         _existingSlurs = existingSlurs;
         _staffHeight = staffHeight;
+        _isBrokenLeft = isBrokenLeft;
+        _isBrokenRight = isBrokenRight;
 
         // Musical dy: distance in SVG coordinates (Y increases downward)
         // Staff positions are inverted: higher pitch = lower Y in SVG
@@ -674,6 +680,8 @@ public sealed class SlurScoringProblem
             config.EndX,
             config.EndY,
             control1,
-            control2);
+            control2,
+            isBrokenLeft: _isBrokenLeft,
+            isBrokenRight: _isBrokenRight);
     }
 }

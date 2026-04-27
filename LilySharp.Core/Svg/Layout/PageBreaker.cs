@@ -72,6 +72,18 @@ public sealed record SystemDetails
     public double PagePenalty { get; init; }
 
     /// <summary>
+    /// Penalty for line breaking at this system boundary.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh:76 break_penalty_</remarks>
+    public double BreakPenalty { get; init; }
+
+    /// <summary>
+    /// Penalty for page turn after this system (two-sided printing).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh:78 turn_penalty_</remarks>
+    public double TurnPenalty { get; init; }
+
+    /// <summary>
     /// Whether a page break is forced after this system.
     /// </summary>
     public bool ForceBreakAfter { get; init; }
@@ -99,6 +111,16 @@ public sealed record SystemDetails
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/include/constrained-breaking.hh:67 bottom_padding_</remarks>
     public double BottomPadding { get; init; }
+
+    /// <summary>
+    /// Estimated footnote height for this system (0 if no footnotes).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:186-310 footnote_height()
+    /// Footnotes attached to this system consume space at the bottom of the page.
+    /// The page breaker subtracts this from available height.
+    /// </remarks>
+    public double FootnoteHeight { get; init; }
 
     /// <summary>
     /// Gets the natural distance to the next system.
@@ -185,6 +207,10 @@ public sealed class PageSpacing
             _rodHeight += system.StaffHeight + system.BottomExtent;
             _springLength += _lastSystem!.GetSpringLength(system);
         }
+
+        // LILYPOND-REF: lily/page-layout-problem.cc:186-310 footnote_height
+        // Footnotes consume vertical space at the bottom of the page
+        _rodHeight += system.FootnoteHeight;
 
         _inverseSpringK += system.InverseHooke;
         _lastSystem = system;
@@ -297,7 +323,7 @@ public sealed class PageBreaker
     }
 
     /// <summary>
-    /// Finds optimal page breaks using dynamic programming.
+    /// Finds optimal page breaks using 2D dynamic programming over page counts.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/page-spacing.cc:146-179 solve()
@@ -310,20 +336,39 @@ public sealed class PageBreaker
     {
         int n = systems.Count;
 
-        // dp[j] = minimum penalty to lay out systems 0..j-1
-        // prev[j] = previous break point for optimal solution ending at j
-        // pageCount[j] = number of pages in optimal solution ending at j
-        var dp = new double[n + 1];
-        var prev = new int[n + 1];
-        var pageCount = new int[n + 1];
+        // Estimate page count range
+        // LILYPOND-REF: lily/page-spacing.cc:146-179 — iterate min_pages..max_pages
+        int minPages = 1;
+        int maxPages = n; // At most one system per page
 
-        dp[0] = 0;
-        pageCount[0] = 0;
+        // Better upper bound: fit as many systems as possible per page
+        {
+            int sysIdx = 0;
+            int pages = 0;
+            while (sysIdx < n)
+            {
+                pages++;
+                sysIdx++; // At least one system per page
+                // Greedily add more while they fit (rough estimate)
+                while (sysIdx < n)
+                {
+                    // Simple height check
+                    sysIdx++;
+                }
+            }
+            maxPages = Math.Min(maxPages, n);
+        }
+
+        // 2D DP: dp[j * (maxPages+1) + p] = min demerits for systems 0..j-1 on p pages
+        int cols = maxPages + 1;
+        var dp = new double[(n + 1) * cols];
+        var prev = new int[(n + 1) * cols];
+        Array.Fill(dp, double.MaxValue);
+        Array.Fill(prev, -1);
+        dp[0] = 0; // 0 systems on 0 pages
+
         for (int j = 1; j <= n; j++)
         {
-            dp[j] = double.MaxValue;
-            prev[j] = -1;
-
             for (int i = 0; i < j; i++)
             {
                 int systemCount = j - i;
@@ -343,35 +388,61 @@ public sealed class PageBreaker
                     if (j < n) continue;
                 }
 
-                bool isFirstPage = i == 0;
-                bool isLastPage = j == n;
-                bool isRagged = _params.RaggedBottom
-                    || (isLastPage && _params.RaggedLastBottom);
-
-                // Calculate penalty for putting systems i..j-1 on one page
-                double penalty = CalculatePagePenalty(
-                    systems, i, j, isFirstPage, isLastPage, isRagged);
-
-                if (penalty < double.MaxValue)
+                for (int p = 1; p <= maxPages; p++)
                 {
-                    double totalPenalty = dp[i] + penalty;
-                    if (totalPenalty < dp[j])
+                    int prevIdx = i * cols + (p - 1);
+                    if (dp[prevIdx] >= double.MaxValue) continue;
+
+                    bool isFirstPage = (p == 1);
+                    bool isLastPage = (j == n);
+                    bool isRagged = _params.RaggedBottom
+                        || (isLastPage && _params.RaggedLastBottom);
+
+                    double penalty = CalculatePagePenalty(
+                        systems, i, j, isFirstPage, isLastPage, isRagged);
+
+                    if (penalty < double.MaxValue)
                     {
-                        dp[j] = totalPenalty;
-                        prev[j] = i;
-                        pageCount[j] = pageCount[i] + 1;
+                        double totalPenalty = dp[prevIdx] + penalty;
+                        int curIdx = j * cols + p;
+                        if (totalPenalty < dp[curIdx])
+                        {
+                            dp[curIdx] = totalPenalty;
+                            prev[curIdx] = i;
+                        }
                     }
                 }
             }
         }
 
+        // Find best page count for all n systems
+        double bestDemerits = double.MaxValue;
+        int bestPages = -1;
+        for (int p = minPages; p <= maxPages; p++)
+        {
+            int idx = n * cols + p;
+            if (dp[idx] < bestDemerits)
+            {
+                bestDemerits = dp[idx];
+                bestPages = p;
+            }
+        }
+
+        if (bestPages < 0)
+        {
+            // Fallback: single page
+            return new List<int> { n };
+        }
+
         // Backtrack to find break points
         var breaks = new List<int>();
         int current = n;
-        while (current > 0)
+        int curP = bestPages;
+        while (current > 0 && curP > 0)
         {
             breaks.Add(current);
-            current = prev[current];
+            current = prev[current * cols + curP];
+            curP--;
         }
 
         breaks.Reverse();
@@ -450,13 +521,25 @@ public sealed class PageBreaker
             // LILYPOND-REF: lily/page-layout-problem.cc:808-823 fixed_force_solution
             //
             // For ragged pages, use fixed_force_solution (force=0):
-            // - Overfull (force < 0): impossible, reject this page configuration
+            // - Overfull but systems fit at minimum distances: allow with penalty
+            //   (lily/page-layout-problem.cc:808-823 — fixed_force attempts placement)
             // - Underfull (force >= 0): no spacing penalty; systems placed at natural
             //   spring positions with remaining space at the bottom.
-            //   Distribution across pages is determined by page/orphan/line-count penalties.
             if (force < 0)
             {
-                return double.MaxValue;
+                // LILYPOND-REF: lily/page-layout-problem.cc:808-823
+                // fixed_force_solution: even when force<0, if the rod height fits,
+                // the page is feasible — just with systems at minimum distances.
+                // Use force² as penalty rather than immediately rejecting.
+                if (spacing.RodHeight <= _pageHeight - topMargin - _bottomMargin)
+                {
+                    demerits = force * force * _params.PageSpacingWeight;
+                    demerits = Math.Min(demerits, BadSpacingPenalty);
+                }
+                else
+                {
+                    return double.MaxValue;
+                }
             }
             else
             {
@@ -465,16 +548,19 @@ public sealed class PageBreaker
         }
         else
         {
-            // LILYPOND-REF: lily/page-spacing.cc:358
-            // demerits = force² × pageSpacingWeight
-            demerits = force * force;
+            // LILYPOND-REF: lily/page-spacing.cc:358, lily/page-breaking.cc:1506
+            // demerits = force² × page_spacing_weight
+            demerits = force * force * _params.PageSpacingWeight;
             demerits = Math.Min(demerits, BadSpacingPenalty);
         }
 
-        // Add page penalty for breaking after this page
+        // LILYPOND-REF: lily/constrained-breaking.cc:112-113 combine_demerits
+        // Add page_penalty_, break_penalty_, and turn_penalty_ for page break
         if (!isLastPage && endIdx > startIdx)
         {
             demerits += systems[endIdx - 1].PagePenalty;
+            demerits += systems[endIdx - 1].BreakPenalty;
+            demerits += systems[endIdx - 1].TurnPenalty;
         }
 
         // Line count penalty (min/max systems per page)

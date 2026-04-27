@@ -84,6 +84,8 @@ public sealed class TieFormattingProblem
     private readonly IReadOnlyList<TieLayout>? _existingTies;
     private readonly double _staffHeight;
     private readonly int _startDots;
+    private readonly bool _isBrokenLeft;
+    private readonly bool _isBrokenRight;
 
     // Staff line positions (in staff spaces from bottom line)
     private static readonly double[] StaffLinePositions = { 0, 1, 2, 3, 4 };
@@ -97,8 +99,12 @@ public sealed class TieFormattingProblem
         TieDetails? details = null,
         IReadOnlyList<TieLayout>? existingTies = null,
         double staffHeight = 4.0,
-        int startDots = 0)
+        int startDots = 0,
+        bool isBrokenLeft = false,
+        bool isBrokenRight = false)
     {
+        _isBrokenLeft = isBrokenLeft;
+        _isBrokenRight = isBrokenRight;
         _tie = tie;
         _startX = startX;
         _startY = startY;
@@ -562,6 +568,8 @@ public sealed class TieFormattingProblem
             config.EndX,
             baseY,
             control1,
-            control2);
+            control2,
+            isBrokenLeft: _isBrokenLeft,
+            isBrokenRight: _isBrokenRight);
     }
 }

@@ -83,14 +83,7 @@ public static class VoltaBracketEngraver
         if (voltaBrackets.IsDefaultOrEmpty)
             return ImmutableArray<VoltaBracketLayout>.Empty;
 
-        // Build measure-to-system-index mapping
-        var measureToSystemIdx = new Dictionary<int, int>();
-        for (int si = 0; si < systems.Length; si++)
-        {
-            foreach (var m in systems[si].Measures)
-                measureToSystemIdx[m.MeasureIndex] = si;
-        }
-
+        var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var layouts = ImmutableArray.CreateBuilder<VoltaBracketLayout>();
 
         foreach (var bracket in voltaBrackets)
@@ -99,65 +92,36 @@ public static class VoltaBracketEngraver
                 bracket.EndMeasureIndex >= measureLayouts.Length)
                 continue;
 
-            int startSystemIdx = measureToSystemIdx.GetValueOrDefault(bracket.StartMeasureIndex, 0);
-            int endSystemIdx = measureToSystemIdx.GetValueOrDefault(bracket.EndMeasureIndex, startSystemIdx);
+            // LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
+            var segments = SpannerBreakSubstitution.Split(
+                bracket.StartMeasureIndex, bracket.EndMeasureIndex, systems, measureToSystemIdx);
+            if (segments.IsEmpty)
+                continue;
 
-            if (startSystemIdx == endSystemIdx)
+            foreach (var segment in segments)
             {
-                // Same system — single bracket
-                var startMeasure = measureLayouts[bracket.StartMeasureIndex];
-                var endMeasure = measureLayouts[bracket.EndMeasureIndex];
+                if (segment.StartMeasureIndex >= measureLayouts.Length ||
+                    segment.EndMeasureIndex >= measureLayouts.Length)
+                    continue;
+
+                var segStartMeasure = measureLayouts[segment.StartMeasureIndex];
+                var segEndMeasure = measureLayouts[segment.EndMeasureIndex];
+
+                // First segment shows volta text; continuation pieces are empty.
+                string segText = segment.IsFirst ? bracket.VoltaText : "";
+                // Only the last segment carries the right hook (if the bracket is closed).
+                bool segClosed = segment.IsLast && bracket.IsClosed;
+
                 layouts.Add(new VoltaBracketLayout(
-                    bracket.StartMeasureIndex,
-                    bracket.EndMeasureIndex,
-                    startMeasure.X + StartPadding,
-                    endMeasure.X + endMeasure.Width - EndPadding,
+                    segment.StartMeasureIndex,
+                    segment.EndMeasureIndex,
+                    segStartMeasure.X + StartPadding,
+                    segEndMeasure.X + segEndMeasure.Width - EndPadding,
                     YOffset,
-                    bracket.VoltaText,
-                    bracket.IsClosed,
+                    segText,
+                    segClosed,
                     bracket.SourcePosition
                 ));
-            }
-            else
-            {
-                // Cross-system: split into one bracket per system
-                for (int si = startSystemIdx; si <= endSystemIdx; si++)
-                {
-                    var system = systems[si];
-                    if (system.Measures.IsDefaultOrEmpty)
-                        continue;
-
-                    int sysFirstMeasure = system.Measures[0].MeasureIndex;
-                    int sysLastMeasure = system.Measures[^1].MeasureIndex;
-
-                    int segStart = si == startSystemIdx ? bracket.StartMeasureIndex : sysFirstMeasure;
-                    int segEnd = si == endSystemIdx ? bracket.EndMeasureIndex : sysLastMeasure;
-
-                    if (segStart >= measureLayouts.Length || segEnd >= measureLayouts.Length)
-                        continue;
-
-                    var segStartMeasure = measureLayouts[segStart];
-                    var segEndMeasure = measureLayouts[segEnd];
-
-                    bool isFirst = (si == startSystemIdx);
-                    bool isLast = (si == endSystemIdx);
-
-                    // First segment shows volta text; continuations are empty
-                    string segText = isFirst ? bracket.VoltaText : "";
-                    // Only last segment has right hook if bracket is closed
-                    bool segClosed = isLast && bracket.IsClosed;
-
-                    layouts.Add(new VoltaBracketLayout(
-                        segStart,
-                        segEnd,
-                        segStartMeasure.X + StartPadding,
-                        segEndMeasure.X + segEndMeasure.Width - EndPadding,
-                        YOffset,
-                        segText,
-                        segClosed,
-                        bracket.SourcePosition
-                    ));
-                }
             }
         }
 

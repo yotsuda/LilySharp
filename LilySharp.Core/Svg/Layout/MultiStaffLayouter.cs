@@ -34,7 +34,7 @@ namespace LilySharp.Core.Svg.Layout;
 ///   when measure layouts are provided, uses skyline distance between staves for collision avoidance;
 ///   falls back to fixed formula (BasicDistance - staffHeight) when skylines are unavailable
 /// IMPLEMENTED — pure height estimation (axis-group-interface.cc:138-173) via CalculatePureSystemHeight
-/// NOT YET IMPLEMENTED — staff-affinity for non-spaceable staves (align-interface.cc:240-252)
+/// IMPLEMENTED — staff-affinity for non-spaceable staves (align-interface.cc:240-252) via StaffAffinity.Select
 /// IMPLEMENTED — hara-kiri auto-hide empty staves (hara-kiri-group-spanner.cc)
 /// IMPLEMENTED — alignment-distances manual override (StaffSpacingParameters.ApplyOverrides)
 /// Outside-staff-priority stacking: implemented in OutsideStaffStacker.cs (axis-group-interface.cc:359-474)
@@ -100,9 +100,12 @@ public sealed class MultiStaffLayouter
 
             if (i < score.StaffGroups.Length - 1)
             {
-                // Inter-group: staffgroup-staff-spacing basic distance
-                double interGroupGap = sp.StaffGroupStaff.BasicDistance - staffHeight;
-                bool nextIsOssia = score.StaffGroups[i + 1].Staves.Any(s => s.IsOssia);
+                // LILYPOND-REF: lily/align-interface.cc:240-252 — direction-aware staff-affinity spec selection.
+                var nextGroup = score.StaffGroups[i + 1];
+                var spec = SelectInterGroupSpec(group, nextGroup, sp);
+                double interGroupGap = spec.BasicDistance - staffHeight;
+
+                bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                 bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
@@ -111,6 +114,27 @@ public sealed class MultiStaffLayouter
         }
 
         return height;
+    }
+
+    /// <summary>
+    /// Picks the right vertical-spacing spec for the gap between two adjacent staff groups,
+    /// honouring the boundary staves' <c>staff-affinity</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/align-interface.cc:240-252 — direction-aware non-staff spacing.
+    /// The boundary is between the LAST staff of <paramref name="upper"/> and the FIRST
+    /// staff of <paramref name="lower"/>. When both are spaceable, falls back to
+    /// staffgroup-staff-spacing.
+    /// </remarks>
+    private static VerticalSpacingSpec SelectInterGroupSpec(
+        StaffGroup upper, StaffGroup lower, StaffSpacingParameters sp)
+    {
+        if (upper.Staves.IsDefaultOrEmpty || lower.Staves.IsDefaultOrEmpty)
+            return sp.StaffGroupStaff;
+
+        int? upperAffinity = upper.Staves[^1].StaffAffinity;
+        int? lowerAffinity = lower.Staves[0].StaffAffinity;
+        return StaffAffinity.Select(upperAffinity, lowerAffinity, sp.StaffGroupStaff, sp);
     }
 
     /// <summary>
@@ -196,10 +220,11 @@ public sealed class MultiStaffLayouter
 
             if (i < score.StaffGroups.Length - 1)
             {
-                // Inter-group gap: staffgroup-staff basic distance
-                // Reduce spacing when adjacent to an ossia staff
-                double interGroupGap = sp.StaffGroupStaff.BasicDistance - staffHeight;
-                bool nextIsOssia = score.StaffGroups[i + 1].Staves.Any(s => s.IsOssia);
+                // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
+                var nextGroup = score.StaffGroups[i + 1];
+                var spec = SelectInterGroupSpec(group, nextGroup, sp);
+                double interGroupGap = spec.BasicDistance - staffHeight;
+                bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                 bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
@@ -290,8 +315,11 @@ public sealed class MultiStaffLayouter
 
                 if (nextGroupVisible)
                 {
-                    double interGroupGap = sp.StaffGroupStaff.BasicDistance - staffHeight;
-                    bool nextIsOssia = score.StaffGroups[i + 1].Staves.Any(s => s.IsOssia);
+                    // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
+                    var nextGroup = score.StaffGroups[i + 1];
+                    var spec = SelectInterGroupSpec(group, nextGroup, sp);
+                    double interGroupGap = spec.BasicDistance - staffHeight;
+                    bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                     bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
                     if (nextIsOssia || currentIsOssia)
                         interGroupGap *= OssiaScaleFactor;
@@ -893,10 +921,13 @@ public sealed class MultiStaffLayouter
             {
                 int lastOfGroup = globalStaffIdx + staffCount - 1;
                 int firstOfNext = globalStaffIdx + staffCount;
+                // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
+                var nextGroup = score.StaffGroups[i + 1];
+                var spec = SelectInterGroupSpec(group, nextGroup, sp);
                 double interGroupGap = CalculateStaffGapWithSkylines(
-                    sp.StaffGroupStaff, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
+                    spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
 
-                bool nextIsOssia = score.StaffGroups[i + 1].Staves.Any(s => s.IsOssia);
+                bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                 bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
@@ -960,10 +991,13 @@ public sealed class MultiStaffLayouter
             {
                 int lastOfGroup = globalStaffIndex + group.StaffCount - 1;
                 int firstOfNext = globalStaffIndex + group.StaffCount;
+                // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
+                var nextGroup = score.StaffGroups[i + 1];
+                var spec = SelectInterGroupSpec(group, nextGroup, sp);
                 double interGroupGap = CalculateStaffGapWithSkylines(
-                    sp.StaffGroupStaff, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
+                    spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
 
-                bool nextIsOssia = score.StaffGroups[i + 1].Staves.Any(s => s.IsOssia);
+                bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                 bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
