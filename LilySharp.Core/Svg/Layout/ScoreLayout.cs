@@ -215,6 +215,12 @@ public sealed record ScoreLayout(
     /// </summary>
     public GrobPropertyResolver GrobPropertyResolver { get; init; } = GrobPropertyResolver.Empty;
 
+    /// <summary>
+    /// Layout options used to compute this layout. Renderers consult these for
+    /// page margins, indents, and other paper-level parameters.
+    /// </summary>
+    public LayoutOptions Options { get; init; } = LayoutOptions.Default;
+
     /// <summary>Total number of pages.</summary>
     public int PageCount => Pages.Length;
 

@@ -148,6 +148,7 @@ public sealed class LayoutEngine
 
         var result = BuildScoreLayout(pages, systemsArray, beamLayouts, tieLayouts, slurLayouts,
             glissandoLayouts, annotations, voiceOffsets, headWipeEntries, dotForceDownEntries, restShifts, partCombineLayouts);
+        result = result with { Options = _options };
 
         // LILYPOND-REF: lily/grob-property.cc — attach user overrides/reverts to layout
         if (!score.GrobOverrides.IsDefaultOrEmpty || !score.GrobReverts.IsDefaultOrEmpty)
@@ -358,6 +359,7 @@ public sealed class LayoutEngine
             ImmutableHashSet<VoiceItemKey>.Empty,
             ImmutableDictionary<RestShiftKey, double>.Empty,
             partCombineLayouts);
+        result = result with { Options = _options };
 
         // LILYPOND-REF: lily/grob-property.cc — attach user overrides/reverts to layout
         if (!score.GrobOverrides.IsDefaultOrEmpty || !score.GrobReverts.IsDefaultOrEmpty)

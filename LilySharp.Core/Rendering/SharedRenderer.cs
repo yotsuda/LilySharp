@@ -46,61 +46,80 @@ public static class SharedRenderer
     public static void RenderTo(
         MultiStaffScore score, ScoreLayout layout, IDocumentContext doc)
     {
+        var options = layout.Options;
         foreach (var page in layout.Pages)
         {
             var gc = doc.BeginPage(page.Width, page.Height);
-            DrawHeader(score, page, gc);
-            foreach (var system in page.Systems)
-                DrawSystem(score, layout, system, gc);
-            // Page-level overlays that span systems
-            var measureToSystemY = BuildMeasureToSystemY(layout);
-            DrawTies(layout, gc);
-            DrawSlurs(layout, gc);
-            DrawDynamics(layout, measureToSystemY, gc);
-            DrawArticulations(layout, measureToSystemY, gc);
-            DrawLyrics(layout, measureToSystemY, gc);
-            DrawHairpins(layout, measureToSystemY, gc);
-            DrawOttavaBrackets(layout, measureToSystemY, gc);
-            DrawVoltaBrackets(layout, measureToSystemY, gc);
-            DrawTupletBrackets(layout, measureToSystemY, gc);
-            DrawTrillSpanners(layout, measureToSystemY, gc);
-            DrawGlissandos(layout, gc);
-            DrawArpeggios(layout, gc);
-            DrawGraceNotes(layout, measureToSystemY, gc);
-            DrawChordNames(layout, measureToSystemY, gc);
-            DrawFiguredBass(layout, measureToSystemY, gc);
-            DrawPercentRepeats(layout, measureToSystemY, gc);
-            DrawBarNumbers(layout, gc);
-            DrawStanzaNumbers(layout, gc);
-            DrawFingerings(layout, measureToSystemY, gc);
-            DrawMusicMarks(layout, measureToSystemY, gc);
-            DrawCustomTexts(layout, measureToSystemY, gc);
-            DrawTextSpanners(layout, measureToSystemY, gc);
-            DrawPedalBrackets(layout, measureToSystemY, gc);
-            DrawMultiMeasureRests(layout, gc);
-            DrawTieVariants(layout, measureToSystemY, gc);
-            DrawLyricHyphens(layout, measureToSystemY, gc);
-            DrawPartCombine(layout, measureToSystemY, gc);
+            // LILYPOND-REF: lily/page-layout-problem.cc:434 — header at MarginTop;
+            // SystemLayout.Y already includes MarginTop, so apply MarginLeft only.
+            DrawHeader(score, page, options, gc);
+            var marginScope = options.MarginLeft != 0
+                ? gc.BeginGroup(DrawingTransform.Translate(options.MarginLeft, 0))
+                : null;
+            try
+            {
+                foreach (var system in page.Systems)
+                    DrawSystem(score, layout, system, gc);
+                // Page-level overlays that span systems
+                var measureToSystemY = BuildMeasureToSystemY(layout);
+                DrawTies(layout, gc);
+                DrawSlurs(layout, gc);
+                DrawDynamics(layout, measureToSystemY, gc);
+                DrawArticulations(layout, measureToSystemY, gc);
+                DrawLyrics(layout, measureToSystemY, gc);
+                DrawHairpins(layout, measureToSystemY, gc);
+                DrawOttavaBrackets(layout, measureToSystemY, gc);
+                DrawVoltaBrackets(layout, measureToSystemY, gc);
+                DrawTupletBrackets(layout, measureToSystemY, gc);
+                DrawTrillSpanners(layout, measureToSystemY, gc);
+                DrawGlissandos(layout, gc);
+                DrawArpeggios(layout, gc);
+                DrawGraceNotes(layout, measureToSystemY, gc);
+                DrawChordNames(layout, measureToSystemY, gc);
+                DrawFiguredBass(layout, measureToSystemY, gc);
+                DrawPercentRepeats(layout, measureToSystemY, gc);
+                DrawBarNumbers(layout, gc);
+                DrawStanzaNumbers(layout, gc);
+                DrawFingerings(layout, measureToSystemY, gc);
+                DrawMusicMarks(layout, measureToSystemY, gc);
+                DrawCustomTexts(layout, measureToSystemY, gc);
+                DrawTextSpanners(layout, measureToSystemY, gc);
+                DrawPedalBrackets(layout, measureToSystemY, gc);
+                DrawMultiMeasureRests(layout, gc);
+                DrawTieVariants(layout, measureToSystemY, gc);
+                DrawLyricHyphens(layout, measureToSystemY, gc);
+                DrawPartCombine(layout, measureToSystemY, gc);
+            }
+            finally
+            {
+                marginScope?.Dispose();
+            }
             doc.EndPage();
         }
     }
 
     // ---------- Header ----------
 
-    private static void DrawHeader(MultiStaffScore score, PageLayout page, IDrawingContext gc)
+    // LILYPOND-REF: ly/titling-init.ly:79-108 — \huge \larger \larger \bold ≈ 3.49 ss
+    // LILYPOND-REF: ly/titling-init.ly:100 — composer baseline ≈ 2.2 ss
+    private const double TitleFontSize = 3.49;
+    private const double ComposerFontSize = 2.2;
+
+    private static void DrawHeader(
+        MultiStaffScore score, PageLayout page, LayoutOptions options, IDrawingContext gc)
     {
+        double y = options.MarginTop;
         if (score.Title is { } title)
         {
             double centerX = page.Width / 2;
-            double titleY = page.HeaderHeight * 0.5;
-            gc.DrawText(title, centerX, titleY, 1.6, "serif",
+            gc.DrawText(title, centerX, y, TitleFontSize, "serif",
                 FontStyle.Bold, TextAnchor.Middle);
+            y += TitleFontSize;
         }
         if (score.Composer is { } composer)
         {
-            double rightX = page.Width - 2;
-            double composerY = page.HeaderHeight * 0.85;
-            gc.DrawText(composer, rightX, composerY, 1.0, "serif",
+            double rightX = page.Width - options.MarginLeft;
+            gc.DrawText(composer, rightX, y, ComposerFontSize, "serif",
                 FontStyle.Italic, TextAnchor.End);
         }
     }
