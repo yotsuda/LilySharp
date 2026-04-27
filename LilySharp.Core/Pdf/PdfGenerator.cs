@@ -15,9 +15,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using LilySharp.Core.Pdf.Renderer;
+using LilySharp.Core.Rendering;
+using LilySharp.Core.Rendering.Pdf;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Pdf;
@@ -41,22 +44,21 @@ public static class PdfGenerator
     public static byte[] Generate(SyntaxTree tree, PdfRenderOptions? options = null, string? renderName = null)
     {
         options ??= PdfRenderOptions.Default;
-        var renderer = new PdfRenderer(options: options);
 
         // Find render specification - by name if specified, otherwise first
         var renderSpec = string.IsNullOrEmpty(renderName)
             ? RenderSpecParser.FindFirst(tree)
             : RenderSpecParser.FindByName(tree, renderName);
 
+        // Always promote to MultiStaffScore so the new SharedRenderer can
+        // drive both single-staff and multi-staff cases through the same path.
+        MultiStaffScore multiScore;
+        ScoreLayout layout;
         if (renderSpec != null && renderSpec.IsMultiStaff)
         {
             var collector = new MeasureCollector();
-            var multiScore = collector.CollectMultiStaff(tree, renderSpec);
-
-            var layoutEngine = new LayoutEngine();
-            var layout = layoutEngine.Layout(multiScore);
-
-            return renderer.Render(multiScore, layout);
+            multiScore = collector.CollectMultiStaff(tree, renderSpec);
+            layout = new LayoutEngine().Layout(multiScore);
         }
         else
         {
@@ -66,14 +68,21 @@ public static class PdfGenerator
             {
                 voiceName = single.Staff.VoiceName;
             }
-
             var collector = new MeasureCollector();
             var score = collector.Collect(tree, voiceName);
-
-            var layoutEngine = new LayoutEngine();
-            var layout = layoutEngine.Layout(score);
-
-            return renderer.Render(score, layout);
+            multiScore = MultiStaffScore.FromScore(score);
+            layout = new LayoutEngine().Layout(multiScore);
         }
+
+        var docOptions = new PdfDocumentOptions
+        {
+            PointsPerSpace = options.StaffSpacePt,
+            AutoSizePages = true,
+            FontDirectory = options.FontDirectory,
+        };
+        using var doc = new PdfDocumentContext(docOptions);
+        SharedRenderer.RenderTo(multiScore, layout, doc);
+        doc.Dispose();
+        return doc.GetBytes();
     }
 }
