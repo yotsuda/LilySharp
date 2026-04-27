@@ -52,6 +52,9 @@ public static class SharedRenderer
             DrawHeader(score, page, gc);
             foreach (var system in page.Systems)
                 DrawSystem(score, layout, system, gc);
+            // Page-level overlays that span systems
+            DrawTies(layout, gc);
+            DrawSlurs(layout, gc);
             doc.EndPage();
         }
     }
@@ -279,6 +282,10 @@ public static class SharedRenderer
         if (note.BaseDuration.Numerator != 1) noteValue = 1;
         double noteY = staffMiddleY - note.StaffPosition * 0.5;
 
+        // Accidental (left of notehead)
+        if (note.Accidental != null)
+            DrawAccidental(note.Accidental, note.IsCourtesy, x, noteY, note.SourcePosition, gc);
+
         // Notehead
         char head = EmmentalerGlyphs.GetNotehead(noteValue);
         using (gc.Source(note.SourcePosition))
@@ -326,6 +333,8 @@ public static class SharedRenderer
         foreach (var n in chord.Notes)
         {
             double y = staffMiddleY - n.StaffPosition * 0.5;
+            if (n.Accidental != null)
+                DrawAccidental(n.Accidental, isCourtesy: false, x, y, chord.SourcePosition, gc);
             using (gc.Source(chord.SourcePosition))
                 gc.DrawGlyph(head, x, y, FontSize);
             DrawLedgerLines(n.StaffPosition, x, staffMiddleY, gc);
@@ -470,5 +479,87 @@ public static class SharedRenderer
         // Sloped beam as a filled polygon would be ideal; simple thick line is a
         // good Phase 2-A approximation (LP uses precise quad polygons).
         gc.DrawLine(x1, y1, x2, y2, Color.Black, EngravingDefaults.BeamThickness);
+    }
+
+    // ---------- Accidentals ----------
+
+    private static void DrawAccidental(
+        string accidentalKind, bool isCourtesy, double noteheadX, double noteheadY,
+        int sourcePosition, IDrawingContext gc)
+    {
+        char glyph = accidentalKind switch
+        {
+            "doubleSharp" => EmmentalerGlyphs.AccidentalDoubleSharp,
+            "sharp" => EmmentalerGlyphs.AccidentalSharp,
+            "flat" => EmmentalerGlyphs.AccidentalFlat,
+            "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
+            _ => EmmentalerGlyphs.AccidentalNatural,
+        };
+        var accBBox = GlyphMetrics.GetAccidentalBBox(accidentalKind);
+        double accWidth = accBBox.Width;
+        double gap = GlyphMetrics.AccidentalNoteGap;
+
+        if (isCourtesy)
+        {
+            // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize()
+            double parenWidth = GlyphMetrics.AccidentalParenWidth;
+            double total = parenWidth + accWidth + parenWidth;
+            double startX = noteheadX - total - gap;
+            using (gc.Source(sourcePosition))
+            {
+                gc.DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen, startX, noteheadY, FontSize);
+                gc.DrawGlyph(glyph, startX + parenWidth, noteheadY, FontSize);
+                gc.DrawGlyph(EmmentalerGlyphs.AccidentalRightParen,
+                    startX + parenWidth + accWidth, noteheadY, FontSize);
+            }
+        }
+        else
+        {
+            using (gc.Source(sourcePosition))
+                gc.DrawGlyph(glyph, noteheadX - accWidth - gap, noteheadY, FontSize);
+        }
+    }
+
+    // ---------- Ties & slurs ----------
+
+    private static void DrawTies(ScoreLayout layout, IDrawingContext gc)
+    {
+        foreach (var tie in layout.TieLayouts)
+            DrawCurve(
+                tie.StartX, tie.StartY, tie.EndX, tie.EndY,
+                tie.Control1, tie.Control2, tie.CurveUp,
+                EngravingDefaults.TieMidThickness, gc);
+    }
+
+    private static void DrawSlurs(ScoreLayout layout, IDrawingContext gc)
+    {
+        foreach (var slur in layout.SlurLayouts)
+            DrawCurve(
+                slur.StartX, slur.StartY, slur.EndX, slur.EndY,
+                slur.Control1, slur.Control2, slur.CurveUp,
+                EngravingDefaults.SlurMidThickness, gc);
+    }
+
+    /// <summary>
+    /// Draws a tapered cubic Bézier "bow" (used for both ties and slurs) by
+    /// emitting an outer curve from <c>start → c1 c2 → end</c> and an inner
+    /// curve back, offset toward the curve interior to create the LP-style
+    /// thicker middle / pointed endpoints.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie.cc, lily/slur.cc — Bezier bow rendering
+    /// </remarks>
+    private static void DrawCurve(
+        double startX, double startY, double endX, double endY,
+        (double X, double Y) c1, (double X, double Y) c2,
+        bool curveUp, double midThickness, IDrawingContext gc)
+    {
+        double direction = curveUp ? -1.0 : 1.0;
+        var c1Back = (X: c1.X, Y: c1.Y + direction * midThickness * 0.9);
+        var c2Back = (X: c2.X, Y: c2.Y + direction * midThickness * 0.9);
+        gc.DrawClosedBezier(
+            (startX, startY), c1, c2,
+            (endX, endY), c2Back, c1Back,
+            Color.Black);
     }
 }

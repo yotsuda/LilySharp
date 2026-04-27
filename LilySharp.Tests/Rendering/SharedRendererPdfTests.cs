@@ -63,6 +63,67 @@ public sealed class SharedRendererPdfTests
     }
 
     [Fact]
+    public void Pdf_DrawsAccidentalsAndTiesAndSlurs()
+    {
+        // A single line exercising sharp/flat accidentals, a tie (~), and a
+        // slur ((...)). Phase 2-B should now emit Emmentaler accidental
+        // glyphs and Bezier path operators for the tie/slur.
+        var source = """
+            key C major
+            time 4/4
+
+            section Demo {
+                line {
+                    | cis'4 d~ d8( e fis g) | a2 bes |
+                }
+            }
+
+            structure { Demo }
+
+            render score "out.svg" { staff { line } }
+            """;
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+
+        var bytes = PdfGenerator.Generate(tree, PdfRenderOptions.Default);
+        Assert.True(bytes.Length > 30_000);
+
+        // Decompress the first content stream and look for closed-bezier
+        // ops (tie/slur) and the sharp-accidental codepoint mapping.
+        var streamText = DecodeFirstContentStream(bytes);
+        // PDF cubic bezier op is "c"; closed filled paths end in "h" + "f" or "f*".
+        Assert.True(streamText.Contains(" c\n") || streamText.Contains(" c\r"),
+            "Expected at least one cubic Bezier 'c' operator (tie or slur).");
+        Assert.True(streamText.Contains("h\nf"),
+            "Expected at least one closed/filled path 'h' + fill (tie/slur).");
+    }
+
+    private static string DecodeFirstContentStream(byte[] pdfBytes)
+    {
+        // Locate the first "stream\n...endstream" block, then FlateDecode.
+        var text = System.Text.Encoding.Latin1.GetString(pdfBytes);
+        int startKw = text.IndexOf("stream", StringComparison.Ordinal);
+        Assert.True(startKw >= 0);
+        int dataStart = startKw + "stream".Length;
+        // Skip the line-ending after "stream" (CR LF or just LF)
+        if (dataStart < text.Length && text[dataStart] == '\r') dataStart++;
+        if (dataStart < text.Length && text[dataStart] == '\n') dataStart++;
+        int endKw = text.IndexOf("endstream", dataStart, StringComparison.Ordinal);
+        Assert.True(endKw > dataStart);
+        // Trim trailing newline before "endstream"
+        int dataEnd = endKw;
+        if (dataEnd > dataStart && text[dataEnd - 1] == '\n') dataEnd--;
+        if (dataEnd > dataStart && text[dataEnd - 1] == '\r') dataEnd--;
+
+        var compressed = System.Text.Encoding.Latin1.GetBytes(text.Substring(dataStart, dataEnd - dataStart));
+        // Skip 2-byte zlib header; the rest is raw DEFLATE
+        using var ms = new MemoryStream(compressed, 2, compressed.Length - 2);
+        using var ds = new System.IO.Compression.DeflateStream(ms, System.IO.Compression.CompressionMode.Decompress);
+        using var sr = new StreamReader(ds, System.Text.Encoding.Latin1);
+        return sr.ReadToEnd();
+    }
+
+    [Fact]
     public void SingleStaffScore_PromotedToMultiStaff_StillRenders()
     {
         var source = """
