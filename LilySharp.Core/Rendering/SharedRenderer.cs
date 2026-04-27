@@ -300,6 +300,12 @@ public static class SharedRenderer
                     case ChordItem chord:
                         DrawChord(chord, itemX, staffMiddleY, gc);
                         break;
+                    case ClefChangeItem clefChange:
+                        DrawClefChange(clefChange, itemX, staffY, gc);
+                        break;
+                    case KeySignatureChangeItem keyChange:
+                        DrawKeySignatureChange(keyChange, itemX, staffY, gc);
+                        break;
                 }
             }
         }
@@ -1552,10 +1558,9 @@ public static class SharedRenderer
                     DrawSystemStartBarLine(delim.BraceX, top, bottom, gc);
                     break;
                 case SystemStartDelimiterType.Brace:
-                    // TODO Phase 3: port BraceRenderer (Bezier-path glyph) so the
-                    // brace can be drawn through IDrawingContext as well. For now
-                    // grand-staff PDFs lack the curly brace but staves are still
-                    // visually grouped via the connecting bar lines elsewhere.
+                    // LILYPOND-REF: scm/define-grobs.scm SystemStartBrace collapse-height = 5
+                    if (height >= 5)
+                        DrawSystemStartBrace(delim.BraceX, top, bottom, gc);
                     break;
             }
         }
@@ -1591,5 +1596,106 @@ public static class SharedRenderer
     {
         double thickness = EngravingDefaults.StaffLineThickness * 1.6;
         gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
+    }
+
+    /// <summary>
+    /// Draws the curly brace used for grand staff (piano) groups. The brace
+    /// is rendered as a single Emmentaler-Brace glyph (576 sizes available
+    /// at U+E000+index, larger index → taller brace). Glyph selection mirrors
+    /// <see cref="Svg.Renderer.BraceRenderer"/> so SVG and PDF agree on size.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-markup-commands.scm (left-brace)
+    /// </remarks>
+    // ---------- Mid-measure clef change ----------
+
+    /// <summary>
+    /// Draws a mid-measure clef change at reduced size (LP _change variant glyphs).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/clef.cc:29-52 — calc_glyph_name appends "_change" suffix
+    /// </remarks>
+    private static void DrawClefChange(ClefChangeItem clefChange, double x, double staffY, IDrawingContext gc)
+    {
+        char glyph = clefChange.NewClef switch
+        {
+            ClefType.Bass => EmmentalerGlyphs.FClefChange,
+            ClefType.Alto => EmmentalerGlyphs.CClefChange,
+            ClefType.Tenor => EmmentalerGlyphs.CClefChange,
+            _ => EmmentalerGlyphs.GClefChange,
+        };
+        double clefY = clefChange.NewClef switch
+        {
+            ClefType.Bass => staffY + 1,
+            ClefType.Alto => staffY + 2,
+            ClefType.Tenor => staffY + 1,
+            _ => staffY + 3,
+        };
+        using (gc.Source(clefChange.SourcePosition))
+            gc.DrawGlyph(glyph, x, clefY, FontSize);
+    }
+
+    // ---------- Mid-measure key signature change ----------
+
+    /// <summary>
+    /// Draws a mid-measure key signature change. Cancellation naturals are
+    /// shown for accidentals removed from the previous key, followed by the
+    /// new key's accidentals.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/key-engraver.cc — process_music()
+    /// </remarks>
+    private static void DrawKeySignatureChange(KeySignatureChangeItem change, double x, double staffY, IDrawingContext gc)
+    {
+        int prev = change.PreviousKey.Sharps;
+        int next = change.NewKey.Sharps;
+        double dx = 0;
+
+        // Cancellation naturals when the sign flips or count shrinks.
+        bool needNaturals = (prev != 0 && next == 0) ||
+                            (prev > 0 && next < 0) || (prev < 0 && next > 0) ||
+                            (Math.Sign(prev) == Math.Sign(next) && Math.Abs(next) < Math.Abs(prev));
+        if (needNaturals)
+        {
+            int natCount = Math.Abs(prev) - (Math.Sign(prev) == Math.Sign(next) ? Math.Abs(next) : 0);
+            int[] sharpPos = { 8, 5, 9, 6, 3, 7, 4 };
+            int[] flatPos = { 4, 7, 3, 6, 2, 5, 1 };
+            var positions = prev > 0 ? sharpPos : flatPos;
+            int startAt = Math.Sign(prev) == Math.Sign(next) ? Math.Abs(next) : 0;
+            for (int i = 0; i < natCount; i++)
+            {
+                int pos = positions[startAt + i];
+                double y = staffY + 4 - (pos - 1) * 0.5;
+                using (gc.Source(change.SourcePosition))
+                    gc.DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x + dx, y, FontSize);
+                dx += 0.7;
+            }
+        }
+
+        if (next != 0)
+            DrawKeySignature(change.NewKey, ClefType.Treble, x + dx, staffY, gc);
+    }
+
+    private static void DrawSystemStartBrace(double x, double top, double bottom, IDrawingContext gc)
+    {
+        double height = bottom - top;
+        double yMid = (top + bottom) / 2;
+
+        const int braceGlyphStart = 0xE000;
+        const int braceGlyphCount = 576;
+        const double minGlyphHeight = 263.0;
+        const double maxGlyphHeight = 11493.0;
+        const double unitsPerEm = 1000.0;
+        const double scaleFactor = 0.76;
+
+        double targetUnits = height * unitsPerEm;
+        double ratio = Math.Clamp((targetUnits - minGlyphHeight) / (maxGlyphHeight - minGlyphHeight), 0, 1);
+        int glyphIndex = Math.Clamp((int)(Math.Pow(ratio, 0.8) * (braceGlyphCount - 1)), 0, braceGlyphCount - 1);
+        double glyphHeightUnits = minGlyphHeight + ((double)glyphIndex / (braceGlyphCount - 1)) * (maxGlyphHeight - minGlyphHeight);
+        double fontSize = (height / (glyphHeightUnits / unitsPerEm)) * scaleFactor;
+
+        char braceChar = (char)(braceGlyphStart + glyphIndex);
+        gc.DrawText(braceChar.ToString(), x, yMid, fontSize, "Emmentaler-Brace",
+            FontStyle.Regular, TextAnchor.End, Color.Black);
     }
 }
