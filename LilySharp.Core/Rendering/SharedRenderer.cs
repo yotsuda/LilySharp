@@ -67,6 +67,12 @@ public static class SharedRenderer
             DrawGlissandos(layout, gc);
             DrawArpeggios(layout, gc);
             DrawGraceNotes(layout, measureToSystemY, gc);
+            DrawChordNames(layout, measureToSystemY, gc);
+            DrawFiguredBass(layout, measureToSystemY, gc);
+            DrawPercentRepeats(layout, measureToSystemY, gc);
+            DrawBarNumbers(layout, gc);
+            DrawStanzaNumbers(layout, gc);
+            DrawFingerings(layout, measureToSystemY, gc);
             doc.EndPage();
         }
     }
@@ -980,6 +986,151 @@ public static class SharedRenderer
                     currentX += 1.2 * g.Scale;  // approximate advance per grace note
                 }
             }
+        }
+    }
+
+    // ---------- Chord names ("Cm7", "B♭7") ----------
+
+    /// <summary>
+    /// Draws chord-name labels above the staff using a sans-serif bold font.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm ChordName: font-family=sans, font-size=1.5
+    /// LILYPOND-REF: scm/chord-ignatzek-names.scm — chord-name formatting
+    /// </remarks>
+    private static void DrawChordNames(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.ChordNameLayouts.IsDefaultOrEmpty) return;
+        double size = FontSize * 0.65;
+        foreach (var c in layout.ChordNameLayouts)
+        {
+            if (!sysY.TryGetValue(c.MeasureIndex, out var sy)) continue;
+            using (gc.Source(c.SourcePosition))
+                gc.DrawText(c.ChordText, c.X, sy + c.Y, size, "sans-serif",
+                    FontStyle.Bold, TextAnchor.Middle, Color.Black);
+        }
+    }
+
+    // ---------- Figured bass ----------
+
+    /// <summary>
+    /// Draws figured-bass numerals stacked vertically below the staff.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/figured-bass-engraver.cc:200-350 print()
+    /// LILYPOND-REF: scm/define-grobs.scm:362-380 BassFigure defaults
+    /// </remarks>
+    private static void DrawFiguredBass(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.FiguredBassLayouts.IsDefaultOrEmpty) return;
+        double size = FontSize * 0.75;
+        const double figureSpacing = 1.5;
+        foreach (var fb in layout.FiguredBassLayouts)
+        {
+            if (!sysY.TryGetValue(fb.MeasureIndex, out var sy)) continue;
+            double baseY = sy + fb.Y;
+            using (gc.Source(fb.SourcePosition))
+            {
+                for (int i = 0; i < fb.FigureTexts.Length; i++)
+                    gc.DrawText(fb.FigureTexts[i], fb.X, baseY + i * figureSpacing,
+                        size, "serif", FontStyle.Regular, TextAnchor.Middle, Color.Black);
+            }
+        }
+    }
+
+    // ---------- Percent repeats (slash + dots) ----------
+
+    /// <summary>
+    /// Draws the percent-repeat sign (a slanted slash with two dots) inside
+    /// a measure that repeats the previous one.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/percent-repeat-interface.cc — x_percent() rendering
+    /// LILYPOND-REF: scm/define-grobs.scm:2520-2539 — slope=1.0, thickness=0.48
+    /// </remarks>
+    private static void DrawPercentRepeats(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.PercentRepeatLayouts.IsDefaultOrEmpty) return;
+        const double slope = 1.0;
+        const double thickness = 0.48;
+        const double slashWidth = 2.0;
+        const double dotOffset = 1.0;
+        const double dotRadius = 0.25;
+        double slashHeight = slashWidth * slope;
+
+        foreach (var pr in layout.PercentRepeatLayouts)
+        {
+            if (!sysY.TryGetValue(pr.MeasureIndex, out var sy)) continue;
+            double cx = pr.X;
+            double cy = sy + pr.Y;
+            using (gc.Source(pr.SourcePosition))
+            {
+                // Slash from bottom-left to top-right
+                gc.DrawLine(cx - slashWidth / 2, cy + slashHeight / 2,
+                    cx + slashWidth / 2, cy - slashHeight / 2,
+                    Color.Black, thickness);
+                gc.DrawCircle(cx + dotOffset * 0.3, cy - dotOffset, dotRadius, Color.Black);
+                gc.DrawCircle(cx - dotOffset * 0.3, cy + dotOffset, dotRadius, Color.Black);
+            }
+        }
+    }
+
+    // ---------- Bar numbers ----------
+
+    /// <summary>
+    /// Draws the bar-number text at the start of each system (and at any
+    /// requested period). Position is precomputed by BarNumberEngraver.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/bar-number-engraver.cc — Bar_number_engraver
+    /// LILYPOND-REF: scm/define-grobs.scm BarNumber (font-size = -2)
+    /// </remarks>
+    private static void DrawBarNumbers(ScoreLayout layout, IDrawingContext gc)
+    {
+        if (layout.BarNumberLayouts.IsDefaultOrEmpty) return;
+        const double fontSize = 1.8;
+        foreach (var bn in layout.BarNumberLayouts)
+            gc.DrawText(bn.Text, bn.X, bn.Y, fontSize, "serif",
+                FontStyle.Bold, TextAnchor.Start, Color.Black);
+    }
+
+    // ---------- Stanza numbers ----------
+
+    /// <summary>
+    /// Draws stanza numbers ("1.", "2.") at the left of each verse line.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stanza-number-engraver.cc — Stanza_number_engraver
+    /// LILYPOND-REF: scm/define-grobs.scm StanzaNumber (font-size=-1, bold)
+    /// </remarks>
+    private static void DrawStanzaNumbers(ScoreLayout layout, IDrawingContext gc)
+    {
+        if (layout.StanzaNumberLayouts.IsDefaultOrEmpty) return;
+        const double fontSize = 2.4;
+        foreach (var sn in layout.StanzaNumberLayouts)
+            gc.DrawText(sn.Text, sn.X, sn.Y, fontSize, "serif",
+                FontStyle.Bold, TextAnchor.Start, Color.Black);
+    }
+
+    // ---------- Fingering ----------
+
+    /// <summary>
+    /// Draws fingering numerals (1-5) next to noteheads.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob
+    /// LILYPOND-REF: scm/define-grobs.scm Fingering (font-size = -5 → ~0.56×)
+    /// </remarks>
+    private static void DrawFingerings(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.FingeringLayouts.IsDefaultOrEmpty) return;
+        double size = FontSize * 0.56;  // magstep(-5)
+        foreach (var f in layout.FingeringLayouts)
+        {
+            double y = (sysY.TryGetValue(f.MeasureIndex, out var sy) ? sy : 0) + f.Y;
+            using (gc.Source(f.SourcePosition))
+                gc.DrawText(f.Number.ToString(), f.X, y, size, "serif",
+                    FontStyle.Regular, TextAnchor.Middle, Color.Black);
         }
     }
 }
