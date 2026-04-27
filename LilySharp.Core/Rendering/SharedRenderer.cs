@@ -193,11 +193,46 @@ public static class SharedRenderer
 
     // ---------- Clef ----------
 
+    /// <summary>
+    /// Resolves the active clef at the start of a system by walking previous
+    /// measures' ClefChangeItems. Mirrors SvgRenderer.GetActiveClefStringForSystem.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/clef-engraver.cc — clef at system start reflects last clef change.
+    /// </remarks>
     private static ClefType ResolveClef(Staff staff, SystemLayout system, MultiStaffScore score)
     {
-        // For Phase 2-A we just take the staff's notated clef. Mid-score
-        // clef changes are not yet supported.
-        return staff.Clef;
+        if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return staff.Clef;
+
+        var voice = staff.PrimaryVoice;
+        int firstMeasureIndex = system.Measures[0].MeasureIndex;
+        var activeClef = staff.Clef;
+
+        // Apply clef changes accumulated in earlier measures.
+        for (int m = 0; m < firstMeasureIndex && m < voice.Measures.Length; m++)
+        {
+            foreach (var item in voice.Measures[m].Items)
+            {
+                if (item is ClefChangeItem cc)
+                    activeClef = cc.NewClef;
+            }
+        }
+
+        // Leading ClefChangeItems in this system's first measure also surface as
+        // system-start clefs (LP groups them with the prefix).
+        if (firstMeasureIndex < voice.Measures.Length)
+        {
+            foreach (var item in voice.Measures[firstMeasureIndex].Items)
+            {
+                if (item is ClefChangeItem cc)
+                    activeClef = cc.NewClef;
+                else if (item.Duration > Fraction.Zero)
+                    break;
+            }
+        }
+
+        return activeClef;
     }
 
     private static double DrawClef(ClefType clef, double x, double staffY, IDrawingContext gc)

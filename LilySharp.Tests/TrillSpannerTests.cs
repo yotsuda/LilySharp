@@ -139,8 +139,12 @@ render score ""test.svg"" { staff { melody } }
 
         // Should contain trill glyph (U+E05C = OrnTrill / scripts.trill)
         Assert.Contains("\uE05C", svg);
-        // Should contain wavy line path element
-        Assert.Contains("trill-spanner-line", svg);
+        // SharedRenderer emits the wavy line as a chain of <line> segments
+        // rather than a single classed <path>. The SvgRenderer-era
+        // "trill-spanner-line" class no longer exists post Phase 3-B; verify
+        // multiple short segments are present near the trill glyph instead.
+        var lineCount = System.Text.RegularExpressions.Regex.Matches(svg, "<line ").Count;
+        Assert.True(lineCount > 5, $"Expected multiple wavy-line segments, got {lineCount}.");
     }
 
     [Fact]

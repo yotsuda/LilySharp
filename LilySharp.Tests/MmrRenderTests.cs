@@ -45,8 +45,10 @@ public class MmrRenderTests
         // The MMR renderer prints the measure count as text-anchor="middle" with
         // font-weight="bold". Our run produces ">4<" inside that text element.
         Assert.Contains(">4<", svg);
-        // It also draws an H-bar (rect with fill="black").
-        Assert.Contains("fill=\"black\"", svg);
+        // SharedRenderer emits hex colors (`#000000`) where SvgRenderer used named
+        // colors (`black`). Either form is acceptable — barlines/H-bar fill must exist.
+        Assert.True(svg.Contains("fill=\"black\"") || svg.Contains("fill=\"#000000\""),
+            "Expected at least one black-filled rect (barlines or H-bar).");
     }
 
     [Fact]

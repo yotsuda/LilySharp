@@ -15,10 +15,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Text;
-using LilySharp.Core.Syntax;
+using LilySharp.Core.Rendering;
+using LilySharp.Core.Rendering.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Svg.Renderer;
+using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Svg;
 
@@ -38,42 +41,14 @@ public static class SvgGenerator
     public static string Generate(SyntaxTree tree, SvgRenderOptions? options = null, string? renderName = null)
     {
         options ??= SvgRenderOptions.Default;
-        var renderer = new SvgRenderer(renderOptions: options);
 
         // Find render specification - by name if specified, otherwise first
         var renderSpec = string.IsNullOrEmpty(renderName)
             ? RenderSpecParser.FindFirst(tree)
             : RenderSpecParser.FindByName(tree, renderName);
 
-        if (renderSpec != null && renderSpec.IsMultiStaff)
-        {
-            // Multi-staff rendering (grandStaff, etc.)
-            var collector = new MeasureCollector();
-            var multiScore = collector.CollectMultiStaff(tree, renderSpec);
-
-            var layoutEngine = new LayoutEngine();
-            var layout = layoutEngine.Layout(multiScore);
-
-            return renderer.Render(multiScore, layout);
-        }
-        else
-        {
-            // Single staff - get voiceName from renderSpec if available
-            string? voiceName = null;
-            if (renderSpec != null && renderSpec.Items.Length == 1 &&
-                renderSpec.Items[0] is SingleStaffSpec single)
-            {
-                voiceName = single.Staff.VoiceName;
-            }
-
-            var collector = new MeasureCollector();
-            var score = collector.Collect(tree, voiceName);
-
-            var layoutEngine = new LayoutEngine();
-            var layout = layoutEngine.Layout(score);
-
-            return renderer.Render(score, layout);
-        }
+        var (multiScore, layout) = BuildLayout(tree, renderSpec);
+        return RenderToSvg(multiScore, layout, options);
     }
 
     /// <summary>
@@ -97,28 +72,8 @@ public static class SvgGenerator
         var results = new List<(string, string)>();
         foreach (var spec in allSpecs)
         {
-            var renderer = new SvgRenderer(renderOptions: options);
-            var collector = new MeasureCollector();
-            var layoutEngine = new LayoutEngine();
-
-            string svg;
-            if (spec.IsMultiStaff)
-            {
-                var multiScore = collector.CollectMultiStaff(tree, spec);
-                var layout = layoutEngine.Layout(multiScore);
-                svg = renderer.Render(multiScore, layout);
-            }
-            else
-            {
-                string? voiceName = null;
-                if (spec.Items.Length == 1 && spec.Items[0] is SingleStaffSpec single)
-                    voiceName = single.Staff.VoiceName;
-
-                var score = collector.Collect(tree, voiceName);
-                var layout = layoutEngine.Layout(score);
-                svg = renderer.Render(score, layout);
-            }
-
+            var (multiScore, layout) = BuildLayout(tree, spec);
+            var svg = RenderToSvg(multiScore, layout, options);
             results.Add((spec.OutputFile, svg));
         }
 
@@ -146,40 +101,50 @@ public static class SvgGenerator
 
         foreach (var spec in allSpecs)
         {
-            var renderer = new SvgRenderer(renderOptions: options);
-            var collector = new MeasureCollector();
-            var layoutEngine = new LayoutEngine();
-
-            string svg;
-            double width, height;
-
-            if (spec.IsMultiStaff)
-            {
-                var multiScore = collector.CollectMultiStaff(tree, spec);
-                var layout = layoutEngine.Layout(multiScore);
-                svg = renderer.Render(multiScore, layout);
-                width = layout.Width;
-                height = layout.Height;
-            }
-            else
-            {
-                string? voiceName = null;
-                if (spec.Items.Length == 1 && spec.Items[0] is SingleStaffSpec single)
-                    voiceName = single.Staff.VoiceName;
-
-                var score = collector.Collect(tree, voiceName);
-                var layout = layoutEngine.Layout(score);
-                svg = renderer.Render(score, layout);
-                width = layout.Width;
-                height = layout.Height;
-            }
-
-            // Movement title from output filename (without extension)
+            var (multiScore, layout) = BuildLayout(tree, spec);
+            var svg = RenderToSvg(multiScore, layout, options);
             var title = System.IO.Path.GetFileNameWithoutExtension(spec.OutputFile);
-            movements.Add((title, svg, width, height));
+            movements.Add((title, svg, layout.Width, layout.Height));
         }
 
         return CombineMovements(movements, options);
+    }
+
+    private static (MultiStaffScore Score, ScoreLayout Layout) BuildLayout(
+        SyntaxTree tree, RenderSpec? renderSpec)
+    {
+        var collector = new MeasureCollector();
+        var layoutEngine = new LayoutEngine();
+        if (renderSpec != null && renderSpec.IsMultiStaff)
+        {
+            var multiScore = collector.CollectMultiStaff(tree, renderSpec);
+            return (multiScore, layoutEngine.Layout(multiScore));
+        }
+
+        // Single staff — wrap in MultiStaffScore so SharedRenderer has a uniform input.
+        string? voiceName = null;
+        if (renderSpec != null && renderSpec.Items.Length == 1 &&
+            renderSpec.Items[0] is SingleStaffSpec single)
+        {
+            voiceName = single.Staff.VoiceName;
+        }
+        var score = collector.Collect(tree, voiceName);
+        var wrapped = MultiStaffScore.FromScore(score);
+        return (wrapped, layoutEngine.Layout(wrapped));
+    }
+
+    private static string RenderToSvg(MultiStaffScore score, ScoreLayout layout, SvgRenderOptions options)
+    {
+        var docOptions = new SvgDocumentOptions
+        {
+            EmbedFont = options.EmbedFont,
+            OmitFontFace = options.OmitFontFace,
+            FontDirectory = options.FontDirectory,
+        };
+        using var doc = new SvgDocumentContext(docOptions);
+        SharedRenderer.RenderTo(score, layout, doc);
+        doc.Dispose();
+        return doc.ToSvg();
     }
 
     /// <summary>

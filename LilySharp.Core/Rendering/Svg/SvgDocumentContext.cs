@@ -27,6 +27,12 @@ public sealed class SvgDocumentOptions
     /// <summary>If true, embed Emmentaler as base64 WOFF2; otherwise reference by name.</summary>
     public bool EmbedFont { get; init; } = true;
 
+    /// <summary>
+    /// If true, skip the <c>@font-face</c> rule entirely. Used by the VS Code
+    /// preview path where the host page injects Emmentaler from a known URL.
+    /// </summary>
+    public bool OmitFontFace { get; init; }
+
     /// <summary>Optional override for the font directory.</summary>
     public string? FontDirectory { get; init; }
 }
@@ -94,13 +100,18 @@ public sealed class SvgDocumentContext : IDocumentContext
         _sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
         _sb.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{widthPx:F1}\" height=\"{heightPx:F1}\" viewBox=\"0 0 {widthSpaces:F2} {heightSpaces:F2}\">");
         _sb.AppendLine("<style>");
-        _sb.AppendLine("  " + GetFontFaceRule());
+        var fontFaceRule = GetFontFaceRule();
+        if (!string.IsNullOrEmpty(fontFaceRule))
+            _sb.AppendLine("  " + fontFaceRule);
         _sb.AppendLine("  .music { font-family: 'Emmentaler', serif; }");
         _sb.AppendLine("</style>");
     }
 
     private string GetFontFaceRule()
     {
+        // Preview mode: host page (VS Code webview, browser) injects Emmentaler.
+        if (_options.OmitFontFace)
+            return "";
         if (_options.EmbedFont)
         {
             var path = ResolveFontPath("emmentaler-20.woff2");
