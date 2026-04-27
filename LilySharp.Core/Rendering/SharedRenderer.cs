@@ -79,6 +79,8 @@ public static class SharedRenderer
             DrawPedalBrackets(layout, measureToSystemY, gc);
             DrawMultiMeasureRests(layout, gc);
             DrawTieVariants(layout, measureToSystemY, gc);
+            DrawLyricHyphens(layout, measureToSystemY, gc);
+            DrawPartCombine(layout, measureToSystemY, gc);
             doc.EndPage();
         }
     }
@@ -111,6 +113,9 @@ public static class SharedRenderer
     {
         bool isFirstSystem = system.SystemIndex == 0;
         double systemStartX = system.Indent;
+
+        // System-start delimiters (brackets / bar lines connecting staves in a group).
+        DrawSystemStartDelimiters(system, gc);
 
         // Per-staff: staff lines + prefix glyphs + notes
         foreach (var (group, staff, globalIdx) in score.EnumerateStaves())
@@ -330,12 +335,20 @@ public static class SharedRenderer
             gc.DrawLine(stemX, noteY, stemX, stemEndY, Color.Black, EngravingDefaults.StemThickness);
 
             // Flag (only for unbeamed eighth+ notes; beamed notes handled in DrawBeams)
+            bool hasFlag = false;
             if (noteValue >= 8)
             {
                 var flag = EmmentalerGlyphs.GetFlag(noteValue, note.StemUp);
                 if (flag.HasValue)
+                {
                     gc.DrawGlyph(flag.Value, stemX, stemEndY, FontSize);
+                    hasFlag = true;
+                }
             }
+
+            // Tremolo slashes on the stem
+            if (note.HasTremolo)
+                DrawTremolo(stemX, noteY, stemEndY, note.StemUp, note.TremoloBeams, hasFlag, gc);
         }
 
         // Augmentation dots
@@ -1404,5 +1417,179 @@ public static class SharedRenderer
                 v.Control1, v.Control2, v.CurveUp,
                 EngravingDefaults.TieMidThickness, gc);
         }
+    }
+
+    // ---------- Lyric hyphen dashes ----------
+
+    /// <summary>
+    /// Draws explicit hyphen dashes between syllables of the same word
+    /// (LyricLayout.DrawHyphen handles single-character hyphens; this draws
+    /// the multi-dash sequence layouts that span wider gaps).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-hyphen.cc:60-100 LyricHyphen grob
+    /// </remarks>
+    private static void DrawLyricHyphens(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.LyricHyphenLayouts.IsDefaultOrEmpty) return;
+        const double thickness = 0.16;
+        foreach (var h in layout.LyricHyphenLayouts)
+        {
+            if (h.Type == LyricConnectorType.Hyphen)
+            {
+                foreach (var dash in h.Dashes)
+                {
+                    var src = layout.LyricLayouts[h.LyricIndex];
+                    double sy = sysY.TryGetValue(src.Item.MeasureIndex, out var s) ? s : 0;
+                    gc.DrawLine(dash.X1, sy + dash.Y, dash.X2, sy + dash.Y,
+                        Color.Black, thickness);
+                }
+            }
+            else if (h.Type == LyricConnectorType.Extender)
+            {
+                var src = layout.LyricLayouts[h.LyricIndex];
+                double sy = sysY.TryGetValue(src.Item.MeasureIndex, out var s) ? s : 0;
+                if (h.CrossesSystemBreak)
+                {
+                    gc.DrawLine(h.ExtenderStartX, sy + h.ExtenderY,
+                        h.FirstSegmentEndX, sy + h.ExtenderY, Color.Black, 0.1);
+                    gc.DrawLine(h.SecondSegmentStartX, sy + h.ExtenderY,
+                        h.ExtenderEndX, sy + h.ExtenderY, Color.Black, 0.1);
+                }
+                else
+                {
+                    gc.DrawLine(h.ExtenderStartX, sy + h.ExtenderY,
+                        h.ExtenderEndX, sy + h.ExtenderY, Color.Black, 0.1);
+                }
+            }
+        }
+    }
+
+    // ---------- Part combine annotations ----------
+
+    /// <summary>Draws part-combine text labels ("a2", "Solo", "Solo II").</summary>
+    /// <remarks>LILYPOND-REF: scm/part-combiner.scm — CombineTextScript</remarks>
+    private static void DrawPartCombine(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.PartCombineLayouts.IsDefaultOrEmpty) return;
+        double size = FontSize * 0.65;
+        foreach (var pc in layout.PartCombineLayouts)
+        {
+            double y = (sysY.TryGetValue(pc.MeasureIndex, out var s) ? s : 0) + pc.Y;
+            gc.DrawText(pc.Text, pc.X, y, size, "serif",
+                FontStyle.Italic, TextAnchor.Start, Color.Black);
+        }
+    }
+
+    // ---------- Tremolo (stem slashes, drawn from DrawNote) ----------
+
+    /// <summary>
+    /// Draws tremolo beams across a stem: short angled slashes at the stem's
+    /// midpoint. Number of slashes corresponds to the tremolo subdivision.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/stem-tremolo.cc:129-150 raw_stencil
+    /// LILYPOND-REF: lily/stem-tremolo.cc:81-94 width depends on flag
+    /// LILYPOND-REF: lily/stem-tremolo.cc:45-79 calc-slope
+    /// </remarks>
+    private static void DrawTremolo(
+        double stemX, double stemAttachY, double stemEndY,
+        bool stemUp, int beamCount, bool hasFlag, IDrawingContext gc)
+    {
+        if (beamCount <= 0) return;
+        double beamWidth = hasFlag ? 1.0 : 1.5;
+        const double beamThickness = 0.48;
+        const double beamGap = 0.8;
+        double slope = (!stemUp && hasFlag) ? 0.40 : 0.25;
+
+        double stemMidY = (stemAttachY + stemEndY) / 2;
+        double totalHeight = beamCount * beamThickness + (beamCount - 1) * beamGap;
+        double startY = stemMidY - totalHeight / 2 + beamThickness / 2;
+
+        for (int i = 0; i < beamCount; i++)
+        {
+            double y = startY + i * (beamThickness + beamGap);
+            double halfW = beamWidth / 2;
+            double dy = halfW * slope;
+            double y1 = stemUp ? y + dy : y - dy;
+            double y2 = stemUp ? y - dy : y + dy;
+            gc.DrawLine(stemX - halfW, y1, stemX + halfW, y2,
+                Color.Black, beamThickness);
+        }
+    }
+
+    // ---------- System-start delimiters (group brackets / bar lines) ----------
+
+    /// <summary>
+    /// Draws the system-start delimiter (bracket / line-bracket / bar-line)
+    /// on the left edge of each multi-staff group. Brace rendering is left
+    /// to a future phase that ports BraceRenderer's path output.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter.cc:127-129 collapse_height check
+    /// LILYPOND-REF: scm/define-grobs.scm SystemStartBrace/Bracket/Square/Bar
+    /// </remarks>
+    private static void DrawSystemStartDelimiters(SystemLayout system, IDrawingContext gc)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty) return;
+        foreach (var group in system.StaffGroups)
+        {
+            if (group.GrandStaffLayout is not { } delim) continue;
+            double top = system.Y + delim.BraceTop;
+            double bottom = system.Y + delim.BraceBottom;
+            double height = bottom - top;
+            switch (delim.DelimiterType)
+            {
+                case SystemStartDelimiterType.Bracket:
+                    if (height >= 5)
+                        DrawSystemStartBracket(delim.BraceX, top, bottom, gc);
+                    break;
+                case SystemStartDelimiterType.LineBracket:
+                    if (height >= 5)
+                        DrawSystemStartLineBracket(delim.BraceX, top, bottom, gc);
+                    break;
+                case SystemStartDelimiterType.BarLine:
+                    DrawSystemStartBarLine(delim.BraceX, top, bottom, gc);
+                    break;
+                case SystemStartDelimiterType.Brace:
+                    // TODO Phase 3: port BraceRenderer (Bezier-path glyph) so the
+                    // brace can be drawn through IDrawingContext as well. For now
+                    // grand-staff PDFs lack the curly brace but staves are still
+                    // visually grouped via the connecting bar lines elsewhere.
+                    break;
+            }
+        }
+    }
+
+    private static void DrawSystemStartBracket(double x, double top, double bottom, IDrawingContext gc)
+    {
+        double thickness = 0.45;
+        double serifH = 0.4, serifW = 0.6;
+        gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
+        // Top serif (right-pointing triangle filled)
+        gc.DrawClosedBezier(
+            (x, top), (x + serifW, top), (x + serifW, top),
+            (x + serifW * 0.3, top + serifH), (x + serifW * 0.3, top + serifH), (x + serifW * 0.3, top + serifH),
+            Color.Black);
+        // Bottom serif
+        gc.DrawClosedBezier(
+            (x, bottom), (x + serifW, bottom), (x + serifW, bottom),
+            (x + serifW * 0.3, bottom - serifH), (x + serifW * 0.3, bottom - serifH), (x + serifW * 0.3, bottom - serifH),
+            Color.Black);
+    }
+
+    private static void DrawSystemStartLineBracket(double x, double top, double bottom, IDrawingContext gc)
+    {
+        double thickness = EngravingDefaults.StaffLineThickness;
+        const double hookWidth = 0.5;
+        gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
+        gc.DrawLine(x, top, x + hookWidth, top, Color.Black, thickness);
+        gc.DrawLine(x, bottom, x + hookWidth, bottom, Color.Black, thickness);
+    }
+
+    private static void DrawSystemStartBarLine(double x, double top, double bottom, IDrawingContext gc)
+    {
+        double thickness = EngravingDefaults.StaffLineThickness * 1.6;
+        gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
     }
 }
