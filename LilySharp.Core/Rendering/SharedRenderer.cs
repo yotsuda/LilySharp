@@ -316,6 +316,9 @@ public static class SharedRenderer
         int noteValue = note.BaseDuration.Denominator;
         if (note.BaseDuration.Numerator != 1) noteValue = 1;
         double noteY = staffMiddleY - note.StaffPosition * 0.5;
+        // Cue notes scale to ~0.66× (LP CueVoice fontSize = -4 → magstep(-4)).
+        // LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4
+        double noteFontSize = note.IsCue ? FontSize * 0.66 : FontSize;
 
         // Accidental (left of notehead)
         if (note.Accidental != null)
@@ -324,7 +327,7 @@ public static class SharedRenderer
         // Notehead
         char head = EmmentalerGlyphs.GetNotehead(noteValue);
         using (gc.Source(note.SourcePosition))
-            gc.DrawGlyph(head, x, noteY, FontSize);
+            gc.DrawGlyph(head, x, noteY, noteFontSize);
 
         // Ledger lines for notes far from middle line
         DrawLedgerLines(note.StaffPosition, x, staffMiddleY, gc);
@@ -347,7 +350,7 @@ public static class SharedRenderer
                 var flag = EmmentalerGlyphs.GetFlag(noteValue, note.StemUp);
                 if (flag.HasValue)
                 {
-                    gc.DrawGlyph(flag.Value, stemX, stemEndY, FontSize);
+                    gc.DrawGlyph(flag.Value, stemX, stemEndY, noteFontSize);
                     hasFlag = true;
                 }
             }
@@ -362,7 +365,7 @@ public static class SharedRenderer
         {
             double dotX = x + 1.0 + d * 0.5;
             double dotY = note.StaffPosition % 2 == 0 ? noteY - 0.5 : noteY;
-            gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, dotY, FontSize);
+            gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, dotY, noteFontSize);
         }
     }
 
