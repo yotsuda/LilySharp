@@ -63,6 +63,10 @@ public static class SharedRenderer
             DrawOttavaBrackets(layout, measureToSystemY, gc);
             DrawVoltaBrackets(layout, measureToSystemY, gc);
             DrawTupletBrackets(layout, measureToSystemY, gc);
+            DrawTrillSpanners(layout, measureToSystemY, gc);
+            DrawGlissandos(layout, gc);
+            DrawArpeggios(layout, gc);
+            DrawGraceNotes(layout, measureToSystemY, gc);
             doc.EndPage();
         }
     }
@@ -826,6 +830,155 @@ public static class SharedRenderer
                 double textY = b.IsStemUp ? midY - 0.3 : midY + 0.8;
                 gc.DrawText(b.NumberText, midX, textY,
                     FontSize * 0.6, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
+            }
+        }
+    }
+
+    // ---------- Trill spanners (tr + wavy line) ----------
+
+    /// <summary>
+    /// Draws trill spanners: the "tr" Emmentaler glyph followed by a wavy
+    /// extension line. The wave is approximated as a polyline through
+    /// peak/valley points (enough segments per cycle that it reads as smooth).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/scheme-engravers.scm Trill_spanner_engraver
+    /// LILYPOND-REF: scm/define-grobs.scm:2228 (style . trill)
+    /// </remarks>
+    private static void DrawTrillSpanners(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.TrillSpannerLayouts.IsDefaultOrEmpty) return;
+        const double wavePeriod = 0.8;
+        const double waveAmplitude = 0.2;
+        double thickness = EngravingDefaults.StaffLineThickness;
+        foreach (var s in layout.TrillSpannerLayouts)
+        {
+            double absY = (sysY.TryGetValue(s.StartMeasureIndex, out var sy) ? sy : 0) + s.Y;
+            using (gc.Source(s.SourcePosition))
+            {
+                bool isContinuation = Math.Abs(s.GlyphX - s.LineStartX) < 0.01;
+                if (!isContinuation)
+                    gc.DrawGlyph(EmmentalerGlyphs.OrnTrill, s.GlyphX, absY, FontSize);
+                if (s.LineStartX < s.LineEndX)
+                {
+                    double length = s.LineEndX - s.LineStartX;
+                    int halfWaves = Math.Max(1, (int)(length / (wavePeriod / 2)));
+                    double seg = length / halfWaves;
+                    double prevX = s.LineStartX, prevY = absY;
+                    // Approximate Q-curves with 4 line segments per half-wave;
+                    // visually indistinguishable at typical print sizes.
+                    const int subdivisions = 4;
+                    for (int i = 0; i < halfWaves; i++)
+                    {
+                        double startX = s.LineStartX + i * seg;
+                        double sign = (i % 2 == 0) ? -1 : 1;
+                        for (int j = 1; j <= subdivisions; j++)
+                        {
+                            double t = (double)j / subdivisions;
+                            double x = startX + t * seg;
+                            // Parabolic shape: y = absY + sign * amplitude * 4 t (1-t)
+                            double y = absY + sign * waveAmplitude * 4 * t * (1 - t);
+                            gc.DrawLine(prevX, prevY, x, y, Color.Black, thickness);
+                            prevX = x; prevY = y;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ---------- Glissandos ----------
+
+    /// <summary>Draws a simple straight glissando line between two notes.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/scheme-engravers.scm, scm/define-grobs.scm Glissando grob
+    /// </remarks>
+    private static void DrawGlissandos(ScoreLayout layout, IDrawingContext gc)
+    {
+        if (layout.GlissandoLayouts.IsDefaultOrEmpty) return;
+        double thickness = EngravingDefaults.StaffLineThickness;
+        foreach (var g in layout.GlissandoLayouts)
+        {
+            using (gc.Source(g.SourcePosition))
+                gc.DrawLine(g.StartX, g.StartY, g.EndX, g.EndY, Color.Black, thickness);
+        }
+    }
+
+    // ---------- Arpeggios (wavy vertical line) ----------
+
+    /// <summary>
+    /// Draws arpeggio markings: a wavy vertical line on the left of a chord.
+    /// Like the trill wavy line, the curve is approximated as a polyline.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/arpeggio.cc, scm/define-grobs.scm:201-224
+    /// </remarks>
+    private static void DrawArpeggios(ScoreLayout layout, IDrawingContext gc)
+    {
+        if (layout.ArpeggioLayouts.IsDefaultOrEmpty) return;
+        const double wavePeriod = 0.8;
+        const double waveAmplitude = 0.2;
+        double thickness = EngravingDefaults.StaffLineThickness;
+        foreach (var a in layout.ArpeggioLayouts)
+        {
+            double length = a.BottomY - a.TopY;
+            if (length <= 0) continue;
+            int halfWaves = Math.Max(1, (int)(length / (wavePeriod / 2)));
+            double seg = length / halfWaves;
+            double prevX = a.X, prevY = a.TopY;
+            const int subdivisions = 4;
+            using (gc.Source(a.SourcePosition))
+            {
+                for (int i = 0; i < halfWaves; i++)
+                {
+                    double startY = a.TopY + i * seg;
+                    double sign = (i % 2 == 0) ? -1 : 1;
+                    for (int j = 1; j <= subdivisions; j++)
+                    {
+                        double t = (double)j / subdivisions;
+                        double y = startY + t * seg;
+                        double x = a.X + sign * waveAmplitude * 4 * t * (1 - t);
+                        gc.DrawLine(prevX, prevY, x, y, Color.Black, thickness);
+                        prevX = x; prevY = y;
+                    }
+                }
+            }
+        }
+    }
+
+    // ---------- Grace notes ----------
+
+    /// <summary>
+    /// Draws grace-note groups: small noteheads (with optional accidentals)
+    /// scaled to GraceNoteLayout.Scale (typically 0.65), placed before the
+    /// main note's column.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/grace-engraver.cc:36-80 Grace_engraver
+    /// LILYPOND-REF: scm/define-grobs.scm:1358-1402 GraceSpacing grob
+    /// </remarks>
+    private static void DrawGraceNotes(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.GraceNoteLayouts.IsDefaultOrEmpty) return;
+        foreach (var g in layout.GraceNoteLayouts)
+        {
+            double sy = sysY.TryGetValue(g.MeasureIndex, out var s) ? s : 0;
+            double staffMiddleY = sy + StaffHeight / 2;
+            double scaledFontSize = FontSize * g.Scale;
+            double currentX = g.X;
+            using (gc.Source(g.SourcePosition))
+            {
+                foreach (var note in g.Notes)
+                {
+                    double y = staffMiddleY - note.StaffPosition * 0.5;
+                    if (note.Accidental is { } acc)
+                        DrawAccidental(acc, isCourtesy: false, currentX, y,
+                            g.SourcePosition, gc);
+                    gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize);
+                    if (note.NeedsLedger)
+                        DrawLedgerLines(note.StaffPosition, currentX, staffMiddleY, gc);
+                    currentX += 1.2 * g.Scale;  // approximate advance per grace note
+                }
             }
         }
     }
