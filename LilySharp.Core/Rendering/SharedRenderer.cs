@@ -73,6 +73,12 @@ public static class SharedRenderer
             DrawBarNumbers(layout, gc);
             DrawStanzaNumbers(layout, gc);
             DrawFingerings(layout, measureToSystemY, gc);
+            DrawMusicMarks(layout, measureToSystemY, gc);
+            DrawCustomTexts(layout, measureToSystemY, gc);
+            DrawTextSpanners(layout, measureToSystemY, gc);
+            DrawPedalBrackets(layout, measureToSystemY, gc);
+            DrawMultiMeasureRests(layout, gc);
+            DrawTieVariants(layout, measureToSystemY, gc);
             doc.EndPage();
         }
     }
@@ -1131,6 +1137,272 @@ public static class SharedRenderer
             using (gc.Source(f.SourcePosition))
                 gc.DrawText(f.Number.ToString(), f.X, y, size, "serif",
                     FontStyle.Regular, TextAnchor.Middle, Color.Black);
+        }
+    }
+
+    // ---------- Music marks (segno, coda, fine, tempo, rehearsal, pedal text) ----------
+
+    /// <summary>
+    /// Draws music marks: navigation labels (Segno/Coda/Fine/D.S./D.C.),
+    /// pedal text (Ped./Sost.), tempo markings (♩= NNN), rehearsal marks
+    /// (boxed letters), and section labels.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/mark-engraver.cc:90-140 Mark types
+    /// LILYPOND-REF: scm/define-grobs.scm:3650-3710 Segno, Coda
+    /// </remarks>
+    private static void DrawMusicMarks(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.MusicMarkLayouts.IsDefaultOrEmpty) return;
+        foreach (var m in layout.MusicMarkLayouts)
+        {
+            if (IsHandledBySpannerEngraver(m.MarkType)) continue;
+            double y = (sysY.TryGetValue(m.MeasureIndex, out var s) ? s : 0) + m.Y;
+            using (gc.Source(m.SourcePosition))
+                DrawSingleMusicMark(m, y, gc);
+        }
+    }
+
+    private static void DrawSingleMusicMark(MusicMarkLayout m, double absY, IDrawingContext gc)
+    {
+        if (m.IsSymbol)
+        {
+            // Segno (U+E047) / Coda (U+E048): SMuFL music symbols rendered via
+            // Emmentaler. Centered on the anchor.
+            char glyph = m.MarkType == MusicMarkType.Segno ? '' : '';
+            gc.DrawGlyph(glyph, m.X, absY, FontSize, Color.Black);
+            return;
+        }
+        if (m.MarkType == MusicMarkType.Tempo)
+        {
+            // LILYPOND-REF: scm/define-grobs.scm:1835 MetronomeMark
+            // LILYPOND-REF: lily/metronome-engraver.cc — notehead + stem + " = NNN"
+            const double noteSize = 1.6;
+            const double textSize = 1.8;
+            gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, m.X, absY, noteSize);
+            double stemX = m.X + noteSize * 0.32;
+            double stemTop = absY - 3.5 * (noteSize / FontSize);
+            gc.DrawLine(stemX, absY, stemX, stemTop, Color.Black, 0.10);
+            gc.DrawText("= " + m.Text, m.X + noteSize * 0.5 + 0.3, absY,
+                textSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
+            return;
+        }
+        if (m.MarkType == MusicMarkType.Rehearsal || m.MarkType == MusicMarkType.SectionLabel)
+        {
+            double fs = m.MarkType == MusicMarkType.Rehearsal ? FontSize * 0.6 : FontSize * 0.55;
+            const double pad = 0.2;
+            double textWidth = m.Text.Length * fs * 0.6;  // crude advance estimate
+            double boxW = textWidth + pad * 2;
+            double boxH = fs + pad * 2;
+            gc.DrawRectangle(m.X - boxW / 2, absY - boxH / 2, boxW, boxH,
+                fill: Color.White, stroke: Color.Black, strokeWidth: 0.10);
+            gc.DrawText(m.Text, m.X, absY + fs / 2 - pad, fs, "serif",
+                FontStyle.Bold, TextAnchor.Middle, Color.Black);
+            return;
+        }
+        if (IsPedalMark(m.MarkType))
+        {
+            bool italic = m.MarkType is MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
+                or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
+            gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, "serif",
+                italic ? FontStyle.BoldItalic : FontStyle.Bold, TextAnchor.Middle, Color.Black);
+            return;
+        }
+        // Default text marks (D.S./D.C./Fine/etc.)
+        gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, "serif",
+            FontStyle.BoldItalic, TextAnchor.Middle, Color.Black);
+    }
+
+    private static bool IsHandledBySpannerEngraver(MusicMarkType type) =>
+        type is MusicMarkType.Cresc or MusicMarkType.Decresc or MusicMarkType.Dim
+             or MusicMarkType.Rit or MusicMarkType.Accel
+             or MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
+             or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
+             or MusicMarkType.Loco;
+
+    private static bool IsPedalMark(MusicMarkType type) =>
+        type is MusicMarkType.SustainOn or MusicMarkType.SustainOff
+             or MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
+             or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
+
+    // ---------- Custom text annotations ----------
+
+    /// <summary>Draws free-form text annotations (e.g. "molto rit.", "a tempo").</summary>
+    /// <remarks>LILYPOND-REF: lily/text-interface.cc — text rendering</remarks>
+    private static void DrawCustomTexts(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.CustomTextLayouts.IsDefaultOrEmpty) return;
+        foreach (var t in layout.CustomTextLayouts)
+        {
+            double y = (sysY.TryGetValue(t.MeasureIndex, out var s) ? s : 0) + t.Y;
+            using (gc.Source(t.SourcePosition))
+                gc.DrawText(t.Text, t.X, y, FontSize * 0.6, "serif",
+                    FontStyle.Italic, TextAnchor.Middle, Color.Black);
+        }
+    }
+
+    // ---------- Text spanners (rit. ----, accel. ----) ----------
+
+    /// <summary>
+    /// Draws text spanners: italic label followed by an extension line (dashed
+    /// or solid) to the spanner end.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/text-spanner-engraver.cc TextSpanner engraver
+    /// LILYPOND-REF: scm/define-grobs.scm:3504-3535 TextSpanner grob
+    /// </remarks>
+    private static void DrawTextSpanners(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.TextSpannerLayouts.IsDefaultOrEmpty) return;
+        double textSize = FontSize * 0.5;
+        double thickness = EngravingDefaults.StaffLineThickness;
+        foreach (var s in layout.TextSpannerLayouts)
+        {
+            double absY = (sysY.TryGetValue(s.StartMeasureIndex, out var y) ? y : 0) + s.Y;
+            using (gc.Source(s.SourcePosition))
+            {
+                gc.DrawText(s.Text, s.StartX, absY, textSize, "serif",
+                    FontStyle.Italic, TextAnchor.Start, Color.Black);
+                if (s.Style != TextSpannerStyle.None && s.LineStartX < s.EndX)
+                {
+                    (double On, double Off)? dash = s.Style == TextSpannerStyle.DashedLine
+                        ? (s.DashPeriod * s.DashFraction, s.DashPeriod * (1 - s.DashFraction))
+                        : null;
+                    gc.DrawLine(s.LineStartX, absY, s.EndX, absY,
+                        Color.Black, thickness, dash);
+                }
+            }
+        }
+    }
+
+    // ---------- Pedal brackets ----------
+
+    /// <summary>
+    /// Draws piano pedal brackets: horizontal line below staff with a
+    /// vertical hook at the release point.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/pedal-bracket.cc — PianoPedalBracket grob
+    /// </remarks>
+    private static void DrawPedalBrackets(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.PedalBracketLayouts.IsDefaultOrEmpty) return;
+        double thickness = EngravingDefaults.StaffLineThickness;
+        foreach (var b in layout.PedalBracketLayouts)
+        {
+            double absY = (sysY.TryGetValue(b.StartMeasureIndex, out var y) ? y : 0) + b.Y;
+            using (gc.Source(b.SourcePosition))
+            {
+                gc.DrawLine(b.StartX, absY, b.EndX, absY, Color.Black, thickness);
+                gc.DrawLine(b.EndX, absY - b.EdgeHeight, b.EndX, absY, Color.Black, thickness);
+            }
+        }
+    }
+
+    // ---------- Multi-measure rests ----------
+
+    /// <summary>
+    /// Draws multi-measure rest indicators. Short runs (≤ ExpandLimit) use the
+    /// church_rest decomposition (combinations of long/breve/whole rest
+    /// glyphs); longer runs use the big_rest H-bar with a bold count above.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:194-220 big_rest
+    /// LILYPOND-REF: lily/multi-measure-rest.cc:225-300 church_rest
+    /// </remarks>
+    private static void DrawMultiMeasureRests(ScoreLayout layout, IDrawingContext gc)
+    {
+        if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty) return;
+        foreach (var mmr in layout.MultiMeasureRestLayouts)
+        {
+            if (mmr.UseChurchRest)
+                DrawChurchRest(mmr, gc);
+            else
+                DrawBigRest(mmr, gc);
+        }
+    }
+
+    private static void DrawChurchRest(MultiMeasureRestLayout mmr, IDrawingContext gc)
+    {
+        double cx = (mmr.StartX + mmr.EndX) / 2.0;
+        double cy = mmr.Y;
+
+        // Greedy decomposition: 4 (long), 2 (breve), 1 (whole).
+        var pieces = new List<(int Span, char Glyph, double Width, double Y)>();
+        const double LongWidth = 2.0, BreveWidth = 1.5, WholeWidth = 1.5, Gap = 0.4;
+        int remaining = mmr.MeasureCount;
+        foreach (var (span, glyph, width, dy) in new[]
+        {
+            (4, EmmentalerGlyphs.RestLonga, LongWidth, 0.0),
+            (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, 0.0),
+            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -0.5),
+        })
+        {
+            while (remaining >= span)
+            {
+                pieces.Add((span, glyph, width, cy + dy));
+                remaining -= span;
+            }
+        }
+        if (pieces.Count == 0) return;
+
+        double totalWidth = pieces.Sum(p => p.Width) + Gap * (pieces.Count - 1);
+        double x = cx - totalWidth / 2;
+        foreach (var p in pieces)
+        {
+            gc.DrawGlyph(p.Glyph, x + p.Width / 2, p.Y, FontSize);
+            x += p.Width + Gap;
+        }
+        if (mmr.MeasureCount > 1)
+            gc.DrawText(mmr.MeasureCount.ToString(), cx, cy - 2.5,
+                2.4, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
+    }
+
+    private static void DrawBigRest(MultiMeasureRestLayout mmr, IDrawingContext gc)
+    {
+        const double thickness = 0.5;
+        const double endCapHeight = 0.8;
+        const double padding = 1.0;
+        const double capThickness = 0.18;
+
+        double left = mmr.StartX + padding;
+        double right = mmr.EndX - padding;
+        if (right <= left) return;
+        double cy = mmr.Y;
+
+        gc.DrawRectangle(left, cy - thickness / 2, right - left, thickness, fill: Color.Black);
+        gc.DrawRectangle(left - capThickness / 2, cy - endCapHeight,
+            capThickness, 2 * endCapHeight, fill: Color.Black);
+        gc.DrawRectangle(right - capThickness / 2, cy - endCapHeight,
+            capThickness, 2 * endCapHeight, fill: Color.Black);
+
+        double textX = (left + right) / 2;
+        double textY = cy - endCapHeight - 0.5;
+        gc.DrawText(mmr.MeasureCount.ToString(), textX, textY,
+            2.4, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
+    }
+
+    // ---------- Tie variants (laissez-vibrer / repeat-tie) ----------
+
+    /// <summary>
+    /// Draws half-ties: laissez-vibrer (let-ring, pointing right out of the
+    /// note) and repeat-tie (pointing left into the note from a repeat).
+    /// Same Bezier-bow shape as full ties.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/laissez-vibrer-engraver.cc — LaissezVibrerTie grob
+    /// LILYPOND-REF: lily/repeat-tie-engraver.cc — RepeatTie grob
+    /// </remarks>
+    private static void DrawTieVariants(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.TieVariantLayouts.IsDefaultOrEmpty) return;
+        // Tie variants use staff-relative Y already in the layout — no system offset needed
+        // (TieVariantEngraver computes absolute Y).
+        foreach (var v in layout.TieVariantLayouts)
+        {
+            DrawCurve(v.StartX, v.Y, v.EndX, v.Y,
+                v.Control1, v.Control2, v.CurveUp,
+                EngravingDefaults.TieMidThickness, gc);
         }
     }
 }
