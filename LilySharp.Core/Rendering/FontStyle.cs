@@ -31,3 +31,21 @@ public enum TextAnchor
     Middle,
     End,
 }
+
+/// <summary>
+/// Vertical anchor for <see cref="IDrawingContext.DrawText"/>. Selects which
+/// part of the glyph extents the supplied <c>y</c> coordinate refers to.
+/// </summary>
+/// <remarks>
+/// Maps to SVG <c>dominant-baseline</c>: <see cref="Baseline"/>=alphabetic
+/// (default), <see cref="Middle"/>=central, <see cref="Hanging"/>=hanging.
+/// </remarks>
+public enum VerticalAnchor
+{
+    /// <summary>SVG default — y is the alphabetic baseline.</summary>
+    Baseline,
+    /// <summary>y is the visual midline (≈ cap-height / 2 above baseline).</summary>
+    Middle,
+    /// <summary>y is the top of the glyph extents.</summary>
+    Hanging,
+}

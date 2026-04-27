@@ -136,6 +136,10 @@ public static class SharedRenderer
         // System-start delimiters (brackets / bar lines connecting staves in a group).
         DrawSystemStartDelimiters(system, gc);
 
+        // Instrument names within the indent area (drawn before staves so glyphs
+        // overlap correctly when names are wider than the indent).
+        DrawInstrumentNames(system, gc);
+
         // Per-staff: staff lines + prefix glyphs + notes
         foreach (var (group, staff, globalIdx) in score.EnumerateStaves())
         {
@@ -1557,6 +1561,75 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/system-start-delimiter.cc:127-129 collapse_height check
     /// LILYPOND-REF: scm/define-grobs.scm SystemStartBrace/Bracket/Square/Bar
     /// </remarks>
+    /// <summary>
+    /// Draws the instrument name text for each staff group. When a grand-staff
+    /// group has only one named staff, the name is centered vertically across
+    /// the brace span; otherwise each named staff gets its own centered name.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/instrument-name-engraver.cc — InstrumentName grob
+    /// LILYPOND-REF: scm/define-grobs.scm:1711-1728 InstrumentName
+    ///   font: serif, padding 0.3, self-alignment-X = CENTER, self-alignment-Y = CENTER
+    /// LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
+    ///   nameX = MarginLeft + indent / 2 (MarginLeft applied by the page-level
+    ///   translate group, so this method uses indent / 2 directly).
+    /// </remarks>
+    private static void DrawInstrumentNames(SystemLayout system, IDrawingContext gc)
+    {
+        if (system.Indent <= 0) return;
+        if (system.StaffGroups.IsDefaultOrEmpty) return;
+
+        const double NameFontScale = 0.75;
+        double actualFontSize = FontSize * NameFontScale;
+        double nameX = system.Indent / 2.0;
+
+        foreach (var staffGroup in system.StaffGroups)
+        {
+            bool anyNamed = false;
+            foreach (var sl in staffGroup.Staves)
+            {
+                if (!string.IsNullOrEmpty(sl.InstrumentName)) { anyNamed = true; break; }
+            }
+            if (!anyNamed) continue;
+
+            // Single name spanning a delimited group: center vertically across the brace.
+            if (staffGroup.HasDelimiter && staffGroup.GrandStaffLayout is { } gs)
+            {
+                int namedCount = 0;
+                StaffLayout? onlyNamed = null;
+                foreach (var sl in staffGroup.Staves)
+                {
+                    if (string.IsNullOrEmpty(sl.InstrumentName)) continue;
+                    namedCount++;
+                    onlyNamed = sl;
+                    if (namedCount > 1) break;
+                }
+                if (namedCount == 1 && onlyNamed is { })
+                {
+                    double centerY = system.Y + (gs.BraceTop + gs.BraceBottom) / 2.0;
+                    gc.DrawText(onlyNamed.InstrumentName!, nameX, centerY,
+                        actualFontSize, "serif", FontStyle.Regular,
+                        TextAnchor.Middle, fill: null,
+                        verticalAnchor: VerticalAnchor.Middle);
+                    continue;
+                }
+                // Multiple named staves fall through to per-staff rendering.
+            }
+
+            foreach (var staffLayout in staffGroup.Staves)
+            {
+                if (string.IsNullOrEmpty(staffLayout.InstrumentName) || staffLayout.IsHidden)
+                    continue;
+                double staffY = system.Y + staffLayout.Y;
+                double centerY = staffY + staffLayout.Height / 2.0;
+                gc.DrawText(staffLayout.InstrumentName, nameX, centerY,
+                    actualFontSize, "serif", FontStyle.Regular,
+                    TextAnchor.Middle, fill: null,
+                    verticalAnchor: VerticalAnchor.Middle);
+            }
+        }
+    }
+
     private static void DrawSystemStartDelimiters(SystemLayout system, IDrawingContext gc)
     {
         if (system.StaffGroups.IsDefaultOrEmpty) return;

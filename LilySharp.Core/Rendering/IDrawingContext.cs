@@ -81,7 +81,8 @@ public interface IDrawingContext
     void DrawText(
         string text, double x, double y, double fontSize,
         string fontFamily, FontStyle style = FontStyle.Regular,
-        TextAnchor anchor = TextAnchor.Start, Color? fill = null);
+        TextAnchor anchor = TextAnchor.Start, Color? fill = null,
+        VerticalAnchor verticalAnchor = VerticalAnchor.Baseline);
 
     /// <summary>
     /// Tags subsequent draw operations (until <see cref="IDisposable.Dispose"/>)

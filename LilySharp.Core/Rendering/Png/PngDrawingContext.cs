@@ -134,7 +134,8 @@ internal sealed class PngDrawingContext : IDrawingContext
 
     public void DrawText(string text, double x, double y, double fontSize,
         string fontFamily, FontStyle style = FontStyle.Regular,
-        TextAnchor anchor = TextAnchor.Start, Color? fill = null)
+        TextAnchor anchor = TextAnchor.Start, Color? fill = null,
+        VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
     {
         var font = _fonts.GetFont(fontFamily, T(fontSize), style);
         using var paint = new SKPaint
@@ -155,7 +156,21 @@ internal sealed class PngDrawingContext : IDrawingContext
             if (anchor == TextAnchor.Middle) tx -= width / 2f;
             else /* End */ tx -= width;
         }
-        _canvas.DrawText(text, tx, X(y), font, paint);
+        // SVG dominant-baseline parity: shift Y so SkiaSharp's baseline lands
+        // where the requested anchor visually is. Use SKFont.Metrics for
+        // accurate ascent/descent (ascent is negative in Skia).
+        float ty = X(y);
+        if (verticalAnchor != VerticalAnchor.Baseline)
+        {
+            var metrics = font.Metrics;
+            ty += verticalAnchor switch
+            {
+                VerticalAnchor.Middle => -(metrics.Ascent + metrics.Descent) / 2f,
+                VerticalAnchor.Hanging => -metrics.Ascent,
+                _ => 0,
+            };
+        }
+        _canvas.DrawText(text, tx, ty, font, paint);
     }
 
     public IDisposable Source(int sourcePosition)

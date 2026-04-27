@@ -136,7 +136,8 @@ internal sealed class PdfDrawingContext : IDrawingContext
 
     public void DrawText(string text, double x, double y, double fontSize,
         string fontFamily, FontStyle style = FontStyle.Regular,
-        TextAnchor anchor = TextAnchor.Start, Color? fill = null)
+        TextAnchor anchor = TextAnchor.Start, Color? fill = null,
+        VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
     {
         var pdfStyle = ((style & FontStyle.Bold) != 0, (style & FontStyle.Italic) != 0) switch
         {
@@ -152,8 +153,17 @@ internal sealed class PdfDrawingContext : IDrawingContext
             TextAnchor.End => XStringFormats.BaseLineRight,
             _ => XStringFormats.BaseLineLeft,
         };
+        // SVG dominant-baseline parity: shift Y so the baseline sits where the
+        // requested anchor would visually land. cap-height ≈ 0.7 × em, so
+        // central baseline ≈ 0.35 × em below central, hanging ≈ 0.8 × em below top.
+        double drawY = verticalAnchor switch
+        {
+            VerticalAnchor.Middle => y + fontSize * 0.35,
+            VerticalAnchor.Hanging => y + fontSize * 0.8,
+            _ => y,
+        };
         _gfx.DrawString(text, font, new XSolidBrush(ToXColor(fill)),
-            X(x), X(y), fmt);
+            X(x), X(drawY), fmt);
     }
 
     public IDisposable Source(int sourcePosition)

@@ -106,7 +106,8 @@ internal sealed class SvgDrawingContext : IDrawingContext
 
     public void DrawText(string text, double x, double y, double fontSize,
         string fontFamily, FontStyle style = FontStyle.Regular,
-        TextAnchor anchor = TextAnchor.Start, Color? fill = null)
+        TextAnchor anchor = TextAnchor.Start, Color? fill = null,
+        VerticalAnchor verticalAnchor = VerticalAnchor.Baseline)
     {
         var attrs = new StringBuilder(128);
         attrs.AppendFormat(Inv, " x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\" font-family=\"{3}\"",
@@ -117,6 +118,10 @@ internal sealed class SvgDrawingContext : IDrawingContext
             attrs.Append(" font-style=\"italic\"");
         if (anchor != TextAnchor.Start)
             attrs.Append(anchor == TextAnchor.Middle ? " text-anchor=\"middle\"" : " text-anchor=\"end\"");
+        if (verticalAnchor != VerticalAnchor.Baseline)
+            attrs.Append(verticalAnchor == VerticalAnchor.Middle
+                ? " dominant-baseline=\"central\""
+                : " dominant-baseline=\"hanging\"");
         if (fill is { } f)
             attrs.AppendFormat(Inv, " fill=\"{0}\"", f.ToHex());
         attrs.Append(SourceAttr());
