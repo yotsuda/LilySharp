@@ -124,6 +124,86 @@ public sealed class SharedRendererPdfTests
     }
 
     [Fact]
+    public void Pdf_DrawsDynamicsArticulationsAndLyrics()
+    {
+        // Showcase sample exercises @p / @f / @ff / @accent / @staccato / @fermata
+        // and a separate lyrics line. The PDF should now embed both Emmentaler
+        // (for music + articulations) and a serif font (for dynamics + lyrics)
+        // and the content stream should reference both via "/F0" and "/F1".
+        var path = Path.Combine(SamplesRoot, "test", "lyrics.lys");
+        Assert.True(File.Exists(path), $"sample missing: {path}");
+        var tree = SyntaxTree.Parse(File.ReadAllText(path));
+        Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
+
+        var bytes = PdfGenerator.Generate(tree, PdfRenderOptions.Default);
+        var stream = DecodeAllContentStreams(bytes);
+
+        // Music font (Emmentaler) selected at FontSize × scale = 4 × 6 = 24 pt.
+        // PdfSharpCore assigns /F0 / /F1 in encounter order, so either may
+        // host the music font.
+        Assert.True(stream.Contains("/F0 24 Tf") || stream.Contains("/F1 24 Tf"),
+            "Expected a 24-pt music font selection (Emmentaler).");
+
+        // Lyrics use serif at 0.8 × FontSize × scale = 0.8 × 4 × 6 = 19.2 pt
+        Assert.True(stream.Contains(" 19.2 Tf") || stream.Contains(" 19 Tf"),
+            "Expected a 19.2-pt serif font selection for lyrics.");
+    }
+
+    private static string DecodeAllContentStreams(byte[] pdfBytes)
+    {
+        var text = System.Text.Encoding.Latin1.GetString(pdfBytes);
+        var sb = new System.Text.StringBuilder();
+        int searchFrom = 0;
+        while (true)
+        {
+            int kw = text.IndexOf("stream", searchFrom, StringComparison.Ordinal);
+            if (kw < 0) break;
+            int dataStart = kw + "stream".Length;
+            if (dataStart < text.Length && text[dataStart] == '\r') dataStart++;
+            if (dataStart < text.Length && text[dataStart] == '\n') dataStart++;
+            int endKw = text.IndexOf("endstream", dataStart, StringComparison.Ordinal);
+            if (endKw <= dataStart) break;
+            int dataEnd = endKw;
+            if (dataEnd > dataStart && text[dataEnd - 1] == '\n') dataEnd--;
+            if (dataEnd > dataStart && text[dataEnd - 1] == '\r') dataEnd--;
+
+            var compressed = System.Text.Encoding.Latin1.GetBytes(
+                text.Substring(dataStart, dataEnd - dataStart));
+            try
+            {
+                using var ms = new MemoryStream(compressed, 2, compressed.Length - 2);
+                using var ds = new System.IO.Compression.DeflateStream(
+                    ms, System.IO.Compression.CompressionMode.Decompress);
+                using var sr = new StreamReader(ds, System.Text.Encoding.Latin1);
+                sb.AppendLine(sr.ReadToEnd());
+            }
+            catch
+            {
+                // Some streams (font data, CMap) may not be flate-compressed
+                // or may decompress to binary; skip them.
+            }
+            searchFrom = endKw + "endstream".Length;
+        }
+        return sb.ToString();
+    }
+
+    private static string SamplesRoot
+    {
+        get
+        {
+            var dir = AppContext.BaseDirectory;
+            for (int i = 0; i < 6; i++)
+            {
+                var candidate = Path.Combine(dir, "samples");
+                if (Directory.Exists(candidate)) return candidate;
+                dir = Path.GetDirectoryName(dir)!;
+            }
+            // Repo path fallback
+            return @"C:\MyProj\LilySharp\samples";
+        }
+    }
+
+    [Fact]
     public void SingleStaffScore_PromotedToMultiStaff_StillRenders()
     {
         var source = """

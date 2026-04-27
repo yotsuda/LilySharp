@@ -53,8 +53,12 @@ public static class SharedRenderer
             foreach (var system in page.Systems)
                 DrawSystem(score, layout, system, gc);
             // Page-level overlays that span systems
+            var measureToSystemY = BuildMeasureToSystemY(layout);
             DrawTies(layout, gc);
             DrawSlurs(layout, gc);
+            DrawDynamics(layout, measureToSystemY, gc);
+            DrawArticulations(layout, measureToSystemY, gc);
+            DrawLyrics(layout, measureToSystemY, gc);
             doc.EndPage();
         }
     }
@@ -561,5 +565,98 @@ public static class SharedRenderer
             (startX, startY), c1, c2,
             (endX, endY), c2Back, c1Back,
             Color.Black);
+    }
+
+    // ---------- Helpers for system-Y lookup ----------
+
+    private static Dictionary<int, double> BuildMeasureToSystemY(ScoreLayout layout)
+    {
+        var map = new Dictionary<int, double>();
+        foreach (var system in layout.AllSystems)
+            foreach (var ml in system.Measures)
+                map[ml.MeasureIndex] = system.Y;
+        return map;
+    }
+
+    // ---------- Dynamics ----------
+
+    /// <summary>
+    /// Draws dynamic markings ("p", "f", "mf", etc.) below the staff using
+    /// serif bold-italic text (matching LP's DynamicText grob font).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:1298-1327 DynamicText grob
+    /// LILYPOND-REF: scm/define-grobs.scm:1311 self-alignment-X = CENTER
+    /// </remarks>
+    private static void DrawDynamics(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.DynamicLayouts.IsDefaultOrEmpty) return;
+        double fontSize = FontSize * 0.5;
+        foreach (var d in layout.DynamicLayouts)
+        {
+            string text = NormalizeDynamicText(d.Text);
+            double y = (sysY.TryGetValue(d.MeasureIndex, out var sy) ? sy : 0) + d.Y;
+            using (gc.Source(d.SourcePosition))
+                gc.DrawText(text, d.X, y, fontSize, "serif",
+                    FontStyle.BoldItalic, TextAnchor.Middle, Color.Black);
+        }
+    }
+
+    private static string NormalizeDynamicText(string raw) => raw switch
+    {
+        "cresc" => "cresc.",
+        "decresc" => "decresc.",
+        "dim" => "dim.",
+        _ => raw,
+    };
+
+    // ---------- Articulations ----------
+
+    /// <summary>
+    /// Draws articulation marks (staccato, accent, tenuto, fermata, etc.)
+    /// using their precomputed Emmentaler glyphs.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:2268-2310 Script grob
+    /// LILYPOND-REF: lily/script-engraver.cc:92-125 acknowledge_note_head
+    /// </remarks>
+    private static void DrawArticulations(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.ArticulationLayouts.IsDefaultOrEmpty) return;
+        foreach (var a in layout.ArticulationLayouts)
+        {
+            if (string.IsNullOrEmpty(a.Glyph)) continue;
+            double y = (sysY.TryGetValue(a.MeasureIndex, out var sy) ? sy : 0) + a.Y;
+            using (gc.Source(a.SourcePosition))
+                gc.DrawGlyph(a.Glyph[0], a.X, y, FontSize);
+        }
+    }
+
+    // ---------- Lyrics ----------
+
+    /// <summary>
+    /// Draws lyric syllables (and any hyphen / extender connectors) below
+    /// the staff using serif text at the LP-style reduced size.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lyric-engraver.cc:32-52 LyricText grob
+    /// LILYPOND-REF: scm/define-grobs.scm:3025 font-size = -1
+    /// </remarks>
+    private static void DrawLyrics(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.LyricLayouts.IsDefaultOrEmpty) return;
+        double lyricFontSize = FontSize * 0.8;
+        foreach (var l in layout.LyricLayouts)
+        {
+            double y = (sysY.TryGetValue(l.Item.MeasureIndex, out var sy) ? sy : 0) + l.Y;
+            gc.DrawText(l.Item.Text, l.X, y, lyricFontSize, "serif",
+                FontStyle.Regular, TextAnchor.Middle, Color.Black);
+            if (l.DrawHyphen)
+                gc.DrawText("-", l.HyphenX, y, lyricFontSize, "serif",
+                    FontStyle.Regular, TextAnchor.Middle, Color.Black);
+            if (l.DrawExtender)
+                gc.DrawLine(l.X + l.Width / 2, y - 0.2, l.ExtenderEndX, y - 0.2,
+                    Color.Black, 0.1);
+        }
     }
 }
