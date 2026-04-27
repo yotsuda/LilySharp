@@ -59,6 +59,10 @@ public static class SharedRenderer
             DrawDynamics(layout, measureToSystemY, gc);
             DrawArticulations(layout, measureToSystemY, gc);
             DrawLyrics(layout, measureToSystemY, gc);
+            DrawHairpins(layout, measureToSystemY, gc);
+            DrawOttavaBrackets(layout, measureToSystemY, gc);
+            DrawVoltaBrackets(layout, measureToSystemY, gc);
+            DrawTupletBrackets(layout, measureToSystemY, gc);
             doc.EndPage();
         }
     }
@@ -657,6 +661,172 @@ public static class SharedRenderer
             if (l.DrawExtender)
                 gc.DrawLine(l.X + l.Width / 2, y - 0.2, l.ExtenderEndX, y - 0.2,
                     Color.Black, 0.1);
+        }
+    }
+
+    // ---------- Hairpins (cresc / dim wedges) ----------
+
+    /// <summary>
+    /// Draws crescendo/decrescendo wedges as a pair of straight lines that
+    /// converge to a point (cresc) or open from a point (dim).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/hairpin.cc:110-358 print()
+    /// LILYPOND-REF: scm/define-grobs.scm:1641-1666 Hairpin grob (thickness = 1.0)
+    /// </remarks>
+    private static void DrawHairpins(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.HairpinLayouts.IsDefaultOrEmpty) return;
+        double thickness = EngravingDefaults.StaffLineThickness;
+        foreach (var h in layout.HairpinLayouts)
+        {
+            double absY = (sysY.TryGetValue(h.StartMeasureIndex, out var sy) ? sy : 0) + h.Y;
+            double leftTop = absY - h.StartOpening;
+            double leftBottom = absY + h.StartOpening;
+            double rightTop = absY - h.EndOpening;
+            double rightBottom = absY + h.EndOpening;
+            using (gc.Source(h.SourcePosition))
+            {
+                gc.DrawLine(h.StartX, leftTop, h.EndX, rightTop, Color.Black, thickness);
+                gc.DrawLine(h.StartX, leftBottom, h.EndX, rightBottom, Color.Black, thickness);
+            }
+        }
+    }
+
+    // ---------- Ottava brackets (8va / 8vb / 15ma) ----------
+
+    /// <summary>
+    /// Draws ottava brackets: serif italic-bold text label, dashed extension
+    /// line, and a vertical hook on the closing end.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm OttavaBracket grob
+    /// LILYPOND-REF: lily/ottava-bracket.cc — Ottava_bracket
+    /// </remarks>
+    private static void DrawOttavaBrackets(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.OttavaBracketLayouts.IsDefaultOrEmpty) return;
+        double thickness = EngravingDefaults.StaffLineThickness;
+        double textFontSize = FontSize * 0.45;
+        foreach (var b in layout.OttavaBracketLayouts)
+        {
+            double absY = (sysY.TryGetValue(b.StartMeasureIndex, out var sy) ? sy : 0) + b.Y;
+            using (gc.Source(b.SourcePosition))
+            {
+                gc.DrawText(b.Text, b.StartX, absY, textFontSize, "serif",
+                    FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
+
+                double textWidth = b.Text.Length * 0.65;
+                double lineStartX = b.StartX + textWidth + 0.5;
+                if (lineStartX < b.EndX)
+                {
+                    double dashOn = b.DashPeriod * b.DashFraction;
+                    double dashOff = b.DashPeriod * (1 - b.DashFraction);
+                    gc.DrawLine(lineStartX, absY, b.EndX, absY,
+                        Color.Black, thickness, (dashOn, dashOff));
+                }
+                if (b.EdgeHeight > 0)
+                {
+                    double hookDir = b.IsAbove ? 1 : -1;
+                    gc.DrawLine(b.EndX, absY, b.EndX, absY + b.EdgeHeight * hookDir,
+                        Color.Black, thickness);
+                }
+            }
+        }
+    }
+
+    // ---------- Volta brackets (1./2. endings) ----------
+
+    /// <summary>
+    /// Draws volta (repeat ending) brackets: optional left hook, horizontal
+    /// line, optional right hook, and the volta-number text label.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/volta-bracket.cc:1-170 Volta_bracket_interface
+    /// LILYPOND-REF: scm/define-grobs.scm:4292-4317 VoltaBracket grob
+    /// </remarks>
+    private static void DrawVoltaBrackets(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.VoltaBracketLayouts.IsDefaultOrEmpty) return;
+        const double thickness = 0.13;
+        double edgeHeight = VoltaBracketEngraver.GetEdgeHeight();
+
+        foreach (var v in layout.VoltaBracketLayouts)
+        {
+            double absY = (sysY.TryGetValue(v.StartMeasureIndex, out var sy) ? sy : 0) + v.Y;
+            bool hasText = !string.IsNullOrEmpty(v.VoltaText);
+            using (gc.Source(v.SourcePosition))
+            {
+                if (hasText)
+                    gc.DrawLine(v.StartX, absY, v.StartX, absY + edgeHeight,
+                        Color.Black, thickness);
+                gc.DrawLine(v.StartX, absY, v.EndX, absY,
+                    Color.Black, thickness);
+                if (v.IsClosed)
+                    gc.DrawLine(v.EndX, absY, v.EndX, absY + edgeHeight,
+                        Color.Black, thickness);
+                if (hasText)
+                {
+                    double textY = absY + 0.3 + 0.6;  // baseline below the bracket line
+                    gc.DrawText(v.VoltaText, v.StartX + 0.5, textY,
+                        FontSize * 0.6, "serif", FontStyle.Bold, TextAnchor.Start, Color.Black);
+                }
+            }
+        }
+    }
+
+    // ---------- Tuplet brackets ----------
+
+    /// <summary>
+    /// Draws tuplet brackets: hook + sloped line (split around the number) +
+    /// hook + centered number text. When all members are beamed the bracket
+    /// is suppressed (number-only).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:200-350 print()
+    /// LILYPOND-REF: scm/define-grobs.scm TupletBracket defaults
+    /// </remarks>
+    private static void DrawTupletBrackets(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    {
+        if (layout.TupletBracketLayouts.IsDefaultOrEmpty) return;
+        const double thickness = 0.13;
+        double edgeHeight = TupletBracketEngraver.GetEdgeHeight();
+
+        foreach (var b in layout.TupletBracketLayouts)
+        {
+            double sy = sysY.TryGetValue(b.MeasureIndex, out var s) ? s : 0;
+            double startY = sy + b.StartY;
+            double endY = sy + b.EndY;
+            double midX = (b.StartX + b.EndX) / 2;
+            double midY = (startY + endY) / 2;
+            double hookDir = b.IsStemUp ? 1 : -1;
+
+            using (gc.Source(b.SourcePosition))
+            {
+                if (b.ShowBracket)
+                {
+                    gc.DrawLine(b.StartX, startY, b.StartX, startY + edgeHeight * hookDir,
+                        Color.Black, thickness);
+
+                    const double numberGap = 1.0;
+                    double totalWidth = b.EndX - b.StartX;
+                    double leftFrac = totalWidth > 0 ? (midX - numberGap - b.StartX) / totalWidth : 0.5;
+                    double rightFrac = totalWidth > 0 ? (midX + numberGap - b.StartX) / totalWidth : 0.5;
+                    double leftGapY = startY + (endY - startY) * leftFrac;
+                    double rightGapY = startY + (endY - startY) * rightFrac;
+
+                    gc.DrawLine(b.StartX, startY, midX - numberGap, leftGapY,
+                        Color.Black, thickness);
+                    gc.DrawLine(midX + numberGap, rightGapY, b.EndX, endY,
+                        Color.Black, thickness);
+                    gc.DrawLine(b.EndX, endY, b.EndX, endY + edgeHeight * hookDir,
+                        Color.Black, thickness);
+                }
+
+                double textY = b.IsStemUp ? midY - 0.3 : midY + 0.8;
+                gc.DrawText(b.NumberText, midX, textY,
+                    FontSize * 0.6, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
+            }
         }
     }
 }

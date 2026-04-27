@@ -39,9 +39,15 @@ internal sealed class PdfDrawingContext : IDrawingContext
     }
 
     public void DrawLine(double x1, double y1, double x2, double y2,
-        Color? stroke = null, double strokeWidth = 0.1)
+        Color? stroke = null, double strokeWidth = 0.1,
+        (double On, double Off)? dash = null)
     {
         var pen = new XPen(ToXColor(stroke), T(strokeWidth));
+        if (dash is { } d)
+        {
+            pen.DashStyle = XDashStyle.Custom;
+            pen.DashPattern = new[] { d.On, d.Off };
+        }
         _gfx.DrawLine(pen, X(x1), X(y1), X(x2), X(y2));
     }
 

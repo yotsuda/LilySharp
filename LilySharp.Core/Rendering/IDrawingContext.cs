@@ -34,7 +34,8 @@ public interface IDrawingContext
 {
     void DrawLine(
         double x1, double y1, double x2, double y2,
-        Color? stroke = null, double strokeWidth = 0.1);
+        Color? stroke = null, double strokeWidth = 0.1,
+        (double On, double Off)? dash = null);
 
     void DrawRectangle(
         double x, double y, double width, double height,
