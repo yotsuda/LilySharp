@@ -135,7 +135,7 @@ public sealed class PdfDocumentContext : IDocumentContext
             // PdfSharpCore allows the resolver to be set only once per process.
             // We compose: ours first (Emmentaler), fallback to the existing
             // resolver (PdfSharpCore's default handles common system fonts
-            // like "Serif" used by SvgRenderer/PdfRenderer for titles).
+            // like "Serif" used by SharedRenderer for titles/lyrics/dynamics).
             var existing = GlobalFontSettings.FontResolver;
             GlobalFontSettings.FontResolver = new EmmentalerFontResolver(fontDirectory, existing);
             _resolverInstalled = true;

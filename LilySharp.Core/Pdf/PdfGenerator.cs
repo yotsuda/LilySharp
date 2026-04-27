@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using LilySharp.Core.Pdf.Renderer;
 using LilySharp.Core.Rendering;
 using LilySharp.Core.Rendering.Pdf;
 using LilySharp.Core.Svg;

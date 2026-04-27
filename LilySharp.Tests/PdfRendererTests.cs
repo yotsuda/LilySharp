@@ -15,9 +15,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using LilySharp.Core.Pdf;
-using LilySharp.Core.Pdf.Renderer;
-using LilySharp.Core.Svg.Collector;
-using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -135,23 +132,6 @@ public class PdfRendererTests
 
         Assert.NotNull(bytes);
         Assert.True(bytes.Length > 100);
-    }
-
-    [Fact]
-    public void PdfRenderer_SingleStaff_ViaRenderer()
-    {
-        var source = "c4 d e f";
-        var tree = SyntaxTree.Parse(source);
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree);
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-
-        var renderer = new PdfRenderer();
-        var bytes = renderer.Render(score, layout);
-
-        Assert.NotNull(bytes);
-        Assert.True(bytes.Length > 0);
     }
 
     [Fact]

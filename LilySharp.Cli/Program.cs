@@ -18,7 +18,6 @@ using System.Reflection;
 using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
 using LilySharp.Core.Pdf;
-using LilySharp.Core.Pdf.Renderer;
 using LilySharp.Core.Png;
 using LilySharp.Core.Syntax;
 

@@ -15,7 +15,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using LilySharp.Core.Pdf;
-using LilySharp.Core.Pdf.Renderer;
 using LilySharp.Core.Syntax;
 using Xunit;
 
