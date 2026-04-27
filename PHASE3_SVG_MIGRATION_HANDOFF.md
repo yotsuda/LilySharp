@@ -8,6 +8,79 @@
 
 ---
 
+## 0. 前提知識・環境
+
+このドキュメント単体で次セッションを開始できるよう、必要な前提を整理する。
+
+### 0.1 プロジェクト所在
+
+| 項目 | 場所 |
+|---|---|
+| LilySharp 本体 | `C:\MyProj\LilySharp` |
+| **LilyPond ソースクローン (必須)** | `C:\MyProj\lilypond-src` |
+| ビルド済 CLI | `LilySharp.Cli/bin/Debug/net9.0/lysc.exe` |
+| サンプル `.lys` | `samples/test/`, `samples/showcase/`, `samples/demo/` |
+| SVG snapshot baseline | `LilySharp.Tests/Snapshots/` (40 件) |
+| Emmentaler フォント | `LilySharp.Core/Fonts/emmentaler-20.{otf,woff2}`, `emmentaler-brace.{otf,woff}` |
+
+`C:\MyProj\lilypond-src` は LILYPOND-REF コメントの整合性検証に必須。WebFetch で LP source を見るのは禁止 — 必ずローカルクローンを Read/Grep する。
+
+### 0.2 ビルド・実行環境
+
+- **.NET 9** (`net9.0` target)
+- C# 12 (record / pattern matching を多用)
+- Build: `dotnet build LilySharp.Core/LilySharp.Core.csproj` (sln ファイルは無いので csproj 個別指定)
+- 主要 csproj:
+  - `LilySharp.Core/LilySharp.Core.csproj` (engraving 本体)
+  - `LilySharp.Cli/LilySharp.Cli.csproj` (`lysc.exe`)
+  - `LilySharp.Tests/LilySharp.Tests.csproj` (xUnit)
+  - `LilySharp.Lsp/LilySharp.Lsp.csproj` (Language Server)
+- 主要 NuGet 依存: `PdfSharpCore` 1.3.65, `Svg.Skia` 3.4.1 (SkiaSharp 2.88 を transitively bring in)
+
+### 0.3 絶対ルール (LilySharp 固有)
+
+[`MEMORY.md` の "LilySharp 絶対ルール" entry および `lilysharp_rules.md` を参照]
+
+1. **LilyPond ソース準拠**: レイアウト/スペーシング実装は常に LP のソースコード準拠。独自の近似やヒューリスティックを追加しない。
+2. **LILYPOND-REF コメント必須**: 変更時は `LILYPOND-REF: lily/<file>.cc:<lines> <意味>` を該当箇所に明記。LP 2.25.35 基準で行番号記録。
+3. **Emmentaler 排他**: Bravura 由来の数字は完全除去済 (commit `8495976`、2026-04-26)。新規定数は emmentaler-20.otf から `audit/scripts/Extract-EmmentalerMetrics.py` で抽出した値を使う。
+4. **命名**: ユーザ向け文字列は "Lily#" (lilysharp ではない)。
+
+### 0.4 検証ツール
+
+| 用途 | コマンド |
+|---|---|
+| LP-REF citation 整合性検証 | `pwsh -File audit/scripts/Verify-LilyPondRefs.ps1` |
+| Emmentaler glyph metrics 再抽出 | `python audit/scripts/Extract-EmmentalerMetrics.py` |
+| SVG snapshot 比較 | `dotnet test LilySharp.Tests --filter "FullyQualifiedName~SvgSnapshot"` |
+| Snapshot baseline 一括更新 | `$env:LILYSHARP_UPDATE_SNAPSHOTS="1"; dotnet test ...` |
+| 全テスト (perf 除く) | `dotnet test LilySharp.Tests --filter "FullyQualifiedName!~PerformanceTests"` |
+| サンプル PDF 生成 | `lysc.exe pdf samples/test/ossia.lys out.pdf` |
+| サンプル SVG 生成 | `lysc.exe svg samples/test/ossia.lys out.svg` |
+| サンプル PNG 生成 | `lysc.exe png samples/test/ossia.lys out.png` |
+
+### 0.5 シェル環境
+
+- Windows 11、bash (Git Bash) と PowerShell 7+ (`pwsh`) 両用
+- bash は Unix 構文 (`/dev/null`, forward slash path、`/c/MyProj/...` で C: drive アクセス)
+- 大量にコマンドを叩くなら ripple MCP 推奨 (高速、可視 console)。pwsh MCP は補助。
+- ファイル検索は **Glob/Grep ツール優先** (find/grep を Bash で叩かない)
+
+### 0.6 補足: 現セッションの memory 関連
+
+このセッションで追加された/参照した user memory:
+
+- `lilypond_source_clone.md` — LP source の場所 (上記 §0.1 と同じ)
+- `lilysharp_rules.md` — LP 準拠の絶対ルール (上記 §0.3 と同じ)
+
+新規 memory 追加は原則不要 (このドキュメントが project-specific 知識を担う)。ただし:
+- 設計判断が変わった場合 (例: byte-identical を諦める方針確定後)
+- 新しい絶対ルールが発生した場合
+
+は `MEMORY.md` に追記推奨。
+
+---
+
 ## 1. ゴールと現在地
 
 ### 最終ゴール
