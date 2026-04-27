@@ -47,6 +47,7 @@ public static class SharedRenderer
         MultiStaffScore score, ScoreLayout layout, IDocumentContext doc)
     {
         var options = layout.Options;
+        var resolver = layout.GrobPropertyResolver;
         foreach (var page in layout.Pages)
         {
             var gc = doc.BeginPage(page.Width, page.Height);
@@ -59,7 +60,7 @@ public static class SharedRenderer
             try
             {
                 foreach (var system in page.Systems)
-                    DrawSystem(score, layout, system, gc);
+                    DrawSystem(score, layout, system, resolver, gc);
                 // Page-level overlays that span systems
                 var measureToSystemY = BuildMeasureToSystemY(layout);
                 DrawTies(layout, gc);
@@ -128,7 +129,7 @@ public static class SharedRenderer
 
     private static void DrawSystem(
         MultiStaffScore score, ScoreLayout layout,
-        SystemLayout system, IDrawingContext gc)
+        SystemLayout system, GrobPropertyResolver resolver, IDrawingContext gc)
     {
         bool isFirstSystem = system.SystemIndex == 0;
         double systemStartX = system.Indent;
@@ -165,7 +166,7 @@ public static class SharedRenderer
                 }
 
                 // Notes per measure
-                DrawStaffMeasures(staff, system, layout, localStaffY, clef, gc);
+                DrawStaffMeasures(staff, system, layout, localStaffY, clef, resolver, gc);
 
                 // Barlines at end of each measure (single thin only in this phase)
                 DrawBarlines(system, localStaffY, gc);
@@ -294,7 +295,7 @@ public static class SharedRenderer
 
     private static void DrawStaffMeasures(
         Staff staff, SystemLayout system, ScoreLayout layout,
-        double staffY, ClefType clef, IDrawingContext gc)
+        double staffY, ClefType clef, GrobPropertyResolver resolver, IDrawingContext gc)
     {
         double staffMiddleY = staffY + StaffHeight / 2;
         var voice = staff.PrimaryVoice;
@@ -312,16 +313,22 @@ public static class SharedRenderer
                 var il = ml.Items[itemIdx];
                 double itemX = ml.X + il.X;
 
+                // LILYPOND-REF: lily/grob-property.cc — apply \override / \revert at this position.
+                // Multi-staff scores re-advance the resolver per staff: harmless for ordinary
+                // overrides (idempotent), but \once overrides may double-apply across staves.
+                if (resolver.HasOverrides)
+                    resolver.AdvanceTo(ml.MeasureIndex, itemIdx);
+
                 switch (item)
                 {
                     case NoteItem note:
-                        DrawNote(note, itemX, staffMiddleY, gc);
+                        DrawNote(note, itemX, staffMiddleY, resolver, gc);
                         break;
                     case RestItem rest:
                         DrawRest(rest, itemX, staffY, gc);
                         break;
                     case ChordItem chord:
-                        DrawChord(chord, itemX, staffMiddleY, gc);
+                        DrawChord(chord, itemX, staffMiddleY, resolver, gc);
                         break;
                     case ClefChangeItem clefChange:
                         DrawClefChange(clefChange, itemX, staffY, gc);
@@ -334,7 +341,8 @@ public static class SharedRenderer
         }
     }
 
-    private static void DrawNote(NoteItem note, double x, double staffMiddleY, IDrawingContext gc)
+    private static void DrawNote(NoteItem note, double x, double staffMiddleY,
+        GrobPropertyResolver resolver, IDrawingContext gc)
     {
         int noteValue = note.BaseDuration.Denominator;
         if (note.BaseDuration.Numerator != 1) noteValue = 1;
@@ -348,9 +356,10 @@ public static class SharedRenderer
             DrawAccidental(note.Accidental, note.IsCourtesy, x, noteY, note.SourcePosition, gc);
 
         // Notehead
+        Color? noteheadColor = ResolveColor(resolver, "NoteHead");
         char head = EmmentalerGlyphs.GetNotehead(noteValue);
         using (gc.Source(note.SourcePosition))
-            gc.DrawGlyph(head, x, noteY, noteFontSize);
+            gc.DrawGlyph(head, x, noteY, noteFontSize, noteheadColor);
 
         // Ledger lines for notes far from middle line
         DrawLedgerLines(note.StaffPosition, x, staffMiddleY, gc);
@@ -358,13 +367,15 @@ public static class SharedRenderer
         // Stem (no stem for whole notes)
         if (noteValue >= 2)
         {
+            Color? stemColor = ResolveColor(resolver, "Stem");
             double stemX = note.StemUp
                 ? x + EngravingDefaults.StemUpAttachX
                 : x + EngravingDefaults.StemDownAttachX;
             double stemEndY = note.StemUp
                 ? noteY - EngravingRules.StandardStemLength
                 : noteY + EngravingRules.StandardStemLength;
-            gc.DrawLine(stemX, noteY, stemX, stemEndY, Color.Black, EngravingDefaults.StemThickness);
+            gc.DrawLine(stemX, noteY, stemX, stemEndY,
+                stemColor ?? Color.Black, EngravingDefaults.StemThickness);
 
             // Flag (only for unbeamed eighth+ notes; beamed notes handled in DrawBeams)
             bool hasFlag = false;
@@ -373,7 +384,7 @@ public static class SharedRenderer
                 var flag = EmmentalerGlyphs.GetFlag(noteValue, note.StemUp);
                 if (flag.HasValue)
                 {
-                    gc.DrawGlyph(flag.Value, stemX, stemEndY, noteFontSize);
+                    gc.DrawGlyph(flag.Value, stemX, stemEndY, noteFontSize, stemColor);
                     hasFlag = true;
                 }
             }
@@ -388,15 +399,17 @@ public static class SharedRenderer
         {
             double dotX = x + 1.0 + d * 0.5;
             double dotY = note.StaffPosition % 2 == 0 ? noteY - 0.5 : noteY;
-            gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, dotY, noteFontSize);
+            gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, dotY, noteFontSize, noteheadColor);
         }
     }
 
-    private static void DrawChord(ChordItem chord, double x, double staffMiddleY, IDrawingContext gc)
+    private static void DrawChord(ChordItem chord, double x, double staffMiddleY,
+        GrobPropertyResolver resolver, IDrawingContext gc)
     {
         int noteValue = chord.BaseDuration.Denominator;
         if (chord.BaseDuration.Numerator != 1) noteValue = 1;
         char head = EmmentalerGlyphs.GetNotehead(noteValue);
+        Color? noteheadColor = ResolveColor(resolver, "NoteHead");
 
         double topY = double.MaxValue, bottomY = double.MinValue;
         foreach (var n in chord.Notes)
@@ -405,7 +418,7 @@ public static class SharedRenderer
             if (n.Accidental != null)
                 DrawAccidental(n.Accidental, isCourtesy: false, x, y, chord.SourcePosition, gc);
             using (gc.Source(chord.SourcePosition))
-                gc.DrawGlyph(head, x, y, FontSize);
+                gc.DrawGlyph(head, x, y, FontSize, noteheadColor);
             DrawLedgerLines(n.StaffPosition, x, staffMiddleY, gc);
             if (y < topY) topY = y;
             if (y > bottomY) bottomY = y;
@@ -413,6 +426,7 @@ public static class SharedRenderer
 
         if (noteValue >= 2 && chord.Notes.Length > 0)
         {
+            Color? stemColor = ResolveColor(resolver, "Stem");
             double stemX = chord.StemUp
                 ? x + EngravingDefaults.StemUpAttachX
                 : x + EngravingDefaults.StemDownAttachX;
@@ -421,8 +435,83 @@ public static class SharedRenderer
                 ? topY - EngravingRules.StandardStemLength
                 : bottomY + EngravingRules.StandardStemLength;
             gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
-                Color.Black, EngravingDefaults.StemThickness);
+                stemColor ?? Color.Black, EngravingDefaults.StemThickness);
         }
+    }
+
+    /// <summary>
+    /// Resolves the active color override for a grob type, or null when no
+    /// override is active or the override is a no-op (black is treated as
+    /// "no override" to keep drawing helpers using their default fill).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/output-lib.scm — x11-color mapping
+    /// Accepts named colors and #rgb / #rrggbb hex codes.
+    /// </remarks>
+    private static Color? ResolveColor(GrobPropertyResolver resolver, string grobType)
+    {
+        if (!resolver.HasOverrides) return null;
+        var s = resolver.GetString(grobType, "color");
+        if (string.IsNullOrEmpty(s)) return null;
+        return ParseColor(s);
+    }
+
+    private static Color? ParseColor(string s)
+    {
+        // Hex literal: #rgb / #rrggbb
+        if (s.Length >= 4 && s[0] == '#')
+        {
+            ReadOnlySpan<char> hex = s.AsSpan(1);
+            if (hex.Length == 3 &&
+                TryParseHexNibble(hex[0], out int r3) &&
+                TryParseHexNibble(hex[1], out int g3) &&
+                TryParseHexNibble(hex[2], out int b3))
+            {
+                return new Color((byte)(r3 * 17), (byte)(g3 * 17), (byte)(b3 * 17));
+            }
+            if (hex.Length == 6 &&
+                TryParseHexByte(hex[0], hex[1], out int r6) &&
+                TryParseHexByte(hex[2], hex[3], out int g6) &&
+                TryParseHexByte(hex[4], hex[5], out int b6))
+            {
+                return new Color((byte)r6, (byte)g6, (byte)b6);
+            }
+            return null;
+        }
+        // Named color (subset of CSS / X11)
+        return s.ToLowerInvariant() switch
+        {
+            "black" => null,           // default — let backends use their own black
+            "red" => new Color(255, 0, 0),
+            "green" => new Color(0, 128, 0),
+            "blue" => new Color(0, 0, 255),
+            "yellow" => new Color(255, 255, 0),
+            "cyan" => new Color(0, 255, 255),
+            "magenta" => new Color(255, 0, 255),
+            "white" => new Color(255, 255, 255),
+            "gray" or "grey" => new Color(128, 128, 128),
+            "orange" => new Color(255, 165, 0),
+            "purple" => new Color(128, 0, 128),
+            "brown" => new Color(165, 42, 42),
+            _ => null,
+        };
+    }
+
+    private static bool TryParseHexNibble(char c, out int v)
+    {
+        if (c >= '0' && c <= '9') { v = c - '0'; return true; }
+        if (c >= 'a' && c <= 'f') { v = 10 + c - 'a'; return true; }
+        if (c >= 'A' && c <= 'F') { v = 10 + c - 'A'; return true; }
+        v = 0; return false;
+    }
+
+    private static bool TryParseHexByte(char hi, char lo, out int v)
+    {
+        v = 0;
+        if (!TryParseHexNibble(hi, out int h)) return false;
+        if (!TryParseHexNibble(lo, out int l)) return false;
+        v = (h << 4) | l;
+        return true;
     }
 
     private static void DrawLedgerLines(int staffPosition, double x, double staffMiddleY, IDrawingContext gc)
