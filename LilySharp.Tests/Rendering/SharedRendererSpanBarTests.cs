@@ -43,8 +43,8 @@ public sealed class SharedRendererSpanBarTests
             title "T"
             time 4/4
 
-            rh = { c''4 d'' e'' f'' | }
-            lh = { c4 e g c' | }
+            phrase rh { c''4 d'' e'' f'' | }
+            phrase lh { c4 e g c' | }
 
             section Main { melody { rh } bass { lh } }
             structure { Main }

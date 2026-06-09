@@ -296,6 +296,31 @@ part {
     }
 
     [Fact]
+    public void LetDeclaration_IsRejected_WithPhraseHint()
+    {
+        // 'let name = …' was removed in favor of 'phrase name { … }'.
+        var tree = SyntaxTree.Parse("let theme = { c d e f }");
+        Assert.True(tree.HasErrors);
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.LegacyDeclarationForm);
+    }
+
+    [Fact]
+    public void BareEqualsDeclaration_IsRejected_WithPhraseHint()
+    {
+        // 'name = { … }' was removed in favor of 'phrase name { … }'.
+        var tree = SyntaxTree.Parse("theme = { c d e f }");
+        Assert.True(tree.HasErrors);
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.LegacyDeclarationForm);
+    }
+
+    [Fact]
+    public void PhraseDeclaration_IsTheBlessedForm()
+    {
+        var tree = SyntaxTree.Parse("phrase theme { c d e f }");
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+    }
+
+    [Fact]
     public void ParseVariableReference()
     {
         var tree = SyntaxTree.Parse(@"let theme = { c d e f }
@@ -992,7 +1017,7 @@ structure { Verse }
     [Fact]
     public void ParseDollarVariableReference()
     {
-        var tree = SyntaxTree.Parse(@"let theme = { c d e f }
+        var tree = SyntaxTree.Parse(@"phrase theme { c d e f }
 $theme");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         var varRef = tree.Root.GetSlot(1) as VariableReferenceGreen;
@@ -1039,7 +1064,7 @@ structure { Main }
     [Fact]
     public void UseKeywordEmitsDeprecationWarning()
     {
-        var tree = SyntaxTree.Parse(@"let theme = { c d e f }
+        var tree = SyntaxTree.Parse(@"phrase theme { c d e f }
 use theme");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         var warnings = tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.DeprecatedUseKeyword).ToList();

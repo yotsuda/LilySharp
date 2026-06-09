@@ -23,9 +23,9 @@ namespace LilySharp.Tests;
 public class SectionOrientedTests
 {
     [Fact]
-    public void ParseVariableDeclaration()
+    public void ParsePhraseDeclaration()
     {
-        var source = "guitar_riff = { c4 d e f }";
+        var source = "phrase guitar_riff { c4 d e f }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
@@ -152,7 +152,7 @@ public class SectionOrientedTests
             time 4/4
             key c major
 
-            guitar_riff = { c4 d e f }
+            phrase guitar_riff { c4 d e f }
 
             section Intro {
                 guitar { guitar_riff }

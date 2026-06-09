@@ -362,8 +362,6 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "phrase", Kind = CompletionItemKind.Keyword, InsertText = "phrase $1 {\n\t$0\n}", Detail = "Reusable phrase" },
                 new CompletionItem { Label = "structure", Kind = CompletionItemKind.Keyword, InsertText = "structure { $0 }", Detail = "Playback order" },
                 new CompletionItem { Label = "render", Kind = CompletionItemKind.Keyword, InsertText = "render score {\n\t$0\n}", Detail = "Output layout" },
-                new CompletionItem { Label = "relative", Kind = CompletionItemKind.Keyword, InsertText = "relative c' {\n\t$0\n}", Detail = "Relative pitch mode" },
-                new CompletionItem { Label = "let", Kind = CompletionItemKind.Keyword, InsertText = "let $1 = $0", Detail = "Variable declaration" },
                 new CompletionItem { Label = "title", Kind = CompletionItemKind.Keyword, InsertText = "title \"$0\"", Detail = "Title metadata" },
                 new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertText = "composer \"$0\"", Detail = "Composer metadata" },
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertText = "tempo $0", Detail = "Tempo (BPM)" },

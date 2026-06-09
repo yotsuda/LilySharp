@@ -24,9 +24,9 @@ namespace LilySharp.Tests;
 public class SectionOrientedParserTests
 {
     [Fact]
-    public void ParseVariableDeclaration_NewStyle()
+    public void ParsePhraseDeclaration_Simple()
     {
-        var source = "guitar_riff = { c4 d e f }";
+        var source = "phrase guitar_riff { c4 d e f }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
@@ -129,7 +129,7 @@ tempo 120
 time 4/4
 key c major
 
-guitar_riff = { c4 d e f | g a b c' }
+phrase guitar_riff { c4 d e f | g a b c' }
 
 section Intro {
     guitar { guitar_riff }

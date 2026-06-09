@@ -416,10 +416,18 @@ internal sealed class Parser
 
     private VariableDeclarationGreen ParseVariableDeclaration()
     {
+        int startPos = _textPosition;
         var letKeyword = Expect(SyntaxKind.LetKeyword);
         var name = Expect(SyntaxKind.Identifier);
         var equals = Expect(SyntaxKind.Equals);
         var expression = ParseMusicExpression();
+
+        // 'let name = …' was removed in favor of 'phrase name { … }'. Reject with a
+        // hint and recover by keeping the parsed declaration (so $name still resolves).
+        var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
+        _diagnostics.Error(span, DiagnosticCodes.LegacyDeclarationForm,
+            $"'let {name.Text} = …' is not a Lily# declaration; use 'phrase {name.Text} {{ … }}'.");
+
         return new VariableDeclarationGreen(letKeyword, name, equals, expression);
     }
 
@@ -1156,11 +1164,18 @@ private GreenNode?[] ParseArticulations()
     /// </summary>
     private VariableDeclarationGreen ParseNewVariableDeclaration()
     {
+        int startPos = _textPosition;
         var name = Expect(SyntaxKind.Identifier);
         var equals = Expect(SyntaxKind.Equals);
 
         // Body is always a music block
         var body = ParseMusicBlock();
+
+        // 'name = { … }' was removed in favor of 'phrase name { … }'. Reject with a
+        // hint and recover by keeping the parsed declaration (so $name still resolves).
+        var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
+        _diagnostics.Error(span, DiagnosticCodes.LegacyDeclarationForm,
+            $"'{name.Text} = {{ … }}' is not a Lily# declaration; use 'phrase {name.Text} {{ … }}'.");
 
         return new VariableDeclarationGreen(name, equals, body);
     }

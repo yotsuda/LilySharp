@@ -33,8 +33,8 @@ public class GrandStaffRenderTests
             title "Test"
             time 4/4
 
-            rh = { c''4 d'' e'' f'' | }
-            lh = { c4 e g c' | }
+            phrase rh { c''4 d'' e'' f'' | }
+            phrase lh { c4 e g c' | }
 
             section Main {
               melody { rh }
@@ -85,8 +85,8 @@ public class GrandStaffRenderTests
             title "Test"
             time 4/4
 
-            rh = { c''4 | }
-            lh = { c4 | }
+            phrase rh { c''4 | }
+            phrase lh { c4 | }
 
             section Main {
               melody { rh }
@@ -131,8 +131,8 @@ public class GrandStaffRenderTests
             title "Test"
             time 4/4
 
-            rh = { c''4 d'' e'' f'' | g'' a'' b'' c''' | }
-            lh = { c4 e g c' | d e f g | }
+            phrase rh { c''4 d'' e'' f'' | g'' a'' b'' c''' | }
+            phrase lh { c4 e g c' | d e f g | }
 
             section Main {
               melody { rh }

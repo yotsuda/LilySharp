@@ -115,14 +115,16 @@ volta repeats.)
 << { c2 d } \\ { e2 f } >>
 ```
 
-### Variables
+### Named music (phrases)
+
+Named music is declared with `phrase` and referenced with `$name`:
 
 ```lilysharp
-let melody = { c4 d e f }
-let bass = { c2 g }
+phrase melody { c4 d e f }
+phrase bass { c2 g }
 
 score {
-    part { use $melody }
+    part { $melody }
 }
 ```
 

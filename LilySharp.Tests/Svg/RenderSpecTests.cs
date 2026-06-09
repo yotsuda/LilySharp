@@ -31,8 +31,8 @@ public class RenderSpecTests
             title "Test"
             time 4/4
 
-            rh = { c''4 d'' e'' f'' | }
-            lh = { c4 e g c' | }
+            phrase rh { c''4 d'' e'' f'' | }
+            phrase lh { c4 e g c' | }
 
             section Main {
               melody { rh }
@@ -76,7 +76,7 @@ public class RenderSpecTests
             title "Test"
             time 4/4
 
-            melody = { c'4 d' e' f' | }
+            phrase melody { c'4 d' e' f' | }
 
             section Main {
               guitar { melody }
@@ -112,9 +112,9 @@ public class RenderSpecTests
             title "Test"
             time 4/4
 
-            rh = { c''4 d'' e'' f'' | }
-            lh = { c4 e g c' | }
-            vocal = { g'4 a' b' c'' | }
+            phrase rh { c''4 d'' e'' f'' | }
+            phrase lh { c4 e g c' | }
+            phrase vocal { g'4 a' b' c'' | }
 
             section Main {
               singer { vocal }
@@ -162,7 +162,7 @@ public class RenderSpecTests
             title "Test"
             time 4/4
 
-            dummy = { c'4 | }
+            phrase dummy { c'4 | }
 
             section Main {
               singer { dummy }
@@ -201,8 +201,8 @@ public class RenderSpecTests
             title "Test"
             time 4/4
 
-            rh = { c''4 | }
-            lh = { c4 | }
+            phrase rh { c''4 | }
+            phrase lh { c4 | }
 
             section Main {
               melody { rh }
@@ -240,8 +240,8 @@ public class RenderSpecTests
             title "Test"
             time 4/4
 
-            rh = { c''4 | }
-            lh = { c4 | }
+            phrase rh { c''4 | }
+            phrase lh { c4 | }
 
             section Main {
               melody { rh }

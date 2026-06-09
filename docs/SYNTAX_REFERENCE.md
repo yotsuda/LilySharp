@@ -286,13 +286,11 @@ c8[ d e f]     % Beam these four notes together
 
 The `\\` separator creates a second voice on the same staff.
 
-## Variables and Phrases
+## Named Music (Phrases)
 
-### Variable Declaration
-
-```
-melody = { c4 d e f | g2 g | }
-```
+Named music is declared with the `phrase` keyword. (The earlier `name = { … }`
+and `let name = …` forms have been removed — the parser rejects them with a hint
+to use `phrase`.)
 
 ### Phrase Declaration
 
@@ -302,11 +300,10 @@ phrase theme {
 }
 ```
 
-### Variable Reference
+### Phrase Reference
 
 ```
-$theme              % Insert phrase content here
-$melody             % Insert variable content
+$theme              % Insert the phrase's music here
 ```
 
 ## Sections and Parts

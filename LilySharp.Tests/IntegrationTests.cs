@@ -214,10 +214,10 @@ title ""Test""
 tempo 120
 time 4/4
 
-rh1 = { c'4 d' e' f' | g'2 g' | }
-lh1 = { c2 e | g g, | }
-rh2 = { e'4 d' c' d' | e'1 | }
-lh2 = { c2 g, | c1 | }
+phrase rh1 { c'4 d' e' f' | g'2 g' | }
+phrase lh1 { c2 e | g g, | }
+phrase rh2 { e'4 d' c' d' | e'1 | }
+phrase lh2 { c2 g, | c1 | }
 
 render score ""mvt1"" {
   grandStaff {
@@ -255,10 +255,10 @@ title ""Test""
 tempo 120
 time 4/4
 
-rh1 = { c'4 d' e' f' | g'2 g' | }
-lh1 = { c2 e | g g, | }
-rh2 = { e'4 d' c' d' | e'1 | }
-lh2 = { c2 g, | c1 | }
+phrase rh1 { c'4 d' e' f' | g'2 g' | }
+phrase lh1 { c2 e | g g, | }
+phrase rh2 { e'4 d' c' d' | e'1 | }
+phrase lh2 { c2 g, | c1 | }
 
 render score ""movement1"" {
   grandStaff {
@@ -305,8 +305,8 @@ render score ""movement2"" {
     public void FindAll_ReturnsAllRenderSpecs()
     {
         var source = @"
-rh = { c'4 d' e' f' | }
-lh = { c2 e | }
+phrase rh { c'4 d' e' f' | }
+phrase lh { c2 e | }
 
 render score ""first"" { staff treble { rh } }
 render score ""second"" { staff treble { lh } }

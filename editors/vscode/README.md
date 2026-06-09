@@ -97,13 +97,13 @@ tempo 4 = 120
 time 4/4
 key c major
 
-let theme = relative c' {
+phrase theme {
     c4 d e f | g2 g |
 }
 
 score {
     part Melody {
-        use $theme
+        $theme
     }
 }
 ```
