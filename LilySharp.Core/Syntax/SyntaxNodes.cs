@@ -1032,24 +1032,12 @@ public sealed class ArticulationSyntax : SyntaxNode
     public SyntaxTokenNode NameToken => (SyntaxTokenNode)GetChild(1)!;
 
     /// <summary>
-    /// Gets the articulation type.
+    /// Gets the articulation type by resolving the <c>@name</c> text (and its
+    /// abbreviations) against <see cref="ArticulationRegistry"/>. Returns
+    /// <see cref="ArticulationType.None"/> for non-articulation marks (e.g. a
+    /// music mark), which are then resolved by name downstream.
     /// </summary>
-    public ArticulationType Type => NameToken.Kind switch
-    {
-        SyntaxKind.StaccatoKeyword => ArticulationType.Staccato,
-        SyntaxKind.AccentKeyword => ArticulationType.Accent,
-        SyntaxKind.TenutoKeyword => ArticulationType.Tenuto,
-        SyntaxKind.MarcatoKeyword => ArticulationType.Marcato,
-        SyntaxKind.FermataKeyword => ArticulationType.Fermata,
-        SyntaxKind.PortatoKeyword => ArticulationType.Portato,
-        SyntaxKind.TrillKeyword => ArticulationType.Trill,
-        SyntaxKind.MordentKeyword => ArticulationType.Mordent,
-        SyntaxKind.PrallKeyword => ArticulationType.Prall,
-        SyntaxKind.TurnKeyword => ArticulationType.Turn,
-        SyntaxKind.InvertedTurnKeyword => ArticulationType.InvertedTurn,
-        SyntaxKind.PrallTrillKeyword => ArticulationType.PrallTriller,
-        _ => ArticulationType.None
-    };
+    public ArticulationType Type => ArticulationRegistry.Resolve(NameToken.Text);
 }
 
 /// <summary>

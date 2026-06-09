@@ -913,9 +913,8 @@ public sealed class LilySharpLanguageServer
                 // Rest
                 SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full => 6,
 
-                // Articulation names
-                SyntaxKind.StaccatoKeyword or SyntaxKind.AccentKeyword or SyntaxKind.TenutoKeyword or
-                SyntaxKind.MarcatoKeyword or SyntaxKind.FermataKeyword or SyntaxKind.PortatoKeyword => 7,
+                // Articulation/ornament names are now '@name' identifiers resolved by
+                // ArticulationRegistry, not distinct keyword tokens — no special case here.
 
                 // Dynamic names
                 SyntaxKind.DynamicPPP or SyntaxKind.DynamicPP or SyntaxKind.DynamicP or

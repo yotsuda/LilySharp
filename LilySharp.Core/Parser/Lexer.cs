@@ -490,22 +490,10 @@ internal sealed class Lexer
             "tuning" => SyntaxKind.TuningKeyword,
             "break" => SyntaxKind.BreakKeyword,
 
-            // Articulation names
-            "staccato" or "stac" => SyntaxKind.StaccatoKeyword,
-            "accent" or "acc" => SyntaxKind.AccentKeyword,
-            "tenuto" or "ten" => SyntaxKind.TenutoKeyword,
-            "marcato" or "marc" => SyntaxKind.MarcatoKeyword,
-            "fermata" or "ferm" => SyntaxKind.FermataKeyword,
-            "portato" => SyntaxKind.PortatoKeyword,
-
-            // Ornament names
-            "trill" or "tr" => SyntaxKind.TrillKeyword,
-            "mordent" => SyntaxKind.MordentKeyword,
-            "prall" => SyntaxKind.PrallKeyword,
-            "turn" => SyntaxKind.TurnKeyword,
-            "invertedturn" => SyntaxKind.InvertedTurnKeyword,
-            "pralltriller" => SyntaxKind.PrallTrillKeyword,
-            "tremolo" => SyntaxKind.TremoloKeyword,
+            // Articulation/ornament names (staccato, tr, mordent, cresc, dim, …) are
+            // NOT reserved words: they are resolved from the '@name' text against
+            // ArticulationRegistry / the mark registry, so they stay identifiers here
+            // and no longer collide with user names like 'tr', 'acc', 'ten', 'dim'.
 
             // Override/Revert
             "override" => SyntaxKind.OverrideKeyword,
@@ -521,9 +509,6 @@ internal sealed class Lexer
             "f" => SyntaxKind.DynamicF,
             "ff" => SyntaxKind.DynamicFF,
             "fff" => SyntaxKind.DynamicFFF,
-            "cresc" => SyntaxKind.CrescKeyword,
-            "decresc" => SyntaxKind.DecrescKeyword,
-            "dim" => SyntaxKind.DimKeyword,
 
             // Default: identifier
             _ => SyntaxKind.Identifier

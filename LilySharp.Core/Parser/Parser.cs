@@ -913,22 +913,16 @@ private GreenNode?[] ParseArticulations()
 
     private bool IsArticulationName()
     {
-        return Current.Kind is SyntaxKind.StaccatoKeyword or SyntaxKind.AccentKeyword or
-            SyntaxKind.TenutoKeyword or SyntaxKind.MarcatoKeyword or
-            SyntaxKind.FermataKeyword or SyntaxKind.PortatoKeyword or
-            // Ornaments
-            SyntaxKind.TrillKeyword or SyntaxKind.MordentKeyword or
-            SyntaxKind.PrallKeyword or SyntaxKind.TurnKeyword or
-            SyntaxKind.InvertedTurnKeyword or SyntaxKind.PrallTrillKeyword or
-            // Tremolo
-            SyntaxKind.TremoloKeyword or
-            SyntaxKind.Identifier; // Allow custom articulation names
+        // Articulation/ornament names are plain identifiers after '@'; the specific
+        // name is resolved by ArticulationRegistry, not by the lexer.
+        return Current.Kind is SyntaxKind.Identifier;
     }
 
     private bool IsDynamicName()
     {
-        // Note: PitchF can also be dynamics (\f, \ff, \fff) when preceded by backslash
-        // Check token text as well as kind
+        // Dynamics are recognized by text: the level marks (p, f, mf, …) which the
+        // lexer keeps as Dynamic* tokens (or pitch tokens like 'f'), plus cresc /
+        // decresc / dim which are now plain identifiers resolved by name downstream.
         var text = Current.Text;
         if (text is "f" or "ff" or "fff" or "p" or "pp" or "ppp" or "mp" or "mf" or
             "cresc" or "decresc" or "dim")
@@ -938,9 +932,7 @@ private GreenNode?[] ParseArticulations()
         return Current.Kind is SyntaxKind.DynamicPPP or SyntaxKind.DynamicPP or
             SyntaxKind.DynamicP or SyntaxKind.DynamicMP or
             SyntaxKind.DynamicMF or SyntaxKind.DynamicF or
-            SyntaxKind.DynamicFF or SyntaxKind.DynamicFFF or
-            SyntaxKind.CrescKeyword or SyntaxKind.DecrescKeyword or
-            SyntaxKind.DimKeyword;
+            SyntaxKind.DynamicFF or SyntaxKind.DynamicFFF;
     }
 
     // ========== Repeat and Parallel ==========

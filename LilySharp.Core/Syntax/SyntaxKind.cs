@@ -155,22 +155,10 @@ public enum SyntaxKind : ushort
     DoubleOpenAngle,    // <<
     DoubleCloseAngle,   // >>
 
-    // === Articulation Names ===
-    StaccatoKeyword,
-    AccentKeyword,
-    TenutoKeyword,
-    MarcatoKeyword,
-    FermataKeyword,
-    PortatoKeyword,
-
-    // === Ornament Names ===
-    TrillKeyword,       // @trill
-    MordentKeyword,     // @mordent
-    PrallKeyword,       // @prall (inverted mordent)
-    TurnKeyword,        // @turn
-    InvertedTurnKeyword, // @invertedturn
-    PrallTrillKeyword,  // @pralltriller (short trill)
-    TremoloKeyword,     // @tremolo (stem tremolo)
+    // Articulation/ornament names (staccato, tr, mordent, cresc, dim, …) are no
+    // longer reserved keywords: they are written as '@name' and resolved from text
+    // by ArticulationRegistry / the mark registry. Only the dynamic level marks
+    // below remain distinct tokens (some share spelling with pitch letters).
 
     // === Override/Revert Keywords (no backslash, follows LilySharp convention) ===
     OverrideKeyword,    // override
@@ -186,9 +174,6 @@ public enum SyntaxKind : ushort
     DynamicF,           // \f
     DynamicFF,          // \ff
     DynamicFFF,         // \fff
-    CrescKeyword,       // \cresc
-    DecrescKeyword,     // \decresc
-    DimKeyword,         // \dim
 
     // === Nodes: Top Level ===
     CompilationUnit,
