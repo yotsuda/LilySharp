@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Globalization;
 using System.Text;
 
 namespace LilySharp.Core.Rendering.Svg;
@@ -38,16 +39,20 @@ public sealed class SvgDocumentOptions
 }
 
 /// <summary>
-/// Single-document, single-page SVG output. Multi-page documents are
-/// emitted as multiple <c>&lt;svg&gt;</c> elements stacked vertically in
-/// the same root document (each page begins at <c>(0, accumulatedY)</c>).
+/// SVG output. A single-page document is emitted as one <c>&lt;svg&gt;</c>.
+/// Multi-page documents are stacked vertically inside one root <c>&lt;svg&gt;</c>
+/// sized to hold every page: each page's content is wrapped in a
+/// <c>&lt;g transform="translate(0, y)"&gt;</c> at its cumulative Y offset, so
+/// pages no longer overlap and nothing is clipped by the first page's height.
 /// </summary>
 public sealed class SvgDocumentContext : IDocumentContext
 {
     private readonly SvgDocumentOptions _options;
-    private readonly StringBuilder _sb = new();
+    private readonly List<(StringBuilder Content, double Width, double Height)> _pages = new();
+    private StringBuilder? _currentContent;
+    private double _currentWidth, _currentHeight;
     private SvgDrawingContext? _currentPage;
-    private bool _headerWritten;
+    private string? _result;
     private bool _disposed;
 
     public SvgDocumentContext(SvgDocumentOptions? options = null)
@@ -59,52 +64,92 @@ public sealed class SvgDocumentContext : IDocumentContext
     {
         if (_currentPage != null)
             throw new InvalidOperationException("Previous page not ended.");
-        if (!_headerWritten)
-        {
-            WriteHeader(widthSpaces, heightSpaces);
-            _headerWritten = true;
-        }
-        _currentPage = new SvgDrawingContext(_sb);
+        // Buffer each page separately so we can size the root <svg> to all pages
+        // and offset them at Dispose (we don't know the total height up front).
+        _currentContent = new StringBuilder();
+        _currentWidth = widthSpaces;
+        _currentHeight = heightSpaces;
+        _currentPage = new SvgDrawingContext(_currentContent);
         return _currentPage;
     }
 
     public void EndPage()
     {
-        if (_currentPage == null)
+        if (_currentPage == null || _currentContent == null)
             throw new InvalidOperationException("No page to end.");
+        _pages.Add((_currentContent, _currentWidth, _currentHeight));
         _currentPage = null;
+        _currentContent = null;
     }
 
-    /// <summary>Returns the accumulated SVG text. Call after <see cref="Dispose"/>.</summary>
+    /// <summary>Returns the assembled SVG text. Call after <see cref="Dispose"/>.</summary>
     public string ToSvg()
     {
         if (!_disposed)
             throw new InvalidOperationException("Dispose the document before reading SVG.");
-        return _sb.ToString();
+        return _result ?? "";
     }
 
     public void Dispose()
     {
         if (_disposed) return;
         if (_currentPage != null) EndPage();
-        if (_headerWritten)
-            _sb.AppendLine("</svg>");
+        _result = Assemble();
         _disposed = true;
     }
 
-    private void WriteHeader(double widthSpaces, double heightSpaces)
+    private string Assemble()
+    {
+        if (_pages.Count == 0)
+            return "";
+
+        var sb = new StringBuilder();
+
+        // Single page: emit exactly as a one-page document (no <g> wrapper) so the
+        // output is byte-identical to the common case.
+        if (_pages.Count == 1)
+        {
+            var (content, w, h) = _pages[0];
+            WriteHeader(sb, w, h);
+            sb.Append(content);
+            sb.AppendLine("</svg>");
+            return sb.ToString();
+        }
+
+        double totalHeight = 0, maxWidth = 0;
+        foreach (var (_, w, h) in _pages)
+        {
+            totalHeight += h;
+            if (w > maxWidth) maxWidth = w;
+        }
+
+        WriteHeader(sb, maxWidth, totalHeight);
+        double yOffset = 0;
+        foreach (var (content, _, h) in _pages)
+        {
+            sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                "<g transform=\"translate(0, {0:F2})\">", yOffset));
+            sb.Append(content);
+            sb.AppendLine("</g>");
+            yOffset += h;
+        }
+        sb.AppendLine("</svg>");
+        return sb.ToString();
+    }
+
+    private void WriteHeader(StringBuilder sb, double widthSpaces, double heightSpaces)
     {
         double widthPx = widthSpaces * _options.PixelsPerSpace;
         double heightPx = heightSpaces * _options.PixelsPerSpace;
 
-        _sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        _sb.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{widthPx:F1}\" height=\"{heightPx:F1}\" viewBox=\"0 0 {widthSpaces:F2} {heightSpaces:F2}\">");
-        _sb.AppendLine("<style>");
+        sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+        sb.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{widthPx:F1}\" height=\"{heightPx:F1}\" viewBox=\"0 0 {widthSpaces:F2} {heightSpaces:F2}\">");
+        sb.AppendLine("<style>");
         var fontFaceRule = GetFontFaceRule();
         if (!string.IsNullOrEmpty(fontFaceRule))
-            _sb.AppendLine("  " + fontFaceRule);
-        _sb.AppendLine("  .music { font-family: 'Emmentaler', serif; }");
-        _sb.AppendLine("</style>");
+            sb.AppendLine("  " + fontFaceRule);
+        sb.AppendLine("  .music { font-family: 'Emmentaler', serif; }");
+        sb.AppendLine("</style>");
     }
 
     private string GetFontFaceRule()

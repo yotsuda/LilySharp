@@ -43,18 +43,20 @@ public sealed class PngDocumentOptions
 /// begins at <c>y = sum(previous heights)</c>).
 /// </summary>
 /// <remarks>
-/// Unlike PdfDocumentContext, the PNG backend pre-allocates a single
-/// surface large enough to hold all pages. <see cref="BeginPage"/> sets a
-/// translation so the page-local <c>(0, 0)</c> maps to the next free row.
+/// Each page is rendered to its own surface; at <see cref="Dispose"/> the pages
+/// are composited into a final image sized to hold them all (height = sum of
+/// page heights, width = widest page). This handles any number of pages and
+/// pages of differing sizes without clipping — unlike a fixed pre-reserved
+/// surface, which dropped pages beyond a guessed height.
 /// </remarks>
 public sealed class PngDocumentContext : IDocumentContext
 {
     private readonly PngDocumentOptions _options;
-    private readonly List<(double WidthSp, double HeightSp)> _pendingPages = new();
-    private SKSurface? _surface;
-    private SKCanvas? _canvas;
+    private readonly List<(SKImage Image, int WidthPx, int HeightPx)> _pages = new();
+    private SKSurface? _pageSurface;
+    private SKCanvas? _pageCanvas;
+    private int _pageWidthPx, _pageHeightPx;
     private PngDrawingContext? _currentPage;
-    private double _accumulatedY;
     private bool _disposed;
     private byte[]? _bytes;
 
@@ -68,40 +70,27 @@ public sealed class PngDocumentContext : IDocumentContext
         if (_currentPage != null)
             throw new InvalidOperationException("Previous page not ended.");
 
-        // Lazy-allocate surface on the first page using its dimensions.
-        // Multi-page PNG isn't a real format; we vertically stack instead.
-        // The first BeginPage sets the canvas width to the first page's width
-        // (assumed largest in practice). Subsequent pages are clipped to that
-        // width if they exceed it.
-        if (_surface == null)
-        {
-            int w = (int)Math.Ceiling(widthSpaces * _options.PixelsPerSpace);
-            int h = (int)Math.Ceiling(heightSpaces * _options.PixelsPerSpace);
-            // Reserve room for likely future pages (×4); we'll truncate at Dispose.
-            int reservedH = Math.Max(h, h * 4);
-            _surface = SKSurface.Create(new SKImageInfo(w, reservedH,
-                SKColorType.Rgba8888, SKAlphaType.Premul))
-                ?? throw new InvalidOperationException("Failed to allocate SKSurface.");
-            _canvas = _surface.Canvas;
-            var bg = _options.Background;
-            _canvas.Clear(new SKColor(bg.R, bg.G, bg.B, bg.A));
-        }
-
-        _canvas!.Save();
-        _canvas.Translate(0, (float)(_accumulatedY * _options.PixelsPerSpace));
-        _currentPage = new PngDrawingContext(_canvas, _options.PixelsPerSpace,
+        _pageWidthPx = Math.Max(1, (int)Math.Ceiling(widthSpaces * _options.PixelsPerSpace));
+        _pageHeightPx = Math.Max(1, (int)Math.Ceiling(heightSpaces * _options.PixelsPerSpace));
+        _pageSurface = SKSurface.Create(new SKImageInfo(_pageWidthPx, _pageHeightPx,
+            SKColorType.Rgba8888, SKAlphaType.Premul))
+            ?? throw new InvalidOperationException("Failed to allocate SKSurface.");
+        _pageCanvas = _pageSurface.Canvas;
+        var bg = _options.Background;
+        _pageCanvas.Clear(new SKColor(bg.R, bg.G, bg.B, bg.A));
+        _currentPage = new PngDrawingContext(_pageCanvas, _options.PixelsPerSpace,
             _options.FontDirectory);
-        _pendingPages.Add((widthSpaces, heightSpaces));
         return _currentPage;
     }
 
     public void EndPage()
     {
-        if (_canvas == null || _currentPage == null)
+        if (_pageSurface == null || _currentPage == null)
             throw new InvalidOperationException("No page to end.");
-        _canvas.Restore();
-        var (_, h) = _pendingPages[^1];
-        _accumulatedY += h;
+        _pages.Add((_pageSurface.Snapshot(), _pageWidthPx, _pageHeightPx));
+        _pageSurface.Dispose();
+        _pageSurface = null;
+        _pageCanvas = null;
         _currentPage = null;
     }
 
@@ -110,19 +99,36 @@ public sealed class PngDocumentContext : IDocumentContext
         if (_disposed) return;
         if (_currentPage != null) EndPage();
 
-        if (_surface != null)
+        if (_pages.Count > 0)
         {
-            // Snapshot only the used portion of the surface (crop to actual content).
-            int finalH = Math.Max(1, (int)Math.Ceiling(_accumulatedY * _options.PixelsPerSpace));
-            int width = _surface.Canvas.LocalClipBounds.Width > 0
-                ? (int)_surface.Canvas.LocalClipBounds.Width
-                : (int)Math.Ceiling(_pendingPages[0].WidthSp * _options.PixelsPerSpace);
+            int totalH = 0, maxW = 0;
+            foreach (var (_, w, h) in _pages)
+            {
+                totalH += h;
+                if (w > maxW) maxW = w;
+            }
 
-            using var image = _surface.Snapshot(new SKRectI(0, 0, width, finalH));
-            using var data = image.Encode(SKEncodedImageFormat.Png, _options.Quality);
-            _bytes = data.ToArray();
-            _surface.Dispose();
-            _surface = null;
+            using (var final = SKSurface.Create(new SKImageInfo(maxW, totalH,
+                       SKColorType.Rgba8888, SKAlphaType.Premul))
+                   ?? throw new InvalidOperationException("Failed to allocate SKSurface."))
+            {
+                var canvas = final.Canvas;
+                var bg = _options.Background;
+                canvas.Clear(new SKColor(bg.R, bg.G, bg.B, bg.A));
+                float y = 0;
+                foreach (var (image, _, h) in _pages)
+                {
+                    canvas.DrawImage(image, 0, y);
+                    y += h;
+                }
+                using var snapshot = final.Snapshot();
+                using var data = snapshot.Encode(SKEncodedImageFormat.Png, _options.Quality);
+                _bytes = data.ToArray();
+            }
+
+            foreach (var (image, _, _) in _pages)
+                image.Dispose();
+            _pages.Clear();
         }
         _disposed = true;
     }
