@@ -27,6 +27,16 @@ namespace LilySharp.Core.Svg.Renderer;
 /// <summary>
 /// Renders a Score with its ScoreLayout to SVG.
 /// </summary>
+/// <remarks>
+/// LEGACY / NOT IN PRODUCTION PATH. The live SVG/PDF/PNG path is
+/// <see cref="LilySharp.Core.Rendering.SharedRenderer"/>; nothing outside
+/// tests and benchmarks constructs this class. It is retained only as a
+/// feature reference for the backend-agnostic migration (it still implements
+/// barline types, multiple voices, tablature, cross-staff/kneed beams, etc.
+/// that SharedRenderer has not yet ported — see LILYSHARP_STANDALONE_REVIEW.md
+/// §3). Do not add new features here; port to SharedRenderer instead. Slated
+/// for removal once parity is reached.
+/// </remarks>
 public sealed class SvgRenderer
 {
     // SVG output scale: pixels per staff space for the width/height attributes

@@ -30,12 +30,24 @@ namespace LilySharp.Core.Rendering;
 /// <see cref="Rendering.Pdf.PdfDocumentContext"/>.
 /// </summary>
 /// <remarks>
-/// This is the Phase 2-A renderer — feature-incomplete by design. It does
-/// not yet draw ties, slurs, dynamics, articulations, lyrics, accidentals,
-/// or any of the higher-level engraving artefacts that the full
-/// <c>SvgRenderer</c> handles. Those will be migrated in subsequent
-/// phases as <c>SvgRenderer</c> is incrementally ported to use
-/// <see cref="IDrawingContext"/>.
+/// CANONICAL RENDERER. This is the live render path for SVG, PDF, and PNG
+/// (<c>SvgGenerator</c>/<c>PdfGenerator</c>/<c>PngGenerator</c> all call
+/// <see cref="RenderTo"/>). It already draws ties, slurs, dynamics,
+/// articulations, lyrics, accidentals, hairpins, tuplets, ottava/volta
+/// brackets, grace notes, multi-measure rests, and more (see
+/// <see cref="RenderTo"/>).
+///
+/// The legacy <c>SvgRenderer</c> is no longer in any production path; it is
+/// kept only as a feature reference until the remaining migration backlog is
+/// ported here. Features still owned by <c>SvgRenderer</c> and NOT yet
+/// implemented in this renderer:
+///   • barline types (double / final / repeat / repeat-dots) and SpanBars
+///   • multiple voices per staff (only <c>PrimaryVoice</c> is drawn today)
+///   • tablature staves
+///   • cross-staff / kneed beams (DrawBeams uses a single staffMiddleY)
+///   • grace slurs, ossia barlines, layout-driven tempo marks
+///   • real serif text metrics (box widths are length×factor estimates)
+/// See LILYSHARP_STANDALONE_REVIEW.md §3 for the full parity backlog.
 /// </remarks>
 public static class SharedRenderer
 {

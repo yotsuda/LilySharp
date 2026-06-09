@@ -24,6 +24,12 @@ namespace LilySharp.Core.Svg.Layout;
 /// All calculations are in staff spaces.
 /// </summary>
 /// <remarks>
+/// REFERENCE / NOT IN PRODUCTION PATH. The live slur layout is
+/// <see cref="SlurScoringProblem"/>, invoked per broken piece by
+/// <c>ElementCoordinator</c>. This simpler engraver is used only by tests
+/// (<c>SlurTests</c>); keep as a reference implementation or retire it, but
+/// do not treat its passing tests as covering production. See
+/// LILYSHARP_STANDALONE_REVIEW.md §1.
 /// LILYPOND-REF: lily/slur-scoring.cc:1-906 Slur_scoring class
 /// LILYPOND-REF: lily/bezier-bow.cc:1-132 Bezier_bow class
 /// </remarks>

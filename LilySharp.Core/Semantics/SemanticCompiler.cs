@@ -27,6 +27,15 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 /// <remarks>
 /// Pipeline: SyntaxTree → SymbolCollector → Binder → ScoreBuilder → Score
+///
+/// STATUS: NOT YET WIRED INTO ANY OUTPUT PIPELINE. As of this review nothing
+/// outside <c>Semantics/</c> and tests consumes this compiler or its
+/// <c>BoundScore</c>. The live render path uses <c>MeasureCollector</c>
+/// (Svg/Collector) instead, which re-walks the syntax tree independently, and
+/// MIDI/MusicXML export walk the syntax tree directly. This is the intended
+/// "Roslyn-style" semantic layer (a stated design goal) built ahead of being
+/// integrated — keep, but treat its tests as not covering any shipping path
+/// until a generator is switched onto it. See LILYSHARP_STANDALONE_REVIEW.md §1.
 /// </remarks>
 public sealed class SemanticCompiler
 {
