@@ -69,6 +69,10 @@ public sealed class BeamScoringProblem
     // Per-member stem directions (needed for kneed beams)
     private readonly int[] _memberBeamDirs;
 
+    // Per-member beam count (1 = eighth, 2 = sixteenth, ...) — drives per-stem
+    // ideal/shortest stem length, matching LilyPond's Stem_info.
+    private readonly int[] _memberBeamCounts;
+
     // Staff radius (half staff height in half-spaces = 2.0 for 5-line staff)
     private const double StaffRadius = 2.0;
 
@@ -100,6 +104,7 @@ public sealed class BeamScoringProblem
         // Extract stem positions (in staff positions)
         _stemXPositions = new double[group.Members.Length];
         _staffPositions = new int[group.Members.Length];
+        _memberBeamCounts = new int[group.Members.Length];
         _maxBeamCount = 0;
 
         for (int i = 0; i < group.Members.Length; i++)
@@ -107,6 +112,7 @@ public sealed class BeamScoringProblem
             var member = group.Members[i];
             _stemXPositions[i] = itemXPositions[member.ItemIndex] - _leftX; // relative to left
             _staffPositions[i] = member.StaffPosition;
+            _memberBeamCounts[i] = Math.Max(1, member.BeamCount);
             _maxBeamCount = Math.Max(_maxBeamCount, member.BeamCount);
         }
 
@@ -828,9 +834,6 @@ public sealed class BeamScoringProblem
         double[] score = { 0, 0 }; // [DOWN=0, UP=1]
         int[] count = { 0, 0 };
 
-        double idealStemLenPos = _idealStemLength * 2;
-        double minStemLenPos = _minStemLength * 2;
-
         for (int i = 0; i < _stemXPositions.Length; i++)
         {
             double x = _stemXPositions[i];
@@ -845,14 +848,25 @@ public sealed class BeamScoringProblem
             int memberDir = _isKnee ? _memberBeamDirs[i] : _beamDir;
             int d = memberDir > 0 ? 1 : 0; // index into score array
 
+            // Per-stem ideal/shortest beam Y, varying with beam count (16th/32nd
+            // stems are longer) — LilyPond's Stem_info, not a flat constant.
+            // CalculateBeamedStemInfo returns staff-SPACE Y; ×2 converts to the
+            // staff-position (half-space) frame the quanter uses.
+            // LILYPOND-REF: lily/stem.cc:1137 calc_stem_info;
+            //               lily/beam-quanting.cc score_stem_lengths.
+            var info = StemCalculator.CalculateBeamedStemInfo(
+                _staffPositions[i], memberDir > 0, _memberBeamCounts[i],
+                _beamThickness, _beamTranslation);
+            double idealY = info.IdealY * 2.0;
+            double shortestY = info.ShortestY * 2.0;
+
             // LILYPOND-REF: lily/beam-quanting.cc:1139-1140
             // Penalty for stems shorter than minimum
-            double shortage = memberDir * (_staffPositions[i] + memberDir * minStemLenPos - currentY);
+            double shortage = memberDir * (shortestY - currentY);
             score[d] += limitPenalty * Math.Max(0.0, shortage);
 
             // LILYPOND-REF: lily/beam-quanting.cc:1142-1143
             // Penalty for deviation from ideal
-            double idealY = _staffPositions[i] + memberDir * idealStemLenPos;
             double idealDiff = memberDir * (currentY - idealY);
             double idealScore = ShrinkExtraWeight(idealDiff, 1.5);
 
