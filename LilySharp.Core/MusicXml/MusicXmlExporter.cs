@@ -29,6 +29,8 @@ public sealed class MusicXmlExporter
     private const int DivisionsPerQuarter = 4;
 
     private int _currentOctave = 4;
+    private int _currentStep = 0;     // c=0..b=6, for LilyPond relative-octave resolution (mirrors MidiExporter)
+    private bool _tieToNextNote;      // a tie was seen; the next note/chord ends it (gets tie-stop)
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _measureNumber = 1;
     private MusicXmlMeasure? _currentMeasure;
@@ -141,6 +143,8 @@ public sealed class MusicXmlExporter
 
         // Reset state for this part's continuation
         _currentOctave = 4;
+        _currentStep = 0;
+        _tieToNextNote = false;
         _defaultDuration = Fraction.Quarter;
         _pendingDynamic = null;
 
@@ -264,9 +268,11 @@ public sealed class MusicXmlExporter
                 break;
 
             case TieSyntax:
-                // Tie follows a note — mark the last note as tie start
+                // Tie follows a note — mark the last note as tie start, and flag
+                // the next note/chord so it emits the matching tie-stop.
                 if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
                     _currentMeasure.Notes[^1].TieStart = true;
+                _tieToNextNote = true;
                 break;
 
             case SlurSyntax slur:
@@ -376,9 +382,7 @@ public sealed class MusicXmlExporter
         if (_currentMeasure == null) return;
 
         var (step, alter) = ParsePitch(note.Pitch);
-        int octaveChange = note.Pitch.OctaveOffset;
-        int targetOctave = _currentOctave + octaveChange;
-        _currentOctave = targetOctave;
+        int targetOctave = ResolveRelativeOctave(note.Pitch);
 
         var duration = GetDuration(note.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -400,6 +404,11 @@ public sealed class MusicXmlExporter
         // Process articulations and slurs
         ProcessArticulations(note.Articulations, xmlNote);
 
+        // Tie pairing: a preceding '~' ends on this note (tie-stop); a '~' on
+        // this note (sibling or articulation) starts a tie to the next note.
+        if (_tieToNextNote) { xmlNote.TieStop = true; _tieToNextNote = false; }
+        if (note.Articulations.OfType<TieSyntax>().Any()) { xmlNote.TieStart = true; _tieToNextNote = true; }
+
         _currentMeasure.Notes.Add(xmlNote);
     }
 
@@ -417,12 +426,20 @@ public sealed class MusicXmlExporter
         // Emit pending dynamic as direction before the chord
         EmitPendingDynamic();
 
+        // Resolve each pitch relative to the chord's starting state; only the
+        // first pitch advances the running state (matches MidiExporter so MIDI
+        // and MusicXML octaves agree).
+        int savedStep = _currentStep, savedOctave = _currentOctave;
+        int firstStep = savedStep, firstOctave = savedOctave;
         bool isFirst = true;
         foreach (var pitch in pitches)
         {
+            if (!isFirst) { _currentStep = savedStep; _currentOctave = savedOctave; }
+
             var (step, alter) = ParsePitch(pitch);
-            int octaveChange = pitch.OctaveOffset;
-            int targetOctave = _currentOctave + octaveChange;
+            int targetOctave = ResolveRelativeOctave(pitch);
+
+            if (isFirst) { firstStep = _currentStep; firstOctave = _currentOctave; }
 
             var xmlNote = new MusicXmlNote
             {
@@ -435,20 +452,22 @@ public sealed class MusicXmlExporter
                 IsChord = !isFirst
             };
 
-            // Add articulations only to the first note
+            // Add articulations + tie pairing only on the first note of the chord.
             if (isFirst)
             {
                 ProcessArticulations(chord.Articulations, xmlNote);
+                if (_tieToNextNote) { xmlNote.TieStop = true; _tieToNextNote = false; }
+                if (chord.Articulations.OfType<TieSyntax>().Any()) { xmlNote.TieStart = true; _tieToNextNote = true; }
+                isFirst = false;
             }
 
             _currentMeasure.Notes.Add(xmlNote);
-
-            if (isFirst)
-            {
-                _currentOctave = targetOctave;
-                isFirst = false;
-            }
         }
+
+        // Continue from the first chord note (LilyPond: next note is relative to
+        // the chord's first pitch).
+        _currentStep = firstStep;
+        _currentOctave = firstOctave;
     }
 
     private void ProcessRest(RestSyntax rest)
@@ -481,9 +500,7 @@ public sealed class MusicXmlExporter
             if (item is NoteSyntax note)
             {
                 var (step, alter) = ParsePitch(note.Pitch);
-                int octaveChange = note.Pitch.OctaveOffset;
-                int targetOctave = _currentOctave + octaveChange;
-                _currentOctave = targetOctave;
+                int targetOctave = ResolveRelativeOctave(note.Pitch);
 
                 var duration = GetDuration(note.Duration);
                 var (type, _) = GetNoteType(duration);
@@ -577,6 +594,42 @@ public sealed class MusicXmlExporter
         string step = char.ToUpper(pitch.BaseName).ToString();
         return (step, pitch.AccidentalOffset);
     }
+
+    /// <summary>
+    /// Resolves the absolute octave of a pitch using LilyPond's relative-octave
+    /// rule (nearest octave to the previous pitch, within a fourth), then applies
+    /// the explicit ' / , offset. Mirrors <c>MidiExporter.CalculateRelativeMidiPitch</c>
+    /// so MIDI and MusicXML octaves agree. Updates the running step/octave state.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/pitch.cc — relative octave (closest interval).</remarks>
+    private int ResolveRelativeOctave(PitchSyntax pitch)
+    {
+        int noteName = StepIndex(pitch.BaseName);
+
+        int upOctave = _currentOctave;
+        if (_currentStep > noteName) upOctave++;
+        int downOctave = _currentOctave;
+        if (_currentStep < noteName) downOctave--;
+
+        int currentSteps = _currentStep + _currentOctave * 7;
+        int upSteps = noteName + upOctave * 7;
+        int downSteps = noteName + downOctave * 7;
+
+        int targetOctave = Math.Abs(upSteps - currentSteps) < Math.Abs(downSteps - currentSteps)
+            ? upOctave
+            : downOctave;
+
+        targetOctave += pitch.OctaveOffset;
+
+        _currentStep = noteName;
+        _currentOctave = targetOctave;
+        return targetOctave;
+    }
+
+    private static int StepIndex(char baseName) => baseName switch
+    {
+        'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3, 'g' => 4, 'a' => 5, 'b' => 6, _ => 0
+    };
 
     private Fraction GetDuration(DurationSyntax? duration)
     {

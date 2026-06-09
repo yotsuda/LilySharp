@@ -35,6 +35,12 @@ public sealed class MidiExporter
     private int _timeNumerator = 4;
     private int _timeDenominator = 4;
 
+    // Tie handling: a tie (~) merges the next same-pitch note into the previous
+    // one (one sustained note) instead of re-articulating it.
+    private bool _tiePending;
+    private int _lastNoteIndex = -1;
+    private MidiTrack? _lastNoteTrack;
+
     public MidiExporter(int ticksPerQuarter = MidiFile.DefaultTicksPerQuarter)
     {
         _ticksPerQuarter = ticksPerQuarter;
@@ -88,6 +94,12 @@ public sealed class MidiExporter
 
             case NoteSyntax note:
                 ProcessNote(note, track);
+                break;
+
+            case TieSyntax:
+                // Tie between two sibling notes — the next same-pitch note extends
+                // the previous one rather than re-articulating.
+                _tiePending = true;
                 break;
 
             case RestSyntax rest:
@@ -252,12 +264,32 @@ public sealed class MidiExporter
 
         int actualDuration = durationTicks * durationPercent / 100;
 
+        bool startsTie = note.Articulations.OfType<TieSyntax>().Any();
+
+        // If the previous note tied into this one (same pitch on the same track),
+        // extend that note instead of emitting a new note-on/off pair.
+        if (_tiePending && _lastNoteTrack == track
+            && _lastNoteIndex >= 0 && _lastNoteIndex < track.Notes.Count
+            && track.Notes[_lastNoteIndex].Pitch == midiPitch)
+        {
+            var prev = track.Notes[_lastNoteIndex];
+            track.Notes[_lastNoteIndex] = prev with { DurationTicks = prev.DurationTicks + durationTicks };
+            _currentTick += durationTicks;
+            _tiePending = startsTie; // continue a tie chain (c~ c~ c)
+            return;
+        }
+
         track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration));
+        _lastNoteIndex = track.Notes.Count - 1;
+        _lastNoteTrack = track;
         _currentTick += durationTicks;
+        _tiePending = startsTie;
     }
 
     private void ProcessRest(RestSyntax rest)
     {
+        // A rest breaks any pending tie (a tie cannot span a rest).
+        _tiePending = false;
         var duration = GetDuration(rest.Duration);
         _currentTick += FractionToTicks(duration);
     }
