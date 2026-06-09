@@ -303,37 +303,29 @@ public sealed class MidiExporter
         var duration = durationNode != null ? GetDuration(durationNode) : _defaultDuration;
         int durationTicks = FractionToTicks(duration);
 
-        // For chords, calculate all pitches relative to the current state,
-        // but only update the state based on the first (lowest) pitch
+        // LilyPond relative chords: each note is relative to the PREVIOUS note in
+        // the chord (so the state advances per pitch); the note AFTER the chord is
+        // relative to the chord's FIRST note. Matches MeasureCollector.CreateChordItem.
+        // LILYPOND-REF: notation manual — relative octave within chords.
         bool isFirst = true;
-        int savedNoteName = _currentNoteName;
-        int savedOctave = _currentOctave;
+        int firstNoteName = _currentNoteName;
+        int firstOctave = _currentOctave;
 
         foreach (var pitch in pitches)
         {
-            if (!isFirst)
-            {
-                // Restore state for each subsequent pitch in the chord
-                _currentNoteName = savedNoteName;
-                _currentOctave = savedOctave;
-            }
-
-            int midiPitch = CalculateRelativeMidiPitch(pitch);
-
+            int midiPitch = CalculateRelativeMidiPitch(pitch); // advances state per pitch
             if (isFirst)
             {
-                // Save the state after processing the first pitch
-                savedNoteName = _currentNoteName;
-                savedOctave = _currentOctave;
+                firstNoteName = _currentNoteName;
+                firstOctave = _currentOctave;
                 isFirst = false;
             }
-
             track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks));
         }
 
-        // Restore the state from the first pitch for the next note
-        _currentNoteName = savedNoteName;
-        _currentOctave = savedOctave;
+        // Next note is relative to the chord's first pitch.
+        _currentNoteName = firstNoteName;
+        _currentOctave = firstOctave;
 
         _currentTick = startTick + durationTicks;
     }

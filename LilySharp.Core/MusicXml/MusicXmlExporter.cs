@@ -426,18 +426,15 @@ public sealed class MusicXmlExporter
         // Emit pending dynamic as direction before the chord
         EmitPendingDynamic();
 
-        // Resolve each pitch relative to the chord's starting state; only the
-        // first pitch advances the running state (matches MidiExporter so MIDI
-        // and MusicXML octaves agree).
-        int savedStep = _currentStep, savedOctave = _currentOctave;
-        int firstStep = savedStep, firstOctave = savedOctave;
+        // LilyPond relative chords: each note is relative to the PREVIOUS note in
+        // the chord (state advances per pitch); the note after the chord is relative
+        // to the FIRST pitch. Matches MidiExporter and MeasureCollector.
+        int firstStep = _currentStep, firstOctave = _currentOctave;
         bool isFirst = true;
         foreach (var pitch in pitches)
         {
-            if (!isFirst) { _currentStep = savedStep; _currentOctave = savedOctave; }
-
             var (step, alter) = ParsePitch(pitch);
-            int targetOctave = ResolveRelativeOctave(pitch);
+            int targetOctave = ResolveRelativeOctave(pitch); // advances state per pitch
 
             if (isFirst) { firstStep = _currentStep; firstOctave = _currentOctave; }
 

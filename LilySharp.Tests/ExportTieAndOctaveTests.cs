@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
 using LilySharp.Core.Syntax;
@@ -96,5 +97,16 @@ public sealed class ExportTieAndOctaveTests
         var mnotes = midi.Tracks[1].Notes;
         Assert.Equal(60, mnotes[0].Pitch);
         Assert.Equal(55, mnotes[1].Pitch);
+    }
+
+    [Fact]
+    public void Chord_RelativeOctave_IsReckonedFromPreviousNoteInChord()
+    {
+        // LilyPond: within <c g e>, g is relative to c (→ G3, down a fourth) and e
+        // is relative to g (→ E3, down a third), NOT relative to the first note c
+        // (which would give E4). Matches the renderer/collector.
+        var midi = new MidiExporter().Export(SyntaxTree.Parse("<c g e>4"));
+        var pitches = midi.Tracks[1].Notes.OrderBy(n => n.StartTick).Select(n => n.Pitch).ToList();
+        Assert.Equal(new[] { 60, 55, 52 }, pitches); // C4, G3, E3 (e from g, not c)
     }
 }
