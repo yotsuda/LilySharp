@@ -71,8 +71,7 @@ public sealed class MidiExporter
         switch (node)
         {
             case CompilationUnitSyntax cu:
-                foreach (var member in cu.Members)
-                    ProcessNode(member, track, conductorTrack);
+                ProcessSequence(cu.Members.ToList(), track, conductorTrack);
                 break;
 
             case ScoreDeclarationSyntax score:
@@ -88,8 +87,7 @@ public sealed class MidiExporter
                 break;
 
             case MusicBlockSyntax block:
-                foreach (var item in block.Items)
-                    ProcessNode(item, track, conductorTrack);
+                ProcessSequence(block.Items.ToList(), track, conductorTrack);
                 break;
 
             case NoteSyntax note:
@@ -159,12 +157,69 @@ public sealed class MidiExporter
 
     private void ProcessChildren(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
     {
+        var children = new List<SyntaxNode>();
         for (int i = 0; i < node.SlotCount; i++)
         {
             var child = node.GetChild(i);
             if (child != null && child is not SyntaxTokenNode)
-                ProcessNode(child, track, conductorTrack);
+                children.Add(child);
         }
+        ProcessSequence(children, track, conductorTrack);
+    }
+
+    /// <summary>
+    /// Processes a sibling sequence, expanding symbolic repeats: the span between
+    /// a <c>|:</c> and its matching <c>:|</c> is played twice (volta repeat) so
+    /// inline <c>|: … :|</c> actually repeats in playback, not just visually.
+    /// Each pass restarts from the same relative-octave/duration/dynamic context.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/volta-repeat — repeated music is performed N times.</remarks>
+    private void ProcessSequence(List<SyntaxNode> items, MidiTrack track, MidiTrack conductorTrack)
+    {
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (IsRepeatBar(items[i], SyntaxKind.RepeatStartBar))
+            {
+                int end = FindMatchingRepeatEnd(items, i);
+                if (end > i)
+                {
+                    var span = items.GetRange(i + 1, end - i - 1);
+                    const int count = 2; // default; explicit ':|*N' is a later stage
+
+                    int savedName = _currentNoteName, savedOctave = _currentOctave, savedVelocity = _velocity;
+                    var savedDuration = _defaultDuration;
+                    for (int pass = 0; pass < count; pass++)
+                    {
+                        _currentNoteName = savedName;
+                        _currentOctave = savedOctave;
+                        _velocity = savedVelocity;
+                        _defaultDuration = savedDuration;
+                        ProcessSequence(span, track, conductorTrack);
+                    }
+                    i = end; // continue after the closing :|
+                    continue;
+                }
+            }
+            ProcessNode(items[i], track, conductorTrack);
+        }
+    }
+
+    private static bool IsRepeatBar(SyntaxNode node, SyntaxKind kind)
+        => node is BarlineSyntax b && b.BarToken.Kind == kind;
+
+    private static int FindMatchingRepeatEnd(List<SyntaxNode> items, int start)
+    {
+        int depth = 0;
+        for (int i = start + 1; i < items.Count; i++)
+        {
+            if (IsRepeatBar(items[i], SyntaxKind.RepeatStartBar)) depth++;
+            else if (IsRepeatBar(items[i], SyntaxKind.RepeatEndBar))
+            {
+                if (depth == 0) return i;
+                depth--;
+            }
+        }
+        return -1; // unmatched |: — caller falls back to normal processing
     }
 
     /// <summary>
