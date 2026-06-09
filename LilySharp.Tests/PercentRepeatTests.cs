@@ -144,8 +144,8 @@ public class PercentRepeatTests
     [Fact]
     public void Collector_VoltaRepeat_NoPercentMarkers()
     {
-        // Volta repeats should not create percent markers
-        var source = "repeat volta 2 { c4 d e f }";
+        // Symbolic volta repeats should not create percent markers
+        var source = "{ |: c4 d e f :| }";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);

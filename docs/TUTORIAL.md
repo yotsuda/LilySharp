@@ -121,16 +121,20 @@ section Main {
 
 ## Repeats
 
+Volta repeats use the symbolic `|: … :|` barlines. Add inline volta endings with
+`[1. …] [2. …]` for first/second-time bars; the repeat count defaults to 2 (or the
+highest volta number), or state it as `|: … :|*N`.
+
 ```
-repeat volta 2 {
-  c4 d e f |
-  g4 a b c' |
-}
-alternative {
-  { d'2 d' | }    // First time
-  { c'2 c' | }    // Second time
+{
+  |: c4 d e f |
+     g4 a b c' |
+  [1. d'2 d' | ] :|   // First time
+  [2. c'2 c' | ]      // Second time
 }
 ```
+
+A plain `|: … :|` (no endings) just repeats its body.
 
 ## Grace Notes
 

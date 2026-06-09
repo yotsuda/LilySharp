@@ -121,6 +121,7 @@ public static class DiagnosticCodes
     public const string UnterminatedString = "LYS0003";
     public const string UnterminatedComment = "LYS0004";
     public const string InvalidNumber = "LYS0005";
+    public const string RepeatVoltaRemoved = "LYS0006";
 
     // Semantic errors (LYS1xxx)
     public const string UndefinedVariable = "LYS1001";

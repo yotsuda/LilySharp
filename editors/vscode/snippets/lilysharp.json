@@ -60,24 +60,16 @@
     "Repeat Volta": {
         "prefix": "repeat",
         "body": [
-            "repeat volta ${1:2} {",
-            "\t${0}",
-            "}"
+            "|: ${0} :|"
         ],
-        "description": "Volta repeat"
+        "description": "Volta repeat (symbolic |: :|)"
     },
     "Repeat with Alternatives": {
         "prefix": "repeat-alt",
         "body": [
-            "repeat volta ${1:2} {",
-            "\t${2}",
-            "}",
-            "alternative {",
-            "\t{ ${3} }",
-            "\t{ ${0} }",
-            "}"
+            "|: ${1} [1. ${2} ] :| [2. ${0} ]"
         ],
-        "description": "Volta repeat with alternative endings"
+        "description": "Volta repeat with inline endings [1. …] [2. …]"
     },
     "Tuplet": {
         "prefix": "tuplet",

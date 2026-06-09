@@ -246,15 +246,20 @@ tuplet 3/2 {
 
 ### Volta Repeats
 
+Volta repeats are written symbolically with `|: … :|` repeat barlines and inline
+volta endings `[1. …] [2. …]`. The play count defaults to 2 (or, when endings are
+present, the highest volta number); give it explicitly with `|: … :|*N`.
+
 ```
-repeat volta 2 {
-  c4 d e f |
-}
-alternative {
-  { g2 g | }     % First ending
-  { a2 a | }     % Second ending
-}
+{ |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ] }
 ```
+
+Endings accept ranges and lists: `[1-2. … ]`, `[1,3. … ]`. Without endings, a bare
+`|: … :|` simply repeats the body (twice by default, or `|: … :|*N` times).
+
+> Note: `repeat volta` / `alternative` are **not** Lily# constructs — the parser
+> rejects them with a hint to use the symbolic form above. The `repeat` keyword
+> survives only for `unfold` / `percent` / `tremolo` (see below).
 
 ### Percent Repeats
 

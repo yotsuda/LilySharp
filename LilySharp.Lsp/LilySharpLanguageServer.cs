@@ -398,7 +398,8 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "R", Kind = CompletionItemKind.Value, Detail = "Full-measure rest", SortText = "1R" },
 
                 // Structures
-                new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertText = "repeat volta 2 {\n\t$0\n}", Detail = "Repeat block", SortText = "2repeat" },
+                new CompletionItem { Label = "|: :|", Kind = CompletionItemKind.Snippet, InsertText = "|: $0 :|", Detail = "Volta repeat (symbolic; add endings [1. …] [2. …])", SortText = "2repeat" },
+                new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertText = "repeat unfold 2 {\n\t$0\n}", Detail = "Repeat block (unfold/percent/tremolo)", SortText = "2repeatkw" },
                 new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "2tuplet" },
                 new CompletionItem { Label = "grace", Kind = CompletionItemKind.Keyword, InsertText = "grace { $0 }", Detail = "Grace notes", SortText = "2grace" },
                 new CompletionItem { Label = "acciaccatura", Kind = CompletionItemKind.Keyword, InsertText = "acciaccatura { $0 }", Detail = "Slashed grace note", SortText = "2acciaccatura" },
@@ -1435,13 +1436,14 @@ public sealed class LilySharpLanguageServer
 
             signatures.Add(new SignatureInformation
             {
-                Label = "repeat count { music } [alternative { ... }]",
-                Documentation = "Repeats the music block the specified number of times.",
+                Label = "repeat (unfold|percent|tremolo) count { music }",
+                Documentation = "Repeats the music block. For volta repeats use the symbolic form "
+                    + "'|: … :|' (count '|: … :|*N') with inline endings '[1. …] [2. …]'.",
                 Parameters = new[]
                 {
+                    new ParameterInformation { Label = "unfold|percent|tremolo", Documentation = "Repeat kind (volta is the symbolic |: :| form, not this keyword)" },
                     new ParameterInformation { Label = "count", Documentation = "Number of repetitions (integer)" },
-                    new ParameterInformation { Label = "{ music }", Documentation = "Music block to repeat" },
-                    new ParameterInformation { Label = "alternative { ... }", Documentation = "Optional different endings" }
+                    new ParameterInformation { Label = "{ music }", Documentation = "Music block to repeat" }
                 }
             });
         }

@@ -98,15 +98,16 @@ lyrics { Hap -- py birth -- day }
 
 ### Repeats and Alternatives
 
+Volta repeats use the symbolic `|: … :|` barlines with inline volta endings
+`[1. …] [2. …]`. The repeat count defaults to 2 (or the highest volta number);
+state it explicitly with `|: … :|*N`.
+
 ```lilysharp
-repeat volta 2 {
-    c4 d e f |
-}
-alternative {
-    { g2 g | }
-    { a2 a | }
-}
+{ |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ] }
 ```
+
+(The `repeat` keyword remains for `unfold` / `percent` / `tremolo`, which are not
+volta repeats.)
 
 ### Parallel Voices
 

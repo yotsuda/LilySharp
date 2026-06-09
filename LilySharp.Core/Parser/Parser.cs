@@ -925,19 +925,33 @@ private GreenNode?[] ParseArticulations()
 
     private RepeatExpressionGreen ParseRepeatExpression()
     {
+        int startPos = _textPosition;
         var repeatKeyword = Expect(SyntaxKind.RepeatKeyword);
 
-        // Expect repeat type: volta, unfold, percent, tremolo
+        // Expect repeat type: unfold, percent, tremolo (volta is no longer a Lily#
+        // construct — see the diagnostic below).
         SyntaxToken repeatType;
         if (Check(SyntaxKind.VoltaKeyword) || Check(SyntaxKind.Identifier))
         {
             repeatType = Advance();
+
+            // 'repeat volta' / 'alternative' were removed in favor of the symbolic
+            // |: … :| form with inline volta endings. Reject with a friendly hint and
+            // recover by parsing the rest so no cascade errors follow.
+            if (repeatType.Kind == SyntaxKind.VoltaKeyword || repeatType.Text == "volta")
+            {
+                var voltaSpan = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
+                _diagnostics.Error(voltaSpan, DiagnosticCodes.RepeatVoltaRemoved,
+                    "'repeat volta' is not a Lily# construct; use the symbolic repeat "
+                    + "'|: … :|' (explicit count '|: … :|*N') with inline volta endings "
+                    + "'[1. …] [2. …]'.");
+            }
         }
         else
         {
             var span = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                "Expected repeat type (volta, unfold, percent, tremolo)");
+                "Expected repeat type (unfold, percent, tremolo)");
             repeatType = new SyntaxToken(SyntaxKind.VoltaKeyword, "volta", null, null);
         }
 

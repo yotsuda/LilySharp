@@ -429,9 +429,9 @@ score {
     // ========== Repeat Tests ==========
 
     [Fact]
-    public void ParseRepeatVolta()
+    public void ParseRepeatUnfold()
     {
-        var tree = SyntaxTree.Parse("repeat volta 2 { c4 d e f }");
+        var tree = SyntaxTree.Parse("repeat unfold 2 { c4 d e f }");
         Assert.False(tree.HasErrors);
 
         var repeat = tree.Root.GetSlot(0) as RepeatExpressionGreen;
@@ -440,34 +440,47 @@ score {
     }
 
     [Fact]
-    public void ParseRepeatWithAlternative()
+    public void RepeatVolta_IsRejected_WithSymbolicHint()
     {
-        var tree = SyntaxTree.Parse(@"repeat volta 2 { c4 d e f } alternative { { g2 } { a2 } }");
-        Assert.False(tree.HasErrors);
-
-        var repeat = tree.Root.GetSlot(0) as RepeatExpressionGreen;
-        Assert.NotNull(repeat);
-
-        // Should have alternative clause
-        var alternative = repeat.GetSlot(4) as AlternativeClauseGreen;
-        Assert.NotNull(alternative);
+        // 'repeat volta' was removed in favor of the symbolic |: … :| form.
+        var tree = SyntaxTree.Parse("repeat volta 2 { c4 d e f }");
+        Assert.True(tree.HasErrors);
+        Assert.Contains(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.RepeatVoltaRemoved);
     }
 
     [Fact]
-    public void ParseRepeatRoundTrip()
+    public void RepeatVoltaWithAlternative_IsRejected_ButRecovers()
     {
-        var source = "repeat volta 2 { c4 d e f | g2 g | }";
+        var tree = SyntaxTree.Parse(@"repeat volta 2 { c4 d e f } alternative { { g2 } { a2 } }");
+        Assert.True(tree.HasErrors);
+        Assert.Contains(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.RepeatVoltaRemoved);
+
+        // Recovery still parses the full structure (no cascade), including the
+        // alternative clause, so the tree round-trips faithfully.
+        var repeat = tree.Root.GetSlot(0) as RepeatExpressionGreen;
+        Assert.NotNull(repeat);
+        Assert.NotNull(repeat.GetSlot(4) as AlternativeClauseGreen);
+    }
+
+    [Fact]
+    public void ParseRepeatUnfoldRoundTrip()
+    {
+        var source = "repeat unfold 2 { c4 d e f | g2 g | }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
         Assert.Equal(source, tree.ToFullString());
     }
 
     [Fact]
-    public void ParseRepeatWithAlternativeRoundTrip()
+    public void RepeatVolta_RecoveryRoundTripsFaithfully()
     {
+        // Even though 'repeat volta' is rejected, recovery consumes every token so
+        // the source still round-trips (full-fidelity preserved through the error).
         var source = "repeat volta 2 { c4 d e f } alternative { { g2 } { a2 } }";
         var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
+        Assert.True(tree.HasErrors);
         Assert.Equal(source, tree.ToFullString());
     }
 
@@ -510,6 +523,7 @@ score {
     [Fact]
     public void ParseNestedRepeatInPart()
     {
+        // 'repeat volta' inside a section is also rejected with the symbolic hint.
         var tree = SyntaxTree.Parse(@"section Main {
     melody {
         repeat volta 2 {
@@ -521,7 +535,9 @@ score {
         }
     }
 }");
-        Assert.False(tree.HasErrors);
+        Assert.True(tree.HasErrors);
+        Assert.Contains(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.RepeatVoltaRemoved);
     }
 
     [Fact]
