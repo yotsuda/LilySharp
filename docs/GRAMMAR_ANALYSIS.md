@@ -392,8 +392,7 @@ render midi "output.mid" {
 // === キーワードによる構造定義 ===
 phrase intro { c4 d e f | g2 g | }
 section Intro { ... }
-part violin { clef: treble }
-let tempo = 120
+part violin { clef: treble  tempo: 120 }
 
 // === 参照（プレフィックスなし） ===
 section Main {

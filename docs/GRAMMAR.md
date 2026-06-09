@@ -48,6 +48,11 @@ OctaveDown     = { ',' }+ ;
 Octave         = OctaveUp | OctaveDown | ε ;
 PitchToken     = PitchBase , [ Accidental ] , Octave ;
 
+(* Octaves are always RELATIVE: each pitch lands in the octave nearest the previous
+   pitch, then any '/',' marks shift it. There is no absolute-octave mode and no
+   'relative'/'absolute' keyword; the octave resets to the part's base at each
+   section boundary. The ' and , marks adjust relative to that reckoning. *)
+
 ### Duration
 
 DurationBase   = '1' | '2' | '4' | '8' | '16' | '32' | '64' | '128'
@@ -135,9 +140,13 @@ PartDecl       = 'part' , Identifier , [ PartBody ] ;
 
 PartBody       = '{' , { PartProperty } , '}' ;
 
-PartProperty   = PropertyKey , ':' , PropertyValue ;
+(* Every part-header attribute is colon-form ('name: value'). time and tempo keep
+   their richer value grammars but still take the colon, like the simple keys. *)
+PartProperty   = SimpleKey , ':' , PropertyValue
+               | 'time'  , ':' , TimeValue            (* e.g. time: 4/4 *)
+               | 'tempo' , ':' , TempoValue ;         (* e.g. tempo: 120 *)
 
-PropertyKey    = 'clef' | 'instrument' | 'channel' | 'tuning' ;
+SimpleKey      = 'clef' | 'instrument' | 'channel' | 'tuning' | 'octave' ;
 
 PropertyValue  = Identifier | String | Integer ;
 
@@ -149,6 +158,8 @@ PropertyValue  = Identifier | String | Integer ;
    // With properties
    part melody {
      clef: treble
+     time: 4/4
+     tempo: 120
      instrument: "Violin"
    }
 
@@ -402,11 +413,24 @@ MusicItem      = Note
                | Rest
                | Chord
                | Barline
+               | InlineVolta
                | PhraseRef
                | ParallelExpr
                | Slur
                | Tie
+               | Beam
+               | MidMusicCommand
                ;
+
+(* Mid-music commands change context at this point in the stream. clef/key/time
+   here are the bare COMMAND form (no colon) — DISTINCT from the part-header
+   attribute form 'clef: treble' (with colon). The header form sets a part's
+   initial value; the command form changes it mid-music. Both are intentional and
+   each is consistent within its context (header = 'name: value', music = command). *)
+MidMusicCommand = 'clef' , Identifier                 (* clef bass *)
+               | 'key' , PitchBase , ( 'major' | 'minor' )
+               | 'time' , Integer , '/' , Integer     (* time 4/4 *)
+               | Tuplet | Grace | 'break' ;
 
 ### 8.2 Notes, Rests, Chords
 
@@ -421,7 +445,13 @@ RestType       = 'r' | 's' | 'R' ;
 
 Chord          = '<' , Pitch , { Pitch } , '>' , [ Duration ] , { Articulation } ;
 
-Barline        = '|' | '||' | '|.' ;
+Barline        = '|' | '||' | '|.' | '|:' | RepeatEnd ;
+RepeatEnd      = ':|' , [ '*' , Integer ] ;           (* :|*N plays the span N times, default 2 *)
+
+(* First/second-time endings inside a |: … :| repeat. '[' followed by an integer is
+   a volta; otherwise '[' … ']' is a Beam group. *)
+InlineVolta    = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , { MusicItem } , ']' ;
+Beam           = '[' | ']' ;
 
 PhraseRef      = Identifier ;
 
@@ -443,10 +473,17 @@ Articulation   = '@' , ArticulationName
                | DynamicMark
                ;
 
-ArticulationName = 'staccato' | 'accent' | 'tenuto' | 'marcato' | 'fermata' ;
+(* ArticulationName is any identifier; it is resolved from text (not reserved as a
+   keyword), so abbreviations and full names both work and names like 'tr' stay
+   usable as ordinary identifiers. Known articulations/ornaments: *)
+ArticulationName = 'staccato' ('stac') | 'accent' ('acc') | 'tenuto' ('ten')
+               | 'marcato' ('marc') | 'fermata' ('ferm') | 'portato'
+               | 'trill' ('tr') | 'mordent' | 'prall' | 'turn'
+               | 'invertedturn' | 'pralltriller' ;
 
-DynamicMark    = '\' , DynamicLevel
-               | '\' , DynamicChange
+(* Dynamics take '@' (preferred, consistent with articulations) or '\' *)
+DynamicMark    = ( '@' | '\' ) , DynamicLevel
+               | ( '@' | '\' ) , DynamicChange
                ;
 
 DynamicLevel   = 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'f' | 'ff' | 'fff' ;
