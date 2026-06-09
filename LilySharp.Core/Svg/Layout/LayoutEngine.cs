@@ -332,31 +332,43 @@ public sealed class LayoutEngine
             score.PercentRepeats, crossStaffLayouts,
             trillSpanners: score.TrillSpanners);
 
-        // Calculate part combination layouts for staves with multiple voices
+        // Voice collision offsets / head-wipes for multi-voice staves, so the
+        // renderer can nudge opposing voices apart. Computed per staff; the keys
+        // are (measureIndex, voiceId, itemIndex) — fully correct for the common
+        // single-multi-voice-staff case. (Multiple multi-voice staves in one
+        // system would share keys; rare, handled best-effort.)
+        var voiceOffsetsBuilder = ImmutableDictionary.CreateBuilder<VoiceItemKey, double>();
+        var headWipeBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
+        var dotForceDownBuilder = ImmutableHashSet.CreateBuilder<VoiceItemKey>();
         var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
-        foreach (var group in score.StaffGroups)
+        foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
-            foreach (var staff in group.Staves)
+            if (staff.Voices.Length < 2)
+                continue;
+
+            var staffScore = new Score(
+                staff.Voices, score.TimeSignature, score.KeySignature, ClefToString(staff.Clef));
+            var (vo, hw, df) = _elementCoordinator.CalculateVoiceOffsets(staffScore);
+            foreach (var kv in vo) voiceOffsetsBuilder[kv.Key] = kv.Value;
+            foreach (var k in hw) headWipeBuilder.Add(k);
+            foreach (var k in df) dotForceDownBuilder.Add(k);
+
+            if (partCombineLayouts.IsEmpty)
             {
-                if (staff.Voices.Length >= 2)
-                {
-                    var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
-                    var combineItems = PartCombineAnalyzer.Analyze(
-                        staff.Voices[0], staff.Voices[1], score.TimeSignature);
-                    partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml);
-                    break; // Only first multi-voice staff for now
-                }
+                var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
+                var combineItems = PartCombineAnalyzer.Analyze(
+                    staff.Voices[0], staff.Voices[1], score.TimeSignature);
+                partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml);
             }
-            if (!partCombineLayouts.IsEmpty) break;
         }
 
         var result = BuildScoreLayout(pages, systemsArray,
             allBeamLayouts.ToImmutableArray(), allTieLayouts.ToImmutableArray(),
             allSlurLayouts.ToImmutableArray(), allGlissandoLayouts.ToImmutableArray(),
             annotations,
-            ImmutableDictionary<VoiceItemKey, double>.Empty,
-            ImmutableHashSet<VoiceItemKey>.Empty,
-            ImmutableHashSet<VoiceItemKey>.Empty,
+            voiceOffsetsBuilder.ToImmutable(),
+            headWipeBuilder.ToImmutable(),
+            dotForceDownBuilder.ToImmutable(),
             ImmutableDictionary<RestShiftKey, double>.Empty,
             partCombineLayouts);
         result = result with { Options = _options };

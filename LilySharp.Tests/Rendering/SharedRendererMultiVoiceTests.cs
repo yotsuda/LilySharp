@@ -68,6 +68,31 @@ public sealed class SharedRendererMultiVoiceTests
         Assert.True(anyDown, "voice 2 should produce down-stems (only PrimaryVoice was drawn before)");
     }
 
+    [Fact]
+    public void CollidingVoices_ProduceVoiceOffsets_InMultiStaffLayout()
+    {
+        // Two voices a second apart at the same time collide; the layout must now
+        // compute a non-zero horizontal offset (Layout(MultiStaffScore) used to
+        // pass empty voice offsets, so noteheads overlapped).
+        var (_, layout) = BuildLayout("""
+            key C major
+            time 4/4
+
+            section S { line { << { d'4 d'4 d'4 d'4 } \\ { c'4 c'4 c'4 c'4 } >> } }
+
+            structure { S }
+            render score "o.svg" { staff { line } }
+            """);
+
+        bool anyOffset = false;
+        for (int voice = 1; voice <= 2 && !anyOffset; voice++)
+            for (int item = 0; item < 4; item++)
+                if (System.Math.Abs(layout.GetVoiceOffset(0, voice, item)) > 1e-6)
+                    anyOffset = true;
+
+        Assert.True(anyOffset, "colliding voices should yield a non-zero voice X-offset");
+    }
+
     private static (MultiStaffScore Score, ScoreLayout Layout) BuildLayout(string source)
     {
         var tree = SyntaxTree.Parse(source);
