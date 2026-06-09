@@ -195,6 +195,30 @@ internal sealed class BeamMarkerGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// An inline volta ending inside a <c>|: … :|</c> repeat: <c>[1. … ]</c> (or
+/// a range/list <c>[1-2. …]</c> / <c>[1,3. …]</c>). Holds the volta number(s)
+/// and the ending's music. Distinct from <see cref="StructureAlternativeGreen"/>,
+/// which references a named section rather than carrying literal music.
+/// </summary>
+/// <remarks>
+/// Slot layout: <c>[</c>, number, separator?, endNumber?, <c>.</c>, items…, <c>]</c>.
+/// </remarks>
+internal sealed class InlineVoltaGreen : GreenSyntaxNode
+{
+    public InlineVoltaGreen(
+        SyntaxToken openBracket,
+        SyntaxToken number,
+        SyntaxToken? separator,
+        SyntaxToken? endNumber,
+        SyntaxToken dot,
+        GreenNode?[] items,
+        SyntaxToken closeBracket)
+        : base(SyntaxKind.InlineVolta, [openBracket, number, separator, endNumber, dot, .. items, closeBracket])
+    {
+    }
+}
+
+/// <summary>
 /// Score declaration: score "title" { ... }
 /// </summary>
 internal sealed class ScoreDeclarationGreen : GreenSyntaxNode

@@ -252,6 +252,7 @@ public enum SyntaxKind : ushort
     RepeatExpression,
     AlternativeClause,
     ParallelExpression,
+    InlineVolta,                // [1. ...] inline volta ending in a |: :| repeat
 
     // === Nodes: Properties ===
     PropertyAssignment,

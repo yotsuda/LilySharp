@@ -515,7 +515,8 @@ internal sealed class Parser
 
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => ParseSlur(),
 
-            SyntaxKind.OpenBracket or SyntaxKind.CloseBracket => ParseBeamMarker(),
+            SyntaxKind.OpenBracket => ParseBeamOrInlineVolta(),
+            SyntaxKind.CloseBracket => ParseBeamMarker(),
 
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
 
@@ -765,6 +766,54 @@ internal sealed class Parser
     {
         var bracket = Advance();
         return new BeamMarkerGreen(bracket);
+    }
+
+    /// <summary>
+    /// Disambiguates the overloaded <c>[</c> in a music stream: <c>[</c> followed
+    /// by an integer is an inline volta ending (<c>[1. …]</c>); otherwise it is a
+    /// beam marker (<c>[c d]</c>). A bare integer never legitimately follows a beam
+    /// <c>[</c>, so the lookahead is unambiguous.
+    /// </summary>
+    private GreenNode ParseBeamOrInlineVolta()
+    {
+        if (Peek(1).Kind == SyntaxKind.IntegerLiteral)
+            return ParseInlineVolta();
+        return ParseBeamMarker();
+    }
+
+    /// <summary>
+    /// Parses an inline volta ending: <c>[1. … ]</c>, <c>[1-2. … ]</c>, or
+    /// <c>[1,3. … ]</c>. The body is a sequence of music items up to the closing
+    /// <c>]</c>.
+    /// </summary>
+    private InlineVoltaGreen ParseInlineVolta()
+    {
+        var openBracket = Expect(SyntaxKind.OpenBracket);
+        var number = Expect(SyntaxKind.IntegerLiteral);
+
+        // Optional range/list: [1-2. …] or [1,3. …]
+        SyntaxToken? separator = null;
+        SyntaxToken? endNumber = null;
+        if (Check(SyntaxKind.Minus) || Check(SyntaxKind.Comma))
+        {
+            separator = Advance();
+            endNumber = Expect(SyntaxKind.IntegerLiteral);
+        }
+
+        var dot = Expect(SyntaxKind.Dot);
+
+        var items = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBracket) && !Check(SyntaxKind.EndOfFile))
+        {
+            var item = ParseMusicItem();
+            if (item != null)
+                items.Add(item);
+            else
+                Advance(); // skip unexpected token to recover
+        }
+
+        var closeBracket = Expect(SyntaxKind.CloseBracket);
+        return new InlineVoltaGreen(openBracket, number, separator, endNumber, dot, [.. items], closeBracket);
     }
 
 private GreenNode?[] ParseArticulations()

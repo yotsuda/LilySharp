@@ -357,6 +357,9 @@ public sealed class MeasureCollector
     private readonly List<CustomTextItem> _customTexts = new();
     // Volta brackets (first/second ending)
     private readonly List<VoltaBracketItem> _voltaBrackets = new();
+    // Inline volta endings collected during the current voice walk; finalized
+    // (and marked closed/open) once the whole voice has been processed.
+    private readonly List<(int startMeasure, int endMeasure, string voltaText, int sourcePosition)> _pendingInlineVoltas = new();
     // Tuplet brackets
     private readonly List<TupletBracketItem> _tupletBrackets = new();
     // Arpeggio markings
@@ -609,48 +612,73 @@ public sealed class MeasureCollector
     {
         var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.Position);
 
+        _pendingInlineVoltas.Clear();
+
         // Collect all music nodes, expanding variable references
         var musicNodes = new List<SyntaxNode>();
 
         foreach (var node in voiceNode.DescendantNodes())
         {
-            // Skip nodes that are inside a tuplet, repeat, grace, or once (they'll be processed by those handlers)
-            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideOnce(node) || IsInsideGrace(node))
+            // Skip nodes that are inside a tuplet, repeat, grace, once, or inline
+            // volta (they'll be processed by those handlers)
+            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideOnce(node)
+                || IsInsideGrace(node) || IsInsideInlineVolta(node))
                 continue;
 
-            switch (node)
-            {
-                case NoteSyntax:
-                case RestSyntax:
-                case ChordSyntax:
-                case BarlineSyntax:
-                case BreakSyntax:
-                case TieSyntax:
-                case SlurSyntax:
-                case BeamMarkerSyntax:
-                case GraceExpressionSyntax:
-                case TupletExpressionSyntax:
-                case RepeatExpressionSyntax:
-                case MusicMarkSyntax:
-                case OverrideDeclarationSyntax:
-                case RevertDeclarationSyntax:
-                case OnceModifierSyntax:
-                case ClefDeclarationSyntax:
-                case KeySignatureSyntax:
-                    musicNodes.Add(node);
-                    break;
-
-                case VariableReferenceSyntax varRef:
-                    ExpandVariable(varRef.Name.Text, musicNodes);
-                    break;
-            }
+            GatherMusicNode(node, musicNodes);
         }
 
-        // Process collected music nodes (with lookahead for ties/slurs/beams)
+        ProcessMusicNodeSequence(musicNodes, builder);
+
+        FinalizeInlineVoltas();
+
+        return builder.FinalizeMeasures();
+    }
+
+    /// <summary>
+    /// Adds a single descendant node to the flat music-node list, expanding
+    /// variable references in place.
+    /// </summary>
+    private void GatherMusicNode(SyntaxNode node, List<SyntaxNode> musicNodes)
+    {
+        switch (node)
+        {
+            case NoteSyntax:
+            case RestSyntax:
+            case ChordSyntax:
+            case BarlineSyntax:
+            case BreakSyntax:
+            case TieSyntax:
+            case SlurSyntax:
+            case BeamMarkerSyntax:
+            case InlineVoltaSyntax:
+            case GraceExpressionSyntax:
+            case TupletExpressionSyntax:
+            case RepeatExpressionSyntax:
+            case MusicMarkSyntax:
+            case OverrideDeclarationSyntax:
+            case RevertDeclarationSyntax:
+            case OnceModifierSyntax:
+            case ClefDeclarationSyntax:
+            case KeySignatureSyntax:
+                musicNodes.Add(node);
+                break;
+
+            case VariableReferenceSyntax varRef:
+                ExpandVariable(varRef.Name.Text, musicNodes);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Processes a flat list of music nodes with one-node lookahead for
+    /// ties/slurs/beams (which annotate the preceding note).
+    /// </summary>
+    private void ProcessMusicNodeSequence(List<SyntaxNode> musicNodes, MeasureBuilder builder)
+    {
         for (int i = 0; i < musicNodes.Count; i++)
         {
             var node = musicNodes[i];
-            // Check if next node is a tie or slur
             bool hasTieAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is TieSyntax;
             bool hasSlurStartAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is SlurSyntax slurS && slurS.IsOpen;
             bool hasSlurEndAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is SlurSyntax slurE && !slurE.IsOpen;
@@ -658,8 +686,22 @@ public sealed class MeasureCollector
             bool hasBeamEndAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is BeamMarkerSyntax beamE && !beamE.IsStart;
             ProcessMusicNode(node, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
         }
+    }
 
-        return builder.FinalizeMeasures();
+    /// <summary>
+    /// Converts the inline volta endings collected during this voice walk into
+    /// volta brackets. The last ending in source order is drawn closed (right
+    /// hook); earlier endings are open (mirrors the structure-form behavior).
+    /// </summary>
+    private void FinalizeInlineVoltas()
+    {
+        for (int i = 0; i < _pendingInlineVoltas.Count; i++)
+        {
+            var (startMeasure, endMeasure, voltaText, sourcePosition) = _pendingInlineVoltas[i];
+            bool isClosed = (i == _pendingInlineVoltas.Count - 1);
+            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
+        }
+        _pendingInlineVoltas.Clear();
     }
 
     private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false)
@@ -751,6 +793,26 @@ public sealed class MeasureCollector
                 var barType = ParseBarlineType(barline.BarToken.Text);
                 builder.HandleBarline(barType, barline.Position);
                 RotateMeasureAlterations();
+                break;
+
+            case InlineVoltaSyntax volta:
+                {
+                    // Render the ending's music in place (the body before |: … :| is
+                    // written once; repeat barlines imply repetition) and overlay a
+                    // volta bracket across the measures the ending occupies.
+                    int startMeasureIndex = builder.CurrentMeasureIndex;
+
+                    var innerNodes = new List<SyntaxNode>();
+                    foreach (var item in volta.Items)
+                        GatherMusicNode(item, innerNodes);
+                    ProcessMusicNodeSequence(innerNodes, builder);
+
+                    int endMeasureIndex = builder.CurrentMeasureIndex;
+                    if (builder.CurrentItemCount > 0)
+                        endMeasureIndex++; // include the in-progress measure
+                    int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
+                    _pendingInlineVoltas.Add((startMeasureIndex, lastMeasure, volta.VoltaText, volta.Position));
+                }
                 break;
 
             case BreakSyntax:
@@ -1248,6 +1310,8 @@ public sealed class MeasureCollector
     {
         var builder = new MeasureBuilder(TimeSignatureFraction);
 
+        _pendingInlineVoltas.Clear();
+
         void ProcessNodes(IEnumerable<SyntaxNode> nodes)
         {
             var nodeList = nodes.ToList();
@@ -1280,9 +1344,11 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or KeySignatureSyntax);
+                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && !IsInsideInlineVolta(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or InlineVoltaSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or KeySignatureSyntax);
             ProcessNodes(musicNodes);
         }
+
+        FinalizeInlineVoltas();
 
         return builder.FinalizeMeasures();
     }
@@ -1402,6 +1468,18 @@ public sealed class MeasureCollector
         while (parent != null)
         {
             if (parent is RepeatExpressionSyntax)
+                return true;
+            parent = parent.Parent;
+        }
+        return false;
+    }
+
+    private static bool IsInsideInlineVolta(SyntaxNode node)
+    {
+        var parent = node.Parent;
+        while (parent != null)
+        {
+            if (parent is InlineVoltaSyntax)
                 return true;
             parent = parent.Parent;
         }

@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax.InternalSyntax;
 
@@ -397,6 +398,79 @@ public sealed class BeamMarkerSyntax : SyntaxNode
     }
 
     public bool IsStart => ((SyntaxTokenNode)GetChild(0)!).Kind == SyntaxKind.OpenBracket;
+}
+
+/// <summary>
+/// An inline volta ending in a <c>|: … :|</c> repeat: <c>[1. … ]</c> (or a range
+/// <c>[1-2. …]</c> / list <c>[1,3. …]</c>). Carries the volta number(s) and the
+/// ending's literal music; selected per repeat pass for playback and drawn as a
+/// volta bracket over its measures.
+/// </summary>
+public sealed class InlineVoltaSyntax : SyntaxNode
+{
+    internal InlineVoltaSyntax(InlineVoltaGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode Number => (SyntaxTokenNode)GetChild(1)!;
+
+    /// <summary>True for a range/list form like <c>[1-2. …]</c> or <c>[1,3. …]</c>.</summary>
+    public bool HasSeparator => GetChild(2) is SyntaxTokenNode;
+    public SyntaxTokenNode? Separator => GetChild(2) as SyntaxTokenNode;
+    public SyntaxTokenNode? EndNumber => GetChild(3) as SyntaxTokenNode;
+
+    /// <summary>Display text for the bracket label, e.g. "1.", "1-2.", "1,3.".</summary>
+    public string VoltaText => HasSeparator
+        ? $"{Number.Text}{Separator!.Text}{EndNumber!.Text}."
+        : $"{Number.Text}.";
+
+    /// <summary>The ending's music items (between the dot and the closing bracket).</summary>
+    public IEnumerable<SyntaxNode> Items
+    {
+        get
+        {
+            // Slots: [ number sep? endNumber? . items… ]  — items start after the dot
+            // (slot 4) and stop before the closing bracket (last slot).
+            for (int i = 5; i < SlotCount - 1; i++)
+            {
+                if (GetChild(i) is SyntaxNode n && n is not SyntaxTokenNode)
+                    yield return n;
+            }
+        }
+    }
+
+    /// <summary>The set of pass numbers this ending applies to.</summary>
+    public IEnumerable<int> Numbers
+    {
+        get
+        {
+            int start = int.Parse(Number.Text);
+            if (HasSeparator && EndNumber != null && int.TryParse(EndNumber.Text, out int end))
+            {
+                if (Separator!.Kind == SyntaxKind.Minus)
+                {
+                    for (int n = start; n <= end; n++)
+                        yield return n;
+                }
+                else // comma list: [1,3. …]
+                {
+                    yield return start;
+                    yield return end;
+                }
+            }
+            else
+            {
+                yield return start;
+            }
+        }
+    }
+
+    /// <summary>Highest pass number this ending covers (drives the inferred repeat count).</summary>
+    public int MaxNumber => Numbers.Max();
+
+    /// <summary>True iff this ending should play on the given (1-based) repeat pass.</summary>
+    public bool Matches(int pass) => Numbers.Contains(pass);
 }
 
 /// <summary>

@@ -183,26 +183,90 @@ public sealed class MidiExporter
                 int end = FindMatchingRepeatEnd(items, i);
                 if (end > i)
                 {
-                    var span = items.GetRange(i + 1, end - i - 1);
-                    // Play count comes off the :| end barline: explicit ':|*N' or default 2.
-                    int count = (items[end] as BarlineSyntax)?.RepeatCount ?? 2;
-
-                    int savedName = _currentNoteName, savedOctave = _currentOctave, savedVelocity = _velocity;
-                    var savedDuration = _defaultDuration;
-                    for (int pass = 0; pass < count; pass++)
-                    {
-                        _currentNoteName = savedName;
-                        _currentOctave = savedOctave;
-                        _velocity = savedVelocity;
-                        _defaultDuration = savedDuration;
-                        ProcessSequence(span, track, conductorTrack);
-                    }
-                    i = end; // continue after the closing :|
+                    int last = ProcessRepeatSpan(items, i, end, track, conductorTrack);
+                    i = last; // continue after the repeat (and any trailing endings)
                     continue;
                 }
             }
             ProcessNode(items[i], track, conductorTrack);
         }
+    }
+
+    /// <summary>
+    /// Plays a <c>|: … :|</c> span: the common body N times, selecting the matching
+    /// inline volta ending (<c>[1. …] [2. …]</c>) on each pass. N comes from an
+    /// explicit <c>:|*N</c>, else the highest volta number, else the default 2.
+    /// Returns the index of the last item consumed (the <c>:|</c> or the last
+    /// trailing ending) so the caller resumes after it.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/volta-repeat — body performed N times, i-th ending per pass.</remarks>
+    private int ProcessRepeatSpan(List<SyntaxNode> items, int start, int end,
+        MidiTrack track, MidiTrack conductorTrack)
+    {
+        // Partition the inner span into the common body and any inline volta endings.
+        var body = new List<SyntaxNode>();
+        var endings = new List<InlineVoltaSyntax>();
+        for (int k = start + 1; k < end; k++)
+        {
+            if (items[k] is InlineVoltaSyntax ev)
+                endings.Add(ev);
+            else if (endings.Count == 0)
+                body.Add(items[k]);
+            // (items after an early ending but before :| are non-standard; ignored.)
+        }
+
+        // Trailing endings live after the :| (e.g. |: body [1. …] :| [2. …]).
+        int last = end;
+        for (int k = end + 1; k < items.Count && items[k] is InlineVoltaSyntax lv; k++)
+        {
+            endings.Add(lv);
+            last = k;
+        }
+
+        var endBar = items[end] as BarlineSyntax;
+        int count;
+        if (endBar?.HasExplicitRepeatCount == true)
+            count = endBar.RepeatCount;
+        else if (endings.Count > 0)
+            count = Math.Max(2, endings.Max(e => e.MaxNumber));
+        else
+            count = 2;
+
+        int savedName = _currentNoteName, savedOctave = _currentOctave, savedVelocity = _velocity;
+        var savedDuration = _defaultDuration;
+        for (int pass = 1; pass <= count; pass++)
+        {
+            _currentNoteName = savedName;
+            _currentOctave = savedOctave;
+            _velocity = savedVelocity;
+            _defaultDuration = savedDuration;
+
+            ProcessSequence(body, track, conductorTrack);
+
+            if (endings.Count > 0)
+            {
+                var ending = SelectEnding(endings, pass);
+                if (ending != null)
+                    ProcessSequence(ending.Items.ToList(), track, conductorTrack);
+            }
+        }
+
+        return last;
+    }
+
+    /// <summary>
+    /// Picks the inline volta ending for a (1-based) repeat pass: the one whose
+    /// number set contains the pass, else the last ending (clamping, mirroring the
+    /// keyword path's <c>Math.Min(i, count-1)</c> selection).
+    /// </summary>
+    private static InlineVoltaSyntax? SelectEnding(List<InlineVoltaSyntax> endings, int pass)
+    {
+        foreach (var ending in endings)
+        {
+            if (ending.Matches(pass))
+                return ending;
+        }
+        return endings.Count > 0 ? endings[^1] : null;
     }
 
     private static bool IsRepeatBar(SyntaxNode node, SyntaxKind kind)

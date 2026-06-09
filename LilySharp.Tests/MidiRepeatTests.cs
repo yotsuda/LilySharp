@@ -83,4 +83,43 @@ public sealed class MidiRepeatTests
         Assert.Equal(new[] { 60, 62, 62, 62, 60, 62, 62, 62 },
             Pitches("{ |: c4 |: d4 :|*3 :|*2 }"));
     }
+
+    [Fact]
+    public void InlineVoltas_PlayCommonBodyThenIthEnding()
+    {
+        // |: c [1. e] :| [2. f]  -> pass1: c e ; pass2: c f.
+        // Each pass restarts the octave context from c, so e=E4(64), f=F4(65).
+        Assert.Equal(new[] { 60, 64, 60, 65 }, Pitches("{ |: c4 [1. e4] :| [2. f4] }"));
+    }
+
+    [Fact]
+    public void InlineVoltas_CountInferredFromHighestNumber()
+    {
+        // Three endings -> body plays 3 times, i-th ending per pass.
+        Assert.Equal(new[] { 60, 62, 60, 64, 60, 65 },
+            Pitches("{ |: c4 [1. d4] :| [2. e4] [3. f4] }"));
+    }
+
+    [Fact]
+    public void InlineVoltas_RangeEndingMatchesEachPass()
+    {
+        // [1-2. d] covers passes 1 and 2; [3. e] covers pass 3. Count = 3.
+        Assert.Equal(new[] { 60, 62, 60, 62, 60, 64 },
+            Pitches("{ |: c4 [1-2. d4] :| [3. e4] }"));
+    }
+
+    [Fact]
+    public void InlineVoltas_ExplicitCountClampsToLastEnding()
+    {
+        // :|*3 forces 3 passes but only two endings -> pass 3 reuses the last ending.
+        Assert.Equal(new[] { 60, 62, 60, 64, 60, 64 },
+            Pitches("{ |: c4 [1. d4] :|*3 [2. e4] }"));
+    }
+
+    [Fact]
+    public void InlineVoltas_DoNotBreakBeams()
+    {
+        // '[' before a note is still a beam marker, not a volta: [c d] plays once.
+        Assert.Equal(new[] { 60, 62 }, Pitches("{ [c8 d8] }"));
+    }
 }
