@@ -752,7 +752,11 @@ public sealed class MultiStaffLayouter
             var solver = new SpringSolver(allSprings);
 
             // LILYPOND-REF: lily/simple-spacer.cc:175-205 Simple_spacer::solve()
-            if (_options.RaggedRight || isLastSystem)
+            // The last system is justified like the others — LilyPond's `ragged-last`
+            // is unset by default and inherits `ragged-right` (= #f for a multi-line
+            // score), so the final line fills the full width (verified against
+            // LilyPond 2.24 output). Only a global ragged-right leaves lines unfilled.
+            if (_options.RaggedRight)
             {
                 double naturalLength = solver.IdealTotalLength;
                 if (naturalLength < springTargetWidth)

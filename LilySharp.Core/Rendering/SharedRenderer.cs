@@ -95,7 +95,7 @@ public static class SharedRenderer
                 DrawChordNames(layout, measureToSystemY, gc);
                 DrawFiguredBass(layout, measureToSystemY, gc);
                 DrawPercentRepeats(layout, measureToSystemY, gc);
-                DrawBarNumbers(layout, gc);
+                DrawBarNumbers(layout, measureToSystemY, gc);
                 DrawStanzaNumbers(layout, gc);
                 DrawFingerings(layout, measureToSystemY, gc);
                 DrawMusicMarks(layout, measureToSystemY, gc);
@@ -169,6 +169,13 @@ public static class SharedRenderer
         // overlap correctly when names are wider than the indent).
         DrawInstrumentNames(system, gc);
 
+        // Staff lines end exactly at the final barline (the last measure's right
+        // edge), so the staff never overshoots a ragged system nor falls short of a
+        // justified one. (system.Width is the target width, not the drawn content.)
+        double staffRight = system.Measures.Length > 0
+            ? system.Measures[^1].X + system.Measures[^1].Width
+            : system.Width;
+
         // Per-staff: staff lines + prefix glyphs + notes
         foreach (var (group, staff, globalIdx) in score.EnumerateStaves())
         {
@@ -181,7 +188,7 @@ public static class SharedRenderer
             try
             {
                 double localStaffY = isOssia ? 0 : staffY;
-                DrawStaffLines(localStaffY, system.Width, gc);
+                DrawStaffLines(localStaffY, staffRight, gc);
 
                 // System-start prefix (clef, key, time) only on first system
                 double prefixEndX = systemStartX;
@@ -522,9 +529,13 @@ public static class SharedRenderer
             double stemX = stemUp
                 ? x + EngravingDefaults.StemUpAttachX
                 : x + EngravingDefaults.StemDownAttachX;
-            double stemEndY = stemUp
-                ? noteY - EngravingRules.StandardStemLength
-                : noteY + EngravingRules.StandardStemLength;
+            // Duration-dependent length + unnatural-direction shortening + the
+            // extend-to-center-line rule, faithfully following LilyPond's
+            // Stem::internal_calc_stem_end_position (lily/stem.cc:481).
+            int durLog = StemCalculator.GetDurationLog(noteValue);
+            double staffTopY = staffMiddleY - StaffHeight / 2.0;
+            double stemEndY = StemCalculator.CalculateStemEndY(
+                noteY, stemUp, staffTopY, durLog, note.StaffPosition);
             gc.DrawLine(stemX, noteY, stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
 
@@ -562,6 +573,7 @@ public static class SharedRenderer
         bool stemUp = forcedStemUp ?? chord.StemUp;
 
         double topY = double.MaxValue, bottomY = double.MinValue;
+        int maxPos = int.MinValue, minPos = int.MaxValue;
         foreach (var n in chord.Notes)
         {
             double y = staffMiddleY - n.StaffPosition * 0.5;
@@ -573,6 +585,8 @@ public static class SharedRenderer
             DrawLedgerLines(n.StaffPosition, x, staffMiddleY, gc);
             if (y < topY) topY = y;
             if (y > bottomY) bottomY = y;
+            if (n.StaffPosition > maxPos) maxPos = n.StaffPosition;
+            if (n.StaffPosition < minPos) minPos = n.StaffPosition;
         }
 
         // Skip chord stem when chord is part of a beam — DrawBeams handles it.
@@ -583,10 +597,16 @@ public static class SharedRenderer
             double stemX = stemUp
                 ? x + EngravingDefaults.StemUpAttachX
                 : x + EngravingDefaults.StemDownAttachX;
+            // Stem attaches at the far notehead; its length is reckoned from the
+            // stem-tip-side notehead (top note for stem-up, bottom for stem-down),
+            // following LilyPond's Stem::internal_calc_stem_end_position (stem.cc:481).
             double stemStartY = stemUp ? bottomY : topY;
-            double stemEndY = stemUp
-                ? topY - EngravingRules.StandardStemLength
-                : bottomY + EngravingRules.StandardStemLength;
+            int stemTipPos = stemUp ? maxPos : minPos;
+            double stemTipNoteY = stemUp ? topY : bottomY;
+            int durLog = StemCalculator.GetDurationLog(noteValue);
+            double staffTopY = staffMiddleY - StaffHeight / 2.0;
+            double stemEndY = StemCalculator.CalculateStemEndY(
+                stemTipNoteY, stemUp, staffTopY, durLog, stemTipPos);
             gc.DrawLine(stemX, stemStartY, stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
         }
@@ -1164,9 +1184,13 @@ public static class SharedRenderer
                         Color.Black, thickness);
                 if (hasText)
                 {
-                    double textY = absY + 0.3 + 0.6;  // baseline below the bracket line
+                    // Hang the number from just below the horizontal line so it sits
+                    // inside the bracket instead of overlapping the line (matches the
+                    // reference SvgRenderer: y = top of glyph at absY + 0.3).
+                    double textY = absY + 0.3;
                     gc.DrawText(v.VoltaText, v.StartX + 0.5, textY,
-                        FontSize * 0.6, "serif", FontStyle.Bold, TextAnchor.Start, Color.Black);
+                        FontSize * 0.6, "serif", FontStyle.Bold, TextAnchor.Start, Color.Black,
+                        VerticalAnchor.Hanging);
                 }
             }
         }
@@ -1472,13 +1496,31 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/bar-number-engraver.cc — Bar_number_engraver
     /// LILYPOND-REF: scm/define-grobs.scm BarNumber (font-size = -2)
     /// </remarks>
-    private static void DrawBarNumbers(ScoreLayout layout, IDrawingContext gc)
+    private static void DrawBarNumbers(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
     {
         if (layout.BarNumberLayouts.IsDefaultOrEmpty) return;
         const double fontSize = 1.8;
+        var voltas = layout.VoltaBracketLayouts;
         foreach (var bn in layout.BarNumberLayouts)
-            gc.DrawText(bn.Text, bn.X, bn.Y, fontSize, "serif",
+        {
+            double y = bn.Y;
+            // When a volta ending begins at this bar-numbered measure (e.g. a second
+            // ending that opens a new system), stack the bar number ABOVE the volta
+            // bracket so it does not collide with the volta number.
+            // LILYPOND-REF: outside-staff-priority — BarNumber sits clear of VoltaBracket.
+            if (!voltas.IsDefaultOrEmpty)
+            {
+                foreach (var v in voltas)
+                {
+                    if (string.IsNullOrEmpty(v.VoltaText) || v.StartMeasureIndex != bn.MeasureIndex)
+                        continue;
+                    double voltaLineY = (sysY.TryGetValue(v.StartMeasureIndex, out var s) ? s : 0) + v.Y;
+                    y = Math.Min(y, voltaLineY - 0.7);
+                }
+            }
+            gc.DrawText(bn.Text, bn.X, y, fontSize, "serif",
                 FontStyle.Bold, TextAnchor.Start, Color.Black);
+        }
     }
 
     // ---------- Stanza numbers ----------

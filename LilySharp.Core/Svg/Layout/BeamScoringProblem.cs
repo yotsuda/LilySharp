@@ -56,8 +56,8 @@ public sealed class BeamScoringProblem
     private readonly double _lineThickness;
     private readonly double _beamTranslation;
 
-    // Stem info
-    private readonly double _idealStemLength;
+    // Stem info — per-stem ideal/shortest now come from StemCalculator.CalculateBeamedStemInfo
+    // (LilyPond calc_stem_info); only the flat minimum floor remains for EnsureMinimumStemLength.
     private readonly double _minStemLength;
 
     // Direction
@@ -133,7 +133,6 @@ public sealed class BeamScoringProblem
         _beamThickness = EngravingDefaults.BeamThickness;  // 0.48 staff spaces
         _lineThickness = EngravingDefaults.StaffLineThickness;  // 0.13 staff spaces
         _beamTranslation = EngravingDefaults.BeamTranslation;
-        _idealStemLength = EngravingDefaults.IdealStemLength;  // 3.5 staff spaces
         _minStemLength = EngravingDefaults.MinStemLength;      // 2.5 staff spaces
     }
 
@@ -205,19 +204,25 @@ public sealed class BeamScoringProblem
         if (_staffPositions.Length < 1)
             return (0, 0);
 
-        // Compute ideal Y for each stem (in staff positions)
-        double idealStemLenPos = _idealStemLength * 2; // Convert staff spaces → staff positions
         double minStemLenPos = _minStemLength * 2;
 
         // Least-squares: find best fit line through ideal positions
         // LILYPOND-REF: lily/beam-quanting.cc:588-603
         // For kneed beams, use per-member stem direction so the ideal positions
         // naturally cluster in the gap between the two pitch groups.
+        // The per-stem ideal beam Y comes from LilyPond's Stem_info (calc_stem_info),
+        // NOT a flat 3.5-space length: it shortens stems near the staff and extends
+        // far-from-staff stems toward the centre line, so the seed already matches
+        // what ScoreStemLengths optimises against.
+        // LILYPOND-REF: lily/stem.cc:1024-1155 calc_stem_info.
         var ideals = new List<(double x, double y)>();
         for (int i = 0; i < _staffPositions.Length; i++)
         {
             int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
-            double idealY = _staffPositions[i] + dir * idealStemLenPos;
+            var info = StemCalculator.CalculateBeamedStemInfo(
+                _staffPositions[i], dir > 0, _memberBeamCounts[i],
+                _beamThickness, _beamTranslation);
+            double idealY = info.IdealY * 2.0; // staff-space → staff-position frame
             ideals.Add((_stemXPositions[i], idealY));
         }
 
@@ -354,6 +359,18 @@ public sealed class BeamScoringProblem
 
             double dampedDy = slope * _xSpan;
 
+            // set_minimum_dy: don't let damping flatten the beam below the smallest
+            // quant step (sit/inter/hang). LILYPOND-REF: lily/beam-quanting.cc:771
+            //   (set_minimum_dy) + lily/beam-quanting.cc:470-489.
+            if (Math.Abs(dampedDy) > 0.001)
+            {
+                double sit = (_beamThickness - _lineThickness) / 2 * 2;
+                double inter = 1.0;
+                double hang = (1.0 - (_beamThickness - _lineThickness) / 2) * 2;
+                double minDy = Math.Min(Math.Min(sit, inter), hang);
+                dampedDy = Math.Sign(dampedDy) * Math.Max(Math.Abs(dampedDy), minDy);
+            }
+
             // LILYPOND-REF: lily/beam-quanting.cc:776-777
             _unquantedLeftY += (dy - dampedDy) / 2;
             _unquantedRightY -= (dy - dampedDy) / 2;
@@ -483,16 +500,21 @@ public sealed class BeamScoringProblem
         double feasibleMin = double.NegativeInfinity;
         double feasibleMax = double.PositiveInfinity;
 
-        double minStemLenPos = _minStemLength * 2; // Convert to staff positions
-
         for (int i = 0; i < _staffPositions.Length; i++)
         {
-            // The minimum beam Y at this stem position, to satisfy min stem length
-            double minBeamY = _staffPositions[i] + _beamDir * minStemLenPos;
+            // The minimum beam Y at this stem comes from the per-stem shortest_y of
+            // calc_stem_info — NOT a flat 2.5-space length. The flat constant over-
+            // constrained the tip note (shortest stem), pushing the whole beam up.
+            // LILYPOND-REF: lily/beam-quanting.cc:794-805 (stem_infos_[i].shortest_y_).
+            int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
+            var info = StemCalculator.CalculateBeamedStemInfo(
+                _staffPositions[i], dir > 0, _memberBeamCounts[i],
+                _beamThickness, _beamTranslation);
+            double minBeamY = info.ShortestY * 2.0; // staff-space → staff-position frame
             // Convert to left Y: leftY = beamAtStem - slope * stemX
             double leftYForMin = minBeamY - slope * _stemXPositions[i];
 
-            if (_beamDir > 0) // stem up: beam must be above minimum
+            if (dir > 0) // stem up: beam must be above minimum
                 feasibleMin = Math.Max(feasibleMin, leftYForMin);
             else // stem down: beam must be below minimum
                 feasibleMax = Math.Min(feasibleMax, leftYForMin);
