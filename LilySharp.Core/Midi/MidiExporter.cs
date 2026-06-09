@@ -184,7 +184,8 @@ public sealed class MidiExporter
                 if (end > i)
                 {
                     var span = items.GetRange(i + 1, end - i - 1);
-                    const int count = 2; // default; explicit ':|*N' is a later stage
+                    // Play count comes off the :| end barline: explicit ':|*N' or default 2.
+                    int count = (items[end] as BarlineSyntax)?.RepeatCount ?? 2;
 
                     int savedName = _currentNoteName, savedOctave = _currentOctave, savedVelocity = _velocity;
                     var savedDuration = _defaultDuration;

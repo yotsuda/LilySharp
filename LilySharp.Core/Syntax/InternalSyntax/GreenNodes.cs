@@ -148,12 +148,17 @@ internal sealed class ChordGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// A barline: |, ||, |., |:, :|
+/// A barline: |, ||, |., |:, :| with an optional <c>*N</c> explicit repeat
+/// count on a <c>:|</c> end-repeat (e.g. <c>:|*3</c> = play the span 3 times).
 /// </summary>
+/// <remarks>
+/// The <c>*N</c> multiplier reuses the <c>R1*N</c> idiom and applies only to the
+/// <c>:|</c> repeat-end barline; it sets the volta-repeat play count (default 2).
+/// </remarks>
 internal sealed class BarlineGreen : GreenSyntaxNode
 {
-    public BarlineGreen(SyntaxToken barToken)
-        : base(SyntaxKind.Barline, [barToken])
+    public BarlineGreen(SyntaxToken barToken, SyntaxToken? asterisk = null, SyntaxToken? count = null)
+        : base(SyntaxKind.Barline, [barToken, asterisk, count])
     {
     }
 }

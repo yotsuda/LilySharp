@@ -61,4 +61,26 @@ public sealed class MidiRepeatTests
         // outer x2 of [ c, (d x2) ] = c d d c d d
         Assert.Equal(new[] { 60, 62, 62, 60, 62, 62 }, Pitches("{ |: c4 |: d4 :| :| }"));
     }
+
+    [Fact]
+    public void ExplicitRepeatCount_PlaysSpanNTimes()
+    {
+        // |: c d :|*3 -> c d c d c d (played three times).
+        Assert.Equal(new[] { 60, 62, 60, 62, 60, 62 }, Pitches("{ |: c4 d4 :|*3 }"));
+    }
+
+    [Fact]
+    public void ExplicitRepeatCount_One_PlaysSpanOnce()
+    {
+        // |: c d :|*1 -> c d (an explicit single pass).
+        Assert.Equal(new[] { 60, 62 }, Pitches("{ |: c4 d4 :|*1 }"));
+    }
+
+    [Fact]
+    public void ExplicitRepeatCount_OuterAndInner()
+    {
+        // |: c |: d :|*3 :|*2 -> outer x2 of [ c, (d x3) ] = c d d d  c d d d
+        Assert.Equal(new[] { 60, 62, 62, 62, 60, 62, 62, 62 },
+            Pitches("{ |: c4 |: d4 :|*3 :|*2 }"));
+    }
 }

@@ -649,6 +649,16 @@ internal sealed class Parser
     private BarlineGreen ParseBarline()
     {
         var barToken = Advance();
+
+        // Optional explicit repeat count on a :| end-repeat barline: ":|*N"
+        // (reuses the R1*N multiplier idiom; sets the volta-repeat play count).
+        if (barToken.Kind == SyntaxKind.RepeatEndBar && Check(SyntaxKind.Asterisk))
+        {
+            var asterisk = Advance();
+            var count = Expect(SyntaxKind.IntegerLiteral);
+            return new BarlineGreen(barToken, asterisk, count);
+        }
+
         return new BarlineGreen(barToken);
     }
 

@@ -339,6 +339,27 @@ public sealed class BarlineSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode BarToken => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>
+    /// Explicit volta-repeat play count from a <c>:|*N</c> end-repeat barline.
+    /// Returns the default (2) when no <c>*N</c> multiplier is present. Only
+    /// meaningful on a <c>:|</c> (<see cref="SyntaxKind.RepeatEndBar"/>) barline.
+    /// </summary>
+    public int RepeatCount
+    {
+        get
+        {
+            if (GetChild(2) is SyntaxTokenNode countToken &&
+                int.TryParse(countToken.Text, out int n) && n >= 1)
+            {
+                return n;
+            }
+            return 2;
+        }
+    }
+
+    /// <summary>True iff this barline carries an explicit <c>:|*N</c> repeat count.</summary>
+    public bool HasExplicitRepeatCount => GetChild(2) is SyntaxTokenNode;
 }
 
 /// <summary>
