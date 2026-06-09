@@ -103,11 +103,11 @@
   <text x="74.07" y="18.80" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="445">pp</text>
   <text x="13.67" y="31.80" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="523">mf</text>
   <text x="16.99" y="31.30" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="528">p</text>
-  <text class="music" x="48.41" y="11.33" font-size="4.00" data-pos="380"></text>
-  <text class="music" x="51.41" y="12.50" font-size="4.00" data-pos="391"></text>
-  <text class="music" x="54.42" y="12.50" font-size="4.00" data-pos="402"></text>
-  <text class="music" x="57.76" y="15.50" font-size="4.00" data-pos="413"></text>
-  <text class="music" x="73.36" y="21.30" font-size="4.00" data-pos="640"></text>
+  <text class="music" x="49.06" y="11.33" font-size="4.00" data-pos="380"></text>
+  <text class="music" x="52.06" y="12.50" font-size="4.00" data-pos="391"></text>
+  <text class="music" x="55.07" y="12.50" font-size="4.00" data-pos="402"></text>
+  <text class="music" x="58.41" y="15.50" font-size="4.00" data-pos="413"></text>
+  <text class="music" x="74.02" y="21.30" font-size="4.00" data-pos="640"></text>
   <line x1="35.86" y1="19.39" x2="40.87" y2="19.06" stroke="#000000" stroke-width="0.130" data-pos="299"/>
   <line x1="35.86" y1="19.39" x2="40.87" y2="19.73" stroke="#000000" stroke-width="0.130" data-pos="299"/>
   <line x1="68.43" y1="19.56" x2="73.57" y2="19.89" stroke="#000000" stroke-width="0.130" data-pos="429"/>

@@ -118,9 +118,12 @@ public static class ArticulationEngraver
             int staffPosition = GetStaffPosition(item);
             bool stemUp = GetStemUp(item, staffPosition);
 
-            // Calculate X position (centered on the note)
+            // Calculate X position (centered on the note).
+            // The item X is the notehead's LEFT edge and articulation glyphs are
+            // origin-centred (symmetric BBox), so add the notehead's half-width to
+            // land the glyph centre on the notehead centre rather than its left edge.
             // LILYPOND-REF: define-grobs.scm:2289 self-alignment-X = CENTER
-            double x = measureLayout.X + itemLayout.X;
+            double x = measureLayout.X + itemLayout.X + NoteheadHalfWidth(item);
 
             // Calculate Y position based on note position and direction
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
@@ -151,6 +154,28 @@ public static class ArticulationEngraver
             : 4,
         _ => 0 // Default to middle line (StaffPosition 0 = B4 in treble clef)
     };
+
+    /// <summary>
+    /// Half the notehead's advance width, i.e. the offset from the notehead's left
+    /// edge (the item X) to its horizontal centre. Picks the head glyph by note
+    /// value (whole / half / black) so the script centres on the actual head.
+    /// </summary>
+    private static double NoteheadHalfWidth(MusicItem item)
+    {
+        int noteValue = item switch
+        {
+            NoteItem n => n.BaseDuration.Numerator == 1 ? n.BaseDuration.Denominator : 1,
+            ChordItem c => c.BaseDuration.Numerator == 1 ? c.BaseDuration.Denominator : 1,
+            _ => 4
+        };
+        double advance = noteValue switch
+        {
+            1 => GlyphMetrics.NoteheadWholeAdvance,
+            2 => GlyphMetrics.NoteheadHalfAdvance,
+            _ => GlyphMetrics.NoteheadBlackAdvance
+        };
+        return advance / 2.0;
+    }
 
     /// <summary>
     /// Determines stem direction from the item.
