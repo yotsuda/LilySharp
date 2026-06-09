@@ -12,12 +12,30 @@ $serverDir = Join-Path $projectRoot "editors/vscode/server"
 
 Write-Host "=== LilySharp Extension Deployment ===" -ForegroundColor Cyan
 
-# Step 1: Kill VS Code and LSP to release all file locks
+# Step 1: Kill VS Code and LSP to release all file locks on the server DLL/EXE.
+# VS Code is killed FIRST so it cannot respawn the LSP server while we work; then
+# any leftover LSP process is killed. This is intentional — overwriting the bundled
+# server requires the running exe/dll to be unlocked.
 Write-Host "`n[1/6] Stopping VS Code and LSP server..." -ForegroundColor Green
-Get-Process -Name "lilysharp-lsp" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-Get-Process -Name "Code" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
-# Wait for processes to exit and file locks to be released
+function Stop-ByName($name) {
+    $procs = Get-Process -Name $name -ErrorAction SilentlyContinue
+    if ($procs) { $procs | Stop-Process -Force -ErrorAction SilentlyContinue }
+}
+
+Stop-ByName "Code"
+
+# Wait for ALL Code processes (main + helpers) to actually exit before continuing.
+for ($i = 0; $i -lt 30; $i++) {
+    if (-not (Get-Process -Name "Code" -ErrorAction SilentlyContinue)) { break }
+    Write-Host "  Waiting for VS Code to exit... ($($i+1))" -ForegroundColor DarkYellow
+    Start-Sleep -Milliseconds 500
+}
+
+# Now kill any remaining LSP server (won't be respawned with Code down).
+Stop-ByName "lilysharp-lsp"
+
+# Wait for the server DLL lock to release.
 $timeout = 10
 for ($i = 0; $i -lt $timeout; $i++) {
     $locked = $false
@@ -65,19 +83,22 @@ $lspContent = $lspContent -replace 'public const string Version = "[^"]+";', "pu
 Set-Content $lspServerPath -Value $lspContent -Encoding UTF8
 Write-Host "LSP: $lspVersion" -ForegroundColor Yellow
 
-# Step 3: Build VSIX (runs: tsc, dotnet publish, vsce package)
+# Step 3: Build VSIX (runs: tsc, dotnet publish, vsce package).
+# --skip-license + --allow-missing-repository keep vsce fully NON-INTERACTIVE so the
+# deploy never stalls on a [y/N] prompt.
 Write-Host "`n[3/6] Building VSIX package..." -ForegroundColor Green
 Push-Location (Join-Path $projectRoot "editors/vscode")
-npx @vscode/vsce package --allow-missing-repository --pre-release
+npx @vscode/vsce package --allow-missing-repository --skip-license --pre-release
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw "VSIX build failed" }
 $vsix = Get-ChildItem *.vsix | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 Pop-Location
 
-# Step 4: Install extension
+# Step 4: Install extension (force overwrite so it always lands, even on a version
+# clash). --force also suppresses any install confirmation.
 Write-Host "`n[4/6] Installing extension..." -ForegroundColor Green
 code --uninstall-extension lilysharp.lilysharp 2>$null
 Start-Sleep -Seconds 1
-code --install-extension (Join-Path $projectRoot "editors/vscode/$($vsix.Name)")
+code --install-extension (Join-Path $projectRoot "editors/vscode/$($vsix.Name)") --force
 if ($LASTEXITCODE -ne 0) { throw "Extension install failed" }
 
 # Step 5: Cleanup old VSIX files
