@@ -91,10 +91,15 @@ public static class EngravingDefaults
     public const double NoteheadDoubleWholeWidth = 2.296;
 
     // === Stem attachment points ===
-    // LILYPOND-REF: lily/stem.cc — stem attaches at notehead extent RIGHT edge
-    public const double StemUpAttachX = NoteheadBlackWidth;
+    // The stem centre is shifted by -dir*thickness/2 so the stem EDGE (not its
+    // centre) sits on the notehead boundary: an up-stem's right edge aligns with
+    // the notehead's right edge, a down-stem's left edge with the notehead's left
+    // edge. Without this the half-thickness pokes outside the notehead.
+    // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head
+    //   (r += -d * rule_thick * 0.5).
+    public const double StemUpAttachX = NoteheadBlackWidth - StemThickness / 2;
     public const double StemUpAttachY = 0.168;
-    public const double StemDownAttachX = 0.0;
+    public const double StemDownAttachX = StemThickness / 2;
     public const double StemDownAttachY = -0.168;
 
 
