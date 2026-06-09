@@ -317,41 +317,53 @@ public static class SharedRenderer
 
     // ---------- Key signature ----------
 
+    // LilyPond key-signature placement tables (indexed by (c0-position mod 7)).
+    // LILYPOND-REF: scm/output-lib.scm key-signature-interface::alteration-position;
+    // scm/define-grobs.scm sharp-positions / flat-positions.
+    private static readonly int[] KeySigSharpPositions = [4, 5, 4, 2, 3, 2, 3];
+    private static readonly int[] KeySigFlatPositions = [2, 3, 4, 2, 1, 2, 1];
+    // Order of accidentals: sharps F C G D A E B; flats B E A D G C F.
+    private static readonly int[] KeySigSharpSteps = [3, 0, 4, 1, 5, 2, 6];
+    private static readonly int[] KeySigFlatSteps = [6, 2, 5, 1, 4, 0, 3];
+
     private static double DrawKeySignature(
         KeySignature key, ClefType clef, double x, double staffY, IDrawingContext gc)
     {
         if (key.Sharps == 0) return x;
 
-        // LP key signature accidental positions (staff positions from bottom line, going up)
-        // Treble clef positions for sharps (FCGDAEB) and flats (BEADGCF)
-        int[] sharpPositions = { 8, 5, 9, 6, 3, 7, 4 };  // F G A B C D E (relative)
-        int[] flatPositions = { 4, 7, 3, 6, 2, 5, 1 };
-
-        // Map by clef (rough approximation; full LP rules in lily/key-signature-interface.cc)
-        int clefShift = clef switch
+        // c0-position: staff position of middle C for each clef (half-spaces from
+        // the middle line, + = up). Replaces the old uniform integer clefShift,
+        // which placed accidentals on the wrong lines for non-treble clefs.
+        int c0Position = clef switch
         {
-            ClefType.Bass => -2,    // F clef shifts positions
-            ClefType.Alto => -1,
-            ClefType.Tenor => 1,
-            _ => 0,
+            ClefType.Bass => 6,
+            ClefType.Alto => 0,
+            ClefType.Tenor => 2,
+            _ => -6, // treble (and treble_8)
         };
 
-        char glyph = key.Sharps > 0
-            ? EmmentalerGlyphs.AccidentalSharp
-            : EmmentalerGlyphs.AccidentalFlat;
-        var positions = key.Sharps > 0 ? sharpPositions : flatPositions;
+        bool isSharps = key.Sharps > 0;
+        char glyph = isSharps ? EmmentalerGlyphs.AccidentalSharp : EmmentalerGlyphs.AccidentalFlat;
+        int[] positions = isSharps ? KeySigSharpPositions : KeySigFlatPositions;
+        int[] steps = isSharps ? KeySigSharpSteps : KeySigFlatSteps;
+
+        int cPos = ((c0Position % 7) + 7) % 7;
+        int hi = positions[cPos];
         int n = Math.Min(Math.Abs(key.Sharps), 7);
-        double dx = 0;
+
+        double accidentalWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(isSharps);
         for (int i = 0; i < n; i++)
         {
-            int pos = positions[i] + clefShift;
-            // pos is 1-based from bottom line (1 = bottom line, 9 = top space)
-            // staffY is top of staff; bottom line is staffY + 4.
-            double y = staffY + 4 - (pos - 1) * 0.5;
-            gc.DrawGlyph(glyph, x + dx, y, FontSize);
-            dx += 0.7;
+            int step = steps[i];
+            // LilyPond: staffPosition = hi - modulo(hi - (c-pos + step), 7).
+            int diff = hi - (cPos + step);
+            int modDiff = ((diff % 7) + 7) % 7;
+            int staffPosition = hi - modDiff;
+            double y = staffY + StaffHeight / 2 - staffPosition * 0.5;
+            gc.DrawGlyph(glyph, x, y, FontSize);
+            x += accidentalWidth;
         }
-        return x + dx + 0.4;
+        return x + 0.4;
     }
 
     // ---------- Notes & rests per staff ----------
