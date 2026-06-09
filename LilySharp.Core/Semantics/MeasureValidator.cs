@@ -47,6 +47,12 @@ public sealed class MeasureValidator
 
     private void ValidateNode(SyntaxNode node)
     {
+        // A tuplet/grace body is a nested MusicBlock, but its notes belong to the
+        // enclosing measure (and are counted there with the correct tuplet scale).
+        // Don't recurse into it, or it would be validated as a short standalone bar.
+        if (node is TupletExpressionSyntax or GraceExpressionSyntax)
+            return;
+
         switch (node)
         {
             case MusicBlockSyntax block:
@@ -144,35 +150,51 @@ public sealed class MeasureValidator
     private Fraction CalculateMeasureDuration(List<SyntaxNode> items, ref Fraction defaultDuration)
     {
         var total = Fraction.Zero;
-
         foreach (var item in items)
-        {
-            switch (item)
-            {
-                case NoteSyntax note:
-                    var noteDuration = DurationCalculator.GetDuration(note, defaultDuration);
-                    if (note.Duration != null)
-                        defaultDuration = noteDuration;
-                    total += noteDuration;
-                    break;
-
-                case RestSyntax rest:
-                    var restDuration = DurationCalculator.GetDuration(rest, defaultDuration);
-                    if (rest.Duration != null)
-                        defaultDuration = restDuration;
-                    total += restDuration;
-                    break;
-
-                case ChordSyntax chord:
-                    var chordDuration = DurationCalculator.GetDuration(chord, defaultDuration);
-                    if (chord.Duration != null)
-                        defaultDuration = chordDuration;
-                    total += chordDuration;
-                    break;
-            }
-        }
-
+            total += ItemDuration(item, ref defaultDuration);
         return total;
+    }
+
+    /// <summary>
+    /// Metric duration of a single music item, recursing into tuplets (scaled by
+    /// their ratio) so triplets etc. fill the correct fraction of the bar.
+    /// </summary>
+    private Fraction ItemDuration(SyntaxNode item, ref Fraction defaultDuration)
+    {
+        switch (item)
+        {
+            case NoteSyntax note:
+                var noteDuration = DurationCalculator.GetDuration(note, defaultDuration);
+                if (note.Duration != null) defaultDuration = noteDuration;
+                return noteDuration;
+
+            case RestSyntax rest:
+                var restDuration = DurationCalculator.GetDuration(rest, defaultDuration);
+                if (rest.Duration != null) defaultDuration = restDuration;
+                return restDuration;
+
+            case ChordSyntax chord:
+                var chordDuration = DurationCalculator.GetDuration(chord, defaultDuration);
+                if (chord.Duration != null) defaultDuration = chordDuration;
+                return chordDuration;
+
+            case TupletExpressionSyntax tuplet:
+                // actual = written * BaseDivision / TupletRatio
+                // (\tuplet 3/2 { c8 c c } -> 3 * 1/8 * 2/3 = 1/4).
+                var inner = Fraction.Zero;
+                foreach (var bodyItem in tuplet.Body.Items)
+                    inner += ItemDuration(bodyItem, ref defaultDuration);
+                if (tuplet.TupletRatio > 0)
+                    inner *= new Fraction(tuplet.BaseDivision, tuplet.TupletRatio);
+                return inner;
+
+            case GraceExpressionSyntax:
+                // Grace notes are ornamental and consume no metric time.
+                return Fraction.Zero;
+
+            default:
+                return Fraction.Zero;
+        }
     }
 
     private static TextSpan GetSpan(List<SyntaxNode> items)

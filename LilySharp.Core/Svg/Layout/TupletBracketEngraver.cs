@@ -77,6 +77,7 @@ public static class TupletBracketEngraver
     // LILYPOND-REF: scm/define-grobs.scm TupletBracket defaults
     private const double BracketPadding = 0.5;
     private const double EdgeHeight = 0.7;
+    private const double StaffMiddleY = 2.0;    // staff-top frame: middle line = StaffHeight/2
     private const double YOffsetAbove = -2.5;  // Above staff
     private const double YOffsetBelow = 5.5;   // Below staff
     private const double HalfNoteheadWidth = 0.59;  // NoteheadBlackWidth / 2
@@ -338,11 +339,14 @@ public static class TupletBracketEngraver
         // LILYPOND-REF: lily/tuplet-bracket.cc:320-340 collision avoidance
         if (isStemUp)
         {
-            // Bracket above: ensure it's above the highest note
+            // Bracket above: ensure it's above the highest note.
+            // Y is in the staff-top frame (Y=0 at the top line); a note at staff
+            // position p sits at StaffMiddle - p*0.5 = 2.0 - p*0.5. The +2.0 was
+            // missing here, placing the edge two staff-spaces too high.
             double highestNoteY = YOffsetAbove - nestingOffset;
             if (highestPos != null)
             {
-                double noteEdge = -(highestPos.Value * 0.5) - DefaultStemLength - BracketPadding;
+                double noteEdge = StaffMiddleY - (highestPos.Value * 0.5) - DefaultStemLength - BracketPadding;
                 highestNoteY = Math.Min(highestNoteY, noteEdge);
             }
             if (startY > highestNoteY) startY = highestNoteY;
@@ -350,11 +354,12 @@ public static class TupletBracketEngraver
         }
         else
         {
-            // Bracket below: ensure it's below the lowest note
+            // Bracket below: ensure it's below the lowest note (same staff-top
+            // frame; the +2.0 staff-middle offset was missing here too).
             double lowestNoteY = YOffsetBelow + nestingOffset;
             if (lowestPos != null)
             {
-                double noteEdge = -(lowestPos.Value * 0.5) + DefaultStemLength + BracketPadding;
+                double noteEdge = StaffMiddleY - (lowestPos.Value * 0.5) + DefaultStemLength + BracketPadding;
                 lowestNoteY = Math.Max(lowestNoteY, noteEdge);
             }
             if (startY < lowestNoteY) startY = lowestNoteY;
