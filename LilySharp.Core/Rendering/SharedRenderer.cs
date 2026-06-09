@@ -193,8 +193,19 @@ public static class SharedRenderer
                     prefixEndX = DrawTimeSignature(score.TimeSignature, prefixEndX, localStaffY, gc);
                 }
 
-                // Notes per measure
-                DrawStaffMeasures(staff, system, layout, localStaffY, clef, resolver, beamedItems, gc);
+                // Notes per measure — render every voice (voice 1 = stems up,
+                // voice 2 = stems down, with collision offsets / head wipes).
+                var voices = staff.Voices;
+                bool multiVoice = voices.Length > 1;
+                for (int vi = 0; vi < voices.Length; vi++)
+                {
+                    int voiceNumber = vi + 1;
+                    bool? forcedStemUp = multiVoice
+                        ? VoiceDefaults.GetDefaultStemUp(voiceNumber)
+                        : null;
+                    DrawStaffMeasures(voices[vi], voiceNumber, forcedStemUp,
+                        system, layout, localStaffY, clef, resolver, beamedItems, gc);
+                }
 
                 // Barlines (typed: single / double / final / repeat) per measure
                 DrawBarlines(system, staff, localStaffY, gc);
@@ -369,12 +380,12 @@ public static class SharedRenderer
     // ---------- Notes & rests per staff ----------
 
     private static void DrawStaffMeasures(
-        Staff staff, SystemLayout system, ScoreLayout layout,
+        Voice voice, int voiceNumber, bool? forcedStemUp,
+        SystemLayout system, ScoreLayout layout,
         double staffY, ClefType clef, GrobPropertyResolver resolver,
         HashSet<MusicItem> beamedItems, IDrawingContext gc)
     {
         double staffMiddleY = staffY + StaffHeight / 2;
-        var voice = staff.PrimaryVoice;
 
         foreach (var ml in system.Measures)
         {
@@ -400,6 +411,11 @@ public static class SharedRenderer
                     : ml.X + il.X;
                 currentTiming += item.Duration;
 
+                // Horizontal collision offset for multi-voice columns + head-wipe
+                // when this voice's notehead merges with another's.
+                itemX += layout.GetVoiceOffset(ml.MeasureIndex, voiceNumber, itemIdx);
+                bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
+
                 // LILYPOND-REF: lily/grob-property.cc — apply \override / \revert at this position.
                 // Multi-staff scores re-advance the resolver per staff: harmless for ordinary
                 // overrides (idempotent), but \once overrides may double-apply across staves.
@@ -409,13 +425,13 @@ public static class SharedRenderer
                 switch (item)
                 {
                     case NoteItem note:
-                        DrawNote(note, itemX, staffMiddleY, resolver, beamedItems.Contains(note), gc);
+                        DrawNote(note, itemX, staffMiddleY, resolver, beamedItems.Contains(note), forcedStemUp, headWiped, gc);
                         break;
                     case RestItem rest:
                         DrawRest(rest, itemX, staffY, gc);
                         break;
                     case ChordItem chord:
-                        DrawChord(chord, itemX, staffMiddleY, resolver, beamedItems.Contains(chord), gc);
+                        DrawChord(chord, itemX, staffMiddleY, resolver, beamedItems.Contains(chord), forcedStemUp, headWiped, gc);
                         break;
                     case ClefChangeItem clefChange:
                         DrawClefChange(clefChange, itemX, staffY, gc);
@@ -429,7 +445,7 @@ public static class SharedRenderer
     }
 
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
-        GrobPropertyResolver resolver, bool isBeamed, IDrawingContext gc)
+        GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped, IDrawingContext gc)
     {
         int noteValue = note.BaseDuration.Denominator;
         if (note.BaseDuration.Numerator != 1) noteValue = 1;
@@ -438,15 +454,21 @@ public static class SharedRenderer
         // LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4
         double noteFontSize = note.IsCue ? FontSize * 0.66 : FontSize;
 
+        // Voice stem direction override (voice 1 up / voice 2 down); falls back
+        // to the note's own position-based default in single-voice staves.
+        bool stemUp = forcedStemUp ?? note.StemUp;
+
         // Accidental (left of notehead)
         if (note.Accidental != null)
             DrawAccidental(note.Accidental, note.IsCourtesy, x, noteY, note.SourcePosition, gc);
 
-        // Notehead
+        // Notehead — skipped when this head merges with another voice's (head wipe).
+        // LILYPOND-REF: lily/note-collision.cc:381-407
         Color? noteheadColor = ResolveColor(resolver, "NoteHead");
         char head = EmmentalerGlyphs.GetNotehead(noteValue);
-        using (gc.Source(note.SourcePosition))
-            gc.DrawGlyph(head, x, noteY, noteFontSize, noteheadColor);
+        if (!headWiped)
+            using (gc.Source(note.SourcePosition))
+                gc.DrawGlyph(head, x, noteY, noteFontSize, noteheadColor);
 
         // Ledger lines for notes far from middle line
         DrawLedgerLines(note.StaffPosition, x, staffMiddleY, gc);
@@ -458,10 +480,10 @@ public static class SharedRenderer
         if (noteValue >= 2 && !isBeamed)
         {
             Color? stemColor = ResolveColor(resolver, "Stem");
-            double stemX = note.StemUp
+            double stemX = stemUp
                 ? x + EngravingDefaults.StemUpAttachX
                 : x + EngravingDefaults.StemDownAttachX;
-            double stemEndY = note.StemUp
+            double stemEndY = stemUp
                 ? noteY - EngravingRules.StandardStemLength
                 : noteY + EngravingRules.StandardStemLength;
             gc.DrawLine(stemX, noteY, stemX, stemEndY,
@@ -470,7 +492,7 @@ public static class SharedRenderer
             bool hasFlag = false;
             if (noteValue >= 8)
             {
-                var flag = EmmentalerGlyphs.GetFlag(noteValue, note.StemUp);
+                var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
                 if (flag.HasValue)
                 {
                     gc.DrawGlyph(flag.Value, stemX, stemEndY, noteFontSize, stemColor);
@@ -479,7 +501,7 @@ public static class SharedRenderer
             }
 
             if (note.HasTremolo)
-                DrawTremolo(stemX, noteY, stemEndY, note.StemUp, note.TremoloBeams, hasFlag, gc);
+                DrawTremolo(stemX, noteY, stemEndY, stemUp, note.TremoloBeams, hasFlag, gc);
         }
 
         // Augmentation dots
@@ -492,12 +514,13 @@ public static class SharedRenderer
     }
 
     private static void DrawChord(ChordItem chord, double x, double staffMiddleY,
-        GrobPropertyResolver resolver, bool isBeamed, IDrawingContext gc)
+        GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped, IDrawingContext gc)
     {
         int noteValue = chord.BaseDuration.Denominator;
         if (chord.BaseDuration.Numerator != 1) noteValue = 1;
         char head = EmmentalerGlyphs.GetNotehead(noteValue);
         Color? noteheadColor = ResolveColor(resolver, "NoteHead");
+        bool stemUp = forcedStemUp ?? chord.StemUp;
 
         double topY = double.MaxValue, bottomY = double.MinValue;
         foreach (var n in chord.Notes)
@@ -505,8 +528,9 @@ public static class SharedRenderer
             double y = staffMiddleY - n.StaffPosition * 0.5;
             if (n.Accidental != null)
                 DrawAccidental(n.Accidental, isCourtesy: false, x, y, chord.SourcePosition, gc);
-            using (gc.Source(chord.SourcePosition))
-                gc.DrawGlyph(head, x, y, FontSize, noteheadColor);
+            if (!headWiped)
+                using (gc.Source(chord.SourcePosition))
+                    gc.DrawGlyph(head, x, y, FontSize, noteheadColor);
             DrawLedgerLines(n.StaffPosition, x, staffMiddleY, gc);
             if (y < topY) topY = y;
             if (y > bottomY) bottomY = y;
@@ -517,11 +541,11 @@ public static class SharedRenderer
         if (noteValue >= 2 && chord.Notes.Length > 0 && !isBeamed)
         {
             Color? stemColor = ResolveColor(resolver, "Stem");
-            double stemX = chord.StemUp
+            double stemX = stemUp
                 ? x + EngravingDefaults.StemUpAttachX
                 : x + EngravingDefaults.StemDownAttachX;
-            double stemStartY = chord.StemUp ? bottomY : topY;
-            double stemEndY = chord.StemUp
+            double stemStartY = stemUp ? bottomY : topY;
+            double stemEndY = stemUp
                 ? topY - EngravingRules.StandardStemLength
                 : bottomY + EngravingRules.StandardStemLength;
             gc.DrawLine(stemX, stemStartY, stemX, stemEndY,

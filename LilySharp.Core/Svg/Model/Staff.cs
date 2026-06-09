@@ -89,6 +89,10 @@ public sealed record Staff(
     public static Staff Create(ClefType clef, Voice voice, string? instrumentName = null)
         => new(clef, ImmutableArray.Create(voice), null, instrumentName);
 
+    /// <summary>Creates a staff holding one or more voices (polyphony).</summary>
+    public static Staff Create(ClefType clef, ImmutableArray<Voice> voices, string? instrumentName = null)
+        => new(clef, voices, null, instrumentName);
+
     /// <summary>
     /// Creates a tablature staff with the specified tuning.
     /// </summary>

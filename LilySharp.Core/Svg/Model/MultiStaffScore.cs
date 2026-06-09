@@ -163,7 +163,10 @@ public sealed record MultiStaffScore
     public static MultiStaffScore FromScore(Score score)
     {
         var clef = Staff.ParseClef(score.Clef);
-        var staff = Staff.Create(clef, score.Voice);
+        // Preserve ALL voices (polyphony), not just the primary, so the renderer
+        // can draw every voice. (Voice collision offsets in the multi-staff layout
+        // path remain a separate refinement.)
+        var staff = Staff.Create(clef, score.Voices);
         var staffGroup = StaffGroup.CreateSingle(staff);
 
         return new MultiStaffScore(
