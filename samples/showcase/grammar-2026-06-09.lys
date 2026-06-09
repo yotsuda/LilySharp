@@ -1,0 +1,65 @@
+// =============================================================================
+// Lily# Grammar Showcase — changes committed 2026-06-09
+// Each section demonstrates a grammar feature shipped today.
+// =============================================================================
+
+title "Grammar Showcase (2026-06-09)"
+composer "Lily#"
+
+// Global settings use the bare COMMAND form (no colon) at the top level.
+tempo 120
+time 4/4
+key c major
+
+// -----------------------------------------------------------------------------
+// G1 — part/staff headers: every attribute is colon-form, including time:/tempo:
+//      (contrast with the top-level command form above).
+// -----------------------------------------------------------------------------
+part melody {
+  clef: treble
+  time: 4/4
+  tempo: 120
+  instrument: "Violin"
+}
+
+// -----------------------------------------------------------------------------
+// G2 — named music is declared ONLY with `phrase` (the old `name = {}` / `let`
+//      forms were removed). Reference a phrase with `$name`.
+// -----------------------------------------------------------------------------
+phrase intro {
+  c4 d e f | g2 g |
+}
+
+// G3 — `tr` used to be a reserved keyword (trill); it is now an ordinary
+//      identifier, so it can name a phrase. (`@tr` still means trill — below.)
+phrase tr {
+  e4 f g a | b2 b |
+}
+
+// -----------------------------------------------------------------------------
+// Main music
+// -----------------------------------------------------------------------------
+{
+  // Reuse phrases by reference:
+  $intro
+
+  // G3 — articulations resolve from `@name` text via a registry; full names and
+  //      abbreviations both work:
+  c4@staccato d@stac e@accent f@acc |     // @stac == @staccato, @acc == @accent
+  g@tenuto a@ten b@marcato c@marc |      // @ten == @tenuto,   @marc == @marcato
+
+  // G3 — ornaments too (@tr == @trill):
+  c4@trill d,@tr e@mordent f@turn |
+
+  // Task 15 — inline volta repeat: body once, with first/second-time endings.
+  |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ]
+
+  // Task 15 — explicit repeat count on the closing barline (:|*N):
+  |: c,'8 d e f g f e c :|*3
+
+  // G3 — `repeat tremolo` now parses (the keyword used to be rejected):
+  repeat tremolo 4 { c16 }
+
+  // Reference the phrase whose name is a former keyword:
+  $tr
+}
