@@ -76,6 +76,8 @@ public sealed class Binder
             // Determine base octave from part definition
             _baseOctave = GetBaseOctaveForPart(partName, symbols);
             _pitchResolver.Reset(_baseOctave); // Reset for each voice with part's base octave
+            _defaultDuration = Fraction.Quarter; // Each voice starts from the default; don't leak the
+                                                 // previous voice's last duration across parts.
             var measures = BindMeasures(nodes);
             voices.Add(new BoundVoice(partName, measures));
         }

@@ -98,15 +98,13 @@ public sealed class PdfDocumentContext : IDocumentContext
         _currentPage = null;
     }
 
-    /// <summary>Returns the document bytes. Call after <see cref="Dispose"/>.</summary>
-    public byte[] ToBytes()
-    {
-        if (!_disposed)
-            throw new InvalidOperationException("Dispose the document before reading bytes.");
-        using var ms = new MemoryStream();
-        _document.Save(ms);
-        return ms.ToArray();
-    }
+    /// <summary>
+    /// Returns the document bytes. Call after <see cref="Dispose"/>.
+    /// Alias for <see cref="GetBytes"/>: the bytes are captured during
+    /// <see cref="Dispose"/> (the underlying document is disposed there, so we
+    /// cannot re-save it afterwards).
+    /// </summary>
+    public byte[] ToBytes() => GetBytes();
 
     private byte[]? _savedBytes;
 

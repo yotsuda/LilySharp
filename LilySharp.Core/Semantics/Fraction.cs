@@ -25,28 +25,50 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
     public int Denominator { get; }
 
     public Fraction(int numerator, int denominator = 1)
+        : this((long)numerator, denominator)
+    {
+    }
+
+    /// <summary>
+    /// Normalizes and reduces in 64-bit so intermediate products in the
+    /// arithmetic operators cannot silently overflow. After reduction the
+    /// result is range-checked back into <see cref="int"/>: a genuine overflow
+    /// throws <see cref="OverflowException"/> rather than wrapping to a wrong
+    /// (possibly negative) duration. For ordinary music — power-of-two
+    /// denominators plus small tuplet factors — reduction keeps values tiny.
+    /// </summary>
+    private Fraction(long numerator, long denominator)
     {
         if (denominator == 0)
             throw new ArgumentException("Denominator cannot be zero", nameof(denominator));
 
-        // Normalize sign
+        // Normalize sign (safe in long even for int.MinValue inputs).
         if (denominator < 0)
         {
             numerator = -numerator;
             denominator = -denominator;
         }
 
-        // Reduce to lowest terms
-        int gcd = Gcd(Math.Abs(numerator), denominator);
-        Numerator = numerator / gcd;
-        Denominator = denominator / gcd;
+        // Reduce to lowest terms.
+        long gcd = Gcd(Math.Abs(numerator), denominator);
+        if (gcd != 0)
+        {
+            numerator /= gcd;
+            denominator /= gcd;
+        }
+
+        checked
+        {
+            Numerator = (int)numerator;
+            Denominator = (int)denominator;
+        }
     }
 
-    private static int Gcd(int a, int b)
+    private static long Gcd(long a, long b)
     {
         while (b != 0)
         {
-            int temp = b;
+            long temp = b;
             b = a % b;
             a = temp;
         }
@@ -101,31 +123,31 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
     public static Fraction operator +(Fraction a, Fraction b)
     {
         return new Fraction(
-            a.Numerator * b.Denominator + b.Numerator * a.Denominator,
-            a.Denominator * b.Denominator);
+            (long)a.Numerator * b.Denominator + (long)b.Numerator * a.Denominator,
+            (long)a.Denominator * b.Denominator);
     }
 
     public static Fraction operator -(Fraction a, Fraction b)
     {
         return new Fraction(
-            a.Numerator * b.Denominator - b.Numerator * a.Denominator,
-            a.Denominator * b.Denominator);
+            (long)a.Numerator * b.Denominator - (long)b.Numerator * a.Denominator,
+            (long)a.Denominator * b.Denominator);
     }
 
     public static Fraction operator *(Fraction a, Fraction b)
     {
-        return new Fraction(a.Numerator * b.Numerator, a.Denominator * b.Denominator);
+        return new Fraction((long)a.Numerator * b.Numerator, (long)a.Denominator * b.Denominator);
     }
 
     public static Fraction operator /(Fraction a, Fraction b)
     {
-        return new Fraction(a.Numerator * b.Denominator, a.Denominator * b.Numerator);
+        return new Fraction((long)a.Numerator * b.Denominator, (long)a.Denominator * b.Numerator);
     }
 
     // Comparison
     public int CompareTo(Fraction other)
     {
-        return (Numerator * other.Denominator).CompareTo(other.Numerator * Denominator);
+        return ((long)Numerator * other.Denominator).CompareTo((long)other.Numerator * Denominator);
     }
 
     public static bool operator <(Fraction a, Fraction b) => a.CompareTo(b) < 0;
