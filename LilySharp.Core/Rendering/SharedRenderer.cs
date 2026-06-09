@@ -196,8 +196,8 @@ public static class SharedRenderer
                 // Notes per measure
                 DrawStaffMeasures(staff, system, layout, localStaffY, clef, resolver, beamedItems, gc);
 
-                // Barlines at end of each measure (single thin only in this phase)
-                DrawBarlines(system, localStaffY, gc);
+                // Barlines (typed: single / double / final / repeat) per measure
+                DrawBarlines(system, staff, localStaffY, gc);
             }
             finally
             {
@@ -626,14 +626,107 @@ public static class SharedRenderer
 
     // ---------- Barlines ----------
 
-    private static void DrawBarlines(SystemLayout system, double staffY, IDrawingContext gc)
+    private static void DrawBarlines(SystemLayout system, Staff staff, double staffY, IDrawingContext gc)
     {
-        double thinW = EngravingDefaults.ThinBarlineThickness;
+        var voice = staff.PrimaryVoice;
         foreach (var ml in system.Measures)
         {
-            double barX = ml.X + ml.Width;
-            gc.DrawRectangle(barX, staffY, thinW, StaffHeight, fill: Color.Black);
+            if (ml.MeasureIndex >= voice.Measures.Length)
+                continue;
+            var measure = voice.Measures[ml.MeasureIndex];
+
+            // Start barline (e.g. repeat-start) at the measure's left edge.
+            if (measure.StartBarline != BarlineType.None)
+                DrawBarline(measure.StartBarline, ml.X, staffY, StaffHeight, gc);
+
+            // End barline drawn so its right edge sits on the column boundary
+            // (matches SvgRenderer: endX - visualWidth). Normal measures carry
+            // BarlineType.Single from the collector.
+            double endX = ml.X + ml.Width;
+            double width = GetVisualBarlineWidth(measure.EndBarline);
+            DrawBarline(measure.EndBarline, endX - width, staffY, StaffHeight, gc);
         }
+    }
+
+    /// <summary>
+    /// Draws a barline of the given type. Mirrors <c>SvgRenderer.DrawBarline</c>.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/bar-line.cc — bar-line glyph composition.</remarks>
+    private static void DrawBarline(BarlineType type, double x, double staffY, double height, IDrawingContext gc)
+    {
+        if (type == BarlineType.None) return;
+
+        double thin = EngravingDefaults.ThinBarlineThickness;
+        double thick = EngravingDefaults.ThickBarlineThickness;
+        double sep = EngravingDefaults.BarlineSeparation;
+        double dotSep = EngravingDefaults.RepeatBarlineDotSeparation;
+        double dotsOffset = EngravingDefaults.RepeatDotsOffset;
+
+        switch (type)
+        {
+            case BarlineType.Single:
+                gc.DrawRectangle(x, staffY, thin, height, fill: Color.Black);
+                break;
+
+            case BarlineType.Double:
+                gc.DrawRectangle(x, staffY, thin, height, fill: Color.Black);
+                gc.DrawRectangle(x + thin + sep, staffY, thin, height, fill: Color.Black);
+                break;
+
+            case BarlineType.Final:
+                gc.DrawRectangle(x, staffY, thin, height, fill: Color.Black);
+                gc.DrawRectangle(x + thin + sep, staffY, thick, height, fill: Color.Black);
+                break;
+
+            case BarlineType.RepeatStart:
+                gc.DrawRectangle(x, staffY, thick, height, fill: Color.Black);
+                gc.DrawRectangle(x + thick + sep, staffY, thin, height, fill: Color.Black);
+                DrawRepeatDots(x + thick + sep + thin + dotSep, staffY, gc);
+                break;
+
+            case BarlineType.RepeatEnd:
+                DrawRepeatDots(x, staffY, gc);
+                double afterDots = x + dotsOffset;
+                gc.DrawRectangle(afterDots, staffY, thin, height, fill: Color.Black);
+                gc.DrawRectangle(afterDots + thin + sep, staffY, thick, height, fill: Color.Black);
+                break;
+
+            case BarlineType.RepeatBoth:
+                DrawRepeatDots(x, staffY, gc);
+                double pos = x + dotsOffset;
+                gc.DrawRectangle(pos, staffY, thin, height, fill: Color.Black);
+                gc.DrawRectangle(pos + thin + sep, staffY, thick, height, fill: Color.Black);
+                gc.DrawRectangle(pos + thin + sep + thick + sep, staffY, thin, height, fill: Color.Black);
+                DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, gc);
+                break;
+        }
+    }
+
+    private static void DrawRepeatDots(double x, double staffY, IDrawingContext gc)
+    {
+        double r = EngravingDefaults.RepeatDotRadius;
+        gc.DrawCircle(x + r, staffY + EngravingDefaults.RepeatDotPosition1, r, Color.Black);
+        gc.DrawCircle(x + r, staffY + EngravingDefaults.RepeatDotPosition2, r, Color.Black);
+    }
+
+    /// <summary>Total horizontal extent of a barline glyph (for right-edge alignment).</summary>
+    private static double GetVisualBarlineWidth(BarlineType type)
+    {
+        double thin = EngravingDefaults.ThinBarlineThickness;
+        double thick = EngravingDefaults.ThickBarlineThickness;
+        double sep = EngravingDefaults.BarlineSeparation;
+        double dotsOffset = EngravingDefaults.RepeatDotsOffset;
+        return type switch
+        {
+            BarlineType.None => 0,
+            BarlineType.Single => thin,
+            BarlineType.Double => thin + sep + thin,
+            BarlineType.Final => thin + sep + thick,
+            BarlineType.RepeatStart => thick + sep + thin + dotsOffset,
+            BarlineType.RepeatEnd => dotsOffset + thin + sep + thick,
+            BarlineType.RepeatBoth => dotsOffset + thin + sep + thick + sep + thin + dotsOffset,
+            _ => thin
+        };
     }
 
     // ---------- Beams ----------
