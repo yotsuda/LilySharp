@@ -568,9 +568,11 @@ public sealed class TimeSignatureSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode TimeKeyword => (SyntaxTokenNode)GetChild(0)!;
-    public SyntaxTokenNode Numerator => (SyntaxTokenNode)GetChild(1)!;
-    public SyntaxTokenNode Slash => (SyntaxTokenNode)GetChild(2)!;
-    public SyntaxTokenNode Denominator => (SyntaxTokenNode)GetChild(3)!;
+    /// <summary>The <c>:</c> in a part-header <c>time: 4/4</c>; null for the bare music command.</summary>
+    public SyntaxTokenNode? Colon => GetChild(1) as SyntaxTokenNode;
+    public SyntaxTokenNode Numerator => (SyntaxTokenNode)GetChild(2)!;
+    public SyntaxTokenNode Slash => (SyntaxTokenNode)GetChild(3)!;
+    public SyntaxTokenNode Denominator => (SyntaxTokenNode)GetChild(4)!;
 
     /// <summary>
     /// Gets the numerator value (e.g., 4 for 4/4).
@@ -595,14 +597,18 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
 
     public SyntaxTokenNode TempoKeyword => (SyntaxTokenNode)GetChild(0)!;
 
+    /// <summary>The <c>:</c> in a part-header <c>tempo: 120</c>; null for the bare music command.</summary>
+    public SyntaxTokenNode? Colon => GetChild(1) as SyntaxTokenNode;
+
     /// <summary>
-    /// Gets all value tokens after the keyword.
+    /// Gets all value tokens after the keyword (and the optional header colon).
     /// </summary>
     public IEnumerable<SyntaxNode> Values
     {
         get
         {
-            for (int i = 1; i < SlotCount; i++)
+            // Slot 0 is the keyword, slot 1 is the optional colon; values follow.
+            for (int i = 2; i < SlotCount; i++)
             {
                 var child = GetChild(i);
                 if (child != null)

@@ -242,8 +242,15 @@ internal sealed class Parser
         return new PartDeclarationGreen(keyword, name, displayName, openBrace, [.. members], closeBrace);
     }
 
-    private PropertyAssignmentGreen? ParsePartProperty()
+    private GreenNode? ParsePartProperty()
     {
+        // In a part/staff header every attribute is colon-form ('name: value'),
+        // including time and tempo (which keep their richer value grammars).
+        if (Current.Kind == SyntaxKind.TimeKeyword)
+            return ParseTimeSignature(expectColon: true);
+        if (Current.Kind == SyntaxKind.TempoKeyword)
+            return ParseTempoDeclaration(expectColon: true);
+
         // clef: treble, instrument: "Violin", channel: 1, tuning: standard
         if (Current.Kind == SyntaxKind.Identifier ||
             Current.Kind == SyntaxKind.ClefKeyword ||
@@ -266,8 +273,9 @@ internal sealed class Parser
         {
             SyntaxKind.StaffKeyword => ParseStaffDeclaration(),
             SyntaxKind.ClefKeyword or SyntaxKind.KeyKeyword => ParsePropertyAssignment(),
-            SyntaxKind.TimeKeyword => ParseTimeSignature(),
-            SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
+            // Part/staff header: time and tempo are colon-form like the other attributes.
+            SyntaxKind.TimeKeyword => ParseTimeSignature(expectColon: true),
+            SyntaxKind.TempoKeyword => ParseTempoDeclaration(expectColon: true),
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
 
             SyntaxKind.OpenBrace => ParseMusicBlock(),
@@ -372,18 +380,24 @@ internal sealed class Parser
         return new MetadataDeclarationGreen(keyword, [.. valueTokens]);
     }
 
-    private TimeSignatureGreen ParseTimeSignature()
+    // expectColon: true in a part/staff header (the property form 'time: 4/4');
+    // false for the bare music-stream command ('time 4/4').
+    private TimeSignatureGreen ParseTimeSignature(bool expectColon = false)
     {
         var timeKeyword = Expect(SyntaxKind.TimeKeyword);
+        SyntaxToken? colon = expectColon ? Expect(SyntaxKind.Colon) : null;
         var numerator = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
         var slash = Expect(SyntaxKind.Slash);
         var denominator = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
-        return new TimeSignatureGreen(timeKeyword, numerator, slash, denominator);
+        return new TimeSignatureGreen(timeKeyword, colon, numerator, slash, denominator);
     }
 
-    private TempoDeclarationGreen ParseTempoDeclaration()
+    // expectColon: true in a part/staff header ('tempo: 120'); false for the bare
+    // music-stream command ('tempo 120').
+    private TempoDeclarationGreen ParseTempoDeclaration(bool expectColon = false)
     {
         var tempoKeyword = Expect(SyntaxKind.TempoKeyword);
+        SyntaxToken? colon = expectColon ? Expect(SyntaxKind.Colon) : null;
         var valueTokens = new List<GreenNode?>();
 
         // Collect value tokens: "marking" duration = bpm
@@ -395,7 +409,7 @@ internal sealed class Parser
             valueTokens.Add(Advance());
         }
 
-        return new TempoDeclarationGreen(tempoKeyword, [.. valueTokens]);
+        return new TempoDeclarationGreen(tempoKeyword, colon, [.. valueTokens]);
     }
 
     // ========== Variables ==========

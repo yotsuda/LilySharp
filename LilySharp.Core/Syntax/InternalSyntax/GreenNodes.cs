@@ -267,8 +267,10 @@ internal sealed class PropertyAssignmentGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class TimeSignatureGreen : GreenSyntaxNode
 {
-    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken numerator, SyntaxToken slash, SyntaxToken denominator)
-        : base(SyntaxKind.TimeSignature, [timeKeyword, numerator, slash, denominator])
+    // In a part/staff header the keyword takes a colon ('time: 4/4'); in the music
+    // stream it is a bare command ('time 4/4'), so the colon slot is null there.
+    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? colon, SyntaxToken numerator, SyntaxToken slash, SyntaxToken denominator)
+        : base(SyntaxKind.TimeSignature, [timeKeyword, colon, numerator, slash, denominator])
     {
     }
 }
@@ -278,8 +280,10 @@ internal sealed class TimeSignatureGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class TempoDeclarationGreen : GreenSyntaxNode
 {
-    public TempoDeclarationGreen(SyntaxToken tempoKeyword, GreenNode?[] values)
-        : base(SyntaxKind.TempoDeclaration, [tempoKeyword, .. values])
+    // Colon slot is non-null only in a part/staff header ('tempo: 120'); a bare
+    // music-stream 'tempo 120' command leaves it null.
+    public TempoDeclarationGreen(SyntaxToken tempoKeyword, SyntaxToken? colon, GreenNode?[] values)
+        : base(SyntaxKind.TempoDeclaration, [tempoKeyword, colon, .. values])
     {
     }
 }
