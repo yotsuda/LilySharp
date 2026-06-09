@@ -48,6 +48,10 @@ public static class SharedRenderer
     {
         var options = layout.Options;
         var resolver = layout.GrobPropertyResolver;
+        // Items participating in a beam — DrawNote/DrawChord skip stem & flag for these,
+        // because DrawBeams will draw the beam-aware stem instead. Mirrors SvgRenderer's
+        // _beamedStemEndYs gating (lily/stem.cc — beamed stem end is computed by beam layout).
+        var beamedItems = BuildBeamedItemsSet(layout);
         foreach (var page in layout.Pages)
         {
             var gc = doc.BeginPage(page.Width, page.Height);
@@ -60,7 +64,7 @@ public static class SharedRenderer
             try
             {
                 foreach (var system in page.Systems)
-                    DrawSystem(score, layout, system, resolver, gc);
+                    DrawSystem(score, layout, system, resolver, beamedItems, gc);
                 // Page-level overlays that span systems
                 var measureToSystemY = BuildMeasureToSystemY(layout);
                 DrawTies(layout, gc);
@@ -127,9 +131,21 @@ public static class SharedRenderer
 
     // ---------- System ----------
 
+    private static HashSet<MusicItem> BuildBeamedItemsSet(ScoreLayout layout)
+    {
+        // Records use value equality; SourcePosition uniquely identifies each
+        // note/chord across the score, so default equality is correct here.
+        var set = new HashSet<MusicItem>();
+        foreach (var beam in layout.BeamLayouts)
+            foreach (var member in beam.Group.Members)
+                set.Add(member.Item);
+        return set;
+    }
+
     private static void DrawSystem(
         MultiStaffScore score, ScoreLayout layout,
-        SystemLayout system, GrobPropertyResolver resolver, IDrawingContext gc)
+        SystemLayout system, GrobPropertyResolver resolver,
+        HashSet<MusicItem> beamedItems, IDrawingContext gc)
     {
         bool isFirstSystem = system.SystemIndex == 0;
         double systemStartX = system.Indent;
@@ -166,7 +182,7 @@ public static class SharedRenderer
                 }
 
                 // Notes per measure
-                DrawStaffMeasures(staff, system, layout, localStaffY, clef, resolver, gc);
+                DrawStaffMeasures(staff, system, layout, localStaffY, clef, resolver, beamedItems, gc);
 
                 // Barlines at end of each measure (single thin only in this phase)
                 DrawBarlines(system, localStaffY, gc);
@@ -330,7 +346,8 @@ public static class SharedRenderer
 
     private static void DrawStaffMeasures(
         Staff staff, SystemLayout system, ScoreLayout layout,
-        double staffY, ClefType clef, GrobPropertyResolver resolver, IDrawingContext gc)
+        double staffY, ClefType clef, GrobPropertyResolver resolver,
+        HashSet<MusicItem> beamedItems, IDrawingContext gc)
     {
         double staffMiddleY = staffY + StaffHeight / 2;
         var voice = staff.PrimaryVoice;
@@ -341,12 +358,23 @@ public static class SharedRenderer
                 continue;
 
             var measure = voice.Measures[ml.MeasureIndex];
+            // Multi-staff scores fill MeasureLayout.Columns with timing-based X
+            // anchors; per-staff Items[i].X are not aligned to the shared column
+            // grid, so beams (computed from column timings) drift away from
+            // noteheads if we use Items[i].X here. BeamEngraver itself uses
+            // GetXForTiming when columns exist — matching that ensures stem &
+            // notehead share the same X.
+            bool useColumnTiming = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
+            var currentTiming = Fraction.Zero;
             for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
             {
                 var item = measure.Items[itemIdx];
-                if (itemIdx >= ml.Items.Length) continue;
+                if (itemIdx >= ml.Items.Length) { currentTiming += item.Duration; continue; }
                 var il = ml.Items[itemIdx];
-                double itemX = ml.X + il.X;
+                double itemX = useColumnTiming
+                    ? ml.X + ml.GetXForTiming(currentTiming)
+                    : ml.X + il.X;
+                currentTiming += item.Duration;
 
                 // LILYPOND-REF: lily/grob-property.cc — apply \override / \revert at this position.
                 // Multi-staff scores re-advance the resolver per staff: harmless for ordinary
@@ -357,13 +385,13 @@ public static class SharedRenderer
                 switch (item)
                 {
                     case NoteItem note:
-                        DrawNote(note, itemX, staffMiddleY, resolver, gc);
+                        DrawNote(note, itemX, staffMiddleY, resolver, beamedItems.Contains(note), gc);
                         break;
                     case RestItem rest:
                         DrawRest(rest, itemX, staffY, gc);
                         break;
                     case ChordItem chord:
-                        DrawChord(chord, itemX, staffMiddleY, resolver, gc);
+                        DrawChord(chord, itemX, staffMiddleY, resolver, beamedItems.Contains(chord), gc);
                         break;
                     case ClefChangeItem clefChange:
                         DrawClefChange(clefChange, itemX, staffY, gc);
@@ -377,7 +405,7 @@ public static class SharedRenderer
     }
 
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
-        GrobPropertyResolver resolver, IDrawingContext gc)
+        GrobPropertyResolver resolver, bool isBeamed, IDrawingContext gc)
     {
         int noteValue = note.BaseDuration.Denominator;
         if (note.BaseDuration.Numerator != 1) noteValue = 1;
@@ -399,8 +427,11 @@ public static class SharedRenderer
         // Ledger lines for notes far from middle line
         DrawLedgerLines(note.StaffPosition, x, staffMiddleY, gc);
 
-        // Stem (no stem for whole notes)
-        if (noteValue >= 2)
+        // Stem & flag — beamed notes are handled by DrawBeams (which draws the
+        // beam-aware stem to the actual beam Y), so skip both here to avoid a
+        // duplicated short stem layered under the beam stem.
+        // LILYPOND-REF: lily/stem.cc — beamed stem end determined by beam layout.
+        if (noteValue >= 2 && !isBeamed)
         {
             Color? stemColor = ResolveColor(resolver, "Stem");
             double stemX = note.StemUp
@@ -412,7 +443,6 @@ public static class SharedRenderer
             gc.DrawLine(stemX, noteY, stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
 
-            // Flag (only for unbeamed eighth+ notes; beamed notes handled in DrawBeams)
             bool hasFlag = false;
             if (noteValue >= 8)
             {
@@ -424,7 +454,6 @@ public static class SharedRenderer
                 }
             }
 
-            // Tremolo slashes on the stem
             if (note.HasTremolo)
                 DrawTremolo(stemX, noteY, stemEndY, note.StemUp, note.TremoloBeams, hasFlag, gc);
         }
@@ -439,7 +468,7 @@ public static class SharedRenderer
     }
 
     private static void DrawChord(ChordItem chord, double x, double staffMiddleY,
-        GrobPropertyResolver resolver, IDrawingContext gc)
+        GrobPropertyResolver resolver, bool isBeamed, IDrawingContext gc)
     {
         int noteValue = chord.BaseDuration.Denominator;
         if (chord.BaseDuration.Numerator != 1) noteValue = 1;
@@ -459,7 +488,9 @@ public static class SharedRenderer
             if (y > bottomY) bottomY = y;
         }
 
-        if (noteValue >= 2 && chord.Notes.Length > 0)
+        // Skip chord stem when chord is part of a beam — DrawBeams handles it.
+        // LILYPOND-REF: lily/stem.cc — beamed stem end determined by beam layout.
+        if (noteValue >= 2 && chord.Notes.Length > 0 && !isBeamed)
         {
             Color? stemColor = ResolveColor(resolver, "Stem");
             double stemX = chord.StemUp
