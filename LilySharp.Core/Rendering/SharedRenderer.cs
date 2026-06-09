@@ -219,6 +219,45 @@ public static class SharedRenderer
         // Beams (use system-wide coordinates; ossia beams are rare and
         // outside the Phase 2-A scope so we draw at full scale)
         DrawBeams(layout, system, gc);
+
+        // SpanBars: connect barlines across the staves of each multi-staff group.
+        DrawSpanBars(score, system, gc);
+    }
+
+    /// <summary>
+    /// Draws barlines spanning the full height of each multi-staff group, so the
+    /// per-staff barlines read as one continuous barline across the group.
+    /// Repeat dots stay per-staff (drawn by <see cref="DrawBarlines"/>).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/span-bar.cc — SpanBar across a connected group.</remarks>
+    private static void DrawSpanBars(MultiStaffScore score, SystemLayout system, IDrawingContext gc)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty) return;
+
+        for (int gi = 0; gi < system.StaffGroups.Length && gi < score.StaffGroups.Length; gi++)
+        {
+            // Only connected, multi-staff groups (those with a delimiter) get a span bar.
+            if (system.StaffGroups[gi].GrandStaffLayout is not { } delim) continue;
+
+            double top = system.Y + delim.BraceTop;
+            double height = delim.BraceBottom - delim.BraceTop;
+            if (height <= StaffHeight + 0.001) continue; // single staff — nothing to span
+
+            // Barline types are a measure property shared by all staves in the group.
+            var voice = score.StaffGroups[gi].Staves[0].PrimaryVoice;
+            foreach (var ml in system.Measures)
+            {
+                if (ml.MeasureIndex >= voice.Measures.Length) continue;
+                var measure = voice.Measures[ml.MeasureIndex];
+
+                if (measure.StartBarline != BarlineType.None)
+                    DrawBarline(measure.StartBarline, ml.X, top, height, gc, withDots: false);
+
+                double endX = ml.X + ml.Width;
+                DrawBarline(measure.EndBarline, endX - GetVisualBarlineWidth(measure.EndBarline),
+                    top, height, gc, withDots: false);
+            }
+        }
     }
 
     private static void DrawStaffLines(double staffY, double width, IDrawingContext gc)
@@ -688,7 +727,8 @@ public static class SharedRenderer
     /// Draws a barline of the given type. Mirrors <c>SvgRenderer.DrawBarline</c>.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/bar-line.cc — bar-line glyph composition.</remarks>
-    private static void DrawBarline(BarlineType type, double x, double staffY, double height, IDrawingContext gc)
+    private static void DrawBarline(BarlineType type, double x, double staffY, double height,
+        IDrawingContext gc, bool withDots = true)
     {
         if (type == BarlineType.None) return;
 
@@ -717,23 +757,23 @@ public static class SharedRenderer
             case BarlineType.RepeatStart:
                 gc.DrawRectangle(x, staffY, thick, height, fill: Color.Black);
                 gc.DrawRectangle(x + thick + sep, staffY, thin, height, fill: Color.Black);
-                DrawRepeatDots(x + thick + sep + thin + dotSep, staffY, gc);
+                if (withDots) DrawRepeatDots(x + thick + sep + thin + dotSep, staffY, gc);
                 break;
 
             case BarlineType.RepeatEnd:
-                DrawRepeatDots(x, staffY, gc);
+                if (withDots) DrawRepeatDots(x, staffY, gc);
                 double afterDots = x + dotsOffset;
                 gc.DrawRectangle(afterDots, staffY, thin, height, fill: Color.Black);
                 gc.DrawRectangle(afterDots + thin + sep, staffY, thick, height, fill: Color.Black);
                 break;
 
             case BarlineType.RepeatBoth:
-                DrawRepeatDots(x, staffY, gc);
+                if (withDots) DrawRepeatDots(x, staffY, gc);
                 double pos = x + dotsOffset;
                 gc.DrawRectangle(pos, staffY, thin, height, fill: Color.Black);
                 gc.DrawRectangle(pos + thin + sep, staffY, thick, height, fill: Color.Black);
                 gc.DrawRectangle(pos + thin + sep + thick + sep, staffY, thin, height, fill: Color.Black);
-                DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, gc);
+                if (withDots) DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, gc);
                 break;
         }
     }
