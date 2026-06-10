@@ -32,10 +32,17 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260426-1603";
+    public const string Version = "0.1.2-20260611-0001";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
+
+    // Debounced diagnostics: typing bursts cancel the pending validation run
+    // so only the settled document gets validated, not every keystroke.
+    // didOpen/didSave still publish immediately.
+    private const int DiagnosticsDebounceMs = 200;
+    private readonly Dictionary<Uri, CancellationTokenSource> _pendingDiagnostics = [];
+    private readonly object _diagnosticsGate = new();
 
     public LilySharpLanguageServer(Stream input, Stream output)
     {
@@ -170,13 +177,14 @@ public sealed class LilySharpLanguageServer
                 var text = @params.ContentChanges[^1].Text;
                 doc = _documentManager.OpenOrUpdate(uri, text, version);
             }
-            PublishDiagnostics(doc);
+            ScheduleDiagnostics(doc);
         }
     }
 
     [JsonRpcMethod(Methods.TextDocumentDidCloseName, UseSingleObjectParameterDeserialization = true)]
     public void DidClose(DidCloseTextDocumentParams @params)
     {
+        CancelPendingDiagnostics(@params.TextDocument.Uri);
         _documentManager.Close(@params.TextDocument.Uri);
 
         // Clear diagnostics
@@ -198,6 +206,58 @@ public sealed class LilySharpLanguageServer
     }
 
     // ========== Diagnostics ==========
+
+    /// <summary>
+    /// Schedules a debounced diagnostics run for the document. A newer change
+    /// to the same document cancels the pending run; the run also re-checks
+    /// that its document is still the latest version before publishing.
+    /// </summary>
+    private void ScheduleDiagnostics(Document doc)
+    {
+        CancellationToken token;
+        lock (_diagnosticsGate)
+        {
+            if (_pendingDiagnostics.TryGetValue(doc.Uri, out var old))
+            {
+                old.Cancel();
+                old.Dispose();
+            }
+            var cts = new CancellationTokenSource();
+            _pendingDiagnostics[doc.Uri] = cts;
+            token = cts.Token;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(DiagnosticsDebounceMs, token);
+
+                // Drop if the document moved on (or was closed) while we slept.
+                var current = _documentManager.GetDocument(doc.Uri);
+                if (current == null || current.Version != doc.Version)
+                    return;
+
+                PublishDiagnostics(doc);
+            }
+            catch (OperationCanceledException)
+            {
+                // Superseded by a newer change — nothing to do.
+            }
+        }, CancellationToken.None);
+    }
+
+    private void CancelPendingDiagnostics(Uri uri)
+    {
+        lock (_diagnosticsGate)
+        {
+            if (_pendingDiagnostics.Remove(uri, out var cts))
+            {
+                cts.Cancel();
+                cts.Dispose();
+            }
+        }
+    }
 
     private void PublishDiagnostics(Document doc)
     {

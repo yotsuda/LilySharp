@@ -22,9 +22,16 @@ namespace LilySharp.Lsp;
 /// <summary>
 /// Manages open documents and their syntax trees.
 /// </summary>
+/// <remarks>
+/// Thread-safe: diagnostics are published from debounced background tasks
+/// while didChange notifications mutate the map on the dispatch thread, so
+/// every access goes through <see cref="_gate"/>. <see cref="Document"/>
+/// instances themselves are immutable.
+/// </remarks>
 public sealed class DocumentManager
 {
     private readonly Dictionary<Uri, Document> _documents = [];
+    private readonly object _gate = new();
 
     /// <summary>
     /// Opens or updates a document.
@@ -33,7 +40,8 @@ public sealed class DocumentManager
     {
         var tree = SyntaxTree.Parse(text);
         var doc = new Document(uri, text, tree, version ?? 0);
-        _documents[uri] = doc;
+        lock (_gate)
+            _documents[uri] = doc;
         return doc;
     }
 
@@ -42,7 +50,8 @@ public sealed class DocumentManager
     /// </summary>
     public Document? GetDocument(Uri uri)
     {
-        return _documents.TryGetValue(uri, out var doc) ? doc : null;
+        lock (_gate)
+            return _documents.TryGetValue(uri, out var doc) ? doc : null;
     }
 
     /// <summary>
@@ -50,15 +59,25 @@ public sealed class DocumentManager
     /// </summary>
     public void Close(Uri uri)
     {
-        _documents.Remove(uri);
+        lock (_gate)
+            _documents.Remove(uri);
     }
 
     /// <summary>
     /// Gets all open documents.
     /// </summary>
-    public IEnumerable<Document> GetAllDocuments() => _documents.Values;
+    public IEnumerable<Document> GetAllDocuments()
+    {
+        lock (_gate)
+            return _documents.Values.ToArray();
+    }
+
     /// <summary>
-    /// Applies incremental changes to a document.
+    /// Applies incremental changes to a document. Per the LSP spec the changes
+    /// are sequential — each Range refers to the document state AFTER the
+    /// previous change — so the edits are applied to the TEXT one by one and
+    /// the result is parsed ONCE (previously every change in a batch triggered
+    /// its own full re-parse).
     /// </summary>
     public Document ApplyChanges(Uri uri, IEnumerable<TextDocumentContentChangeEvent> changes, int version)
     {
@@ -66,41 +85,42 @@ public sealed class DocumentManager
         if (doc == null)
             throw new InvalidOperationException($"Document not found: {uri}");
 
-        var tree = doc.Tree;
         var currentText = doc.Text;
-        
+
         foreach (var change in changes)
         {
             if (change.Range != null)
             {
-                // Incremental change - use current text for offset calculation
                 var start = GetOffset(currentText, change.Range.Start);
-                var end = GetOffset(currentText, change.Range.End);
-                var textChange = new TextChange(new TextSpan(start, end - start), change.Text);
-                tree = tree.WithChange(textChange);
-                currentText = tree.Text; // Update text for next change
+                var end = Math.Max(start, GetOffset(currentText, change.Range.End));
+                currentText = currentText[..start] + change.Text + currentText[end..];
             }
             else
             {
                 // Full replacement
-                tree = SyntaxTree.Parse(change.Text);
-                currentText = tree.Text;
+                currentText = change.Text;
             }
         }
 
-        var newDoc = new Document(uri, tree.Text, tree, version);
-        _documents[uri] = newDoc;
+        var tree = SyntaxTree.Parse(currentText);
+        var newDoc = new Document(uri, currentText, tree, version);
+        lock (_gate)
+            _documents[uri] = newDoc;
         return newDoc;
     }
 
     /// <summary>
-    /// Converts line/character position to text offset.
+    /// Converts an LSP line/character position to a text offset. The LSP
+    /// default position encoding is UTF-16 code units, which is exactly C#'s
+    /// string indexing, so <c>Position.Character</c> maps 1:1. Out-of-range
+    /// positions are clamped per the spec ("if the character value is greater
+    /// than the line length it defaults back to the line length").
     /// </summary>
-    private static int GetOffset(string text, Position position)
+    internal static int GetOffset(string text, Position position)
     {
         int offset = 0;
         int line = 0;
-        
+
         while (line < position.Line && offset < text.Length)
         {
             if (text[offset] == '\n')
@@ -113,8 +133,13 @@ public sealed class DocumentManager
             }
             offset++;
         }
-        
-        return offset + position.Character;
+
+        // Clamp the character offset to the end of this line (and the text).
+        int lineEnd = offset;
+        while (lineEnd < text.Length && text[lineEnd] != '\n' && text[lineEnd] != '\r')
+            lineEnd++;
+
+        return Math.Min(offset + Math.Max(0, position.Character), lineEnd);
     }
 }
 
