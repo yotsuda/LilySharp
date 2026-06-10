@@ -2425,14 +2425,10 @@ public sealed class MeasureCollector
     {
         char pitchName = pitch.PitchName.ToLowerInvariant()[0];
 
-        // Calculate base octave from interval (without OctaveOffset)
-        int interval = GetPitchIndex(pitchName) - GetPitchIndex(_lastPitchName);
-        int baseOctave = _currentOctave;
-        if (interval > 3) baseOctave--;
-        else if (interval < -3) baseOctave++;
-
-        // Apply OctaveOffset for this note only (does not affect next note)
-        int actualOctave = baseOctave + pitch.OctaveOffset;
+        // Closest-octave rule + explicit '/, offset — shared with the exporters.
+        int actualOctave = RelativeOctave.Resolve(
+            GetPitchIndex(_lastPitchName), _currentOctave,
+            GetPitchIndex(pitchName), pitch.OctaveOffset);
 
         // Staff position 0 = middle line of the staff
         // Treble clef: B4 = staff position 0
@@ -2450,11 +2446,7 @@ public sealed class MeasureCollector
         return (basePosition, actualOctave);
     }
 
-    private static int GetPitchIndex(char pitch) => pitch switch
-    {
-        'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3, 'g' => 4, 'a' => 5, 'b' => 6,
-        _ => 0
-    };
+    private static int GetPitchIndex(char pitch) => RelativeOctave.StepIndex(pitch);
 
     private static ClefType ParseClefType(string clef) => clef switch
     {

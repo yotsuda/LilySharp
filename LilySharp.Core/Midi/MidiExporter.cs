@@ -306,29 +306,10 @@ public sealed class MidiExporter
     {
         int noteName = GetNoteName(pitch.BaseName);
 
-        // Calculate up and down candidates (LilyPond algorithm)
-        int upOctave = _currentOctave;
-        if (_currentNoteName > noteName)
-            upOctave++;
-
-        int downOctave = _currentOctave;
-        if (_currentNoteName < noteName)
-            downOctave--;
-
-        // Calculate steps (note name + octave * 7)
-        int currentSteps = _currentNoteName + _currentOctave * 7;
-        int upSteps = noteName + upOctave * 7;
-        int downSteps = noteName + downOctave * 7;
-
-        // Choose the closer octave
-        int targetOctave;
-        if (Math.Abs(upSteps - currentSteps) < Math.Abs(downSteps - currentSteps))
-            targetOctave = upOctave;
-        else
-            targetOctave = downOctave;
-
-        // Apply explicit octave offset (' or ,)
-        targetOctave += pitch.OctaveOffset;
+        // Closest-octave rule + explicit '/, offset — shared with the collector
+        // and the MusicXML exporter (RelativeOctave is the single source of truth).
+        int targetOctave = RelativeOctave.Resolve(
+            _currentNoteName, _currentOctave, noteName, pitch.OctaveOffset);
 
         // Update current state for next note
         _currentNoteName = noteName;
@@ -347,14 +328,7 @@ public sealed class MidiExporter
     /// <summary>
     /// Gets the note name index (c=0, d=1, e=2, f=3, g=4, a=5, b=6).
     /// </summary>
-    private static int GetNoteName(char baseName)
-    {
-        return baseName switch
-        {
-            'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3,
-            'g' => 4, 'a' => 5, 'b' => 6, _ => 0
-        };
-    }
+    private static int GetNoteName(char baseName) => RelativeOctave.StepIndex(baseName);
 
     private void ProcessNote(NoteSyntax note, MidiTrack track)
     {

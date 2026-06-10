@@ -603,30 +603,17 @@ public sealed class MusicXmlExporter
     {
         int noteName = StepIndex(pitch.BaseName);
 
-        int upOctave = _currentOctave;
-        if (_currentStep > noteName) upOctave++;
-        int downOctave = _currentOctave;
-        if (_currentStep < noteName) downOctave--;
-
-        int currentSteps = _currentStep + _currentOctave * 7;
-        int upSteps = noteName + upOctave * 7;
-        int downSteps = noteName + downOctave * 7;
-
-        int targetOctave = Math.Abs(upSteps - currentSteps) < Math.Abs(downSteps - currentSteps)
-            ? upOctave
-            : downOctave;
-
-        targetOctave += pitch.OctaveOffset;
+        // Closest-octave rule + explicit '/, offset — shared with the collector
+        // and the MIDI exporter (RelativeOctave is the single source of truth).
+        int targetOctave = RelativeOctave.Resolve(
+            _currentStep, _currentOctave, noteName, pitch.OctaveOffset);
 
         _currentStep = noteName;
         _currentOctave = targetOctave;
         return targetOctave;
     }
 
-    private static int StepIndex(char baseName) => baseName switch
-    {
-        'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3, 'g' => 4, 'a' => 5, 'b' => 6, _ => 0
-    };
+    private static int StepIndex(char baseName) => RelativeOctave.StepIndex(baseName);
 
     private Fraction GetDuration(DurationSyntax? duration)
     {
