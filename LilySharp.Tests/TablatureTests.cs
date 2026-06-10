@@ -23,12 +23,11 @@ using Xunit;
 
 namespace LilySharp.Tests;
 
-[Trait("Category", "Unit")]
 /// <summary>
-/// LEGACY-PATH TESTS. Tablature is rendered only by the legacy SvgRenderer;
-/// SharedRenderer (the live path) has not ported it yet. Repoint these tests
-/// when tablature lands in SharedRenderer (see LILYSHARP_STANDALONE_REVIEW.md §3).
+/// Tablature parsing (tunings, fret calculation) and live-path rendering
+/// (SharedRenderer: TAB clef, string lines, fret numbers).
 /// </summary>
+[Trait("Category", "Unit")]
 public class TablatureTests
 {
     [Fact]
