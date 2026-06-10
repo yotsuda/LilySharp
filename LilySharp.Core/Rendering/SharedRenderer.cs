@@ -217,7 +217,7 @@ public static class SharedRenderer
                 }
 
                 // Barlines (typed: single / double / final / repeat) per measure
-                DrawBarlines(system, staff, localStaffY, gc);
+                DrawBarlines(system, staff, localStaffY, layout, gc);
             }
             finally
             {
@@ -476,7 +476,13 @@ public static class SharedRenderer
                         DrawNote(note, itemX, staffMiddleY, resolver, beamedItems.Contains(note), forcedStemUp, headWiped, gc);
                         break;
                     case RestItem rest:
-                        DrawRest(rest, itemX, staffY, gc);
+                        // Measures inside a multi-measure-rest run get their
+                        // symbol from DrawMultiMeasureRests (church rest or
+                        // H-bar); drawing the per-measure whole rest too would
+                        // double-print. LILYPOND-REF: lily/multi-measure-rest.cc
+                        // — the MMR spanner replaces the individual rests.
+                        if (!IsMmrCovered(layout, ml.MeasureIndex))
+                            DrawRest(rest, itemX, staffY, gc);
                         break;
                     case ChordItem chord:
                         DrawChord(chord, itemX, staffMiddleY, resolver, beamedItems.Contains(chord), forcedStemUp, headWiped, gc);
@@ -728,7 +734,8 @@ public static class SharedRenderer
 
     // ---------- Barlines ----------
 
-    private static void DrawBarlines(SystemLayout system, Staff staff, double staffY, IDrawingContext gc)
+    private static void DrawBarlines(SystemLayout system, Staff staff, double staffY,
+        ScoreLayout layout, IDrawingContext gc)
     {
         var voice = staff.PrimaryVoice;
         foreach (var ml in system.Measures)
@@ -744,10 +751,48 @@ public static class SharedRenderer
             // End barline drawn so its right edge sits on the column boundary
             // (matches SvgRenderer: endX - visualWidth). Normal measures carry
             // BarlineType.Single from the collector.
+            //
+            // Plain barlines INSIDE a multi-measure-rest run are suppressed —
+            // the MMR symbol spans the whole run without internal barlines
+            // (LILYPOND-REF: lily/multi-measure-rest.cc). Non-Single barlines
+            // (double / final / repeat) keep their meaning and stay visible.
+            if (measure.EndBarline == BarlineType.Single
+                && IsMmrInnerEndBarline(layout, ml.MeasureIndex))
+                continue;
+
             double endX = ml.X + ml.Width;
             double width = GetVisualBarlineWidth(measure.EndBarline);
             DrawBarline(measure.EndBarline, endX - width, staffY, StaffHeight, gc);
         }
+    }
+
+    /// <summary>True iff the measure lies inside a multi-measure-rest run.</summary>
+    private static bool IsMmrCovered(ScoreLayout layout, int measureIndex)
+    {
+        if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty) return false;
+        foreach (var mmr in layout.MultiMeasureRestLayouts)
+        {
+            if (measureIndex >= mmr.StartMeasureIndex &&
+                measureIndex < mmr.StartMeasureIndex + mmr.MeasureCount)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// True iff the measure's END barline is internal to a multi-measure-rest
+    /// run (i.e. the run continues into the next measure).
+    /// </summary>
+    private static bool IsMmrInnerEndBarline(ScoreLayout layout, int measureIndex)
+    {
+        if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty) return false;
+        foreach (var mmr in layout.MultiMeasureRestLayouts)
+        {
+            if (measureIndex >= mmr.StartMeasureIndex &&
+                measureIndex < mmr.StartMeasureIndex + mmr.MeasureCount - 1)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
