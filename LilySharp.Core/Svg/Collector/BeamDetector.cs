@@ -492,24 +492,26 @@ public sealed class BeamDetector
         // LILYPOND-REF: beam.cc:1039-1082 grow-direction
         int growDirection = group[0].item is NoteItem firstNote ? firstNote.FeatherDirection : 0;
 
-        // Auto-knee detection: check if notes span a large gap
-        // LILYPOND-REF: beam.cc:894-982 consider_auto_knees
+        // Auto-knee detection: knee when the union of (widened) head extents
+        // leaves an interior gap larger than auto-knee-gap + the beam stack.
+        // LILYPOND-REF: beam.cc:968-1056 consider_auto_knees
         // LILYPOND-REF: define-grobs.scm:437 auto-knee-gap = 5.5
-        bool useKnee = ShouldAutoKnee(members);
+        double? kneeGapCenter = AutoKneeGapCenter(members);
 
-        if (!useKnee)
-        {
-            // All members use the group's overall stem direction
-            for (int i = 0; i < members.Count; i++)
+        for (int i = 0; i < members.Count; i++)
         {
             var m = members[i];
+            // Knee: each stem points INTO the gap — UP when its head sits
+            // below the gap center, DOWN above (beam.cc:1047-1049). Without a
+            // knee, every member takes the group direction.
+            bool memberUp = kneeGapCenter is { } gapCenter
+                ? (m.HeadPositionMin + m.HeadPositionMax) / 2.0 < gapCenter
+                : stemUp;
             members[i] = new BeamMember(m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
-                m.StaffPosition, m.ItemIndex, stemUp,
+                m.StaffPosition, m.ItemIndex, memberUp,
                 headPositionMin: m.HeadPositionMin,
                 headPositionMax: m.HeadPositionMax);
-            }
         }
-        // If useKnee, keep per-member directions based on staff position
 
         return new BeamGroup(
             members.ToImmutableArray(),
@@ -519,37 +521,53 @@ public sealed class BeamDetector
             growDirection);
     }
 
+    /// <summary>auto-knee-gap, in staff spaces.</summary>
+    /// <remarks>LILYPOND-REF: define-grobs.scm:437 (auto-knee-gap . 5.5)</remarks>
+    private const double AutoKneeGap = 5.5;
+
     /// <summary>
-    /// Determines if a beam group should use kneed beams based on gap analysis.
+    /// LilyPond's consider_auto_knees: take each member's head-position
+    /// interval widened by ±1 position, union them, and find the largest
+    /// INTERIOR gap. A knee triggers when that gap exceeds auto-knee-gap plus
+    /// the height of the beam stack (thickness/2 + (count−1)·translation).
+    /// Returns the gap center (staff positions) or null for no knee.
     /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: beam.cc:894-982 consider_auto_knees
-    /// LILYPOND-REF: define-grobs.scm:437 auto-knee-gap = 5.5
-    ///
-    /// If notes span more than AutoKneeGap staff spaces with a clear gap
-    /// in between, the beam should be kneed.
-    /// Note: auto-knee-gap is in staff spaces; staff positions are in half-spaces.
-    /// </remarks>
-    private const double AutoKneeGap = 5.5; // in staff spaces
-
-    private static bool ShouldAutoKnee(List<BeamMember> members)
+    /// <remarks>LILYPOND-REF: beam.cc:968-1056 consider_auto_knees</remarks>
+    private static double? AutoKneeGapCenter(List<BeamMember> members)
     {
-        if (members.Count < 2) return false;
+        if (members.Count < 2) return null;
 
-        // Sort positions to find the largest gap
-        var positions = members.Select(m => m.StaffPosition).OrderBy(p => p).ToList();
+        // Head extents in staff positions, widened by 1 like head_extents.widen(1).
+        var intervals = members
+            .Select(m => (Lo: m.HeadPositionMin - 1.0, Hi: m.HeadPositionMax + 1.0))
+            .OrderBy(iv => iv.Lo)
+            .ToList();
 
-        double maxGap = 0;
-        for (int i = 1; i < positions.Count; i++)
+        // Walk the sorted union; track the largest interior gap.
+        double maxGapLen = 0, gapCenter = 0;
+        double coveredHi = intervals[0].Hi;
+        for (int i = 1; i < intervals.Count; i++)
         {
-            double gap = positions[i] - positions[i - 1];
-            maxGap = Math.Max(maxGap, gap);
+            if (intervals[i].Lo > coveredHi)
+            {
+                double len = intervals[i].Lo - coveredHi;
+                if (len >= maxGapLen)
+                {
+                    maxGapLen = len;
+                    gapCenter = (coveredHi + intervals[i].Lo) / 2.0;
+                }
+            }
+            coveredHi = Math.Max(coveredHi, intervals[i].Hi);
         }
 
-        // Convert from staff positions (half-spaces) to staff spaces
-        // LILYPOND-REF: define-grobs.scm:437 auto-knee-gap = 5.5 (staff spaces)
-        double maxGapInStaffSpaces = maxGap / 2.0;
-        return maxGapInStaffSpaces >= AutoKneeGap;
+        // threshold = auto-knee-gap + height_of_beams (staff spaces → ×2 positions).
+        // LILYPOND-REF: beam.cc:1033-1040
+        int beamCount = members.Max(m => m.BeamCount);
+        double heightOfBeams = EngravingDefaults.BeamThickness / 2.0
+            + (beamCount - 1) * EngravingDefaults.BeamTranslation;
+        double thresholdPositions = (AutoKneeGap + heightOfBeams) * 2.0;
+
+        return maxGapLen > thresholdPositions ? gapCenter : null;
     }
 
     private Fraction GetDuration(MusicItem item)
