@@ -1,0 +1,95 @@
+name: Release
+
+# Tag-driven release: pushing a tag like v0.3.0 builds the CLI binaries and
+# the VS Code extension VSIX, runs the full test suite as a gate, and attaches
+# everything to a GitHub Release.
+#
+# Marketplace publishing is intentionally a separate, manual decision — see
+# the commented step at the bottom (requires a VSCE_PAT secret and a
+# registered publisher).
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write   # create the GitHub Release + upload assets
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - run: dotnet restore
+      - run: dotnet build --no-restore
+      - run: dotnet test --no-build
+
+  cli:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rid: [ win-x64, linux-x64, osx-x64, osx-arm64 ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Publish lysc (${{ matrix.rid }})
+        run: >
+          dotnet publish LilySharp.Cli/LilySharp.Cli.csproj
+          -c Release -r ${{ matrix.rid }}
+          --self-contained
+          -p:PublishSingleFile=true
+          -p:EnableCompressionInSingleFile=true
+          -o publish/${{ matrix.rid }}
+      - name: Archive
+        run: |
+          cd publish/${{ matrix.rid }}
+          if [[ "${{ matrix.rid }}" == win-* ]]; then
+            zip -r ../../lysc-${{ github.ref_name }}-${{ matrix.rid }}.zip .
+          else
+            tar czf ../../lysc-${{ github.ref_name }}-${{ matrix.rid }}.tar.gz .
+          fi
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            lysc-*.zip
+            lysc-*.tar.gz
+
+  vsix:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Sync extension version to tag
+        working-directory: editors/vscode
+        # v0.3.0 → 0.3.0; "|| true" tolerates an already-matching version.
+        run: npm version --no-git-tag-version "${GITHUB_REF_NAME#v}" || true
+      - name: Build VSIX
+        working-directory: editors/vscode
+        run: |
+          npm ci
+          npx @vscode/vsce package --allow-missing-repository --skip-license --pre-release
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: editors/vscode/*.vsix
+
+      # Marketplace publication is a deliberate, separate decision.
+      # To enable: register the publisher, create a Personal Access Token,
+      # store it as the VSCE_PAT repository secret, then uncomment:
+      #
+      # - name: Publish to VS Code Marketplace
+      #   working-directory: editors/vscode
+      #   run: npx @vscode/vsce publish --pre-release -p ${{ secrets.VSCE_PAT }}
