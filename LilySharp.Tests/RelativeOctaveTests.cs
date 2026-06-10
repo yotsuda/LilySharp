@@ -22,7 +22,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// The shared closest-octave rule (LILYPOND-REF: lily/pitch.cc
 /// Pitch::to_relative_octave) used by MeasureCollector, MidiExporter,
-/// MusicXmlExporter, and RelativePitchResolver.
+/// and MusicXmlExporter.
 /// </summary>
 [Trait("Category", "Unit")]
 public class RelativeOctaveTests

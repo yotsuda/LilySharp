@@ -3,8 +3,11 @@
 > the `repeat volta` / `alternative` keywords were removed from the language
 > (volta repeats are `|: … :|` (+`:|*N`) with inline voltas `[1. …]`), and the
 > semantic layer described here (SemanticCompiler/BoundTree/ScoreBuilder) was
-> built but is still NOT wired into any output pipeline — see
-> LILYSHARP_STANDALONE_REVIEW.md §1/§2.
+> built, never wired into any output pipeline, and **deleted on 2026-06-10**
+> (recoverable from git history). The live pipeline is
+> MeasureCollector → LayoutEngine → SharedRenderer; shared semantics are
+> being extracted from it instead (e.g. `Semantics/RelativeOctave.cs`).
+> See LILYSHARP_STANDALONE_REVIEW.md §1/§2 for the analysis that led here.
 
 ## ビジョン
 
