@@ -30,17 +30,47 @@ namespace LilySharp.Tests;
 public class CommonShortestDurationTests
 {
     [Fact]
-    public void QuarterNoteOnlyScore_ShortestIsQuarter()
+    public void QuarterNoteOnlyScore_IsCappedAtEighth()
     {
-        // LILYPOND-REF: lily/spacing-determine-shortest-duration-op.cc
-        // A score with only quarter notes should have common shortest = 0.25
+        // LILYPOND-REF: lily/spacing-spanner.cc:166-171 — the spacing basis is
+        // min(base-shortest-duration (1/8), mode of per-measure shortests), so a
+        // quarters-only score still spaces on the 1/8 basis like LilyPond.
         var source = "c4 d e f |";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree);
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
 
-        Assert.Equal(0.25, shortest, 4);
+        Assert.Equal(0.125, shortest, 4);
+    }
+
+    [Fact]
+    public void OneOrnamentalRun_DoesNotDominate_ModeWins()
+    {
+        // LILYPOND-REF: lily/spacing-spanner.cc:92-164 calc_common_shortest_duration —
+        // the basis is the MOST COMMON per-measure shortest, so a single 32nd-note
+        // measure must not loosen a whole piece of eighths.
+        var source = "c8 d e f g a b c' | c8 d e f g a b c' | c8 d e f g a b c' | c32 d e f c d e f c d e f c d e f c d e f c d e f c d e f c d e f |";
+        var tree = SyntaxTree.Parse(source);
+        var score = new MeasureCollector().Collect(tree);
+
+        double shortest = SpacingRules.CalculateCommonShortestDuration(score);
+
+        Assert.Equal(0.125, shortest, 4);
+    }
+
+    [Fact]
+    public void FullMeasureRests_DoNotContribute()
+    {
+        // Full-measure rests create no musical columns in LilyPond; the basis
+        // comes from the sounding measures only (here: capped 1/8).
+        var source = "R1*2 c4 d e f |";
+        var tree = SyntaxTree.Parse(source);
+        var score = new MeasureCollector().Collect(tree);
+
+        double shortest = SpacingRules.CalculateCommonShortestDuration(score);
+
+        Assert.Equal(0.125, shortest, 4);
     }
 
     [Fact]

@@ -623,70 +623,71 @@ public static class SpacingRules
     /// Calculates the common shortest duration across all voices in a multi-staff score.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spacing-spanner.cc
-    ///
-    /// LilyPond determines the base shortest duration dynamically by scanning all
-    /// musical columns in the score. The common shortest duration is used as the
-    /// reference point for the Gourlay spacing algorithm: durations shorter than
-    /// this get linear spacing, durations longer get logarithmic spacing.
-    ///
-    /// This ensures that a score with only quarter and half notes spaces differently
-    /// from a score that also contains sixteenth notes.
+    /// LILYPOND-REF: lily/spacing-spanner.cc:92-173 calc_common_shortest_duration —
+    /// per MEASURE, find the shortest sounding duration; the spacing basis is the
+    /// MODE of those per-measure shortests across the piece (ties prefer the
+    /// shorter duration), capped at base-shortest-duration (1/8). This keeps one
+    /// ornamental 32nd-note run from loosening the whole piece, and keeps
+    /// long-note pieces from collapsing to minimal spacing — unlike the absolute
+    /// global minimum this method used previously.
     /// </remarks>
     public static double CalculateCommonShortestDuration(Model.MultiStaffScore score)
-    {
-        double shortest = double.MaxValue;
-
-        foreach (var voice in score.AllVoices)
-        {
-            double voiceShortest = FindShortestDurationInMeasures(voice.Measures);
-            if (voiceShortest < shortest)
-                shortest = voiceShortest;
-        }
-
-        // Fall back to default if no notes found
-        return shortest < double.MaxValue ? shortest : EngravingDefaults.BaseShortestDuration;
-    }
+        => CommonShortestDuration(score.AllVoices.Select(v => v.Measures));
 
     /// <summary>
     /// Calculates the common shortest duration across all voices in a single-staff score.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/spacing-spanner.cc
+    /// LILYPOND-REF: lily/spacing-spanner.cc:92-173 calc_common_shortest_duration
     /// </remarks>
     public static double CalculateCommonShortestDuration(Model.Score score)
+        => CommonShortestDuration(score.Voices.Select(v => v.Measures));
+
+    private static double CommonShortestDuration(IEnumerable<ImmutableArray<Model.Measure>> voiceMeasures)
     {
-        double shortest = double.MaxValue;
+        var voices = voiceMeasures.ToList();
+        int measureCount = voices.Count == 0 ? 0 : voices.Max(m => m.Length);
 
-        foreach (var voice in score.Voices)
+        // Per-measure shortest across all voices, then count occurrences.
+        var counts = new Dictionary<double, int>();
+        for (int m = 0; m < measureCount; m++)
         {
-            double voiceShortest = FindShortestDurationInMeasures(voice.Measures);
-            if (voiceShortest < shortest)
-                shortest = voiceShortest;
-        }
-
-        return shortest < double.MaxValue ? shortest : EngravingDefaults.BaseShortestDuration;
-    }
-
-    /// <summary>
-    /// Finds the shortest note/rest duration in a sequence of measures.
-    /// </summary>
-    private static double FindShortestDurationInMeasures(ImmutableArray<Model.Measure> measures)
-    {
-        double shortest = double.MaxValue;
-
-        foreach (var measure in measures)
-        {
-            foreach (var item in measure.Items)
+            double shortest = double.MaxValue;
+            foreach (var measures in voices)
             {
-                double dur = item.Duration.ToDouble();
-                // Skip zero-duration items (grace notes, clef changes, etc.)
-                if (dur > 0 && dur < shortest)
-                    shortest = dur;
+                if (m >= measures.Length)
+                    continue;
+
+                // Full-measure rests create no musical columns in LilyPond and
+                // therefore never contribute to the common shortest duration.
+                if (MultiMeasureRestEngraver.IsFullMeasureRest(measures[m]))
+                    continue;
+
+                foreach (var item in measures[m].Items)
+                {
+                    double dur = item.Duration.ToDouble();
+                    // Skip zero-duration items (grace notes, clef changes, etc.)
+                    if (dur > 0 && dur < shortest)
+                        shortest = dur;
+                }
             }
+
+            if (shortest < double.MaxValue)
+                counts[shortest] = counts.GetValueOrDefault(shortest) + 1;
         }
 
-        return shortest;
+        if (counts.Count == 0)
+            return EngravingDefaults.BaseShortestDuration;
+
+        // Mode; on equal counts LilyPond prefers the SHORTER duration
+        // (spacing-spanner.cc:156-164 — descending scan with >=).
+        double mode = counts
+            .OrderByDescending(kv => kv.Value)
+            .ThenBy(kv => kv.Key)
+            .First().Key;
+
+        // d = min(base-shortest-duration, mode) — spacing-spanner.cc:166-171.
+        return Math.Min(EngravingDefaults.BaseShortestDuration, mode);
     }
 
     /// <summary>
@@ -1003,6 +1004,23 @@ public static class SpacingRules
 
         if (spacingItems.Count == 0)
             return ImmutableArray<Spring>.Empty;
+
+        // LILYPOND-REF: lily/multi-measure-rest.cc:340-391 set_spacing_rods /
+        // calculate_spacing_rods — full-measure rests are spaced by a compact
+        // rod for the whole run (symbol width + ONE duration space +
+        // space-increment·log2(count)), NOT proportionally to the notated
+        // whole notes. Per-measure approximation: canonical column widths on
+        // both sides of the rest, independent of the global shortest duration.
+        if (MultiMeasureRestEngraver.IsFullMeasureRest(measure))
+        {
+            var rest = spacingItems[0];
+            double inc = EngravingDefaults.SpacingIncrement;
+            double startMin = Math.Max(inc, CalculateSkylineDistance(null, rest, staffY: 0));
+            double endMin = Math.Max(inc, CalculateSkylineDistance(rest, null, staffY: 0));
+            return ImmutableArray.Create(
+                new Spring(Math.Max(1.25 * inc, startMin), startMin, Math.Max(0.1, 0.25 * inc)),
+                new Spring(Math.Max(2.0 * inc, endMin), endMin, Math.Max(0.1, inc)));
+        }
 
         var springs = new List<Spring>();
 

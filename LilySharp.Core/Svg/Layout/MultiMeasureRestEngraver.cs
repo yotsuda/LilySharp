@@ -141,7 +141,7 @@ public static class MultiMeasureRestEngraver
     /// True iff the measure contains exactly one <see cref="RestItem"/> filling
     /// (or longer than) the time signature — the canonical "rest the whole measure".
     /// </summary>
-    private static bool IsFullMeasureRest(Measure measure)
+    internal static bool IsFullMeasureRest(Measure measure)
     {
         if (measure.Items.Length != 1)
             return false;
