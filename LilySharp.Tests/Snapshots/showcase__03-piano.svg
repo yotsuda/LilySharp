@@ -196,9 +196,9 @@
   <line x1="14.80" y1="39.39" x2="39.24" y2="39.06" stroke="#000000" stroke-width="0.130" data-pos="277"/>
   <line x1="14.80" y1="39.39" x2="39.24" y2="39.73" stroke="#000000" stroke-width="0.130" data-pos="277"/>
   <text x="52.27" y="29.50" font-size="1.80" font-family="serif" font-weight="bold" font-style="italic" fill="#000000" data-pos="339">8va</text>
-  <line x1="54.72" y1="29.50" x2="77.40" y2="29.50" stroke="#000000" stroke-width="0.130" stroke-dasharray="0.60 1.40" data-pos="339"/>
+  <line x1="55.47" y1="29.50" x2="77.40" y2="29.50" stroke="#000000" stroke-width="0.130" stroke-dasharray="0.60 1.40" data-pos="339"/>
   <text x="6.20" y="51.50" font-size="1.80" font-family="serif" font-weight="bold" font-style="italic" fill="#000000" data-pos="339">(8va)</text>
-  <line x1="9.95" y1="51.50" x2="33.89" y2="51.50" stroke="#000000" stroke-width="0.130" stroke-dasharray="0.60 1.40" data-pos="339"/>
+  <line x1="10.60" y1="51.50" x2="33.89" y2="51.50" stroke="#000000" stroke-width="0.130" stroke-dasharray="0.60 1.40" data-pos="339"/>
   <line x1="33.89" y1="51.50" x2="33.89" y2="52.30" stroke="#000000" stroke-width="0.130" data-pos="339"/>
   <text x="7.00" y="30.50" font-size="1.80" font-family="serif" font-weight="bold" fill="#000000">3</text>
   <text x="7.00" y="52.50" font-size="1.80" font-family="serif" font-weight="bold" fill="#000000">6</text>
@@ -208,7 +208,7 @@
   <text x="34.99" y="59.50" font-size="2.80" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="568">Ped.</text>
   <text x="34.99" y="61.96" font-size="2.80" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="560">*</text>
   <text x="58.01" y="59.50" font-size="2.80" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="592">*</text>
-  <rect x="7.46" y="6.70" width="5.68" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
+  <rect x="7.59" y="6.70" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="10.30" y="8.90" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">Main</text>
   <line x1="54.07" y1="46.70" x2="56.07" y2="46.70" stroke="#000000" stroke-width="0.130" data-pos="510"/>
   <line x1="56.07" y1="45.70" x2="56.07" y2="46.70" stroke="#000000" stroke-width="0.130" data-pos="510"/>

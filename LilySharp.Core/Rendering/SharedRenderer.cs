@@ -1185,7 +1185,7 @@ public static class SharedRenderer
                 gc.DrawText(b.Text, b.StartX, absY, textFontSize, "serif",
                     FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
 
-                double textWidth = b.Text.Length * 0.65;
+                double textWidth = SerifTextMetrics.MeasureBold(b.Text, textFontSize);
                 double lineStartX = b.StartX + textWidth + 0.5;
                 if (lineStartX < b.EndX)
                 {
@@ -1435,6 +1435,7 @@ public static class SharedRenderer
             double staffMiddleY = sy + StaffHeight / 2;
             double scaledFontSize = FontSize * g.Scale;
             double currentX = g.X;
+            double lastNoteX = g.X, lastNoteY = staffMiddleY;
             using (gc.Source(g.SourcePosition))
             {
                 foreach (var note in g.Notes)
@@ -1446,10 +1447,46 @@ public static class SharedRenderer
                     gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize);
                     if (note.NeedsLedger)
                         DrawLedgerLines(note.StaffPosition, currentX, staffMiddleY, gc);
+                    lastNoteX = currentX;
+                    lastNoteY = y;
                     currentX += 1.2 * g.Scale;  // approximate advance per grace note
+                }
+
+                // Grace slur from the last grace notehead to the main notehead.
+                // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur —
+                // acciaccatura and appoggiatura are auto-slurred to the main note.
+                if (g.Notes.Length > 0 &&
+                    g.Type is GraceNoteType.Acciaccatura or GraceNoteType.Appoggiatura)
+                {
+                    double mainY = staffMiddleY - g.MainNoteStaffPosition * 0.5;
+                    DrawGraceSlur(lastNoteX, lastNoteY, g.MainNoteX, mainY, g.Scale, gc);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Draws a small slur arcing below from the last grace note to the main
+    /// note (grace stems point up, so the slur bows underneath).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: ly/grace-init.ly — grace auto-slur.</remarks>
+    private static void DrawGraceSlur(double graceX, double graceY,
+        double mainX, double mainY, double scale, IDrawingContext gc)
+    {
+        double startX = graceX + GlyphMetrics.NoteheadBlack.CenterX * scale;
+        double startY = graceY + 0.5;
+        double endX = mainX + GlyphMetrics.NoteheadBlack.CenterX;
+        double endY = mainY + 0.5;
+
+        double dx = endX - startX;
+        if (dx < 0.5) return; // degenerate
+
+        double arcHeight = Math.Min(dx * 0.25, 1.2);
+        var c1 = (X: startX + dx * 0.3, Y: startY + 0.3 * (endY - startY) + arcHeight);
+        var c2 = (X: startX + dx * 0.7, Y: startY + 0.7 * (endY - startY) + arcHeight);
+
+        DrawCurve(startX, startY, endX, endY, c1, c2,
+            curveUp: false, EngravingDefaults.SlurMidThickness * scale, gc);
     }
 
     // ---------- Chord names ("Cm7", "B♭7") ----------
@@ -1666,7 +1703,7 @@ public static class SharedRenderer
         {
             double fs = m.MarkType == MusicMarkType.Rehearsal ? FontSize * 0.6 : FontSize * 0.55;
             const double pad = 0.2;
-            double textWidth = m.Text.Length * fs * 0.6;  // crude advance estimate
+            double textWidth = SerifTextMetrics.MeasureBold(m.Text, fs);
             double boxW = textWidth + pad * 2;
             double boxH = fs + pad * 2;
             gc.DrawRectangle(m.X - boxW / 2, absY - boxH / 2, boxW, boxH,

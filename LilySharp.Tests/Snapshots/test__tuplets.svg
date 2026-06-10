@@ -166,7 +166,7 @@
   <line x1="60.14" y1="37.25" x2="60.14" y2="36.55" stroke="#000000" stroke-width="0.130" data-pos="363"/>
   <text x="53.80" y="37.92" font-size="2.40" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="363">3</text>
   <text x="7.00" y="30.50" font-size="1.80" font-family="serif" font-weight="bold" fill="#000000">3</text>
-  <rect x="7.46" y="9.70" width="5.68" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
+  <rect x="7.59" y="9.70" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="10.30" y="11.90" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">Main</text>
   </g>
 </svg>

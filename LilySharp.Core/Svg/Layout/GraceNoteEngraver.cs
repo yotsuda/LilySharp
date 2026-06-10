@@ -35,7 +35,11 @@ public readonly record struct GraceNoteLayout(
     ImmutableArray<GraceNoteInfo> Notes, // Notes in the grace group
     GraceNoteType Type,                  // Grace type (for slash rendering)
     double Scale,                        // Scale factor (0.65 for grace notes)
-    int SourcePosition                   // For click-to-source mapping
+    int SourcePosition,                  // For click-to-source mapping
+    // Main-note anchor for the grace slur (acciaccatura/appoggiatura).
+    // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur
+    double MainNoteX = 0,                // Absolute X of the main notehead
+    int MainNoteStaffPosition = 0        // Staff position of the main notehead
 );
 
 /// <summary>
@@ -125,6 +129,16 @@ public static class GraceNoteEngraver
                 y = grace.Notes[0].StaffPosition * 0.5;
             }
 
+            // Main-note anchor for the grace slur (acciaccatura/appoggiatura).
+            int mainStaffPosition = grace.MainNoteItemIndex < measure.Items.Length
+                ? measure.Items[grace.MainNoteItemIndex] switch
+                {
+                    NoteItem n => n.StaffPosition,
+                    ChordItem { Notes.Length: > 0 } c => c.Notes.Min(cn => cn.StaffPosition),
+                    _ => 0
+                }
+                : 0;
+
             layouts.Add(new GraceNoteLayout(
                 grace.MeasureIndex,
                 grace.MainNoteItemIndex,
@@ -133,7 +147,9 @@ public static class GraceNoteEngraver
                 grace.Notes,
                 grace.Type,
                 GraceScale,
-                grace.SourcePosition
+                grace.SourcePosition,
+                MainNoteX: measureLayout.X + mainNoteLayout.X,
+                MainNoteStaffPosition: mainStaffPosition
             ));
         }
 
