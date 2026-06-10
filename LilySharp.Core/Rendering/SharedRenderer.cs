@@ -45,9 +45,9 @@ namespace LilySharp.Core.Rendering;
 /// measured serif text (SerifTextMetrics) are implemented here as well.
 ///
 /// The legacy <c>SvgRenderer</c> was retired and DELETED once parity was
-/// reached (recoverable from git history). Known remaining gap:
-///   • cross-staff / kneed beam DRAWING (DrawBeams uses a single
-///     staffMiddleY; the quanter itself is knee-aware)
+/// reached (recoverable from git history). Beam drawing is staff- and
+/// knee-aware; cross-staff beam PRODUCTION (the upstream layout emitting
+/// MemberStaffIndices) is the remaining known gap.
 /// </remarks>
 public static class SharedRenderer
 {
@@ -1029,7 +1029,6 @@ public static class SharedRenderer
 
     private static void DrawBeams(ScoreLayout layout, SystemLayout system, IDrawingContext gc)
     {
-        double staffMiddleY = system.Y + StaffHeight / 2;
         foreach (var beam in layout.BeamLayouts)
         {
             // Only draw beams whose first measure is in this system
@@ -1037,17 +1036,32 @@ public static class SharedRenderer
             if (!inSystem) continue;
 
             var grp = beam.Group;
+
+            // The quanter's Y positions are staff positions relative to the
+            // beam's OWN staff middle — resolve that staff in this system
+            // (multi-staff scores; -1 = single staff = the system's first).
+            double staffY = beam.StaffIndex >= 0
+                ? LayoutUtilities.FindStaffYInSystem(system, beam.StaffIndex)
+                : system.Y;
+            double staffMiddleY = staffY + StaffHeight / 2;
+
+            // Per-member stem direction: kneed beams mix up- and down-stems
+            // within one group (LILYPOND-REF: beam.cc:894-982 consider_auto_knees),
+            // which flips the stem's notehead attachment side.
+            bool MemberUp(int i) => grp.IsKnee ? grp.Members[i].MemberStemUp : grp.StemUp;
+            double StemAttachX(int i) => beam.MemberXPositions[i]
+                + (MemberUp(i) ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
+
             double leftBeamY = staffMiddleY - beam.LeftY * 0.5;
             double rightBeamY = staffMiddleY - beam.RightY * 0.5;
-            double leftStemX = beam.MemberXPositions[0]
-                + (grp.StemUp ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
-            double rightStemX = beam.MemberXPositions[^1]
-                + (grp.StemUp ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
+            double leftStemX = StemAttachX(0);
+            double rightStemX = StemAttachX(grp.Members.Length - 1);
 
             // Primary beam — drawn as a thick filled rectangle (sloped by polygon)
             DrawBeamSegment(leftStemX, leftBeamY, rightStemX, rightBeamY, gc);
 
-            // Secondary beams (16th+)
+            // Secondary beams (16th+) stack toward the noteheads of the beam's
+            // overall direction.
             int maxBeamCount = grp.Members.Max(m => m.BeamCount);
             for (int level = 1; level < maxBeamCount; level++)
             {
@@ -1059,10 +1073,8 @@ public static class SharedRenderer
                 {
                     if (grp.Members[i].BeamCount > level && grp.Members[i + 1].BeamCount > level)
                     {
-                        double xa = beam.MemberXPositions[i]
-                            + (grp.StemUp ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
-                        double xb = beam.MemberXPositions[i + 1]
-                            + (grp.StemUp ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
+                        double xa = StemAttachX(i);
+                        double xb = StemAttachX(i + 1);
                         double ta = beamSpanX > 0.001 ? (xa - leftStemX) / beamSpanX : 0;
                         double tb = beamSpanX > 0.001 ? (xb - leftStemX) / beamSpanX : 0;
                         double ya = leftBeamY + offset + ta * (rightBeamY - leftBeamY);
@@ -1072,28 +1084,43 @@ public static class SharedRenderer
                 }
             }
 
-            // Stems for beam members (replace any individual stems)
+            // Stems for beam members (replace any individual stems). For knees
+            // each stem runs from its OWN notehead (attachment side per member
+            // direction) to the shared beam line; for cross-staff members the
+            // notehead lives in that member's staff frame.
             double slope = (rightStemX - leftStemX) > 0.001
                 ? (rightBeamY - leftBeamY) / (rightStemX - leftStemX) : 0;
             for (int i = 0; i < grp.Members.Length; i++)
             {
                 var member = grp.Members[i];
-                double mx = beam.MemberXPositions[i];
-                double stemX = mx + (grp.StemUp
-                    ? EngravingDefaults.StemUpAttachX
-                    : EngravingDefaults.StemDownAttachX);
+                bool up = MemberUp(i);
+                double stemX = StemAttachX(i);
                 double beamY = leftBeamY + slope * (stemX - leftStemX);
-                double headY = staffMiddleY - GetMemberStaffPosition(member) * 0.5;
+
+                double memberStaffMiddleY = staffMiddleY;
+                if (!beam.MemberStaffIndices.IsDefaultOrEmpty
+                    && i < beam.MemberStaffIndices.Length
+                    && beam.MemberStaffIndices[i] >= 0)
+                {
+                    memberStaffMiddleY = LayoutUtilities.FindStaffYInSystem(
+                        system, beam.MemberStaffIndices[i]) + StaffHeight / 2;
+                }
+
+                double headY = memberStaffMiddleY - GetMemberStaffPosition(member, up) * 0.5;
                 gc.DrawLine(stemX, headY, stemX, beamY,
                     Color.Black, EngravingDefaults.StemThickness);
             }
         }
     }
 
-    private static int GetMemberStaffPosition(BeamMember m) => m.Item switch
+    /// <summary>
+    /// Staff position of the stem's notehead attachment: for chords the head
+    /// on the far side from the beam (stem-up beams attach at the bottom head).
+    /// </summary>
+    private static int GetMemberStaffPosition(BeamMember m, bool stemUp) => m.Item switch
     {
         NoteItem n => n.StaffPosition,
-        ChordItem c => c.StemUp
+        ChordItem c => stemUp
             ? c.Notes.Min(x => x.StaffPosition)
             : c.Notes.Max(x => x.StaffPosition),
         _ => 0,
