@@ -444,8 +444,12 @@ public sealed class ElementCoordinator
                     continue;
             }
 
+            // BeamCollision.X is relative to the beam's left stem —
+            // BeamScoringProblem range-checks it against [0, xSpan] and
+            // evaluates the beam Y at that offset. Passing the absolute
+            // item X silently discarded most collisions.
             collisions.Add(new BeamCollision(
-                X: itemX,
+                X: itemX - beamLeftX,
                 MinY: staffPosition - halfHeight,
                 MaxY: staffPosition + halfHeight,
                 BasePenalty: 1.0));

@@ -200,11 +200,12 @@ public class BeamScoringTests
         var group = new BeamGroup(members, 0, 0, stemUp: true);
         var xPositions = new List<double> { 50.0, 100.0 };
 
-        // Create a collision object directly in the beam's expected path
+        // Create a collision object directly in the beam's expected path.
+        // BeamCollision.X is relative to the beam's left stem (here: mid-span).
         // Beam for stem up typically goes from about staffPos+7 (ideal stem length)
         var collisions = new List<BeamCollision>
         {
-            new BeamCollision(X: 75.0, MinY: 8, MaxY: 10, BasePenalty: 5.0) // Collision near expected beam Y
+            new BeamCollision(X: 25.0, MinY: 8, MaxY: 10, BasePenalty: 5.0) // Collision near expected beam Y
         };
 
         // The collision scorer should add demerits when beam is near collision
@@ -214,6 +215,55 @@ public class BeamScoringTests
         // Beam should still produce valid output
         Assert.True(leftY > 2, "Beam should be above the notes");
         Assert.True(rightY > 4, "Beam right should be above the highest note");
+    }
+
+    [Fact]
+    public void BeamCollision_OnBeamPath_PushesBeamAway()
+    {
+        // Two level 8ths, stem up — baseline beam height first.
+        var members = ImmutableArray.Create(
+            new BeamMember(CreateNote(0), 1, 0, 1, 0, 0),
+            new BeamMember(CreateNote(0), 1, 1, 0, 0, 1));
+        var group = new BeamGroup(members, 0, 0, stemUp: true);
+        var xPositions = new List<double> { 50.0, 100.0 };
+
+        var (baseLeft, _) = new BeamScoringProblem(group, xPositions).Solve();
+
+        // A fat obstacle straddling exactly the baseline beam height at mid-span
+        // (X is relative to the left stem).
+        var collisions = new List<BeamCollision>
+        {
+            new BeamCollision(X: 25.0, MinY: baseLeft - 1, MaxY: baseLeft + 1, BasePenalty: 4.0)
+        };
+        var (withLeft, _) =
+            new BeamScoringProblem(group, xPositions, collisions: collisions).Solve();
+
+        Assert.True(withLeft > baseLeft + 0.5,
+            $"beam should quant up past the obstacle: with={withLeft} base={baseLeft}");
+    }
+
+    [Fact]
+    public void BeamCollision_OutsideSpan_IsIgnored()
+    {
+        // X beyond the beam span (e.g. an absolute coordinate passed by
+        // mistake) must not influence the result — the relative-X contract.
+        var members = ImmutableArray.Create(
+            new BeamMember(CreateNote(0), 1, 0, 1, 0, 0),
+            new BeamMember(CreateNote(0), 1, 1, 0, 0, 1));
+        var group = new BeamGroup(members, 0, 0, stemUp: true);
+        var xPositions = new List<double> { 50.0, 100.0 };
+
+        var (baseLeft, baseRight) = new BeamScoringProblem(group, xPositions).Solve();
+
+        var collisions = new List<BeamCollision>
+        {
+            new BeamCollision(X: 75.0, MinY: baseLeft - 1, MaxY: baseLeft + 1, BasePenalty: 4.0)
+        };
+        var (withLeft, withRight) =
+            new BeamScoringProblem(group, xPositions, collisions: collisions).Solve();
+
+        Assert.Equal(baseLeft, withLeft, 3);
+        Assert.Equal(baseRight, withRight, 3);
     }
 }
 

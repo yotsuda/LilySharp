@@ -1022,12 +1022,18 @@ public sealed class BeamScoringProblem
             if (collision.X < 0 || collision.X > _xSpan)
                 continue;
 
-            // LILYPOND-REF: lily/beam-quanting.cc:1380
+            // LILYPOND-REF: lily/beam-quanting.cc:1378-1380
             double centerBeamY = config.GetYAt(collision.X + _leftX, _leftX, _xSpan);
 
-            // Convert collision Y to staff positions if needed
-            double beamYMin = centerBeamY - _beamThickness;  // Approximate beam extent
-            double beamYMax = centerBeamY + _beamThickness;
+            // Beam stack extent at this X: inner beams extend from the quanted
+            // (outer) beam toward the noteheads by (count−1)·translation, the
+            // whole stack widened by half the beam thickness — LilyPond's
+            // collision beam_y_ (add_collision, :187-201). Staff-space values
+            // ×2 into the staff-position frame.
+            int stackCount = BeamCountAtX(collision.X);
+            double stackInner = -_beamDir * (stackCount - 1) * _beamTranslation * 2.0;
+            double beamYMin = centerBeamY + Math.Min(0.0, stackInner) - _beamThickness;
+            double beamYMax = centerBeamY + Math.Max(0.0, stackInner) + _beamThickness;
 
             double dist;
             bool intersects = beamYMax >= collision.MinY && beamYMin <= collision.MaxY;
@@ -1056,6 +1062,22 @@ public sealed class BeamScoringProblem
 
         if (demerits > _parameters.BeamEps)
             config.AddDemerit(demerits, "C");
+    }
+
+    /// <summary>
+    /// Number of beam lines present at a given X offset (relative to the left
+    /// stem): between two stems a beam segment exists for the smaller of the
+    /// neighbours' counts. Approximates LilyPond's per-segment lookup
+    /// (add_collision walks get_beam_segments).
+    /// </summary>
+    private int BeamCountAtX(double x)
+    {
+        for (int i = 0; i + 1 < _stemXPositions.Length; i++)
+        {
+            if (x >= _stemXPositions[i] && x <= _stemXPositions[i + 1])
+                return Math.Min(_memberBeamCounts[i], _memberBeamCounts[i + 1]);
+        }
+        return x < _stemXPositions[0] ? _memberBeamCounts[0] : _memberBeamCounts[^1];
     }
 
     // ========================================
