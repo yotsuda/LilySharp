@@ -36,13 +36,7 @@ public class IntegrationTests
     public void RenderSimpleMelody_SvgHasNoteheads()
     {
         var source = "{ c4 d e f | g a b c' | }";
-        var tree = SyntaxTree.Parse(source);
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree, null);
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-        var renderer = new SvgRenderer();
-        var svg = renderer.Render(score, layout);
+        var svg = LiveRender.Svg(source);
 
         var noteheadCount = System.Text.RegularExpressions.Regex.Matches(svg, "\uE0EA").Count;
         Assert.True(noteheadCount >= 8,
@@ -342,15 +336,13 @@ render score ""third"" { staff treble { rh } }
         Assert.True(items[2].IsCue, "e'@cue should be cue");
         Assert.True(items[3].IsCue, "f'@cue should be cue");
 
-        // Verify SVG contains scale transforms for cue notes
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-        var renderer = new SvgRenderer();
-        var svg = renderer.Render(score, layout);
+        // Verify the live render shrinks cue noteheads: SharedRenderer scales the
+        // glyph font size (4.0 × 0.66 = 2.64) rather than emitting a transform.
+        var svg = LiveRender.Svg(source);
 
-        var scaleCount = System.Text.RegularExpressions.Regex.Matches(svg, @"scale\(0\.66\)").Count;
-        Assert.True(scaleCount >= 2,
-            $"Should have at least 2 scale(0.66) transforms (one per cue note), but has {scaleCount}");
+        var cueGlyphCount = System.Text.RegularExpressions.Regex.Matches(svg, "font-size=\"2\\.64\"").Count;
+        Assert.True(cueGlyphCount >= 2,
+            $"Should have at least 2 cue-sized glyphs (one per cue note), but has {cueGlyphCount}");
     }
 
     [Fact]
@@ -383,13 +375,10 @@ render score ""third"" { staff treble { rh } }
         var items = score.Voice.Measures.SelectMany(m => m.Items).OfType<LilySharp.Core.Svg.Model.NoteItem>().ToList();
         Assert.All(items, note => Assert.False(note.IsCue));
 
-        // SVG should have no scale(0.66) transforms
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-        var renderer = new SvgRenderer();
-        var svg = renderer.Render(score, layout);
+        // SVG should have no cue-sized (4.0 × 0.66 = 2.64) glyphs
+        var svg = LiveRender.Svg(source);
 
-        Assert.DoesNotContain("scale(0.66)", svg);
+        Assert.DoesNotContain("font-size=\"2.64\"", svg);
     }
 
     [Fact]

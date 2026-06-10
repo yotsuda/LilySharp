@@ -510,11 +510,14 @@ public static class SharedRenderer
         if (note.Accidental != null)
             DrawAccidental(note.Accidental, note.IsCourtesy, x, noteY, note.SourcePosition, gc);
 
-        // Notehead — skipped when this head merges with another voice's (head wipe).
+        // Notehead — skipped when this head merges with another voice's (head wipe)
+        // or when NoteHead.transparent is overridden.
         // LILYPOND-REF: lily/note-collision.cc:381-407
+        // LILYPOND-REF: lily/grob-property.cc — NoteHead.transparent
         Color? noteheadColor = ResolveColor(resolver, "NoteHead");
+        bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;
         char head = EmmentalerGlyphs.GetNotehead(noteValue);
-        if (!headWiped)
+        if (!headWiped && !headTransparent)
             using (gc.Source(note.SourcePosition))
                 gc.DrawGlyph(head, x, noteY, noteFontSize, noteheadColor);
 
@@ -572,6 +575,8 @@ public static class SharedRenderer
         if (chord.BaseDuration.Numerator != 1) noteValue = 1;
         char head = EmmentalerGlyphs.GetNotehead(noteValue);
         Color? noteheadColor = ResolveColor(resolver, "NoteHead");
+        // LILYPOND-REF: lily/grob-property.cc — NoteHead.transparent
+        bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;
         bool stemUp = forcedStemUp ?? chord.StemUp;
 
         double topY = double.MaxValue, bottomY = double.MinValue;
@@ -581,7 +586,7 @@ public static class SharedRenderer
             double y = staffMiddleY - n.StaffPosition * 0.5;
             if (n.Accidental != null)
                 DrawAccidental(n.Accidental, isCourtesy: false, x, y, chord.SourcePosition, gc);
-            if (!headWiped)
+            if (!headWiped && !headTransparent)
                 using (gc.Source(chord.SourcePosition))
                     gc.DrawGlyph(head, x, y, FontSize, noteheadColor);
             DrawLedgerLines(n.StaffPosition, x, staffMiddleY, gc);

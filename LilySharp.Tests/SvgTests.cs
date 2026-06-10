@@ -27,16 +27,7 @@ namespace LilySharp.Tests;
 [Trait("Category", "Integration")]
 public class SvgTests
 {
-    private static string RenderSvg(string source)
-    {
-        var tree = SyntaxTree.Parse(source);
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree, null);
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-        var renderer = new SvgRenderer();
-        return renderer.Render(score, layout);
-    }
+    private static string RenderSvg(string source) => LiveRender.Svg(source);
 
     [Fact]
     public void ExportSimpleNote()
@@ -78,10 +69,13 @@ public class SvgTests
     [Fact]
     public void ExportWithTimeSignature()
     {
-        var svg = RenderSvg("time 4/4 { c4 }");
+        // 3/4 is drawn with digit glyphs (Emmentaler time sig 3, U+E0B7)
+        var svg = RenderSvg("time 3/4 { c4 }");
+        Assert.Contains("\uE0B7", svg);
 
-        // Emmentaler time sig 4 (U+E0B8)
-        Assert.Contains("\uE0B8", svg);
+        // 4/4 is drawn as the common-time C symbol (U+E091), as in LilyPond
+        var svgCommon = RenderSvg("time 4/4 { c4 }");
+        Assert.Contains("\uE091", svgCommon);
     }
 
     [Fact]
@@ -142,13 +136,7 @@ structure {
     |: A :|
 }
 ";
-        var tree = SyntaxTree.Parse(source);
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree, "melody");
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-        var renderer = new SvgRenderer();
-        var svg = renderer.Render(score, layout);
+        var svg = LiveRender.Svg(source, "melody");
 
         // Repeat barlines drawn as shapes: circles for dots, rects for bars
         Assert.Contains("<circle", svg);

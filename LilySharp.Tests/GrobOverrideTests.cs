@@ -338,36 +338,31 @@ public class GrobOverrideTests
     {
         var tree = SyntaxTree.Parse(input);
         Assert.False(tree.HasErrors, $"Parse errors: {string.Join(", ", tree.Diagnostics)}");
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree);
-        var engine = new LayoutEngine();
-        var layout = engine.Layout(score);
-        var renderer = new SvgRenderer();
-        return renderer.Render(score, layout);
+        return LiveRender.Svg(input);
     }
 
     [Fact]
     public void Pipeline_Override_NoteHeadColor_AppearsInSvg()
     {
         var svg = RenderToSvg("override NoteHead.color = red c4 d e f");
-        // All noteheads should have fill="red"
-        Assert.Contains("fill=\"red\"", svg);
+        // All noteheads should have fill="#FF0000" (live path emits hex)
+        Assert.Contains("fill=\"#FF0000\"", svg);
     }
 
     [Fact]
     public void Pipeline_Override_StemColor_AppearsInSvg()
     {
         var svg = RenderToSvg("override Stem.color = blue c4 d e f");
-        // Stems should have stroke="blue"
-        Assert.Contains("stroke=\"blue\"", svg);
+        // Stems should have stroke="#0000FF" (live path emits hex)
+        Assert.Contains("stroke=\"#0000FF\"", svg);
     }
 
     [Fact]
     public void Pipeline_OnceOverride_NoteHeadColor_OnlyFirstNote()
     {
         var svg = RenderToSvg("once override NoteHead.color = red c4 d e f");
-        // Only one note should have fill="red" (the first one)
-        int count = CountOccurrences(svg, "fill=\"red\"");
+        // Only one note should have fill="#FF0000" (the first one)
+        int count = CountOccurrences(svg, "fill=\"#FF0000\"");
         Assert.Equal(1, count);
     }
 
@@ -376,7 +371,7 @@ public class GrobOverrideTests
     {
         var svg = RenderToSvg("override NoteHead.color = red c4 d revert NoteHead.color e f");
         // First two notes have red, last two don't
-        int count = CountOccurrences(svg, "fill=\"red\"");
+        int count = CountOccurrences(svg, "fill=\"#FF0000\"");
         Assert.Equal(2, count);
     }
 
@@ -384,9 +379,9 @@ public class GrobOverrideTests
     public void Pipeline_NoOverrides_NoColorAttributes()
     {
         var svg = RenderToSvg("c4 d e f");
-        // No fill="..." on noteheads (default rendering)
-        Assert.DoesNotContain("fill=\"red\"", svg);
-        Assert.DoesNotContain("fill=\"blue\"", svg);
+        // No override colors on noteheads (default rendering)
+        Assert.DoesNotContain("fill=\"#FF0000\"", svg);
+        Assert.DoesNotContain("fill=\"#0000FF\"", svg);
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,10 @@ using LilySharp.Core.Svg.Renderer;
 namespace LilySharp.Tests;
 
 [Trait("Category", "Integration")]
+/// <summary>
+/// LEGACY-PATH DEMO (visualization aid, not a regression test). Still renders
+/// via the legacy SvgRenderer.
+/// </summary>
 public class PageLayouterSvgDemo
 {
     private const string DemoSource = """

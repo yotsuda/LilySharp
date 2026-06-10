@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -25,6 +25,11 @@ using LilySharp.Core.Svg;
 namespace LilySharp.Tests;
 
 [Trait("Category", "Unit")]
+/// <summary>
+/// LEGACY-PATH TESTS. Exercises SvgRenderer's per-glyph text metrics, which
+/// the live SharedRenderer has not ported yet (it uses length-based estimates).
+/// Repoint when real text metrics land in SharedRenderer.
+/// </summary>
 public class FontDebugTest
 {
     private readonly ITestOutputHelper _output;

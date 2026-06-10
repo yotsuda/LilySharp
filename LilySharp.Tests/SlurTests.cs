@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,6 +22,11 @@ using LilySharp.Core.Semantics;
 namespace LilySharp.Tests;
 
 [Trait("Category", "Unit")]
+/// <summary>
+/// REFERENCE-TWIN TESTS. SlurEngraver is NOT the production slur layout —
+/// the live path uses SlurScoringProblem (via ElementCoordinator). These tests
+/// pin the reference implementation only; do not read them as live coverage.
+/// </summary>
 public class SlurTests
 {
     private static NoteItem CreateNote(int staffPosition)

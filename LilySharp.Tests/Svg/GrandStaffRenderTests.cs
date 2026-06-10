@@ -54,24 +54,16 @@ public class GrandStaffRenderTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
-        var renderSpec = RenderSpecParser.FindFirst(tree);
-        Assert.NotNull(renderSpec);
-
-        var collector = new MeasureCollector();
-        var score = collector.CollectMultiStaff(tree, renderSpec);
-
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-
-        var renderer = new SvgRenderer();
-        var svg = renderer.Render(score, layout);
+        var svg = LiveRender.SvgFromRenderSpec(source);
 
         // Should contain brace (rendered using Emmentaler-Brace font)
         Assert.Contains("<text", svg);
         Assert.Contains("Emmentaler-Brace", svg);
 
-        // Should contain two sets of staff lines (10 lines total)
-        var staffLineCount = System.Text.RegularExpressions.Regex.Matches(svg, @"<line class=""staff""").Count;
+        // Should contain two sets of staff lines (10 lines total).
+        // Live staff lines are full-width horizontal lines at staff-line thickness.
+        var staffLineCount = System.Text.RegularExpressions.Regex.Matches(
+            svg, @"<line x1=""0\.00"" [^/]*stroke-width=""0\.130""").Count;
         Assert.Equal(10, staffLineCount);
 
         // Should contain treble and bass clef glyphs
@@ -149,20 +141,14 @@ public class GrandStaffRenderTests
             }
             """;
 
-        var tree = SyntaxTree.Parse(source);
-        var renderSpec = RenderSpecParser.FindFirst(tree)!;
+        var svg = LiveRender.SvgFromRenderSpec(source);
 
-        var collector = new MeasureCollector();
-        var score = collector.CollectMultiStaff(tree, renderSpec);
-
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-
-        var renderer = new SvgRenderer();
-        var svg = renderer.Render(score, layout);
-
-        // Should have system barlines that span both staves
-        // Look for barline elements
-        Assert.Contains("class=\"barline\"", svg);
+        // Should have a SpanBar: a barline rect taller than one staff (4.0 spaces)
+        // bridging the gap between the two staves.
+        var heights = System.Text.RegularExpressions.Regex.Matches(
+                svg, @"<rect [^/]*height=""([0-9.]+)""")
+            .Select(m => double.Parse(m.Groups[1].Value,
+                System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Contains(heights, h => h > 5.0);
     }
 }

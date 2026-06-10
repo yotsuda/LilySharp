@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,10 @@ using Xunit.Abstractions;
 
 namespace LilySharp.Tests;
 
+/// <summary>
+/// LEGACY-PATH BENCHMARK (skipped by default). Still constructs the legacy
+/// SvgRenderer; consider migrating to SvgGenerator when benchmarking the live path.
+/// </summary>
 public class BenchmarkTest
 {
     private readonly ITestOutputHelper _output;

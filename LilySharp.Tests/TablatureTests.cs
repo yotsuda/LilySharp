@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,11 @@ using Xunit;
 namespace LilySharp.Tests;
 
 [Trait("Category", "Unit")]
+/// <summary>
+/// LEGACY-PATH TESTS. Tablature is rendered only by the legacy SvgRenderer;
+/// SharedRenderer (the live path) has not ported it yet. Repoint these tests
+/// when tablature lands in SharedRenderer (see LILYSHARP_STANDALONE_REVIEW.md §3).
+/// </summary>
 public class TablatureTests
 {
     [Fact]

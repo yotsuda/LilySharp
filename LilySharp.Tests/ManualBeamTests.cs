@@ -187,12 +187,7 @@ render score ""test.svg"" {
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics.Select(d => d.ToString())));
 
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree, null);
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-        var renderer = new SvgRenderer();
-        var svg = renderer.Render(score, layout);
+        var svg = LiveRender.Svg(source);
 
         // SVG should be non-empty and contain noteheads
         Assert.NotEmpty(svg);
