@@ -32,8 +32,9 @@ namespace LilySharp.Core.Svg.Renderer;
 /// <see cref="LilySharp.Core.Rendering.SharedRenderer"/>; nothing outside
 /// tests and benchmarks constructs this class. It is retained only as a
 /// feature reference for the backend-agnostic migration (it still implements
-/// barline types, multiple voices, tablature, cross-staff/kneed beams, etc.
-/// that SharedRenderer has not yet ported — see LILYSHARP_STANDALONE_REVIEW.md
+/// tablature, cross-staff/kneed beams, grace slurs, ossia barlines, and real
+/// text metrics that SharedRenderer has not yet ported — barline types,
+/// SpanBars, and multi-voice ARE ported now; see LILYSHARP_STANDALONE_REVIEW.md
 /// §3). Do not add new features here; port to SharedRenderer instead. Slated
 /// for removal once parity is reached.
 /// </remarks>

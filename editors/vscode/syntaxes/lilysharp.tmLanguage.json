@@ -8,7 +8,9 @@
         { "include": "#section-declaration" },
         { "include": "#phrase-declaration" },
         { "include": "#variable-reference" },
+        { "include": "#legacy-keywords" },
         { "include": "#keywords" },
+        { "include": "#inline-volta" },
         { "include": "#structures" },
         { "include": "#pitches" },
         { "include": "#rests" },
@@ -104,15 +106,42 @@
                 }
             ]
         },
+        "legacy-keywords": {
+            "patterns": [
+                {
+                    "comment": "Removed constructs: parser rejects 'repeat volta'/'alternative' (LYS0006) and 'let' (LegacyDeclarationForm). Highlight as errors.",
+                    "name": "invalid.illegal.removed-keyword.lilysharp",
+                    "match": "\\b(volta|alternative|let)\\b"
+                },
+                {
+                    "comment": "'use name' still parses but warns; prefer $name.",
+                    "name": "invalid.deprecated.use-keyword.lilysharp",
+                    "match": "\\buse\\b"
+                }
+            ]
+        },
         "keywords": {
             "patterns": [
                 {
                     "name": "keyword.control.lilysharp",
-                    "match": "\\b(score|part|staff|voice|relative|absolute|fixed|repeat|volta|alternative|let|use|structure|render|grace|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics)\\b"
+                    "match": "\\b(score|part|staff|voice|relative|absolute|fixed|repeat|structure|render|grace|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics)\\b"
                 },
                 {
                     "name": "keyword.other.lilysharp",
                     "match": "\\b(title|composer|tempo|time|key|clef|major|minor|instrument|octave|channel|tuning|treble|bass|alto|tenor|percent|unfold)\\b"
+                }
+            ]
+        },
+        "inline-volta": {
+            "patterns": [
+                {
+                    "comment": "Inline volta endings: [1. ...] [2. ...] [1-3. ...] [1,3. ...] — '[' + number disambiguates volta vs beam",
+                    "match": "(\\[)\\s*(\\d+(?:\\s*[-,]\\s*\\d+)*)(\\.)",
+                    "captures": {
+                        "1": { "name": "punctuation.definition.volta.lilysharp" },
+                        "2": { "name": "constant.numeric.volta.lilysharp" },
+                        "3": { "name": "punctuation.definition.volta.lilysharp" }
+                    }
                 }
             ]
         },
@@ -162,6 +191,15 @@
         },
         "barlines": {
             "patterns": [
+                {
+                    "comment": "Repeat-end with explicit count: :|*N",
+                    "match": "(:\\|)(\\*)(\\d+)",
+                    "captures": {
+                        "1": { "name": "punctuation.separator.barline.lilysharp" },
+                        "2": { "name": "keyword.operator.repeat-count.lilysharp" },
+                        "3": { "name": "constant.numeric.repeat-count.lilysharp" }
+                    }
+                },
                 {
                     "name": "punctuation.separator.barline.lilysharp",
                     "match": "\\|\\||\\|\\.|\\|:|:\\||\\|"

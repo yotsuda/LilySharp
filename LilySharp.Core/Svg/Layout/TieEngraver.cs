@@ -26,8 +26,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// <remarks>
 /// REFERENCE / NOT IN PRODUCTION PATH. The live tie layout is
 /// <see cref="TieFormattingProblem"/>, invoked by <c>ElementCoordinator</c>.
-/// (Note: ElementCoordinator holds a <c>_tieEngraver</c> field but never calls
-/// it — that field is dead.) This engraver is used only by tests
+/// This engraver is used only by tests
 /// (<c>TieTests</c>); keep as a reference or retire it. See
 /// LILYSHARP_STANDALONE_REVIEW.md §1.
 /// LILYPOND-REF: lily/tie-formatting-problem.cc:1-1285 Tie_formatting_problem class

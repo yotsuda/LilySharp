@@ -37,12 +37,14 @@ namespace LilySharp.Core.Rendering;
 /// brackets, grace notes, multi-measure rests, and more (see
 /// <see cref="RenderTo"/>).
 ///
+/// Barline types (double / final / repeat / repeat-dots), SpanBars across
+/// staff groups, and multiple voices per staff (with stem-direction defaults
+/// and collision offsets) are implemented here as well.
+///
 /// The legacy <c>SvgRenderer</c> is no longer in any production path; it is
 /// kept only as a feature reference until the remaining migration backlog is
 /// ported here. Features still owned by <c>SvgRenderer</c> and NOT yet
 /// implemented in this renderer:
-///   • barline types (double / final / repeat / repeat-dots) and SpanBars
-///   • multiple voices per staff (only <c>PrimaryVoice</c> is drawn today)
 ///   • tablature staves
 ///   • cross-staff / kneed beams (DrawBeams uses a single staffMiddleY)
 ///   • grace slurs, ossia barlines, layout-driven tempo marks
