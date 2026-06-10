@@ -234,7 +234,8 @@
             "patterns": [
                 {
                     "name": "keyword.other.articulation.lilysharp",
-                    "match": "@(staccato|accent|tenuto|marcato|fermata|portato|trill|mordent|prall|turn|invertedturn|pralltriller)\\b"
+                    "comment": "Keep in sync with LilySharp.Core ArticulationRegistry (full names + abbreviations).",
+                    "match": "@(staccato|stac|accent|acc|tenuto|ten|marcato|marc|fermata|ferm|portato|trill|tr|mordent|prall|turn|invertedturn|pralltriller)\\b"
                 }
             ]
         },
