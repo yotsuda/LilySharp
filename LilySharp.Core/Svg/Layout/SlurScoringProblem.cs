@@ -234,12 +234,13 @@ public sealed class SlurScoringProblem
 
     /// <summary>
     /// Runs the next scorer on a configuration.
-    /// Scorer order matches LilyPond: SLOPE → ENCOMPASS → EXTRA_ENCOMPASS → EDGES.
+    /// Scorer order matches LilyPond (cheap before expensive):
+    /// SLOPE → EDGES → EXTRA_ENCOMPASS → ENCOMPASS.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/slur-configuration.cc:531-558 run_next_scorer()
-    /// LILYPOND-REF: lily/include/slur-configuration.hh Slur_scorers enum
-    /// Order: INITIAL_SCORE, SLOPE, ENCOMPASS, EXTRA_ENCOMPASS, EDGES
+    /// LILYPOND-REF: lily/include/slur-configuration.hh:43-51 Slur_scorers enum
+    /// Order: INITIAL_SCORE, SLOPE, EDGES, EXTRA_ENCOMPASS, ENCOMPASS
     /// </remarks>
     private void RunNextScorer(SlurCandidate config)
     {
@@ -248,14 +249,14 @@ public sealed class SlurScoringProblem
             case 1: // SLOPE
                 ScoreSlopes(config);
                 break;
-            case 2: // ENCOMPASS
-                ScoreEncompass(config);
+            case 2: // EDGES
+                ScoreEdges(config);
                 break;
             case 3: // EXTRA_ENCOMPASS
                 ScoreExtraEncompass(config);
                 break;
-            case 4: // EDGES
-                ScoreEdges(config);
+            case 4: // ENCOMPASS
+                ScoreEncompass(config);
                 break;
         }
         config.NextScorerTodo++;
@@ -371,25 +372,31 @@ public sealed class SlurScoringProblem
         demerit += Math.Max(Math.Abs(slurDy / slurDx) - _parameters.MaxSlope, 0.0)
                    * _parameters.MaxSlopeFactor;
 
+        // Broken slurs (split at a line break) skip the musical-slope penalties:
+        // their attachment points are artificial at the break edge.
+        // LILYPOND-REF: slur-configuration.cc:505-521 (!state.is_broken_ gates)
+        bool isBroken = _isBrokenLeft || _isBrokenRight;
+
         // Steeper than musical indication
-        // LILYPOND-REF: slur-configuration.cc:504-508
-        double maxDy = Math.Abs(_musicalDy) + 0.2; // 0.2: staffline offset
-        demerit += _parameters.SteeperSlopeFactor
-                   * Math.Max(Math.Abs(slurDy) - maxDy, 0.0);
+        // LILYPOND-REF: slur-configuration.cc:501-507
+        double maxDy = Math.Abs(_musicalDy) + 0.2; // 0.2: account for staffline offset
+        if (!isBroken)
+            demerit += _parameters.SteeperSlopeFactor
+                       * Math.Max(Math.Abs(slurDy) - maxDy, 0.0);
 
         // Max slope penalty (applied twice in LilyPond)
-        // LILYPOND-REF: slur-configuration.cc:510-513
+        // LILYPOND-REF: slur-configuration.cc:509-513
         demerit += Math.Max(Math.Abs(slurDy / slurDx) - _parameters.MaxSlope, 0.0)
                    * _parameters.MaxSlopeFactor;
 
         // Non-horizontal penalty: if notes are at same pitch but slur is tilted
-        // LILYPOND-REF: slur-configuration.cc:517-519
-        if (Math.Abs(_musicalDy) < 0.01 && Math.Abs(slurDy) > 0.01)
+        // LILYPOND-REF: slur-configuration.cc:515-518
+        if (Math.Abs(_musicalDy) < 0.01 && Math.Abs(slurDy) > 0.01 && !isBroken)
             demerit += _parameters.NonHorizontalPenalty;
 
         // Same direction penalty: slur slopes opposite to note movement
-        // LILYPOND-REF: slur-configuration.cc:521-526
-        if (Math.Abs(_musicalDy) > 0.01 && Math.Abs(slurDy) > 0.01
+        // LILYPOND-REF: slur-configuration.cc:520-524
+        if (Math.Abs(_musicalDy) > 0.01 && Math.Abs(slurDy) > 0.01 && !isBroken
             && Math.Sign(slurDy) != Math.Sign(_musicalDy))
         {
             demerit += _parameters.SameSlopePenalty;
