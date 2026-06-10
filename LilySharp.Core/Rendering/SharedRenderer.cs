@@ -18,6 +18,8 @@ using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
+using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Rendering;
 
@@ -38,18 +40,14 @@ namespace LilySharp.Core.Rendering;
 /// <see cref="RenderTo"/>).
 ///
 /// Barline types (double / final / repeat / repeat-dots), SpanBars across
-/// staff groups, and multiple voices per staff (with stem-direction defaults
-/// and collision offsets) are implemented here as well.
+/// staff groups, multiple voices per staff (with stem-direction defaults and
+/// collision offsets), tablature staves, grace slurs, ossia staves, and
+/// measured serif text (SerifTextMetrics) are implemented here as well.
 ///
-/// The legacy <c>SvgRenderer</c> is no longer in any production path; it is
-/// kept only as a feature reference until the remaining migration backlog is
-/// ported here. Features still owned by <c>SvgRenderer</c> and NOT yet
-/// implemented in this renderer:
-///   • tablature staves
-///   • cross-staff / kneed beams (DrawBeams uses a single staffMiddleY)
-///   • grace slurs, ossia barlines, layout-driven tempo marks
-///   • real serif text metrics (box widths are length×factor estimates)
-/// See LILYSHARP_STANDALONE_REVIEW.md §3 for the full parity backlog.
+/// The legacy <c>SvgRenderer</c> was retired and DELETED once parity was
+/// reached (recoverable from git history). Known remaining gap:
+///   • cross-staff / kneed beam DRAWING (DrawBeams uses a single
+///     staffMiddleY; the quanter itself is knee-aware)
 /// </remarks>
 public static class SharedRenderer
 {
@@ -190,6 +188,14 @@ public static class SharedRenderer
             try
             {
                 double localStaffY = isOssia ? 0 : staffY;
+
+                // Tablature staves: string lines + TAB clef + fret numbers.
+                if (staff.IsTab)
+                {
+                    DrawTabStaff(staff, system, localStaffY, staffRight, systemStartX, gc);
+                    continue;
+                }
+
                 DrawStaffLines(localStaffY, staffRight, gc);
 
                 // System-start prefix (clef, key, time) only on first system
@@ -276,6 +282,148 @@ public static class SharedRenderer
             double y = staffY + i;
             gc.DrawLine(0, y, width, y, Color.Black, EngravingDefaults.StaffLineThickness);
         }
+    }
+
+    // ---------- Tablature ----------
+
+    /// <summary>
+    /// Draws a tablature staff: one line per string, the TAB clef, and fret
+    /// numbers (with white backgrounds occluding the string line) instead of
+    /// noteheads. Rests draw nothing on a tab staff.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tab-note-heads-engraver.cc — fret numbers as note heads
+    /// LILYPOND-REF: scm/translation-functions.scm determine-frets
+    /// </remarks>
+    private static void DrawTabStaff(Staff staff, SystemLayout system,
+        double staffY, double staffRight, double systemStartX, IDrawingContext gc)
+    {
+        var tuningType = staff.Tuning ?? TuningType.Guitar;
+        int stringCount = Tunings.GetStringCount(tuningType);
+        int[] tuning = Tunings.GetTuning(tuningType);
+
+        // One staff line per string.
+        for (int i = 0; i < stringCount; i++)
+            gc.DrawLine(0, staffY + i, staffRight, staffY + i,
+                Color.Black, EngravingDefaults.StaffLineThickness);
+
+        // TAB clef (clefs.tab) centered on the staff. The glyph is designed
+        // for 6-string staves; it overflows gracefully on fewer strings.
+        double tabCenterY = staffY + (stringCount - 1) / 2.0;
+        gc.DrawGlyph(EmmentalerGlyphs.TabClef, systemStartX, tabCenterY,
+            FontSize * (5.0 / 5.78));
+
+        // Per-measure barlines at the tab staff height (stringCount−1 spaces).
+        var primaryVoice = staff.PrimaryVoice;
+        double tabHeight = stringCount - 1;
+        foreach (var ml in system.Measures)
+        {
+            if (ml.MeasureIndex >= primaryVoice.Measures.Length)
+                continue;
+            var measure = primaryVoice.Measures[ml.MeasureIndex];
+            if (measure.StartBarline != BarlineType.None)
+                DrawBarline(measure.StartBarline, ml.X, staffY, tabHeight, gc);
+            double endX = ml.X + ml.Width;
+            double width = GetVisualBarlineWidth(measure.EndBarline);
+            DrawBarline(measure.EndBarline, endX - width, staffY, tabHeight, gc);
+        }
+
+        foreach (var ml in system.Measures)
+        {
+            foreach (var voice in staff.Voices)
+            {
+                if (ml.MeasureIndex < voice.Measures.Length)
+                    DrawTabMeasure(voice.Measures[ml.MeasureIndex], ml, staffY,
+                        tuning, stringCount, gc);
+            }
+        }
+    }
+
+    private static void DrawTabMeasure(Measure measure, MeasureLayout ml,
+        double staffY, int[] tuning, int stringCount, IDrawingContext gc)
+    {
+        bool useColumnTiming = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
+        var currentTiming = Fraction.Zero;
+
+        for (int i = 0; i < measure.Items.Length; i++)
+        {
+            var item = measure.Items[i];
+            double itemX = useColumnTiming
+                ? ml.X + ml.GetXForTiming(currentTiming)
+                : (i < ml.Items.Length ? ml.X + ml.Items[i].X : ml.X);
+            currentTiming += item.Duration;
+
+            switch (item)
+            {
+                case NoteItem note:
+                    DrawTabNote(note.StaffPosition, note.Accidental, itemX, staffY,
+                        tuning, note.SourcePosition, gc);
+                    break;
+                case ChordItem chord:
+                    foreach (var cn in chord.Notes)
+                        DrawTabNote(cn.StaffPosition, cn.Accidental, itemX, staffY,
+                            tuning, chord.SourcePosition, gc);
+                    break;
+                // RestItem: nothing on a tab staff.
+            }
+        }
+    }
+
+    private static void DrawTabNote(int staffPosition, string? accidental,
+        double x, double staffY, int[] tuning, int sourcePosition, IDrawingContext gc)
+    {
+        int midiPitch = StaffPositionToMidi(staffPosition, accidental);
+        var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning);
+
+        // String 1 (highest pitch) is the TOP tab line; string N the bottom.
+        double noteY = staffY + (stringNum - 1);
+
+        string fretText = fret.ToString();
+        const double fontSize = 1.6;
+        double bgWidth = fretText.Length == 1 ? 1.0 : 1.6;
+        const double bgHeight = 1.1;
+
+        using (gc.Source(sourcePosition))
+        {
+            // White background occludes the string line behind the number.
+            gc.DrawRectangle(x - bgWidth / 2, noteY - bgHeight / 2, bgWidth, bgHeight,
+                fill: Color.White);
+            gc.DrawText(fretText, x, noteY + fontSize * 0.32, fontSize, "serif",
+                FontStyle.Regular, TextAnchor.Middle, Color.Black);
+        }
+    }
+
+    /// <summary>
+    /// Converts a staff position and accidental back to a MIDI note number
+    /// (staff position 0 = middle C = MIDI 60).
+    /// </summary>
+    private static int StaffPositionToMidi(int staffPosition, string? accidental)
+    {
+        int step = ((staffPosition % 7) + 7) % 7;
+        int octave = 4 + (staffPosition - step) / 7;
+
+        int semitone = step switch
+        {
+            0 => 0,  // C
+            1 => 2,  // D
+            2 => 4,  // E
+            3 => 5,  // F
+            4 => 7,  // G
+            5 => 9,  // A
+            6 => 11, // B
+            _ => 0
+        };
+
+        int alteration = accidental switch
+        {
+            "sharp" => 1,
+            "flat" => -1,
+            "doubleSharp" => 2,
+            "doubleFlat" => -2,
+            _ => 0
+        };
+
+        return (octave + 1) * 12 + semitone + alteration;
     }
 
     // ---------- Clef ----------

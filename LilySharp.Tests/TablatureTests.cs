@@ -135,26 +135,18 @@ public class TablatureTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
-        var renderSpec = RenderSpecParser.FindFirst(tree);
-        Assert.NotNull(renderSpec);
-
-        var collector = new MeasureCollector();
-        var score = collector.CollectMultiStaff(tree, renderSpec);
-
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-
-        var renderer = new SvgRenderer();
-        var svg = renderer.Render(score, layout);
+        var svg = LiveRender.SvgFromRenderSpec(source);
 
         // Should contain TAB clef glyph (Emmentaler clefs.tab = U+E08F)
         Assert.Contains("\uE08F", svg);
 
-        // Should contain fret numbers
-        Assert.Contains("class=\"tab-fret\"", svg);
+        // Should contain serif fret-number text
+        Assert.Contains("font-family=\"serif\"", svg);
 
-        // Should contain 6 staff lines for guitar tab (in addition to 5 for treble)
-        var staffLineCount = System.Text.RegularExpressions.Regex.Matches(svg, "class=\"staff\"").Count;
+        // Should contain 6 staff lines for guitar tab (in addition to 5 for treble):
+        // live staff/string lines are full-width horizontals at line thickness.
+        var staffLineCount = System.Text.RegularExpressions.Regex.Matches(
+            svg, "<line x1=\"0\\.00\" [^/]*stroke-width=\"0\\.130\"").Count;
         Assert.True(staffLineCount >= 11, $"Expected at least 11 staff lines (5 treble + 6 tab), got {staffLineCount}");
     }
 
@@ -221,22 +213,15 @@ public class TablatureTests
         Assert.NotNull(renderSpec);
         Assert.Equal(2, renderSpec.Items.Length); // staff + tab
 
-        var collector = new MeasureCollector();
-        var score = collector.CollectMultiStaff(tree, renderSpec);
-
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-
-        var renderer = new SvgRenderer();
-        var svg = renderer.Render(score, layout);
+        var svg = LiveRender.SvgFromRenderSpec(source);
 
         // Basic SVG structure
         Assert.Contains("<svg", svg);
         Assert.Contains("</svg>", svg);
 
-        // Tab-specific elements
-        Assert.Contains("\uE08F", svg);  // TAB clef glyph
-        Assert.Contains("class=\"tab-fret\"", svg);
-        Assert.Contains("class=\"tab-bg\"", svg);
+        // Tab-specific elements: TAB clef glyph + the white fret-number
+        // background that occludes the string line.
+        Assert.Contains("\uE08F", svg);
+        Assert.Contains("fill=\"#FFFFFF\"", svg);
     }
 }

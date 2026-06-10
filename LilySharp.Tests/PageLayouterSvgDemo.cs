@@ -17,17 +17,18 @@
 using System.Collections.Immutable;
 using Xunit;
 using LilySharp.Core.Syntax;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Renderer;
 
 namespace LilySharp.Tests;
 
-[Trait("Category", "Integration")]
 /// <summary>
-/// LEGACY-PATH DEMO (visualization aid, not a regression test). Still renders
-/// via the legacy SvgRenderer.
+/// Page-breaking demo (visualization aid) — renders via the live SvgGenerator
+/// pipeline and writes output/page-breaking-demo.svg.
 /// </summary>
+[Trait("Category", "Integration")]
 public class PageLayouterSvgDemo
 {
     private const string DemoSource = """
@@ -65,19 +66,12 @@ public class PageLayouterSvgDemo
         var tree = SyntaxTree.Parse(DemoSource);
         Assert.False(tree.HasErrors, $"Parse errors: {string.Join(", ", tree.Diagnostics)}");
 
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree);
-
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-
         var fontDir = Path.Combine(
             Path.GetDirectoryName(typeof(PageLayouterSvgDemo).Assembly.Location)!,
             "..", "..", "..", "..", "LilySharp.Core", "Fonts");
         fontDir = Path.GetFullPath(fontDir);
         var renderOptions = SvgRenderOptions.Export(fontDir);
-        var renderer = new SvgRenderer(renderOptions: renderOptions);
-        var svg = renderer.Render(score, layout);
+        var svg = SvgGenerator.Generate(tree, renderOptions);
 
         var outputPath = Path.Combine(
             Path.GetDirectoryName(typeof(PageLayouterSvgDemo).Assembly.Location)!,
@@ -85,6 +79,8 @@ public class PageLayouterSvgDemo
         outputPath = Path.GetFullPath(outputPath);
         File.WriteAllText(outputPath, svg);
 
+        // 24 measures at default density break into several systems.
+        var layout = new LayoutEngine().Layout(new MeasureCollector().Collect(tree));
         Assert.True(layout.Systems.Length >= 3, $"Expected ≥3 systems, got {layout.Systems.Length}");
     }
 

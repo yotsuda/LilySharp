@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,8 @@ using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Rendering;
+using LilySharp.Core.Rendering.Svg;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 
@@ -40,7 +42,8 @@ public class RenderPipelineBenchmark
     // Pre-parsed trees for stage-specific benchmarks
     private SyntaxTree _furEliseTree = null!;
     private Score _furEliseScore = null!;
-    private ScoreLayout _furEliseLayout = null!;
+    private MultiStaffScore _furEliseMulti = null!;
+    private ScoreLayout _furEliseMultiLayout = null!;
 
     private static string FindSamplesDir()
     {
@@ -68,7 +71,8 @@ public class RenderPipelineBenchmark
         var collector = new MeasureCollector();
         _furEliseScore = collector.Collect(_furEliseTree, null);
         var layoutEngine = new LayoutEngine();
-        _furEliseLayout = layoutEngine.Layout(_furEliseScore);
+        _furEliseMulti = MultiStaffScore.FromScore(_furEliseScore);
+        _furEliseMultiLayout = layoutEngine.Layout(_furEliseMulti);
     }
 
     // === Full Pipeline Benchmarks ===
@@ -116,13 +120,15 @@ public class RenderPipelineBenchmark
     public ScoreLayout Stage_Layout()
     {
         var layoutEngine = new LayoutEngine();
-        return layoutEngine.Layout(_furEliseScore);
+        return layoutEngine.Layout(_furEliseMulti);
     }
 
     [Benchmark(Description = "Stage 4: Render SVG")]
     public string Stage_RenderSvg()
     {
-        var renderer = new SvgRenderer(renderOptions: new SvgRenderOptions { EmbedFont = false });
-        return renderer.Render(_furEliseScore, _furEliseLayout);
+        using var doc = new SvgDocumentContext(new SvgDocumentOptions { EmbedFont = false });
+        SharedRenderer.RenderTo(_furEliseMulti, _furEliseMultiLayout, doc);
+        doc.Dispose();
+        return doc.ToSvg();
     }
 }

@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,34 +17,29 @@
 using Xunit;
 using Xunit.Abstractions;
 using LilySharp.Core.Syntax;
-using LilySharp.Core.Svg.Collector;
-using LilySharp.Core.Svg.Layout;
-using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Renderer;
 
 namespace LilySharp.Tests;
 
-[Trait("Category", "Unit")]
 /// <summary>
-/// LEGACY-PATH TESTS. Exercises SvgRenderer's per-glyph text metrics, which
-/// the live SharedRenderer has not ported yet (it uses length-based estimates).
-/// Repoint when real text metrics land in SharedRenderer.
+/// Font-face emission modes of the live SVG path (SvgGenerator →
+/// SvgDocumentContext.GetFontFaceRule): Preview omits @font-face entirely
+/// (the host page injects Emmentaler); Default references the local font.
 /// </summary>
+[Trait("Category", "Unit")]
 public class FontDebugTest
 {
     private readonly ITestOutputHelper _output;
     public FontDebugTest(ITestOutputHelper output) => _output = output;
 
+    private static string Render(SvgRenderOptions options)
+        => SvgGenerator.Generate(SyntaxTree.Parse("c4 |"), options);
+
     [Fact]
     public void Preview_OmitsFontFace()
     {
-        var tree = SyntaxTree.Parse("c4 |");
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree);
-        var layout = new LayoutEngine().Layout(score);
-
-        var renderer = new SvgRenderer(renderOptions: SvgRenderOptions.Preview());
-        var svg = renderer.Render(score, layout);
+        var svg = Render(SvgRenderOptions.Preview());
 
         // Preview mode should NOT contain @font-face
         Assert.DoesNotContain("@font-face", svg);
@@ -55,28 +50,16 @@ public class FontDebugTest
     [Fact]
     public void Default_UsesLocalFont()
     {
-        var tree = SyntaxTree.Parse("c4 |");
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree);
-        var layout = new LayoutEngine().Layout(score);
+        var svg = Render(new SvgRenderOptions { EmbedFont = false });
 
-        var renderer = new SvgRenderer(renderOptions: SvgRenderOptions.Default);
-        var svg = renderer.Render(score, layout);
-
-        // Default mode should reference local font
+        // Without embedding, the font-face rule falls back to the local font
         Assert.Contains("src: local('Emmentaler')", svg);
     }
 
     [Fact]
     public void SvgContainsGlyphCharacters()
     {
-        var tree = SyntaxTree.Parse("c4 |");
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree);
-        var layout = new LayoutEngine().Layout(score);
-
-        var renderer = new SvgRenderer(renderOptions: SvgRenderOptions.Preview());
-        var svg = renderer.Render(score, layout);
+        var svg = Render(SvgRenderOptions.Preview());
 
         // Should contain music glyph characters
         Assert.True(svg.Contains(EmmentalerGlyphs.NoteheadBlack) ||

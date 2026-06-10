@@ -16,8 +16,7 @@
 
 using System.Diagnostics;
 using LilySharp.Core.Syntax;
-using LilySharp.Core.Svg.Collector;
-using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Renderer;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,8 +24,8 @@ using Xunit.Abstractions;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// LEGACY-PATH BENCHMARK (skipped by default). Still constructs the legacy
-/// SvgRenderer; consider migrating to SvgGenerator when benchmarking the live path.
+/// In-test benchmark (skipped by default; run manually). Renders through the
+/// live pipeline via <see cref="SvgGenerator"/>.
 /// </summary>
 public class BenchmarkTest
 {
@@ -34,14 +33,7 @@ public class BenchmarkTest
     public BenchmarkTest(ITestOutputHelper output) => _output = output;
 
     private static string RenderSvg(SyntaxTree tree)
-    {
-        var collector = new MeasureCollector();
-        var score = collector.Collect(tree, null);
-        var layoutEngine = new LayoutEngine();
-        var layout = layoutEngine.Layout(score);
-        var renderer = new SvgRenderer();
-        return renderer.Render(score, layout);
-    }
+        => SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
 
     [Fact(Skip = "Benchmark test - run manually")]
     [Trait("Category", "Benchmark")]
