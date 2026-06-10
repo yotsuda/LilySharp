@@ -408,13 +408,27 @@ public sealed class BeamScoringProblem
         if (_staffPositions.Length <= 2)
             return 0;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:733-737
-        // Check if notes form a concave pattern
-        if (IsConcaveSingleNotes(_staffPositions, _beamDir))
+        // LILYPOND-REF: lily/beam-quanting.cc:709-726 — for chords the close
+        // head (beam side) and far head feed separate measures; single notes
+        // have close == far == StaffPosition.
+        var close = new int[_group.Members.Length];
+        var far = new int[_group.Members.Length];
+        for (int i = 0; i < _group.Members.Length; i++)
+        {
+            var m = _group.Members[i];
+            close[i] = _beamDir > 0 ? m.HeadPositionMax : m.HeadPositionMin;
+            far[i] = _beamDir > 0 ? m.HeadPositionMin : m.HeadPositionMax;
+        }
+
+        // LILYPOND-REF: lily/beam-quanting.cc:730-737 — the bowl check runs on
+        // the close heads for UP beams, the far heads for DOWN beams.
+        if (IsConcaveSingleNotes(_beamDir > 0 ? close : far, _beamDir))
             return 10000;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:740-743
-        return CalcPositionsConcaveness(_staffPositions, _beamDir);
+        // LILYPOND-REF: lily/beam-quanting.cc:738-743 — average of far and
+        // close concaveness.
+        return (CalcPositionsConcaveness(far, _beamDir)
+                + CalcPositionsConcaveness(close, _beamDir)) / 2;
     }
 
     /// <summary>

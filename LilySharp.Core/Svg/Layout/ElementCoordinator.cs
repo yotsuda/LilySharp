@@ -367,7 +367,9 @@ public sealed class ElementCoordinator
                 m.StaffPosition, itemIndex: i,
                 memberStemUp: m.MemberStemUp,
                 targetStaffIndex: m.TargetStaffIndex,
-                measureIndex: m.MeasureIndex));
+                measureIndex: m.MeasureIndex,
+                headPositionMin: m.HeadPositionMin,
+                headPositionMax: m.HeadPositionMax));
         }
 
         var renumberedGroup = new BeamGroup(

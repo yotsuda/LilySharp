@@ -167,6 +167,22 @@ public sealed record BeamMember
     /// </remarks>
     public int TargetStaffIndex { get; }
 
+    /// <summary>
+    /// Lowest notehead staff position (= <see cref="StaffPosition"/> for
+    /// single notes; the bottom chord note for chords).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: beam-quanting.cc calc_concaveness — head_positions_[i]
+    /// (close/far head per beam direction).
+    /// </remarks>
+    public int HeadPositionMin { get; }
+
+    /// <summary>
+    /// Highest notehead staff position (= <see cref="StaffPosition"/> for
+    /// single notes; the top chord note for chords).
+    /// </summary>
+    public int HeadPositionMax { get; }
+
     public BeamMember(
         MusicItem item,
         int beamCount,
@@ -176,7 +192,9 @@ public sealed record BeamMember
         int itemIndex,
         bool memberStemUp = true,
         int targetStaffIndex = -1,
-        int measureIndex = -1)
+        int measureIndex = -1,
+        int? headPositionMin = null,
+        int? headPositionMax = null)
     {
         Item = item;
         BeamCount = beamCount;
@@ -187,6 +205,8 @@ public sealed record BeamMember
         MemberStemUp = memberStemUp;
         TargetStaffIndex = targetStaffIndex;
         MeasureIndex = measureIndex;
+        HeadPositionMin = headPositionMin ?? staffPosition;
+        HeadPositionMax = headPositionMax ?? staffPosition;
     }
 
     /// <summary>

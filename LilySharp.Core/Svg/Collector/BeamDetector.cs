@@ -195,11 +195,14 @@ public sealed class BeamDetector
             if (i == allEntries.Count - 1)
                 beamCountRight = 0;
 
+            var headRange = GetHeadRange(item);
             members.Add(new BeamMember(
                 item, beamCount, beamCountLeft, beamCountRight,
                 staffPosition, itemIdx,
                 memberStemUp: staffPosition < 0,
-                measureIndex: mi));
+                measureIndex: mi,
+                headPositionMin: headRange.Min,
+                headPositionMax: headRange.Max));
 
             totalPosition += staffPosition;
             noteCount++;
@@ -214,7 +217,9 @@ public sealed class BeamDetector
                 m.StaffPosition, m.ItemIndex,
                 memberStemUp: stemUp,
                 targetStaffIndex: m.TargetStaffIndex,
-                measureIndex: m.MeasureIndex);
+                measureIndex: m.MeasureIndex,
+                headPositionMin: m.HeadPositionMin,
+                headPositionMax: m.HeadPositionMax);
         }
 
         beamGroups.Add(new BeamGroup(
@@ -468,6 +473,7 @@ public sealed class BeamDetector
                 beamCountRight = continuousBeams + rightBeamlets;
             }
 
+            var headRange = GetHeadRange(item);
             members.Add(new BeamMember(
                 item,
                 beamCount,
@@ -475,7 +481,9 @@ public sealed class BeamDetector
                 beamCountRight,
                 staffPosition,
                 itemIndex,
-                memberStemUp: staffPosition < 0)); // Temporary: per-member direction based on position
+                memberStemUp: staffPosition < 0, // Temporary: per-member direction based on position
+                headPositionMin: headRange.Min,
+                headPositionMax: headRange.Max));
         }
 
         bool stemUp = noteCount > 0 && (double)totalPosition / noteCount < 0;  // stem up if below middle line
@@ -496,7 +504,9 @@ public sealed class BeamDetector
         {
             var m = members[i];
             members[i] = new BeamMember(m.Item, m.BeamCount, m.BeamCountLeft, m.BeamCountRight,
-                m.StaffPosition, m.ItemIndex, stemUp);
+                m.StaffPosition, m.ItemIndex, stemUp,
+                headPositionMin: m.HeadPositionMin,
+                headPositionMax: m.HeadPositionMax);
             }
         }
         // If useKnee, keep per-member directions based on staff position
@@ -602,6 +612,19 @@ public sealed class BeamDetector
 
         return (int)chord.Notes.Average(n => n.StaffPosition);
     }
+
+    /// <summary>
+    /// Notehead staff-position range: single value for notes, bottom/top
+    /// chord notes for chords. Feeds concaveness's close/far heads.
+    /// LILYPOND-REF: beam-quanting.cc calc_concaveness head_positions_.
+    /// </summary>
+    private static (int Min, int Max) GetHeadRange(MusicItem item) => item switch
+    {
+        NoteItem note => (note.StaffPosition, note.StaffPosition),
+        ChordItem { Notes.Length: > 0 } chord =>
+            (chord.Notes.Min(n => n.StaffPosition), chord.Notes.Max(n => n.StaffPosition)),
+        _ => (4, 4)
+    };
 
     /// <summary>
     /// Detects manual beam groups from HasBeamStart/HasBeamEnd flags on notes/chords.
