@@ -69,9 +69,13 @@ public sealed record BeamQuantParameters
     /// <summary>Penalty for collision with other objects.</summary>
     public double CollisionPenalty { get; init; } = 500.0;
 
-    /// <summary>Padding for collision detection.</summary>
-    /// <remarks>LILYPOND-REF: lily/beam-quanting.cc:1390 collision_padding = 0.35</remarks>
-    public double CollisionPadding { get; init; } = 0.35;
+    /// <summary>Padding for collision detection (staff spaces).</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam-quanting.cc:113-118 COLLISION_PADDING —
+    /// default 0.5 (scaled by length-fraction² for grace beams, which
+    /// Lily# does not have yet).
+    /// </remarks>
+    public double CollisionPadding { get; init; } = 0.5;
 
     /// <summary>Penalty for horizontal inter-quant positioning.</summary>
     public double HorizontalInterQuantPenalty { get; init; } = 500.0;

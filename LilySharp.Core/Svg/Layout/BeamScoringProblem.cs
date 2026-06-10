@@ -73,6 +73,11 @@ public sealed class BeamScoringProblem
     // ideal/shortest stem length, matching LilyPond's Stem_info.
     private readonly int[] _memberBeamCounts;
 
+    // Edge (first/last member) beam counts and stem directions.
+    // LILYPOND-REF: beam-quanting.cc edge_beam_counts_, edge_dirs_
+    private readonly int[] _edgeBeamCounts; // [0]=left, [1]=right
+    private readonly int[] _edgeDirs;       // [0]=left, [1]=right
+
     // Staff radius (half staff height in half-spaces = 2.0 for 5-line staff)
     private const double StaffRadius = 2.0;
 
@@ -127,6 +132,14 @@ public sealed class BeamScoringProblem
         {
             _memberBeamDirs[i] = group.Members[i].MemberStemUp ? 1 : -1;
         }
+
+        // LILYPOND-REF: beam-quanting.cc edge_beam_counts_ / edge_dirs_ —
+        // forbidden-quant checks run per beam END with that end's own beam
+        // count and stem direction (they differ for e.g. c16 d8 and knees).
+        _edgeBeamCounts = new[] { _memberBeamCounts[0], _memberBeamCounts[^1] };
+        _edgeDirs = _isKnee
+            ? new[] { _memberBeamDirs[0], _memberBeamDirs[^1] }
+            : new[] { _beamDir, _beamDir };
 
         // LILYPOND-REF: lily/beam-quanting.cc:236-238
         // Calculations are in staff-space units
@@ -387,6 +400,11 @@ public sealed class BeamScoringProblem
     /// </remarks>
     private double CalculateConcaveness()
     {
+        // LILYPOND-REF: lily/beam-quanting.cc:700-702 — knees and cross-staff
+        // beams are exempt from concaveness flattening.
+        if (_isKnee || _group.IsCrossStaff)
+            return 0;
+
         if (_staffPositions.Length <= 2)
             return 0;
 
@@ -568,6 +586,13 @@ public sealed class BeamScoringProblem
         double hang = 1.0 - (_beamThickness - _lineThickness) / 2;
         double[] baseQuants = { straddle, sit, inter, hang };
 
+        // LILYPOND-REF: lily/beam-quanting.cc:911-918 — with more than 4 beams
+        // the outer beam (used for quanting) never meets the staff lines, but
+        // pins the inner beams awkwardly; shift the quant grid to compensate.
+        double gridShift = 0.0;
+        if (!_isKnee && _maxBeamCount > 4)
+            gridShift = (_maxBeamCount - 4) * (1.0 - _beamTranslation);
+
         // Convert unquanted_y from staff positions to staff spaces for quanting
         double unquantedLeftSS = _unquantedLeftY / 2.0;
         double unquantedRightSS = _unquantedRightY / 2.0;
@@ -586,10 +611,21 @@ public sealed class BeamScoringProblem
         {
             for (int j = 0; j < unshiftedQuants.Count; j++)
             {
+                // LILYPOND-REF: lily/beam-quanting.cc:933-938 — apply the grid
+                // shift only when the quant lies outside the 5-line staff.
+                double corrLeft = 0.0, corrRight = 0.0;
+                if (gridShift != 0.0)
+                {
+                    if ((unquantedLeftSS + unshiftedQuants[i]) * _edgeDirs[0] > 2.5)
+                        corrLeft = gridShift * _edgeDirs[0];
+                    if ((unquantedRightSS + unshiftedQuants[j]) * _edgeDirs[1] > 2.5)
+                        corrRight = gridShift * _edgeDirs[1];
+                }
+
                 // New config: truncate to integer + add quant offset
                 // LILYPOND-REF: lily/beam-quanting.cc:161
-                double leftYSS = (int)unquantedLeftSS + unshiftedQuants[i];
-                double rightYSS = (int)unquantedRightSS + unshiftedQuants[j];
+                double leftYSS = (int)unquantedLeftSS + unshiftedQuants[i] - corrLeft;
+                double rightYSS = (int)unquantedRightSS + unshiftedQuants[j] - corrRight;
 
                 // Convert back to staff positions
                 double leftY = leftYSS * 2.0;
@@ -662,9 +698,16 @@ public sealed class BeamScoringProblem
         double dy = config.RightY - config.LeftY;
         double dampedDy = _unquantedRightY - _unquantedLeftY;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:1231-1232
+        double slopePenalty = _parameters.IdealSlopeFactor;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:1224-1226 — cross-staff beams tend
+        // to use extreme slopes to get short stems; penalise the slope 10×.
+        if (_group.IsCrossStaff)
+            slopePenalty *= 10;
+
+        // LILYPOND-REF: lily/beam-quanting.cc:1228-1230
         double diff = Math.Abs(dampedDy) - Math.Abs(dy);
-        double dem = ShrinkExtraWeight(diff, 1.5) * _parameters.IdealSlopeFactor;
+        double dem = ShrinkExtraWeight(diff, 1.5) * slopePenalty;
 
         config.AddDemerit(dem, "Si");
     }
@@ -757,35 +800,37 @@ public sealed class BeamScoringProblem
     /// </remarks>
     private void ScoreForbiddenQuants(BeamConfiguration config)
     {
-        // LILYPOND-REF: lily/beam-quanting.cc:1270-1271
-        int maxEdgeBeamCount = _maxBeamCount;
-        double extraDemerit = _parameters.SecondaryBeamDemerit / Math.Max(maxEdgeBeamCount, 1);
+        // LILYPOND-REF: lily/beam-quanting.cc:1266-1268 — divided by the larger
+        // EDGE beam count (not the global maximum over all members).
+        double extraDemerit = _parameters.SecondaryBeamDemerit
+            / Math.Max(Math.Max(_edgeBeamCounts[0], _edgeBeamCounts[1]), 1);
 
         double dem = 0.0;
         double eps = _parameters.BeamEps;
 
-        // Check each beam end (left and right)
-        // LILYPOND-REF: lily/beam-quanting.cc:1276-1325
-        foreach (double endY in new[] { config.LeftY, config.RightY })
+        // Check each beam end with that end's own beam count and direction.
+        // LILYPOND-REF: lily/beam-quanting.cc:1273-1325
+        for (int e = 0; e < 2; e++)
         {
-            double endYSS = endY / 2.0; // Convert staff positions → staff spaces
+            double endYSS = (e == 0 ? config.LeftY : config.RightY) / 2.0; // staff positions → spaces
+            int stemDir = _edgeDirs[e];
 
-            for (int j = 1; j <= maxEdgeBeamCount; j++)
+            for (int j = 1; j <= _edgeBeamCounts[e]; j++)
             {
-                // LILYPOND-REF: lily/beam-quanting.cc:1289-1297
+                // LILYPOND-REF: lily/beam-quanting.cc:1280-1294
                 double fudgeFactor = 2.2;
                 double gap1 = endYSS
-                    - _beamDir * ((j - 1) * _beamTranslation + _beamThickness / 2
+                    - stemDir * ((j - 1) * _beamTranslation + _beamThickness / 2
                                   - _lineThickness / fudgeFactor);
                 double gap2 = endYSS
-                    - _beamDir * (j * _beamTranslation - _beamThickness / 2
+                    - stemDir * (j * _beamTranslation - _beamThickness / 2
                                   + _lineThickness / fudgeFactor);
 
                 double gapMin = Math.Min(gap1, gap2);
                 double gapMax = Math.Max(gap1, gap2);
                 double gapLength = gapMax - gapMin;
 
-                // LILYPOND-REF: lily/beam-quanting.cc:1303-1323
+                // LILYPOND-REF: lily/beam-quanting.cc:1300-1322
                 // Check if any staff line falls within the gap
                 for (double k = -StaffRadius; k <= StaffRadius + eps; k += 1.0)
                 {
@@ -802,34 +847,39 @@ public sealed class BeamScoringProblem
 
         config.AddDemerit(dem, "Fl");
 
-        // LILYPOND-REF: lily/beam-quanting.cc:1329-1366
+        // LILYPOND-REF: lily/beam-quanting.cc:1327-1366
         // Additional forbidden quants for 2+ beam counts
         dem = 0.0;
-        if (maxEdgeBeamCount >= 2)
+        if (Math.Max(_edgeBeamCounts[0], _edgeBeamCounts[1]) >= 2)
         {
+            double straddle = 0.0;
             double sit = (_beamThickness - _lineThickness) / 2;
             double hang = 1.0 - (_beamThickness - _lineThickness) / 2;
             double dy = config.RightY - config.LeftY;
 
-            foreach (double endY in new[] { config.LeftY, config.RightY })
+            for (int e = 0; e < 2; e++)
             {
-                double endYSS = endY / 2.0;
+                double endYSS = (e == 0 ? config.LeftY : config.RightY) / 2.0;
+                int edgeDir = _edgeDirs[e];
+                double frac = endYSS - Math.Floor(endYSS); // my_modf
 
-                if (maxEdgeBeamCount >= 2
-                    && Math.Abs(endYSS - _beamDir * _beamTranslation) < StaffRadius + 0.5)
+                if (_edgeBeamCounts[e] >= 2
+                    && Math.Abs(endYSS - edgeDir * _beamTranslation) < StaffRadius + 0.5)
                 {
-                    double frac = endYSS - Math.Floor(endYSS);
-                    if (_beamDir > 0 && dy <= eps && Math.Abs(frac - sit) < eps)
+                    if (edgeDir > 0 && dy <= eps && Math.Abs(frac - sit) < eps)
                         dem += extraDemerit;
-                    if (_beamDir < 0 && dy >= eps && Math.Abs(frac - hang) < eps)
+                    if (edgeDir < 0 && dy >= eps && Math.Abs(frac - hang) < eps)
                         dem += extraDemerit;
                 }
 
-                if (maxEdgeBeamCount >= 3
-                    && Math.Abs(endYSS - 2 * _beamDir * _beamTranslation) < StaffRadius + 0.5)
+                // LILYPOND-REF: lily/beam-quanting.cc:1352-1365 — the straddle
+                // check is also gated by edge direction and slope sign.
+                if (_edgeBeamCounts[e] >= 3
+                    && Math.Abs(endYSS - 2 * edgeDir * _beamTranslation) < StaffRadius + 0.5)
                 {
-                    double frac = endYSS - Math.Floor(endYSS);
-                    if (Math.Abs(frac) < eps)
+                    if (edgeDir > 0 && dy <= eps && Math.Abs(frac - straddle) < eps)
+                        dem += extraDemerit;
+                    if (edgeDir < 0 && dy >= eps && Math.Abs(frac - straddle) < eps)
                         dem += extraDemerit;
                 }
             }
@@ -903,18 +953,26 @@ public sealed class BeamScoringProblem
             count[d]++;
         }
 
-        // LILYPOND-REF: lily/beam-quanting.cc:1156-1157
+        // LILYPOND-REF: lily/beam-quanting.cc:1152-1155
+        // Divide by number of stems, to make the measure scale-free.
         for (int d = 0; d < 2; d++)
             score[d] /= Math.Max(count[d], 1);
 
-        double totalScore = score[0] + score[1];
+        // LILYPOND-REF: lily/beam-quanting.cc:1157-1169 — symmetric 2-stem knees
+        // can tie; nudge the quanting toward the slope direction so the first
+        // stem reads as the longer one.
+        if (_isKnee && count[0] == count[1] && count[0] == 1)
+        {
+            int d = Math.Sign(_unquantedRightY - _unquantedLeftY);
+            if (d != 0)
+            {
+                int idx = d > 0 ? 1 : 0;
+                if (score[idx] < 1.0)
+                    score[idx] += 0.01;
+            }
+        }
 
-        // LILYPOND-REF: lily/beam-quanting.cc — cross-staff beams get 10× penalty
-        // to strongly prefer configurations with good stem lengths across staves
-        if (_group.IsCrossStaff)
-            totalScore *= 10;
-
-        config.AddDemerit(totalScore, "L");
+        config.AddDemerit(score[0] + score[1], "L");
     }
 
     /// <summary>
