@@ -88,54 +88,100 @@ public sealed class TieDetector
                 if (item is ChordItem endChord)
                 {
                     // For each pitch in startChord, find a matching pitch in endChord.
+                    var matched = new List<(ChordNoteInfo Start, NoteItem End)>();
                     foreach (var startPitch in startChord.Notes)
                     {
-                        bool found = false;
                         foreach (var endPitch in endChord.Notes)
                         {
                             if (endPitch.StaffPosition == startPitch.StaffPosition)
                             {
-                                found = true;
-                                bool curveUp = !startChord.StemUp;
-                                // Synthesize NoteItem stand-ins for TieItem (the renderer
-                                // only consumes StaffPosition/CurveUp from these).
-                                var startNote = SynthesizeNote(startPitch, startChord);
-                                var endNote = SynthesizeNote(endPitch, endChord);
-                                ties.Add(new TieItem(
-                                    startNote, endNote,
-                                    startPitch.StaffPosition,
-                                    curveUp,
-                                    measureIdx, mi,
-                                    itemIdx, ii));
+                                matched.Add((startPitch, SynthesizeNote(endPitch, endChord)));
                                 break;
                             }
                         }
-                        // If no match, the tie is silently dropped (LP behaviour for chord
-                        // ties is to require matching pitches; mismatched ones are skipped).
-                        _ = found;
+                        // Unmatched pitches are silently dropped (LP behaviour for
+                        // chord ties is to require matching pitches).
                     }
+                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii);
                     return;
                 }
                 else if (item is NoteItem endNoteItem)
                 {
                     // chord ~ note: tie any pitch that matches the next note.
+                    var matched = new List<(ChordNoteInfo Start, NoteItem End)>();
                     foreach (var startPitch in startChord.Notes)
                     {
                         if (endNoteItem.StaffPosition == startPitch.StaffPosition)
-                        {
-                            bool curveUp = !startChord.StemUp;
-                            var startNote = SynthesizeNote(startPitch, startChord);
-                            ties.Add(new TieItem(
-                                startNote, endNoteItem,
-                                startPitch.StaffPosition,
-                                curveUp,
-                                measureIdx, mi,
-                                itemIdx, ii));
-                        }
+                            matched.Add((startPitch, endNoteItem));
                     }
+                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii);
                     return;
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Emits the chord's ties with LilyPond's standard direction assignment:
+    /// the bottom tie curves DOWN, the top tie UP, adjacent seconds split
+    /// (lower DOWN / upper UP), and remaining inner ties follow the sign of
+    /// their staff position (middle line → DOWN). A single matched tie keeps
+    /// the stem-opposite default.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc
+    /// set_ties_config_standard_directions.
+    /// </remarks>
+    private static void EmitChordTies(
+        List<(ChordNoteInfo Start, NoteItem End)> matched,
+        ChordItem startChord,
+        List<TieItem> ties,
+        int startMeasureIdx, int endMeasureIdx,
+        int startItemIdx, int endItemIdx)
+    {
+        if (matched.Count == 0)
+            return;
+
+        // Sort bottom → top like LilyPond's tie configs.
+        matched.Sort((a, b) => a.Start.StaffPosition.CompareTo(b.Start.StaffPosition));
+
+        var dirs = new bool?[matched.Count]; // true = curve up
+        if (matched.Count == 1)
+        {
+            dirs[0] = !startChord.StemUp;
+        }
+        else
+        {
+            dirs[0] = false;            // front: DOWN
+            dirs[^1] = true;            // back: UP
+
+            // Seconds: adjacent ties within one staff position split outward.
+            for (int i = 1; i < matched.Count; i++)
+            {
+                if (Math.Abs(matched[i].Start.StaffPosition
+                             - matched[i - 1].Start.StaffPosition) <= 1)
+                {
+                    dirs[i - 1] ??= false;
+                    dirs[i] ??= true;
+                }
+            }
+
+            // Remaining inner ties: sign of the position (0 → DOWN).
+            for (int i = 0; i < matched.Count; i++)
+                dirs[i] ??= matched[i].Start.StaffPosition > 0;
+        }
+
+        for (int i = 0; i < matched.Count; i++)
+        {
+            var (startPitch, endNote) = matched[i];
+            // Synthesize NoteItem stand-ins for TieItem (the renderer only
+            // consumes StaffPosition/CurveUp from these).
+            ties.Add(new TieItem(
+                SynthesizeNote(startPitch, startChord), endNote,
+                startPitch.StaffPosition,
+                dirs[i]!.Value,
+                startMeasureIdx, endMeasureIdx,
+                startItemIdx, endItemIdx));
         }
     }
 
