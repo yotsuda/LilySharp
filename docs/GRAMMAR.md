@@ -353,9 +353,9 @@ CustomText     = '_' , String ;                   (* end, below *)
 
 (* Output definitions - at least one required *)
 
-RenderDecl     = 'render' , RenderType , String , RenderBody ;
+RenderDecl     = 'render' , [ RenderName ] , String , RenderBody ;
 
-RenderType     = 'score' | 'midi' ;
+RenderName     = Identifier | 'score' ;   (* free-form label, e.g. score, piano *)
 
 RenderBody     = '{' , { RenderItem } , '}' ;
 
@@ -385,21 +385,14 @@ PartRef        = Identifier ;
    }
 *)
 
-### 7.2 MIDI Render
+### 7.2 MIDI Export
 
-MidiPart       = PartRef , [ MidiOptions ] ;
+(* There is NO `render midi` block. MIDI is exported by the CLI directly
+   from the music tree:
 
-MidiOptions    = { MidiOption } ;
-MidiOption     = 'channel' , ':' , Integer
-               | 'instrument' , ':' , Integer
-               ;
+     lysc midi song.lys song.mid
 
-(* Example:
-   render midi "song.mid" {
-     melody channel: 1 instrument: 41
-     bass channel: 2 instrument: 33
-   }
-*)
+   Per-part channel/instrument options are not part of the language today. *)
 
 ================================================================================
 ## 8. Music Expression
@@ -570,12 +563,9 @@ render score "rocksong-full.svg" {
 render score "guitar-part.pdf" {
   staff { guitar }
 }
-
-render midi "rocksong.mid" {
-  guitar channel: 1 instrument: 27
-  bass channel: 2 instrument: 33
-}
 ```
+
+MIDI export: `lysc midi rocksong.lys rocksong.mid` (no render block needed).
 
 ================================================================================
 ## 10. Symbol Summary

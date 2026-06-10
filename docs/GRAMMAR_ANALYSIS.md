@@ -1,4 +1,11 @@
 # LilySharp (.lys) 文法設計
+> **STATUS (2026-06-10): historical design notes.** The grammar has moved on:
+> `repeat volta`/`alternative` were removed (use `|: … :|` (+`:|*N`) and `[1. …]`),
+> `phrase` is the sole named-music declaration, `@articulations` resolve via a
+> registry, and there is no `render midi` block (MIDI comes from `lysc midi`).
+> For the current grammar see `docs/GRAMMAR.md` / `docs/SYNTAX_REFERENCE.md`.
+> The task lists in the bottom half of this file are stale (e.g. manual beams
+> ARE implemented).
 
 ## 設計方針
 
@@ -334,11 +341,8 @@ render score "output.svg" {
   }
 }
 
-// MIDI出力
-render midi "output.mid" {
-  melody channel: 1 instrument: 1
-  bass channel: 2 instrument: 33
-}
+// MIDI出力は CLI から: lysc midi input.lys output.mid
+// （render midi ブロックは存在しない）
 ```
 
 ---

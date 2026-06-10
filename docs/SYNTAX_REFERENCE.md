@@ -36,12 +36,13 @@ Special forms: `ees` (Eb), `aes` (Ab), `bes` (Bb).
 | `,` | One octave down |
 | `,,` | Two octaves down |
 
-Default starting octave is C4 (middle C). Octave is relative to the previous note.
+Default starting octave is C4 (middle C). Each pitch takes the octave
+closest to the previous note (an interval of a fourth or less); `'` and `,`
+shift octaves on top of that.
 
 ```
-c d e f g a b c'   % C4 D4 E4 F4 G4 A4 B4 C5
-c' c''              % C5 C6
-c, c,,              % C3 C2
+c d e f g a b c    % C4 D4 E4 F4 G4 A4 B4 C5 — bare c after b is already C5
+c' c,              % C6 C5 — marks shift from the nearest octave
 ```
 
 ## Durations

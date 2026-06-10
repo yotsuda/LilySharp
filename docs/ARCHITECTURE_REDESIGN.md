@@ -1,4 +1,10 @@
 # LilySharp アーキテクチャ再設計
+> **STATUS (2026-06-10): historical redesign plan.** Since this was written,
+> the `repeat volta` / `alternative` keywords were removed from the language
+> (volta repeats are `|: … :|` (+`:|*N`) with inline voltas `[1. …]`), and the
+> semantic layer described here (SemanticCompiler/BoundTree/ScoreBuilder) was
+> built but is still NOT wired into any output pipeline — see
+> LILYSHARP_STANDALONE_REVIEW.md §1/§2.
 
 ## ビジョン
 

@@ -26,7 +26,7 @@
 | 譜表 | `staff { part }` | ✅ | |
 | 大譜表 | `grandStaff { staff staff }` | ✅ | |
 | タブ譜 | `tab standard { part }` | ✅ | Guitar/Bass/Bass5/Ukulele対応 |
-| MIDI | `render midi "file.mid" { }` | ✅ | |
+| MIDI | CLI: `lysc midi file.lys file.mid` | ✅ | `render midi` ブロックは存在しない |
 
 ### 4. 音楽要素
 | 機能 | 構文 | 状況 | 備考 |
