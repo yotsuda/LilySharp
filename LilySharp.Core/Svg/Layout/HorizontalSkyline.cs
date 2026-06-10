@@ -233,18 +233,20 @@ public sealed class HorizontalSkyline
     /// <summary>
     /// Merges another skyline into this one.
     /// </summary>
+    /// <remarks>
+    /// Deliberately keeps the building LIST (concatenation), not the envelope.
+    /// This is sound for every query this class offers: a building shadowed by
+    /// a taller one can never win a max — <see cref="Distance"/> takes the max
+    /// of building-pair sums and <see cref="X"/> takes the max over covering
+    /// buildings, so both already compute envelope values. (LilyPond's
+    /// internal_merge_skyline canonicalizes because its representation must
+    /// cover the full axis; ours is sparse.) Cost: queries are O(n·m) instead
+    /// of O(n+m) — fine at the per-item-pair sizes used in note spacing.
+    /// </remarks>
     public void Merge(HorizontalSkyline other)
     {
         if (other._direction != _direction)
             throw new ArgumentException("Cannot merge skylines with different directions");
-
-        if (other.IsEmpty) return;
-
-        if (IsEmpty)
-        {
-            _buildings.AddRange(other._buildings);
-            return;
-        }
 
         _buildings.AddRange(other._buildings);
     }
@@ -272,27 +274,13 @@ public sealed class HorizontalSkyline
 
                 if (overlapBottom < overlapTop)
                 {
-                    double[] ySamples = { overlapBottom, overlapTop, (overlapBottom + overlapTop) / 2 };
-
-                    foreach (double y in ySamples)
-                    {
-                        if (y >= overlapBottom && y <= overlapTop)
-                        {
-                            double x1 = b1.X(y);
-                            double x2 = b2.X(y);
-                            double dist = x1 + x2;
-                            maxDistance = Math.Max(maxDistance, dist);
-                        }
-                    }
-
-                    if (Math.Abs(b1.Slope - b2.Slope) > 1e-6)
-                    {
-                        double iy = b1.IntersectionY(b2);
-                        if (iy > overlapBottom && iy < overlapTop)
-                        {
-                            maxDistance = Math.Max(maxDistance, b1.X(iy) + b2.X(iy));
-                        }
-                    }
+                    // b1.X + b2.X is LINEAR in y on the overlap, so its max is
+                    // attained at an endpoint — evaluating the two endpoints is
+                    // exact, not a sampling approximation. (The slopes'
+                    // intersection point is never an extremum of their SUM.)
+                    double atBottom = b1.X(overlapBottom) + b2.X(overlapBottom);
+                    double atTop = b1.X(overlapTop) + b2.X(overlapTop);
+                    maxDistance = Math.Max(maxDistance, Math.Max(atBottom, atTop));
                 }
             }
         }
@@ -316,17 +304,22 @@ public sealed class HorizontalSkyline
 
     /// <summary>
     /// Returns the X position at a specific Y coordinate in real coordinates.
+    /// Takes the OUTERMOST covering building (the envelope), since the
+    /// building list may contain shadowed entries (see <see cref="Merge"/>).
     /// </summary>
     public double X(double y)
     {
+        double best = NegativeInfinity; // stored frame: larger = outer for both directions
         foreach (var b in _buildings)
         {
             if (y >= b.YBottom && y <= b.YTop)
-            {
-                int sky = (int)_direction;
-                return sky * b.X(y);
-            }
+                best = Math.Max(best, b.X(y));
         }
-        return _direction == HorizontalDirection.Right ? NegativeInfinity : PositiveInfinity;
+
+        if (double.IsNegativeInfinity(best))
+            return _direction == HorizontalDirection.Right ? NegativeInfinity : PositiveInfinity;
+
+        int sky = (int)_direction;
+        return sky * best;
     }
 }
