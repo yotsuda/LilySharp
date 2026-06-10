@@ -593,6 +593,26 @@ public sealed class BeamScoringProblem
         if (!_isKnee && _maxBeamCount > 4)
             gridShift = (_maxBeamCount - 4) * (1.0 - _beamTranslation);
 
+        // LILYPOND-REF: lily/beam-quanting.cc:343-360 quant_range_ — at each
+        // edge the beam may not come closer to the edge notehead than half a
+        // staff space plus the stacked inner beams plus half the beam
+        // thickness. (For chord edges our member StaffPosition is the head
+        // AVERAGE, not the beam-side head, so the bound is merely looser than
+        // LilyPond's — never tighter.)
+        double[] quantMin = { double.NegativeInfinity, double.NegativeInfinity };
+        double[] quantMax = { double.PositiveInfinity, double.PositiveInfinity };
+        for (int e = 0; e < 2; e++)
+        {
+            double headSS = _staffPositions[e == 0 ? 0 : ^1] / 2.0;
+            double widen = 0.5
+                + (_edgeBeamCounts[e] - 1) * _beamTranslation
+                + _beamThickness * 0.5;
+            if (_edgeDirs[e] > 0)
+                quantMin[e] = headSS + widen;
+            else
+                quantMax[e] = headSS - widen;
+        }
+
         // Convert unquanted_y from staff positions to staff spaces for quanting
         double unquantedLeftSS = _unquantedLeftY / 2.0;
         double unquantedRightSS = _unquantedRightY / 2.0;
@@ -626,6 +646,13 @@ public sealed class BeamScoringProblem
                 // LILYPOND-REF: lily/beam-quanting.cc:161
                 double leftYSS = (int)unquantedLeftSS + unshiftedQuants[i] - corrLeft;
                 double rightYSS = (int)unquantedRightSS + unshiftedQuants[j] - corrRight;
+
+                // LILYPOND-REF: lily/beam-quanting.cc:943-952 — drop candidates
+                // whose edge falls outside the feasible quant range.
+                if (leftYSS < quantMin[0] || leftYSS > quantMax[0])
+                    continue;
+                if (rightYSS < quantMin[1] || rightYSS > quantMax[1])
+                    continue;
 
                 // Convert back to staff positions
                 double leftY = leftYSS * 2.0;
