@@ -111,12 +111,12 @@
   <path d="M 7.20,38.30 C 8.23,39.13 12.71,39.13 13.74,38.30 C 12.71,39.35 8.23,39.35 7.20,38.30 Z" fill="#000000"/>
   <path d="M 16.76,15.90 C 20.08,17.79 74.38,17.79 77.70,15.90 C 74.38,18.06 20.08,18.06 16.76,15.90 Z" fill="#000000"/>
   <path d="M 7.30,25.40 C 9.71,27.07 23.71,27.07 26.12,25.40 C 23.71,27.34 9.71,27.34 7.30,25.40 Z" fill="#000000"/>
-  <text x="49.66" y="40.80" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="597">p</text>
-  <text x="62.34" y="52.40" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="632">f</text>
-  <line x1="56.95" y1="39.20" x2="78.00" y2="38.98" stroke="#000000" stroke-width="0.130" data-pos="601"/>
-  <line x1="56.95" y1="39.20" x2="78.00" y2="39.42" stroke="#000000" stroke-width="0.130" data-pos="601"/>
-  <line x1="7.00" y1="53.38" x2="61.84" y2="53.16" stroke="#000000" stroke-width="0.130" data-pos="601"/>
-  <line x1="7.00" y1="53.60" x2="61.84" y2="53.83" stroke="#000000" stroke-width="0.130" data-pos="601"/>
+  <text x="49.44" y="40.80" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="597">p</text>
+  <text x="62.84" y="52.40" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="632">f</text>
+  <line x1="56.88" y1="39.20" x2="78.00" y2="38.98" stroke="#000000" stroke-width="0.130" data-pos="601"/>
+  <line x1="56.88" y1="39.20" x2="78.00" y2="39.42" stroke="#000000" stroke-width="0.130" data-pos="601"/>
+  <line x1="7.00" y1="53.38" x2="62.34" y2="53.16" stroke="#000000" stroke-width="0.130" data-pos="601"/>
+  <line x1="7.00" y1="53.60" x2="62.34" y2="53.83" stroke="#000000" stroke-width="0.130" data-pos="601"/>
   <text x="7.00" y="21.00" font-size="1.80" font-family="serif" font-weight="bold" fill="#000000">3</text>
   <text x="7.00" y="33.00" font-size="1.80" font-family="serif" font-weight="bold" fill="#000000">6</text>
   <text x="7.00" y="45.50" font-size="1.80" font-family="serif" font-weight="bold" fill="#000000">8</text>

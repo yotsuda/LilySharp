@@ -485,52 +485,111 @@ public static class SpacingRules
     }
 
     /// <summary>
-    /// Calculates stem direction optical correction for spacing.
+    /// Calculates stem direction optical correction for spacing ([Wanske] p.138:
+    /// up-stem→down-stem needs extra space, down-stem→up-stem less).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-spacing.cc:119-199 stem_dir_correction
-    /// - Opposite stem directions: increase space to avoid visual collision
-    /// - Same stem direction: decrease space for tighter appearance
+    /// LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction:
+    /// - opposite directions → correction scales with the stems' vertical
+    ///   OVERLAP: min(|overlap|/7, 1) · leftDir · stem-spacing-correction
+    ///   (different_directions_correction, :140-160)
+    /// - same direction → only when the head ranges do NOT overlap and the gap
+    ///   exceeds one staff position: ±same-direction-correction depending on
+    ///   which side is lower (same_direction_correction, :162-197); skipped
+    ///   when an accidental sticks out of the right side (:305-308)
+    /// Simplifications vs LilyPond (beam membership is not visible at spacing
+    /// time): the flagged-unbeamed-left gate (:264-266) and the knee special
+    /// case (:289-292) are not applied.
     /// </remarks>
     private static double CalculateStemCorrection(MusicItem? prevItem, MusicItem? nextItem,
                                                    NoteSpacingParameters noteParams)
     {
-        bool? prevStemUp = prevItem switch
-        {
-            NoteItem n => n.StemUp,
-            ChordItem c => c.StemUp,
-            _ => null
-        };
-
-        bool? nextStemUp = nextItem switch
-        {
-            NoteItem n => n.StemUp,
-            ChordItem c => c.StemUp,
-            _ => null
-        };
-
-        if (!prevStemUp.HasValue || !nextStemUp.HasValue)
+        if (StemSpacingInfo(prevItem) is not { } l || StemSpacingInfo(nextItem) is not { } r)
             return 0;
 
-        double increment = EngravingDefaults.SpacingIncrement;
+        int leftDir = l.StemUp ? 1 : -1;
+        int rightDir = r.StemUp ? 1 : -1;
 
-        if (prevStemUp.Value != nextStemUp.Value)
+        if (leftDir != rightDir)
         {
-            // Different stem directions: stems may cross → increase space
-            // LILYPOND-REF: note-spacing.cc:141-162 (different direction correction)
-            // Simplified: apply stem_spacing_correction as fraction of increment
-            return noteParams.StemSpacingCorrection * increment * 0.5;
-        }
-        else
-        {
-            // Same stem direction: can be tighter
-            // LILYPOND-REF: note-spacing.cc:305-310
-            // Only apply same direction correction if there are no
-            // accidentals sticking out of the right hand side.
-            if (HasAccidental(nextItem))
+            // LILYPOND-REF: note-spacing.cc:140-160 different_directions_correction
+            double lo = Math.Max(l.StemMin, r.StemMin);
+            double hi = Math.Min(l.StemMax, r.StemMax);
+            if (hi <= lo)
                 return 0;
-            return -noteParams.SameDirectionCorrection * increment * 0.5;
+            // Overlap in staff positions (half-spaces); 7 is LilyPond's hardcoded scale.
+            return Math.Min((hi - lo) / 7.0, 1.0) * leftDir * noteParams.StemSpacingCorrection;
         }
+
+        // LILYPOND-REF: note-spacing.cc:305-308 — same-direction correction only
+        // without accidentals sticking out of the right hand side.
+        if (HasAccidental(nextItem))
+            return 0;
+
+        // LILYPOND-REF: note-spacing.cc:162-197 same_direction_correction —
+        // applies only when the two head ranges are disjoint by more than one
+        // staff position; sign depends on which side is lower.
+        bool headsOverlap = Math.Max(l.HeadMin, r.HeadMin) <= Math.Min(l.HeadMax, r.HeadMax);
+        if (headsOverlap)
+            return 0;
+
+        int lowest = l.HeadMin > r.HeadMax ? 1 : -1; // +1 = RIGHT side is lower
+        double delta = lowest > 0 ? l.HeadMin - r.HeadMax : r.HeadMin - l.HeadMax;
+        return delta > 1 ? -lowest * noteParams.SameDirectionCorrection : 0;
+    }
+
+    /// <summary>
+    /// Stem and head vertical ranges (staff positions, +up) used by the stem
+    /// direction correction. Null for stemless items (rests, whole notes).
+    /// </summary>
+    private static (bool StemUp, double StemMin, double StemMax, double HeadMin, double HeadMax)?
+        StemSpacingInfo(MusicItem? item)
+    {
+        switch (item)
+        {
+            case NoteItem n:
+            {
+                int noteValue = n.BaseDuration.Denominator;
+                if (n.BaseDuration.Numerator != 1) noteValue = 1;
+                if (noteValue < 2)
+                    return null; // whole notes have no stem (Stem::is_invisible)
+                double endPos = StemEndPosition(n.StaffPosition, n.StemUp, noteValue, n.StaffPosition);
+                return (n.StemUp,
+                    Math.Min(n.StaffPosition, endPos), Math.Max(n.StaffPosition, endPos),
+                    n.StaffPosition, n.StaffPosition);
+            }
+            case ChordItem c when c.Notes.Length > 0:
+            {
+                int noteValue = c.BaseDuration.Denominator;
+                if (c.BaseDuration.Numerator != 1) noteValue = 1;
+                if (noteValue < 2)
+                    return null;
+                int minPos = c.Notes.Min(x => x.StaffPosition);
+                int maxPos = c.Notes.Max(x => x.StaffPosition);
+                int tipPos = c.StemUp ? maxPos : minPos;
+                double endPos = StemEndPosition(tipPos, c.StemUp, noteValue, tipPos);
+                return (c.StemUp,
+                    Math.Min(minPos, endPos), Math.Max(maxPos, endPos),
+                    minPos, maxPos);
+            }
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// Unbeamed stem end in staff positions (+up), via the LilyPond stem-length
+    /// rules (stem.cc internal_calc_stem_end_position).
+    /// </summary>
+    private static double StemEndPosition(int attachPos, bool stemUp, int noteValue, int staffPosition)
+    {
+        // StemCalculator works in the renderer's Y-down staff-space frame with
+        // the staff middle at staffTopY + 2; use middle = 0 → staffTopY = −2.
+        double attachY = -attachPos * 0.5;
+        double endY = StemCalculator.CalculateStemEndY(
+            attachY, stemUp, staffTopY: -2.0,
+            StemCalculator.GetDurationLog(noteValue), staffPosition);
+        return -endY * 2.0;
     }
 
     /// <summary>
