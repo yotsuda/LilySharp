@@ -54,7 +54,8 @@ public sealed class MeasureValidatorTupletTests
     [Fact]
     public void GenuinelyShortBar_StillWarns()
     {
-        // Detection must still fire for a real short measure.
-        Assert.True(HasIncomplete("time 2/4\n{ c4 }"));
+        // Detection must still fire for a real short measure — placed in the
+        // INTERIOR (underfull first/last measures are exempt as pickups).
+        Assert.True(HasIncomplete("time 2/4\n{ c4 d | c4 | c4 d | }"));
     }
 }

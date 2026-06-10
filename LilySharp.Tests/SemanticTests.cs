@@ -147,13 +147,27 @@ public class SemanticTests
     [Fact]
     public void MeasureValidator_IncompleteMeasure()
     {
-        var tree = SyntaxTree.Parse("{ c4 d e | }");
+        // The short measure must be INTERIOR — underfull first/last measures
+        // are exempt as pickup (anacrusis) / closing measures.
+        var tree = SyntaxTree.Parse("{ c4 d e f | c4 d e | c4 d e f | }");
         var validator = new MeasureValidator();
         validator.Validate(tree);
 
         // 3 quarter notes < 4/4 time
         Assert.Single(validator.Diagnostics);
         Assert.Contains("less than", validator.Diagnostics[0].Message);
+    }
+
+    [Fact]
+    public void MeasureValidator_PickupAndClosingMeasures_DoNotWarn()
+    {
+        // Anacrusis: a quarter-note pickup, full middle, shortened final bar.
+        // LilyPond expresses this with \partial; Lily# exempts edge measures.
+        var tree = SyntaxTree.Parse("{ c4 | c4 d e f | c4 d e | }");
+        var validator = new MeasureValidator();
+        validator.Validate(tree);
+
+        Assert.Empty(validator.Diagnostics);
     }
 
     [Fact]

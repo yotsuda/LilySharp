@@ -89,22 +89,32 @@ public sealed class MeasureValidator
         var measures = SplitIntoMeasures(block);
         var defaultDuration = Fraction.Quarter;
 
-        foreach (var measure in measures)
+        for (int i = 0; i < measures.Count; i++)
         {
+            var measure = measures[i];
             var duration = CalculateMeasureDuration(measure.Items, ref defaultDuration);
 
             if (duration != _timeSignature && duration != Fraction.Zero)
             {
                 if (duration < _timeSignature)
                 {
-                    // Incomplete measure
-                    var span = GetSpan(measure.Items);
-                    _diagnostics.Warning(span, DiagnosticCodes.MeasureIncomplete,
-                        $"Measure duration {duration} is less than time signature {_timeSignature}");
+                    // Underfull FIRST measures are pickups (anacrusis) and
+                    // underfull LAST measures conventionally complete them —
+                    // both are normal notation, not authoring errors, so only
+                    // interior measures warn. (LilyPond marks pickups with
+                    // \partial; Lily# has no such keyword yet, so the edge
+                    // measures get the benefit of the doubt.)
+                    bool isEdgeMeasure = i == 0 || i == measures.Count - 1;
+                    if (!isEdgeMeasure)
+                    {
+                        var span = GetSpan(measure.Items);
+                        _diagnostics.Warning(span, DiagnosticCodes.MeasureIncomplete,
+                            $"Measure duration {duration} is less than time signature {_timeSignature}");
+                    }
                 }
                 else if (duration > _timeSignature)
                 {
-                    // Overfull measure
+                    // Overfull measure — always worth flagging.
                     var span = GetSpan(measure.Items);
                     _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
                         $"Measure duration {duration} exceeds time signature {_timeSignature}");
