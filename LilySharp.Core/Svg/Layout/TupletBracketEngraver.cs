@@ -120,7 +120,8 @@ public static class TupletBracketEngraver
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures,
-        ImmutableArray<BeamGroup> beamGroups = default)
+        ImmutableArray<BeamGroup> beamGroups = default,
+        ImmutableArray<BeamLayout> beamLayouts = default)
     {
         if (tuplets.IsDefaultOrEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
@@ -161,6 +162,35 @@ public static class TupletBracketEngraver
             // LILYPOND-REF: lily/tuplet-bracket.cc:200-350 slope calculation
             // Calculate slope based on first/last note staff positions
             var (startY, endY) = CalculateSlope(tuplet, measures, isStemUp);
+
+            // When the bracket is suppressed (fully beamed), the NUMBER
+            // attaches to the BEAM: centered between the outer stems, sitting
+            // just off the beam line on its stem side — not at the bracket's
+            // notehead-based position (which reads as shifted up-left).
+            // LILYPOND-REF: lily/tuplet-number.cc — number follows the beam
+            // when there is no bracket.
+            if (!showBracket && !beamLayouts.IsDefaultOrEmpty)
+            {
+                var beam = FindCoveringBeam(beamLayouts, tuplet);
+                if (beam != null)
+                {
+                    isStemUp = beam.Group.StemUp;
+                    // BeamLayout X values are notehead anchors; the stems (and
+                    // thus the beam bar) sit at the attach offset — right of
+                    // the head for up-stems (same correction DrawBeams makes).
+                    double stemOffset = isStemUp
+                        ? EngravingDefaults.StemUpAttachX
+                        : EngravingDefaults.StemDownAttachX;
+                    startX = beam.LeftX + stemOffset;
+                    endX = beam.RightX + stemOffset;
+                    const double clearance = 0.7;
+                    double dir = isStemUp ? -1.0 : 1.0;
+                    // Beam Y is in staff positions from the middle line;
+                    // bracket Y is staff spaces from the staff top.
+                    startY = 2.0 - beam.LeftY * 0.5 + clearance * dir;
+                    endY = 2.0 - beam.RightY * 0.5 + clearance * dir;
+                }
+            }
 
             layouts.Add(new TupletBracketLayout(
                 tuplet.MeasureIndex,
@@ -284,6 +314,20 @@ public static class TupletBracketEngraver
     /// The bracket follows the contour of the notes. The slope is limited
     /// to avoid excessively tilted brackets.
     /// </remarks>
+    private static BeamLayout? FindCoveringBeam(
+        ImmutableArray<BeamLayout> beamLayouts, TupletBracketItem tuplet)
+    {
+        foreach (var beam in beamLayouts)
+        {
+            int beamEnd = beam.Group.StartIndex + beam.Group.Members.Length - 1;
+            if (beam.Group.MeasureIndex == tuplet.MeasureIndex
+                && beam.Group.StartIndex <= tuplet.StartNoteIndex
+                && beamEnd >= tuplet.EndNoteIndex)
+                return beam;
+        }
+        return null;
+    }
+
     private static (double startY, double endY) CalculateSlope(
         TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp)
     {

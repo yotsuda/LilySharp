@@ -134,7 +134,8 @@ public sealed class LayoutEngine
             score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
             score.Voice.Measures, score.FiguredBasses, score.ChordNames, score.PercentRepeats,
             trillSpanners: score.TrillSpanners,
-            beamGroups: beamGroups);
+            beamGroups: beamGroups,
+            beamLayouts: beamLayouts);
 
         // Calculate part combination layouts for multi-voice scores
         var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
@@ -336,8 +337,11 @@ public sealed class LayoutEngine
             score.PercentRepeats, crossStaffLayouts,
             trillSpanners: score.TrillSpanners,
             // bracket-visibility = if-no-beam needs the beam groups; without
-            // them every tuplet bracket draws even when fully beamed.
-            beamGroups: _elementCoordinator.DetectBeamGroups(primaryScore));
+            // them every tuplet bracket draws even when fully beamed. The
+            // beam LAYOUTS let the suppressed-bracket number attach to the
+            // beam itself.
+            beamGroups: _elementCoordinator.DetectBeamGroups(primaryScore),
+            beamLayouts: allBeamLayouts.ToImmutableArray());
 
         // Voice collision offsets / head-wipes for multi-voice staves, so the
         // renderer can nudge opposing voices apart. Computed per staff; the keys
@@ -614,7 +618,8 @@ public sealed class LayoutEngine
         ImmutableArray<PercentRepeatItem>? percentRepeats = null,
         ImmutableArray<CrossStaffLayout>? crossStaffLayouts = null,
         ImmutableArray<TrillSpannerItem>? trillSpanners = null,
-        ImmutableArray<BeamGroup>? beamGroups = null)
+        ImmutableArray<BeamGroup>? beamGroups = null,
+        ImmutableArray<BeamLayout>? beamLayouts = null)
     {
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
         var lyricLayouts = new LyricEngraver().CalculateLayouts(lyrics, ml, _options.StaffHeight);
@@ -684,7 +689,7 @@ public sealed class LayoutEngine
             MusicMarks: MusicMarkEngraver.Calculate(score, musicMarks, systems, ml, measures, voltaBracketLayouts),
             CustomTexts: CustomTextEngraver.Calculate(score, customTexts, systems, ml),
             VoltaBrackets: voltaBracketLayouts,
-            TupletBrackets: TupletBracketEngraver.Calculate(tupletBrackets, systems, ml, measures, beamGroups ?? default),
+            TupletBrackets: TupletBracketEngraver.Calculate(tupletBrackets, systems, ml, measures, beamGroups ?? default, beamLayouts ?? default),
             Hairpins: stackedHairpins,
             TextSpanners: stackedTextSpanners,
             OttavaBrackets: ottavaLayouts,
