@@ -738,11 +738,15 @@ public static class SharedRenderer
         //   padding = one dot width (advance per dot = 2 dot widths)
         double dotWidth = GlyphMetrics.AugmentationDot.Width;
         double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) + dotWidth;
-        for (int d = 0; d < note.Dots; d++)
+        if (note.Dots > 0)
         {
-            double dotX = dotStartX + d * 2 * dotWidth;
-            double dotY = note.StaffPosition % 2 == 0 ? noteY - 0.5 : noteY;
-            gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, dotY, noteFontSize, noteheadColor);
+            // Same Dot_configuration machinery as chords (for a single dot
+            // this reduces to "line notes move to the space above").
+            int dotPos = DotConfiguration.Resolve(new[] { note.StaffPosition })[0];
+            double dotY = staffMiddleY - dotPos * 0.5;
+            for (int d = 0; d < note.Dots; d++)
+                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                    dotStartX + d * 2 * dotWidth, dotY, noteFontSize, noteheadColor);
         }
     }
 
@@ -792,23 +796,19 @@ public static class SharedRenderer
         }
 
         // Augmentation dots: one dot ROW per chord note, all in one column a
-        // dot-width right of the heads. Dots prefer SPACES (line notes shift
-        // up one position); when two notes claim the same space the later one
-        // climbs to the next free space — a simplified Dot_configuration.
+        // dot-width right of the heads. Final positions come from the full
+        // Dot_configuration port (badness-scored up/down displacement with
+        // cascading; on-line dots forced into spaces).
         // LILYPOND-REF: scm/define-grobs.scm DotColumn padding (one dot width)
-        // LILYPOND-REF: lily/dot-column.cc / dot-configuration.cc — dots sit
-        //   in spaces, resolved against each other.
+        // LILYPOND-REF: lily/dot-configuration.cc; lily/dot-column.cc:194-224.
         if (chord.Dots > 0 && chord.Notes.Length > 0)
         {
             double dotWidth = GlyphMetrics.AugmentationDot.Width;
             double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) + dotWidth;
-            var taken = new HashSet<int>();
-            foreach (var n in chord.Notes.OrderBy(n => n.StaffPosition))
+            var resolved = DotConfiguration.Resolve(
+                chord.Notes.Select(n => n.StaffPosition).ToArray());
+            foreach (int p in resolved)
             {
-                int p = n.StaffPosition;
-                if (p % 2 == 0) p += 1; // lines -> space above
-                while (taken.Contains(p)) p += 2;
-                taken.Add(p);
                 double dotY = staffMiddleY - p * 0.5;
                 for (int d = 0; d < chord.Dots; d++)
                     using (gc.Source(chord.SourcePosition))
