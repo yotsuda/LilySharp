@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -91,7 +91,35 @@ public sealed class SystemBreaker
                 _options.LineBreakingTolerance,
                 raggedRight: _options.RaggedRight);
 
-            return breaker.BreakIntoLines(measures, baseShortestDuration);
+            // Price each measure by the COMBINED springs across all staves —
+            // the same springs the actual system layout solves with. Pricing
+            // by the primary staff alone packs lines wherever that staff
+            // rests while another staff is dense.
+            // LILYPOND-REF: lily/paper-column.cc — columns aggregate staves.
+            var layouter = new MeasureLayouter();
+            var springData = new MeasureSpringData[measures.Length];
+            for (int i = 0; i < measures.Length; i++)
+            {
+                var primaryMeasure = measures[i];
+                var allTimings = MultiStaffLayouter.CollectAllTimingsForMeasure(score, i);
+                var allMeasures = MultiStaffLayouter.CollectAllMeasuresAtIndex(score, i);
+                var springs = layouter.CreateTimingSprings(
+                    primaryMeasure, allTimings, baseShortestDuration, allMeasures);
+
+                double ideal = 0, min = 0, invStretch = 0;
+                foreach (var s in springs)
+                {
+                    ideal += s.IdealDistance;
+                    min += s.MinDistance;
+                    invStretch += s.InverseStretchStrength;
+                }
+                double barlines = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
+                                + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
+                springData[i] = new MeasureSpringData(ideal + barlines, min + barlines, invStretch,
+                    primaryMeasure.BreakPenalty, primaryMeasure.LineBreakPermission);
+            }
+
+            return breaker.BreakIntoLines(measures, springData);
         }
 
         return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);

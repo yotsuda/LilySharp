@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -141,16 +141,47 @@ public sealed class MeasureLayouter
             }
         }
 
+        // Full-measure rests are spaced by a compact rod, not proportionally
+        // to the notated whole note — when EVERY voice is resting the whole
+        // measure, the combined-timing path must compact exactly like the
+        // single-voice path, or line breaking and layout disagree about the
+        // measure's width and multi-measure-rest runs split or stretch.
+        // LILYPOND-REF: lily/multi-measure-rest.cc:340-391 set_spacing_rods
+        bool allFullMeasureRests = true;
+        foreach (var m in measuresToScan)
+        {
+            if (!MultiMeasureRestEngraver.IsFullMeasureRest(m))
+            {
+                allFullMeasureRests = false;
+                break;
+            }
+        }
+        if (allFullMeasureRests && measure.Items.Length > 0)
+        {
+            var rest = measure.Items[0];
+            double inc = EngravingDefaults.SpacingIncrement;
+            double startMin = Math.Max(inc, SpacingRules.CalculateSkylineDistance(null, rest, staffY: 0));
+            double endMin = Math.Max(inc, SpacingRules.CalculateSkylineDistance(rest, null, staffY: 0));
+            return ImmutableArray.Create(
+                new Spring(Math.Max(1.25 * inc, startMin), startMin, Math.Max(0.1, 0.25 * inc)),
+                new Spring(Math.Max(2.0 * inc, endMin), endMin, Math.Max(0.1, inc)));
+        }
+
         var springs = new List<Spring>();
 
-        // Spring 0: barline → first column
-        // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist (first-note . (fixed-space . 1.3))
-        // LILYPOND-REF: lily/spacing-engraver.cc:200-253 — shortest-playing-duration aggregated across voices.
-        var firstDuration = timings.Count > 1 ? timings[1] - timings[0] : totalDuration;
-        var firstShortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[0], measuresToScan);
-        var firstSpring = SpacingRules.CreateTimingSpringMultiVoice(
-            firstDuration, firstShortestPlaying, baseShortestDuration);
-        double firstNoteMin = EngravingDefaults.BarLineToFirstNoteSpace;
+        // Spring 0: barline → first column. This is BREAKABLE spacing, not
+        // musical spacing: the gap after a barline is governed by the
+        // BarLine space-alist, NOT by the first note's duration, and it must
+        // never stretch under line justification (or the first note drifts
+        // rightward in stretched lines).
+        // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist —
+        //   (first-note . (semi-shrink-space . 1.3))
+        // LILYPOND-REF: lily/staff-spacing.cc Staff_spacing::get_spacing —
+        //   semi-shrink-space: fixed = d/2, ideal = d, is_stretchable = false
+        //   → inverse stretch strength 0; compressible only down to fixed
+        //   (inverse compress = ideal − fixed = d/2).
+        double firstNoteSpace = EngravingDefaults.BarLineToFirstNoteSpace;
+        double firstNoteMin = firstNoteSpace / 2;
 
         // Apply skyline rod: barline → first item (max across all voices)
         if (timingToItems.TryGetValue(timings[0], out var firstItems))
@@ -163,9 +194,9 @@ public sealed class MeasureLayouter
         }
 
         springs.Add(new Spring(
-            Math.Max(firstSpring.IdealDistance, firstNoteMin),
+            Math.Max(firstNoteSpace, firstNoteMin),
             firstNoteMin,
-            firstSpring.InverseStretchStrength));
+            inverseStretchStrength: 0));
 
         // Springs between adjacent timing columns (duration-proportional + skyline rods)
         // LILYPOND-REF: lily/spacing-basic.cc:107-162 — note_spacing uses left column's shortest-playing-duration.

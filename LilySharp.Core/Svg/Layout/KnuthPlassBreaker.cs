@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -111,6 +111,23 @@ public sealed class KnuthPlassBreaker
         var breakPoints = FindOptimalBreaks(springData);
 
         // Convert break points to measure groups
+        return CreateMeasureGroups(measures, breakPoints);
+    }
+
+    /// <summary>
+    /// Breaks with PRECOMPUTED per-measure spring data. Multi-staff scores
+    /// must price each measure by the COMBINED springs of all staves —
+    /// pricing by the primary staff alone packs lines wherever that staff
+    /// happens to rest while another staff is dense.
+    /// LILYPOND-REF: lily/paper-column.cc — columns aggregate all staves,
+    /// so constrained breaking sees the combined springs.
+    /// </summary>
+    internal List<List<Measure>> BreakIntoLines(IReadOnlyList<Measure> measures,
+                                                MeasureSpringData[] springData)
+    {
+        if (measures.Count == 0)
+            return new List<List<Measure>>();
+        var breakPoints = FindOptimalBreaks(springData);
         return CreateMeasureGroups(measures, breakPoints);
     }
 

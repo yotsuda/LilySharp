@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -809,7 +809,7 @@ public sealed class MultiStaffLayouter
     /// <summary>
     /// Collects all unique timings from all voices for a specific measure.
     /// </summary>
-    private List<Fraction> CollectAllTimingsForMeasure(MultiStaffScore score, int measureIndex)
+    internal static List<Fraction> CollectAllTimingsForMeasure(MultiStaffScore score, int measureIndex)
     {
         var timings = new HashSet<Fraction>();
 
@@ -846,7 +846,7 @@ public sealed class MultiStaffLayouter
     /// LILYPOND-REF: lily/paper-column.cc — paper columns aggregate grobs from all staves.
     /// Column spacing rods must consider skyline collisions from ALL voices.
     /// </remarks>
-    private List<Measure> CollectAllMeasuresAtIndex(MultiStaffScore score, int measureIndex)
+    internal static List<Measure> CollectAllMeasuresAtIndex(MultiStaffScore score, int measureIndex)
     {
         var measures = new List<Measure>();
 
