@@ -183,12 +183,19 @@ public static class TupletBracketEngraver
                         : EngravingDefaults.StemDownAttachX;
                     startX = beam.LeftX + stemOffset;
                     endX = beam.RightX + stemOffset;
+                    // The digit is BASELINE-anchored: above the beam the
+                    // baseline is the digit's bottom edge, so the clearance
+                    // alone suffices; below the beam the digit body extends
+                    // UPWARD from the baseline, so the digit height must be
+                    // added or the number lands on the beam.
                     const double clearance = 0.7;
-                    double dir = isStemUp ? -1.0 : 1.0;
+                    const double digitHeight = 1.7; // cap height at 0.6·FontSize
+                    double offset = isStemUp ? -clearance : clearance + digitHeight - 0.8;
                     // Beam Y is in staff positions from the middle line;
-                    // bracket Y is staff spaces from the staff top.
-                    startY = 2.0 - beam.LeftY * 0.5 + clearance * dir;
-                    endY = 2.0 - beam.RightY * 0.5 + clearance * dir;
+                    // bracket Y is staff spaces from the staff top. The
+                    // renderer adds its own -0.3/+0.8 text offset on top.
+                    startY = 2.0 - beam.LeftY * 0.5 + offset;
+                    endY = 2.0 - beam.RightY * 0.5 + offset;
                 }
             }
 
