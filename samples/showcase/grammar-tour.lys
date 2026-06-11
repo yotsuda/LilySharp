@@ -68,7 +68,7 @@ phrase p_tiesSlurs {
 phrase p_beams {
   g8 a b c d e fis g |              // 自動
   g8[ a b c d e fis g] |           // 手動（8 音 1 群）
-  g8[ c, b c | d8 e fis g] |       // 小節をまたぐ手動ビーム（, で戻す）
+  g4 a g8[ c, b c | d8 e fis g] a4 g |   // 小節をまたぐ手動ビーム（, で戻す）
 }
 
 // 6 連符・装飾音・トレモロ
@@ -82,7 +82,7 @@ phrase p_rhythm {
 // 7 装飾記号・グリッサンド
 phrase p_ornaments {
   g4@trill a@mordent b@turn c |     // トリル / モルデント / ターン
-  g4@glissando c e@glissando b r |
+  g4@glissando c e@glissando b |
 }
 
 // 8 拡張：多小節休符 / 運指 / ハーフタイ / 和音タイ
@@ -106,7 +106,7 @@ phrase p_chordTies {
 // 9 反復：インライン・ボルタ ＋ 反復回数
 phrase p_repeat {
   |: g'4 a g f | [1. e2 d | ] :| [2. e2 c | ]        // 1・2 番括弧
-  |: g'8 a g f :|*2                                   // ":|*N" で N 回反復
+  |: g'8 a g f g a g f :|*2                           // ":|*N" で N 回反復
 }
 
 // 10 多声部：1 段に上声部(符尾上) / 下声部(符尾下)
