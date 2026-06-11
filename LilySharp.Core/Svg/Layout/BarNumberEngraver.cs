@@ -71,15 +71,12 @@ public static class BarNumberEngraver
     /// than 1, also numbers every Nth measure within a system; default 0 means
     /// system starts only. <paramref name="numberFirstMeasure"/> set to false (LP
     /// default) suppresses the score's very first measure number.
-    /// <paramref name="systemSkylines"/> (optional, indexed per system) lets the
-    /// number side-position ABOVE anything protruding over the staff at its X
-    /// instead of assuming a bare staff top.
+    /// Collision handling lives in OutsideStaffStacker.StackAboveStaff.
     /// </summary>
     public static ImmutableArray<BarNumberLayout> Calculate(
         ImmutableArray<SystemLayout> systems,
         int period = 0,
-        bool numberFirstMeasure = false,
-        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
+        bool numberFirstMeasure = false)
     {
         if (systems.IsDefaultOrEmpty)
             return ImmutableArray<BarNumberLayout>.Empty;
@@ -132,31 +129,12 @@ public static class BarNumberEngraver
                     ? system.Indent + 0.05
                     : ml.X;
 
-                // Side-position: the number's BOTTOM sits padding (1.0sp)
-                // above whatever the system's up-skyline holds under the
-                // number's horizontal extent (usually just the staff top;
-                // a protruding grob pushes the number up). Baseline = digit
-                // bottom, so y = staffTop - protrusion - padding.
-                // LILYPOND-REF: scm/define-grobs.scm BarNumber — padding 1.0,
-                //   Y-offset side-position-interface::y-aligned-side.
-                double textWidth = displayedNumber.ToString().Length * FontSize * 0.5;
-                double xLo = atLineStart ? x - textWidth : x;
-                double xHi = atLineStart ? x : x + textWidth;
-                double protrusion = 0;
-                if (systemSkylines != null && sysIdx < systemSkylines.Count)
-                {
-                    var up = systemSkylines[sysIdx].up;
-                    if (!up.IsEmpty)
-                    {
-                        for (int s = 0; s <= 4; s++)
-                        {
-                            double sx = xLo + (xHi - xLo) * s / 4.0;
-                            // UP skylines store negative heights above the top.
-                            protrusion = Math.Max(protrusion, Math.Max(0, -up.Height(sx)));
-                        }
-                    }
-                }
-                double y = system.Y - protrusion - 1.0;
+                // Baseline = digit bottom, padding 1.0sp above the staff
+                // top. Collisions with protruding staff content and other
+                // outside-staff grobs are resolved afterwards by the unified
+                // OutsideStaffStacker.StackAboveStaff pass.
+                // LILYPOND-REF: scm/define-grobs.scm BarNumber — padding 1.0.
+                double y = system.Y - 1.0;
 
                 builder.Add(new BarNumberLayout(
                     MeasureIndex: measureIndex,

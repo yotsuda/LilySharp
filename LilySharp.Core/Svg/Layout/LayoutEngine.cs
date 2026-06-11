@@ -684,26 +684,43 @@ public sealed class LayoutEngine
         var (stackedDynamics, stackedHairpins, stackedTextSpanners) =
             OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts, textSpannerLayouts);
 
+        // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
+        // tuplet brackets 200 as immovable seeds, ottava 400, text 450,
+        // volta 600, marks 1500), seeded from the per-system up-skylines.
+        // Replaces the old pairwise hacks (bar-number-vs-volta in the
+        // renderer; music-mark-vs-volta inside MusicMarkEngraver).
+        var tupletBracketLayouts = TupletBracketEngraver.Calculate(
+            tupletBrackets, systems, ml, measures, beamGroups ?? default, beamLayouts ?? default);
+        var musicMarkLayouts = MusicMarkEngraver.Calculate(
+            score, musicMarks, systems, ml, measures, default);
+        var customTextLayouts = CustomTextEngraver.Calculate(score, customTexts, systems, ml);
+        var barNumberLayouts = BarNumberEngraver.Calculate(systems);
+        var (stackedTrills, stackedBarNumbers, stackedOttavas, stackedCustomTexts,
+             stackedVoltas, stackedMarks) = OutsideStaffStacker.StackAboveStaff(
+            systems, systemSkylines, tupletBracketLayouts,
+            trillSpannerLayouts, barNumberLayouts, ottavaLayouts,
+            customTextLayouts, voltaBracketLayouts, musicMarkLayouts);
+
         return new AnnotationLayouts(
             Dynamics: stackedDynamics,
             Articulations: score != null ? ArticulationEngraver.Calculate(score, articulations, systems, ml) : ImmutableArray<ArticulationLayout>.Empty,
             GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, systems, ml) : ImmutableArray<GraceNoteLayout>.Empty,
             Lyrics: lyricLayouts,
             LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(lyricLayouts, systems),
-            MusicMarks: MusicMarkEngraver.Calculate(score, musicMarks, systems, ml, measures, voltaBracketLayouts),
-            CustomTexts: CustomTextEngraver.Calculate(score, customTexts, systems, ml),
-            VoltaBrackets: voltaBracketLayouts,
-            TupletBrackets: TupletBracketEngraver.Calculate(tupletBrackets, systems, ml, measures, beamGroups ?? default, beamLayouts ?? default),
+            MusicMarks: stackedMarks,
+            CustomTexts: stackedCustomTexts,
+            VoltaBrackets: stackedVoltas,
+            TupletBrackets: tupletBracketLayouts,
             Hairpins: stackedHairpins,
             TextSpanners: stackedTextSpanners,
-            OttavaBrackets: ottavaLayouts,
+            OttavaBrackets: stackedOttavas,
             Arpeggios: arpeggioLayouts,
             PedalBrackets: pedalBracketLayouts,
             FiguredBasses: figuredBassLayouts,
             ChordNames: chordNameLayouts,
             PercentRepeats: percentRepeatLayouts,
             CrossStaffs: crossStaffLayouts ?? ImmutableArray<CrossStaffLayout>.Empty,
-            TrillSpanners: trillSpannerLayouts,
+            TrillSpanners: stackedTrills,
             // LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob.
             Fingerings: score != null
                 ? FingeringEngraver.Calculate(score, systems)
@@ -721,7 +738,7 @@ public sealed class LayoutEngine
                 ? LedgerLineSpannerEngraver.Calculate(score, systems, _options.StaffHeight)
                 : ImmutableArray<LedgerLineSpan>.Empty,
             // LILYPOND-REF: lily/bar-number-engraver.cc — BarNumber grob.
-            BarNumbers: BarNumberEngraver.Calculate(systems, systemSkylines: systemSkylines),
+            BarNumbers: stackedBarNumbers,
             // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.
             StanzaNumbers: StanzaNumberEngraver.Calculate(lyricLayouts, systems));
     }

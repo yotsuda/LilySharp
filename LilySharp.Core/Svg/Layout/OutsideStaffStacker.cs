@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -212,5 +212,258 @@ public static class OutsideStaffStacker
         {
             _regions.Add((startX, endX, bottomY));
         }
+    }
+
+    // =================================================================
+    // Above-staff stacking
+    // =================================================================
+
+    // LILYPOND-REF: scm/define-grobs.scm outside-staff-priority —
+    // TrillSpanner 50, BarNumber 100, TupletBracket 200, OttavaBracket 400,
+    // TextScript 450, VoltaBracketSpanner 600, RehearsalMark 1500.
+    // Lower priority = placed first = closer to the staff; later (higher
+    // priority) grobs are pushed ABOVE everything already placed.
+
+    /// <summary>
+    /// Unified above-staff stacking: every above-staff annotation is placed
+    /// in ascending outside-staff-priority order against a per-system
+    /// occupancy seeded from the system's UP skyline (note/stem/beam
+    /// content) and the above-staff tuplet brackets (which are bound to
+    /// their beams and therefore registered as immovable).
+    /// Replaces the previous pairwise special cases (bar-number-vs-volta in
+    /// the renderer, music-mark-vs-volta in MusicMarkEngraver).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc:359-474
+    /// outside_staff_axis_group — sort by priority, side-position each grob
+    /// against the accumulated skyline, then merge its extent in.
+    /// </remarks>
+    public static (ImmutableArray<TrillSpannerLayout> Trills,
+                   ImmutableArray<BarNumberLayout> BarNumbers,
+                   ImmutableArray<OttavaBracketLayout> Ottavas,
+                   ImmutableArray<CustomTextLayout> CustomTexts,
+                   ImmutableArray<VoltaBracketLayout> Voltas,
+                   ImmutableArray<MusicMarkLayout> MusicMarks)
+        StackAboveStaff(
+            ImmutableArray<SystemLayout> systems,
+            IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
+            ImmutableArray<TupletBracketLayout> tupletBrackets,
+            ImmutableArray<TrillSpannerLayout> trills,
+            ImmutableArray<BarNumberLayout> barNumbers,
+            ImmutableArray<OttavaBracketLayout> ottavas,
+            ImmutableArray<CustomTextLayout> customTexts,
+            ImmutableArray<VoltaBracketLayout> voltas,
+            ImmutableArray<MusicMarkLayout> musicMarks)
+    {
+        if (systems.IsDefaultOrEmpty)
+            return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks);
+
+        var measureToSystem = new Dictionary<int, int>();
+        for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
+            foreach (var m in systems[sysIdx].Measures)
+                measureToSystem[m.MeasureIndex] = sysIdx;
+
+        // UP trackers: smaller page Y = further above the staff. Occupancy
+        // records the TOP edge of everything placed so far.
+        var trackers = new UpTracker[systems.Length];
+        for (int i = 0; i < systems.Length; i++)
+        {
+            trackers[i] = new UpTracker(systems[i].Y);
+            // Seed with the system's up-skyline (staff content protrusions).
+            // VerticalSkyline.Height converts the internal sky-relative value
+            // to real coordinates (negative = above the staff top); raw
+            // Building.Height must NOT be used here.
+            if (systemSkylines != null && i < systemSkylines.Count
+                && !systemSkylines[i].up.IsEmpty)
+            {
+                var up = systemSkylines[i].up;
+                foreach (var b in up.Buildings)
+                {
+                    if (double.IsInfinity(b.XLeft) || double.IsInfinity(b.XRight))
+                        continue;
+                    double mid = (b.XLeft + b.XRight) / 2;
+                    double h = up.Height(mid);
+                    if (double.IsInfinity(h) || double.IsNaN(h))
+                        continue;
+                    double protrusion = Math.Max(0, -h);
+                    if (protrusion > 0)
+                        trackers[i].AddRegion(b.XLeft, b.XRight, systems[i].Y - protrusion);
+                }
+            }
+        }
+
+        // Priority 200: above-staff tuplet brackets/numbers. They are bound
+        // to their beams in this model, so they seed the occupancy without
+        // being moved themselves.
+        if (!tupletBrackets.IsDefaultOrEmpty)
+        {
+            foreach (var tb in tupletBrackets)
+            {
+                if (!tb.IsStemUp || !measureToSystem.TryGetValue(tb.MeasureIndex, out int sysIdx))
+                    continue;
+                double sy = systems[sysIdx].Y;
+                double top = sy + Math.Min(tb.StartY, tb.EndY) - 1.6; // number above the line
+                trackers[sysIdx].AddRegion(tb.StartX, tb.EndX, top);
+            }
+        }
+
+        // ---- 50: TrillSpanner ----
+        var adjTrills = trills;
+        if (!trills.IsDefaultOrEmpty)
+        {
+            var b = trills.ToBuilder();
+            for (int i = 0; i < b.Count; i++)
+            {
+                var t = b[i];
+                if (!measureToSystem.TryGetValue(t.StartMeasureIndex, out int sysIdx))
+                    continue;
+                double sy = systems[sysIdx].Y;
+                // anchor = glyph baseline; body extends ~1.5sp up, 0.3 down.
+                double newAbs = Place(trackers[sysIdx], t.GlyphX, t.LineEndX,
+                    sy + t.Y, topOffset: -1.5, bottomOffset: 0.3);
+                b[i] = t with { Y = newAbs - sy };
+            }
+            adjTrills = b.ToImmutable();
+        }
+
+        // ---- 100: BarNumber (absolute page Y) ----
+        var adjBarNumbers = barNumbers;
+        if (!barNumbers.IsDefaultOrEmpty)
+        {
+            var b = barNumbers.ToBuilder();
+            for (int i = 0; i < b.Count; i++)
+            {
+                var bn = b[i];
+                if (!measureToSystem.TryGetValue(bn.MeasureIndex, out int sysIdx))
+                    continue;
+                double halfWidth = bn.Text.Length * 0.9;
+                double x0 = bn.RightAligned ? bn.X - 2 * halfWidth : bn.X;
+                double x1 = bn.RightAligned ? bn.X : bn.X + 2 * halfWidth;
+                double newY = Place(trackers[sysIdx], x0, x1,
+                    bn.Y, topOffset: -1.4, bottomOffset: 0.0);
+                b[i] = bn with { Y = newY };
+            }
+            adjBarNumbers = b.ToImmutable();
+        }
+
+        // ---- 400: OttavaBracket (above-staff only) ----
+        var adjOttavas = ottavas;
+        if (!ottavas.IsDefaultOrEmpty)
+        {
+            var b = ottavas.ToBuilder();
+            for (int i = 0; i < b.Count; i++)
+            {
+                var o = b[i];
+                if (!o.IsAbove || !measureToSystem.TryGetValue(o.StartMeasureIndex, out int sysIdx))
+                    continue;
+                double sy = systems[sysIdx].Y;
+                double newAbs = Place(trackers[sysIdx], o.StartX, o.EndX,
+                    sy + o.Y, topOffset: -1.3, bottomOffset: Math.Max(0.3, o.EdgeHeight));
+                b[i] = o with { Y = newAbs - sy };
+            }
+            adjOttavas = b.ToImmutable();
+        }
+
+        // ---- 450: TextScript (^"...") ----
+        var adjCustomTexts = customTexts;
+        if (!customTexts.IsDefaultOrEmpty)
+        {
+            var b = customTexts.ToBuilder();
+            for (int i = 0; i < b.Count; i++)
+            {
+                var ct = b[i];
+                if (!measureToSystem.TryGetValue(ct.MeasureIndex, out int sysIdx))
+                    continue;
+                double sy = systems[sysIdx].Y;
+                double halfWidth = Math.Max(1.0, ct.Text.Length * 0.55);
+                double newAbs = Place(trackers[sysIdx], ct.X - halfWidth, ct.X + halfWidth,
+                    sy + ct.Y, topOffset: -1.6, bottomOffset: 0.3);
+                b[i] = ct with { Y = newAbs - sy };
+            }
+            adjCustomTexts = b.ToImmutable();
+        }
+
+        // ---- 600: VoltaBracket ----
+        var adjVoltas = voltas;
+        if (!voltas.IsDefaultOrEmpty)
+        {
+            var b = voltas.ToBuilder();
+            for (int i = 0; i < b.Count; i++)
+            {
+                var v = b[i];
+                if (!measureToSystem.TryGetValue(v.StartMeasureIndex, out int sysIdx))
+                    continue;
+                double sy = systems[sysIdx].Y;
+                // anchor = bracket line; hooks and text hang ~1.6sp below it.
+                double newAbs = Place(trackers[sysIdx], v.StartX, v.EndX,
+                    sy + v.Y, topOffset: -0.15, bottomOffset: 1.6);
+                b[i] = v with { Y = newAbs - sy };
+            }
+            adjVoltas = b.ToImmutable();
+        }
+
+        // ---- 1500: MusicMark (rehearsal/section labels) ----
+        var adjMarks = musicMarks;
+        if (!musicMarks.IsDefaultOrEmpty)
+        {
+            var b = musicMarks.ToBuilder();
+            for (int i = 0; i < b.Count; i++)
+            {
+                var m = b[i];
+                if (!measureToSystem.TryGetValue(m.MeasureIndex, out int sysIdx))
+                    continue;
+                double sy = systems[sysIdx].Y;
+                double halfWidth = Math.Max(1.4, m.Text.Length * 0.7);
+                // anchor = text baseline inside the box: box top ~2.1 above,
+                // box bottom ~0.6 below.
+                double newAbs = Place(trackers[sysIdx], m.X - halfWidth, m.X + halfWidth,
+                    sy + m.Y, topOffset: -2.1, bottomOffset: 0.6);
+                b[i] = m with { Y = newAbs - sy };
+            }
+            adjMarks = b.ToImmutable();
+        }
+
+        return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks);
+    }
+
+    /// <summary>
+    /// Places one element: its BOTTOM edge must clear the current occupancy
+    /// top by outside-staff-padding; the element only ever moves AWAY from
+    /// the staff. Registers the element's extent and returns the new anchor.
+    /// </summary>
+    private static double Place(UpTracker tracker, double x0, double x1,
+        double anchorY, double topOffset, double bottomOffset)
+    {
+        double occupiedTop = tracker.MinYAt(x0, x1);
+        double required = occupiedTop - OutsideStaffPadding - bottomOffset;
+        double newAnchor = Math.Min(anchorY, required);
+        tracker.AddRegion(x0, x1, newAnchor + topOffset);
+        return newAnchor;
+    }
+
+    /// <summary>
+    /// Occupancy above the staff: tracks the topmost (smallest page Y) edge
+    /// per X region. Mirror image of <see cref="OccupiedTracker"/>.
+    /// </summary>
+    private sealed class UpTracker
+    {
+        private readonly List<(double startX, double endX, double topY)> _regions = new();
+        private readonly double _staffTop;
+
+        public UpTracker(double staffTop) => _staffTop = staffTop;
+
+        public double MinYAt(double startX, double endX)
+        {
+            double minY = _staffTop;
+            foreach (var (rStart, rEnd, rTop) in _regions)
+            {
+                if (rStart < endX && rEnd > startX)
+                    minY = Math.Min(minY, rTop);
+            }
+            return minY;
+        }
+
+        public void AddRegion(double startX, double endX, double topY)
+            => _regions.Add((startX, endX, topY));
     }
 }

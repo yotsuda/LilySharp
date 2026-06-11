@@ -1975,24 +1975,11 @@ public static class SharedRenderer
         // LILYPOND-REF: scm/define-grobs.scm BarNumber (font-size . -2) —
         // 2.2sp text height × magstep(-2); see BarNumberEngraver.FontSize.
         double fontSize = BarNumberEngraver.FontSize;
-        var voltas = layout.VoltaBracketLayouts;
+        // Collisions with voltas/marks are resolved by the unified
+        // outside-staff stacking pass (OutsideStaffStacker.StackAboveStaff).
         foreach (var bn in layout.BarNumberLayouts)
         {
             double y = bn.Y;
-            // When a volta ending begins at this bar-numbered measure (e.g. a second
-            // ending that opens a new system), stack the bar number ABOVE the volta
-            // bracket so it does not collide with the volta number.
-            // LILYPOND-REF: outside-staff-priority — BarNumber sits clear of VoltaBracket.
-            if (!voltas.IsDefaultOrEmpty)
-            {
-                foreach (var v in voltas)
-                {
-                    if (string.IsNullOrEmpty(v.VoltaText) || v.StartMeasureIndex != bn.MeasureIndex)
-                        continue;
-                    double voltaLineY = (sysY.TryGetValue(v.StartMeasureIndex, out var s) ? s : 0) + v.Y;
-                    y = Math.Min(y, voltaLineY - 0.7);
-                }
-            }
             gc.DrawText(bn.Text, bn.X, y, fontSize, "serif",
                 FontStyle.Bold, bn.RightAligned ? TextAnchor.End : TextAnchor.Start,
                 Color.Black);
