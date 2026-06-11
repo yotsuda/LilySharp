@@ -202,7 +202,7 @@ public static class LayoutUtilities
         }
 
         // Multi-staff path: timing → column lookup.
-        if (measureIndex < 0 || measureIndex >= measures.Length)
+        if (measures.IsDefault || measureIndex < 0 || measureIndex >= measures.Length)
             return 0;
         var measure = measures[measureIndex];
         var timing = Fraction.Zero;

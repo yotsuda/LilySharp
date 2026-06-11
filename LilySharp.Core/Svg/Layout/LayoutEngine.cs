@@ -144,7 +144,7 @@ public sealed class LayoutEngine
             var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
             var combineItems = PartCombineAnalyzer.Analyze(
                 score.Voices[0], score.Voices[1], score.TimeSignature);
-            partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml);
+            partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml, score.Voices[0].Measures);
         }
 
         var result = BuildScoreLayout(pages, systemsArray, beamLayouts, tieLayouts, slurLayouts,
@@ -369,7 +369,7 @@ public sealed class LayoutEngine
                 var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
                 var combineItems = PartCombineAnalyzer.Analyze(
                     staff.Voices[0], staff.Voices[1], score.TimeSignature);
-                partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml);
+                partCombineLayouts = PartCombineAnalyzer.Calculate(combineItems, ml, staff.Voices[0].Measures);
             }
         }
 
@@ -646,7 +646,7 @@ public sealed class LayoutEngine
         var ottavaLayouts = OttavaBracketEngraver.Calculate(ottavaItems, systems, ml);
 
         // Layout arpeggio markings
-        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, ml, _options.StaffHeight);
+        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, ml, _options.StaffHeight, measures);
 
         // Detect and layout pedal brackets from sustain/sostenuto/una corda marks
         var pedalBracketItems = PedalEngraver.DetectPedalBrackets(musicMarks);
@@ -654,11 +654,11 @@ public sealed class LayoutEngine
 
         // Layout figured bass
         var figuredBassLayouts = FiguredBassEngraver.Calculate(
-            figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml);
+            figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures);
 
         // Layout chord names
         var chordNameLayouts = ChordNameEngraver.Calculate(
-            chordNames ?? ImmutableArray<ChordNameItem>.Empty, systems, ml);
+            chordNames ?? ImmutableArray<ChordNameItem>.Empty, systems, ml, measures);
 
         // Layout percent repeats
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(

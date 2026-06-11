@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -207,7 +207,8 @@ public static class PartCombineAnalyzer
     /// <returns>Layout items for rendering</returns>
     public static ImmutableArray<PartCombineLayout> Calculate(
         ImmutableArray<PartCombineItem> combineItems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<Measure> measures = default)
     {
         if (combineItems.IsDefaultOrEmpty)
             return ImmutableArray<PartCombineLayout>.Empty;
@@ -228,15 +229,13 @@ public static class PartCombineAnalyzer
             if (text == null)
                 continue;
 
-            // Find X position from measure layout
+            // Find X position from measure layout (Items/Columns-aware)
             double x = 0;
             if (item.MeasureIndex < measureLayouts.Length)
             {
                 var ml = measureLayouts[item.MeasureIndex];
-                if (item.ItemIndex < ml.Items.Length)
-                    x = ml.X + ml.Items[item.ItemIndex].X;
-                else
-                    x = ml.X;
+                x = ml.X + LayoutUtilities.GetItemXOffset(
+                    measures, item.MeasureIndex, item.ItemIndex, ml);
             }
 
             layouts.Add(new PartCombineLayout(text, x, aboveStaffY, item.MeasureIndex));

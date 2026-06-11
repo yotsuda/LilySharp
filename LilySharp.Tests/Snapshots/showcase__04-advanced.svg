@@ -190,10 +190,10 @@
   <line x1="28.04" y1="54.00" x2="77.70" y2="54.00" stroke="#000000" stroke-width="0.130" data-pos="942"/>
   <line x1="77.70" y1="54.00" x2="77.70" y2="56.00" stroke="#000000" stroke-width="0.130" data-pos="942"/>
   <text x="28.54" y="54.30" font-size="2.40" font-family="serif" font-weight="bold" dominant-baseline="hanging" fill="#000000" data-pos="942">2.</text>
-  <text x="14.06" y="10.50" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="228">C</text>
-  <text x="18.32" y="10.50" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="244">Dm</text>
-  <text x="22.58" y="10.50" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="261">Em</text>
-  <text x="27.47" y="10.50" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="279">F</text>
+  <text x="14.19" y="10.50" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="228">C</text>
+  <text x="18.57" y="10.50" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="244">Dm</text>
+  <text x="22.96" y="10.50" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="261">Em</text>
+  <text x="27.35" y="10.50" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="279">F</text>
   <text x="36.92" y="10.50" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="301">G</text>
   <text x="41.31" y="10.50" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="319">Am</text>
   <text x="45.69" y="10.50" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="337">G</text>
@@ -205,12 +205,12 @@
   <text x="68.43" y="23.50" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="436">4</text>
   <text x="72.81" y="22.00" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="446">5</text>
   <text x="72.81" y="23.50" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="446">3</text>
-  <text x="11.51" y="36.00" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="461">7</text>
-  <text x="16.03" y="36.00" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="469">6</text>
-  <text x="20.54" y="36.00" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="477">5</text>
-  <text x="20.54" y="37.50" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="477">3</text>
-  <text x="25.35" y="36.00" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="487">5</text>
-  <text x="25.35" y="37.50" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="487">3</text>
+  <text x="11.57" y="36.00" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="461">7</text>
+  <text x="16.15" y="36.00" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="469">6</text>
+  <text x="20.72" y="36.00" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="477">5</text>
+  <text x="20.72" y="37.50" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="477">3</text>
+  <text x="25.29" y="36.00" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="487">5</text>
+  <text x="25.29" y="37.50" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="487">3</text>
   <text x="7.00" y="29.00" font-size="1.80" font-family="serif" font-weight="bold" fill="#000000">4</text>
   <text x="7.00" y="44.00" font-size="1.80" font-family="serif" font-weight="bold" fill="#000000">7</text>
   <text x="7.00" y="56.00" font-size="1.80" font-family="serif" font-weight="bold" fill="#000000">10</text>

@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -112,7 +112,7 @@ public static class FingeringEngraver
                 if (item is NoteItem note && note.Fingering.HasValue)
                 {
                     var layout = BuildLayout(
-                        note, mi, ii, measureLayout, system, staffIndex);
+                        note, mi, ii, measureLayout, system, staffIndex, voice.Measures);
                     if (layout.HasValue)
                         layouts.Add(layout.Value);
                 }
@@ -120,7 +120,7 @@ public static class FingeringEngraver
                 {
                     // LILYPOND-REF: lily/fingering-column.cc — stack chord fingerings.
                     BuildChordFingerings(
-                        chord, mi, ii, measureLayout, system, staffIndex, layouts);
+                        chord, mi, ii, measureLayout, system, staffIndex, layouts, voice.Measures);
                 }
             }
         }
@@ -143,12 +143,16 @@ public static class FingeringEngraver
     private static void BuildChordFingerings(
         ChordItem chord, int measureIndex, int itemIndex,
         MeasureLayout measureLayout, SystemLayout system, int staffIndex,
-        ImmutableArray<FingeringLayout>.Builder layouts)
+        ImmutableArray<FingeringLayout>.Builder layouts,
+        ImmutableArray<Measure> measures)
     {
-        if (itemIndex >= measureLayout.Items.Length)
+        if (measureLayout.Columns.IsDefaultOrEmpty
+            && itemIndex >= measureLayout.Items.Length)
             return;
-        var itemLayout = measureLayout.Items[itemIndex];
-        double centerX = measureLayout.X + itemLayout.X + itemLayout.Width / 2.0;
+        double centerX = measureLayout.X + LayoutUtilities.GetItemXOffset(
+            measures, measureIndex, itemIndex, measureLayout)
+            + GlyphMetrics.GetNoteheadAdvance(
+                chord.BaseDuration.Numerator == 1 ? (int)chord.BaseDuration.Denominator : 1) / 2.0;
 
         bool isAbove = !chord.StemUp;
         double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
@@ -177,13 +181,19 @@ public static class FingeringEngraver
 
     private static FingeringLayout? BuildLayout(
         NoteItem note, int measureIndex, int itemIndex,
-        MeasureLayout measureLayout, SystemLayout system, int staffIndex)
+        MeasureLayout measureLayout, SystemLayout system, int staffIndex,
+        ImmutableArray<Measure> measures)
     {
-        if (itemIndex >= measureLayout.Items.Length)
+        if (measureLayout.Columns.IsDefaultOrEmpty
+            && itemIndex >= measureLayout.Items.Length)
             return null;
 
-        var itemLayout = measureLayout.Items[itemIndex];
-        double centerX = measureLayout.X + itemLayout.X + itemLayout.Width / 2.0;
+        // Centered on the notehead glyph (self-alignment-X = CENTER), via the
+        // Items/Columns-aware resolver.
+        double centerX = measureLayout.X + LayoutUtilities.GetItemXOffset(
+            measures, measureIndex, itemIndex, measureLayout)
+            + GlyphMetrics.GetNoteheadAdvance(
+                note.BaseDuration.Numerator == 1 ? (int)note.BaseDuration.Denominator : 1) / 2.0;
 
         // Direction: opposite to stem (LILYPOND-REF: script-interface.cc:23-45).
         bool isAbove = !note.StemUp;

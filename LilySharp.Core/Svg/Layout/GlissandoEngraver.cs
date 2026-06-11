@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -58,7 +58,8 @@ public static class GlissandoEngraver
         ImmutableArray<GlissandoItem> glissandos,
         ImmutableArray<SystemLayout> systems,
         double staffHeight,
-        int staffIndex = -1)
+        int staffIndex = -1,
+        ImmutableArray<Measure> measures = default)
     {
         if (glissandos.IsDefaultOrEmpty || glissandos.Length == 0)
             return ImmutableArray<GlissandoLayout>.Empty;
@@ -80,12 +81,10 @@ public static class GlissandoEngraver
             // Real start/end X derived from note attachment.
             // LILYPOND-REF: scm/define-grobs.scm:1560 left attach-dir = RIGHT
             // LILYPOND-REF: scm/define-grobs.scm:1563 right attach-dir = LEFT
-            double realStartX = startMeasure.X;
-            double realEndX = endMeasure.X;
-            if (gliss.StartItemIndex < startMeasure.Items.Length)
-                realStartX += startMeasure.Items[gliss.StartItemIndex].X;
-            if (gliss.EndItemIndex < endMeasure.Items.Length)
-                realEndX += endMeasure.Items[gliss.EndItemIndex].X;
+            double realStartX = startMeasure.X + LayoutUtilities.GetItemXOffset(
+                measures, gliss.StartMeasureIndex, gliss.StartItemIndex, startMeasure);
+            double realEndX = endMeasure.X + LayoutUtilities.GetItemXOffset(
+                measures, gliss.EndMeasureIndex, gliss.EndItemIndex, endMeasure);
             realStartX += Padding;
             realEndX -= Padding;
 

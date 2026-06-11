@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -82,10 +82,12 @@ public class FingeringTests
         var (_, layout) = BuildLayout("c4@finger.2 |");
         var fingering = layout.FingeringLayouts[0];
 
-        // The note layout's X should match the fingering's X (within the digit center).
+        // The fingering centers on the NOTEHEAD GLYPH (self-alignment-X =
+        // CENTER on the note column), not on the spacing-allocated width.
         var measure = layout.AllSystems[0].Measures[0];
         var item = measure.Items[fingering.ItemIndex];
-        double noteCenterX = measure.X + item.X + item.Width / 2.0;
+        double noteCenterX = measure.X + item.X
+            + LilySharp.Core.Svg.Layout.GlyphMetrics.NoteheadBlackAdvance / 2.0;
         Assert.Equal(noteCenterX, fingering.X, precision: 4);
     }
 

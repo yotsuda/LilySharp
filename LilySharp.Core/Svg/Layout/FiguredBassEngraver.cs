@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -60,7 +60,8 @@ public static class FiguredBassEngraver
     public static ImmutableArray<FiguredBassLayout> Calculate(
         ImmutableArray<FiguredBassItem> figuredBasses,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<Measure> measures = default)
     {
         if (figuredBasses.IsDefaultOrEmpty)
             return ImmutableArray<FiguredBassLayout>.Empty;
@@ -74,11 +75,12 @@ public static class FiguredBassEngraver
 
             var measureLayout = measureLayouts[fb.MeasureIndex];
 
-            if (fb.ItemIndex >= measureLayout.Items.Length)
+            if (measureLayout.Columns.IsDefaultOrEmpty
+                && fb.ItemIndex >= measureLayout.Items.Length)
                 continue;
 
-            var itemLayout = measureLayout.Items[fb.ItemIndex];
-            double x = measureLayout.X + itemLayout.X;
+            double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                measures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
             double y = BelowStaffY + StaffPadding;
 
             var figureTexts = fb.Figures

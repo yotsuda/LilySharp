@@ -782,6 +782,6 @@ public sealed class ElementCoordinator
         if (glissandos.Length == 0)
             return ImmutableArray<GlissandoLayout>.Empty;
 
-        return GlissandoEngraver.Calculate(glissandos, systems, _options.StaffHeight, staffIndex);
+        return GlissandoEngraver.Calculate(glissandos, systems, _options.StaffHeight, staffIndex, score.Voice.Measures);
     }
 }

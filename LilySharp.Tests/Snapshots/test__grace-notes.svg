@@ -41,16 +41,16 @@
   <rect x="60.49" y="9.50" width="0.16" height="4.00" fill="#000000"/>
   <rect x="76.94" y="9.50" width="0.16" height="4.00" fill="#000000"/>
   <rect x="77.50" y="9.50" width="0.50" height="4.00" fill="#000000"/>
-  <text class="music" x="10.56" y="14.00" font-size="2.60" data-pos="166"></text>
-  <text class="music" x="11.34" y="13.50" font-size="2.60" data-pos="166"></text>
-  <text class="music" x="28.79" y="15.50" font-size="2.60" data-pos="264"></text>
-  <line x1="28.58" y1="14.50" x2="29.85" y2="14.50" stroke="#000000" stroke-width="0.230" data-pos="264"/>
-  <line x1="28.58" y1="15.50" x2="29.85" y2="15.50" stroke="#000000" stroke-width="0.230" data-pos="264"/>
-  <path d="M 29.22,16.00 C 29.79,16.33 30.55,16.13 31.12,15.50 C 30.55,16.30 29.79,16.50 29.22,16.00 Z" fill="#000000" data-pos="264"/>
-  <text class="music" x="45.74" y="14.50" font-size="2.60" data-pos="375"></text>
-  <line x1="45.53" y1="14.50" x2="46.80" y2="14.50" stroke="#000000" stroke-width="0.230" data-pos="375"/>
-  <path d="M 46.17,15.00 C 46.74,15.33 47.50,15.13 48.07,14.50 C 47.50,15.30 46.74,15.50 46.17,15.00 Z" fill="#000000" data-pos="375"/>
-  <text class="music" x="62.69" y="13.50" font-size="2.60" data-pos="477"></text>
+  <text class="music" x="10.17" y="14.00" font-size="2.60" data-pos="166"></text>
+  <text class="music" x="10.95" y="13.50" font-size="2.60" data-pos="166"></text>
+  <text class="music" x="28.40" y="15.50" font-size="2.60" data-pos="264"></text>
+  <line x1="28.18" y1="14.50" x2="29.46" y2="14.50" stroke="#000000" stroke-width="0.230" data-pos="264"/>
+  <line x1="28.18" y1="15.50" x2="29.46" y2="15.50" stroke="#000000" stroke-width="0.230" data-pos="264"/>
+  <path d="M 28.82,16.00 C 29.39,16.33 30.16,16.13 30.73,15.50 C 30.16,16.30 29.39,16.50 28.82,16.00 Z" fill="#000000" data-pos="264"/>
+  <text class="music" x="45.35" y="14.50" font-size="2.60" data-pos="375"></text>
+  <line x1="45.13" y1="14.50" x2="46.41" y2="14.50" stroke="#000000" stroke-width="0.230" data-pos="375"/>
+  <path d="M 45.77,15.00 C 46.34,15.33 47.11,15.13 47.68,14.50 C 47.11,15.30 46.34,15.50 45.77,15.00 Z" fill="#000000" data-pos="375"/>
+  <text class="music" x="62.30" y="13.50" font-size="2.60" data-pos="477"></text>
   <rect x="7.59" y="5.70" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="10.30" y="7.90" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">Main</text>
   </g>

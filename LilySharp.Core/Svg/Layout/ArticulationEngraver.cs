@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -103,11 +103,11 @@ public static class ArticulationEngraver
 
             var measureLayout = measureLayouts[articulation.MeasureIndex];
 
-            // Find the item layout within the measure
-            if (articulation.ItemIndex >= measureLayout.Items.Length)
+            // Bounds guard (single-staff layouts only; multi-staff layouts
+            // resolve through timing-aligned columns).
+            if (measureLayout.Columns.IsDefaultOrEmpty
+                && articulation.ItemIndex >= measureLayout.Items.Length)
                 continue;
-
-            var itemLayout = measureLayout.Items[articulation.ItemIndex];
 
             // Get the music item to determine staff position
             // LILYPOND-REF: script-engraver.cc:92-125 acknowledge_note_head
@@ -123,7 +123,10 @@ public static class ArticulationEngraver
             // origin-centred (symmetric BBox), so add the notehead's half-width to
             // land the glyph centre on the notehead centre rather than its left edge.
             // LILYPOND-REF: define-grobs.scm:2289 self-alignment-X = CENTER
-            double x = measureLayout.X + itemLayout.X + NoteheadHalfWidth(item);
+            double x = measureLayout.X
+                + LayoutUtilities.GetItemXOffset(score.Voice.Measures,
+                    articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
+                + NoteheadHalfWidth(item);
 
             // Calculate Y position based on note position and direction
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation

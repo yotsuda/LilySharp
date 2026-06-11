@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -49,7 +49,8 @@ public static class ArpeggioEngraver
         ImmutableArray<ArpeggioItem> arpeggios,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        double staffHeight)
+        double staffHeight,
+        ImmutableArray<Measure> measures = default)
     {
         if (arpeggios.IsDefaultOrEmpty || arpeggios.Length == 0)
             return ImmutableArray<ArpeggioLayout>.Empty;
@@ -74,9 +75,8 @@ public static class ArpeggioEngraver
 
             // Get X position of the chord item, then place arpeggio to the left
             // LILYPOND-REF: scm/define-grobs.scm:206 (direction . ,LEFT)
-            double itemX = measure.X;
-            if (arp.ItemIndex < measure.Items.Length)
-                itemX += measure.Items[arp.ItemIndex].X;
+            double itemX = measure.X + LayoutUtilities.GetItemXOffset(
+                measures, arp.MeasureIndex, arp.ItemIndex, measure);
 
             double arpeggioX = itemX - Padding;
 

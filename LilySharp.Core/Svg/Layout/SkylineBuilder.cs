@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -100,12 +100,13 @@ public sealed class SkylineBuilder
                 var measure = voice.Measures[measureIndex];
                 for (int itemIndex = 0; itemIndex < measure.Items.Length; itemIndex++)
                 {
-                    if (itemIndex >= measureLayout.Items.Length)
+                    if (measureLayout.Columns.IsDefaultOrEmpty
+                        && itemIndex >= measureLayout.Items.Length)
                         continue;
 
                     var item = measure.Items[itemIndex];
-                    var itemLayout = measureLayout.Items[itemIndex];
-                    double itemX = measureLayout.X + itemLayout.X;
+                    double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                        voice.Measures, measureIndex, itemIndex, measureLayout);
 
                     AddMusicItemToSkylines(item, itemX, staffMiddleY,
                         stemLength, noteheadHeight, upSkyline, downSkyline);

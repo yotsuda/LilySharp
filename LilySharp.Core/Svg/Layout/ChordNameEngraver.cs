@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -64,7 +64,8 @@ public static class ChordNameEngraver
     public static ImmutableArray<ChordNameLayout> Calculate(
         ImmutableArray<ChordNameItem> chordNames,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<Measure> measures = default)
     {
         if (chordNames.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<ChordNameLayout>.Empty;
@@ -78,12 +79,9 @@ public static class ChordNameEngraver
 
             var ml = measureLayouts[chord.MeasureIndex];
 
-            // Find item X position
-            double itemX = 0;
-            if (chord.ItemIndex < ml.Items.Length)
-                itemX = ml.Items[chord.ItemIndex].X;
-
-            double x = ml.X + itemX;
+            // Find item X position (Items/Columns-aware)
+            double x = ml.X + LayoutUtilities.GetItemXOffset(
+                measures, chord.MeasureIndex, chord.ItemIndex, ml);
 
             // Y position: above the staff (negative = upward)
             double y = -StaffPadding;

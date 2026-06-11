@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -91,11 +91,14 @@ public static class GraceNoteEngraver
 
             var measureLayout = measureLayouts[grace.MeasureIndex];
 
-            // Find the main note's item layout
-            if (grace.MainNoteItemIndex >= measureLayout.Items.Length)
+            // Bounds guard (single-staff layouts only; multi-staff layouts
+            // resolve through timing-aligned columns).
+            if (measureLayout.Columns.IsDefaultOrEmpty
+                && grace.MainNoteItemIndex >= measureLayout.Items.Length)
                 continue;
 
-            var mainNoteLayout = measureLayout.Items[grace.MainNoteItemIndex];
+            double mainNoteX = LayoutUtilities.GetItemXOffset(
+                score.Voice.Measures, grace.MeasureIndex, grace.MainNoteItemIndex, measureLayout);
 
             // LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 — spring-based grace group width
             double graceGroupWidth = SpacingRules.CalculateGraceGroupSpringWidth(grace.Notes)
@@ -118,7 +121,7 @@ public static class GraceNoteEngraver
             }
 
             // Position grace notes to the left of the main note (including accidental)
-            double x = measureLayout.X + mainNoteLayout.X - accidentalExtent - graceGroupWidth - GraceToMainSpacing;
+            double x = measureLayout.X + mainNoteX - accidentalExtent - graceGroupWidth - GraceToMainSpacing;
 
             // Y position based on first note's staff position
             double y = 0;
@@ -148,7 +151,7 @@ public static class GraceNoteEngraver
                 grace.Type,
                 GraceScale,
                 grace.SourcePosition,
-                MainNoteX: measureLayout.X + mainNoteLayout.X,
+                MainNoteX: measureLayout.X + mainNoteX,
                 MainNoteStaffPosition: mainStaffPosition
             ));
         }

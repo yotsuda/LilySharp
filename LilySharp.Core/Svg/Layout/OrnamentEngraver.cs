@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -98,13 +98,15 @@ public static class OrnamentEngraver
 
             var measureLayout = measureLayouts[ornament.MeasureIndex];
 
-            if (ornament.ItemIndex >= measureLayout.Items.Length)
+            // Bounds guard (single-staff layouts only; multi-staff layouts
+            // resolve through timing-aligned columns).
+            if (measureLayout.Columns.IsDefaultOrEmpty
+                && ornament.ItemIndex >= measureLayout.Items.Length)
                 continue;
 
-            var itemLayout = measureLayout.Items[ornament.ItemIndex];
-
             // Calculate X position (centered on the note)
-            double x = measureLayout.X + itemLayout.X;
+            double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                score.Voice.Measures, ornament.MeasureIndex, ornament.ItemIndex, measureLayout);
 
             // Get staff position and stem direction from the music item
             // LILYPOND-REF: script-engraver.cc:92-125 acknowledge_note_head

@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -105,11 +105,11 @@ public static class DynamicEngraver
 
             var measureLayout = measureLayouts[dynamic.MeasureIndex];
 
-            // Find the item layout within the measure
-            if (dynamic.ItemIndex >= measureLayout.Items.Length)
+            // Bounds guard (single-staff layouts only; multi-staff layouts
+            // resolve through timing-aligned columns).
+            if (measureLayout.Columns.IsDefaultOrEmpty
+                && dynamic.ItemIndex >= measureLayout.Items.Length)
                 continue;
-
-            var itemLayout = measureLayout.Items[dynamic.ItemIndex];
 
             // Get the music item to determine if we need to avoid collision
             // LILYPOND-REF: dynamic-align-engraver.cc:92-110 acknowledge_note_head
@@ -118,7 +118,8 @@ public static class DynamicEngraver
 
             // Calculate X position (centered on the note)
             // LILYPOND-REF: define-grobs.scm:1311 self-alignment-X = CENTER
-            double x = measureLayout.X + itemLayout.X;
+            double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                score.Voice.Measures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
 
             // Calculate Y position with collision avoidance
             // LILYPOND-REF: side-position-interface.cc:266-320 skyline-based positioning
