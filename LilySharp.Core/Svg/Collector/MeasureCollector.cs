@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -679,6 +679,16 @@ public sealed class MeasureCollector
         for (int i = 0; i < musicNodes.Count; i++)
         {
             var node = musicNodes[i];
+
+            // Phrase-reference boundary: evaluate the body in the default frame.
+            if (node is RelativeResetMarker)
+            {
+                _currentOctave = _initialOctave;
+                _lastPitchName = 'c';
+                _defaultDuration = Fraction.Quarter;
+                continue;
+            }
+
             bool hasTieAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is TieSyntax;
             bool hasSlurStartAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is SlurSyntax slurS && slurS.IsOpen;
             bool hasSlurEndAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is SlurSyntax slurE && !slurE.IsOpen;
@@ -1318,6 +1328,17 @@ public sealed class MeasureCollector
             for (int i = 0; i < nodeList.Count; i++)
             {
                 var node = nodeList[i];
+
+                // Phrase-reference boundary: evaluate the body in the default
+                // frame (same handling as ProcessMusicNodeSequence).
+                if (node is RelativeResetMarker)
+                {
+                    _currentOctave = _initialOctave;
+                    _lastPitchName = 'c';
+                    _defaultDuration = Fraction.Quarter;
+                    continue;
+                }
+
                 // Check if next node is a tie, slur, or beam marker
                 bool hasTieAfter = i + 1 < nodeList.Count && nodeList[i + 1] is TieSyntax;
                 bool hasSlurStartAfter = i + 1 < nodeList.Count && nodeList[i + 1] is SlurSyntax slurS && slurS.IsOpen;
@@ -1619,6 +1640,15 @@ public sealed class MeasureCollector
     {
         if (!_variables.TryGetValue(name, out var expression))
             return;
+
+        // Each phrase reference evaluates its body in a FRESH relative frame
+        // (default octave / pitch / duration): a phrase's pitches must not
+        // depend on what happened to be played before the reference, or the
+        // same $phrase would render differently at every call site. This is
+        // the moral equivalent of LilyPond variables carrying their own
+        // \relative block. State flows OUT of the phrase normally, so a note
+        // following $phrase is relative to the phrase's last note.
+        musicNodes.Add(RelativeResetMarker.Instance);
 
         // Include expression itself if it is a music node
         if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax

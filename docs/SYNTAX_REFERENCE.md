@@ -45,6 +45,12 @@ c d e f g a b c    % C4 D4 E4 F4 G4 A4 B4 C5 — bare c after b is already C5
 c' c,              % C6 C5 — marks shift from the nearest octave
 ```
 
+Each **phrase body** evaluates in a fresh frame — the default octave, pitch
+and duration — regardless of where the `$phrase` is referenced, so a phrase
+always means the same notes at every call site. State flows out normally:
+a note written after `$phrase` is relative to the phrase's last note.
+**Section boundaries** also reset the frame.
+
 ## Durations
 
 | Value | Name | Beats (in 4/4) |

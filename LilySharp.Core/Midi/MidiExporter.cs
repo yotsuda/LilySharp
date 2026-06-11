@@ -148,6 +148,17 @@ public sealed class MidiExporter
                     ProcessNode(voices[0], track, conductorTrack);
                 break;
 
+            case PhraseDeclarationSyntax phrase:
+                // Phrase bodies evaluate in a fresh relative frame so a phrase
+                // means the same pitches wherever it is used (matches
+                // MeasureCollector's RelativeResetMarker). MIDI plays phrase
+                // declarations in source order, so the reset applies here.
+                _currentNoteName = 0;
+                _currentOctave = 4;
+                _defaultDuration = Fraction.Quarter;
+                ProcessChildren(phrase, track, conductorTrack);
+                break;
+
             default:
                 // Process any other nodes by visiting their children
                 ProcessChildren(node, track, conductorTrack);

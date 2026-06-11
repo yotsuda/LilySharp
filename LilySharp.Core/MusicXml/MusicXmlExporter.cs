@@ -292,7 +292,15 @@ public sealed class MusicXmlExporter
 
             case VariableReferenceSyntax varRef:
                 if (_variables.TryGetValue(varRef.Name.Text, out var varBody))
+                {
+                    // Phrase bodies evaluate in a fresh relative frame so a
+                    // $phrase means the same pitches at every call site
+                    // (matches MeasureCollector's RelativeResetMarker).
+                    _currentOctave = 4;
+                    _currentStep = 0;
+                    _defaultDuration = Fraction.Quarter;
                     ProcessNode(varBody);
+                }
                 break;
 
             case PhraseDeclarationSyntax:
