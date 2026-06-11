@@ -732,6 +732,11 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(Syntax
     var validator = new LilySharp.Core.Semantics.SymbolReferenceValidator();
     validator.Validate(tree);
     combined.AddRange(validator.Diagnostics);
+    // Measure validation (fullness vs the score time signature, cross-part
+    // measure-length mismatches) — same set the LSP shows in the editor.
+    var measureValidator = new LilySharp.Core.Semantics.MeasureValidator();
+    measureValidator.Validate(tree);
+    combined.AddRange(measureValidator.Diagnostics);
     return combined;
 }
 

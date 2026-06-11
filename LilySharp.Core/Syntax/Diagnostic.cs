@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -141,4 +141,6 @@ public static class DiagnosticCodes
     public const string MeasureIncomplete = "LYS2001";
     public const string MeasureOverflow = "LYS2002";
     public const string NoTimeSignature = "LYS2003";
+    public const string MeasureDurationMismatch = "LYS2004";
+    public const string ConflictingTimeSignatures = "LYS2005";
 }
