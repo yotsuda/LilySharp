@@ -65,6 +65,18 @@ public static partial class GlyphMetrics
     /// <summary>Double flat accidental — advance width (next-glyph horizontal feed).</summary>
     public const double AccidentalDoubleFlatAdvance = 1.4480;
 
+    /// <summary>Left accidental parenthesis (ink left of origin, advance 0) — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-parenthesis.mf — accidentals.leftparen (U+E02F = accidentals.leftparen)</remarks>
+    public static readonly BBox AccidentalLeftParen = new(-0.6000, -1.0520, -0.1480, 1.0520);
+    /// <summary>Left accidental parenthesis (ink left of origin, advance 0) — advance width (next-glyph horizontal feed).</summary>
+    public const double AccidentalLeftParenAdvance = 0.0000;
+
+    /// <summary>Right accidental parenthesis — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-parenthesis.mf — accidentals.rightparen (U+E02E = accidentals.rightparen)</remarks>
+    public static readonly BBox AccidentalRightParen = new(0.1480, -1.0520, 0.6000, 1.0520);
+    /// <summary>Right accidental parenthesis — advance width (next-glyph horizontal feed).</summary>
+    public const double AccidentalRightParenAdvance = 0.6000;
+
     /// <summary>8th note flag (upward stem) — BBox.</summary>
     /// <remarks>LILYPOND-REF: mf/feta-flags.mf — flags.u3 (U+E0D2 = flags.u3)</remarks>
     public static readonly BBox Flag8thUp = new(-0.0640, -3.0080, 0.8280, 0.0000);
@@ -178,9 +190,5 @@ public static partial class GlyphMetrics
     /// <summary>Time signature '9' digit advance width</summary>
     /// <remarks>LILYPOND-REF: mf/feta-numbers.mf — fattened.nine (U+E0BF = fattened.nine)</remarks>
     public const double TimeSigDigit9Advance = 1.3560;
-
-    /// <summary>Right parenthesis advance width (used for AccidentalParenWidth)</summary>
-    /// <remarks>LILYPOND-REF: mf/feta-parenthesis.mf — accidentals.rightparen (U+E02E = accidentals.rightparen)</remarks>
-    public const double AccidentalRightParenAdvance = 0.6000;
 
 }

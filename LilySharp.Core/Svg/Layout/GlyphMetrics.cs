@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -67,15 +67,19 @@ public static partial class GlyphMetrics
     // ========== Accidental parenthesis ==========
 
     /// <summary>
-    /// Width of accidental parenthesis glyph (left or right) in staff spaces.
-    /// Same metric for both leftparen and rightparen — extracted from rightparen
-    /// advance width.
+    /// Combined ink width both parens add around a parenthesized accidental:
+    /// parenthesize() juxtaposes stencil EXTENTS with zero padding, so the
+    /// added width is the two paren glyphs' bounding-box widths — NOT their
+    /// advances (leftparen draws behind its origin with advance 0).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: mf/feta-parenthesis.mf — set_char_box(0, .5*ss + slt, ss, ss)
+    /// LILYPOND-REF: mf/feta-parenthesis.mf — accidentals.leftparen/rightparen
     /// LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize() adds parens with 0 padding
     /// </remarks>
-    public const double AccidentalParenWidth = AccidentalRightParenAdvance;
+    /// (Computed property: static-field initialization order across partial
+    /// class files is unspecified, and the BBoxes live in the generated file.)
+    public static double AccidentalParensInkWidth =>
+        AccidentalLeftParen.Width + AccidentalRightParen.Width;
 
     // ========== Engraving line/stroke thicknesses ==========
 

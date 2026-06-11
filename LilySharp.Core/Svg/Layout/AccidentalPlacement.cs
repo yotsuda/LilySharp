@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -181,7 +181,7 @@ public sealed class AccidentalPlacement
             baseWidth *= _params.EditorialFontFactor;
         // Both courtesy and editorial wrap in parens.
         if (isCourtesy || isEditorial)
-            return baseWidth + 2 * GlyphMetrics.AccidentalParenWidth;
+            return baseWidth + GlyphMetrics.AccidentalParensInkWidth;
         return baseWidth;
     }
 
@@ -205,7 +205,7 @@ public sealed class AccidentalPlacement
             int priority = GetAlterationPriority(n.Accidental!);
             // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize() adds a paren glyph each side.
             double width = (n.IsCourtesy || n.IsEditorial)
-                ? scaledGlyphWidth + 2 * GlyphMetrics.AccidentalParenWidth
+                ? scaledGlyphWidth + GlyphMetrics.AccidentalParensInkWidth
                 : scaledGlyphWidth;
             entries.Add(new PlacementEntry(
                 n.StaffPosition, n.Accidental!, yBottom, yTop, width, priority,

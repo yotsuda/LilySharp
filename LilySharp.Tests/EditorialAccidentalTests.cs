@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -87,7 +87,7 @@ public class EditorialAccidentalTests
         // Width comparison depends on factor: factor * sharpWidth + 2*paren vs sharpWidth.
         // Actual values come from GlyphMetrics (extracted from Emmentaler-20):
         //   sharp width = AccidentalSharp.Right
-        //   paren width = AccidentalParenWidth
+        //   paren ink width = AccidentalParensInkWidth (both parens, zero padding)
         var plain = Placement.CalculateSinglePosition(MakeNote(0, "sharp"))!.Value;
         var editorial = Placement.CalculateSinglePosition(MakeNote(0, "sharp", editorial: true))!.Value;
 
@@ -95,8 +95,8 @@ public class EditorialAccidentalTests
         double editorialWidth = -editorial.XOffset - Params.RightPadding;
 
         double sharpWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.AccidentalSharp.Right;
-        double parenWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.AccidentalParenWidth;
-        double expectedEditorialWidth = sharpWidth * Params.EditorialFontFactor + 2 * parenWidth;
+        double parensInk = LilySharp.Core.Svg.Layout.GlyphMetrics.AccidentalParensInkWidth;
+        double expectedEditorialWidth = sharpWidth * Params.EditorialFontFactor + parensInk;
         Assert.Equal(expectedEditorialWidth, editorialWidth, precision: 4);
         Assert.Equal(sharpWidth, plainWidth, precision: 4);
     }

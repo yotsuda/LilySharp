@@ -58,6 +58,10 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("AccidentalNatural",     0xE01D, "Natural accidental",      "mf/feta-accidentals.mf — accidentals.natural"),
     GlyphSpec("AccidentalDoubleSharp", 0xE01C, "Double sharp accidental", "mf/feta-accidentals.mf — accidentals.doublesharp"),
     GlyphSpec("AccidentalDoubleFlat",  0xE02A, "Double flat accidental",  "mf/feta-flats.mf — accidentals.flatflat"),
+    # Accidental parentheses: ink-extent glyphs designed for extent
+    # juxtaposition (leftparen draws BEHIND its origin with advance 0)
+    GlyphSpec("AccidentalLeftParen",  0xE02F, "Left accidental parenthesis (ink left of origin, advance 0)",  "mf/feta-parenthesis.mf — accidentals.leftparen"),
+    GlyphSpec("AccidentalRightParen", 0xE02E, "Right accidental parenthesis", "mf/feta-parenthesis.mf — accidentals.rightparen"),
     # Flags
     GlyphSpec("Flag8thUp",    0xE0D2, "8th note flag (upward stem)",     "mf/feta-flags.mf — flags.u3"),
     GlyphSpec("Flag8thDown",  0xE0DA, "8th note flag (downward stem)",   "mf/feta-flags.mf — flags.d3"),
@@ -91,7 +95,6 @@ ADVANCE_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("TimeSigDigit8Advance", 0xE0BE, "Time signature '8' digit advance width", "mf/feta-numbers.mf — fattened.eight"),
     GlyphSpec("TimeSigDigit9Advance", 0xE0BF, "Time signature '9' digit advance width", "mf/feta-numbers.mf — fattened.nine"),
     # Accidental parenthesis
-    GlyphSpec("AccidentalRightParenAdvance", 0xE02E, "Right parenthesis advance width (used for AccidentalParenWidth)", "mf/feta-parenthesis.mf — accidentals.rightparen"),
 ]
 
 

@@ -1299,16 +1299,29 @@ public static class SharedRenderer
 
         if (isCourtesy)
         {
+            // Parens attach at the accidental's INK edges with zero padding —
+            // add_at_edge juxtaposes stencil extents, so positioning must use
+            // each glyph's bounding box, not its advance. The paren glyphs are
+            // designed for this: leftparen draws BEHIND its origin (ink
+            // [-0.60,-0.15], advance 0), so placing it "at" a position and
+            // stepping by advance leaves a gap that pushes the accidental
+            // against the right paren.
             // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize()
-            double parenWidth = GlyphMetrics.AccidentalParenWidth;
-            double total = parenWidth + accWidth + parenWidth;
-            double startX = noteheadX - total - gap;
+            var leftParen = GlyphMetrics.AccidentalLeftParen;
+            var rightParen = GlyphMetrics.AccidentalRightParen;
+            double totalInk = leftParen.Width + accWidth + rightParen.Width;
+
+            // Ink left edge of the whole "(♮)" assembly.
+            double inkLeft = noteheadX - gap - totalInk;
+            double accInkLeft = inkLeft + leftParen.Width;
             using (gc.Source(sourcePosition))
             {
-                gc.DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen, startX, noteheadY, FontSize);
-                gc.DrawGlyph(glyph, startX + parenWidth, noteheadY, FontSize);
+                // Each origin is chosen so the glyph's INK lands flush.
+                gc.DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen,
+                    accInkLeft - leftParen.Right, noteheadY, FontSize);
+                gc.DrawGlyph(glyph, accInkLeft - accBBox.Left, noteheadY, FontSize);
                 gc.DrawGlyph(EmmentalerGlyphs.AccidentalRightParen,
-                    startX + parenWidth + accWidth, noteheadY, FontSize);
+                    accInkLeft + accWidth - rightParen.Left, noteheadY, FontSize);
             }
         }
         else
