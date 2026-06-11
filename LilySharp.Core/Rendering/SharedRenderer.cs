@@ -1923,7 +1923,9 @@ public static class SharedRenderer
     private static void DrawBarNumbers(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
     {
         if (layout.BarNumberLayouts.IsDefaultOrEmpty) return;
-        const double fontSize = 1.8;
+        // LILYPOND-REF: scm/define-grobs.scm BarNumber (font-size . -2) —
+        // 2.2sp text height × magstep(-2); see BarNumberEngraver.FontSize.
+        double fontSize = BarNumberEngraver.FontSize;
         var voltas = layout.VoltaBracketLayouts;
         foreach (var bn in layout.BarNumberLayouts)
         {

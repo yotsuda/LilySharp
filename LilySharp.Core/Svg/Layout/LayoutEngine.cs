@@ -135,7 +135,8 @@ public sealed class LayoutEngine
             score.Voice.Measures, score.FiguredBasses, score.ChordNames, score.PercentRepeats,
             trillSpanners: score.TrillSpanners,
             beamGroups: beamGroups,
-            beamLayouts: beamLayouts);
+            beamLayouts: beamLayouts,
+            systemSkylines: perSystemSkylines);
 
         // Calculate part combination layouts for multi-voice scores
         var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
@@ -342,7 +343,8 @@ public sealed class LayoutEngine
             // beam LAYOUTS let the suppressed-bracket number attach to the
             // beam itself.
             beamGroups: _elementCoordinator.DetectBeamGroups(primaryScore),
-            beamLayouts: allBeamLayouts.ToImmutableArray());
+            beamLayouts: allBeamLayouts.ToImmutableArray(),
+            systemSkylines: perSystemSkylines);
 
         // Voice collision offsets / head-wipes for multi-voice staves, so the
         // renderer can nudge opposing voices apart. Computed per staff; the keys
@@ -620,7 +622,8 @@ public sealed class LayoutEngine
         ImmutableArray<CrossStaffLayout>? crossStaffLayouts = null,
         ImmutableArray<TrillSpannerItem>? trillSpanners = null,
         ImmutableArray<BeamGroup>? beamGroups = null,
-        ImmutableArray<BeamLayout>? beamLayouts = null)
+        ImmutableArray<BeamLayout>? beamLayouts = null,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
     {
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
         var lyricLayouts = new LyricEngraver().CalculateLayouts(lyrics, ml, _options.StaffHeight);
@@ -718,7 +721,7 @@ public sealed class LayoutEngine
                 ? LedgerLineSpannerEngraver.Calculate(score, systems, _options.StaffHeight)
                 : ImmutableArray<LedgerLineSpan>.Empty,
             // LILYPOND-REF: lily/bar-number-engraver.cc — BarNumber grob.
-            BarNumbers: BarNumberEngraver.Calculate(systems),
+            BarNumbers: BarNumberEngraver.Calculate(systems, systemSkylines: systemSkylines),
             // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.
             StanzaNumbers: StanzaNumberEngraver.Calculate(lyricLayouts, systems));
     }

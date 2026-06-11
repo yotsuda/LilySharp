@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -56,15 +56,30 @@ public readonly record struct BarNumberLayout(
 public static class BarNumberEngraver
 {
     /// <summary>
+    /// Bar number text height: normal text is 11pt at a 20pt staff
+    /// (= 2.2 staff spaces) and BarNumber uses font-size -2, i.e.
+    /// magstep(-2) = 2^(-2/6).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm BarNumber (font-size . -2)
+    /// LILYPOND-REF: ly/paper-defaults-init.ly — text-font-size 11 @ 20pt staff
+    /// </remarks>
+    public static readonly double FontSize = 2.2 * Math.Pow(2, -2.0 / 6.0);
+
+    /// <summary>
     /// Calculates bar number layouts. When <paramref name="period"/> is greater
     /// than 1, also numbers every Nth measure within a system; default 0 means
     /// system starts only. <paramref name="numberFirstMeasure"/> set to false (LP
     /// default) suppresses the score's very first measure number.
+    /// <paramref name="systemSkylines"/> (optional, indexed per system) lets the
+    /// number side-position ABOVE anything protruding over the staff at its X
+    /// instead of assuming a bare staff top.
     /// </summary>
     public static ImmutableArray<BarNumberLayout> Calculate(
         ImmutableArray<SystemLayout> systems,
         int period = 0,
-        bool numberFirstMeasure = false)
+        bool numberFirstMeasure = false,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
     {
         if (systems.IsDefaultOrEmpty)
             return ImmutableArray<BarNumberLayout>.Empty;
@@ -116,8 +131,32 @@ public static class BarNumberEngraver
                 double x = atLineStart
                     ? system.Indent + 0.05
                     : ml.X;
-                // Sit above the staff: a couple staff spaces above system top.
-                double y = system.Y - 1.0;
+
+                // Side-position: the number's BOTTOM sits padding (1.0sp)
+                // above whatever the system's up-skyline holds under the
+                // number's horizontal extent (usually just the staff top;
+                // a protruding grob pushes the number up). Baseline = digit
+                // bottom, so y = staffTop - protrusion - padding.
+                // LILYPOND-REF: scm/define-grobs.scm BarNumber — padding 1.0,
+                //   Y-offset side-position-interface::y-aligned-side.
+                double textWidth = displayedNumber.ToString().Length * FontSize * 0.5;
+                double xLo = atLineStart ? x - textWidth : x;
+                double xHi = atLineStart ? x : x + textWidth;
+                double protrusion = 0;
+                if (systemSkylines != null && sysIdx < systemSkylines.Count)
+                {
+                    var up = systemSkylines[sysIdx].up;
+                    if (!up.IsEmpty)
+                    {
+                        for (int s = 0; s <= 4; s++)
+                        {
+                            double sx = xLo + (xHi - xLo) * s / 4.0;
+                            // UP skylines store negative heights above the top.
+                            protrusion = Math.Max(protrusion, Math.Max(0, -up.Height(sx)));
+                        }
+                    }
+                }
+                double y = system.Y - protrusion - 1.0;
 
                 builder.Add(new BarNumberLayout(
                     MeasureIndex: measureIndex,
