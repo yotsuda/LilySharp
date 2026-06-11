@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -103,7 +103,7 @@ public static class MusicMarkEngraver
                 continue;
 
             var measureLayout = measureLayouts[mark.MeasureIndex];
-            double x = CalculateXPosition(mark, measureLayout);
+            double x = CalculateXPosition(mark, measureLayout, systems);
             markEntries.Add((mark, x));
         }
 
@@ -321,13 +321,53 @@ public static class MusicMarkEngraver
     /// - Beginning marks (segno, coda): align to start of measure
     /// - End marks (fine, D.S., D.C.): align to end of measure
     /// </remarks>
-    private static double CalculateXPosition(MusicMarkItem mark, MeasureLayout measureLayout)
+    /// <summary>
+    /// X anchor for a mark. Marks break-align: mid-line they anchor on the
+    /// measure's start barline; at a line start (no visible barline) the
+    /// anchor falls back to the key signature / clef — i.e. the start of the
+    /// system's prefix — NOT the first note.
+    /// Boxed labels (Rehearsal / SectionLabel) align their LEFT edge on the
+    /// anchor; the returned X is the box CENTER (the renderer draws
+    /// middle-anchored), so half the box width is added.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm SectionLabel —
+    ///   (self-alignment-X . LEFT),
+    ///   X-offset self-alignment-interface::self-aligned-on-breakable.
+    /// LILYPOND-REF: scm/define-grobs.scm RehearsalMark —
+    ///   break-align-symbols (staff-bar key-signature clef).
+    /// </remarks>
+    private static double CalculateXPosition(
+        MusicMarkItem mark, MeasureLayout measureLayout,
+        ImmutableArray<SystemLayout> systems)
     {
-        return mark.Position switch
+        if (mark.Position == MusicMarkPosition.End)
+            return measureLayout.X + measureLayout.Width - 0.5; // Before end barline
+
+        if (mark.Position != MusicMarkPosition.Beginning)
+            return measureLayout.X + measureLayout.Width / 2; // Center (fallback)
+
+        // Break-align anchor: at a line start the barline is invisible, so
+        // the anchor falls back to the start of the prefix (clef/key).
+        double anchor = measureLayout.X;
+        foreach (var system in systems)
         {
-            MusicMarkPosition.Beginning => measureLayout.X + 0.5, // Small offset from barline
-            MusicMarkPosition.End => measureLayout.X + measureLayout.Width - 0.5, // Before end barline
-            _ => measureLayout.X + measureLayout.Width / 2 // Center (fallback)
-        };
+            if (!system.Measures.IsDefaultOrEmpty
+                && system.Measures[0].MeasureIndex == measureLayout.MeasureIndex)
+            {
+                anchor = system.Indent + 0.3;
+                break;
+            }
+        }
+
+        if (mark.Type is MusicMarkType.Rehearsal or MusicMarkType.SectionLabel)
+        {
+            // LEFT edge on the anchor: returned X is the box center.
+            double fs = mark.Type == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
+            double boxWidth = Rendering.SerifTextMetrics.MeasureBold(mark.Text, fs) + 0.4;
+            return anchor + boxWidth / 2;
+        }
+
+        return anchor + 0.5;
     }
 }
