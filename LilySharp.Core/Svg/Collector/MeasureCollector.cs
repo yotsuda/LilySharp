@@ -483,6 +483,84 @@ public sealed class MeasureCollector
     /// <summary>
     /// Collects a MultiStaffScore from a syntax tree based on a render specification.
     /// </summary>
+
+    /// <summary>
+    /// Propagates the strongest start/end barline at each measure index to
+    /// every voice (score-level Timing semantics — see CollectMultiStaff).
+    /// </summary>
+    private static void SynchronizeBarlines(Dictionary<string, Voice> voiceDict)
+    {
+        if (voiceDict.Count < 2)
+            return;
+
+        int maxLen = voiceDict.Values.Max(v => v.Measures.Length);
+        var starts = new BarlineType[maxLen];
+        var ends = new BarlineType[maxLen];
+        for (int i = 0; i < maxLen; i++)
+        {
+            var start = BarlineType.None;
+            var end = BarlineType.None;
+            foreach (var v in voiceDict.Values)
+            {
+                if (i >= v.Measures.Length)
+                    continue;
+                start = Stronger(start, v.Measures[i].StartBarline);
+                end = Stronger(end, v.Measures[i].EndBarline);
+            }
+            starts[i] = start;
+            ends[i] = end;
+        }
+
+        foreach (var name in voiceDict.Keys.ToArray())
+        {
+            var voice = voiceDict[name];
+            var measures = voice.Measures;
+            ImmutableArray<Measure>.Builder? builder = null;
+            for (int i = 0; i < measures.Length; i++)
+            {
+                var m = measures[i];
+                if (m.StartBarline == starts[i] && m.EndBarline == ends[i])
+                    continue;
+                builder ??= measures.ToBuilder();
+                builder[i] = new Measure(
+                    m.Items, starts[i], ends[i], m.SectionLabel,
+                    m.SourceStart, m.SourceEnd,
+                    hasBreakAfter: false,
+                    lineBreakPermission: m.LineBreakPermission,
+                    breakPenalty: m.BreakPenalty,
+                    pageBreakPermission: m.PageBreakPermission,
+                    pageTurnPermission: m.PageTurnPermission);
+            }
+            if (builder != null)
+                voiceDict[name] = new Voice(voice.Name, builder.ToImmutable());
+        }
+    }
+
+    /// <summary>
+    /// Of two barline types at the same timestep, the more significant wins
+    /// (repeats and finals over plain bars; both-repeat over either half).
+    /// </summary>
+    private static BarlineType Stronger(BarlineType a, BarlineType b)
+    {
+        // A repeat-end meeting a repeat-start at the same point = both.
+        if ((a == BarlineType.RepeatEnd && b == BarlineType.RepeatStart)
+            || (a == BarlineType.RepeatStart && b == BarlineType.RepeatEnd))
+            return BarlineType.RepeatBoth;
+        return Rank(a) >= Rank(b) ? a : b;
+
+        static int Rank(BarlineType t) => t switch
+        {
+            BarlineType.None => 0,
+            BarlineType.Single => 1,
+            BarlineType.Double => 2,
+            BarlineType.RepeatStart => 3,
+            BarlineType.RepeatEnd => 3,
+            BarlineType.RepeatBoth => 4,
+            BarlineType.Final => 5,
+            _ => 0
+        };
+    }
+
     public MultiStaffScore CollectMultiStaff(SyntaxTree tree, RenderSpec renderSpec)
     {
         Reset();
@@ -511,6 +589,13 @@ public sealed class MeasureCollector
             ResolveBeamStemDirections(measures);
             voiceDict[voiceName] = new Voice(voiceName, measures.ToImmutableArray());
         }
+
+        // Bar lines are score-synchronized: LilyPond's Timing context lives
+        // at Score level, so a repeat/double/final bar set by ANY part
+        // appears in EVERY part at that measure.
+        // LILYPOND-REF: ly/engraver-init.ly — "Timing" alias on Score;
+        //   lily/bar-engraver.cc reads Timing.whichBar score-wide.
+        SynchronizeBarlines(voiceDict);
 
         // Phase 3: Build staff groups from render spec
         var staffGroups = renderSpec.ToStaffGroups(name =>
