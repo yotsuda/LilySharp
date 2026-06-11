@@ -1,0 +1,35 @@
+// Regression: barlines are score-synchronized — a repeat written only in
+// the rh part must appear on BOTH staves (Timing is score-level), the
+// system start must join the staves with a bar, and inside a grand staff
+// every barline spans the inter-staff gap (Span_bar).
+time 4/4
+
+part rh {
+  clef: treble
+}
+
+part lh {
+  clef: bass
+}
+
+phrase rhTune {
+  |: g'4 a g f | [1. e2 d | ] :| [2. e2 c | ]
+}
+
+phrase lhBass {
+  c2 g | c g | c g |
+}
+
+section Main {
+  rh { $rhTune }
+  lh { $lhBass }
+}
+
+structure { Main }
+
+render score "grandstaff-repeat.svg" {
+  grandStaff {
+    staff { rh }
+    staff { lh }
+  }
+}

@@ -176,6 +176,9 @@ public static class SharedRenderer
             ? system.Measures[^1].X + system.Measures[^1].Width
             : system.Width;
 
+        // Left-edge system bar + span bars through grand-staff gaps.
+        DrawStaffConnectors(score, layout, system, systemStartX, gc);
+
         // Per-staff: staff lines + prefix glyphs + notes
         foreach (var (group, staff, globalIdx) in score.EnumerateStaves())
         {
@@ -2470,6 +2473,84 @@ public static class SharedRenderer
                     actualFontSize, "serif", FontStyle.Regular,
                     TextAnchor.Middle, fill: null,
                     verticalAnchor: VerticalAnchor.Middle);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Joins the staves of a multi-staff system: a SystemStartBar at the left
+    /// edge (always, for 2+ staves), and — within delimited groups (grand
+    /// staff etc.) — every barline extended through the inter-staff gap
+    /// (Span_bar), with repeat dots omitted in the gap.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/system-start-delimiter-engraver.cc — Score-level
+    ///   SystemStartBar joins all staves of any multi-staff system.
+    /// LILYPOND-REF: lily/span-bar-engraver.cc + ly/engraver-init.ly —
+    ///   Span_bar_engraver lives in GrandStaff/PianoStaff/StaffGroup, so
+    ///   ungrouped staves do NOT span their barlines.
+    /// LILYPOND-REF: lily/span-bar.cc print() — the spanned segment redraws
+    ///   the bar glyph without the dots.
+    /// </remarks>
+    private static void DrawStaffConnectors(
+        MultiStaffScore score, ScoreLayout layout, SystemLayout system,
+        double systemStartX, IDrawingContext gc)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty)
+            return;
+
+        // SystemStartBar across ALL visible staves of the system.
+        var allStaves = system.StaffGroups
+            .SelectMany(g => g.Staves)
+            .Where(s => !s.IsHidden && !s.IsOssia)
+            .OrderBy(s => s.Y)
+            .ToList();
+        if (allStaves.Count >= 2)
+        {
+            double top = system.Y + allStaves[0].Y;
+            double bottom = system.Y + allStaves[^1].Y + allStaves[^1].Height;
+            DrawSystemStartBarLine(systemStartX, top, bottom, gc);
+        }
+
+        // Span bars inside delimited groups. Barline types come from the
+        // first voice — they are score-synchronized at collection time.
+        var voice = score.StaffGroups[0].Staves[0].PrimaryVoice;
+        foreach (var group in system.StaffGroups)
+        {
+            if (!group.HasDelimiter)
+                continue;
+            var staves = group.Staves
+                .Where(s => !s.IsHidden && !s.IsOssia)
+                .OrderBy(s => s.Y)
+                .ToList();
+            if (staves.Count < 2)
+                continue;
+
+            foreach (var ml in system.Measures)
+            {
+                if (ml.MeasureIndex >= voice.Measures.Length)
+                    continue;
+                var measure = voice.Measures[ml.MeasureIndex];
+
+                bool suppressEnd = measure.EndBarline == BarlineType.Single
+                    && IsMmrInnerEndBarline(layout, ml.MeasureIndex);
+                double endWidth = GetVisualBarlineWidth(measure.EndBarline);
+
+                for (int i = 0; i + 1 < staves.Count; i++)
+                {
+                    double gapTop = system.Y + staves[i].Y + staves[i].Height;
+                    double gapBottom = system.Y + staves[i + 1].Y;
+                    double gapHeight = gapBottom - gapTop;
+                    if (gapHeight <= 0)
+                        continue;
+
+                    if (measure.StartBarline != BarlineType.None)
+                        DrawBarline(measure.StartBarline, ml.X, gapTop, gapHeight,
+                            gc, withDots: false);
+                    if (!suppressEnd)
+                        DrawBarline(measure.EndBarline, ml.X + ml.Width - endWidth,
+                            gapTop, gapHeight, gc, withDots: false);
+                }
             }
         }
     }
