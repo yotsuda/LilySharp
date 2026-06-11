@@ -25,13 +25,13 @@
   <text class="music" x="50.56" y="10.00" font-size="4.00" data-pos="310"></text>
   <line x1="50.62" y1="10.00" x2="50.62" y2="13.50" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="57.22" y="9.50" font-size="4.00" data-pos="315"></text>
-  <line x1="56.89" y1="9.50" x2="58.85" y2="9.50" stroke="#000000" stroke-width="0.230"/>
   <line x1="57.28" y1="9.50" x2="57.28" y2="13.00" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="63.88" y="11.50" font-size="4.00" data-pos="317"></text>
   <text class="music" x="63.88" y="13.00" font-size="4.00" data-pos="327"></text>
   <line x1="65.12" y1="13.00" x2="65.12" y2="9.50" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="70.54" y="12.50" font-size="4.00" data-pos="331"></text>
   <line x1="70.60" y1="12.50" x2="70.60" y2="16.00" stroke="#000000" stroke-width="0.120"/>
+  <line x1="56.89" y1="9.50" x2="58.85" y2="9.50" stroke="#000000" stroke-width="0.230"/>
   <rect x="43.74" y="10.50" width="0.16" height="4.00" fill="#000000"/>
   <rect x="77.84" y="10.50" width="0.16" height="4.00" fill="#000000"/>
   <line x1="0.00" y1="22.50" x2="78.00" y2="22.50" stroke="#000000" stroke-width="0.130"/>
@@ -50,10 +50,10 @@
   <line x1="36.87" y1="22.50" x2="36.87" y2="26.00" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="55.64" y="25.50" font-size="4.00" data-pos="348"></text>
   <text class="music" x="55.64" y="20.50" font-size="4.00" data-pos="362"></text>
-  <line x1="55.30" y1="21.50" x2="57.36" y2="21.50" stroke="#000000" stroke-width="0.230"/>
-  <line x1="55.30" y1="20.50" x2="57.36" y2="20.50" stroke="#000000" stroke-width="0.230"/>
   <line x1="55.70" y1="20.50" x2="55.70" y2="24.50" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="66.22" y="24.50" font-size="4.00" data-pos="366"></text>
+  <line x1="55.30" y1="21.50" x2="57.36" y2="21.50" stroke="#000000" stroke-width="0.230"/>
+  <line x1="55.30" y1="20.50" x2="57.36" y2="20.50" stroke="#000000" stroke-width="0.230"/>
   <rect x="44.90" y="22.50" width="0.16" height="4.00" fill="#000000"/>
   <rect x="76.94" y="22.50" width="0.16" height="4.00" fill="#000000"/>
   <rect x="77.50" y="22.50" width="0.50" height="4.00" fill="#000000"/>

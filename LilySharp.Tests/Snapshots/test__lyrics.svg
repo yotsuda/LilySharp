@@ -15,7 +15,6 @@
   <text class="music" x="0.30" y="13.00" font-size="4.00"></text>
   <text class="music" x="3.30" y="12.00" font-size="4.00"></text>
   <text class="music" x="13.52" y="15.00" font-size="4.00" data-pos="180"></text>
-  <line x1="13.19" y1="15.00" x2="15.15" y2="15.00" stroke="#000000" stroke-width="0.230"/>
   <line x1="14.76" y1="15.00" x2="14.76" y2="11.50" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="17.24" y="14.50" font-size="4.00" data-pos="187"></text>
   <line x1="18.48" y1="14.50" x2="18.48" y2="11.00" stroke="#000000" stroke-width="0.120"/>
@@ -36,6 +35,7 @@
   <text class="music" x="59.81" y="12.50" font-size="4.00" data-pos="217"></text>
   <line x1="61.05" y1="12.50" x2="61.05" y2="9.00" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="70.56" y="13.00" font-size="4.00" data-pos="221"></text>
+  <line x1="13.19" y1="15.00" x2="15.15" y2="15.00" stroke="#000000" stroke-width="0.230"/>
   <rect x="29.03" y="10.00" width="0.16" height="4.00" fill="#000000"/>
   <rect x="44.77" y="10.00" width="0.16" height="4.00" fill="#000000"/>
   <rect x="64.16" y="10.00" width="0.16" height="4.00" fill="#000000"/>

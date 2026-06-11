@@ -630,6 +630,25 @@ public sealed class ElementCoordinator
                 {
                     segStartX = startMeasure.X
                         + GetItemXOffset(score.Voice, tie.StartMeasureIndex, tie.StartItemIndex, startMeasure);
+
+                    // The tie attaches at the RIGHT edge of the left note's
+                    // outline (head + augmentation dots) — the item X is the
+                    // head's LEFT edge. TieFormattingProblem then insets by
+                    // x-gap on top, matching attachment_x_.widen(-x_gap_).
+                    // LILYPOND-REF: lily/tie-formatting-problem.cc:560-581 —
+                    // attachments come from the chord outline at the tie's Y.
+                    int noteValue = tie.StartNote.BaseDuration.Numerator != 1
+                        ? 1
+                        : tie.StartNote.BaseDuration.Denominator;
+                    double outlineRight = GlyphMetrics.GetNoteheadAdvance(noteValue);
+                    if (startDots > 0)
+                    {
+                        // Dots sit at headLeft + 1.0 + i·0.5 (SharedRenderer);
+                        // clear the last dot plus its glyph width.
+                        outlineRight = Math.Max(outlineRight,
+                            1.0 + (startDots - 1) * 0.5 + 0.4);
+                    }
+                    segStartX += outlineRight;
                 }
                 else
                 {

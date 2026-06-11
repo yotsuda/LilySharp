@@ -583,6 +583,11 @@ public static class SharedRenderer
     {
         double staffMiddleY = staffY + StaffHeight / 2;
 
+        // Ledger requests are collected across the whole system so adjacent
+        // columns can shorten each other's ledgers (ledger-line-spanner.cc),
+        // then drawn in one pass at the end.
+        var ledgerPlan = new List<LedgerRequest>();
+
         foreach (var ml in system.Measures)
         {
             if (ml.MeasureIndex >= voice.Measures.Length)
@@ -621,7 +626,7 @@ public static class SharedRenderer
                 switch (item)
                 {
                     case NoteItem note:
-                        DrawNote(note, itemX, staffMiddleY, resolver, beamedItems.Contains(note), forcedStemUp, headWiped, gc);
+                        DrawNote(note, itemX, staffMiddleY, resolver, beamedItems.Contains(note), forcedStemUp, headWiped, gc, ledgerPlan);
                         break;
                     case RestItem rest:
                         // Measures inside a multi-measure-rest run get their
@@ -633,7 +638,7 @@ public static class SharedRenderer
                             DrawRest(rest, itemX, staffY, gc);
                         break;
                     case ChordItem chord:
-                        DrawChord(chord, itemX, staffMiddleY, resolver, beamedItems.Contains(chord), forcedStemUp, headWiped, gc);
+                        DrawChord(chord, itemX, staffMiddleY, resolver, beamedItems.Contains(chord), forcedStemUp, headWiped, gc, ledgerPlan);
                         break;
                     case ClefChangeItem clefChange:
                         DrawClefChange(clefChange, itemX, staffY, gc);
@@ -644,10 +649,13 @@ public static class SharedRenderer
                 }
             }
         }
+
+        DrawPlannedLedgers(ledgerPlan, gc);
     }
 
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
-        GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped, IDrawingContext gc)
+        GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
+        IDrawingContext gc, List<LedgerRequest>? ledgerPlan = null)
     {
         int noteValue = note.BaseDuration.Denominator;
         if (note.BaseDuration.Numerator != 1) noteValue = 1;
@@ -675,9 +683,16 @@ public static class SharedRenderer
             using (gc.Source(note.SourcePosition))
                 gc.DrawGlyph(head, x, noteY, noteFontSize, noteheadColor);
 
-        // Ledger lines for notes far from middle line
-        DrawLedgerLines(note.StaffPosition, x, staffMiddleY, gc,
-            GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? 0.66 : 1.0));
+        // Ledger lines for notes far from middle line. The staff-measure path
+        // COLLECTS requests so neighbouring ledgers can be shortened against
+        // each other before drawing (ledger-line-spanner.cc); other callers
+        // draw directly.
+        double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? 0.66 : 1.0);
+        if (ledgerPlan != null)
+            CollectLedgerRequest(ledgerPlan, note.StaffPosition, x, headWidth,
+                staffMiddleY, note.Accidental != null);
+        else
+            DrawLedgerLines(note.StaffPosition, x, staffMiddleY, gc, headWidth);
 
         // Stem & flag — beamed notes are handled by DrawBeams (which draws the
         // beam-aware stem to the actual beam Y), so skip both here to avoid a
@@ -724,7 +739,8 @@ public static class SharedRenderer
     }
 
     private static void DrawChord(ChordItem chord, double x, double staffMiddleY,
-        GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped, IDrawingContext gc)
+        GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
+        IDrawingContext gc, List<LedgerRequest>? ledgerPlan = null)
     {
         int noteValue = chord.BaseDuration.Denominator;
         if (chord.BaseDuration.Numerator != 1) noteValue = 1;
@@ -736,6 +752,7 @@ public static class SharedRenderer
 
         double topY = double.MaxValue, bottomY = double.MinValue;
         int maxPos = int.MinValue, minPos = int.MaxValue;
+        bool extremeTopAcc = false, extremeBottomAcc = false;
         foreach (var n in chord.Notes)
         {
             double y = staffMiddleY - n.StaffPosition * 0.5;
@@ -744,12 +761,26 @@ public static class SharedRenderer
             if (!headWiped && !headTransparent)
                 using (gc.Source(chord.SourcePosition))
                     gc.DrawGlyph(head, x, y, FontSize, noteheadColor);
-            DrawLedgerLines(n.StaffPosition, x, staffMiddleY, gc,
-                GlyphMetrics.GetNoteheadAdvance(noteValue));
+            if (ledgerPlan == null)
+                DrawLedgerLines(n.StaffPosition, x, staffMiddleY, gc,
+                    GlyphMetrics.GetNoteheadAdvance(noteValue));
             if (y < topY) topY = y;
             if (y > bottomY) bottomY = y;
-            if (n.StaffPosition > maxPos) maxPos = n.StaffPosition;
-            if (n.StaffPosition < minPos) minPos = n.StaffPosition;
+            if (n.StaffPosition > maxPos) { maxPos = n.StaffPosition; extremeTopAcc = n.Accidental != null; }
+            if (n.StaffPosition < minPos) { minPos = n.StaffPosition; extremeBottomAcc = n.Accidental != null; }
+        }
+
+        if (ledgerPlan != null && chord.Notes.Length > 0)
+        {
+            double chordHeadWidth = GlyphMetrics.GetNoteheadAdvance(noteValue);
+            // At most one request per outside-staff direction; the extreme
+            // head drives the ledger run (inner heads share its lines).
+            if (maxPos >= 5)
+                CollectLedgerRequest(ledgerPlan, maxPos, x, chordHeadWidth,
+                    staffMiddleY, extremeTopAcc);
+            if (minPos <= -5)
+                CollectLedgerRequest(ledgerPlan, minPos, x, chordHeadWidth,
+                    staffMiddleY, extremeBottomAcc);
         }
 
         // Skip chord stem when chord is part of a beam — DrawBeams handles it.
@@ -848,6 +879,114 @@ public static class SharedRenderer
         if (!TryParseHexNibble(lo, out int l)) return false;
         v = (h << 4) | l;
         return true;
+    }
+
+    // ---------- Ledger lines (ledger-line-spanner.cc port) ----------
+
+    /// <summary>
+    /// One note column's ledger needs in one vertical direction — the unit
+    /// LilyPond's Ledger_line_spanner reasons about when shortening
+    /// neighbouring ledgers against each other.
+    /// </summary>
+    private sealed class LedgerRequest
+    {
+        public double HeadLeft, HeadRight;
+        public double LedgerLeft, LedgerRight; // clamped by the shortening pass
+        public int ExtremePos;                 // signed staff position of the far head
+        public double StaffMiddleY;
+        public bool HasAccidental;
+    }
+
+    /// <summary>
+    /// Registers a column's ledger request. Columns at the FIRST position
+    /// outside the staff (|pos| == 5) carry no ledgers themselves but still
+    /// participate, shortening their neighbours' ledgers.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/ledger-line-spanner.cc:236-248.</remarks>
+    private static void CollectLedgerRequest(List<LedgerRequest> plan, int extremePos,
+        double x, double headWidth, double staffMiddleY, bool hasAccidental)
+    {
+        if (Math.Abs(extremePos) < 5)
+            return;
+
+        double ext = EngravingDefaults.LedgerLengthFraction * headWidth;
+        plan.Add(new LedgerRequest
+        {
+            HeadLeft = x,
+            HeadRight = x + headWidth,
+            LedgerLeft = x - ext,
+            LedgerRight = x + headWidth + ext,
+            ExtremePos = extremePos,
+            StaffMiddleY = staffMiddleY,
+            HasAccidental = hasAccidental,
+        });
+    }
+
+    /// <summary>
+    /// Shortens neighbouring ledger extents against each other, then draws.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:251-296 — for adjacent
+    /// out-of-staff columns in the same direction, each side's ledger is
+    /// clamped to the midpoint between the facing head edges; when BOTH
+    /// columns are beyond the first space outside the staff (|pos| ≥ 6, i.e.
+    /// both actually carry ledgers) a gap of 0.1 staff spaces is kept between
+    /// them so the ledgers never read as one line.
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:330-343 — ledgers of a note
+    /// with an accidental are shortened on the LEFT to midway between the
+    /// accidental's right edge and the head's left edge. (LilyPond limits
+    /// this to the glyph's font-provided vertical shortening range; we
+    /// approximate that range as ±3 staff positions around the head.)
+    /// </remarks>
+    private static void DrawPlannedLedgers(List<LedgerRequest> plan, IDrawingContext gc)
+    {
+        if (plan.Count == 0)
+            return;
+
+        const double gap = 0.1; // LedgerLineSpanner (gap . 0.1)
+        const int accidentalRange = 3; // approximation of ledger_shortening_range
+
+        foreach (var direction in new[] { 1, -1 })
+        {
+            var reqs = plan
+                .Where(r => Math.Sign(r.ExtremePos) == direction)
+                .OrderBy(r => r.HeadLeft)
+                .ToList();
+
+            for (int i = 1; i < reqs.Count; i++)
+            {
+                var prev = reqs[i - 1];
+                var cur = reqs[i];
+                double center = (prev.HeadRight + cur.HeadLeft) / 2.0;
+                bool both = Math.Abs(prev.ExtremePos) >= 6 && Math.Abs(cur.ExtremePos) >= 6;
+                double half = both ? gap / 2.0 : 0.0;
+                prev.LedgerRight = Math.Min(prev.LedgerRight, center - half);
+                cur.LedgerLeft = Math.Max(cur.LedgerLeft, center + half);
+            }
+        }
+
+        double thickness = EngravingDefaults.LegerLineThickness;
+        foreach (var req in plan)
+        {
+            int extreme = req.ExtremePos;
+            int step = extreme > 0 ? 2 : -2;
+            for (int pos = extreme > 0 ? 6 : -6;
+                 extreme > 0 ? pos <= extreme : pos >= extreme;
+                 pos += step)
+            {
+                double left = req.LedgerLeft;
+                if (req.HasAccidental && Math.Abs(pos - extreme) <= accidentalRange)
+                {
+                    double accRight = req.HeadLeft - GlyphMetrics.AccidentalNoteGap;
+                    left = Math.Max(left, (accRight + req.HeadLeft) / 2.0);
+                }
+                if (left >= req.LedgerRight)
+                    continue;
+
+                double y = req.StaffMiddleY - pos * 0.5;
+                gc.DrawLine(left, y, req.LedgerRight, y, Color.Black, thickness);
+            }
+        }
     }
 
     private static void DrawLedgerLines(int staffPosition, double x, double staffMiddleY,
