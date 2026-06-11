@@ -2053,9 +2053,12 @@ public static class SharedRenderer
     {
         if (m.IsSymbol)
         {
-            // Segno (U+E047) / Coda (U+E048): SMuFL music symbols rendered via
-            // Emmentaler. Centered on the anchor.
-            char glyph = m.MarkType == MusicMarkType.Segno ? '' : '';
+            // Segno (U+E062) / Coda (U+E064) in this Emmentaler cmap.
+            // NOTE: the SMuFL codepoints U+E047/E048 map to scripts.thumb /
+            // scripts.sforzato here and previously drew the WRONG glyphs.
+            char glyph = m.MarkType == MusicMarkType.Segno
+                ? EmmentalerGlyphs.MarkSegno
+                : EmmentalerGlyphs.MarkCoda;
             gc.DrawGlyph(glyph, m.X, absY, FontSize, Color.Black);
             return;
         }

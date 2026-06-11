@@ -71,8 +71,10 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("AugmentationDot", 0xE038, "Augmentation dot", "mf/feta-noteheads.mf — dots.dot"),
     # Ornament / mark glyphs (ink extents for outside-staff stacking)
     GlyphSpec("OrnTrillGlyph", 0xE05C, "Trill ornament", "mf/feta-scripts.mf — scripts.trill"),
-    # NOTE: U+E047/U+E048 resolve to scripts.thumb / scripts.sforzato in this
-    # font's cmap, NOT segno/coda — do not extract metrics for them here.
+    # NOTE: in this font's cmap segno/coda live at U+E062/U+E064;
+    # U+E047/U+E048 are scripts.thumb / scripts.sforzato.
+    GlyphSpec("MarkSegno", 0xE062, "Segno mark", "mf/feta-scripts.mf — scripts.segno"),
+    GlyphSpec("MarkCoda", 0xE064, "Coda mark", "mf/feta-scripts.mf — scripts.coda"),
     # Rests (ink extents; used to place augmentation dots after the glyph)
     GlyphSpec("RestWhole",   0xE000, "Whole rest",   "mf/feta-rests.mf — rests.0"),
     GlyphSpec("RestHalf",    0xE001, "Half rest",    "mf/feta-rests.mf — rests.1"),

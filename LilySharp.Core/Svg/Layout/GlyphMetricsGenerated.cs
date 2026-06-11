@@ -113,6 +113,18 @@ public static partial class GlyphMetrics
     /// <summary>Trill ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnTrillGlyphAdvance = 0.8480;
 
+    /// <summary>Segno mark — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.segno (U+E062 = scripts.segno)</remarks>
+    public static readonly BBox MarkSegno = new(-1.0000, -1.5000, 1.0000, 1.5000);
+    /// <summary>Segno mark — advance width (next-glyph horizontal feed).</summary>
+    public const double MarkSegnoAdvance = 1.0000;
+
+    /// <summary>Coda mark — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.coda (U+E064 = scripts.coda)</remarks>
+    public static readonly BBox MarkCoda = new(-1.0760, -1.4120, 1.0760, 1.4120);
+    /// <summary>Coda mark — advance width (next-glyph horizontal feed).</summary>
+    public const double MarkCodaAdvance = 1.0160;
+
     /// <summary>Whole rest — BBox.</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.0 (U+E000 = rests.0)</remarks>
     public static readonly BBox RestWhole = new(0.0000, -0.6240, 1.5000, 0.0000);

@@ -459,10 +459,12 @@ public static class OutsideStaffStacker
 
         if (m.IsSymbol)
         {
-            // Segno/Coda glyphs, centered on the anchor. The font cmap does
-            // not expose proper segno/coda metrics (U+E047/E048 resolve to
-            // other glyphs), so use a conservative symbol box.
-            return (1.2, -2.0, 2.0);
+            // Segno/Coda glyphs (U+E062/U+E064), centered on the anchor;
+            // ink extents from the font bboxes.
+            var box = m.MarkType == MusicMarkType.Segno
+                ? GlyphMetrics.MarkSegno
+                : GlyphMetrics.MarkCoda;
+            return (Math.Max(-box.Left, box.Right), -box.Top, -box.Bottom);
         }
 
         switch (m.MarkType)

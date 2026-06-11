@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -125,6 +125,8 @@ public static class EmmentalerGlyphs
     public const char OrnReverseTurn = '\uE058';       // scripts.reverseturn
     public const char OrnTurn = '\uE059';              // scripts.turn
     public const char OrnTrill = '\uE05C';             // scripts.trill
+    public const char MarkSegno = '\uE062';            // scripts.segno
+    public const char MarkCoda = '\uE064';             // scripts.coda
     public const char OrnPrall = '\uE070';             // scripts.prall
     public const char OrnMordent = '\uE071';           // scripts.mordent
     public const char OrnPrallPrall = '\uE072';        // scripts.prallprall

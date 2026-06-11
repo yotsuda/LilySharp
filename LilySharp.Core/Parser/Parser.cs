@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1004,8 +1004,13 @@ private GreenNode?[] ParseArticulations()
     private bool IsArticulationName()
     {
         // Articulation/ornament names are plain identifiers after '@'; the specific
-        // name is resolved by ArticulationRegistry, not by the lexer.
-        return Current.Kind is SyntaxKind.Identifier;
+        // name is resolved by ArticulationRegistry, not by the lexer. A few mark
+        // names (coda/segno/fine) lex as structure keywords but are equally valid
+        // as in-music marks (e.g. g1@coda).
+        return Current.Kind is SyntaxKind.Identifier
+            or SyntaxKind.CodaKeyword
+            or SyntaxKind.SegnoKeyword
+            or SyntaxKind.FineKeyword;
     }
 
     private bool IsDynamicName()
