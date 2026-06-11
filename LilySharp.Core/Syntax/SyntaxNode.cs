@@ -27,6 +27,14 @@ public abstract class SyntaxNode
     private readonly int _position;
     internal readonly GreenNode Green;
 
+    // Red children are created lazily and CACHED (Roslyn-style): repeated
+    // GetChild(i) returns the same instance, so repeated tree walks (LSP
+    // validators, collectors) don't re-allocate the red tree every time.
+    // Both arrays are published with CompareExchange so concurrent walkers
+    // converge on a single instance without locks.
+    private SyntaxNode?[]? _children;
+    private int[]? _childPositions;
+
     internal SyntaxNode(GreenNode green, SyntaxNode? parent, int position)
     {
         Green = green;
@@ -75,7 +83,8 @@ public abstract class SyntaxNode
     public int SlotCount => Green.SlotCount;
 
     /// <summary>
-    /// Gets the child at the specified index, creating red node on demand.
+    /// Gets the child at the specified index, creating the red node on first
+    /// access and returning the cached instance afterwards.
     /// </summary>
     public SyntaxNode? GetChild(int index)
     {
@@ -83,20 +92,43 @@ public abstract class SyntaxNode
         if (greenChild == null)
             return null;
 
-        int childPosition = GetChildPosition(index);
-        return CreateRed(greenChild, childPosition);
+        var children = _children;
+        if (children == null)
+        {
+            children = new SyntaxNode?[Green.SlotCount];
+            children = Interlocked.CompareExchange(ref _children, children, null) ?? children;
+        }
+
+        var existing = children[index];
+        if (existing != null)
+            return existing;
+
+        var created = CreateRed(greenChild, GetChildPosition(index));
+        return Interlocked.CompareExchange(ref children[index], created, null) ?? created;
     }
 
+    /// <summary>
+    /// Child positions are cumulative sums of green full widths; computing
+    /// them once kills the former O(n²) walk over preceding siblings.
+    /// </summary>
     private int GetChildPosition(int index)
     {
-        int pos = _position;
-        for (int i = 0; i < index; i++)
+        var positions = _childPositions;
+        if (positions == null)
         {
-            var child = Green.GetSlot(i);
-            if (child != null)
-                pos += child.FullWidth;
+            int n = Green.SlotCount;
+            positions = new int[n];
+            int pos = _position;
+            for (int i = 0; i < n; i++)
+            {
+                positions[i] = pos;
+                var child = Green.GetSlot(i);
+                if (child != null)
+                    pos += child.FullWidth;
+            }
+            positions = Interlocked.CompareExchange(ref _childPositions, positions, null) ?? positions;
         }
-        return pos;
+        return positions[index];
     }
 
     /// <summary>

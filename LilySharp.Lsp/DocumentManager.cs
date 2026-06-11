@@ -85,25 +85,44 @@ public sealed class DocumentManager
         if (doc == null)
             throw new InvalidOperationException($"Document not found: {uri}");
 
-        var currentText = doc.Text;
+        var changeList = changes as IReadOnlyList<TextDocumentContentChangeEvent> ?? changes.ToList();
 
-        foreach (var change in changes)
+        SyntaxTree tree;
+        if (changeList.Count == 1 && changeList[0].Range != null)
         {
-            if (change.Range != null)
+            // The common case (one edit per keystroke) goes through the
+            // INCREMENTAL reparse: unchanged top-level items of the previous
+            // tree are reused instead of being re-parsed.
+            var change = changeList[0];
+            var start = GetOffset(doc.Text, change.Range!.Start);
+            var end = Math.Max(start, GetOffset(doc.Text, change.Range.End));
+            tree = doc.Tree.WithChange(
+                new TextChange(new TextSpan(start, end - start), change.Text));
+        }
+        else
+        {
+            // Multi-change batches and full replacements: apply the edits to
+            // the text sequentially (per the LSP spec each Range refers to the
+            // post-previous-change state) and parse once.
+            var currentText = doc.Text;
+            foreach (var change in changeList)
             {
-                var start = GetOffset(currentText, change.Range.Start);
-                var end = Math.Max(start, GetOffset(currentText, change.Range.End));
-                currentText = currentText[..start] + change.Text + currentText[end..];
+                if (change.Range != null)
+                {
+                    var start = GetOffset(currentText, change.Range.Start);
+                    var end = Math.Max(start, GetOffset(currentText, change.Range.End));
+                    currentText = currentText[..start] + change.Text + currentText[end..];
+                }
+                else
+                {
+                    // Full replacement
+                    currentText = change.Text;
+                }
             }
-            else
-            {
-                // Full replacement
-                currentText = change.Text;
-            }
+            tree = SyntaxTree.Parse(currentText);
         }
 
-        var tree = SyntaxTree.Parse(currentText);
-        var newDoc = new Document(uri, currentText, tree, version);
+        var newDoc = new Document(uri, tree.Text, tree, version);
         lock (_gate)
             _documents[uri] = newDoc;
         return newDoc;

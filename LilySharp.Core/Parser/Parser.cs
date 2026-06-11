@@ -26,12 +26,23 @@ internal sealed class Parser
 {
     private readonly List<SyntaxToken> _tokens;
     private readonly DiagnosticBag _diagnostics = new();
+    private readonly IncrementalReuseMap? _reuse;
     private int _position;
     private int _textPosition; // Tracks position in source text
 
     public Parser(IEnumerable<SyntaxToken> tokens)
+        : this(tokens, reuse: null)
+    {
+    }
+
+    /// <summary>
+    /// Creates a parser that may adopt unchanged top-level green nodes from a
+    /// previous tree instead of re-parsing them (incremental reparse).
+    /// </summary>
+    internal Parser(IEnumerable<SyntaxToken> tokens, IncrementalReuseMap? reuse)
     {
         _tokens = tokens.ToList();
+        _reuse = reuse;
         _position = 0;
         _textPosition = 0;
     }
@@ -104,6 +115,20 @@ internal sealed class Parser
 
         while (!Check(SyntaxKind.EndOfFile))
         {
+            // Incremental reparse: adopt an unchanged top-level item from the
+            // previous tree wholesale (greens are position-free). Adoption is
+            // VERIFIED against the fresh token stream — an edit can change how
+            // FOLLOWING text lexes (a new "//" or "/*" rewrites everything up
+            // to the line end / comment close), so position math alone is not
+            // safe; this mirrors why Roslyn's Blender compares tokens. On any
+            // mismatch we fall back to ordinary parsing of that item.
+            if (_reuse != null && _reuse.TryGet(_textPosition, out var reused)
+                && TryAdoptTokens(reused))
+            {
+                members.Add(reused);
+                continue;
+            }
+
             var member = ParseTopLevelItem();
             if (member != null)
                 members.Add(member);
@@ -113,6 +138,71 @@ internal sealed class Parser
 
         var eof = Expect(SyntaxKind.EndOfFile);
         return new CompilationUnitGreen([.. members], eof);
+    }
+
+    /// <summary>
+    /// Consumes the tokens covered by a candidate node IF the fresh token
+    /// stream matches the node's own tokens exactly; otherwise restores the
+    /// parser position and reports failure.
+    /// </summary>
+    private bool TryAdoptTokens(GreenNode node)
+    {
+        int savePosition = _position;
+        int saveTextPosition = _textPosition;
+
+        // Depth-first token walk with an explicit stack (nested iterators are
+        // far too slow for a per-edit hot path).
+        var stack = new Stack<GreenNode>();
+        stack.Push(node);
+        while (stack.Count > 0)
+        {
+            var green = stack.Pop();
+            if (green.IsToken)
+            {
+                if (!TokenMatches(Current, (SyntaxToken)green))
+                {
+                    _position = savePosition;
+                    _textPosition = saveTextPosition;
+                    return false;
+                }
+                Advance();
+                continue;
+            }
+            for (int i = green.SlotCount - 1; i >= 0; i--)
+            {
+                if (green.GetSlot(i) is { } child)
+                    stack.Push(child);
+            }
+        }
+
+        if (_textPosition != saveTextPosition + node.FullWidth)
+        {
+            _position = savePosition;
+            _textPosition = saveTextPosition;
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool TokenMatches(SyntaxToken a, SyntaxToken b)
+    {
+        if (ReferenceEquals(a, b)) // common: the token interning cache hit
+            return true;
+        return a.Kind == b.Kind
+            && a.FullWidth == b.FullWidth
+            && a.Text == b.Text
+            && TriviaTextEquals(a.LeadingTrivia, b.LeadingTrivia)
+            && TriviaTextEquals(a.TrailingTrivia, b.TrailingTrivia);
+    }
+
+    private static bool TriviaTextEquals(GreenNode? x, GreenNode? y)
+    {
+        if (ReferenceEquals(x, y))
+            return true;
+        if (x == null || y == null)
+            return false;
+        return x.FullWidth == y.FullWidth && x.ToFullString() == y.ToFullString();
     }
 
     private GreenNode? ParseTopLevelItem()

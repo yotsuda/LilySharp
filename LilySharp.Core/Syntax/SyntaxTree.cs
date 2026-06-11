@@ -111,7 +111,32 @@ public sealed class SyntaxTree
             return this;
 
         var newText = ApplyChanges(_text, changes);
-        return Parse(newText);
+
+        // Combined damaged region in OLD-text coordinates (all spans refer to
+        // the original text; ApplyChanges applies them back-to-front).
+        int damageStart = changes.Min(c => c.Span.Start);
+        int damageOldEnd = changes.Max(c => c.Span.End);
+
+        return ParseIncremental(this, newText, damageStart, damageOldEnd);
+    }
+
+    /// <summary>
+    /// Incremental reparse: lexes the new text in full (lexing is a cheap
+    /// single pass) but re-PARSES only the damaged region — top-level items
+    /// of the old tree outside the edit are adopted wholesale because green
+    /// nodes are position-free. Falls back to plain parsing behaviour
+    /// automatically when nothing is reusable.
+    /// </summary>
+    public static SyntaxTree ParseIncremental(
+        SyntaxTree oldTree, string newText, int damageStart, int damageOldEnd)
+    {
+        int delta = newText.Length - oldTree._text.Length;
+        var reuse = IncrementalReuseMap.Create(oldTree, damageStart, damageOldEnd, delta);
+
+        var lexer = new Lexer(newText);
+        var parser = new Parser.Parser(lexer.ScanAllTokens(), reuse);
+        var root = parser.ParseCompilationUnit();
+        return new SyntaxTree(newText, root, parser.Diagnostics.ToList());
     }
 
     /// <summary>

@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -63,7 +63,7 @@ internal sealed class Lexer
         // Scan trailing trivia (until end of line)
         var trailingTrivia = ScanTrivia(leading: false);
 
-        return new SyntaxToken(kind, text, leadingTrivia, trailingTrivia);
+        return GreenCache.GetToken(kind, text, leadingTrivia, trailingTrivia);
     }
 
     private GreenNode? ScanTrivia(bool leading)
@@ -112,7 +112,7 @@ internal sealed class Lexer
         int start = _position;
         while (Current is ' ' or '\t')
             _position++;
-        return new SyntaxTrivia(SyntaxKind.WhitespaceTrivia, _text[start.._position]);
+        return GreenCache.GetTrivia(SyntaxKind.WhitespaceTrivia, _text.AsSpan(start, _position - start));
     }
 
     private SyntaxTrivia ScanEndOfLine()
@@ -128,7 +128,7 @@ internal sealed class Lexer
         {
             _position++;
         }
-        return new SyntaxTrivia(SyntaxKind.EndOfLineTrivia, _text[start.._position]);
+        return GreenCache.GetTrivia(SyntaxKind.EndOfLineTrivia, _text.AsSpan(start, _position - start));
     }
 
     private SyntaxTrivia ScanLineComment()
@@ -137,7 +137,7 @@ internal sealed class Lexer
         _position += 2; // skip //
         while (!IsAtEnd && Current != '\r' && Current != '\n')
             _position++;
-        return new SyntaxTrivia(SyntaxKind.LineCommentTrivia, _text[start.._position]);
+        return GreenCache.GetTrivia(SyntaxKind.LineCommentTrivia, _text.AsSpan(start, _position - start));
     }
 
     private SyntaxTrivia ScanBlockComment()
@@ -153,7 +153,7 @@ internal sealed class Lexer
             }
             _position++;
         }
-        return new SyntaxTrivia(SyntaxKind.BlockCommentTrivia, _text[start.._position]);
+        return GreenCache.GetTrivia(SyntaxKind.BlockCommentTrivia, _text.AsSpan(start, _position - start));
     }
 
     private (SyntaxKind kind, string text) ScanTokenCore()
