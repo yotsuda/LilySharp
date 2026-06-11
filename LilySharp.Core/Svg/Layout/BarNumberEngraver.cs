@@ -31,10 +31,16 @@ public readonly record struct BarNumberLayout(
     int MeasureIndex,
     /// <summary>Bar number text (typically a 1-based integer).</summary>
     string Text,
-    /// <summary>X coordinate of the text anchor (start of the measure).</summary>
+    /// <summary>X coordinate of the text anchor.</summary>
     double X,
     /// <summary>Y coordinate of the text baseline (above the staff).</summary>
-    double Y);
+    double Y,
+    /// <summary>
+    /// True for line-start numbers: the anchor is the system's LEFT EDGE
+    /// (before the clef) and the text right-aligns to it, per BarNumber's
+    /// begin-of-line alignment.
+    /// </summary>
+    bool RightAligned = false);
 
 /// <summary>
 /// Calculates BarNumber positions for each system. By default, the first
@@ -92,7 +98,24 @@ public static class BarNumberEngraver
 
                 // LP shows 1-based numbers. measureIndex is 0-based.
                 int displayedNumber = measureIndex + 1;
-                double x = ml.X;
+
+                // Line-start numbers break-align to the LEFT EDGE — the very
+                // start of the staff lines, BEFORE the clef — and right-align
+                // to it (plus a small horizon padding), so the number hangs
+                // just left of the system. Mid-line (period) numbers keep the
+                // measure-start anchor, left-aligned (staff-bar alignment).
+                // LILYPOND-REF: scm/define-grobs.scm BarNumber —
+                //   break-align-symbols (left-edge staff-bar),
+                //   self-alignment-X (break-alignment-list LEFT LEFT RIGHT),
+                //   horizon-padding 0.05
+                bool atLineStart = isFirstInSystem;
+                // The system's left edge is where the staff lines start:
+                // the indent (margins live in the page transform). ml.X is
+                // the prefix END, and PrefixWidth is not reliable per-system
+                // here, so anchor on the staff-line origin directly.
+                double x = atLineStart
+                    ? system.Indent + 0.05
+                    : ml.X;
                 // Sit above the staff: a couple staff spaces above system top.
                 double y = system.Y - 1.0;
 
@@ -100,7 +123,8 @@ public static class BarNumberEngraver
                     MeasureIndex: measureIndex,
                     Text: displayedNumber.ToString(),
                     X: x,
-                    Y: y));
+                    Y: y,
+                    RightAligned: atLineStart));
             }
         }
 

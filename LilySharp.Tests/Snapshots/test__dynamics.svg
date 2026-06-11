@@ -92,7 +92,7 @@
   <line x1="64.55" y1="16.99" x2="72.32" y2="17.33" stroke="#000000" stroke-width="0.130" data-pos="254"/>
   <line x1="21.25" y1="29.56" x2="34.16" y2="29.89" stroke="#000000" stroke-width="0.130" data-pos="277"/>
   <line x1="21.25" y1="30.23" x2="34.16" y2="29.89" stroke="#000000" stroke-width="0.130" data-pos="277"/>
-  <text x="7.00" y="21.00" font-size="1.80" font-family="serif" font-weight="bold" fill="#000000">4</text>
+  <text x="0.05" y="21.00" font-size="1.80" font-family="serif" font-weight="bold" text-anchor="end" fill="#000000">4</text>
   <rect x="7.59" y="6.20" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="10.30" y="8.40" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">Main</text>
   </g>

@@ -1943,7 +1943,8 @@ public static class SharedRenderer
                 }
             }
             gc.DrawText(bn.Text, bn.X, y, fontSize, "serif",
-                FontStyle.Bold, TextAnchor.Start, Color.Black);
+                FontStyle.Bold, bn.RightAligned ? TextAnchor.End : TextAnchor.Start,
+                Color.Black);
         }
     }
 
