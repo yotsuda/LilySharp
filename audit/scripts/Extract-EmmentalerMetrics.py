@@ -69,6 +69,10 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("Flag16thDown", 0xE0DB, "16th note flag (downward stem)",  "mf/feta-flags.mf — flags.d4"),
     # Augmentation dot
     GlyphSpec("AugmentationDot", 0xE038, "Augmentation dot", "mf/feta-noteheads.mf — dots.dot"),
+    # Ornament / mark glyphs (ink extents for outside-staff stacking)
+    GlyphSpec("OrnTrillGlyph", 0xE05C, "Trill ornament", "mf/feta-scripts.mf — scripts.trill"),
+    # NOTE: U+E047/U+E048 resolve to scripts.thumb / scripts.sforzato in this
+    # font's cmap, NOT segno/coda — do not extract metrics for them here.
     # Rests (ink extents; used to place augmentation dots after the glyph)
     GlyphSpec("RestWhole",   0xE000, "Whole rest",   "mf/feta-rests.mf — rests.0"),
     GlyphSpec("RestHalf",    0xE001, "Half rest",    "mf/feta-rests.mf — rests.1"),

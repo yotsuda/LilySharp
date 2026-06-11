@@ -107,6 +107,12 @@ public static partial class GlyphMetrics
     /// <summary>Augmentation dot — advance width (next-glyph horizontal feed).</summary>
     public const double AugmentationDotAdvance = 0.4480;
 
+    /// <summary>Trill ornament — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.trill (U+E05C = scripts.trill)</remarks>
+    public static readonly BBox OrnTrillGlyph = new(-1.2880, -0.0440, 1.1080, 2.1600);
+    /// <summary>Trill ornament — advance width (next-glyph horizontal feed).</summary>
+    public const double OrnTrillGlyphAdvance = 0.8480;
+
     /// <summary>Whole rest — BBox.</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.0 (U+E000 = rests.0)</remarks>
     public static readonly BBox RestWhole = new(0.0000, -0.6240, 1.5000, 0.0000);

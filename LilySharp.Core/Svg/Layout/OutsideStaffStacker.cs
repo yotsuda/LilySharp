@@ -15,6 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Rendering;
+using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -302,7 +304,9 @@ public static class OutsideStaffStacker
                 if (!tb.IsStemUp || !measureToSystem.TryGetValue(tb.MeasureIndex, out int sysIdx))
                     continue;
                 double sy = systems[sysIdx].Y;
-                double top = sy + Math.Min(tb.StartY, tb.EndY) - 1.6; // number above the line
+                // Bracket line + the centered number's upper half
+                // (number font = 0.6 x 4sp, cap height ~0.71em).
+                double top = sy + Math.Min(tb.StartY, tb.EndY) - 0.71 * 2.4 / 2 - 0.1;
                 trackers[sysIdx].AddRegion(tb.StartX, tb.EndX, top);
             }
         }
@@ -318,9 +322,13 @@ public static class OutsideStaffStacker
                 if (!measureToSystem.TryGetValue(t.StartMeasureIndex, out int sysIdx))
                     continue;
                 double sy = systems[sysIdx].Y;
-                // anchor = glyph baseline; body extends ~1.5sp up, 0.3 down.
-                double newAbs = Place(trackers[sysIdx], t.GlyphX, t.LineEndX,
-                    sy + t.Y, topOffset: -1.5, bottomOffset: 0.3);
+                // anchor = "tr" glyph baseline; ink extent from the font bbox
+                // (scripts.trill: 2.16sp above the baseline), wave +-0.25.
+                double newAbs = Place(trackers[sysIdx],
+                    t.GlyphX + GlyphMetrics.OrnTrillGlyph.Left, t.LineEndX,
+                    sy + t.Y,
+                    topOffset: -GlyphMetrics.OrnTrillGlyph.Top,
+                    bottomOffset: 0.25);
                 b[i] = t with { Y = newAbs - sy };
             }
             adjTrills = b.ToImmutable();
@@ -336,11 +344,13 @@ public static class OutsideStaffStacker
                 var bn = b[i];
                 if (!measureToSystem.TryGetValue(bn.MeasureIndex, out int sysIdx))
                     continue;
-                double halfWidth = bn.Text.Length * 0.9;
-                double x0 = bn.RightAligned ? bn.X - 2 * halfWidth : bn.X;
-                double x1 = bn.RightAligned ? bn.X : bn.X + 2 * halfWidth;
+                // Measured digit width; digits have no descenders, cap
+                // height ~0.71em above the baseline anchor.
+                double width = SerifTextMetrics.MeasureBold(bn.Text, BarNumberEngraver.FontSize);
+                double x0 = bn.RightAligned ? bn.X - width : bn.X;
+                double x1 = bn.RightAligned ? bn.X : bn.X + width;
                 double newY = Place(trackers[sysIdx], x0, x1,
-                    bn.Y, topOffset: -1.4, bottomOffset: 0.0);
+                    bn.Y, topOffset: -0.71 * BarNumberEngraver.FontSize, bottomOffset: 0.0);
                 b[i] = bn with { Y = newY };
             }
             adjBarNumbers = b.ToImmutable();
@@ -357,8 +367,12 @@ public static class OutsideStaffStacker
                 if (!o.IsAbove || !measureToSystem.TryGetValue(o.StartMeasureIndex, out int sysIdx))
                     continue;
                 double sy = systems[sysIdx].Y;
+                // anchor = text baseline / line Y; "8va" at 0.45 x 4sp with
+                // ~0.75em ascent; the end hook drops EdgeHeight below.
                 double newAbs = Place(trackers[sysIdx], o.StartX, o.EndX,
-                    sy + o.Y, topOffset: -1.3, bottomOffset: Math.Max(0.3, o.EdgeHeight));
+                    sy + o.Y,
+                    topOffset: -0.75 * (0.45 * 4.0),
+                    bottomOffset: Math.Max(0.1, o.EdgeHeight));
                 b[i] = o with { Y = newAbs - sy };
             }
             adjOttavas = b.ToImmutable();
@@ -375,9 +389,13 @@ public static class OutsideStaffStacker
                 if (!measureToSystem.TryGetValue(ct.MeasureIndex, out int sysIdx))
                     continue;
                 double sy = systems[sysIdx].Y;
-                double halfWidth = Math.Max(1.0, ct.Text.Length * 0.55);
+                // Centered italic text at 0.6 x 4sp; measured width (bold
+                // table, a slight overestimate for italic), ~0.75em ascent
+                // and ~0.25em descent around the baseline anchor.
+                const double ctFs = 0.6 * 4.0;
+                double halfWidth = SerifTextMetrics.MeasureBold(ct.Text, ctFs) / 2;
                 double newAbs = Place(trackers[sysIdx], ct.X - halfWidth, ct.X + halfWidth,
-                    sy + ct.Y, topOffset: -1.6, bottomOffset: 0.3);
+                    sy + ct.Y, topOffset: -0.75 * ctFs, bottomOffset: 0.25 * ctFs);
                 b[i] = ct with { Y = newAbs - sy };
             }
             adjCustomTexts = b.ToImmutable();
@@ -394,9 +412,15 @@ public static class OutsideStaffStacker
                 if (!measureToSystem.TryGetValue(v.StartMeasureIndex, out int sysIdx))
                     continue;
                 double sy = systems[sysIdx].Y;
-                // anchor = bracket line; hooks and text hang ~1.6sp below it.
+                // anchor = bracket line. Hooks drop EdgeHeight; the volta
+                // number hangs from line+0.3 at 0.6 x 4sp (renderer
+                // geometry), so the deeper of the two bounds the extent.
+                double textDepth = string.IsNullOrEmpty(v.VoltaText)
+                    ? 0
+                    : 0.3 + 0.75 * (0.6 * 4.0);
+                double bottom = Math.Max(VoltaBracketEngraver.GetEdgeHeight(), textDepth);
                 double newAbs = Place(trackers[sysIdx], v.StartX, v.EndX,
-                    sy + v.Y, topOffset: -0.15, bottomOffset: 1.6);
+                    sy + v.Y, topOffset: -0.1, bottomOffset: bottom);
                 b[i] = v with { Y = newAbs - sy };
             }
             adjVoltas = b.ToImmutable();
@@ -413,17 +437,62 @@ public static class OutsideStaffStacker
                 if (!measureToSystem.TryGetValue(m.MeasureIndex, out int sysIdx))
                     continue;
                 double sy = systems[sysIdx].Y;
-                double halfWidth = Math.Max(1.4, m.Text.Length * 0.7);
-                // anchor = text baseline inside the box: box top ~2.1 above,
-                // box bottom ~0.6 below.
+                var (halfWidth, top, bottom) = MusicMarkExtents(m);
                 double newAbs = Place(trackers[sysIdx], m.X - halfWidth, m.X + halfWidth,
-                    sy + m.Y, topOffset: -2.1, bottomOffset: 0.6);
+                    sy + m.Y, topOffset: top, bottomOffset: bottom);
                 b[i] = m with { Y = newAbs - sy };
             }
             adjMarks = b.ToImmutable();
         }
 
         return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks);
+    }
+
+    /// <summary>
+    /// Extents of a music mark around its anchor, mirroring the renderer's
+    /// DrawSingleMusicMark geometry (boxed labels are anchored at the box
+    /// CENTER; plain text marks at the baseline).
+    /// </summary>
+    private static (double HalfWidth, double Top, double Bottom) MusicMarkExtents(MusicMarkLayout m)
+    {
+        const double fontSize = 4.0; // renderer FontSize
+
+        if (m.IsSymbol)
+        {
+            // Segno/Coda glyphs, centered on the anchor. The font cmap does
+            // not expose proper segno/coda metrics (U+E047/E048 resolve to
+            // other glyphs), so use a conservative symbol box.
+            return (1.2, -2.0, 2.0);
+        }
+
+        switch (m.MarkType)
+        {
+            case MusicMarkType.Rehearsal:
+            case MusicMarkType.SectionLabel:
+            {
+                // Boxed bold text anchored at the box center.
+                double fs = m.MarkType == MusicMarkType.Rehearsal
+                    ? fontSize * 0.6
+                    : fontSize * 0.55;
+                const double pad = 0.2;
+                double halfW = (SerifTextMetrics.MeasureBold(m.Text, fs) + 2 * pad) / 2;
+                double halfH = (fs + 2 * pad) / 2;
+                return (halfW, -halfH, halfH);
+            }
+            case MusicMarkType.Tempo:
+            {
+                // Metronome: notehead + stem (reaching ~1.5sp up) + "= NNN".
+                double textW = SerifTextMetrics.MeasureBold("= " + m.Text, 1.8);
+                return ((1.1 + textW) / 2 + 0.6, -1.5, 0.5);
+            }
+            default:
+            {
+                // Plain bold(-italic) text at 0.7 x 4sp, baseline anchor.
+                double fs = fontSize * 0.7;
+                double halfW = SerifTextMetrics.MeasureBold(m.Text, fs) / 2;
+                return (halfW, -0.75 * fs, 0.25 * fs);
+            }
+        }
     }
 
     /// <summary>
