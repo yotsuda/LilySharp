@@ -69,6 +69,15 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("Flag16thDown", 0xE0DB, "16th note flag (downward stem)",  "mf/feta-flags.mf — flags.d4"),
     # Augmentation dot
     GlyphSpec("AugmentationDot", 0xE038, "Augmentation dot", "mf/feta-noteheads.mf — dots.dot"),
+    # Rests (ink extents; used to place augmentation dots after the glyph)
+    GlyphSpec("RestWhole",   0xE000, "Whole rest",   "mf/feta-rests.mf — rests.0"),
+    GlyphSpec("RestHalf",    0xE001, "Half rest",    "mf/feta-rests.mf — rests.1"),
+    GlyphSpec("RestQuarter", 0xE008, "Quarter rest", "mf/feta-rests.mf — rests.2"),
+    GlyphSpec("Rest8th",     0xE00B, "8th rest",     "mf/feta-rests.mf — rests.3"),
+    GlyphSpec("Rest16th",    0xE00C, "16th rest",    "mf/feta-rests.mf — rests.4"),
+    GlyphSpec("Rest32nd",    0xE00D, "32nd rest",    "mf/feta-rests.mf — rests.5"),
+    GlyphSpec("Rest64th",    0xE00E, "64th rest",    "mf/feta-rests.mf — rests.6"),
+    GlyphSpec("Rest128th",   0xE00F, "128th rest",   "mf/feta-rests.mf — rests.7"),
     # Articulations
     GlyphSpec("ArticStaccato",      0xE04A, "Staccato dot articulation",       "mf/feta-scripts.mf — scripts.staccato"),
     GlyphSpec("ArticAccent",        0xE048, "Accent / sforzato articulation",  "mf/feta-scripts.mf — scripts.sforzato"),

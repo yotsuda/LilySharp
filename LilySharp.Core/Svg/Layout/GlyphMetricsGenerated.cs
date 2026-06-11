@@ -107,6 +107,54 @@ public static partial class GlyphMetrics
     /// <summary>Augmentation dot — advance width (next-glyph horizontal feed).</summary>
     public const double AugmentationDotAdvance = 0.4480;
 
+    /// <summary>Whole rest — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.0 (U+E000 = rests.0)</remarks>
+    public static readonly BBox RestWhole = new(0.0000, -0.6240, 1.5000, 0.0000);
+    /// <summary>Whole rest — advance width (next-glyph horizontal feed).</summary>
+    public const double RestWholeAdvance = 1.5000;
+
+    /// <summary>Half rest — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.1 (U+E001 = rests.1)</remarks>
+    public static readonly BBox RestHalf = new(0.0000, 0.0000, 1.5000, 0.6240);
+    /// <summary>Half rest — advance width (next-glyph horizontal feed).</summary>
+    public const double RestHalfAdvance = 1.5000;
+
+    /// <summary>Quarter rest — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.2 (U+E008 = rests.2)</remarks>
+    public static readonly BBox RestQuarter = new(-0.0920, -1.2831, 0.9720, 1.5840);
+    /// <summary>Quarter rest — advance width (next-glyph horizontal feed).</summary>
+    public const double RestQuarterAdvance = 0.9480;
+
+    /// <summary>8th rest — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.3 (U+E00B = rests.3)</remarks>
+    public static readonly BBox Rest8th = new(-0.0120, -1.0400, 1.0000, 0.8200);
+    /// <summary>8th rest — advance width (next-glyph horizontal feed).</summary>
+    public const double Rest8thAdvance = 1.0000;
+
+    /// <summary>16th rest — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.4 (U+E00C = rests.4)</remarks>
+    public static readonly BBox Rest16th = new(-0.1040, -2.0400, 1.2000, 0.8200);
+    /// <summary>16th rest — advance width (next-glyph horizontal feed).</summary>
+    public const double Rest16thAdvance = 1.1960;
+
+    /// <summary>32nd rest — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.5 (U+E00D = rests.5)</remarks>
+    public static readonly BBox Rest32nd = new(-0.2200, -2.0400, 1.3000, 1.8200);
+    /// <summary>32nd rest — advance width (next-glyph horizontal feed).</summary>
+    public const double Rest32ndAdvance = 1.3000;
+
+    /// <summary>64th rest — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.6 (U+E00E = rests.6)</remarks>
+    public static readonly BBox Rest64th = new(-0.2680, -3.0400, 1.4000, 1.8200);
+    /// <summary>64th rest — advance width (next-glyph horizontal feed).</summary>
+    public const double Rest64thAdvance = 1.3960;
+
+    /// <summary>128th rest — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.7 (U+E00F = rests.7)</remarks>
+    public static readonly BBox Rest128th = new(-0.2400, -3.0400, 1.5000, 2.8200);
+    /// <summary>128th rest — advance width (next-glyph horizontal feed).</summary>
+    public const double Rest128thAdvance = 1.5000;
+
     /// <summary>Staccato dot articulation — BBox.</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.staccato (U+E04A = scripts.staccato)</remarks>
     public static readonly BBox ArticStaccato = new(-0.2000, -0.2000, 0.2000, 0.2000);

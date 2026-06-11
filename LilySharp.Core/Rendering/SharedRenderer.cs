@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -791,6 +791,32 @@ public static class SharedRenderer
                     staffMiddleY, extremeBottomAcc);
         }
 
+        // Augmentation dots: one dot ROW per chord note, all in one column a
+        // dot-width right of the heads. Dots prefer SPACES (line notes shift
+        // up one position); when two notes claim the same space the later one
+        // climbs to the next free space — a simplified Dot_configuration.
+        // LILYPOND-REF: scm/define-grobs.scm DotColumn padding (one dot width)
+        // LILYPOND-REF: lily/dot-column.cc / dot-configuration.cc — dots sit
+        //   in spaces, resolved against each other.
+        if (chord.Dots > 0 && chord.Notes.Length > 0)
+        {
+            double dotWidth = GlyphMetrics.AugmentationDot.Width;
+            double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) + dotWidth;
+            var taken = new HashSet<int>();
+            foreach (var n in chord.Notes.OrderBy(n => n.StaffPosition))
+            {
+                int p = n.StaffPosition;
+                if (p % 2 == 0) p += 1; // lines -> space above
+                while (taken.Contains(p)) p += 2;
+                taken.Add(p);
+                double dotY = staffMiddleY - p * 0.5;
+                for (int d = 0; d < chord.Dots; d++)
+                    using (gc.Source(chord.SourcePosition))
+                        gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                            dotStartX + d * 2 * dotWidth, dotY, FontSize, noteheadColor);
+            }
+        }
+
         // Skip chord stem when chord is part of a beam — DrawBeams handles it.
         // LILYPOND-REF: lily/stem.cc — beamed stem end determined by beam layout.
         if (noteValue >= 2 && chord.Notes.Length > 0 && !isBeamed)
@@ -1032,6 +1058,21 @@ public static class SharedRenderer
         double y = noteValue == 1 ? staffY + 1 : staffY + 2;  // whole rests hang from 4th line
         using (gc.Source(rest.SourcePosition))
             gc.DrawGlyph(glyph, x, y, FontSize);
+
+        // Augmentation dots: one dot-width right of the rest's ink, in the
+        // space above the middle line (standard rest-dot position).
+        // LILYPOND-REF: lily/dot-column.cc:252-257 — rest dots translate by
+        //   the rest extent plus the DotColumn padding (one dot width).
+        if (rest.Dots > 0)
+        {
+            double dotWidth = GlyphMetrics.AugmentationDot.Width;
+            double dotStartX = x + GlyphMetrics.GetRestBBox(noteValue).Right + dotWidth;
+            double dotY = staffY + 2 - 0.5; // staff position +1 (3rd space)
+            for (int d = 0; d < rest.Dots; d++)
+                using (gc.Source(rest.SourcePosition))
+                    gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
+                        dotStartX + d * 2 * dotWidth, dotY, FontSize);
+        }
     }
 
     // ---------- Barlines ----------

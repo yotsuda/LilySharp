@@ -217,6 +217,20 @@ public static partial class GlyphMetrics
 
     // ========== Helper methods ==========
 
+    /// <summary>Gets the rest glyph bounding box for a given note value.</summary>
+    public static BBox GetRestBBox(int noteValue) => noteValue switch
+    {
+        1 => RestWhole,
+        2 => RestHalf,
+        4 => RestQuarter,
+        8 => Rest8th,
+        16 => Rest16th,
+        32 => Rest32nd,
+        64 => Rest64th,
+        128 => Rest128th,
+        _ => RestQuarter
+    };
+
     /// <summary>Gets the bounding box for an accidental by name.</summary>
     public static BBox GetAccidentalBBox(string? accidental) => accidental switch
     {
