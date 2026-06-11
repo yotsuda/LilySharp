@@ -1,0 +1,147 @@
+// =============================================================================
+// Lily# 文法ツアー — 主要な文法を 1 ファイルで一望できるショーケース。
+// 各 phrase が 1 トピックを担当し、最後にグランドスタッフとして描画する。
+//
+//   1 基本記譜   ピッチ / オクターブ(' ,) / 付点(.) / 休符(r) / 和音(< >)
+//   2 臨時記号   is=♯ es=♭ / @courtesy 注意 / @editorial 編集
+//   3 表情       アーティキュレーション(+略記) / ダイナミクス / ヘアピン
+//   4 結合線     タイ(~) / スラー(( )) / 自動・手動ビーム([ ])
+//   5 リズム     連符(tuplet) / 装飾音(grace) / トレモロ(:N)
+//   6 装飾記号   @trill @mordent @turn / グリッサンド
+//   7 拡張       多小節休符(R1*N) / 運指(@finger.N) / ハーフタイ / 和音タイ
+//   8 反復       インライン・ボルタ(|: … [1.…] :| [2.…]) / 反復回数(:|*N)
+//   9 多声部     1 段に 2 声部 (<< { } \\ { } >>)
+//  10 構造       part / phrase / section / structure / render
+//
+//  ※ オクターブは相対式（各音は直前の音の最も近い同名音）。' で 1 oct 上、
+//    , で 1 oct 下に補正する。上行音階の後は , で戻すと五線内に収まる。
+// =============================================================================
+
+title "Lily# Grammar Tour"
+composer "Lily#"
+
+// トップレベルの曲設定はコマンド形式（コロン無し）。
+tempo 96
+time 4/4
+key g major
+
+// --- パート定義（G1: ヘッダ属性はすべてコロン形式 attr: value）---------------
+part rh {
+  clef: treble
+}
+part lh {
+  clef: bass
+}
+
+// --- フレーズ（G2: 名前付き楽譜は phrase のみ。参照は $名前）-----------------
+
+// 1 基本記譜：ピッチ / オクターブ / 付点 / 休符 / 和音
+phrase p_basics {
+  g4 a b c' |                       // 単音 + オクターブ上げ(')
+  d4. e8 d c b a |                  // 付点 + 8 分音符
+  <g b d>4 <a c e> <g b d> r |      // 和音 + 休符
+}
+
+// 2 臨時記号：is=♯ es=♭ / 注意・編集臨時記号
+phrase p_accidentals {
+  fis4 g a bes |                    // F♯ … B♭
+  c4 cis d ees |                    // C C♯ D E♭
+  a4@courtesy bes c@editorial r |   // 注意臨時記号 / 編集臨時記号
+}
+
+// 3 表情：アーティキュレーション(略記可) / ダイナミクス / ヘアピン
+phrase p_expression {
+  g4@p@stac a@acc b@ten c@marc |    // @stac/@acc/@ten/@marc は略記
+  d4@cresc e fis g@f |              // @cresc … @f でヘアピン(増)
+  fis4@decresc e d c@p |            // @decresc … @p でヘアピン(減)
+  b2.@fermata r4 |                  // フェルマータ
+}
+
+// 4 結合線：タイ / スラー
+phrase p_tiesSlurs {
+  g2~ g4 a |                        // タイ(~)
+  b4( c d e) |                      // スラー(( ))
+  d2~( d4 c) | b1 |                // タイ + スラーのネスト
+}
+
+// 5 ビーム：自動（拍ごと） / 手動（[ ] で 1 群） / 小節をまたぐ手動
+phrase p_beams {
+  g8 a b c d e fis g |              // 自動
+  g8[ a b c d e fis g] |           // 手動（8 音 1 群）
+  g8[ a, b c | d8 e fis g] |       // 小節をまたぐ手動ビーム（, で戻す）
+}
+
+// 6 連符・装飾音・トレモロ
+phrase p_rhythm {
+  tuplet 3/2 { g'8 a b } tuplet 3/2 { c d e } d2 |  // 3 連符 ×2
+  tuplet 5/4 { g,16 a b c d } e4 d c |              // 5 連符
+  grace { d8 } e4 grace { fis8 } g4 r2 |            // 装飾音
+  c2:8 d4 e |                                        // トレモロ(:8)
+}
+
+// 7 装飾記号・グリッサンド
+phrase p_ornaments {
+  g4@trill a@mordent b@turn c |     // トリル / モルデント / ターン
+  g4@glissando c e@glissando b r |
+}
+
+// 8 拡張：多小節休符 / 運指 / ハーフタイ / 和音タイ
+phrase p_mmr {
+  R1*4 |                            // 4 小節フル休符
+  c4 d e f |
+}
+phrase p_fingering {
+  g4@finger.1 a@finger.2 b@finger.3 c@finger.4 |          // 単音の運指
+  <c@finger.1 e@finger.3 g@finger.5>4 <d@finger.2 f@finger.4 a@finger.5> r2 |  // 和音内
+}
+phrase p_halfTies {
+  g4@laissezVibrer r r r |          // l.v.(余韻ハーフタイ)
+  g4@repeatTie a b c |              // リピート明けの入りタイ
+}
+phrase p_chordTies {
+  <g b d>2~ <g b d> |               // 3 音すべてタイ
+  <g b d>2~ <g b e> |               // 共通音(g,b)のみタイ
+}
+
+// 9 反復：インライン・ボルタ ＋ 反復回数
+phrase p_repeat {
+  |: g'4 a g f | [1. e2 d | ] :| [2. e2 c | ]        // 1・2 番括弧
+  |: g'8 a g f :|*2                                   // ":|*N" で N 回反復
+}
+
+// 10 多声部：1 段に上声部(符尾上) / 下声部(符尾下)
+phrase p_voices {
+  << { b'2 a | g2 a | } \\ { d2 e | d2 c | } >>
+}
+
+// 伴奏（バス声部）— 各セクションで使い回す
+phrase p_bass { g2 d | g4 a b c | g2~ g4 r | d2 g | }
+
+// --- 構造（section → structure → render）------------------------------------
+section A {
+  rh { $p_basics $p_accidentals $p_expression }
+  lh { $p_bass $p_bass $p_bass }
+}
+section B {
+  rh { $p_tiesSlurs $p_beams $p_rhythm }
+  lh { $p_bass $p_bass $p_bass }
+}
+section C {
+  rh { $p_mmr $p_fingering $p_halfTies $p_chordTies }
+  lh { $p_bass $p_bass $p_bass $p_bass }
+}
+section D {
+  rh { $p_ornaments $p_repeat $p_voices }
+  lh { $p_bass $p_bass $p_bass }
+}
+
+structure { A B C D }
+
+render score "grammar-tour.svg" {
+  staff { rh }
+  staff { lh }
+}
+
+// 歌詞(lyrics)は単一譜のときに描画される。構文例は samples/test/lyrics.lys:
+//   section Main { melody { c4 d e f | g2 g | } lyrics { Twin- kle twin- kle | star~ | } }
+// （- で音節区切り、~ でメリスマ。グランドスタッフでの歌詞は現状未対応）
