@@ -1,0 +1,35 @@
+// Beamed Tuplet Test
+// Beamed tuplets exercise three behaviors that bracketed (unbeamed)
+// tuplets do not:
+//  - auto beams break at tuplet boundaries (two adjacent triplets get
+//    two separate beams, never one six-note beam)
+//  - bracket-visibility = if-no-beam suppresses the bracket, so only
+//    the number is drawn
+//  - the number attaches to the BEAM: centered between the outer
+//    stems, clear of the beam on its stem side (above for up-stem
+//    beams, below — including the digit height — for down-stem beams)
+title "Beamed Tuplets"
+composer "Lily#"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+phrase beamedTuplets {
+  // Up-stem triplet (number above) + down-stem triplet (number below)
+  tuplet 3/2 { g'8 a b } tuplet 3/2 { c d e } d2 |
+  // 16th quintuplet: double beam, number below
+  tuplet 5/4 { g,16 a b c d } e4 d c |
+}
+
+section Main {
+  melody { $beamedTuplets }
+}
+
+structure { Main }
+
+render score "tuplets-beamed.svg" {
+  staff { melody }
+}

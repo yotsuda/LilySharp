@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -78,6 +78,7 @@ public class SvgSnapshotTests
         yield return new object[] { "test/grace-notes" };
         yield return new object[] { "test/ties-slurs" };
         yield return new object[] { "test/tuplets" };
+        yield return new object[] { "test/tuplets-beamed" };
         yield return new object[] { "test/bass-clef" };
         yield return new object[] { "test/keysig-treble" };
         yield return new object[] { "test/keysig-bass" };
