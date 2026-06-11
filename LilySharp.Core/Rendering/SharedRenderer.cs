@@ -676,7 +676,8 @@ public static class SharedRenderer
                 gc.DrawGlyph(head, x, noteY, noteFontSize, noteheadColor);
 
         // Ledger lines for notes far from middle line
-        DrawLedgerLines(note.StaffPosition, x, staffMiddleY, gc);
+        DrawLedgerLines(note.StaffPosition, x, staffMiddleY, gc,
+            GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? 0.66 : 1.0));
 
         // Stem & flag — beamed notes are handled by DrawBeams (which draws the
         // beam-aware stem to the actual beam Y), so skip both here to avoid a
@@ -743,7 +744,8 @@ public static class SharedRenderer
             if (!headWiped && !headTransparent)
                 using (gc.Source(chord.SourcePosition))
                     gc.DrawGlyph(head, x, y, FontSize, noteheadColor);
-            DrawLedgerLines(n.StaffPosition, x, staffMiddleY, gc);
+            DrawLedgerLines(n.StaffPosition, x, staffMiddleY, gc,
+                GlyphMetrics.GetNoteheadAdvance(noteValue));
             if (y < topY) topY = y;
             if (y > bottomY) bottomY = y;
             if (n.StaffPosition > maxPos) maxPos = n.StaffPosition;
@@ -848,13 +850,18 @@ public static class SharedRenderer
         return true;
     }
 
-    private static void DrawLedgerLines(int staffPosition, double x, double staffMiddleY, IDrawingContext gc)
+    private static void DrawLedgerLines(int staffPosition, double x, double staffMiddleY,
+        IDrawingContext gc, double headWidth = EngravingDefaults.NoteheadBlackWidth)
     {
-        double ext = EngravingDefaults.LegerLineExtension;
+        // ledger_extent = head_extent widened by length-fraction·head_width —
+        // proportional to the ACTUAL head, so whole/half noteheads (wider than
+        // black ones) get correspondingly longer, centered ledgers.
+        // LILYPOND-REF: lily/ledger-line-spanner.cc:204-233 (length-fraction 0.25)
+        // LILYPOND-REF: lily/staff-symbol.cc:337-344 (thickness 1.0·line + 0.1·space)
+        double ext = EngravingDefaults.LedgerLengthFraction * headWidth;
         double thickness = EngravingDefaults.LegerLineThickness;
-        // Notehead width approx 1.18 sp; centered around x
         double x1 = x - ext;
-        double x2 = x + EngravingDefaults.NoteheadBlackWidth + ext;
+        double x2 = x + headWidth + ext;
 
         // Ledger lines above staff (staff position > 4 = above top line)
         for (int pos = 6; pos <= staffPosition; pos += 2)
@@ -1621,7 +1628,8 @@ public static class SharedRenderer
                             g.SourcePosition, gc);
                     gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize);
                     if (note.NeedsLedger)
-                        DrawLedgerLines(note.StaffPosition, currentX, staffMiddleY, gc);
+                        DrawLedgerLines(note.StaffPosition, currentX, staffMiddleY, gc,
+                            EngravingDefaults.NoteheadBlackWidth * g.Scale);
                     lastNoteX = currentX;
                     lastNoteY = y;
                     currentX += 1.2 * g.Scale;  // approximate advance per grace note

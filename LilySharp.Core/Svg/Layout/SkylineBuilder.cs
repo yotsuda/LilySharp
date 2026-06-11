@@ -282,9 +282,9 @@ public sealed class SkylineBuilder
         upSkyline.Merge(noteheadUp);
         downSkyline.Merge(noteheadDown);
 
-        // LILYPOND-REF: lily/ledger-line-engraver.cc:82-127
-        // Ledger lines extend horizontally from the note
-        double ledgerExtension = EngravingDefaults.LegerLineExtension;
+        // LILYPOND-REF: lily/ledger-line-spanner.cc:204-233 — ledger extent is
+        // the head extent widened by length-fraction (0.25) of the head width.
+        double ledgerExtension = EngravingDefaults.LedgerLengthFraction * noteheadWidth;
         double ledgerThickness = EngravingDefaults.LegerLineThickness;
         double ledgerLeft = x - noteheadWidth / 2 - ledgerExtension;
         double ledgerRight = x + noteheadWidth / 2 + ledgerExtension;

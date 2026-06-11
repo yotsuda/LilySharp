@@ -15,10 +15,10 @@
   <text class="music" x="0.30" y="13.00" font-size="4.00"></text>
   <text class="music" x="3.30" y="12.00" font-size="4.00"></text>
   <text class="music" x="13.21" y="15.00" font-size="4.00" data-pos="164"></text>
-  <line x1="12.81" y1="15.00" x2="14.92" y2="15.00" stroke="#000000" stroke-width="0.160"/>
+  <line x1="12.89" y1="15.00" x2="14.84" y2="15.00" stroke="#000000" stroke-width="0.230"/>
   <line x1="14.46" y1="15.00" x2="14.46" y2="11.50" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="16.60" y="15.00" font-size="4.00" data-pos="185"></text>
-  <line x1="16.20" y1="15.00" x2="18.30" y2="15.00" stroke="#000000" stroke-width="0.160"/>
+  <line x1="16.27" y1="15.00" x2="18.23" y2="15.00" stroke="#000000" stroke-width="0.230"/>
   <line x1="17.84" y1="15.00" x2="17.84" y2="11.50" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="23.18" y="14.50" font-size="4.00" data-pos="188"></text>
   <line x1="24.42" y1="14.50" x2="24.42" y2="11.00" stroke="#000000" stroke-width="0.120"/>
@@ -69,10 +69,10 @@
   <line x1="46.52" y1="23.50" x2="46.52" y2="27.00" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="53.23" y="24.00" font-size="4.00" data-pos="406"></text>
   <text class="music" x="62.04" y="20.50" font-size="4.00" data-pos="411"></text>
-  <line x1="61.64" y1="21.00" x2="63.74" y2="21.00" stroke="#000000" stroke-width="0.160"/>
+  <line x1="61.71" y1="21.00" x2="63.67" y2="21.00" stroke="#000000" stroke-width="0.230"/>
   <line x1="62.10" y1="20.50" x2="62.10" y2="24.00" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="65.49" y="20.50" font-size="4.00" data-pos="461"></text>
-  <line x1="65.09" y1="21.00" x2="67.19" y2="21.00" stroke="#000000" stroke-width="0.160"/>
+  <line x1="65.16" y1="21.00" x2="67.12" y2="21.00" stroke="#000000" stroke-width="0.230"/>
   <line x1="65.55" y1="20.50" x2="65.55" y2="24.00" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="72.26" y="24.00" font-size="4.00" data-pos="464"></text>
   <rect x="24.89" y="22.00" width="0.16" height="4.00" fill="#000000"/>

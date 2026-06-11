@@ -30,12 +30,12 @@
   <text class="music" x="57.73" y="14.00" font-size="4.00" data-pos="283"></text>
   <line x1="57.79" y1="14.00" x2="57.79" y2="17.50" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="64.09" y="10.00" font-size="4.00" data-pos="285"></text>
-  <line x1="63.69" y1="11.00" x2="65.79" y2="11.00" stroke="#000000" stroke-width="0.160"/>
-  <line x1="63.69" y1="10.00" x2="65.79" y2="10.00" stroke="#000000" stroke-width="0.160"/>
+  <line x1="63.76" y1="11.00" x2="65.72" y2="11.00" stroke="#000000" stroke-width="0.230"/>
+  <line x1="63.76" y1="10.00" x2="65.72" y2="10.00" stroke="#000000" stroke-width="0.230"/>
   <line x1="64.15" y1="10.00" x2="64.15" y2="14.00" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="70.44" y="9.50" font-size="4.00" data-pos="290"></text>
-  <line x1="70.04" y1="11.00" x2="72.15" y2="11.00" stroke="#000000" stroke-width="0.160"/>
-  <line x1="70.04" y1="10.00" x2="72.15" y2="10.00" stroke="#000000" stroke-width="0.160"/>
+  <line x1="70.12" y1="11.00" x2="72.07" y2="11.00" stroke="#000000" stroke-width="0.230"/>
+  <line x1="70.12" y1="10.00" x2="72.07" y2="10.00" stroke="#000000" stroke-width="0.230"/>
   <line x1="70.50" y1="9.50" x2="70.50" y2="14.00" stroke="#000000" stroke-width="0.120"/>
   <rect x="44.86" y="12.00" width="0.16" height="4.00" fill="#000000"/>
   <rect x="76.94" y="12.00" width="0.16" height="4.00" fill="#000000"/>
@@ -62,10 +62,10 @@
   <text class="music" x="57.73" y="20.50" font-size="4.00" data-pos="334"></text>
   <line x1="57.79" y1="20.50" x2="57.79" y2="24.00" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="64.09" y="20.00" font-size="4.00" data-pos="336"></text>
-  <line x1="63.69" y1="20.00" x2="65.79" y2="20.00" stroke="#000000" stroke-width="0.160"/>
+  <line x1="63.76" y1="20.00" x2="65.72" y2="20.00" stroke="#000000" stroke-width="0.230"/>
   <line x1="64.15" y1="20.00" x2="64.15" y2="23.50" stroke="#000000" stroke-width="0.120"/>
   <text class="music" x="70.44" y="19.50" font-size="4.00" data-pos="340"></text>
-  <line x1="70.04" y1="20.00" x2="72.15" y2="20.00" stroke="#000000" stroke-width="0.160"/>
+  <line x1="70.12" y1="20.00" x2="72.07" y2="20.00" stroke="#000000" stroke-width="0.230"/>
   <line x1="70.50" y1="19.50" x2="70.50" y2="23.00" stroke="#000000" stroke-width="0.120"/>
   <rect x="44.86" y="21.00" width="0.16" height="4.00" fill="#000000"/>
   <rect x="76.94" y="21.00" width="0.16" height="4.00" fill="#000000"/>

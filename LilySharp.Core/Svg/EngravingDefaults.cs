@@ -28,8 +28,29 @@ public static class EngravingDefaults
 {
     // === Staff and lines ===
     public const double StaffLineThickness = 0.13;
-    public const double LegerLineThickness = 0.16;
-    public const double LegerLineExtension = 0.4;
+
+    /// <summary>
+    /// Ledger line thickness: StaffSymbol.ledger-line-thickness = (1.0 . 0.1)
+    /// → 1.0·line-thickness + 0.1·staff-space.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-symbol.cc:337-344 get_ledger_line_thickness;
+    /// scm/define-grobs.scm StaffSymbol (ledger-line-thickness . (1.0 . 0.1)).
+    /// </remarks>
+    public const double LegerLineThickness = 1.0 * StaffLineThickness + 0.1 * 1.0;
+
+    /// <summary>
+    /// Ledger lines extend beyond the notehead by this FRACTION of the head's
+    /// own width on each side — proportional, so wide whole/half noteheads get
+    /// proportionally longer ledgers.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/ledger-line-spanner.cc:204-233 —
+    /// ledger_extent = head_extent widened by length-fraction·head_width;
+    /// (length-fraction . 0.25) per scm/define-grobs.scm LedgerLineSpanner.
+    /// </remarks>
+    public const double LedgerLengthFraction = 0.25;
+
     public const double LineThickness = 0.1;
 
     // === Stems ===
