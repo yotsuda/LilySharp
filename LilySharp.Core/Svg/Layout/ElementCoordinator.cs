@@ -613,10 +613,14 @@ public sealed class ElementCoordinator
                     double outlineRight = GlyphMetrics.GetNoteheadAdvance(noteValue);
                     if (startDots > 0)
                     {
-                        // Dots sit at headLeft + 1.0 + i·0.5 (SharedRenderer);
-                        // clear the last dot plus its glyph width.
-                        outlineRight = Math.Max(outlineRight,
-                            1.0 + (startDots - 1) * 0.5 + 0.4);
+                        // Dot column geometry (matches SharedRenderer): the
+                        // first dot starts one dot-width right of the head,
+                        // each dot advances two dot-widths; the outline ends
+                        // at the last dot's right edge = head + 2n·dotWidth.
+                        // LILYPOND-REF: scm/define-grobs.scm DotColumn padding;
+                        //   scm/output-lib.scm ly:dots::print.
+                        double dotWidth = GlyphMetrics.AugmentationDot.Width;
+                        outlineRight += 2 * startDots * dotWidth;
                     }
                     segStartX += outlineRight;
                 }

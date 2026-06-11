@@ -729,10 +729,18 @@ public static class SharedRenderer
                 DrawTremolo(stemX, noteY, stemEndY, stemUp, note.TremoloBeams, hasFlag, gc);
         }
 
-        // Augmentation dots
+        // Augmentation dots: the dot column sits one dot-width right of the
+        // head's right edge (per-duration head width — whole/half heads are
+        // wider), and successive dots are spaced one dot-width apart.
+        // LILYPOND-REF: scm/define-grobs.scm DotColumn —
+        //   (padding . dot-column-interface::pad-by-one-dot-width)
+        // LILYPOND-REF: scm/output-lib.scm ly:dots::print — stack with
+        //   padding = one dot width (advance per dot = 2 dot widths)
+        double dotWidth = GlyphMetrics.AugmentationDot.Width;
+        double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) + dotWidth;
         for (int d = 0; d < note.Dots; d++)
         {
-            double dotX = x + 1.0 + d * 0.5;
+            double dotX = dotStartX + d * 2 * dotWidth;
             double dotY = note.StaffPosition % 2 == 0 ? noteY - 0.5 : noteY;
             gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, dotY, noteFontSize, noteheadColor);
         }
