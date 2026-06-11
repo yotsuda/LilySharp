@@ -1757,8 +1757,12 @@ public sealed class MeasureCollector
 
         foreach (var node in partBlock.DescendantNodes())
         {
-            // Skip nodes inside tuplets, repeats, or grace expressions (they'll be processed by those handlers)
-            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node))
+            // Skip nodes inside containers (tuplet/repeat/grace/inline volta) —
+            // they'll be processed by those handlers. Inline voltas in
+            // particular must pass through as ONE wrapper node, or the
+            // bracket ([1. ]/[2.]) is lost while its notes leak out flat.
+            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
+                || IsInsideInlineVolta(node))
                 continue;
 
             switch (node)
@@ -1774,6 +1778,7 @@ public sealed class MeasureCollector
                 case GraceExpressionSyntax:
                 case TupletExpressionSyntax:
                 case RepeatExpressionSyntax:
+                case InlineVoltaSyntax:
                 case MusicMarkSyntax:
                 case ClefDeclarationSyntax:
                 case KeySignatureSyntax:
@@ -1805,19 +1810,22 @@ public sealed class MeasureCollector
 
         // Include expression itself if it is a music node
         if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
-            or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
+            or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or InlineVoltaSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
             or ClefDeclarationSyntax or KeySignatureSyntax)
         {
             musicNodes.Add(expression);
         }
 
-        // Get music nodes from the variable expression descendants
-        // Skip nodes inside containers (grace, tuplet, repeat, once) - they'll be processed by those handlers
+        // Get music nodes from the variable expression descendants.
+        // Skip nodes inside containers (grace, tuplet, repeat, once, inline
+        // volta) — they'll be processed by those handlers; the inline volta
+        // must travel as ONE wrapper node so its bracket survives.
         var nodes = expression.DescendantNodes()
             .Where(n => !IsInsideGrace(n) && !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n)
+                && !IsInsideInlineVolta(n)
                 && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
-                or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
+                or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or InlineVoltaSyntax
                 or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
                 or ClefDeclarationSyntax or KeySignatureSyntax);
 
