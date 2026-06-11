@@ -27,14 +27,23 @@ public sealed class SyntaxTree
     private readonly CompilationUnitGreen _greenRoot;
     private readonly string _text;
     private readonly IReadOnlyList<Diagnostic> _diagnostics;
+    // The lexer's token stream, retained for incremental LEXING on the next
+    // edit. Unlike tokens enumerated from the green tree, this stream is
+    // text-faithful even when the parse had errors (the parser synthesizes
+    // missing tokens; the lexer never does).
+    private readonly IReadOnlyList<SyntaxToken> _tokens;
     private CompilationUnitSyntax? _redRoot;
 
-    private SyntaxTree(string text, CompilationUnitGreen root, IReadOnlyList<Diagnostic> diagnostics)
+    private SyntaxTree(string text, CompilationUnitGreen root,
+        IReadOnlyList<Diagnostic> diagnostics, IReadOnlyList<SyntaxToken> tokens)
     {
         _text = text;
         _greenRoot = root;
         _diagnostics = diagnostics;
+        _tokens = tokens;
     }
+
+    internal IReadOnlyList<SyntaxToken> Tokens => _tokens;
 
     /// <summary>
     /// The source text.
@@ -70,10 +79,10 @@ public sealed class SyntaxTree
     public static SyntaxTree Parse(string text)
     {
         var lexer = new Lexer(text);
-        var tokens = lexer.ScanAllTokens();
+        var tokens = lexer.ScanAllTokens().ToList();
         var parser = new Parser.Parser(tokens);
         var root = parser.ParseCompilationUnit();
-        return new SyntaxTree(text, root, parser.Diagnostics.ToList());
+        return new SyntaxTree(text, root, parser.Diagnostics.ToList(), tokens);
     }
 
     /// <summary>
@@ -121,11 +130,13 @@ public sealed class SyntaxTree
     }
 
     /// <summary>
-    /// Incremental reparse: lexes the new text in full (lexing is a cheap
-    /// single pass) but re-PARSES only the damaged region — top-level items
-    /// of the old tree outside the edit are adopted wholesale because green
-    /// nodes are position-free. Falls back to plain parsing behaviour
-    /// automatically when nothing is reusable.
+    /// Incremental reparse. Both halves are incremental:
+    /// LEXING — tokens outside the damaged region are spliced from the old
+    /// tree's retained stream (re-lexing only the damage, resynchronizing on
+    /// the first shared token boundary after it); PARSING — top-level items
+    /// outside the edit are adopted wholesale because green nodes are
+    /// position-free. Both fall back to full work automatically when reuse
+    /// is not possible (e.g. an edit that opens an unterminated comment).
     /// </summary>
     public static SyntaxTree ParseIncremental(
         SyntaxTree oldTree, string newText, int damageStart, int damageOldEnd)
@@ -133,10 +144,12 @@ public sealed class SyntaxTree
         int delta = newText.Length - oldTree._text.Length;
         var reuse = IncrementalReuseMap.Create(oldTree, damageStart, damageOldEnd, delta);
 
-        var lexer = new Lexer(newText);
-        var parser = new Parser.Parser(lexer.ScanAllTokens(), reuse);
+        var tokens = IncrementalLexer.Splice(
+            oldTree.Tokens, newText, damageStart, damageOldEnd, delta);
+
+        var parser = new Parser.Parser(tokens, reuse);
         var root = parser.ParseCompilationUnit();
-        return new SyntaxTree(newText, root, parser.Diagnostics.ToList());
+        return new SyntaxTree(newText, root, parser.Diagnostics.ToList(), tokens);
     }
 
     /// <summary>

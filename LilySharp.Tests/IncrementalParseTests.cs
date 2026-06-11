@@ -66,7 +66,16 @@ public class IncrementalParseTests
         Assert.Equal(expected.FullWidth, actual.FullWidth);
         Assert.Equal(expected.SlotCount, actual.SlotCount);
         if (expected.IsToken)
+        {
             Assert.Equal(expected.Text, actual.Text);
+            // Trivia ATTACHMENT and content must match too — incremental
+            // lexing splices token streams, and a wrong splice would first
+            // show up as trivia migrating between neighbouring tokens.
+            Assert.Equal(expected.LeadingTrivia?.ToFullString(),
+                actual.LeadingTrivia?.ToFullString());
+            Assert.Equal(expected.TrailingTrivia?.ToFullString(),
+                actual.TrailingTrivia?.ToFullString());
+        }
 
         for (int i = 0; i < expected.SlotCount; i++)
         {
@@ -145,11 +154,18 @@ public class IncrementalParseTests
     public void WithChange_RandomizedEdits_MatchFullParse()
     {
         // Deterministic fuzz: random spans replaced with random snippets.
+        // The comment snippets are the incremental LEXER's worst case — a new
+        // "//" or "/*" (or a deleted "*/") rewrites how all following text
+        // lexes, so the splicer must refuse to resync or resync correctly.
         var rng = new Random(20260611);
-        string[] snippets = ["c4 ", "phrase z { d8 e } ", "|", "", "  ", "render ", "}", "{ a2 | }"];
+        string[] snippets =
+        [
+            "c4 ", "phrase z { d8 e } ", "|", "", "  ", "render ", "}", "{ a2 | }",
+            "// note\n", "/* x */", "/*", "*/", "\n\n",
+        ];
 
         var tree = SyntaxTree.Parse(Source);
-        for (int i = 0; i < 200; i++)
+        for (int i = 0; i < 300; i++)
         {
             var text = tree.Text;
             int start = rng.Next(text.Length + 1);
@@ -159,6 +175,32 @@ public class IncrementalParseTests
             tree = tree.WithChange(new TextChange(new TextSpan(start, length), replacement));
             var full = SyntaxTree.Parse(tree.Text);
             AssertTreesEquivalent(full, tree);
+        }
+    }
+
+    [Fact]
+    public void WithChange_CommentBoundaryEdits_MatchFullParse()
+    {
+        // Targeted lexical-bleed cases around comments.
+        var src = "phrase a { c4 d } // tail\nphrase b { e4 f }\n/* block\n spans */ phrase c { g4 }\n";
+        var cases = new (string find, string replace)[]
+        {
+            ("// tail", "x4"),          // comment becomes music
+            ("c4 d", "c4 d // rest"),   // music grows a comment to EOL
+            ("/* block", "block"),      // block comment opener removed
+            ("spans */", "spans"),      // block comment closer removed
+            ("e4", "e4 /* zz */"),      // inline block comment inserted
+        };
+
+        foreach (var (find, replace) in cases)
+        {
+            var old = SyntaxTree.Parse(src);
+            int start = src.IndexOf(find, StringComparison.Ordinal);
+            Assert.True(start >= 0);
+            var incremental = old.WithChange(
+                new TextChange(new TextSpan(start, find.Length), replace));
+            var full = SyntaxTree.Parse(incremental.Text);
+            AssertTreesEquivalent(full, incremental);
         }
     }
 

@@ -28,10 +28,23 @@ internal sealed class Lexer
     private int _position;
 
     public Lexer(string text)
+        : this(text, 0)
+    {
+    }
+
+    /// <summary>
+    /// Starts lexing at an arbitrary offset. The lexer carries no state other
+    /// than its position, so lexing from any character offset is well-defined
+    /// (incremental lexing re-lexes only the damaged region this way).
+    /// </summary>
+    public Lexer(string text, int start)
     {
         _text = text;
-        _position = 0;
+        _position = start;
     }
+
+    /// <summary>The current character offset of the lexer.</summary>
+    public int Position => _position;
 
     private char Current => _position < _text.Length ? _text[_position] : '\0';
     private char Peek(int offset = 1) => _position + offset < _text.Length ? _text[_position + offset] : '\0';
