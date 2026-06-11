@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -135,17 +135,22 @@ public static class TupletBracketEngraver
 
             var measureLayout = measureLayouts[tuplet.MeasureIndex];
 
-            // Find start and end X positions from item layouts
-            if (tuplet.StartNoteIndex >= measureLayout.Items.Length ||
-                tuplet.EndNoteIndex >= measureLayout.Items.Length)
+            // Find start and end X positions. Multi-staff layouts use
+            // timing-aligned columns, not Items — go through the shared
+            // resolver (a direct Items index silently shifts the bracket).
+            if (measureLayout.Columns.IsDefaultOrEmpty
+                && (tuplet.StartNoteIndex >= measureLayout.Items.Length ||
+                    tuplet.EndNoteIndex >= measureLayout.Items.Length))
                 continue;
 
-            var startItem = measureLayout.Items[tuplet.StartNoteIndex];
-            var endItem = measureLayout.Items[tuplet.EndNoteIndex];
+            double startOffset = LayoutUtilities.GetItemXOffset(
+                measures, tuplet.MeasureIndex, tuplet.StartNoteIndex, measureLayout);
+            double endOffset = LayoutUtilities.GetItemXOffset(
+                measures, tuplet.MeasureIndex, tuplet.EndNoteIndex, measureLayout);
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:145-180 calc_x_positions
-            double startX = measureLayout.X + startItem.X - HalfNoteheadWidth;
-            double endX = measureLayout.X + endItem.X + HalfNoteheadWidth;
+            double startX = measureLayout.X + startOffset - HalfNoteheadWidth;
+            double endX = measureLayout.X + endOffset + HalfNoteheadWidth;
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
             bool isStemUp = CalculateDirection(tuplet, measures);

@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -298,7 +298,10 @@ public sealed class LayoutEngine
         {
             var staffScore = new Score(
                 staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
-                ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer);
+                ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                // Beam detection must see tuplet spans: auto beams break at
+                // tuplet boundaries (BeamDetector).
+                tupletBrackets: score.TupletBrackets);
             allBeamLayouts.AddRange(_elementCoordinator.LayoutBeams(staffScore, systemsArray, staffIndex));
             allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffScore, systemsArray, staffIndex));
             allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffScore, systemsArray, staffIndex));
@@ -321,7 +324,8 @@ public sealed class LayoutEngine
         var primaryStaff = score.StaffGroups[0].PrimaryStaff;
         var primaryScore = new Score(
             primaryStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
-            ClefToString(primaryStaff.Clef));
+            ClefToString(primaryStaff.Clef),
+            tupletBrackets: score.TupletBrackets);
 
         var annotations = CalculateAnnotationLayouts(
             primaryScore, systemsArray,
@@ -330,7 +334,10 @@ public sealed class LayoutEngine
             score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
             primaryStaff.PrimaryVoice.Measures, score.FiguredBasses, score.ChordNames,
             score.PercentRepeats, crossStaffLayouts,
-            trillSpanners: score.TrillSpanners);
+            trillSpanners: score.TrillSpanners,
+            // bracket-visibility = if-no-beam needs the beam groups; without
+            // them every tuplet bracket draws even when fully beamed.
+            beamGroups: _elementCoordinator.DetectBeamGroups(primaryScore));
 
         // Voice collision offsets / head-wipes for multi-voice staves, so the
         // renderer can nudge opposing voices apart. Computed per staff; the keys

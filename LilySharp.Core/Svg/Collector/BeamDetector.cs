@@ -40,7 +40,7 @@ public sealed class BeamDetector
     /// </summary>
     public ImmutableArray<BeamGroup> DetectBeamGroups(Score score)
     {
-        return DetectBeamGroups(score.Voice, score.TimeSignature);
+        return DetectBeamGroups(score.Voice, score.TimeSignature, score.TupletBrackets);
     }
 
     /// <summary>
@@ -56,10 +56,24 @@ public sealed class BeamDetector
     ///      single-measure manual + automatic beaming, skipping items already
     ///      consumed by the cross-measure pass.
     /// </remarks>
-    public ImmutableArray<BeamGroup> DetectBeamGroups(Voice voice, TimeSignature timeSignature)
+    public ImmutableArray<BeamGroup> DetectBeamGroups(Voice voice, TimeSignature timeSignature,
+        ImmutableArray<TupletBracketItem> tupletBrackets = default)
     {
         var beamGroups = new List<BeamGroup>();
         var consumed = new HashSet<(int measureIndex, int itemIndex)>();
+
+        // Auto beams never cross a tuplet boundary: a tuplet is its own
+        // rhythmic group, so a beam ends where a tuplet starts or ends.
+        // LILYPOND-REF: lily/auto-beam-engraver.cc — tuplet spans bound beams.
+        var tupletBoundaries = new HashSet<(int measureIndex, int itemIndex)>();
+        if (!tupletBrackets.IsDefaultOrEmpty)
+        {
+            foreach (var bracket in tupletBrackets)
+            {
+                tupletBoundaries.Add((bracket.MeasureIndex, bracket.StartNoteIndex));
+                tupletBoundaries.Add((bracket.MeasureIndex, bracket.EndNoteIndex + 1));
+            }
+        }
 
         // Pass 1: cross-measure manual beams.
         DetectCrossMeasureManualBeams(voice, beamGroups, consumed);
@@ -68,7 +82,7 @@ public sealed class BeamDetector
         for (int measureIndex = 0; measureIndex < voice.Measures.Length; measureIndex++)
         {
             var measure = voice.Measures[measureIndex];
-            DetectBeamGroupsInMeasure(measure, measureIndex, timeSignature, beamGroups, consumed);
+            DetectBeamGroupsInMeasure(measure, measureIndex, timeSignature, beamGroups, consumed, tupletBoundaries);
         }
 
         return beamGroups.ToImmutableArray();
@@ -235,7 +249,8 @@ public sealed class BeamDetector
         int measureIndex,
         TimeSignature timeSig,
         List<BeamGroup> beamGroups,
-        HashSet<(int, int)>? consumed = null)
+        HashSet<(int, int)>? consumed = null,
+        HashSet<(int, int)>? tupletBoundaries = null)
     {
         // Phase 0: Detect manual beam groups (c8[ d e f])
         var manualRanges = DetectManualBeamGroups(measure, measureIndex, beamGroups);
@@ -280,6 +295,19 @@ public sealed class BeamDetector
 
             if (IsBeamable(item))
             {
+                // Tuplet boundary: never beam across it (the tuplet is its
+                // own rhythmic group, see DetectBeamGroups).
+                if (currentGroup.Count > 0 && tupletBoundaries != null
+                    && tupletBoundaries.Contains((measureIndex, i)))
+                {
+                    if (currentGroup.Count >= 2)
+                    {
+                        beatGroups.Add(new List<(MusicItem, int, Fraction)>(currentGroup));
+                    }
+                    currentGroup.Clear();
+                    groupStartPosition = currentPosition;
+                }
+
                 if (currentGroup.Count > 0 && CrossesGroupBoundary(groupStartPosition, currentPosition, beatLength))
                 {
                     // Flush current group at beat boundary
@@ -318,7 +346,7 @@ public sealed class BeamDetector
         }
 
         // Second pass: merge consecutive pure-8th-note groups in same half-measure
-        var mergedGroups = MergePureEighthNoteGroups(beatGroups, timeSig);
+        var mergedGroups = MergePureEighthNoteGroups(beatGroups, timeSig, measureIndex, tupletBoundaries);
 
         // Convert to BeamGroups
         foreach (var group in mergedGroups)
@@ -342,7 +370,9 @@ public sealed class BeamDetector
     /// </remarks>
     private List<List<(MusicItem item, int index, Fraction startPos)>> MergePureEighthNoteGroups(
         List<List<(MusicItem item, int index, Fraction startPos)>> beatGroups,
-        TimeSignature timeSig)
+        TimeSignature timeSig,
+        int measureIndex = 0,
+        HashSet<(int, int)>? tupletBoundaries = null)
     {
         if (beatGroups.Count == 0)
             return beatGroups;
@@ -379,8 +409,11 @@ public sealed class BeamDetector
                     // Check if in same group
                     bool sameGroup = !CrossesGroupBoundary(mergeStartPos, groupStart, groupLength);
                     bool currentIsPureEighths = currentMerged.All(g => GetBeamCount(g.item) == 1);
+                    // Never re-join groups split at a tuplet boundary.
+                    bool atTupletBoundary = tupletBoundaries != null
+                        && tupletBoundaries.Contains((measureIndex, group[0].index));
 
-                    if (sameGroup && currentIsPureEighths)
+                    if (sameGroup && currentIsPureEighths && !atTupletBoundary)
                     {
                         // Merge
                         currentMerged.AddRange(group);

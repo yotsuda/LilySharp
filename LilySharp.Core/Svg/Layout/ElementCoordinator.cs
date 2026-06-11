@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -549,37 +549,7 @@ public sealed class ElementCoordinator
     /// </summary>
     private static double GetItemXOffset(
         Voice voice, int measureIndex, int itemIndex, MeasureLayout measureLayout)
-    {
-        // Single-staff path: MeasureLayout.Items aligns with this voice. Use it directly.
-        if (measureLayout.Columns.IsDefaultOrEmpty)
-        {
-            if (itemIndex < measureLayout.Items.Length)
-                return measureLayout.Items[itemIndex].X;
-            return 0;
-        }
-
-        // Multi-staff path: walk this voice's items to compute the timing of the
-        // requested item, then look up the matching column.
-        if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
-            return 0;
-        var measure = voice.Measures[measureIndex];
-        var timing = Fraction.Zero;
-        for (int i = 0; i < itemIndex && i < measure.Items.Length; i++)
-            timing = timing + measure.Items[i].Duration;
-
-        // Find the column whose Timing matches (columns are sorted by Timing).
-        // Fall back to nearest column if no exact match (defensive — should not normally hit).
-        double targetT = timing.ToDouble();
-        ColumnLayout? best = null;
-        double bestDiff = double.MaxValue;
-        foreach (var col in measureLayout.Columns)
-        {
-            if (col.Timing == timing) return col.X;
-            double diff = Math.Abs(col.Timing.ToDouble() - targetT);
-            if (diff < bestDiff) { best = col; bestDiff = diff; }
-        }
-        return best?.X ?? 0;
-    }
+        => LayoutUtilities.GetItemXOffset(voice.Measures, measureIndex, itemIndex, measureLayout);
 
     /// <summary>
     /// Detects ties and calculates their layouts, splitting cross-system ties into broken pieces.

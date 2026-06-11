@@ -116,7 +116,15 @@ public sealed record NoteItem : MusicItem
     public bool HasRepeatTie { get; }
     private readonly int _sourcePosition;
 
-    public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
+    /// <summary>
+    /// Time scale applied by enclosing tuplets (base/ratio, compounded when
+    /// nested); 1 outside tuplets. <see cref="BaseDuration"/> stays the
+    /// written notation; <see cref="Duration"/> is actual time.
+    /// </summary>
+    public Fraction TimeScale { get; init; } = new Fraction(1, 1);
+
+    public override Fraction Duration =>
+        (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
     public override int SourcePosition => _sourcePosition;
 
     /// <summary>Determines stem direction based on staff position.</summary>
@@ -159,7 +167,11 @@ public sealed record RestItem : MusicItem
     public int Dots { get; }
     private readonly int _sourcePosition;
 
-    public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
+    /// <summary>Tuplet time scale; see <see cref="NoteItem.TimeScale"/>.</summary>
+    public Fraction TimeScale { get; init; } = new Fraction(1, 1);
+
+    public override Fraction Duration =>
+        (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
     public override int SourcePosition => _sourcePosition;
 
     public RestItem(Fraction baseDuration, int dots, int sourcePosition)
@@ -212,7 +224,11 @@ public sealed record ChordItem : MusicItem
     public bool IsCue { get; }
     private readonly int _sourcePosition;
 
-    public override Fraction Duration => Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration;
+    /// <summary>Tuplet time scale; see <see cref="NoteItem.TimeScale"/>.</summary>
+    public Fraction TimeScale { get; init; } = new Fraction(1, 1);
+
+    public override Fraction Duration =>
+        (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
     public override int SourcePosition => _sourcePosition;
 
     /// <summary>Determines stem direction based on average staff position.</summary>

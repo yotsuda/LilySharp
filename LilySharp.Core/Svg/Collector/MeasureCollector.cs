@@ -920,10 +920,20 @@ public sealed class MeasureCollector
     /// Only the top-level tuplet (nestingDepth=0) adds duration to the measure.
     /// </remarks>
     /// <returns>The actual (scaled) duration of this tuplet.</returns>
-    private Fraction ProcessTuplet(TupletExpressionSyntax tuplet, MeasureBuilder builder, int nestingDepth)
+    private Fraction ProcessTuplet(TupletExpressionSyntax tuplet, MeasureBuilder builder, int nestingDepth,
+        Fraction? parentScale = null)
     {
         int measureIndex = builder.CurrentMeasureIndex;
         int startNoteIndex = builder.CurrentItemCount;
+
+        // Cumulative time scale for items inside this tuplet. Items store
+        // their ACTUAL duration (written × base/ratio, compounded through
+        // nesting): BaseDuration carries the notation, Duration carries time.
+        // Beat-based beaming and spacing need real time positions — a triplet
+        // of written 8ths occupies ONE beat, so its beam group is the tuplet
+        // itself, not "three 8ths plus whatever fills the half note".
+        Fraction scale = (parentScale ?? new Fraction(1, 1))
+            * new Fraction(tuplet.BaseDivision, tuplet.TupletRatio);
 
         // Track written duration of all items in the tuplet
         Fraction writtenDuration = Fraction.Zero;
@@ -937,22 +947,22 @@ public sealed class MeasureCollector
             if (item is NoteSyntax note)
             {
                 var noteItem = CreateNoteItem(note, false, false, false);
-                builder.AddItemWithoutDuration(noteItem);
                 writtenDuration += noteItem.Duration;
+                builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
                 lastSourcePosition = note.Position;
             }
             else if (item is RestSyntax rest)
             {
                 var restItem = CreateRestItem(rest);
-                builder.AddItemWithoutDuration(restItem);
                 writtenDuration += restItem.Duration;
+                builder.AddItemWithoutDuration(restItem with { TimeScale = scale });
                 lastSourcePosition = rest.Position;
             }
             else if (item is ChordSyntax chord)
             {
                 var chordItem = CreateChordItem(chord);
-                builder.AddItemWithoutDuration(chordItem);
                 writtenDuration += chordItem.Duration;
+                builder.AddItemWithoutDuration(chordItem with { TimeScale = scale });
                 lastSourcePosition = chord.Position;
             }
             else if (item is TupletExpressionSyntax nestedTuplet)
@@ -960,7 +970,7 @@ public sealed class MeasureCollector
                 // LILYPOND-REF: lily/tuplet-bracket.cc - nested tuplet processing
                 // Recursively process nested tuplet; its actual duration
                 // counts as "written" duration for this outer tuplet
-                Fraction nestedActualDuration = ProcessTuplet(nestedTuplet, builder, nestingDepth + 1);
+                Fraction nestedActualDuration = ProcessTuplet(nestedTuplet, builder, nestingDepth + 1, scale);
                 writtenDuration += nestedActualDuration;
                 lastSourcePosition = nestedTuplet.Position;
             }

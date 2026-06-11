@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -180,5 +180,44 @@ public static class LayoutUtilities
             }
         }
         return system.Y;
+    }
+
+    /// <summary>
+    /// Resolves an item's X offset within a measure layout. Single-staff
+    /// layouts index <see cref="MeasureLayout.Items"/> directly; multi-staff
+    /// layouts use timing-aligned COLUMNS, so the item's timing is computed
+    /// from the voice's measures and matched to a column. Engravers that
+    /// index Items directly silently shift on the multi-staff path — always
+    /// go through this helper.
+    /// </summary>
+    public static double GetItemXOffset(
+        ImmutableArray<Measure> measures, int measureIndex, int itemIndex, MeasureLayout measureLayout)
+    {
+        // Single-staff path: MeasureLayout.Items aligns with this voice.
+        if (measureLayout.Columns.IsDefaultOrEmpty)
+        {
+            if (itemIndex < measureLayout.Items.Length)
+                return measureLayout.Items[itemIndex].X;
+            return 0;
+        }
+
+        // Multi-staff path: timing → column lookup.
+        if (measureIndex < 0 || measureIndex >= measures.Length)
+            return 0;
+        var measure = measures[measureIndex];
+        var timing = Fraction.Zero;
+        for (int i = 0; i < itemIndex && i < measure.Items.Length; i++)
+            timing = timing + measure.Items[i].Duration;
+
+        double targetT = timing.ToDouble();
+        ColumnLayout? best = null;
+        double bestDiff = double.MaxValue;
+        foreach (var col in measureLayout.Columns)
+        {
+            if (col.Timing == timing) return col.X;
+            double diff = Math.Abs(col.Timing.ToDouble() - targetT);
+            if (diff < bestDiff) { best = col; bestDiff = diff; }
+        }
+        return best?.X ?? 0;
     }
 }
