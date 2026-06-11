@@ -107,7 +107,7 @@ phrase p_chordTies {
 phrase p_repeat {
   |: g'4 a g f | [1. e2 d | ] :| [2. e2 c | ]        // 1・2 番括弧
   |: g'8 a g f :|*2                                   // ":|*N" で N 回反復
-}v
+}
 
 // 10 多声部：1 段に上声部(符尾上) / 下声部(符尾下)
 phrase p_voices {
