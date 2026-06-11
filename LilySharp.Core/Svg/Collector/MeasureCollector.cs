@@ -448,6 +448,7 @@ public sealed class MeasureCollector
 
         // Single voice
         var measures = CollectMeasures();
+        ResolveBeamStemDirections(measures);
         var voice = new Voice(_voiceName ?? "default", measures.ToImmutableArray());
 
         // Collect lyrics
@@ -507,6 +508,7 @@ public sealed class MeasureCollector
             _initialOctave = _currentOctave;
 
             var measures = CollectMeasuresForVoice(voiceName);
+            ResolveBeamStemDirections(measures);
             voiceDict[voiceName] = new Voice(voiceName, measures.ToImmutableArray());
         }
 
@@ -536,6 +538,61 @@ public sealed class MeasureCollector
             percentRepeats: _percentRepeats.ToImmutableArray(),
             crossStaffItems: _crossStaffItems.ToImmutableArray(),
             trillSpanners: PairTrillSpannerEvents());
+    }
+
+    /// <summary>
+    /// Bakes beam-resolved stem directions into the collected items, IN
+    /// PLACE. A beam forces one direction onto all members, and LilyPond
+    /// resolves directions in the engravers BEFORE spacing — skyline rods and
+    /// stem-direction corrections must see the same stems the renderer draws,
+    /// or beamed runs space differently from LilyPond (this showed up as
+    /// down-natural 8ths inside an up-beam getting ~8% extra room).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/beam.cc Beam::calc_direction — beam direction wins.
+    /// LILYPOND-REF: lily/beam.cc:894-982 consider_auto_knees — per-member
+    /// directions for kneed beams (BeamMember.MemberStemUp).
+    /// </remarks>
+    private void ResolveBeamStemDirections(List<Measure> measures)
+    {
+        if (measures.Count == 0)
+            return;
+
+        var voice = new Voice("beam-direction-probe", measures.ToImmutableArray());
+        var groups = new BeamDetector().DetectBeamGroups(
+            voice, new TimeSignature(_timeBeats, _timeBeatType), _tupletBrackets.ToImmutableArray());
+
+        foreach (var group in groups)
+        {
+            foreach (var member in group.Members)
+            {
+                int mi = member.MeasureIndex >= 0 ? member.MeasureIndex : group.MeasureIndex;
+                if (mi < 0 || mi >= measures.Count)
+                    continue;
+                var measure = measures[mi];
+                if (member.ItemIndex < 0 || member.ItemIndex >= measure.Items.Length)
+                    continue;
+
+                MusicItem? updated = measure.Items[member.ItemIndex] switch
+                {
+                    NoteItem n => n with { StemUpOverride = member.MemberStemUp },
+                    ChordItem c => c with { StemUpOverride = member.MemberStemUp },
+                    _ => null,
+                };
+                if (updated == null)
+                    continue;
+
+                measures[mi] = new Measure(
+                    measure.Items.SetItem(member.ItemIndex, updated),
+                    measure.StartBarline, measure.EndBarline, measure.SectionLabel,
+                    measure.SourceStart, measure.SourceEnd,
+                    hasBreakAfter: false,
+                    lineBreakPermission: measure.LineBreakPermission,
+                    breakPenalty: measure.BreakPenalty,
+                    pageBreakPermission: measure.PageBreakPermission,
+                    pageTurnPermission: measure.PageTurnPermission);
+            }
+        }
     }
 
     private List<Measure> CollectMeasuresForVoice(string voiceName)
@@ -573,6 +630,7 @@ public sealed class MeasureCollector
                 firstVoiceMeasures = measures;
 
             var voiceName = $"voice{voiceNumber}";
+            ResolveBeamStemDirections(measures);
             voices.Add(new Voice(voiceName, measures.ToImmutableArray()));
             voiceNumber++;
 

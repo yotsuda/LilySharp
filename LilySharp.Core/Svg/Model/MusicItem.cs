@@ -127,8 +127,17 @@ public sealed record NoteItem : MusicItem
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
     public override int SourcePosition => _sourcePosition;
 
-    /// <summary>Determines stem direction based on staff position.</summary>
-    public bool StemUp => StaffPosition < 0;
+    /// <summary>
+    /// Beam-resolved stem direction. A beam forces ONE direction onto all its
+    /// members; the collector bakes that in here so spacing (skyline rods,
+    /// stem-direction corrections) sees the same stems the renderer draws.
+    /// LilyPond resolves directions in the engravers BEFORE spacing runs.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/beam.cc — Beam::calc_direction.</remarks>
+    public bool? StemUpOverride { get; init; }
+
+    /// <summary>Stem direction: beam-resolved if beamed, else by staff position.</summary>
+    public bool StemUp => StemUpOverride ?? StaffPosition < 0;
 
     /// <summary>Whether this note has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
@@ -231,8 +240,11 @@ public sealed record ChordItem : MusicItem
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
     public override int SourcePosition => _sourcePosition;
 
-    /// <summary>Determines stem direction based on average staff position.</summary>
-    public bool StemUp => Notes.Length > 0 && Notes.Average(n => n.StaffPosition) < 0;
+    /// <summary>Beam-resolved stem direction; see <see cref="NoteItem.StemUpOverride"/>.</summary>
+    public bool? StemUpOverride { get; init; }
+
+    /// <summary>Stem direction: beam-resolved if beamed, else by average staff position.</summary>
+    public bool StemUp => StemUpOverride ?? (Notes.Length > 0 && Notes.Average(n => n.StaffPosition) < 0);
 
     /// <summary>Whether this chord has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;

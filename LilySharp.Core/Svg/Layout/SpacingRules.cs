@@ -499,9 +499,10 @@ public static class SpacingRules
     ///   when an accidental sticks out of the right side (:305-308)
     /// Simplifications vs LilyPond (beam membership is not visible at spacing
     /// time): the flagged-unbeamed-left gate (:264-266) and the knee special
-    /// case (:289-292) are not applied.
+    /// case (:289-292) are not applied. Stem directions ARE beam-resolved —
+    /// the collector bakes the beam's direction into the items.
     /// </remarks>
-    private static double CalculateStemCorrection(MusicItem? prevItem, MusicItem? nextItem,
+    internal static double CalculateStemCorrection(MusicItem? prevItem, MusicItem? nextItem,
                                                    NoteSpacingParameters noteParams)
     {
         if (StemSpacingInfo(prevItem) is not { } l || StemSpacingInfo(nextItem) is not { } r)

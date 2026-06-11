@@ -217,6 +217,23 @@ public sealed class MeasureLayouter
             // Take the maximum skyline distance across all voice pairs.
             timingToItems.TryGetValue(timings[i - 1], out var prevItems);
             timingToItems.TryGetValue(timings[i], out var nextItems);
+
+            // Stem-direction optical correction ([Wanske]): up-stem→down-stem
+            // gets extra space, down→up less. LilyPond adds it to the musical
+            // column spring (*space += correction). Items carry beam-resolved
+            // directions. Single-item columns only — averaging the wishes of
+            // simultaneous voices is a separate refinement.
+            // LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction
+            if (prevItems is { Count: 1 } && nextItems is { Count: 1 })
+            {
+                double corr = SpacingRules.CalculateStemCorrection(
+                    prevItems[0], nextItems[0], NoteSpacingParameters.Default);
+                if (corr != 0)
+                    spring = new Spring(
+                        Math.Max(spring.MinDistance, spring.IdealDistance + corr),
+                        spring.MinDistance,
+                        spring.InverseStretchStrength);
+            }
             if (prevItems != null && nextItems != null)
             {
                 double maxSkyDist = 0;
@@ -231,8 +248,15 @@ public sealed class MeasureLayouter
 
                 if (maxSkyDist > spring.MinDistance)
                 {
+                    // Rods are MINIMA, never ideals: the spring's natural
+                    // length stays duration-based and the rod only blocks
+                    // compression below the collision distance (Spring's
+                    // blocking force handles min > ideal). Inflating the
+                    // ideal here used to swallow optical corrections and
+                    // over-stretch dense columns in justified lines.
+                    // LILYPOND-REF: lily/spacing-spanner.cc — set_min_distance.
                     spring = new Spring(
-                        Math.Max(spring.IdealDistance, maxSkyDist),
+                        spring.IdealDistance,
                         maxSkyDist,
                         spring.InverseStretchStrength);
                 }
@@ -260,8 +284,9 @@ public sealed class MeasureLayouter
 
             if (maxSkyDist > endSpring.MinDistance)
             {
+                // Rod = minimum only; see the loop above.
                 endSpring = new Spring(
-                    Math.Max(endSpring.IdealDistance, maxSkyDist),
+                    endSpring.IdealDistance,
                     maxSkyDist,
                     endSpring.InverseStretchStrength);
             }
