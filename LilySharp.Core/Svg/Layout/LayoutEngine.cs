@@ -202,6 +202,7 @@ public sealed class LayoutEngine
         multiStaffLayouter.CurrentIndent = indent;
         var firstSystemMeasureLayouts = systemMeasures.Count > 0
             ? multiStaffLayouter.LayoutMeasures(score, 0, 0, systemMeasures[0].Count,
+                isLastSystem: systemMeasures.Count == 1,
                 baseShortestDuration: commonShortestDuration)
             : ImmutableArray<MeasureLayout>.Empty;
         double systemHeight = multiStaffLayouter.CalculateSystemHeight(

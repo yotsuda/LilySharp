@@ -1,0 +1,6 @@
+{
+  "description": "Four plain quarters: all gaps equal (ratio 1 : 1 : 1).",
+  "staff": 0,
+  "heads": 4,
+  "tolerance": 0.06
+}

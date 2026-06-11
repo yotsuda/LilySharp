@@ -1,0 +1,8 @@
+time 4/4
+part rh { clef: treble }
+phrase top { g'4 a b c | }
+section Main {
+  rh { $top }
+}
+structure { Main }
+render score "x.svg" { staff { rh } }

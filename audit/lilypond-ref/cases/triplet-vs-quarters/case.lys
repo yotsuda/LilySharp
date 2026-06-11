@@ -1,0 +1,11 @@
+time 4/4
+part rh { clef: treble }
+part lh { clef: bass }
+phrase top { tuplet 3/2 { g'8 a b } tuplet 3/2 { c d e } d2 | }
+phrase bottom { g4 a b c | }
+section Main {
+  rh { $top }
+  lh { $bottom }
+}
+structure { Main }
+render score "x.svg" { staff { rh } staff { lh } }

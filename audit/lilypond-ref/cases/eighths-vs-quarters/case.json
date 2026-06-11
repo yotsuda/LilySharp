@@ -1,0 +1,7 @@
+{
+  "description": "8th run then quarters: 8th gaps narrower than quarter gaps per get_duration_space.",
+  "staff": 0,
+  "heads": 6,
+  "tolerance": 0.08,
+  "knownDivergence": "Lily#'s stem-direction spacing correction over-shrinks down-stem 8th gaps by ~8% vs LilyPond (note-spacing.cc stem_dir_correction). Tracked divergence; flip this flag off once fixed."
+}

@@ -1,0 +1,6 @@
+{
+  "description": "Quarters under triplets: beats carrying triplet heads get more room; the beat under the half note gets plain quarter space (gap ratio ~ 1 : 1 : 0.6).",
+  "staff": 1,
+  "heads": 4,
+  "tolerance": 0.08
+}

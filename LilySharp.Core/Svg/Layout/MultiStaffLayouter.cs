@@ -756,7 +756,14 @@ public sealed class MultiStaffLayouter
             // is unset by default and inherits `ragged-right` (= #f for a multi-line
             // score), so the final line fills the full width (verified against
             // LilyPond 2.24 output). Only a global ragged-right leaves lines unfilled.
-            if (_options.RaggedRight)
+            //
+            // SPECIAL CASE (constrained-breaking.cc:142-148): a score whose
+            // ONLY line would be STRETCHED uses ragged spacing — a single
+            // sparse system keeps its natural width instead of being pulled
+            // across the whole page. Compression still applies.
+            bool singleSystemRagged = systemIndex == 0 && isLastSystem
+                && new SpringSolver(allSprings).IdealTotalLength < springTargetWidth;
+            if (_options.RaggedRight || singleSystemRagged)
             {
                 double naturalLength = solver.IdealTotalLength;
                 if (naturalLength < springTargetWidth)
