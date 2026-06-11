@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -220,112 +220,140 @@ public sealed class TieFormattingProblem
     /// </remarks>
     private List<TieCandidate> GenerateCandidates(double width)
     {
-        var candidates = new List<TieCandidate>();
+        // LILYPOND-REF: lily/tie-formatting-problem.cc:1120-1151
+        // generate_single_tie_variations — the base configuration sits AT the
+        // note's staff position with the tie's default direction; variations
+        // walk outward one half-space at a time, in BOTH directions, with the
+        // walk direction doubling as the candidate's curve direction.
+        int notePos = _tie.StaffPosition;
+        double staffMiddleY = _startY + notePos * 0.5; // page Y of the middle line
+        int defaultDir = _tie.CurveUp ? +1 : -1;       // LP convention: up = +1
 
-        double baseHeight = CalculateTieHeight(width);
-        bool preferUp = _tie.CurveUp;
-        int direction = preferUp ? -1 : 1; // -1 = up, +1 = down (Y-axis positive = down on staff)
+        var candidates = new List<TieCandidate>
+        {
+            GenerateConfiguration(notePos, defaultDir, notePos, staffMiddleY, width),
+        };
 
-        // Convert note position to staff-space Y
-        // Staff position is in half-spaces; Y in staff spaces = staffPosition / 2
-        // Note: _startY is already the note's Y in staff spaces
-
-        // Default attachment offset from note (staff spaces)
-        double defaultOffset = 0.3;
-
-        // Base attachment position
-        double baseAttachmentY = preferUp
-            ? _startY - defaultOffset
-            : _startY + defaultOffset;
-
-        // Determine the staff position (integer) nearest to base attachment
-        // In staff spaces, position p corresponds to staff-space Y = p * 0.5
-        // But our staff lines are at integer staff spaces, so
-        // the nearest half-space position to baseAttachmentY is:
-        int basePosition = (int)Math.Round(baseAttachmentY * 2); // convert to half-spaces
-
-        // Region size
         int regionSize = (_existingTies != null && _existingTies.Count > 0)
             ? _details.MultiTieRegionSize
             : _details.SingleTieRegionSize;
 
-        // Generate candidates at integer positions within the region
-        // LILYPOND-REF: lily/tie-formatting-problem.cc:1130-1150
         for (int i = 0; i < regionSize; i++)
         {
-            foreach (int dir in new[] { -1, 1 }) // try both directions
+            foreach (int d in new[] { -1, +1 })
             {
-                if (i == 0 && (preferUp ? -1 : 1) == dir)
-                    continue; // skip duplicate at base position
-
-                int position = basePosition + i * dir;
-                double attachmentY = position * 0.5; // convert back to staff spaces
-
-                bool curveUp = preferUp;
-                // For positions that move away from the default direction,
-                // consider flipping direction
-                if (dir != (preferUp ? -1 : 1) && i > 0)
-                    curveUp = !preferUp;
-
-                double h = baseHeight;
-
-                var candidate = new TieCandidate
-                {
-                    StartX = _startX + _details.XGap,
-                    StartY = _startY,
-                    EndX = _endX - _details.XGap,
-                    EndY = _endY,
-                    Height = h,
-                    CurveUp = curveUp,
-                    AttachmentY = attachmentY,
-                    Position = position,
-                    DeltaY = 0,
-                    Demerits = 0,
-                    IsScored = false
-                };
-                candidates.Add(candidate);
-            }
-
-            // Also add the base direction at each offset
-            {
-                int position = basePosition + i * (preferUp ? -1 : 1);
-                double attachmentY = position * 0.5;
-
-                var candidate = new TieCandidate
-                {
-                    StartX = _startX + _details.XGap,
-                    StartY = _startY,
-                    EndX = _endX - _details.XGap,
-                    EndY = _endY,
-                    Height = baseHeight,
-                    CurveUp = preferUp,
-                    AttachmentY = attachmentY,
-                    Position = position,
-                    DeltaY = 0,
-                    Demerits = 0,
-                    IsScored = false
-                };
-                candidates.Add(candidate);
+                if (i == 0 && d == defaultDir)
+                    continue;
+                candidates.Add(GenerateConfiguration(notePos + i * d, d, notePos, staffMiddleY, width));
             }
         }
 
-        // Always include the default configuration
-        candidates.Insert(0, new TieCandidate
+        return candidates;
+    }
+
+    /// <summary>
+    /// Builds one tie configuration: nominal Y from the staff position plus
+    /// the delta-y tuning LilyPond applies before scoring. All math is in
+    /// LilyPond convention (staff positions / staff spaces, UP positive,
+    /// relative to the middle line); the result converts to page Y at the end.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tie-formatting-problem.cc:476-611
+    /// generate_configuration:
+    /// - a dot at the tie position pushes the tie a quarter space dirwards
+    ///   and disables further tuning (:489-493)
+    /// - a tie in the half-space just OUTSIDE the head hugs the head's outer
+    ///   edge plus outer-tie-vertical-gap (:495-505)
+    /// - small ties: on a line, nudge by the tip clearance; in a staff space,
+    ///   center the curve vertically on the position (:526-543 +
+    ///   tie-configuration.cc:36-45 center_tie_vertically)
+    /// - tall ties: keep the curve TOP clear of real staff lines (:544-560,
+    ///   note LilyPond ASSIGNS delta_y there rather than adding)
+    /// </remarks>
+    private TieCandidate GenerateConfiguration(int pos, int dir, int notePos, double staffMiddleY, double width)
+    {
+        double y = pos * 0.5;   // sp from middle line, up+
+        double deltaY = 0;      // sp, up+
+        double height = CalculateTieHeight(width);
+        bool yTune = true;
+
+        // Dot avoidance.
+        if (_startDots > 0)
+        {
+            int dotPos = notePos % 2 == 0 ? notePos + 1 : notePos;
+            if (dotPos == pos)
+            {
+                deltaY += dir * 0.25;
+                yTune = false;
+            }
+        }
+
+        // Head-edge hug: the head spans one half-space either side of its
+        // position; a tie in the adjacent half-space (and not on a line)
+        // snaps to the head's outer edge + outer-tie-vertical-gap.
+        double headEdgeY = (notePos + dir) * 0.5;
+        if (yTune && Math.Abs(headEdgeY - y) < 0.25 && pos % 2 != 0)
+        {
+            deltaY = (headEdgeY - y) + dir * _details.OuterTieVerticalGap;
+        }
+
+        if (yTune)
+        {
+            // staff_span widened by -1: positions -3..3; head positions at
+            // the columns reduce to the note position for single notes.
+            bool withinStaff = Math.Abs(pos) <= 3;
+            bool nearHeads = pos == notePos;
+            if (nearHeads || withinStaff)
+            {
+                if (height < _details.IntraSpaceThreshold * 0.5)
+                {
+                    if (pos % 2 == 0)
+                    {
+                        // TipStaffLineClearance is stored in staff spaces
+                        // (= LP's half-space value x 0.5 already).
+                        deltaY += dir * _details.TipStaffLineClearance;
+                    }
+                    else if (withinStaff)
+                    {
+                        // center_tie_vertically: untransformed curve spans
+                        // 0..height, center = height/2.
+                        deltaY = -dir * height / 2;
+                    }
+                }
+                else
+                {
+                    double topY = y + deltaY + dir * height;
+                    double topPos = topY / 0.5;
+                    int roundPos = (int)Math.Floor(topPos + 0.5); // round_halfway_up
+                    // Clearance compared in half-space units (LP raw value).
+                    double clearanceHs = _details.CenterStaffLineClearance * 2;
+                    bool onRealStaffLine = roundPos % 2 == 0 && Math.Abs(roundPos) <= 4;
+                    if (Math.Abs(topPos - roundPos) < clearanceHs && onRealStaffLine)
+                    {
+                        double newY = (roundPos + clearanceHs * dir) * 0.5;
+                        deltaY = newY - topY; // LP assigns (see remarks)
+                    }
+                }
+            }
+        }
+
+        double curveYFromMiddle = y + deltaY;        // sp, up+
+        double attachmentY = staffMiddleY - curveYFromMiddle; // page Y, down+
+
+        return new TieCandidate
         {
             StartX = _startX + _details.XGap,
             StartY = _startY,
             EndX = _endX - _details.XGap,
             EndY = _endY,
-            Height = baseHeight,
-            CurveUp = preferUp,
-            AttachmentY = baseAttachmentY,
-            Position = basePosition,
-            DeltaY = baseAttachmentY - basePosition * 0.5,
+            Height = height,
+            CurveUp = dir > 0,
+            AttachmentY = attachmentY,
+            Position = pos,
+            DeltaY = deltaY,
             Demerits = 0,
             IsScored = false
-        });
-
-        return candidates;
+        };
     }
 
     // ---------------------------------------------------------------
@@ -353,66 +381,41 @@ public sealed class TieFormattingProblem
             0.33 * _details.MinLength, _details.MinLength, length);
         config.Demerits += _details.MinLengthPenaltyFactor * lengthPenalty;
 
-        // --- Staff line collision at tip ---
-        // LILYPOND-REF: tie-formatting-problem.cc:779-793
-        ScoreTipStaffLineCollision(config, attachmentY);
+        // --- Staff line collisions, in LilyPond position units ---
+        // LILYPOND-REF: tie-formatting-problem.cc:754-792
+        int dir = config.CurveUp ? +1 : -1;
+        double tipPos = config.Position + config.DeltaY / 0.5;
+        double topPos = tipPos + dir * config.Height / 0.5;
 
-        // --- Staff line collision at center ---
-        // LILYPOND-REF: tie-formatting-problem.cc:765-775
-        double peakY = config.CurveUp
-            ? attachmentY - config.Height
-            : attachmentY + config.Height;
-        ScoreCenterStaffLineCollision(config, peakY);
+        // Curve top vs a REAL staff line, only when the top is below the
+        // staff's top line (:762-774).
+        int roundTopPos = (int)Math.Round(topPos);
+        if (roundTopPos % 2 == 0 && Math.Abs(roundTopPos) <= 4
+            && topPos * 0.5 < 2.0)
+        {
+            double clearanceHs = _details.CenterStaffLineClearance * 2;
+            config.Demerits += _details.StaffLineCollisionPenalty
+                * PeakAround(0.1 * clearanceHs, clearanceHs,
+                    Math.Abs(topPos - roundTopPos));
+        }
+
+        // Tie tips vs LINE positions, gated to the heads' positions or the
+        // inner staff (:776-792).
+        int roundTipPos = (int)Math.Round(tipPos);
+        if (roundTipPos % 2 == 0
+            && (roundTipPos == _tie.StaffPosition || Math.Abs(roundTipPos) <= 3))
+        {
+            double clearanceHs = _details.TipStaffLineClearance * 2;
+            config.Demerits += _details.StaffLineCollisionPenalty
+                * PeakAround(0.1 * clearanceHs, clearanceHs,
+                    Math.Abs(tipPos - roundTipPos));
+        }
 
         // --- Dot collision ---
         // LILYPOND-REF: tie-formatting-problem.cc:795-818
         ScoreDotCollision(config);
 
         config.IsScored = true;
-    }
-
-    /// <summary>
-    /// Penalizes tip positions on or near staff lines.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/tie-formatting-problem.cc:779-793
-    /// </remarks>
-    private void ScoreTipStaffLineCollision(TieCandidate config, double tipY)
-    {
-        foreach (double lineY in StaffLinePositions)
-        {
-            if (tipY < -0.5 || tipY > _staffHeight + 0.5)
-                continue; // outside staff
-
-            double distance = Math.Abs(tipY - lineY);
-            config.Demerits += _details.StaffLineCollisionPenalty
-                * PeakAround(
-                    0.1 * _details.TipStaffLineClearance,
-                    _details.TipStaffLineClearance,
-                    distance);
-        }
-    }
-
-    /// <summary>
-    /// Penalizes center/peak positions on or near staff lines.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/tie-formatting-problem.cc:765-775
-    /// </remarks>
-    private void ScoreCenterStaffLineCollision(TieCandidate config, double centerY)
-    {
-        foreach (double lineY in StaffLinePositions)
-        {
-            if (centerY < -0.5 || centerY > _staffHeight + 0.5)
-                continue; // outside staff
-
-            double distance = Math.Abs(centerY - lineY);
-            config.Demerits += _details.StaffLineCollisionPenalty
-                * PeakAround(
-                    0.1 * _details.CenterStaffLineClearance,
-                    _details.CenterStaffLineClearance,
-                    distance);
-        }
     }
 
     /// <summary>
@@ -456,24 +459,23 @@ public sealed class TieFormattingProblem
     /// </remarks>
     private void ScoreAptitude(TieCandidate config)
     {
-        double curveY = config.AttachmentY;
-        double noteY = config.StartY;
+        // LilyPond convention: staff spaces from the middle line, up+.
+        int dir = config.CurveUp ? +1 : -1;
+        double curveY = config.Position * 0.5 + config.DeltaY;
+        double tieY = _tie.StaffPosition * 0.5;
 
         // --- Direction penalty ---
-        // LILYPOND-REF: tie-formatting-problem.cc:648-655
-        bool correctDirection = config.CurveUp
-            ? curveY < noteY // curve attachment should be above (lower Y) for curve up
-            : curveY > noteY; // curve attachment should be below (higher Y) for curve down
-
-        if (!correctDirection && Math.Abs(curveY - noteY) > 0.01)
+        // LILYPOND-REF: tie-formatting-problem.cc:642-653 —
+        // Direction(curve_y - tie_y) must equal the tie's direction.
+        if (Math.Sign(curveY - tieY) != dir)
         {
             config.Demerits += _details.WrongDirectionOffsetPenalty;
         }
 
         // --- Vertical distance penalty ---
-        // LILYPOND-REF: tie-formatting-problem.cc:657-665
+        // LILYPOND-REF: tie-formatting-problem.cc:655-663
         {
-            double relevantDist = Math.Max(Math.Abs(curveY - noteY) - 0.5, 0.0);
+            double relevantDist = Math.Max(Math.Abs(curveY - tieY) - 0.5, 0.0);
             double p = _details.VerticalDistancePenaltyFactor
                        * ConvexAmplifier(1.0, 0.9, relevantDist);
             config.Demerits += p;
