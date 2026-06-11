@@ -202,15 +202,11 @@ public sealed class MeasureLayouter
         // LILYPOND-REF: lily/spacing-basic.cc:107-162 — note_spacing uses left column's shortest-playing-duration.
         for (int i = 1; i < timings.Count; i++)
         {
-            Fraction segmentDuration;
-            if (i < timings.Count - 1)
-            {
-                segmentDuration = timings[i + 1] - timings[i];
-            }
-            else
-            {
-                segmentDuration = totalDuration - timings[i];
-            }
+            // This spring connects timings[i-1] → timings[i]; its duration is
+            // THAT segment. (A previous off-by-one used the FOLLOWING
+            // segment's duration here, which clamped a half-note gap down to
+            // the next quarter's length — half and quarter came out equal.)
+            Fraction segmentDuration = timings[i] - timings[i - 1];
             // LILYPOND-REF: lily/spacing-engraver.cc:200-253 — shortest_playing aggregated at the LEFT column.
             var shortestPlaying = SpacingRules.ComputeShortestPlayingAt(timings[i - 1], measuresToScan);
             var spring = SpacingRules.CreateTimingSpringMultiVoice(
