@@ -75,7 +75,14 @@ public readonly record struct TupletBracketLayout(
 public static class TupletBracketEngraver
 {
     // LILYPOND-REF: scm/define-grobs.scm TupletBracket defaults
-    private const double BracketPadding = 0.5;
+    // LILYPOND-REF: scm/define-grobs.scm TupletBracket (padding . 1.1) —
+    // distance from the encompass points (stem tips / staff edge) to the
+    // bracket LINE. The 0.7 edge hooks eat into this and still clear.
+    private const double BracketPadding = 1.1;
+    // LILYPOND-REF: scm/define-grobs.scm TupletBracket (staff-padding . 0.25)
+    // — the staff extent, widened by this, joins the encompass points, so
+    // the bracket never enters the staff even over low notes.
+    private const double StaffPaddingLP = 0.25;
     private const double EdgeHeight = 0.7;
     private const double StaffMiddleY = 2.0;    // staff-top frame: middle line = StaffHeight/2
     private const double YOffsetAbove = -2.5;  // Above staff
@@ -412,11 +419,15 @@ public static class TupletBracketEngraver
         //   positions derive from the extremal stem/head edges + padding.
         if (isStemUp)
         {
-            // The hooks extend EdgeHeight from the bracket line TOWARD the
-            // notes; the line must sit that much further out so the hook
-            // TIP (not the line) clears the stem by the padding.
-            double edge = StaffMiddleY - (highestPos!.Value * 0.5)
-                - DefaultStemLength - BracketPadding - EdgeHeight - nestingOffset;
+            // Encompass points: every column's stem-side extent PLUS the
+            // widened staff edge — then one padding to the bracket line.
+            // LILYPOND-REF: lily/tuplet-bracket.cc:444-719
+            // calc_position_and_height — points from
+            // Note_column::cross_staff_extent[dir] and staff.widen(pad);
+            // *offset += padding * dir.
+            double tipY = StaffMiddleY - (highestPos!.Value * 0.5) - DefaultStemLength;
+            double edge = Math.Min(tipY, -StaffPaddingLP)
+                - BracketPadding - nestingOffset;
             double mid = edge;
             startY = mid + slopeDir * 0.5;
             endY = mid - slopeDir * 0.5;
@@ -426,8 +437,9 @@ public static class TupletBracketEngraver
         }
         else
         {
-            double edge = StaffMiddleY - (lowestPos!.Value * 0.5)
-                + DefaultStemLength + BracketPadding + EdgeHeight + nestingOffset;
+            double tipY = StaffMiddleY - (lowestPos!.Value * 0.5) + DefaultStemLength;
+            double edge = Math.Max(tipY, 4.0 + StaffPaddingLP)
+                + BracketPadding + nestingOffset;
             double mid = edge;
             startY = mid + slopeDir * 0.5;
             endY = mid - slopeDir * 0.5;
