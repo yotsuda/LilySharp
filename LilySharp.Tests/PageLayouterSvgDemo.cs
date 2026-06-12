@@ -77,6 +77,7 @@ public class PageLayouterSvgDemo
             Path.GetDirectoryName(typeof(PageLayouterSvgDemo).Assembly.Location)!,
             "..", "..", "..", "..", "output", "page-breaking-demo.svg");
         outputPath = Path.GetFullPath(outputPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
         File.WriteAllText(outputPath, svg);
 
         // 24 measures at default density break into several systems.

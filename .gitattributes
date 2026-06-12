@@ -1,0 +1,4 @@
+# Source positions (data-pos) in SVG snapshots are byte offsets into the
+# .lys source, so its line endings must be identical on every platform.
+*.lys text eol=lf
+LilySharp.Tests/Snapshots/*.svg text eol=lf
