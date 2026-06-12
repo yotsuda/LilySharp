@@ -228,10 +228,17 @@ internal sealed class MeasureBuilder
     }
 
     /// <summary>
-    /// Handles an explicit barline as a bar check (LilyPond style).
-    /// Does not create measures - measures are created automatically based on time signature.
-    /// Emits warnings if barline position doesn't match expected measure boundary.
+    /// Handles an explicit barline: the WRITTEN barline is the measure
+    /// boundary. The current measure is closed HERE, whatever its duration;
+    /// a duration mismatch is a warning (bar check), not a layout input.
+    /// Full measures are unaffected: duration auto-completion has already
+    /// closed them, so the barline arrives on an empty measure (no-op).
     /// </summary>
+    /// <remarks>
+    /// This is the agreed Lily# semantic (the reverse of LilyPond, where
+    /// "|" is only an assertion and Timing draws the bars): see the measure
+    /// validator, which checks written measures against the meter.
+    /// </remarks>
     public void HandleBarline(BarlineType barType, int position)
     {
         // Bar check: verify current position is at a measure boundary
@@ -246,46 +253,72 @@ internal sealed class MeasureBuilder
                 _currentDuration));
         }
 
-        // Handle special barlines by setting pending barline types
-        switch (barType)
+        if (barType == BarlineType.RepeatStart)
         {
-            case BarlineType.RepeatStart:
-                _pendingStartBarline = BarlineType.RepeatStart;
-                break;
-
-            case BarlineType.RepeatEnd:
-                if (_currentDuration == Fraction.Zero && _measures.Count > 0)
-                {
-                    // :| at measure boundary - modify last measure's end barline
-                    var lastMeasure = _measures[^1];
-                    _measures[^1] = new Measure(
-                        lastMeasure.Items,
-                        lastMeasure.StartBarline,
-                        BarlineType.RepeatEnd,
-                        lastMeasure.SectionLabel,
-                        lastMeasure.SourceStart,
-                        lastMeasure.SourceEnd);
-                }
-                else
-                {
-                    // :| in middle of measure - set pending end barline
-                    _pendingEndBarline = BarlineType.RepeatEnd;
-                }
-                break;
-
-            case BarlineType.Double:
-                _pendingEndBarline = BarlineType.Double;
-                break;
-
-            case BarlineType.Final:
-                _pendingEndBarline = BarlineType.Final;
-                break;
-
-            // Single barline is just a check, no action needed
-            case BarlineType.Single:
-            default:
-                break;
+            // |: opens the NEXT measure; close anything pending first.
+            if (_currentItems.Count > 0)
+                CompleteMeasure(position, BarlineType.Single);
+            _pendingStartBarline = BarlineType.RepeatStart;
+            return;
         }
+
+        var endType = barType == BarlineType.None ? BarlineType.Single : barType;
+
+        if (_currentItems.Count > 0)
+        {
+            CompleteMeasure(position, endType);
+        }
+        else if (endType != BarlineType.Single && _measures.Count > 0)
+        {
+            // Barline at an already-closed boundary (e.g. ":|" right after
+            // auto-completion): retro-apply the type to the last measure.
+            var lastMeasure = _measures[^1];
+            _measures[^1] = new Measure(
+                lastMeasure.Items,
+                lastMeasure.StartBarline,
+                endType,
+                lastMeasure.SectionLabel,
+                lastMeasure.SourceStart,
+                lastMeasure.SourceEnd,
+                hasBreakAfter: lastMeasure.HasBreakAfter,
+                lineBreakPermission: lastMeasure.LineBreakPermission,
+                breakPenalty: lastMeasure.BreakPenalty,
+                pageBreakPermission: lastMeasure.PageBreakPermission,
+                pageTurnPermission: lastMeasure.PageTurnPermission);
+        }
+    }
+
+    /// <summary>
+    /// Closes the current measure at an EXPLICIT barline with the given end
+    /// barline type.
+    /// </summary>
+    private void CompleteMeasure(int sourceEnd, BarlineType endType)
+    {
+        bool isAligned = _currentDuration == _timeSignature;
+        bool hasBreak = _pendingBreak;
+        _pendingBreak = false;
+
+        _measures.Add(new Measure(
+            _currentItems.ToImmutableArray(),
+            _pendingStartBarline,
+            _pendingEndBarline != BarlineType.None ? _pendingEndBarline : endType,
+            _sectionLabel,
+            _measureSourceStart,
+            sourceEnd,
+            hasBreakAfter: hasBreak));
+
+        _boundaries.Add(new MeasureBoundary(
+            sourceEnd,
+            _currentDuration,
+            IsExplicit: true,
+            IsAligned: isAligned));
+
+        _currentItems.Clear();
+        _sectionLabel = null;
+        _pendingStartBarline = BarlineType.None;
+        _pendingEndBarline = BarlineType.None;
+        _measureSourceStart = sourceEnd;
+        _currentDuration = Fraction.Zero;
     }
 
 
@@ -1128,13 +1161,10 @@ public sealed class MeasureCollector
             writtenDuration.Numerator * @base,
             writtenDuration.Denominator * ratio);
 
-        // Only add duration to the measure at the top level
-        // Nested tuplets return their duration to the parent for compounding
-        if (nestingDepth == 0)
-        {
-            builder.AddDuration(actualDuration, lastSourcePosition + 1);
-        }
-
+        // Record the bracket BEFORE adding the duration: AddDuration can
+        // auto-complete (roll) the measure, after which CurrentItemCount is
+        // reset and the indexes would be garbage — that dropped the second
+        // nested tuplet's outer bracket and mis-indexed its inner one.
         int endNoteIndex = builder.CurrentItemCount - 1;
 
         // Only add bracket if we have at least 2 notes
@@ -1149,6 +1179,13 @@ public sealed class MeasureCollector
                 tuplet.Position,
                 nestingDepth
             ));
+        }
+
+        // Only add duration to the measure at the top level
+        // Nested tuplets return their duration to the parent for compounding
+        if (nestingDepth == 0)
+        {
+            builder.AddDuration(actualDuration, lastSourcePosition + 1);
         }
 
         return actualDuration;
