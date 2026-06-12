@@ -586,11 +586,65 @@ public static class SharedRenderer
     {
         double staffMiddleY = staffY + StaffHeight / 2;
 
-        // Ledger requests are collected across the whole system so adjacent
-        // columns can shorten each other's ledgers (ledger-line-spanner.cc),
-        // then drawn in one pass at the end.
+        // Ledger pre-pass: requests are collected across the whole system so
+        // adjacent columns can shorten each other's ledgers
+        // (ledger-line-spanner.cc), then drawn BEFORE any noteheads — ledger
+        // lines sit on layer 0 with the staff lines, noteheads above them, so
+        // a head paints over its own ledger (visible whenever a head is
+        // recolored, e.g. an editor selection highlight).
+        // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0);
+        // NoteHead uses the default layer 1.
         var ledgerPlan = new List<LedgerRequest>();
+        foreach (var (item, _, _, itemX) in EnumerateStaffItems(voice, voiceNumber, system, layout))
+            CollectItemLedgers(item, itemX, staffMiddleY, ledgerPlan);
+        DrawPlannedLedgers(ledgerPlan, gc);
 
+        foreach (var (item, ml, itemIdx, itemX) in EnumerateStaffItems(voice, voiceNumber, system, layout))
+        {
+            // Head-wipe when this voice's notehead merges with another's.
+            bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
+
+            // LILYPOND-REF: lily/grob-property.cc — apply \override / \revert at this position.
+            // Multi-staff scores re-advance the resolver per staff: harmless for ordinary
+            // overrides (idempotent), but \once overrides may double-apply across staves.
+            if (resolver.HasOverrides)
+                resolver.AdvanceTo(ml.MeasureIndex, itemIdx);
+
+            switch (item)
+            {
+                case NoteItem note:
+                    DrawNote(note, itemX, staffMiddleY, resolver, beamedItems.Contains(note), forcedStemUp, headWiped, gc);
+                    break;
+                case RestItem rest:
+                    // Measures inside a multi-measure-rest run get their
+                    // symbol from DrawMultiMeasureRests (church rest or
+                    // H-bar); drawing the per-measure whole rest too would
+                    // double-print. LILYPOND-REF: lily/multi-measure-rest.cc
+                    // — the MMR spanner replaces the individual rests.
+                    if (!IsMmrCovered(layout, ml.MeasureIndex))
+                        DrawRest(rest, itemX, staffY, gc);
+                    break;
+                case ChordItem chord:
+                    DrawChord(chord, itemX, staffMiddleY, resolver, beamedItems.Contains(chord), forcedStemUp, headWiped, gc);
+                    break;
+                case ClefChangeItem clefChange:
+                    DrawClefChange(clefChange, itemX, staffY, gc);
+                    break;
+                case KeySignatureChangeItem keyChange:
+                    DrawKeySignatureChange(keyChange, itemX, staffY, gc);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resolves each drawable item's X position for one staff pass — shared by
+    /// the ledger pre-pass and the note drawing pass so both see identical
+    /// positions.
+    /// </summary>
+    private static IEnumerable<(MusicItem Item, MeasureLayout Ml, int ItemIdx, double ItemX)>
+        EnumerateStaffItems(Voice voice, int voiceNumber, SystemLayout system, ScoreLayout layout)
+    {
         foreach (var ml in system.Measures)
         {
             if (ml.MeasureIndex >= voice.Measures.Length)
@@ -615,50 +669,58 @@ public static class SharedRenderer
                     : ml.X + il.X;
                 currentTiming += item.Duration;
 
-                // Horizontal collision offset for multi-voice columns + head-wipe
-                // when this voice's notehead merges with another's.
+                // Horizontal collision offset for multi-voice columns.
                 itemX += layout.GetVoiceOffset(ml.MeasureIndex, voiceNumber, itemIdx);
-                bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
-
-                // LILYPOND-REF: lily/grob-property.cc — apply \override / \revert at this position.
-                // Multi-staff scores re-advance the resolver per staff: harmless for ordinary
-                // overrides (idempotent), but \once overrides may double-apply across staves.
-                if (resolver.HasOverrides)
-                    resolver.AdvanceTo(ml.MeasureIndex, itemIdx);
-
-                switch (item)
-                {
-                    case NoteItem note:
-                        DrawNote(note, itemX, staffMiddleY, resolver, beamedItems.Contains(note), forcedStemUp, headWiped, gc, ledgerPlan);
-                        break;
-                    case RestItem rest:
-                        // Measures inside a multi-measure-rest run get their
-                        // symbol from DrawMultiMeasureRests (church rest or
-                        // H-bar); drawing the per-measure whole rest too would
-                        // double-print. LILYPOND-REF: lily/multi-measure-rest.cc
-                        // — the MMR spanner replaces the individual rests.
-                        if (!IsMmrCovered(layout, ml.MeasureIndex))
-                            DrawRest(rest, itemX, staffY, gc);
-                        break;
-                    case ChordItem chord:
-                        DrawChord(chord, itemX, staffMiddleY, resolver, beamedItems.Contains(chord), forcedStemUp, headWiped, gc, ledgerPlan);
-                        break;
-                    case ClefChangeItem clefChange:
-                        DrawClefChange(clefChange, itemX, staffY, gc);
-                        break;
-                    case KeySignatureChangeItem keyChange:
-                        DrawKeySignatureChange(keyChange, itemX, staffY, gc);
-                        break;
-                }
+                yield return (item, ml, itemIdx, itemX);
             }
         }
+    }
 
-        DrawPlannedLedgers(ledgerPlan, gc);
+    /// <summary>
+    /// Registers the ledger requests one item (note or chord) needs. Chords
+    /// contribute at most one request per outside-staff direction; the extreme
+    /// head drives the ledger run (inner heads share its lines).
+    /// </summary>
+    private static void CollectItemLedgers(MusicItem item, double x, double staffMiddleY,
+        List<LedgerRequest> ledgerPlan)
+    {
+        switch (item)
+        {
+            case NoteItem note:
+            {
+                int noteValue = note.BaseDuration.Denominator;
+                if (note.BaseDuration.Numerator != 1) noteValue = 1;
+                double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? 0.66 : 1.0);
+                CollectLedgerRequest(ledgerPlan, note.StaffPosition, x, headWidth,
+                    staffMiddleY, note.Accidental != null);
+                break;
+            }
+            case ChordItem chord when chord.Notes.Length > 0:
+            {
+                int noteValue = chord.BaseDuration.Denominator;
+                if (chord.BaseDuration.Numerator != 1) noteValue = 1;
+                double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue);
+                int maxPos = int.MinValue, minPos = int.MaxValue;
+                bool extremeTopAcc = false, extremeBottomAcc = false;
+                foreach (var n in chord.Notes)
+                {
+                    if (n.StaffPosition > maxPos) { maxPos = n.StaffPosition; extremeTopAcc = n.Accidental != null; }
+                    if (n.StaffPosition < minPos) { minPos = n.StaffPosition; extremeBottomAcc = n.Accidental != null; }
+                }
+                if (maxPos >= 5)
+                    CollectLedgerRequest(ledgerPlan, maxPos, x, headWidth,
+                        staffMiddleY, extremeTopAcc);
+                if (minPos <= -5)
+                    CollectLedgerRequest(ledgerPlan, minPos, x, headWidth,
+                        staffMiddleY, extremeBottomAcc);
+                break;
+            }
+        }
     }
 
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc, List<LedgerRequest>? ledgerPlan = null)
+        IDrawingContext gc)
     {
         int noteValue = note.BaseDuration.Denominator;
         if (note.BaseDuration.Numerator != 1) noteValue = 1;
@@ -686,16 +748,8 @@ public static class SharedRenderer
             using (gc.Source(note.SourcePosition))
                 gc.DrawGlyph(head, x, noteY, noteFontSize, noteheadColor);
 
-        // Ledger lines for notes far from middle line. The staff-measure path
-        // COLLECTS requests so neighbouring ledgers can be shortened against
-        // each other before drawing (ledger-line-spanner.cc); other callers
-        // draw directly.
-        double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? 0.66 : 1.0);
-        if (ledgerPlan != null)
-            CollectLedgerRequest(ledgerPlan, note.StaffPosition, x, headWidth,
-                staffMiddleY, note.Accidental != null);
-        else
-            DrawLedgerLines(note.StaffPosition, x, staffMiddleY, gc, headWidth);
+        // Ledger lines are drawn by the staff-measure ledger pre-pass, BEFORE
+        // any noteheads (CollectItemLedgers/DrawPlannedLedgers).
 
         // Stem & flag — beamed notes are handled by DrawBeams (which draws the
         // beam-aware stem to the actual beam Y), so skip both here to avoid a
@@ -755,7 +809,7 @@ public static class SharedRenderer
 
     private static void DrawChord(ChordItem chord, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
-        IDrawingContext gc, List<LedgerRequest>? ledgerPlan = null)
+        IDrawingContext gc)
     {
         int noteValue = chord.BaseDuration.Denominator;
         if (chord.BaseDuration.Numerator != 1) noteValue = 1;
@@ -767,7 +821,6 @@ public static class SharedRenderer
 
         double topY = double.MaxValue, bottomY = double.MinValue;
         int maxPos = int.MinValue, minPos = int.MaxValue;
-        bool extremeTopAcc = false, extremeBottomAcc = false;
         foreach (var n in chord.Notes)
         {
             double y = staffMiddleY - n.StaffPosition * 0.5;
@@ -776,27 +829,14 @@ public static class SharedRenderer
             if (!headWiped && !headTransparent)
                 using (gc.Source(chord.SourcePosition))
                     gc.DrawGlyph(head, x, y, FontSize, noteheadColor);
-            if (ledgerPlan == null)
-                DrawLedgerLines(n.StaffPosition, x, staffMiddleY, gc,
-                    GlyphMetrics.GetNoteheadAdvance(noteValue));
             if (y < topY) topY = y;
             if (y > bottomY) bottomY = y;
-            if (n.StaffPosition > maxPos) { maxPos = n.StaffPosition; extremeTopAcc = n.Accidental != null; }
-            if (n.StaffPosition < minPos) { minPos = n.StaffPosition; extremeBottomAcc = n.Accidental != null; }
+            if (n.StaffPosition > maxPos) maxPos = n.StaffPosition;
+            if (n.StaffPosition < minPos) minPos = n.StaffPosition;
         }
 
-        if (ledgerPlan != null && chord.Notes.Length > 0)
-        {
-            double chordHeadWidth = GlyphMetrics.GetNoteheadAdvance(noteValue);
-            // At most one request per outside-staff direction; the extreme
-            // head drives the ledger run (inner heads share its lines).
-            if (maxPos >= 5)
-                CollectLedgerRequest(ledgerPlan, maxPos, x, chordHeadWidth,
-                    staffMiddleY, extremeTopAcc);
-            if (minPos <= -5)
-                CollectLedgerRequest(ledgerPlan, minPos, x, chordHeadWidth,
-                    staffMiddleY, extremeBottomAcc);
-        }
+        // Ledger lines are drawn by the staff-measure ledger pre-pass, BEFORE
+        // any noteheads (CollectItemLedgers/DrawPlannedLedgers).
 
         // Augmentation dots: one dot ROW per chord note, all in one column a
         // dot-width right of the heads. Final positions come from the full
@@ -1827,13 +1867,15 @@ public static class SharedRenderer
                 foreach (var note in g.Notes)
                 {
                     double y = staffMiddleY - note.StaffPosition * 0.5;
+                    // Ledgers under the head — layer 0 with the staff lines.
+                    // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0)
+                    if (note.NeedsLedger)
+                        DrawLedgerLines(note.StaffPosition, currentX, staffMiddleY, gc,
+                            EngravingDefaults.NoteheadBlackWidth * g.Scale);
                     if (note.Accidental is { } acc)
                         DrawAccidental(acc, isCourtesy: false, currentX, y,
                             g.SourcePosition, gc);
                     gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize);
-                    if (note.NeedsLedger)
-                        DrawLedgerLines(note.StaffPosition, currentX, staffMiddleY, gc,
-                            EngravingDefaults.NoteheadBlackWidth * g.Scale);
                     lastNoteX = currentX;
                     lastNoteY = y;
                     currentX += 1.2 * g.Scale;  // approximate advance per grace note
