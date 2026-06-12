@@ -293,6 +293,15 @@ public sealed class LilySharpLanguageServer
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
 
+        // Unknown @annotation names (typos like @glisando are otherwise
+        // silently ignored by the collector)
+        var annotationValidator = new AnnotationNameValidator();
+        annotationValidator.Validate(doc.Tree);
+        foreach (var d in annotationValidator.Diagnostics)
+        {
+            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+        }
+
         _rpc.NotifyAsync(Methods.TextDocumentPublishDiagnosticsName, new PublishDiagnosticParams
         {
             Uri = doc.Uri,

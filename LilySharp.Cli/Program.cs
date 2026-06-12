@@ -737,6 +737,10 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(Syntax
     var measureValidator = new LilySharp.Core.Semantics.MeasureValidator();
     measureValidator.Validate(tree);
     combined.AddRange(measureValidator.Diagnostics);
+    // Unknown @annotation names (otherwise silently ignored by the collector).
+    var annotationValidator = new LilySharp.Core.Semantics.AnnotationNameValidator();
+    annotationValidator.Validate(tree);
+    combined.AddRange(annotationValidator.Diagnostics);
     return combined;
 }
 

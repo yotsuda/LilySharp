@@ -132,6 +132,7 @@ public static class DiagnosticCodes
     public const string UndefinedSection = "LYS1005";
     public const string UndefinedPhrase = "LYS1006";
     public const string UndefinedPart = "LYS1007";
+    public const string UnknownAnnotation = "LYS1008";
 
     // Deprecation warnings (LYS3xxx)
     public const string DeprecatedBareReference = "LYS3001";
