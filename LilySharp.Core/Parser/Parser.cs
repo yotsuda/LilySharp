@@ -565,7 +565,8 @@ internal sealed class Parser
         var openBrace = Expect(SyntaxKind.OpenBrace);
         var items = new List<GreenNode?>();
 
-        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        while (_pendingPostEventMarkers.Count > 0
+               || (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile)))
         {
             var item = ParseMusicItem();
             if (item != null)
@@ -580,6 +581,10 @@ internal sealed class Parser
 
     private bool IsMusicItemStart()
     {
+        // Markers pending replay count as music items regardless of Current.
+        if (_pendingPostEventMarkers.Count > 0)
+            return true;
+
         return Current.Kind switch
         {
             SyntaxKind.PitchC or SyntaxKind.PitchD or SyntaxKind.PitchE or
@@ -608,6 +613,11 @@ internal sealed class Parser
 
     private GreenNode? ParseMusicItem()
     {
+        // Replay slur/tie/beam markers that ParsePostEvents consumed out of
+        // order (g4(@cresc — the '(' re-enters the sequence here).
+        if (_pendingPostEventMarkers.Count > 0)
+            return _pendingPostEventMarkers.Dequeue();
+
         return Current.Kind switch
         {
             SyntaxKind.PitchC or SyntaxKind.PitchD or SyntaxKind.PitchE or
@@ -708,9 +718,70 @@ internal sealed class Parser
         var pitch = ParsePitch();
         var duration = ParseOptionalDuration();
         var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
-        var articulations = ParseArticulations();
+        var articulations = ParsePostEvents();
         return new NoteGreen(pitch, duration, tremolo, articulations);
     }
+
+    /// <summary>
+    /// Queue of slur/tie/beam markers consumed out of order by
+    /// <see cref="ParsePostEvents"/>; <see cref="ParseMusicItem"/> replays them
+    /// as the following sequence items, preserving source order.
+    /// </summary>
+    private readonly Queue<GreenNode> _pendingPostEventMarkers = new();
+
+    /// <summary>
+    /// Parses a note's/chord's trailing post-events with LilyPond's order-free
+    /// semantics: slur parens, ties and beam brackets may interleave with
+    /// <c>@</c>-articulations (<c>g4(@cresc</c> ≡ <c>g4@cresc(</c>). Every
+    /// articulation belongs to the host note; the markers are replayed into
+    /// the music sequence in source order via the pending queue.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/lily-parser.yy post_events — an unordered list of
+    /// post-events following the note.
+    /// </remarks>
+    private GreenNode?[] ParsePostEvents()
+    {
+        var articulations = ParseArticulations();
+        if (!PendingMarkerRunHasArticulation())
+            return articulations;
+
+        var combined = new List<GreenNode?>(articulations);
+        while (PendingMarkerRunHasArticulation())
+        {
+            _pendingPostEventMarkers.Enqueue(ParsePostEventMarker());
+            combined.AddRange(ParseArticulations());
+        }
+        return [.. combined];
+    }
+
+    /// <summary>
+    /// True when the upcoming run of post-event markers (<c>( ) ~ [ ]</c>) is
+    /// followed by an <c>@</c>-articulation that must attach to the current
+    /// note. A bare marker run (no trailing <c>@</c>) takes the normal
+    /// sequence-item path untouched.
+    /// </summary>
+    private bool PendingMarkerRunHasArticulation()
+    {
+        if (!IsPostEventMarkerKind(Current.Kind))
+            return false;
+        int k = 1;
+        while (IsPostEventMarkerKind(Peek(k).Kind))
+            k++;
+        return Peek(k).Kind == SyntaxKind.At;
+    }
+
+    private static bool IsPostEventMarkerKind(SyntaxKind kind) => kind
+        is SyntaxKind.OpenParen or SyntaxKind.CloseParen
+        or SyntaxKind.Tilde
+        or SyntaxKind.OpenBracket or SyntaxKind.CloseBracket;
+
+    private GreenNode ParsePostEventMarker() => Current.Kind switch
+    {
+        SyntaxKind.Tilde => ParseTie(),
+        SyntaxKind.OpenBracket or SyntaxKind.CloseBracket => ParseBeamMarker(),
+        _ => ParseSlur(),
+    };
 
     private RestGreen ParseRest()
     {
@@ -759,7 +830,7 @@ internal sealed class Parser
         var closeAngle = Expect(SyntaxKind.CloseAngle);
         var duration = ParseOptionalDuration();
         var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
-        var articulations = ParseArticulations();
+        var articulations = ParsePostEvents();
 
         return new ChordGreen(openAngle, [.. pitches], closeAngle, duration, tremolo, articulations);
     }
@@ -920,7 +991,8 @@ internal sealed class Parser
         var dot = Expect(SyntaxKind.Dot);
 
         var items = new List<GreenNode?>();
-        while (!Check(SyntaxKind.CloseBracket) && !Check(SyntaxKind.EndOfFile))
+        while (_pendingPostEventMarkers.Count > 0
+               || (!Check(SyntaxKind.CloseBracket) && !Check(SyntaxKind.EndOfFile)))
         {
             var item = ParseMusicItem();
             if (item != null)
@@ -1131,9 +1203,10 @@ private GreenNode?[] ParseArticulations()
 
         // Parse inline music items until \\ or >>
         var items = new List<GreenNode?>();
-        while (!Check(SyntaxKind.DoubleCloseAngle) &&
-               !Check(SyntaxKind.EndOfFile) &&
-               !(Check(SyntaxKind.Backslash) && Peek().Kind == SyntaxKind.Backslash))
+        while (_pendingPostEventMarkers.Count > 0 ||
+               (!Check(SyntaxKind.DoubleCloseAngle) &&
+                !Check(SyntaxKind.EndOfFile) &&
+                !(Check(SyntaxKind.Backslash) && Peek().Kind == SyntaxKind.Backslash)))
         {
             var item = ParseMusicItem();
             if (item != null)

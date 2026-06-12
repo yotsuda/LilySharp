@@ -63,7 +63,7 @@ phrase tiesSlurs {
 phrase beams {
   g8 a b c d e fis g |    // 自動 (4+4)
   g8[ a b c d e fis g] |  // 手動 (8音 1グループ)
-  g8[ a, b c | d8 e fis g] | // 小節をまたぐ手動ビーム (K-1b)
+  g4 a g8[ c, b c | d8 e fis g] a4 g | // 小節をまたぐ手動ビーム (K-1b)
 }
 
 // ---- 6. 連符 (3連符・5連符) ------------------------------------------------
@@ -112,14 +112,14 @@ phrase ornaments {
 
 // ---- 12. グリッサンド --------------------------------------------------------
 phrase gliss {
-  g4@glissando c e@glissando b r |
+  g4@glissando c e@glissando b |
 }
 
 // ---- 13. 改行をまたぐスパナー (K-1: break-substitution) ------------------
 // 強制改行 (break) で slur/tie/hairpin が正しく分割される
 phrase crossLine {
   g4(@cresc a b c | break d e fis g)@f |   // 段またぎスラー + ヘアピン
-  g2~ |
+  g2 g2~ |
   break
   g4 a b c |                                   // 段またぎタイ
 }
