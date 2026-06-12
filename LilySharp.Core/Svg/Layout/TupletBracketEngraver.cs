@@ -149,12 +149,22 @@ public static class TupletBracketEngraver
             double endOffset = LayoutUtilities.GetItemXOffset(
                 measures, tuplet.MeasureIndex, tuplet.EndNoteIndex, measureLayout);
 
-            // LILYPOND-REF: lily/tuplet-bracket.cc:145-180 calc_x_positions
-            double startX = measureLayout.X + startOffset - HalfNoteheadWidth;
-            double endX = measureLayout.X + endOffset + HalfNoteheadWidth;
-
             // LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
             bool isStemUp = CalculateDirection(tuplet, measures);
+
+            // The bracket's bound items are the OUTER STEMS when the stems
+            // point in the bracket's direction (always true here: the
+            // bracket sits on the stem side), so the end hooks align with
+            // the stem X — not the notehead edges.
+            // LILYPOND-REF: lily/tuplet-bracket.cc:71-85 get_x_bound_item —
+            //   bound = the column's stem when Note_column::dir == bracket
+            //   dir; :180-189 x_span = bound extent LEFT/RIGHT edges.
+            double stemAttach = isStemUp
+                ? EngravingDefaults.StemUpAttachX
+                : EngravingDefaults.StemDownAttachX;
+            double halfStem = EngravingDefaults.StemThickness / 2;
+            double startX = measureLayout.X + startOffset + stemAttach - halfStem;
+            double endX = measureLayout.X + endOffset + stemAttach + halfStem;
 
             // LILYPOND-REF: scm/define-grobs.scm bracket-visibility = if-no-beam
             bool showBracket = !AreAllNotesBeamed(tuplet, beamGroups);
