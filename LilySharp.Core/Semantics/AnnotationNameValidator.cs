@@ -41,7 +41,7 @@ public sealed class AnnotationNameValidator
         new(StringComparer.OrdinalIgnoreCase)
         {
             "starttrillspan", "stoptrillspan",
-            "courtesy",
+            "courtesy", "editorial",
             "gliss", "glissando",
             "cue",
             "cross",
@@ -58,8 +58,8 @@ public sealed class AnnotationNameValidator
     [
         "staccato", "accent", "tenuto", "marcato", "fermata", "portato",
         "trill", "mordent", "prall", "turn", "invertedturn", "pralltriller",
-        "starttrillspan", "stoptrillspan", "courtesy", "glissando", "cue",
-        "cross", "arpeggio", "laissezvibrer", "repeattie",
+        "starttrillspan", "stoptrillspan", "courtesy", "editorial", "glissando",
+        "cue", "cross", "arpeggio", "laissezvibrer", "repeattie",
         "segno", "coda", "fine", "rit", "accel", "cresc", "decresc", "dim",
         "ottava", "ottava.bassa", "loco", "ped", "ped.off", "sustain",
         "sost.ped", "sostenuto", "una.corda", "tre.corde", "to.coda",

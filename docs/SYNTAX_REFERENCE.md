@@ -27,6 +27,13 @@ Complete reference for the `.lys` music notation language.
 
 Special forms: `ees` (Eb), `aes` (Ab), `bes` (Bb).
 
+Annotations:
+
+```
+a4@courtesy     % Courtesy (cautionary) accidental — parenthesized, left of the note
+c4@editorial    % Editorial (suggestion) accidental — small, above the note (musica ficta)
+```
+
 ### Octave Marks
 
 | Mark | Meaning |

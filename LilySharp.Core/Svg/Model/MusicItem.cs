@@ -76,14 +76,22 @@ public sealed record NoteItem : MusicItem
     /// <remarks>LILYPOND-REF: ly/engraver-init.ly CueVoice context — fontSize = #-4, magstep(-4) ≈ 0.66</remarks>
     public bool IsCue { get; }
     /// <summary>
-    /// Whether this accidental is editorial (suggestion), rendered in parentheses with smaller size.
+    /// Editorial (suggestion) accidental kind ("sharp", "flat", "natural", ...)
+    /// shown as a small accidental ABOVE the note (musica ficta), or null.
+    /// When set, the regular left-of-note <see cref="Accidental"/> is
+    /// suppressed — the suggestion replaces it.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/accidental.cc:130-166 — AccidentalSuggestion
-    /// Different from IsCourtesy: editorial accidentals are musicological suggestions
-    /// (e.g., musica ficta), while courtesy accidentals are reminders of canceled accidentals.
+    /// LILYPOND-REF: scm/define-grobs.scm:96-123 AccidentalSuggestion —
+    /// (direction . UP), (font-size . -2), centered on the notehead.
+    /// Different from IsCourtesy: editorial accidentals are musicological
+    /// suggestions, while courtesy accidentals are reminders of canceled
+    /// accidentals (parenthesized, left of the note).
     /// </remarks>
-    public bool IsEditorial { get; }
+    public string? EditorialAccidental { get; }
+
+    /// <summary>Whether this note carries an editorial (suggestion) accidental.</summary>
+    public bool IsEditorial => EditorialAccidental != null;
     /// <summary>
     /// Optional finger number (1..5) attached to this note. Null when no fingering.
     /// </summary>
@@ -142,7 +150,7 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this note has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
 
-    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasGlissando = false, int featherDirection = 0, bool isCourtesy = false, bool isCue = false, bool isEditorial = false, int? fingering = null, bool hasLaissezVibrer = false, bool hasRepeatTie = false)
+    public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasGlissando = false, int featherDirection = 0, bool isCourtesy = false, bool isCue = false, string? editorialAccidental = null, int? fingering = null, bool hasLaissezVibrer = false, bool hasRepeatTie = false)
     {
         StaffPosition = staffPosition;
         BaseDuration = baseDuration;
@@ -159,7 +167,7 @@ public sealed record NoteItem : MusicItem
         FeatherDirection = Math.Clamp(featherDirection, -1, 1);
         IsCourtesy = isCourtesy;
         IsCue = isCue;
-        IsEditorial = isEditorial;
+        EditorialAccidental = editorialAccidental;
         Fingering = fingering;
         HasLaissezVibrer = hasLaissezVibrer;
         HasRepeatTie = hasRepeatTie;
@@ -200,11 +208,6 @@ public readonly record struct ChordNoteInfo(
     bool NeedsLedgerLines,
     /// <summary>Whether this accidental is a courtesy (cautionary) accidental shown in parentheses.</summary>
     bool IsCourtesy = false,
-    /// <summary>
-    /// Whether this accidental is editorial (suggestion), rendered in parentheses with smaller size.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/accidental.cc:130-166 — AccidentalSuggestion</remarks>
-    bool IsEditorial = false,
     /// <summary>
     /// Optional per-pitch finger number attached via <c>@finger.N</c> inside a chord.
     /// </summary>

@@ -1,0 +1,26 @@
+// Editorial Accidental Test
+// @editorial = suggestion accidental above the note (musica ficta)
+// LILYPOND-REF: scm/define-grobs.scm AccidentalSuggestion
+title "Editorial Accidentals"
+composer "Lily#"
+
+tempo 100
+time 4/4
+key c major
+
+part melody
+
+phrase ficta {
+  c4@editorial fis@editorial bes@editorial c |
+  d4@courtesy e g2 |
+}
+
+section Main {
+  melody { $ficta }
+}
+
+structure { Main }
+
+render score "editorial-accidental.svg" {
+  staff { melody }
+}

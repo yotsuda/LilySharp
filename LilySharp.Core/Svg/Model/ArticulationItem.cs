@@ -73,6 +73,11 @@ public sealed record ArticulationItem
         ArticulationType.Turn => EmmentalerGlyphs.OrnTurn.ToString(),
         ArticulationType.InvertedTurn => EmmentalerGlyphs.OrnReverseTurn.ToString(),
         ArticulationType.PrallTriller => EmmentalerGlyphs.OrnPrallPrall.ToString(),
+        ArticulationType.EditorialSharp => EmmentalerGlyphs.AccidentalSharp.ToString(),
+        ArticulationType.EditorialFlat => EmmentalerGlyphs.AccidentalFlat.ToString(),
+        ArticulationType.EditorialNatural => EmmentalerGlyphs.AccidentalNatural.ToString(),
+        ArticulationType.EditorialDoubleSharp => EmmentalerGlyphs.AccidentalDoubleSharp.ToString(),
+        ArticulationType.EditorialDoubleFlat => EmmentalerGlyphs.AccidentalDoubleFlat.ToString(),
         _ => ""
     };
 
@@ -82,4 +87,41 @@ public sealed record ArticulationItem
     public bool IsOrnament => Type is ArticulationType.Trill or ArticulationType.Mordent or
         ArticulationType.Prall or ArticulationType.Turn or ArticulationType.InvertedTurn or
         ArticulationType.PrallTriller;
+
+    /// <summary>
+    /// Whether this is an editorial (suggestion) accidental — always above the
+    /// note, drawn at the reduced AccidentalSuggestion size.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:96-123 AccidentalSuggestion —
+    /// (direction . UP), (font-size . -2).
+    /// </remarks>
+    public bool IsEditorialAccidental => Type is ArticulationType.EditorialSharp
+        or ArticulationType.EditorialFlat or ArticulationType.EditorialNatural
+        or ArticulationType.EditorialDoubleSharp or ArticulationType.EditorialDoubleFlat;
+
+    /// <summary>
+    /// Maps a resolved accidental kind ("sharp", "flat", ...) to its editorial
+    /// articulation type.
+    /// </summary>
+    public static ArticulationType EditorialTypeFor(string accidentalKind) => accidentalKind switch
+    {
+        "sharp" => ArticulationType.EditorialSharp,
+        "flat" => ArticulationType.EditorialFlat,
+        "doubleSharp" => ArticulationType.EditorialDoubleSharp,
+        "doubleFlat" => ArticulationType.EditorialDoubleFlat,
+        _ => ArticulationType.EditorialNatural
+    };
+
+    /// <summary>
+    /// The accidental kind string for an editorial type (for BBox lookups).
+    /// </summary>
+    public static string AccidentalKindFor(ArticulationType type) => type switch
+    {
+        ArticulationType.EditorialSharp => "sharp",
+        ArticulationType.EditorialFlat => "flat",
+        ArticulationType.EditorialDoubleSharp => "doubleSharp",
+        ArticulationType.EditorialDoubleFlat => "doubleFlat",
+        _ => "natural"
+    };
 }

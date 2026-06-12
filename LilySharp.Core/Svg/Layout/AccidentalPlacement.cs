@@ -30,16 +30,7 @@ public readonly record struct AccidentalLayout(
     /// <summary>X offset from the note column in staff spaces (negative = left of note).</summary>
     double XOffset,
     /// <summary>Whether this is a courtesy (cautionary) accidental.</summary>
-    bool IsCourtesy = false,
-    /// <summary>
-    /// Whether this is an editorial (suggested) accidental, rendered in parentheses.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/accidental.cc:130-166
-    /// Editorial accidentals are suggestions (e.g., musica ficta) and are
-    /// rendered smaller or in parentheses to distinguish from required accidentals.
-    /// </remarks>
-    bool IsEditorial = false
+    bool IsCourtesy = false
 );
 
 /// <summary>
@@ -65,16 +56,6 @@ public sealed record AccidentalPlacementParameters
     /// <remarks>LILYPOND-REF: accidental-placement.cc:413 horizon_padding</remarks>
     public double HorizonPadding { get; init; } = 0.1;
 
-    /// <summary>
-    /// Font-size factor applied to editorial (suggestion) accidentals. LP renders
-    /// AccidentalSuggestion with font-size = -3 ⇒ magstep ≈ 2^(-3/6) ≈ 0.707, but
-    /// the documented engraving convention uses 0.6 for clarity.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/accidental.cc:130-166 — AccidentalSuggestion print
-    /// LILYPOND-REF: scm/define-grobs.scm AccidentalSuggestion (font-size . -3)
-    /// </remarks>
-    public double EditorialFontFactor { get; init; } = 0.6;
 }
 
 /// <summary>
@@ -100,8 +81,10 @@ public sealed record AccidentalPlacementParameters
 ///   group accidentals by vertical proximity, reorder by group size, zigzag within size groups
 /// IMPLEMENTED — same-note-name overstrike (accidental-placement.cc set_ape_skylines):
 ///   overstrike when same note name + same octave + same alteration
-/// IMPLEMENTED — AccidentalSuggestion/editorial (accidental.cc:130-166): smaller glyph
-///   (EditorialFontFactor) wrapped in parentheses, IsEditorial flag propagated to layout.
+/// NOTE — editorial (AccidentalSuggestion) accidentals do NOT pass through this
+///   class: per LilyPond they are placed ABOVE the note (define-grobs.scm:96-123,
+///   direction UP), handled by the collector + ArticulationEngraver; the
+///   left-of-note IsEditorial path below is retained but never fed.
 /// </remarks>
 public sealed class AccidentalPlacement
 {
@@ -118,10 +101,9 @@ public sealed class AccidentalPlacement
         string Accidental,
         double YBottom,     // Lower bound in staff spaces
         double YTop,        // Upper bound in staff spaces
-        double Width,       // Glyph width in staff spaces (includes paren width if courtesy/editorial)
+        double Width,       // Glyph width in staff spaces (includes paren width if courtesy)
         int Priority,       // Sorting priority: lower = rightmost
-        bool IsCourtesy,    // Whether this is a courtesy accidental
-        bool IsEditorial    // Whether this is an editorial (suggestion) accidental
+        bool IsCourtesy     // Whether this is a courtesy accidental
     );
 
     /// <summary>
@@ -139,10 +121,10 @@ public sealed class AccidentalPlacement
         if (accidentals.Count == 1)
         {
             var n = accidentals[0];
-            double totalWidth = ComputeRenderedWidth(n.Accidental!, n.IsCourtesy, n.IsEditorial);
+            double totalWidth = ComputeRenderedWidth(n.Accidental!, n.IsCourtesy);
             return ImmutableArray.Create(new AccidentalLayout(
                 n.StaffPosition, n.Accidental!, -(totalWidth + _params.RightPadding),
-                n.IsCourtesy, n.IsEditorial));
+                n.IsCourtesy));
         }
 
         return CalculateMultipleAccidentals(accidentals);
@@ -156,31 +138,27 @@ public sealed class AccidentalPlacement
         if (string.IsNullOrEmpty(note.Accidental))
             return null;
 
-        double totalWidth = ComputeRenderedWidth(note.Accidental, note.IsCourtesy, note.IsEditorial);
+        double totalWidth = ComputeRenderedWidth(note.Accidental, note.IsCourtesy);
         return new AccidentalLayout(
             note.StaffPosition,
             note.Accidental,
             -(totalWidth + _params.RightPadding),
-            note.IsCourtesy,
-            note.IsEditorial);
+            note.IsCourtesy);
     }
 
     /// <summary>
     /// Computes the rendered width of an accidental glyph, accounting for
-    /// courtesy parentheses and editorial size reduction.
+    /// courtesy parentheses.
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/accidental.cc:130-166 — parenthesize() + AccidentalSuggestion
-    /// Editorial accidentals are rendered smaller (factor <see cref="AccidentalPlacementParameters.EditorialFontFactor"/>)
-    /// AND wrapped in parentheses (just like courtesy). Courtesy alone keeps full size.
+    /// LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize().
+    /// (Editorial/AccidentalSuggestion accidentals never reach this class —
+    /// they print ABOVE the note via the articulation channel.)
     /// </remarks>
-    private double ComputeRenderedWidth(string accidental, bool isCourtesy, bool isEditorial)
+    private double ComputeRenderedWidth(string accidental, bool isCourtesy)
     {
         double baseWidth = GetAccidentalWidth(accidental);
-        if (isEditorial)
-            baseWidth *= _params.EditorialFontFactor;
-        // Both courtesy and editorial wrap in parens.
-        if (isCourtesy || isEditorial)
+        if (isCourtesy)
             return baseWidth + GlyphMetrics.AccidentalParensInkWidth;
         return baseWidth;
     }
@@ -196,20 +174,17 @@ public sealed class AccidentalPlacement
             // Staff position is in half-spaces; convert to staff spaces
             double yCenterSS = n.StaffPosition / 2.0;
 
-            // LILYPOND-REF: lily/accidental.cc:130-166 — editorial accidentals are scaled by font-size factor.
-            double scale = n.IsEditorial ? _params.EditorialFontFactor : 1.0;
-            double yBottom = yCenterSS + bbox.Bottom * scale;
-            double yTop = yCenterSS + bbox.Top * scale;
-            double scaledGlyphWidth = bbox.Width * scale;
+            double yBottom = yCenterSS + bbox.Bottom;
+            double yTop = yCenterSS + bbox.Top;
 
             int priority = GetAlterationPriority(n.Accidental!);
             // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize() adds a paren glyph each side.
-            double width = (n.IsCourtesy || n.IsEditorial)
-                ? scaledGlyphWidth + GlyphMetrics.AccidentalParensInkWidth
-                : scaledGlyphWidth;
+            double width = n.IsCourtesy
+                ? bbox.Width + GlyphMetrics.AccidentalParensInkWidth
+                : bbox.Width;
             entries.Add(new PlacementEntry(
                 n.StaffPosition, n.Accidental!, yBottom, yTop, width, priority,
-                n.IsCourtesy, n.IsEditorial));
+                n.IsCourtesy));
         }
 
         // Sort by octave first, then alteration priority: naturals rightmost, flats leftmost
@@ -285,7 +260,7 @@ public sealed class AccidentalPlacement
 
                 layouts.Add(new AccidentalLayout(
                     entry.StaffPosition, entry.Accidental, lastXLeft,
-                    entry.IsCourtesy, entry.IsEditorial));
+                    entry.IsCourtesy));
                 // LILYPOND-REF: last_octave and last_alteration always updated unconditionally
                 lastOctave = octave;
                 lastAlteration = entry.Accidental;
@@ -332,7 +307,7 @@ public sealed class AccidentalPlacement
             placedEntries.Add((xLeft, entry.YBottom, entry.YTop, entry.Accidental, entry.Width));
             layouts.Add(new AccidentalLayout(
                 entry.StaffPosition, entry.Accidental, xLeft,
-                entry.IsCourtesy, entry.IsEditorial));
+                entry.IsCourtesy));
 
             lastOctave = octave;
             lastAlteration = entry.Accidental;

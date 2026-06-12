@@ -35,7 +35,15 @@ public enum ArticulationType
     Prall,
     Turn,
     InvertedTurn,
-    PrallTriller
+    PrallTriller,
+    // Editorial (suggestion) accidentals — a small accidental ABOVE the note,
+    // created from @editorial; the kind comes from the note's resolved
+    // accidental. LILYPOND-REF: scm/define-grobs.scm:96-123 AccidentalSuggestion
+    EditorialSharp,
+    EditorialFlat,
+    EditorialNatural,
+    EditorialDoubleSharp,
+    EditorialDoubleFlat
 }
 
 /// <summary>

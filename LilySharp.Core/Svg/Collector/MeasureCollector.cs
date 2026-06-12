@@ -918,7 +918,8 @@ public sealed class MeasureCollector
                     var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue);
                     builder.AddItem(noteItem);
                     CollectDynamics(note, measureIndex, itemIndex);
-                    CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp);
+                    CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
+                        noteItem.EditorialAccidental);
                     CollectFiguredBass(note, measureIndex, itemIndex);
                     CollectChordNames(note, measureIndex, itemIndex);
                     CollectCrossStaff(note, measureIndex, itemIndex);
@@ -2323,7 +2324,8 @@ public sealed class MeasureCollector
     /// <remarks>
     /// LILYPOND-REF: script-engraver.cc:92-125 Script_engraver::acknowledge_note_head
     /// </remarks>
-    private void CollectArticulations(SyntaxNode node, int measureIndex, int itemIndex, bool stemUp)
+    private void CollectArticulations(SyntaxNode node, int measureIndex, int itemIndex, bool stemUp,
+        string? editorialAccidental = null)
     {
         var articulations = node switch
         {
@@ -2378,6 +2380,16 @@ public sealed class MeasureCollector
                         // LILYPOND-REF: lily/accidental.cc:147-148 — parenthesized property
                         // Explicit @courtesy annotation forces courtesy (parenthesized) accidental
                         _courtesySourcePositions.Add(node.Position);
+                    }
+                    else if (nameLower == "editorial" && editorialAccidental != null)
+                    {
+                        // Editorial (suggestion) accidental: a small accidental
+                        // ABOVE the note; the kind was resolved in CreateNoteItem.
+                        // LILYPOND-REF: scm/define-grobs.scm:96-123 AccidentalSuggestion
+                        _articulations.Add(new ArticulationItem(
+                            ArticulationItem.EditorialTypeFor(editorialAccidental),
+                            measureIndex, itemIndex, isAbove: true,
+                            articulationSyntax.Position));
                     }
                     else
                     {
@@ -2548,6 +2560,31 @@ public sealed class MeasureCollector
         bool hasLv = HasLaissezVibrerAnnotation(note);
         bool hasRepeatTie = HasRepeatTieAnnotation(note);
 
+        // @editorial: the accidental this note resolves to becomes a SUGGESTION
+        // above the note instead of a regular accidental at its left; when the
+        // note has no printed accidental, force the key-signature alteration
+        // (same rule as @courtesy).
+        // LILYPOND-REF: scm/define-grobs.scm:96-123 AccidentalSuggestion;
+        // suggestAccidentals replaces Accidental with AccidentalSuggestion.
+        string? editorialAccidental = null;
+        if (HasNamedArticulation(note, "editorial"))
+        {
+            if (accidental != null)
+            {
+                editorialAccidental = accidental;
+            }
+            else
+            {
+                int step = PitchNameToStep(note.Pitch.BaseName);
+                int alt = GetKeySignatureAlteration(step);
+                editorialAccidental = alt switch
+                {
+                    1 => "sharp", -1 => "flat", _ => "natural"
+                };
+            }
+            accidental = null; // suggestion replaces the left-of-note accidental
+        }
+
         return new NoteItem(
             staffPosition,
             Fraction.FromNoteValue(noteValue),
@@ -2565,6 +2602,7 @@ public sealed class MeasureCollector
             featherDirection: featherDirection,
             isCourtesy: isCourtesy,
             isCue: isCue,
+            editorialAccidental: editorialAccidental,
             fingering: fingering,
             hasLaissezVibrer: hasLv,
             hasRepeatTie: hasRepeatTie);

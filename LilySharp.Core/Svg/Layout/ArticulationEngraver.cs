@@ -35,7 +35,8 @@ public readonly record struct ArticulationLayout(
     double Y,               // Y position (staff spaces from staff top, positive = down)
     string Glyph,           // SMuFL glyph to render
     bool IsAbove,           // Whether placed above the note
-    int SourcePosition      // For click-to-source mapping
+    int SourcePosition,     // For click-to-source mapping
+    double Scale = 1.0      // Glyph scale (editorial accidentals: magstep(-2))
 );
 
 /// <summary>
@@ -66,6 +67,11 @@ public static class ArticulationEngraver
 
     // LILYPOND-REF: stem.cc:93 default stem-length = 3.5
     private const double DefaultStemLength = 3.5;
+
+    // Editorial (suggestion) accidentals print at font-size -2:
+    // magstep(-2) = 2^(-2/6) ≈ 0.7937.
+    // LILYPOND-REF: scm/define-grobs.scm:101 AccidentalSuggestion (font-size . -2)
+    private const double EditorialScale = 0.7937;
 
     // Staff middle line position
     private const double StaffMiddle = 2.0;
@@ -128,6 +134,20 @@ public static class ArticulationEngraver
                     articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
                 + NoteheadHalfWidth(item);
 
+            double scale = 1.0;
+            if (articulation.IsEditorialAccidental)
+            {
+                scale = EditorialScale;
+                // Accidental glyphs are anchored at the left baseline, not
+                // origin-centred like script glyphs — shift so the INK centre
+                // lands on the notehead centre.
+                // LILYPOND-REF: define-grobs.scm:104-106 AccidentalSuggestion
+                //   parent-alignment-X / self-alignment-X = CENTER
+                var accBBox = GlyphMetrics.GetAccidentalBBox(
+                    ArticulationItem.AccidentalKindFor(articulation.Type));
+                x -= scale * (accBBox.Left + accBBox.Width / 2.0);
+            }
+
             // Calculate Y position based on note position and direction
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
             double y = CalculateYPosition(articulation, staffPosition, stemUp);
@@ -139,7 +159,8 @@ public static class ArticulationEngraver
                 y,
                 articulation.GetGlyph(),
                 articulation.IsAbove,
-                articulation.SourcePosition
+                articulation.SourcePosition,
+                scale
             ));
         }
 
@@ -196,14 +217,32 @@ public static class ArticulationEngraver
     /// <remarks>
     /// LILYPOND-REF: mf/feta-scripts.mf set_char_box() for each script glyph
     /// </remarks>
-    private static GlyphMetrics.BBox GetGlyphBBox(ArticulationType type) => type switch
+    private static GlyphMetrics.BBox GetGlyphBBox(ArticulationType type)
     {
-        ArticulationType.Staccato => GlyphMetrics.ArticStaccato,
-        ArticulationType.Accent => GlyphMetrics.ArticAccent,
-        ArticulationType.Tenuto => GlyphMetrics.ArticTenuto,
-        ArticulationType.Marcato => GlyphMetrics.ArticMarcatoAbove, // direction handled separately
-        _ => new GlyphMetrics.BBox(-0.5, -0.5, 0.5, 0.5) // fallback for fermata, ornaments
-    };
+        if (IsEditorialType(type))
+        {
+            // Scaled accidental ink box (anchored at the left baseline).
+            var b = GlyphMetrics.GetAccidentalBBox(ArticulationItem.AccidentalKindFor(type));
+            return new GlyphMetrics.BBox(
+                b.Left * EditorialScale, b.Bottom * EditorialScale,
+                b.Right * EditorialScale, b.Top * EditorialScale);
+        }
+
+        return type switch
+        {
+            ArticulationType.Staccato => GlyphMetrics.ArticStaccato,
+            ArticulationType.Accent => GlyphMetrics.ArticAccent,
+            ArticulationType.Tenuto => GlyphMetrics.ArticTenuto,
+            ArticulationType.Marcato => GlyphMetrics.ArticMarcatoAbove, // direction handled separately
+            _ => new GlyphMetrics.BBox(-0.5, -0.5, 0.5, 0.5) // fallback for fermata, ornaments
+        };
+    }
+
+    /// <summary>Editorial (suggestion) accidental types.</summary>
+    private static bool IsEditorialType(ArticulationType type) => type
+        is ArticulationType.EditorialSharp or ArticulationType.EditorialFlat
+        or ArticulationType.EditorialNatural or ArticulationType.EditorialDoubleSharp
+        or ArticulationType.EditorialDoubleFlat;
 
     /// <summary>
     /// Gets the full vertical extent (total height) of an articulation glyph.
@@ -247,7 +286,9 @@ public static class ArticulationEngraver
     {
         // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
         // LILYPOND-REF: define-grobs.scm:2175 TrillSpanner: direction = UP
-        bool forceAbove = articulation.Type == ArticulationType.Fermata || articulation.IsOrnament;
+        // LILYPOND-REF: define-grobs.scm:100 AccidentalSuggestion: direction = UP
+        bool forceAbove = articulation.Type == ArticulationType.Fermata || articulation.IsOrnament
+            || articulation.IsEditorialAccidental;
         bool isAbove = forceAbove || articulation.IsAbove;
 
         // Convert staff position to Y coordinate (staff spaces from top).

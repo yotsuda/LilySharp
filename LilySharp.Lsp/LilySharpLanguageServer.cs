@@ -546,6 +546,7 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "gliss", Kind = CompletionItemKind.Value, Detail = "Glissando to next note (short for glissando)", SortText = "6glissando2" },
                 new CompletionItem { Label = "arpeggio", Kind = CompletionItemKind.Value, Detail = "Arpeggiate chord", SortText = "6arpeggio" },
                 new CompletionItem { Label = "courtesy", Kind = CompletionItemKind.Value, Detail = "Force courtesy accidental", SortText = "6courtesy" },
+                new CompletionItem { Label = "editorial", Kind = CompletionItemKind.Value, Detail = "Editorial (suggestion) accidental above the note", SortText = "6editorial" },
 
                 // Figured bass
                 new CompletionItem { Label = "fig.6", Kind = CompletionItemKind.Value, Detail = "Figured bass: 6", SortText = "7fig" },

@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -14,127 +14,100 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-using System.Collections.Immutable;
-using LilySharp.Core.Semantics;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
 using Xunit;
 
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Verifies the editorial (suggestion) accidental rendering pipeline:
-/// the IsEditorial flag propagates from the model through layout, and the
-/// resulting accidental is sized smaller and wrapped in parentheses.
+/// Verifies the editorial (suggestion) accidental pipeline: @editorial turns
+/// the note's resolved accidental into a small accidental ABOVE the note
+/// (musica ficta) instead of a regular accidental at its left.
 /// </summary>
 /// <remarks>
-/// LILYPOND-REF: lily/accidental.cc:130-166 — AccidentalSuggestion
-/// LILYPOND-REF: scm/define-grobs.scm AccidentalSuggestion (font-size . -3)
+/// LILYPOND-REF: scm/define-grobs.scm:96-123 AccidentalSuggestion —
+/// (direction . UP), (font-size . -2), centered on the notehead.
 /// </remarks>
 [Trait("Category", "Unit")]
 public class EditorialAccidentalTests
 {
-    private static readonly AccidentalPlacement Placement = new();
-    private static readonly AccidentalPlacementParameters Params = AccidentalPlacementParameters.Default;
-
-    private static NoteItem MakeNote(int staffPos, string acc, bool courtesy = false, bool editorial = false)
-        => new(staffPosition: staffPos,
-               baseDuration: new Fraction(1, 4),
-               dots: 0,
-               accidental: acc,
-               needsLedgerLines: false,
-               sourcePosition: 0,
-               isCourtesy: courtesy,
-               isEditorial: editorial);
-
-    private static ChordNoteInfo MakeInfo(int staffPos, string acc, bool courtesy = false, bool editorial = false)
-        => new(staffPos, acc, NeedsLedgerLines: false, IsCourtesy: courtesy, IsEditorial: editorial);
+    private static Score Collect(string source)
+        => new MeasureCollector().Collect(SyntaxTree.Parse(source));
 
     [Fact]
-    public void Single_PlainSharp_DoesNotMarkEditorial()
+    public void Editorial_OnPlainNote_ForcesKeySignatureNatural()
     {
-        var layout = Placement.CalculateSinglePosition(MakeNote(0, "sharp"));
-        Assert.NotNull(layout);
-        Assert.False(layout!.Value.IsEditorial);
-        Assert.False(layout.Value.IsCourtesy);
+        // C in C major prints no accidental — the suggestion shows natural.
+        var score = Collect("c4@editorial d e f |");
+        var note = Assert.IsType<NoteItem>(score.Voice.Measures[0].Items[0]);
+
+        Assert.Equal("natural", note.EditorialAccidental);
+        Assert.True(note.IsEditorial);
+        Assert.Null(note.Accidental); // suggestion replaces the left accidental
     }
 
     [Fact]
-    public void Single_EditorialSharp_PropagatesFlagToLayout()
+    public void Editorial_OnSharpedNote_MovesSharpAboveAndSuppressesLeft()
     {
-        var layout = Placement.CalculateSinglePosition(MakeNote(0, "sharp", editorial: true));
-        Assert.NotNull(layout);
-        Assert.True(layout!.Value.IsEditorial);
+        var score = Collect("fis4@editorial g a b |");
+        var note = Assert.IsType<NoteItem>(score.Voice.Measures[0].Items[0]);
+
+        Assert.Equal("sharp", note.EditorialAccidental);
+        Assert.Null(note.Accidental);
     }
 
     [Fact]
-    public void Single_EditorialSharp_IsNarrowerThanCourtesySharp()
+    public void Editorial_CreatesAboveArticulationOfMatchingKind()
     {
-        // Both wrap in parens, but editorial scales the glyph by EditorialFontFactor (~0.6),
-        // so its X offset is closer to the note than a courtesy paren-wrapped sharp.
-        var courtesy = Placement.CalculateSinglePosition(MakeNote(0, "sharp", courtesy: true))!.Value;
-        var editorial = Placement.CalculateSinglePosition(MakeNote(0, "sharp", editorial: true))!.Value;
+        var score = Collect("fis4@editorial g a b |");
 
-        // XOffset is negative (left of note); editorial should be CLOSER to 0 (less negative).
-        Assert.True(editorial.XOffset > courtesy.XOffset,
-            $"Editorial should be narrower than courtesy. courtesy={courtesy.XOffset}, editorial={editorial.XOffset}");
+        var editorial = Assert.Single(score.Articulations,
+            a => a.IsEditorialAccidental);
+        Assert.Equal(ArticulationType.EditorialSharp, editorial.Type);
+        Assert.True(editorial.IsAbove);
+        Assert.Equal(0, editorial.MeasureIndex);
+        Assert.Equal(0, editorial.ItemIndex);
     }
 
     [Fact]
-    public void Single_EditorialSharp_IsNarrowerThanPlainSharp()
+    public void PlainNote_WithoutEditorial_HasNoEditorialState()
     {
-        // Plain has no parens; editorial has parens but smaller glyph.
-        // Width comparison depends on factor: factor * sharpWidth + 2*paren vs sharpWidth.
-        // Actual values come from GlyphMetrics (extracted from Emmentaler-20):
-        //   sharp width = AccidentalSharp.Right
-        //   paren ink width = AccidentalParensInkWidth (both parens, zero padding)
-        var plain = Placement.CalculateSinglePosition(MakeNote(0, "sharp"))!.Value;
-        var editorial = Placement.CalculateSinglePosition(MakeNote(0, "sharp", editorial: true))!.Value;
+        var score = Collect("fis4 g a b |");
+        var note = Assert.IsType<NoteItem>(score.Voice.Measures[0].Items[0]);
 
-        double plainWidth = -plain.XOffset - Params.RightPadding;
-        double editorialWidth = -editorial.XOffset - Params.RightPadding;
-
-        double sharpWidth = LilySharp.Core.Svg.Layout.GlyphMetrics.AccidentalSharp.Right;
-        double parensInk = LilySharp.Core.Svg.Layout.GlyphMetrics.AccidentalParensInkWidth;
-        double expectedEditorialWidth = sharpWidth * Params.EditorialFontFactor + parensInk;
-        Assert.Equal(expectedEditorialWidth, editorialWidth, precision: 4);
-        Assert.Equal(sharpWidth, plainWidth, precision: 4);
+        Assert.False(note.IsEditorial);
+        Assert.Equal("sharp", note.Accidental); // normal left accidental kept
+        Assert.DoesNotContain(score.Articulations, a => a.IsEditorialAccidental);
     }
 
     [Fact]
-    public void Chord_EditorialFlagPropagatesThroughMultipleAccidentalsPath()
+    public void EditorialTypeMapping_RoundTrips()
     {
-        // Two-note chord with one editorial accidental.
-        var notes = new[]
+        foreach (var kind in new[] { "sharp", "flat", "natural", "doubleSharp", "doubleFlat" })
         {
-            MakeInfo(0, "sharp", editorial: true),
-            MakeInfo(4, "flat"),
-        };
-
-        var layouts = Placement.CalculatePositions(notes);
-        Assert.Equal(2, layouts.Length);
-
-        var editorialLayout = layouts.First(l => l.StaffPosition == 0);
-        var plainLayout = layouts.First(l => l.StaffPosition == 4);
-
-        Assert.True(editorialLayout.IsEditorial);
-        Assert.False(plainLayout.IsEditorial);
-        Assert.False(editorialLayout.IsCourtesy);
+            var type = ArticulationItem.EditorialTypeFor(kind);
+            Assert.Equal(kind, ArticulationItem.AccidentalKindFor(type));
+        }
     }
 
     [Fact]
-    public void EditorialAndCourtesy_CanCoexistOnSameNote_AsIndependentFlags()
+    public void EditorialLayout_IsAboveTheNote_AtReducedScale()
     {
-        // Both flags set: editorial sizing AND courtesy parens (LP allows this combination).
-        var layout = Placement.CalculateSinglePosition(
-            MakeNote(0, "natural", courtesy: true, editorial: true))!.Value;
-        Assert.True(layout.IsCourtesy);
-        Assert.True(layout.IsEditorial);
-    }
+        var score = Collect("c4@editorial d e f |");
+        var layout = new LayoutEngine(new LayoutOptions()).Layout(score);
 
-    [Fact]
-    public void EditorialFontFactor_DefaultsToLpDocumentedValue()
-    {
-        Assert.Equal(0.6, AccidentalPlacementParameters.Default.EditorialFontFactor);
+        var editorial = Assert.Single(layout.ArticulationLayouts,
+            a => a.Scale < 1.0);
+        // magstep(-2) = 2^(-2/6)
+        Assert.Equal(0.7937, editorial.Scale, precision: 3);
+        Assert.True(editorial.IsAbove);
+        // c (C4? — relative anchor) sits below the middle line; the suggestion
+        // must end up above the staff top minus padding, i.e. y < noteY.
+        var measure = layout.Systems[0].Measures[0];
+        Assert.True(editorial.Y < 2.0,
+            $"Editorial accidental should sit above the note (Y={editorial.Y:F2})");
     }
 }

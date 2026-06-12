@@ -1527,7 +1527,7 @@ public static class SharedRenderer
             if (string.IsNullOrEmpty(a.Glyph)) continue;
             double y = (sysY.TryGetValue(a.MeasureIndex, out var sy) ? sy : 0) + a.Y;
             using (gc.Source(a.SourcePosition))
-                gc.DrawGlyph(a.Glyph[0], a.X, y, FontSize);
+                gc.DrawGlyph(a.Glyph[0], a.X, y, FontSize * a.Scale);
         }
     }
 

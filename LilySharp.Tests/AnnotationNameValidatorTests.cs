@@ -107,12 +107,6 @@ public class AnnotationNameValidatorTests
     // actually consumes: a new annotation added to the collector but not the
     // registry makes its sample fail here. ---
 
-    // Known gap: @editorial (LilyPond's AccidentalSuggestion — the musica
-    // ficta accidental placed ABOVE the note, define-grobs.scm:96-123) is not
-    // implemented yet, so the samples that demonstrate it warn — truthfully.
-    // Remove this allowlist when @editorial is implemented.
-    private static readonly string[] KnownGapAnnotations = ["@editorial"];
-
     [Fact]
     public void AllSamples_HaveNoUnknownAnnotations()
     {
@@ -122,11 +116,7 @@ public class AnnotationNameValidatorTests
         {
             var diags = Validate(File.ReadAllText(file));
             foreach (var d in diags.Where(d => d.Code == DiagnosticCodes.UnknownAnnotation))
-            {
-                if (KnownGapAnnotations.Any(gap => d.Message.Contains($"'{gap}'")))
-                    continue;
                 offenders.Add($"{Path.GetFileName(file)}: {d.Message}");
-            }
         }
         Assert.True(offenders.Count == 0,
             "Unknown annotations in samples:\n" + string.Join("\n", offenders));
