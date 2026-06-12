@@ -82,18 +82,10 @@ public static partial class GlyphMetrics
         AccidentalLeftParen.Width + AccidentalRightParen.Width;
 
     // ========== Engraving line/stroke thicknesses ==========
-
-    /// <summary>Extension of ledger lines beyond notehead on each side.</summary>
-    public const double LegerLineExtension = 0.4;
-
-    /// <summary>Thickness of ledger lines.</summary>
-    public const double LegerLineThickness = 0.16;
-
-    /// <summary>Thickness of staff lines.</summary>
-    public const double StaffLineThickness = 0.13;
-
-    /// <summary>Thickness of stems.</summary>
-    public const double StemThickness = 0.12;
+    // Line-family thicknesses live in EngravingDefaults, derived from
+    // LilyPond's line-thickness (scm/paper.scm). The SMuFL/Bravura duplicates
+    // that used to sit here (staff 0.13 / stem 0.12 / ledger 0.16) were
+    // unused and contradicted LilyPond's values.
 
     /// <summary>Thickness of thin barlines.</summary>
     public const double ThinBarlineThickness = 0.16;

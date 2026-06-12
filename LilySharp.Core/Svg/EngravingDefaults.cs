@@ -27,7 +27,22 @@ namespace LilySharp.Core.Svg;
 public static class EngravingDefaults
 {
     // === Staff and lines ===
-    public const double StaffLineThickness = 0.13;
+
+    /// <summary>
+    /// Base line thickness. LilyPond's layout <c>line-thickness</c> at the
+    /// default 20pt staff: calc-line-thickness interpolates to 0.5pt =
+    /// 0.10 staff space. Every line-family thickness derives from this,
+    /// mirroring LilyPond's structure (stems 1.3×, staff lines 1.0×, …).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/paper.scm:52-66 calc-line-thickness.</remarks>
+    public const double LineThickness = 0.1;
+
+    /// <summary>Staff line thickness: 1.0 × line-thickness.</summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/staff-symbol.cc — StaffSymbol thickness default 1.0
+    /// (in line-thickness units).
+    /// </remarks>
+    public const double StaffLineThickness = 1.0 * LineThickness;
 
     /// <summary>
     /// Ledger line thickness: StaffSymbol.ledger-line-thickness = (1.0 . 0.1)
@@ -51,10 +66,11 @@ public static class EngravingDefaults
     /// </remarks>
     public const double LedgerLengthFraction = 0.25;
 
-    public const double LineThickness = 0.1;
-
     // === Stems ===
-    public const double StemThickness = 0.12;
+
+    /// <summary>Stem thickness: 1.3 × line-thickness = 0.13 staff space.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm (Stem (thickness . 1.3)).</remarks>
+    public const double StemThickness = 1.3 * LineThickness;
     public const double IdealStemLength = 3.5;
     public const double MinStemLength = 2.5;
     public const double DefaultStemLength = 3.5;

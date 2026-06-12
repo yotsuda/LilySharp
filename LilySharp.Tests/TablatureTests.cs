@@ -145,7 +145,7 @@ public class TablatureTests
         // Should contain 6 staff lines for guitar tab (in addition to 5 for treble):
         // live staff/string lines are full-width horizontals at line thickness.
         var staffLineCount = System.Text.RegularExpressions.Regex.Matches(
-            svg, "<line x1=\"0\\.00\" [^/]*stroke-width=\"0\\.130\"").Count;
+            svg, "<line x1=\"0\\.00\" [^/]*stroke-width=\"0\\.100\"").Count;
         Assert.True(staffLineCount >= 11, $"Expected at least 11 staff lines (5 treble + 6 tab), got {staffLineCount}");
     }
 

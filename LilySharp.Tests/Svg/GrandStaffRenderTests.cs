@@ -63,7 +63,7 @@ public class GrandStaffRenderTests
         // Should contain two sets of staff lines (10 lines total).
         // Live staff lines are full-width horizontal lines at staff-line thickness.
         var staffLineCount = System.Text.RegularExpressions.Regex.Matches(
-            svg, @"<line x1=""0\.00"" [^/]*stroke-width=""0\.130""").Count;
+            svg, @"<line x1=""0\.00"" [^/]*stroke-width=""0\.100""").Count;
         Assert.Equal(10, staffLineCount);
 
         // Should contain treble and bass clef glyphs
