@@ -105,6 +105,29 @@ public sealed class LayoutEngine
             score.Lyrics, score.Dynamics, score.FiguredBasses,
             score.MusicMarks, score.VoltaBrackets, singleMeasureRanges);
 
+        // Preliminary annotation pass: real protrusions join the spacing
+        // extents (see EnrichExtentsWithAnnotationProtrusions). These
+        // layouts are discarded; the final pass below recomputes them
+        // against the re-spaced systems.
+        {
+            var prelimSystems = systems.ToImmutableArray();
+            var prelimBeams = _elementCoordinator.LayoutBeams(score, prelimSystems);
+            var prelimAnn = CalculateAnnotationLayouts(
+                score, prelimSystems,
+                score.Dynamics, score.Articulations, score.GraceNotes,
+                score.Lyrics, score.MusicMarks, score.CustomTexts,
+                score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
+                score.Voice.Measures, score.FiguredBasses, score.ChordNames, score.PercentRepeats,
+                trillSpanners: score.TrillSpanners,
+                beamGroups: _elementCoordinator.DetectBeamGroups(score),
+                beamLayouts: prelimBeams,
+                systemSkylines: perSystemSkylines);
+            EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
+                prelimAnn,
+                _elementCoordinator.LayoutTies(score, prelimSystems),
+                _elementCoordinator.LayoutSlurs(score, prelimSystems));
+        }
+
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, _options.StaffHeight,
             perSystemSkylines);
@@ -287,6 +310,44 @@ public sealed class LayoutEngine
         AugmentExtentsWithLooseLines(perSystemExtents,
             score.Lyrics, score.Dynamics, score.FiguredBasses,
             score.MusicMarks, score.VoltaBrackets, multiMeasureRanges);
+
+        // Preliminary annotation pass (see the single-staff path): real
+        // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
+        // spacing extents before the page Y is fixed.
+        {
+            var prelimSystems = systems.ToImmutableArray();
+            var prelimStaff = score.StaffGroups[0].PrimaryStaff;
+            var prelimScore = new Score(
+                prelimStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+                ClefToString(prelimStaff.Clef),
+                tupletBrackets: score.TupletBrackets);
+            var prelimBeams = new List<BeamLayout>();
+            var prelimTies = new List<TieLayout>();
+            var prelimSlurs = new List<SlurLayout>();
+            foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
+            {
+                var staffScore = new Score(
+                    staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
+                    ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                    tupletBrackets: score.TupletBrackets);
+                prelimBeams.AddRange(_elementCoordinator.LayoutBeams(staffScore, prelimSystems, staffIndex));
+                prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex));
+                prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex));
+            }
+            var prelimAnn = CalculateAnnotationLayouts(
+                prelimScore, prelimSystems,
+                score.Dynamics, score.Articulations, score.GraceNotes,
+                score.Lyrics, score.MusicMarks, score.CustomTexts,
+                score.VoltaBrackets, score.TupletBrackets, score.Arpeggios,
+                prelimStaff.PrimaryVoice.Measures, score.FiguredBasses, score.ChordNames,
+                score.PercentRepeats,
+                trillSpanners: score.TrillSpanners,
+                beamGroups: _elementCoordinator.DetectBeamGroups(prelimScore),
+                beamLayouts: prelimBeams.ToImmutableArray(),
+                systemSkylines: perSystemSkylines);
+            EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
+                prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
+        }
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
@@ -583,6 +644,116 @@ public sealed class LayoutEngine
     /// Estimates both above-staff (upExtent) and below-staff (downExtent)
     /// contributions from annotations, so page breaking accounts for full system height.
     /// </remarks>
+
+    /// <summary>
+    /// Measures each system's REAL vertical protrusions from a preliminary
+    /// annotation pass and max-merges them into the spacing extents. The
+    /// provisional systems already carry final X geometry — only the page Y
+    /// changes afterwards — so slurs, ties, tuplet brackets, marks and
+    /// dynamics can be laid out, measured, and discarded; the final pass
+    /// recomputes them against the re-spaced systems.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1070-1127
+    /// build_system_skyline — page spacing reads COMPLETE system stencils
+    /// (slurs, brackets, scripts included), not just note skylines.
+    /// </remarks>
+    private static void EnrichExtentsWithAnnotationProtrusions(
+        List<(double upExtent, double downExtent)> perSystemExtents,
+        ImmutableArray<SystemLayout> systems,
+        AnnotationLayouts ann,
+        ImmutableArray<TieLayout> ties,
+        ImmutableArray<SlurLayout> slurs)
+    {
+        int n = Math.Min(perSystemExtents.Count, systems.Length);
+        var up = new double[n];
+        var down = new double[n];
+
+        var measureToSystem = new Dictionary<int, int>();
+        var bottoms = new double[n];
+        for (int i = 0; i < n; i++)
+        {
+            foreach (var m in systems[i].Measures)
+                measureToSystem[m.MeasureIndex] = i;
+            // System bottom relative to its top: last visible staff's bottom
+            // (4.0 for a single staff).
+            bottoms[i] = 4.0;
+            if (!systems[i].StaffGroups.IsDefaultOrEmpty)
+            {
+                foreach (var g in systems[i].StaffGroups)
+                    foreach (var st in g.Staves)
+                        if (!st.IsHidden)
+                            bottoms[i] = Math.Max(bottoms[i], st.Y + st.Height);
+            }
+        }
+
+        void Add(int measureIndex, double topRel, double bottomRel)
+        {
+            if (!measureToSystem.TryGetValue(measureIndex, out int s))
+                return;
+            up[s] = Math.Max(up[s], -topRel);
+            down[s] = Math.Max(down[s], bottomRel - bottoms[s]);
+        }
+
+        foreach (var t in ann.TupletBrackets)
+        {
+            double hi = Math.Min(t.StartY, t.EndY);
+            double lo = Math.Max(t.StartY, t.EndY);
+            Add(t.MeasureIndex, hi - (t.IsStemUp ? 1.6 : 0.1), lo + (t.IsStemUp ? 0.7 : 1.7));
+        }
+        foreach (var v in ann.VoltaBrackets)
+            Add(v.StartMeasureIndex, v.Y - 0.1, v.Y + 1.6);
+        foreach (var m in ann.MusicMarks)
+        {
+            if (MusicMarkItem.IsSpannerHandled(m.MarkType))
+                continue;
+            Add(m.MeasureIndex, m.Y - 2.1, m.Y + 0.7);
+        }
+        foreach (var ct in ann.CustomTexts)
+            Add(ct.MeasureIndex, ct.Y - 1.8, ct.Y + 0.6);
+        foreach (var tr in ann.TrillSpanners)
+            Add(tr.StartMeasureIndex, tr.Y - GlyphMetrics.OrnTrillGlyph.Top, tr.Y + 0.25);
+        foreach (var d in ann.Dynamics)
+            Add(d.MeasureIndex, d.Y - 1.2, d.Y + 0.3);
+        foreach (var h in ann.Hairpins)
+            Add(h.StartMeasureIndex, h.Y - 0.34, h.Y + 0.34);
+        foreach (var sp in ann.TextSpanners)
+            Add(sp.StartMeasureIndex, sp.Y - 1.2, sp.Y + 0.3);
+        foreach (var bn in ann.BarNumbers)
+        {
+            if (!measureToSystem.TryGetValue(bn.MeasureIndex, out int s))
+                continue;
+            double rel = bn.Y - systems[s].Y;
+            up[s] = Math.Max(up[s], -(rel - 1.3));
+        }
+
+        // Ties and slurs carry ABSOLUTE page Y — relativize via their system.
+        void AddCurve(int measureIndex, double y0, double y1, double c1, double c2)
+        {
+            if (!measureToSystem.TryGetValue(measureIndex, out int s))
+                return;
+            double sy = systems[s].Y;
+            // Curve extreme ~ 3/4 of the way from endpoints to controls.
+            double topRel = Math.Min(Math.Min(y0, y1), Math.Min(y0, y1) * 0.25 + Math.Min(c1, c2) * 0.75) - sy;
+            double botRel = Math.Max(Math.Max(y0, y1), Math.Max(y0, y1) * 0.25 + Math.Max(c1, c2) * 0.75) - sy;
+            up[s] = Math.Max(up[s], -topRel);
+            down[s] = Math.Max(down[s], botRel - bottoms[s]);
+        }
+
+        foreach (var t in ties)
+            AddCurve(t.Tie.StartMeasureIndex, t.StartY, t.EndY, t.Control1.Y, t.Control2.Y);
+        foreach (var sl in slurs)
+            AddCurve(sl.Slur.StartMeasureIndex, sl.StartY, sl.EndY, sl.Control1.Y, sl.Control2.Y);
+
+        for (int i = 0; i < n; i++)
+        {
+            var ext = perSystemExtents[i];
+            perSystemExtents[i] = (
+                Math.Max(ext.upExtent, up[i]),
+                Math.Max(ext.downExtent, down[i]));
+        }
+    }
+
     private static void AugmentExtentsWithLooseLines(
         List<(double upExtent, double downExtent)> perSystemExtents,
         ImmutableArray<LyricItem> lyrics,
