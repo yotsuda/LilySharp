@@ -234,7 +234,7 @@ public sealed class BeamScoringProblem
             int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
             var info = StemCalculator.CalculateBeamedStemInfo(
                 _staffPositions[i], dir > 0, _memberBeamCounts[i],
-                _beamThickness, _beamTranslation);
+                _beamThickness, _beamTranslation, isKnee: _isKnee);
             double idealY = info.IdealY * 2.0; // staff-space → staff-position frame
             ideals.Add((_stemXPositions[i], idealY));
         }
@@ -541,7 +541,7 @@ public sealed class BeamScoringProblem
             int dir = _isKnee ? _memberBeamDirs[i] : _beamDir;
             var info = StemCalculator.CalculateBeamedStemInfo(
                 _staffPositions[i], dir > 0, _memberBeamCounts[i],
-                _beamThickness, _beamTranslation);
+                _beamThickness, _beamTranslation, isKnee: _isKnee);
             double minBeamY = info.ShortestY * 2.0; // staff-space → staff-position frame
             // Convert to left Y: leftY = beamAtStem - slope * stemX
             double leftYForMin = minBeamY - slope * _stemXPositions[i];
@@ -969,7 +969,7 @@ public sealed class BeamScoringProblem
             //               lily/beam-quanting.cc score_stem_lengths.
             var info = StemCalculator.CalculateBeamedStemInfo(
                 _staffPositions[i], memberDir > 0, _memberBeamCounts[i],
-                _beamThickness, _beamTranslation);
+                _beamThickness, _beamTranslation, isKnee: _isKnee);
             double idealY = info.IdealY * 2.0;
             double shortestY = info.ShortestY * 2.0;
 

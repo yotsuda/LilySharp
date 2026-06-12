@@ -180,9 +180,11 @@ public static class StemCalculator
     /// <param name="beamThickness">Beam thickness in staff spaces.</param>
     /// <param name="beamTranslation">Distance between beam centers in staff spaces.</param>
     /// <param name="details">Stem details parameters.</param>
+    /// <param name="isKnee">True when the owning beam is kneed — LilyPond skips
+    /// the staff-extension clamps for knees (<c>knee</c> beam property).</param>
     /// <returns>Stem info with ideal and shortest Y positions (in staff positions/half-spaces).</returns>
     /// <remarks>
-    /// LILYPOND-REF: lily/stem.cc:1024-1155 calc_stem_info
+    /// LILYPOND-REF: lily/stem.cc:1135-1266 calc_stem_info
     /// </remarks>
     public static StemInfo CalculateBeamedStemInfo(
         int headPosition,
@@ -190,7 +192,8 @@ public static class StemCalculator
         int beamCount,
         double beamThickness = 0.48,
         double beamTranslation = 0.81,
-        StemDetails? details = null)
+        StemDetails? details = null,
+        bool isKnee = false)
     {
         var d = details ?? StemDetails.Default;
         int dir = stemUp ? 1 : -1; // staff positions: positive = up
@@ -218,9 +221,16 @@ public static class StemCalculator
         double idealY = noteStart + idealLength;
 
         // --- Staff boundary constraints ---
-        // LILYPOND-REF: stem.cc:1122-1132
-        // Stems should not end below the middle staff line
-        idealY = Math.Max(idealY, 0.0);
+        // LILYPOND-REF: stem.cc:1218-1243 — the highest beam of an UP beam must
+        // never be lower than the middle staffline, and the lowest beam never
+        // lower than the second staffline. NOT applied to knees ("Also, not
+        // for knees. Seems to be a good thing.") — for a knee the ideal beam
+        // sits in the gap between the pitch groups, outside the staff.
+        if (!isKnee)
+        {
+            idealY = Math.Max(idealY, 0.0);
+            idealY = Math.Max(idealY, -1.0 - beamThickness + heightOfMyBeams);
+        }
 
         // --- Extreme minimum ---
         // LILYPOND-REF: stem.cc:1136-1152
