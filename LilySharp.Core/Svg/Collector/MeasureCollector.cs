@@ -1955,12 +1955,6 @@ public sealed class MeasureCollector
     }
 
     /// <summary>
-    /// Checks if a note or chord has a @gliss articulation.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/scheme-engravers.scm - Glissando_engraver::listen_glissando
-    /// </remarks>
-    /// <summary>
     /// Checks if a note/chord has an explicit @courtesy annotation.
     /// </summary>
     private static bool HasCourtesyAnnotation(SyntaxNode node)
@@ -2071,6 +2065,14 @@ public sealed class MeasureCollector
         return null;
     }
 
+    /// <summary>
+    /// Checks if a note or chord has a @glissando (or the short alias @gliss)
+    /// articulation.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/scheme-engravers.scm - Glissando_engraver::listen_glissando
+    /// — LilyPond's user-facing command is the full word \glissando.
+    /// </remarks>
     private static bool HasGlissandoArticulation(SyntaxNode node)
     {
         var articulations = node switch
@@ -2083,7 +2085,7 @@ public sealed class MeasureCollector
         foreach (var art in articulations)
         {
             if (art is ArticulationSyntax artSyntax &&
-                artSyntax.NameToken.Text == "gliss")
+                artSyntax.NameToken.Text is "glissando" or "gliss")
                 return true;
         }
         return false;

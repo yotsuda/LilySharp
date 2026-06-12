@@ -533,7 +533,8 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "tre.corde", Kind = CompletionItemKind.Value, Detail = "Una corda pedal off", SortText = "5tre.corde" },
 
                 // Notation marks
-                new CompletionItem { Label = "gliss", Kind = CompletionItemKind.Value, Detail = "Glissando to next note", SortText = "6gliss" },
+                new CompletionItem { Label = "glissando", Kind = CompletionItemKind.Value, Detail = "Glissando to next note", SortText = "6glissando" },
+                new CompletionItem { Label = "gliss", Kind = CompletionItemKind.Value, Detail = "Glissando to next note (short for glissando)", SortText = "6glissando2" },
                 new CompletionItem { Label = "arpeggio", Kind = CompletionItemKind.Value, Detail = "Arpeggiate chord", SortText = "6arpeggio" },
                 new CompletionItem { Label = "courtesy", Kind = CompletionItemKind.Value, Detail = "Force courtesy accidental", SortText = "6courtesy" },
 
