@@ -339,6 +339,8 @@ public static class TupletBracketEngraver
         TupletBracketItem tuplet, ImmutableArray<Measure> measures, bool isStemUp)
     {
         double nestingOffset = tuplet.NestingDepth * NestingDepthOffset;
+        // Fallback only — when no note positions are found the bracket
+        // parks outside the staff. The real position is NOTE-DRIVEN below.
         double baseY = isStemUp
             ? YOffsetAbove - nestingOffset
             : YOffsetBelow + nestingOffset;
@@ -384,42 +386,40 @@ public static class TupletBracketEngraver
         if (Math.Abs(slope) > MaxSlope)
             slope = Math.Sign(slope) * MaxSlope;
 
-        // Direction: bracket above → negative slope follows ascending pitch;
-        // bracket below → positive slope follows ascending pitch
-        double slopeDir = isStemUp ? -slope : slope;
+        // The bracket follows the pitch contour on EITHER side: ascending
+        // notes raise the right end. In the down-positive staff frame that
+        // is the same sign for above and below brackets (the old
+        // direction-dependent sign came from the fixed-base formulation and
+        // inverted above brackets).
+        double slopeDir = slope;
 
-        double startY = baseY + slopeDir * 0.5;
-        double endY = baseY - slopeDir * 0.5;
-
-        // Ensure bracket clears all notes in the range
-        // LILYPOND-REF: lily/tuplet-bracket.cc:320-340 collision avoidance
+        double startY, endY;
+        // NOTE-DRIVEN base: the bracket hugs the stems — its edge sits one
+        // padding beyond the extreme stem tip in the bracket's direction,
+        // wherever the notes are (a low triplet brings the bracket DOWN to
+        // the staff; the old fixed outside-staff base left it floating).
+        // LILYPOND-REF: lily/tuplet-bracket.cc calc_position_and_height —
+        //   positions derive from the extremal stem/head edges + padding.
         if (isStemUp)
         {
-            // Bracket above: ensure it's above the highest note.
-            // Y is in the staff-top frame (Y=0 at the top line); a note at staff
-            // position p sits at StaffMiddle - p*0.5 = 2.0 - p*0.5. The +2.0 was
-            // missing here, placing the edge two staff-spaces too high.
-            double highestNoteY = YOffsetAbove - nestingOffset;
-            if (highestPos != null)
-            {
-                double noteEdge = StaffMiddleY - (highestPos.Value * 0.5) - DefaultStemLength - BracketPadding;
-                highestNoteY = Math.Min(highestNoteY, noteEdge);
-            }
-            if (startY > highestNoteY) startY = highestNoteY;
-            if (endY > highestNoteY) endY = highestNoteY;
+            double edge = StaffMiddleY - (highestPos!.Value * 0.5)
+                - DefaultStemLength - BracketPadding - nestingOffset;
+            double mid = edge;
+            startY = mid + slopeDir * 0.5;
+            endY = mid - slopeDir * 0.5;
+            // The slope must not dip the bracket below the extreme stem tip.
+            if (startY > edge) { endY -= startY - edge; startY = edge; }
+            if (endY > edge) { startY -= endY - edge; endY = edge; }
         }
         else
         {
-            // Bracket below: ensure it's below the lowest note (same staff-top
-            // frame; the +2.0 staff-middle offset was missing here too).
-            double lowestNoteY = YOffsetBelow + nestingOffset;
-            if (lowestPos != null)
-            {
-                double noteEdge = StaffMiddleY - (lowestPos.Value * 0.5) + DefaultStemLength + BracketPadding;
-                lowestNoteY = Math.Max(lowestNoteY, noteEdge);
-            }
-            if (startY < lowestNoteY) startY = lowestNoteY;
-            if (endY < lowestNoteY) endY = lowestNoteY;
+            double edge = StaffMiddleY - (lowestPos!.Value * 0.5)
+                + DefaultStemLength + BracketPadding + nestingOffset;
+            double mid = edge;
+            startY = mid + slopeDir * 0.5;
+            endY = mid - slopeDir * 0.5;
+            if (startY < edge) { endY += edge - startY; startY = edge; }
+            if (endY < edge) { startY += edge - endY; endY = edge; }
         }
 
         return (startY, endY);
