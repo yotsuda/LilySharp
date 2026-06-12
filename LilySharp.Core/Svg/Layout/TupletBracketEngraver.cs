@@ -412,8 +412,11 @@ public static class TupletBracketEngraver
         //   positions derive from the extremal stem/head edges + padding.
         if (isStemUp)
         {
+            // The hooks extend EdgeHeight from the bracket line TOWARD the
+            // notes; the line must sit that much further out so the hook
+            // TIP (not the line) clears the stem by the padding.
             double edge = StaffMiddleY - (highestPos!.Value * 0.5)
-                - DefaultStemLength - BracketPadding - nestingOffset;
+                - DefaultStemLength - BracketPadding - EdgeHeight - nestingOffset;
             double mid = edge;
             startY = mid + slopeDir * 0.5;
             endY = mid - slopeDir * 0.5;
@@ -424,7 +427,7 @@ public static class TupletBracketEngraver
         else
         {
             double edge = StaffMiddleY - (lowestPos!.Value * 0.5)
-                + DefaultStemLength + BracketPadding + nestingOffset;
+                + DefaultStemLength + BracketPadding + EdgeHeight + nestingOffset;
             double mid = edge;
             startY = mid + slopeDir * 0.5;
             endY = mid - slopeDir * 0.5;
