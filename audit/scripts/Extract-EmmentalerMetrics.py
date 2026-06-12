@@ -75,6 +75,12 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     # U+E047/U+E048 are scripts.thumb / scripts.sforzato.
     GlyphSpec("MarkSegno", 0xE062, "Segno mark", "mf/feta-scripts.mf — scripts.segno"),
     GlyphSpec("MarkCoda", 0xE064, "Coda mark", "mf/feta-scripts.mf — scripts.coda"),
+    # Clefs (ink extents; prefix glyphs seed the outside-staff occupancy).
+    # NOTE: this font's cmap puts the clefs at E085/E083/E07F (the SMuFL
+    # E050-range codepoints map to script glyphs here).
+    GlyphSpec("ClefG", 0xE085, "G (treble) clef", "mf/feta-clefs.mf — clefs.G"),
+    GlyphSpec("ClefF", 0xE083, "F (bass) clef", "mf/feta-clefs.mf — clefs.F"),
+    GlyphSpec("ClefC", 0xE07F, "C (alto/tenor) clef", "mf/feta-clefs.mf — clefs.C"),
     # Rests (ink extents; used to place augmentation dots after the glyph)
     GlyphSpec("RestWhole",   0xE000, "Whole rest",   "mf/feta-rests.mf — rests.0"),
     GlyphSpec("RestHalf",    0xE001, "Half rest",    "mf/feta-rests.mf — rests.1"),

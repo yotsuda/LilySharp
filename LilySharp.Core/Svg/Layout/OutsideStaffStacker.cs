@@ -17,6 +17,7 @@
 using System.Collections.Immutable;
 using LilySharp.Core.Rendering;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -290,6 +291,37 @@ public static class OutsideStaffStacker
                     double protrusion = Math.Max(0, -h);
                     if (protrusion > 0)
                         trackers[i].AddRegion(b.XLeft, b.XRight, systems[i].Y - protrusion);
+                }
+            }
+
+            // Prefix clef ink: the up-skyline is built from music items
+            // only, so a treble clef's ~1.8sp protrusion above the staff
+            // top is invisible to it. Seed the TOP staff's clef ink so
+            // line-start marks clear the clef. Geometry mirrors DrawClef:
+            // glyph at (Indent + 0.3, staffTop + anchor line).
+            var firstStaff = systems[i].StaffGroups.IsDefaultOrEmpty
+                ? null
+                : systems[i].StaffGroups
+                    .SelectMany(g => g.Staves)
+                    .Where(s => !s.IsHidden)
+                    .OrderBy(s => s.Y)
+                    .FirstOrDefault();
+            if (firstStaff != null)
+            {
+                var (clefBox, anchorLine) = firstStaff.Clef switch
+                {
+                    ClefType.Bass => (GlyphMetrics.ClefF, 1.0),
+                    ClefType.Alto => (GlyphMetrics.ClefC, 2.0),
+                    ClefType.Tenor => (GlyphMetrics.ClefC, 1.0),
+                    _ => (GlyphMetrics.ClefG, 3.0),
+                };
+                double clefProtrusion = clefBox.Top - anchorLine;
+                if (clefProtrusion > 0)
+                {
+                    double clefX = systems[i].Indent + 0.3;
+                    trackers[i].AddRegion(
+                        clefX + clefBox.Left, clefX + clefBox.Right,
+                        systems[i].Y + firstStaff.Y - clefProtrusion);
                 }
             }
         }

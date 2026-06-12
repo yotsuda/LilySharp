@@ -125,6 +125,24 @@ public static partial class GlyphMetrics
     /// <summary>Coda mark — advance width (next-glyph horizontal feed).</summary>
     public const double MarkCodaAdvance = 1.0160;
 
+    /// <summary>G (treble) clef — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.G (U+E085 = clefs.G)</remarks>
+    public static readonly BBox ClefG = new(0.0080, -2.5400, 2.5800, 4.7790);
+    /// <summary>G (treble) clef — advance width (next-glyph horizontal feed).</summary>
+    public const double ClefGAdvance = 2.5640;
+
+    /// <summary>F (bass) clef — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.F (U+E083 = clefs.F)</remarks>
+    public static readonly BBox ClefF = new(-0.0520, -2.0520, 2.6360, 1.0520);
+    /// <summary>F (bass) clef — advance width (next-glyph horizontal feed).</summary>
+    public const double ClefFAdvance = 2.6800;
+
+    /// <summary>C (alto/tenor) clef — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-clefs.mf — clefs.C (U+E07F = clefs.C)</remarks>
+    public static readonly BBox ClefC = new(0.0000, -2.0000, 2.7200, 2.0000);
+    /// <summary>C (alto/tenor) clef — advance width (next-glyph horizontal feed).</summary>
+    public const double ClefCAdvance = 2.7200;
+
     /// <summary>Whole rest — BBox.</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.0 (U+E000 = rests.0)</remarks>
     public static readonly BBox RestWhole = new(0.0000, -0.6240, 1.5000, 0.0000);
