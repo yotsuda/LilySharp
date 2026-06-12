@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -160,24 +160,18 @@ public static class PedalEngraver
             }
         }
 
-        // Determine the Y offset for pedal brackets:
-        // In grand staff, bracket goes below the bass (lowest) staff.
-        // LILYPOND-REF: piano-pedal-bracket.cc — Y relative to lowest staff bottom
-        double bracketY = BracketY;  // Default: single staff
+        // The bracket line runs on the SAME baseline as the "Ped." text and
+        // the release "*" (classic Ped.____* notation): the below-mark
+        // baseline under the system's LAST visible staff.
+        double systemBottom = 4.0;
         if (systems.Length > 0 && !systems[0].StaffGroups.IsDefaultOrEmpty)
         {
-            // Find the grand staff group — pedal is below its lowest staff
             foreach (var group in systems[0].StaffGroups)
-            {
-                if (group.IsGrandStaff && group.GrandStaffLayout != null)
-                {
-                    // Bass staff bottom Y (relative to system top) + padding
-                    var lowerStaff = group.GrandStaffLayout.LowerStaff;
-                    bracketY = lowerStaff.Y + lowerStaff.Height + StaffPadding + EdgeHeight;
-                    break;
-                }
-            }
+                foreach (var st in group.Staves)
+                    if (!st.IsHidden)
+                        systemBottom = Math.Max(systemBottom, st.Y + st.Height);
         }
+        double bracketY = MusicMarkEngraver.BelowMarkBaseline(systemBottom);
 
         foreach (var bracket in brackets)
         {

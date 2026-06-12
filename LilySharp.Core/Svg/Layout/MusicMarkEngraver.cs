@@ -61,6 +61,15 @@ public static class MusicMarkEngraver
     // LILYPOND-REF: define-grobs.scm:3665 padding = 0.5
     private const double Padding = 0.5;
 
+    /// <summary>
+    /// Baseline for below-staff marks (pedal text etc.): the system's last
+    /// staff bottom + 1.5sp + padding. The pedal BRACKET LINE runs on this
+    /// same baseline so "Ped." text, line and the release "*" align in the
+    /// classic Ped.____* shape.
+    /// </summary>
+    public static double BelowMarkBaseline(double systemBottom)
+        => systemBottom + 1.5 + Padding;
+
     // Y offset above staff for marks (when no volta brackets present)
     // LILYPOND-REF: define-grobs.scm RehearsalMark padding=0.8
     private const double AboveStaffOffset = -2.0;
@@ -212,23 +221,52 @@ public static class MusicMarkEngraver
             // Stack below-staff marks (lower priority = closer to staff).
             // Base = the system's LAST staff bottom + 1.5 (equals the old
             // 5.5 constant for a single 4sp staff — multi-staff changes only).
-            double belowBase = 4.0 + 1.5;
+            double belowBase = BelowMarkBaseline(4.0) - Padding;
             if (belowMarks.Count > 0
                 && measureToSystemBottom.TryGetValue(belowMarks[0].Mark.MeasureIndex, out double sysBottom))
             {
-                belowBase = sysBottom + 1.5;
+                belowBase = BelowMarkBaseline(sysBottom) - Padding;
             }
+            // Pedal CHANGES put the previous release "*" and the next
+            // "Ped." in the same group; classic notation writes them SIDE BY
+            // SIDE on the one pedal baseline ("* Ped."), never stacked.
+            // Releases sharing a group with an on-mark shift left of it.
+            bool IsPedalRelease(MusicMarkType t) =>
+                t is MusicMarkType.SustainOff or MusicMarkType.SostenutoOff
+                  or MusicMarkType.UnaCordaOff;
+            bool IsPedal(MusicMarkType t) =>
+                t is MusicMarkType.SustainOn or MusicMarkType.SostenutoOn
+                  or MusicMarkType.UnaCordaOn || IsPedalRelease(t);
+            bool groupHasPedalChange =
+                belowMarks.Any(e => IsPedalRelease(e.Mark.Type))
+                && belowMarks.Any(e => IsPedal(e.Mark.Type) && !IsPedalRelease(e.Mark.Type));
+
             double stackBottomY = belowBase;
+            bool firstStacked = true;
             for (int i = 0; i < belowMarks.Count; i++)
             {
                 var (mark, x) = belowMarks[i];
                 double halfExtent = GetMarkHalfExtent(mark.Type);
 
                 double y;
-                if (i == 0)
+                if (IsPedal(mark.Type))
+                {
+                    // All pedal text shares the pedal baseline.
+                    y = belowBase + Padding;
+                    if (groupHasPedalChange && IsPedalRelease(mark.Type))
+                    {
+                        // "*" just left of the new "Ped." — both centered
+                        // texts, so clear half of each measured width + gap.
+                        double pedHalf = Rendering.SerifTextMetrics.MeasureBold("Ped.", 2.8) / 2;
+                        double starHalf = Rendering.SerifTextMetrics.MeasureBold(mark.Text, 2.8) / 2;
+                        x -= pedHalf + starHalf + 0.4;
+                    }
+                }
+                else if (firstStacked)
                 {
                     y = belowBase + Padding;
                     stackBottomY = y + halfExtent;
+                    firstStacked = false;
                 }
                 else
                 {
