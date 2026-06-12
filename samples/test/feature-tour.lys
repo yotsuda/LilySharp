@@ -37,7 +37,7 @@ phrase basics {
 // シャープ (is), フラット (es), ナチュラル (自動), 編集臨時記号 (@editorial)
 phrase accidentals {
   fis4 g a bes |           // F# G A Bb
-  c4 cis d es |        // C C# D Eb
+  c4 cis d ees |       // C C# D Eb
   a4@courtesy bes c@editorial r |   // 注意 / 編集臨時記号
 }
 
