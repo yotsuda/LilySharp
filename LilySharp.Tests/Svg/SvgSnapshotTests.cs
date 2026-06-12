@@ -142,7 +142,10 @@ public class SvgSnapshotTests
         var source = File.ReadAllText(lysPath);
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
-        var svg = SvgGenerator.Generate(tree, options);
+        // Snapshots are platform-neutral: LF on disk (.gitattributes pins
+        // Snapshots/*.svg to eol=lf) and LF in comparison, regardless of the
+        // generator's native newline.
+        var svg = SvgGenerator.Generate(tree, options).Replace("\r\n", "\n");
 
         // Snapshot file path: "test/notes" → "test__notes.svg"
         var snapshotFileName = sampleName.Replace("/", "__").Replace("\\", "__") + ".svg";
@@ -164,8 +167,9 @@ public class SvgSnapshotTests
             return;
         }
 
-        // Compare against baseline
-        var baseline = File.ReadAllText(snapshotPath);
+        // Compare against baseline (newline-normalized: working trees may
+        // hold either ending depending on git config and platform)
+        var baseline = File.ReadAllText(snapshotPath).Replace("\r\n", "\n");
         if (svg != baseline)
         {
             // Find first difference for a helpful error message
