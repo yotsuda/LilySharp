@@ -700,19 +700,24 @@ public static class SharedRenderer
                 int noteValue = chord.BaseDuration.Denominator;
                 if (chord.BaseDuration.Numerator != 1) noteValue = 1;
                 double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue);
-                int maxPos = int.MinValue, minPos = int.MaxValue;
-                bool extremeTopAcc = false, extremeBottomAcc = false;
-                foreach (var n in chord.Notes)
+                // Seconds shift reversed heads sideways — the ledger run
+                // follows the extreme head's real X.
+                double[] offsets = ChordHeadPositioning.CalculateOffsets(
+                    chord.Notes, chord.StemUp, noteValue);
+                int maxIdx = -1, minIdx = -1;
+                for (int i = 0; i < chord.Notes.Length; i++)
                 {
-                    if (n.StaffPosition > maxPos) { maxPos = n.StaffPosition; extremeTopAcc = n.Accidental != null; }
-                    if (n.StaffPosition < minPos) { minPos = n.StaffPosition; extremeBottomAcc = n.Accidental != null; }
+                    if (maxIdx < 0 || chord.Notes[i].StaffPosition > chord.Notes[maxIdx].StaffPosition) maxIdx = i;
+                    if (minIdx < 0 || chord.Notes[i].StaffPosition < chord.Notes[minIdx].StaffPosition) minIdx = i;
                 }
-                if (maxPos >= 5)
-                    CollectLedgerRequest(ledgerPlan, maxPos, x, headWidth,
-                        staffMiddleY, extremeTopAcc);
-                if (minPos <= -5)
-                    CollectLedgerRequest(ledgerPlan, minPos, x, headWidth,
-                        staffMiddleY, extremeBottomAcc);
+                if (chord.Notes[maxIdx].StaffPosition >= 5)
+                    CollectLedgerRequest(ledgerPlan, chord.Notes[maxIdx].StaffPosition,
+                        x + offsets[maxIdx], headWidth,
+                        staffMiddleY, chord.Notes[maxIdx].Accidental != null);
+                if (chord.Notes[minIdx].StaffPosition <= -5)
+                    CollectLedgerRequest(ledgerPlan, chord.Notes[minIdx].StaffPosition,
+                        x + offsets[minIdx], headWidth,
+                        staffMiddleY, chord.Notes[minIdx].Accidental != null);
                 break;
             }
         }
@@ -819,16 +824,32 @@ public static class SharedRenderer
         bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;
         bool stemUp = forcedStemUp ?? chord.StemUp;
 
+        // Within-chord seconds/unisons: reversed heads shift to the far side
+        // of the stem. LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
+        double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
+            chord.Notes, stemUp, noteValue);
+
+        // Accidentals through the full placement machinery (stagger/skylines),
+        // aware of the shifted head ink — drawing each one at the same fixed
+        // offset overprints them for seconds (e.g. <fis gis>).
+        // LILYPOND-REF: lily/accidental-placement.cc position_apes.
+        var accLayouts = AccidentalColumn.CalculatePositions(chord.Notes, headOffsets);
+        foreach (var al in accLayouts)
+        {
+            double ay = staffMiddleY - al.StaffPosition * 0.5;
+            DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy,
+                x + al.XOffset, ay, chord.SourcePosition, gc);
+        }
+
         double topY = double.MaxValue, bottomY = double.MinValue;
         int maxPos = int.MinValue, minPos = int.MaxValue;
-        foreach (var n in chord.Notes)
+        for (int i = 0; i < chord.Notes.Length; i++)
         {
+            var n = chord.Notes[i];
             double y = staffMiddleY - n.StaffPosition * 0.5;
-            if (n.Accidental != null)
-                DrawAccidental(n.Accidental, isCourtesy: false, x, y, chord.SourcePosition, gc);
             if (!headWiped && !headTransparent)
                 using (gc.Source(chord.SourcePosition))
-                    gc.DrawGlyph(head, x, y, FontSize, noteheadColor);
+                    gc.DrawGlyph(head, x + headOffsets[i], y, FontSize, noteheadColor);
             if (y < topY) topY = y;
             if (y > bottomY) bottomY = y;
             if (n.StaffPosition > maxPos) maxPos = n.StaffPosition;
@@ -844,10 +865,12 @@ public static class SharedRenderer
         // cascading; on-line dots forced into spaces).
         // LILYPOND-REF: scm/define-grobs.scm DotColumn padding (one dot width)
         // LILYPOND-REF: lily/dot-configuration.cc; lily/dot-column.cc:194-224.
+        // The dot column clears heads reversed to the RIGHT of the stem.
         if (chord.Dots > 0 && chord.Notes.Length > 0)
         {
             double dotWidth = GlyphMetrics.AugmentationDot.Width;
-            double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) + dotWidth;
+            double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue)
+                + Math.Max(0, headOffsets.Max()) + dotWidth;
             var resolved = DotConfiguration.Resolve(
                 chord.Notes.Select(n => n.StaffPosition).ToArray());
             foreach (int p in resolved)
@@ -1372,6 +1395,52 @@ public static class SharedRenderer
     }
 
     // ---------- Accidentals ----------
+
+    /// <summary>Chord accidental column placement (stagger/skylines).</summary>
+    private static readonly AccidentalPlacement AccidentalColumn = new();
+
+    /// <summary>
+    /// Draws an accidental (with courtesy parens when set) so its ink LEFT
+    /// edge lands at <paramref name="inkLeftX"/> — used for chord accidental
+    /// columns whose X comes from <see cref="AccidentalPlacement"/>.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/accidental-placement.cc position_apes.</remarks>
+    private static void DrawAccidentalAtInkLeft(
+        string accidentalKind, bool isCourtesy, double inkLeftX, double noteheadY,
+        int sourcePosition, IDrawingContext gc)
+    {
+        char glyph = accidentalKind switch
+        {
+            "doubleSharp" => EmmentalerGlyphs.AccidentalDoubleSharp,
+            "sharp" => EmmentalerGlyphs.AccidentalSharp,
+            "flat" => EmmentalerGlyphs.AccidentalFlat,
+            "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
+            _ => EmmentalerGlyphs.AccidentalNatural,
+        };
+        var accBBox = GlyphMetrics.GetAccidentalBBox(accidentalKind);
+
+        if (isCourtesy)
+        {
+            // Same paren assembly as DrawAccidental, anchored at the ink left.
+            // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize()
+            var leftParen = GlyphMetrics.AccidentalLeftParen;
+            var rightParen = GlyphMetrics.AccidentalRightParen;
+            double accInkLeft = inkLeftX + leftParen.Width;
+            using (gc.Source(sourcePosition))
+            {
+                gc.DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen,
+                    accInkLeft - leftParen.Right, noteheadY, FontSize);
+                gc.DrawGlyph(glyph, accInkLeft - accBBox.Left, noteheadY, FontSize);
+                gc.DrawGlyph(EmmentalerGlyphs.AccidentalRightParen,
+                    accInkLeft + accBBox.Width - rightParen.Left, noteheadY, FontSize);
+            }
+        }
+        else
+        {
+            using (gc.Source(sourcePosition))
+                gc.DrawGlyph(glyph, inkLeftX - accBBox.Left, noteheadY, FontSize);
+        }
+    }
 
     private static void DrawAccidental(
         string accidentalKind, bool isCourtesy, double noteheadX, double noteheadY,

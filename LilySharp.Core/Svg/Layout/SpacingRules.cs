@@ -318,9 +318,18 @@ public static class SpacingRules
         // Handle accidentals
         if (item is ChordItem chord)
         {
+            // Within-chord seconds: a head reversed to the LEFT of the stem
+            // (stem down) extends the column's left ink even without
+            // accidentals. LILYPOND-REF: lily/stem.cc:606-760.
+            double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
+                chord.Notes, chord.StemUp, noteValue);
+            double minHeadOffset = headOffsets.Min();
+            if (minHeadOffset < 0)
+                extent = Math.Max(extent, noteheadBBox.CenterX - minHeadOffset);
+
             // For chords, use AccidentalPlacement to calculate staggered positions
             var placement = new AccidentalPlacement();
-            var layouts = placement.CalculatePositions(chord.Notes);
+            var layouts = placement.CalculatePositions(chord.Notes, headOffsets);
 
             if (layouts.Length > 0)
             {
@@ -329,7 +338,7 @@ public static class SpacingRules
                 double leftmostOffset = layouts.Min(l => l.XOffset);
 
                 // The leftmost extent is the absolute value of the offset
-                extent = Math.Abs(leftmostOffset);
+                extent = Math.Max(extent, Math.Abs(leftmostOffset));
             }
         }
         else if (item is NoteItem note && note.Accidental != null)
@@ -373,23 +382,16 @@ public static class SpacingRules
         // Base extent: from center to right edge of notehead
         double extent = noteheadBBox.Width - noteheadBBox.CenterX;
 
-        // LILYPOND-REF: lily/note-column.cc:169-220 calc_main_extent
-        // For stem-up chords with seconds, a suspended head extends right of stem.
-        // The main extent excludes this suspended head.
-        if (item is ChordItem chord && HasSuspendedHead(chord))
+        // Within-chord seconds: a head reversed to the RIGHT of the stem
+        // (stem up) extends the column's right ink by its shift amount.
+        // LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
+        if (item is ChordItem chord)
         {
-            bool stemUp = chord.StemUp;
-            if (stemUp)
-            {
-                // Stem-up: suspended head is right of stem, main extent is just the normal side
-                // Don't add the suspended head width to right extent
-                // (the base extent already accounts for one notehead)
-            }
-            else
-            {
-                // Stem-down: suspended head is left of stem, right extent needs the extra notehead
-                extent += noteheadBBox.Width;
-            }
+            double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
+                chord.Notes, chord.StemUp, noteValue);
+            double maxHeadOffset = headOffsets.Length > 0 ? headOffsets.Max() : 0;
+            if (maxHeadOffset > 0)
+                extent += maxHeadOffset;
         }
 
         // Add dot width
@@ -402,29 +404,6 @@ public static class SpacingRules
         }
 
         return extent;
-    }
-
-    /// <summary>
-    /// Determines if a chord has a suspended notehead (shifted to the opposite side of the stem
-    /// due to a second interval).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/note-column.cc:169-220 calc_main_extent
-    /// A chord has a suspended head when two adjacent notes are a second apart
-    /// (staff position difference of 1). The note on the opposite side of the stem is "suspended".
-    /// </remarks>
-    internal static bool HasSuspendedHead(ChordItem chord)
-    {
-        if (chord.Notes.Length < 2)
-            return false;
-
-        var positions = chord.Notes.Select(n => n.StaffPosition).OrderBy(p => p).ToArray();
-        for (int i = 0; i < positions.Length - 1; i++)
-        {
-            if (positions[i + 1] - positions[i] == 1)
-                return true;  // Second interval found
-        }
-        return false;
     }
 
     /// <summary>
@@ -1564,18 +1543,24 @@ public static class SpacingRules
 
         if (item is ChordItem chord)
         {
-            // Add all noteheads from the chord
-            foreach (var noteInfo in chord.Notes)
+            // Within-chord seconds: reversed heads shift sideways.
+            // LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
+            double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
+                chord.Notes, chord.StemUp, noteValue);
+
+            // Add all noteheads from the chord (at their real, shifted X)
+            for (int i = 0; i < chord.Notes.Length; i++)
             {
-                double noteY = staffY - noteInfo.StaffPosition / 2.0;
+                double noteY = staffY - chord.Notes[i].StaffPosition / 2.0;
                 double noteheadYBottom = noteY - noteheadBBox.Top;
                 double noteheadYTop = noteY - noteheadBBox.Bottom;
-                boxes.Add((noteheadYBottom, noteheadYTop, noteheadLeftX, noteheadLeftX + noteheadWidth));
+                double hx = noteheadLeftX + headOffsets[i];
+                boxes.Add((noteheadYBottom, noteheadYTop, hx, hx + noteheadWidth));
             }
 
             // Add accidentals using AccidentalPlacement for proper staggering
             var placement = new AccidentalPlacement();
-            var layouts = placement.CalculatePositions(chord.Notes);
+            var layouts = placement.CalculatePositions(chord.Notes, headOffsets);
 
             foreach (var layout in layouts)
             {

@@ -688,53 +688,61 @@ public class NoteCollisionTests
     // --- Suspended head filtering ---
     // LILYPOND-REF: lily/note-column.cc:169-220 calc_main_extent
 
-    [Fact]
-    public void HasSuspendedHead_ChordWithSecond_ReturnsTrue()
-    {
-        // Chord with C and D (staff positions 0 and 1 = a second)
-        var chord = new ChordItem(
-            ImmutableArray.Create(
-                new ChordNoteInfo(0, null, false),
-                new ChordNoteInfo(1, null, false)),
-            Fraction.Quarter, 0, 0);
+    // --- Within-chord seconds displacement (replaces HasSuspendedHead) ---
+    // LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done
 
-        Assert.True(SpacingRules.HasSuspendedHead(chord));
+    private static ChordNoteInfo[] Infos(params int[] positions)
+        => positions.Select(p => new ChordNoteInfo(p, null, false)).ToArray();
+
+    [Fact]
+    public void ChordHeadPositioning_Second_StemUp_ShiftsUpperHeadRight()
+    {
+        var offsets = ChordHeadPositioning.CalculateOffsets(Infos(0, 1), stemUp: true, noteValue: 4);
+        Assert.Equal(0, offsets[0]);
+        // ell - 0.5*stemThickness, shifted right
+        double expected = GlyphMetrics.NoteheadBlack.Right - 0.5 * EngravingDefaults.StemThickness;
+        Assert.Equal(expected, offsets[1], precision: 6);
     }
 
     [Fact]
-    public void HasSuspendedHead_ChordWithThird_ReturnsFalse()
+    public void ChordHeadPositioning_Second_StemDown_ShiftsLowerHeadLeft()
     {
-        // Chord with C and E (staff positions 0 and 2 = a third)
-        var chord = new ChordItem(
-            ImmutableArray.Create(
-                new ChordNoteInfo(0, null, false),
-                new ChordNoteInfo(2, null, false)),
-            Fraction.Quarter, 0, 0);
-
-        Assert.False(SpacingRules.HasSuspendedHead(chord));
+        var offsets = ChordHeadPositioning.CalculateOffsets(Infos(0, 1), stemUp: false, noteValue: 4);
+        Assert.Equal(0, offsets[1]); // upper head = support head for stem down
+        Assert.True(offsets[0] < 0, "lower head must shift LEFT for stem down");
     }
 
     [Fact]
-    public void HasSuspendedHead_SingleNote_ReturnsFalse()
+    public void ChordHeadPositioning_Third_NoShift()
     {
-        var chord = new ChordItem(
-            ImmutableArray.Create(new ChordNoteInfo(0, null, false)),
-            Fraction.Quarter, 0, 0);
-
-        Assert.False(SpacingRules.HasSuspendedHead(chord));
+        var offsets = ChordHeadPositioning.CalculateOffsets(Infos(0, 2), stemUp: true, noteValue: 4);
+        Assert.All(offsets, o => Assert.Equal(0, o));
     }
 
     [Fact]
-    public void HasSuspendedHead_ChordWithMixedIntervals_DetectsSecond()
+    public void ChordHeadPositioning_SingleNote_NoShift()
     {
-        // Chord with C, D, G (positions 0, 1, 4) — has a second between 0 and 1
-        var chord = new ChordItem(
-            ImmutableArray.Create(
-                new ChordNoteInfo(0, null, false),
-                new ChordNoteInfo(1, null, false),
-                new ChordNoteInfo(4, null, false)),
-            Fraction.Quarter, 0, 0);
+        var offsets = ChordHeadPositioning.CalculateOffsets(Infos(0), stemUp: true, noteValue: 4);
+        Assert.Equal(0, Assert.Single(offsets));
+    }
 
-        Assert.True(SpacingRules.HasSuspendedHead(chord));
+    [Fact]
+    public void ChordHeadPositioning_MixedIntervals_OnlySecondShifts()
+    {
+        // C, D, G (0, 1, 4): the D reverses; the G (a fourth above D) resets parity.
+        var offsets = ChordHeadPositioning.CalculateOffsets(Infos(0, 1, 4), stemUp: true, noteValue: 4);
+        Assert.Equal(0, offsets[0]);
+        Assert.True(offsets[1] > 0);
+        Assert.Equal(0, offsets[2]);
+    }
+
+    [Fact]
+    public void ChordHeadPositioning_Cluster_AlternatesByParity()
+    {
+        // C, D, E (0, 1, 2): D reverses, E returns to the normal side (parity).
+        var offsets = ChordHeadPositioning.CalculateOffsets(Infos(0, 1, 2), stemUp: true, noteValue: 4);
+        Assert.Equal(0, offsets[0]);
+        Assert.True(offsets[1] > 0);
+        Assert.Equal(0, offsets[2]);
     }
 }

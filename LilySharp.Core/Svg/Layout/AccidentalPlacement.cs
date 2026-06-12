@@ -109,21 +109,38 @@ public sealed class AccidentalPlacement
     /// <summary>
     /// Calculates accidental positions for a chord.
     /// </summary>
-    public ImmutableArray<AccidentalLayout> CalculatePositions(IReadOnlyList<ChordNoteInfo> notes)
+    /// <param name="notes">The chord's notes.</param>
+    /// <param name="headOffsets">Optional per-note head X displacement
+    /// (parallel to <paramref name="notes"/>) from
+    /// <see cref="ChordHeadPositioning"/> — reversed heads of seconds shift
+    /// the note-column ink the accidentals must clear.
+    /// LILYPOND-REF: lily/accidental-placement.cc:355-370 — the reference
+    /// skyline is built from the heads' real (shifted) extents.</param>
+    public ImmutableArray<AccidentalLayout> CalculatePositions(
+        IReadOnlyList<ChordNoteInfo> notes, IReadOnlyList<double>? headOffsets = null)
     {
-        var accidentals = notes
-            .Where(n => !string.IsNullOrEmpty(n.Accidental))
-            .ToList();
+        var accidentals = new List<(ChordNoteInfo Note, double HeadOffset)>();
+        double minHeadOffset = 0;
+        for (int i = 0; i < notes.Count; i++)
+        {
+            double off = headOffsets != null && i < headOffsets.Count ? headOffsets[i] : 0;
+            minHeadOffset = Math.Min(minHeadOffset, off);
+            if (!string.IsNullOrEmpty(notes[i].Accidental))
+                accidentals.Add((notes[i], off));
+        }
 
         if (accidentals.Count == 0)
             return ImmutableArray<AccidentalLayout>.Empty;
 
         if (accidentals.Count == 1)
         {
-            var n = accidentals[0];
+            var (n, _) = accidentals[0];
             double totalWidth = ComputeRenderedWidth(n.Accidental!, n.IsCourtesy);
+            // A head reversed to the LEFT of the stem extends the column ink;
+            // the accidental clears the leftmost head edge.
             return ImmutableArray.Create(new AccidentalLayout(
-                n.StaffPosition, n.Accidental!, -(totalWidth + _params.RightPadding),
+                n.StaffPosition, n.Accidental!,
+                minHeadOffset - (totalWidth + _params.RightPadding),
                 n.IsCourtesy));
         }
 
@@ -164,11 +181,12 @@ public sealed class AccidentalPlacement
     }
 
     private ImmutableArray<AccidentalLayout> CalculateMultipleAccidentals(
-        List<ChordNoteInfo> accidentals)
+        List<(ChordNoteInfo Note, double HeadOffset)> accidentalsWithOffsets)
     {
+        var accidentals = accidentalsWithOffsets;
         // Build entries with glyph Y-extents
         var entries = new List<PlacementEntry>(accidentals.Count);
-        foreach (var n in accidentals)
+        foreach (var (n, _) in accidentals)
         {
             var bbox = GetAccidentalBBox(n.Accidental!);
             // Staff position is in half-spaces; convert to staff spaces
@@ -208,17 +226,18 @@ public sealed class AccidentalPlacement
         // LILYPOND-REF: accidental-placement.cc:355-370
         // Build reference LeftSkyline from notehead column boundary.
         // The reference skyline represents the left edge of the note column
-        // that accidentals must not cross.
+        // that accidentals must not cross. Heads reversed to the LEFT of the
+        // stem (seconds, stem down) shift their box accordingly.
         var noteheadBoxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
-        foreach (var n in accidentals)
+        foreach (var (n, headOffset) in accidentals)
         {
             double yCenterSS = n.StaffPosition / 2.0;
             var nhBBox = GlyphMetrics.NoteheadBlack;
             noteheadBoxes.Add((
                 yCenterSS + nhBBox.Bottom,
                 yCenterSS + nhBBox.Top,
-                -_params.RightPadding,
-                0));
+                headOffset - _params.RightPadding,
+                headOffset));
         }
         var referenceSkyline = Skyline.FromBoxes(noteheadBoxes, Skyline.Direction.Left);
 

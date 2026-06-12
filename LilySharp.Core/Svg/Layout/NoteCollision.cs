@@ -120,7 +120,7 @@ public sealed record NoteCollisionInfo
 /// NOT YET IMPLEMENTED — FA-shaped notehead handling (note-collision-interface.cc:270-280)
 /// IMPLEMENTED — dot direction adjustment (note-collision-interface.cc:411-448)
 /// IMPLEMENTED — force-hshift manual override (note-collision-interface.cc:486-502)
-/// IMPLEMENTED — suspended head filtering (note-column.cc:180-220) in SpacingRules.HasSuspendedHead
+/// IMPLEMENTED — within-chord seconds displacement (stem.cc:606-760) in ChordHeadPositioning
 /// IMPLEMENTED — multi-voice cascading for 3+ voices (note-collision-interface.cc:420-480)
 /// </remarks>
 public sealed record NoteCollisionParameters
