@@ -132,6 +132,28 @@ public static class MusicMarkEngraver
             .GroupBy(e => (e.Mark.MeasureIndex, e.Mark.Position))
             .ToList();
 
+        // BELOW-staff marks (pedal text etc.) hang under the LAST staff of
+        // the measure's system, not under the top staff — in a grand staff
+        // the old top-staff constant dropped "Ped." between the staves,
+        // straight into the rh's low ledger notes.
+        // LILYPOND-REF: ly/engraver-init.ly — Piano_pedal_engraver lives in
+        //   PianoStaff/GrandStaff context: pedal grobs attach below the
+        //   whole staff group.
+        var measureToSystemBottom = new Dictionary<int, double>();
+        foreach (var system in systems)
+        {
+            double bottom = 4.0;
+            if (!system.StaffGroups.IsDefaultOrEmpty)
+            {
+                foreach (var g in system.StaffGroups)
+                    foreach (var st in g.Staves)
+                        if (!st.IsHidden)
+                            bottom = Math.Max(bottom, st.Y + st.Height);
+            }
+            foreach (var ml in system.Measures)
+                measureToSystemBottom[ml.MeasureIndex] = bottom;
+        }
+
         var layouts = ImmutableArray.CreateBuilder<MusicMarkLayout>();
 
         foreach (var group in groups)
@@ -187,8 +209,16 @@ public static class MusicMarkEngraver
                     mark.IsSymbol, mark.SourcePosition));
             }
 
-            // Stack below-staff marks (lower priority = closer to staff)
-            double stackBottomY = BelowStaffOffset;
+            // Stack below-staff marks (lower priority = closer to staff).
+            // Base = the system's LAST staff bottom + 1.5 (equals the old
+            // 5.5 constant for a single 4sp staff — multi-staff changes only).
+            double belowBase = 4.0 + 1.5;
+            if (belowMarks.Count > 0
+                && measureToSystemBottom.TryGetValue(belowMarks[0].Mark.MeasureIndex, out double sysBottom))
+            {
+                belowBase = sysBottom + 1.5;
+            }
+            double stackBottomY = belowBase;
             for (int i = 0; i < belowMarks.Count; i++)
             {
                 var (mark, x) = belowMarks[i];
@@ -197,7 +227,7 @@ public static class MusicMarkEngraver
                 double y;
                 if (i == 0)
                 {
-                    y = BelowStaffOffset + Padding;
+                    y = belowBase + Padding;
                     stackBottomY = y + halfExtent;
                 }
                 else
