@@ -144,7 +144,7 @@ public sealed class AccidentalPlacement
                 n.IsCourtesy));
         }
 
-        return CalculateMultipleAccidentals(accidentals);
+        return CalculateMultipleAccidentals(accidentals, notes, headOffsets);
     }
 
     /// <summary>
@@ -181,7 +181,9 @@ public sealed class AccidentalPlacement
     }
 
     private ImmutableArray<AccidentalLayout> CalculateMultipleAccidentals(
-        List<(ChordNoteInfo Note, double HeadOffset)> accidentalsWithOffsets)
+        List<(ChordNoteInfo Note, double HeadOffset)> accidentalsWithOffsets,
+        IReadOnlyList<ChordNoteInfo> allNotes,
+        IReadOnlyList<double>? headOffsets)
     {
         var accidentals = accidentalsWithOffsets;
         // Build entries with glyph Y-extents
@@ -223,15 +225,17 @@ public sealed class AccidentalPlacement
         if (entries.Count > 2)
             entries = StaggerEntries(entries);
 
-        // LILYPOND-REF: accidental-placement.cc:355-370
-        // Build reference LeftSkyline from notehead column boundary.
-        // The reference skyline represents the left edge of the note column
-        // that accidentals must not cross. Heads reversed to the LEFT of the
-        // stem (seconds, stem down) shift their box accordingly.
+        // LILYPOND-REF: accidental-placement.cc:341-385 build_heads_skyline —
+        // the reference skyline is built from ALL noteheads of the column
+        // (not only the accidental-carrying ones), at their real X extents:
+        // heads reversed to the LEFT of a down-stem (seconds) shift their box.
+        // (LilyPond also adds the stems; for the LEFT skyline they never
+        // protrude beyond the head boxes, so they are omitted here.)
         var noteheadBoxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
-        foreach (var (n, headOffset) in accidentals)
+        for (int i = 0; i < allNotes.Count; i++)
         {
-            double yCenterSS = n.StaffPosition / 2.0;
+            double headOffset = headOffsets != null && i < headOffsets.Count ? headOffsets[i] : 0;
+            double yCenterSS = allNotes[i].StaffPosition / 2.0;
             var nhBBox = GlyphMetrics.NoteheadBlack;
             noteheadBoxes.Add((
                 yCenterSS + nhBBox.Bottom,
