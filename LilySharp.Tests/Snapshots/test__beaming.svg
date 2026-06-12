@@ -46,9 +46,9 @@
   <text class="music" x="69.16" y="18.14" font-size="4.00" data-pos="269"></text>
   <text class="music" x="71.84" y="18.64" font-size="4.00" data-pos="271"></text>
   <text class="music" x="74.52" y="19.14" font-size="4.00" data-pos="273"></text>
-  <rect x="31.87" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="53.66" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="77.84" y="14.64" width="0.16" height="4.00" fill="#000000"/>
+  <rect x="31.84" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="53.63" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="77.81" y="14.64" width="0.19" height="4.00" fill="#000000"/>
   <line x1="34.05" y1="18.64" x2="42.09" y2="17.83" stroke="#000000" stroke-width="0.480"/>
   <line x1="34.05" y1="16.14" x2="34.05" y2="18.64" stroke="#000000" stroke-width="0.130"/>
   <line x1="36.73" y1="15.64" x2="36.73" y2="18.37" stroke="#000000" stroke-width="0.130"/>
@@ -100,9 +100,9 @@
   <text class="music" x="72.64" y="30.64" font-size="4.00" data-pos="443"></text>
   <text class="music" x="75.23" y="31.14" font-size="4.00" data-pos="445"></text>
   <line x1="76.47" y1="31.14" x2="76.47" y2="27.64" stroke="#000000" stroke-width="0.130"/>
-  <rect x="50.61" y="26.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="76.94" y="26.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="77.50" y="26.64" width="0.50" height="4.00" fill="#000000"/>
+  <rect x="50.58" y="26.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="76.91" y="26.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="77.40" y="26.64" width="0.60" height="4.00" fill="#000000"/>
   <line x1="10.80" y1="27.64" x2="18.59" y2="26.83" stroke="#000000" stroke-width="0.480"/>
   <line x1="10.80" y1="28.45" x2="13.40" y2="28.18" stroke="#000000" stroke-width="0.480"/>
   <line x1="13.40" y1="28.18" x2="16.00" y2="27.91" stroke="#000000" stroke-width="0.480"/>

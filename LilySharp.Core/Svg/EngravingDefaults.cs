@@ -84,10 +84,34 @@ public static class EngravingDefaults
     public const double BeamletLength = 1.0;
 
     // === Barlines ===
-    public const double ThinBarlineThickness = 0.16;
-    public const double ThickBarlineThickness = 0.5;
-    public const double BarlineSeparation = 0.4;
-    public const double RepeatBarlineDotSeparation = 0.16;
+    // All barline metrics scale with line-thickness, mirroring LilyPond.
+
+    /// <summary>Thin barline: hair-thickness 1.9 × line-thickness = 0.19.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm BarLine (hair-thickness . 1.9).</remarks>
+    public const double ThinBarlineThickness = 1.9 * LineThickness;
+
+    /// <summary>Thick barline: thick-thickness 6.0 × line-thickness = 0.6.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm BarLine (thick-thickness . 6.0).</remarks>
+    public const double ThickBarlineThickness = 6.0 * LineThickness;
+
+    /// <summary>
+    /// Ink gap between the segments of a compound barline:
+    /// kern 3.0 × line-thickness = 0.3.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm BarLine (kern . 3.0);
+    /// scm/bar-line.scm:766-801 — compound bars stack their glyph stencils
+    /// with spacing <c>kern</c> between every pair.
+    /// </remarks>
+    public const double BarlineSeparation = 3.0 * LineThickness;
+
+    /// <summary>
+    /// Gap between the repeat dots and the adjacent bar segment — the same
+    /// kern as between line segments (the colon is just another glyph in the
+    /// compound bar).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/bar-line.scm:766-801.</remarks>
+    public const double RepeatBarlineDotSeparation = BarlineSeparation;
 
     // === Slurs and ties ===
     public const double SlurEndpointThickness = 0.1;
@@ -96,8 +120,12 @@ public static class EngravingDefaults
     public const double TieMidpointThickness = 0.22;
 
     // === Other elements ===
-    public const double HairpinThickness = 0.16;
-    public const double TupletBracketThickness = 0.16;
+    // (Hairpins draw at StaffLineThickness — LP Hairpin (thickness . 1.0)
+    //  × line-thickness; the former unused HairpinThickness 0.16 is gone.)
+
+    /// <summary>Tuplet bracket: thickness 1.6 × line-thickness = 0.16.</summary>
+    /// <remarks>LILYPOND-REF: scm/define-grobs.scm TupletBracket (thickness . 1.6).</remarks>
+    public const double TupletBracketThickness = 1.6 * LineThickness;
     public const double BracketThickness = 0.5;
 
     // Rest collision avoidance
@@ -218,8 +246,13 @@ public static class EngravingDefaults
     public const double MaxStiffness = 10.0;
 
     // === Barline rendering ===
-    /// <summary>Space after repeat dots before barline (in staff spaces).</summary>
-    public const double RepeatDotsOffset = 0.6;
+    /// <summary>
+    /// Total width of the repeat-dots block including its kern to the next
+    /// bar segment: dot diameter + kern.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: scm/bar-line.scm:766-801 — the colon glyph is
+    /// stacked with the same kern as the line segments.</remarks>
+    public const double RepeatDotsOffset = 2 * RepeatDotRadius + RepeatBarlineDotSeparation;
 
     // === Tie/Slur rendering ===
     /// <summary>Tie thickness multiplier for rendering (deprecated, use TieMidThickness).</summary>

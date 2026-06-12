@@ -36,11 +36,11 @@
   <line x1="55.29" y1="19.64" x2="55.29" y2="14.14" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="57.66" y="16.64" font-size="4.00" data-pos="531"></text>
   <text class="music" x="62.46" y="16.64" font-size="4.00" data-pos="534"></text>
-  <rect x="22.44" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="37.19" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="51.94" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="66.20" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="66.76" y="14.64" width="0.50" height="4.00" fill="#000000"/>
+  <rect x="22.41" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="37.16" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="51.91" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="66.17" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="66.66" y="14.64" width="0.60" height="4.00" fill="#000000"/>
   <text class="music" x="6.84" y="19.14" font-size="2.60" data-pos="166"></text>
   <text class="music" x="7.62" y="18.64" font-size="2.60" data-pos="166"></text>
   <line x1="22.66" y1="19.64" x2="23.93" y2="19.64" stroke="#000000" stroke-width="0.200" data-pos="264"/>

@@ -52,14 +52,14 @@
   <line x1="67.31" y1="22.64" x2="67.31" y2="16.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="67.90" y="22.14" font-size="4.00"></text>
   <text class="music" x="72.87" y="16.64" font-size="4.00" data-pos="177"></text>
-  <rect x="27.74" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="42.31" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="42.47" y="14.64" width="0.50" height="4.00" fill="#000000"/>
-  <rect x="43.37" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <circle cx="43.89" cy="16.14" r="0.20" fill="#000000"/>
-  <circle cx="43.89" cy="17.14" r="0.20" fill="#000000"/>
-  <rect x="63.96" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="77.84" y="14.64" width="0.16" height="4.00" fill="#000000"/>
+  <rect x="27.71" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="42.28" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="42.47" y="14.64" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="43.37" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <circle cx="44.06" cy="16.14" r="0.20" fill="#000000"/>
+  <circle cx="44.06" cy="17.14" r="0.20" fill="#000000"/>
+  <rect x="63.93" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="77.81" y="14.64" width="0.19" height="4.00" fill="#000000"/>
   <line x1="0.00" y1="34.16" x2="78.00" y2="34.16" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="35.16" x2="78.00" y2="35.16" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="36.16" x2="78.00" y2="36.16" stroke="#000000" stroke-width="0.100"/>
@@ -96,13 +96,13 @@
   <line x1="65.79" y1="37.16" x2="65.79" y2="33.66" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="70.47" y="37.16" font-size="4.00" data-pos="141"></text>
   <line x1="71.71" y1="37.16" x2="71.71" y2="33.66" stroke="#000000" stroke-width="0.130"/>
-  <rect x="27.61" y="34.16" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="42.25" y="34.16" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="62.40" y="34.16" width="0.16" height="4.00" fill="#000000"/>
-  <circle cx="76.54" cy="35.66" r="0.20" fill="#000000"/>
-  <circle cx="76.54" cy="36.66" r="0.20" fill="#000000"/>
-  <rect x="76.94" y="34.16" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="77.50" y="34.16" width="0.50" height="4.00" fill="#000000"/>
+  <rect x="27.58" y="34.16" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="42.22" y="34.16" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="62.37" y="34.16" width="0.19" height="4.00" fill="#000000"/>
+  <circle cx="76.41" cy="35.66" r="0.20" fill="#000000"/>
+  <circle cx="76.41" cy="36.66" r="0.20" fill="#000000"/>
+  <rect x="76.91" y="34.16" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="77.40" y="34.16" width="0.60" height="4.00" fill="#000000"/>
   <line x1="4.86" y1="31.10" x2="4.86" y2="33.10" stroke="#000000" stroke-width="0.130" data-pos="349"/>
   <line x1="4.86" y1="31.10" x2="42.11" y2="31.10" stroke="#000000" stroke-width="0.130" data-pos="349"/>
   <text x="5.36" y="31.40" font-size="2.40" font-family="serif" font-weight="bold" dominant-baseline="hanging" fill="#000000" data-pos="349">1.</text>

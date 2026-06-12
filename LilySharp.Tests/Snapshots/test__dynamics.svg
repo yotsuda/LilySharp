@@ -40,9 +40,9 @@
   <line x1="68.13" y1="18.64" x2="68.13" y2="15.14" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="72.05" y="18.14" font-size="4.00" data-pos="263"></text>
   <line x1="73.29" y1="18.14" x2="73.29" y2="14.64" stroke="#000000" stroke-width="0.130"/>
-  <rect x="31.05" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="54.48" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="77.84" y="14.64" width="0.16" height="4.00" fill="#000000"/>
+  <rect x="31.02" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="54.45" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="77.81" y="14.64" width="0.19" height="4.00" fill="#000000"/>
   <line x1="0.00" y1="28.54" x2="78.00" y2="28.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="29.54" x2="78.00" y2="29.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="30.54" x2="78.00" y2="30.54" stroke="#000000" stroke-width="0.100"/>
@@ -66,9 +66,9 @@
   <line x1="61.94" y1="32.54" x2="61.94" y2="29.04" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="68.75" y="32.04" font-size="4.00" data-pos="402"></text>
   <line x1="69.99" y1="32.04" x2="69.99" y2="28.54" stroke="#000000" stroke-width="0.130"/>
-  <rect x="42.48" y="28.54" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="76.94" y="28.54" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="77.50" y="28.54" width="0.50" height="4.00" fill="#000000"/>
+  <rect x="42.45" y="28.54" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="76.91" y="28.54" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="77.40" y="28.54" width="0.60" height="4.00" fill="#000000"/>
   <text x="9.80" y="21.94" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="147">p</text>
   <text x="14.95" y="21.44" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="151">mp</text>
   <text x="20.10" y="20.94" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="156">mf</text>

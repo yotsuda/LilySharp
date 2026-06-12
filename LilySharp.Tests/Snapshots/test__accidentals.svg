@@ -51,9 +51,9 @@
   <text class="music" x="70.86" y="16.64" font-size="4.00" data-pos="330"></text>
   <text class="music" x="72.16" y="16.64" font-size="4.00" data-pos="330"></text>
   <line x1="72.22" y1="16.64" x2="72.22" y2="20.14" stroke="#000000" stroke-width="0.130"/>
-  <rect x="30.61" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="53.54" y="14.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="77.84" y="14.64" width="0.16" height="4.00" fill="#000000"/>
+  <rect x="30.58" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="53.51" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="77.81" y="14.64" width="0.19" height="4.00" fill="#000000"/>
   <line x1="0.00" y1="26.64" x2="78.00" y2="26.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="27.64" x2="78.00" y2="27.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="28.64" x2="78.00" y2="28.64" stroke="#000000" stroke-width="0.100"/>
@@ -88,10 +88,10 @@
   <text class="music" x="67.41" y="29.14" font-size="4.00" data-pos="443"></text>
   <text class="music" x="68.72" y="28.64" font-size="4.00" data-pos="443"></text>
   <line x1="68.65" y1="29.14" x2="68.65" y2="25.14" stroke="#000000" stroke-width="0.130"/>
-  <rect x="36.84" y="26.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="53.81" y="26.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="76.94" y="26.64" width="0.16" height="4.00" fill="#000000"/>
-  <rect x="77.50" y="26.64" width="0.50" height="4.00" fill="#000000"/>
+  <rect x="36.81" y="26.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="53.78" y="26.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="76.91" y="26.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="77.40" y="26.64" width="0.60" height="4.00" fill="#000000"/>
   <text x="0.05" y="25.64" font-size="1.75" font-family="serif" font-weight="bold" text-anchor="end" fill="#000000">4</text>
   <rect x="0.30" y="9.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="3.01" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">Main</text>
