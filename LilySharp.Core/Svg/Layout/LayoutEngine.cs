@@ -681,8 +681,12 @@ public sealed class LayoutEngine
         // Post-process below-staff elements using priority-based stacking.
         // This ensures hairpins avoid dynamics (both priority 250) and
         // text spanners avoid both dynamics and hairpins (priority 350).
+        var articulationLayouts = score != null
+            ? ArticulationEngraver.Calculate(score, articulations, systems, ml)
+            : ImmutableArray<ArticulationLayout>.Empty;
         var (stackedDynamics, stackedHairpins, stackedTextSpanners) =
-            OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts, textSpannerLayouts);
+            OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts, textSpannerLayouts,
+                articulationLayouts);
 
         // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
         // tuplet brackets 200 as immovable seeds, ottava 400, text 450,
@@ -703,7 +707,7 @@ public sealed class LayoutEngine
 
         return new AnnotationLayouts(
             Dynamics: stackedDynamics,
-            Articulations: score != null ? ArticulationEngraver.Calculate(score, articulations, systems, ml) : ImmutableArray<ArticulationLayout>.Empty,
+            Articulations: articulationLayouts,
             GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, systems, ml) : ImmutableArray<GraceNoteLayout>.Empty,
             Lyrics: lyricLayouts,
             LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(lyricLayouts, systems),

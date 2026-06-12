@@ -86,7 +86,8 @@ public static class OutsideStaffStacker
             ImmutableArray<SystemLayout> systems,
             ImmutableArray<DynamicLayout> dynamics,
             ImmutableArray<HairpinLayout> hairpins,
-            ImmutableArray<TextSpannerLayout> textSpanners)
+            ImmutableArray<TextSpannerLayout> textSpanners,
+            ImmutableArray<ArticulationLayout> articulations = default)
     {
         if ((dynamics.IsDefaultOrEmpty && hairpins.IsDefaultOrEmpty && textSpanners.IsDefaultOrEmpty)
             || systems.Length == 0)
@@ -105,22 +106,49 @@ public static class OutsideStaffStacker
         for (int i = 0; i < systems.Length; i++)
             trackers[i] = new OccupiedTracker();
 
+        // Below-staff articulations (Script grobs) have NO outside-staff
+        // priority in LilyPond: they sit against the note and everything at
+        // priority 250+ side-positions BELOW them. Seed them as immovable.
+        // LILYPOND-REF: scm/define-grobs.scm Script — no outside-staff-priority;
+        //   DynamicLineSpanner side-positions against the staff skyline
+        //   which includes the scripts.
+        if (!articulations.IsDefaultOrEmpty)
+        {
+            foreach (var a in articulations)
+            {
+                if (a.IsAbove || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
+                    continue;
+                // Glyph roughly centered on its anchor; half-extent ~0.6sp.
+                trackers[sysIdx].AddRegion(a.X - 0.6, a.X + 0.6, a.Y + 0.6);
+            }
+        }
+
         // --- Priority 250: DynamicLineSpanner (dynamics + hairpins) ---
         // LILYPOND-REF: scm/define-grobs.scm:1270 DynamicLineSpanner.outside-staff-priority = 250
 
-        // Register dynamics (keep their engraver-calculated Y, just record occupied space)
+        // Dynamics: push below anything already occupying their X range
+        // (below-staff scripts), then record their own extent.
+        var adjDynamics = dynamics;
         if (!dynamics.IsDefaultOrEmpty)
         {
-            foreach (var dyn in dynamics)
+            var dynBuilder = dynamics.ToBuilder();
+            for (int i = 0; i < dynBuilder.Count; i++)
             {
+                var dyn = dynBuilder[i];
                 if (!measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
                     continue;
 
                 double xStart = dyn.X - DynamicHalfWidth;
                 double xEnd = dyn.X + DynamicHalfWidth;
-                double bottom = dyn.Y + DynamicTextDescent;
+                double occupied = trackers[sysIdx].MaxYAt(xStart, xEnd);
+                double requiredY = occupied + OutsideStaffPadding + DynamicTextAscent;
+                if (requiredY > dyn.Y)
+                    dynBuilder[i] = dyn with { Y = requiredY };
+
+                double bottom = dynBuilder[i].Y + DynamicTextDescent;
                 trackers[sysIdx].AddRegion(xStart, xEnd, bottom);
             }
+            adjDynamics = dynBuilder.ToImmutable();
         }
 
         // Adjust hairpins: avoid overlapping with dynamics in the same X range
@@ -175,7 +203,7 @@ public static class OutsideStaffStacker
             adjTextSpanners = builder.ToImmutable();
         }
 
-        return (dynamics, adjHairpins, adjTextSpanners);
+        return (adjDynamics, adjHairpins, adjTextSpanners);
     }
 
     /// <summary>
