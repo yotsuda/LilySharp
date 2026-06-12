@@ -732,6 +732,21 @@ public sealed class MultiStaffLayouter
             var allMeasures = CollectAllMeasuresAtIndex(score, i);
 
             var springs = _measureLayouter.CreateTimingSprings(primaryMeasure, allTimings, baseShortestDuration, allMeasures);
+
+            // LINE-START measure: spring 0 is the prefix→first-note spacing
+            // (space-alist of the last prefix item), not the mid-line
+            // BarLine semi-shrink. The prefix width itself ends at the ink.
+            // LILYPOND-REF: scm/define-grobs.scm Clef/KeySignature/
+            //   TimeSignature space-alist (first-note . ...).
+            if (i == startMeasureIndex && springs.Length > 0)
+            {
+                var (ideal, min) = SpacingRules.FirstNoteSpring(
+                    score.KeySignature.Sharps, systemIndex == 0);
+                var s0 = springs[0];
+                double newMin = Math.Max(min, s0.MinDistance);
+                springs = springs.SetItem(0, new Spring(
+                    Math.Max(ideal, newMin), newMin, inverseStretchStrength: 0));
+            }
             measureSprings.Add(springs);
             measureTimings.Add(allTimings);
             measureAllMeasures.Add(allMeasures);

@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -137,52 +137,57 @@ public class BreakAlignSpacingTests
     [Fact]
     public void PrefixWidth_FirstSystem_NoKey_MatchesRenderer()
     {
-        // C major, first system with 4/4 time
-        // Renderer: clef(4.2) + timeSig + 2.0 = 4.2 + timeSigWidth + 2.0
+        // C major, first system with 4/4 time. The prefix ends at the
+        // time signature's INK; the 2.0 first-note distance is carried by
+        // the first measure's leading spring (FirstNoteSpring), not here.
         double width = BreakAlignSpacing.CalculatePrefixWidth(
             GlyphMetrics.GClefWidth, 0, false, true, 4, 4);
 
         double timeSigWidth = GlyphMetrics.GetTimeSigWidth(4, 4);
-        double expected = 4.2 + timeSigWidth + 2.0;
+        double expected = 4.2 + timeSigWidth;
         Assert.Equal(expected, width, 1);
+        Assert.Equal((2.0, 1.0), BreakAlignSpacing.FirstNoteSpring(0, includeTimeSignature: true));
     }
 
     [Fact]
     public void PrefixWidth_FirstSystem_WithKey_MatchesRenderer()
     {
-        // D major (2 sharps), first system with 4/4 time
-        // Renderer: 3.5 + 2*1.1 + 1.15 + timeSig + 2.0
+        // D major (2 sharps), first system with 4/4 time — ink end only.
         double width = BreakAlignSpacing.CalculatePrefixWidth(
             GlyphMetrics.GClefWidth, 2, true, true, 4, 4);
 
         double keyWidth = 2 * GlyphMetrics.GetKeySignatureAccidentalWidth(true);
         double timeSigWidth = GlyphMetrics.GetTimeSigWidth(4, 4);
-        double expected = 3.5 + keyWidth + 1.15 + timeSigWidth + 2.0;
+        double expected = 3.5 + keyWidth + 1.15 + timeSigWidth;
         Assert.Equal(expected, width, 1);
     }
 
     [Fact]
     public void PrefixWidth_Continuation_NoKey_UsesClefToFirstNote()
     {
-        // C major, continuation line (no time sig)
-        // Renderer: ClefToFirstNoteSpace = 5.0
+        // C major, continuation line (no time sig): the prefix is the clef
+        // ink alone; the rigid 5.0 clef→first-note distance lives in the
+        // leading spring.
+        // LILYPOND-REF: Clef space-alist (first-note . (minimum-fixed-space . 5.0))
         double width = BreakAlignSpacing.CalculatePrefixWidth(
             GlyphMetrics.GClefWidth, 0, false, false);
 
-        Assert.Equal(5.0, width, 1);
+        Assert.Equal(GlyphMetrics.GClefWidth, width, 1);
+        Assert.Equal((5.0, 5.0), BreakAlignSpacing.FirstNoteSpring(0, includeTimeSignature: false));
     }
 
     [Fact]
     public void PrefixWidth_Continuation_WithKey_MatchesRenderer()
     {
-        // D major (2 sharps), continuation line
-        // Renderer: 3.5 + 2*1.1 + 2.5 (KeySignatureToFirstNoteSpace)
+        // D major (2 sharps), continuation line — ink end only; the 2.5
+        // key→first-note distance lives in the leading spring.
         double width = BreakAlignSpacing.CalculatePrefixWidth(
             GlyphMetrics.GClefWidth, 2, true, false);
 
         double keyWidth = 2 * GlyphMetrics.GetKeySignatureAccidentalWidth(true);
-        double expected = 3.5 + keyWidth + 2.5;
+        double expected = 3.5 + keyWidth;
         Assert.Equal(expected, width, 1);
+        Assert.Equal((2.5, 1.25), BreakAlignSpacing.FirstNoteSpring(2, includeTimeSignature: false));
     }
 
     [Fact]

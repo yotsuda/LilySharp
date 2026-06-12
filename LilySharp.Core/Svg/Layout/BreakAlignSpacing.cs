@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -329,13 +329,34 @@ public static class BreakAlignSpacing
             currentSymbol = BreakAlignSymbol.TimeSignature;
         }
 
-        // → FirstNote (transition to music content)
-        {
-            var entry = GetSpacing(currentSymbol, BreakAlignSymbol.FirstNote);
-            double noteLeftExtent = 0;
-            distance += CalculateDistance(entry, currentRightExtent, noteLeftExtent);
-        }
+        // The prefix ends at the last item's INK. The prefix→first-note
+        // distance is NOT part of the prefix: it is carried by the first
+        // measure's leading spring (see FirstNoteSpring) so it can take part
+        // in spring solving with the proper minimum — adding it here AND in
+        // the spring double-counted the gap and line-start measures came out
+        // ~3x wider than LilyPond's.
+        return distance + currentRightExtent;
+    }
 
-        return distance;
+    /// <summary>
+    /// Ideal/minimum distance from the END of the line-start prefix to the
+    /// first note column, per the LAST prefix item's space-alist entry.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm space-alist (first-note . ...):
+    ///   Clef           (minimum-fixed-space . 5.0)  — rigid
+    ///   KeySignature   (shrink-space . 2.5)         — compressible
+    ///   TimeSignature  (semi-shrink-space . 2.0)    — compressible to half
+    /// LILYPOND-REF: lily/staff-spacing.cc Staff_spacing::get_spacing —
+    ///   the style decides how much of the ideal survives compression.
+    /// </remarks>
+    public static (double Ideal, double Min) FirstNoteSpring(
+        int keyAccidentalCount, bool includeTimeSignature)
+    {
+        if (includeTimeSignature)
+            return (2.0, 1.0);   // semi-shrink: fixed = d/2
+        if (keyAccidentalCount > 0)
+            return (2.5, 1.25);  // shrink-space: generously compressible
+        return (5.0, 5.0);       // minimum-fixed: rigid
     }
 }

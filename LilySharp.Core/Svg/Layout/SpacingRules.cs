@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -130,6 +130,13 @@ public static class SpacingRules
     /// with space-alist lookups and break-align-orders for correct element ordering.
     /// Uses G-clef width as default; for other clefs, use the overload with clefWidth.
     /// </remarks>
+    /// <summary>
+    /// Line-start prefix-to-first-note spring (ideal, min) — see
+    /// BreakAlignSpacing.FirstNoteSpring.
+    /// </summary>
+    public static (double Ideal, double Min) FirstNoteSpring(int keySharps, bool includeTimeSignature)
+        => BreakAlignSpacing.FirstNoteSpring(Math.Abs(keySharps), includeTimeSignature);
+
     public static double CalculatePrefixWidth(int keySharps, bool includeTimeSignature,
         int timeSigBeats = 4, int timeSigBeatType = 4)
     {

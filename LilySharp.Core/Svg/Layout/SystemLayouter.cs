@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -87,9 +87,23 @@ public sealed class SystemLayouter
         var measureBarlineWidths = new List<double>();
         double totalBarlineWidth = 0;
 
+        bool firstMeasureOfSystem = true;
         foreach (var measure in measures)
         {
             var springs = SpacingRules.CreateSpringsForMeasure(measure, baseShortestDuration);
+
+            // LINE-START measure: spring 0 carries the prefix→first-note
+            // spacing (space-alist of the last prefix item) instead of the
+            // mid-line BarLine semi-shrink — see MultiStaffLayouter.
+            if (firstMeasureOfSystem && springs.Length > 0)
+            {
+                var (ideal, min) = SpacingRules.FirstNoteSpring(keySharps, isFirstSystem);
+                var s0 = springs[0];
+                double newMin = Math.Max(min, s0.MinDistance);
+                springs = springs.SetItem(0, new Spring(
+                    Math.Max(ideal, newMin), newMin, inverseStretchStrength: 0));
+                firstMeasureOfSystem = false;
+            }
             measureSprings.Add(springs);
 
             double barlineWidth = SpacingRules.GetBarlineWidth(measure.StartBarline)
