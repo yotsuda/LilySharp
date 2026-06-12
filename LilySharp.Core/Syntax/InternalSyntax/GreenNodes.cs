@@ -124,8 +124,9 @@ internal sealed class NoteGreen : GreenSyntaxNode
 internal sealed class RestGreen : GreenSyntaxNode
 {
     public RestGreen(SyntaxToken restToken, DurationGreen? duration,
-                     SyntaxToken? asterisk = null, SyntaxToken? measureCount = null)
-        : base(SyntaxKind.Rest, [restToken, duration, asterisk, measureCount])
+                     SyntaxToken? asterisk = null, SyntaxToken? measureCount = null,
+                     GreenNode?[]? articulations = null)
+        : base(SyntaxKind.Rest, [restToken, duration, asterisk, measureCount, .. articulations ?? []])
     {
     }
 }

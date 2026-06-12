@@ -255,6 +255,25 @@ public sealed class RestSyntax : SyntaxNode
 
     /// <summary>True iff this rest carries a <c>*N</c> multi-measure multiplier.</summary>
     public bool IsMultiMeasure => MeasureCount > 1;
+
+    /// <summary>
+    /// Articulations / marks / dynamics attached to the rest (e.g.
+    /// <c>r4@fermata</c> — a fermata over a rest is standard notation).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/lily-parser.yy — post-events attach to rests too
+    /// (<c>r4\fermata</c>).</remarks>
+    public IEnumerable<SyntaxNode> Articulations
+    {
+        get
+        {
+            for (int i = 4; i < SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child is ArticulationSyntax or DynamicSyntax or MusicMarkSyntax)
+                    yield return child;
+            }
+        }
+    }
 }
 
 /// <summary>

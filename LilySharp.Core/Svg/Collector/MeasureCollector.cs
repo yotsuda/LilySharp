@@ -929,10 +929,16 @@ public sealed class MeasureCollector
             case RestSyntax rest:
                 {
                     var restItem = CreateRestItem(rest);
+                    int restMeasureIndex = builder.CurrentMeasureIndex;
+                    int restItemIndex = builder.CurrentItemCount;
                     int count = rest.MeasureCount;
                     if (count <= 1)
                     {
                         builder.AddItem(restItem);
+                        // Post-events on the rest (r4@fermata, r2@coda, ...).
+                        // Rests have no stem; stemUp=false makes the default
+                        // direction UP, matching scripts over rests.
+                        CollectArticulations(rest, restMeasureIndex, restItemIndex, stemUp: false);
                     }
                     else
                     {
@@ -2331,6 +2337,7 @@ public sealed class MeasureCollector
         {
             NoteSyntax note => note.Articulations,
             ChordSyntax chord => chord.Articulations,
+            RestSyntax rest => rest.Articulations,
             _ => Enumerable.Empty<SyntaxNode>()
         };
 

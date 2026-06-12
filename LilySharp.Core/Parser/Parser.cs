@@ -737,7 +737,12 @@ internal sealed class Parser
             }
         }
 
-        return new RestGreen(restToken, duration, asterisk, measureCount);
+        // Post-events on rests (r4@fermata, r2@coda, ...) — standard notation;
+        // LILYPOND-REF: lily/lily-parser.yy — post-events attach to rests
+        // (r4\fermata).
+        var articulations = ParseArticulations();
+
+        return new RestGreen(restToken, duration, asterisk, measureCount, articulations);
     }
 
     private ChordGreen ParseChord()
