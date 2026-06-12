@@ -33,7 +33,7 @@ phrase percentRepeat {
 
 phrase kneedBeam {
   // Wide-interval beaming that triggers auto-knee
-  c,8 c c c'' c, c'' c, c'' |
+  c8 c c c'' c, c'' c, c'' |
 }
 
 section Main {
