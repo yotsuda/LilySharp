@@ -36,7 +36,8 @@ public readonly record struct ArticulationLayout(
     string Glyph,           // SMuFL glyph to render
     bool IsAbove,           // Whether placed above the note
     int SourcePosition,     // For click-to-source mapping
-    double Scale = 1.0      // Glyph scale (editorial accidentals: magstep(-2))
+    double Scale = 1.0,     // Glyph scale (editorial accidentals: magstep(-2))
+    GlyphMetrics.BBox Ink = default // Ink box relative to the anchor (for skyline seeding)
 );
 
 /// <summary>
@@ -160,7 +161,8 @@ public static class ArticulationEngraver
                 articulation.GetGlyph(),
                 articulation.IsAbove,
                 articulation.SourcePosition,
-                scale
+                scale,
+                GetSeedBBox(articulation.Type)
             ));
         }
 
@@ -243,6 +245,19 @@ public static class ArticulationEngraver
         is ArticulationType.EditorialSharp or ArticulationType.EditorialFlat
         or ArticulationType.EditorialNatural or ArticulationType.EditorialDoubleSharp
         or ArticulationType.EditorialDoubleFlat;
+
+    /// <summary>
+    /// Ink box used to seed the outside-staff occupancy (so movable grobs —
+    /// rehearsal/section marks etc. — clear the scripts). Uses real font
+    /// metrics where extracted (the trill "tr" glyph is much wider and taller
+    /// than the positioning fallback); other ornaments fall back to the
+    /// positioning box until their metrics are extracted from the font.
+    /// </summary>
+    private static GlyphMetrics.BBox GetSeedBBox(ArticulationType type) => type switch
+    {
+        ArticulationType.Trill => GlyphMetrics.OrnTrillGlyph,
+        _ => GetGlyphBBox(type)
+    };
 
     /// <summary>
     /// Gets the full vertical extent (total height) of an articulation glyph.

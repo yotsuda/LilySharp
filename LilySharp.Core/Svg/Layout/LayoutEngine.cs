@@ -874,7 +874,8 @@ public sealed class LayoutEngine
              stackedVoltas, stackedMarks) = OutsideStaffStacker.StackAboveStaff(
             systems, systemSkylines, tupletBracketLayouts,
             trillSpannerLayouts, barNumberLayouts, ottavaLayouts,
-            customTextLayouts, voltaBracketLayouts, musicMarkLayouts);
+            customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
+            articulationLayouts);
 
         return new AnnotationLayouts(
             Dynamics: stackedDynamics,

@@ -284,7 +284,8 @@ public static class OutsideStaffStacker
             ImmutableArray<OttavaBracketLayout> ottavas,
             ImmutableArray<CustomTextLayout> customTexts,
             ImmutableArray<VoltaBracketLayout> voltas,
-            ImmutableArray<MusicMarkLayout> musicMarks)
+            ImmutableArray<MusicMarkLayout> musicMarks,
+            ImmutableArray<ArticulationLayout> articulations = default)
     {
         if (systems.IsDefaultOrEmpty)
             return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks);
@@ -351,6 +352,26 @@ public static class OutsideStaffStacker
                         clefX + clefBox.Left, clefX + clefBox.Right,
                         systems[i].Y + firstStaff.Y - clefProtrusion);
                 }
+            }
+        }
+
+        // Above-staff scripts (trill, turn, fermata, editorial accidentals …)
+        // are bound to their notes: they carry no outside-staff-priority and
+        // enter the skyline BEFORE any outside-staff grob is placed, so
+        // movable marks (rehearsal/section marks etc.) must clear them.
+        // LILYPOND-REF: lily/axis-group-interface.cc:359-474 — grobs without
+        // outside-staff-priority stay in the support skyline.
+        if (!articulations.IsDefaultOrEmpty)
+        {
+            foreach (var a in articulations)
+            {
+                if (!a.IsAbove || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
+                    continue;
+                double absY = systems[sysIdx].Y + a.Y;
+                double inkTop = absY - a.Ink.Top;     // BBox Top is up-positive
+                if (inkTop >= systems[sysIdx].Y)
+                    continue; // entirely inside the staff — the up-skyline covers it
+                trackers[sysIdx].AddRegion(a.X + a.Ink.Left, a.X + a.Ink.Right, inkTop);
             }
         }
 
