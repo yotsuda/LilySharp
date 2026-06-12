@@ -433,27 +433,53 @@ public static class OutsideStaffStacker
             adjCustomTexts = b.ToImmutable();
         }
 
-        // ---- 600: VoltaBracket ----
+        // ---- 600: VoltaBracketSpanner ----
+        // LilyPond's outside-staff grob here is the SPANNER — an axis group
+        // holding ALL volta brackets of a system — so consecutive endings
+        // share ONE side-positioned Y per system instead of each bracket
+        // finding its own height over its own bars.
+        // LILYPOND-REF: scm/define-grobs.scm VoltaBracketSpanner —
+        //   (axes . (Y)) (outside-staff-priority . 600) (side-axis . Y).
         var adjVoltas = voltas;
         if (!voltas.IsDefaultOrEmpty)
         {
-            var b = voltas.ToBuilder();
-            for (int i = 0; i < b.Count; i++)
+            double VoltaBottom(VoltaBracketLayout v)
             {
-                var v = b[i];
-                if (!measureToSystem.TryGetValue(v.StartMeasureIndex, out int sysIdx))
-                    continue;
-                double sy = systems[sysIdx].Y;
                 // anchor = bracket line. Hooks drop EdgeHeight; the volta
                 // number hangs from line+0.3 at 0.6 x 4sp (renderer
                 // geometry), so the deeper of the two bounds the extent.
                 double textDepth = string.IsNullOrEmpty(v.VoltaText)
                     ? 0
                     : 0.3 + 0.75 * (0.6 * 4.0);
-                double bottom = Math.Max(VoltaBracketEngraver.GetEdgeHeight(), textDepth);
-                double newAbs = Place(trackers[sysIdx], v.StartX, v.EndX,
-                    sy + v.Y, topOffset: -0.1, bottomOffset: bottom);
-                b[i] = v with { Y = newAbs - sy };
+                return Math.Max(VoltaBracketEngraver.GetEdgeHeight(), textDepth);
+            }
+
+            var b = voltas.ToBuilder();
+            foreach (var sysGroup in Enumerable.Range(0, b.Count)
+                .Where(i => measureToSystem.ContainsKey(b[i].StartMeasureIndex))
+                .GroupBy(i => measureToSystem[b[i].StartMeasureIndex]))
+            {
+                int sysIdx = sysGroup.Key;
+                double sy = systems[sysIdx].Y;
+
+                // One required anchor for the whole spanner: the highest
+                // (smallest page Y) the occupancy demands across all of the
+                // system's brackets.
+                double anchor = double.MaxValue;
+                foreach (int i in sysGroup)
+                {
+                    var v = b[i];
+                    double required = trackers[sysIdx].MinYAt(v.StartX, v.EndX)
+                        - OutsideStaffPadding - VoltaBottom(v);
+                    anchor = Math.Min(anchor, Math.Min(sy + v.Y, required));
+                }
+
+                foreach (int i in sysGroup)
+                {
+                    var v = b[i];
+                    b[i] = v with { Y = anchor - sy };
+                    trackers[sysIdx].AddRegion(v.StartX, v.EndX, anchor - 0.1);
+                }
             }
             adjVoltas = b.ToImmutable();
         }
