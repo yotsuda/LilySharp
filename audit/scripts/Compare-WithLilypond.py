@@ -62,6 +62,32 @@ def render_lilysharp(lys: Path, out_png: Path) -> None:
 
 
 def render_lilypond(ly: Path, out_png: Path) -> None:
+    # lilypond's Guile init DEADLOCKS when it inherits certain consoles
+    # (observed: spawned under a PowerShell.MCP console, directly or via
+    # python — ~5s of CPU, then a kernel wait forever, before the version
+    # banner). The proven-safe launch is detached through cmd.exe with
+    # stdin from NUL and no inherited console; same recipe regardless of
+    # who invokes this script.
+    if os.name == "nt":
+        log = out_png.with_suffix(".lilypond.log")
+        cmdline = (
+            f'"{LILYPOND}" --png -dresolution=160 '
+            f'-o "{out_png.with_suffix("")}" "{ly}" '
+            f'< NUL > "{log}" 2>&1'
+        )
+        # Pass ONE string so Python's list2cmdline cannot mangle the inner
+        # quotes into \" (cmd does not understand backslash escapes); /s
+        # makes cmd strip exactly the outer quote pair.
+        result = subprocess.run(
+            f'cmd.exe /d /s /c "{cmdline}"', cwd=out_png.parent,
+            stdin=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW)
+        if result.returncode != 0:
+            tail = log.read_text(encoding="utf-8", errors="replace")[-2000:] if log.exists() else "(no log)"
+            print(f"FAILED: lilypond {ly}", file=sys.stderr)
+            print(tail, file=sys.stderr)
+            raise SystemExit(1)
+        return
     run([str(LILYPOND), "--png", "-dresolution=160",
          "-o", str(out_png.with_suffix("")), str(ly)], cwd=out_png.parent)
 
