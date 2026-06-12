@@ -522,6 +522,12 @@ public static class OutsideStaffStacker
                 var m = b[i];
                 if (!measureToSystem.TryGetValue(m.MeasureIndex, out int sysIdx))
                     continue;
+                // Spanner-handled marks (cresc./rit./ottava ...) are never
+                // drawn by DrawMusicMarks — registering them would reserve
+                // PHANTOM space and push real marks above thin air. Marks
+                // placed below the staff don't belong to the above pass.
+                if (MusicMarkItem.IsSpannerHandled(m.MarkType) || m.Y > 0)
+                    continue;
                 double sy = systems[sysIdx].Y;
                 var (halfWidth, top, bottom) = MusicMarkExtents(m);
                 double newAbs = Place(trackers[sysIdx], m.X - halfWidth, m.X + halfWidth,

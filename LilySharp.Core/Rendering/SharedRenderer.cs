@@ -2106,11 +2106,7 @@ public static class SharedRenderer
     }
 
     private static bool IsHandledBySpannerEngraver(MusicMarkType type) =>
-        type is MusicMarkType.Cresc or MusicMarkType.Decresc or MusicMarkType.Dim
-             or MusicMarkType.Rit or MusicMarkType.Accel
-             or MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
-             or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
-             or MusicMarkType.Loco;
+        MusicMarkItem.IsSpannerHandled(type);
 
     private static bool IsPedalMark(MusicMarkType type) =>
         type is MusicMarkType.SustainOn or MusicMarkType.SustainOff

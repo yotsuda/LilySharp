@@ -1,4 +1,4 @@
-// Lily# - Music notation compiler
+﻿// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -175,6 +175,18 @@ public sealed record MusicMarkItem
     /// For rehearsal marks (@mark.A, @mark.1), returns Rehearsal.
     /// Use ParseRehearsalText to get the display text for rehearsal marks.
     /// </summary>
+    /// <summary>
+    /// Marks whose visuals are produced by a SPANNER engraver (text
+    /// spanners, ottava brackets): their MusicMarkLayout entries are not
+    /// drawn by DrawMusicMarks and must not occupy outside-staff space.
+    /// </summary>
+    public static bool IsSpannerHandled(MusicMarkType type) =>
+        type is MusicMarkType.Cresc or MusicMarkType.Decresc or MusicMarkType.Dim
+             or MusicMarkType.Rit or MusicMarkType.Accel
+             or MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
+             or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
+             or MusicMarkType.Loco;
+
     public static MusicMarkType? ParseMarkName(string name)
     {
         // Check for rehearsal marks: @mark.A, @mark.B, @mark.1, etc.
