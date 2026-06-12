@@ -264,7 +264,7 @@
                 {
                     "comment": "Cross-staff and other annotations",
                     "name": "keyword.other.annotation.lilysharp",
-                    "match": "@(cross|gliss|arpeggio|courtesy)\\b"
+                    "match": "@(cross|glissando|gliss|arpeggio|courtesy)\\b"
                 }
             ]
         },
