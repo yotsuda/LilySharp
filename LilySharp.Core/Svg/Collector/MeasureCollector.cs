@@ -1491,6 +1491,14 @@ public sealed class MeasureCollector
 
     private void ExtractVoiceName(RenderDeclarationSyntax render)
     {
+        // Inference only: never clobber a voice the caller pinned (SvgGenerator
+        // passes the selected render's voice), and with multiple render blocks
+        // the FIRST one wins — previously every render block overwrote
+        // _voiceName, so a two-render file always collected the LAST render's
+        // part regardless of which render was being generated.
+        if (_voiceName != null)
+            return;
+
         if (render.GetChild(1) is not SyntaxTokenNode outputType || outputType.Text != "score")
             return;
 

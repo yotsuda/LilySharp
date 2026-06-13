@@ -7,17 +7,32 @@ tempo 120
 time 4/4
 key c major
 
-// Single notes: normal c' d', then cue e' f'
-// Second measure: normal g' a', then cue b' c''
-melody = { c4 d e@cue f@cue | g4 a b@cue c@cue | c1 | }
+part melody
+part chords
+
+// Single notes: normal, then cue (each measure: 2 normal + 2 cue)
+phrase cueMelody {
+  c4 d e@cue f@cue |
+  g4 a b@cue c@cue |
+}
 
 // Chords: normal then cue
-chords = { <c, e g>4 <d f a>4 <e g b>4@cue <f a c>4@cue | <c e g>1 | }
+phrase cueChords {
+  <c, e g>4 <d f a>4 <e g b>4@cue <f a c>4@cue |
+  <c e g>1 |
+}
 
-render score "cue-melody" {
+section Main {
+  melody { $cueMelody }
+  chords { $cueChords }
+}
+
+structure { Main }
+
+render score "cue-melody.svg" {
   staff treble { melody }
 }
 
-render score "cue-chords" {
+render score "cue-chords.svg" {
   staff treble { chords }
 }
