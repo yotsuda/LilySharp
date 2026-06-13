@@ -214,7 +214,7 @@ public static class SpacingRules
     /// <remarks>
     /// LILYPOND-REF: lily/clef.cc:29-52 — "_change" suffix glyphs are smaller variants.
     /// </remarks>
-    private static double GetClefChangeWidth(ClefType clef) => clef switch
+    internal static double GetClefChangeWidth(ClefType clef) => clef switch
     {
         ClefType.Bass => GlyphMetrics.FClefChangeWidth,
         ClefType.Alto or ClefType.Tenor => GlyphMetrics.CClefChangeWidth,
@@ -242,7 +242,7 @@ public static class SpacingRules
     /// LILYPOND-REF: lily/key-engraver.cc — key signature width depends on accidental count.
     /// Includes cancellation naturals from previous key.
     /// </remarks>
-    private static double GetKeySignatureChangeWidth(KeySignatureChangeItem keyChange)
+    internal static double GetKeySignatureChangeWidth(KeySignatureChangeItem keyChange)
     {
         double width = 0;
 

@@ -669,6 +669,22 @@ public static class SharedRenderer
                     : ml.X + il.X;
                 currentTiming += item.Duration;
 
+                // Mid-measure clef/key changes share the next note's timing —
+                // in the column path hang them LEFT of the column (their
+                // width is reserved in the preceding spring; the item-slot
+                // path already gives them their own X).
+                // LILYPOND-REF: lily/paper-column.cc — non-musical columns
+                // precede the musical column of the same moment.
+                if (useColumnTiming)
+                {
+                    if (item is ClefChangeItem cc)
+                        itemX -= SpacingRules.GetClefChangeWidth(cc.NewClef)
+                            + GlyphMetrics.ClefChangePadding;
+                    else if (item is KeySignatureChangeItem kc)
+                        itemX -= SpacingRules.GetKeySignatureChangeWidth(kc)
+                            + GlyphMetrics.ClefChangePadding;
+                }
+
                 // Horizontal collision offset for multi-voice columns.
                 itemX += layout.GetVoiceOffset(ml.MeasureIndex, voiceNumber, itemIdx);
                 yield return (item, ml, itemIdx, itemX);

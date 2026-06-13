@@ -262,6 +262,20 @@ public sealed class MeasureLayouter
                 }
             }
 
+            // Mid-measure clef/key-signature changes have zero duration and
+            // share the next note's timing. LilyPond puts them in their own
+            // non-musical column BEFORE the musical column of that moment;
+            // approximate by reserving the change's width in this spring —
+            // the renderer hangs the glyph left of the column to match.
+            // LILYPOND-REF: lily/paper-column.cc — breakable (non-musical)
+            // columns precede the musical column of the same moment.
+            double prefixWidth = ChangeItemPrefixWidth(nextItems);
+            if (prefixWidth > 0)
+                spring = new Spring(
+                    spring.IdealDistance + prefixWidth,
+                    spring.MinDistance + prefixWidth,
+                    spring.InverseStretchStrength);
+
             springs.Add(spring);
         }
 
@@ -294,6 +308,31 @@ public sealed class MeasureLayouter
         springs.Add(endSpring);
 
         return springs.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Width a zero-duration clef/key-signature change at a timing column
+    /// needs in FRONT of that column (glyph + padding on both sides). When
+    /// several staves change at the same moment the glyphs align vertically,
+    /// so the MAX (not the sum) is reserved.
+    /// </summary>
+    private static double ChangeItemPrefixWidth(IEnumerable<MusicItem>? items)
+    {
+        if (items == null) return 0;
+        double w = 0;
+        foreach (var item in items)
+        {
+            double itemW = item switch
+            {
+                ClefChangeItem cc =>
+                    SpacingRules.GetClefChangeWidth(cc.NewClef) + 2 * GlyphMetrics.ClefChangePadding,
+                KeySignatureChangeItem kc =>
+                    SpacingRules.GetKeySignatureChangeWidth(kc) + 2 * GlyphMetrics.ClefChangePadding,
+                _ => 0
+            };
+            w = Math.Max(w, itemW);
+        }
+        return w;
     }
 
     /// <summary>
