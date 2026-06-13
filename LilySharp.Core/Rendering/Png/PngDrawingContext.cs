@@ -42,7 +42,7 @@ internal sealed class PngDrawingContext : IDrawingContext
 
     public void DrawLine(double x1, double y1, double x2, double y2,
         Color? stroke = null, double strokeWidth = 0.1,
-        (double On, double Off)? dash = null)
+        (double On, double Off)? dash = null, LineCap cap = LineCap.Butt)
     {
         using var paint = new SKPaint
         {
@@ -50,6 +50,7 @@ internal sealed class PngDrawingContext : IDrawingContext
             StrokeWidth = T(strokeWidth),
             Style = SKPaintStyle.Stroke,
             IsAntialias = true,
+            StrokeCap = cap == LineCap.Round ? SKStrokeCap.Round : SKStrokeCap.Butt,
         };
         if (dash is { } d)
             paint.PathEffect = SKPathEffect.CreateDash(

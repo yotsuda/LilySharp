@@ -88,10 +88,10 @@
   <text class="music" x="53.30" y="34.16" font-size="4.00" data-pos="380"></text>
   <text class="music" x="61.35" y="33.32" font-size="4.00" data-pos="391"></text>
   <text class="music" x="69.40" y="27.79" font-size="4.00" data-pos="403"></text>
-  <line x1="64.16" y1="21.63" x2="72.19" y2="21.30" stroke="#000000" stroke-width="0.100" data-pos="254"/>
-  <line x1="64.16" y1="21.63" x2="72.19" y2="21.97" stroke="#000000" stroke-width="0.100" data-pos="254"/>
-  <line x1="19.90" y1="36.10" x2="33.92" y2="36.43" stroke="#000000" stroke-width="0.100" data-pos="277"/>
-  <line x1="19.90" y1="36.77" x2="33.92" y2="36.43" stroke="#000000" stroke-width="0.100" data-pos="277"/>
+  <line x1="64.16" y1="21.63" x2="72.19" y2="21.30" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>
+  <line x1="64.16" y1="21.63" x2="72.19" y2="21.97" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>
+  <line x1="19.90" y1="36.10" x2="33.92" y2="36.43" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
+  <line x1="19.90" y1="36.77" x2="33.92" y2="36.43" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
   <text x="0.05" y="27.54" font-size="1.75" font-family="serif" font-weight="bold" text-anchor="end" fill="#000000">4</text>
   <rect x="0.30" y="9.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="3.01" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">Main</text>

@@ -35,15 +35,17 @@ internal sealed class SvgDrawingContext : IDrawingContext
 
     public void DrawLine(double x1, double y1, double x2, double y2,
         Color? stroke = null, double strokeWidth = 0.1,
-        (double On, double Off)? dash = null)
+        (double On, double Off)? dash = null, LineCap cap = LineCap.Butt)
     {
         var color = (stroke ?? Color.Black).ToHex();
         var dashAttr = dash is { } d
             ? string.Format(Inv, " stroke-dasharray=\"{0:F2} {1:F2}\"", d.On, d.Off)
             : "";
+        // SVG default linecap is butt; only emit the attribute when rounding.
+        var capAttr = cap == LineCap.Round ? " stroke-linecap=\"round\"" : "";
         _sb.AppendLine(string.Format(Inv,
-            "  <line x1=\"{0:F2}\" y1=\"{1:F2}\" x2=\"{2:F2}\" y2=\"{3:F2}\" stroke=\"{4}\" stroke-width=\"{5:F3}\"{6}{7}/>",
-            x1, y1, x2, y2, color, strokeWidth, dashAttr, SourceAttr()));
+            "  <line x1=\"{0:F2}\" y1=\"{1:F2}\" x2=\"{2:F2}\" y2=\"{3:F2}\" stroke=\"{4}\" stroke-width=\"{5:F3}\"{6}{7}{8}/>",
+            x1, y1, x2, y2, color, strokeWidth, dashAttr, capAttr, SourceAttr()));
     }
 
     public void DrawRectangle(double x, double y, double width, double height,

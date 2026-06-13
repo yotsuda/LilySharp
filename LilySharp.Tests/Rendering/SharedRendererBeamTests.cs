@@ -201,7 +201,7 @@ public sealed class SharedRendererBeamTests
         public void DrawLine(
             double x1, double y1, double x2, double y2,
             Color? stroke = null, double strokeWidth = 0.1,
-            (double On, double Off)? dash = null)
+            (double On, double Off)? dash = null, LineCap cap = LineCap.Butt)
         {
             var (ax1, ay1) = Apply(x1, y1);
             var (ax2, ay2) = Apply(x2, y2);

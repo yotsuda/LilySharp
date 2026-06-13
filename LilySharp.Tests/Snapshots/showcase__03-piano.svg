@@ -201,8 +201,8 @@
   <rect x="77.40" y="35.94" width="0.60" height="13.00" fill="#000000"/>
   <text x="9.80" y="21.44" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="249">p</text>
   <text x="67.73" y="21.44" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="305">f</text>
-  <line x1="49.41" y1="22.53" x2="68.57" y2="22.20" stroke="#000000" stroke-width="0.100" data-pos="277"/>
-  <line x1="49.41" y1="22.53" x2="68.57" y2="22.87" stroke="#000000" stroke-width="0.100" data-pos="277"/>
+  <line x1="49.41" y1="22.53" x2="68.57" y2="22.20" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
+  <line x1="49.41" y1="22.53" x2="68.57" y2="22.87" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
   <text x="3.76" y="33.68" font-size="1.80" font-family="serif" font-weight="bold" font-style="italic" fill="#000000" data-pos="339">8va</text>
   <line x1="6.96" y1="33.68" x2="47.97" y2="33.68" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 1.40" data-pos="339"/>
   <line x1="47.97" y1="33.68" x2="47.97" y2="34.48" stroke="#000000" stroke-width="0.100" data-pos="339"/>

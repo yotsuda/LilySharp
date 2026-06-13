@@ -122,7 +122,8 @@ public sealed class SharedRendererMultiVoiceTests
         public void Dispose() { }
 
         public void DrawLine(double x1, double y1, double x2, double y2,
-            Color? stroke = null, double strokeWidth = 0.1, (double On, double Off)? dash = null)
+            Color? stroke = null, double strokeWidth = 0.1, (double On, double Off)? dash = null,
+            LineCap cap = LineCap.Butt)
             => Lines.Add((x1, y1, x2, y2, strokeWidth));
 
         public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null) { }

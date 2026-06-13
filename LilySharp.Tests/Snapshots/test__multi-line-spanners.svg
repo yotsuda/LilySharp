@@ -110,10 +110,10 @@
   <path d="M 4.86,39.39 C 7.40,41.28 23.87,42.43 26.41,40.89 C 23.87,42.70 7.40,41.55 4.86,39.39 Z" fill="#000000"/>
   <text x="44.76" y="68.42" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="597">p</text>
   <text x="60.01" y="81.82" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="632">f</text>
-  <line x1="57.06" y1="66.32" x2="78.00" y2="66.09" stroke="#000000" stroke-width="0.100" data-pos="601"/>
-  <line x1="57.06" y1="66.32" x2="78.00" y2="66.54" stroke="#000000" stroke-width="0.100" data-pos="601"/>
-  <line x1="4.56" y1="82.80" x2="61.93" y2="82.58" stroke="#000000" stroke-width="0.100" data-pos="601"/>
-  <line x1="4.56" y1="83.02" x2="61.93" y2="83.24" stroke="#000000" stroke-width="0.100" data-pos="601"/>
+  <line x1="57.06" y1="66.32" x2="78.00" y2="66.09" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
+  <line x1="57.06" y1="66.32" x2="78.00" y2="66.54" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
+  <line x1="4.56" y1="82.80" x2="61.93" y2="82.58" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
+  <line x1="4.56" y1="83.02" x2="61.93" y2="83.24" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="601"/>
   <text x="0.05" y="36.49" font-size="1.75" font-family="serif" font-weight="bold" text-anchor="end" fill="#000000">3</text>
   <text x="0.05" y="60.12" font-size="1.75" font-family="serif" font-weight="bold" text-anchor="end" fill="#000000">6</text>
   <text x="0.05" y="74.02" font-size="1.75" font-family="serif" font-weight="bold" text-anchor="end" fill="#000000">8</text>

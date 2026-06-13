@@ -1685,8 +1685,12 @@ public static class SharedRenderer
             double rightBottom = absY + h.EndOpening;
             using (gc.Source(h.SourcePosition))
             {
-                gc.DrawLine(h.StartX, leftTop, h.EndX, rightTop, Color.Black, thickness);
-                gc.DrawLine(h.StartX, leftBottom, h.EndX, rightBottom, Color.Black, thickness);
+                // Round caps so the two arms close cleanly at the wedge apex
+                // (where StartOpening or EndOpening is 0): butt caps left a
+                // small V-notch at the point. Matches LilyPond's blot-rounded
+                // line ends. LILYPOND-REF: lily/hairpin.cc — Round_ blot.
+                gc.DrawLine(h.StartX, leftTop, h.EndX, rightTop, Color.Black, thickness, cap: LineCap.Round);
+                gc.DrawLine(h.StartX, leftBottom, h.EndX, rightBottom, Color.Black, thickness, cap: LineCap.Round);
             }
         }
     }

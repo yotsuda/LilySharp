@@ -106,7 +106,8 @@ public sealed class SharedRendererSpanBarTests
             => Rects.Add((x, y, w, h));
 
         public void DrawLine(double x1, double y1, double x2, double y2,
-            Color? stroke = null, double strokeWidth = 0.1, (double On, double Off)? dash = null) { }
+            Color? stroke = null, double strokeWidth = 0.1, (double On, double Off)? dash = null,
+            LineCap cap = LineCap.Butt) { }
         public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null) { }
         public void DrawEllipse(double cx, double cy, double rx, double ry,
             Color? fill = null, Color? stroke = null, double sw = 0) { }

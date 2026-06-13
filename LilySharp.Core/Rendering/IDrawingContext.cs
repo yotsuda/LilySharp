@@ -17,6 +17,17 @@
 namespace LilySharp.Core.Rendering;
 
 /// <summary>
+/// How the ends of a stroked line are shaped.
+/// </summary>
+public enum LineCap
+{
+    /// <summary>Squared off exactly at the endpoint (SVG default).</summary>
+    Butt,
+    /// <summary>Rounded end of radius = half the stroke width.</summary>
+    Round,
+}
+
+/// <summary>
 /// Backend-agnostic drawing surface for music notation. All coordinates,
 /// thicknesses, and font sizes are expressed in <em>staff-spaces</em>
 /// (the same unit Lily#'s layout engine uses). The implementation is
@@ -35,7 +46,8 @@ public interface IDrawingContext
     void DrawLine(
         double x1, double y1, double x2, double y2,
         Color? stroke = null, double strokeWidth = 0.1,
-        (double On, double Off)? dash = null);
+        (double On, double Off)? dash = null,
+        LineCap cap = LineCap.Butt);
 
     void DrawRectangle(
         double x, double y, double width, double height,
