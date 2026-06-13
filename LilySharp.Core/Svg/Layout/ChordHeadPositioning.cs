@@ -43,15 +43,18 @@ public static class ChordHeadPositioning
     /// <param name="stemUp">Stem direction (drives the shift side).</param>
     /// <param name="noteValue">1=whole, 2=half, 4=quarter, … (head glyph and
     /// the stemless-semibreve rule).</param>
+    /// <param name="headScale">Head glyph scale (cue chords: 0.66) — the
+    /// reversal shift follows the scaled head extent.</param>
     public static double[] CalculateOffsets(
-        IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue)
+        IReadOnlyList<ChordNoteInfo> notes, bool stemUp, int noteValue,
+        double headScale = 1.0)
     {
         var offsets = new double[notes.Count];
         if (notes.Count < 2)
             return offsets;
 
         // LILYPOND-REF: stem.cc:684 — ell = head right ink extent.
-        double ell = GlyphMetrics.GetNoteheadBBox(noteValue).Right;
+        double ell = GlyphMetrics.GetNoteheadBBox(noteValue).Right * headScale;
         double thick = EngravingDefaults.StemThickness;
         int dir = stemUp ? 1 : -1;
 

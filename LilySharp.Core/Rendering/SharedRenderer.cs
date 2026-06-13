@@ -715,11 +715,12 @@ public static class SharedRenderer
             {
                 int noteValue = chord.BaseDuration.Denominator;
                 if (chord.BaseDuration.Numerator != 1) noteValue = 1;
-                double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue);
+                double chordScale = chord.IsCue ? 0.66 : 1.0;
+                double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue) * chordScale;
                 // Seconds shift reversed heads sideways — the ledger run
                 // follows the extreme head's real X.
                 double[] offsets = ChordHeadPositioning.CalculateOffsets(
-                    chord.Notes, chord.StemUp, noteValue);
+                    chord.Notes, chord.StemUp, noteValue, chordScale);
                 int maxIdx = -1, minIdx = -1;
                 for (int i = 0; i < chord.Notes.Length; i++)
                 {
@@ -779,8 +780,17 @@ public static class SharedRenderer
         if (noteValue >= 2 && !isBeamed)
         {
             Color? stemColor = ResolveColor(resolver, "Stem");
+            // Cue heads are drawn at 0.66×, so the up-stem attaches at the
+            // SCALED head's right edge (head width × scale − thick/2), or the
+            // stem floats off the small head. Down-stems attach at the head's
+            // left edge, which doesn't move with the scale.
+            // LILYPOND-REF: lily/stem.cc internal_calc_stem_offset_from_head —
+            // the offset comes from the (scaled) head extent.
+            double headScale = note.IsCue ? 0.66 : 1.0;
+            double upAttach = EngravingDefaults.NoteheadBlackWidth * headScale
+                - EngravingDefaults.StemThickness / 2;
             double stemX = stemUp
-                ? x + EngravingDefaults.StemUpAttachX
+                ? x + upAttach
                 : x + EngravingDefaults.StemDownAttachX;
             // Duration-dependent length + unnatural-direction shortening + the
             // extend-to-center-line rule, faithfully following LilyPond's
@@ -815,7 +825,7 @@ public static class SharedRenderer
         // LILYPOND-REF: scm/output-lib.scm ly:dots::print — stack with
         //   padding = one dot width (advance per dot = 2 dot widths)
         double dotWidth = GlyphMetrics.AugmentationDot.Width;
-        double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) + dotWidth;
+        double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? 0.66 : 1.0) + dotWidth;
         if (note.Dots > 0)
         {
             // Same Dot_configuration machinery as chords (for a single dot
@@ -840,10 +850,15 @@ public static class SharedRenderer
         bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;
         bool stemUp = forcedStemUp ?? chord.StemUp;
 
+        // Cue chords scale like cue notes (LP CueVoice fontSize = -4 ≈ 0.66×).
+        // LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4
+        double headScale = chord.IsCue ? 0.66 : 1.0;
+        double noteFontSize = chord.IsCue ? FontSize * 0.66 : FontSize;
+
         // Within-chord seconds/unisons: reversed heads shift to the far side
         // of the stem. LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
         double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
-            chord.Notes, stemUp, noteValue);
+            chord.Notes, stemUp, noteValue, headScale);
 
         // Accidentals through the full placement machinery (stagger/skylines),
         // aware of the shifted head ink — drawing each one at the same fixed
@@ -865,7 +880,7 @@ public static class SharedRenderer
             double y = staffMiddleY - n.StaffPosition * 0.5;
             if (!headWiped && !headTransparent)
                 using (gc.Source(chord.SourcePosition))
-                    gc.DrawGlyph(head, x + headOffsets[i], y, FontSize, noteheadColor);
+                    gc.DrawGlyph(head, x + headOffsets[i], y, noteFontSize, noteheadColor);
             if (y < topY) topY = y;
             if (y > bottomY) bottomY = y;
             if (n.StaffPosition > maxPos) maxPos = n.StaffPosition;
@@ -885,7 +900,7 @@ public static class SharedRenderer
         if (chord.Dots > 0 && chord.Notes.Length > 0)
         {
             double dotWidth = GlyphMetrics.AugmentationDot.Width;
-            double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue)
+            double dotStartX = x + GlyphMetrics.GetNoteheadAdvance(noteValue) * headScale
                 + Math.Max(0, headOffsets.Max()) + dotWidth;
             var resolved = DotConfiguration.Resolve(
                 chord.Notes.Select(n => n.StaffPosition).ToArray());
@@ -895,7 +910,7 @@ public static class SharedRenderer
                 for (int d = 0; d < chord.Dots; d++)
                     using (gc.Source(chord.SourcePosition))
                         gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
-                            dotStartX + d * 2 * dotWidth, dotY, FontSize, noteheadColor);
+                            dotStartX + d * 2 * dotWidth, dotY, noteFontSize, noteheadColor);
             }
         }
 
@@ -904,8 +919,11 @@ public static class SharedRenderer
         if (noteValue >= 2 && chord.Notes.Length > 0 && !isBeamed)
         {
             Color? stemColor = ResolveColor(resolver, "Stem");
+            // Up-stems attach at the (cue-scaled) head's right edge; see DrawNote.
+            double chordUpAttach = EngravingDefaults.NoteheadBlackWidth * headScale
+                - EngravingDefaults.StemThickness / 2;
             double stemX = stemUp
-                ? x + EngravingDefaults.StemUpAttachX
+                ? x + chordUpAttach
                 : x + EngravingDefaults.StemDownAttachX;
             // Stem attaches at the far notehead; its length is reckoned from the
             // stem-tip-side notehead (top note for stem-up, bottom for stem-down),
