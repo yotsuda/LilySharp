@@ -1621,7 +1621,11 @@ private GreenNode?[] ParseArticulations()
     {
         return Current.Kind switch
         {
-            SyntaxKind.Identifier => new SectionReferenceGreen(Advance()),
+            // Section reference with optional per-occurrence display label:
+            //   structure { First Second First "First (reprise)" }
+            SyntaxKind.Identifier => new SectionReferenceGreen(
+                Advance(),
+                Check(SyntaxKind.StringLiteral) ? Advance() : null),
             SyntaxKind.Tilde => ParseSilentSectionReference(),
             SyntaxKind.At => ParseMusicMark(),
             SyntaxKind.Underscore => ParseCustomText(),

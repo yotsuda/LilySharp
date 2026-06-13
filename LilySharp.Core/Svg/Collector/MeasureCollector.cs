@@ -1591,7 +1591,7 @@ public sealed class MeasureCollector
                         break;
                     if (_sections.TryGetValue(reference.SectionName, out var section))
                     {
-                        builder.SectionLabel = reference.SectionName;
+                        builder.SectionLabel = ResolveSectionLabel(reference);
                         ProcessSection(section, processNodes);
                     }
                     break;
@@ -1601,6 +1601,18 @@ public sealed class MeasureCollector
                     break;
             }
         }
+    }
+
+    /// <summary>
+    /// The printed mark for one section occurrence: the per-occurrence display
+    /// label when given (<c>structure { First First "First (reprise)" }</c> —
+    /// an empty string suppresses the mark like <c>~First</c>), else the
+    /// section identifier.
+    /// </summary>
+    private static string? ResolveSectionLabel(SectionReferenceSyntax reference)
+    {
+        var label = reference.DisplayLabel ?? reference.SectionName;
+        return label.Length == 0 ? null : label;
     }
 
     private static bool IsInsideRepeatBlock(SyntaxNode node)
@@ -1739,7 +1751,7 @@ public sealed class MeasureCollector
                 {
                     if (_sections.TryGetValue(reference.SectionName, out var section))
                     {
-                        builder.SectionLabel = reference.SectionName;
+                        builder.SectionLabel = ResolveSectionLabel(reference);
                         ProcessSection(section, processNodes);
                     }
                 }

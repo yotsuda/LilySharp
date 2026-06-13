@@ -23,8 +23,9 @@ section Second {
   melody { $motifC $motifA }
 }
 
-// Reuse sections
-structure { First Second First }
+// Reuse sections — the second occurrence of First gets its own display
+// label so the printed rehearsal marks stay unique.
+structure { First Second First "First (reprise)" }
 
 render score "dollar-ref.svg" {
   staff { melody }

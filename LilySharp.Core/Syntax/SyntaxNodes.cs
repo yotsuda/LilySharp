@@ -1251,6 +1251,28 @@ public sealed partial class SectionReferenceSyntax : SyntaxNode
     /// Gets the referenced section name.
     /// </summary>
     public string SectionName => Identifier.Text;
+
+    /// <summary>
+    /// Optional per-occurrence display label: <c>structure { First Second
+    /// First "First (reprise)" }</c> prints the string instead of the section
+    /// identifier for THIS occurrence. Null when no label was given.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: LilyPond's analog is a manual <c>\mark "text"</c> per
+    /// occurrence — display labels are occurrence-level events there too.
+    /// </remarks>
+    public string? DisplayLabel
+    {
+        get
+        {
+            if (GetChild(1) is not SyntaxTokenNode token)
+                return null;
+            var text = token.Text;
+            if (text.StartsWith("\"") && text.EndsWith("\"") && text.Length >= 2)
+                return text.Substring(1, text.Length - 2);
+            return text;
+        }
+    }
 }
 
 /// <summary>

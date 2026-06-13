@@ -351,6 +351,21 @@ section Main {
 structure { Intro Main Main Coda }
 ```
 
+A reused section prints the same section mark each time. Give an
+occurrence its own display label with a string after the name; an empty
+string suppresses the mark (like `~Name`):
+
+```
+structure { Intro Main Main "Main (reprise)" Coda }
+```
+
+Identifiers (sections, parts, phrases) may use any Unicode letters:
+
+```
+section イントロ { メロディ { $動機 } }
+structure { イントロ イントロ "イントロ(再現)" }
+```
+
 ## Render Block
 
 Controls output layout:

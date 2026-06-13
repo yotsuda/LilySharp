@@ -617,8 +617,8 @@ internal sealed class StructureDeclarationGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class SectionReferenceGreen : GreenSyntaxNode
 {
-    public SectionReferenceGreen(SyntaxToken identifier)
-        : base(SyntaxKind.SectionReference, [identifier])
+    public SectionReferenceGreen(SyntaxToken identifier, SyntaxToken? displayLabel = null)
+        : base(SyntaxKind.SectionReference, [identifier, displayLabel])
     {
     }
 }
