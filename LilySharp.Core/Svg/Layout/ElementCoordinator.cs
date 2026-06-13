@@ -671,6 +671,57 @@ public sealed class ElementCoordinator
     /// Each piece is scored independently with its bounds reattached to the system edges
     /// (LP-faithful: each broken piece gets its own SlurScoringProblem invocation).
     /// </remarks>
+    /// <summary>
+    /// Staff position of the note nearest a broken slur edge: the first
+    /// (leftEdge) or last sounding note of <paramref name="segSystem"/> that
+    /// lies within the slur's span. For chords the head on the curve's side
+    /// anchors the edge. Null when the system holds no covered note.
+    /// </summary>
+    private static int? EdgeNoteStaffPosition(
+        Score score, SystemLayout segSystem, SlurItem slur, bool leftEdge)
+    {
+        var measures = leftEdge
+            ? segSystem.Measures.AsEnumerable()
+            : segSystem.Measures.Reverse();
+
+        foreach (var ml in measures)
+        {
+            int mi = ml.MeasureIndex;
+            if (mi < slur.StartMeasureIndex || mi > slur.EndMeasureIndex)
+                continue;
+            if (mi >= score.Voice.Measures.Length)
+                continue;
+
+            var items = score.Voice.Measures[mi].Items;
+            int lo = mi == slur.StartMeasureIndex ? slur.StartItemIndex : 0;
+            int hi = mi == slur.EndMeasureIndex ? slur.EndItemIndex : items.Length - 1;
+            hi = Math.Min(hi, items.Length - 1);
+
+            if (leftEdge)
+            {
+                for (int i = lo; i <= hi; i++)
+                    if (ItemStaffPosition(items[i], slur.CurveUp) is { } p)
+                        return p;
+            }
+            else
+            {
+                for (int i = hi; i >= lo; i--)
+                    if (ItemStaffPosition(items[i], slur.CurveUp) is { } p)
+                        return p;
+            }
+        }
+        return null;
+    }
+
+    private static int? ItemStaffPosition(MusicItem item, bool curveUp) => item switch
+    {
+        NoteItem n => n.StaffPosition,
+        ChordItem c when c.Notes.Length > 0 => curveUp
+            ? c.Notes.Max(n => n.StaffPosition)
+            : c.Notes.Min(n => n.StaffPosition),
+        _ => null
+    };
+
     public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
     {
         var slurs = _slurDetector.DetectSlurs(score);
@@ -729,20 +780,22 @@ public sealed class ElementCoordinator
                     segEndX = lastMeasure.X + lastMeasure.Width;
                 }
 
-                // Y at the broken edge anchors at the connected side's staff position
-                // (the segment continues horizontally off-system).
-                double startStaffPos, endStaffPos;
-                if (segment.IsMiddle)
-                {
-                    double mid = (slur.StartStaffPosition + slur.EndStaffPosition) / 2.0;
-                    startStaffPos = mid;
-                    endStaffPos = mid;
-                }
-                else
-                {
-                    startStaffPos = segment.IsFirst ? slur.StartStaffPosition : slur.EndStaffPosition;
-                    endStaffPos = segment.IsLast ? slur.EndStaffPosition : slur.StartStaffPosition;
-                }
+                // Y at a broken edge anchors at the NEAREST covered note in
+                // this system, not at the slur's far endpoint — anchoring the
+                // continuation at the global end note's pitch ran the curve
+                // through the segment's own first/last heads when they sit
+                // lower/higher. LilyPond re-scores each broken piece over its
+                // real encompassed columns; this is the endpoint part of that.
+                // LILYPOND-REF: lily/slur-scoring.cc — encompass_info over the
+                // broken piece's own note columns.
+                double startStaffPos = segment.IsFirst
+                    ? slur.StartStaffPosition
+                    : EdgeNoteStaffPosition(score, segSystem, slur, leftEdge: true)
+                        ?? slur.EndStaffPosition;
+                double endStaffPos = segment.IsLast
+                    ? slur.EndStaffPosition
+                    : EdgeNoteStaffPosition(score, segSystem, slur, leftEdge: false)
+                        ?? slur.StartStaffPosition;
 
                 double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex);
                 double staffMiddleY = staffY + _options.StaffHeight / 2;
