@@ -36,6 +36,15 @@ public static class SerifTextMetrics
     /// <summary>Times New Roman Bold advance widths per 1000 em units.</summary>
     private static int AdvanceWidth(char c) => c switch
     {
+        // East Asian wide characters (kana, CJK ideographs, Hangul,
+        // full-width forms): rendered by a CJK fallback font at a full em
+        // advance; half-width katakana at half an em.
+        >= 'ᄀ' and <= 'ᅟ' => 1000, // Hangul Jamo
+        >= '⺀' and <= '꓏' => 1000, // CJK radicals … kana … ideographs … Yi
+        >= '가' and <= '힣' => 1000, // Hangul syllables
+        >= '豈' and <= '﫿' => 1000, // CJK compatibility ideographs
+        >= '＀' and <= '｠' => 1000, // full-width forms
+        >= '｡' and <= 'ﾟ' => 500,  // half-width katakana
         // Uppercase
         'A' => 722, 'B' => 667, 'C' => 722, 'D' => 722, 'E' => 667,
         'F' => 611, 'G' => 778, 'H' => 778, 'I' => 389, 'J' => 500,
