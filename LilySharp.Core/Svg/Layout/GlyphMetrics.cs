@@ -84,11 +84,10 @@ public static partial class GlyphMetrics
     // ========== Engraving line/stroke thicknesses ==========
     // Line-family thicknesses live in EngravingDefaults, derived from
     // LilyPond's line-thickness (scm/paper.scm). The SMuFL/Bravura duplicates
-    // that used to sit here (staff 0.13 / stem 0.12 / ledger 0.16) were
-    // unused and contradicted LilyPond's values.
-
-    /// <summary>Thickness of thin barlines.</summary>
-    public const double ThinBarlineThickness = 0.16;
+    // that used to sit here (staff 0.13 / stem 0.12 / ledger 0.16, and the
+    // thin-barline 0.16) were unused and contradicted LilyPond's values;
+    // the thin barline is EngravingDefaults.ThinBarlineThickness (1.9 ×
+    // line-thickness = 0.19, LilyPond's hair-thickness).
 
     // ========== Spacing heuristics ==========
 

@@ -113,12 +113,6 @@ public static class EngravingDefaults
     /// <remarks>LILYPOND-REF: scm/bar-line.scm:766-801.</remarks>
     public const double RepeatBarlineDotSeparation = BarlineSeparation;
 
-    // === Slurs and ties ===
-    public const double SlurEndpointThickness = 0.1;
-    public const double SlurMidpointThickness = 0.22;
-    public const double TieEndpointThickness = 0.1;
-    public const double TieMidpointThickness = 0.22;
-
     // === Other elements ===
     // (Hairpins draw at StaffLineThickness — LP Hairpin (thickness . 1.0)
     //  × line-thickness; the former unused HairpinThickness 0.16 is gone.)
@@ -126,7 +120,6 @@ public static class EngravingDefaults
     /// <summary>Tuplet bracket: thickness 1.6 × line-thickness = 0.16.</summary>
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm TupletBracket (thickness . 1.6).</remarks>
     public const double TupletBracketThickness = 1.6 * LineThickness;
-    public const double BracketThickness = 0.5;
 
     // Rest collision avoidance
     /// <summary>Default staff position for rest center (middle line).</summary>
@@ -253,12 +246,6 @@ public static class EngravingDefaults
     /// <remarks>LILYPOND-REF: scm/bar-line.scm:766-801 — the colon glyph is
     /// stacked with the same kern as the line segments.</remarks>
     public const double RepeatDotsOffset = 2 * RepeatDotRadius + RepeatBarlineDotSeparation;
-
-    // === Tie/Slur rendering ===
-    /// <summary>Tie thickness multiplier for rendering (deprecated, use TieMidThickness).</summary>
-    public const double TieRenderThickness = 0.12;
-    /// <summary>Slur thickness multiplier for rendering (deprecated, use SlurMidThickness).</summary>
-    public const double SlurRenderThickness = 0.15;
 
     // LilyPond-style variable thickness parameters
     // Reference: LilyPond's 'thickness' property (distance between arcs at thickest point)
