@@ -98,8 +98,8 @@ public static class GlissandoEngraver
                 var system = systems[segment.SystemIndex];
                 double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
                 double staffMiddleY = staffY + staffHeight / 2;
-                double startStaffYAbs = staffMiddleY - gliss.StartStaffPosition / 2.0;
-                double endStaffYAbs = staffMiddleY - gliss.EndStaffPosition / 2.0;
+                double startStaffYAbs = StaffFrame.PositionToDevice(gliss.StartStaffPosition, staffMiddleY);
+                double endStaffYAbs = StaffFrame.PositionToDevice(gliss.EndStaffPosition, staffMiddleY);
 
                 // Resolve segment-local X bounds against the system's measure layouts.
                 // LILYPOND-REF: lily/spanner.cc:124-137 — bounds reattached to system edges.

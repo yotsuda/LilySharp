@@ -141,7 +141,7 @@ public static class TieVariantEngraver
         double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
         const double StaffHeight = 4.0;
         double staffMiddleY = staffY + StaffHeight / 2.0;
-        double noteY = staffMiddleY - note.StaffPosition / 2.0;
+        double noteY = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY);
         double baseY = curveUp ? noteY - NoteOffset : noteY + NoteOffset;
 
         // Half-tie geometry: starts at the note edge, extends TieLength away.

@@ -203,7 +203,7 @@ public sealed class SkylineBuilder
                 int chordNoteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
                 foreach (var chordNote in chord.Notes)
                 {
-                    double noteY = staffMiddleY - chordNote.StaffPosition / 2.0;
+                    double noteY = StaffFrame.PositionToDevice(chordNote.StaffPosition, staffMiddleY);
                     bool stemUp = chordNote.StaffPosition < 4;
                     AddNoteBoxToSkylines(chordNote.StaffPosition, x, noteY,
                         stemLength, noteheadHeight, stemUp, chordNoteValue,
@@ -239,7 +239,7 @@ public sealed class SkylineBuilder
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline)
     {
-        double noteY = staffMiddleY - note.StaffPosition / 2.0;
+        double noteY = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY);
         int noteValue = LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration);
         bool stemUp = note.StemUp;
 

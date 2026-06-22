@@ -53,4 +53,14 @@ public static class StaffFrame
     /// </summary>
     public static double ToDevice(double up, double staffMiddleY)
         => staffMiddleY - up;
+
+    /// <summary>
+    /// Device Y of a point at the given staff position. Staff positions are
+    /// LilyPond's Y-up half-spaces from the middle line (position 0, so pos/2
+    /// staff-spaces above it); this is the half-space form of
+    /// <see cref="ToDevice"/>, the single home for the <c>staffMiddleY -
+    /// pos/2</c> conversion that was formerly inlined at every call site.
+    /// </summary>
+    public static double PositionToDevice(double staffPosition, double staffMiddleY)
+        => staffMiddleY - staffPosition / 2.0;
 }

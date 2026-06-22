@@ -166,7 +166,7 @@ public static class FingeringEngraver
 
             // Y position: align with the note's own staff position, matching the
             // visual convention of putting each finger next to its note.
-            double y = staffMiddle - note.StaffPosition / 2.0;
+            double y = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddle);
 
             layouts.Add(new FingeringLayout(
                 MeasureIndex: measureIndex,

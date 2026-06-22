@@ -746,7 +746,7 @@ public static class SharedRenderer
     {
         int noteValue = note.BaseDuration.Denominator;
         if (note.BaseDuration.Numerator != 1) noteValue = 1;
-        double noteY = staffMiddleY - note.StaffPosition * 0.5;
+        double noteY = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY);
         // Cue notes scale to ~0.66× (LP CueVoice fontSize = -4 → magstep(-4)).
         // LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4
         double noteFontSize = note.IsCue ? FontSize * 0.66 : FontSize;
@@ -831,7 +831,7 @@ public static class SharedRenderer
             // Same Dot_configuration machinery as chords (for a single dot
             // this reduces to "line notes move to the space above").
             int dotPos = DotConfiguration.Resolve(new[] { note.StaffPosition })[0];
-            double dotY = staffMiddleY - dotPos * 0.5;
+            double dotY = StaffFrame.PositionToDevice(dotPos, staffMiddleY);
             for (int d = 0; d < note.Dots; d++)
                 gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
                     dotStartX + d * 2 * dotWidth, dotY, noteFontSize, noteheadColor);
@@ -867,7 +867,7 @@ public static class SharedRenderer
         var accLayouts = AccidentalColumn.CalculatePositions(chord.Notes, headOffsets);
         foreach (var al in accLayouts)
         {
-            double ay = staffMiddleY - al.StaffPosition * 0.5;
+            double ay = StaffFrame.PositionToDevice(al.StaffPosition, staffMiddleY);
             DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy,
                 x + al.XOffset, ay, chord.SourcePosition, gc);
         }
@@ -877,7 +877,7 @@ public static class SharedRenderer
         for (int i = 0; i < chord.Notes.Length; i++)
         {
             var n = chord.Notes[i];
-            double y = staffMiddleY - n.StaffPosition * 0.5;
+            double y = StaffFrame.PositionToDevice(n.StaffPosition, staffMiddleY);
             if (!headWiped && !headTransparent)
                 using (gc.Source(chord.SourcePosition))
                     gc.DrawGlyph(head, x + headOffsets[i], y, noteFontSize, noteheadColor);
@@ -906,7 +906,7 @@ public static class SharedRenderer
                 chord.Notes.Select(n => n.StaffPosition).ToArray());
             foreach (int p in resolved)
             {
-                double dotY = staffMiddleY - p * 0.5;
+                double dotY = StaffFrame.PositionToDevice(p, staffMiddleY);
                 for (int d = 0; d < chord.Dots; d++)
                     using (gc.Source(chord.SourcePosition))
                         gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot,
@@ -1117,7 +1117,7 @@ public static class SharedRenderer
                 if (left >= req.LedgerRight)
                     continue;
 
-                double y = req.StaffMiddleY - pos * 0.5;
+                double y = StaffFrame.PositionToDevice(pos, req.StaffMiddleY);
                 gc.DrawLine(left, y, req.LedgerRight, y, Color.Black, thickness);
             }
         }
@@ -1139,13 +1139,13 @@ public static class SharedRenderer
         // Ledger lines above staff (staff position > 4 = above top line)
         for (int pos = 6; pos <= staffPosition; pos += 2)
         {
-            double y = staffMiddleY - pos * 0.5;
+            double y = StaffFrame.PositionToDevice(pos, staffMiddleY);
             gc.DrawLine(x1, y, x2, y, Color.Black, thickness);
         }
         // Ledger lines below staff (staff position < -4 = below bottom line)
         for (int pos = -6; pos >= staffPosition; pos -= 2)
         {
-            double y = staffMiddleY - pos * 0.5;
+            double y = StaffFrame.PositionToDevice(pos, staffMiddleY);
             gc.DrawLine(x1, y, x2, y, Color.Black, thickness);
         }
     }
@@ -1347,8 +1347,8 @@ public static class SharedRenderer
             double StemAttachX(int i) => beam.MemberXPositions[i]
                 + (MemberUp(i) ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
 
-            double leftBeamY = staffMiddleY - beam.LeftY * 0.5;
-            double rightBeamY = staffMiddleY - beam.RightY * 0.5;
+            double leftBeamY = StaffFrame.PositionToDevice(beam.LeftY, staffMiddleY);
+            double rightBeamY = StaffFrame.PositionToDevice(beam.RightY, staffMiddleY);
             double leftStemX = StemAttachX(0);
             double rightStemX = StemAttachX(grp.Members.Length - 1);
 
@@ -1973,7 +1973,7 @@ public static class SharedRenderer
             {
                 foreach (var note in g.Notes)
                 {
-                    double y = staffMiddleY - note.StaffPosition * 0.5;
+                    double y = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY);
                     // Ledgers under the head — layer 0 with the staff lines.
                     // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0)
                     if (note.NeedsLedger)
@@ -1994,7 +1994,7 @@ public static class SharedRenderer
                 if (g.Notes.Length > 0 &&
                     g.Type is GraceNoteType.Acciaccatura or GraceNoteType.Appoggiatura)
                 {
-                    double mainY = staffMiddleY - g.MainNoteStaffPosition * 0.5;
+                    double mainY = StaffFrame.PositionToDevice(g.MainNoteStaffPosition, staffMiddleY);
                     DrawGraceSlur(lastNoteX, lastNoteY, g.MainNoteX, mainY, g.Scale, gc);
                 }
             }

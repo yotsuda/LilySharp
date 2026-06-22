@@ -82,8 +82,8 @@ public static class ArpeggioEngraver
 
             // Calculate Y positions from staff positions
             double staffMiddleY = system.Y + staffHeight / 2;
-            double topY = staffMiddleY - arp.MaxStaffPosition / 2.0;
-            double bottomY = staffMiddleY - arp.MinStaffPosition / 2.0;
+            double topY = StaffFrame.PositionToDevice(arp.MaxStaffPosition, staffMiddleY);
+            double bottomY = StaffFrame.PositionToDevice(arp.MinStaffPosition, staffMiddleY);
 
             // LILYPOND-REF: scm/define-grobs.scm:211 (protrusion . 0.4)
             topY -= 0.4;

@@ -644,7 +644,7 @@ public sealed class ElementCoordinator
                 // Tie Y position is uniform (same pitch on both ends).
                 double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex);
                 double staffMiddleY = staffY + _options.StaffHeight / 2;
-                double y = staffMiddleY - tie.StaffPosition / 2;
+                double y = StaffFrame.PositionToDevice(tie.StaffPosition, staffMiddleY);
 
                 var problem = new TieFormattingProblem(
                     tie, segStartX, y, segEndX, y,
@@ -799,8 +799,8 @@ public sealed class ElementCoordinator
 
                 double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex);
                 double staffMiddleY = staffY + _options.StaffHeight / 2;
-                double segStartY = staffMiddleY - startStaffPos / 2.0;
-                double segEndY = staffMiddleY - endStaffPos / 2.0;
+                double segStartY = StaffFrame.PositionToDevice(startStaffPos, staffMiddleY);
+                double segEndY = StaffFrame.PositionToDevice(endStaffPos, staffMiddleY);
 
                 if (slur.CurveUp)
                 {
