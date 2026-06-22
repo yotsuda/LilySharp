@@ -105,8 +105,9 @@ public sealed class SlurScoringProblem
     // Musical dy: pitch difference in staff spaces
     private readonly double _musicalDy;
 
-    // Staff line positions (in staff spaces)
-    private static readonly double[] StaffLinePositions = { 0, 1, 2, 3, 4 };
+    // Staff line positions (staff spaces), in the internal Y-up frame
+    // (yUp = -yDevice), so they are negated relative to the device 0..4.
+    private static readonly double[] StaffLinePositions = { 0, -1, -2, -3, -4 };
 
     public SlurScoringProblem(
         SlurItem slur,
@@ -121,22 +122,40 @@ public sealed class SlurScoringProblem
         bool isBrokenLeft = false,
         bool isBrokenRight = false)
     {
+        // Internal vertical frame: LilyPond's native Y-up. We obtain it from
+        // the device frame (Y-down) by exact negation (yUp = -yDevice), so the
+        // scorers below read sign-for-sign against lily/slur-configuration.cc
+        // (dir = up ? +1 : -1, peak = mid + height, encompass dir*(slur - head)
+        // < 0, ...). Negation is exact in IEEE, so the round-trip is
+        // byte-neutral; CreateLayout negates the result back to device.
         _slur = slur;
         _startX = startX;
-        _startY = startY;
+        _startY = -startY;
         _endX = endX;
-        _endY = endY;
+        _endY = -endY;
         _parameters = parameters ?? SlurScoreParameters.Default;
-        _obstacles = obstacles;
         _existingSlurs = existingSlurs;
         _staffHeight = staffHeight;
         _isBrokenLeft = isBrokenLeft;
         _isBrokenRight = isBrokenRight;
 
-        // Musical dy: distance in SVG coordinates (Y increases downward)
-        // Staff positions are inverted: higher pitch = lower Y in SVG
+        // Reflect obstacle extents into the Y-up frame (negate both edges; the
+        // TopY field stays the visual top edge, now the numerically larger one).
+        if (obstacles != null)
+        {
+            var reflected = new List<SlurObstacle>(obstacles.Count);
+            foreach (var o in obstacles)
+                reflected.Add(new SlurObstacle(o.X, -o.TopY, -o.BottomY, o.Type));
+            _obstacles = reflected;
+        }
+        else
+        {
+            _obstacles = null;
+        }
+
+        // Musical dy in the Y-up frame: higher pitch = larger Y.
         // LILYPOND-REF: lily/slur-scoring.cc:180-190
-        _musicalDy = (slur.StartStaffPosition - slur.EndStaffPosition) / 2.0;
+        _musicalDy = (slur.EndStaffPosition - slur.StartStaffPosition) / 2.0;
     }
 
     // ---------------------------------------------------------------
@@ -191,7 +210,8 @@ public sealed class SlurScoringProblem
     {
         double linearY = startY + t * (endY - startY);
         double arc = 4 * height * t * (1 - t);
-        return curveUp ? linearY - arc : linearY + arc;
+        // Y-up: an up slur peaks ABOVE the chord line (larger Y).
+        return curveUp ? linearY + arc : linearY - arc;
     }
 
     // ---------------------------------------------------------------
@@ -280,12 +300,13 @@ public sealed class SlurScoringProblem
 
         double baseHeight = CalculateSlurHeight(width);
         bool preferUp = _slur.CurveUp;
-        int dir = preferUp ? -1 : 1;
+        // Y-up: an up slur sits ABOVE its notes, so attachments move to larger Y.
+        int dir = preferUp ? 1 : -1;
 
         // Base attachment offset from notes
         double offset = 0.3; // staff spaces
-        double baseStartY = preferUp ? _startY - offset : _startY + offset;
-        double baseEndY = preferUp ? _endY - offset : _endY + offset;
+        double baseStartY = preferUp ? _startY + offset : _startY - offset;
+        double baseEndY = preferUp ? _endY + offset : _endY - offset;
 
         // Generate grid: regionSize steps at 0.5 staff-space intervals
         // LILYPOND-REF: lily/slur-scoring.cc:739-740
@@ -424,7 +445,7 @@ public sealed class SlurScoringProblem
 
         double slope = (config.EndY - config.StartY) / slurDx;
         double factor = _parameters.EdgeAttractionFactor;
-        int dir = config.CurveUp ? -1 : 1;
+        int dir = config.CurveUp ? 1 : -1;
 
         // Left edge
         {
@@ -484,7 +505,7 @@ public sealed class SlurScoringProblem
 
         // Check peak against staff lines
         double midY = (config.StartY + config.EndY) / 2;
-        double peakY = config.CurveUp ? midY - config.Height : midY + config.Height;
+        double peakY = config.CurveUp ? midY + config.Height : midY - config.Height;
 
         foreach (double lineY in StaffLinePositions)
         {
@@ -505,7 +526,8 @@ public sealed class SlurScoringProblem
                 if (!xOverlap)
                     continue;
 
-                double existingPeakY = (existing.Control1.Y + existing.Control2.Y) / 2;
+                // Existing slurs are device-Y; reflect into the Y-up frame.
+                double existingPeakY = -((existing.Control1.Y + existing.Control2.Y) / 2);
                 double dist = Math.Abs(peakY - existingPeakY);
 
                 demerit += _parameters.ExtraObjectCollisionPenalty
@@ -541,7 +563,7 @@ public sealed class SlurScoringProblem
 
         double demerit = 0.0;
         var convexHeadDistances = new List<double>();
-        int dir = config.CurveUp ? -1 : 1;
+        int dir = config.CurveUp ? 1 : -1;
 
         for (int j = 0; j < _obstacles.Count; j++)
         {
@@ -583,8 +605,8 @@ public sealed class SlurScoringProblem
                     // Track distance for variance calculation
                     double lineY = config.StartY + t * (config.EndY - config.StartY);
                     double closest = config.CurveUp
-                        ? Math.Min(obstacle.TopY, lineY)
-                        : Math.Max(obstacle.BottomY, lineY);
+                        ? Math.Max(obstacle.TopY, lineY)
+                        : Math.Min(obstacle.BottomY, lineY);
                     double d = Math.Abs(closest - slurY);
                     convexHeadDistances.Add(d);
                 }
@@ -672,7 +694,8 @@ public sealed class SlurScoringProblem
         double width = config.EndX - config.StartX;
         double indent = CalculateIndent(width);
 
-        double directedHeight = config.CurveUp ? -config.Height : config.Height;
+        // Y-up: an up slur's control points sit ABOVE the chord line (larger Y).
+        double directedHeight = config.CurveUp ? config.Height : -config.Height;
         // Control points follow start-end line with arc height offset
         // LILYPOND-REF: lily/bezier-bow.cc flat bow + shear for dy
         double cpT1 = (width > 0) ? indent / width : 0;
@@ -680,14 +703,15 @@ public sealed class SlurScoringProblem
         var control1 = (X: config.StartX + indent, Y: config.StartY + cpT1 * (config.EndY - config.StartY) + directedHeight);
         var control2 = (X: config.EndX - indent, Y: config.StartY + cpT2 * (config.EndY - config.StartY) + directedHeight);
 
+        // Negate Y back to device coordinates (inverse of the entry flip).
         return new SlurLayout(
             _slur,
             config.StartX,
-            config.StartY,
+            -config.StartY,
             config.EndX,
-            config.EndY,
-            control1,
-            control2,
+            -config.EndY,
+            (control1.X, -control1.Y),
+            (control2.X, -control2.Y),
             isBrokenLeft: _isBrokenLeft,
             isBrokenRight: _isBrokenRight);
     }
