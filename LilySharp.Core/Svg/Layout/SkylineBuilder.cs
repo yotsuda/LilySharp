@@ -201,12 +201,16 @@ public sealed class SkylineBuilder
                 break;
             case ChordItem chord:
                 int chordNoteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
+                // Every note of a chord shares the chord's single stem, so the
+                // stem box must use the chord's resolved direction — not a
+                // per-note threshold. Mirrors the note case (note.StemUp) and
+                // the renderer (chord.StemUp).
+                // LILYPOND-REF: lily/stem.cc — one Stem per NoteColumn.
                 foreach (var chordNote in chord.Notes)
                 {
                     double noteY = StaffFrame.PositionToDevice(chordNote.StaffPosition, staffMiddleY);
-                    bool stemUp = chordNote.StaffPosition < 4;
                     AddNoteBoxToSkylines(chordNote.StaffPosition, x, noteY,
-                        stemLength, noteheadHeight, stemUp, chordNoteValue,
+                        stemLength, noteheadHeight, chord.StemUp, chordNoteValue,
                         upSkyline, downSkyline);
                 }
                 break;
