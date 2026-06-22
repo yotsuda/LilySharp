@@ -101,10 +101,10 @@ public static class OutsideStaffStacker
             foreach (var m in systems[sysIdx].Measures)
                 measureToSystem[m.MeasureIndex] = sysIdx;
 
-        // Per-system occupied space tracker
-        var trackers = new OccupiedTracker[systems.Length];
+        // Per-system occupied space tracker (stacks DOWN, below the staff)
+        var trackers = new DirectionalOccupancy[systems.Length];
         for (int i = 0; i < systems.Length; i++)
-            trackers[i] = new OccupiedTracker();
+            trackers[i] = new DirectionalOccupancy(StaffBottom, dir: +1);
 
         // Below-staff articulations (Script grobs) have NO outside-staff
         // priority in LilyPond: they sit against the note and everything at
@@ -140,7 +140,7 @@ public static class OutsideStaffStacker
 
                 double xStart = dyn.X - DynamicHalfWidth;
                 double xEnd = dyn.X + DynamicHalfWidth;
-                double occupied = trackers[sysIdx].MaxYAt(xStart, xEnd);
+                double occupied = trackers[sysIdx].Frontier(xStart, xEnd);
                 double requiredY = occupied + OutsideStaffPadding + DynamicTextAscent;
                 if (requiredY > dyn.Y)
                     dynBuilder[i] = dyn with { Y = requiredY };
@@ -162,7 +162,7 @@ public static class OutsideStaffStacker
                 if (!measureToSystem.TryGetValue(hp.StartMeasureIndex, out int sysIdx))
                     continue;
 
-                double occupiedBottom = trackers[sysIdx].MaxYAt(hp.StartX, hp.EndX);
+                double occupiedBottom = trackers[sysIdx].Frontier(hp.StartX, hp.EndX);
                 double requiredY = occupiedBottom + OutsideStaffPadding + HairpinHalfHeight;
                 double newY = Math.Max(hp.Y, requiredY);
 
@@ -189,7 +189,7 @@ public static class OutsideStaffStacker
                 if (!measureToSystem.TryGetValue(sp.StartMeasureIndex, out int sysIdx))
                     continue;
 
-                double occupiedBottom = trackers[sysIdx].MaxYAt(sp.StartX, sp.EndX);
+                double occupiedBottom = trackers[sysIdx].Frontier(sp.StartX, sp.EndX);
                 double requiredY = occupiedBottom + OutsideStaffPadding + TextSpannerAscent;
                 double newY = Math.Max(sp.Y, requiredY);
 
@@ -204,45 +204,6 @@ public static class OutsideStaffStacker
         }
 
         return (adjDynamics, adjHairpins, adjTextSpanners);
-    }
-
-    /// <summary>
-    /// Tracks occupied vertical space per X region for collision avoidance.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/axis-group-interface.cc:912-972 skyline_spacing
-    ///
-    /// Simplified interval-based tracker: stores (startX, endX, bottomY) tuples
-    /// and queries for the maximum bottomY overlapping a given X range.
-    /// This is equivalent to using a DOWN skyline but with simpler implementation
-    /// suitable for the discrete set of outside-staff elements.
-    /// </remarks>
-    private sealed class OccupiedTracker
-    {
-        private readonly List<(double startX, double endX, double bottomY)> _regions = new();
-
-        /// <summary>
-        /// Returns the maximum occupied bottom Y at the given X range.
-        /// Returns StaffBottom if no regions overlap.
-        /// </summary>
-        public double MaxYAt(double startX, double endX)
-        {
-            double maxY = StaffBottom;
-            foreach (var (rStart, rEnd, rBottom) in _regions)
-            {
-                if (rStart < endX && rEnd > startX) // X overlap
-                    maxY = Math.Max(maxY, rBottom);
-            }
-            return maxY;
-        }
-
-        /// <summary>
-        /// Registers an occupied region.
-        /// </summary>
-        public void AddRegion(double startX, double endX, double bottomY)
-        {
-            _regions.Add((startX, endX, bottomY));
-        }
     }
 
     // =================================================================
@@ -297,10 +258,10 @@ public static class OutsideStaffStacker
 
         // UP trackers: smaller page Y = further above the staff. Occupancy
         // records the TOP edge of everything placed so far.
-        var trackers = new UpTracker[systems.Length];
+        var trackers = new DirectionalOccupancy[systems.Length];
         for (int i = 0; i < systems.Length; i++)
         {
-            trackers[i] = new UpTracker(systems[i].Y);
+            trackers[i] = new DirectionalOccupancy(systems[i].Y, dir: -1);
             // Seed with the system's up-skyline (staff content protrusions).
             // VerticalSkyline.Height converts the internal sky-relative value
             // to real coordinates (negative = above the staff top); raw
@@ -518,7 +479,7 @@ public static class OutsideStaffStacker
                 foreach (int i in sysGroup)
                 {
                     var v = b[i];
-                    double required = trackers[sysIdx].MinYAt(v.StartX, v.EndX)
+                    double required = trackers[sysIdx].Frontier(v.StartX, v.EndX)
                         - OutsideStaffPadding - VoltaBottom(v);
                     anchor = Math.Min(anchor, Math.Min(sy + v.Y, required));
                 }
@@ -615,10 +576,10 @@ public static class OutsideStaffStacker
     /// top by outside-staff-padding; the element only ever moves AWAY from
     /// the staff. Registers the element's extent and returns the new anchor.
     /// </summary>
-    private static double Place(UpTracker tracker, double x0, double x1,
+    private static double Place(DirectionalOccupancy tracker, double x0, double x1,
         double anchorY, double topOffset, double bottomOffset)
     {
-        double occupiedTop = tracker.MinYAt(x0, x1);
+        double occupiedTop = tracker.Frontier(x0, x1);
         double required = occupiedTop - OutsideStaffPadding - bottomOffset;
         double newAnchor = Math.Min(anchorY, required);
         tracker.AddRegion(x0, x1, newAnchor + topOffset);
@@ -626,28 +587,51 @@ public static class OutsideStaffStacker
     }
 
     /// <summary>
-    /// Occupancy above the staff: tracks the topmost (smallest page Y) edge
-    /// per X region. Mirror image of <see cref="OccupiedTracker"/>.
+    /// Single interval-based occupancy skyline shared by both stacking
+    /// directions, replacing the former mirror-image below/above trackers.
     /// </summary>
-    private sealed class UpTracker
+    /// <remarks>
+    /// LILYPOND-REF: lily/axis-group-interface.cc — outside-staff grobs are
+    /// side-positioned against ONE accumulated skyline, parameterized by the
+    /// stacking direction, rather than two hand-mirrored implementations.
+    ///
+    /// Coordinates here are device Y (Y-down). <paramref name="_dir"/> = +1
+    /// stacks DOWN (below the staff: the frontier is the largest device Y, the
+    /// edge furthest below); <paramref name="_dir"/> = -1 stacks UP (above the
+    /// staff: the frontier is the smallest device Y, the edge furthest above).
+    /// <see cref="Frontier"/> returns the staff edge when no region overlaps.
+    /// </remarks>
+    private sealed class DirectionalOccupancy
     {
-        private readonly List<(double startX, double endX, double topY)> _regions = new();
-        private readonly double _staffTop;
+        private readonly List<(double startX, double endX, double edgeY)> _regions = new();
+        private readonly double _staffEdge;
+        private readonly int _dir;
 
-        public UpTracker(double staffTop) => _staffTop = staffTop;
-
-        public double MinYAt(double startX, double endX)
+        public DirectionalOccupancy(double staffEdge, int dir)
         {
-            double minY = _staffTop;
-            foreach (var (rStart, rEnd, rTop) in _regions)
-            {
-                if (rStart < endX && rEnd > startX)
-                    minY = Math.Min(minY, rTop);
-            }
-            return minY;
+            _staffEdge = staffEdge;
+            _dir = dir;
         }
 
-        public void AddRegion(double startX, double endX, double topY)
-            => _regions.Add((startX, endX, topY));
+        /// <summary>
+        /// Returns the occupied frontier device-Y in the stacking direction
+        /// over the given X range (max for down, min for up), or the staff
+        /// edge if no region overlaps.
+        /// </summary>
+        public double Frontier(double startX, double endX)
+        {
+            double frontier = _staffEdge;
+            foreach (var (rStart, rEnd, edgeY) in _regions)
+            {
+                if (rStart < endX && rEnd > startX) // X overlap
+                    frontier = _dir > 0
+                        ? Math.Max(frontier, edgeY)
+                        : Math.Min(frontier, edgeY);
+            }
+            return frontier;
+        }
+
+        public void AddRegion(double startX, double endX, double edgeY)
+            => _regions.Add((startX, endX, edgeY));
     }
 }
