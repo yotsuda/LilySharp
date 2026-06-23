@@ -64,6 +64,26 @@ Stage 1 step 1(stem アンカー + column-X 補正を単一音 byte 不変で導
   (DrawNote:771 / DrawChord:883)、stem はヘッド端へ:up-stem `x + headWidth − thick/2`
   (:790-793)、down-stem `x + StemDownAttachX`(:925-927)。= ハンドオフ言う左端アンカー。
 
+### 2026-06-23 実測値(close_half・byte 単位)— 実装の目標値
+
+`test__collision.svg`(snapshot)から close_half 同群(beat1: up=e2 高 / down=d2 低、
+両 half)の実座標:
+- up-head 左端 `x=11.10`、up-stem `12.34`(= +1.239 = `StemUpAttachX`)。
+- down-head 左端 `x=9.80`、down-stem `9.87`(= +0.065 = `StemDownAttachX`)。
+- **head 左端の分離 = 11.10 − 9.80 = 1.30 ≈ noteheadWidth(1.304)。高い音(up)が
+  低い音(down)の右に隣接、重なり無し。= 現 `1.0×w`。**
+- グリフ実値: `NoteheadBlack`=`[0,1.304]`、`NoteheadHalf`=`[0,1.376]`、
+  `NoteheadWhole`=`[0,1.964]`(原点=左端)。`StemThickness≈0.13`。
+- LP 実描画(`C:\temp\closehalf.ly` = collision.lys と同 voiceCollision)も**高音を右隣接**で
+  Lily# と視覚一致 → **close_half の出力は保存すべき**(変えない)。
+
+**重要な含意(formula では解けない)**: LP 公式の `0.52 × 正規化(同幅 head なら 1.0)×
+downstem幅(1.304)≈ 0.678` は現 `1.0×1.304=1.304` と一致しない。差は head アンカー基準
+(LP=stem 一致 / Lily#=head 左端一致)にある。closed-form で stem 一致基準を組むと**高音が
+左に来る等、符号・量がズレる**。⇒ **このリファクタは定数の置換でなく、1 編集ごとに描画して
+LP と突合する反復ループでしか正しく収束しない**。各編集後に必ず close_half/full/mesh を
+描画して「高音右隣接・分離 1.30」を維持しているか確認する。
+
 ### Stage 1 の着手手順(精緻化版・least-breakage)
 
 1. **stem アンカー + column-X 補正を「単一音 byte 不変」で導入(まず純リファクタとして)**。
