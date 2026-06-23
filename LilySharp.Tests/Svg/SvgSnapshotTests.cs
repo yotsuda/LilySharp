@@ -39,16 +39,19 @@ public class SvgSnapshotTests
 
     private static string FindSamplesDir()
     {
-        // Walk up from test assembly output to repo root
+        // Snapshot fixtures live UNDER the test project (LilySharp.Tests/Fixtures),
+        // deliberately separate from the user-editable samples/ playground so an
+        // edit to a free sample never trips a snapshot. sampleName keeps its
+        // "test/" and "showcase/" prefixes, which map to Fixtures/test, etc.
         var dir = AppContext.BaseDirectory;
         while (dir != null)
         {
-            var candidate = Path.Combine(dir, "samples");
+            var candidate = Path.Combine(dir, "LilySharp.Tests", "Fixtures");
             if (Directory.Exists(candidate))
                 return candidate;
             dir = Path.GetDirectoryName(dir);
         }
-        throw new DirectoryNotFoundException("Cannot find samples/ directory");
+        throw new DirectoryNotFoundException("Cannot find LilySharp.Tests/Fixtures/ directory");
     }
 
     private static string FindSnapshotsDir()

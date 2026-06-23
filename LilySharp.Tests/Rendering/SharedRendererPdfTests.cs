@@ -129,7 +129,7 @@ public sealed class SharedRendererPdfTests
         // and a separate lyrics line. The PDF should now embed both Emmentaler
         // (for music + articulations) and a serif font (for dynamics + lyrics)
         // and the content stream should reference both via "/F0" and "/F1".
-        var path = Path.Combine(SamplesRoot, "test", "lyrics.lys");
+        var path = Path.Combine(FixturesRoot, "test", "lyrics.lys");
         Assert.True(File.Exists(path), $"sample missing: {path}");
         var tree = SyntaxTree.Parse(File.ReadAllText(path));
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
@@ -186,19 +186,21 @@ public sealed class SharedRendererPdfTests
         return sb.ToString();
     }
 
-    private static string SamplesRoot
+    private static string FixturesRoot
     {
         get
         {
+            // Snapshot fixtures live under the test project (LilySharp.Tests/Fixtures),
+            // separate from the user-editable samples/ playground.
             var dir = AppContext.BaseDirectory;
             for (int i = 0; i < 6; i++)
             {
-                var candidate = Path.Combine(dir, "samples");
+                var candidate = Path.Combine(dir, "LilySharp.Tests", "Fixtures");
                 if (Directory.Exists(candidate)) return candidate;
                 dir = Path.GetDirectoryName(dir)!;
             }
             // Repo path fallback
-            return @"C:\MyProj\LilySharp\samples";
+            return @"C:\MyProj\LilySharp\LilySharp.Tests\Fixtures";
         }
     }
 

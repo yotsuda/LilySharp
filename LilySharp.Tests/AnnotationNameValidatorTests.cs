@@ -110,28 +110,35 @@ public class AnnotationNameValidatorTests
     [Fact]
     public void AllSamples_HaveNoUnknownAnnotations()
     {
-        var dir = FindSamplesDir();
+        // Sweep BOTH the user-facing samples/ playground and the snapshot
+        // fixtures (split out to LilySharp.Tests/Fixtures), so the annotation
+        // registry stays pinned for every shipped .lys regardless of location.
         var offenders = new List<string>();
-        foreach (var file in Directory.EnumerateFiles(dir, "*.lys", SearchOption.AllDirectories))
-        {
-            var diags = Validate(File.ReadAllText(file));
-            foreach (var d in diags.Where(d => d.Code == DiagnosticCodes.UnknownAnnotation))
-                offenders.Add($"{Path.GetFileName(file)}: {d.Message}");
-        }
+        foreach (var dir in EnumerateSampleRoots())
+            foreach (var file in Directory.EnumerateFiles(dir, "*.lys", SearchOption.AllDirectories))
+            {
+                var diags = Validate(File.ReadAllText(file));
+                foreach (var d in diags.Where(d => d.Code == DiagnosticCodes.UnknownAnnotation))
+                    offenders.Add($"{Path.GetFileName(file)}: {d.Message}");
+            }
         Assert.True(offenders.Count == 0,
             "Unknown annotations in samples:\n" + string.Join("\n", offenders));
     }
 
-    private static string FindSamplesDir()
+    private static IEnumerable<string> EnumerateSampleRoots()
     {
         var dir = AppContext.BaseDirectory;
         while (dir != null)
         {
-            var candidate = Path.Combine(dir, "samples");
-            if (Directory.Exists(candidate))
-                return candidate;
+            var roots = new List<string>();
+            var samples = Path.Combine(dir, "samples");
+            if (Directory.Exists(samples)) roots.Add(samples);
+            var fixtures = Path.Combine(dir, "LilySharp.Tests", "Fixtures");
+            if (Directory.Exists(fixtures)) roots.Add(fixtures);
+            if (roots.Count > 0)
+                return roots;
             dir = Path.GetDirectoryName(dir);
         }
-        throw new DirectoryNotFoundException("Cannot find samples/ directory");
+        throw new DirectoryNotFoundException("Cannot find samples/ or LilySharp.Tests/Fixtures/ directory");
     }
 }

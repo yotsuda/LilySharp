@@ -33,25 +33,26 @@ public class MultiStaffBenchmark
     private string _pianoSource = null!;
     private string _advancedSource = null!;
 
-    private static string FindSamplesDir()
+    private static string FindFixturesDir()
     {
+        // The showcase pieces are snapshot fixtures, now under LilySharp.Tests/Fixtures.
         var dir = AppContext.BaseDirectory;
         while (dir != null)
         {
-            var candidate = Path.Combine(dir, "samples");
+            var candidate = Path.Combine(dir, "LilySharp.Tests", "Fixtures");
             if (Directory.Exists(candidate))
                 return candidate;
             dir = Path.GetDirectoryName(dir);
         }
-        throw new DirectoryNotFoundException("Cannot find samples/ directory");
+        throw new DirectoryNotFoundException("Cannot find LilySharp.Tests/Fixtures/ directory");
     }
 
     [GlobalSetup]
     public void Setup()
     {
-        var samplesDir = FindSamplesDir();
-        _pianoSource = File.ReadAllText(Path.Combine(samplesDir, "showcase", "03-piano.lys"));
-        _advancedSource = File.ReadAllText(Path.Combine(samplesDir, "showcase", "04-advanced.lys"));
+        var fixturesDir = FindFixturesDir();
+        _pianoSource = File.ReadAllText(Path.Combine(fixturesDir, "showcase", "03-piano.lys"));
+        _advancedSource = File.ReadAllText(Path.Combine(fixturesDir, "showcase", "04-advanced.lys"));
     }
 
     [Benchmark(Description = "Multi-staff: Piano (grand staff)")]
