@@ -3,7 +3,7 @@
 文法レビュー(リリース硬化)で見つかった2つの**未実装機能**を実装するブランチ。散文は日本語、パス/識別子は原文。
 
 ## 0. 一行サマリ
-- **② 小節途中の拍子変更の表示**: 足場 commit 済み(`cc2e7ed`)だが **未完(描画されない)**。次の一手は「mid-music `time` が collector の新ケースに流れない」原因特定。
+- **② 小節途中の拍子変更の表示**: **完了(`4df8993`)**。真因は collector でなく **parser**(`ParseMusicItem` が `time` を未処理)。LP 突合済み・snapshot 追加・full suite 1463緑。詳細は §2。
 - **① transpose(移調)**: **未着手**。`transpose` は part-option としてパースされるだけで意味解析ゼロ → 相対音程移調を新規実装する。
 - ブランチは master(`7971e3f`)から分岐。`cc2e7ed` は full suite 1462緑(回帰なし)。
 
@@ -13,9 +13,19 @@
 - **小節途中の拍子変更**: clef/key は変更時に `ClefChangeItem`/`KeySignatureChangeItem` を生成し描画するが、**time は change-item が無い**。`time 3/4` を小節途中に書くと、拍数には(部分的に)効くが**拍子記号が描かれない**。
 - (参考)pickup `partial 4` は**動作する**(reference 未記載だが実装あり)。`@`-annotation は text-registry 解決で additive=破壊的変更不要。**単字 dynamic 名(`p`/`f` 等)は識別子に使えない**(lexer が Dynamic 化)。relative octave のみ。
 
-## 2. ② 小節途中の拍子変更表示 — 現状と次の一手
+## 2. ② 小節途中の拍子変更表示 — 完了(`4df8993`)
 
-### 済(`cc2e7ed`)
+### 真因(ハンドオフの仮説は外れていた)
+collector を疑っていたが、**真因は parser**。`ParseMusicItem`(part/music block 内の music パーサ、`Parser.cs:614`)は `key`/`clef` を処理するのに **`time` を処理していなかった** → mid-music `time` は TimeSignatureSyntax にならず、`time` トークンが捨てられ `3/4` が音符(U+E0EA)に化けていた。clef/key が動いて time だけ動かなかった理由がこれ。
+
+### 修正(parser → 既存の clef/key 経路に相乗り)
+- **Parser**: `ParseMusicItem` に `SyntaxKind.TimeKeyword => ParseTimeSignature()` を追加(本丸)。
+- **MeasureCollector**: 5 つの収集経路(`ProcessPartBlock`/`GatherMusicNode`/root/`ExpandVariable`×2)に `case TimeSignatureSyntax` を追加 → `ProcessMusicNode`(`:1069`、cc2e7ed で実装済)へ届き zero-duration `TimeSignatureChangeItem` を発行。
+- **Layout(item-slot パス)**: `SpacingRules.GetTimeSignatureChangeWidth` 新設＋幅確保を全箇所に(`ChangeItemPrefixWidth`/Left・Right extent/notehead-right extent/`GetNoteValue` fallback/barline spacing)。
+- **MeasureValidator**: `ValidateMusicBlock` で各小節検証前に mid-block の time change を適用 → 4/4 開始後の正当な 3/4 小節が「underfull」と誤警告されない。
+- **検証**: LP `\time` 突合(4/4→3/4→6/8→2/4、digit/配置/6-8 連桁 一致)。`Fixtures/test/timesig-change.lys` + snapshot 追加、full suite 1463緑。
+
+### 済(`cc2e7ed`、足場)
 - `LilySharp.Core/Svg/Model/MusicItem.cs`: `TimeSignatureChangeItem`(zero-duration、Clef/Key 雛形)。
 - `MeasureCollector.cs`: `MeasureBuilder._timeSignature` を可変化、`AddItem` が `TimeSignatureChangeItem` で measure 長を re-arm(後続小節の自動完了長を更新、duration 0)。music-stream switch(`:~1058`)に `case TimeSignatureSyntax` を追加し item 発行。top-level switch(`:~1308`)を `IsInsideMusicContent` でガード(初期 time のみ global 設定)。
 - `SharedRenderer.cs`: dispatch switch に `case TimeSignatureChangeItem`、`EnumerateStaffItems` の column-path に hang-left の X 減算、`DrawTimeSignatureChange`(`DrawTimeSignature` を full-size 呼び+`gc.Source`)。
