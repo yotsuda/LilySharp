@@ -201,13 +201,20 @@ public static class SharedRenderer
 
                 DrawStaffLines(localStaffY, staffRight, gc);
 
-                // System-start prefix (clef, key, time) only on first system
+                // System-start prefix. The clef and key signature repeat at the
+                // head of EVERY system (standard notation); the key reflects any
+                // mid-piece change in force at this point. The time signature is
+                // printed only at the very start — a mid-piece meter change is
+                // drawn as a measure item, not a system prefix.
+                // LILYPOND-REF: lily/break-align-engraver.cc — Clef + KeySignature
+                // are break-aligned at every line start; TimeSignature is not.
                 double prefixEndX = systemStartX;
                 var clef = ResolveClef(staff, system, score);
                 prefixEndX = DrawClef(clef, systemStartX, localStaffY, gc);
+                var activeKey = ResolveKeySignature(staff, system, score);
+                prefixEndX = DrawKeySignature(activeKey, clef, prefixEndX, localStaffY, gc);
                 if (isFirstSystem)
                 {
-                    prefixEndX = DrawKeySignature(score.KeySignature, clef, prefixEndX, localStaffY, gc);
                     prefixEndX = DrawTimeSignature(score.TimeSignature, prefixEndX, localStaffY, gc);
                 }
 
@@ -471,6 +478,40 @@ public static class SharedRenderer
         }
 
         return activeClef;
+    }
+
+    /// <summary>
+    /// Resolves the active key signature at the start of a system by walking
+    /// previous measures' KeySignatureChangeItems. Mirrors ResolveClef so the
+    /// key signature repeated at each system head reflects any mid-piece change,
+    /// not the initial key.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/key-engraver.cc — the key signature is reprinted at
+    /// every line start, showing the meter in force at that point.
+    /// </remarks>
+    private static KeySignature ResolveKeySignature(Staff staff, SystemLayout system, MultiStaffScore score)
+    {
+        if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return score.KeySignature;
+
+        var voice = staff.PrimaryVoice;
+        int firstMeasureIndex = system.Measures[0].MeasureIndex;
+        var activeKey = score.KeySignature;
+
+        // Apply key changes accumulated in measures BEFORE this system. A change
+        // that lands inside this system is drawn in place as a measure item, so
+        // it is not folded into the system-start prefix here.
+        for (int m = 0; m < firstMeasureIndex && m < voice.Measures.Length; m++)
+        {
+            foreach (var item in voice.Measures[m].Items)
+            {
+                if (item is KeySignatureChangeItem kc)
+                    activeKey = kc.NewKey;
+            }
+        }
+
+        return activeKey;
     }
 
     private static double DrawClef(ClefType clef, double x, double staffY, IDrawingContext gc)

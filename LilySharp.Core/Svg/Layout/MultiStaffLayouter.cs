@@ -707,7 +707,17 @@ public sealed class MultiStaffLayouter
             ? startMeasureIndex + measureCount.Value
             : primaryVoice.Measures.Length;
 
-        double prefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, systemIndex == 0,
+        // The key signature is reprinted at every system head, reflecting any
+        // mid-piece change in force before this system. The reserved prefix
+        // width must use that active key (not the initial one), or the redrawn
+        // signature and the first note column would disagree.
+        int activeKeySharps = score.KeySignature.Sharps;
+        for (int m = 0; m < startMeasureIndex && m < primaryVoice.Measures.Length; m++)
+            foreach (var item in primaryVoice.Measures[m].Items)
+                if (item is KeySignatureChangeItem kc)
+                    activeKeySharps = kc.NewKey.Sharps;
+
+        double prefixWidth = SpacingRules.CalculatePrefixWidth(activeKeySharps, systemIndex == 0,
             score.TimeSignature.Beats, score.TimeSignature.BeatType);
         // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
         // Staff lines start at MarginLeft + indent; music starts after prefix
@@ -741,7 +751,7 @@ public sealed class MultiStaffLayouter
             if (i == startMeasureIndex && springs.Length > 0)
             {
                 var (ideal, min) = SpacingRules.FirstNoteSpring(
-                    score.KeySignature.Sharps, systemIndex == 0);
+                    activeKeySharps, systemIndex == 0);
                 var s0 = springs[0];
                 double newMin = Math.Max(min, s0.MinDistance);
                 springs = springs.SetItem(0, new Spring(
