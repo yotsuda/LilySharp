@@ -508,7 +508,16 @@ public static class SharedRenderer
             gc.DrawGlyph(EmmentalerGlyphs.TimeSigCutCommon, x, staffY + 2, FontSize);
             return x + 2.0;
         }
-        // Stack numerator over denominator
+        // Stack numerator over denominator, each centered on the staff like
+        // LilyPond: numerator centered at staff position +2 (device staffY+1),
+        // denominator at -2 (device staffY+3), so the pair is symmetric about
+        // the middle line. Unlike the common/cut-common glyphs (vertically
+        // centred on their origin), the feta number glyphs are anchored at their
+        // BASELINE (= the digit's bottom) and stand ~2 staff-spaces tall, so the
+        // DrawGlyph y must be lowered by half the digit height to bring the
+        // digit's CENTER onto the target line.
+        // LILYPOND-REF: mf/feta-numbers.mf — time-signature numbers sit on the baseline.
+        const double digitHalfHeight = 1.0; // feta number glyphs are ~2 ss tall
         var num = ts.Beats.ToString();
         var den = ts.BeatType.ToString();
         double dx = 0;
@@ -516,10 +525,10 @@ public static class SharedRenderer
         {
             if (i < num.Length)
                 gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(num[i] - '0'),
-                    x + dx, staffY + 1, FontSize);
+                    x + dx, staffY + 1 + digitHalfHeight, FontSize);
             if (i < den.Length)
                 gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(den[i] - '0'),
-                    x + dx, staffY + 3, FontSize);
+                    x + dx, staffY + 3 + digitHalfHeight, FontSize);
             dx += 1.4;
         }
         return x + dx + 0.4;
