@@ -279,14 +279,19 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
         context.subscriptions
     );
 
-    // Get font URI for HTML (must use webview URI for security)
+    // Get font URIs for HTML (must use webview URI for security). The brace
+    // font (Emmentaler-Brace) is a SEPARATE face used for grand-staff/group
+    // braces; without it the brace glyph renders blank in the preview.
     const fontUri = panel.webview.asWebviewUri(
         vscode.Uri.joinPath(context.extensionUri, 'media', 'fonts', 'emmentaler-20.woff2')
+    );
+    const braceFontUri = panel.webview.asWebviewUri(
+        vscode.Uri.joinPath(context.extensionUri, 'media', 'fonts', 'emmentaler-brace.woff2')
     );
 
     // Set initial HTML structure with font
     outputChannel.appendLine('Setting webview HTML');
-    panel.webview.html = getPreviewHtml(fontUri.toString(), panel.webview.cspSource);
+    panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource);
 
     // Then load content
     outputChannel.appendLine('Calling updatePreviewContent');
@@ -399,7 +404,7 @@ interface SvgResponse {
     Renders: RenderInfo[] | null;
 }
 
-function getPreviewHtml(fontUri: string, cspSource: string): string {
+function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string): string {
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -410,6 +415,10 @@ function getPreviewHtml(fontUri: string, cspSource: string): string {
         @font-face {
             font-family: 'Emmentaler';
             src: url('${fontUri}') format('woff2');
+        }
+        @font-face {
+            font-family: 'Emmentaler-Brace';
+            src: url('${braceFontUri}') format('woff2');
         }
         body {
             margin: 0;

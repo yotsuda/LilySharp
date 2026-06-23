@@ -154,20 +154,32 @@ public sealed class SvgDocumentContext : IDocumentContext
 
     private string GetFontFaceRule()
     {
-        // Preview mode: host page (VS Code webview, browser) injects Emmentaler.
+        // Preview mode: host page (VS Code webview, browser) injects the fonts.
         if (_options.OmitFontFace)
             return "";
         if (_options.EmbedFont)
         {
-            var path = ResolveFontPath("emmentaler-20.woff2");
-            if (path != null && File.Exists(path))
-            {
-                var bytes = File.ReadAllBytes(path);
-                var b64 = Convert.ToBase64String(bytes);
-                return $"@font-face {{ font-family: 'Emmentaler'; src: url('data:font/woff2;base64,{b64}') format('woff2'); }}";
-            }
+            // Embed BOTH the main notation font and the SEPARATE brace font
+            // (Emmentaler-Brace, used for grand-staff/group braces). Without the
+            // brace face the brace glyph renders blank in any viewer that lacks
+            // the font installed (the bug that hid it in the VS Code preview).
+            var faces = new StringBuilder();
+            AppendEmbeddedFontFace(faces, "Emmentaler", "emmentaler-20.woff2", "woff2");
+            AppendEmbeddedFontFace(faces, "Emmentaler-Brace", "emmentaler-brace.woff", "woff");
+            if (faces.Length > 0)
+                return faces.ToString().TrimEnd();
         }
         return "@font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }";
+    }
+
+    private void AppendEmbeddedFontFace(StringBuilder sb, string family, string fileName, string format)
+    {
+        var path = ResolveFontPath(fileName);
+        if (path == null || !File.Exists(path))
+            return;
+        var b64 = Convert.ToBase64String(File.ReadAllBytes(path));
+        sb.AppendLine(
+            $"@font-face {{ font-family: '{family}'; src: url('data:font/{format};base64,{b64}') format('{format}'); }}");
     }
 
     private string? ResolveFontPath(string fileName)
