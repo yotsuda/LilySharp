@@ -328,6 +328,8 @@ public sealed class MeasureLayouter
                     SpacingRules.GetClefChangeWidth(cc.NewClef) + 2 * GlyphMetrics.ClefChangePadding,
                 KeySignatureChangeItem kc =>
                     SpacingRules.GetKeySignatureChangeWidth(kc) + 2 * GlyphMetrics.ClefChangePadding,
+                TimeSignatureChangeItem tc =>
+                    SpacingRules.GetTimeSignatureChangeWidth(tc) + 2 * GlyphMetrics.ClefChangePadding,
                 _ => 0
             };
             w = Math.Max(w, itemW);

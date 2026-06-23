@@ -93,6 +93,17 @@ public sealed class MeasureValidator
         for (int i = 0; i < measures.Count; i++)
         {
             var measure = measures[i];
+
+            // A mid-piece \time takes effect at the bar it appears in
+            // (LilyPond applies the new meter from that timestep), so adopt
+            // the new reference meter before checking this bar's fill — else a
+            // valid 3/4 bar after a 4/4 opening is wrongly flagged underfull.
+            foreach (var item in measure.Items)
+            {
+                if (item is TimeSignatureSyntax ts)
+                    SetTimeSignature(ts.Beats, ts.BeatType);
+            }
+
             var duration = CalculateMeasureDuration(measure.Items, ref defaultDuration);
 
             if (duration != _timeSignature && duration != Fraction.Zero)

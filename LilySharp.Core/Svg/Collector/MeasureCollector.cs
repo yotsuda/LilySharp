@@ -847,6 +847,7 @@ public sealed class MeasureCollector
             case OnceModifierSyntax:
             case ClefDeclarationSyntax:
             case KeySignatureSyntax:
+            case TimeSignatureSyntax:
                 musicNodes.Add(node);
                 break;
 
@@ -1598,7 +1599,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && !IsInsideInlineVolta(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or InlineVoltaSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or KeySignatureSyntax);
+                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && !IsInsideInlineVolta(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or InlineVoltaSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or KeySignatureSyntax or TimeSignatureSyntax);
             ProcessNodes(musicNodes);
         }
 
@@ -1874,6 +1875,7 @@ public sealed class MeasureCollector
                 case MusicMarkSyntax:
                 case ClefDeclarationSyntax:
                 case KeySignatureSyntax:
+                case TimeSignatureSyntax:
                     musicNodes.Add(node);
                     break;
 
@@ -1904,7 +1906,7 @@ public sealed class MeasureCollector
         if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or InlineVoltaSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-            or ClefDeclarationSyntax or KeySignatureSyntax)
+            or ClefDeclarationSyntax or KeySignatureSyntax or TimeSignatureSyntax)
         {
             musicNodes.Add(expression);
         }
@@ -1919,7 +1921,7 @@ public sealed class MeasureCollector
                 && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
                 or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or InlineVoltaSyntax
                 or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-                or ClefDeclarationSyntax or KeySignatureSyntax);
+                or ClefDeclarationSyntax or KeySignatureSyntax or TimeSignatureSyntax);
 
         musicNodes.AddRange(nodes);
     }

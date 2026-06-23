@@ -274,6 +274,16 @@ public static class SpacingRules
     }
 
     /// <summary>
+    /// Gets the width of a mid-measure time signature change.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/time-signature-engraver.cc — width is the wider of the
+    /// numerator / denominator digit stacks.
+    /// </remarks>
+    internal static double GetTimeSignatureChangeWidth(TimeSignatureChangeItem timeChange) =>
+        GlyphMetrics.GetTimeSigWidth(timeChange.NewTime.Beats, timeChange.NewTime.BeatType);
+
+    /// <summary>
     /// Calculates the left extent of an item from its reference point (notehead center).
     /// This includes accidentals which are drawn to the left of the notehead.
     /// </summary>
@@ -300,6 +310,13 @@ public static class SpacingRules
         {
             double keyWidth = GetKeySignatureChangeWidth(keyChange);
             return keyWidth / 2.0 + GlyphMetrics.ClefChangePadding;
+        }
+
+        // Time signature change items
+        if (item is TimeSignatureChangeItem timeChange)
+        {
+            double timeWidth = GetTimeSignatureChangeWidth(timeChange);
+            return timeWidth / 2.0 + GlyphMetrics.ClefChangePadding;
         }
 
         // Get notehead metrics (note value determines which notehead glyph)
@@ -375,6 +392,13 @@ public static class SpacingRules
             return keyWidth / 2.0 + GlyphMetrics.ClefChangePadding;
         }
 
+        // Time signature change items
+        if (item is TimeSignatureChangeItem timeChange)
+        {
+            double timeWidth = GetTimeSignatureChangeWidth(timeChange);
+            return timeWidth / 2.0 + GlyphMetrics.ClefChangePadding;
+        }
+
         // Get notehead metrics
         int noteValue = GetNoteValue(item);
         var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
@@ -411,8 +435,8 @@ public static class SpacingRules
     /// </summary>
     private static int GetNoteValue(MusicItem item)
     {
-        // Clef/key change items have zero duration — treat as quarter note for glyph lookup
-        if (item is ClefChangeItem or KeySignatureChangeItem)
+        // Clef/key/time change items have zero duration — treat as quarter note for glyph lookup
+        if (item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem)
             return 4;
         var duration = item.Duration;
         return (int)duration.Denominator;
@@ -1638,9 +1662,10 @@ public static class SpacingRules
         // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist
         return nextItem switch
         {
-            ClefChangeItem => 1.0,           // (clef . (extra-space . 1.0))
-            KeySignatureChangeItem => 1.0,   // (key-signature . (extra-space . 1.0))
-            _ when isFirstInMeasure => 1.3,  // (first-note . (semi-shrink-space . 1.3))
+            ClefChangeItem => 1.0,             // (clef . (extra-space . 1.0))
+            KeySignatureChangeItem => 1.0,     // (key-signature . (extra-space . 1.0))
+            TimeSignatureChangeItem => 0.75,   // (time-signature . (extra-space . 0.75))
+            _ when isFirstInMeasure => 1.3,    // (first-note . (semi-shrink-space . 1.3))
             _ => 0.9                         // (next-note . (semi-fixed-space . 0.9))
         };
     }
@@ -1659,6 +1684,7 @@ public static class SpacingRules
         {
             ClefChangeItem => 1.0,
             KeySignatureChangeItem => 1.0,
+            TimeSignatureChangeItem => 1.0,
             _ => BarlinePadding
         };
     }
@@ -1732,6 +1758,12 @@ public static class SpacingRules
         {
             double keyWidth = GetKeySignatureChangeWidth(keyChange);
             return keyWidth / 2.0 + GlyphMetrics.ClefChangePadding;
+        }
+
+        if (item is TimeSignatureChangeItem timeChange)
+        {
+            double timeWidth = GetTimeSignatureChangeWidth(timeChange);
+            return timeWidth / 2.0 + GlyphMetrics.ClefChangePadding;
         }
 
         int noteValue = GetNoteValue(item);

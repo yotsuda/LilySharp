@@ -114,6 +114,10 @@ public class SvgSnapshotTests
         // were uncovered and both had rendering bugs (time-sig digits too high;
         // surplus secondary noteheads dropped).
         yield return new object[] { "test/timesig-grandstaff" };
+        // Mid-piece time signature changes (4/4 -> 3/4 -> 6/8 -> 2/4): digits
+        // drawn at each change point, measure length re-armed, validator follows
+        // the new meter. Verified against LilyPond \time at matching bars.
+        yield return new object[] { "test/timesig-change" };
     }
 
     /// <summary>

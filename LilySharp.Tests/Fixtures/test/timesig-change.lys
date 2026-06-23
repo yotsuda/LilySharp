@@ -1,0 +1,33 @@
+// Mid-Piece Time Signature Change Test
+// Tests time signature changes between measures: the new meter's digits are
+// drawn at the change point, the per-measure length re-arms, and the measure
+// validator follows the new meter (so a valid 3/4 bar is not flagged short).
+title "Time Signature Changes"
+composer "Lily#"
+
+tempo 120
+time 4/4
+key c major
+
+part melody {
+  clef: treble
+}
+
+// Phrase with mid-piece meter changes: 4/4 -> 3/4 -> 6/8 -> 2/4.
+// Travels through the $-reference expansion path as well.
+phrase meterChanges {
+  c'4 d e f |
+  time 3/4 g4 a b |
+  time 6/8 a8 g f e d c |
+  time 2/4 d4 e |
+}
+
+section Main {
+  melody { $meterChanges }
+}
+
+structure { Main }
+
+render score "timesig-change.svg" {
+  staff { melody }
+}
