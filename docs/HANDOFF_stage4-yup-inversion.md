@@ -7,10 +7,22 @@
 
 ## 0. 一行サマリ
 
-Lily# の垂直座標を LP と同じ「**内部 Y-up・出力時に単一フリップ**」へ移す。設計は
-`docs/STAGE4_YUP_INVERSION.md` に確定済み。**次の一手 = その §4 手順で ~170箇所を一括反転
-→ build → 42 snapshot が byte 不変であることを確認**(出力同値が成功条件、リベース禁止)。
-**コードは未着手**(本ブランチは設計 note のみ)。
+Lily# の垂直座標を LP と同じ Y-up へ移し、LP のレイアウト計算を符号そのままで移植できる素地を作る。
+
+> **改訂(2026-06-23 セッション2)**: 当初の「内部 Y-up・出力時に単一 ScaleY:-1 フリップ・~170箇所
+> atomic・42 snapshot byte 不変」路線は**破棄**。実コード精査で (1) 単一 group flip は glyph を
+> 上下反転させ byte 一致とも矛盾、(2) 絶対 Y-up は prelim extent pass の H 循環で成立せず、
+> (3) `system.Y` 共有フレームで render パスだけの分離も不可、と判明。**byte 一致は要件から外した**
+> (ユーザー判断: 正しい実装なら出力はより正しくなってよい/検証は LP 比較 + snapshot 再ベースライン)。
+>
+> **新路線(LP 忠実・漸進)**: grob ファミリを1つずつ「相対 Y-up offset + 自分の draw 境界で device
+> 変換」へ移す(StaffFrame/skyline が per-staff で既にやっている形)。**page-level decorator
+> `YFlipDrawingContext` は最終ステップ**(全 grob 相対 Y-up 化後に単一 flip へ畳む)。詳細・根拠は
+> `docs/STAGE4_YUP_INVERSION.md` §1, §3.5。
+>
+> **済(本ブランチ・push 前)**: `5e8f899` decorator(死にコード)+ 設計修正、`bea2b81` 漸進計画。
+> **次の一手 = 漸進初手**: layout 時 engraver(移植の痛点。tie/beam/slur 等)を1つ相対 Y-up へ。
+> within-staff (a) は既に StaffFrame 経由で概ね Y-up 済み=初手の対象外。
 
 ---
 
@@ -93,7 +105,10 @@ Lily# の垂直座標を LP と同じ「**内部 Y-up・出力時に単一フリ
 
 ## 5. やってはいけないこと / 教訓
 
-- **Stage 4 で snapshot 差をリベースで飲まない**。出力同値が条件、差=符号ミス。
+- ~~**Stage 4 で snapshot 差をリベースで飲まない**。出力同値が条件、差=符号ミス。~~
+  → **撤回**(セッション2)。byte 一致は要件でなくなった。各 increment は LP 比較で正しさを確認し、
+  改善・正当な変化なら snapshot を再ベースラインしてよい。ただし「意図しない差」は依然バグなので、
+  再ベースライン前に必ず LP と突合して**正当性を確認**すること(無検証の再ベースラインは禁止)。
 - 「設計 doc の前提」を一次照合する。本プロジェクトでは設計 doc の想定(extent 正規化が最優先、
    Stage 2-4 が未実装、per-grob フリップ存在)が**実コードと食い違っていた**(衝突の真因は別、
    Stage 2-3 は既達、per-grob フリップ無し)。**必ず実コードを読んで確認**。
