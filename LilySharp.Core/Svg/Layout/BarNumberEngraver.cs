@@ -36,9 +36,10 @@ public readonly record struct BarNumberLayout(
     /// <summary>Y coordinate of the text baseline (above the staff).</summary>
     double Y,
     /// <summary>
-    /// True for line-start numbers: the anchor is the system's LEFT EDGE
-    /// (before the clef) and the text right-aligns to it, per BarNumber's
-    /// begin-of-line alignment.
+    /// When true the text right-aligns to <see cref="X"/> (TextAnchor.End).
+    /// Line-start and mid-line bar numbers LEFT-align (false) per BarNumber's
+    /// self-alignment-X = LEFT, so the number sits above the staff start and
+    /// extends rightward, clear of the system-start brace.
     /// </summary>
     bool RightAligned = false);
 
@@ -111,15 +112,17 @@ public static class BarNumberEngraver
                 // LP shows 1-based numbers. measureIndex is 0-based.
                 int displayedNumber = measureIndex + 1;
 
-                // Line-start numbers break-align to the LEFT EDGE — the very
-                // start of the staff lines, BEFORE the clef — and right-align
-                // to it (plus a small horizon padding), so the number hangs
-                // just left of the system. Mid-line (period) numbers keep the
-                // measure-start anchor, left-aligned (staff-bar alignment).
+                // Line-start numbers break-align to the LEFT EDGE (the staff-
+                // line origin, before the clef) and LEFT-align to it plus a
+                // small horizon padding, so the number sits above the staff
+                // start and extends RIGHTWARD — clear of the system-start brace
+                // in the left margin. (Right-aligning here made the number hang
+                // left into the margin and collide with the brace.) Mid-line
+                // (period) numbers keep the measure-start anchor, also left-aligned.
                 // LILYPOND-REF: scm/define-grobs.scm BarNumber —
                 //   break-align-symbols (left-edge staff-bar),
-                //   self-alignment-X (break-alignment-list LEFT LEFT RIGHT),
-                //   horizon-padding 0.05
+                //   self-alignment-X (break-alignment-list LEFT LEFT RIGHT) =
+                //   LEFT at a line start, horizon-padding 0.05
                 bool atLineStart = isFirstInSystem;
                 // The system's left edge is where the staff lines start:
                 // the indent (margins live in the page transform). ml.X is
@@ -141,7 +144,7 @@ public static class BarNumberEngraver
                     Text: displayedNumber.ToString(),
                     X: x,
                     Y: y,
-                    RightAligned: atLineStart));
+                    RightAligned: false));
             }
         }
 

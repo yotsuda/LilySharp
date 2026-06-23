@@ -76,17 +76,19 @@ public class BarNumberTests
     }
 
     [Fact]
-    public void BarNumberX_RightAlignsToSystemLeftEdge()
+    public void BarNumberX_LeftAlignsToSystemLeftEdge()
     {
-        // Line-start bar numbers break-align to the LEFT EDGE (before the
-        // clef) and right-align to it, hanging just left of the system.
+        // Line-start bar numbers break-align to the LEFT EDGE (before the clef)
+        // and LEFT-align to it (+ horizon padding 0.05), so the number sits
+        // above the staff start and extends rightward — clear of the
+        // system-start brace in the left margin.
         // LILYPOND-REF: scm/define-grobs.scm BarNumber —
         //   break-align-symbols (left-edge staff-bar),
-        //   self-alignment-X (break-alignment-list LEFT LEFT RIGHT).
+        //   self-alignment-X (break-alignment-list LEFT LEFT RIGHT) = LEFT at line start.
         var layout = BuildLayout("c4 d e f | break g4 a b c |");
         var bn = layout.BarNumberLayouts[0];
         var system = layout.AllSystems[1];
-        Assert.True(bn.RightAligned);
+        Assert.False(bn.RightAligned);
         Assert.Equal(system.Indent + 0.05, bn.X, precision: 4);
     }
 

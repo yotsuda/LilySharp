@@ -204,8 +204,8 @@
   <text x="69.68" y="23.50" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="477">3</text>
   <text x="73.55" y="22.00" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="487">5</text>
   <text x="73.55" y="23.50" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="487">3</text>
-  <text x="0.05" y="32.60" font-size="1.75" font-family="serif" font-weight="bold" text-anchor="end" fill="#000000">5</text>
-  <text x="0.05" y="54.62" font-size="1.75" font-family="serif" font-weight="bold" text-anchor="end" fill="#000000">9</text>
+  <text x="0.05" y="31.36" font-size="1.75" font-family="serif" font-weight="bold" fill="#000000">5</text>
+  <text x="0.05" y="53.38" font-size="1.75" font-family="serif" font-weight="bold" fill="#000000">9</text>
   <rect x="0.30" y="11.16" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="1.29" y="13.36" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">A</text>
   <rect x="44.88" y="29.80" width="1.87" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="616"/>
