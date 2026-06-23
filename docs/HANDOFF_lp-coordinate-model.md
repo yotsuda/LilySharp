@@ -9,8 +9,9 @@
 
 Lily# のレイアウト座標を **LilyPond の実際の座標モデル**(grob 親子の相対参照点ツリー、
 staff-space、Y-up、出力時に単一フリップ)に揃える大規模リファクタ。**ブランチ
-`lp-coordinate-model` 上**で進行中。設計は `docs/LP_COORDINATE_MODEL.md` に確定済み。
-**次の一手は Stage 1(stem 相対 head X + 衝突 port)**。
+`lp-coordinate-model` 上**で進行中(push 済み)。設計は `docs/LP_COORDINATE_MODEL.md` に確定済み。
+**安全網(part-combine ラベル汚染)を 2026-06-23 に修正済み(§3 の確定事項)→ 次の一手は
+Stage 1 step 1(stem アンカー + column-X 補正を単一音 byte 不変で導入)**。
 
 ---
 
@@ -20,10 +21,16 @@ staff-space、Y-up、出力時に単一フリップ)に揃える大規模リフ�
   座標 Y-up 化(stem/slur, `StaffFrame`)、dead 重複掃除(`SpacingSettings` クラスタ・未使用
   定数)、実 findings(和音スカイライン・ornament 0.20・in-note-padding 削除・TopSystem=6)。
   **これらは触らない。安全に確定済み。**
-- **ブランチ `lp-coordinate-model`(`b4af9da`、未 push)** — master を土台に `docs/
-  LP_COORDINATE_MODEL.md`(設計)を追加しただけ。**コードはまだ未着手。**
-- 再開時: `git checkout lp-coordinate-model` で作業。ブランチは必要に応じ push 可
-  (進行中なので任意)。**ブランチの削除/別ブランチ作成は明示 GO 待ち。**
+- **ブランチ `lp-coordinate-model`(`42d1ae8`、push 済み = `origin/lp-coordinate-model`)** —
+  master を土台に 3 コミット:
+  - `b4af9da` 設計 doc(`docs/LP_COORDINATE_MODEL.md`)
+  - `1f25385` 本ハンドオフ
+  - `42d1ae8` **part-combine ラベルを既定 off に gate**(`LayoutOptions.EnablePartCombine`、
+    既定 false)。`<< \\ >>` は LP では \partcombine でないので "a2"/"Solo" を出さない。
+    アナライザ本体・`PartCombineTests` は無傷(直接テスト)。全 1461 緑・snapshot 不変。
+    **これで unison/mesh サンプルがラベル無しで描け、LP 視覚突合が機能する。**
+- **Stage 1 のジオメトリ変更コードはまだ未着手**(part-combine 修正は安全網の準備で別件)。
+- 再開時: `git checkout lp-coordinate-model` で作業。**ブランチの削除/別ブランチ作成は明示 GO 待ち。**
 
 ---
 
@@ -40,6 +47,33 @@ staff-space、Y-up、出力時に単一フリップ)に揃える大規模リフ�
 ---
 
 ## 3. 次の一手 — Stage 1: stem 相対 head X + 衝突 port
+
+### 2026-06-23 セッションの確定事項(必読)
+
+- **計測の結論**: Lily# の衝突定数は**すでに大半が LP-raw 一致**(full 0.5 / mesh 0.17 /
+  dotted 0.1 / distant_half 0.4 / close_half-異 head group 0.52)。`NoteCollisionTests.cs` が
+  これらを数値で pin 済み。**Stage 1 が実際に動かすジオメトリは 2 点だけ**:
+  1. **同 head group close_half = `1.0`**(`NoteCollision.cs:369`、left-edge フレームの
+     `0.52×2` 補償値)→ stem 相対フレーム化で `0.52` にして視覚同値を保つ。
+  2. **touch = `0.65`**(`NoteCollisionParameters.TouchShift`)→ LP touch は **0.5**
+     (`note-collision.cc:324`)。0.65 は `stem_to_stem` の値で取り違え。
+- **part-combine は安全網の障害だった**:`<< \\ >>` を無条件 part-combine し "a2"/"Solo"
+  ラベルを出していた(LP 非互換)。`42d1ae8` で gate off。**これで視覚突合が機能する。**
+  (part-combine はテキスト注記のみ。ヘッド再配置・衝突には無関係と確認済み。)
+- **現状モデル(`SharedRenderer.cs` 実読)**: column X = **ヘッド左端**。ヘッド描画は `x`
+  (DrawNote:771 / DrawChord:883)、stem はヘッド端へ:up-stem `x + headWidth − thick/2`
+  (:790-793)、down-stem `x + StemDownAttachX`(:925-927)。= ハンドオフ言う左端アンカー。
+
+### Stage 1 の着手手順(精緻化版・least-breakage)
+
+1. **stem アンカー + column-X 補正を「単一音 byte 不変」で導入(まず純リファクタとして)**。
+   column アンカーを stem(X=0)にし、ヘッドを `[−w,0]`(up)/`[0,+w]`(down)に置く。
+   ただし **single-note の device X を不変に保つには、ヘッド描画 X を stem 基準に変える
+   だけでなく、layout/spacing 側の column-X 導出を up-stem で `headWidth` 分ずらす補正が要る**
+   (描画専用の変更では済まない=ここが非自明)。**チェックポイント: 単一音 snapshot が
+   byte 不変**であることを確認してから次へ。
+2. その後に **衝突 `1.0→0.52`(extent 正規化込み)+ touch `0.5`** を入れ、衝突種ごとに
+   LP 描画(§4 のコマンド・`coll-cases.ly` 雛形が `C:\temp`)と突合 → 意図差分のみ rebaseline。
 
 ### 何をするか
 1. **stem を note-column の X アンカーにする**。各 head の X-extent を `stem-attachment`
