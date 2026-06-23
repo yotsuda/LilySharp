@@ -584,6 +584,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 } else {
                     el.removeAttribute('fill');
                 }
+                // Restore the original z-order (DOM position) that was changed
+                // when this element was raised on highlight.
+                if (el.__origParent) {
+                    el.__origParent.insertBefore(el, el.__origNextSibling);
+                    el.__origParent = null;
+                    el.__origNextSibling = null;
+                }
             });
 
             // Find nearest data-pos value
@@ -611,6 +618,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         el.setAttribute('stroke', color);
                     } else {
                         el.setAttribute('fill', color);
+                    }
+                    // SVG has no z-index — z-order is document order. The stem
+                    // (and beam) are drawn after the notehead, so a recolored
+                    // head would be partly covered by the black stem. Raise the
+                    // highlighted element to the end of its group so it paints
+                    // on top; remember its slot to restore on clear.
+                    if (!el.__origParent && el.parentNode) {
+                        el.__origParent = el.parentNode;
+                        el.__origNextSibling = el.nextSibling;
+                        el.parentNode.appendChild(el);
                     }
                 });
             }
