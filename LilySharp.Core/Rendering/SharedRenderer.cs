@@ -671,11 +671,25 @@ public static class SharedRenderer
             for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
             {
                 var item = measure.Items[itemIdx];
-                if (itemIdx >= ml.Items.Length) { currentTiming += item.Duration; continue; }
-                var il = ml.Items[itemIdx];
-                double itemX = useColumnTiming
-                    ? ml.X + ml.GetXForTiming(currentTiming)
-                    : ml.X + il.X;
+                double itemX;
+                if (useColumnTiming)
+                {
+                    // Timing-aligned column path (multi-staff): the shared
+                    // MeasureLayout.Items is sized for the PRIMARY voice, so a
+                    // secondary voice with MORE items in this measure must not be
+                    // bounded by ml.Items.Length — its X comes from the timing
+                    // columns, not the primary item slots. Previously the
+                    // ml.Items.Length guard below ran on this path too and
+                    // silently dropped the surplus secondary-voice items (e.g.
+                    // beamed notes after a rest, when the other staff held a
+                    // single dotted note) — their noteheads never drew.
+                    itemX = ml.X + ml.GetXForTiming(currentTiming);
+                }
+                else
+                {
+                    if (itemIdx >= ml.Items.Length) { currentTiming += item.Duration; continue; }
+                    itemX = ml.X + ml.Items[itemIdx].X;
+                }
                 currentTiming += item.Duration;
 
                 // Mid-measure clef/key changes share the next note's timing —
