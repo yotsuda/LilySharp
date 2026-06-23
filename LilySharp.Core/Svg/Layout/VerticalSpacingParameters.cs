@@ -150,19 +150,6 @@ public sealed record VerticalSpacingParameters
     };
 
     /// <summary>
-    /// Extra padding between note content of adjacent systems.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/page-layout-problem.cc:483 in-note-system-padding
-    /// LILYPOND-REF: ly/paper-defaults-init.ly — default 1.5 staff spaces
-    ///
-    /// This ensures a minimum gap between the note extents of adjacent systems,
-    /// beyond what the general spacing padding provides. Applied as an additional
-    /// floor on the minimum distance when positioning systems on a page.
-    /// </remarks>
-    public double InNoteSystemPadding { get; init; } = 1.5;
-
-    /// <summary>
     /// Selects the appropriate spacing spec based on the context of two adjacent elements.
     /// </summary>
     /// <remarks>

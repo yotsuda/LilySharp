@@ -265,14 +265,13 @@ public sealed class PageLayouter
                     padding *= factor;
                 }
 
-                double minDistance = Math.Max(skylineDistance, spec.MinimumDistance) + padding;
-
-                // LILYPOND-REF: lily/page-layout-problem.cc:483 in-note-system-padding
-                // Ensure minimum gap between note extents of adjacent systems.
-                // This provides extra padding specifically for note content, beyond
-                // the general spacing spec padding.
-                double noteDistance = skylineDistance + vs.InNoteSystemPadding;
-                minDistance = Math.Max(minDistance, noteDistance);
+                // LILYPOND-REF: lily/page-layout-problem.cc:625-632 append_system —
+                // the inter-system minimum distance is the skyline distance plus
+                // the spec's padding, floored by the spec's minimum-distance.
+                // (LP's in-note-system-padding folds into the skyline only when a
+                // system carries an in-note stencil, which Lily# never renders, so
+                // it can never contribute to a plain system-to-system spring.)
+                double minDistance = Math.Max(spec.MinimumDistance, skylineDistance + padding);
 
                 // Spring-based ideal distance
                 double springDistance = Math.Max(basicDist, minDistance);
