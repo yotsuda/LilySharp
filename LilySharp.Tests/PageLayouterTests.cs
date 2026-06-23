@@ -187,7 +187,7 @@ public class PageLayouterTests
         Assert.Equal(5, p.MarkupSystem.BasicDistance);
         Assert.Equal(0.5, p.MarkupSystem.Padding);
 
-        Assert.Equal(1, p.TopSystem.BasicDistance);
+        Assert.Equal(6, p.TopSystem.BasicDistance);
         Assert.Equal(1, p.TopSystem.Padding);
 
         Assert.Equal(1, p.LastBottom.BasicDistance);

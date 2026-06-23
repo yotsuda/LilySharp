@@ -128,10 +128,14 @@ public sealed record VerticalSpacingParameters
     /// <summary>
     /// Spacing from page top to first system.
     /// </summary>
-    /// <remarks>LILYPOND-REF: paper-defaults-init.ly:80-82</remarks>
+    /// <remarks>
+    /// LILYPOND-REF: ly/paper-defaults-init.ly:78-80 top-system-spacing
+    /// ((basic-distance . 6) (minimum-distance . 0) (padding . 1)).
+    /// (BasicDistance was transcribed as 1 — the last-bottom-spacing value.)
+    /// </remarks>
     public VerticalSpacingSpec TopSystem { get; init; } = new()
     {
-        BasicDistance = 1,
+        BasicDistance = 6,
         MinimumDistance = 0,
         Padding = 1,
         Stretchability = 0
