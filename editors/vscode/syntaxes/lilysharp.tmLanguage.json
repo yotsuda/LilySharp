@@ -169,7 +169,8 @@
             "patterns": [
                 {
                     "name": "variable.other.pitch.lilysharp",
-                    "match": "\\b[a-g](isis|eses|is|es|as)?[',]*"
+                    "comment": "Trailing (?![A-Za-z]) so a pitch letter that merely starts a longer word (g in grandStaff, b in bass, c in clef) is NOT mis-highlighted as a note. Notes are always followed by a duration digit, octave mark, space or punctuation, never a letter.",
+                    "match": "\\b[a-g](isis|eses|is|es|as)?[',]*(?![A-Za-z])"
                 }
             ]
         },
