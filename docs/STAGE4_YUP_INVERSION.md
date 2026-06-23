@@ -20,16 +20,37 @@
 
 ## 1. 単一フリップの機構(backend 非依存)
 
-page 内容全体を **1個の flip transform group** で包む:
+> **改訂(2026-06-23)**: 旧 §1 の「page 内容全体を `DrawingTransform(TranslateY: page.Height,
+> ScaleY: -1)` の group で包む」案は**破棄**。理由は2つ、いずれも実コード照合で判明:
+> 1. **glyph が上下反転する**。`SvgDrawingContext.BeginGroup` は `<g transform="… scale(1,-1)">`
+>    を素で吐き、`DrawGlyph`/`DrawText` は per-glyph の打ち消し変換を持たない。`scale(1,-1)` の
+>    親 group の下では notehead/clef/歌詞そのものが鏡像(上下逆)になる。LP の stencil-time flip は
+>    **配置だけ**を反転し glyph は正立で吐くので、「この group 1個が LP flip 相当」は誤り。
+> 2. **byte 一致と論理矛盾**。group を被せて全 Y を Y-up 値へ書き換えれば、出力バイト列は構造ごと
+>    変わる。§4 の「42 snapshot byte 不変」は鏡を被せて達成するものではなく、**内部を Y-up に
+>    作り替えても出力ピクセルが厳密に同じ=リファクタが挙動保存した証明**として使う。
 
-```csharp
-// y_device = page.Height - y_up   ( = TranslateY + y_up * ScaleY )
-var flip = new DrawingTransform(TranslateY: page.Height, ScaleY: -1);
-using (gc.BeginGroup(flip)) { /* draw everything in Y-up */ }
-```
+**正しい機構 = 出力境界の Y-flip デコレータ(算術変換、鏡ではない)**。`IDrawingContext` を包む
+薄いデコレータ `YFlipDrawingContext` を1個だけ挟み、全プリミティブの Y を `y_device = H − y_up`
+で device へ落とす(H = page.Height)。座標の数値を変換するだけなので **glyph は正立のまま**=
+LP の stencil-time flip と同じ。`SharedRenderer.RenderTo` の `gc = doc.BeginPage(w, h)` を
+`gc = new YFlipDrawingContext(doc.BeginPage(w, h), page.Height)` に置き換える**ただ1箇所**が flip。
 
-SVG/PNG/PDF は既存の margin scope と同じ経路で ScaleY を処理する=**この1個が LP の
-stencil-time フリップに相当**。`StaffFrame` の per-staff 反射は**廃止**(フリップが1箇所に集約)。
+プリミティブ別の変換(H = page.Height):
+- 点系(`DrawLine` の各端点・`DrawCircle`/`DrawEllipse` の cy・`DrawClosedBezier` の各点・
+  `DrawGlyph`/`DrawText` の baseline): `y → H − y`。glyph/text は鏡像化しない(anchor 不変)。
+- `DrawRectangle(x, y, w, h)`: y は「視覚上端の Y-up 座標」と定義し `y → H − y`(高さ h は下方向、不変)。
+- `BeginGroup(tx, ty, sx, sy)`: device へ**共役変換**して渡す。
+  `flip ∘ T_up = T_dev ∘ flip` を解くと
+  `T_dev = (TranslateX=tx, TranslateY = H − ty − sy·H, ScaleX=sx, ScaleY=sy)`。
+  **ScaleY は正のまま**(鏡化しない)。nest しても共役は合成する(`T1_dev∘T2_dev = flip∘T1_up∘T2_up∘flip⁻¹`)。
+  既存 marginScope(tx=ML, ty=0, s=1)は `translate(ML, 0)` に落ち**今と完全一致**。
+
+`StaffFrame` の per-staff 反射(`PositionToDevice = staffMiddleY − pos/2` 等)は、この単一境界に
+吸収され**廃止**。内部は全て Y-up(`PositionToUp = staffMiddleY_up + pos/2`)で計算する。
+
+> 注: multi-page の `SvgDocumentContext.Assemble` が各ページ content を `translate(0, yOffset)` で
+> 積む処理は device 空間でデコレータの外側なので不変(各ページ content が byte 一致なら積み上げも一致)。
 
 ## 2. 内部 Y-up 規約
 
@@ -54,10 +75,12 @@ stencil-time フリップに相当**。`StaffFrame` の per-staff 反射は**廃
   ⇒ 一括反転 → build → snapshot 全 byte 比較 → 符号ミスを潰す、の atomic な進め方。
 - 成功条件: **42 snapshot が byte 不変**(出力同値)。差が出たら符号ミスなので修正、リベースしない
   (Stage 4 は出力を変えてはいけない)。
-- 順序の目安: (1) flip group を SharedRenderer に追加(この時点で全部上下反転して壊れる)→
+- 順序の目安: (0) `YFlipDrawingContext` デコレータを追加(未配線=死にコード、挙動不変・commit 可)→
+  (1) `SharedRenderer.RenderTo` の `gc` を decorator で包む(この時点で全部上下反転して壊れる)→
   (2) layout の Y 起点(CalculateFirstSystemY / currentY 累積 / FindStaffYInSystem)を Y-up へ →
-  (3) StaffFrame を PositionToUp へ → (4) renderer 60 箇所の Y 算術を Y-up へ →
+  (3) StaffFrame を PositionToUp へ → (4) renderer の Y 算術を Y-up へ →
   (5) 各 engraver → (6) skyline → build green → snapshot byte 比較で詰める。
+  (1)〜(6) は atomic(途中は壊れる)。(0) だけ先行 commit してよい。
 
 ## 5. 注意
 
