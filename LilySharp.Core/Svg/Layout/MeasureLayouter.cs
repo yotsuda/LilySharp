@@ -191,6 +191,18 @@ public sealed class MeasureLayouter
                 double skyDist = SpacingRules.CalculateSkylineDistance(null, item, staffY: 0);
                 firstNoteMin = Math.Max(firstNoteMin, skyDist);
             }
+
+            // A zero-duration clef/key/time change at the MEASURE START shares
+            // the first note's column and is drawn hanging LEFT of it. The
+            // inter-column springs below (see ~line 290) reserve that hung
+            // width via ChangeItemPrefixWidth, but the barline→first-column
+            // spring did not — so a measure-opening change had nothing pushing
+            // its column right and the hung glyph jammed against the barline.
+            // Reserve it here too (glyph + padding on both sides).
+            // LILYPOND-REF: lily/paper-column.cc — the non-musical (breakable)
+            // column precedes the musical column of the same moment.
+            double startPrefix = ChangeItemPrefixWidth(firstItems);
+            firstNoteMin = Math.Max(firstNoteMin, startPrefix);
         }
 
         springs.Add(new Spring(
