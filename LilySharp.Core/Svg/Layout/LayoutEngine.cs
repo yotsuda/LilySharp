@@ -161,9 +161,11 @@ public sealed class LayoutEngine
             beamLayouts: beamLayouts,
             systemSkylines: perSystemSkylines);
 
-        // Calculate part combination layouts for multi-voice scores
+        // Calculate part combination layouts for multi-voice scores.
+        // LILYPOND-REF: part combination is opt-in (\partcombine); plain << \\ >>
+        // voices are not combined and carry no a2/Solo text. Gated off by default.
         var partCombineLayouts = ImmutableArray<PartCombineLayout>.Empty;
-        if (score.IsMultiVoice && score.Voices.Length >= 2)
+        if (_options.EnablePartCombine && score.IsMultiVoice && score.Voices.Length >= 2)
         {
             var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
             var combineItems = PartCombineAnalyzer.Analyze(
@@ -428,7 +430,9 @@ public sealed class LayoutEngine
             foreach (var k in hw) headWipeBuilder.Add(k);
             foreach (var k in df) dotForceDownBuilder.Add(k);
 
-            if (partCombineLayouts.IsEmpty)
+            // Part combination is opt-in (\partcombine); plain << \\ >> voices
+            // carry no a2/Solo text. Gated off by default to match LilyPond.
+            if (_options.EnablePartCombine && partCombineLayouts.IsEmpty)
             {
                 var ml = systemsArray.SelectMany(s => s.Measures).ToImmutableArray();
                 var combineItems = PartCombineAnalyzer.Analyze(
