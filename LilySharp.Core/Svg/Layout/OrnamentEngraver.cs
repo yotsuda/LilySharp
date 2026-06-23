@@ -47,8 +47,8 @@ public readonly record struct OrnamentLayout(
 ///
 /// Ornaments are always placed above the note with:
 /// - direction: UP (always)
-/// - padding: 0.5 staff spaces (define-grobs.scm:2195)
-/// - staff-padding: 0.25 staff spaces
+/// - padding: 0.20 staff spaces (scm/script.scm — per ornament script)
+/// - staff-padding: 0.25 staff spaces (Script grob default)
 ///
 /// Uses the same non-quantized positioning as ArticulationEngraver for fermata/ornaments:
 ///   1. Calculate support extent (stem length or notehead height)
@@ -57,10 +57,14 @@ public readonly record struct OrnamentLayout(
 /// </remarks>
 public static class OrnamentEngraver
 {
-    // LILYPOND-REF: define-grobs.scm:2195 padding = 0.5
-    private const double Padding = 0.5;
+    // Ornaments are Script grobs; their padding is set per script in
+    // scm/script.scm, where trill / prall / mordent / turn (and variants) all
+    // use (padding . 0.20). define-grobs.scm:2195 (the old citation) is an
+    // unrelated lyric grob, and 0.5 was the wrong value.
+    // LILYPOND-REF: scm/script.scm trill/prall/mordent/turn (padding . 0.20)
+    private const double Padding = 0.20;
 
-    // LILYPOND-REF: define-grobs.scm:2295 staff-padding = 0.25
+    // LILYPOND-REF: scm/define-grobs.scm:3004 Script (staff-padding . 0.25)
     private const double StaffPadding = 0.25;
 
     // Ornament glyph near-extent (half-height, how far glyph extends toward note)
