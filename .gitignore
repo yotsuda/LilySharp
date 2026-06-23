@@ -74,6 +74,10 @@ vstest_diag.*
 # Output folder (generated files)
 output/
 
+# Local .lys playground — not snapshot fixtures (those live under
+# LilySharp.Tests/Fixtures/), so edits here must not show up as repo changes.
+samples/
+
 # Claude Code local files
 work_progress.md
 .claude/
