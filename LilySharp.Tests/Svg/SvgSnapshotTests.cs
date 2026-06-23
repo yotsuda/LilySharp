@@ -106,6 +106,11 @@ public class SvgSnapshotTests
         yield return new object[] { "test/editorial-accidental" };
         yield return new object[] { "test/multi-line-spanners" };
         yield return new object[] { "test/multi-measure-rest" };
+        // Covers a stacked-digit time signature (3/8) AND a grand staff whose
+        // secondary (bass) staff out-counts the primary in a measure — both
+        // were uncovered and both had rendering bugs (time-sig digits too high;
+        // surplus secondary noteheads dropped).
+        yield return new object[] { "test/timesig-grandstaff" };
     }
 
     /// <summary>

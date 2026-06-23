@@ -1,0 +1,35 @@
+// Regression coverage for two rendering bugs the existing snapshots missed:
+//
+// 1. Stacked-digit time signature (3/8): the numerator/denominator must be
+//    vertically centred on the staff (numerator at staff position +2,
+//    denominator at -2), symmetric about the middle line — not anchored by
+//    their baseline (which floated the digits ~1 staff-space too high).
+//
+// 2. Grand staff where a SECONDARY staff holds MORE items in a measure than
+//    the primary: here the bass "r8 e a" / "r8 e gis" (3 items) against the
+//    treble "a4." (1 item). Every bass notehead must still render — previously
+//    the surplus secondary-voice items were dropped, so the beamed notes after
+//    the rest showed stems/beam but no heads.
+time 3/8
+
+part rh {
+  clef: treble
+}
+
+part lh {
+  clef: bass
+}
+
+section Main {
+  rh { a4. | a4. }
+  lh { r8 e a | r8 e gis }
+}
+
+structure { Main }
+
+render score "timesig-grandstaff.svg" {
+  grandStaff {
+    staff { rh }
+    staff { lh }
+  }
+}
