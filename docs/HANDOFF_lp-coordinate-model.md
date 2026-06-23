@@ -106,7 +106,26 @@ interlock 一致)。全 1461 緑。distant(0.8w)/touch は同機構・未個別�
 
 **残: 「stem 相対 head X」純アーキ再アンカー**は、上記より**出力には殆ど効かない**(extent
 正規化が no-op、衝突は既に LP 一致)。やるなら完全模倣の構造忠実性のためで、出力リスクを
-取って head 描画を stem 基準に書き換える作業。優先度は下がった。Stage 2-4 を先にしてよい。
+取って head 描画を stem 基準に書き換える作業。優先度は下がった。
+
+### 2026-06-23 scope: Stage 2/3 は既に実装済み(master)— 残る出力課題はほぼ無い
+
+コード精査の結論:
+- **Stage 2(notehead staff 相対 Y)= 実装済み**。`StaffFrame.PositionToDevice = staffMiddleY
+  − pos/2`(中央線 0、LP の `y=p·space/2`)。
+- **Stage 3(Align 風 譜間 skyline スタック)= 実装済み・配線済み**。`MultiStaffLayouter`
+  の `CalculateStaffGapWithSkylines` が `align-interface.cc:217-268` を移植
+  (`gap = max(skyline+padding, min, basic) − staffHeight`)、`LayoutEngine:234-242` が
+  skyline 版 `LayoutStaffGroups/CalculateSystemHeight` を呼ぶ。
+  (hara-kiri 自動非表示時のみ固定式へ fallback = 軽微な edge。)
+- **Stage 4(System/Page フレーム + 単一フリップ)= 設計 doc 自身が「conventional /
+  出力同値」と明記**。純 bookkeeping リファクタで**出力は変わらない**(snapshot churn リスク
+  のみ、視覚的便益ゼロ)。`StaffFrame` が既に per-staff の単一フリップ stand-in。
+
+⇒ **この branch の出力影響のある仕事は実質 Stage 1 衝突 port(本日完了)だけだった。**
+Stage 2-3 は master で既達、Stage 4 は出力中立。完全模倣の「出力」目標はほぼ達成済み。
+次の高価値の進め方は、Stage 4 の純アーキ整形よりも **LP との実出力乖離(衝突の halving の
+ような実バグ)を render 突合で探す**方が筋。
 
 ### (旧)Stage 1 の着手手順(精緻化版・least-breakage)
 
