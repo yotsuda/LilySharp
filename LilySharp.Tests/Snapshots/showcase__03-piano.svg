@@ -7,7 +7,7 @@
   <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle">Piano Etude</text>
   <text x="78.00" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end">Lily# Showcase</text>
   <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
-  <text x="1.00" y="21.14" font-size="0.86" font-family="Emmentaler-Brace" text-anchor="end" fill="#000000"></text>
+  <text x="-0.30" y="21.14" font-size="0.86" font-family="Emmentaler-Brace" text-anchor="end" fill="#000000"></text>
   <line x1="0.00" y1="14.64" x2="0.00" y2="27.64" stroke="#000000" stroke-width="0.160"/>
   <rect x="25.34" y="18.64" width="0.19" height="5.00" fill="#000000"/>
   <rect x="43.06" y="18.64" width="0.19" height="5.00" fill="#000000"/>
@@ -105,7 +105,7 @@
   <rect x="43.06" y="14.64" width="0.19" height="13.00" fill="#000000"/>
   <rect x="65.58" y="14.64" width="0.19" height="13.00" fill="#000000"/>
   <rect x="77.81" y="14.64" width="0.19" height="13.00" fill="#000000"/>
-  <text x="1.00" y="42.44" font-size="0.86" font-family="Emmentaler-Brace" text-anchor="end" fill="#000000"></text>
+  <text x="-0.30" y="42.44" font-size="0.86" font-family="Emmentaler-Brace" text-anchor="end" fill="#000000"></text>
   <line x1="0.00" y1="35.94" x2="0.00" y2="48.94" stroke="#000000" stroke-width="0.160"/>
   <rect x="27.88" y="39.94" width="0.19" height="5.00" fill="#000000"/>
   <rect x="48.38" y="39.94" width="0.19" height="5.00" fill="#000000"/>

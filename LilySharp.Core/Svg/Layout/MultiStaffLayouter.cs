@@ -386,7 +386,7 @@ public sealed class MultiStaffLayouter
         }
 
         double totalHeight = currentY + staffHeight - y;
-        double braceX = _options.MarginLeft + CurrentIndent - 1.0;
+        double braceX = CurrentIndent - 0.3;  // LP SystemStartBrace padding 0.3, left of the staff (define-grobs.scm)
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -539,7 +539,7 @@ public sealed class MultiStaffLayouter
         }
 
         double totalHeight = currentY + lastVisibleHeight - y;
-        double bracketX = _options.MarginLeft + CurrentIndent - 1.0;
+        double bracketX = CurrentIndent - 0.8;  // LP SystemStartBracket padding 0.8, left of the staff (define-grobs.scm)
 
         var delimiterLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -584,7 +584,7 @@ public sealed class MultiStaffLayouter
         }
 
         double totalHeight = currentY + staffHeight - y;
-        double braceX = _options.MarginLeft + CurrentIndent - 1.0;
+        double braceX = CurrentIndent - 0.3;  // LP SystemStartBrace padding 0.3, left of the staff (define-grobs.scm)
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -675,7 +675,7 @@ public sealed class MultiStaffLayouter
 
         double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
         double totalHeight = currentY + lastStaffHeight - y;
-        double bracketX = _options.MarginLeft + CurrentIndent - 1.0;
+        double bracketX = CurrentIndent - 0.8;  // LP SystemStartBracket padding 0.8, left of the staff (define-grobs.scm)
 
         var delimiterLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -1068,7 +1068,7 @@ public sealed class MultiStaffLayouter
         }
 
         double totalHeight = currentY + staffHeight - y;
-        double braceX = _options.MarginLeft + CurrentIndent - 1.0;
+        double braceX = CurrentIndent - 0.3;  // LP SystemStartBrace padding 0.3, left of the staff (define-grobs.scm)
 
         var grandStaffLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
@@ -1165,7 +1165,7 @@ public sealed class MultiStaffLayouter
 
         double lastStaffHeight = GetStaffHeight(group.Staves[^1]);
         double totalHeight = currentY + lastStaffHeight - y;
-        double bracketX = _options.MarginLeft + CurrentIndent - 1.0;
+        double bracketX = CurrentIndent - 0.8;  // LP SystemStartBracket padding 0.8, left of the staff (define-grobs.scm)
 
         var delimiterLayout = new GrandStaffLayout(
             Staves: staffLayouts.ToImmutable(),
