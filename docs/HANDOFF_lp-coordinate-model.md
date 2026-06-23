@@ -10,8 +10,10 @@
 Lily# のレイアウト座標を **LilyPond の実際の座標モデル**(grob 親子の相対参照点ツリー、
 staff-space、Y-up、出力時に単一フリップ)に揃える大規模リファクタ。**ブランチ
 `lp-coordinate-model` 上**で進行中(push 済み)。設計は `docs/LP_COORDINATE_MODEL.md` に確定済み。
-**安全網(part-combine ラベル汚染)を 2026-06-23 に修正済み(§3 の確定事項)→ 次の一手は
-Stage 1 step 1(stem アンカー + column-X 補正を単一音 byte 不変で導入)**。
+**2026-06-23: (1) 安全網=part-combine ラベル汚染を修正、(2) Stage 1 衝突 port を完了
+(`cd594af`、LP の symmetric ±inner + leftmost-pin モデルに移植、full/close_half/mesh を
+LP 描画と突合済み)。→ 残るは「stem 相対 head X」の純アーキテクチャ再アンカー(下記の通り
+出力には殆ど効かない任意ポリッシュ)と Stage 2-4。**
 
 ---
 
@@ -84,7 +86,29 @@ downstem幅(1.304)≈ 0.678` は現 `1.0×1.304=1.304` と一致しない。差�
 LP と突合する反復ループでしか正しく収束しない**。各編集後に必ず close_half/full/mesh を
 描画して「高音右隣接・分離 1.30」を維持しているか確認する。
 
-### Stage 1 の着手手順(精緻化版・least-breakage)
+### 2026-06-23 完了: 衝突 port(`cd594af`)— 真因は systematic halving
+
+LP の `note-collision.cc` を精読して判明した**決定的事実**(formula 不一致の真因):
+- LP は clash を **両声部を対称にずらす**(`automatic_shift` の `d*offset` = up +inner /
+  down −inner)→ `calc_positioning_done` が **leftmost group を slot に pin**
+  (`translate amount − left_most`)。**2声では分離 = 2×inner×幅**。
+- Lily# は**片側だけ**ずらしていた(inner×幅)= LP の**半分**。例外は同群 close_half の
+  magic `1.0`(≈ 2×0.52=1.04)だけが偶然合っており、systematic な半減を隠していた。
+- **extent 正規化(`:343-348`)は標準 head では ≈1.0 の no-op**(全 head が左端 0 のため
+  `(extent_down[RIGHT]−extent_up[LEFT])/length = (w−0)/w = 1`)。LP でも同様。
+  ⇒ 設計 doc が「最優先」とした extent 正規化は**実質効かない**。真の修正は symmetric+pin。
+
+**実施(`cd594af`、LP 描画と突合済み)**: `AnalyzeCollision` を対称 ±inner 返却に、magic
+`1.0`→raw `0.52`、touch `0.65`→`0.5`(LP touch、0.65 は未検出の stem_to_stem)。
+`CalculateVoiceOffsets` を leftmost-pin に。検証: full_collide=半重なり→隣接(LP一致)、
+close_half=1.0→1.04(視覚不変・snapshot 純粋リベース)、mesh=2×0.17=0.34w(LP の tight
+interlock 一致)。全 1461 緑。distant(0.8w)/touch は同機構・未個別描画。
+
+**残: 「stem 相対 head X」純アーキ再アンカー**は、上記より**出力には殆ど効かない**(extent
+正規化が no-op、衝突は既に LP 一致)。やるなら完全模倣の構造忠実性のためで、出力リスクを
+取って head 描画を stem 基準に書き換える作業。優先度は下がった。Stage 2-4 を先にしてよい。
+
+### (旧)Stage 1 の着手手順(精緻化版・least-breakage)
 
 1. **stem アンカー + column-X 補正を「単一音 byte 不変」で導入(まず純リファクタとして)**。
    column アンカーを stem(X=0)にし、ヘッドを `[−w,0]`(up)/`[0,+w]`(down)に置く。
