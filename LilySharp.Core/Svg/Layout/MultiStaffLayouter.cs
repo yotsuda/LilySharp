@@ -717,8 +717,23 @@ public sealed class MultiStaffLayouter
                 if (item is KeySignatureChangeItem kc)
                     activeKeySharps = kc.NewKey.Sharps;
 
-        double prefixWidth = SpacingRules.CalculatePrefixWidth(activeKeySharps, systemIndex == 0,
-            score.TimeSignature.Beats, score.TimeSignature.BeatType);
+        // A meter change that OPENS this system's first measure (i.e. a change
+        // landing exactly at the line break) is drawn in the prefix — clef, key,
+        // THEN time — like LilyPond, instead of hanging off the first note column.
+        // Reserve the time-signature width in the prefix (not the measure spring).
+        // Only on a non-first system; the first system carries the initial meter.
+        TimeSignatureChangeItem? leadingTimeChange = null;
+        if (systemIndex > 0 && startMeasureIndex < primaryVoice.Measures.Length)
+            foreach (var item in primaryVoice.Measures[startMeasureIndex].Items)
+            {
+                if (item is TimeSignatureChangeItem tc) { leadingTimeChange = tc; break; }
+                if (item.Duration > Fraction.Zero) break;
+            }
+
+        bool prefixHasTime = systemIndex == 0 || leadingTimeChange != null;
+        double prefixWidth = SpacingRules.CalculatePrefixWidth(activeKeySharps, prefixHasTime,
+            leadingTimeChange?.NewTime.Beats ?? score.TimeSignature.Beats,
+            leadingTimeChange?.NewTime.BeatType ?? score.TimeSignature.BeatType);
         // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
         // Staff lines start at MarginLeft + indent; music starts after prefix
         double startX = _options.MarginLeft + CurrentIndent + prefixWidth;
@@ -751,9 +766,13 @@ public sealed class MultiStaffLayouter
             if (i == startMeasureIndex && springs.Length > 0)
             {
                 var (ideal, min) = SpacingRules.FirstNoteSpring(
-                    activeKeySharps, systemIndex == 0);
+                    activeKeySharps, prefixHasTime);
                 var s0 = springs[0];
-                double newMin = Math.Max(min, s0.MinDistance);
+                // When the opening meter change is hoisted into the prefix, its
+                // hang-left width is no longer reserved in the measure — use the
+                // bare prefix→first-note spring so the first note doesn't inherit
+                // the (now prefix-drawn) time signature's reservation.
+                double newMin = leadingTimeChange != null ? min : Math.Max(min, s0.MinDistance);
                 springs = springs.SetItem(0, new Spring(
                     Math.Max(ideal, newMin), newMin, inverseStretchStrength: 0));
             }

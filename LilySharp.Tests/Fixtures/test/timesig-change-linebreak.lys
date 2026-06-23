@@ -1,0 +1,26 @@
+// Mid-piece time signature change that lands at a SYSTEM BREAK.
+// The wide measures force a line break before the 2/4 bar, so that meter
+// change opens system 2. It must be drawn in the system-start prefix
+// (clef, key, THEN 2/4) — tight after the key signature — not hanging far
+// right off the first note column. Also exercises the key signature being
+// reprinted at the system head.
+title "Time Signature Change at Line Break"
+composer "Lily#"
+
+tempo 100
+time 4/4
+key g major
+
+part melody { clef: treble }
+
+phrase tune {
+  g'4 a b a |
+  time 3/4 g4 a b |
+  time 2/4 a4 g |
+  time 6/8 a8 b a g fis e |
+  time 4/4 d2 g |
+}
+
+section Main { melody { $tune } }
+structure { Main }
+render score "timesig-change-linebreak.svg" { staff { melody } }

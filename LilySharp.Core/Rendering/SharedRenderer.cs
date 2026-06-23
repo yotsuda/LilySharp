@@ -217,6 +217,11 @@ public static class SharedRenderer
                 {
                     prefixEndX = DrawTimeSignature(score.TimeSignature, prefixEndX, localStaffY, gc);
                 }
+                else if (GetSystemStartTimeChange(staff, system) is { } startTimeChange)
+                {
+                    // A meter change at the line break is part of the prefix.
+                    prefixEndX = DrawTimeSignature(startTimeChange.NewTime, prefixEndX, localStaffY, gc);
+                }
 
                 // Notes per measure — render every voice (voice 1 = stems up,
                 // voice 2 = stems down, with collision offsets / head wipes).
@@ -514,6 +519,32 @@ public static class SharedRenderer
         return activeKey;
     }
 
+    /// <summary>
+    /// Returns the time-signature change that OPENS the first measure of a
+    /// (non-first) system, or null. Such a change lands exactly at the line
+    /// break and is drawn in the system-start prefix (clef, key, THEN time),
+    /// like LilyPond — not as a measure item hanging left of the first note.
+    /// </summary>
+    private static TimeSignatureChangeItem? GetSystemStartTimeChange(Staff staff, SystemLayout system)
+    {
+        if (system.SystemIndex == 0 || system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return null;
+
+        var voice = staff.PrimaryVoice;
+        int firstMeasureIndex = system.Measures[0].MeasureIndex;
+        if (firstMeasureIndex >= voice.Measures.Length)
+            return null;
+
+        foreach (var item in voice.Measures[firstMeasureIndex].Items)
+        {
+            if (item is TimeSignatureChangeItem tc)
+                return tc;
+            if (item.Duration > Fraction.Zero)
+                break; // a note/rest before any change → not a measure-opening meter change
+        }
+        return null;
+    }
+
     private static double DrawClef(ClefType clef, double x, double staffY, IDrawingContext gc)
     {
         char glyph = clef switch
@@ -715,6 +746,18 @@ public static class SharedRenderer
             for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
             {
                 var item = measure.Items[itemIdx];
+
+                // A meter change opening the first measure of a (non-first)
+                // system is drawn in the system-start prefix (see DrawSystem),
+                // not as a measure item — skip its in-measure copy here.
+                if (item is TimeSignatureChangeItem
+                    && currentTiming == Fraction.Zero
+                    && system.SystemIndex > 0
+                    && ml.MeasureIndex == system.Measures[0].MeasureIndex)
+                {
+                    continue;
+                }
+
                 double itemX;
                 if (useColumnTiming)
                 {

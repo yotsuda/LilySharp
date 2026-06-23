@@ -118,6 +118,10 @@ public class SvgSnapshotTests
         // drawn at each change point, measure length re-armed, validator follows
         // the new meter. Verified against LilyPond \time at matching bars.
         yield return new object[] { "test/timesig-change" };
+        // A meter change that lands at a system break: it must join the
+        // system-start prefix (clef, key, time) instead of hanging far right of
+        // the first note, and the key signature is reprinted at the system head.
+        yield return new object[] { "test/timesig-change-linebreak" };
     }
 
     /// <summary>
