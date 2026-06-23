@@ -69,7 +69,32 @@ LP の stencil-time flip と同じ。`SharedRenderer.RenderTo` の `gc = doc.Beg
 ・各 engraver(Tie/Glissando/Stem/Arpeggio/Fingering/TupletBracket/TieVariant…)・`MultiStaffLayouter`
 ・`LayoutEngine`・`LayoutUtilities`。
 
-## 4. 実行戦略(all-or-nothing)
+## 3.5. 改訂(2026-06-23 その2): all-or-nothing をやめ、相対 Y-up grob への漸進へ
+
+実コード精査で2つの構造的事実が判明し、§4 の「ページ全体一括 Y-up・atomic・byte 一致」路線は
+現モデルに不適と確定した。**byte 一致は要件から外す**(ユーザー判断: 正しい実装なら出力はより
+正しくなってよい。検証は LP 比較 + snapshot 再ベースライン)。
+
+- **循環**: 絶対 Y-up は `H`(page.Height)が要るが、`LayoutEngine` の prelim extent pass
+  (`EnrichExtentsWithAnnotationProtrusions`)が `H` 確定前に絶対 tie/slur Y と `system.Y` を使う。
+  `H` は extent に依存し、extent は絶対 Y に依存する=循環。LP は絶対フレームを最後まで持たず
+  (相対 Y-up offset + refpoint)出力時に1回 flip して回避している。
+- **フレーム結合**: `system.Y` は「layout が産む絶対 Y」と「render の消費」が共有する device
+  フレーム。within-staff (a) は既に `StaffFrame` 経由で Y-up 記述済みだが、overlays (b) は
+  `system.Y + offset`、engraver は `system.Y` から絶対 device Y を産む。だから「render パスだけ
+  Y-up」は無意味な `H−(H−y)` 往復になるか engraver へ波及するかのどちらかで、分離できない。
+
+**正しい漸進(LP 忠実)**:
+- **各 increment = grob ファミリを1つずつ相対 Y-up フレームへ移す**。各 grob は自分の refpoint
+  (staff/system)からの相対 Y-up offset で計算し、device へは**自分の draw 境界で**変換する
+  (`StaffFrame`/skyline が per-staff で既にやっているのと同じ)。小さく・独立に検証可能・holistic
+  結合なし。検証は LP 比較と snapshot(改善なら再ベースライン)。
+- **page-level decorator(`YFlipDrawingContext`)は最終ステップ**。全 grob が相対 Y-up に揃った
+  時点で、per-grob の device 変換を畳んで単一 flip に置換する。`5e8f899` の decorator は
+  「到達点」であって今は配線しない(正しく死にコード)。
+- 推奨初手 = layout 時 engraver(移植の痛点)を1つ。自己完結で検証しやすいものから。
+
+## 4. 旧・実行戦略(破棄: all-or-nothing。§3.5 に置換)
 
 - **byte 一致は全反転完了まで検証不能**(途中は「一部 Y-up・一部 device」でパイプライン破綻)。
   ⇒ 一括反転 → build → snapshot 全 byte 比較 → 符号ミスを潰す、の atomic な進め方。
