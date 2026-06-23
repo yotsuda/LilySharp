@@ -208,8 +208,7 @@ public sealed class SkylineBuilder
                 // LILYPOND-REF: lily/stem.cc — one Stem per NoteColumn.
                 foreach (var chordNote in chord.Notes)
                 {
-                    double noteY = StaffFrame.PositionToDevice(chordNote.StaffPosition, staffMiddleY);
-                    AddNoteBoxToSkylines(chordNote.StaffPosition, x, noteY,
+                    AddNoteBoxToSkylines(chordNote.StaffPosition, x, staffMiddleY,
                         stemLength, noteheadHeight, chord.StemUp, chordNoteValue,
                         upSkyline, downSkyline);
                 }
@@ -219,9 +218,10 @@ public sealed class SkylineBuilder
                 // Rests are centered on the staff middle line
                 double restHeight = EngravingDefaults.RestHeight;
                 double restWidth = EngravingDefaults.RestWidth;
-                double restY = staffMiddleY; // Rests centered vertically
-                double restTop = restY - restHeight / 2;
-                double restBottom = restY + restHeight / 2;
+                // Rests are centered on the staff middle line — Y-up 0 — and span
+                // ±restHeight/2; reflect to device via staffMiddleY - up.
+                double restTop = staffMiddleY - restHeight / 2;     // up frame: +restHeight/2
+                double restBottom = staffMiddleY + restHeight / 2;  // up frame: -restHeight/2
                 var restUp = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Up);
                 var restDown = VerticalSkyline.FromBox(x - restWidth / 2, x + restWidth / 2, restBottom, restTop, VerticalDirection.Down);
                 upSkyline.Merge(restUp);
@@ -243,28 +243,36 @@ public sealed class SkylineBuilder
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline)
     {
-        double noteY = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY);
         int noteValue = LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration);
         bool stemUp = note.StemUp;
 
-        AddNoteBoxToSkylines(note.StaffPosition, x, noteY,
+        AddNoteBoxToSkylines(note.StaffPosition, x, staffMiddleY,
             stemLength, noteheadHeight, stemUp, noteValue, upSkyline, downSkyline);
     }
 
     /// <summary>
     /// Adds bounding boxes for a note at the given position.
     /// Includes notehead, stem, and ledger lines.
-    /// All coordinates in staff spaces.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/grob.cc:85-89 simple_vertical_skylines_from_extents
     /// LILYPOND-REF: lily/stencil-integral.cc:55-62 add_*_segments functions
     /// Each graphical element contributes its bounding box to the vertical skyline.
+    ///
+    /// COORDINATE SYSTEM: like <see cref="StemCalculator"/> and the engravers, the
+    /// extents below are reasoned in LilyPond's native <b>Y-up</b> frame — staff-
+    /// spaces above the staff middle line, up-positive — so a stem-up box ADDS its
+    /// length (matching <c>stem.cc</c>) and ledgers/flags read sign-for-sign against
+    /// <c>grob.cc</c>. They are reflected to the shared device frame (Y-down) only
+    /// at the <see cref="VerticalSkyline.FromBox"/> boundary via
+    /// <c>staffMiddleY - up</c> (the local <c>ToDevice</c>), the single chokepoint
+    /// that stands in for LilyPond's stencil-time flip. The note center's Y-up
+    /// coordinate is just its staff position in staff-spaces (<c>staffPosition/2</c>).
     /// </remarks>
     private void AddNoteBoxToSkylines(
         int staffPosition,
         double x,
-        double noteY,
+        double staffMiddleY,
         double stemLength,
         double noteheadHeight,
         bool stemUp,
@@ -272,18 +280,21 @@ public sealed class SkylineBuilder
         VerticalSkyline upSkyline,
         VerticalSkyline downSkyline)
     {
+        // Reflect a Y-up coordinate (staff-spaces above the middle line) to device.
+        double ToDevice(double up) => staffMiddleY - up;
+
+        double noteUp = staffPosition * 0.5;   // staff-spaces above middle, up+
         double noteheadWidth = EngravingDefaults.NoteheadBlackWidth;
         double halfNoteheadHeight = noteheadHeight / 2;
 
-        // Notehead bounding box
+        // Notehead bounding box (head spans noteUp ± half in the up frame).
         double noteLeft = x - noteheadWidth / 2;
         double noteRight = x + noteheadWidth / 2;
-        double noteTop = noteY - halfNoteheadHeight;  // Remember: Y increases downward
-        double noteBottom = noteY + halfNoteheadHeight;
+        double headTopUp = noteUp + halfNoteheadHeight;
+        double headBottomUp = noteUp - halfNoteheadHeight;
 
-        // Add notehead to both skylines
-        var noteheadUp = VerticalSkyline.FromBox(noteLeft, noteRight, noteBottom, noteTop, VerticalDirection.Up);
-        var noteheadDown = VerticalSkyline.FromBox(noteLeft, noteRight, noteBottom, noteTop, VerticalDirection.Down);
+        var noteheadUp = VerticalSkyline.FromBox(noteLeft, noteRight, ToDevice(headBottomUp), ToDevice(headTopUp), VerticalDirection.Up);
+        var noteheadDown = VerticalSkyline.FromBox(noteLeft, noteRight, ToDevice(headBottomUp), ToDevice(headTopUp), VerticalDirection.Down);
         upSkyline.Merge(noteheadUp);
         downSkyline.Merge(noteheadDown);
 
@@ -294,18 +305,17 @@ public sealed class SkylineBuilder
         double ledgerLeft = x - noteheadWidth / 2 - ledgerExtension;
         double ledgerRight = x + noteheadWidth / 2 + ledgerExtension;
 
-        // Ledger lines above staff (staffPosition >= 6)
-        // Use noteY-based calculation to correctly handle any staff position
+        // Ledger lines above staff (staffPosition >= 6). Each ledger sits at the
+        // staff position it serves: its Y-up coordinate is pos/2.
         if (staffPosition >= 6)
         {
             for (int pos = 6; pos <= staffPosition; pos += 2)
             {
-                // Ledger Y is at the same position as a note at this staff position
-                double ledgerY = noteY + (staffPosition - pos) / 2.0;
-                double ledgerTop = ledgerY - ledgerThickness / 2;
-                double ledgerBottom = ledgerY + ledgerThickness / 2;
-                var ledgerUp = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ledgerBottom, ledgerTop, VerticalDirection.Up);
-                upSkyline.Merge(ledgerUp);
+                double ledgerUp = pos * 0.5;
+                double ledgerTopUp = ledgerUp + ledgerThickness / 2;
+                double ledgerBottomUp = ledgerUp - ledgerThickness / 2;
+                var ledger = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ToDevice(ledgerBottomUp), ToDevice(ledgerTopUp), VerticalDirection.Up);
+                upSkyline.Merge(ledger);
             }
         }
 
@@ -314,57 +324,55 @@ public sealed class SkylineBuilder
         {
             for (int pos = -6; pos >= staffPosition; pos -= 2)
             {
-                double ledgerY = noteY + (staffPosition - pos) / 2.0;
-                double ledgerTop = ledgerY - ledgerThickness / 2;
-                double ledgerBottom = ledgerY + ledgerThickness / 2;
-                var ledgerDown = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ledgerBottom, ledgerTop, VerticalDirection.Down);
-                downSkyline.Merge(ledgerDown);
+                double ledgerUp = pos * 0.5;
+                double ledgerTopUp = ledgerUp + ledgerThickness / 2;
+                double ledgerBottomUp = ledgerUp - ledgerThickness / 2;
+                var ledger = VerticalSkyline.FromBox(ledgerLeft, ledgerRight, ToDevice(ledgerBottomUp), ToDevice(ledgerTopUp), VerticalDirection.Down);
+                downSkyline.Merge(ledger);
             }
         }
 
-        // Stem bounding box (if applicable - quarter notes and shorter)
-        // For half notes and whole notes, no stem
+        // Stem bounding box (quarter notes and shorter; half/whole have no stem).
         if (stemUp)
         {
-            // Stem goes up from notehead
-            double stemTop = noteY - stemLength;
-            double stemBottom = noteY;
-            var stemSkyline = VerticalSkyline.FromBox(noteRight - 1, noteRight + 1, stemBottom, stemTop, VerticalDirection.Up);
+            // Stem extends UPWARD from the head: tip = noteUp + stemLength.
+            double stemTipUp = noteUp + stemLength;
+            double stemBaseUp = noteUp;
+            var stemSkyline = VerticalSkyline.FromBox(noteRight - 1, noteRight + 1, ToDevice(stemBaseUp), ToDevice(stemTipUp), VerticalDirection.Up);
             upSkyline.Merge(stemSkyline);
 
             // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
-            // Flag for eighth notes and shorter (noteValue >= 8)
+            // Flag for eighth notes and shorter (noteValue >= 8), hanging DOWN
+            // from the stem tip.
             if (noteValue >= 8)
             {
-                // Flag extends from stem top, curving down-right
                 double flagHeight = LayoutUtilities.CalculateFlagHeight(noteValue);
                 double flagLeft = x;
                 double flagRight = x + EngravingDefaults.FlagWidth;
-                double flagTop = stemTop;
-                double flagBottom = stemTop + flagHeight;
-                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, flagBottom, flagTop, VerticalDirection.Up);
+                double flagTopUp = stemTipUp;
+                double flagBottomUp = stemTipUp - flagHeight;
+                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, ToDevice(flagBottomUp), ToDevice(flagTopUp), VerticalDirection.Up);
                 upSkyline.Merge(flagSkyline);
             }
         }
         else
         {
-            // Stem goes down from notehead
-            double stemTop = noteY;
-            double stemBottom = noteY + stemLength;
-            var stemSkyline = VerticalSkyline.FromBox(noteLeft - 1, noteLeft + 1, stemBottom, stemTop, VerticalDirection.Down);
+            // Stem extends DOWNWARD from the head: tip = noteUp - stemLength.
+            double stemTipUp = noteUp - stemLength;
+            double stemBaseUp = noteUp;
+            var stemSkyline = VerticalSkyline.FromBox(noteLeft - 1, noteLeft + 1, ToDevice(stemTipUp), ToDevice(stemBaseUp), VerticalDirection.Down);
             downSkyline.Merge(stemSkyline);
 
             // LILYPOND-REF: lily/flag.cc:51-69 Flag::width
-            // Flag for eighth notes and shorter (noteValue >= 8)
+            // Flag rises UP from the stem bottom.
             if (noteValue >= 8)
             {
-                // Flag extends from stem bottom, curving up-right
                 double flagHeight = LayoutUtilities.CalculateFlagHeight(noteValue);
                 double flagLeft = x;
                 double flagRight = x + EngravingDefaults.FlagWidth;
-                double flagTop = stemBottom - flagHeight;
-                double flagBottom = stemBottom;
-                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, flagBottom, flagTop, VerticalDirection.Down);
+                double flagTopUp = stemTipUp + flagHeight;
+                double flagBottomUp = stemTipUp;
+                var flagSkyline = VerticalSkyline.FromBox(flagLeft, flagRight, ToDevice(flagBottomUp), ToDevice(flagTopUp), VerticalDirection.Down);
                 downSkyline.Merge(flagSkyline);
             }
         }
