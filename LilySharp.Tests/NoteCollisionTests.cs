@@ -129,19 +129,21 @@ public class NoteCollisionTests
         // LILYPOND-REF: lily/note-collision-interface.cc:299-350
         var p = NoteCollisionParameters.Default;
 
-        Assert.Equal(0.52, p.CloseHalfShift);     // close_half_collide
-        Assert.Equal(0.4, p.DistantHalfShift);    // distant_half_collide
-        Assert.Equal(0.5, p.FullCollideShift);     // full_collide
-        Assert.Equal(0.65, p.TouchShift);          // stem_to_stem
-        Assert.Equal(0.17, p.MeshingGeneralShift); // meshing_general
-        Assert.Equal(0.1, p.MeshingDottedShift);   // meshing_dotted
+        Assert.Equal(0.52, p.CloseHalfShift);     // close_half_collide :326
+        Assert.Equal(0.4, p.DistantHalfShift);    // distant_half_collide :329
+        Assert.Equal(0.5, p.FullCollideShift);     // full_collide :327
+        Assert.Equal(0.5, p.TouchShift);           // touch :324 (not stem_to_stem 0.65)
+        Assert.Equal(0.17, p.MeshingGeneralShift); // meshing_general :337
+        Assert.Equal(0.1, p.MeshingDottedShift);   // meshing_dotted :335
     }
 
     [Fact]
     public void FullCollision_ShiftAmount_MatchesLilyPond()
     {
-        // LILYPOND-REF: lily/note-collision-interface.cc:321
-        // full_collide = 0.5 notehead widths
+        // LILYPOND-REF: lily/note-collision.cc:327 full_collide = 0.5, applied
+        // symmetrically (automatic_shift d*offset): up +0.5 / down -0.5. The
+        // consumer (CalculateVoiceOffsets) pins the leftmost group, so the
+        // 2-voice head separation is 2*0.5 = 1.0 notehead widths (side by side).
         var collision = new NoteCollision();
         var ups = new[] { 4 };
         var downs = new[] { 4 };
@@ -150,7 +152,7 @@ public class NoteCollisionTests
 
         Assert.Equal(CollisionType.Full, result.Type);
         Assert.Equal(0.5, result.UpStemXOffset);
-        Assert.Equal(0, result.DownStemXOffset);
+        Assert.Equal(-0.5, result.DownStemXOffset);
     }
 
     [Fact]
@@ -251,8 +253,10 @@ public class NoteCollisionTests
         var result = collision.AnalyzeCollision(ups, downs,
             upNoteValue: 2, downNoteValue: 2, upDots: 0, downDots: 0);
 
-        // Same head groups require full displacement (1.0), not meshing (0.17)
-        Assert.Equal(1.0, result.UpStemXOffset, 2);
+        // Same head groups can't mesh: close_half_collide raw 0.52 (not meshing
+        // 0.17). Applied symmetrically + pinned, the heads end up ~2*0.52 = 1.04w
+        // apart (side by side). The old 1.0 here was the pre-doubled value.
+        Assert.Equal(0.52, result.UpStemXOffset, 2);
     }
 
     [Fact]

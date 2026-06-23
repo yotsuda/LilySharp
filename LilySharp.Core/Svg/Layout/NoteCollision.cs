@@ -170,9 +170,11 @@ public sealed record NoteCollisionParameters
     /// Horizontal shift amount for touch condition (in notehead widths).
     /// </summary>
     /// <remarks>
-    /// LILYPOND-REF: lily/note-collision.cc:317 stem_to_stem
+    /// LILYPOND-REF: lily/note-collision.cc:324 touch — multiplier 0.5.
+    /// (0.65 is the separate stem_to_stem case at :322, which Lily# does not
+    /// detect; the old 0.65 here was that wrong value.)
     /// </remarks>
-    public double TouchShift { get; init; } = 0.65;
+    public double TouchShift { get; init; } = 0.5;
 
     /// <summary>
     /// Horizontal shift for meshing seconds (general case, no dots involved).
@@ -300,10 +302,13 @@ public sealed class NoteCollision
 
         if (touch && !fullCollide && !closeHalf && !distantHalf)
         {
-            // Just touching - stems can align (with small shift per Lilypond line 295-296)
-            double touchShift = _params.TouchShift;
-            double upOffset = shiftUpRight ? touchShift : 0;
-            double downOffset = shiftUpRight ? 0 : -touchShift;
+            // LILYPOND-REF: lily/note-collision.cc:323-324 touch (0.5) and
+            // automatic_shift (d*offset): the two columns shift symmetrically
+            // (+inner up / -inner down); calc_positioning_done pins the leftmost
+            // group to the slot, so the 2-voice separation is 2*inner.
+            double inner = _params.TouchShift;
+            double upOffset = shiftUpRight ? inner : -inner;
+            double downOffset = shiftUpRight ? -inner : inner;
             return new NoteCollisionInfo(CollisionType.Touch, upOffset, downOffset,
                 downDotForceDown: downDotForceDown);
         }
@@ -359,14 +364,12 @@ public sealed class NoteCollision
                 }
                 else
                 {
-                    // LILYPOND-REF: lily/note-collision.cc:180-230
-                    // Same head groups: noteheads cannot interlock at all.
-                    // In LilyPond's stem-reference coordinate system, close_half_collide
-                    // (0.52) produces visual separation because up/down stems place
-                    // noteheads on opposite sides of the reference point.
-                    // In Lily#'s left-edge coordinate system, we need 1.0 (full notehead
-                    // width) to achieve the same side-by-side placement.
-                    shiftAmount = 1.0;
+                    // LILYPOND-REF: lily/note-collision.cc:326 close_half_collide (0.52).
+                    // Same head groups cannot interlock; the symmetric +/-inner shift
+                    // (pinned by the consumer) yields a 2*0.52 ~= 1.0w separation, so the
+                    // two heads sit side by side. (The old magic 1.0 here was the
+                    // pre-doubled single-sided value for the left-edge frame.)
+                    shiftAmount = _params.CloseHalfShift;
                     type = CollisionType.CloseHalf;
                 }
             }
@@ -376,9 +379,13 @@ public sealed class NoteCollision
                 type = CollisionType.CloseHalf;
             }
 
-            // Apply shift direction
-            double upOffset = shiftUpRight ? shiftAmount : 0;
-            double downOffset = shiftUpRight ? 0 : -shiftAmount;
+            // LILYPOND-REF: lily/note-collision.cc automatic_shift (d*offset) +
+            // calc_positioning_done (translate amount - left_most): the columns
+            // shift symmetrically (+inner up / -inner down) and the consumer pins
+            // the leftmost group, so the 2-voice separation is 2*inner. (Lily#
+            // previously shifted only one side, ~half of LilyPond's separation.)
+            double upOffset = shiftUpRight ? shiftAmount : -shiftAmount;
+            double downOffset = shiftUpRight ? -shiftAmount : shiftAmount;
 
             return new NoteCollisionInfo(type, upOffset, downOffset,
                 downDotForceDown: downDotForceDown);
@@ -536,23 +543,32 @@ public sealed class NoteCollision
         // Voice priority order within each direction:
         //   Up-stem:  Voice 1 (base), Voice 3 (+1 notehead), Voice 5 (+2 noteheads), ...
         //   Down-stem: Voice 2 (base), Voice 4 (-1 notehead), Voice 6 (-2 noteheads), ...
+        // LILYPOND-REF: lily/note-collision.cc calc_positioning_done — each clash
+        // group is translated by (amount - left_most), pinning the leftmost group
+        // to the column's spacing slot. Up groups shift +, down groups shift -,
+        // with the cascade extending outward; subtract the minimum so the leftmost
+        // group lands at 0. For two voices this makes the separation 2*inner.
+        var raw = new List<(int VoiceId, int ItemIndex, double Offset, bool Hide, bool Dot)>();
         for (int i = 0; i < upEntries.Count; i++)
         {
             var entry = upEntries[i];
-            double cascadeShift = i * noteheadWidth;
-            offsets.Add((entry.VoiceId, entry.ItemIndex,
-                collision.UpStemXOffset * noteheadWidth + cascadeShift,
+            raw.Add((entry.VoiceId, entry.ItemIndex,
+                collision.UpStemXOffset + i,   // up shifts right; cascade outward
                 i == 0 && collision.UpHeadTransparent, false));
         }
         for (int i = 0; i < downEntries.Count; i++)
         {
             var entry = downEntries[i];
-            double cascadeShift = -i * noteheadWidth;
-            offsets.Add((entry.VoiceId, entry.ItemIndex,
-                collision.DownStemXOffset * noteheadWidth + cascadeShift,
+            raw.Add((entry.VoiceId, entry.ItemIndex,
+                collision.DownStemXOffset - i, // down shifts left; cascade outward
                 i == 0 && collision.DownHeadTransparent,
                 i == 0 && collision.DownDotForceDown));
         }
+
+        double leftMost = raw.Count > 0 ? raw.Min(r => r.Offset) : 0.0;
+        foreach (var r in raw)
+            offsets.Add((r.VoiceId, r.ItemIndex,
+                (r.Offset - leftMost) * noteheadWidth, r.Hide, r.Dot));
 
         return offsets.ToImmutableArray();
     }
