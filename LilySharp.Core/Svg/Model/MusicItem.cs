@@ -328,3 +328,28 @@ public sealed record KeySignatureChangeItem : MusicItem
         _sourcePosition = sourcePosition;
     }
 }
+
+/// <summary>
+/// A mid-piece time signature change. Has zero duration — occupies horizontal
+/// space and is printed at the change point, but does not advance timing.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/time-signature-engraver.cc — a new TimeSignature grob is
+/// created when the measureLength/timeSignatureFraction changes.
+/// </remarks>
+public sealed record TimeSignatureChangeItem : MusicItem
+{
+    /// <summary>The new time signature after the change.</summary>
+    public TimeSignature NewTime { get; }
+
+    private readonly int _sourcePosition;
+
+    public override Fraction Duration => Fraction.Zero;
+    public override int SourcePosition => _sourcePosition;
+
+    public TimeSignatureChangeItem(TimeSignature newTime, int sourcePosition)
+    {
+        NewTime = newTime;
+        _sourcePosition = sourcePosition;
+    }
+}

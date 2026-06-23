@@ -642,6 +642,9 @@ public static class SharedRenderer
                 case KeySignatureChangeItem keyChange:
                     DrawKeySignatureChange(keyChange, itemX, staffY, gc);
                     break;
+                case TimeSignatureChangeItem timeChange:
+                    DrawTimeSignatureChange(timeChange, itemX, staffY, gc);
+                    break;
             }
         }
     }
@@ -705,6 +708,9 @@ public static class SharedRenderer
                             + GlyphMetrics.ClefChangePadding;
                     else if (item is KeySignatureChangeItem kc)
                         itemX -= SpacingRules.GetKeySignatureChangeWidth(kc)
+                            + GlyphMetrics.ClefChangePadding;
+                    else if (item is TimeSignatureChangeItem tc)
+                        itemX -= GlyphMetrics.GetTimeSigWidth(tc.NewTime.Beats, tc.NewTime.BeatType)
                             + GlyphMetrics.ClefChangePadding;
                 }
 
@@ -2862,6 +2868,17 @@ public static class SharedRenderer
 
         if (next != 0)
             DrawKeySignature(change.NewKey, ClefType.Treble, x + dx, staffY, gc);
+    }
+
+    /// <summary>
+    /// Draws a mid-piece time signature change at the change point, full size
+    /// (unlike clef changes, which use reduced _change glyphs).
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/time-signature-engraver.cc</remarks>
+    private static void DrawTimeSignatureChange(TimeSignatureChangeItem timeChange, double x, double staffY, IDrawingContext gc)
+    {
+        using (gc.Source(timeChange.SourcePosition))
+            DrawTimeSignature(timeChange.NewTime, x, staffY, gc);
     }
 
     private static void DrawSystemStartBrace(double x, double top, double bottom, IDrawingContext gc)

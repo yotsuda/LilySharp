@@ -51,7 +51,7 @@ internal sealed class MeasureBuilder
     private readonly List<MeasureBoundary> _boundaries = new();
     private readonly List<BarCheckWarning> _barCheckWarnings = new();
 
-    private readonly Fraction _timeSignature;
+    private Fraction _timeSignature; // mutable: a mid-piece time change re-arms it
     private Fraction _currentDuration = Fraction.Zero;
     private Fraction _defaultDuration = Fraction.Quarter;
 
@@ -90,6 +90,16 @@ internal sealed class MeasureBuilder
     /// </summary>
     public void AddItem(MusicItem item)
     {
+        // A mid-piece meter change re-arms the auto-complete length for the
+        // measures that follow. It is a zero-duration grob (printed at the
+        // change point), so it never advances timing or completes a measure.
+        if (item is TimeSignatureChangeItem tsc)
+        {
+            _timeSignature = new Fraction(tsc.NewTime.Beats, tsc.NewTime.BeatType);
+            _currentItems.Add(item);
+            return;
+        }
+
         _currentItems.Add(item);
 
         // Track duration
@@ -1056,6 +1066,18 @@ public sealed class MeasureCollector
                 }
                 break;
 
+            case TimeSignatureSyntax timeSigChange:
+                {
+                    // Mid-piece time signature change. Emit a zero-duration grob
+                    // (printed at the change point) and re-arm the builder's
+                    // measure length for the measures that follow.
+                    // LILYPOND-REF: lily/time-signature-engraver.cc
+                    var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType);
+                    var timeChange = new TimeSignatureChangeItem(newTime, timeSigChange.Position);
+                    builder.AddItem(timeChange);
+                }
+                break;
+
             case TieSyntax:
             case SlurSyntax:
             case BeamMarkerSyntax:
@@ -1306,8 +1328,14 @@ public sealed class MeasureCollector
                     break;
 
                 case TimeSignatureSyntax timeSig:
-                    _timeBeats = timeSig.Beats;
-                    _timeBeatType = timeSig.BeatType;
+                    // Only the top-level (initial) time sets the global default;
+                    // mid-music changes are handled in the music stream (a
+                    // TimeSignatureChangeItem re-arms the per-measure length).
+                    if (!IsInsideMusicContent(timeSig))
+                    {
+                        _timeBeats = timeSig.Beats;
+                        _timeBeatType = timeSig.BeatType;
+                    }
                     break;
 
                 case KeySignatureSyntax key:
