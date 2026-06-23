@@ -20,9 +20,17 @@ Lily# の垂直座標を LP と同じ Y-up へ移し、LP のレイアウト計�
 > `YFlipDrawingContext` は最終ステップ**(全 grob 相対 Y-up 化後に単一 flip へ畳む)。詳細・根拠は
 > `docs/STAGE4_YUP_INVERSION.md` §1, §3.5。
 >
-> **済(本ブランチ・push 前)**: `5e8f899` decorator(死にコード)+ 設計修正、`bea2b81` 漸進計画。
-> **次の一手 = 漸進初手**: layout 時 engraver(移植の痛点。tie/beam/slur 等)を1つ相対 Y-up へ。
-> within-staff (a) は既に StaffFrame 経由で概ね Y-up 済み=初手の対象外。
+> **監査結果(3並列 Explore で全 engraver/配置層を精査)**: 計算層は**ほぼ全て既に Y-up**だった
+> (stem/beam/tie/slur/articulation/tuplet/dynamics/fingering/tie-variant、配置/間隔/衝突も中立 or
+> 正しい境界符号処理)。真の device-Y 負債は **`SkylineBuilder` だけ**(他は誤検出: LedgerLineSpanner:166
+> は StaffFrame.ToDevice のインライン=負債でない、GraceNoteEngraver:132 は renderer 不使用の残骸)。
+>
+> **済(本ブランチ・push 前)**: `5e8f899` decorator(死にコード)+ 設計修正、`bea2b81` 漸進計画、
+> `0b344e5` handoff、**`8725d39` SkylineBuilder を Y-up 化(box/stem/ledger/flag/rest を up+ で再導出、
+> FromBox 境界で `staffMiddleY − up` 反射)。出力不変=42 snapshot byte 一致・全 1461 緑で実証。**
+> これで**移植負債の最後の島を解消**、計算層は一様に「Y-up + 境界反射」。
+> **残るは微小な任意項目のみ**: GraceNoteEngraver:132 の残骸 Y(実害なし)。decorator は将来の単一 flip
+> 統合用に死にコードのまま(全 grob が相対 Y-up 化した後に配線=現状その必要性は低い)。
 
 ---
 
