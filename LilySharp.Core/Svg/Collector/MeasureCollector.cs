@@ -1462,7 +1462,8 @@ public sealed class MeasureCollector
                 endNoteIndex,
                 measureIndex,
                 tuplet.Position,
-                nestingDepth
+                nestingDepth,
+                _currentStaffIndex
             ));
         }
 

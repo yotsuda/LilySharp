@@ -129,7 +129,10 @@ public static class TupletBracketEngraver
         ImmutableArray<Measure> measures,
         ImmutableArray<BeamGroup> beamGroups = default,
         ImmutableArray<BeamLayout> beamLayouts = default,
-        bool forceStemUp = false)
+        bool forceStemUp = false,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         if (tuplets.IsDefaultOrEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
@@ -152,10 +155,20 @@ public static class TupletBracketEngraver
                     tuplet.EndNoteIndex >= measureLayout.Items.Length))
                 continue;
 
+            // Resolve this tuplet's OWN staff (multi-staff): its measures (for
+            // note staff positions / slope / X), whether that staff is multi-
+            // voice (forced stem direction), and the staff's vertical offset.
+            var tupMeasures = measuresByStaff != null
+                && measuresByStaff.TryGetValue(tuplet.StaffIndex, out var mm) ? mm : measures;
+            bool tupForceStemUp = voicesByStaff != null
+                && voicesByStaff.TryGetValue(tuplet.StaffIndex, out var vv) ? vv.Length > 1 : forceStemUp;
+            double staffOffset = staffYByIndex != null
+                && staffYByIndex.TryGetValue(tuplet.StaffIndex, out var so) ? so : 0;
+
             double startOffset = LayoutUtilities.GetItemXOffset(
-                measures, tuplet.MeasureIndex, tuplet.StartNoteIndex, measureLayout);
+                tupMeasures, tuplet.MeasureIndex, tuplet.StartNoteIndex, measureLayout);
             double endOffset = LayoutUtilities.GetItemXOffset(
-                measures, tuplet.MeasureIndex, tuplet.EndNoteIndex, measureLayout);
+                tupMeasures, tuplet.MeasureIndex, tuplet.EndNoteIndex, measureLayout);
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
             // In a multi-voice staff the primary voice's stems are FORCED up at
@@ -163,7 +176,7 @@ public static class TupletBracketEngraver
             // pitch default — so high tuplet notes would put the bracket below,
             // on the wrong side. Honour the forced direction here. (The bracket
             // list is resolved against the primary voice's measures.)
-            bool isStemUp = forceStemUp || CalculateDirection(tuplet, measures);
+            bool isStemUp = tupForceStemUp || CalculateDirection(tuplet, tupMeasures);
 
             // The bracket's bound items are the OUTER STEMS when the stems
             // point in the bracket's direction (always true here: the
@@ -184,7 +197,7 @@ public static class TupletBracketEngraver
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:200-350 slope calculation
             // Calculate slope based on first/last note staff positions
-            var (startY, endY) = CalculateSlope(tuplet, measures, isStemUp);
+            var (startY, endY) = CalculateSlope(tuplet, tupMeasures, isStemUp);
 
             // When the bracket is suppressed (fully beamed), the NUMBER
             // attaches to the BEAM: centered between the outer stems, sitting
@@ -221,6 +234,11 @@ public static class TupletBracketEngraver
                     endY = 2.0 - beam.RightY * 0.5 + offset;
                 }
             }
+
+            // Bake the staff's within-system offset (multi-staff) so the bracket
+            // sits over its OWN staff, not the first.
+            startY += staffOffset;
+            endY += staffOffset;
 
             layouts.Add(new TupletBracketLayout(
                 tuplet.MeasureIndex,

@@ -44,7 +44,10 @@ public sealed record TupletBracketItem(
     /// <remarks>
     /// LILYPOND-REF: lily/tuplet-bracket.cc:400-500 nested bracket stacking
     /// </remarks>
-    int NestingDepth = 0
+    int NestingDepth = 0,
+    /// <summary>Global staff index this tuplet belongs to (multi-staff routing;
+    /// see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
+    int StaffIndex = 0
 )
 {
     /// <summary>

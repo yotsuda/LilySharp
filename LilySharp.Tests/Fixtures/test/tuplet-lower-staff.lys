@@ -1,0 +1,22 @@
+// A tuplet bracket on the SECOND (bass) staff must sit over that staff's notes,
+// not collapse under the first. The "3" bracket follows the bass triplet's
+// stems/slope and the staff's vertical offset. Verified against LilyPond.
+// Guards TupletBracketItem.StaffIndex routing.
+title "Lower-staff tuplet"
+time 4/4
+key c major
+
+part top { clef treble }
+part bot { clef bass }
+
+section Main {
+  top { c'4 d e f | g1 | }
+  bot { c4 d e f | tuplet 3/2 { g4 a b } c4 | }
+}
+
+structure { Main }
+
+render score "tuplet-lower-staff.svg" {
+  staff { top }
+  staff { bot }
+}

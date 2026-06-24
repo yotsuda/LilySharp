@@ -121,6 +121,9 @@ public class SvgSnapshotTests
         // Multi-staff: articulations + ornaments on the SECOND (bass) staff render
         // against that staff's notes, not the first (ArticulationItem.StaffIndex).
         yield return new object[] { "test/articulations-lower-staff" };
+        // Multi-staff: a tuplet bracket on the SECOND (bass) staff sits over that
+        // staff's notes, not the first (TupletBracketItem.StaffIndex).
+        yield return new object[] { "test/tuplet-lower-staff" };
         // Polyrhythm: an upper-voice triplet's "3" bracket sits above its notes
         // (the voice's stems are force-flipped), not below by the other voice.
         yield return new object[] { "test/voice-tuplet" };

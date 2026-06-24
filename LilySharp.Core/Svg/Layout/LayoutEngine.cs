@@ -903,7 +903,8 @@ public sealed class LayoutEngine
         // renderer; music-mark-vs-volta inside MusicMarkEngraver).
         var tupletBracketLayouts = TupletBracketEngraver.Calculate(
             tupletBrackets, systems, ml, measures, beamGroups ?? default, beamLayouts ?? default,
-            forceStemUp: tupletForceStemUp);
+            forceStemUp: tupletForceStemUp,
+            measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYByIndex: staffYByIndex);
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             score, musicMarks, systems, ml, measures, default);
         var customTextLayouts = CustomTextEngraver.Calculate(score, customTexts, systems, ml);
