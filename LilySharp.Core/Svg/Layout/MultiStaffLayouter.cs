@@ -708,14 +708,27 @@ public sealed class MultiStaffLayouter
             : primaryVoice.Measures.Length;
 
         // The key signature is reprinted at every system head, reflecting any
-        // mid-piece change in force before this system. The reserved prefix
-        // width must use that active key (not the initial one), or the redrawn
-        // signature and the first note column would disagree.
+        // mid-piece change in force before this system. Reserve width for the
+        // WIDEST staff's active key: a transposed part (Staff.PerStaffKeySignature)
+        // may carry more accidentals than the primary, and its signature must not
+        // overrun the shared first-note column.
         int activeKeySharps = score.KeySignature.Sharps;
-        for (int m = 0; m < startMeasureIndex && m < primaryVoice.Measures.Length; m++)
-            foreach (var item in primaryVoice.Measures[m].Items)
-                if (item is KeySignatureChangeItem kc)
-                    activeKeySharps = kc.NewKey.Sharps;
+        int widestAccidentals = -1;
+        foreach (var staffGroup in score.StaffGroups)
+            foreach (var staff in staffGroup.Staves)
+            {
+                int sharps = (staff.PerStaffKeySignature ?? score.KeySignature).Sharps;
+                var pv = staff.PrimaryVoice;
+                for (int m = 0; m < startMeasureIndex && m < pv.Measures.Length; m++)
+                    foreach (var item in pv.Measures[m].Items)
+                        if (item is KeySignatureChangeItem kc)
+                            sharps = kc.NewKey.Sharps;
+                if (Math.Abs(sharps) > widestAccidentals)
+                {
+                    widestAccidentals = Math.Abs(sharps);
+                    activeKeySharps = sharps;
+                }
+            }
 
         // A meter change that OPENS this system's first measure (i.e. a change
         // landing exactly at the line break) is drawn in the prefix — clef, key,

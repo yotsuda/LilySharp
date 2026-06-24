@@ -1,0 +1,26 @@
+// Per-staff transpose in a multi-staff score: the top part is transposed
+// (transpose: d), so its staff shows its own key (C major -> D major) and
+// transposed pitches, while the concert-pitch bottom staff keeps C major.
+// The prefix reserves room for the widest staff key. Verified against LilyPond.
+title "Multi-Staff Transpose"
+composer "Lily#"
+
+time 4/4
+key c major
+
+part upper { clef: treble transpose: d }
+part lower { clef: bass }
+
+section Main {
+  upper { c'4 d e f | g2 e | }
+  lower { c4 d e f | g2 e | }
+}
+
+structure { Main }
+
+render score "transpose-multistaff.svg" {
+  grandStaff {
+    staff { upper }
+    staff { lower }
+  }
+}

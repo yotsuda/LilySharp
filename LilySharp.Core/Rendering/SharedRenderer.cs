@@ -497,12 +497,16 @@ public static class SharedRenderer
     /// </remarks>
     private static KeySignature ResolveKeySignature(Staff staff, SystemLayout system, MultiStaffScore score)
     {
+        // A transposed part in a multi-staff score carries its own key; concert
+        // staves fall back to the score key.
+        var initialKey = staff.PerStaffKeySignature ?? score.KeySignature;
+
         if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
-            return score.KeySignature;
+            return initialKey;
 
         var voice = staff.PrimaryVoice;
         int firstMeasureIndex = system.Measures[0].MeasureIndex;
-        var activeKey = score.KeySignature;
+        var activeKey = initialKey;
 
         // Apply key changes accumulated in measures BEFORE this system. A change
         // that lands inside this system is drawn in place as a measure item, so

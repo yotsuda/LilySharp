@@ -126,6 +126,10 @@ public class SvgSnapshotTests
         // (c major -> D major), in-key accidentals suppressed and an out-of-key
         // one (cis -> dis) kept. Verified against LilyPond \transpose c d.
         yield return new object[] { "test/transpose" };
+        // Per-staff transpose in a multi-staff score: the transposed (top) staff
+        // shows its own key (D major) while the concert (bottom) staff keeps C
+        // major. Verified against LilyPond.
+        yield return new object[] { "test/transpose-multistaff" };
     }
 
     /// <summary>

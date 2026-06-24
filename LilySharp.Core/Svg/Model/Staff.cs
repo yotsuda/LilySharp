@@ -68,7 +68,13 @@ public sealed record Staff(
     /// null = normal spaceable staff, UP = attach to staff above, DOWN = attach to staff below.
     /// Used for ossia and cue staves.
     /// </remarks>
-    int? StaffAffinity = null
+    int? StaffAffinity = null,
+    /// <summary>
+    /// Per-staff key signature override. Set for a TRANSPOSED part in a
+    /// multi-staff score so the staff shows its own (transposed) key while the
+    /// concert-pitch staves keep the score key. Null = use the score key.
+    /// </summary>
+    KeySignature? PerStaffKeySignature = null
 )
 {
     /// <summary>The primary voice (first voice).</summary>

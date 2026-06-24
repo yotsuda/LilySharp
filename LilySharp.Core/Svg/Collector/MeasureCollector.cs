@@ -626,6 +626,9 @@ public sealed class MeasureCollector
 
         // Phase 2: Build voice dictionary
         var voiceDict = new Dictionary<string, Voice>();
+        // Per-voice transposed key signature (only for transposed parts); used
+        // to give that voice's staff its own key in a multi-staff score.
+        var voiceKeyDict = new Dictionary<string, KeySignature>();
         foreach (var voiceName in renderSpec.GetVoiceNames())
         {
             _voiceName = voiceName;
@@ -640,6 +643,14 @@ public sealed class MeasureCollector
             _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
             _initialOctave = _currentOctave;
             ApplyTranspose(partTranspose);
+
+            // Re-arm this voice's running key from the written initial key,
+            // transposed by THIS part's option, so the accidental engine
+            // suppresses in-key accidentals correctly and the key does not leak
+            // between voices.
+            _keySharps = TransposeKeySharps(_initialKeySharps);
+            if (_hasTranspose)
+                voiceKeyDict[voiceName] = new KeySignature(_keySharps);
 
             var measures = CollectMeasuresForVoice(voiceName);
             ResolveBeamStemDirections(measures);
@@ -657,6 +668,21 @@ public sealed class MeasureCollector
         var staffGroups = renderSpec.ToStaffGroups(name =>
             voiceDict.TryGetValue(name, out var v) ? v : new Voice(name, ImmutableArray<Measure>.Empty))
             .ToImmutableArray();
+
+        // Attach per-staff key signatures to transposed parts (a staff is keyed
+        // by its primary voice's name). Concert-pitch staves keep null and fall
+        // back to the score key.
+        if (voiceKeyDict.Count > 0)
+            staffGroups = staffGroups
+                .Select(sg => sg with
+                {
+                    Staves = sg.Staves
+                        .Select(st => voiceKeyDict.TryGetValue(st.PrimaryVoice.Name, out var k)
+                            ? st with { PerStaffKeySignature = k }
+                            : st)
+                        .ToImmutableArray()
+                })
+                .ToImmutableArray();
 
         return new MultiStaffScore(
             staffGroups,
