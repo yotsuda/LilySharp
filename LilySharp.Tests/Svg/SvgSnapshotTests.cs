@@ -130,6 +130,9 @@ public class SvgSnapshotTests
         // shows its own key (D major) while the concert (bottom) staff keeps C
         // major. Verified against LilyPond.
         yield return new object[] { "test/transpose-multistaff" };
+        // Octave-marked transpose target (transpose: bes,) — a downward interval
+        // spanning the octave; key moves G major -> F major. Verified vs LilyPond.
+        yield return new object[] { "test/transpose-down" };
     }
 
     /// <summary>

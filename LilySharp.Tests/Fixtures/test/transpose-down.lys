@@ -1,0 +1,18 @@
+// A transpose target may carry octave marks, so the interval can go DOWN or
+// span more than an octave (transpose: bes, = down a major 2nd; the comma drops
+// the target an octave below c). The key moves with it: G major -> F major.
+// Verified against LilyPond \transpose c bes,.
+title "Transpose Down"
+composer "Lily#"
+
+time 4/4
+key g major
+
+part melody { clef: treble transpose: bes, }
+
+section Main {
+  melody { g'4 a b c | d2 g | }
+}
+
+structure { Main }
+render score "transpose-down.svg" { staff { melody } }

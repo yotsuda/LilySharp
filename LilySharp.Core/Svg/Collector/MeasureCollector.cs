@@ -453,6 +453,7 @@ public sealed class MeasureCollector
     private bool _hasTranspose;
     private int _transposeStep;
     private int _transposeAlt;
+    private int _transposeOctave;
 
     /// <summary>
     /// Gets the time signature as a Fraction.
@@ -1303,13 +1304,14 @@ public sealed class MeasureCollector
     /// <summary>
     /// Arms (or clears) the part-option transpose from the parsed target.
     /// </summary>
-    private void ApplyTranspose((int step, int alt)? transpose)
+    private void ApplyTranspose((int step, int alt, int oct)? transpose)
     {
         if (transpose is { } t)
         {
             _hasTranspose = true;
             _transposeStep = t.step;
             _transposeAlt = t.alt;
+            _transposeOctave = t.oct;
         }
         else
         {
@@ -1327,7 +1329,7 @@ public sealed class MeasureCollector
             ? sharps + PitchTransposer.KeySignatureFifthsShift(_transposeStep, _transposeAlt)
             : sharps;
 
-    private static (string? clef, int? octave, (int step, int alt)? transpose) GetPartDefaults(SyntaxNode root, string partName)
+    private static (string? clef, int? octave, (int step, int alt, int oct)? transpose) GetPartDefaults(SyntaxNode root, string partName)
     {
         foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
         {
@@ -1337,7 +1339,7 @@ public sealed class MeasureCollector
             string? clef = null;
             string? instrument = null;
             int? octave = null;
-            (int step, int alt)? transpose = null;
+            (int step, int alt, int oct)? transpose = null;
 
             // Check properties for clef, instrument, octave, and transpose
             foreach (var prop in partDecl.Properties)
@@ -1354,7 +1356,19 @@ public sealed class MeasureCollector
                     octave = oct;
                 else if (propName == "transpose"
                          && PitchTransposer.TryParseTarget(valueToken.Text, out int tStep, out int tAlt))
-                    transpose = (tStep, tAlt);
+                {
+                    // Octave marks (' / ,) follow the pitch token as extra children.
+                    int tOct = 0;
+                    for (int ci = 3; ci < prop.SlotCount; ci++)
+                    {
+                        if (prop.GetChild(ci) is SyntaxTokenNode mark)
+                        {
+                            if (mark.Kind == SyntaxKind.Apostrophe) tOct++;
+                            else if (mark.Kind == SyntaxKind.Comma) tOct--;
+                        }
+                    }
+                    transpose = (tStep, tAlt, tOct);
+                }
             }
 
             // Resolve clef: explicit > instrument > null
@@ -2848,7 +2862,7 @@ public sealed class MeasureCollector
         int dStep = step, dAlt = pitch.AccidentalOffset, dOctave = actualOctave;
         if (_hasTranspose)
             (dStep, dAlt, dOctave) = PitchTransposer.Transpose(
-                step, pitch.AccidentalOffset, actualOctave, _transposeStep, _transposeAlt);
+                step, pitch.AccidentalOffset, actualOctave, _transposeStep, _transposeAlt, _transposeOctave);
 
         // Staff position 0 = middle line of the staff
         // Treble clef: B4 = staff position 0

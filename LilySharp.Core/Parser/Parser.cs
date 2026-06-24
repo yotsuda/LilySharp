@@ -352,8 +352,13 @@ internal sealed class Parser
         {
             var propName = Advance();
             var colon = Expect(SyntaxKind.Colon);
-            var value = Advance(); // identifier, string, or number
-            return new PropertyAssignmentGreen(propName, colon, [value]);
+            var value = Advance(); // identifier, string, number, or pitch
+            // A transpose target may carry octave marks (transpose: d' / c,);
+            // harmless for the other properties, which never have trailing marks.
+            var values = new List<GreenNode?> { value };
+            while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
+                values.Add(Advance());
+            return new PropertyAssignmentGreen(propName, colon, [.. values]);
         }
         return null;
     }

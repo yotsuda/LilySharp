@@ -87,6 +87,27 @@ public class PitchTransposerTests
         Assert.Equal(expOct, o);
     }
 
+    [Theory]
+    // transpose: c, (DOWN an octave): every degree drops one octave, same spelling
+    [InlineData(0, 0, 4, /*to*/ 0, 0, -1, /*=>*/ 0, 0, 3)]  // c4 -> c3
+    [InlineData(2, 0, 4, 0, 0, -1, 2, 0, 3)]                 // e4 -> e3
+    [InlineData(6, 0, 4, 0, 0, -1, 6, 0, 3)]                 // b4 -> b3
+    // transpose: bes, (DOWN a major 2nd): c -> bes of the octave below
+    [InlineData(0, 0, 4, 6, -1, -1, 6, -1, 3)]               // c4 -> bes3
+    [InlineData(1, 0, 4, 6, -1, -1, 0, 0, 4)]                // d4 -> c4
+    // transpose: d' (UP a ninth): c -> d of the octave above
+    [InlineData(0, 0, 4, 1, 0, 1, 1, 0, 5)]                  // c4 -> d5
+    [InlineData(3, 0, 4, 1, 0, 1, 4, 0, 5)]                  // f4 -> g5
+    public void Transpose_HandlesOctaveDisplacedTargets(
+        int step, int alt, int oct, int toStep, int toAlt, int toOct,
+        int expStep, int expAlt, int expOct)
+    {
+        var (s, a, o) = PitchTransposer.Transpose(step, alt, oct, toStep, toAlt, toOct);
+        Assert.Equal(expStep, s);
+        Assert.Equal(expAlt, a);
+        Assert.Equal(expOct, o);
+    }
+
     [Fact]
     public void Transpose_PreservesSemitoneDistanceForEveryDegree()
     {

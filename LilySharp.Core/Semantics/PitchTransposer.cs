@@ -79,22 +79,33 @@ public static class PitchTransposer
     /// <param name="octave">Its absolute octave.</param>
     /// <param name="toStep">Target's diatonic step (the interval's top, from c).</param>
     /// <param name="toAlteration">Target's accidental in semitones.</param>
+    /// <param name="toOctave">
+    /// Target's octave offset from c (from <c>'</c>/<c>,</c> marks). 0 keeps the
+    /// interval within one octave (up); +1 makes it a ninth, −1 transposes DOWN.
+    /// </param>
     public static (int step, int alteration, int octave) Transpose(
-        int step, int alteration, int octave, int toStep, int toAlteration)
+        int step, int alteration, int octave, int toStep, int toAlteration, int toOctave = 0)
     {
-        int deltaSemitones = StepSemitone[toStep] + toAlteration; // c → target
+        // Interval from c (step 0, octave 0) up/down to the target.
+        int deltaStep = toStep + 7 * toOctave;
+        int deltaSemitones = StepSemitone[toStep] + toAlteration + 12 * toOctave;
 
         int targetSemitones = octave * 12 + StepSemitone[step] + alteration + deltaSemitones;
 
-        int rawStep = step + toStep;          // 0..12 (toStep is the step delta from c)
-        int newOctave = octave + rawStep / 7; // carry once past b
-        int newStep = rawStep % 7;
+        int rawStep = step + deltaStep;             // may be negative (downward)
+        int newOctave = octave + FloorDiv(rawStep, 7);
+        int newStep = Mod(rawStep, 7);
 
         int naturalSemitones = newOctave * 12 + StepSemitone[newStep];
         int newAlteration = targetSemitones - naturalSemitones;
 
         return (newStep, newAlteration, newOctave);
     }
+
+    // Floored division / modulo so a downward interval (negative rawStep) carries
+    // the octave the same way an upward one does.
+    private static int FloorDiv(int a, int b) => (int)Math.Floor((double)a / b);
+    private static int Mod(int a, int b) => ((a % b) + b) % b;
 
     /// <summary>
     /// How a key signature's sharp count changes when the music is transposed
