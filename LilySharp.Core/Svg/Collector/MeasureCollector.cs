@@ -409,6 +409,11 @@ public sealed class MeasureCollector
     // the remaining voices are reconstructed afterwards (BuildMultiVoiceScore).
     // Cleared at the start of each collection.
     private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure)> _parallelSpans = new();
+    // Added to the local measure index when collecting a parallel span's EXTRA
+    // voices (they're collected with a fresh 0-based builder), so their
+    // per-note metadata — dynamics, articulations, etc. — lands at the span's
+    // real measure index instead of measure 0. Zero for the primary stream.
+    private int _metadataMeasureOffset = 0;
     // Tuplet brackets
     private readonly List<TupletBracketItem> _tupletBrackets = new();
     // Arpeggio markings
@@ -933,8 +938,13 @@ public sealed class MeasureCollector
                 _lastPitchName = 'c';
                 _defaultDuration = Fraction.Quarter;
 
+                // Per-note metadata in this sub-voice is keyed by its local 0-based
+                // measure index; shift it to the span's real start so dynamics etc.
+                // land in the right measure.
+                _metadataMeasureOffset = start;
                 var sub = CollectMeasuresFromNode(blocks[t]);
                 ResolveBeamStemDirections(sub);
+                _metadataMeasureOffset = 0;
 
                 _currentOctave = savedOctave;
                 _lastPitchName = savedPitch;
@@ -1128,7 +1138,7 @@ public sealed class MeasureCollector
 
             case NoteSyntax note:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex;
+                    int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     // Process grace notes BEFORE the main note so they get correct octave context
                     if (_pendingGrace != null)
@@ -1156,7 +1166,7 @@ public sealed class MeasureCollector
             case RestSyntax rest:
                 {
                     var restItem = CreateRestItem(rest);
-                    int restMeasureIndex = builder.CurrentMeasureIndex;
+                    int restMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
                     int restItemIndex = builder.CurrentItemCount;
                     int count = rest.MeasureCount;
                     if (count <= 1)
@@ -1181,7 +1191,7 @@ public sealed class MeasureCollector
 
             case ChordSyntax chord:
                 {
-                    int measureIndex = builder.CurrentMeasureIndex;
+                    int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
                     // Process grace notes BEFORE the main chord so they get correct octave context
                     if (_pendingGrace != null)

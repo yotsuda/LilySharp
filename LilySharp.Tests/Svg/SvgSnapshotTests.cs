@@ -108,6 +108,9 @@ public class SvgSnapshotTests
         // Two voices each with a dynamic on the same note column — both render
         // (stacked) rather than one hiding the other.
         yield return new object[] { "test/voice-dynamics" };
+        // A << \\ >> span mid-stream: its voices' dynamics land in the span's
+        // measure, not back in measure 0.
+        yield return new object[] { "test/voice-dynamics-mid" };
         yield return new object[] { "test/collision" };
         yield return new object[] { "test/phrases" };
         yield return new object[] { "test/ornaments" };

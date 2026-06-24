@@ -1,0 +1,20 @@
+// A << \\ >> span in the MIDDLE of the stream (not measure 0) whose voices carry
+// dynamics: the lower voice's @p must land in the span's measure, not back in
+// measure 0 (regression guard for the extra-voice metadata measure offset).
+title "Mid-Piece Voice Dynamics"
+composer "Lily#"
+tempo 96
+time 4/4
+key c major
+
+part m { clef treble }
+
+section Main {
+  m { c'4 d e f | << { g'2@f a } \\ { c2@p d } >> | e'4 d c2 | }
+}
+
+structure { Main }
+
+render score "voice-dynamics-mid.svg" {
+  staff { m }
+}
