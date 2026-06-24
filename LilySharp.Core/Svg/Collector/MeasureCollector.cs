@@ -3072,13 +3072,17 @@ public sealed class MeasureCollector
             (dStep, dAlt, dOctave) = PitchTransposer.Transpose(
                 step, pitch.AccidentalOffset, actualOctave, _transposeStep, _transposeAlt, _transposeOctave);
 
-        // Staff position 0 = middle line of the staff
-        // Treble clef: B4 = staff position 0
-        // Bass clef: D3 = staff position 0
+        // Staff position 0 = middle line of the staff.
+        //   Treble: B4   Bass: D3   Alto: C4 (middle line)   Tenor: A3
+        // The C clefs differ — alto puts middle C on the middle line, tenor on
+        // the 4th line (so the middle line is A3, a third lower). Without their
+        // own cases both fell through to the treble default and rendered alike.
         int basePosition = _clef switch
         {
             "treble" or "treble_8" => dStep - GetPitchIndex('b') + (dOctave - 4) * 7,
             "bass" => dStep - GetPitchIndex('d') + (dOctave - 3) * 7,
+            "alto" => dStep - GetPitchIndex('c') + (dOctave - 4) * 7,
+            "tenor" => dStep - GetPitchIndex('a') + (dOctave - 3) * 7,
             _ => dStep - GetPitchIndex('b') + (dOctave - 4) * 7
         };
 

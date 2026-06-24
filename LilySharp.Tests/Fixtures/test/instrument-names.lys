@@ -8,22 +8,22 @@ time 4/4
 
 part violin1 {
   clef treble
-  name: "Violin I"
+  name "Violin I"
 }
 
 part violin2 {
   clef treble
-  name: "Violin II"
+  name "Violin II"
 }
 
 part viola {
   clef alto
-  name: Viola
+  name "Viola"
 }
 
 part cello {
   clef bass
-  name: Cello
+  name "Cello"
 }
 
 phrase vln1Line {

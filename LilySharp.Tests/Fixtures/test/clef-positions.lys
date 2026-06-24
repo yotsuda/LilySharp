@@ -1,0 +1,29 @@
+// Middle C (c') drawn in all four clefs: it must land BELOW the treble staff,
+// on the ALTO middle line, on the TENOR fourth line (one line above alto), and
+// ABOVE the bass staff — so alto and tenor are distinct (regression guard: they
+// previously both fell through to treble positioning and rendered identically).
+title "Clef Positions"
+composer "Lily#"
+tempo 100
+time 4/4
+
+part sop { clef treble }
+part alt { clef alto }
+part ten { clef tenor }
+part bas { clef bass }
+
+section M {
+  sop { c'1 }
+  alt { c'1 }
+  ten { c'1 }
+  bas { c'1 }
+}
+
+structure { M }
+
+render score "clef-positions.svg" {
+  staff { sop }
+  staff { alt }
+  staff { ten }
+  staff { bas }
+}

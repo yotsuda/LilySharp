@@ -87,6 +87,9 @@ public class SvgSnapshotTests
         yield return new object[] { "test/keysig-treble" };
         yield return new object[] { "test/keysig-bass" };
         yield return new object[] { "test/keysig-clefs" };
+        // Middle C in all four clefs — guards that alto and tenor C-clefs are
+        // positioned distinctly (tenor a third higher than alto).
+        yield return new object[] { "test/clef-positions" };
         yield return new object[] { "test/treble8" };
         yield return new object[] { "test/ledger-lines" };
         yield return new object[] { "test/barcheck" };
