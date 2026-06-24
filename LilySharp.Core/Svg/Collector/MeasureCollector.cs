@@ -1223,7 +1223,7 @@ public sealed class MeasureCollector
                     {
                         int minPos = chordItem.Notes.Min(n => n.StaffPosition);
                         int maxPos = chordItem.Notes.Max(n => n.StaffPosition);
-                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, chord.Position));
+                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, chord.Position, _currentStaffIndex));
                     }
                 }
                 break;

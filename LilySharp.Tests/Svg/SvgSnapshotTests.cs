@@ -124,6 +124,9 @@ public class SvgSnapshotTests
         // Multi-staff: a tuplet bracket on the SECOND (bass) staff sits over that
         // staff's notes, not the first (TupletBracketItem.StaffIndex).
         yield return new object[] { "test/tuplet-lower-staff" };
+        // Multi-staff: an arpeggio on a SECOND (bass) staff chord draws to the
+        // left of that chord, not the first staff (ArpeggioItem.StaffIndex).
+        yield return new object[] { "test/arpeggio-lower-staff" };
         // Polyrhythm: an upper-voice triplet's "3" bracket sits above its notes
         // (the voice's stems are force-flipped), not below by the other voice.
         yield return new object[] { "test/voice-tuplet" };

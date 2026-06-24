@@ -858,7 +858,7 @@ public sealed class LayoutEngine
         var ottavaLayouts = OttavaBracketEngraver.Calculate(ottavaItems, systems, ml);
 
         // Layout arpeggio markings
-        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, ml, _options.StaffHeight, measures);
+        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, ml, _options.StaffHeight, measures, measuresByStaff, staffYByIndex);
 
         // Detect and layout pedal brackets from sustain/sostenuto/una corda marks
         var pedalBracketItems = PedalEngraver.DetectPedalBrackets(musicMarks);

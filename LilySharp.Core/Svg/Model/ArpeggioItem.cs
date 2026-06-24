@@ -29,4 +29,7 @@ public readonly record struct ArpeggioItem(
     int ItemIndex,
     int MinStaffPosition,
     int MaxStaffPosition,
-    int SourcePosition);
+    int SourcePosition,
+    // Global staff index this arpeggio belongs to (multi-staff routing;
+    // see DynamicItem.StaffIndex). 0 for single-staff.
+    int StaffIndex = 0);

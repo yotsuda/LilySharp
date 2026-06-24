@@ -1,0 +1,21 @@
+// An arpeggio belongs to a chord on the SECOND (bass) staff: its wavy vertical
+// line must sit to the left of THAT chord, not over the first staff. Verified
+// against LilyPond. Guards ArpeggioItem.StaffIndex routing.
+title "Lower-staff arpeggio"
+time 4/4
+key c major
+
+part top { clef treble }
+part bot { clef bass }
+
+section Main {
+  top { c'4 d e f | g1 | }
+  bot { c4 d e f | <c e g>1@arpeggio | }
+}
+
+structure { Main }
+
+render score "arpeggio-lower-staff.svg" {
+  staff { top }
+  staff { bot }
+}

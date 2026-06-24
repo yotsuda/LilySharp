@@ -50,7 +50,9 @@ public static class ArpeggioEngraver
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         double staffHeight,
-        ImmutableArray<Measure> measures = default)
+        ImmutableArray<Measure> measures = default,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         if (arpeggios.IsDefaultOrEmpty || arpeggios.Length == 0)
             return ImmutableArray<ArpeggioLayout>.Empty;
@@ -73,15 +75,24 @@ public static class ArpeggioEngraver
 
             var (system, measure) = info;
 
+            // Resolve this arpeggio's OWN staff (multi-staff): its measures (for
+            // the item X) and the staff's vertical offset within the system.
+            var arpMeasures = measuresByStaff != null
+                && measuresByStaff.TryGetValue(arp.StaffIndex, out var mm) ? mm : measures;
+            double staffOffset = staffYByIndex != null
+                && staffYByIndex.TryGetValue(arp.StaffIndex, out var so) ? so : 0;
+
             // Get X position of the chord item, then place arpeggio to the left
             // LILYPOND-REF: scm/define-grobs.scm:206 (direction . ,LEFT)
             double itemX = measure.X + LayoutUtilities.GetItemXOffset(
-                measures, arp.MeasureIndex, arp.ItemIndex, measure);
+                arpMeasures, arp.MeasureIndex, arp.ItemIndex, measure);
 
             double arpeggioX = itemX - Padding;
 
-            // Calculate Y positions from staff positions
-            double staffMiddleY = system.Y + staffHeight / 2;
+            // Calculate Y positions from staff positions. The arpeggio's Y is
+            // absolute (system.Y based), so add the staff's within-system offset
+            // so it lands over its OWN staff, not the first.
+            double staffMiddleY = system.Y + staffOffset + staffHeight / 2;
             double topY = StaffFrame.PositionToDevice(arp.MaxStaffPosition, staffMiddleY);
             double bottomY = StaffFrame.PositionToDevice(arp.MinStaffPosition, staffMiddleY);
 
