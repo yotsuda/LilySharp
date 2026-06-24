@@ -111,6 +111,10 @@ public class SvgSnapshotTests
         // A << \\ >> span mid-stream: its voices' dynamics land in the span's
         // measure, not back in measure 0.
         yield return new object[] { "test/voice-dynamics-mid" };
+        // Multi-staff: a low lower-voice dynamic in the TOP staff's << \\ >> must
+        // widen the inter-staff gap so it clears the staff below instead of
+        // overlapping its lines (dynamics join the outside-staff skyline).
+        yield return new object[] { "test/voice-dynamics-multistaff" };
         // Polyrhythm: an upper-voice triplet's "3" bracket sits above its notes
         // (the voice's stems are force-flipped), not below by the other voice.
         yield return new object[] { "test/voice-tuplet" };

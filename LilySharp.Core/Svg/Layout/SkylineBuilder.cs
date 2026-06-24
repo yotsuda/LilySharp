@@ -124,7 +124,8 @@ public sealed class SkylineBuilder
     /// LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()
     /// </remarks>
     public (VerticalSkyline Up, VerticalSkyline Down) BuildStaffSkylines(
-        Staff staff, ImmutableArray<MeasureLayout> measureLayouts)
+        Staff staff, ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<DynamicItem> dynamics = default)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -136,7 +137,69 @@ public sealed class SkylineBuilder
         AddStaffToSkylines(staff, measureLayouts, staffMiddleY,
             stemLength, noteheadHeight, upSkyline, downSkyline);
 
+        // Dynamics hang below the lowest stem of any voice; they must widen the
+        // inter-staff gap or a low lower-voice's dynamic overlaps the staff below.
+        // (Score-level dynamics render against the primary staff, so the caller
+        // passes them only for that staff.)
+        // LILYPOND-REF: lily/align-interface.cc:217-268 — outside-staff grobs join
+        // the staff's skyline used for spacing.
+        AddDynamicsToSkyline(staff, dynamics, measureLayouts, staffMiddleY, downSkyline);
+
         return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// Adds each dynamic's downward extent to the DOWN skyline so staff-to-staff
+    /// spacing reserves room for it (mirrors <see cref="DynamicEngraver"/>'s Y).
+    /// </summary>
+    private void AddDynamicsToSkyline(
+        Staff staff, ImmutableArray<DynamicItem> dynamics,
+        ImmutableArray<MeasureLayout> measureLayouts,
+        double staffMiddleY, VerticalSkyline downSkyline)
+    {
+        if (dynamics.IsDefaultOrEmpty)
+            return;
+
+        var voices = staff.Voices;
+        var primaryMeasures = staff.PrimaryVoice.Measures;
+        double staffTopDevice = staffMiddleY - _staffHeight / 2;
+        const double dynamicWidth = 1.3;    // approx width of a dynamic glyph
+        const double dynamicDescent = 0.3;  // text reaches a little below baseline
+
+        // Same-column dynamics stack downward (see DynamicEngraver); track depth
+        // so the box reflects the LOWEST stacked glyph.
+        var stackAt = new Dictionary<(int, int), int>();
+        foreach (var dyn in dynamics)
+        {
+            int layoutIdx = -1;
+            for (int i = 0; i < measureLayouts.Length; i++)
+            {
+                if (measureLayouts[i].MeasureIndex == dyn.MeasureIndex)
+                {
+                    layoutIdx = i;
+                    break;
+                }
+            }
+            if (layoutIdx < 0)
+                continue;
+            var measureLayout = measureLayouts[layoutIdx];
+
+            var key = (dyn.MeasureIndex, dyn.ItemIndex);
+            int depth = stackAt.GetValueOrDefault(key, 0);
+            stackAt[key] = depth + 1;
+
+            double baseline = DynamicEngraver.ColumnBaselineY(
+                voices, dyn.MeasureIndex, dyn.ItemIndex) + depth * DynamicEngraver.StackStep;
+            double deviceBottom = staffTopDevice + baseline + dynamicDescent;
+
+            double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                primaryMeasures, dyn.MeasureIndex, dyn.ItemIndex, measureLayout);
+
+            var box = VerticalSkyline.FromBox(
+                x - dynamicWidth / 2, x + dynamicWidth / 2,
+                deviceBottom, deviceBottom - 0.5, VerticalDirection.Down);
+            downSkyline.Merge(box);
+        }
     }
 
     /// <summary>

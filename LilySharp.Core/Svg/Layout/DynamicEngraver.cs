@@ -72,7 +72,7 @@ public static class DynamicEngraver
     private const double TextAscent = 1.2;
 
     // Vertical step between two dynamics that fall on the same note column.
-    private const double StackStep = 2.0;
+    internal const double StackStep = 2.0;
 
     /// <summary>
     /// Calculates layout for all dynamics in a score.
@@ -150,6 +150,22 @@ public static class DynamicEngraver
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// Baseline Y (staff spaces from staff top, positive = down) the dynamic at a
+    /// given note column occupies, BEFORE same-column stacking. Exposed so the
+    /// inter-staff skyline can widen the gap by the dynamic's downward reach
+    /// (otherwise a low lower-voice's dynamic overlaps the staff below).
+    /// </summary>
+    internal static double ColumnBaselineY(
+        ImmutableArray<Voice> voices, int measureIndex, int itemIndex)
+    {
+        var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
+        double baseY = StaffBottom + StaffPadding + Padding + TextAscent;
+        if (vs.IsEmpty)
+            return baseY;
+        return CalculateYPositionAcrossVoices(vs, measureIndex, itemIndex, baseY);
     }
 
     /// <summary>

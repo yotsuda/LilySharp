@@ -1249,11 +1249,17 @@ public sealed class MultiStaffLayouter
     {
         var result = new List<(VerticalSkyline Up, VerticalSkyline Down)>();
 
+        // Score-level dynamics are positioned against the primary (first) staff
+        // (see LayoutEngine's annotation pass), so only that staff's down skyline
+        // reserves room for them.
+        bool isFirstStaff = true;
         foreach (var group in score.StaffGroups)
         {
             foreach (var staff in group.Staves)
             {
-                result.Add(skylineBuilder.BuildStaffSkylines(staff, measureLayouts));
+                var dynamics = isFirstStaff ? score.Dynamics : ImmutableArray<DynamicItem>.Empty;
+                result.Add(skylineBuilder.BuildStaffSkylines(staff, measureLayouts, dynamics));
+                isFirstStaff = false;
             }
         }
 

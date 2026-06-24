@@ -1,0 +1,24 @@
+// Inter-staff spacing must reserve room for a dynamic that hangs below the
+// staff. The top staff's << \\ >> has a low lower-voice @p whose forced
+// down-stem plus the @f/@p stack reach toward the staff below; the inter-staff
+// gap has to widen so the dynamics clear the second staff instead of overlapping
+// its lines. Verified against LilyPond (dynamics join the staff's outside-staff
+// skyline). Guards SkylineBuilder.AddDynamicsToSkyline.
+title "Inter-staff dynamic spacing"
+time 4/4
+key c major
+
+part top { clef treble }
+part bot { clef alto }
+
+section Main {
+  top { c'4 d e f | << { g'2@f a } \\ { c2@p d } >> | }
+  bot { c'4 b a g | f2 e2 | }
+}
+
+structure { Main }
+
+render score "voice-dynamics-multistaff.svg" {
+  staff { top }
+  staff { bot }
+}
