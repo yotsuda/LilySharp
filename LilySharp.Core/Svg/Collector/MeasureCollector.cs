@@ -447,6 +447,13 @@ public sealed class MeasureCollector
     private string _clef = "treble";
     private string _initialClef = "treble"; // Preserved for Score.Clef (not mutated by mid-measure clef changes)
 
+    // Part-option transpose:. When set, every pitch is shifted by the interval
+    // from c to (_transposeStep, _transposeAlt) AFTER relative-octave resolution.
+    // LILYPOND-REF: scm/music-functions.scm \transpose (with from = c).
+    private bool _hasTranspose;
+    private int _transposeStep;
+    private int _transposeAlt;
+
     /// <summary>
     /// Gets the time signature as a Fraction.
     /// </summary>
@@ -466,10 +473,11 @@ public sealed class MeasureCollector
         // Phase 1.5: If voiceName specified, look up clef and octave from part definition
         if (voiceName != null)
         {
-            var (partClef, partOctave) = GetPartDefaults(tree.GetRoot(), voiceName);
+            var (partClef, partOctave, partTranspose) = GetPartDefaults(tree.GetRoot(), voiceName);
             if (partClef != null)
                 _clef = partClef;
             _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+            ApplyTranspose(partTranspose);
         }
         else
         {
@@ -621,12 +629,13 @@ public sealed class MeasureCollector
             _defaultDuration = Fraction.Quarter;
 
             // Set clef and octave for this voice from part definition
-            var (partClef, partOctave) = GetPartDefaults(tree.GetRoot(), voiceName);
+            var (partClef, partOctave, partTranspose) = GetPartDefaults(tree.GetRoot(), voiceName);
             _clef = partClef ?? "treble";
 
             // Set initial octave: explicit > instrument default > clef default
             _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
             _initialOctave = _currentOctave;
+            ApplyTranspose(partTranspose);
 
             var measures = CollectMeasuresForVoice(voiceName);
             ResolveBeamStemDirections(measures);
@@ -1261,7 +1270,24 @@ public sealed class MeasureCollector
     /// Looks up clef and octave defaults from a part definition by name.
     /// Priority: explicit attributes > instrument defaults > clef-based defaults.
     /// </summary>
-    private static (string? clef, int? octave) GetPartDefaults(SyntaxNode root, string partName)
+    /// <summary>
+    /// Arms (or clears) the part-option transpose from the parsed target.
+    /// </summary>
+    private void ApplyTranspose((int step, int alt)? transpose)
+    {
+        if (transpose is { } t)
+        {
+            _hasTranspose = true;
+            _transposeStep = t.step;
+            _transposeAlt = t.alt;
+        }
+        else
+        {
+            _hasTranspose = false;
+        }
+    }
+
+    private static (string? clef, int? octave, (int step, int alt)? transpose) GetPartDefaults(SyntaxNode root, string partName)
     {
         foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
         {
@@ -1271,8 +1297,9 @@ public sealed class MeasureCollector
             string? clef = null;
             string? instrument = null;
             int? octave = null;
+            (int step, int alt)? transpose = null;
 
-            // Check properties for clef, instrument, and octave
+            // Check properties for clef, instrument, octave, and transpose
             foreach (var prop in partDecl.Properties)
             {
                 var propName = prop.NameToken.Text.ToLowerInvariant();
@@ -1285,6 +1312,9 @@ public sealed class MeasureCollector
                     instrument = valueToken.Text.ToLowerInvariant();
                 else if (propName == "octave" && int.TryParse(valueToken.Text, out var oct))
                     octave = oct;
+                else if (propName == "transpose"
+                         && PitchTransposer.TryParseTarget(valueToken.Text, out int tStep, out int tAlt))
+                    transpose = (tStep, tAlt);
             }
 
             // Resolve clef: explicit > instrument > null
@@ -1306,10 +1336,10 @@ public sealed class MeasureCollector
                 resolvedOctave ??= defaultOctave;
             }
 
-            return (resolvedClef, resolvedOctave);
+            return (resolvedClef, resolvedOctave, transpose);
         }
 
-        return (null, null);
+        return (null, null, null);
     }
 
     private void CollectDefinitions(SyntaxNode root)
@@ -1453,11 +1483,13 @@ public sealed class MeasureCollector
     /// LILYPOND-REF: lily/accidental-engraver.cc — courtesy (cautionary) accidentals
     /// are shown when a note returns to key signature after being altered in a previous measure.
     /// </remarks>
-    private (string? accidental, bool isCourtesy) GetDisplayAccidentalWithCourtesy(PitchSyntax pitch, int octave)
+    // Takes the DISPLAY pitch (post-transpose): diatonic step (0–6), its
+    // accidental in semitones, and octave. The key here is the displayed
+    // (step, octave), so within-measure accidental memory tracks the pitches
+    // actually drawn — consistent under transposition since it is a bijection.
+    private (string? accidental, bool isCourtesy) GetDisplayAccidentalWithCourtesy(int step, int actual, int octave)
     {
-        int step = PitchNameToStep(pitch.BaseName);
         int expected = GetKeySignatureAlteration(step);
-        int actual = pitch.AccidentalOffset;
         var key = (step, octave);
 
         if (actual != expected)
@@ -2551,11 +2583,12 @@ public sealed class MeasureCollector
         {
             if (item is NoteSyntax note)
             {
-                var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);
-                _currentOctave = octave;
+                var rp = CalculateStaffPosition(note.Pitch);
+                _currentOctave = rp.RelativeOctave;
+                int staffPosition = rp.StaffPosition;
 
                 bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
-                var (accidental, _) = GetDisplayAccidentalWithCourtesy(note.Pitch, octave);
+                var (accidental, _) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
 
                 // Resolve grace note duration (inherit previous grace duration if not specified)
                 int noteValue = note.Duration?.Value ?? (int)graceDefaultDuration.Denominator;
@@ -2579,8 +2612,9 @@ public sealed class MeasureCollector
 
     private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasGlissando = false, int featherDirection = 0, bool isCue = false)
     {
-        var (staffPosition, octave) = CalculateStaffPosition(note.Pitch);
-        _currentOctave = octave;
+        var rp = CalculateStaffPosition(note.Pitch);
+        _currentOctave = rp.RelativeOctave;
+        int staffPosition = rp.StaffPosition;
 
         int noteValue = note.Duration?.Value ?? (int)_defaultDuration.Denominator;
         if (note.Duration != null)
@@ -2592,7 +2626,7 @@ public sealed class MeasureCollector
         // Parse tremolo suffix (:8 = 1 beam, :16 = 2 beams, :32 = 3 beams)
         int tremoloBeams = ParseTremoloBeams(note.Tremolo);
 
-        var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(note.Pitch, octave);
+        var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
 
         // Check for explicit @courtesy annotation
         if (!isCourtesy && _courtesySourcePositions.Contains(note.Position))
@@ -2601,7 +2635,7 @@ public sealed class MeasureCollector
             // If no accidental shown, force the key-signature-matching accidental
             if (accidental == null)
             {
-                int step = PitchNameToStep(note.Pitch.BaseName);
+                int step = rp.DisplayStep;
                 int alt = GetKeySignatureAlteration(step);
                 accidental = alt switch
                 {
@@ -2632,7 +2666,7 @@ public sealed class MeasureCollector
             }
             else
             {
-                int step = PitchNameToStep(note.Pitch.BaseName);
+                int step = rp.DisplayStep;
                 int alt = GetKeySignatureAlteration(step);
                 editorialAccidental = alt switch
                 {
@@ -2709,17 +2743,18 @@ public sealed class MeasureCollector
 
         foreach (var pitch in chord.Pitches)
         {
-            var (staffPosition, octave) = CalculateStaffPosition(pitch);
-            _currentOctave = octave;
+            var rp = CalculateStaffPosition(pitch);
+            _currentOctave = rp.RelativeOctave;
+            int staffPosition = rp.StaffPosition;
 
-            // Remember first pitch's state
+            // Remember first pitch's state (original octave drives the relative chain)
             if (notes.Count == 0)
             {
-                firstOctave = octave;
+                firstOctave = rp.RelativeOctave;
                 firstPitchName = pitch.PitchName.ToLowerInvariant()[0];
             }
 
-            var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(pitch, octave);
+            var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
 
             bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
 
@@ -2746,29 +2781,47 @@ public sealed class MeasureCollector
         return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter);
     }
 
-    private (int staffPosition, int octave) CalculateStaffPosition(PitchSyntax pitch)
+    /// <summary>
+    /// A pitch resolved for rendering. <see cref="RelativeOctave"/> is the
+    /// ORIGINAL (written) octave that drives the relative-octave chain for the
+    /// next note; the Display* fields are what is actually drawn — equal to the
+    /// written pitch, or its transposition when the part has a transpose option.
+    /// </summary>
+    private readonly record struct ResolvedPitch(
+        int StaffPosition, int RelativeOctave, int DisplayStep, int DisplayAlteration, int DisplayOctave);
+
+    private ResolvedPitch CalculateStaffPosition(PitchSyntax pitch)
     {
         char pitchName = pitch.PitchName.ToLowerInvariant()[0];
+        int step = GetPitchIndex(pitchName);
 
         // Closest-octave rule + explicit '/, offset — shared with the exporters.
+        // The relative chain runs on the ORIGINAL pitches; transpose is applied
+        // afterwards, so a transposed part still resolves octaves from what the
+        // user wrote.
         int actualOctave = RelativeOctave.Resolve(
             GetPitchIndex(_lastPitchName), _currentOctave,
-            GetPitchIndex(pitchName), pitch.OctaveOffset);
+            step, pitch.OctaveOffset);
+        _lastPitchName = pitchName;
+
+        // Display pitch = written pitch, transposed if the part has transpose:.
+        int dStep = step, dAlt = pitch.AccidentalOffset, dOctave = actualOctave;
+        if (_hasTranspose)
+            (dStep, dAlt, dOctave) = PitchTransposer.Transpose(
+                step, pitch.AccidentalOffset, actualOctave, _transposeStep, _transposeAlt);
 
         // Staff position 0 = middle line of the staff
         // Treble clef: B4 = staff position 0
         // Bass clef: D3 = staff position 0
         int basePosition = _clef switch
         {
-            "treble" or "treble_8" => GetPitchIndex(pitchName) - GetPitchIndex('b') + (actualOctave - 4) * 7,
-            "bass" => GetPitchIndex(pitchName) - GetPitchIndex('d') + (actualOctave - 3) * 7,
-            _ => GetPitchIndex(pitchName) - GetPitchIndex('b') + (actualOctave - 4) * 7
+            "treble" or "treble_8" => dStep - GetPitchIndex('b') + (dOctave - 4) * 7,
+            "bass" => dStep - GetPitchIndex('d') + (dOctave - 3) * 7,
+            _ => dStep - GetPitchIndex('b') + (dOctave - 4) * 7
         };
 
-        _lastPitchName = pitchName;
-
-        // Return actualOctave - next note is calculated relative to actual pitch
-        return (basePosition, actualOctave);
+        // RelativeOctave keeps the ORIGINAL octave for the next note's chain.
+        return new ResolvedPitch(basePosition, actualOctave, dStep, dAlt, dOctave);
     }
 
     private static int GetPitchIndex(char pitch) => RelativeOctave.StepIndex(pitch);
