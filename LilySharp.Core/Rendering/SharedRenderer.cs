@@ -96,7 +96,7 @@ public static class SharedRenderer
                 DrawFiguredBass(layout, measureToSystemY, gc);
                 DrawPercentRepeats(layout, measureToSystemY, gc);
                 DrawBarNumbers(layout, measureToSystemY, gc);
-                DrawStanzaNumbers(layout, gc);
+                DrawStanzaNumbers(layout, measureToSystemY, gc);
                 DrawFingerings(layout, measureToSystemY, gc);
                 DrawMusicMarks(layout, measureToSystemY, gc);
                 DrawCustomTexts(layout, measureToSystemY, gc);
@@ -2264,13 +2264,19 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/stanza-number-engraver.cc — Stanza_number_engraver
     /// LILYPOND-REF: scm/define-grobs.scm StanzaNumber (font-size=-1, bold)
     /// </remarks>
-    private static void DrawStanzaNumbers(ScoreLayout layout, IDrawingContext gc)
+    private static void DrawStanzaNumbers(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
     {
         if (layout.StanzaNumberLayouts.IsDefaultOrEmpty) return;
         const double fontSize = 2.4;
         foreach (var sn in layout.StanzaNumberLayouts)
-            gc.DrawText(sn.Text, sn.X, sn.Y, fontSize, "serif",
+        {
+            // sn.Y is relative to the system top (the verse's lyric baseline);
+            // add the system Y like DrawLyrics, so the number sits next to its
+            // verse line rather than at the page top.
+            double y = (sysY.TryGetValue(sn.MeasureIndex, out var s) ? s : 0) + sn.Y;
+            gc.DrawText(sn.Text, sn.X, y, fontSize, "serif",
                 FontStyle.Bold, TextAnchor.Start, Color.Black);
+        }
     }
 
     // ---------- Fingering ----------

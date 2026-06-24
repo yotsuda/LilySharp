@@ -95,6 +95,9 @@ public class SvgSnapshotTests
         yield return new object[] { "test/barcheck" };
         yield return new object[] { "test/break" };
         yield return new object[] { "test/lyrics" };
+        // Two verses: each verse line gets its stanza number ("1." / "2.") at the
+        // left of its lyrics, not floating at the top of the page.
+        yield return new object[] { "test/lyrics-verses" };
         yield return new object[] { "test/multi-voice" };
         // Sequential measures around a << \\ >> span — the single-voice measures
         // before and after the parallel block must not be dropped.

@@ -31,9 +31,11 @@ namespace LilySharp.Core.Svg.Layout;
 public readonly record struct StanzaNumberLayout(
     int VerseNumber,
     int SystemIndex,
+    /// <summary>A measure in this system, used to resolve the system's Y when drawing.</summary>
+    int MeasureIndex,
     /// <summary>X coordinate at the system's left edge (start of staff lines).</summary>
     double X,
-    /// <summary>Y coordinate matching the verse's lyric baseline.</summary>
+    /// <summary>Y coordinate (relative to the system top, matching the verse's lyric baseline).</summary>
     double Y,
     /// <summary>Display text (e.g., "1.", "2.").</summary>
     string Text);
@@ -105,6 +107,7 @@ public static class StanzaNumberEngraver
             builder.Add(new StanzaNumberLayout(
                 VerseNumber: verseNumber,
                 SystemIndex: sysIdx,
+                MeasureIndex: lyric.Item.MeasureIndex,
                 X: x,
                 Y: lyric.Y,
                 Text: $"{verseNumber}."));

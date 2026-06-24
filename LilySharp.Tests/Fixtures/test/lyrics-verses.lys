@@ -1,0 +1,20 @@
+// Probe: TWO verses (two lyrics blocks), melisma (~), hyphenation.
+title "Two Verses"
+composer "Lily#"
+tempo 96
+time 4/4
+key c major
+
+part melody { clef treble }
+
+section Main {
+  melody { c'4 d e f | g2 a4 g | f4 e d c | g1 | }
+  lyrics { A- ma- zing grace | how~ sweet | the sound that | saved~ | }
+  lyrics { Twas grace that taught | my~ heart | to fear and | grace~ | }
+}
+
+structure { Main }
+
+render score "lyrics-verses.svg" {
+  staff { melody }
+}
