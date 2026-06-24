@@ -96,6 +96,9 @@ public class SvgSnapshotTests
         // Sequential measures around a << \\ >> span — the single-voice measures
         // before and after the parallel block must not be dropped.
         yield return new object[] { "test/voice-mixed" };
+        // Intra-staff polyphony on a grand staff: both voices of a << \\ >> in
+        // the upper staff render, with the surrounding single-voice measures.
+        yield return new object[] { "test/voice-grandstaff" };
         yield return new object[] { "test/collision" };
         yield return new object[] { "test/phrases" };
         yield return new object[] { "test/ornaments" };

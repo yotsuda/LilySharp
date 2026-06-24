@@ -105,7 +105,7 @@ public sealed record RenderSpec(
     }
 
     /// <summary>Gets all staff groups for layout.</summary>
-    public IEnumerable<StaffGroup> ToStaffGroups(Func<string, Voice> getVoice)
+    public IEnumerable<StaffGroup> ToStaffGroups(Func<string, ImmutableArray<Voice>> getVoices)
     {
         foreach (var item in Items)
         {
@@ -114,7 +114,7 @@ public sealed record RenderSpec(
                 case SingleStaffSpec single:
                     var singleStaff = Staff.Create(
                         single.Staff.Clef,
-                        getVoice(single.Staff.VoiceName),
+                        getVoices(single.Staff.VoiceName),
                         single.Staff.InstrumentName);
                     yield return StaffGroup.CreateSingle(singleStaff);
                     break;
@@ -123,21 +123,23 @@ public sealed record RenderSpec(
                     var staves = grand.GrandStaff.Staves
                         .Select(s => Staff.Create(
                             s.Clef,
-                            getVoice(s.VoiceName),
+                            getVoices(s.VoiceName),
                             s.InstrumentName))
                         .ToArray();
                     yield return StaffGroup.CreateGrandStaff(staves);
                     break;
 
+                // Tab / ossia staves don't support intra-staff polyphony; they
+                // take the primary voice only.
                 case TabStaffSpec tab:
-                    var tabStaff = Staff.CreateTab(tab.Tuning, getVoice(tab.Staff.VoiceName));
+                    var tabStaff = Staff.CreateTab(tab.Tuning, getVoices(tab.Staff.VoiceName)[0]);
                     yield return StaffGroup.CreateSingle(tabStaff);
                     break;
 
                 case OssiaStaffSpec ossia:
                     var ossiaStaff = Staff.CreateOssia(
                         ossia.Staff.Clef,
-                        getVoice(ossia.Staff.VoiceName),
+                        getVoices(ossia.Staff.VoiceName)[0],
                         ossia.Staff.InstrumentName);
                     yield return StaffGroup.CreateSingle(ossiaStaff);
                     break;

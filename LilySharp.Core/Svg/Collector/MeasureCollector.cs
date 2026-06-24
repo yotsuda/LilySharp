@@ -631,8 +631,9 @@ public sealed class MeasureCollector
         CollectDefinitions(tree.GetRoot());
         _initialKeySharps = _keySharps; // Preserve initial key before music processing
 
-        // Phase 2: Build voice dictionary
-        var voiceDict = new Dictionary<string, Voice>();
+        // Phase 2: Build voice dictionary. Each staff maps to ALL its voices
+        // (the primary stream plus any from << \\ >> spans inside that staff).
+        var staffVoices = new Dictionary<string, ImmutableArray<Voice>>();
         // Per-voice transposed key signature (only for transposed parts); used
         // to give that voice's staff its own key in a multi-staff score.
         var voiceKeyDict = new Dictionary<string, KeySignature>();
@@ -659,9 +660,7 @@ public sealed class MeasureCollector
             if (_hasTranspose)
                 voiceKeyDict[voiceName] = new KeySignature(_keySharps);
 
-            var measures = CollectMeasuresForVoice(voiceName);
-            ResolveBeamStemDirections(measures);
-            voiceDict[voiceName] = new Voice(voiceName, measures.ToImmutableArray());
+            staffVoices[voiceName] = CollectStaffVoices(voiceName);
         }
 
         // Bar lines are score-synchronized: LilyPond's Timing context lives
@@ -669,11 +668,21 @@ public sealed class MeasureCollector
         // appears in EVERY part at that measure.
         // LILYPOND-REF: ly/engraver-init.ly — "Timing" alias on Score;
         //   lily/bar-engraver.cc reads Timing.whichBar score-wide.
-        SynchronizeBarlines(voiceDict);
+        // Sync barlines score-wide across EVERY voice (including a staff's extra
+        // voices). Voice names are unique (part name, plus a ".N" suffix per
+        // intra-staff voice), so a flat dict round-trips cleanly.
+        var flatVoices = new Dictionary<string, Voice>();
+        foreach (var vs in staffVoices.Values)
+            foreach (var v in vs)
+                flatVoices[v.Name] = v;
+        SynchronizeBarlines(flatVoices);
+        foreach (var key in staffVoices.Keys.ToArray())
+            staffVoices[key] = staffVoices[key].Select(v => flatVoices[v.Name]).ToImmutableArray();
 
         // Phase 3: Build staff groups from render spec
         var staffGroups = renderSpec.ToStaffGroups(name =>
-            voiceDict.TryGetValue(name, out var v) ? v : new Voice(name, ImmutableArray<Measure>.Empty))
+            staffVoices.TryGetValue(name, out var v) ? v
+                : ImmutableArray.Create(new Voice(name, ImmutableArray<Measure>.Empty)))
             .ToImmutableArray();
 
         // Attach per-staff key signatures to transposed parts (a staff is keyed
@@ -771,9 +780,9 @@ public sealed class MeasureCollector
 
     private List<Measure> CollectMeasuresForVoice(string voiceName)
     {
-        // Multi-staff reconstructs voices per-staff, not from these spans; clear
-        // so a << \\ >> inside one staff doesn't leak into another. (Intra-staff
-        // multi-voice on a grand staff renders the primary voice only for now.)
+        // Reset spans so a << \\ >> inside one staff doesn't leak into the next;
+        // the caller (CollectStaffVoices) reads them back to rebuild this staff's
+        // extra voices.
         _parallelSpans.Clear();
 
         // 1. Check variables first
@@ -854,16 +863,55 @@ public sealed class MeasureCollector
     /// </summary>
     private Score BuildMultiVoiceScore(List<Measure> track0, SyntaxNode root)
     {
+        var voices = new List<Voice>
+        {
+            new Voice("voice1", track0.ToImmutableArray())
+        };
+        var extras = BuildExtraVoiceTracks(track0);
+        for (int i = 0; i < extras.Count; i++)
+            voices.Add(new Voice($"voice{i + 2}", extras[i]));
+
+        // Lyrics align with the primary voice.
+        CollectLyrics(root, track0);
+
+        return new Score(
+            voices.ToImmutableArray(),
+            new TimeSignature(_timeBeats, _timeBeatType),
+            new KeySignature(_initialKeySharps),
+            _initialClef,
+            _tempo,
+            _title,
+            _composer,
+            _dynamics.ToImmutableArray(),
+            _articulations.ToImmutableArray(),
+            _graceNotes.ToImmutableArray(),
+            lyrics: _lyrics.ToImmutableArray(),
+            musicMarks: _musicMarks.ToImmutableArray(),
+            customTexts: _customTexts.ToImmutableArray(),
+            voltaBrackets: _voltaBrackets.ToImmutableArray(),
+            tupletBrackets: _tupletBrackets.ToImmutableArray(),
+            arpeggios: _arpeggios.ToImmutableArray(),
+            figuredBasses: _figuredBasses.ToImmutableArray(),
+            grobOverrides: _grobOverrides.ToImmutableArray(),
+            grobReverts: _grobReverts.ToImmutableArray(),
+            trillSpanners: PairTrillSpannerEvents());
+    }
+
+    /// <summary>
+    /// Builds the measure tracks for voices 1..N-1 of a << \\ >> mixed stream
+    /// from the spans recorded in <see cref="_parallelSpans"/>: each track is
+    /// full length, empty except where a span supplies its sub-voice. Shared by
+    /// the single-staff Score path (<see cref="BuildMultiVoiceScore"/>) and the
+    /// per-staff multi-staff path (<see cref="CollectStaffVoices"/>).
+    /// </summary>
+    private List<ImmutableArray<Measure>> BuildExtraVoiceTracks(List<Measure> track0)
+    {
         int totalMeasures = track0.Count;
         int voiceCount = 1;
         foreach (var (parallel, _) in _parallelSpans)
             voiceCount = Math.Max(voiceCount, parallel.Voices.Count());
 
-        var voices = new List<Voice>
-        {
-            new Voice("voice1", track0.ToImmutableArray())
-        };
-
+        var tracks = new List<ImmutableArray<Measure>>();
         for (int t = 1; t < voiceCount; t++)
         {
             var trackMeasures = new Measure[totalMeasures];
@@ -896,33 +944,28 @@ public sealed class MeasureCollector
                     trackMeasures[start + k] = sub[k];
             }
 
-            voices.Add(new Voice($"voice{t + 1}", trackMeasures.ToImmutableArray()));
+            tracks.Add(trackMeasures.ToImmutableArray());
         }
+        return tracks;
+    }
 
-        // Lyrics align with the primary voice.
-        CollectLyrics(root, track0);
+    /// <summary>
+    /// Collects ALL voices of one staff in a multi-staff score: the primary
+    /// (voice-0) stream plus any voices contributed by << \\ >> spans inside
+    /// that staff. Voice 0 keeps the part's name (the staff is keyed by it for
+    /// per-staff key signatures); extra voices get a derived name.
+    /// </summary>
+    private ImmutableArray<Voice> CollectStaffVoices(string voiceName)
+    {
+        var track0 = CollectMeasuresForVoice(voiceName); // clears + fills _parallelSpans
+        ResolveBeamStemDirections(track0);
 
-        return new Score(
-            voices.ToImmutableArray(),
-            new TimeSignature(_timeBeats, _timeBeatType),
-            new KeySignature(_initialKeySharps),
-            _initialClef,
-            _tempo,
-            _title,
-            _composer,
-            _dynamics.ToImmutableArray(),
-            _articulations.ToImmutableArray(),
-            _graceNotes.ToImmutableArray(),
-            lyrics: _lyrics.ToImmutableArray(),
-            musicMarks: _musicMarks.ToImmutableArray(),
-            customTexts: _customTexts.ToImmutableArray(),
-            voltaBrackets: _voltaBrackets.ToImmutableArray(),
-            tupletBrackets: _tupletBrackets.ToImmutableArray(),
-            arpeggios: _arpeggios.ToImmutableArray(),
-            figuredBasses: _figuredBasses.ToImmutableArray(),
-            grobOverrides: _grobOverrides.ToImmutableArray(),
-            grobReverts: _grobReverts.ToImmutableArray(),
-            trillSpanners: PairTrillSpannerEvents());
+        var voices = ImmutableArray.CreateBuilder<Voice>();
+        voices.Add(new Voice(voiceName, track0.ToImmutableArray()));
+        var extras = BuildExtraVoiceTracks(track0);
+        for (int i = 0; i < extras.Count; i++)
+            voices.Add(new Voice($"{voiceName}.{i + 2}", extras[i]));
+        return voices.ToImmutable();
     }
 
     /// <summary>An empty placeholder measure (no items) that mirrors the

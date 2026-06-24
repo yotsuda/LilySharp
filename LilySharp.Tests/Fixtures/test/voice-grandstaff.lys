@@ -1,0 +1,26 @@
+// Intra-staff polyphony on a grand staff: the upper staff splits into two
+// voices for one measure (<< \\ >>) while staying single-voice before and
+// after, and the lower staff is plain. BOTH voices of the span must render
+// (regression guard for "grand-staff staff shows the primary voice only").
+title "Grand Staff Voices"
+composer "Lily#"
+tempo 90
+time 4/4
+key c major
+
+part rh { clef treble }
+part lh { clef bass }
+
+section Main {
+  rh { c'4 d e f | << { g'2 a } \\ { c2 d } >> | e'4 d c b | }
+  lh { c4 d e f | g4 a g f | e4 d c2 | }
+}
+
+structure { Main }
+
+render score "voice-grandstaff.svg" {
+  grandStaff {
+    staff { rh }
+    staff { lh }
+  }
+}
