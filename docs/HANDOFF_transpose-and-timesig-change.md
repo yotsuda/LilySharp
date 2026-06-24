@@ -4,7 +4,7 @@
 
 ## 0. 一行サマリ
 - **② 小節途中の拍子変更の表示**: **完了(`4df8993`)**。真因は collector でなく **parser**(`ParseMusicItem` が `time` を未処理)。LP 突合済み・snapshot 追加・full suite 1463緑。詳細は §2。
-- **① transpose(移調)**: **未着手**。`transpose` は part-option としてパースされるだけで意味解析ゼロ → 相対音程移調を新規実装する。
+- **① transpose(移調)**: **完了**。`PitchTransposer`(LP `Pitch::transpose` 方式の綴り直し)＋ collector 配線。音符/和音/装飾音、調号移調、**multi-staff per-part 調号**(Staff.PerStaffKeySignature)、**下行/オクターブ跨ぎ**(target のオクターブマーク)、**MIDI/MusicXML 出力**まで。全 LP 突合。真因の一つは parser(`ParsePartProperty` が TransposeKeyword 未受理)。詳細は §3。
 - ブランチは master(`7971e3f`)から分岐。`cc2e7ed` は full suite 1462緑(回帰なし)。
 
 ## 1. 背景(なぜこの2つか)
@@ -46,10 +46,22 @@ collector を疑っていたが、**真因は parser**。`ParseMusicItem`(part/m
 - LP 突合: `lily/time-signature-engraver.cc`(変更で TimeSignature grob 生成)。`time 3/4`/`6/8`/`2/2` を変更点に置いた最小 .ly を `lilypond --png -dcrop=#t` で。
 - 全 snapshot は mid-music time を含まないので、完成後は回帰テスト用に `Fixtures/test/timesig-change.lys` を追加し snapshot 化推奨。
 
-## 3. ① transpose(移調)— 未着手・設計
+## 3. ① transpose(移調)— 完了
 
-### 現状
-- `transpose` は SyntaxKind.TransposeKeyword(`Lexer.cs:443`)、part-option として `ParsePartOption`(`Parser.cs:1590`、`transpose: <value>` 形)でパースされるのみ。**意味解析が一切無い**(Bind/Expand/Collector に transpose 処理ゼロ)。
+### 真因(設計時に見落とし)
+part ヘッダのプロパティは `ParsePartProperty`(`Parser.cs:335`)が解釈するが、ここの受理リストに **`TransposeKeyword` が無かった** → `transpose: d` は黙って捨てられていた(`ParsePartOption`/`IsPartOption` の方は未使用経路)。`ParsePartProperty` に追加して解決。
+
+### 実装(全 LP 突合済み)
+- **`PitchTransposer`**(`Semantics/PitchTransposer.cs`): LP `lily/pitch.cc Pitch::transpose` 方式。`Transpose(step,alt,octave, toStep,toAlt,toOctave)` で diatonic step を足し octave 桁上げ、新 alteration=目標半音−自然半音。`KeySignatureFifthsShift`(circle of fifths)で調号、`IntervalSemitones` で MIDI 用半音。純粋関数＋40 ユニットテスト。
+- **`PartTranspose.Read`**(共有): part-option(オクターブマーク込み)を読む。collector/MIDI/MusicXML が共用。
+- **collector**: `CalculateStaffPosition` が相対解決の**後**に `Transpose` 適用(relative chain は原音維持)。`GetDisplayAccidentalWithCourtesy` は `(step,alt,octave)` を取り移調後値を渡す。`TransposeKeySharps` で `_keySharps`/初期 key 移調。
+- **#1 multi-staff**: `Staff.PerStaffKeySignature`(null=score key)。`CollectMultiStaff` が per-voice に移調キーを dict 化→staff へ付与、`_keySharps` も per-voice 再 arm。`ResolveKeySignature` が per-staff key 起点。`MultiStaffLayouter` は prefix 幅を全 staff の最広 key で確保。
+- **#2 下行/広音程**: target にオクターブマーク(`transpose: c,`/`d'`)。`ParsePartProperty` が後続 `'`/`,` を取り込み、`Transpose` の `toOctave` へ。
+- **#3 出力**: MIDI=`CalculateRelativeMidiPitch` に半音シフト。MusicXML=`ProcessNote`/`ProcessChord` で記譜音綴り直し＋`StartNewMeasure` で KeyFifths 移調。
+
+### 制限(現状)
+- target は単一ピッチ(from=c 固定)。`\transpose from to` の任意 from は未対応。
+- 三重以上の臨時記号は表示モデル外(±2 まで)。
 
 ### 設計(LP 忠実=diatonic 音程移調)
 - 構文: part-option `transpose: <pitch>`(1値)。「書いた c が <pitch> の高さで鳴る」= **c→<pitch> の音程**を全ピッチに適用、と解釈(LP `\transpose from to` の from=c 固定版)。`from to` 2値が要るなら part-option パーサ(1値前提)の拡張が必要。
