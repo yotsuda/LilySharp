@@ -21,10 +21,10 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// In a part/staff header every attribute is colon-form (<c>name: value</c>),
-/// including <c>time:</c> and <c>tempo:</c> — consistent with <c>clef:</c>,
-/// <c>key:</c>, <c>instrument:</c>, etc. The bare keyword forms (<c>time 4/4</c>,
-/// <c>tempo 120</c>) remain valid only in the music stream / top level.
+/// A part/staff header attribute is written bare (<c>name value</c>), the same
+/// as a top-level directive — <c>clef treble</c>, <c>transpose d</c>,
+/// <c>time 4/4</c>. The colon form (<c>clef: treble</c>) is still accepted during
+/// the migration off colons but is no longer the canonical spelling.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class PartHeaderPropertyTests
@@ -53,11 +53,23 @@ public sealed class PartHeaderPropertyTests
     }
 
     [Fact]
-    public void PartHeader_TimeWithoutColon_IsError()
+    public void PartHeader_TimeWithoutColon_Parses()
     {
-        // The header attribute form requires the colon now.
+        // Bare is the canonical header form: `time 4/4` is valid, no colon.
         var tree = SyntaxTree.Parse("part melody { time 4/4 }");
-        Assert.True(tree.HasErrors);
+        Assert.False(tree.HasErrors);
+
+        var time = tree.GetRoot().DescendantNodes<TimeSignatureSyntax>().Single();
+        Assert.Null(time.Colon);
+        Assert.Equal(4, time.Beats);
+        Assert.Equal(4, time.BeatType);
+    }
+
+    [Fact]
+    public void PartHeader_ClefBare_Parses()
+    {
+        var tree = SyntaxTree.Parse("part melody { clef treble transpose d }");
+        Assert.False(tree.HasErrors);
     }
 
     [Fact]

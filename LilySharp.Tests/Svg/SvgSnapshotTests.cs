@@ -133,6 +133,9 @@ public class SvgSnapshotTests
         // Octave-marked transpose target (transpose: bes,) — a downward interval
         // spanning the octave; key moves G major -> F major. Verified vs LilyPond.
         yield return new object[] { "test/transpose-down" };
+        // Top-level (score-wide) transpose default + bare headers: both parts
+        // inherit transpose d (C major -> D major). Verified vs LilyPond.
+        yield return new object[] { "test/transpose-score" };
     }
 
     /// <summary>

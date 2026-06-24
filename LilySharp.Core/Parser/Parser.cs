@@ -229,6 +229,7 @@ internal sealed class Parser
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),
+            SyntaxKind.TransposeKeyword => ParseTopLevelTranspose(),
 
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
@@ -351,9 +352,11 @@ internal sealed class Parser
             Current.Kind == SyntaxKind.TransposeKeyword)
         {
             var propName = Advance();
-            var colon = Expect(SyntaxKind.Colon);
+            // Colon is optional: a part header attribute is `clef treble` (bare,
+            // the canonical form) — `clef: treble` is still accepted.
+            var colon = Check(SyntaxKind.Colon) ? Advance() : null;
             var value = Advance(); // identifier, string, number, or pitch
-            // A transpose target may carry octave marks (transpose: d' / c,);
+            // A transpose target may carry octave marks (transpose d' / c,);
             // harmless for the other properties, which never have trailing marks.
             var values = new List<GreenNode?> { value };
             while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
@@ -402,10 +405,23 @@ internal sealed class Parser
 
     // ========== Properties and Metadata ==========
 
+    // Top-level `transpose d` (bare, like `time 4/4` / `key c major`): a default
+    // transpose applied to every part that does not set its own. Octave marks
+    // (transpose d' / c,) are allowed on the target.
+    private PropertyAssignmentGreen ParseTopLevelTranspose()
+    {
+        var keyword = Advance(); // transpose
+        var value = Advance();   // target pitch
+        var values = new List<GreenNode?> { value };
+        while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
+            values.Add(Advance());
+        return new PropertyAssignmentGreen(keyword, null, [.. values]);
+    }
+
     private PropertyAssignmentGreen ParsePropertyAssignment()
     {
         var name = Advance(); // keyword like tempo, clef, etc.
-        var colon = Expect(SyntaxKind.Colon);
+        var colon = Check(SyntaxKind.Colon) ? Advance() : null; // colon optional (bare canonical)
         var valueTokens = ParsePropertyValue();
         return new PropertyAssignmentGreen(name, colon, valueTokens);
     }
@@ -481,7 +497,7 @@ internal sealed class Parser
     private TimeSignatureGreen ParseTimeSignature(bool expectColon = false)
     {
         var timeKeyword = Expect(SyntaxKind.TimeKeyword);
-        SyntaxToken? colon = expectColon ? Expect(SyntaxKind.Colon) : null;
+        SyntaxToken? colon = Check(SyntaxKind.Colon) ? Advance() : null; // colon optional everywhere
         var numerator = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
         var slash = Expect(SyntaxKind.Slash);
         var denominator = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
@@ -493,7 +509,7 @@ internal sealed class Parser
     private TempoDeclarationGreen ParseTempoDeclaration(bool expectColon = false)
     {
         var tempoKeyword = Expect(SyntaxKind.TempoKeyword);
-        SyntaxToken? colon = expectColon ? Expect(SyntaxKind.Colon) : null;
+        SyntaxToken? colon = Check(SyntaxKind.Colon) ? Advance() : null; // colon optional everywhere
         var valueTokens = new List<GreenNode?>();
 
         // Collect value tokens: "marking" duration = bpm
@@ -2023,7 +2039,7 @@ private GreenNode?[] ParseArticulations()
             or SyntaxKind.OctaveKeyword)
         {
             var optKeyword = Advance();
-            var colon = Expect(SyntaxKind.Colon);
+            var colon = Check(SyntaxKind.Colon) ? Advance() : null; // colon optional (bare canonical)
             var value = Advance();
             options.Add(new PropertyAssignmentGreen(optKeyword, colon, [value]));
         }

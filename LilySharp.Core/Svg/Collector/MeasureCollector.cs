@@ -1356,7 +1356,7 @@ public sealed class MeasureCollector
                     octave = oct;
             }
 
-            transpose = PartTranspose.Read(partDecl);
+            transpose = PartTranspose.Read(root, partName);
 
             // Resolve clef: explicit > instrument > null
             string? resolvedClef = clef;

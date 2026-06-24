@@ -1,0 +1,27 @@
+// A top-level `transpose` (bare, like `time`/`key`) is the score-wide default:
+// every part without its own transpose inherits it. Here both staves move
+// C major -> D major and their pitches up a major 2nd. Headers are bare too
+// (clef treble), the canonical no-colon form.
+title "Score Transpose"
+composer "Lily#"
+
+time 4/4
+key c major
+transpose d
+
+part upper { clef treble }
+part lower { clef bass }
+
+section Main {
+  upper { c'4 d e f }
+  lower { c4 d e f }
+}
+
+structure { Main }
+
+render score "transpose-score.svg" {
+  grandStaff {
+    staff { upper }
+    staff { lower }
+  }
+}

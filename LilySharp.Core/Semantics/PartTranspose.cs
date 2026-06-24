@@ -21,42 +21,85 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Reads the part-option <c>transpose:</c> target (with its octave marks) from
-/// a part declaration. Shared by the renderer's collector and the MIDI / MusicXML
-/// exporters so the single transpose grammar has one reader.
+/// Reads the <c>transpose</c> target (with its octave marks) for a part:
+/// the part's own option if present, otherwise a top-level <c>transpose</c>
+/// default that applies to every part. Shared by the renderer's collector and
+/// the MIDI / MusicXML exporters so the single transpose grammar has one reader.
 /// </summary>
 public static class PartTranspose
 {
-    /// <summary>Reads the transpose target for <paramref name="partName"/>, or null.</summary>
+    /// <summary>The effective transpose for <paramref name="partName"/>, or null.</summary>
     public static (int step, int alt, int oct)? Read(SyntaxNode root, string partName)
     {
         foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
             if (partDecl.Name.Text == partName)
-                return Read(partDecl);
-        return null;
+            {
+                var own = Read(partDecl);
+                if (own != null) return own; // a part's own transpose overrides the default
+                break;
+            }
+        return ReadScoreDefault(root);
     }
 
-    /// <summary>Reads the transpose target from a part declaration, or null.</summary>
+    /// <summary>Reads the transpose option from a part declaration, or null.</summary>
     public static (int step, int alt, int oct)? Read(PartDeclarationSyntax partDecl)
     {
         foreach (var prop in partDecl.Properties)
-        {
-            if (!string.Equals(prop.NameToken.Text, "transpose", StringComparison.OrdinalIgnoreCase))
-                continue;
-            if (prop.GetChild(2) is not SyntaxTokenNode valueToken
-                || !PitchTransposer.TryParseTarget(valueToken.Text, out int step, out int alt))
-                return null;
-
-            // Octave marks (' / ,) follow the pitch token as extra children.
-            int oct = 0;
-            for (int ci = 3; ci < prop.SlotCount; ci++)
-                if (prop.GetChild(ci) is SyntaxTokenNode mark)
-                {
-                    if (mark.Kind == SyntaxKind.Apostrophe) oct++;
-                    else if (mark.Kind == SyntaxKind.Comma) oct--;
-                }
-            return (step, alt, oct);
-        }
+            if (IsTranspose(prop))
+                return Parse(prop);
         return null;
+    }
+
+    /// <summary>
+    /// A free-standing top-level <c>transpose d</c> (not a part-header attribute):
+    /// the score-wide default.
+    /// </summary>
+    private static (int step, int alt, int oct)? ReadScoreDefault(SyntaxNode root)
+    {
+        foreach (var prop in root.DescendantNodes().OfType<PropertyAssignmentSyntax>())
+            if (IsTranspose(prop) && !IsInsidePart(prop))
+                return Parse(prop);
+        return null;
+    }
+
+    private static bool IsTranspose(PropertyAssignmentSyntax prop)
+        => string.Equals(prop.NameToken.Text, "transpose", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsInsidePart(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is PartDeclarationSyntax)
+                return true;
+        return false;
+    }
+
+    // Children are: name, [optional colon], value, [octave marks...]. The colon
+    // is now optional, so locate the value/marks by skipping the name and colon
+    // rather than by a fixed slot index.
+    private static (int step, int alt, int oct)? Parse(PropertyAssignmentSyntax prop)
+    {
+        SyntaxTokenNode? valueToken = null;
+        int oct = 0;
+        for (int ci = 1; ci < prop.SlotCount; ci++)
+        {
+            if (prop.GetChild(ci) is not SyntaxTokenNode tok || tok.Kind == SyntaxKind.Colon)
+                continue;
+            if (valueToken == null)
+            {
+                valueToken = tok;
+            }
+            else if (tok.Kind == SyntaxKind.Apostrophe)
+            {
+                oct++;
+            }
+            else if (tok.Kind == SyntaxKind.Comma)
+            {
+                oct--;
+            }
+        }
+
+        if (valueToken == null || !PitchTransposer.TryParseTarget(valueToken.Text, out int step, out int alt))
+            return null;
+        return (step, alt, oct);
     }
 }
