@@ -1,0 +1,22 @@
+// A trill spanner (tr + wavy line) authored on the SECOND (bass) staff must run
+// above THAT staff, not the first. The above-staff stacker only de-collides the
+// top staff, so a lower-staff spanner keeps its engraver Y (offset to its own
+// staff). Verified against LilyPond. Guards TrillSpannerItem.StaffIndex routing.
+title "Lower-staff trill span"
+time 4/4
+key c major
+
+part top { clef treble }
+part bot { clef bass }
+
+section Main {
+  top { c'4 d e f | g1 | }
+  bot { c4@startTrillSpan d e f@stopTrillSpan | g1 | }
+}
+
+structure { Main }
+
+render score "trillspan-lower-staff.svg" {
+  staff { top }
+  staff { bot }
+}

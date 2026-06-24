@@ -361,6 +361,11 @@ public static class OutsideStaffStacker
             for (int i = 0; i < b.Count; i++)
             {
                 var t = b[i];
+                // Lower-staff trills are already positioned over their own staff
+                // by the engraver; the staff-0 seeded occupancy would wrongly pull
+                // them back up to the top staff.
+                if (t.StaffIndex != 0)
+                    continue;
                 if (!measureToSystem.TryGetValue(t.StartMeasureIndex, out int sysIdx))
                     continue;
                 double sy = systems[sysIdx].Y;

@@ -38,7 +38,11 @@ public readonly record struct TrillSpannerLayout(
     /// <summary>Y position (staff spaces from staff top, negative = above staff).</summary>
     double Y,
     /// <summary>Source position for click-to-source mapping.</summary>
-    int SourcePosition
+    int SourcePosition,
+    /// <summary>Global staff index this spanner belongs to (multi-staff). The
+    /// above-staff stacker only de-collides staff 0; lower staves keep their
+    /// engraver Y so they stay over their own staff.</summary>
+    int StaffIndex = 0
 );
 
 /// <summary>
@@ -100,7 +104,8 @@ public static class TrillSpannerEngraver
     public static ImmutableArray<TrillSpannerLayout> Calculate(
         ImmutableArray<TrillSpannerItem> trillSpanners,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         if (trillSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TrillSpannerLayout>.Empty;
@@ -108,13 +113,16 @@ public static class TrillSpannerEngraver
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var layouts = ImmutableArray.CreateBuilder<TrillSpannerLayout>();
 
-        // Y position: above staff with padding (LILYPOND-REF: scm/define-grobs.scm:2213)
-        double y = -StaffPadding - TrillGlyphHeight;
-
         foreach (var spanner in trillSpanners)
         {
             if (spanner.StartMeasureIndex >= measureLayouts.Length)
                 continue;
+
+            // Y position: above staff with padding, offset to this spanner's OWN
+            // staff (multi-staff). LILYPOND-REF: scm/define-grobs.scm:2213
+            double staffOffset = staffYByIndex != null
+                && staffYByIndex.TryGetValue(spanner.StaffIndex, out var so) ? so : 0;
+            double y = -StaffPadding - TrillGlyphHeight + staffOffset;
 
             var startMeasure = measureLayouts[spanner.StartMeasureIndex];
             if (spanner.StartItemIndex >= startMeasure.Items.Length)
@@ -162,7 +170,7 @@ public static class TrillSpannerEngraver
 
                 layouts.Add(new TrillSpannerLayout(
                     segment.StartMeasureIndex, glyphX, lineStartX, endX, y,
-                    spanner.SourcePosition));
+                    spanner.SourcePosition, spanner.StaffIndex));
             }
         }
 

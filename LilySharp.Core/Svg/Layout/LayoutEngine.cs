@@ -881,7 +881,7 @@ public sealed class LayoutEngine
         // Layout trill spanners (tr + wavy line)
         // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning
         var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
-            trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml);
+            trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYByIndex);
 
         // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
         // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority

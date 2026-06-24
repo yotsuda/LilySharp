@@ -37,5 +37,8 @@ public sealed record TrillSpannerItem(
     /// <summary>Item index within the end measure.</summary>
     int EndItemIndex,
     /// <summary>Source position for click-to-source mapping.</summary>
-    int SourcePosition
+    int SourcePosition,
+    /// <summary>Global staff index this spanner belongs to (multi-staff routing;
+    /// see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
+    int StaffIndex = 0
 );

@@ -434,7 +434,7 @@ public sealed class MeasureCollector
     private readonly List<GrobOverride> _grobOverrides = new();
     private readonly List<GrobRevert> _grobReverts = new();
     // Trill spanner start/stop events (paired into TrillSpannerItems after collection)
-    private readonly List<(bool isStart, int measureIndex, int itemIndex, int sourcePosition)> _trillSpannerEvents = new();
+    private readonly List<(bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex)> _trillSpannerEvents = new();
     // Courtesy accidental tracking: (step, octave) → alteration for current and previous measures
     // LILYPOND-REF: lily/accidental-engraver.cc — tracks alterations per measure for cautionary accidentals
     private readonly Dictionary<(int step, int octave), int> _currentMeasureAlterations = new();
@@ -2743,11 +2743,11 @@ public sealed class MeasureCollector
                     var nameLower = nameText.ToLowerInvariant();
                     if (nameLower == "starttrillspan")
                     {
-                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.Position));
+                        _trillSpannerEvents.Add((true, measureIndex, itemIndex, articulationSyntax.Position, _currentStaffIndex));
                     }
                     else if (nameLower == "stoptrillspan")
                     {
-                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.Position));
+                        _trillSpannerEvents.Add((false, measureIndex, itemIndex, articulationSyntax.Position, _currentStaffIndex));
                     }
                     else if (nameLower == "courtesy")
                     {
@@ -2790,11 +2790,11 @@ public sealed class MeasureCollector
                 var markName = markSyntax.MarkName.ToLowerInvariant();
                 if (markName == "trillspan.start")
                 {
-                    _trillSpannerEvents.Add((true, measureIndex, itemIndex, markSyntax.Position));
+                    _trillSpannerEvents.Add((true, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex));
                 }
                 else if (markName == "trillspan.stop")
                 {
-                    _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position));
+                    _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex));
                 }
                 else if (markName.StartsWith("finger."))
                 {
@@ -2822,7 +2822,7 @@ public sealed class MeasureCollector
             return ImmutableArray<TrillSpannerItem>.Empty;
 
         var items = ImmutableArray.CreateBuilder<TrillSpannerItem>();
-        (bool isStart, int measureIndex, int itemIndex, int sourcePosition)? pendingStart = null;
+        (bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex)? pendingStart = null;
 
         foreach (var evt in _trillSpannerEvents)
         {
@@ -2837,7 +2837,8 @@ public sealed class MeasureCollector
                     pendingStart.Value.itemIndex,
                     evt.measureIndex,
                     evt.itemIndex,
-                    pendingStart.Value.sourcePosition));
+                    pendingStart.Value.sourcePosition,
+                    pendingStart.Value.staffIndex));
                 pendingStart = null;
             }
         }
