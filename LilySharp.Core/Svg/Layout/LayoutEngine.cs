@@ -918,6 +918,28 @@ public sealed class LayoutEngine
             customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
             articulationLayouts);
 
+        // Fingerings live on the NoteItem, so they must be read from EACH staff's
+        // own voice (score.Voice is only the first staff) and positioned at that
+        // staff's index — otherwise lower-staff fingerings vanish.
+        ImmutableArray<FingeringLayout> fingeringLayouts;
+        if (score == null)
+            fingeringLayouts = ImmutableArray<FingeringLayout>.Empty;
+        else if (voicesByStaff != null && voicesByStaff.Count > 0)
+        {
+            var fb = ImmutableArray.CreateBuilder<FingeringLayout>();
+            foreach (var kv in voicesByStaff)
+            {
+                if (kv.Value.IsDefaultOrEmpty)
+                    continue;
+                var staffScore = new Score(kv.Value[0], score.TimeSignature,
+                    score.KeySignature, score.Clef, score.Tempo);
+                fb.AddRange(FingeringEngraver.Calculate(staffScore, systems, kv.Key));
+            }
+            fingeringLayouts = fb.ToImmutable();
+        }
+        else
+            fingeringLayouts = FingeringEngraver.Calculate(score, systems);
+
         return new AnnotationLayouts(
             Dynamics: stackedDynamics,
             Articulations: articulationLayouts,
@@ -939,9 +961,7 @@ public sealed class LayoutEngine
             CrossStaffs: crossStaffLayouts ?? ImmutableArray<CrossStaffLayout>.Empty,
             TrillSpanners: stackedTrills,
             // LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob.
-            Fingerings: score != null
-                ? FingeringEngraver.Calculate(score, systems)
-                : ImmutableArray<FingeringLayout>.Empty,
+            Fingerings: fingeringLayouts,
             // LILYPOND-REF: lily/laissez-vibrer-engraver.cc + repeat-tie-engraver.cc — half-ties.
             TieVariants: score != null
                 ? TieVariantEngraver.Calculate(score, systems)

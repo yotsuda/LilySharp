@@ -1,0 +1,23 @@
+// Fingerings live on the NoteItem, so they must be read from EACH staff's own
+// voice and positioned at that staff's index. Authored on the SECOND (bass)
+// staff, they previously vanished (read only from the first staff, and the Y
+// double-counted the system origin). Verified against LilyPond. Guards the
+// per-staff FingeringEngraver pass.
+title "Lower-staff fingering"
+time 4/4
+key c major
+
+part top { clef treble }
+part bot { clef bass }
+
+section Main {
+  top { c'4 d e f | g1 | }
+  bot { c4@finger.1 d@finger.2 e@finger.3 f@finger.5 | g1@finger.1 | }
+}
+
+structure { Main }
+
+render score "fingering-lower-staff.svg" {
+  staff { top }
+  staff { bot }
+}

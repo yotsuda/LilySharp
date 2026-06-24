@@ -136,6 +136,9 @@ public class SvgSnapshotTests
         // Multi-staff: a trill spanner on the SECOND (bass) staff runs above that
         // staff, not pulled to the top by the stacker (TrillSpannerItem.StaffIndex).
         yield return new object[] { "test/trillspan-lower-staff" };
+        // Multi-staff: fingerings on the SECOND (bass) staff render at that staff
+        // (per-staff FingeringEngraver pass), instead of vanishing.
+        yield return new object[] { "test/fingering-lower-staff" };
         // Polyrhythm: an upper-voice triplet's "3" bracket sits above its notes
         // (the voice's stems are force-flipped), not below by the other voice.
         yield return new object[] { "test/voice-tuplet" };

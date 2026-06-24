@@ -155,7 +155,9 @@ public static class FingeringEngraver
                 chord.BaseDuration.Numerator == 1 ? (int)chord.BaseDuration.Denominator : 1) / 2.0;
 
         bool isAbove = !chord.StemUp;
-        double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
+        // Within-system staff offset (0 for the top/only staff). The renderer
+        // adds the system's page Y, so Y must NOT include system.Y here.
+        double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex) - system.Y;
         const double StaffHeight = 4.0;
         double staffMiddle = staffY + StaffHeight / 2.0;
 
@@ -198,7 +200,9 @@ public static class FingeringEngraver
         // Direction: opposite to stem (LILYPOND-REF: script-interface.cc:23-45).
         bool isAbove = !note.StemUp;
 
-        double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
+        // Within-system staff offset (0 for the top/only staff). The renderer
+        // adds the system's page Y, so Y must NOT include system.Y here.
+        double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex) - system.Y;
         // Default staff height = 4 staff spaces (5 lines).
         const double StaffHeight = 4.0;
 
