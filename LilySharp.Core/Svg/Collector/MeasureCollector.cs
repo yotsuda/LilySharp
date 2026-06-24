@@ -403,6 +403,12 @@ public sealed class MeasureCollector
     // Inline volta endings collected during the current voice walk; finalized
     // (and marked closed/open) once the whole voice has been processed.
     private readonly List<(int startMeasure, int endMeasure, string voltaText, int sourcePosition)> _pendingInlineVoltas = new();
+    // Parallel-voice spans (<< \\ >>) recorded during the primary (voice-0)
+    // walk: the parallel node and the measure index where its content begins.
+    // Voice 0 flows into the primary stream so measure indices stay continuous;
+    // the remaining voices are reconstructed afterwards (BuildMultiVoiceScore).
+    // Cleared at the start of each collection.
+    private readonly List<(ParallelExpressionSyntax Parallel, int StartMeasure)> _parallelSpans = new();
     // Tuplet brackets
     private readonly List<TupletBracketItem> _tupletBrackets = new();
     // Arpeggio markings
@@ -492,19 +498,19 @@ public sealed class MeasureCollector
         _initialClef = _clef; // Preserve initial clef before music processing
         _initialKeySharps = _keySharps; // Preserve initial key before music processing
 
-        // Phase 2: Check for parallel expression (multi-voice)
-        var parallelExpr = tree.GetRoot().DescendantNodes()
-            .OfType<ParallelExpressionSyntax>()
-            .FirstOrDefault();
-
-        if (parallelExpr != null)
-        {
-            return CollectMultiVoiceScore(parallelExpr);
-        }
-
-        // Single voice
+        // Phase 2: Collect the primary (voice-0) stream. A << \\ >> span is
+        // handled INLINE during this walk (its first voice flows into the
+        // stream, the span is recorded in _parallelSpans), so sequential
+        // measures and any number of parallel spans interleave correctly.
+        _parallelSpans.Clear();
         var measures = CollectMeasures();
         ResolveBeamStemDirections(measures);
+
+        // If any parallel span was seen, reconstruct the additional voices.
+        if (_parallelSpans.Count > 0)
+            return BuildMultiVoiceScore(measures, tree.GetRoot());
+
+        // Single voice
         var voice = new Voice(_voiceName ?? "default", measures.ToImmutableArray());
 
         // Collect lyrics
@@ -765,6 +771,11 @@ public sealed class MeasureCollector
 
     private List<Measure> CollectMeasuresForVoice(string voiceName)
     {
+        // Multi-staff reconstructs voices per-staff, not from these spans; clear
+        // so a << \\ >> inside one staff doesn't leak into another. (Intra-staff
+        // multi-voice on a grand staff renders the primary voice only for now.)
+        _parallelSpans.Clear();
+
         // 1. Check variables first
         if (_variables.TryGetValue(voiceName, out var variable))
             return CollectMeasuresFromNode(variable);
@@ -832,6 +843,115 @@ public sealed class MeasureCollector
             grobOverrides: _grobOverrides.ToImmutableArray(),
             grobReverts: _grobReverts.ToImmutableArray(),
             trillSpanners: PairTrillSpannerEvents());
+    }
+
+    /// <summary>
+    /// Reconstructs a multi-voice <see cref="Score"/> after the primary stream
+    /// (<paramref name="track0"/>) has been collected and the <c>&lt;&lt; \\ &gt;&gt;</c>
+    /// spans recorded in <see cref="_parallelSpans"/>. Voice 0 is the primary
+    /// stream; each additional voice is a full-length, synchronized measure list
+    /// that is empty except where a span supplies its sub-voice.
+    /// </summary>
+    private Score BuildMultiVoiceScore(List<Measure> track0, SyntaxNode root)
+    {
+        int totalMeasures = track0.Count;
+        int voiceCount = 1;
+        foreach (var (parallel, _) in _parallelSpans)
+            voiceCount = Math.Max(voiceCount, parallel.Voices.Count());
+
+        var voices = new List<Voice>
+        {
+            new Voice("voice1", track0.ToImmutableArray())
+        };
+
+        for (int t = 1; t < voiceCount; t++)
+        {
+            var trackMeasures = new Measure[totalMeasures];
+            for (int m = 0; m < totalMeasures; m++)
+                trackMeasures[m] = EmptyMeasure(track0[m]);
+
+            foreach (var (parallel, start) in _parallelSpans)
+            {
+                var blocks = parallel.Voices.ToList();
+                if (t >= blocks.Count)
+                    continue;
+
+                // Each sub-voice evaluates in a fresh relative frame (same as
+                // CollectMultiVoiceScore), then maps onto the span's measures.
+                var savedOctave = _currentOctave;
+                var savedPitch = _lastPitchName;
+                var savedDuration = _defaultDuration;
+                _currentOctave = _initialOctave;
+                _lastPitchName = 'c';
+                _defaultDuration = Fraction.Quarter;
+
+                var sub = CollectMeasuresFromNode(blocks[t]);
+                ResolveBeamStemDirections(sub);
+
+                _currentOctave = savedOctave;
+                _lastPitchName = savedPitch;
+                _defaultDuration = savedDuration;
+
+                for (int k = 0; k < sub.Count && start + k < totalMeasures; k++)
+                    trackMeasures[start + k] = sub[k];
+            }
+
+            voices.Add(new Voice($"voice{t + 1}", trackMeasures.ToImmutableArray()));
+        }
+
+        // Lyrics align with the primary voice.
+        CollectLyrics(root, track0);
+
+        return new Score(
+            voices.ToImmutableArray(),
+            new TimeSignature(_timeBeats, _timeBeatType),
+            new KeySignature(_initialKeySharps),
+            _initialClef,
+            _tempo,
+            _title,
+            _composer,
+            _dynamics.ToImmutableArray(),
+            _articulations.ToImmutableArray(),
+            _graceNotes.ToImmutableArray(),
+            lyrics: _lyrics.ToImmutableArray(),
+            musicMarks: _musicMarks.ToImmutableArray(),
+            customTexts: _customTexts.ToImmutableArray(),
+            voltaBrackets: _voltaBrackets.ToImmutableArray(),
+            tupletBrackets: _tupletBrackets.ToImmutableArray(),
+            arpeggios: _arpeggios.ToImmutableArray(),
+            figuredBasses: _figuredBasses.ToImmutableArray(),
+            grobOverrides: _grobOverrides.ToImmutableArray(),
+            grobReverts: _grobReverts.ToImmutableArray(),
+            trillSpanners: PairTrillSpannerEvents());
+    }
+
+    /// <summary>An empty placeholder measure (no items) that mirrors the
+    /// barline/source span of the primary voice's measure at the same index,
+    /// so an absent voice draws nothing while staying barline-aligned.</summary>
+    private static Measure EmptyMeasure(Measure reference) =>
+        new Measure(
+            ImmutableArray<MusicItem>.Empty,
+            BarlineType.None,
+            reference.EndBarline,
+            null,
+            reference.SourceStart,
+            reference.SourceEnd);
+
+    /// <summary>
+    /// Gathers a voice block's music nodes (variable refs expanded), used to
+    /// flow a parallel span's first voice into the primary builder.
+    /// </summary>
+    private List<SyntaxNode> GatherVoiceMusicNodes(SyntaxNode voiceNode)
+    {
+        var musicNodes = new List<SyntaxNode>();
+        foreach (var node in voiceNode.DescendantNodes())
+        {
+            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideOnce(node)
+                || IsInsideGrace(node) || IsInsideInlineVolta(node))
+                continue;
+            GatherMusicNode(node, musicNodes);
+        }
+        return musicNodes;
     }
 
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
@@ -949,6 +1069,18 @@ public sealed class MeasureCollector
             case GraceExpressionSyntax grace:
                 // Store grace expression to attach to the next note
                 _pendingGrace = grace;
+                break;
+
+            case ParallelExpressionSyntax parallel:
+                {
+                    // << \\ >> span. Voice 0 joins the primary stream (this
+                    // builder) so measure indices stay continuous; the extra
+                    // voices are reconstructed later from the recorded span.
+                    var voiceBlocks = parallel.Voices.ToList();
+                    _parallelSpans.Add((parallel, builder.CurrentMeasureIndex));
+                    if (voiceBlocks.Count > 0)
+                        ProcessMusicNodeSequence(GatherVoiceMusicNodes(voiceBlocks[0]), builder);
+                }
                 break;
 
             case NoteSyntax note:
@@ -1697,7 +1829,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && !IsInsideInlineVolta(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or InlineVoltaSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax);
+                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && !IsInsideInlineVolta(n) && !IsInsideParallel(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or InlineVoltaSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax);
             ProcessNodes(musicNodes);
         }
 
@@ -1785,6 +1917,24 @@ public sealed class MeasureCollector
         while (parent != null)
         {
             if (parent is TupletExpressionSyntax)
+                return true;
+            parent = parent.Parent;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Checks if a node is inside a << \\ >> parallel expression. The primary
+    /// walk uses this to SKIP a span's inner nodes (they are processed by the
+    /// ParallelExpressionSyntax handler) while the span node itself passes
+    /// through atomically.
+    /// </summary>
+    private static bool IsInsideParallel(SyntaxNode node)
+    {
+        var parent = node.Parent;
+        while (parent != null)
+        {
+            if (parent is ParallelExpressionSyntax)
                 return true;
             parent = parent.Parent;
         }
@@ -1948,12 +2098,13 @@ public sealed class MeasureCollector
 
         foreach (var node in partBlock.DescendantNodes())
         {
-            // Skip nodes inside containers (tuplet/repeat/grace/inline volta) —
-            // they'll be processed by those handlers. Inline voltas in
-            // particular must pass through as ONE wrapper node, or the
-            // bracket ([1. ]/[2.]) is lost while its notes leak out flat.
+            // Skip nodes inside containers (tuplet/repeat/grace/inline volta/
+            // parallel) — they'll be processed by those handlers. Inline voltas
+            // in particular must pass through as ONE wrapper node, or the
+            // bracket ([1. ]/[2.]) is lost while its notes leak out flat. A
+            // << \\ >> span likewise passes through as one node.
             if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
-                || IsInsideInlineVolta(node))
+                || IsInsideInlineVolta(node) || IsInsideParallel(node))
                 continue;
 
             switch (node)
@@ -1969,6 +2120,7 @@ public sealed class MeasureCollector
                 case GraceExpressionSyntax:
                 case TupletExpressionSyntax:
                 case RepeatExpressionSyntax:
+                case ParallelExpressionSyntax:
                 case InlineVoltaSyntax:
                 case MusicMarkSyntax:
                 case ClefDeclarationSyntax:
@@ -2003,7 +2155,7 @@ public sealed class MeasureCollector
 
         // Include expression itself if it is a music node
         if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
-            or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or InlineVoltaSyntax
+            or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
             or ClefDeclarationSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax)
         {
@@ -2012,13 +2164,13 @@ public sealed class MeasureCollector
 
         // Get music nodes from the variable expression descendants.
         // Skip nodes inside containers (grace, tuplet, repeat, once, inline
-        // volta) — they'll be processed by those handlers; the inline volta
-        // must travel as ONE wrapper node so its bracket survives.
+        // volta, parallel) — they'll be processed by those handlers; the inline
+        // volta and the << \\ >> span must travel as ONE wrapper node each.
         var nodes = expression.DescendantNodes()
             .Where(n => !IsInsideGrace(n) && !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n)
-                && !IsInsideInlineVolta(n)
+                && !IsInsideInlineVolta(n) && !IsInsideParallel(n)
                 && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
-                or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or InlineVoltaSyntax
+                or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax
                 or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
                 or ClefDeclarationSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax);
 

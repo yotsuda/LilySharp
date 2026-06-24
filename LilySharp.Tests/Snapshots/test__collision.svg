@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="800.0" height="238.4" viewBox="0 0 80.00 23.84">
+<svg xmlns="http://www.w3.org/2000/svg" width="800.0" height="397.0" viewBox="0 0 80.00 39.70">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -7,34 +7,81 @@
   <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle">Collision Test</text>
   <text x="78.00" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end">Lily#</text>
   <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="13.84" x2="32.99" y2="13.84" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.84" x2="32.99" y2="14.84" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.84" x2="32.99" y2="15.84" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.84" x2="32.99" y2="16.84" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.84" x2="32.99" y2="17.84" stroke="#000000" stroke-width="0.100"/>
-  <text class="music" x="0.30" y="16.84" font-size="4.00"></text>
-  <text class="music" x="3.30" y="15.84" font-size="4.00"></text>
-  <text class="music" x="11.16" y="17.84" font-size="4.00" data-pos="220"></text>
-  <line x1="12.40" y1="17.84" x2="12.40" y2="14.34" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="15.96" y="17.34" font-size="4.00" data-pos="223"></text>
-  <line x1="17.20" y1="17.34" x2="17.20" y2="13.84" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="23.54" y="16.84" font-size="4.00" data-pos="227"></text>
-  <line x1="24.78" y1="16.84" x2="24.78" y2="13.34" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="28.34" y="16.34" font-size="4.00" data-pos="230"></text>
-  <line x1="29.58" y1="16.34" x2="29.58" y2="12.84" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="9.80" y="18.34" font-size="4.00" data-pos="241"></text>
-  <line x1="9.87" y1="18.34" x2="9.87" y2="20.84" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="14.60" y="17.84" font-size="4.00" data-pos="244"></text>
-  <line x1="14.67" y1="17.84" x2="14.67" y2="20.34" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="22.19" y="17.34" font-size="4.00" data-pos="248"></text>
-  <line x1="22.25" y1="17.34" x2="22.25" y2="19.84" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="26.99" y="16.84" font-size="4.00" data-pos="251"></text>
-  <line x1="27.05" y1="16.84" x2="27.05" y2="19.59" stroke="#000000" stroke-width="0.130"/>
-  <rect x="20.01" y="13.84" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="31.90" y="13.84" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="32.39" y="13.84" width="0.60" height="4.00" fill="#000000"/>
-  <text class="music" x="0.80" y="11.10" font-size="1.60" data-pos="0"></text>
-  <line x1="1.31" y1="11.10" x2="1.31" y2="9.70" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="1.90" y="11.10" font-size="1.80" font-family="serif" fill="#000000" data-pos="0">= 80</text>
+  <line x1="0.00" y1="17.16" x2="78.00" y2="17.16" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.16" x2="78.00" y2="18.16" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.16" x2="78.00" y2="19.16" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.16" x2="78.00" y2="20.16" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="21.16" x2="78.00" y2="21.16" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.30" y="20.16" font-size="4.00"></text>
+  <text class="music" x="3.30" y="19.16" font-size="4.00"></text>
+  <text class="music" x="11.16" y="21.16" font-size="4.00" data-pos="220"></text>
+  <line x1="12.40" y1="21.16" x2="12.40" y2="17.66" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="20.00" y="20.66" font-size="4.00" data-pos="223"></text>
+  <line x1="21.24" y1="20.66" x2="21.24" y2="17.16" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="31.63" y="20.16" font-size="4.00" data-pos="227"></text>
+  <line x1="32.87" y1="20.16" x2="32.87" y2="16.66" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="40.48" y="19.66" font-size="4.00" data-pos="230"></text>
+  <line x1="41.72" y1="19.66" x2="41.72" y2="16.16" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="50.72" y="20.66" font-size="4.00" data-pos="292"></text>
+  <text class="music" x="52.02" y="20.66" font-size="4.00" data-pos="292"></text>
+  <line x1="53.25" y1="20.66" x2="53.25" y2="17.16" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="58.31" y="19.16" font-size="4.00" data-pos="332"></text>
+  <text class="music" x="64.61" y="19.16" font-size="4.00" data-pos="334"></text>
+  <text class="music" x="70.90" y="19.16" font-size="4.00" data-pos="336"></text>
+  <text class="music" x="9.80" y="21.66" font-size="4.00" data-pos="241"></text>
+  <line x1="9.87" y1="21.66" x2="9.87" y2="24.16" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="18.64" y="21.16" font-size="4.00" data-pos="244"></text>
+  <line x1="18.71" y1="21.16" x2="18.71" y2="23.66" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="30.28" y="20.66" font-size="4.00" data-pos="248"></text>
+  <line x1="30.34" y1="20.66" x2="30.34" y2="23.16" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="39.12" y="20.16" font-size="4.00" data-pos="251"></text>
+  <line x1="39.18" y1="20.16" x2="39.18" y2="22.91" stroke="#000000" stroke-width="0.130"/>
+  <rect x="28.10" y="17.16" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="48.57" y="17.16" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="77.81" y="17.16" width="0.19" height="4.00" fill="#000000"/>
+  <line x1="0.00" y1="29.70" x2="78.00" y2="29.70" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="30.70" x2="78.00" y2="30.70" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="31.70" x2="78.00" y2="31.70" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="32.70" x2="78.00" y2="32.70" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="33.70" x2="78.00" y2="33.70" stroke="#000000" stroke-width="0.100"/>
+  <text class="music" x="0.30" y="32.70" font-size="4.00"></text>
+  <text class="music" x="8.11" y="33.20" font-size="4.00" data-pos="340"></text>
+  <text class="music" x="6.81" y="32.70" font-size="4.00" data-pos="340"></text>
+  <text class="music" x="9.56" y="33.20" font-size="4.00" data-pos="340"></text>
+  <text class="music" x="10.80" y="32.70" font-size="4.00" data-pos="340"></text>
+  <line x1="10.80" y1="33.20" x2="10.80" y2="29.20" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="14.14" y="31.70" font-size="4.00" data-pos="390"></text>
+  <text class="music" x="18.72" y="31.70" font-size="4.00" data-pos="392"></text>
+  <text class="music" x="23.30" y="31.70" font-size="4.00" data-pos="394"></text>
+  <text class="music" x="32.58" y="34.20" font-size="4.00" data-pos="398"></text>
+  <text class="music" x="31.28" y="33.20" font-size="4.00" data-pos="398"></text>
+  <text class="music" x="29.98" y="32.70" font-size="4.00" data-pos="398"></text>
+  <text class="music" x="34.03" y="34.20" font-size="4.00" data-pos="398"></text>
+  <text class="music" x="34.03" y="33.20" font-size="4.00" data-pos="398"></text>
+  <text class="music" x="35.26" y="32.70" font-size="4.00" data-pos="398"></text>
+  <line x1="35.26" y1="34.20" x2="35.26" y2="29.20" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="38.60" y="31.70" font-size="4.00" data-pos="447"></text>
+  <text class="music" x="43.18" y="31.70" font-size="4.00" data-pos="449"></text>
+  <text class="music" x="47.76" y="31.70" font-size="4.00" data-pos="451"></text>
+  <text class="music" x="57.04" y="33.20" font-size="4.00" data-pos="455"></text>
+  <text class="music" x="55.74" y="32.70" font-size="4.00" data-pos="455"></text>
+  <text class="music" x="54.44" y="32.20" font-size="4.00" data-pos="455"></text>
+  <text class="music" x="58.49" y="33.20" font-size="4.00" data-pos="455"></text>
+  <text class="music" x="59.73" y="32.70" font-size="4.00" data-pos="455"></text>
+  <text class="music" x="58.49" y="32.20" font-size="4.00" data-pos="455"></text>
+  <line x1="59.73" y1="33.20" x2="59.73" y2="28.70" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="63.07" y="31.70" font-size="4.00" data-pos="514"></text>
+  <text class="music" x="67.64" y="31.70" font-size="4.00" data-pos="516"></text>
+  <text class="music" x="72.22" y="31.70" font-size="4.00" data-pos="518"></text>
+  <rect x="28.49" y="29.70" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="52.95" y="29.70" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="76.91" y="29.70" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="77.40" y="29.70" width="0.60" height="4.00" fill="#000000"/>
+  <text x="0.05" y="27.46" font-size="1.75" font-family="serif" font-weight="bold" fill="#000000">4</text>
+  <text class="music" x="0.80" y="14.42" font-size="1.60" data-pos="0"></text>
+  <line x1="1.31" y1="14.42" x2="1.31" y2="13.02" stroke="#000000" stroke-width="0.100" data-pos="0"/>
+  <text x="1.90" y="14.42" font-size="1.80" font-family="serif" fill="#000000" data-pos="0">= 80</text>
+  <rect x="0.30" y="9.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
+  <text x="3.01" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">Main</text>
   </g>
 </svg>

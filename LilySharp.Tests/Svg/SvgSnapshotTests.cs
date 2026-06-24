@@ -93,6 +93,9 @@ public class SvgSnapshotTests
         yield return new object[] { "test/break" };
         yield return new object[] { "test/lyrics" };
         yield return new object[] { "test/multi-voice" };
+        // Sequential measures around a << \\ >> span — the single-voice measures
+        // before and after the parallel block must not be dropped.
+        yield return new object[] { "test/voice-mixed" };
         yield return new object[] { "test/collision" };
         yield return new object[] { "test/phrases" };
         yield return new object[] { "test/ornaments" };
