@@ -8,11 +8,11 @@ time 4/4
 key c major
 
 part rightHand {
-  clef: treble
+  clef treble
 }
 
 part leftHand {
-  clef: bass
+  clef bass
 }
 
 phrase rhTheme {

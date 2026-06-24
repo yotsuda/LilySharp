@@ -8,7 +8,7 @@ time 4/4
 key c major
 
 part melody {
-  clef: treble
+  clef treble
 }
 
 // Phrase with mid-measure clef change: treble → bass → treble

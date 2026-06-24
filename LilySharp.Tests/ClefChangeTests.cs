@@ -40,7 +40,7 @@ public class ClefChangeTests
     public void ClefChangeItem_InMeasure_DetectedCorrectly()
     {
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4 d clef bass c,4 d | }
 section A { melody { $m } }
 structure { A }
@@ -86,7 +86,7 @@ render score ""test.svg"" { staff { melody } }
     public void ClefChange_MultipleMeasures_TrackedCorrectly()
     {
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4 d e f | clef bass c,4 d e f | clef treble c'4 d e f | }
 section A { melody { $m } }
 structure { A }
@@ -133,7 +133,7 @@ render score ""test.svg"" { staff { melody } }
     public void ClefChange_RenderedInSvg_ChangeGlyphs()
     {
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4 d e f | g4 a clef bass c,4 d | }
 section A { melody { $m } }
 structure { A }
@@ -155,7 +155,7 @@ render score ""test.svg"" { staff { melody } }
         // Use enough measures to force a natural system break.
         // The clef changes to bass at measure 3, so system 2 should start with bass clef.
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4 d e f | g4 a b c' | clef bass c,4 d e f | g4 a b c | e4 f g a | b4 c d e | g4 a b c | e4 f g a | }
 section A { melody { $m } }
 structure { A }

@@ -275,7 +275,7 @@ key g major
     public void ParsePropertyAssignment()
     {
         var tree = SyntaxTree.Parse(@"part {
-    clef: treble
+    clef treble
     relative c' { c d e f }
 }");
         var part = tree.Root.GetSlot(0) as PartDeclarationGreen;
@@ -343,11 +343,11 @@ key a minor
 score {
     part Piano {
         staff RH {
-            clef: treble
+            clef treble
             relative c'' { e8 dis e dis e b d c | a4. }
         }
         staff LH {
-            clef: bass
+            clef bass
             relative c { r4. a8 e' a | c4. }
         }
     }
@@ -363,8 +363,8 @@ score {
     public void ParseScoreWithProperties()
     {
         var tree = SyntaxTree.Parse(@"score {
-    tempo: 120
-    time: 4/4
+    tempo 120
+    time 4/4
     key: c major
 
     part {

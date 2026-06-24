@@ -21,41 +21,24 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A part/staff header attribute is written bare (<c>name value</c>), the same
-/// as a top-level directive — <c>clef treble</c>, <c>transpose d</c>,
-/// <c>time 4/4</c>. The colon form (<c>clef: treble</c>) is still accepted during
-/// the migration off colons but is no longer the canonical spelling.
+/// Every directive — at the top level, in a part/staff header, or in the music
+/// stream — is written bare (<c>keyword value</c>): <c>clef treble</c>,
+/// <c>transpose d</c>, <c>time 4/4</c>. There is one form, no colon; the old
+/// <c>name: value</c> header spelling is rejected.
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class PartHeaderPropertyTests
 {
     [Fact]
-    public void PartHeader_TimeWithColon_Parses()
+    public void PartHeader_BareAttributes_Parse()
     {
-        var tree = SyntaxTree.Parse("part melody { time: 4/4 }");
+        var tree = SyntaxTree.Parse("part melody { clef treble transpose d octave 0 }");
         Assert.False(tree.HasErrors);
-
-        var time = tree.GetRoot().DescendantNodes<TimeSignatureSyntax>().Single();
-        Assert.NotNull(time.Colon);
-        Assert.Equal(4, time.Beats);
-        Assert.Equal(4, time.BeatType);
     }
 
     [Fact]
-    public void PartHeader_TempoWithColon_Parses()
+    public void PartHeader_TimeBare_Parses()
     {
-        var tree = SyntaxTree.Parse("part melody { tempo: 120 }");
-        Assert.False(tree.HasErrors);
-
-        var tempo = tree.GetRoot().DescendantNodes<TempoDeclarationSyntax>().Single();
-        Assert.NotNull(tempo.Colon);
-        Assert.Equal(120, tempo.Bpm);
-    }
-
-    [Fact]
-    public void PartHeader_TimeWithoutColon_Parses()
-    {
-        // Bare is the canonical header form: `time 4/4` is valid, no colon.
         var tree = SyntaxTree.Parse("part melody { time 4/4 }");
         Assert.False(tree.HasErrors);
 
@@ -66,25 +49,29 @@ public sealed class PartHeaderPropertyTests
     }
 
     [Fact]
-    public void PartHeader_ClefBare_Parses()
+    public void PartHeader_ClefColon_IsError()
     {
-        var tree = SyntaxTree.Parse("part melody { clef treble transpose d }");
-        Assert.False(tree.HasErrors);
+        var tree = SyntaxTree.Parse("part melody { clef: treble }");
+        Assert.True(tree.HasErrors);
     }
 
     [Fact]
-    public void PartHeader_ColonForm_RoundTrips()
+    public void PartHeader_TimeColon_IsError()
     {
-        var source = "part melody { time: 4/4 tempo: 120 }";
-        var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors);
-        Assert.Equal(source, tree.ToFullString());
+        var tree = SyntaxTree.Parse("part melody { time: 4/4 }");
+        Assert.True(tree.HasErrors);
     }
 
     [Fact]
-    public void MusicStream_TimeWithoutColon_StillWorks()
+    public void PartHeader_TempoColon_IsError()
     {
-        // The bare command form stays valid outside a part/staff header.
+        var tree = SyntaxTree.Parse("part melody { tempo: 120 }");
+        Assert.True(tree.HasErrors);
+    }
+
+    [Fact]
+    public void MusicStream_TimeBare_Works()
+    {
         var source = "time 4/4 { c4 d e f }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
@@ -93,5 +80,12 @@ public sealed class PartHeaderPropertyTests
         var time = tree.GetRoot().DescendantNodes<TimeSignatureSyntax>().Single();
         Assert.Null(time.Colon);
         Assert.Equal(4, time.Beats);
+    }
+
+    [Fact]
+    public void TopLevel_TransposeBare_Parses()
+    {
+        var tree = SyntaxTree.Parse("transpose d part melody { clef treble } section Main { melody { c4 } } structure { Main }");
+        Assert.False(tree.HasErrors);
     }
 }

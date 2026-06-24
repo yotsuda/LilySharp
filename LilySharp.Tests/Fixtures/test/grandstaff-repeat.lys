@@ -5,11 +5,11 @@
 time 4/4
 
 part rh {
-  clef: treble
+  clef treble
 }
 
 part lh {
-  clef: bass
+  clef bass
 }
 
 phrase rhTune {

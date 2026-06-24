@@ -20,8 +20,8 @@
             "time ${3:4/4}",
             "key ${4:c} ${5|major,minor|}",
             "",
-            "part rightHand { clef: treble }",
-            "part leftHand { clef: bass }",
+            "part rightHand { clef treble }",
+            "part leftHand { clef bass }",
             "",
             "section ${6:Main} {",
             "\trightHand { ${7:c'4 d' e' f' | g'2 g' |} }",
@@ -133,7 +133,7 @@
     },
     "Part Declaration": {
         "prefix": "part",
-        "body": "part ${1:name} { clef: ${2|treble,bass,alto,tenor|} }",
+        "body": "part ${1:name} { clef ${2|treble,bass,alto,tenor|} }",
         "description": "Part declaration with clef"
     },
     "Key Signature": {

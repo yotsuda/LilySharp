@@ -107,7 +107,7 @@ public class OctaveTests
         // With bass clef part, initial octave should be 3
         // Bass clef: staffPosition 0 = d3
         var source = @"
-part bassline { clef: bass }
+part bassline { clef bass }
 section A {
     bassline { c4 d e f | }
 }
@@ -138,7 +138,7 @@ render score ""test.svg"" {
     {
         // Instrument "cello" should set clef=bass, octave=3
         var source = @"
-part cellopart { instrument: cello }
+part cellopart { instrument cello }
 section A {
     cellopart { c4 d e f | }
 }
@@ -248,7 +248,7 @@ render score ""test.svg"" {
         // Guitar: treble_8 clef, octave=4, so c4 in treble_8 clef
         // staffPosition = pitchIndex(c) - pitchIndex(b) + (4-4)*7 = 0 - 6 = -6
         var source = @"
-part lead { instrument: guitar }
+part lead { instrument guitar }
 section A {
     lead { c4 d e f | }
 }
@@ -268,7 +268,7 @@ render score ""test.svg"" {
         // Flute: treble clef, octave=5
         // c5 in treble clef: staffPosition = pitchIndex(c) - pitchIndex(b) + (5-4)*7 = 0 - 6 + 7 = 1
         var source = @"
-part fl { instrument: flute }
+part fl { instrument flute }
 section A {
     fl { c4 d e f | }
 }
@@ -290,7 +290,7 @@ render score ""test.svg"" {
         // violin defaults to octave=4, but explicit octave: 5 overrides
         // c5 in treble clef: staffPosition = 0 - 6 + (5-4)*7 = 1
         var source = @"
-part high { instrument: violin, octave: 5 }
+part high { instrument violin, octave 5 }
 section A {
     high { c4 d e f | }
 }
@@ -338,7 +338,7 @@ render score ""test.svg"" {
     public void SectionBoundary_ResetsOctaveForBassClef()
     {
         var source = @"
-part bassline { clef: bass }
+part bassline { clef bass }
 section A {
     bassline { c4 d e f | g a b c' | }
 }
@@ -370,7 +370,7 @@ render score ""test.svg"" {
 
         // f should be HIGHER than c (same octave, ascending fourth)
         Assert.True(notes[1].StaffPosition > notes[0].StaffPosition,
-            $"f after c should stay same octave: f(pos={notes[1].StaffPosition}) should be > c(pos={notes[0].StaffPosition})");
+            $"f after c should stay same octave f(pos={notes[1].StaffPosition}) should be > c(pos={notes[0].StaffPosition})");
     }
 
     [Fact]
@@ -383,7 +383,7 @@ render score ""test.svg"" {
 
         // c should be LOWER than f (same octave, descending fourth)
         Assert.True(notes[1].StaffPosition < notes[0].StaffPosition,
-            $"c after f should stay same octave: c(pos={notes[1].StaffPosition}) should be < f(pos={notes[0].StaffPosition})");
+            $"c after f should stay same octave c(pos={notes[1].StaffPosition}) should be < f(pos={notes[0].StaffPosition})");
     }
 
     [Fact]
@@ -397,7 +397,7 @@ render score ""test.svg"" {
     {
         // Verify treble_8 is lexed and parsed as a clef keyword
         var source = @"
-part melody { clef: treble_8 }
+part melody { clef treble_8 }
 section A {
     melody { c4 d e f | }
 }

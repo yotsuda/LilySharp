@@ -27,10 +27,10 @@ key g major
 
 // --- パート定義（G1: ヘッダ属性はすべてコロン形式 attr: value）---------------
 part rh {
-  clef: treble
+  clef treble
 }
 part lh {
-  clef: bass
+  clef bass
 }
 
 // --- フレーズ（G2: 名前付き楽譜は phrase のみ。参照は $名前）-----------------

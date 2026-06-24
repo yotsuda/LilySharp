@@ -69,7 +69,7 @@ render score ""test.svg"" { staff { vln1 } }
     public void StaffSpec_NoInstrumentName_ReturnsNull()
     {
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c4 d e f }
 section A { melody { $m } }
 structure { A }
@@ -86,8 +86,8 @@ render score ""test.svg"" { staff { melody } }
     public void GrandStaff_InstrumentName_CenteredInSvg()
     {
         var source = @"
-part rh { clef: treble  name: Piano }
-part lh { clef: bass }
+part rh { clef treble  name: Piano }
+part lh { clef bass }
 phrase rhM { c4 d e f }
 phrase lhM { c,4 d e f }
 section A { rh { $rhM } lh { $lhM } }
@@ -109,8 +109,8 @@ render score ""test.svg"" { grandStaff { staff { rh } staff { lh } } }
     public void MultiStaff_EachStaffHasOwnName()
     {
         var source = @"
-part vln { clef: treble  name: Violin }
-part vla { clef: alto  name: Viola }
+part vln { clef treble  name: Violin }
+part vla { clef alto  name: Viola }
 phrase m { c4 d e f }
 section A { vln { $m } vla { $m } }
 structure { A }
@@ -129,8 +129,8 @@ render score ""test.svg"" { staff { vln } staff { vla } }
     {
         // Multi-staff render spec needed for instrument name display
         var source = @"
-part vln { clef: treble  name: ""Violin I"" }
-part vla { clef: alto  name: Viola }
+part vln { clef treble  name: ""Violin I"" }
+part vla { clef alto  name: Viola }
 phrase m { c4 d e f }
 section A { vln { $m } vla { $m } }
 structure { A }

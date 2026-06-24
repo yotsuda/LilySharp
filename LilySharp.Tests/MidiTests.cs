@@ -279,7 +279,7 @@ lyrics { Hap -- py birth -- day }
     public void ExportTransposedPart_ShiftsSoundingPitchUp()
     {
         var source = @"
-part clar { clef: treble transpose: d }
+part clar { clef treble transpose d }
 section Main { clar { c4 d e } }
 structure { Main }
 render score ""x.svg"" { staff { clar } }";
@@ -298,7 +298,7 @@ render score ""x.svg"" { staff { clar } }";
     public void ExportTransposedPart_OctaveMarkGoesDown()
     {
         var source = @"
-part lower { clef: bass transpose: c, }
+part lower { clef bass transpose c, }
 section Main { lower { c4 d e } }
 structure { Main }
 render score ""x.svg"" { staff { lower } }";

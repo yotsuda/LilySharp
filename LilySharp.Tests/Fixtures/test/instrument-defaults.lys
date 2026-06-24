@@ -8,22 +8,22 @@ time 4/4
 
 // Guitar: should default to treble_8, octave 4
 part guitar {
-  instrument: guitar
+  instrument guitar
 }
 
 // Tenor: should default to treble_8, octave 4
 part tenorVoice {
-  instrument: tenor
+  instrument tenor
 }
 
 // Piano right hand: treble clef
 part pianoRH {
-  clef: treble
+  clef treble
 }
 
 // Piano left hand: bass clef
 part pianoLH {
-  clef: bass
+  clef bass
 }
 
 phrase guitarLine {

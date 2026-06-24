@@ -136,7 +136,7 @@ public class SectionOrientedTests
             section A { guitar { c4 } }
             structure { A }
             render audio "song.mid" {
-                guitar channel:1 instrument:25
+                guitar channel 1 instrument 25
             }
             """;
         var tree = SyntaxTree.Parse(source);

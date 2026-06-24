@@ -13,11 +13,11 @@
 time 3/8
 
 part rh {
-  clef: treble
+  clef treble
 }
 
 part lh {
-  clef: bass
+  clef bass
 }
 
 section Main {

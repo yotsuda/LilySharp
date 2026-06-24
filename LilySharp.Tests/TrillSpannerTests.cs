@@ -50,7 +50,7 @@ public class TrillSpannerTests
     public void StartTrillSpan_Detected_InSingleMeasure()
     {
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4@startTrillSpan d e f@stopTrillSpan | }
 section A { melody { $m } }
 structure { A }
@@ -80,7 +80,7 @@ render score ""test.svg"" { staff { melody } }
     public void StartTrillSpan_SpanningMultipleMeasures()
     {
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4@startTrillSpan d e f | g4 a b c'@stopTrillSpan | }
 section A { melody { $m } }
 structure { A }
@@ -100,7 +100,7 @@ render score ""test.svg"" { staff { melody } }
     public void MultipleTrillSpanners_PairedCorrectly()
     {
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4@startTrillSpan d@stopTrillSpan e4@startTrillSpan f@stopTrillSpan | }
 section A { melody { $m } }
 structure { A }
@@ -125,7 +125,7 @@ render score ""test.svg"" { staff { melody } }
     public void TrillSpanner_RenderedInSvg_ContainsGlyph()
     {
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4@startTrillSpan d e f@stopTrillSpan | g4 a b c' | }
 section A { melody { $m } }
 structure { A }
@@ -152,7 +152,7 @@ render score ""test.svg"" { staff { melody } }
     {
         // Test @trillSpan.start / @trillSpan.stop compound syntax
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4@trillSpan.start d e f@trillSpan.stop | g4 a b c' | }
 section A { melody { $m } }
 structure { A }
@@ -174,7 +174,7 @@ render score ""test.svg"" { staff { melody } }
     {
         // Unpaired start should not produce a spanner
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4@startTrillSpan d e f | }
 section A { melody { $m } }
 structure { A }

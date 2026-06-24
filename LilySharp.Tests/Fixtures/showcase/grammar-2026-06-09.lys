@@ -16,10 +16,10 @@ key c major
 //      (contrast with the top-level command form above).
 // -----------------------------------------------------------------------------
 part melody {
-  clef: treble
-  time: 4/4
-  tempo: 120
-  instrument: "Violin"
+  clef treble
+  time 4/4
+  tempo 120
+  instrument "Violin"
 }
 
 // -----------------------------------------------------------------------------

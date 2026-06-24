@@ -80,7 +80,7 @@ render score ""test.svg"" {
     {
         var source = @"
 part melody {
-    clef: treble
+    clef treble
 }
 
 section A {

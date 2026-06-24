@@ -113,8 +113,8 @@ render guitarTab ""guitar.svg"" {
     {
         var source = @"
 render audio ""song.mid"" {
-    guitar channel:1 instrument:25
-    bass channel:2 instrument:33
+    guitar channel 1 instrument 25
+    bass channel 2 instrument 33
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);

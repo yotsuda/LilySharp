@@ -8,10 +8,10 @@ time 4/4
 key d major  // 2 sharps: F#, C#
 
 part treblePart {
-  clef: treble
+  clef treble
 }
 part bassPart {
-  clef: bass
+  clef bass
 }
 
 phrase treblePhrase {

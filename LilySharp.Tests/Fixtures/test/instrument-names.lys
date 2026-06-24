@@ -7,22 +7,22 @@ tempo 120
 time 4/4
 
 part violin1 {
-  clef: treble
+  clef treble
   name: "Violin I"
 }
 
 part violin2 {
-  clef: treble
+  clef treble
   name: "Violin II"
 }
 
 part viola {
-  clef: alto
+  clef alto
   name: Viola
 }
 
 part cello {
-  clef: bass
+  clef bass
   name: Cello
 }
 

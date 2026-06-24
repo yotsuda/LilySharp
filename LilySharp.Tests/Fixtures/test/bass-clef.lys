@@ -7,7 +7,7 @@ time 4/4
 key f major
 
 part bass_part {
-  clef: bass
+  clef bass
 }
 
 phrase test {

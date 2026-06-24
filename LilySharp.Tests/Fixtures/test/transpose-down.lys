@@ -8,7 +8,7 @@ composer "Lily#"
 time 4/4
 key g major
 
-part melody { clef: treble transpose: bes, }
+part melody { clef treble transpose bes, }
 
 section Main {
   melody { g'4 a b c | d2 g | }

@@ -7,7 +7,7 @@ tempo 120
 time 4/4
 
 part bassLine {
-  clef: bass
+  clef bass
 }
 
 // F major in bass clef (1 flat: Bb)

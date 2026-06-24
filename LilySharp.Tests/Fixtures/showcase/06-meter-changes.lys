@@ -9,7 +9,7 @@ tempo 100
 time 4/4
 key g major
 
-part melody { clef: treble }
+part melody { clef treble }
 
 phrase tune {
   g'4 a b a |

@@ -9,7 +9,7 @@ composer "Lily#"
 time 4/4
 key c major
 
-part melody { clef: treble transpose: d }
+part melody { clef treble transpose d }
 
 section Main {
   melody {

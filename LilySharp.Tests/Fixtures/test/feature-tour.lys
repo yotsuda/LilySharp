@@ -22,7 +22,7 @@ key g major
 
 part melody
 part lh {
-  clef: bass
+  clef bass
 }
 
 // ---- 1. 基本記譜 -----------------------------------------------------------

@@ -41,7 +41,7 @@ public class CourtesyAccidentalTests
     {
         // cis in measure 1, c (natural) in measure 2 → courtesy natural
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { cis'4 d e f | c4 d e f | }
 section A { melody { $m } }
 structure { A }
@@ -64,7 +64,7 @@ render score """"test.svg"""" { staff { melody } }
     {
         // bes in measure 1, b (natural) in measure 2 → courtesy natural
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { bes'4 c d e | b4 c d e | }
 section A { melody { $m } }
 structure { A }
@@ -87,7 +87,7 @@ render score """"test.svg"""" { staff { melody } }
         // c after cis in same measure: current accidental engine only checks key signature,
         // so c (matching C major key sig) shows no accidental at all (not even courtesy)
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { cis'4 c d e | }
 section A { melody { $m } }
 structure { A }
@@ -109,7 +109,7 @@ render score """"test.svg"""" { staff { melody } }
     {
         // No alteration in previous measure → no courtesy
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4 d e f | c4 d e f | }
 section A { melody { $m } }
 structure { A }
@@ -130,7 +130,7 @@ render score """"test.svg"""" { staff { melody } }
     {
         // @courtesy annotation forces parenthesized accidental
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { c'4@courtesy d e f | }
 section A { melody { $m } }
 structure { A }
@@ -151,7 +151,7 @@ render score """"test.svg"""" { staff { melody } }
     {
         // Courtesy accidental should render parenthesis glyphs in SVG
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 phrase m { cis'4 d e f | c4 d e f | }
 section A { melody { $m } }
 structure { A }
@@ -210,7 +210,7 @@ render score """"test.svg"""" { staff { melody } }
     {
         // In key of G major (1 sharp = F#), if F# appears then F natural → courtesy
         var source = @"
-part melody { clef: treble }
+part melody { clef treble }
 key g major
 phrase m { fis'4 g a b | f4 g a b | }
 section A { melody { $m } }

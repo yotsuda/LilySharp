@@ -366,7 +366,7 @@ c4 d e f";
     {
         var source = @"
 key c major
-part melody { clef: treble transpose: d }
+part melody { clef treble transpose d }
 section Main { melody { c4 d e } }
 structure { Main }
 render score ""x.svg"" { staff { melody } }";

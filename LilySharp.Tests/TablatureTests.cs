@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -188,7 +188,7 @@ public class TablatureTests
             time 4/4
 
             part guitar {
-              clef: treble
+              clef treble
             }
 
             section Main {

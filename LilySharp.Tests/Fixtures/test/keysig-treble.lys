@@ -7,7 +7,7 @@ tempo 120
 time 4/4
 
 part melody {
-  clef: treble
+  clef treble
 }
 
 // D major scale (2 sharps: F#, C#)

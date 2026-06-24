@@ -10,7 +10,7 @@ time 4/4
 key c major
 
 part melody {
-  clef: treble
+  clef treble
 }
 
 // Phrase with mid-piece meter changes: 4/4 -> 3/4 -> 6/8 -> 2/4.

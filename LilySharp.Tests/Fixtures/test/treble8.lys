@@ -5,15 +5,15 @@ tempo 120
 time 4/4
 
 part gtr {
-  instrument: guitar
+  instrument guitar
 }
 
 part tnr {
-  instrument: tenor
+  instrument tenor
 }
 
 part t8 {
-  clef: treble_8
+  clef treble_8
 }
 
 section Main {
