@@ -124,6 +124,22 @@ public class PitchTransposerTests
         }
     }
 
+    // ---- IntervalSemitones (sounding/MIDI shift) ----
+
+    [Theory]
+    [InlineData("c", 0, 0)]    // unison
+    [InlineData("d", 0, 2)]    // major 2nd up
+    [InlineData("ees", 0, 3)]  // minor 3rd up
+    [InlineData("g", 0, 7)]    // perfect 5th up
+    [InlineData("c", -1, -12)] // down an octave (transpose: c,)
+    [InlineData("bes", -1, -2)]// down a major 2nd (transpose: bes,)
+    [InlineData("d", 1, 14)]   // up a ninth (transpose: d')
+    public void IntervalSemitones_MatchesChromaticSize(string target, int octave, int expected)
+    {
+        Assert.True(PitchTransposer.TryParseTarget(target, out int step, out int alt));
+        Assert.Equal(expected, PitchTransposer.IntervalSemitones(step, alt, octave));
+    }
+
     // ---- KeySignatureFifthsShift ----
 
     [Theory]

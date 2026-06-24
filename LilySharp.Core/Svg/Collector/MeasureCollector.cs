@@ -1354,22 +1354,9 @@ public sealed class MeasureCollector
                     instrument = valueToken.Text.ToLowerInvariant();
                 else if (propName == "octave" && int.TryParse(valueToken.Text, out var oct))
                     octave = oct;
-                else if (propName == "transpose"
-                         && PitchTransposer.TryParseTarget(valueToken.Text, out int tStep, out int tAlt))
-                {
-                    // Octave marks (' / ,) follow the pitch token as extra children.
-                    int tOct = 0;
-                    for (int ci = 3; ci < prop.SlotCount; ci++)
-                    {
-                        if (prop.GetChild(ci) is SyntaxTokenNode mark)
-                        {
-                            if (mark.Kind == SyntaxKind.Apostrophe) tOct++;
-                            else if (mark.Kind == SyntaxKind.Comma) tOct--;
-                        }
-                    }
-                    transpose = (tStep, tAlt, tOct);
-                }
             }
+
+            transpose = PartTranspose.Read(partDecl);
 
             // Resolve clef: explicit > instrument > null
             string? resolvedClef = clef;

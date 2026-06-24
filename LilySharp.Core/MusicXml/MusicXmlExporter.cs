@@ -49,6 +49,11 @@ public sealed class MusicXmlExporter
     // Track parts across sections for multi-section support
     private readonly Dictionary<string, MusicXmlPart> _partsByName = new();
 
+    // Part-option transpose for the part being written: the WRITTEN pitch is
+    // respelled and the key signature shifts with it.
+    private SyntaxNode? _root;
+    private (int step, int alt, int oct)? _currentTranspose;
+
     // Variable/phrase resolution
     private readonly Dictionary<string, SyntaxNode> _variables = new();
 
@@ -57,6 +62,7 @@ public sealed class MusicXmlExporter
         _document = new MusicXmlDocument();
 
         var root = tree.GetRoot();
+        _root = root;
 
         // Check if there are section declarations (multi-part)
         var hasSections = root.DescendantNodes().OfType<SectionDeclarationSyntax>().Any();
@@ -140,6 +146,7 @@ public sealed class MusicXmlExporter
     {
         var partName = partBlock.Name;
         EnsurePart(partName);
+        _currentTranspose = _root != null ? PartTranspose.Read(_root, partName) : null;
 
         // Reset state for this part's continuation
         _currentOctave = 4;
@@ -199,7 +206,9 @@ public sealed class MusicXmlExporter
                 Divisions = DivisionsPerQuarter,
                 TimeBeats = _timeNumerator,
                 TimeBeatType = _timeDenominator,
-                KeyFifths = _keyFifths,
+                KeyFifths = _currentTranspose is { } trk
+                    ? _keyFifths + PitchTransposer.KeySignatureFifthsShift(trk.step, trk.alt)
+                    : _keyFifths,
                 KeyMode = _keyMode,
                 ClefSign = _clefSign,
                 ClefLine = _clefLine
@@ -385,12 +394,27 @@ public sealed class MusicXmlExporter
         };
     }
 
+    // Respells a written pitch for a transposed part (no-op otherwise). The
+    // relative octave is resolved on the ORIGINAL pitch by the caller; this only
+    // moves the printed step / alter / octave.
+    private (string step, int alter, int octave) ApplyTranspose(
+        PitchSyntax pitch, string step, int alter, int octave)
+    {
+        if (_currentTranspose is not { } tr)
+            return (step, alter, octave);
+        var (ns, na, no) = PitchTransposer.Transpose(
+            RelativeOctave.StepIndex(pitch.BaseName), pitch.AccidentalOffset, octave,
+            tr.step, tr.alt, tr.oct);
+        return ("CDEFGAB"[ns].ToString(), na, no);
+    }
+
     private void ProcessNote(NoteSyntax note)
     {
         if (_currentMeasure == null) return;
 
         var (step, alter) = ParsePitch(note.Pitch);
         int targetOctave = ResolveRelativeOctave(note.Pitch);
+        (step, alter, targetOctave) = ApplyTranspose(note.Pitch, step, alter, targetOctave);
 
         var duration = GetDuration(note.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -443,6 +467,7 @@ public sealed class MusicXmlExporter
         {
             var (step, alter) = ParsePitch(pitch);
             int targetOctave = ResolveRelativeOctave(pitch); // advances state per pitch
+            (step, alter, targetOctave) = ApplyTranspose(pitch, step, alter, targetOctave);
 
             if (isFirst) { firstStep = _currentStep; firstOctave = _currentOctave; }
 

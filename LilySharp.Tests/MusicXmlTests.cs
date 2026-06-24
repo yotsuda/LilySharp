@@ -360,4 +360,31 @@ c4 d e f";
         Assert.NotEmpty(graces);
         Assert.Equal("yes", graces[0].Attribute("slash")?.Value);
     }
+
+    [Fact]
+    public void ExportTransposedPart_RespellsPitchAndShiftsKey()
+    {
+        var source = @"
+key c major
+part melody { clef: treble transpose: d }
+section Main { melody { c4 d e } }
+structure { Main }
+render score ""x.svg"" { staff { melody } }";
+        var tree = SyntaxTree.Parse(source);
+        var xml = new MusicXmlExporter().Export(tree);
+        var measure = xml.Parts[0].Measures[0];
+        var notes = measure.Notes;
+
+        // transpose: d respells the written pitch up a major 2nd: c d e -> d e fis.
+        Assert.Equal("D", notes[0].Step);
+        Assert.Equal(0, notes[0].Alter);
+        Assert.Equal("E", notes[1].Step);
+        Assert.Equal(0, notes[1].Alter);
+        Assert.Equal("F", notes[2].Step);
+        Assert.Equal(1, notes[2].Alter); // e -> fis (F#)
+
+        // The key moves with the music: C major (0) -> D major (2 sharps).
+        Assert.NotNull(measure.Attributes);
+        Assert.Equal(2, measure.Attributes.KeyFifths);
+    }
 }

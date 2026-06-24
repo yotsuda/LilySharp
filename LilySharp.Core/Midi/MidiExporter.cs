@@ -41,6 +41,11 @@ public sealed class MidiExporter
     private int _lastNoteIndex = -1;
     private MidiTrack? _lastNoteTrack;
 
+    // Sounding-pitch transpose for the part currently being played. A part option
+    // transpose: shifts every note by the interval's semitones (no respelling).
+    private SyntaxNode? _root;
+    private int _currentTransposeSemitones;
+
     public MidiExporter(int ticksPerQuarter = MidiFile.DefaultTicksPerQuarter)
     {
         _ticksPerQuarter = ticksPerQuarter;
@@ -55,7 +60,8 @@ public sealed class MidiExporter
         midi.Tracks.Add(conductorTrack);
 
         var mainTrack = new MidiTrack { Name = "Track 1", Channel = 0 };
-        ProcessNode(tree.GetRoot(), mainTrack, conductorTrack);
+        _root = tree.GetRoot();
+        ProcessNode(_root, mainTrack, conductorTrack);
 
         // Add initial time signature (may have been updated during processing)
         conductorTrack.TimeSignatures.Insert(0, new TimeSignatureChange(0, _timeNumerator, _timeDenominator));
@@ -84,6 +90,17 @@ public sealed class MidiExporter
 
             case StaffDeclarationSyntax staff:
                 ProcessChildren(staff, track, conductorTrack);
+                break;
+
+            case PartBlockSyntax partBlock:
+                // A section's `partName { ... }` block: arm the part's transpose
+                // (sounding-pitch shift) for the notes inside, then disarm it.
+                var transpose = _root != null ? PartTranspose.Read(_root, partBlock.Name) : null;
+                _currentTransposeSemitones = transpose is { } t
+                    ? PitchTransposer.IntervalSemitones(t.step, t.alt, t.oct)
+                    : 0;
+                ProcessChildren(partBlock, track, conductorTrack);
+                _currentTransposeSemitones = 0;
                 break;
 
             case MusicBlockSyntax block:
@@ -333,7 +350,9 @@ public sealed class MidiExporter
             'g' => 7, 'a' => 9, 'b' => 11, _ => 0
         };
 
-        return Math.Clamp(basePitch + pitch.AccidentalOffset + (targetOctave + 1) * 12, 0, 127);
+        return Math.Clamp(
+            basePitch + pitch.AccidentalOffset + (targetOctave + 1) * 12 + _currentTransposeSemitones,
+            0, 127);
     }
 
     /// <summary>

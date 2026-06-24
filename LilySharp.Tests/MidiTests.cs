@@ -274,4 +274,42 @@ lyrics { Hap -- py birth -- day }
         // 140 BPM = 428571 microseconds per beat
         Assert.Contains(conductorTrack.TempoChanges, tc => tc.MicrosecondsPerBeat == 428571);
     }
+
+    [Fact]
+    public void ExportTransposedPart_ShiftsSoundingPitchUp()
+    {
+        var source = @"
+part clar { clef: treble transpose: d }
+section Main { clar { c4 d e } }
+structure { Main }
+render score ""x.svg"" { staff { clar } }";
+        var tree = SyntaxTree.Parse(source);
+        var midi = new MidiExporter().Export(tree);
+        var notes = midi.Tracks[1].Notes;
+
+        Assert.Equal(3, notes.Count);
+        // transpose: d shifts every sounding pitch up a major 2nd (+2 semitones).
+        Assert.Equal(62, notes[0].Pitch); // c (60) -> d
+        Assert.Equal(64, notes[1].Pitch); // d (62) -> e
+        Assert.Equal(66, notes[2].Pitch); // e (64) -> fis
+    }
+
+    [Fact]
+    public void ExportTransposedPart_OctaveMarkGoesDown()
+    {
+        var source = @"
+part lower { clef: bass transpose: c, }
+section Main { lower { c4 d e } }
+structure { Main }
+render score ""x.svg"" { staff { lower } }";
+        var tree = SyntaxTree.Parse(source);
+        var midi = new MidiExporter().Export(tree);
+        var notes = midi.Tracks[1].Notes;
+
+        Assert.Equal(3, notes.Count);
+        // transpose: c, drops every sounding pitch one octave (-12 semitones).
+        Assert.Equal(48, notes[0].Pitch); // c (60) -> c one octave down
+        Assert.Equal(50, notes[1].Pitch); // d (62) -> d
+        Assert.Equal(52, notes[2].Pitch); // e (64) -> e
+    }
 }

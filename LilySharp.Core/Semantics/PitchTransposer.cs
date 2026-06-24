@@ -108,6 +108,13 @@ public static class PitchTransposer
     private static int Mod(int a, int b) => ((a % b) + b) % b;
 
     /// <summary>
+    /// The chromatic size, in semitones, of the interval from c to the target.
+    /// A sounding pitch (MIDI) only needs this shift — no respelling.
+    /// </summary>
+    public static int IntervalSemitones(int toStep, int toAlteration, int toOctave = 0)
+        => StepSemitone[toStep] + toAlteration + 12 * toOctave;
+
+    /// <summary>
     /// How a key signature's sharp count changes when the music is transposed
     /// up by the c→(toStep, toAlteration) interval — each fifth adds one sharp.
     /// C major (0) with <c>transpose: d</c> → D major (+2 sharps).
