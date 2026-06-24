@@ -1,0 +1,17 @@
+// Mid-piece tempo change: 'tempo' is now an event in the music stream (like
+// key/clef/time), so a new metronome mark (quarter = NNN) is printed above the
+// staff at the change point. Verified against LilyPond \tempo 4 = NNN.
+title "Tempo Changes"
+composer "Lily#"
+
+tempo 120
+time 4/4
+
+part melody { clef treble }
+
+section Main {
+  melody { c'4 d e f | tempo 160 g4 a g f | e4 d c2 | }
+}
+
+structure { Main }
+render score "tempo-change.svg" { staff { melody } }

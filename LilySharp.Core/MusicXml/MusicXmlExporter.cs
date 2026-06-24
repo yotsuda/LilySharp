@@ -339,8 +339,13 @@ public sealed class MusicXmlExporter
 
     private void ProcessTempo(TempoDeclarationSyntax tempo)
     {
-        if (tempo.Bpm is int bpm)
-            _tempo = bpm;
+        if (tempo.Bpm is not int bpm)
+            return;
+        _tempo = bpm;
+        // A mid-piece tempo change emits a metronome direction at this point; the
+        // initial tempo is carried by the first measure's attributes direction.
+        if (_currentMeasure != null && (_currentMeasure.Notes.Count > 0 || _currentMeasure.Number > 1))
+            _currentMeasure.Directions.Add(new MusicXmlDirection { Tempo = bpm });
     }
 
     private void ProcessMetadata(MetadataDeclarationSyntax metadata)

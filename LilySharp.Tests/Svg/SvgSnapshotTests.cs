@@ -136,6 +136,9 @@ public class SvgSnapshotTests
         // Top-level (score-wide) transpose default + bare headers: both parts
         // inherit transpose d (C major -> D major). Verified vs LilyPond.
         yield return new object[] { "test/transpose-score" };
+        // Mid-piece tempo change: a new metronome mark (quarter = 160) prints at
+        // the change point in the music stream. Verified vs LilyPond \tempo.
+        yield return new object[] { "test/tempo-change" };
     }
 
     /// <summary>

@@ -387,4 +387,22 @@ render score ""x.svg"" { staff { melody } }";
         Assert.NotNull(measure.Attributes);
         Assert.Equal(2, measure.Attributes.KeyFifths);
     }
+
+    [Fact]
+    public void ExportMidPieceTempo_EmitsDirection()
+    {
+        var source = @"
+tempo 120
+time 4/4
+part m { clef treble }
+section Main { m { c4 d e f | tempo 160 g a b c } }
+structure { Main }
+render score ""x.svg"" { staff { m } }";
+        var tree = SyntaxTree.Parse(source);
+        var xml = new MusicXmlExporter().Export(tree);
+        var measures = xml.Parts[0].Measures;
+
+        // The second measure carries a tempo direction of 160.
+        Assert.Contains(measures[1].Directions, d => d.Tempo == 160);
+    }
 }

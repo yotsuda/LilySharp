@@ -682,6 +682,7 @@ internal sealed class Parser
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
+            SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
 
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),

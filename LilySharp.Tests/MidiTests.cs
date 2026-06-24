@@ -312,4 +312,22 @@ render score ""x.svg"" { staff { lower } }";
         Assert.Equal(50, notes[1].Pitch); // d (62) -> d
         Assert.Equal(52, notes[2].Pitch); // e (64) -> e
     }
+
+    [Fact]
+    public void ExportMidPieceTempoChange()
+    {
+        var source = @"
+tempo 120
+time 4/4
+part m { clef treble }
+section Main { m { c4 d e f | tempo 160 g a b c } }
+structure { Main }
+render score ""x.svg"" { staff { m } }";
+        var tree = SyntaxTree.Parse(source);
+        var midi = new MidiExporter().Export(tree);
+        var tempos = midi.Tracks[0].TempoChanges; // conductor track
+
+        Assert.Contains(tempos, t => t.Tick == 0 && t.MicrosecondsPerBeat == 500000);    // 120 BPM
+        Assert.Contains(tempos, t => t.Tick == 1920 && t.MicrosecondsPerBeat == 375000); // 160 BPM at bar 2
+    }
 }

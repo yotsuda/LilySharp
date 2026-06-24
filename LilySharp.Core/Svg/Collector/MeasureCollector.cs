@@ -888,6 +888,7 @@ public sealed class MeasureCollector
             case ClefDeclarationSyntax:
             case KeySignatureSyntax:
             case TimeSignatureSyntax:
+            case TempoDeclarationSyntax:
                 musicNodes.Add(node);
                 break;
 
@@ -1116,6 +1117,18 @@ public sealed class MeasureCollector
                     var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType);
                     var timeChange = new TimeSignatureChangeItem(newTime, timeSigChange.Position);
                     builder.AddItem(timeChange);
+                }
+                break;
+
+            case TempoDeclarationSyntax tempoChange:
+                {
+                    // Mid-piece tempo change: a metronome mark (♩= NNN) above the
+                    // staff at this point (the initial tempo is drawn from
+                    // Score.Tempo). LILYPOND-REF: scm/define-grobs.scm MetronomeMark.
+                    if (tempoChange.Bpm is int bpm)
+                        _musicMarks.Add(new MusicMarkItem(
+                            MusicMarkType.Tempo, bpm.ToString(),
+                            builder.CurrentMeasureIndex, tempoChange.Position));
                 }
                 break;
 
@@ -1672,7 +1685,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && !IsInsideInlineVolta(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or InlineVoltaSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or KeySignatureSyntax or TimeSignatureSyntax);
+                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && !IsInsideInlineVolta(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or InlineVoltaSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax);
             ProcessNodes(musicNodes);
         }
 
@@ -1949,6 +1962,7 @@ public sealed class MeasureCollector
                 case ClefDeclarationSyntax:
                 case KeySignatureSyntax:
                 case TimeSignatureSyntax:
+                case TempoDeclarationSyntax:
                     musicNodes.Add(node);
                     break;
 
@@ -1979,7 +1993,7 @@ public sealed class MeasureCollector
         if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or InlineVoltaSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-            or ClefDeclarationSyntax or KeySignatureSyntax or TimeSignatureSyntax)
+            or ClefDeclarationSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax)
         {
             musicNodes.Add(expression);
         }
@@ -1994,7 +2008,7 @@ public sealed class MeasureCollector
                 && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
                 or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or InlineVoltaSyntax
                 or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-                or ClefDeclarationSyntax or KeySignatureSyntax or TimeSignatureSyntax);
+                or ClefDeclarationSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax);
 
         musicNodes.AddRange(nodes);
     }
