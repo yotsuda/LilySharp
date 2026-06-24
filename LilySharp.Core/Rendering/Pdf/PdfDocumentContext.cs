@@ -38,6 +38,14 @@ public sealed class PdfDocumentOptions
     /// <summary>Fixed page height in points (used when AutoSizePages = false).</summary>
     public double PageHeightPt { get; init; } = 841.89;
 
+    /// <summary>
+    /// Extra margin (points) added on every side of an auto-sized page, on top
+    /// of the engraving's own small left/top margins. Content is shifted by this
+    /// amount so the page keeps a symmetric border instead of the music running
+    /// to the right/bottom edge. Ignored when AutoSizePages = false.
+    /// </summary>
+    public double AutoSizeMarginPt { get; init; } = 18.0;  // ~6.4 mm
+
     /// <summary>Optional font directory override.</summary>
     public string? FontDirectory { get; init; }
 }
@@ -73,10 +81,15 @@ public sealed class PdfDocumentContext : IDocumentContext
             throw new InvalidOperationException("Previous page not ended.");
 
         var page = _document.AddPage();
+        double originPt = 0;
         if (_options.AutoSizePages)
         {
-            page.Width = widthSpaces * _options.PointsPerSpace;
-            page.Height = heightSpaces * _options.PointsPerSpace;
+            // Pad the content box on every side so the music doesn't touch the
+            // page edge; shift the drawing origin by the same amount to keep the
+            // left/right (and top/bottom) borders symmetric.
+            originPt = _options.AutoSizeMarginPt;
+            page.Width = widthSpaces * _options.PointsPerSpace + 2 * originPt;
+            page.Height = heightSpaces * _options.PointsPerSpace + 2 * originPt;
         }
         else
         {
@@ -85,7 +98,7 @@ public sealed class PdfDocumentContext : IDocumentContext
         }
 
         _currentGfx = XGraphics.FromPdfPage(page);
-        _currentPage = new PdfDrawingContext(_currentGfx, _options.PointsPerSpace);
+        _currentPage = new PdfDrawingContext(_currentGfx, _options.PointsPerSpace, originPt);
         return _currentPage;
     }
 

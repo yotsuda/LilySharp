@@ -23,14 +23,17 @@ internal sealed class PdfDrawingContext : IDrawingContext
 {
     private readonly XGraphics _gfx;
     private readonly double _scale;  // points per staff-space
+    private readonly double _originPt; // page-margin offset applied to positions
 
-    public PdfDrawingContext(XGraphics gfx, double pointsPerSpace)
+    public PdfDrawingContext(XGraphics gfx, double pointsPerSpace, double originPt = 0)
     {
         _gfx = gfx;
         _scale = pointsPerSpace;
+        _originPt = originPt;
     }
 
-    private double X(double s) => s * _scale;
+    // Positions are offset by the page margin; sizes (T) are not.
+    private double X(double s) => s * _scale + _originPt;
     private double T(double s) => s * _scale;
     private static XColor ToXColor(Color? c)
     {

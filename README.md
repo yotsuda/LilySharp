@@ -245,4 +245,5 @@ This program is free software: you can redistribute it and/or modify it under th
 
 - LilyPond for inspiration on music notation syntax
 - Roslyn for the Red-Green tree pattern
-- Emmentaler font (SIL Open Font License)
+- Emmentaler font (SIL Open Font License) — music glyphs
+- Liberation Serif font (SIL Open Font License) — text in PDF output; see `LilySharp.Core/Fonts/LiberationSerif-LICENSE.OFL.txt`

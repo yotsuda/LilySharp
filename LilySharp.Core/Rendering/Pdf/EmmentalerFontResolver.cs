@@ -49,6 +49,21 @@ internal sealed class EmmentalerFontResolver : IFontResolver
             return new FontResolverInfo("Emmentaler#");
         if (name == "emmentaler-brace")
             return new FontResolverInfo("EmmentalerBrace#");
+        // SharedRenderer asks for the CSS-generic "serif" for titles/lyrics/
+        // dynamics. SVG/PNG let the viewer/Skia map that to a real serif, but
+        // PdfSharpCore's fallback has no "serif" face and substitutes an
+        // arbitrary installed font (e.g. the sans-serif "Agency"), so PDFs looked
+        // nothing like the SVG — and embedded a proprietary system font. Resolve
+        // it to the bundled Liberation Serif (SIL OFL 1.1, metric-compatible with
+        // Times), which is licensed for both embedding and redistribution.
+        if (name is "serif")
+            return new FontResolverInfo((isBold, isItalic) switch
+            {
+                (true, true) => "LiberationSerif-BoldItalic#",
+                (true, false) => "LiberationSerif-Bold#",
+                (false, true) => "LiberationSerif-Italic#",
+                _ => "LiberationSerif#",
+            });
         return _fallback?.ResolveTypeface(familyName, isBold, isItalic);
     }
 
@@ -58,6 +73,10 @@ internal sealed class EmmentalerFontResolver : IFontResolver
         {
             "Emmentaler#" => "emmentaler-20.otf",
             "EmmentalerBrace#" => "emmentaler-brace.otf",
+            "LiberationSerif#" => "LiberationSerif-Regular.ttf",
+            "LiberationSerif-Bold#" => "LiberationSerif-Bold.ttf",
+            "LiberationSerif-Italic#" => "LiberationSerif-Italic.ttf",
+            "LiberationSerif-BoldItalic#" => "LiberationSerif-BoldItalic.ttf",
             _ => null
         };
         if (fileName != null)

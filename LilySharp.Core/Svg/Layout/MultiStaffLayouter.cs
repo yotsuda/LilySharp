@@ -771,6 +771,13 @@ public sealed class MultiStaffLayouter
 
             var springs = _measureLayouter.CreateTimingSprings(primaryMeasure, allTimings, baseShortestDuration, allMeasures);
 
+            // Reserve room for lyric syllables so they don't collide. Only acts
+            // on single-voice measures (timing columns == note items); a no-lyric
+            // score leaves the chain untouched. Applied before the FirstNoteSpring
+            // tweak below, which Math.Max-preserves the widened minimum.
+            if (!score.Lyrics.IsDefaultOrEmpty)
+                springs = SpacingRules.ApplyLyricSpacing(springs, primaryMeasure, i, score.Lyrics);
+
             // LINE-START measure: spring 0 is the prefix→first-note spacing
             // (space-alist of the last prefix item), not the mid-line
             // BarLine semi-shrink. The prefix width itself ends at the ink.
@@ -856,7 +863,15 @@ public sealed class MultiStaffLayouter
                 measureWidth += spring.Length(force);
             }
 
-            var itemLayouts = _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
+            // For a lyric score, place items with the lyric-widened spring chain
+            // (single-voice → columns coincide with items) so syllables sit under
+            // their spread-out notes. Without lyrics, re-solve as before so no
+            // existing layout shifts.
+            var primarySprings = measureSprings[i];
+            var itemLayouts = (!score.Lyrics.IsDefaultOrEmpty
+                    && primarySprings.Length == primaryMeasure.Items.Length + 1)
+                ? _measureLayouter.LayoutItems(primaryMeasure, measureWidth, primarySprings, force)
+                : _measureLayouter.LayoutItems(primaryMeasure, measureWidth);
             var columnLayouts = _measureLayouter.LayoutColumns(
                 primaryMeasure, measureWidth, measureTimings[i],
                 baseShortestDuration, measureAllMeasures[i],

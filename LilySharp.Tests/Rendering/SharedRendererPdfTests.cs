@@ -138,9 +138,11 @@ public sealed class SharedRendererPdfTests
         var stream = DecodeAllContentStreams(bytes);
 
         // Music font (Emmentaler) selected at FontSize × scale = 4 × 6 = 24 pt.
-        // PdfSharpCore assigns /F0 / /F1 in encounter order, so either may
-        // host the music font.
-        Assert.True(stream.Contains("/F0 24 Tf") || stream.Contains("/F1 24 Tf"),
+        // PdfSharpCore assigns /F0, /F1, … in encounter order; the index depends
+        // on how many text faces (serif regular/bold/italic) are also embedded,
+        // so match on the size selection alone — 24 pt is unique to the music
+        // font (text is 19.2 pt).
+        Assert.True(stream.Contains(" 24 Tf"),
             "Expected a 24-pt music font selection (Emmentaler).");
 
         // Lyrics use serif at 0.8 × FontSize × scale = 0.8 × 4 × 6 = 19.2 pt

@@ -326,13 +326,16 @@ $theme              % Insert the phrase's music here
 
 ### Part Declaration
 
+Header attributes are written bare (no colon), the same as the top-level
+`clef` / `key` / `time` / `tempo` commands:
+
 ```
 part rightHand {
-  clef: treble
+  clef treble
 }
 
 part leftHand {
-  clef: bass
+  clef bass
 }
 ```
 
@@ -368,14 +371,23 @@ structure { イントロ イントロ "イントロ(再現)" }
 
 ## Render Block
 
-Controls output layout:
+Controls output layout. Each `staff { partName }` names the part to draw; the
+clef comes from the part declaration, not the render block:
 
 ```
-render score {
+render score "out.svg" {
   grandStaff {
-    staff treble { rightHand }
-    staff bass { leftHand }
+    staff { rightHand }
+    staff { leftHand }
   }
+}
+```
+
+A single-staff score names one staff directly:
+
+```
+render score "out.svg" {
+  staff { melody }
 }
 ```
 

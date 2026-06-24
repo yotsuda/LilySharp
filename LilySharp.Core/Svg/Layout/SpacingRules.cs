@@ -1261,6 +1261,77 @@ public static class SpacingRules
     }
 
     /// <summary>
+    /// Widens an EXISTING spring chain so adjacent syllables don't collide.
+    /// Unlike <see cref="CreateSpringsForMeasureWithLyrics"/> (which builds item
+    /// springs from scratch for the single-staff path), this post-processes the
+    /// timing-column springs used by the multi-staff layouter, so a promoted
+    /// single-staff score gets the same lyric-driven spacing.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:80-85 skyline-based min_distance.
+    /// The spring chain is [start→col0, col0→col1, …, colLast→end]; for a
+    /// single-voice measure the timing columns coincide with the note items, so
+    /// spring i+1 spans item i → item i+1. When the column count does not match
+    /// the item count (extra voices), the mapping breaks down and the chain is
+    /// returned unchanged — lyrics are only engraved on single-voice staves.
+    /// </remarks>
+    public static ImmutableArray<Spring> ApplyLyricSpacing(
+        ImmutableArray<Spring> springs,
+        Measure measure,
+        int measureIndex,
+        IReadOnlyList<LyricItem> lyrics)
+    {
+        if (measure.Items.Length == 0 || springs.Length != measure.Items.Length + 1)
+            return springs;
+
+        var lyricsByItem = new Dictionary<int, List<LyricItem>>();
+        foreach (var lyric in lyrics)
+        {
+            if (lyric.MeasureIndex != measureIndex)
+                continue;
+            if (!lyricsByItem.TryGetValue(lyric.ItemIndex, out var list))
+                lyricsByItem[lyric.ItemIndex] = list = new List<LyricItem>();
+            list.Add(lyric);
+        }
+        if (lyricsByItem.Count == 0)
+            return springs;
+
+        var result = springs.ToBuilder();
+
+        // First spring (start barline → item 0): reserve item 0's left extent.
+        if (lyricsByItem.TryGetValue(0, out var firstLyrics))
+        {
+            var s0 = result[0];
+            double adjustedMin = Math.Max(s0.MinDistance, GetLyricLeftExtent(firstLyrics) + MinItemGap);
+            result[0] = new Spring(Math.Max(s0.IdealDistance, adjustedMin), adjustedMin, s0.InverseStretchStrength);
+        }
+
+        // Between items: spring i+1 spans item i → item i+1.
+        for (int i = 0; i < measure.Items.Length - 1; i++)
+        {
+            double lyricDistance = CalculateLyricDistance(
+                lyricsByItem.GetValueOrDefault(i),
+                lyricsByItem.GetValueOrDefault(i + 1));
+            var spring = result[i + 1];
+            if (lyricDistance > spring.MinDistance)
+                result[i + 1] = new Spring(
+                    Math.Max(spring.IdealDistance, lyricDistance),
+                    lyricDistance, spring.InverseStretchStrength);
+        }
+
+        // Last spring (item last → end barline): reserve last item's right extent.
+        int lastIndex = measure.Items.Length - 1;
+        if (lyricsByItem.TryGetValue(lastIndex, out var lastLyrics))
+        {
+            var sl = result[^1];
+            double adjustedMin = Math.Max(sl.MinDistance, GetLyricRightExtent(lastLyrics) + MinItemGap);
+            result[^1] = new Spring(Math.Max(sl.IdealDistance, adjustedMin), adjustedMin, sl.InverseStretchStrength);
+        }
+
+        return result.ToImmutable();
+    }
+
+    /// <summary>
     /// Calculates the minimum distance between two notes based on their lyrics.
     /// </summary>
     /// <remarks>
