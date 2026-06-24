@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Layout;
@@ -116,7 +117,9 @@ public static class PedalEngraver
                         pedalType,
                         activeOn.MeasureIndex,
                         mark.MeasureIndex,
-                        activeOn.SourcePosition));
+                        activeOn.SourcePosition,
+                        activeOn.AnchorItemIndex, mark.AnchorItemIndex,
+                        activeOn.AnchorTiming, mark.AnchorTiming));
                 }
                 activeOn = mark;
             }
@@ -126,7 +129,9 @@ public static class PedalEngraver
                     pedalType,
                     activeOn.MeasureIndex,
                     mark.MeasureIndex,
-                    activeOn.SourcePosition));
+                    activeOn.SourcePosition,
+                    activeOn.AnchorItemIndex, mark.AnchorItemIndex,
+                    activeOn.AnchorTiming, mark.AnchorTiming));
                 activeOn = null;
             }
         }
@@ -182,11 +187,10 @@ public static class PedalEngraver
             var startMeasure = measureLayouts[bracket.StartMeasureIndex];
             var endMeasure = measureLayouts[bracket.EndMeasureIndex];
 
-            // Start X: beginning of start measure + small offset for text
-            double startX = startMeasure.X + BoundPadding;
-
-            // End X: beginning of end measure + offset
-            double endX = endMeasure.X + BoundPadding;
+            // X anchors at the engaging / releasing note's column (LP places
+            // "Ped." and "*" at the note, not the measure start).
+            double startX = AnchorX(startMeasure, bracket.StartItemIndex, bracket.StartTiming);
+            double endX = AnchorX(endMeasure, bracket.EndItemIndex, bracket.EndTiming);
 
             // Ensure minimum length
             if (endX - startX < 2.0)
@@ -202,5 +206,19 @@ public static class PedalEngraver
         }
 
         return layouts.ToImmutable();
+    }
+
+    /// <summary>
+    /// X of the note column a pedal mark attaches to. Multi-staff layouts use the
+    /// shared, voice-independent timing columns (like MetronomeMark); single-staff
+    /// uses the item slot; falls back to a small inset at the measure start.
+    /// </summary>
+    private static double AnchorX(MeasureLayout ml, int itemIndex, Fraction timing)
+    {
+        if (!ml.Columns.IsDefaultOrEmpty)
+            return ml.X + ml.GetXForTiming(timing);
+        if (itemIndex >= 0 && itemIndex < ml.Items.Length)
+            return ml.X + ml.Items[itemIndex].X;
+        return ml.X + BoundPadding;
     }
 }

@@ -139,6 +139,9 @@ public class SvgSnapshotTests
         // Multi-staff: fingerings on the SECOND (bass) staff render at that staff
         // (per-staff FingeringEngraver pass), instead of vanishing.
         yield return new object[] { "test/fingering-lower-staff" };
+        // A pedal "Ped." mark anchors at the note it is written on (its column),
+        // not the measure start (music-mark AnchorTiming).
+        yield return new object[] { "test/pedal-note-anchor" };
         // Polyrhythm: an upper-voice triplet's "3" bracket sits above its notes
         // (the voice's stems are force-flipped), not below by the other voice.
         yield return new object[] { "test/voice-tuplet" };

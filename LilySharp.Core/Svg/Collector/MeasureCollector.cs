@@ -1149,6 +1149,9 @@ public sealed class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
+                    // Onset timing of this note (elapsed duration before it is added)
+                    // — anchors note-attached marks to the right column.
+                    Fraction noteAnchorTiming = builder.CurrentDuration;
                     // Process grace notes BEFORE the main note so they get correct octave context
                     if (_pendingGrace != null)
                     {
@@ -1165,7 +1168,7 @@ public sealed class MeasureCollector
                     builder.AddItem(noteItem);
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
-                        noteItem.EditorialAccidental);
+                        noteItem.EditorialAccidental, noteAnchorTiming);
                     CollectFiguredBass(note, measureIndex, itemIndex);
                     CollectChordNames(note, measureIndex, itemIndex);
                     CollectCrossStaff(note, measureIndex, itemIndex);
@@ -1177,6 +1180,7 @@ public sealed class MeasureCollector
                     var restItem = CreateRestItem(rest);
                     int restMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
                     int restItemIndex = builder.CurrentItemCount;
+                    Fraction restAnchorTiming = builder.CurrentDuration;
                     int count = rest.MeasureCount;
                     if (count <= 1)
                     {
@@ -1184,7 +1188,7 @@ public sealed class MeasureCollector
                         // Post-events on the rest (r4@fermata, r2@coda, ...).
                         // Rests have no stem; stemUp=false makes the default
                         // direction UP, matching scripts over rests.
-                        CollectArticulations(rest, restMeasureIndex, restItemIndex, stemUp: false);
+                        CollectArticulations(rest, restMeasureIndex, restItemIndex, stemUp: false, anchorTiming: restAnchorTiming);
                     }
                     else
                     {
@@ -1202,6 +1206,7 @@ public sealed class MeasureCollector
                 {
                     int measureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
                     int itemIndex = builder.CurrentItemCount;
+                    Fraction chordAnchorTiming = builder.CurrentDuration;
                     // Process grace notes BEFORE the main chord so they get correct octave context
                     if (_pendingGrace != null)
                     {
@@ -1214,7 +1219,7 @@ public sealed class MeasureCollector
                     builder.AddItem(chordItem);
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
-                    CollectArticulations(chord, measureIndex, itemIndex, chordItem.StemUp);
+                    CollectArticulations(chord, measureIndex, itemIndex, chordItem.StemUp, anchorTiming: chordAnchorTiming);
                     CollectFiguredBass(chord, measureIndex, itemIndex);
                     CollectChordNames(chord, measureIndex, itemIndex);
                     CollectCrossStaff(chord, measureIndex, itemIndex);
@@ -2698,7 +2703,7 @@ public sealed class MeasureCollector
     /// LILYPOND-REF: script-engraver.cc:92-125 Script_engraver::acknowledge_note_head
     /// </remarks>
     private void CollectArticulations(SyntaxNode node, int measureIndex, int itemIndex, bool stemUp,
-        string? editorialAccidental = null)
+        string? editorialAccidental = null, Fraction anchorTiming = default)
     {
         var articulations = node switch
         {
@@ -2774,11 +2779,14 @@ public sealed class MeasureCollector
                             if (markType.Value == MusicMarkType.Rehearsal)
                             {
                                 string text = MusicMarkItem.ParseRehearsalText(nameText);
-                                _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, text, measureIndex, articulationSyntax.Position));
+                                _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, text, measureIndex, articulationSyntax.Position, itemIndex, anchorTiming));
                             }
                             else
                             {
-                                _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.Position));
+                                // Anchor to the host note's column so note-attached
+                                // marks (e.g. pedal "Ped.") sit at the note, not the
+                                // measure start.
+                                _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.Position, itemIndex, anchorTiming));
                             }
                         }
                     }

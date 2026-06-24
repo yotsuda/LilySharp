@@ -438,6 +438,20 @@ public static class MusicMarkEngraver
                 return measureLayout.X + measureLayout.Items[mark.AnchorItemIndex].X - 0.70;
         }
 
+        // Pedal marks ("Ped." / "*") attach to the note they are written on
+        // (like the metronome mark), so they anchor at that note's column rather
+        // than the measure/line start. LILYPOND-REF: piano-pedal-engraver.cc.
+        if (mark.AnchorItemIndex >= 0 &&
+            mark.Type is MusicMarkType.SustainOn or MusicMarkType.SustainOff
+                or MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
+                or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff)
+        {
+            if (!measureLayout.Columns.IsDefaultOrEmpty)
+                return measureLayout.X + measureLayout.GetXForTiming(mark.AnchorTiming);
+            if (mark.AnchorItemIndex < measureLayout.Items.Length)
+                return measureLayout.X + measureLayout.Items[mark.AnchorItemIndex].X;
+        }
+
         if (mark.Position != MusicMarkPosition.Beginning)
             return measureLayout.X + measureLayout.Width / 2; // Center (fallback)
 

@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Semantics;
+
 namespace LilySharp.Core.Svg.Model;
 
 /// <summary>
@@ -43,5 +45,12 @@ public readonly record struct PedalBracketItem(
     PedalType Type,
     int StartMeasureIndex,
     int EndMeasureIndex,
-    int SourcePosition
+    int SourcePosition,
+    // Note-column anchors so "Ped." / "*" sit at the engaging/releasing note,
+    // not the measure start. Item index for single-staff; timing for the shared
+    // multi-staff columns (voice-independent, like MetronomeMark).
+    int StartItemIndex = 0,
+    int EndItemIndex = 0,
+    Fraction StartTiming = default,
+    Fraction EndTiming = default
 );
