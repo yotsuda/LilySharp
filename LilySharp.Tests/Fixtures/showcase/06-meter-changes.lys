@@ -1,0 +1,24 @@
+// Showcase: a short piece that changes meter several times, including a
+// change that lands at a system break. Demonstrates mid-piece time signatures
+// (3/4, 6/8, 2/4), 6/8 beaming, the key signature reprinted at the system
+// head, and a system-break meter change drawn in the prefix.
+title "Meter Changes Demo"
+composer "Lily#"
+
+tempo 100
+time 4/4
+key g major
+
+part melody { clef: treble }
+
+phrase tune {
+  g'4 a b a |
+  time 3/4 g4 a b |
+  time 2/4 a4 g |
+  time 6/8 a8 b a g fis e |
+  time 4/4 d2 g |
+}
+
+section Main { melody { $tune } }
+structure { Main }
+render score "06-meter-changes.svg" { staff { melody } }

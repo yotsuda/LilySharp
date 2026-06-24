@@ -134,6 +134,7 @@ public class SvgSnapshotTests
         yield return new object[] { "showcase/03-piano" };
         yield return new object[] { "showcase/04-advanced" };
         yield return new object[] { "showcase/05-special-techniques" };
+        yield return new object[] { "showcase/06-meter-changes" };
     }
 
     [Theory]
