@@ -1,0 +1,22 @@
+// Grace notes authored on the SECOND (bass) staff must render against that
+// staff (the renderer recomputes note Y from staff positions, so the staff's
+// vertical offset travels via GraceNoteLayout.StaffYOffset). Verified against
+// LilyPond. Guards GraceNoteItem.StaffIndex routing.
+title "Lower-staff grace"
+time 4/4
+key c major
+
+part top { clef treble }
+part bot { clef bass }
+
+section Main {
+  top { c'4 d e f | g1 | }
+  bot { grace { e16 f } g4 a b c | grace { d16 e } f2 g2 | }
+}
+
+structure { Main }
+
+render score "grace-lower-staff.svg" {
+  staff { top }
+  staff { bot }
+}

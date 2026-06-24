@@ -130,6 +130,9 @@ public class SvgSnapshotTests
         // Multi-staff: figured bass + chord names on the SECOND (bass) staff
         // render against that staff (FiguredBassItem/ChordNameItem.StaffIndex).
         yield return new object[] { "test/figbass-chordname-lower-staff" };
+        // Multi-staff: grace notes on the SECOND (bass) staff render against that
+        // staff (GraceNoteItem.StaffIndex / GraceNoteLayout.StaffYOffset).
+        yield return new object[] { "test/grace-lower-staff" };
         // Polyrhythm: an upper-voice triplet's "3" bracket sits above its notes
         // (the voice's stems are force-flipped), not below by the other voice.
         yield return new object[] { "test/voice-tuplet" };

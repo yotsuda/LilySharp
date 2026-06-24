@@ -2891,7 +2891,8 @@ public sealed class MeasureCollector
                 graceNoteInfos.ToImmutableArray(),
                 measureIndex,
                 mainNoteItemIndex,
-                grace.Position));
+                grace.Position,
+                _currentStaffIndex));
         }
     }
 

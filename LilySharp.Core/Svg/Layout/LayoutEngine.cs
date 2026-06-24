@@ -921,7 +921,7 @@ public sealed class LayoutEngine
         return new AnnotationLayouts(
             Dynamics: stackedDynamics,
             Articulations: articulationLayouts,
-            GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, systems, ml) : ImmutableArray<GraceNoteLayout>.Empty,
+            GraceNotes: score != null ? GraceNoteEngraver.Calculate(score, graceNotes, systems, ml, measuresByStaff, staffYByIndex) : ImmutableArray<GraceNoteLayout>.Empty,
             Lyrics: lyricLayouts,
             LyricHyphens: new LyricHyphenEngraver().CalculateLayouts(lyricLayouts, systems),
             MusicMarks: stackedMarks,

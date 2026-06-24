@@ -39,7 +39,11 @@ public readonly record struct GraceNoteLayout(
     // Main-note anchor for the grace slur (acciaccatura/appoggiatura).
     // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur
     double MainNoteX = 0,                // Absolute X of the main notehead
-    int MainNoteStaffPosition = 0        // Staff position of the main notehead
+    int MainNoteStaffPosition = 0,       // Staff position of the main notehead
+    // Multi-staff: vertical offset of this grace's OWN staff within the system.
+    // The renderer recomputes note Y from staff positions, so the offset must
+    // travel to it rather than being baked into Y here.
+    double StaffYOffset = 0
 );
 
 /// <summary>
@@ -76,7 +80,9 @@ public static class GraceNoteEngraver
         Score score,
         ImmutableArray<GraceNoteItem> graceNotes,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         if (graceNotes.IsDefaultOrEmpty)
             return ImmutableArray<GraceNoteLayout>.Empty;
@@ -97,8 +103,18 @@ public static class GraceNoteEngraver
                 && grace.MainNoteItemIndex >= measureLayout.Items.Length)
                 continue;
 
+            // Resolve this grace's OWN staff (multi-staff): its measures (for the
+            // main-note X / accidental) and the staff's vertical offset (carried
+            // to the renderer via StaffYOffset, since it recomputes note Y).
+            var graceMeasures = measuresByStaff != null
+                && measuresByStaff.TryGetValue(grace.StaffIndex, out var gm) ? gm : score.Voice.Measures;
+            double staffOffset = staffYByIndex != null
+                && staffYByIndex.TryGetValue(grace.StaffIndex, out var so) ? so : 0;
+            if (grace.MeasureIndex >= graceMeasures.Length)
+                continue;
+
             double mainNoteX = LayoutUtilities.GetItemXOffset(
-                score.Voice.Measures, grace.MeasureIndex, grace.MainNoteItemIndex, measureLayout);
+                graceMeasures, grace.MeasureIndex, grace.MainNoteItemIndex, measureLayout);
 
             // LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 — spring-based grace group width
             double graceGroupWidth = SpacingRules.CalculateGraceGroupSpringWidth(grace.Notes)
@@ -109,7 +125,7 @@ public static class GraceNoteEngraver
             // drawn from the notehead LEFT edge. We need: centerX + accWidth + gap.
             // LILYPOND-REF: grace-spacing.cc:65-80 positioning before main note
             double accidentalExtent = 0;
-            var measure = score.Voice.Measures[grace.MeasureIndex];
+            var measure = graceMeasures[grace.MeasureIndex];
             if (grace.MainNoteItemIndex < measure.Items.Length
                 && measure.Items[grace.MainNoteItemIndex] is NoteItem mainNote
                 && mainNote.Accidental != null)
@@ -152,7 +168,8 @@ public static class GraceNoteEngraver
                 GraceScale,
                 grace.SourcePosition,
                 MainNoteX: measureLayout.X + mainNoteX,
-                MainNoteStaffPosition: mainStaffPosition
+                MainNoteStaffPosition: mainStaffPosition,
+                StaffYOffset: staffOffset
             ));
         }
 

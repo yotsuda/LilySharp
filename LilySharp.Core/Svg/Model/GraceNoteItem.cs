@@ -74,18 +74,24 @@ public sealed record GraceNoteItem
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
 
+    /// <summary>Global staff index this grace group belongs to (multi-staff
+    /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
+    public int StaffIndex { get; }
+
     public GraceNoteItem(
         GraceNoteType type,
         ImmutableArray<GraceNoteInfo> notes,
         int measureIndex,
         int mainNoteItemIndex,
-        int sourcePosition)
+        int sourcePosition,
+        int staffIndex = 0)
     {
         Type = type;
         Notes = notes;
         MeasureIndex = measureIndex;
         MainNoteItemIndex = mainNoteItemIndex;
         SourcePosition = sourcePosition;
+        StaffIndex = staffIndex;
     }
 
     /// <summary>

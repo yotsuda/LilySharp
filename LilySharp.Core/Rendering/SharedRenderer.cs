@@ -2082,7 +2082,9 @@ public static class SharedRenderer
         foreach (var g in layout.GraceNoteLayouts)
         {
             double sy = sysY.TryGetValue(g.MeasureIndex, out var s) ? s : 0;
-            double staffMiddleY = sy + StaffHeight / 2;
+            // StaffYOffset places the grace over its OWN staff in a multi-staff
+            // score (0 for the first staff / single-staff).
+            double staffMiddleY = sy + g.StaffYOffset + StaffHeight / 2;
             double scaledFontSize = FontSize * g.Scale;
             double currentX = g.X;
             double lastNoteX = g.X, lastNoteY = staffMiddleY;
