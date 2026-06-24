@@ -890,7 +890,7 @@ public sealed class LayoutEngine
         // This ensures hairpins avoid dynamics (both priority 250) and
         // text spanners avoid both dynamics and hairpins (priority 350).
         var articulationLayouts = score != null
-            ? ArticulationEngraver.Calculate(score, articulations, systems, ml)
+            ? ArticulationEngraver.Calculate(score, articulations, systems, ml, measuresByStaff, staffYByIndex)
             : ImmutableArray<ArticulationLayout>.Empty;
         var (stackedDynamics, stackedHairpins, stackedTextSpanners) =
             OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts, textSpannerLayouts,

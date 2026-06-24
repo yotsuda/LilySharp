@@ -118,6 +118,9 @@ public class SvgSnapshotTests
         // Multi-staff: dynamics that belong to the SECOND (bass) staff render
         // under THAT staff, not collapsed under the first (DynamicItem.StaffIndex).
         yield return new object[] { "test/dynamics-lower-staff" };
+        // Multi-staff: articulations + ornaments on the SECOND (bass) staff render
+        // against that staff's notes, not the first (ArticulationItem.StaffIndex).
+        yield return new object[] { "test/articulations-lower-staff" };
         // Polyrhythm: an upper-voice triplet's "3" bracket sits above its notes
         // (the voice's stems are force-flipped), not below by the other voice.
         yield return new object[] { "test/voice-tuplet" };

@@ -43,13 +43,19 @@ public sealed record ArticulationItem
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
 
-    public ArticulationItem(ArticulationType type, int measureIndex, int itemIndex, bool isAbove, int sourcePosition)
+    /// <summary>Global staff index this articulation belongs to (multi-staff
+    /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
+    public int StaffIndex { get; }
+
+    public ArticulationItem(ArticulationType type, int measureIndex, int itemIndex,
+        bool isAbove, int sourcePosition, int staffIndex = 0)
     {
         Type = type;
         MeasureIndex = measureIndex;
         ItemIndex = itemIndex;
         IsAbove = isAbove;
         SourcePosition = sourcePosition;
+        StaffIndex = staffIndex;
     }
 
     /// <summary>

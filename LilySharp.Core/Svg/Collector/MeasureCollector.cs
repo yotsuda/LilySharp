@@ -2730,7 +2730,7 @@ public sealed class MeasureCollector
                         isAbove = true;
                     }
 
-                    _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove, articulationSyntax.Position));
+                    _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove, articulationSyntax.Position, _currentStaffIndex));
                 }
                 else
                 {
@@ -2760,7 +2760,7 @@ public sealed class MeasureCollector
                         _articulations.Add(new ArticulationItem(
                             ArticulationItem.EditorialTypeFor(editorialAccidental),
                             measureIndex, itemIndex, isAbove: true,
-                            articulationSyntax.Position));
+                            articulationSyntax.Position, _currentStaffIndex));
                     }
                     else
                     {

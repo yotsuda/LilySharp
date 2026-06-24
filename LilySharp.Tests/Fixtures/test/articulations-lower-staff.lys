@@ -1,0 +1,24 @@
+// Articulations and ornaments are score-level with no staff in the model, so
+// without a staff tag they collapse onto the FIRST staff. Here they belong to
+// the SECOND (bass) staff: staccato/accent/tenuto/marcato/fermata plus a
+// trill/mordent ornament must render against the bass staff's own notes, not the
+// treble. Verified against LilyPond. Guards ArticulationItem.StaffIndex routing
+// (ornaments share the ArticulationItem path).
+title "Lower-staff articulation"
+time 4/4
+key c major
+
+part top { clef treble }
+part bot { clef bass }
+
+section Main {
+  top { c'4 d e f | g1 | }
+  bot { c4@staccato d@accent e@tenuto f@marcato | g4@trill a@mordent b c | }
+}
+
+structure { Main }
+
+render score "articulations-lower-staff.svg" {
+  staff { top }
+  staff { bot }
+}

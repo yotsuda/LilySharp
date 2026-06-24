@@ -95,7 +95,9 @@ public static class ArticulationEngraver
         Score score,
         ImmutableArray<ArticulationItem> articulations,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         if (articulations.IsDefaultOrEmpty)
             return ImmutableArray<ArticulationLayout>.Empty;
@@ -116,9 +118,22 @@ public static class ArticulationEngraver
                 && articulation.ItemIndex >= measureLayout.Items.Length)
                 continue;
 
+            // Resolve this articulation's OWN staff (multi-staff): its measures
+            // (to read the right note's staff position) and the staff's vertical
+            // offset within the system, so it sits under its own staff.
+            var artMeasures = measuresByStaff != null
+                && measuresByStaff.TryGetValue(articulation.StaffIndex, out var mm) ? mm : score.Voice.Measures;
+            double staffOffset = staffYByIndex != null
+                && staffYByIndex.TryGetValue(articulation.StaffIndex, out var so) ? so : 0;
+
+            if (articulation.MeasureIndex >= artMeasures.Length)
+                continue;
+
             // Get the music item to determine staff position
             // LILYPOND-REF: script-engraver.cc:92-125 acknowledge_note_head
-            var measure = score.Voice.Measures[articulation.MeasureIndex];
+            var measure = artMeasures[articulation.MeasureIndex];
+            if (articulation.ItemIndex >= measure.Items.Length)
+                continue;
             var item = measure.Items[articulation.ItemIndex];
 
             // Get staff position of the note
@@ -131,7 +146,7 @@ public static class ArticulationEngraver
             // land the glyph centre on the notehead centre rather than its left edge.
             // LILYPOND-REF: define-grobs.scm:2289 self-alignment-X = CENTER
             double x = measureLayout.X
-                + LayoutUtilities.GetItemXOffset(score.Voice.Measures,
+                + LayoutUtilities.GetItemXOffset(artMeasures,
                     articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
                 + NoteheadHalfWidth(item);
 
@@ -149,9 +164,11 @@ public static class ArticulationEngraver
                 x -= scale * (accBBox.Left + accBBox.Width / 2.0);
             }
 
-            // Calculate Y position based on note position and direction
+            // Calculate Y position based on note position and direction, then bake
+            // the staff's within-system offset (multi-staff) so the page-level
+            // renderer's system-top + Y lands under THIS staff.
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
-            double y = CalculateYPosition(articulation, staffPosition, stemUp);
+            double y = CalculateYPosition(articulation, staffPosition, stemUp) + staffOffset;
 
             layouts.Add(new ArticulationLayout(
                 articulation.MeasureIndex,
