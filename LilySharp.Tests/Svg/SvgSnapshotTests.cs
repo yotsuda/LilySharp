@@ -139,6 +139,11 @@ public class SvgSnapshotTests
         // Mid-piece tempo change: a new metronome mark (quarter = 160) prints at
         // the change point in the music stream. Verified vs LilyPond \tempo.
         yield return new object[] { "test/tempo-change" };
+        // Mid-measure tempo on a grand staff with independent rhythms: the lower
+        // staff's tempo must resolve via the shared timing columns and land on
+        // its own note (beat 2), where the upper staff has no onset — not on the
+        // upper voice's same-index note. Verified vs LilyPond \tempo.
+        yield return new object[] { "test/tempo-grandstaff" };
     }
 
     /// <summary>

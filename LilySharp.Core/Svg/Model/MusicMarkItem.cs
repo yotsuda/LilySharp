@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using LilySharp.Core.Semantics;
 
 namespace LilySharp.Core.Svg.Model;
 
@@ -144,7 +145,30 @@ public sealed record MusicMarkItem
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
 
-    public MusicMarkItem(MusicMarkType type, int measureIndex, int sourcePosition)
+    /// <summary>
+    /// Index of the measure item (note/rest) this mark anchors on, or -1 when
+    /// the mark anchors on the measure start (break-align).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: metronome-engraver.cc — a \tempo mid-measure attaches its
+    /// MetronomeMark to the musical column at that moment (the following note),
+    /// not to the measure's break-align prefix. Index 0 (the first note of the
+    /// measure) is treated as a measure-start tempo and still break-aligns.
+    /// On a single staff the index resolves the note directly; on a grand staff
+    /// (independent rhythms) it only flags "mid-measure" and <see cref="AnchorTiming"/>
+    /// resolves the X via the shared timing columns.
+    /// </remarks>
+    public int AnchorItemIndex { get; }
+
+    /// <summary>
+    /// Musical time elapsed from the measure start at this mark's moment. Used to
+    /// resolve the X on a multi-staff measure whose timing columns are shared
+    /// across staves, so the index of the authoring voice cannot be trusted.
+    /// </summary>
+    public Fraction AnchorTiming { get; }
+
+    public MusicMarkItem(MusicMarkType type, int measureIndex, int sourcePosition,
+        int anchorItemIndex = -1, Fraction anchorTiming = default)
     {
         Type = type;
         Text = GetMarkText(type);
@@ -153,12 +177,15 @@ public sealed record MusicMarkItem
         IsSymbol = type == MusicMarkType.Segno || type == MusicMarkType.Coda;
         MeasureIndex = measureIndex;
         SourcePosition = sourcePosition;
+        AnchorItemIndex = anchorItemIndex;
+        AnchorTiming = anchorTiming;
     }
 
     /// <summary>
     /// Creates a music mark with custom text (for rehearsal marks).
     /// </summary>
-    public MusicMarkItem(MusicMarkType type, string text, int measureIndex, int sourcePosition)
+    public MusicMarkItem(MusicMarkType type, string text, int measureIndex, int sourcePosition,
+        int anchorItemIndex = -1, Fraction anchorTiming = default)
     {
         Type = type;
         Text = text;
@@ -167,6 +194,8 @@ public sealed record MusicMarkItem
         IsSymbol = false;
         MeasureIndex = measureIndex;
         SourcePosition = sourcePosition;
+        AnchorItemIndex = anchorItemIndex;
+        AnchorTiming = anchorTiming;
     }
 
     /// <summary>

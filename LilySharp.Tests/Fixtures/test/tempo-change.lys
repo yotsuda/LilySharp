@@ -1,6 +1,8 @@
 // Mid-piece tempo change: 'tempo' is now an event in the music stream (like
 // key/clef/time), so a new metronome mark (quarter = NNN) is printed above the
-// staff at the change point. Verified against LilyPond \tempo 4 = NNN.
+// staff at the change point. A MID-MEASURE change anchors on the following note
+// (the third beat of measure 2 here), not the measure start, matching LilyPond's
+// MetronomeMark moment. Verified against LilyPond \tempo 4 = NNN.
 title "Tempo Changes"
 composer "Lily#"
 
@@ -10,7 +12,7 @@ time 4/4
 part melody { clef treble }
 
 section Main {
-  melody { c'4 d e f | tempo 160 g4 a g f | e4 d c2 | }
+  melody { c'4 d e f | g4 a tempo 160 g f | e4 d c2 | }
 }
 
 structure { Main }

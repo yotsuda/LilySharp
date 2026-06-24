@@ -412,6 +412,32 @@ public static class MusicMarkEngraver
         if (mark.Position == MusicMarkPosition.End)
             return measureLayout.X + measureLayout.Width - 0.5; // Before end barline
 
+        // A mid-measure tempo change attaches to the musical column of the note
+        // that follows it (LilyPond's MetronomeMark moment), not the measure's
+        // break-align prefix. Index 0 (first note) stays a measure-start tempo
+        // and falls through to the break-align logic below.
+        // LILYPOND-REF: metronome-engraver.cc — mark attached at its moment.
+        if (mark.Type == MusicMarkType.Tempo && mark.AnchorItemIndex > 0)
+        {
+            // Resolve the note column the mark sits over. On a grand staff the
+            // staves share timing columns, but each voice indexes its OWN notes,
+            // so the authoring voice's item index would pick the wrong staff's
+            // note (independent rhythms). Prefer the shared timing columns there;
+            // fall back to the item index on a single staff (no columns).
+            //
+            // LilyPond aligns the metronome notehead with the following note's
+            // head (its " = NNN" text then trails to the right of that note).
+            // The timing column X already lands on the drawn note glyph; the
+            // single-staff item X is the slot reference, ~0.7 ss right of the
+            // glyph, so back that path off to match.
+            // LILYPOND-REF verified: \tempo 4 = N mid-measure puts the mark's
+            // notehead at the same X as the note that follows it.
+            if (!measureLayout.Columns.IsDefaultOrEmpty)
+                return measureLayout.X + measureLayout.GetXForTiming(mark.AnchorTiming);
+            if (mark.AnchorItemIndex < measureLayout.Items.Length)
+                return measureLayout.X + measureLayout.Items[mark.AnchorItemIndex].X - 0.70;
+        }
+
         if (mark.Position != MusicMarkPosition.Beginning)
             return measureLayout.X + measureLayout.Width / 2; // Center (fallback)
 

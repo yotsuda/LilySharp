@@ -1125,10 +1125,18 @@ public sealed class MeasureCollector
                     // Mid-piece tempo change: a metronome mark (♩= NNN) above the
                     // staff at this point (the initial tempo is drawn from
                     // Score.Tempo). LILYPOND-REF: scm/define-grobs.scm MetronomeMark.
+                    // Anchor on the note that FOLLOWS the \tempo (its musical
+                    // moment) so a mid-measure change prints above that note, as
+                    // LilyPond does — not snapped to the measure start. The next
+                    // item appended to this measure takes index CurrentItemCount.
+                    // CurrentDuration is the time elapsed in this measure, used
+                    // to resolve the column X on a grand staff (where the voice's
+                    // item index would point into the wrong staff's note list).
                     if (tempoChange.Bpm is int bpm)
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, bpm.ToString(),
-                            builder.CurrentMeasureIndex, tempoChange.Position));
+                            builder.CurrentMeasureIndex, tempoChange.Position,
+                            builder.CurrentItemCount, builder.CurrentDuration));
                 }
                 break;
 

@@ -1,0 +1,30 @@
+// Mid-measure tempo change on a grand staff with INDEPENDENT rhythms: the
+// lower staff places 'tempo 90' before its second note (beat 2), where the
+// upper staff (two half notes) has no note onset. The mark must resolve via the
+// shared timing columns and land on the lower staff's note — not on whatever the
+// upper voice's item index happens to point at. Verified against LilyPond \tempo.
+title "Grand Staff Tempo"
+tempo 120
+time 4/4
+
+part rightHand {
+  clef treble
+}
+
+part leftHand {
+  clef bass
+}
+
+section Main {
+  rightHand { c'2 g' | }
+  leftHand  { c4 tempo 90 e g c | }
+}
+
+structure { Main }
+
+render score "tempo-grandstaff.svg" {
+  grandStaff {
+    staff { rightHand }
+    staff { leftHand }
+  }
+}
