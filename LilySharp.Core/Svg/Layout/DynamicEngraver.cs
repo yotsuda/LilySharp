@@ -88,7 +88,8 @@ public static class DynamicEngraver
         Score score,
         ImmutableArray<DynamicItem> dynamics,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        ImmutableArray<Voice> voices = default)
     {
         if (dynamics.IsDefaultOrEmpty)
             return ImmutableArray<DynamicLayout>.Empty;
@@ -120,19 +121,18 @@ public static class DynamicEngraver
                 && dynamic.ItemIndex >= measureLayout.Items.Length)
                 continue;
 
-            // Get the music item to determine if we need to avoid collision
-            // LILYPOND-REF: dynamic-align-engraver.cc:92-110 acknowledge_note_head
-            var measure = score.Voice.Measures[dynamic.MeasureIndex];
-            var item = measure.Items[dynamic.ItemIndex];
-
             // Calculate X position (centered on the note)
             // LILYPOND-REF: define-grobs.scm:1311 self-alignment-X = CENTER
             double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 score.Voice.Measures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
 
-            // Calculate Y position with collision avoidance
+            // Calculate Y position with collision avoidance against EVERY voice's
+            // note column (a lower voice's down-stem must not be overlapped by a
+            // dynamic positioned from the upper voice's stem-up note).
             // LILYPOND-REF: side-position-interface.cc:266-320 skyline-based positioning
-            double y = CalculateYPosition(item, baseY);
+            double y = CalculateYPositionAcrossVoices(
+                voices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice) : voices,
+                dynamic.MeasureIndex, dynamic.ItemIndex, baseY);
 
             var key = (dynamic.MeasureIndex, dynamic.ItemIndex);
             int depth = stackAt.GetValueOrDefault(key, 0);
@@ -153,25 +153,31 @@ public static class DynamicEngraver
     }
 
     /// <summary>
-    /// Calculates Y position for a dynamic, avoiding collision with the note.
+    /// Dynamic Y that clears the deepest note/stem of ANY voice at the column —
+    /// so in a &lt;&lt; \\ &gt;&gt; the dynamic sits below the lower voice's
+    /// down-stem instead of through it.
     /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
-    ///
-    /// Simple collision avoidance: if the note extends below the staff
-    /// (low notes or stem-down notes), push the dynamic further down.
-    /// </remarks>
-    private static double CalculateYPosition(MusicItem item, double baseY)
+    private static double CalculateYPositionAcrossVoices(
+        ImmutableArray<Voice> voices, int measureIndex, int itemIndex, double baseY)
     {
-        // Get the lowest extent of the note/chord (Y in staff spaces from top, positive = down)
-        double lowestY = GetLowestExtent(item);
-
-        // The dynamic text baseline must be low enough that the visual top
-        // (baseline - TextAscent) clears the lowest extent of the note with Padding gap.
-        // LILYPOND-REF: side-position-interface.cc:330-337 include_staff
-        double requiredY = lowestY + Padding + TextAscent;
-
-        return Math.Max(baseY, requiredY);
+        bool multiVoice = voices.Length > 1;
+        double y = baseY;
+        for (int vi = 0; vi < voices.Length; vi++)
+        {
+            var voice = voices[vi];
+            if (measureIndex >= voice.Measures.Length)
+                continue;
+            var items = voice.Measures[measureIndex].Items;
+            if (itemIndex >= items.Length)
+                continue;
+            // In a multi-voice staff the stems are force-flipped (voice 1 up,
+            // voice 2 down) regardless of the note's pitch-default StemUp, so a
+            // low note in the lower voice still has a long DOWN stem to clear.
+            bool? forcedStemUp = multiVoice ? VoiceDefaults.GetDefaultStemUp(vi + 1) : null;
+            double lowest = GetLowestExtent(items[itemIndex], forcedStemUp);
+            y = Math.Max(y, lowest + Padding + TextAscent);
+        }
+        return y;
     }
 
     /// <summary>
@@ -181,7 +187,7 @@ public static class DynamicEngraver
     /// LILYPOND-REF: stem.cc:876-920 calc_stem_end_position
     /// Accounts for note position and stem direction.
     /// </remarks>
-    private static double GetLowestExtent(MusicItem item)
+    private static double GetLowestExtent(MusicItem item, bool? forcedStemUp = null)
     {
         switch (item)
         {
@@ -192,8 +198,9 @@ public static class DynamicEngraver
                 // LILYPOND-REF: staff-symbol-referencer.cc:76-89 get_position
                 double noteY = StaffMiddle - note.StaffPosition * 0.5;
 
-                // If stem down, add stem length below the notehead
-                if (!note.StemUp)
+                // If stem down, add stem length below the notehead. forcedStemUp
+                // (multi-voice) overrides the note's pitch-default direction.
+                if (!(forcedStemUp ?? note.StemUp))
                 {
                     // LILYPOND-REF: stem.cc:93 stem-length = 3.5
                     double stemLength = 3.5;
@@ -209,7 +216,7 @@ public static class DynamicEngraver
                 double lowestNoteY = StaffMiddle - lowestPos * 0.5;
 
                 // If stem down, add stem length from lowest note
-                if (!chord.StemUp)
+                if (!(forcedStemUp ?? chord.StemUp))
                 {
                     double stemLength = 3.5;
                     return lowestNoteY + stemLength;
