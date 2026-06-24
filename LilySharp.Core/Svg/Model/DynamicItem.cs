@@ -42,13 +42,23 @@ public sealed record DynamicItem
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
 
-    public DynamicItem(DynamicLevel level, int measureIndex, int itemIndex, int sourcePosition)
+    /// <summary>
+    /// Global staff index (see <c>MultiStaffScore.EnumerateStaves</c>) this
+    /// dynamic belongs to. Score-level dynamics carry no staff in the model, so
+    /// the collector stamps it; layout uses it to position the dynamic under its
+    /// OWN staff (not always the first) and to clear its own voices' stems.
+    /// </summary>
+    public int StaffIndex { get; }
+
+    public DynamicItem(DynamicLevel level, int measureIndex, int itemIndex,
+        int sourcePosition, int staffIndex = 0)
     {
         Level = level;
         Text = GetDynamicText(level);
         MeasureIndex = measureIndex;
         ItemIndex = itemIndex;
         SourcePosition = sourcePosition;
+        StaffIndex = staffIndex;
     }
 
     private static string GetDynamicText(DynamicLevel level) => level switch

@@ -89,7 +89,10 @@ public static class DynamicEngraver
         ImmutableArray<DynamicItem> dynamics,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        ImmutableArray<Voice> voices = default)
+        ImmutableArray<Voice> voices = default,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         if (dynamics.IsDefaultOrEmpty)
             return ImmutableArray<DynamicLayout>.Empty;
@@ -101,11 +104,14 @@ public static class DynamicEngraver
         // visual top of the text (baseline - TextAscent) clears the staff bottom.
         double baseY = StaffBottom + StaffPadding + Padding + TextAscent;
 
+        var fallbackVoices = voices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice) : voices;
+
         // Two voices can carry a dynamic on the SAME note column (e.g. an upper
         // voice @f and a lower voice @p in a << \\ >>). They share (measure,
         // item) and would draw on top of each other; stack the 2nd+ downward so
-        // both stay legible.
-        var stackAt = new Dictionary<(int, int), int>();
+        // both stay legible. Keyed by staff too: same-column dynamics on
+        // DIFFERENT staves are independent and must not stack onto each other.
+        var stackAt = new Dictionary<(int, int, int), int>();
 
         foreach (var dynamic in dynamics)
         {
@@ -121,23 +127,37 @@ public static class DynamicEngraver
                 && dynamic.ItemIndex >= measureLayout.Items.Length)
                 continue;
 
+            // Resolve this dynamic's OWN staff: its voices (to clear the right
+            // stems), its measures (for timing), and the staff's vertical offset
+            // within the system (so it sits under its own staff, not the first).
+            var dynVoices = voicesByStaff != null
+                && voicesByStaff.TryGetValue(dynamic.StaffIndex, out var vv) ? vv : fallbackVoices;
+            var dynMeasures = measuresByStaff != null
+                && measuresByStaff.TryGetValue(dynamic.StaffIndex, out var mm) ? mm : score.Voice.Measures;
+            double staffOffset = staffYByIndex != null
+                && staffYByIndex.TryGetValue(dynamic.StaffIndex, out var so) ? so : 0;
+
             // Calculate X position (centered on the note)
             // LILYPOND-REF: define-grobs.scm:1311 self-alignment-X = CENTER
             double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
-                score.Voice.Measures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
+                dynMeasures, dynamic.MeasureIndex, dynamic.ItemIndex, measureLayout);
 
             // Calculate Y position with collision avoidance against EVERY voice's
             // note column (a lower voice's down-stem must not be overlapped by a
             // dynamic positioned from the upper voice's stem-up note).
             // LILYPOND-REF: side-position-interface.cc:266-320 skyline-based positioning
             double y = CalculateYPositionAcrossVoices(
-                voices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice) : voices,
-                dynamic.MeasureIndex, dynamic.ItemIndex, baseY);
+                dynVoices, dynamic.MeasureIndex, dynamic.ItemIndex, baseY);
 
-            var key = (dynamic.MeasureIndex, dynamic.ItemIndex);
+            var key = (dynamic.MeasureIndex, dynamic.ItemIndex, dynamic.StaffIndex);
             int depth = stackAt.GetValueOrDefault(key, 0);
             stackAt[key] = depth + 1;
             y += depth * StackStep;
+
+            // Bake the staff's within-system offset so the page-level renderer's
+            // system-top + Y lands under THIS staff. (Offsets are uniform across
+            // systems, so a single value is correct everywhere this measure falls.)
+            y += staffOffset;
 
             layouts.Add(new DynamicLayout(
                 dynamic.MeasureIndex,

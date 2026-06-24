@@ -1,0 +1,23 @@
+// Score-level dynamics carry no staff in the model, so without a staff tag they
+// all collapse under the FIRST staff. Here the dynamics belong to the SECOND
+// (bass) staff: @p on beat 1, @f in measure 2. They must render below the bass
+// staff (cleared against the bass staff's own stems), not below the treble.
+// Verified against LilyPond. Guards the DynamicItem.StaffIndex routing.
+title "Lower-staff dynamic"
+time 4/4
+key c major
+
+part top { clef treble }
+part bot { clef bass }
+
+section Main {
+  top { c'4 d e f | g1 | }
+  bot { c4@p d e f | g1@f | }
+}
+
+structure { Main }
+
+render score "dynamics-lower-staff.svg" {
+  staff { top }
+  staff { bot }
+}

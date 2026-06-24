@@ -1249,17 +1249,20 @@ public sealed class MultiStaffLayouter
     {
         var result = new List<(VerticalSkyline Up, VerticalSkyline Down)>();
 
-        // Score-level dynamics are positioned against the primary (first) staff
-        // (see LayoutEngine's annotation pass), so only that staff's down skyline
-        // reserves room for them.
-        bool isFirstStaff = true;
+        // Each staff's own dynamics (tagged by StaffIndex) hang below it and must
+        // widen the gap to the staff below; filter so a staff reserves room only
+        // for its dynamics, cleared against its own voices.
+        int staffIndex = 0;
         foreach (var group in score.StaffGroups)
         {
             foreach (var staff in group.Staves)
             {
-                var dynamics = isFirstStaff ? score.Dynamics : ImmutableArray<DynamicItem>.Empty;
+                int thisStaff = staffIndex;
+                var dynamics = score.Dynamics.IsDefaultOrEmpty
+                    ? ImmutableArray<DynamicItem>.Empty
+                    : score.Dynamics.Where(d => d.StaffIndex == thisStaff).ToImmutableArray();
                 result.Add(skylineBuilder.BuildStaffSkylines(staff, measureLayouts, dynamics));
-                isFirstStaff = false;
+                staffIndex++;
             }
         }
 

@@ -388,6 +388,10 @@ public sealed class MeasureCollector
 
     // Dynamic markings
     private readonly List<DynamicItem> _dynamics = new();
+    // Global staff index currently being collected (multi-staff). Stamped onto
+    // each dynamic so layout positions it under its own staff. 0 for the single-
+    // staff/single-Score paths.
+    private int _currentStaffIndex = 0;
     // Articulation marks
     private readonly List<ArticulationItem> _articulations = new();
     // Grace notes
@@ -642,9 +646,14 @@ public sealed class MeasureCollector
         // Per-voice transposed key signature (only for transposed parts); used
         // to give that voice's staff its own key in a multi-staff score.
         var voiceKeyDict = new Dictionary<string, KeySignature>();
+        // GetVoiceNames() yields names in the SAME order ToStaffGroups() builds
+        // staves, so this counter equals the global staff index (see
+        // EnumerateStaves) and tags each staff's dynamics correctly.
+        int collectStaffIndex = 0;
         foreach (var voiceName in renderSpec.GetVoiceNames())
         {
             _voiceName = voiceName;
+            _currentStaffIndex = collectStaffIndex++;
             _lastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
 
@@ -1472,6 +1481,7 @@ public sealed class MeasureCollector
         _sections.Clear();
         _variables.Clear();
         _dynamics.Clear();
+        _currentStaffIndex = 0;
         _articulations.Clear();
         _graceNotes.Clear();
         _arpeggios.Clear();
@@ -2274,7 +2284,7 @@ public sealed class MeasureCollector
                 var level = dynamicSyntax.Level;
                 if (level != DynamicLevel.None)
                 {
-                    _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.Position));
+                    _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.Position, _currentStaffIndex));
                 }
                 else
                 {

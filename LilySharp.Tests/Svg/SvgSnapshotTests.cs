@@ -115,6 +115,9 @@ public class SvgSnapshotTests
         // widen the inter-staff gap so it clears the staff below instead of
         // overlapping its lines (dynamics join the outside-staff skyline).
         yield return new object[] { "test/voice-dynamics-multistaff" };
+        // Multi-staff: dynamics that belong to the SECOND (bass) staff render
+        // under THAT staff, not collapsed under the first (DynamicItem.StaffIndex).
+        yield return new object[] { "test/dynamics-lower-staff" };
         // Polyrhythm: an upper-voice triplet's "3" bracket sits above its notes
         // (the voice's stems are force-flipped), not below by the other voice.
         yield return new object[] { "test/voice-tuplet" };

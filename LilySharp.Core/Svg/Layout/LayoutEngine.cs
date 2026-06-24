@@ -399,6 +399,23 @@ public sealed class LayoutEngine
             ClefToString(primaryStaff.Clef), score.Tempo, score.Title, score.Composer,
             tupletBrackets: score.TupletBrackets);
 
+        // Per-staff lookups so a dynamic is positioned under its OWN staff (clears
+        // that staff's stems) and offset to it — score-level dynamics otherwise all
+        // collapse onto the first staff. Staff vertical offsets are uniform across
+        // systems, so read them from the first laid-out system.
+        var voicesByStaff = new Dictionary<int, ImmutableArray<Voice>>();
+        var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
+        foreach (var (g, st, idx) in score.EnumerateStaves())
+        {
+            voicesByStaff[idx] = st.Voices;
+            measuresByStaff[idx] = st.PrimaryVoice.Measures;
+        }
+        var staffYByIndex = new Dictionary<int, double>();
+        if (systemsArray.Length > 0 && !systemsArray[0].StaffGroups.IsDefaultOrEmpty)
+            foreach (var sg in systemsArray[0].StaffGroups)
+                foreach (var st in sg.Staves)
+                    staffYByIndex[st.StaffIndex] = st.Y;
+
         var annotations = CalculateAnnotationLayouts(
             primaryScore, systemsArray,
             score.Dynamics, score.Articulations, score.GraceNotes,
@@ -415,7 +432,10 @@ public sealed class LayoutEngine
             beamLayouts: allBeamLayouts.ToImmutableArray(),
             systemSkylines: perSystemSkylines,
             tupletForceStemUp: primaryStaff.IsMultiVoice,
-            staffVoices: primaryStaff.Voices);
+            staffVoices: primaryStaff.Voices,
+            voicesByStaff: voicesByStaff,
+            measuresByStaff: measuresByStaff,
+            staffYByIndex: staffYByIndex);
 
         // Voice collision offsets / head-wipes for multi-voice staves, so the
         // renderer can nudge opposing voices apart. Computed per staff; the keys
@@ -808,7 +828,10 @@ public sealed class LayoutEngine
         ImmutableArray<BeamLayout>? beamLayouts = null,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
         bool tupletForceStemUp = false,
-        ImmutableArray<Voice> staffVoices = default)
+        ImmutableArray<Voice> staffVoices = default,
+        Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
         var lyricLayouts = new LyricEngraver().CalculateLayouts(lyrics, ml, _options.StaffHeight);
@@ -819,7 +842,7 @@ public sealed class LayoutEngine
         // so text spanners can be placed below dynamics.
 
         // Dynamics first (outside-staff-priority: 250)
-        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, systems, ml, staffVoices) : ImmutableArray<DynamicLayout>.Empty;
+        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, systems, ml, staffVoices, voicesByStaff, measuresByStaff, staffYByIndex) : ImmutableArray<DynamicLayout>.Empty;
 
         // Detect and layout hairpins from cresc/decresc marks
         var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics);
