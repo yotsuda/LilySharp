@@ -122,6 +122,10 @@ public class SvgSnapshotTests
         // system-start prefix (clef, key, time) instead of hanging far right of
         // the first note, and the key signature is reprinted at the system head.
         yield return new object[] { "test/timesig-change-linebreak" };
+        // Part-option transpose: pitches re-spelled (c->d), key signature moved
+        // (c major -> D major), in-key accidentals suppressed and an out-of-key
+        // one (cis -> dis) kept. Verified against LilyPond \transpose c d.
+        yield return new object[] { "test/transpose" };
     }
 
     /// <summary>

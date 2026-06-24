@@ -1,0 +1,21 @@
+// Part-option transpose: every pitch is shifted by the interval from c to the
+// target (here c->d, up a major 2nd) and re-spelled, and the key signature
+// moves with it. Written c major becomes D major (F#, C#): the in-key fis/cis
+// print no accidental, while the written cis (-> dis) is out of key and keeps a
+// sharp. Verified against LilyPond \transpose c d.
+title "Transpose"
+composer "Lily#"
+
+time 4/4
+key c major
+
+part melody { clef: treble transpose: d }
+
+section Main {
+  melody {
+    c'4 d e f | g4 a b c' | cis'4 d' r2 |
+  }
+}
+
+structure { Main }
+render score "transpose.svg" { staff { melody } }
