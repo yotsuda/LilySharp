@@ -1,0 +1,22 @@
+// Polyrhythm: the upper voice has a triplet (stems forced up), the lower voice
+// four straight quarters. The tuplet "3" bracket must sit ABOVE the triplet's
+// three noteheads — not below by the lower voice (regression guard: the bracket
+// used the pitch-default stem side, which put it on the wrong side in a voice
+// whose stems are force-flipped, making the triplet look like it lost a note).
+title "Polyrhythm Tuplet"
+composer "Lily#"
+tempo 90
+time 4/4
+key c major
+
+part m { clef treble }
+
+section Main {
+  m { << { tuplet 3/2 { c'4 d e } f2 } \\ { e4 e e e } >> | }
+}
+
+structure { Main }
+
+render score "voice-tuplet.svg" {
+  staff { m }
+}

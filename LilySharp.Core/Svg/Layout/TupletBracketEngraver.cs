@@ -128,7 +128,8 @@ public static class TupletBracketEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures,
         ImmutableArray<BeamGroup> beamGroups = default,
-        ImmutableArray<BeamLayout> beamLayouts = default)
+        ImmutableArray<BeamLayout> beamLayouts = default,
+        bool forceStemUp = false)
     {
         if (tuplets.IsDefaultOrEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
@@ -157,7 +158,12 @@ public static class TupletBracketEngraver
                 measures, tuplet.MeasureIndex, tuplet.EndNoteIndex, measureLayout);
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
-            bool isStemUp = CalculateDirection(tuplet, measures);
+            // In a multi-voice staff the primary voice's stems are FORCED up at
+            // render time (VoiceDefaults), but NoteItem.StemUp still holds the
+            // pitch default — so high tuplet notes would put the bracket below,
+            // on the wrong side. Honour the forced direction here. (The bracket
+            // list is resolved against the primary voice's measures.)
+            bool isStemUp = forceStemUp || CalculateDirection(tuplet, measures);
 
             // The bracket's bound items are the OUTER STEMS when the stems
             // point in the bracket's direction (always true here: the

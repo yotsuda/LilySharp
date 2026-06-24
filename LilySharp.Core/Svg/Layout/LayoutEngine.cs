@@ -121,7 +121,8 @@ public sealed class LayoutEngine
                 trillSpanners: score.TrillSpanners,
                 beamGroups: _elementCoordinator.DetectBeamGroups(score),
                 beamLayouts: prelimBeams,
-                systemSkylines: perSystemSkylines);
+                systemSkylines: perSystemSkylines,
+                tupletForceStemUp: score.IsMultiVoice);
             EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
                 prelimAnn,
                 _elementCoordinator.LayoutTies(score, prelimSystems),
@@ -159,7 +160,8 @@ public sealed class LayoutEngine
             trillSpanners: score.TrillSpanners,
             beamGroups: beamGroups,
             beamLayouts: beamLayouts,
-            systemSkylines: perSystemSkylines);
+            systemSkylines: perSystemSkylines,
+            tupletForceStemUp: score.IsMultiVoice);
 
         // Calculate part combination layouts for multi-voice scores.
         // LILYPOND-REF: part combination is opt-in (\partcombine); plain << \\ >>
@@ -346,7 +348,8 @@ public sealed class LayoutEngine
                 trillSpanners: score.TrillSpanners,
                 beamGroups: _elementCoordinator.DetectBeamGroups(prelimScore),
                 beamLayouts: prelimBeams.ToImmutableArray(),
-                systemSkylines: perSystemSkylines);
+                systemSkylines: perSystemSkylines,
+                tupletForceStemUp: prelimStaff.IsMultiVoice);
             EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
                 prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
         }
@@ -407,7 +410,8 @@ public sealed class LayoutEngine
             // beam itself.
             beamGroups: _elementCoordinator.DetectBeamGroups(primaryScore),
             beamLayouts: allBeamLayouts.ToImmutableArray(),
-            systemSkylines: perSystemSkylines);
+            systemSkylines: perSystemSkylines,
+            tupletForceStemUp: primaryStaff.IsMultiVoice);
 
         // Voice collision offsets / head-wipes for multi-voice staves, so the
         // renderer can nudge opposing voices apart. Computed per staff; the keys
@@ -798,7 +802,8 @@ public sealed class LayoutEngine
         ImmutableArray<TrillSpannerItem>? trillSpanners = null,
         ImmutableArray<BeamGroup>? beamGroups = null,
         ImmutableArray<BeamLayout>? beamLayouts = null,
-        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
+        bool tupletForceStemUp = false)
     {
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
         var lyricLayouts = new LyricEngraver().CalculateLayouts(lyrics, ml, _options.StaffHeight);
@@ -869,7 +874,8 @@ public sealed class LayoutEngine
         // Replaces the old pairwise hacks (bar-number-vs-volta in the
         // renderer; music-mark-vs-volta inside MusicMarkEngraver).
         var tupletBracketLayouts = TupletBracketEngraver.Calculate(
-            tupletBrackets, systems, ml, measures, beamGroups ?? default, beamLayouts ?? default);
+            tupletBrackets, systems, ml, measures, beamGroups ?? default, beamLayouts ?? default,
+            forceStemUp: tupletForceStemUp);
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             score, musicMarks, systems, ml, measures, default);
         var customTextLayouts = CustomTextEngraver.Calculate(score, customTexts, systems, ml);
