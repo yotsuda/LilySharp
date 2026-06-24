@@ -71,6 +71,9 @@ public static class DynamicEngraver
     // LILYPOND-REF: define-grobs.scm:1317 Y-offset = (scale-by-font-size -0.6)
     private const double TextAscent = 1.2;
 
+    // Vertical step between two dynamics that fall on the same note column.
+    private const double StackStep = 2.0;
+
     /// <summary>
     /// Calculates layout for all dynamics in a score.
     /// </summary>
@@ -96,6 +99,12 @@ public static class DynamicEngraver
         // Base Y position: dynamic text baseline must be low enough that the
         // visual top of the text (baseline - TextAscent) clears the staff bottom.
         double baseY = StaffBottom + StaffPadding + Padding + TextAscent;
+
+        // Two voices can carry a dynamic on the SAME note column (e.g. an upper
+        // voice @f and a lower voice @p in a << \\ >>). They share (measure,
+        // item) and would draw on top of each other; stack the 2nd+ downward so
+        // both stay legible.
+        var stackAt = new Dictionary<(int, int), int>();
 
         foreach (var dynamic in dynamics)
         {
@@ -124,6 +133,11 @@ public static class DynamicEngraver
             // Calculate Y position with collision avoidance
             // LILYPOND-REF: side-position-interface.cc:266-320 skyline-based positioning
             double y = CalculateYPosition(item, baseY);
+
+            var key = (dynamic.MeasureIndex, dynamic.ItemIndex);
+            int depth = stackAt.GetValueOrDefault(key, 0);
+            stackAt[key] = depth + 1;
+            y += depth * StackStep;
 
             layouts.Add(new DynamicLayout(
                 dynamic.MeasureIndex,

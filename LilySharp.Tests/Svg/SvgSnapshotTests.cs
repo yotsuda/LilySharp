@@ -105,6 +105,9 @@ public class SvgSnapshotTests
         // Intra-staff polyphony on a grand staff: both voices of a << \\ >> in
         // the upper staff render, with the surrounding single-voice measures.
         yield return new object[] { "test/voice-grandstaff" };
+        // Two voices each with a dynamic on the same note column — both render
+        // (stacked) rather than one hiding the other.
+        yield return new object[] { "test/voice-dynamics" };
         yield return new object[] { "test/collision" };
         yield return new object[] { "test/phrases" };
         yield return new object[] { "test/ornaments" };

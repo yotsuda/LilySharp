@@ -1,0 +1,20 @@
+// Two voices each carrying a dynamic on the same opening note column: the upper
+// @f and lower @p must BOTH render (regression guard — they previously drew on
+// top of each other so only one showed). They stack vertically.
+title "Two Voices Dynamics"
+composer "Lily#"
+tempo 100
+time 4/4
+key c major
+
+part m { clef treble }
+
+section Main {
+  m { << { e'4@f f g a | b2 a2 | } \\ { c4@p d e f | g2 f2 | } >> }
+}
+
+structure { Main }
+
+render score "voice-dynamics.svg" {
+  staff { m }
+}
