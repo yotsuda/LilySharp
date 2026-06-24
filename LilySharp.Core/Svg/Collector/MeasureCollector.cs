@@ -478,6 +478,10 @@ public sealed class MeasureCollector
                 _clef = partClef;
             _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
             ApplyTranspose(partTranspose);
+            // Transpose the written key signature (CollectDefinitions set it
+            // before the part option was known) so the displayed key and the
+            // accidental engine match the transposed pitches.
+            _keySharps = TransposeKeySharps(_keySharps);
         }
         else
         {
@@ -1068,7 +1072,7 @@ public sealed class MeasureCollector
                     // Mid-measure key signature change
                     // LILYPOND-REF: lily/key-engraver.cc — process_music() creates KeySignature grob
                     var previousKey = new KeySignature(_keySharps);
-                    int newSharps = CalculateKeySharps(keySig);
+                    int newSharps = TransposeKeySharps(CalculateKeySharps(keySig));
                     _keySharps = newSharps;
                     var newKey = new KeySignature(newSharps);
                     var keyChange = new KeySignatureChangeItem(newKey, previousKey, keySig.Position);
@@ -1286,6 +1290,16 @@ public sealed class MeasureCollector
             _hasTranspose = false;
         }
     }
+
+    /// <summary>
+    /// Shifts a written key signature's sharp count by the part's transpose
+    /// (no-op when the part is untransposed). C major (0) with transpose: d
+    /// becomes D major (+2). LILYPOND-REF: \transpose also moves \key.
+    /// </summary>
+    private int TransposeKeySharps(int sharps) =>
+        _hasTranspose
+            ? sharps + PitchTransposer.KeySignatureFifthsShift(_transposeStep, _transposeAlt)
+            : sharps;
 
     private static (string? clef, int? octave, (int step, int alt)? transpose) GetPartDefaults(SyntaxNode root, string partName)
     {
