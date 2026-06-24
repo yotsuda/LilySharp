@@ -1,0 +1,22 @@
+// Figured bass and chord names authored on the SECOND (bass) staff must render
+// against that staff (figures below it, chord symbols above it), not collapse
+// onto the first staff. Verified against LilyPond. Guards FiguredBassItem and
+// ChordNameItem StaffIndex routing.
+title "Lower-staff chord/figbass"
+time 4/4
+key c major
+
+part top { clef treble }
+part bot { clef bass }
+
+section Main {
+  top { c'4 d e f | g1 | }
+  bot { c4@chord.Cm7 d@fig.6 e@fig.6.4 f | g1@chord.G7 | }
+}
+
+structure { Main }
+
+render score "figbass-chordname-lower-staff.svg" {
+  staff { top }
+  staff { bot }
+}

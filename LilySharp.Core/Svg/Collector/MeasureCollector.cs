@@ -2563,7 +2563,8 @@ public sealed class MeasureCollector
                         figures.Value,
                         measureIndex,
                         itemIndex,
-                        markSyntax.Position));
+                        markSyntax.Position,
+                        _currentStaffIndex));
                 }
             }
         }
@@ -2596,7 +2597,8 @@ public sealed class MeasureCollector
                         chordText,
                         measureIndex,
                         itemIndex,
-                        markSyntax.Position));
+                        markSyntax.Position,
+                        _currentStaffIndex));
                 }
             }
         }

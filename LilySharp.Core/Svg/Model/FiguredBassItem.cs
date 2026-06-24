@@ -90,16 +90,22 @@ public sealed record FiguredBassItem
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
 
+    /// <summary>Global staff index this figured bass belongs to (multi-staff
+    /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
+    public int StaffIndex { get; }
+
     public FiguredBassItem(
         ImmutableArray<FiguredBassFigure> figures,
         int measureIndex,
         int itemIndex,
-        int sourcePosition)
+        int sourcePosition,
+        int staffIndex = 0)
     {
         Figures = figures;
         MeasureIndex = measureIndex;
         ItemIndex = itemIndex;
         SourcePosition = sourcePosition;
+        StaffIndex = staffIndex;
     }
 
     /// <summary>

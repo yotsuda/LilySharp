@@ -65,7 +65,9 @@ public static class ChordNameEngraver
         ImmutableArray<ChordNameItem> chordNames,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        ImmutableArray<Measure> measures = default)
+        ImmutableArray<Measure> measures = default,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         if (chordNames.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<ChordNameLayout>.Empty;
@@ -79,12 +81,19 @@ public static class ChordNameEngraver
 
             var ml = measureLayouts[chord.MeasureIndex];
 
+            // Resolve this chord name's OWN staff (multi-staff): its measures (X)
+            // and the staff's vertical offset, so it sits above its own staff.
+            var cnMeasures = measuresByStaff != null
+                && measuresByStaff.TryGetValue(chord.StaffIndex, out var mm) ? mm : measures;
+            double staffOffset = staffYByIndex != null
+                && staffYByIndex.TryGetValue(chord.StaffIndex, out var so) ? so : 0;
+
             // Find item X position (Items/Columns-aware)
             double x = ml.X + LayoutUtilities.GetItemXOffset(
-                measures, chord.MeasureIndex, chord.ItemIndex, ml);
+                cnMeasures, chord.MeasureIndex, chord.ItemIndex, ml);
 
-            // Y position: above the staff (negative = upward)
-            double y = -StaffPadding;
+            // Y position: above the staff (negative = upward), offset to own staff
+            double y = -StaffPadding + staffOffset;
 
             results.Add(new ChordNameLayout(
                 chord.MeasureIndex, x, y, chord.ChordText, chord.SourcePosition));

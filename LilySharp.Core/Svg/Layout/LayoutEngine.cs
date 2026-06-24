@@ -866,11 +866,13 @@ public sealed class LayoutEngine
 
         // Layout figured bass
         var figuredBassLayouts = FiguredBassEngraver.Calculate(
-            figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures);
+            figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures,
+            measuresByStaff, staffYByIndex);
 
         // Layout chord names
         var chordNameLayouts = ChordNameEngraver.Calculate(
-            chordNames ?? ImmutableArray<ChordNameItem>.Empty, systems, ml, measures);
+            chordNames ?? ImmutableArray<ChordNameItem>.Empty, systems, ml, measures,
+            measuresByStaff, staffYByIndex);
 
         // Layout percent repeats
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(

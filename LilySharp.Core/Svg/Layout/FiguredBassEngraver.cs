@@ -61,7 +61,9 @@ public static class FiguredBassEngraver
         ImmutableArray<FiguredBassItem> figuredBasses,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        ImmutableArray<Measure> measures = default)
+        ImmutableArray<Measure> measures = default,
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         if (figuredBasses.IsDefaultOrEmpty)
             return ImmutableArray<FiguredBassLayout>.Empty;
@@ -79,9 +81,16 @@ public static class FiguredBassEngraver
                 && fb.ItemIndex >= measureLayout.Items.Length)
                 continue;
 
+            // Resolve this figure's OWN staff (multi-staff): its measures (X) and
+            // the staff's vertical offset, so it sits below its own staff.
+            var fbMeasures = measuresByStaff != null
+                && measuresByStaff.TryGetValue(fb.StaffIndex, out var mm) ? mm : measures;
+            double staffOffset = staffYByIndex != null
+                && staffYByIndex.TryGetValue(fb.StaffIndex, out var so) ? so : 0;
+
             double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
-                measures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
-            double y = BelowStaffY + StaffPadding;
+                fbMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
+            double y = BelowStaffY + StaffPadding + staffOffset;
 
             var figureTexts = fb.Figures
                 .Select(f => f.DisplayText)

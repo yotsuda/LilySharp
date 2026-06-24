@@ -127,6 +127,9 @@ public class SvgSnapshotTests
         // Multi-staff: an arpeggio on a SECOND (bass) staff chord draws to the
         // left of that chord, not the first staff (ArpeggioItem.StaffIndex).
         yield return new object[] { "test/arpeggio-lower-staff" };
+        // Multi-staff: figured bass + chord names on the SECOND (bass) staff
+        // render against that staff (FiguredBassItem/ChordNameItem.StaffIndex).
+        yield return new object[] { "test/figbass-chordname-lower-staff" };
         // Polyrhythm: an upper-voice triplet's "3" bracket sits above its notes
         // (the voice's stems are force-flipped), not below by the other voice.
         yield return new object[] { "test/voice-tuplet" };

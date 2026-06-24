@@ -45,12 +45,18 @@ public sealed record ChordNameItem
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
 
-    public ChordNameItem(string chordText, int measureIndex, int itemIndex, int sourcePosition)
+    /// <summary>Global staff index this chord name belongs to (multi-staff
+    /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
+    public int StaffIndex { get; }
+
+    public ChordNameItem(string chordText, int measureIndex, int itemIndex,
+        int sourcePosition, int staffIndex = 0)
     {
         ChordText = chordText;
         MeasureIndex = measureIndex;
         ItemIndex = itemIndex;
         SourcePosition = sourcePosition;
+        StaffIndex = staffIndex;
     }
 
     /// <summary>
