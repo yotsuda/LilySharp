@@ -321,7 +321,7 @@ public sealed class LayoutEngine
             var prelimStaff = score.StaffGroups[0].PrimaryStaff;
             var prelimScore = new Score(
                 prelimStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
-                ClefToString(prelimStaff.Clef),
+                ClefToString(prelimStaff.Clef), score.Tempo, score.Title, score.Composer,
                 tupletBrackets: score.TupletBrackets);
             var prelimBeams = new List<BeamLayout>();
             var prelimTies = new List<TieLayout>();
@@ -390,7 +390,7 @@ public sealed class LayoutEngine
         var primaryStaff = score.StaffGroups[0].PrimaryStaff;
         var primaryScore = new Score(
             primaryStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
-            ClefToString(primaryStaff.Clef),
+            ClefToString(primaryStaff.Clef), score.Tempo, score.Title, score.Composer,
             tupletBrackets: score.TupletBrackets);
 
         var annotations = CalculateAnnotationLayouts(

@@ -1409,7 +1409,11 @@ public sealed class MeasureCollector
                     break;
 
                 case TempoDeclarationSyntax tempoDecl:
-                    CollectTempo(tempoDecl);
+                    // Only the top-level (initial) tempo sets the score default;
+                    // mid-music tempo changes are handled in the music stream
+                    // (a Tempo MusicMark at the change point).
+                    if (!IsInsideMusicContent(tempoDecl))
+                        CollectTempo(tempoDecl);
                     break;
 
                 case TimeSignatureSyntax timeSig:
