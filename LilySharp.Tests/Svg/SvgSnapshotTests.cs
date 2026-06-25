@@ -144,6 +144,9 @@ public class SvgSnapshotTests
         yield return new object[] { "test/dense-chromatic" };
         yield return new object[] { "test/alto-tenor-clefs" };
         yield return new object[] { "test/two-voice-polyphony" };
+        // A leading in-music \time collapses into the initial signature (no
+        // redundant "C" before the "3/4").
+        yield return new object[] { "test/leading-time-change" };
         // Multi-staff: a trill spanner on the SECOND (bass) staff runs above that
         // staff, not pulled to the top by the stacker (TrillSpannerItem.StaffIndex).
         yield return new object[] { "test/trillspan-lower-staff" };

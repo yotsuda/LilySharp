@@ -1,0 +1,15 @@
+// Coverage: a \time as the FIRST thing in the music (no top-level time set)
+// collapses into the initial signature, so only "3/4" prints at the start, not
+// the default "C" followed by "3/4". LILYPOND-REF: time-signature-engraver.cc
+// (one TimeSignature grob per timestep, reflecting the current value).
+title "Leading time change"
+key g major
+part m { clef treble }
+section Main {
+  m {
+    time 3/4
+    g4 a b | c4 d e |
+  }
+}
+structure { Main }
+render score "leading-time-change.svg" { staff { m } }
