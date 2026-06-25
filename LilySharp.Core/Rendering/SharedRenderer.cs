@@ -2120,7 +2120,8 @@ public static class SharedRenderer
                 // LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings —
                 //   ((Voice Stem direction ,UP) (Voice Slur direction ,DOWN)): grace
                 //   stems are forced up regardless of pitch, and the auto-slur bows down.
-                DrawGraceStemsAndBeam(headX, headY, beamCounts, g.Scale, gc);
+                DrawGraceStemsAndBeam(headX, headY, beamCounts, g.Scale,
+                    g.Type == GraceNoteType.Acciaccatura, gc);
 
                 // Grace slur from the last grace notehead to the main notehead.
                 // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur —
@@ -2161,7 +2162,8 @@ public static class SharedRenderer
     /// flags rather than a partial beam.
     /// </remarks>
     private static void DrawGraceStemsAndBeam(
-        List<double> xs, List<double> ys, List<int> beamCounts, double scale, IDrawingContext gc)
+        List<double> xs, List<double> ys, List<int> beamCounts, double scale,
+        bool acciaccatura, IDrawingContext gc)
     {
         int n = xs.Count;
         if (n == 0) return;
@@ -2192,6 +2194,9 @@ public static class SharedRenderer
                 var flag = EmmentalerGlyphs.GetFlag(denom, stemUp: true);
                 if (flag.HasValue)
                     gc.DrawGlyph(flag.Value, StemX(i), StemEndY(i), FontSize * scale, Color.Black);
+                // Acciaccatura: diagonal slash through the stem just below the flag.
+                if (acciaccatura)
+                    DrawGraceSlash(StemX(i), StemEndY(i), scale, gc);
             }
             return;
         }
@@ -2209,6 +2214,40 @@ public static class SharedRenderer
                     gc.DrawLine(StemX(i), StemEndY(i) + off, StemX(i + 1), StemEndY(i + 1) + off,
                         Color.Black, beamThick);
         }
+        // Beamed acciaccatura would carry the slash on the beam itself
+        // (Beam.stencil = slashed-stencil); not yet ported — only the lone-note
+        // flag dash above is. acciaccatura groups are almost always a single note.
+    }
+
+    /// <summary>
+    /// Draws the acciaccatura slash: a diagonal stroke through the (up) stem just
+    /// below the flag, lower-left to upper-right, with the stem top as origin.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: mf/feta-flags.mf:1228-1260 "grace dash (up)" (flags.ugrace) —
+    ///   stroke from z1=(-hip_width·0.72, -foot_depth·0.72) to z2=(hip_width, -flare),
+    ///   pen = 1.5·stemthickness; with flare = 1 ss, foot_depth = 3 ss,
+    ///   hip_width = upflag_width − hip_thickness/2,
+    ///   upflag_width = .65·notehead_width + stemthickness/2,
+    ///   hip_thickness = linethickness + .069 ss. All scaled by the grace scale.
+    /// </remarks>
+    private static void DrawGraceSlash(double stemX, double stemTopY, double scale, IDrawingContext gc)
+    {
+        const double hipDepthRatio = 0.72;
+        const double footDepth = 3.0;   // staff spaces
+        const double flare = 1.0;       // staff spaces
+        double upflagWidth = 0.65 * EngravingDefaults.NoteheadBlackWidth
+                           + EngravingDefaults.StemThickness / 2;
+        double hipThickness = EngravingDefaults.LineThickness + 0.069;
+        double hipWidth = upflagWidth - hipThickness / 2;
+
+        // feta y is up; device y is down, so a feta y of -k is k staff-spaces below
+        // the stem top (= +k in device).
+        double x1 = stemX - hipWidth * hipDepthRatio * scale;
+        double y1 = stemTopY + footDepth * hipDepthRatio * scale;   // lower-left
+        double x2 = stemX + hipWidth * scale;
+        double y2 = stemTopY + flare * scale;                       // upper-right
+        gc.DrawLine(x1, y1, x2, y2, Color.Black, 1.5 * EngravingDefaults.StemThickness * scale);
     }
 
     /// <summary>

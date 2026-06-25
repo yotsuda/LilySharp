@@ -179,6 +179,7 @@
   <text class="music" x="31.45" y="17.66" font-size="2.60" data-pos="297"></text>
   <line x1="32.26" y1="17.66" x2="32.26" y2="15.38" stroke="#000000" stroke-width="0.085" data-pos="297"/>
   <text class="music" x="32.26" y="15.38" font-size="2.60" fill="#000000" data-pos="297"></text>
+  <line x1="31.87" y1="16.79" x2="32.80" y2="16.04" stroke="#000000" stroke-width="0.127" data-pos="297"/>
   <path d="M 31.88,18.16 C 32.45,18.49 33.21,18.29 33.79,17.66 C 33.21,18.46 32.45,18.66 31.88,18.16 Z" fill="#000000" data-pos="297"/>
   <text x="0.05" y="30.92" font-size="1.75" font-family="serif" font-weight="bold" fill="#000000">4</text>
   <text x="0.05" y="48.27" font-size="1.75" font-family="serif" font-weight="bold" fill="#000000">7</text>
