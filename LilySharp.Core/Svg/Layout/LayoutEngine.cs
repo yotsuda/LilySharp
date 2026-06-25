@@ -743,6 +743,13 @@ public sealed class LayoutEngine
         }
         foreach (var ct in ann.CustomTexts)
             Add(ct.MeasureIndex, ct.Y - 1.8, ct.Y + 0.6);
+        // Chord names ride above the staff and rise (ChordNameEngraver skyline) to
+        // clear high notes; their REAL text top must join the system up-extent or a
+        // lifted chord line pokes into the header/title. Chord font = FontSize*0.65
+        // (≈2.6 ss), Middle-anchored, so the glyph top is cap-height/2 ≈ 0.9 above
+        // the anchor and the descent ≈ 0.3 below.
+        foreach (var cn in ann.ChordNames)
+            Add(cn.MeasureIndex, cn.Y - 0.9, cn.Y + 0.3);
         foreach (var tr in ann.TrillSpanners)
             Add(tr.StartMeasureIndex, tr.Y - GlyphMetrics.OrnTrillGlyph.Top, tr.Y + 0.25);
         foreach (var d in ann.Dynamics)
