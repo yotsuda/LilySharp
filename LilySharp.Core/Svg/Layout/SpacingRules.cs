@@ -938,6 +938,28 @@ public static class SpacingRules
     };
 
     /// <summary>
+    /// If <paramref name="prevItem"/> is a mid-measure clef/key/time change, widens
+    /// the following spring by its glyph width so the width ESTIMATE matches the
+    /// timing-column layout (which reserves the same via
+    /// MeasureLayouter.ChangeItemPrefixWidth). Otherwise returns the spring unchanged.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/paper-column.cc — the breakable change column
+    /// precedes the musical column of the same moment.</remarks>
+    private static Spring WidenForChangeItem(Spring spring, MusicItem prevItem)
+    {
+        double w = prevItem switch
+        {
+            ClefChangeItem cc => GetClefChangeWidth(cc.NewClef) + 2 * GlyphMetrics.ClefChangePadding,
+            KeySignatureChangeItem kc => GetKeySignatureChangeWidth(kc) + 2 * GlyphMetrics.ClefChangePadding,
+            TimeSignatureChangeItem tc => GetTimeSignatureChangeWidth(tc) + 2 * GlyphMetrics.ClefChangePadding,
+            _ => 0
+        };
+        return w > 0
+            ? new Spring(spring.IdealDistance + w, spring.MinDistance + w, spring.InverseStretchStrength)
+            : spring;
+    }
+
+    /// <summary>
     /// Creates a spring for a timing column based on duration.
     /// </summary>
     /// <remarks>
@@ -1125,14 +1147,20 @@ public static class SpacingRules
             baseShortestDuration: baseShortestDuration);
         springs.Add(AdjustSpringForGraceNotes(firstSpring, GraceNotesOf(firstItem)));
 
-        // Springs between items (the spring into a grace-bearing note reserves its grace)
+        // Springs between items (the spring into a grace-bearing note reserves its
+        // grace; the spring after a mid-measure clef/key/time change reserves the
+        // change glyph, so this estimate agrees with the timing-column layout —
+        // which reserves it via MeasureLayouter.ChangeItemPrefixWidth — and line
+        // breaking does not under-estimate change measures).
         for (int i = 0; i < spacingItems.Count - 1; i++)
         {
             var prevItem = spacingItems[i];
             var nextItem = spacingItems[i + 1];
             var spring = CreateSpring(prevItem, nextItem, prevItem.Duration,
                 baseShortestDuration: baseShortestDuration);
-            springs.Add(AdjustSpringForGraceNotes(spring, GraceNotesOf(nextItem)));
+            spring = AdjustSpringForGraceNotes(spring, GraceNotesOf(nextItem));
+            spring = WidenForChangeItem(spring, prevItem);
+            springs.Add(spring);
         }
 
         // Spring from last item to end barline
@@ -1255,8 +1283,10 @@ public static class SpacingRules
             var nextItem = measure.Items[i + 1];
             var spring = CreateSpring(prevItem, nextItem, prevItem.Duration,
                 baseShortestDuration: baseShortestDuration);
-            // Reserve grace hanging left of the next item (matches the timing path).
+            // Reserve grace hanging left of the next item, and the glyph of a
+            // mid-measure clef/key/time change (both match the timing path).
             spring = AdjustSpringForGraceNotes(spring, GraceNotesOf(nextItem));
+            spring = WidenForChangeItem(spring, prevItem);
 
             // LILYPOND-REF: lily/note-spacing.cc:80-85
             // Adjust minimum distance for lyrics
