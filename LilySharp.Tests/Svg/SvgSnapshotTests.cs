@@ -147,6 +147,8 @@ public class SvgSnapshotTests
         // A leading in-music \time collapses into the initial signature (no
         // redundant "C" before the "3/4").
         yield return new object[] { "test/leading-time-change" };
+        // Meter-dependent 8th beaming: 3/4 (6), 6/8 (3+3), 5/4 (2+2+2+2+2).
+        yield return new object[] { "test/mixed-meters" };
         // Multi-staff: a trill spanner on the SECOND (bass) staff runs above that
         // staff, not pulled to the top by the stacker (TrillSpannerItem.StaffIndex).
         yield return new object[] { "test/trillspan-lower-staff" };

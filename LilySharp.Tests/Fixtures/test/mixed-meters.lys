@@ -1,0 +1,18 @@
+// Coverage: meter-dependent 8th-note beaming across 3/4 (one group of 6), 6/8
+// (3+3, compound), and 5/4 (2+2+2+2+2, by beat — no merge exception). Guards
+// the per-measure effective time signature AND the LilyPond beamExceptions.
+title "Mixed meters and beaming"
+key g major
+part m { clef treble }
+section Main {
+  m {
+    time 3/4
+    g8 a b c d e |
+    time 6/8
+    g8 a b c d e | g4. a4. |
+    time 5/4
+    g8 a b c d e fis g a b |
+  }
+}
+structure { Main }
+render score "mixed-meters.svg" { staff { m } }
