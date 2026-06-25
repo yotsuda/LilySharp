@@ -85,6 +85,10 @@ internal sealed class MeasureBuilder
         set => _sectionLabel = value;
     }
 
+    /// <summary>Re-arms the auto-complete measure length without printing a grob
+    /// (used when a leading meter change collapses into the initial time signature).</summary>
+    public void SetMeasureLength(Fraction length) => _timeSignature = length;
+
     /// <summary>
     /// Adds a music item and automatically completes the measure if duration is reached.
     /// </summary>
@@ -1335,13 +1339,30 @@ public sealed class MeasureCollector
 
             case TimeSignatureSyntax timeSigChange:
                 {
-                    // Mid-piece time signature change. Emit a zero-duration grob
-                    // (printed at the change point) and re-arm the builder's
-                    // measure length for the measures that follow.
-                    // LILYPOND-REF: lily/time-signature-engraver.cc
-                    var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType);
-                    var timeChange = new TimeSignatureChangeItem(newTime, timeSigChange.Position);
-                    builder.AddItem(timeChange);
+                    // LilyPond's Time_signature_engraver makes ONE TimeSignature
+                    // grob per timestep, reflecting the CURRENT value, and the very
+                    // first timestep compares against last_spec_ = null. So a
+                    // \time before any note collapses INTO the initial signature
+                    // (only the new value prints) — the default 4/4 never gets its
+                    // own grob. A \time at the first moment of the piece therefore
+                    // REPLACES the initial signature rather than printing a separate
+                    // change grob on top of it ("C 3/4").
+                    // LILYPOND-REF: lily/time-signature-engraver.cc:94-122
+                    //   process_music — `if (time_signature_) return;` (one per
+                    //   timestep) and the last_spec_ comparison.
+                    if (builder.CurrentMeasureIndex == 0 && builder.CurrentDuration == Fraction.Zero)
+                    {
+                        _timeBeats = timeSigChange.Beats;
+                        _timeBeatType = timeSigChange.BeatType;
+                        builder.SetMeasureLength(new Fraction(timeSigChange.Beats, timeSigChange.BeatType));
+                    }
+                    else
+                    {
+                        // Mid-piece change: a zero-duration grob printed at the
+                        // change point, re-arming the following measures' length.
+                        var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType);
+                        builder.AddItem(new TimeSignatureChangeItem(newTime, timeSigChange.Position));
+                    }
                 }
                 break;
 
