@@ -658,14 +658,15 @@ static int RunCheck(string[] args)
         return 1;
     }
 
-    var inputPath = args[0];
-    if (!File.Exists(inputPath))
+    bool showPitches = args.Contains("--pitches") || args.Contains("-p");
+    var inputPath = args.FirstOrDefault(a => !a.StartsWith('-'));
+    if (inputPath is null || !File.Exists(inputPath))
     {
         Console.Error.WriteLine($"Error: File not found: {inputPath}");
         return 1;
     }
 
-    return ExecuteCheck(inputPath);
+    return ExecuteCheck(inputPath, showPitches);
 }
 
 static void ShowCheckHelp()
@@ -679,14 +680,18 @@ static void ShowCheckHelp()
           <input.lys>      Input Lily# source file
 
         Options:
+          -p, --pitches    Also print each note's resolved absolute pitch
+                           (written -> resolved), so relative-octave mistakes
+                           are visible before rendering
           -h, --help       Show this help
 
         Examples:
           lysc check score.lys
+          lysc check score.lys --pitches
         """);
 }
 
-static int ExecuteCheck(string inputPath)
+static int ExecuteCheck(string inputPath, bool showPitches = false)
 {
     try
     {
@@ -694,9 +699,13 @@ static int ExecuteCheck(string inputPath)
         var tree = SyntaxTree.Parse(source);
         var allDiagnostics = CollectDiagnostics(tree);
 
+        if (showPitches)
+            PrintResolvedPitches(source, tree);
+
         if (allDiagnostics.Count == 0)
         {
-            Console.WriteLine("No errors found.");
+            if (!showPitches)
+                Console.WriteLine("No errors found.");
             return 0;
         }
 
@@ -720,6 +729,62 @@ static int ExecuteCheck(string inputPath)
         Console.Error.WriteLine($"Error: {ex.Message}");
         return 1;
     }
+}
+
+/// <summary>
+/// Prints each note's resolved absolute pitch (written → resolved), making the
+/// relative-octave chain's otherwise-invisible state visible so authors can spot
+/// octave mistakes BEFORE rendering. Driven by `check --pitches`.
+/// </summary>
+static void PrintResolvedPitches(string source, SyntaxTree tree)
+{
+    IReadOnlyList<LilySharp.Core.Svg.Collector.MeasureCollector.PitchTraceEntry> trace;
+    try
+    {
+        var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
+        collector.Collect(tree);
+        trace = collector.PitchTrace;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"(could not resolve pitches: {ex.Message})");
+        return;
+    }
+
+    Console.WriteLine($"Resolved pitches ({trace.Count}):");
+    foreach (var e in trace)
+    {
+        // The token's span starts at its leading trivia (indent/newline); advance
+        // to the actual pitch so the line:col and written token line up.
+        int p = e.Position;
+        while (p < source.Length && char.IsWhiteSpace(source[p])) p++;
+        var (line, col) = LineColFromPosition(source, p);
+        string written = ReadPitchToken(source, p);
+        Console.WriteLine($"  {line,4}:{col,-3} {written,-7} -> {e.Pitch}");
+    }
+    Console.WriteLine();
+}
+
+static (int Line, int Col) LineColFromPosition(string source, int pos)
+{
+    int line = 1, col = 1;
+    int n = Math.Min(pos, source.Length);
+    for (int i = 0; i < n; i++)
+    {
+        if (source[i] == '\n') { line++; col = 1; }
+        else col++;
+    }
+    return (line, col);
+}
+
+static string ReadPitchToken(string source, int pos)
+{
+    if (pos < 0 || pos >= source.Length) return "";
+    int end = pos;
+    while (end < source.Length &&
+           (char.IsLetter(source[end]) || source[end] == '\'' || source[end] == ','))
+        end++;
+    return source[pos..end];
 }
 
 /// <summary>

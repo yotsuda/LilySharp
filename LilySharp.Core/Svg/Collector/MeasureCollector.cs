@@ -422,6 +422,13 @@ public sealed class MeasureCollector
     private readonly List<TupletBracketItem> _tupletBrackets = new();
     // Arpeggio markings
     private readonly List<ArpeggioItem> _arpeggios = new();
+    // Resolved-pitch trace (every pitch the relative-octave chain produces, in
+    // source order), so `check --pitches` can show the author what each note
+    // actually resolved to — the relative chain's otherwise-invisible state.
+    private readonly List<PitchTraceEntry> _pitchTrace = new();
+    /// <summary>Resolved absolute pitch for each note/chord-member/grace, in
+    /// source order (e.g. written <c>c''</c> → <c>C6</c>).</summary>
+    public IReadOnlyList<PitchTraceEntry> PitchTrace => _pitchTrace;
     // Figured bass
     private readonly List<FiguredBassItem> _figuredBasses = new();
     // Chord names
@@ -3133,6 +3140,10 @@ public sealed class MeasureCollector
     private readonly record struct ResolvedPitch(
         int StaffPosition, int RelativeOctave, int DisplayStep, int DisplayAlteration, int DisplayOctave);
 
+    /// <summary>One entry in the resolved-pitch trace: the source position of the
+    /// written pitch and its resolved absolute spelling (e.g. "C6").</summary>
+    public readonly record struct PitchTraceEntry(int Position, string Pitch);
+
     private ResolvedPitch CalculateStaffPosition(PitchSyntax pitch)
     {
         char pitchName = pitch.PitchName.ToLowerInvariant()[0];
@@ -3168,7 +3179,24 @@ public sealed class MeasureCollector
         };
 
         // RelativeOctave keeps the ORIGINAL octave for the next note's chain.
+        _pitchTrace.Add(new PitchTraceEntry(pitch.Position, FormatPitch(dStep, dAlt, dOctave)));
         return new ResolvedPitch(basePosition, actualOctave, dStep, dAlt, dOctave);
+    }
+
+    /// <summary>Formats a resolved pitch as a letter + accidental + octave number
+    /// (C4 = middle C), e.g. "C4", "F#5", "Bb3", "Cx4" (double sharp).</summary>
+    private static string FormatPitch(int step, int alteration, int octave)
+    {
+        char letter = "CDEFGAB"[((step % 7) + 7) % 7];
+        string acc = alteration switch
+        {
+            >= 2 => "x",   // double sharp
+            1 => "#",
+            -1 => "b",
+            <= -2 => "bb",
+            _ => ""
+        };
+        return $"{letter}{acc}{octave}";
     }
 
     private static int GetPitchIndex(char pitch) => RelativeOctave.StepIndex(pitch);
