@@ -197,8 +197,18 @@ public static class FingeringEngraver
             + GlyphMetrics.GetNoteheadAdvance(
                 note.BaseDuration.Numerator == 1 ? (int)note.BaseDuration.Denominator : 1) / 2.0;
 
-        // Direction: opposite to stem (LILYPOND-REF: script-interface.cc:23-45).
-        bool isAbove = !note.StemUp;
+        // Direction: a melodic (single-voice) fingering defaults ABOVE the staff,
+        // NOT opposite the stem. LilyPond's New_fingering_engraver buckets each
+        // fingering by fingeringOrientations and tries them in order; the default
+        // is '(up down), so a lone fingering takes the first orientation = up —
+        // independent of stem direction. (Verified against LilyPond 2.24.4: a
+        // stem-UP bass note still gets its fingering above, i.e. on the same side
+        // as the stem.)
+        // LILYPOND-REF: scm/define-context-properties.scm:411 fingeringOrientations;
+        //   ly/engraver-init.ly:907 fingeringOrientations = #'(up down) (Score-level
+        //   default, propagates to Voice);
+        //   lily/new-fingering-engraver.cc:182,210,360 position_scripts (up/down buckets).
+        bool isAbove = true;
 
         // Within-system staff offset (0 for the top/only staff). The renderer
         // adds the system's page Y, so Y must NOT include system.Y here.

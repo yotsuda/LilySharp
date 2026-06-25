@@ -45,7 +45,7 @@
   <rect x="24.81" y="22.14" width="0.19" height="4.00" fill="#000000"/>
   <rect x="33.39" y="22.14" width="0.19" height="4.00" fill="#000000"/>
   <rect x="33.88" y="22.14" width="0.60" height="4.00" fill="#000000"/>
-  <text x="10.45" y="27.20" font-size="2.24" font-family="serif" text-anchor="middle" fill="#000000" data-pos="498">1</text>
+  <text x="10.45" y="21.64" font-size="2.24" font-family="serif" text-anchor="middle" fill="#000000" data-pos="498">1</text>
   <text x="14.05" y="21.64" font-size="2.24" font-family="serif" text-anchor="middle" fill="#000000" data-pos="510">2</text>
   <text x="17.65" y="21.64" font-size="2.24" font-family="serif" text-anchor="middle" fill="#000000" data-pos="521">3</text>
   <text x="21.25" y="21.64" font-size="2.24" font-family="serif" text-anchor="middle" fill="#000000" data-pos="532">5</text>

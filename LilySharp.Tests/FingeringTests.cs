@@ -102,12 +102,15 @@ public class FingeringTests
     }
 
     [Fact]
-    public void Layout_StemUpNote_PlacesFingeringBelow()
+    public void Layout_StemUpNote_StillPlacesFingeringAbove()
     {
-        // Low notes (negative staff position) → stem up → fingering below.
-        // c4 with treble clef has staffPos < 0 (middle C is well below the staff).
+        // A melodic (single-voice) fingering defaults ABOVE regardless of stem
+        // direction: LilyPond's fingeringOrientations default is '(up down), so
+        // even a stem-UP note keeps its fingering above (same side as the stem).
+        // c4 in treble clef has staffPos < 0 (stem up); the fingering is still above.
+        // LILYPOND-REF: ly/engraver-init.ly:907 fingeringOrientations = #'(up down).
         var (_, layout) = BuildLayout("c4@finger.4 |");
         Assert.Single(layout.FingeringLayouts);
-        Assert.False(layout.FingeringLayouts[0].IsAbove);
+        Assert.True(layout.FingeringLayouts[0].IsAbove);
     }
 }
