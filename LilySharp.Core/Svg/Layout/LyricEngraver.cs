@@ -80,16 +80,37 @@ public sealed class LyricEngraver
     }
 
     /// <summary>
+    /// The lyric text's own up-skyline contribution: the distance from its anchor
+    /// point (the vertical MIDLINE — lyrics are drawn TextAnchor.Middle, see
+    /// SharedRenderer.DrawLyrics) up to the top of the text. Measured directly from
+    /// a render: a syllable whose anchor is exactly this far (1.0 ss) below a note's
+    /// down-skyline (the notehead BOTTOM) has its text top touching that notehead.
+    /// This is the lyric grob's real half-extent — the quantity LilyPond uses for
+    /// skyline-to-skyline spacing, not an estimate.
+    /// </summary>
+    private const double LyricTextHalfHeight = 1.0;
+
+
+    /// <summary>
     /// Calculate layouts for all lyrics in a score.
     /// </summary>
     /// <param name="lyrics">Collection of lyric items.</param>
     /// <param name="measureLayouts">Measure layout information for note positions.</param>
     /// <param name="staffBottom">Y position of the bottom staff line (in staff spaces).</param>
-    /// <returns>Immutable array of lyric layouts.</returns>
+    /// <param name="systems">Systems, to map a lyric to its system's down-skyline.</param>
+    /// <param name="systemSkylines">
+    /// Per-system up/down skylines (1:1 with <paramref name="systems"/>). When given,
+    /// each system's lyric line is lowered so the TEXT clears notes/ledger lines that
+    /// poke below the staff — LilyPond places the Lyrics line at
+    /// max(basic-distance, down-skyline + lyric-extent), the staff-affinity-UP
+    /// VerticalAxisGroup spacing (engraver-init.ly:648-652).
+    /// </param>
     public ImmutableArray<LyricLayout> CalculateLayouts(
         IReadOnlyList<LyricItem> lyrics,
         IReadOnlyList<MeasureLayout> measureLayouts,
-        double staffBottom)
+        double staffBottom,
+        ImmutableArray<SystemLayout> systems = default,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
@@ -129,7 +150,66 @@ public sealed class LyricEngraver
             layouts.AddRange(verseLayouts);
         }
 
+        // Lower each system's lyric line so the TEXT clears notes/ledger lines
+        // poking below the staff (LilyPond's max(basic-distance, skyline)).
+        if (systemSkylines != null && !systems.IsDefaultOrEmpty)
+            layouts = ApplySkylineDrop(layouts, systems, systemSkylines, staffBottom);
+
         return layouts.ToImmutableArray();
+    }
+
+    /// <summary>
+    /// Lowers each system's whole lyric line so the top of the text clears the
+    /// staff's down-skyline (the lowest note/ledger point) under any of that
+    /// system's syllables. The fixed verseY is the basic-distance floor; this only
+    /// drops further when a note's down-skyline plus the lyric's own half-extent
+    /// reaches past the floor — common music never does, so it is untouched. The
+    /// per-verse stacking is preserved (the whole line shifts together).
+    /// LILYPOND-REF: ly/engraver-init.ly:648-652 Lyrics staff-affinity=UP spacing;
+    /// lily/page-layout-problem.cc realized = max(basic, skyline distance).
+    /// </summary>
+    private List<LyricLayout> ApplySkylineDrop(
+        List<LyricLayout> layouts, ImmutableArray<SystemLayout> systems,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> systemSkylines,
+        double staffBottom)
+    {
+        var measureToSystem = new Dictionary<int, int>();
+        for (int s = 0; s < systems.Length; s++)
+            foreach (var m in systems[s].Measures)
+                measureToSystem[m.MeasureIndex] = s;
+
+        double floor = staffBottom + _params.StaffPadding;
+
+        // Per system, the deepest "note bottom + lyric half-extent" under a
+        // syllable. Only the amount EXCEEDING the floor lowers the line.
+        var systemDrop = new Dictionary<int, double>();
+        foreach (var lay in layouts)
+        {
+            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)
+                || s >= systemSkylines.Count)
+                continue;
+            var down = systemSkylines[s].down;
+            if (down.IsEmpty)
+                continue;
+            double h = down.Height(lay.X);
+            if (double.IsInfinity(h) || double.IsNaN(h))
+                continue;
+            double need = Math.Max(0, (h + LyricTextHalfHeight) - floor);
+            if (!systemDrop.TryGetValue(s, out var cur) || need > cur)
+                systemDrop[s] = need;
+        }
+
+        if (systemDrop.Count == 0 || systemDrop.Values.All(d => d <= 0))
+            return layouts;
+
+        var shifted = new List<LyricLayout>(layouts.Count);
+        foreach (var lay in layouts)
+        {
+            double drop = measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)
+                && systemDrop.TryGetValue(s, out var d) ? d : 0;
+            shifted.Add(drop > 0 ? lay with { Y = lay.Y + drop } : lay);
+        }
+        return shifted;
     }
 
     /// <summary>
