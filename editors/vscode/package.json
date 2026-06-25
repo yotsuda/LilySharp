@@ -2,7 +2,7 @@
   "name": "lilysharp",
   "displayName": "Lily#",
   "description": "Language support for Lily# music notation",
-  "version": "0.1.2-dev.88",
+  "version": "0.1.2-dev.89",
   "publisher": "lilysharp",
   "engines": {
     "vscode": "^1.85.0"
