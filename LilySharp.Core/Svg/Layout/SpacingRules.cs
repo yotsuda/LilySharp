@@ -51,45 +51,6 @@ public static class SpacingRules
     public const double DoubleBarlineWidth = 1.2;
 
     /// <summary>
-    /// Calculates width based on duration using Lilypond's spacing algorithm.
-    /// </summary>
-    /// <remarks>
-    /// Uses CalculateDurationSpace internally for consistency.
-    /// This is a convenience method for situations where only the width is needed.
-    /// </remarks>
-    public static double CalculateDurationWidth(Fraction duration)
-    {
-        return Math.Max(MinNoteWidth, CalculateDurationSpace(duration));
-    }
-    /// <summary>
-    /// Calculates the minimum width needed for a measure (collision avoidance only).
-    /// </summary>
-    /// <remarks>
-    /// The minimum width is the sum of all spring MinDistances plus barline widths.
-    /// This ensures no visual collisions when the measure is at its minimum size.
-    /// </remarks>
-    public static double CalculateMeasureMinWidth(Measure measure)
-    {
-        double width = 0;
-
-        // Barline widths
-        width += GetBarlineWidth(measure.StartBarline);
-        width += GetBarlineWidth(measure.EndBarline);
-
-        // Spring minimum distances (content area)
-        if (measure.Items.Length > 0)
-        {
-            var springs = CreateSpringsForMeasure(measure);
-            foreach (var spring in springs)
-            {
-                width += spring.MinDistance;
-            }
-        }
-
-        return width;
-    }
-
-    /// <summary>
     /// Calculates the ideal width for a measure (includes duration-based spacing).
     /// </summary>
     /// <remarks>
@@ -658,38 +619,6 @@ public static class SpacingRules
     }
 
     /// <summary>
-    /// Calculates duration space using packed-spacing mode.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/spacing-spanner.cc:140-180
-    /// In packed-spacing mode, each column uses its own shortest duration
-    /// rather than the global score-wide shortest. This produces tighter spacing
-    /// for passages with mixed note values (e.g., whole notes next to eighth notes).
-    /// </remarks>
-    public static double CalculateDurationSpacePacked(Fraction duration, Fraction localShortestDuration)
-    {
-        double durationValue = duration.ToDouble();
-        if (durationValue <= 0)
-            return EngravingDefaults.SpacingIncrement;
-
-        double localShortest = localShortestDuration.ToDouble();
-        if (localShortest <= 0)
-            localShortest = EngravingDefaults.BaseShortestDuration;
-
-        // Use local shortest for ratio calculation
-        double ratio = durationValue / localShortest;
-
-        // Same formula as normal, but with local base
-        double spaceFactor;
-        if (ratio < 1.0)
-            spaceFactor = EngravingDefaults.ShortestDurationSpace + ratio - 1.0;
-        else
-            spaceFactor = EngravingDefaults.ShortestDurationSpace + Math.Log2(ratio);
-
-        return spaceFactor * EngravingDefaults.SpacingIncrement;
-    }
-
-    /// <summary>
     /// Calculates the common shortest duration across all voices in a multi-staff score.
     /// </summary>
     /// <remarks>
@@ -1169,54 +1098,6 @@ public static class SpacingRules
             baseShortestDuration: baseShortestDuration));
 
         return springs.ToImmutableArray();
-    }
-
-    /// <summary>
-    /// Merges springs from multiple voices at the same column positions.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/spacing-spanner.cc:100-140 — spacing wishes
-    /// When multiple voices share the same time positions, their springs are
-    /// merged using weighted averaging via Spring.Merge() to produce a single
-    /// spring per column pair.
-    /// </remarks>
-    public static ImmutableArray<Spring> MergeSpringsMultiVoice(
-        IReadOnlyList<ImmutableArray<Spring>> voiceSprings)
-    {
-        if (voiceSprings.Count == 0)
-            return ImmutableArray<Spring>.Empty;
-
-        if (voiceSprings.Count == 1)
-            return voiceSprings[0];
-
-        // Use the longest spring array as the reference
-        int maxLen = 0;
-        foreach (var vs in voiceSprings)
-            maxLen = Math.Max(maxLen, vs.Length);
-
-        if (maxLen == 0)
-            return ImmutableArray<Spring>.Empty;
-
-        var result = new Spring[maxLen];
-
-        // Initialize with the first voice's springs
-        var first = voiceSprings[0];
-        for (int i = 0; i < maxLen; i++)
-            result[i] = i < first.Length ? first[i] : first[^1];
-
-        // Merge remaining voices
-        for (int v = 1; v < voiceSprings.Count; v++)
-        {
-            var vs = voiceSprings[v];
-            int len = Math.Min(maxLen, vs.Length);
-            for (int i = 0; i < len; i++)
-            {
-                // LILYPOND-REF: lily/spacing-spanner.cc:100-140 — merge spacing wishes
-                result[i] = Spring.Merge(result[i], vs[i]);
-            }
-        }
-
-        return result.ToImmutableArray();
     }
 
     /// <summary>
