@@ -834,8 +834,7 @@ public sealed class LayoutEngine
         Dictionary<int, double>? staffYByIndex = null)
     {
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
-        var lyricLayouts = new LyricEngraver().CalculateLayouts(
-            lyrics, ml, _options.StaffHeight, systems, systemSkylines);
+        var lyricLayouts = new LyricEngraver().CalculateLayouts(lyrics, ml, _options.StaffHeight);
 
         // LILYPOND-REF: axis-group-interface.cc skyline_spacing
         // Outside-staff elements are placed in priority order (lower priority = closer to staff).
