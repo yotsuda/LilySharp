@@ -137,6 +137,13 @@ public class SvgSnapshotTests
         // the left of the heads, and grace accidentals are reduced + spaced. These
         // paths were never covered because every other fixture is a grand staff.
         yield return new object[] { "test/single-staff-arpeggio-grace" };
+        // Diverse-coverage fixtures (dimensions the grand-staff/loose fixtures
+        // missed): tight chromatic + chord accidentals, alto/tenor C-clefs, and
+        // two-voice polyphony. Authored in relative mode, octaves verified with
+        // `check --pitches`.
+        yield return new object[] { "test/dense-chromatic" };
+        yield return new object[] { "test/alto-tenor-clefs" };
+        yield return new object[] { "test/two-voice-polyphony" };
         // Multi-staff: a trill spanner on the SECOND (bass) staff runs above that
         // staff, not pulled to the top by the stacker (TrillSpannerItem.StaffIndex).
         yield return new object[] { "test/trillspan-lower-staff" };

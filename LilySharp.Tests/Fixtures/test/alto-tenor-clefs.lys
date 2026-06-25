@@ -1,0 +1,14 @@
+// Coverage: alto and tenor C-clefs (the C-clef sits on a different line in each,
+// so notes and the clef glyph land at different staff positions). Guards the
+// per-clef staff-position cases in CalculateStaffPosition.
+title "Alto and tenor clefs"
+time 4/4
+key f major
+part alt { clef alto }
+part ten { clef tenor }
+section Main {
+  alt { c4 d e f | g a bes c | }
+  ten { c4 d e f | g a bes c | }
+}
+structure { Main }
+render score "alto-tenor-clefs.svg" { staff { alt } staff { ten } }
