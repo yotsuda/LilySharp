@@ -183,14 +183,14 @@
   <line x1="42.74" y1="51.72" x2="77.70" y2="51.72" stroke="#000000" stroke-width="0.130" data-pos="942"/>
   <line x1="77.70" y1="51.72" x2="77.70" y2="53.72" stroke="#000000" stroke-width="0.130" data-pos="942"/>
   <text x="43.24" y="52.02" font-size="2.40" font-family="serif" font-weight="bold" dominant-baseline="hanging" fill="#000000" data-pos="942">2.</text>
-  <text x="9.80" y="11.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="228">C</text>
-  <text x="13.45" y="11.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="244">Dm</text>
-  <text x="17.10" y="11.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="261">Em</text>
-  <text x="21.26" y="11.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="279">F</text>
-  <text x="27.66" y="11.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="301">G</text>
-  <text x="31.31" y="11.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="319">Am</text>
-  <text x="34.96" y="11.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="337">G</text>
-  <text x="38.61" y="11.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="353">C</text>
+  <text x="9.80" y="16.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="228">C</text>
+  <text x="13.45" y="16.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="244">Dm</text>
+  <text x="17.10" y="16.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="261">Em</text>
+  <text x="21.26" y="16.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="279">F</text>
+  <text x="27.66" y="16.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="301">G</text>
+  <text x="31.31" y="16.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="319">Am</text>
+  <text x="34.96" y="16.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="337">G</text>
+  <text x="38.61" y="16.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="353">C</text>
   <text x="45.02" y="23.16" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="418">5</text>
   <text x="45.02" y="24.66" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="418">3</text>
   <text x="48.67" y="23.16" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="428">6</text>

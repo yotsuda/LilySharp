@@ -46,17 +46,25 @@ public readonly record struct ChordNameLayout(
 /// </remarks>
 public static class ChordNameEngraver
 {
-    /// <summary>Distance from staff center to ChordNames context reference point.</summary>
+    /// <summary>Distance from the associated staff's top line up to the chord-name baseline.</summary>
     /// <remarks>
-    /// LILYPOND-REF: ly/engraver-init.ly:588 - nonstaff-relatedstaff-spacing.padding = 0.5
-    /// LILYPOND-REF: scm/define-grobs.scm - VerticalAxisGroup nonstaff-relatedstaff-spacing
-    ///   basic-distance = 5.5 (center-to-center from staff)
-    /// ChordNames is a separate non-staff context above the staff; positioned using
-    /// basic-distance from the staff center (StaffHeight/2 = 2.0).
-    /// Y offset from staff top = StaffHeight/2 + basic-distance = 2.0 + 5.5 = 7.5
-    /// but adjusted for text being positioned at baseline, not center.
+    /// LILYPOND-REF: ly/engraver-init.ly:703-723 - ChordNames context:
+    ///   staff-affinity = DOWN, nonstaff-relatedstaff-spacing.padding = 0.5
+    /// The ChordNames context has staff-affinity = DOWN, so it is spaced relative to the
+    /// staff BELOW it (i.e. it sits just above its associated staff), NOT floated high above.
+    /// LilyPond places the chord-name baseline ~0.6 staff-spaces above that staff's top line
+    /// (relatedstaff-spacing padding 0.5 plus the glyph's skyline clearance; measured 0.587
+    /// against LilyPond 2.24.4 for both solo and top-of-system lead sheets).
+    ///
+    /// NOTE: an earlier value of 5.5 was the basic-distance of the LYRICS/DYNAMICS contexts
+    /// (engraver-init.ly:650/692), mis-attributed to ChordNames. It floated single-staff chords
+    /// far too high and, on a lower staff, shoved the chord up into the staff above it.
+    ///
+    /// Known simplification: like the other annotation engravers, this uses a fixed offset from
+    /// the staff's top LINE rather than the staff's full skyline, so notes/ledger lines poking
+    /// above the staff are not yet cleared (LilyPond would skyline-space the ChordNames line).
     /// </remarks>
-    private const double StaffPadding = 5.5;
+    private const double StaffPadding = 0.6;
 
     /// <summary>
     /// Calculates chord name layouts from collected items.
