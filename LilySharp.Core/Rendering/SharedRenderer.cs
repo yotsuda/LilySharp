@@ -2088,6 +2088,11 @@ public static class SharedRenderer
             double scaledFontSize = FontSize * g.Scale;
             double currentX = g.X;
             double lastNoteX = g.X, lastNoteY = staffMiddleY;
+            // Per-head geometry, collected so the stems/beam can be drawn once
+            // the whole group's positions are known.
+            var headX = new List<double>(g.Notes.Length);
+            var headY = new List<double>(g.Notes.Length);
+            var beamCounts = new List<int>(g.Notes.Length);
             using (gc.Source(g.SourcePosition))
             {
                 foreach (var note in g.Notes)
@@ -2102,10 +2107,20 @@ public static class SharedRenderer
                         DrawAccidental(acc, isCourtesy: false, currentX, y,
                             g.SourcePosition, gc);
                     gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize);
+                    headX.Add(currentX);
+                    headY.Add(y);
+                    beamCounts.Add(BeamCountForDuration(note.BaseDuration.Denominator));
                     lastNoteX = currentX;
                     lastNoteY = y;
                     currentX += 1.2 * g.Scale;  // approximate advance per grace note
                 }
+
+                // Stems (forced UP) plus the connecting beam, or a flag for a lone
+                // grace note. Without this the small heads float free of any stem.
+                // LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings —
+                //   ((Voice Stem direction ,UP) (Voice Slur direction ,DOWN)): grace
+                //   stems are forced up regardless of pitch, and the auto-slur bows down.
+                DrawGraceStemsAndBeam(headX, headY, beamCounts, g.Scale, gc);
 
                 // Grace slur from the last grace notehead to the main notehead.
                 // LILYPOND-REF: ly/grace-init.ly startGraceSlur/stopGraceSlur —
@@ -2117,6 +2132,82 @@ public static class SharedRenderer
                     DrawGraceSlur(lastNoteX, lastNoteY, g.MainNoteX, mainY, g.Scale, gc);
                 }
             }
+        }
+    }
+
+    /// <summary>Number of beams/flag-hooks for a duration denominator
+    /// (8th=1, 16th=2, 32nd=3, …); 0 for quarter and longer.</summary>
+    private static int BeamCountForDuration(int denominator)
+    {
+        int beams = 0;
+        for (int d = denominator; d >= 8; d /= 2) beams++;
+        return beams;
+    }
+
+    /// <summary>
+    /// Draws the up-pointing stems for a grace group, then either a connecting
+    /// beam (≥2 beamable heads) or a single flag (lone grace note). Everything is
+    /// scaled by the grace scale; stems are forced UP per score-grace-settings.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings — grace
+    ///   stems are forced UP (so a stem-up beam stacks its secondary beams toward
+    ///   the heads, i.e. downward on the page).
+    /// LILYPOND-REF: lily/beam.cc secondary beams translated by beam-thickness +
+    ///   gap; here BeamTranslation, scaled.
+    /// Simplification: equal-length stems, so the beam runs parallel to the head
+    /// contour (LilyPond solves a quanted slope). A grace group mixing
+    /// beamed (≥8th) and unbeamed (≤quarter) durations falls back to per-head
+    /// flags rather than a partial beam.
+    /// </remarks>
+    private static void DrawGraceStemsAndBeam(
+        List<double> xs, List<double> ys, List<int> beamCounts, double scale, IDrawingContext gc)
+    {
+        int n = xs.Count;
+        if (n == 0) return;
+
+        double stemThick = EngravingDefaults.StemThickness * scale;
+        double stemLen = EngravingDefaults.DefaultStemLength * scale;
+        // Stem-up attaches at the right edge of the (scaled) notehead.
+        double upAttach = EngravingDefaults.NoteheadBlackWidth * scale - stemThick / 2;
+        double StemX(int i) => xs[i] + upAttach;
+        double StemEndY(int i) => ys[i] - stemLen;   // up = smaller device Y
+
+        // Draw each stem (head up to its stem end).
+        for (int i = 0; i < n; i++)
+            gc.DrawLine(StemX(i), ys[i], StemX(i), StemEndY(i), Color.Black, stemThick);
+
+        int maxBeams = 0;
+        foreach (var b in beamCounts) maxBeams = Math.Max(maxBeams, b);
+        if (maxBeams == 0) return;   // quarter-or-longer grace: bare stems only
+
+        bool allBeamable = n > 1 && beamCounts.All(b => b >= 1);
+        if (!allBeamable)
+        {
+            // Lone grace note (or a non-uniform group): flag each beamable head.
+            for (int i = 0; i < n; i++)
+            {
+                if (beamCounts[i] == 0) continue;
+                int denom = 1 << (beamCounts[i] + 2);   // beams→denominator (1→8, 2→16, …)
+                var flag = EmmentalerGlyphs.GetFlag(denom, stemUp: true);
+                if (flag.HasValue)
+                    gc.DrawGlyph(flag.Value, StemX(i), StemEndY(i), FontSize * scale, Color.Black);
+            }
+            return;
+        }
+
+        // Beam: primary across the whole group; secondaries stack toward the
+        // heads (downward) since grace stems point up.
+        double beamThick = EngravingDefaults.BeamThickness * scale;
+        double beamTrans = EngravingDefaults.BeamTranslation * scale;
+        gc.DrawLine(StemX(0), StemEndY(0), StemX(n - 1), StemEndY(n - 1), Color.Black, beamThick);
+        for (int level = 1; level < maxBeams; level++)
+        {
+            double off = level * beamTrans;   // downward toward the heads
+            for (int i = 0; i < n - 1; i++)
+                if (beamCounts[i] > level && beamCounts[i + 1] > level)
+                    gc.DrawLine(StemX(i), StemEndY(i) + off, StemX(i + 1), StemEndY(i + 1) + off,
+                        Color.Black, beamThick);
         }
     }
 
