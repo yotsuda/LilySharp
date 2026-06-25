@@ -80,15 +80,27 @@ public sealed class LyricEngraver
     }
 
     /// <summary>
-    /// The lyric text's own up-skyline contribution: the distance from its anchor
-    /// point (the vertical MIDLINE — lyrics are drawn TextAnchor.Middle, see
-    /// SharedRenderer.DrawLyrics) up to the top of the text. Measured directly from
-    /// a render: a syllable whose anchor is exactly this far (1.0 ss) below a note's
-    /// down-skyline (the notehead BOTTOM) has its text top touching that notehead.
-    /// This is the lyric grob's real half-extent — the quantity LilyPond uses for
-    /// skyline-to-skyline spacing, not an estimate.
+    /// Distance from a lyric's anchor (the vertical MIDLINE — lyrics are drawn
+    /// TextAnchor.Middle, see SharedRenderer.DrawLyrics) up to the TOP of the glyph.
+    /// This is the lyric grob's real up-extent, used to build the lyric line's
+    /// up-skyline box [anchor − topExtent, anchor] that the staff down-skyline must
+    /// clear. The visible gap between text and note then equals
+    /// <see cref="RelatedStaffPadding"/>, independent of this value.
     /// </summary>
-    private const double LyricTextHalfHeight = 1.0;
+    private const double LyricTextTopExtent = 0.76;
+
+    /// <summary>
+    /// LilyPond Lyrics relatedstaff-spacing padding (ly/engraver-init.ly:651): the
+    /// gap left between the lyric up-skyline and the staff down-skyline when a note
+    /// pokes far enough below that the skyline distance beats the basic-distance.
+    /// </summary>
+    private const double RelatedStaffPadding = 0.5;
+
+    /// <summary>skyline-horizontal-padding for the lyric/staff skyline distance.</summary>
+    private const double HorizonPadding = 0.1;
+
+    /// <summary>Minimum X-width of a syllable's skyline box (narrow glyphs).</summary>
+    private const double MinSyllableBoxWidth = 0.8;
 
 
     /// <summary>
@@ -159,14 +171,15 @@ public sealed class LyricEngraver
     }
 
     /// <summary>
-    /// Lowers each system's whole lyric line so the top of the text clears the
-    /// staff's down-skyline (the lowest note/ledger point) under any of that
-    /// system's syllables. The fixed verseY is the basic-distance floor; this only
-    /// drops further when a note's down-skyline plus the lyric's own half-extent
-    /// reaches past the floor — common music never does, so it is untouched. The
-    /// per-verse stacking is preserved (the whole line shifts together).
-    /// LILYPOND-REF: ly/engraver-init.ly:648-652 Lyrics staff-affinity=UP spacing;
-    /// lily/page-layout-problem.cc realized = max(basic, skyline distance).
+    /// Places each system's lyric line below the staff at the LilyPond distance
+    ///   realized = max(basic-distance, staffDownSkyline.distance(lyricUpSkyline) + padding)
+    /// — Align_interface's per-pair spacing (align-interface.cc:222-275,
+    /// page-layout-problem.cc:625-629). The lyric line's UP-skyline is built from
+    /// the REAL text boxes of its (verse-1) syllables, so the skyline distance is
+    /// the true glyph-to-note clearance, not a single-point estimate. basic-distance
+    /// (the fixed floor) wins for ordinary music — so common snapshots are
+    /// untouched and only notes poking far below drop the line, with the LP padding
+    /// gap. The whole line (all verses) shifts together, preserving verse stacking.
     /// </summary>
     private List<LyricLayout> ApplySkylineDrop(
         List<LyricLayout> layouts, ImmutableArray<SystemLayout> systems,
@@ -178,28 +191,38 @@ public sealed class LyricEngraver
             foreach (var m in systems[s].Measures)
                 measureToSystem[m.MeasureIndex] = s;
 
-        double floor = staffBottom + _params.StaffPadding;
+        double basic = staffBottom + _params.StaffPadding;
 
-        // Per system, the deepest "note bottom + lyric half-extent" under a
-        // syllable. Only the amount EXCEEDING the floor lowers the line.
-        var systemDrop = new Dictionary<int, double>();
+        // Build each system's lyric UP-skyline from the verse-1 syllable boxes,
+        // self-relative to the line's anchor (anchor at y=0; text top at -topExtent
+        // above it, so the UP-skyline height there is +topExtent).
+        var lyricUp = new Dictionary<int, VerticalSkyline>();
         foreach (var lay in layouts)
         {
-            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)
-                || s >= systemSkylines.Count)
+            if (lay.Item.VerseNumber > 1) continue; // verse 1 is the line's top edge
+            if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s))
                 continue;
-            var down = systemSkylines[s].down;
-            if (down.IsEmpty)
-                continue;
-            double h = down.Height(lay.X);
-            if (double.IsInfinity(h) || double.IsNaN(h))
-                continue;
-            double need = Math.Max(0, (h + LyricTextHalfHeight) - floor);
-            if (!systemDrop.TryGetValue(s, out var cur) || need > cur)
-                systemDrop[s] = need;
+            double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
+            var box = VerticalSkyline.FromBox(
+                lay.X - halfW, lay.X + halfW, 0, -LyricTextTopExtent, VerticalDirection.Up);
+            if (lyricUp.TryGetValue(s, out var sky)) sky.Merge(box);
+            else lyricUp[s] = box;
         }
 
-        if (systemDrop.Count == 0 || systemDrop.Values.All(d => d <= 0))
+        var systemDrop = new Dictionary<int, double>();
+        foreach (var (s, up) in lyricUp)
+        {
+            if (s >= systemSkylines.Count) continue;
+            var down = systemSkylines[s].down;
+            if (down.IsEmpty || up.IsEmpty) continue;
+            double dist = down.Distance(up, HorizonPadding);
+            if (double.IsInfinity(dist) || double.IsNaN(dist)) continue;
+            double realized = Math.Max(basic, dist + RelatedStaffPadding);
+            double drop = realized - basic;
+            if (drop > 1e-6) systemDrop[s] = drop;
+        }
+
+        if (systemDrop.Count == 0)
             return layouts;
 
         var shifted = new List<LyricLayout>(layouts.Count);
