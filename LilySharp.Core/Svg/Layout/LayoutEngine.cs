@@ -860,9 +860,15 @@ public sealed class LayoutEngine
         // Layout arpeggio markings
         var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, ml, _options.StaffHeight, measures, measuresByStaff, staffYByIndex);
 
-        // Detect and layout pedal brackets from sustain/sostenuto/una corda marks
-        var pedalBracketItems = PedalEngraver.DetectPedalBrackets(musicMarks);
-        var pedalBracketLayouts = PedalEngraver.Calculate(pedalBracketItems, systems, ml);
+        // Pedal rendering uses the default TEXT style: "Ped." at the engage note
+        // and "*" at the release note, with NO connecting line or hook (those
+        // belong to the bracket / mixed styles, which Lily# does not emit). The
+        // "Ped." / "*" text is drawn from the SustainOn/Off music marks, so here
+        // we emit no bracket layout.
+        // LILYPOND-REF: scm/define-grobs.scm SustainPedal — default
+        //   pedalSustainStyle = 'text ("Ped." … "*"); 'bracket / 'mixed add the
+        //   line+hook and are separate styles.
+        var pedalBracketLayouts = ImmutableArray<PedalBracketLayout>.Empty;
 
         // Layout figured bass
         var figuredBassLayouts = FiguredBassEngraver.Calculate(

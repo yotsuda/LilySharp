@@ -44,11 +44,12 @@ public readonly record struct PedalBracketLayout(
 /// LILYPOND-REF: define-grobs.scm:2586-2605 PianoPedalBracket parameters
 /// LILYPOND-REF: define-grobs.scm:3255-3296 SustainPedal/SustainPedalLineSpanner
 ///
-/// In text style, LilyPond renders:
-/// - "Ped." at sustain-on position
-/// - "*" at sustain-off position
-/// - A horizontal line connecting them (bracket)
-/// - A vertical hook at the release point
+/// NOTE: the DEFAULT pedalSustainStyle is 'text — just "Ped." at sustain-on and
+/// "*" at sustain-off, with NO connecting line or hook. The horizontal line +
+/// release hook belong to the 'bracket / 'mixed styles. Lily# currently emits
+/// only the text style (the "Ped." / "*" music marks), so these bracket layouts
+/// are not wired into the layout pipeline; this class is retained as the basis
+/// for a future bracket style.
 /// </remarks>
 public static class PedalEngraver
 {

@@ -1266,6 +1266,12 @@ public sealed class MeasureCollector
 
             case MusicMarkSyntax mark:
                 {
+                    // A note-attached compound mark (e.g. b@ped.off) is also surfaced
+                    // here as a statement node; CollectArticulations already created it
+                    // anchored to its host note. Skip this un-anchored duplicate so the
+                    // release ("*") stays at its note rather than snapping to the bar.
+                    if (_musicMarks.Any(m => m.SourcePosition == mark.Position))
+                        break;
                     var markType = MusicMarkItem.ParseMarkName(mark.MarkName);
                     if (markType != null)
                     {
@@ -2814,9 +2820,35 @@ public sealed class MeasureCollector
                         _fingeringByPosition[node.Position] = finger;
                     }
                 }
+                else if (MusicMarkItem.ParseMarkName(markSyntax.MarkName) is { } compoundMark
+                         && IsNoteAnchoredPedalMark(compoundMark))
+                {
+                    // A compound PEDAL mark written ON a note (e.g. @ped.off,
+                    // @sost.ped.off). Like @ped above, anchor it to the host note's
+                    // column via itemIndex/anchorTiming so the release ("*") sits at
+                    // that note, not the measure start. Without this the off-mark was
+                    // created with no anchor and snapped to the bar start. The
+                    // statement-level handler then de-dupes by source position.
+                    // Non-pedal compound marks (e.g. @mark.A rehearsal) are left to
+                    // that statement-level handler, which extracts their text.
+                    // LILYPOND-REF: piano-pedal-engraver.cc — pedal marks at note moment.
+                    _musicMarks.Add(new MusicMarkItem(
+                        compoundMark, measureIndex, markSyntax.Position, itemIndex, anchorTiming));
+                }
             }
         }
     }
+
+    /// <summary>
+    /// True for the pedal music marks that anchor to the host note's column
+    /// (the engage/release marks). Compound pedal marks like @ped.off arrive as
+    /// MusicMarkSyntax note articulations and need this anchoring; other compound
+    /// marks (rehearsal, etc.) are handled at the statement level instead.
+    /// </summary>
+    private static bool IsNoteAnchoredPedalMark(MusicMarkType type) =>
+        type is MusicMarkType.SustainOn or MusicMarkType.SustainOff
+             or MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
+             or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
 
     /// <summary>
     /// Pairs trill spanner start/stop events into TrillSpannerItems.
