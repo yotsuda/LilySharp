@@ -1,0 +1,24 @@
+// A high lower-staff chord (C4-E4-G4, reaching the upper staff's pitch range
+// with several ledger lines) must widen the inter-staff gap so the chord and its
+// ledgers clear the UPPER staff's lines, not just its notes. LilyPond's per-staff
+// spacing skyline includes the staff symbol, so a neighbour's notes clear the
+// staff lines themselves. Verified against LilyPond. Guards
+// SkylineBuilder.SeedStaffSymbol.
+title "Inter-staff: high bass chord"
+time 4/4
+key c major
+
+part rh { clef treble }
+part lh { clef bass }
+
+section Main {
+  rh { c'1 | c'1 | }
+  lh { c4 d e f | <c' e' g'>1 | }
+}
+
+structure { Main }
+
+render score "grandstaff-high-bass.svg" {
+  staff { rh }
+  staff { lh }
+}

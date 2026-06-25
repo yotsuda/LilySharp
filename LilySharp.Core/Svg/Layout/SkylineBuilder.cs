@@ -134,6 +134,14 @@ public sealed class SkylineBuilder
         double stemLength = EngravingDefaults.DefaultStemLength;
         double noteheadHeight = EngravingDefaults.NoteheadHeight;
 
+        // The staff symbol itself (the 5 lines, ±StaffHeight/2 around the middle)
+        // is part of LilyPond's VerticalAxisGroup skyline, so adjacent staves are
+        // spaced to clear each other's STAFF LINES — not just their notes. Seed it
+        // first as the baseline; notes/ledgers then extend it outward.
+        // LILYPOND-REF: lily/axis-group-interface.cc:914-940 skyline_spacing —
+        //   inside_staff_skylines include the StaffSymbol grob.
+        SeedStaffSymbol(measureLayouts, staffMiddleY, upSkyline, downSkyline);
+
         AddStaffToSkylines(staff, measureLayouts, staffMiddleY,
             stemLength, noteheadHeight, upSkyline, downSkyline);
 
@@ -146,6 +154,39 @@ public sealed class SkylineBuilder
         AddDynamicsToSkyline(staff, dynamics, measureLayouts, staffMiddleY, downSkyline);
 
         return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// Seeds both skylines with the staff symbol's own vertical extent (the five
+    /// lines span ±StaffHeight/2 about the middle). LilyPond's per-staff spacing
+    /// skyline includes the StaffSymbol, so a neighbour's high/low notes must
+    /// clear these lines, not merely the notes at the same X.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/axis-group-interface.cc:914-940.</remarks>
+    private void SeedStaffSymbol(
+        ImmutableArray<MeasureLayout> measureLayouts, double staffMiddleY,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (measureLayouts.IsDefaultOrEmpty)
+            return;
+        double xLeft = double.PositiveInfinity, xRight = double.NegativeInfinity;
+        foreach (var ml in measureLayouts)
+        {
+            xLeft = Math.Min(xLeft, ml.X);
+            xRight = Math.Max(xRight, ml.X + ml.Width);
+        }
+        if (xRight <= xLeft)
+            return;
+
+        double half = _staffHeight / 2.0;
+        double staffTop = staffMiddleY - half;     // device Y of the top line
+        double staffBottom = staffMiddleY + half;   // device Y of the bottom line
+
+        // UP skyline takes the top line; DOWN skyline takes the bottom line.
+        upSkyline.Merge(VerticalSkyline.FromBox(
+            xLeft, xRight, staffBottom, staffTop, VerticalDirection.Up));
+        downSkyline.Merge(VerticalSkyline.FromBox(
+            xLeft, xRight, staffBottom, staffTop, VerticalDirection.Down));
     }
 
     /// <summary>

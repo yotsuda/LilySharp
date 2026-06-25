@@ -142,6 +142,10 @@ public class SvgSnapshotTests
         // A pedal "Ped." mark anchors at the note it is written on (its column),
         // not the measure start (music-mark AnchorTiming).
         yield return new object[] { "test/pedal-note-anchor" };
+        // A high lower-staff chord (reaching the upper staff's range with ledgers)
+        // widens the inter-staff gap so it clears the upper staff's LINES, not
+        // just its notes (the staff symbol joins the spacing skyline).
+        yield return new object[] { "test/grandstaff-high-bass" };
         // Polyrhythm: an upper-voice triplet's "3" bracket sits above its notes
         // (the voice's stems are force-flipped), not below by the other voice.
         yield return new object[] { "test/voice-tuplet" };
