@@ -78,11 +78,21 @@ public sealed class BeamDetector
         // Pass 1: cross-measure manual beams.
         DetectCrossMeasureManualBeams(voice, beamGroups, consumed);
 
-        // Pass 2: single-measure detection (skipping consumed items).
+        // Pass 2: single-measure detection (skipping consumed items). The beam
+        // grouping depends on the meter, which a mid-piece \time changes — track
+        // the EFFECTIVE time signature per measure (a TimeSignatureChangeItem
+        // carries the new meter from its measure onward) rather than beaming every
+        // measure by the initial one (which beamed e.g. a 6/8 measure as 3/4).
+        // LILYPOND-REF: lily/beaming-pattern.cc — beaming follows the current
+        //   timeSignatureFraction / beatStructure.
+        var effectiveTimeSig = timeSignature;
         for (int measureIndex = 0; measureIndex < voice.Measures.Length; measureIndex++)
         {
             var measure = voice.Measures[measureIndex];
-            DetectBeamGroupsInMeasure(measure, measureIndex, timeSignature, beamGroups, consumed, tupletBoundaries);
+            foreach (var item in measure.Items)
+                if (item is TimeSignatureChangeItem tsc)
+                    effectiveTimeSig = tsc.NewTime;
+            DetectBeamGroupsInMeasure(measure, measureIndex, effectiveTimeSig, beamGroups, consumed, tupletBoundaries);
         }
 
         return beamGroups.ToImmutableArray();
