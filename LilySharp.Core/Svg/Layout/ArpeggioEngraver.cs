@@ -39,8 +39,19 @@ public readonly record struct ArpeggioLayout(
 /// </remarks>
 public static class ArpeggioEngraver
 {
-    // LILYPOND-REF: scm/define-grobs.scm:209 (padding . 0.5)
-    private const double Padding = 0.5;
+    // LILYPOND-REF: scm/define-grobs.scm:210 Arpeggio (padding . 0.5) — this is the
+    // gap between the arpeggio's RIGHT edge and the note column's LEFT edge
+    // (side-position-interface with side-axis = X, direction = LEFT), NOT an offset
+    // from the notehead center.
+    internal const double Padding = 0.5;
+
+    // Half-extent of the wavy line either side of its center; matches the
+    // amplitude the renderer (SharedRenderer.DrawArpeggios) draws with, so the
+    // wave's right edge lands exactly `Padding` left of the noteheads.
+    internal const double WaveAmplitude = 0.2;
+
+    // Vertical overhang past the outer noteheads. LILYPOND-REF: define-grobs.scm:212.
+    internal const double Protrusion = 0.4;
 
     /// <summary>
     /// Calculates layout positions for all arpeggio items.
@@ -87,7 +98,22 @@ public static class ArpeggioEngraver
             double itemX = measure.X + LayoutUtilities.GetItemXOffset(
                 arpMeasures, arp.MeasureIndex, arp.ItemIndex, measure);
 
-            double arpeggioX = itemX - Padding;
+            // The wavy line must clear the LEFT edge of the noteheads, not the
+            // notehead center: place its right edge `Padding` left of the head's
+            // left edge. itemX is the notehead center, so subtract the head's
+            // half-width before the padding and the wave half-extent.
+            // LILYPOND-REF: scm/define-grobs.scm Arpeggio side-position (LEFT, X).
+            double noteheadCenterX = 0.65;
+            if (!arpMeasures.IsDefaultOrEmpty
+                && arp.MeasureIndex < arpMeasures.Length
+                && arp.ItemIndex < arpMeasures[arp.MeasureIndex].Items.Length
+                && arpMeasures[arp.MeasureIndex].Items[arp.ItemIndex] is ChordItem arpChord)
+            {
+                int nv = arpChord.BaseDuration.Denominator <= 1 ? 1
+                       : arpChord.BaseDuration.Denominator <= 2 ? 2 : 4;
+                noteheadCenterX = GlyphMetrics.GetNoteheadBBox(nv).CenterX;
+            }
+            double arpeggioX = itemX - noteheadCenterX - Padding - WaveAmplitude;
 
             // Calculate Y positions from staff positions. The arpeggio's Y is
             // absolute (system.Y based), so add the staff's within-system offset
@@ -96,9 +122,9 @@ public static class ArpeggioEngraver
             double topY = StaffFrame.PositionToDevice(arp.MaxStaffPosition, staffMiddleY);
             double bottomY = StaffFrame.PositionToDevice(arp.MinStaffPosition, staffMiddleY);
 
-            // LILYPOND-REF: scm/define-grobs.scm:211 (protrusion . 0.4)
-            topY -= 0.4;
-            bottomY += 0.4;
+            // LILYPOND-REF: scm/define-grobs.scm:212 (protrusion . 0.4)
+            topY -= Protrusion;
+            bottomY += Protrusion;
 
             layouts.Add(new ArpeggioLayout(
                 X: arpeggioX,

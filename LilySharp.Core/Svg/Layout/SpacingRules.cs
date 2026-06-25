@@ -1684,6 +1684,23 @@ public static class SpacingRules
                 double accYTop = noteY - accBBox.Bottom;
                 boxes.Add((accYBottom, accYTop, accX, accX + accWidth));
             }
+
+            // Arpeggio wavy line hangs to the LEFT of the chord. Reserve its extent
+            // (using the SAME constants ArpeggioEngraver places it with) so it does
+            // not collide with the barline or the previous note — without this the
+            // arpeggio was drawn but never spaced for, like grace notes were.
+            // LILYPOND-REF: scm/define-grobs.scm Arpeggio (direction . LEFT),
+            //   (X-extent . ly:arpeggio::width) — the grob participates in spacing.
+            if (chord.HasArpeggio && chord.Notes.Length > 0)
+            {
+                double arpRight = noteheadLeftX - ArpeggioEngraver.Padding;
+                double arpLeft = arpRight - 2 * ArpeggioEngraver.WaveAmplitude;
+                int maxPos = chord.Notes.Max(n => n.StaffPosition);
+                int minPos = chord.Notes.Min(n => n.StaffPosition);
+                double arpYBottom = (staffY - maxPos / 2.0) - ArpeggioEngraver.Protrusion;
+                double arpYTop = (staffY - minPos / 2.0) + ArpeggioEngraver.Protrusion;
+                boxes.Add((arpYBottom, arpYTop, arpLeft, arpRight));
+            }
         }
         else if (item is NoteItem note)
         {

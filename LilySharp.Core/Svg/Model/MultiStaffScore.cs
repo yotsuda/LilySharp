@@ -184,6 +184,11 @@ public sealed record MultiStaffScore
             score.Dynamics,
             score.Articulations,
             score.GraceNotes,
+            // Arpeggios were dropped here (skipped between GraceNotes and the named
+            // figuredBasses below), so a SINGLE-staff score — which always renders
+            // through FromScore — never showed any arpeggio. Multi-staff scores build
+            // MultiStaffScore directly with per-staff arpeggios, which masked this.
+            arpeggios: score.Arpeggios,
             figuredBasses: score.FiguredBasses,
             chordNames: score.ChordNames,
             percentRepeats: score.PercentRepeats,
