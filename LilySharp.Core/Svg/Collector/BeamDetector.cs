@@ -387,22 +387,26 @@ public sealed class BeamDetector
         if (beatGroups.Count == 0)
             return beatGroups;
 
-        // For compound meter, don't merge (already grouped correctly)
+        // For compound meter, don't merge (already grouped per dotted beat).
         if (timeSig.BeatType == 8 && timeSig.Beats % 3 == 0)
             return beatGroups;
 
-        // Calculate grouping length for 8th notes
+        // Only 4/4 and 3/4 carry an 8th-note beamException that merges eighths
+        // BEYOND the beat (4/4 -> two half-measure groups of 4; 3/4 -> one whole-
+        // measure group of 6). Every other simple meter beams eighths by the beat
+        // (2/4 -> 2+2, 5/4 -> 2+2+2+2+2, 6/4 -> 2x6, ...), so leave the per-beat
+        // groups from the first pass untouched.
+        // LILYPOND-REF: scm/time-signature-settings.scm —
+        //   ((4 . 4) (beamExceptions (end (1/8 . (4 4)))))
+        //   ((3 . 4) (beamExceptions (end (1/8 . (6)))))
+        //   no (5 . 4) / (2 . 4) entry => default beat grouping.
         Fraction groupLength;
-        if (timeSig.Beats >= 4)
-        {
-            // 4/4 or larger: half measure
-            groupLength = new Fraction(timeSig.Beats / 2, timeSig.BeatType);
-        }
+        if (timeSig.BeatType == 4 && timeSig.Beats == 4)
+            groupLength = new Fraction(2, 4);   // 4/4: half measure (4+4)
+        else if (timeSig.BeatType == 4 && timeSig.Beats == 3)
+            groupLength = new Fraction(3, 4);   // 3/4: whole measure (6)
         else
-        {
-            // 2/4, 3/4: full measure
-            groupLength = new Fraction(timeSig.Beats, timeSig.BeatType);
-        }
+            return beatGroups;                  // beam by the beat
         var result = new List<List<(MusicItem item, int index, Fraction startPos)>>();
         var currentMerged = new List<(MusicItem item, int index, Fraction startPos)>();
         Fraction mergeStartPos = Fraction.Zero;
