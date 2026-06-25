@@ -133,6 +133,10 @@ public class SvgSnapshotTests
         // Multi-staff: grace notes on the SECOND (bass) staff render against that
         // staff (GraceNoteItem.StaffIndex / GraceNoteLayout.StaffYOffset).
         yield return new object[] { "test/grace-lower-staff" };
+        // SINGLE-staff: arpeggio renders at all (FromScore used to drop it) and to
+        // the left of the heads, and grace accidentals are reduced + spaced. These
+        // paths were never covered because every other fixture is a grand staff.
+        yield return new object[] { "test/single-staff-arpeggio-grace" };
         // Multi-staff: a trill spanner on the SECOND (bass) staff runs above that
         // staff, not pulled to the top by the stacker (TrillSpannerItem.StaffIndex).
         yield return new object[] { "test/trillspan-lower-staff" };

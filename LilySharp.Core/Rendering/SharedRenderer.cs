@@ -1595,7 +1595,7 @@ public static class SharedRenderer
 
     private static void DrawAccidental(
         string accidentalKind, bool isCourtesy, double noteheadX, double noteheadY,
-        int sourcePosition, IDrawingContext gc)
+        int sourcePosition, IDrawingContext gc, double scale = 1.0)
     {
         char glyph = accidentalKind switch
         {
@@ -1605,9 +1605,14 @@ public static class SharedRenderer
             "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
             _ => EmmentalerGlyphs.AccidentalNatural,
         };
+        // Grace-note accidentals are reduced with the grace head (font-size -3 ≈
+        // 0.65); the glyph size AND all the bbox-derived offsets scale together.
+        // LILYPOND-REF: scm/music-functions.scm general-grace-settings — grace grobs
+        //   inherit the reduced font-size, accidentals included.
+        double fs = FontSize * scale;
         var accBBox = GlyphMetrics.GetAccidentalBBox(accidentalKind);
-        double accWidth = accBBox.Width;
-        double gap = GlyphMetrics.AccidentalNoteGap;
+        double accWidth = accBBox.Width * scale;
+        double gap = GlyphMetrics.AccidentalNoteGap * scale;
 
         if (isCourtesy)
         {
@@ -1621,25 +1626,27 @@ public static class SharedRenderer
             // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize()
             var leftParen = GlyphMetrics.AccidentalLeftParen;
             var rightParen = GlyphMetrics.AccidentalRightParen;
-            double totalInk = leftParen.Width + accWidth + rightParen.Width;
+            double lpWidth = leftParen.Width * scale;
+            double rpWidth = rightParen.Width * scale;
+            double totalInk = lpWidth + accWidth + rpWidth;
 
             // Ink left edge of the whole "(♮)" assembly.
             double inkLeft = noteheadX - gap - totalInk;
-            double accInkLeft = inkLeft + leftParen.Width;
+            double accInkLeft = inkLeft + lpWidth;
             using (gc.Source(sourcePosition))
             {
                 // Each origin is chosen so the glyph's INK lands flush.
                 gc.DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen,
-                    accInkLeft - leftParen.Right, noteheadY, FontSize);
-                gc.DrawGlyph(glyph, accInkLeft - accBBox.Left, noteheadY, FontSize);
+                    accInkLeft - leftParen.Right * scale, noteheadY, fs);
+                gc.DrawGlyph(glyph, accInkLeft - accBBox.Left * scale, noteheadY, fs);
                 gc.DrawGlyph(EmmentalerGlyphs.AccidentalRightParen,
-                    accInkLeft + accWidth - rightParen.Left, noteheadY, FontSize);
+                    accInkLeft + accWidth - rightParen.Left * scale, noteheadY, fs);
             }
         }
         else
         {
             using (gc.Source(sourcePosition))
-                gc.DrawGlyph(glyph, noteheadX - accWidth - gap, noteheadY, FontSize);
+                gc.DrawGlyph(glyph, noteheadX - accWidth - gap, noteheadY, fs);
         }
     }
 
@@ -2105,7 +2112,7 @@ public static class SharedRenderer
                             EngravingDefaults.NoteheadBlackWidth * g.Scale);
                     if (note.Accidental is { } acc)
                         DrawAccidental(acc, isCourtesy: false, currentX, y,
-                            g.SourcePosition, gc);
+                            g.SourcePosition, gc, g.Scale);
                     gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize);
                     headX.Add(currentX);
                     headY.Add(y);

@@ -864,6 +864,18 @@ public static class SpacingRules
         // Add rod from grace group to main note (junction padding)
         totalIdealDistance += GraceToMainRod;
 
+        // The leftmost grace note's accidental hangs further left of the group's
+        // first head, so it sets how far the group protrudes before the main note;
+        // reserve it (scaled with the grace head). Without this a grace accidental
+        // (e.g. \grace { fis16 }) could overrun the barline or the previous note.
+        // LILYPOND-REF: lily/accidental-placement.cc — accidentals reserve left extent.
+        if (notes[0].Accidental is { } acc0)
+        {
+            double accW = GlyphMetrics.GetAccidentalBBox(acc0).Width
+                        + GlyphMetrics.AccidentalNoteGap;
+            totalIdealDistance += accW * GraceNoteItem.ScaleFactor;
+        }
+
         return totalIdealDistance;
     }
 

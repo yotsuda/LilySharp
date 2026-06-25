@@ -1,0 +1,23 @@
+// SINGLE-staff coverage for two paths that the grand-staff fixtures never
+// exercised (and so hid real bugs):
+//   * an arpeggiated chord on a single staff — MultiStaffScore.FromScore used to
+//     drop score.Arpeggios, so single-staff arpeggios never drew at all; and the
+//     wavy line must sit clear to the LEFT of the noteheads (not over them).
+//   * grace notes carrying accidentals — the accidental must be reduced with the
+//     grace head and its width reserved so it does not overrun the previous note.
+// Verified against LilyPond.
+title "Single-staff arpeggio + grace accidentals"
+time 4/4
+key c major
+
+part lh { clef bass }
+
+section Main {
+  lh { c4 grace { fis16 } g4 <c e g>4@arpeggio grace { aes16 } b4 | }
+}
+
+structure { Main }
+
+render score "single-staff-arpeggio-grace.svg" {
+  staff { lh }
+}
