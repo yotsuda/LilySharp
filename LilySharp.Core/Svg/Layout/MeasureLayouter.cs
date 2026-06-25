@@ -184,6 +184,7 @@ public sealed class MeasureLayouter
         double firstNoteMin = firstNoteSpace / 2;
 
         // Apply skyline rod: barline → first item (max across all voices)
+        double startLeadGrace = 0;
         if (timingToItems.TryGetValue(timings[0], out var firstItems))
         {
             foreach (var item in firstItems)
@@ -203,12 +204,37 @@ public sealed class MeasureLayouter
             // column precedes the musical column of the same moment.
             double startPrefix = ChangeItemPrefixWidth(firstItems);
             firstNoteMin = Math.Max(firstNoteMin, startPrefix);
+
+            // Leading grace notes on the first note hang left of its column, after
+            // the barline (LilyPond gives the grace its own column between the
+            // barline and the main note).
+            startLeadGrace = LeadingGracePrefixWidth(firstItems);
         }
 
-        springs.Add(new Spring(
-            Math.Max(firstNoteSpace, firstNoteMin),
-            firstNoteMin,
-            inverseStretchStrength: 0));
+        Spring firstSpring;
+        if (startLeadGrace > 0)
+        {
+            // The grace is now the FIRST musical column after the barline, so the
+            // barline→grace gap uses tight GRACE spacing (spacing-increment), NOT
+            // the wider regular barline→first-note space. The grace group span +
+            // grace→main rod (startLeadGrace) then pushes the main note's column
+            // right. The whole front block is rigid (grace columns don't stretch).
+            // LILYPOND-REF: scm/define-grobs.scm:1592 GraceSpacing
+            //   (spacing-increment . 0.8) — grace columns space tighter than notes.
+            // LILYPOND-REF: lily/grace-spacing-engraver.cc — barline → first grace
+            //   column → … → main column.
+            double graceApproach = GraceSpacingParameters.Default.SpacingIncrement;
+            double front = Math.Max(firstNoteMin, graceApproach + startLeadGrace);
+            firstSpring = new Spring(front, front, inverseStretchStrength: 0);
+        }
+        else
+        {
+            firstSpring = new Spring(
+                Math.Max(firstNoteSpace, firstNoteMin),
+                firstNoteMin,
+                inverseStretchStrength: 0);
+        }
+        springs.Add(firstSpring);
 
         // Springs between adjacent timing columns (duration-proportional + skyline rods)
         // LILYPOND-REF: lily/spacing-basic.cc:107-162 — note_spacing uses left column's shortest-playing-duration.
@@ -282,6 +308,9 @@ public sealed class MeasureLayouter
             // LILYPOND-REF: lily/paper-column.cc — breakable (non-musical)
             // columns precede the musical column of the same moment.
             double prefixWidth = ChangeItemPrefixWidth(nextItems);
+            // Leading grace on the NEXT note hangs left of its column, between the
+            // two notes (same reservation as a hung clef change, see ~line 204).
+            prefixWidth += LeadingGracePrefixWidth(nextItems);
             if (prefixWidth > 0)
                 spring = new Spring(
                     spring.IdealDistance + prefixWidth,
@@ -345,6 +374,37 @@ public sealed class MeasureLayouter
                 _ => 0
             };
             w = Math.Max(w, itemW);
+        }
+        return w;
+    }
+
+    /// <summary>
+    /// Width that leading grace notes need in FRONT of their main note's column.
+    /// Grace notes hang to the left of the note (like a mid-measure clef change),
+    /// so the spring into the column reserves their group width. When several
+    /// voices have grace at the same moment the groups align, so the MAX is taken.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/grace-spacing-engraver.cc:36-80 — grace columns precede
+    ///   the main note's musical column; their span is reserved before it.
+    /// The width equals SpacingRules.CalculateGraceGroupSpringWidth (grace springs
+    /// plus the grace→main rod), the same measure GraceNoteEngraver uses to PLACE
+    /// the group, so reserved space and drawn space agree.
+    /// </remarks>
+    private static double LeadingGracePrefixWidth(IEnumerable<MusicItem>? items)
+    {
+        if (items == null) return 0;
+        double w = 0;
+        foreach (var item in items)
+        {
+            var grace = item switch
+            {
+                NoteItem n => n.LeadingGrace,
+                ChordItem c => c.LeadingGrace,
+                _ => ImmutableArray<GraceNoteInfo>.Empty
+            };
+            if (!grace.IsDefaultOrEmpty)
+                w = Math.Max(w, SpacingRules.CalculateGraceGroupSpringWidth(grace));
         }
         return w;
     }

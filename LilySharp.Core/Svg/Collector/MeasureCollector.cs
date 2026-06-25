@@ -448,6 +448,9 @@ public sealed class MeasureCollector
     private readonly Dictionary<int, int> _fingeringByPosition = new();
     // Pending grace notes to attach to the next main note
     private GraceExpressionSyntax? _pendingGrace = null;
+    // Grace-note infos of the just-collected leading grace group, stamped onto the
+    // main note/chord so the spacing can reserve space in front of its column.
+    private ImmutableArray<GraceNoteInfo> _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
     // Default duration
     private Fraction _defaultDuration = Fraction.Quarter;
 
@@ -1165,6 +1168,11 @@ public sealed class MeasureCollector
                     if (HasCourtesyAnnotation(note))
                         _courtesySourcePositions.Add(note.Position);
                     var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue);
+                    if (!_pendingLeadingGrace.IsDefaultOrEmpty)
+                    {
+                        noteItem = noteItem with { LeadingGrace = _pendingLeadingGrace };
+                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                    }
                     builder.AddItem(noteItem);
                     CollectDynamics(note, measureIndex, itemIndex);
                     CollectArticulations(note, measureIndex, itemIndex, noteItem.StemUp,
@@ -1216,6 +1224,11 @@ public sealed class MeasureCollector
                     bool hasArpeggio = HasArpeggioArticulation(chord);
                     bool isCue = HasCueAnnotation(chord);
                     var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter);
+                    if (!_pendingLeadingGrace.IsDefaultOrEmpty)
+                    {
+                        chordItem = chordItem with { LeadingGrace = _pendingLeadingGrace };
+                        _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
+                    }
                     builder.AddItem(chordItem);
                     CollectDynamics(chord, measureIndex, itemIndex);
                     // Use chord stem direction for articulation placement
@@ -2927,13 +2940,16 @@ public sealed class MeasureCollector
 
         if (graceNoteInfos.Count > 0)
         {
+            var infos = graceNoteInfos.ToImmutableArray();
             _graceNotes.Add(new GraceNoteItem(
                 type,
-                graceNoteInfos.ToImmutableArray(),
+                infos,
                 measureIndex,
                 mainNoteItemIndex,
                 grace.Position,
                 _currentStaffIndex));
+            // Hand the infos to the next main note/chord so it can reserve front space.
+            _pendingLeadingGrace = infos;
         }
     }
 

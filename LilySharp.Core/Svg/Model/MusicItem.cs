@@ -144,6 +144,15 @@ public sealed record NoteItem : MusicItem
     /// <remarks>LILYPOND-REF: lily/beam.cc — Beam::calc_direction.</remarks>
     public bool? StemUpOverride { get; init; }
 
+    /// <summary>
+    /// Grace notes written immediately before this note, "hanging" to the left of
+    /// its column. Like a mid-measure clef change, they occupy horizontal space in
+    /// FRONT of this column, so the spacing reserves their width via the same
+    /// prefix-width mechanism (see MeasureLayouter). Empty when there is none.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/grace-spacing-engraver.cc — grace columns precede the main note's column.</remarks>
+    public ImmutableArray<GraceNoteInfo> LeadingGrace { get; init; } = ImmutableArray<GraceNoteInfo>.Empty;
+
     /// <summary>Stem direction: beam-resolved if beamed, else by staff position.</summary>
     public bool StemUp => StemUpOverride ?? StaffPosition < 0;
 
@@ -245,6 +254,10 @@ public sealed record ChordItem : MusicItem
 
     /// <summary>Beam-resolved stem direction; see <see cref="NoteItem.StemUpOverride"/>.</summary>
     public bool? StemUpOverride { get; init; }
+
+    /// <summary>Leading grace notes hanging left of this chord's column; see
+    /// <see cref="NoteItem.LeadingGrace"/>.</summary>
+    public ImmutableArray<GraceNoteInfo> LeadingGrace { get; init; } = ImmutableArray<GraceNoteInfo>.Empty;
 
     /// <summary>Stem direction: beam-resolved if beamed, else by average staff position.</summary>
     public bool StemUp => StemUpOverride ?? (Notes.Length > 0 && Notes.Average(n => n.StaffPosition) < 0);

@@ -917,6 +917,14 @@ public static class SpacingRules
         return new Spring(newIdeal, newMin, spring.InverseStretchStrength);
     }
 
+    /// <summary>The leading grace notes hanging left of an item's column, if any.</summary>
+    private static ImmutableArray<GraceNoteInfo> GraceNotesOf(MusicItem item) => item switch
+    {
+        NoteItem n => n.LeadingGrace,
+        ChordItem c => c.LeadingGrace,
+        _ => ImmutableArray<GraceNoteInfo>.Empty
+    };
+
     /// <summary>
     /// Creates a spring for a timing column based on duration.
     /// </summary>
@@ -1094,18 +1102,25 @@ public static class SpacingRules
 
         var springs = new List<Spring>();
 
-        // Spring from start barline to first item
+        // Spring from start barline to first item. Leading grace on the first item
+        // hangs left of its column (after the barline), so reserve its width here
+        // too — otherwise this width estimate disagrees with the timing-column
+        // layout (which reserves it in MeasureLayouter), and line breaking would
+        // under-estimate grace measures.
+        // LILYPOND-REF: lily/grace-spacing-engraver.cc — grace columns precede the note.
         var firstItem = spacingItems[0];
-        springs.Add(CreateSpring(null, firstItem, Fraction.Quarter,
-            baseShortestDuration: baseShortestDuration));
+        var firstSpring = CreateSpring(null, firstItem, Fraction.Quarter,
+            baseShortestDuration: baseShortestDuration);
+        springs.Add(AdjustSpringForGraceNotes(firstSpring, GraceNotesOf(firstItem)));
 
-        // Springs between items
+        // Springs between items (the spring into a grace-bearing note reserves its grace)
         for (int i = 0; i < spacingItems.Count - 1; i++)
         {
             var prevItem = spacingItems[i];
             var nextItem = spacingItems[i + 1];
-            springs.Add(CreateSpring(prevItem, nextItem, prevItem.Duration,
-                baseShortestDuration: baseShortestDuration));
+            var spring = CreateSpring(prevItem, nextItem, prevItem.Duration,
+                baseShortestDuration: baseShortestDuration);
+            springs.Add(AdjustSpringForGraceNotes(spring, GraceNotesOf(nextItem)));
         }
 
         // Spring from last item to end barline
