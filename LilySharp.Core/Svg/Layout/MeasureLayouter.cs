@@ -257,21 +257,18 @@ public sealed class MeasureLayouter
             timingToItems.TryGetValue(timings[i], out var nextItems);
 
             // Stem-direction optical correction ([Wanske]): up-stem→down-stem
-            // gets extra space, down→up less. LilyPond adds it to the musical
-            // column spring (*space += correction). Items carry beam-resolved
-            // directions. Single-item columns only — averaging the wishes of
-            // simultaneous voices is a separate refinement.
+            // gets extra space, down→up less. LilyPond computes it per voice
+            // inside each Note_spacing wish, then merges the simultaneous
+            // voices' wishes via merge_springs. For monophonic music this is
+            // the single voice's wish (base + its correction); for polyphony
+            // the per-voice corrections are averaged via Spring.Merge instead
+            // of being dropped.
             // LILYPOND-REF: lily/note-spacing.cc:204-315 stem_dir_correction
-            if (prevItems is { Count: 1 } && nextItems is { Count: 1 })
-            {
-                double corr = SpacingRules.CalculateStemCorrection(
-                    prevItems[0], nextItems[0], NoteSpacingParameters.Default);
-                if (corr != 0)
-                    spring = new Spring(
-                        Math.Max(spring.MinDistance, spring.IdealDistance + corr),
-                        spring.MinDistance,
-                        spring.InverseStretchStrength);
-            }
+            // LILYPOND-REF: lily/spacing-spanner.cc:322-393 musical_column_spacing
+            //   + lily/spring.cc:104 merge_springs
+            spring = SpacingRules.MergeVoiceStemWishes(
+                spring, measuresToScan, timings[i - 1], timings[i],
+                NoteSpacingParameters.Default);
             if (prevItems != null && nextItems != null)
             {
                 double maxSkyDist = 0;

@@ -511,6 +511,67 @@ public static class SpacingRules
     }
 
     /// <summary>
+    /// Merges the per-voice stem-direction spacing wishes for the column pair
+    /// (<paramref name="tLeft"/> → <paramref name="tRight"/>) into a single spring.
+    /// Each voice with a note/chord column at BOTH moments contributes one wish:
+    /// the duration-proportional <paramref name="baseSpring"/> refined by that
+    /// voice's stem-direction correction. The wishes are combined with
+    /// <see cref="Spring.Merge"/>, exactly as LilyPond merges the simultaneous
+    /// voices' spacing wishes for a musical column pair.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spacing-spanner.cc:322-393 Spacing_spanner::musical_column_spacing
+    ///   — collect each voice's Note_spacing wish, then <c>spring = merge_springs (springs)</c>.
+    /// LILYPOND-REF: lily/spring.cc:101-131 merge_springs.
+    /// For monophonic music exactly one voice contributes, so the result equals
+    /// that single wish (base + its own correction) — identical to applying the
+    /// correction directly, which keeps all single-voice spacing unchanged.
+    /// </remarks>
+    internal static Spring MergeVoiceStemWishes(
+        Spring baseSpring, IReadOnlyList<Measure> voices,
+        Fraction tLeft, Fraction tRight, NoteSpacingParameters noteParams)
+    {
+        Spring? merged = null;
+        foreach (var voice in voices)
+        {
+            var left = NoteColumnAt(voice, tLeft);
+            var right = NoteColumnAt(voice, tRight);
+            if (left is null || right is null)
+                continue;
+
+            double corr = CalculateStemCorrection(left, right, noteParams);
+            Spring wish = corr != 0
+                ? new Spring(
+                    Math.Max(baseSpring.MinDistance, baseSpring.IdealDistance + corr),
+                    baseSpring.MinDistance,
+                    baseSpring.InverseStretchStrength)
+                : baseSpring;
+
+            merged = merged is null ? wish : Spring.Merge(merged, wish);
+        }
+        return merged ?? baseSpring;
+    }
+
+    /// <summary>
+    /// The note or chord column starting exactly at moment <paramref name="t"/> in
+    /// <paramref name="measure"/>, or null if that voice rests (or has no column)
+    /// there. Zero-duration change items sharing the moment are skipped.
+    /// </summary>
+    private static MusicItem? NoteColumnAt(Measure measure, Fraction t)
+    {
+        var cur = Fraction.Zero;
+        foreach (var item in measure.Items)
+        {
+            if (cur == t && item is NoteItem or ChordItem)
+                return item;
+            if (cur > t)
+                return null;
+            cur += item.Duration;
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Stem and head vertical ranges (staff positions, +up) used by the stem
     /// direction correction. Null for stemless items (rests, whole notes).
     /// </summary>
