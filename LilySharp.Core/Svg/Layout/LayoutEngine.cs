@@ -875,10 +875,10 @@ public sealed class LayoutEngine
             figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures,
             measuresByStaff, staffYByIndex);
 
-        // Layout chord names
+        // Layout chord names (skyline-spaced above high notes when skylines available)
         var chordNameLayouts = ChordNameEngraver.Calculate(
             chordNames ?? ImmutableArray<ChordNameItem>.Empty, systems, ml, measures,
-            measuresByStaff, staffYByIndex);
+            measuresByStaff, staffYByIndex, systemSkylines);
 
         // Layout percent repeats
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(

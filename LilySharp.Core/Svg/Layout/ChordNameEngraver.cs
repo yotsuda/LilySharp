@@ -69,42 +69,94 @@ public static class ChordNameEngraver
     /// <summary>
     /// Calculates chord name layouts from collected items.
     /// </summary>
+    /// <param name="systemSkylines">
+    /// Per-system up/down skylines (1:1 with <paramref name="systems"/>). When supplied,
+    /// the chord-name line of each system is raised so it clears notes/ledger lines that
+    /// poke above the staff — LilyPond skyline-spaces the ChordNames VerticalAxisGroup
+    /// above the staff's up-skyline rather than from a fixed offset.
+    /// LILYPOND-REF: lily/axis-group-interface.cc skyline-based VerticalAxisGroup spacing;
+    /// ly/engraver-init.ly:721-722 ChordNames staff-affinity=DOWN, relatedstaff padding=0.5.
+    /// </param>
     public static ImmutableArray<ChordNameLayout> Calculate(
         ImmutableArray<ChordNameItem> chordNames,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures = default,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null)
+        Dictionary<int, double>? staffYByIndex = null,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
     {
         if (chordNames.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<ChordNameLayout>.Empty;
 
-        var results = ImmutableArray.CreateBuilder<ChordNameLayout>(chordNames.Length);
+        // Map measure index -> system index, so each chord can find its system's
+        // up-skyline (the skyline is the system's TOPMOST staff content).
+        var measureToSystem = new Dictionary<int, int>();
+        for (int s = 0; s < systems.Length; s++)
+            foreach (var m in systems[s].Measures)
+                measureToSystem[m.MeasureIndex] = s;
 
+        // The top staff's chord line is the only one the system up-skyline describes;
+        // lower-staff chords keep the fixed offset (their staff's skyline isn't here).
+        double minStaffOffset = staffYByIndex != null && staffYByIndex.Count > 0
+            ? staffYByIndex.Values.Min() : 0;
+
+        // Pre-resolve each chord's X and per-staff offset.
+        var prepared = new List<(ChordNameItem chord, double x, double staffOffset, bool topStaff, int sysIdx)>(chordNames.Length);
         foreach (var chord in chordNames)
         {
             if (chord.MeasureIndex >= measureLayouts.Length)
                 continue;
 
             var ml = measureLayouts[chord.MeasureIndex];
-
-            // Resolve this chord name's OWN staff (multi-staff): its measures (X)
-            // and the staff's vertical offset, so it sits above its own staff.
             var cnMeasures = measuresByStaff != null
                 && measuresByStaff.TryGetValue(chord.StaffIndex, out var mm) ? mm : measures;
             double staffOffset = staffYByIndex != null
                 && staffYByIndex.TryGetValue(chord.StaffIndex, out var so) ? so : 0;
 
-            // Find item X position (Items/Columns-aware)
             double x = ml.X + LayoutUtilities.GetItemXOffset(
                 cnMeasures, chord.MeasureIndex, chord.ItemIndex, ml);
+            bool topStaff = staffOffset <= minStaffOffset + 1e-6;
+            int sysIdx = measureToSystem.TryGetValue(chord.MeasureIndex, out var si) ? si : -1;
 
-            // Y position: above the staff (negative = upward), offset to own staff
-            double y = -StaffPadding + staffOffset;
+            prepared.Add((chord, x, staffOffset, topStaff, sysIdx));
+        }
+
+        // Per system, the peak protrusion of staff content above the staff top, sampled
+        // under the top-staff chords. The whole chord line of a system shares one
+        // baseline (a VerticalAxisGroup is placed at a single offset per system), so we
+        // take the maximum over the chords in that system.
+        var systemPeak = new Dictionary<int, double>();
+        if (systemSkylines != null)
+        {
+            foreach (var p in prepared)
+            {
+                if (!p.topStaff || p.sysIdx < 0 || p.sysIdx >= systemSkylines.Count)
+                    continue;
+                var up = systemSkylines[p.sysIdx].up;
+                if (up.IsEmpty)
+                    continue;
+                double h = up.Height(p.x);
+                if (double.IsInfinity(h) || double.IsNaN(h))
+                    continue;
+                double protrusion = Math.Max(0, -h);
+                if (!systemPeak.TryGetValue(p.sysIdx, out var cur) || protrusion > cur)
+                    systemPeak[p.sysIdx] = protrusion;
+            }
+        }
+
+        var results = ImmutableArray.CreateBuilder<ChordNameLayout>(prepared.Count);
+        foreach (var p in prepared)
+        {
+            // Y position: above the staff (negative = upward), offset to own staff.
+            // Raise by the system's peak note protrusion (top-staff only) so the chord
+            // line clears high notes/ledger lines; the StaffPadding floor reproduces the
+            // measured no-protrusion distance (lead sheet without notes above the staff).
+            double protrusion = p.topStaff && systemPeak.TryGetValue(p.sysIdx, out var pk) ? pk : 0;
+            double y = -(StaffPadding + protrusion) + p.staffOffset;
 
             results.Add(new ChordNameLayout(
-                chord.MeasureIndex, x, y, chord.ChordText, chord.SourcePosition));
+                p.chord.MeasureIndex, p.x, y, p.chord.ChordText, p.chord.SourcePosition));
         }
 
         return results.ToImmutable();
