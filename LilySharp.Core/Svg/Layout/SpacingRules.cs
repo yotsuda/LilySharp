@@ -1236,6 +1236,9 @@ public static class SpacingRules
         var firstItem = measure.Items[0];
         var firstSpring = CreateSpring(null, firstItem, Fraction.Quarter,
             baseShortestDuration: baseShortestDuration);
+        // Reserve any leading grace on the first item (same as the non-lyric
+        // estimate path), so a grace + lyric measure is not under-estimated.
+        firstSpring = AdjustSpringForGraceNotes(firstSpring, GraceNotesOf(firstItem));
         // Adjust for first item's lyric left extent
         if (lyricsByItem.TryGetValue(0, out var firstLyrics))
         {
@@ -1252,6 +1255,8 @@ public static class SpacingRules
             var nextItem = measure.Items[i + 1];
             var spring = CreateSpring(prevItem, nextItem, prevItem.Duration,
                 baseShortestDuration: baseShortestDuration);
+            // Reserve grace hanging left of the next item (matches the timing path).
+            spring = AdjustSpringForGraceNotes(spring, GraceNotesOf(nextItem));
 
             // LILYPOND-REF: lily/note-spacing.cc:80-85
             // Adjust minimum distance for lyrics
