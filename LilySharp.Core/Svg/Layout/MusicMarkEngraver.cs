@@ -339,7 +339,27 @@ public static class MusicMarkEngraver
 
         var builder = ImmutableArray.CreateBuilder<MusicMarkItem>();
         if (!marks.IsDefaultOrEmpty)
-            builder.AddRange(marks);
+        {
+            // The INITIAL tempo is drawn from Score.Tempo (the mark added below).
+            // A top-level or part-header `tempo` ALSO gets injected into the music
+            // stream as a metronome mark at the opening moment (MeasureCollector),
+            // so without this filter the same starting tempo prints two or three
+            // times — and the stream copies, anchored to a note column rather than
+            // the line start, float at the wrong height. Drop those redundant
+            // opening-moment stream tempos (MeasureIndex 0, zero elapsed time,
+            // AnchorItemIndex >= 0 = stream-sourced). A genuine mid-piece change
+            // (AnchorTiming numerator != 0, or a later measure) is kept; an
+            // in-music tempo with no Score.Tempo never reaches this branch.
+            foreach (var m in marks)
+            {
+                bool redundantOpeningTempo = m.Type == MusicMarkType.Tempo
+                    && m.MeasureIndex == 0
+                    && m.AnchorItemIndex >= 0
+                    && m.AnchorTiming.Numerator == 0;
+                if (!redundantOpeningTempo)
+                    builder.Add(m);
+            }
+        }
         builder.Add(tempoMark);
         return builder.ToImmutable();
     }
