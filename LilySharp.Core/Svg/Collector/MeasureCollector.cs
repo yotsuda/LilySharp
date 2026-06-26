@@ -61,6 +61,15 @@ internal sealed class MeasureBuilder
     private string? _sectionLabel;
     private int _measureSourceStart;
 
+    /// <summary>
+    /// Fires when a measure is completed (auto-fill OR explicit barline), i.e.
+    /// a new measure is about to begin. The collector uses this to reset its
+    /// per-measure accidental state — LilyPond forgets accidentals at the
+    /// barline. LILYPOND-REF: lily/accidental-engraver.cc — accidental state
+    /// resets at measure boundaries.
+    /// </summary>
+    public Action? MeasureCompleted;
+
     public MeasureBuilder(Fraction timeSignature, int sourceStart = 0)
     {
         _timeSignature = timeSignature;
@@ -216,6 +225,7 @@ internal sealed class MeasureBuilder
                 // This would require more complex handling
             }
             _currentDuration = Fraction.Zero;
+            MeasureCompleted?.Invoke();
         }
     }
 
@@ -333,6 +343,7 @@ internal sealed class MeasureBuilder
         _pendingEndBarline = BarlineType.None;
         _measureSourceStart = sourceEnd;
         _currentDuration = Fraction.Zero;
+        MeasureCompleted?.Invoke();
     }
 
 
@@ -446,6 +457,13 @@ public sealed class MeasureCollector
     private readonly List<GrobRevert> _grobReverts = new();
     // Trill spanner start/stop events (paired into TrillSpannerItems after collection)
     private readonly List<(bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex)> _trillSpannerEvents = new();
+    // Within-measure accidental memory: (diatonic step, octave) → the alteration
+    // currently in effect for that pitch in the CURRENT measure. Seeded from the
+    // key signature and updated as notes are engraved; reset at every measure
+    // boundary (via MeasureBuilder.MeasureCompleted). A note prints an accidental
+    // only when its alteration differs from the in-effect value — LilyPond's
+    // default style. LILYPOND-REF: lily/accidental-engraver.cc.
+    private readonly Dictionary<(int step, int octave), int> _measureAccidentals = new();
     // Notes explicitly marked with @courtesy annotation
     private readonly HashSet<int> _courtesySourcePositions = new();
     /// <summary>
@@ -1029,6 +1047,8 @@ public sealed class MeasureCollector
     private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
     {
         var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.Position);
+        _measureAccidentals.Clear();
+        builder.MeasureCompleted = _measureAccidentals.Clear;
 
         _pendingInlineVoltas.Clear();
 
@@ -1541,6 +1561,7 @@ public sealed class MeasureCollector
         _grobReverts.Clear();
         _trillSpannerEvents.Clear();
         _courtesySourcePositions.Clear();
+        _measureAccidentals.Clear();
         _fingeringByPosition.Clear();
         _structure = null;
         _root = null;
@@ -1782,24 +1803,36 @@ public sealed class MeasureCollector
     }
 
     /// <summary>
-    /// Determines the displayed accidental for a pitch, considering the key
-    /// signature. Returns (null, false) when the pitch's alteration matches the
-    /// key signature (LilyPond's default accidental style prints an accidental
-    /// only where the pitch differs from the key — it does NOT add cautionary
-    /// accidentals across barlines; explicit @courtesy is handled at the call
-    /// site). Verified against LilyPond 2.24.4: a pitch altered in one measure
-    /// and returning to the key value in the next shows no courtesy.
+    /// Determines the displayed accidental for a pitch using LilyPond's default
+    /// accidental style: an accidental is printed when the pitch's alteration
+    /// differs from the one currently IN EFFECT for that (step, octave) within
+    /// the measure. The in-effect value starts at the key signature each measure
+    /// and is updated by every engraved note, so a sharp/flat persists to the
+    /// barline (a later same-pitch note in the measure needs no repeat, and a
+    /// return to the key value prints a cancelling natural). Memory is
+    /// octave-specific and resets at the barline (MeasureBuilder.MeasureCompleted).
+    /// Explicit @courtesy is layered on at the call site. Verified against
+    /// LilyPond 2.24.4.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/accidental-engraver.cc — default style.</remarks>
     // Takes the DISPLAY pitch (post-transpose): diatonic step (0–6), its
     // accidental in semitones, and octave.
     private (string? accidental, bool isCourtesy) GetDisplayAccidentalWithCourtesy(int step, int actual, int octave)
     {
-        int expected = GetKeySignatureAlteration(step);
+        var key = (step, octave);
+        // In effect: a prior accidental on this exact pitch this measure, else
+        // the key signature. A mid-measure key change updates the latter for
+        // pitches not yet altered this measure (GetKeySignatureAlteration reads
+        // the live key) without disturbing remembered alterations.
+        int inEffect = _measureAccidentals.TryGetValue(key, out int remembered)
+            ? remembered
+            : GetKeySignatureAlteration(step);
 
-        if (actual != expected)
+        // Remember this pitch's alteration for the rest of the measure.
+        _measureAccidentals[key] = actual;
+
+        if (actual != inEffect)
         {
-            // Differs from the key signature → print the accidental.
             return (actual switch
             {
                 2 => "doubleSharp",
@@ -1855,6 +1888,8 @@ public sealed class MeasureCollector
     private List<Measure> CollectMeasures()
     {
         var builder = new MeasureBuilder(TimeSignatureFraction);
+        _measureAccidentals.Clear();
+        builder.MeasureCompleted = _measureAccidentals.Clear;
 
         _pendingInlineVoltas.Clear();
 

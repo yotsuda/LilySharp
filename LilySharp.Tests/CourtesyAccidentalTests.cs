@@ -86,10 +86,12 @@ render score """"test.svg"""" { staff { melody } }
     }
 
     [Fact]
-    public void NoCourtesy_SameMeasure_NoBarlineCrossing()
+    public void WithinMeasure_NaturalCancelsEarlierSharp()
     {
-        // c after cis in same measure: current accidental engine only checks key signature,
-        // so c (matching C major key sig) shows no accidental at all (not even courtesy)
+        // c after cis in the SAME measure: the C# is in effect for the rest of
+        // the measure, so the C natural prints a (regular, non-courtesy) natural
+        // to cancel it. Verified vs LilyPond 2.24.4.
+        // LILYPOND-REF: lily/accidental-engraver.cc — accidentals persist to the barline.
         var source = @"
 part melody { clef treble }
 phrase m { cis'4 c d e | }
@@ -101,11 +103,56 @@ render score """"test.svg"""" { staff { melody } }
         var score = new MeasureCollector().Collect(tree, "melody");
 
         var measure = score.Voice.Measures[0];
-        // Second note (c) matches key signature → no accidental displayed
+        // Second note (c) cancels the earlier C# → regular natural, not courtesy.
         var secondNote = measure.Items[1] as NoteItem;
         Assert.NotNull(secondNote);
-        Assert.Null(secondNote.Accidental);
+        Assert.Equal("natural", secondNote.Accidental);
         Assert.False(secondNote.IsCourtesy);
+    }
+
+    [Fact]
+    public void WithinMeasure_RepeatedSharp_PrintsOnce()
+    {
+        // dis dis dis dis in one measure: only the FIRST prints a sharp; the
+        // accidental persists for the rest of the measure. Verified vs LilyPond.
+        var source = @"
+part melody { clef treble }
+phrase m { dis'4 dis dis dis | }
+section A { melody { $m } }
+structure { A }
+render score """"test.svg"""" { staff { melody } }
+";
+        var tree = SyntaxTree.Parse(source);
+        var score = new MeasureCollector().Collect(tree, "melody");
+
+        var items = score.Voice.Measures[0].Items;
+        Assert.Equal("sharp", (items[0] as NoteItem)!.Accidental);
+        Assert.Null((items[1] as NoteItem)!.Accidental);
+        Assert.Null((items[2] as NoteItem)!.Accidental);
+        Assert.Null((items[3] as NoteItem)!.Accidental);
+    }
+
+    [Fact]
+    public void WithinMeasure_AccidentalIsOctaveSpecific()
+    {
+        // cis'(C#5) does NOT affect c'(C6): the memory is octave-specific. The
+        // C6 matches the C-major key in its own octave → no accidental; the later
+        // c,(C5) shares cis''s octave → cancels it. Verified vs LilyPond 2.24.4.
+        // (Octaves accumulate in relative mode: cis'=C#5, c'=C6, c,=C5.)
+        var source = @"
+part melody { clef treble }
+phrase m { cis'4 c' c, e | }
+section A { melody { $m } }
+structure { A }
+render score """"test.svg"""" { staff { melody } }
+";
+        var tree = SyntaxTree.Parse(source);
+        var score = new MeasureCollector().Collect(tree, "melody");
+
+        var items = score.Voice.Measures[0].Items;
+        Assert.Equal("sharp", (items[0] as NoteItem)!.Accidental);   // cis' (C#5)
+        Assert.Null((items[1] as NoteItem)!.Accidental);             // c'  (C6) — other octave
+        Assert.Equal("natural", (items[2] as NoteItem)!.Accidental); // c,  (C5) cancels the C#5
     }
 
     [Fact]
