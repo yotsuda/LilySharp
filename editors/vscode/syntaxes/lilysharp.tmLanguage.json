@@ -7,6 +7,7 @@
         { "include": "#override-declaration" },
         { "include": "#section-declaration" },
         { "include": "#phrase-declaration" },
+        { "include": "#lyrics-block" },
         { "include": "#variable-reference" },
         { "include": "#legacy-keywords" },
         { "include": "#keywords" },
@@ -92,6 +93,32 @@
                         "1": { "name": "keyword.control.phrase.lilysharp" },
                         "2": { "name": "entity.name.function.phrase.lilysharp" }
                     }
+                }
+            ]
+        },
+        "lyrics-block": {
+            "comment": "Inside lyrics { … } the words are syllables, not code, so reserved words like 'key'/'time'/'a'/'f' must NOT be highlighted as keywords or pitches. Match the block as its own context that only knows comments, quoted syllables, barlines and the connector tokens; everything else stays plain text.",
+            "begin": "\\b(lyrics)\\b(?:\\s+([A-Za-z_][A-Za-z0-9_]*))?\\s*(\\{)",
+            "beginCaptures": {
+                "1": { "name": "keyword.control.lilysharp" },
+                "2": { "name": "entity.name.voice.lilysharp" },
+                "3": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.definition.block.lilysharp" }
+            },
+            "patterns": [
+                { "include": "#comments" },
+                { "include": "#strings" },
+                {
+                    "name": "punctuation.separator.barline.lilysharp",
+                    "match": "\\|"
+                },
+                {
+                    "comment": "Lyric connectors: hyphen (--), extender (__ or _), melisma (~)",
+                    "name": "punctuation.separator.lyric-connector.lilysharp",
+                    "match": "--|__|~|_"
                 }
             ]
         },
