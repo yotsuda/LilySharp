@@ -400,6 +400,12 @@ public sealed class MeasureCollector
     private int _currentOctave = 4;
     private int _initialOctave = 4;  // Reset target for section boundaries
     private char _lastPitchName = 'c';
+    // Octave resolution mode. Default (false) = LilyPond-style relative: each
+    // pitch takes the octave nearest the previous one, then '/, adjust. When
+    // true (set by `octave absolute`), '/, are absolute offsets from a fixed C4
+    // anchor (bare c = C4, c' = C5, c, = C3) and notes do not carry octave.
+    private bool _octaveAbsolute;
+    private bool _initialOctaveAbsolute; // file-level default, restored per voice
 
     // Dynamic markings
     private readonly List<DynamicItem> _dynamics = new();
@@ -534,6 +540,7 @@ public sealed class MeasureCollector
         _initialOctave = _currentOctave;
         _initialClef = _clef; // Preserve initial clef before music processing
         _initialKeySharps = _keySharps; // Preserve initial key before music processing
+        _initialOctaveAbsolute = _octaveAbsolute; // file-level octave mode default
 
         // Phase 2: Collect the primary (voice-0) stream. A << \\ >> span is
         // handled INLINE during this walk (its first voice flows into the
@@ -692,6 +699,7 @@ public sealed class MeasureCollector
             // Set initial octave: explicit > instrument default > clef default
             _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
             _initialOctave = _currentOctave;
+            _octaveAbsolute = _initialOctaveAbsolute; // restore file-level octave mode
             ApplyTranspose(partTranspose);
 
             // Re-arm this voice's running key from the written initial key,
@@ -1098,6 +1106,7 @@ public sealed class MeasureCollector
             case RevertDeclarationSyntax:
             case OnceModifierSyntax:
             case ClefDeclarationSyntax:
+            case OctaveDirectiveSyntax:
             case KeySignatureSyntax:
             case TimeSignatureSyntax:
             case TempoDeclarationSyntax:
@@ -1339,6 +1348,12 @@ public sealed class MeasureCollector
                 }
                 break;
 
+            case OctaveDirectiveSyntax octaveDir:
+                // Mid-stream octave-mode switch: affects only how subsequent
+                // pitches resolve '/, marks; emits no grob.
+                _octaveAbsolute = octaveDir.IsAbsolute;
+                break;
+
             case KeySignatureSyntax keySig:
                 {
                     // Mid-measure key signature change
@@ -1567,6 +1582,8 @@ public sealed class MeasureCollector
         _root = null;
         _currentOctave = 4;
         _initialOctave = 4;
+        _octaveAbsolute = false;
+        _initialOctaveAbsolute = false;
         _lastPitchName = 'c';
         _defaultDuration = Fraction.Quarter;
         _title = null;
@@ -1705,6 +1722,13 @@ public sealed class MeasureCollector
 
                 case ClefDeclarationSyntax clef:
                     _clef = clef.ClefName.Text.ToLowerInvariant();
+                    break;
+
+                case OctaveDirectiveSyntax octaveDir:
+                    // A top-level `octave absolute/relative` sets the file default;
+                    // mid-music switches are handled in the music stream.
+                    if (!IsInsideMusicContent(octaveDir))
+                        _octaveAbsolute = octaveDir.IsAbsolute;
                     break;
 
                 case SectionDeclarationSyntax section:
@@ -2183,6 +2207,7 @@ public sealed class MeasureCollector
         // Reset octave to initial value at each section boundary
         _currentOctave = _initialOctave;
         _lastPitchName = 'c';
+        _octaveAbsolute = _initialOctaveAbsolute; // mode reverts to file default per section
 
         foreach (var child in section.DescendantNodes())
         {
@@ -2231,6 +2256,7 @@ public sealed class MeasureCollector
                 case InlineVoltaSyntax:
                 case MusicMarkSyntax:
                 case ClefDeclarationSyntax:
+                case OctaveDirectiveSyntax:
                 case KeySignatureSyntax:
                 case TimeSignatureSyntax:
                 case TempoDeclarationSyntax:
@@ -2264,7 +2290,7 @@ public sealed class MeasureCollector
         if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-            or ClefDeclarationSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax)
+            or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax)
         {
             musicNodes.Add(expression);
         }
@@ -2279,7 +2305,7 @@ public sealed class MeasureCollector
                 && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
                 or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax
                 or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-                or ClefDeclarationSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax);
+                or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax);
 
         musicNodes.AddRange(nodes);
     }
@@ -3161,13 +3187,17 @@ public sealed class MeasureCollector
         char pitchName = pitch.PitchName.ToLowerInvariant()[0];
         int step = GetPitchIndex(pitchName);
 
-        // Closest-octave rule + explicit '/, offset — shared with the exporters.
+        // Absolute mode: '/, are offsets from a fixed C4 anchor (bare c = C4),
+        // stateless — every note is independent. Relative mode (default): the
+        // closest-octave rule + explicit '/, offset, shared with the exporters.
         // The relative chain runs on the ORIGINAL pitches; transpose is applied
         // afterwards, so a transposed part still resolves octaves from what the
         // user wrote.
-        int actualOctave = RelativeOctave.Resolve(
-            GetPitchIndex(_lastPitchName), _currentOctave,
-            step, pitch.OctaveOffset);
+        int actualOctave = _octaveAbsolute
+            ? 4 + pitch.OctaveOffset
+            : RelativeOctave.Resolve(
+                GetPitchIndex(_lastPitchName), _currentOctave,
+                step, pitch.OctaveOffset);
         _lastPitchName = pitchName;
 
         // Display pitch = written pitch, transposed if the part has transpose:.

@@ -1,0 +1,25 @@
+// Absolute octave mode: `octave absolute` makes '/, offsets from a fixed C4
+// anchor (bare c = C4, c' = C5, c, = C3), with NO carry between notes — each
+// pitch is independent. The octave leaps in the last measure (C5 C4 C6 C5)
+// would each need careful '/, counting in relative mode; here they are direct.
+// Relative remains the default; this fixture opts in at the top.
+octave absolute
+title "Octave Mode (absolute)"
+composer "Lily#"
+
+time 4/4
+key c major
+
+part melody { clef treble }
+
+section Main {
+  melody {
+    c' d' e' f' | g' a' b' c'' | c'' g' e' c' | c' c c'' c' |
+  }
+}
+
+structure { Main }
+
+render score "octave-absolute.svg" {
+  staff { melody }
+}

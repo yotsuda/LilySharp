@@ -486,6 +486,20 @@ internal sealed class ClefDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Octave mode directive: <c>octave absolute</c> / <c>octave relative</c>.
+/// Switches how <c>'</c>/<c>,</c> marks are resolved.
+/// </summary>
+internal sealed class OctaveDirectiveGreen : GreenSyntaxNode
+{
+    public OctaveDirectiveGreen(
+        SyntaxToken octaveKeyword,
+        SyntaxToken mode)
+        : base(SyntaxKind.OctaveDirective, [octaveKeyword, mode])
+    {
+    }
+}
+
+/// <summary>
 /// Tuplet expression: tuplet 3/2 { ... }
 /// </summary>
 internal sealed class TupletExpressionGreen : GreenSyntaxNode

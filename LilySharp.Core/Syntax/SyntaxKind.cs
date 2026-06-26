@@ -245,6 +245,7 @@ public enum SyntaxKind : ushort
     TempoDeclaration,
     KeySignature,
     ClefDeclaration,
+    OctaveDirective,
 
     // === Nodes: Tuplet and Grace ===
     TupletExpression,

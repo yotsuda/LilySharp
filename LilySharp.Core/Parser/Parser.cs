@@ -242,6 +242,7 @@ internal sealed class Parser
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),
+            SyntaxKind.OctaveKeyword => ParseOctaveDirective(),
             SyntaxKind.TransposeKeyword => ParseTopLevelTranspose(),
 
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or
@@ -637,6 +638,7 @@ internal sealed class Parser
             SyntaxKind.BreakKeyword => true,
             SyntaxKind.KeyKeyword => true,
             SyntaxKind.ClefKeyword => true,
+            SyntaxKind.OctaveKeyword => true,
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or SyntaxKind.AppogiaturaKeyword => true,
             SyntaxKind.LyricsKeyword => true,
             SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword or SyntaxKind.OnceKeyword => true,
@@ -681,6 +683,7 @@ internal sealed class Parser
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),
+            SyntaxKind.OctaveKeyword => ParseOctaveDirective(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
 
@@ -1299,6 +1302,32 @@ private GreenNode?[] ParseArticulations()
         }
 
         return new ClefDeclarationGreen(clefKeyword, clefName);
+    }
+
+    /// <summary>
+    /// Parse an octave mode directive: <c>octave absolute</c> / <c>octave relative</c>.
+    /// The mode switches how <c>'</c>/<c>,</c> octave marks resolve (relative is
+    /// the default; absolute makes each mark an offset from a fixed C4 anchor).
+    /// </summary>
+    private OctaveDirectiveGreen ParseOctaveDirective()
+    {
+        var octaveKeyword = Expect(SyntaxKind.OctaveKeyword);
+
+        SyntaxToken mode;
+        if (Check(SyntaxKind.Identifier) &&
+            (Current.Text == "absolute" || Current.Text == "relative"))
+        {
+            mode = Advance();
+        }
+        else
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                "Expected octave mode (absolute or relative)");
+            mode = new SyntaxToken(SyntaxKind.Identifier, "relative", null, null);
+        }
+
+        return new OctaveDirectiveGreen(octaveKeyword, mode);
     }
 
     private TupletExpressionGreen ParseTupletExpression()

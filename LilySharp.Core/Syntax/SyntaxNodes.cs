@@ -960,6 +960,23 @@ public sealed class ClefDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Octave mode directive: <c>octave absolute</c> / <c>octave relative</c>.
+/// </summary>
+public sealed class OctaveDirectiveSyntax : SyntaxNode
+{
+    internal OctaveDirectiveSyntax(InternalSyntax.OctaveDirectiveGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode OctaveKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode Mode => (SyntaxTokenNode)GetChild(1)!;
+
+    /// <summary>True for <c>octave absolute</c>, false for <c>octave relative</c>.</summary>
+    public bool IsAbsolute => Mode.Text.Equals("absolute", System.StringComparison.OrdinalIgnoreCase);
+}
+
+/// <summary>
 /// Tuplet expression: tuplet 3/2 { ... }
 /// </summary>
 public sealed class TupletExpressionSyntax : SyntaxNode

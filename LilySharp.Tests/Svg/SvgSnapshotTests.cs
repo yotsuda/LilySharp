@@ -180,6 +180,10 @@ public class SvgSnapshotTests
         yield return new object[] { "test/courtesy-accidentals" };
         yield return new object[] { "test/editorial-accidental" };
         yield return new object[] { "test/multi-line-spanners" };
+        // Absolute octave mode (`octave absolute`): '/, resolve from a fixed C4
+        // anchor with no carry, so octave leaps render directly. Relative is the
+        // default and unaffected.
+        yield return new object[] { "test/octave-absolute" };
         yield return new object[] { "test/multi-measure-rest" };
         // Multi-staff: when ONE staff rests (R1*N) but ANOTHER has content over
         // the same measures, the resting staff shows individual whole rests and
