@@ -100,13 +100,16 @@ public class MultiLineSpannerTests
         var first = layout.HairpinLayouts[0];
         var last = layout.HairpinLayouts[^1];
 
+        // Full half-opening = LilyPond's height (0.6666); broken edges are a
+        // fraction of it (2/3 continued, 1/3 continuing).
+        const double full = 0.6666;
         // First piece: starts at 0 (cresc start), ends at a partial opening (continued).
         Assert.Equal(0.0, first.StartOpening, precision: 4);
-        Assert.True(first.EndOpening > 0 && first.EndOpening < 0.34,
+        Assert.True(first.EndOpening > 0 && first.EndOpening < full,
             $"First piece's end opening should be a partial fraction, got {first.EndOpening}");
 
         // Last piece: starts at a partial opening (continuing), ends at full opening.
-        Assert.True(last.StartOpening > 0 && last.StartOpening < 0.34,
+        Assert.True(last.StartOpening > 0 && last.StartOpening < full,
             $"Last piece's start opening should be a partial fraction, got {last.StartOpening}");
         Assert.True(last.EndOpening > last.StartOpening,
             $"Last piece should grow from continuing to full, got start={last.StartOpening}, end={last.EndOpening}");

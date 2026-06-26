@@ -124,8 +124,14 @@ public static class HairpinEngraver
         var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var layouts = ImmutableArray.CreateBuilder<HairpinLayout>();
 
-        double fullOpening = Height / 2.0;
-        // LILYPOND-REF: lily/hairpin.cc:180-220 — broken hairpin height fractions
+        // Height IS the wedge's half-opening (LP's `height` property): the two
+        // arms sit at ±fullOpening, so the open end's full mouth is 2·Height,
+        // matching LilyPond. (A stray /2 here made every hairpin half-height,
+        // so the flat wedge read as "not closing" at a broken continuation.)
+        // LILYPOND-REF: lily/hairpin.cc — Line(x, ±starth) … (width, ±endh).
+        double fullOpening = Height;
+        // LILYPOND-REF: lily/hairpin.cc:300-313 — broken hairpin height fractions
+        // (crescendo: first piece 0→2·height/3, continuation height/3→height).
         double continuedOpening = fullOpening * ContinuedFraction;
         double continuingOpening = fullOpening * ContinuingFraction;
 

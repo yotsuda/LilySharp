@@ -237,7 +237,7 @@ public class HairpinTests
     public void Calculate_Opening_MatchesLilyPondHeight()
     {
         // LILYPOND-REF: scm/define-grobs.scm:1655 (height . 0.6666)
-        // Opening = height / 2
+        // height IS the half-opening, so the open end's half-mouth = height.
         var measures = CreateMeasureLayouts(3);
         var systems = CreateSingleSystem(3);
         var hairpins = ImmutableArray.Create(new HairpinItem(
@@ -247,7 +247,7 @@ public class HairpinTests
 
         Assert.Single(result);
         Assert.Equal(0.0, result[0].StartOpening, 4);  // Crescendo: point at start
-        Assert.Equal(0.6666 / 2.0, result[0].EndOpening, 4);  // Full opening at end
+        Assert.Equal(0.6666, result[0].EndOpening, 4);  // Full opening at end
     }
 
     [Fact]
@@ -302,7 +302,7 @@ public class HairpinTests
         Assert.Equal(2, result.Length);
 
         // First segment (continued): point at left, 2/3 opening at right
-        double fullOpening = 0.6666 / 2.0;
+        double fullOpening = 0.6666;
         Assert.Equal(0.0, result[0].StartOpening, 4);
         Assert.Equal(fullOpening * 2.0 / 3.0, result[0].EndOpening, 4);
 
@@ -323,7 +323,7 @@ public class HairpinTests
 
         Assert.Equal(2, result.Length);
 
-        double fullOpening = 0.6666 / 2.0;
+        double fullOpening = 0.6666;
         // First segment (continued): full opening at left, 2/3 at right
         Assert.Equal(fullOpening, result[0].StartOpening, 4);
         Assert.Equal(fullOpening * 2.0 / 3.0, result[0].EndOpening, 4);
@@ -346,7 +346,7 @@ public class HairpinTests
 
         Assert.Single(result);
         Assert.Equal(0.0, result[0].StartOpening, 4);
-        Assert.Equal(0.6666 / 2.0, result[0].EndOpening, 4);
+        Assert.Equal(0.6666, result[0].EndOpening, 4);
     }
 
     // --- HairpinDirection enum ---

@@ -88,10 +88,10 @@
   <text class="music" x="53.30" y="37.92" font-size="4.00" data-pos="380"></text>
   <text class="music" x="61.35" y="37.08" font-size="4.00" data-pos="391"></text>
   <text class="music" x="69.40" y="31.55" font-size="4.00" data-pos="403"></text>
-  <line x1="64.16" y1="24.15" x2="72.19" y2="23.82" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>
-  <line x1="64.16" y1="24.15" x2="72.19" y2="24.49" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>
-  <line x1="19.90" y1="39.86" x2="33.92" y2="40.19" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
-  <line x1="19.90" y1="40.53" x2="33.92" y2="40.19" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
+  <line x1="64.16" y1="24.15" x2="72.19" y2="23.49" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>
+  <line x1="64.16" y1="24.15" x2="72.19" y2="24.82" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>
+  <line x1="19.90" y1="39.53" x2="33.92" y2="40.19" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
+  <line x1="19.90" y1="40.86" x2="33.92" y2="40.19" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>
   <text x="0.05" y="30.06" font-size="1.75" font-family="serif" font-weight="bold" fill="#000000">4</text>
   <text class="music" x="0.80" y="14.42" font-size="1.60" data-pos="0"></text>
   <line x1="1.31" y1="14.42" x2="1.31" y2="13.02" stroke="#000000" stroke-width="0.100" data-pos="0"/>
