@@ -1199,13 +1199,16 @@ private GreenNode?[] ParseArticulations()
     private ParallelExpressionGreen ParseVoiceBlocks()
     {
         var firstVoice = Expect(SyntaxKind.VoiceKeyword);
-        var children = new List<GreenNode?> { ParseMusicBlock() };
+        var children = new List<GreenNode?>();
+        if (Check(SyntaxKind.Identifier)) children.Add(Advance()); // optional voice name
+        children.Add(ParseMusicBlock());
 
         while (Check(SyntaxKind.VoiceKeyword))
         {
             // Keep the separating `voice` keyword in the tree so ToFullString
             // round-trips exactly; Voices skips it (only MusicBlocks are voices).
             children.Add(Advance());
+            if (Check(SyntaxKind.Identifier)) children.Add(Advance()); // optional voice name
             children.Add(ParseMusicBlock());
         }
 
@@ -1537,6 +1540,8 @@ private GreenNode?[] ParseArticulations()
     private LyricsBlockGreen ParseLyricsBlock()
     {
         var keyword = Expect(SyntaxKind.LyricsKeyword);
+        // Optional voice-binding name: `lyrics sop { … }` aligns to voice 'sop'.
+        var name = Check(SyntaxKind.Identifier) ? Advance() : (SyntaxToken?)null;
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var measures = new List<GreenNode?>();
@@ -1550,7 +1555,7 @@ private GreenNode?[] ParseArticulations()
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
 
-        return new LyricsBlockGreen(keyword, openBrace, [.. measures], closeBrace);
+        return new LyricsBlockGreen(keyword, name, openBrace, [.. measures], closeBrace);
     }
 
     /// <summary>

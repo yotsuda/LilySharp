@@ -900,6 +900,32 @@ public sealed class ParallelExpressionSyntax : SyntaxNode
             }
         }
     }
+
+    /// <summary>
+    /// Each voice block with its optional name (<c>voice sop { … }</c> → "sop";
+    /// <c>voice { … }</c> → null). A name token, when present, sits immediately
+    /// before its block; a separating <c>voice</c> keyword clears the pending name.
+    /// </summary>
+    public IEnumerable<(string? Name, MusicBlockSyntax Block)> NamedVoices
+    {
+        get
+        {
+            string? pending = null;
+            for (int i = 1; i < SlotCount - 1; i++)
+            {
+                var child = GetChild(i);
+                if (child is MusicBlockSyntax mb)
+                {
+                    yield return (pending, mb);
+                    pending = null;
+                }
+                else if (child is SyntaxTokenNode t && t.Kind == SyntaxKind.Identifier)
+                    pending = t.Text;
+                else
+                    pending = null; // a separating `voice` keyword
+            }
+        }
+    }
 }
 
 /// <summary>
@@ -1012,12 +1038,25 @@ public sealed class LyricsBlockSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode LyricsKeyword => (SyntaxTokenNode)GetChild(0)!;
-    public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(1)!;
+
+    /// <summary>True when written as `lyrics name { … }` (an optional name sits
+    /// between the keyword and the brace, binding to a same-named voice).</summary>
+    private bool HasName =>
+        GetChild(1) is SyntaxTokenNode t && t.Kind == SyntaxKind.Identifier;
+
+    /// <summary>The voice name this lyrics block binds to, or null for the default
+    /// (first voice).</summary>
+    public string? VoiceName =>
+        HasName ? ((SyntaxTokenNode)GetChild(1)!).Text : null;
+
+    private int OpenBraceIndex => HasName ? 2 : 1;
+
+    public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(OpenBraceIndex)!;
     public IEnumerable<SyntaxNode> Syllables
     {
         get
         {
-            for (int i = 2; i < SlotCount - 1; i++)
+            for (int i = OpenBraceIndex + 1; i < SlotCount - 1; i++)
             {
                 var child = GetChild(i);
                 if (child != null)

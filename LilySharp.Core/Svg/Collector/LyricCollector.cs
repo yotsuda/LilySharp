@@ -46,7 +46,7 @@ public sealed class LyricCollector
     /// <returns>List of LyricItem objects.</returns>
     public ImmutableArray<LyricItem> Collect(
         LyricsBlockSyntax lyricsBlock,
-        IReadOnlyList<(int MeasureIndex, int ItemIndex)> noteItemIndices,
+        IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing)> noteItemIndices,
         int voiceId = 0,
         int verseNumber = 1)
     {
@@ -71,7 +71,7 @@ public sealed class LyricCollector
                 continue;
             }
 
-            var (measureIndex, itemIndex) = noteItemIndices[noteIndex];
+            var (measureIndex, itemIndex, timing) = noteItemIndices[noteIndex];
 
             lyrics.Add(new LyricItem(
                 Text: text,
@@ -79,7 +79,8 @@ public sealed class LyricCollector
                 ItemIndex: itemIndex,
                 ConnectorType: connectorType,
                 VoiceId: voiceId,
-                VerseNumber: verseNumber
+                VerseNumber: verseNumber,
+                Timing: timing
             ));
 
             noteIndex++;

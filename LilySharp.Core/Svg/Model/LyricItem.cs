@@ -57,9 +57,16 @@ public sealed record LyricItem(
     /// <summary>Type of connector after this syllable.</summary>
     LyricConnectorType ConnectorType = LyricConnectorType.None,
 
-    /// <summary>Voice ID this lyric belongs to (for multi-voice lyrics).</summary>
+    /// <summary>Voice ID this lyric belongs to (for multi-voice lyrics). 0 = the
+    /// primary voice; greater than 0 = a named bound voice, whose X is resolved
+    /// from <see cref="Timing"/> against the shared column grid.</summary>
     int VoiceId = 0,
 
     /// <summary>Verse number (1-based) for multiple lyric lines.</summary>
-    int VerseNumber = 1
+    int VerseNumber = 1,
+
+    /// <summary>Musical moment of this syllable's note within its measure. Used
+    /// to place a bound (non-primary) voice's syllable over its real note column
+    /// (which the primary voice's item index would miss when rhythms differ).</summary>
+    LilySharp.Core.Semantics.Fraction Timing = default
 );

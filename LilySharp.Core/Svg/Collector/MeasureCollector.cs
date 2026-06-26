@@ -428,6 +428,10 @@ public sealed class MeasureCollector
     private readonly List<GraceNoteItem> _graceNotes = new();
     // Lyrics
     private readonly List<LyricItem> _lyrics = new();
+    // Named voices (voice sop { … }) → (voice index, measure track), so a
+    // `lyrics sop { … }` block aligns to THAT voice's notes (and its index drives
+    // timing-based X for non-primary voices) instead of the default first voice.
+    private readonly Dictionary<string, (int Index, List<Measure> Measures)> _voiceMeasuresByName = new();
     // Music marks (segno, coda, fine, D.S., D.C., etc.)
     private readonly List<MusicMarkItem> _musicMarks = new();
     // Custom text annotations
@@ -949,7 +953,25 @@ public sealed class MeasureCollector
         for (int i = 0; i < extras.Count; i++)
             voices.Add(new Voice($"voice{i + 2}", extras[i]));
 
-        // Lyrics align with the primary voice.
+        // Map named voices (voice sop { … }) to their measure track so a
+        // `lyrics sop { … }` block can bind to it. Track 0 is voice 1, then extras.
+        foreach (var (parallel, _) in _parallelSpans)
+        {
+            int vi = 0;
+            foreach (var (name, _) in parallel.NamedVoices)
+            {
+                if (name != null && !_voiceMeasuresByName.ContainsKey(name))
+                {
+                    if (vi == 0)
+                        _voiceMeasuresByName[name] = (0, track0);
+                    else if (vi - 1 < extras.Count)
+                        _voiceMeasuresByName[name] = (vi, extras[vi - 1].ToList());
+                }
+                vi++;
+            }
+        }
+
+        // Unnamed lyrics align with the primary voice; named ones bind above.
         CollectLyrics(root, track0);
 
         return new Score(
@@ -1603,6 +1625,7 @@ public sealed class MeasureCollector
         _grobOverrides.Clear();
         _grobReverts.Clear();
         _sectionStartMeasure.Clear();
+        _voiceMeasuresByName.Clear();
         _trillSpannerEvents.Clear();
         _courtesySourcePositions.Clear();
         _measureAccidentals.Clear();
@@ -3315,21 +3338,7 @@ public sealed class MeasureCollector
         if (lyricsBlocks.Count == 0)
             return;
 
-        // Build note indices: (measureIndex, itemIndex) for each note/chord
-        var noteIndices = new List<(int MeasureIndex, int ItemIndex)>();
-        for (int m = 0; m < measures.Count; m++)
-        {
-            var measure = measures[m];
-            for (int i = 0; i < measure.Items.Length; i++)
-            {
-                var item = measure.Items[i];
-                // Only notes and chords get lyrics (not rests)
-                if (item is NoteItem or ChordItem)
-                {
-                    noteIndices.Add((m, i));
-                }
-            }
-        }
+        var defaultIndices = BuildNoteIndices(measures);
 
         // Collect lyrics from each block. A block aligns to the notes of the
         // SECTION it is written in (offset to that section's first measure), so
@@ -3340,17 +3349,51 @@ public sealed class MeasureCollector
         var nextVerseByStart = new Dictionary<int, int>();
         foreach (var lyricsBlock in lyricsBlocks)
         {
+            // `lyrics sop { … }` aligns to the same-named voice's notes; an unnamed
+            // block uses the default (first) voice. The note count AND columns then
+            // come from the right voice (the voice index drives timing-based X), so
+            // a voice with its own rhythm matches.
+            var indices = defaultIndices;
+            int voiceId = 0;
+            if (lyricsBlock.VoiceName is { } vn
+                && _voiceMeasuresByName.TryGetValue(vn, out var bound))
+            {
+                indices = BuildNoteIndices(bound.Measures);
+                voiceId = bound.Index;
+            }
+
             int startMeasure = ResolveLyricsStartMeasure(lyricsBlock);
             int verseNumber = nextVerseByStart.TryGetValue(startMeasure, out var v) ? v : 1;
             nextVerseByStart[startMeasure] = verseNumber + 1;
 
-            IReadOnlyList<(int MeasureIndex, int ItemIndex)> aligned = startMeasure <= 0
-                ? noteIndices
-                : noteIndices.Where(n => n.MeasureIndex >= startMeasure).ToList();
+            IReadOnlyList<(int MeasureIndex, int ItemIndex, Fraction Timing)> aligned = startMeasure <= 0
+                ? indices
+                : indices.Where(n => n.MeasureIndex >= startMeasure).ToList();
 
-            var lyrics = lyricCollector.Collect(lyricsBlock, aligned, voiceId: 0, verseNumber);
+            var lyrics = lyricCollector.Collect(lyricsBlock, aligned, voiceId: voiceId, verseNumber);
             _lyrics.AddRange(lyrics);
         }
+    }
+
+    /// <summary>(measureIndex, itemIndex, timing) of every note/chord (not rests)
+    /// in a voice's measures — the slots a lyric line's syllables map onto. The
+    /// timing (musical moment in the measure) lets a bound voice's syllable land
+    /// over its real column even when that voice's rhythm differs.</summary>
+    private static List<(int MeasureIndex, int ItemIndex, Fraction Timing)> BuildNoteIndices(List<Measure> measures)
+    {
+        var noteIndices = new List<(int MeasureIndex, int ItemIndex, Fraction Timing)>();
+        for (int m = 0; m < measures.Count; m++)
+        {
+            var timing = Fraction.Zero;
+            var items = measures[m].Items;
+            for (int i = 0; i < items.Length; i++)
+            {
+                if (items[i] is NoteItem or ChordItem)
+                    noteIndices.Add((m, i, timing));
+                timing += items[i].Duration;
+            }
+        }
+        return noteIndices;
     }
 
     /// <summary>

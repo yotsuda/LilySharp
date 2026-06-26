@@ -302,12 +302,23 @@ public sealed class LyricEngraver
             return null;
 
         var measureLayout = measureLayouts[lyric.MeasureIndex];
-        if (lyric.ItemIndex < 0 || lyric.ItemIndex >= measureLayout.ItemPositions.Count)
-            return null;
 
-        // Get X position from the associated note
+        // Get X position from the associated note.
         // LILYPOND-REF: lily/lyric-engraver.cc:100-110 horizontal alignment
-        double noteX = measureLayout.X + measureLayout.ItemPositions[lyric.ItemIndex];
+        double noteX;
+        if (lyric.VoiceId > 0)
+        {
+            // A bound (non-primary) voice's item index points into a DIFFERENT
+            // voice's note list, so resolve X from its musical moment against the
+            // shared column grid — the same X the renderer draws that note at.
+            noteX = measureLayout.X + measureLayout.GetXForTiming(lyric.Timing);
+        }
+        else
+        {
+            if (lyric.ItemIndex < 0 || lyric.ItemIndex >= measureLayout.ItemPositions.Count)
+                return null;
+            noteX = measureLayout.X + measureLayout.ItemPositions[lyric.ItemIndex];
+        }
 
         // Estimate text width (rough approximation: 0.5 staff spaces per character)
         double textWidth = EstimateTextWidth(lyric.Text);
@@ -368,9 +379,12 @@ public sealed class LyricEngraver
             return null;
 
         var measureLayout = measureLayouts[lyric.MeasureIndex];
+
+        if (lyric.VoiceId > 0)
+            return measureLayout.X + measureLayout.GetXForTiming(lyric.Timing);
+
         if (lyric.ItemIndex < 0 || lyric.ItemIndex >= measureLayout.ItemPositions.Count)
             return null;
-
         return measureLayout.X + measureLayout.ItemPositions[lyric.ItemIndex];
     }
 

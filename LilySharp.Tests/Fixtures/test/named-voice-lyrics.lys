@@ -1,0 +1,29 @@
+// Named voices + voice-bound lyrics. `voice sop { … }` names a voice; a
+// `lyrics sop { … }` block binds to it, so each lyric line aligns to ITS voice's
+// notes even when the two voices have different rhythms — the syllable X is
+// resolved from the note's musical moment, not the primary voice's columns.
+// Here the alto's half-note delays its 2nd syllable to beat 3, off the soprano's
+// beat-2 column. Unnamed voice/lyrics keep the default first-voice behavior.
+octave absolute
+title "Named Voices"
+composer "Lily#"
+
+time 4/4
+key c major
+
+part m { clef treble }
+
+section Main {
+  m {
+    voice sop { c'4 d' e' f' | g'2 e' | }
+    voice alt { e2  f4 g4    | c'2 c'  | }
+  }
+  lyrics sop { Sing a love song | soft now | }
+  lyrics alt { Low part deep   | slow now | }
+}
+
+structure { Main }
+
+score "named-voices" {
+  staff { m }
+}

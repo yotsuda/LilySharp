@@ -978,12 +978,18 @@ internal sealed class SectionStartMarkerGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class LyricsBlockGreen : GreenSyntaxNode
 {
+    // `lyrics [name] { … }` — the optional name binds the lyrics to a same-named
+    // voice. When present it sits between the keyword and the brace.
     public LyricsBlockGreen(
         SyntaxToken lyricsKeyword,
+        SyntaxToken? name,
         SyntaxToken openBrace,
         GreenNode?[] measures,
         SyntaxToken closeBrace)
-        : base(SyntaxKind.LyricsBlock, [lyricsKeyword, openBrace, .. measures, closeBrace])
+        : base(SyntaxKind.LyricsBlock,
+            name != null
+                ? [lyricsKeyword, name, openBrace, .. measures, closeBrace]
+                : [lyricsKeyword, openBrace, .. measures, closeBrace])
     {
     }
 }

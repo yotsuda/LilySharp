@@ -488,6 +488,36 @@ use theme");
     }
 
     [Fact]
+    public void ParseNamedVoices_CarryTheirNames()
+    {
+        var tree = SyntaxTree.Parse(@"voice sop { c2 } voice alt { e2 }");
+        Assert.False(tree.HasErrors);
+        var parallel = tree.GetRoot().DescendantNodes()
+            .OfType<ParallelExpressionSyntax>().Single();
+        var names = parallel.NamedVoices.Select(v => v.Name).ToArray();
+        Assert.Equal(new[] { "sop", "alt" }, names);
+    }
+
+    [Fact]
+    public void ParseNamedLyrics_CarryTheirBindingName()
+    {
+        var tree = SyntaxTree.Parse(@"lyrics alt { la la la }");
+        Assert.False(tree.HasErrors);
+        var lyrics = tree.GetRoot().DescendantNodes().OfType<LyricsBlockSyntax>().Single();
+        Assert.Equal("alt", lyrics.VoiceName);
+    }
+
+    [Fact]
+    public void ParseUnnamedVoicesAndLyrics_HaveNoNames()
+    {
+        var tree = SyntaxTree.Parse(@"voice { c2 } voice { e2 }");
+        Assert.False(tree.HasErrors);
+        var parallel = tree.GetRoot().DescendantNodes()
+            .OfType<ParallelExpressionSyntax>().Single();
+        Assert.All(parallel.NamedVoices, v => Assert.Null(v.Name));
+    }
+
+    [Fact]
     public void OldAngleParallelSyntax_ReportsMigrationHint()
     {
         // The removed << … \\ … >> form is rejected with a hint pointing at voice { }.

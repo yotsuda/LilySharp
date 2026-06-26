@@ -185,6 +185,10 @@ public class SvgSnapshotTests
         // default and unaffected.
         yield return new object[] { "test/octave-absolute" };
         yield return new object[] { "test/octave-base" };
+        // Named voices with per-voice bound lyrics; the alto's lyric aligns to its
+        // own (differently-rhythmed) notes via timing-based X, not the soprano's
+        // columns.
+        yield return new object[] { "test/named-voice-lyrics" };
         yield return new object[] { "test/multi-measure-rest" };
         // Multi-staff: when ONE staff rests (R1*N) but ANOTHER has content over
         // the same measures, the resting staff shows individual whole rests and
