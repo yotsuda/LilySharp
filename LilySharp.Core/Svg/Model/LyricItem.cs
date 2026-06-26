@@ -68,5 +68,10 @@ public sealed record LyricItem(
     /// <summary>Musical moment of this syllable's note within its measure. Used
     /// to place a bound (non-primary) voice's syllable over its real note column
     /// (which the primary voice's item index would miss when rhythms differ).</summary>
-    LilySharp.Core.Semantics.Fraction Timing = default
+    LilySharp.Core.Semantics.Fraction Timing = default,
+
+    /// <summary>Byte offset of this syllable's word in the source. Emitted as the
+    /// SVG data-pos so the preview can highlight the syllable from the editor and
+    /// jump back to it on click, like notes and other grobs.</summary>
+    int SourcePosition = 0
 );

@@ -98,13 +98,13 @@
   <rect x="59.96" y="17.16" width="0.19" height="17.00" fill="#000000"/>
   <rect x="60.45" y="17.16" width="0.60" height="17.00" fill="#000000"/>
   <text class="music" x="55.74" y="16.41" font-size="4.00" data-pos="761"></text>
-  <text x="12.23" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">Praise</text>
-  <text x="19.61" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">God</text>
-  <text x="26.03" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">from</text>
-  <text x="33.89" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">whom</text>
-  <text x="41.09" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">all</text>
-  <text x="47.51" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">bless-</text>
-  <text x="55.05" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">ings</text>
+  <text x="12.23" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="935">Praise</text>
+  <text x="19.61" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="942">God</text>
+  <text x="26.03" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="946">from</text>
+  <text x="33.89" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="951">whom</text>
+  <text x="41.09" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="958">all</text>
+  <text x="47.51" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="962">bless-</text>
+  <text x="55.05" y="40.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="968">ings</text>
   <text class="music" x="0.80" y="14.42" font-size="1.60" data-pos="0"></text>
   <line x1="1.31" y1="14.42" x2="1.31" y2="13.02" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="1.90" y="14.42" font-size="1.80" font-family="serif" fill="#000000" data-pos="0">= 80</text>

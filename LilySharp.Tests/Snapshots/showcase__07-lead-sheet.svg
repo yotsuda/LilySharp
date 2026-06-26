@@ -50,21 +50,21 @@
   <rect x="67.71" y="17.16" width="0.19" height="4.00" fill="#000000"/>
   <rect x="83.25" y="17.16" width="0.19" height="4.00" fill="#000000"/>
   <rect x="83.74" y="17.16" width="0.60" height="4.00" fill="#000000"/>
-  <text x="8.60" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">Mu-</text>
-  <text x="13.58" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">sic</text>
-  <text x="19.20" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">fills</text>
-  <text x="25.14" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">the</text>
-  <text x="31.22" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">air</text>
-  <text x="35.88" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">to-</text>
-  <text x="42.14" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">night</text>
-  <text x="47.92" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">so</text>
-  <text x="53.20" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">ev-</text>
-  <text x="56.26" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">'</text>
-  <text x="59.32" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">ry-</text>
-  <text x="64.30" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">one</text>
-  <text x="70.86" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">will</text>
-  <text x="76.80" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">sing</text>
-  <text x="81.46" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">a-</text>
+  <text x="8.60" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="619">Mu-</text>
+  <text x="13.58" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="622">sic</text>
+  <text x="19.20" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="626">fills</text>
+  <text x="25.14" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="632">the</text>
+  <text x="31.22" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="638">air</text>
+  <text x="35.88" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="642">to-</text>
+  <text x="42.14" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="645">night</text>
+  <text x="47.92" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="651">so</text>
+  <text x="53.20" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="656">ev-</text>
+  <text x="56.26" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="659">'</text>
+  <text x="59.32" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="660">ry-</text>
+  <text x="64.30" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="663">one</text>
+  <text x="70.86" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="667">will</text>
+  <text x="76.80" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="674">sing</text>
+  <text x="81.46" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="679">a-</text>
   <text x="8.60" y="15.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="525">C</text>
   <text x="31.22" y="15.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="544">Am</text>
   <text x="53.20" y="15.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="568">F</text>

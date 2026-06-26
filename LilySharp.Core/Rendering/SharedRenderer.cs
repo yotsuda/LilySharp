@@ -1808,8 +1808,17 @@ public static class SharedRenderer
         foreach (var l in layout.LyricLayouts)
         {
             double y = (sysY.TryGetValue(l.Item.MeasureIndex, out var sy) ? sy : 0) + l.Y;
-            gc.DrawText(l.Item.Text, l.X, y, lyricFontSize, "serif",
-                FontStyle.Regular, TextAnchor.Middle, Color.Black);
+            // Tag the syllable with its source offset (data-pos) so the preview can
+            // click-to-jump and editor-highlight it like a note. SourcePosition 0
+            // means "unknown" (would clash with the bar-0 section mark), so only
+            // scope a real offset.
+            if (l.Item.SourcePosition > 0)
+                using (gc.Source(l.Item.SourcePosition))
+                    gc.DrawText(l.Item.Text, l.X, y, lyricFontSize, "serif",
+                        FontStyle.Regular, TextAnchor.Middle, Color.Black);
+            else
+                gc.DrawText(l.Item.Text, l.X, y, lyricFontSize, "serif",
+                    FontStyle.Regular, TextAnchor.Middle, Color.Black);
             if (l.DrawHyphen)
                 gc.DrawText("-", l.HyphenX, y, lyricFontSize, "serif",
                     FontStyle.Regular, TextAnchor.Middle, Color.Black);

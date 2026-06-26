@@ -65,7 +65,7 @@ public sealed class LyricCollector
         int i = 0;
         for (; i < syllables.Count && noteIndex < noteItemIndices.Count; i++)
         {
-            var (text, connectorType) = syllables[i];
+            var (text, connectorType, position) = syllables[i];
 
             // Skip extender markers - they indicate previous syllable continues
             if (text == "__")
@@ -89,7 +89,8 @@ public sealed class LyricCollector
                 ConnectorType: connectorType,
                 VoiceId: voiceId,
                 VerseNumber: verseNumber,
-                Timing: timing
+                Timing: timing,
+                SourcePosition: position
             ));
 
             noteIndex++;
@@ -118,12 +119,13 @@ public sealed class LyricCollector
     ///
     /// Structure: LyricsBlock contains LyricMeasure nodes, each containing LyricSyllable nodes.
     /// </remarks>
-    private List<(string Text, LyricConnectorType Connector)> ParseSyllables(LyricsBlockSyntax lyricsBlock)
+    private List<(string Text, LyricConnectorType Connector, int Position)> ParseSyllables(LyricsBlockSyntax lyricsBlock)
     {
-        var result = new List<(string, LyricConnectorType)>();
+        var result = new List<(string, LyricConnectorType, int)>();
 
-        // Collect all syllable tokens from all measures
-        var allTokens = new List<string>();
+        // Collect all syllable tokens from all measures, keeping each token's
+        // source byte offset so the placed syllable can carry it (data-pos).
+        var allTokens = new List<(string Text, int Position)>();
         foreach (var measureNode in lyricsBlock.Syllables)
         {
             // Each child of lyrics block is a LyricMeasure (Kind = LyricMeasure)
@@ -136,7 +138,7 @@ public sealed class LyricCollector
                 var text = GetTokenText(syllableNode);
                 if (!string.IsNullOrEmpty(text) && text != "|")
                 {
-                    allTokens.Add(text);
+                    allTokens.Add((text, GetTokenPosition(syllableNode)));
                 }
             }
         }
@@ -144,13 +146,13 @@ public sealed class LyricCollector
         // Process tokens with connector detection
         for (int i = 0; i < allTokens.Count; i++)
         {
-            var text = allTokens[i];
+            var (text, position) = allTokens[i];
 
             // Check if next token is a connector
             LyricConnectorType connector = LyricConnectorType.None;
             if (i + 1 < allTokens.Count)
             {
-                var nextText = allTokens[i + 1];
+                var nextText = allTokens[i + 1].Text;
                 if (nextText == "--")
                 {
                     connector = LyricConnectorType.Hyphen;
@@ -169,7 +171,7 @@ public sealed class LyricCollector
                 continue;
             }
 
-            result.Add((text, connector));
+            result.Add((text, connector, position));
         }
 
         return result;
@@ -204,6 +206,27 @@ public sealed class LyricCollector
         }
 
         return "";
+    }
+
+    /// <summary>Source byte offset of a syllable's WORD (Span.Start excludes the
+    /// leading trivia), so the emitted data-pos lands on the syllable itself and a
+    /// preview click jumps the editor to the word, not the whitespace before it.
+    /// Mirrors <see cref="GetTokenText"/>'s node walk.</summary>
+    private int GetTokenPosition(SyntaxNode node)
+    {
+        if (node.Kind == SyntaxKind.LyricSyllable && node.GetChild(0) is SyntaxTokenNode tokenNode)
+            return tokenNode.Span.Start;
+
+        if (node is SyntaxTokenNode directToken)
+            return directToken.Span.Start;
+
+        for (int i = 0; i < node.SlotCount; i++)
+        {
+            if (node.GetChild(i) is SyntaxTokenNode childToken)
+                return childToken.Span.Start;
+        }
+
+        return node.Span.Start;
     }
 
     private static string GetCleanText(string text)

@@ -43,26 +43,26 @@
   <rect x="87.78" y="17.16" width="0.19" height="4.00" fill="#000000"/>
   <rect x="92.15" y="17.16" width="0.19" height="4.00" fill="#000000"/>
   <rect x="92.64" y="17.16" width="0.60" height="4.00" fill="#000000"/>
-  <text x="9.72" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">A-</text>
-  <text x="17.74" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">ma-</text>
-  <text x="25.44" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">zing</text>
-  <text x="33.94" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">grace</text>
-  <text x="43.06" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">how</text>
-  <text x="50.60" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">sweet</text>
-  <text x="57.82" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">the</text>
-  <text x="65.82" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">sound</text>
-  <text x="73.52" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">that</text>
-  <text x="81.22" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">saved</text>
-  <text x="9.72" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">Twas</text>
-  <text x="17.74" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">grace</text>
-  <text x="25.44" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">that</text>
-  <text x="33.94" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">taught</text>
-  <text x="43.06" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">my</text>
-  <text x="50.60" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">heart</text>
-  <text x="57.82" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">to</text>
-  <text x="65.82" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">fear</text>
-  <text x="73.52" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">and</text>
-  <text x="81.22" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">grace</text>
+  <text x="9.72" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="241">A-</text>
+  <text x="17.74" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="243">ma-</text>
+  <text x="25.44" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="246">zing</text>
+  <text x="33.94" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="251">grace</text>
+  <text x="43.06" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="258">how</text>
+  <text x="50.60" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="263">sweet</text>
+  <text x="57.82" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="271">the</text>
+  <text x="65.82" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="275">sound</text>
+  <text x="73.52" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="281">that</text>
+  <text x="81.22" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="288">saved</text>
+  <text x="9.72" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="310">Twas</text>
+  <text x="17.74" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="315">grace</text>
+  <text x="25.44" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="320">that</text>
+  <text x="33.94" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="325">taught</text>
+  <text x="43.06" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="334">my</text>
+  <text x="50.60" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="338">heart</text>
+  <text x="57.82" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="346">to</text>
+  <text x="65.82" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="348">fear</text>
+  <text x="73.52" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="353">and</text>
+  <text x="81.22" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="359">grace</text>
   <text x="1.80" y="24.77" font-size="2.40" font-family="serif" font-weight="bold" fill="#000000">1.</text>
   <text x="1.80" y="26.57" font-size="2.40" font-family="serif" font-weight="bold" fill="#000000">2.</text>
   <text class="music" x="0.80" y="14.42" font-size="1.60" data-pos="0"></text>
