@@ -446,10 +446,6 @@ public sealed class MeasureCollector
     private readonly List<GrobRevert> _grobReverts = new();
     // Trill spanner start/stop events (paired into TrillSpannerItems after collection)
     private readonly List<(bool isStart, int measureIndex, int itemIndex, int sourcePosition, int staffIndex)> _trillSpannerEvents = new();
-    // Courtesy accidental tracking: (step, octave) → alteration for current and previous measures
-    // LILYPOND-REF: lily/accidental-engraver.cc — tracks alterations per measure for cautionary accidentals
-    private readonly Dictionary<(int step, int octave), int> _currentMeasureAlterations = new();
-    private readonly Dictionary<(int step, int octave), int> _previousMeasureAlterations = new();
     // Notes explicitly marked with @courtesy annotation
     private readonly HashSet<int> _courtesySourcePositions = new();
     /// <summary>
@@ -1260,7 +1256,6 @@ public sealed class MeasureCollector
             case BarlineSyntax barline:
                 var barType = ParseBarlineType(barline.BarToken.Text);
                 builder.HandleBarline(barType, barline.Position);
-                RotateMeasureAlterations();
                 break;
 
             case InlineVoltaSyntax volta:
@@ -1545,8 +1540,6 @@ public sealed class MeasureCollector
         _grobOverrides.Clear();
         _grobReverts.Clear();
         _trillSpannerEvents.Clear();
-        _currentMeasureAlterations.Clear();
-        _previousMeasureAlterations.Clear();
         _courtesySourcePositions.Clear();
         _fingeringByPosition.Clear();
         _structure = null;
@@ -1789,29 +1782,24 @@ public sealed class MeasureCollector
     }
 
     /// <summary>
-    /// Determines the displayed accidental for a pitch, considering the key signature.
-    /// Returns (null, false) if the pitch's alteration matches the key signature and
-    /// no courtesy accidental is needed.
+    /// Determines the displayed accidental for a pitch, considering the key
+    /// signature. Returns (null, false) when the pitch's alteration matches the
+    /// key signature (LilyPond's default accidental style prints an accidental
+    /// only where the pitch differs from the key — it does NOT add cautionary
+    /// accidentals across barlines; explicit @courtesy is handled at the call
+    /// site). Verified against LilyPond 2.24.4: a pitch altered in one measure
+    /// and returning to the key value in the next shows no courtesy.
     /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/accidental-engraver.cc — courtesy (cautionary) accidentals
-    /// are shown when a note returns to key signature after being altered in a previous measure.
-    /// </remarks>
+    /// <remarks>LILYPOND-REF: lily/accidental-engraver.cc — default style.</remarks>
     // Takes the DISPLAY pitch (post-transpose): diatonic step (0–6), its
-    // accidental in semitones, and octave. The key here is the displayed
-    // (step, octave), so within-measure accidental memory tracks the pitches
-    // actually drawn — consistent under transposition since it is a bijection.
+    // accidental in semitones, and octave.
     private (string? accidental, bool isCourtesy) GetDisplayAccidentalWithCourtesy(int step, int actual, int octave)
     {
         int expected = GetKeySignatureAlteration(step);
-        var key = (step, octave);
 
         if (actual != expected)
         {
-            // Normal accidental: differs from key signature
-            // Track this alteration for courtesy detection in subsequent measures
-            _currentMeasureAlterations[key] = actual;
-
+            // Differs from the key signature → print the accidental.
             return (actual switch
             {
                 2 => "doubleSharp",
@@ -1823,39 +1811,7 @@ public sealed class MeasureCollector
             }, false);
         }
 
-        // Matches key signature — check if courtesy accidental needed
-        // LILYPOND-REF: lily/accidental-engraver.cc — cautionary accidental when
-        // same pitch was altered differently in previous measure
-        if (_previousMeasureAlterations.TryGetValue(key, out int prevAlt) && prevAlt != expected)
-        {
-            string? courtesyAcc = actual switch
-            {
-                2 => "doubleSharp",
-                1 => "sharp",
-                0 => "natural",
-                -1 => "flat",
-                -2 => "doubleFlat",
-                _ => null
-            };
-            return (courtesyAcc, courtesyAcc != null);
-        }
-
         return (null, false);
-    }
-
-    /// <summary>
-    /// Rotates measure alteration tracking at a barline boundary.
-    /// Previous measure alterations are replaced with current, and current is cleared.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/accidental-engraver.cc — accidental state resets at barlines
-    /// </remarks>
-    private void RotateMeasureAlterations()
-    {
-        _previousMeasureAlterations.Clear();
-        foreach (var kvp in _currentMeasureAlterations)
-            _previousMeasureAlterations[kvp.Key] = kvp.Value;
-        _currentMeasureAlterations.Clear();
     }
 
     private static int PitchNameToStep(char name) => char.ToLower(name) switch

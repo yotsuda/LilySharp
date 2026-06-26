@@ -37,9 +37,12 @@ public class CourtesyAccidentalTests
     public CourtesyAccidentalTests(ITestOutputHelper output) => _output = output;
 
     [Fact]
-    public void AutoCourtesy_AfterBarline_SharpThenNatural()
+    public void NoAutoCourtesy_AfterBarline_SharpThenNatural()
     {
-        // cis in measure 1, c (natural) in measure 2 → courtesy natural
+        // cis in measure 1, c (natural) in measure 2. LilyPond's DEFAULT
+        // accidental style forgets the accidental at the barline — c matches
+        // the C-major key, so NO accidental (and no courtesy) is shown.
+        // Verified vs LilyPond 2.24.4. LILYPOND-REF: lily/accidental-engraver.cc.
         var source = @"
 part melody { clef treble }
 phrase m { cis'4 d e f | c4 d e f | }
@@ -50,19 +53,20 @@ render score """"test.svg"""" { staff { melody } }
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree, "melody");
 
-        // Measure 2, first note (c) should have courtesy accidental
         Assert.True(score.Voice.Measures.Length >= 2);
         var measure2 = score.Voice.Measures[1];
         var firstNote = measure2.Items[0] as NoteItem;
         Assert.NotNull(firstNote);
-        Assert.Equal("natural", firstNote.Accidental);
-        Assert.True(firstNote.IsCourtesy);
+        Assert.Null(firstNote.Accidental);
+        Assert.False(firstNote.IsCourtesy);
     }
 
     [Fact]
-    public void AutoCourtesy_AfterBarline_FlatThenNatural()
+    public void NoAutoCourtesy_AfterBarline_FlatThenNatural()
     {
-        // bes in measure 1, b (natural) in measure 2 → courtesy natural
+        // bes in measure 1, b (natural) in measure 2. As above, LilyPond shows
+        // no cautionary accidental across the barline — b matches the C-major
+        // key. Verified vs LilyPond 2.24.4.
         var source = @"
 part melody { clef treble }
 phrase m { bes'4 c d e | b4 c d e | }
@@ -77,8 +81,8 @@ render score """"test.svg"""" { staff { melody } }
         var measure2 = score.Voice.Measures[1];
         var firstNote = measure2.Items[0] as NoteItem;
         Assert.NotNull(firstNote);
-        Assert.Equal("natural", firstNote.Accidental);
-        Assert.True(firstNote.IsCourtesy);
+        Assert.Null(firstNote.Accidental);
+        Assert.False(firstNote.IsCourtesy);
     }
 
     [Fact]
@@ -149,10 +153,13 @@ render score """"test.svg"""" { staff { melody } }
     [Fact]
     public void CourtesyAccidental_RenderedWithParentheses()
     {
-        // Courtesy accidental should render parenthesis glyphs in SVG
+        // An explicit @courtesy accidental renders parenthesis glyphs in SVG.
+        // (Auto cross-measure courtesy is not produced — LP forgets the
+        // accidental at the barline — so the explicit annotation is the path
+        // that exercises the parenthesized rendering.)
         var source = @"
 part melody { clef treble }
-phrase m { cis'4 d e f | c4 d e f | }
+phrase m { cis'4 d e f | c4@courtesy d e f | }
 section A { melody { $m } }
 structure { A }
 render score """"test.svg"""" { staff { melody } }

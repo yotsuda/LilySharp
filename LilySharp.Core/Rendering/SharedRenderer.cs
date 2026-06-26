@@ -786,26 +786,59 @@ public static class SharedRenderer
                 // Mid-measure clef/key changes share the next note's timing —
                 // in the column path hang them LEFT of the column (their
                 // width is reserved in the preceding spring; the item-slot
-                // path already gives them their own X).
-                // LILYPOND-REF: lily/paper-column.cc — non-musical columns
-                // precede the musical column of the same moment.
+                // path already gives them their own X). The following note's
+                // OWN accidental also hangs left of that column, so hang the
+                // change glyph past it too — otherwise the change glyph (e.g. a
+                // key-cancellation natural) overprints the note's accidental
+                // (e.g. a fis sharp). LILYPOND-REF: lily/paper-column.cc —
+                // non-musical columns precede the musical column of the same
+                // moment, and the accidentals sit between them and the heads.
                 if (useColumnTiming)
                 {
+                    double nextAcc = itemIdx + 1 < measure.Items.Length
+                        ? FollowingAccidentalLeftExtent(measure.Items[itemIdx + 1])
+                        : 0;
                     if (item is ClefChangeItem cc)
                         itemX -= SpacingRules.GetClefChangeWidth(cc.NewClef)
-                            + GlyphMetrics.ClefChangePadding;
+                            + GlyphMetrics.ClefChangePadding + nextAcc;
                     else if (item is KeySignatureChangeItem kc)
                         itemX -= SpacingRules.GetKeySignatureChangeWidth(kc)
-                            + GlyphMetrics.ClefChangePadding;
+                            + GlyphMetrics.ClefChangePadding + nextAcc;
                     else if (item is TimeSignatureChangeItem tc)
                         itemX -= GlyphMetrics.GetTimeSigWidth(tc.NewTime.Beats, tc.NewTime.BeatType)
-                            + GlyphMetrics.ClefChangePadding;
+                            + GlyphMetrics.ClefChangePadding + nextAcc;
                 }
 
                 // Horizontal collision offset for multi-voice columns.
                 itemX += layout.GetVoiceOffset(ml.MeasureIndex, voiceNumber, itemIdx);
                 yield return (item, ml, itemIdx, itemX);
             }
+        }
+    }
+
+    /// <summary>
+    /// How far the item's accidental(s) reach to the LEFT of its notehead
+    /// origin (accidental glyph width + the head gap), or 0 when it has none.
+    /// Used to hang a preceding mid-measure clef/key/time change past the
+    /// accidental so the two do not overprint.
+    /// </summary>
+    private static double FollowingAccidentalLeftExtent(MusicItem item)
+    {
+        static double Ext(string? acc) => acc == null
+            ? 0
+            : GlyphMetrics.GetAccidentalBBox(acc).Width + GlyphMetrics.AccidentalNoteGap;
+
+        switch (item)
+        {
+            case NoteItem note:
+                return Ext(note.Accidental);
+            case ChordItem chord:
+                double max = 0;
+                foreach (var n in chord.Notes)
+                    max = Math.Max(max, Ext(n.Accidental));
+                return max;
+            default:
+                return 0;
         }
     }
 

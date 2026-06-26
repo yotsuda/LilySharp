@@ -1,6 +1,10 @@
 // Courtesy Accidentals Test
-// Tests parenthesized accidentals shown after barlines
-// LILYPOND-REF: lily/accidental-engraver.cc
+// Tests parenthesized accidentals. LilyPond's DEFAULT accidental style does
+// NOT add cautionary accidentals across barlines — a pitch altered in one
+// measure and returning to the key value in the next shows NOTHING. Only the
+// explicit @courtesy annotation forces a parenthesized accidental (≈ LP's `?`).
+// Verified against LilyPond 2.24.4.
+// LILYPOND-REF: lily/accidental-engraver.cc — default style.
 
 title "Courtesy Accidentals"
 composer "Lily#"
@@ -11,9 +15,9 @@ key c major
 
 part melody
 
-phrase autoCourtesy {
-  // Auto-detection: cis in measure 1, then c natural in measure 2
-  // should show courtesy natural (parenthesized)
+phrase noAutoCourtesy {
+  // cis in measure 1, then c natural in measure 2 — LP shows NO courtesy
+  // natural (the accidental is forgotten at the barline).
   c'4 cis d e | c4 d e f |
 }
 
@@ -27,13 +31,13 @@ phrase noCourtesy {
   c'4 d e f | g4 a b c' |
 }
 
-phrase flatCourtesy {
-  // Flats: bes in measure 1, then b natural in measure 2
+phrase noAutoFlatCourtesy {
+  // bes in measure 1, then b natural in measure 2 — LP shows NO courtesy.
   c'4 d bes a | b4 c' d e |
 }
 
 section Main {
-  melody { $autoCourtesy $explicitCourtesy $noCourtesy $flatCourtesy }
+  melody { $noAutoCourtesy $explicitCourtesy $noCourtesy $noAutoFlatCourtesy }
 }
 
 structure { Main }
