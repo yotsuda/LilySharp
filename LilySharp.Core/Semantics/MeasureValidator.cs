@@ -98,40 +98,53 @@ public sealed class MeasureValidator
             // (LilyPond applies the new meter from that timestep), so adopt
             // the new reference meter before checking this bar's fill — else a
             // valid 3/4 bar after a 4/4 opening is wrongly flagged underfull.
+            // A 'partial N' in the bar declares it a pickup of length 1/N, which
+            // is then the expected fill for THIS measure only.
+            Fraction? partialLength = null;
             foreach (var item in measure.Items)
             {
                 if (item is TimeSignatureSyntax ts)
                     SetTimeSignature(ts.Beats, ts.BeatType);
+                else if (item is PartialDeclarationSyntax pd)
+                    partialLength = pd.ToFraction();
             }
 
             var duration = CalculateMeasureDuration(measure.Items, ref defaultDuration);
 
-            if (duration != _timeSignature && duration != Fraction.Zero)
+            // The pickup's declared length overrides the meter as the fill target
+            // for the measure that carries the \partial.
+            var expected = partialLength ?? _timeSignature;
+
+            if (duration != expected && duration != Fraction.Zero)
             {
-                if (duration < _timeSignature)
+                if (duration < expected)
                 {
                     // Underfull FIRST measures are pickups (anacrusis) and
                     // underfull LAST measures conventionally complete them —
                     // both are normal notation, not authoring errors, so only
-                    // interior measures warn. (LilyPond marks pickups with
-                    // \partial; Lily# has no such keyword yet, so the edge
-                    // measures get the benefit of the doubt.)
+                    // interior measures warn. But a measure with an explicit
+                    // 'partial N' is strictly checked against its declared length
+                    // even at an edge: that is the whole point of writing \partial.
                     bool isEdgeMeasure = i == 0 || i == measures.Count - 1;
-                    if (!isEdgeMeasure)
+                    if (!isEdgeMeasure || partialLength != null)
                     {
                         var span = GetSpan(measure.Items);
                         _warnedSpans.Add((span.Start, span.Length));
                         _diagnostics.Warning(span, DiagnosticCodes.MeasureIncomplete,
-                            $"Measure duration {duration} is less than time signature {_timeSignature}");
+                            partialLength != null
+                                ? $"Pickup measure duration {duration} is less than the declared partial {expected}"
+                                : $"Measure duration {duration} is less than time signature {expected}");
                     }
                 }
-                else if (duration > _timeSignature)
+                else if (duration > expected)
                 {
                     // Overfull measure — always worth flagging.
                     var span = GetSpan(measure.Items);
                     _warnedSpans.Add((span.Start, span.Length));
                     _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
-                        $"Measure duration {duration} exceeds time signature {_timeSignature}");
+                        partialLength != null
+                            ? $"Pickup measure duration {duration} exceeds the declared partial {expected}"
+                            : $"Measure duration {duration} exceeds time signature {expected}");
                 }
             }
         }

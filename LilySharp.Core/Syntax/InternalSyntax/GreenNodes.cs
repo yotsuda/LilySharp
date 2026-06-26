@@ -273,6 +273,19 @@ internal sealed class TempoDeclarationGreen : GreenSyntaxNode
     }
 }
 
+/// <summary>
+/// Partial (anacrusis) declaration: partial 4 — the next measure is a pickup of
+/// the given duration. The value is a Duration node (number + optional dots), so
+/// 'partial 2.' and 'partial 8' reuse the note-duration grammar.
+/// </summary>
+internal sealed class PartialDeclarationGreen : GreenSyntaxNode
+{
+    public PartialDeclarationGreen(SyntaxToken partialKeyword, GreenNode duration)
+        : base(SyntaxKind.PartialDeclaration, [partialKeyword, duration])
+    {
+    }
+}
+
 /// Metadata declaration: title "value" or tempo 120
 /// </summary>
 internal sealed class MetadataDeclarationGreen : GreenSyntaxNode

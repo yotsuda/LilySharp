@@ -679,6 +679,27 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Partial (anacrusis) declaration: partial 4 — declares the following measure a
+/// pickup of the given duration. LILYPOND-REF: ly/music-functions-init.ly:1670-1678
+/// 'partial' music function (PartialSet on the Timing context).
+/// </summary>
+public sealed class PartialDeclarationSyntax : SyntaxNode
+{
+    internal PartialDeclarationSyntax(InternalSyntax.PartialDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode PartialKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The pickup length as a duration node (number + optional dots).</summary>
+    public DurationSyntax Duration => (DurationSyntax)GetChild(1)!;
+
+    /// <summary>The pickup length as a metric fraction (e.g. 1/4 for 'partial 4').</summary>
+    public Fraction ToFraction() => Duration.ToFraction();
+}
+
+/// <summary>
 /// Metadata declaration: title "value" or tempo 120
 /// </summary>
 public sealed class MetadataDeclarationSyntax : SyntaxNode

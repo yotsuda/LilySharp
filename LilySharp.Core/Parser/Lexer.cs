@@ -501,6 +501,7 @@ internal sealed class Lexer
             "tabStaff" or "tabstaff" => SyntaxKind.TabStaffKeyword,
             "tuning" => SyntaxKind.TuningKeyword,
             "break" => SyntaxKind.BreakKeyword,
+            "partial" => SyntaxKind.PartialKeyword,
 
             // Articulation/ornament names (staccato, tr, mordent, cresc, dim, …) are
             // NOT reserved words: they are resolved from the '@name' text against

@@ -240,6 +240,7 @@ internal sealed class Parser
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
+            SyntaxKind.PartialKeyword => ParsePartialDeclaration(),
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.ClefKeyword => ParseClefDeclaration(),
             SyntaxKind.OctaveKeyword => ParseOctaveDirective(),
@@ -505,6 +506,20 @@ internal sealed class Parser
         return new TempoDeclarationGreen(tempoKeyword, colon, [.. valueTokens]);
     }
 
+    // partial <duration> — declares the following measure a pickup (anacrusis)
+    // of the given length. The value reuses the note-duration grammar (number +
+    // optional dots) so 'partial 4', 'partial 8' and 'partial 2.' all parse.
+    private PartialDeclarationGreen ParsePartialDeclaration()
+    {
+        var partialKeyword = Expect(SyntaxKind.PartialKeyword);
+        var number = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
+        var dots = new List<GreenNode?>();
+        while (Check(SyntaxKind.Dot))
+            dots.Add(Advance());
+        var duration = new DurationGreen(number, [.. dots]);
+        return new PartialDeclarationGreen(partialKeyword, duration);
+    }
+
     // ========== Variables ==========
 
     private VariableDeclarationGreen ParseVariableDeclaration()
@@ -605,6 +620,7 @@ internal sealed class Parser
             SyntaxKind.RepeatKeyword => true,
             SyntaxKind.TupletKeyword => true,
             SyntaxKind.BreakKeyword => true,
+            SyntaxKind.PartialKeyword => true,
             SyntaxKind.KeyKeyword => true,
             SyntaxKind.ClefKeyword => true,
             SyntaxKind.OctaveKeyword => true,
@@ -663,6 +679,7 @@ internal sealed class Parser
             SyntaxKind.OctaveKeyword => ParseOctaveDirective(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
+            SyntaxKind.PartialKeyword => ParsePartialDeclaration(),
 
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
@@ -1505,6 +1522,7 @@ private GreenNode?[] ParseArticulations()
             SyntaxKind.KeyKeyword => ParseKeySignature(),
             SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
+            SyntaxKind.PartialKeyword => ParsePartialDeclaration(),
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             // Allow identifier or instrument keywords (bass, guitar-like names) as part names
             SyntaxKind.Identifier => ParsePartBlock(),

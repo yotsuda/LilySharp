@@ -93,6 +93,10 @@ public class SvgSnapshotTests
         yield return new object[] { "test/treble8" };
         yield return new object[] { "test/ledger-lines" };
         yield return new object[] { "test/barcheck" };
+        // A 'partial 4' pickup: the opening measure auto-closes after one quarter
+        // (no written barline needed), then 4/4 resumes for the full bars.
+        // Verified against LilyPond \partial 4.
+        yield return new object[] { "test/partial-pickup" };
         yield return new object[] { "test/break" };
         yield return new object[] { "test/lyrics" };
         // Two verses: each verse line gets its stanza number ("1." / "2.") at the

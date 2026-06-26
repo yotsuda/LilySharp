@@ -65,6 +65,12 @@ internal sealed class MeasureBuilder
     private Fraction _currentDuration = Fraction.Zero;
     private Fraction _defaultDuration = Fraction.Quarter;
 
+    // When a 'partial N' shortens the next measure to a pickup, the meter to
+    // restore once that measure closes is parked here. LILYPOND-REF:
+    // ly/music-functions-init.ly:1670-1678 — \partial sets measurePosition for one
+    // measure; the normal measureLength resumes afterwards.
+    private Fraction? _partialRestore;
+
     private BarlineType _pendingStartBarline = BarlineType.None;
     private BarlineType _pendingEndBarline = BarlineType.None;
     private bool _pendingBreak = false;
@@ -116,6 +122,31 @@ internal sealed class MeasureBuilder
     /// <summary>Re-arms the auto-complete measure length without printing a grob
     /// (used when a leading meter change collapses into the initial time signature).</summary>
     public void SetMeasureLength(Fraction length) => _timeSignature = length;
+
+    /// <summary>
+    /// Declares the current (in-progress) measure a pickup of <paramref name="length"/>:
+    /// it auto-completes after only that much music, then the real meter resumes.
+    /// LILYPOND-REF: ly/music-functions-init.ly:1670-1678 — \partial adjusts the
+    /// Timing measurePosition so the current measure ends <paramref name="length"/>
+    /// past the point of use; normal measureLength applies thereafter.
+    /// </summary>
+    public void SetPartial(Fraction length)
+    {
+        // Remember the meter to restore once the pickup closes (don't stack a
+        // second partial onto a still-pending one — the first wins until it ends).
+        _partialRestore ??= _timeSignature;
+        _timeSignature = length;
+    }
+
+    /// <summary>After a pickup measure closes, restore the meter \partial replaced.</summary>
+    private void RestorePartialIfPending()
+    {
+        if (_partialRestore is Fraction restore)
+        {
+            _timeSignature = restore;
+            _partialRestore = null;
+        }
+    }
 
     /// <summary>
     /// Adds a music item and automatically completes the measure if duration is reached.
@@ -246,6 +277,7 @@ internal sealed class MeasureBuilder
                 // This would require more complex handling
             }
             _currentDuration = Fraction.Zero;
+            RestorePartialIfPending();
             MeasureCompleted?.Invoke();
         }
     }
@@ -368,6 +400,7 @@ internal sealed class MeasureBuilder
         _pendingEndBarline = BarlineType.None;
         _measureSourceStart = sourceEnd;
         _currentDuration = Fraction.Zero;
+        RestorePartialIfPending();
         MeasureCompleted?.Invoke();
     }
 
@@ -1209,6 +1242,7 @@ public sealed class MeasureCollector
             case KeySignatureSyntax:
             case TimeSignatureSyntax:
             case TempoDeclarationSyntax:
+            case PartialDeclarationSyntax:
                 musicNodes.Add(node);
                 break;
 
@@ -1513,6 +1547,13 @@ public sealed class MeasureCollector
                             builder.CurrentMeasureIndex, tempoChange.Position,
                             builder.CurrentItemCount, builder.CurrentDuration));
                 }
+                break;
+
+            case PartialDeclarationSyntax partial:
+                // Anacrusis: shorten the current measure to the declared pickup
+                // length so it auto-completes early; the meter resumes after.
+                // LILYPOND-REF: ly/music-functions-init.ly:1670-1678 \partial.
+                builder.SetPartial(partial.ToFraction());
                 break;
 
             case TieSyntax:
@@ -2398,6 +2439,7 @@ public sealed class MeasureCollector
                 case KeySignatureSyntax:
                 case TimeSignatureSyntax:
                 case TempoDeclarationSyntax:
+                case PartialDeclarationSyntax:
                     musicNodes.Add(node);
                     break;
 
@@ -2428,7 +2470,8 @@ public sealed class MeasureCollector
         if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-            or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax)
+            or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
+            or PartialDeclarationSyntax)
         {
             musicNodes.Add(expression);
         }
@@ -2443,7 +2486,8 @@ public sealed class MeasureCollector
                 && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
                 or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax
                 or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-                or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax);
+                or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
+                or PartialDeclarationSyntax);
 
         musicNodes.AddRange(nodes);
     }

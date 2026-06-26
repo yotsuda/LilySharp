@@ -97,6 +97,7 @@ public enum SyntaxKind : ushort
     InstrumentKeyword,  // instrument
     ChannelKeyword,     // channel
     BreakKeyword,       // break (line break)
+    PartialKeyword,     // partial (anacrusis / pickup measure)
 
 
     // === Navigation Keywords (structure block) ===
@@ -242,6 +243,7 @@ public enum SyntaxKind : ushort
     PropertyAssignment,
     TimeSignature,
     TempoDeclaration,
+    PartialDeclaration,
     KeySignature,
     ClefDeclaration,
     OctaveDirective,
