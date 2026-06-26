@@ -2069,7 +2069,7 @@ public sealed class MeasureCollector
                 if (!_sectionStartMeasure.ContainsKey(section.SectionName))
                     _sectionStartMeasure[section.SectionName] = builder.CurrentMeasureIndex;
                 builder.SectionLabel = section.SectionName;
-                builder.SectionLabelPosition = section.SectionKeyword.Span.Start;
+                builder.SectionLabelPosition = section.Name.Span.Start;
                 ProcessSection(section, ProcessNodes);
             }
         }
@@ -2122,7 +2122,7 @@ public sealed class MeasureCollector
     /// name is unknown), so its label mark can jump to the declaration. Sections are
     /// registered before structure expansion, so the lookup is populated here.</summary>
     private int SectionDeclPos(string sectionName)
-        => _sections.TryGetValue(sectionName, out var s) ? s.SectionKeyword.Span.Start : 0;
+        => _sections.TryGetValue(sectionName, out var s) ? s.Name.Span.Start : 0;
 
     private static string? ResolveSectionLabel(SectionReferenceSyntax reference)
     {

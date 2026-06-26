@@ -59,7 +59,7 @@
   <text class="music" x="19.29" y="21.64" font-size="4.00" data-pos="627"></text>
   <text class="music" x="25.97" y="21.39" font-size="4.00" data-pos="640"></text>
   <text class="music" x="29.57" y="20.94" font-size="4.00" data-pos="648"></text>
-  <rect x="0.30" y="6.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="546"/>
-  <text x="3.01" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="546">Main</text>
+  <rect x="0.30" y="6.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="554"/>
+  <text x="3.01" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="554">Main</text>
   </g>
 </svg>
