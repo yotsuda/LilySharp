@@ -881,7 +881,7 @@ public sealed class LayoutEngine
         // Layout figured bass
         var figuredBassLayouts = FiguredBassEngraver.Calculate(
             figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures,
-            measuresByStaff, staffYByIndex);
+            measuresByStaff, staffYByIndex, systemSkylines);
 
         // Layout chord names (skyline-spaced above high notes when skylines available)
         var chordNameLayouts = ChordNameEngraver.Calculate(

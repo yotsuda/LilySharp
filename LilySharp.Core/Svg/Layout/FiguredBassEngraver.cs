@@ -57,13 +57,19 @@ public static class FiguredBassEngraver
     /// <summary>
     /// Calculates layout for all figured bass items.
     /// </summary>
+    private const double FigureTopExtent = 0.76;
+    private const double RelatedStaffPadding = 0.5;
+    private const double HorizonPadding = 0.1;
+    private const double MinFigureBoxWidth = 0.8;
+
     public static ImmutableArray<FiguredBassLayout> Calculate(
         ImmutableArray<FiguredBassItem> figuredBasses,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures = default,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null)
+        Dictionary<int, double>? staffYByIndex = null,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
     {
         if (figuredBasses.IsDefaultOrEmpty)
             return ImmutableArray<FiguredBassLayout>.Empty;
@@ -104,6 +110,54 @@ public static class FiguredBassEngraver
                 fb.SourcePosition));
         }
 
-        return layouts.ToImmutable();
+        var result = layouts.ToImmutable();
+        if (systemSkylines != null && !systems.IsDefaultOrEmpty)
+            result = ApplySkylineDrop(result, systems, systemSkylines);
+        return result;
+    }
+
+    private static ImmutableArray<FiguredBassLayout> ApplySkylineDrop(
+        ImmutableArray<FiguredBassLayout> layouts, ImmutableArray<SystemLayout> systems,
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> systemSkylines)
+    {
+        var measureToSystem = new Dictionary<int, int>();
+        for (int s = 0; s < systems.Length; s++)
+            foreach (var m in systems[s].Measures)
+                measureToSystem[m.MeasureIndex] = s;
+
+        var fbUp = new Dictionary<int, VerticalSkyline>();
+        var basicY = new Dictionary<int, double>();
+        foreach (var lay in layouts)
+        {
+            if (!measureToSystem.TryGetValue(lay.MeasureIndex, out int s)) continue;
+            double halfW = MinFigureBoxWidth / 2.0;
+            var box = VerticalSkyline.FromBox(
+                lay.X - halfW, lay.X + halfW, 0, -FigureTopExtent, VerticalDirection.Up);
+            if (fbUp.TryGetValue(s, out var sky)) sky.Merge(box);
+            else fbUp[s] = box;
+            basicY[s] = basicY.TryGetValue(s, out var b) ? System.Math.Min(b, lay.Y) : lay.Y;
+        }
+
+        var systemDrop = new Dictionary<int, double>();
+        foreach (var (s, up) in fbUp)
+        {
+            if (s >= systemSkylines.Count) continue;
+            var down = systemSkylines[s].down;
+            if (down.IsEmpty || up.IsEmpty) continue;
+            double dist = down.Distance(up, HorizonPadding);
+            if (double.IsInfinity(dist) || double.IsNaN(dist)) continue;
+            double basic = basicY[s];
+            double drop = System.Math.Max(basic, dist + RelatedStaffPadding) - basic;
+            if (drop > 1e-6) systemDrop[s] = drop;
+        }
+
+        if (systemDrop.Count == 0)
+            return layouts;
+
+        return System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Select(layouts, lay =>
+            measureToSystem.TryGetValue(lay.MeasureIndex, out int s)
+            && systemDrop.TryGetValue(s, out var d) && d > 0
+                ? lay with { Y = lay.Y + d }
+                : lay)).ToImmutableArray();
     }
 }
