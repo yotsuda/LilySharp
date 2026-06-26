@@ -63,6 +63,50 @@ c4 d4";
     }
 
     [Fact]
+    public void Partial_PickupIsImplicitMeasureZero()
+    {
+        // 'partial 4' makes the opening bar a pickup: MusicXML marks it
+        // implicit and numbers it 0, so the first full bar is 1.
+        var tree = SyntaxTree.Parse("time 4/4 partial 4 g4 | c4 d e f | g1 |");
+        var xml = new MusicXmlExporter().Export(tree);
+        var measures = xml.Parts[0].Measures;
+
+        Assert.Equal(3, measures.Count);
+        Assert.True(measures[0].Implicit);
+        Assert.Equal(0, measures[0].Number);
+        Assert.Single(measures[0].Notes);          // pickup g4
+        Assert.False(measures[1].Implicit);
+        Assert.Equal(1, measures[1].Number);
+        Assert.Equal(4, measures[1].Notes.Count);  // c d e f
+        Assert.Equal(2, measures[2].Number);
+    }
+
+    [Fact]
+    public void Partial_AutoClosesWithoutWrittenBarline()
+    {
+        // No '|' after the pickup: it must still close at 1/4, with no spurious
+        // empty measure (matches the SVG collector's auto-close).
+        var tree = SyntaxTree.Parse("time 4/4 partial 4 g4 c4 d e f | g1 |");
+        var xml = new MusicXmlExporter().Export(tree);
+        var measures = xml.Parts[0].Measures;
+
+        Assert.Equal(3, measures.Count);
+        Assert.True(measures[0].Implicit);
+        Assert.Single(measures[0].Notes);          // pickup g4
+        Assert.Equal(4, measures[1].Notes.Count);  // c d e f
+        Assert.Single(measures[2].Notes);          // g1
+    }
+
+    [Fact]
+    public void Partial_ImplicitAttributeSerialized()
+    {
+        var tree = SyntaxTree.Parse("time 4/4 partial 4 g4 | c4 d e f |");
+        var xml = new MusicXmlExporter().Export(tree);
+        var firstMeasureXml = xml.Parts[0].Measures[0].ToXml().ToString();
+        Assert.Contains("implicit=\"yes\"", firstMeasureXml);
+    }
+
+    [Fact]
     public void ExportWithRest()
     {
         var source = "c4 r4 e4";

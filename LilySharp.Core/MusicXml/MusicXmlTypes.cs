@@ -107,6 +107,13 @@ public sealed class MusicXmlPart
 public sealed class MusicXmlMeasure
 {
     public int Number { get; set; }
+
+    /// <summary>
+    /// True for an anacrusis (pickup) measure: MusicXML marks it
+    /// <c>implicit="yes"</c> so consumers don't count it in the bar numbering.
+    /// </summary>
+    public bool Implicit { get; set; }
+
     public MusicXmlAttributes? Attributes { get; set; }
     public MusicXmlDirection? Direction { get; set; }
     public List<MusicXmlDirection> Directions { get; } = new();
@@ -115,6 +122,8 @@ public sealed class MusicXmlMeasure
     public XElement ToXml()
     {
         var measure = new XElement("measure", new XAttribute("number", Number));
+        if (Implicit)
+            measure.Add(new XAttribute("implicit", "yes"));
 
         if (Attributes != null)
             measure.Add(Attributes.ToXml());

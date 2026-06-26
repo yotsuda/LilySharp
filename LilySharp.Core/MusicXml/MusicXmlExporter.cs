@@ -37,6 +37,14 @@ public sealed class MusicXmlExporter
     private bool _tieToNextNote;      // a tie was seen; the next note/chord ends it (gets tie-stop)
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _measureNumber = 1;
+    // Anacrusis (partial) state: while a pickup is open, accumulate its duration
+    // and auto-close the implicit measure once it reaches the declared length
+    // (mirrors MeasureCollector). _justAutoClosedPickup absorbs a written barline
+    // that immediately follows the auto-close, so no empty measure is emitted.
+    private bool _pendingPickup;
+    private Fraction _pickupLength = Fraction.Zero;
+    private Fraction _pickupAccumulated = Fraction.Zero;
+    private bool _justAutoClosedPickup;
     private MusicXmlMeasure? _currentMeasure;
     private MusicXmlPart? _currentPart;
     private MusicXmlDocument? _document;
@@ -206,6 +214,31 @@ public sealed class MusicXmlExporter
             _currentPart.Measures.Add(_currentMeasure);
         }
         _currentMeasure = null;
+        _pendingPickup = false;
+        _justAutoClosedPickup = false;
+    }
+
+    /// <summary>
+    /// While a leading 'partial' pickup is open, accumulate its duration and
+    /// auto-close the implicit measure once it reaches the declared length — even
+    /// with no written barline — mirroring MeasureCollector so MusicXML and SVG
+    /// split the pickup identically.
+    /// </summary>
+    private void MaybeClosePickup(Fraction added)
+    {
+        if (!_pendingPickup)
+            return;
+        _pickupAccumulated += added;
+        if (_pickupAccumulated >= _pickupLength)
+        {
+            _pendingPickup = false;
+            if (_currentMeasure != null && _currentPart != null && _currentMeasure.Notes.Count > 0)
+            {
+                _currentPart.Measures.Add(_currentMeasure);
+                StartNewMeasure();
+                _justAutoClosedPickup = true;
+            }
+        }
     }
 
     private void StartNewMeasure(bool addAttributes = false)
@@ -282,7 +315,30 @@ public sealed class MusicXmlExporter
                 ProcessRest(rest);
                 break;
 
+            case PartialDeclarationSyntax partial:
+                // Anacrusis: the measure currently being built is a pickup. Mark it
+                // implicit and number it 0, so the first FULL measure becomes 1, and
+                // arm the duration-based auto-close (no written barline required).
+                // LILYPOND-REF: ly/music-functions-init.ly:1670-1678 \partial.
+                if (_currentMeasure != null && _currentMeasure.Notes.Count == 0)
+                {
+                    _currentMeasure.Implicit = true;
+                    _currentMeasure.Number = 0;
+                    _measureNumber = 1;
+                    _pendingPickup = true;
+                    _pickupLength = partial.ToFraction();
+                    _pickupAccumulated = Fraction.Zero;
+                }
+                break;
+
             case BarlineSyntax:
+                // A barline immediately after a pickup auto-close is redundant —
+                // the pickup measure already closed, so swallow it (no empty bar).
+                if (_justAutoClosedPickup)
+                {
+                    _justAutoClosedPickup = false;
+                    break;
+                }
                 if (_currentMeasure != null && _currentPart != null)
                 {
                     _currentPart.Measures.Add(_currentMeasure);
@@ -434,6 +490,7 @@ public sealed class MusicXmlExporter
     private void ProcessNote(NoteSyntax note)
     {
         if (_currentMeasure == null) return;
+        _justAutoClosedPickup = false;
 
         var (step, alter) = ParsePitch(note.Pitch);
         int targetOctave = ResolveRelativeOctave(note.Pitch);
@@ -465,11 +522,13 @@ public sealed class MusicXmlExporter
         if (note.Articulations.OfType<TieSyntax>().Any()) { xmlNote.TieStart = true; _tieToNextNote = true; }
 
         _currentMeasure.Notes.Add(xmlNote);
+        MaybeClosePickup(duration);
     }
 
     private void ProcessChord(ChordSyntax chord)
     {
         if (_currentMeasure == null) return;
+        _justAutoClosedPickup = false;
 
         var pitches = chord.Pitches.ToList();
         if (pitches.Count == 0) return;
@@ -521,11 +580,13 @@ public sealed class MusicXmlExporter
         // the chord's first pitch).
         _currentStep = firstStep;
         _currentOctave = firstOctave;
+        MaybeClosePickup(duration);
     }
 
     private void ProcessRest(RestSyntax rest)
     {
         if (_currentMeasure == null) return;
+        _justAutoClosedPickup = false;
 
         var duration = GetDuration(rest.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -540,6 +601,7 @@ public sealed class MusicXmlExporter
         };
 
         _currentMeasure.Notes.Add(xmlNote);
+        MaybeClosePickup(duration);
     }
 
     private void ProcessGraceNotes(GraceExpressionSyntax grace)
