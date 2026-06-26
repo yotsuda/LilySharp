@@ -155,7 +155,7 @@
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|key|clef|major|minor|instrument|octave|channel|tuning|treble|bass|alto|tenor|percent|unfold)\\b"
+                    "match": "\\b(title|composer|tempo|time|partial|key|clef|major|minor|instrument|octave|channel|tuning|treble|bass|alto|tenor|percent|unfold)\\b"
                 }
             ]
         },
