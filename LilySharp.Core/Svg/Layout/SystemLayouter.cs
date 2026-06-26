@@ -78,8 +78,13 @@ public sealed class SystemLayouter
         double? baseShortestDuration = null)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        double startX = _options.MarginLeft + prefixWidth;
-        double rightEdge = _options.PageWidth - _options.MarginRight;
+        // System-internal coordinates are LINE-RELATIVE (0 = line start); the
+        // renderer's margin translate places the whole line at MarginLeft once.
+        // So startX/rightEdge must NOT include MarginLeft — baking it in here
+        // would double-count it (see MultiStaffLayouter). availableWidth is the
+        // same either way, so justification width is unchanged.
+        double startX = prefixWidth;
+        double rightEdge = _options.PageWidth - _options.MarginLeft - _options.MarginRight;
         double availableWidth = rightEdge - startX;
 
         // Collect springs and barline widths for each measure
@@ -225,8 +230,13 @@ public sealed class SystemLayouter
         double? baseShortestDuration = null)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        double startX = _options.MarginLeft + prefixWidth;
-        double rightEdge = _options.PageWidth - _options.MarginRight;
+        // System-internal coordinates are LINE-RELATIVE (0 = line start); the
+        // renderer's margin translate places the whole line at MarginLeft once.
+        // So startX/rightEdge must NOT include MarginLeft — baking it in here
+        // would double-count it (see MultiStaffLayouter). availableWidth is the
+        // same either way, so justification width is unchanged.
+        double startX = prefixWidth;
+        double rightEdge = _options.PageWidth - _options.MarginLeft - _options.MarginRight;
         double availableWidth = rightEdge - startX;
 
         // Collect springs and barline widths for each measure
