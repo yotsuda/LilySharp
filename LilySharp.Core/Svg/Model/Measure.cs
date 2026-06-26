@@ -127,6 +127,11 @@ public sealed record Measure
     /// <summary>Source end position for caching and incremental updates.</summary>
     public int SourceEnd { get; }
 
+    /// <summary>Source offset of this measure's section-label declaration (0 = none),
+    /// so the section mark can carry a data-pos that jumps to <c>section X</c>
+    /// instead of the measure's music. Falls back to SourceStart when unset.</summary>
+    public int SectionLabelPosition { get; }
+
     public Measure(
         ImmutableArray<MusicItem> items,
         BarlineType startBarline,
@@ -138,7 +143,8 @@ public sealed record Measure
         BreakPermission lineBreakPermission = BreakPermission.Allow,
         double breakPenalty = 0,
         BreakPermission pageBreakPermission = BreakPermission.Allow,
-        BreakPermission pageTurnPermission = BreakPermission.Allow)
+        BreakPermission pageTurnPermission = BreakPermission.Allow,
+        int sectionLabelPosition = 0)
     {
         Items = items;
         StartBarline = startBarline;
@@ -146,6 +152,7 @@ public sealed record Measure
         SectionLabel = sectionLabel;
         SourceStart = sourceStart;
         SourceEnd = sourceEnd;
+        SectionLabelPosition = sectionLabelPosition;
         // Derive permission: hasBreakAfter implies Force for backward compatibility
         LineBreakPermission = hasBreakAfter ? BreakPermission.Force : lineBreakPermission;
         HasBreakAfter = hasBreakAfter || LineBreakPermission == BreakPermission.Force;

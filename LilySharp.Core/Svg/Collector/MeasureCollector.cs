@@ -69,6 +69,7 @@ internal sealed class MeasureBuilder
     private BarlineType _pendingEndBarline = BarlineType.None;
     private bool _pendingBreak = false;
     private string? _sectionLabel;
+    private int _sectionLabelPosition;
     private int _measureSourceStart;
 
     /// <summary>
@@ -102,6 +103,14 @@ internal sealed class MeasureBuilder
     {
         get => _sectionLabel;
         set => _sectionLabel = value;
+    }
+
+    /// <summary>Source offset of the pending section label's declaration, carried
+    /// onto the next measure so its section mark can jump to <c>section X</c>.</summary>
+    public int SectionLabelPosition
+    {
+        get => _sectionLabelPosition;
+        set => _sectionLabelPosition = value;
     }
 
     /// <summary>Re-arms the auto-complete measure length without printing a grob
@@ -213,7 +222,8 @@ internal sealed class MeasureBuilder
                 _sectionLabel,
                 _measureSourceStart,
                 sourceEnd,
-                hasBreakAfter: hasBreak));
+                hasBreakAfter: hasBreak,
+                sectionLabelPosition: _sectionLabelPosition));
 
             // Record boundary
             _boundaries.Add(new MeasureBoundary(
@@ -224,6 +234,7 @@ internal sealed class MeasureBuilder
 
             _currentItems.Clear();
             _sectionLabel = null;
+            _sectionLabelPosition = 0;
             _pendingStartBarline = BarlineType.None;
             _pendingEndBarline = BarlineType.None;
             _measureSourceStart = sourceEnd;
@@ -252,7 +263,8 @@ internal sealed class MeasureBuilder
                 last.SectionLabel,
                 last.SourceStart,
                 last.SourceEnd,
-                hasBreakAfter: true);
+                hasBreakAfter: true,
+                sectionLabelPosition: last.SectionLabelPosition);
         }
         else
         {
@@ -318,7 +330,8 @@ internal sealed class MeasureBuilder
                 lineBreakPermission: lastMeasure.LineBreakPermission,
                 breakPenalty: lastMeasure.BreakPenalty,
                 pageBreakPermission: lastMeasure.PageBreakPermission,
-                pageTurnPermission: lastMeasure.PageTurnPermission);
+                pageTurnPermission: lastMeasure.PageTurnPermission,
+                sectionLabelPosition: lastMeasure.SectionLabelPosition);
         }
     }
 
@@ -339,7 +352,8 @@ internal sealed class MeasureBuilder
             _sectionLabel,
             _measureSourceStart,
             sourceEnd,
-            hasBreakAfter: hasBreak));
+            hasBreakAfter: hasBreak,
+            sectionLabelPosition: _sectionLabelPosition));
 
         _boundaries.Add(new MeasureBoundary(
             sourceEnd,
@@ -349,6 +363,7 @@ internal sealed class MeasureBuilder
 
         _currentItems.Clear();
         _sectionLabel = null;
+        _sectionLabelPosition = 0;
         _pendingStartBarline = BarlineType.None;
         _pendingEndBarline = BarlineType.None;
         _measureSourceStart = sourceEnd;
@@ -370,7 +385,8 @@ internal sealed class MeasureBuilder
                 _pendingEndBarline != BarlineType.None ? _pendingEndBarline : BarlineType.Single,
                 _sectionLabel,
                 _measureSourceStart,
-                _measureSourceStart));  // End position same as start for incomplete
+                _measureSourceStart,  // End position same as start for incomplete
+                sectionLabelPosition: _sectionLabelPosition));
 
             _boundaries.Add(new MeasureBoundary(
                 _measureSourceStart,
@@ -387,7 +403,8 @@ internal sealed class MeasureBuilder
             {
                 _measures[^1] = new Measure(
                     last.Items, last.StartBarline, BarlineType.Final,
-                    last.SectionLabel, last.SourceStart, last.SourceEnd, last.HasBreakAfter);
+                    last.SectionLabel, last.SourceStart, last.SourceEnd, last.HasBreakAfter,
+                    sectionLabelPosition: last.SectionLabelPosition);
             }
         }
 
@@ -673,7 +690,8 @@ public sealed class MeasureCollector
                     lineBreakPermission: m.LineBreakPermission,
                     breakPenalty: m.BreakPenalty,
                     pageBreakPermission: m.PageBreakPermission,
-                    pageTurnPermission: m.PageTurnPermission);
+                    pageTurnPermission: m.PageTurnPermission,
+                    sectionLabelPosition: m.SectionLabelPosition);
             }
             if (builder != null)
                 voiceDict[name] = new Voice(voice.Name, builder.ToImmutable());
@@ -880,7 +898,8 @@ public sealed class MeasureCollector
                     lineBreakPermission: measure.LineBreakPermission,
                     breakPenalty: measure.BreakPenalty,
                     pageBreakPermission: measure.PageBreakPermission,
-                    pageTurnPermission: measure.PageTurnPermission);
+                    pageTurnPermission: measure.PageTurnPermission,
+                    sectionLabelPosition: measure.SectionLabelPosition);
             }
         }
     }
@@ -2050,6 +2069,7 @@ public sealed class MeasureCollector
                 if (!_sectionStartMeasure.ContainsKey(section.SectionName))
                     _sectionStartMeasure[section.SectionName] = builder.CurrentMeasureIndex;
                 builder.SectionLabel = section.SectionName;
+                builder.SectionLabelPosition = section.SectionKeyword.Span.Start;
                 ProcessSection(section, ProcessNodes);
             }
         }
@@ -2080,6 +2100,7 @@ public sealed class MeasureCollector
                         if (!_sectionStartMeasure.ContainsKey(reference.SectionName))
                             _sectionStartMeasure[reference.SectionName] = builder.CurrentMeasureIndex;
                         builder.SectionLabel = ResolveSectionLabel(reference);
+                        builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         ProcessSection(section, processNodes);
                     }
                     break;
@@ -2097,6 +2118,12 @@ public sealed class MeasureCollector
     /// an empty string suppresses the mark like <c>~First</c>), else the
     /// section identifier.
     /// </summary>
+    /// <summary>Source offset of a section's <c>section X</c> declaration (0 if the
+    /// name is unknown), so its label mark can jump to the declaration. Sections are
+    /// registered before structure expansion, so the lookup is populated here.</summary>
+    private int SectionDeclPos(string sectionName)
+        => _sections.TryGetValue(sectionName, out var s) ? s.SectionKeyword.Span.Start : 0;
+
     private static string? ResolveSectionLabel(SectionReferenceSyntax reference)
     {
         var label = reference.DisplayLabel ?? reference.SectionName;
@@ -2260,6 +2287,7 @@ public sealed class MeasureCollector
                         if (!_sectionStartMeasure.ContainsKey(reference.SectionName))
                             _sectionStartMeasure[reference.SectionName] = builder.CurrentMeasureIndex;
                         builder.SectionLabel = ResolveSectionLabel(reference);
+                        builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         ProcessSection(section, processNodes);
                     }
                 }
@@ -2272,6 +2300,7 @@ public sealed class MeasureCollector
                         int startMeasureIndex = builder.CurrentMeasureIndex;
 
                         builder.SectionLabel = altSectionName;
+                        builder.SectionLabelPosition = SectionDeclPos(altSectionName);
                         ProcessSection(section, processNodes);
 
                         // Track measure index after processing

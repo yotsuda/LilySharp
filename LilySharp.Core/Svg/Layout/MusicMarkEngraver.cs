@@ -306,8 +306,13 @@ public static class MusicMarkEngraver
             var measure = measures[i];
             if (measure.SectionLabel != null)
             {
+                // Prefer the `section X` declaration offset so a click jumps there;
+                // fall back to the measure's music start when it wasn't threaded.
+                int pos = measure.SectionLabelPosition > 0
+                    ? measure.SectionLabelPosition
+                    : measure.SourceStart;
                 sectionLabels.Add(new MusicMarkItem(
-                    MusicMarkType.SectionLabel, measure.SectionLabel, i, measure.SourceStart));
+                    MusicMarkType.SectionLabel, measure.SectionLabel, i, pos));
             }
         }
 

@@ -50,7 +50,7 @@
   <text x="11.44" y="28.90" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="444">6</text>
   <text x="15.04" y="28.90" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="452">6</text>
   <text x="15.04" y="30.40" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="452">4</text>
-  <rect x="0.30" y="6.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="3.01" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">Main</text>
+  <rect x="0.30" y="6.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="380"/>
+  <text x="3.01" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="380">Main</text>
   </g>
 </svg>

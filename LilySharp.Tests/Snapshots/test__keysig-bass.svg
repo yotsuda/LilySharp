@@ -121,9 +121,9 @@
   <text class="music" x="0.80" y="14.66" font-size="1.60" data-pos="0"></text>
   <line x1="1.31" y1="14.66" x2="1.31" y2="13.26" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="1.90" y="14.66" font-size="1.80" font-family="serif" fill="#000000" data-pos="0">= 120</text>
-  <rect x="0.30" y="9.80" width="7.73" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="4.17" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">FMajor</text>
-  <rect x="39.65" y="13.36" width="8.10" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="259"/>
-  <text x="43.70" y="15.56" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="259">GMajor</text>
+  <rect x="0.30" y="9.80" width="7.73" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="354"/>
+  <text x="4.17" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="354">FMajor</text>
+  <rect x="39.65" y="13.36" width="8.10" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="415"/>
+  <text x="43.70" y="15.56" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="415">GMajor</text>
   </g>
 </svg>

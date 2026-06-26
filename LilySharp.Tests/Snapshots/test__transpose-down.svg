@@ -30,7 +30,7 @@
   <rect x="24.13" y="14.64" width="0.19" height="4.00" fill="#000000"/>
   <rect x="36.27" y="14.64" width="0.19" height="4.00" fill="#000000"/>
   <rect x="36.76" y="14.64" width="0.60" height="4.00" fill="#000000"/>
-  <rect x="0.30" y="9.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
-  <text x="3.01" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">Main</text>
+  <rect x="0.30" y="9.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="390"/>
+  <text x="3.01" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="390">Main</text>
   </g>
 </svg>
