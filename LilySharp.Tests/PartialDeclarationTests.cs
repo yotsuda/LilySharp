@@ -92,6 +92,24 @@ public sealed class PartialDeclarationTests
         Assert.Equal(8, NoteEvents(measures[1])); // full 4/4 bar of eighths
     }
 
+    [Fact]
+    public void PickupMeasure_IsFlaggedIsPickup()
+    {
+        // The pickup is marked so bar numbering can treat it as bar 0; the full
+        // measures that follow are NOT pickups.
+        var measures = CollectMeasures("time 4/4 partial 4 g4 | c4 d e f | g1 |");
+        Assert.True(measures[0].IsPickup);
+        Assert.False(measures[1].IsPickup);
+        Assert.False(measures[2].IsPickup);
+    }
+
+    [Fact]
+    public void WithoutPartial_NoMeasureIsPickup()
+    {
+        var measures = CollectMeasures("time 4/4 c4 d e f | g1 |");
+        Assert.All(measures, m => Assert.False(m.IsPickup));
+    }
+
     // ---- Validator (strict pickup) -------------------------------------------
 
     private static bool Warns(string source, string code)

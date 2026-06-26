@@ -132,6 +132,15 @@ public sealed record Measure
     /// instead of the measure's music. Falls back to SourceStart when unset.</summary>
     public int SectionLabelPosition { get; }
 
+    /// <summary>
+    /// True when this measure is an anacrusis (pickup) declared with <c>partial</c>:
+    /// it is shorter than the meter on purpose. A LEADING pickup (index 0) is bar 0
+    /// for numbering, so the first full bar is numbered 1, not 2.
+    /// LILYPOND-REF: lily/bar-number-engraver.cc — \partial leaves the pickup
+    /// uncounted (currentBarNumber reaches 1 only at the first full measure).
+    /// </summary>
+    public bool IsPickup { get; }
+
     public Measure(
         ImmutableArray<MusicItem> items,
         BarlineType startBarline,
@@ -144,7 +153,8 @@ public sealed record Measure
         double breakPenalty = 0,
         BreakPermission pageBreakPermission = BreakPermission.Allow,
         BreakPermission pageTurnPermission = BreakPermission.Allow,
-        int sectionLabelPosition = 0)
+        int sectionLabelPosition = 0,
+        bool isPickup = false)
     {
         Items = items;
         StartBarline = startBarline;
@@ -153,6 +163,7 @@ public sealed record Measure
         SourceStart = sourceStart;
         SourceEnd = sourceEnd;
         SectionLabelPosition = sectionLabelPosition;
+        IsPickup = isPickup;
         // Derive permission: hasBreakAfter implies Force for backward compatibility
         LineBreakPermission = hasBreakAfter ? BreakPermission.Force : lineBreakPermission;
         HasBreakAfter = hasBreakAfter || LineBreakPermission == BreakPermission.Force;

@@ -77,7 +77,8 @@ public static class BarNumberEngraver
     public static ImmutableArray<BarNumberLayout> Calculate(
         ImmutableArray<SystemLayout> systems,
         int period = 0,
-        bool numberFirstMeasure = false)
+        bool numberFirstMeasure = false,
+        int numberOffset = 0)
     {
         if (systems.IsDefaultOrEmpty)
             return ImmutableArray<BarNumberLayout>.Empty;
@@ -109,8 +110,10 @@ public static class BarNumberEngraver
                 if (!show)
                     continue;
 
-                // LP shows 1-based numbers. measureIndex is 0-based.
-                int displayedNumber = measureIndex + 1;
+                // LP shows 1-based numbers. measureIndex is 0-based. A leading
+                // \partial pickup shifts everything down by one (numberOffset = -1)
+                // so the pickup is bar 0 and the first full measure is bar 1.
+                int displayedNumber = measureIndex + 1 + numberOffset;
 
                 // Line-start numbers break-align to the LEFT EDGE (the staff-
                 // line origin, before the clef) and LEFT-align to it plus a

@@ -1,0 +1,18 @@
+// Coverage: bar numbering with a leading 'partial' pickup. The pickup is bar 0,
+// so the first FULL measure is bar 1 and the second system (forced by 'break')
+// starts at bar 3 — not 4. Without the pickup offset the numbers would be one
+// too high. LILYPOND-REF: lily/bar-number-engraver.cc (\partial leaves the
+// pickup uncounted).
+title "Pickup bar numbers"
+key c major
+part m { clef treble }
+section Main {
+  m {
+    time 4/4
+    partial 4
+    g4 | c4 d e f | g4 a g f | break
+    e4 f g a | g1 |
+  }
+}
+structure { Main }
+score "partial-barnumber" { staff { m } }

@@ -97,6 +97,9 @@ public class SvgSnapshotTests
         // (no written barline needed), then 4/4 resumes for the full bars.
         // Verified against LilyPond \partial 4.
         yield return new object[] { "test/partial-pickup" };
+        // A leading pickup is bar 0, so the second system (forced break) starts at
+        // bar 3, not 4 — the BarNumberEngraver pickup offset. Verified vs LilyPond.
+        yield return new object[] { "test/partial-barnumber" };
         yield return new object[] { "test/break" };
         yield return new object[] { "test/lyrics" };
         // Two verses: each verse line gets its stanza number ("1." / "2.") at the

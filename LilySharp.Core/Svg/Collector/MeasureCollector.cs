@@ -254,7 +254,8 @@ internal sealed class MeasureBuilder
                 _measureSourceStart,
                 sourceEnd,
                 hasBreakAfter: hasBreak,
-                sectionLabelPosition: _sectionLabelPosition));
+                sectionLabelPosition: _sectionLabelPosition,
+                isPickup: _partialRestore != null));
 
             // Record boundary
             _boundaries.Add(new MeasureBoundary(
@@ -296,7 +297,8 @@ internal sealed class MeasureBuilder
                 last.SourceStart,
                 last.SourceEnd,
                 hasBreakAfter: true,
-                sectionLabelPosition: last.SectionLabelPosition);
+                sectionLabelPosition: last.SectionLabelPosition,
+                isPickup: last.IsPickup);
         }
         else
         {
@@ -363,7 +365,8 @@ internal sealed class MeasureBuilder
                 breakPenalty: lastMeasure.BreakPenalty,
                 pageBreakPermission: lastMeasure.PageBreakPermission,
                 pageTurnPermission: lastMeasure.PageTurnPermission,
-                sectionLabelPosition: lastMeasure.SectionLabelPosition);
+                sectionLabelPosition: lastMeasure.SectionLabelPosition,
+                isPickup: lastMeasure.IsPickup);
         }
     }
 
@@ -385,7 +388,8 @@ internal sealed class MeasureBuilder
             _measureSourceStart,
             sourceEnd,
             hasBreakAfter: hasBreak,
-            sectionLabelPosition: _sectionLabelPosition));
+            sectionLabelPosition: _sectionLabelPosition,
+            isPickup: _partialRestore != null));
 
         _boundaries.Add(new MeasureBoundary(
             sourceEnd,
@@ -419,7 +423,8 @@ internal sealed class MeasureBuilder
                 _sectionLabel,
                 _measureSourceStart,
                 _measureSourceStart,  // End position same as start for incomplete
-                sectionLabelPosition: _sectionLabelPosition));
+                sectionLabelPosition: _sectionLabelPosition,
+                isPickup: _partialRestore != null));
 
             _boundaries.Add(new MeasureBoundary(
                 _measureSourceStart,
@@ -437,7 +442,8 @@ internal sealed class MeasureBuilder
                 _measures[^1] = new Measure(
                     last.Items, last.StartBarline, BarlineType.Final,
                     last.SectionLabel, last.SourceStart, last.SourceEnd, last.HasBreakAfter,
-                    sectionLabelPosition: last.SectionLabelPosition);
+                    sectionLabelPosition: last.SectionLabelPosition,
+                    isPickup: last.IsPickup);
             }
         }
 
@@ -726,7 +732,8 @@ public sealed class MeasureCollector
                     breakPenalty: m.BreakPenalty,
                     pageBreakPermission: m.PageBreakPermission,
                     pageTurnPermission: m.PageTurnPermission,
-                    sectionLabelPosition: m.SectionLabelPosition);
+                    sectionLabelPosition: m.SectionLabelPosition,
+                    isPickup: m.IsPickup);
             }
             if (builder != null)
                 voiceDict[name] = new Voice(voice.Name, builder.ToImmutable());
@@ -935,7 +942,8 @@ public sealed class MeasureCollector
                     breakPenalty: measure.BreakPenalty,
                     pageBreakPermission: measure.PageBreakPermission,
                     pageTurnPermission: measure.PageTurnPermission,
-                    sectionLabelPosition: measure.SectionLabelPosition);
+                    sectionLabelPosition: measure.SectionLabelPosition,
+                    isPickup: measure.IsPickup);
             }
         }
     }
@@ -1165,7 +1173,8 @@ public sealed class MeasureCollector
             reference.EndBarline,
             null,
             reference.SourceStart,
-            reference.SourceEnd);
+            reference.SourceEnd,
+            isPickup: reference.IsPickup);
 
     /// <summary>
     /// Gathers a voice block's music nodes (variable refs expanded), used to
