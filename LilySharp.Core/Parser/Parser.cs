@@ -594,7 +594,7 @@ internal sealed class Parser
             SyntaxKind.PitchB => true,
             SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full => true,
             SyntaxKind.OpenAngle => true, // Chord
-            SyntaxKind.DoubleOpenAngle => true, // Parallel <<
+            SyntaxKind.VoiceKeyword => true, // Parallel voices: voice { } voice { }
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
             SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => true,
             SyntaxKind.Tilde => true,
@@ -631,7 +631,7 @@ internal sealed class Parser
 
             SyntaxKind.OpenAngle => ParseChord(),
 
-            SyntaxKind.DoubleOpenAngle => ParseParallelExpression(),
+            SyntaxKind.VoiceKeyword => ParseVoiceBlocks(),
 
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
             SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => ParseBarline(),
@@ -1178,53 +1178,33 @@ private GreenNode?[] ParseArticulations()
         return new AlternativeClauseGreen(alternativeKeyword, openBrace, [.. alternatives], closeBrace);
     }
 
-    private ParallelExpressionGreen ParseParallelExpression()
+    /// <summary>
+    /// Parse parallel voices on one staff: <c>voice { … } voice { … } …</c>.
+    /// Consecutive <c>voice</c> blocks become the staff's simultaneous voices
+    /// (the 1st gets stems up, the 2nd down, and so on). This is the only
+    /// polyphony form — the old <c>&lt;&lt; … \\ … &gt;&gt;</c> was removed — and it
+    /// desugars to the same ParallelExpression those produced, so the collector,
+    /// renderer and exporters are unchanged.
+    /// </summary>
+    private ParallelExpressionGreen ParseVoiceBlocks()
     {
-        var openAngle = Expect(SyntaxKind.DoubleOpenAngle);
+        var firstVoice = Expect(SyntaxKind.VoiceKeyword);
+        var children = new List<GreenNode?> { ParseMusicBlock() };
 
-        var voices = new List<GreenNode?>();
-
-        // Parse first voice
-        voices.Add(ParseVoiceContent());
-
-        // Parse additional voices separated by \\
-        while (Check(SyntaxKind.Backslash) && Peek().Kind == SyntaxKind.Backslash)
+        while (Check(SyntaxKind.VoiceKeyword))
         {
-            voices.Add(Advance()); // first backslash
-            voices.Add(Advance()); // second backslash
-            voices.Add(ParseVoiceContent());
+            // Keep the separating `voice` keyword in the tree so ToFullString
+            // round-trips exactly; Voices skips it (only MusicBlocks are voices).
+            children.Add(Advance());
+            children.Add(ParseMusicBlock());
         }
 
-        var closeAngle = Expect(SyntaxKind.DoubleCloseAngle);
-        return new ParallelExpressionGreen(openAngle, [.. voices], closeAngle);
-    }
-
-    private GreenNode ParseVoiceContent()
-    {
-        // A voice can be a music block or sequence of items
-        if (Check(SyntaxKind.OpenBrace))
-        {
-            return ParseMusicBlock();
-        }
-
-        // Parse inline music items until \\ or >>
-        var items = new List<GreenNode?>();
-        while (_pendingPostEventMarkers.Count > 0 ||
-               (!Check(SyntaxKind.DoubleCloseAngle) &&
-                !Check(SyntaxKind.EndOfFile) &&
-                !(Check(SyntaxKind.Backslash) && Peek().Kind == SyntaxKind.Backslash)))
-        {
-            var item = ParseMusicItem();
-            if (item != null)
-                items.Add(item);
-            else
-                break;
-        }
-
-        // Wrap in an implicit music block
-        var openBrace = new SyntaxToken(SyntaxKind.OpenBrace, "", null, null);
-        var closeBrace = new SyntaxToken(SyntaxKind.CloseBrace, "", null, null);
-        return new MusicBlockGreen(openBrace, [.. items], closeBrace);
+        // ParallelExpression carries an open/close token; voice blocks have no
+        // closing delimiter, so reuse the opening `voice` keyword as the open
+        // marker and a synthetic empty close. ParallelExpressionSyntax.Voices
+        // only reads the MusicBlock children, so the markers are inert.
+        var close = new SyntaxToken(SyntaxKind.VoiceKeyword, "", null, null);
+        return new ParallelExpressionGreen(firstVoice, [.. children], close);
     }
 
     // ========== Key, Clef, Tuplet ==========

@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -99,19 +99,19 @@ public class SvgSnapshotTests
         // left of its lyrics, not floating at the top of the page.
         yield return new object[] { "test/lyrics-verses" };
         yield return new object[] { "test/multi-voice" };
-        // Sequential measures around a << \\ >> span — the single-voice measures
+        // Sequential measures around a voice { } voice { } span — the single-voice measures
         // before and after the parallel block must not be dropped.
         yield return new object[] { "test/voice-mixed" };
-        // Intra-staff polyphony on a grand staff: both voices of a << \\ >> in
+        // Intra-staff polyphony on a grand staff: both voices of a voice { } voice { } in
         // the upper staff render, with the surrounding single-voice measures.
         yield return new object[] { "test/voice-grandstaff" };
         // Two voices each with a dynamic on the same note column — both render
         // (stacked) rather than one hiding the other.
         yield return new object[] { "test/voice-dynamics" };
-        // A << \\ >> span mid-stream: its voices' dynamics land in the span's
+        // A voice { } voice { } span mid-stream: its voices' dynamics land in the span's
         // measure, not back in measure 0.
         yield return new object[] { "test/voice-dynamics-mid" };
-        // Multi-staff: a low lower-voice dynamic in the TOP staff's << \\ >> must
+        // Multi-staff: a low lower-voice dynamic in the TOP staff's voice { } voice { } must
         // widen the inter-staff gap so it clears the staff below instead of
         // overlapping its lines (dynamics join the outside-staff skyline).
         yield return new object[] { "test/voice-dynamics-multistaff" };

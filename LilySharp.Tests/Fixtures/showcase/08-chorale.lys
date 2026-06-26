@@ -1,6 +1,6 @@
 // SATB chorale: a four-part hymn texture on a grand staff, with TWO voices on
 // EACH staff (soprano/alto on the treble, tenor/bass on the bass) via the
-// << v1 \\ v2 >> span. Exercises polyphony on both staves of a grand staff at
+// voice { } voice { } span. Exercises polyphony on both staves of a grand staff at
 // once, per-voice stem directions, and a cadential fermata. Authored in
 // absolute octave (each voice sits in its own register) — which only works on
 // a multi-part score once the file-level octave mode reaches every staff. The
@@ -19,12 +19,12 @@ part lower { clef bass }
 
 section Main {
   upper {
-    << { d'4 d' e' d' | b4 a b2@fermata | }
-       \\ { b4 g g fis | g fis g2 } >>
+    voice { d'4 d' e' d' | b4 a  b2@fermata | }
+    voice { b4  g  g  fis | g  fis g2 }
   }
   lower {
-    << { g,4 b, c a, | d d d2 | }
-       \\ { g,,4 g,, c, d, | g,, d, g,,2 } >>
+    voice { g,4  b,  c   a,  | d   d   d2 | }
+    voice { g,,4 g,, c,  d,  | g,, d,  g,,2 }
   }
   lyrics { Praise God from whom | all bless- ings | }
 }

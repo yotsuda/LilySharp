@@ -12,7 +12,7 @@ key c major
 part m { clef treble }
 
 section Main {
-  m { << { tuplet 3/2 { c'4 d e } f2 } \\ { e4 e e e } >> | }
+  m { voice { tuplet 3/2 { c'4 d e } f2 } voice { e4 e e e }  | }
 }
 
 structure { Main }

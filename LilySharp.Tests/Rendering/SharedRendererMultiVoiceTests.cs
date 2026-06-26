@@ -43,7 +43,7 @@ public sealed class SharedRendererMultiVoiceTests
             key C major
             time 4/4
 
-            section S { line { << { c''4 c'' c'' c'' } \\ { e4 e e e } >> } }
+            section S { line { voice { c''4 c'' c'' c'' } voice { e4 e e e } } }
 
             structure { S }
             score "o" { staff { line } }
@@ -78,7 +78,7 @@ public sealed class SharedRendererMultiVoiceTests
             key C major
             time 4/4
 
-            section S { line { << { d'4 d'4 d'4 d'4 } \\ { c'4 c'4 c'4 c'4 } >> } }
+            section S { line { voice { d'4 d'4 d'4 d'4 } voice { c'4 c'4 c'4 c'4 } } }
 
             structure { S }
             score "o" { staff { line } }

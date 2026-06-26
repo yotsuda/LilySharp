@@ -456,7 +456,7 @@ use theme");
     [Fact]
     public void ParseParallelExpression()
     {
-        var tree = SyntaxTree.Parse(@"<< { c2 d } \\ { e2 f } >>");
+        var tree = SyntaxTree.Parse(@"voice { c2 d } voice { e2 f }");
         Assert.False(tree.HasErrors);
 
         var parallel = tree.Root.GetSlot(0) as ParallelExpressionGreen;
@@ -467,14 +467,14 @@ use theme");
     [Fact]
     public void ParseParallelWithMusicBlocks()
     {
-        var tree = SyntaxTree.Parse(@"<< { c2 d } \\ { e2 f } >>");
+        var tree = SyntaxTree.Parse(@"voice { c2 d } voice { e2 f }");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseParallelRoundTrip()
     {
-        var source = @"<< { c2 d } \\ { e2 f } >>";
+        var source = @"voice { c2 d } voice { e2 f }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
         Assert.Equal(source, tree.ToFullString());
@@ -483,7 +483,7 @@ use theme");
     [Fact]
     public void ParseParallelThreeVoices()
     {
-        var tree = SyntaxTree.Parse(@"<< { c2 } \\ { e2 } \\ { g2 } >>");
+        var tree = SyntaxTree.Parse(@"voice { c2 } voice { e2 } voice { g2 }");
         Assert.False(tree.HasErrors);
     }
 
@@ -512,7 +512,7 @@ use theme");
     {
         var tree = SyntaxTree.Parse(@"section Main {
     melody {
-        << { c2 d } \\ { e2 f } >>
+        voice { c2 d } voice { e2 f }
     }
 }");
         Assert.False(tree.HasErrors);
