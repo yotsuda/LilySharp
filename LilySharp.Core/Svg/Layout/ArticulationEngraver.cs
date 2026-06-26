@@ -81,6 +81,13 @@ public static class ArticulationEngraver
     private const double StaffTop = 0.0;
     private const double StaffBottom = 4.0;
 
+    // Breathing-sign placement: gap to the RIGHT of the note's right edge, and the
+    // Y at the top of the staff (the comma straddles the top line). Tuned to
+    // LilyPond's \breathe (scripts.rcomma at the staff top).
+    // LILYPOND-REF: lily/breathing-sign.cc offset-callback (top of staff).
+    private const double BreathGap = 0.55;
+    private const double BreathStaffY = -0.5;
+
     /// <summary>
     /// Calculates layout for all articulations in a score.
     /// </summary>
@@ -135,6 +142,33 @@ public static class ArticulationEngraver
             if (articulation.ItemIndex >= measure.Items.Length)
                 continue;
             var item = measure.Items[articulation.ItemIndex];
+
+            // Breathing signs are not Scripts: place them at the TOP of the staff,
+            // just to the right of the note (in the gap before the next note),
+            // independent of the note's pitch and stem — so they skip the whole
+            // Script side-positioning machinery below.
+            // LILYPOND-REF: lily/breathing-sign.cc — BreathingSign Y at staff top;
+            // the engraver emits the sign after the note it follows.
+            if (articulation.Type is ArticulationType.Breath or ArticulationType.Caesura)
+            {
+                double bx = measureLayout.X
+                    + LayoutUtilities.GetItemXOffset(artMeasures,
+                        articulation.MeasureIndex, articulation.ItemIndex, measureLayout)
+                    + 2.0 * NoteheadHalfWidth(item)  // full notehead advance → right edge
+                    + BreathGap;
+                double by = BreathStaffY + staffOffset;
+                layouts.Add(new ArticulationLayout(
+                    articulation.MeasureIndex,
+                    articulation.ItemIndex,
+                    bx,
+                    by,
+                    articulation.GetGlyph(),
+                    true,
+                    articulation.SourcePosition,
+                    1.0,
+                    GetSeedBBox(articulation.Type)));
+                continue;
+            }
 
             // Get staff position of the note
             int staffPosition = GetStaffPosition(item);

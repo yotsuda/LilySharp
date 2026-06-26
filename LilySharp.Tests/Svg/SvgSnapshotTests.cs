@@ -180,6 +180,10 @@ public class SvgSnapshotTests
         yield return new object[] { "test/collision" };
         yield return new object[] { "test/phrases" };
         yield return new object[] { "test/ornaments" };
+        // Breathing signs: @breath (comma) and @caesura (//) sit at the top of the
+        // staff, right of the note they follow. Verified against LilyPond \breathe
+        // / \caesura.
+        yield return new object[] { "test/breath-marks" };
         yield return new object[] { "test/repeat-volta" };
         yield return new object[] { "test/dollar-ref" };
         yield return new object[] { "test/grammar-test" };

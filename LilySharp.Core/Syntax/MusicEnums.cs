@@ -36,6 +36,14 @@ public enum ArticulationType
     Turn,
     InvertedTurn,
     PrallTriller,
+    // Breathing signs — NOT Script grobs: a BreathingSign sits at the TOP of the
+    // staff, to the RIGHT of the note it follows (in the gap before the next
+    // note), independent of note height and stem. Routed through the articulation
+    // anchor/render pipeline for reuse but positioned independently.
+    // LILYPOND-REF: lily/breathing-sign.cc; \breathe = scripts.rcomma, \caesura
+    // = scripts.caesura.straight (ly/music-functions-init.ly, ly/gregorian.ly).
+    Breath,
+    Caesura,
     // Editorial (suggestion) accidentals — a small accidental ABOVE the note,
     // created from @editorial; the kind comes from the note's resolved
     // accidental. LILYPOND-REF: scm/define-grobs.scm:96-123 AccidentalSuggestion

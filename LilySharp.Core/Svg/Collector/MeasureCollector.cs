@@ -2988,7 +2988,10 @@ public sealed class MeasureCollector
                         type == ArticulationType.Prall ||
                         type == ArticulationType.Turn ||
                         type == ArticulationType.InvertedTurn ||
-                        type == ArticulationType.PrallTriller)
+                        type == ArticulationType.PrallTriller ||
+                        // Breathing signs always sit at the top of the staff.
+                        type == ArticulationType.Breath ||
+                        type == ArticulationType.Caesura)
                     {
                         isAbove = true;
                     }

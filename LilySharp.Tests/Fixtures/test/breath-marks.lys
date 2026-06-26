@@ -1,0 +1,15 @@
+// Coverage: breathing signs. '@breath' (scripts.rcomma) and '@caesura'
+// (scripts.caesura.straight) are BreathingSign grobs — they sit at the TOP of
+// the staff, just to the right of the note they follow, independent of pitch
+// and stem. LILYPOND-REF: lily/breathing-sign.cc; \breathe / \caesura.
+title "Breathing signs"
+key c major
+part m { clef treble }
+section Main {
+  m {
+    time 4/4
+    c4@breath d e f | g a@caesura b c |
+  }
+}
+structure { Main }
+score "breath-marks" { staff { m } }

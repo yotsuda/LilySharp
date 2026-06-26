@@ -79,6 +79,8 @@ public sealed record ArticulationItem
         ArticulationType.Turn => EmmentalerGlyphs.OrnTurn.ToString(),
         ArticulationType.InvertedTurn => EmmentalerGlyphs.OrnReverseTurn.ToString(),
         ArticulationType.PrallTriller => EmmentalerGlyphs.OrnPrallPrall.ToString(),
+        ArticulationType.Breath => EmmentalerGlyphs.BreathComma.ToString(),
+        ArticulationType.Caesura => EmmentalerGlyphs.CaesuraStraight.ToString(),
         ArticulationType.EditorialSharp => EmmentalerGlyphs.AccidentalSharp.ToString(),
         ArticulationType.EditorialFlat => EmmentalerGlyphs.AccidentalFlat.ToString(),
         ArticulationType.EditorialNatural => EmmentalerGlyphs.AccidentalNatural.ToString(),

@@ -52,6 +52,9 @@ public static class ArticulationRegistry
             ["turn"] = ArticulationType.Turn,
             ["invertedturn"] = ArticulationType.InvertedTurn,
             ["pralltriller"] = ArticulationType.PrallTriller,
+            // Breathing signs (after the note they follow)
+            ["breath"] = ArticulationType.Breath,
+            ["caesura"] = ArticulationType.Caesura,
         };
 
     /// <summary>

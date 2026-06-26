@@ -131,6 +131,10 @@ public static class EmmentalerGlyphs
     public const char OrnMordent = '\uE071';           // scripts.mordent
     public const char OrnPrallPrall = '\uE072';        // scripts.prallprall
 
+    // === Breathing signs (verified against emmentaler-20.woff2 cmap) ===
+    public const char BreathComma = '\uE066';          // scripts.rcomma (\breathe)
+    public const char CaesuraStraight = '\uE07C';      // scripts.caesura.straight (\caesura)
+
     // === Metronome (use regular noteheads) ===
     public const char MetNoteDoubleWhole = '\uE0E6';
     public const char MetNoteWhole = '\uE0E8';
