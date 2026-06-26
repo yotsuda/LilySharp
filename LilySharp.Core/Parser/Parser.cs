@@ -1914,7 +1914,9 @@ private GreenNode?[] ParseArticulations()
             name = Advance();
         }
 
-        var filename = Expect(SyntaxKind.StringLiteral);
+        // The output filename is optional. When omitted the CLI derives it from
+        // the input file (<input>.<ext>), so `render score { … }` is valid.
+        var filename = TryConsume(SyntaxKind.StringLiteral);
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var items = new List<GreenNode?>();

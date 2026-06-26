@@ -70,6 +70,39 @@ public class RenderSpecTests
     }
 
     [Fact]
+    public void OmittedFilename_ParsesWithEmptyOutputFile()
+    {
+        // The output filename is optional: `render score { … }` is valid and
+        // yields an empty OutputFile, signalling the consumer to derive the name
+        // from the input file (<input>.<ext>).
+        var source = """
+            title "Test"
+            time 4/4
+
+            phrase melody { c'4 d' e' f' | }
+
+            section Main {
+              melody { melody }
+            }
+
+            structure { Main }
+
+            render score {
+              staff treble { melody }
+            }
+            """;
+
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
+
+        var renderSpec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(renderSpec);
+        Assert.Equal("score", renderSpec.Name);
+        Assert.Equal("", renderSpec.OutputFile);
+        Assert.Single(renderSpec.Items); // the staff still parses
+    }
+
+    [Fact]
     public void ParseSingleStaff_ReturnsCorrectStructure()
     {
         var source = """

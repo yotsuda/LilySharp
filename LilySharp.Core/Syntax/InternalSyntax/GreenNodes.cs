@@ -840,14 +840,28 @@ internal sealed class RenderDeclarationGreen : GreenSyntaxNode
     public RenderDeclarationGreen(
         SyntaxToken renderKeyword,
         SyntaxToken? name,
-        SyntaxToken filename,
+        SyntaxToken? filename,
         SyntaxToken openBrace,
         GreenNode?[] items,
         SyntaxToken closeBrace)
-        : base(SyntaxKind.RenderDeclaration, name != null
-            ? [renderKeyword, name, filename, openBrace, .. items, closeBrace]
-            : [renderKeyword, filename, openBrace, .. items, closeBrace])
+        : base(SyntaxKind.RenderDeclaration,
+            BuildChildren(renderKeyword, name, filename, openBrace, items, closeBrace))
     {
+    }
+
+    // name and filename are both optional, so assemble the child list rather
+    // than enumerate every present/absent combination.
+    private static GreenNode?[] BuildChildren(
+        SyntaxToken renderKeyword, SyntaxToken? name, SyntaxToken? filename,
+        SyntaxToken openBrace, GreenNode?[] items, SyntaxToken closeBrace)
+    {
+        var children = new List<GreenNode?> { renderKeyword };
+        if (name != null) children.Add(name);
+        if (filename != null) children.Add(filename);
+        children.Add(openBrace);
+        children.AddRange(items);
+        children.Add(closeBrace);
+        return [.. children];
     }
 }
 

@@ -61,7 +61,9 @@ public static class RenderSpecParser
             }
         }
 
-        if (name == null || outputFile == null)
+        // The output filename is optional: when omitted the consumer derives it
+        // from the input file name. An empty OutputFile signals "use the default".
+        if (name == null)
             return null;
 
         // Parse render items
@@ -95,7 +97,7 @@ public static class RenderSpecParser
             }
         }
 
-        return new RenderSpec(name, outputFile, [.. items]);
+        return new RenderSpec(name, outputFile ?? "", [.. items]);
     }
 
     private static bool IsNameToken(SyntaxKind kind)
