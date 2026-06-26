@@ -599,8 +599,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
         }
 
-        function highlightNearestElement(cursorPos) {
-            // Clear previous highlights
+        function clearHighlights() {
             document.querySelectorAll('.highlight').forEach(el => {
                 el.classList.remove('highlight');
                 // Only restore what we actually recolored (origStroke/origFill set);
@@ -622,6 +621,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     el.__origNextSibling = null;
                 }
             });
+        }
+
+        function highlightNearestElement(cursorPos) {
+            // Clear previous highlights
+            clearHighlights();
 
             // Find nearest data-pos value
             const elements = document.querySelectorAll('[data-pos]');
@@ -745,6 +749,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (target && target.hasAttribute && target.hasAttribute('data-pos')) {
                 const pos = parseInt(target.getAttribute('data-pos'), 10);
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
+            } else {
+                // Clicked empty space / a non-clickable grob: just drop the
+                // highlight. Don't move the editor cursor (no message sent), and
+                // forget the position so a re-render doesn't bring it back.
+                lastHighlightPos = -1;
+                clearHighlights();
             }
         });
     </script>
