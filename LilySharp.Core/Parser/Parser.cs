@@ -1555,26 +1555,27 @@ private GreenNode?[] ParseArticulations()
             return new LyricSyllableGreen(first);
         }
 
-        // Text syllable: identifier (possibly with trailing hyphen)
-        if (Check(SyntaxKind.Identifier))
+        // Text syllable: an identifier, OR any word that merely happens to lex as
+        // a reserved token. Inside a lyrics block everything up to | or } is free
+        // text, so syllables like "to", "time", "key" (keywords elsewhere) and
+        // single letters that look like pitches ("a".."g") or dynamics ("f","p")
+        // must still render. The special lyric tokens (~ _ -) are handled above
+        // and the measure delimiters (| }) are stopped by the caller, so anything
+        // reaching here is a syllable — normalize it to a plain identifier token.
+        var text = Advance();
+
+        // Trailing hyphen (word continuation, e.g. "Hap-")
+        if (Check(SyntaxKind.Minus))
         {
-            var text = Advance();
-
-            // Check for trailing hyphen (word continuation, e.g., "Hap-")
-            if (Check(SyntaxKind.Minus))
-            {
-                var hyphen = Advance();
-                // Combine text and hyphen into one token
-                var combined = new SyntaxToken(
-                    SyntaxKind.Identifier,
-                    text.Text + hyphen.Text);
-                return new LyricSyllableGreen(combined);
-            }
-
-            return new LyricSyllableGreen(text);
+            var hyphen = Advance();
+            return new LyricSyllableGreen(
+                new SyntaxToken(SyntaxKind.Identifier, text.Text + hyphen.Text));
         }
 
-        return null;
+        return new LyricSyllableGreen(
+            text.Kind == SyntaxKind.Identifier
+                ? text
+                : new SyntaxToken(SyntaxKind.Identifier, text.Text));
     }
 
     /// <summary>
