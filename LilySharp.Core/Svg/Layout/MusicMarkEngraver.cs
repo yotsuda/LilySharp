@@ -137,8 +137,13 @@ public static class MusicMarkEngraver
             }
         }
 
+        // Group by measure + position + ANCHOR TIMING so only marks that share a
+        // horizontal column stack vertically. Without the timing, a mid-measure
+        // tempo (e.g. \tempo at beat 2) stacked onto the line-start tempo/section
+        // label even though they sit at different X, stealing the bottom slot and
+        // floating the opening marks far above the staff (grand-staff regression).
         var groups = markEntries
-            .GroupBy(e => (e.Mark.MeasureIndex, e.Mark.Position))
+            .GroupBy(e => (e.Mark.MeasureIndex, e.Mark.Position, e.Mark.AnchorTiming))
             .ToList();
 
         // BELOW-staff marks (pedal text etc.) hang under the LAST staff of
