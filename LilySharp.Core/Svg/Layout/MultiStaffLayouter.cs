@@ -748,8 +748,12 @@ public sealed class MultiStaffLayouter
             leadingTimeChange?.NewTime.Beats ?? score.TimeSignature.Beats,
             leadingTimeChange?.NewTime.BeatType ?? score.TimeSignature.BeatType);
         // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
-        // Staff lines start at MarginLeft + indent; music starts after prefix
-        double startX = _options.MarginLeft + CurrentIndent + prefixWidth;
+        // System-internal coordinates are LINE-RELATIVE (0 = line start); the page
+        // places the whole line at MarginLeft once, via the renderer's margin
+        // translate. So startX must NOT include MarginLeft — baking it in here AND
+        // translating again double-counts the left margin, shoving the music right
+        // until the final barline hits the page edge (no right margin).
+        double startX = CurrentIndent + prefixWidth;
         double availableWidth = _options.PageWidth - _options.MarginLeft - _options.MarginRight - CurrentIndent - prefixWidth;
 
         // LILYPOND-REF: lily/spacing-spanner.cc — collect springs from ALL columns across
