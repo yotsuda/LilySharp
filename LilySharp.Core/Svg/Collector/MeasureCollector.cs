@@ -518,6 +518,12 @@ public sealed class MeasureCollector
     // Metadata
     private string? _title;
     private string? _composer;
+    // Source offsets of the header grobs (0 = none), emitted as data-pos so the
+    // preview can click-to-jump to the title/composer/time/key declarations.
+    private int _titlePosition;
+    private int _composerPosition;
+    private int _timePosition;
+    private int _keyPosition;
     private int? _tempo;
     private int _timeBeats = 4;
     private int _timeBeatType = 4;
@@ -614,7 +620,8 @@ public sealed class MeasureCollector
             crossStaffItems: _crossStaffItems.ToImmutableArray(),
             grobOverrides: _grobOverrides.ToImmutableArray(),
             grobReverts: _grobReverts.ToImmutableArray(),
-            trillSpanners: PairTrillSpannerEvents());
+            trillSpanners: PairTrillSpannerEvents(),
+            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition));
     }
 
     /// <summary>
@@ -819,7 +826,8 @@ public sealed class MeasureCollector
             chordNames: _chordNames.ToImmutableArray(),
             percentRepeats: _percentRepeats.ToImmutableArray(),
             crossStaffItems: _crossStaffItems.ToImmutableArray(),
-            trillSpanners: PairTrillSpannerEvents());
+            trillSpanners: PairTrillSpannerEvents(),
+            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition));
     }
 
     /// <summary>
@@ -950,7 +958,8 @@ public sealed class MeasureCollector
             figuredBasses: _figuredBasses.ToImmutableArray(),
             grobOverrides: _grobOverrides.ToImmutableArray(),
             grobReverts: _grobReverts.ToImmutableArray(),
-            trillSpanners: PairTrillSpannerEvents());
+            trillSpanners: PairTrillSpannerEvents(),
+            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition));
     }
 
     /// <summary>
@@ -1011,7 +1020,8 @@ public sealed class MeasureCollector
             figuredBasses: _figuredBasses.ToImmutableArray(),
             grobOverrides: _grobOverrides.ToImmutableArray(),
             grobReverts: _grobReverts.ToImmutableArray(),
-            trillSpanners: PairTrillSpannerEvents());
+            trillSpanners: PairTrillSpannerEvents(),
+            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition));
     }
 
     /// <summary>
@@ -1658,6 +1668,10 @@ public sealed class MeasureCollector
         _defaultDuration = Fraction.Quarter;
         _title = null;
         _composer = null;
+        _titlePosition = 0;
+        _composerPosition = 0;
+        _timePosition = 0;
+        _keyPosition = 0;
         _tempo = null;
         _timeBeats = 4;
         _timeBeatType = 4;
@@ -1781,13 +1795,17 @@ public sealed class MeasureCollector
                     {
                         _timeBeats = timeSig.Beats;
                         _timeBeatType = timeSig.BeatType;
+                        _timePosition = timeSig.Span.Start;
                     }
                     break;
 
                 case KeySignatureSyntax key:
                     // Only process top-level key declarations (not inside phrases/sections)
                     if (!IsInsideMusicContent(key))
+                    {
                         _keySharps = CalculateKeySharps(key);
+                        _keyPosition = key.Span.Start;
+                    }
                     break;
 
                 case ClefDeclarationSyntax clef:
@@ -1833,11 +1851,17 @@ public sealed class MeasureCollector
         {
             case "title":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode titleToken)
+                {
                     _title = titleToken.Text.Trim('"');
+                    _titlePosition = titleToken.Span.Start;
+                }
                 break;
             case "composer":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode composerToken)
+                {
                     _composer = composerToken.Text.Trim('"');
+                    _composerPosition = composerToken.Span.Start;
+                }
                 break;
         }
     }

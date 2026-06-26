@@ -19,6 +19,18 @@ using System.Collections.Immutable;
 namespace LilySharp.Core.Svg.Model;
 
 /// <summary>
+/// Source byte offsets of the score's header grobs, so the renderer can stamp each
+/// with a data-pos and the preview can click-to-jump / highlight them like notes.
+/// 0 means "no known position" (the grob is then drawn without a data-pos).
+/// </summary>
+public readonly record struct HeaderPositions(
+    int Title = 0,
+    int Composer = 0,
+    int Time = 0,
+    int Key = 0
+);
+
+/// <summary>
 /// A complete musical score with multiple staff groups.
 /// </summary>
 /// <remarks>
@@ -97,6 +109,10 @@ public sealed record MultiStaffScore
     /// <summary>Trill spanners (tr + wavy line).</summary>
     public ImmutableArray<TrillSpannerItem> TrillSpanners { get; }
 
+    /// <summary>Source offsets of the header grobs (title/composer/time/key) so the
+    /// SVG can tag them with data-pos and the preview can click-to-jump.</summary>
+    public HeaderPositions Header { get; }
+
     /// <summary>Whether this score has a grand staff.</summary>
     public bool HasGrandStaff => StaffGroups.Any(g => g.IsGrandStaff);
 
@@ -128,7 +144,8 @@ public sealed record MultiStaffScore
         ImmutableArray<CrossStaffItem>? crossStaffItems = null,
         ImmutableArray<GrobOverride>? grobOverrides = null,
         ImmutableArray<GrobRevert>? grobReverts = null,
-        ImmutableArray<TrillSpannerItem>? trillSpanners = null)
+        ImmutableArray<TrillSpannerItem>? trillSpanners = null,
+        HeaderPositions header = default)
     {
         if (staffGroups.Length == 0)
             throw new ArgumentException("Score must have at least one staff group", nameof(staffGroups));
@@ -155,6 +172,7 @@ public sealed record MultiStaffScore
         GrobOverrides = grobOverrides ?? ImmutableArray<GrobOverride>.Empty;
         GrobReverts = grobReverts ?? ImmutableArray<GrobRevert>.Empty;
         TrillSpanners = trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty;
+        Header = header;
     }
 
     /// <summary>
@@ -195,7 +213,8 @@ public sealed record MultiStaffScore
             crossStaffItems: score.CrossStaffItems,
             grobOverrides: score.GrobOverrides,
             grobReverts: score.GrobReverts,
-            trillSpanners: score.TrillSpanners);
+            trillSpanners: score.TrillSpanners,
+            header: score.Header);
     }
 
     /// <summary>Number of measures (from first staff of first group).</summary>

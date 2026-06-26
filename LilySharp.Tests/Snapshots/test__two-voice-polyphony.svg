@@ -4,7 +4,7 @@
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle">Two-voice polyphony</text>
+  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="233">Two-voice polyphony</text>
   <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="11.64" x2="40.52" y2="11.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="12.64" x2="40.52" y2="12.64" stroke="#000000" stroke-width="0.100"/>
@@ -12,7 +12,7 @@
   <line x1="0.00" y1="14.64" x2="40.52" y2="14.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.64" x2="40.52" y2="15.64" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="14.64" font-size="4.00"></text>
-  <text class="music" x="3.30" y="13.64" font-size="4.00"></text>
+  <text class="music" x="3.30" y="13.64" font-size="4.00" data-pos="255"></text>
   <text class="music" x="7.80" y="14.64" font-size="4.00" data-pos="332"></text>
   <line x1="9.04" y1="14.64" x2="9.04" y2="11.14" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="15.00" y="14.14" font-size="4.00" data-pos="336"></text>

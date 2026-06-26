@@ -4,7 +4,7 @@
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle">Inter-staff: high bass chord</text>
+  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="424">Inter-staff: high bass chord</text>
   <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="11.64" x2="0.00" y2="31.14" stroke="#000000" stroke-width="0.160"/>
   <line x1="0.00" y1="11.64" x2="32.84" y2="11.64" stroke="#000000" stroke-width="0.100"/>
@@ -13,7 +13,7 @@
   <line x1="0.00" y1="14.64" x2="32.84" y2="14.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.64" x2="32.84" y2="15.64" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="14.64" font-size="4.00"></text>
-  <text class="music" x="3.30" y="13.64" font-size="4.00"></text>
+  <text class="music" x="3.30" y="13.64" font-size="4.00" data-pos="455"></text>
   <line x1="25.15" y1="10.64" x2="28.09" y2="10.64" stroke="#000000" stroke-width="0.200"/>
   <line x1="25.15" y1="9.64" x2="28.09" y2="9.64" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="8.08" y="13.14" font-size="4.00" data-pos="546"></text>
@@ -27,7 +27,7 @@
   <line x1="0.00" y1="30.14" x2="32.84" y2="30.14" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="31.14" x2="32.84" y2="31.14" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="28.14" font-size="4.00"></text>
-  <text class="music" x="3.30" y="29.14" font-size="4.00"></text>
+  <text class="music" x="3.30" y="29.14" font-size="4.00" data-pos="455"></text>
   <line x1="25.15" y1="26.14" x2="28.09" y2="26.14" stroke="#000000" stroke-width="0.200"/>
   <line x1="25.15" y1="25.14" x2="28.09" y2="25.14" stroke="#000000" stroke-width="0.200"/>
   <line x1="25.15" y1="24.14" x2="28.09" y2="24.14" stroke="#000000" stroke-width="0.200"/>

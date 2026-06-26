@@ -4,8 +4,8 @@
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle">Transpose</text>
-  <text x="78.00" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end">Lily#</text>
+  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="373">Transpose</text>
+  <text x="78.00" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="394">Lily#</text>
   <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="23.00" x2="59.75" y2="23.00" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="24.00" x2="59.75" y2="24.00" stroke="#000000" stroke-width="0.100"/>
@@ -13,9 +13,9 @@
   <line x1="0.00" y1="26.00" x2="59.75" y2="26.00" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="27.00" x2="59.75" y2="27.00" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="26.00" font-size="4.00"></text>
-  <text class="music" x="3.30" y="23.00" font-size="4.00"></text>
-  <text class="music" x="4.40" y="24.50" font-size="4.00"></text>
-  <text class="music" x="5.90" y="25.00" font-size="4.00"></text>
+  <text class="music" x="3.30" y="23.00" font-size="4.00" data-pos="412"></text>
+  <text class="music" x="4.40" y="24.50" font-size="4.00" data-pos="412"></text>
+  <text class="music" x="5.90" y="25.00" font-size="4.00" data-pos="402"></text>
   <line x1="27.28" y1="22.00" x2="29.23" y2="22.00" stroke="#000000" stroke-width="0.200"/>
   <line x1="30.88" y1="22.00" x2="32.83" y2="22.00" stroke="#000000" stroke-width="0.200"/>
   <line x1="34.48" y1="22.00" x2="36.43" y2="22.00" stroke="#000000" stroke-width="0.200"/>

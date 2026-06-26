@@ -4,8 +4,8 @@
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle">Octave Mode (absolute)</text>
-  <text x="78.00" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end">Lily#</text>
+  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="399">Octave Mode (absolute)</text>
+  <text x="78.00" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="433">Lily#</text>
   <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="14.64" x2="73.43" y2="14.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.64" x2="73.43" y2="15.64" stroke="#000000" stroke-width="0.100"/>
@@ -13,7 +13,7 @@
   <line x1="0.00" y1="17.64" x2="73.43" y2="17.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="18.64" x2="73.43" y2="18.64" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="17.64" font-size="4.00"></text>
-  <text class="music" x="3.30" y="16.64" font-size="4.00"></text>
+  <text class="music" x="3.30" y="16.64" font-size="4.00" data-pos="441"></text>
   <line x1="28.23" y1="13.64" x2="30.18" y2="13.64" stroke="#000000" stroke-width="0.200"/>
   <line x1="31.83" y1="13.64" x2="33.78" y2="13.64" stroke="#000000" stroke-width="0.200"/>
   <line x1="35.43" y1="13.64" x2="37.38" y2="13.64" stroke="#000000" stroke-width="0.200"/>

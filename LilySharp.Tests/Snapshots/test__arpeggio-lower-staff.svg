@@ -4,7 +4,7 @@
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle">Lower-staff arpeggio</text>
+  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="226">Lower-staff arpeggio</text>
   <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="11.64" x2="0.00" y2="26.14" stroke="#000000" stroke-width="0.160"/>
   <line x1="0.00" y1="11.64" x2="32.52" y2="11.64" stroke="#000000" stroke-width="0.100"/>
@@ -13,7 +13,7 @@
   <line x1="0.00" y1="14.64" x2="32.52" y2="14.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="15.64" x2="32.52" y2="15.64" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="14.64" font-size="4.00"></text>
-  <text class="music" x="3.30" y="13.64" font-size="4.00"></text>
+  <text class="music" x="3.30" y="13.64" font-size="4.00" data-pos="249"></text>
   <text class="music" x="7.80" y="13.14" font-size="4.00" data-pos="343"></text>
   <line x1="7.87" y1="13.14" x2="7.87" y2="16.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="11.44" y="12.64" font-size="4.00" data-pos="347"></text>
@@ -32,7 +32,7 @@
   <line x1="0.00" y1="25.14" x2="32.52" y2="25.14" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="26.14" x2="32.52" y2="26.14" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="23.14" font-size="4.00"></text>
-  <text class="music" x="3.30" y="24.14" font-size="4.00"></text>
+  <text class="music" x="3.30" y="24.14" font-size="4.00" data-pos="249"></text>
   <text class="music" x="7.80" y="24.64" font-size="4.00" data-pos="370"></text>
   <line x1="9.04" y1="24.64" x2="9.04" y2="21.14" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="11.44" y="24.14" font-size="4.00" data-pos="373"></text>

@@ -4,8 +4,8 @@
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle">Multi-Staff Transpose</text>
-  <text x="78.00" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end">Lily#</text>
+  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="311">Multi-Staff Transpose</text>
+  <text x="78.00" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="344">Lily#</text>
   <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
   <text x="-0.30" y="21.14" font-size="0.86" font-family="Emmentaler-Brace" text-anchor="end" fill="#000000"></text>
   <line x1="0.00" y1="14.64" x2="0.00" y2="27.64" stroke="#000000" stroke-width="0.160"/>
@@ -18,9 +18,9 @@
   <line x1="0.00" y1="17.64" x2="38.22" y2="17.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="18.64" x2="38.22" y2="18.64" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="17.64" font-size="4.00"></text>
-  <text class="music" x="3.30" y="14.64" font-size="4.00"></text>
-  <text class="music" x="4.40" y="16.14" font-size="4.00"></text>
-  <text class="music" x="5.90" y="16.64" font-size="4.00"></text>
+  <text class="music" x="3.30" y="14.64" font-size="4.00" data-pos="362"></text>
+  <text class="music" x="4.40" y="16.14" font-size="4.00" data-pos="362"></text>
+  <text class="music" x="5.90" y="16.64" font-size="4.00" data-pos="352"></text>
   <line x1="27.33" y1="13.64" x2="29.39" y2="13.64" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="10.45" y="15.64" font-size="4.00" data-pos="465"></text>
   <line x1="10.51" y1="15.64" x2="10.51" y2="19.14" stroke="#000000" stroke-width="0.130"/>
@@ -43,7 +43,7 @@
   <line x1="0.00" y1="26.64" x2="38.22" y2="26.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="27.64" x2="38.22" y2="27.64" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="24.64" font-size="4.00"></text>
-  <text class="music" x="3.30" y="25.64" font-size="4.00"></text>
+  <text class="music" x="3.30" y="25.64" font-size="4.00" data-pos="352"></text>
   <text class="music" x="10.45" y="26.14" font-size="4.00" data-pos="496"></text>
   <line x1="11.69" y1="26.14" x2="11.69" y2="22.64" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="14.09" y="25.64" font-size="4.00" data-pos="499"></text>

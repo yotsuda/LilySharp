@@ -129,16 +129,30 @@ public static class SharedRenderer
         if (score.Title is { } title)
         {
             double centerX = page.Width / 2;
-            gc.DrawText(title, centerX, y, TitleFontSize, "serif",
-                FontStyle.Bold, TextAnchor.Middle);
+            using (SourceScope(gc, score.Header.Title))
+                gc.DrawText(title, centerX, y, TitleFontSize, "serif",
+                    FontStyle.Bold, TextAnchor.Middle);
             y += TitleFontSize;
         }
         if (score.Composer is { } composer)
         {
             double rightX = page.Width - options.MarginLeft;
-            gc.DrawText(composer, rightX, y, ComposerFontSize, "serif",
-                FontStyle.Italic, TextAnchor.End);
+            using (SourceScope(gc, score.Header.Composer))
+                gc.DrawText(composer, rightX, y, ComposerFontSize, "serif",
+                    FontStyle.Italic, TextAnchor.End);
         }
+    }
+
+    /// <summary>Opens a data-pos source scope for a header grob, or a no-op scope
+    /// when the offset is unknown (0). Lets the title/composer/time/key carry a
+    /// data-pos for click-to-jump without sprinkling null checks at each draw.</summary>
+    private static IDisposable SourceScope(IDrawingContext gc, int sourcePosition)
+        => sourcePosition > 0 ? gc.Source(sourcePosition) : NullScope.Instance;
+
+    private sealed class NullScope : IDisposable
+    {
+        public static readonly NullScope Instance = new();
+        public void Dispose() { }
     }
 
     // ---------- System ----------
@@ -212,10 +226,15 @@ public static class SharedRenderer
                 var clef = ResolveClef(staff, system, score);
                 prefixEndX = DrawClef(clef, systemStartX, localStaffY, gc);
                 var activeKey = ResolveKeySignature(staff, system, score);
-                prefixEndX = DrawKeySignature(activeKey, clef, prefixEndX, localStaffY, gc);
+                // Tag the key sig with its declaration on the first line only — there
+                // it IS the declared key; later lines may show a mid-piece change,
+                // which carries its own position via its measure item.
+                using (SourceScope(gc, isFirstSystem ? score.Header.Key : 0))
+                    prefixEndX = DrawKeySignature(activeKey, clef, prefixEndX, localStaffY, gc);
                 if (isFirstSystem)
                 {
-                    prefixEndX = DrawTimeSignature(score.TimeSignature, prefixEndX, localStaffY, gc);
+                    using (SourceScope(gc, score.Header.Time))
+                        prefixEndX = DrawTimeSignature(score.TimeSignature, prefixEndX, localStaffY, gc);
                 }
                 else if (GetSystemStartTimeChange(staff, system) is { } startTimeChange)
                 {
