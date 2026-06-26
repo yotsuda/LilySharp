@@ -575,14 +575,30 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             return window.matchMedia('(prefers-color-scheme: dark)').matches ? '#00ccff' : '#ff6600';
         }
 
+        // Put an attribute back to the value the SVG shipped with: re-apply the
+        // saved string, or drop the attribute entirely if it never had one.
+        // Removing it blindly is wrong — many grobs carry an explicit paint
+        // (the section mark's box is fill="#FFFFFF", its label fill="#000000"),
+        // and dropping it falls back to SVG's default black, which the dark-mode
+        // invert() filter then renders as a solid white blob that never reverts.
+        function restoreAttr(el, name, orig) {
+            if (orig === null || orig === undefined) {
+                el.removeAttribute(name);
+            } else {
+                el.setAttribute(name, orig);
+            }
+        }
+
         function highlightNearestElement(cursorPos) {
             // Clear previous highlights
             document.querySelectorAll('.highlight').forEach(el => {
                 el.classList.remove('highlight');
                 if (el.tagName.toLowerCase() === 'line') {
-                    el.setAttribute('stroke', 'black');
+                    restoreAttr(el, 'stroke', el.__origStroke);
+                    el.__origStroke = undefined;
                 } else {
-                    el.removeAttribute('fill');
+                    restoreAttr(el, 'fill', el.__origFill);
+                    el.__origFill = undefined;
                 }
                 // Restore the original z-order (DOM position) that was changed
                 // when this element was raised on highlight.
@@ -614,9 +630,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const matches = document.querySelectorAll('[data-pos="' + nearestPos + '"]');
                 matches.forEach(el => {
                     el.classList.add('highlight');
+                    // Save the shipped paint once (guard against re-highlight
+                    // clobbering it with the highlight color) so clear can restore
+                    // the real value, not SVG's default.
                     if (el.tagName.toLowerCase() === 'line') {
+                        if (el.__origStroke === undefined) el.__origStroke = el.getAttribute('stroke');
                         el.setAttribute('stroke', color);
                     } else {
+                        if (el.__origFill === undefined) el.__origFill = el.getAttribute('fill');
                         el.setAttribute('fill', color);
                     }
                     // SVG has no z-index — z-order is document order. The stem
