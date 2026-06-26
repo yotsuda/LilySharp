@@ -272,8 +272,13 @@ public class SvgSnapshotTests
         var lysPath = Path.Combine(SamplesDir, sampleName + ".lys");
         Assert.True(File.Exists(lysPath), $"Source file not found: {lysPath}");
 
-        // Render SVG (without font embedding for smaller/stable snapshots)
-        var source = File.ReadAllText(lysPath);
+        // Render SVG (without font embedding for smaller/stable snapshots).
+        // Normalize the SOURCE to LF first: the SVG carries data-pos byte offsets
+        // into this source, so a CRLF working-tree checkout (Windows) would shift
+        // every offset past a newline relative to an LF checkout (CI/Linux) and
+        // break the snapshot cross-platform. Reading it LF-canonical pins data-pos
+        // to one value everywhere, independent of how git materialized the file.
+        var source = File.ReadAllText(lysPath).Replace("\r\n", "\n");
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
         // Snapshots are platform-neutral: LF on disk (.gitattributes pins
