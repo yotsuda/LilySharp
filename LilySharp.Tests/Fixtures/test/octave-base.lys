@@ -1,0 +1,24 @@
+// A per-part octave base for ABSOLUTE mode: `part X { ... octave N }` makes
+// bare c = C(N) for that part, so a bass-clef line can be written without
+// piling up `,` commas. Default stays C4 (LilyPond's fixed absolute anchor);
+// only an explicit `octave` shifts it. Here `octave 3` puts bare notes in the
+// heart of the bass staff (C3..C4), so `c d e f g a b c'` reads directly.
+// Identical output to the same line written at the default anchor with commas.
+octave absolute
+title "Octave Base (absolute)"
+composer "Lily#"
+
+time 4/4
+key c major
+
+part low { clef bass octave 3 }
+
+section Main {
+  low { c4 d e f | g a b c' | c' b a g | f e d c | }
+}
+
+structure { Main }
+
+score "octave-base" {
+  staff { low }
+}

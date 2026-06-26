@@ -403,6 +403,11 @@ public sealed class MeasureCollector
     // State for relative pitch mode
     private int _currentOctave = 4;
     private int _initialOctave = 4;  // Reset target for section boundaries
+    // Absolute-mode anchor: bare c = C(_octaveBase). Defaults to 4 (LilyPond's
+    // fixed c=C4) and is overridden ONLY by an explicit `part X { octave N }`, so
+    // a bass part can be written `octave 2` to avoid piling up `,` commas. The
+    // clef default is deliberately NOT used here (absolute stays c=C4 by default).
+    private int _octaveBase = 4;
     private char _lastPitchName = 'c';
     // Octave resolution mode. Default (false) = LilyPond-style relative: each
     // pitch takes the octave nearest the previous one, then '/, adjust. When
@@ -531,6 +536,7 @@ public sealed class MeasureCollector
             if (partClef != null)
                 _clef = partClef;
             _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+            _octaveBase = partOctave ?? 4;
             ApplyTranspose(partTranspose);
             // Transpose the written key signature (CollectDefinitions set it
             // before the part option was known) so the displayed key and the
@@ -709,6 +715,7 @@ public sealed class MeasureCollector
             // Set initial octave: explicit > instrument default > clef default
             _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
             _initialOctave = _currentOctave;
+            _octaveBase = partOctave ?? 4;
             _octaveAbsolute = _initialOctaveAbsolute; // restore file-level octave mode
             ApplyTranspose(partTranspose);
 
@@ -1604,6 +1611,7 @@ public sealed class MeasureCollector
         _root = null;
         _currentOctave = 4;
         _initialOctave = 4;
+        _octaveBase = 4;
         _octaveAbsolute = false;
         _initialOctaveAbsolute = false;
         _lastPitchName = 'c';
@@ -3222,7 +3230,7 @@ public sealed class MeasureCollector
         // afterwards, so a transposed part still resolves octaves from what the
         // user wrote.
         int actualOctave = _octaveAbsolute
-            ? 4 + pitch.OctaveOffset
+            ? _octaveBase + pitch.OctaveOffset
             : RelativeOctave.Resolve(
                 GetPitchIndex(_lastPitchName), _currentOctave,
                 step, pitch.OctaveOffset);

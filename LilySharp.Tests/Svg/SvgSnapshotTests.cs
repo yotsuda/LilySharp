@@ -184,6 +184,7 @@ public class SvgSnapshotTests
         // anchor with no carry, so octave leaps render directly. Relative is the
         // default and unaffected.
         yield return new object[] { "test/octave-absolute" };
+        yield return new object[] { "test/octave-base" };
         yield return new object[] { "test/multi-measure-rest" };
         // Multi-staff: when ONE staff rests (R1*N) but ANOTHER has content over
         // the same measures, the resting staff shows individual whole rests and
