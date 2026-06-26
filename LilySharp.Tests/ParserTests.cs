@@ -497,6 +497,29 @@ use theme");
             d => d.Code == DiagnosticCodes.ParallelSyntaxRemoved);
     }
 
+    [Theory]
+    [InlineData(@"\tempo 120")]
+    [InlineData(@"\clef bass")]
+    [InlineData(@"\new Staff { c4 d }")]
+    [InlineData(@"\relative c' { c4 d }")]
+    [InlineData(@"\addlyrics { la la }")]
+    public void LilypondBackslashCommand_ReportsMigrationHint(string source)
+    {
+        // A LilyPond reflex — a leading backslash on a command — gets a Lily# hint.
+        var tree = SyntaxTree.Parse(source);
+        Assert.Contains(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.LilypondBackslashCommand);
+    }
+
+    [Fact]
+    public void Backslash_OnTablature_IsNotFlaggedAsLilypondReflex()
+    {
+        // \tabStaff / \tuning are genuine Lily# backslash syntax, not LP reflexes.
+        var tree = SyntaxTree.Parse(@"\tabStaff \tuning guitar { e4 a d' }");
+        Assert.DoesNotContain(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.LilypondBackslashCommand);
+    }
+
     [Fact]
     public void ParseNestedRepeatInPart()
     {

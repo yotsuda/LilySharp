@@ -256,6 +256,7 @@ internal sealed class Parser
             SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
             SyntaxKind.OnceKeyword => ParseOnceModifier(),
             SyntaxKind.OpenBrace => ParseMusicBlock(),
+            SyntaxKind.Backslash => ParseLilypondBackslashCommand(topLevel: true),
             _ when IsMusicItemStart() => ParseMusicItem(),
             _ => null
         };
@@ -637,6 +638,10 @@ internal sealed class Parser
             // Removed syntax: report a migration hint, then recover by parsing the
             // old structure so no cascade of errors follows.
             SyntaxKind.DoubleOpenAngle => ParseRemovedParallelExpression(),
+
+            // A leading backslash on a known LilyPond command (\tempo, \new, …) —
+            // a habit from LilyPond — gets a hint pointing at the Lily# form.
+            SyntaxKind.Backslash => ParseLilypondBackslashCommand(topLevel: false),
 
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
             SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => ParseBarline(),
@@ -1259,6 +1264,49 @@ private GreenNode?[] ParseArticulations()
         var openBrace = new SyntaxToken(SyntaxKind.OpenBrace, "", null, null);
         var closeBrace = new SyntaxToken(SyntaxKind.CloseBrace, "", null, null);
         return new MusicBlockGreen(openBrace, [.. items], closeBrace);
+    }
+
+    /// <summary>
+    /// A leading backslash before a well-known LilyPond command (a reflex for
+    /// users coming from LilyPond) gets a hint pointing at the Lily# form, then
+    /// recovers by parsing the now-bare command. Backslashes that ARE valid
+    /// Lily# (\tabStaff, \tuning) or unrecognized ones are left untouched (return
+    /// null without consuming, so the caller skips the '\' as before).
+    /// </summary>
+    private GreenNode? ParseLilypondBackslashCommand(bool topLevel)
+    {
+        string word = Peek(1).Text;
+        string? hint = word switch
+        {
+            "new" => "Lily# has no '\\new'; declare 'part name { … }' and lay it out with "
+                + "'staff { … }' / 'voice { … }'.",
+            "relative" => "Lily# is relative by default — drop '\\relative …'; switch modes "
+                + "with 'octave absolute'.",
+            "addlyrics" => "Lily# writes lyrics as 'lyrics { … }', not '\\addlyrics'.",
+            "tempo" or "clef" or "key" or "time" or "transpose" or "octave"
+                => $"Lily# commands take no leading backslash — write '{word} …', not '\\{word} …'.",
+            _ => null
+        };
+        if (hint == null)
+            return null;
+
+        int startPos = _textPosition;
+        Advance(); // consume the leading '\'
+        var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
+        _diagnostics.Error(span, DiagnosticCodes.LilypondBackslashCommand, hint);
+
+        // A bare directive (\tempo 120 → tempo 120) parses straight away once the
+        // backslash is gone — re-dispatch it. The structural commands (\new /
+        // \relative / \addlyrics) have no one-token form, so drop their keyword
+        // and let the rest fall through to the caller's recovery without a
+        // misleading secondary "use $new" warning.
+        bool bareDirective = word is "tempo" or "clef" or "key"
+            or "time" or "transpose" or "octave";
+        if (bareDirective)
+            return topLevel ? ParseTopLevelItem() : ParseMusicItem();
+
+        Advance(); // drop the structural command keyword
+        return null;
     }
 
     // ========== Key, Clef, Tuplet ==========
