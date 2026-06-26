@@ -28,6 +28,9 @@ public sealed class MidiExporter
     private int _currentTick;
     private int _currentOctave = 4;
     private int _currentNoteName = 0; // c=0, d=1, e=2, f=3, g=4, a=5, b=6
+    // Octave mode (mirrors MeasureCollector): false = relative (default), true =
+    // `octave absolute` ('/, are offsets from a fixed C4 anchor, no carry).
+    private bool _octaveAbsolute;
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _tempo = 120;
     private int _velocity = 80;
@@ -101,6 +104,12 @@ public sealed class MidiExporter
                     : 0;
                 ProcessChildren(partBlock, track, conductorTrack);
                 _currentTransposeSemitones = 0;
+                break;
+
+            case OctaveDirectiveSyntax octaveDir:
+                // Octave-mode switch (top-level default or mid-stream). MIDI walks
+                // in source order, so a file-level directive precedes the notes.
+                _octaveAbsolute = octaveDir.IsAbsolute;
                 break;
 
             case MusicBlockSyntax block:
@@ -334,10 +343,14 @@ public sealed class MidiExporter
     {
         int noteName = GetNoteName(pitch.BaseName);
 
-        // Closest-octave rule + explicit '/, offset — shared with the collector
-        // and the MusicXML exporter (RelativeOctave is the single source of truth).
-        int targetOctave = RelativeOctave.Resolve(
-            _currentNoteName, _currentOctave, noteName, pitch.OctaveOffset);
+        // Absolute mode: '/, are offsets from a fixed C4 anchor (bare c = C4),
+        // stateless. Relative mode (default): closest-octave rule + '/, offset,
+        // shared with the collector and the MusicXML exporter (RelativeOctave is
+        // the single source of truth). Matches MeasureCollector exactly.
+        int targetOctave = _octaveAbsolute
+            ? 4 + pitch.OctaveOffset
+            : RelativeOctave.Resolve(
+                _currentNoteName, _currentOctave, noteName, pitch.OctaveOffset);
 
         // Update current state for next note
         _currentNoteName = noteName;

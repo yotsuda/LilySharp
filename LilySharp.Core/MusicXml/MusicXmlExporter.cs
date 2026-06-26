@@ -30,6 +30,10 @@ public sealed class MusicXmlExporter
 
     private int _currentOctave = 4;
     private int _currentStep = 0;     // c=0..b=6, for LilyPond relative-octave resolution (mirrors MidiExporter)
+    // Octave mode (mirrors MeasureCollector): false = relative (default), true =
+    // `octave absolute` ('/, are offsets from a fixed C4 anchor, no carry).
+    private bool _octaveAbsolute;
+    private bool _initialOctaveAbsolute; // file-level default, restored per part
     private bool _tieToNextNote;      // a tie was seen; the next note/chord ends it (gets tie-stop)
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _measureNumber = 1;
@@ -108,6 +112,14 @@ public sealed class MusicXmlExporter
                 case ClefDeclarationSyntax clef:
                     ProcessClef(clef);
                     break;
+                case OctaveDirectiveSyntax octaveDir:
+                    // Top-level `octave absolute/relative` sets the file default.
+                    if (!IsInsideMusicContent(octaveDir))
+                    {
+                        _octaveAbsolute = octaveDir.IsAbsolute;
+                        _initialOctaveAbsolute = octaveDir.IsAbsolute;
+                    }
+                    break;
                 case PhraseDeclarationSyntax phrase:
                     _variables[phrase.Name.Text] = phrase.Body;
                     break;
@@ -151,6 +163,7 @@ public sealed class MusicXmlExporter
         // Reset state for this part's continuation
         _currentOctave = 4;
         _currentStep = 0;
+        _octaveAbsolute = _initialOctaveAbsolute; // restore file-level octave mode
         _tieToNextNote = false;
         _defaultDuration = Fraction.Quarter;
         _pendingDynamic = null;
@@ -245,6 +258,11 @@ public sealed class MusicXmlExporter
 
             case ClefDeclarationSyntax clef:
                 ProcessClef(clef);
+                break;
+
+            case OctaveDirectiveSyntax octaveDir:
+                // Mid-stream octave-mode switch (affects subsequent pitches only).
+                _octaveAbsolute = octaveDir.IsAbsolute;
                 break;
 
             case MusicBlockSyntax block:
@@ -641,14 +659,29 @@ public sealed class MusicXmlExporter
     {
         int noteName = StepIndex(pitch.BaseName);
 
-        // Closest-octave rule + explicit '/, offset — shared with the collector
-        // and the MIDI exporter (RelativeOctave is the single source of truth).
-        int targetOctave = RelativeOctave.Resolve(
-            _currentStep, _currentOctave, noteName, pitch.OctaveOffset);
+        // Absolute mode: '/, are offsets from a fixed C4 anchor (bare c = C4),
+        // stateless. Relative mode (default): closest-octave rule + '/, offset,
+        // shared with the collector and the MIDI exporter (RelativeOctave is the
+        // single source of truth). Matches MeasureCollector exactly.
+        int targetOctave = _octaveAbsolute
+            ? 4 + pitch.OctaveOffset
+            : RelativeOctave.Resolve(
+                _currentStep, _currentOctave, noteName, pitch.OctaveOffset);
 
         _currentStep = noteName;
         _currentOctave = targetOctave;
         return targetOctave;
+    }
+
+    /// <summary>True when <paramref name="node"/> is nested inside a phrase /
+    /// section / part body (music content) rather than a top-level declaration.</summary>
+    private static bool IsInsideMusicContent(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is PhraseDeclarationSyntax or SectionDeclarationSyntax
+                or VariableDeclarationSyntax or PartBlockSyntax)
+                return true;
+        return false;
     }
 
     private static int StepIndex(char baseName) => RelativeOctave.StepIndex(baseName);

@@ -99,6 +99,33 @@ public sealed class ExportTieAndOctaveTests
         Assert.Equal(55, mnotes[1].Pitch);
     }
 
+    // ---- octave absolute: exporters agree with the renderer ----
+
+    // cis'(C#5) c''(C6) c'(C5) e'(E5) — absolute, stateless (4 + '/, offset).
+    private const string AbsoluteSource = @"
+octave absolute
+part melody { clef treble }
+section A { melody { cis'4 c'' c' e' } }
+structure { A }
+render score ""t.svg"" { staff { melody } }
+";
+
+    [Fact]
+    public void MusicXml_OctaveAbsolute_ResolvesFromFixedC4Anchor()
+    {
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse(AbsoluteSource));
+        var octaves = xml.Parts[0].Measures.SelectMany(m => m.Notes).Select(n => n.Octave!.Value).ToArray();
+        Assert.Equal(new[] { 5, 6, 5, 5 }, octaves); // C#5, C6, C5, E5
+    }
+
+    [Fact]
+    public void Midi_OctaveAbsolute_ResolvesFromFixedC4Anchor()
+    {
+        var midi = new MidiExporter().Export(SyntaxTree.Parse(AbsoluteSource));
+        var pitches = midi.Tracks[1].Notes.OrderBy(n => n.StartTick).Select(n => n.Pitch).ToArray();
+        Assert.Equal(new[] { 73, 84, 72, 76 }, pitches); // C#5, C6, C5, E5
+    }
+
     [Fact]
     public void Chord_RelativeOctave_IsReckonedFromPreviousNoteInChord()
     {
