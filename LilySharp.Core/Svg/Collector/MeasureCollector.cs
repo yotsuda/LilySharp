@@ -674,6 +674,12 @@ public sealed class MeasureCollector
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
         _initialKeySharps = _keySharps; // Preserve initial key before music processing
+        // Capture the file-level `octave absolute/relative` default AFTER the
+        // pre-scan, mirroring the single-staff path. Without this each part's
+        // line-702 restore reads the post-Reset `false`, so a top-level
+        // `octave absolute` was silently ignored for every staff in a
+        // multi-part score (notes fell back to relative and ran off the staff).
+        _initialOctaveAbsolute = _octaveAbsolute;
 
         // Phase 2: Build voice dictionary. Each staff maps to ALL its voices
         // (the primary stream plus any from << \\ >> spans inside that staff).
