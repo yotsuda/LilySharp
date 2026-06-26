@@ -392,6 +392,10 @@ public sealed class MeasureCollector
 {
     private readonly Dictionary<string, SectionDeclarationSyntax> _sections = new();
     private readonly Dictionary<string, SyntaxNode> _variables = new();
+    // First expanded-measure index where each section begins, so a `lyrics` block
+    // written inside a section aligns to THAT section's notes (not from bar 0).
+    // First-occurrence wins; populated during structure/section expansion.
+    private readonly Dictionary<string, int> _sectionStartMeasure = new();
     private StructureDeclarationSyntax? _structure;
     private string? _voiceName;
     private SyntaxNode? _root;
@@ -734,6 +738,17 @@ public sealed class MeasureCollector
         SynchronizeBarlines(flatVoices);
         foreach (var key in staffVoices.Keys.ToArray())
             staffVoices[key] = staffVoices[key].Select(v => flatVoices[v.Name]).ToImmutableArray();
+
+        // Lyrics align to the melody — the primary voice of the FIRST staff.
+        // (Single-staff scores collect lyrics in Collect(); the grand-staff path
+        // did not, so lyrics silently vanished on a multi-part score.)
+        var firstVoiceName = renderSpec.GetVoiceNames().FirstOrDefault();
+        if (firstVoiceName != null
+            && staffVoices.TryGetValue(firstVoiceName, out var firstStaffVoices)
+            && firstStaffVoices.Length > 0)
+        {
+            CollectLyrics(tree.GetRoot(), firstStaffVoices[0].Measures.ToList());
+        }
 
         // Phase 3: Build staff groups from render spec
         var staffGroups = renderSpec.ToStaffGroups(name =>
@@ -1580,6 +1595,7 @@ public sealed class MeasureCollector
         _crossStaffItems.Clear();
         _grobOverrides.Clear();
         _grobReverts.Clear();
+        _sectionStartMeasure.Clear();
         _trillSpannerEvents.Clear();
         _courtesySourcePositions.Clear();
         _measureAccidentals.Clear();
@@ -1959,6 +1975,8 @@ public sealed class MeasureCollector
         {
             foreach (var section in _sections.Values)
             {
+                if (!_sectionStartMeasure.ContainsKey(section.SectionName))
+                    _sectionStartMeasure[section.SectionName] = builder.CurrentMeasureIndex;
                 builder.SectionLabel = section.SectionName;
                 ProcessSection(section, ProcessNodes);
             }
@@ -1987,6 +2005,8 @@ public sealed class MeasureCollector
                         break;
                     if (_sections.TryGetValue(reference.SectionName, out var section))
                     {
+                        if (!_sectionStartMeasure.ContainsKey(reference.SectionName))
+                            _sectionStartMeasure[reference.SectionName] = builder.CurrentMeasureIndex;
                         builder.SectionLabel = ResolveSectionLabel(reference);
                         ProcessSection(section, processNodes);
                     }
@@ -2165,6 +2185,8 @@ public sealed class MeasureCollector
                 {
                     if (_sections.TryGetValue(reference.SectionName, out var section))
                     {
+                        if (!_sectionStartMeasure.ContainsKey(reference.SectionName))
+                            _sectionStartMeasure[reference.SectionName] = builder.CurrentMeasureIndex;
                         builder.SectionLabel = ResolveSectionLabel(reference);
                         ProcessSection(section, processNodes);
                     }
@@ -3301,14 +3323,41 @@ public sealed class MeasureCollector
             }
         }
 
-        // Collect lyrics from each block
+        // Collect lyrics from each block. A block aligns to the notes of the
+        // SECTION it is written in (offset to that section's first measure), so
+        // a `lyrics` block inside section B starts under B's notes rather than
+        // becoming a second verse from bar 0. Blocks sharing a section start
+        // stack as successive verses (verse 1, 2, ...).
         var lyricCollector = new LyricCollector();
-        int verseNumber = 1;
+        var nextVerseByStart = new Dictionary<int, int>();
         foreach (var lyricsBlock in lyricsBlocks)
         {
-            var lyrics = lyricCollector.Collect(lyricsBlock, noteIndices, voiceId: 0, verseNumber);
+            int startMeasure = ResolveLyricsStartMeasure(lyricsBlock);
+            int verseNumber = nextVerseByStart.TryGetValue(startMeasure, out var v) ? v : 1;
+            nextVerseByStart[startMeasure] = verseNumber + 1;
+
+            IReadOnlyList<(int MeasureIndex, int ItemIndex)> aligned = startMeasure <= 0
+                ? noteIndices
+                : noteIndices.Where(n => n.MeasureIndex >= startMeasure).ToList();
+
+            var lyrics = lyricCollector.Collect(lyricsBlock, aligned, voiceId: 0, verseNumber);
             _lyrics.AddRange(lyrics);
-            verseNumber++;
         }
+    }
+
+    /// <summary>
+    /// The first expanded-measure index a lyrics block aligns to: the start of
+    /// the section it is written in (0 when it is top-level or its section was
+    /// never reached by the structure).
+    /// </summary>
+    private int ResolveLyricsStartMeasure(LyricsBlockSyntax lyricsBlock)
+    {
+        for (var n = lyricsBlock.Parent; n != null; n = n.Parent)
+        {
+            if (n is SectionDeclarationSyntax section
+                && _sectionStartMeasure.TryGetValue(section.SectionName, out int start))
+                return start;
+        }
+        return 0;
     }
 }
