@@ -39,19 +39,19 @@
   <rect x="33.67" y="14.64" width="0.19" height="4.00" fill="#000000"/>
   <rect x="48.79" y="14.64" width="0.19" height="4.00" fill="#000000"/>
   <rect x="49.28" y="14.64" width="0.60" height="4.00" fill="#000000"/>
-  <text x="9.08" y="23.40" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">Sing</text>
-  <text x="15.66" y="23.40" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">a</text>
-  <text x="22.56" y="23.40" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">love</text>
-  <text x="29.46" y="23.40" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">song</text>
-  <text x="37.46" y="23.40" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">soft</text>
-  <text x="43.88" y="23.40" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">now</text>
-  <text x="9.08" y="25.20" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">Low</text>
-  <text x="22.56" y="25.20" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">part</text>
-  <text x="29.46" y="25.20" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">deep</text>
-  <text x="37.46" y="25.20" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">slow</text>
-  <text x="43.88" y="25.20" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">now</text>
-  <text x="1.80" y="23.40" font-size="2.40" font-family="serif" font-weight="bold" fill="#000000">1.</text>
-  <text x="1.80" y="25.20" font-size="2.40" font-family="serif" font-weight="bold" fill="#000000">2.</text>
+  <text x="9.08" y="24.75" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">Sing</text>
+  <text x="15.66" y="24.75" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">a</text>
+  <text x="22.56" y="24.75" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">love</text>
+  <text x="29.46" y="24.75" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">song</text>
+  <text x="37.46" y="24.75" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">soft</text>
+  <text x="43.88" y="24.75" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">now</text>
+  <text x="9.08" y="26.55" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">Low</text>
+  <text x="22.56" y="26.55" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">part</text>
+  <text x="29.46" y="26.55" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">deep</text>
+  <text x="37.46" y="26.55" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">slow</text>
+  <text x="43.88" y="26.55" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">now</text>
+  <text x="1.80" y="24.75" font-size="2.40" font-family="serif" font-weight="bold" fill="#000000">1.</text>
+  <text x="1.80" y="26.55" font-size="2.40" font-family="serif" font-weight="bold" fill="#000000">2.</text>
   <rect x="0.30" y="9.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="3.01" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="0">Main</text>
   </g>

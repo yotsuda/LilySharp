@@ -80,14 +80,51 @@ public sealed class LyricEngraver
     }
 
     /// <summary>
-    /// Distance from a lyric's anchor (the vertical MIDLINE — lyrics are drawn
-    /// TextAnchor.Middle, see SharedRenderer.DrawLyrics) up to the TOP of the glyph.
-    /// This is the lyric grob's real up-extent, used to build the lyric line's
-    /// up-skyline box [anchor − topExtent, anchor] that the staff down-skyline must
-    /// clear. The visible gap between text and note then equals
-    /// <see cref="RelatedStaffPadding"/>, independent of this value.
+    /// The lyric serif font size in staff spaces (SharedRenderer draws lyrics at
+    /// FontSize * 0.8 = 4 * 0.8). Kept in sync with EstimateTextWidth, which uses
+    /// the same value to turn em-fraction advance widths into staff-space widths.
     /// </summary>
-    private const double LyricTextTopExtent = 0.76;
+    private const double LyricFontSize = 3.2;
+
+    /// <summary>
+    /// Serif cap/ascender height as an em fraction — the top of letters like
+    /// l, d, k, t, every capital, and digits. Measured from the rendered face
+    /// (an 'l' tops 2.11 sp above the baseline at <see cref="LyricFontSize"/>).
+    /// </summary>
+    private const double AscenderEm = 0.66;
+
+    /// <summary>
+    /// Serif x-height as an em fraction — the top of an all-short word like
+    /// "up"/"now". Measured at 1.46 sp above the baseline.
+    /// </summary>
+    private const double XHeightEm = 0.456;
+
+    /// <summary>Lowercase letters whose ink reaches the cap/ascender line.</summary>
+    private const string AscenderLetters = "bdfhijklt";
+
+    /// <summary>
+    /// Real up-extent (baseline → top of ink) of a lyric syllable in staff spaces,
+    /// from the serif font's metrics at the lyric font size. LilyPond builds the
+    /// LyricText skyline from the grob's true stencil bounding box; here the
+    /// ascender / x-height em-fractions (measured from the rendered face) stand in
+    /// for FreeType glyph metrics — mirroring how EstimateTextWidth derives advance
+    /// widths. The extent is the MAX over the syllable's glyphs (a single ascender
+    /// or capital lifts the whole box to the cap line), so the up-skyline reflects
+    /// the tallest ink the staff's down-skyline must clear.
+    /// </summary>
+    private static double LyricUpExtent(string text)
+    {
+        double em = XHeightEm;
+        foreach (char c in text)
+        {
+            if (char.IsUpper(c) || char.IsDigit(c) || AscenderLetters.IndexOf(c) >= 0)
+            {
+                em = AscenderEm;
+                break;
+            }
+        }
+        return LyricFontSize * em;
+    }
 
     /// <summary>
     /// LilyPond Lyrics relatedstaff-spacing padding (ly/engraver-init.ly:651): the
@@ -204,7 +241,7 @@ public sealed class LyricEngraver
                 continue;
             double halfW = Math.Max(lay.Width, MinSyllableBoxWidth) / 2.0;
             var box = VerticalSkyline.FromBox(
-                lay.X - halfW, lay.X + halfW, 0, -LyricTextTopExtent, VerticalDirection.Up);
+                lay.X - halfW, lay.X + halfW, 0, -LyricUpExtent(lay.Item.Text), VerticalDirection.Up);
             if (lyricUp.TryGetValue(s, out var sky)) sky.Merge(box);
             else lyricUp[s] = box;
         }

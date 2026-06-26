@@ -1,0 +1,23 @@
+// Fix demo: lyrics skyline-space below the staff.
+// Measure 2 dips to low notes (ledger lines below the staff). The whole lyric
+// line of the system drops uniformly to clear them (the syllables over the
+// in-staff measures 1 and 3 sit at that same lowered height) — before the fix
+// the syllables sat at a fixed offset and the low notes ran through the text.
+title "Lyrics clear low notes"
+time 4/4
+key c major
+part melody
+section Main {
+  melody {
+    g'4 a g f |
+    c,4 c c c |
+    g'4 a g f |
+  }
+  lyrics {
+    up up up up |
+    low low low low |
+    up up up up |
+  }
+}
+structure { Main }
+score "lyrics-skyline" { staff { melody } }

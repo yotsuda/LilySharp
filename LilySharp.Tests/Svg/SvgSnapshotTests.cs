@@ -98,6 +98,11 @@ public class SvgSnapshotTests
         // Two verses: each verse line gets its stanza number ("1." / "2.") at the
         // left of its lyrics, not floating at the top of the page.
         yield return new object[] { "test/lyrics-verses" };
+        // Measure 2 dips to C3 (four ledger lines below). The whole lyric line
+        // drops uniformly so the TEXT clears the low notes — the up-skyline is
+        // built from the real glyph height (ascender vs x-height), so the drop
+        // matches the true ink. Guards the lyric/note overlap regression.
+        yield return new object[] { "test/lyrics-skyline" };
         yield return new object[] { "test/multi-voice" };
         // Sequential measures around a voice { } voice { } span — the single-voice measures
         // before and after the parallel block must not be dropped.
