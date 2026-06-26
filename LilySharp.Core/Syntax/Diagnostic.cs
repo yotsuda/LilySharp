@@ -123,6 +123,7 @@ public static class DiagnosticCodes
     public const string InvalidNumber = "LYS0005";
     public const string RepeatVoltaRemoved = "LYS0006";
     public const string LegacyDeclarationForm = "LYS0007";
+    public const string ParallelSyntaxRemoved = "LYS0008";
 
     // Semantic errors (LYS1xxx)
     public const string UndefinedVariable = "LYS1001";

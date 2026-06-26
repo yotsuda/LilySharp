@@ -595,6 +595,7 @@ internal sealed class Parser
             SyntaxKind.RestR or SyntaxKind.RestS or SyntaxKind.RestR_Full => true,
             SyntaxKind.OpenAngle => true, // Chord
             SyntaxKind.VoiceKeyword => true, // Parallel voices: voice { } voice { }
+            SyntaxKind.DoubleOpenAngle => true, // removed << >> — dispatched to a migration hint
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
             SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => true,
             SyntaxKind.Tilde => true,
@@ -632,6 +633,10 @@ internal sealed class Parser
             SyntaxKind.OpenAngle => ParseChord(),
 
             SyntaxKind.VoiceKeyword => ParseVoiceBlocks(),
+
+            // Removed syntax: report a migration hint, then recover by parsing the
+            // old structure so no cascade of errors follows.
+            SyntaxKind.DoubleOpenAngle => ParseRemovedParallelExpression(),
 
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
             SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => ParseBarline(),
@@ -1205,6 +1210,55 @@ private GreenNode?[] ParseArticulations()
         // only reads the MusicBlock children, so the markers are inert.
         var close = new SyntaxToken(SyntaxKind.VoiceKeyword, "", null, null);
         return new ParallelExpressionGreen(firstVoice, [.. children], close);
+    }
+
+    /// <summary>
+    /// Reports that the old <c>&lt;&lt; … \\ … &gt;&gt;</c> polyphony was removed in
+    /// favor of <c>voice { … }</c> blocks, then recovers by parsing the old shape
+    /// into the same ParallelExpression so the rest of the file still parses.
+    /// </summary>
+    private ParallelExpressionGreen ParseRemovedParallelExpression()
+    {
+        int startPos = _textPosition;
+        var open = Expect(SyntaxKind.DoubleOpenAngle);
+
+        var children = new List<GreenNode?> { ParseRemovedVoiceContent() };
+        while (Check(SyntaxKind.Backslash) && Peek().Kind == SyntaxKind.Backslash)
+        {
+            children.Add(Advance()); // first \
+            children.Add(Advance()); // second \
+            children.Add(ParseRemovedVoiceContent());
+        }
+
+        var close = Expect(SyntaxKind.DoubleCloseAngle);
+
+        var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
+        // Worded for LilyPond newcomers (who reach for << … \\ … >> by habit) as
+        // much as for old Lily# files: state the Lily# form, don't assume history.
+        _diagnostics.Error(span, DiagnosticCodes.ParallelSyntaxRemoved,
+            "Lily# writes parallel voices as 'voice { … }' blocks, not '<< … \\\\ … >>' "
+            + "— e.g. 'voice { c d } voice { e f }'.");
+
+        return new ParallelExpressionGreen(open, [.. children], close);
+    }
+
+    private GreenNode ParseRemovedVoiceContent()
+    {
+        if (Check(SyntaxKind.OpenBrace))
+            return ParseMusicBlock();
+
+        // Bare inline voice (no braces): consume items up to \\ or >>.
+        var items = new List<GreenNode?>();
+        while (!Check(SyntaxKind.DoubleCloseAngle) && !Check(SyntaxKind.EndOfFile)
+               && !(Check(SyntaxKind.Backslash) && Peek().Kind == SyntaxKind.Backslash))
+        {
+            var item = ParseMusicItem();
+            if (item != null) items.Add(item);
+            else break;
+        }
+        var openBrace = new SyntaxToken(SyntaxKind.OpenBrace, "", null, null);
+        var closeBrace = new SyntaxToken(SyntaxKind.CloseBrace, "", null, null);
+        return new MusicBlockGreen(openBrace, [.. items], closeBrace);
     }
 
     // ========== Key, Clef, Tuplet ==========

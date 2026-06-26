@@ -488,6 +488,16 @@ use theme");
     }
 
     [Fact]
+    public void OldAngleParallelSyntax_ReportsMigrationHint()
+    {
+        // The removed << … \\ … >> form is rejected with a hint pointing at voice { }.
+        var tree = SyntaxTree.Parse(@"<< { c2 d } \\ { e2 f } >>");
+        Assert.True(tree.HasErrors);
+        Assert.Contains(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.ParallelSyntaxRemoved);
+    }
+
+    [Fact]
     public void ParseNestedRepeatInPart()
     {
         // 'repeat volta' inside a section is also rejected with the symbolic hint.
