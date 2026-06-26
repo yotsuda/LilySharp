@@ -224,7 +224,14 @@ public static class SharedRenderer
                 // are break-aligned at every line start; TimeSignature is not.
                 double prefixEndX = systemStartX;
                 var clef = ResolveClef(staff, system, score);
-                prefixEndX = DrawClef(clef, systemStartX, localStaffY, gc);
+                // Tag the clef with its declaration for click-to-jump, on the first
+                // line of a single-staff score: there it IS the declared clef (later
+                // lines may show a mid-piece change, which owns its own position),
+                // and a multi-staff score's per-staff clefs would all wrongly point
+                // at the one score-level position.
+                int clefPos = isFirstSystem && score.TotalStaffCount == 1 ? score.Header.Clef : 0;
+                using (SourceScope(gc, clefPos))
+                    prefixEndX = DrawClef(clef, systemStartX, localStaffY, gc);
                 var activeKey = ResolveKeySignature(staff, system, score);
                 // Tag the key sig with its declaration on the first line only — there
                 // it IS the declared key; later lines may show a mid-piece change,

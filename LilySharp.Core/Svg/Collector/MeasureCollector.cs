@@ -548,6 +548,7 @@ public sealed class MeasureCollector
     private int _initialKeySharps = 0; // Preserved for Score.KeySignature (not mutated by mid-measure key changes)
     private string _clef = "treble";
     private string _initialClef = "treble"; // Preserved for Score.Clef (not mutated by mid-measure clef changes)
+    private int _clefPosition; // Source offset of the clef declaration (0 = none), for data-pos
 
     // Part-option transpose:. When set, every pitch is shifted by the interval
     // from c to (_transposeStep, _transposeAlt) AFTER relative-octave resolution.
@@ -576,9 +577,10 @@ public sealed class MeasureCollector
         // Phase 1.5: If voiceName specified, look up clef and octave from part definition
         if (voiceName != null)
         {
-            var (partClef, partOctave, partTranspose) = GetPartDefaults(tree.GetRoot(), voiceName);
+            var (partClef, partOctave, partTranspose, partClefPos) = GetPartDefaults(tree.GetRoot(), voiceName);
             if (partClef != null)
                 _clef = partClef;
+            _clefPosition = partClefPos;
             _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
             _octaveBase = partOctave ?? 4;
             ApplyTranspose(partTranspose);
@@ -638,7 +640,7 @@ public sealed class MeasureCollector
             grobOverrides: _grobOverrides.ToImmutableArray(),
             grobReverts: _grobReverts.ToImmutableArray(),
             trillSpanners: PairTrillSpannerEvents(),
-            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition));
+            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition));
     }
 
     /// <summary>
@@ -755,8 +757,9 @@ public sealed class MeasureCollector
             _defaultDuration = Fraction.Quarter;
 
             // Set clef and octave for this voice from part definition
-            var (partClef, partOctave, partTranspose) = GetPartDefaults(tree.GetRoot(), voiceName);
+            var (partClef, partOctave, partTranspose, partClefPos) = GetPartDefaults(tree.GetRoot(), voiceName);
             _clef = partClef ?? "treble";
+            _clefPosition = partClefPos;
 
             // Set initial octave: explicit > instrument default > clef default
             _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
@@ -845,7 +848,7 @@ public sealed class MeasureCollector
             percentRepeats: _percentRepeats.ToImmutableArray(),
             crossStaffItems: _crossStaffItems.ToImmutableArray(),
             trillSpanners: PairTrillSpannerEvents(),
-            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition));
+            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition));
     }
 
     /// <summary>
@@ -978,7 +981,7 @@ public sealed class MeasureCollector
             grobOverrides: _grobOverrides.ToImmutableArray(),
             grobReverts: _grobReverts.ToImmutableArray(),
             trillSpanners: PairTrillSpannerEvents(),
-            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition));
+            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition));
     }
 
     /// <summary>
@@ -1040,7 +1043,7 @@ public sealed class MeasureCollector
             grobOverrides: _grobOverrides.ToImmutableArray(),
             grobReverts: _grobReverts.ToImmutableArray(),
             trillSpanners: PairTrillSpannerEvents(),
-            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition));
+            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition));
     }
 
     /// <summary>
@@ -1691,6 +1694,7 @@ public sealed class MeasureCollector
         _composerPosition = 0;
         _timePosition = 0;
         _keyPosition = 0;
+        _clefPosition = 0;
         _tempo = null;
         _timeBeats = 4;
         _timeBeatType = 4;
@@ -1732,7 +1736,7 @@ public sealed class MeasureCollector
             ? sharps + PitchTransposer.KeySignatureFifthsShift(_transposeStep, _transposeAlt)
             : sharps;
 
-    private static (string? clef, int? octave, (int step, int alt, int oct)? transpose) GetPartDefaults(SyntaxNode root, string partName)
+    private static (string? clef, int? octave, (int step, int alt, int oct)? transpose, int clefPos) GetPartDefaults(SyntaxNode root, string partName)
     {
         foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
         {
@@ -1742,6 +1746,7 @@ public sealed class MeasureCollector
             string? clef = null;
             string? instrument = null;
             int? octave = null;
+            int clefPos = 0;
             (int step, int alt, int oct)? transpose = null;
 
             // Check properties for clef, instrument, octave, and transpose
@@ -1752,7 +1757,10 @@ public sealed class MeasureCollector
                 if (valueToken == null) continue;
 
                 if (propName == "clef")
+                {
                     clef = valueToken.Text.ToLowerInvariant();
+                    clefPos = prop.NameToken.Span.Start;
+                }
                 else if (propName == "instrument")
                     instrument = valueToken.Text.ToLowerInvariant();
                 else if (propName == "octave" && int.TryParse(valueToken.Text, out var oct))
@@ -1780,10 +1788,10 @@ public sealed class MeasureCollector
                 resolvedOctave ??= defaultOctave;
             }
 
-            return (resolvedClef, resolvedOctave, transpose);
+            return (resolvedClef, resolvedOctave, transpose, clefPos);
         }
 
-        return (null, null, null);
+        return (null, null, null, 0);
     }
 
     private void CollectDefinitions(SyntaxNode root)
@@ -1829,6 +1837,7 @@ public sealed class MeasureCollector
 
                 case ClefDeclarationSyntax clef:
                     _clef = clef.ClefName.Text.ToLowerInvariant();
+                    _clefPosition = clef.ClefName.Span.Start;
                     break;
 
                 case OctaveDirectiveSyntax octaveDir:

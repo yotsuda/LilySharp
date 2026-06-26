@@ -27,7 +27,8 @@ public readonly record struct HeaderPositions(
     int Title = 0,
     int Composer = 0,
     int Time = 0,
-    int Key = 0
+    int Key = 0,
+    int Clef = 0
 );
 
 /// <summary>

@@ -167,12 +167,15 @@ score ""test"" { staff { melody } }
 
         _output.WriteLine(svg);
 
-        // Find system-start clef glyphs: text elements with class="music" but no data-pos
+        // Find system-start clef glyphs: a system's prefix clef sits at the left
+        // edge (x="0.30"), distinguishing it from a mid-piece clef change further
+        // right. (The prefix clef now also carries a data-pos for click-to-jump, so
+        // it can no longer be told apart by the absence of one.)
         var lines = svg.Split('\n');
         var systemClefs = new List<string>();
         foreach (var line in lines)
         {
-            if (line.Contains("class=\"music\"") && !line.Contains("data-pos"))
+            if (line.Contains("class=\"music\"") && line.Contains("x=\"0.30\""))
             {
                 foreach (char c in line)
                 {
