@@ -63,9 +63,23 @@ public sealed class LyricCollector
 
         int noteIndex = 0;
         int i = 0;
+        // Music measure the last syllable landed in. A lyric barline skips every
+        // remaining note of this measure so the next syllable starts the next bar,
+        // honouring the written "|" instead of running syllables on sequentially.
+        int lastPlacedMeasure = -1;
         for (; i < syllables.Count && noteIndex < noteItemIndices.Count; i++)
         {
-            var (text, connectorType, position) = syllables[i];
+            var (text, connectorType, position, isBarline) = syllables[i];
+
+            // A barline advances to the next measure's notes (drops any unsung
+            // notes left in the current bar).
+            if (isBarline)
+            {
+                while (noteIndex < noteItemIndices.Count
+                       && noteItemIndices[noteIndex].MeasureIndex <= lastPlacedMeasure)
+                    noteIndex++;
+                continue;
+            }
 
             // Skip extender markers - they indicate previous syllable continues
             if (text == "__")
@@ -93,17 +107,19 @@ public sealed class LyricCollector
                 SourcePosition: position
             ));
 
+            lastPlacedMeasure = measureIndex;
             noteIndex++;
         }
 
         // Any real syllables remaining once the notes are exhausted are dropped on
         // the floor by the loop above. Count them (applying the same skip rules so
-        // trailing extenders/blanks don't inflate the figure) so the caller can warn.
+        // trailing extenders/blanks/barlines don't inflate the figure) so the
+        // caller can warn.
         unplacedSyllableCount = 0;
         for (; i < syllables.Count; i++)
         {
-            var text = syllables[i].Text;
-            if (text == "__" || string.IsNullOrWhiteSpace(text))
+            var (text, _, _, isBarline) = syllables[i];
+            if (isBarline || text == "__" || string.IsNullOrWhiteSpace(text))
                 continue;
             unplacedSyllableCount++;
         }
@@ -119,12 +135,14 @@ public sealed class LyricCollector
     ///
     /// Structure: LyricsBlock contains LyricMeasure nodes, each containing LyricSyllable nodes.
     /// </remarks>
-    private List<(string Text, LyricConnectorType Connector, int Position)> ParseSyllables(LyricsBlockSyntax lyricsBlock)
+    private List<(string Text, LyricConnectorType Connector, int Position, bool IsBarline)> ParseSyllables(LyricsBlockSyntax lyricsBlock)
     {
-        var result = new List<(string, LyricConnectorType, int)>();
+        var result = new List<(string, LyricConnectorType, int, bool)>();
 
         // Collect all syllable tokens from all measures, keeping each token's
         // source byte offset so the placed syllable can carry it (data-pos).
+        // Barlines are KEPT (not stripped) so Collect can use them to skip to the
+        // next measure's notes — the written "|" is a real measure boundary.
         var allTokens = new List<(string Text, int Position)>();
         foreach (var measureNode in lyricsBlock.Syllables)
         {
@@ -136,7 +154,7 @@ public sealed class LyricCollector
                 if (syllableNode == null) continue;
 
                 var text = GetTokenText(syllableNode);
-                if (!string.IsNullOrEmpty(text) && text != "|")
+                if (!string.IsNullOrEmpty(text))
                 {
                     allTokens.Add((text, GetTokenPosition(syllableNode)));
                 }
@@ -147,6 +165,14 @@ public sealed class LyricCollector
         for (int i = 0; i < allTokens.Count; i++)
         {
             var (text, position) = allTokens[i];
+
+            // A barline becomes a boundary marker — it consumes no note but tells
+            // Collect to advance to the next measure.
+            if (text == "|")
+            {
+                result.Add(("|", LyricConnectorType.None, position, true));
+                continue;
+            }
 
             // Check if next token is a connector
             LyricConnectorType connector = LyricConnectorType.None;
@@ -171,7 +197,7 @@ public sealed class LyricCollector
                 continue;
             }
 
-            result.Add((text, connector, position));
+            result.Add((text, connector, position, false));
         }
 
         return result;

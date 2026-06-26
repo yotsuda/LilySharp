@@ -1650,19 +1650,49 @@ private GreenNode?[] ParseArticulations()
         // and the measure delimiters (| }) are stopped by the caller, so anything
         // reaching here is a syllable — normalize it to a plain identifier token.
         var text = Advance();
+        var word = new System.Text.StringBuilder(text.Text);
 
-        // Trailing hyphen (word continuation, e.g. "Hap-")
+        // A word can lex as several ADJACENT tokens (no whitespace between them):
+        // an apostrophe splits "'ry"/"don't", a letter run, etc. Glue any
+        // immediately-following token onto the syllable so one written word is one
+        // syllable (else the stray "'" consumes a note of its own and shifts every
+        // following syllable). Whitespace lives as TRAILING trivia on the previous
+        // token, so "no space between" means the previous token has no trailing
+        // trivia. Stop at a connector (- ~ _) or a delimiter (| }).
+        var prev = text;
+        bool merged = false;
+        while (prev.TrailingTriviaWidth == 0
+               && Current.LeadingTriviaWidth == 0
+               && Current.Kind != SyntaxKind.Bar
+               && Current.Kind != SyntaxKind.CloseBrace
+               && Current.Kind != SyntaxKind.EndOfFile
+               && Current.Kind != SyntaxKind.Minus
+               && Current.Kind != SyntaxKind.Tilde
+               && Current.Kind != SyntaxKind.Underscore)
+        {
+            prev = Advance();
+            word.Append(prev.Text);
+            merged = true;
+        }
+
+        // Trailing hyphen (word continuation, e.g. "Hap-"). Keep the first token's
+        // leading trivia and the hyphen's trailing trivia so the tree round-trips.
         if (Check(SyntaxKind.Minus))
         {
             var hyphen = Advance();
             return new LyricSyllableGreen(
-                new SyntaxToken(SyntaxKind.Identifier, text.Text + hyphen.Text));
+                new SyntaxToken(SyntaxKind.Identifier, word.Append(hyphen.Text).ToString(),
+                    text.LeadingTrivia, hyphen.TrailingTrivia));
         }
 
+        // A lone identifier is returned verbatim so its trivia is preserved exactly.
+        if (!merged && text.Kind == SyntaxKind.Identifier)
+            return new LyricSyllableGreen(text);
+
+        // Otherwise rebuild as one identifier, keeping the outer trivia.
         return new LyricSyllableGreen(
-            text.Kind == SyntaxKind.Identifier
-                ? text
-                : new SyntaxToken(SyntaxKind.Identifier, text.Text));
+            new SyntaxToken(SyntaxKind.Identifier, word.ToString(),
+                text.LeadingTrivia, prev.TrailingTrivia));
     }
 
     /// <summary>
