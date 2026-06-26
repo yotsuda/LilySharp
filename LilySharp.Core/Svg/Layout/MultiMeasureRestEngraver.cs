@@ -68,7 +68,8 @@ public static class MultiMeasureRestEngraver
         Score score,
         ImmutableArray<SystemLayout> systems,
         double staffHeight,
-        int staffIndex = -1)
+        int staffIndex = -1,
+        IReadOnlyList<ImmutableArray<Measure>>? allStaffMeasures = null)
     {
         if (score.Voices.IsDefaultOrEmpty)
             return ImmutableArray<MultiMeasureRestLayout>.Empty;
@@ -77,11 +78,29 @@ public static class MultiMeasureRestEngraver
         var voice = score.Voice;
         var builder = ImmutableArray.CreateBuilder<MultiMeasureRestLayout>();
 
+        // A measure collapses into a multi-measure rest only when EVERY staff
+        // rests it. LilyPond keeps the measures (and their barlines) separate when
+        // another staff has content — the resting staff then shows individual
+        // whole rests, not a merged MMR symbol. Verified against LilyPond 2.24
+        // (single staff R1*4 → individual rests + barlines; only \compressMMRests
+        // over all-resting measures merges them). LILYPOND-REF: lily/bar-engraver.cc
+        // (barlines from Timing, independent of MMR) + lily/multi-measure-rest.cc.
+        bool RestsEverywhere(int m)
+        {
+            if (m >= voice.Measures.Length || !IsFullMeasureRest(voice.Measures[m]))
+                return false;
+            if (allStaffMeasures != null)
+                foreach (var sm in allStaffMeasures)
+                    if (m >= sm.Length || !IsFullMeasureRest(sm[m]))
+                        return false;
+            return true;
+        }
+
         int mi = 0;
         while (mi < voice.Measures.Length)
         {
-            // Skip non-rest measures.
-            if (!IsFullMeasureRest(voice.Measures[mi]))
+            // Skip measures not resting across the whole staff group.
+            if (!RestsEverywhere(mi))
             {
                 mi++;
                 continue;
@@ -100,7 +119,7 @@ public static class MultiMeasureRestEngraver
             int runStart = mi;
             int runEnd = mi;
             while (runEnd + 1 < voice.Measures.Length &&
-                   IsFullMeasureRest(voice.Measures[runEnd + 1]) &&
+                   RestsEverywhere(runEnd + 1) &&
                    measureMap.TryGetValue(runEnd + 1, out var nextInfo) &&
                    nextInfo.System.SystemIndex == startSystem.SystemIndex)
             {

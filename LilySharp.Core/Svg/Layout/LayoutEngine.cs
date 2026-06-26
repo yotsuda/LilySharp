@@ -982,7 +982,9 @@ public sealed class LayoutEngine
                 : ImmutableArray<TieVariantLayout>.Empty,
             // LILYPOND-REF: lily/multi-measure-rest.cc — Multi_measure_rest grob.
             MultiMeasureRests: score != null
-                ? MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight)
+                ? MultiMeasureRestEngraver.Calculate(score, systems, _options.StaffHeight,
+                    allStaffMeasures: measuresByStaff != null && measuresByStaff.Count > 1
+                        ? measuresByStaff.Values.ToArray() : null)
                 : ImmutableArray<MultiMeasureRestLayout>.Empty,
             // LILYPOND-REF: lily/ledger-line-spanner.cc — LedgerLineSpanner grob.
             LedgerLineSpans: score != null

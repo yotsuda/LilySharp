@@ -1,0 +1,33 @@
+// Multi-Measure Rest on a grand staff — regression for the barline-suppression bug.
+// When ONE staff rests (R1*N) but ANOTHER staff has content over the same
+// measures, LilyPond does NOT collapse the resting staff into a merged MMR
+// symbol: it shows individual whole rests and keeps the barlines on BOTH
+// staves. Only \compressMMRests over all-resting measures merges them.
+// Verified against LilyPond 2.24.4 (PianoStaff, treble R1*4 + bass content →
+// 4 individual whole rests + barlines). LILYPOND-REF: lily/bar-engraver.cc
+// (barlines come from Timing, independent of MMR) + lily/multi-measure-rest.cc.
+title "Multi-Measure Rest (grand staff)"
+composer "Lily#"
+
+time 4/4
+key g major
+
+part melody
+part lh { clef bass }
+
+section Main {
+  melody {
+    R1*4 |
+    c4 d e f |
+  }
+  lh {
+    g2 d | g4 a b c | g2~ g4 r | d2 g | c4 d e f |
+  }
+}
+
+structure { Main }
+
+render score "multi-measure-rest-grandstaff.svg" {
+  staff { melody }
+  staff { lh }
+}

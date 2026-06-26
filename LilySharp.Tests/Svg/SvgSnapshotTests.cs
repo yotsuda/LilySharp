@@ -181,6 +181,12 @@ public class SvgSnapshotTests
         yield return new object[] { "test/editorial-accidental" };
         yield return new object[] { "test/multi-line-spanners" };
         yield return new object[] { "test/multi-measure-rest" };
+        // Multi-staff: when ONE staff rests (R1*N) but ANOTHER has content over
+        // the same measures, the resting staff shows individual whole rests and
+        // BOTH staves keep their barlines — no merged MMR symbol (that only
+        // happens via \compressMMRests over all-resting measures). Regression
+        // for the dropped-barline bug. Verified against LilyPond 2.24.4.
+        yield return new object[] { "test/multi-measure-rest-grandstaff" };
         // Covers a stacked-digit time signature (3/8) AND a grand staff whose
         // secondary (bass) staff out-counts the primary in a measure — both
         // were uncovered and both had rendering bugs (time-sig digits too high;
