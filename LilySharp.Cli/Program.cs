@@ -810,6 +810,10 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(Syntax
     var structureValidator = new LilySharp.Core.Semantics.StructureDeclarationValidator();
     structureValidator.Validate(tree);
     combined.AddRange(structureValidator.Diagnostics);
+    // Lyric lines with more syllables than notes (extra syllables silently dropped).
+    var lyricValidator = new LilySharp.Core.Semantics.LyricSyllableValidator();
+    lyricValidator.Validate(tree);
+    combined.AddRange(lyricValidator.Diagnostics);
     return combined;
 }
 

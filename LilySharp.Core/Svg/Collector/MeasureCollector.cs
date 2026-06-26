@@ -32,6 +32,16 @@ public record MeasureBoundary(
 );
 
 /// <summary>
+/// Reports a lyrics line that has MORE syllables than the notes it binds to, so
+/// the trailing syllables found no note and were silently dropped from the
+/// engraving. <see cref="Span"/> points at the offending <c>lyrics</c> keyword.
+/// </summary>
+public record LyricSyllableWarning(
+    LilySharp.Core.Syntax.TextSpan Span,
+    int UnplacedSyllables
+);
+
+/// <summary>
 /// Represents a bar check warning when barline position doesn't match time signature.
 /// </summary>
 public record BarCheckWarning(
@@ -428,6 +438,10 @@ public sealed class MeasureCollector
     private readonly List<GraceNoteItem> _graceNotes = new();
     // Lyrics
     private readonly List<LyricItem> _lyrics = new();
+    // Lyric lines whose syllable count overflowed the notes they bind to (the
+    // extra syllables were dropped). Surfaced by LyricSyllableValidator to `check`
+    // and the editor; mirrors the BarCheckWarnings exposure pattern.
+    private readonly List<LyricSyllableWarning> _lyricWarnings = new();
     // Named voices (voice sop { … }) → (voice index, measure track), so a
     // `lyrics sop { … }` block aligns to THAT voice's notes (and its index drives
     // timing-based X for non-primary voices) instead of the default first voice.
@@ -463,6 +477,9 @@ public sealed class MeasureCollector
     /// <summary>Resolved absolute pitch for each note/chord-member/grace, in
     /// source order (e.g. written <c>c''</c> → <c>C6</c>).</summary>
     public IReadOnlyList<PitchTraceEntry> PitchTrace => _pitchTrace;
+    /// <summary>Lyric lines whose syllable count overflowed their bound notes
+    /// (extra syllables dropped). Populated as a side effect of Collect.</summary>
+    public IReadOnlyList<LyricSyllableWarning> LyricWarnings => _lyricWarnings;
     // Figured bass
     private readonly List<FiguredBassItem> _figuredBasses = new();
     // Chord names
@@ -3370,8 +3387,14 @@ public sealed class MeasureCollector
                 ? indices
                 : indices.Where(n => n.MeasureIndex >= startMeasure).ToList();
 
-            var lyrics = lyricCollector.Collect(lyricsBlock, aligned, voiceId: voiceId, verseNumber);
+            var lyrics = lyricCollector.Collect(lyricsBlock, aligned, out int unplaced, voiceId: voiceId, verseNumber);
             _lyrics.AddRange(lyrics);
+
+            // More syllables than notes: the loop above ran out of notes and the
+            // trailing syllables vanished. Flag the line so the author catches the
+            // miscount instead of silently losing words (the bug this guards).
+            if (unplaced > 0)
+                _lyricWarnings.Add(new LyricSyllableWarning(lyricsBlock.LyricsKeyword.Span, unplaced));
         }
     }
 

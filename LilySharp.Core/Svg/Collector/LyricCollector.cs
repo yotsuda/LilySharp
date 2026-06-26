@@ -43,10 +43,18 @@ public sealed class LyricCollector
     /// </param>
     /// <param name="voiceId">Voice ID to associate with these lyrics.</param>
     /// <param name="verseNumber">Verse number (1-based) for multiple lyric lines.</param>
+    /// <param name="unplacedSyllableCount">
+    /// Number of real syllables left over after the notes ran out (overflow). Each
+    /// is a word that would silently vanish from the engraving — the count lets the
+    /// caller warn about a miscounted lyric line. Melisma/extender markers do not
+    /// count (they consume no note), so a line shorter than the melody never
+    /// reports overflow.
+    /// </param>
     /// <returns>List of LyricItem objects.</returns>
     public ImmutableArray<LyricItem> Collect(
         LyricsBlockSyntax lyricsBlock,
         IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing)> noteItemIndices,
+        out int unplacedSyllableCount,
         int voiceId = 0,
         int verseNumber = 1)
     {
@@ -54,7 +62,8 @@ public sealed class LyricCollector
         var syllables = ParseSyllables(lyricsBlock);
 
         int noteIndex = 0;
-        for (int i = 0; i < syllables.Count && noteIndex < noteItemIndices.Count; i++)
+        int i = 0;
+        for (; i < syllables.Count && noteIndex < noteItemIndices.Count; i++)
         {
             var (text, connectorType) = syllables[i];
 
@@ -84,6 +93,18 @@ public sealed class LyricCollector
             ));
 
             noteIndex++;
+        }
+
+        // Any real syllables remaining once the notes are exhausted are dropped on
+        // the floor by the loop above. Count them (applying the same skip rules so
+        // trailing extenders/blanks don't inflate the figure) so the caller can warn.
+        unplacedSyllableCount = 0;
+        for (; i < syllables.Count; i++)
+        {
+            var text = syllables[i].Text;
+            if (text == "__" || string.IsNullOrWhiteSpace(text))
+                continue;
+            unplacedSyllableCount++;
         }
 
         return lyrics.ToImmutable();

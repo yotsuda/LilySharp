@@ -310,6 +310,14 @@ public sealed class LilySharpLanguageServer
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
 
+        // Lyric lines with more syllables than notes (extras silently dropped).
+        var lyricValidator = new LyricSyllableValidator();
+        lyricValidator.Validate(doc.Tree);
+        foreach (var d in lyricValidator.Diagnostics)
+        {
+            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+        }
+
         _rpc.NotifyAsync(Methods.TextDocumentPublishDiagnosticsName, new PublishDiagnosticParams
         {
             Uri = doc.Uri,

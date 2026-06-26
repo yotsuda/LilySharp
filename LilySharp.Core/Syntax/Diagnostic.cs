@@ -147,4 +147,7 @@ public static class DiagnosticCodes
     public const string NoTimeSignature = "LYS2003";
     public const string MeasureDurationMismatch = "LYS2004";
     public const string ConflictingTimeSignatures = "LYS2005";
+
+    // Lyric warnings (LYS4xxx)
+    public const string LyricSyllableOverflow = "LYS4001";
 }
