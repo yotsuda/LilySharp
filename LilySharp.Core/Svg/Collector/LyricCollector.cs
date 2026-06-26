@@ -69,7 +69,7 @@ public sealed class LyricCollector
         int lastPlacedMeasure = -1;
         for (; i < syllables.Count && noteIndex < noteItemIndices.Count; i++)
         {
-            var (text, connectorType, position, isBarline) = syllables[i];
+            var (text, connectorType, position, isBarline, isMelisma) = syllables[i];
 
             // A barline advances to the next measure's notes (drops any unsung
             // notes left in the current bar).
@@ -81,14 +81,19 @@ public sealed class LyricCollector
                 continue;
             }
 
-            // Skip extender markers - they indicate previous syllable continues
-            if (text == "__")
+            // A melisma (~ / __ / _) holds the PREVIOUS syllable over one more note,
+            // so consume that note without placing a syllable — the held note is no
+            // longer left unsung. Stay within the bar (a barline, not a melisma,
+            // crosses to the next measure).
+            if (isMelisma)
             {
-                // Don't consume a note for pure extenders
+                if (noteIndex < noteItemIndices.Count
+                    && noteItemIndices[noteIndex].MeasureIndex == lastPlacedMeasure)
+                    noteIndex++;
                 continue;
             }
 
-            // Handle empty text with extender (melisma continuation)
+            // Defensive: a blank syllable consumes nothing.
             if (string.IsNullOrWhiteSpace(text))
             {
                 continue;
@@ -118,8 +123,8 @@ public sealed class LyricCollector
         unplacedSyllableCount = 0;
         for (; i < syllables.Count; i++)
         {
-            var (text, _, _, isBarline) = syllables[i];
-            if (isBarline || text == "__" || string.IsNullOrWhiteSpace(text))
+            var (text, _, _, isBarline, isMelisma) = syllables[i];
+            if (isBarline || isMelisma || string.IsNullOrWhiteSpace(text))
                 continue;
             unplacedSyllableCount++;
         }
@@ -135,9 +140,9 @@ public sealed class LyricCollector
     ///
     /// Structure: LyricsBlock contains LyricMeasure nodes, each containing LyricSyllable nodes.
     /// </remarks>
-    private List<(string Text, LyricConnectorType Connector, int Position, bool IsBarline)> ParseSyllables(LyricsBlockSyntax lyricsBlock)
+    private List<(string Text, LyricConnectorType Connector, int Position, bool IsBarline, bool IsMelisma)> ParseSyllables(LyricsBlockSyntax lyricsBlock)
     {
-        var result = new List<(string, LyricConnectorType, int, bool)>();
+        var result = new List<(string, LyricConnectorType, int, bool, bool)>();
 
         // Collect all syllable tokens from all measures, keeping each token's
         // source byte offset so the placed syllable can carry it (data-pos).
@@ -161,46 +166,55 @@ public sealed class LyricCollector
             }
         }
 
-        // Process tokens with connector detection
-        for (int i = 0; i < allTokens.Count; i++)
+        // Build the marker stream. A barline is a measure boundary; "--"/"-" is a
+        // hyphen on the PREVIOUS syllable (no note); "__"/"_" is an extender (a line
+        // over one more held note); "~" is a plain melisma (one more held note, no
+        // line). Connectors attach by looking BACK at the last real syllable so a
+        // melisma marker can also be emitted to consume the held note.
+        foreach (var (text, position) in allTokens)
         {
-            var (text, position) = allTokens[i];
-
-            // A barline becomes a boundary marker — it consumes no note but tells
-            // Collect to advance to the next measure.
             if (text == "|")
             {
-                result.Add(("|", LyricConnectorType.None, position, true));
-                continue;
+                result.Add(("|", LyricConnectorType.None, position, true, false));
             }
-
-            // Check if next token is a connector
-            LyricConnectorType connector = LyricConnectorType.None;
-            if (i + 1 < allTokens.Count)
+            else if (text == "--" || text == "-")
             {
-                var nextText = allTokens[i + 1].Text;
-                if (nextText == "--")
-                {
-                    connector = LyricConnectorType.Hyphen;
-                    i++; // Skip the connector token
-                }
-                else if (nextText == "__" || nextText == "_")
-                {
-                    connector = LyricConnectorType.Extender;
-                    i++; // Skip the connector token
-                }
+                SetPreviousConnector(result, LyricConnectorType.Hyphen);
             }
-
-            // Skip pure connector tokens and standalone hyphens
-            if (text == "--" || text == "__" || text == "_" || text == "~" || text == "-")
+            else if (text == "__" || text == "_")
             {
-                continue;
+                SetPreviousConnector(result, LyricConnectorType.Extender);
+                result.Add(("", LyricConnectorType.None, position, false, true)); // melisma note (with line)
             }
-
-            result.Add((text, connector, position, false));
+            else if (text == "~")
+            {
+                result.Add(("", LyricConnectorType.None, position, false, true)); // melisma note (no line)
+            }
+            else
+            {
+                result.Add((text, LyricConnectorType.None, position, false, false));
+            }
         }
 
         return result;
+    }
+
+    /// <summary>Attaches a connector (hyphen/extender) to the most recent real
+    /// syllable in the stream — connectors are written AFTER the syllable they
+    /// belong to.</summary>
+    private static void SetPreviousConnector(
+        List<(string Text, LyricConnectorType Connector, int Position, bool IsBarline, bool IsMelisma)> result,
+        LyricConnectorType connector)
+    {
+        for (int j = result.Count - 1; j >= 0; j--)
+        {
+            var e = result[j];
+            if (!e.IsBarline && !e.IsMelisma && !string.IsNullOrEmpty(e.Text))
+            {
+                result[j] = (e.Text, connector, e.Position, e.IsBarline, e.IsMelisma);
+                return;
+            }
+        }
     }
 
     private string GetTokenText(SyntaxNode node)
