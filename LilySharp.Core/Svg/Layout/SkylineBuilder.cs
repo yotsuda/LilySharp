@@ -85,8 +85,18 @@ public sealed class SkylineBuilder
         double staffMiddleY, double stemLength, double noteheadHeight,
         VerticalSkyline upSkyline, VerticalSkyline downSkyline)
     {
-        foreach (var voice in staff.Voices)
+        bool multiVoice = staff.Voices.Length > 1;
+        for (int vi = 0; vi < staff.Voices.Length; vi++)
         {
+            var voice = staff.Voices[vi];
+            // A staff with multiple voices forces stem directions by voice (v1 up,
+            // v2 down, ...), exactly as the renderer does (SharedRenderer uses
+            // VoiceDefaults.GetDefaultStemUp). The note's own pitch-based StemUp is
+            // wrong for the skyline then — e.g. a low bass note in voice 2 is drawn
+            // stem-DOWN but its natural direction is up, so its down-stem would be
+            // missing from the down-skyline and lyrics/staves below would collide.
+            bool? forcedStemUp = multiVoice ? VoiceDefaults.GetDefaultStemUp(vi + 1) : null;
+
             // Iterate over measureLayouts (which are for the current system only).
             // Use MeasureLayout.MeasureIndex to look up the correct voice measure.
             for (int layoutIndex = 0; layoutIndex < measureLayouts.Length; layoutIndex++)
@@ -109,7 +119,7 @@ public sealed class SkylineBuilder
                         voice.Measures, measureIndex, itemIndex, measureLayout);
 
                     AddMusicItemToSkylines(item, itemX, staffMiddleY,
-                        stemLength, noteheadHeight, upSkyline, downSkyline);
+                        stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp);
                 }
             }
         }
@@ -295,25 +305,27 @@ public sealed class SkylineBuilder
         double stemLength,
         double noteheadHeight,
         VerticalSkyline upSkyline,
-        VerticalSkyline downSkyline)
+        VerticalSkyline downSkyline,
+        bool? forcedStemUp = null)
     {
         switch (item)
         {
             case NoteItem note:
                 AddNoteToSkylines(note, x, staffMiddleY,
-                    stemLength, noteheadHeight, upSkyline, downSkyline);
+                    stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp);
                 break;
             case ChordItem chord:
                 int chordNoteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
                 // Every note of a chord shares the chord's single stem, so the
                 // stem box must use the chord's resolved direction — not a
                 // per-note threshold. Mirrors the note case (note.StemUp) and
-                // the renderer (chord.StemUp).
+                // the renderer (chord.StemUp). A multi-voice staff forces it.
                 // LILYPOND-REF: lily/stem.cc — one Stem per NoteColumn.
+                bool chordStemUp = forcedStemUp ?? chord.StemUp;
                 foreach (var chordNote in chord.Notes)
                 {
                     AddNoteBoxToSkylines(chordNote.StaffPosition, x, staffMiddleY,
-                        stemLength, noteheadHeight, chord.StemUp, chordNoteValue,
+                        stemLength, noteheadHeight, chordStemUp, chordNoteValue,
                         upSkyline, downSkyline);
                 }
                 break;
@@ -345,10 +357,11 @@ public sealed class SkylineBuilder
         double stemLength,
         double noteheadHeight,
         VerticalSkyline upSkyline,
-        VerticalSkyline downSkyline)
+        VerticalSkyline downSkyline,
+        bool? forcedStemUp = null)
     {
         int noteValue = LayoutUtilities.GetNoteValueFromFraction(note.BaseDuration);
-        bool stemUp = note.StemUp;
+        bool stemUp = forcedStemUp ?? note.StemUp;
 
         AddNoteBoxToSkylines(note.StaffPosition, x, staffMiddleY,
             stemLength, noteheadHeight, stemUp, noteValue, upSkyline, downSkyline);
