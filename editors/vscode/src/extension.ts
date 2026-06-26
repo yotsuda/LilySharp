@@ -603,10 +603,14 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // Clear previous highlights
             document.querySelectorAll('.highlight').forEach(el => {
                 el.classList.remove('highlight');
-                if (el.tagName.toLowerCase() === 'line') {
+                // Only restore what we actually recolored (origStroke/origFill set);
+                // a boxed label's text is left untouched on highlight, so leave its
+                // fill alone here too — undefined means "never recolored".
+                if (el.__origStroke !== undefined) {
                     restoreAttr(el, 'stroke', el.__origStroke);
                     el.__origStroke = undefined;
-                } else {
+                }
+                if (el.__origFill !== undefined) {
                     restoreAttr(el, 'fill', el.__origFill);
                     el.__origFill = undefined;
                 }
@@ -638,14 +642,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (nearestPos >= 0 && nearestDist < HIGHLIGHT_THRESHOLD) {
                 const color = getHighlightColor();
                 const matches = document.querySelectorAll('[data-pos="' + nearestPos + '"]');
+                // A boxed mark (section/rehearsal) is a <rect> with a <text> label on
+                // top. Recoloring both to the highlight color hides the label, so when
+                // the group has a box we recolor the box only and leave its text its
+                // own color (still raised above the box, so it stays readable).
+                const hasBox = Array.from(matches).some(el => el.tagName.toLowerCase() === 'rect');
                 matches.forEach(el => {
                     el.classList.add('highlight');
+                    const tag = el.tagName.toLowerCase();
                     // Save the shipped paint once (guard against re-highlight
                     // clobbering it with the highlight color) so clear can restore
                     // the real value, not SVG's default.
-                    if (el.tagName.toLowerCase() === 'line') {
+                    if (tag === 'line') {
                         if (el.__origStroke === undefined) el.__origStroke = el.getAttribute('stroke');
                         el.setAttribute('stroke', color);
+                    } else if (tag === 'text' && hasBox) {
+                        // leave the label text's fill untouched — readable on the box
                     } else {
                         if (el.__origFill === undefined) el.__origFill = el.getAttribute('fill');
                         el.setAttribute('fill', color);
