@@ -37,6 +37,6 @@ section Main {
 
 structure { Main }
 
-render score "accidentals.svg" {
+score "accidentals" {
   staff { melody }
 }

@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -57,7 +57,7 @@ public class PageLayouterSvgDemo
 
         structure { Intro Dev Recap Intro Dev Recap }
 
-        render score "demo" { staff { melody } }
+        score "demo" { staff { melody } }
         """;
 
     [Fact]

@@ -16,4 +16,4 @@ section Main {
 }
 
 structure { Main }
-render score "tempo-change.svg" { staff { melody } }
+score "tempo-change" { staff { melody } }

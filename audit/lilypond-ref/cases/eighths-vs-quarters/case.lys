@@ -5,4 +5,4 @@ section Main {
   rh { $top }
 }
 structure { Main }
-render score "x.svg" { staff { rh } }
+score "x" { staff { rh } }

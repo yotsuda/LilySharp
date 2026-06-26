@@ -43,7 +43,7 @@ public class GrandStaffRenderTests
 
             structure { Main }
 
-            render piano "test.svg" {
+            score "test" {
               grandStaff {
                 staff treble { melody }
                 staff bass { bass }
@@ -87,7 +87,7 @@ public class GrandStaffRenderTests
 
             structure { Main }
 
-            render piano "test.svg" {
+            score "test" {
               grandStaff {
                 staff treble { melody }
                 staff bass { bass }
@@ -133,7 +133,7 @@ public class GrandStaffRenderTests
 
             structure { Main }
 
-            render piano "test.svg" {
+            score "test" {
               grandStaff {
                 staff treble { melody }
                 staff bass { bass }

@@ -16,7 +16,7 @@ section Main {
 
 structure { Main }
 
-render score "tuplet-lower-staff.svg" {
+score "tuplet-lower-staff" {
   staff { top }
   staff { bot }
 }

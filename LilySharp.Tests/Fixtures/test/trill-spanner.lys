@@ -26,4 +26,4 @@ section C { melody { $m3 } }
 
 structure { A B C }
 
-render score "trill-spanner.svg" { staff { melody } }
+score "trill-spanner" { staff { melody } }

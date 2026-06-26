@@ -14,6 +14,6 @@ section Main {
 
 structure { Main }
 
-render score "pedal-note-anchor.svg" {
+score "pedal-note-anchor" {
   staff { lh }
 }

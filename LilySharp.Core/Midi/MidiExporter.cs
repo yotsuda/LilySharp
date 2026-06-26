@@ -83,10 +83,6 @@ public sealed class MidiExporter
                 ProcessSequence(cu.Members.ToList(), track, conductorTrack);
                 break;
 
-            case ScoreDeclarationSyntax score:
-                ProcessChildren(score, track, conductorTrack);
-                break;
-
             case PartDeclarationSyntax part:
                 ProcessChildren(part, track, conductorTrack);
                 break;

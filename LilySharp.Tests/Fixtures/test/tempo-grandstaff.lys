@@ -22,7 +22,7 @@ section Main {
 
 structure { Main }
 
-render score "tempo-grandstaff.svg" {
+score "tempo-grandstaff" {
   grandStaff {
     staff { rightHand }
     staff { leftHand }

@@ -29,10 +29,10 @@ section Main {
 
 structure { Main }
 
-render score "cue-melody.svg" {
+score "cue-melody" {
   staff treble { melody }
 }
 
-render score "cue-chords.svg" {
+score "cue-chords" {
   staff treble { chords }
 }

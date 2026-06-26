@@ -89,7 +89,7 @@ structure {
     public void ParseRenderDeclaration_Staff()
     {
         var source = @"
-render full ""output.svg"" {
+score ""output"" {
     staff { guitar }
 }";
         var tree = SyntaxTree.Parse(source);
@@ -100,7 +100,7 @@ render full ""output.svg"" {
     public void ParseRenderDeclaration_Tab()
     {
         var source = @"
-render guitarTab ""guitar.svg"" {
+score ""guitar"" {
     staff { guitar }
     tab guitar { guitar }
 }";
@@ -112,7 +112,7 @@ render guitarTab ""guitar.svg"" {
     public void ParseRenderDeclaration_Midi()
     {
         var source = @"
-render audio ""song.mid"" {
+score ""song"" {
     guitar channel 1 instrument 25
     bass channel 2 instrument 33
 }";
@@ -146,7 +146,7 @@ structure {
     A
 }
 
-render full ""test.svg"" {
+score ""test"" {
     staff { guitar }
     staff bass { bass }
 }

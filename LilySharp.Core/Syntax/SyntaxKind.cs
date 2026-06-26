@@ -208,7 +208,6 @@ public enum SyntaxKind : ushort
     MusicMark,                  // @segno, @fine, @ds.al.fine (new)
 
     // === Nodes: Legacy Structure ===
-    ScoreDeclaration,
     StaffDeclaration,
     VoiceDeclaration,
 

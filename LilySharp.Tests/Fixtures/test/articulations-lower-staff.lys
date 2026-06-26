@@ -18,7 +18,7 @@ section Main {
 
 structure { Main }
 
-render score "articulations-lower-staff.svg" {
+score "articulations-lower-staff" {
   staff { top }
   staff { bot }
 }

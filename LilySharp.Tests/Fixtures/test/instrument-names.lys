@@ -51,7 +51,7 @@ section Main {
 
 structure { Main }
 
-render score "instrument-names.svg" {
+score "instrument-names" {
   staff { violin1 }
   staff { violin2 }
   staff { viola }

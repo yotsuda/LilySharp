@@ -20,21 +20,21 @@ rh_rondo = { c8 d' e f g4 g | a8 g f e d4 d | e,8 d c d e4 g | c2 r2 | }
 lh_rondo = { c2 e | f d | c e | c r | }
 
 // Each render block = one movement, referencing different variables
-render score "movement1-allegro" {
+score "movement1-allegro" {
   grandStaff {
     staff treble { rh_allegro }
     staff bass { lh_allegro }
   }
 }
 
-render score "movement2-andante" {
+score "movement2-andante" {
   grandStaff {
     staff treble { rh_andante }
     staff bass { lh_andante }
   }
 }
 
-render score "movement3-rondo" {
+score "movement3-rondo" {
   grandStaff {
     staff treble { rh_rondo }
     staff bass { lh_rondo }

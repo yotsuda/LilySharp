@@ -17,6 +17,6 @@ section Main {
 
 structure { Main }
 
-render score "voice-tuplet.svg" {
+score "voice-tuplet" {
   staff { m }
 }

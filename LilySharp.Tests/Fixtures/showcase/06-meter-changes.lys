@@ -21,4 +21,4 @@ phrase tune {
 
 section Main { melody { $tune } }
 structure { Main }
-render score "06-meter-changes.svg" { staff { melody } }
+score "06-meter-changes" { staff { melody } }

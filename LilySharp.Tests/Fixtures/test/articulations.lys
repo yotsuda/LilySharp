@@ -35,6 +35,6 @@ section Main {
 
 structure { Main }
 
-render score "articulations.svg" {
+score "articulations" {
   staff { melody }
 }

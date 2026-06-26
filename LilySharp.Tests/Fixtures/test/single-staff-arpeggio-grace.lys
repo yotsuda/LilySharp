@@ -18,6 +18,6 @@ section Main {
 
 structure { Main }
 
-render score "single-staff-arpeggio-grace.svg" {
+score "single-staff-arpeggio-grace" {
   staff { lh }
 }

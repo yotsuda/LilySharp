@@ -27,7 +27,7 @@ section Main {
 
 structure { Main }
 
-render score "timesig-grandstaff.svg" {
+score "timesig-grandstaff" {
   grandStaff {
     staff { rh }
     staff { lh }

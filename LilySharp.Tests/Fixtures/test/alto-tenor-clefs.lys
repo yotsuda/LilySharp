@@ -11,4 +11,4 @@ section Main {
   ten { c4 d e f | g a bes c | }
 }
 structure { Main }
-render score "alto-tenor-clefs.svg" { staff { alt } staff { ten } }
+score "alto-tenor-clefs" { staff { alt } staff { ten } }

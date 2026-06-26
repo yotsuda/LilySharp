@@ -36,7 +36,7 @@ public sealed class SharedRendererPngTests
             }
 
             structure { Demo }
-            render score "out.svg" { staff { line } }
+            score "out" { staff { line } }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
@@ -68,7 +68,7 @@ public sealed class SharedRendererPngTests
 
             structure { Main }
 
-            render score "ossia.svg" {
+            score "ossia" {
                 staff { melody }
                 ossia { ossia_melody }
             }

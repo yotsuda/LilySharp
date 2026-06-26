@@ -19,7 +19,7 @@ section Main {
 
 structure { Main }
 
-render score "transpose-score.svg" {
+score "transpose-score" {
   grandStaff {
     staff { upper }
     staff { lower }

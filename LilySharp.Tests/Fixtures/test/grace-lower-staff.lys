@@ -16,7 +16,7 @@ section Main {
 
 structure { Main }
 
-render score "grace-lower-staff.svg" {
+score "grace-lower-staff" {
   staff { top }
   staff { bot }
 }

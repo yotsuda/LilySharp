@@ -41,7 +41,7 @@ public class IncrementalParseTests
 
         structure { Main }
 
-        render score "x.svg" { staff { melody } }
+        score "x" { staff { melody } }
         """;
 
     // ---------- helpers ----------

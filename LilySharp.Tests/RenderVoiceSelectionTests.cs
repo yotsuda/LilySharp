@@ -40,8 +40,8 @@ public class RenderVoiceSelectionTests
           chords { $pb }
         }
         structure { Main }
-        render score "first.svg" { staff { melody } }
-        render score "second.svg" { staff { chords } }
+        score "first" { staff { melody } }
+        score "second" { staff { chords } }
         """;
 
     [Fact]

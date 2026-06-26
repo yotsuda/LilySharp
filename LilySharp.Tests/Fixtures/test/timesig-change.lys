@@ -28,6 +28,6 @@ section Main {
 
 structure { Main }
 
-render score "timesig-change.svg" {
+score "timesig-change" {
   staff { melody }
 }

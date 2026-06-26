@@ -31,7 +31,7 @@ part melody
 section A {{ melody {{ c'4 d e f | }} }}
 section B {{ melody {{ g'4 a b c | }} }}
 {structures}
-render score {{ staff {{ melody }} }}
+score {{ staff {{ melody }} }}
 ";
 
     [Fact]

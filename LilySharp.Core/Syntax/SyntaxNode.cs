@@ -154,7 +154,6 @@ public abstract class SyntaxNode
             SyntaxKind.Slur => new SlurSyntax((SlurGreen)green, this, position),
             SyntaxKind.BeamMarker => new BeamMarkerSyntax((BeamMarkerGreen)green, this, position),
             SyntaxKind.InlineVolta => new InlineVoltaSyntax((InlineVoltaGreen)green, this, position),
-            SyntaxKind.ScoreDeclaration => new ScoreDeclarationSyntax((ScoreDeclarationGreen)green, this, position),
             SyntaxKind.PartDeclaration => new PartDeclarationSyntax((PartDeclarationGreen)green, this, position),
             SyntaxKind.StaffDeclaration => new StaffDeclarationSyntax((StaffDeclarationGreen)green, this, position),
             SyntaxKind.PropertyAssignment => new PropertyAssignmentSyntax((PropertyAssignmentGreen)green, this, position),

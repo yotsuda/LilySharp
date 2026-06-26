@@ -21,6 +21,6 @@ section Main {
 
 structure { Main }
 
-render score "editorial-accidental.svg" {
+score "editorial-accidental" {
   staff { melody }
 }

@@ -20,6 +20,6 @@ section Main {
 
 structure { Main }
 
-render score "voice-mixed.svg" {
+score "voice-mixed" {
   staff { m }
 }

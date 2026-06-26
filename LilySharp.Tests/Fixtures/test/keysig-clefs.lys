@@ -28,7 +28,7 @@ section Main {
 
 structure { Main }
 
-render score "keysig-clefs.svg" {
+score "keysig-clefs" {
   grandStaff {
     staff { treblePart }
     staff { bassPart }

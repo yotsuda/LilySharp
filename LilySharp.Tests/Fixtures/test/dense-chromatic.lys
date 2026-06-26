@@ -12,4 +12,4 @@ section Main {
   }
 }
 structure { Main }
-render score "dense-chromatic.svg" { staff { m } }
+score "dense-chromatic" { staff { m } }

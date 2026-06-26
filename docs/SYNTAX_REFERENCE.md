@@ -375,7 +375,7 @@ Controls output layout. Each `staff { partName }` names the part to draw; the
 clef comes from the part declaration, not the render block:
 
 ```
-render score "out.svg" {
+score "out" {
   grandStaff {
     staff { rightHand }
     staff { leftHand }
@@ -386,7 +386,7 @@ render score "out.svg" {
 A single-staff score names one staff directly:
 
 ```
-render score "out.svg" {
+score "out" {
   staff { melody }
 }
 ```

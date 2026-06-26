@@ -16,7 +16,7 @@ section Main {
 
 structure { Main }
 
-render score "figbass-chordname-lower-staff.svg" {
+score "figbass-chordname-lower-staff" {
   staff { top }
   staff { bot }
 }

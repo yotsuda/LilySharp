@@ -32,6 +32,6 @@ section GMajor {
 
 structure { FMajor GMajor }
 
-render score "keysig-bass.svg" {
+score "keysig-bass" {
   staff { bassLine }
 }

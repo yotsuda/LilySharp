@@ -34,6 +34,6 @@ section C {
 
 structure { A B C }
 
-render score "section-octave-reset.svg" {
+score "section-octave-reset" {
   staff { melody }
 }

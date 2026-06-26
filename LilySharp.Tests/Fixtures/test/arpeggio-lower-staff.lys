@@ -15,7 +15,7 @@ section Main {
 
 structure { Main }
 
-render score "arpeggio-lower-staff.svg" {
+score "arpeggio-lower-staff" {
   staff { top }
   staff { bot }
 }

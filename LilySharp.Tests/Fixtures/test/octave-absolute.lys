@@ -20,6 +20,6 @@ section Main {
 
 structure { Main }
 
-render score "octave-absolute.svg" {
+score "octave-absolute" {
   staff { melody }
 }

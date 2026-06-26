@@ -54,6 +54,6 @@ structure {
   |: B [1. End1] [2. End2] :|
 }
 
-render score "04-advanced.svg" {
+score "04-advanced" {
   staff { melody }
 }

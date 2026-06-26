@@ -125,7 +125,7 @@ public class TablatureTests
 
             structure { Main }
 
-            render score "test.svg" {
+            score "test" {
                 staff treble { guitar }
                 tab standard { guitar }
             }
@@ -161,7 +161,7 @@ public class TablatureTests
 
             structure { Main }
 
-            render score "test.svg" {
+            score "test" {
                 tab standard { melody }
             }
             """;
@@ -199,7 +199,7 @@ public class TablatureTests
 
             structure { Main }
 
-            render score "guitar-tab.svg" {
+            score "guitar-tab" {
               staff { guitar }
               tab standard { guitar }
             }
@@ -208,7 +208,7 @@ public class TablatureTests
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
-        var renderSpec = RenderSpecParser.FindByName(tree, "score");
+        var renderSpec = RenderSpecParser.FindByName(tree, "guitar-tab");
         Assert.NotNull(renderSpec);
         Assert.Equal(2, renderSpec.Items.Length); // staff + tab
 

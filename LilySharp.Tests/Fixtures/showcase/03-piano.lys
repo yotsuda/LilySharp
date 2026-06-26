@@ -50,7 +50,7 @@ section Main {
 
 structure { Main }
 
-render score "03-piano.svg" {
+score "03-piano" {
   grandStaff {
     staff { rightHand }
     staff { leftHand }

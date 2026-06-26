@@ -21,7 +21,7 @@ section M {
 
 structure { M }
 
-render score "clef-positions.svg" {
+score "clef-positions" {
   staff { sop }
   staff { alt }
   staff { ten }

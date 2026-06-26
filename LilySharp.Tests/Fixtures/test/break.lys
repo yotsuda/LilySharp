@@ -21,6 +21,6 @@ section Main {
 
 structure { Main }
 
-render score "break.svg" {
+score "break" {
   staff { melody }
 }

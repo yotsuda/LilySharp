@@ -156,7 +156,7 @@ section D {
 structure { A B C D }
 
 // ---- 16. レンダリング (グランドスタッフ) ----------------------------------
-render score "feature-tour.svg" {
+score "feature-tour" {
   staff { melody }
   staff { lh }
 }

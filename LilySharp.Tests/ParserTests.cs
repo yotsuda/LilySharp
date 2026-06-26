@@ -214,20 +214,6 @@ c4 d e f  /* first measure */
     // ========== Structure Tests ==========
 
     [Fact]
-    public void ParseScoreDeclaration()
-    {
-        var tree = SyntaxTree.Parse(@"score ""My Song"" {
-    part {
-        relative c' { c d e f }
-    }
-}");
-        var score = tree.Root.GetSlot(0) as ScoreDeclarationGreen;
-
-        Assert.NotNull(score);
-        Assert.Equal(SyntaxKind.ScoreDeclaration, score.Kind);
-    }
-
-    [Fact]
     public void ParsePartDeclaration()
     {
         var tree = SyntaxTree.Parse(@"part Violin ""First Violin"" {
@@ -329,50 +315,6 @@ use theme");
         var varRef = tree.Root.GetSlot(1) as VariableReferenceGreen;
         Assert.NotNull(varRef);
         Assert.Equal(SyntaxKind.VariableReference, varRef.Kind);
-    }
-
-    [Fact]
-    public void ParseCompleteScore()
-    {
-        var source = @"title ""Fur Elise""
-composer ""Beethoven""
-tempo 76
-time 3/8
-key a minor
-
-score {
-    part Piano {
-        staff RH {
-            clef treble
-            relative c'' { e8 dis e dis e b d c | a4. }
-        }
-        staff LH {
-            clef bass
-            relative c { r4. a8 e' a | c4. }
-        }
-    }
-}";
-        var tree = SyntaxTree.Parse(source);
-
-        // Round-trip should preserve text
-        var reconstructed = tree.ToFullString();
-        Assert.Equal(source, reconstructed);
-    }
-
-    [Fact]
-    public void ParseScoreWithProperties()
-    {
-        var tree = SyntaxTree.Parse(@"score {
-    tempo 120
-    time 4/4
-    key: c major
-
-    part {
-        relative c' { c d e f }
-    }
-}");
-        var score = tree.Root.GetSlot(0) as ScoreDeclarationGreen;
-        Assert.NotNull(score);
     }
 
     [Fact]

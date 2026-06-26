@@ -39,6 +39,6 @@ section Main {
 
 structure { Main }
 
-render score "01-expressions.svg" {
+score "01-expressions" {
   staff { melody }
 }

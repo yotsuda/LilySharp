@@ -60,7 +60,7 @@ public sealed class SharedRendererBeamTests
             }
 
             structure { Demo }
-            render score "out.svg" { staff { line } }
+            score "out" { staff { line } }
             """;
         var (score, layout) = BuildLayout(source);
 
@@ -92,7 +92,7 @@ public sealed class SharedRendererBeamTests
             }
 
             structure { M }
-            render score "grand.svg" {
+            score "grand" {
                 staff { top }
                 staff { bot }
             }

@@ -220,22 +220,6 @@ internal sealed class InlineVoltaGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Score declaration: score "title" { ... }
-/// </summary>
-internal sealed class ScoreDeclarationGreen : GreenSyntaxNode
-{
-    public ScoreDeclarationGreen(
-        SyntaxToken scoreKeyword,
-        SyntaxToken? title,
-        SyntaxToken openBrace,
-        GreenNode?[] members,
-        SyntaxToken closeBrace)
-        : base(SyntaxKind.ScoreDeclaration, [scoreKeyword, title, openBrace, .. members, closeBrace])
-    {
-    }
-}
-
-/// <summary>
 /// Staff declaration: staff Name { ... }
 /// </summary>
 internal sealed class StaffDeclarationGreen : GreenSyntaxNode

@@ -36,6 +36,6 @@ structure {
   |: B [1. Ending1] [2. Ending2] :|
 }
 
-render score "repeat-volta.svg" {
+score "repeat-volta" {
   staff { melody }
 }

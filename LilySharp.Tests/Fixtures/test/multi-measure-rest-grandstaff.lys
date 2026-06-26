@@ -27,7 +27,7 @@ section Main {
 
 structure { Main }
 
-render score "multi-measure-rest-grandstaff.svg" {
+score "multi-measure-rest-grandstaff" {
   staff { melody }
   staff { lh }
 }

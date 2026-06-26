@@ -91,7 +91,7 @@ section Main {
   leftHand  { c2 g, | c g, | }
 }
 
-render score {
+score {
   grandStaff {
     staff treble { rightHand }
     staff bass { leftHand }

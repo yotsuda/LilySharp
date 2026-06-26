@@ -51,7 +51,7 @@ section Main {
 
 structure { Main }
 
-render score "instrument-defaults.svg" {
+score "instrument-defaults" {
   staff { guitar }
   staff { tenorVoice }
   grandStaff {

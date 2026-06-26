@@ -8,4 +8,4 @@ section Main {
   lh { $bottom }
 }
 structure { Main }
-render score "x.svg" { staff { rh } staff { lh } }
+score "x" { staff { rh } staff { lh } }

@@ -78,7 +78,7 @@ structure {
     |: A | [1. A] :| [2. A]
 }
 
-render score ""test.svg"" {
+score ""test"" {
     staff treble { melody }
 }
 ";

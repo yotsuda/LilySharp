@@ -17,7 +17,7 @@ section Main {
 
 structure { Main }
 
-render score "fingering-lower-staff.svg" {
+score "fingering-lower-staff" {
   staff { top }
   staff { bot }
 }

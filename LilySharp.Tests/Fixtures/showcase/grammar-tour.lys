@@ -137,7 +137,7 @@ section D {
 
 structure { A B C D }
 
-render score "grammar-tour.svg" {
+score "grammar-tour" {
   staff { rh }
   staff { lh }
 }

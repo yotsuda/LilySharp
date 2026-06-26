@@ -30,6 +30,6 @@ section Main {
 
 structure { Main }
 
-render score "tuplets-beamed.svg" {
+score "tuplets-beamed" {
   staff { melody }
 }

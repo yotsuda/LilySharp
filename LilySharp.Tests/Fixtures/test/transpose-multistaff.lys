@@ -18,7 +18,7 @@ section Main {
 
 structure { Main }
 
-render score "transpose-multistaff.svg" {
+score "transpose-multistaff" {
   grandStaff {
     staff { upper }
     staff { lower }

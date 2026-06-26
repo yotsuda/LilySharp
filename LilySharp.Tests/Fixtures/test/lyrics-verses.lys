@@ -15,6 +15,6 @@ section Main {
 
 structure { Main }
 
-render score "lyrics-verses.svg" {
+score "lyrics-verses" {
   staff { melody }
 }

@@ -45,7 +45,7 @@ public sealed class SharedRendererPdfTests
 
             structure { Main }
 
-            render score "ossia.svg" {
+            score "ossia" {
                 staff { melody }
                 ossia { ossia_melody }
             }
@@ -79,7 +79,7 @@ public sealed class SharedRendererPdfTests
 
             structure { Demo }
 
-            render score "out.svg" { staff { line } }
+            score "out" { staff { line } }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));
@@ -221,7 +221,7 @@ public sealed class SharedRendererPdfTests
 
             structure { Hello }
 
-            render score "out.pdf" { staff { tune } }
+            score "out" { staff { tune } }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));

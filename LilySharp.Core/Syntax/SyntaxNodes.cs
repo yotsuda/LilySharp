@@ -493,32 +493,6 @@ public sealed class InlineVoltaSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Score declaration: score "title" { ... }
-/// </summary>
-public sealed class ScoreDeclarationSyntax : SyntaxNode
-{
-    internal ScoreDeclarationSyntax(ScoreDeclarationGreen green, SyntaxNode? parent, int position)
-        : base(green, parent, position)
-    {
-    }
-
-    public SyntaxTokenNode ScoreKeyword => (SyntaxTokenNode)GetChild(0)!;
-    public SyntaxTokenNode? Title => GetChild(1) as SyntaxTokenNode;
-
-    public IEnumerable<PartDeclarationSyntax> Parts
-    {
-        get
-        {
-            for (int i = 0; i < SlotCount; i++)
-            {
-                if (GetChild(i) is PartDeclarationSyntax part)
-                    yield return part;
-            }
-        }
-    }
-}
-
-/// <summary>
 /// Staff declaration: staff Name { ... }
 /// </summary>
 public sealed class StaffDeclarationSyntax : SyntaxNode

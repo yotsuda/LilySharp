@@ -27,6 +27,6 @@ section Second {
 // label so the printed rehearsal marks stay unique.
 structure { First Second First "First (reprise)" }
 
-render score "dollar-ref.svg" {
+score "dollar-ref" {
   staff { melody }
 }

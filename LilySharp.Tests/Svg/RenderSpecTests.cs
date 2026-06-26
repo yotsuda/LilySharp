@@ -41,7 +41,7 @@ public class RenderSpecTests
 
             structure { Main }
 
-            render piano "test.svg" {
+            score "test" {
               grandStaff {
                 staff treble { melody }
                 staff bass { bass }
@@ -55,8 +55,8 @@ public class RenderSpecTests
         var renderSpec = RenderSpecParser.FindFirst(tree);
 
         Assert.NotNull(renderSpec);
-        Assert.Equal("piano", renderSpec.Name);
-        Assert.Equal("test.svg", renderSpec.OutputFile);
+        Assert.Equal("test", renderSpec.Name);       // name = the basename
+        Assert.Equal("test", renderSpec.OutputFile); // extension dropped (CLI picks format)
         Assert.True(renderSpec.HasGrandStaff);
         Assert.Single(renderSpec.Items);
 
@@ -72,7 +72,7 @@ public class RenderSpecTests
     [Fact]
     public void OmittedFilename_ParsesWithEmptyOutputFile()
     {
-        // The output filename is optional: `render score { … }` is valid and
+        // The output filename is optional: `score { … }` is valid and
         // yields an empty OutputFile, signalling the consumer to derive the name
         // from the input file (<input>.<ext>).
         var source = """
@@ -87,7 +87,7 @@ public class RenderSpecTests
 
             structure { Main }
 
-            render score {
+            score {
               staff treble { melody }
             }
             """;
@@ -117,7 +117,7 @@ public class RenderSpecTests
 
             structure { Main }
 
-            render score "test.svg" {
+            score "test" {
               staff treble { guitar }
             }
             """;
@@ -128,7 +128,7 @@ public class RenderSpecTests
         var renderSpec = RenderSpecParser.FindFirst(tree);
 
         Assert.NotNull(renderSpec);
-        Assert.Equal("score", renderSpec.Name);
+        Assert.Equal("test", renderSpec.Name);
         Assert.False(renderSpec.HasGrandStaff);
         Assert.Single(renderSpec.Items);
 
@@ -157,7 +157,7 @@ public class RenderSpecTests
 
             structure { Main }
 
-            render pianoVocal "test.svg" {
+            score "test" {
               staff treble { singer }
               grandStaff {
                 staff treble { melody }
@@ -172,7 +172,7 @@ public class RenderSpecTests
         var renderSpec = RenderSpecParser.FindFirst(tree);
 
         Assert.NotNull(renderSpec);
-        Assert.Equal("pianoVocal", renderSpec.Name);
+        Assert.Equal("test", renderSpec.Name);
         Assert.True(renderSpec.HasGrandStaff);
         Assert.True(renderSpec.IsMultiStaff);
         Assert.Equal(2, renderSpec.Items.Length);
@@ -205,7 +205,7 @@ public class RenderSpecTests
 
             structure { Main }
 
-            render test "test.svg" {
+            score "test" {
               staff treble { singer }
               grandStaff {
                 staff treble { rightHand }
@@ -244,7 +244,7 @@ public class RenderSpecTests
 
             structure { Main }
 
-            render piano "test.svg" {
+            score "test" {
               grandStaff {
                 staff treble { melody }
                 staff bass { bass }
@@ -283,7 +283,7 @@ public class RenderSpecTests
 
             structure { Main }
 
-            render piano "test.svg" {
+            score "test" {
               grandStaff {
                 staff treble { melody }
                 staff bass { bass }

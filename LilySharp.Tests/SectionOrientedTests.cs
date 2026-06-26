@@ -106,7 +106,7 @@ public class SectionOrientedTests
         var source = """
             section A { guitar { c4 } }
             structure { A }
-            render full "output.svg" {
+            score "output" {
                 staff { guitar }
             }
             """;
@@ -120,7 +120,7 @@ public class SectionOrientedTests
         var source = """
             section A { guitar { c4 d e f } }
             structure { A }
-            render guitarPart "guitar.pdf" {
+            score "guitar" {
                 staff { guitar }
                 tab guitar { guitar }
             }
@@ -135,7 +135,7 @@ public class SectionOrientedTests
         var source = """
             section A { guitar { c4 } }
             structure { A }
-            render audio "song.mid" {
+            score "song" {
                 guitar channel 1 instrument 25
             }
             """;
@@ -171,7 +171,7 @@ public class SectionOrientedTests
                 fine
             }
 
-            render full "test.svg" {
+            score "test" {
                 staff { guitar }
                 tab guitar { guitar }
                 staff bass { bass }

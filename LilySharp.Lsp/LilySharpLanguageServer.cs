@@ -438,7 +438,7 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "section", Kind = CompletionItemKind.Keyword, InsertText = "section $1 {\n\t$0\n}", Detail = "Section declaration" },
                 new CompletionItem { Label = "phrase", Kind = CompletionItemKind.Keyword, InsertText = "phrase $1 {\n\t$0\n}", Detail = "Reusable phrase" },
                 new CompletionItem { Label = "structure", Kind = CompletionItemKind.Keyword, InsertText = "structure { $0 }", Detail = "Playback order" },
-                new CompletionItem { Label = "render", Kind = CompletionItemKind.Keyword, InsertText = "render score {\n\t$0\n}", Detail = "Output layout" },
+                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertText = "score {\n\t$0\n}", Detail = "Printable score (visual layout)" },
                 new CompletionItem { Label = "title", Kind = CompletionItemKind.Keyword, InsertText = "title \"$0\"", Detail = "Title metadata" },
                 new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertText = "composer \"$0\"", Detail = "Composer metadata" },
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertText = "tempo $0", Detail = "Tempo (BPM)" },
@@ -650,7 +650,7 @@ public sealed class LilySharpLanguageServer
             PhraseDeclarationSyntax phrase => $"**Phrase**: `{phrase.Name.Text}` — Reusable music block",
             SectionDeclarationSyntax section => $"**Section**: `{section.SectionName}` — Groups parts for a musical section",
             StructureDeclarationSyntax => "**Structure**: Defines playback order of sections",
-            RenderDeclarationSyntax => "**Render**: Controls output layout (staff assignment)",
+            RenderDeclarationSyntax => "**Score**: A printable score — visual layout (staff assignment). Output format is a CLI choice.",
             VariableDeclarationSyntax varDecl => $"**Variable**: `{varDecl.Name.Text}`",
             VariableReferenceSyntax varRef => $"**Variable reference**: `${varRef.Name.Text}`",
             LyricsBlockSyntax => "**Lyrics**: Text aligned to notes",
@@ -723,7 +723,6 @@ public sealed class LilySharpLanguageServer
     {
         var (name, kind) = node switch
         {
-            ScoreDeclarationSyntax => ("score", SymbolKind.Module),
             PartDeclarationSyntax part => (GetPartName(part), SymbolKind.Class),
             StaffDeclarationSyntax staff => (GetStaffName(staff), SymbolKind.Class),
 
@@ -731,7 +730,7 @@ public sealed class LilySharpLanguageServer
             PhraseDeclarationSyntax phrase => ($"phrase {phrase.Name.Text}", SymbolKind.Function),
             SectionDeclarationSyntax section => ($"section {section.SectionName}", SymbolKind.Namespace),
             StructureDeclarationSyntax => ("structure", SymbolKind.Struct),
-            RenderDeclarationSyntax => ("render", SymbolKind.Module),
+            RenderDeclarationSyntax => ("score", SymbolKind.Module),
             RepeatExpressionSyntax repeat => ($"repeat {repeat.Count.Text}x", SymbolKind.Operator),
             ParallelExpressionSyntax => ("parallel", SymbolKind.Struct),
             TupletExpressionSyntax tuplet => ($"tuplet {tuplet.TupletRatio}/{tuplet.BaseDivision}", SymbolKind.Operator),
@@ -1073,8 +1072,8 @@ public sealed class LilySharpLanguageServer
 
     private void CollectFoldingRanges(SyntaxNode node, string text, List<FoldingRange> ranges)
     {
-        // Foldable node types: MusicBlock, ScoreDeclaration, PartDeclaration, etc.
-        bool isFoldable = node is MusicBlockSyntax or ScoreDeclarationSyntax or
+        // Foldable node types: MusicBlock, PartDeclaration, etc.
+        bool isFoldable = node is MusicBlockSyntax or
                           PartDeclarationSyntax or StaffDeclarationSyntax or
                           RepeatExpressionSyntax or ParallelExpressionSyntax or
                           TupletExpressionSyntax or GraceExpressionSyntax or
@@ -1914,7 +1913,7 @@ public sealed class LilySharpLanguageServer
                 var name = filename;
                 if (string.IsNullOrEmpty(name))
                 {
-                    name = $"render_{renders.Count + 1}";
+                    name = $"score_{renders.Count + 1}";
                 }
 
                 renders.Add(new RenderInfo

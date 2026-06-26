@@ -225,15 +225,15 @@ internal sealed class Parser
             // New section-oriented structure
             SyntaxKind.SectionKeyword => ParseSectionDeclaration(),
             SyntaxKind.StructureKeyword => ParseStructureDeclaration(),
-            SyntaxKind.RenderKeyword => ParseRenderDeclaration(),
+            // `score [ "basename" ] { layout }` — a printable score (visual
+            // layout). The output format/extension is a CLI choice, not source.
+            SyntaxKind.ScoreKeyword => ParseRenderDeclaration(),
             SyntaxKind.PhraseKeyword => ParsePhraseDeclaration(),
             SyntaxKind.PartKeyword => ParsePartDeclaration(),  // New part syntax
 
             // Variable declaration: identifier = { ... } (legacy)
             SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
 
-            // Legacy structure
-            SyntaxKind.ScoreKeyword => ParseScoreDeclaration(),
             SyntaxKind.LetKeyword => ParseVariableDeclaration(),
             SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
 
@@ -262,39 +262,6 @@ internal sealed class Parser
     }
 
     // ========== Structure Declarations ==========
-
-    private ScoreDeclarationGreen ParseScoreDeclaration()
-    {
-        var keyword = Expect(SyntaxKind.ScoreKeyword);
-        var title = TryConsume(SyntaxKind.StringLiteral);
-        var openBrace = Expect(SyntaxKind.OpenBrace);
-
-        var members = new List<GreenNode?>();
-        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
-        {
-            var member = ParseScoreMember();
-            if (member != null)
-                members.Add(member);
-            else
-                Advance();
-        }
-
-        var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new ScoreDeclarationGreen(keyword, title, openBrace, [.. members], closeBrace);
-    }
-
-    private GreenNode? ParseScoreMember()
-    {
-        return Current.Kind switch
-        {
-            SyntaxKind.PartKeyword => ParseLegacyPartDeclaration(),
-            SyntaxKind.TimeKeyword => ParseTimeSignature(),
-            SyntaxKind.TempoKeyword => ParseTempoDeclaration(),
-            SyntaxKind.KeyKeyword => ParsePropertyAssignment(),
-            SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParsePropertyAssignment(),
-            _ => null
-        };
-    }
 
     private PartDeclarationGreen ParsePartDeclaration()
     {
@@ -1903,19 +1870,17 @@ private GreenNode?[] ParseArticulations()
     /// <summary>
     /// Parse render declaration: render [name] "file.svg" { ... }
     /// </summary>
+    // Parses a printable-score declaration: `score [ "basename" ] { layout }`.
+    // `score` is the keyword (the old `render score` form is gone). The optional
+    // string is the output BASENAME — its extension, if any, is ignored because
+    // the file format is a CLI choice; omitting it derives the name from the
+    // input file. Multiple `score` blocks (with distinct basenames) emit
+    // multiple files, e.g. a full score plus part extracts.
     private RenderDeclarationGreen ParseRenderDeclaration()
     {
-        var keyword = Expect(SyntaxKind.RenderKeyword);
+        var keyword = Expect(SyntaxKind.ScoreKeyword);
 
-        // Optional name (can be identifier or keywords like 'score', 'audio')
-        SyntaxToken? name = null;
-        if (Check(SyntaxKind.Identifier) || Check(SyntaxKind.ScoreKeyword))
-        {
-            name = Advance();
-        }
-
-        // The output filename is optional. When omitted the CLI derives it from
-        // the input file (<input>.<ext>), so `render score { … }` is valid.
+        // Optional output basename. Extension (if written) is dropped downstream.
         var filename = TryConsume(SyntaxKind.StringLiteral);
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
@@ -1930,7 +1895,8 @@ private GreenNode?[] ParseArticulations()
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new RenderDeclarationGreen(keyword, name, filename, openBrace, [.. items], closeBrace);
+        // name is always null now (`score` is the keyword, not a name slot).
+        return new RenderDeclarationGreen(keyword, null, filename, openBrace, [.. items], closeBrace);
     }
 
 

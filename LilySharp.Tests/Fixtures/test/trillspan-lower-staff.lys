@@ -16,7 +16,7 @@ section Main {
 
 structure { Main }
 
-render score "trillspan-lower-staff.svg" {
+score "trillspan-lower-staff" {
   staff { top }
   staff { bot }
 }

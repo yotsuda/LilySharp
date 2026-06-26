@@ -22,4 +22,4 @@ structure {
   |: Verse [1. Chorus] [2. Intro] :|
 }
 
-render score "grammar-test.svg" { staff { melody } }
+score "grammar-test" { staff { melody } }

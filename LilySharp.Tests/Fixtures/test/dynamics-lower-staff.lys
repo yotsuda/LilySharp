@@ -17,7 +17,7 @@ section Main {
 
 structure { Main }
 
-render score "dynamics-lower-staff.svg" {
+score "dynamics-lower-staff" {
   staff { top }
   staff { bot }
 }

@@ -16,7 +16,7 @@ section Main {
 
 structure { Main }
 
-render score "ossia.svg" {
+score "ossia" {
     staff { melody }
     ossia { ossia_melody }
 }

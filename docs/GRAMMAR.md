@@ -348,20 +348,22 @@ CustomText     = '_' , String ;                   (* end, below *)
 *)
 
 ================================================================================
-## 7. Render Definition
+## 7. Score (Output) Definition
 ================================================================================
 
-(* Output definitions - at least one required *)
+(* A printable score = a visual layout. `score` is the keyword. The optional
+   string is the output BASENAME; its extension (if written) is ignored because
+   the file format is a CLI choice (lysc pdf|svg|png). Omitting it derives the
+   name from the input file. Multiple `score` blocks (with distinct basenames)
+   emit multiple files — e.g. a full score plus part extracts. *)
 
-RenderDecl     = 'render' , [ RenderName ] , String , RenderBody ;
+ScoreDecl      = 'score' , [ String ] , ScoreBody ;
 
-RenderName     = Identifier | 'score' ;   (* free-form label, e.g. score, piano *)
+ScoreBody      = '{' , { ScoreItem } , '}' ;
 
-RenderBody     = '{' , { RenderItem } , '}' ;
+### 7.1 Score Layout
 
-### 7.1 Score Render
-
-RenderItem     = StaffRender | GrandStaffRender | TabRender | MidiPart ;
+ScoreItem      = StaffRender | GrandStaffRender | TabRender ;
 
 StaffRender    = 'staff' , '{' , PartRef , '}' ;
 
@@ -372,12 +374,12 @@ TabRender      = 'tab' , '{' , PartRef , '}' ;
 PartRef        = Identifier ;
 
 (* Example:
-   render score "full-score.pdf" {
+   score "full-score" {
      staff { melody }
      staff { bass }
    }
 
-   render score "piano.pdf" {
+   score "piano" {
      grandStaff {
        staff { rightHand }
        staff { leftHand }
@@ -387,7 +389,8 @@ PartRef        = Identifier ;
 
 ### 7.2 MIDI Export
 
-(* There is NO `render midi` block. MIDI is exported by the CLI directly
+(* There is NO MIDI block in the source. MIDI is a different KIND of output
+   (audio, not a file-format of the visual score), exported by the CLI directly
    from the music tree:
 
      lysc midi song.lys song.mid
@@ -555,12 +558,12 @@ structure {
 }
 
 // Output definitions
-render score "rocksong-full.svg" {
+score "rocksong-full" {
   staff { guitar }
   staff { bass }
 }
 
-render score "guitar-part.pdf" {
+score "guitar-part" {
   staff { guitar }
 }
 ```
@@ -604,8 +607,8 @@ MIDI export: `lysc midi rocksong.lys rocksong.mid` (no render block needed).
 | Error        | Description                                    |
 |--------------|------------------------------------------------|
 | No section   | File must contain at least one `section` block |
-| No structure | File must contain exactly one `structure` block|
-| No render    | File must contain at least one `render` block  |
+| Multiple structure | At most one `structure` block (omitting it plays sections in declaration order) |
+| No score     | File must contain at least one `score` block   |
 
 ### Compile-time Errors
 

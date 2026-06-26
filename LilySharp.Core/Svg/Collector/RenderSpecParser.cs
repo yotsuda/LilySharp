@@ -31,40 +31,26 @@ public static class RenderSpecParser
     /// </summary>
     public static RenderSpec? Parse(RenderDeclarationSyntax render)
     {
-        string? name = null;
         string? outputFile = null;
         var items = new List<RenderItemSpec>();
 
-        // Extract name and output file
-        // Structure: renderKeyword, [name], filename, openBrace, items..., closeBrace
-        // name can be Identifier or keywords like 'score', 'audio'
+        // Structure: scoreKeyword, [basename string], openBrace, items..., closeBrace
+        // The only header token is the optional basename string; its extension (if
+        // written) is dropped because the file format is a CLI choice.
         for (int i = 0; i < render.SlotCount; i++)
         {
-            var child = render.GetChild(i);
-            if (child is SyntaxTokenNode token)
+            if (render.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } token)
             {
-                // Skip render keyword and braces
-                if (token.Kind == SyntaxKind.RenderKeyword ||
-                    token.Kind == SyntaxKind.OpenBrace ||
-                    token.Kind == SyntaxKind.CloseBrace)
-                    continue;
-
-                // Name can be Identifier or keywords like 'score'
-                if (name == null && IsNameToken(token.Kind))
-                {
-                    name = token.Text;
-                }
-                else if (token.Kind == SyntaxKind.StringLiteral)
-                {
-                    outputFile = token.Text.Trim('"');
-                }
+                var raw = token.Text.Trim('"');
+                outputFile = System.IO.Path.GetFileNameWithoutExtension(raw);
+                break;
             }
         }
 
-        // The output filename is optional: when omitted the consumer derives it
-        // from the input file name. An empty OutputFile signals "use the default".
-        if (name == null)
-            return null;
+        // The basename is optional. When omitted, OutputFile is empty (the
+        // consumer derives it from the input file). Name doubles as the
+        // selector for `--score <name>`; default to "score" when unnamed.
+        var name = string.IsNullOrEmpty(outputFile) ? "score" : outputFile;
 
         // Parse render items
         foreach (var child in render.DescendantNodes())
@@ -98,12 +84,6 @@ public static class RenderSpecParser
         }
 
         return new RenderSpec(name, outputFile ?? "", [.. items]);
-    }
-
-    private static bool IsNameToken(SyntaxKind kind)
-    {
-        return kind == SyntaxKind.Identifier ||
-               kind == SyntaxKind.ScoreKeyword;
     }
 
     /// <summary>

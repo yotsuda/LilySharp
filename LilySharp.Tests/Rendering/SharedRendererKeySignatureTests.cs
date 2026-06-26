@@ -47,7 +47,7 @@ public sealed class SharedRendererKeySignatureTests
             section S { line { | d'4 e g a | } }
 
             structure { S }
-            render score "o.svg" { staff { line } }
+            score "o" { staff { line } }
             """);
 
         var rec = new GlyphRecorder();

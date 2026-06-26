@@ -15,6 +15,6 @@ section Main {
 
 structure { Main }
 
-render score "voice-dynamics.svg" {
+score "voice-dynamics" {
   staff { m }
 }

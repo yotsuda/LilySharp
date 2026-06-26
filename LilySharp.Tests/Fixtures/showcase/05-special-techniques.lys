@@ -42,6 +42,6 @@ section Main {
 
 structure { Main }
 
-render score "05-special-techniques.svg" {
+score "05-special-techniques" {
   staff { melody }
 }
