@@ -302,6 +302,14 @@ public sealed class LilySharpLanguageServer
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
 
+        // At most one `structure` declaration (the single shared form).
+        var structureValidator = new StructureDeclarationValidator();
+        structureValidator.Validate(doc.Tree);
+        foreach (var d in structureValidator.Diagnostics)
+        {
+            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+        }
+
         _rpc.NotifyAsync(Methods.TextDocumentPublishDiagnosticsName, new PublishDiagnosticParams
         {
             Uri = doc.Uri,
@@ -1382,6 +1390,57 @@ public sealed class LilySharpLanguageServer
     private IEnumerable<CodeAction> GenerateRefactorings(Document doc, SyntaxNode node, Uri uri)
     {
         var actions = new List<CodeAction>();
+
+        // Suggest an explicit `structure` when the file has sections but none is
+        // declared. Omitting it is valid (sections play in declaration order),
+        // so this is an on-demand convenience, not a warning.
+        var sections = doc.Tree.GetNodes<SectionDeclarationSyntax>()
+            .OrderBy(s => s.Position).ToList();
+        if (sections.Count > 0 && !doc.Tree.GetNodes<StructureDeclarationSyntax>().Any())
+        {
+            var names = string.Join(" ", sections.Select(s => s.SectionName));
+            // Slot it between the sections and the first render/score if present,
+            // otherwise right after the last section.
+            var firstRender = doc.Tree.GetNodes<RenderDeclarationSyntax>()
+                .OrderBy(r => r.Position).FirstOrDefault();
+            int offset;
+            string newText;
+            if (firstRender != null)
+            {
+                offset = firstRender.Position;
+                newText = $"structure {{ {names} }}\n\n";
+            }
+            else
+            {
+                var last = sections[^1];
+                offset = last.Position + last.FullWidth;
+                newText = $"\nstructure {{ {names} }}\n";
+            }
+            var (insLine, insChar) = GetLineAndCharacter(doc.Text, offset);
+            actions.Add(new CodeAction
+            {
+                Title = "Insert structure declaration",
+                Kind = CodeActionKind.Refactor,
+                Edit = new WorkspaceEdit
+                {
+                    Changes = new Dictionary<string, TextEdit[]>
+                    {
+                        [uri.ToString()] = new[]
+                        {
+                            new TextEdit
+                            {
+                                Range = new LspRange
+                                {
+                                    Start = new Position { Line = insLine, Character = insChar },
+                                    End = new Position { Line = insLine, Character = insChar }
+                                },
+                                NewText = newText
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         // Refactor: Extract variable from music block
         if (node is MusicBlockSyntax block && block.Items.Any())

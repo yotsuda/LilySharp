@@ -806,6 +806,10 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(Syntax
     var annotationValidator = new LilySharp.Core.Semantics.AnnotationNameValidator();
     annotationValidator.Validate(tree);
     combined.AddRange(annotationValidator.Diagnostics);
+    // At most one `structure` declaration (the single shared form).
+    var structureValidator = new LilySharp.Core.Semantics.StructureDeclarationValidator();
+    structureValidator.Validate(tree);
+    combined.AddRange(structureValidator.Diagnostics);
     return combined;
 }
 
