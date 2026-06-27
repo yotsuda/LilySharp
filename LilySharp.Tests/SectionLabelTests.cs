@@ -79,6 +79,22 @@ public class SectionLabelTests
     }
 
     [Fact]
+    public void NoStructure_UsesSectionDeclarationOrder()
+    {
+        // With no `structure { }`, sections play in the order they were declared
+        // (source order). 'Zebra' is declared before 'Alpha', so an alphabetical
+        // or hash-bucket order would fail this — only source order passes.
+        var labels = SectionLabels("""
+            part melody
+            section Zebra { melody { c4 d e f | } }
+            section Alpha { melody { g4 a b c | } }
+            score "x" { staff melody }
+            """);
+
+        Assert.Equal(new[] { "Zebra", "Alpha" }, labels);
+    }
+
+    [Fact]
     public void UnicodeIdentifiers_NoDiagnostics()
     {
         var tree = SyntaxTree.Parse("""

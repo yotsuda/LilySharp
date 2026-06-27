@@ -2161,7 +2161,9 @@ public sealed class MeasureCollector
         }
         else if (_sections.Count > 0)
         {
-            foreach (var section in _sections.Values)
+            // No `structure { }` — default to the order the sections were declared
+            // (source order), so a single-section piece needs no structure at all.
+            foreach (var section in _sections.Values.OrderBy(s => s.Name.Span.Start))
             {
                 if (!_sectionStartMeasure.ContainsKey(section.SectionName))
                     _sectionStartMeasure[section.SectionName] = builder.CurrentMeasureIndex;
