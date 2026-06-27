@@ -410,9 +410,10 @@ interface ExportResponse {
     Error: string | null;
 }
 
-// Export the currently-previewed score: pick a format, choose a destination, then
-// ask the language server to generate the file. SVG/PNG/PDF honour the selected
-// score; MIDI and MusicXML export the whole piece.
+// Export the currently-previewed score: open the save dialog straight away and let
+// its "Save as type" dropdown choose the format; the saved file's extension decides
+// what the language server generates. SVG/PNG/PDF honour the selected score; MIDI
+// and MusicXML export the whole piece.
 async function exportPreview(
     uri: string,
     renderName: string | undefined
@@ -422,41 +423,41 @@ async function exportPreview(
         return;
     }
 
-    const formats = [
-        { label: 'PNG image', detail: 'Raster image (.png)', format: 'png', ext: 'png' },
-        { label: 'PDF document', detail: 'Print-ready sheet music (.pdf)', format: 'pdf', ext: 'pdf' },
-        { label: 'SVG image', detail: 'Scalable vector graphic (.svg)', format: 'svg', ext: 'svg' },
-        { label: 'MIDI', detail: 'Audio sequence — whole piece (.mid)', format: 'midi', ext: 'mid' },
-        { label: 'MusicXML', detail: 'Interchange format — whole piece (.musicxml)', format: 'musicxml', ext: 'musicxml' },
-    ];
-    const pick = await vscode.window.showQuickPick(
-        formats.map(f => ({ label: f.label, detail: f.detail, fmt: f })),
-        { placeHolder: 'Export the score as…' }
-    );
-    if (!pick) {
-        return;
-    }
-    const chosen = pick.fmt;
-
     // Default filename: the selected score's name, else the source file's basename.
     const docUri = vscode.Uri.parse(uri);
     const baseDir = vscode.Uri.joinPath(docUri, '..');
     const sourceName = (docUri.path.split('/').pop() || 'score').replace(/\.lys$/i, '');
     const baseName = renderName && renderName.length > 0 ? renderName : sourceName;
-    const defaultUri = vscode.Uri.joinPath(baseDir, baseName + '.' + chosen.ext);
 
     const target = await vscode.window.showSaveDialog({
-        defaultUri,
-        filters: { [chosen.label]: [chosen.ext] }
+        defaultUri: vscode.Uri.joinPath(baseDir, baseName + '.pdf'),
+        // The dropdown order is the picker; the first entry is the default type.
+        filters: {
+            'PDF document': ['pdf'],
+            'PNG image': ['png'],
+            'SVG image': ['svg'],
+            'MIDI (whole piece)': ['mid'],
+            'MusicXML (whole piece)': ['musicxml'],
+        }
     });
     if (!target) {
+        return;
+    }
+
+    // The chosen file's extension is the format.
+    const ext = (target.fsPath.split('.').pop() || '').toLowerCase();
+    const format = ext === 'mid' || ext === 'midi' ? 'midi'
+        : ext === 'xml' || ext === 'musicxml' ? 'musicxml'
+        : ext; // png / pdf / svg
+    if (!['png', 'pdf', 'svg', 'midi', 'musicxml'].includes(format)) {
+        vscode.window.showErrorMessage(`Lily#: unsupported export type ".${ext}".`);
         return;
     }
 
     try {
         const response = await client.sendRequest<ExportResponse>('lilysharp/export', {
             textDocument: { uri },
-            format: chosen.format,
+            format,
             outputPath: target.fsPath,
             renderName: renderName || null
         });
