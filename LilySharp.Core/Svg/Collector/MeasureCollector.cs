@@ -18,6 +18,7 @@ using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
+using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Collector;
 
@@ -886,6 +887,21 @@ public sealed class MeasureCollector
                         .ToImmutableArray()
                 })
                 .ToImmutableArray();
+
+        // Resolve tab string numbers per tab staff (tuning-dependent): explicit
+        // \N kept, repeated pitches in a bar reuse the first string, the rest
+        // auto-pick the nearest-fret string. Done here so the layout and every
+        // render pass (fret number, stem, beam) read one consistent string.
+        staffGroups = staffGroups
+            .Select(sg => sg with
+            {
+                Staves = sg.Staves
+                    .Select(st => st.IsTab && st.Tuning.HasValue
+                        ? st with { Voices = st.Voices.SetItem(0, ResolveTabStrings(st.PrimaryVoice, st.Tuning.Value)) }
+                        : st)
+                    .ToImmutableArray()
+            })
+            .ToImmutableArray();
 
         return new MultiStaffScore(
             staffGroups,
@@ -2720,6 +2736,60 @@ public sealed class MeasureCollector
         var rebuilt = ImmutableArray.CreateBuilder<Measure>(measures.Length);
         for (int mi = 0; mi < measures.Length; mi++)
             rebuilt.Add(measures[mi] with { Items = ImmutableArray.Create(items[mi]) });
+        return voice with { Measures = rebuilt.MoveToImmutable() };
+    }
+
+    /// <summary>
+    /// Assigns every tab note a concrete string for a staff's tuning so the fret
+    /// number, the stem and the beam all read one consistent value. Priority:
+    /// <list type="number">
+    /// <item>an explicit <c>\N</c> (or tie-adopted string) is kept;</item>
+    /// <item>a pitch already seen earlier IN THE SAME BAR reuses that string —
+    /// accidental-like, reset at the bar line (so <c>a\4 a a a</c> stays on 4);</item>
+    /// <item>otherwise the string whose fret is closest to the previous note's fret
+    /// is chosen, keeping the hand in position.</item>
+    /// </list>
+    /// Tuning-dependent, so it runs per tab staff after the score is assembled.
+    /// </summary>
+    private static Voice ResolveTabStrings(Voice voice, TuningType tuning)
+    {
+        int[] tun = Tunings.GetTuning(tuning);
+        int shift = Tunings.OctaveShift(tuning);
+        int? prevFret = null; // hand position, carried across bar lines
+
+        var rebuilt = ImmutableArray.CreateBuilder<Measure>(voice.Measures.Length);
+        foreach (var measure in voice.Measures)
+        {
+            var barString = new Dictionary<int, int>(); // written MIDI -> string, reset each bar
+            var items = measure.Items.ToArray();
+            bool changed = false;
+            for (int i = 0; i < items.Length; i++)
+            {
+                if (items[i] is not NoteItem note) continue;
+                int midi = note.Midi + shift;
+                int strNum, fret;
+                if (note.StringNumber.HasValue)
+                {
+                    (strNum, fret) = Tunings.CalculateFret(midi, tun, note.StringNumber.Value);
+                    barString[note.Midi] = strNum;
+                }
+                else if (barString.TryGetValue(note.Midi, out var inherited))
+                {
+                    (strNum, fret) = Tunings.CalculateFret(midi, tun, inherited);
+                    items[i] = note with { StringNumber = strNum };
+                    changed = true;
+                }
+                else
+                {
+                    (strNum, fret) = Tunings.CalculateFret(midi, tun, 0, nearFret: prevFret);
+                    items[i] = note with { StringNumber = strNum };
+                    barString[note.Midi] = strNum;
+                    changed = true;
+                }
+                prevFret = fret;
+            }
+            rebuilt.Add(changed ? measure with { Items = ImmutableArray.Create(items) } : measure);
+        }
         return voice with { Measures = rebuilt.MoveToImmutable() };
     }
 

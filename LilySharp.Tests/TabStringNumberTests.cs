@@ -134,6 +134,36 @@ public sealed class TabStringNumberTests
         Assert.Equal(4, Notes(score)[0].StringNumber); // source string kept
     }
 
+    // ---- Per-staff tab string resolution (inheritance + nearest fret) ----
+
+    private static List<NoteItem> TabNotes(string body)
+    {
+        var src = "part bl { clef bass }\nsection Main {\n  bl {\n" + body + "\n  }\n}\n" +
+                  "structure { Main }\nscore \"x\" { staff bass { bl } tab bass { bl } }\n";
+        var tree = SyntaxTree.Parse(src);
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        var multi = new MeasureCollector().CollectMultiStaff(tree, spec);
+        var tab = multi.EnumerateStaves().First(s => s.Staff.IsTab).Staff;
+        return tab.PrimaryVoice.Measures.SelectMany(m => m.Items).OfType<NoteItem>().ToList();
+    }
+
+    [Fact]
+    public void RepeatedPitchInBar_ReusesFirstString()
+    {
+        // a\4 sets string 4; the bare a's in the same bar inherit it (accidental-like).
+        var notes = TabNotes("a8\\4 a a a a a a a |");
+        Assert.All(notes, n => Assert.Equal(4, n.StringNumber));
+    }
+
+    [Fact]
+    public void BarePitch_AutoPicksStringNearestPreviousFret()
+    {
+        // a\4 = fret 5 on the E string; the following b auto-picks the E string
+        // (fret 7, distance 2) over the A string (fret 2, distance 3).
+        var notes = TabNotes("a4\\4 b4 |");
+        Assert.Equal(4, notes[1].StringNumber);
+    }
+
     [Fact]
     public void StringNumberToken_KeepsFollowingSourcePositionsAligned()
     {

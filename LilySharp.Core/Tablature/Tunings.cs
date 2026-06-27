@@ -78,8 +78,13 @@ public static class Tunings
     /// <param name="midiPitch">The MIDI note number to place.</param>
     /// <param name="tuning">The tuning array (index 0 = lowest string).</param>
     /// <param name="preferredString">Preferred string (1 = highest, 0 = auto).</param>
+    /// <param name="nearFret">When set (and no preferred string applies), pick the
+    /// string whose fret is CLOSEST to this value — the previous note's fret — so
+    /// the hand stays in position. When null, auto-selection prefers the lowest
+    /// fret (the historical behaviour).</param>
     /// <returns>A tuple of (stringNumber, fret) where stringNumber 1 = highest pitch string.</returns>
-    public static (int stringNum, int fret) CalculateFret(int midiPitch, int[] tuning, int preferredString = 0)
+    public static (int stringNum, int fret) CalculateFret(int midiPitch, int[] tuning,
+        int preferredString = 0, int? nearFret = null)
     {
         int stringCount = tuning.Length;
 
@@ -101,9 +106,12 @@ public static class Tunings
             }
         }
 
-        // Auto: find the best string (prefer lower fret positions)
+        // Auto: score each playable string. Without a hand-position hint the score
+        // is the fret itself (prefer low positions); with one it is the distance to
+        // the previous fret, ties broken toward the lower fret.
         int bestString = stringCount; // lowest string as fallback
         int bestFret = 99;
+        int bestScore = int.MaxValue;
 
         // Search from highest to lowest string
         for (int idx = stringCount - 1; idx >= 0; idx--)
@@ -113,8 +121,10 @@ public static class Tunings
 
             if (fret >= 0 && fret <= 24)
             {
-                if (fret < bestFret)
+                int score = nearFret.HasValue ? System.Math.Abs(fret - nearFret.Value) : fret;
+                if (score < bestScore || (score == bestScore && fret < bestFret))
                 {
+                    bestScore = score;
                     bestString = ToStringNum(idx);
                     bestFret = fret;
                 }
