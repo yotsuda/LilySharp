@@ -651,8 +651,9 @@ public sealed class ElementCoordinator
                 {
                     // On a tab the tie connects two fret digits on ONE string, so it
                     // belongs on that string's line — NOT at the notation pitch height.
-                    // Place it just above the digits and arc upward, clear of the
-                    // down-stems (which hang below the tab).
+                    // It curves OPPOSITE the stem: below the digits when the stem
+                    // points up, above when it points down (matching the tab stem,
+                    // which uses note.StemUp).
                     var tuningType = staff.Tuning ?? TuningType.Guitar;
                     int octaveShift = Tunings.OctaveShift(tuningType);
                     int[] tuning = Tunings.GetTuning(tuningType);
@@ -662,10 +663,11 @@ public sealed class ElementCoordinator
                     double digitY = staffY + (stringNum - 1) * stringSpace;
                     const double tabFretFontSize = 2.6; // SharedRenderer.TabFretFontSize
                     double clearance = 0.6875 * tabFretFontSize / 2 + 0.3;
-                    y = digitY - clearance;
-                    // Force an upward arc (constructor-set property, no `with`).
+                    bool stemUp = tie.StartNote.StemUp;
+                    y = digitY + (stemUp ? clearance : -clearance);
+                    // Curve opposite the stem (constructor-set property, no `with`).
                     tieForProblem = new TieItem(
-                        tie.StartNote, tie.EndNote, tie.StaffPosition, curveUp: true,
+                        tie.StartNote, tie.EndNote, tie.StaffPosition, curveUp: !stemUp,
                         tie.StartMeasureIndex, tie.EndMeasureIndex, tie.StartItemIndex, tie.EndItemIndex);
                 }
                 else
