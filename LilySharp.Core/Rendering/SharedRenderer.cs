@@ -209,7 +209,7 @@ public static class SharedRenderer
                 // Tablature staves: string lines + TAB clef + fret numbers.
                 if (staff.IsTab)
                 {
-                    DrawTabStaff(staff, system, localStaffY, staffRight, systemStartX, gc);
+                    DrawTabStaff(staff, system, localStaffY, staffRight, systemStartX, beamedItems, gc);
                     continue;
                 }
 
@@ -337,7 +337,8 @@ public static class SharedRenderer
     /// LILYPOND-REF: scm/translation-functions.scm determine-frets
     /// </remarks>
     private static void DrawTabStaff(Staff staff, SystemLayout system,
-        double staffY, double staffRight, double systemStartX, IDrawingContext gc)
+        double staffY, double staffRight, double systemStartX,
+        HashSet<MusicItem> beamedItems, IDrawingContext gc)
     {
         var tuningType = staff.Tuning ?? TuningType.Guitar;
         int stringCount = Tunings.GetStringCount(tuningType);
@@ -378,13 +379,14 @@ public static class SharedRenderer
             {
                 if (ml.MeasureIndex < voice.Measures.Length)
                     DrawTabMeasure(voice.Measures[ml.MeasureIndex], ml, staffY,
-                        tuning, stringCount, octaveShift, gc);
+                        tuning, stringCount, octaveShift, staff, beamedItems, gc);
             }
         }
     }
 
     private static void DrawTabMeasure(Measure measure, MeasureLayout ml,
-        double staffY, int[] tuning, int stringCount, int octaveShift, IDrawingContext gc)
+        double staffY, int[] tuning, int stringCount, int octaveShift,
+        Staff staff, HashSet<MusicItem> beamedItems, IDrawingContext gc)
     {
         bool useColumnTiming = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
         var currentTiming = Fraction.Zero;
@@ -402,14 +404,47 @@ public static class SharedRenderer
                 case NoteItem note:
                     DrawTabNote(note.Midi, itemX, staffY,
                         tuning, note.StringNumber, octaveShift, note.SourcePosition, gc);
+                    DrawUnbeamedTabStem(note, note.BaseDuration, note.StemUp,
+                        itemX, staffY, staff, beamedItems, gc);
                     break;
                 case ChordItem chord:
                     foreach (var cn in chord.Notes)
                         DrawTabNote(cn.Midi, itemX, staffY,
                             tuning, cn.StringNumber, octaveShift, chord.SourcePosition, gc);
+                    DrawUnbeamedTabStem(chord, chord.BaseDuration, chord.StemUp,
+                        itemX, staffY, staff, beamedItems, gc);
                     break;
                 // RestItem: nothing on a tab staff.
             }
+        }
+    }
+
+    /// <summary>
+    /// Stem (and flag for eighths and shorter) for a tab note that is NOT part of
+    /// a beam group — beamed notes get their stem from <see cref="DrawBeams"/>.
+    /// The stem rises from the fret number's centre (its string line, with a gap)
+    /// in the note's notation stem direction, so it stays parallel to the stem on
+    /// the companion notation staff. Whole notes carry no stem.
+    /// </summary>
+    private static void DrawUnbeamedTabStem(MusicItem item, Fraction baseDuration,
+        bool stemUp, double itemX, double staffY, Staff staff,
+        HashSet<MusicItem> beamedItems, IDrawingContext gc)
+    {
+        int noteValue = baseDuration.Denominator;
+        if (baseDuration.Numerator != 1) noteValue = 1;
+        if (noteValue < 2 || beamedItems.Contains(item))
+            return; // whole notes have no stem; beamed notes are drawn elsewhere.
+
+        const double stemLength = 3.0;
+        double nearY = TabStemHeadY(item, stemUp, staffY, staff);
+        double farY = nearY + (stemUp ? -stemLength : stemLength);
+        gc.DrawLine(itemX, nearY, itemX, farY, Color.Black, EngravingDefaults.StemThickness);
+
+        if (noteValue >= 8)
+        {
+            var flag = EmmentalerGlyphs.GetFlag(noteValue, stemUp);
+            if (flag.HasValue)
+                gc.DrawGlyph(flag.Value, itemX, farY, FontSize, null);
         }
     }
 
@@ -1521,12 +1556,27 @@ public static class SharedRenderer
                 : system.Y;
             double staffMiddleY = staffY + StaffHeight / 2;
 
+            // Resolve each member's staff. Cross-staff beams — and the tab
+            // mirror of a notation beam — route members to a staff OTHER than
+            // the beam's own StaffIndex, so this must be decided per member.
+            int MemberStaffIdx(int i) => (!beam.MemberStaffIndices.IsDefaultOrEmpty
+                    && i < beam.MemberStaffIndices.Length && beam.MemberStaffIndices[i] >= 0)
+                ? beam.MemberStaffIndices[i] : beam.StaffIndex;
+            Staff? MemberStaffOf(int i) => MemberStaffIdx(i) is var si && si >= 0
+                && staffByIndex.TryGetValue(si, out var s) ? s : null;
+
             // Per-member stem direction: kneed beams mix up- and down-stems
             // within one group (LILYPOND-REF: beam.cc:894-982 consider_auto_knees),
             // which flips the stem's notehead attachment side.
             bool MemberUp(int i) => grp.IsKnee ? grp.Members[i].MemberStemUp : grp.StemUp;
-            double StemAttachX(int i) => beam.MemberXPositions[i]
-                + (MemberUp(i) ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
+
+            // On a tab staff the stem rises from the CENTRE of the fret number
+            // (the note column = MemberXPositions), not a notehead edge — so a
+            // tab member gets no notehead attachment offset.
+            double StemAttachX(int i) => MemberStaffOf(i)?.IsTab == true
+                ? beam.MemberXPositions[i]
+                : beam.MemberXPositions[i]
+                    + (MemberUp(i) ? EngravingDefaults.StemUpAttachX : EngravingDefaults.StemDownAttachX);
 
             double leftBeamY = StaffFrame.PositionToDevice(beam.LeftY, staffMiddleY);
             double rightBeamY = StaffFrame.PositionToDevice(beam.RightY, staffMiddleY);
@@ -1573,11 +1623,8 @@ public static class SharedRenderer
                 double stemX = StemAttachX(i);
                 double beamY = leftBeamY + slope * (stemX - leftStemX);
 
-                int memberStaffIdx = (!beam.MemberStaffIndices.IsDefaultOrEmpty
-                    && i < beam.MemberStaffIndices.Length && beam.MemberStaffIndices[i] >= 0)
-                    ? beam.MemberStaffIndices[i] : beam.StaffIndex;
-                Staff? memberStaff = memberStaffIdx >= 0
-                    && staffByIndex.TryGetValue(memberStaffIdx, out var ms) ? ms : null;
+                int memberStaffIdx = MemberStaffIdx(i);
+                Staff? memberStaff = MemberStaffOf(i);
 
                 double headY;
                 if (memberStaff?.IsTab == true)
