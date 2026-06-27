@@ -155,6 +155,36 @@ public sealed class TabStringNumberTests
         Assert.All(notes, n => Assert.Equal(4, n.StringNumber));
     }
 
+    // ---- Chord fret-number collision offsets (bigger font) ----
+
+    [Fact]
+    public void TwoNoteChord_PutsSmallerFretOnLeft()
+    {
+        // Strings 1 (fret 3) and 2 (fret 2), adjacent → the smaller fret (2) shifts left.
+        var off = LilySharp.Core.Rendering.SharedRenderer.AssignTabChordOffsets(
+            new[] { (str: 1, fret: 3), (str: 2, fret: 2) });
+        Assert.True(off[1] < 0, "smaller fret should be left of centre");
+        Assert.True(off[0] > 0, "larger fret should be right of centre");
+    }
+
+    [Fact]
+    public void ThreeNoteChord_Zigzags()
+    {
+        // Three adjacent strings → left, right, left (zigzag, not a slant).
+        var off = LilySharp.Core.Rendering.SharedRenderer.AssignTabChordOffsets(
+            new[] { (str: 1, fret: 0), (str: 2, fret: 0), (str: 3, fret: 0) });
+        Assert.True(off[0] < 0 && off[1] > 0 && off[2] < 0);
+    }
+
+    [Fact]
+    public void NonAdjacentChord_NotShifted()
+    {
+        // Strings 1 and 3 don't overlap vertically, so neither digit moves.
+        var off = LilySharp.Core.Rendering.SharedRenderer.AssignTabChordOffsets(
+            new[] { (str: 1, fret: 5), (str: 3, fret: 7) });
+        Assert.Equal(new[] { 0.0, 0.0 }, off);
+    }
+
     [Fact]
     public void TabOnlyScore_RoutesThroughTabPipeline()
     {

@@ -411,9 +411,7 @@ public static class SharedRenderer
                         itemX, staffY, staff, beamedItems, gc);
                     break;
                 case ChordItem chord:
-                    foreach (var cn in chord.Notes)
-                        DrawTabNote(cn.Midi, itemX, staffY,
-                            tuning, cn.StringNumber, octaveShift, chord.SourcePosition, gc);
+                    DrawTabChord(chord, itemX, staffY, tuning, octaveShift, gc);
                     DrawUnbeamedTabStem(chord, chord.BaseDuration, chord.StemUp,
                         itemX, staffY, staff, beamedItems, gc);
                     break;
@@ -465,29 +463,112 @@ public static class SharedRenderer
         }
     }
 
+    // Tab fret numbers are drawn a notch larger than the historical 1.6 so they
+    // read clearly; the chord-collision shifts below keep the bigger digits from
+    // overlapping. Background/clearance dimensions scale with this.
+    private const double TabFretFontSize = 2.0;
+
+    /// <summary>Drawn width of a fret number at <see cref="TabFretFontSize"/>.</summary>
+    private static double TabFretWidth(int fret) =>
+        (fret.ToString().Length == 1 ? 0.625 : 1.0) * TabFretFontSize;
+
     private static void DrawTabNote(int midi,
         double x, double staffY, int[] tuning, int? stringNumber, int octaveShift,
         int sourcePosition, IDrawingContext gc)
     {
         int midiPitch = midi + octaveShift;
         var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning, stringNumber ?? 0);
+        DrawTabFret(fret, stringNum, x, staffY, sourcePosition, gc);
+    }
 
+    /// <summary>
+    /// Draws one fret number (with its string-line-occluding background) at the
+    /// given string line and x. Chord notes share this after their x is shifted.
+    /// </summary>
+    private static void DrawTabFret(int fret, int stringNum, double x, double staffY,
+        int sourcePosition, IDrawingContext gc)
+    {
         // String 1 (highest pitch) is the TOP tab line; string N the bottom.
         double noteY = staffY + (stringNum - 1);
-
         string fretText = fret.ToString();
-        const double fontSize = 1.6;
-        double bgWidth = fretText.Length == 1 ? 1.0 : 1.6;
-        const double bgHeight = 1.1;
+        double bgWidth = TabFretWidth(fret);
+        double bgHeight = 0.6875 * TabFretFontSize;
 
         using (gc.Source(sourcePosition))
         {
             // White background occludes the string line behind the number.
             gc.DrawRectangle(x - bgWidth / 2, noteY - bgHeight / 2, bgWidth, bgHeight,
                 fill: Color.White);
-            gc.DrawText(fretText, x, noteY + fontSize * 0.32, fontSize, "serif",
+            gc.DrawText(fretText, x, noteY + TabFretFontSize * 0.32, TabFretFontSize, "serif",
                 FontStyle.Regular, TextAnchor.Middle, Color.Black);
         }
+    }
+
+    /// <summary>
+    /// Draws a chord's fret numbers, shifting their x so the (now larger) digits on
+    /// neighbouring strings do not overlap — the tab analogue of notehead-collision
+    /// resolution. Two-note chords put the SMALLER fret on the left; three-or-more
+    /// zigzag between two columns (rather than slanting) so the stack stays compact.
+    /// </summary>
+    private static void DrawTabChord(ChordItem chord, double itemX, double staffY,
+        int[] tuning, int octaveShift, IDrawingContext gc)
+    {
+        // Resolve (string, fret) per note and order top string (1) → bottom.
+        var notes = chord.Notes
+            .Select(cn =>
+            {
+                var (str, fret) = Tunings.CalculateFret(cn.Midi + octaveShift, tuning, cn.StringNumber ?? 0);
+                return (str, fret);
+            })
+            .OrderBy(p => p.str)
+            .ToList();
+
+        double[] dx = AssignTabChordOffsets(notes);
+        for (int i = 0; i < notes.Count; i++)
+            DrawTabFret(notes[i].fret, notes[i].str, itemX + dx[i], staffY, chord.SourcePosition, gc);
+    }
+
+    /// <summary>
+    /// Horizontal offset for each chord note (notes ordered top string → bottom) so
+    /// digits on ADJACENT strings (which would overlap vertically at the larger font)
+    /// are pulled apart into a left and a right column. Two overlapping notes: the
+    /// smaller fret goes left. Three or more: zigzag the columns down each run of
+    /// adjacent strings; a note with no adjacent neighbour stays centred.
+    /// </summary>
+    internal static double[] AssignTabChordOffsets(IReadOnlyList<(int str, int fret)> notes)
+    {
+        int n = notes.Count;
+        var off = new double[n];
+        if (n < 2) return off;
+
+        // Mark notes that have an adjacent (string ±1) neighbour in the chord.
+        var adjacent = new bool[n];
+        for (int i = 1; i < n; i++)
+            if (notes[i].str == notes[i - 1].str + 1)
+                adjacent[i] = adjacent[i - 1] = true;
+
+        // Column separation: half the widest digit + a small gap, so even two-digit
+        // frets in the two columns clear each other.
+        double maxWidth = notes.Max(p => TabFretWidth(p.fret));
+        double delta = maxWidth / 2 + 0.1;
+
+        if (n == 2 && adjacent[0])
+        {
+            bool topSmaller = notes[0].fret <= notes[1].fret;
+            off[0] = topSmaller ? -delta : delta;
+            off[1] = topSmaller ? delta : -delta;
+            return off;
+        }
+
+        // Three or more: zigzag (left, right, left, …) within each adjacent run.
+        int col = 0;
+        for (int i = 0; i < n; i++)
+        {
+            if (!adjacent[i]) { off[i] = 0; continue; }
+            col = (i > 0 && adjacent[i - 1] && notes[i].str == notes[i - 1].str + 1) ? 1 - col : 0;
+            off[i] = col == 0 ? -delta : delta;
+        }
+        return off;
     }
 
     /// <summary>
@@ -1732,7 +1813,9 @@ public static class SharedRenderer
 
         var (stringNum, _) = Tunings.CalculateFret(midi + octaveShift, tuning, stringNumber ?? 0);
         double digitY = tabStaffTopY + (stringNum - 1);
-        const double clearance = 0.85; // half the digit (~0.55) + a small gap (~0.3)
+        // Half the digit height (0.6875 × font) plus a small gap, so the stem meets
+        // the bigger number without overlapping it.
+        double clearance = 0.6875 * TabFretFontSize / 2 + 0.3;
         return digitY + (stemUp ? -clearance : clearance);
     }
 
