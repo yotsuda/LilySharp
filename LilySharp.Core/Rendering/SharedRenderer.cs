@@ -1803,10 +1803,16 @@ public static class SharedRenderer
                 midi = n.Midi; stringNumber = n.StringNumber;
                 break;
             case ChordItem c when c.Notes.Length > 0:
-                // The stem meets the chord's outermost note on its near side.
+                // On a tab the digits stack by STRING, so the stem must meet the
+                // END of the stack in its direction — the TOP digit (smallest
+                // string number) for an up-stem, the BOTTOM for a down-stem. Picking
+                // by pitch can start the stem on a middle digit and run it THROUGH
+                // the others.
+                int StrOf(ChordNoteInfo x) =>
+                    Tunings.CalculateFret(x.Midi + octaveShift, tuning, x.StringNumber ?? 0).stringNum;
                 var head = stemUp
-                    ? c.Notes.OrderBy(x => x.Midi).First()
-                    : c.Notes.OrderByDescending(x => x.Midi).First();
+                    ? c.Notes.OrderBy(StrOf).First()
+                    : c.Notes.OrderByDescending(StrOf).First();
                 midi = head.Midi; stringNumber = head.StringNumber;
                 break;
         }
