@@ -16,6 +16,7 @@
 
 using System.Linq;
 using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -59,5 +60,20 @@ public sealed class StructureVoltaTests
         int trailing = MeasureCount("structure { |: A [1. D] [2. O] :| }");
         int inline = MeasureCount("structure { |: A [1. D] :| [2. O] }");
         Assert.Equal(trailing, inline);
+    }
+
+    [Fact]
+    public void FirstEnding_BeforeRepeatBarline_Closes()
+    {
+        // The 1st ending sits before the :|, so its bracket must close with a down
+        // hook at the repeat (regression: it used to stay open — only the last
+        // ending closed).
+        var tree = SyntaxTree.Parse(
+            Head + "structure { |: A [1. D] :| [2. O] }\nscore { staff m  tab m }\n");
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        var layout = new LayoutEngine().Layout(new MeasureCollector().CollectMultiStaff(tree, spec));
+
+        var firstEnding = layout.VoltaBracketLayouts.First(v => v.VoltaText == "1.");
+        Assert.True(firstEnding.IsClosed, "1st ending must close at the following :|");
     }
 }

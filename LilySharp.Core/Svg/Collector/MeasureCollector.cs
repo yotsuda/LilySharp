@@ -2409,6 +2409,10 @@ public sealed class MeasureCollector
     {
         bool afterRepeatStart = false;
         var pendingVoltaBrackets = new List<(int startMeasure, int endMeasure, string voltaText, int sourcePosition)>();
+        // Indices of brackets immediately followed by a repeat barline (:|). Such an
+        // ending closes with a down hook at the repeat — e.g. the 1st ending in
+        // |: … [1. D] :| [2. Outro]. (The last bracket also closes; see below.)
+        var closedByRepeat = new HashSet<int>();
 
         for (int i = 0; i < repeat.SlotCount; i++)
         {
@@ -2424,6 +2428,9 @@ public sealed class MeasureCollector
                 else if (token.Text == ":|")
                 {
                     processNodes(new[] { CreateBarlineSyntax(token.Text, token.Position) });
+                    // The ending just before this repeat barline closes here.
+                    if (pendingVoltaBrackets.Count > 0)
+                        closedByRepeat.Add(pendingVoltaBrackets.Count - 1);
                 }
             }
             else if (afterRepeatStart)
@@ -2474,7 +2481,9 @@ public sealed class MeasureCollector
         for (int i = 0; i < pendingVoltaBrackets.Count; i++)
         {
             var (startMeasure, endMeasure, voltaText, sourcePosition) = pendingVoltaBrackets[i];
-            bool isClosed = (i == pendingVoltaBrackets.Count - 1);
+            // A bracket closes if it is the last ending, or if a repeat barline
+            // follows it (the 1st ending in |: … [1. D] :| [2. Outro]).
+            bool isClosed = (i == pendingVoltaBrackets.Count - 1) || closedByRepeat.Contains(i);
             _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
         }
     }
