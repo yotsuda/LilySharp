@@ -863,26 +863,13 @@ internal sealed class RenderDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Staff render: staff [clef] { partName }
+/// Staff render: staff [clef] partName  or  staff [clef] { partName }
+/// (clef defaults to the part definition; braces are optional).
 /// </summary>
 internal sealed class StaffRenderGreen : GreenSyntaxNode
 {
-    public StaffRenderGreen(
-        SyntaxToken staffKeyword,
-        SyntaxToken openBrace,
-        SyntaxToken partName,
-        SyntaxToken closeBrace)
-        : base(SyntaxKind.StaffRender, [staffKeyword, openBrace, partName, closeBrace])
-    {
-    }
-
-    public StaffRenderGreen(
-        SyntaxToken staffKeyword,
-        SyntaxToken clefName,
-        SyntaxToken openBrace,
-        SyntaxToken partName,
-        SyntaxToken closeBrace)
-        : base(SyntaxKind.StaffRender, [staffKeyword, clefName, openBrace, partName, closeBrace])
+    public StaffRenderGreen(params SyntaxToken[] tokens)
+        : base(SyntaxKind.StaffRender, tokens)
     {
     }
 }
@@ -929,17 +916,13 @@ internal sealed class OssiaRenderGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Tab render: tab tuning { partName }
+/// Tab render: tab [tuning] partName  or  tab [tuning] { partName }
+/// (tuning defaults to the part definition; braces are optional).
 /// </summary>
 internal sealed class TabRenderGreen : GreenSyntaxNode
 {
-    public TabRenderGreen(
-        SyntaxToken tabKeyword,
-        SyntaxToken tuning,
-        SyntaxToken openBrace,
-        SyntaxToken partName,
-        SyntaxToken closeBrace)
-        : base(SyntaxKind.TabRender, [tabKeyword, tuning, openBrace, partName, closeBrace])
+    public TabRenderGreen(params SyntaxToken[] tokens)
+        : base(SyntaxKind.TabRender, tokens)
     {
     }
 }

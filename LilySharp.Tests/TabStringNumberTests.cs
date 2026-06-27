@@ -185,6 +185,45 @@ public sealed class TabStringNumberTests
         Assert.Equal(new[] { 0.0, 0.0 }, off);
     }
 
+    // ---- Part-defined tuning + braceless render grammar ----
+
+    private static Staff RenderStaff(string body, bool wantTab)
+    {
+        var src = body;
+        var tree = SyntaxTree.Parse(src);
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        var multi = new MeasureCollector().CollectMultiStaff(tree, spec);
+        return multi.EnumerateStaves().First(s => s.Staff.IsTab == wantTab).Staff;
+    }
+
+    [Fact]
+    public void TabUsesPartTuning_WhenRenderGivesNone()
+    {
+        // `tab bl` with no tuning takes it from the part's `tuning bass5`.
+        var tab = RenderStaff(
+            "part bl { clef bass tuning bass5 }\nsection Main { bl { a4 b c d | } }\n" +
+            "structure { Main }\nscore \"x\" { tab bl }\n", wantTab: true);
+        Assert.Equal(TuningType.Bass5, tab.Tuning);
+    }
+
+    [Fact]
+    public void TabRenderTuning_OverridesPartTuning()
+    {
+        var tab = RenderStaff(
+            "part bl { clef bass tuning bass }\nsection Main { bl { a4 b c d | } }\n" +
+            "structure { Main }\nscore \"x\" { tab bass6 bl }\n", wantTab: true);
+        Assert.Equal(TuningType.Bass6, tab.Tuning);
+    }
+
+    [Fact]
+    public void BracelessStaff_TakesClefFromPart()
+    {
+        var notation = RenderStaff(
+            "part bl { clef bass tuning bass }\nsection Main { bl { a4 b c d | } }\n" +
+            "structure { Main }\nscore \"x\" { staff bl  tab bl }\n", wantTab: false);
+        Assert.Equal(ClefType.Bass, notation.Clef);
+    }
+
     [Fact]
     public void TabOnlyScore_RoutesThroughTabPipeline()
     {

@@ -167,93 +167,63 @@ public static class RenderSpecParser
         return new GrandStaffSpec([.. staves]);
     }
 
+    /// <summary>The non-keyword, non-brace tokens of a render item, in order:
+    /// either [part] or [modifier, part] (modifier = clef or tuning).</summary>
+    private static List<SyntaxTokenNode> RenderTargetTokens(SyntaxNode node)
+    {
+        var toks = new List<SyntaxTokenNode>();
+        for (int i = 1; i < node.SlotCount; i++) // skip the leading keyword
+            if (node.GetChild(i) is SyntaxTokenNode t
+                && t.Kind is not (SyntaxKind.OpenBrace or SyntaxKind.CloseBrace))
+                toks.Add(t);
+        return toks;
+    }
+
     private static StaffSpec? ParseStaff(StaffRenderSyntax staff)
     {
-        ClefType? explicitClef = null;
-        string? voiceName = null;
-        bool foundOpenBrace = false;
+        // [part] or [clef, part]; braces (if any) are skipped.
+        var toks = RenderTargetTokens(staff);
+        if (toks.Count == 0) return null;
+        var partToken = toks[^1];
+        var clefToken = toks.Count >= 2 ? toks[0] : null;
+        string voiceName = partToken.Text;
 
-        for (int i = 0; i < staff.SlotCount; i++)
+        ClefType? explicitClef = clefToken?.Kind switch
         {
-            var child = staff.GetChild(i);
-            if (child is SyntaxTokenNode token)
-            {
-                // Track when we've passed the open brace
-                if (token.Kind == SyntaxKind.OpenBrace)
-                {
-                    foundOpenBrace = true;
-                    continue;
-                }
+            SyntaxKind.TrebleKeyword => ClefType.Treble,
+            SyntaxKind.BassKeyword => ClefType.Bass,
+            SyntaxKind.AltoKeyword => ClefType.Alto,
+            SyntaxKind.TenorKeyword => ClefType.Tenor,
+            SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
+            _ => null,
+        };
 
-                if (token.Kind == SyntaxKind.CloseBrace)
-                    break;
-
-                // Before open brace: clef keywords set the clef
-                if (!foundOpenBrace)
-                {
-                    switch (token.Kind)
-                    {
-                        case SyntaxKind.TrebleKeyword:
-                            explicitClef = ClefType.Treble;
-                            break;
-                        case SyntaxKind.BassKeyword:
-                            explicitClef = ClefType.Bass;
-                            break;
-                        case SyntaxKind.AltoKeyword:
-                            explicitClef = ClefType.Alto;
-                            break;
-                        case SyntaxKind.TenorKeyword:
-                            explicitClef = ClefType.Tenor;
-                            break;
-                        case SyntaxKind.Treble8Keyword:
-                            explicitClef = ClefType.Treble8Below;
-                            break;
-                    }
-                }
-                else
-                {
-                    // After open brace: this is the voice/part name
-                    // It can be an Identifier or a keyword like 'bass' used as a part name
-                    if (token.Kind != SyntaxKind.StaffKeyword)
-                    {
-                        voiceName = token.Text;
-                    }
-                }
-            }
-        }
-
-        if (voiceName == null)
-            return null;
-
-        // If no explicit clef in render block, look up part definition
+        // No explicit clef in the render block → take it from the part definition.
         ClefType clef = explicitClef ?? GetPartClef(staff, voiceName) ?? ClefType.Treble;
-
-        // Look up instrument name from part definition
         string? instrumentName = GetPartProperty(staff, voiceName, "name")
                               ?? GetPartProperty(staff, voiceName, "instrument");
-
         return new StaffSpec(clef, voiceName, instrumentName);
     }
+
     private static TabStaffSpec? ParseTab(TabRenderSyntax tab)
     {
-        // TabRenderGreen children: [tabKeyword, tuning, openBrace, partName, closeBrace]
-        var tuningToken = tab.GetChild(1) as SyntaxTokenNode;
-        var partNameToken = tab.GetChild(3) as SyntaxTokenNode;
+        // [part] or [tuning, part]; braces (if any) are skipped.
+        var toks = RenderTargetTokens(tab);
+        if (toks.Count == 0) return null;
+        var partToken = toks[^1];
+        var tuningToken = toks.Count >= 2 ? toks[0] : null;
+        string voiceName = partToken.Text;
 
-        if (tuningToken == null || partNameToken == null)
-            return null;
-
-        string tuningName = tuningToken.Text.ToLowerInvariant();
-        string voiceName = partNameToken.Text;
-
+        // Explicit tuning override → else the part's `tuning` property → else guitar.
+        string? tuningName = tuningToken?.Text.ToLowerInvariant()
+            ?? GetPartProperty(tab, voiceName, "tuning")?.ToLowerInvariant();
         TuningType tuning = tuningName switch
         {
-            "standard" or "guitar" => TuningType.Guitar,
             "bass" => TuningType.Bass,
             "bass5" => TuningType.Bass5,
             "bass6" => TuningType.Bass6,
             "ukulele" or "uke" => TuningType.Ukulele,
-            _ => TuningType.Guitar
+            _ => TuningType.Guitar, // "standard"/"guitar"/unknown/none
         };
 
         var staffSpec = new StaffSpec(ClefType.Tab, voiceName);
