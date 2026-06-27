@@ -2038,6 +2038,7 @@ private GreenNode?[] ParseArticulations()
         var items = new List<GreenNode?>();
         var alternatives = new List<GreenNode?>();
         SyntaxToken? pipeBeforeAlternatives = null;
+        int voltaBracketsBeforeClose = 0;
 
         // Parse items until :| or | (for alternatives)
         while (!Check(SyntaxKind.RepeatEndBar) && !Check(SyntaxKind.EndOfFile))
@@ -2047,6 +2048,19 @@ private GreenNode?[] ParseArticulations()
             {
                 pipeBeforeAlternatives = Advance(); // consume |
                 break;
+            }
+
+            // The repeat barline belongs BETWEEN the endings — write
+            //   |: … [1. D] :| [2. Outro]
+            // A second ending bracket before the :| is the old, ambiguous spelling
+            // (|: … [1. D] [2. Outro] :|), which wrongly implies the 2nd ending also
+            // repeats. Reject it with a hint to the correct form.
+            if (Check(SyntaxKind.OpenBracket) && ++voltaBracketsBeforeClose == 2)
+            {
+                _diagnostics.Error(new TextSpan(_textPosition, Current.FullWidth),
+                    DiagnosticCodes.VoltaRepeatBarlinePlacement,
+                    "Put the repeat barline between the endings: write '[1. ...] :| [2. ...]', " +
+                    "not '[1. ...] [2. ...] :|'");
             }
 
             var item = ParseStructureItem();

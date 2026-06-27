@@ -33,7 +33,7 @@ section Ending2 {
 // Structure with repeat and volta
 structure {
   A
-  |: B [1. Ending1] [2. Ending2] :|
+  |: B [1. Ending1] :| [2. Ending2]
 }
 
 score "repeat-volta" {

@@ -19,7 +19,7 @@ section Chorus { key g major
 
 structure {
   Intro
-  |: Verse [1. Chorus] [2. Intro] :|
+  |: Verse [1. Chorus] :| [2. Intro]
 }
 
 score "grammar-test" { staff melody }

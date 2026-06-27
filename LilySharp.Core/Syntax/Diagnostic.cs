@@ -136,6 +136,7 @@ public static class DiagnosticCodes
     public const string UndefinedPart = "LYS1007";
     public const string UnknownAnnotation = "LYS1008";
     public const string MultipleStructureDeclarations = "LYS1009";
+    public const string VoltaRepeatBarlinePlacement = "LYS1010";
 
     // Deprecation warnings (LYS3xxx)
     public const string DeprecatedBareReference = "LYS3001";

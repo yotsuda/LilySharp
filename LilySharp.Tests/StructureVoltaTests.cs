@@ -53,13 +53,13 @@ public sealed class StructureVoltaTests
     }
 
     [Fact]
-    public void InlineForm_EquivalentToTrailingBarlineForm()
+    public void OldSpelling_RepeatBarlineAfterBothEndings_IsAnError()
     {
-        // Both spellings describe the same repeat (A D | A O), so they expand to the
-        // same number of measures.
-        int trailing = MeasureCount("structure { |: A [1. D] [2. O] :| }");
-        int inline = MeasureCount("structure { |: A [1. D] :| [2. O] }");
-        Assert.Equal(trailing, inline);
+        // |: A [1. D] [2. O] :|  — the repeat barline must go BETWEEN the endings
+        // ([1. D] :| [2. O]); the old after-both spelling is rejected.
+        var tree = SyntaxTree.Parse(Head + "structure { |: A [1. D] [2. O] :| }" + Tail);
+        Assert.True(tree.HasErrors);
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.VoltaRepeatBarlinePlacement);
     }
 
     [Fact]
@@ -75,18 +75,5 @@ public sealed class StructureVoltaTests
 
         var firstEnding = layout.VoltaBracketLayouts.First(v => v.VoltaText == "1.");
         Assert.True(firstEnding.IsClosed, "1st ending must close at the following :|");
-    }
-
-    [Theory]
-    [InlineData("|: A [1. D] :| [2. O]")]   // repeat barline between endings
-    [InlineData("|: A [1. D] [2. O] :|")]   // repeat barline after both endings
-    public void FirstEnding_Closes_InEitherSpelling(string structure)
-    {
-        // The 1st ending closes (down hook) regardless of where the :| is written.
-        var tree = SyntaxTree.Parse(Head + "structure { " + structure + " }\nscore { staff m  tab m }\n");
-        var spec = RenderSpecParser.FindFirst(tree)!;
-        var layout = new LayoutEngine().Layout(new MeasureCollector().CollectMultiStaff(tree, spec));
-
-        Assert.True(layout.VoltaBracketLayouts.First(v => v.VoltaText == "1.").IsClosed);
     }
 }

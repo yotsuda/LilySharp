@@ -160,7 +160,7 @@ score ""test"" {
     {
         var source = @"
 structure {
-    |: Verse [1. Bridge] [2. Chorus] :|
+    |: Verse [1. Bridge] :| [2. Chorus]
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
@@ -171,7 +171,7 @@ structure {
     {
         var source = @"
 structure {
-    |: Verse [1. Bridge] [2. ~Verse] :|
+    |: Verse [1. Bridge] :| [2. ~Verse]
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
@@ -192,7 +192,7 @@ structure {
     {
         var source = @"
 structure {
-    |: Verse [1-2. Bridge] [3. ~Coda] :| x3
+    |: Verse [1-2. Bridge] :| [3. ~Coda] x3
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
