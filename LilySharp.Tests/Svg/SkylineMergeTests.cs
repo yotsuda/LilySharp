@@ -36,6 +36,22 @@ public class SkylineMergeTests
     }
 
     /// <summary>
+    /// MaxProtrusionInRange returns the peak rise above Y=0 within the window only —
+    /// the basis for raising a chord-name row over the notes its symbols overhang.
+    /// </summary>
+    [Fact]
+    public void MaxProtrusionInRange_PeakWithinWindowOnly()
+    {
+        // A 3-sp protrusion over [20,30] and a taller 5-sp one over [40,50].
+        var sky = VerticalSkyline.FromBox(20, 30, -3, -3, VerticalDirection.Up);
+        sky.Merge(VerticalSkyline.FromBox(40, 50, -5, -5, VerticalDirection.Up));
+
+        Assert.Equal(3.0, sky.MaxProtrusionInRange(15, 35), 3);  // first box only
+        Assert.Equal(5.0, sky.MaxProtrusionInRange(15, 55), 3);  // both → taller wins
+        Assert.Equal(0.0, sky.MaxProtrusionInRange(-10, 5), 3);  // left of everything
+    }
+
+    /// <summary>
     /// Two non-overlapping buildings should remain separate.
     /// </summary>
     [Fact]

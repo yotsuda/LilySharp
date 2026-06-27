@@ -786,6 +786,34 @@ public sealed class VerticalSkyline
     }
 
     /// <summary>
+    /// The maximum protrusion above Y=0 over the X range [<paramref name="xLeft"/>,
+    /// <paramref name="xRight"/>] — i.e. how far the skyline's content rises above
+    /// the staff top within that span (0 if nothing protrudes). Used to space a
+    /// chord-name line above the notes its symbols horizontally overhang, rather
+    /// than only at the symbols' anchor points. (Defined for UP skylines.)
+    /// </summary>
+    public double MaxProtrusionInRange(double xLeft, double xRight)
+    {
+        if (xRight <= xLeft || IsEmpty)
+            return 0;
+        int sky = (int)_direction; // UP=-1
+        double max = 0;
+        foreach (var b in _buildings)
+        {
+            double l = Math.Max(b.XLeft, xLeft);
+            double r = Math.Min(b.XRight, xRight);
+            if (l >= r)
+                continue;
+            // protrusion above Y=0 = -realY, realY = sky * internalHeight.
+            double pL = -sky * b.Height(l);
+            double pR = -sky * b.Height(r);
+            if (!double.IsInfinity(pL)) max = Math.Max(max, pL);
+            if (!double.IsInfinity(pR)) max = Math.Max(max, pR);
+        }
+        return Math.Max(0, max);
+    }
+
+    /// <summary>
     /// Returns the height at a specific x coordinate in real Y coordinates.
     /// </summary>
     /// <remarks>

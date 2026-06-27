@@ -66,6 +66,15 @@ public static class ChordNameEngraver
     /// </remarks>
     private const double StaffPadding = 0.6;
 
+    /// <summary>How far left of the first chord symbol the protrusion scan starts —
+    /// enough for a centred symbol's left half, but short of the system-start clef.</summary>
+    private const double ChordRowLeftMargin = 2.0;
+
+    /// <summary>Extra clearance (staff spaces) added when notes protrude into the
+    /// chord row, covering the accidentals/scripts above the notehead that the
+    /// system skyline omits (an Emmentaler flat/sharp rises ~1 sp above its head).</summary>
+    private const double ProtrudingAccidentalAllowance = 0.9;
+
     /// <summary>
     /// Calculates chord name layouts from collected items.
     /// </summary>
@@ -132,22 +141,32 @@ public static class ChordNameEngraver
         // under the top-staff chords. The whole chord line of a system shares one
         // baseline (a VerticalAxisGroup is placed at a single offset per system), so we
         // take the maximum over the chords in that system.
+        // The chord line shares ONE baseline per system, so it must clear the
+        // highest note any of its symbols sit over. A symbol has no note of its own
+        // at a high beat between chords (e.g. a tall chord on beat 4 under a wide
+        // "Gm7♭5" anchored on beat 3), so sampling only at the symbols' anchor
+        // points misses it. Instead clear the max staff protrusion from the first
+        // symbol rightward — excluding the system-start clef, which sits left of it.
+        // LILYPOND-REF: lily/axis-group-interface.cc — the ChordNames
+        // VerticalAxisGroup is skyline-spaced above the staff content it overlaps.
         var systemPeak = new Dictionary<int, double>();
         if (systemSkylines != null)
         {
+            var systemMinX = new Dictionary<int, double>();
             foreach (var p in prepared)
             {
-                if (!p.topStaff || p.sysIdx < 0 || p.sysIdx >= systemSkylines.Count)
+                if (!p.topStaff || p.sysIdx < 0)
                     continue;
-                var up = systemSkylines[p.sysIdx].up;
-                if (up.IsEmpty)
+                if (!systemMinX.TryGetValue(p.sysIdx, out var mx) || p.x < mx)
+                    systemMinX[p.sysIdx] = p.x;
+            }
+            foreach (var (sysIdx, minX) in systemMinX)
+            {
+                if (sysIdx >= systemSkylines.Count)
                     continue;
-                double h = up.Height(p.x);
-                if (double.IsInfinity(h) || double.IsNaN(h))
-                    continue;
-                double protrusion = Math.Max(0, -h);
-                if (!systemPeak.TryGetValue(p.sysIdx, out var cur) || protrusion > cur)
-                    systemPeak[p.sysIdx] = protrusion;
+                var up = systemSkylines[sysIdx].up;
+                if (!up.IsEmpty)
+                    systemPeak[sysIdx] = up.MaxProtrusionInRange(minX - ChordRowLeftMargin, double.PositiveInfinity);
             }
         }
 
@@ -159,7 +178,13 @@ public static class ChordNameEngraver
             // line clears high notes/ledger lines; the StaffPadding floor reproduces the
             // measured no-protrusion distance (lead sheet without notes above the staff).
             double protrusion = p.topStaff && systemPeak.TryGetValue(p.sysIdx, out var pk) ? pk : 0;
-            double y = -(StaffPadding + protrusion) + p.staffOffset;
+            // The system skyline is built from noteheads/stems/ledgers and omits the
+            // accidentals/scripts that sit above a protruding note, so add a small
+            // allowance when notes protrude — otherwise a flat above a high chord
+            // grazes the chord text. (No allowance in the common no-protrusion case,
+            // which keeps the measured lead-sheet distance exact.)
+            double accidentalAllowance = protrusion > 0 ? ProtrudingAccidentalAllowance : 0;
+            double y = -(StaffPadding + protrusion + accidentalAllowance) + p.staffOffset;
 
             results.Add(new ChordNameLayout(
                 p.chord.MeasureIndex, p.x, y, p.chord.ChordText, p.chord.SourcePosition));

@@ -65,10 +65,10 @@
   <text x="76.30" y="25.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="678">sing</text>
   <text x="80.96" y="25.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="683">a-</text>
   <text x="85.62" y="25.27" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="686">long</text>
-  <text x="8.60" y="15.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="525">C</text>
-  <text x="31.22" y="15.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="544">Am</text>
-  <text x="53.20" y="15.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="568">F</text>
-  <text x="76.30" y="15.56" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="587">G7</text>
+  <text x="8.60" y="14.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="525">C</text>
+  <text x="31.22" y="14.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="544">Am</text>
+  <text x="53.20" y="14.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="568">F</text>
+  <text x="76.30" y="14.66" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="587">G7</text>
   <text class="music" x="0.80" y="14.42" font-size="1.60" data-pos="0"></text>
   <line x1="1.31" y1="14.42" x2="1.31" y2="13.02" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="1.90" y="14.42" font-size="1.80" font-family="serif" fill="#000000" data-pos="0">= 120</text>

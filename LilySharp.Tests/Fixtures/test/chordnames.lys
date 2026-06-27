@@ -1,8 +1,12 @@
 // Coverage: a 'chordnames { }' block — symbolic chord entry displayed as chord
 // symbols above the staff, aligned by timing to the melody. Roots auto-name from
-// root+quality (c -> "C", a:m -> "Am", g:7 -> "G7"); mid-bar changes land at
-// their musical moment. Verified against LilyPond \chords / \chordmode.
-// LILYPOND-REF: ly/engraver-init.ly ChordNames; scm/chord-entry.scm.
+// root+quality (c -> "C", a:m -> "Am"); mid-bar changes land at their musical
+// moment. Also exercises a MULTI-TOKEN quality (g:m7.5- -> "Gm7♭5") and the
+// chord-row CLEARANCE over a tall chord the wide symbol overhangs (the last
+// beat's <c ees ges bes> reaches above the staff, so the whole row is raised to
+// clear it). Verified against LilyPond \chords / \chordmode.
+// LILYPOND-REF: ly/engraver-init.ly ChordNames; scm/chord-entry.scm;
+// lily/axis-group-interface.cc (skyline-spaced ChordNames group).
 // Known simplification: names are plain text (Lily# style), not LilyPond's
 // superscript/triangle typography.
 title "Chord names"
@@ -11,10 +15,10 @@ part m { clef treble }
 section Main {
   m {
     time 4/4
-    c4 d e f | g a b c |
+    c4 d e f | g a b <c ees ges bes> |
   }
   chordnames {
-    c2 a2:m | f2 g2:7 |
+    c2 a2:m | f2 g2:m7.5- |
   }
 }
 structure { Main }
