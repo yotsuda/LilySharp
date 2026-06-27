@@ -2401,6 +2401,16 @@ public static class SharedRenderer
         foreach (var g in layout.GraceNoteLayouts)
         {
             double sy = sysY.TryGetValue(g.MeasureIndex, out var s) ? s : 0;
+
+            // Tab staff: grace notes are small fret numbers on the string lines,
+            // not noteheads. No stems/beam/slur/ledger — tab grace is just the
+            // shrunken digit before the main fret.
+            if (g.Tuning is { } graceTuning)
+            {
+                DrawTabGraceNotes(g, sy, graceTuning, gc);
+                continue;
+            }
+
             // StaffYOffset places the grace over its OWN staff in a multi-staff
             // score (0 for the first staff / single-staff).
             double staffMiddleY = sy + g.StaffYOffset + StaffHeight / 2;
@@ -2451,6 +2461,40 @@ public static class SharedRenderer
                     double mainY = StaffFrame.PositionToDevice(g.MainNoteStaffPosition, staffMiddleY);
                     DrawGraceSlur(lastNoteX, lastNoteY, g.MainNoteX, mainY, g.Scale, gc);
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Draws a grace group on a TAB staff: each grace note becomes a small fret
+    /// number on its string line (resolved from the note's MIDI pitch + tuning),
+    /// scaled by the grace scale. No stems, beams, slurs, or ledger lines — tab
+    /// grace notes are just the shrunken digits ahead of the main fret.
+    /// </summary>
+    private static void DrawTabGraceNotes(GraceNoteLayout g, double sy, TuningType tuning, IDrawingContext gc)
+    {
+        double tabTopY = sy + g.StaffYOffset;
+        int[] tuningArray = Tunings.GetTuning(tuning);
+        int octaveShift = Tunings.OctaveShift(tuning);
+        double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning));
+        double fontSize = TabFretFontSize * g.Scale;
+        double currentX = g.X;
+
+        using (gc.Source(g.SourcePosition))
+        {
+            foreach (var note in g.Notes)
+            {
+                var (stringNum, fret) = Tunings.CalculateFret(note.Midi + octaveShift, tuningArray, 0);
+                double noteY = tabTopY + (stringNum - 1) * stringSpace;
+                string fretText = fret.ToString();
+                double bgWidth = (fretText.Length == 1 ? 0.625 : 1.0) * fontSize;
+                double bgHeight = 0.6875 * fontSize;
+                // White background occludes the string line behind the digit.
+                gc.DrawRectangle(currentX - bgWidth / 2, noteY - bgHeight / 2, bgWidth, bgHeight,
+                    fill: Color.White);
+                gc.DrawText(fretText, currentX, noteY + fontSize * 0.32, fontSize, "serif",
+                    FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                currentX += 1.2 * g.Scale;
             }
         }
     }

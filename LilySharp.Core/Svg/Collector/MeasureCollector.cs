@@ -3531,7 +3531,8 @@ public sealed class MeasureCollector
                 var baseDuration = Fraction.FromNoteValue(noteValue);
                 graceDefaultDuration = baseDuration;
 
-                graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger, baseDuration));
+                int graceMidi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.RelativeOctave);
+                graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger, baseDuration, graceMidi));
             }
         }
 

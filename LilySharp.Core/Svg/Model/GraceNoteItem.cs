@@ -43,7 +43,8 @@ public readonly record struct GraceNoteInfo(
     int StaffPosition,      // Staff position (-6 = middle C in treble clef)
     string? Accidental,     // "sharp", "flat", "natural", "doubleSharp", "doubleFlat", or null
     bool NeedsLedger,       // Whether ledger lines are needed
-    Fraction BaseDuration   // Duration of this grace note (for spacing calculation)
+    Fraction BaseDuration,  // Duration of this grace note (for spacing calculation)
+    int Midi = 0            // Absolute MIDI pitch (for tab fret resolution)
 );
 
 /// <summary>

@@ -16,6 +16,8 @@
 
 using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
+using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -43,7 +45,11 @@ public readonly record struct GraceNoteLayout(
     // Multi-staff: vertical offset of this grace's OWN staff within the system.
     // The renderer recomputes note Y from staff positions, so the offset must
     // travel to it rather than being baked into Y here.
-    double StaffYOffset = 0
+    double StaffYOffset = 0,
+    // Non-null when this grace sits on a TAB staff: the renderer then draws each
+    // grace as a small fret number (resolved from GraceNoteInfo.Midi) instead of
+    // a notehead. null for ordinary notation staves.
+    TuningType? Tuning = null
 );
 
 /// <summary>
@@ -82,7 +88,8 @@ public static class GraceNoteEngraver
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null)
+        Dictionary<int, double>? staffYByIndex = null,
+        Dictionary<int, Staff>? staffByIndex = null)
     {
         if (graceNotes.IsDefaultOrEmpty)
             return ImmutableArray<GraceNoteLayout>.Empty;
@@ -110,6 +117,11 @@ public static class GraceNoteEngraver
                 && measuresByStaff.TryGetValue(grace.StaffIndex, out var gm) ? gm : score.Voice.Measures;
             double staffOffset = staffYByIndex != null
                 && staffYByIndex.TryGetValue(grace.StaffIndex, out var so) ? so : 0;
+            // Tab staves render grace notes as small fret numbers, not noteheads.
+            TuningType? tabTuning = staffByIndex != null
+                && staffByIndex.TryGetValue(grace.StaffIndex, out var gst) && gst.IsTab
+                    ? gst.Tuning ?? TuningType.Guitar
+                    : null;
             if (grace.MeasureIndex >= graceMeasures.Length)
                 continue;
 
@@ -169,7 +181,8 @@ public static class GraceNoteEngraver
                 grace.SourcePosition,
                 MainNoteX: measureLayout.X + mainNoteX,
                 MainNoteStaffPosition: mainStaffPosition,
-                StaffYOffset: staffOffset
+                StaffYOffset: staffOffset,
+                Tuning: tabTuning
             ));
         }
 
