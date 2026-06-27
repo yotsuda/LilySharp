@@ -2066,12 +2066,14 @@ private GreenNode?[] ParseArticulations()
 
         var endBar = Expect(SyntaxKind.RepeatEndBar);
 
-        // Final alternative after :| (e.g., "2. A2")
+        // Final alternative after :| — the bare "2. A2" form or the bracket form
+        // "[2. A2]", so a structure repeat reads exactly like the inline volta:
+        //   |: Intro2 B C A2 [1. D] :| [2. Outro]
         GreenNode? finalAlternative = null;
         if (Check(SyntaxKind.IntegerLiteral))
-        {
             finalAlternative = ParseStructureAlternative();
-        }
+        else if (Check(SyntaxKind.OpenBracket))
+            finalAlternative = ParseVoltaBracket();
 
         // Parse repeat count: x3
         SyntaxToken? xToken = null;
