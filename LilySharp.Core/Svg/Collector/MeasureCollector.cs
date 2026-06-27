@@ -2751,6 +2751,45 @@ public sealed class MeasureCollector
     /// </list>
     /// Tuning-dependent, so it runs per tab staff after the score is assembled.
     /// </summary>
+    /// <summary>
+    /// Gives every note of a chord its own string for a tuning, so two fret numbers
+    /// never collide on one line. Explicit <c>\N</c> notes are pinned; the rest are
+    /// assigned highest pitch first, each taking its lowest-fret FREE string (a free
+    /// playable string failing only for genuinely out-of-range pitches).
+    /// </summary>
+    private static ImmutableArray<ChordNoteInfo> AssignChordStrings(
+        ImmutableArray<ChordNoteInfo> notes, int[] tun, int shift)
+    {
+        int n = tun.Length;
+        var result = notes.ToArray();
+        var used = new bool[n + 1]; // 1-based string numbers
+
+        foreach (var cn in notes)
+            if (cn.StringNumber is int s && s >= 1 && s <= n)
+                used[s] = true;
+
+        foreach (int i in Enumerable.Range(0, notes.Length).OrderByDescending(k => notes[k].Midi))
+        {
+            if (notes[i].StringNumber is int es && es >= 1 && es <= n)
+                continue; // keep explicit \N
+            int midi = notes[i].Midi + shift;
+            int best = -1, bestFret = int.MaxValue;
+            for (int str = 1; str <= n; str++)
+            {
+                if (used[str]) continue;
+                int fret = midi - tun[n - str]; // string `str` → tuning index n-str
+                if (fret < 0 || fret > 24) continue;
+                if (fret < bestFret) { bestFret = fret; best = str; }
+            }
+            if (best == -1)
+                best = Tunings.CalculateFret(midi, tun, 0).stringNum; // out of range: best effort
+            else
+                used[best] = true;
+            result[i] = notes[i] with { StringNumber = best };
+        }
+        return ImmutableArray.Create(result);
+    }
+
     private static Voice ResolveTabStrings(Voice voice, TuningType tuning)
     {
         int[] tun = Tunings.GetTuning(tuning);
@@ -2765,6 +2804,21 @@ public sealed class MeasureCollector
             bool changed = false;
             for (int i = 0; i < items.Length; i++)
             {
+                if (items[i] is ChordItem chord)
+                {
+                    // Each chord note needs its OWN string, else two fret numbers
+                    // land on the same line and overlap into one.
+                    var newNotes = AssignChordStrings(chord.Notes, tun, shift);
+                    items[i] = chord with { Notes = newNotes };
+                    changed = true;
+                    if (newNotes.Length > 0)
+                    {
+                        var low = newNotes[0];
+                        foreach (var c in newNotes) if (c.Midi < low.Midi) low = c;
+                        prevFret = Tunings.CalculateFret(low.Midi + shift, tun, low.StringNumber ?? 0).fret;
+                    }
+                    continue;
+                }
                 if (items[i] is not NoteItem note) continue;
                 int midi = note.Midi + shift;
                 int strNum, fret;

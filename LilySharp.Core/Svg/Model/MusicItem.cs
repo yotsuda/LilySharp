@@ -255,7 +255,7 @@ public readonly record struct ChordNoteInfo(
 /// </summary>
 public sealed record ChordItem : MusicItem
 {
-    public ImmutableArray<ChordNoteInfo> Notes { get; }
+    public ImmutableArray<ChordNoteInfo> Notes { get; init; }
     public Fraction BaseDuration { get; }
     public int Dots { get; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
