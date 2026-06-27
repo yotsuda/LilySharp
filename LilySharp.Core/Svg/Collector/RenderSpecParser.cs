@@ -213,9 +213,11 @@ public static class RenderSpecParser
         var tuningToken = toks.Count >= 2 ? toks[0] : null;
         string voiceName = partToken.Text;
 
-        // Explicit tuning override → else the part's `tuning` property → else guitar.
+        // Explicit tuning override → the part's `tuning` property → the tuning
+        // implied by the part's `instrument` preset → else guitar.
         string? tuningName = tuningToken?.Text.ToLowerInvariant()
-            ?? GetPartProperty(tab, voiceName, "tuning")?.ToLowerInvariant();
+            ?? GetPartProperty(tab, voiceName, "tuning")?.ToLowerInvariant()
+            ?? InstrumentDefaults.GetTuning(GetPartProperty(tab, voiceName, "instrument"));
         TuningType tuning = tuningName switch
         {
             "bass" => TuningType.Bass,

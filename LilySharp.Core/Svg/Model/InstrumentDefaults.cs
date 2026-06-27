@@ -90,6 +90,27 @@ public static class InstrumentDefaults
     }
 
     /// <summary>
+    /// The default tablature tuning for a fretted/bass instrument, as a tuning name
+    /// (the same names a <c>tab</c> render accepts), or null for instruments that are
+    /// not played from tab. Lets <c>instrument bass</c> imply <c>tuning bass</c> when a
+    /// part is shown as a tab and gives no explicit tuning.
+    /// </summary>
+    /// <remarks>
+    /// Part of the <c>instrument</c>-as-preset role: <c>instrument</c> supplies clef,
+    /// octave and (here) tab tuning defaults; <c>name</c> is the display label and
+    /// explicit <c>clef</c>/<c>tuning</c> override the preset.
+    /// </remarks>
+    public static string? GetTuning(string? instrument) => instrument?.ToLowerInvariant() switch
+    {
+        "bass" or "bass-guitar" or "electric-bass" or "contrabass" or "double-bass" => "bass",
+        "bass5" or "5-string-bass" => "bass5",
+        "bass6" or "6-string-bass" => "bass6",
+        "guitar" or "acoustic-guitar" or "electric-guitar" => "guitar",
+        "ukulele" or "uke" => "ukulele",
+        _ => null,
+    };
+
+    /// <summary>
     /// Checks if the given string is a known instrument name.
     /// </summary>
     public static bool IsKnownInstrument(string name)
