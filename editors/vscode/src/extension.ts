@@ -252,9 +252,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
 
     // Handle messages from webview
     panel.webview.onDidReceiveMessage(
-        message => {
+        async message => {
             outputChannel.appendLine(`Received message from webview: ${message.type}`);
-            if (message.type === 'jumpToPosition') {
+            if (message.type === 'export') {
+                await exportPreview(uri, message.renderName);
+            } else if (message.type === 'jumpToPosition') {
                 const targetEditor = vscode.window.visibleTextEditors.find(
                     e => e.document.uri.toString() === uri
                 );
@@ -402,6 +404,81 @@ async function updatePreviewContent(
     }
 }
 
+interface ExportResponse {
+    Success: boolean;
+    OutputPath: string | null;
+    Error: string | null;
+}
+
+// Export the currently-previewed score: pick a format, choose a destination, then
+// ask the language server to generate the file. SVG/PNG/PDF honour the selected
+// score; MIDI and MusicXML export the whole piece.
+async function exportPreview(
+    uri: string,
+    renderName: string | undefined
+) {
+    if (!client || !clientReady) {
+        vscode.window.showErrorMessage('Lily#: language server not ready yet.');
+        return;
+    }
+
+    const formats = [
+        { label: 'PNG image', detail: 'Raster image (.png)', format: 'png', ext: 'png' },
+        { label: 'PDF document', detail: 'Print-ready sheet music (.pdf)', format: 'pdf', ext: 'pdf' },
+        { label: 'SVG image', detail: 'Scalable vector graphic (.svg)', format: 'svg', ext: 'svg' },
+        { label: 'MIDI', detail: 'Audio sequence — whole piece (.mid)', format: 'midi', ext: 'mid' },
+        { label: 'MusicXML', detail: 'Interchange format — whole piece (.musicxml)', format: 'musicxml', ext: 'musicxml' },
+    ];
+    const pick = await vscode.window.showQuickPick(
+        formats.map(f => ({ label: f.label, detail: f.detail, fmt: f })),
+        { placeHolder: 'Export the score as…' }
+    );
+    if (!pick) {
+        return;
+    }
+    const chosen = pick.fmt;
+
+    // Default filename: the selected score's name, else the source file's basename.
+    const docUri = vscode.Uri.parse(uri);
+    const baseDir = vscode.Uri.joinPath(docUri, '..');
+    const sourceName = (docUri.path.split('/').pop() || 'score').replace(/\.lys$/i, '');
+    const baseName = renderName && renderName.length > 0 ? renderName : sourceName;
+    const defaultUri = vscode.Uri.joinPath(baseDir, baseName + '.' + chosen.ext);
+
+    const target = await vscode.window.showSaveDialog({
+        defaultUri,
+        filters: { [chosen.label]: [chosen.ext] }
+    });
+    if (!target) {
+        return;
+    }
+
+    try {
+        const response = await client.sendRequest<ExportResponse>('lilysharp/export', {
+            textDocument: { uri },
+            format: chosen.format,
+            outputPath: target.fsPath,
+            renderName: renderName || null
+        });
+
+        if (response.Success) {
+            const openAction = 'Open File';
+            const revealAction = 'Reveal in Explorer';
+            const choice = await vscode.window.showInformationMessage(
+                `Exported to ${response.OutputPath}`, openAction, revealAction);
+            if (choice === openAction) {
+                vscode.env.openExternal(target);
+            } else if (choice === revealAction) {
+                vscode.commands.executeCommand('revealFileInOS', target);
+            }
+        } else {
+            vscode.window.showErrorMessage(`Lily# export failed: ${response.Error}`);
+        }
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily# export failed: ${err}`);
+    }
+}
+
 interface RenderInfo {
     Name: string;
     Type: string;
@@ -446,6 +523,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             align-items: center;
             gap: 8px;
             flex-shrink: 0;
+            /* Stay pinned to the top while the sheet scrolls underneath. */
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         .toolbar label {
             font-family: system-ui, sans-serif;
@@ -460,8 +541,29 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             background: white;
             min-width: 150px;
         }
+        .toolbar button {
+            padding: 4px 12px;
+            font-size: 13px;
+            font-family: system-ui, sans-serif;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            color: #333;
+            cursor: pointer;
+        }
+        .toolbar button:hover {
+            background: #e8e8e8;
+        }
+        .toolbar button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
         .main-content {
             flex: 1;
+            /* A flex item defaults to min-height:auto, which refuses to shrink
+               below its content and pushes the whole page (and the toolbar) into a
+               window-level scroll. min-height:0 lets THIS pane own the scroll. */
+            min-height: 0;
             padding: 20px;
             display: flex;
             justify-content: center;
@@ -543,10 +645,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 </head>
 <body>
     <div class="toolbar">
-        <label for="renderSelect">Render:</label>
+        <label for="renderSelect">Score:</label>
         <select id="renderSelect">
             <option value="">(Default)</option>
         </select>
+        <button id="exportBtn" type="button">Export…</button>
     </div>
     <div class="main-content">
         <div class="container">
@@ -707,6 +810,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         renderSelect.addEventListener('change', () => {
             vscode.postMessage({ type: 'selectRender', renderName: renderSelect.value });
+        });
+
+        const exportBtn = document.getElementById('exportBtn');
+        exportBtn.addEventListener('click', () => {
+            vscode.postMessage({ type: 'export', renderName: renderSelect.value });
         });
 
         window.addEventListener('message', event => {

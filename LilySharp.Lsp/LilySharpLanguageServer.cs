@@ -34,7 +34,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260627-2338";
+    public const string Version = "0.1.1-20260628-0558";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -2016,6 +2016,94 @@ public sealed class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// Exports the current document to a file in the requested format. The
+    /// extension drives this from the preview's Export button: it shows the
+    /// format/save dialog and passes the chosen path here. SVG/PNG/PDF honour the
+    /// selected score (RenderName); MIDI and MusicXML export the whole piece.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/export", UseSingleObjectParameterDeserialization = true)]
+    public ExportResponse Export(ExportParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new ExportResponse { Success = false, Error = "Document not found" };
+
+        var tree = ExpandIncludes(doc, @params.TextDocument.Uri);
+        if (tree.HasErrors)
+        {
+            var errors = string.Join("\n", tree.Diagnostics
+                .Where(d => d.Severity == CoreDiagnosticSeverity.Error)
+                .Select(d =>
+                {
+                    var (line, col) = GetLineAndColumn(tree.Text, d.Span.Start);
+                    return $"Line {line}, Col {col}: {d.Message}";
+                }));
+            return new ExportResponse { Success = false, Error = errors };
+        }
+
+        try
+        {
+            var format = (@params.Format ?? "svg").ToLowerInvariant();
+            var outputPath = @params.OutputPath;
+            var renderName = @params.RenderName;
+            switch (format)
+            {
+                case "svg":
+                    var fontDir = FindFontDirectory();
+                    // Embed the font so the exported SVG is self-contained; fall back
+                    // to a reference if the bundled font can't be located.
+                    var svgOpts = fontDir != null
+                        ? LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(fontDir)
+                        : LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
+                    File.WriteAllText(outputPath,
+                        LilySharp.Core.Svg.SvgGenerator.Generate(tree, svgOpts, renderName));
+                    break;
+                case "png":
+                    File.WriteAllBytes(outputPath,
+                        LilySharp.Core.Png.PngGenerator.Generate(tree, null, renderName));
+                    break;
+                case "pdf":
+                    File.WriteAllBytes(outputPath,
+                        LilySharp.Core.Pdf.PdfGenerator.Generate(tree, null, renderName));
+                    break;
+                case "midi":
+                    new LilySharp.Core.Midi.MidiExporter().Export(tree).Save(outputPath);
+                    break;
+                case "musicxml":
+                    new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).Save(outputPath);
+                    break;
+                default:
+                    return new ExportResponse { Success = false, Error = $"Unknown format: {format}" };
+            }
+            return new ExportResponse { Success = true, OutputPath = outputPath };
+        }
+        catch (Exception ex)
+        {
+            return new ExportResponse { Success = false, Error = ex.Message };
+        }
+    }
+
+    /// <summary>Locates the bundled Emmentaler font directory next to the server
+    /// assembly (the deploy bundles it as <c>Fonts/</c>).</summary>
+    private static string? FindFontDirectory()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "fonts"),
+            Path.Combine(AppContext.BaseDirectory, "Fonts"),
+            Path.Combine(AppContext.BaseDirectory, "..", "fonts"),
+        };
+        foreach (var c in candidates)
+        {
+            if (Directory.Exists(c) &&
+                (File.Exists(Path.Combine(c, "emmentaler-20.otf")) ||
+                 File.Exists(Path.Combine(c, "emmentaler-20.woff2"))))
+                return Path.GetFullPath(c);
+        }
+        return null;
+    }
+
+    /// <summary>
     /// Extract render definitions from the syntax tree.
     /// </summary>
     private RenderInfo[] ExtractRenderInfo(SyntaxTree tree)
@@ -2144,6 +2232,32 @@ public class RenderInfo
     public string Type { get; set; } = "";  // "score" or "audio"
     public string Filename { get; set; } = "";
 }
+
+/// <summary>
+/// Parameters for the lilysharp/export request.
+/// </summary>
+public class ExportParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    /// <summary>Output format: svg, png, pdf, midi, or musicxml.</summary>
+    public string? Format { get; set; }
+    /// <summary>Absolute path to write the exported file to.</summary>
+    public string OutputPath { get; set; } = "";
+    /// <summary>Score to export (visual formats); null = first/default score.</summary>
+    public string? RenderName { get; set; }
+}
+
+/// <summary>
+/// Response for the lilysharp/export request.
+/// </summary>
+public class ExportResponse
+{
+    public bool Success { get; set; }
+    public string? OutputPath { get; set; }
+    public string? Error { get; set; }
+}
+
+
 
 
 
