@@ -239,11 +239,17 @@ public static class EngravingDefaults
     public const double MaxStiffness = 10.0;
 
     /// <summary>
-    /// Tab string-line spacing in staff spaces. Wider than the 1.0 of a normal
-    /// staff so the larger fret numbers fit; measures 1.5× the notation staff-space
-    /// in LilyPond's TabStaff.
+    /// Tab string-line spacing in staff spaces for a given string count. Wider than
+    /// the 1.0 of a normal staff so the larger fret numbers fit (≈1.5× the notation
+    /// staff-space, as in LilyPond's TabStaff); tightened a little as strings are
+    /// added so a 5- or 6-string staff does not grow excessively tall.
     /// </summary>
-    public const double TabStringSpace = 1.5;
+    public static double TabStringSpace(int stringCount) => stringCount switch
+    {
+        >= 6 => 1.3,
+        5 => 1.4,
+        _ => 1.5,
+    };
 
     // === Barline rendering ===
     /// <summary>

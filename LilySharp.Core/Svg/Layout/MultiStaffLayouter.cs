@@ -174,7 +174,7 @@ public sealed class MultiStaffLayouter
         {
             int stringCount = Tunings.GetStringCount(staff.Tuning.Value);
             // Tab lines are spaced wider than a normal staff (TabStringSpace).
-            return (stringCount - 1) * EngravingDefaults.TabStringSpace; // Bass: 3 → 4.5
+            return (stringCount - 1) * EngravingDefaults.TabStringSpace(stringCount); // Bass: 3 → 4.5
         }
         if (staff.IsOssia)
             return _options.StaffHeight * OssiaScaleFactor;
