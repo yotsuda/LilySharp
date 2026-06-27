@@ -79,6 +79,22 @@ public class SectionLabelTests
     }
 
     [Fact]
+    public void SilentReference_RendersMusicWithoutLabel()
+    {
+        // ~B renders B's music but shows no label (regression: it used to drop the
+        // whole section). A keeps its label; B's slot is present but null.
+        var labels = SectionLabels("""
+            part melody
+            section A { melody { c4 d e f | } }
+            section B { melody { g4 a b c | } }
+            structure { A ~B }
+            score "x" { staff melody }
+            """);
+
+        Assert.Equal(new string?[] { "A", null }, labels);
+    }
+
+    [Fact]
     public void NoStructure_UsesSectionDeclarationOrder()
     {
         // With no `structure { }`, sections play in the order they were declared

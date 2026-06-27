@@ -2259,6 +2259,20 @@ public sealed class MeasureCollector
                 case StructureRepeatBlockSyntax repeat:
                     ProcessRepeatBlock(repeat, processNodes, builder);
                     break;
+
+                // ~Name — render the section's music but show NO label (the dedicated
+                // form for an unlabelled section, e.g. a Coda). Without this the whole
+                // section was silently dropped.
+                case { Kind: SyntaxKind.SilentSectionReference } silent
+                        when !IsInsideRepeatBlock(silent)
+                          && silent.GetChild(1) is SyntaxTokenNode nameTok
+                          && _sections.TryGetValue(nameTok.Text, out var silentSection):
+                    if (!_sectionStartMeasure.ContainsKey(nameTok.Text))
+                        _sectionStartMeasure[nameTok.Text] = builder.CurrentMeasureIndex;
+                    builder.SectionLabel = null;
+                    builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
+                    ProcessSection(silentSection, processNodes);
+                    break;
             }
         }
     }
