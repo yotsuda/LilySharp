@@ -34,7 +34,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260627-1003";
+    public const string Version = "0.1.1-20260627-1113";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -2115,6 +2115,7 @@ public class RenderInfo
     public string Type { get; set; } = "";  // "score" or "audio"
     public string Filename { get; set; } = "";
 }
+
 
 
 
