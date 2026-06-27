@@ -16,19 +16,20 @@
 
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 
 namespace LilySharp.Core.Music;
 
 /// <summary>
 /// The set of named chord qualities Lily# understands in chord-name entry
-/// (<c>c:maj7</c>, <c>a:m</c>, …). Each maps to a fixed interval set (semitones
-/// above the root) and a display suffix.
+/// (<c>c:maj7</c>, <c>a:m</c>, …). Each maps to a fixed set of chord tones and a
+/// display suffix.
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: scm/chord-entry.scm — default chord step construction; the
 /// named modifiers in ly/chord-modifiers-init.ly (m, dim, aug, maj, sus). The
-/// interval sets below are the standard jazz/pop spellings LilyPond produces.
+/// tone sets below are the standard jazz/pop spellings LilyPond produces.
 /// </remarks>
 public enum ChordQuality
 {
@@ -52,43 +53,72 @@ public enum ChordQuality
     Dominant7Sus4,
 }
 
-/// <summary>Interval set (semitones above the root) and display suffix for a quality.</summary>
-public readonly record struct ChordQualityInfo(ImmutableArray<int> Intervals, string DisplaySuffix);
+/// <summary>One chord tone: a diatonic step above the root (0=root, 2=third,
+/// 4=fifth, 6=seventh, 8=ninth) and its semitone offset above the root. The step
+/// gives the spelled LETTER; the semitone gives the actual pitch (hence the
+/// accidental).</summary>
+public readonly record struct ChordToneSpec(int DiatonicStep, int Semitone);
+
+/// <summary>A spelled chord tone: a diatonic letter step (0=C..6=B), an accidental
+/// alteration, and how many octaves above the root it sits.</summary>
+public readonly record struct ChordTone(int Step, int Alter, int OctaveUp);
 
 /// <summary>
 /// Maps chord-entry quality tokens (the text after the <c>:</c>) to a
-/// <see cref="ChordQuality"/>, and each quality to its interval set + display
-/// suffix. This single table is the foundation the chord NAME display, future
-/// staff-note expansion, and future fret diagrams all build on.
+/// <see cref="ChordQuality"/>, and each quality to its tone set + display suffix.
+/// This single table is the foundation the chord NAME display, the editor's
+/// note-expansion completion, and future fret diagrams all build on.
 /// </summary>
 public static class ChordQualityRegistry
 {
-    // semitone offsets from the root. P1=0, m3=3, M3=4, d5=6, P5=7, #5=8, M6/d7=9,
-    // m7=10, M7=11, M9=14.
-    private static readonly Dictionary<ChordQuality, ChordQualityInfo> Info = new()
+    // Tones as (diatonic step above root, semitone above root). P1=0, m3=3, M3=4,
+    // d5=6, P5=7, #5=8, M6=9, m7=10, M7=11, M9=14.
+    private static readonly Dictionary<ChordQuality, ChordToneSpec[]> Tones = new()
     {
-        [ChordQuality.Major] = new(ImmutableArray.Create(0, 4, 7), ""),
-        [ChordQuality.Minor] = new(ImmutableArray.Create(0, 3, 7), "m"),
-        [ChordQuality.Diminished] = new(ImmutableArray.Create(0, 3, 6), "dim"),
-        [ChordQuality.Augmented] = new(ImmutableArray.Create(0, 4, 8), "aug"),
-        [ChordQuality.Dominant7] = new(ImmutableArray.Create(0, 4, 7, 10), "7"),
-        [ChordQuality.Major7] = new(ImmutableArray.Create(0, 4, 7, 11), "maj7"),
-        [ChordQuality.Minor7] = new(ImmutableArray.Create(0, 3, 7, 10), "m7"),
-        [ChordQuality.MinorMajor7] = new(ImmutableArray.Create(0, 3, 7, 11), "m maj7"),
-        [ChordQuality.Diminished7] = new(ImmutableArray.Create(0, 3, 6, 9), "dim7"),
-        [ChordQuality.HalfDiminished7] = new(ImmutableArray.Create(0, 3, 6, 10), "m7♭5"),
-        [ChordQuality.Major6] = new(ImmutableArray.Create(0, 4, 7, 9), "6"),
-        [ChordQuality.Minor6] = new(ImmutableArray.Create(0, 3, 7, 9), "m6"),
-        [ChordQuality.Dominant9] = new(ImmutableArray.Create(0, 4, 7, 10, 14), "9"),
-        [ChordQuality.Major9] = new(ImmutableArray.Create(0, 4, 7, 11, 14), "maj9"),
-        [ChordQuality.Minor9] = new(ImmutableArray.Create(0, 3, 7, 10, 14), "m9"),
-        [ChordQuality.Sus2] = new(ImmutableArray.Create(0, 2, 7), "sus2"),
-        [ChordQuality.Sus4] = new(ImmutableArray.Create(0, 5, 7), "sus4"),
-        [ChordQuality.Dominant7Sus4] = new(ImmutableArray.Create(0, 5, 7, 10), "7sus4"),
+        [ChordQuality.Major] = [new(0, 0), new(2, 4), new(4, 7)],
+        [ChordQuality.Minor] = [new(0, 0), new(2, 3), new(4, 7)],
+        [ChordQuality.Diminished] = [new(0, 0), new(2, 3), new(4, 6)],
+        [ChordQuality.Augmented] = [new(0, 0), new(2, 4), new(4, 8)],
+        [ChordQuality.Dominant7] = [new(0, 0), new(2, 4), new(4, 7), new(6, 10)],
+        [ChordQuality.Major7] = [new(0, 0), new(2, 4), new(4, 7), new(6, 11)],
+        [ChordQuality.Minor7] = [new(0, 0), new(2, 3), new(4, 7), new(6, 10)],
+        [ChordQuality.MinorMajor7] = [new(0, 0), new(2, 3), new(4, 7), new(6, 11)],
+        [ChordQuality.Diminished7] = [new(0, 0), new(2, 3), new(4, 6), new(6, 9)],
+        [ChordQuality.HalfDiminished7] = [new(0, 0), new(2, 3), new(4, 6), new(6, 10)],
+        [ChordQuality.Major6] = [new(0, 0), new(2, 4), new(4, 7), new(5, 9)],
+        [ChordQuality.Minor6] = [new(0, 0), new(2, 3), new(4, 7), new(5, 9)],
+        [ChordQuality.Dominant9] = [new(0, 0), new(2, 4), new(4, 7), new(6, 10), new(8, 14)],
+        [ChordQuality.Major9] = [new(0, 0), new(2, 4), new(4, 7), new(6, 11), new(8, 14)],
+        [ChordQuality.Minor9] = [new(0, 0), new(2, 3), new(4, 7), new(6, 10), new(8, 14)],
+        [ChordQuality.Sus2] = [new(0, 0), new(1, 2), new(4, 7)],
+        [ChordQuality.Sus4] = [new(0, 0), new(3, 5), new(4, 7)],
+        [ChordQuality.Dominant7Sus4] = [new(0, 0), new(3, 5), new(4, 7), new(6, 10)],
     };
 
-    // Entry tokens (case-sensitive after the ':') that select each quality. Several
-    // spellings map to the same quality (m / min, maj7 / maj, m7b5 / m7.5-).
+    private static readonly Dictionary<ChordQuality, string> Suffix = new()
+    {
+        [ChordQuality.Major] = "",
+        [ChordQuality.Minor] = "m",
+        [ChordQuality.Diminished] = "dim",
+        [ChordQuality.Augmented] = "aug",
+        [ChordQuality.Dominant7] = "7",
+        [ChordQuality.Major7] = "maj7",
+        [ChordQuality.Minor7] = "m7",
+        [ChordQuality.MinorMajor7] = "m maj7",
+        [ChordQuality.Diminished7] = "dim7",
+        [ChordQuality.HalfDiminished7] = "m7♭5",
+        [ChordQuality.Major6] = "6",
+        [ChordQuality.Minor6] = "m6",
+        [ChordQuality.Dominant9] = "9",
+        [ChordQuality.Major9] = "maj9",
+        [ChordQuality.Minor9] = "m9",
+        [ChordQuality.Sus2] = "sus2",
+        [ChordQuality.Sus4] = "sus4",
+        [ChordQuality.Dominant7Sus4] = "7sus4",
+    };
+
+    // Entry tokens (after the ':') that select each quality. Several spellings map
+    // to the same quality (m / min, maj7 / maj, m7b5 / m7.5-).
     private static readonly Dictionary<string, ChordQuality> ByToken = new()
     {
         ["m"] = ChordQuality.Minor,
@@ -117,8 +147,11 @@ public static class ChordQualityRegistry
         ["7sus4"] = ChordQuality.Dominant7Sus4,
     };
 
-    /// <summary>The interval set (semitones above the root) and display suffix.</summary>
-    public static ChordQualityInfo GetInfo(ChordQuality quality) => Info[quality];
+    /// <summary>The tones (diatonic step + semitone above root) of a quality.</summary>
+    public static IReadOnlyList<ChordToneSpec> GetTones(ChordQuality quality) => Tones[quality];
+
+    /// <summary>The printed suffix after the root (e.g. "m7", "maj7", "").</summary>
+    public static string GetSuffix(ChordQuality quality) => Suffix[quality];
 
     /// <summary>
     /// Resolves a quality token (text after the <c>:</c>, e.g. "m7"); returns false
@@ -139,16 +172,15 @@ public static class ChordQualityRegistry
 }
 
 /// <summary>
-/// A fully resolved chord: a root, a quality (hence an interval set), and an
-/// optional slash bass. The display name is derived from the structure; the
-/// interval set is the foundation for future staff-note expansion and fret
-/// diagrams. Phase 1 renders only the name.
+/// A fully resolved chord: a root, a quality (hence a tone set), and an optional
+/// slash bass. The display name and the spelled note chord are both derived from
+/// the structure — so this one model drives the chord-name display, the editor's
+/// note-expansion completion, and (later) staff notes and fret diagrams.
 /// </summary>
 /// <remarks>
 /// LILYPOND-REF: scm/chord-ignatzek-names.scm — root + quality → printed name.
 /// Lily# renders the name as PLAIN TEXT (e.g. "Cmaj7"), not LilyPond's
-/// superscript/triangle typography — a deliberate Phase-1 simplification matching
-/// the existing @chord text chord names.
+/// superscript/triangle typography — a deliberate Phase-1 simplification.
 /// </remarks>
 public sealed record ChordStructure(
     int RootStep,            // 0=C, 1=D, … 6=B (diatonic step)
@@ -157,17 +189,46 @@ public sealed record ChordStructure(
     int? BassStep = null,    // slash bass diatonic step (null = no bass)
     int? BassAlter = null)
 {
-    /// <summary>Semitone offsets of the chord tones above the root (the pitch set).</summary>
-    public ImmutableArray<int> Intervals => ChordQualityRegistry.GetInfo(Quality).Intervals;
+    // Semitones of each diatonic step in the major scale (C D E F G A B).
+    private static readonly int[] MajorScale = [0, 2, 4, 5, 7, 9, 11];
 
-    /// <summary>The printed chord symbol, e.g. "C", "Am7", "G7", "F♭maj7", "C/G".</summary>
+    /// <summary>Semitone offsets of the chord tones above the root (the pitch set).</summary>
+    public ImmutableArray<int> Intervals =>
+        [.. ChordQualityRegistry.GetTones(Quality).Select(t => t.Semitone)];
+
+    /// <summary>
+    /// The spelled chord tones (letter step, accidental, octave above the root).
+    /// Each tone's letter comes from its diatonic degree and its accidental from
+    /// the actual semitone, so a minor third spells e♭ (not d♯) and a Bb7 seventh
+    /// spells a♭ (not g♯).
+    /// </summary>
+    public ImmutableArray<ChordTone> Tones
+    {
+        get
+        {
+            var b = ImmutableArray.CreateBuilder<ChordTone>();
+            foreach (var spec in ChordQualityRegistry.GetTones(Quality))
+            {
+                int absStep = RootStep + spec.DiatonicStep;
+                int letterStep = ((absStep % 7) + 7) % 7;
+                int octaveUp = absStep / 7;
+                // Semitone span from the root LETTER (natural) to the tone LETTER.
+                int naturalSpan = MajorScale[letterStep] - MajorScale[RootStep] + 12 * octaveUp;
+                int alter = spec.Semitone - naturalSpan + RootAlter;
+                b.Add(new ChordTone(letterStep, alter, octaveUp));
+            }
+            return b.ToImmutable();
+        }
+    }
+
+    /// <summary>The printed chord symbol, e.g. "C", "Am7", "G7", "B♭maj7", "C/G".</summary>
     public string DisplayName
     {
         get
         {
             var sb = new StringBuilder();
             sb.Append(SpellPitch(RootStep, RootAlter));
-            sb.Append(ChordQualityRegistry.GetInfo(Quality).DisplaySuffix);
+            sb.Append(ChordQualityRegistry.GetSuffix(Quality));
             if (BassStep is int bs)
             {
                 sb.Append('/');
@@ -175,6 +236,59 @@ public sealed record ChordStructure(
             }
             return sb.ToString();
         }
+    }
+
+    /// <summary>
+    /// The chord as a Lily# note chord, e.g. "&lt;c e g b&gt;" (Cmaj7),
+    /// "&lt;c ees g&gt;" (Cm). The notes are bare (no octave marks): in relative
+    /// mode each successive tone resolves to the nearest pitch above, voicing the
+    /// chord ascending from the root. A slash bass is prepended below the root.
+    /// </summary>
+    public string ToNoteChord()
+    {
+        var notes = new List<string>();
+        if (BassStep is int bs)
+            notes.Add(SpellLilyPitch(bs, BassAlter ?? 0) + ","); // bass an octave down
+        foreach (var t in Tones)
+            notes.Add(SpellLilyPitch(t.Step, t.Alter));
+        return "<" + string.Join(" ", notes) + ">";
+    }
+
+    /// <summary>
+    /// Parses a chord symbol written as a single word (root letter + Dutch
+    /// accidental + quality token), e.g. "cmaj7", "am", "g7", "besm7". Requires a
+    /// recognized non-empty quality so plain note letters do not parse as chords.
+    /// Used by the editor's note-expansion completion.
+    /// </summary>
+    public static bool TryParseSymbol(string word, out ChordStructure result)
+    {
+        result = default!;
+        if (string.IsNullOrEmpty(word))
+            return false;
+
+        int step = "cdefgab".IndexOf(char.ToLower(word[0]));
+        if (step < 0)
+            return false;
+
+        string rest = word.Substring(1);
+        int alter = 0;
+        foreach (var (suffix, a) in new[] { ("isis", 2), ("eses", -2), ("is", 1), ("es", -1) })
+        {
+            if (rest.StartsWith(suffix, System.StringComparison.Ordinal))
+            {
+                alter = a;
+                rest = rest.Substring(suffix.Length);
+                break;
+            }
+        }
+
+        // Require an explicit, recognized quality (so "c" or "ees" alone do not
+        // expand — only "cm", "g7", "besmaj7" do).
+        if (rest.Length == 0 || !ChordQualityRegistry.TryResolve(rest, out var quality))
+            return false;
+
+        result = new ChordStructure(step, alter, quality);
+        return true;
     }
 
     /// <summary>Spells a diatonic step + alteration as a note name with a Unicode
@@ -189,6 +303,22 @@ public sealed record ChordStructure(
             0 => "",
             1 => "♯",
             2 => "♯♯",
+            _ => "",
+        };
+        return letter + acc;
+    }
+
+    // A Lily# (Dutch) pitch token: letter + is/isis/es/eses accidental.
+    private static string SpellLilyPitch(int step, int alter)
+    {
+        char letter = "cdefgab"[((step % 7) + 7) % 7];
+        string acc = alter switch
+        {
+            2 => "isis",
+            1 => "is",
+            0 => "",
+            -1 => "es",
+            -2 => "eses",
             _ => "",
         };
         return letter + acc;

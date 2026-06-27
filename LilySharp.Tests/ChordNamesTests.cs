@@ -123,6 +123,42 @@ public sealed class ChordNamesTests
         Assert.Equal(new[] { 0, 4, 7, 10 }, chords[3].Structure!.Intervals); // G7
     }
 
+    // ---- Note-expansion (editor completion) --------------------------------
+
+    [Theory]
+    [InlineData("cmaj7", "<c e g b>")]
+    [InlineData("am", "<a c e>")]
+    [InlineData("g7", "<g b d f>")]
+    [InlineData("cm", "<c ees g>")]      // minor third spells e-flat, not d-sharp
+    [InlineData("bes7", "<bes d f aes>")] // Bb7: B♭ D F A♭, correctly spelled
+    [InlineData("dm7", "<d f a c>")]
+    [InlineData("csus4", "<c f g>")]
+    [InlineData("c9", "<c e g bes d>")]   // the 9th voices an octave up via relative
+    public void TryParseSymbol_SpellsNoteChord(string word, string expected)
+    {
+        Assert.True(ChordStructure.TryParseSymbol(word, out var chord));
+        Assert.Equal(expected, chord.ToNoteChord());
+    }
+
+    [Theory]
+    [InlineData("c")]      // bare note — no quality, not a chord
+    [InlineData("ees")]    // bare accidental note
+    [InlineData("cx")]     // unknown quality token
+    [InlineData("h7")]     // not a pitch letter
+    public void TryParseSymbol_RejectsNonChords(string word)
+    {
+        Assert.False(ChordStructure.TryParseSymbol(word, out _));
+    }
+
+    [Fact]
+    public void Tones_AreSpelledByDegree()
+    {
+        // Cm: C, E♭, G — letter steps 0/2/4 with the third flattened.
+        var tones = new ChordStructure(0, 0, ChordQuality.Minor).Tones;
+        Assert.Equal(new[] { 0, 2, 4 }, tones.Select(t => t.Step));
+        Assert.Equal(new[] { 0, -1, 0 }, tones.Select(t => t.Alter));
+    }
+
     [Fact]
     public void Collector_UnknownQuality_FallsBackToRawText()
     {

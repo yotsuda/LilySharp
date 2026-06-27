@@ -14,11 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using Microsoft.VisualStudio.LanguageServer.Protocol;
 using StreamJsonRpc;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Music;
 using LspRange = Microsoft.VisualStudio.LanguageServer.Protocol.Range;
 using LspDiagnosticSeverity = Microsoft.VisualStudio.LanguageServer.Protocol.DiagnosticSeverity;
 using CoreDiagnosticSeverity = LilySharp.Core.Syntax.DiagnosticSeverity;
@@ -385,14 +387,75 @@ public sealed class LilySharpLanguageServer
         // Determine context
         var context = GetCompletionContext(doc.Text, offset);
 
+        // The word being typed at the cursor (chord letters/digits, e.g. "cmaj7"
+        // or, after a ':', the quality being completed).
+        int wordStart = offset;
+        while (wordStart > 0 && IsChordWordChar(doc.Text[wordStart - 1]))
+            wordStart--;
+        string word = doc.Text.Substring(wordStart, offset - wordStart);
+
+        // Inside a chordnames { } block, right after a chord's ':', complete the
+        // quality tokens (m, m7, maj7, sus4, …).
+        if (wordStart > 0 && doc.Text[wordStart - 1] == ':' && IsInsideChordNamesBlock(doc.Text, offset))
+            return GetChordQualityCompletions();
+
         return context switch
         {
             CompletionContext.TopLevel => GetTopLevelCompletions(),
-            CompletionContext.MusicBlock => GetMusicCompletions(),
+            CompletionContext.MusicBlock => GetMusicCompletions(word),
             CompletionContext.AfterAt => GetArticulationCompletions(),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
         };
+    }
+
+    private static bool IsChordWordChar(char c) => char.IsLetterOrDigit(c);
+
+    /// <summary>
+    /// True when <paramref name="offset"/> sits inside a <c>chordnames { … }</c>
+    /// block — found by tracking the keyword before each open brace and seeing
+    /// whether the innermost still-open block is <c>chordnames</c>.
+    /// </summary>
+    private static bool IsInsideChordNamesBlock(string text, int offset)
+    {
+        var stack = new System.Collections.Generic.Stack<string>();
+        for (int i = 0; i < offset && i < text.Length; i++)
+        {
+            if (text[i] == '{')
+            {
+                int j = i - 1;
+                while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+                int end = j + 1;
+                while (j >= 0 && (char.IsLetterOrDigit(text[j]) || text[j] == '_')) j--;
+                stack.Push(text.Substring(j + 1, end - (j + 1)));
+            }
+            else if (text[i] == '}' && stack.Count > 0)
+            {
+                stack.Pop();
+            }
+        }
+        return stack.Count > 0 && stack.Peek() == "chordnames";
+    }
+
+    /// <summary>Quality-token completions offered after a chord's ':' inside a chordnames block.</summary>
+    private static CompletionList GetChordQualityCompletions()
+    {
+        var items = ChordQualityRegistry.Tokens
+            .OrderBy(t => t)
+            .Select(t =>
+            {
+                ChordQualityRegistry.TryResolve(t, out var q);
+                return new CompletionItem
+                {
+                    Label = t,
+                    Kind = CompletionItemKind.EnumMember,
+                    Detail = new ChordStructure(0, 0, q).DisplayName.Length == 0
+                        ? "major triad"
+                        : "C" + ChordQualityRegistry.GetSuffix(q),
+                };
+            })
+            .ToArray();
+        return new CompletionList { Items = items };
     }
 
     private enum CompletionContext
@@ -460,12 +523,10 @@ public sealed class LilySharpLanguageServer
         };
     }
 
-    private static CompletionList GetMusicCompletions()
+    private static CompletionList GetMusicCompletions(string word)
     {
-        return new CompletionList
+        var items = new System.Collections.Generic.List<CompletionItem>
         {
-            Items =
-            [
                 // Pitches
                 new CompletionItem { Label = "c", Kind = CompletionItemKind.Value, Detail = "C pitch", SortText = "0c" },
                 new CompletionItem { Label = "d", Kind = CompletionItemKind.Value, Detail = "D pitch", SortText = "0d" },
@@ -497,8 +558,26 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertText = "override $1.$2 = $0", Detail = "Override grob property", SortText = "4override" },
                 new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertText = "revert $1.$0", Detail = "Revert grob property", SortText = "4revert" },
                 new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertText = "once override $1.$2 = $0", Detail = "One-time override", SortText = "4once" }
-            ]
         };
+
+        // Chord note-expansion: a chord symbol the user is typing (cmaj7, am, g7)
+        // offers to replace itself with the spelled note chord <c e g b> — the same
+        // tone set that names and (later) voices the chord. The notes are bare so
+        // relative mode voices them ascending. LILYPOND-REF: scm/chord-entry.scm.
+        if (word.Length >= 2 && ChordStructure.TryParseSymbol(word, out var chord))
+        {
+            var notes = chord.ToNoteChord();
+            items.Insert(0, new CompletionItem
+            {
+                Label = $"{word}  →  {notes}",
+                Kind = CompletionItemKind.Snippet,
+                FilterText = word,
+                InsertText = notes,
+                Detail = $"{chord.DisplayName} chord notes",
+                SortText = "00chord",
+            });
+        }
+        return new CompletionList { Items = items.ToArray() };
     }
 
     private static CompletionList GetArticulationCompletions()
