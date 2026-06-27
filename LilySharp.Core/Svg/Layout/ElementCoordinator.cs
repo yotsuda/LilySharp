@@ -18,6 +18,8 @@ using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
+using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -561,7 +563,7 @@ public sealed class ElementCoordinator
     /// A tie that crosses one or more system breaks is split into per-system pieces.
     /// Each piece's bound on the broken side is reattached to the system edge.
     /// </remarks>
-    public ImmutableArray<TieLayout> LayoutTies(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
+    public ImmutableArray<TieLayout> LayoutTies(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1, Model.Staff? staff = null)
     {
         var ties = _tieDetector.DetectTies(score);
 
@@ -643,11 +645,37 @@ public sealed class ElementCoordinator
 
                 // Tie Y position is uniform (same pitch on both ends).
                 double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex);
-                double staffMiddleY = staffY + _options.StaffHeight / 2;
-                double y = StaffFrame.PositionToDevice(tie.StaffPosition, staffMiddleY);
+                double y;
+                var tieForProblem = tie;
+                if (staff is { IsTab: true })
+                {
+                    // On a tab the tie connects two fret digits on ONE string, so it
+                    // belongs on that string's line — NOT at the notation pitch height.
+                    // Place it just above the digits and arc upward, clear of the
+                    // down-stems (which hang below the tab).
+                    var tuningType = staff.Tuning ?? TuningType.Guitar;
+                    int octaveShift = Tunings.OctaveShift(tuningType);
+                    int[] tuning = Tunings.GetTuning(tuningType);
+                    var (stringNum, _) = Tunings.CalculateFret(
+                        tie.StartNote.Midi + octaveShift, tuning, tie.StartNote.StringNumber ?? 0);
+                    double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuningType));
+                    double digitY = staffY + (stringNum - 1) * stringSpace;
+                    const double tabFretFontSize = 2.6; // SharedRenderer.TabFretFontSize
+                    double clearance = 0.6875 * tabFretFontSize / 2 + 0.3;
+                    y = digitY - clearance;
+                    // Force an upward arc (constructor-set property, no `with`).
+                    tieForProblem = new TieItem(
+                        tie.StartNote, tie.EndNote, tie.StaffPosition, curveUp: true,
+                        tie.StartMeasureIndex, tie.EndMeasureIndex, tie.StartItemIndex, tie.EndItemIndex);
+                }
+                else
+                {
+                    double staffMiddleY = staffY + _options.StaffHeight / 2;
+                    y = StaffFrame.PositionToDevice(tie.StaffPosition, staffMiddleY);
+                }
 
                 var problem = new TieFormattingProblem(
-                    tie, segStartX, y, segEndX, y,
+                    tieForProblem, segStartX, y, segEndX, y,
                     existingTies: tieLayouts,
                     staffHeight: _options.StaffHeight,
                     startDots: segment.IsFirst ? startDots : 0,

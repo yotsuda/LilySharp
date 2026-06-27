@@ -80,6 +80,9 @@ public class SvgSnapshotTests
         yield return new object[] { "test/beaming" };
         yield return new object[] { "test/grace-notes" };
         yield return new object[] { "test/ties-slurs" };
+        // Tab ties sit on each tied note's STRING line (above the fret digit), not
+        // at the notation pitch height — the two ties are on different strings.
+        yield return new object[] { "test/tab-tie" };
         yield return new object[] { "test/tuplets" };
         yield return new object[] { "test/tuplets-beamed" };
         yield return new object[] { "test/grandstaff-repeat" };

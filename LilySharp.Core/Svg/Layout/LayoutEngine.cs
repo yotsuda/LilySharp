@@ -337,7 +337,7 @@ public sealed class LayoutEngine
                     ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
                     tupletBrackets: score.TupletBrackets);
                 prelimBeams.AddRange(_elementCoordinator.LayoutBeams(staffScore, prelimSystems, staffIndex));
-                prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex));
+                prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff));
                 prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex));
             }
             var prelimAnn = CalculateAnnotationLayouts(
@@ -375,7 +375,7 @@ public sealed class LayoutEngine
                 // tuplet boundaries (BeamDetector).
                 tupletBrackets: score.TupletBrackets);
             allBeamLayouts.AddRange(_elementCoordinator.LayoutBeams(staffScore, systemsArray, staffIndex));
-            allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffScore, systemsArray, staffIndex));
+            allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffScore, systemsArray, staffIndex, staff));
             allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffScore, systemsArray, staffIndex));
             allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffScore, systemsArray, staffIndex));
         }
