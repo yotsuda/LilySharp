@@ -1294,9 +1294,10 @@ public sealed partial class StringNumberAnnotationSyntax : SyntaxNode
     public SyntaxTokenNode StringNumberToken => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
-    /// Gets the string number (1-based).
+    /// Gets the string number (1-based). The token text is the full <c>\N</c>
+    /// annotation (e.g. "\4"), so the leading backslash is stripped before parsing.
     /// </summary>
-    public int StringNumber => int.Parse(StringNumberToken.Text);
+    public int StringNumber => int.Parse(StringNumberToken.Text.TrimStart('\\'));
 }
 
 // ============================================================

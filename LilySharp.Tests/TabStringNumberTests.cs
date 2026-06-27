@@ -135,6 +135,22 @@ public sealed class TabStringNumberTests
     }
 
     [Fact]
+    public void StringNumberToken_KeepsFollowingSourcePositionsAligned()
+    {
+        // Regression: the \N token text must span BOTH chars ("\4", not "4"); a
+        // token's width comes from its text, so a 1-char text under a 2-char span
+        // drifts every following note's SourcePosition by 1 per \N, which silently
+        // broke the editor<->preview note mapping on tab scores.
+        var src = "part bl { clef bass }\nsection Main {\n  bl {\n r4 a4\\4 b4\\3 c4 |\n  }\n}\n" +
+                  "structure { Main }\nscore \"x\" { staff { bl } }\n";
+        var notes = Notes(new MeasureCollector().Collect(SyntaxTree.Parse(src)));
+        Assert.Equal(src.IndexOf("b4") - src.IndexOf("a4"),
+            notes[1].SourcePosition - notes[0].SourcePosition);
+        Assert.Equal(src.IndexOf("c4") - src.IndexOf("b4"),
+            notes[2].SourcePosition - notes[1].SourcePosition);
+    }
+
+    [Fact]
     public void TabTieStringValidator_SurfacesConflict()
     {
         var src = "part bl { clef bass }\nsection Main {\n  bl {\n a4\\4~ a4\\3 b4 |\n  }\n}\n" +

@@ -200,7 +200,11 @@ internal sealed class Lexer
                     _position++; // skip \
                     var stringNum = Current.ToString();
                     _position++;
-                    return (SyntaxKind.StringNumber, stringNum);
+                    // The token text MUST cover both consumed characters ("\4",
+                    // not "4"): the token's width is derived from its text, so a
+                    // 1-char text under a 2-char span drifts every following
+                    // node's source position by 1 (breaks editor<->preview sync).
+                    return (SyntaxKind.StringNumber, "\\" + stringNum);
                 }
                 _position++;
                 return (SyntaxKind.Backslash, "\\");
