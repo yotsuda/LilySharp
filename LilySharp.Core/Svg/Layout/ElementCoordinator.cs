@@ -662,7 +662,10 @@ public sealed class ElementCoordinator
                     double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuningType));
                     double digitY = staffY + (stringNum - 1) * stringSpace;
                     const double tabFretFontSize = 2.6; // SharedRenderer.TabFretFontSize
-                    double clearance = 0.6875 * tabFretFontSize / 2 + 0.3;
+                    // LilyPond hangs the tab tie right at the digit's edge — a small,
+                    // shallow curve hugging the number — so offset by the VISIBLE
+                    // glyph half-height plus a hair, not the full erase-box height.
+                    double clearance = 0.36 * tabFretFontSize + 0.1; // ~0.54 sp at font 2.6
                     bool stemUp = tie.StartNote.StemUp;
                     y = digitY + (stemUp ? clearance : -clearance);
                     // Curve opposite the stem (constructor-set property, no `with`).
