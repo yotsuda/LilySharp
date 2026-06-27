@@ -42,10 +42,13 @@ public static class SvgGenerator
     {
         options ??= SvgRenderOptions.Default;
 
-        // Find render specification - by name if specified, otherwise first
+        // Find render specification - by name if specified, otherwise first. If a
+        // name is given but matches no score (e.g. a stale preview selection left
+        // over after the score was renamed), fall back to the first score rather
+        // than laying out an empty score, which would crash.
         var renderSpec = string.IsNullOrEmpty(renderName)
             ? RenderSpecParser.FindFirst(tree)
-            : RenderSpecParser.FindByName(tree, renderName);
+            : RenderSpecParser.FindByName(tree, renderName) ?? RenderSpecParser.FindFirst(tree);
 
         var (multiScore, layout) = BuildLayout(tree, renderSpec);
         return RenderToSvg(multiScore, layout, options);

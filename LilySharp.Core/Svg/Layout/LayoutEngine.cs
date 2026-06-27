@@ -500,6 +500,11 @@ public sealed class LayoutEngine
         List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight,
         List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines = null)
     {
+        // An empty score (no systems) has nothing to page; return empty rather than
+        // indexing perSystemExtents[0] below.
+        if (systems.IsDefaultOrEmpty || perSystemExtents.Count == 0)
+            return (ImmutableArray<PageLayout>.Empty, ImmutableArray<SystemLayout>.Empty);
+
         if (_options.UseOptimalPageBreaking && _options.PageHeight > 0)
         {
             // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
