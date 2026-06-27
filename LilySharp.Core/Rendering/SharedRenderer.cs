@@ -357,6 +357,13 @@ public static class SharedRenderer
         var primaryVoice = staff.PrimaryVoice;
         double tabHeight = (stringCount - 1) * stringSpace;
 
+        // Repeat dots straddle the staff centre, each centred in a string space:
+        // ±1 line off centre when the centre falls in a space (even line gap), ±½
+        // when it falls on a line — matching LilyPond's tab repeat dots.
+        double dotCenter = (stringCount - 1) / 2.0;
+        double dotOff = ((stringCount - 1) % 2 == 0) ? 0.5 : 1.0;
+        (double, double) tabDots = ((dotCenter - dotOff) * stringSpace, (dotCenter + dotOff) * stringSpace);
+
         // TAB clef (clefs.tab), sized to span the actual staff height (the glyph's
         // designed span is ~5.78 font units) and centered on it.
         double tabCenterY = staffY + tabHeight / 2.0;
@@ -368,10 +375,10 @@ public static class SharedRenderer
                 continue;
             var measure = primaryVoice.Measures[ml.MeasureIndex];
             if (measure.StartBarline != BarlineType.None)
-                DrawBarline(measure.StartBarline, ml.X, staffY, tabHeight, gc);
+                DrawBarline(measure.StartBarline, ml.X, staffY, tabHeight, gc, tabDots: tabDots);
             double endX = ml.X + ml.Width;
             double width = GetVisualBarlineWidth(measure.EndBarline);
-            DrawBarline(measure.EndBarline, endX - width, staffY, tabHeight, gc);
+            DrawBarline(measure.EndBarline, endX - width, staffY, tabHeight, gc, tabDots: tabDots);
         }
 
         foreach (var ml in system.Measures)
@@ -1559,7 +1566,7 @@ public static class SharedRenderer
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/bar-line.cc — bar-line glyph composition.</remarks>
     private static void DrawBarline(BarlineType type, double x, double staffY, double height,
-        IDrawingContext gc, bool withDots = true)
+        IDrawingContext gc, bool withDots = true, (double Y1, double Y2)? tabDots = null)
     {
         if (type == BarlineType.None) return;
 
@@ -1588,32 +1595,37 @@ public static class SharedRenderer
             case BarlineType.RepeatStart:
                 gc.DrawRectangle(x, staffY, thick, height, fill: Color.Black);
                 gc.DrawRectangle(x + thick + sep, staffY, thin, height, fill: Color.Black);
-                if (withDots) DrawRepeatDots(x + thick + sep + thin + dotSep, staffY, gc);
+                if (withDots) DrawRepeatDots(x + thick + sep + thin + dotSep, staffY, gc, tabDots);
                 break;
 
             case BarlineType.RepeatEnd:
-                if (withDots) DrawRepeatDots(x, staffY, gc);
+                if (withDots) DrawRepeatDots(x, staffY, gc, tabDots);
                 double afterDots = x + dotsOffset;
                 gc.DrawRectangle(afterDots, staffY, thin, height, fill: Color.Black);
                 gc.DrawRectangle(afterDots + thin + sep, staffY, thick, height, fill: Color.Black);
                 break;
 
             case BarlineType.RepeatBoth:
-                if (withDots) DrawRepeatDots(x, staffY, gc);
+                if (withDots) DrawRepeatDots(x, staffY, gc, tabDots);
                 double pos = x + dotsOffset;
                 gc.DrawRectangle(pos, staffY, thin, height, fill: Color.Black);
                 gc.DrawRectangle(pos + thin + sep, staffY, thick, height, fill: Color.Black);
                 gc.DrawRectangle(pos + thin + sep + thick + sep, staffY, thin, height, fill: Color.Black);
-                if (withDots) DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, gc);
+                if (withDots) DrawRepeatDots(pos + thin + sep + thick + sep + thin + dotSep, staffY, gc, tabDots);
                 break;
         }
     }
 
-    private static void DrawRepeatDots(double x, double staffY, IDrawingContext gc)
+    private static void DrawRepeatDots(double x, double staffY, IDrawingContext gc,
+        (double Y1, double Y2)? tabDots = null)
     {
         double r = EngravingDefaults.RepeatDotRadius;
-        gc.DrawCircle(x + r, staffY + EngravingDefaults.RepeatDotPosition1, r, Color.Black);
-        gc.DrawCircle(x + r, staffY + EngravingDefaults.RepeatDotPosition2, r, Color.Black);
+        // On a tab staff the dots straddle the centre, each centred in a string
+        // space (passed in); otherwise the notation 2nd/3rd-space positions.
+        double y1 = tabDots?.Y1 ?? EngravingDefaults.RepeatDotPosition1;
+        double y2 = tabDots?.Y2 ?? EngravingDefaults.RepeatDotPosition2;
+        gc.DrawCircle(x + r, staffY + y1, r, Color.Black);
+        gc.DrawCircle(x + r, staffY + y2, r, Color.Black);
     }
 
     /// <summary>Total horizontal extent of a barline glyph (for right-edge alignment).</summary>
