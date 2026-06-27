@@ -788,9 +788,19 @@ public sealed class LayoutEngine
         }
 
         foreach (var t in ties)
-            AddCurve(t.Tie.StartMeasureIndex, t.StartY, t.EndY, t.Control1.Y, t.Control2.Y);
+        {
+            // A broken tie's continuation piece (IsBrokenLeft) lives on a LATER
+            // system at that system's Y — attribute its extent to the system holding
+            // its END, or its low Y leaks onto the start system and forces a huge
+            // inter-system gap.
+            int mi = t.IsBrokenLeft ? t.Tie.EndMeasureIndex : t.Tie.StartMeasureIndex;
+            AddCurve(mi, t.StartY, t.EndY, t.Control1.Y, t.Control2.Y);
+        }
         foreach (var sl in slurs)
-            AddCurve(sl.Slur.StartMeasureIndex, sl.StartY, sl.EndY, sl.Control1.Y, sl.Control2.Y);
+        {
+            int mi = sl.IsBrokenLeft ? sl.Slur.EndMeasureIndex : sl.Slur.StartMeasureIndex;
+            AddCurve(mi, sl.StartY, sl.EndY, sl.Control1.Y, sl.Control2.Y);
+        }
 
         for (int i = 0; i < n; i++)
         {
