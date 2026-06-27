@@ -2149,7 +2149,13 @@ private GreenNode?[] ParseArticulations()
         // number) or a quoted string — quotes only needed for spaces/special
         // characters, like `title`. Anything that is not the opening brace is the
         // name. Extension (if written) is dropped downstream.
-        SyntaxToken? filename = Check(SyntaxKind.OpenBrace) ? null : Advance();
+        SyntaxToken? filename = Check(SyntaxKind.OpenBrace) || Check(SyntaxKind.TransposeKeyword)
+            ? null : Advance();
+
+        // Optional per-score transpose: `score [name] transpose <pitch> { ... }`.
+        // Stored as a transpose property (same shape the part header uses).
+        GreenNode? transpose = Check(SyntaxKind.TransposeKeyword) ? ParsePartProperty() : null;
+
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var items = new List<GreenNode?>();
@@ -2164,7 +2170,7 @@ private GreenNode?[] ParseArticulations()
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         // name is always null now (`score` is the keyword, not a name slot).
-        return new RenderDeclarationGreen(keyword, null, filename, openBrace, [.. items], closeBrace);
+        return new RenderDeclarationGreen(keyword, null, filename, transpose, openBrace, [.. items], closeBrace);
     }
 
 

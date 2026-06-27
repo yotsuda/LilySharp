@@ -849,23 +849,26 @@ internal sealed class RenderDeclarationGreen : GreenSyntaxNode
         SyntaxToken renderKeyword,
         SyntaxToken? name,
         SyntaxToken? filename,
+        GreenNode? transpose,
         SyntaxToken openBrace,
         GreenNode?[] items,
         SyntaxToken closeBrace)
         : base(SyntaxKind.RenderDeclaration,
-            BuildChildren(renderKeyword, name, filename, openBrace, items, closeBrace))
+            BuildChildren(renderKeyword, name, filename, transpose, openBrace, items, closeBrace))
     {
     }
 
-    // name and filename are both optional, so assemble the child list rather
-    // than enumerate every present/absent combination.
+    // name, filename and the score transpose are all optional and precede the
+    // brace, so assemble the child list rather than enumerate every combination.
+    // Source order is preserved (transpose comes after the name, before the brace).
     private static GreenNode?[] BuildChildren(
         SyntaxToken renderKeyword, SyntaxToken? name, SyntaxToken? filename,
-        SyntaxToken openBrace, GreenNode?[] items, SyntaxToken closeBrace)
+        GreenNode? transpose, SyntaxToken openBrace, GreenNode?[] items, SyntaxToken closeBrace)
     {
         var children = new List<GreenNode?> { renderKeyword };
         if (name != null) children.Add(name);
         if (filename != null) children.Add(filename);
+        if (transpose != null) children.Add(transpose);
         children.Add(openBrace);
         children.AddRange(items);
         children.Add(closeBrace);

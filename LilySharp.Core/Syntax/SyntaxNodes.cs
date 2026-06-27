@@ -1637,6 +1637,22 @@ public sealed partial class RenderDeclarationSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode RenderKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>
+    /// The optional per-score <c>transpose &lt;pitch&gt;</c> (a property node before the
+    /// brace), or null. Render items are staff/tab/etc. nodes, never properties, so
+    /// a direct-child property is unambiguously the score transpose.
+    /// </summary>
+    public PropertyAssignmentSyntax? Transpose
+    {
+        get
+        {
+            for (int i = 1; i < SlotCount; i++)
+                if (GetChild(i) is PropertyAssignmentSyntax prop)
+                    return prop;
+            return null;
+        }
+    }
 }
 
 /// <summary>

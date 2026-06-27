@@ -78,7 +78,11 @@ public static class RenderSpecParser
             }
         }
 
-        return new RenderSpec(name, outputFile ?? "", [.. items]);
+        var scoreTranspose = render.Transpose is { } t
+            ? LilySharp.Core.Semantics.PartTranspose.ReadProperty(t)
+            : null;
+
+        return new RenderSpec(name, outputFile ?? "", [.. items], scoreTranspose);
     }
 
     /// <summary>

@@ -71,7 +71,10 @@ public sealed record OssiaStaffSpec(StaffSpec Staff) : RenderItemSpec;
 public sealed record RenderSpec(
     string Name,
     string OutputFile,
-    ImmutableArray<RenderItemSpec> Items
+    ImmutableArray<RenderItemSpec> Items,
+    // A per-score `transpose <pitch>` (e.g. a Bb part-score): the c->target diatonic
+    // interval, composed on top of each part's own transpose. Null = concert pitch.
+    (int step, int alt, int oct)? ScoreTranspose = null
 )
 {
     /// <summary>Whether this render contains a grand staff.</summary>

@@ -114,6 +114,7 @@ public static class SvgGenerator
         SyntaxTree tree, RenderSpec? renderSpec)
     {
         var collector = new MeasureCollector();
+        collector.ScoreTranspose = renderSpec?.ScoreTranspose;
         var layoutEngine = new LayoutEngine();
         if (renderSpec != null && renderSpec.IsMultiStaff)
         {

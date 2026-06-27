@@ -41,6 +41,13 @@ public static class PartTranspose
         return ReadScoreDefault(root);
     }
 
+    /// <summary>
+    /// Parses a <c>transpose &lt;pitch&gt;</c> property node (the shared shape used by a
+    /// part header and a per-score transpose) into a c-&gt;target interval, or null.
+    /// </summary>
+    public static (int step, int alt, int oct)? ReadProperty(PropertyAssignmentSyntax prop)
+        => IsTranspose(prop) ? Parse(prop) : null;
+
     /// <summary>Reads the transpose option from a part declaration, or null.</summary>
     public static (int step, int alt, int oct)? Read(PartDeclarationSyntax partDecl)
     {

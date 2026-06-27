@@ -482,6 +482,12 @@ public sealed class MeasureCollector
     private string? _voiceName;
     private SyntaxNode? _root;
 
+    /// <summary>
+    /// A per-score transpose (from <c>score "Bb" transpose d { ... }</c>) composed on
+    /// top of each part's own transpose. Set by the render pipeline before collecting.
+    /// </summary>
+    public (int step, int alt, int oct)? ScoreTranspose { get; set; }
+
     // State for relative pitch mode
     private int _currentOctave = 4;
     private int _initialOctave = 4;  // Reset target for section boundaries
@@ -1805,7 +1811,10 @@ public sealed class MeasureCollector
     /// </summary>
     private void ApplyTranspose((int step, int alt, int oct)? transpose)
     {
-        if (transpose is { } t)
+        // A per-score transpose composes on top of the part's own transpose, so a
+        // Bb-part-score of an already-transposed part is shifted exactly once more.
+        var effective = ComposeTranspose(transpose, ScoreTranspose);
+        if (effective is { } t)
         {
             _hasTranspose = true;
             _transposeStep = t.step;
@@ -1816,6 +1825,21 @@ public sealed class MeasureCollector
         {
             _hasTranspose = false;
         }
+    }
+
+    /// <summary>
+    /// Composes two transpose targets: apply <paramref name="outer"/> after
+    /// <paramref name="inner"/>. Each target is the c-&gt;target interval; applying the
+    /// outer interval to the inner target pitch yields the combined target.
+    /// </summary>
+    private static (int step, int alt, int oct)? ComposeTranspose(
+        (int step, int alt, int oct)? inner, (int step, int alt, int oct)? outer)
+    {
+        if (inner == null) return outer;
+        if (outer == null) return inner;
+        var i = inner.Value;
+        var o = outer.Value;
+        return PitchTransposer.Transpose(i.step, i.alt, i.oct, o.step, o.alt, o.oct);
     }
 
     /// <summary>
