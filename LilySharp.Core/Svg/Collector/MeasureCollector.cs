@@ -2469,6 +2469,11 @@ public sealed class MeasureCollector
                         // for VoltaBracketItem which stores the last measure index
                         if (alt.HasBracket && !alt.IsSilent)
                         {
+                            // A preceding ending closes when another ending follows it,
+                            // so the 1st ending closes in |: … [1. D] [2. Outro] :| too
+                            // (not only in the [1. D] :| [2. Outro] spelling).
+                            if (pendingVoltaBrackets.Count > 0)
+                                closedByRepeat.Add(pendingVoltaBrackets.Count - 1);
                             int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
                             pendingVoltaBrackets.Add((startMeasureIndex, lastMeasure, alt.VoltaText, alt.Position));
                         }
@@ -2481,8 +2486,9 @@ public sealed class MeasureCollector
         for (int i = 0; i < pendingVoltaBrackets.Count; i++)
         {
             var (startMeasure, endMeasure, voltaText, sourcePosition) = pendingVoltaBrackets[i];
-            // A bracket closes if it is the last ending, or if a repeat barline
-            // follows it (the 1st ending in |: … [1. D] :| [2. Outro]).
+            // A bracket closes if it is the last ending, or if another ending or a
+            // repeat barline follows it — so both endings close in either spelling
+            // of the repeat.
             bool isClosed = (i == pendingVoltaBrackets.Count - 1) || closedByRepeat.Contains(i);
             _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
         }
