@@ -477,6 +477,10 @@ public static class SharedRenderer
     // overlapping. Background/clearance dimensions scale with this.
     private const double TabFretFontSize = 2.6;
 
+    /// <summary>Grace fret digits relative to the normal fret size — just slightly
+    /// smaller, so the grace reads as a grace without becoming illegible.</summary>
+    private const double TabGraceFretScale = 0.8;
+
     /// <summary>Drawn width of a fret number at <see cref="TabFretFontSize"/>.</summary>
     private static double TabFretWidth(int fret) =>
         (fret.ToString().Length == 1 ? 0.625 : 1.0) * TabFretFontSize;
@@ -2477,7 +2481,11 @@ public static class SharedRenderer
         int[] tuningArray = Tunings.GetTuning(tuning);
         int octaveShift = Tunings.OctaveShift(tuning);
         double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning));
-        double fontSize = TabFretFontSize * g.Scale;
+        // Tab grace digits sit only slightly below the main fret size (NOT the
+        // 0.65 notehead grace scale): on a tab staff the fret number IS the note,
+        // so the size contrast that reads as "grace" in notation would here just
+        // make the digit illegibly tiny.
+        double fontSize = TabFretFontSize * TabGraceFretScale;
         double currentX = g.X;
 
         using (gc.Source(g.SourcePosition))
