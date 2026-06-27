@@ -654,6 +654,7 @@ public sealed class MeasureCollector
 
         // Collect lyrics
         CollectLyrics(tree.GetRoot(), measures);
+        CollectChordNamesBlocks(tree.GetRoot());
 
         return new Score(
             voice,
@@ -845,6 +846,7 @@ public sealed class MeasureCollector
         {
             CollectLyrics(tree.GetRoot(), firstStaffVoices[0].Measures.ToList());
         }
+        CollectChordNamesBlocks(tree.GetRoot());
 
         // Phase 3: Build staff groups from render spec
         var staffGroups = renderSpec.ToStaffGroups(name =>
@@ -1000,6 +1002,7 @@ public sealed class MeasureCollector
         // Collect lyrics (aligned with first voice)
         if (firstVoiceMeasures != null)
             CollectLyrics(parallelExpr, firstVoiceMeasures);
+        CollectChordNamesBlocks(parallelExpr);
 
         return new Score(
             voices.ToImmutableArray(),
@@ -1062,6 +1065,7 @@ public sealed class MeasureCollector
 
         // Unnamed lyrics align with the primary voice; named ones bind above.
         CollectLyrics(root, track0);
+        CollectChordNamesBlocks(root);
 
         return new Score(
             voices.ToImmutableArray(),
@@ -3514,6 +3518,104 @@ public sealed class MeasureCollector
             if (unplaced > 0)
                 _lyricWarnings.Add(new LyricSyllableWarning(lyricsBlock.LyricsKeyword.Span, unplaced));
         }
+    }
+
+    /// <summary>
+    /// Collects chord symbols from every <c>chordnames { … }</c> block. Each block
+    /// is a parallel stream: entries are walked, split at barlines into measures,
+    /// and each chord's start TIMING within its measure is accumulated from the
+    /// entry durations (default quarter, carried). The symbol is auto-named from
+    /// the resolved <see cref="LilySharp.Core.Music.ChordStructure"/>; an unknown
+    /// quality token falls back to "root + raw text" so any name still displays.
+    /// LILYPOND-REF: ly/engraver-init.ly ChordNames context; scm/chord-entry.scm.
+    /// </summary>
+    private void CollectChordNamesBlocks(SyntaxNode root)
+    {
+        var blocks = root.DescendantNodes().OfType<ChordNamesBlockSyntax>().ToList();
+        if (blocks.Count == 0)
+            return;
+
+        foreach (var block in blocks)
+        {
+            int startMeasure = 0;
+            for (var n = block.Parent; n != null; n = n.Parent)
+            {
+                if (n is SectionDeclarationSyntax section
+                    && _sectionStartMeasure.TryGetValue(section.SectionName, out int s))
+                {
+                    startMeasure = s;
+                    break;
+                }
+            }
+
+            int localMeasure = 0;
+            var timing = Fraction.Zero;
+            var defaultDuration = Fraction.Quarter;
+
+            foreach (var item in block.Items)
+            {
+                if (item is BarlineSyntax)
+                {
+                    localMeasure++;
+                    timing = Fraction.Zero;
+                    continue;
+                }
+                if (item is not ChordEntrySyntax entry)
+                    continue;
+
+                var (text, structure) = ResolveChordEntry(entry);
+                _chordNames.Add(new ChordNameItem(
+                    text,
+                    startMeasure + localMeasure,
+                    itemIndex: -1,
+                    entry.Root.Position,
+                    _currentStaffIndex,
+                    useTiming: true,
+                    timing: timing,
+                    structure: structure));
+
+                var dur = entry.Duration?.ToFraction() ?? defaultDuration;
+                if (entry.Duration != null)
+                    defaultDuration = dur;
+                timing += dur;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Resolves a chord entry to its display text and (when the quality is known)
+    /// its structure. The root step comes from the pitch letter, the alteration
+    /// from its accidental; an unrecognized quality token is shown verbatim.
+    /// </summary>
+    private static (string Text, LilySharp.Core.Music.ChordStructure? Structure) ResolveChordEntry(ChordEntrySyntax entry)
+    {
+        int rootStep = "cdefgab".IndexOf(entry.Root.BaseName);
+        int rootAlter = entry.Root.AccidentalOffset;
+        int? bassStep = null, bassAlter = null;
+        if (entry.Bass is { } bass)
+        {
+            bassStep = "cdefgab".IndexOf(bass.BaseName);
+            bassAlter = bass.AccidentalOffset;
+        }
+
+        if (rootStep >= 0 && LilySharp.Core.Music.ChordQualityRegistry.TryResolve(entry.QualityText, out var quality))
+        {
+            var structure = new LilySharp.Core.Music.ChordStructure(
+                rootStep, rootAlter, quality, bassStep, bassAlter);
+            return (structure.DisplayName, structure);
+        }
+
+        // Unknown quality (e.g. an extended chord not in the vocabulary): show the
+        // root + the raw token text so the name still displays, but carry no
+        // structure (no interval set for future notes/fret diagrams).
+        var sb = new System.Text.StringBuilder();
+        sb.Append(rootStep >= 0
+            ? LilySharp.Core.Music.ChordStructure.SpellPitch(rootStep, rootAlter)
+            : entry.Root.PitchName);
+        sb.Append(entry.QualityText);
+        if (bassStep is int bs)
+            sb.Append('/').Append(LilySharp.Core.Music.ChordStructure.SpellPitch(bs, bassAlter ?? 0));
+        return (sb.ToString(), null);
     }
 
     /// <summary>(measureIndex, itemIndex, timing) of every note/chord (not rests)

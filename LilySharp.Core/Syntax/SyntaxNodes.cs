@@ -1089,6 +1089,58 @@ public sealed class LyricsBlockSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Chord-names block: chordnames { c1 | a:m f | g:7 } — a parallel stream of
+/// chord symbols shown above the staff, aligned by timing.
+/// </summary>
+public sealed class ChordNamesBlockSyntax : SyntaxNode
+{
+    internal ChordNamesBlockSyntax(InternalSyntax.ChordNamesBlockGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode ChordNamesKeyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(1)!;
+
+    /// <summary>The chord entries and barlines, in source order.</summary>
+    public IEnumerable<SyntaxNode> Items
+    {
+        get
+        {
+            for (int i = 2; i < SlotCount - 1; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+
+    public SyntaxTokenNode CloseBrace => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
+}
+
+/// <summary>
+/// A single chord entry: root[duration][:quality][/bass] (e.g. c1, a:m, g2:7,
+/// d:m7/f). The quality token is the raw text after the colon (resolved against
+/// <c>ChordQualityRegistry</c> by the collector).
+/// </summary>
+public sealed class ChordEntrySyntax : SyntaxNode
+{
+    internal ChordEntrySyntax(InternalSyntax.ChordEntryGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    // Slots: 0 root, 1 duration?, 2 colon?, 3 quality?, 4 slash?, 5 bass?.
+    public PitchSyntax Root => (PitchSyntax)GetChild(0)!;
+    public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+    /// <summary>The quality text after the <c>:</c> (e.g. "m7", "maj7", "7"), or null for a plain major triad.</summary>
+    public string? QualityText => (GetChild(3) as SyntaxTokenNode)?.Text;
+    /// <summary>The slash-bass pitch (<c>c/g</c>), or null.</summary>
+    public PitchSyntax? Bass => GetChild(5) as PitchSyntax;
+}
+
+/// <summary>
 /// An articulation mark: @staccato, @accent, etc.
 /// </summary>
 public sealed class ArticulationSyntax : SyntaxNode

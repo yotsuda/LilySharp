@@ -114,8 +114,14 @@ public static class ChordNameEngraver
             double staffOffset = staffYByIndex != null
                 && staffYByIndex.TryGetValue(chord.StaffIndex, out var so) ? so : 0;
 
-            double x = ml.X + LayoutUtilities.GetItemXOffset(
-                cnMeasures, chord.MeasureIndex, chord.ItemIndex, ml);
+            // chordnames entries carry their own rhythm: place them by musical
+            // moment against the shared column grid (the same X the renderer draws
+            // a note at that timing), exactly as bound-voice lyrics do. The
+            // note-attached @chord path keeps the item-index offset.
+            double x = chord.UseTiming
+                ? ml.X + ml.GetXForTiming(chord.Timing)
+                : ml.X + LayoutUtilities.GetItemXOffset(
+                    cnMeasures, chord.MeasureIndex, chord.ItemIndex, ml);
             bool topStaff = staffOffset <= minStaffOffset + 1e-6;
             int sysIdx = measureToSystem.TryGetValue(chord.MeasureIndex, out var si) ? si : -1;
 

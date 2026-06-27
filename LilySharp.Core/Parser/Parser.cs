@@ -250,6 +250,7 @@ internal sealed class Parser
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
+            SyntaxKind.ChordNamesKeyword => ParseChordNamesBlock(),
             SyntaxKind.BreakKeyword => ParseBreak(),
             SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
@@ -685,6 +686,7 @@ internal sealed class Parser
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
+            SyntaxKind.ChordNamesKeyword => ParseChordNamesBlock(),
             SyntaxKind.BreakKeyword => ParseBreak(),
                         SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
             SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
@@ -1524,6 +1526,7 @@ private GreenNode?[] ParseArticulations()
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.PartialKeyword => ParsePartialDeclaration(),
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
+            SyntaxKind.ChordNamesKeyword => ParseChordNamesBlock(),
             // Allow identifier or instrument keywords (bass, guitar-like names) as part names
             SyntaxKind.Identifier => ParsePartBlock(),
             // bass, treble etc. can also be part names
@@ -1574,6 +1577,61 @@ private GreenNode?[] ParseArticulations()
         var closeBrace = Expect(SyntaxKind.CloseBrace);
 
         return new LyricsBlockGreen(keyword, name, openBrace, [.. measures], closeBrace);
+    }
+
+    private static bool IsPitchKind(SyntaxKind kind) => kind is SyntaxKind.PitchC
+        or SyntaxKind.PitchD or SyntaxKind.PitchE or SyntaxKind.PitchF
+        or SyntaxKind.PitchG or SyntaxKind.PitchA or SyntaxKind.PitchB;
+
+    // chordnames { c1 | a:m f | g:7/b } — a parallel stream of chord symbols.
+    // Entries and barlines are kept flat; the collector splits at the barlines.
+    private ChordNamesBlockGreen ParseChordNamesBlock()
+    {
+        var keyword = Expect(SyntaxKind.ChordNamesKeyword);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        var items = new List<GreenNode?>();
+
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            if (Check(SyntaxKind.Bar) || Check(SyntaxKind.DoubleBar) || Check(SyntaxKind.FinalBar)
+                || Check(SyntaxKind.RepeatStartBar) || Check(SyntaxKind.RepeatEndBar))
+                items.Add(ParseBarline());
+            else if (IsPitchKind(Current.Kind))
+                items.Add(ParseChordEntry());
+            else
+                Advance(); // error recovery — skip stray tokens
+        }
+
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new ChordNamesBlockGreen(keyword, openBrace, [.. items], closeBrace);
+    }
+
+    // root[duration][:quality][/bass] — reuses the pitch and duration grammar.
+    private ChordEntryGreen ParseChordEntry()
+    {
+        var root = ParsePitch();
+        var duration = ParseOptionalDuration();
+
+        SyntaxToken? colon = null, quality = null, slash = null;
+        GreenNode? bass = null;
+
+        // ':quality' — a single token (identifier like m7/maj7/sus4, or a number 7/6/9).
+        if (Check(SyntaxKind.Colon))
+        {
+            colon = Advance();
+            if (Check(SyntaxKind.Identifier) || Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DurationNumber))
+                quality = Advance();
+        }
+
+        // '/bass' — a slash bass pitch (c/g).
+        if (Check(SyntaxKind.Slash))
+        {
+            slash = Advance();
+            if (IsPitchKind(Current.Kind))
+                bass = ParsePitch();
+        }
+
+        return new ChordEntryGreen(root, duration, colon, quality, slash, bass);
     }
 
     /// <summary>

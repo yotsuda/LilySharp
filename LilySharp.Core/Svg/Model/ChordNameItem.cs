@@ -16,6 +16,8 @@
 
 using System.Collections.Immutable;
 using System.Text;
+using LilySharp.Core.Music;
+using LilySharp.Core.Semantics;
 
 namespace LilySharp.Core.Svg.Model;
 
@@ -49,14 +51,37 @@ public sealed record ChordNameItem
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
     public int StaffIndex { get; }
 
+    /// <summary>
+    /// When true the chord is placed by its musical moment (<see cref="Timing"/>)
+    /// against the shared column grid, not by <see cref="ItemIndex"/>. Set for
+    /// <c>chordnames { }</c> entries, which carry their own rhythm independent of
+    /// the melody. The note-attached <c>@chord.TEXT</c> path leaves it false.
+    /// </summary>
+    public bool UseTiming { get; }
+
+    /// <summary>The chord's start time from its measure's start (used when <see cref="UseTiming"/>).</summary>
+    public Fraction Timing { get; }
+
+    /// <summary>
+    /// The resolved chord structure (root, quality interval set, bass) when entered
+    /// symbolically via <c>chordnames</c>. Null for the literal <c>@chord.TEXT</c>
+    /// path. The foundation for future staff-note expansion and fret diagrams;
+    /// Phase 1 renders only <see cref="ChordText"/>.
+    /// </summary>
+    public ChordStructure? Structure { get; }
+
     public ChordNameItem(string chordText, int measureIndex, int itemIndex,
-        int sourcePosition, int staffIndex = 0)
+        int sourcePosition, int staffIndex = 0,
+        bool useTiming = false, Fraction timing = default, ChordStructure? structure = null)
     {
         ChordText = chordText;
         MeasureIndex = measureIndex;
         ItemIndex = itemIndex;
         SourcePosition = sourcePosition;
         StaffIndex = staffIndex;
+        UseTiming = useTiming;
+        Timing = timing;
+        Structure = structure;
     }
 
     /// <summary>

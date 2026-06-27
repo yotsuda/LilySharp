@@ -180,6 +180,10 @@ public class SvgSnapshotTests
         yield return new object[] { "test/collision" };
         yield return new object[] { "test/phrases" };
         yield return new object[] { "test/ornaments" };
+        // A chordnames { } block: symbolic chord entry (c / a:m / g:7) auto-named
+        // and shown above the staff, timing-aligned to the melody (mid-bar Am/G7).
+        // Verified against LilyPond \chords.
+        yield return new object[] { "test/chordnames" };
         // Breathing signs: @breath (comma) and @caesura (//) sit at the top of the
         // staff, right of the note they follow. Verified against LilyPond \breathe
         // / \caesura.

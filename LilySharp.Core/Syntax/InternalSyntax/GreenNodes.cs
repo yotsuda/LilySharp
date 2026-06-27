@@ -1030,6 +1030,34 @@ internal sealed class LyricSyllableGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// A chord-names block: chordnames { c1 | a:m f | g:7/b } — a parallel stream of
+/// chord symbols displayed above the staff, aligned by timing.
+/// </summary>
+internal sealed class ChordNamesBlockGreen : GreenSyntaxNode
+{
+    public ChordNamesBlockGreen(SyntaxToken keyword, SyntaxToken openBrace, GreenNode?[] items, SyntaxToken closeBrace)
+        : base(SyntaxKind.ChordNamesBlock, [keyword, openBrace, .. items, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// A single chord entry inside a chordnames block: root[duration][:quality][/bass]
+/// (e.g. c1, a:m, g2:7, d:m7/f). Reuses PitchGreen for the root/bass and
+/// DurationGreen for the duration. Quality is a single token (identifier or
+/// number, e.g. m7 / maj7 / 7 / sus4).
+/// </summary>
+internal sealed class ChordEntryGreen : GreenSyntaxNode
+{
+    // Slots: 0 root(Pitch), 1 duration(Duration?), 2 colon?, 3 quality?, 4 slash?, 5 bass(Pitch?).
+    public ChordEntryGreen(GreenNode root, GreenNode? duration, SyntaxToken? colon,
+        SyntaxToken? quality, SyntaxToken? slash, GreenNode? bass)
+        : base(SyntaxKind.ChordEntry, [root, duration, colon, quality, slash, bass])
+    {
+    }
+}
+
+/// <summary>
 /// Override declaration: override Grob.property = value
 /// LILYPOND-REF: lily/context-property.cc (push)
 /// </summary>

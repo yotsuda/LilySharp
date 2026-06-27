@@ -90,6 +90,7 @@ public enum SyntaxKind : ushort
     AcciaccaturaKeyword,
     AppogiaturaKeyword,
     LyricsKeyword,      // lyrics
+    ChordNamesKeyword,  // chordnames
     TabStaffKeyword,    // tabStaff (legacy)
     TuningKeyword,      // tuning
     TransposeKeyword,   // transpose
@@ -192,6 +193,8 @@ public enum SyntaxKind : ushort
     LyricsBlock,                // lyrics { ... } inside section
     LyricMeasure,               // syllable syllable | inside lyrics
     LyricSyllable,              // single lyric syllable
+    ChordNamesBlock,            // chordnames { ... } inside section
+    ChordEntry,                 // root[dur][:quality][/bass] inside chordnames
     StaffRender,                // staff { guitar } inside render
     GrandStaffRender,           // grandStaff { staff staff } inside render
     TabRender,                  // tab guitar { guitar } inside render
