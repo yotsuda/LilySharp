@@ -405,10 +405,12 @@ public sealed class LayoutEngine
         // systems, so read them from the first laid-out system.
         var voicesByStaff = new Dictionary<int, ImmutableArray<Voice>>();
         var measuresByStaff = new Dictionary<int, ImmutableArray<Measure>>();
+        var staffByIndex = new Dictionary<int, Staff>();
         foreach (var (g, st, idx) in score.EnumerateStaves())
         {
             voicesByStaff[idx] = st.Voices;
             measuresByStaff[idx] = st.PrimaryVoice.Measures;
+            staffByIndex[idx] = st;
         }
         var staffYByIndex = new Dictionary<int, double>();
         if (systemsArray.Length > 0 && !systemsArray[0].StaffGroups.IsDefaultOrEmpty)
@@ -435,7 +437,8 @@ public sealed class LayoutEngine
             staffVoices: primaryStaff.Voices,
             voicesByStaff: voicesByStaff,
             measuresByStaff: measuresByStaff,
-            staffYByIndex: staffYByIndex);
+            staffYByIndex: staffYByIndex,
+            staffByIndex: staffByIndex);
 
         // Voice collision offsets / head-wipes for multi-voice staves, so the
         // renderer can nudge opposing voices apart. Computed per staff; the keys
@@ -838,7 +841,8 @@ public sealed class LayoutEngine
         ImmutableArray<Voice> staffVoices = default,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null)
+        Dictionary<int, double>? staffYByIndex = null,
+        Dictionary<int, Staff>? staffByIndex = null)
     {
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
         var lyricLayouts = new LyricEngraver().CalculateLayouts(
@@ -906,7 +910,7 @@ public sealed class LayoutEngine
         // This ensures hairpins avoid dynamics (both priority 250) and
         // text spanners avoid both dynamics and hairpins (priority 350).
         var articulationLayouts = score != null
-            ? ArticulationEngraver.Calculate(score, articulations, systems, ml, measuresByStaff, staffYByIndex)
+            ? ArticulationEngraver.Calculate(score, articulations, systems, ml, measuresByStaff, staffYByIndex, staffByIndex)
             : ImmutableArray<ArticulationLayout>.Empty;
         var (stackedDynamics, stackedHairpins, stackedTextSpanners) =
             OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts, textSpannerLayouts,

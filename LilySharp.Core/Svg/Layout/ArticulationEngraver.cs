@@ -17,6 +17,7 @@
 using System.Collections.Immutable;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
+using LilySharp.Core.Tablature;
 
 namespace LilySharp.Core.Svg.Layout;
 
@@ -104,7 +105,8 @@ public static class ArticulationEngraver
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null)
+        Dictionary<int, double>? staffYByIndex = null,
+        Dictionary<int, Staff>? staffByIndex = null)
     {
         if (articulations.IsDefaultOrEmpty)
             return ImmutableArray<ArticulationLayout>.Empty;
@@ -173,6 +175,31 @@ public static class ArticulationEngraver
             // Get staff position of the note
             int staffPosition = GetStaffPosition(item);
             bool stemUp = GetStemUp(item, staffPosition);
+
+            // On a TAB staff the fret number is centred on the note column (the
+            // stem's x), with no notehead. So put the script at that column x — not
+            // a notehead-edge offset, which makes a staccato dot look like an
+            // augmentation dot beside the number — and just outside the staff on the
+            // side away from the stem.
+            if (staffByIndex != null
+                && staffByIndex.TryGetValue(articulation.StaffIndex, out var tabStaff)
+                && tabStaff.IsTab && tabStaff.Tuning.HasValue)
+            {
+                int strings = Tunings.GetStringCount(tabStaff.Tuning.Value);
+                double space = EngravingDefaults.TabStringSpace(strings);
+                double colX = measureLayout.X
+                    + LayoutUtilities.GetItemXOffset(artMeasures,
+                        articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
+                const double tabGap = 1.0;
+                double tabY = stemUp
+                    ? staffOffset + (strings - 1) * space + tabGap // below the bottom line
+                    : staffOffset - tabGap;                        // above the top line
+                layouts.Add(new ArticulationLayout(
+                    articulation.MeasureIndex, articulation.ItemIndex, colX, tabY,
+                    articulation.GetGlyph(), !stemUp, articulation.SourcePosition, 1.0,
+                    GetSeedBBox(articulation.Type)));
+                continue;
+            }
 
             // Calculate X position (centered on the note).
             // The item X is the notehead's LEFT edge and articulation glyphs are
