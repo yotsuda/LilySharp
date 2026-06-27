@@ -274,7 +274,7 @@ public static class SharedRenderer
 
         // Beams (use system-wide coordinates; ossia beams are rare and
         // outside the Phase 2-A scope so we draw at full scale)
-        DrawBeams(layout, system, gc);
+        DrawBeams(score, layout, system, gc);
 
         // SpanBars: connect barlines across the staves of each multi-staff group.
         DrawSpanBars(score, system, gc);
@@ -1502,8 +1502,9 @@ public static class SharedRenderer
 
     // ---------- Beams ----------
 
-    private static void DrawBeams(ScoreLayout layout, SystemLayout system, IDrawingContext gc)
+    private static void DrawBeams(MultiStaffScore score, ScoreLayout layout, SystemLayout system, IDrawingContext gc)
     {
+        var staffByIndex = score.EnumerateStaves().ToDictionary(s => s.GlobalStaffIndex, s => s.Staff);
         foreach (var beam in layout.BeamLayouts)
         {
             // Only draw beams whose first measure is in this system
@@ -1572,16 +1573,30 @@ public static class SharedRenderer
                 double stemX = StemAttachX(i);
                 double beamY = leftBeamY + slope * (stemX - leftStemX);
 
-                double memberStaffMiddleY = staffMiddleY;
-                if (!beam.MemberStaffIndices.IsDefaultOrEmpty
-                    && i < beam.MemberStaffIndices.Length
-                    && beam.MemberStaffIndices[i] >= 0)
-                {
-                    memberStaffMiddleY = LayoutUtilities.FindStaffYInSystem(
-                        system, beam.MemberStaffIndices[i]) + StaffHeight / 2;
-                }
+                int memberStaffIdx = (!beam.MemberStaffIndices.IsDefaultOrEmpty
+                    && i < beam.MemberStaffIndices.Length && beam.MemberStaffIndices[i] >= 0)
+                    ? beam.MemberStaffIndices[i] : beam.StaffIndex;
+                Staff? memberStaff = memberStaffIdx >= 0
+                    && staffByIndex.TryGetValue(memberStaffIdx, out var ms) ? ms : null;
 
-                double headY = memberStaffMiddleY - GetMemberStaffPosition(member, up) * 0.5;
+                double headY;
+                if (memberStaff?.IsTab == true)
+                {
+                    // On a tab staff the stem runs from the FRET NUMBER (at its
+                    // string line), not a notehead at a staff position. Keep the
+                    // stem's X aligned with the notation staff's stem; only the
+                    // near end moves to the digit, with a small gap so the stem
+                    // never overlaps the number.
+                    headY = TabStemHeadY(member.Item, up,
+                        LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx), memberStaff);
+                }
+                else
+                {
+                    double memberStaffMiddleY = memberStaffIdx >= 0
+                        ? LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx) + StaffHeight / 2
+                        : staffMiddleY;
+                    headY = memberStaffMiddleY - GetMemberStaffPosition(member, up) * 0.5;
+                }
                 gc.DrawLine(stemX, headY, stemX, beamY,
                     Color.Black, EngravingDefaults.StemThickness);
             }
@@ -1600,6 +1615,40 @@ public static class SharedRenderer
             : c.Notes.Max(x => x.StaffPosition),
         _ => 0,
     };
+
+    /// <summary>
+    /// The Y where a tab-staff stem meets its fret number: the digit's string
+    /// line, offset by half the digit height plus a small gap so the stem touches
+    /// the number without overlapping it. The stem's X stays aligned with the
+    /// notation staff's stem (handled by the caller).
+    /// </summary>
+    private static double TabStemHeadY(MusicItem item, bool stemUp, double tabStaffTopY, Staff staff)
+    {
+        var tuningType = staff.Tuning ?? TuningType.Guitar;
+        int octaveShift = Tunings.OctaveShift(tuningType);
+        int[] tuning = Tunings.GetTuning(tuningType);
+
+        int midi = 0;
+        int? stringNumber = null;
+        switch (item)
+        {
+            case NoteItem n:
+                midi = n.Midi; stringNumber = n.StringNumber;
+                break;
+            case ChordItem c when c.Notes.Length > 0:
+                // The stem meets the chord's outermost note on its near side.
+                var head = stemUp
+                    ? c.Notes.OrderBy(x => x.Midi).First()
+                    : c.Notes.OrderByDescending(x => x.Midi).First();
+                midi = head.Midi; stringNumber = head.StringNumber;
+                break;
+        }
+
+        var (stringNum, _) = Tunings.CalculateFret(midi + octaveShift, tuning, stringNumber ?? 0);
+        double digitY = tabStaffTopY + (stringNum - 1);
+        const double clearance = 0.85; // half the digit (~0.55) + a small gap (~0.3)
+        return digitY + (stemUp ? -clearance : clearance);
+    }
 
     private static void DrawBeamSegment(double x1, double y1, double x2, double y2, IDrawingContext gc)
     {
