@@ -402,8 +402,11 @@ public static class SharedRenderer
             switch (item)
             {
                 case NoteItem note:
-                    DrawTabNote(note.Midi, itemX, staffY,
-                        tuning, note.StringNumber, octaveShift, note.SourcePosition, gc);
+                    // A tie's destination keeps its rhythm (stem/beam) but hides
+                    // its fret number — the held string is not re-struck.
+                    if (!note.IsTieTarget)
+                        DrawTabNote(note.Midi, itemX, staffY,
+                            tuning, note.StringNumber, octaveShift, note.SourcePosition, gc);
                     DrawUnbeamedTabStem(note, note.BaseDuration, note.StemUp,
                         itemX, staffY, staff, beamedItems, gc);
                     break;

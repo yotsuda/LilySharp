@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Generic;
 using System.Linq;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -84,5 +86,62 @@ public sealed class TabStringNumberTests
         var (str, fret) = Tunings.CalculateFret(33, Tunings.Bass, preferredString: 4);
         Assert.Equal(4, str);
         Assert.Equal(5, fret);
+    }
+
+    // ---- Tab tie behaviour ----
+
+    private static (Score Score, MeasureCollector Collector) CollectBody(string body)
+    {
+        var src = "part bl { clef bass }\nsection Main {\n  bl {\n" + body + "\n  }\n}\n" +
+                  "structure { Main }\nscore \"x\" { staff { bl } }\n";
+        var collector = new MeasureCollector();
+        var score = collector.Collect(SyntaxTree.Parse(src));
+        return (score, collector);
+    }
+
+    private static List<NoteItem> Notes(Score score) =>
+        score.Voice.Measures.SelectMany(m => m.Items).OfType<NoteItem>().ToList();
+
+    [Fact]
+    public void TieDestination_IsFlaggedTieTarget()
+    {
+        // The held note (tie destination) is flagged so the tab hides its fret;
+        // the struck note (source) is not.
+        var notes = Notes(CollectBody("a4\\4~ a4 b4 |").Score);
+        Assert.False(notes[0].IsTieTarget);
+        Assert.True(notes[1].IsTieTarget);
+    }
+
+    [Fact]
+    public void TieSource_AdoptsDestinationString_WhenSourceUnspecified()
+    {
+        // Source has no \N but the destination names string 3 → source adopts 3
+        // (so the struck note sits on the held string). Not a conflict.
+        var (score, collector) = CollectBody("a4~ a4\\3 b4 |");
+        var notes = Notes(score);
+        Assert.Equal(3, notes[0].StringNumber);
+        Assert.True(notes[1].IsTieTarget);
+        Assert.Empty(collector.TabTieWarnings);
+    }
+
+    [Fact]
+    public void TieWithConflictingStrings_Warns_AndKeepsSourceString()
+    {
+        var (score, collector) = CollectBody("a4\\4~ a4\\3 b4 |");
+        var w = Assert.Single(collector.TabTieWarnings);
+        Assert.Equal(4, w.PreviousString);
+        Assert.Equal(3, w.FollowingString);
+        Assert.Equal(4, Notes(score)[0].StringNumber); // source string kept
+    }
+
+    [Fact]
+    public void TabTieStringValidator_SurfacesConflict()
+    {
+        var src = "part bl { clef bass }\nsection Main {\n  bl {\n a4\\4~ a4\\3 b4 |\n  }\n}\n" +
+                  "structure { Main }\nscore \"x\" { staff { bl } }\n";
+        var validator = new TabTieStringValidator();
+        validator.Validate(SyntaxTree.Parse(src));
+        var d = Assert.Single(validator.Diagnostics);
+        Assert.Equal(DiagnosticCodes.TabTieStringConflict, d.Code);
     }
 }

@@ -150,4 +150,7 @@ public static class DiagnosticCodes
 
     // Lyric warnings (LYS4xxx)
     public const string LyricSyllableOverflow = "LYS4001";
+
+    // Tablature warnings (LYS5xxx)
+    public const string TabTieStringConflict = "LYS5001";
 }

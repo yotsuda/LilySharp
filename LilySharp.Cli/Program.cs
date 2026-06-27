@@ -814,6 +814,10 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(Syntax
     var lyricValidator = new LilySharp.Core.Semantics.LyricSyllableValidator();
     lyricValidator.Validate(tree);
     combined.AddRange(lyricValidator.Diagnostics);
+    // Tied notes naming different tab strings (a tie holds one string).
+    var tabTieValidator = new LilySharp.Core.Semantics.TabTieStringValidator();
+    tabTieValidator.Validate(tree);
+    combined.AddRange(tabTieValidator.Diagnostics);
     return combined;
 }
 

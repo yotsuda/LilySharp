@@ -166,6 +166,15 @@ public sealed record NoteItem : MusicItem
     /// clef-relative visual position and must not be used for pitch.</summary>
     public int Midi { get; init; }
 
+    /// <summary>
+    /// True when this note is the DESTINATION of a tie (the held continuation).
+    /// On a tab staff its fret number is hidden — the held string is not re-struck,
+    /// so only the tie line shows the continuation (the rhythm/stem still draws).
+    /// Ignored on a notation staff, which shows the tied notehead normally.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/tab-note-heads-engraver.cc — tied tab heads are transparent.</remarks>
+    public bool IsTieTarget { get; init; }
+
     /// <summary>Stem direction: beam-resolved if beamed, else by staff position.</summary>
     public bool StemUp => StemUpOverride ?? StaffPosition < 0;
 

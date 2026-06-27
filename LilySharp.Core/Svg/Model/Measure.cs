@@ -46,7 +46,7 @@ public enum BarlineType
 public sealed record Measure
 {
     /// <summary>The music items in this measure.</summary>
-    public ImmutableArray<MusicItem> Items { get; }
+    public ImmutableArray<MusicItem> Items { get; init; }
 
     /// <summary>Barline at the start of this measure (for repeat starts).</summary>
     public BarlineType StartBarline { get; }

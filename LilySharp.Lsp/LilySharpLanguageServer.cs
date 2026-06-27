@@ -34,7 +34,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260627-1113";
+    public const string Version = "0.1.1-20260627-1207";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -316,6 +316,14 @@ public sealed class LilySharpLanguageServer
         var lyricValidator = new LyricSyllableValidator();
         lyricValidator.Validate(doc.Tree);
         foreach (var d in lyricValidator.Diagnostics)
+        {
+            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+        }
+
+        // Tied notes naming different tab strings (a tie holds one string).
+        var tabTieValidator = new TabTieStringValidator();
+        tabTieValidator.Validate(doc.Tree);
+        foreach (var d in tabTieValidator.Diagnostics)
         {
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
@@ -2115,6 +2123,9 @@ public class RenderInfo
     public string Type { get; set; } = "";  // "score" or "audio"
     public string Filename { get; set; } = "";
 }
+
+
+
 
 
 

@@ -51,6 +51,17 @@ public record BarCheckWarning(
 );
 
 /// <summary>
+/// A tied pair whose two notes carry DIFFERENT explicit tab string numbers
+/// (<c>\N</c>). A tie holds one string, so the held note can't change strings;
+/// <see cref="SourcePosition"/> points at the destination note's <c>\N</c>.
+/// </summary>
+public record TabTieStringWarning(
+    int SourcePosition,
+    int PreviousString,
+    int FollowingString
+);
+
+/// <summary>
 /// Helper class for building measures from syntax nodes.
 /// Supports both explicit barlines and automatic measure detection based on time signature.
 /// </summary>
@@ -536,6 +547,12 @@ public sealed class MeasureCollector
     /// <summary>Lyric lines whose syllable count overflowed their bound notes
     /// (extra syllables dropped). Populated as a side effect of Collect.</summary>
     public IReadOnlyList<LyricSyllableWarning> LyricWarnings => _lyricWarnings;
+    // Tied pairs whose explicit tab string numbers disagree (a tie can't change
+    // strings). Surfaced by TabTieStringValidator; mirrors LyricWarnings.
+    private readonly List<TabTieStringWarning> _tabTieWarnings = new();
+    /// <summary>Tied note pairs with conflicting explicit tab string numbers.
+    /// Populated as a side effect of Collect.</summary>
+    public IReadOnlyList<TabTieStringWarning> TabTieWarnings => _tabTieWarnings;
     // Figured bass
     private readonly List<FiguredBassItem> _figuredBasses = new();
     // Chord names
@@ -650,7 +667,7 @@ public sealed class MeasureCollector
             return BuildMultiVoiceScore(measures, tree.GetRoot());
 
         // Single voice
-        var voice = new Voice(_voiceName ?? "default", measures.ToImmutableArray());
+        var voice = ResolveVoiceTabTies(new Voice(_voiceName ?? "default", measures.ToImmutableArray()));
 
         // Collect lyrics
         CollectLyrics(tree.GetRoot(), measures);
@@ -834,7 +851,8 @@ public sealed class MeasureCollector
                 flatVoices[v.Name] = v;
         SynchronizeBarlines(flatVoices);
         foreach (var key in staffVoices.Keys.ToArray())
-            staffVoices[key] = staffVoices[key].Select(v => flatVoices[v.Name]).ToImmutableArray();
+            staffVoices[key] = staffVoices[key]
+                .Select(v => ResolveVoiceTabTies(flatVoices[v.Name])).ToImmutableArray();
 
         // Lyrics align to the melody — the primary voice of the FIRST staff.
         // (Single-staff scores collect lyrics in Collect(); the grand-staff path
@@ -2640,6 +2658,69 @@ public sealed class MeasureCollector
             if (art is StringNumberAnnotationSyntax s)
                 return s.StringNumber;
         return null;
+    }
+
+    /// <summary>
+    /// Resolves ties for tab rendering across a single voice. The destination of a
+    /// tie is flagged <see cref="NoteItem.IsTieTarget"/> (its fret number is hidden
+    /// on a tab staff) and string numbers are reconciled along the tie:
+    /// <list type="bullet">
+    /// <item>both notes carry an explicit <c>\N</c> that disagree → a warning (a tie
+    /// holds one string); the source string is kept.</item>
+    /// <item>only the destination carries <c>\N</c> → the source ADOPTS it (so the
+    /// struck note sits on the held string).</item>
+    /// </list>
+    /// Voices with no ties are returned unchanged (no rebuild), so non-tied scores —
+    /// and all notation rendering — are byte-for-byte identical.
+    /// </summary>
+    private Voice ResolveVoiceTabTies(Voice voice)
+    {
+        bool anyTie = voice.Measures.Any(m => m.Items.Any(it => it is NoteItem { HasTieStart: true }));
+        if (!anyTie)
+            return voice;
+
+        var items = voice.Measures.Select(m => m.Items.ToArray()).ToArray();
+        int pendingMi = -1, pendingIi = -1; // the note awaiting its tie destination
+
+        for (int mi = 0; mi < items.Length; mi++)
+        {
+            for (int ii = 0; ii < items[mi].Length; ii++)
+            {
+                if (items[mi][ii] is not NoteItem note)
+                    continue;
+
+                if (pendingMi >= 0)
+                {
+                    var src = (NoteItem)items[pendingMi][pendingIi];
+                    int? srcStr = src.StringNumber;
+                    int? dstStr = note.StringNumber;
+
+                    if (srcStr.HasValue && dstStr.HasValue && srcStr != dstStr)
+                        _tabTieWarnings.Add(new TabTieStringWarning(
+                            note.SourcePosition, srcStr.Value, dstStr.Value));
+                    else if (!srcStr.HasValue && dstStr.HasValue)
+                    {
+                        items[pendingMi][pendingIi] = src with { StringNumber = dstStr };
+                        srcStr = dstStr;
+                    }
+
+                    // The destination keeps the held string (for chained ties) and
+                    // is hidden on the tab staff.
+                    note = note with { IsTieTarget = true, StringNumber = dstStr ?? srcStr };
+                    items[mi][ii] = note;
+                    pendingMi = -1;
+                }
+
+                pendingMi = note.HasTieStart ? mi : -1;
+                pendingIi = ii;
+            }
+        }
+
+        var measures = voice.Measures;
+        var rebuilt = ImmutableArray.CreateBuilder<Measure>(measures.Length);
+        for (int mi = 0; mi < measures.Length; mi++)
+            rebuilt.Add(measures[mi] with { Items = ImmutableArray.Create(items[mi]) });
+        return voice with { Measures = rebuilt.MoveToImmutable() };
     }
 
     /// <summary>Absolute MIDI number from a diatonic step (0=C..6=B), alteration and octave.</summary>
