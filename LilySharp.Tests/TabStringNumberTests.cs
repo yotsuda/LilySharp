@@ -156,6 +156,20 @@ public sealed class TabStringNumberTests
     }
 
     [Fact]
+    public void TabOnlyScore_RoutesThroughTabPipeline()
+    {
+        // A lone `tab` (no paired `staff`) must still render as a tab staff, not
+        // fall back to a plain notation staff.
+        var src = "part bl { clef bass }\nsection Main {\n  bl {\n a4\\4 b4 c4 d4 |\n  }\n}\n" +
+                  "structure { Main }\nscore \"x\" { tab bass { bl } }\n";
+        var tree = SyntaxTree.Parse(src);
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        Assert.True(spec.IsMultiStaff);
+        var multi = new MeasureCollector().CollectMultiStaff(tree, spec);
+        Assert.Contains(multi.EnumerateStaves(), s => s.Staff.IsTab);
+    }
+
+    [Fact]
     public void BarePitch_AutoPicksStringNearestPreviousFret()
     {
         // a\4 = fret 5 on the E string; the following b auto-picks the E string

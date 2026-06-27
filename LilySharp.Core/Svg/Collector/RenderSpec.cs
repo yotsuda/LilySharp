@@ -77,8 +77,15 @@ public sealed record RenderSpec(
     /// <summary>Whether this render contains a grand staff.</summary>
     public bool HasGrandStaff => Items.Any(i => i is GrandStaffRenderSpec);
 
-    /// <summary>Whether this is a multi-staff render.</summary>
-    public bool IsMultiStaff => Items.Length > 1 || HasGrandStaff;
+    /// <summary>Whether this render contains a tablature staff.</summary>
+    public bool HasTab => Items.Any(i => i is TabStaffSpec);
+
+    /// <summary>
+    /// Whether this render needs the multi-staff pipeline. A lone <c>tab</c> still
+    /// does: the single-staff path renders plain notation and has no tab support,
+    /// so a tab-only score would otherwise fall back to a notation staff.
+    /// </summary>
+    public bool IsMultiStaff => Items.Length > 1 || HasGrandStaff || HasTab;
 
     /// <summary>Gets all voice names referenced in this render.</summary>
     public IEnumerable<string> GetVoiceNames()
