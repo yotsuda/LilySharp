@@ -34,7 +34,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260627-1707";
+    public const string Version = "0.1.1-20260627-2139";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -324,6 +324,14 @@ public sealed class LilySharpLanguageServer
         var tabTieValidator = new TabTieStringValidator();
         tabTieValidator.Validate(doc.Tree);
         foreach (var d in tabTieValidator.Diagnostics)
+        {
+            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+        }
+
+        // Notes clamped outside the tab range (usually an octave slip).
+        var tabRangeValidator = new TabRangeValidator();
+        tabRangeValidator.Validate(doc.Tree);
+        foreach (var d in tabRangeValidator.Diagnostics)
         {
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
@@ -2136,6 +2144,13 @@ public class RenderInfo
     public string Type { get; set; } = "";  // "score" or "audio"
     public string Filename { get; set; } = "";
 }
+
+
+
+
+
+
+
 
 
 

@@ -63,6 +63,17 @@ public record TabTieStringWarning(
 );
 
 /// <summary>
+/// A note whose sounding pitch is outside the tab's playable range — below the
+/// lowest open string (silently CLAMPED to fret 0, i.e. shown as a wrong open
+/// string) or above the 24th fret of every string. Almost always an octave slip.
+/// <see cref="SourcePosition"/> points at the note.
+/// </summary>
+public record TabRangeWarning(
+    int SourcePosition,
+    bool BelowRange   // true = below the lowest string; false = above the top fret
+);
+
+/// <summary>
 /// Helper class for building measures from syntax nodes.
 /// Supports both explicit barlines and automatic measure detection based on time signature.
 /// </summary>
@@ -561,6 +572,10 @@ public sealed class MeasureCollector
     // Tied pairs whose explicit tab string numbers disagree (a tie can't change
     // strings). Surfaced by TabTieStringValidator; mirrors LyricWarnings.
     private readonly List<TabTieStringWarning> _tabTieWarnings = new();
+    private readonly List<TabRangeWarning> _tabRangeWarnings = new();
+    /// <summary>Notes that fall outside the tab range (clamped). Populated by the
+    /// tab-string resolution during multi-staff collection.</summary>
+    public IReadOnlyList<TabRangeWarning> TabRangeWarnings => _tabRangeWarnings;
     /// <summary>Tied note pairs with conflicting explicit tab string numbers.
     /// Populated as a side effect of Collect.</summary>
     public IReadOnlyList<TabTieStringWarning> TabTieWarnings => _tabTieWarnings;
@@ -2873,10 +2888,19 @@ public sealed class MeasureCollector
         return ImmutableArray.Create(result);
     }
 
-    private static Voice ResolveTabStrings(Voice voice, TuningType tuning)
+    /// <summary>A sounding pitch is playable when some string frets it at 0..24.</summary>
+    private static bool IsTabPlaceable(int sounding, int[] tun)
+    {
+        foreach (var open in tun)
+            if (sounding - open >= 0 && sounding - open <= 24) return true;
+        return false;
+    }
+
+    private Voice ResolveTabStrings(Voice voice, TuningType tuning)
     {
         int[] tun = Tunings.GetTuning(tuning);
         int shift = Tunings.OctaveShift(tuning);
+        int lowestOpen = tun.Min();
         int? prevFret = null; // hand position, carried across bar lines
 
         var rebuilt = ImmutableArray.CreateBuilder<Measure>(voice.Measures.Length);
@@ -2894,6 +2918,9 @@ public sealed class MeasureCollector
                     var newNotes = AssignChordStrings(chord.Notes, tun, shift);
                     items[i] = chord with { Notes = newNotes };
                     changed = true;
+                    foreach (var cn in newNotes)
+                        if (!IsTabPlaceable(cn.Midi + shift, tun))
+                            _tabRangeWarnings.Add(new TabRangeWarning(chord.SourcePosition, cn.Midi + shift < lowestOpen));
                     if (newNotes.Length > 0)
                     {
                         var low = newNotes[0];
@@ -2904,6 +2931,8 @@ public sealed class MeasureCollector
                 }
                 if (items[i] is not NoteItem note) continue;
                 int midi = note.Midi + shift;
+                if (!IsTabPlaceable(midi, tun))
+                    _tabRangeWarnings.Add(new TabRangeWarning(note.SourcePosition, midi < lowestOpen));
                 int strNum, fret;
                 if (note.StringNumber.HasValue)
                 {

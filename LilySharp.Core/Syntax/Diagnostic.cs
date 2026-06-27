@@ -154,6 +154,7 @@ public static class DiagnosticCodes
 
     // Tablature warnings (LYS5xxx)
     public const string TabTieStringConflict = "LYS5001";
+    public const string TabOutOfRange = "LYS5002";
 
     // Render/score declaration errors (LYS6xxx)
     public const string DuplicateScoreName = "LYS6001";
