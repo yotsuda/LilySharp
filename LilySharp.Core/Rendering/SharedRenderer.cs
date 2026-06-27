@@ -468,7 +468,7 @@ public static class SharedRenderer
     // Tab fret numbers are drawn a notch larger than the historical 1.6 so they
     // read clearly; the chord-collision shifts below keep the bigger digits from
     // overlapping. Background/clearance dimensions scale with this.
-    private const double TabFretFontSize = 2.4;
+    private const double TabFretFontSize = 2.6;
 
     /// <summary>Drawn width of a fret number at <see cref="TabFretFontSize"/>.</summary>
     private static double TabFretWidth(int fret) =>
