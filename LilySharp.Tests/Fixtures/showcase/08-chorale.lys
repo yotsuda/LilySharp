@@ -33,7 +33,7 @@ structure { Main }
 
 score "chorale" {
   grandStaff {
-    staff { upper }
-    staff { lower }
+    staff upper
+    staff lower
   }
 }

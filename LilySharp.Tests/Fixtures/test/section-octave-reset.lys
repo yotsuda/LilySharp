@@ -35,5 +35,5 @@ section C {
 structure { A B C }
 
 score "section-octave-reset" {
-  staff { melody }
+  staff melody
 }

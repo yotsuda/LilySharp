@@ -20,4 +20,4 @@ section Main {
   }
 }
 structure { Main }
-score "lyrics-skyline" { staff { melody } }
+score "lyrics-skyline" { staff melody }

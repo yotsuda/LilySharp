@@ -52,7 +52,7 @@ structure { Main }
 
 score "03-piano" {
   grandStaff {
-    staff { rightHand }
-    staff { leftHand }
+    staff rightHand
+    staff leftHand
   }
 }

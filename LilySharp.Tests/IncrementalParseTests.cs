@@ -41,7 +41,7 @@ public class IncrementalParseTests
 
         structure { Main }
 
-        score "x" { staff { melody } }
+        score "x" { staff melody }
         """;
 
     // ---------- helpers ----------
@@ -107,7 +107,7 @@ public class IncrementalParseTests
     // Edit the title at the very start.
     [InlineData("Incremental", "X")]
     // Edit at the very end.
-    [InlineData("{ staff { melody } }", "{ staff { melody } staff { melody } }")]
+    [InlineData("{ staff melody }", "{ staff melody staff melody }")]
     // Introduce a parse error.
     [InlineData("time 4/4", "time 4/")]
     // Edit that changes how a token lexes at the boundary.

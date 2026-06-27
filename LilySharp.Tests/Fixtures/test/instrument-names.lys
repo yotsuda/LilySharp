@@ -52,8 +52,8 @@ section Main {
 structure { Main }
 
 score "instrument-names" {
-  staff { violin1 }
-  staff { violin2 }
-  staff { viola }
-  staff { cello }
+  staff violin1
+  staff violin2
+  staff viola
+  staff cello
 }

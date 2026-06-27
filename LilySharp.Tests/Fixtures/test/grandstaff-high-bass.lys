@@ -19,6 +19,6 @@ section Main {
 structure { Main }
 
 score "grandstaff-high-bass" {
-  staff { rh }
-  staff { lh }
+  staff rh
+  staff lh
 }

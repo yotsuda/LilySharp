@@ -107,7 +107,7 @@ octave absolute
 part melody { clef treble }
 section A { melody { cis'4 c'' c' e' } }
 structure { A }
-score ""t"" { staff { melody } }
+score ""t"" { staff melody }
 ";
 
     [Fact]

@@ -81,7 +81,7 @@ part melody { clef treble }
 section A { melody { octave absolute  c' c'' | } }
 section B { melody { c' c'' | } }
 structure { A B }
-score ""t"" { staff { melody } }
+score ""t"" { staff melody }
 ";
         var collector = new MeasureCollector();
         collector.Collect(SyntaxTree.Parse(src), "melody");

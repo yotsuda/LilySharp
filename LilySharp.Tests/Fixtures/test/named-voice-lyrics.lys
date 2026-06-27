@@ -25,5 +25,5 @@ section Main {
 structure { Main }
 
 score "named-voices" {
-  staff { m }
+  staff m
 }

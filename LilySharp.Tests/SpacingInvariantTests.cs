@@ -49,7 +49,7 @@ public class SpacingInvariantTests
         time 4/4
         section Main { melody { c2 d4 e | } }
         structure { Main }
-        score "x" { staff { melody } }
+        score "x" { staff melody }
         """;
 
     [Fact]
@@ -110,7 +110,7 @@ public class SpacingInvariantTests
             time 4/4
             section Main { melody { R1 | c4 d e f | } }
             structure { Main }
-            score "x" { staff { melody } }
+            score "x" { staff melody }
             """;
         var (timings, allMeasures, primary, _) = Collect(src, measureIndex: 0);
         var springs = new MeasureLayouter().CreateTimingSprings(primary, timings, 0.125, allMeasures);
@@ -139,7 +139,7 @@ public class SpacingInvariantTests
               lh { c8 d e f g a b c | R1 | }
             }
             structure { Main }
-            score "x" { staff { rh } staff { lh } }
+            score "x" { staff rh staff lh }
             """;
         var (timings0, all0, primary0, _) = Collect(src, measureIndex: 0);
         var (timings1, all1, primary1, _) = Collect(src, measureIndex: 1);

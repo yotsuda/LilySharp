@@ -34,5 +34,5 @@ section Main {
 structure { Main }
 
 score "ornaments" {
-  staff { melody }
+  staff melody
 }

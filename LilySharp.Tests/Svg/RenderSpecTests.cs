@@ -43,8 +43,8 @@ public class RenderSpecTests
 
             score "test" {
               grandStaff {
-                staff treble { melody }
-                staff bass { bass }
+                staff treble melody
+                staff bass bass
               }
             }
             """;
@@ -88,7 +88,7 @@ public class RenderSpecTests
             structure { Main }
 
             score {
-              staff treble { melody }
+              staff treble melody
             }
             """;
 
@@ -118,7 +118,7 @@ public class RenderSpecTests
             structure { Main }
 
             score "test" {
-              staff treble { guitar }
+              staff treble guitar
             }
             """;
 
@@ -158,10 +158,10 @@ public class RenderSpecTests
             structure { Main }
 
             score "test" {
-              staff treble { singer }
+              staff treble singer
               grandStaff {
-                staff treble { melody }
-                staff bass { bass }
+                staff treble melody
+                staff bass bass
               }
             }
             """;
@@ -206,10 +206,10 @@ public class RenderSpecTests
             structure { Main }
 
             score "test" {
-              staff treble { singer }
+              staff treble singer
               grandStaff {
-                staff treble { rightHand }
-                staff bass { leftHand }
+                staff treble rightHand
+                staff bass leftHand
               }
             }
             """;
@@ -246,8 +246,8 @@ public class RenderSpecTests
 
             score "test" {
               grandStaff {
-                staff treble { melody }
-                staff bass { bass }
+                staff treble melody
+                staff bass bass
               }
             }
             """;
@@ -285,8 +285,8 @@ public class RenderSpecTests
 
             score "test" {
               grandStaff {
-                staff treble { melody }
-                staff bass { bass }
+                staff treble melody
+                staff bass bass
               }
             }
             """;

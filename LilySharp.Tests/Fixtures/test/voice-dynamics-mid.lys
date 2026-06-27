@@ -16,5 +16,5 @@ section Main {
 structure { Main }
 
 score "voice-dynamics-mid" {
-  staff { m }
+  staff m
 }

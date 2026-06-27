@@ -113,7 +113,7 @@ section A {
 }
 structure { A }
 score ""test"" {
-    staff bass { bassline }
+    staff bass bassline
 }
 ";
         var notes = CollectNotes(source, "bassline");
@@ -144,7 +144,7 @@ section A {
 }
 structure { A }
 score ""test"" {
-    staff bass { cellopart }
+    staff bass cellopart
 }
 ";
         var notes = CollectNotes(source, "cellopart");
@@ -254,7 +254,7 @@ section A {
 }
 structure { A }
 score ""test"" {
-    staff treble_8 { lead }
+    staff treble_8 lead
 }
 ";
         var notes = CollectNotes(source, "lead");
@@ -274,7 +274,7 @@ section A {
 }
 structure { A }
 score ""test"" {
-    staff treble { fl }
+    staff treble fl
 }
 ";
         var notes = CollectNotes(source, "fl");
@@ -296,7 +296,7 @@ section A {
 }
 structure { A }
 score ""test"" {
-    staff treble { high }
+    staff treble high
 }
 ";
         var notes = CollectNotes(source, "high");
@@ -319,7 +319,7 @@ section B {
 }
 structure { A B }
 score ""test"" {
-    staff treble { melody }
+    staff treble melody
 }
 ";
         var notes = CollectNotes(source, "melody");
@@ -347,7 +347,7 @@ section B {
 }
 structure { A B }
 score ""test"" {
-    staff bass { bassline }
+    staff bass bassline
 }
 ";
         var notes = CollectNotes(source, "bassline");
@@ -403,7 +403,7 @@ section A {
 }
 structure { A }
 score ""test"" {
-    staff treble_8 { melody }
+    staff treble_8 melody
 }
 ";
         var tree = SyntaxTree.Parse(source);

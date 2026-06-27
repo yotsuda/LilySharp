@@ -79,7 +79,7 @@ structure {
 }
 
 score ""test"" {
-    staff treble { melody }
+    staff treble melody
 }
 ";
         var tree = SyntaxTree.Parse(source);

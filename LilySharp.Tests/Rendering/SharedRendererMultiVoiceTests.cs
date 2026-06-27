@@ -46,7 +46,7 @@ public sealed class SharedRendererMultiVoiceTests
             section S { line { voice { c''4 c'' c'' c'' } voice { e4 e e e } } }
 
             structure { S }
-            score "o" { staff { line } }
+            score "o" { staff line }
             """);
 
         // Sanity: the staff really has two voices.
@@ -81,7 +81,7 @@ public sealed class SharedRendererMultiVoiceTests
             section S { line { voice { d'4 d'4 d'4 d'4 } voice { c'4 c'4 c'4 c'4 } } }
 
             structure { S }
-            score "o" { staff { line } }
+            score "o" { staff line }
             """);
 
         bool anyOffset = false;

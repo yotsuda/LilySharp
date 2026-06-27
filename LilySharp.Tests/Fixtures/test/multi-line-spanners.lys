@@ -38,5 +38,5 @@ section Main {
 structure { Main }
 
 score "multi-line-spanners" {
-  staff { melody }
+  staff melody
 }

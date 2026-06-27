@@ -18,6 +18,6 @@ section Main {
 structure { Main }
 
 score "fingering-lower-staff" {
-  staff { top }
-  staff { bot }
+  staff top
+  staff bot
 }

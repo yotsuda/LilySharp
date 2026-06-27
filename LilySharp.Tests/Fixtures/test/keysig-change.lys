@@ -26,4 +26,4 @@ section C { melody { $m3 } }
 
 structure { A B C }
 
-score "keysig-change" { staff { melody } }
+score "keysig-change" { staff melody }

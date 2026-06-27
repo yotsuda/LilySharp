@@ -39,7 +39,7 @@ part violin { name: Violin }
 phrase m { c4 d e f }
 section A { violin { $m } }
 structure { A }
-score ""test"" { staff { violin } }
+score ""test"" { staff violin }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -56,7 +56,7 @@ part vln1 { name: ""Violin I"" }
 phrase m { c4 d e f }
 section A { vln1 { $m } }
 structure { A }
-score ""test"" { staff { vln1 } }
+score ""test"" { staff vln1 }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -73,7 +73,7 @@ part melody { clef treble }
 phrase m { c4 d e f }
 section A { melody { $m } }
 structure { A }
-score ""test"" { staff { melody } }
+score ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -92,7 +92,7 @@ phrase rhM { c4 d e f }
 phrase lhM { c,4 d e f }
 section A { rh { $rhM } lh { $lhM } }
 structure { A }
-score ""test"" { grandStaff { staff { rh } staff { lh } } }
+score ""test"" { grandStaff { staff rh staff lh } }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -114,7 +114,7 @@ part vla { clef alto  name: Viola }
 phrase m { c4 d e f }
 section A { vln { $m } vla { $m } }
 structure { A }
-score ""test"" { staff { vln } staff { vla } }
+score ""test"" { staff vln staff vla }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -134,7 +134,7 @@ part vla { clef alto  name: Viola }
 phrase m { c4 d e f }
 section A { vln { $m } vla { $m } }
 structure { A }
-score ""test"" { staff { vln } staff { vla } }
+score ""test"" { staff vln staff vla }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };

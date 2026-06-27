@@ -20,5 +20,5 @@ section Main {
 structure { Main }
 
 score "multi-measure-rest" {
-  staff { melody }
+  staff melody
 }

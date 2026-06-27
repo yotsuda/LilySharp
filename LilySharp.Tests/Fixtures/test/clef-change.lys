@@ -26,5 +26,5 @@ section Main {
 structure { Main }
 
 score "clef-change" {
-  staff { melody }
+  staff melody
 }

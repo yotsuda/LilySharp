@@ -37,5 +37,5 @@ section Main {
 structure { Main }
 
 score "ties-slurs" {
-  staff { melody }
+  staff melody
 }

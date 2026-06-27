@@ -21,5 +21,5 @@ section Main {
 structure { Main }
 
 score "bass-clef" {
-  staff { bass_part }
+  staff bass_part
 }

@@ -43,5 +43,5 @@ section Main {
 structure { Main }
 
 score "courtesy-accidentals" {
-  staff { melody }
+  staff melody
 }

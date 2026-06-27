@@ -40,7 +40,7 @@ public class SectionLabelTests
         section First { melody { $pa } }
         section Second { melody { $pa } }
         structure { First Second First "First (reprise)" }
-        score "x" { staff { melody } }
+        score "x" { staff melody }
         """;
 
     [Fact]
@@ -71,7 +71,7 @@ public class SectionLabelTests
             phrase 動機 { c4 d e f | }
             section イントロ { メロディ { $動機 } }
             structure { イントロ イントロ "イントロ(再現)" }
-            score "x" { staff { メロディ } }
+            score "x" { staff メロディ }
             """);
 
         Assert.Equal("イントロ", labels[0]);
@@ -86,7 +86,7 @@ public class SectionLabelTests
             phrase 動機 { c4 d e f | }
             section イントロ { メロディ { $動機 } }
             structure { イントロ }
-            score "x" { staff { メロディ } }
+            score "x" { staff メロディ }
             """);
         Assert.Empty(tree.Diagnostics);
     }

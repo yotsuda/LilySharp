@@ -23,4 +23,4 @@ phrase tune {
 
 section Main { melody { $tune } }
 structure { Main }
-score "timesig-change-linebreak" { staff { melody } }
+score "timesig-change-linebreak" { staff melody }

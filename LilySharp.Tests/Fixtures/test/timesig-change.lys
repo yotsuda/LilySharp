@@ -29,5 +29,5 @@ section Main {
 structure { Main }
 
 score "timesig-change" {
-  staff { melody }
+  staff melody
 }

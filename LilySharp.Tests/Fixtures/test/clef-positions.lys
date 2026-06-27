@@ -22,8 +22,8 @@ section M {
 structure { M }
 
 score "clef-positions" {
-  staff { sop }
-  staff { alt }
-  staff { ten }
-  staff { bas }
+  staff sop
+  staff alt
+  staff ten
+  staff bas
 }

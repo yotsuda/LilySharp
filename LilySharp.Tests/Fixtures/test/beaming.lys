@@ -36,5 +36,5 @@ section Main {
 structure { Main }
 
 score "beaming" {
-  staff { melody }
+  staff melody
 }

@@ -107,7 +107,7 @@ public class SectionOrientedTests
             section A { guitar { c4 } }
             structure { A }
             score "output" {
-                staff { guitar }
+                staff guitar
             }
             """;
         var tree = SyntaxTree.Parse(source);
@@ -121,8 +121,8 @@ public class SectionOrientedTests
             section A { guitar { c4 d e f } }
             structure { A }
             score "guitar" {
-                staff { guitar }
-                tab guitar { guitar }
+                staff guitar
+                tab guitar guitar
             }
             """;
         var tree = SyntaxTree.Parse(source);
@@ -172,9 +172,9 @@ public class SectionOrientedTests
             }
 
             score "test" {
-                staff { guitar }
-                tab guitar { guitar }
-                staff bass { bass }
+                staff guitar
+                tab guitar guitar
+                staff bass bass
             }
             """;
         var tree = SyntaxTree.Parse(source);

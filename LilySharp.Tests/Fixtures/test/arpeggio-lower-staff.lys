@@ -16,6 +16,6 @@ section Main {
 structure { Main }
 
 score "arpeggio-lower-staff" {
-  staff { top }
-  staff { bot }
+  staff top
+  staff bot
 }

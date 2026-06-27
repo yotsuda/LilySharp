@@ -22,4 +22,4 @@ section Main {
   }
 }
 structure { Main }
-score "chordnames" { staff { m } }
+score "chordnames" { staff m }

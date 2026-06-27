@@ -31,5 +31,5 @@ section Main {
 structure { Main }
 
 score "tuplets-beamed" {
-  staff { melody }
+  staff melody
 }

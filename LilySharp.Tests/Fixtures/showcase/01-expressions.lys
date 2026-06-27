@@ -40,5 +40,5 @@ section Main {
 structure { Main }
 
 score "01-expressions" {
-  staff { melody }
+  staff melody
 }

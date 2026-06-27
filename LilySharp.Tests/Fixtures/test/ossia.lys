@@ -17,6 +17,6 @@ section Main {
 structure { Main }
 
 score "ossia" {
-    staff { melody }
+    staff melody
     ossia { ossia_melody }
 }

@@ -45,8 +45,8 @@ public class GrandStaffRenderTests
 
             score "test" {
               grandStaff {
-                staff treble { melody }
-                staff bass { bass }
+                staff treble melody
+                staff bass bass
               }
             }
             """;
@@ -89,8 +89,8 @@ public class GrandStaffRenderTests
 
             score "test" {
               grandStaff {
-                staff treble { melody }
-                staff bass { bass }
+                staff treble melody
+                staff bass bass
               }
             }
             """;
@@ -135,8 +135,8 @@ public class GrandStaffRenderTests
 
             score "test" {
               grandStaff {
-                staff treble { melody }
-                staff bass { bass }
+                staff treble melody
+                staff bass bass
               }
             }
             """;

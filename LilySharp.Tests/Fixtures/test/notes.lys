@@ -48,5 +48,5 @@ section Main {
 structure { Main }
 
 score "notes" {
-  staff { melody }
+  staff melody
 }

@@ -2120,14 +2120,13 @@ private GreenNode?[] ParseArticulations()
     /// <summary>
     /// Check if current token can be a part name (Identifier or instrument keyword like bass).
     /// </summary>
-    private bool IsPartNameStart()
-    {
-        return Current.Kind is SyntaxKind.Identifier
-            or SyntaxKind.BassKeyword
-            or SyntaxKind.TrebleKeyword
-            or SyntaxKind.AltoKeyword
-            or SyntaxKind.TenorKeyword;
-    }
+    private bool IsPartNameStart() => IsPartNameKind(Current.Kind);
+
+    private static bool IsPartNameKind(SyntaxKind? kind) => kind is SyntaxKind.Identifier
+        or SyntaxKind.BassKeyword
+        or SyntaxKind.TrebleKeyword
+        or SyntaxKind.AltoKeyword
+        or SyntaxKind.TenorKeyword;
 
     /// <summary>
     /// Expect a part name (Identifier or instrument keyword like bass).
@@ -2163,32 +2162,15 @@ private GreenNode?[] ParseArticulations()
     /// </summary>
     private StaffRenderGreen ParseStaffRender()
     {
-        // staff [clef] part   or   staff [clef] { part }  — clef and braces optional.
+        // staff [clef] part   (clef optional; no braces)
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.StaffKeyword) };
 
-        // A clef keyword followed by a part name or a brace is an override.
-        if (IsClefKeyword() &&
-            (Peek(1)?.Kind == SyntaxKind.Identifier || Peek(1)?.Kind == SyntaxKind.OpenBrace))
+        // A clef keyword followed by a part name is an override.
+        if (IsClefKeyword() && IsPartNameKind(Peek(1)?.Kind))
             tokens.Add(Advance());
 
-        ParseRenderTargetBody(tokens);
+        tokens.Add(ExpectPartName());
         return new StaffRenderGreen([.. tokens]);
-    }
-
-    /// <summary>Parses the part-name tail of a render item: either <c>part</c> or
-    /// <c>{ part }</c>, appending the tokens consumed.</summary>
-    private void ParseRenderTargetBody(List<SyntaxToken> tokens)
-    {
-        if (Check(SyntaxKind.OpenBrace))
-        {
-            tokens.Add(Advance());
-            tokens.Add(ExpectPartName());
-            tokens.Add(Expect(SyntaxKind.CloseBrace));
-        }
-        else
-        {
-            tokens.Add(ExpectPartName());
-        }
     }
 
     /// <summary>
@@ -2247,17 +2229,16 @@ private GreenNode?[] ParseArticulations()
     /// </summary>
     private TabRenderGreen ParseTabRender()
     {
-        // tab [tuning] part   or   tab [tuning] { part }  — tuning and braces optional.
+        // tab [tuning] part   (tuning optional; no braces)
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.TabKeyword) };
 
-        // A tuning name followed by a part name or a brace is an override; otherwise
-        // the lone token is the part and the tuning comes from the part definition.
+        // A tuning name followed by a part name is an override; otherwise the lone
+        // token is the part and the tuning comes from the part definition.
         bool tuningish = Current.Kind is SyntaxKind.Identifier or SyntaxKind.BassKeyword;
-        if (tuningish &&
-            (Peek(1)?.Kind == SyntaxKind.Identifier || Peek(1)?.Kind == SyntaxKind.OpenBrace))
+        if (tuningish && IsPartNameKind(Peek(1)?.Kind))
             tokens.Add(Advance());
 
-        ParseRenderTargetBody(tokens);
+        tokens.Add(ExpectPartName());
         return new TabRenderGreen([.. tokens]);
     }
 

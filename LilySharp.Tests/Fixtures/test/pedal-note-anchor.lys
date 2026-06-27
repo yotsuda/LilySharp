@@ -15,5 +15,5 @@ section Main {
 structure { Main }
 
 score "pedal-note-anchor" {
-  staff { lh }
+  staff lh
 }

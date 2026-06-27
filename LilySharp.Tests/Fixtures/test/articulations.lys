@@ -36,5 +36,5 @@ section Main {
 structure { Main }
 
 score "articulations" {
-  staff { melody }
+  staff melody
 }

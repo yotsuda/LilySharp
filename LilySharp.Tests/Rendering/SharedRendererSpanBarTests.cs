@@ -51,8 +51,8 @@ public sealed class SharedRendererSpanBarTests
 
             score "t" {
               grandStaff {
-                staff treble { melody }
-                staff bass { bass }
+                staff treble melody
+                staff bass bass
               }
             }
             """);
@@ -68,7 +68,7 @@ public sealed class SharedRendererSpanBarTests
             time 4/4
             section S { line { c'4 d e f | } }
             structure { S }
-            score "s" { staff { line } }
+            score "s" { staff line }
             """);
 
         bool spanBar = single.Rects.Any(r => IsVerticalBar(r) && r.H > StaffHeight + 1.0);

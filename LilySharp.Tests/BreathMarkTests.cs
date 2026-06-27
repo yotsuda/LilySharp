@@ -56,7 +56,7 @@ public sealed class BreathMarkTests
     [Fact]
     public void Collector_AnchorsBreathToItsNote()
     {
-        var src = "section Main {\n  m {\n    time 4/4\n    c4@breath d e f |\n  }\n}\nstructure { Main }\nscore \"x\" { staff { m } }\n";
+        var src = "section Main {\n  m {\n    time 4/4\n    c4@breath d e f |\n  }\n}\nstructure { Main }\nscore \"x\" { staff m }\n";
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src));
         var breath = score.Articulations.Single(a => a.Type == ArticulationType.Breath);
         Assert.Equal(0, breath.MeasureIndex);

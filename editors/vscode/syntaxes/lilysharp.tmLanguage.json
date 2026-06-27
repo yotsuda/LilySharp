@@ -151,7 +151,7 @@
             "patterns": [
                 {
                     "name": "keyword.control.lilysharp",
-                    "match": "\\b(score|part|staff|voice|relative|absolute|fixed|repeat|structure|render|grace|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics|chordnames)\\b"
+                    "match": "\\b(score|part|staff|tab|grandstaff|ossia|voice|relative|absolute|fixed|repeat|structure|render|grace|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics|chordnames)\\b"
                 },
                 {
                     "name": "keyword.other.lilysharp",

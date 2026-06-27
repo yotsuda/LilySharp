@@ -17,6 +17,6 @@ section Main {
 structure { Main }
 
 score "figbass-chordname-lower-staff" {
-  staff { top }
-  staff { bot }
+  staff top
+  staff bot
 }

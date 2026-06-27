@@ -19,6 +19,6 @@ section Main {
 structure { Main }
 
 score "articulations-lower-staff" {
-  staff { top }
-  staff { bot }
+  staff top
+  staff bot
 }

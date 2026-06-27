@@ -26,5 +26,5 @@ section Main {
 structure { Main }
 
 score "lyrics" {
-  staff { melody }
+  staff melody
 }

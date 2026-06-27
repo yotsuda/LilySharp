@@ -13,4 +13,4 @@ section Main {
   }
 }
 structure { Main }
-score "partial-pickup" { staff { m } }
+score "partial-pickup" { staff m }

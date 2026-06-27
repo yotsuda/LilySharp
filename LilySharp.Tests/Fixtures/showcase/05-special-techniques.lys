@@ -43,5 +43,5 @@ section Main {
 structure { Main }
 
 score "05-special-techniques" {
-  staff { melody }
+  staff melody
 }

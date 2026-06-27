@@ -18,4 +18,4 @@ section Main {
 }
 
 structure { Main }
-score "transpose" { staff { melody } }
+score "transpose" { staff melody }

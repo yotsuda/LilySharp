@@ -60,7 +60,7 @@ public sealed class SharedRendererBeamTests
             }
 
             structure { Demo }
-            score "out" { staff { line } }
+            score "out" { staff line }
             """;
         var (score, layout) = BuildLayout(source);
 
@@ -93,8 +93,8 @@ public sealed class SharedRendererBeamTests
 
             structure { M }
             score "grand" {
-                staff { top }
-                staff { bot }
+                staff top
+                staff bot
             }
             """;
         var (score, layout) = BuildLayout(source);

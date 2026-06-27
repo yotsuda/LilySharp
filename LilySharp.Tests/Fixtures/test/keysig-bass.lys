@@ -33,5 +33,5 @@ section GMajor {
 structure { FMajor GMajor }
 
 score "keysig-bass" {
-  staff { bassLine }
+  staff bassLine
 }

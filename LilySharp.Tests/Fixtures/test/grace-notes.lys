@@ -36,5 +36,5 @@ section Main {
 structure { Main }
 
 score "grace-notes" {
-  staff { melody }
+  staff melody
 }

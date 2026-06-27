@@ -157,6 +157,6 @@ structure { A B C D }
 
 // ---- 16. レンダリング (グランドスタッフ) ----------------------------------
 score "feature-tour" {
-  staff { melody }
-  staff { lh }
+  staff melody
+  staff lh
 }

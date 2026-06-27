@@ -19,6 +19,6 @@ section Main {
 structure { Main }
 
 score "voice-dynamics-multistaff" {
-  staff { top }
-  staff { bot }
+  staff top
+  staff bot
 }

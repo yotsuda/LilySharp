@@ -21,7 +21,7 @@ structure { Main }
 
 score "transpose-score" {
   grandStaff {
-    staff { upper }
-    staff { lower }
+    staff upper
+    staff lower
   }
 }

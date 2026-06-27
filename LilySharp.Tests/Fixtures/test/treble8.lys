@@ -31,7 +31,7 @@ section Main {
 structure { Main }
 
 score "treble8" {
-  staff { gtr }
-  staff { tnr }
-  staff { t8 }
+  staff gtr
+  staff tnr
+  staff t8
 }

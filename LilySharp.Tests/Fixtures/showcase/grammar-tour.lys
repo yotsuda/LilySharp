@@ -138,8 +138,8 @@ section D {
 structure { A B C D }
 
 score "grammar-tour" {
-  staff { rh }
-  staff { lh }
+  staff rh
+  staff lh
 }
 
 // 歌詞(lyrics)は単一譜のときに描画される。構文例は samples/test/lyrics.lys:

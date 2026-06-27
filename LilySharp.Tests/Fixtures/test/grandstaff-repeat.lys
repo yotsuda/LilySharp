@@ -29,7 +29,7 @@ structure { Main }
 
 score "grandstaff-repeat" {
   grandStaff {
-    staff { rh }
-    staff { lh }
+    staff rh
+    staff lh
   }
 }

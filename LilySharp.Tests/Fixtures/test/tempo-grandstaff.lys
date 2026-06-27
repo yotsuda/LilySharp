@@ -24,7 +24,7 @@ structure { Main }
 
 score "tempo-grandstaff" {
   grandStaff {
-    staff { rightHand }
-    staff { leftHand }
+    staff rightHand
+    staff leftHand
   }
 }

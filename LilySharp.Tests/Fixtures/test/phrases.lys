@@ -30,5 +30,5 @@ section Main {
 structure { Main }
 
 score "phrases" {
-  staff { melody }
+  staff melody
 }

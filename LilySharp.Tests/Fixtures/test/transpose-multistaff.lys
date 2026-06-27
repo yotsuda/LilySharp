@@ -20,7 +20,7 @@ structure { Main }
 
 score "transpose-multistaff" {
   grandStaff {
-    staff { upper }
-    staff { lower }
+    staff upper
+    staff lower
   }
 }

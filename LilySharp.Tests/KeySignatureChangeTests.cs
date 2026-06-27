@@ -64,7 +64,7 @@ part melody { clef treble }
 phrase m { c'4 d e f | key d major fis4 g a b | }
 section A { melody { $m } }
 structure { A }
-score ""test"" { staff { melody } }
+score ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -96,7 +96,7 @@ part melody { clef treble }
 phrase m { c'4 d e f | key d major fis4 g a b | key bes major bes4 a g f | }
 section A { melody { $m } }
 structure { A }
-score ""test"" { staff { melody } }
+score ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -143,7 +143,7 @@ part melody { clef treble }
 phrase m { c'4 d e f | key d major fis4 g a b | }
 section A { melody { $m } }
 structure { A }
-score ""test"" { staff { melody } }
+score ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -165,7 +165,7 @@ key d major
 phrase m { fis4 g a b | key f major c'4 bes a g | }
 section A { melody { $m } }
 structure { A }
-score ""test"" { staff { melody } }
+score ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -190,7 +190,7 @@ key d major
 phrase m { fis4 g a b | key c major c'4 d e f | }
 section A { melody { $m } }
 structure { A }
-score ""test"" { staff { melody } }
+score ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -212,7 +212,7 @@ key d major
 phrase m { fis4 g a b | key g major c'4 d e fis | }
 section A { melody { $m } }
 structure { A }
-score ""test"" { staff { melody } }
+score ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);

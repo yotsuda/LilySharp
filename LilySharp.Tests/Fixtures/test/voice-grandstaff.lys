@@ -20,7 +20,7 @@ structure { Main }
 
 score "voice-grandstaff" {
   grandStaff {
-    staff { rh }
-    staff { lh }
+    staff rh
+    staff lh
   }
 }

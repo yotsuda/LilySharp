@@ -90,7 +90,7 @@ structure {
     {
         var source = @"
 score ""output"" {
-    staff { guitar }
+    staff guitar
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
@@ -101,8 +101,8 @@ score ""output"" {
     {
         var source = @"
 score ""guitar"" {
-    staff { guitar }
-    tab guitar { guitar }
+    staff guitar
+    tab guitar guitar
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
@@ -147,8 +147,8 @@ structure {
 }
 
 score ""test"" {
-    staff { guitar }
-    staff bass { bass }
+    staff guitar
+    staff bass bass
 }
 ";
         var tree = SyntaxTree.Parse(source);

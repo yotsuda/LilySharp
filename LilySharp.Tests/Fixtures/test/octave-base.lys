@@ -20,5 +20,5 @@ section Main {
 structure { Main }
 
 score "octave-base" {
-  staff { low }
+  staff low
 }

@@ -43,5 +43,5 @@ section FMajor {
 structure { DMajor GMajor FMajor }
 
 score "keysig-treble" {
-  staff { melody }
+  staff melody
 }

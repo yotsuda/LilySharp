@@ -59,7 +59,7 @@ structure {
 }
 
 score ""test"" {
-    staff treble { melody }
+    staff treble melody
 }
 ";
         var tree = SyntaxTree.Parse(source);
@@ -94,7 +94,7 @@ structure {
 }
 
 score ""test"" {
-    staff treble { melody }
+    staff treble melody
 }
 ";
         var tree = SyntaxTree.Parse(source);
@@ -141,7 +141,7 @@ section Main {
 structure { Main }
 
 score ""test"" {
-  staff { melody }
+  staff melody
 }
 ";
         var tree = SyntaxTree.Parse(source);
@@ -215,15 +215,15 @@ phrase lh2 { c2 g, | c1 | }
 
 score ""mvt1"" {
   grandStaff {
-    staff treble { rh1 }
-    staff bass { lh1 }
+    staff treble rh1
+    staff bass lh1
   }
 }
 
 score ""mvt2"" {
   grandStaff {
-    staff treble { rh2 }
-    staff bass { lh2 }
+    staff treble rh2
+    staff bass lh2
   }
 }
 ";
@@ -256,15 +256,15 @@ phrase lh2 { c2 g, | c1 | }
 
 score ""movement1"" {
   grandStaff {
-    staff treble { rh1 }
-    staff bass { lh1 }
+    staff treble rh1
+    staff bass lh1
   }
 }
 
 score ""movement2"" {
   grandStaff {
-    staff treble { rh2 }
-    staff bass { lh2 }
+    staff treble rh2
+    staff bass lh2
   }
 }
 ";
@@ -302,9 +302,9 @@ score ""movement2"" {
 phrase rh { c'4 d' e' f' | }
 phrase lh { c2 e | }
 
-score ""first"" { staff treble { rh } }
-score ""second"" { staff treble { lh } }
-score ""third"" { staff treble { rh } }
+score ""first"" { staff treble rh }
+score ""second"" { staff treble lh }
+score ""third"" { staff treble rh }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
@@ -395,7 +395,7 @@ section Main {
 }
 structure { Main }
 score ""ossia-test"" {
-    staff { melody }
+    staff melody
     ossia { alt }
 }";
         var tree = SyntaxTree.Parse(source);
@@ -428,7 +428,7 @@ section Main {
 }
 structure { Main }
 score ""ossia-clef"" {
-    staff { melody }
+    staff melody
     ossia bass { bassAlt }
 }";
         var tree = SyntaxTree.Parse(source);
@@ -453,7 +453,7 @@ section Main {
 }
 structure { Main }
 score ""ossia-barline"" {
-    staff { melody }
+    staff melody
     ossia { alt }
 }";
         var tree = SyntaxTree.Parse(source);

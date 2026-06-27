@@ -62,7 +62,7 @@ public sealed class PartialDeclarationTests
 
     private static System.Collections.Immutable.ImmutableArray<Measure> CollectMeasures(string body)
     {
-        var src = "section Main {\n  m {\n" + body + "\n  }\n}\nstructure { Main }\nscore \"x\" { staff { m } }\n";
+        var src = "section Main {\n  m {\n" + body + "\n  }\n}\nstructure { Main }\nscore \"x\" { staff m }\n";
         var tree = SyntaxTree.Parse(src);
         return new MeasureCollector().Collect(tree).Voice.Measures;
     }

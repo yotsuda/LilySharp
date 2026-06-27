@@ -28,5 +28,5 @@ section Second {
 structure { First Second First "First (reprise)" }
 
 score "dollar-ref" {
-  staff { melody }
+  staff melody
 }

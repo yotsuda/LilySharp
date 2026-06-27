@@ -30,7 +30,7 @@ structure { Main }
 
 score "keysig-clefs" {
   grandStaff {
-    staff { treblePart }
-    staff { bassPart }
+    staff treblePart
+    staff bassPart
   }
 }

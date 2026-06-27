@@ -19,5 +19,5 @@ section Main {
 structure { Main }
 
 score "single-staff-arpeggio-grace" {
-  staff { lh }
+  staff lh
 }

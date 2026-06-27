@@ -11,4 +11,4 @@ section Main {
   ten { c4 d e f | g a bes c | }
 }
 structure { Main }
-score "alto-tenor-clefs" { staff { alt } staff { ten } }
+score "alto-tenor-clefs" { staff alt staff ten }

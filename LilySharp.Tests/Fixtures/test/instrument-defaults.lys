@@ -52,10 +52,10 @@ section Main {
 structure { Main }
 
 score "instrument-defaults" {
-  staff { guitar }
-  staff { tenorVoice }
+  staff guitar
+  staff tenorVoice
   grandStaff {
-    staff { pianoRH }
-    staff { pianoLH }
+    staff pianoRH
+    staff pianoLH
   }
 }

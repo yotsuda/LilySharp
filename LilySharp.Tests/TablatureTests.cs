@@ -126,8 +126,8 @@ public class TablatureTests
             structure { Main }
 
             score "test" {
-                staff treble { guitar }
-                tab standard { guitar }
+                staff treble guitar
+                tab standard guitar
             }
             """;
 
@@ -162,7 +162,7 @@ public class TablatureTests
             structure { Main }
 
             score "test" {
-                tab standard { melody }
+                tab standard melody
             }
             """;
 
@@ -200,8 +200,8 @@ public class TablatureTests
             structure { Main }
 
             score "guitar-tab" {
-              staff { guitar }
-              tab standard { guitar }
+              staff guitar
+              tab standard guitar
             }
             """;
 

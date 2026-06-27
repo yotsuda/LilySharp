@@ -11,4 +11,4 @@ section Main {
   }
 }
 structure { Main }
-score "two-voice-polyphony" { staff { m } }
+score "two-voice-polyphony" { staff m }

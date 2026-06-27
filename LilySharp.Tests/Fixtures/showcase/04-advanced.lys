@@ -55,5 +55,5 @@ structure {
 }
 
 score "04-advanced" {
-  staff { melody }
+  staff melody
 }

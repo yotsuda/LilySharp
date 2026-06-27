@@ -22,5 +22,5 @@ section Main {
 structure { Main }
 
 score "break" {
-  staff { melody }
+  staff melody
 }

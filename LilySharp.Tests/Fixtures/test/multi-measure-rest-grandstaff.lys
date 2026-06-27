@@ -28,6 +28,6 @@ section Main {
 structure { Main }
 
 score "multi-measure-rest-grandstaff" {
-  staff { melody }
-  staff { lh }
+  staff melody
+  staff lh
 }

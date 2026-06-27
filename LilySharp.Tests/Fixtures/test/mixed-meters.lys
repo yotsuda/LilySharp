@@ -15,4 +15,4 @@ section Main {
   }
 }
 structure { Main }
-score "mixed-meters" { staff { m } }
+score "mixed-meters" { staff m }
