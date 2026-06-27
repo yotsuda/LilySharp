@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="800.0" height="331.4" viewBox="0 0 80.00 33.14">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="331.4" viewBox="0 0 119.05 33.14">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="395">Lower-staff dynamic</text>
-  <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
+  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="395">Lower-staff dynamic</text>
+  <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="11.64" x2="0.00" y2="26.14" stroke="#000000" stroke-width="0.160"/>
   <line x1="0.00" y1="11.64" x2="32.52" y2="11.64" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="12.64" x2="32.52" y2="12.64" stroke="#000000" stroke-width="0.100"/>

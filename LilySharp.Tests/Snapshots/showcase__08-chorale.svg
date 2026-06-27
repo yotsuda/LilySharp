@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="800.0" height="428.6" viewBox="0 0 80.00 42.86">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="428.6" viewBox="0 0 119.05 42.86">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="589">Chorale</text>
-  <text x="78.00" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="608">Lily#</text>
-  <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
+  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="589">Chorale</text>
+  <text x="110.55" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="608">Lily#</text>
+  <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <text x="-0.30" y="25.66" font-size="1.12" font-family="Emmentaler-Brace" text-anchor="end" fill="#000000"></text>
   <line x1="0.00" y1="17.16" x2="0.00" y2="34.16" stroke="#000000" stroke-width="0.160"/>
   <rect x="38.74" y="21.16" width="0.19" height="9.00" fill="#000000"/>

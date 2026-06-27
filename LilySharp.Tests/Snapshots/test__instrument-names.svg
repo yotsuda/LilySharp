@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="800.0" height="601.6" viewBox="0 0 80.00 60.16">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="601.6" viewBox="0 0 119.05 60.16">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="82">Instrument Names</text>
-  <text x="78.00" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="110">Lily#</text>
-  <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
+  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="82">Instrument Names</text>
+  <text x="110.55" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="110">Lily#</text>
+  <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <text x="7.50" y="19.16" font-size="3.00" font-family="serif" text-anchor="middle" dominant-baseline="central">Violin I</text>
   <text x="7.50" y="29.66" font-size="3.00" font-family="serif" text-anchor="middle" dominant-baseline="central">Violin II</text>
   <text x="7.50" y="40.16" font-size="3.00" font-family="serif" text-anchor="middle" dominant-baseline="central">Viola</text>

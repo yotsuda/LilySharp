@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="800.0" height="576.6" viewBox="0 0 80.00 57.66">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="576.6" viewBox="0 0 119.05 57.66">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-  <text x="40.00" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="96">Instrument Defaults</text>
-  <text x="78.00" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="127">Lily#</text>
-  <g transform="translate(2.00,0.00) scale(1.0000,1.0000)">
+  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="96">Instrument Defaults</text>
+  <text x="110.55" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="127">Lily#</text>
+  <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <text x="10.20" y="44.66" font-size="0.86" font-family="Emmentaler-Brace" text-anchor="end" fill="#000000"></text>
   <text x="5.25" y="19.16" font-size="3.00" font-family="serif" text-anchor="middle" dominant-baseline="central">guitar</text>
   <text x="5.25" y="29.66" font-size="3.00" font-family="serif" text-anchor="middle" dominant-baseline="central">tenor</text>

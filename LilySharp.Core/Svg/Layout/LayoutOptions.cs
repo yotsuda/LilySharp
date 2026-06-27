@@ -29,13 +29,21 @@ public sealed record LayoutOptions
     // === Page Dimensions (in staff spaces) ===
 
     /// <summary>Page width in staff spaces.</summary>
-    public double PageWidth { get; init; } = 80;
+    /// <remarks>
+    /// A4 (210mm) at the default 20pt staff: staff-space = 5pt = 1.764mm, so
+    /// 210 / 1.764 = 119 staff spaces. Earlier this was an arbitrary 80, which
+    /// made line breaking pack ~25% fewer measures per line than LilyPond on the
+    /// same A4 paper. ContentWidth now equals LP's 180mm line-width (102 ss).
+    /// </remarks>
+    public double PageWidth { get; init; } = 119.05;
 
     /// <summary>Left margin in staff spaces.</summary>
-    public double MarginLeft { get; init; } = 2;
+    /// <remarks>LilyPond A4 default left-margin 15mm = 8.5 staff spaces at 20pt.</remarks>
+    public double MarginLeft { get; init; } = 8.5;
 
     /// <summary>Right margin in staff spaces.</summary>
-    public double MarginRight { get; init; } = 2;
+    /// <remarks>LilyPond A4 default right-margin 15mm = 8.5 staff spaces at 20pt.</remarks>
+    public double MarginRight { get; init; } = 8.5;
 
     /// <summary>Top margin in staff spaces.</summary>
     /// <remarks>LILYPOND-REF: scm/paper.scm:49 top-margin</remarks>
