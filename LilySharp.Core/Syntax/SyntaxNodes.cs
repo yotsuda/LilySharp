@@ -1131,13 +1131,27 @@ public sealed class ChordEntrySyntax : SyntaxNode
     {
     }
 
-    // Slots: 0 root, 1 duration?, 2 colon?, 3 quality?, 4 slash?, 5 bass?.
+    // Slots: 0 root, 1 duration?, 2 colon?, [quality tokens…], slash?, bass?
+    // (slash/bass are always the final two slots, null when absent).
     public PitchSyntax Root => (PitchSyntax)GetChild(0)!;
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
-    /// <summary>The quality text after the <c>:</c> (e.g. "m7", "maj7", "7"), or null for a plain major triad.</summary>
-    public string? QualityText => (GetChild(3) as SyntaxTokenNode)?.Text;
+
+    /// <summary>The full quality text after the <c>:</c> (e.g. "m7", "maj7", "7",
+    /// "m7.5-"), joined from its token run, or null for a plain major triad.</summary>
+    public string? QualityText
+    {
+        get
+        {
+            var sb = new System.Text.StringBuilder();
+            for (int i = 3; i < SlotCount - 2; i++)
+                if (GetChild(i) is SyntaxTokenNode t)
+                    sb.Append(t.Text);
+            return sb.Length > 0 ? sb.ToString() : null;
+        }
+    }
+
     /// <summary>The slash-bass pitch (<c>c/g</c>), or null.</summary>
-    public PitchSyntax? Bass => GetChild(5) as PitchSyntax;
+    public PitchSyntax? Bass => GetChild(SlotCount - 1) as PitchSyntax;
 }
 
 /// <summary>

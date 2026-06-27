@@ -159,6 +159,21 @@ public sealed class ChordNamesTests
         Assert.Equal(new[] { 0, -1, 0 }, tones.Select(t => t.Alter));
     }
 
+    [Theory]
+    // A quality that lexes as several tokens (dot + minus, or number + word) must
+    // be captured WHOLE, not truncated to its first token (the "Gm7" bug).
+    [InlineData("g:m7.5-", "Gm7♭5")] // half-diminished, dot+minus → resolves
+    [InlineData("g:7sus4", "G7sus4")]      // number + word → resolves
+    [InlineData("g:m7.5-7", "Gm7.5-7")]    // unknown extended chord → full text, not "Gm7"
+    public void MultiTokenQuality_IsCapturedWhole(string entry, string expected)
+    {
+        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chordnames { " + entry + " }\n}\n" +
+                  "structure { Main }\nscore \"x\" { staff { m } }\n";
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(src));
+        var chord = Assert.Single(score.ChordNames);
+        Assert.Equal(expected, chord.ChordText);
+    }
+
     [Fact]
     public void Collector_UnknownQuality_FallsBackToRawText()
     {

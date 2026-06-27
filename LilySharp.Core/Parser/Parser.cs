@@ -1606,21 +1606,37 @@ private GreenNode?[] ParseArticulations()
         return new ChordNamesBlockGreen(keyword, openBrace, [.. items], closeBrace);
     }
 
+    private static bool IsQualityToken(SyntaxKind kind) => kind is SyntaxKind.Identifier
+        or SyntaxKind.IntegerLiteral or SyntaxKind.DurationNumber
+        or SyntaxKind.Dot or SyntaxKind.Minus;
+
     // root[duration][:quality][/bass] — reuses the pitch and duration grammar.
     private ChordEntryGreen ParseChordEntry()
     {
         var root = ParsePitch();
         var duration = ParseOptionalDuration();
 
-        SyntaxToken? colon = null, quality = null, slash = null;
+        SyntaxToken? colon = null, slash = null;
         GreenNode? bass = null;
+        var qualityTokens = new List<GreenNode?>();
 
-        // ':quality' — a single token (identifier like m7/maj7/sus4, or a number 7/6/9).
+        // ':quality' — the WHOLE run of tokens directly after the colon with no
+        // intervening whitespace, so m7 / maj7 / 7sus4 / m7.5- are captured as one
+        // string instead of just their first token. Whitespace (a token's trailing
+        // trivia), a '/' bass, a barline or '}' ends the run.
         if (Check(SyntaxKind.Colon))
         {
             colon = Advance();
-            if (Check(SyntaxKind.Identifier) || Check(SyntaxKind.IntegerLiteral) || Check(SyntaxKind.DurationNumber))
-                quality = Advance();
+            if (IsQualityToken(Current.Kind))
+            {
+                var prev = Advance();
+                qualityTokens.Add(prev);
+                while (prev.TrailingTriviaWidth == 0 && IsQualityToken(Current.Kind))
+                {
+                    prev = Advance();
+                    qualityTokens.Add(prev);
+                }
+            }
         }
 
         // '/bass' — a slash bass pitch (c/g).
@@ -1631,7 +1647,7 @@ private GreenNode?[] ParseArticulations()
                 bass = ParsePitch();
         }
 
-        return new ChordEntryGreen(root, duration, colon, quality, slash, bass);
+        return new ChordEntryGreen(root, duration, colon, [.. qualityTokens], slash, bass);
     }
 
     /// <summary>
