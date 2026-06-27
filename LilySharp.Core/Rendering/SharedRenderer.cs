@@ -441,7 +441,20 @@ public static class SharedRenderer
         const double stemLength = 3.0;
         double nearY = TabStemHeadY(item, stemUp, staffY, staff);
         double farY = nearY + (stemUp ? -stemLength : stemLength);
-        gc.DrawLine(itemX, nearY, itemX, farY, Color.Black, EngravingDefaults.StemThickness);
+
+        if (noteValue == 2)
+        {
+            // Half note: a DOUBLE stem distinguishes it from a quarter on a tab
+            // staff, where the fret number carries no notehead shape to read the
+            // duration from. LILYPOND-REF: ly/tablature-init.ly — half-note stems.
+            const double gap = 0.13;
+            gc.DrawLine(itemX - gap, nearY, itemX - gap, farY, Color.Black, EngravingDefaults.StemThickness);
+            gc.DrawLine(itemX + gap, nearY, itemX + gap, farY, Color.Black, EngravingDefaults.StemThickness);
+        }
+        else
+        {
+            gc.DrawLine(itemX, nearY, itemX, farY, Color.Black, EngravingDefaults.StemThickness);
+        }
 
         if (noteValue >= 8)
         {
