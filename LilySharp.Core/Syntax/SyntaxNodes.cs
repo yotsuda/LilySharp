@@ -1324,6 +1324,24 @@ public sealed partial class SectionDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Represents an include directive: include "file.lys". Resolved by the include
+/// expander before collection; in the parsed tree it is an inert marker.
+/// </summary>
+public sealed class IncludeDirectiveSyntax : SyntaxNode
+{
+    internal IncludeDirectiveSyntax(InternalSyntax.IncludeDirectiveGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+    public SyntaxTokenNode PathToken => (SyntaxTokenNode)GetChild(1)!;
+
+    /// <summary>The included file path, with surrounding quotes stripped.</summary>
+    public string Path => PathToken.Text.Trim('"');
+}
+
+/// <summary>
 /// Represents a part block inside a section: partName { ... }
 /// </summary>
 public sealed partial class PartBlockSyntax : SyntaxNode

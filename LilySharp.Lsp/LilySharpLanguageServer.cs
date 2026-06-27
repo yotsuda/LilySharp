@@ -1928,6 +1928,22 @@ public sealed class LilySharpLanguageServer
     /// Custom request to generate SVG from a document.
     /// Used for real-time preview in VS Code.
     /// </summary>
+    /// <summary>
+    /// The document's tree with <c>include "..."</c> directives resolved (files read
+    /// relative to the document), or the plain tree when there are no includes. The
+    /// document's own text stays the prefix, so its positions are preserved.
+    /// </summary>
+    private static SyntaxTree ExpandIncludes(Document doc, Uri uri)
+    {
+        if (!LilySharp.Core.Parser.IncludeExpander.HasIncludes(doc.Text))
+            return doc.Tree;
+
+        var basePath = uri.IsFile ? uri.LocalPath : string.Empty;
+        var expanded = LilySharp.Core.Parser.IncludeExpander.Expand(doc.Text, basePath,
+            p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null);
+        return SyntaxTree.Parse(expanded);
+    }
+
     [JsonRpcMethod("lilysharp/svg", UseSingleObjectParameterDeserialization = true)]
     public SvgResponse GetSvg(SvgParams @params)
     {
@@ -1941,15 +1957,20 @@ public sealed class LilySharpLanguageServer
             };
         }
 
-        // Extract render definitions
-        var renders = ExtractRenderInfo(doc.Tree);
+        // Resolve `include "..."` directives so the preview shows the whole piece.
+        // The main file is the prefix of the combined source, so its positions
+        // (data-pos editor<->preview sync) are unchanged.
+        var tree = ExpandIncludes(doc, @params.TextDocument.Uri);
 
-        if (doc.Tree.HasErrors)
+        // Extract render definitions
+        var renders = ExtractRenderInfo(tree);
+
+        if (tree.HasErrors)
         {
-            var errors = string.Join("\n", doc.Tree.Diagnostics
+            var errors = string.Join("\n", tree.Diagnostics
                 .Where(d => d.Severity == CoreDiagnosticSeverity.Error)
                 .Select(d => {
-                    var (line, col) = GetLineAndColumn(doc.Tree.Text, d.Span.Start);
+                    var (line, col) = GetLineAndColumn(tree.Text, d.Span.Start);
                     return $"Line {line}, Col {col}: {d.Message}";
                 }));
             return new SvgResponse
@@ -1966,7 +1987,7 @@ public sealed class LilySharpLanguageServer
             var renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview();
 
             // Generate SVG using shared generator (same code path as CLI)
-            var svg = LilySharp.Core.Svg.SvgGenerator.Generate(doc.Tree, renderOptions, @params.RenderName);
+            var svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, renderOptions, @params.RenderName);
 
             return new SvgResponse
             {

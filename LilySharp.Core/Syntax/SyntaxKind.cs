@@ -58,6 +58,7 @@ public enum SyntaxKind : ushort
     // === Structure Keywords (no backslash) ===
     SectionKeyword,     // section
     StructureKeyword,   // structure
+    IncludeKeyword,     // include
     RenderKeyword,      // render
     ScoreKeyword,       // score (legacy)
     PartKeyword,        // part (legacy)
@@ -188,6 +189,7 @@ public enum SyntaxKind : ushort
     // === Nodes: New Structure ===
     SectionDeclaration,         // section Name { ... }
     StructureDeclaration,       // structure { ... }
+    IncludeDirective,           // include "file.lys"
     RenderDeclaration,          // render Name "file.svg" { ... }
     PartBlock,                  // guitar { ... } inside section
     LyricsBlock,                // lyrics { ... } inside section

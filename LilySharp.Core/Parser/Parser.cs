@@ -225,6 +225,7 @@ internal sealed class Parser
             // New section-oriented structure
             SyntaxKind.SectionKeyword => ParseSectionDeclaration(),
             SyntaxKind.StructureKeyword => ParseStructureDeclaration(),
+            SyntaxKind.IncludeKeyword => ParseIncludeDirective(),
             // `score [ "basename" ] { layout }` — a printable score (visual
             // layout). The output format/extension is a CLI choice, not source.
             SyntaxKind.ScoreKeyword => ParseRenderDeclaration(),
@@ -1527,6 +1528,17 @@ private GreenNode?[] ParseArticulations()
     /// <summary>
     /// Parse phrase declaration: phrase name { ... }
     /// </summary>
+    /// <summary>
+    /// Parse an include directive: <c>include "file.lys"</c>. The expander resolves
+    /// the file before collection; here it is parsed as an inert top-level marker.
+    /// </summary>
+    private IncludeDirectiveGreen ParseIncludeDirective()
+    {
+        var keyword = Expect(SyntaxKind.IncludeKeyword);
+        var path = Expect(SyntaxKind.StringLiteral);
+        return new IncludeDirectiveGreen(keyword, path);
+    }
+
     private PhraseDeclarationGreen ParsePhraseDeclaration()
     {
         var keyword = Expect(SyntaxKind.PhraseKeyword);

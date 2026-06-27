@@ -595,6 +595,17 @@ internal sealed class SectionDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Include directive: include "file.lys"
+/// </summary>
+internal sealed class IncludeDirectiveGreen : GreenSyntaxNode
+{
+    public IncludeDirectiveGreen(SyntaxToken keyword, SyntaxToken path)
+        : base(SyntaxKind.IncludeDirective, [keyword, path])
+    {
+    }
+}
+
+/// <summary>
 /// Part block inside section: guitar { ... }
 /// </summary>
 internal sealed class PartBlockGreen : GreenSyntaxNode

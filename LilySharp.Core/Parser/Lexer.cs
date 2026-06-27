@@ -439,6 +439,7 @@ internal sealed class Lexer
             // New structure keywords
             "section" => SyntaxKind.SectionKeyword,
             "structure" => SyntaxKind.StructureKeyword,
+            "include" => SyntaxKind.IncludeKeyword,
             "tab" => SyntaxKind.TabKeyword,
             "ossia" => SyntaxKind.OssiaKeyword,
 

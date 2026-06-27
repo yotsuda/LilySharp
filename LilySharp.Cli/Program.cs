@@ -218,8 +218,7 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
 {
     try
     {
-        var source = File.ReadAllText(inputPath);
-        var tree = SyntaxTree.Parse(source);
+        var (source, tree) = LoadAndParse(inputPath);
         var allDiagnostics = CollectDiagnostics(tree);
 
         // Always surface diagnostics — warnings are emitted to stderr even when
@@ -266,8 +265,7 @@ static int ExecuteSvgAll(string inputPath, bool embedFont)
 {
     try
     {
-        var source = File.ReadAllText(inputPath);
-        var tree = SyntaxTree.Parse(source);
+        var (source, tree) = LoadAndParse(inputPath);
 
         if (tree.HasErrors)
         {
@@ -363,8 +361,7 @@ static int ExecutePdf(string inputPath, string outputPath)
 {
     try
     {
-        var source = File.ReadAllText(inputPath);
-        var tree = SyntaxTree.Parse(source);
+        var (source, tree) = LoadAndParse(inputPath);
 
         if (tree.HasErrors)
         {
@@ -465,8 +462,7 @@ static int ExecutePng(string inputPath, string outputPath, float scale)
 {
     try
     {
-        var source = File.ReadAllText(inputPath);
-        var tree = SyntaxTree.Parse(source);
+        var (source, tree) = LoadAndParse(inputPath);
 
         if (tree.HasErrors)
         {
@@ -540,8 +536,7 @@ static int ExecuteMidi(string inputPath, string outputPath)
 {
     try
     {
-        var source = File.ReadAllText(inputPath);
-        var tree = SyntaxTree.Parse(source);
+        var (source, tree) = LoadAndParse(inputPath);
 
         if (tree.HasErrors)
         {
@@ -614,8 +609,7 @@ static int ExecuteXml(string inputPath, string outputPath)
 {
     try
     {
-        var source = File.ReadAllText(inputPath);
-        var tree = SyntaxTree.Parse(source);
+        var (source, tree) = LoadAndParse(inputPath);
 
         if (tree.HasErrors)
         {
@@ -695,8 +689,7 @@ static int ExecuteCheck(string inputPath, bool showPitches = false)
 {
     try
     {
-        var source = File.ReadAllText(inputPath);
-        var tree = SyntaxTree.Parse(source);
+        var (source, tree) = LoadAndParse(inputPath);
         var allDiagnostics = CollectDiagnostics(tree);
 
         if (showPitches)
@@ -830,6 +823,18 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(Syntax
 }
 
 // ============ Shared Utilities ============
+
+// Read a .lys file and parse it, first resolving any `include "..."` directives
+// (relative to the file) into one combined source. The main file is the prefix, so
+// its diagnostic positions are unchanged.
+static (string Source, LilySharp.Core.Syntax.SyntaxTree Tree) LoadAndParse(string inputPath)
+{
+    var source = File.ReadAllText(inputPath);
+    if (LilySharp.Core.Parser.IncludeExpander.HasIncludes(source))
+        source = LilySharp.Core.Parser.IncludeExpander.Expand(source, inputPath,
+            p => File.Exists(p) ? File.ReadAllText(p) : null);
+    return (source, LilySharp.Core.Syntax.SyntaxTree.Parse(source));
+}
 
 static (string? InputPath, string? OutputPath, string? Error) ParseSimpleOptions(string[] args, string defaultExt)
 {
