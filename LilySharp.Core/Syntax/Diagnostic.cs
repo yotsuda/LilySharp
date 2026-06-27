@@ -156,4 +156,7 @@ public static class DiagnosticCodes
 
     // Render/score declaration errors (LYS6xxx)
     public const string DuplicateScoreName = "LYS6001";
+
+    // Structure / section-part grid errors (LYS7xxx)
+    public const string DuplicateCell = "LYS7001";
 }

@@ -822,6 +822,10 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(Syntax
     var dupScoreValidator = new LilySharp.Core.Semantics.DuplicateScoreNameValidator();
     dupScoreValidator.Validate(tree);
     combined.AddRange(dupScoreValidator.Diagnostics);
+    // Same (section x part) cell filled twice (section-major and/or part-major).
+    var dupCellValidator = new LilySharp.Core.Semantics.DuplicateCellValidator();
+    dupCellValidator.Validate(tree);
+    combined.AddRange(dupCellValidator.Diagnostics);
     return combined;
 }
 

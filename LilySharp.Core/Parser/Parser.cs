@@ -284,6 +284,15 @@ internal sealed class Parser
         var properties = new List<GreenNode?>();
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
+            // Part-major form: a `part` may hold its own `section` blocks
+            //   part bass { clef bass  section A { c d } section B { e f } }
+            // Each inner section's music belongs to THIS part (cell = section x part).
+            if (Check(SyntaxKind.SectionKeyword))
+            {
+                properties.Add(ParsePartInnerSection());
+                continue;
+            }
+
             var prop = ParsePartProperty();
             if (prop != null)
                 properties.Add(prop);
@@ -293,6 +302,33 @@ internal sealed class Parser
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new PartDeclarationGreen(keyword, name, openBrace, [.. properties], closeBrace);
+    }
+
+    /// <summary>
+    /// Parse a section nested inside a part (part-major form). Unlike a top-level
+    /// section — whose body is per-part blocks — an inner section's body is the
+    /// music itself, implicitly bound to the enclosing part. Built faithfully
+    /// (no synthesized tokens) so source positions stay exact.
+    /// </summary>
+    private SectionDeclarationGreen ParsePartInnerSection()
+    {
+        var keyword = Expect(SyntaxKind.SectionKeyword);
+        var name = Expect(SyntaxKind.Identifier);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+
+        var items = new List<GreenNode?>();
+        while (_pendingPostEventMarkers.Count > 0
+               || (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile)))
+        {
+            var item = ParseMusicItem();
+            if (item != null)
+                items.Add(item);
+            else
+                Advance();
+        }
+
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new SectionDeclarationGreen(keyword, name, openBrace, [.. items], closeBrace);
     }
 
     // Legacy part inside score: part Name "display" { staff... }

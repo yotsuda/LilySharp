@@ -34,7 +34,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260627-1640";
+    public const string Version = "0.1.1-20260627-1707";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -332,6 +332,14 @@ public sealed class LilySharpLanguageServer
         var dupScoreValidator = new DuplicateScoreNameValidator();
         dupScoreValidator.Validate(doc.Tree);
         foreach (var d in dupScoreValidator.Diagnostics)
+        {
+            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+        }
+
+        // Same (section x part) cell filled twice (section-major and/or part-major).
+        var dupCellValidator = new DuplicateCellValidator();
+        dupCellValidator.Validate(doc.Tree);
+        foreach (var d in dupCellValidator.Diagnostics)
         {
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
@@ -2107,6 +2115,7 @@ public class RenderInfo
     public string Type { get; set; } = "";  // "score" or "audio"
     public string Filename { get; set; } = "";
 }
+
 
 
 

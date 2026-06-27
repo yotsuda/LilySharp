@@ -469,6 +469,10 @@ internal sealed class MeasureBuilder
 public sealed class MeasureCollector
 {
     private readonly Dictionary<string, SectionDeclarationSyntax> _sections = new();
+    // Part-major cells: `part X { section A { music } }` registers (A, X) -> the
+    // inner section, whose body IS the music for that part. Lets a section's music
+    // live inside the part instead of inside the section.
+    private readonly Dictionary<(string section, string part), SectionDeclarationSyntax> _partMajorCells = new();
     private readonly Dictionary<string, SyntaxNode> _variables = new();
     // First expanded-measure index where each section begins, so a `lyrics` block
     // written inside a section aligns to THAT section's notes (not from bar 0).
@@ -1936,7 +1940,16 @@ public sealed class MeasureCollector
                     break;
 
                 case SectionDeclarationSyntax section:
-                    _sections[section.SectionName] = section;
+                    // First declaration of a name wins as the order/label
+                    // representative (source order), so a name appearing in both
+                    // forms stays stable.
+                    if (!_sections.ContainsKey(section.SectionName))
+                        _sections[section.SectionName] = section;
+                    // Part-major: an inner section binds its music to the part it
+                    // lives in. Record the (section, part) cell for voice lookup.
+                    var owningPart = EnclosingPartName(section);
+                    if (owningPart != null)
+                        _partMajorCells[(section.SectionName, owningPart)] = section;
                     break;
 
                 case StructureDeclarationSyntax structure:
@@ -2229,6 +2242,18 @@ public sealed class MeasureCollector
         return label.Length == 0 ? null : label;
     }
 
+    /// <summary>
+    /// The name of the <c>part</c> a node lives inside, or null if it is not inside
+    /// any part. Used to bind a part-major inner <c>section</c> to its part.
+    /// </summary>
+    private static string? EnclosingPartName(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is PartDeclarationSyntax part)
+                return part.Name.Text;
+        return null;
+    }
+
     private static bool IsInsideRepeatBlock(SyntaxNode node)
     {
         var parent = node.Parent;
@@ -2437,26 +2462,43 @@ public sealed class MeasureCollector
         _lastPitchName = 'c';
         _octaveAbsolute = _initialOctaveAbsolute; // mode reverts to file default per section
 
+        bool matched = false;
         foreach (var child in section.DescendantNodes())
         {
             if (child is PartBlockSyntax partBlock)
             {
                 if (_voiceName == null || partBlock.Name == _voiceName)
                 {
-                    ProcessPartBlock(partBlock, processNodes);
+                    ProcessMusicContainer(partBlock, processNodes);
+                    matched = true;
 
                     if (_voiceName != null) return;
                 }
             }
         }
+
+        // Part-major fallback: this section's music for the current voice is not a
+        // part-block here but lives inside `part <voice> { section <name> { ... } }`.
+        if (!matched && _voiceName != null
+            && _partMajorCells.TryGetValue((section.SectionName, _voiceName), out var cell))
+        {
+            ProcessMusicContainer(cell, processNodes);
+        }
     }
 
     private void ProcessPartBlock(PartBlockSyntax partBlock, Action<IEnumerable<SyntaxNode>> processNodes)
+        => ProcessMusicContainer(partBlock, processNodes);
+
+    /// <summary>
+    /// Process the music inside a container node — a <c>part-block</c> (section-major)
+    /// or a part-major inner <c>section</c>. Both expose their music as descendants.
+    /// </summary>
+    private void ProcessMusicContainer(SyntaxNode container, Action<IEnumerable<SyntaxNode>> processNodes)
     {
         // Collect all music nodes, expanding variable references
         var musicNodes = new List<SyntaxNode>();
 
-        foreach (var node in partBlock.DescendantNodes())
+        foreach (var node in container.DescendantNodes())
         {
             // Skip nodes inside containers (tuplet/repeat/grace/inline volta/
             // parallel) — they'll be processed by those handlers. Inline voltas
