@@ -352,15 +352,15 @@ public static class SharedRenderer
             gc.DrawLine(0, staffY + i * TabStringSpace, staffRight, staffY + i * TabStringSpace,
                 Color.Black, EngravingDefaults.StaffLineThickness);
 
-        // TAB clef (clefs.tab) centered on the staff. The glyph is designed
-        // for 6-string staves; it overflows gracefully on fewer strings.
-        double tabCenterY = staffY + (stringCount - 1) * TabStringSpace / 2.0;
-        gc.DrawGlyph(EmmentalerGlyphs.TabClef, systemStartX, tabCenterY,
-            FontSize * (5.0 / 5.78) * TabStringSpace);
-
         // Per-measure barlines at the tab staff height.
         var primaryVoice = staff.PrimaryVoice;
         double tabHeight = (stringCount - 1) * TabStringSpace;
+
+        // TAB clef (clefs.tab), sized to span the actual staff height (the glyph's
+        // designed span is ~5.78 font units) and centered on it.
+        double tabCenterY = staffY + tabHeight / 2.0;
+        gc.DrawGlyph(EmmentalerGlyphs.TabClef, systemStartX, tabCenterY,
+            FontSize * tabHeight / 5.78);
         foreach (var ml in system.Measures)
         {
             if (ml.MeasureIndex >= primaryVoice.Measures.Length)
@@ -466,7 +466,7 @@ public static class SharedRenderer
     // Tab fret numbers are drawn a notch larger than the historical 1.6 so they
     // read clearly; the chord-collision shifts below keep the bigger digits from
     // overlapping. Background/clearance dimensions scale with this.
-    private const double TabFretFontSize = 2.0;
+    private const double TabFretFontSize = 2.3;
 
     // Tab string lines sit wider than a normal staff so the larger fret numbers
     // breathe (see EngravingDefaults.TabStringSpace).
