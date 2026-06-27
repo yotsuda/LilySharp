@@ -689,22 +689,20 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
 
         function updateRenderSelect(renders, selectedRender) {
-            const currentValue = renderSelect.value;
-            renderSelect.innerHTML = '<option value="">(Default)</option>';
-
-            if (renders && renders.length > 0) {
-                // Filter score renders only
-                const scoreRenders = renders.filter(r => r.Type === 'score');
-                scoreRenders.forEach(render => {
-                    const option = document.createElement('option');
-                    option.value = render.Name;
-                    option.textContent = render.Filename || render.Name;
-                    if (render.Name === selectedRender) {
-                        option.selected = true;
-                    }
-                    renderSelect.appendChild(option);
-                });
-            }
+            // One entry per score. The UNNAMED score shows as "(Default)" (value "");
+            // there is no "(Default)" entry when every score is named.
+            renderSelect.innerHTML = '';
+            const scoreRenders = (renders || []).filter(r => r.Type === 'score');
+            scoreRenders.forEach(render => {
+                const option = document.createElement('option');
+                const unnamed = !render.Filename;
+                option.value = unnamed ? '' : render.Name;
+                option.textContent = unnamed ? '(Default)' : render.Filename;
+                if (option.value === (selectedRender || '')) {
+                    option.selected = true;
+                }
+                renderSelect.appendChild(option);
+            });
         }
 
         renderSelect.addEventListener('change', () => {

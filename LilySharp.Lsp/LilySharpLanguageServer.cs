@@ -34,7 +34,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260627-1329";
+    public const string Version = "0.1.1-20260627-1640";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -324,6 +324,14 @@ public sealed class LilySharpLanguageServer
         var tabTieValidator = new TabTieStringValidator();
         tabTieValidator.Validate(doc.Tree);
         foreach (var d in tabTieValidator.Diagnostics)
+        {
+            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
+        }
+
+        // Two score blocks sharing a name (or both unnamed) collide.
+        var dupScoreValidator = new DuplicateScoreNameValidator();
+        dupScoreValidator.Validate(doc.Tree);
+        foreach (var d in dupScoreValidator.Diagnostics)
         {
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
@@ -1980,41 +1988,17 @@ public sealed class LilySharpLanguageServer
         {
             if (node is RenderDeclarationSyntax render)
             {
-                // Get children: render [type] "filename" { ... }
-                string type = "score";
-                string filename = "";
-
-                // Iterate through children using GetChild
-                for (int i = 0; ; i++)
-                {
-                    var child = render.GetChild(i);
-                    if (child == null) break;
-
-                    if (child is SyntaxTokenNode token)
-                    {
-                        var text = token.Text;
-                        if (text == "score" || text == "audio" || text == "midi")
-                        {
-                            type = text;
-                        }
-                        else if (text.StartsWith("\"") && text.EndsWith("\""))
-                        {
-                            filename = text.Trim('"');
-                        }
-                    }
-                }
-
-                // Use full filename as the name (to distinguish fur-elise.svg from fur-elise.mid)
-                var name = filename;
-                if (string.IsNullOrEmpty(name))
-                {
-                    name = $"score_{renders.Count + 1}";
-                }
+                // Structure: score [name] { ... }; the name is the single token after
+                // the keyword (child 1 is the name token or the opening brace). Empty
+                // when unnamed — the preview shows such a score as "(Default)".
+                string filename = render.GetChild(1) is SyntaxTokenNode nameTok
+                    && nameTok.Kind != SyntaxKind.OpenBrace
+                    ? nameTok.Text.Trim('"') : "";
 
                 renders.Add(new RenderInfo
                 {
-                    Name = name,
-                    Type = type,
+                    Name = filename, // empty for an unnamed score
+                    Type = "score",
                     Filename = filename
                 });
             }
@@ -2123,6 +2107,17 @@ public class RenderInfo
     public string Type { get; set; } = "";  // "score" or "audio"
     public string Filename { get; set; } = "";
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

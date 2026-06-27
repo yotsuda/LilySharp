@@ -37,15 +37,10 @@ public static class RenderSpecParser
         // Structure: scoreKeyword, [basename string], openBrace, items..., closeBrace
         // The only header token is the optional basename string; its extension (if
         // written) is dropped because the file format is a CLI choice.
-        for (int i = 0; i < render.SlotCount; i++)
-        {
-            if (render.GetChild(i) is SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } token)
-            {
-                var raw = token.Text.Trim('"');
-                outputFile = System.IO.Path.GetFileNameWithoutExtension(raw);
-                break;
-            }
-        }
+        // The name (if any) is the single token right after the keyword — child 1
+        // is either the name token or the opening brace.
+        if (render.GetChild(1) is SyntaxTokenNode nameTok && nameTok.Kind != SyntaxKind.OpenBrace)
+            outputFile = System.IO.Path.GetFileNameWithoutExtension(nameTok.Text.Trim('"'));
 
         // The basename is optional. When omitted, OutputFile is empty (the
         // consumer derives it from the input file). Name doubles as the

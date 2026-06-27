@@ -818,6 +818,10 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(Syntax
     var tabTieValidator = new LilySharp.Core.Semantics.TabTieStringValidator();
     tabTieValidator.Validate(tree);
     combined.AddRange(tabTieValidator.Diagnostics);
+    // Two score blocks sharing a name (or both unnamed) collide.
+    var dupScoreValidator = new LilySharp.Core.Semantics.DuplicateScoreNameValidator();
+    dupScoreValidator.Validate(tree);
+    combined.AddRange(dupScoreValidator.Diagnostics);
     return combined;
 }
 

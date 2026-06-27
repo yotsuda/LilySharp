@@ -2097,8 +2097,11 @@ private GreenNode?[] ParseArticulations()
     {
         var keyword = Expect(SyntaxKind.ScoreKeyword);
 
-        // Optional output basename. Extension (if written) is dropped downstream.
-        var filename = TryConsume(SyntaxKind.StringLiteral);
+        // Optional output basename: a single bare token (identifier, pitch letter,
+        // number) or a quoted string — quotes only needed for spaces/special
+        // characters, like `title`. Anything that is not the opening brace is the
+        // name. Extension (if written) is dropped downstream.
+        SyntaxToken? filename = Check(SyntaxKind.OpenBrace) ? null : Advance();
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var items = new List<GreenNode?>();
