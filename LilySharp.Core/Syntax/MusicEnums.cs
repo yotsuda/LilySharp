@@ -81,6 +81,8 @@ public enum TuningType
     Bass,
     /// <summary>5-string bass tuning: B E A D G</summary>
     Bass5,
+    /// <summary>6-string bass tuning: B E A D G C</summary>
+    Bass6,
     /// <summary>Ukulele tuning: G C E A</summary>
     Ukulele,
     /// <summary>Custom tuning</summary>

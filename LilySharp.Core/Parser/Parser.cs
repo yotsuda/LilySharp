@@ -1087,6 +1087,13 @@ private GreenNode?[] ParseArticulations()
                         $"Expected articulation or dynamic name after '@', found '{Current.Kind}'");
                 }
             }
+            else if (Check(SyntaxKind.StringNumber))
+            {
+                // \4, \3 … — tab string-number annotation on the note (forces the
+                // fret's string on a tab staff; ignored on a notation staff).
+                var stringNum = Advance();
+                articulations.Add(new StringNumberAnnotationGreen(stringNum));
+            }
             else if (Check(SyntaxKind.Backslash))
             {
                 // \p, \f, \cresc, etc.

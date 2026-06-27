@@ -1275,6 +1275,7 @@ public sealed partial class TuningDeclarationSyntax : SyntaxNode
         "guitar" => TuningType.Guitar,
         "bass" => TuningType.Bass,
         "bass5" => TuningType.Bass5,
+        "bass6" => TuningType.Bass6,
         "ukulele" => TuningType.Ukulele,
         _ => TuningType.Guitar
     };

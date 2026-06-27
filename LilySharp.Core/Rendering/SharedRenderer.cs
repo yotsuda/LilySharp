@@ -342,6 +342,9 @@ public static class SharedRenderer
         var tuningType = staff.Tuning ?? TuningType.Guitar;
         int stringCount = Tunings.GetStringCount(tuningType);
         int[] tuning = Tunings.GetTuning(tuningType);
+        // Bass guitar sounds 8vb relative to its bass-clef notation, so its tab
+        // frets come from the written pitch shifted down an octave.
+        int octaveShift = Tunings.OctaveShift(tuningType);
 
         // One staff line per string.
         for (int i = 0; i < stringCount; i++)
@@ -375,13 +378,13 @@ public static class SharedRenderer
             {
                 if (ml.MeasureIndex < voice.Measures.Length)
                     DrawTabMeasure(voice.Measures[ml.MeasureIndex], ml, staffY,
-                        tuning, stringCount, gc);
+                        tuning, stringCount, octaveShift, gc);
             }
         }
     }
 
     private static void DrawTabMeasure(Measure measure, MeasureLayout ml,
-        double staffY, int[] tuning, int stringCount, IDrawingContext gc)
+        double staffY, int[] tuning, int stringCount, int octaveShift, IDrawingContext gc)
     {
         bool useColumnTiming = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
         var currentTiming = Fraction.Zero;
@@ -397,24 +400,25 @@ public static class SharedRenderer
             switch (item)
             {
                 case NoteItem note:
-                    DrawTabNote(note.StaffPosition, note.Accidental, itemX, staffY,
-                        tuning, note.SourcePosition, gc);
+                    DrawTabNote(note.Midi, itemX, staffY,
+                        tuning, note.StringNumber, octaveShift, note.SourcePosition, gc);
                     break;
                 case ChordItem chord:
                     foreach (var cn in chord.Notes)
-                        DrawTabNote(cn.StaffPosition, cn.Accidental, itemX, staffY,
-                            tuning, chord.SourcePosition, gc);
+                        DrawTabNote(cn.Midi, itemX, staffY,
+                            tuning, cn.StringNumber, octaveShift, chord.SourcePosition, gc);
                     break;
                 // RestItem: nothing on a tab staff.
             }
         }
     }
 
-    private static void DrawTabNote(int staffPosition, string? accidental,
-        double x, double staffY, int[] tuning, int sourcePosition, IDrawingContext gc)
+    private static void DrawTabNote(int midi,
+        double x, double staffY, int[] tuning, int? stringNumber, int octaveShift,
+        int sourcePosition, IDrawingContext gc)
     {
-        int midiPitch = StaffPositionToMidi(staffPosition, accidental);
-        var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning);
+        int midiPitch = midi + octaveShift;
+        var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning, stringNumber ?? 0);
 
         // String 1 (highest pitch) is the TOP tab line; string N the bottom.
         double noteY = staffY + (stringNum - 1);

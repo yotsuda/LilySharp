@@ -34,6 +34,9 @@ public static class Tunings
     // Bass (5-string): B0=23, E1=28, A1=33, D2=38, G2=43 (5弦→1弦)
     public static readonly int[] Bass5 = [23, 28, 33, 38, 43];
 
+    // Bass (6-string): B0=23, E1=28, A1=33, D2=38, G2=43, C3=48 (6弦→1弦, low B + high C)
+    public static readonly int[] Bass6 = [23, 28, 33, 38, 43, 48];
+
     // Ukulele: G4=67, C4=60, E4=64, A4=69 (4弦→1弦, re-entrant tuning)
     public static readonly int[] Ukulele = [67, 60, 64, 69];
 
@@ -42,6 +45,7 @@ public static class Tunings
         TuningType.Guitar => Guitar,
         TuningType.Bass => Bass,
         TuningType.Bass5 => Bass5,
+        TuningType.Bass6 => Bass6,
         TuningType.Ukulele => Ukulele,
         _ => Guitar
     };
@@ -51,9 +55,22 @@ public static class Tunings
         TuningType.Guitar => 6,
         TuningType.Bass => 4,
         TuningType.Bass5 => 5,
+        TuningType.Bass6 => 6,
         TuningType.Ukulele => 4,
         _ => 6
     };
+
+    /// <summary>
+    /// True for bass tunings, which sound an octave BELOW where they are written
+    /// in bass clef (the bass guitar is a transposing instrument). Tab frets are
+    /// therefore computed from the written pitch shifted down one octave.
+    /// </summary>
+    public static bool IsBass(TuningType type) =>
+        type is TuningType.Bass or TuningType.Bass5 or TuningType.Bass6;
+
+    /// <summary>The octave shift (semitones) to apply to written pitches before
+    /// computing tab frets: −12 for bass tunings (8vb), 0 otherwise.</summary>
+    public static int OctaveShift(TuningType type) => IsBass(type) ? -12 : 0;
 
     /// <summary>
     /// Calculates the best string and fret for a given MIDI pitch.

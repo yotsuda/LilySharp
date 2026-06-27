@@ -153,6 +153,19 @@ public sealed record NoteItem : MusicItem
     /// <remarks>LILYPOND-REF: lily/grace-spacing-engraver.cc — grace columns precede the main note's column.</remarks>
     public ImmutableArray<GraceNoteInfo> LeadingGrace { get; init; } = ImmutableArray<GraceNoteInfo>.Empty;
 
+    /// <summary>
+    /// Explicit tab string number (1 = highest-pitch string) from a <c>\N</c>
+    /// annotation, or null for automatic string selection. On a tab staff the
+    /// fret is computed for THIS string; ignored on a notation staff.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/tab-note-heads-engraver.cc — string number forces the fret's string.</remarks>
+    public int? StringNumber { get; init; }
+
+    /// <summary>The absolute sounding MIDI note number (clef-independent), used by
+    /// the tab staff to compute frets — <see cref="StaffPosition"/> is a
+    /// clef-relative visual position and must not be used for pitch.</summary>
+    public int Midi { get; init; }
+
     /// <summary>Stem direction: beam-resolved if beamed, else by staff position.</summary>
     public bool StemUp => StemUpOverride ?? StaffPosition < 0;
 
@@ -221,7 +234,11 @@ public readonly record struct ChordNoteInfo(
     /// Optional per-pitch finger number attached via <c>@finger.N</c> inside a chord.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/fingering-engraver.cc — FingeringColumn stacking.</remarks>
-    int? Fingering = null
+    int? Fingering = null,
+    /// <summary>Explicit tab string number (1 = highest) via <c>\N</c> inside a chord, or null for auto.</summary>
+    int? StringNumber = null,
+    /// <summary>Absolute sounding MIDI number (clef-independent), for tab frets.</summary>
+    int Midi = 0
 );
 
 /// <summary>

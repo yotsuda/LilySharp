@@ -2626,6 +2626,29 @@ public sealed class MeasureCollector
     private static bool HasRepeatTieAnnotation(SyntaxNode node)
         => HasNamedArticulation(node, "repeattie");
 
+    /// <summary>The explicit tab string number from a <c>\N</c> annotation on a
+    /// note/chord, or null for automatic string selection.</summary>
+    private static int? ExtractStringNumber(SyntaxNode node)
+    {
+        var articulations = node switch
+        {
+            NoteSyntax note => note.Articulations,
+            ChordSyntax chord => chord.Articulations,
+            _ => Enumerable.Empty<SyntaxNode>()
+        };
+        foreach (var art in articulations)
+            if (art is StringNumberAnnotationSyntax s)
+                return s.StringNumber;
+        return null;
+    }
+
+    /// <summary>Absolute MIDI number from a diatonic step (0=C..6=B), alteration and octave.</summary>
+    private static int PitchToMidi(int step, int alter, int octave)
+    {
+        int[] semis = { 0, 2, 4, 5, 7, 9, 11 };
+        return (octave + 1) * 12 + semis[((step % 7) + 7) % 7] + alter;
+    }
+
     private static bool HasNamedArticulation(SyntaxNode node, string lowerName)
     {
         var articulations = node switch
@@ -3282,7 +3305,11 @@ public sealed class MeasureCollector
             editorialAccidental: editorialAccidental,
             fingering: fingering,
             hasLaissezVibrer: hasLv,
-            hasRepeatTie: hasRepeatTie);
+            hasRepeatTie: hasRepeatTie)
+        {
+            StringNumber = ExtractStringNumber(note),
+            Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.RelativeOctave),
+        };
     }
 
     private RestItem CreateRestItem(RestSyntax rest)
@@ -3350,7 +3377,9 @@ public sealed class MeasureCollector
             notes.Add(new ChordNoteInfo(
                 staffPosition, accidental, needsLedger,
                 IsCourtesy: isCourtesy,
-                Fingering: pitchFingering));
+                Fingering: pitchFingering,
+                StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
+                Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.RelativeOctave)));
         }
 
         // Next chord/note is relative to first pitch of this chord (Lilypond spec)
