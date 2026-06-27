@@ -499,8 +499,9 @@ public static class SharedRenderer
             // White background occludes the string line behind the number.
             gc.DrawRectangle(x - bgWidth / 2, noteY - bgHeight / 2, bgWidth, bgHeight,
                 fill: Color.White);
+            // Bold so the fret numbers read clearly over the string lines.
             gc.DrawText(fretText, x, noteY + TabFretFontSize * 0.32, TabFretFontSize, "serif",
-                FontStyle.Regular, TextAnchor.Middle, Color.Black);
+                FontStyle.Bold, TextAnchor.Middle, Color.Black);
         }
     }
 
