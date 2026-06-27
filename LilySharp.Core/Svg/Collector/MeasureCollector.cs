@@ -648,13 +648,18 @@ public sealed class MeasureCollector
     /// <summary>
     /// Collects a Score from a syntax tree.
     /// </summary>
-    public Score Collect(SyntaxTree tree, string? voiceName = null)
+    public Score Collect(SyntaxTree tree, string? voiceName = null,
+        StructureDeclarationSyntax? localStructure = null)
     {
         _voiceName = voiceName;
         Reset();
 
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
+        // A score-local `structure { ... }` overrides the top-level structure for
+        // this render only.
+        if (localStructure != null)
+            _structure = localStructure;
 
         // Phase 1.5: If voiceName specified, look up clef and octave from part definition
         if (voiceName != null)
@@ -815,6 +820,10 @@ public sealed class MeasureCollector
 
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
+        // A score-local `structure { ... }` overrides the top-level structure for
+        // this render only.
+        if (renderSpec.LocalStructure != null)
+            _structure = renderSpec.LocalStructure;
         _initialKeySharps = _keySharps; // Preserve initial key before music processing
         // Capture the file-level `octave absolute/relative` default AFTER the
         // pre-scan, mirroring the single-staff path. Without this each part's
@@ -1992,7 +2001,11 @@ public sealed class MeasureCollector
                     break;
 
                 case StructureDeclarationSyntax structure:
-                    _structure = structure;
+                    // Only the top-level structure becomes the file default. A
+                    // structure nested in a `score { }` block is a per-score
+                    // override, applied later from the RenderSpec.
+                    if (!IsInsideRender(structure))
+                        _structure = structure;
                     break;
 
                 case VariableDeclarationSyntax varDecl:
@@ -2305,6 +2318,14 @@ public sealed class MeasureCollector
             if (p is PartDeclarationSyntax part)
                 return part.Name.Text;
         return null;
+    }
+
+    private static bool IsInsideRender(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is RenderDeclarationSyntax)
+                return true;
+        return false;
     }
 
     private static bool IsInsideRepeatBlock(SyntaxNode node)

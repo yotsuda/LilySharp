@@ -82,7 +82,13 @@ public static class RenderSpecParser
             ? LilySharp.Core.Semantics.PartTranspose.ReadProperty(t)
             : null;
 
-        return new RenderSpec(name, outputFile ?? "", [.. items], scoreTranspose);
+        // A score-local `structure { ... }` overrides the top-level structure for
+        // this score only. The first one wins (a second is flagged by the validator).
+        var localStructure = render.DescendantNodes()
+            .OfType<StructureDeclarationSyntax>()
+            .FirstOrDefault();
+
+        return new RenderSpec(name, outputFile ?? "", [.. items], scoreTranspose, localStructure);
     }
 
     /// <summary>

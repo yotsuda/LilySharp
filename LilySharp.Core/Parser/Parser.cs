@@ -2225,6 +2225,10 @@ private GreenNode?[] ParseArticulations()
             SyntaxKind.GrandStaffKeyword => ParseGrandStaffRender(),
             SyntaxKind.TabKeyword => ParseTabRender(),
             SyntaxKind.OssiaKeyword => ParseOssiaRender(),
+            // A score may carry its own `structure { ... }` to render a different
+            // arrangement of the same sections (e.g. a practice excerpt), overriding
+            // the top-level structure for that score only.
+            SyntaxKind.StructureKeyword => ParseStructureDeclaration(),
             _ when IsPartNameStart() => ParseMidiPartRender(),
             _ => null
         };

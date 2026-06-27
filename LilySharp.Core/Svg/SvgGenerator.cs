@@ -132,7 +132,7 @@ public static class SvgGenerator
         {
             voiceName = single.Staff.VoiceName;
         }
-        var score = collector.Collect(tree, voiceName);
+        var score = collector.Collect(tree, voiceName, renderSpec?.LocalStructure);
         var wrapped = MultiStaffScore.FromScore(score);
         return (wrapped, layoutEngine.Layout(wrapped));
     }

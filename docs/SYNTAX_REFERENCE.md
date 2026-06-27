@@ -391,6 +391,27 @@ score "out" {
 }
 ```
 
+### Per-Score Structure
+
+A score may carry its own `structure { ... }` to render a different
+arrangement of the same sections — for example a practice excerpt that
+plays only the intro. It overrides the file's top-level structure for
+that score only; scores without one keep using the top-level structure
+(and MIDI always uses the top-level form).
+
+```
+structure { Intro Verse Outro }   % the default form
+
+score full {
+  staff melody
+}
+
+score 練習 {
+  structure { Intro }             % this score renders only the intro
+  staff melody
+}
+```
+
 ## Override/Revert
 
 Modify engraving properties:

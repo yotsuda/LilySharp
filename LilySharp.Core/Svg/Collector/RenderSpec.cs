@@ -74,7 +74,11 @@ public sealed record RenderSpec(
     ImmutableArray<RenderItemSpec> Items,
     // A per-score `transpose <pitch>` (e.g. a Bb part-score): the c->target diatonic
     // interval, composed on top of each part's own transpose. Null = concert pitch.
-    (int step, int alt, int oct)? ScoreTranspose = null
+    (int step, int alt, int oct)? ScoreTranspose = null,
+    // A score-local `structure { ... }` that overrides the top-level structure for
+    // this score only (e.g. a practice excerpt rendering just one section). Null =
+    // use the file's top-level structure (or section-declaration order if none).
+    StructureDeclarationSyntax? LocalStructure = null
 )
 {
     /// <summary>Whether this render contains a grand staff.</summary>

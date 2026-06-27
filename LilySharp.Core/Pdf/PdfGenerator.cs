@@ -68,7 +68,7 @@ public static class PdfGenerator
                 voiceName = single.Staff.VoiceName;
             }
             var collector = new MeasureCollector();
-            var score = collector.Collect(tree, voiceName);
+            var score = collector.Collect(tree, voiceName, renderSpec?.LocalStructure);
             multiScore = MultiStaffScore.FromScore(score);
             layout = new LayoutEngine().Layout(multiScore);
         }
