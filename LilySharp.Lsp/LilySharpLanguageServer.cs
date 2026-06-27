@@ -34,7 +34,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260628-0722";
+    public const string Version = "0.1.1-20260628-0736";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -434,7 +434,7 @@ public sealed class LilySharpLanguageServer
         return context switch
         {
             CompletionContext.TopLevel => GetTopLevelCompletions(),
-            CompletionContext.MusicBlock => GetMusicCompletions(word),
+            CompletionContext.MusicBlock => GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset)),
             CompletionContext.AfterAt => GetArticulationCompletions(),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
@@ -555,19 +555,53 @@ public sealed class LilySharpLanguageServer
         };
     }
 
-    private static CompletionList GetMusicCompletions(string word)
+    /// <summary>
+    /// Finds the key signature in force at <paramref name="offset"/> by scanning back
+    /// for the nearest preceding <c>key &lt;tonic&gt; &lt;mode&gt;</c> declaration, and
+    /// returns its sharp(+)/flat(-) count (0 = C major / no key found).
+    /// </summary>
+    private static int CurrentKeySharps(string text, int offset)
     {
-        var items = new System.Collections.Generic.List<CompletionItem>
-        {
-                // Pitches
-                new CompletionItem { Label = "c", Kind = CompletionItemKind.Value, Detail = "C pitch", SortText = "0c" },
-                new CompletionItem { Label = "d", Kind = CompletionItemKind.Value, Detail = "D pitch", SortText = "0d" },
-                new CompletionItem { Label = "e", Kind = CompletionItemKind.Value, Detail = "E pitch", SortText = "0e" },
-                new CompletionItem { Label = "f", Kind = CompletionItemKind.Value, Detail = "F pitch", SortText = "0f" },
-                new CompletionItem { Label = "g", Kind = CompletionItemKind.Value, Detail = "G pitch", SortText = "0g" },
-                new CompletionItem { Label = "a", Kind = CompletionItemKind.Value, Detail = "A pitch", SortText = "0a" },
-                new CompletionItem { Label = "b", Kind = CompletionItemKind.Value, Detail = "B pitch", SortText = "0b" },
+        if (offset > text.Length) offset = text.Length;
+        var prefix = text.Substring(0, offset);
+        // tonic carries its own accidental suffix (fis, bes, …); mode is a word.
+        var matches = System.Text.RegularExpressions.Regex.Matches(
+            prefix, @"\bkey\s+([a-gA-G](?:is|es|isis|eses)?)\s+([A-Za-z]+)");
+        if (matches.Count == 0) return 0;
+        var last = matches[matches.Count - 1];
+        return LilySharp.Core.Music.KeySpelling.SharpsFor(
+            last.Groups[1].Value, last.Groups[2].Value) ?? 0;
+    }
 
+    private static CompletionList GetMusicCompletions(string word, int keySharps)
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>();
+
+        // Pitches, spelled for the key in force at the cursor: in G major (one
+        // sharp) the F row is offered as "fis", so accepting it writes the
+        // sounding note. Filtering on the spelled form keeps the row visible
+        // whether the user typed just "f" or the full "fis".
+        foreach (char letter in "cdefgab")
+        {
+            int alt = LilySharp.Core.Music.KeySpelling.Alteration(
+                LilySharp.Core.Music.KeySpelling.StepOf(letter), keySharps);
+            string spelled = LilySharp.Core.Music.KeySpelling.SpellLetter(letter, keySharps);
+            string upper = char.ToUpperInvariant(letter).ToString();
+            items.Add(new CompletionItem
+            {
+                Label = spelled,
+                Kind = CompletionItemKind.Value,
+                Detail = alt == 0
+                    ? $"{upper} pitch"
+                    : $"{upper}{(alt > 0 ? "♯" : "♭")} pitch (from key signature)",
+                FilterText = spelled,
+                InsertText = spelled,
+                SortText = "0" + letter
+            });
+        }
+
+        items.AddRange(new[]
+        {
                 // Rests
                 new CompletionItem { Label = "r", Kind = CompletionItemKind.Value, Detail = "Rest", SortText = "1r" },
                 new CompletionItem { Label = "s", Kind = CompletionItemKind.Value, Detail = "Spacer rest (invisible)", SortText = "1s" },
@@ -590,7 +624,7 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertText = "override $1.$2 = $0", Detail = "Override grob property", SortText = "4override" },
                 new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertText = "revert $1.$0", Detail = "Revert grob property", SortText = "4revert" },
                 new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertText = "once override $1.$2 = $0", Detail = "One-time override", SortText = "4once" }
-        };
+        });
 
         // Chord note-expansion: a chord symbol the user is typing (cmaj7, am, g7)
         // offers to replace itself with the spelled note chord <c e g b> — the same
@@ -2256,6 +2290,7 @@ public class ExportResponse
     public string? OutputPath { get; set; }
     public string? Error { get; set; }
 }
+
 
 
 

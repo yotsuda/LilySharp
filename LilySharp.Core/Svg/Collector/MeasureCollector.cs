@@ -2057,49 +2057,15 @@ public sealed class MeasureCollector
     private int CalculateKeySharps(KeySignatureSyntax key)
     {
         // PitchName already includes accidental suffix (e.g., "bes", "fis")
-        string keyName = key.Pitch.PitchName.ToLowerInvariant();
-        string mode = key.Mode.Text.ToLowerInvariant();
-
-        var majorKeys = new Dictionary<string, int>
-        {
-            ["c"] = 0, ["g"] = 1, ["d"] = 2, ["a"] = 3, ["e"] = 4, ["b"] = 5,
-            ["fis"] = 6, ["cis"] = 7,
-            ["f"] = -1, ["bes"] = -2, ["ees"] = -3, ["aes"] = -4, ["des"] = -5, ["ges"] = -6, ["ces"] = -7
-        };
-
-        if (majorKeys.TryGetValue(keyName, out int sharps))
-        {
-            if (mode == "minor") sharps -= 3;
-            return sharps;
-        }
-
-        return 0;
+        return LilySharp.Core.Music.KeySpelling.SharpsFor(
+            key.Pitch.PitchName, key.Mode.Text) ?? 0;
     }
-
-    // LILYPOND-REF: lily/accidental-engraver.cc
-    // Sharp order: F C G D A E B (steps 3,0,4,1,5,2,6)
-    // Flat order:  B E A D G C F (steps 6,2,5,1,4,0,3)
-    private static readonly int[] SharpOrder = { 3, 0, 4, 1, 5, 2, 6 };
-    private static readonly int[] FlatOrder = { 6, 2, 5, 1, 4, 0, 3 };
 
     /// <summary>
     /// Gets the expected alteration for a pitch step based on the current key signature.
     /// </summary>
     private int GetKeySignatureAlteration(int step)
-    {
-        if (_keySharps > 0)
-        {
-            for (int i = 0; i < _keySharps && i < SharpOrder.Length; i++)
-                if (SharpOrder[i] == step) return 1;
-        }
-        else if (_keySharps < 0)
-        {
-            int flatCount = -_keySharps;
-            for (int i = 0; i < flatCount && i < FlatOrder.Length; i++)
-                if (FlatOrder[i] == step) return -1;
-        }
-        return 0;
-    }
+        => LilySharp.Core.Music.KeySpelling.Alteration(step, _keySharps);
 
     /// <summary>
     /// Determines the displayed accidental for a pitch using LilyPond's default
