@@ -238,6 +238,13 @@ public static class EngravingDefaults
     /// <summary>Maximum stiffness for zero-duration items.</summary>
     public const double MaxStiffness = 10.0;
 
+    /// <summary>
+    /// Tab string-line spacing in staff spaces. Wider than the 1.0 of a normal
+    /// staff so the larger fret numbers fit; measures 1.5× the notation staff-space
+    /// in LilyPond's TabStaff.
+    /// </summary>
+    public const double TabStringSpace = 1.5;
+
     // === Barline rendering ===
     /// <summary>
     /// Total width of the repeat-dots block including its kern to the next

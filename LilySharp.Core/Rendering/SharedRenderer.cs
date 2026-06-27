@@ -347,20 +347,20 @@ public static class SharedRenderer
         // frets come from the written pitch shifted down an octave.
         int octaveShift = Tunings.OctaveShift(tuningType);
 
-        // One staff line per string.
+        // One staff line per string, spaced TabStringSpace apart.
         for (int i = 0; i < stringCount; i++)
-            gc.DrawLine(0, staffY + i, staffRight, staffY + i,
+            gc.DrawLine(0, staffY + i * TabStringSpace, staffRight, staffY + i * TabStringSpace,
                 Color.Black, EngravingDefaults.StaffLineThickness);
 
         // TAB clef (clefs.tab) centered on the staff. The glyph is designed
         // for 6-string staves; it overflows gracefully on fewer strings.
-        double tabCenterY = staffY + (stringCount - 1) / 2.0;
+        double tabCenterY = staffY + (stringCount - 1) * TabStringSpace / 2.0;
         gc.DrawGlyph(EmmentalerGlyphs.TabClef, systemStartX, tabCenterY,
-            FontSize * (5.0 / 5.78));
+            FontSize * (5.0 / 5.78) * TabStringSpace);
 
-        // Per-measure barlines at the tab staff height (stringCount−1 spaces).
+        // Per-measure barlines at the tab staff height.
         var primaryVoice = staff.PrimaryVoice;
-        double tabHeight = stringCount - 1;
+        double tabHeight = (stringCount - 1) * TabStringSpace;
         foreach (var ml in system.Measures)
         {
             if (ml.MeasureIndex >= primaryVoice.Measures.Length)
@@ -468,6 +468,10 @@ public static class SharedRenderer
     // overlapping. Background/clearance dimensions scale with this.
     private const double TabFretFontSize = 2.0;
 
+    // Tab string lines sit wider than a normal staff so the larger fret numbers
+    // breathe (see EngravingDefaults.TabStringSpace).
+    private const double TabStringSpace = EngravingDefaults.TabStringSpace;
+
     /// <summary>Drawn width of a fret number at <see cref="TabFretFontSize"/>.</summary>
     private static double TabFretWidth(int fret) =>
         (fret.ToString().Length == 1 ? 0.625 : 1.0) * TabFretFontSize;
@@ -489,7 +493,7 @@ public static class SharedRenderer
         int sourcePosition, IDrawingContext gc)
     {
         // String 1 (highest pitch) is the TOP tab line; string N the bottom.
-        double noteY = staffY + (stringNum - 1);
+        double noteY = staffY + (stringNum - 1) * TabStringSpace;
         string fretText = fret.ToString();
         double bgWidth = TabFretWidth(fret);
         double bgHeight = 0.6875 * TabFretFontSize;
@@ -1819,7 +1823,7 @@ public static class SharedRenderer
         }
 
         var (stringNum, _) = Tunings.CalculateFret(midi + octaveShift, tuning, stringNumber ?? 0);
-        double digitY = tabStaffTopY + (stringNum - 1);
+        double digitY = tabStaffTopY + (stringNum - 1) * TabStringSpace;
         // Half the digit height (0.6875 × font) plus a small gap, so the stem meets
         // the bigger number without overlapping it.
         double clearance = 0.6875 * TabFretFontSize / 2 + 0.3;
