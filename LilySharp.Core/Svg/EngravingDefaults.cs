@@ -161,6 +161,13 @@ public static class EngravingDefaults
     public const double StemDownAttachY = -0.168;
 
 
+    // === Staff geometry (local engraver coordinates) ===
+    /// <summary>Device-Y of the staff's middle line in the engravers' local
+    /// staff-space frame (top line = 0, bottom line = 4). A notehead's local Y is
+    /// <c>StaffMiddle - staffPosition / 2</c> (staffPosition is half-spaces from the
+    /// middle line, LilyPond convention). Use this instead of a bare <c>2.0</c>.</summary>
+    public const double StaffMiddle = 2.0;
+
     // === Notehead collision ===
     /// <summary>Half-height of notehead for collision detection (in staff positions).</summary>
     public const double NoteheadHalfHeight = 0.5;

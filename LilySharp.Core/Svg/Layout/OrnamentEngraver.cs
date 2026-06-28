@@ -71,15 +71,11 @@ public static class OrnamentEngraver
     // LILYPOND-REF: feta-scripts.mf — ornament glyph vertical extent ≈ 1.0 staff space total
     private const double OrnamentNearExtent = 0.5;
 
-    // Staff positions
-    private const double StaffMiddle = 2.0;
+    // Staff geometry + notehead/stem extents: canonical values in EngravingDefaults.
+    private const double StaffMiddle = EngravingDefaults.StaffMiddle;
     private const double StaffTop = 0.0;
-
-    // Notehead vertical half-extent
-    private const double NoteheadHalfHeight = 0.5;
-
-    // LILYPOND-REF: stem.cc:93 default stem-length = 3.5
-    private const double DefaultStemLength = 3.5;
+    private const double NoteheadHalfHeight = EngravingDefaults.NoteheadHalfHeight;
+    private const double DefaultStemLength = EngravingDefaults.DefaultStemLength;
 
     /// <summary>
     /// Calculates layout for all ornaments in a score.

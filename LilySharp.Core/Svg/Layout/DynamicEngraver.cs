@@ -64,7 +64,7 @@ public static class DynamicEngraver
 
     // Staff geometry (5 lines = 4 staff spaces)
     private const double StaffBottom = 4.0;
-    private const double StaffMiddle = 2.0;  // StaffBottom / 2
+    private const double StaffMiddle = EngravingDefaults.StaffMiddle;  // StaffBottom / 2
 
     // Text ascent above baseline for dynamic text (font-size 2.0, bold italic serif).
     // Approximate cap-height ratio ~0.6 × font-size.
@@ -238,13 +238,11 @@ public static class DynamicEngraver
                 // (multi-voice) overrides the note's pitch-default direction.
                 if (!(forcedStemUp ?? note.StemUp))
                 {
-                    // LILYPOND-REF: stem.cc:93 stem-length = 3.5
-                    double stemLength = 3.5;
-                    return noteY + stemLength;
+                    return noteY + EngravingDefaults.DefaultStemLength;
                 }
 
                 // Half a notehead height below center
-                return noteY + 0.5;
+                return noteY + EngravingDefaults.NoteheadHalfHeight;
 
             case ChordItem chord:
                 // Find lowest note in chord (most negative StaffPosition = lowest on staff)
@@ -254,11 +252,10 @@ public static class DynamicEngraver
                 // If stem down, add stem length from lowest note
                 if (!(forcedStemUp ?? chord.StemUp))
                 {
-                    double stemLength = 3.5;
-                    return lowestNoteY + stemLength;
+                    return lowestNoteY + EngravingDefaults.DefaultStemLength;
                 }
 
-                return lowestNoteY + 0.5;
+                return lowestNoteY + EngravingDefaults.NoteheadHalfHeight;
 
             case RestItem:
                 // Rest is typically around middle of staff

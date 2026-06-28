@@ -63,20 +63,18 @@ public static class ArticulationEngraver
     // LILYPOND-REF: define-grobs.scm:2295 staff-padding = 0.25
     private const double StaffPadding = 0.25;
 
-    // Notehead vertical half-extent (from GlyphMetrics.NoteheadBlack.Top)
-    // LILYPOND-REF: the support skyline of a notehead extends ±0.5 staff spaces from center
-    private const double NoteheadHalfHeight = 0.5;
-
-    // LILYPOND-REF: stem.cc:93 default stem-length = 3.5
-    private const double DefaultStemLength = 3.5;
+    // Notehead half-extent and stem length: the canonical values live in
+    // EngravingDefaults (single source of truth, LILYPOND-REF there).
+    private const double NoteheadHalfHeight = EngravingDefaults.NoteheadHalfHeight;
+    private const double DefaultStemLength = EngravingDefaults.DefaultStemLength;
 
     // Editorial (suggestion) accidentals print at font-size -2:
     // magstep(-2) = 2^(-2/6) ≈ 0.7937.
     // LILYPOND-REF: scm/define-grobs.scm:101 AccidentalSuggestion (font-size . -2)
     private const double EditorialScale = 0.7937;
 
-    // Staff middle line position
-    private const double StaffMiddle = 2.0;
+    // Staff middle line position (see EngravingDefaults.StaffMiddle).
+    private const double StaffMiddle = EngravingDefaults.StaffMiddle;
 
     // Staff top and bottom
     private const double StaffTop = 0.0;
