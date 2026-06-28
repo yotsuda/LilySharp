@@ -58,9 +58,8 @@ public static class FiguredBassEngraver
     /// Calculates layout for all figured bass items.
     /// </summary>
     private const double FigureTopExtent = 0.76;
-    private const double RelatedStaffPadding = 0.5;
-    private const double HorizonPadding = 0.1;
     private const double MinFigureBoxWidth = 0.8;
+    // relatedstaff-spacing padding + the distance→drop math live in SkylineDrop (shared with lyrics).
 
     public static ImmutableArray<FiguredBassLayout> Calculate(
         ImmutableArray<FiguredBassItem> figuredBasses,
@@ -120,10 +119,7 @@ public static class FiguredBassEngraver
         ImmutableArray<FiguredBassLayout> layouts, ImmutableArray<SystemLayout> systems,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> systemSkylines)
     {
-        var measureToSystem = new Dictionary<int, int>();
-        for (int s = 0; s < systems.Length; s++)
-            foreach (var m in systems[s].Measures)
-                measureToSystem[m.MeasureIndex] = s;
+        var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
         var fbUp = new Dictionary<int, VerticalSkyline>();
         var basicY = new Dictionary<int, double>();
@@ -138,18 +134,8 @@ public static class FiguredBassEngraver
             basicY[s] = basicY.TryGetValue(s, out var b) ? System.Math.Min(b, lay.Y) : lay.Y;
         }
 
-        var systemDrop = new Dictionary<int, double>();
-        foreach (var (s, up) in fbUp)
-        {
-            if (s >= systemSkylines.Count) continue;
-            var down = systemSkylines[s].down;
-            if (down.IsEmpty || up.IsEmpty) continue;
-            double dist = down.Distance(up, HorizonPadding);
-            if (double.IsInfinity(dist) || double.IsNaN(dist)) continue;
-            double basic = basicY[s];
-            double drop = System.Math.Max(basic, dist + RelatedStaffPadding) - basic;
-            if (drop > 1e-6) systemDrop[s] = drop;
-        }
+        // Figured bass uses each system's own lowest figure as the basic-distance floor.
+        var systemDrop = SkylineDrop.Compute(fbUp, s => basicY[s], systemSkylines);
 
         if (systemDrop.Count == 0)
             return layouts;

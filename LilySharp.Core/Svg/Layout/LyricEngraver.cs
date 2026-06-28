@@ -126,15 +126,9 @@ public sealed class LyricEngraver
         return LyricFontSize * em;
     }
 
-    /// <summary>
-    /// LilyPond Lyrics relatedstaff-spacing padding (ly/engraver-init.ly:651): the
-    /// gap left between the lyric up-skyline and the staff down-skyline when a note
-    /// pokes far enough below that the skyline distance beats the basic-distance.
-    /// </summary>
-    private const double RelatedStaffPadding = 0.5;
-
-    /// <summary>skyline-horizontal-padding for the lyric/staff skyline distance.</summary>
-    private const double HorizonPadding = 0.1;
+    // LilyPond Lyrics relatedstaff-spacing: the line is lowered so its up-skyline
+    // clears the staff down-skyline. The distance→drop math and its padding live in
+    // SkylineDrop (shared with figured bass).
 
     /// <summary>Minimum X-width of a syllable's skyline box (narrow glyphs).</summary>
     private const double MinSyllableBoxWidth = 0.8;
@@ -235,10 +229,7 @@ public sealed class LyricEngraver
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)> systemSkylines,
         double staffBottom)
     {
-        var measureToSystem = new Dictionary<int, int>();
-        for (int s = 0; s < systems.Length; s++)
-            foreach (var m in systems[s].Measures)
-                measureToSystem[m.MeasureIndex] = s;
+        var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
 
         double basic = staffBottom + _params.StaffPadding;
 
@@ -259,18 +250,8 @@ public sealed class LyricEngraver
             else lyricUp[s] = box;
         }
 
-        var systemDrop = new Dictionary<int, double>();
-        foreach (var (s, up) in lyricUp)
-        {
-            if (s >= systemSkylines.Count) continue;
-            var down = systemSkylines[s].down;
-            if (down.IsEmpty || up.IsEmpty) continue;
-            double dist = down.Distance(up, HorizonPadding);
-            if (double.IsInfinity(dist) || double.IsNaN(dist)) continue;
-            double realized = Math.Max(basic, dist + RelatedStaffPadding);
-            double drop = realized - basic;
-            if (drop > 1e-6) systemDrop[s] = drop;
-        }
+        // Lyrics share ONE basic-distance floor across systems (the line baseline).
+        var systemDrop = SkylineDrop.Compute(lyricUp, _ => basic, systemSkylines);
 
         if (systemDrop.Count == 0)
             return layouts;
