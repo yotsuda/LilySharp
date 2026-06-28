@@ -76,6 +76,29 @@ score ""test"" { staff melody }
     }
 
     [Fact]
+    public void ClefChange_ToTreble8_ParsesAndIsRecognized()
+    {
+        // treble_8 is a valid clef name mid-music, not only in a part header
+        // (the parser used to reject it everywhere but headers).
+        var source = @"
+part melody { clef treble }
+phrase m { c'4 d clef treble_8 c4 d | }
+section A { melody { $m } }
+structure { A }
+score ""x"" { staff melody }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors);
+
+        var spec = RenderSpecParser.FindFirst(tree);
+        var score = new MeasureCollector().CollectMultiStaff(tree, spec!);
+        var clefChanges = score.StaffGroups[0].Staves[0].Voices[0]
+            .Measures[0].Items.OfType<ClefChangeItem>().ToList();
+        Assert.Single(clefChanges);
+        Assert.Equal(ClefType.Treble8Below, clefChanges[0].NewClef);
+    }
+
+    [Fact]
     public void ClefChangeItem_ZeroDuration()
     {
         var clefChange = new ClefChangeItem(ClefType.Bass, 0);

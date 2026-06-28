@@ -1422,7 +1422,8 @@ private GreenNode?[] ParseArticulations()
 
         SyntaxToken clefName;
         if (CheckAny(SyntaxKind.TrebleKeyword, SyntaxKind.BassKeyword,
-                     SyntaxKind.AltoKeyword, SyntaxKind.TenorKeyword))
+                     SyntaxKind.AltoKeyword, SyntaxKind.TenorKeyword,
+                     SyntaxKind.Treble8Keyword))
         {
             clefName = Advance();
         }
@@ -1430,7 +1431,7 @@ private GreenNode?[] ParseArticulations()
         {
             var span = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                "Expected clef name (treble, bass, alto, tenor)");
+                "Expected clef name (treble, treble_8, alto, tenor, bass)");
             clefName = new SyntaxToken(SyntaxKind.TrebleKeyword, "treble", null, null);
         }
 
