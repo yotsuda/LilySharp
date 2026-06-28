@@ -35,6 +35,10 @@ internal static class LyricSyllableReader
     {
         /// <summary>A sung syllable (its text is the word to render).</summary>
         Syllable,
+        /// <summary>A sung syllable whose word ends in a hyphen (<c>Mu-</c>): it is
+        /// rendered without the trailing dash and carries a hyphen connector to the
+        /// next syllable. Use <see cref="TrimHyphenWord"/> for the display text.</summary>
+        HyphenWord,
         /// <summary>A standalone hyphen marker (<c>--</c> / <c>-</c>): the previous
         /// syllable continues into the next as one word.</summary>
         Hyphen,
@@ -77,7 +81,12 @@ internal static class LyricSyllableReader
         : text is "--" or "-" ? Marker.Hyphen
         : text is "__" or "_" ? Marker.Extender
         : text is "~" ? Marker.Melisma
+        : text.EndsWith('-') ? Marker.HyphenWord
         : Marker.Syllable;
+
+    /// <summary>The display text of a <see cref="Marker.HyphenWord"/> — the word
+    /// without its trailing hyphen(s).</summary>
+    public static string TrimHyphenWord(string text) => text.TrimEnd('-');
 
     /// <summary>True for a barline glyph (<c>|</c>, <c>||</c>, <c>|.</c>, <c>|:</c>,
     /// <c>:|</c>, <c>.|</c>) — a run of only bar/dot/colon characters that contains

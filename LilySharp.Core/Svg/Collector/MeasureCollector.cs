@@ -4167,11 +4167,11 @@ public sealed class MeasureCollector
                 case LyricSyllableReader.Marker.Melisma:
                     SetPrevConnector(LyricConnectorType.Extender);
                     break;
+                case LyricSyllableReader.Marker.HyphenWord:
+                    result.Add((LyricSyllableReader.TrimHyphenWord(text), LyricConnectorType.Hyphen, pos));
+                    break;
                 default: // Syllable
-                    if (text.EndsWith("-", System.StringComparison.Ordinal))
-                        result.Add((text.TrimEnd('-'), LyricConnectorType.Hyphen, pos));
-                    else
-                        result.Add((text, LyricConnectorType.None, pos));
+                    result.Add((text, LyricConnectorType.None, pos));
                     break;
             }
         }

@@ -162,6 +162,33 @@ score ""x"" { lyrics verse }
     }
 
     [Fact]
+    public void TrailingHyphenWord_RendersAsCenteredHyphen_BothPaths()
+    {
+        // A word ending in a hyphen ("Mu-") is a sung syllable WITHOUT the dash that
+        // carries a hyphen connector to the next syllable — identically for note-bound
+        // lyrics and an independent lyrics row (no literal trailing dash on either).
+        var noteBound = Collect(@"
+time 4/4
+section Main { melody { c'4 d e f | } lyrics melody { Mu- sic is here | } }
+structure { Main }
+score ""x"" { staff melody }
+");
+        var mu = noteBound.Lyrics.Single(l => l.Text.StartsWith("Mu"));
+        Assert.Equal("Mu", mu.Text);
+        Assert.Equal(LilySharp.Core.Svg.Model.LyricConnectorType.Hyphen, mu.ConnectorType);
+
+        var row = Collect(@"
+time 4/4
+section Main { lyrics verse { Mu- sic is here | } }
+structure { Main }
+score ""x"" { lyrics verse }
+");
+        var muRow = row.Lyrics.Single(l => l.Text.StartsWith("Mu"));
+        Assert.Equal("Mu", muRow.Text);
+        Assert.Equal(LilySharp.Core.Svg.Model.LyricConnectorType.Hyphen, muRow.ConnectorType);
+    }
+
+    [Fact]
     public void MultiVerseRow_ReservesTallerBand()
     {
         // A 2-verse auto-wrapped lyrics row marks its staff with TextRowVerses=2 so

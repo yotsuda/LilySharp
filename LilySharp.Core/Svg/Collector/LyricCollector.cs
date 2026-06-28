@@ -193,6 +193,13 @@ public sealed class LyricCollector
                 case LyricSyllableReader.Marker.Melisma:
                     result.Add(("", LyricConnectorType.None, position, false, true)); // melisma note (no line)
                     break;
+                case LyricSyllableReader.Marker.HyphenWord:
+                    // A sung syllable ending in a hyphen (Mu-): render it WITHOUT the
+                    // dash and draw a centered hyphen to the next syllable, same as a
+                    // spaced `--` marker (and the lyrics-row path).
+                    result.Add((LyricSyllableReader.TrimHyphenWord(text),
+                        LyricConnectorType.Hyphen, position, false, false));
+                    break;
                 default: // Syllable
                     result.Add((text, LyricConnectorType.None, position, false, false));
                     break;
