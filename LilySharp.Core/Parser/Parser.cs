@@ -333,6 +333,25 @@ internal sealed class Parser
     }
 
     // Legacy part inside score: part Name "display" { staff... }
+    /// <summary>
+    /// Parses items with <paramref name="parseItem"/> until <paramref name="close"/>
+    /// or EOF. A null result skips one token (the single infinite-loop guard shared
+    /// by every brace-delimited list).
+    /// </summary>
+    private List<GreenNode?> ParseList(SyntaxKind close, System.Func<GreenNode?> parseItem)
+    {
+        var items = new List<GreenNode?>();
+        while (!Check(close) && !Check(SyntaxKind.EndOfFile))
+        {
+            var item = parseItem();
+            if (item != null)
+                items.Add(item);
+            else
+                Advance();
+        }
+        return items;
+    }
+
     private PartDeclarationGreen ParseLegacyPartDeclaration()
     {
         var keyword = Expect(SyntaxKind.PartKeyword);
@@ -340,15 +359,7 @@ internal sealed class Parser
         var displayName = TryConsume(SyntaxKind.StringLiteral);
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
-        var members = new List<GreenNode?>();
-        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
-        {
-            var member = ParsePartMember();
-            if (member != null)
-                members.Add(member);
-            else
-                Advance();
-        }
+        var members = ParseList(SyntaxKind.CloseBrace, ParsePartMember);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new PartDeclarationGreen(keyword, name, displayName, openBrace, [.. members], closeBrace);
@@ -409,15 +420,8 @@ internal sealed class Parser
         var name = TryConsume(SyntaxKind.Identifier);
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
-        var members = new List<GreenNode?>();
-        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
-        {
-            var member = ParsePartMember(); // Staff has same members as Part
-            if (member != null)
-                members.Add(member);
-            else
-                Advance();
-        }
+        // Staff has the same members as a part.
+        var members = ParseList(SyntaxKind.CloseBrace, ParsePartMember);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new StaffDeclarationGreen(keyword, name, openBrace, [.. members], closeBrace);
@@ -1558,15 +1562,7 @@ private GreenNode?[] ParseArticulations()
         var name = Expect(SyntaxKind.Identifier);
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
-        var items = new List<GreenNode?>();
-        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
-        {
-            var item = ParseSectionItem();
-            if (item != null)
-                items.Add(item);
-            else
-                Advance();
-        }
+        var items = ParseList(SyntaxKind.CloseBrace, ParseSectionItem);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new SectionDeclarationGreen(keyword, name, openBrace, [.. items], closeBrace);
@@ -1620,16 +1616,7 @@ private GreenNode?[] ParseArticulations()
         var name = Check(SyntaxKind.Identifier) ? Advance() : (SyntaxToken?)null;
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
-        var measures = new List<GreenNode?>();
-
-        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
-        {
-            var measure = ParseLyricMeasure();
-            if (measure != null)
-                measures.Add(measure);
-            else
-                Advance(); // guard: never spin if a measure parses to nothing
-        }
+        var measures = ParseList(SyntaxKind.CloseBrace, ParseLyricMeasure);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
 
@@ -1902,15 +1889,7 @@ private GreenNode?[] ParseArticulations()
         var keyword = Expect(SyntaxKind.StructureKeyword);
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
-        var items = new List<GreenNode?>();
-        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
-        {
-            var item = ParseStructureItem();
-            if (item != null)
-                items.Add(item);
-            else
-                Advance();
-        }
+        var items = ParseList(SyntaxKind.CloseBrace, ParseStructureItem);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new StructureDeclarationGreen(keyword, openBrace, [.. items], closeBrace);
@@ -2176,15 +2155,7 @@ private GreenNode?[] ParseArticulations()
 
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
-        var items = new List<GreenNode?>();
-        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
-        {
-            var item = ParseRenderItem();
-            if (item != null)
-                items.Add(item);
-            else
-                Advance();
-        }
+        var items = ParseList(SyntaxKind.CloseBrace, ParseRenderItem);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         // name is always null now (`score` is the keyword, not a name slot).
