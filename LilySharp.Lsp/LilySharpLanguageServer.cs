@@ -1691,7 +1691,7 @@ public sealed class LilySharpLanguageServer
 
             actions.Add(new CodeAction
             {
-                Title = "Extract to variable",
+                Title = "Extract to phrase",
                 Kind = CodeActionKind.Refactor,
                 Edit = new WorkspaceEdit
                 {
@@ -1699,7 +1699,9 @@ public sealed class LilySharpLanguageServer
                     {
                         [uri.ToString()] = new[]
                         {
-                            // Insert variable declaration at start
+                            // Insert a phrase declaration at the top. blockText already
+                            // includes the braces, so `phrase melody { … }` is well-formed.
+                            // (`let name = …` was removed from the grammar.)
                             new TextEdit
                             {
                                 Range = new LspRange
@@ -1707,9 +1709,9 @@ public sealed class LilySharpLanguageServer
                                     Start = new Position { Line = 0, Character = 0 },
                                     End = new Position { Line = 0, Character = 0 }
                                 },
-                                NewText = $"let melody = {blockText}\n\n"
+                                NewText = $"phrase melody {blockText}\n\n"
                             },
-                            // Replace block with variable reference
+                            // Replace block with a phrase reference
                             new TextEdit
                             {
                                 Range = new LspRange
@@ -1835,10 +1837,6 @@ public sealed class LilySharpLanguageServer
             "Creates a tuplet (e.g., triplet).",
             new[] { ("ratio", "Ratio (e.g., 3/2 for triplet)"),
                     ("{ music }", "Notes in the tuplet") }),
-        new("let", "let name = expression",
-            "Declares a variable.",
-            new[] { ("name", "Variable name (identifier)"),
-                    ("expression", "Value to assign") }),
         new("override", "override Grob.property = value",
             "Overrides a grob (graphical object) property.",
             new[] { ("Grob.property", "Grob name and property (e.g., Stem.length, NoteHead.color)"),
