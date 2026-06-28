@@ -213,7 +213,7 @@ internal sealed class InlineVoltaGreen : GreenSyntaxNode
         SyntaxToken? endNumber,
         SyntaxToken dot,
         GreenNode?[] items,
-        SyntaxToken closeBracket)
+        SyntaxToken? closeBracket)
         : base(SyntaxKind.InlineVolta, [openBracket, number, separator, endNumber, dot, .. items, closeBracket])
     {
     }
@@ -786,7 +786,7 @@ internal sealed class StructureAlternativeGreen : GreenSyntaxNode
         SyntaxToken dot,
         SyntaxToken? tilde,
         SyntaxToken sectionName,
-        SyntaxToken closeBracket)
+        SyntaxToken? closeBracket)
         : base(SyntaxKind.StructureAlternative,
             BuildSlots(openBracket, number, separator, endNumber, dot, tilde, sectionName, closeBracket))
     {
@@ -800,7 +800,7 @@ internal sealed class StructureAlternativeGreen : GreenSyntaxNode
         SyntaxToken dot,
         SyntaxToken? tilde,
         SyntaxToken sectionName,
-        SyntaxToken closeBracket)
+        SyntaxToken? closeBracket)
     {
         // Slot layout (always include tilde slot for consistent indexing):
         // With separator: [openBracket, number, separator, endNumber, dot, tilde?, sectionName, closeBracket]

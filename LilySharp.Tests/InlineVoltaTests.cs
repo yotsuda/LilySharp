@@ -56,6 +56,18 @@ public sealed class InlineVoltaTests
     }
 
     [Fact]
+    public void OmittingCloseBracket_LeavesEndingOpen()
+    {
+        // ']' draws the right cap (closed); omitting it leaves the ending open.
+        // Here [1.] writes ']' (closes at the :|); [2.] omits ']' (open on the right).
+        var score = Collect("{ |: c4 d4 e4 f4 [1. g4 a4 b4 c5] :| [2. c4 d4 e4 f4 }");
+
+        Assert.Equal(2, score.VoltaBrackets.Length);
+        Assert.True(score.VoltaBrackets[0].IsClosed);  // [1.] wrote ']'
+        Assert.False(score.VoltaBrackets[1].IsClosed); // [2.] omitted ']'
+    }
+
+    [Fact]
     public void RangeEnding_KeepsRangeLabel()
     {
         var score = Collect("{ |: c4 d4 e4 f4 [1-2. g4 a4 b4 c5] :| [3. c4 d4 e4 f4] }");

@@ -459,6 +459,12 @@ public sealed class InlineVoltaSyntax : SyntaxNode
         }
     }
 
+    /// <summary>True when the ending is terminated by a closing <c>]</c> — its right
+    /// cap (down hook) is drawn. Omitting the <c>]</c> leaves the ending open on the
+    /// right; the bracket then runs to the next boundary (another ending, the repeat
+    /// barline, or the end of the block), and the engraver still opens line-break pieces.</summary>
+    public bool IsClosed => GetChild(SlotCount - 1) is SyntaxTokenNode { Kind: SyntaxKind.CloseBracket };
+
     /// <summary>The set of pass numbers this ending applies to.</summary>
     public IEnumerable<int> Numbers
     {
@@ -1458,6 +1464,11 @@ public sealed partial class StructureAlternativeSyntax : SyntaxNode
             return child != null && child is SyntaxTokenNode token && token.Kind == SyntaxKind.Tilde;
         }
     }
+
+    /// <summary>True when the bracket ending is terminated by a closing <c>]</c> — its
+    /// right cap is drawn. Omitting the <c>]</c> leaves the ending open on the right.</summary>
+    public bool IsClosed =>
+        HasBracket && GetChild(SlotCount - 1) is SyntaxTokenNode { Kind: SyntaxKind.CloseBracket };
 
     /// <summary>
     /// Gets the number token.

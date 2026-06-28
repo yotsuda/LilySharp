@@ -543,7 +543,7 @@ public sealed class MeasureCollector
     private readonly List<VoltaBracketItem> _voltaBrackets = new();
     // Inline volta endings collected during the current voice walk; finalized
     // (and marked closed/open) once the whole voice has been processed.
-    private readonly List<(int startMeasure, int endMeasure, string voltaText, int sourcePosition)> _pendingInlineVoltas = new();
+    private readonly List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)> _pendingInlineVoltas = new();
     // Parallel-voice spans (<< \\ >>) recorded during the primary (voice-0)
     // walk: the parallel node and the measure index where its content begins.
     // Voice 0 flows into the primary stream so measure indices stay continuous;
@@ -1363,15 +1363,15 @@ public sealed class MeasureCollector
 
     /// <summary>
     /// Converts the inline volta endings collected during this voice walk into
-    /// volta brackets. Every ending closes (right hook) at its true end, giving a
-    /// clear boundary before the next ending; the engraver's segment splitter
-    /// leaves a bracket open only where a line break cuts it, so a closed ending
-    /// never dangles a hook mid-system.
+    /// volta brackets. Each ending's right cap follows its source: a closing ']'
+    /// draws the cap (closed), omitting it leaves the ending open. The engraver's
+    /// segment splitter still opens a closed bracket only where a line break cuts
+    /// it, so a closed ending never dangles a hook mid-system.
     /// </summary>
     private void FinalizeInlineVoltas()
     {
-        foreach (var (startMeasure, endMeasure, voltaText, sourcePosition) in _pendingInlineVoltas)
-            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, IsClosed: true, sourcePosition));
+        foreach (var (startMeasure, endMeasure, voltaText, isClosed, sourcePosition) in _pendingInlineVoltas)
+            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
         _pendingInlineVoltas.Clear();
     }
 
@@ -1515,7 +1515,7 @@ public sealed class MeasureCollector
                     if (builder.CurrentItemCount > 0)
                         endMeasureIndex++; // include the in-progress measure
                     int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
-                    _pendingInlineVoltas.Add((startMeasureIndex, lastMeasure, volta.VoltaText, volta.Position));
+                    _pendingInlineVoltas.Add((startMeasureIndex, lastMeasure, volta.VoltaText, volta.IsClosed, volta.Position));
                 }
                 break;
 
@@ -2376,7 +2376,7 @@ public sealed class MeasureCollector
     private void ProcessRepeatBlock(StructureRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
         bool afterRepeatStart = false;
-        var pendingVoltaBrackets = new List<(int startMeasure, int endMeasure, string voltaText, int sourcePosition)>();
+        var pendingVoltaBrackets = new List<(int startMeasure, int endMeasure, string voltaText, bool isClosed, int sourcePosition)>();
 
         for (int i = 0; i < repeat.SlotCount; i++)
         {
@@ -2431,17 +2431,17 @@ public sealed class MeasureCollector
                         if (alt.HasBracket && !alt.IsSilent)
                         {
                             int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
-                            pendingVoltaBrackets.Add((startMeasureIndex, lastMeasure, alt.VoltaText, alt.Position));
+                            pendingVoltaBrackets.Add((startMeasureIndex, lastMeasure, alt.VoltaText, alt.IsClosed, alt.Position));
                         }
                     }
                 }
             }
         }
 
-        // Every ending closes at its true end (clear boundary before the next
-        // ending); the engraver's segment splitter opens only line-break pieces.
-        foreach (var (startMeasure, endMeasure, voltaText, sourcePosition) in pendingVoltaBrackets)
-            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, IsClosed: true, sourcePosition));
+        // Each ending's right cap follows its source ']' (present = closed); the
+        // engraver's segment splitter opens only line-break pieces of a closed one.
+        foreach (var (startMeasure, endMeasure, voltaText, isClosed, sourcePosition) in pendingVoltaBrackets)
+            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
     }
 
     private void ProcessSection(SectionDeclarationSyntax section, Action<IEnumerable<SyntaxNode>> processNodes)

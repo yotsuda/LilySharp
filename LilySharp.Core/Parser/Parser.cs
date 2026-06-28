@@ -1066,9 +1066,12 @@ internal sealed class Parser
 
         var dot = Expect(SyntaxKind.Dot);
 
+        // The ending body runs until a structural boundary: the closing ']' (which
+        // makes the ending CLOSED), the next ending '[N.', a repeat barline, the
+        // block close, or EOF. Internal beams '[c8 …]' and plain '|' barlines stay
+        // part of the body. Omitting the ']' leaves the ending open on the right.
         var items = new List<GreenNode?>();
-        while (_pendingPostEventMarkers.Count > 0
-               || (!Check(SyntaxKind.CloseBracket) && !Check(SyntaxKind.EndOfFile)))
+        while (_pendingPostEventMarkers.Count > 0 || !AtInlineVoltaBoundary())
         {
             var item = ParseMusicItem();
             if (item != null)
@@ -1077,9 +1080,20 @@ internal sealed class Parser
                 Advance(); // skip unexpected token to recover
         }
 
-        var closeBracket = Expect(SyntaxKind.CloseBracket);
+        SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
         return new InlineVoltaGreen(openBracket, number, separator, endNumber, dot, [.. items], closeBracket);
     }
+
+    /// <summary>The token stream is at the end of an inline volta ending body: the
+    /// closing ']', the next ending '[N.', a repeat barline, the block close, or EOF.
+    /// A '[' that starts a beam (not followed by a number) is NOT a boundary.</summary>
+    private bool AtInlineVoltaBoundary() =>
+        Check(SyntaxKind.CloseBracket)
+        || (Check(SyntaxKind.OpenBracket) && Peek(1).Kind == SyntaxKind.IntegerLiteral)
+        || Check(SyntaxKind.RepeatStartBar)
+        || Check(SyntaxKind.RepeatEndBar)
+        || Check(SyntaxKind.CloseBrace)
+        || Check(SyntaxKind.EndOfFile);
 
 private GreenNode?[] ParseArticulations()
     {
@@ -2004,7 +2018,8 @@ private GreenNode?[] ParseArticulations()
         }
 
         var section = Expect(SyntaxKind.Identifier);
-        var closeBracket = Expect(SyntaxKind.CloseBracket);
+        // The ']' is optional: present = closed (right cap drawn), absent = open.
+        SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
 
         return new StructureAlternativeGreen(openBracket, number, separator, endNumber, dot, tilde, section, closeBracket);
     }
