@@ -166,6 +166,8 @@ internal sealed class Lexer
             }
             _position++;
         }
+        // An unterminated block comment is detected post-lex (LexicalDiagnostics),
+        // not here, so the lexer stays stateless for incremental re-lexing.
         return GreenCache.GetTrivia(SyntaxKind.BlockCommentTrivia, _text.AsSpan(start, _position - start));
     }
 
@@ -308,6 +310,8 @@ internal sealed class Lexer
 
         if (Current == '"')
             _position++; // skip closing quote
+        // An unterminated string (no closing quote) is flagged post-lex by
+        // LexicalDiagnostics, keeping the lexer stateless.
 
         return (SyntaxKind.StringLiteral, _text[start.._position]);
     }

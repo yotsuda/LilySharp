@@ -307,6 +307,28 @@ part {
     }
 
     [Fact]
+    public void UnterminatedString_IsReported()
+    {
+        var tree = SyntaxTree.Parse("title \"oops");
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnterminatedString);
+    }
+
+    [Fact]
+    public void UnterminatedBlockComment_IsReported()
+    {
+        var tree = SyntaxTree.Parse("/* never closed\nphrase a { c }");
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnterminatedComment);
+    }
+
+    [Fact]
+    public void TerminatedStringAndComment_AreClean()
+    {
+        var tree = SyntaxTree.Parse("/* ok */ title \"fine\"\nphrase a { c }");
+        Assert.DoesNotContain(tree.Diagnostics, d =>
+            d.Code == DiagnosticCodes.UnterminatedString || d.Code == DiagnosticCodes.UnterminatedComment);
+    }
+
+    [Fact]
     public void ParseVariableReference()
     {
         var tree = SyntaxTree.Parse(@"let theme = { c d e f }

@@ -82,7 +82,7 @@ public sealed class SyntaxTree
         var tokens = lexer.ScanAllTokens().ToList();
         var parser = new Parser.Parser(tokens);
         var root = parser.ParseCompilationUnit();
-        return new SyntaxTree(text, root, parser.Diagnostics.ToList(), tokens);
+        return new SyntaxTree(text, root, MergeDiagnostics(tokens, parser.Diagnostics), tokens);
     }
 
     /// <summary>
@@ -149,7 +149,20 @@ public sealed class SyntaxTree
 
         var parser = new Parser.Parser(tokens, reuse);
         var root = parser.ParseCompilationUnit();
-        return new SyntaxTree(newText, root, parser.Diagnostics.ToList(), tokens);
+        return new SyntaxTree(newText, root, MergeDiagnostics(tokens, parser.Diagnostics), tokens);
+    }
+
+    /// <summary>Combines lexical diagnostics (derived from the final token stream by
+    /// <see cref="Parser.LexicalDiagnostics"/>, so full and incremental parses agree)
+    /// with the parser's, ordered by source position — an unterminated string/comment
+    /// reads in line with the parser errors that follow it.</summary>
+    private static List<Diagnostic> MergeDiagnostics(
+        IReadOnlyList<SyntaxToken> tokens, DiagnosticBag parser)
+    {
+        var combined = Parser.LexicalDiagnostics.Scan(tokens);
+        combined.AddRange(parser.ToList());
+        combined.Sort((a, b) => a.Span.Start.CompareTo(b.Span.Start));
+        return combined;
     }
 
     /// <summary>
