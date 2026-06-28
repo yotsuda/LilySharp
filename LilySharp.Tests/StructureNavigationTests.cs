@@ -102,20 +102,24 @@ public class StructureNavigationTests
     }
 
     [Fact]
-    public void CoPlaceToCoda_AdoptsTheNearbyLabelLineAndSitsLeft()
+    public void CoPlaceToCoda_SitsLeftOfTheLabelOnTheCommonLine()
     {
-        // A "To Coda" at the end of one section and the next section's label sit
-        // on the same barline (close X). Co-placement lifts the sign onto the
-        // label's measure/line and tucks it to the label's left.
+        // A "To Coda" (end of one section) and the next section's label sit on the
+        // same barline (close X); label C was raised to clear the sign, while B
+        // sits on the common line. Co-placement drops C back to the common line,
+        // keeps the sign in its own measure, and tucks it to C's left.
         var marks = System.Collections.Immutable.ImmutableArray.Create(
             new MusicMarkLayout(1, 39.65, -2.50, MusicMarkType.ToCoda, "To Coda", false, 0),
-            new MusicMarkLayout(2, 41.15, -6.36, MusicMarkType.SectionLabel, "C", false, 0));
+            new MusicMarkLayout(2, 41.15, -6.36, MusicMarkType.SectionLabel, "C", false, 0),
+            new MusicMarkLayout(1, 23.93, -2.50, MusicMarkType.SectionLabel, "B", false, 0));
 
         var result = MusicMarkEngraver.CoPlaceToCodaWithLabels(marks);
         var tc = result.First(m => m.MarkType == MusicMarkType.ToCoda);
+        var cLabel = result.First(m => m.MarkType == MusicMarkType.SectionLabel && m.Text == "C");
 
-        Assert.Equal(1, tc.MeasureIndex);  // keeps its own (prev-section) measure
-        Assert.Equal(-6.36, tc.Y, 3);      // but adopts the label's line
-        Assert.True(tc.X < 41.15, "To Coda should sit left of the label");
+        Assert.Equal(1, tc.MeasureIndex);   // keeps its own (prev-section) measure
+        Assert.Equal(-2.50, cLabel.Y, 3);   // C drops to the common (B) line
+        Assert.Equal(-2.50, tc.Y, 3);       // sign sits on that line too
+        Assert.True(tc.X < cLabel.X, "To Coda should sit left of the label");
     }
 }

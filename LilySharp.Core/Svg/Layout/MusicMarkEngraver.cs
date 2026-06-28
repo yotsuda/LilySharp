@@ -322,24 +322,39 @@ public static class MusicMarkEngraver
         if (marks.IsDefaultOrEmpty || !marks.Any(m => m.MarkType == MusicMarkType.ToCoda))
             return marks;
 
-        var labels = marks
-            .Where(m => m.MarkType is MusicMarkType.SectionLabel or MusicMarkType.Rehearsal)
-            .ToList();
         var result = marks.ToBuilder();
+        var labelIdx = new List<int>();
+        for (int i = 0; i < result.Count; i++)
+            if (result[i].MarkType is MusicMarkType.SectionLabel or MusicMarkType.Rehearsal)
+                labelIdx.Add(i);
+        if (labelIdx.Count == 0)
+            return marks;
+
+        // The common rehearsal line: the labels closest to the staff (largest Y),
+        // i.e. those NOT raised to clear something. An un-raised label sits at the
+        // same staff-relative Y in every system, so this is system-agnostic.
+        double commonY = labelIdx.Max(j => result[j].Y);
+
         for (int i = 0; i < result.Count; i++)
         {
             if (result[i].MarkType != MusicMarkType.ToCoda)
                 continue;
             var tc = result[i];
-            MusicMarkLayout? best = null;
+            int bestJ = -1;
             double bestDx = double.MaxValue;
-            foreach (var lb in labels)
+            foreach (int j in labelIdx)
             {
-                double dx = lb.X - tc.X;
-                if (dx >= -1.0 && dx < 5.0 && dx < bestDx) { bestDx = dx; best = lb; }
+                double dx = result[j].X - tc.X;
+                if (dx >= -1.0 && dx < 5.0 && dx < bestDx) { bestDx = dx; bestJ = j; }
             }
-            if (best is { } lab)
-                result[i] = tc with { Y = lab.Y, X = lab.X - ToCodaLabelGap };
+            if (bestJ >= 0)
+            {
+                // The label was raised only to clear this sign. With the sign
+                // moving beside it, drop the label back to the common line and
+                // sit the sign on that line too, just to its left.
+                result[bestJ] = result[bestJ] with { Y = commonY };
+                result[i] = tc with { Y = commonY, X = result[bestJ].X - ToCodaLabelGap };
+            }
         }
         return result.ToImmutable();
     }
