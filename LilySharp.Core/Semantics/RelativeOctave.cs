@@ -40,6 +40,22 @@ public static class RelativeOctave
         _ => 0
     };
 
+    /// <summary>Chromatic semitone offset of a diatonic step within its octave
+    /// (c=0, d=2, e=4, f=5, g=7, a=9, b=11).</summary>
+    private static readonly int[] StepSemitone = { 0, 2, 4, 5, 7, 9, 11 };
+
+    /// <summary>The semitone (0–11) of a diatonic step (0–6).</summary>
+    public static int StepSemitoneOf(int step) => StepSemitone[step];
+
+    /// <summary>
+    /// Absolute MIDI number for a diatonic step (0–6), its alteration in semitones,
+    /// and its octave (scientific, where octave 4 = the octave of middle C). The
+    /// single source for the <c>(octave+1)*12 + semitone + alter</c> formula that was
+    /// inlined in the collector, the MIDI exporter, the renderer and the transposer.
+    /// </summary>
+    public static int StepToMidi(int step, int alter, int octave) =>
+        (octave + 1) * 12 + StepSemitone[step] + alter;
+
     /// <summary>
     /// Resolves the octave of the new pitch relative to the previous pitch.
     /// Octave numbers are caller-convention agnostic (pure step arithmetic),

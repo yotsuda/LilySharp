@@ -596,18 +596,6 @@ public static class SharedRenderer
         int step = ((staffPosition % 7) + 7) % 7;
         int octave = 4 + (staffPosition - step) / 7;
 
-        int semitone = step switch
-        {
-            0 => 0,  // C
-            1 => 2,  // D
-            2 => 4,  // E
-            3 => 5,  // F
-            4 => 7,  // G
-            5 => 9,  // A
-            6 => 11, // B
-            _ => 0
-        };
-
         int alteration = accidental switch
         {
             "sharp" => 1,
@@ -617,7 +605,7 @@ public static class SharedRenderer
             _ => 0
         };
 
-        return (octave + 1) * 12 + semitone + alteration;
+        return Semantics.RelativeOctave.StepToMidi(step, alteration, octave);
     }
 
     // ---------- Clef ----------

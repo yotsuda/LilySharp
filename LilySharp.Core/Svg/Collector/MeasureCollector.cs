@@ -2972,10 +2972,7 @@ public sealed class MeasureCollector
 
     /// <summary>Absolute MIDI number from a diatonic step (0=C..6=B), alteration and octave.</summary>
     private static int PitchToMidi(int step, int alter, int octave)
-    {
-        int[] semis = { 0, 2, 4, 5, 7, 9, 11 };
-        return (octave + 1) * 12 + semis[((step % 7) + 7) % 7] + alter;
-    }
+        => RelativeOctave.StepToMidi(((step % 7) + 7) % 7, alter, octave);
 
     /// <summary>The post-event articulations attached to a note or chord (empty for
     /// anything else). The single source for the former five-copy node switch.</summary>

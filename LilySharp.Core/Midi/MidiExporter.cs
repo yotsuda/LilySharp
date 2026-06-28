@@ -352,15 +352,11 @@ public sealed class MidiExporter
         _currentNoteName = noteName;
         _currentOctave = targetOctave;
 
-        // Calculate MIDI pitch
-        int basePitch = pitch.BaseName switch
-        {
-            'c' => 0, 'd' => 2, 'e' => 4, 'f' => 5,
-            'g' => 7, 'a' => 9, 'b' => 11, _ => 0
-        };
-
+        // Calculate MIDI pitch (shared step→MIDI formula), then transpose + clamp.
         return Math.Clamp(
-            basePitch + pitch.AccidentalOffset + (targetOctave + 1) * 12 + _currentTransposeSemitones,
+            RelativeOctave.StepToMidi(
+                RelativeOctave.StepIndex(pitch.BaseName), pitch.AccidentalOffset, targetOctave)
+            + _currentTransposeSemitones,
             0, 127);
     }
 

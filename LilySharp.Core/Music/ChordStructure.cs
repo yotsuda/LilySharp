@@ -189,8 +189,7 @@ public sealed record ChordStructure(
     int? BassStep = null,    // slash bass diatonic step (null = no bass)
     int? BassAlter = null)
 {
-    // Semitones of each diatonic step in the major scale (C D E F G A B).
-    private static readonly int[] MajorScale = [0, 2, 4, 5, 7, 9, 11];
+    // Diatonic-step semitones come from RelativeOctave.StepSemitoneOf (single source).
 
     /// <summary>Semitone offsets of the chord tones above the root (the pitch set).</summary>
     public ImmutableArray<int> Intervals =>
@@ -213,7 +212,8 @@ public sealed record ChordStructure(
                 int letterStep = ((absStep % 7) + 7) % 7;
                 int octaveUp = absStep / 7;
                 // Semitone span from the root LETTER (natural) to the tone LETTER.
-                int naturalSpan = MajorScale[letterStep] - MajorScale[RootStep] + 12 * octaveUp;
+                int naturalSpan = Semantics.RelativeOctave.StepSemitoneOf(letterStep)
+                                  - Semantics.RelativeOctave.StepSemitoneOf(RootStep) + 12 * octaveUp;
                 int alter = spec.Semitone - naturalSpan + RootAlter;
                 b.Add(new ChordTone(letterStep, alter, octaveUp));
             }

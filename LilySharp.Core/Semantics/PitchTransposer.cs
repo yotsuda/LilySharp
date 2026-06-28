@@ -32,10 +32,8 @@ namespace LilySharp.Core.Semantics;
 /// </remarks>
 public static class PitchTransposer
 {
-    // Semitones of each natural diatonic step above its octave's c.
-    // Index = step (c=0 … b=6), matching RelativeOctave.StepIndex.
-    private static readonly int[] StepSemitone = { 0, 2, 4, 5, 7, 9, 11 };
-
+    // Semitone of each diatonic step comes from RelativeOctave.StepSemitoneOf (the
+    // single source); only the circle-of-fifths table is local to transposition.
     // Circle-of-fifths distance of each natural step from C (F=−1 … B=+5).
     private static readonly int[] StepFifths = { 0, 2, 4, -1, 1, 3, 5 };
 
@@ -88,15 +86,15 @@ public static class PitchTransposer
     {
         // Interval from c (step 0, octave 0) up/down to the target.
         int deltaStep = toStep + 7 * toOctave;
-        int deltaSemitones = StepSemitone[toStep] + toAlteration + 12 * toOctave;
+        int deltaSemitones = RelativeOctave.StepSemitoneOf(toStep) + toAlteration + 12 * toOctave;
 
-        int targetSemitones = octave * 12 + StepSemitone[step] + alteration + deltaSemitones;
+        int targetSemitones = octave * 12 + RelativeOctave.StepSemitoneOf(step) + alteration + deltaSemitones;
 
         int rawStep = step + deltaStep;             // may be negative (downward)
         int newOctave = octave + FloorDiv(rawStep, 7);
         int newStep = Mod(rawStep, 7);
 
-        int naturalSemitones = newOctave * 12 + StepSemitone[newStep];
+        int naturalSemitones = newOctave * 12 + RelativeOctave.StepSemitoneOf(newStep);
         int newAlteration = targetSemitones - naturalSemitones;
 
         return (newStep, newAlteration, newOctave);
@@ -112,7 +110,7 @@ public static class PitchTransposer
     /// A sounding pitch (MIDI) only needs this shift — no respelling.
     /// </summary>
     public static int IntervalSemitones(int toStep, int toAlteration, int toOctave = 0)
-        => StepSemitone[toStep] + toAlteration + 12 * toOctave;
+        => RelativeOctave.StepSemitoneOf(toStep) + toAlteration + 12 * toOctave;
 
     /// <summary>
     /// How a key signature's sharp count changes when the music is transposed
