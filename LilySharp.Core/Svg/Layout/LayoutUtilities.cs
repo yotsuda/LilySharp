@@ -183,6 +183,16 @@ public static class LayoutUtilities
     }
 
     /// <summary>
+    /// Absolute Y of a staff's middle line, the anchor that
+    /// <see cref="StaffFrame.PositionToDevice"/> measures staff positions from.
+    /// Equivalent to <see cref="FindStaffYInSystem"/> plus half the staff height.
+    /// Engravers that route an element to its own staff (ties, slurs, glissandi,
+    /// multi-measure rests, ledger-line spanners) share this resolution.
+    /// </summary>
+    public static double ResolveStaffMiddleY(SystemLayout system, int staffIndex, double staffHeight)
+        => FindStaffYInSystem(system, staffIndex) + staffHeight / 2.0;
+
+    /// <summary>
     /// Resolves an item's X offset within a measure layout. Single-staff
     /// layouts index <see cref="MeasureLayout.Items"/> directly; multi-staff
     /// layouts use timing-aligned COLUMNS, so the item's timing is computed

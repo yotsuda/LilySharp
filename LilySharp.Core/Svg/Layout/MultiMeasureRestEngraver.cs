@@ -138,8 +138,7 @@ public static class MultiMeasureRestEngraver
 
                 double startX = startMeasure.X;
                 double endX = endMeasure.X + endMeasure.Width;
-                double staffY = LayoutUtilities.FindStaffYInSystem(startSystem, staffIndex);
-                double y = staffY + staffHeight / 2.0;
+                double y = LayoutUtilities.ResolveStaffMiddleY(startSystem, staffIndex, staffHeight);
 
                 builder.Add(new MultiMeasureRestLayout(
                     StartMeasureIndex: runStart,

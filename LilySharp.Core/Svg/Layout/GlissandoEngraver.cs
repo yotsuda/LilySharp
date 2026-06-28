@@ -96,8 +96,7 @@ public static class GlissandoEngraver
             foreach (var segment in segments)
             {
                 var system = systems[segment.SystemIndex];
-                double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
-                double staffMiddleY = staffY + staffHeight / 2;
+                double staffMiddleY = LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, staffHeight);
                 double startStaffYAbs = StaffFrame.PositionToDevice(gliss.StartStaffPosition, staffMiddleY);
                 double endStaffYAbs = StaffFrame.PositionToDevice(gliss.EndStaffPosition, staffMiddleY);
 

@@ -138,9 +138,8 @@ public static class TieVariantEngraver
         // LILYPOND-REF: lily/tie.cc — direction defaults opposite to stem.
         bool curveUp = !note.StemUp;
 
-        double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
         const double StaffHeight = 4.0;
-        double staffMiddleY = staffY + StaffHeight / 2.0;
+        double staffMiddleY = LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, StaffHeight);
         double noteY = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY);
         double baseY = curveUp ? noteY - NoteOffset : noteY + NoteOffset;
 

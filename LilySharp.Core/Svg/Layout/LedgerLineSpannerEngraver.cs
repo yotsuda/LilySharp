@@ -162,8 +162,8 @@ public static class LedgerLineSpannerEngraver
         if (sysIdx >= systems.Length)
             return;
         var system = systems[sysIdx];
-        double staffY = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
-        double y = staffY + staffHeight / 2.0 - staffPos / 2.0;
+        double staffMiddleY = LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, staffHeight);
+        double y = StaffFrame.PositionToDevice(staffPos, staffMiddleY);
         builder.Add(new LedgerLineSpan(
             SystemIndex: sysIdx,
             StaffPosition: staffPos,

@@ -824,8 +824,7 @@ public sealed class ElementCoordinator
                     : EdgeNoteStaffPosition(score, segSystem, slur, leftEdge: false)
                         ?? slur.StartStaffPosition;
 
-                double staffY = LayoutUtilities.FindStaffYInSystem(segSystem, staffIndex);
-                double staffMiddleY = staffY + _options.StaffHeight / 2;
+                double staffMiddleY = LayoutUtilities.ResolveStaffMiddleY(segSystem, staffIndex, _options.StaffHeight);
                 double segStartY = StaffFrame.PositionToDevice(startStaffPos, staffMiddleY);
                 double segEndY = StaffFrame.PositionToDevice(endStaffPos, staffMiddleY);
 
