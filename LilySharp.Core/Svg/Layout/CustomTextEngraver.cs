@@ -47,9 +47,6 @@ public readonly record struct CustomTextLayout(
 /// </remarks>
 public static class CustomTextEngraver
 {
-    // LILYPOND-REF: define-grobs.scm:3920 direction = DOWN
-    private const int Direction = 1;  // DOWN = 1 (positive Y = down)
-
     // LILYPOND-REF: define-grobs.scm:3925 padding = 0.5
     private const double Padding = 0.5;
 

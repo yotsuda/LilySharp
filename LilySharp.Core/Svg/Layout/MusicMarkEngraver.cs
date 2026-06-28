@@ -77,9 +77,6 @@ public static class MusicMarkEngraver
     // LILYPOND-REF: axis-group-interface.cc:50 default_outside_staff_padding_ = 0.46
     private const double OutsideStaffPadding = 0.46;
 
-    // Y offset below staff for expression marks
-    private const double BelowStaffOffset = 5.5;
-
     // Extra drop for D.S./D.C. jump instructions so they sit clear of low notes.
     private const double JumpInstructionDrop = 1.5;
 

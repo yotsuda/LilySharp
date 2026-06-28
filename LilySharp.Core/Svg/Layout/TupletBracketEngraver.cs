@@ -257,17 +257,6 @@ public static class TupletBracketEngraver
     }
 
     /// <summary>
-    /// Overload for backward compatibility (defaults to stems up, no beam info).
-    /// </summary>
-    public static ImmutableArray<TupletBracketLayout> Calculate(
-        ImmutableArray<TupletBracketItem> tuplets,
-        ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
-    {
-        return Calculate(tuplets, systems, measureLayouts, ImmutableArray<Measure>.Empty);
-    }
-
-    /// <summary>
     /// Overload with measures but no beam info.
     /// </summary>
     public static ImmutableArray<TupletBracketLayout> Calculate(

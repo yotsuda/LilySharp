@@ -183,16 +183,6 @@ public static class HairpinEngraver
         return layouts.ToImmutable();
     }
 
-    private static (double startX, double endX) CalculateEndpoints(
-        HairpinItem hairpin, ImmutableArray<MeasureLayout> measureLayouts)
-    {
-        double startX = CalculateStartX(hairpin, measureLayouts);
-        double endX = CalculateEndX(hairpin, measureLayouts);
-        if (endX - startX < MinimumLength)
-            endX = startX + MinimumLength;
-        return (startX, endX);
-    }
-
     private static double CalculateStartX(HairpinItem hairpin, ImmutableArray<MeasureLayout> measureLayouts)
     {
         var startMeasure = measureLayouts[hairpin.StartMeasureIndex];
