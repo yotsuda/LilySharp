@@ -244,6 +244,15 @@ public static partial class GlyphMetrics
         _ => NoteheadBlack
     };
 
+    /// <summary>
+    /// The note-value bucket (1=whole, 2=half, else black) a written base duration
+    /// maps to. A non-1 numerator (e.g. a breve 2/1) collapses to a black head as a
+    /// safe default. Centralises the formerly inlined
+    /// <c>Numerator == 1 ? Denominator : 1</c> idiom.
+    /// </summary>
+    public static int NoteValueOf(Semantics.Fraction baseDuration) =>
+        baseDuration.Numerator == 1 ? baseDuration.Denominator : 1;
+
     /// <summary>Gets the notehead advance width for a given note value.</summary>
     public static double GetNoteheadAdvance(int noteValue) => noteValue switch
     {

@@ -233,7 +233,7 @@ public class SlurScoringProblemTests
     public void PeakAround_ReturnsExpectedValues(double x, double expected)
     {
         // LILYPOND-REF: lily/misc.cc:48-55
-        double result = SlurScoringProblem.PeakAround(0.05, 0.5, x);
+        double result = BezierBow.PeakAround(0.05, 0.5, x);
         Assert.Equal(expected, result, 3);
     }
 

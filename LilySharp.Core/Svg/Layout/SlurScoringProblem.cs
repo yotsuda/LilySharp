@@ -162,46 +162,13 @@ public sealed class SlurScoringProblem
     // Helper functions
     // ---------------------------------------------------------------
 
-    /// <summary>
-    /// peak_around: 1 at x=0, 0 at x=threshold, 0 beyond.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/misc.cc:48-55
-    /// </remarks>
-    internal static double PeakAround(double epsilon, double threshold, double x)
-    {
-        if (x < 0)
-            return 1.0;
-        return Math.Max(-epsilon * (x - threshold) / ((x + epsilon) * threshold), 0.0);
-    }
+    // Bow arc height / control-point indent: the shared bezier-bow math, bound to
+    // this slur's height-limit and ratio. See BezierBow (LilyPond bezier-bow.cc).
+    private double CalculateSlurHeight(double width) =>
+        BezierBow.Height(_parameters.HeightLimit, _parameters.Ratio, width);
 
-    /// <summary>
-    /// Calculates slur arc height using LilyPond's atan formula.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/bezier-bow.cc:28-38 F0_1() + slur_height()
-    /// </remarks>
-    private double CalculateSlurHeight(double width)
-    {
-        if (_parameters.HeightLimit < 0.001)
-            return 0;
-
-        double x = width * _parameters.Ratio / _parameters.HeightLimit;
-        return _parameters.HeightLimit * (2.0 / Math.PI) * Math.Atan(Math.PI * x / 2.0);
-    }
-
-    /// <summary>
-    /// Calculates indent for control points.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/bezier-bow.cc:109-118 get_slur_indent_height()
-    /// </remarks>
-    private double CalculateIndent(double width)
-    {
-        double maxFraction = 1.0 / 3.1;
-        double q = 2 * _parameters.HeightLimit / maxFraction;
-        return 2 * _parameters.HeightLimit - q * q * maxFraction / (width + q);
-    }
+    private double CalculateIndent(double width) =>
+        BezierBow.Indent(_parameters.HeightLimit, width);
 
     /// <summary>
     /// Interpolates slur Y at parameter t using parabolic arc.
@@ -492,14 +459,14 @@ public sealed class SlurScoringProblem
             if (startDist < gapInside)
             {
                 demerit += _parameters.ExtraObjectCollisionPenalty
-                           * PeakAround(0.1 * gapInside, gapInside, startDist);
+                           * BezierBow.PeakAround(0.1 * gapInside, gapInside, startDist);
             }
 
             double endDist = Math.Abs(config.EndY - lineY);
             if (endDist < gapInside)
             {
                 demerit += _parameters.ExtraObjectCollisionPenalty
-                           * PeakAround(0.1 * gapInside, gapInside, endDist);
+                           * BezierBow.PeakAround(0.1 * gapInside, gapInside, endDist);
             }
         }
 
@@ -513,7 +480,7 @@ public sealed class SlurScoringProblem
             if (peakDist < gapOutside)
             {
                 demerit += _parameters.ExtraObjectCollisionPenalty * 0.5
-                           * PeakAround(0.1 * gapOutside, gapOutside, peakDist);
+                           * BezierBow.PeakAround(0.1 * gapOutside, gapOutside, peakDist);
             }
         }
 
@@ -531,7 +498,7 @@ public sealed class SlurScoringProblem
                 double dist = Math.Abs(peakY - existingPeakY);
 
                 demerit += _parameters.ExtraObjectCollisionPenalty
-                           * PeakAround(
+                           * BezierBow.PeakAround(
                                0.1 * _parameters.ExtraEncompassFreeDistance,
                                _parameters.ExtraEncompassFreeDistance,
                                dist);

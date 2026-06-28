@@ -2698,12 +2698,7 @@ public sealed class MeasureCollector
     /// </remarks>
     private void CollectDynamics(SyntaxNode node, int measureIndex, int itemIndex)
     {
-        var articulations = node switch
-        {
-            NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
-        };
+        var articulations = ArticulationsOf(node);
 
         foreach (var articulation in articulations)
         {
@@ -2737,12 +2732,7 @@ public sealed class MeasureCollector
     /// </remarks>
     private static bool HasArpeggioArticulation(SyntaxNode node)
     {
-        var articulations = node switch
-        {
-            NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
-        };
+        var articulations = ArticulationsOf(node);
 
         foreach (var art in articulations)
         {
@@ -2758,12 +2748,7 @@ public sealed class MeasureCollector
     /// </summary>
     private static bool HasCourtesyAnnotation(SyntaxNode node)
     {
-        var articulations = node switch
-        {
-            NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
-        };
+        var articulations = ArticulationsOf(node);
 
         foreach (var art in articulations)
         {
@@ -2793,12 +2778,7 @@ public sealed class MeasureCollector
     /// note/chord, or null for automatic string selection.</summary>
     private static int? ExtractStringNumber(SyntaxNode node)
     {
-        var articulations = node switch
-        {
-            NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
-        };
+        var articulations = ArticulationsOf(node);
         foreach (var art in articulations)
             if (art is StringNumberAnnotationSyntax s)
                 return s.StringNumber;
@@ -2997,14 +2977,27 @@ public sealed class MeasureCollector
         return (octave + 1) * 12 + semis[((step % 7) + 7) % 7] + alter;
     }
 
+    /// <summary>The post-event articulations attached to a note or chord (empty for
+    /// anything else). The single source for the former five-copy node switch.</summary>
+    private static IEnumerable<SyntaxNode> ArticulationsOf(SyntaxNode node) => node switch
+    {
+        NoteSyntax note => note.Articulations,
+        ChordSyntax chord => chord.Articulations,
+        _ => Enumerable.Empty<SyntaxNode>()
+    };
+
+    /// <summary>The finger number from a <c>@finger.N</c> compound mark, or null.</summary>
+    /// <remarks>LILYPOND-REF: lily/fingering-engraver.cc — finger event handling.</remarks>
+    private static int? ParseFingerMark(MusicMarkSyntax mark)
+    {
+        var name = mark.MarkName.ToLowerInvariant();
+        return name.StartsWith("finger.") && int.TryParse(name.AsSpan(7), out int finger) && finger >= 0
+            ? finger : null;
+    }
+
     private static bool HasNamedArticulation(SyntaxNode node, string lowerName)
     {
-        var articulations = node switch
-        {
-            NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
-        };
+        var articulations = ArticulationsOf(node);
 
         foreach (var art in articulations)
         {
@@ -3024,18 +3017,8 @@ public sealed class MeasureCollector
     private static int? ExtractPitchFingering(PitchSyntax pitch)
     {
         foreach (var art in pitch.Articulations)
-        {
-            if (art is MusicMarkSyntax markSyntax)
-            {
-                var name = markSyntax.MarkName.ToLowerInvariant();
-                if (name.StartsWith("finger.") &&
-                    int.TryParse(name.AsSpan(7), out int finger) &&
-                    finger >= 0)
-                {
-                    return finger;
-                }
-            }
-        }
+            if (art is MusicMarkSyntax markSyntax && ParseFingerMark(markSyntax) is { } finger)
+                return finger;
         return null;
     }
 
@@ -3049,26 +3032,9 @@ public sealed class MeasureCollector
     /// </remarks>
     private static int? ExtractFingering(SyntaxNode node)
     {
-        var articulations = node switch
-        {
-            NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
-        };
-
-        foreach (var art in articulations)
-        {
-            if (art is MusicMarkSyntax markSyntax)
-            {
-                var name = markSyntax.MarkName.ToLowerInvariant();
-                if (name.StartsWith("finger.") &&
-                    int.TryParse(name.AsSpan(7), out int finger) &&
-                    finger >= 0)
-                {
-                    return finger;
-                }
-            }
-        }
+        foreach (var art in ArticulationsOf(node))
+            if (art is MusicMarkSyntax markSyntax && ParseFingerMark(markSyntax) is { } finger)
+                return finger;
         return null;
     }
 
@@ -3082,12 +3048,7 @@ public sealed class MeasureCollector
     /// </remarks>
     private static bool HasGlissandoArticulation(SyntaxNode node)
     {
-        var articulations = node switch
-        {
-            NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
-        };
+        var articulations = ArticulationsOf(node);
 
         foreach (var art in articulations)
         {
@@ -3104,12 +3065,7 @@ public sealed class MeasureCollector
     /// </summary>
     private static bool HasCueAnnotation(SyntaxNode node)
     {
-        var articulations = node switch
-        {
-            NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
-        };
+        var articulations = ArticulationsOf(node);
 
         foreach (var art in articulations)
         {
@@ -3180,12 +3136,7 @@ public sealed class MeasureCollector
     /// </remarks>
     private void CollectFiguredBass(SyntaxNode node, int measureIndex, int itemIndex)
     {
-        var articulations = node switch
-        {
-            NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
-        };
+        var articulations = ArticulationsOf(node);
 
         foreach (var child in articulations)
         {
@@ -3214,12 +3165,7 @@ public sealed class MeasureCollector
     /// </remarks>
     private void CollectChordNames(SyntaxNode node, int measureIndex, int itemIndex)
     {
-        var articulations = node switch
-        {
-            NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
-        };
+        var articulations = ArticulationsOf(node);
 
         foreach (var child in articulations)
         {
@@ -3254,12 +3200,7 @@ public sealed class MeasureCollector
     /// </remarks>
     private void CollectCrossStaff(SyntaxNode node, int measureIndex, int itemIndex)
     {
-        var articulations = node switch
-        {
-            NoteSyntax note => note.Articulations,
-            ChordSyntax chord => chord.Articulations,
-            _ => Enumerable.Empty<SyntaxNode>()
-        };
+        var articulations = ArticulationsOf(node);
 
         foreach (var child in articulations)
         {
@@ -3439,13 +3380,10 @@ public sealed class MeasureCollector
                 }
                 else if (markName.StartsWith("finger."))
                 {
-                    // LILYPOND-REF: lily/fingering-engraver.cc — finger event attaches to the host note.
-                    if (int.TryParse(markName.AsSpan(7), out int finger) && finger >= 0)
-                    {
-                        // The fingering applies to the host note (the one this articulation
-                        // is attached to). Use the note's source position as the key.
+                    // LILYPOND-REF: lily/fingering-engraver.cc — finger event attaches to
+                    // the host note. Keyed by the note's source position.
+                    if (ParseFingerMark(markSyntax) is { } finger)
                         _fingeringByPosition[node.Position] = finger;
-                    }
                 }
                 else if (MusicMarkItem.ParseMarkName(markSyntax.MarkName) is { } compoundMark
                          && IsNoteAnchoredPedalMark(compoundMark))

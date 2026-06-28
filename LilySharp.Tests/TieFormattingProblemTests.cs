@@ -128,14 +128,14 @@ public class TieFormattingProblemTests
     public void PeakAround_ReturnsExpectedValues(double x, double expected)
     {
         // LILYPOND-REF: lily/misc.cc:48-55
-        double result = TieFormattingProblem.PeakAround(0.05, 0.5, x);
+        double result = BezierBow.PeakAround(0.05, 0.5, x);
         Assert.Equal(expected, result, 3);
     }
 
     [Fact]
     public void PeakAround_NegativeX_ReturnsOne()
     {
-        Assert.Equal(1.0, TieFormattingProblem.PeakAround(0.1, 0.5, -0.1));
+        Assert.Equal(1.0, BezierBow.PeakAround(0.1, 0.5, -0.1));
     }
 
     [Theory]
@@ -144,14 +144,14 @@ public class TieFormattingProblemTests
     public void ConvexAmplifier_ReturnsExpectedValues(double x, double expected)
     {
         // LILYPOND-REF: lily/misc.cc:60-65
-        double result = TieFormattingProblem.ConvexAmplifier(1.0, 0.9, x);
+        double result = BezierBow.ConvexAmplifier(1.0, 0.9, x);
         Assert.Equal(expected, result, 3);
     }
 
     [Fact]
     public void ConvexAmplifier_BeyondStandard_GreaterThanOne()
     {
-        double result = TieFormattingProblem.ConvexAmplifier(1.0, 0.9, 2.0);
+        double result = BezierBow.ConvexAmplifier(1.0, 0.9, 2.0);
         Assert.True(result > 1.0, $"ConvexAmplifier at 2*standard should be > 1.0, got {result}");
     }
 

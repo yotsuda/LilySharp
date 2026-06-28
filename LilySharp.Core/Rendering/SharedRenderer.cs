@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1032,8 +1032,7 @@ public static class SharedRenderer
         {
             case NoteItem note:
             {
-                int noteValue = note.BaseDuration.Denominator;
-                if (note.BaseDuration.Numerator != 1) noteValue = 1;
+                int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
                 double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue) * (note.IsCue ? 0.66 : 1.0);
                 CollectLedgerRequest(ledgerPlan, note.StaffPosition, x, headWidth,
                     staffMiddleY, note.Accidental != null);
@@ -1041,8 +1040,7 @@ public static class SharedRenderer
             }
             case ChordItem chord when chord.Notes.Length > 0:
             {
-                int noteValue = chord.BaseDuration.Denominator;
-                if (chord.BaseDuration.Numerator != 1) noteValue = 1;
+                int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
                 double chordScale = chord.IsCue ? 0.66 : 1.0;
                 double headWidth = GlyphMetrics.GetNoteheadAdvance(noteValue) * chordScale;
                 // Seconds shift reversed heads sideways — the ledger run
@@ -1072,8 +1070,7 @@ public static class SharedRenderer
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
         IDrawingContext gc)
     {
-        int noteValue = note.BaseDuration.Denominator;
-        if (note.BaseDuration.Numerator != 1) noteValue = 1;
+        int noteValue = GlyphMetrics.NoteValueOf(note.BaseDuration);
         double noteY = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY);
         // Cue notes scale to ~0.66× (LP CueVoice fontSize = -4 → magstep(-4)).
         // LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4
@@ -1175,8 +1172,7 @@ public static class SharedRenderer
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
         IDrawingContext gc)
     {
-        int noteValue = chord.BaseDuration.Denominator;
-        if (chord.BaseDuration.Numerator != 1) noteValue = 1;
+        int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
         char head = EmmentalerGlyphs.GetNotehead(noteValue);
         Color? noteheadColor = ResolveColor(resolver, "NoteHead");
         // LILYPOND-REF: lily/grob-property.cc — NoteHead.transparent
@@ -1485,8 +1481,7 @@ public static class SharedRenderer
 
     private static void DrawRest(RestItem rest, double x, double staffY, IDrawingContext gc)
     {
-        int noteValue = rest.BaseDuration.Denominator;
-        if (rest.BaseDuration.Numerator != 1) noteValue = 1;
+        int noteValue = GlyphMetrics.NoteValueOf(rest.BaseDuration);
         char glyph = EmmentalerGlyphs.GetRest(noteValue);
         double y = noteValue == 1 ? staffY + 1 : staffY + 2;  // whole rests hang from 4th line
         using (gc.Source(rest.SourcePosition))

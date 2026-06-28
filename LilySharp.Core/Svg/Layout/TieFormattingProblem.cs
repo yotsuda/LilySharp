@@ -124,55 +124,13 @@ public sealed class TieFormattingProblem
     /// Returns 1 at x=0, decreases to 0 at x=threshold, stays 0 beyond.
     /// The epsilon parameter controls the curve shape near x=0.
     /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/misc.cc:48-55 peak_around()
-    /// </remarks>
-    internal static double PeakAround(double epsilon, double threshold, double x)
-    {
-        if (x < 0)
-            return 1.0;
-        return Math.Max(-epsilon * (x - threshold) / ((x + epsilon) * threshold), 0.0);
-    }
+    // Bow arc height / control-point indent: the shared bezier-bow math, bound to
+    // this tie's height-limit and ratio. See BezierBow (LilyPond bezier-bow.cc).
+    private double CalculateTieHeight(double width) =>
+        BezierBow.Height(_details.HeightLimit, _details.Ratio, width);
 
-    /// <summary>
-    /// Returns 0 at x=0, 1 at x=standardX, growing exponentially beyond.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/misc.cc:60-65 convex_amplifier()
-    /// </remarks>
-    internal static double ConvexAmplifier(double standardX, double increaseFactor, double x)
-    {
-        return (Math.Exp(increaseFactor * x / standardX) - 1.0)
-               / (Math.Exp(increaseFactor) - 1.0);
-    }
-
-    /// <summary>
-    /// Calculates tie height using LilyPond's atan formula.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/bezier-bow.cc:28-38 F0_1() + slur_height()
-    /// </remarks>
-    private double CalculateTieHeight(double width)
-    {
-        if (_details.HeightLimit < 0.001)
-            return 0;
-
-        double x = width * _details.Ratio / _details.HeightLimit;
-        return _details.HeightLimit * (2.0 / Math.PI) * Math.Atan(Math.PI * x / 2.0);
-    }
-
-    /// <summary>
-    /// Calculates indent for control points.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/bezier-bow.cc get_slur_indent_height()
-    /// </remarks>
-    private double CalculateIndent(double width)
-    {
-        double maxFraction = 1.0 / 3.1;
-        double q = 2 * _details.HeightLimit / maxFraction;
-        return 2 * _details.HeightLimit - q * q * maxFraction / (width + q);
-    }
+    private double CalculateIndent(double width) =>
+        BezierBow.Indent(_details.HeightLimit, width);
 
     // ---------------------------------------------------------------
     // Solving
@@ -377,7 +335,7 @@ public sealed class TieFormattingProblem
 
         // --- Minimum length penalty ---
         // LILYPOND-REF: tie-formatting-problem.cc:751-754
-        double lengthPenalty = PeakAround(
+        double lengthPenalty = BezierBow.PeakAround(
             0.33 * _details.MinLength, _details.MinLength, length);
         config.Demerits += _details.MinLengthPenaltyFactor * lengthPenalty;
 
@@ -395,7 +353,7 @@ public sealed class TieFormattingProblem
         {
             double clearanceHs = _details.CenterStaffLineClearance * 2;
             config.Demerits += _details.StaffLineCollisionPenalty
-                * PeakAround(0.1 * clearanceHs, clearanceHs,
+                * BezierBow.PeakAround(0.1 * clearanceHs, clearanceHs,
                     Math.Abs(topPos - roundTopPos));
         }
 
@@ -407,7 +365,7 @@ public sealed class TieFormattingProblem
         {
             double clearanceHs = _details.TipStaffLineClearance * 2;
             config.Demerits += _details.StaffLineCollisionPenalty
-                * PeakAround(0.1 * clearanceHs, clearanceHs,
+                * BezierBow.PeakAround(0.1 * clearanceHs, clearanceHs,
                     Math.Abs(tipPos - roundTipPos));
         }
 
@@ -477,7 +435,7 @@ public sealed class TieFormattingProblem
         {
             double relevantDist = Math.Max(Math.Abs(curveY - tieY) - 0.5, 0.0);
             double p = _details.VerticalDistancePenaltyFactor
-                       * ConvexAmplifier(1.0, 0.9, relevantDist);
+                       * BezierBow.ConvexAmplifier(1.0, 0.9, relevantDist);
             config.Demerits += p;
         }
 
@@ -523,7 +481,7 @@ public sealed class TieFormattingProblem
             // Center-center collision
             // LILYPOND-REF: tie-formatting-problem.cc:875-880
             config.Demerits += _details.TieTieCollisionPenalty
-                * PeakAround(
+                * BezierBow.PeakAround(
                     0.1 * _details.TieTieCollisionDistance,
                     _details.TieTieCollisionDistance,
                     Math.Abs(configCenterY - existingCenterY));
@@ -531,7 +489,7 @@ public sealed class TieFormattingProblem
             // Edge-edge collision
             // LILYPOND-REF: tie-formatting-problem.cc:881-886
             config.Demerits += _details.TieTieCollisionPenalty
-                * PeakAround(
+                * BezierBow.PeakAround(
                     0.1 * _details.TieTieCollisionDistance,
                     _details.TieTieCollisionDistance,
                     Math.Abs(configEdgeY - existingEdgeY));
