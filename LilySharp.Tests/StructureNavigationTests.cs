@@ -119,7 +119,9 @@ public class StructureNavigationTests
 
         Assert.Equal(1, tc.MeasureIndex);   // keeps its own (prev-section) measure
         Assert.Equal(-2.50, cLabel.Y, 3);   // C drops to the common (B) line
-        Assert.Equal(-2.50, tc.Y, 3);       // sign sits on that line too
+        // Sign baseline meets the box bottom: commonY + boxHalf, boxHalf =
+        // (4.0*0.55 + 0.4)/2 = 1.3, so -2.50 + 1.3 = -1.20.
+        Assert.Equal(-1.20, tc.Y, 3);
         Assert.True(tc.X < cLabel.X, "To Coda should sit left of the label");
     }
 }

@@ -350,10 +350,15 @@ public static class MusicMarkEngraver
             if (bestJ >= 0)
             {
                 // The label was raised only to clear this sign. With the sign
-                // moving beside it, drop the label back to the common line and
-                // sit the sign on that line too, just to its left.
-                result[bestJ] = result[bestJ] with { Y = commonY };
-                result[i] = tc with { Y = commonY, X = result[bestJ].X - ToCodaLabelGap };
+                // moving beside it, drop the label back to the common line, then
+                // sit the sign just to its left and LOW enough that its baseline
+                // meets the label box's bottom edge (the box extends half its
+                // height below the shared centre line).
+                var lab = result[bestJ] with { Y = commonY };
+                result[bestJ] = lab;
+                double labelFs = lab.MarkType == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
+                double boxHalf = (labelFs + 2 * 0.2) / 2; // box height = fs + 2*pad(0.2)
+                result[i] = tc with { Y = commonY + boxHalf, X = lab.X - ToCodaLabelGap };
             }
         }
         return result.ToImmutable();
