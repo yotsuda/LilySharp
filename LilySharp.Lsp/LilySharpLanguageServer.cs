@@ -363,6 +363,7 @@ public sealed class LilySharpLanguageServer
             CompletionContext.TopLevel => GetTopLevelCompletions(),
             CompletionContext.MusicBlock => GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset)),
             CompletionContext.StructureBlock => GetStructureCompletions(doc.Text),
+            CompletionContext.AfterClef => GetClefCompletions(),
             CompletionContext.AfterAt => GetArticulationCompletions(),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
@@ -523,8 +524,25 @@ public sealed class LilySharpLanguageServer
         TopLevel,
         MusicBlock,
         StructureBlock,
+        AfterClef,
         AfterAt,
         AfterBackslash
+    }
+
+    /// <summary>
+    /// The whole word immediately before the partial word being typed at
+    /// <paramref name="offset"/> (skipping the current word and any whitespace),
+    /// e.g. "clef" in <c>clef tr|</c> or <c>clef |</c>. Empty if none.
+    /// </summary>
+    internal static string WordBeforeCursor(string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+        int i = offset;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // skip the partial word
+        while (i > 0 && char.IsWhiteSpace(text[i - 1])) i--; // skip whitespace
+        int end = i;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // the preceding word
+        return text.Substring(i, end - i);
     }
 
     private CompletionContext GetCompletionContext(string text, int offset)
@@ -545,6 +563,11 @@ public sealed class LilySharpLanguageServer
                 return CompletionContext.AfterBackslash;
         }
 
+        // Right after the `clef` keyword (in a header or mid-music), only the clef
+        // names are valid — offer those alone, not notes/keywords.
+        if (WordBeforeCursor(text, offset) == "clef")
+            return CompletionContext.AfterClef;
+
         // Inside structure { … } the body is a playback order (section names and
         // navigation marks), not music — so it gets its own completions, never
         // note names. Checked before the brace fallback so 'structure {|' counts.
@@ -563,6 +586,28 @@ public sealed class LilySharpLanguageServer
         }
 
         return braceDepth > 0 ? CompletionContext.MusicBlock : CompletionContext.TopLevel;
+    }
+
+    /// <summary>The clef names valid right after the <c>clef</c> keyword.</summary>
+    internal static CompletionList GetClefCompletions()
+    {
+        var clefs = new (string Label, string Detail)[]
+        {
+            ("treble", "Treble (G) clef"),
+            ("bass", "Bass (F) clef"),
+            ("alto", "Alto (C) clef"),
+            ("tenor", "Tenor (C) clef"),
+            ("treble_8", "Treble clef sounding an octave lower (guitar/tenor)"),
+        };
+        return new CompletionList
+        {
+            Items = clefs.Select(c => new CompletionItem
+            {
+                Label = c.Label,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = c.Detail,
+            }).ToArray()
+        };
     }
 
     private static CompletionList GetTopLevelCompletions()
