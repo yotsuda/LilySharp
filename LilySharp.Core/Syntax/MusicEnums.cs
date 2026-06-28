@@ -29,6 +29,10 @@ public enum ArticulationType
     Marcato,
     Fermata,
     Portato,
+    // Bend-after gestures: a short curved line trailing off the note — a jazz
+    // "fall" (drops away) or "doit" (rises away). LilyPond's \bendAfter#-N / #+N.
+    Fall,
+    Doit,
     // Ornaments
     Trill,
     Mordent,

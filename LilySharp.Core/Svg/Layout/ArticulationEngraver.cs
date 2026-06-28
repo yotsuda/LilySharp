@@ -145,6 +145,41 @@ public static class ArticulationEngraver
                 continue;
             var item = measure.Items[articulation.ItemIndex];
 
+            // Fall / Doit (bend-after): a short curve trailing off the RIGHT of the
+            // note at the note's own height — on a tab staff, off the fret digit's
+            // string row. Positioned independently of the Script side machinery.
+            if (articulation.Type is ArticulationType.Fall or ArticulationType.Doit)
+            {
+                double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                    artMeasures, articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
+                double fx, fy;
+                if (staffByIndex != null
+                    && staffByIndex.TryGetValue(articulation.StaffIndex, out var ts)
+                    && ts.IsTab && ts.Tuning.HasValue)
+                {
+                    var tt = ts.Tuning.Value;
+                    int strings = Tunings.GetStringCount(tt);
+                    double space = EngravingDefaults.TabStringSpace(strings);
+                    int midi = item switch { NoteItem n => n.Midi,
+                        ChordItem c when c.Notes.Length > 0 => c.Notes[0].Midi, _ => 0 };
+                    int? sn = item is NoteItem ni ? ni.StringNumber : null;
+                    var (strNum, _) = Tunings.CalculateFret(
+                        midi + Tunings.OctaveShift(tt), Tunings.GetTuning(tt), sn ?? 0);
+                    fx = itemX + 0.5;
+                    fy = staffOffset + (strNum - 1) * space;
+                }
+                else
+                {
+                    fx = itemX + 2.0 * NoteheadHalfWidth(item) + 0.15;
+                    fy = (StaffMiddle - GetStaffPosition(item) * 0.5) + staffOffset;
+                }
+                string bendGlyph = articulation.Type == ArticulationType.Fall ? "bendFall" : "bendDoit";
+                layouts.Add(new ArticulationLayout(
+                    articulation.MeasureIndex, articulation.ItemIndex, fx, fy,
+                    bendGlyph, true, articulation.SourcePosition, 1.0));
+                continue;
+            }
+
             // Breathing signs are not Scripts: place them at the TOP of the staff,
             // just to the right of the note (in the gap before the next note),
             // independent of the note's pitch and stem — so they skip the whole

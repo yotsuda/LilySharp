@@ -86,6 +86,9 @@ public class SvgSnapshotTests
         // Tab grace notes render as small fret numbers on the string line, not
         // noteheads at the notation pitch height.
         yield return new object[] { "test/tab-grace" };
+        // Bend-after gestures (@fall / @doit) render as trailing curves on both
+        // the notation staff and the tab.
+        yield return new object[] { "test/bend" };
         yield return new object[] { "test/tuplets" };
         yield return new object[] { "test/tuplets-beamed" };
         yield return new object[] { "test/grandstaff-repeat" };

@@ -1,0 +1,6 @@
+// Bend-after gestures: @fall drops a curve away from the note, @doit rises. They
+// render on both the notation staff and the tab (off the fret's string row).
+part bl { clef bass tuning bass }
+section A { c4 e@fall g@fall e@doit | c2@fall g4@doit r | }
+structure { A }
+score { staff bl  tab bl }

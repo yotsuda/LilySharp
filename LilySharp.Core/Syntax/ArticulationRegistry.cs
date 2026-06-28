@@ -44,6 +44,11 @@ public static class ArticulationRegistry
             ["fermata"] = ArticulationType.Fermata,
             ["ferm"] = ArticulationType.Fermata,
             ["portato"] = ArticulationType.Portato,
+            // Bend-after gestures (jazz fall / doit). `bendafter` aliases fall
+            // (the common down-bend); use `doit` for the up-bend.
+            ["fall"] = ArticulationType.Fall,
+            ["bendafter"] = ArticulationType.Fall,
+            ["doit"] = ArticulationType.Doit,
             // Ornaments
             ["trill"] = ArticulationType.Trill,
             ["tr"] = ArticulationType.Trill,

@@ -73,6 +73,11 @@ public sealed record ArticulationItem
         ArticulationType.Marcato => (IsAbove ? EmmentalerGlyphs.ArticMarcatoAbove : EmmentalerGlyphs.ArticMarcatoBelow).ToString(),
         ArticulationType.Fermata => (IsAbove ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow).ToString(),
         ArticulationType.Portato => (IsAbove ? EmmentalerGlyphs.ArticPortatoAbove : EmmentalerGlyphs.ArticPortatoBelow).ToString(),
+        // Fall/Doit carry no font glyph — the layout emits a bend sentinel that the
+        // renderer draws as a trailing curve (see ArticulationEngraver), so GetGlyph
+        // is never consulted for them.
+        ArticulationType.Fall => "",
+        ArticulationType.Doit => "",
         ArticulationType.Trill => EmmentalerGlyphs.OrnTrill.ToString(),
         ArticulationType.Mordent => EmmentalerGlyphs.OrnMordent.ToString(),
         ArticulationType.Prall => EmmentalerGlyphs.OrnPrall.ToString(),

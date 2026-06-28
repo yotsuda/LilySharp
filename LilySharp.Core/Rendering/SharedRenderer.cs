@@ -2060,8 +2060,38 @@ public static class SharedRenderer
         {
             if (string.IsNullOrEmpty(a.Glyph)) continue;
             double y = (sysY.TryGetValue(a.MeasureIndex, out var sy) ? sy : 0) + a.Y;
+            // Bend sentinels ("bendFall"/"bendDoit"): a trailing curve, not a glyph.
+            if (a.Glyph is "bendFall" or "bendDoit")
+            {
+                using (gc.Source(a.SourcePosition))
+                    DrawBendAfter(a.X, y, fall: a.Glyph == "bendFall", gc);
+                continue;
+            }
             using (gc.Source(a.SourcePosition))
                 gc.DrawGlyph(a.Glyph[0], a.X, y, FontSize * a.Scale);
+        }
+    }
+
+    /// <summary>
+    /// Draws a jazz "fall" (drops away) or "doit" (rises away) — a short curved
+    /// line trailing off to the right of a note, approximated by a polyline along
+    /// a quadratic Bézier. LILYPOND-REF: lily/bend-after.cc BendAfter (curved fall).
+    /// </summary>
+    private static void DrawBendAfter(double x0, double y0, bool fall, IDrawingContext gc)
+    {
+        const double len = 1.25;                 // horizontal reach
+        double drop = fall ? 1.7 : -1.7;          // vertical reach (down for fall)
+        // Control point: leaves the note nearly horizontal, then curves away.
+        double cx = x0 + len * 0.62, cy = y0 + drop * 0.08;
+        double px = x0, py = y0;
+        const int seg = 8;
+        for (int s = 1; s <= seg; s++)
+        {
+            double t = s / (double)seg, u = 1 - t;
+            double nx = u * u * x0 + 2 * u * t * cx + t * t * (x0 + len);
+            double ny = u * u * y0 + 2 * u * t * cy + t * t * (y0 + drop);
+            gc.DrawLine(px, py, nx, ny, Color.Black, 0.13, cap: LineCap.Round);
+            px = nx; py = ny;
         }
     }
 
