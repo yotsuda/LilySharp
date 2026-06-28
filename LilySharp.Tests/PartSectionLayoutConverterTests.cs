@@ -90,4 +90,34 @@ public class PartSectionLayoutConverterTests
         // No part blocks / inner sections — nothing to transpose.
         Assert.Null(PartSectionLayoutConverter.Convert("title \"x\"\nsection A { c4 d e f }\n"));
     }
+
+    [Fact]
+    public void Convert_FileWithSyntaxError_ReturnsNull_NoCorruption()
+    {
+        // Unbalanced braces — must NOT be transposed (the caller overwrites the
+        // whole document, so a malformed file would be mangled).
+        var broken = "part low { clef bass }\nsection A { low { c4 d } \n";
+        Assert.Null(PartSectionLayoutConverter.Convert(broken));
+    }
+
+    [Fact]
+    public void Convert_CellEndingInLineComment_DoesNotSwallowBrace()
+    {
+        var src = "part low { clef bass }\nsection A { low { c4 d e f // melody\n} }\nstructure { A }\n";
+        var converted = PartSectionLayoutConverter.Convert(src);
+        Assert.NotNull(converted);
+        // The // comment must not comment out the regenerated closing brace.
+        Assert.False(SyntaxTree.Parse(converted!).HasErrors);
+        Assert.Contains("// melody", converted);
+    }
+
+    [Fact]
+    public void Convert_KeepsCommentAboveFirstStructuralBlock()
+    {
+        var src = "// verse arrangement\npart low { clef bass }\nsection A { low { c4 d } }\nstructure { A }\n";
+        var converted = PartSectionLayoutConverter.Convert(src);
+        Assert.NotNull(converted);
+        Assert.Contains("// verse arrangement", converted);
+        Assert.False(SyntaxTree.Parse(converted!).HasErrors);
+    }
 }

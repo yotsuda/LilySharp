@@ -2221,6 +2221,16 @@ public sealed class LilySharpLanguageServer
         if (doc == null)
             return new ConvertLayoutResponse { Success = false, Error = "Document not found" };
 
+        // Refuse to convert a file with syntax errors: cell extraction needs a
+        // clean, balanced tree, and the client overwrites the whole document with
+        // the result — so a malformed file would be mangled. Leave it untouched.
+        if (LilySharp.Core.Syntax.SyntaxTree.Parse(doc.Text).HasErrors)
+            return new ConvertLayoutResponse
+            {
+                Success = false,
+                Error = "Fix the syntax errors before converting the layout — no changes made."
+            };
+
         var from = LilySharp.Core.Editing.PartSectionLayoutConverter.Detect(doc.Text);
         if (from == LilySharp.Core.Editing.LayoutForm.Unknown)
             return new ConvertLayoutResponse
@@ -2229,9 +2239,15 @@ public sealed class LilySharpLanguageServer
                 Error = "No part/section layout to convert — the file needs parts with sections."
             };
 
+        // Convert self-guards: it returns null unless the result round-trips to a
+        // clean parse, so this can never produce a corrupt document.
         var newText = LilySharp.Core.Editing.PartSectionLayoutConverter.Convert(doc.Text);
         if (newText == null)
-            return new ConvertLayoutResponse { Success = false, Error = "Conversion failed." };
+            return new ConvertLayoutResponse
+            {
+                Success = false,
+                Error = "Conversion would not produce a clean result — no changes made."
+            };
 
         var to = from == LilySharp.Core.Editing.LayoutForm.PartMajor
             ? LilySharp.Core.Editing.LayoutForm.SectionMajor

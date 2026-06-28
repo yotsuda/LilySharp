@@ -65,17 +65,29 @@ public static class PartSectionLayoutConverter
     /// </summary>
     public static string? Convert(string source)
     {
-        var root = SyntaxTree.Parse(source).GetRoot();
+        var tree = SyntaxTree.Parse(source);
+        // Never transpose a malformed file: the cell extraction relies on a clean,
+        // balanced tree, and the caller overwrites the whole document with the
+        // result. A file with syntax errors is left untouched.
+        if (tree.HasErrors)
+            return null;
+
+        var root = tree.GetRoot();
         var form = Detect(root);
         if (form == LayoutForm.Unknown)
             return null;
         var target = form == LayoutForm.PartMajor ? LayoutForm.SectionMajor : LayoutForm.PartMajor;
-        return Emit(root, target);
+
+        var result = Emit(source, root, target);
+        // Safety net: only return a result that round-trips to a clean parse, so a
+        // surprising cell (e.g. one with embedded braces) can never corrupt the
+        // document in place. If it wouldn't parse, report "no change" instead.
+        return SyntaxTree.Parse(result).HasErrors ? null : result;
     }
 
     // --- model extraction -----------------------------------------------------
 
-    private static string Emit(CompilationUnitSyntax root, LayoutForm target)
+    private static string Emit(string source, CompilationUnitSyntax root, LayoutForm target)
     {
         // Part order + attributes (the part body items that are NOT inner sections).
         var parts = new List<(string Name, string Attrs)>();
@@ -126,7 +138,7 @@ public static class PartSectionLayoutConverter
             ? EmitPartMajor(parts, sectionOrder, cells)
             : EmitSectionMajor(parts, sectionOrder, cells);
 
-        return Reassemble(root, body);
+        return Reassemble(source, root, body);
     }
 
     private static string EmitPartMajor(
@@ -141,7 +153,7 @@ public static class PartSectionLayoutConverter
                 sb.Append("  ").Append(attrs).Append('\n');
             foreach (var section in sectionOrder)
                 if (cells.TryGetValue((name, section), out var music))
-                    sb.Append("  section ").Append(section).Append(" { ").Append(music).Append(" }\n");
+                    sb.Append("  section ").Append(section).Append(' ').Append(Braced(music)).Append('\n');
             sb.Append("}\n");
         }
         return sb.ToString();
@@ -163,7 +175,7 @@ public static class PartSectionLayoutConverter
             sb.Append("section ").Append(section).Append(" {\n");
             foreach (var (name, _) in parts)
                 if (cells.TryGetValue((name, section), out var music))
-                    sb.Append("  ").Append(name).Append(" { ").Append(music).Append(" }\n");
+                    sb.Append("  ").Append(name).Append(' ').Append(Braced(music)).Append('\n');
             sb.Append("}\n");
         }
         return sb.ToString();
@@ -175,7 +187,7 @@ public static class PartSectionLayoutConverter
     /// and the regenerated part/section block replaces the structural region (parts
     /// + part-bearing sections) at the position of its first member.
     /// </summary>
-    private static string Reassemble(CompilationUnitSyntax root, string structuralBody)
+    private static string Reassemble(string source, CompilationUnitSyntax root, string structuralBody)
     {
         var sb = new StringBuilder();
         bool emitted = false;
@@ -185,7 +197,17 @@ public static class PartSectionLayoutConverter
                 || (member is SectionDeclarationSyntax s && DirectChildrenOfType<PartBlockSyntax>(s).Any());
             if (structural)
             {
-                if (!emitted) { sb.Append(structuralBody); emitted = true; }
+                if (!emitted)
+                {
+                    // Keep the blank line / comment the user placed above the first
+                    // part-or-section block — it is the leading trivia of that block's
+                    // keyword token (the node-level trivia width is 0 for composites,
+                    // so read it from the keyword token's span).
+                    if (member.GetChild(0) is SyntaxTokenNode kw && kw.Span.Start > kw.FullSpan.Start)
+                        sb.Append(source[kw.FullSpan.Start..kw.Span.Start]);
+                    sb.Append(structuralBody);
+                    emitted = true;
+                }
                 continue; // absorbed into the regenerated block
             }
             sb.Append(member.ToFullString());
@@ -220,4 +242,12 @@ public static class PartSectionLayoutConverter
             return text.Trim();
         return text.Substring(open + 1, close - open - 1).Trim();
     }
+
+    /// <summary>Wraps a music cell in braces. A cell that spans lines or ends in a
+    /// <c>//</c> line comment puts the closing brace on its OWN line, so the comment
+    /// can't swallow the brace (which would unbalance and corrupt the document).</summary>
+    private static string Braced(string music)
+        => music.Contains('\n') || music.Contains("//")
+            ? "{ " + music + "\n}"
+            : "{ " + music + " }";
 }
