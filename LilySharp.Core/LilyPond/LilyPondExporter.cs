@@ -291,16 +291,22 @@ public sealed class LilyPondExporter
             bool hasTab = spec.HasTab;
             bool hasStaff = spec.Items.Any(i => i is SingleStaffSpec or GrandStaffRenderSpec);
             string body = _absolute ? "\\music" : "\\relative c' { \\music }";
+            // LilyPond's TabStaff reads the written pitch directly, whereas Lily#'s
+            // bass tab sounds an octave lower (the original .ly used a lower
+            // \relative base for the tab). Drop the tab music one octave so the
+            // frets match.
+            string tabBody = _absolute ? "\\transpose c' c { \\music }"
+                                       : "\\relative c { \\music }";
             _sb.AppendLine("\\score {");
             if (hasStaff && hasTab)
             {
                 _sb.AppendLine("  <<");
                 _sb.AppendLine($"    \\new Staff {{ {body} }}");
-                _sb.AppendLine($"    \\new TabStaff {TuningWith(spec)}{{ {body} }}");
+                _sb.AppendLine($"    \\new TabStaff {TuningWith(spec)}{{ {tabBody} }}");
                 _sb.AppendLine("  >>");
             }
             else if (hasTab)
-                _sb.AppendLine($"  \\new TabStaff {TuningWith(spec)}{{ {body} }}");
+                _sb.AppendLine($"  \\new TabStaff {TuningWith(spec)}{{ {tabBody} }}");
             else
                 _sb.AppendLine($"  \\new Staff {{ {body} }}");
             _sb.AppendLine("  \\layout {}");
