@@ -220,20 +220,10 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
     try
     {
         var (source, tree) = LoadAndParse(inputPath);
-        var allDiagnostics = CollectDiagnostics(tree);
 
-        // Always surface diagnostics — warnings are emitted to stderr even when
-        // the build proceeds, so silent typos (e.g. `es` masquerading as a
-        // bare variable reference, or a misspelled phrase name) are visible
-        // to the user.
-        if (allDiagnostics.Count > 0)
-        {
-            bool hasErrors = allDiagnostics.Any(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
-            Console.Error.WriteLine(hasErrors ? "Syntax errors:" : "Diagnostics:");
-            foreach (var diag in allDiagnostics)
-                Console.Error.WriteLine($"  {diag}");
-            if (hasErrors) return 1;
-        }
+        // Surface every diagnostic (warnings to stderr too, so silent typos like `es`
+        // as a bare variable reference are visible); errors abort.
+        if (ReportDiagnostics(tree)) return 1;
 
         // Configure render options
         LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
@@ -268,13 +258,7 @@ static int ExecuteSvgAll(string inputPath, bool embedFont)
     {
         var (source, tree) = LoadAndParse(inputPath);
 
-        if (tree.HasErrors)
-        {
-            Console.Error.WriteLine("Syntax errors:");
-            foreach (var diag in tree.Diagnostics)
-                Console.Error.WriteLine($"  {diag}");
-            return 1;
-        }
+        if (ReportDiagnostics(tree)) return 1;
 
         LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
         if (embedFont)
@@ -364,13 +348,7 @@ static int ExecutePdf(string inputPath, string outputPath)
     {
         var (source, tree) = LoadAndParse(inputPath);
 
-        if (tree.HasErrors)
-        {
-            Console.Error.WriteLine("Syntax errors:");
-            foreach (var diag in tree.Diagnostics)
-                Console.Error.WriteLine($"  {diag}");
-            return 1;
-        }
+        if (ReportDiagnostics(tree)) return 1;
 
         var pdfBytes = PdfGenerator.Generate(tree);
         File.WriteAllBytes(outputPath, pdfBytes);
@@ -465,13 +443,7 @@ static int ExecutePng(string inputPath, string outputPath, float scale)
     {
         var (source, tree) = LoadAndParse(inputPath);
 
-        if (tree.HasErrors)
-        {
-            Console.Error.WriteLine("Syntax errors:");
-            foreach (var diag in tree.Diagnostics)
-                Console.Error.WriteLine($"  {diag}");
-            return 1;
-        }
+        if (ReportDiagnostics(tree)) return 1;
 
         var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
         var pngOptions = new PngRenderOptions { Scale = scale, FontDirectory = fontDir };
@@ -539,13 +511,7 @@ static int ExecuteMidi(string inputPath, string outputPath)
     {
         var (source, tree) = LoadAndParse(inputPath);
 
-        if (tree.HasErrors)
-        {
-            Console.Error.WriteLine("Syntax errors:");
-            foreach (var diag in tree.Diagnostics)
-                Console.Error.WriteLine($"  {diag}");
-            return 1;
-        }
+        if (ReportDiagnostics(tree)) return 1;
 
         var exporter = new MidiExporter();
         var midi = exporter.Export(tree);
@@ -612,13 +578,7 @@ static int ExecuteXml(string inputPath, string outputPath)
     {
         var (source, tree) = LoadAndParse(inputPath);
 
-        if (tree.HasErrors)
-        {
-            Console.Error.WriteLine("Syntax errors:");
-            foreach (var diag in tree.Diagnostics)
-                Console.Error.WriteLine($"  {diag}");
-            return 1;
-        }
+        if (ReportDiagnostics(tree)) return 1;
 
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);
@@ -663,13 +623,7 @@ static int RunLy(string[] args)
     try
     {
         var (_, tree) = LoadAndParse(inputPath!);
-        if (tree.HasErrors)
-        {
-            Console.Error.WriteLine("Syntax errors:");
-            foreach (var diag in tree.Diagnostics)
-                Console.Error.WriteLine($"  {diag}");
-            return 1;
-        }
+        if (ReportDiagnostics(tree)) return 1;
         var ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
         File.WriteAllText(outputPath!, ly);
         Console.WriteLine($"Created: {outputPath}");
@@ -838,6 +792,25 @@ static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(Syntax
     var combined = new List<LilySharp.Core.Syntax.Diagnostic>(tree.Diagnostics);
     combined.AddRange(LilySharp.Core.Semantics.SemanticValidation.Run(tree));
     return combined;
+}
+
+/// <summary>
+/// Prints every diagnostic (parser AND semantic) to stderr, then reports whether the
+/// caller should abort. EVERY output path (svg/pdf/png/midi/xml/ly) goes through this,
+/// so a semantic error — an undefined variable, a measure overflow — can't be silently
+/// dropped for one format while it blocks another. Warnings are surfaced but don't abort.
+/// </summary>
+static bool ReportDiagnostics(SyntaxTree tree)
+{
+    var all = CollectDiagnostics(tree);
+    if (all.Count == 0)
+        return false;
+
+    bool hasErrors = all.Any(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
+    Console.Error.WriteLine(hasErrors ? "Syntax errors:" : "Diagnostics:");
+    foreach (var diag in all)
+        Console.Error.WriteLine($"  {diag}");
+    return hasErrors;
 }
 
 // ============ Shared Utilities ============
