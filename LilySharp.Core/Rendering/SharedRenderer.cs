@@ -2890,6 +2890,23 @@ public static class SharedRenderer
                 italic ? FontStyle.BoldItalic : FontStyle.Bold, TextAnchor.Middle, Color.Black);
             return;
         }
+        if (m.MarkType == MusicMarkType.ToCoda)
+        {
+            // "To" followed by the coda SIGN (not the word "Coda"), centered as a
+            // group. LILYPOND-REF: the al-coda text is set with the coda glyph.
+            double ts = FontSize * 0.7;
+            double gs = FontSize * 0.8;
+            const string prefix = "To ";
+            double textW = SerifTextMetrics.MeasureBold(prefix, ts);
+            double glyphW = gs * 0.42;   // approx advance of scripts.coda
+            double left = m.X - (textW + glyphW) / 2;
+            gc.DrawText(prefix, left, absY, ts, "serif",
+                FontStyle.BoldItalic, TextAnchor.Start, Color.Black);
+            // The coda glyph's baseline sits low; lift it so its centre aligns with
+            // the cap height of "To".
+            gc.DrawGlyph(EmmentalerGlyphs.MarkCoda, left + textW, absY - gs * 0.30, gs, Color.Black);
+            return;
+        }
         // Default text marks (D.S./D.C./Fine/etc.)
         gc.DrawText(m.Text, m.X, absY, FontSize * 0.7, "serif",
             FontStyle.BoldItalic, TextAnchor.Middle, Color.Black);

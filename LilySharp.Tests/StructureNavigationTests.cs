@@ -46,6 +46,36 @@ public class StructureNavigationTests
         return score.MusicMarks.Select(m => m.Type).ToArray();
     }
 
+    private static MusicMarkItem[] MarkItems(string structure)
+    {
+        var source = $$"""
+            part m {
+              clef treble
+              section A { c4 d e f | }
+              section B { g4 a b c | }
+              section C { e4 f g a | }
+              section D { c'4 b a g | }
+            }
+            structure { {{structure}} }
+            score "x" { staff m }
+            """;
+        return new MeasureCollector().Collect(SyntaxTree.Parse(source)).MusicMarks.ToArray();
+    }
+
+    [Fact]
+    public void JumpInstructions_SitBelowStaff_TargetsAndToCodaAbove()
+    {
+        var marks = MarkItems("A segno B to coda C ds al coda coda D");
+        MusicMarkVertical V(MusicMarkType t) => marks.First(m => m.Type == t).Vertical;
+
+        // Jump-FROM instructions (D.S./D.C. family) are below the staff.
+        Assert.Equal(MusicMarkVertical.Below, V(MusicMarkType.DalSegnoAlCoda));
+        // Targets (segno/coda) and "To Coda" stay above.
+        Assert.Equal(MusicMarkVertical.Above, V(MusicMarkType.Segno));
+        Assert.Equal(MusicMarkVertical.Above, V(MusicMarkType.Coda));
+        Assert.Equal(MusicMarkVertical.Above, V(MusicMarkType.ToCoda));
+    }
+
     [Fact]
     public void SegnoToCodaDsAlCodaAndCoda_AreCollected()
     {

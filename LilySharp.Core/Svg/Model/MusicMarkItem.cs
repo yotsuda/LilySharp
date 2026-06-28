@@ -327,6 +327,12 @@ public sealed record MusicMarkItem
 
     private static MusicMarkVertical GetMarkVertical(MusicMarkType type) => type switch
     {
+        // Jump-FROM instructions sit below the staff, right-aligned at the barline
+        // (Gould, Behind Bars). Segno/Coda targets and "To Coda" stay above.
+        MusicMarkType.DalSegno or MusicMarkType.DaCapo
+            or MusicMarkType.DalSegnoAlFine or MusicMarkType.DalSegnoAlCoda
+            or MusicMarkType.DaCapoAlFine or MusicMarkType.DaCapoAlCoda
+            => MusicMarkVertical.Below,
         MusicMarkType.Rit => MusicMarkVertical.Below,
         MusicMarkType.Accel => MusicMarkVertical.Below,
         MusicMarkType.Cresc => MusicMarkVertical.Below,
