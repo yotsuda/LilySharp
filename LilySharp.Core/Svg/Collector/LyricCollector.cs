@@ -153,52 +153,49 @@ public sealed class LyricCollector
         // Collect all syllable tokens from all measures, keeping each token's
         // source byte offset so the placed syllable can carry it (data-pos).
         // Barlines are KEPT (not stripped) so Collect can use them to skip to the
-        // next measure's notes — the written "|" is a real measure boundary.
+        // next measure's notes — a written bar is a real measure boundary.
         var allTokens = new List<(string Text, int Position)>();
         foreach (var measureNode in lyricsBlock.Syllables)
         {
             // Each child of lyrics block is a LyricMeasure (Kind = LyricMeasure)
-            // LyricMeasure contains LyricSyllable nodes and a barline
+            // LyricMeasure contains LyricSyllable nodes and a trailing barline token.
             for (int i = 0; i < measureNode.SlotCount; i++)
             {
                 var syllableNode = measureNode.GetChild(i);
                 if (syllableNode == null) continue;
 
-                var text = GetTokenText(syllableNode);
+                var (text, position) = LyricSyllableReader.ReadToken(syllableNode);
                 if (!string.IsNullOrEmpty(text))
-                {
-                    allTokens.Add((text, GetTokenPosition(syllableNode)));
-                }
+                    allTokens.Add((text, position));
             }
         }
 
-        // Build the marker stream. A barline is a measure boundary; "--"/"-" is a
-        // hyphen on the PREVIOUS syllable (no note); "__"/"_" is an extender (a line
-        // over one more held note); "~" is a plain melisma (one more held note, no
-        // line). Connectors attach by looking BACK at the last real syllable so a
-        // melisma marker can also be emitted to consume the held note.
+        // Build the marker stream. A barline (single `|` or compound `||`/`|.`) is a
+        // measure boundary; "--"/"-" is a hyphen on the PREVIOUS syllable (no note);
+        // "__"/"_" is an extender (a line over one more held note); "~" is a plain
+        // melisma (one more held note, no line). Connectors attach by looking BACK at
+        // the last real syllable so a melisma marker can also consume the held note.
+        // Marker roles are classified by the shared reader the lyrics-row path uses.
         foreach (var (text, position) in allTokens)
         {
-            if (text == "|")
+            switch (LyricSyllableReader.Classify(text))
             {
-                result.Add(("|", LyricConnectorType.None, position, true, false));
-            }
-            else if (text == "--" || text == "-")
-            {
-                SetPreviousConnector(result, LyricConnectorType.Hyphen);
-            }
-            else if (text == "__" || text == "_")
-            {
-                SetPreviousConnector(result, LyricConnectorType.Extender);
-                result.Add(("", LyricConnectorType.None, position, false, true)); // melisma note (with line)
-            }
-            else if (text == "~")
-            {
-                result.Add(("", LyricConnectorType.None, position, false, true)); // melisma note (no line)
-            }
-            else
-            {
-                result.Add((text, LyricConnectorType.None, position, false, false));
+                case LyricSyllableReader.Marker.Barline:
+                    result.Add((text, LyricConnectorType.None, position, true, false));
+                    break;
+                case LyricSyllableReader.Marker.Hyphen:
+                    SetPreviousConnector(result, LyricConnectorType.Hyphen);
+                    break;
+                case LyricSyllableReader.Marker.Extender:
+                    SetPreviousConnector(result, LyricConnectorType.Extender);
+                    result.Add(("", LyricConnectorType.None, position, false, true)); // melisma note (with line)
+                    break;
+                case LyricSyllableReader.Marker.Melisma:
+                    result.Add(("", LyricConnectorType.None, position, false, true)); // melisma note (no line)
+                    break;
+                default: // Syllable
+                    result.Add((text, LyricConnectorType.None, position, false, false));
+                    break;
             }
         }
 
@@ -223,65 +220,4 @@ public sealed class LyricCollector
         }
     }
 
-    private string GetTokenText(SyntaxNode node)
-    {
-        // For LyricSyllable nodes, get the child token's text
-        if (node.Kind == SyntaxKind.LyricSyllable)
-        {
-            var child = node.GetChild(0);
-            if (child is SyntaxTokenNode tokenNode)
-            {
-                return GetCleanText(tokenNode.Text);
-            }
-        }
-
-        // Direct token node
-        if (node is SyntaxTokenNode directToken)
-        {
-            return GetCleanText(directToken.Text);
-        }
-
-        // Fallback: try to get text from first child token
-        for (int i = 0; i < node.SlotCount; i++)
-        {
-            var child = node.GetChild(i);
-            if (child is SyntaxTokenNode childToken)
-            {
-                return GetCleanText(childToken.Text);
-            }
-        }
-
-        return "";
-    }
-
-    /// <summary>Source byte offset of a syllable's WORD (Span.Start excludes the
-    /// leading trivia), so the emitted data-pos lands on the syllable itself and a
-    /// preview click jumps the editor to the word, not the whitespace before it.
-    /// Mirrors <see cref="GetTokenText"/>'s node walk.</summary>
-    private int GetTokenPosition(SyntaxNode node)
-    {
-        if (node.Kind == SyntaxKind.LyricSyllable && node.GetChild(0) is SyntaxTokenNode tokenNode)
-            return tokenNode.Span.Start;
-
-        if (node is SyntaxTokenNode directToken)
-            return directToken.Span.Start;
-
-        for (int i = 0; i < node.SlotCount; i++)
-        {
-            if (node.GetChild(i) is SyntaxTokenNode childToken)
-                return childToken.Span.Start;
-        }
-
-        return node.Span.Start;
-    }
-
-    private static string GetCleanText(string text)
-    {
-        // Remove quotes from string literals
-        if (text.StartsWith("\"") && text.EndsWith("\"") && text.Length >= 2)
-        {
-            return text.Substring(1, text.Length - 2);
-        }
-        return text;
-    }
 }

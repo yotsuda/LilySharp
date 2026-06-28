@@ -4140,71 +4140,42 @@ public sealed class MeasureCollector
     /// </summary>
     private static List<(string Text, LyricConnectorType Conn, int Pos)> RowSyllables(SyntaxNode measureNode)
     {
-        var raw = new List<(string Text, int Pos)>();
+        var result = new List<(string, LyricConnectorType, int)>();
+        void SetPrevConnector(LyricConnectorType conn)
+        {
+            if (result.Count > 0)
+                result[^1] = (result[^1].Item1, conn, result[^1].Item3);
+        }
+
         for (int i = 0; i < measureNode.SlotCount; i++)
         {
             var child = measureNode.GetChild(i);
             if (child == null) continue;
-            var (text, pos) = LyricSyllableText(child);
-            // Drop every barline glyph — a lyric measure may carry single (`|`) or
-            // compound (`||`, `|.`, `|:`, `:|`, `.|`) bars; none are syllables.
-            if (!string.IsNullOrEmpty(text) && !IsBarlineGlyph(text))
-                raw.Add((text, pos));
-        }
+            var (text, pos) = LyricSyllableReader.ReadToken(child);
+            if (string.IsNullOrEmpty(text)) continue;
 
-        var result = new List<(string, LyricConnectorType, int)>();
-        foreach (var (text, pos) in raw)
-        {
-            if (text is "--" or "-")
+            switch (LyricSyllableReader.Classify(text))
             {
-                if (result.Count > 0)
-                    result[^1] = (result[^1].Item1, LyricConnectorType.Hyphen, result[^1].Item3);
-            }
-            else if (text is "~" or "_" or "__")
-            {
-                if (result.Count > 0)
-                    result[^1] = (result[^1].Item1, LyricConnectorType.Extender, result[^1].Item3);
-            }
-            else if (text.EndsWith("-", System.StringComparison.Ordinal))
-            {
-                result.Add((text.TrimEnd('-'), LyricConnectorType.Hyphen, pos));
-            }
-            else
-            {
-                result.Add((text, LyricConnectorType.None, pos));
+                case LyricSyllableReader.Marker.Barline:
+                    break; // a measure boundary, never a word
+                case LyricSyllableReader.Marker.Hyphen:
+                    SetPrevConnector(LyricConnectorType.Hyphen);
+                    break;
+                // A row holds no notes, so an extender/melisma marker just draws an
+                // extender line off the previous syllable.
+                case LyricSyllableReader.Marker.Extender:
+                case LyricSyllableReader.Marker.Melisma:
+                    SetPrevConnector(LyricConnectorType.Extender);
+                    break;
+                default: // Syllable
+                    if (text.EndsWith("-", System.StringComparison.Ordinal))
+                        result.Add((text.TrimEnd('-'), LyricConnectorType.Hyphen, pos));
+                    else
+                        result.Add((text, LyricConnectorType.None, pos));
+                    break;
             }
         }
         return result;
-    }
-
-    /// <summary>True for a barline token (`|`, `||`, `|.`, `|:`, `:|`, `.|`) — a
-    /// run of only bar/dot/colon characters containing at least one bar.</summary>
-    private static bool IsBarlineGlyph(string text)
-    {
-        bool sawBar = false;
-        foreach (char c in text)
-        {
-            if (c == '|') sawBar = true;
-            else if (c != '.' && c != ':') return false;
-        }
-        return sawBar;
-    }
-
-    private static (string Text, int Pos) LyricSyllableText(SyntaxNode node)
-    {
-        SyntaxTokenNode? tok = node.Kind == SyntaxKind.LyricSyllable
-            ? node.GetChild(0) as SyntaxTokenNode
-            : node as SyntaxTokenNode;
-        if (tok == null)
-            for (int i = 0; i < node.SlotCount && tok == null; i++)
-                tok = node.GetChild(i) as SyntaxTokenNode;
-        if (tok == null)
-            return ("", node.Span.Start);
-
-        var text = tok.Text;
-        if (text.Length >= 2 && text[0] == '"' && text[^1] == '"')
-            text = text.Substring(1, text.Length - 2);
-        return (text, tok.Span.Start);
     }
 
     /// <summary>

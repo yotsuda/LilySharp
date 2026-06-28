@@ -1,0 +1,95 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+using LilySharp.Core.Syntax;
+
+namespace LilySharp.Core.Svg.Collector;
+
+/// <summary>
+/// Shared reading of lyric-block tokens, used by BOTH lyric paths so they classify
+/// markers identically: <see cref="LyricCollector"/> (note-bound, one syllable per
+/// note) and <c>MeasureCollector.CollectLyricsRow</c> (an independent lyrics row,
+/// syllables spread evenly across the bar). Each path still ASSEMBLES its result
+/// differently — a row has no notes to hold, so it draws no melisma slots, and the
+/// two paths intentionally differ on a trailing-hyphen word ("Mu-": note-bound
+/// keeps it literal, the row strips it to a centered hyphen) — but the decision of
+/// "what role does this token play" lives here in one place.
+/// </summary>
+internal static class LyricSyllableReader
+{
+    /// <summary>The role a raw lyric token plays.</summary>
+    internal enum Marker
+    {
+        /// <summary>A sung syllable (its text is the word to render).</summary>
+        Syllable,
+        /// <summary>A standalone hyphen marker (<c>--</c> / <c>-</c>): the previous
+        /// syllable continues into the next as one word.</summary>
+        Hyphen,
+        /// <summary>An extender marker (<c>__</c> / <c>_</c>): a held note with a
+        /// drawn extender line over it.</summary>
+        Extender,
+        /// <summary>A plain melisma (<c>~</c>): a held note with NO line.</summary>
+        Melisma,
+        /// <summary>A barline (<c>|</c>, <c>||</c>, <c>|.</c>, …): a measure boundary.</summary>
+        Barline,
+    }
+
+    /// <summary>
+    /// Reads a lyric measure's child node (a syllable or the trailing barline token)
+    /// to its display text — string-literal quotes stripped — and the source byte
+    /// offset of the word itself (Span.Start excludes leading trivia), so an emitted
+    /// data-pos lands on the word and a preview click jumps to it, not the space
+    /// before. Returns an empty string for a node with no token.
+    /// </summary>
+    public static (string Text, int Position) ReadToken(SyntaxNode node)
+    {
+        SyntaxTokenNode? tok = node.Kind == SyntaxKind.LyricSyllable
+            ? node.GetChild(0) as SyntaxTokenNode
+            : node as SyntaxTokenNode;
+        if (tok == null)
+            for (int i = 0; i < node.SlotCount && tok == null; i++)
+                tok = node.GetChild(i) as SyntaxTokenNode;
+        if (tok == null)
+            return ("", node.Span.Start);
+
+        var text = tok.Text;
+        if (text.Length >= 2 && text[0] == '"' && text[^1] == '"')
+            text = text.Substring(1, text.Length - 2);
+        return (text, tok.Span.Start);
+    }
+
+    /// <summary>Classifies a raw lyric token into its <see cref="Marker"/> role.</summary>
+    public static Marker Classify(string text) =>
+        IsBarline(text) ? Marker.Barline
+        : text is "--" or "-" ? Marker.Hyphen
+        : text is "__" or "_" ? Marker.Extender
+        : text is "~" ? Marker.Melisma
+        : Marker.Syllable;
+
+    /// <summary>True for a barline glyph (<c>|</c>, <c>||</c>, <c>|.</c>, <c>|:</c>,
+    /// <c>:|</c>, <c>.|</c>) — a run of only bar/dot/colon characters that contains
+    /// at least one bar. Both paths treat it as a measure boundary, never a word.</summary>
+    public static bool IsBarline(string text)
+    {
+        bool sawBar = false;
+        foreach (char c in text)
+        {
+            if (c == '|') sawBar = true;
+            else if (c != '.' && c != ':') return false;
+        }
+        return sawBar;
+    }
+}
