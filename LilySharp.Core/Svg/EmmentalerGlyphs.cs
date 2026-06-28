@@ -26,8 +26,9 @@ namespace LilySharp.Core.Svg;
 public static class EmmentalerGlyphs
 {
     // === Clefs ===
-    // Note: treble_8 "8" is NOT a glyph - it's rendered as text by ClefModifier.
-    // See: lilypond-src/scm/define-grobs.scm L836-867 (ClefModifier grob)
+    // Note: treble_8 "8" is NOT a glyph - it's rendered as italic text by the
+    // clef modifier (see SharedRenderer.DrawClefModifier8).
+    // LILYPOND-REF: scm/define-grobs.scm:944-975 (ClefModifier grob)
     // _change variants are smaller glyphs for mid-staff clef changes (base + 1).
     // LILYPOND-REF: lily/clef.cc:29-52 — calc_glyph_name appends "_change" suffix
     public const char GClef = '\uE085';           // clefs.G

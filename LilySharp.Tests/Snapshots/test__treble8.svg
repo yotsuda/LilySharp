@@ -15,6 +15,7 @@
   <line x1="0.00" y1="17.16" x2="51.37" y2="17.16" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="18.16" x2="51.37" y2="18.16" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="10.80" y="17.16" font-size="4.00"></text>
+  <text x="11.90" y="19.76" font-size="3.20" font-family="serif" font-style="italic" text-anchor="middle" dominant-baseline="central" fill="#000000">8</text>
   <text class="music" x="13.80" y="16.16" font-size="4.00" data-pos="70"></text>
   <line x1="17.97" y1="19.16" x2="19.93" y2="19.16" stroke="#000000" stroke-width="0.200"/>
   <line x1="46.25" y1="13.16" x2="48.20" y2="13.16" stroke="#000000" stroke-width="0.200"/>
@@ -44,6 +45,7 @@
   <line x1="0.00" y1="27.66" x2="51.37" y2="27.66" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="28.66" x2="51.37" y2="28.66" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="10.80" y="27.66" font-size="4.00"></text>
+  <text x="11.90" y="30.26" font-size="3.20" font-family="serif" font-style="italic" text-anchor="middle" dominant-baseline="central" fill="#000000">8</text>
   <text class="music" x="13.80" y="26.66" font-size="4.00" data-pos="70"></text>
   <line x1="17.97" y1="29.66" x2="19.93" y2="29.66" stroke="#000000" stroke-width="0.200"/>
   <line x1="46.25" y1="23.66" x2="48.20" y2="23.66" stroke="#000000" stroke-width="0.200"/>
@@ -73,6 +75,7 @@
   <line x1="0.00" y1="38.16" x2="51.37" y2="38.16" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="39.16" x2="51.37" y2="39.16" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="10.80" y="38.16" font-size="4.00"></text>
+  <text x="11.90" y="40.76" font-size="3.20" font-family="serif" font-style="italic" text-anchor="middle" dominant-baseline="central" fill="#000000">8</text>
   <text class="music" x="13.80" y="37.16" font-size="4.00" data-pos="70"></text>
   <line x1="17.97" y1="40.16" x2="19.93" y2="40.16" stroke="#000000" stroke-width="0.200"/>
   <line x1="46.25" y1="34.16" x2="48.20" y2="34.16" stroke="#000000" stroke-width="0.200"/>

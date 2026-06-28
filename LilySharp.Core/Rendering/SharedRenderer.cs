@@ -728,7 +728,35 @@ public static class SharedRenderer
             _ => staffY + 3,
         };
         gc.DrawGlyph(glyph, x + 0.3, clefY, FontSize);
+        if (clef == ClefType.Treble8Below)
+            DrawClefModifier8(x + 0.3, staffY, change: false, gc);
         return x + 0.3 + 3.0;  // approximate clef width + padding
+    }
+
+    /// <summary>
+    /// Draws the octavation modifier digit "8" beneath a <c>treble_8</c> clef.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:944-975 (ClefModifier grob) +
+    /// scm/output-lib.scm:3972-3989 (clef-modifier::print). LilyPond draws the
+    /// modifier as italic text centred on the clef (self-alignment CENTER, with a
+    /// small leftward nudge from clef-alignments <c>(G . (-0.2 . 0.1))</c>) and
+    /// placed below the staff (direction DOWN, staff-padding 0.7). Lily# has no
+    /// glyph-metric measurement, so the horizontal centre and vertical drop are
+    /// constants calibrated to LilyPond 2.24 output (staff-space pixel probe of a
+    /// treble_8 render): the digit is ~2 ss tall, its top ~0.3 ss below the bottom
+    /// staff line, centred ~0.1 ss left of the clef's vertical axis. The mid-music
+    /// _change clef uses a smaller glyph, so the digit and its offset shrink to
+    /// match (LP applies a font-size dampening for change clefs).
+    /// </remarks>
+    private static void DrawClefModifier8(double clefGlyphX, double staffY, bool change, IDrawingContext gc)
+    {
+        double scale = change ? 0.85 : 1.0;
+        double centerX = clefGlyphX + 1.1 * scale; // under the clef's descender (slightly left of the stem)
+        double centerY = staffY + 5.6;             // digit centre, clearing the clef's lower curl
+        double size = FontSize * 0.80 * scale;     // digit ~2 ss tall, matching LP
+        gc.DrawText("8", centerX, centerY, size, "serif",
+            FontStyle.Italic, TextAnchor.Middle, Color.Black, VerticalAnchor.Middle);
     }
 
     // ---------- Time signature ----------
@@ -3455,7 +3483,11 @@ public static class SharedRenderer
             _ => staffY + 3,
         };
         using (gc.Source(clefChange.SourcePosition))
+        {
             gc.DrawGlyph(glyph, x, clefY, FontSize);
+            if (clefChange.NewClef == ClefType.Treble8Below)
+                DrawClefModifier8(x, staffY, change: true, gc);
+        }
     }
 
     // ---------- Mid-measure key signature change ----------

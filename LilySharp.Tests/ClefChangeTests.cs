@@ -99,6 +99,49 @@ score ""x"" { staff melody }
     }
 
     [Fact]
+    public void Treble8_HeaderClef_RendersOctaveModifier8()
+    {
+        // A treble_8 part-header clef must draw the ClefModifier "8" below the
+        // clef (LILYPOND-REF: ClefModifier grob). The "8" is plain italic text,
+        // the only such glyph here, so its presence is unambiguous.
+        var source = @"
+part gtr { clef treble_8 }
+phrase m { c'4 d e f | }
+section A { gtr { $m } }
+structure { A }
+score ""x"" { staff gtr }
+";
+        var tree = SyntaxTree.Parse(source);
+        var svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
+        _output.WriteLine(svg);
+
+        Assert.Contains(">8</text>", svg);
+        var modLine = svg.Split('\n').First(l => l.Contains(">8</text>"));
+        Assert.Contains("font-style=\"italic\"", modLine);
+    }
+
+    [Fact]
+    public void Treble8_MidMusicClefChange_RendersOctaveModifier8()
+    {
+        // A mid-music clef change to treble_8 also draws the "8" modifier
+        // (DrawClefChange path), not just the header clef.
+        var source = @"
+part melody { clef treble }
+phrase m { c'4 d clef treble_8 c4 d | }
+section A { melody { $m } }
+structure { A }
+score ""x"" { staff melody }
+";
+        var tree = SyntaxTree.Parse(source);
+        var svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
+        _output.WriteLine(svg);
+
+        Assert.Contains(">8</text>", svg);
+        var modLine = svg.Split('\n').First(l => l.Contains(">8</text>"));
+        Assert.Contains("font-style=\"italic\"", modLine);
+    }
+
+    [Fact]
     public void ClefChangeItem_ZeroDuration()
     {
         var clefChange = new ClefChangeItem(ClefType.Bass, 0);
