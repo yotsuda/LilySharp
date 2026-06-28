@@ -475,11 +475,12 @@ public static class SharedRenderer
     // Tab fret numbers are drawn a notch larger than the historical 1.6 so they
     // read clearly; the chord-collision shifts below keep the bigger digits from
     // overlapping. Background/clearance dimensions scale with this.
-    private const double TabFretFontSize = 2.6;
+    // Single source: TabConstants (shared with the tie/grace layout so they can't desync).
+    private const double TabFretFontSize = TabConstants.FretFontSize;
 
     /// <summary>Grace fret digits relative to the normal fret size — just slightly
     /// smaller, so the grace reads as a grace without becoming illegible.</summary>
-    private const double TabGraceFretScale = 0.8;
+    private const double TabGraceFretScale = TabConstants.GraceFretScale;
 
     /// <summary>Drawn width of a fret number at <see cref="TabFretFontSize"/>.</summary>
     private static double TabFretWidth(int fret) =>

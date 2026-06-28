@@ -654,18 +654,12 @@ public sealed class ElementCoordinator
                     // It curves OPPOSITE the stem: below the digits when the stem
                     // points up, above when it points down (matching the tab stem,
                     // which uses note.StemUp).
-                    var tuningType = staff.Tuning ?? TuningType.Guitar;
-                    int octaveShift = Tunings.OctaveShift(tuningType);
-                    int[] tuning = Tunings.GetTuning(tuningType);
-                    var (stringNum, _) = Tunings.CalculateFret(
-                        tie.StartNote.Midi + octaveShift, tuning, tie.StartNote.StringNumber ?? 0);
-                    double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuningType));
-                    double digitY = staffY + (stringNum - 1) * stringSpace;
-                    const double tabFretFontSize = 2.6; // SharedRenderer.TabFretFontSize
+                    var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY);
+                    double digitY = geom.DigitY(tie.StartNote.Midi, tie.StartNote.StringNumber);
                     // LilyPond hangs the tab tie right at the digit's edge — a small,
                     // shallow curve hugging the number — so offset by the VISIBLE
                     // glyph half-height plus a hair, not the full erase-box height.
-                    double clearance = 0.36 * tabFretFontSize + 0.1; // ~0.54 sp at font 2.6
+                    double clearance = 0.36 * TabConstants.FretFontSize + 0.1; // ~0.54 sp at font 2.6
                     bool stemUp = tie.StartNote.StemUp;
                     y = digitY + (stemUp ? clearance : -clearance);
                     // Curve opposite the stem (constructor-set property, no `with`).
