@@ -2608,12 +2608,6 @@ public sealed class MeasureCollector
         return new BarlineSyntax(green, null, position);
     }
 
-    private void InitializeRelativeMode(PitchSyntax basePitch)
-    {
-        _lastPitchName = basePitch.PitchName[0];
-        _currentOctave = 4 + basePitch.OctaveOffset;
-    }
-
     /// <summary>
     /// Collects dynamic markings from note/chord modifiers.
     /// </summary>

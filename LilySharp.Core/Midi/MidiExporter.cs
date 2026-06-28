@@ -321,17 +321,6 @@ public sealed class MidiExporter
     }
 
     /// <summary>
-    /// Initializes the relative mode with the base pitch (e.g., c'' sets octave 5 and note name c).
-    /// </summary>
-    private void InitializeRelativeMode(PitchSyntax basePitch)
-    {
-        _currentNoteName = GetNoteName(basePitch.BaseName);
-        // Base octave: c' = octave 4, c'' = octave 5, etc.
-        // OctaveOffset is the number of ' minus the number of ,
-        _currentOctave = 3 + basePitch.OctaveOffset;
-    }
-
-    /// <summary>
     /// Calculates the MIDI pitch using LilyPond's relative octave algorithm.
     /// Finds the closest octave to the previous note, then applies explicit octave modifiers.
     /// </summary>
