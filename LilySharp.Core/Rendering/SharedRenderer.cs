@@ -193,9 +193,9 @@ public static class SharedRenderer
             double staffY = LayoutUtilities.FindStaffYInSystem(system, globalIdx);
             bool isOssia = staff.IsOssia;
 
-            // Independent chord / lyrics rows draw no staff lines / clef / notes —
-            // only their symbols, emitted by DrawChordNames / DrawLyrics at the row Y.
-            if (staff.IsChordRow || staff.IsLyricsRow)
+            // Independent text rows (chords / lyrics) draw no staff lines / clef /
+            // notes — only their text, emitted by DrawChordNames / DrawLyrics at the row Y.
+            if (staff.IsTextRow)
                 continue;
 
             IDisposable? groupScope = isOssia
@@ -3336,14 +3336,15 @@ public static class SharedRenderer
             return;
 
         // SystemStartBar across ALL visible staves of the system — EXCLUDING
-        // independent chord rows, which LilyPond's ChordNames context does not
-        // connect (StaffLayout carries no kind, so resolve back via EnumerateStaves).
-        var chordRowIndices = new HashSet<int>(
-            score.EnumerateStaves().Where(t => t.Staff.IsChordRow || t.Staff.IsLyricsRow)
+        // independent text rows (chords / lyrics), which LilyPond's ChordNames /
+        // Lyrics contexts do not connect (StaffLayout carries no kind, so resolve
+        // back via EnumerateStaves).
+        var textRowIndices = new HashSet<int>(
+            score.EnumerateStaves().Where(t => t.Staff.IsTextRow)
                 .Select(t => t.GlobalStaffIndex));
         var allStaves = system.StaffGroups
             .SelectMany(g => g.Staves)
-            .Where(s => !s.IsHidden && !s.IsOssia && !chordRowIndices.Contains(s.StaffIndex))
+            .Where(s => !s.IsHidden && !s.IsOssia && !textRowIndices.Contains(s.StaffIndex))
             .OrderBy(s => s.Y)
             .ToList();
         if (allStaves.Count >= 2)

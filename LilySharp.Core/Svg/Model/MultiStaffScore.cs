@@ -230,7 +230,7 @@ public sealed record MultiStaffScore
         get
         {
             foreach (var (_, staff, _) in EnumerateStaves())
-                if (!staff.IsChordRow && !staff.IsLyricsRow && staff.PrimaryVoice.Measures.Length > 0)
+                if (!staff.IsTextRow && staff.PrimaryVoice.Measures.Length > 0)
                     return staff;
             return StaffGroups[0].PrimaryStaff;
         }

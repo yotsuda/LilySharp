@@ -76,17 +76,13 @@ public sealed record Staff(
     /// </summary>
     KeySignature? PerStaffKeySignature = null,
     /// <summary>
-    /// Whether this is an independent chord-symbol row (no staff lines, no notes —
-    /// just chord names laid out by timing). Rendered by a dedicated path; its
-    /// symbols come from <c>ChordNameItem</c>s tagged with this staff's index.
+    /// Whether this is an independent TEXT row (chord symbols or lyric syllables) —
+    /// no staff lines, no notes, just text laid out by timing in its own band. The
+    /// layout/renderer treat every text row the same; the chord-vs-lyric content
+    /// distinction lives on the items (<c>ChordNameItem</c> / <c>LyricItem</c>)
+    /// tagged with this staff's index, not on the staff.
     /// </summary>
-    bool IsChordRow = false,
-    /// <summary>
-    /// Whether this is an independent lyrics row (no staff lines, no notes — just
-    /// lyric syllables laid out by timing). Its syllables come from
-    /// <c>LyricItem</c>s tagged with this staff's index.
-    /// </summary>
-    bool IsLyricsRow = false
+    bool IsTextRow = false
 )
 {
     /// <summary>The primary voice (first voice).</summary>
@@ -125,20 +121,13 @@ public sealed record Staff(
         => new(clef, ImmutableArray.Create(voice), null, instrumentName, IsOssia: true);
 
     /// <summary>
-    /// Creates an independent chord-symbol row (no staff lines / notes). The voice
-    /// is a placeholder for measure/index bookkeeping; the symbols are carried as
-    /// <c>ChordNameItem</c>s tagged with this row's staff index.
+    /// Creates an independent text row (chord-symbol or lyrics row): no staff lines
+    /// or notes. The voice is a placeholder for measure/index bookkeeping; the text
+    /// is carried as <c>ChordNameItem</c> / <c>LyricItem</c>s tagged with this row's
+    /// staff index.
     /// </summary>
-    public static Staff CreateChordRow(Voice voice)
-        => new(ClefType.Treble, ImmutableArray.Create(voice), IsChordRow: true);
-
-    /// <summary>
-    /// Creates an independent lyrics row (no staff lines / notes). The voice is a
-    /// placeholder for measure bookkeeping; the syllables are carried as
-    /// <c>LyricItem</c>s tagged with this row's staff index.
-    /// </summary>
-    public static Staff CreateLyricsRow(Voice voice)
-        => new(ClefType.Treble, ImmutableArray.Create(voice), IsLyricsRow: true);
+    public static Staff CreateTextRow(Voice voice)
+        => new(ClefType.Treble, ImmutableArray.Create(voice), IsTextRow: true);
 
     /// <summary>
     /// Parses a clef string to ClefType.

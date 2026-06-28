@@ -190,7 +190,7 @@ public sealed record RenderSpec(
                     var chordVoice = chordVoices.Length > 0
                         ? chordVoices[0]
                         : new Voice(chordRow.PartName, ImmutableArray<Measure>.Empty);
-                    yield return StaffGroup.CreateSingle(Staff.CreateChordRow(chordVoice));
+                    yield return StaffGroup.CreateSingle(Staff.CreateTextRow(chordVoice));
                     break;
 
                 case LyricsRowSpec lyricsRow:
@@ -198,7 +198,7 @@ public sealed record RenderSpec(
                     var lyricVoice = lyricVoices.Length > 0
                         ? lyricVoices[0]
                         : new Voice(lyricsRow.PartName, ImmutableArray<Measure>.Empty);
-                    yield return StaffGroup.CreateSingle(Staff.CreateLyricsRow(lyricVoice));
+                    yield return StaffGroup.CreateSingle(Staff.CreateTextRow(lyricVoice));
                     break;
             }
         }
