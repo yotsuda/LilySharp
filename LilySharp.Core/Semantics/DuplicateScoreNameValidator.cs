@@ -24,7 +24,7 @@ namespace LilySharp.Core.Semantics;
 /// which would collide on disk and be indistinguishable in the preview's score
 /// picker. Two UNNAMED scores collide too — both would be the "(Default)" entry.
 /// </summary>
-public sealed class DuplicateScoreNameValidator
+public sealed class DuplicateScoreNameValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
 

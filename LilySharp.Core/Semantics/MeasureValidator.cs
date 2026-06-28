@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -21,7 +21,7 @@ namespace LilySharp.Core.Semantics;
 /// <summary>
 /// Validates measures against time signatures.
 /// </summary>
-public sealed class MeasureValidator
+public sealed class MeasureValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
     private Fraction _timeSignature = new(4, 4); // Default 4/4

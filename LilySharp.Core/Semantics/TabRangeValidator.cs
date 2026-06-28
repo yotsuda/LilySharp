@@ -32,7 +32,7 @@ namespace LilySharp.Core.Semantics;
 /// multi-staff path the renderer uses, so the range check matches what is drawn)
 /// and reads back the out-of-range notes it recorded as a side effect.
 /// </remarks>
-public sealed class TabRangeValidator
+public sealed class TabRangeValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
 

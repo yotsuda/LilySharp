@@ -271,83 +271,9 @@ public sealed class LilySharpLanguageServer
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }
 
-        // Semantic diagnostics (measure validation)
-        var validator = new MeasureValidator();
-        validator.Validate(doc.Tree);
-        foreach (var d in validator.Diagnostics)
-        {
-            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
-        }
-
-        // Symbol reference validation (undefined variables, phrases, sections)
-        var symbolValidator = new SymbolReferenceValidator();
-        symbolValidator.Validate(doc.Tree);
-        foreach (var d in symbolValidator.Diagnostics)
-        {
-            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
-        }
-
-        // Duration validation (invalid note values like 5, 3, 6)
-        var durationValidator = new DurationValidator();
-        durationValidator.Validate(doc.Tree);
-        foreach (var d in durationValidator.Diagnostics)
-        {
-            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
-        }
-
-        // Unknown @annotation names (typos like @glisando are otherwise
-        // silently ignored by the collector)
-        var annotationValidator = new AnnotationNameValidator();
-        annotationValidator.Validate(doc.Tree);
-        foreach (var d in annotationValidator.Diagnostics)
-        {
-            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
-        }
-
-        // At most one `structure` declaration (the single shared form).
-        var structureValidator = new StructureDeclarationValidator();
-        structureValidator.Validate(doc.Tree);
-        foreach (var d in structureValidator.Diagnostics)
-        {
-            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
-        }
-
-        // Lyric lines with more syllables than notes (extras silently dropped).
-        var lyricValidator = new LyricSyllableValidator();
-        lyricValidator.Validate(doc.Tree);
-        foreach (var d in lyricValidator.Diagnostics)
-        {
-            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
-        }
-
-        // Tied notes naming different tab strings (a tie holds one string).
-        var tabTieValidator = new TabTieStringValidator();
-        tabTieValidator.Validate(doc.Tree);
-        foreach (var d in tabTieValidator.Diagnostics)
-        {
-            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
-        }
-
-        // Notes clamped outside the tab range (usually an octave slip).
-        var tabRangeValidator = new TabRangeValidator();
-        tabRangeValidator.Validate(doc.Tree);
-        foreach (var d in tabRangeValidator.Diagnostics)
-        {
-            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
-        }
-
-        // Two score blocks sharing a name (or both unnamed) collide.
-        var dupScoreValidator = new DuplicateScoreNameValidator();
-        dupScoreValidator.Validate(doc.Tree);
-        foreach (var d in dupScoreValidator.Diagnostics)
-        {
-            diagnostics.Add(ConvertDiagnostic(d, doc.Text));
-        }
-
-        // Same (section x part) cell filled twice (section-major and/or part-major).
-        var dupCellValidator = new DuplicateCellValidator();
-        dupCellValidator.Validate(doc.Tree);
-        foreach (var d in dupCellValidator.Diagnostics)
+        // Semantic diagnostics — every validator via the shared registry (same set
+        // the CLI's `check` runs, so the two can never drift).
+        foreach (var d in LilySharp.Core.Semantics.SemanticValidation.Run(doc.Tree))
         {
             diagnostics.Add(ConvertDiagnostic(d, doc.Text));
         }

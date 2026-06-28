@@ -833,43 +833,10 @@ static string ReadPitchToken(string source, int pos)
 /// </summary>
 static IReadOnlyList<LilySharp.Core.Syntax.Diagnostic> CollectDiagnostics(SyntaxTree tree)
 {
+    // Parser diagnostics plus every semantic validator (single shared registry, so
+    // the CLI and the LSP can never diverge on which validators run).
     var combined = new List<LilySharp.Core.Syntax.Diagnostic>(tree.Diagnostics);
-    var validator = new LilySharp.Core.Semantics.SymbolReferenceValidator();
-    validator.Validate(tree);
-    combined.AddRange(validator.Diagnostics);
-    // Measure validation (fullness vs the score time signature, cross-part
-    // measure-length mismatches) — same set the LSP shows in the editor.
-    var measureValidator = new LilySharp.Core.Semantics.MeasureValidator();
-    measureValidator.Validate(tree);
-    combined.AddRange(measureValidator.Diagnostics);
-    // Unknown @annotation names (otherwise silently ignored by the collector).
-    var annotationValidator = new LilySharp.Core.Semantics.AnnotationNameValidator();
-    annotationValidator.Validate(tree);
-    combined.AddRange(annotationValidator.Diagnostics);
-    // At most one `structure` declaration (the single shared form).
-    var structureValidator = new LilySharp.Core.Semantics.StructureDeclarationValidator();
-    structureValidator.Validate(tree);
-    combined.AddRange(structureValidator.Diagnostics);
-    // Lyric lines with more syllables than notes (extra syllables silently dropped).
-    var lyricValidator = new LilySharp.Core.Semantics.LyricSyllableValidator();
-    lyricValidator.Validate(tree);
-    combined.AddRange(lyricValidator.Diagnostics);
-    // Tied notes naming different tab strings (a tie holds one string).
-    var tabTieValidator = new LilySharp.Core.Semantics.TabTieStringValidator();
-    tabTieValidator.Validate(tree);
-    combined.AddRange(tabTieValidator.Diagnostics);
-    // Notes clamped outside the tab range (usually an octave slip).
-    var tabRangeValidator = new LilySharp.Core.Semantics.TabRangeValidator();
-    tabRangeValidator.Validate(tree);
-    combined.AddRange(tabRangeValidator.Diagnostics);
-    // Two score blocks sharing a name (or both unnamed) collide.
-    var dupScoreValidator = new LilySharp.Core.Semantics.DuplicateScoreNameValidator();
-    dupScoreValidator.Validate(tree);
-    combined.AddRange(dupScoreValidator.Diagnostics);
-    // Same (section x part) cell filled twice (section-major and/or part-major).
-    var dupCellValidator = new LilySharp.Core.Semantics.DuplicateCellValidator();
-    dupCellValidator.Validate(tree);
-    combined.AddRange(dupCellValidator.Diagnostics);
+    combined.AddRange(LilySharp.Core.Semantics.SemanticValidation.Run(tree));
     return combined;
 }
 

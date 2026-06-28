@@ -21,7 +21,7 @@ namespace LilySharp.Core.Semantics;
 /// <summary>
 /// Validates that note/rest/chord durations use valid note values.
 /// </summary>
-public sealed class DurationValidator
+public sealed class DurationValidator : ISemanticValidator
 {
     private static readonly HashSet<int> ValidDurations = [1, 2, 4, 8, 16, 32, 64, 128];
 
