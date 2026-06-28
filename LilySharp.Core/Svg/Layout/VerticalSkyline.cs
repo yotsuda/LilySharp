@@ -717,32 +717,14 @@ public sealed class VerticalSkyline
 
                 if (overlapLeft < overlapRight)
                 {
-                    // Sample heights at key points within overlap
-                    double[] xSamples = { overlapLeft, overlapRight,
-                        (overlapLeft + overlapRight) / 2 };
-
-                    foreach (double x in xSamples)
-                    {
-                        if (x >= overlapLeft && x <= overlapRight)
-                        {
-                            double h1 = b1.Height(x);
-                            double h2 = b2.Height(x);
-                            double dist = h1 + h2;  // Both stored with direction sign
-                            maxDistance = Math.Max(maxDistance, dist);
-                        }
-                    }
-
-                    // Also check intersection point if slopes differ
-                    if (Math.Abs(b1.Slope - b2.Slope) > 1e-6)
-                    {
-                        double ix = b1.IntersectionX(b2);
-                        if (ix > overlapLeft && ix < overlapRight)
-                        {
-                            double h1 = b1.Height(ix);
-                            double h2 = b2.Height(ix);
-                            maxDistance = Math.Max(maxDistance, h1 + h2);
-                        }
-                    }
+                    // Each building's height is Slope*x + intercept, so the gap
+                    // h1+h2 is linear over the overlap and its maximum is always at
+                    // an endpoint. Sampling the midpoint or the b1/b2 intersection
+                    // can never beat the ends, so we only evaluate the two ends.
+                    // LILYPOND-REF: skyline.cc measures distance at the overlap ends.
+                    double distLeft = b1.Height(overlapLeft) + b2.Height(overlapLeft);
+                    double distRight = b1.Height(overlapRight) + b2.Height(overlapRight);
+                    maxDistance = Math.Max(maxDistance, Math.Max(distLeft, distRight));
                 }
             }
         }
