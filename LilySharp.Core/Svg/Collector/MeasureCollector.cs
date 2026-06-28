@@ -3727,7 +3727,6 @@ public sealed class MeasureCollector
 
             int startMeasure = ResolveLyricsStartMeasure(lyricsBlock);
             int verseNumber = nextVerseByStart.TryGetValue(startMeasure, out var v) ? v : 1;
-            nextVerseByStart[startMeasure] = verseNumber + 1;
 
             IReadOnlyList<(int MeasureIndex, int ItemIndex, Fraction Timing)> aligned = startMeasure <= 0
                 ? indices
@@ -3735,6 +3734,13 @@ public sealed class MeasureCollector
 
             var lyrics = lyricCollector.Collect(lyricsBlock, aligned, out int unplaced, voiceId: voiceId, verseNumber);
             _lyrics.AddRange(lyrics);
+
+            // A single block may auto-wrap into several stacked verses; the next
+            // block at this start begins after the highest verse this one produced.
+            int maxVerse = verseNumber;
+            foreach (var ly in lyrics)
+                if (ly.VerseNumber > maxVerse) maxVerse = ly.VerseNumber;
+            nextVerseByStart[startMeasure] = maxVerse + 1;
 
             // More syllables than notes: the loop above ran out of notes and the
             // trailing syllables vanished. Flag the line so the author catches the

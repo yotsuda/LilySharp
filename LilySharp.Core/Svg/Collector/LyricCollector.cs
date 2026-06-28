@@ -60,73 +60,79 @@ public sealed class LyricCollector
     {
         var lyrics = ImmutableArray.CreateBuilder<LyricItem>();
         var syllables = ParseSyllables(lyricsBlock);
+        unplacedSyllableCount = 0;
 
-        int noteIndex = 0;
-        int i = 0;
-        // Music measure the last syllable landed in. A lyric barline skips every
-        // remaining note of this measure so the next syllable starts the next bar,
-        // honouring the written "|" instead of running syllables on sequentially.
-        int lastPlacedMeasure = -1;
-        for (; i < syllables.Count && noteIndex < noteItemIndices.Count; i++)
+        // Group the verse's notes by measure, in source order. A written "|" then
+        // advances by exactly ONE measure — so an EMPTY measure ("| |") skips a
+        // whole bar — and when the syllables run PAST the last measure they WRAP
+        // into the next stacked verse (1番, 2番, … written flat in one block).
+        var measures = new List<List<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing)>>();
+        int lastMi = int.MinValue;
+        foreach (var n in noteItemIndices)
         {
-            var (text, connectorType, position, isBarline, isMelisma) = syllables[i];
+            if (n.MeasureIndex != lastMi)
+            {
+                measures.Add(new List<(int, int, LilySharp.Core.Semantics.Fraction)>());
+                lastMi = n.MeasureIndex;
+            }
+            measures[^1].Add(n);
+        }
+        int measureCount = measures.Count;
+        if (measureCount == 0)
+            return lyrics.ToImmutable();
 
-            // A barline advances to the next measure's notes (drops any unsung
-            // notes left in the current bar).
+        int lm = 0;     // local measure within the current verse (0 .. measureCount-1)
+        int pos = 0;    // note position within the current measure
+        int verse = verseNumber;
+
+        foreach (var (text, connectorType, position, isBarline, isMelisma) in syllables)
+        {
+            // A barline advances one measure; past the last bar it wraps to the
+            // next stacked verse (and any unsung notes left in the bar are skipped).
             if (isBarline)
             {
-                while (noteIndex < noteItemIndices.Count
-                       && noteItemIndices[noteIndex].MeasureIndex <= lastPlacedMeasure)
-                    noteIndex++;
+                lm++;
+                pos = 0;
+                if (lm >= measureCount)
+                {
+                    lm = 0;
+                    verse++;
+                }
                 continue;
             }
 
-            // A melisma (~ / __ / _) holds the PREVIOUS syllable over one more note,
-            // so consume that note without placing a syllable — the held note is no
-            // longer left unsung. Stay within the bar (a barline, not a melisma,
-            // crosses to the next measure).
+            // A melisma (~ / __ / _) holds the previous syllable over one more note
+            // in THIS bar — consume a note position without placing a syllable.
             if (isMelisma)
             {
-                if (noteIndex < noteItemIndices.Count
-                    && noteItemIndices[noteIndex].MeasureIndex == lastPlacedMeasure)
-                    noteIndex++;
+                pos++;
                 continue;
             }
 
             // Defensive: a blank syllable consumes nothing.
             if (string.IsNullOrWhiteSpace(text))
+                continue;
+
+            if (lm < measureCount && pos < measures[lm].Count)
             {
-                continue;
+                var (measureIndex, itemIndex, timing) = measures[lm][pos];
+                lyrics.Add(new LyricItem(
+                    Text: text,
+                    MeasureIndex: measureIndex,
+                    ItemIndex: itemIndex,
+                    ConnectorType: connectorType,
+                    VoiceId: voiceId,
+                    VerseNumber: verse,
+                    Timing: timing,
+                    SourcePosition: position
+                ));
             }
-
-            var (measureIndex, itemIndex, timing) = noteItemIndices[noteIndex];
-
-            lyrics.Add(new LyricItem(
-                Text: text,
-                MeasureIndex: measureIndex,
-                ItemIndex: itemIndex,
-                ConnectorType: connectorType,
-                VoiceId: voiceId,
-                VerseNumber: verseNumber,
-                Timing: timing,
-                SourcePosition: position
-            ));
-
-            lastPlacedMeasure = measureIndex;
-            noteIndex++;
-        }
-
-        // Any real syllables remaining once the notes are exhausted are dropped on
-        // the floor by the loop above. Count them (applying the same skip rules so
-        // trailing extenders/blanks/barlines don't inflate the figure) so the
-        // caller can warn.
-        unplacedSyllableCount = 0;
-        for (; i < syllables.Count; i++)
-        {
-            var (text, _, _, isBarline, isMelisma) = syllables[i];
-            if (isBarline || isMelisma || string.IsNullOrWhiteSpace(text))
-                continue;
-            unplacedSyllableCount++;
+            else
+            {
+                // More syllables than notes in this bar — the word would vanish.
+                unplacedSyllableCount++;
+            }
+            pos++;
         }
 
         return lyrics.ToImmutable();
