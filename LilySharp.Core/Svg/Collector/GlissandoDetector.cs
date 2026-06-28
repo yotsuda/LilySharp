@@ -45,7 +45,8 @@ public sealed class GlissandoDetector
                 if (!startNote.HasGlissando)
                     continue;
 
-                var endNote = FindNextNote(measures, measureIdx, itemIdx);
+                // Glissandos connect to the next note of any pitch.
+                var endNote = NoteScan.FindNextNote(measures, measureIdx, itemIdx, _ => true);
                 if (endNote != null)
                 {
                     var (endMeasureIdx, endItemIdx, note) = endNote.Value;
@@ -64,35 +65,5 @@ public sealed class GlissandoDetector
         }
 
         return glissandos.ToImmutableArray();
-    }
-
-    /// <summary>
-    /// Finds the next note after the given position (any pitch).
-    /// </summary>
-    private static (int measureIdx, int itemIdx, NoteItem note)? FindNextNote(
-        ImmutableArray<Measure> measures,
-        int startMeasureIdx,
-        int startItemIdx)
-    {
-        // Search in current measure first
-        var currentMeasure = measures[startMeasureIdx];
-        for (int i = startItemIdx + 1; i < currentMeasure.Items.Length; i++)
-        {
-            if (currentMeasure.Items[i] is NoteItem candidate)
-                return (startMeasureIdx, i, candidate);
-        }
-
-        // Search in subsequent measures
-        for (int m = startMeasureIdx + 1; m < measures.Length; m++)
-        {
-            var measure = measures[m];
-            for (int i = 0; i < measure.Items.Length; i++)
-            {
-                if (measure.Items[i] is NoteItem candidate)
-                    return (m, i, candidate);
-            }
-        }
-
-        return null;
     }
 }

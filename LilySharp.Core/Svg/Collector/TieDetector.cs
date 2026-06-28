@@ -39,7 +39,9 @@ public sealed class TieDetector
 
                 if (item is NoteItem startNote && startNote.HasTieStart)
                 {
-                    var endNote = FindNextSamePitchNote(score, measureIdx, itemIdx, startNote);
+                    // A tie connects to the next note of the SAME pitch.
+                    var endNote = NoteScan.FindNextNote(measures, measureIdx, itemIdx,
+                        c => c.StaffPosition == startNote.StaffPosition);
                     if (endNote != null)
                     {
                         var (endMeasureIdx, endItemIdx, note) = endNote.Value;
@@ -196,39 +198,4 @@ public sealed class TieDetector
             sourcePosition: chord.SourcePosition);
     }
 
-    private (int measureIdx, int itemIdx, NoteItem note)? FindNextSamePitchNote(
-        Score score,
-        int startMeasureIdx,
-        int startItemIdx,
-        NoteItem startNote)
-    {
-        var measures = score.Voice.Measures;
-
-        // Search in current measure first
-        var currentMeasure = measures[startMeasureIdx];
-        for (int i = startItemIdx + 1; i < currentMeasure.Items.Length; i++)
-        {
-            if (currentMeasure.Items[i] is NoteItem candidate &&
-                candidate.StaffPosition == startNote.StaffPosition)
-            {
-                return (startMeasureIdx, i, candidate);
-            }
-        }
-
-        // Search in subsequent measures
-        for (int m = startMeasureIdx + 1; m < measures.Length; m++)
-        {
-            var measure = measures[m];
-            for (int i = 0; i < measure.Items.Length; i++)
-            {
-                if (measure.Items[i] is NoteItem candidate &&
-                    candidate.StaffPosition == startNote.StaffPosition)
-                {
-                    return (m, i, candidate);
-                }
-            }
-        }
-
-        return null;
-    }
 }
