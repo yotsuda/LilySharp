@@ -254,16 +254,11 @@ public sealed class BeamScoringProblem
         double leftY = intercept;
         double rightY = intercept + slope * _xSpan;
 
-        // LILYPOND-REF: lily/beam-quanting.cc:470-489 set_minimum_dy()
-        // Ensure dy is not smaller than the smallest quant step
+        // Ensure dy is not smaller than the smallest quant step.
         double dy = rightY - leftY;
         if (Math.Abs(dy) > 0.001)
         {
-            double sit = (_beamThickness - _lineThickness) / 2 * 2; // In staff positions
-            double inter = 1.0; // 0.5 staff spaces = 1 staff position
-            double hang = (1.0 - (_beamThickness - _lineThickness) / 2) * 2;
-            double minDy = Math.Min(Math.Min(sit, inter), hang);
-            dy = Math.Sign(dy) * Math.Max(Math.Abs(dy), minDy);
+            dy = MinimumDy(dy);
 
             double center = (leftY + rightY) / 2;
             leftY = center - dy / 2;
@@ -276,6 +271,21 @@ public sealed class BeamScoringProblem
         EnsureMinimumStemLength(ref leftY, ref rightY, minStemLenPos);
 
         return (leftY, rightY);
+    }
+
+    /// <summary>
+    /// Clamps |dy| up to the smallest quant step (the min of the sit/inter/hang
+    /// beam positions), preserving sign, so damping never flattens a beam below
+    /// it. Callers guard the near-zero case (a flat beam stays flat).
+    /// </summary>
+    // LILYPOND-REF: lily/beam-quanting.cc:470-489 set_minimum_dy()
+    private double MinimumDy(double dy)
+    {
+        double sit = (_beamThickness - _lineThickness) / 2 * 2; // In staff positions
+        double inter = 1.0; // 0.5 staff spaces = 1 staff position
+        double hang = (1.0 - (_beamThickness - _lineThickness) / 2) * 2;
+        double minDy = Math.Min(Math.Min(sit, inter), hang);
+        return Math.Sign(dy) * Math.Max(Math.Abs(dy), minDy);
     }
 
     /// <summary>
@@ -372,17 +382,10 @@ public sealed class BeamScoringProblem
 
             double dampedDy = slope * _xSpan;
 
-            // set_minimum_dy: don't let damping flatten the beam below the smallest
-            // quant step (sit/inter/hang). LILYPOND-REF: lily/beam-quanting.cc:771
-            //   (set_minimum_dy) + lily/beam-quanting.cc:470-489.
+            // Don't let damping flatten the beam below the smallest quant step.
+            // LILYPOND-REF: lily/beam-quanting.cc:771 (set_minimum_dy).
             if (Math.Abs(dampedDy) > 0.001)
-            {
-                double sit = (_beamThickness - _lineThickness) / 2 * 2;
-                double inter = 1.0;
-                double hang = (1.0 - (_beamThickness - _lineThickness) / 2) * 2;
-                double minDy = Math.Min(Math.Min(sit, inter), hang);
-                dampedDy = Math.Sign(dampedDy) * Math.Max(Math.Abs(dampedDy), minDy);
-            }
+                dampedDy = MinimumDy(dampedDy);
 
             // LILYPOND-REF: lily/beam-quanting.cc:776-777
             _unquantedLeftY += (dy - dampedDy) / 2;
