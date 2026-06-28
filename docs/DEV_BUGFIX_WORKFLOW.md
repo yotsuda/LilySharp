@@ -374,3 +374,124 @@ git push
 - 中間クレフ/調号変更のスペーシングは LP の非音楽カラムの**近似**(端点リザーブ方式)。
 - inter-system spacing は X 依存スカイラインでなく per-system extent の近似。
 - XFAIL: eighths-vs-quarters の MinItemGap 0.4 vs LP skyline-horizontal-padding 0.1(追跡中)。
+
+---
+
+## 13. エディタ / LSP / 拡張機能のワークフロー(描画とは別系統)
+
+§1〜12 は **描画(LilyPond 忠実再現)** の手順。2026-06-28 のセッションは主に
+**エディタ機能(LSP 補完・プレビュー連携・拡張機能)** を扱った。別系統なので手順も別。
+
+### 13.1 構成
+
+| 対象 | 場所 |
+|---|---|
+| VS Code 拡張(TypeScript) | `editors/vscode/src/extension.ts`(webview プレビューも同ファイル) |
+| 言語サーバ(C#) | `LilySharp.Lsp/LilySharpLanguageServer.cs`(Core を参照) |
+| .lys フィクスチャ | `LilySharp.Tests/Fixtures/{test,showcase}/*.lys` |
+| スナップショット | `LilySharp.Tests/Snapshots/*.svg` |
+| ナビ記号の手検証用 scratch | `scratch/navtest.lys` |
+
+### 13.2 ビルド・デプロイ
+
+- TS のみの変更でも、deploy 前に型チェック: `cd editors\vscode; npm run compile`(exit 0 を確認)。
+- デプロイ: `.\deploy-extension.ps1`(VSIX + LSP を再ビルド・再インストール)。
+  `Get-Process "Code"/"lilysharp-lsp" not found` エラーは無害(VS Code 未起動時)。
+- **CLI は自前の Core コピーを同梱する。** Core を変更したら、レンダリング確認の前に
+  `dotnet build LilySharp.Cli\LilySharp.Cli.csproj` で CLI を建て直す(Core だけ建てても CLI の
+  bin には反映されない)。
+- **deploy は毎回バージョンスタンプを書き換える**: `LilySharp.Lsp/LilySharpLanguageServer.cs` の
+  `public const string Version` と `editors/vscode/package.json` の `version`。これは本体コミットと
+  分けて `Bump dev build version (0.1.2-dev.NN)` として別コミットにし、ツリーをクリーンに保つ。
+
+### 13.3 LSP 補完(文脈依存)
+
+`Completion()` → `GetCompletionContext()` が文脈を判定し、文脈別メソッドへ分岐:
+TopLevel / MusicBlock / **StructureBlock** / **AfterClef** / AfterAt / AfterBackslash。
+
+- `InnermostOpenBlock(text, offset)`: 最内の `keyword { … }` のキーワード(structure / chordnames 判定)。
+  **`{` 直前の語が name 付きブロックでは name になる**(`section A {` → "A"、`structure {` → "structure")。
+- `WordBeforeCursor(text, offset)`: カーソル直前の語(入力中の部分語をスキップ)。`clef ` 直後判定に使用。
+- 文脈別: `GetTopLevelCompletions` / `GetMusicCompletions` / `GetStructureCompletions` /
+  `GetClefCompletions`。並び順は `SortText` で制御(クレフは音域 高→低)。プレースホルダ付きは
+  `InsertTextFormat = InsertTextFormat.Snippet` を**必ず**付ける。
+- **登録スニペット(`package.json` の `snippets` 契約と `snippets/lilysharp.json`)は削除済み。**
+  VS Code の登録スニペットは**位置でスコープできず**、`structure {}` 内に `grace` 等が漏れていた。
+  補完は LSP(文脈依存)に一本化したので、**スニペットファイルを復活させない**。リッチな雛形
+  (piano / render / lyrics / repeat-alt)は LSP の該当文脈へ移植済み。
+- テスト: internal ヘルパは `LilySharp.Lsp.csproj` の `InternalsVisibleTo("LilySharp.Tests")` で公開済み。
+  `StructureCompletionTests` / `ClefCompletionTests` が雛形。新文脈を足したら同様に internal 公開 + テスト。
+
+### 13.4 エディタ⇔プレビューの相互参照(data-pos)
+
+すべての grob は `gc.Source(sourcePosition)` 内で描画され、SVG に `data-pos="<ソースオフセット>"` が出る
+(§4 の調査と同じ仕組み)。これがカーソル連携の土台:
+
+- **カーソル→プレビュー**(`extension.ts` の `onDidChangeTextEditorSelection`): カーソルオフセットを
+  postMessage。webview の `highlightNearestElement` が「`data-pos ≤ cursor` の最大値」を閾値 50 内で
+  選んでハイライト。**空白の上(左右とも空白)は -1 を送って何もハイライトしない**
+  (`highlightNearestElement(-1)` はクリアして何も選ばない)。
+- **セクションラベルの data-pos** は `SectionDeclPos` = `section` **キーワード**の開始
+  (`s.SectionKeyword.Span.Start`)。名前にすると `section` キーワード上で手前のノートに
+  フォールバックするので、宣言全体がラベル箱にマップされるようキーワードに合わせる。
+- **プレビュー→エディタ(クリック)**: data-pos → カーソル。空白を前方スキップして語頭へ。
+
+### 13.5 PNG 拡大確認(pwsh System.Drawing — PIL の代替)
+
+Python/PIL が使いにくいときは pwsh の System.Drawing で切り出し・拡大できる:
+
+```pwsh
+Add-Type -AssemblyName System.Drawing
+$img = [System.Drawing.Image]::FromFile($png)
+$rect = New-Object System.Drawing.Rectangle($x,$y,$w,$h)
+$c = New-Object System.Drawing.Bitmap($W,$H); $g = [System.Drawing.Graphics]::FromImage($c)
+$g.InterpolationMode = 'NearestNeighbor'
+$g.DrawImage($img,(New-Object System.Drawing.Rectangle(0,0,$W,$H)),$rect,[System.Drawing.GraphicsUnit]::Pixel)
+$g.Dispose(); $c.Save($out)   # その後 Read ツールで $out を視覚確認
+```
+
+### 13.6 ナビゲーション記号の配置(MusicMarkEngraver / OutsideStaffStacker)
+
+- `MusicMarkEngraver` が初期位置を計算し、その後 `OutsideStaffStacker.StackAboveStaff` が衝突回避で
+  **再積層**する。**マークの最終 Y はここで決まる**(Engraver で Y を弄っても上書きされるので、
+  最終調整は stacker の後段で行う)。
+- 各マークは **per-measure の system-Y 基準(sysY)** で描画。同じ layout-Y でも measure が違うと
+  描画高さが違う(セクションラベルが衝突回避で上に押し上げられるのもこれ)。
+- D.S./D.C. 系(jump-from)は五線下。Segno/Coda・To Coda は五線上。To Coda は次セクションラベルと
+  同じ小節線を挟むので `CoPlaceToCodaWithLabels`(stacker の後段)で同じ段に横並びさせる
+  (**measure は付け替えず**共通ラインへ。改行時は近接 X 判定が外れて自動的に非適用)。
+
+---
+
+## 14. 次セッションへの引き継ぎ(2026-06-28)
+
+### このセッションの成果(参考)
+
+- **リファクタ Tier1/2**(レビュー由来): `RelativeOctave.StepToMidi`、`SyntaxNode.IsInside<T>`、
+  `VerticalSkyline.Distance` の端点化、共有 `NullScope`/`ScopeAction`、`LayoutUtilities.ResolveStaffMiddleY`、
+  `EmmentalerGlyphs.AccidentalGlyph`、`BeamScoringProblem.MinimumDy`、`LayoutEngine.FinalizeLayout`。
+- **ナビゲーション記号**: D.S./D.C. を五線下へ、「To Coda」をコーダ記号(scripts.coda)で描画、
+  Segno/Coda を小節線中心に、section ラベルを共通段に整列、To Coda を C ラベルの左・下端揃えに。
+- **LSP 補完**: `structure {}` 文脈(セクション名/ナビ記号/リピート/ボルタ/`~Name`/`_""`、note 名は出さない)、
+  `clef` 直後はクレフ名のみ(高→低順)。
+- **プレビュー連携**: `section` キーワードでセクション記号をハイライト、空白上では非ハイライト。
+- **パーサ**: `clef treble_8` を mid-music でも受理(従来は part ヘッダのみ)。
+
+### 残課題(優先度の目安)
+
+1. **`treble_8` の "8"(ClefModifier)描画が未実装。** 初期/ヘッダ/mid-music のいずれも "8" を
+   描いていない(`EmmentalerGlyphs.cs` の TODO コメント、LilyPond `scm/define-grobs.scm` の
+   ClefModifier grob 参照)。視覚的に素の treble と同一で、違いはオクターブ/再生のみ。実装すると
+   `test__treble8.svg` スナップショットが変わる中規模タスク(§3 の LP 並置で位置を確認しつつ)。
+2. **相対オクターブの stateful driver 統合(Tier 2 で意図的に保留)。** アルゴリズムは
+   `RelativeOctave.Resolve` で既に DRY。残るのは 3 ウォーカー(MeasureCollector / MidiExporter /
+   MusicXmlExporter)の running-state ラッパで、アンカー規約が三者三様(C4 / octaveBase / C3)。
+   高リスク・低リターンで見送った。やるなら全 octave/MIDI/MusicXML テストを担保しつつ慎重に。
+   `RelativeOctave.cs` の remarks に「only the algorithm is shared」と明文化済み(再提案時はここを読む)。
+3. **deploy ごとの版バンプ commit がノイズ。** 毎回 `Version` 定数 + `package.json` version が変わり、
+   別コミットで吸収している。版スタンプを gitignore するか deploy スクリプト側で自動コミットにする等の整理。
+
+### コミット規約の食い違い(要確認)
+
+§10 は `Co-Authored-By: Claude …` を付ける運用だが、2026-06-28 セッションは現行のセッション指示
+(「Co-Authored-By を付けない」)に従い付けていない。次セッションはどちらを正とするかを確認すること。
