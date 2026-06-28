@@ -35,7 +35,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260628-2146";
+    public const string Version = "0.1.1-20260628-2202";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -427,10 +427,12 @@ public sealed class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// Completions for a <c>structure { … }</c> block: the section names declared
-    /// in this document, plus the navigation marks (segno / coda / to coda / D.C. /
-    /// D.S. …). Deliberately offers NO note names — the structure is a playback
-    /// order of sections, not music.
+    /// Completions for a <c>structure { … }</c> block: everything a structure body
+    /// can hold — the document's section names, the navigation marks (segno / coda /
+    /// to coda / D.C. / D.S. …), repeat barlines (<c>|:</c> <c>:|</c>), volta
+    /// brackets (<c>[1. …]</c>), the silent-section prefix (<c>~</c>) and custom
+    /// text (<c>_"…"</c>). Deliberately offers NO note names — the structure is a
+    /// playback order of sections, not music.
     /// </summary>
     internal static CompletionList GetStructureCompletions(string text)
     {
@@ -472,6 +474,33 @@ public sealed class LilySharpLanguageServer
                 Kind = CompletionItemKind.Keyword,
                 Detail = detail,
             });
+
+        // Repeat barlines, volta brackets, the silent-section prefix and custom
+        // text — the remaining things a structure body can hold.
+        items.Add(new CompletionItem
+        {
+            Label = "|:", InsertText = "|:", Kind = CompletionItemKind.Operator,
+            Detail = "Repeat start",
+        });
+        items.Add(new CompletionItem
+        {
+            Label = ":|", InsertText = ":|", Kind = CompletionItemKind.Operator,
+            Detail = "Repeat end (suffix x3 for a count)",
+        });
+
+        CompletionItem Snippet(string label, string insert, string detail) => new()
+        {
+            Label = label,
+            InsertText = insert,
+            InsertTextFormat = InsertTextFormat.Snippet,
+            Kind = CompletionItemKind.Snippet,
+            Detail = detail,
+        };
+        items.Add(Snippet("[1. ]", "[1. $0]", "1st ending (volta bracket)"));
+        items.Add(Snippet("[2. ]", "[2. $0]", "2nd ending (volta bracket)"));
+        items.Add(Snippet("[1-2. ]", "[${1:1-2}. $0]", "Multi-pass ending, e.g. [1-2. …] or [1,3. …]"));
+        items.Add(Snippet("~", "~$0", "Silent section (renders, no rehearsal label)"));
+        items.Add(Snippet("_\"\"", "_\"$0\"", "Custom text annotation"));
 
         return new CompletionList { Items = items.ToArray() };
     }
@@ -2268,6 +2297,7 @@ public class ExportResponse
     public string? OutputPath { get; set; }
     public string? Error { get; set; }
 }
+
 
 
 

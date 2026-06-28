@@ -66,6 +66,20 @@ public class StructureCompletionTests
     }
 
     [Fact]
+    public void StructureCompletions_OfferRepeatVoltaAndOtherSyntax()
+    {
+        var labels = LilySharpLanguageServer.GetStructureCompletions(Doc).Items
+            .Select(i => i.Label).ToHashSet();
+
+        Assert.Contains("|:", labels);     // repeat barlines
+        Assert.Contains(":|", labels);
+        Assert.Contains("[1. ]", labels);  // volta brackets
+        Assert.Contains("[2. ]", labels);
+        Assert.Contains("~", labels);      // silent section prefix
+        Assert.Contains("_\"\"", labels);  // custom text
+    }
+
+    [Fact]
     public void StructureCompletions_OfferNoNoteNames()
     {
         var labels = LilySharpLanguageServer.GetStructureCompletions(Doc).Items
