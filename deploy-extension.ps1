@@ -16,7 +16,7 @@ Write-Host "=== LilySharp Extension Deployment ===" -ForegroundColor Cyan
 # VS Code is killed FIRST so it cannot respawn the LSP server while we work; then
 # any leftover LSP process is killed. This is intentional — overwriting the bundled
 # server requires the running exe/dll to be unlocked.
-Write-Host "`n[1/6] Stopping VS Code and LSP server..." -ForegroundColor Green
+Write-Host "`n[1/7] Stopping VS Code and LSP server..." -ForegroundColor Green
 
 function Stop-ByName($name) {
     $procs = Get-Process -Name $name -ErrorAction SilentlyContinue
@@ -58,7 +58,7 @@ if (Test-Path $serverDir) {
 }
 
 # Step 2: Update versions
-Write-Host "`n[2/6] Updating versions..." -ForegroundColor Green
+Write-Host "`n[2/7] Updating versions..." -ForegroundColor Green
 $packageJsonPath = Join-Path $projectRoot "editors/vscode/package.json"
 $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
 $currentVersion = $packageJson.version
@@ -86,7 +86,7 @@ Write-Host "LSP: $lspVersion" -ForegroundColor Yellow
 # Step 3: Build VSIX (runs: tsc, dotnet publish, vsce package).
 # --skip-license + --allow-missing-repository keep vsce fully NON-INTERACTIVE so the
 # deploy never stalls on a [y/N] prompt.
-Write-Host "`n[3/6] Building VSIX package..." -ForegroundColor Green
+Write-Host "`n[3/7] Building VSIX package..." -ForegroundColor Green
 Push-Location (Join-Path $projectRoot "editors/vscode")
 npx @vscode/vsce package --allow-missing-repository --skip-license --pre-release
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw "VSIX build failed" }
@@ -95,20 +95,39 @@ Pop-Location
 
 # Step 4: Install extension (force overwrite so it always lands, even on a version
 # clash). --force also suppresses any install confirmation.
-Write-Host "`n[4/6] Installing extension..." -ForegroundColor Green
+Write-Host "`n[4/7] Installing extension..." -ForegroundColor Green
 code --uninstall-extension lilysharp.lilysharp 2>$null
 Start-Sleep -Seconds 1
 code --install-extension (Join-Path $projectRoot "editors/vscode/$($vsix.Name)") --force
 if ($LASTEXITCODE -ne 0) { throw "Extension install failed" }
 
 # Step 5: Cleanup old VSIX files
-Write-Host "`n[5/6] Cleanup..." -ForegroundColor Green
+Write-Host "`n[5/7] Cleanup..." -ForegroundColor Green
 Get-ChildItem (Join-Path $projectRoot "editors/vscode") -Filter "*.vsix" |
     Sort-Object LastWriteTime -Descending | Select-Object -Skip 3 | Remove-Item -Force
 
 # Step 6: Restart VS Code
-Write-Host "`n[6/6] Restarting VS Code..." -ForegroundColor Green
+Write-Host "`n[6/7] Restarting VS Code..." -ForegroundColor Green
 Start-Process code
+
+# Step 7: Commit the two version stamps so they never linger as a noisy
+# working-tree diff that the next feature commit has to step around. Only the
+# package.json version and the LSP Version const are committed (taken by explicit
+# pathspec, so any other staged/unstaged work is left untouched). Skipped when
+# not in a git repo or when the stamps are unchanged.
+Write-Host "`n[7/7] Committing version bump..." -ForegroundColor Green
+$PSNativeCommandUseErrorActionPreference = $false  # native non-zero is a signal here, not a failure
+if ((git rev-parse --is-inside-work-tree 2>$null) -eq 'true') {
+    git diff --quiet -- $packageJsonPath $lspServerPath
+    if ($LASTEXITCODE -ne 0) {
+        git commit -q -m "Bump dev build version ($newVersion)" -- $packageJsonPath $lspServerPath
+        Write-Host "  Committed: Bump dev build version ($newVersion)" -ForegroundColor Yellow
+    } else {
+        Write-Host "  No version changes to commit" -ForegroundColor DarkGray
+    }
+} else {
+    Write-Host "  Not a git repo; skipping version commit" -ForegroundColor DarkGray
+}
 
 Write-Host "`n=== Deployment Complete ===" -ForegroundColor Cyan
 Write-Host "VSIX: $($vsix.Name)" -ForegroundColor Yellow
