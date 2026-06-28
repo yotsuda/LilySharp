@@ -504,3 +504,94 @@ $g.Dispose(); $c.Save($out)   # その後 Read ツールで $out を視覚確認
 `Co-Authored-By: Claude <current-model> <noreply@anthropic.com>` を**付ける**(§10 の運用を正とする)。
 2026-06-28 セッションはセッション指示に従い付けていなかったが、ユーザー確認の結果 §10 を正と決定。
 モデル名は current model に合わせる(例: 2026-06-29 は `Claude Opus 4.8`)。
+
+---
+
+## 15. 次セッションへの引き継ぎ(2026-06-29 PM)― 相対オクターブ連鎖の抽出
+
+**次セッションの主タスク**: `MeasureCollector` の「相対オクターブ連鎖(stateful driver)」を
+専用の collaborator に抽出する。これは god-class 分解の**最後で最難**の継ぎ目(deferred endgame)。
+§14 の残課題1 と同じ対象を、別角度(まず MeasureCollector から切り出す)で扱う。
+
+### 背景 ― このセッション(PM)で済ませた god-class 分解
+
+レビュー(5観点の並列レビュー)で `MeasureCollector.cs`(当時 4253 行)が唯一の god class と
+判定。**家のスタイル(secondary-pass / collaborator 抽出)で3つ切り出し済み**。これが手本:
+
+| collaborator | 中身 | 結合の解き方 |
+|---|---|---|
+| `TabResolver.cs` | tab tie/string 解決 | 完全な post-pass。voice だけ渡す。警告リスト2本を所有 |
+| `ChordNameCollector.cs` | inline `c:m` + `chordnames{}` + `chords` 行 | 蓄積リストを所有。inline 経路は `AddInline` で本体から供給(`ArticulationsOf` は本体に残す)。context(section→measure / time-sig / staffIndex)は引数 |
+| `LyricsCollector.cs` | note-bound 歌詞 + 独立歌詞行 | 蓄積リスト＋overflow 警告を所有。context は引数 |
+
+**手本の原則**: collaborator が「蓄積物」を所有し、collection-time の context(`_sectionStartMeasure`,
+`_timeBeats`/`_timeBeatType`, `_currentStaffIndex`, `_voiceMeasuresByName`)は**引数で渡す**。
+全段で**スナップショット byte-identical**を維持(`git diff backup-or-baseline HEAD` 空)。現在 3559 行。
+
+### なぜオクターブ連鎖だけ難しいか
+
+上の3つは「**出力を貯める accumulator**」で切れた。オクターブ連鎖は逆に
+**メインウォーク(`ProcessMusicNode` とピッチ解決)が読み書きするコア状態**で、note/chord/grace/
+tuplet の一つ一つが「直前の状態に対して解決し、状態を更新する」。だから単純な後付けパスにはできない。
+これが「等間隔に切れない」理由であり、レビューのエージェントも「最初にやるな」と明言した部分。
+
+### 抽出対象の状態(フィールド)
+
+`MeasureCollector.cs`(行番号は 2026-06-29 PM 時点、ズレうるので識別子で再 grep すること):
+
+- `_currentOctave`(503)/ `_lastPitchName`(510) ― 走行中の running state(中核)
+- `_initialOctave`(504)/ `_octaveBase`(509) ― セクション境界のリセット先 / 絶対モードの基準
+- `_octaveAbsolute`(515)/ `_initialOctaveAbsolute`(516) ― 絶対オクターブモードのフラグ
+- transpose 一族 `_hasTranspose`/`_transposeStep`/`_transposeAlt`/`_transposeOctave`(638-641)＋
+  `ApplyTranspose`(1907)― オクターブ解決の**直後**に効くので連鎖と密。一緒に設計すること
+
+### 読み書きマップ(grep で最新行を取り直す)
+
+- **解決(read)**: `RelativeOctave.Resolve(...)` @ 3492。アルゴリズムは既に `RelativeOctave.cs` に
+  DRY 済み(StepToMidi/StepIndex も)。ここで `_currentOctave`/`_lastPitchName` を読み、直後に
+  更新(3257/3291/3427/3453-3454/3495 の `_currentOctave = rp.RelativeOctave` 系)。
+- **per-voice セットアップ**: 671-686(初回)/ 854 / 885-889(多譜表ループ)。clef 既定オクターブ＋
+  `ApplyTranspose` を絡める。
+- **save/restore**: grace 1121-1139、tuplet/repeat 1264-1280(`savedOctave/savedPitch` で退避→復元)。
+- **セクション境界リセット**: 1422-1423 / 2243-2244 / 2525-2526(`_currentOctave = _initialOctave; _lastPitchName='c'`)。
+- **ファイルレベル reset**: 1877-1882(`Reset()`)。
+
+### 推奨アプローチ(段階的・低リスク順)
+
+1. **第一段(推奨開始点)**: `OctaveContext`(**可変クラス**)を新設し、上記フィールドを束ねる。
+   `MeasureCollector` は `private readonly OctaveContext _octave = new();` を1本持つ。
+   - 解決は `_octave.Resolve(pitch)` に集約(内部で `RelativeOctave.Resolve` を呼び running state 更新)。
+   - save/restore は `var saved = _octave.Snapshot(); … _octave.Restore(saved);`(grace/tuplet)。
+   - セクション/ファイルreset は `_octave.ResetToSectionStart()` / `_octave.ResetToFileDefault()`。
+   - これで**フィールド ~8本→1オブジェクト**、概念に名前が付く。挙動不変(値は同じ)。
+   - 可変クラスにするのは、メインウォークが頻繁に mutate＋save/restore するため(record + with は逆に煩雑)。
+2. **第二段(任意・より純粋)**: 解決を純関数化し context を引数/戻り値で通す。コスト大。第一段が
+   緑で安定してから、別コミットで検討。**最初からこれを狙わない**。
+
+### §14 残課題1 との統合余地
+
+§14 残課題1 は「3 ウォーカー(MeasureCollector / MidiExporter / MusicXmlExporter)が
+`RelativeOctave.Resolve` を**各自の running-state ラッパ**で包んでおり、アンカー規約が三者三様
+(C4 / `octaveBase` / C3)」という DRY 課題。**第一段の `OctaveContext` を Core 共通にすれば、
+3ウォーカーで共有できる可能性**がある(アンカー規約は ctor 引数化)。ただし MIDI/MusicXML 側の
+running-state も合わせて移すのは追加スコープ。まず MeasureCollector 単体で `OctaveContext` を
+確立し、共有は次の一歩として評価する。`RelativeOctave.cs` の remarks に
+「only the algorithm is shared」と明記済み(再提案時に読む)。
+
+### 厳守事項・検証
+
+- §0 の「アドホック禁止 / LILYPOND-REF」。挙動は**完全不変**(これは整理リファクタで、出力を変えない)。
+- 検証: `dotnet test`(**ベースライン 1789 緑** / skip 3)。特に octave / relative / transpose / MIDI /
+  MusicXML 系を必ず通す。加えてオクターブが効くサンプル(relative・transpose・grace・tuplet・
+  多セクション)を render してスナップショット byte-identical を確認。
+- 手順は §1 の鉄則(ripple shell / `Write` でファイル作成 / master 直 / 勝手にブランチ作らない)。
+- コミットは §10＋§14 のコミット規約(`Co-Authored-By: Claude <current-model>`)。collaborator 1本ごとに
+  「ビルド緑→全テスト緑→commit」を刻む(TabResolver/ChordNameCollector/LyricsCollector と同じ刻み)。
+
+### リポジトリ状態(2026-06-29 PM 終了時)
+
+- `master` = `origin/master`(同期済み)。このセッションのコミットは就業時間外帯に再配置済み
+  (履歴 redate＋force-push 済み、private repo)。`backup/pre-redate`(ローカルのみ)に redate 前の
+  tip を退避(不要になれば `git branch -D backup/pre-redate`)。
+- A5(exporter の `tempo=120` 等リテラル集約)は「層別の妥当な既定で分散が自然」と判断し**見送り**
+  (your call 項目)。再検討するならここから。
