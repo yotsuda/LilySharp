@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Linq;
+using System.Text.RegularExpressions;
 using Microsoft.VisualStudio.LanguageServer.Protocol;
 using StreamJsonRpc;
 using LilySharp.Core.Syntax;
@@ -34,7 +35,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260628-1514";
+    public const string Version = "0.1.1-20260628-2146";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -361,6 +362,7 @@ public sealed class LilySharpLanguageServer
         {
             CompletionContext.TopLevel => GetTopLevelCompletions(),
             CompletionContext.MusicBlock => GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset)),
+            CompletionContext.StructureBlock => GetStructureCompletions(doc.Text),
             CompletionContext.AfterAt => GetArticulationCompletions(),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
@@ -375,6 +377,14 @@ public sealed class LilySharpLanguageServer
     /// whether the innermost still-open block is <c>chordnames</c>.
     /// </summary>
     private static bool IsInsideChordNamesBlock(string text, int offset)
+        => InnermostOpenBlock(text, offset) == "chordnames";
+
+    /// <summary>
+    /// The keyword introducing the innermost still-open <c>keyword { … }</c> block
+    /// at <paramref name="offset"/> (e.g. "structure", "chordnames", "section"),
+    /// or null at the top level. Used to scope completions to the block kind.
+    /// </summary>
+    internal static string? InnermostOpenBlock(string text, int offset)
     {
         var stack = new System.Collections.Generic.Stack<string>();
         for (int i = 0; i < offset && i < text.Length; i++)
@@ -392,7 +402,7 @@ public sealed class LilySharpLanguageServer
                 stack.Pop();
             }
         }
-        return stack.Count > 0 && stack.Peek() == "chordnames";
+        return stack.Count > 0 ? stack.Peek() : null;
     }
 
     /// <summary>Quality-token completions offered after a chord's ':' inside a chordnames block.</summary>
@@ -416,11 +426,62 @@ public sealed class LilySharpLanguageServer
         return new CompletionList { Items = items };
     }
 
+    /// <summary>
+    /// Completions for a <c>structure { … }</c> block: the section names declared
+    /// in this document, plus the navigation marks (segno / coda / to coda / D.C. /
+    /// D.S. …). Deliberately offers NO note names — the structure is a playback
+    /// order of sections, not music.
+    /// </summary>
+    internal static CompletionList GetStructureCompletions(string text)
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>();
+
+        // Section names declared anywhere in the document (in declaration order,
+        // deduplicated) — these are what a structure plays.
+        var seen = new System.Collections.Generic.HashSet<string>();
+        foreach (Match m in Regex.Matches(text, @"\bsection\s+(\w+)"))
+        {
+            var name = m.Groups[1].Value;
+            if (seen.Add(name))
+                items.Add(new CompletionItem
+                {
+                    Label = name,
+                    Kind = CompletionItemKind.Reference,
+                    Detail = "Section",
+                });
+        }
+
+        // Navigation marks placed between sections.
+        var navs = new (string Label, string Detail)[]
+        {
+            ("segno", "Segno (jump target)"),
+            ("coda", "Coda (jump target)"),
+            ("to coda", "Jump to the coda"),
+            ("fine", "End here"),
+            ("dc", "Da Capo — repeat from the top"),
+            ("ds", "Dal Segno — repeat from the segno"),
+            ("dc al fine", "Da Capo al Fine"),
+            ("dc al coda", "Da Capo al Coda"),
+            ("ds al fine", "Dal Segno al Fine"),
+            ("ds al coda", "Dal Segno al Coda"),
+        };
+        foreach (var (label, detail) in navs)
+            items.Add(new CompletionItem
+            {
+                Label = label,
+                Kind = CompletionItemKind.Keyword,
+                Detail = detail,
+            });
+
+        return new CompletionList { Items = items.ToArray() };
+    }
+
     private enum CompletionContext
     {
         Unknown,
         TopLevel,
         MusicBlock,
+        StructureBlock,
         AfterAt,
         AfterBackslash
     }
@@ -441,9 +502,16 @@ public sealed class LilySharpLanguageServer
                 return CompletionContext.AfterAt;
             if (text[i] == '\\')
                 return CompletionContext.AfterBackslash;
-            if (text[i] == '{')
-                return CompletionContext.MusicBlock;
         }
+
+        // Inside structure { … } the body is a playback order (section names and
+        // navigation marks), not music — so it gets its own completions, never
+        // note names. Checked before the brace fallback so 'structure {|' counts.
+        if (InnermostOpenBlock(text, offset) == "structure")
+            return CompletionContext.StructureBlock;
+
+        if (i >= 0 && text[i] == '{')
+            return CompletionContext.MusicBlock;
 
         // Check if inside braces
         int braceDepth = 0;
@@ -2200,6 +2268,14 @@ public class ExportResponse
     public string? OutputPath { get; set; }
     public string? Error { get; set; }
 }
+
+
+
+
+
+
+
+
 
 
 
