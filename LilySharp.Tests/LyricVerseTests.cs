@@ -113,6 +113,74 @@ score ""x"" { staff melody  lyrics verse }
     }
 
     [Fact]
+    public void MultiSection_WrapsEachBlockAtItsOwnSectionLength()
+    {
+        // Section A = 2 bars; its lyrics-ROW block of 4 bars wraps into 2 verses on
+        // bars 0,1 (NOT overrunning into section B's bars 2,3). Section B's block
+        // restarts at verse 1 on bars 2,3.
+        var score = Collect(@"
+time 4/4
+section A {
+  melody { c'4 d e f | g a b c'' | }
+  lyrics verse { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
+}
+section B {
+  melody { c'4 d e f | g a b c'' | }
+  lyrics verse { Xx yy zz w1 | mm nn oo pp | }
+}
+structure { A B }
+score ""x"" { staff melody  lyrics verse }
+");
+        var a = score.Lyrics.Where(l => l.Text == "Pp").ToList(); // verse 2 of section A
+        Assert.NotEmpty(a);
+        Assert.All(a, l => Assert.InRange(l.MeasureIndex, 0, 1)); // wrapped within A
+        Assert.All(a, l => Assert.Equal(2, l.VerseNumber));
+
+        var b = score.Lyrics.Where(l => l.Text == "Xx").ToList(); // section B
+        Assert.NotEmpty(b);
+        Assert.All(b, l => Assert.InRange(l.MeasureIndex, 2, 3)); // in B's bars
+        Assert.All(b, l => Assert.Equal(1, l.VerseNumber));       // restarted at verse 1
+    }
+
+    [Fact]
+    public void CompoundBarlines_AreNotSyllables_AndSplitMeasures()
+    {
+        // `||` and `|.` in a lyrics row are barlines, not words: they never appear as
+        // syllables, and a mid-line `||` advances the bar (Aa/bb in bar 0, cc/dd bar 1).
+        var score = Collect(@"
+time 4/4
+section Main { lyrics verse { Aa bb || cc dd |. } }
+structure { Main }
+score ""x"" { lyrics verse }
+");
+        Assert.NotEmpty(score.Lyrics);
+        Assert.DoesNotContain(score.Lyrics, l => l.Text.Contains('|'));
+        Assert.Equal(0, score.Lyrics.Single(l => l.Text == "Aa").MeasureIndex);
+        Assert.Equal(0, score.Lyrics.Single(l => l.Text == "bb").MeasureIndex);
+        Assert.Equal(1, score.Lyrics.Single(l => l.Text == "cc").MeasureIndex);
+        Assert.Equal(1, score.Lyrics.Single(l => l.Text == "dd").MeasureIndex);
+    }
+
+    [Fact]
+    public void MultiVerseRow_ReservesTallerBand()
+    {
+        // A 2-verse auto-wrapped lyrics row marks its staff with TextRowVerses=2 so
+        // the layout reserves room for the second line.
+        var score = Collect(@"
+time 4/4
+section Main {
+  melody { c'4 d e f | g a b c'' | }
+  lyrics verse { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
+}
+structure { Main }
+score ""x"" { staff melody  lyrics verse }
+");
+        var rowStaff = score.StaffGroups.SelectMany(g => g.Staves)
+            .Single(s => s.IsTextRow);
+        Assert.Equal(2, rowStaff.TextRowVerses);
+    }
+
+    [Fact]
     public void EmptyMeasure_SkipsBar_NoSyllableThere()
     {
         // Bar 2 of the lyric line is empty (`| |`), so no syllable lands in measure 1.

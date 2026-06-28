@@ -554,6 +554,10 @@ public sealed class LayoutEngine
             int maxVerse = 0;
             foreach (var lyric in lyrics)
             {
+                // Independent lyrics-row syllables get their own text band; they must
+                // not reserve phantom space under a music staff (that inflates the gap).
+                if (lyric.IsLyricsRow)
+                    continue;
                 if (lyric.MeasureIndex >= startMeasure && lyric.MeasureIndex < endMeasure)
                     maxVerse = Math.Max(maxVerse, lyric.VerseNumber);
             }

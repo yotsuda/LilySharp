@@ -177,7 +177,9 @@ public sealed class MultiStaffLayouter
             return (stringCount - 1) * EngravingDefaults.TabStringSpace(stringCount); // Bass: 3 → 4.5
         }
         if (staff.IsTextRow)
-            return TextRowHeight; // no 5-line staff — just a one-line text band
+            // One-line text band; a multi-verse lyrics row stacks extra lines, so
+            // grow the band by one verse-spacing per additional verse.
+            return TextRowHeight + (staff.TextRowVerses - 1) * TextRowVerseSpacing;
         if (staff.IsOssia)
             return _options.StaffHeight * OssiaScaleFactor;
         return _options.StaffHeight;
@@ -186,6 +188,10 @@ public sealed class MultiStaffLayouter
     /// <summary>Reserved vertical band (staff spaces) for an independent text row
     /// (chords / lyrics): a line of text (~1.5 ss tall) plus a little breathing room.</summary>
     private const double TextRowHeight = 2.5;
+
+    /// <summary>Extra band height per additional lyrics verse (matches the
+    /// LyricEngraver verse spacing), so stacked verses get vertical room.</summary>
+    private const double TextRowVerseSpacing = 1.8;
 
     /// <summary>
     /// Layouts all staff groups within a system.

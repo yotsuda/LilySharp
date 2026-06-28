@@ -1735,6 +1735,11 @@ private GreenNode?[] ParseArticulations()
         return new ChordEntryGreen(root, duration, colon, [.. qualityTokens], slash, bass);
     }
 
+    /// <summary>Any barline token that ends a lyric measure.</summary>
+    private static bool IsLyricBarline(SyntaxKind kind) => kind is SyntaxKind.Bar
+        or SyntaxKind.DoubleBar or SyntaxKind.FinalBar
+        or SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar;
+
     /// <summary>
     /// Parse a single lyric measure: syllable syllable ... |
     /// </summary>
@@ -1745,7 +1750,7 @@ private GreenNode?[] ParseArticulations()
     {
         var syllables = new List<GreenNode?>();
 
-        while (!Check(SyntaxKind.Bar) && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        while (!IsLyricBarline(Current.Kind) && !Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
             var syllable = ParseLyricSyllable();
             if (syllable != null)
@@ -1759,7 +1764,9 @@ private GreenNode?[] ParseArticulations()
             }
         }
 
-        if (Check(SyntaxKind.Bar))
+        // Any barline kind ends a lyric measure — single `|`, compound `||`/`|.`,
+        // or a repeat bar — so a measure break is honored however it's written.
+        if (IsLyricBarline(Current.Kind))
         {
             var barline = Advance();
             return new LyricMeasureGreen([.. syllables], barline);

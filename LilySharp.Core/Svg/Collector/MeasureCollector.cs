@@ -968,6 +968,34 @@ public sealed class MeasureCollector
                 })
                 .ToImmutableArray();
 
+        // Size each lyrics text row's band to its tallest verse stack, so a
+        // multi-verse row (auto-wrapped, or 1番/2番/3番) reserves room for verse 2+
+        // instead of overlapping the staff below. Staff order matches the global
+        // staff index the lyrics were tagged with (GetVoiceNames == ToStaffGroups).
+        var rowVerses = new Dictionary<int, int>();
+        foreach (var ly in _lyrics)
+            if (ly.IsLyricsRow)
+                rowVerses[ly.StaffIndex] = Math.Max(
+                    rowVerses.TryGetValue(ly.StaffIndex, out var mv) ? mv : 0, ly.VerseNumber);
+        if (rowVerses.Values.Any(v => v > 1))
+        {
+            int gsi = 0;
+            staffGroups = staffGroups
+                .Select(sg => sg with
+                {
+                    Staves = sg.Staves
+                        .Select(st =>
+                        {
+                            int idx = gsi++;
+                            return st.IsTextRow && rowVerses.TryGetValue(idx, out var verses) && verses > 1
+                                ? st with { TextRowVerses = verses }
+                                : st;
+                        })
+                        .ToImmutableArray()
+                })
+                .ToImmutableArray();
+        }
+
         // Resolve tab string numbers per tab staff (tuning-dependent): explicit
         // \N kept, repeated pitches in a bar reuse the first string, the rest
         // auto-pick the nearest-fret string. Done here so the layout and every
@@ -4000,7 +4028,7 @@ public sealed class MeasureCollector
     /// width); the syllables go to <c>_lyrics</c> tagged with this row's staff index.
     /// </summary>
     private ImmutableArray<Measure> CollectLyricsRow(
-        SyntaxNode root, string partName, int staffIndex, int wrapBars)
+        SyntaxNode root, string partName, int staffIndex, int totalBars)
     {
         var blocks = root.DescendantNodes().OfType<LyricsBlockSyntax>()
             .Where(b => b.VoiceName == partName).ToList();
@@ -4010,19 +4038,45 @@ public sealed class MeasureCollector
         var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
         int maxIndex = -1;
         int verse = 1;
+        int prevSectionStart = -1;
         var measureLen = new Fraction(_timeBeats, _timeBeatType);
 
         foreach (var block in blocks)
         {
             int startMeasure = 0;
+            bool inSection = false;
             for (var n = block.Parent; n != null; n = n.Parent)
             {
                 if (n is SectionDeclarationSyntax section
                     && _sectionStartMeasure.TryGetValue(section.SectionName, out int s))
                 {
                     startMeasure = s;
+                    inSection = true;
                     break;
                 }
+            }
+
+            // Wrap a block at its OWN section's bar count (verses written flat
+            // stack every section). A standalone block (not inside a section) wraps
+            // at the whole piece's length. Otherwise a short section's verse 2 would
+            // overrun into the next section's bars.
+            int wrapBars = totalBars;
+            if (inSection)
+            {
+                int sectionEnd = totalBars;
+                foreach (var st in _sectionStartMeasure.Values)
+                    if (st > startMeasure && st < sectionEnd)
+                        sectionEnd = st;
+                wrapBars = sectionEnd - startMeasure;
+            }
+
+            // Verses stack within ONE section; a block in a new section restarts at
+            // verse 1, so its line sits directly under that section's staff rather
+            // than carrying over the previous section's verse offset.
+            if (startMeasure != prevSectionStart)
+            {
+                verse = 1;
+                prevSectionStart = startMeasure;
             }
 
             int j = 0; // block-local bar index
@@ -4092,7 +4146,9 @@ public sealed class MeasureCollector
             var child = measureNode.GetChild(i);
             if (child == null) continue;
             var (text, pos) = LyricSyllableText(child);
-            if (!string.IsNullOrEmpty(text) && text != "|")
+            // Drop every barline glyph — a lyric measure may carry single (`|`) or
+            // compound (`||`, `|.`, `|:`, `:|`, `.|`) bars; none are syllables.
+            if (!string.IsNullOrEmpty(text) && !IsBarlineGlyph(text))
                 raw.Add((text, pos));
         }
 
@@ -4119,6 +4175,19 @@ public sealed class MeasureCollector
             }
         }
         return result;
+    }
+
+    /// <summary>True for a barline token (`|`, `||`, `|.`, `|:`, `:|`, `.|`) — a
+    /// run of only bar/dot/colon characters containing at least one bar.</summary>
+    private static bool IsBarlineGlyph(string text)
+    {
+        bool sawBar = false;
+        foreach (char c in text)
+        {
+            if (c == '|') sawBar = true;
+            else if (c != '.' && c != ':') return false;
+        }
+        return sawBar;
     }
 
     private static (string Text, int Pos) LyricSyllableText(SyntaxNode node)

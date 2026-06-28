@@ -82,7 +82,13 @@ public sealed record Staff(
     /// distinction lives on the items (<c>ChordNameItem</c> / <c>LyricItem</c>)
     /// tagged with this staff's index, not on the staff.
     /// </summary>
-    bool IsTextRow = false
+    bool IsTextRow = false,
+    /// <summary>
+    /// For a lyrics text row, how many stacked verses it carries (1 = a single
+    /// line). Drives the reserved band height so verse 2+ don't overlap the staff
+    /// below. Always 1 for chord rows and normal staves.
+    /// </summary>
+    int TextRowVerses = 1
 )
 {
     /// <summary>The primary voice (first voice).</summary>
