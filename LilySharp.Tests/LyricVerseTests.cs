@@ -89,6 +89,30 @@ score ""x"" { lyrics verse }
     }
 
     [Fact]
+    public void LyricsRow_OneBlock_AutoWrapsByMusicBarCount()
+    {
+        // A single lyrics-row block of 4 bars, with a 2-bar melody in the score,
+        // auto-wraps into 2 stacked verses mapped back onto the same 2 bars.
+        var score = Collect(@"
+time 4/4
+section Main {
+  melody { c'4 d e f | g a b c'' | }
+  lyrics verse { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
+}
+structure { Main }
+score ""x"" { staff melody  lyrics verse }
+");
+        var row = score.Lyrics.Where(l => l.IsLyricsRow).ToList();
+        var v1 = row.Where(l => l.VerseNumber == 1).ToList();
+        var v2 = row.Where(l => l.VerseNumber == 2).ToList();
+
+        Assert.NotEmpty(v1);
+        Assert.NotEmpty(v2);
+        Assert.Contains(v2, l => l.Text == "Pp");
+        Assert.All(v2, l => Assert.InRange(l.MeasureIndex, 0, 1)); // wrapped onto bars 0,1
+    }
+
+    [Fact]
     public void EmptyMeasure_SkipsBar_NoSyllableThere()
     {
         // Bar 2 of the lyric line is empty (`| |`), so no syllable lands in measure 1.

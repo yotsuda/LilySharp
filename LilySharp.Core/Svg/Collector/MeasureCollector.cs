@@ -847,6 +847,9 @@ public sealed class MeasureCollector
         // staves, so this counter equals the global staff index (see
         // EnumerateStaves) and tags each staff's dynamics correctly.
         int collectStaffIndex = 0;
+        // Lyrics rows are collected AFTER the music, so the per-section bar count
+        // (used to auto-wrap one block's verses) is known from the real content.
+        var pendingLyricsRows = new List<(string Name, int StaffIndex)>();
         foreach (var voiceName in renderSpec.GetVoiceNames())
         {
             _voiceName = voiceName;
@@ -864,12 +867,14 @@ public sealed class MeasureCollector
                 continue;
             }
 
-            // An independent lyrics row (`lyrics name` in the score) — collect its
-            // syllables, even-spread per bar, against this row's staff index.
+            // An independent lyrics row (`lyrics name` in the score). Defer its
+            // collection (placeholder voice for now) until the music bar count is
+            // known, so one block of flat verses can auto-wrap to that bar count.
             if (renderSpec.Items.OfType<LyricsRowSpec>().Any(c => c.PartName == voiceName))
             {
-                var rowMeasures = CollectLyricsRow(tree.GetRoot(), voiceName, _currentStaffIndex);
-                staffVoices[voiceName] = ImmutableArray.Create(new Voice(voiceName, rowMeasures));
+                pendingLyricsRows.Add((voiceName, _currentStaffIndex));
+                staffVoices[voiceName] = ImmutableArray.Create(
+                    new Voice(voiceName, ImmutableArray<Measure>.Empty));
                 continue;
             }
 
@@ -894,6 +899,23 @@ public sealed class MeasureCollector
                 voiceKeyDict[voiceName] = new KeySignature(_keySharps);
 
             staffVoices[voiceName] = CollectStaffVoices(voiceName);
+        }
+
+        // Now that the music is collected, gather the lyrics rows. The wrap bar
+        // count is the longest real (non-lyrics-row) part — so a single block whose
+        // verses are written flat auto-stacks every `wrapBars` measures.
+        if (pendingLyricsRows.Count > 0)
+        {
+            int wrapBars = 0;
+            foreach (var kv in staffVoices)
+                if (!_lyricsRowNames.Contains(kv.Key))
+                    foreach (var v in kv.Value)
+                        wrapBars = Math.Max(wrapBars, v.Measures.Length);
+            foreach (var (name, idx) in pendingLyricsRows)
+            {
+                var rowMeasures = CollectLyricsRow(tree.GetRoot(), name, idx, wrapBars);
+                staffVoices[name] = ImmutableArray.Create(new Voice(name, rowMeasures));
+            }
         }
 
         // Bar lines are score-synchronized: LilyPond's Timing context lives
@@ -3971,11 +3993,14 @@ public sealed class MeasureCollector
     /// Collects an independent lyrics row (<c>lyrics name { … }</c> placed via
     /// <c>lyrics name</c> in a score) with NO bound melody: each bar's syllables are
     /// spread evenly across it, and an empty bar (bare <c>|</c>) is skipped. Multiple
-    /// blocks of the same name stack as verses (1番, 2番, …). Returns the row's
-    /// measure skeleton (spacer rests for width); the syllables go to <c>_lyrics</c>
-    /// tagged with this row's staff index.
+    /// blocks of the same name stack as verses (1番, 2番, …). A SINGLE block whose
+    /// bars exceed <paramref name="wrapBars"/> (the song's bar count) also auto-wraps:
+    /// every <paramref name="wrapBars"/> measures start the next stacked verse, mapped
+    /// back onto the same bars. Returns the row's measure skeleton (spacer rests for
+    /// width); the syllables go to <c>_lyrics</c> tagged with this row's staff index.
     /// </summary>
-    private ImmutableArray<Measure> CollectLyricsRow(SyntaxNode root, string partName, int staffIndex)
+    private ImmutableArray<Measure> CollectLyricsRow(
+        SyntaxNode root, string partName, int staffIndex, int wrapBars)
     {
         var blocks = root.DescendantNodes().OfType<LyricsBlockSyntax>()
             .Where(b => b.VoiceName == partName).ToList();
@@ -4000,11 +4025,16 @@ public sealed class MeasureCollector
                 }
             }
 
-            int localMeasure = 0;
+            int j = 0; // block-local bar index
             foreach (var measureNode in block.Syllables)
             {
+                // Wrap a long block: bar j belongs to verse (j / wrapBars) and maps
+                // back onto bar (j % wrapBars). wrapBars <= 0 → no wrap (one verse).
+                int barInVerse = wrapBars > 0 ? j % wrapBars : j;
+                int v = verse + (wrapBars > 0 ? j / wrapBars : 0);
+                int mi = startMeasure + barInVerse;
+
                 var sylls = RowSyllables(measureNode);
-                int mi = startMeasure + localMeasure;
                 if (sylls.Count > 0)
                 {
                     var slotDur = measureLen * new Fraction(1, sylls.Count);
@@ -4018,18 +4048,21 @@ public sealed class MeasureCollector
                         var (text, conn, pos) = sylls[k];
                         _lyrics.Add(new LyricItem(
                             Text: text, MeasureIndex: mi, ItemIndex: k,
-                            ConnectorType: conn, VoiceId: staffIndex, VerseNumber: verse,
+                            ConnectorType: conn, VoiceId: staffIndex, VerseNumber: v,
                             Timing: timing, SourcePosition: pos,
                             StaffIndex: staffIndex, IsLyricsRow: true));
                         spacers.Add(new RestItem(slotDur, 0, pos) { IsSpacer = true });
                         timing += slotDur;
                     }
-                    measureItems[mi] = spacers.MoveToImmutable();
+                    // Keep the widest verse's slot count at this bar (verses usually match).
+                    if (!measureItems.TryGetValue(mi, out var existing) || existing.Length < sylls.Count)
+                        measureItems[mi] = spacers.MoveToImmutable();
                     maxIndex = Math.Max(maxIndex, mi);
                 }
-                localMeasure++;
+                j++;
             }
-            verse++;
+            // The block produced ceil(j / wrapBars) stacked verses.
+            verse += wrapBars > 0 && j > 0 ? (j + wrapBars - 1) / wrapBars : 1;
         }
 
         if (maxIndex < 0)
