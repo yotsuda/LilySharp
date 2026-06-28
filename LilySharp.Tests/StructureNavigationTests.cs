@@ -16,6 +16,7 @@
 
 using System.Linq;
 using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -98,5 +99,23 @@ public class StructureNavigationTests
     public void NoNavigationMarks_WhenStructureHasNone()
     {
         Assert.Empty(Marks("A B C D"));
+    }
+
+    [Fact]
+    public void CoPlaceToCoda_AdoptsTheNearbyLabelLineAndSitsLeft()
+    {
+        // A "To Coda" at the end of one section and the next section's label sit
+        // on the same barline (close X). Co-placement lifts the sign onto the
+        // label's measure/line and tucks it to the label's left.
+        var marks = System.Collections.Immutable.ImmutableArray.Create(
+            new MusicMarkLayout(1, 39.65, -2.50, MusicMarkType.ToCoda, "To Coda", false, 0),
+            new MusicMarkLayout(2, 41.15, -6.36, MusicMarkType.SectionLabel, "C", false, 0));
+
+        var result = MusicMarkEngraver.CoPlaceToCodaWithLabels(marks);
+        var tc = result.First(m => m.MarkType == MusicMarkType.ToCoda);
+
+        Assert.Equal(1, tc.MeasureIndex);  // keeps its own (prev-section) measure
+        Assert.Equal(-6.36, tc.Y, 3);      // but adopts the label's line
+        Assert.True(tc.X < 41.15, "To Coda should sit left of the label");
     }
 }

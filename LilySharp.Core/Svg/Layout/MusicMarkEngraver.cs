@@ -306,6 +306,49 @@ public static class MusicMarkEngraver
     }
 
     /// <summary>
+    /// Co-places a boundary "To Coda" with the section label it shares a barline
+    /// with: lifts the sign to the label's (post-stacking) line and tucks it a
+    /// fixed gap to the LEFT of the label, so the two sit side by side instead of
+    /// colliding. The sign keeps its own measure — it stays logically at the end
+    /// of the previous section (left of the barline), the label stays at the start
+    /// of the next; only the outside-staff LINE is shared (the stacker raises the
+    /// label, so the sign just adopts that height). Matched by X proximity, which
+    /// also means a label on the NEXT system (far X) is never matched. Run AFTER
+    /// outside-staff stacking so the label's line is final.
+    /// </summary>
+    public static ImmutableArray<MusicMarkLayout> CoPlaceToCodaWithLabels(
+        ImmutableArray<MusicMarkLayout> marks)
+    {
+        if (marks.IsDefaultOrEmpty || !marks.Any(m => m.MarkType == MusicMarkType.ToCoda))
+            return marks;
+
+        var labels = marks
+            .Where(m => m.MarkType is MusicMarkType.SectionLabel or MusicMarkType.Rehearsal)
+            .ToList();
+        var result = marks.ToBuilder();
+        for (int i = 0; i < result.Count; i++)
+        {
+            if (result[i].MarkType != MusicMarkType.ToCoda)
+                continue;
+            var tc = result[i];
+            MusicMarkLayout? best = null;
+            double bestDx = double.MaxValue;
+            foreach (var lb in labels)
+            {
+                double dx = lb.X - tc.X;
+                if (dx >= -1.0 && dx < 5.0 && dx < bestDx) { bestDx = dx; best = lb; }
+            }
+            if (best is { } lab)
+                result[i] = tc with { Y = lab.Y, X = lab.X - ToCodaLabelGap };
+        }
+        return result.ToImmutable();
+    }
+
+    // Centre-to-centre gap between a boundary "To Coda" and the section label it
+    // shares the rehearsal line with, so the sign sits clear to the label's left.
+    private const double ToCodaLabelGap = 4.0;
+
+    /// <summary>
     /// Merges section labels from measures into the music marks list.
     /// Section labels become MusicMarkType.SectionLabel entries.
     /// </summary>

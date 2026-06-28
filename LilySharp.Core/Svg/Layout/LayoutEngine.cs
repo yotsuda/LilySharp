@@ -931,6 +931,9 @@ public sealed class LayoutEngine
             trillSpannerLayouts, barNumberLayouts, ottavaLayouts,
             customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
             articulationLayouts);
+        // After stacking, sit a boundary "To Coda" on the adjacent section label's
+        // line (the two straddle one barline) instead of stacking them apart.
+        stackedMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(stackedMarks);
 
         // Fingerings live on the NoteItem, so they must be read from EACH staff's
         // own voice (score.Voice is only the first staff) and positioned at that
