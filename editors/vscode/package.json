@@ -140,6 +140,11 @@
         "category": "Lily#",
         "icon": "$(open-preview)",
         "title": "Open Preview to Side"
+      },
+      {
+        "command": "lilysharp.convertLayout",
+        "category": "Lily#",
+        "title": "Convert Layout (part-major ⇄ section-major)"
       }
     ],
     "menus": {
@@ -151,6 +156,17 @@
         {
           "command": "lilysharp.openPreviewToSide",
           "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.convertLayout",
+          "when": "resourceLangId == lilysharp"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "lilysharp.convertLayout",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification"
         }
       ],
       "editor/title": [

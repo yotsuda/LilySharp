@@ -155,6 +155,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.openPreviewToSide', () => {
             outputChannel.appendLine('openPreviewToSide command triggered');
             openPreview(context, vscode.ViewColumn.Beside);
+        }),
+        vscode.commands.registerCommand('lilysharp.convertLayout', () => {
+            outputChannel.appendLine('convertLayout command triggered');
+            convertLayout();
         })
     );
 
@@ -489,6 +493,51 @@ async function exportPreview(
         }
     } catch (err) {
         vscode.window.showErrorMessage(`Lily# export failed: ${err}`);
+    }
+}
+
+interface ConvertLayoutResponse {
+    Success: boolean;
+    NewText: string | null;
+    FromLayout: string | null;
+    ToLayout: string | null;
+    Error: string | null;
+}
+
+/**
+ * Converts the active .lys document between the section-major and part-major
+ * layouts (toggles whichever the file currently uses) and applies the result as
+ * a full-document edit.
+ */
+async function convertLayout() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'lilysharp') {
+        vscode.window.showErrorMessage('Lily#: open a .lys file to convert its layout.');
+        return;
+    }
+    if (!client) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return;
+    }
+
+    const doc = editor.document;
+    try {
+        const response = await client.sendRequest<ConvertLayoutResponse>('lilysharp/convertLayout', {
+            textDocument: { uri: doc.uri.toString() }
+        });
+        if (response.Success && response.NewText != null) {
+            const fullRange = new vscode.Range(
+                doc.positionAt(0), doc.positionAt(doc.getText().length));
+            const edit = new vscode.WorkspaceEdit();
+            edit.replace(doc.uri, fullRange, response.NewText);
+            await vscode.workspace.applyEdit(edit);
+            vscode.window.showInformationMessage(
+                `Lily#: converted layout ${response.FromLayout} → ${response.ToLayout}.`);
+        } else {
+            vscode.window.showErrorMessage(`Lily#: ${response.Error}`);
+        }
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: layout conversion failed: ${err}`);
     }
 }
 

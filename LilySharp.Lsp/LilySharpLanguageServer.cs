@@ -2210,6 +2210,42 @@ public sealed class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// Converts the document between the section-major and part-major authoring
+    /// layouts (the editor command toggles whichever the file currently uses) and
+    /// returns the rewritten source; the extension applies it as a full-document edit.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/convertLayout", UseSingleObjectParameterDeserialization = true)]
+    public ConvertLayoutResponse ConvertLayout(ConvertLayoutParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new ConvertLayoutResponse { Success = false, Error = "Document not found" };
+
+        var from = LilySharp.Core.Editing.PartSectionLayoutConverter.Detect(doc.Text);
+        if (from == LilySharp.Core.Editing.LayoutForm.Unknown)
+            return new ConvertLayoutResponse
+            {
+                Success = false,
+                Error = "No part/section layout to convert — the file needs parts with sections."
+            };
+
+        var newText = LilySharp.Core.Editing.PartSectionLayoutConverter.Convert(doc.Text);
+        if (newText == null)
+            return new ConvertLayoutResponse { Success = false, Error = "Conversion failed." };
+
+        var to = from == LilySharp.Core.Editing.LayoutForm.PartMajor
+            ? LilySharp.Core.Editing.LayoutForm.SectionMajor
+            : LilySharp.Core.Editing.LayoutForm.PartMajor;
+        return new ConvertLayoutResponse
+        {
+            Success = true,
+            NewText = newText,
+            FromLayout = from.ToString(),
+            ToLayout = to.ToString(),
+        };
+    }
+
+    /// <summary>
     /// Extract render definitions from the syntax tree.
     /// </summary>
     private RenderInfo[] ExtractRenderInfo(SyntaxTree tree)
@@ -2360,6 +2396,23 @@ public class ExportResponse
 {
     public bool Success { get; set; }
     public string? OutputPath { get; set; }
+    public string? Error { get; set; }
+}
+
+/// <summary>Parameters for the lilysharp/convertLayout request.</summary>
+public class ConvertLayoutParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+}
+
+/// <summary>Response for the lilysharp/convertLayout request: the rewritten source
+/// plus which layout it went from / to (for a status message).</summary>
+public class ConvertLayoutResponse
+{
+    public bool Success { get; set; }
+    public string? NewText { get; set; }
+    public string? FromLayout { get; set; }
+    public string? ToLayout { get; set; }
     public string? Error { get; set; }
 }
 
