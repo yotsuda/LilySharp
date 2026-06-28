@@ -191,8 +191,19 @@ export function activate(context: vscode.ExtensionContext) {
                 const uri = event.textEditor.document.uri.toString();
                 const panel = previewPanels.get(uri);
                 if (panel) {
-                    const position = event.textEditor.document.offsetAt(event.selections[0].active);
-                    panel.webview.postMessage({ type: 'highlightPosition', position });
+                    const doc = event.textEditor.document;
+                    const offset = doc.offsetAt(event.selections[0].active);
+                    const text = doc.getText();
+                    // Highlight only when the cursor touches a token: if it sits in a
+                    // pure-whitespace gap (line indent, between tokens) send -1 so the
+                    // preview clears instead of snapping to the nearest preceding grob.
+                    const isWs = (c: string | undefined) =>
+                        c === undefined || c === ' ' || c === '\t' || c === '\n' || c === '\r';
+                    const onToken = !isWs(text[offset]) || !isWs(text[offset - 1]);
+                    panel.webview.postMessage({
+                        type: 'highlightPosition',
+                        position: onToken ? offset : -1,
+                    });
                 }
             }
         })
