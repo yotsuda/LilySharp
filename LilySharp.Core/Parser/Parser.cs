@@ -2238,6 +2238,7 @@ private GreenNode?[] ParseArticulations()
         {
             SyntaxKind.StaffKeyword => ParseStaffRender(),
             SyntaxKind.ChordsKeyword => ParseChordRowRender(),
+            SyntaxKind.LyricsKeyword => ParseLyricsRowRender(),
             SyntaxKind.GrandStaffKeyword => ParseGrandStaffRender(),
             SyntaxKind.TabKeyword => ParseTabRender(),
             SyntaxKind.OssiaKeyword => ParseOssiaRender(),
@@ -2274,6 +2275,16 @@ private GreenNode?[] ParseArticulations()
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.ChordsKeyword) };
         tokens.Add(ExpectPartName());
         return new ChordRowRenderGreen([.. tokens]);
+    }
+
+    /// <summary>
+    /// Parse lyrics-row render: <c>lyrics partName</c> (places a lyrics part as a row).
+    /// </summary>
+    private LyricsRowRenderGreen ParseLyricsRowRender()
+    {
+        var tokens = new List<SyntaxToken> { Expect(SyntaxKind.LyricsKeyword) };
+        tokens.Add(ExpectPartName());
+        return new LyricsRowRenderGreen([.. tokens]);
     }
 
     /// <summary>

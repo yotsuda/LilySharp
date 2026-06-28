@@ -901,6 +901,18 @@ internal sealed class ChordRowRenderGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Lyrics-row render: <c>lyrics name</c> inside a score — places a lyrics part as
+/// an independent row. Tokens: [lyricsKeyword, partName].
+/// </summary>
+internal sealed class LyricsRowRenderGreen : GreenSyntaxNode
+{
+    public LyricsRowRenderGreen(params SyntaxToken[] tokens)
+        : base(SyntaxKind.LyricsRowRender, tokens)
+    {
+    }
+}
+
+/// <summary>
 /// Grand staff render: grandStaff { staff staff ... }
 /// </summary>
 internal sealed class GrandStaffRenderGreen : GreenSyntaxNode

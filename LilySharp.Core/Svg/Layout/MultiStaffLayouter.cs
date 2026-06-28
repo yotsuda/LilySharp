@@ -176,8 +176,8 @@ public sealed class MultiStaffLayouter
             // Tab lines are spaced wider than a normal staff (TabStringSpace).
             return (stringCount - 1) * EngravingDefaults.TabStringSpace(stringCount); // Bass: 3 → 4.5
         }
-        if (staff.IsChordRow)
-            return ChordRowHeight; // no 5-line staff — just the chord-symbol band
+        if (staff.IsChordRow || staff.IsLyricsRow)
+            return ChordRowHeight; // no 5-line staff — just a one-line text band
         if (staff.IsOssia)
             return _options.StaffHeight * OssiaScaleFactor;
         return _options.StaffHeight;

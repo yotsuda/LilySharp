@@ -72,6 +72,12 @@ public sealed record OssiaStaffSpec(StaffSpec Staff) : RenderItemSpec;
 public sealed record ChordRowSpec(string PartName) : RenderItemSpec;
 
 /// <summary>
+/// Independent lyrics-row render item: <c>lyrics name</c> places a lyrics part
+/// (<c>lyrics name { … }</c>) as its own row in the score's staff order.
+/// </summary>
+public sealed record LyricsRowSpec(string PartName) : RenderItemSpec;
+
+/// <summary>
 /// Complete render specification parsed from a render block.
 /// </summary>
 public sealed record RenderSpec(
@@ -98,12 +104,16 @@ public sealed record RenderSpec(
     /// does: the single-staff path renders plain notation and has no tab support,
     /// so a tab-only score would otherwise fall back to a notation staff.
     /// </summary>
-    public bool IsMultiStaff => Items.Length > 1 || HasGrandStaff || HasTab || HasChordRow;
+    public bool IsMultiStaff => Items.Length > 1 || HasGrandStaff || HasTab || HasChordRow || HasLyricsRow;
 
     /// <summary>Whether this render contains an independent chord row. A chord-only
     /// score (just <c>chords name</c>) still needs the multi-staff pipeline — the
     /// single-staff path renders a notation staff and has no chord-row support.</summary>
     public bool HasChordRow => Items.Any(i => i is ChordRowSpec);
+
+    /// <summary>Whether this render contains an independent lyrics row (same
+    /// multi-staff-pipeline requirement as <see cref="HasChordRow"/>).</summary>
+    public bool HasLyricsRow => Items.Any(i => i is LyricsRowSpec);
 
     /// <summary>Gets all voice names referenced in this render.</summary>
     public IEnumerable<string> GetVoiceNames()
@@ -127,6 +137,9 @@ public sealed record RenderSpec(
                     break;
                 case ChordRowSpec chordRow:
                     yield return chordRow.PartName;
+                    break;
+                case LyricsRowSpec lyricsRow:
+                    yield return lyricsRow.PartName;
                     break;
             }
         }
@@ -178,6 +191,14 @@ public sealed record RenderSpec(
                         ? chordVoices[0]
                         : new Voice(chordRow.PartName, ImmutableArray<Measure>.Empty);
                     yield return StaffGroup.CreateSingle(Staff.CreateChordRow(chordVoice));
+                    break;
+
+                case LyricsRowSpec lyricsRow:
+                    var lyricVoices = getVoices(lyricsRow.PartName);
+                    var lyricVoice = lyricVoices.Length > 0
+                        ? lyricVoices[0]
+                        : new Voice(lyricsRow.PartName, ImmutableArray<Measure>.Empty);
+                    yield return StaffGroup.CreateSingle(Staff.CreateLyricsRow(lyricVoice));
                     break;
             }
         }

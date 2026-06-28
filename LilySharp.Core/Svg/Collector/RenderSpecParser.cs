@@ -79,6 +79,10 @@ public static class RenderSpecParser
                 case ChordRowRenderSyntax chordRow:
                     items.Add(new ChordRowSpec(chordRow.PartName));
                     break;
+
+                case LyricsRowRenderSyntax lyricsRow:
+                    items.Add(new LyricsRowSpec(lyricsRow.PartName));
+                    break;
             }
         }
 

@@ -1739,6 +1739,23 @@ public sealed class ChordRowRenderSyntax : SyntaxNode
 }
 
 /// <summary>
+/// A lyrics-row render item: <c>lyrics name</c> inside a score — places a lyrics
+/// part as an independent row.
+/// </summary>
+public sealed class LyricsRowRenderSyntax : SyntaxNode
+{
+    internal LyricsRowRenderSyntax(InternalSyntax.LyricsRowRenderGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode LyricsKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The lyrics part name to place (e.g. <c>lyrics verse</c> → "verse").</summary>
+    public string PartName => ((SyntaxTokenNode)GetChild(1)!).Text;
+}
+
+/// <summary>
 /// Represents a grand staff render item: grandStaff { staff staff ... }
 /// </summary>
 public sealed partial class GrandStaffRenderSyntax : SyntaxNode

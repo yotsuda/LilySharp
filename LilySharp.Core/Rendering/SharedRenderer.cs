@@ -193,9 +193,9 @@ public static class SharedRenderer
             double staffY = LayoutUtilities.FindStaffYInSystem(system, globalIdx);
             bool isOssia = staff.IsOssia;
 
-            // Independent chord rows draw no staff lines / clef / notes — only the
-            // chord symbols, which are emitted by DrawChordNames at the row's Y.
-            if (staff.IsChordRow)
+            // Independent chord / lyrics rows draw no staff lines / clef / notes —
+            // only their symbols, emitted by DrawChordNames / DrawLyrics at the row Y.
+            if (staff.IsChordRow || staff.IsLyricsRow)
                 continue;
 
             IDisposable? groupScope = isOssia

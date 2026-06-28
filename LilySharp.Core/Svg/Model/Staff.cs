@@ -80,7 +80,13 @@ public sealed record Staff(
     /// just chord names laid out by timing). Rendered by a dedicated path; its
     /// symbols come from <c>ChordNameItem</c>s tagged with this staff's index.
     /// </summary>
-    bool IsChordRow = false
+    bool IsChordRow = false,
+    /// <summary>
+    /// Whether this is an independent lyrics row (no staff lines, no notes — just
+    /// lyric syllables laid out by timing). Its syllables come from
+    /// <c>LyricItem</c>s tagged with this staff's index.
+    /// </summary>
+    bool IsLyricsRow = false
 )
 {
     /// <summary>The primary voice (first voice).</summary>
@@ -125,6 +131,14 @@ public sealed record Staff(
     /// </summary>
     public static Staff CreateChordRow(Voice voice)
         => new(ClefType.Treble, ImmutableArray.Create(voice), IsChordRow: true);
+
+    /// <summary>
+    /// Creates an independent lyrics row (no staff lines / notes). The voice is a
+    /// placeholder for measure bookkeeping; the syllables are carried as
+    /// <c>LyricItem</c>s tagged with this row's staff index.
+    /// </summary>
+    public static Staff CreateLyricsRow(Voice voice)
+        => new(ClefType.Treble, ImmutableArray.Create(voice), IsLyricsRow: true);
 
     /// <summary>
     /// Parses a clef string to ClefType.

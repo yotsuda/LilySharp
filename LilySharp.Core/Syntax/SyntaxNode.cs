@@ -196,6 +196,7 @@ public abstract class SyntaxNode
             SyntaxKind.RenderDeclaration => new RenderDeclarationSyntax((RenderDeclarationGreen)green, this, position),
             SyntaxKind.StaffRender => new StaffRenderSyntax((StaffRenderGreen)green, this, position),
             SyntaxKind.ChordRowRender => new ChordRowRenderSyntax((ChordRowRenderGreen)green, this, position),
+            SyntaxKind.LyricsRowRender => new LyricsRowRenderSyntax((LyricsRowRenderGreen)green, this, position),
             SyntaxKind.GrandStaffRender => new GrandStaffRenderSyntax((GrandStaffRenderGreen)green, this, position),
             SyntaxKind.TabRender => new TabRenderSyntax((TabRenderGreen)green, this, position),
             SyntaxKind.OssiaRender => new OssiaRenderSyntax((OssiaRenderGreen)green, this, position),

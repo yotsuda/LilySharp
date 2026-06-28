@@ -204,6 +204,7 @@ public enum SyntaxKind : ushort
     TabRender,                  // tab guitar { guitar } inside render
     OssiaRender,                // ossia treble { alternative } inside render
     ChordRowRender,             // chords name inside score (places a chord part as a row)
+    LyricsRowRender,            // lyrics name inside score (places a lyrics part as a row)
     MidiPartRender,             // guitar channel:1 inside render
     // === Nodes: Structure Block Items ===
     SectionStartMarker,         // marker to reset pitch resolver at section boundaries

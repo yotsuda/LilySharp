@@ -73,5 +73,15 @@ public sealed record LyricItem(
     /// <summary>Byte offset of this syllable's word in the source. Emitted as the
     /// SVG data-pos so the preview can highlight the syllable from the editor and
     /// jump back to it on click, like notes and other grobs.</summary>
-    int SourcePosition = 0
+    int SourcePosition = 0,
+
+    /// <summary>Global staff index for an independent lyrics ROW (a <c>lyrics name</c>
+    /// score row), so the engraver places the syllable at that row's Y. 0 for
+    /// ordinary lyrics sitting below the first staff.</summary>
+    int StaffIndex = 0,
+
+    /// <summary>True when this syllable belongs to an independent lyrics ROW. The
+    /// engraver then places it WITHIN its row's band (by <see cref="StaffIndex"/>)
+    /// and takes its X from <see cref="Timing"/>, not from a note column.</summary>
+    bool IsLyricsRow = false
 );
