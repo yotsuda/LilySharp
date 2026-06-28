@@ -72,13 +72,7 @@ public static class PartTranspose
     private static bool IsTranspose(PropertyAssignmentSyntax prop)
         => string.Equals(prop.NameToken.Text, "transpose", StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsInsidePart(SyntaxNode node)
-    {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is PartDeclarationSyntax)
-                return true;
-        return false;
-    }
+    private static bool IsInsidePart(SyntaxNode node) => node.IsInside<PartDeclarationSyntax>();
 
     // Children are: name, [optional colon], value, [octave marks...]. The colon
     // is now optional, so locate the value/marks by skipping the name and colon

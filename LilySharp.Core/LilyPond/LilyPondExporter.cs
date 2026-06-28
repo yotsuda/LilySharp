@@ -375,24 +375,9 @@ public sealed class LilyPondExporter
         return false;
     }
 
-    private static bool IsInsideGrace(SyntaxNode node)
-    {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is GraceExpressionSyntax) return true;
-        return false;
-    }
+    private static bool IsInsideGrace(SyntaxNode node) => node.IsInside<GraceExpressionSyntax>();
 
-    private static bool IsInsideRepeat(SyntaxNode node)
-    {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is StructureRepeatBlockSyntax) return true;
-        return false;
-    }
+    private static bool IsInsideRepeat(SyntaxNode node) => node.IsInside<StructureRepeatBlockSyntax>();
 
-    private static bool IsInsideAlternative(SyntaxNode node)
-    {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is StructureAlternativeSyntax) return true;
-        return false;
-    }
+    private static bool IsInsideAlternative(SyntaxNode node) => node.IsInside<StructureAlternativeSyntax>();
 }

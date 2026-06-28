@@ -248,6 +248,19 @@ public abstract class SyntaxNode
     }
 
     /// <summary>
+    /// True when any ancestor (walking the parent chain, excluding this node)
+    /// is of type <typeparamref name="T"/>. The single source for the many
+    /// <c>IsInsideXxx</c> parent-chain walks in the collector and exporters.
+    /// </summary>
+    public bool IsInside<T>() where T : SyntaxNode
+    {
+        for (var p = Parent; p != null; p = p.Parent)
+            if (p is T)
+                return true;
+        return false;
+    }
+
+    /// <summary>
     /// Find the node at the given position.
     /// </summary>
     public SyntaxNode? FindNode(int position)

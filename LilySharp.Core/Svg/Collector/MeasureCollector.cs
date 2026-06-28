@@ -2316,25 +2316,9 @@ public sealed class MeasureCollector
         _ => MusicMarkType.Segno
     };
 
-    private static bool IsInsideRender(SyntaxNode node)
-    {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is RenderDeclarationSyntax)
-                return true;
-        return false;
-    }
+    private static bool IsInsideRender(SyntaxNode node) => node.IsInside<RenderDeclarationSyntax>();
 
-    private static bool IsInsideRepeatBlock(SyntaxNode node)
-    {
-        var parent = node.Parent;
-        while (parent != null)
-        {
-            if (parent is StructureRepeatBlockSyntax)
-                return true;
-            parent = parent.Parent;
-        }
-        return false;
-    }
+    private static bool IsInsideRepeatBlock(SyntaxNode node) => node.IsInside<StructureRepeatBlockSyntax>();
 
     /// <summary>
     /// Checks if a node is inside music content (phrase/section/variable body).
@@ -2361,17 +2345,7 @@ public sealed class MeasureCollector
     /// <remarks>
     /// LILYPOND-REF: lily/tuplet-bracket.cc - notes inside tuplets are processed together
     /// </remarks>
-    private static bool IsInsideTuplet(SyntaxNode node)
-    {
-        var parent = node.Parent;
-        while (parent != null)
-        {
-            if (parent is TupletExpressionSyntax)
-                return true;
-            parent = parent.Parent;
-        }
-        return false;
-    }
+    private static bool IsInsideTuplet(SyntaxNode node) => node.IsInside<TupletExpressionSyntax>();
 
     /// <summary>
     /// Checks if a node is inside a << \\ >> parallel expression. The primary
@@ -2379,77 +2353,27 @@ public sealed class MeasureCollector
     /// ParallelExpressionSyntax handler) while the span node itself passes
     /// through atomically.
     /// </summary>
-    private static bool IsInsideParallel(SyntaxNode node)
-    {
-        var parent = node.Parent;
-        while (parent != null)
-        {
-            if (parent is ParallelExpressionSyntax)
-                return true;
-            parent = parent.Parent;
-        }
-        return false;
-    }
+    private static bool IsInsideParallel(SyntaxNode node) => node.IsInside<ParallelExpressionSyntax>();
 
     /// <summary>
     /// Checks if a node is inside an OnceModifierSyntax.
     /// Prevents double-processing of inner override/revert in once modifier.
     /// </summary>
-    private static bool IsInsideOnce(SyntaxNode node)
-    {
-        var parent = node.Parent;
-        while (parent != null)
-        {
-            if (parent is OnceModifierSyntax)
-                return true;
-            parent = parent.Parent;
-        }
-        return false;
-    }
+    private static bool IsInsideOnce(SyntaxNode node) => node.IsInside<OnceModifierSyntax>();
+
+    /// <summary>
+    /// Checks if a node is inside a GraceExpressionSyntax.
+    /// Prevents double-processing of notes inside grace expressions.
+    /// </summary>
+    private static bool IsInsideGrace(SyntaxNode node) => node.IsInside<GraceExpressionSyntax>();
 
     /// <summary>
     /// Checks if a node is inside a RepeatExpressionSyntax.
     /// Prevents double-processing of notes inside repeat expressions.
     /// </summary>
-    /// <summary>
-    /// Checks if a node is inside a GraceExpressionSyntax.
-    /// Prevents double-processing of notes inside grace expressions.
-    /// </summary>
-    private static bool IsInsideGrace(SyntaxNode node)
-    {
-        var parent = node.Parent;
-        while (parent != null)
-        {
-            if (parent is GraceExpressionSyntax)
-                return true;
-            parent = parent.Parent;
-        }
-        return false;
-    }
+    private static bool IsInsideRepeat(SyntaxNode node) => node.IsInside<RepeatExpressionSyntax>();
 
-    private static bool IsInsideRepeat(SyntaxNode node)
-    {
-        var parent = node.Parent;
-        while (parent != null)
-        {
-            if (parent is RepeatExpressionSyntax)
-                return true;
-            parent = parent.Parent;
-        }
-        return false;
-    }
-
-    private static bool IsInsideInlineVolta(SyntaxNode node)
-    {
-        var parent = node.Parent;
-        while (parent != null)
-        {
-            if (parent is InlineVoltaSyntax)
-                return true;
-            parent = parent.Parent;
-        }
-        return false;
-    }
+    private static bool IsInsideInlineVolta(SyntaxNode node) => node.IsInside<InlineVoltaSyntax>();
 
     private void ProcessRepeatBlock(StructureRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
