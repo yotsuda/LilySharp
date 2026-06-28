@@ -165,6 +165,8 @@ public static class MultiMeasureRestEngraver
             return false;
         if (measure.Items[0] is not RestItem rest)
             return false;
+        if (rest.IsSpacer)
+            return false; // invisible chord-row filler — not a real rest
         // Whole-note rest covers any time signature up to 4/4. Anything dotted /
         // longer also qualifies (LP's `R1` is a full-measure rest regardless of
         // actual time signature).

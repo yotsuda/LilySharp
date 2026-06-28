@@ -854,9 +854,8 @@ public sealed class MeasureCollector
             // give the staff an empty placeholder voice.
             if (renderSpec.Items.OfType<ChordRowSpec>().Any(c => c.PartName == voiceName))
             {
-                CollectChordPart(tree.GetRoot(), voiceName, _currentStaffIndex);
-                staffVoices[voiceName] = ImmutableArray.Create(
-                    new Voice(voiceName, ImmutableArray<Measure>.Empty));
+                var rowMeasures = CollectChordPart(tree.GetRoot(), voiceName, _currentStaffIndex);
+                staffVoices[voiceName] = ImmutableArray.Create(new Voice(voiceName, rowMeasures));
                 continue;
             }
 
@@ -3815,12 +3814,21 @@ public sealed class MeasureCollector
     /// measure is "explicit mode": unspecified chords carry the previous duration
     /// forward (note-like), so the last chord absorbs whatever fills the bar.
     /// </summary>
-    private void CollectChordPart(SyntaxNode root, string partName, int staffIndex)
+    /// <returns>
+    /// The chord row's measure skeleton: one measure per bar, each filled with
+    /// invisible spacer rests at the chord rhythm. The rests are never drawn (the
+    /// renderer skips chord rows) but give the layout timing columns so the bar
+    /// gets width even with no music staff (standalone lead sheet).
+    /// </returns>
+    private ImmutableArray<Measure> CollectChordPart(SyntaxNode root, string partName, int staffIndex)
     {
         var blocks = root.DescendantNodes().OfType<ChordPartBlockSyntax>()
             .Where(b => b.PartName == partName).ToList();
         if (blocks.Count == 0)
-            return;
+            return ImmutableArray<Measure>.Empty;
+
+        var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
+        int maxIndex = -1;
 
         foreach (var block in blocks)
         {
@@ -3841,7 +3849,11 @@ public sealed class MeasureCollector
             void Flush()
             {
                 if (pending.Count > 0)
-                    EmitChordPartMeasure(pending, startMeasure + localMeasure, staffIndex);
+                {
+                    int mi = startMeasure + localMeasure;
+                    measureItems[mi] = EmitChordPartMeasure(pending, mi, staffIndex);
+                    maxIndex = Math.Max(maxIndex, mi);
+                }
                 localMeasure++;
                 pending.Clear();
             }
@@ -3855,22 +3867,43 @@ public sealed class MeasureCollector
             }
             // A trailing measure with no closing barline still counts.
             if (pending.Count > 0)
-                EmitChordPartMeasure(pending, startMeasure + localMeasure, staffIndex);
+            {
+                int mi = startMeasure + localMeasure;
+                measureItems[mi] = EmitChordPartMeasure(pending, mi, staffIndex);
+                maxIndex = Math.Max(maxIndex, mi);
+            }
         }
+
+        if (maxIndex < 0)
+            return ImmutableArray<Measure>.Empty;
+
+        var measures = ImmutableArray.CreateBuilder<Measure>(maxIndex + 1);
+        for (int i = 0; i <= maxIndex; i++)
+        {
+            var items = measureItems.TryGetValue(i, out var it)
+                ? it : ImmutableArray<MusicItem>.Empty;
+            // No barlines: a chord row draws none, and BarlineType.None never
+            // overrides the music staves under score-wide barline sync.
+            measures.Add(new Measure(items, BarlineType.None, BarlineType.None, null, 0, 0));
+        }
+        return measures.MoveToImmutable();
     }
 
     /// <summary>
-    /// Emits the chord-name items for one measure of a chord part, assigning each
-    /// chord its start timing from either the default rhythm table (no explicit
-    /// durations) or carry-forward explicit durations.
+    /// Emits the chord-name items for one measure of a chord part and returns the
+    /// matching invisible spacer rests. Each chord's start timing / duration comes
+    /// from the default rhythm table (no explicit durations) or, in "explicit mode"
+    /// (any explicit duration present), carry-forward explicit durations.
     /// </summary>
-    private void EmitChordPartMeasure(List<ChordEntrySyntax> entries, int measureIndex, int staffIndex)
+    private ImmutableArray<MusicItem> EmitChordPartMeasure(
+        List<ChordEntrySyntax> entries, int measureIndex, int staffIndex)
     {
         bool anyExplicit = entries.Any(e => e.Duration != null);
         ImmutableArray<Fraction>? table = anyExplicit
             ? null
             : ChordRhythm.DefaultDurations(entries.Count, _timeBeats, _timeBeatType);
 
+        var rests = ImmutableArray.CreateBuilder<MusicItem>(entries.Count);
         var timing = Fraction.Zero;
         var carry = Fraction.Quarter;
         for (int i = 0; i < entries.Count; i++)
@@ -3896,8 +3929,12 @@ public sealed class MeasureCollector
             {
                 dur = carry; // explicit-mode remainder, or unsupported meter/count
             }
+            // BaseDuration = the resolved fraction (Dots 0): only its Duration drives
+            // the spacing spring, so a dotted/compound value spaces correctly too.
+            rests.Add(new RestItem(dur, 0, entry.Root.Position) { IsSpacer = true });
             timing += dur;
         }
+        return rests.MoveToImmutable();
     }
 
     /// <summary>

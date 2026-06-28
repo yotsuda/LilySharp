@@ -225,6 +225,13 @@ public sealed record RestItem : MusicItem
     /// <summary>Tuplet time scale; see <see cref="NoteItem.TimeScale"/>.</summary>
     public Fraction TimeScale { get; init; } = new Fraction(1, 1);
 
+    /// <summary>
+    /// An invisible time-filler (LilyPond <c>s</c> skip), used by chord rows to give
+    /// the layout timing columns without drawing anything. Never rendered, and never
+    /// collapses into a multi-measure rest.
+    /// </summary>
+    public bool IsSpacer { get; init; }
+
     public override Fraction Duration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
     public override int SourcePosition => _sourcePosition;

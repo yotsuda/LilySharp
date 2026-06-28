@@ -57,6 +57,37 @@ score ""x"" { chords riff  staff melody }
     }
 
     [Fact]
+    public void ChordPart_Standalone_NoStaff_SpreadsAcrossBars()
+    {
+        // A chords-only lead sheet (no music staff) renders the symbols spread
+        // across bars by their rhythm — not collapsed at one X.
+        var source = @"
+time 4/4
+section Main {
+  chords riff { c | a:m | f | g:7 | }
+}
+structure { Main }
+score ""x"" { chords riff }
+";
+        var svg = Render(source);
+        _output.WriteLine(svg);
+
+        Assert.Contains(">Am</text>", svg);
+        Assert.Contains(">G7</text>", svg);
+
+        double X(string text)
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(
+                svg, "<text[^>]*\\bx=\"([0-9.]+)\"[^>]*>" + text + "</text>");
+            Assert.True(m.Success, $"chord '{text}' not found");
+            return double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        // C (bar 1) < Am (bar 2) < F (bar 3) < G7 (bar 4): the bars have real width.
+        Assert.True(X("C") < X("Am") && X("Am") < X("F") && X("F") < X("G7"),
+            "chords collapsed instead of spreading across bars");
+    }
+
+    [Fact]
     public void ChordPart_QualityAndDuration_RootSuffixForm()
     {
         // g4:m7 = Gm7, quarter (duration after the root, before the colon).

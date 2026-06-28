@@ -98,7 +98,12 @@ public sealed record RenderSpec(
     /// does: the single-staff path renders plain notation and has no tab support,
     /// so a tab-only score would otherwise fall back to a notation staff.
     /// </summary>
-    public bool IsMultiStaff => Items.Length > 1 || HasGrandStaff || HasTab;
+    public bool IsMultiStaff => Items.Length > 1 || HasGrandStaff || HasTab || HasChordRow;
+
+    /// <summary>Whether this render contains an independent chord row. A chord-only
+    /// score (just <c>chords name</c>) still needs the multi-staff pipeline — the
+    /// single-staff path renders a notation staff and has no chord-row support.</summary>
+    public bool HasChordRow => Items.Any(i => i is ChordRowSpec);
 
     /// <summary>Gets all voice names referenced in this render.</summary>
     public IEnumerable<string> GetVoiceNames()

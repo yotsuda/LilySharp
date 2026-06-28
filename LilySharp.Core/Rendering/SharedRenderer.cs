@@ -3335,10 +3335,14 @@ public static class SharedRenderer
         if (system.StaffGroups.IsDefaultOrEmpty)
             return;
 
-        // SystemStartBar across ALL visible staves of the system.
+        // SystemStartBar across ALL visible staves of the system — EXCLUDING
+        // independent chord rows, which LilyPond's ChordNames context does not
+        // connect (StaffLayout carries no kind, so resolve back via EnumerateStaves).
+        var chordRowIndices = new HashSet<int>(
+            score.EnumerateStaves().Where(t => t.Staff.IsChordRow).Select(t => t.GlobalStaffIndex));
         var allStaves = system.StaffGroups
             .SelectMany(g => g.Staves)
-            .Where(s => !s.IsHidden && !s.IsOssia)
+            .Where(s => !s.IsHidden && !s.IsOssia && !chordRowIndices.Contains(s.StaffIndex))
             .OrderBy(s => s.Y)
             .ToList();
         if (allStaves.Count >= 2)
@@ -3348,9 +3352,9 @@ public static class SharedRenderer
             DrawSystemStartBarLine(systemStartX, top, bottom, gc);
         }
 
-        // Span bars inside delimited groups. Barline types come from the
-        // first voice — they are score-synchronized at collection time.
-        var voice = score.StaffGroups[0].Staves[0].PrimaryVoice;
+        // Span bars inside delimited groups. Barline types come from a content
+        // voice — they are score-synchronized at collection time.
+        var voice = score.PrimaryContentStaff.PrimaryVoice;
         foreach (var group in system.StaffGroups)
         {
             if (!group.HasDelimiter)
