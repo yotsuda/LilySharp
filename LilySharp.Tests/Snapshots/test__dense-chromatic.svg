@@ -88,7 +88,7 @@
   <line x1="53.52" y1="10.64" x2="53.52" y2="14.28" stroke="#000000" stroke-width="0.130"/>
   <line x1="58.70" y1="10.14" x2="58.70" y2="14.04" stroke="#000000" stroke-width="0.130"/>
   <line x1="63.33" y1="10.14" x2="63.33" y2="13.83" stroke="#000000" stroke-width="0.130"/>
-  <rect x="0.30" y="6.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="315"/>
-  <text x="3.01" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="315">Main</text>
+  <rect x="0.30" y="6.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="307"/>
+  <text x="3.01" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="307">Main</text>
   </g>
 </svg>

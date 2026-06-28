@@ -83,7 +83,7 @@
   <rect x="81.78" y="25.14" width="0.19" height="4.00" fill="#000000"/>
   <rect x="82.27" y="25.14" width="0.60" height="4.00" fill="#000000"/>
   <path d="M 41.12,29.89 C 41.78,30.56 43.49,30.56 44.15,29.89 C 43.49,30.79 41.78,30.79 41.12,29.89 Z" fill="#000000"/>
-  <rect x="0.30" y="9.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="741"/>
-  <text x="3.01" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="741">Main</text>
+  <rect x="0.30" y="9.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="733"/>
+  <text x="3.01" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="733">Main</text>
   </g>
 </svg>

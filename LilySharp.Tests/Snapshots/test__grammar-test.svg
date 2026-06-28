@@ -116,13 +116,13 @@
   <text class="music" x="0.80" y="14.42" font-size="1.60" data-pos="0"></text>
   <line x1="1.31" y1="14.42" x2="1.31" y2="13.02" stroke="#000000" stroke-width="0.100" data-pos="0"/>
   <text x="1.90" y="14.42" font-size="1.80" font-family="serif" fill="#000000" data-pos="0">= 120</text>
-  <rect x="0.30" y="9.80" width="5.29" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="192"/>
-  <text x="2.94" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="192">Intro</text>
-  <rect x="53.69" y="13.36" width="5.77" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="227"/>
-  <text x="56.57" y="15.56" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="227">Verse</text>
-  <rect x="0.30" y="30.46" width="7.37" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="262"/>
-  <text x="3.98" y="32.66" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="262">Chorus</text>
-  <rect x="54.03" y="30.46" width="5.29" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="192"/>
-  <text x="56.68" y="32.66" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="192">Intro</text>
+  <rect x="0.30" y="9.80" width="5.29" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
+  <text x="2.94" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="184">Intro</text>
+  <rect x="53.69" y="13.36" width="5.77" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="219"/>
+  <text x="56.57" y="15.56" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="219">Verse</text>
+  <rect x="0.30" y="30.46" width="7.37" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="254"/>
+  <text x="3.98" y="32.66" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="254">Chorus</text>
+  <rect x="54.03" y="30.46" width="5.29" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="184"/>
+  <text x="56.68" y="32.66" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="184">Intro</text>
   </g>
 </svg>

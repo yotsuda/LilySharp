@@ -2276,10 +2276,12 @@ public sealed class MeasureCollector
     /// section identifier.
     /// </summary>
     /// <summary>Source offset of a section's <c>section X</c> declaration (0 if the
-    /// name is unknown), so its label mark can jump to the declaration. Sections are
-    /// registered before structure expansion, so the lookup is populated here.</summary>
+    /// name is unknown), so its label mark can jump to the declaration. Anchored on
+    /// the <c>section</c> keyword (not the name) so hovering anywhere on the
+    /// declaration highlights the label in the preview. Sections are registered
+    /// before structure expansion, so the lookup is populated here.</summary>
     private int SectionDeclPos(string sectionName)
-        => _sections.TryGetValue(sectionName, out var s) ? s.Name.Span.Start : 0;
+        => _sections.TryGetValue(sectionName, out var s) ? s.SectionKeyword.Span.Start : 0;
 
     private static string? ResolveSectionLabel(SectionReferenceSyntax reference)
     {
