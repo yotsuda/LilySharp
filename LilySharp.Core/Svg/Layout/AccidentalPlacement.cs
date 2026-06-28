@@ -190,7 +190,7 @@ public sealed class AccidentalPlacement
         var entries = new List<PlacementEntry>(accidentals.Count);
         foreach (var (n, _) in accidentals)
         {
-            var bbox = GetAccidentalBBox(n.Accidental!);
+            var bbox = GlyphMetrics.GetAccidentalBBox(n.Accidental!);
             // Staff position is in half-spaces; convert to staff spaces
             double yCenterSS = n.StaffPosition / 2.0;
 
@@ -462,16 +462,8 @@ public sealed class AccidentalPlacement
         _ => 2
     };
 
+    // Single source of truth for the accidental BBox lives in GlyphMetrics; the
+    // former private copy here diverged only in an unreachable fallback.
     private static double GetAccidentalWidth(string accidental) =>
-        GetAccidentalBBox(accidental).Width;
-
-    private static GlyphMetrics.BBox GetAccidentalBBox(string accidental) => accidental switch
-    {
-        "sharp" => GlyphMetrics.AccidentalSharp,
-        "flat" => GlyphMetrics.AccidentalFlat,
-        "natural" => GlyphMetrics.AccidentalNatural,
-        "doubleSharp" => GlyphMetrics.AccidentalDoubleSharp,
-        "doubleFlat" => GlyphMetrics.AccidentalDoubleFlat,
-        _ => GlyphMetrics.AccidentalSharp
-    };
+        GlyphMetrics.GetAccidentalBBox(accidental).Width;
 }

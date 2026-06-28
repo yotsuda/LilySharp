@@ -2083,7 +2083,7 @@ public sealed class LilySharpLanguageServer
             switch (format)
             {
                 case "svg":
-                    var fontDir = FindFontDirectory();
+                    var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
                     // Embed the font so the exported SVG is self-contained; fall back
                     // to a reference if the bundled font can't be located.
                     var svgOpts = fontDir != null
@@ -2119,26 +2119,6 @@ public sealed class LilySharpLanguageServer
         {
             return new ExportResponse { Success = false, Error = ex.Message };
         }
-    }
-
-    /// <summary>Locates the bundled Emmentaler font directory next to the server
-    /// assembly (the deploy bundles it as <c>Fonts/</c>).</summary>
-    private static string? FindFontDirectory()
-    {
-        var candidates = new[]
-        {
-            Path.Combine(AppContext.BaseDirectory, "fonts"),
-            Path.Combine(AppContext.BaseDirectory, "Fonts"),
-            Path.Combine(AppContext.BaseDirectory, "..", "fonts"),
-        };
-        foreach (var c in candidates)
-        {
-            if (Directory.Exists(c) &&
-                (File.Exists(Path.Combine(c, "emmentaler-20.otf")) ||
-                 File.Exists(Path.Combine(c, "emmentaler-20.woff2"))))
-                return Path.GetFullPath(c);
-        }
-        return null;
     }
 
     /// <summary>

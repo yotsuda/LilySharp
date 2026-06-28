@@ -1627,6 +1627,8 @@ private GreenNode?[] ParseArticulations()
             var measure = ParseLyricMeasure();
             if (measure != null)
                 measures.Add(measure);
+            else
+                Advance(); // guard: never spin if a measure parses to nothing
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);

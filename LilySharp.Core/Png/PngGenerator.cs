@@ -75,7 +75,7 @@ public static class PngGenerator
             layout = new LayoutEngine().Layout(multiScore);
         }
 
-        var fontDir = options.FontDirectory ?? FindFontDirectory();
+        var fontDir = options.FontDirectory ?? FontLocator.Find();
         var docOptions = new PngDocumentOptions
         {
             // PngRenderOptions.Scale is "× SVG-baseline DPI"; SharedRenderer
@@ -100,7 +100,7 @@ public static class PngGenerator
     public static byte[] ConvertSvgToPng(string svgString, PngRenderOptions? options = null, string? fontDirectory = null)
     {
         options ??= PngRenderOptions.Default;
-        fontDirectory ??= FindFontDirectory();
+        fontDirectory ??= FontLocator.Find();
 
         using var svg = new global::Svg.Skia.SKSvg();
         var providers = RegisterMusicFonts(svg, fontDirectory);
@@ -168,25 +168,6 @@ public static class PngGenerator
         providers.Add(provider);
     }
 
-    private static string? FindFontDirectory()
-    {
-        var candidates = new[]
-        {
-            Path.Combine(AppContext.BaseDirectory, "fonts"),
-            Path.Combine(AppContext.BaseDirectory, "Fonts"),
-            Path.Combine(AppContext.BaseDirectory, "..", "fonts"),
-            "fonts",
-            "../fonts"
-        };
-        foreach (var c in candidates)
-        {
-            if (Directory.Exists(c) &&
-                (File.Exists(Path.Combine(c, "emmentaler-20.otf")) ||
-                 File.Exists(Path.Combine(c, "emmentaler-20.woff2"))))
-                return Path.GetFullPath(c);
-        }
-        return null;
-    }
 }
 
 /// <summary>Custom typeface provider for Svg.Skia (legacy SVG path only).</summary>

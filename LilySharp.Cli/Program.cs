@@ -239,7 +239,7 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
         LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
         if (embedFont)
         {
-            var fontDir = FindFontDirectory();
+            var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
             renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(fontDir);
         }
         else
@@ -279,7 +279,7 @@ static int ExecuteSvgAll(string inputPath, bool embedFont)
         LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
         if (embedFont)
         {
-            var fontDir = FindFontDirectory();
+            var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
             renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(fontDir);
         }
         else
@@ -473,7 +473,7 @@ static int ExecutePng(string inputPath, string outputPath, float scale)
             return 1;
         }
 
-        var fontDir = FindFontDirectory();
+        var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
         var pngOptions = new PngRenderOptions { Scale = scale, FontDirectory = fontDir };
         var pngBytes = PngGenerator.Generate(tree, pngOptions);
         File.WriteAllBytes(outputPath, pngBytes);
@@ -931,26 +931,3 @@ static (string? InputPath, string? OutputPath, string? Error) ParseSimpleOptions
     return (inputPath, outputPath, null);
 }
 
-static string? FindFontDirectory()
-{
-    var candidates = new[]
-    {
-        Path.Combine(AppContext.BaseDirectory, "fonts"),
-        Path.Combine(AppContext.BaseDirectory, "..", "fonts"),
-        "fonts",
-        "../fonts",
-        "editors/vscode/media/fonts"
-    };
-    
-    foreach (var candidate in candidates)
-    {
-        if (Directory.Exists(candidate) &&
-            (File.Exists(Path.Combine(candidate, "emmentaler-20.otf")) ||
-             File.Exists(Path.Combine(candidate, "emmentaler-20.woff2"))))
-        {
-            return Path.GetFullPath(candidate);
-        }
-    }
-    
-    return null;
-}
