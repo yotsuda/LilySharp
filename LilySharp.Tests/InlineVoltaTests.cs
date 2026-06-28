@@ -44,12 +44,15 @@ public sealed class InlineVoltaTests
     }
 
     [Fact]
-    public void LastEndingIsClosed_EarlierEndingsAreOpen()
+    public void EveryEnding_ClosesAtItsTrueEnd()
     {
         var score = Collect("{ |: c4 d4 e4 f4 [1. g4 a4 b4 c5] :| [2. c4 d4 e4 f4] }");
 
-        Assert.False(score.VoltaBrackets[0].IsClosed); // first ending: open (continues)
-        Assert.True(score.VoltaBrackets[1].IsClosed);   // last ending: closed (right hook)
+        // Every ending closes (right hook) at its true end so the boundary before
+        // the next ending is clear; the engraver's segment splitter is what leaves
+        // a bracket open where a line break cuts it (not the bracket flag itself).
+        Assert.True(score.VoltaBrackets[0].IsClosed); // 1st ending: closes at the :|
+        Assert.True(score.VoltaBrackets[1].IsClosed); // 2nd ending: closes at its end
     }
 
     [Fact]

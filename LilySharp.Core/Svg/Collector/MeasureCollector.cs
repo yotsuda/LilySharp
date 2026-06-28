@@ -1363,17 +1363,15 @@ public sealed class MeasureCollector
 
     /// <summary>
     /// Converts the inline volta endings collected during this voice walk into
-    /// volta brackets. The last ending in source order is drawn closed (right
-    /// hook); earlier endings are open (mirrors the structure-form behavior).
+    /// volta brackets. Every ending closes (right hook) at its true end, giving a
+    /// clear boundary before the next ending; the engraver's segment splitter
+    /// leaves a bracket open only where a line break cuts it, so a closed ending
+    /// never dangles a hook mid-system.
     /// </summary>
     private void FinalizeInlineVoltas()
     {
-        for (int i = 0; i < _pendingInlineVoltas.Count; i++)
-        {
-            var (startMeasure, endMeasure, voltaText, sourcePosition) = _pendingInlineVoltas[i];
-            bool isClosed = (i == _pendingInlineVoltas.Count - 1);
-            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
-        }
+        foreach (var (startMeasure, endMeasure, voltaText, sourcePosition) in _pendingInlineVoltas)
+            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, IsClosed: true, sourcePosition));
         _pendingInlineVoltas.Clear();
     }
 
@@ -2379,10 +2377,6 @@ public sealed class MeasureCollector
     {
         bool afterRepeatStart = false;
         var pendingVoltaBrackets = new List<(int startMeasure, int endMeasure, string voltaText, int sourcePosition)>();
-        // Indices of brackets immediately followed by a repeat barline (:|). Such an
-        // ending closes with a down hook at the repeat — e.g. the 1st ending in
-        // |: … [1. D] :| [2. Outro]. (The last bracket also closes; see below.)
-        var closedByRepeat = new HashSet<int>();
 
         for (int i = 0; i < repeat.SlotCount; i++)
         {
@@ -2398,9 +2392,6 @@ public sealed class MeasureCollector
                 else if (token.Text == ":|")
                 {
                     processNodes(new[] { CreateBarlineSyntax(token.Text, token.Position) });
-                    // The ending just before this repeat barline closes here.
-                    if (pendingVoltaBrackets.Count > 0)
-                        closedByRepeat.Add(pendingVoltaBrackets.Count - 1);
                 }
             }
             else if (afterRepeatStart)
@@ -2439,11 +2430,6 @@ public sealed class MeasureCollector
                         // for VoltaBracketItem which stores the last measure index
                         if (alt.HasBracket && !alt.IsSilent)
                         {
-                            // A preceding ending closes when another ending follows it,
-                            // so the 1st ending closes in |: … [1. D] [2. Outro] :| too
-                            // (not only in the [1. D] :| [2. Outro] spelling).
-                            if (pendingVoltaBrackets.Count > 0)
-                                closedByRepeat.Add(pendingVoltaBrackets.Count - 1);
                             int lastMeasure = Math.Max(startMeasureIndex, endMeasureIndex - 1);
                             pendingVoltaBrackets.Add((startMeasureIndex, lastMeasure, alt.VoltaText, alt.Position));
                         }
@@ -2452,16 +2438,10 @@ public sealed class MeasureCollector
             }
         }
 
-        // Add all volta brackets - last one is closed, others are open
-        for (int i = 0; i < pendingVoltaBrackets.Count; i++)
-        {
-            var (startMeasure, endMeasure, voltaText, sourcePosition) = pendingVoltaBrackets[i];
-            // A bracket closes if it is the last ending, or if another ending or a
-            // repeat barline follows it — so both endings close in either spelling
-            // of the repeat.
-            bool isClosed = (i == pendingVoltaBrackets.Count - 1) || closedByRepeat.Contains(i);
-            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
-        }
+        // Every ending closes at its true end (clear boundary before the next
+        // ending); the engraver's segment splitter opens only line-break pieces.
+        foreach (var (startMeasure, endMeasure, voltaText, sourcePosition) in pendingVoltaBrackets)
+            _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, IsClosed: true, sourcePosition));
     }
 
     private void ProcessSection(SectionDeclarationSyntax section, Action<IEnumerable<SyntaxNode>> processNodes)
