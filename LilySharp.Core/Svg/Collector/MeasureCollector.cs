@@ -583,8 +583,9 @@ public sealed class MeasureCollector
     public IReadOnlyList<TabTieStringWarning> TabTieWarnings => _tabResolver.TieWarnings;
     // Figured bass
     private readonly List<FiguredBassItem> _figuredBasses = new();
-    // Chord names
-    private readonly List<ChordNameItem> _chordNames = new();
+    // Chord names (inline c:m marks, chordnames {} streams, chords-name rows) —
+    // collected by a dedicated collaborator; the main walk feeds inline marks via AddInline.
+    private readonly ChordNameCollector _chordNameCollector = new();
     // Percent repeats
     private readonly List<PercentRepeatItem> _percentRepeats = new();
     // Cross-staff items
@@ -704,7 +705,7 @@ public sealed class MeasureCollector
 
         // Collect lyrics
         CollectLyrics(tree.GetRoot(), measures);
-        CollectChordNamesBlocks(tree.GetRoot());
+        _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
 
         return new Score(
             voice,
@@ -724,7 +725,7 @@ public sealed class MeasureCollector
             tupletBrackets: _tupletBrackets.ToImmutableArray(),
             arpeggios: _arpeggios.ToImmutableArray(),
             figuredBasses: _figuredBasses.ToImmutableArray(),
-            chordNames: _chordNames.ToImmutableArray(),
+            chordNames: _chordNameCollector.Items.ToImmutableArray(),
             percentRepeats: _percentRepeats.ToImmutableArray(),
             crossStaffItems: _crossStaffItems.ToImmutableArray(),
             grobOverrides: _grobOverrides.ToImmutableArray(),
@@ -861,7 +862,8 @@ public sealed class MeasureCollector
             // give the staff an empty placeholder voice.
             if (renderSpec.Items.OfType<ChordRowSpec>().Any(c => c.PartName == voiceName))
             {
-                var rowMeasures = CollectChordPart(tree.GetRoot(), voiceName, _currentStaffIndex);
+                var rowMeasures = _chordNameCollector.CollectPart(
+                    tree.GetRoot(), voiceName, _currentStaffIndex, _sectionStartMeasure, _timeBeats, _timeBeatType);
                 staffVoices[voiceName] = ImmutableArray.Create(new Voice(voiceName, rowMeasures));
                 continue;
             }
@@ -944,7 +946,7 @@ public sealed class MeasureCollector
         {
             CollectLyrics(tree.GetRoot(), firstStaffVoices[0].Measures.ToList());
         }
-        CollectChordNamesBlocks(tree.GetRoot());
+        _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
 
         // Phase 3: Build staff groups from render spec
         var staffGroups = renderSpec.ToStaffGroups(name =>
@@ -1027,7 +1029,7 @@ public sealed class MeasureCollector
             graceNotes: _graceNotes.ToImmutableArray(),
             arpeggios: _arpeggios.ToImmutableArray(),
             figuredBasses: _figuredBasses.ToImmutableArray(),
-            chordNames: _chordNames.ToImmutableArray(),
+            chordNames: _chordNameCollector.Items.ToImmutableArray(),
             percentRepeats: _percentRepeats.ToImmutableArray(),
             crossStaffItems: _crossStaffItems.ToImmutableArray(),
             trillSpanners: PairTrillSpannerEvents(),
@@ -1143,7 +1145,7 @@ public sealed class MeasureCollector
         // Collect lyrics (aligned with first voice)
         if (firstVoiceMeasures != null)
             CollectLyrics(parallelExpr, firstVoiceMeasures);
-        CollectChordNamesBlocks(parallelExpr);
+        _chordNameCollector.CollectBlocks(parallelExpr, _sectionStartMeasure, _currentStaffIndex);
 
         return new Score(
             voices.ToImmutableArray(),
@@ -1206,7 +1208,7 @@ public sealed class MeasureCollector
 
         // Unnamed lyrics align with the primary voice; named ones bind above.
         CollectLyrics(root, track0);
-        CollectChordNamesBlocks(root);
+        _chordNameCollector.CollectBlocks(root, _sectionStartMeasure, _currentStaffIndex);
 
         return new Score(
             voices.ToImmutableArray(),
@@ -1861,7 +1863,7 @@ public sealed class MeasureCollector
         _graceNotes.Clear();
         _arpeggios.Clear();
         _figuredBasses.Clear();
-        _chordNames.Clear();
+        _chordNameCollector.Clear();
         _percentRepeats.Clear();
         _crossStaffItems.Clear();
         _grobOverrides.Clear();
@@ -2958,14 +2960,8 @@ public sealed class MeasureCollector
             {
                 var chordText = ChordNameItem.ParseChordName(markSyntax.MarkName);
                 if (chordText != null)
-                {
-                    _chordNames.Add(new ChordNameItem(
-                        chordText,
-                        measureIndex,
-                        itemIndex,
-                        markSyntax.Position,
-                        _currentStaffIndex));
-                }
+                    _chordNameCollector.AddInline(
+                        chordText, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex);
             }
         }
     }
@@ -3642,195 +3638,6 @@ public sealed class MeasureCollector
     /// quality token falls back to "root + raw text" so any name still displays.
     /// LILYPOND-REF: ly/engraver-init.ly ChordNames context; scm/chord-entry.scm.
     /// </summary>
-    private void CollectChordNamesBlocks(SyntaxNode root)
-    {
-        var blocks = root.DescendantNodes().OfType<ChordNamesBlockSyntax>().ToList();
-        if (blocks.Count == 0)
-            return;
-
-        foreach (var block in blocks)
-        {
-            int startMeasure = 0;
-            for (var n = block.Parent; n != null; n = n.Parent)
-            {
-                if (n is SectionDeclarationSyntax section
-                    && _sectionStartMeasure.TryGetValue(section.SectionName, out int s))
-                {
-                    startMeasure = s;
-                    break;
-                }
-            }
-
-            int localMeasure = 0;
-            var timing = Fraction.Zero;
-            var defaultDuration = Fraction.Quarter;
-
-            foreach (var item in block.Items)
-            {
-                if (item is BarlineSyntax)
-                {
-                    localMeasure++;
-                    timing = Fraction.Zero;
-                    continue;
-                }
-                if (item is not ChordEntrySyntax entry)
-                    continue;
-
-                var (text, structure) = ResolveChordEntry(entry);
-                _chordNames.Add(new ChordNameItem(
-                    text,
-                    startMeasure + localMeasure,
-                    itemIndex: -1,
-                    entry.Root.Position,
-                    _currentStaffIndex,
-                    useTiming: true,
-                    timing: timing,
-                    structure: structure));
-
-                var dur = entry.Duration?.ToFraction() ?? defaultDuration;
-                if (entry.Duration != null)
-                    defaultDuration = dur;
-                timing += dur;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Collects independent chord parts (<c>chords name { … }</c>) into chord-name
-    /// items. Unlike <c>chordnames</c>, a chord part fills each measure by the
-    /// per-count default rhythm table (<see cref="ChordRhythm"/>) when the user
-    /// omits durations. If ANY chord in a measure carries an explicit duration that
-    /// measure is "explicit mode": unspecified chords carry the previous duration
-    /// forward (note-like), so the last chord absorbs whatever fills the bar.
-    /// </summary>
-    /// <returns>
-    /// The chord row's measure skeleton: one measure per bar, each filled with
-    /// invisible spacer rests at the chord rhythm. The rests are never drawn (the
-    /// renderer skips chord rows) but give the layout timing columns so the bar
-    /// gets width even with no music staff (standalone lead sheet).
-    /// </returns>
-    private ImmutableArray<Measure> CollectChordPart(SyntaxNode root, string partName, int staffIndex)
-    {
-        var blocks = root.DescendantNodes().OfType<ChordPartBlockSyntax>()
-            .Where(b => b.PartName == partName).ToList();
-        if (blocks.Count == 0)
-            return ImmutableArray<Measure>.Empty;
-
-        var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
-        int maxIndex = -1;
-
-        foreach (var block in blocks)
-        {
-            int startMeasure = 0;
-            for (var n = block.Parent; n != null; n = n.Parent)
-            {
-                if (n is SectionDeclarationSyntax section
-                    && _sectionStartMeasure.TryGetValue(section.SectionName, out int s))
-                {
-                    startMeasure = s;
-                    break;
-                }
-            }
-
-            int localMeasure = 0;
-            var pending = new List<ChordEntrySyntax>();
-
-            void Flush()
-            {
-                if (pending.Count > 0)
-                {
-                    int mi = startMeasure + localMeasure;
-                    measureItems[mi] = EmitChordPartMeasure(pending, mi, staffIndex);
-                    maxIndex = Math.Max(maxIndex, mi);
-                }
-                localMeasure++;
-                pending.Clear();
-            }
-
-            foreach (var item in block.Items)
-            {
-                if (item is BarlineSyntax)
-                    Flush();
-                else if (item is ChordEntrySyntax entry)
-                    pending.Add(entry);
-            }
-            // A trailing measure with no closing barline still counts.
-            if (pending.Count > 0)
-            {
-                int mi = startMeasure + localMeasure;
-                measureItems[mi] = EmitChordPartMeasure(pending, mi, staffIndex);
-                maxIndex = Math.Max(maxIndex, mi);
-            }
-        }
-
-        if (maxIndex < 0)
-            return ImmutableArray<Measure>.Empty;
-
-        // An empty bar (written as a bare "|") gets one whole-measure spacer rest
-        // so it keeps its width even with no music staff (standalone lead sheet),
-        // matching how empty lyric measures work.
-        var emptyBar = ImmutableArray.Create<MusicItem>(
-            new RestItem(new Fraction(_timeBeats, _timeBeatType), 0, 0) { IsSpacer = true });
-
-        var measures = ImmutableArray.CreateBuilder<Measure>(maxIndex + 1);
-        for (int i = 0; i <= maxIndex; i++)
-        {
-            var items = measureItems.TryGetValue(i, out var it) ? it : emptyBar;
-            // No barlines: a chord row draws none, and BarlineType.None never
-            // overrides the music staves under score-wide barline sync.
-            measures.Add(new Measure(items, BarlineType.None, BarlineType.None, null, 0, 0));
-        }
-        return measures.MoveToImmutable();
-    }
-
-    /// <summary>
-    /// Emits the chord-name items for one measure of a chord part and returns the
-    /// matching invisible spacer rests. Each chord's start timing / duration comes
-    /// from the default rhythm table (no explicit durations) or, in "explicit mode"
-    /// (any explicit duration present), carry-forward explicit durations.
-    /// </summary>
-    private ImmutableArray<MusicItem> EmitChordPartMeasure(
-        List<ChordEntrySyntax> entries, int measureIndex, int staffIndex)
-    {
-        bool anyExplicit = entries.Any(e => e.Duration != null);
-        ImmutableArray<Fraction>? table = anyExplicit
-            ? null
-            : ChordRhythm.DefaultDurations(entries.Count, _timeBeats, _timeBeatType);
-
-        var rests = ImmutableArray.CreateBuilder<MusicItem>(entries.Count);
-        var timing = Fraction.Zero;
-        var carry = Fraction.Quarter;
-        for (int i = 0; i < entries.Count; i++)
-        {
-            var entry = entries[i];
-            var (text, structure) = ResolveChordEntry(entry);
-            _chordNames.Add(new ChordNameItem(
-                text, measureIndex, itemIndex: -1, entry.Root.Position,
-                staffIndex: staffIndex, useTiming: true, timing: timing, structure: structure,
-                isChordRow: true));
-
-            Fraction dur;
-            if (entry.Duration != null)
-            {
-                dur = entry.Duration.ToFraction();
-                carry = dur;
-            }
-            else if (table != null && i < table.Value.Length)
-            {
-                dur = table.Value[i];
-            }
-            else
-            {
-                dur = carry; // explicit-mode remainder, or unsupported meter/count
-            }
-            // BaseDuration = the resolved fraction (Dots 0): only its Duration drives
-            // the spacing spring, so a dotted/compound value spaces correctly too.
-            rests.Add(new RestItem(dur, 0, entry.Root.Position) { IsSpacer = true });
-            timing += dur;
-        }
-        return rests.MoveToImmutable();
-    }
-
     /// <summary>
     /// Collects an independent lyrics row (<c>lyrics name { … }</c> placed via
     /// <c>lyrics name</c> in a score) with NO bound melody: each bar's syllables are
@@ -3990,42 +3797,6 @@ public sealed class MeasureCollector
             }
         }
         return result;
-    }
-
-    /// <summary>
-    /// Resolves a chord entry to its display text and (when the quality is known)
-    /// its structure. The root step comes from the pitch letter, the alteration
-    /// from its accidental; an unrecognized quality token is shown verbatim.
-    /// </summary>
-    private static (string Text, LilySharp.Core.Music.ChordStructure? Structure) ResolveChordEntry(ChordEntrySyntax entry)
-    {
-        int rootStep = "cdefgab".IndexOf(entry.Root.BaseName);
-        int rootAlter = entry.Root.AccidentalOffset;
-        int? bassStep = null, bassAlter = null;
-        if (entry.Bass is { } bass)
-        {
-            bassStep = "cdefgab".IndexOf(bass.BaseName);
-            bassAlter = bass.AccidentalOffset;
-        }
-
-        if (rootStep >= 0 && LilySharp.Core.Music.ChordQualityRegistry.TryResolve(entry.QualityText, out var quality))
-        {
-            var structure = new LilySharp.Core.Music.ChordStructure(
-                rootStep, rootAlter, quality, bassStep, bassAlter);
-            return (structure.DisplayName, structure);
-        }
-
-        // Unknown quality (e.g. an extended chord not in the vocabulary): show the
-        // root + the raw token text so the name still displays, but carry no
-        // structure (no interval set for future notes/fret diagrams).
-        var sb = new System.Text.StringBuilder();
-        sb.Append(rootStep >= 0
-            ? LilySharp.Core.Music.ChordStructure.SpellPitch(rootStep, rootAlter)
-            : entry.Root.PitchName);
-        sb.Append(entry.QualityText);
-        if (bassStep is int bs)
-            sb.Append('/').Append(LilySharp.Core.Music.ChordStructure.SpellPitch(bs, bassAlter ?? 0));
-        return (sb.ToString(), null);
     }
 
     /// <summary>(measureIndex, itemIndex, timing) of every note/chord (not rests)
