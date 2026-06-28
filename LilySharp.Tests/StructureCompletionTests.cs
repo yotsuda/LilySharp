@@ -75,8 +75,12 @@ public class StructureCompletionTests
         Assert.Contains(":|", labels);
         Assert.Contains("[1. ]", labels);  // volta brackets
         Assert.Contains("[2. ]", labels);
-        Assert.Contains("~", labels);      // silent section prefix
         Assert.Contains("_\"\"", labels);  // custom text
+
+        // Silent sections are offered with the name attached (~Intro), not bare ~.
+        Assert.Contains("~Intro", labels);
+        Assert.Contains("~Verse", labels);
+        Assert.DoesNotContain("~", labels);
     }
 
     [Fact]

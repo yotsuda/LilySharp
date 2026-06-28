@@ -440,18 +440,31 @@ public sealed class LilySharpLanguageServer
 
         // Section names declared anywhere in the document (in declaration order,
         // deduplicated) — these are what a structure plays.
+        var sections = new System.Collections.Generic.List<string>();
         var seen = new System.Collections.Generic.HashSet<string>();
         foreach (Match m in Regex.Matches(text, @"\bsection\s+(\w+)"))
         {
             var name = m.Groups[1].Value;
             if (seen.Add(name))
-                items.Add(new CompletionItem
-                {
-                    Label = name,
-                    Kind = CompletionItemKind.Reference,
-                    Detail = "Section",
-                });
+                sections.Add(name);
         }
+        // Plain reference, then the silent form (~Name = render, no rehearsal
+        // label) — one per section, so the ~ prefix is never offered on its own.
+        foreach (var name in sections)
+            items.Add(new CompletionItem
+            {
+                Label = name,
+                Kind = CompletionItemKind.Reference,
+                Detail = "Section",
+            });
+        foreach (var name in sections)
+            items.Add(new CompletionItem
+            {
+                Label = "~" + name,
+                InsertText = "~" + name,
+                Kind = CompletionItemKind.Reference,
+                Detail = "Silent section (renders, no rehearsal label)",
+            });
 
         // Navigation marks placed between sections.
         var navs = new (string Label, string Detail)[]
@@ -499,7 +512,6 @@ public sealed class LilySharpLanguageServer
         items.Add(Snippet("[1. ]", "[1. $0]", "1st ending (volta bracket)"));
         items.Add(Snippet("[2. ]", "[2. $0]", "2nd ending (volta bracket)"));
         items.Add(Snippet("[1-2. ]", "[${1:1-2}. $0]", "Multi-pass ending, e.g. [1-2. …] or [1,3. …]"));
-        items.Add(Snippet("~", "~$0", "Silent section (renders, no rehearsal label)"));
         items.Add(Snippet("_\"\"", "_\"$0\"", "Custom text annotation"));
 
         return new CompletionList { Items = items.ToArray() };
