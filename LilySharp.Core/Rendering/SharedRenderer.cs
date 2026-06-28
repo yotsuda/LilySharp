@@ -3339,7 +3339,8 @@ public static class SharedRenderer
         // independent chord rows, which LilyPond's ChordNames context does not
         // connect (StaffLayout carries no kind, so resolve back via EnumerateStaves).
         var chordRowIndices = new HashSet<int>(
-            score.EnumerateStaves().Where(t => t.Staff.IsChordRow).Select(t => t.GlobalStaffIndex));
+            score.EnumerateStaves().Where(t => t.Staff.IsChordRow || t.Staff.IsLyricsRow)
+                .Select(t => t.GlobalStaffIndex));
         var allStaves = system.StaffGroups
             .SelectMany(g => g.Staves)
             .Where(s => !s.IsHidden && !s.IsOssia && !chordRowIndices.Contains(s.StaffIndex))

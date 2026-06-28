@@ -154,30 +154,42 @@ public sealed class LyricEngraver
     /// max(basic-distance, down-skyline + lyric-extent), the staff-affinity-UP
     /// VerticalAxisGroup spacing (engraver-init.ly:648-652).
     /// </param>
+    /// <summary>Baseline of an independent lyrics ROW's verse 1 below the row band's
+    /// top, so the text sits inside the reserved band (cf. ChordRow text baseline).</summary>
+    private const double LyricRowBaseline = 1.6;
+
     public ImmutableArray<LyricLayout> CalculateLayouts(
         IReadOnlyList<LyricItem> lyrics,
         IReadOnlyList<MeasureLayout> measureLayouts,
         double staffBottom,
         ImmutableArray<SystemLayout> systems = default,
-        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
+        IReadOnlyDictionary<int, double>? staffYByIndex = null)
     {
         if (lyrics.Count == 0)
             return ImmutableArray<LyricLayout>.Empty;
 
         var layouts = new List<LyricLayout>();
 
-        // Group lyrics by verse number
-        var verseGroups = lyrics.GroupBy(l => l.VerseNumber).OrderBy(g => g.Key);
+        // Group by (row, verse): ordinary lyrics (row = -1) sit below the first
+        // staff; an independent lyrics row (row = its staff index) sits in its own
+        // band at that staff's Y. Verses stack within each.
+        var verseGroups = lyrics
+            .GroupBy(l => (Row: l.IsLyricsRow ? l.StaffIndex : -1, Verse: l.VerseNumber))
+            .OrderBy(g => g.Key.Row).ThenBy(g => g.Key.Verse);
 
         foreach (var verseGroup in verseGroups)
         {
-            int verseNumber = verseGroup.Key;
+            int verseNumber = verseGroup.Key.Verse;
+            int rowKey = verseGroup.Key.Row;
             var verseLyrics = verseGroup.ToList();
 
             // Calculate Y position for this verse
             // LILYPOND-REF: lily/lyric-engraver.cc:85-95 vertical positioning
-            double verseY = staffBottom + _params.StaffPadding +
-                           (verseNumber - 1) * _params.VerseSpacing;
+            double verseY = rowKey >= 0 && staffYByIndex != null
+                            && staffYByIndex.TryGetValue(rowKey, out var rowY)
+                ? rowY + LyricRowBaseline + (verseNumber - 1) * _params.VerseSpacing
+                : staffBottom + _params.StaffPadding + (verseNumber - 1) * _params.VerseSpacing;
 
             var verseLayouts = new List<LyricLayout>();
             for (int i = 0; i < verseLyrics.Count; i++)
@@ -236,6 +248,7 @@ public sealed class LyricEngraver
         var lyricUp = new Dictionary<int, VerticalSkyline>();
         foreach (var lay in layouts)
         {
+            if (lay.Item.IsLyricsRow) continue; // a row sits in its own band, not below this staff
             if (lay.Item.VerseNumber > 1) continue; // verse 1 is the line's top edge
             if (!measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s))
                 continue;
@@ -265,7 +278,8 @@ public sealed class LyricEngraver
         var shifted = new List<LyricLayout>(layouts.Count);
         foreach (var lay in layouts)
         {
-            double drop = measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)
+            double drop = !lay.Item.IsLyricsRow
+                && measureToSystem.TryGetValue(lay.Item.MeasureIndex, out int s)
                 && systemDrop.TryGetValue(s, out var d) ? d : 0;
             shifted.Add(drop > 0 ? lay with { Y = lay.Y + drop } : lay);
         }
@@ -343,11 +357,11 @@ public sealed class LyricEngraver
         // Get X position from the associated note.
         // LILYPOND-REF: lily/lyric-engraver.cc:100-110 horizontal alignment
         double noteX;
-        if (lyric.VoiceId > 0)
+        if (lyric.VoiceId > 0 || lyric.IsLyricsRow)
         {
-            // A bound (non-primary) voice's item index points into a DIFFERENT
-            // voice's note list, so resolve X from its musical moment against the
-            // shared column grid — the same X the renderer draws that note at.
+            // A bound (non-primary) voice — or an independent lyrics ROW — resolves
+            // X from its musical moment against the shared column grid (the same X
+            // the renderer draws that timing at), not from a primary-voice item.
             noteX = measureLayout.X + measureLayout.GetXForTiming(lyric.Timing);
         }
         else
@@ -417,7 +431,7 @@ public sealed class LyricEngraver
 
         var measureLayout = measureLayouts[lyric.MeasureIndex];
 
-        if (lyric.VoiceId > 0)
+        if (lyric.VoiceId > 0 || lyric.IsLyricsRow)
             return measureLayout.X + measureLayout.GetXForTiming(lyric.Timing);
 
         if (lyric.ItemIndex < 0 || lyric.ItemIndex >= measureLayout.ItemPositions.Count)

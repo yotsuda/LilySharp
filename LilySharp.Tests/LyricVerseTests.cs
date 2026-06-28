@@ -63,6 +63,32 @@ score ""x"" { staff melody }
     }
 
     [Fact]
+    public void LyricsRow_Standalone_EvenDistributesSyllables()
+    {
+        // `lyrics verse` as a score row with no melody: each bar's syllables spread
+        // evenly, tagged as a lyrics row.
+        var score = Collect(@"
+time 4/4
+section Main { lyrics verse { Aa bb cc dd | ee ff | } }
+structure { Main }
+score ""x"" { lyrics verse }
+");
+        var row = score.Lyrics.Where(l => l.IsLyricsRow).ToList();
+        Assert.NotEmpty(row);
+        Assert.All(row, l => Assert.True(l.IsLyricsRow));
+
+        var bar0 = row.Where(l => l.MeasureIndex == 0).OrderBy(l => l.Timing).ToList();
+        var bar1 = row.Where(l => l.MeasureIndex == 1).OrderBy(l => l.Timing).ToList();
+        Assert.Equal(4, bar0.Count);                 // Aa bb cc dd
+        Assert.Equal(2, bar1.Count);                 // ee ff
+        Assert.Equal(LilySharp.Core.Semantics.Fraction.Zero, bar0[0].Timing);
+        // Strictly increasing within a bar (spread out, not collapsed).
+        static double Val(LilySharp.Core.Semantics.Fraction f) => f.Numerator / (double)f.Denominator;
+        for (int i = 1; i < bar0.Count; i++)
+            Assert.True(Val(bar0[i].Timing) > Val(bar0[i - 1].Timing));
+    }
+
+    [Fact]
     public void EmptyMeasure_SkipsBar_NoSyllableThere()
     {
         // Bar 2 of the lyric line is empty (`| |`), so no syllable lands in measure 1.

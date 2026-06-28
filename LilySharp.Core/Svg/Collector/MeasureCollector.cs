@@ -527,6 +527,9 @@ public sealed class MeasureCollector
     private readonly List<GraceNoteItem> _graceNotes = new();
     // Lyrics
     private readonly List<LyricItem> _lyrics = new();
+    // Names bound to an independent lyrics ROW (`lyrics name` score row). The
+    // note-bound CollectLyrics skips these — they are collected by CollectLyricsRow.
+    private HashSet<string> _lyricsRowNames = new();
     // Lyric lines whose syllable count overflowed the notes they bind to (the
     // extra syllables were dropped). Surfaced by LyricSyllableValidator to `check`
     // and the editor; mirrors the BarCheckWarnings exposure pattern.
@@ -835,6 +838,8 @@ public sealed class MeasureCollector
         // Phase 2: Build voice dictionary. Each staff maps to ALL its voices
         // (the primary stream plus any from << \\ >> spans inside that staff).
         var staffVoices = new Dictionary<string, ImmutableArray<Voice>>();
+        _lyricsRowNames = renderSpec.Items.OfType<LyricsRowSpec>()
+            .Select(s => s.PartName).ToHashSet();
         // Per-voice transposed key signature (only for transposed parts); used
         // to give that voice's staff its own key in a multi-staff score.
         var voiceKeyDict = new Dictionary<string, KeySignature>();
@@ -855,6 +860,15 @@ public sealed class MeasureCollector
             if (renderSpec.Items.OfType<ChordRowSpec>().Any(c => c.PartName == voiceName))
             {
                 var rowMeasures = CollectChordPart(tree.GetRoot(), voiceName, _currentStaffIndex);
+                staffVoices[voiceName] = ImmutableArray.Create(new Voice(voiceName, rowMeasures));
+                continue;
+            }
+
+            // An independent lyrics row (`lyrics name` in the score) — collect its
+            // syllables, even-spread per bar, against this row's staff index.
+            if (renderSpec.Items.OfType<LyricsRowSpec>().Any(c => c.PartName == voiceName))
+            {
+                var rowMeasures = CollectLyricsRow(tree.GetRoot(), voiceName, _currentStaffIndex);
                 staffVoices[voiceName] = ImmutableArray.Create(new Voice(voiceName, rowMeasures));
                 continue;
             }
@@ -3712,6 +3726,11 @@ public sealed class MeasureCollector
         var nextVerseByStart = new Dictionary<int, int>();
         foreach (var lyricsBlock in lyricsBlocks)
         {
+            // An independent lyrics row's block is collected by CollectLyricsRow
+            // (even-spread), not here — skip it so it isn't also note-bound.
+            if (lyricsBlock.VoiceName is { } rowName && _lyricsRowNames.Contains(rowName))
+                continue;
+
             // `lyrics sop { … }` aligns to the same-named voice's notes; an unnamed
             // block uses the default (first) voice. The note count AND columns then
             // come from the right voice (the voice index drives timing-based X), so
@@ -3946,6 +3965,144 @@ public sealed class MeasureCollector
             timing += dur;
         }
         return rests.MoveToImmutable();
+    }
+
+    /// <summary>
+    /// Collects an independent lyrics row (<c>lyrics name { … }</c> placed via
+    /// <c>lyrics name</c> in a score) with NO bound melody: each bar's syllables are
+    /// spread evenly across it, and an empty bar (bare <c>|</c>) is skipped. Multiple
+    /// blocks of the same name stack as verses (1番, 2番, …). Returns the row's
+    /// measure skeleton (spacer rests for width); the syllables go to <c>_lyrics</c>
+    /// tagged with this row's staff index.
+    /// </summary>
+    private ImmutableArray<Measure> CollectLyricsRow(SyntaxNode root, string partName, int staffIndex)
+    {
+        var blocks = root.DescendantNodes().OfType<LyricsBlockSyntax>()
+            .Where(b => b.VoiceName == partName).ToList();
+        if (blocks.Count == 0)
+            return ImmutableArray<Measure>.Empty;
+
+        var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
+        int maxIndex = -1;
+        int verse = 1;
+        var measureLen = new Fraction(_timeBeats, _timeBeatType);
+
+        foreach (var block in blocks)
+        {
+            int startMeasure = 0;
+            for (var n = block.Parent; n != null; n = n.Parent)
+            {
+                if (n is SectionDeclarationSyntax section
+                    && _sectionStartMeasure.TryGetValue(section.SectionName, out int s))
+                {
+                    startMeasure = s;
+                    break;
+                }
+            }
+
+            int localMeasure = 0;
+            foreach (var measureNode in block.Syllables)
+            {
+                var sylls = RowSyllables(measureNode);
+                int mi = startMeasure + localMeasure;
+                if (sylls.Count > 0)
+                {
+                    var slotDur = measureLen * new Fraction(1, sylls.Count);
+                    var spacers = ImmutableArray.CreateBuilder<MusicItem>(sylls.Count);
+                    var timing = Fraction.Zero;
+                    // ItemIndex = the syllable's slot (one spacer per syllable), so the
+                    // bar gets widened for the lyric widths (SpacingRules.ApplyLyricSpacing).
+                    // The engraver still takes X from Timing (IsLyricsRow path).
+                    for (int k = 0; k < sylls.Count; k++)
+                    {
+                        var (text, conn, pos) = sylls[k];
+                        _lyrics.Add(new LyricItem(
+                            Text: text, MeasureIndex: mi, ItemIndex: k,
+                            ConnectorType: conn, VoiceId: staffIndex, VerseNumber: verse,
+                            Timing: timing, SourcePosition: pos,
+                            StaffIndex: staffIndex, IsLyricsRow: true));
+                        spacers.Add(new RestItem(slotDur, 0, pos) { IsSpacer = true });
+                        timing += slotDur;
+                    }
+                    measureItems[mi] = spacers.MoveToImmutable();
+                    maxIndex = Math.Max(maxIndex, mi);
+                }
+                localMeasure++;
+            }
+            verse++;
+        }
+
+        if (maxIndex < 0)
+            return ImmutableArray<Measure>.Empty;
+
+        var emptyBar = ImmutableArray.Create<MusicItem>(
+            new RestItem(measureLen, 0, 0) { IsSpacer = true });
+        var measures = ImmutableArray.CreateBuilder<Measure>(maxIndex + 1);
+        for (int i = 0; i <= maxIndex; i++)
+        {
+            var items = measureItems.TryGetValue(i, out var it) ? it : emptyBar;
+            measures.Add(new Measure(items, BarlineType.None, BarlineType.None, null, 0, 0));
+        }
+        return measures.MoveToImmutable();
+    }
+
+    /// <summary>
+    /// Extracts one bar's lyric syllables (text + connector) from a lyric-measure
+    /// node, applying the hyphen ("a-" / "-" / "--") and extender ("~" / "_")
+    /// markers — the barline token and melisma-only markers are dropped.
+    /// </summary>
+    private static List<(string Text, LyricConnectorType Conn, int Pos)> RowSyllables(SyntaxNode measureNode)
+    {
+        var raw = new List<(string Text, int Pos)>();
+        for (int i = 0; i < measureNode.SlotCount; i++)
+        {
+            var child = measureNode.GetChild(i);
+            if (child == null) continue;
+            var (text, pos) = LyricSyllableText(child);
+            if (!string.IsNullOrEmpty(text) && text != "|")
+                raw.Add((text, pos));
+        }
+
+        var result = new List<(string, LyricConnectorType, int)>();
+        foreach (var (text, pos) in raw)
+        {
+            if (text is "--" or "-")
+            {
+                if (result.Count > 0)
+                    result[^1] = (result[^1].Item1, LyricConnectorType.Hyphen, result[^1].Item3);
+            }
+            else if (text is "~" or "_" or "__")
+            {
+                if (result.Count > 0)
+                    result[^1] = (result[^1].Item1, LyricConnectorType.Extender, result[^1].Item3);
+            }
+            else if (text.EndsWith("-", System.StringComparison.Ordinal))
+            {
+                result.Add((text.TrimEnd('-'), LyricConnectorType.Hyphen, pos));
+            }
+            else
+            {
+                result.Add((text, LyricConnectorType.None, pos));
+            }
+        }
+        return result;
+    }
+
+    private static (string Text, int Pos) LyricSyllableText(SyntaxNode node)
+    {
+        SyntaxTokenNode? tok = node.Kind == SyntaxKind.LyricSyllable
+            ? node.GetChild(0) as SyntaxTokenNode
+            : node as SyntaxTokenNode;
+        if (tok == null)
+            for (int i = 0; i < node.SlotCount && tok == null; i++)
+                tok = node.GetChild(i) as SyntaxTokenNode;
+        if (tok == null)
+            return ("", node.Span.Start);
+
+        var text = tok.Text;
+        if (text.Length >= 2 && text[0] == '"' && text[^1] == '"')
+            text = text.Substring(1, text.Length - 2);
+        return (text, tok.Span.Start);
     }
 
     /// <summary>

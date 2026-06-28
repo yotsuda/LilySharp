@@ -839,7 +839,7 @@ public sealed class LayoutEngine
     {
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
         var lyricLayouts = new LyricEngraver().CalculateLayouts(
-            lyrics, ml, _options.StaffHeight, systems, systemSkylines);
+            lyrics, ml, _options.StaffHeight, systems, systemSkylines, staffYByIndex);
 
         // LILYPOND-REF: axis-group-interface.cc skyline_spacing
         // Outside-staff elements are placed in priority order (lower priority = closer to staff).
