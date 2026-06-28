@@ -321,14 +321,13 @@ git add <変更ファイル群>
 git commit -F C:\temp\commit-msg.txt          # メッセージは Write でファイル化
 git push                                        # 完了形主張は push 済みのときだけ
 & .\deploy-extension.ps1                         # VS Code 拡張 + LSP を再ビルド・再インストール
-git add -u
-git commit -m "Bump extension dev version (0.1.2-dev.NN)"
-git push
+                                                  #   → 版スタンプ2ファイルは deploy が自動コミットする
+git push                                          # deploy の自動 "Bump dev build version" コミットを push
 ```
 
 - master 直作業。ブランチは勝手に作らない。
-- コミットメッセージは英語、`Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>` を付ける
-  (current model 名に合わせる)。
+- コミットメッセージは英語、`Co-Authored-By: Claude <current-model> <noreply@anthropic.com>` を付ける
+  (current model 名に合わせる。例: `Claude Opus 4.8`)。§14 のコミット規約で確定済み。
 - メッセージには「症状 → 真因 → LILYPOND-REF → 実装 → 検証(LP と一致確認)→ 既知の簡略化」を書く。
 - `deploy-extension.ps1` の `Get-Process` "Code not found" エラーは無害(VS Code 未起動時)。
 
@@ -401,8 +400,10 @@ git push
   `dotnet build LilySharp.Cli\LilySharp.Cli.csproj` で CLI を建て直す(Core だけ建てても CLI の
   bin には反映されない)。
 - **deploy は毎回バージョンスタンプを書き換える**: `LilySharp.Lsp/LilySharpLanguageServer.cs` の
-  `public const string Version` と `editors/vscode/package.json` の `version`。これは本体コミットと
-  分けて `Bump dev build version (0.1.2-dev.NN)` として別コミットにし、ツリーをクリーンに保つ。
+  `public const string Version` と `editors/vscode/package.json` の `version`。**この2ファイルは
+  deploy スクリプトの最終ステップが pathspec 指定で自動コミットする**(`Bump dev build version (...)`)。
+  本体コミットと分かれてツリーがクリーンに保たれる ― 手動の `git add -u; git commit` は不要になった。
+  他の作業中ファイルは pathspec で除外されるので巻き込まれない。deploy 後は `git push` するだけ。
 
 ### 13.3 LSP 補完(文脈依存)
 
@@ -477,21 +478,29 @@ $g.Dispose(); $c.Save($out)   # その後 Read ツールで $out を視覚確認
 - **プレビュー連携**: `section` キーワードでセクション記号をハイライト、空白上では非ハイライト。
 - **パーサ**: `clef treble_8` を mid-music でも受理(従来は part ヘッダのみ)。
 
+### 2026-06-29 セッションで対応済み
+
+- **`treble_8` の "8"(ClefModifier)描画**(旧残課題1)― 完了。`SharedRenderer.DrawClefModifier8`
+  を新設し `DrawClef`(ヘッダ/プレフィックス)と `DrawClefChange`(mid-music)から呼ぶ。LP 2.24 の
+  treble_8 を PNG 並置・ピクセル実測で校正(digit ~2ss・font-size 0.80×・中心は底線下 ~1.3ss、
+  クレフ下降部の真下)。スナップショット差分は純(`test__treble8.svg`×3・`test__instrument-defaults.svg`×2
+  に `<text>8</text>` 追加のみ)。`ClefChangeTests` に header/mid-music の描画テストを追加。
+  既知の簡略化: 中心オフセットと縦位置は字形メトリクス非測定ゆえ校正定数。Emmentaler のクレフ下降カールが
+  LP より僅かに長く描かれる(既存のクレフ字形特性)ため "8" の絶対位置は LP より僅かに低い。
+- **deploy の版バンプ commit ノイズ**(旧残課題3)― 完了。`deploy-extension.ps1` の最終ステップが
+  版スタンプ2ファイルを pathspec 指定で自動コミットするようにした(他の作業中ファイルは巻き込まない)。
+  gitignore 案は不可(両者とも多目的ファイル内のインライン値)ゆえ auto-commit を採用。
+
 ### 残課題(優先度の目安)
 
-1. **`treble_8` の "8"(ClefModifier)描画が未実装。** 初期/ヘッダ/mid-music のいずれも "8" を
-   描いていない(`EmmentalerGlyphs.cs` の TODO コメント、LilyPond `scm/define-grobs.scm` の
-   ClefModifier grob 参照)。視覚的に素の treble と同一で、違いはオクターブ/再生のみ。実装すると
-   `test__treble8.svg` スナップショットが変わる中規模タスク(§3 の LP 並置で位置を確認しつつ)。
-2. **相対オクターブの stateful driver 統合(Tier 2 で意図的に保留)。** アルゴリズムは
+1. **相対オクターブの stateful driver 統合(Tier 2 で意図的に保留)。** アルゴリズムは
    `RelativeOctave.Resolve` で既に DRY。残るのは 3 ウォーカー(MeasureCollector / MidiExporter /
    MusicXmlExporter)の running-state ラッパで、アンカー規約が三者三様(C4 / octaveBase / C3)。
    高リスク・低リターンで見送った。やるなら全 octave/MIDI/MusicXML テストを担保しつつ慎重に。
    `RelativeOctave.cs` の remarks に「only the algorithm is shared」と明文化済み(再提案時はここを読む)。
-3. **deploy ごとの版バンプ commit がノイズ。** 毎回 `Version` 定数 + `package.json` version が変わり、
-   別コミットで吸収している。版スタンプを gitignore するか deploy スクリプト側で自動コミットにする等の整理。
 
-### コミット規約の食い違い(要確認)
+### コミット規約(2026-06-29 確定)
 
-§10 は `Co-Authored-By: Claude …` を付ける運用だが、2026-06-28 セッションは現行のセッション指示
-(「Co-Authored-By を付けない」)に従い付けていない。次セッションはどちらを正とするかを確認すること。
+`Co-Authored-By: Claude <current-model> <noreply@anthropic.com>` を**付ける**(§10 の運用を正とする)。
+2026-06-28 セッションはセッション指示に従い付けていなかったが、ユーザー確認の結果 §10 を正と決定。
+モデル名は current model に合わせる(例: 2026-06-29 は `Claude Opus 4.8`)。
