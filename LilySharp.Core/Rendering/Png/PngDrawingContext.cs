@@ -213,19 +213,6 @@ internal sealed class PngDrawingContext : IDrawingContext
         return new ScopeAction(() => _canvas.RestoreToCount(saveCount));
     }
 
-    private sealed class NullScope : IDisposable
-    {
-        public static readonly NullScope Instance = new();
-        public void Dispose() { }
-    }
-
-    private sealed class ScopeAction : IDisposable
-    {
-        private Action? _action;
-        public ScopeAction(Action a) { _action = a; }
-        public void Dispose() { _action?.Invoke(); _action = null; }
-    }
-
     /// <summary>
     /// Caches SKTypeface and SKFont instances per family/style. Loads the
     /// Emmentaler music fonts from disk; falls back to system typefaces for

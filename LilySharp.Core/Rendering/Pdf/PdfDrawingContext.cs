@@ -187,17 +187,4 @@ internal sealed class PdfDrawingContext : IDrawingContext
         }
         return new ScopeAction(() => _gfx.Restore(state));
     }
-
-    private sealed class NullScope : IDisposable
-    {
-        public static readonly NullScope Instance = new();
-        public void Dispose() { }
-    }
-
-    private sealed class ScopeAction : IDisposable
-    {
-        private Action? _action;
-        public ScopeAction(Action a) { _action = a; }
-        public void Dispose() { _action?.Invoke(); _action = null; }
-    }
 }

@@ -172,11 +172,4 @@ internal sealed class SvgDrawingContext : IDrawingContext
         s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
     private static string EscapeAttr(string s) => EscapeText(s).Replace("\"", "&quot;");
-
-    private sealed class ScopeAction : IDisposable
-    {
-        private Action? _action;
-        public ScopeAction(Action a) { _action = a; }
-        public void Dispose() { _action?.Invoke(); _action = null; }
-    }
 }

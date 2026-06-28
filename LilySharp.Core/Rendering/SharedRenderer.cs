@@ -149,12 +149,6 @@ public static class SharedRenderer
     private static IDisposable SourceScope(IDrawingContext gc, int sourcePosition)
         => sourcePosition > 0 ? gc.Source(sourcePosition) : NullScope.Instance;
 
-    private sealed class NullScope : IDisposable
-    {
-        public static readonly NullScope Instance = new();
-        public void Dispose() { }
-    }
-
     // ---------- System ----------
 
     private static HashSet<MusicItem> BuildBeamedItemsSet(ScoreLayout layout)
