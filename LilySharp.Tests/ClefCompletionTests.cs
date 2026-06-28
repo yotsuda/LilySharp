@@ -49,4 +49,16 @@ public class ClefCompletionTests
         foreach (var note in new[] { "c", "d", "e", "f", "g", "a", "b" })
             Assert.DoesNotContain(note, labels);
     }
+
+    [Fact]
+    public void ClefCompletions_AreOrderedHighToLow()
+    {
+        // Sorted by SortText (what the editor shows), not alphabetically.
+        var ordered = LilySharpLanguageServer.GetClefCompletions().Items
+            .OrderBy(i => i.SortText, System.StringComparer.Ordinal)
+            .Select(i => i.Label)
+            .ToArray();
+
+        Assert.Equal(new[] { "treble", "treble_8", "alto", "tenor", "bass" }, ordered);
+    }
 }

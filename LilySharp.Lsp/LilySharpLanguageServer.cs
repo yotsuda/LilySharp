@@ -588,24 +588,28 @@ public sealed class LilySharpLanguageServer
         return braceDepth > 0 ? CompletionContext.MusicBlock : CompletionContext.TopLevel;
     }
 
-    /// <summary>The clef names valid right after the <c>clef</c> keyword.</summary>
+    /// <summary>The clef names valid right after the <c>clef</c> keyword, ordered
+    /// from the highest-sounding clef to the lowest (not alphabetically).</summary>
     internal static CompletionList GetClefCompletions()
     {
+        // High → low pitch range.
         var clefs = new (string Label, string Detail)[]
         {
             ("treble", "Treble (G) clef"),
-            ("bass", "Bass (F) clef"),
+            ("treble_8", "Treble clef sounding an octave lower (guitar/tenor)"),
             ("alto", "Alto (C) clef"),
             ("tenor", "Tenor (C) clef"),
-            ("treble_8", "Treble clef sounding an octave lower (guitar/tenor)"),
+            ("bass", "Bass (F) clef"),
         };
         return new CompletionList
         {
-            Items = clefs.Select(c => new CompletionItem
+            // SortText keeps the high→low order (VS Code otherwise sorts by label).
+            Items = clefs.Select((c, i) => new CompletionItem
             {
                 Label = c.Label,
                 Kind = CompletionItemKind.EnumMember,
                 Detail = c.Detail,
+                SortText = i.ToString(),
             }).ToArray()
         };
     }
