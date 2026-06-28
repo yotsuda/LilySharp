@@ -525,15 +525,12 @@ public sealed class MeasureCollector
     private readonly List<ArticulationItem> _articulations = new();
     // Grace notes
     private readonly List<GraceNoteItem> _graceNotes = new();
-    // Lyrics
-    private readonly List<LyricItem> _lyrics = new();
+    // Lyrics (note-bound lines + independent rows) — collected by a dedicated
+    // collaborator that owns the item list and the overflow warnings.
+    private readonly LyricsCollector _lyricsCollector = new();
     // Names bound to an independent lyrics ROW (`lyrics name` score row). The
-    // note-bound CollectLyrics skips these — they are collected by CollectLyricsRow.
+    // note-bound pass skips these — they are collected as rows instead.
     private HashSet<string> _lyricsRowNames = new();
-    // Lyric lines whose syllable count overflowed the notes they bind to (the
-    // extra syllables were dropped). Surfaced by LyricSyllableValidator to `check`
-    // and the editor; mirrors the BarCheckWarnings exposure pattern.
-    private readonly List<LyricSyllableWarning> _lyricWarnings = new();
     // Named voices (voice sop { … }) → (voice index, measure track), so a
     // `lyrics sop { … }` block aligns to THAT voice's notes (and its index drives
     // timing-based X for non-primary voices) instead of the default first voice.
@@ -571,7 +568,7 @@ public sealed class MeasureCollector
     public IReadOnlyList<PitchTraceEntry> PitchTrace => _pitchTrace;
     /// <summary>Lyric lines whose syllable count overflowed their bound notes
     /// (extra syllables dropped). Populated as a side effect of Collect.</summary>
-    public IReadOnlyList<LyricSyllableWarning> LyricWarnings => _lyricWarnings;
+    public IReadOnlyList<LyricSyllableWarning> LyricWarnings => _lyricsCollector.Warnings;
     // Tablature post-pass (tie-string reconciliation + per-tuning string assignment),
     // extracted as a self-contained collaborator. Its warnings are surfaced below.
     private readonly TabResolver _tabResolver = new();
@@ -704,7 +701,7 @@ public sealed class MeasureCollector
         var voice = _tabResolver.ResolveVoiceTabTies(new Voice(_voiceName ?? "default", measures.ToImmutableArray()));
 
         // Collect lyrics
-        CollectLyrics(tree.GetRoot(), measures);
+        _lyricsCollector.CollectNoteBound(tree.GetRoot(), measures, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
 
         return new Score(
@@ -718,7 +715,7 @@ public sealed class MeasureCollector
             _dynamics.ToImmutableArray(),
             _articulations.ToImmutableArray(),
             _graceNotes.ToImmutableArray(),
-            lyrics: _lyrics.ToImmutableArray(),
+            lyrics: _lyricsCollector.Lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
             voltaBrackets: _voltaBrackets.ToImmutableArray(),
@@ -914,7 +911,8 @@ public sealed class MeasureCollector
                         wrapBars = Math.Max(wrapBars, v.Measures.Length);
             foreach (var (name, idx) in pendingLyricsRows)
             {
-                var rowMeasures = CollectLyricsRow(tree.GetRoot(), name, idx, wrapBars);
+                var rowMeasures = _lyricsCollector.CollectRow(
+                    tree.GetRoot(), name, idx, wrapBars, _sectionStartMeasure, _timeBeats, _timeBeatType);
                 staffVoices[name] = ImmutableArray.Create(new Voice(name, rowMeasures));
             }
         }
@@ -944,7 +942,7 @@ public sealed class MeasureCollector
             && staffVoices.TryGetValue(firstVoiceName, out var firstStaffVoices)
             && firstStaffVoices.Length > 0)
         {
-            CollectLyrics(tree.GetRoot(), firstStaffVoices[0].Measures.ToList());
+            _lyricsCollector.CollectNoteBound(tree.GetRoot(), firstStaffVoices[0].Measures.ToList(), _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
         }
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
 
@@ -974,7 +972,7 @@ public sealed class MeasureCollector
         // instead of overlapping the staff below. Staff order matches the global
         // staff index the lyrics were tagged with (GetVoiceNames == ToStaffGroups).
         var rowVerses = new Dictionary<int, int>();
-        foreach (var ly in _lyrics)
+        foreach (var ly in _lyricsCollector.Lyrics)
             if (ly.IsLyricsRow)
                 rowVerses[ly.StaffIndex] = Math.Max(
                     rowVerses.TryGetValue(ly.StaffIndex, out var mv) ? mv : 0, ly.VerseNumber);
@@ -1019,7 +1017,7 @@ public sealed class MeasureCollector
             _tempo,
             _title,
             _composer,
-            lyrics: _lyrics.ToImmutableArray(),
+            lyrics: _lyricsCollector.Lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
             voltaBrackets: _voltaBrackets.ToImmutableArray(),
@@ -1144,7 +1142,7 @@ public sealed class MeasureCollector
 
         // Collect lyrics (aligned with first voice)
         if (firstVoiceMeasures != null)
-            CollectLyrics(parallelExpr, firstVoiceMeasures);
+            _lyricsCollector.CollectNoteBound(parallelExpr, firstVoiceMeasures, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
         _chordNameCollector.CollectBlocks(parallelExpr, _sectionStartMeasure, _currentStaffIndex);
 
         return new Score(
@@ -1158,7 +1156,7 @@ public sealed class MeasureCollector
             _dynamics.ToImmutableArray(),
             _articulations.ToImmutableArray(),
             _graceNotes.ToImmutableArray(),
-            lyrics: _lyrics.ToImmutableArray(),
+            lyrics: _lyricsCollector.Lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
             voltaBrackets: _voltaBrackets.ToImmutableArray(),
@@ -1207,7 +1205,7 @@ public sealed class MeasureCollector
         }
 
         // Unnamed lyrics align with the primary voice; named ones bind above.
-        CollectLyrics(root, track0);
+        _lyricsCollector.CollectNoteBound(root, track0, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
         _chordNameCollector.CollectBlocks(root, _sectionStartMeasure, _currentStaffIndex);
 
         return new Score(
@@ -1221,7 +1219,7 @@ public sealed class MeasureCollector
             _dynamics.ToImmutableArray(),
             _articulations.ToImmutableArray(),
             _graceNotes.ToImmutableArray(),
-            lyrics: _lyrics.ToImmutableArray(),
+            lyrics: _lyricsCollector.Lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
             voltaBrackets: _voltaBrackets.ToImmutableArray(),
@@ -3558,281 +3556,4 @@ public sealed class MeasureCollector
         _ => BarlineType.Single
     };
 
-    /// <summary>
-    /// Collects lyrics from LyricsBlockSyntax nodes and associates them with notes.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/lyric-engraver.cc:60-88 process_music
-    /// LILYPOND-REF: lily/lyric-combine-music-iterator.cc:100-150 note association
-    /// </remarks>
-    private void CollectLyrics(SyntaxNode root, List<Measure> measures)
-    {
-        // Find all LyricsBlockSyntax nodes
-        var lyricsBlocks = root.DescendantNodes()
-            .OfType<LyricsBlockSyntax>()
-            .ToList();
-
-        if (lyricsBlocks.Count == 0)
-            return;
-
-        var defaultIndices = BuildNoteIndices(measures);
-
-        // Collect lyrics from each block. A block aligns to the notes of the
-        // SECTION it is written in (offset to that section's first measure), so
-        // a `lyrics` block inside section B starts under B's notes rather than
-        // becoming a second verse from bar 0. Blocks sharing a section start
-        // stack as successive verses (verse 1, 2, ...).
-        var lyricCollector = new LyricCollector();
-        var nextVerseByStart = new Dictionary<int, int>();
-        foreach (var lyricsBlock in lyricsBlocks)
-        {
-            // An independent lyrics row's block is collected by CollectLyricsRow
-            // (even-spread), not here — skip it so it isn't also note-bound.
-            if (lyricsBlock.VoiceName is { } rowName && _lyricsRowNames.Contains(rowName))
-                continue;
-
-            // `lyrics sop { … }` aligns to the same-named voice's notes; an unnamed
-            // block uses the default (first) voice. The note count AND columns then
-            // come from the right voice (the voice index drives timing-based X), so
-            // a voice with its own rhythm matches.
-            var indices = defaultIndices;
-            int voiceId = 0;
-            if (lyricsBlock.VoiceName is { } vn
-                && _voiceMeasuresByName.TryGetValue(vn, out var bound))
-            {
-                indices = BuildNoteIndices(bound.Measures);
-                voiceId = bound.Index;
-            }
-
-            int startMeasure = ResolveLyricsStartMeasure(lyricsBlock);
-            int verseNumber = nextVerseByStart.TryGetValue(startMeasure, out var v) ? v : 1;
-
-            IReadOnlyList<(int MeasureIndex, int ItemIndex, Fraction Timing)> aligned = startMeasure <= 0
-                ? indices
-                : indices.Where(n => n.MeasureIndex >= startMeasure).ToList();
-
-            var lyrics = lyricCollector.Collect(lyricsBlock, aligned, out int unplaced, voiceId: voiceId, verseNumber);
-            _lyrics.AddRange(lyrics);
-
-            // A single block may auto-wrap into several stacked verses; the next
-            // block at this start begins after the highest verse this one produced.
-            int maxVerse = verseNumber;
-            foreach (var ly in lyrics)
-                if (ly.VerseNumber > maxVerse) maxVerse = ly.VerseNumber;
-            nextVerseByStart[startMeasure] = maxVerse + 1;
-
-            // More syllables than notes: the loop above ran out of notes and the
-            // trailing syllables vanished. Flag the line so the author catches the
-            // miscount instead of silently losing words (the bug this guards).
-            if (unplaced > 0)
-                _lyricWarnings.Add(new LyricSyllableWarning(lyricsBlock.LyricsKeyword.Span, unplaced));
-        }
-    }
-
-    /// <summary>
-    /// Collects chord symbols from every <c>chordnames { … }</c> block. Each block
-    /// is a parallel stream: entries are walked, split at barlines into measures,
-    /// and each chord's start TIMING within its measure is accumulated from the
-    /// entry durations (default quarter, carried). The symbol is auto-named from
-    /// the resolved <see cref="LilySharp.Core.Music.ChordStructure"/>; an unknown
-    /// quality token falls back to "root + raw text" so any name still displays.
-    /// LILYPOND-REF: ly/engraver-init.ly ChordNames context; scm/chord-entry.scm.
-    /// </summary>
-    /// <summary>
-    /// Collects an independent lyrics row (<c>lyrics name { … }</c> placed via
-    /// <c>lyrics name</c> in a score) with NO bound melody: each bar's syllables are
-    /// spread evenly across it, and an empty bar (bare <c>|</c>) is skipped. Multiple
-    /// blocks of the same name stack as verses (1番, 2番, …). A SINGLE block whose
-    /// bars exceed <paramref name="wrapBars"/> (the song's bar count) also auto-wraps:
-    /// every <paramref name="wrapBars"/> measures start the next stacked verse, mapped
-    /// back onto the same bars. Returns the row's measure skeleton (spacer rests for
-    /// width); the syllables go to <c>_lyrics</c> tagged with this row's staff index.
-    /// </summary>
-    private ImmutableArray<Measure> CollectLyricsRow(
-        SyntaxNode root, string partName, int staffIndex, int totalBars)
-    {
-        var blocks = root.DescendantNodes().OfType<LyricsBlockSyntax>()
-            .Where(b => b.VoiceName == partName).ToList();
-        if (blocks.Count == 0)
-            return ImmutableArray<Measure>.Empty;
-
-        var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
-        int maxIndex = -1;
-        int verse = 1;
-        int prevSectionStart = -1;
-        var measureLen = new Fraction(_timeBeats, _timeBeatType);
-
-        foreach (var block in blocks)
-        {
-            int startMeasure = 0;
-            bool inSection = false;
-            for (var n = block.Parent; n != null; n = n.Parent)
-            {
-                if (n is SectionDeclarationSyntax section
-                    && _sectionStartMeasure.TryGetValue(section.SectionName, out int s))
-                {
-                    startMeasure = s;
-                    inSection = true;
-                    break;
-                }
-            }
-
-            // Wrap a block at its OWN section's bar count (verses written flat
-            // stack every section). A standalone block (not inside a section) wraps
-            // at the whole piece's length. Otherwise a short section's verse 2 would
-            // overrun into the next section's bars.
-            int wrapBars = totalBars;
-            if (inSection)
-            {
-                int sectionEnd = totalBars;
-                foreach (var st in _sectionStartMeasure.Values)
-                    if (st > startMeasure && st < sectionEnd)
-                        sectionEnd = st;
-                wrapBars = sectionEnd - startMeasure;
-            }
-
-            // Verses stack within ONE section; a block in a new section restarts at
-            // verse 1, so its line sits directly under that section's staff rather
-            // than carrying over the previous section's verse offset.
-            if (startMeasure != prevSectionStart)
-            {
-                verse = 1;
-                prevSectionStart = startMeasure;
-            }
-
-            int j = 0; // block-local bar index
-            foreach (var measureNode in block.Syllables)
-            {
-                // Wrap a long block: bar j belongs to verse (j / wrapBars) and maps
-                // back onto bar (j % wrapBars). wrapBars <= 0 → no wrap (one verse).
-                int barInVerse = wrapBars > 0 ? j % wrapBars : j;
-                int v = verse + (wrapBars > 0 ? j / wrapBars : 0);
-                int mi = startMeasure + barInVerse;
-
-                var sylls = RowSyllables(measureNode);
-                if (sylls.Count > 0)
-                {
-                    var slotDur = measureLen * new Fraction(1, sylls.Count);
-                    var spacers = ImmutableArray.CreateBuilder<MusicItem>(sylls.Count);
-                    var timing = Fraction.Zero;
-                    // ItemIndex = the syllable's slot (one spacer per syllable), so the
-                    // bar gets widened for the lyric widths (SpacingRules.ApplyLyricSpacing).
-                    // The engraver still takes X from Timing (IsLyricsRow path).
-                    for (int k = 0; k < sylls.Count; k++)
-                    {
-                        var (text, conn, pos) = sylls[k];
-                        _lyrics.Add(new LyricItem(
-                            Text: text, MeasureIndex: mi, ItemIndex: k,
-                            ConnectorType: conn, VoiceId: staffIndex, VerseNumber: v,
-                            Timing: timing, SourcePosition: pos,
-                            StaffIndex: staffIndex, IsLyricsRow: true));
-                        spacers.Add(new RestItem(slotDur, 0, pos) { IsSpacer = true });
-                        timing += slotDur;
-                    }
-                    // Keep the widest verse's slot count at this bar (verses usually match).
-                    if (!measureItems.TryGetValue(mi, out var existing) || existing.Length < sylls.Count)
-                        measureItems[mi] = spacers.MoveToImmutable();
-                    maxIndex = Math.Max(maxIndex, mi);
-                }
-                j++;
-            }
-            // The block produced ceil(j / wrapBars) stacked verses.
-            verse += wrapBars > 0 && j > 0 ? (j + wrapBars - 1) / wrapBars : 1;
-        }
-
-        if (maxIndex < 0)
-            return ImmutableArray<Measure>.Empty;
-
-        var emptyBar = ImmutableArray.Create<MusicItem>(
-            new RestItem(measureLen, 0, 0) { IsSpacer = true });
-        var measures = ImmutableArray.CreateBuilder<Measure>(maxIndex + 1);
-        for (int i = 0; i <= maxIndex; i++)
-        {
-            var items = measureItems.TryGetValue(i, out var it) ? it : emptyBar;
-            measures.Add(new Measure(items, BarlineType.None, BarlineType.None, null, 0, 0));
-        }
-        return measures.MoveToImmutable();
-    }
-
-    /// <summary>
-    /// Extracts one bar's lyric syllables (text + connector) from a lyric-measure
-    /// node, applying the hyphen ("a-" / "-" / "--") and extender ("~" / "_")
-    /// markers — the barline token and melisma-only markers are dropped.
-    /// </summary>
-    private static List<(string Text, LyricConnectorType Conn, int Pos)> RowSyllables(SyntaxNode measureNode)
-    {
-        var result = new List<(string, LyricConnectorType, int)>();
-        void SetPrevConnector(LyricConnectorType conn)
-        {
-            if (result.Count > 0)
-                result[^1] = (result[^1].Item1, conn, result[^1].Item3);
-        }
-
-        for (int i = 0; i < measureNode.SlotCount; i++)
-        {
-            var child = measureNode.GetChild(i);
-            if (child == null) continue;
-            var (text, pos) = LyricSyllableReader.ReadToken(child);
-            if (string.IsNullOrEmpty(text)) continue;
-
-            switch (LyricSyllableReader.Classify(text))
-            {
-                case LyricSyllableReader.Marker.Barline:
-                    break; // a measure boundary, never a word
-                case LyricSyllableReader.Marker.Hyphen:
-                    SetPrevConnector(LyricConnectorType.Hyphen);
-                    break;
-                // A row holds no notes, so an extender/melisma marker just draws an
-                // extender line off the previous syllable.
-                case LyricSyllableReader.Marker.Extender:
-                case LyricSyllableReader.Marker.Melisma:
-                    SetPrevConnector(LyricConnectorType.Extender);
-                    break;
-                case LyricSyllableReader.Marker.HyphenWord:
-                    result.Add((LyricSyllableReader.TrimHyphenWord(text), LyricConnectorType.Hyphen, pos));
-                    break;
-                default: // Syllable
-                    result.Add((text, LyricConnectorType.None, pos));
-                    break;
-            }
-        }
-        return result;
-    }
-
-    /// <summary>(measureIndex, itemIndex, timing) of every note/chord (not rests)
-    /// in a voice's measures — the slots a lyric line's syllables map onto. The
-    /// timing (musical moment in the measure) lets a bound voice's syllable land
-    /// over its real column even when that voice's rhythm differs.</summary>
-    private static List<(int MeasureIndex, int ItemIndex, Fraction Timing)> BuildNoteIndices(List<Measure> measures)
-    {
-        var noteIndices = new List<(int MeasureIndex, int ItemIndex, Fraction Timing)>();
-        for (int m = 0; m < measures.Count; m++)
-        {
-            var timing = Fraction.Zero;
-            var items = measures[m].Items;
-            for (int i = 0; i < items.Length; i++)
-            {
-                if (items[i] is NoteItem or ChordItem)
-                    noteIndices.Add((m, i, timing));
-                timing += items[i].Duration;
-            }
-        }
-        return noteIndices;
-    }
-
-    /// <summary>
-    /// The first expanded-measure index a lyrics block aligns to: the start of
-    /// the section it is written in (0 when it is top-level or its section was
-    /// never reached by the structure).
-    /// </summary>
-    private int ResolveLyricsStartMeasure(LyricsBlockSyntax lyricsBlock)
-    {
-        for (var n = lyricsBlock.Parent; n != null; n = n.Parent)
-        {
-            if (n is SectionDeclarationSyntax section
-                && _sectionStartMeasure.TryGetValue(section.SectionName, out int start))
-                return start;
-        }
-        return 0;
-    }
 }
