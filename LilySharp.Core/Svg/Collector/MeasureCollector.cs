@@ -3883,11 +3883,16 @@ public sealed class MeasureCollector
         if (maxIndex < 0)
             return ImmutableArray<Measure>.Empty;
 
+        // An empty bar (written as a bare "|") gets one whole-measure spacer rest
+        // so it keeps its width even with no music staff (standalone lead sheet),
+        // matching how empty lyric measures work.
+        var emptyBar = ImmutableArray.Create<MusicItem>(
+            new RestItem(new Fraction(_timeBeats, _timeBeatType), 0, 0) { IsSpacer = true });
+
         var measures = ImmutableArray.CreateBuilder<Measure>(maxIndex + 1);
         for (int i = 0; i <= maxIndex; i++)
         {
-            var items = measureItems.TryGetValue(i, out var it)
-                ? it : ImmutableArray<MusicItem>.Empty;
+            var items = measureItems.TryGetValue(i, out var it) ? it : emptyBar;
             // No barlines: a chord row draws none, and BarlineType.None never
             // overrides the music staves under score-wide barline sync.
             measures.Add(new Measure(items, BarlineType.None, BarlineType.None, null, 0, 0));

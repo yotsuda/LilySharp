@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -85,6 +87,27 @@ score ""x"" { chords riff }
         // C (bar 1) < Am (bar 2) < F (bar 3) < G7 (bar 4): the bars have real width.
         Assert.True(X("C") < X("Am") && X("Am") < X("F") && X("F") < X("G7"),
             "chords collapsed instead of spreading across bars");
+    }
+
+    [Fact]
+    public void ChordPart_EmptyBar_SkipsAndCountsTheBar()
+    {
+        // A bare "|" is an empty chord bar: it is skipped (no chord) but still
+        // counts, so the following chords land in the right measures.
+        var source = @"
+time 4/4
+section Main { chords riff { c | | f | g:7 | } }
+structure { Main }
+score ""x"" { chords riff }
+";
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        var score = new MeasureCollector().CollectMultiStaff(tree, spec!);
+
+        var byText = score.ChordNames.ToDictionary(c => c.ChordText, c => c.MeasureIndex);
+        Assert.Equal(0, byText["C"]);
+        Assert.Equal(2, byText["F"]);   // bar 1 (index 1) was empty -> F is bar 3
+        Assert.Equal(3, byText["G7"]);
     }
 
     [Fact]
