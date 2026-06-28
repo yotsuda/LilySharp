@@ -35,12 +35,6 @@
         "path": "./syntaxes/lilysharp.tmLanguage.json"
       }
     ],
-    "snippets": [
-      {
-        "language": "lilysharp",
-        "path": "./snippets/lilysharp.json"
-      }
-    ],
     "semanticTokenTypes": [
       {
         "id": "pitch",
