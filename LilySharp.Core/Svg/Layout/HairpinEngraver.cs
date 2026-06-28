@@ -141,17 +141,11 @@ public static class HairpinEngraver
                 hairpin.EndMeasureIndex >= measureLayouts.Length)
                 continue;
 
-            // LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing splits the
-            // spanner once per system; bounds are reattached to the system edges.
-            var segments = SpannerBreakSubstitution.Split(
-                hairpin.StartMeasureIndex, hairpin.EndMeasureIndex, systems, measureToSystemIdx);
-            if (segments.IsEmpty)
-                continue;
-
-            foreach (var segment in segments)
+            // LILYPOND-REF: lily/spanner.cc:36-144 — broken once per system; bounds
+            // reattached to the system edges.
+            foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
+                hairpin.StartMeasureIndex, hairpin.EndMeasureIndex, systems, measureToSystemIdx))
             {
-                var system = systems[segment.SystemIndex];
-
                 double segStartX = segment.IsFirst
                     ? CalculateStartX(hairpin, measureLayouts)
                     : system.Measures[0].X;

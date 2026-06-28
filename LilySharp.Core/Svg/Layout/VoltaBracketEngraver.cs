@@ -92,13 +92,8 @@ public static class VoltaBracketEngraver
                 bracket.EndMeasureIndex >= measureLayouts.Length)
                 continue;
 
-            // LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
-            var segments = SpannerBreakSubstitution.Split(
-                bracket.StartMeasureIndex, bracket.EndMeasureIndex, systems, measureToSystemIdx);
-            if (segments.IsEmpty)
-                continue;
-
-            foreach (var segment in segments)
+            foreach (var (segment, _) in SpannerBreakSubstitution.BrokenPieces(
+                bracket.StartMeasureIndex, bracket.EndMeasureIndex, systems, measureToSystemIdx))
             {
                 if (segment.StartMeasureIndex >= measureLayouts.Length ||
                     segment.EndMeasureIndex >= measureLayouts.Length)

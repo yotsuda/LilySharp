@@ -88,14 +88,9 @@ public static class GlissandoEngraver
             realStartX += Padding;
             realEndX -= Padding;
 
-            var segments = SpannerBreakSubstitution.Split(
-                gliss.StartMeasureIndex, gliss.EndMeasureIndex, systems, measureToSystemIdx);
-            if (segments.IsEmpty)
-                continue;
-
-            foreach (var segment in segments)
+            foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
+                gliss.StartMeasureIndex, gliss.EndMeasureIndex, systems, measureToSystemIdx))
             {
-                var system = systems[segment.SystemIndex];
                 double staffMiddleY = LayoutUtilities.ResolveStaffMiddleY(system, staffIndex, staffHeight);
                 double startStaffYAbs = StaffFrame.PositionToDevice(gliss.StartStaffPosition, staffMiddleY);
                 double endStaffYAbs = StaffFrame.PositionToDevice(gliss.EndStaffPosition, staffMiddleY);

@@ -155,4 +155,25 @@ public static class SpannerBreakSubstitution
         }
         return builder.ToImmutable();
     }
+
+    /// <summary>
+    /// Iterates a spanner's broken pieces: <see cref="Split"/>s [start, end] into
+    /// per-system segments and yields each paired with its <see cref="SystemLayout"/>.
+    /// Centralizes the split + empty-guard + system lookup that every spanner engraver
+    /// repeats, so each one keeps only its own per-piece geometry. Yields nothing when
+    /// the span can't be split (defensive no-op), so a <c>foreach</c> over it skips the
+    /// body just like the old <c>if (segments.IsEmpty) continue;</c>.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing (one piece per system).
+    /// </remarks>
+    public static IEnumerable<(SpannerBreakSegment Segment, SystemLayout System)> BrokenPieces(
+        int spannerStartMeasure,
+        int spannerEndMeasure,
+        ImmutableArray<SystemLayout> systems,
+        Dictionary<int, int> measureToSystemIdx)
+    {
+        foreach (var segment in Split(spannerStartMeasure, spannerEndMeasure, systems, measureToSystemIdx))
+            yield return (segment, systems[segment.SystemIndex]);
+    }
 }

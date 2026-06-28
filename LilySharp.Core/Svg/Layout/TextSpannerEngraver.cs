@@ -167,18 +167,13 @@ public static class TextSpannerEngraver
 
             // LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
             // LILYPOND-REF: lily/line-spanner.cc:546-600 — Line_spanner breaks at system boundaries
-            var segments = SpannerBreakSubstitution.Split(
-                spanner.StartMeasureIndex, spanner.EndMeasureIndex, systems, measureToSystem);
-            if (segments.IsEmpty)
-                continue;
-
-            foreach (var segment in segments)
+            foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
+                spanner.StartMeasureIndex, spanner.EndMeasureIndex, systems, measureToSystem))
             {
                 if (segment.StartMeasureIndex >= measureLayouts.Length ||
                     segment.EndMeasureIndex >= measureLayouts.Length)
                     continue;
 
-                var system = systems[segment.SystemIndex];
                 if (system.Measures.IsDefaultOrEmpty)
                     continue;
 

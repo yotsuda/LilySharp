@@ -159,13 +159,8 @@ public static class OttavaBracketEngraver
                 _ => "8va"
             };
 
-            // LILYPOND-REF: lily/spanner.cc:36-144 — Spanner::do_break_processing
-            var segments = SpannerBreakSubstitution.Split(
-                bracket.StartMeasureIndex, endMeasureIdx, systems, measureToSystemIdx);
-            if (segments.IsEmpty)
-                continue;
-
-            foreach (var segment in segments)
+            foreach (var (segment, _) in SpannerBreakSubstitution.BrokenPieces(
+                bracket.StartMeasureIndex, endMeasureIdx, systems, measureToSystemIdx))
             {
                 if (segment.StartMeasureIndex >= measureLayouts.Length ||
                     segment.EndMeasureIndex >= measureLayouts.Length)
