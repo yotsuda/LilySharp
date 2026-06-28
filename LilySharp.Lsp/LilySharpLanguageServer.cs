@@ -1776,183 +1776,82 @@ public sealed class LilySharpLanguageServer
         var lineStart = doc.Text.LastIndexOf('\n', Math.Max(0, offset - 1)) + 1;
         var lineText = doc.Text[lineStart..offset];
 
-        // Check for keywords that have signatures
-        var signatures = new List<SignatureInformation>();
-        int activeParameter = 0;
-
-        if (lineText.Contains("relative"))
+        // First keyword on the line (in priority order) that has a signature wins.
+        foreach (var entry in SignatureTable)
         {
-            var paramIndex = lineText.IndexOf("relative") + "relative".Length;
-            activeParameter = CountSpaces(lineText[paramIndex..]);
+            int kw = lineText.IndexOf(entry.Keyword, StringComparison.Ordinal);
+            if (kw < 0) continue;
 
-            signatures.Add(new SignatureInformation
+            int activeParameter = CountSpaces(lineText[(kw + entry.Keyword.Length)..]);
+            var sig = new SignatureInformation
             {
-                Label = "relative pitch { music }",
-                Documentation = "Sets relative pitch mode. Notes are interpreted relative to the previous note.",
-                Parameters = new[]
-                {
-                    new ParameterInformation { Label = "pitch", Documentation = "Base pitch with optional octave marks (e.g., c', c'')" },
-                    new ParameterInformation { Label = "{ music }", Documentation = "Music block containing notes" }
-                }
-            });
-        }
-        else if (lineText.Contains("repeat"))
-        {
-            var paramIndex = lineText.IndexOf("repeat") + "repeat".Length;
-            activeParameter = CountSpaces(lineText[paramIndex..]);
-
-            signatures.Add(new SignatureInformation
+                Label = entry.Label,
+                Documentation = entry.Documentation,
+                Parameters = entry.Parameters
+                    .Select(p => new ParameterInformation { Label = p.Label, Documentation = p.Documentation })
+                    .ToArray(),
+            };
+            return new SignatureHelp
             {
-                Label = "repeat (unfold|percent|tremolo) count { music }",
-                Documentation = "Repeats the music block. For volta repeats use the symbolic form "
-                    + "'|: … :|' (count '|: … :|*N') with inline endings '[1. …] [2. …]'.",
-                Parameters = new[]
-                {
-                    new ParameterInformation { Label = "unfold|percent|tremolo", Documentation = "Repeat kind (volta is the symbolic |: :| form, not this keyword)" },
-                    new ParameterInformation { Label = "count", Documentation = "Number of repetitions (integer)" },
-                    new ParameterInformation { Label = "{ music }", Documentation = "Music block to repeat" }
-                }
-            });
-        }
-        else if (lineText.Contains("tempo"))
-        {
-            var paramIndex = lineText.IndexOf("tempo") + "tempo".Length;
-            activeParameter = CountSpaces(lineText[paramIndex..]);
-
-            signatures.Add(new SignatureInformation
-            {
-                Label = "tempo \"marking\" duration = bpm",
-                Documentation = "Sets the tempo for playback.",
-                Parameters = new[]
-                {
-                    new ParameterInformation { Label = "\"marking\"", Documentation = "Optional tempo marking (e.g., \"Allegro\")" },
-                    new ParameterInformation { Label = "duration", Documentation = "Note duration (e.g., 4 for quarter note)" },
-                    new ParameterInformation { Label = "bpm", Documentation = "Beats per minute" }
-                }
-            });
-        }
-        else if (lineText.Contains("time"))
-        {
-            var paramIndex = lineText.IndexOf("time") + "time".Length;
-            activeParameter = CountSpaces(lineText[paramIndex..]);
-
-            signatures.Add(new SignatureInformation
-            {
-                Label = "time numerator/denominator",
-                Documentation = "Sets the time signature.",
-                Parameters = new[]
-                {
-                    new ParameterInformation { Label = "numerator/denominator", Documentation = "Time signature (e.g., 4/4, 3/4, 6/8)" }
-                }
-            });
-        }
-        else if (lineText.Contains("key"))
-        {
-            var paramIndex = lineText.IndexOf("key") + "key".Length;
-            activeParameter = CountSpaces(lineText[paramIndex..]);
-
-            signatures.Add(new SignatureInformation
-            {
-                Label = "key pitch major|minor",
-                Documentation = "Sets the key signature.",
-                Parameters = new[]
-                {
-                    new ParameterInformation { Label = "pitch", Documentation = "Key pitch (e.g., c, g, fis, bes)" },
-                    new ParameterInformation { Label = "major|minor", Documentation = "Mode: major or minor" }
-                }
-            });
-        }
-        else if (lineText.Contains("tuplet"))
-        {
-            var paramIndex = lineText.IndexOf("tuplet") + "tuplet".Length;
-            activeParameter = CountSpaces(lineText[paramIndex..]);
-
-            signatures.Add(new SignatureInformation
-            {
-                Label = "tuplet ratio { music }",
-                Documentation = "Creates a tuplet (e.g., triplet).",
-                Parameters = new[]
-                {
-                    new ParameterInformation { Label = "ratio", Documentation = "Ratio (e.g., 3/2 for triplet)" },
-                    new ParameterInformation { Label = "{ music }", Documentation = "Notes in the tuplet" }
-                }
-            });
-        }
-        else if (lineText.Contains("let"))
-        {
-            var paramIndex = lineText.IndexOf("let") + "let".Length;
-            activeParameter = CountSpaces(lineText[paramIndex..]);
-
-            signatures.Add(new SignatureInformation
-            {
-                Label = "let name = expression",
-                Documentation = "Declares a variable.",
-                Parameters = new[]
-                {
-                    new ParameterInformation { Label = "name", Documentation = "Variable name (identifier)" },
-                    new ParameterInformation { Label = "expression", Documentation = "Value to assign" }
-                }
-            });
-        }
-        else if (lineText.Contains("override"))
-        {
-            var paramIndex = lineText.IndexOf("override") + "override".Length;
-            activeParameter = CountSpaces(lineText[paramIndex..]);
-
-            signatures.Add(new SignatureInformation
-            {
-                Label = "override Grob.property = value",
-                Documentation = "Overrides a grob (graphical object) property.",
-                Parameters = new[]
-                {
-                    new ParameterInformation { Label = "Grob.property", Documentation = "Grob name and property (e.g., Stem.length, NoteHead.color)" },
-                    new ParameterInformation { Label = "value", Documentation = "New value (number, string, or identifier)" }
-                }
-            });
-        }
-        else if (lineText.Contains("phrase"))
-        {
-            var paramIndex = lineText.IndexOf("phrase") + "phrase".Length;
-            activeParameter = CountSpaces(lineText[paramIndex..]);
-
-            signatures.Add(new SignatureInformation
-            {
-                Label = "phrase name { music }",
-                Documentation = "Declares a reusable musical phrase. Reference with $name.",
-                Parameters = new[]
-                {
-                    new ParameterInformation { Label = "name", Documentation = "Phrase name (identifier)" },
-                    new ParameterInformation { Label = "{ music }", Documentation = "Music content" }
-                }
-            });
-        }
-        else if (lineText.Contains("section"))
-        {
-            var paramIndex = lineText.IndexOf("section") + "section".Length;
-            activeParameter = CountSpaces(lineText[paramIndex..]);
-
-            signatures.Add(new SignatureInformation
-            {
-                Label = "section Name { parts... }",
-                Documentation = "Declares a section grouping multiple parts.",
-                Parameters = new[]
-                {
-                    new ParameterInformation { Label = "Name", Documentation = "Section name (identifier)" },
-                    new ParameterInformation { Label = "{ parts... }", Documentation = "Part blocks with music" }
-                }
-            });
+                Signatures = new[] { sig },
+                ActiveSignature = 0,
+                ActiveParameter = Math.Min(activeParameter, sig.Parameters.Length - 1),
+            };
         }
 
-        if (signatures.Count == 0)
-            return null;
-
-        return new SignatureHelp
-        {
-            Signatures = signatures.ToArray(),
-            ActiveSignature = 0,
-            ActiveParameter = Math.Min(activeParameter, signatures[0].Parameters?.Length - 1 ?? 0)
-        };
+        return null;
     }
+
+    private readonly record struct SignatureEntry(
+        string Keyword, string Label, string Documentation, (string Label, string Documentation)[] Parameters);
+
+    // Keyword → signature, in match-priority order (the first keyword found on the
+    // line wins). Adding a keyword's help is a one-line table entry.
+    private static readonly SignatureEntry[] SignatureTable =
+    {
+        new("relative", "relative pitch { music }",
+            "Sets relative pitch mode. Notes are interpreted relative to the previous note.",
+            new[] { ("pitch", "Base pitch with optional octave marks (e.g., c', c'')"),
+                    ("{ music }", "Music block containing notes") }),
+        new("repeat", "repeat (unfold|percent|tremolo) count { music }",
+            "Repeats the music block. For volta repeats use the symbolic form "
+                + "'|: … :|' (count '|: … :|*N') with inline endings '[1. …] [2. …]'.",
+            new[] { ("unfold|percent|tremolo", "Repeat kind (volta is the symbolic |: :| form, not this keyword)"),
+                    ("count", "Number of repetitions (integer)"),
+                    ("{ music }", "Music block to repeat") }),
+        new("tempo", "tempo \"marking\" duration = bpm",
+            "Sets the tempo for playback.",
+            new[] { ("\"marking\"", "Optional tempo marking (e.g., \"Allegro\")"),
+                    ("duration", "Note duration (e.g., 4 for quarter note)"),
+                    ("bpm", "Beats per minute") }),
+        new("time", "time numerator/denominator",
+            "Sets the time signature.",
+            new[] { ("numerator/denominator", "Time signature (e.g., 4/4, 3/4, 6/8)") }),
+        new("key", "key pitch major|minor",
+            "Sets the key signature.",
+            new[] { ("pitch", "Key pitch (e.g., c, g, fis, bes)"),
+                    ("major|minor", "Mode: major or minor") }),
+        new("tuplet", "tuplet ratio { music }",
+            "Creates a tuplet (e.g., triplet).",
+            new[] { ("ratio", "Ratio (e.g., 3/2 for triplet)"),
+                    ("{ music }", "Notes in the tuplet") }),
+        new("let", "let name = expression",
+            "Declares a variable.",
+            new[] { ("name", "Variable name (identifier)"),
+                    ("expression", "Value to assign") }),
+        new("override", "override Grob.property = value",
+            "Overrides a grob (graphical object) property.",
+            new[] { ("Grob.property", "Grob name and property (e.g., Stem.length, NoteHead.color)"),
+                    ("value", "New value (number, string, or identifier)") }),
+        new("phrase", "phrase name { music }",
+            "Declares a reusable musical phrase. Reference with $name.",
+            new[] { ("name", "Phrase name (identifier)"),
+                    ("{ music }", "Music content") }),
+        new("section", "section Name { parts... }",
+            "Declares a section grouping multiple parts.",
+            new[] { ("Name", "Section name (identifier)"),
+                    ("{ parts... }", "Part blocks with music") }),
+    };
 
     private static int CountSpaces(string text)
     {
