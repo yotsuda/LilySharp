@@ -34,7 +34,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260628-0931";
+    public const string Version = "0.1.1-20260628-1117";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -2106,6 +2106,10 @@ public sealed class LilySharpLanguageServer
                 case "musicxml":
                     new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).Save(outputPath);
                     break;
+                case "ly":
+                    File.WriteAllText(outputPath,
+                        new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree));
+                    break;
                 default:
                     return new ExportResponse { Success = false, Error = $"Unknown format: {format}" };
             }
@@ -2290,6 +2294,7 @@ public class ExportResponse
     public string? OutputPath { get; set; }
     public string? Error { get; set; }
 }
+
 
 
 

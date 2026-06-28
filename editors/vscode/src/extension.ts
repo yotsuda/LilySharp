@@ -436,6 +436,7 @@ async function exportPreview(
             'PDF document': ['pdf'],
             'PNG image': ['png'],
             'SVG image': ['svg'],
+            'LilyPond source': ['ly'],
             'MIDI (whole piece)': ['mid'],
             'MusicXML (whole piece)': ['musicxml'],
         }
@@ -449,7 +450,7 @@ async function exportPreview(
     const format = ext === 'mid' || ext === 'midi' ? 'midi'
         : ext === 'xml' || ext === 'musicxml' ? 'musicxml'
         : ext; // png / pdf / svg
-    if (!['png', 'pdf', 'svg', 'midi', 'musicxml'].includes(format)) {
+    if (!['png', 'pdf', 'svg', 'ly', 'midi', 'musicxml'].includes(format)) {
         vscode.window.showErrorMessage(`Lily#: unsupported export type ".${ext}".`);
         return;
     }
