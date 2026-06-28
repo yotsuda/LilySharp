@@ -47,6 +47,7 @@ public sealed class AnnotationNameValidator
             "cross",
             "arpeggio",
             "laissezvibrer", "repeattie",
+            "dead",
         };
 
     /// <summary>

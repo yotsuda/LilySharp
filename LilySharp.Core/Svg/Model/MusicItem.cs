@@ -175,6 +175,13 @@ public sealed record NoteItem : MusicItem
     /// <remarks>LILYPOND-REF: lily/tab-note-heads-engraver.cc — tied tab heads are transparent.</remarks>
     public bool IsTieTarget { get; init; }
 
+    /// <summary>
+    /// True when this is a dead (muted / ghost) note — a cross "×" notehead in
+    /// notation and an "×" in place of the fret number in tab.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: ly/property-init.ly \deadNote — cross notehead, muted.</remarks>
+    public bool IsDead { get; init; }
+
     /// <summary>Stem direction: beam-resolved if beamed, else by staff position.</summary>
     public bool StemUp => StemUpOverride ?? StaffPosition < 0;
 

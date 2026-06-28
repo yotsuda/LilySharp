@@ -415,7 +415,7 @@ public static class SharedRenderer
                     // its fret number — the held string is not re-struck.
                     if (!note.IsTieTarget)
                         DrawTabNote(note.Midi, itemX, staffY,
-                            tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition, gc);
+                            tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition, gc, note.IsDead);
                     DrawUnbeamedTabStem(note, note.BaseDuration, note.StemUp,
                         itemX, staffY, staff, beamedItems, gc);
                     break;
@@ -487,11 +487,11 @@ public static class SharedRenderer
 
     private static void DrawTabNote(int midi,
         double x, double staffY, int[] tuning, int? stringNumber, int octaveShift,
-        double stringSpace, int sourcePosition, IDrawingContext gc)
+        double stringSpace, int sourcePosition, IDrawingContext gc, bool isDead = false)
     {
         int midiPitch = midi + octaveShift;
         var (stringNum, fret) = Tunings.CalculateFret(midiPitch, tuning, stringNumber ?? 0);
-        DrawTabFret(fret, stringNum, x, staffY, stringSpace, sourcePosition, gc);
+        DrawTabFret(fret, stringNum, x, staffY, stringSpace, sourcePosition, gc, isDead);
     }
 
     /// <summary>
@@ -499,12 +499,13 @@ public static class SharedRenderer
     /// given string line and x. Chord notes share this after their x is shifted.
     /// </summary>
     private static void DrawTabFret(int fret, int stringNum, double x, double staffY,
-        double stringSpace, int sourcePosition, IDrawingContext gc)
+        double stringSpace, int sourcePosition, IDrawingContext gc, bool isDead = false)
     {
         // String 1 (highest pitch) is the TOP tab line; string N the bottom.
         double noteY = staffY + (stringNum - 1) * stringSpace;
-        string fretText = fret.ToString();
-        double bgWidth = TabFretWidth(fret);
+        // A dead (muted) note shows an "×" in place of the fret number.
+        string fretText = isDead ? "×" : fret.ToString();
+        double bgWidth = isDead ? 0.7 * TabFretFontSize : TabFretWidth(fret);
         double bgHeight = 0.6875 * TabFretFontSize;
 
         using (gc.Source(sourcePosition))
@@ -1095,7 +1096,12 @@ public static class SharedRenderer
         char head = EmmentalerGlyphs.GetNotehead(noteValue);
         if (!headWiped && !headTransparent)
             using (gc.Source(note.SourcePosition))
-                gc.DrawGlyph(head, x, noteY, noteFontSize, noteheadColor);
+            {
+                if (note.IsDead)
+                    DrawDeadNotehead(x, noteY, noteheadColor, gc);
+                else
+                    gc.DrawGlyph(head, x, noteY, noteFontSize, noteheadColor);
+            }
 
         // Ledger lines are drawn by the staff-measure ledger pre-pass, BEFORE
         // any noteheads (CollectItemLedgers/DrawPlannedLedgers).
@@ -2070,6 +2076,21 @@ public static class SharedRenderer
             using (gc.Source(a.SourcePosition))
                 gc.DrawGlyph(a.Glyph[0], a.X, y, FontSize * a.Scale);
         }
+    }
+
+    /// <summary>
+    /// Draws a dead-note "×" notehead (two crossing strokes) sized like a normal
+    /// black head, anchored at the head's left edge / vertical centre.
+    /// LILYPOND-REF: cross notehead style for \deadNote.
+    /// </summary>
+    private static void DrawDeadNotehead(double x, double noteY, Color? color, IDrawingContext gc)
+    {
+        double w = EngravingDefaults.NoteheadBlackWidth;
+        const double h = 0.55;                 // half-height of the cross
+        double t = EngravingDefaults.StemThickness * 1.4;
+        var c = color ?? Color.Black;
+        gc.DrawLine(x, noteY - h, x + w, noteY + h, c, t, cap: LineCap.Round);
+        gc.DrawLine(x, noteY + h, x + w, noteY - h, c, t, cap: LineCap.Round);
     }
 
     /// <summary>

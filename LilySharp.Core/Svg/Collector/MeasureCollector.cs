@@ -3628,6 +3628,7 @@ public sealed class MeasureCollector
         {
             StringNumber = ExtractStringNumber(note),
             Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.RelativeOctave),
+            IsDead = HasNamedArticulation(note, "dead"),
         };
     }
 

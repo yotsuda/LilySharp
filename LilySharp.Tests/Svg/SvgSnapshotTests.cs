@@ -89,6 +89,8 @@ public class SvgSnapshotTests
         // Bend-after gestures (@fall / @doit) render as trailing curves on both
         // the notation staff and the tab.
         yield return new object[] { "test/bend" };
+        // Dead (muted) notes (@dead) render as "×" noteheads / tab "×".
+        yield return new object[] { "test/dead-note" };
         yield return new object[] { "test/tuplets" };
         yield return new object[] { "test/tuplets-beamed" };
         yield return new object[] { "test/grandstaff-repeat" };
