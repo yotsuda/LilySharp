@@ -80,6 +80,15 @@ public static class MusicMarkEngraver
     // Y offset below staff for expression marks
     private const double BelowStaffOffset = 5.5;
 
+    // Extra drop for D.S./D.C. jump instructions so they sit clear of low notes.
+    private const double JumpInstructionDrop = 1.5;
+
+    /// <summary>A jump-FROM instruction (D.S./D.C. family) — placed below the staff.</summary>
+    private static bool IsJumpInstruction(MusicMarkType type) =>
+        type is MusicMarkType.DalSegno or MusicMarkType.DaCapo
+             or MusicMarkType.DalSegnoAlFine or MusicMarkType.DalSegnoAlCoda
+             or MusicMarkType.DaCapoAlFine or MusicMarkType.DaCapoAlCoda;
+
     // Gap between stacked marks
     // LILYPOND-REF: axis-group-interface.cc:50 default_outside_staff_padding_ = 0.46
     private const double StackGap = 0.46;
@@ -277,6 +286,14 @@ public static class MusicMarkEngraver
                 {
                     y = stackBottomY + StackGap + halfExtent;
                     stackBottomY = y + halfExtent;
+                }
+
+                // Jump-from instructions (D.S./D.C.) hang a little lower than the
+                // pedal baseline so they clear low notes under the staff.
+                if (IsJumpInstruction(mark.Type))
+                {
+                    y += JumpInstructionDrop;
+                    stackBottomY = Math.Max(stackBottomY, y + halfExtent);
                 }
 
                 layouts.Add(new MusicMarkLayout(
@@ -505,6 +522,11 @@ public static class MusicMarkEngraver
             double boxWidth = Rendering.SerifTextMetrics.MeasureBold(mark.Text, fs) + 0.4;
             return anchor + boxWidth / 2;
         }
+
+        // Segno/Coda glyphs have a symmetric bbox (origin = horizontal centre), so
+        // returning the barline anchor centres the sign on the barline.
+        if (mark.Type is MusicMarkType.Segno or MusicMarkType.Coda)
+            return anchor;
 
         return anchor + 0.5;
     }
