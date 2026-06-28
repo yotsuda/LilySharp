@@ -179,18 +179,7 @@ public sealed class LayoutEngine
 
         var result = BuildScoreLayout(pages, systemsArray, beamLayouts, tieLayouts, slurLayouts,
             glissandoLayouts, annotations, voiceOffsets, headWipeEntries, dotForceDownEntries, restShifts, partCombineLayouts);
-        result = result with { Options = _options };
-
-        // LILYPOND-REF: lily/grob-property.cc — attach user overrides/reverts to layout
-        if (!score.GrobOverrides.IsDefaultOrEmpty || !score.GrobReverts.IsDefaultOrEmpty)
-        {
-            result = result with
-            {
-                GrobPropertyResolver = new GrobPropertyResolver(score.GrobOverrides, score.GrobReverts)
-            };
-        }
-
-        return result;
+        return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
     }
 
     /// <summary>Calculates the complete layout for a multi-staff score.</summary>
@@ -481,18 +470,7 @@ public sealed class LayoutEngine
             dotForceDownBuilder.ToImmutable(),
             ImmutableDictionary<RestShiftKey, double>.Empty,
             partCombineLayouts);
-        result = result with { Options = _options };
-
-        // LILYPOND-REF: lily/grob-property.cc — attach user overrides/reverts to layout
-        if (!score.GrobOverrides.IsDefaultOrEmpty || !score.GrobReverts.IsDefaultOrEmpty)
-        {
-            result = result with
-            {
-                GrobPropertyResolver = new GrobPropertyResolver(score.GrobOverrides, score.GrobReverts)
-            };
-        }
-
-        return result;
+        return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
     }
 
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
@@ -1016,6 +994,26 @@ public sealed class LayoutEngine
             BarNumbers: stackedBarNumbers,
             // LILYPOND-REF: lily/stanza-number-engraver.cc — StanzaNumber grob.
             StanzaNumbers: StanzaNumberEngraver.Calculate(lyricLayouts, systems));
+    }
+
+    /// <summary>
+    /// Common tail of both <c>Layout</c> overloads: stamp the engine options onto
+    /// the built layout and, when the score carries user \override/\revert, attach
+    /// a grob-property resolver.
+    /// LILYPOND-REF: lily/grob-property.cc — user overrides/reverts on the layout.
+    /// </summary>
+    private ScoreLayout FinalizeLayout(ScoreLayout result,
+        ImmutableArray<GrobOverride> grobOverrides, ImmutableArray<GrobRevert> grobReverts)
+    {
+        result = result with { Options = _options };
+        if (!grobOverrides.IsDefaultOrEmpty || !grobReverts.IsDefaultOrEmpty)
+        {
+            result = result with
+            {
+                GrobPropertyResolver = new GrobPropertyResolver(grobOverrides, grobReverts)
+            };
+        }
+        return result;
     }
 
     private static ScoreLayout BuildScoreLayout(
