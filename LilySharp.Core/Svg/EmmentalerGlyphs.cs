@@ -67,6 +67,18 @@ public static class EmmentalerGlyphs
     public const char AccidentalDoubleSharp = '\uE01C';  // accidentals.doublesharp
     public const char AccidentalDoubleFlat = '\uE02A';   // accidentals.flatflat
 
+    /// <summary>The glyph for a resolved accidental kind ("sharp", "flat",
+    /// "doubleSharp", "doubleFlat"); anything else (incl. "natural") maps to the
+    /// natural sign. Single source for the name-to-glyph switch.</summary>
+    public static char AccidentalGlyph(string? kind) => kind switch
+    {
+        "doubleSharp" => AccidentalDoubleSharp,
+        "sharp" => AccidentalSharp,
+        "flat" => AccidentalFlat,
+        "doubleFlat" => AccidentalDoubleFlat,
+        _ => AccidentalNatural,
+    };
+
     // === Accidental Parentheses (for courtesy/cautionary accidentals) ===
     // LILYPOND-REF: lily/accidental.cc:35-46 parenthesize() uses these glyphs
     // LILYPOND-REF: mf/feta-parenthesis.mf — leftparen/rightparen glyph definitions

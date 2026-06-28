@@ -1851,14 +1851,7 @@ public static class SharedRenderer
         string accidentalKind, bool isCourtesy, double inkLeftX, double noteheadY,
         int sourcePosition, IDrawingContext gc)
     {
-        char glyph = accidentalKind switch
-        {
-            "doubleSharp" => EmmentalerGlyphs.AccidentalDoubleSharp,
-            "sharp" => EmmentalerGlyphs.AccidentalSharp,
-            "flat" => EmmentalerGlyphs.AccidentalFlat,
-            "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
-            _ => EmmentalerGlyphs.AccidentalNatural,
-        };
+        char glyph = EmmentalerGlyphs.AccidentalGlyph(accidentalKind);
         var accBBox = GlyphMetrics.GetAccidentalBBox(accidentalKind);
 
         if (isCourtesy)
@@ -1888,14 +1881,7 @@ public static class SharedRenderer
         string accidentalKind, bool isCourtesy, double noteheadX, double noteheadY,
         int sourcePosition, IDrawingContext gc, double scale = 1.0)
     {
-        char glyph = accidentalKind switch
-        {
-            "doubleSharp" => EmmentalerGlyphs.AccidentalDoubleSharp,
-            "sharp" => EmmentalerGlyphs.AccidentalSharp,
-            "flat" => EmmentalerGlyphs.AccidentalFlat,
-            "doubleFlat" => EmmentalerGlyphs.AccidentalDoubleFlat,
-            _ => EmmentalerGlyphs.AccidentalNatural,
-        };
+        char glyph = EmmentalerGlyphs.AccidentalGlyph(accidentalKind);
         // Grace-note accidentals are reduced with the grace head (font-size -3 ≈
         // 0.65); the glyph size AND all the bbox-derived offsets scale together.
         // LILYPOND-REF: scm/music-functions.scm general-grace-settings — grace grobs
