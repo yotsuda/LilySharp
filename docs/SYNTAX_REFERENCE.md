@@ -369,6 +369,22 @@ section イントロ { メロディ { $動機 } }
 structure { イントロ イントロ "イントロ(再現)" }
 ```
 
+### Navigation marks
+
+The structure may carry repeat-navigation marks between sections. The *signs*
+`segno` and `coda` engrave at the start of the following section (the jump
+target); the *text* directives `fine`, `to coda`, `dc`/`ds` (optionally
+`dc al fine`, `ds al coda`, …) engrave at the end of the section just played:
+
+```
+structure {
+  A segno
+  B  to coda
+  C  ds al coda
+  coda  D
+}
+```
+
 ## Render Block
 
 Controls output layout. Each `staff { partName }` names the part to draw; the

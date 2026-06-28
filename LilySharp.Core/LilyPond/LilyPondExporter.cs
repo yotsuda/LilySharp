@@ -139,9 +139,26 @@ public sealed class LilyPondExporter
                     EmitSectionRef(nm.Text, label: false); break;
                 case StructureRepeatBlockSyntax repeat:
                     EmitRepeat(repeat); break;
+                case NavigationMarkSyntax nav when !IsInsideRepeat(nav):
+                    _sb.AppendLine().Append("  ").AppendLine(NavMarkLy(nav.MarkType)); break;
             }
         }
     }
+
+    private static string NavMarkLy(NavigationMarkType t) => t switch
+    {
+        NavigationMarkType.Segno => "\\mark \\markup { \\musicglyph #\"scripts.segno\" }",
+        NavigationMarkType.Coda => "\\mark \\markup { \\musicglyph #\"scripts.coda\" }",
+        NavigationMarkType.Fine => "\\mark \\markup { \\italic \"Fine\" }",
+        NavigationMarkType.ToCoda => "\\mark \\markup { \\italic \"To Coda\" }",
+        NavigationMarkType.DaCapo => "\\mark \\markup { \\italic \"D.C.\" }",
+        NavigationMarkType.DaCapoAlFine => "\\mark \\markup { \\italic \"D.C. al Fine\" }",
+        NavigationMarkType.DaCapoAlCoda => "\\mark \\markup { \\italic \"D.C. al Coda\" }",
+        NavigationMarkType.DalSegno => "\\mark \\markup { \\italic \"D.S.\" }",
+        NavigationMarkType.DalSegnoAlFine => "\\mark \\markup { \\italic \"D.S. al Fine\" }",
+        NavigationMarkType.DalSegnoAlCoda => "\\mark \\markup { \\italic \"D.S. al Coda\" }",
+        _ => ""
+    };
 
     private void EmitRepeat(StructureRepeatBlockSyntax repeat)
     {

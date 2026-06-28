@@ -2239,6 +2239,21 @@ public sealed class MeasureCollector
                     ProcessRepeatBlock(repeat, processNodes, builder);
                     break;
 
+                // Navigation marks in the structure (segno / coda / fine / to coda /
+                // D.C. / D.S. al fine|coda) — engraved like the inline @-marks, at the
+                // boundary of the section just played.
+                case NavigationMarkSyntax nav when !IsInsideRepeatBlock(nav):
+                    var navMark = NavigationToMusicMark(nav.MarkType);
+                    // Target signs (segno/coda — where a jump lands) sit at the START
+                    // of the next section; the jump-from text (fine / to coda / D.S. /
+                    // D.C.) sits at the END of the section just played.
+                    bool target = navMark is MusicMarkType.Segno or MusicMarkType.Coda;
+                    int navMeasure = target
+                        ? builder.CurrentMeasureIndex
+                        : Math.Max(0, builder.CurrentMeasureIndex - 1);
+                    _musicMarks.Add(new MusicMarkItem(navMark, navMeasure, nav.Position));
+                    break;
+
                 // ~Name — render the section's music but show NO label (the dedicated
                 // form for an unlabelled section, e.g. a Coda). Without this the whole
                 // section was silently dropped.
@@ -2285,6 +2300,21 @@ public sealed class MeasureCollector
                 return part.Name.Text;
         return null;
     }
+
+    private static MusicMarkType NavigationToMusicMark(NavigationMarkType t) => t switch
+    {
+        NavigationMarkType.Segno => MusicMarkType.Segno,
+        NavigationMarkType.Coda => MusicMarkType.Coda,
+        NavigationMarkType.Fine => MusicMarkType.Fine,
+        NavigationMarkType.ToCoda => MusicMarkType.ToCoda,
+        NavigationMarkType.DaCapo => MusicMarkType.DaCapo,
+        NavigationMarkType.DaCapoAlFine => MusicMarkType.DaCapoAlFine,
+        NavigationMarkType.DaCapoAlCoda => MusicMarkType.DaCapoAlCoda,
+        NavigationMarkType.DalSegno => MusicMarkType.DalSegno,
+        NavigationMarkType.DalSegnoAlFine => MusicMarkType.DalSegnoAlFine,
+        NavigationMarkType.DalSegnoAlCoda => MusicMarkType.DalSegnoAlCoda,
+        _ => MusicMarkType.Segno
+    };
 
     private static bool IsInsideRender(SyntaxNode node)
     {
