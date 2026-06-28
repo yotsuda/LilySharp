@@ -504,6 +504,7 @@ internal sealed class Lexer
             "appoggiatura" => SyntaxKind.AppogiaturaKeyword,
             "lyrics" => SyntaxKind.LyricsKeyword,
             "chordnames" => SyntaxKind.ChordNamesKeyword,
+            "chords" => SyntaxKind.ChordsKeyword,
             "tabStaff" or "tabstaff" => SyntaxKind.TabStaffKeyword,
             "tuning" => SyntaxKind.TuningKeyword,
             "break" => SyntaxKind.BreakKeyword,

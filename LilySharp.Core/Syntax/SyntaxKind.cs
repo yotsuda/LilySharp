@@ -92,6 +92,7 @@ public enum SyntaxKind : ushort
     AppogiaturaKeyword,
     LyricsKeyword,      // lyrics
     ChordNamesKeyword,  // chordnames
+    ChordsKeyword,      // chords (independent chord part: chords name { ... } + score row)
     TabStaffKeyword,    // tabStaff (legacy)
     TuningKeyword,      // tuning
     TransposeKeyword,   // transpose
@@ -196,11 +197,13 @@ public enum SyntaxKind : ushort
     LyricMeasure,               // syllable syllable | inside lyrics
     LyricSyllable,              // single lyric syllable
     ChordNamesBlock,            // chordnames { ... } inside section
-    ChordEntry,                 // root[dur][:quality][/bass] inside chordnames
+    ChordPartBlock,             // chords name { ... } inside section (independent chord part)
+    ChordEntry,                 // root[dur][:quality][/bass] inside chordnames / chords
     StaffRender,                // staff { guitar } inside render
     GrandStaffRender,           // grandStaff { staff staff } inside render
     TabRender,                  // tab guitar { guitar } inside render
     OssiaRender,                // ossia treble { alternative } inside render
+    ChordRowRender,             // chords name inside score (places a chord part as a row)
     MidiPartRender,             // guitar channel:1 inside render
     // === Nodes: Structure Block Items ===
     SectionStartMarker,         // marker to reset pitch resolver at section boundaries

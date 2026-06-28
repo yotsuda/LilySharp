@@ -1593,6 +1593,7 @@ private GreenNode?[] ParseArticulations()
             SyntaxKind.PartialKeyword => ParsePartialDeclaration(),
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             SyntaxKind.ChordNamesKeyword => ParseChordNamesBlock(),
+            SyntaxKind.ChordsKeyword => ParseChordPartBlock(),
             // Allow identifier or instrument keywords (bass, guitar-like names) as part names
             SyntaxKind.Identifier => ParsePartBlock(),
             // bass, treble etc. can also be part names
@@ -1663,6 +1664,31 @@ private GreenNode?[] ParseArticulations()
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new ChordNamesBlockGreen(keyword, openBrace, [.. items], closeBrace);
+    }
+
+    // chords name { c | g:7 c | } — an independent chord part bound to `name`,
+    // placed in a score via `chords name`. Same entry/barline grammar as
+    // chordnames; the optional name sits between the keyword and the brace.
+    private ChordPartBlockGreen ParseChordPartBlock()
+    {
+        var keyword = Expect(SyntaxKind.ChordsKeyword);
+        var name = Check(SyntaxKind.Identifier) ? Advance() : (SyntaxToken?)null;
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        var items = new List<GreenNode?>();
+
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            if (Check(SyntaxKind.Bar) || Check(SyntaxKind.DoubleBar) || Check(SyntaxKind.FinalBar)
+                || Check(SyntaxKind.RepeatStartBar) || Check(SyntaxKind.RepeatEndBar))
+                items.Add(ParseBarline());
+            else if (IsPitchKind(Current.Kind))
+                items.Add(ParseChordEntry());
+            else
+                Advance(); // error recovery — skip stray tokens
+        }
+
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new ChordPartBlockGreen(keyword, name, openBrace, [.. items], closeBrace);
     }
 
     private static bool IsQualityToken(SyntaxKind kind) => kind is SyntaxKind.Identifier
@@ -2211,6 +2237,7 @@ private GreenNode?[] ParseArticulations()
         return Current.Kind switch
         {
             SyntaxKind.StaffKeyword => ParseStaffRender(),
+            SyntaxKind.ChordsKeyword => ParseChordRowRender(),
             SyntaxKind.GrandStaffKeyword => ParseGrandStaffRender(),
             SyntaxKind.TabKeyword => ParseTabRender(),
             SyntaxKind.OssiaKeyword => ParseOssiaRender(),
@@ -2237,6 +2264,16 @@ private GreenNode?[] ParseArticulations()
 
         tokens.Add(ExpectPartName());
         return new StaffRenderGreen([.. tokens]);
+    }
+
+    /// <summary>
+    /// Parse chord-row render: <c>chords partName</c> (places a chord part as a row).
+    /// </summary>
+    private ChordRowRenderGreen ParseChordRowRender()
+    {
+        var tokens = new List<SyntaxToken> { Expect(SyntaxKind.ChordsKeyword) };
+        tokens.Add(ExpectPartName());
+        return new ChordRowRenderGreen([.. tokens]);
     }
 
     /// <summary>

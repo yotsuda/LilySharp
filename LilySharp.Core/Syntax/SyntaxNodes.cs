@@ -1126,6 +1126,48 @@ public sealed class ChordNamesBlockSyntax : SyntaxNode
 }
 
 /// <summary>
+/// An independent chord part block: <c>chords name { c | g:7 c | }</c>. Same chord
+/// entries as <see cref="ChordNamesBlockSyntax"/>, but the name binds it to a chord
+/// row placed via <c>chords name</c> in a score.
+/// </summary>
+public sealed class ChordPartBlockSyntax : SyntaxNode
+{
+    internal ChordPartBlockSyntax(InternalSyntax.ChordPartBlockGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode ChordsKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    private bool HasName =>
+        GetChild(1) is SyntaxTokenNode t && t.Kind == SyntaxKind.Identifier;
+
+    /// <summary>The chord part name this block contributes to.</summary>
+    public string? PartName =>
+        HasName ? ((SyntaxTokenNode)GetChild(1)!).Text : null;
+
+    private int OpenBraceIndex => HasName ? 2 : 1;
+
+    public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(OpenBraceIndex)!;
+
+    /// <summary>The chord entries and barlines, in source order.</summary>
+    public IEnumerable<SyntaxNode> Items
+    {
+        get
+        {
+            for (int i = OpenBraceIndex + 1; i < SlotCount - 1; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+
+    public SyntaxTokenNode CloseBrace => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
+}
+
+/// <summary>
 /// A single chord entry: root[duration][:quality][/bass] (e.g. c1, a:m, g2:7,
 /// d:m7/f). The quality token is the raw text after the colon (resolved against
 /// <c>ChordQualityRegistry</c> by the collector).
@@ -1677,6 +1719,23 @@ public sealed partial class StaffRenderSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode StaffKeyword => (SyntaxTokenNode)GetChild(0)!;
+}
+
+/// <summary>
+/// A chord-row render item: <c>chords name</c> inside a score — places a chord part
+/// as an independent row.
+/// </summary>
+public sealed class ChordRowRenderSyntax : SyntaxNode
+{
+    internal ChordRowRenderSyntax(InternalSyntax.ChordRowRenderGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode ChordsKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The chord part name to place (e.g. <c>chords riff</c> → "riff").</summary>
+    public string PartName => ((SyntaxTokenNode)GetChild(1)!).Text;
 }
 
 /// <summary>

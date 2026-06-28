@@ -889,6 +889,18 @@ internal sealed class StaffRenderGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Chord-row render: <c>chords name</c> inside a score — places a chord part as an
+/// independent row. Tokens: [chordsKeyword, partName].
+/// </summary>
+internal sealed class ChordRowRenderGreen : GreenSyntaxNode
+{
+    public ChordRowRenderGreen(params SyntaxToken[] tokens)
+        : base(SyntaxKind.ChordRowRender, tokens)
+    {
+    }
+}
+
+/// <summary>
 /// Grand staff render: grandStaff { staff staff ... }
 /// </summary>
 internal sealed class GrandStaffRenderGreen : GreenSyntaxNode
@@ -1034,6 +1046,28 @@ internal sealed class ChordNamesBlockGreen : GreenSyntaxNode
 {
     public ChordNamesBlockGreen(SyntaxToken keyword, SyntaxToken openBrace, GreenNode?[] items, SyntaxToken closeBrace)
         : base(SyntaxKind.ChordNamesBlock, [keyword, openBrace, .. items, closeBrace])
+    {
+    }
+}
+
+/// <summary>
+/// An independent chord part block: <c>chords name { c | g:7 c | }</c>. Same chord
+/// entry grammar as <see cref="ChordNamesBlockGreen"/>, but carries a (required)
+/// name binding it to a chord row placed via <c>chords name</c> in a score. The
+/// name sits between the keyword and the brace (mirrors LyricsBlockGreen).
+/// </summary>
+internal sealed class ChordPartBlockGreen : GreenSyntaxNode
+{
+    public ChordPartBlockGreen(
+        SyntaxToken keyword,
+        SyntaxToken? name,
+        SyntaxToken openBrace,
+        GreenNode?[] items,
+        SyntaxToken closeBrace)
+        : base(SyntaxKind.ChordPartBlock,
+            name != null
+                ? [keyword, name, openBrace, .. items, closeBrace]
+                : [keyword, openBrace, .. items, closeBrace])
     {
     }
 }

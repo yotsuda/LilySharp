@@ -32,16 +32,16 @@ public class RenderVoiceSelectionTests
 {
     private const string TwoRenderSource = """
         part melody
-        part chords
+        part harmony
         phrase pa { c4 d e f | }
         phrase pb { <c e g>1 | }
         section Main {
           melody { $pa }
-          chords { $pb }
+          harmony { $pb }
         }
         structure { Main }
         score "first" { staff melody }
-        score "second" { staff chords }
+        score "second" { staff harmony }
         """;
 
     [Fact]
@@ -64,7 +64,7 @@ public class RenderVoiceSelectionTests
     [Fact]
     public void SecondRenderVoice_StillSelectable()
     {
-        var score = new MeasureCollector().Collect(SyntaxTree.Parse(TwoRenderSource), "chords");
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(TwoRenderSource), "harmony");
 
         var chord = Assert.Single(score.Voice.Measures[0].Items);
         Assert.IsType<ChordItem>(chord);
