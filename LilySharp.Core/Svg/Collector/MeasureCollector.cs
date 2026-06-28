@@ -703,6 +703,7 @@ public sealed class MeasureCollector
         // Collect lyrics
         CollectLyrics(tree.GetRoot(), measures);
         CollectChordNamesBlocks(tree.GetRoot());
+        CollectChordPartBlocks(tree.GetRoot());
 
         return new Score(
             voice,
@@ -900,6 +901,7 @@ public sealed class MeasureCollector
             CollectLyrics(tree.GetRoot(), firstStaffVoices[0].Measures.ToList());
         }
         CollectChordNamesBlocks(tree.GetRoot());
+        CollectChordPartBlocks(tree.GetRoot());
 
         // Phase 3: Build staff groups from render spec
         var staffGroups = renderSpec.ToStaffGroups(name =>
@@ -1071,6 +1073,7 @@ public sealed class MeasureCollector
         if (firstVoiceMeasures != null)
             CollectLyrics(parallelExpr, firstVoiceMeasures);
         CollectChordNamesBlocks(parallelExpr);
+        CollectChordPartBlocks(parallelExpr);
 
         return new Score(
             voices.ToImmutableArray(),
@@ -1134,6 +1137,7 @@ public sealed class MeasureCollector
         // Unnamed lyrics align with the primary voice; named ones bind above.
         CollectLyrics(root, track0);
         CollectChordNamesBlocks(root);
+        CollectChordPartBlocks(root);
 
         return new Score(
             voices.ToImmutableArray(),
@@ -3793,6 +3797,97 @@ public sealed class MeasureCollector
                     defaultDuration = dur;
                 timing += dur;
             }
+        }
+    }
+
+    /// <summary>
+    /// Collects independent chord parts (<c>chords name { … }</c>) into chord-name
+    /// items. Unlike <c>chordnames</c>, a chord part fills each measure by the
+    /// per-count default rhythm table (<see cref="ChordRhythm"/>) when the user
+    /// omits durations. If ANY chord in a measure carries an explicit duration that
+    /// measure is "explicit mode": unspecified chords carry the previous duration
+    /// forward (note-like), so the last chord absorbs whatever fills the bar.
+    /// </summary>
+    private void CollectChordPartBlocks(SyntaxNode root)
+    {
+        var blocks = root.DescendantNodes().OfType<ChordPartBlockSyntax>().ToList();
+        if (blocks.Count == 0)
+            return;
+
+        foreach (var block in blocks)
+        {
+            int startMeasure = 0;
+            for (var n = block.Parent; n != null; n = n.Parent)
+            {
+                if (n is SectionDeclarationSyntax section
+                    && _sectionStartMeasure.TryGetValue(section.SectionName, out int s))
+                {
+                    startMeasure = s;
+                    break;
+                }
+            }
+
+            int localMeasure = 0;
+            var pending = new List<ChordEntrySyntax>();
+
+            void Flush()
+            {
+                if (pending.Count > 0)
+                    EmitChordPartMeasure(pending, startMeasure + localMeasure);
+                localMeasure++;
+                pending.Clear();
+            }
+
+            foreach (var item in block.Items)
+            {
+                if (item is BarlineSyntax)
+                    Flush();
+                else if (item is ChordEntrySyntax entry)
+                    pending.Add(entry);
+            }
+            // A trailing measure with no closing barline still counts.
+            if (pending.Count > 0)
+                EmitChordPartMeasure(pending, startMeasure + localMeasure);
+        }
+    }
+
+    /// <summary>
+    /// Emits the chord-name items for one measure of a chord part, assigning each
+    /// chord its start timing from either the default rhythm table (no explicit
+    /// durations) or carry-forward explicit durations.
+    /// </summary>
+    private void EmitChordPartMeasure(List<ChordEntrySyntax> entries, int measureIndex)
+    {
+        bool anyExplicit = entries.Any(e => e.Duration != null);
+        ImmutableArray<Fraction>? table = anyExplicit
+            ? null
+            : ChordRhythm.DefaultDurations(entries.Count, _timeBeats, _timeBeatType);
+
+        var timing = Fraction.Zero;
+        var carry = Fraction.Quarter;
+        for (int i = 0; i < entries.Count; i++)
+        {
+            var entry = entries[i];
+            var (text, structure) = ResolveChordEntry(entry);
+            _chordNames.Add(new ChordNameItem(
+                text, measureIndex, itemIndex: -1, entry.Root.Position,
+                staffIndex: 0, useTiming: true, timing: timing, structure: structure));
+
+            Fraction dur;
+            if (entry.Duration != null)
+            {
+                dur = entry.Duration.ToFraction();
+                carry = dur;
+            }
+            else if (table != null && i < table.Value.Length)
+            {
+                dur = table.Value[i];
+            }
+            else
+            {
+                dur = carry; // explicit-mode remainder, or unsupported meter/count
+            }
+            timing += dur;
         }
     }
 
