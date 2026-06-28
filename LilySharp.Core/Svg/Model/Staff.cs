@@ -74,7 +74,13 @@ public sealed record Staff(
     /// multi-staff score so the staff shows its own (transposed) key while the
     /// concert-pitch staves keep the score key. Null = use the score key.
     /// </summary>
-    KeySignature? PerStaffKeySignature = null
+    KeySignature? PerStaffKeySignature = null,
+    /// <summary>
+    /// Whether this is an independent chord-symbol row (no staff lines, no notes —
+    /// just chord names laid out by timing). Rendered by a dedicated path; its
+    /// symbols come from <c>ChordNameItem</c>s tagged with this staff's index.
+    /// </summary>
+    bool IsChordRow = false
 )
 {
     /// <summary>The primary voice (first voice).</summary>
@@ -111,6 +117,14 @@ public sealed record Staff(
     /// </summary>
     public static Staff CreateOssia(ClefType clef, Voice voice, string? instrumentName = null)
         => new(clef, ImmutableArray.Create(voice), null, instrumentName, IsOssia: true);
+
+    /// <summary>
+    /// Creates an independent chord-symbol row (no staff lines / notes). The voice
+    /// is a placeholder for measure/index bookkeeping; the symbols are carried as
+    /// <c>ChordNameItem</c>s tagged with this row's staff index.
+    /// </summary>
+    public static Staff CreateChordRow(Voice voice)
+        => new(ClefType.Treble, ImmutableArray.Create(voice), IsChordRow: true);
 
     /// <summary>
     /// Parses a clef string to ClefType.

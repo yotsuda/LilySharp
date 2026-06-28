@@ -218,8 +218,26 @@ public sealed record MultiStaffScore
             header: score.Header);
     }
 
-    /// <summary>Number of measures (from first staff of first group).</summary>
-    public int MeasureCount => StaffGroups[0].PrimaryStaff.MeasureCount;
+    /// <summary>
+    /// The first staff that actually carries musical content (a non-empty primary
+    /// voice), skipping content-less rows such as chord rows. For a normal score
+    /// this is exactly <c>StaffGroups[0].PrimaryStaff</c>, so existing behaviour is
+    /// unchanged; it only differs when a chord row precedes the music in the score
+    /// order, where it keeps the measure structure driven by the real staff.
+    /// </summary>
+    public Staff PrimaryContentStaff
+    {
+        get
+        {
+            foreach (var (_, staff, _) in EnumerateStaves())
+                if (!staff.IsChordRow && staff.PrimaryVoice.Measures.Length > 0)
+                    return staff;
+            return StaffGroups[0].PrimaryStaff;
+        }
+    }
+
+    /// <summary>Number of measures (from the first content staff).</summary>
+    public int MeasureCount => PrimaryContentStaff.MeasureCount;
 
     /// <summary>Gets all voices across all staves.</summary>
     public IEnumerable<Voice> AllVoices

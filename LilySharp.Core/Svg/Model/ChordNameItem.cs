@@ -70,9 +70,18 @@ public sealed record ChordNameItem
     /// </summary>
     public ChordStructure? Structure { get; }
 
+    /// <summary>
+    /// True when this symbol belongs to an independent chord ROW (a <c>chords name
+    /// { }</c> part placed via <c>chords name</c> in a score). The engraver then
+    /// places it WITHIN its row's band (by <see cref="StaffIndex"/>) rather than
+    /// floating above an associated staff.
+    /// </summary>
+    public bool IsChordRow { get; }
+
     public ChordNameItem(string chordText, int measureIndex, int itemIndex,
         int sourcePosition, int staffIndex = 0,
-        bool useTiming = false, Fraction timing = default, ChordStructure? structure = null)
+        bool useTiming = false, Fraction timing = default, ChordStructure? structure = null,
+        bool isChordRow = false)
     {
         ChordText = chordText;
         MeasureIndex = measureIndex;
@@ -82,6 +91,7 @@ public sealed record ChordNameItem
         UseTiming = useTiming;
         Timing = timing;
         Structure = structure;
+        IsChordRow = isChordRow;
     }
 
     /// <summary>

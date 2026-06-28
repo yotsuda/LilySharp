@@ -311,7 +311,7 @@ public sealed class LayoutEngine
         // spacing extents before the page Y is fixed.
         {
             var prelimSystems = systems.ToImmutableArray();
-            var prelimStaff = score.StaffGroups[0].PrimaryStaff;
+            var prelimStaff = score.PrimaryContentStaff;
             var prelimScore = new Score(
                 prelimStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
                 ClefToString(prelimStaff.Clef), score.Tempo, score.Title, score.Composer,
@@ -382,7 +382,7 @@ public sealed class LayoutEngine
         }
 
         // Create primary staff Score for annotation engravers
-        var primaryStaff = score.StaffGroups[0].PrimaryStaff;
+        var primaryStaff = score.PrimaryContentStaff;
         var primaryScore = new Score(
             primaryStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
             ClefToString(primaryStaff.Clef), score.Tempo, score.Title, score.Composer,

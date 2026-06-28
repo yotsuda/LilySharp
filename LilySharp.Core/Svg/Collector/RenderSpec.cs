@@ -66,6 +66,12 @@ public sealed record TabStaffSpec(StaffSpec Staff, TuningType Tuning) : RenderIt
 public sealed record OssiaStaffSpec(StaffSpec Staff) : RenderItemSpec;
 
 /// <summary>
+/// Independent chord-row render item: <c>chords name</c> places a chord part
+/// (<c>chords name { … }</c>) as its own row in the score's staff order.
+/// </summary>
+public sealed record ChordRowSpec(string PartName) : RenderItemSpec;
+
+/// <summary>
 /// Complete render specification parsed from a render block.
 /// </summary>
 public sealed record RenderSpec(
@@ -114,6 +120,9 @@ public sealed record RenderSpec(
                 case OssiaStaffSpec ossia:
                     yield return ossia.Staff.VoiceName;
                     break;
+                case ChordRowSpec chordRow:
+                    yield return chordRow.PartName;
+                    break;
             }
         }
     }
@@ -156,6 +165,14 @@ public sealed record RenderSpec(
                         getVoices(ossia.Staff.VoiceName)[0],
                         ossia.Staff.InstrumentName);
                     yield return StaffGroup.CreateSingle(ossiaStaff);
+                    break;
+
+                case ChordRowSpec chordRow:
+                    var chordVoices = getVoices(chordRow.PartName);
+                    var chordVoice = chordVoices.Length > 0
+                        ? chordVoices[0]
+                        : new Voice(chordRow.PartName, ImmutableArray<Measure>.Empty);
+                    yield return StaffGroup.CreateSingle(Staff.CreateChordRow(chordVoice));
                     break;
             }
         }

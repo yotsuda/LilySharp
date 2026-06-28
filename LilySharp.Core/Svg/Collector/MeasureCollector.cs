@@ -703,7 +703,6 @@ public sealed class MeasureCollector
         // Collect lyrics
         CollectLyrics(tree.GetRoot(), measures);
         CollectChordNamesBlocks(tree.GetRoot());
-        CollectChordPartBlocks(tree.GetRoot());
 
         return new Score(
             voice,
@@ -850,6 +849,17 @@ public sealed class MeasureCollector
             _lastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
 
+            // An independent chord row (`chords name` in the score) carries no music
+            // voice — collect its chord symbols against this row's staff index and
+            // give the staff an empty placeholder voice.
+            if (renderSpec.Items.OfType<ChordRowSpec>().Any(c => c.PartName == voiceName))
+            {
+                CollectChordPart(tree.GetRoot(), voiceName, _currentStaffIndex);
+                staffVoices[voiceName] = ImmutableArray.Create(
+                    new Voice(voiceName, ImmutableArray<Measure>.Empty));
+                continue;
+            }
+
             // Set clef and octave for this voice from part definition
             var (partClef, partOctave, partTranspose, partClefPos) = GetPartDefaults(tree.GetRoot(), voiceName);
             _clef = partClef ?? "treble";
@@ -901,7 +911,6 @@ public sealed class MeasureCollector
             CollectLyrics(tree.GetRoot(), firstStaffVoices[0].Measures.ToList());
         }
         CollectChordNamesBlocks(tree.GetRoot());
-        CollectChordPartBlocks(tree.GetRoot());
 
         // Phase 3: Build staff groups from render spec
         var staffGroups = renderSpec.ToStaffGroups(name =>
@@ -1073,7 +1082,6 @@ public sealed class MeasureCollector
         if (firstVoiceMeasures != null)
             CollectLyrics(parallelExpr, firstVoiceMeasures);
         CollectChordNamesBlocks(parallelExpr);
-        CollectChordPartBlocks(parallelExpr);
 
         return new Score(
             voices.ToImmutableArray(),
@@ -1137,7 +1145,6 @@ public sealed class MeasureCollector
         // Unnamed lyrics align with the primary voice; named ones bind above.
         CollectLyrics(root, track0);
         CollectChordNamesBlocks(root);
-        CollectChordPartBlocks(root);
 
         return new Score(
             voices.ToImmutableArray(),
@@ -3808,9 +3815,10 @@ public sealed class MeasureCollector
     /// measure is "explicit mode": unspecified chords carry the previous duration
     /// forward (note-like), so the last chord absorbs whatever fills the bar.
     /// </summary>
-    private void CollectChordPartBlocks(SyntaxNode root)
+    private void CollectChordPart(SyntaxNode root, string partName, int staffIndex)
     {
-        var blocks = root.DescendantNodes().OfType<ChordPartBlockSyntax>().ToList();
+        var blocks = root.DescendantNodes().OfType<ChordPartBlockSyntax>()
+            .Where(b => b.PartName == partName).ToList();
         if (blocks.Count == 0)
             return;
 
@@ -3833,7 +3841,7 @@ public sealed class MeasureCollector
             void Flush()
             {
                 if (pending.Count > 0)
-                    EmitChordPartMeasure(pending, startMeasure + localMeasure);
+                    EmitChordPartMeasure(pending, startMeasure + localMeasure, staffIndex);
                 localMeasure++;
                 pending.Clear();
             }
@@ -3847,7 +3855,7 @@ public sealed class MeasureCollector
             }
             // A trailing measure with no closing barline still counts.
             if (pending.Count > 0)
-                EmitChordPartMeasure(pending, startMeasure + localMeasure);
+                EmitChordPartMeasure(pending, startMeasure + localMeasure, staffIndex);
         }
     }
 
@@ -3856,7 +3864,7 @@ public sealed class MeasureCollector
     /// chord its start timing from either the default rhythm table (no explicit
     /// durations) or carry-forward explicit durations.
     /// </summary>
-    private void EmitChordPartMeasure(List<ChordEntrySyntax> entries, int measureIndex)
+    private void EmitChordPartMeasure(List<ChordEntrySyntax> entries, int measureIndex, int staffIndex)
     {
         bool anyExplicit = entries.Any(e => e.Duration != null);
         ImmutableArray<Fraction>? table = anyExplicit
@@ -3871,7 +3879,8 @@ public sealed class MeasureCollector
             var (text, structure) = ResolveChordEntry(entry);
             _chordNames.Add(new ChordNameItem(
                 text, measureIndex, itemIndex: -1, entry.Root.Position,
-                staffIndex: 0, useTiming: true, timing: timing, structure: structure));
+                staffIndex: staffIndex, useTiming: true, timing: timing, structure: structure,
+                isChordRow: true));
 
             Fraction dur;
             if (entry.Duration != null)

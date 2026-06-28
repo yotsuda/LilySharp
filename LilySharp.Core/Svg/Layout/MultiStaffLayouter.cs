@@ -176,10 +176,16 @@ public sealed class MultiStaffLayouter
             // Tab lines are spaced wider than a normal staff (TabStringSpace).
             return (stringCount - 1) * EngravingDefaults.TabStringSpace(stringCount); // Bass: 3 → 4.5
         }
+        if (staff.IsChordRow)
+            return ChordRowHeight; // no 5-line staff — just the chord-symbol band
         if (staff.IsOssia)
             return _options.StaffHeight * OssiaScaleFactor;
         return _options.StaffHeight;
     }
+
+    /// <summary>Reserved vertical band (staff spaces) for an independent chord row:
+    /// a chord symbol (~1.5 ss tall) plus a little breathing room.</summary>
+    private const double ChordRowHeight = 2.5;
 
     /// <summary>
     /// Layouts all staff groups within a system.
@@ -703,7 +709,7 @@ public sealed class MultiStaffLayouter
         bool isLastSystem = false,
         double? baseShortestDuration = null)
     {
-        var primaryVoice = score.StaffGroups[0].PrimaryStaff.PrimaryVoice;
+        var primaryVoice = score.PrimaryContentStaff.PrimaryVoice;
         int endMeasureIndex = measureCount.HasValue
             ? startMeasureIndex + measureCount.Value
             : primaryVoice.Measures.Length;

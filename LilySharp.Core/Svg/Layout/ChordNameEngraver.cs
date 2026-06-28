@@ -66,6 +66,10 @@ public static class ChordNameEngraver
     /// </remarks>
     private const double StaffPadding = 0.6;
 
+    /// <summary>For an independent chord ROW, the chord text baseline below the
+    /// row band's top, so a ~1.5 ss symbol sits inside the reserved band.</summary>
+    private const double ChordRowTextBaseline = 1.6;
+
     /// <summary>How far left of the first chord symbol the protrusion scan starts —
     /// enough for a centred symbol's left half, but short of the system-start clef.</summary>
     private const double ChordRowLeftMargin = 2.0;
@@ -173,6 +177,16 @@ public static class ChordNameEngraver
         var results = ImmutableArray.CreateBuilder<ChordNameLayout>(prepared.Count);
         foreach (var p in prepared)
         {
+            // Independent chord ROW: the symbol sits WITHIN its own row band (its
+            // staff offset is the band top), not floated above an associated staff.
+            if (p.chord.IsChordRow)
+            {
+                results.Add(new ChordNameLayout(
+                    p.chord.MeasureIndex, p.x, p.staffOffset + ChordRowTextBaseline,
+                    p.chord.ChordText, p.chord.SourcePosition));
+                continue;
+            }
+
             // Y position: above the staff (negative = upward), offset to own staff.
             // Raise by the system's peak note protrusion (top-staff only) so the chord
             // line clears high notes/ledger lines; the StaffPadding floor reproduces the

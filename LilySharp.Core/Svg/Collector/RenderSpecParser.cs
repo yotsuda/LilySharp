@@ -75,6 +75,10 @@ public static class RenderSpecParser
                     if (ossiaSpec != null)
                         items.Add(ossiaSpec);
                     break;
+
+                case ChordRowRenderSyntax chordRow:
+                    items.Add(new ChordRowSpec(chordRow.PartName));
+                    break;
             }
         }
 
