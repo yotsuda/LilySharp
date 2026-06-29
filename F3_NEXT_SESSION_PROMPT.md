@@ -1,6 +1,6 @@
 LilySharp の F3（意味解析〜レイアウトの増分化）を再開する。現在地は **B = whole-layout reuse が稼働中**。
-MusicMark 移行（`8e8755e`）＋ B-2 whole-layout reuse（`706d36d`）まで完了・push 済み。
-まず現状を読んでから、次の一手（**Lyric 移行＝`ReuseSafe` から外す**）に着手して。
+MusicMark 移行（`8e8755e`）＋ B-2 whole-layout reuse（`706d36d`）＋ Lyric 移行（`7d1d436`）まで完了・push 済み。
+まず現状を読んでから、次の一手（**note 由来 Glissando/Fingering/TieVariant 移行＝note-index resolver を作り `ReuseSafe` から外す**）に着手して。
 
 ## 最初に読む（この順で）
 1. `C:\MyProj\LilySharp\docs\DEV_BUGFIX_WORKFLOW.md` の §0（アドホック禁止）と §19（F3 引き継ぎ・運用）。
@@ -9,7 +9,7 @@ MusicMark 移行（`8e8755e`）＋ B-2 whole-layout reuse（`706d36d`）まで�
 4. **`C:\MyProj\LilySharp\LSP_F3_ANNOTATION_REMAINING.md`** ← **今回の本丸**。B の設計・残型・**MusicMark 移行の具体手順**・B-2 復活手順が全部ここにある。
 
 ## 現在地（2026-06-30 更新）
-- リポジトリ `C:\MyProj\LilySharp`、ブランチ `f3-incremental` = `origin/master`（最新 tip `706d36d`）。全テスト **1846 passed / 3 skipped**。作業ツリー clean。
+- リポジトリ `C:\MyProj\LilySharp`、ブランチ `f3-incremental` = `origin/master`（最新 tip `7d1d436`）。全テスト **1847 passed / 3 skipped**。作業ツリー clean。
 - 着手前に必ず `dotnet test LilySharp.Tests`（ripple MCP の pwsh で）でベースライン確認。
 
 ### 完了済み（コミット済・push 済）
@@ -27,20 +27,24 @@ MusicMark 移行（`8e8755e`）＋ B-2 whole-layout reuse（`706d36d`）まで�
 - **MusicMark 移行**（`8e8755e`）: 12型目。`MusicMarkLayout.SourceIndex`＝`BuildAllMarks()` の index、`BuildAllMarks` public 化、
   `ResolveDataPos` で再構築解決。section ラベルを位置ずれ編集下で正しく再導出することを `MigratedDataPosTests` で実証。snapshot byte-identical。
 - **B-2 whole-layout reuse**（`706d36d`）: `IncrementalCompiler` が「line-break gate 不変＋content key 全一致＋global key
-  (Title/Composer/Tempo) 一致＋`ReuseSafe`（残7アレイ empty）」で `_cachedLayout` を丸ごと再利用、`LayoutEngine.Layout` を完全 skip。
+  (Title/Composer/Tempo) 一致＋`ReuseSafe`（残アレイ empty）」で `_cachedLayout` を丸ごと再利用、`LayoutEngine.Layout` を完全 skip。
   override 無し通常スコアの内容不変編集で reuse 発火を **増分==フルで実証**（`LastEditReusedLayout`）。global key guard が load-bearing。
+- **Lyric 移行**（`7d1d436`、13型目）: `LyricLayout.SourceIndex`＝score.Lyrics への index、`LyricEngraver` の (row,verse) GroupBy に
+  元 index を threading、`ResolveDataPos` で nested `Item.SourcePosition` を再導出。`LyricLayouts` を `ReuseSafe` から外し、
+  **歌詞入りスコアでも reuse 発火**を `ContentUnchangedEdit_WithLyrics` で実証。残 `ReuseSafe`=6アレイ
+  （Hairpin/Ottava/Glissando/Fingering/TextSpanner/Pedal）。
 
 ## 次にやること（B の続き ＝ `ReuseSafe` を1つずつ外して reuse eligible を広げる）
-**`LSP_F3_ANNOTATION_REMAINING.md` の「残型の移行方針」をそのまま実行する。** 残7アレイの検出元は全て content key 被覆済み
+**`LSP_F3_ANNOTATION_REMAINING.md` の「残型の移行方針」をそのまま実行する。** 残6アレイの検出元は全て content key 被覆済み
 （健全性の論拠は同ファイル参照）。各型を移行→`MigratedDataPosTests` に追加→`IncrementalCompiler.ReuseSafe` から該当アレイを外す。
 
-1. **Lyric（次の最優先）**: `LyricEngraver` の verse グルーピングを通る→`score.Lyrics` への index を `LyricLayout.SourceIndex` に
-   threading、`ResolveDataPos` に `LyricLayouts ← score.Lyrics` を追加、`ReuseSafe` から `LyricLayouts` を外す。
-   `MigratedDataPosTests` に Lyric を追加（歌詞入り fixture で検証）。
-2. **note 由来 Glissando/Fingering/TieVariant**: note の `SourcePosition` を `(MeasureIndex, ItemIndex)`＋多譜表 staff 経路で
-   measures から引く **note-index resolver** を実装。各移行後 `ReuseSafe` から外す。
-3. **detected Hairpin/Ottava/Pedal/Ornament/TextSpanner**（score 非保持）: 検出元 item を `ScoreLayout` に載せて render 到達可能に。
-   各移行ごとに lyrics/hairpin 入りスコアでも reuse 発火することを増分==フルで実証。
+1. **note 由来 Glissando/Fingering/TieVariant（次の最優先・新機構）**: side-table と違い data-pos は **start note の
+   `SourcePosition`** 由来（`GlissandoDetector`=`score.Voice.Measures[mi].Items[ii]` の `NoteItem`）。検出は **per-staff**
+   （`ElementCoordinator.LayoutGlissandos(staffScore,…,staffIndex)`）で layout は現状 StaffIndex 非保持→ layout に
+   `(StaffIndex, MeasureIndex, ItemIndex)` を載せ、`ResolveDataPos` に **note-index resolver**（新 score の
+   `staff.PrimaryVoice.Measures[mi].Items[ii]` から `SourcePosition` を引く）を追加。詳細は `LSP_F3_ANNOTATION_REMAINING.md`。
+2. **detected Hairpin/Ottava/Pedal/Ornament/TextSpanner**（score 非保持、musicMarks/dynamics 由来）: 検出元 item を
+   `ScoreLayout` に載せて render 到達可能に。各移行ごとに hairpin 入りスコアでも reuse 発火を増分==フルで実証。
 
 ## 検証
 - `MigratedDataPosTests`（B-1 の頑健性ガード）: 移行型を足したら必ずここに追加（位置ずれ編集下の resolution 正当性を実証）。
