@@ -49,5 +49,11 @@ public sealed record LyricLayout(
     bool DrawExtender = false,
 
     /// <summary>End X position of extender if drawn (in staff spaces).</summary>
-    double ExtenderEndX = 0
+    double ExtenderEndX = 0,
+
+    /// <summary>F3/B: index of this syllable in the score's <c>Lyrics</c> side-table
+    /// — a position-independent reference so a reused (cached) layout re-derives its
+    /// data-pos (<see cref="LyricItem.SourcePosition"/>) from the live score at render
+    /// time (SharedRenderer.ResolveDataPos). -1 = unresolved (direct unit-test construction).</summary>
+    int SourceIndex = -1
 );

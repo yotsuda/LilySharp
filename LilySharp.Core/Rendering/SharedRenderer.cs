@@ -2074,6 +2074,11 @@ public static class SharedRenderer
                 MusicMarkEngraver.BuildAllMarks(score.MusicMarks,
                     score.PrimaryContentStaff.PrimaryVoice.Measures, score.Tempo),
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            // Lyrics carry the source offset on their nested LyricItem (the renderer draws
+            // data-pos from Item.SourcePosition); re-derive that from the live Lyrics table.
+            LyricLayouts = ResolveArr(layout.LyricLayouts, score.Lyrics,
+                static (l, it) => l with { Item = l.Item with { SourcePosition = it.SourcePosition } },
+                static l => l.SourceIndex),
         };
     }
 

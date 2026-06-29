@@ -168,8 +168,11 @@ public sealed class LyricEngraver
         // Group by (row, verse): ordinary lyrics (row = -1) sit below the first
         // staff; an independent lyrics row (row = its staff index) sits in its own
         // band at that staff's Y. Verses stack within each.
+        // F3/B: carry each syllable's ORIGINAL index in `lyrics` (== score.Lyrics order)
+        // through the grouping so the emitted layout can re-derive its data-pos later.
         var verseGroups = lyrics
-            .GroupBy(l => (Row: l.IsLyricsRow ? l.StaffIndex : -1, Verse: l.VerseNumber))
+            .Select((l, i) => (Lyric: l, Index: i))
+            .GroupBy(x => (Row: x.Lyric.IsLyricsRow ? x.Lyric.StaffIndex : -1, Verse: x.Lyric.VerseNumber))
             .OrderBy(g => g.Key.Row).ThenBy(g => g.Key.Verse);
 
         foreach (var verseGroup in verseGroups)
@@ -188,15 +191,15 @@ public sealed class LyricEngraver
             var verseLayouts = new List<LyricLayout>();
             for (int i = 0; i < verseLyrics.Count; i++)
             {
-                var lyric = verseLyrics[i];
+                var (lyric, srcIndex) = verseLyrics[i];
                 var layout = CalculateSyllableLayout(
                     lyric,
                     measureLayouts,
                     verseY,
-                    i + 1 < verseLyrics.Count ? verseLyrics[i + 1] : null);
+                    i + 1 < verseLyrics.Count ? verseLyrics[i + 1].Lyric : null);
 
                 if (layout != null)
-                    verseLayouts.Add(layout);
+                    verseLayouts.Add(layout with { SourceIndex = srcIndex });
             }
 
             // Apply collision avoidance for this verse

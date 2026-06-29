@@ -199,16 +199,16 @@ public sealed class IncrementalCompiler
     // F3/B-2: a cached layout is safe to reuse only if it carries no annotation whose
     // data-pos is still BAKED into the layout (i.e. not yet migrated onto the render-time
     // SourceIndex resolution). Those would go stale on reuse since a content-unchanged
-    // edit shifts source offsets. The migrated arrays (dynamics, articulations, marks, …)
-    // are re-resolved from the live score by SharedRenderer.ResolveDataPos, so they impose
-    // no constraint. Every detection source of the arrays below is itself folded into the
-    // content key (lyrics/marks/dynamics tables, or note items via the intrinsic key), so
-    // a content-key match guarantees these stay empty — checking the cached layout is
-    // equivalent to checking the edited score would produce none. PedalBracketLayouts is
-    // always empty today (pedals render as text marks), kept for completeness.
+    // edit shifts source offsets. The migrated arrays (dynamics, articulations, marks,
+    // lyrics, …) are re-resolved from the live score by SharedRenderer.ResolveDataPos, so
+    // they impose no constraint. Every detection source of the arrays below is itself
+    // folded into the content key (the marks/dynamics tables, or note items via the
+    // intrinsic key), so a content-key match guarantees these stay empty — checking the
+    // cached layout is equivalent to checking the edited score would produce none.
+    // PedalBracketLayouts is always empty today (pedals render as text marks), kept for
+    // completeness.
     private static bool ReuseSafe(ScoreLayout layout) =>
-        layout.LyricLayouts.IsDefaultOrEmpty
-        && layout.HairpinLayouts.IsDefaultOrEmpty
+        layout.HairpinLayouts.IsDefaultOrEmpty
         && layout.OttavaBracketLayouts.IsDefaultOrEmpty
         && layout.GlissandoLayouts.IsDefaultOrEmpty
         && layout.FingeringLayouts.IsDefaultOrEmpty

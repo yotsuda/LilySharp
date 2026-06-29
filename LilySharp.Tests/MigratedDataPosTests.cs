@@ -107,6 +107,10 @@ public class MigratedDataPosTests
             Check(fx, "MusicMark", l1.MusicMarkLayouts, l2.MusicMarkLayouts, editedMarks,
                 x => x.SourceIndex, x => x.SourcePosition, it => it.SourcePosition, covered,
                 skipNoDataPos: true);
+
+            // Lyric carries its data-pos on the nested LyricItem.
+            Check(fx, "Lyric", l1.LyricLayouts, l2.LyricLayouts, s2.Lyrics,
+                x => x.SourceIndex, x => x.Item.SourcePosition, it => it.SourcePosition, covered);
         }
 
         // Every migrated type the fixtures contain must have been exercised. (CustomText
@@ -116,7 +120,7 @@ public class MigratedDataPosTests
         {
             "Dynamic", "Articulation", "Arpeggio", "FiguredBass", "VoltaBracket",
             "TupletBracket", "PercentRepeat", "GraceNote", "ChordName", "TrillSpanner",
-            "MusicMark",
+            "MusicMark", "Lyric",
         };
         var missing = new List<string>();
         foreach (var t in expected)
