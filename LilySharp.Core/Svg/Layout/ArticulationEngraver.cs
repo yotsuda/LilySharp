@@ -359,14 +359,23 @@ public static class ArticulationEngraver
 
     /// <summary>
     /// Ink box used to seed the outside-staff occupancy (so movable grobs —
-    /// rehearsal/section marks etc. — clear the scripts). Uses real font
-    /// metrics where extracted (the trill "tr" glyph is much wider and taller
-    /// than the positioning fallback); other ornaments fall back to the
-    /// positioning box until their metrics are extracted from the font.
+    /// rehearsal/section marks etc. — clear the scripts). Uses the real font
+    /// metrics for the ornament glyphs (extracted from Emmentaler via
+    /// audit/scripts/Extract-EmmentalerMetrics.py), which are much wider/taller
+    /// than the 0.5×0.5 positioning fallback — e.g. prall-prall spans ~2.85sp
+    /// wide. The ornaments' own POSITIONING still uses the simplified extents
+    /// (GetGlyphBBox / GetArticulationExtent), exactly as the trill does; only
+    /// the occupancy a mark must clear changes. Other types fall back.
+    /// LILYPOND-REF: mf/feta-scripts.mf set_char_box() for each script glyph.
     /// </summary>
     private static GlyphMetrics.BBox GetSeedBBox(ArticulationType type) => type switch
     {
         ArticulationType.Trill => GlyphMetrics.OrnTrillGlyph,
+        ArticulationType.Turn => GlyphMetrics.OrnTurnGlyph,
+        ArticulationType.InvertedTurn => GlyphMetrics.OrnReverseTurnGlyph,
+        ArticulationType.Prall => GlyphMetrics.OrnPrallGlyph,
+        ArticulationType.Mordent => GlyphMetrics.OrnMordentGlyph,
+        ArticulationType.PrallTriller => GlyphMetrics.OrnPrallPrallGlyph,
         _ => GetGlyphBBox(type)
     };
 

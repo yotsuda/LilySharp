@@ -113,6 +113,36 @@ public static partial class GlyphMetrics
     /// <summary>Trill ornament — advance width (next-glyph horizontal feed).</summary>
     public const double OrnTrillGlyphAdvance = 0.8480;
 
+    /// <summary>Turn ornament — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.turn (U+E059 = scripts.turn)</remarks>
+    public static readonly BBox OrnTurnGlyph = new(-1.0920, -0.5280, 1.0920, 0.5280);
+    /// <summary>Turn ornament — advance width (next-glyph horizontal feed).</summary>
+    public const double OrnTurnGlyphAdvance = 1.0920;
+
+    /// <summary>Inverted (reverse) turn ornament — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.reverseturn (U+E058 = scripts.reverseturn)</remarks>
+    public static readonly BBox OrnReverseTurnGlyph = new(-1.0920, -0.5280, 1.0920, 0.5280);
+    /// <summary>Inverted (reverse) turn ornament — advance width (next-glyph horizontal feed).</summary>
+    public const double OrnReverseTurnGlyphAdvance = 1.0920;
+
+    /// <summary>Prall (upper mordent) ornament — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.prall (U+E070 = scripts.prall)</remarks>
+    public static readonly BBox OrnPrallGlyph = new(-1.0040, -0.5000, 1.0040, 0.5000);
+    /// <summary>Prall (upper mordent) ornament — advance width (next-glyph horizontal feed).</summary>
+    public const double OrnPrallGlyphAdvance = 0.8320;
+
+    /// <summary>Mordent (lower mordent) ornament — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.mordent (U+E071 = scripts.mordent)</remarks>
+    public static readonly BBox OrnMordentGlyph = new(-1.0040, -0.6680, 1.0040, 0.6680);
+    /// <summary>Mordent (lower mordent) ornament — advance width (next-glyph horizontal feed).</summary>
+    public const double OrnMordentGlyphAdvance = 0.8320;
+
+    /// <summary>Prall-prall / prall-triller ornament — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.prallprall (U+E072 = scripts.prallprall)</remarks>
+    public static readonly BBox OrnPrallPrallGlyph = new(-1.4240, -0.5000, 1.4240, 0.5000);
+    /// <summary>Prall-prall / prall-triller ornament — advance width (next-glyph horizontal feed).</summary>
+    public const double OrnPrallPrallGlyphAdvance = 1.2480;
+
     /// <summary>Segno mark — BBox.</summary>
     /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.segno (U+E062 = scripts.segno)</remarks>
     public static readonly BBox MarkSegno = new(-1.0000, -1.5000, 1.0000, 1.5000);
