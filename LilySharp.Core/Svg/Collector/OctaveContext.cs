@@ -116,6 +116,52 @@ internal sealed class OctaveContext
         InitialOctaveAbsolute = false;
         LastPitchName = 'c';
     }
+
+    // --- Part transpose: composes on top of relative-octave resolution ---
+    // LILYPOND-REF: scm/music-functions.scm \transpose (with from = c). The
+    // relative chain runs on the ORIGINAL pitches; transpose is applied AFTER
+    // Resolve, so a transposed part still resolves octaves from what the user
+    // wrote. State (HasTranspose / Transpose*) and the application logic live
+    // together here; the collector only composes the target (part + score) and
+    // hands it to SetTranspose.
+
+    /// <summary>
+    /// Arms (or clears) the part transpose from an already-composed target (the
+    /// part's own transpose combined with any score-level transpose). Null clears.
+    /// </summary>
+    public void SetTranspose((int step, int alt, int oct)? transpose)
+    {
+        if (transpose is { } t)
+        {
+            HasTranspose = true;
+            TransposeStep = t.step;
+            TransposeAlt = t.alt;
+            TransposeOctave = t.oct;
+        }
+        else
+        {
+            HasTranspose = false;
+        }
+    }
+
+    /// <summary>
+    /// Applies the part transpose to a resolved display pitch (no-op when the part
+    /// is untransposed).
+    /// </summary>
+    public (int step, int alt, int octave) TransposePitch(int step, int alt, int octave) =>
+        HasTranspose
+            ? PitchTransposer.Transpose(step, alt, octave, TransposeStep, TransposeAlt, TransposeOctave)
+            : (step, alt, octave);
+
+    /// <summary>
+    /// Shifts a written key signature's sharp count by the part transpose (no-op
+    /// when untransposed). C major (0) transposed by d becomes D major (+2).
+    /// LILYPOND-REF: \transpose also moves \key.
+    /// </summary>
+    public int TransposeKeySharps(int sharps) =>
+        HasTranspose
+            ? sharps + PitchTransposer.KeySignatureFifthsShift(TransposeStep, TransposeAlt)
+            : sharps;
 }
 
 /// <summary>Running octave state captured for a nested frame.</summary>

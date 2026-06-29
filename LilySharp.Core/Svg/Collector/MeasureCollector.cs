@@ -655,7 +655,7 @@ public sealed class MeasureCollector
             // Transpose the written key signature (CollectDefinitions set it
             // before the part option was known) so the displayed key and the
             // accidental engine match the transposed pitches.
-            _keySharps = TransposeKeySharps(_keySharps);
+            _keySharps = _octave.TransposeKeySharps(_keySharps);
         }
         else
         {
@@ -873,7 +873,7 @@ public sealed class MeasureCollector
             // transposed by THIS part's option, so the accidental engine
             // suppresses in-key accidentals correctly and the key does not leak
             // between voices.
-            _keySharps = TransposeKeySharps(_initialKeySharps);
+            _keySharps = _octave.TransposeKeySharps(_initialKeySharps);
             if (_octave.HasTranspose)
                 voiceKeyDict[voiceName] = new KeySignature(_keySharps);
 
@@ -1562,7 +1562,7 @@ public sealed class MeasureCollector
                     // Mid-measure key signature change
                     // LILYPOND-REF: lily/key-engraver.cc — process_music() creates KeySignature grob
                     var previousKey = new KeySignature(_keySharps);
-                    int newSharps = TransposeKeySharps(CalculateKeySharps(keySig));
+                    int newSharps = _octave.TransposeKeySharps(CalculateKeySharps(keySig));
                     _keySharps = newSharps;
                     var newKey = new KeySignature(newSharps);
                     var keyChange = new KeySignatureChangeItem(newKey, previousKey, keySig.Position);
@@ -1821,18 +1821,9 @@ public sealed class MeasureCollector
     {
         // A per-score transpose composes on top of the part's own transpose, so a
         // Bb-part-score of an already-transposed part is shifted exactly once more.
-        var effective = ComposeTranspose(transpose, ScoreTranspose);
-        if (effective is { } t)
-        {
-            _octave.HasTranspose = true;
-            _octave.TransposeStep = t.step;
-            _octave.TransposeAlt = t.alt;
-            _octave.TransposeOctave = t.oct;
-        }
-        else
-        {
-            _octave.HasTranspose = false;
-        }
+        // OctaveContext owns the transpose state + application; we only compose the
+        // effective target here (ScoreTranspose is a collector-level concern).
+        _octave.SetTranspose(ComposeTranspose(transpose, ScoreTranspose));
     }
 
     /// <summary>
@@ -1850,15 +1841,6 @@ public sealed class MeasureCollector
         return PitchTransposer.Transpose(i.step, i.alt, i.oct, o.step, o.alt, o.oct);
     }
 
-    /// <summary>
-    /// Shifts a written key signature's sharp count by the part's transpose
-    /// (no-op when the part is untransposed). C major (0) with transpose: d
-    /// becomes D major (+2). LILYPOND-REF: \transpose also moves \key.
-    /// </summary>
-    private int TransposeKeySharps(int sharps) =>
-        _octave.HasTranspose
-            ? sharps + PitchTransposer.KeySignatureFifthsShift(_octave.TransposeStep, _octave.TransposeAlt)
-            : sharps;
 
     private static (string? clef, int? octave, (int step, int alt, int oct)? transpose, int clefPos) GetPartDefaults(SyntaxNode root, string partName)
     {
@@ -3401,10 +3383,7 @@ public sealed class MeasureCollector
         int actualOctave = _octave.Resolve(step, pitch.OctaveOffset, pitchName);
 
         // Display pitch = written pitch, transposed if the part has transpose:.
-        int dStep = step, dAlt = pitch.AccidentalOffset, dOctave = actualOctave;
-        if (_octave.HasTranspose)
-            (dStep, dAlt, dOctave) = PitchTransposer.Transpose(
-                step, pitch.AccidentalOffset, actualOctave, _octave.TransposeStep, _octave.TransposeAlt, _octave.TransposeOctave);
+        var (dStep, dAlt, dOctave) = _octave.TransposePitch(step, pitch.AccidentalOffset, actualOctave);
 
         // Staff position 0 = middle line of the staff.
         //   Treble: B4   Bass: D3   Alto: C4 (middle line)   Tenor: A3
