@@ -96,13 +96,13 @@ B（render が data-pos を score から引く＝layout を完全に位置非依
 - **移行済み11型（MultiStaffScore side-table 直結）**: Dynamic, Articulation, Arpeggio, CustomText, FiguredBass,
   VoltaBracket, TupletBracket, PercentRepeat, GraceNote(+tab grace), ChordName, TrillSpanner。
 
-### data-pos を出す未移行アレイ＝6つ（`ScoreLayout` 上）。reuse はこれら全 empty 時のみ byte-identical（`ReuseSafe`）
-`HairpinLayouts, OttavaBracketLayouts, GlissandoLayouts, FingeringLayouts,
-TextSpannerLayouts, PedalBracketLayouts`（**MusicMark・Lyric は移行済みで除外**）。**beams/ties/slurs/barnumber/stanza/
-tievariant/mmrest/partcombine/crossstaff は data-pos を出さない**（`gc.Source` 無し）→ reuse を妨げない（確認済み）。
-PedalBracketLayouts は常に empty（pedal は text mark で描画）。**この6アレイの検出元は全て content key に被覆**
-（Hairpin←musicMarks+dynamics / Ottava・TextSpanner←musicMarks / Glissando・Fingering←note items）
-＝content-key 一致なら空のまま、ゆえに「cached layout が空」の検査＝「編集後 score も空」の検査と等価（健全）。
+### data-pos を出す未移行アレイ＝4つ（`ScoreLayout` 上）。reuse はこれら全 empty 時のみ byte-identical（`ReuseSafe`）
+`HairpinLayouts, OttavaBracketLayouts, TextSpannerLayouts, PedalBracketLayouts`
+（**MusicMark・Lyric・Glissando・Fingering は移行済みで除外**）。**beams/ties/slurs/barnumber/stanza/**tievariant**/mmrest/
+partcombine/crossstaff は data-pos を出さない**（`gc.Source` 無し→`DrawTieVariants` も確認済）→ reuse を妨げない＝移行不要。
+PedalBracketLayouts は常に empty（pedal は text mark で描画）。**この4アレイの検出元は全て content key に被覆**
+（Hairpin←musicMarks+dynamics / Ottava・TextSpanner←musicMarks）＝content-key 一致なら空のまま、ゆえに「cached layout が空」
+の検査＝「編集後 score も空」の検査と等価（健全）。残る実作業は **Hairpin/Ottava/TextSpanner**（Pedal は空で無害）。
 
 ### MusicMark（セクションラベル）＝移行済み（旧ブロッカー解消）
 旧: `section X` ラベルが全スコアに1つ以上生成され、未移行のため reuse が死にコードだった。→ `8e8755e` で移行し unblock 済み。
@@ -113,19 +113,20 @@ B-2（`706d36d`）も復活＝override 無しの通常スコアで内容不変�
 該当アレイを外す（＝hairpin 等を含むスコアでも reuse 発火）。
 - ~~**Lyric**~~: **完了 `7d1d436`**（`LyricLayout.SourceIndex`＝score.Lyrics への index、`LyricEngraver` の (row,verse)
   GroupBy に元 index を threading、`ResolveDataPos` で nested `Item.SourcePosition` を再導出）。
-- **Glissando/Fingering/TieVariant（note 由来）＝次の最優先。side-table と違い note-index resolver が要る**:
-  - data-pos の出所: Glissando の `SourcePosition` = **start note の `SourcePosition`**（`GlissandoDetector`:
-    `score.Voice.Measures[StartMeasureIndex].Items[StartItemIndex]` の `NoteItem.SourcePosition`）。Fingering/TieVariant も同様に
-    note item 由来のはず（要確認）。
-  - **検出は per-staff**: `ElementCoordinator.LayoutGlissandos(staffScore, …, staffIndex)` が staff ごとに `DetectGlissandos` を回す。
-    `GlissandoLayout`/`GlissandoItem` は現状 **StaffIndex を持たない** → resolver 用に layout へ `(StaffIndex, MeasureIndex, ItemIndex)`
-    を載せる必要。多譜表は `score.EnumerateStaves()` の staffIndex で対応する `staff.PrimaryVoice.Measures` を引く。
-  - 機構案: `ResolveDataPos` に **note-index resolver** `ResolveNoteArr`（layout が持つ (staffIdx, mi, ii) で
-    新 score の measures から `NoteItem` を引き `SourcePosition` を取る）を追加。side-table 用 `ResolveArr` とは別ヘルパ。
-  - 各 layout に locator を threading（GlissandoEngraver:159 等の構築点）。`MigratedDataPosTests` に追加し `ReuseSafe` から外す。
-- **Hairpin/Ottava/Pedal/Ornament/TextSpanner**（detected, score 非保持）: 検出元 item を `ScoreLayout` に載せて render 到達可能に。
-  Hairpin/Ottava/TextSpanner は `musicMarks`/`dynamics` 由来（`SourcePosition` はその検出元 item から）。
-- 各移行後、`ReuseSafe` から該当アレイを外し、増分==フルで reuse 発火を実証（hairpin 入りスコアでも）。
+- ~~**Glissando/Fingering（note 由来）**~~: **完了 `7f0a12d`(Gliss) / `aebafb5`(Finger)**。新機構 **note-index resolver**
+  `ResolveNoteArr`（`SharedRenderer`）= layout が持つ `(StaffIndex, MeasureIndex, ItemIndex)` で新 score の
+  `staff.PrimaryVoice.Measures[mi].Items[ii]` を引き、host item（**基底 `MusicItem`**＝note も chord も可）の `SourcePosition`
+  を取る。`BuildStaffMeasures` で staff→measures マップを lazy 構築。staffIndex=-1（単一譜 `Layout(Score)` 経路）は fallback
+  ＝baked 値（通常レンダで正、reuse 経路は `Layout(MultiStaffScore)` で実 staffIndex）。両型とも `ReuseSafe` から除外済み。
+- ~~**TieVariant**~~: **移行不要を確認**。`DrawTieVariants` は `gc.Source` を呼ばず data-pos を出さない（`SourcePosition`
+  フィールドは未使用）→ reuse で stale 化しない。元から `ReuseSafe` に無い。
+- **Hairpin/Ottava/TextSpanner（detected, score 非保持）＝次の最優先・最後の実作業**: いずれも `gc.Source` で data-pos を出す
+  （`DrawHairpins`/`DrawOttavaBrackets`/`DrawTextSpanners` で確認）。検出元: Hairpin=`DetectHairpins(musicMarks, dynamics)`、
+  Ottava=`DetectOttavaBrackets(musicMarks)`、TextSpanner=`DetectTextSpanners(musicMarks)`。`SourcePosition` はその検出元
+  mark/dynamic item 由来。**方針**: 検出器が各検出 item の**元 side-table（score.MusicMarks / score.Dynamics）への index**を
+  追跡→layout に載せ、`ResolveDataPos` で `ResolveArr`（既存ヘルパ）で再導出。Hairpin は2テーブル由来なので「どちらのテーブルの
+  どの index か」を識別する必要（例: tableId + index、または検出元種別で分岐）。各移行後 `ReuseSafe` から外す。Pedal は空で無害。
+- 各移行後、`MigratedDataPosTests` に追加＋`IncrementalCompilerTests` で hairpin 入りスコアの reuse 発火を増分==フルで実証。
 
 ### B-1 の頑健性は実証済み（commit `8afaf0e`）
 `MigratedDataPosTests`：全 fixture を「元」vs「先頭改行コピー（全 offset +1）」でレイアウトし、移行済み各アレイで
