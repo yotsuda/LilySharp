@@ -38,65 +38,71 @@ namespace LilySharp.Benchmarks;
 /// The near-equality of the three today IS the motivation: incremental parsing
 /// saves little because render dominates. When F3 lands, only Edit_* should drop.
 ///
+/// Source is the largest test fixture (showcase/grammar-tour); the dead
+/// samples/music pieces the old RenderPipelineBenchmark points at no longer
+/// exist, so this walks up to LilySharp.Tests/Fixtures like the snapshot tests.
+///
 /// Run: dotnet run -c Release -- --filter '*IncrementalEdit*'
 /// </summary>
 [MemoryDiagnoser]
 [SimpleJob(RuntimeMoniker.Net90)]
 public class IncrementalEditBenchmark
 {
-    private string _furEliseSource = null!;
-    private string _furEliseEdited = null!;
-    private SyntaxTree _furEliseTree = null!;
+    private const string Fixture = "showcase/grammar-tour";
+
+    private string _source = null!;
+    private string _editedSource = null!;
+    private SyntaxTree _tree = null!;
     private TextChange _edit;
 
     private static readonly SvgRenderOptions Options = new() { EmbedFont = false };
 
-    private static string FindSamplesDir()
+    private static string FindFixturesDir()
     {
         var dir = AppContext.BaseDirectory;
         while (dir != null)
         {
-            var candidate = Path.Combine(dir, "samples");
+            var candidate = Path.Combine(dir, "LilySharp.Tests", "Fixtures");
             if (Directory.Exists(candidate))
                 return candidate;
             dir = Path.GetDirectoryName(dir);
         }
-        throw new DirectoryNotFoundException("Cannot find samples/ directory");
+        throw new DirectoryNotFoundException("Cannot find LilySharp.Tests/Fixtures/ directory");
     }
 
     [GlobalSetup]
     public void Setup()
     {
-        var samplesDir = FindSamplesDir();
-        _furEliseSource = File.ReadAllText(Path.Combine(samplesDir, "music", "fur-elise.lys"));
-        _furEliseTree = SyntaxTree.Parse(_furEliseSource);
+        var path = Path.Combine(FindFixturesDir(), Fixture.Replace('/', Path.DirectorySeparatorChar) + ".lys");
+        _source = File.ReadAllText(path).Replace("\r\n", "\n");
+        _tree = SyntaxTree.Parse(_source);
 
-        // A representative single-character-ish edit: insert a note token near
-        // the middle of the document (insertion = zero-length span), the shape
-        // of a user typing one note. Robust to file contents.
-        int at = _furEliseSource.Length / 2;
+        // A representative single edit: insert a note token near the middle of
+        // the document (insertion = zero-length span), the shape of a user
+        // typing one note. Robust to file contents.
+        int at = _source.Length / 2;
         _edit = new TextChange(new TextSpan(at, 0), " c4");
-        _furEliseEdited = _furEliseSource.Insert(at, " c4");
+        _editedSource = _source.Insert(at, " c4");
     }
 
-    [Benchmark(Baseline = true, Description = "Cold: parse + render (Fur Elise)")]
+    [Benchmark(Baseline = true, Description = "Cold: parse + render")]
     public string Cold_ParseAndRender()
     {
-        var tree = SyntaxTree.Parse(_furEliseSource);
+        var tree = SyntaxTree.Parse(_source);
         return SvgGenerator.Generate(tree, Options);
     }
 
     [Benchmark(Description = "Edit: incremental reparse + full render")]
     public string Edit_IncrementalReparse_FullRender()
     {
-        var tree = _furEliseTree.WithChange(_edit);
+        var tree = _tree.WithChange(_edit);
         return SvgGenerator.Generate(tree, Options);
     }
 
     [Benchmark(Description = "Edit: cold reparse + full render")]
     public string Edit_ColdReparse_FullRender()
     {
-        var tree = SyntaxTree.Parse(_furEliseEdited);
+        var tree = SyntaxTree.Parse(_editedSource);
         return SvgGenerator.Generate(tree, Options);
     }
 }
