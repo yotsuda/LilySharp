@@ -71,10 +71,22 @@ S5-3a/c で **per-system の spring 解（`LayoutMeasures`）＋ skyline（`Buil
 - 既存キャッシュ: `SystemLayoutCache.cs`（spring ＋ skyline の2相、typed memo）/ `IncrementalCompiler.cs`（gate・content key・cache 設置）。
 - per-measure 識別子: `MeasureContentKey.cs`（`Compute(Score)` / `Compute(MultiStaffScore)`）。
 
-## B 実装の進捗（2026-06-30）
+## B 実装の進捗（2026-06-30 更新）
 
-B（render が data-pos を score から引く＝layout を完全に位置非依存化）に着手。**機構は確立・実証済み**だが、
+B（render が data-pos を score から引く＝layout を完全に位置非依存化）。**機構は確立・実証済み**。
+**MusicMark 移行（`8e8755e`）＋ B-2 whole-layout reuse（`706d36d`）まで完了・push 済み**。
+通常スコア（lyrics/hairpin 等を含まない override 無しスコア）の内容不変編集で **layout 100% skip（reuse 発火）が
+増分==フルで実証済み**（`IncrementalCompilerTests.ContentUnchangedEdit_ReusesWholeLayout_AndMatchesFull`）。
 注釈の data-pos 出力源は当初想定より多く **計28箇所/約24型**で、いくつかは bespoke。
+
+### 完了（2026-06-30）
+- **MusicMark 移行**（`8e8755e`）: `MusicMarkLayout.SourceIndex`＝`BuildAllMarks()` への index。`BuildAllMarks(musicMarks,
+  measures, int? tempo)` を public 化、`SharedRenderer.ResolveDataPos` で再構築解決。`MigratedDataPosTests` に MusicMark 追加
+  （section ラベルが位置ずれ編集下で正しく再導出されることを全 fixture で実証、tempo は data-pos 0 で skip）。snapshot byte-identical。
+- **B-2 whole-layout reuse**（`706d36d`）: `IncrementalCompiler` が「line-break gate 不変＋content key 全一致＋global key
+  (Title/Composer/Tempo) 一致＋`ReuseSafe`（下記7アレイ empty）」で `_cachedLayout` を丸ごと再利用、`LayoutEngine.Layout`
+  を完全 skip。`LastEditReusedLayout` で発火可視化。健全性=content-key 一致⟹幾何位置非依存で同一、data-pos は render 時に
+  新 score から再導出（header data-pos も新 score から）。**global key が load-bearing**（title 編集は reuse 拒否＝専用テストで実証）。
 
 ### 確立した機構（commit `28edb88` + `69c4db5`、snapshot byte-identical）
 - 各注釈 `*Layout` struct に `int SourceIndex = -1`（その注釈が来た score side-table の index＝位置非依存な参照）。
@@ -84,29 +96,26 @@ B（render が data-pos を score から引く＝layout を完全に位置非依
 - **移行済み11型（MultiStaffScore side-table 直結）**: Dynamic, Articulation, Arpeggio, CustomText, FiguredBass,
   VoltaBracket, TupletBracket, PercentRepeat, GraceNote(+tab grace), ChordName, TrillSpanner。
 
-### data-pos を出す未移行アレイ＝8つ（`ScoreLayout` 上）。reuse はこれら全 empty 時のみ byte-identical
-`LyricLayouts, HairpinLayouts, OttavaBracketLayouts, GlissandoLayouts, FingeringLayouts, MusicMarkLayouts,
-TextSpannerLayouts, PedalBracketLayouts`。**beams/ties/slurs/barnumber/stanza/tievariant/mmrest/partcombine/crossstaff は
-data-pos を出さない**（`gc.Source` 無し）→ reuse を妨げない（確認済み）。
+### data-pos を出す未移行アレイ＝7つ（`ScoreLayout` 上）。reuse はこれら全 empty 時のみ byte-identical（`ReuseSafe`）
+`LyricLayouts, HairpinLayouts, OttavaBracketLayouts, GlissandoLayouts, FingeringLayouts,
+TextSpannerLayouts, PedalBracketLayouts`（**MusicMark は移行済みで除外**）。**beams/ties/slurs/barnumber/stanza/
+tievariant/mmrest/partcombine/crossstaff は data-pos を出さない**（`gc.Source` 無し）→ reuse を妨げない（確認済み）。
+PedalBracketLayouts は常に empty（pedal は text mark で描画）。**この7アレイの検出元は全て content key に被覆**
+（Lyric←score.Lyrics / Hairpin←musicMarks+dynamics / Ottava・TextSpanner←musicMarks / Glissando・Fingering←note items）
+＝content-key 一致なら空のまま、ゆえに「cached layout が空」の検査＝「編集後 score も空」の検査と等価（健全）。
 
-### 重大ブロッカー：MusicMark（セクションラベル）
-`section X` ラベルは `MusicMarkEngraver` が `MergeSectionLabels(score.MusicMarks, measures) + MergeTempoMark` で
-**全スコアに1つ以上生成**する（実測 MusicMark=1）。よって **MusicMark を移行しない限り whole-layout reuse は
-どの実スコアでも発火しない**。これが B-2 の最優先 unblock。
+### MusicMark（セクションラベル）＝移行済み（旧ブロッカー解消）
+旧: `section X` ラベルが全スコアに1つ以上生成され、未移行のため reuse が死にコードだった。→ `8e8755e` で移行し unblock 済み。
+B-2（`706d36d`）も復活＝override 無しの通常スコアで内容不変編集の reuse が増分==フルで発火する。
 
-### B-2（whole-layout reuse）
-`IncrementalCompiler` に「content key 全一致＋gate 不変なら `_cachedLayout` を丸ごと再利用、`ReuseSafe`(上記8アレイ empty)で
-gate」を実装→**試作したが、MusicMark で全スコア gate off＝死にコードのため未コミット（revert 済）**。MusicMark 移行後に復活させる。
-
-### 残型の移行方針（次の道）
-- **MusicMark**（最優先）: `allMarks`（merge）を render 時に再構築し index 解決。セクションラベルは `measure.SectionLabelPosition`
-  （再 collect で新値）から、実マークは `score.MusicMarks` から。merge 順は content 不変で安定。`Score?` vs `MultiStaffScore` の
-  型差に注意（tempo 等）。
-- **Lyric**: verse グルーピングを通る→`score.Lyrics` への index を layout に threading。
+### 残型の移行方針（次の道）— `ReuseSafe` を1つずつ外して eligible を広げる
+各型を移行するたびに `MigratedDataPosTests` で位置ずれ編集下の resolution を実証し、`IncrementalCompiler.ReuseSafe` から
+該当アレイを外す（＝lyrics/hairpin 等を含むスコアでも reuse 発火）。
+- **Lyric**（次の最優先）: verse グルーピングを通る→`score.Lyrics` への index を layout に threading。
 - **Glissando/Fingering/TieVariant**（note 由来）: note の `SourcePosition` を `(MeasureIndex, ItemIndex)`＋多譜表 staff 経路で
   measures から引く **note-index resolver** が要る。
 - **Hairpin/Ottava/Pedal/Ornament/TextSpanner**（detected, score 非保持）: 検出元 item を `ScoreLayout` に載せて render 到達可能に。
-- 各移行後、`ReuseSafe` から該当アレイを外し、B-2 を復活＋増分==フルで reuse 発火を実証。
+- 各移行後、`ReuseSafe` から該当アレイを外し、増分==フルで reuse 発火を実証（lyrics/hairpin 入りスコアでも）。
 
 ### B-1 の頑健性は実証済み（commit `8afaf0e`）
 `MigratedDataPosTests`：全 fixture を「元」vs「先頭改行コピー（全 offset +1）」でレイアウトし、移行済み各アレイで
@@ -114,7 +123,7 @@ gate」を実装→**試作したが、MusicMark で全スコア gate off＝死�
 10型を fixture で網羅（カバレッジ強制）＋CustomText はエングレーバ直接テスト。**11型すべて pass**＝位置がずれる編集下で
 正しく再導出される＝reuse 用途での正当性を証明（snapshot は同一ツリーの同値しか保証しないため、この追加が肝）。
 
-### MusicMark 移行の具体設計（実装待ち・最優先 unblock）
+### MusicMark 移行の具体設計（**実装済み `8e8755e`** — 以下は実行記録、12型に拡大）
 `MusicMarkEngraver`：
 1. `MusicMarkLayout` に `int SourceIndex = -1`（**allMarks への index**）。
 2. `Calculate` 内 `foreach (var mark in allMarks)` を**indexed for** にし、`markEntries` を `(Mark, X, SourceIndex)` の3-tuple化。
@@ -127,4 +136,5 @@ gate」を実装→**試作したが、MusicMark で全スコア gate off＝死�
    - section ラベルは `measure.SectionLabelPosition`（再 collect で新値）、実マークは `score.MusicMarks` から解決。
 5. `MigratedDataPosTests` に `MusicMark` を追加（section ラベルは全 fixture にある＝即カバー）＝移行の正当性を即実証。
 6. その後 B-2（`IncrementalCompiler` の `_cachedLayout` 再利用＋`ReuseSafe`）を復活し、`ReuseSafe` から MusicMark を外す。
-   これで「lyrics/hairpin 等を含まない通常スコア」で reuse 発火＋増分==フル証明が可能になる。
+   → **`706d36d` で完了**。global key (Title/Composer/Tempo) guard も追加（title 等の score-global 変更は reuse 拒否）。
+   「lyrics/hairpin 等を含まない通常スコア」で内容不変編集の reuse 発火＋増分==フルを `IncrementalCompilerTests` で実証済み。

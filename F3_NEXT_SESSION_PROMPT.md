@@ -1,12 +1,6 @@
-# F3 次セッション開始プロンプト
-
-> 新しい Claude Code セッションの最初に、下の `---` 以降の本文をそのまま貼る。
-> 現在の最前線は **B（whole-layout reuse のための「render 側 data-pos 解決」）**。S0〜S5-3c は完了済み。
-
----
-
-LilySharp の F3（意味解析〜レイアウトの増分化）を再開する。現在地は **B = whole-layout reuse の基盤づくり**。
-まず現状を読んでから、次の一手（MusicMark 移行）に着手して。
+LilySharp の F3（意味解析〜レイアウトの増分化）を再開する。現在地は **B = whole-layout reuse が稼働中**。
+MusicMark 移行（`8e8755e`）＋ B-2 whole-layout reuse（`706d36d`）まで完了・push 済み。
+まず現状を読んでから、次の一手（**Lyric 移行＝`ReuseSafe` から外す**）に着手して。
 
 ## 最初に読む（この順で）
 1. `C:\MyProj\LilySharp\docs\DEV_BUGFIX_WORKFLOW.md` の §0（アドホック禁止）と §19（F3 引き継ぎ・運用）。
@@ -14,8 +8,8 @@ LilySharp の F3（意味解析〜レイアウトの増分化）を再開する�
 3. `C:\MyProj\LilySharp\LSP_F3_QUERY_GRAPH_DESIGN.md` の §0.5（検証済み前提）と S-stage 進捗。
 4. **`C:\MyProj\LilySharp\LSP_F3_ANNOTATION_REMAINING.md`** ← **今回の本丸**。B の設計・残型・**MusicMark 移行の具体手順**・B-2 復活手順が全部ここにある。
 
-## 現在地（2026-06-30）
-- リポジトリ `C:\MyProj\LilySharp`、ブランチ `f3-incremental` = `origin/master`（最新 tip）。全テスト **1843 passed / 3 skipped**。作業ツリー clean。
+## 現在地（2026-06-30 更新）
+- リポジトリ `C:\MyProj\LilySharp`、ブランチ `f3-incremental` = `origin/master`（最新 tip `706d36d`）。全テスト **1846 passed / 3 skipped**。作業ツリー clean。
 - 着手前に必ず `dotnet test LilySharp.Tests`（ripple MCP の pwsh で）でベースライン確認。
 
 ### 完了済み（コミット済・push 済）
@@ -30,20 +24,23 @@ LilySharp の F3（意味解析〜レイアウトの増分化）を再開する�
   通常レンダは snapshot byte-identical、reuse 時は編集後の正しい位置になる。**11型（Dynamic, Articulation, Arpeggio, CustomText,
   FiguredBass, VoltaBracket, TupletBracket, PercentRepeat, GraceNote, ChordName, TrillSpanner）は頑健性を実証済み**
   （`MigratedDataPosTests` が位置ずれ編集下で正しく再導出されることを全 fixture で証明）。
+- **MusicMark 移行**（`8e8755e`）: 12型目。`MusicMarkLayout.SourceIndex`＝`BuildAllMarks()` の index、`BuildAllMarks` public 化、
+  `ResolveDataPos` で再構築解決。section ラベルを位置ずれ編集下で正しく再導出することを `MigratedDataPosTests` で実証。snapshot byte-identical。
+- **B-2 whole-layout reuse**（`706d36d`）: `IncrementalCompiler` が「line-break gate 不変＋content key 全一致＋global key
+  (Title/Composer/Tempo) 一致＋`ReuseSafe`（残7アレイ empty）」で `_cachedLayout` を丸ごと再利用、`LayoutEngine.Layout` を完全 skip。
+  override 無し通常スコアの内容不変編集で reuse 発火を **増分==フルで実証**（`LastEditReusedLayout`）。global key guard が load-bearing。
 
-## 次にやること（B の続き ＝ whole-layout reuse を実際に動かす）
-**`LSP_F3_ANNOTATION_REMAINING.md` の「MusicMark 移行の具体設計」と「B-2 復活手順」をそのまま実行する。**
+## 次にやること（B の続き ＝ `ReuseSafe` を1つずつ外して reuse eligible を広げる）
+**`LSP_F3_ANNOTATION_REMAINING.md` の「残型の移行方針」をそのまま実行する。** 残7アレイの検出元は全て content key 被覆済み
+（健全性の論拠は同ファイル参照）。各型を移行→`MigratedDataPosTests` に追加→`IncrementalCompiler.ReuseSafe` から該当アレイを外す。
 
-1. **MusicMark 移行（最優先 unblock）**: `section X` ラベルは全スコアに必ず生成され、未移行のため whole-layout reuse が
-   どの実スコアでも発火しない。`MusicMarkEngraver` を migrate（`allMarks` の index を `SourceIndex` に、構築点2箇所に threading、
-   `BuildAllMarks` を public 化、`ResolveDataPos` で再構築解決）。tempo マークは data-pos を出さず無害、section ラベルは
-   `measure.SectionLabelPosition` から、実マークは `score.MusicMarks` から解決。**`MigratedDataPosTests` に MusicMark を足せば
-   全 fixture が即検証**（section ラベルは全 fixture にある）。
-2. **B-2 復活**: `IncrementalCompiler` に「content key 全一致＋gate 不変なら `_cachedLayout` を丸ごと再利用、`ReuseSafe`（未移行で
-   data-pos を出す8アレイ＝Lyric/Hairpin/Ottava/Glissando/Fingering/MusicMark/TextSpanner/Pedal が全 empty）で gate」を実装
-   （前回試作・revert 済。MusicMark 移行後は `ReuseSafe` から MusicMark を外す）。**増分==フルで reuse 発火を実証**。
-3. **残型を順次移行**（Lyric → note 由来 Glissando/Fingering/TieVariant → detected Hairpin/Ottava/Pedal/Ornament/TextSpanner）。
-   各移行ごとに `MigratedDataPosTests` に足して検証し、`ReuseSafe` から外す＝eligible なスコアが広がる。
+1. **Lyric（次の最優先）**: `LyricEngraver` の verse グルーピングを通る→`score.Lyrics` への index を `LyricLayout.SourceIndex` に
+   threading、`ResolveDataPos` に `LyricLayouts ← score.Lyrics` を追加、`ReuseSafe` から `LyricLayouts` を外す。
+   `MigratedDataPosTests` に Lyric を追加（歌詞入り fixture で検証）。
+2. **note 由来 Glissando/Fingering/TieVariant**: note の `SourcePosition` を `(MeasureIndex, ItemIndex)`＋多譜表 staff 経路で
+   measures から引く **note-index resolver** を実装。各移行後 `ReuseSafe` から外す。
+3. **detected Hairpin/Ottava/Pedal/Ornament/TextSpanner**（score 非保持）: 検出元 item を `ScoreLayout` に載せて render 到達可能に。
+   各移行ごとに lyrics/hairpin 入りスコアでも reuse 発火することを増分==フルで実証。
 
 ## 検証
 - `MigratedDataPosTests`（B-1 の頑健性ガード）: 移行型を足したら必ずここに追加（位置ずれ編集下の resolution 正当性を実証）。
