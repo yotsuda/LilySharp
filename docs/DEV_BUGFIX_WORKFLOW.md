@@ -713,3 +713,30 @@ running-state も合わせて移すのは追加スコープ。まず MeasureColl
   - `84f1da0` [5] transpose 凝集(per-pitch 適用を OctaveContext へ)
   - (本コミット)docs: [3] スキップ + [5] 完了を §16 に反映
 - 未追跡 `AI_POSITIONING_HANDOFF.md` は別件(本作業と無関係、温存)。
+
+---
+
+## 17. 次セッションへの引き継ぎ(2026-06-29 夜)― §12 描画パス + F3 並行作業の衝突警告
+
+### §12(描画忠実再現)パスの成果
+- **実装済み**: §12-1 cue 臨時記号縮小(`8fb2079`)、§12-2 装飾 seed 実寸(`fc90359`、現状 no-op の prep)、
+  §12-3a arpeggio が反転 head を clear(`b36f881`)。
+- **評価して deferred**: §12-3 の slur/tie(深い scoring 問題・低頻度)、§12-4 中間クレフ非音楽カラム
+  (構造改修・可視欠陥なし)、§12-5 inter-system skyline(最適パスは実装済・非最適は広域 churn)、
+  §12-6 MinItemGap 0.4→0.1(グローバル再間隔・要衝突検証)。理由は §12 各項目に明記。
+
+### ⚠️ F3(`LSP_F3_QUERY_GRAPH_DESIGN.md`)との並行作業は中核ファイルが衝突する
+F3 は意味解析〜レイアウトを Salsa 型クエリ DAG に**作り替える大規模改修**で、本セッションが触った中核と
+直撃する。**真の並行は避け、この未 push 群を push してから F3 を「その tip」で開始するのが安全**。
+- 直撃: `Svg/Collector/MeasureCollector.cs` + `OctaveContext.cs`(F3a/b の entry/exit_context =
+  相対オクターブ/transpose/key/clef の running state そのもの)。
+- 高: `Svg/Layout/{LayoutEngine,MeasureLayouter,SpacingRules}.cs`(F3c/d natural_width/line_breaks/
+  system_layout)、`Rendering/SharedRenderer.cs`(F3d system_svg)。
+- 中: スパナ系 engraver(`ArpeggioEngraver` 等 = F3 spanner_layout)。
+- F3 worktree は **必ず現 master tip(未 push 群込み)から分岐**(origin/master から切ると OctaveContext 等が
+  無く再衝突)。
+
+### リポジトリ状態(2026-06-29 夜)
+- `master` は `origin/master`(`bea7d74`)より **10 コミット先行・未 push**(ユーザー指示で保留)。
+  内訳: OctaveContext 一式(§15/16)+ LSP デプロイ版バンプ + §12-1/2/3a 実装 + §12 評価 docs。
+- 全テスト緑(**1788 passed / 3 skipped**)。作業ツリーは clean(未追跡 .md 4 本は別件)。
