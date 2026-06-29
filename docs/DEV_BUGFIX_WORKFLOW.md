@@ -383,6 +383,14 @@ git push                                          # deploy の自動 "Bump dev b
   上向きテキスト/markup や複合オーナメント追加時に即活きる。装飾**自身の位置**は trill 同様 simplified
   のまま(GetArticulationExtent=1.0、意図的)。
 - スラー/タイ端点・アルペジオ括弧は和音内 2 度の符頭変位 X に未追従(未変位の列 X のまま)。
+  - **arpeggio** ― ✅ **対応済み(2026-06-29 夕、§12-3a)**。`ArpeggioEngraver` が列 X 基準で
+    置いていたため、stem-down 2度和音の**左反転 head に arpeggio が重なっていた**(実測 before:
+    arp x=[17.7,18.09] が反転 head b の ink 内)。`ChordHeadPositioning.CalculateOffsets` の最小
+    オフセットだけ左へずらして最左 head を clear(after: x=[16.46,16.86]=Padding 0.5 確保)。
+    LP 並置一致、fixture `test/arpeggio-second` 追加。`SpacingRules` の left-extent と同型。
+  - **tie / slur** ― 未対応(deferred、低頻度×高難度)。tie は `TieFormattingProblem`、slur は
+    `SlurScoringProblem`(LP でも最難)へ headOffset を導通する必要があり、波及大。発火は
+    「2度和音 + tie/slur」と稀。腰を据えて別途。
 - 中間クレフ/調号変更のスペーシングは LP の非音楽カラムの**近似**(端点リザーブ方式)。
 - inter-system spacing は X 依存スカイラインでなく per-system extent の近似。
 - XFAIL: eighths-vs-quarters の MinItemGap 0.4 vs LP skyline-horizontal-padding 0.1(追跡中)。

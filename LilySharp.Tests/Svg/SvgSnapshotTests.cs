@@ -78,6 +78,9 @@ public class SvgSnapshotTests
         // Cue notes/chords scale their accidentals with the head (LP CueVoice
         // fontSize = -4), as a pair with the cue-scaled placement column.
         yield return new object[] { "test/cue-accidentals" };
+        // Arpeggio clears a chord-second's LEFT-reversed head (stem-down), not
+        // just the un-displaced column.
+        yield return new object[] { "test/arpeggio-second" };
         yield return new object[] { "test/articulations" };
         yield return new object[] { "test/dynamics" };
         yield return new object[] { "test/beaming" };

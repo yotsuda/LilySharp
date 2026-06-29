@@ -1,0 +1,26 @@
+// Arpeggio on chords containing a second. A head reversed to the LEFT of the
+// stem (stem-DOWN chords) extends the column's left ink, so the arpeggio must
+// clear THAT head, not the un-displaced column. The climbing seconds give both
+// stem-up chords (reversal RIGHT, arpeggio unaffected) and stem-down chords
+// (reversal LEFT, arpeggio shifts further left).
+// LILYPOND-REF: lily/arpeggio.cc — side-position (LEFT) over the real head extents.
+
+title "Arpeggio over chord seconds"
+time 4/4
+key c major
+
+part melody
+
+phrase test {
+  <c d>4@arpeggio <e f>4@arpeggio <g a>4@arpeggio <b c>4@arpeggio |
+}
+
+section Main {
+  melody { $test }
+}
+
+structure { Main }
+
+score "arpeggio-second" {
+  staff treble melody
+}

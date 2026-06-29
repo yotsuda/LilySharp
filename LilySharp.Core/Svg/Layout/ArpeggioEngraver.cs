@@ -104,6 +104,13 @@ public static class ArpeggioEngraver
             // half-width before the padding and the wave half-extent.
             // LILYPOND-REF: scm/define-grobs.scm Arpeggio side-position (LEFT, X).
             double noteheadCenterX = 0.65;
+            // Most-negative within-chord head displacement. A head reversed to the
+            // LEFT of the stem (a second in a stem-down chord) extends the column's
+            // left ink past the un-displaced column, so the arpeggio must clear
+            // THAT head, not the column. LILYPOND-REF: lily/stem.cc:606-760
+            // calc_positioning_done (reversed heads); the arpeggio's side-position
+            // (LEFT) clears the real head extents. Mirrors SpacingRules' left-extent.
+            double minHeadOffset = 0;
             if (!arpMeasures.IsDefaultOrEmpty
                 && arp.MeasureIndex < arpMeasures.Length
                 && arp.ItemIndex < arpMeasures[arp.MeasureIndex].Items.Length
@@ -112,8 +119,11 @@ public static class ArpeggioEngraver
                 int nv = arpChord.BaseDuration.Denominator <= 1 ? 1
                        : arpChord.BaseDuration.Denominator <= 2 ? 2 : 4;
                 noteheadCenterX = GlyphMetrics.GetNoteheadBBox(nv).CenterX;
+                foreach (var off in ChordHeadPositioning.CalculateOffsets(
+                             arpChord.Notes, arpChord.StemUp, nv))
+                    minHeadOffset = Math.Min(minHeadOffset, off);
             }
-            double arpeggioX = itemX - noteheadCenterX - Padding - WaveAmplitude;
+            double arpeggioX = itemX + minHeadOffset - noteheadCenterX - Padding - WaveAmplitude;
 
             // Calculate Y positions from staff positions. The arpeggio's Y is
             // absolute (system.Y based), so add the staff's within-system offset
