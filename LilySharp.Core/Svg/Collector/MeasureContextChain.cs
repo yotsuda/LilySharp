@@ -85,18 +85,21 @@ public sealed class MeasureContextChain
         Compute(score.Voice.Measures, InitialContextOf(score));
 
     /// <summary>
-    /// The score-level starting context (key / time of bar 1). <c>Score.KeySignature</c>
-    /// and <c>Score.TimeSignature</c> are the header (initial) values — unlike
-    /// <c>Score.Clef</c>, which is the end-state clef, hence clef is not carried yet.
+    /// The score-level starting context (key / time / clef of bar 1).
+    /// <c>Score.KeySignature</c>, <c>Score.TimeSignature</c> and <c>Score.Clef</c>
+    /// are all the bar-1 values: the collector preserves <c>_initialKeySharps</c>
+    /// / <c>_initialClef</c> before music processing, so they are NOT the end
+    /// state after mid-piece changes (provided the score was collected with its
+    /// voice name, i.e. the normal render path).
     /// </summary>
     public static MeasureContext InitialContextOf(Score score) =>
-        new(score.KeySignature, score.TimeSignature);
+        new(score.KeySignature, score.TimeSignature, MeasureCollector.ParseClefType(score.Clef));
 
     /// <summary>
     /// Applies a measure's mid-piece change items to the running context. Only
-    /// the zero-duration Key / Time change items move the context; every other
-    /// item leaves it untouched (accidentals reset at the barline and so never
-    /// cross — only the key does).
+    /// the zero-duration Key / Clef / Time change items move the context; every
+    /// other item leaves it untouched (accidentals reset at the barline and so
+    /// never cross — only the key does).
     /// </summary>
     private static MeasureContext Advance(MeasureContext ctx, Measure measure)
     {
@@ -105,6 +108,7 @@ public sealed class MeasureContextChain
             ctx = item switch
             {
                 KeySignatureChangeItem k => ctx with { Key = k.NewKey },
+                ClefChangeItem c => ctx with { Clef = c.NewClef },
                 TimeSignatureChangeItem t => ctx with { Time = t.NewTime },
                 _ => ctx,
             };

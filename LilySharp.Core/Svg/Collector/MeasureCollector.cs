@@ -3422,7 +3422,10 @@ public sealed class MeasureCollector
 
     private static int GetPitchIndex(char pitch) => RelativeOctave.StepIndex(pitch);
 
-    private static ClefType ParseClefType(string clef) => clef switch
+    // internal (not private) so the F3 MeasureContext chain can map the
+    // score-level initial clef string to a ClefType with the SAME canonical
+    // table the collector uses (no duplicate clef map). Visibility only.
+    internal static ClefType ParseClefType(string clef) => clef switch
     {
         "bass" => ClefType.Bass,
         "alto" => ClefType.Alto,

@@ -29,19 +29,20 @@ namespace LilySharp.Core.Svg.Model;
 /// <c>exit_context</c> is unchanged after an edit, the running-state cascade to
 /// later measures stops (LSP_F3_QUERY_GRAPH_DESIGN.md §3-4).
 ///
-/// SCOPE (S2 / F3a): the cleanly + FAITHFULLY recoverable backbone — key and
-/// time — captured from a collected <c>Score</c>. Deliberately deferred to later
-/// stages, where they are consumed or can be derived from the right source:
+/// SCOPE: this is the Timing/Clef/Key backbone LilyPond's three context
+/// engravers carry. The initial values come from the score header / part clef
+/// (<c>Score.KeySignature</c> / <c>Score.TimeSignature</c> / <c>Score.Clef</c>
+/// are all the bar-1 values — the collector preserves <c>_initialClef</c> /
+/// <c>_initialKeySharps</c> before music processing), and mid-piece changes fold
+/// in from the zero-duration Key/Clef/Time change items.
+///
+/// Deliberately deferred to later stages, where they are consumed or can be
+/// derived faithfully from the right source:
 /// <list type="bullet">
-/// <item>clef — although the F3 design lists it here, the collected
-/// <c>Score.Clef</c> holds the END-STATE clef (the last mid-piece change), not
-/// bar 1's, and the per-voice initial clef is not exposed post-collection; a
-/// faithful initial clef needs the syntax tree / walk, so it joins the context
-/// when the chain is built green-side (S5) or from per-staff clefs;</item>
 /// <item>ottava (octave-shift span);</item>
 /// <item>the relative-octave reference pitch — post-collection notes are already
 /// resolved to staff positions, so this only becomes meaningful once S3 (F3b)
-/// normalizes relative→absolute;</item>
+/// normalizes relative→absolute and the chain is driven from the walk/green;</item>
 /// <item>pending ties and open cross-measure spanners (slur/hairpin), which need
 /// span tracking rather than a scalar carry.</item>
 /// </list>
@@ -50,7 +51,8 @@ namespace LilySharp.Core.Svg.Model;
 /// </remarks>
 public readonly record struct MeasureContext(
     KeySignature Key,
-    TimeSignature Time)
+    TimeSignature Time,
+    ClefType Clef)
 {
-    public override string ToString() => $"key={Key.Sharps} time={Time}";
+    public override string ToString() => $"key={Key.Sharps} time={Time} clef={Clef}";
 }

@@ -33,15 +33,26 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class MeasureContextChainTests
 {
-    private static Score Collect(string source) =>
-        new MeasureCollector().Collect(SyntaxTree.Parse(source), null);
+    // Collect the way the renderer does (SvgGenerator.BuildLayout): resolve the
+    // render spec and pass the staff's voice name, so Phase 1.5 reads the part
+    // clef into _initialClef and Score.Clef is the faithful bar-1 clef. Calling
+    // Collect(tree, null) skips that and leaves the clef wrong — the bug that
+    // made S2 defer clef.
+    private static Score Collect(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        string? voiceName = spec is { Items.Length: 1 } && spec.Items[0] is SingleStaffSpec single
+            ? single.Staff.VoiceName
+            : null;
+        return new MeasureCollector { ScoreTranspose = spec?.ScoreTranspose }
+            .Collect(tree, voiceName, spec?.LocalStructure);
+    }
 
-    // Single section, exact measure indices. The mid-measure `clef bass` is
-    // present on purpose: clef is NOT in the S2 context, so Advance must IGNORE
-    // it (m2's exit stays key=G, time=4/4).
-    //   m0  c4 d e f                      -> (C, 4/4)
+    // Single section, exact measure indices, one change of each kind:
+    //   m0  c4 d e f                      -> (C, 4/4, Treble)
     //   m1  key g major; c d e f          -> exit key becomes G (1 sharp)
-    //   m2  clef bass; c d e f            -> unchanged (clef not carried)
+    //   m2  clef bass; c d e f            -> exit clef becomes Bass
     //   m3  time 3/4; c d e               -> exit time becomes 3/4
     private const string Changes = """
         time 4/4
@@ -59,7 +70,7 @@ public class MeasureContextChainTests
         """;
 
     [Fact]
-    public void InlineChanges_KeyAndTime_CarryForwardAndUpdateAtChangePoints()
+    public void InlineChanges_KeyClefTime_CarryForwardAndUpdateAtChangePoints()
     {
         var score = Collect(Changes);
         var chain = MeasureContextChain.Compute(score);
@@ -73,15 +84,15 @@ public class MeasureContextChainTests
         Assert.Equal(4, chain.Entry.Length);
         Assert.Equal(4, chain.Exit.Length);
 
-        // Entry of bar 1 is the score-level initial.
-        Assert.Equal(new MeasureContext(cMaj, four4), chain.Entry[0]);
+        // Entry of bar 1 is the score-level initial (faithful clef = Treble).
+        Assert.Equal(new MeasureContext(cMaj, four4, ClefType.Treble), chain.Entry[0]);
 
         // Exit after each measure folds that measure's change items; everything
-        // else carries forward unchanged. The mid `clef bass` in m2 is ignored.
-        Assert.Equal(new MeasureContext(cMaj, four4), chain.Exit[0]);
-        Assert.Equal(new MeasureContext(gMaj, four4), chain.Exit[1]);  // +key
-        Assert.Equal(new MeasureContext(gMaj, four4), chain.Exit[2]);  // clef change ignored
-        Assert.Equal(new MeasureContext(gMaj, three4), chain.Exit[3]); // +time
+        // else carries forward unchanged.
+        Assert.Equal(new MeasureContext(cMaj, four4, ClefType.Treble), chain.Exit[0]);
+        Assert.Equal(new MeasureContext(gMaj, four4, ClefType.Treble), chain.Exit[1]); // +key
+        Assert.Equal(new MeasureContext(gMaj, four4, ClefType.Bass), chain.Exit[2]);   // +clef
+        Assert.Equal(new MeasureContext(gMaj, three4, ClefType.Bass), chain.Exit[3]);  // +time
     }
 
     [Fact]
@@ -142,9 +153,9 @@ public class MeasureContextChainTests
     [Fact]
     public void MeasureContext_HasValueEquality_ForEarlyCutoff()
     {
-        var a = new MeasureContext(new KeySignature(1), new TimeSignature(4, 4));
-        var b = new MeasureContext(new KeySignature(1), new TimeSignature(4, 4));
-        var c = new MeasureContext(new KeySignature(2), new TimeSignature(4, 4));
+        var a = new MeasureContext(new KeySignature(1), new TimeSignature(4, 4), ClefType.Treble);
+        var b = new MeasureContext(new KeySignature(1), new TimeSignature(4, 4), ClefType.Treble);
+        var c = new MeasureContext(new KeySignature(2), new TimeSignature(4, 4), ClefType.Treble);
 
         Assert.Equal(a, b);          // same state -> equal -> cascade can stop
         Assert.True(a == b);

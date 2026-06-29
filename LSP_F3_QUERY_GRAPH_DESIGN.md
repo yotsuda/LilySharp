@@ -81,14 +81,24 @@ benchmark は cold full＋stage 別(`RenderPipelineBenchmark`)はあるが**編�
 - **S0**(本節): 設計を検証済み前提に修正。コード不変。
 - **S1**: F3e 差分ハーネス(`WithChange→full render == Parse(newText)→full render` を fuzz 保証、
   **テストのみ**)＋ F0 編集レイテンシ benchmark。本番コード不変。
-- **S2 (= F3a)**: `OctaveContext` を一般化した `MeasureContext`(entry/exit) を `Measure` に付与する
-  **挙動 byte-identical な純リファクタ**。安定 per-measure 識別子(訂正1)もここで用意。
-- **S3 (= F3b)**: `measure_semantics` 内で相対→絶対正規化。レイアウト層を relative 非依存に。
+- **S2 (= F3a)** ✅: `MeasureContext`(entry/exit) を **post-pass**(`MeasureContextChain`)で構築。
+  `Measure` record にフィールド注入せず key+time backbone を fold。byte-identical 純追加。安定 per-measure
+  識別子(訂正1)は未消費ゆえ S4 へ deferred。
+- **S3 (= F3b)** ✅: **「レイアウト層を relative 非依存に」は現アーキで既に達成済み**と判明。
+  `Svg/Layout` の相対オクターブ参照は 0 件、`Rendering` の唯一の参照は `SharedRenderer.cs` の
+  **絶対**ピッチ→MIDI 静的変換のみ。collector が collection 時に相対→絶対(StaffPosition)解決を完了している。
+  → 追加すべき正規化コードは無し。代わりに **S2 で誤って deferred した clef を忠実に context へ入れ直した**。
+  **訂正(S2 の誤り)**: `Score.Clef` は末尾状態ではなく**初期 clef**(collector が `_initialClef` を音楽処理前に保存・
+  `MeasureCollector.cs:665,691-692`)。S2 で「末尾状態」に見えたのは `Collect(tree, null)` が Phase 1.5(part clef 読込)を
+  skip した**テストの不備**。実レンダは `Collect(tree, voiceName)` なので clef 忠実。tests も render-spec 経由収集に修正。
+  **octave 基準/ottava/ties/spanners は walk/green 駆動が要るため S5 へ deferred**(post-pass では忠実復元不可)。
 - **S4 (= F3c)**: `MeasureSpringData` を cache 化＋early-cutoff(訂正2)。幅不変編集で Knuth-Plass を skip。
 - **S5+**: クエリエンジン本体 → tie/slur/beam resolver の依存辺化(訂正3) → LSP 増分ドライバ。
   ここで初めて速度向上が観測可能(訂正4)。
 
 > 旧 §8(F3a〜F3e)の概念分割は保持。S 番号は「安全にマージできる単位」での再束ね。
+> **方針更新(ユーザー指示)**: byte-identical は純 substrate の既定であって目的ではない。出力が**より正しく**
+> なる変更は歓迎(snapshot を意図的に貼り直し理由を明記)。「正しさ＞現状維持」を基準とする。
 
 ---
 
