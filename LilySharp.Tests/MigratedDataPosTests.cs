@@ -116,6 +116,10 @@ public class MigratedDataPosTests
             // resolved from the edited score by the (staff, measure, item) locator.
             CheckNote(fx, "Glissando", l1.GlissandoLayouts, l2.GlissandoLayouts, s2,
                 x => (x.StaffIndex, x.MeasureIndex, x.ItemIndex), x => x.SourcePosition, covered);
+
+            // Fingering is note-hosted too (its host can be a single note OR a chord).
+            CheckNote(fx, "Fingering", l1.FingeringLayouts, l2.FingeringLayouts, s2,
+                x => (x.StaffIndex, x.MeasureIndex, x.ItemIndex), x => x.SourcePosition, covered);
         }
 
         // Every migrated type the fixtures contain must have been exercised. (CustomText
@@ -125,7 +129,7 @@ public class MigratedDataPosTests
         {
             "Dynamic", "Articulation", "Arpeggio", "FiguredBass", "VoltaBracket",
             "TupletBracket", "PercentRepeat", "GraceNote", "ChordName", "TrillSpanner",
-            "MusicMark", "Lyric", "Glissando",
+            "MusicMark", "Lyric", "Glissando", "Fingering",
         };
         var missing = new List<string>();
         foreach (var t in expected)
@@ -221,10 +225,12 @@ public class MigratedDataPosTests
             Assert.True((uint)m < (uint)measures.Length,
                 $"{fixture}/{name}[{k}]: measure {m} out of range");
             var items = measures[m].Items;
-            Assert.True((uint)it < (uint)items.Length && items[it] is LilySharp.Core.Svg.Model.NoteItem,
-                $"{fixture}/{name}[{k}]: item {it} is not a note");
+            // The host is read as the base MusicItem (a single note OR a chord), matching
+            // the production resolver — a chord-hosted fingering points at a ChordItem.
+            Assert.True((uint)it < (uint)items.Length,
+                $"{fixture}/{name}[{k}]: item {it} out of range");
 
-            int resolved = ((LilySharp.Core.Svg.Model.NoteItem)items[it]).SourcePosition;
+            int resolved = items[it].SourcePosition;
             int expected = layoutPos(full[k]);
             Assert.True(resolved == expected,
                 $"{fixture}/{name}[{k}]: locator resolves to {resolved}, expected {expected}");

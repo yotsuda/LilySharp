@@ -210,7 +210,6 @@ public sealed class IncrementalCompiler
     private static bool ReuseSafe(ScoreLayout layout) =>
         layout.HairpinLayouts.IsDefaultOrEmpty
         && layout.OttavaBracketLayouts.IsDefaultOrEmpty
-        && layout.FingeringLayouts.IsDefaultOrEmpty
         && layout.TextSpannerLayouts.IsDefaultOrEmpty
         && layout.PedalBracketLayouts.IsDefaultOrEmpty;
 }

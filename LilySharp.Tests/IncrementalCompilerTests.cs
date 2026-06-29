@@ -171,6 +171,32 @@ public class IncrementalCompilerTests
     }
 
     [Fact]
+    public void ContentUnchangedEdit_WithFingering_ReusesWholeLayout_AndMatchesFull()
+    {
+        // Fingering (single-note AND chord) is note-hosted and migrated, so a fingered
+        // score is reuse-eligible. Reuse must fire and stay byte-identical.
+        string withFingering = """
+            time 4/4
+            key c major
+            part melody
+            section Main {
+              melody { g4@finger.1 a@finger.2 b@finger.3 c@finger.4 | <c@finger.1 e@finger.3 g@finger.5>4 d e f | }
+            }
+            structure { Main }
+            score "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(withFingering);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = new TextChange(new TextSpan(0, 0), "\n");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.True(session.LastEditReusedLayout);
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    [Fact]
     public void TitleChange_DoesNotReuseLayout_ButMatchesFull()
     {
         // A rendered title is score-global: it is NOT in any per-measure content key, so

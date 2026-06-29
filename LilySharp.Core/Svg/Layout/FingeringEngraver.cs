@@ -41,7 +41,10 @@ public readonly record struct FingeringLayout(
     /// <summary>True = above the staff, false = below.</summary>
     bool IsAbove,
     /// <summary>Source position for click-to-source mapping.</summary>
-    int SourcePosition);
+    int SourcePosition,
+    /// <summary>F3/B: staff index of the host note/chord, so a reused layout re-derives
+    /// data-pos from the live score (SharedRenderer.ResolveDataPos). -1 = unresolved.</summary>
+    int StaffIndex = -1);
 
 /// <summary>
 /// Calculates positions for fingering numbers attached to notes.
@@ -177,7 +180,8 @@ public static class FingeringEngraver
                 X: centerX,
                 Y: y,
                 IsAbove: isAbove,
-                SourcePosition: chord.SourcePosition));
+                SourcePosition: chord.SourcePosition,
+                StaffIndex: staffIndex));
         }
     }
 
@@ -231,6 +235,7 @@ public static class FingeringEngraver
             X: centerX,
             Y: y,
             IsAbove: isAbove,
-            SourcePosition: note.SourcePosition);
+            SourcePosition: note.SourcePosition,
+            StaffIndex: staffIndex);
     }
 }

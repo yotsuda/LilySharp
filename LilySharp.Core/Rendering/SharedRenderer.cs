@@ -2045,7 +2045,8 @@ public static class SharedRenderer
         // instead of a side-table index; their data-pos is the HOST NOTE's source offset.
         // Build the staff -> measures map once so the resolver can re-derive it. Lazy:
         // only built when such an annotation is present.
-        var noteHosts = layout.GlissandoLayouts.IsDefaultOrEmpty
+        var noteHosts = (layout.GlissandoLayouts.IsDefaultOrEmpty
+                         && layout.FingeringLayouts.IsDefaultOrEmpty)
             ? null : BuildStaffMeasures(score);
         return layout with
         {
@@ -2090,6 +2091,10 @@ public static class SharedRenderer
             GlissandoLayouts = ResolveNoteArr(layout.GlissandoLayouts, noteHosts,
                 static l => (l.StaffIndex, l.MeasureIndex, l.ItemIndex),
                 static (l, pos) => l with { SourcePosition = pos }),
+            // Fingering data-pos = its host note/chord's source offset.
+            FingeringLayouts = ResolveNoteArr(layout.FingeringLayouts, noteHosts,
+                static l => (l.StaffIndex, l.MeasureIndex, l.ItemIndex),
+                static (l, pos) => l with { SourcePosition = pos }),
         };
     }
 
@@ -2105,11 +2110,13 @@ public static class SharedRenderer
         return map;
     }
 
-    // Refreshes each note-hosted layout's data-pos from its host NoteItem, located by the
-    // (staff, measure, item) triple it carries. A locator that doesn't resolve to a NoteItem
-    // (out of range, or staffIndex -1 from the single-staff path) is left as-is — its baked
-    // value is already correct for a normal full render; only whole-layout reuse needs the
-    // re-derivation, and that path always carries a real staff index.
+    // Refreshes each note-hosted layout's data-pos from its HOST ITEM's source offset,
+    // located by the (staff, measure, item) triple it carries. The host is read as the base
+    // MusicItem, so it covers both a single note (glissando, melodic fingering) and a chord
+    // (chord fingering) — both expose SourcePosition. A locator that doesn't resolve (out of
+    // range, or staffIndex -1 from the single-staff Layout(Score) path) is left as-is — its
+    // baked value is already correct for a normal full render; only whole-layout reuse needs
+    // the re-derivation, and that path always carries a real staff index.
     private static ImmutableArray<T> ResolveNoteArr<T>(
         ImmutableArray<T> layouts,
         System.Collections.Generic.Dictionary<int, ImmutableArray<Measure>>? staffMeasures,
@@ -2126,8 +2133,8 @@ public static class SharedRenderer
                 && (uint)m < (uint)measures.Length)
             {
                 var items = measures[m].Items;
-                if ((uint)it < (uint)items.Length && items[it] is NoteItem note)
-                    b[i] = resolve(b[i], note.SourcePosition);
+                if ((uint)it < (uint)items.Length)
+                    b[i] = resolve(b[i], items[it].SourcePosition);
             }
         }
         return b.MoveToImmutable();
