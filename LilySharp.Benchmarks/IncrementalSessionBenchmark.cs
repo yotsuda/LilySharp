@@ -59,12 +59,20 @@ public class IncrementalSessionBenchmark
         }
     }
 
-    private const string Fixture = "showcase/grammar-tour";
+    // grammar-tour is MULTI-staff (the S5-3a per-system cache does not engage);
+    // grammar-2026-06-09 is the largest SINGLE-staff fixture (cache engages).
+    private const string MultiFixture = "showcase/grammar-tour";
+    private const string SingleFixture = "showcase/grammar-2026-06-09";
 
     private SyntaxTree _tree = null!;
     private TextChange _widthPreservingEdit;
     private TextChange _widthChangingEdit;
     private IncrementalCompiler _session = null!;
+
+    private SyntaxTree _singleTree = null!;
+    private TextChange _singleWidthPreservingEdit;
+    private TextChange _singleWidthChangingEdit;
+    private IncrementalCompiler _singleSession = null!;
 
     private static readonly SvgRenderOptions Options = new() { EmbedFont = false };
 
@@ -84,16 +92,23 @@ public class IncrementalSessionBenchmark
     [GlobalSetup]
     public void Setup()
     {
-        var path = Path.Combine(FindFixturesDir(), Fixture.Replace('/', Path.DirectorySeparatorChar) + ".lys");
-        var source = File.ReadAllText(path).Replace("\r\n", "\n");
-        _tree = SyntaxTree.Parse(source);
+        var fixtures = FindFixturesDir();
 
+        var source = File.ReadAllText(
+            Path.Combine(fixtures, MultiFixture.Replace('/', Path.DirectorySeparatorChar) + ".lys")).Replace("\r\n", "\n");
+        _tree = SyntaxTree.Parse(source);
         // Leading newline: pure trivia, so no token (and no measure) changes —
         // the line-break gate is unchanged and Edit takes the skip path.
         _widthPreservingEdit = new TextChange(new TextSpan(0, 0), "\n");
         // A note insertion near the middle: changes a measure's natural width, so
         // the break DP runs fully.
         _widthChangingEdit = new TextChange(new TextSpan(source.Length / 2, 0), " c4");
+
+        var single = File.ReadAllText(
+            Path.Combine(fixtures, SingleFixture.Replace('/', Path.DirectorySeparatorChar) + ".lys")).Replace("\r\n", "\n");
+        _singleTree = SyntaxTree.Parse(single);
+        _singleWidthPreservingEdit = new TextChange(new TextSpan(0, 0), "\n");
+        _singleWidthChangingEdit = new TextChange(new TextSpan(single.Length / 2, 0), " c4");
     }
 
     [IterationSetup]
@@ -101,11 +116,19 @@ public class IncrementalSessionBenchmark
     {
         _session = new IncrementalCompiler(_tree, Options);
         _session.Render();
+        _singleSession = new IncrementalCompiler(_singleTree, Options);
+        _singleSession.Render();
     }
 
-    [Benchmark(Description = "Warm session edit: width-preserving (DP skipped)")]
-    public string Session_WidthPreserving() => _session.Edit(_widthPreservingEdit);
+    [Benchmark(Description = "multi-staff edit: width-preserving (no per-system cache)")]
+    public string Multi_WidthPreserving() => _session.Edit(_widthPreservingEdit);
 
-    [Benchmark(Description = "Warm session edit: width-changing (full rebreak)")]
-    public string Session_WidthChanging() => _session.Edit(_widthChangingEdit);
+    [Benchmark(Description = "multi-staff edit: width-changing")]
+    public string Multi_WidthChanging() => _session.Edit(_widthChangingEdit);
+
+    [Benchmark(Description = "single-staff edit: width-preserving (systems reused)")]
+    public string Single_WidthPreserving() => _singleSession.Edit(_singleWidthPreservingEdit);
+
+    [Benchmark(Description = "single-staff edit: width-changing")]
+    public string Single_WidthChanging() => _singleSession.Edit(_singleWidthChangingEdit);
 }
