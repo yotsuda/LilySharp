@@ -98,19 +98,23 @@ public sealed class IncrementalCompiler
     private string Compile(SyntaxTree tree, bool allowSkip)
     {
         var spec = RenderSpecParser.FindFirst(tree);
-        var score = SvgGenerator.CollectScore(tree, spec, out var singleStaffScore);
+        var score = SvgGenerator.CollectScore(tree, spec);
 
-        // F3/S5-3a: install/refresh the per-system layout cache for single-staff
-        // scores without grob overrides. Grob overrides can change spacing globally
-        // (so a per-measure key cannot localize them), and multi-staff systems couple
-        // all staves' columns (the primary-voice keys would not capture them) — both
-        // fall back to full layout (cache == null), which is byte-identical.
-        if (singleStaffScore != null
-            && singleStaffScore.GrobOverrides.IsDefaultOrEmpty
-            && singleStaffScore.GrobReverts.IsDefaultOrEmpty)
+        // F3/S5-3a: install/refresh the per-system layout cache for SINGLE-staff
+        // scores without grob overrides. Overrides can change spacing globally (a
+        // per-measure key cannot localize them). Multi-staff is correct with the
+        // cache too (Compute(MultiStaffScore) is sound — proven by tests), but
+        // measured a wash: caching only the per-system SPRING solve does not move
+        // multi-staff, where the uncached skyline + global annotation passes dominate
+        // and the key computation is pure overhead. So multi-staff falls back to full
+        // layout (cache == null, byte-identical) until those phases are cached too
+        // (S5-3b/c). Both gates => no per-edit key cost on the fallback path.
+        if (!score.IsMultiStaff
+            && score.GrobOverrides.IsDefaultOrEmpty
+            && score.GrobReverts.IsDefaultOrEmpty)
         {
             _systemCache ??= new SystemLayoutCache();
-            _systemCache.SetContentKeys(MeasureContentKey.Compute(singleStaffScore));
+            _systemCache.SetContentKeys(MeasureContentKey.Compute(score));
         }
         else
         {

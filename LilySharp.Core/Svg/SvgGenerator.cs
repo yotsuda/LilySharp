@@ -127,28 +127,16 @@ public static class SvgGenerator
     /// <see cref="Generate(SyntaxTree, SvgRenderOptions, string)"/> byte for byte.
     /// </summary>
     internal static MultiStaffScore CollectScore(SyntaxTree tree, RenderSpec? renderSpec)
-        => CollectScore(tree, renderSpec, out _);
-
-    /// <summary>
-    /// As <see cref="CollectScore(SyntaxTree, RenderSpec?)"/>, additionally exposing
-    /// the underlying single-staff <see cref="Score"/> (null for multi-staff), so the
-    /// incremental driver can compute per-measure content keys for layout reuse.
-    /// </summary>
-    internal static MultiStaffScore CollectScore(SyntaxTree tree, RenderSpec? renderSpec, out Score? singleStaffScore)
     {
         var collector = new MeasureCollector { ScoreTranspose = renderSpec?.ScoreTranspose };
         if (renderSpec != null && renderSpec.IsMultiStaff)
-        {
-            singleStaffScore = null;
             return collector.CollectMultiStaff(tree, renderSpec);
-        }
 
         // Single staff — wrap in MultiStaffScore so SharedRenderer has a uniform input.
         string? voiceName = renderSpec is { Items.Length: 1 } && renderSpec.Items[0] is SingleStaffSpec single
             ? single.Staff.VoiceName
             : null;
         var score = collector.Collect(tree, voiceName, renderSpec?.LocalStructure);
-        singleStaffScore = score;
         return MultiStaffScore.FromScore(score);
     }
 

@@ -20,6 +20,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using LilySharp.Core.Svg.Collector;
 
@@ -125,6 +126,49 @@ public readonly record struct MeasureContentKey(int Hash)
         return builder.MoveToImmutable();
     }
 
+    /// <summary>
+    /// The COMPLETE per-measure render-input key vector for a multi-staff score:
+    /// per measure index, every staff's intrinsic content + that staff's entry
+    /// context, combined, plus the score side-tables bucketed by <c>MeasureIndex</c>.
+    /// Index-aligned with the primary content staff's measures.
+    /// </summary>
+    /// <remarks>
+    /// Side-tables are folded by measure index across ALL staves (StaffIndex is not
+    /// needed: a measure's key already combines every staff at that index, so a
+    /// dynamic on any staff at measure i lands in measure i's key regardless of
+    /// staff — sound, and it is what couples the per-system spring solve, which spans
+    /// all staves' columns).
+    /// </remarks>
+    public static ImmutableArray<MeasureContentKey> Compute(MultiStaffScore score)
+    {
+        int n = score.MeasureCount;
+        var acc = new HashCode[n];
+
+        foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
+        {
+            var measures = staff.PrimaryVoice.Measures;
+            var chain = MeasureContextChain.Compute(
+                measures, new MeasureContext(score.KeySignature, score.TimeSignature, staff.Clef));
+            int m = Math.Min(n, measures.Length);
+            for (int i = 0; i < m; i++)
+            {
+                acc[i].Add(staffIndex);                 // discriminate which staff
+                AddIntrinsic(ref acc[i], measures[i]);
+                acc[i].Add(chain.Entry[i]);
+            }
+        }
+
+        var sideTables = BucketSideTables(score, n);
+        for (int i = 0; i < n; i++)
+            foreach (int itemHash in sideTables[i])
+                acc[i].Add(itemHash);
+
+        var builder = ImmutableArray.CreateBuilder<MeasureContentKey>(n);
+        for (int i = 0; i < n; i++)
+            builder.Add(new MeasureContentKey(acc[i].ToHashCode()));
+        return builder.MoveToImmutable();
+    }
+
     public override string ToString() => $"mck:{Hash:x8}";
 
     // --- intrinsic (items + structural fields) ---
@@ -197,6 +241,35 @@ public readonly record struct MeasureContentKey(int Hash)
         return buckets;
     }
 
+    private static List<int>[] BucketSideTables(MultiStaffScore score, int measureCount)
+    {
+        var buckets = new List<int>[measureCount];
+        for (int i = 0; i < measureCount; i++)
+            buckets[i] = new List<int>();
+
+        // Same tables as the Score overload, by MeasureIndex across all staves.
+        // (MultiStaffScore has no separate Tremolos table — tremolo lives on the
+        // note item, already folded via the intrinsic key.)
+        BucketSingle(score.Dynamics, buckets);
+        BucketSingle(score.Articulations, buckets);
+        BucketSingle(score.GraceNotes, buckets);
+        BucketSingle(score.Lyrics, buckets);
+        BucketSingle(score.MusicMarks, buckets);
+        BucketSingle(score.CustomTexts, buckets);
+        BucketSingle(score.TupletBrackets, buckets);
+        BucketSingle(score.Arpeggios, buckets);
+        BucketSingle(score.FiguredBasses, buckets);
+        BucketSingle(score.ChordNames, buckets);
+        BucketSingle(score.PercentRepeats, buckets);
+        BucketSingle(score.CrossStaffItems, buckets);
+        BucketSingle(score.GrobOverrides, buckets);
+        BucketSingle(score.GrobReverts, buckets);
+        BucketSpan(score.VoltaBrackets, buckets);
+        BucketSpan(score.TrillSpanners, buckets);
+
+        return buckets;
+    }
+
     private static void BucketSingle(IEnumerable items, List<int>[] buckets)
     {
         foreach (var item in items)
@@ -227,38 +300,62 @@ public readonly record struct MeasureContentKey(int Hash)
         }
     }
 
-    // --- reflection-based content hashing ---
+    // --- content hashing (reflection discovers properties once per type; the
+    //     per-item hot path uses compiled getters) ---
 
-    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropsForItem = new();
-    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropsForSide = new();
-    private static readonly ConcurrentDictionary<(Type, string), PropertyInfo?> NamedProp = new();
+    // Reflection is used ONCE per type to discover the public, readable, non-excluded
+    // properties (so the key auto-covers any new content field and never silently
+    // drifts behind the model — cf. the §9 drift hazard); Compute then folds them via
+    // COMPILED getters rather than Reflection.GetValue, ~30x faster, which matters
+    // because Compute runs on every edit (a wholesale GetValue version cost ~3.5ms per
+    // edit on a 41-measure multi-staff score — enough to cancel the reuse it enables).
+    private static readonly ConcurrentDictionary<Type, Func<object, object?>[]> ItemGetters = new();
+    private static readonly ConcurrentDictionary<Type, Func<object, object?>[]> SideGetters = new();
+    private static readonly ConcurrentDictionary<(Type, string), Func<object, int>?> IntGetters = new();
 
     private static int HashContent(object item, HashSet<string> excluded)
     {
         var hc = new HashCode();
         hc.Add(item.GetType());                       // discriminate kinds
-        foreach (var p in PropsOf(item.GetType(), excluded))
-            AddValue(ref hc, p.GetValue(item));
+        foreach (var get in Getters(item.GetType(), excluded))
+            AddValue(ref hc, get(item));
         return hc.ToHashCode();
     }
 
-    private static PropertyInfo[] PropsOf(Type type, HashSet<string> excluded)
+    private static Func<object, object?>[] Getters(Type type, HashSet<string> excluded)
     {
-        var cache = ReferenceEquals(excluded, ItemExclusions) ? PropsForItem : PropsForSide;
+        var cache = ReferenceEquals(excluded, ItemExclusions) ? ItemGetters : SideGetters;
         return cache.GetOrAdd(type, t =>
             t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => p.CanRead
                             && p.GetIndexParameters().Length == 0
                             && !excluded.Contains(p.Name))
                 .OrderBy(p => p.Name, StringComparer.Ordinal)
+                .Select(CompileGetter)
                 .ToArray());
+    }
+
+    // o => (object)((TDeclaring)o).Prop
+    private static Func<object, object?> CompileGetter(PropertyInfo p)
+    {
+        var o = Expression.Parameter(typeof(object), "o");
+        var body = Expression.Convert(
+            Expression.Property(Expression.Convert(o, p.DeclaringType!), p), typeof(object));
+        return Expression.Lambda<Func<object, object?>>(body, o).Compile();
     }
 
     private static int GetInt(object item, string property)
     {
-        var p = NamedProp.GetOrAdd((item.GetType(), property),
-            static key => key.Item1.GetProperty(key.Item2, BindingFlags.Public | BindingFlags.Instance));
-        return p?.GetValue(item) is int v ? v : -1;
+        var get = IntGetters.GetOrAdd((item.GetType(), property), static key =>
+        {
+            var p = key.Item1.GetProperty(key.Item2, BindingFlags.Public | BindingFlags.Instance);
+            if (p == null || p.PropertyType != typeof(int))
+                return null;
+            var o = Expression.Parameter(typeof(object), "o");
+            var body = Expression.Property(Expression.Convert(o, p.DeclaringType!), p);
+            return Expression.Lambda<Func<object, int>>(body, o).Compile();
+        });
+        return get == null ? -1 : get(item);
     }
 
     private static void AddValue(ref HashCode hc, object? value)

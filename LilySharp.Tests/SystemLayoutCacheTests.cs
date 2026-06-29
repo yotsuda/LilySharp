@@ -135,4 +135,41 @@ public class SystemLayoutCacheTests
         var full = new IncrementalCompiler(SyntaxTree.Parse(editedText)).Render();
         Assert.Equal(full, incremental);
     }
+
+    [Fact]
+    public void MultiStaff_FallsBackToFullLayout_AndStaysByteIdentical()
+    {
+        // grammar-tour is a 2-staff score. The per-system spring cache is gated OFF
+        // for multi-staff (measured a wash — the uncached skyline + global annotation
+        // passes dominate there), so no cache is installed and there is no per-edit
+        // key cost. Editing still equals a full recompile (the full-fallback path).
+        var source = LoadFixture("showcase/grammar-tour");
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source));
+        session.Render();
+        Assert.Null(session.SystemCache);
+
+        var incremental = session.Edit(new TextChange(new TextSpan(0, 0), "\n"));
+        var full = new IncrementalCompiler(SyntaxTree.Parse("\n" + source)).Render();
+        Assert.Equal(full, incremental);
+
+        string edited2 = ("\n" + source).Insert(source.Length / 2 + 1, " c4");
+        var incremental2 = session.Edit(new TextChange(new TextSpan(source.Length / 2 + 1, 0), " c4"));
+        var full2 = new IncrementalCompiler(SyntaxTree.Parse(edited2)).Render();
+        Assert.Equal(full2, incremental2);
+    }
+
+    private static string LoadFixture(string rel)
+    {
+        var dir = System.AppContext.BaseDirectory;
+        while (dir != null)
+        {
+            var candidate = System.IO.Path.Combine(dir, "LilySharp.Tests", "Fixtures");
+            if (System.IO.Directory.Exists(candidate))
+                return System.IO.File.ReadAllText(
+                    System.IO.Path.Combine(candidate, rel.Replace('/', System.IO.Path.DirectorySeparatorChar) + ".lys"))
+                    .Replace("\r\n", "\n");
+            dir = System.IO.Path.GetDirectoryName(dir);
+        }
+        throw new System.IO.DirectoryNotFoundException("Cannot find LilySharp.Tests/Fixtures/ directory");
+    }
 }
