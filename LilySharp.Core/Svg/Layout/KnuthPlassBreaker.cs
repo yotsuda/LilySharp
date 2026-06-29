@@ -132,13 +132,21 @@ public sealed class KnuthPlassBreaker
     }
 
     /// <summary>
-    /// Computes spring data for each measure from its internal springs.
+    /// Computes spring data for each measure from its internal springs — the F3
+    /// design's <c>measure_natural_width</c> vector, i.e. the SOLE input (with
+    /// paper width) to the global line-break DP <see cref="FindOptimalBreaks"/>.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/simple-spacer.cc — spring parameters for force calculation
     /// Each measure's springs are summed to produce aggregate spring data.
+    ///
+    /// internal (not private) so it can be exercised as the line-break gate:
+    /// because <c>FindOptimalBreaks</c> depends only on this vector, an edit that
+    /// leaves every measure's <see cref="MeasureSpringData"/> unchanged cannot
+    /// change the break solution, so line-breaking can be skipped on that edit
+    /// (LSP_F3_QUERY_GRAPH_DESIGN.md §4 — measure_natural_width is the cutoff).
     /// </remarks>
-    private static MeasureSpringData[] ComputeMeasureSpringData(IReadOnlyList<Measure> measures,
+    internal static MeasureSpringData[] ComputeMeasureSpringData(IReadOnlyList<Measure> measures,
                                                                 double? baseShortestDuration = null)
     {
         var data = new MeasureSpringData[measures.Count];
