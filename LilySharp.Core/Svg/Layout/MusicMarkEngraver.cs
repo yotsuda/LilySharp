@@ -34,7 +34,10 @@ public readonly record struct MusicMarkLayout(
     MusicMarkType MarkType, // Type of mark
     string Text,            // Display text or glyph
     bool IsSymbol,          // True if should use symbol glyph, false for text
-    int SourcePosition      // For click-to-source mapping
+    int SourcePosition,     // For click-to-source mapping
+    int SourceIndex = -1    // F3/B: index into BuildAllMarks() — position-independent
+                            //   ref so a reused layout re-derives SourcePosition from
+                            //   the live score (see SharedRenderer.ResolveDataPos).
 );
 
 /// <summary>
@@ -104,22 +107,25 @@ public static class MusicMarkEngraver
         ImmutableArray<VoltaBracketLayout> voltaBrackets = default)
     {
         // Merge section labels and tempo marking into the mark list
-        var allMarks = MergeSectionLabels(musicMarks, measures);
-        allMarks = MergeTempoMark(allMarks, score);
+        var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo);
 
         if (allMarks.Length == 0)
             return ImmutableArray<MusicMarkLayout>.Empty;
 
-        // Calculate X positions and group marks that need stacking
-        var markEntries = new List<(MusicMarkItem Mark, double X)>();
-        foreach (var mark in allMarks)
+        // Calculate X positions and group marks that need stacking.
+        // F3/B: each entry carries its index into allMarks (SourceIndex) so the
+        // emitted layout can re-derive its data-pos from the live score later,
+        // even though GroupBy/OrderBy below reorders the entries.
+        var markEntries = new List<(MusicMarkItem Mark, double X, int SourceIndex)>();
+        for (int si = 0; si < allMarks.Length; si++)
         {
+            var mark = allMarks[si];
             if (mark.MeasureIndex >= measureLayouts.Length)
                 continue;
 
             var measureLayout = measureLayouts[mark.MeasureIndex];
             double x = CalculateXPosition(mark, measureLayout, systems);
-            markEntries.Add((mark, x));
+            markEntries.Add((mark, x, si));
         }
 
         // LILYPOND-REF: axis-group-interface.cc:865-984 skyline_spacing
@@ -208,7 +214,7 @@ public static class MusicMarkEngraver
             double stackTopY = baseAboveY;
             for (int i = 0; i < aboveMarks.Count; i++)
             {
-                var (mark, x) = aboveMarks[i];
+                var (mark, x, si) = aboveMarks[i];
                 double halfExtent = GetMarkHalfExtent(mark.Type);
 
                 double y;
@@ -226,7 +232,7 @@ public static class MusicMarkEngraver
 
                 layouts.Add(new MusicMarkLayout(
                     mark.MeasureIndex, x, y, mark.Type, mark.Text,
-                    mark.IsSymbol, mark.SourcePosition));
+                    mark.IsSymbol, mark.SourcePosition, si));
             }
 
             // Stack below-staff marks (lower priority = closer to staff).
@@ -256,7 +262,7 @@ public static class MusicMarkEngraver
             bool firstStacked = true;
             for (int i = 0; i < belowMarks.Count; i++)
             {
-                var (mark, x) = belowMarks[i];
+                var (mark, x, si) = belowMarks[i];
                 double halfExtent = GetMarkHalfExtent(mark.Type);
 
                 double y;
@@ -295,7 +301,7 @@ public static class MusicMarkEngraver
 
                 layouts.Add(new MusicMarkLayout(
                     mark.MeasureIndex, x, y, mark.Type, mark.Text,
-                    mark.IsSymbol, mark.SourcePosition));
+                    mark.IsSymbol, mark.SourcePosition, si));
             }
         }
 
@@ -366,6 +372,23 @@ public static class MusicMarkEngraver
     private const double ToCodaLabelGap = 4.0;
 
     /// <summary>
+    /// Builds the full, ordered mark list (explicit marks + section labels +
+    /// initial tempo) that <see cref="Calculate"/> lays out. Public and pure so
+    /// the renderer can reconstruct the SAME list from the live score and resolve
+    /// each layout's data-pos by its <c>SourceIndex</c> (F3/B whole-layout reuse).
+    /// The merge order is content-invariant, so the index is stable across edits
+    /// that don't change content.
+    /// </summary>
+    public static ImmutableArray<MusicMarkItem> BuildAllMarks(
+        ImmutableArray<MusicMarkItem> musicMarks,
+        ImmutableArray<Measure> measures,
+        int? tempo)
+    {
+        var allMarks = MergeSectionLabels(musicMarks, measures);
+        return MergeTempoMark(allMarks, tempo);
+    }
+
+    /// <summary>
     /// Merges section labels from measures into the music marks list.
     /// Section labels become MusicMarkType.SectionLabel entries.
     /// </summary>
@@ -411,13 +434,13 @@ public static class MusicMarkEngraver
     /// LILYPOND-REF: define-grobs.scm:1835 MetronomeMark outside-staff-priority = 1000
     /// </remarks>
     private static ImmutableArray<MusicMarkItem> MergeTempoMark(
-        ImmutableArray<MusicMarkItem> marks, Score? score)
+        ImmutableArray<MusicMarkItem> marks, int? tempo)
     {
-        if (score?.Tempo == null)
+        if (tempo == null)
             return marks;
 
         var tempoMark = new MusicMarkItem(
-            MusicMarkType.Tempo, score.Tempo.Value.ToString(), 0, 0);
+            MusicMarkType.Tempo, tempo.Value.ToString(), 0, 0);
 
         var builder = ImmutableArray.CreateBuilder<MusicMarkItem>();
         if (!marks.IsDefaultOrEmpty)

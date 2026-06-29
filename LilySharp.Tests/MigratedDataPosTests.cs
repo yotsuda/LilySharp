@@ -97,6 +97,16 @@ public class MigratedDataPosTests
                 x => x.SourceIndex, x => x.SourcePosition, it => it.SourcePosition, covered);
             Check(fx, "TrillSpanner", l1.TrillSpannerLayouts, l2.TrillSpannerLayouts, s2.TrillSpanners,
                 x => x.SourceIndex, x => x.SourcePosition, it => it.SourcePosition, covered);
+
+            // MusicMark SourceIndex points into the reconstructed BuildAllMarks() list,
+            // not a flat score side-table, so rebuild the edited table the same way
+            // SharedRenderer.ResolveDataPos does. Section labels carry a real (shifted)
+            // offset; the initial tempo mark carries 0 (no data-pos) and is skipped.
+            var editedMarks = MusicMarkEngraver.BuildAllMarks(
+                s2.MusicMarks, s2.PrimaryContentStaff.PrimaryVoice.Measures, s2.Tempo);
+            Check(fx, "MusicMark", l1.MusicMarkLayouts, l2.MusicMarkLayouts, editedMarks,
+                x => x.SourceIndex, x => x.SourcePosition, it => it.SourcePosition, covered,
+                skipNoDataPos: true);
         }
 
         // Every migrated type the fixtures contain must have been exercised. (CustomText
@@ -106,6 +116,7 @@ public class MigratedDataPosTests
         {
             "Dynamic", "Articulation", "Arpeggio", "FiguredBass", "VoltaBracket",
             "TupletBracket", "PercentRepeat", "GraceNote", "ChordName", "TrillSpanner",
+            "MusicMark",
         };
         var missing = new List<string>();
         foreach (var t in expected)
@@ -144,16 +155,22 @@ public class MigratedDataPosTests
         string fixture, string name,
         ImmutableArray<TL> cached, ImmutableArray<TL> full, ImmutableArray<TItem> editedTable,
         Func<TL, int> sourceIndex, Func<TL, int> layoutPos, Func<TItem, int> itemPos,
-        HashSet<string> covered)
+        HashSet<string> covered, bool skipNoDataPos = false)
     {
         if (cached.IsDefaultOrEmpty)
             return;
         // Content unchanged => same engraver output shape.
         Assert.True(cached.Length == full.Length, $"{fixture}/{name}: layout count changed under shift");
-        covered.Add(name);
 
         for (int k = 0; k < cached.Length; k++)
         {
+            // Some marks emit no data-pos (the initial tempo carries SourcePosition 0):
+            // there is nothing to re-derive, and the leading-newline shift would leave it
+            // at 0, tripping the no-op guard below. Skip them.
+            if (skipNoDataPos && layoutPos(full[k]) == 0)
+                continue;
+            covered.Add(name);
+
             int idx = sourceIndex(cached[k]);
             Assert.True((uint)idx < (uint)editedTable.Length,
                 $"{fixture}/{name}[{k}]: SourceIndex {idx} out of range (table {editedTable.Length})");

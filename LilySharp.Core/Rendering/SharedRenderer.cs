@@ -2065,6 +2065,15 @@ public static class SharedRenderer
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
             TrillSpannerLayouts = ResolveArr(layout.TrillSpannerLayouts, score.TrillSpanners,
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            // MusicMarks (incl. section labels + tempo) aren't a flat score side-table;
+            // their SourceIndex points into the reconstructed BuildAllMarks() list. Rebuild
+            // it the same way Calculate does so each layout re-derives its data-pos. Tempo
+            // marks carry SourcePosition 0 (no data-pos emitted), section labels resolve from
+            // the (re-collected) measures, explicit marks from score.MusicMarks.
+            MusicMarkLayouts = ResolveArr(layout.MusicMarkLayouts,
+                MusicMarkEngraver.BuildAllMarks(score.MusicMarks,
+                    score.PrimaryContentStaff.PrimaryVoice.Measures, score.Tempo),
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
         };
     }
 
