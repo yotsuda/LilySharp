@@ -183,7 +183,7 @@ public sealed class LayoutEngine
     }
 
     /// <summary>Calculates the complete layout for a multi-staff score.</summary>
-    public ScoreLayout Layout(MultiStaffScore score)
+    public ScoreLayout Layout(MultiStaffScore score, IReadOnlyList<int>? precomputedLineSizes = null)
     {
         double headerHeight = LayoutUtilities.CalculateHeaderHeight(score.Title, score.Composer);
         double headerBottom = _options.MarginTop + headerHeight;
@@ -214,7 +214,10 @@ public sealed class LayoutEngine
             : CalculateIndentFromInstrumentNames(score);
         double shortIndent = _options.ShortIndent;
 
-        var systemMeasures = _systemBreaker.BreakIntoSystems(score, commonShortestDuration);
+        // F3 incremental cutoff: when the line-break gate is unchanged the driver
+        // passes the cached per-line measure counts so SystemBreaker regroups the
+        // new measures and skips the DP. Null => normal (byte-identical) breaking.
+        var systemMeasures = _systemBreaker.BreakIntoSystems(score, commonShortestDuration, precomputedLineSizes);
 
         // LILYPOND-REF: lily/align-interface.cc:217-268
         // Compute first system measure layouts first, then use skyline-based staff spacing

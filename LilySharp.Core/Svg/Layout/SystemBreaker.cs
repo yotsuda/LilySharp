@@ -75,9 +75,20 @@ public sealed class SystemBreaker
     /// Uses the primary voice of the first staff group for measure widths.
     /// </summary>
     public List<List<Measure>> BreakIntoSystems(MultiStaffScore score,
-                                                double? baseShortestDuration = null)
+                                                double? baseShortestDuration = null,
+                                                IReadOnlyList<int>? precomputedLineSizes = null)
     {
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+
+        // F3 incremental cutoff (LSP_F3_QUERY_GRAPH_DESIGN.md §4): when the caller
+        // has verified the line-break gate (per-measure spring vector + prefix
+        // widths) is unchanged, the break solution cannot change, so regroup the
+        // new measures by the cached line sizes and skip the spring computation
+        // and the DP entirely. The default path (precomputedLineSizes == null) is
+        // byte-identical to before.
+        if (precomputedLineSizes != null)
+            return RegroupBySizes(measures, precomputedLineSizes);
+
         double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true,
             score.TimeSignature.Beats, score.TimeSignature.BeatType);
         double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false);
@@ -91,38 +102,78 @@ public sealed class SystemBreaker
                 _options.LineBreakingTolerance,
                 raggedRight: _options.RaggedRight);
 
-            // Price each measure by the COMBINED springs across all staves —
-            // the same springs the actual system layout solves with. Pricing
-            // by the primary staff alone packs lines wherever that staff
-            // rests while another staff is dense.
-            // LILYPOND-REF: lily/paper-column.cc — columns aggregate staves.
-            var layouter = new MeasureLayouter();
-            var springData = new MeasureSpringData[measures.Length];
-            for (int i = 0; i < measures.Length; i++)
-            {
-                var primaryMeasure = measures[i];
-                var allTimings = MultiStaffLayouter.CollectAllTimingsForMeasure(score, i);
-                var allMeasures = MultiStaffLayouter.CollectAllMeasuresAtIndex(score, i);
-                var springs = layouter.CreateTimingSprings(
-                    primaryMeasure, allTimings, baseShortestDuration, allMeasures);
-
-                double ideal = 0, min = 0, invStretch = 0;
-                foreach (var s in springs)
-                {
-                    ideal += s.IdealDistance;
-                    min += s.MinDistance;
-                    invStretch += s.InverseStretchStrength;
-                }
-                double barlines = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
-                                + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
-                springData[i] = new MeasureSpringData(ideal + barlines, min + barlines, invStretch,
-                    primaryMeasure.BreakPenalty, primaryMeasure.LineBreakPermission);
-            }
-
-            return breaker.BreakIntoLines(measures, springData);
+            return breaker.BreakIntoLines(measures, ComputeMultiStaffSpringData(score, baseShortestDuration));
         }
 
         return BreakIntoSystemsGreedy(measures, firstPrefixWidth, continuationPrefixWidth, baseShortestDuration);
+    }
+
+    /// <summary>
+    /// The multi-staff line-break gate: each measure priced by the COMBINED
+    /// springs across all staves (the same springs the actual system layout
+    /// solves with). This vector — with the paper width and prefix widths — is
+    /// the sole determinant of the break solution, so the incremental driver
+    /// compares it to decide whether line-breaking can be skipped.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/paper-column.cc — columns aggregate staves, so pricing
+    /// by the primary staff alone would pack lines wherever that staff rests
+    /// while another staff is dense.
+    /// </remarks>
+    internal static MeasureSpringData[] ComputeMultiStaffSpringData(MultiStaffScore score,
+                                                                    double? baseShortestDuration)
+    {
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        var layouter = new MeasureLayouter();
+        var springData = new MeasureSpringData[measures.Length];
+        for (int i = 0; i < measures.Length; i++)
+        {
+            var primaryMeasure = measures[i];
+            var allTimings = MultiStaffLayouter.CollectAllTimingsForMeasure(score, i);
+            var allMeasures = MultiStaffLayouter.CollectAllMeasuresAtIndex(score, i);
+            var springs = layouter.CreateTimingSprings(
+                primaryMeasure, allTimings, baseShortestDuration, allMeasures);
+
+            double ideal = 0, min = 0, invStretch = 0;
+            foreach (var s in springs)
+            {
+                ideal += s.IdealDistance;
+                min += s.MinDistance;
+                invStretch += s.InverseStretchStrength;
+            }
+            double barlines = SpacingRules.GetBarlineWidth(primaryMeasure.StartBarline)
+                            + SpacingRules.GetBarlineWidth(primaryMeasure.EndBarline);
+            springData[i] = new MeasureSpringData(ideal + barlines, min + barlines, invStretch,
+                primaryMeasure.BreakPenalty, primaryMeasure.LineBreakPermission);
+        }
+        return springData;
+    }
+
+    /// <summary>
+    /// Regroups measures into systems by cached per-line measure counts — the
+    /// incremental reuse of a prior break solution when the gate is unchanged.
+    /// </summary>
+    private static List<List<Measure>> RegroupBySizes(ImmutableArray<Measure> measures, IReadOnlyList<int> sizes)
+    {
+        var groups = new List<List<Measure>>(sizes.Count);
+        int idx = 0;
+        foreach (int size in sizes)
+        {
+            var group = new List<Measure>(size);
+            for (int k = 0; k < size && idx < measures.Length; k++)
+                group.Add(measures[idx++]);
+            groups.Add(group);
+        }
+        // Defensive: a correct gate guarantees the sizes cover every measure, but
+        // never drop measures if a caller misuses the hook — append the remainder.
+        if (idx < measures.Length)
+        {
+            var tail = new List<Measure>(measures.Length - idx);
+            while (idx < measures.Length)
+                tail.Add(measures[idx++]);
+            groups.Add(tail);
+        }
+        return groups;
     }
 
     /// <summary>

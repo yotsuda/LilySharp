@@ -116,28 +116,31 @@ public static class SvgGenerator
     private static (MultiStaffScore Score, ScoreLayout Layout) BuildLayout(
         SyntaxTree tree, RenderSpec? renderSpec)
     {
-        var collector = new MeasureCollector();
-        collector.ScoreTranspose = renderSpec?.ScoreTranspose;
-        var layoutEngine = new LayoutEngine();
-        if (renderSpec != null && renderSpec.IsMultiStaff)
-        {
-            var multiScore = collector.CollectMultiStaff(tree, renderSpec);
-            return (multiScore, layoutEngine.Layout(multiScore));
-        }
-
-        // Single staff — wrap in MultiStaffScore so SharedRenderer has a uniform input.
-        string? voiceName = null;
-        if (renderSpec != null && renderSpec.Items.Length == 1 &&
-            renderSpec.Items[0] is SingleStaffSpec single)
-        {
-            voiceName = single.Staff.VoiceName;
-        }
-        var score = collector.Collect(tree, voiceName, renderSpec?.LocalStructure);
-        var wrapped = MultiStaffScore.FromScore(score);
-        return (wrapped, layoutEngine.Layout(wrapped));
+        var multiScore = CollectScore(tree, renderSpec);
+        return (multiScore, new LayoutEngine().Layout(multiScore));
     }
 
-    private static string RenderToSvg(MultiStaffScore score, ScoreLayout layout, SvgRenderOptions options)
+    /// <summary>
+    /// Collects a tree to a <see cref="MultiStaffScore"/> exactly the way the
+    /// render path does (single-staff scores are wrapped uniformly). Shared with
+    /// <see cref="IncrementalCompiler"/> so its full and incremental paths match
+    /// <see cref="Generate(SyntaxTree, SvgRenderOptions, string)"/> byte for byte.
+    /// </summary>
+    internal static MultiStaffScore CollectScore(SyntaxTree tree, RenderSpec? renderSpec)
+    {
+        var collector = new MeasureCollector { ScoreTranspose = renderSpec?.ScoreTranspose };
+        if (renderSpec != null && renderSpec.IsMultiStaff)
+            return collector.CollectMultiStaff(tree, renderSpec);
+
+        // Single staff — wrap in MultiStaffScore so SharedRenderer has a uniform input.
+        string? voiceName = renderSpec is { Items.Length: 1 } && renderSpec.Items[0] is SingleStaffSpec single
+            ? single.Staff.VoiceName
+            : null;
+        var score = collector.Collect(tree, voiceName, renderSpec?.LocalStructure);
+        return MultiStaffScore.FromScore(score);
+    }
+
+    internal static string RenderToSvg(MultiStaffScore score, ScoreLayout layout, SvgRenderOptions options)
     {
         var docOptions = new SvgDocumentOptions
         {
