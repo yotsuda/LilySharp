@@ -2041,6 +2041,12 @@ public static class SharedRenderer
     /// </summary>
     private static ScoreLayout ResolveDataPos(ScoreLayout layout, MultiStaffScore score)
     {
+        // Note-hosted annotations (glissando, …) carry a (staff, measure, item) locator
+        // instead of a side-table index; their data-pos is the HOST NOTE's source offset.
+        // Build the staff -> measures map once so the resolver can re-derive it. Lazy:
+        // only built when such an annotation is present.
+        var noteHosts = layout.GlissandoLayouts.IsDefaultOrEmpty
+            ? null : BuildStaffMeasures(score);
         return layout with
         {
             DynamicLayouts = ResolveArr(layout.DynamicLayouts, score.Dynamics,
@@ -2079,7 +2085,52 @@ public static class SharedRenderer
             LyricLayouts = ResolveArr(layout.LyricLayouts, score.Lyrics,
                 static (l, it) => l with { Item = l.Item with { SourcePosition = it.SourcePosition } },
                 static l => l.SourceIndex),
+            // Glissando data-pos = its start note's source offset; re-read it from the live
+            // score by the note locator the layout carries.
+            GlissandoLayouts = ResolveNoteArr(layout.GlissandoLayouts, noteHosts,
+                static l => (l.StaffIndex, l.MeasureIndex, l.ItemIndex),
+                static (l, pos) => l with { SourcePosition = pos }),
         };
+    }
+
+    // staff index -> that staff's primary-voice measures, the host tables the note-locator
+    // annotations resolve against. Same staff-index convention as the layout build path
+    // (LayoutEngine's EnumerateStaves loop).
+    private static System.Collections.Generic.Dictionary<int, ImmutableArray<Measure>>
+        BuildStaffMeasures(MultiStaffScore score)
+    {
+        var map = new System.Collections.Generic.Dictionary<int, ImmutableArray<Measure>>();
+        foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
+            map[staffIndex] = staff.PrimaryVoice.Measures;
+        return map;
+    }
+
+    // Refreshes each note-hosted layout's data-pos from its host NoteItem, located by the
+    // (staff, measure, item) triple it carries. A locator that doesn't resolve to a NoteItem
+    // (out of range, or staffIndex -1 from the single-staff path) is left as-is — its baked
+    // value is already correct for a normal full render; only whole-layout reuse needs the
+    // re-derivation, and that path always carries a real staff index.
+    private static ImmutableArray<T> ResolveNoteArr<T>(
+        ImmutableArray<T> layouts,
+        System.Collections.Generic.Dictionary<int, ImmutableArray<Measure>>? staffMeasures,
+        System.Func<T, (int Staff, int Measure, int Item)> locator,
+        System.Func<T, int, T> resolve)
+    {
+        if (layouts.IsDefaultOrEmpty || staffMeasures == null)
+            return layouts;
+        var b = layouts.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
+        {
+            var (s, m, it) = locator(b[i]);
+            if (staffMeasures.TryGetValue(s, out var measures)
+                && (uint)m < (uint)measures.Length)
+            {
+                var items = measures[m].Items;
+                if ((uint)it < (uint)items.Length && items[it] is NoteItem note)
+                    b[i] = resolve(b[i], note.SourcePosition);
+            }
+        }
+        return b.MoveToImmutable();
     }
 
     // Refreshes each layout's resolved field from the side-table item it references

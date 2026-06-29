@@ -29,7 +29,13 @@ public readonly record struct GlissandoLayout(
     double EndX,
     double EndY,
     GlissandoStyle Style,
-    int SourcePosition);
+    int SourcePosition,
+    // F3/B: locator of the START note this glissando hangs on, so a reused (cached)
+    // layout re-derives its data-pos from the live score (SharedRenderer.ResolveDataPos).
+    // -1 = unresolved (direct unit-test construction / no note resolution).
+    int StaffIndex = -1,
+    int MeasureIndex = -1,
+    int ItemIndex = -1);
 
 /// <summary>
 /// Calculates glissando layouts from detected glissando items.
@@ -156,7 +162,10 @@ public static class GlissandoEngraver
                     EndX: segEndX,
                     EndY: segEndY,
                     Style: gliss.Style,
-                    SourcePosition: gliss.SourcePosition));
+                    SourcePosition: gliss.SourcePosition,
+                    StaffIndex: staffIndex,
+                    MeasureIndex: gliss.StartMeasureIndex,
+                    ItemIndex: gliss.StartItemIndex));
             }
         }
 

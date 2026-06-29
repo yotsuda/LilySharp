@@ -144,6 +144,33 @@ public class IncrementalCompilerTests
     }
 
     [Fact]
+    public void ContentUnchangedEdit_WithGlissando_ReusesWholeLayout_AndMatchesFull()
+    {
+        // Glissando is note-hosted and now migrated (out of ReuseSafe), so a score with a
+        // glissando is reuse-eligible. A content-unchanged edit must reuse the whole layout
+        // AND stay byte-identical — the glissando data-pos re-derives from its host note.
+        string withGliss = """
+            time 4/4
+            key c major
+            part melody
+            section Main {
+              melody { g4@glissando c e@glissando b | c4 d e f | }
+            }
+            structure { Main }
+            score "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(withGliss);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = new TextChange(new TextSpan(0, 0), "\n");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.True(session.LastEditReusedLayout);
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    [Fact]
     public void TitleChange_DoesNotReuseLayout_ButMatchesFull()
     {
         // A rendered title is score-global: it is NOT in any per-measure content key, so

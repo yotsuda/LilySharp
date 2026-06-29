@@ -111,6 +111,11 @@ public class MigratedDataPosTests
             // Lyric carries its data-pos on the nested LyricItem.
             Check(fx, "Lyric", l1.LyricLayouts, l2.LyricLayouts, s2.Lyrics,
                 x => x.SourceIndex, x => x.Item.SourcePosition, it => it.SourcePosition, covered);
+
+            // Glissando is note-hosted: its data-pos is the START note's source offset,
+            // resolved from the edited score by the (staff, measure, item) locator.
+            CheckNote(fx, "Glissando", l1.GlissandoLayouts, l2.GlissandoLayouts, s2,
+                x => (x.StaffIndex, x.MeasureIndex, x.ItemIndex), x => x.SourcePosition, covered);
         }
 
         // Every migrated type the fixtures contain must have been exercised. (CustomText
@@ -120,7 +125,7 @@ public class MigratedDataPosTests
         {
             "Dynamic", "Articulation", "Arpeggio", "FiguredBass", "VoltaBracket",
             "TupletBracket", "PercentRepeat", "GraceNote", "ChordName", "TrillSpanner",
-            "MusicMark", "Lyric",
+            "MusicMark", "Lyric", "Glissando",
         };
         var missing = new List<string>();
         foreach (var t in expected)
@@ -188,6 +193,44 @@ public class MigratedDataPosTests
             // proving it re-derives from the edited score rather than reusing the stale baked offset.
             Assert.True(layoutPos(cached[k]) != expected,
                 $"{fixture}/{name}[{k}]: resolution is a no-op (cached offset == edited offset)");
+        }
+    }
+
+    // Note-hosted variant: the layout carries a (staff, measure, item) locator instead of
+    // a side-table index; resolving it against the EDITED score's measures must yield the
+    // host note's offset that a full layout baked (and must have actually changed).
+    private static void CheckNote<TL>(
+        string fixture, string name,
+        ImmutableArray<TL> cached, ImmutableArray<TL> full, MultiStaffScore edited,
+        Func<TL, (int Staff, int Measure, int Item)> locator, Func<TL, int> layoutPos,
+        HashSet<string> covered)
+    {
+        if (cached.IsDefaultOrEmpty)
+            return;
+        Assert.True(cached.Length == full.Length, $"{fixture}/{name}: layout count changed under shift");
+
+        var staffMeasures = new Dictionary<int, ImmutableArray<LilySharp.Core.Svg.Model.Measure>>();
+        foreach (var (_, staff, idx) in edited.EnumerateStaves())
+            staffMeasures[idx] = staff.PrimaryVoice.Measures;
+
+        for (int k = 0; k < cached.Length; k++)
+        {
+            var (s, m, it) = locator(cached[k]);
+            Assert.True(staffMeasures.TryGetValue(s, out var measures),
+                $"{fixture}/{name}[{k}]: staff {s} not in edited score");
+            Assert.True((uint)m < (uint)measures.Length,
+                $"{fixture}/{name}[{k}]: measure {m} out of range");
+            var items = measures[m].Items;
+            Assert.True((uint)it < (uint)items.Length && items[it] is LilySharp.Core.Svg.Model.NoteItem,
+                $"{fixture}/{name}[{k}]: item {it} is not a note");
+
+            int resolved = ((LilySharp.Core.Svg.Model.NoteItem)items[it]).SourcePosition;
+            int expected = layoutPos(full[k]);
+            Assert.True(resolved == expected,
+                $"{fixture}/{name}[{k}]: locator resolves to {resolved}, expected {expected}");
+            Assert.True(layoutPos(cached[k]) != expected,
+                $"{fixture}/{name}[{k}]: resolution is a no-op (cached offset == edited offset)");
+            covered.Add(name);
         }
     }
 
