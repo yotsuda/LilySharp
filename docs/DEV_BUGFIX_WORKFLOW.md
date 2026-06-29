@@ -620,8 +620,8 @@ running-state も合わせて移すのは追加スコープ。まず MeasureColl
 
 ### 残課題(ユーザー指定の進行順: 6 → 4 → 3 → 5)
 
-優先順は本セッションのレビューで合意。**6 → 4 → 3 → 5** の順で進める。**[6]/[4] は調査の結果クローズ
-(下記)。残るは [3] → [5]。**
+優先順は本セッションのレビューで合意。**6 → 4 → 3 → 5** の順で全て処理済み:
+**[6] 調査→変更なし / [4] 評価→見送り / [3] 評価→スキップ / [5] 実装→完了(commit `84f1da0`)。**
 
 1. **[6] `Reset()` が transpose 状態をクリアしない疑い ― ✅ 調査済み・変更なし**
    調査結果: **全本番経路で `MeasureCollector` は単一使用**(`SvgGenerator.BuildLayout` /
@@ -641,25 +641,35 @@ running-state も合わせて移すのは追加スコープ。まず MeasureColl
    機能セットが分岐する2 exporter を新共有型で**結合**するコスト＋MIDI/MusicXML の byte-identical 検証は
    重い。**kitchen-sink/結合増で見合わず見送り。** 3way も MIDI に transpose が無いため単一抽象は不適。
 
-3. **[3] §15 第二段 ― `OctaveContext` 解決の純関数化(← 次はここ)**
-   解決を純関数化し context を引数/戻り値で通す。コスト大。第一段(stage1)が緑で安定した今が着手可。
-   挙動完全不変。`RelativeOctave.cs` remarks に「only the algorithm is shared」明記あり(再確認)。
+3. **[3] §15 第二段 ― `OctaveContext` 解決の純関数化 ― ✅ 評価済み・スキップ**
+   評価結果: [4] を見送った今、純関数化の**主動機(共有を可能にする)が消えた**。真のコア
+   `RelativeOctave.Resolve` は既に純(static・テスト済)で、`OctaveContext.Resolve` はその薄い
+   stateful ラッパ。純化で得るのは「`LastPitchName` 変異を呼び出し側へ押し出す」だけで、note/grace/chord
+   の**順序依存な変異シーケンス**(和音は per-pitch churn→末尾 first 復元で相対解決)を2〜3箇所に分散させ
+   壊すリスクがある(§15 自身「コスト大・最初から狙うな」)。さらに [3](薄く純に)と [5](太く logic 取込)は
+   **逆方向**で、stage-1 の可変 collaborator 設計と整合するのは [5]。→ **無期限スキップ。** やるなら別途。
 
-4. **[5] transpose の凝集を締める**
-   `OctaveContext` は transpose *状態*を持つが*ロジック*(`ApplyTranspose`/`TransposeKeySharps`/
-   per-pitch の `PitchTransposer.Transpose` 呼び出し)は `MeasureCollector` に残り、データ袋気味。
-   per-pitch の transpose 適用(と任意で `TransposeKeySharps`)を `OctaveContext` のメソッドへ移し、
-   状態とロジックを同居させる。`ApplyTranspose` の composition は `ScoreTranspose`(Collector 側)依存なので
-   境界設計に注意。挙動完全不変。
+4. **[5] transpose の凝集を締める ― ✅ 完了(commit `84f1da0`)**
+   `OctaveContext` に `SetTranspose`(武装)/ `TransposePitch`(per-pitch 適用)/ `TransposeKeySharps`
+   (調号シフト)を追加し、transpose の**状態とロジックを同居**。`MeasureCollector.ApplyTranspose` は
+   effective target の composition(`ScoreTranspose` 依存=collector 関心)だけ担い、transpose フィールドを
+   直接突かなくなった。`CalculateStaffPosition` の inline transpose は `_octave.TransposePitch(...)` に。
+   `ComposeTranspose` は collector に残置。**挙動完全不変**(snapshot byte-identical、transpose 系
+   fixtures/tests 緑)。
 
-### 厳守事項
+### 厳守事項(次セッション以降のための残し)
 
-- [6] は調査の結果**変更なし**で確定。残る [3]/[5] は**整理リファクタ=出力不変**
-  (snapshot byte-identical を毎段検証)。挙動変更と整理を混ぜない(§8.3 差分純度)。
+- これらは全て**処理済み**。今後 [3](純関数化)を再提案する場合は上記スキップ理由を読むこと。
+- 一般則: 挙動変更([6] 型)と整理リファクタ([4]/[5] 型)を混ぜない(§8.3 差分純度)。
 - 手順は §1 の鉄則、コミットは §10＋§14 規約(`Co-Authored-By: Claude Opus 4.8`)。1論点1コミットで刻む。
 
 ### リポジトリ状態(2026-06-29 夕)
 
-- `master` は `origin/master`(`bea7d74`)より **2コミット先行・未 push**:
-  `638ee7e`(OctaveContext 抽出)＋ `f55d0bf`(版バンプ)。**ユーザー指示で push 保留中。**
+- `master` は `origin/master`(`bea7d74`)より **先行・未 push**(**ユーザー指示で push 保留中**):
+  - `638ee7e` OctaveContext 抽出 + 死にコード削除
+  - `f55d0bf` 版バンプ(LSP デプロイ)
+  - `59ca754` docs: §15 完了化 + §16 引き継ぎ
+  - `58a10d4` docs: [6]/[4] クローズ
+  - `84f1da0` [5] transpose 凝集(per-pitch 適用を OctaveContext へ)
+  - (本コミット)docs: [3] スキップ + [5] 完了を §16 に反映
 - 未追跡 `AI_POSITIONING_HANDOFF.md` は別件(本作業と無関係、温存)。
