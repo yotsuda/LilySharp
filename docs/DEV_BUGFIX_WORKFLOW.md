@@ -716,7 +716,7 @@ running-state も合わせて移すのは追加スコープ。まず MeasureColl
 
 ---
 
-## 17. 次セッションへの引き継ぎ(2026-06-29 夜)― §12 描画パス + F3 並行作業の衝突警告
+## 17. 次セッションへの引き継ぎ(2026-06-29 夜)― §12 描画パス
 
 ### §12(描画忠実再現)パスの成果
 - **実装済み**: §12-1 cue 臨時記号縮小(`8fb2079`)、§12-2 装飾 seed 実寸(`fc90359`、現状 no-op の prep)、
@@ -725,18 +725,50 @@ running-state も合わせて移すのは追加スコープ。まず MeasureColl
   (構造改修・可視欠陥なし)、§12-5 inter-system skyline(最適パスは実装済・非最適は広域 churn)、
   §12-6 MinItemGap 0.4→0.1(グローバル再間隔・要衝突検証)。理由は §12 各項目に明記。
 
-### ⚠️ F3(`LSP_F3_QUERY_GRAPH_DESIGN.md`)との並行作業は中核ファイルが衝突する
-F3 は意味解析〜レイアウトを Salsa 型クエリ DAG に**作り替える大規模改修**で、本セッションが触った中核と
-直撃する。**真の並行は避け、この未 push 群を push してから F3 を「その tip」で開始するのが安全**。
-- 直撃: `Svg/Collector/MeasureCollector.cs` + `OctaveContext.cs`(F3a/b の entry/exit_context =
-  相対オクターブ/transpose/key/clef の running state そのもの)。
-- 高: `Svg/Layout/{LayoutEngine,MeasureLayouter,SpacingRules}.cs`(F3c/d natural_width/line_breaks/
-  system_layout)、`Rendering/SharedRenderer.cs`(F3d system_svg)。
-- 中: スパナ系 engraver(`ArpeggioEngraver` 等 = F3 spanner_layout)。
-- F3 worktree は **必ず現 master tip(未 push 群込み)から分岐**(origin/master から切ると OctaveContext 等が
-  無く再衝突)。
+### §12-4/5/6 と F3 の順序メモ
+deferred 3 件はいずれも**広域 snapshot 再ベースライン**を伴う。F3(`LSP_F3_QUERY_GRAPH_DESIGN.md`、
+意味解析〜レイアウトを query DAG に作り替える計画)は同じ `measure_natural_width`/`system_layout` を
+触るので、これら spacing 系を着手するなら **F3 の前後関係を意識**(F3 後にまとめて再ベースラインする方が
+無駄が少ない)。緊急の可視バグでなければ F3 と一緒に扱うのが効率的。
 
-### リポジトリ状態(2026-06-29 夜)
-- `master` は `origin/master`(`bea7d74`)より **10 コミット先行・未 push**(ユーザー指示で保留)。
-  内訳: OctaveContext 一式(§15/16)+ LSP デプロイ版バンプ + §12-1/2/3a 実装 + §12 評価 docs。
-- 全テスト緑(**1788 passed / 3 skipped**)。作業ツリーは clean(未追跡 .md 4 本は別件)。
+### リポジトリ状態(2026-06-29 夜、最終)
+- **push 済み**: `origin/master` = `c69e3df`(11 コミット)。内訳: OctaveContext 一式(§15/16)+
+  LSP デプロイ版バンプ + §12-1/2/3a 実装 + §12 評価/§17 docs。
+- コミット日時は就業時間外帯(19:02〜21:04 JST)へ redate 済み(author/committer 両方、内容は byte 不変)。
+  redate 前 tip `ce95dd7` はローカル reflog / `refs/original` に退避(不要なら掃除可)。
+- 全テスト緑(**1788 passed / 3 skipped**)。作業ツリー clean(未追跡 .md 4 本は別件)。
+
+---
+
+## 18. このセッションの再利用可能な学び(2026-06-29)
+
+§12 を一周して得た、次セッションの時短になる非自明な点。各 workflow 節の補足。
+
+### 18.1 「直す前に no-op/到達不能を疑う」(§2 の補足)
+§12 項目には**観測効果ゼロ**のものが混じる。実装前後で **before/after を実測**して「本当に出力が変わるか」を確認する。
+- 確認テク: 修正を当てた後、`git stash push -- <file>` で当該ファイルだけ戻し、再ビルド・再描画して数値比較 → `stash pop` で戻す(§12-2/§12-3 で使用)。SVG から座標を grep するのが速い(`<line ... data-pos="N">` の min x 等)。
+- §12-2 は seed が「装飾の**上に積む可動グロブ**」にしか効かず、現行マークは小節頭 X 固定で装飾と X が重ならない → no-op。**「効く消費者がいるか」をまず確認**。
+
+### 18.2 テストケース構築の罠(§3.2 の補足)
+- **和音内の相対オクターブ**: `<a' b'>` は2度にならない(`'` が各音に効き 5度等に化ける)。**2度和音は隣接レター(`<c d>` `<e f>`…)を plain で書き、SVG の y で検証**(同 timing の2 head が **Δy=0.5(device)=2度**、Δx≠0=反転)。
+- **stem 方向と反転向き**: `ChordItem.StemUp => Average(StaffPosition) < 0`。反転 head が **右**=stem up、**左**=stem down。stem-down の2度和音(=左反転 head)を作るには平均位置を中線より上へ。単声でも平均で自動反転する。
+
+### 18.3 装飾/アーティキュレーション・レイアウトの3箱(§6 の補足)
+`ArticulationEngraver` は用途で箱を分ける。混同しない:
+- `GetGlyphBBox`/`GetArticulationExtent`/`GetNearExtent` = **その装飾自身の位置決め**(ornament は simplified 1.0/0.5。trill すら実寸でなく 1.0=意図的)。
+- `GetSeedBBox` = **outside-staff 占有の種**(可動グロブが避ける範囲)。実寸を使うのはここ(§12-2)。
+
+### 18.4 グリフ計量パイプライン(§6 の補足)
+`audit/scripts/Extract-EmmentalerMetrics.py` が font から `GlyphMetricsGenerated.cs` を生成。
+- **追加手順**: `BBOX_GLYPHS` に `GlyphSpec("Name", 0xXXXX, ...)` を足す → `py -3 audit\scripts\Extract-EmmentalerMetrics.py` 再生成 → `GlyphMetrics.Name` で参照。
+- **安全前提**: 触る前に「glyph を足さず再生成して zero-diff」を確認(決定性チェック)。差分が出たら font/tool ドリフト。
+
+### 18.5 ページレイアウトの2経路(§12-5 関連)
+SVG は既定で **非最適パス**(`UseOptimalPageBreaking=false`/`PageHeight=0` → `LayoutEngine.cs:503-513`、スカラー extent 縦積み)。最適パス(`PageLayouter.PositionSystemsOnPage`)は skyline `Distance` 実装済み。縦間隔をいじるときはどちらの経路かをまず確認。
+
+### 18.6 未実装オーナメントのバックログ(§12-2 から派生・実需順)
+追加すれば §12-2 の seed パターンがそのまま活きる。
+- **A(頻出)**: down-bow/up-bow(`scripts.downbow`/`upbow`)、staccatissimo(`ustaccatissimo`/`dstaccatissimo`)、stopped/open(`+`/`○`)、harmonic/flageolet、snap pizzicato。
+- **B**: thumb、espressivo、pedal heel/toe、fermata 変種(short/long/verylong)。
+- **C(複合・横広=seed が活きる)**: prallmordent/upprall/downprall/upmordent/downmordent/lineprall、slashturn/haydnturn/schleifer。
+- 加えて「**上向き note-anchored テキスト/markup(`^"text"`)**」を入れると §12-2 の seed 実寸が初めて可視で効く(現状の no-op を解消する消費者)。
