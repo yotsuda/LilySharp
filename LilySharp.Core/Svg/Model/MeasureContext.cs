@@ -1,0 +1,56 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+namespace LilySharp.Core.Svg.Model;
+
+/// <summary>
+/// The running "Timing / Clef / Key" context that crosses barlines — the state
+/// LilyPond threads left-to-right through a voice. This is the F3 design's
+/// <c>entry_context</c> / <c>exit_context</c> payload (LSP_F3_QUERY_GRAPH_DESIGN.md
+/// §2 Layer 2): each measure's <c>entry</c> is the previous measure's <c>exit</c>,
+/// and a measure's semantics depend only on its green subtree plus this context.
+/// </summary>
+/// <remarks>
+/// A <c>readonly record struct</c> on purpose: value equality is exactly the
+/// early-cutoff comparison the query DAG needs — when a measure's
+/// <c>exit_context</c> is unchanged after an edit, the running-state cascade to
+/// later measures stops (LSP_F3_QUERY_GRAPH_DESIGN.md §3-4).
+///
+/// SCOPE (S2 / F3a): the cleanly + FAITHFULLY recoverable backbone — key and
+/// time — captured from a collected <c>Score</c>. Deliberately deferred to later
+/// stages, where they are consumed or can be derived from the right source:
+/// <list type="bullet">
+/// <item>clef — although the F3 design lists it here, the collected
+/// <c>Score.Clef</c> holds the END-STATE clef (the last mid-piece change), not
+/// bar 1's, and the per-voice initial clef is not exposed post-collection; a
+/// faithful initial clef needs the syntax tree / walk, so it joins the context
+/// when the chain is built green-side (S5) or from per-staff clefs;</item>
+/// <item>ottava (octave-shift span);</item>
+/// <item>the relative-octave reference pitch — post-collection notes are already
+/// resolved to staff positions, so this only becomes meaningful once S3 (F3b)
+/// normalizes relative→absolute;</item>
+/// <item>pending ties and open cross-measure spanners (slur/hairpin), which need
+/// span tracking rather than a scalar carry.</item>
+/// </list>
+/// Accidental state is intentionally absent: it resets at every barline
+/// (MeasureCollector clears it on MeasureCompleted), so only the key crosses.
+/// </remarks>
+public readonly record struct MeasureContext(
+    KeySignature Key,
+    TimeSignature Time)
+{
+    public override string ToString() => $"key={Key.Sharps} time={Time}";
+}
