@@ -285,7 +285,9 @@ public sealed class LayoutEngine
             if (hasHaraKiri && sysHeight <= 0)
                 sysHeight = _options.StaffHeight;
 
-            var (upSky, downSky) = _skylineBuilder.BuildSystemSkylines(score, measureLayouts, sysHeight);
+            var (upSky, downSky) = ComputeSystemSkyline(systemCache, firstMeasureIndex, measureCount,
+                isFirstSystem, sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration, sysHeight,
+                () => _skylineBuilder.BuildSystemSkylines(score, measureLayouts, sysHeight));
             perSystemSkylines.Add((upSky, downSky));
             perSystemExtents.Add((
                 LayoutUtilities.CalculateUpExtent(upSky),
@@ -490,8 +492,19 @@ public sealed class LayoutEngine
         Func<ImmutableArray<MeasureLayout>> compute)
         => cache == null
             ? compute()
-            : cache.GetOrCompute(firstMeasureIndex, measureCount, isFirstSystem, isLastSystem,
+            : cache.GetOrComputeMeasures(firstMeasureIndex, measureCount, isFirstSystem, isLastSystem,
                 indent, commonShortestDuration, compute);
+
+    // F3/S5-3c: route a system's skyline through the session cache (the dominant
+    // per-system cost, esp. multi-staff). Keyed additionally on systemHeight.
+    private static (VerticalSkyline up, VerticalSkyline down) ComputeSystemSkyline(
+        SystemLayoutCache? cache, int firstMeasureIndex, int measureCount, bool isFirstSystem,
+        bool isLastSystem, double indent, double commonShortestDuration, double systemHeight,
+        Func<(VerticalSkyline up, VerticalSkyline down)> compute)
+        => cache == null
+            ? compute()
+            : cache.GetOrComputeSkyline(firstMeasureIndex, measureCount, isFirstSystem, isLastSystem,
+                indent, commonShortestDuration, systemHeight, compute);
 
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
         ImmutableArray<SystemLayout> systems, double headerHeight,

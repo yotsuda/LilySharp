@@ -49,16 +49,16 @@ public class SystemLayoutCacheTests
         Func<ImmutableArray<MeasureLayout>> factory = () => { calls++; return Layout(calls); };
 
         // Miss, then hit on identical inputs.
-        var first = cache.GetOrCompute(0, 2, true, false, 2.0, 0.25, factory);
+        var first = cache.GetOrComputeMeasures(0, 2, true, false, 2.0, 0.25, factory);
         Assert.False(cache.LastWasHit);
         Assert.Equal(1, calls);
-        var second = cache.GetOrCompute(0, 2, true, false, 2.0, 0.25, factory);
+        var second = cache.GetOrComputeMeasures(0, 2, true, false, 2.0, 0.25, factory);
         Assert.True(cache.LastWasHit);
         Assert.Equal(1, calls);
         Assert.Equal(first, second);
 
         // A differing scalar (isFirstSystem) is a different system -> miss.
-        cache.GetOrCompute(0, 2, false, false, 2.0, 0.25, factory);
+        cache.GetOrComputeMeasures(0, 2, false, false, 2.0, 0.25, factory);
         Assert.False(cache.LastWasHit);
         Assert.Equal(2, calls);
 
@@ -66,14 +66,14 @@ public class SystemLayoutCacheTests
         cache.SetContentKeys(ImmutableArray.Create(
             new MeasureContentKey(1), new MeasureContentKey(99),
             new MeasureContentKey(3), new MeasureContentKey(4)));
-        cache.GetOrCompute(0, 2, true, false, 2.0, 0.25, factory);
+        cache.GetOrComputeMeasures(0, 2, true, false, 2.0, 0.25, factory);
         Assert.False(cache.LastWasHit);
         Assert.Equal(3, calls);
 
         // A range whose keys were NOT touched still reuses.
-        cache.GetOrCompute(2, 2, false, true, 1.0, 0.25, factory); // miss (first time)
+        cache.GetOrComputeMeasures(2, 2, false, true, 1.0, 0.25, factory); // miss (first time)
         Assert.Equal(4, calls);
-        cache.GetOrCompute(2, 2, false, true, 1.0, 0.25, factory); // hit
+        cache.GetOrComputeMeasures(2, 2, false, true, 1.0, 0.25, factory); // hit
         Assert.True(cache.LastWasHit);
         Assert.Equal(4, calls);
     }
@@ -86,9 +86,9 @@ public class SystemLayoutCacheTests
         int calls = 0;
         Func<ImmutableArray<MeasureLayout>> factory = () => { calls++; return Layout(0); };
 
-        cache.GetOrCompute(0, 5, true, true, 2.0, 0.25, factory); // count exceeds keys
+        cache.GetOrComputeMeasures(0, 5, true, true, 2.0, 0.25, factory); // count exceeds keys
         Assert.False(cache.LastWasHit);
-        cache.GetOrCompute(0, 5, true, true, 2.0, 0.25, factory); // still not cached
+        cache.GetOrComputeMeasures(0, 5, true, true, 2.0, 0.25, factory); // still not cached
         Assert.False(cache.LastWasHit);
         Assert.Equal(2, calls);
         Assert.Equal(0, cache.Count);
@@ -137,21 +137,31 @@ public class SystemLayoutCacheTests
     }
 
     [Fact]
-    public void MultiStaff_FallsBackToFullLayout_AndStaysByteIdentical()
+    public void MultiStaff_ReusesSystems_AndStaysByteIdentical()
     {
-        // grammar-tour is a 2-staff score. The per-system spring cache is gated OFF
-        // for multi-staff (measured a wash — the uncached skyline + global annotation
-        // passes dominate there), so no cache is installed and there is no per-edit
-        // key cost. Editing still equals a full recompile (the full-fallback path).
+        // grammar-tour is a 2-staff score with no grob overrides, so the cache
+        // engages (S5-3c) with per-measure keys that combine both staves, and both
+        // the spring solve AND the skyline are memoized per system.
         var source = LoadFixture("showcase/grammar-tour");
         var session = new IncrementalCompiler(SyntaxTree.Parse(source));
         session.Render();
-        Assert.Null(session.SystemCache);
 
+        var cache = session.SystemCache;
+        Assert.NotNull(cache);
+        Assert.True(cache!.Count >= 2); // spans multiple systems
+
+        int before = cache.Count;
+
+        // Width-preserving edit (leading newline = pure trivia): every system's
+        // content is unchanged, so ALL multi-staff systems are reused (no new cache
+        // entries). Reusing the cached skylines must stay byte-identical to a full
+        // recompile (this also guards against any downstream skyline mutation).
         var incremental = session.Edit(new TextChange(new TextSpan(0, 0), "\n"));
+        Assert.Equal(before, cache.Count);
         var full = new IncrementalCompiler(SyntaxTree.Parse("\n" + source)).Render();
         Assert.Equal(full, incremental);
 
+        // A content edit still equals a full recompile (soundness over a real change).
         string edited2 = ("\n" + source).Insert(source.Length / 2 + 1, " c4");
         var incremental2 = session.Edit(new TextChange(new TextSpan(source.Length / 2 + 1, 0), " c4"));
         var full2 = new IncrementalCompiler(SyntaxTree.Parse(edited2)).Render();

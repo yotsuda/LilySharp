@@ -120,7 +120,7 @@ public class IncrementalSessionBenchmark
         _singleSession.Render();
     }
 
-    [Benchmark(Description = "multi-staff edit: width-preserving (no per-system cache)")]
+    [Benchmark(Description = "multi-staff edit: width-preserving (systems reused)")]
     public string Multi_WidthPreserving() => _session.Edit(_widthPreservingEdit);
 
     [Benchmark(Description = "multi-staff edit: width-changing")]

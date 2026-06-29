@@ -100,17 +100,13 @@ public sealed class IncrementalCompiler
         var spec = RenderSpecParser.FindFirst(tree);
         var score = SvgGenerator.CollectScore(tree, spec);
 
-        // F3/S5-3a: install/refresh the per-system layout cache for SINGLE-staff
-        // scores without grob overrides. Overrides can change spacing globally (a
-        // per-measure key cannot localize them). Multi-staff is correct with the
-        // cache too (Compute(MultiStaffScore) is sound — proven by tests), but
-        // measured a wash: caching only the per-system SPRING solve does not move
-        // multi-staff, where the uncached skyline + global annotation passes dominate
-        // and the key computation is pure overhead. So multi-staff falls back to full
-        // layout (cache == null, byte-identical) until those phases are cached too
-        // (S5-3b/c). Both gates => no per-edit key cost on the fallback path.
-        if (!score.IsMultiStaff
-            && score.GrobOverrides.IsDefaultOrEmpty
+        // F3/S5-3: install/refresh the per-system layout cache for scores without
+        // grob overrides (overrides can change spacing GLOBALLY, so a per-measure key
+        // cannot localize them — those fall back to full layout, byte-identical).
+        // Both single- and multi-staff benefit now that the two dominant per-system
+        // phases — the spring solve AND the skyline (the larger, esp. on multi-staff)
+        // — are memoized; Compute(MultiStaffScore) gives the sound all-staff key.
+        if (score.GrobOverrides.IsDefaultOrEmpty
             && score.GrobReverts.IsDefaultOrEmpty)
         {
             _systemCache ??= new SystemLayoutCache();
