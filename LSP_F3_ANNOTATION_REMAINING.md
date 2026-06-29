@@ -107,3 +107,24 @@ gate」を実装→**試作したが、MusicMark で全スコア gate off＝死�
   measures から引く **note-index resolver** が要る。
 - **Hairpin/Ottava/Pedal/Ornament/TextSpanner**（detected, score 非保持）: 検出元 item を `ScoreLayout` に載せて render 到達可能に。
 - 各移行後、`ReuseSafe` から該当アレイを外し、B-2 を復活＋増分==フルで reuse 発火を実証。
+
+### B-1 の頑健性は実証済み（commit `8afaf0e`）
+`MigratedDataPosTests`：全 fixture を「元」vs「先頭改行コピー（全 offset +1）」でレイアウトし、移行済み各アレイで
+**「cached の `SourceIndex` を編集後 score に解決した値 == 編集後フルレイアウトの値」かつ「値が実際に変化」**をアサート。
+10型を fixture で網羅（カバレッジ強制）＋CustomText はエングレーバ直接テスト。**11型すべて pass**＝位置がずれる編集下で
+正しく再導出される＝reuse 用途での正当性を証明（snapshot は同一ツリーの同値しか保証しないため、この追加が肝）。
+
+### MusicMark 移行の具体設計（実装待ち・最優先 unblock）
+`MusicMarkEngraver`：
+1. `MusicMarkLayout` に `int SourceIndex = -1`（**allMarks への index**）。
+2. `Calculate` 内 `foreach (var mark in allMarks)` を**indexed for** にし、`markEntries` を `(Mark, X, SourceIndex)` の3-tuple化。
+   GroupBy/OrderBy はそのまま3-tupleを保持。**2つの構築点（above ~227 / below ~296）**で `var (mark, x, si) = ...` から `si` を渡す。
+3. `MergeSectionLabels` + `MergeTempoMark` を **public `BuildAllMarks(musicMarks, measures, int? tempo)`** に括り出す
+   （`MergeTempoMark` の `Score?` → `int? tempo` に変更）。
+4. `SharedRenderer.ResolveDataPos`：`var allMarks = MusicMarkEngraver.BuildAllMarks(score.MusicMarks,
+   score.PrimaryContentStaff.PrimaryVoice.Measures, score.Tempo);` で再構築し `ResolveArr(layout.MusicMarkLayouts, allMarks, …)`。
+   - tempo マークは `SourcePosition==0`→`gc.Source` が NullScope＝data-pos を出さない＝reuse に無害。
+   - section ラベルは `measure.SectionLabelPosition`（再 collect で新値）、実マークは `score.MusicMarks` から解決。
+5. `MigratedDataPosTests` に `MusicMark` を追加（section ラベルは全 fixture にある＝即カバー）＝移行の正当性を即実証。
+6. その後 B-2（`IncrementalCompiler` の `_cachedLayout` 再利用＋`ReuseSafe`）を復活し、`ReuseSafe` から MusicMark を外す。
+   これで「lyrics/hairpin 等を含まない通常スコア」で reuse 発火＋増分==フル証明が可能になる。
