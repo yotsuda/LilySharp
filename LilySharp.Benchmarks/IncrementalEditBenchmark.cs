@@ -17,6 +17,9 @@
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 
@@ -55,6 +58,14 @@ public class IncrementalEditBenchmark
     private SyntaxTree _tree = null!;
     private TextChange _edit;
 
+    // Pre-computed stage inputs for the edited tree, so each stage can be timed
+    // in isolation and we see WHERE one edit's time goes (collect vs layout vs
+    // render) — the case for S5's per-system memoization.
+    private SyntaxTree _editedTree = null!;
+    private RenderSpec? _editedSpec;
+    private MultiStaffScore _editedScore = null!;
+    private ScoreLayout _editedLayout = null!;
+
     private static readonly SvgRenderOptions Options = new() { EmbedFont = false };
 
     private static string FindFixturesDir()
@@ -83,6 +94,13 @@ public class IncrementalEditBenchmark
         int at = _source.Length / 2;
         _edit = new TextChange(new TextSpan(at, 0), " c4");
         _editedSource = _source.Insert(at, " c4");
+
+        // Stage inputs: the edited tree carried through the exact render path
+        // (CollectScore → Layout → RenderToSvg, as IncrementalCompiler does).
+        _editedTree = _tree.WithChange(_edit);
+        _editedSpec = RenderSpecParser.FindFirst(_editedTree);
+        _editedScore = SvgGenerator.CollectScore(_editedTree, _editedSpec);
+        _editedLayout = new LayoutEngine().Layout(_editedScore);
     }
 
     [Benchmark(Baseline = true, Description = "Cold: parse + render")]
@@ -105,4 +123,25 @@ public class IncrementalEditBenchmark
         var tree = SyntaxTree.Parse(_editedSource);
         return SvgGenerator.Generate(tree, Options);
     }
+
+    // === Per-stage breakdown of ONE edit ===
+    // These isolate where the edit cost lives. The render path is
+    // reparse → collect → layout → render; comparing these four pins which stage
+    // S5 must memoize (the proposal's claim is layout+render dominate).
+
+    [Benchmark(Description = "Edit stage 0: incremental reparse only")]
+    public SyntaxTree Edit_Stage0_Reparse() => _tree.WithChange(_edit);
+
+    [Benchmark(Description = "Edit stage 1: collect (semantics)")]
+    public MultiStaffScore Edit_Stage1_Collect() =>
+        SvgGenerator.CollectScore(_editedTree, _editedSpec);
+
+    [Benchmark(Description = "Edit stage 2: layout")]
+    public ScoreLayout Edit_Stage2_Layout() =>
+        new LayoutEngine().Layout(_editedScore);
+
+    [Benchmark(Description = "Edit stage 3: render SVG")]
+    public string Edit_Stage3_RenderSvg() =>
+        SvgGenerator.RenderToSvg(_editedScore, _editedLayout, Options);
 }
+
