@@ -499,21 +499,10 @@ public sealed class MeasureCollector
     /// </summary>
     public (int step, int alt, int oct)? ScoreTranspose { get; set; }
 
-    // State for relative pitch mode
-    private int _currentOctave = 4;
-    private int _initialOctave = 4;  // Reset target for section boundaries
-    // Absolute-mode anchor: bare c = C(_octaveBase). Defaults to 4 (LilyPond's
-    // fixed c=C4) and is overridden ONLY by an explicit `part X { octave N }`, so
-    // a bass part can be written `octave 2` to avoid piling up `,` commas. The
-    // clef default is deliberately NOT used here (absolute stays c=C4 by default).
-    private int _octaveBase = 4;
-    private char _lastPitchName = 'c';
-    // Octave resolution mode. Default (false) = LilyPond-style relative: each
-    // pitch takes the octave nearest the previous one, then '/, adjust. When
-    // true (set by `octave absolute`), '/, are absolute offsets from a fixed C4
-    // anchor (bare c = C4, c' = C5, c, = C3) and notes do not carry octave.
-    private bool _octaveAbsolute;
-    private bool _initialOctaveAbsolute; // file-level default, restored per voice
+    // The relative-octave chain plus the part transpose that composes on top of
+    // it, bundled into one named collaborator (see OctaveContext). The main walk
+    // drives this in place on every note / chord / grace / tuplet.
+    private readonly OctaveContext _octave = new();
 
     // Dynamic markings
     private readonly List<DynamicItem> _dynamics = new();
@@ -632,14 +621,6 @@ public sealed class MeasureCollector
     private string _initialClef = "treble"; // Preserved for Score.Clef (not mutated by mid-measure clef changes)
     private int _clefPosition; // Source offset of the clef declaration (0 = none), for data-pos
 
-    // Part-option transpose:. When set, every pitch is shifted by the interval
-    // from c to (_transposeStep, _transposeAlt) AFTER relative-octave resolution.
-    // LILYPOND-REF: scm/music-functions.scm \transpose (with from = c).
-    private bool _hasTranspose;
-    private int _transposeStep;
-    private int _transposeAlt;
-    private int _transposeOctave;
-
     /// <summary>
     /// Gets the time signature as a Fraction.
     /// </summary>
@@ -668,8 +649,8 @@ public sealed class MeasureCollector
             if (partClef != null)
                 _clef = partClef;
             _clefPosition = partClefPos;
-            _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
-            _octaveBase = partOctave ?? 4;
+            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+            _octave.OctaveBase = partOctave ?? 4;
             ApplyTranspose(partTranspose);
             // Transpose the written key signature (CollectDefinitions set it
             // before the part option was known) so the displayed key and the
@@ -678,12 +659,12 @@ public sealed class MeasureCollector
         }
         else
         {
-            _currentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+            _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
         }
-        _initialOctave = _currentOctave;
+        _octave.InitialOctave = _octave.CurrentOctave;
         _initialClef = _clef; // Preserve initial clef before music processing
         _initialKeySharps = _keySharps; // Preserve initial key before music processing
-        _initialOctaveAbsolute = _octaveAbsolute; // file-level octave mode default
+        _octave.InitialOctaveAbsolute = _octave.OctaveAbsolute; // file-level octave mode default
 
         // Phase 2: Collect the primary (voice-0) stream. A << \\ >> span is
         // handled INLINE during this walk (its first voice flows into the
@@ -830,7 +811,7 @@ public sealed class MeasureCollector
         // line-702 restore reads the post-Reset `false`, so a top-level
         // `octave absolute` was silently ignored for every staff in a
         // multi-part score (notes fell back to relative and ran off the staff).
-        _initialOctaveAbsolute = _octaveAbsolute;
+        _octave.InitialOctaveAbsolute = _octave.OctaveAbsolute;
 
         // Phase 2: Build voice dictionary. Each staff maps to ALL its voices
         // (the primary stream plus any from << \\ >> spans inside that staff).
@@ -851,7 +832,7 @@ public sealed class MeasureCollector
         {
             _voiceName = voiceName;
             _currentStaffIndex = collectStaffIndex++;
-            _lastPitchName = 'c';
+            _octave.LastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
 
             // An independent chord row (`chords name` in the score) carries no music
@@ -882,10 +863,10 @@ public sealed class MeasureCollector
             _clefPosition = partClefPos;
 
             // Set initial octave: explicit > instrument default > clef default
-            _currentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
-            _initialOctave = _currentOctave;
-            _octaveBase = partOctave ?? 4;
-            _octaveAbsolute = _initialOctaveAbsolute; // restore file-level octave mode
+            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+            _octave.InitialOctave = _octave.CurrentOctave;
+            _octave.OctaveBase = partOctave ?? 4;
+            _octave.OctaveAbsolute = _octave.InitialOctaveAbsolute; // restore file-level octave mode
             ApplyTranspose(partTranspose);
 
             // Re-arm this voice's running key from the written initial key,
@@ -893,7 +874,7 @@ public sealed class MeasureCollector
             // suppresses in-key accidentals correctly and the key does not leak
             // between voices.
             _keySharps = TransposeKeySharps(_initialKeySharps);
-            if (_hasTranspose)
+            if (_octave.HasTranspose)
                 voiceKeyDict[voiceName] = new KeySignature(_keySharps);
 
             staffVoices[voiceName] = CollectStaffVoices(voiceName);
@@ -1109,72 +1090,12 @@ public sealed class MeasureCollector
         return CollectMeasures();
     }
 
-    private Score CollectMultiVoiceScore(ParallelExpressionSyntax parallelExpr)
-    {
-        var voices = new List<Voice>();
-        List<Measure>? firstVoiceMeasures = null;
-        int voiceNumber = 1;
-
-        foreach (var voiceNode in parallelExpr.Voices)
-        {
-            // Save and reset state for each voice
-            var savedOctave = _currentOctave;
-            var savedPitch = _lastPitchName;
-            var savedDuration = _defaultDuration;
-
-            _currentOctave = 4;
-            _lastPitchName = 'c';
-            _defaultDuration = Fraction.Quarter;
-
-            var measures = CollectMeasuresFromNode(voiceNode);
-            if (firstVoiceMeasures == null)
-                firstVoiceMeasures = measures;
-
-            var voiceName = $"voice{voiceNumber}";
-            ResolveBeamStemDirections(measures);
-            voices.Add(new Voice(voiceName, measures.ToImmutableArray()));
-            voiceNumber++;
-
-            _currentOctave = savedOctave;
-            _lastPitchName = savedPitch;
-            _defaultDuration = savedDuration;
-        }
-
-        // Collect lyrics (aligned with first voice)
-        if (firstVoiceMeasures != null)
-            _lyricsCollector.CollectNoteBound(parallelExpr, firstVoiceMeasures, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
-        _chordNameCollector.CollectBlocks(parallelExpr, _sectionStartMeasure, _currentStaffIndex);
-
-        return new Score(
-            voices.ToImmutableArray(),
-            new TimeSignature(_timeBeats, _timeBeatType),
-            new KeySignature(_initialKeySharps), // Use initial key, not the final state after key changes
-            _initialClef, // Use initial clef, not the final state after clef changes
-            _tempo,
-            _title,
-            _composer,
-            _dynamics.ToImmutableArray(),
-            _articulations.ToImmutableArray(),
-            _graceNotes.ToImmutableArray(),
-            lyrics: _lyricsCollector.Lyrics.ToImmutableArray(),
-            musicMarks: _musicMarks.ToImmutableArray(),
-            customTexts: _customTexts.ToImmutableArray(),
-            voltaBrackets: _voltaBrackets.ToImmutableArray(),
-            tupletBrackets: _tupletBrackets.ToImmutableArray(),
-            arpeggios: _arpeggios.ToImmutableArray(),
-            figuredBasses: _figuredBasses.ToImmutableArray(),
-            grobOverrides: _grobOverrides.ToImmutableArray(),
-            grobReverts: _grobReverts.ToImmutableArray(),
-            trillSpanners: PairTrillSpannerEvents(),
-            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition));
-    }
-
     /// <summary>
     /// Reconstructs a multi-voice <see cref="Score"/> after the primary stream
-    /// (<paramref name="track0"/>) has been collected and the <c>&lt;&lt; \\ &gt;&gt;</c>
-    /// spans recorded in <see cref="_parallelSpans"/>. Voice 0 is the primary
-    /// stream; each additional voice is a full-length, synchronized measure list
-    /// that is empty except where a span supplies its sub-voice.
+    /// (<paramref name="track0"/>) has been collected and the parallel
+    /// <c>voice { … }</c> spans recorded in <see cref="_parallelSpans"/>. Voice 0
+    /// is the primary stream; each additional voice is a full-length, synchronized
+    /// measure list that is empty except where a span supplies its sub-voice.
     /// </summary>
     private Score BuildMultiVoiceScore(List<Measure> track0, SyntaxNode root)
     {
@@ -1259,13 +1180,12 @@ public sealed class MeasureCollector
                 if (t >= blocks.Count)
                     continue;
 
-                // Each sub-voice evaluates in a fresh relative frame (same as
-                // CollectMultiVoiceScore), then maps onto the span's measures.
-                var savedOctave = _currentOctave;
-                var savedPitch = _lastPitchName;
+                // Each sub-voice evaluates in a fresh relative frame anchored at
+                // this voice's initial octave (the part's default), then maps onto
+                // the span's measures.
+                var savedOctave = _octave.Snapshot();
                 var savedDuration = _defaultDuration;
-                _currentOctave = _initialOctave;
-                _lastPitchName = 'c';
+                _octave.ResetToInitial();
                 _defaultDuration = Fraction.Quarter;
 
                 // Per-note metadata in this sub-voice is keyed by its local 0-based
@@ -1276,8 +1196,7 @@ public sealed class MeasureCollector
                 ResolveBeamStemDirections(sub);
                 _metadataMeasureOffset = 0;
 
-                _currentOctave = savedOctave;
-                _lastPitchName = savedPitch;
+                _octave.Restore(savedOctave);
                 _defaultDuration = savedDuration;
 
                 for (int k = 0; k < sub.Count && start + k < totalMeasures; k++)
@@ -1419,8 +1338,7 @@ public sealed class MeasureCollector
             // Phrase-reference boundary: evaluate the body in the default frame.
             if (node is RelativeResetMarker)
             {
-                _currentOctave = _initialOctave;
-                _lastPitchName = 'c';
+                _octave.ResetToInitial();
                 _defaultDuration = Fraction.Quarter;
                 continue;
             }
@@ -1627,7 +1545,7 @@ public sealed class MeasureCollector
                     // LILYPOND-REF: lily/clef-engraver.cc — inspect_clef_properties()
                     string newClef = clefDecl.ClefName.Text.ToLowerInvariant();
                     _clef = newClef;
-                    _currentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+                    _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
                     var clefChange = new ClefChangeItem(ParseClefType(newClef), clefDecl.Position);
                     builder.AddItem(clefChange);
                 }
@@ -1636,7 +1554,7 @@ public sealed class MeasureCollector
             case OctaveDirectiveSyntax octaveDir:
                 // Mid-stream octave-mode switch: affects only how subsequent
                 // pitches resolve '/, marks; emits no grob.
-                _octaveAbsolute = octaveDir.IsAbsolute;
+                _octave.OctaveAbsolute = octaveDir.IsAbsolute;
                 break;
 
             case KeySignatureSyntax keySig:
@@ -1874,12 +1792,7 @@ public sealed class MeasureCollector
         _fingeringByPosition.Clear();
         _structure = null;
         _root = null;
-        _currentOctave = 4;
-        _initialOctave = 4;
-        _octaveBase = 4;
-        _octaveAbsolute = false;
-        _initialOctaveAbsolute = false;
-        _lastPitchName = 'c';
+        _octave.ResetAll();
         _defaultDuration = Fraction.Quarter;
         _title = null;
         _composer = null;
@@ -1911,14 +1824,14 @@ public sealed class MeasureCollector
         var effective = ComposeTranspose(transpose, ScoreTranspose);
         if (effective is { } t)
         {
-            _hasTranspose = true;
-            _transposeStep = t.step;
-            _transposeAlt = t.alt;
-            _transposeOctave = t.oct;
+            _octave.HasTranspose = true;
+            _octave.TransposeStep = t.step;
+            _octave.TransposeAlt = t.alt;
+            _octave.TransposeOctave = t.oct;
         }
         else
         {
-            _hasTranspose = false;
+            _octave.HasTranspose = false;
         }
     }
 
@@ -1943,8 +1856,8 @@ public sealed class MeasureCollector
     /// becomes D major (+2). LILYPOND-REF: \transpose also moves \key.
     /// </summary>
     private int TransposeKeySharps(int sharps) =>
-        _hasTranspose
-            ? sharps + PitchTransposer.KeySignatureFifthsShift(_transposeStep, _transposeAlt)
+        _octave.HasTranspose
+            ? sharps + PitchTransposer.KeySignatureFifthsShift(_octave.TransposeStep, _octave.TransposeAlt)
             : sharps;
 
     private static (string? clef, int? octave, (int step, int alt, int oct)? transpose, int clefPos) GetPartDefaults(SyntaxNode root, string partName)
@@ -2055,7 +1968,7 @@ public sealed class MeasureCollector
                     // A top-level `octave absolute/relative` sets the file default;
                     // mid-music switches are handled in the music stream.
                     if (!IsInsideMusicContent(octaveDir))
-                        _octaveAbsolute = octaveDir.IsAbsolute;
+                        _octave.OctaveAbsolute = octaveDir.IsAbsolute;
                     break;
 
                 case SectionDeclarationSyntax section:
@@ -2240,8 +2153,7 @@ public sealed class MeasureCollector
                 // frame (same handling as ProcessMusicNodeSequence).
                 if (node is RelativeResetMarker)
                 {
-                    _currentOctave = _initialOctave;
-                    _lastPitchName = 'c';
+                    _octave.ResetToInitial();
                     _defaultDuration = Fraction.Quarter;
                     continue;
                 }
@@ -2521,10 +2433,9 @@ public sealed class MeasureCollector
 
     private void ProcessSection(SectionDeclarationSyntax section, Action<IEnumerable<SyntaxNode>> processNodes)
     {
-        // Reset octave to initial value at each section boundary
-        _currentOctave = _initialOctave;
-        _lastPitchName = 'c';
-        _octaveAbsolute = _initialOctaveAbsolute; // mode reverts to file default per section
+        // Reset the relative frame (and revert the octave mode to the file
+        // default) at each section boundary.
+        _octave.ResetForSection();
 
         bool matched = false;
         foreach (var child in section.DescendantNodes())
@@ -3254,7 +3165,7 @@ public sealed class MeasureCollector
             if (item is NoteSyntax note)
             {
                 var rp = CalculateStaffPosition(note.Pitch);
-                _currentOctave = rp.RelativeOctave;
+                _octave.CurrentOctave = rp.RelativeOctave;
                 int staffPosition = rp.StaffPosition;
 
                 bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
@@ -3288,7 +3199,7 @@ public sealed class MeasureCollector
     private NoteItem CreateNoteItem(NoteSyntax note, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasGlissando = false, int featherDirection = 0, bool isCue = false)
     {
         var rp = CalculateStaffPosition(note.Pitch);
-        _currentOctave = rp.RelativeOctave;
+        _octave.CurrentOctave = rp.RelativeOctave;
         int staffPosition = rp.StaffPosition;
 
         int noteValue = note.Duration?.Value ?? (int)_defaultDuration.Denominator;
@@ -3418,13 +3329,13 @@ public sealed class MeasureCollector
         var notes = new List<ChordNoteInfo>();
 
         // Track first note's state for subsequent chord/note relative calculation
-        int firstOctave = _currentOctave;
-        char firstPitchName = _lastPitchName;
+        int firstOctave = _octave.CurrentOctave;
+        char firstPitchName = _octave.LastPitchName;
 
         foreach (var pitch in chord.Pitches)
         {
             var rp = CalculateStaffPosition(pitch);
-            _currentOctave = rp.RelativeOctave;
+            _octave.CurrentOctave = rp.RelativeOctave;
             int staffPosition = rp.StaffPosition;
 
             // Remember first pitch's state (original octave drives the relative chain)
@@ -3450,8 +3361,8 @@ public sealed class MeasureCollector
         }
 
         // Next chord/note is relative to first pitch of this chord (Lilypond spec)
-        _currentOctave = firstOctave;
-        _lastPitchName = firstPitchName;
+        _octave.CurrentOctave = firstOctave;
+        _octave.LastPitchName = firstPitchName;
 
         int noteValue = chord.Duration?.Value ?? (int)_defaultDuration.Denominator;
         if (chord.Duration != null)
@@ -3487,18 +3398,13 @@ public sealed class MeasureCollector
         // The relative chain runs on the ORIGINAL pitches; transpose is applied
         // afterwards, so a transposed part still resolves octaves from what the
         // user wrote.
-        int actualOctave = _octaveAbsolute
-            ? _octaveBase + pitch.OctaveOffset
-            : RelativeOctave.Resolve(
-                GetPitchIndex(_lastPitchName), _currentOctave,
-                step, pitch.OctaveOffset);
-        _lastPitchName = pitchName;
+        int actualOctave = _octave.Resolve(step, pitch.OctaveOffset, pitchName);
 
         // Display pitch = written pitch, transposed if the part has transpose:.
         int dStep = step, dAlt = pitch.AccidentalOffset, dOctave = actualOctave;
-        if (_hasTranspose)
+        if (_octave.HasTranspose)
             (dStep, dAlt, dOctave) = PitchTransposer.Transpose(
-                step, pitch.AccidentalOffset, actualOctave, _transposeStep, _transposeAlt, _transposeOctave);
+                step, pitch.AccidentalOffset, actualOctave, _octave.TransposeStep, _octave.TransposeAlt, _octave.TransposeOctave);
 
         // Staff position 0 = middle line of the staff.
         //   Treble: B4   Bass: D3   Alto: C4 (middle line)   Tenor: A3
