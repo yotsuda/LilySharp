@@ -392,8 +392,27 @@ git push                                          # deploy の自動 "Bump dev b
     `SlurScoringProblem`(LP でも最難)へ headOffset を導通する必要があり、波及大。発火は
     「2度和音 + tie/slur」と稀。腰を据えて別途。
 - 中間クレフ/調号変更のスペーシングは LP の非音楽カラムの**近似**(端点リザーブ方式)。
+  - ✅ **評価済み・deferred(2026-06-29 夕、§12-4)**。LP 並置比較で**目立つ欠陥なし**(クレフ前後ギャップ・
+    位置とも LP とほぼ一致)。近似(次音符 spring に変更幅を上乗せ＋グリフ左 hang、`MeasureLayouter.cs:300-315`)は
+    documented かつ「reserved=drawn 一致」。正しい LP 構造(独立非音楽カラム＝両側 spring＋改行可能点)へ
+    揃えるのは**コア spacing への新カラム種別導入**で高コスト・高リスク・低可視効果。劣る点(中間クレフでの
+    改行不可など)は稀。**実害例が出たらピンポイント対応**。
 - inter-system spacing は X 依存スカイラインでなく per-system extent の近似。
+  - ✅ **評価済み・deferred(2026-06-29 夕、§12-5)**。**最適ページ分割パスは実装済み**
+    (`PageLayouter.PositionSystemsOnPage` が `prevDown.Distance(nextUp)` を使用)。スカラー近似が残るのは
+    **非最適パス**(`LayoutEngine.cs:503-513`)で、SVG は既定(`UseOptimalPageBreaking=false`/`PageHeight=0`)で
+    こちらを通る。限定修正(非最適側でも skyline `Distance` を使う、最適側のミラー)は**小さいが影響が広い**
+    (全マルチシステム SVG snapshot の Y がずれ、再ベースライン多数)。`VerticalSkyline.Distance` の座標系が
+    extent と微妙に異なり要精査。**かつ F3(レイアウトの query 化)が同じ `system_layout` を作り替える予定**
+    のため、今ここで広域再ベースラインするのは無駄/衝突。F3 後 or 専用に。
 - XFAIL: eighths-vs-quarters の MinItemGap 0.4 vs LP skyline-horizontal-padding 0.1(追跡中)。
+  - ✅ **評価済み・deferred(2026-06-29 夕、§12-6)**。実体は「`GlyphMetrics.MinItemGap` 既定 0.4 を
+    LP の 0.1 にするか」というグローバル調整。**設定可能化は実装済み**(`NoteSpacingParameters.MinItemGap`
+    override、`SeparatingPaddingTests` で 0.1<0.4 を検証)。**失敗/skip テストは無い**(3 skip は
+    benchmark/ledger/MIDI で無関係)=追跡中の discrepancy。既定を 0.1 にすると**全譜の水平間隔が縮み
+    snapshot 全面再ベースライン**。かつ 0.1 は Lily# の近似スカイラインでは ink を取りこぼし**衝突しうる**ので
+    無条件に正しいとは言えず要検証。**F3 が `measure_natural_width`/spacing を作り替える**ため、今ここで
+    全面再ベースラインするのは churn。F3 後に専用検証で。
 
 ---
 
