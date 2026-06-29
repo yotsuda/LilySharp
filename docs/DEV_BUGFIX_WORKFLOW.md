@@ -507,9 +507,20 @@ $g.Dispose(); $c.Save($out)   # その後 Read ツールで $out を視覚確認
 
 ---
 
-## 15. 次セッションへの引き継ぎ(2026-06-29 PM)― 相対オクターブ連鎖の抽出
+## 15. 相対オクターブ連鎖の抽出 ― ✅ 完了(2026-06-29 夕)
 
-**次セッションの主タスク**: `MeasureCollector` の「相対オクターブ連鎖(stateful driver)」を
+**✅ このタスクは完了した。** `MeasureCollector` の「相対オクターブ連鎖(stateful driver)」を
+専用 collaborator `OctaveContext`(可変クラス)に抽出済み(commit `638ee7e`)。下記の設計ガイドは
+**経緯の記録**として残す。今回の実装サマリと**次の残課題**は §16 を見ること。
+
+- 成果: `OctaveContext.cs` 新設。~10 フィールド(running state＋reset 先＋mode＋transpose 一族)を束ね、
+  操作を命名(`Resolve` / `Snapshot`+`Restore` / `ResetToInitial` / `ResetForSection` / `ResetAll`)。
+  アルゴリズムは `RelativeOctave` に共有のまま。**挙動完全不変**(snapshot byte-identical、全テスト緑)。
+- ついでに死にコード `CollectMultiVoiceScore`(呼び出し元ゼロ、`<< \\ >>` 廃止の取り残し、生 `=4` アンカー)
+  を削除。現役 polyphony は `voice { … }` ブロック→`BuildMultiVoiceScore`(part の既定オクターブ基準)。
+
+**(以下は着手前の設計ガイド。当初「次セッションの主タスク」として書かれたもの。)**
+`MeasureCollector` の「相対オクターブ連鎖(stateful driver)」を
 専用の collaborator に抽出する。これは god-class 分解の**最後で最難**の継ぎ目(deferred endgame)。
 §14 の残課題1 と同じ対象を、別角度(まず MeasureCollector から切り出す)で扱う。
 
@@ -595,3 +606,54 @@ running-state も合わせて移すのは追加スコープ。まず MeasureColl
   tip を退避(不要になれば `git branch -D backup/pre-redate`)。
 - A5(exporter の `tempo=120` 等リテラル集約)は「層別の妥当な既定で分散が自然」と判断し**見送り**
   (your call 項目)。再検討するならここから。
+
+---
+
+## 16. 次セッションへの引き継ぎ(2026-06-29 夕)― OctaveContext 後の残課題
+
+### このセッションの成果
+
+- **`OctaveContext` 抽出 + 死にコード削除**(commit `638ee7e`、§15 参照)。本体の god-class 分解は
+  これで一区切り。`MeasureCollector` は collaborator(Tab/ChordName/Lyrics/Octave)に分解済み。
+- **LSP デプロイ**: `deploy-extension.ps1` 実行済み(VSIX `0.1.2-dev.187` / LSP `0.1.1-20260629-1701`)。
+  版バンプ自動コミット `f55d0bf`。
+
+### 残課題(ユーザー指定の進行順: 6 → 4 → 3 → 5)
+
+優先順は本セッションのレビューで合意。**6 → 4 → 3 → 5** の順で進める。
+
+1. **[6] `Reset()` が transpose 状態をクリアしない疑い(未検証 → まず調査)**
+   `OctaveContext.ResetAll()` は元実装に忠実に `HasTranspose`/`Transpose*` を残す。`MeasureCollector` を
+   使い回し、transpose 部 → 非 voiceName 部の順で `Collect` すると `HasTranspose` が残留しうる
+   (else 経路は `ApplyTranspose` を呼ばない)。**レンダーごとに新インスタンスなら無害**。
+   → §2 に従い「コレクタが実際に使い回されるか」を grep 調査して所見報告。本物なら別コミットで修正
+   (`ResetAll` に transpose クリアを足す)。修正は挙動を変えうるので snapshot/MIDI/MusicXML で検証。
+
+2. **[4] §14 残課題1 ― `OctaveContext` を MIDI/MusicXML ウォーカーで共有**
+   `MidiExporter` / `MusicXmlExporter` も `RelativeOctave.Resolve` を**各自の running-state ラッパ**で
+   包み、アンカー規約が三者三様(C4 / `octaveBase` / C3)。`OctaveContext` を Core 共通化し
+   (アンカーは ctor 引数化)3ウォーカーで共有する余地。**MIDI/MusicXML 側 running-state の移設は追加スコープ**。
+   整理リファクタとして挙動完全不変を維持(byte-identical + MIDI/MusicXML テスト)。
+
+3. **[3] §15 第二段 ― `OctaveContext` 解決の純関数化**
+   解決を純関数化し context を引数/戻り値で通す。コスト大。第一段(stage1)が緑で安定した今が着手可。
+   挙動完全不変。`RelativeOctave.cs` remarks に「only the algorithm is shared」明記あり(再確認)。
+
+4. **[5] transpose の凝集を締める**
+   `OctaveContext` は transpose *状態*を持つが*ロジック*(`ApplyTranspose`/`TransposeKeySharps`/
+   per-pitch の `PitchTransposer.Transpose` 呼び出し)は `MeasureCollector` に残り、データ袋気味。
+   per-pitch の transpose 適用(と任意で `TransposeKeySharps`)を `OctaveContext` のメソッドへ移し、
+   状態とロジックを同居させる。`ApplyTranspose` の composition は `ScoreTranspose`(Collector 側)依存なので
+   境界設計に注意。挙動完全不変。
+
+### 厳守事項
+
+- [6] は**振る舞いを変えうる**(調査 → 報告 → 直す)。[4]/[3]/[5] は**整理リファクタ=出力不変**
+  (snapshot byte-identical を毎段検証)。両者を混ぜない(§8.3 差分純度)。
+- 手順は §1 の鉄則、コミットは §10＋§14 規約(`Co-Authored-By: Claude Opus 4.8`)。1論点1コミットで刻む。
+
+### リポジトリ状態(2026-06-29 夕)
+
+- `master` は `origin/master`(`bea7d74`)より **2コミット先行・未 push**:
+  `638ee7e`(OctaveContext 抽出)＋ `f55d0bf`(版バンプ)。**ユーザー指示で push 保留中。**
+- 未追跡 `AI_POSITIONING_HANDOFF.md` は別件(本作業と無関係、温存)。
