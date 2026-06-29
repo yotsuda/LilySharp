@@ -49,8 +49,13 @@ public class MeasureContentKeyTests
             .Collect(tree, voiceName, spec?.LocalStructure);
     }
 
+    // Intrinsic keys (items + structural fields only).
     private static ImmutableArray<MeasureContentKey> Keys(string source) =>
         MeasureContentKey.Compute(Collect(source).Voice.Measures);
+
+    // Complete render-input keys (intrinsic + side-tables + entry context).
+    private static ImmutableArray<MeasureContentKey> CompleteKeys(string source) =>
+        MeasureContentKey.Compute(Collect(source));
 
     // Four measures, each with a distinct leading note so we can target one.
     private static string FourBars(string bar2 = "g4 a b c") => $$"""
@@ -141,17 +146,45 @@ public class MeasureContentKeyTests
     }
 
     [Fact]
-    public void DocumentedGap_ScoreSideTables_NotYetReflected()
+    public void CompleteKey_ReflectsArticulations_AndStaysLocal()
     {
-        // S5a scope: the key covers Measure.Items + structural fields, NOT the
-        // Score-level side-tables (articulations/dynamics/lyrics/…). A staccato
-        // is an ArticulationItem on Score.Articulations, NOT on the NoteItem, so
-        // adding it does not (yet) change the key. This locks the documented gap;
-        // folding side-tables in per measure is an explicit S5b prerequisite, and
-        // when that lands this assertion should be inverted.
-        var before = Keys(FourBars("g4 a b c"));
-        var after = Keys(FourBars("g4-. a b c"));
-        Assert.Equal(before[1], after[1]);
+        // A staccato is an ArticulationItem on Score.Articulations, NOT on the
+        // NoteItem — so the INTRINSIC key does not see it (S5a's documented gap)...
+        var beforeIntrinsic = Keys(FourBars("g4 a b c"));
+        var afterIntrinsic = Keys(FourBars("g4@staccato a b c"));
+        Assert.Equal(beforeIntrinsic[1], afterIntrinsic[1]);
+
+        // ...but the COMPLETE key folds side-tables by MeasureIndex, so it changes
+        // exactly the edited measure's key, and only that one (edit-locality holds
+        // through the side-table fold too).
+        var before = CompleteKeys(FourBars("g4 a b c"));
+        var after = CompleteKeys(FourBars("g4@staccato a b c"));
+        Assert.Equal(before[0], after[0]);
+        Assert.NotEqual(before[1], after[1]);
+        Assert.Equal(before[2], after[2]);
+        Assert.Equal(before[3], after[3]);
+    }
+
+    [Fact]
+    public void CompleteKey_IsDeterministic_AndAlignsToMeasures()
+    {
+        var a = CompleteKeys(FourBars());
+        var b = CompleteKeys(FourBars());
+        Assert.Equal(a, b);
+        Assert.Equal(Collect(FourBars()).Voice.Measures.Length, a.Length);
+    }
+
+    [Fact]
+    public void CompleteKey_PitchEdit_StaysLocal()
+    {
+        // The complete key keeps the intrinsic edit-locality: a pitch change in
+        // measure 1 changes only measure 1's complete key.
+        var before = CompleteKeys(FourBars("g4 a b c"));
+        var after = CompleteKeys(FourBars("a4 a b c"));
+        Assert.Equal(before[0], after[0]);
+        Assert.NotEqual(before[1], after[1]);
+        Assert.Equal(before[2], after[2]);
+        Assert.Equal(before[3], after[3]);
     }
 
     [Theory]

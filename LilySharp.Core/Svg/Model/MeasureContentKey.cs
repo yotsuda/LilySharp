@@ -21,12 +21,13 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
+using LilySharp.Core.Svg.Collector;
 
 namespace LilySharp.Core.Svg.Model;
 
 /// <summary>
 /// F3 / S5 substrate (LSP_F3_QUERY_GRAPH_DESIGN.md §1 Layer 1, §19.4): a stable,
-/// position-INDEPENDENT identity for a measure's resolved content. This is the
+/// position-INDEPENDENT identity for a measure's rendered content. This is the
 /// "<c>measure_green</c>" the design assumed it got for free but does not — green
 /// nodes carry no structural hash and measures are discovered by the collector,
 /// not interned (§0.5 correction 1) — so the identity is manufactured here.
@@ -36,55 +37,103 @@ namespace LilySharp.Core.Svg.Model;
 /// WHY THE RESOLVED MODEL, NOT THE SOURCE TEXT: the design suggested a source-slice
 /// hash, but neither <see cref="Measure.SourceStart"/>/<see cref="Measure.SourceEnd"/>
 /// nor the per-item <c>SourcePosition</c> are precise enough to slice a measure's
-/// text (the measure offsets straddle bar boundaries; item offsets lag by several
-/// characters — click-to-source only tolerates this via a ~50px nearest-match
-/// threshold). The reliable signal is the already-resolved <see cref="Measure.Items"/>
-/// — the very data layout/render consume — so the key hashes that, with every
-/// item's position-dependent <c>SourcePosition</c> excluded.
+/// text (measure offsets straddle bar boundaries; item offsets lag several chars —
+/// click-to-source only tolerates this via a ~50px nearest-match threshold). So the
+/// key hashes the already-resolved model — the very data layout/render consume —
+/// with every position-dependent field excluded.
 /// </para>
 /// <para>
-/// POSITION-INDEPENDENCE / EDIT-LOCALITY: because positions are excluded, a measure
-/// whose resolved content is unchanged keeps its key even when an edit elsewhere
-/// shifts it. An edit that changes a measure's notes changes only that measure's
-/// key. This is what lets S5+ recompute only the measures (and systems) that
-/// actually changed.
-/// </para>
-/// <para>
-/// SCOPE / SOUNDNESS (read before building a consumer): this key covers
-/// <see cref="Measure.Items"/> plus the measure's layout-affecting structural
-/// fields (barlines, break permission/penalty, section label, pickup). It does
-/// NOT yet cover:
+/// TWO LEVELS:
 /// <list type="bullet">
-/// <item>The ~17 <see cref="Score"/>-level side-tables (dynamics, articulations,
-/// lyrics, tuplet/volta brackets, arpeggios, trill spanners, …) that attach to a
-/// measure's notes by source position — these must be folded in (per measure)
-/// before key-equality may be treated as full render-identity.</item>
-/// <item>The running <see cref="MeasureContext"/> (key/clef/time today; octave /
-/// ottava / pending ties deferred): relative-octave/ottava cascades change a
-/// measure's resolved pitches via the chain, not its own content. The full
-/// memoization key is <c>(content key, entry context, side-tables)</c>.</item>
+/// <item><see cref="Of(Measure)"/> / <see cref="Compute(IReadOnlyList{Measure})"/>
+/// — the measure's INTRINSIC content: <see cref="Measure.Items"/> plus its
+/// layout-affecting structural fields (barlines, break permission/penalty, section
+/// label, pickup).</item>
+/// <item><see cref="Compute(Score)"/> — the COMPLETE per-measure render-input key:
+/// the intrinsic content PLUS the <see cref="Score"/> side-tables (dynamics,
+/// articulations, lyrics, tuplet/volta brackets, arpeggios, trill spanners, …) that
+/// attach to the measure by <c>MeasureIndex</c>, PLUS the entry
+/// <see cref="MeasureContext"/> (key/clef/time at the measure start, which drives
+/// the line-start prefix glyphs). Key-equality here means render-identity (modulo
+/// the deferred octave/ottava context, which already shows up as changed resolved
+/// items rather than via the context carry).</item>
 /// </list>
-/// As Layer-1 substrate this is correct and complete for what it claims; the
-/// gaps above are explicit prerequisites for the S5b consumer.
 /// </para>
 /// <para>
-/// The hash is deterministic WITHIN a process (it uses <see cref="HashCode"/> and
-/// <see cref="string.GetHashCode()"/>, both per-process randomized) — sufficient
-/// for an in-session incremental cache and for same-process tests; it is not a
-/// stable on-disk identifier. Collision risk is negligible and any real divergence
-/// is caught by the incremental==full differential harness when a consumer lands.
+/// POSITION-INDEPENDENCE / EDIT-LOCALITY: every absolute position is excluded —
+/// each item's <c>SourcePosition</c>, and each side-table item's absolute
+/// <c>MeasureIndex</c>/<c>StartMeasureIndex</c>/<c>EndMeasureIndex</c> (the latter
+/// are the bucketing key, not content; spanners instead fold a position-independent
+/// relative role: start / middle / end). So a measure whose rendered content is
+/// unchanged keeps its key even when an edit elsewhere shifts it — what lets S5+
+/// recompute only the measures (and systems) that actually changed.
+/// </para>
+/// <para>
+/// SOUNDNESS BIAS: fields are folded by reflection so a new content field cannot
+/// silently drift out of the key (§9 drift hazard). Only proven-positional fields
+/// are excluded; everything else is included, so the bias is toward over- (never
+/// under-) sensitivity — a missed reuse costs a little speed, a false reuse would
+/// cost correctness. The hash is deterministic within a process (it uses
+/// <see cref="HashCode"/> / <see cref="string.GetHashCode()"/>, both per-process
+/// randomized) — sufficient for an in-session cache and same-process tests.
+/// Collisions are git-like negligible and caught by the incremental==full harness.
 /// </para>
 /// </remarks>
 public readonly record struct MeasureContentKey(int Hash)
 {
-    /// <summary>Computes the content key of a single measure.</summary>
+    /// <summary>Computes the INTRINSIC content key of a single measure (its items
+    /// and structural fields only — no side-tables, no entry context).</summary>
     public static MeasureContentKey Of(Measure measure)
     {
         var hc = new HashCode();
+        AddIntrinsic(ref hc, measure);
+        return new MeasureContentKey(hc.ToHashCode());
+    }
 
-        // Structural fields that affect layout/render but are NOT in Items.
-        // Position fields (SourceStart/SourceEnd/SectionLabelPosition) are
-        // deliberately excluded so the key is position-independent.
+    /// <summary>Intrinsic content keys for a measure list, in document order.</summary>
+    public static ImmutableArray<MeasureContentKey> Compute(IReadOnlyList<Measure> measures)
+    {
+        var builder = ImmutableArray.CreateBuilder<MeasureContentKey>(measures.Count);
+        for (int i = 0; i < measures.Count; i++)
+            builder.Add(Of(measures[i]));
+        return builder.MoveToImmutable();
+    }
+
+    /// <summary>
+    /// The COMPLETE per-measure render-input key vector for a score's primary
+    /// voice: intrinsic content + entry <see cref="MeasureContext"/> + the score
+    /// side-tables bucketed onto each measure by <c>MeasureIndex</c>. Index-aligned
+    /// with <c>score.Voice.Measures</c>.
+    /// </summary>
+    public static ImmutableArray<MeasureContentKey> Compute(Score score)
+    {
+        var measures = score.Voice.Measures;
+        int n = measures.Length;
+        var chain = MeasureContextChain.Compute(score);
+        var sideTables = BucketSideTables(score, n);
+
+        var builder = ImmutableArray.CreateBuilder<MeasureContentKey>(n);
+        for (int i = 0; i < n; i++)
+        {
+            var hc = new HashCode();
+            AddIntrinsic(ref hc, measures[i]);
+            hc.Add(chain.Entry[i]);                 // line-start prefix identity
+            foreach (int itemHash in sideTables[i]) // attached annotations (ordered)
+                hc.Add(itemHash);
+            builder.Add(new MeasureContentKey(hc.ToHashCode()));
+        }
+        return builder.MoveToImmutable();
+    }
+
+    public override string ToString() => $"mck:{Hash:x8}";
+
+    // --- intrinsic (items + structural fields) ---
+
+    private static void AddIntrinsic(ref HashCode hc, Measure measure)
+    {
+        // Structural fields that affect layout/render but are NOT in Items. Position
+        // fields (SourceStart/SourceEnd/SectionLabelPosition) are excluded so the
+        // key is position-independent.
         hc.Add(measure.StartBarline);
         hc.Add(measure.EndBarline);
         hc.Add(measure.SectionLabel);
@@ -95,49 +144,122 @@ public readonly record struct MeasureContentKey(int Hash)
         hc.Add(measure.PageTurnPermission);
         hc.Add(measure.IsPickup);
 
-        // Resolved items, in order.
         foreach (var item in measure.Items)
-            hc.Add(HashItem(item));
-
-        return new MeasureContentKey(hc.ToHashCode());
+            hc.Add(HashContent(item, ItemExclusions));
     }
 
-    /// <summary>
-    /// Computes the content key of every measure in document order. Index-aligned
-    /// with <paramref name="measures"/> (and so with the <see cref="MeasureContext"/>
-    /// chain), forming the Layer-1 identity vector for the demand-driven DAG.
-    /// </summary>
-    public static ImmutableArray<MeasureContentKey> Compute(IReadOnlyList<Measure> measures)
+    // --- side-tables, bucketed onto measures by MeasureIndex ---
+
+    // Excluded from item hashes: the position-dependent source offset.
+    private static readonly HashSet<string> ItemExclusions = new(StringComparer.Ordinal)
     {
-        var builder = ImmutableArray.CreateBuilder<MeasureContentKey>(measures.Count);
-        for (int i = 0; i < measures.Count; i++)
-            builder.Add(Of(measures[i]));
-        return builder.MoveToImmutable();
+        nameof(MusicItem.SourcePosition),
+    };
+
+    // Excluded from side-table item hashes: the source offset AND the absolute
+    // measure indices (the bucketing key, not content — a spanner's relative role
+    // is folded separately so it stays position-independent).
+    private static readonly HashSet<string> SideExclusions = new(StringComparer.Ordinal)
+    {
+        "SourcePosition", "MeasureIndex", "StartMeasureIndex", "EndMeasureIndex",
+    };
+
+    private static List<int>[] BucketSideTables(Score score, int measureCount)
+    {
+        var buckets = new List<int>[measureCount];
+        for (int i = 0; i < measureCount; i++)
+            buckets[i] = new List<int>();
+
+        // Single-measure tables: each item belongs to one measure (item.MeasureIndex).
+        // Fixed call order keeps the per-bucket fold deterministic.
+        BucketSingle(score.Dynamics, buckets);
+        BucketSingle(score.Articulations, buckets);
+        BucketSingle(score.GraceNotes, buckets);
+        BucketSingle(score.Tremolos, buckets);
+        BucketSingle(score.Lyrics, buckets);
+        BucketSingle(score.MusicMarks, buckets);
+        BucketSingle(score.CustomTexts, buckets);
+        BucketSingle(score.TupletBrackets, buckets);
+        BucketSingle(score.Arpeggios, buckets);
+        BucketSingle(score.FiguredBasses, buckets);
+        BucketSingle(score.ChordNames, buckets);
+        BucketSingle(score.PercentRepeats, buckets);
+        BucketSingle(score.CrossStaffItems, buckets);
+        BucketSingle(score.GrobOverrides, buckets);
+        BucketSingle(score.GrobReverts, buckets);
+
+        // Span tables: an item covers [StartMeasureIndex, EndMeasureIndex]; fold it
+        // into every covered measure with its relative role so the key is
+        // position-independent (no absolute indices).
+        BucketSpan(score.VoltaBrackets, buckets);
+        BucketSpan(score.TrillSpanners, buckets);
+
+        return buckets;
     }
 
-    // Per-type cache of the public, readable, non-position properties to fold,
-    // in a stable (ordinal-by-name) order.
-    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> ItemPropsCache = new();
+    private static void BucketSingle(IEnumerable items, List<int>[] buckets)
+    {
+        foreach (var item in items)
+        {
+            int mi = GetInt(item, "MeasureIndex");
+            if (mi >= 0 && mi < buckets.Length)
+                buckets[mi].Add(HashContent(item, SideExclusions));
+        }
+    }
 
-    private static int HashItem(MusicItem item)
+    private static void BucketSpan(IEnumerable items, List<int>[] buckets)
+    {
+        foreach (var item in items)
+        {
+            int start = GetInt(item, "StartMeasureIndex");
+            int end = GetInt(item, "EndMeasureIndex");
+            for (int mi = start; mi <= end; mi++)
+            {
+                if (mi < 0 || mi >= buckets.Length)
+                    continue;
+                // Relative role: 0=only, 1=start, 2=middle, 3=end. Position-independent.
+                int role = start == end ? 0 : mi == start ? 1 : mi == end ? 3 : 2;
+                var hc = new HashCode();
+                hc.Add(role);
+                hc.Add(HashContent(item, SideExclusions));
+                buckets[mi].Add(hc.ToHashCode());
+            }
+        }
+    }
+
+    // --- reflection-based content hashing ---
+
+    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropsForItem = new();
+    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> PropsForSide = new();
+    private static readonly ConcurrentDictionary<(Type, string), PropertyInfo?> NamedProp = new();
+
+    private static int HashContent(object item, HashSet<string> excluded)
     {
         var hc = new HashCode();
-        hc.Add(item.GetType());                       // discriminate item kinds
-        foreach (var p in ItemProps(item.GetType()))
+        hc.Add(item.GetType());                       // discriminate kinds
+        foreach (var p in PropsOf(item.GetType(), excluded))
             AddValue(ref hc, p.GetValue(item));
         return hc.ToHashCode();
     }
 
-    // Reflection over public properties (auto-including any new content field, so
-    // the key never silently drifts behind the model — cf. the §9 drift hazard),
-    // excluding only the position-dependent SourcePosition.
-    private static PropertyInfo[] ItemProps(Type type) => ItemPropsCache.GetOrAdd(type, static t =>
-        t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.CanRead
-                        && p.GetIndexParameters().Length == 0
-                        && p.Name != nameof(MusicItem.SourcePosition))
-            .OrderBy(p => p.Name, StringComparer.Ordinal)
-            .ToArray());
+    private static PropertyInfo[] PropsOf(Type type, HashSet<string> excluded)
+    {
+        var cache = ReferenceEquals(excluded, ItemExclusions) ? PropsForItem : PropsForSide;
+        return cache.GetOrAdd(type, t =>
+            t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanRead
+                            && p.GetIndexParameters().Length == 0
+                            && !excluded.Contains(p.Name))
+                .OrderBy(p => p.Name, StringComparer.Ordinal)
+                .ToArray());
+    }
+
+    private static int GetInt(object item, string property)
+    {
+        var p = NamedProp.GetOrAdd((item.GetType(), property),
+            static key => key.Item1.GetProperty(key.Item2, BindingFlags.Public | BindingFlags.Instance));
+        return p?.GetValue(item) is int v ? v : -1;
+    }
 
     private static void AddValue(ref HashCode hc, object? value)
     {
@@ -150,14 +272,19 @@ public readonly record struct MeasureContentKey(int Hash)
                 hc.Add(s);
                 break;
             case IEnumerable e:                        // ImmutableArray<T> etc.: element-wise
-                foreach (var element in e)
-                    AddValue(ref hc, element);
+                try
+                {
+                    foreach (var element in e)
+                        AddValue(ref hc, element);
+                }
+                catch (InvalidOperationException)      // default (uninitialized) ImmutableArray
+                {
+                    hc.Add(-1);
+                }
                 break;
             default:                                   // structs/enums/records: content GetHashCode
                 hc.Add(value);
                 break;
         }
     }
-
-    public override string ToString() => $"mck:{Hash:x8}";
 }
