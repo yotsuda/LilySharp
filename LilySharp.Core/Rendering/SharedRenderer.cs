@@ -1096,9 +1096,11 @@ public static class SharedRenderer
         // to the note's own position-based default in single-voice staves.
         bool stemUp = forcedStemUp ?? note.StemUp;
 
-        // Accidental (left of notehead)
+        // Accidental (left of notehead). Cue notes scale their accidental with
+        // the head (LP CueVoice fontSize = -4 reduces the accidental grob too).
         if (note.Accidental != null)
-            DrawAccidental(note.Accidental, note.IsCourtesy, x, noteY, note.SourcePosition, gc);
+            DrawAccidental(note.Accidental, note.IsCourtesy, x, noteY, note.SourcePosition, gc,
+                note.IsCue ? 0.66 : 1.0);
 
         // Notehead — skipped when this head merges with another voice's (head wipe)
         // or when NoteHead.transparent is overridden.
@@ -1209,12 +1211,15 @@ public static class SharedRenderer
         // aware of the shifted head ink — drawing each one at the same fixed
         // offset overprints them for seconds (e.g. <fis gis>).
         // LILYPOND-REF: lily/accidental-placement.cc position_apes.
-        var accLayouts = AccidentalColumn.CalculatePositions(chord.Notes, headOffsets);
+        // Cue chords scale the whole accidental column (placement widths/paddings
+        // AND glyphs) by the head scale — LP runs the cue grobs at fontSize -4, so
+        // the accidentals shrink and pack closer together, as a pair.
+        var accLayouts = AccidentalColumn.CalculatePositions(chord.Notes, headOffsets, headScale);
         foreach (var al in accLayouts)
         {
             double ay = StaffFrame.PositionToDevice(al.StaffPosition, staffMiddleY);
             DrawAccidentalAtInkLeft(al.Accidental, al.IsCourtesy,
-                x + al.XOffset, ay, chord.SourcePosition, gc);
+                x + al.XOffset, ay, chord.SourcePosition, gc, headScale);
         }
 
         double topY = double.MaxValue, bottomY = double.MinValue;
@@ -1882,10 +1887,13 @@ public static class SharedRenderer
     /// <remarks>LILYPOND-REF: lily/accidental-placement.cc position_apes.</remarks>
     private static void DrawAccidentalAtInkLeft(
         string accidentalKind, bool isCourtesy, double inkLeftX, double noteheadY,
-        int sourcePosition, IDrawingContext gc)
+        int sourcePosition, IDrawingContext gc, double scale = 1.0)
     {
         char glyph = EmmentalerGlyphs.AccidentalGlyph(accidentalKind);
         var accBBox = GlyphMetrics.GetAccidentalBBox(accidentalKind);
+        // Cue columns pass scale < 1: the glyph AND its bbox-derived offsets shrink
+        // together, matching the (already scaled) X from AccidentalPlacement.
+        double fs = FontSize * scale;
 
         if (isCourtesy)
         {
@@ -1893,20 +1901,20 @@ public static class SharedRenderer
             // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize()
             var leftParen = GlyphMetrics.AccidentalLeftParen;
             var rightParen = GlyphMetrics.AccidentalRightParen;
-            double accInkLeft = inkLeftX + leftParen.Width;
+            double accInkLeft = inkLeftX + leftParen.Width * scale;
             using (gc.Source(sourcePosition))
             {
                 gc.DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen,
-                    accInkLeft - leftParen.Right, noteheadY, FontSize);
-                gc.DrawGlyph(glyph, accInkLeft - accBBox.Left, noteheadY, FontSize);
+                    accInkLeft - leftParen.Right * scale, noteheadY, fs);
+                gc.DrawGlyph(glyph, accInkLeft - accBBox.Left * scale, noteheadY, fs);
                 gc.DrawGlyph(EmmentalerGlyphs.AccidentalRightParen,
-                    accInkLeft + accBBox.Width - rightParen.Left, noteheadY, FontSize);
+                    accInkLeft + accBBox.Width * scale - rightParen.Left * scale, noteheadY, fs);
             }
         }
         else
         {
             using (gc.Source(sourcePosition))
-                gc.DrawGlyph(glyph, inkLeftX - accBBox.Left, noteheadY, FontSize);
+                gc.DrawGlyph(glyph, inkLeftX - accBBox.Left * scale, noteheadY, fs);
         }
     }
 

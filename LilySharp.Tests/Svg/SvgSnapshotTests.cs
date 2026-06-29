@@ -75,6 +75,9 @@ public class SvgSnapshotTests
         yield return new object[] { "test/notes" };
         yield return new object[] { "test/chords" };
         yield return new object[] { "test/accidentals" };
+        // Cue notes/chords scale their accidentals with the head (LP CueVoice
+        // fontSize = -4), as a pair with the cue-scaled placement column.
+        yield return new object[] { "test/cue-accidentals" };
         yield return new object[] { "test/articulations" };
         yield return new object[] { "test/dynamics" };
         yield return new object[] { "test/beaming" };

@@ -366,7 +366,14 @@ git push                                          # deploy の自動 "Bump dev b
 
 ## 12. 既知の未対応・次の候補(2026-06-13 時点)
 
-- cue 和音の**臨時記号**はフルサイズのまま(`AccidentalPlacement` の幅も未縮小、対として整合)。
+- ~~cue 和音の**臨時記号**はフルサイズのまま~~ ― ✅ **対応済み(2026-06-29 夕、§12-1)**。
+  cue note/chord の臨時記号を head と同じ 0.66× に縮小(描画グリフ＋`AccidentalPlacement` の
+  X 配置を `scale` 引数で一体縮小)。`DrawNote`/`DrawChord`/`DrawAccidentalAtInkLeft`/
+  `AccidentalPlacement.CalculatePositions` に scale を導通。LP(CueVoice fontSize -4)並置で確認、
+  fixture `test/cue-accidentals` を追加。**残る近似**: `SpacingRules`(left-extent/skyline)の
+  cue 和音の**水平スペーシングは全要素フルサイズのまま**(head も含め一括フルサイズで内部整合)。
+  これは「cue を水平圧縮しない」という別系統の近似で、臨時記号だけ縮小すると局所不整合になるため
+  意図的に据置(描画のみ修正)。
 - トリル以外の装飾(turn/mordent 等)のフォント実寸が未抽出で、outside-staff 種に
   フォールバックボックスを使用。実重なりが見えたら計量生成パイプラインへ追加。
 - スラー/タイ端点・アルペジオ括弧は和音内 2 度の符頭変位 X に未追従(未変位の列 X のまま)。

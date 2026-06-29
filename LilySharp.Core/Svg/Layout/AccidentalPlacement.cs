@@ -116,8 +116,13 @@ public sealed class AccidentalPlacement
     /// the note-column ink the accidentals must clear.
     /// LILYPOND-REF: lily/accidental-placement.cc:355-370 — the reference
     /// skyline is built from the heads' real (shifted) extents.</param>
+    /// <param name="scale">Font-size scale for cue chords (LP CueVoice fontSize
+    /// = -4). All dimensional quantities — glyph widths, paddings and the glyphs'
+    /// Y-extents — scale by this; the staff-position Y centers do not (cue heads
+    /// still sit on the real staff lines). 1.0 = normal size.</param>
     public ImmutableArray<AccidentalLayout> CalculatePositions(
-        IReadOnlyList<ChordNoteInfo> notes, IReadOnlyList<double>? headOffsets = null)
+        IReadOnlyList<ChordNoteInfo> notes, IReadOnlyList<double>? headOffsets = null,
+        double scale = 1.0)
     {
         var accidentals = new List<(ChordNoteInfo Note, double HeadOffset)>();
         double minHeadOffset = 0;
@@ -135,16 +140,16 @@ public sealed class AccidentalPlacement
         if (accidentals.Count == 1)
         {
             var (n, _) = accidentals[0];
-            double totalWidth = ComputeRenderedWidth(n.Accidental!, n.IsCourtesy);
+            double totalWidth = ComputeRenderedWidth(n.Accidental!, n.IsCourtesy) * scale;
             // A head reversed to the LEFT of the stem extends the column ink;
             // the accidental clears the leftmost head edge.
             return ImmutableArray.Create(new AccidentalLayout(
                 n.StaffPosition, n.Accidental!,
-                minHeadOffset - (totalWidth + _params.RightPadding),
+                minHeadOffset - (totalWidth + _params.RightPadding * scale),
                 n.IsCourtesy));
         }
 
-        return CalculateMultipleAccidentals(accidentals, notes, headOffsets);
+        return CalculateMultipleAccidentals(accidentals, notes, headOffsets, scale);
     }
 
     /// <summary>
@@ -183,10 +188,13 @@ public sealed class AccidentalPlacement
     private ImmutableArray<AccidentalLayout> CalculateMultipleAccidentals(
         List<(ChordNoteInfo Note, double HeadOffset)> accidentalsWithOffsets,
         IReadOnlyList<ChordNoteInfo> allNotes,
-        IReadOnlyList<double>? headOffsets)
+        IReadOnlyList<double>? headOffsets,
+        double scale)
     {
         var accidentals = accidentalsWithOffsets;
-        // Build entries with glyph Y-extents
+        // Build entries with glyph Y-extents. For cue chords (scale < 1) the glyph
+        // extents and widths shrink, but each stays centered on the note's real
+        // (unscaled) staff position.
         var entries = new List<PlacementEntry>(accidentals.Count);
         foreach (var (n, _) in accidentals)
         {
@@ -194,14 +202,14 @@ public sealed class AccidentalPlacement
             // Staff position is in half-spaces; convert to staff spaces
             double yCenterSS = n.StaffPosition / 2.0;
 
-            double yBottom = yCenterSS + bbox.Bottom;
-            double yTop = yCenterSS + bbox.Top;
+            double yBottom = yCenterSS + bbox.Bottom * scale;
+            double yTop = yCenterSS + bbox.Top * scale;
 
             int priority = GetAlterationPriority(n.Accidental!);
             // LILYPOND-REF: lily/accidental.cc:35-46 — parenthesize() adds a paren glyph each side.
-            double width = n.IsCourtesy
+            double width = (n.IsCourtesy
                 ? bbox.Width + GlyphMetrics.AccidentalParensInkWidth
-                : bbox.Width;
+                : bbox.Width) * scale;
             entries.Add(new PlacementEntry(
                 n.StaffPosition, n.Accidental!, yBottom, yTop, width, priority,
                 n.IsCourtesy));
@@ -237,10 +245,12 @@ public sealed class AccidentalPlacement
             double headOffset = headOffsets != null && i < headOffsets.Count ? headOffsets[i] : 0;
             double yCenterSS = allNotes[i].StaffPosition / 2.0;
             var nhBBox = GlyphMetrics.NoteheadBlack;
+            // headOffset arrives already cue-scaled (ChordHeadPositioning); the head
+            // box's Y-extent and the right-padding scale with the cue font here.
             noteheadBoxes.Add((
-                yCenterSS + nhBBox.Bottom,
-                yCenterSS + nhBBox.Top,
-                headOffset - _params.RightPadding,
+                yCenterSS + nhBBox.Bottom * scale,
+                yCenterSS + nhBBox.Top * scale,
+                headOffset - _params.RightPadding * scale,
                 headOffset));
         }
         var referenceSkyline = Skyline.FromBoxes(noteheadBoxes, Skyline.Direction.Left);
@@ -293,14 +303,14 @@ public sealed class AccidentalPlacement
 
             // Query the reference skyline for the leftmost boundary in this Y range
             // (with horizon padding for proximity tolerance)
-            double yQueryBottom = entry.YBottom - _params.HorizonPadding;
-            double yQueryTop = entry.YTop + _params.HorizonPadding;
+            double yQueryBottom = entry.YBottom - _params.HorizonPadding * scale;
+            double yQueryTop = entry.YTop + _params.HorizonPadding * scale;
             double skylineLeft = referenceSkyline.QueryXInRange(yQueryBottom, yQueryTop);
 
             // Start with skyline boundary (or rightPadding if skyline is empty in this range)
             double xRight = double.IsPositiveInfinity(skylineLeft)
-                ? -_params.RightPadding
-                : skylineLeft - _params.Padding;
+                ? -_params.RightPadding * scale
+                : skylineLeft - _params.Padding * scale;
 
             // LILYPOND-REF: accidental-placement.cc:290-295
             // Check for flat-merge overlap with previously placed flats
@@ -309,11 +319,11 @@ public sealed class AccidentalPlacement
                 foreach (var placed in placedEntries)
                 {
                     if (placed.Accidental == "flat" &&
-                        entry.YBottom - _params.HorizonPadding < placed.YTop &&
-                        placed.YBottom - _params.HorizonPadding < entry.YTop)
+                        entry.YBottom - _params.HorizonPadding * scale < placed.YTop &&
+                        placed.YBottom - _params.HorizonPadding * scale < entry.YTop)
                     {
                         double overlap = Math.Min(entry.Width, placed.Width) * 0.375;
-                        double maxRight = placed.LeftEdge - _params.Padding + overlap;
+                        double maxRight = placed.LeftEdge - _params.Padding * scale + overlap;
                         if (maxRight < xRight)
                             xRight = maxRight;
                     }

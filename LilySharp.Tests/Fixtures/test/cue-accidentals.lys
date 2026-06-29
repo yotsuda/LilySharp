@@ -1,0 +1,25 @@
+// Cue accidentals: cue notes/chords scale their accidentals with the head
+// (LP CueVoice fontSize = -4 reduces the accidental grob too). Normal items
+// in the same measures give a same-size reference.
+// LILYPOND-REF: ly/engraver-init.ly CueVoice — fontSize = #-4
+
+title "Cue Accidentals"
+time 4/4
+key c major
+
+part melody
+
+phrase test {
+  <cis e gis>4 <cis e gis>4@cue <des f aes>4@cue <bes d f>4@cue |
+  fis4 ges4@cue ais4@cue aes4@cue |
+}
+
+section Main {
+  melody { $test }
+}
+
+structure { Main }
+
+score "cue-accidentals" {
+  staff treble melody
+}
