@@ -34,7 +34,8 @@ public readonly record struct VoltaBracketLayout(
     double Y,                   // Y position (above staff)
     string VoltaText,           // Text to display (e.g., "1.")
     bool IsClosed,              // Has right hook
-    int SourcePosition          // For click-to-source mapping
+    int SourcePosition,         // For click-to-source mapping
+    int SourceIndex = -1        // F3/B: index into score.VoltaBrackets (shared by all broken pieces)
 );
 
 /// <summary>
@@ -86,8 +87,9 @@ public static class VoltaBracketEngraver
         var measureToSystemIdx = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var layouts = ImmutableArray.CreateBuilder<VoltaBracketLayout>();
 
-        foreach (var bracket in voltaBrackets)
+        for (int bi = 0; bi < voltaBrackets.Length; bi++)
         {
+            var bracket = voltaBrackets[bi];
             if (bracket.StartMeasureIndex >= measureLayouts.Length ||
                 bracket.EndMeasureIndex >= measureLayouts.Length)
                 continue;
@@ -115,7 +117,8 @@ public static class VoltaBracketEngraver
                     YOffset,
                     segText,
                     segClosed,
-                    bracket.SourcePosition
+                    bracket.SourcePosition,
+                    bi
                 ));
             }
         }

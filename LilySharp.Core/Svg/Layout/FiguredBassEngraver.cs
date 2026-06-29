@@ -32,7 +32,8 @@ public readonly record struct FiguredBassLayout(
     double X,                                         // X position (staff spaces)
     double Y,                                         // Y position of topmost figure (staff spaces)
     ImmutableArray<string> FigureTexts,               // Text for each figure, top to bottom
-    int SourcePosition
+    int SourcePosition,
+    int SourceIndex = -1                              // F3/B: index into score.FiguredBasses
 );
 
 /// <summary>
@@ -75,8 +76,9 @@ public static class FiguredBassEngraver
 
         var layouts = ImmutableArray.CreateBuilder<FiguredBassLayout>(figuredBasses.Length);
 
-        foreach (var fb in figuredBasses)
+        for (int fbi = 0; fbi < figuredBasses.Length; fbi++)
         {
+            var fb = figuredBasses[fbi];
             if (fb.MeasureIndex >= measureLayouts.Length)
                 continue;
 
@@ -106,7 +108,8 @@ public static class FiguredBassEngraver
                 x,
                 y,
                 figureTexts,
-                fb.SourcePosition));
+                fb.SourcePosition,
+                fbi));
         }
 
         var result = layouts.ToImmutable();

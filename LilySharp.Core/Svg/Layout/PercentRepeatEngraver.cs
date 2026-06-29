@@ -30,7 +30,8 @@ public readonly record struct PercentRepeatLayout(
     double X,                // X center of the percent symbol (staff spaces)
     double Y,                // Y center of the percent symbol (staff spaces from system top)
     double Width,            // Measure width for proportional sizing
-    int SourcePosition
+    int SourcePosition,
+    int SourceIndex = -1     // F3/B: index into score.PercentRepeats (data-pos resolved at render)
 );
 
 /// <summary>
@@ -57,8 +58,9 @@ public static class PercentRepeatEngraver
 
         var results = ImmutableArray.CreateBuilder<PercentRepeatLayout>(percentRepeats.Length);
 
-        foreach (var item in percentRepeats)
+        for (int i = 0; i < percentRepeats.Length; i++)
         {
+            var item = percentRepeats[i];
             if (item.MeasureIndex >= measureLayouts.Length)
                 continue;
 
@@ -71,7 +73,7 @@ public static class PercentRepeatEngraver
             double y = 2.0;
 
             results.Add(new PercentRepeatLayout(
-                item.MeasureIndex, x, y, ml.Width, item.SourcePosition));
+                item.MeasureIndex, x, y, ml.Width, item.SourcePosition, i));
         }
 
         return results.ToImmutable();

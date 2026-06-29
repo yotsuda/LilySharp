@@ -30,7 +30,8 @@ public readonly record struct ChordNameLayout(
     double X,                // X position (staff spaces from page left)
     double Y,                // Y position (staff spaces from page top, above staff)
     string ChordText,        // Display text (e.g., "Cm7", "B♭7")
-    int SourcePosition
+    int SourcePosition,
+    int SourceIndex = -1     // F3/B: index into score.ChordNames (data-pos resolved at render)
 );
 
 /// <summary>
@@ -115,9 +116,10 @@ public static class ChordNameEngraver
             ? staffYByIndex.Values.Min() : 0;
 
         // Pre-resolve each chord's X and per-staff offset.
-        var prepared = new List<(ChordNameItem chord, double x, double staffOffset, bool topStaff, int sysIdx)>(chordNames.Length);
-        foreach (var chord in chordNames)
+        var prepared = new List<(ChordNameItem chord, double x, double staffOffset, bool topStaff, int sysIdx, int idx)>(chordNames.Length);
+        for (int cni = 0; cni < chordNames.Length; cni++)
         {
+            var chord = chordNames[cni];
             if (chord.MeasureIndex >= measureLayouts.Length)
                 continue;
 
@@ -138,7 +140,7 @@ public static class ChordNameEngraver
             bool topStaff = staffOffset <= minStaffOffset + 1e-6;
             int sysIdx = measureToSystem.TryGetValue(chord.MeasureIndex, out var si) ? si : -1;
 
-            prepared.Add((chord, x, staffOffset, topStaff, sysIdx));
+            prepared.Add((chord, x, staffOffset, topStaff, sysIdx, cni));
         }
 
         // Per system, the peak protrusion of staff content above the staff top, sampled
@@ -183,7 +185,7 @@ public static class ChordNameEngraver
             {
                 results.Add(new ChordNameLayout(
                     p.chord.MeasureIndex, p.x, p.staffOffset + ChordRowTextBaseline,
-                    p.chord.ChordText, p.chord.SourcePosition));
+                    p.chord.ChordText, p.chord.SourcePosition, p.idx));
                 continue;
             }
 
@@ -201,7 +203,7 @@ public static class ChordNameEngraver
             double y = -(StaffPadding + protrusion + accidentalAllowance) + p.staffOffset;
 
             results.Add(new ChordNameLayout(
-                p.chord.MeasureIndex, p.x, y, p.chord.ChordText, p.chord.SourcePosition));
+                p.chord.MeasureIndex, p.x, y, p.chord.ChordText, p.chord.SourcePosition, p.idx));
         }
 
         return results.ToImmutable();

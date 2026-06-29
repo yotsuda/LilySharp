@@ -42,7 +42,8 @@ public readonly record struct TrillSpannerLayout(
     /// <summary>Global staff index this spanner belongs to (multi-staff). The
     /// above-staff stacker only de-collides staff 0; lower staves keep their
     /// engraver Y so they stay over their own staff.</summary>
-    int StaffIndex = 0
+    int StaffIndex = 0,
+    int SourceIndex = -1   // F3/B: index into score.TrillSpanners (shared by all broken pieces)
 );
 
 /// <summary>
@@ -113,8 +114,9 @@ public static class TrillSpannerEngraver
         var measureToSystem = SpannerBreakSubstitution.BuildMeasureToSystemMap(systems);
         var layouts = ImmutableArray.CreateBuilder<TrillSpannerLayout>();
 
-        foreach (var spanner in trillSpanners)
+        for (int ti = 0; ti < trillSpanners.Length; ti++)
         {
+            var spanner = trillSpanners[ti];
             if (spanner.StartMeasureIndex >= measureLayouts.Length)
                 continue;
 
@@ -164,7 +166,7 @@ public static class TrillSpannerEngraver
 
                 layouts.Add(new TrillSpannerLayout(
                     segment.StartMeasureIndex, glyphX, lineStartX, endX, y,
-                    spanner.SourcePosition, spanner.StaffIndex));
+                    spanner.SourcePosition, spanner.StaffIndex, ti));
             }
         }
 

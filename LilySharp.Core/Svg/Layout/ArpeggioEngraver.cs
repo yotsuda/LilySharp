@@ -27,7 +27,8 @@ public readonly record struct ArpeggioLayout(
     double X,
     double TopY,
     double BottomY,
-    int SourcePosition);
+    int SourcePosition,
+    int SourceIndex = -1);   // F3/B: index into score.Arpeggios (data-pos resolved at render)
 
 /// <summary>
 /// Calculates arpeggio layouts from detected arpeggio items.
@@ -79,8 +80,9 @@ public static class ArpeggioEngraver
 
         var layouts = new List<ArpeggioLayout>();
 
-        foreach (var arp in arpeggios)
+        for (int ai = 0; ai < arpeggios.Length; ai++)
         {
+            var arp = arpeggios[ai];
             if (!measureMap.TryGetValue(arp.MeasureIndex, out var info))
                 continue;
 
@@ -140,7 +142,8 @@ public static class ArpeggioEngraver
                 X: arpeggioX,
                 TopY: topY,
                 BottomY: bottomY,
-                SourcePosition: arp.SourcePosition));
+                SourcePosition: arp.SourcePosition,
+                SourceIndex: ai));
         }
 
         return layouts.ToImmutableArray();

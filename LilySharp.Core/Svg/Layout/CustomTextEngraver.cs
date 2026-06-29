@@ -32,7 +32,8 @@ public readonly record struct CustomTextLayout(
     double X,               // Absolute X position (staff spaces from score start)
     double Y,               // Y position (staff spaces from staff top, positive = down)
     string Text,            // Display text
-    int SourcePosition      // For click-to-source mapping
+    int SourcePosition,     // For click-to-source mapping
+    int SourceIndex = -1    // F3/B: index into score.CustomTexts (data-pos resolved at render)
 );
 
 /// <summary>
@@ -67,8 +68,9 @@ public static class CustomTextEngraver
 
         var layouts = ImmutableArray.CreateBuilder<CustomTextLayout>(customTexts.Length);
 
-        foreach (var customText in customTexts)
+        for (int ci = 0; ci < customTexts.Length; ci++)
         {
+            var customText = customTexts[ci];
             // Find the measure layout
             if (customText.MeasureIndex >= measureLayouts.Length)
                 continue;
@@ -87,7 +89,8 @@ public static class CustomTextEngraver
                 x,
                 y,
                 customText.Text,
-                customText.SourcePosition
+                customText.SourcePosition,
+                ci
             ));
         }
 

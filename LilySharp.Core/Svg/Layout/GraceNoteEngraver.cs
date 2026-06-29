@@ -49,7 +49,8 @@ public readonly record struct GraceNoteLayout(
     // Non-null when this grace sits on a TAB staff: the renderer then draws each
     // grace as a small fret number (resolved from GraceNoteInfo.Midi) instead of
     // a notehead. null for ordinary notation staves.
-    TuningType? Tuning = null
+    TuningType? Tuning = null,
+    int SourceIndex = -1                 // F3/B: index into score.GraceNotes (data-pos resolved at render)
 );
 
 /// <summary>
@@ -96,8 +97,9 @@ public static class GraceNoteEngraver
 
         var layouts = ImmutableArray.CreateBuilder<GraceNoteLayout>(graceNotes.Length);
 
-        foreach (var grace in graceNotes)
+        for (int gi = 0; gi < graceNotes.Length; gi++)
         {
+            var grace = graceNotes[gi];
             // Find the measure layout
             if (grace.MeasureIndex >= measureLayouts.Length)
                 continue;
@@ -182,7 +184,8 @@ public static class GraceNoteEngraver
                 MainNoteX: measureLayout.X + mainNoteX,
                 MainNoteStaffPosition: mainStaffPosition,
                 StaffYOffset: staffOffset,
-                Tuning: tabTuning
+                Tuning: tabTuning,
+                SourceIndex: gi
             ));
         }
 

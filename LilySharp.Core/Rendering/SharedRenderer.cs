@@ -2045,6 +2045,26 @@ public static class SharedRenderer
         {
             DynamicLayouts = ResolveArr(layout.DynamicLayouts, score.Dynamics,
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            ArticulationLayouts = ResolveArr(layout.ArticulationLayouts, score.Articulations,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            ArpeggioLayouts = ResolveArr(layout.ArpeggioLayouts, score.Arpeggios,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            CustomTextLayouts = ResolveArr(layout.CustomTextLayouts, score.CustomTexts,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            FiguredBassLayouts = ResolveArr(layout.FiguredBassLayouts, score.FiguredBasses,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            VoltaBracketLayouts = ResolveArr(layout.VoltaBracketLayouts, score.VoltaBrackets,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            TupletBracketLayouts = ResolveArr(layout.TupletBracketLayouts, score.TupletBrackets,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            PercentRepeatLayouts = ResolveArr(layout.PercentRepeatLayouts, score.PercentRepeats,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            GraceNoteLayouts = ResolveArr(layout.GraceNoteLayouts, score.GraceNotes,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            ChordNameLayouts = ResolveArr(layout.ChordNameLayouts, score.ChordNames,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            TrillSpannerLayouts = ResolveArr(layout.TrillSpannerLayouts, score.TrillSpanners,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
         };
     }
 

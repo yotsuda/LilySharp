@@ -41,7 +41,8 @@ public readonly record struct TupletBracketLayout(
     string NumberText,          // Text to display (e.g., "3")
     bool IsStemUp,              // Whether bracket goes above (true) or below (false)
     bool ShowBracket,           // False = all notes beamed, show number only
-    int SourcePosition          // For click-to-source mapping
+    int SourcePosition,         // For click-to-source mapping
+    int SourceIndex = -1        // F3/B: index into score.TupletBrackets (data-pos resolved at render)
 )
 {
     /// <summary>
@@ -139,8 +140,9 @@ public static class TupletBracketEngraver
 
         var layouts = ImmutableArray.CreateBuilder<TupletBracketLayout>(tuplets.Length);
 
-        foreach (var tuplet in tuplets)
+        for (int ti = 0; ti < tuplets.Length; ti++)
         {
+            var tuplet = tuplets[ti];
             // Find measure layout
             if (tuplet.MeasureIndex >= measureLayouts.Length)
                 continue;
@@ -249,7 +251,8 @@ public static class TupletBracketEngraver
                 tuplet.DisplayText,
                 isStemUp,
                 showBracket,
-                tuplet.SourcePosition
+                tuplet.SourcePosition,
+                ti
             ));
         }
 
