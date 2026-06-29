@@ -620,22 +620,28 @@ running-state も合わせて移すのは追加スコープ。まず MeasureColl
 
 ### 残課題(ユーザー指定の進行順: 6 → 4 → 3 → 5)
 
-優先順は本セッションのレビューで合意。**6 → 4 → 3 → 5** の順で進める。
+優先順は本セッションのレビューで合意。**6 → 4 → 3 → 5** の順で進める。**[6]/[4] は調査の結果クローズ
+(下記)。残るは [3] → [5]。**
 
-1. **[6] `Reset()` が transpose 状態をクリアしない疑い(未検証 → まず調査)**
-   `OctaveContext.ResetAll()` は元実装に忠実に `HasTranspose`/`Transpose*` を残す。`MeasureCollector` を
-   使い回し、transpose 部 → 非 voiceName 部の順で `Collect` すると `HasTranspose` が残留しうる
-   (else 経路は `ApplyTranspose` を呼ばない)。**レンダーごとに新インスタンスなら無害**。
-   → §2 に従い「コレクタが実際に使い回されるか」を grep 調査して所見報告。本物なら別コミットで修正
-   (`ResetAll` に transpose クリアを足す)。修正は挙動を変えうるので snapshot/MIDI/MusicXML で検証。
+1. **[6] `Reset()` が transpose 状態をクリアしない疑い ― ✅ 調査済み・変更なし**
+   調査結果: **全本番経路で `MeasureCollector` は単一使用**(`SvgGenerator.BuildLayout` /
+   `PngGenerator` / `PdfGenerator` / CLI / 各 validator が `new` → 1 回 collect。マルチムーブメントも
+   `foreach(spec)` ごとに新インスタンス。`CollectMultiStaff` の声部ループは各声部で `ApplyTranspose`
+   を呼ぶので stale しない)。新インスタンスは `HasTranspose=false` 初期化子で始まる → **transpose 残留は
+   到達不能ゆえ無害**。ユーザー方針「理論リスクに先回りしない」に従い `Reset()` は**変更しない**。
+   (どうしても内部一貫性で足すなら byte-identical な1行だが、現状不要。)
 
-2. **[4] §14 残課題1 ― `OctaveContext` を MIDI/MusicXML ウォーカーで共有**
-   `MidiExporter` / `MusicXmlExporter` も `RelativeOctave.Resolve` を**各自の running-state ラッパ**で
-   包み、アンカー規約が三者三様(C4 / `octaveBase` / C3)。`OctaveContext` を Core 共通化し
-   (アンカーは ctor 引数化)3ウォーカーで共有する余地。**MIDI/MusicXML 側 running-state の移設は追加スコープ**。
-   整理リファクタとして挙動完全不変を維持(byte-identical + MIDI/MusicXML テスト)。
+2. **[4] §14 残課題1 ― `OctaveContext` を MIDI/MusicXML で共有 ― ✅ 評価済み・見送り**
+   調査結果: 真の共通部(`RelativeOctave.Resolve`/`StepIndex`/`StepToMidi`)は**既に DRY**。残る
+   running-state ラッパは小さく、3ウォーカーで**正当に異なる**: `MidiExporter` は transpose 無・
+   initial-mode 無だが repeat の save/restore に **velocity を octave と束ねる**; `MusicXmlExporter` は
+   **transpose 有**(`_currentTranspose = PartTranspose.Read`)＋ `_initialOctaveAbsolute` の mode 復元有
+   (collector に近い); `MeasureCollector` は absolute anchor=`OctaveBase`(可変)、reset=`InitialOctave`。
+   → 共有可能な核は (step,octave,absolute)+Resolve+和音 first-pitch+`=4` リセットのみ(数行)。一方で
+   機能セットが分岐する2 exporter を新共有型で**結合**するコスト＋MIDI/MusicXML の byte-identical 検証は
+   重い。**kitchen-sink/結合増で見合わず見送り。** 3way も MIDI に transpose が無いため単一抽象は不適。
 
-3. **[3] §15 第二段 ― `OctaveContext` 解決の純関数化**
+3. **[3] §15 第二段 ― `OctaveContext` 解決の純関数化(← 次はここ)**
    解決を純関数化し context を引数/戻り値で通す。コスト大。第一段(stage1)が緑で安定した今が着手可。
    挙動完全不変。`RelativeOctave.cs` remarks に「only the algorithm is shared」明記あり(再確認)。
 
@@ -648,8 +654,8 @@ running-state も合わせて移すのは追加スコープ。まず MeasureColl
 
 ### 厳守事項
 
-- [6] は**振る舞いを変えうる**(調査 → 報告 → 直す)。[4]/[3]/[5] は**整理リファクタ=出力不変**
-  (snapshot byte-identical を毎段検証)。両者を混ぜない(§8.3 差分純度)。
+- [6] は調査の結果**変更なし**で確定。残る [3]/[5] は**整理リファクタ=出力不変**
+  (snapshot byte-identical を毎段検証)。挙動変更と整理を混ぜない(§8.3 差分純度)。
 - 手順は §1 の鉄則、コミットは §10＋§14 規約(`Co-Authored-By: Claude Opus 4.8`)。1論点1コミットで刻む。
 
 ### リポジトリ状態(2026-06-29 夕)
