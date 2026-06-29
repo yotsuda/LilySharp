@@ -183,7 +183,8 @@ public sealed class LayoutEngine
     }
 
     /// <summary>Calculates the complete layout for a multi-staff score.</summary>
-    public ScoreLayout Layout(MultiStaffScore score, IReadOnlyList<int>? precomputedLineSizes = null)
+    public ScoreLayout Layout(MultiStaffScore score, IReadOnlyList<int>? precomputedLineSizes = null,
+        SystemLayoutCache? systemCache = null)
     {
         double headerHeight = LayoutUtilities.CalculateHeaderHeight(score.Title, score.Composer);
         double headerBottom = _options.MarginTop + headerHeight;
@@ -223,9 +224,11 @@ public sealed class LayoutEngine
         // Compute first system measure layouts first, then use skyline-based staff spacing
         multiStaffLayouter.CurrentIndent = indent;
         var firstSystemMeasureLayouts = systemMeasures.Count > 0
-            ? multiStaffLayouter.LayoutMeasures(score, 0, 0, systemMeasures[0].Count,
-                isLastSystem: systemMeasures.Count == 1,
-                baseShortestDuration: commonShortestDuration)
+            ? ComputeSystemMeasures(systemCache, 0, systemMeasures[0].Count, true,
+                systemMeasures.Count == 1, indent, commonShortestDuration,
+                () => multiStaffLayouter.LayoutMeasures(score, 0, 0, systemMeasures[0].Count,
+                    isLastSystem: systemMeasures.Count == 1,
+                    baseShortestDuration: commonShortestDuration))
             : ImmutableArray<MeasureLayout>.Empty;
         double systemHeight = multiStaffLayouter.CalculateSystemHeight(
             score, _skylineBuilder, firstSystemMeasureLayouts);
@@ -259,8 +262,10 @@ public sealed class LayoutEngine
             int measureCount = systemMeasures[sysIdx].Count;
             var measureLayouts = isFirstSystem
                 ? firstSystemMeasureLayouts
-                : multiStaffLayouter.LayoutMeasures(score, sysIdx, firstMeasureIndex, measureCount,
-                    sysIdx == systemMeasures.Count - 1, commonShortestDuration);
+                : ComputeSystemMeasures(systemCache, firstMeasureIndex, measureCount, false,
+                    sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration,
+                    () => multiStaffLayouter.LayoutMeasures(score, sysIdx, firstMeasureIndex, measureCount,
+                        sysIdx == systemMeasures.Count - 1, commonShortestDuration));
 
             // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — per-system staff visibility
             // When hara-kiri is active, compute per-system staff group layouts
@@ -475,6 +480,18 @@ public sealed class LayoutEngine
             partCombineLayouts);
         return FinalizeLayout(result, score.GrobOverrides, score.GrobReverts);
     }
+
+    // F3/S5-3a: route a system's measure layout through the session cache when one
+    // is installed (single-staff incremental path). Null cache => direct compute,
+    // byte-identical to the non-incremental path.
+    private static ImmutableArray<MeasureLayout> ComputeSystemMeasures(
+        SystemLayoutCache? cache, int firstMeasureIndex, int measureCount, bool isFirstSystem,
+        bool isLastSystem, double indent, double commonShortestDuration,
+        Func<ImmutableArray<MeasureLayout>> compute)
+        => cache == null
+            ? compute()
+            : cache.GetOrCompute(firstMeasureIndex, measureCount, isFirstSystem, isLastSystem,
+                indent, commonShortestDuration, compute);
 
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
         ImmutableArray<SystemLayout> systems, double headerHeight,

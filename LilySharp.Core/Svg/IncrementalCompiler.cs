@@ -17,6 +17,7 @@
 using System.Linq;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Svg.Renderer;
 using LilySharp.Core.Syntax;
 
@@ -64,12 +65,22 @@ public sealed class IncrementalCompiler
     private double _contPrefix;
     private int[]? _lineSizes;
 
+    // F3/S5-3a: persists across edits so unchanged systems reuse their (spring)
+    // measure layout. Installed only for the single-staff, override-free path
+    // (see Compile); null otherwise => full layout, byte-identical.
+    private SystemLayoutCache? _systemCache;
+
     /// <summary>Whether the most recent <see cref="Edit"/> reused the cached
     /// break solution (true) or recomputed it (false). For diagnostics / tests.</summary>
     public bool LastEditSkippedLineBreak { get; private set; }
 
     /// <summary>The current syntax tree (after the last edit).</summary>
     public SyntaxTree Tree => _tree;
+
+    /// <summary>Test/diagnostic access to the per-system layout cache (null unless the
+    /// single-staff, override-free path installed one). Lets tests assert that
+    /// unchanged systems are reused rather than recomputed.</summary>
+    internal SystemLayoutCache? SystemCache => _systemCache;
 
     public IncrementalCompiler(SyntaxTree tree, SvgRenderOptions? options = null)
     {
@@ -87,7 +98,24 @@ public sealed class IncrementalCompiler
     private string Compile(SyntaxTree tree, bool allowSkip)
     {
         var spec = RenderSpecParser.FindFirst(tree);
-        var score = SvgGenerator.CollectScore(tree, spec);
+        var score = SvgGenerator.CollectScore(tree, spec, out var singleStaffScore);
+
+        // F3/S5-3a: install/refresh the per-system layout cache for single-staff
+        // scores without grob overrides. Grob overrides can change spacing globally
+        // (so a per-measure key cannot localize them), and multi-staff systems couple
+        // all staves' columns (the primary-voice keys would not capture them) — both
+        // fall back to full layout (cache == null), which is byte-identical.
+        if (singleStaffScore != null
+            && singleStaffScore.GrobOverrides.IsDefaultOrEmpty
+            && singleStaffScore.GrobReverts.IsDefaultOrEmpty)
+        {
+            _systemCache ??= new SystemLayoutCache();
+            _systemCache.SetContentKeys(MeasureContentKey.Compute(singleStaffScore));
+        }
+        else
+        {
+            _systemCache = null;
+        }
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
         var springs = SystemBreaker.ComputeMultiStaffSpringData(score, shortest);
@@ -104,7 +132,7 @@ public sealed class IncrementalCompiler
             && contPrefix == _contPrefix
             && springs.AsSpan().SequenceEqual(_springs);
 
-        var layout = new LayoutEngine().Layout(score, skip ? _lineSizes : null);
+        var layout = new LayoutEngine().Layout(score, skip ? _lineSizes : null, _systemCache);
 
         // Cache: reuse the prior line sizes on a skip (the gate is unchanged so
         // they are still the correct solution); otherwise capture the fresh ones.
