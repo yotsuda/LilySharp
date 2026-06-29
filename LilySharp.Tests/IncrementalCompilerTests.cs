@@ -94,6 +94,62 @@ public class IncrementalCompilerTests
     }
 
     [Fact]
+    public void ContentUnchangedEdit_ReusesWholeLayout_AndMatchesFull()
+    {
+        var tree = SyntaxTree.Parse(Base);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render(); // warm the cache
+
+        // A leading newline shifts EVERY source offset but changes no measure content,
+        // no line-break gate, and no score-global input -> the whole ScoreLayout is
+        // reused and LayoutEngine.Layout is skipped. The renderer re-derives each
+        // annotation's data-pos (the section label, header grobs, …) from the edited
+        // score, so the result is byte-identical to a full recompile of the shifted text.
+        var change = new TextChange(new TextSpan(0, 0), "\n");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.True(session.LastEditReusedLayout);
+        Assert.True(session.LastEditSkippedLineBreak); // reuse implies the gate was skipped
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    [Fact]
+    public void TitleChange_DoesNotReuseLayout_ButMatchesFull()
+    {
+        // A rendered title is score-global: it is NOT in any per-measure content key, so
+        // without the global-key guard a title edit would falsely reuse the layout and
+        // render the stale title. It must NOT reuse, and must match a full recompile.
+        string titled = "title \"Song\"\n" + Base;
+        var tree = SyntaxTree.Parse(titled);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(titled, "title \"Song\"", "title \"Tune\"");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.False(session.LastEditReusedLayout);
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    [Fact]
+    public void WidthPreservingContentEdit_SkipsLineBreak_ButDoesNotReuseLayout()
+    {
+        var tree = SyntaxTree.Parse(Base);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        // Adding an articulation keeps the line-break gate (still a skip) but DOES change
+        // the measure's content key (the articulation side-table is folded into it), so the
+        // whole-layout reuse is correctly declined while the cheaper break-skip still applies.
+        var change = Replace(Base, "c4 d e f", "c4@staccato d e f");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.True(session.LastEditSkippedLineBreak);
+        Assert.False(session.LastEditReusedLayout);
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    [Fact]
     public void ChainedEdits_AlwaysMatchFull_WithExpectedSkips()
     {
         var session = new IncrementalCompiler(SyntaxTree.Parse(Base), Opt);

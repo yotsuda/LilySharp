@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using System.Linq;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -70,9 +71,24 @@ public sealed class IncrementalCompiler
     // (see Compile); null otherwise => full layout, byte-identical.
     private SystemLayoutCache? _systemCache;
 
+    // F3/B-2: the whole previous ScoreLayout, plus the complete per-measure content
+    // key vector and the score-global layout inputs it was built from. When an edit
+    // leaves ALL of these (and the line-break gate) unchanged, the layout geometry is
+    // position-independent and can be reused wholesale — the renderer re-derives every
+    // annotation's data-pos from the live (edited) score (SharedRenderer.ResolveDataPos),
+    // so the reused layout renders byte-identical to a full recompile.
+    private ScoreLayout? _cachedLayout;
+    private ImmutableArray<MeasureContentKey> _contentKeys;
+    private (string? Title, string? Composer, int? Tempo) _globalKey;
+
     /// <summary>Whether the most recent <see cref="Edit"/> reused the cached
     /// break solution (true) or recomputed it (false). For diagnostics / tests.</summary>
     public bool LastEditSkippedLineBreak { get; private set; }
+
+    /// <summary>Whether the most recent <see cref="Edit"/> reused the ENTIRE cached
+    /// ScoreLayout (skipping <see cref="LayoutEngine.Layout"/> outright). Implies
+    /// <see cref="LastEditSkippedLineBreak"/>. For diagnostics / tests.</summary>
+    public bool LastEditReusedLayout { get; private set; }
 
     /// <summary>The current syntax tree (after the last edit).</summary>
     public SyntaxTree Tree => _tree;
@@ -106,11 +122,15 @@ public sealed class IncrementalCompiler
         // Both single- and multi-staff benefit now that the two dominant per-system
         // phases — the spring solve AND the skyline (the larger, esp. on multi-staff)
         // — are memoized; Compute(MultiStaffScore) gives the sound all-staff key.
-        if (score.GrobOverrides.IsDefaultOrEmpty
-            && score.GrobReverts.IsDefaultOrEmpty)
+        bool overrideFree = score.GrobOverrides.IsDefaultOrEmpty
+            && score.GrobReverts.IsDefaultOrEmpty;
+        var contentKeys = overrideFree
+            ? MeasureContentKey.Compute(score)
+            : default;
+        if (overrideFree)
         {
             _systemCache ??= new SystemLayoutCache();
-            _systemCache.SetContentKeys(MeasureContentKey.Compute(score));
+            _systemCache.SetContentKeys(contentKeys);
         }
         else
         {
@@ -132,18 +152,66 @@ public sealed class IncrementalCompiler
             && contPrefix == _contPrefix
             && springs.AsSpan().SequenceEqual(_springs);
 
-        var layout = new LayoutEngine().Layout(score, skip ? _lineSizes : null, _systemCache);
+        // F3/B-2: whole-layout reuse. When the line-break gate is unchanged AND every
+        // per-measure content key matches AND the score-global layout inputs match AND
+        // the cached layout carries no UNMIGRATED data-pos annotation (ReuseSafe), the
+        // geometry is provably position-independent and identical, so the entire cached
+        // ScoreLayout is reused and LayoutEngine.Layout is skipped outright. The renderer
+        // re-derives each migrated annotation's data-pos from the edited score, so the
+        // output is byte-identical to a full recompile. Gated to the override-free path
+        // (overrides spread spacing globally and are not localized by the per-measure key).
+        var globalKey = (score.Title, score.Composer, score.Tempo);
+        bool reuse = skip
+            && overrideFree
+            && _cachedLayout != null
+            && !_contentKeys.IsDefault
+            && globalKey == _globalKey
+            && contentKeys.AsSpan().SequenceEqual(_contentKeys.AsSpan())
+            && ReuseSafe(_cachedLayout);
 
-        // Cache: reuse the prior line sizes on a skip (the gate is unchanged so
-        // they are still the correct solution); otherwise capture the fresh ones.
-        if (!skip)
-            _lineSizes = layout.AllSystems.Select(s => s.Measures.Length).ToArray();
+        ScoreLayout layout;
+        if (reuse)
+        {
+            layout = _cachedLayout!;
+        }
+        else
+        {
+            layout = new LayoutEngine().Layout(score, skip ? _lineSizes : null, _systemCache);
+            // Reuse the prior line sizes on a gate-skip (still the correct solution);
+            // otherwise capture the fresh ones.
+            if (!skip)
+                _lineSizes = layout.AllSystems.Select(s => s.Measures.Length).ToArray();
+        }
+
         _springs = springs;
         _firstPrefix = firstPrefix;
         _contPrefix = contPrefix;
+        _contentKeys = contentKeys;
+        _globalKey = globalKey;
+        _cachedLayout = layout;
         _tree = tree;
         LastEditSkippedLineBreak = skip;
+        LastEditReusedLayout = reuse;
 
         return SvgGenerator.RenderToSvg(score, layout, _options);
     }
+
+    // F3/B-2: a cached layout is safe to reuse only if it carries no annotation whose
+    // data-pos is still BAKED into the layout (i.e. not yet migrated onto the render-time
+    // SourceIndex resolution). Those would go stale on reuse since a content-unchanged
+    // edit shifts source offsets. The migrated arrays (dynamics, articulations, marks, …)
+    // are re-resolved from the live score by SharedRenderer.ResolveDataPos, so they impose
+    // no constraint. Every detection source of the arrays below is itself folded into the
+    // content key (lyrics/marks/dynamics tables, or note items via the intrinsic key), so
+    // a content-key match guarantees these stay empty — checking the cached layout is
+    // equivalent to checking the edited score would produce none. PedalBracketLayouts is
+    // always empty today (pedals render as text marks), kept for completeness.
+    private static bool ReuseSafe(ScoreLayout layout) =>
+        layout.LyricLayouts.IsDefaultOrEmpty
+        && layout.HairpinLayouts.IsDefaultOrEmpty
+        && layout.OttavaBracketLayouts.IsDefaultOrEmpty
+        && layout.GlissandoLayouts.IsDefaultOrEmpty
+        && layout.FingeringLayouts.IsDefaultOrEmpty
+        && layout.TextSpannerLayouts.IsDefaultOrEmpty
+        && layout.PedalBracketLayouts.IsDefaultOrEmpty;
 }
