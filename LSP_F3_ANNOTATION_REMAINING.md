@@ -70,3 +70,40 @@ S5-3a/c で **per-system の spring 解（`LayoutMeasures`）＋ skyline（`Buil
 - 段跨ぎ分割: `SpannerBreakSubstitution`。
 - 既存キャッシュ: `SystemLayoutCache.cs`（spring ＋ skyline の2相、typed memo）/ `IncrementalCompiler.cs`（gate・content key・cache 設置）。
 - per-measure 識別子: `MeasureContentKey.cs`（`Compute(Score)` / `Compute(MultiStaffScore)`）。
+
+## B 実装の進捗（2026-06-30）
+
+B（render が data-pos を score から引く＝layout を完全に位置非依存化）に着手。**機構は確立・実証済み**だが、
+注釈の data-pos 出力源は当初想定より多く **計28箇所/約24型**で、いくつかは bespoke。
+
+### 確立した機構（commit `28edb88` + `69c4db5`、snapshot byte-identical）
+- 各注釈 `*Layout` struct に `int SourceIndex = -1`（その注釈が来た score side-table の index＝位置非依存な参照）。
+- `SharedRenderer.RenderTo` 冒頭で `ResolveDataPos(layout, score)`＝各注釈の `SourcePosition` を**生 score から `SourceIndex` 経由で再導出**。
+  通常レンダは同値（snapshot 一致）、reuse 時は編集後 score の新位置になる。`ResolveArr<T,TItem>` が共通ヘルパ。
+- `SourceIndex = -1` 既定で、layout struct を直接組むユニットテストは無改修で通る。
+- **移行済み11型（MultiStaffScore side-table 直結）**: Dynamic, Articulation, Arpeggio, CustomText, FiguredBass,
+  VoltaBracket, TupletBracket, PercentRepeat, GraceNote(+tab grace), ChordName, TrillSpanner。
+
+### data-pos を出す未移行アレイ＝8つ（`ScoreLayout` 上）。reuse はこれら全 empty 時のみ byte-identical
+`LyricLayouts, HairpinLayouts, OttavaBracketLayouts, GlissandoLayouts, FingeringLayouts, MusicMarkLayouts,
+TextSpannerLayouts, PedalBracketLayouts`。**beams/ties/slurs/barnumber/stanza/tievariant/mmrest/partcombine/crossstaff は
+data-pos を出さない**（`gc.Source` 無し）→ reuse を妨げない（確認済み）。
+
+### 重大ブロッカー：MusicMark（セクションラベル）
+`section X` ラベルは `MusicMarkEngraver` が `MergeSectionLabels(score.MusicMarks, measures) + MergeTempoMark` で
+**全スコアに1つ以上生成**する（実測 MusicMark=1）。よって **MusicMark を移行しない限り whole-layout reuse は
+どの実スコアでも発火しない**。これが B-2 の最優先 unblock。
+
+### B-2（whole-layout reuse）
+`IncrementalCompiler` に「content key 全一致＋gate 不変なら `_cachedLayout` を丸ごと再利用、`ReuseSafe`(上記8アレイ empty)で
+gate」を実装→**試作したが、MusicMark で全スコア gate off＝死にコードのため未コミット（revert 済）**。MusicMark 移行後に復活させる。
+
+### 残型の移行方針（次の道）
+- **MusicMark**（最優先）: `allMarks`（merge）を render 時に再構築し index 解決。セクションラベルは `measure.SectionLabelPosition`
+  （再 collect で新値）から、実マークは `score.MusicMarks` から。merge 順は content 不変で安定。`Score?` vs `MultiStaffScore` の
+  型差に注意（tempo 等）。
+- **Lyric**: verse グルーピングを通る→`score.Lyrics` への index を layout に threading。
+- **Glissando/Fingering/TieVariant**（note 由来）: note の `SourcePosition` を `(MeasureIndex, ItemIndex)`＋多譜表 staff 経路で
+  measures から引く **note-index resolver** が要る。
+- **Hairpin/Ottava/Pedal/Ornament/TextSpanner**（detected, score 非保持）: 検出元 item を `ScoreLayout` に載せて render 到達可能に。
+- 各移行後、`ReuseSafe` から該当アレイを外し、B-2 を復活＋増分==フルで reuse 発火を実証。
