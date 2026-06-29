@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Layout;
@@ -58,6 +59,11 @@ public static class SharedRenderer
     public static void RenderTo(
         MultiStaffScore score, ScoreLayout layout, IDocumentContext doc)
     {
+        // F3/B: re-derive every annotation's data-pos source offset from the LIVE
+        // score (via the SourceIndex each layout carries) so a reused (cached) layout
+        // emits fresh data-pos. Identity for a normal render (same score => same value,
+        // snapshot-identical); refreshes after the edit on whole-layout reuse.
+        layout = ResolveDataPos(layout, score);
         var options = layout.Options;
         var resolver = layout.GrobPropertyResolver;
         // Items participating in a beam — DrawNote/DrawChord skip stem & flag for these,
@@ -2020,6 +2026,44 @@ public static class SharedRenderer
             foreach (var ml in system.Measures)
                 map[ml.MeasureIndex] = system.Y;
         return map;
+    }
+
+    // ---------- F3/B: data-pos resolution ----------
+
+    /// <summary>
+    /// Re-derives each annotation layout's data-pos source offset from the LIVE score,
+    /// via the <c>SourceIndex</c> the layout carries (an index into the matching score
+    /// side-table). This keeps the cached <see cref="ScoreLayout"/> position-independent:
+    /// source offsets are NOT baked into the layout geometry but resolved here at render
+    /// time. For a normal render this reproduces the same value (snapshot-identical); for
+    /// whole-layout reuse (a content-unchanged edit) it yields the edited score's fresh
+    /// positions, so editor click-to-source stays correct.
+    /// </summary>
+    private static ScoreLayout ResolveDataPos(ScoreLayout layout, MultiStaffScore score)
+    {
+        return layout with
+        {
+            DynamicLayouts = ResolveArr(layout.DynamicLayouts, score.Dynamics,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+        };
+    }
+
+    // Refreshes each layout's resolved field from the side-table item it references
+    // (by SourceIndex). Out-of-range indices are left as-is (defensive).
+    private static ImmutableArray<T> ResolveArr<T, TItem>(
+        ImmutableArray<T> layouts, ImmutableArray<TItem> items,
+        System.Func<T, TItem, T> resolve, System.Func<T, int> sourceIndex)
+    {
+        if (layouts.IsDefaultOrEmpty)
+            return layouts;
+        var b = layouts.ToBuilder();
+        for (int i = 0; i < b.Count; i++)
+        {
+            int si = sourceIndex(b[i]);
+            if ((uint)si < (uint)items.Length)
+                b[i] = resolve(b[i], items[si]);
+        }
+        return b.MoveToImmutable();
     }
 
     // ---------- Dynamics ----------

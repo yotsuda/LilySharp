@@ -34,7 +34,11 @@ public readonly record struct DynamicLayout(
     double X,               // Absolute X position (staff spaces from score start)
     double Y,               // Y position (staff spaces from staff top, positive = down)
     string Text,            // Dynamic text ("p", "ff", etc.)
-    int SourcePosition      // For click-to-source mapping
+    int SourcePosition,     // For click-to-source mapping (re-derived at render from SourceIndex)
+    int SourceIndex = -1    // F3/B: index into score.Dynamics — the position-independent
+                            // reference the renderer resolves data-pos from the LIVE score, so a
+                            // reused (cached) layout emits fresh data-pos. See SharedRenderer.ResolveDataPos.
+                            // -1 = "no source" (left unresolved): used by unit tests that build layouts directly.
 );
 
 /// <summary>
@@ -113,8 +117,9 @@ public static class DynamicEngraver
         // DIFFERENT staves are independent and must not stack onto each other.
         var stackAt = new Dictionary<(int, int, int), int>();
 
-        foreach (var dynamic in dynamics)
+        for (int di = 0; di < dynamics.Length; di++)
         {
+            var dynamic = dynamics[di];
             // Find the measure layout
             if (dynamic.MeasureIndex >= measureLayouts.Length)
                 continue;
@@ -165,7 +170,8 @@ public static class DynamicEngraver
                 x,
                 y,
                 dynamic.Text,
-                dynamic.SourcePosition
+                dynamic.SourcePosition,
+                di
             ));
         }
 
