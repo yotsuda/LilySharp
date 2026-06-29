@@ -772,3 +772,68 @@ SVG は既定で **非最適パス**(`UseOptimalPageBreaking=false`/`PageHeight=
 - **B**: thumb、espressivo、pedal heel/toe、fermata 変種(short/long/verylong)。
 - **C(複合・横広=seed が活きる)**: prallmordent/upprall/downprall/upmordent/downmordent/lineprall、slashturn/haydnturn/schleifer。
 - 加えて「**上向き note-anchored テキスト/markup(`^"text"`)**」を入れると §12-2 の seed 実寸が初めて可視で効く(現状の no-op を解消する消費者)。
+
+---
+
+## 19. 次セッションへの引き継ぎ(2026-06-29 深夜)― F3 増分コンパイル(エンジン化)
+
+§1〜18 は **描画忠実再現 / エディタ** の系統。この節は別系統 ―
+**意味解析〜レイアウトを Salsa 型の demand-driven メモ化クエリ DAG に作り替える F3** の引き継ぎ。
+
+### 19.0 まず読むもの(3点セット)
+1. `LSP_INCREMENTAL_IMPROVEMENT_PROPOSAL.md` ― 親提案(F0〜F4 の全体像)。
+2. `LSP_F3_QUERY_GRAPH_DESIGN.md` ― F3 詳細設計。**§0.5「現行コード検証と前提の修正」と S-stage 進捗が常に最新**。本節と二重管理せず、詳細はそちらを正とする。
+3. 本節(運用・現在地・次の一歩)。
+
+### 19.1 ブランチ運用と方針(**最重要・通常ルールを上書き**)
+- **ブランチ `f3-incremental` はユーザーが明示承認**(「必要ならブランチを切って、安全であることを確認できたら段階的にマージ」)。§ の「ブランチを勝手に作らない / master 直」を**この F3 作業に限り上書き**する。
+- 各段は **ビルド緑＋全テスト緑＋snapshot byte-identical** を確認してから `git branch -f master f3-incremental`(ff)＋`git push origin master` で**段階マージ**(作業ツリーを切り替えない ref 移動方式)。
+- **byte-identical は純 substrate の既定であって目的ではない(ユーザー指示)。** 出力が**より正しく**なる変更は歓迎 ― その時は snapshot を意図的に貼り直し、改善であることを示す。基準は「**正しさ＞現状維持**」。各段で byte-identical を過剰に強調しない。
+- コミットは §10＋§14 規約(`Co-Authored-By: Claude Opus 4.8`)。1論点1コミット。
+
+### 19.2 現在地(2026-06-29 深夜)
+`origin/master` = **`4cc2316`**(= ローカル master = `f3-incremental`)。全テスト **1824 passed / 3 skipped**。S0〜S4b 完了:
+
+| commit | 段 | 成果 |
+|---|---|---|
+| `9425073` | S0 | 設計を実コードに接地・前提訂正(§0.5) |
+| `89ac986`/`d3baaf9` | S1/F0 | 差分安全網＋編集レイテンシ baseline |
+| `55f9359` | S2 | `MeasureContext` 鎖(key/time) |
+| `8eabb39` | S3 | clef 忠実化＋「relative 非依存は既達」発見 |
+| `e7b3637` | S4a | 行分割ゲート明示化＋cutoff 実証 |
+| `4cc2316` | S4b | `IncrementalCompiler`＝実カットオフ、増分==フル証明 |
+
+### 19.3 作った主な部品(ファイル)
+- `LilySharp.Core/Svg/Model/MeasureContext.cs` ― `readonly record struct {Key, Time, Clef}`。entry/exit context のペイロード。value 等値が early-cutoff 比較。
+- `LilySharp.Core/Svg/Collector/MeasureContextChain.cs` ― post-pass で `entry/exit` 鎖を構築(`exit[i]=Advance(entry[i],measures[i])`)。
+- `KnuthPlassBreaker.ComputeMeasureSpringData`(単一譜)/ `SystemBreaker.ComputeMultiStaffSpringData`(全譜結合・**実経路はこちら**) ― 行分割ゲート=`measure_natural_width` ベクトル。internal。
+- `LilySharp.Core/Svg/IncrementalCompiler.cs`(**public**) ― 本丸。`Render()`でキャッシュ確立、`Edit(change)`で gate 不変なら `LayoutEngine.Layout(score, precomputedLineSizes)` 経由で**行分割 DP を skip**、変化なら full。`LastEditSkippedLineBreak` で観測。
+- テスト: `IncrementalRenderEquivalenceTests`(S1 差分網)/`MeasureContextChainTests`/`LineBreakGateTests`/`IncrementalCompilerTests`。
+
+### 19.4 検証済みの非自明な前提(次セッションが踏むと事故る所)
+- **`measure_green(part,i)` は無料の安定キーでない**(小節は green ノードでなく collector が発見、`GreenNode` に構造ハッシュ無し、reuse は top-level のみ)。S5 で**安定 measure 識別子(content key)の製造**が要る。
+- **行分割ゲートは構造的に既存**。`FindOptimalBreaks` は spring vector の純関数 → 幅不変編集は skip 可能(S4a/S4b で実証)。
+- **レイアウトは既に relative 非依存**(`Svg/Layout` の相対オクターブ参照0件)。S3 の正規化は追加不要だった。
+- **`Score.Clef` は初期 clef 忠実**。ただし `Collect(tree, voiceName)` で収集した時のみ(Phase 1.5 が part clef を読む)。`Collect(tree, null)` は clef が末尾状態になる罠 ― テストは必ず render-spec 経由(`RenderSpecParser.FindFirst`＋voiceName)で収集。
+- **spanner/cross-staff は overlay**で自然幅に寄与しない(設計どおり)。臨時記号は barline reset ゆえ context は key のみ運ぶ。
+- gotcha: `samples/music/*.lys`(fur-elise 等)は削除済 → **`RenderPipelineBenchmark` は dead path で実行時に壊れる**(未修正・別件)。生きた最大 fixture は `LilySharp.Tests/Fixtures/showcase/grammar-tour.lys`。
+
+### 19.5 次の一歩 ― **S5: per-measure semantics/layout のメモ化**(効果の本丸)
+- 動機: F0 実測で編集レイテンシは **render/layout が律速**(編集 ~9.7ms、行分割 DP はその一部)。S4b は DP しか省かない。**目に見える速度向上は `measure_semantics`/`system_layout` を per-measure でメモ化し、変わった小節・段だけ再計算してから**。
+- 前提: **安定 measure 識別子**(訂正1)を作る。小節 items＋entry-context の content hash 等、編集で生き残るキー。
+- deferred で S5 に持ち込む context 拡張: **octave 基準 / ottava / pending ties / open spanners**。これらは post-pass で忠実復元できず、**walk/green 駆動が必要**(S5 でまとめて)。`MeasureContext.cs` の remarks に明記済み。
+- 健全性: 既に敷いた **`IncrementalCompiler` の増分==フル差分テスト**を S5 でも CI ゲートに。新スライスごとに「skip が発火し、かつ full と一致」を `IncrementalCompilerTests` 流で証明。
+
+### 19.6 検証コマンド
+```pwsh
+cd C:\MyProj\LilySharp
+dotnet test LilySharp.Tests 2>&1 | Select-String "Passed!|Failed!"      # 期待 1824/3 skipped
+dotnet test LilySharp.Tests --filter "FullyQualifiedName~IncrementalCompiler"  # 増分==フル
+git diff --stat master                                                   # substrate 段は tracked 差分ゼロが理想
+```
+- シェルは ripple MCP(§1 鉄則)。lilypond 比較が要るなら §3 のデッドロック回避起動。
+
+### 19.7 任意・未了
+- **速度の定量化**: F0 `IncrementalEditBenchmark` に session-edit ケースを足す(`[IterationSetup]` で session をリセットして1編集を測る)。S4b の DP 省略幅を数値化。
+- `RenderPipelineBenchmark` の dead-path 修正(1行・別件)。
+- 引き継ぎが依存する F3 文書(`LSP_INCREMENTAL_IMPROVEMENT_PROPOSAL.md` / `LSP_F3_QUERY_GRAPH_DESIGN.md`)は追跡済み。F3 と無関係な未追跡 .md 2本(`AI_POSITIONING_HANDOFF.md` / `RELEASE_BLOCKERS.md`)は別件ゆえ温存。

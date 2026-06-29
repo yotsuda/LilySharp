@@ -92,9 +92,15 @@ benchmark は cold full＋stage 別(`RenderPipelineBenchmark`)はあるが**編�
   `MeasureCollector.cs:665,691-692`)。S2 で「末尾状態」に見えたのは `Collect(tree, null)` が Phase 1.5(part clef 読込)を
   skip した**テストの不備**。実レンダは `Collect(tree, voiceName)` なので clef 忠実。tests も render-spec 経由収集に修正。
   **octave 基準/ottava/ties/spanners は walk/green 駆動が要るため S5 へ deferred**(post-pass では忠実復元不可)。
-- **S4 (= F3c)**: `MeasureSpringData` を cache 化＋early-cutoff(訂正2)。幅不変編集で Knuth-Plass を skip。
-- **S5+**: クエリエンジン本体 → tie/slur/beam resolver の依存辺化(訂正3) → LSP 増分ドライバ。
-  ここで初めて速度向上が観測可能(訂正4)。
+- **S4 (= F3c)** ✅: 行分割ゲートのカットオフ。
+  - **S4a**(`e7b3637`): ゲート(`ComputeMeasureSpringData`=`measure_natural_width` ベクトル)を internal 化し、
+    `LineBreakGateTests` で cutoff 性質を実証(幅不変編集→gate bit 一致／rhythm 変更→当該小節のみ・局所化)。
+  - **S4b**(`4cc2316`): `IncrementalCompiler`(public)を実装。`Edit` 時に gate(spring vector＋key/time prefix 幅)が
+    不変なら cached line sizes を `LayoutEngine.Layout(score, precomputedLineSizes)` に注入し**行分割 DP を skip**、
+    変化なら full。`SystemBreaker`/`LayoutEngine`/`SvgGenerator` に注入フックを additive 配線(null=byte-identical)。
+    `IncrementalCompilerTests` で**増分==フル**を証明(skip 発火も検証)。
+- **S5+**: per-measure semantics/layout のメモ化(render/layout 律速の本丸) → tie/slur/beam resolver の依存辺化(訂正3)
+  → LSP 増分ドライバ。**安定 measure 識別子(訂正1)はここで製造**。S4b の差分テストを CI ゲートに継続。
 
 > 旧 §8(F3a〜F3e)の概念分割は保持。S 番号は「安全にマージできる単位」での再束ね。
 > **方針更新(ユーザー指示)**: byte-identical は純 substrate の既定であって目的ではない。出力が**より正しく**
