@@ -393,8 +393,9 @@ internal sealed class VariableReferenceGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class ArticulationGreen : GreenSyntaxNode
 {
-    public ArticulationGreen(SyntaxToken atToken, SyntaxToken nameToken)
-        : base(SyntaxKind.Articulation, [atToken, nameToken])
+    // directionToken is the optional '.up' / '.down' placement word (null = automatic).
+    public ArticulationGreen(SyntaxToken atToken, SyntaxToken nameToken, SyntaxToken? directionToken = null)
+        : base(SyntaxKind.Articulation, [atToken, nameToken, directionToken])
     {
     }
 }

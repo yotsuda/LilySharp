@@ -1222,6 +1222,15 @@ public sealed class ArticulationSyntax : SyntaxNode
     /// music mark), which are then resolved by name downstream.
     /// </summary>
     public ArticulationType Type => ArticulationRegistry.Resolve(NameToken.Text);
+
+    /// <summary>
+    /// Forced placement from a <c>.up</c> / <c>.down</c> qualifier
+    /// (<c>@staccato.up</c>): <c>true</c> = above, <c>false</c> = below,
+    /// <c>null</c> = automatic (opposite the stem, the default).
+    /// </summary>
+    public bool? ForcedAbove => GetChild(2) is SyntaxTokenNode dir
+        ? dir.Text == "up" ? true : dir.Text == "down" ? false : (bool?)null
+        : null;
 }
 
 /// <summary>

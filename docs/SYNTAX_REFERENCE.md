@@ -132,6 +132,16 @@ g4@fermata      % Fermata     (abbrev: @ferm)
 a4@portato      % Portato (tenuto + staccato)
 ```
 
+### Placement (`.up` / `.down`)
+
+By default an articulation sits opposite the stem. Append `.up` or `.down` to force it
+above or below the note:
+
+```
+c4@staccato.up      % staccato forced above
+d4@accent.down      % accent forced below
+```
+
 ## Ornaments
 
 ```

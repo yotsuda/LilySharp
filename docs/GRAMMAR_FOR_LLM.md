@@ -83,7 +83,9 @@ R1          // full-measure rest
 
 ## Annotations (`@name` attached to a note or chord)
 
-Attach with `@`. One note may take several: `c4@staccato@p`.
+Attach with `@`. One note may take several: `c4@staccato@p`. Add `.up` / `.down` to force
+an articulation above / below the note (default is automatic, opposite the stem):
+`c4@staccato.up`, `d4@accent.down`.
 
 - Articulations: `@staccato @accent @tenuto @marcato @fermata @portato`
 - Ornaments: `@trill @mordent @prall @turn @invertedturn`

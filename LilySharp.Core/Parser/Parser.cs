@@ -1117,9 +1117,22 @@ private GreenNode?[] ParseArticulations()
                 }
                 else if (IsArticulationName())
                 {
+                    // @name.up / @name.down — forced PLACEMENT on an articulation
+                    // (above / below), recognised before the compound-mark form so the
+                    // '.up' / '.down' qualifier is a placement, not a mark part.
+                    if (Current.Kind == SyntaxKind.Identifier
+                        && Peek(1)?.Kind == SyntaxKind.Dot
+                        && IsPlacementWord(Peek(2))
+                        && Peek(3)?.Kind != SyntaxKind.Dot)
+                    {
+                        var name = Advance();
+                        Advance();             // .
+                        var dir = Advance();   // up / down
+                        articulations.Add(new ArticulationGreen(at, name, dir));
+                    }
                     // Check for compound mark name: @name.part (e.g., @fig.6, @feather.right)
                     // If current is a plain Identifier followed by a dot, parse as MusicMark
-                    if (Current.Kind == SyntaxKind.Identifier && Peek(1)?.Kind == SyntaxKind.Dot)
+                    else if (Current.Kind == SyntaxKind.Identifier && Peek(1)?.Kind == SyntaxKind.Dot)
                     {
                         // Compound music mark - reuse ParseMusicMark logic
                         var name = Advance();
@@ -1184,6 +1197,11 @@ private GreenNode?[] ParseArticulations()
 
         return [.. articulations];
     }
+
+    // 'up' / 'down' lex as plain identifiers; they are the placement words for the
+    // '@name.up' / '@name.down' qualifier.
+    private static bool IsPlacementWord(SyntaxToken? token) =>
+        token?.Kind == SyntaxKind.Identifier && (token.Text == "up" || token.Text == "down");
 
     private bool IsArticulationName()
     {

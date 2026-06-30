@@ -2988,6 +2988,10 @@ public sealed class MeasureCollector
                         isAbove = true;
                     }
 
+                    // An explicit '.up' / '.down' qualifier overrides the automatic side.
+                    if (articulationSyntax.ForcedAbove is bool forcedAbove)
+                        isAbove = forcedAbove;
+
                     _articulations.Add(new ArticulationItem(type, measureIndex, itemIndex, isAbove, articulationSyntax.Position, _currentStaffIndex));
                 }
                 else
