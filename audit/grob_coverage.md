@@ -1,5 +1,12 @@
 # Grob & Property Coverage Matrix (Phase 1-3)
 
+> ⚠️ **STALE / 信頼不可（2026-06-30 再検証）**: このマトリクスは 2026-04-25 生成で、抽出スクリプト
+> `audit/scripts/Build-GrobCoverage.ps1` の検出漏れにより engraver の実装状況を**過小に誤判定**している。
+> 例: `BarNumber` / `Fingering` / `LedgerLineSpanner` / `Glissando` / `MultiMeasureRest` は "Absent"/"要実装" と
+> 記載されているが、対応 engraver（`BarNumberEngraver` / `FingeringEngraver` / `LedgerLineSpannerEngraver` /
+> `GlissandoEngraver` / `MultiMeasureRestEngraver`、いずれも `LilySharp.Core/Svg/Layout/`）は**実在し稼働中**。
+> 本書の "Absent" 分類は実装状況の根拠に使わないこと。公開/リリース判断には用いない（スクリプト修正後に再生成するまで参考扱い）。
+
 **生成日**: 2026-04-25
 **LP 入力**: `scm/define-grobs.scm` (165 grobs), `scm/define-grob-properties.scm` (483 properties)
 **LilySharp 入力**: `LilySharp.Core/**/*.cs` (168 ファイル)

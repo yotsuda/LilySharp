@@ -228,12 +228,14 @@ The LSP server supports incremental text synchronization:
 - [x] Lyrics support
 - [x] SVG music engraving (Emmentaler font, beams, ties, slurs, tuplets, volta brackets)
 - [x] Multi-system layout with Knuth-Plass line breaking
-- [x] Multi-staff / GrandStaff rendering
+- [x] Multi-staff / GrandStaff rendering (cross-staff beam layout is not yet implemented)
+- [x] MusicXML export (notes, ties, slurs, grace notes, dynamics, articulations, ornaments, multi-part) — lyrics and tuplet numbers are not yet emitted
 - [x] CLI tool
 
 ### Planned
 
-- [ ] MusicXML export (full section/structure support)
+- [ ] Cross-staff beam layout
+- [ ] MusicXML export: lyrics and tuplet output
 - [ ] Multi-file projects
 - [ ] LilyPond → LilySharp conversion tool
 
