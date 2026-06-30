@@ -6,8 +6,9 @@ construct below has exactly one canonical form and one minimal example. Prefer t
 `@annotation` prefix everywhere; emit one statement/idea per line; end every measure
 with `|`.
 
-> This file is the compressed spec. Full human references: `docs/SYNTAX_REFERENCE.md`,
-> `docs/GRAMMAR.md`. When they disagree with this file, those are authoritative.
+> This file is the canonical compressed spec (every example is parse-verified). The
+> parser is the ultimate authority; `docs/GRAMMAR.md` (formal EBNF) and
+> `docs/SYNTAX_REFERENCE.md` are companion references kept in sync with this file.
 
 ## Document skeleton (top level, in this order)
 

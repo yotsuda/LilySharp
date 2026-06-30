@@ -1,75 +1,70 @@
-# LilySharp Grammar Features
+# Lily# Grammar — Feature Status
 
-## 現状の確認
+> Quick implemented-feature checklist. The canonical syntax reference is
+> [`GRAMMAR_FOR_LLM.md`](GRAMMAR_FOR_LLM.md); the formal EBNF is [`GRAMMAR.md`](GRAMMAR.md).
+> Updated 2026-07-01.
 
-### 1. ヘッダー/メタデータ
-| 機能 | 構文 | 状況 |
+### 1. Header / metadata
+| Feature | Syntax | Status |
 |------|------|------|
-| タイトル | rtitle "..."r | ✅ |
-| 作曲者 | rcomposer "..."r | ✅ |
-| テンポ | rtempo 120r | ✅ |
-| 拍子 | rtime 4/4r | ✅ |
-| 調号 | rkey c majorr | ✅ |
+| Title / composer | `title "..."` / `composer "..."` | ✅ |
+| Tempo | `tempo 120` (`tempo 120 swing` / `swing 16` shuffle feel) | ✅ |
+| Time / key | `time 4/4` / `key c major` | ✅ |
 
-### 2. 構造宣言
-| 機能 | 構文 | 状況 | 備考 |
+### 2. Structure declarations
+| Feature | Syntax | Status | Notes |
 |------|------|------|------|
-| パート定義 | rpart name { clef: treble }r | ✅ | instrument/octave 属性対応 |
-| フレーズ定義 | rphrase name { notes }r | ✅ | |
-| セクション | rsection Name { part { } }r | ✅ | |
-| 構造 | rstructure { Section }r | ✅ | |
+| Part | `part name { clef treble }` | ✅ | bare attributes (no colon); `instrument`/`octave`/`channel`/`transpose` |
+| Phrase | `phrase name { notes }` referenced as `$name` | ✅ | |
+| Section | `section Name { partName { … } }` | ✅ | |
+| Structure | `structure { Section … }` | ✅ | optional; navigation marks; per-score override |
 
-### 3. レンダリング指定
-| 機能 | 構文 | 状況 | 備考 |
+### 3. Render targets
+| Feature | Syntax | Status | Notes |
 |------|------|------|------|
-| スコア | rrender score "file.svg" { }r | ✅ | |
-| 譜表 | rstaff { part }r | ✅ | |
-| 大譜表 | rgrandStaff { staff staff }r | ✅ | |
-| タブ譜 | rtab standard { part }r | ✅ | Guitar/Bass/Bass5/Ukulele対応 |
-| MIDI | CLI: rlysc midi file.lys file.midr | ✅ | rrender midir ブロックは存在しない |
+| Score | `score "name" { … }` | ✅ | one or more; optional per-score `structure` |
+| Staff | `staff name` (bare, no braces) | ✅ | optional clef: `staff bass name` |
+| Grand staff | `grandStaff { staff a  staff b }` | ✅ | |
+| Tab | `tab name` | ✅ | Guitar/Bass/Bass5/Ukulele |
+| Ossia | `ossia { name }` | ✅ | reduced-size alternative passage |
+| Lead sheet | `chords name` / `lyrics name` (no staff) | ✅ | barline grid, chords between bars, lyrics below |
+| MIDI | CLI: `lysc midi file.lys file.mid` | ✅ | no source block |
 
-### 4. 音楽要素
-| 機能 | 構文 | 状況 | 備考 |
-|------|------|------|------|
-| 音符 | rc4 d8 e16r | ✅ | |
-| 休符 | rr4 r8r | ✅ | |
-| 和音 | r<c e g>4r | ✅ | |
-| オクターブ | rc' c''r / rc, c,,r | ✅ | |
-| 臨時記号 | rcis dis eesr | ✅ | |
-| 付点 | rc4. c4..r | ✅ | |
-| タイ | rc4~ c4r | ✅ | |
-| スラー | rc4( d e)r | ✅ | |
-| 連符 | rtuplet 3/2 { c8 d e }r | ✅ | |
-| 装飾音 | rgrace { c16 d }r | ✅ | |
-| 連桁 | 自動 / rc8[ d e f]r | ✅ | 手動制御対応 |
-
-### 5. アーティキュレーション/ダイナミクス
-| 機能 | 構文 | 状況 |
+### 4. Music elements
+| Feature | Syntax | Status |
 |------|------|------|
-| スタッカート | rc4@staccator | ✅ |
-| アクセント | rc4@accentr | ✅ |
-| フェルマータ | rc4@fermatar | ✅ |
-| テヌート | rc4@tenutor | ✅ |
-| マルカート | rc4@marcator | ✅ |
-| フォルテ | rc4@fr | ✅ |
-| ピアノ | rc4@pr | ✅ |
-| その他ダイナミクス | r@pp @ff @mf @mpr 等 | ✅ |
+| Notes / rests / spacer | `c4 d8 e16` / `r4` / `s4` / `R1` | ✅ |
+| Chords | `<c e g>4` | ✅ |
+| Octave / accidentals / dots | `c' c,` / `cis ees` / `c4. c4..` | ✅ |
+| Tie / slur | `c4~ c4` / `c4( d e)` — slurs bind chords too: `<c e>4( <d f>)` | ✅ |
+| Tuplets / grace | `tuplet 3/2 { c8 d e }` / `grace { c16 d } e4` | ✅ |
+| Beams | automatic, or manual `c8[ d e f]` | ✅ |
+| Multi-voice | `voice { … } voice { … }` (NOT `<< \\ >>`) | ✅ |
 
-### 6. リピート/ナビゲーション
-| 機能 | 構文 | 状況 |
+### 5. Annotations (`@name`, with optional `.up` / `.down`)
+| Feature | Syntax | Status |
 |------|------|------|
-| リピート | r\|: ... :\|r | ✅ |
-| 1st/2nd ending | r[1. A] [2. B]r | ✅ |
-| D.S. / D.C. | r@segno @coda @finer 等 | ✅ |
+| Articulations | `@staccato @accent @tenuto @marcato @fermata @portato` | ✅ |
+| Ornaments | `@trill @mordent @prall @turn @invertedturn` | ✅ |
+| Dynamics | `@p @f @mf …` (`@f.up` forces side) | ✅ |
+| Hairpins | `@cresc @decresc @dim` (no `.up`/`.down`) | ✅ |
+| Stem direction | `@stemUp` / `@stemDown` | ✅ |
+| Accidental style | `@courtesy` / `@editorial` | ✅ |
+| Arpeggio / glissando | `<c e g>4@arpeggio` / `c4@glissando d` | ✅ |
+| Figured bass / chord name | `c4@fig.6` / `c4@chord.C` | ✅ |
 
-### 7. その他
-| 機能 | 構文 | 状況 |
+### 6. Repeats / navigation
+| Feature | Syntax | Status |
 |------|------|------|
-| 歌詞 | rlyrics { Hap -- py }r | ✅ |
-| 複声部 | r<< { } \\ { } >>r | ✅ |
-| 段改行 | rbreakr | ✅ |
-| 楽曲記号 | r@segno @coda @finer | ✅ |
-| カスタムテキスト | r_"text"r | ✅ |
-| 変数参照 | r$namer | ✅ |
+| Repeat | `|: … :|` (count `:|*N`) | ✅ |
+| Volta endings | `[1. A] [2. B]` | ✅ |
+| Marks / spanners | `segno coda fine dc ds`, `@rit @accel`, `@ottava … @loco`, trill spanner, pedals | ✅ |
 
----
+### 7. Other
+| Feature | Syntax | Status |
+|------|------|------|
+| Lyrics | `lyrics { Hap- py birth- day | to you | }` | ✅ |
+| System break | `break` | ✅ |
+| Custom text | `_"text"` | ✅ |
+| Phrase / variable ref | `$name` | ✅ |
+| Override / revert | `override Stem.length = 7` / `revert …` / `once override …` | ✅ |

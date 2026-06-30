@@ -1,11 +1,21 @@
 # LilySharp (.lys) 文法設計
-> **STATUS (2026-06-10): historical design notes.** The grammar has moved on:
-> `repeat volta`/`alternative` were removed (use `|: … :|` (+`:|*N`) and `[1. …]`),
-> `phrase` is the sole named-music declaration, `@articulations` resolve via a
-> registry, and there is no MIDI block (MIDI comes from `lysc midi`).
-> For the current grammar see `docs/GRAMMAR.md` / `docs/SYNTAX_REFERENCE.md`.
-> The task lists in the bottom half of this file are stale (e.g. manual beams
-> ARE implemented).
+> **STATUS (updated 2026-07-01): historical design notes — kept for the design
+> rationale, NOT as a syntax reference.** Several concrete forms shown below are now
+> obsolete; the canonical concise spec is [`GRAMMAR_FOR_LLM.md`](GRAMMAR_FOR_LLM.md)
+> (formal EBNF: [`GRAMMAR.md`](GRAMMAR.md)).
+>
+> Out-of-date forms in the examples below:
+> - Part attributes are **bare** now (`clef treble`), not colon-form (`clef: treble`).
+> - Multi-voice is `voice { … } voice { … }`, **not** `<< … \\ … >>` (the latter is rejected).
+> - A score is `score "…" { staff name }` (bare `staff NAME`), **not** `render …` / `staff { name }`.
+> - Lyrics syllables join with a single `-` (`Hap- py`), not `--`.
+> - `repeat volta`/`alternative` were removed (use `|: … :|` (+`:|*N`) and `[1. …]`);
+>   `phrase` is the sole named-music declaration; there is no MIDI block (MIDI comes
+>   from `lysc midi`).
+>
+> The task lists in the bottom half of this file are stale (e.g. manual beams ARE
+> implemented). New since: staff-less lead sheets (`chords`/`lyrics` rows), slurs over
+> chords, `tempo … swing`, `@stemUp/@stemDown`, and `@name.up/.down` placement.
 
 ## 設計方針
 

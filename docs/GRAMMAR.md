@@ -1,6 +1,10 @@
 # Lily# Grammar Specification
-# Version: 0.5.0
-# Date: 2025-12-13
+# Version: 1.0.0
+# Date: 2026-07-01
+
+> The canonical, always-current single-file spec is [`GRAMMAR_FOR_LLM.md`](GRAMMAR_FOR_LLM.md)
+> (compressed, every example parse-verified). This file is the formal EBNF; when the two
+> disagree, `GRAMMAR_FOR_LLM.md` and the parser are authoritative.
 
 ## Design Principles
 
@@ -11,6 +15,11 @@
 5. LilyPond inspiration     - Inherit practical conventions, not Scheme complexity
 6. Section-oriented         - Organize by musical sections, not just by parts
 7. AI-friendly              - Unambiguous grammar for both human and AI authoring
+
+Lily# is **not** LilyPond. Backslash constructs are rejected — `\relative`,
+`\repeat volta`, `\new Staff`, `\version`, `<< … \\ … >>`, `\p`/`\f` dynamics, etc.
+The one annotation prefix is `@`; backslash is reserved for tablature only
+(`\3` string numbers, `\tuning`).
 
 ================================================================================
 ## 1. Lexical Grammar
@@ -28,62 +37,61 @@ Trivia         = { Whitespace | LineComment | BlockComment } ;
 Integer        = Digit , { Digit } ;
 Digit          = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' ;
 String         = '"' , { StringChar } , '"' ;
-StringChar     = any except '"' and '\'
-               | '\' , EscapeChar ;
-EscapeChar     = '"' | '\' | 'n' | 'r' | 't' ;
 
 ### Identifiers
 
 Identifier     = IdentStart , { IdentCont } ;
-IdentStart     = 'a'..'z' | 'A'..'Z' | '_' ;
+IdentStart     = UnicodeLetter | '_' ;          (* any Unicode letter, e.g. 動機 *)
 IdentCont      = IdentStart | Digit | '-' ;
 
 ### Pitch Names
 
 PitchBase      = 'c' | 'd' | 'e' | 'f' | 'g' | 'a' | 'b' ;
-Accidental     = 'is' | 'es' | 'isis' | 'eses'
-               | 'aes' | 'bes' ;
+Accidental     = 'is' | 'es' | 'isis' | 'eses' ;   (* sharp / flat / double *)
 OctaveUp       = { '\'' }+ ;
 OctaveDown     = { ',' }+ ;
 Octave         = OctaveUp | OctaveDown | ε ;
 PitchToken     = PitchBase , [ Accidental ] , Octave ;
 
-(* Octaves are always RELATIVE: each pitch lands in the octave nearest the previous
-   pitch, then any '/',' marks shift it. There is no absolute-octave mode and no
-   'relative'/'absolute' keyword; the octave resets to the part's base at each
-   section boundary. The ' and , marks adjust relative to that reckoning. *)
+(* Octaves are always RELATIVE: each bare pitch lands in the octave nearest the
+   previous pitch (an interval of a fourth or less), then any '/',' marks shift it.
+   There is NO absolute-octave mode and no 'relative'/'absolute' keyword; the octave
+   resets to the part's base at each section boundary and at each phrase call. *)
 
 ### Duration
 
-DurationBase   = '1' | '2' | '4' | '8' | '16' | '32' | '64' | '128'
-               | 'breve' | 'longa' ;
+DurationBase   = '1' | '2' | '4' | '8' | '16' | '32' | '64' | '128' ;
 Dots           = { '.' }+ ;
-Tremolo        = ':' , ( '8' | '16' | '32' ) ;    // Stem tremolo: 1-3 beams
+Tremolo        = ':' , ( '8' | '16' | '32' ) ;    (* stem tremolo: 1-3 beams *)
 DurationToken  = DurationBase , [ Dots ] , [ Tremolo ] ;
 
 ### Keywords
 
-StructureKeyword = 'part' | 'phrase' | 'section' | 'structure' | 'render'
-                 | 'staff' | 'grandStaff' | 'tab' | 'midi'
-                 | 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
-                 | 'instrument' | 'channel'
-                 | 'major' | 'minor' | 'dorian' | 'phrygian' | 'lydian'
-                 | 'mixolydian' | 'aeolian' | 'locrian'
-                 | 'treble' | 'bass' | 'alto' | 'tenor' | 'percussion'
-                 | 'r' | 's'
-                 ;
+Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
+        | 'part' | 'phrase' | 'section' | 'structure' | 'score'
+        | 'staff' | 'grandStaff' | 'tab' | 'tabStaff' | 'ossia' | 'voice'
+        | 'lyrics' | 'chords' | 'chordnames' | 'tuning' | 'instrument' | 'channel'
+        | 'transpose' | 'octave' | 'include' | 'use' | 'let' | 'break' | 'partial'
+        | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura'
+        | 'repeat' | 'volta' | 'alternative' | 'swing'
+        | 'override' | 'revert' | 'once'
+        | 'major' | 'minor' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
+        | 'aeolian' | 'locrian'
+        | 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8'
+        | 'segno' | 'fine' | 'coda' | 'dc' | 'ds' | 'al' | 'to'
+        | 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'f' | 'ff' | 'fff'
+        ;
 
-DynamicKeyword = '\p' | '\pp' | '\ppp' | '\mp'
-               | '\f' | '\ff' | '\fff' | '\mf'
-               | '\fp' | '\sf' | '\sfz' | '\rfz'
-               | '\cresc' | '\decresc' | '\dim'
-               ;
+(* The four clef-name words (treble bass alto tenor) ARE allowed as part / section /
+   phrase names. Single letters a-g are pitches; r / R / s are rests. Articulation,
+   ornament, dynamic-text and mark NAMES (staccato, tr, mordent, cresc, dim, …) are
+   resolved from the '@name' text and are NOT reserved. *)
 
 ### Operators & Punctuation
 
 Punctuation    = '{' | '}' | '(' | ')' | '<' | '>' | '[' | ']'
-               | '|' | '~' | ':' | '=' | '/' | '@' | '_' | '\' | '-' | '.'
-               | '|:' | ':|' | ':|:'
+               | '|' | '~' | ':' | '=' | '/' | '@' | '_' | '\' | '-' | '.' | '$'
+               | '|:' | ':|' | ':|:' | '||' | '|.'
                ;
 
 ================================================================================
@@ -94,37 +102,36 @@ Punctuation    = '{' | '}' | '(' | ')' | '<' | '>' | '[' | ']'
 
 File           = { TopLevelItem } ;
 
-TopLevelItem   = MetadataDecl                     (* title, composer, etc. *)
+TopLevelItem   = MetadataDecl                     (* title, composer *)
                | GlobalSetting                    (* tempo, time, key *)
                | PartDecl                         (* part definitions *)
                | PhraseDecl                       (* reusable music fragments *)
                | SectionDecl                      (* musical sections - REQUIRED *)
-               | StructureDecl                    (* song form - REQUIRED *)
-               | RenderDecl                       (* output definitions - REQUIRED *)
+               | StructureDecl                    (* song form - optional *)
+               | ScoreDecl                        (* output definitions - REQUIRED *)
+               | OverrideDecl                     (* engraving overrides *)
                ;
 
 ### 2.2 Metadata
 
 MetadataDecl   = MetadataKey , String ;
-MetadataKey    = 'title' | 'composer' | 'arranger' | 'copyright' ;
-
-(* Example:
-   title "My Song"
-   composer "John Doe"
-*)
+MetadataKey    = 'title' | 'composer' ;
 
 ### 2.3 Global Settings
 
 GlobalSetting  = TempoDecl | TimeDecl | KeyDecl ;
 
-TempoDecl      = 'tempo' , Integer ;
+TempoDecl      = 'tempo' , Integer , [ 'swing' , [ Integer ] ] ;
+                 (* 'tempo 120 swing' draws a shuffle-feel equation; 'swing 16' = 16th swing *)
 TimeDecl       = 'time' , Integer , '/' , Integer ;
-KeyDecl        = 'key' , PitchToken , Mode ;
+KeyDecl        = 'key' , PitchBase , [ Accidental-text ] , Mode ;
 
 Mode           = 'major' | 'minor' | 'dorian' | 'phrygian'
                | 'lydian' | 'mixolydian' | 'aeolian' | 'locrian' ;
 
 (* Example:
+   title "My Song"
+   composer "Jane Doe"
    tempo 120
    time 4/4
    key c major
@@ -134,268 +141,165 @@ Mode           = 'major' | 'minor' | 'dorian' | 'phrygian'
 ## 3. Part Definition
 ================================================================================
 
-(* Parts define instruments/voices with their properties *)
+(* Parts declare instruments/voices. Header attributes are written BARE — the same
+   command form as the top-level commands (NO colon, NO '='). *)
 
 PartDecl       = 'part' , Identifier , [ PartBody ] ;
-
 PartBody       = '{' , { PartProperty } , '}' ;
+PartProperty   = 'clef'       , ClefName
+               | 'instrument' , ( Identifier | String )
+               | 'channel'    , Integer
+               | 'octave'     , ( 'absolute' | 'relative' )
+               | 'transpose'  , PitchToken
+               | 'tuning'     , Identifier ;
 
-(* Every part-header attribute is colon-form ('name: value'). time and tempo keep
-   their richer value grammars but still take the colon, like the simple keys. *)
-PartProperty   = SimpleKey , ':' , PropertyValue
-               | 'time'  , ':' , TimeValue            (* e.g. time: 4/4 *)
-               | 'tempo' , ':' , TempoValue ;         (* e.g. tempo: 120 *)
-
-SimpleKey      = 'clef' | 'instrument' | 'channel' | 'tuning' | 'octave' ;
-
-PropertyValue  = Identifier | String | Integer ;
+ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' ;
 
 (* Examples:
 
-   // Minimal
-   part melody
-
-   // With properties
-   part melody {
-     clef: treble
-     time: 4/4
-     tempo: 120
-     instrument: "Violin"
-   }
-
-   part bass {
-     clef: bass
-     instrument: "Cello"
-     channel: 2
-   }
-
-   part guitar {
-     clef: treble
-     instrument: "Acoustic Guitar"
-     tuning: standard
-   }
+   part melody                        // minimal
+   part melody { clef treble }        // bare attribute, no colon
+   part bass   { clef bass  instrument "Cello" channel 2 }
 *)
 
 ================================================================================
 ## 4. Phrase Definition
 ================================================================================
 
-(* Reusable music fragments - must be defined before use *)
-(* Phrases may NOT contain key/tempo/time/clef changes - pure music only *)
+(* Reusable music fragments, referenced as $name. Defined before use. A phrase body
+   evaluates in a fresh frame (default octave/pitch/duration), so $name means the same
+   notes at every call. *)
 
 PhraseDecl     = 'phrase' , Identifier , MusicBlock ;
 
 (* Example:
    phrase theme { c4 d e f | g a b c' | }
-   phrase ending { g4 f e d | c1 | }
+   section Main { melody { $theme g2 g | } }
 *)
 
 ================================================================================
 ## 5. Section Definition
 ================================================================================
 
-(* Musical sections - at least one required *)
+(* Musical sections bind music to each part by name. At least one is required. *)
 
 SectionDecl    = 'section' , Identifier , '{' , { SectionItem } , '}' ;
 
 SectionItem    = SectionSetting
-               | PartBlock
-               | LyricsBlock
+               | PartBlock                        (* partName MusicBlock *)
+               | VoiceBlock                       (* multi-voice on one staff *)
+               | LyricsBlock                      (* note-bound OR named row *)
+               | ChordsBlock                      (* note-aligned OR named chord row *)
                ;
 
 SectionSetting = KeyDecl | TempoDecl | TimeDecl ;
 
 PartBlock      = Identifier , MusicBlock ;
 
-(* Lyrics blocks - multiple allowed for verses *)
-LyricsBlock    = 'lyrics' , '{' , { LyricMeasure } , '}' ;
+(* Note-bound lyrics align to the SAME part's notes. A NAMED lyrics/chords block
+   (with an identifier before the brace) is an independent ROW placed in a score with
+   'lyrics NAME' / 'chords NAME' — see §7 (lead sheets). *)
+LyricsBlock    = 'lyrics' , [ Identifier ] , '{' , { LyricMeasure } , '}' ;
 LyricMeasure   = { LyricSyllable } , '|' ;
-LyricSyllable  = LyricText
-               | '~' | '～'      (* melisma continuation *)
-               | '_'               (* rest/skip *)
-               ;
-LyricText      = { any except whitespace | '|' | '{' | '}' } , [ '-' ] ;
+LyricSyllable  = LyricText | '~' | '_' ;          (* '-' suffix joins one word's syllables *)
+
+ChordsBlock    = ( 'chordnames' | 'chords' ) , [ Identifier ] , '{' , { ChordEntry | Barline } , '}' ;
+ChordEntry     = PitchBase , [ Accidental-text ] , [ DurationToken ] , [ ':' , Quality ] , [ '/' , PitchBase ] ;
+                 (* c=C, a:m=Am, g:7=G7, g:m7.5-=Gm7b5, c/g=C over a G bass *)
 
 (* Example:
-   section Intro {
-     melody { c4 d e f | g a b c' | }
-     bass { c2 g2 | c2 g2 | }
-   }
-
    section Verse {
      key g major
-     tempo 140
-     melody { c4 d4 e4 f4 | g2 g2 | a1 | }
-     lyrics { き ら き ら | ひ か | る | }
-     lyrics { ま ば た き | し て | は | }
+     melody { c4 d e f | g2 g | }
+     lyrics { Twin- kle twin- kle | lit- tle star | }
    }
+*)
 
-   (* Lyric notation: *)
-   (* - space separates syllables (each maps to next note) *)
-   (* - hyphen at end connects syllables: "twi-" "nkle" *)
-   (* - ~ starts melisma (syllable extends to next note) *)
-   (* - ～ continues melisma *)
-   (* - _ skips a note (rest or no lyric) *)
+### 5.1 Multi-voice (one staff)
+
+VoiceBlock     = 'voice' , [ Identifier ] , MusicBlock , { 'voice' , [ Identifier ] , MusicBlock } ;
+
+(* Example (each voice { } is a simultaneous voice; NOT the LilyPond '<< \\ >>' form):
+   section Main { piano { voice { c'2 d } voice { e2 f } } }
+   // A named voice binds its own lyrics: voice sop { … }  +  lyrics sop { … }
 *)
 
 ================================================================================
 ## 6. Structure Definition
 ================================================================================
 
-(* Song form with repeat signs - REQUIRED, exactly one per file *)
-(* Structure defines the visual appearance of the score *)
-(* Only section references allowed - no inline music { } *)
+(* Song form: print/playback order of sections. Optional — omitting it plays sections
+   in declaration order. Only section references and navigation marks (no inline music). *)
 
 StructureDecl  = 'structure' , '{' , { StructureItem } , '}' ;
 
-StructureItem  = SectionRef
-               | SilentSectionRef
-               | RepeatBlock
-               | VoltaBlock
-               | MusicMark
-               | CustomText
+StructureItem  = SectionRef                        (* Identifier — shows the section label *)
+               | '~' , Identifier                  (* same section, no label *)
+               | String                            (* custom label for the preceding/section *)
+               | NavMark                            (* segno / coda / fine / dc / ds / to coda *)
+               | '_' , String                       (* custom text directive *)
                ;
 
-### 6.1 Section References
+NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
+               | 'dc' [ 'al' ( 'fine' | 'coda' ) ]
+               | 'ds' [ 'al' ( 'fine' | 'coda' ) ] ;
 
-SectionRef       = Identifier ;                   (* displays section label *)
-SilentSectionRef = '~' , Identifier ;             (* no label displayed *)
+(* Section reuse and a custom label:
+   structure { Intro Verse Verse "Verse (reprise)" Coda } *)
 
-(* Example:
-   structure {
-     Intro                // "Intro" label displayed
-     Verse                // "Verse" label displayed
-     ~Verse               // same section, no label
-   }
-*)
-
-### 6.2 Repeat Blocks
-
-RepeatBlock    = '|:' , { StructureItem } , ':|' , [ RepeatCount ] ;
-
-RepeatCount    = 'x' , Integer ;                  (* default: x2 *)
-
-(* Example:
-   |: Verse Chorus :|           // repeat 2 times (default)
-   |: Verse Chorus :| x3        // repeat 3 times
-*)
-
-### 6.3 Volta Blocks
-
-VoltaBlock     = '[' , VoltaSpec , '.' , StructureItem , ']' ;
-
-VoltaSpec      = VoltaNumber , { ',' , VoltaNumber }
-               | VoltaRange
-               ;
-
-VoltaNumber    = Integer ;
-VoltaRange     = Integer , '-' , Integer ;
-
-(* Example:
-   |: Verse [1. Bridge] [2. Chorus] :|
-   |: Verse [1,3. Bridge] [2,4. Coda] :| x4
-   |: Verse [1-3. Bridge] [4. Coda] :| x4
-*)
-
-### 6.4 Music Marks
-
-(* Predefined music symbols - position determined automatically *)
-
-MusicMark      = '@' , MarkName ;
-
-MarkName       = 'segno'                          (* 𝄋 - beginning, above *)
-               | 'coda'                           (* Coda - beginning, above *)
-               | 'fine'                           (* Fine - end, above *)
-               | 'ds'                             (* D.S. - end, above *)
-               | 'dc'                             (* D.C. - end, above *)
-               | 'ds.al" .fine'                    (* D.S. al Fine - end, above *)
-               | 'ds.al.coda'                     (* D.S. al Coda - end, above *)
-               | 'dc.al.fine'                     (* D.C. al Fine - end, above *)
-               | 'dc.al.coda'                     (* D.C. al Coda - end, above *)
-               | 'rit'                            (* rit. - end, below *)
-               | 'accel'                          (* accel. - end, below *)
-               | 'cresc'                          (* cresc. - end, below *)
-               | 'decresc'                        (* decresc. - end, below *)
-               | 'dim'                            (* dim. - end, below *)
-               ;
-
-(* Predefined mark positions:
-
-   | Mark           | Horizontal | Vertical |
-   |----------------|------------|----------|
-   | @segno         | beginning  | above    |
-   | @coda          | beginning  | above    |
-   | @fine          | end        | above    |
-   | @ds, @dc, etc. | end        | above    |
-   | @rit, @accel   | end        | below    |
-   | @cresc, etc.   | end        | below    |
-*)
-
-### 6.5 Custom Text
-
-(* Custom text with explicit position *)
-
-CustomText     = '_' , String ;                   (* end, below *)
-
-(* Example:
-   structure {
-     Intro
-     @segno
-     |: Verse [1. Bridge] [2. Chorus @fine] :|
-     Interlude _"molto rit."
-     @ds.al.fine
-   }
-*)
+(* Navigation: signs (segno/coda) engrave at the START of the following section; text
+   directives (fine, to coda, dc/ds, dc al fine, ds al coda) engrave at the END of the
+   section just played:
+   structure { A segno  B to coda  C ds al coda  coda D } *)
 
 ================================================================================
 ## 7. Score (Output) Definition
 ================================================================================
 
-(* A printable score = a visual layout. `score` is the keyword. The optional
-   string is the output BASENAME; its extension (if written) is ignored because
-   the file format is a CLI choice (lysc pdf|svg|png). Omitting it derives the
-   name from the input file. Multiple `score` blocks (with distinct basenames)
-   emit multiple files — e.g. a full score plus part extracts. *)
+(* A printable layout. 'score' is the keyword; the optional string is the output
+   basename. Multiple 'score' blocks emit multiple files. MIDI has NO source block —
+   it is a CLI output: `lysc midi song.lys song.mid`. *)
 
-ScoreDecl      = 'score' , [ String ] , ScoreBody ;
+ScoreDecl      = 'score' , [ String ] , '{' , [ StructureDecl ] , { ScoreItem } , '}' ;
 
-ScoreBody      = '{' , { ScoreItem } , '}' ;
+ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
+               | 'grandStaff' , '{' , { StaffRender } , '}'
+               | 'tab' , PartRef                     (* tablature: tab partName *)
+               | 'ossia' , '{' , PartRef , '}'       (* ossia { partName } *)
+               | 'chords' , PartRef                  (* independent chord ROW (lead sheet) *)
+               | 'lyrics' , PartRef                  (* independent lyrics ROW (lead sheet) *)
+               ;
 
-### 7.1 Score Layout
-
-ScoreItem      = StaffRender | GrandStaffRender | TabRender ;
-
-StaffRender    = 'staff' , '{' , PartRef , '}' ;
-
-GrandStaffRender = 'grandStaff' , '{' , { StaffRender } , '}' ;
-
-TabRender      = 'tab' , '{' , PartRef , '}' ;
-
+StaffRender    = 'staff' , [ ClefName ] , PartRef ;
 PartRef        = Identifier ;
 
-(* Example:
-   score "full-score" {
-     staff { melody }
-     staff { bass }
+(* A 'score' may carry its OWN 'structure { … }' to render a different arrangement
+   (e.g. a practice excerpt); it overrides the top-level structure for that score only. *)
+
+(* Examples:
+
+   score "full" {
+     grandStaff { staff rightHand  staff leftHand }
    }
 
-   score "piano" {
-     grandStaff {
-       staff { rightHand }
-       staff { leftHand }
-     }
-   }
+   score practice { structure { Intro } staff melody }
 *)
 
-### 7.2 MIDI Export
+### 7.1 Lead sheets (chords and/or lyrics, no staff)
 
-(* There is NO MIDI block in the source. MIDI is a different KIND of output
-   (audio, not a file-format of the visual score), exported by the CLI directly
-   from the music tree:
+(* A 'chords NAME { … }' / 'lyrics NAME { … }' part placed in a score with
+   'chords NAME' / 'lyrics NAME' (instead of 'staff NAME') renders WITHOUT a staff:
+   a grid of measure barlines, chord symbols between the bars (at their timing), and
+   lyrics below. Source barlines ( | |: :| || |. ) are drawn. *)
 
-     lysc midi song.lys song.mid
-
-   Per-part channel/instrument options are not part of the language today. *)
+(* Example:
+   section Main {
+     chords prog  { c2 g:7 | a:m f | c1 :| }
+     lyrics words { Twin- kle | lit- tle | star | }
+   }
+   structure { Main }
+   score "sheet" { chords prog lyrics words }
+*)
 
 ================================================================================
 ## 8. Music Expression
@@ -405,228 +309,139 @@ PartRef        = Identifier ;
 
 MusicBlock     = '{' , { MusicItem } , '}' ;
 
-MusicItem      = Note
-               | Rest
-               | Chord
-               | Barline
-               | InlineVolta
-               | PhraseRef
-               | ParallelExpr
-               | Slur
-               | Tie
-               | Beam
-               | MidMusicCommand
-               ;
+MusicItem      = Note | Rest | Chord | Barline | InlineVolta | PhraseRef
+               | Slur | Tie | Beam | Tuplet | Grace | MidMusicCommand ;
 
-(* Mid-music commands change context at this point in the stream. clef/key/time
-   here are the bare COMMAND form (no colon) — DISTINCT from the part-header
-   attribute form 'clef: treble' (with colon). The header form sets a part's
-   initial value; the command form changes it mid-music. Both are intentional and
-   each is consistent within its context (header = 'name: value', music = command). *)
-MidMusicCommand = 'clef' , Identifier                 (* clef bass *)
-               | 'key' , PitchBase , ( 'major' | 'minor' )
-               | 'time' , Integer , '/' , Integer     (* time 4/4 *)
-               | Tuplet | Grace | 'break' ;
+(* Mid-music commands change context here. clef/key/time use the bare COMMAND form
+   (no colon) — distinct from a part header which uses the same bare form to set the
+   INITIAL value. *)
+MidMusicCommand = 'clef' , ClefName
+               | 'key' , PitchBase , [ Accidental-text ] , Mode
+               | 'time' , Integer , '/' , Integer
+               | 'partial' , DurationToken
+               | 'break' ;
 
 ### 8.2 Notes, Rests, Chords
 
-Note           = Pitch , [ Duration ] , { Articulation } ;
-
-Pitch          = PitchToken ;
-
-Duration       = DurationToken ;
-
-Rest           = RestType , [ Duration ] ;
-RestType       = 'r' | 's' | 'R' ;
-
-Chord          = '<' , Pitch , { Pitch } , '>' , [ Duration ] , { Articulation } ;
+Note           = PitchToken , [ DurationToken ] , { Annotation } ;
+Rest           = ( 'r' | 's' | 'R' ) , [ DurationToken ] , { Annotation } ;
+                 (* r = plain rest, s = invisible spacer, R = full-measure rest *)
+Chord          = '<' , ChordNote , { ChordNote } , '>' , [ DurationToken ] , { Annotation } ;
+ChordNote      = PitchToken , { Annotation } ;
 
 Barline        = '|' | '||' | '|.' | '|:' | RepeatEnd ;
-RepeatEnd      = ':|' , [ '*' , Integer ] ;           (* :|*N plays the span N times, default 2 *)
+RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2 *)
 
-(* First/second-time endings inside a |: … :| repeat. '[' followed by an integer is
-   a volta; otherwise '[' … ']' is a Beam group. *)
+(* First/second-time endings inside a |: … :| repeat. '[' followed by an integer is a
+   volta; otherwise '[' … ']' is a manual beam group. *)
 InlineVolta    = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , { MusicItem } , ']' ;
 Beam           = '[' | ']' ;
+PhraseRef      = '$' , Identifier ;
 
-PhraseRef      = Identifier ;
+### 8.3 Ties, Slurs, Beams
 
-### 8.3 Parallel Voices
+Tie            = '~' ;            (* same pitch across notes/barline: c4~ | c4 *)
+Slur           = '(' | ')' ;      (* over notes OR chords: c4( d e) , <c e>4( <d f>) *)
+Beam           = '[' | ']' ;      (* manual; beaming is automatic otherwise *)
 
-ParallelExpr   = '<<' , MusicBlock , { '\\' , MusicBlock } , '>>' ;
+### 8.4 Annotations (@name, attached to a note or chord)
 
-(* Example:
-   section Verse {
-     piano {
-       << { c'4 e' g' c'' } \\ { c4 e g c' } >>
-     }
-   }
-*)
+Annotation     = '@' , AnnotationName , [ Placement ] , [ '.' , AnnotationArg ] ;
+Placement      = '.up' | '.down' ;   (* force above / below; default is automatic *)
 
-### 8.4 Articulations & Dynamics
+(* The '@' prefix is the ONLY annotation prefix; '\name' is rejected (backslash is
+   tablature-only). AnnotationName is resolved from text — it is NOT a reserved keyword,
+   so names like 'tr' remain usable as identifiers. Categories: *)
 
-Articulation   = '@' , ArticulationName
-               | DynamicMark
-               ;
+(* - Articulations: @staccato @accent @tenuto @marcato @fermata @portato  (.up/.down ok)
+   - Ornaments:     @trill @mordent @prall @turn @invertedturn
+   - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff   (default below; @f.up forces side)
+   - Hairpins:      @cresc @decresc @dim  (start note → next dynamic; .up/.down REJECTED)
+   - Stem:          @stemUp @stemDown      (a beam's shared direction wins)
+   - Accidental:    @courtesy (cautionary) @editorial (musica ficta)
+   - Arpeggio:      <c e g>4@arpeggio
+   - Glissando:     c4@glissando d
+   - Figured bass:  c4@fig.6 , d4@fig.6.4
+   - Chord name:    c4@chord.C , d4@chord.Dm
+   - Marks/spanners: @mark.A @segno @coda @fine @dc @ds.al.fine @rit @accel
+                     @ottava … @loco , @startTrillSpan … @stopTrillSpan ,
+                     @ped … @ped.off *)
 
-(* ArticulationName is any identifier; it is resolved from text (not reserved as a
-   keyword), so abbreviations and full names both work and names like 'tr' stay
-   usable as ordinary identifiers. Known articulations/ornaments: *)
-ArticulationName = 'staccato' ('stac') | 'accent' ('acc') | 'tenuto' ('ten')
-               | 'marcato' ('marc') | 'fermata' ('ferm') | 'portato'
-               | 'trill' ('tr') | 'mordent' | 'prall' | 'turn'
-               | 'invertedturn' | 'pralltriller' ;
+(* Example: c4@staccato.up d4@accent@p <e g>4@arpeggio | *)
 
-(* Dynamics take '@' (preferred, consistent with articulations) or '\' *)
-DynamicMark    = ( '@' | '\' ) , DynamicLevel
-               | ( '@' | '\' ) , DynamicChange
-               ;
+### 8.5 Tuplets and Grace notes
 
-DynamicLevel   = 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'f' | 'ff' | 'fff' ;
-DynamicChange  = 'cresc' | 'decresc' | 'dim' ;
-
-### 8.5 Slurs & Ties
-
-Slur           = '(' | ')' ;
-Tie            = '~' ;
+Tuplet         = 'tuplet' , Integer , '/' , Integer , MusicBlock ;   (* nesting allowed *)
+Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' ) , MusicBlock ;
 
 ================================================================================
-## 9. Complete Example
+## 9. Override / Revert (engraving properties)
+================================================================================
+
+OverrideDecl   = [ 'once' ] , 'override' , Grob , '.' , Property , '=' , Integer
+               | 'revert' , Grob , '.' , Property ;
+
+(* Example:
+   override Stem.length = 7
+   c4 d e f |
+   revert Stem.length
+   once override Stem.length = 9     // applies to the next note only
+*)
+
+================================================================================
+## 10. Complete Example
 ================================================================================
 
 ```lilysharp
-// Metadata
-title "Rock Song"
-composer "John Doe"
-
-// Global settings
+title "Demo"
+composer "Jane Doe"
 tempo 120
 time 4/4
 key c major
 
-// Part definitions
-part guitar {
-  clef: treble
-  instrument: "Electric Guitar"
-}
-
-part bass {
-  clef: bass
-  instrument: "Bass Guitar"
-}
-
-// Reusable phrases
-phrase riff { e4 f g a | b c' d' e' | }
-phrase groove { c,4 g, c, g, | c, g, c, g, | }
-
-// Sections
-section Intro {
-  guitar { c4 d e f | g a b c' | }
-  bass { groove }
-}
+part melody { clef treble }
+phrase riff { c4 d e f | }
 
 section Verse {
-  guitar { riff | g4 a b c' | d' e' f' g' | }
-  bass { groove | e,4 b, e, b, | e, b, e, b, | }
+  melody { $riff | g4@p a( b c') | }
+  lyrics { Sing a song now | one two three four | }
 }
 
-section Chorus {
-  guitar { c'4\f b a g | f e d c | }
-  bass { c,4 g, c, g, | c,1 | }
+// A staff-less lead sheet (chords + lyrics, no notes):
+section Sheet {
+  chords prog  { c2 a:m |: f2 g:7 | c1 :| }
+  lyrics words { Twin- kle twin- kle | lit- tle | star | }
 }
 
-section Bridge {
-  key g major
-  guitar { g4 a b c' | d' e' fis' g' | }
-  bass { g,4 d, g, d, | g,4 d, g, d, | }
-}
+structure { Verse }
 
-section Outro {
-  tempo 100
-  guitar { c'1\p~ | c'1 | }
-  bass { c,1~ | c,1 | }
-}
-
-// Song structure
-structure {
-  Intro
-  @segno
-  |: Verse [1. Bridge] [2. Chorus @fine] :|
-  ~Verse
-  Outro _"molto rit."
-  @ds.al.fine
-}
-
-// Output definitions
-score "rocksong-full" {
-  staff { guitar }
-  staff { bass }
-}
-
-score "guitar-part" {
-  staff { guitar }
-}
+score "demo"  { staff melody }
+score "sheet" { structure { Sheet } chords prog lyrics words }
 ```
 
-MIDI export: `lysc midi rocksong.lys rocksong.mid` (no render block needed).
-
-================================================================================
-## 10. Symbol Summary
-================================================================================
-
-### Structure Symbols
-
-| Symbol     | Meaning                          | Example                |
-|------------|----------------------------------|------------------------|
-| `|: :|`    | Repeat block                     | `|: Verse :|`          |
-| `x3`       | Repeat count                     | `|: Verse :| x3`       |
-| `[1. ]`    | Volta (1st time)                 | `[1. Bridge]`          |
-| `[1,3. ]`  | Volta (1st and 3rd)              | `[1,3. Bridge]`        |
-| `[1-3. ]`  | Volta (1st through 3rd)          | `[1-3. Bridge]`        |
-| `@`        | Music mark                       | `@segno` `@fine`       |
-| `~`        | Silent section (no label)        | `~Verse`               |
-| `_"..."`   | Custom text (end, below)         | `_"molto rit."`        |
-
-### Music Mark Positions
-
-| Mark             | Horizontal | Vertical |
-|------------------|------------|----------|
-| `@segno`         | beginning  | above    |
-| `@coda`          | beginning  | above    |
-| `@fine`          | end        | above    |
-| `@ds` `@dc` etc. | end        | above    |
-| `@rit` `@accel`  | end        | below    |
-| `@cresc` etc.    | end        | below    |
+MIDI export: `lysc midi demo.lys demo.mid` (no score block needed).
 
 ================================================================================
 ## 11. Error Detection
 ================================================================================
 
-### Required Elements
+### Required / structural
 
-| Error        | Description                                    |
-|--------------|------------------------------------------------|
-| No section   | File must contain at least one `section` block |
-| Multiple structure | At most one `structure` block (omitting it plays sections in declaration order) |
-| No score     | File must contain at least one `score` block   |
-
-### Compile-time Errors
-
-| Error                | Description                                    |
-|----------------------|------------------------------------------------|
-| Undefined section    | Section referenced in structure but not defined|
-| Undefined phrase     | Phrase referenced but not defined              |
-| Undefined part       | Part referenced in render but not in sections  |
-| Inline music         | `{ }` in structure (not allowed)               |
-| Forward reference    | Phrase/section used before definition          |
-| Missing fine         | `@dc.al.fine` without `@fine`                  |
-| Missing segno        | `@ds` without `@segno`                         |
-| Missing coda         | `to coda` without `@coda`                      |
+| Error              | Description                                              |
+|--------------------|----------------------------------------------------------|
+| No section         | File must contain at least one `section` block           |
+| No score           | File must contain at least one `score` block             |
+| Multiple structure | At most one top-level `structure` block                  |
+| Inline music       | `{ }` music in `structure` (not allowed — section refs only) |
+| Undefined ref      | Section / phrase / part referenced but not defined       |
+| Forward reference  | Phrase used before its definition                        |
+| Missing fine/segno/coda | `dc al fine` without `fine`, `ds` without `segno`, `to coda` without `coda` |
 
 ### Warnings
 
-| Warning            | Description                                      |
-|--------------------|--------------------------------------------------|
-| Unused section     | Section defined but not in structure             |
-| Unused phrase      | Phrase defined but never referenced              |
-| Incomplete measure | Measure duration doesn't match time signature    |
+| Warning            | Description                                               |
+|--------------------|-----------------------------------------------------------|
+| Unused section     | Section defined but not in structure                      |
+| Unused phrase      | Phrase defined but never referenced                       |
+| Incomplete measure | Measure duration doesn't match the time signature         |
+| Excess lyrics      | More lyric syllables than notes in a bar (extras dropped) |
