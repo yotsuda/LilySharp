@@ -18,9 +18,23 @@
   → 多譜表では layout を100% skip しても速くならない＝**律速は layout(注釈含む)ではなく、毎編集走る collect + content-key(multi ~1.6ms) +
   ResolveDataPos(全注釈アレイ再構築) + render**。これらは reuse/full 両方が払う。per-system cache(S5-3c)が既に多譜表 layout を最小化済み。
 - **含意**: 道 C（per-system 注釈の段ごと化）は width-changing 編集の **annotation layout** を狙うが、上記より多譜表の annotation layout は
-  もはや律速でない（reuse で全 layout を消しても無益＝annotation 分を消しても無益）。**道 C は多譜表で低ペイオフの可能性が高い。**
-  多譜表をさらに速くするなら狙うべきは content-key 計算 / render / collect、または **ResolveDataPos を fresh render では skip**
-  （正常レンダは data-pos 既に正しい＝再導出不要。reuse 時のみ必要。これは安価で全レンダに効く最適化候補）。
+  もはや律速でない（reuse で全 layout を消しても無益＝annotation 分を消しても無益）。**道 C は多譜表で低ペイオフと確定。**
+
+### ResolveDataPos を fresh render で skip（`dee6a0f`）— 実装したが実効はノイズ内
+正常レンダ（Generate/Png/Pdf/snapshot/非reuse編集）は data-pos が既に正しい＝再導出不要なので `RenderTo` の `resolveDataPos` を
+既定 false 化し、reuse 時のみ true に（`IncrementalCompiler`）。**byte-identical（1851緑）。だが再計測で割当は前後で byte 単位完全同一**
+（multi width-changing 3164.04 KB が一致）＝ResolveDataPos の配列再構築は割当をほぼ消費しておらず、grammar-tour の注釈アレイは多くが
+empty で `ResolveArr` が早期 return するため。latency 改善も中央値でノイズ内。**＝正しく無駄ループは消すが律速でない。**
+
+### 再計測（`dee6a0f` 後、クリーン run、中央値/割当）
+| 編集 | reuse | full(width-changing) |
+|---|---|---|
+| 単一譜 | **1.22ms / 532KB** | 2.62ms / 3006KB |
+| 多譜表 | 7.45ms / 3142KB | 7.28ms / 3164KB |
+
+**結論（次の方針）**: 単一譜の content-unchanged 編集は reuse で明確に速い（恒久的成果）。多譜表をさらに速くする唯一の道は
+**毎編集の content-key 計算（multi ~1.6ms・3MB 割当の主因）/ collect / render を削る**こと。annotation layout（道 C の対象）は律速でない。
+→ B（whole-layout reuse）は一区切り。次に多譜表を攻めるなら content-key の増分化（編集された measure のキーだけ再計算）が本命。
 
 ## ★ B（whole-layout reuse）の注釈移行は **完了**（2026-06-30、コミット `e56dc23` まで）
 data-pos を出す全注釈型（計18型）を SourceIndex / note-locator 機構へ移行し、`IncrementalCompiler.ReuseSafe` は
