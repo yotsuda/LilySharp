@@ -32,9 +32,17 @@ empty で `ResolveArr` が早期 return するため。latency 改善も中央�
 | 単一譜 | **1.22ms / 532KB** | 2.62ms / 3006KB |
 | 多譜表 | 7.45ms / 3142KB | 7.28ms / 3164KB |
 
-**結論（次の方針）**: 単一譜の content-unchanged 編集は reuse で明確に速い（恒久的成果）。多譜表をさらに速くする唯一の道は
-**毎編集の content-key 計算（multi ~1.6ms・3MB 割当の主因）/ collect / render を削る**こと。annotation layout（道 C の対象）は律速でない。
-→ B（whole-layout reuse）は一区切り。次に多譜表を攻めるなら content-key の増分化（編集された measure のキーだけ再計算）が本命。
+### content-key の実コストを単離計測（`ContentKeyBenchmark`）— **「1.6ms/3MB」は誤りだった**
+`MeasureContentKey.Compute(MultiStaffScore)` 単体: **多譜表 377µs / 191KB、単一譜 72µs / 37KB**（クリーン run、N=15-17、StdDev<2%）。
+旧メモの「multi ~1.6ms・3MB」は誤り（S5-3b 当時の別測定か reflection warmup 込みか）。**content-key は多譜表 ~7.3ms 編集の僅か ~5%・割当の ~6%
+＝律速でない**。→ **content-key 増分化は低ペイオフ。実装しない（測ってから決める方針の成果）。**
+
+**結論（B は一区切り・以降の最適化は低価値と判明）**:
+- 単一譜の content-unchanged 編集は reuse で明確に速い（**恒久的成果**、レイテンシ~53%減・割当~82%減）。
+- 多譜表 ~7.3ms 編集の内訳: collect ~1.1ms + render ~2.2ms + springs/gate + content-key 0.38ms + 残layout(per-system cache後) + GC。
+  **単一の支配コストは無く**（S4b/S5-3/B が layout 律速を解消済み）、残るは collect と render＝**増分 collect / 増分 render という遥かに大きな
+  アーキテクチャ変更なしには削れない**。道 C も content-key 増分化も ResolveDataPos skip も、いずれも低価値と実測で確認。
+- → **F3/B はここで自然な達成点。** さらに攻めるなら collect か render の増分化（別の大型プロジェクト）。
 
 ## ★ B（whole-layout reuse）の注釈移行は **完了**（2026-06-30、コミット `e56dc23` まで）
 data-pos を出す全注釈型（計18型）を SourceIndex / note-locator 機構へ移行し、`IncrementalCompiler.ReuseSafe` は
