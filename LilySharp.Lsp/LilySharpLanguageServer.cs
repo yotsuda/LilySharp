@@ -620,21 +620,21 @@ public sealed class LilySharpLanguageServer
         {
             Items =
             [
-                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertText = "score {\n\t$0\n}", Detail = "Score block" },
-                new CompletionItem { Label = "part", Kind = CompletionItemKind.Keyword, InsertText = "part $1 {\n\t$0\n}", Detail = "Part declaration" },
-                new CompletionItem { Label = "section", Kind = CompletionItemKind.Keyword, InsertText = "section $1 {\n\t$0\n}", Detail = "Section declaration" },
-                new CompletionItem { Label = "phrase", Kind = CompletionItemKind.Keyword, InsertText = "phrase $1 {\n\t$0\n}", Detail = "Reusable phrase" },
-                new CompletionItem { Label = "structure", Kind = CompletionItemKind.Keyword, InsertText = "structure { $0 }", Detail = "Playback order" },
-                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertText = "score {\n\t$0\n}", Detail = "Printable score (visual layout)" },
-                new CompletionItem { Label = "title", Kind = CompletionItemKind.Keyword, InsertText = "title \"$0\"", Detail = "Title metadata" },
-                new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertText = "composer \"$0\"", Detail = "Composer metadata" },
-                new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertText = "tempo $0", Detail = "Tempo (BPM)" },
-                new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertText = "time $0", Detail = "Time signature" },
-                new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertText = "key $0", Detail = "Key signature" },
-                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertText = "clef $0", Detail = "Clef (treble/bass/alto/tenor)" },
-                new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertText = "override $1.$2 = $0", Detail = "Override grob property" },
-                new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertText = "revert $1.$0", Detail = "Revert grob property" },
-                new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertText = "once override $1.$2 = $0", Detail = "One-time override" },
+                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "score {\n\t$0\n}", Detail = "Score block" },
+                new CompletionItem { Label = "part", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "part $1 {\n\t$0\n}", Detail = "Part declaration" },
+                new CompletionItem { Label = "section", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "section $1 {\n\t$0\n}", Detail = "Section declaration" },
+                new CompletionItem { Label = "phrase", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "phrase $1 {\n\t$0\n}", Detail = "Reusable phrase" },
+                new CompletionItem { Label = "structure", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "structure { $0 }", Detail = "Playback order" },
+                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "score {\n\t$0\n}", Detail = "Printable score (visual layout)" },
+                new CompletionItem { Label = "title", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "title \"$0\"", Detail = "Title metadata" },
+                new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "composer \"$0\"", Detail = "Composer metadata" },
+                new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Tempo (BPM)" },
+                new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Time signature" },
+                new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Key signature" },
+                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "clef $0", Detail = "Clef (treble/bass/alto/tenor)" },
+                new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $1.$2 = $0", Detail = "Override grob property" },
+                new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $1.$0", Detail = "Revert grob property" },
+                new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $1.$2 = $0", Detail = "One-time override" },
                 new CompletionItem { Label = "render", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "render score {\n\t${1|staff,grandStaff|} {\n\t\t$0\n\t}\n}", Detail = "Output layout declaration" },
                 new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics {\n\t$0\n}", Detail = "Lyrics block" },
                 new CompletionItem { Label = "piano", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "title \"${1:Title}\"\ntempo ${2:120}\ntime ${3:4/4}\nkey ${4:c} ${5|major,minor|}\n\npart rightHand { clef treble }\npart leftHand { clef bass }\n\nsection ${6:Main} {\n\trightHand { ${7:c'4 d' e' f' | g'2 g' |} }\n\tleftHand  { ${8:c2 g, | c g, |} }\n}\n\nrender score {\n\tgrandStaff {\n\t\tstaff treble { rightHand }\n\t\tstaff bass { leftHand }\n\t}\n}\n\nstructure { ${6:Main} }", Detail = "Grand staff (piano) score scaffold" }
@@ -697,21 +697,21 @@ public sealed class LilySharpLanguageServer
                 // Structures
                 new CompletionItem { Label = "|: :|", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "|: $0 :|", Detail = "Volta repeat (symbolic; add endings [1. …] [2. …])", SortText = "2repeat" },
                 new CompletionItem { Label = "|: :| [1.][2.]", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "|: $1 [1. $2 ] :| [2. $0 ]", Detail = "Volta repeat with endings", SortText = "2repeatalt" },
-                new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertText = "repeat unfold 2 {\n\t$0\n}", Detail = "Repeat block (unfold/percent/tremolo)", SortText = "2repeatkw" },
-                new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "2tuplet" },
-                new CompletionItem { Label = "grace", Kind = CompletionItemKind.Keyword, InsertText = "grace { $0 }", Detail = "Grace notes", SortText = "2grace" },
-                new CompletionItem { Label = "acciaccatura", Kind = CompletionItemKind.Keyword, InsertText = "acciaccatura { $0 }", Detail = "Slashed grace note", SortText = "2acciaccatura" },
-                new CompletionItem { Label = "appoggiatura", Kind = CompletionItemKind.Keyword, InsertText = "appoggiatura { $0 }", Detail = "Unslashed grace note", SortText = "2appoggiatura" },
+                new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat unfold 2 {\n\t$0\n}", Detail = "Repeat block (unfold/percent/tremolo)", SortText = "2repeatkw" },
+                new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "2tuplet" },
+                new CompletionItem { Label = "grace", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "grace { $0 }", Detail = "Grace notes", SortText = "2grace" },
+                new CompletionItem { Label = "acciaccatura", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "acciaccatura { $0 }", Detail = "Slashed grace note", SortText = "2acciaccatura" },
+                new CompletionItem { Label = "appoggiatura", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "appoggiatura { $0 }", Detail = "Unslashed grace note", SortText = "2appoggiatura" },
 
                 // Mid-measure declarations
-                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertText = "clef $0", Detail = "Change clef", SortText = "3clef" },
-                new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertText = "key $0", Detail = "Change key signature", SortText = "3key" },
-                new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertText = "time $0", Detail = "Change time signature", SortText = "3time" },
+                new CompletionItem { Label = "clef", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "clef $0", Detail = "Change clef", SortText = "3clef" },
+                new CompletionItem { Label = "key", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "key $0", Detail = "Change key signature", SortText = "3key" },
+                new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "3time" },
 
                 // Grob overrides
-                new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertText = "override $1.$2 = $0", Detail = "Override grob property", SortText = "4override" },
-                new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertText = "revert $1.$0", Detail = "Revert grob property", SortText = "4revert" },
-                new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertText = "once override $1.$2 = $0", Detail = "One-time override", SortText = "4once" }
+                new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $1.$2 = $0", Detail = "Override grob property", SortText = "4override" },
+                new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $1.$0", Detail = "Revert grob property", SortText = "4revert" },
+                new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $1.$2 = $0", Detail = "One-time override", SortText = "4once" }
         });
 
         // Chord note-expansion: a chord symbol the user is typing (cmaj7, am, g7)
