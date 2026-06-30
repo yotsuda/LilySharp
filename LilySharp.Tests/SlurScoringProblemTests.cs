@@ -24,15 +24,8 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class SlurScoringProblemTests
 {
-    private static NoteItem CreateNote(int staffPosition) =>
-        new(staffPosition, Fraction.Quarter, 0, null, false, 0);
-
-    private static SlurItem CreateSlur(int startPos, int endPos, bool curveUp = true)
-    {
-        var startNote = CreateNote(startPos);
-        var endNote = CreateNote(endPos);
-        return new SlurItem(startNote, endNote, startPos, endPos, curveUp, 0, 0, 0, 1);
-    }
+    private static SlurItem CreateSlur(int startPos, int endPos, bool curveUp = true) =>
+        new(startPos, endPos, curveUp, 0, 0, 0, 1);
 
     [Fact]
     public void Solve_ReturnsValidLayout()

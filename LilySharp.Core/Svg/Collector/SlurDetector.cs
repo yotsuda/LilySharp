@@ -54,8 +54,6 @@ public sealed class SlurDetector
                     bool curveUp = !StemUpOf(startItem);
 
                     slurs.Add(new SlurItem(
-                        startItem as NoteItem,
-                        item as NoteItem,
                         // For a chord the slur anchors at the head on the curve side.
                         MusicItem.EdgeStaffPosition(startItem, curveUp) ?? 0,
                         MusicItem.EdgeStaffPosition(item, curveUp) ?? 0,
