@@ -247,7 +247,13 @@ time 2/2          % Cut time
 ```
 tempo 120              % Quarter = 120 BPM
 tempo "Allegro" 4 = 120   % With text marking
+tempo 120 swing        % + swing/shuffle feel equation beside the mark
 ```
+
+Adding `swing` (or `shuffle`) after the tempo draws the swing-eighths equation —
+straight eighths = a beamed dotted-eighth + eighth under a triplet `3` — to the
+right of the metronome mark, the way shuffle charts are headed. The words are
+contextual, not reserved, so `swing` / `shuffle` stay usable as your own names.
 
 ## Metadata
 

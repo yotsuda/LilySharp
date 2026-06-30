@@ -78,6 +78,10 @@ public sealed record Score
     /// <summary>Tempo in BPM (optional).</summary>
     public int? Tempo { get; }
 
+    /// <summary>Whether the initial tempo asked for a swing/shuffle feel indicator
+    /// (the swing-eighths equation drawn beside the metronome mark).</summary>
+    public bool SwingTempo { get; }
+
     /// <summary>Title (optional).</summary>
     public string? Title { get; }
 
@@ -170,8 +174,9 @@ public sealed record Score
         ImmutableArray<GrobOverride>? grobOverrides = null,
         ImmutableArray<GrobRevert>? grobReverts = null,
         ImmutableArray<TrillSpannerItem>? trillSpanners = null,
-        HeaderPositions header = default)
-        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts, voltaBrackets, tupletBrackets, arpeggios, figuredBasses, chordNames, percentRepeats, crossStaffItems, grobOverrides, grobReverts, trillSpanners, header)
+        HeaderPositions header = default,
+        bool swingTempo = false)
+        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts, voltaBrackets, tupletBrackets, arpeggios, figuredBasses, chordNames, percentRepeats, crossStaffItems, grobOverrides, grobReverts, trillSpanners, header, swingTempo)
     {
     }
 
@@ -203,7 +208,8 @@ public sealed record Score
         ImmutableArray<GrobOverride>? grobOverrides = null,
         ImmutableArray<GrobRevert>? grobReverts = null,
         ImmutableArray<TrillSpannerItem>? trillSpanners = null,
-        HeaderPositions header = default)
+        HeaderPositions header = default,
+        bool swingTempo = false)
     {
         if (voices.Length == 0)
             throw new ArgumentException("Score must have at least one voice", nameof(voices));
@@ -213,6 +219,7 @@ public sealed record Score
         KeySignature = keySignature;
         Clef = clef;
         Tempo = tempo;
+        SwingTempo = swingTempo;
         Title = title;
         Composer = composer;
         Dynamics = dynamics ?? ImmutableArray<DynamicItem>.Empty;

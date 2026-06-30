@@ -536,17 +536,22 @@ internal sealed class Parser
         SyntaxToken? colon = ConsumeRejectedColon();
         var valueTokens = new List<GreenNode?>();
 
-        // Collect value tokens: "marking" duration = bpm
+        // Collect value tokens: "marking" duration = bpm, plus an optional trailing
+        // 'swing' / 'shuffle' feel word (kept as a value token; the red node reads it
+        // via IsSwing). These are NOT reserved words, so they stay usable as names.
         while (Check(SyntaxKind.StringLiteral) ||
                Check(SyntaxKind.IntegerLiteral) ||
                Check(SyntaxKind.DurationNumber) ||
-               Check(SyntaxKind.Equals))
+               Check(SyntaxKind.Equals) ||
+               (Check(SyntaxKind.Identifier) && IsSwingWord(Current.Text)))
         {
             valueTokens.Add(Advance());
         }
 
         return new TempoDeclarationGreen(tempoKeyword, colon, [.. valueTokens]);
     }
+
+    private static bool IsSwingWord(string text) => text is "swing" or "shuffle";
 
     // partial <duration> — declares the following measure a pickup (anacrusis)
     // of the given length. The value reuses the note-duration grammar (number +

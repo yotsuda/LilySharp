@@ -396,7 +396,7 @@ public sealed class LayoutEngine
         var primaryScore = new Score(
             primaryStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
             ClefToString(primaryStaff.Clef), score.Tempo, score.Title, score.Composer,
-            tupletBrackets: score.TupletBrackets);
+            tupletBrackets: score.TupletBrackets, swingTempo: score.SwingTempo);
 
         // Per-staff lookups so a dynamic is positioned under its OWN staff (clears
         // that staff's stems) and offset to it — score-level dynamics otherwise all

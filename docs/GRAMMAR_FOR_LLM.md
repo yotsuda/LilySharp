@@ -14,7 +14,7 @@ with `|`.
 ```
 title "Song"            // optional metadata
 composer "Composer"     // optional
-tempo 120               // optional, quarter = BPM
+tempo 120               // optional, quarter = BPM ('tempo 120 swing' adds a shuffle-feel equation)
 time 4/4                // optional (default 4/4)
 key c major             // optional (default c major)
 

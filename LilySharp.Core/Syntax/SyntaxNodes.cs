@@ -633,6 +633,22 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
     }
 
     /// <summary>
+    /// True if a 'swing' / 'shuffle' feel word follows the tempo (e.g. <c>tempo 120 swing</c>),
+    /// requesting the swing-eighths equation drawn beside the metronome mark.
+    /// </summary>
+    public bool IsSwing
+    {
+        get
+        {
+            foreach (var value in Values)
+                if (value is SyntaxTokenNode t && t.Kind == SyntaxKind.Identifier &&
+                    (t.Text == "swing" || t.Text == "shuffle"))
+                    return true;
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Gets the BPM value, if present.
     /// </summary>
     public int? Bpm

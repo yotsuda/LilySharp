@@ -127,6 +127,10 @@ public sealed record MusicMarkItem
     /// <summary>The type of music mark.</summary>
     public MusicMarkType Type { get; }
 
+    /// <summary>For a <see cref="MusicMarkType.Tempo"/> mark, whether to draw the
+    /// swing-eighths feel equation beside the metronome mark.</summary>
+    public bool TempoSwing { get; init; }
+
     /// <summary>The text representation of this mark.</summary>
     public string Text { get; }
 

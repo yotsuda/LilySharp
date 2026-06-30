@@ -3053,6 +3053,48 @@ public static class SharedRenderer
         }
     }
 
+    /// <summary>
+    /// Draws the swing/shuffle feel equation beside a tempo mark: two beamed straight
+    /// eighths "=" a beamed dotted-eighth + eighth under a triplet "3". Hand-built from
+    /// the same notehead/stem/beam primitives the metronome mark itself uses.
+    /// </summary>
+    private static void DrawSwingEquation(IDrawingContext gc, double startX, double baselineY)
+    {
+        const double ns = 1.0;           // small notehead size
+        const double headGap = 0.95;     // x between the two heads of a pair
+        const double stemUp = 1.3;       // stem height (upward)
+        const double stemDx = ns * 0.32; // stem offset from head origin (right side)
+        const double eqSize = 1.6;
+        const double threeSize = 1.0;
+
+        // Draws one beamed eighth pair at px; returns the x just past it.
+        double DrawPair(double px, bool dotted, bool withThree)
+        {
+            double h1 = px;
+            double h2 = px + headGap + (dotted ? ns * 0.5 : 0);
+            gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, h1, baselineY, ns);
+            gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, h2, baselineY, ns);
+            if (dotted)
+                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, h1 + ns * 0.62, baselineY, ns);
+            double s1 = h1 + stemDx;
+            double s2 = h2 + stemDx;
+            double beamY = baselineY - stemUp;
+            gc.DrawLine(s1, baselineY, s1, beamY, Color.Black, 0.10);
+            gc.DrawLine(s2, baselineY, s2, beamY, Color.Black, 0.10);
+            DrawBeamSegment(s1, beamY, s2, beamY, gc);
+            if (withThree)
+                gc.DrawText("3", (s1 + s2) / 2, beamY - 0.25, threeSize, "serif",
+                    FontStyle.Regular, TextAnchor.Middle, Color.Black);
+            return s2 + ns * 0.4;
+        }
+
+        double x = DrawPair(startX, dotted: false, withThree: false);
+        x += 0.3;
+        gc.DrawText("=", x, baselineY, eqSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
+        x += SerifTextMetrics.MeasureBold("=", eqSize) + 0.4;
+        DrawPair(x, dotted: true, withThree: true);
+    }
+
     private static void DrawSingleMusicMark(MusicMarkLayout m, double absY, IDrawingContext gc)
     {
         if (m.IsSymbol)
@@ -3076,8 +3118,14 @@ public static class SharedRenderer
             double stemX = m.X + noteSize * 0.32;
             double stemTop = absY - 3.5 * (noteSize / FontSize);
             gc.DrawLine(stemX, absY, stemX, stemTop, Color.Black, 0.10);
-            gc.DrawText("= " + m.Text, m.X + noteSize * 0.5 + 0.3, absY,
+            double tempoTextX = m.X + noteSize * 0.5 + 0.3;
+            gc.DrawText("= " + m.Text, tempoTextX, absY,
                 textSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
+            if (m.TempoSwing)
+            {
+                double textEnd = tempoTextX + SerifTextMetrics.MeasureBold("= " + m.Text, textSize);
+                DrawSwingEquation(gc, textEnd + 0.8, absY);
+            }
             return;
         }
         if (m.MarkType == MusicMarkType.Rehearsal || m.MarkType == MusicMarkType.SectionLabel)

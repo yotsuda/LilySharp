@@ -56,6 +56,9 @@ public sealed record MultiStaffScore
     /// <summary>Tempo in BPM (optional).</summary>
     public int? Tempo { get; }
 
+    /// <summary>Whether the initial tempo asked for a swing/shuffle feel indicator.</summary>
+    public bool SwingTempo { get; }
+
     /// <summary>Title (optional).</summary>
     public string? Title { get; }
 
@@ -146,7 +149,8 @@ public sealed record MultiStaffScore
         ImmutableArray<GrobOverride>? grobOverrides = null,
         ImmutableArray<GrobRevert>? grobReverts = null,
         ImmutableArray<TrillSpannerItem>? trillSpanners = null,
-        HeaderPositions header = default)
+        HeaderPositions header = default,
+        bool swingTempo = false)
     {
         if (staffGroups.Length == 0)
             throw new ArgumentException("Score must have at least one staff group", nameof(staffGroups));
@@ -155,6 +159,7 @@ public sealed record MultiStaffScore
         TimeSignature = timeSignature;
         KeySignature = keySignature;
         Tempo = tempo;
+        SwingTempo = swingTempo;
         Title = title;
         Composer = composer;
         Lyrics = lyrics ?? ImmutableArray<LyricItem>.Empty;
@@ -215,7 +220,8 @@ public sealed record MultiStaffScore
             grobOverrides: score.GrobOverrides,
             grobReverts: score.GrobReverts,
             trillSpanners: score.TrillSpanners,
-            header: score.Header);
+            header: score.Header,
+            swingTempo: score.SwingTempo);
     }
 
     /// <summary>
