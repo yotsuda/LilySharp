@@ -207,9 +207,11 @@ of the following section; text directives `fine`, `to coda`, `dc`/`ds` (and `dc 
 structure { A segno  B to coda  C ds al coda  coda D }
 ```
 
-In-note marks: `c4@mark.A` (rehearsal mark), `@segno @coda @fine @dc @ds.al.fine`,
-text spanners `@rit` / `@accel`, ottava `@ottava` ... `@loco`, trill spanner
-`@startTrillSpan` ... `@stopTrillSpan`, pedals `@ped` ... `@ped.off`.
+In-note marks: `c4@mark(A)` (rehearsal mark), `@segno @coda @fine @dc @ds`,
+text spanners `@rit` / `@accel`, ottava `@ottava` / `@ottava(bassa)` ... `@loco`,
+trill spanner `@startTrillSpan` ... `@stopTrillSpan`, pedals `@ped` ... `@ped(off)`,
+`@sost(ped)` / `@una(corda)` / `@tre(corde)` (a modifier word goes in `()`, like an
+argument). (`@ds al fine` etc. is the navigation form used inside `structure { }`.)
 
 ## Per-score structure
 

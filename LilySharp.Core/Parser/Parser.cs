@@ -1179,23 +1179,10 @@ private GreenNode?[] ParseArticulations()
                         parts.Add(Expect(SyntaxKind.CloseParen));
                         articulations.Add(new MusicMarkGreen([.. parts]));
                     }
-                    // Legacy dotted form: @name.part (e.g. @fig.6.4, @sost.ped). Still
-                    // accepted alongside the parenthesised form above; MarkName joins the
-                    // parts the same way so downstream is identical.
-                    else if (Current.Kind == SyntaxKind.Identifier && Peek(1)?.Kind == SyntaxKind.Dot)
-                    {
-                        var name = Advance();
-                        var parts = new List<SyntaxToken> { at, name };
-                        while (Check(SyntaxKind.Dot))
-                        {
-                            parts.Add(Advance()); // .
-                            parts.Add(ExpectMarkName());
-                        }
-                        articulations.Add(new MusicMarkGreen([.. parts]));
-                    }
                     else
                     {
-                        // @staccato, @accent, @trill, etc.
+                        // @staccato, @accent, @trill, etc. (a bare name; an annotation
+                        // argument must use the (…) form above, not a '.').
                         var name = Advance();
                         articulations.Add(new ArticulationGreen(at, name));
                     }

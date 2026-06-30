@@ -214,7 +214,7 @@ public class FiguredBassTests
     [Fact]
     public void Collector_FiguredBass_SingleFigure()
     {
-        var source = "c4 @fig.6 d e f";
+        var source = "c4 @fig(6) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -230,7 +230,7 @@ public class FiguredBassTests
     [Fact]
     public void Collector_FiguredBass_TwoFigures()
     {
-        var source = "c4 @fig.6.4 d e f";
+        var source = "c4 @fig(6 4) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -245,7 +245,7 @@ public class FiguredBassTests
     [Fact]
     public void Collector_FiguredBass_WithAlteration()
     {
-        var source = "c4 @fig.6.s d e f";
+        var source = "c4 @fig(6 s) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -259,7 +259,7 @@ public class FiguredBassTests
     [Fact]
     public void Collector_FiguredBass_MultipleNotes()
     {
-        var source = "c4 @fig.6 d @fig.5 e @fig.6.4 f";
+        var source = "c4 @fig(6) d @fig(5) e @fig(6 4) f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);

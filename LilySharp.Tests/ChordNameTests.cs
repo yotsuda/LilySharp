@@ -96,7 +96,7 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_MultiPartJoined()
     {
-        // If tokenized as separate parts: @chord.Am.7 → MarkName "chord.Am.7"
+        // If tokenized as separate parts: @chord(Am 7) → MarkName "chord.Am.7"
         var result = ChordNameItem.ParseChordName("chord.Am.7");
         Assert.NotNull(result);
         Assert.Equal("Am7", result);  // Parts joined without dots
@@ -173,7 +173,7 @@ public class ChordNameTests
     [Fact]
     public void Collector_ChordName_SingleChord()
     {
-        var source = "c4 @chord.C d e f";
+        var source = "c4 @chord(C) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -188,7 +188,7 @@ public class ChordNameTests
     [Fact]
     public void Collector_ChordName_MinorSeventh()
     {
-        var source = "c4 @chord.Cm7 d e f";
+        var source = "c4 @chord(Cm7) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -200,7 +200,7 @@ public class ChordNameTests
     [Fact]
     public void Collector_ChordName_FlatRoot()
     {
-        var source = "c4 @chord.Bb7 d e f";
+        var source = "c4 @chord(Bb7) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -212,7 +212,7 @@ public class ChordNameTests
     [Fact]
     public void Collector_ChordName_MultipleChords()
     {
-        var source = "c4 @chord.C d @chord.Am e @chord.F f";
+        var source = "c4 @chord(C) d @chord(Am) e @chord(F) f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -238,7 +238,7 @@ public class ChordNameTests
     public void Collector_ChordName_WithFiguredBass_BothCollected()
     {
         // Chord name and figured bass on the same note
-        var source = "c4 @chord.C @fig.6 d e f";
+        var source = "c4 @chord(C) @fig(6) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);

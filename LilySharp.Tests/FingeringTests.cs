@@ -23,7 +23,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Tests for the fingering pipeline: <c>@finger.N</c> on a note flows through
+/// Tests for the fingering pipeline: <c>@finger(N)</c> on a note flows through
 /// parser → collector → NoteItem.Fingering → FingeringEngraver → FingeringLayout.
 /// </summary>
 /// <remarks>
@@ -52,7 +52,7 @@ public class FingeringTests
     [Fact]
     public void Note_WithFingerOne_HasFingeringOne()
     {
-        var (score, _) = BuildLayout("c4@finger.1 |");
+        var (score, _) = BuildLayout("c4@finger(1) |");
         var note = (NoteItem)score.Voice.Measures[0].Items[0];
         Assert.Equal(1, note.Fingering);
     }
@@ -60,7 +60,7 @@ public class FingeringTests
     [Fact]
     public void Notes_WithDifferentFingerings_PreserveEachValue()
     {
-        var (score, _) = BuildLayout("c4@finger.1 d4@finger.2 e4@finger.3 f4@finger.4 |");
+        var (score, _) = BuildLayout("c4@finger(1) d4@finger(2) e4@finger(3) f4@finger(4) |");
         var notes = score.Voice.Measures[0].Items.OfType<NoteItem>().ToList();
         Assert.Equal(new[] { 1, 2, 3, 4 }, notes.Select(n => n.Fingering!.Value));
     }
@@ -68,7 +68,7 @@ public class FingeringTests
     [Fact]
     public void Layout_ContainsOneFingeringPerAnnotatedNote()
     {
-        var (_, layout) = BuildLayout("c4@finger.1 d4 e4@finger.3 f4 |");
+        var (_, layout) = BuildLayout("c4@finger(1) d4 e4@finger(3) f4 |");
         Assert.Equal(2, layout.FingeringLayouts.Length);
 
         var byNumber = layout.FingeringLayouts.ToLookup(f => f.Number);
@@ -79,7 +79,7 @@ public class FingeringTests
     [Fact]
     public void Layout_FingeringX_IsCenteredOnHostNote()
     {
-        var (_, layout) = BuildLayout("c4@finger.2 |");
+        var (_, layout) = BuildLayout("c4@finger(2) |");
         var fingering = layout.FingeringLayouts[0];
 
         // The fingering centers on the NOTEHEAD GLYPH (self-alignment-X =
@@ -96,7 +96,7 @@ public class FingeringTests
     {
         // High notes (positive staff position) → stem down → fingering above (default direction)
         // c''4 (staffPos > 0) is well above the staff middle line, stem points down.
-        var (_, layout) = BuildLayout("c''4@finger.1 |");
+        var (_, layout) = BuildLayout("c''4@finger(1) |");
         Assert.Single(layout.FingeringLayouts);
         Assert.True(layout.FingeringLayouts[0].IsAbove);
     }
@@ -109,7 +109,7 @@ public class FingeringTests
         // even a stem-UP note keeps its fingering above (same side as the stem).
         // c4 in treble clef has staffPos < 0 (stem up); the fingering is still above.
         // LILYPOND-REF: ly/engraver-init.ly:907 fingeringOrientations = #'(up down).
-        var (_, layout) = BuildLayout("c4@finger.4 |");
+        var (_, layout) = BuildLayout("c4@finger(4) |");
         Assert.Single(layout.FingeringLayouts);
         Assert.True(layout.FingeringLayouts[0].IsAbove);
     }

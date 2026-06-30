@@ -47,8 +47,8 @@ public class AnnotationNameValidatorTests
 
     [Theory]
     [InlineData("c4@feather.up d |")]    // not a feather direction
-    [InlineData("c4@trillspan.begin d |")]
-    [InlineData("c4@finger.x d |")]      // non-numeric finger
+    [InlineData("c4@trillspan(begin) d |")]
+    [InlineData("c4@finger(x) d |")]      // non-numeric finger
     public void UnknownCompoundName_Warns(string source)
     {
         var diags = Validate(source);
@@ -80,20 +80,20 @@ public class AnnotationNameValidatorTests
     [InlineData("c4@fermata d@marcato e@tenuto f@portato |")]
     // Music marks (plain + compound)
     [InlineData("c4@segno d@coda e@fine f |")]
-    [InlineData("c4@mark.A d@mark.12 e f |")]
+    [InlineData("c4@mark(A) d@mark(12) e f |")]
     [InlineData("c4@rit d@accel e@cresc f@dim |")]
-    [InlineData("c4@ottava d@ottava.bassa e@loco f |")]
-    [InlineData("c4@ped d@ped.off e@sost.ped f@tre.corde |")]
-    [InlineData("c4@ds.al.fine d e f |")]
+    [InlineData("c4@ottava d@ottava(bassa) e@loco f |")]
+    [InlineData("c4@ped d@ped(off) e@sost(ped) f@tre(corde) |")]
+    [InlineData("c4@ds(al fine) d e f |")]
     // Feature annotations
     [InlineData("c4@glissando d@gliss e f |")]
     [InlineData("c4@startTrillSpan d e@stopTrillSpan f |")]
     [InlineData("c4@courtesy d@cue e@cross f@arpeggio |")]
     [InlineData("c4@laissezVibrer d@repeatTie e f |")]
-    [InlineData("c16@feather.right d e f g a b c' |")]
-    [InlineData("c4@finger.1 d@finger.3 e f |")]
-    [InlineData("c4@fig.6 d@fig.6.4 e f |")]
-    [InlineData("c4@chord.C d@chord.Am e f |")]
+    [InlineData("c16@feather(right) d e f g a b c' |")]
+    [InlineData("c4@finger(1) d@finger(3) e f |")]
+    [InlineData("c4@fig(6) d@fig(6 4) e f |")]
+    [InlineData("c4@chord(C) d@chord(Am) e f |")]
     // Dynamics are parser-gated, never unknown
     [InlineData("c4@ff d@p e@mf f |")]
     public void KnownNames_NoWarning(string source)

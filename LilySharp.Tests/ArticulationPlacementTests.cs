@@ -26,7 +26,7 @@ namespace LilySharp.Tests;
 /// <summary>
 /// Proposal A: the '.up' / '.down' placement qualifier on '@' annotations
 /// (e.g. '@staccato.up') forces an articulation above / below, overriding the
-/// automatic (opposite-the-stem) side. It rides the existing '@name.qualifier'
+/// automatic (opposite-the-stem) side. It rides the existing '@name(qualifier)'
 /// grammar, so the syntax already parsed — only the meaning is new.
 /// </summary>
 [Trait("Category", "Unit")]

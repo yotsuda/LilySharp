@@ -180,7 +180,7 @@ public class IncrementalCompilerTests
             key c major
             part melody
             section Main {
-              melody { g4@finger.1 a@finger.2 b@finger.3 c@finger.4 | <c@finger.1 e@finger.3 g@finger.5>4 d e f | }
+              melody { g4@finger(1) a@finger(2) b@finger(3) c@finger(4) | <c@finger(1) e@finger(3) g@finger(5)>4 d e f | }
             }
             structure { Main }
             score "x" { staff melody }

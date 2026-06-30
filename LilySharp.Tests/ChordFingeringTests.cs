@@ -52,8 +52,8 @@ public class ChordFingeringTests
     [Fact]
     public void Chord_PerPitchFingering_PropagatesToChordNoteInfo()
     {
-        // <c@finger.1 e@finger.3 g@finger.5> attaches a different finger to each pitch.
-        var (score, _) = BuildLayout("<c@finger.1 e@finger.3 g@finger.5>4 |");
+        // <c@finger(1) e@finger(3) g@finger(5)> attaches a different finger to each pitch.
+        var (score, _) = BuildLayout("<c@finger(1) e@finger(3) g@finger(5)>4 |");
         var chord = (ChordItem)score.Voice.Measures[0].Items[0];
         Assert.Equal(3, chord.Notes.Length);
         Assert.Equal(1, chord.Notes[0].Fingering);
@@ -64,7 +64,7 @@ public class ChordFingeringTests
     [Fact]
     public void Chord_PartialFingering_OnlyMarkedNotesCarryNumbers()
     {
-        var (score, _) = BuildLayout("<c@finger.1 e g@finger.5>4 |");
+        var (score, _) = BuildLayout("<c@finger(1) e g@finger(5)>4 |");
         var chord = (ChordItem)score.Voice.Measures[0].Items[0];
         Assert.Equal(1, chord.Notes[0].Fingering);
         Assert.Null(chord.Notes[1].Fingering);
@@ -74,7 +74,7 @@ public class ChordFingeringTests
     [Fact]
     public void Layout_ChordFingerings_OneLayoutPerAnnotatedPitch()
     {
-        var (_, layout) = BuildLayout("<c@finger.1 e@finger.3 g@finger.5>4 |");
+        var (_, layout) = BuildLayout("<c@finger(1) e@finger(3) g@finger(5)>4 |");
         Assert.Equal(3, layout.FingeringLayouts.Length);
         var numbers = layout.FingeringLayouts.Select(f => f.Number).OrderBy(n => n).ToArray();
         Assert.Equal(new[] { 1, 3, 5 }, numbers);
@@ -84,7 +84,7 @@ public class ChordFingeringTests
     public void Layout_ChordFingerings_AllShareSameItemIndex()
     {
         // Each chord-pitch fingering points at the chord's item index in the measure.
-        var (_, layout) = BuildLayout("<c@finger.1 e@finger.3 g@finger.5>4 |");
+        var (_, layout) = BuildLayout("<c@finger(1) e@finger(3) g@finger(5)>4 |");
         var distinctItemIndices = layout.FingeringLayouts.Select(f => f.ItemIndex).Distinct().ToList();
         Assert.Single(distinctItemIndices);
     }
@@ -93,7 +93,7 @@ public class ChordFingeringTests
     public void Layout_ChordFingerings_DistinctYPositions()
     {
         // Each pitch sits at a different staff position so its finger Y differs.
-        var (_, layout) = BuildLayout("<c@finger.1 e@finger.3 g@finger.5>4 |");
+        var (_, layout) = BuildLayout("<c@finger(1) e@finger(3) g@finger(5)>4 |");
         var distinctYs = layout.FingeringLayouts.Select(f => f.Y).Distinct().ToList();
         Assert.Equal(3, distinctYs.Count);
     }
@@ -101,8 +101,8 @@ public class ChordFingeringTests
     [Fact]
     public void SingleNoteFingering_StillWorks_NoRegression()
     {
-        // Regression check: existing single-note `c@finger.1` path keeps working.
-        var (score, _) = BuildLayout("c4@finger.1 |");
+        // Regression check: existing single-note `c@finger(1)` path keeps working.
+        var (score, _) = BuildLayout("c4@finger(1) |");
         var note = (NoteItem)score.Voice.Measures[0].Items[0];
         Assert.Equal(1, note.Fingering);
     }

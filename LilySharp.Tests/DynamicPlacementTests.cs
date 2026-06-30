@@ -136,10 +136,10 @@ public class DynamicPlacementTests
     [Fact]
     public void AboveDynamic_ClearsOtherAboveStaffGrobs()
     {
-        // @f.up (dynamic, priority 250) and @mark.A (rehearsal mark, 1500) share a column.
+        // @f.up (dynamic, priority 250) and @mark(A) (rehearsal mark, 1500) share a column.
         // The above-staff stacker must separate them — the higher-priority mark sits
         // ABOVE the dynamic (smaller Y), not overlapping it.
-        var score = Collect("c''4@f.up@mark.A");
+        var score = Collect("c''4@f.up@mark(A)");
         var layout = new LayoutEngine().Layout(score);
 
         var dyn = layout.DynamicLayouts.Single(d => d.IsAbove);

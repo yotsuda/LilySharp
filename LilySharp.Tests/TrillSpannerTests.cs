@@ -150,10 +150,10 @@ score ""test"" { staff melody }
     [Fact]
     public void TrillSpanner_CompoundSyntax_Detected()
     {
-        // Test @trillSpan.start / @trillSpan.stop compound syntax
+        // Test @trillSpan(start) / @trillSpan(stop) compound syntax
         var source = @"
 part melody { clef treble }
-phrase m { c'4@trillSpan.start d e f@trillSpan.stop | g4 a b c' | }
+phrase m { c'4@trillSpan(start) d e f@trillSpan(stop) | g4 a b c' | }
 section A { melody { $m } }
 structure { A }
 score ""test"" { staff melody }
