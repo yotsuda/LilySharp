@@ -50,6 +50,9 @@ public sealed record DynamicItem
     /// </summary>
     public int StaffIndex { get; }
 
+    /// <summary>Forced ABOVE the staff (from <c>@f.up</c>); default is below.</summary>
+    public bool IsAbove { get; init; }
+
     public DynamicItem(DynamicLevel level, int measureIndex, int itemIndex,
         int sourcePosition, int staffIndex = 0)
     {

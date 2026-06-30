@@ -1247,6 +1247,14 @@ public sealed class DynamicSyntax : SyntaxNode
     public SyntaxTokenNode DynamicToken => (SyntaxTokenNode)GetChild(1)!;
 
     /// <summary>
+    /// Forced placement from a <c>.up</c> / <c>.down</c> qualifier (<c>@f.up</c>):
+    /// <c>true</c> = above, <c>false</c> = below, <c>null</c> = default (below).
+    /// </summary>
+    public bool? ForcedAbove => GetChild(2) is SyntaxTokenNode dir
+        ? dir.Text == "up" ? true : dir.Text == "down" ? false : (bool?)null
+        : null;
+
+    /// <summary>
     /// Gets the dynamic level.
     /// </summary>
     public DynamicLevel Level

@@ -135,6 +135,11 @@ public static class OutsideStaffStacker
             for (int i = 0; i < dynBuilder.Count; i++)
             {
                 var dyn = dynBuilder[i];
+                // Forced-above dynamics sit above the staff (DynamicEngraver placed them);
+                // the below-staff stacker leaves them untouched and ignores them as
+                // below-staff occupiers.
+                if (dyn.IsAbove)
+                    continue;
                 if (!measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
                     continue;
 

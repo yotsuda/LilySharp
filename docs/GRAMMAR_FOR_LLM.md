@@ -91,7 +91,8 @@ an articulation above / below the note (default is automatic, opposite the stem)
   On a beamed note the beam's shared direction wins.
 - Articulations: `@staccato @accent @tenuto @marcato @fermata @portato`
 - Ornaments: `@trill @mordent @prall @turn @invertedturn`
-- Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff`
+- Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` (default below the staff; `.up` / `.down`
+  forces the side, e.g. `@f.up`)
 - Accidental style: `@courtesy` (cautionary, parenthesized), `@editorial` (musica ficta)
 - Arpeggio: `<c e g>4@arpeggio`
 - Glissando: `c4@glissando d` (line from this note to the next)

@@ -167,6 +167,13 @@ c4@ff     % Fortissimo
 c4@fff    % Fortississimo
 ```
 
+Dynamics sit below the staff by default. Append `.up` / `.down` to force the side:
+
+```
+c4@f.up       % forte above the staff
+d4@p.down     % piano below (the default)
+```
+
 ### Hairpins (Crescendo/Decrescendo)
 
 ```

@@ -405,8 +405,9 @@ internal sealed class ArticulationGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class DynamicGreen : GreenSyntaxNode
 {
-    public DynamicGreen(SyntaxToken backslashToken, SyntaxToken dynamicToken)
-        : base(SyntaxKind.Dynamic, [backslashToken, dynamicToken])
+    // directionToken is the optional '.up' / '.down' placement word (null = below default).
+    public DynamicGreen(SyntaxToken backslashToken, SyntaxToken dynamicToken, SyntaxToken? directionToken = null)
+        : base(SyntaxKind.Dynamic, [backslashToken, dynamicToken, directionToken])
     {
     }
 }

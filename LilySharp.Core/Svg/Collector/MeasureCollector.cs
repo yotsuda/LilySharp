@@ -2573,7 +2573,10 @@ public sealed class MeasureCollector
                 var level = dynamicSyntax.Level;
                 if (level != DynamicLevel.None)
                 {
-                    _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.Position, _currentStaffIndex));
+                    _dynamics.Add(new DynamicItem(level, measureIndex, itemIndex, dynamicSyntax.Position, _currentStaffIndex)
+                    {
+                        IsAbove = dynamicSyntax.ForcedAbove == true,
+                    });
                 }
                 else
                 {

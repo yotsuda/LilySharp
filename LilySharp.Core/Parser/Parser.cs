@@ -1111,9 +1111,21 @@ private GreenNode?[] ParseArticulations()
                 var at = Advance();
                 if (IsDynamicName())
                 {
-                    // @p, @f, @mf, @cresc, etc. - dynamics with @ prefix (new style)
+                    // @p, @f, @mf, @cresc, etc. - dynamics with @ prefix (new style).
+                    // An optional '.up' / '.down' forces the dynamic above / below.
                     var name = Advance();
-                    articulations.Add(new DynamicGreen(at, name));
+                    if (Current.Kind == SyntaxKind.Dot
+                        && IsPlacementWord(Peek(1))
+                        && Peek(2)?.Kind != SyntaxKind.Dot)
+                    {
+                        Advance();             // .
+                        var dir = Advance();   // up / down
+                        articulations.Add(new DynamicGreen(at, name, dir));
+                    }
+                    else
+                    {
+                        articulations.Add(new DynamicGreen(at, name));
+                    }
                 }
                 else if (IsArticulationName())
                 {
