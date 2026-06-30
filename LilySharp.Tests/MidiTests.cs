@@ -172,7 +172,7 @@ public class MidiTests
     [Fact]
     public void ExportWithDynamics()
     {
-        var source = @"c4\p d4\f e4\ff";
+        var source = @"c4@p d4@f e4@ff";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MidiExporter();
         var midi = exporter.Export(tree);
@@ -219,7 +219,7 @@ public class MidiTests
     [Fact]
     public void DynamicsParsing()
     {
-        var source = @"c4\p d4\f";
+        var source = @"c4@p d4@f";
         var tree = SyntaxTree.Parse(source);
 
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));

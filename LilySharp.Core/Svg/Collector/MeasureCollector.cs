@@ -2897,7 +2897,11 @@ public sealed class MeasureCollector
     {
         string grobType = node.GrobName.Text;
         string propertyName = node.PropertyName.Text;
-        string value = node.ValueToken.Text;
+        // A quoted value (e.g. color = "red") stores its CONTENT, not the quotes, so the
+        // resolver's GetString/ParseColor see "red" — matching the bare-identifier form.
+        string value = node.ValueToken.Kind == SyntaxKind.StringLiteral
+            ? node.ValueToken.Text.Trim('"')
+            : node.ValueToken.Text;
         _grobOverrides.Add(new GrobOverride(grobType, propertyName, value, measureIndex, itemIndex, isOnce));
     }
 

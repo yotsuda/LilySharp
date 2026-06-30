@@ -252,7 +252,7 @@ c4 d4 e4 f4";
     [Fact]
     public void ExportWithDynamics_CreatesDirection()
     {
-        var source = "c4\\f d4";
+        var source = "c4@f d4";
         var tree = SyntaxTree.Parse(source);
         var exporter = new MusicXmlExporter();
         var xml = exporter.Export(tree);

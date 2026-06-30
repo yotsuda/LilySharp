@@ -352,21 +352,21 @@ use theme");
     [Fact]
     public void ParseNoteWithDynamic()
     {
-        var tree = SyntaxTree.Parse(@"{ c4\p }");
+        var tree = SyntaxTree.Parse(@"{ c4@p }");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseNoteWithMultipleArticulations()
     {
-        var tree = SyntaxTree.Parse(@"{ c4@staccato@accent\f }");
+        var tree = SyntaxTree.Parse(@"{ c4@staccato@accent@f }");
         Assert.False(tree.HasErrors);
     }
 
     [Fact]
     public void ParseDynamicSequence()
     {
-        var tree = SyntaxTree.Parse(@"{ c4\p d\cresc e\f }");
+        var tree = SyntaxTree.Parse(@"{ c4@p d@cresc e@f }");
         Assert.False(tree.HasErrors);
     }
 
@@ -387,7 +387,7 @@ use theme");
     [Fact]
     public void ParseNoteWithOrnamentAndDynamic()
     {
-        var tree = SyntaxTree.Parse(@"{ c4@trill\p }");
+        var tree = SyntaxTree.Parse(@"{ c4@trill@p }");
         Assert.False(tree.HasErrors);
     }
 
@@ -400,11 +400,17 @@ use theme");
     }
 
     [Fact]
-    public void ParseNoteWithMixedDynamicSyntax()
+    public void BackslashDynamic_IsRejected_WithAtHint()
     {
-        // Both old (\p) and new (@p) syntax should work
-        var tree = SyntaxTree.Parse(@"{ c4@p d\f e@ff }");
-        Assert.False(tree.HasErrors);
+        // Backslash annotations are no longer accepted: '@' is the one canonical
+        // prefix, and backslash is reserved for tablature (\3 string numbers, \tuning).
+        // A '\p' is flagged with a hint pointing at '@p'.
+        var tree = SyntaxTree.Parse(@"{ c4\p }");
+        Assert.True(tree.HasErrors);
+        Assert.Contains(tree.Diagnostics, d => d.Message.Contains("@p"));
+
+        // The canonical '@' form is clean.
+        Assert.False(SyntaxTree.Parse(@"{ c4@p }").HasErrors);
     }
 
     [Fact]
@@ -413,6 +419,29 @@ use theme");
         // Articulation and dynamic both with @ prefix
         var tree = SyntaxTree.Parse(@"{ c4@staccato@p d@accent@f }");
         Assert.False(tree.HasErrors);
+    }
+
+    [Fact]
+    public void ClefNameWords_AreUsableAsIdentifiers()
+    {
+        // bass/treble/alto/tenor are clef-name keywords but are also natural part /
+        // section / phrase names. Declarations AND every reference accept them, so a
+        // 'bass' part can be declared, referenced, sectioned and structured.
+        var tree = SyntaxTree.Parse(
+            "part bass { clef bass }\n" +
+            "phrase bass { c2 c | }\n" +
+            "section bass { bass { $bass } }\n" +
+            "structure { bass }\n" +
+            "score \"out\" { staff bass }\n");
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+    }
+
+    [Fact]
+    public void OverrideValue_AcceptsString()
+    {
+        // Override values may be strings (e.g. a color), not just integers/identifiers.
+        var tree = SyntaxTree.Parse("{ once override NoteHead.color = \"red\" c4 d e f }");
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
     }
 
     // ========== Repeat Tests ==========

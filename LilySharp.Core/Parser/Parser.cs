@@ -270,7 +270,7 @@ internal sealed class Parser
     private PartDeclarationGreen ParsePartDeclaration()
     {
         var keyword = Expect(SyntaxKind.PartKeyword);
-        var name = Expect(SyntaxKind.Identifier);
+        var name = ExpectPartName();   // names may be clef-name words (bass/treble/...)
 
         // Check if there's a body
         if (!Check(SyntaxKind.OpenBrace))
@@ -314,7 +314,7 @@ internal sealed class Parser
     private SectionDeclarationGreen ParsePartInnerSection()
     {
         var keyword = Expect(SyntaxKind.SectionKeyword);
-        var name = Expect(SyntaxKind.Identifier);
+        var name = ExpectPartName();
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var items = new List<GreenNode?>();
@@ -595,7 +595,7 @@ internal sealed class Parser
         else // $name
         {
             var dollar = Expect(SyntaxKind.Dollar);
-            var name = Expect(SyntaxKind.Identifier);
+            var name = ExpectPartName();   // phrase refs may name clef-name words too
             return new VariableReferenceGreen(dollar, name);
         }
     }
@@ -947,11 +947,15 @@ internal sealed class Parser
         var propertyName = Expect(SyntaxKind.Identifier);
         var equals = Expect(SyntaxKind.Equals);
 
-        // Value: integer literal or identifier (for symbolic values)
+        // Value: integer (lengths/positions), identifier (symbolic, e.g. up / red),
+        // string (e.g. color = "red" — the collector strips the quotes), or a negative
+        // integer. The resolver stores the value as a string and reparses it per property
+        // (GetInt / GetDouble / GetString / GetBool), so all four forms flow through.
         var value = Current.Kind switch
         {
             SyntaxKind.IntegerLiteral => Advance(),
             SyntaxKind.Identifier => Advance(),
+            SyntaxKind.StringLiteral => Advance(),
             SyntaxKind.Minus => CombineNegativeNumber(),
             _ => Expect(SyntaxKind.IntegerLiteral) // error recovery
         };
@@ -1151,11 +1155,17 @@ private GreenNode?[] ParseArticulations()
             }
             else if (Check(SyntaxKind.Backslash))
             {
-                // \p, \f, \cresc, etc.
+                int startPos = _textPosition;
                 var backslash = Advance();
                 if (IsDynamicName())
                 {
+                    // \p, \f, \cresc — a LilyPond habit. Lily# writes annotations with
+                    // '@' (e.g. @p); backslash is reserved for tablature (string numbers
+                    // like \3, and \tuning). Flag it, then recover by parsing it anyway.
                     var name = Advance();
+                    var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
+                    _diagnostics.Error(span, DiagnosticCodes.LilypondBackslashCommand,
+                        $"Use '@{name.Text}' for annotations; backslash is reserved for tablature (e.g. string numbers like \\3).");
                     articulations.Add(new DynamicGreen(backslash, name));
                 }
                 else
@@ -1561,7 +1571,7 @@ private GreenNode?[] ParseArticulations()
     private PhraseDeclarationGreen ParsePhraseDeclaration()
     {
         var keyword = Expect(SyntaxKind.PhraseKeyword);
-        var name = Expect(SyntaxKind.Identifier);
+        var name = ExpectPartName();
         var body = ParseMusicBlock();
 
         return new PhraseDeclarationGreen(keyword, name, body);
@@ -1574,7 +1584,7 @@ private GreenNode?[] ParseArticulations()
     private SectionDeclarationGreen ParseSectionDeclaration()
     {
         var keyword = Expect(SyntaxKind.SectionKeyword);
-        var name = Expect(SyntaxKind.Identifier);
+        var name = ExpectPartName();
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var items = ParseList(SyntaxKind.CloseBrace, ParseSectionItem);
@@ -1884,7 +1894,7 @@ private GreenNode?[] ParseArticulations()
     /// </summary>
     private PartBlockGreen ParsePartBlock()
     {
-        var partName = Expect(SyntaxKind.Identifier);
+        var partName = ExpectPartName();
 
         // Parse optional options (transpose, octave, instrument, clef)
         var options = new List<GreenNode?>();
@@ -1949,9 +1959,13 @@ private GreenNode?[] ParseArticulations()
         {
             // Section reference with optional per-occurrence display label:
             //   structure { First Second First "First (reprise)" }
-            SyntaxKind.Identifier => new SectionReferenceGreen(
-                Advance(),
-                Check(SyntaxKind.StringLiteral) ? Advance() : null),
+            // Clef-name words (bass/treble/alto/tenor) are allowed as section names too,
+            // matching part/section/phrase declarations.
+            SyntaxKind.Identifier or SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword
+                or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword
+                => new SectionReferenceGreen(
+                    Advance(),
+                    Check(SyntaxKind.StringLiteral) ? Advance() : null),
             SyntaxKind.Tilde => ParseSilentSectionReference(),
             SyntaxKind.At => ParseMusicMark(),
             SyntaxKind.Underscore => ParseCustomText(),
@@ -1970,7 +1984,7 @@ private GreenNode?[] ParseArticulations()
     private SilentSectionReferenceGreen ParseSilentSectionReference()
     {
         var tilde = Expect(SyntaxKind.Tilde);
-        var name = Expect(SyntaxKind.Identifier);
+        var name = ExpectPartName();
         return new SilentSectionReferenceGreen(tilde, name);
     }
 
