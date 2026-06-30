@@ -181,6 +181,10 @@ c4@p @cresc d e f |
 g4@f @decresc a b c |
 ```
 
+`.up` / `.down` cannot be applied to `@cresc` / `@decresc` / `@dim` — a hairpin is
+always engraved below the staff, so a placement suffix there is rejected as an error
+rather than silently ignored. (Placement works on dynamic *levels* like `@f.up`.)
+
 ## Ties and Slurs
 
 ### Ties

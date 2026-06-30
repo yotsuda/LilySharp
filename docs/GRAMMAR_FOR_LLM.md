@@ -120,6 +120,9 @@ c4@p@cresc d e f@f |        // crescendo p -> f
 g4@f@decresc a b c@p |      // decrescendo
 ```
 
+`.up` / `.down` is NOT allowed on `@cresc` / `@decresc` / `@dim` (a hairpin is always
+below the staff — the parser rejects it). Placement applies only to dynamic levels: `@f.up`.
+
 ## Bar handling
 
 - Barlines: `|` single, `||` double, `|.` final, `|:` repeat start, `:|` repeat end.
