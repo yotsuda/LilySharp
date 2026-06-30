@@ -297,10 +297,16 @@ public static class SpacingRules
         // Base extent: from center to left edge of notehead
         double extent = noteheadBBox.CenterX;
 
-        // For rests, use a simplified calculation
+        // A rest is drawn glyph-left-aligned at its column (DrawRest: DrawGlyph at x),
+        // so its LEFTward reach from the column is the rest glyph's own left edge — NOT
+        // the (wide) notehead box of the same duration. A whole-note notehead's centre
+        // is ~1 ss, which pushed a lone whole rest ~1 ss right of beat 1, so `r1`
+        // rendered near the measure centre instead of at its rhythmic moment. Mirror
+        // CalculateNoteheadRightExtent, which already uses the rest glyph's right edge.
+        // LILYPOND-REF: lily/rest.cc Rest::width — the rest stencil's own X-extent.
         if (item is RestItem)
         {
-            return extent;
+            return -GlyphMetrics.GetRestBBox(noteValue).Left;
         }
 
         // Handle accidentals

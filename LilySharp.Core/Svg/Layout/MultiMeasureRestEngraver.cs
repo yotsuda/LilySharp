@@ -85,13 +85,21 @@ public static class MultiMeasureRestEngraver
         // (single staff R1*4 → individual rests + barlines; only \compressMMRests
         // over all-resting measures merges them). LILYPOND-REF: lily/bar-engraver.cc
         // (barlines from Timing, independent of MMR) + lily/multi-measure-rest.cc.
+        // Only an EXPLICIT multi-measure rest (capital `R`) collapses into a centred
+        // MMR symbol. A plain lowercase `r1` that fills the measure stays an ordinary
+        // Rest drawn at beat 1 (it must NOT centre, and must hang from the 4th line via
+        // the normal rest renderer). LILYPOND-REF: scm/define-grobs.scm Rest vs
+        // MultiMeasureRest; lily/multi-measure-rest.cc (only the MMR spanner centres).
+        static bool IsMmrMeasure(Measure m)
+            => IsFullMeasureRest(m) && m.Items[0] is RestItem { IsMultiMeasure: true };
+
         bool RestsEverywhere(int m)
         {
-            if (m >= voice.Measures.Length || !IsFullMeasureRest(voice.Measures[m]))
+            if (m >= voice.Measures.Length || !IsMmrMeasure(voice.Measures[m]))
                 return false;
             if (allStaffMeasures != null)
                 foreach (var sm in allStaffMeasures)
-                    if (m >= sm.Length || !IsFullMeasureRest(sm[m]))
+                    if (m >= sm.Length || !IsMmrMeasure(sm[m]))
                         return false;
             return true;
         }

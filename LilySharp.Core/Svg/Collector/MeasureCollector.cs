@@ -3316,7 +3316,10 @@ public sealed class MeasureCollector
         // 's' is a spacer rest: it occupies time/width but is never drawn (unlike 'r').
         return new RestItem(Fraction.FromNoteValue(noteValue), dots, rest.Position)
         {
-            IsSpacer = rest.RestToken.Text == "s"
+            IsSpacer = rest.RestToken.Text == "s",
+            // Capital R = explicit multi-measure rest (centred). Lowercase r = plain
+            // rest at beat 1, even when it fills the measure.
+            IsMultiMeasure = rest.RestToken.Text == "R"
         };
     }
 

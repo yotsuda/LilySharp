@@ -232,6 +232,15 @@ public sealed record RestItem : MusicItem
     /// </summary>
     public bool IsSpacer { get; init; }
 
+    /// <summary>
+    /// True iff this rest was written as an explicit multi-measure rest (LilyPond's
+    /// capital <c>R</c>), which is centred between the bar lines as a Multi_measure_rest.
+    /// A plain lowercase <c>r</c> that happens to fill the measure is an ordinary Rest:
+    /// it sits at its rhythmic moment (beat 1) and is never collapsed/centred.
+    /// LILYPOND-REF: scm/define-grobs.scm Rest vs MultiMeasureRest.
+    /// </summary>
+    public bool IsMultiMeasure { get; init; }
+
     public override Fraction Duration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
     public override int SourcePosition => _sourcePosition;
