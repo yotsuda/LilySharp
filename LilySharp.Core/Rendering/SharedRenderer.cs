@@ -231,8 +231,11 @@ public static class SharedRenderer
             // notes — only their text, emitted by DrawChordNames / DrawLyrics at the row Y.
             if (staff.IsTextRow)
             {
+                // Lead-sheet measure grid: the top text row's measures carry the real
+                // barline types (synced from the chord/lyric source), drawn as short
+                // ticks the chords/lyrics hang on.
                 if (leadSheet && globalIdx == barlineRowIdx)
-                    DrawLeadSheetBarlines(system, staffY, gc);
+                    DrawBarlines(system, staff, staffY, layout, gc, barHeight: LeadSheetBarlineHeight);
                 continue;
             }
 
@@ -1577,8 +1580,11 @@ public static class SharedRenderer
     // ---------- Barlines ----------
 
     private static void DrawBarlines(SystemLayout system, Staff staff, double staffY,
-        ScoreLayout layout, IDrawingContext gc)
+        ScoreLayout layout, IDrawingContext gc, double? barHeight = null)
     {
+        // A lead-sheet text row has no staff, so its barlines are short ticks the
+        // chord/lyric row hangs on; a real staff uses its full height.
+        double height = barHeight ?? StaffHeight;
         var voice = staff.PrimaryVoice;
         foreach (var ml in system.Measures)
         {
@@ -1588,7 +1594,7 @@ public static class SharedRenderer
 
             // Start barline (e.g. repeat-start) at the measure's left edge.
             if (measure.StartBarline != BarlineType.None)
-                DrawBarline(measure.StartBarline, ml.X, staffY, StaffHeight, gc);
+                DrawBarline(measure.StartBarline, ml.X, staffY, height, gc);
 
             // End barline drawn so its right edge sits on the column boundary
             // (matches SvgRenderer: endX - visualWidth). Normal measures carry
@@ -1604,28 +1610,7 @@ public static class SharedRenderer
 
             double endX = ml.X + ml.Width;
             double width = GetVisualBarlineWidth(measure.EndBarline);
-            DrawBarline(measure.EndBarline, endX - width, staffY, StaffHeight, gc);
-        }
-    }
-
-    /// <summary>
-    /// Draws the measure grid for a lead-sheet (text-row-only) score: a thin barline
-    /// at the end of every measure and a final barline at the system's right edge.
-    /// The text rows synthesize their measures with <see cref="BarlineType.None"/>
-    /// (no staff carries the real barline types), so the grid is drawn here instead.
-    /// </summary>
-    private static void DrawLeadSheetBarlines(SystemLayout system, double staffY, IDrawingContext gc)
-    {
-        if (system.Measures.Length == 0) return;
-        double h = LeadSheetBarlineHeight;
-        for (int i = 0; i < system.Measures.Length; i++)
-        {
-            var ml = system.Measures[i];
-            double endX = ml.X + ml.Width;
-            bool last = i == system.Measures.Length - 1;
-            var type = last ? BarlineType.Final : BarlineType.Single;
-            double width = GetVisualBarlineWidth(type);
-            DrawBarline(type, endX - width, staffY, h, gc);
+            DrawBarline(measure.EndBarline, endX - width, staffY, height, gc);
         }
     }
 

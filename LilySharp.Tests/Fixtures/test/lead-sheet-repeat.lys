@@ -1,0 +1,10 @@
+// Lead sheet with a repeat: the chord row now carries its source barline types
+// (|: ... :|, ||, |.) instead of a synthesized plain grid, so a repeated section
+// draws real repeat barlines. (Refactor: the same DrawBarlines path as a staff.)
+title "Repeat"
+time 4/4
+section Main {
+  chords prog { c2 a:m |: f2 g:7 | c1 :| }
+}
+structure { Main }
+score "lead-sheet-repeat" { chords prog }

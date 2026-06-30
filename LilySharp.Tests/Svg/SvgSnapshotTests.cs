@@ -96,6 +96,8 @@ public class SvgSnapshotTests
         yield return new object[] { "test/lead-sheet-lyrics" };
         yield return new object[] { "test/lead-sheet-chords" };
         yield return new object[] { "test/lead-sheet" };
+        // A lead sheet keeps the chord source's repeat / double / final barlines.
+        yield return new object[] { "test/lead-sheet-repeat" };
         // Tab ties sit on each tied note's STRING line (above the fret digit), not
         // at the notation pitch height — the two ties are on different strings.
         yield return new object[] { "test/tab-tie" };

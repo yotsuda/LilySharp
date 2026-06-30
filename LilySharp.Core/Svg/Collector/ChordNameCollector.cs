@@ -126,6 +126,13 @@ internal sealed class ChordNameCollector
             return ImmutableArray<Measure>.Empty;
 
         var measureItems = new Dictionary<int, ImmutableArray<MusicItem>>();
+        // Source barline types per measure. A chord row carries its own `|`, `:|`,
+        // `||` etc. so a standalone lead sheet draws a real measure grid (and the
+        // score-wide barline sync propagates a repeat/final set here into the music
+        // staves of a mixed score, exactly as for a written staff). End barline
+        // defaults to Single (a drawn boundary); the last bar is finalised below.
+        var measureStartBar = new Dictionary<int, BarlineType>();
+        var measureEndBar = new Dictionary<int, BarlineType>();
         int maxIndex = -1;
 
         foreach (var block in blocks)
@@ -134,33 +141,58 @@ internal sealed class ChordNameCollector
 
             int localMeasure = 0;
             var pending = new List<ChordEntrySyntax>();
+            var pendingStart = BarlineType.None;
 
-            void Flush()
+            // Close the current measure with the given end barline (None = trailing
+            // measure, no written closer → defaults to Single in the build below).
+            void Commit(BarlineType endBar)
             {
+                int mi = startMeasure + localMeasure;
                 if (pending.Count > 0)
                 {
-                    int mi = startMeasure + localMeasure;
                     measureItems[mi] = EmitChordPartMeasure(pending, mi, staffIndex, timeBeats, timeBeatType);
                     maxIndex = Math.Max(maxIndex, mi);
                 }
+                if (pendingStart != BarlineType.None)
+                    measureStartBar[mi] = pendingStart;
+                if (endBar != BarlineType.None)
+                    measureEndBar[mi] = endBar;
+                pendingStart = BarlineType.None;
                 localMeasure++;
                 pending.Clear();
             }
 
             foreach (var item in block.Items)
             {
-                if (item is BarlineSyntax)
-                    Flush();
+                if (item is BarlineSyntax bar)
+                {
+                    var t = MeasureCollector.ParseBarlineType(bar.BarToken.Text);
+                    if (t == BarlineType.RepeatStart)
+                    {
+                        // |: opens the NEXT measure; close anything pending first.
+                        if (pending.Count > 0)
+                            Commit(BarlineType.Single);
+                        pendingStart = BarlineType.RepeatStart;
+                    }
+                    else if (t == BarlineType.RepeatBoth)
+                    {
+                        // :|: ends this measure AND opens the next.
+                        Commit(BarlineType.RepeatEnd);
+                        pendingStart = BarlineType.RepeatStart;
+                    }
+                    else
+                    {
+                        Commit(t);
+                    }
+                }
                 else if (item is ChordEntrySyntax entry)
+                {
                     pending.Add(entry);
+                }
             }
             // A trailing measure with no closing barline still counts.
-            if (pending.Count > 0)
-            {
-                int mi = startMeasure + localMeasure;
-                measureItems[mi] = EmitChordPartMeasure(pending, mi, staffIndex, timeBeats, timeBeatType);
-                maxIndex = Math.Max(maxIndex, mi);
-            }
+            if (pending.Count > 0 || pendingStart != BarlineType.None)
+                Commit(BarlineType.None);
         }
 
         if (maxIndex < 0)
@@ -176,10 +208,16 @@ internal sealed class ChordNameCollector
         for (int i = 0; i <= maxIndex; i++)
         {
             var items = measureItems.TryGetValue(i, out var it) ? it : emptyBar;
-            // No barlines: a chord row draws none, and BarlineType.None never overrides
-            // the music staves under score-wide barline sync.
-            measures.Add(new Measure(items, BarlineType.None, BarlineType.None, null, 0, 0));
+            var start = measureStartBar.GetValueOrDefault(i, BarlineType.None);
+            var end = measureEndBar.GetValueOrDefault(i, BarlineType.Single);
+            measures.Add(new Measure(items, start, end, null, 0, 0));
         }
+        // Auto-set the final barline on the last measure (music convention), matching
+        // MeasureCollector — a written end-repeat / double bar there is kept.
+        var lastMeasure = measures[maxIndex];
+        if (lastMeasure.EndBarline == BarlineType.Single)
+            measures[maxIndex] = new Measure(
+                lastMeasure.Items, lastMeasure.StartBarline, BarlineType.Final, null, 0, 0);
         return measures.MoveToImmutable();
     }
 

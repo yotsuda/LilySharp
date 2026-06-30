@@ -3474,7 +3474,7 @@ public sealed class MeasureCollector
         _ => ClefType.Treble
     };
 
-    private static BarlineType ParseBarlineType(string text) => text switch
+    internal static BarlineType ParseBarlineType(string text) => text switch
     {
         "|:" => BarlineType.RepeatStart,
         ":|" => BarlineType.RepeatEnd,
