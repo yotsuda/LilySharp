@@ -154,14 +154,23 @@ so you can verify the layout without rendering an image. (For resolved pitches, 
 
 By default the first score block is reported; `--all` reports every score block.
 
+Consecutive systems with the same bar count collapse into one line, so a long
+score (real songs run to 100+ bars) stays a few lines; irregular systems (e.g. a
+short final line) print on their own. Explicit `break`s are listed separately
+(summarized when there are many) so you can confirm the author's breaks landed.
+
 **Example:**
 ```bash
 lysc layout score.lys
 # score "demo"
-#   staves: treble, bass  |  time 4/4  |  2 systems, 6 bars
-#   system 1: bars 1-3      (3 bars)
-#   system 2: bars 4-6      (3 bars)
-#   line breaks after bar: 3
+#   staves: treble, bass  |  time 4/4  |  10 systems, 40 bars
+#   system 1: bars 1-4     (4 bars)
+#   systems 2-3: 5 bars each (bars 5-14)
+#   systems 4-5: 4 bars each (bars 15-22)
+#   systems 6-8: 5 bars each (bars 23-37)
+#   system 9: bars 38-39   (2 bars)
+#   system 10: bar 40      (1 bar)
+#   forced breaks after bar: 37, 39
 ```
 
 ## Output File Naming

@@ -87,20 +87,55 @@ public static class LayoutReport
             .Append(", ").Append(Count(totalBars, "bar"))
             .AppendLine();
 
-        foreach (var sys in layout.AllSystems)
-            AppendSystem(sb, "  ", sys);
-
-        // Where the line breaker split the music: the last bar of every system but the
-        // final one. This is the headline answer to "where did it break?".
-        var breaks = new List<int>();
-        for (int i = 0; i < layout.AllSystems.Length - 1; i++)
+        // Systems, with consecutive equal-bar-count systems collapsed into one run line.
+        // Real scores run to 100+ bars / 40+ systems; one line per system (plus a parallel
+        // list of every break) was a wall AND redundant — every system boundary already IS
+        // a line break, so the run lines are the break map. Irregular systems (a different
+        // bar count, e.g. a short final line) fall out as their own line.
+        var systems = layout.AllSystems;
+        int s = 0;
+        while (s < systems.Length)
         {
-            var ms = layout.AllSystems[i].Measures;
-            if (!ms.IsDefaultOrEmpty)
-                breaks.Add(ms[^1].MeasureIndex + 1);
+            int barCount = BarCount(systems[s]);
+            int e = s;
+            while (e + 1 < systems.Length && BarCount(systems[e + 1]) == barCount)
+                e++;
+            AppendRun(sb, systems, s, e, barCount);
+            s = e + 1;
         }
-        sb.Append("  line breaks after bar: ")
-            .AppendLine(breaks.Count > 0 ? string.Join(", ", breaks) : "(none, single system)");
+
+        // Forced breaks (explicit `break`) only — there are usually a handful, so this
+        // stays short even for a long score and confirms the author's breaks landed.
+        // Auto breaks are the run boundaries above; listing them all was the wall.
+        var modelMeasures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        var forced = new List<int>();
+        for (int k = 0; k < systems.Length - 1; k++)
+        {
+            var ms = systems[k].Measures;
+            if (ms.IsDefaultOrEmpty)
+                continue;
+            int idx = ms[^1].MeasureIndex;
+            if (idx >= 0 && idx < modelMeasures.Length && modelMeasures[idx].HasBreakAfter)
+                forced.Add(idx + 1);
+        }
+        int boundaries = 0;
+        for (int k = 0; k < systems.Length - 1; k++)
+            if (!systems[k].Measures.IsDefaultOrEmpty)
+                boundaries++;
+        if (forced.Count > 0)
+        {
+            if (forced.Count <= 16)
+                // Few enough to name — the headline answer to "did my breaks land?".
+                sb.Append("  forced breaks after bar: ").AppendLine(string.Join(", ", forced));
+            else if (forced.Count == boundaries)
+                // Every line break is explicit (common in hand-broken scores): the run
+                // lines above already are the break map, so just say so.
+                sb.Append("  forced breaks: after every system (").Append(forced.Count).AppendLine(")");
+            else
+                sb.Append("  forced breaks after bar: ")
+                    .Append(string.Join(", ", forced.Take(12)))
+                    .Append(", ... (").Append(forced.Count).AppendLine(" total)");
+        }
 
         // Hara-kiri: a staff auto-hidden in a system (empty there). An unexpected hide
         // is a real layout surprise, so call it out.
@@ -109,19 +144,36 @@ public static class LayoutReport
             sb.Append("  hidden (empty) staves: ").AppendLine(string.Join("; ", hidden));
     }
 
-    private static void AppendSystem(StringBuilder sb, string indent, SystemLayout sys)
+    private static int BarCount(SystemLayout sys) =>
+        sys.Measures.IsDefaultOrEmpty ? 0 : sys.Measures.Length;
+
+    /// <summary>Prints one system, or a run of consecutive equal-bar-count systems.</summary>
+    private static void AppendRun(
+        StringBuilder sb, ImmutableArray<SystemLayout> systems, int start, int end, int barCount)
     {
-        sb.Append(indent).Append("system ").Append(sys.SystemIndex + 1).Append(": ");
-        if (sys.Measures.IsDefaultOrEmpty)
+        var firstSys = systems[start];
+        if (firstSys.Measures.IsDefaultOrEmpty)
         {
-            sb.AppendLine(" (empty)");
+            sb.Append("  system ").Append(firstSys.SystemIndex + 1).AppendLine(": (empty)");
             return;
         }
-        int first = sys.Measures[0].MeasureIndex + 1;
-        int last = sys.Measures[^1].MeasureIndex + 1;
-        int count = sys.Measures.Length;
-        string range = first == last ? $"bar {first}" : $"bars {first}-{last}";
-        sb.Append(range.PadRight(14)).Append('(').Append(count).AppendLine(count == 1 ? " bar)" : " bars)");
+        int firstBar = firstSys.Measures[0].MeasureIndex + 1;
+        int lastBar = systems[end].Measures[^1].MeasureIndex + 1;
+
+        if (start == end)
+        {
+            string range = firstBar == lastBar ? $"bar {firstBar}" : $"bars {firstBar}-{lastBar}";
+            sb.Append("  system ").Append(firstSys.SystemIndex + 1).Append(": ")
+                .Append(range.PadRight(13))
+                .Append('(').Append(barCount).AppendLine(barCount == 1 ? " bar)" : " bars)");
+        }
+        else
+        {
+            sb.Append("  systems ").Append(firstSys.SystemIndex + 1).Append('-')
+                .Append(systems[end].SystemIndex + 1).Append(": ")
+                .Append(barCount).Append(barCount == 1 ? " bar each" : " bars each")
+                .Append(" (bars ").Append(firstBar).Append('-').Append(lastBar).AppendLine(")");
+        }
     }
 
     private static List<string> HiddenStaves(ScoreLayout layout)

@@ -30,9 +30,10 @@ public class LayoutReportTests
     private static string Report(string src) => LayoutReport.Generate(SyntaxTree.Parse(src));
 
     [Fact]
-    public void ForcedBreaks_AreReportedAtTheirBars()
+    public void ForcedBreaks_AreListedAndCollapseRuns()
     {
-        // 'break' after bar 2 and bar 4 → three systems, breaks at exactly 2 and 4.
+        // 'break' after bar 2 and bar 4 → three 2-bar systems. The equal-bar-count run
+        // collapses to one line, and the explicit breaks are listed concisely.
         var report = Report(
             "part melody\n" +
             "section Main {\n" +
@@ -49,20 +50,22 @@ public class LayoutReportTests
 
         Assert.Contains("score \"brk\"", report);
         Assert.Contains("3 systems", report);
-        Assert.Contains("line breaks after bar: 2, 4", report);
+        Assert.Contains("systems 1-3: 2 bars each (bars 1-6)", report);
+        Assert.Contains("forced breaks after bar: 2, 4", report);
     }
 
     [Fact]
-    public void SingleSystem_ReportsNoBreaks()
+    public void SingleSystem_ReportsOneRunAndNoForcedBreaks()
     {
         var report = Report(
             "part melody\n" +
-            "section Main { melody { c4 d e f | } }\n" +
+            "section Main { melody { c4 d e f | g4 a b c' | c'4 b a g | f4 e d c | } }\n" +
             "structure { Main }\n" +
             "score \"one\" { staff melody }\n");
 
-        Assert.Contains("1 system,", report);
-        Assert.Contains("line breaks after bar: (none", report);
+        Assert.Contains("1 system, 4 bars", report);
+        Assert.Contains("system 1: bars 1-4", report);
+        Assert.DoesNotContain("forced breaks", report);
     }
 
     [Fact]
