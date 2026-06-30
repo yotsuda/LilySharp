@@ -142,20 +142,23 @@ lysc check score.lys --pitches    # also print each note's resolved absolute pit
 ### layout - Layout Summary
 
 ```bash
-lysc layout <input.lys>
+lysc layout [--all] <input.lys>
 ```
 
 Prints a plain-text summary of the engine's layout decisions to stdout: the staves,
-page/system counts, which bars landed in each system, and where the line breaker
-split the music. This exposes the facts a source file does not reveal — where breaks
-actually fell and how the bars are distributed — so you can verify the layout without
-rendering an image. (For resolved pitches, use `check --pitches`.)
+the meter (with any mid-piece changes), the system count, which bars landed in each
+system, and where the line breaker split the music. This exposes the facts a source
+file does not reveal — where breaks actually fell and how the bars are distributed —
+so you can verify the layout without rendering an image. (For resolved pitches, use
+`check --pitches`.)
+
+By default the first score block is reported; `--all` reports every score block.
 
 **Example:**
 ```bash
 lysc layout score.lys
 # score "demo"
-#   staves: treble, bass  |  time 4/4  |  1 page, 2 systems, 6 bars
+#   staves: treble, bass  |  time 4/4  |  2 systems, 6 bars
 #   system 1: bars 1-3      (3 bars)
 #   system 2: bars 4-6      (3 bars)
 #   line breaks after bar: 3

@@ -826,20 +826,26 @@ static int RunLayout(string[] args)
 
             Usage: lysc layout <input.lys>
 
-            Shows, per score: the staves, page/system counts, which bars landed in
-            each system, and where the line breaker split the music — the layout
-            facts a source file does not reveal, so you can verify the result
-            without rendering an image. (For resolved pitches, use 'check --pitches'.)
+            Shows, per score: the staves, the meter (with any mid-piece changes),
+            the system count, which bars landed in each system, and where the line
+            breaker split the music — the layout facts a source file does not reveal,
+            so you can verify the result without rendering an image. (For resolved
+            pitches, use 'check --pitches'.)
+
+            By default the first score is reported; --all reports every score block.
 
             Options:
+              --all            Report every score block (default: first only)
               -h, --help       Show this help
 
             Examples:
               lysc layout score.lys
+              lysc layout --all multi-score.lys
             """);
         return 0;
     }
 
+    bool allScores = args.Contains("--all");
     var inputPath = args.FirstOrDefault(a => !a.StartsWith('-'));
     if (inputPath is null)
     {
@@ -860,7 +866,7 @@ static int RunLayout(string[] args)
         // misleading, so route through the same gate as every output command.
         if (ReportDiagnostics(tree)) return 1;
 
-        Console.Write(LilySharp.Core.Svg.LayoutReport.Generate(tree));
+        Console.Write(LilySharp.Core.Svg.LayoutReport.Generate(tree, allScores));
         return 0;
     }
     catch (Exception ex)

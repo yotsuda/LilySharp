@@ -35,10 +35,12 @@ namespace LilySharp.Core.Svg;
 public static class LayoutReport
 {
     /// <summary>
-    /// Builds the layout report for every render block in <paramref name="tree"/>
-    /// (or the implicit default score when none is declared).
+    /// Builds the layout report for the first render block in <paramref name="tree"/>
+    /// (or, with <paramref name="allScores"/>, every block — matching the
+    /// first-by-default / <c>--all</c> convention of the export commands). Falls back
+    /// to the implicit default score when none is declared.
     /// </summary>
-    public static string Generate(SyntaxTree tree)
+    public static string Generate(SyntaxTree tree, bool allScores = false)
     {
         var sb = new StringBuilder();
         var specs = RenderSpecParser.FindAll(tree);
@@ -49,7 +51,8 @@ public static class LayoutReport
             return sb.ToString();
         }
 
-        for (int i = 0; i < specs.Count; i++)
+        int count = allScores ? specs.Count : 1;
+        for (int i = 0; i < count; i++)
         {
             if (i > 0)
                 sb.AppendLine();
@@ -74,26 +77,18 @@ public static class LayoutReport
             .ToList();
         int totalBars = layout.AllSystems.Sum(s => s.Measures.Length);
 
+        // No page count: the engine lays a score out as one continuous flow (SVG/PNG
+        // are a single tall image; PDF auto-sizes one page), so there is no printed-page
+        // concept to report — only systems (lines) and where they break.
         sb.Append("  staves: ")
             .Append(staves.Count > 0 ? string.Join(", ", staves) : "(none)")
-            .Append("  |  time ").Append(score.TimeSignature)
-            .Append("  |  ").Append(Count(layout.PageCount, "page"))
-            .Append(", ").Append(Count(layout.SystemCount, "system"))
+            .Append("  |  time ").Append(TimeField(score))
+            .Append("  |  ").Append(Count(layout.SystemCount, "system"))
             .Append(", ").Append(Count(totalBars, "bar"))
             .AppendLine();
 
-        bool multiPage = layout.PageCount > 1;
-        foreach (var page in layout.Pages)
-        {
-            string indent = "  ";
-            if (multiPage)
-            {
-                sb.Append("  page ").Append(page.PageIndex + 1).AppendLine(":");
-                indent = "    ";
-            }
-            foreach (var sys in page.Systems)
-                AppendSystem(sb, indent, sys);
-        }
+        foreach (var sys in layout.AllSystems)
+            AppendSystem(sb, "  ", sys);
 
         // Where the line breaker split the music: the last bar of every system but the
         // final one. This is the headline answer to "where did it break?".
@@ -105,7 +100,7 @@ public static class LayoutReport
                 breaks.Add(ms[^1].MeasureIndex + 1);
         }
         sb.Append("  line breaks after bar: ")
-            .AppendLine(breaks.Count > 0 ? string.Join(", ", breaks) : "(none — single system)");
+            .AppendLine(breaks.Count > 0 ? string.Join(", ", breaks) : "(none, single system)");
 
         // Hara-kiri: a staff auto-hidden in a system (empty there). An unexpected hide
         // is a real layout surprise, so call it out.
@@ -142,6 +137,24 @@ public static class LayoutReport
                         result.Add($"staff {st.StaffIndex + 1} in system {sys.SystemIndex + 1}");
         }
         return result;
+    }
+
+    /// <summary>
+    /// The score's meter, plus any mid-piece changes with the bar they take effect —
+    /// e.g. "4/4 -> 3/4 (bar 2) -> 6/8 (bar 3)". The starting meter alone hides a
+    /// change the source makes, so the report would otherwise misreport the meter.
+    /// </summary>
+    private static string TimeField(MultiStaffScore score)
+    {
+        string initial = score.TimeSignature.ToString();
+        var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
+        var changes = new List<string>();
+        for (int i = 0; i < measures.Length; i++)
+            foreach (var item in measures[i].Items)
+                if (item is TimeSignatureChangeItem ts)
+                    changes.Add($"{ts.NewTime} (bar {i + 1})");
+
+        return changes.Count == 0 ? initial : initial + " -> " + string.Join(" -> ", changes);
     }
 
     private static string ScoreName(RenderSpec? spec)

@@ -66,6 +66,43 @@ public class LayoutReportTests
     }
 
     [Fact]
+    public void MidPieceTimeChanges_AreReportedWithTheirBars()
+    {
+        var report = Report(
+            "time 4/4\n" +
+            "part melody { clef treble }\n" +
+            "section Main { melody {\n" +
+            "  c'4 d e f |\n" +
+            "  time 3/4 g4 a b |\n" +
+            "  time 6/8 a8 g f e d c |\n" +
+            "} }\n" +
+            "structure { Main }\n" +
+            "score \"meter\" { staff melody }\n");
+
+        Assert.Contains("time 4/4 -> 3/4 (bar 2) -> 6/8 (bar 3)", report);
+    }
+
+    [Fact]
+    public void AllScores_FlagSelectsFirstOrEvery()
+    {
+        var src =
+            "part rh { clef treble }\n" +
+            "section A { rh { c'4 d' e' f' | } }\n" +
+            "structure { A }\n" +
+            "score \"first\" { staff rh }\n" +
+            "score \"second\" { staff rh }\n";
+        var tree = SyntaxTree.Parse(src);
+
+        var firstOnly = LayoutReport.Generate(tree);
+        Assert.Contains("score \"first\"", firstOnly);
+        Assert.DoesNotContain("score \"second\"", firstOnly);
+
+        var all = LayoutReport.Generate(tree, allScores: true);
+        Assert.Contains("score \"first\"", all);
+        Assert.Contains("score \"second\"", all);
+    }
+
+    [Fact]
     public void Header_ListsEveryStaffAndClef()
     {
         var report = Report(
