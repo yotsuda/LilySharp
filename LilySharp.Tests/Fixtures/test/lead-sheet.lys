@@ -1,10 +1,13 @@
 // Chords + lyrics, no staff: the chord row carries the measure barlines and the
 // chords sit between them (timing-aware); the lyrics hang below the barlines.
+// Chords change coarsely (at most a quarter), while the lyrics are a finer
+// syllable grid — so each bar is spaced by its DENSEST row (the lyrics), and the
+// chords land at their timing within. Bars 1/2 have more syllables than chords.
 title "Lead sheet"
 time 4/4
 section Main {
-  chords prog { c2 g:7 | a:m f | c1 | g:7 c | }
-  lyrics words { Twin- kle | lit- tle | star | high low | }
+  chords prog { c2 g:7 | a:m    | f2 g:7 | c1   | }
+  lyrics words { Twin- kle lit- tle | star how I | won- der what | you~ | }
 }
 structure { Main }
 score "lead-sheet" { chords prog lyrics words }

@@ -217,10 +217,9 @@ public static class SharedRenderer
         // barlines on the TOP text row — the chords/lyrics read as a measure grid
         // (chords sit between the barlines, lyrics hang below). A score with any
         // real staff keeps that staff's own barlines and leaves text rows bare.
-        var enumeratedStaves = score.EnumerateStaves().ToList();
-        bool leadSheet = enumeratedStaves.Count > 0
-            && enumeratedStaves.All(t => t.Staff.IsTextRow);
-        int barlineRowIdx = leadSheet ? enumeratedStaves[0].GlobalStaffIndex : -1;
+        bool leadSheet = score.IsLeadSheet;
+        // The grid goes on the top row (global index 0 is always the first staff).
+        int barlineRowIdx = leadSheet ? 0 : -1;
 
         // Per-staff: staff lines + prefix glyphs + notes
         foreach (var (group, staff, globalIdx) in score.EnumerateStaves())

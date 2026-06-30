@@ -793,7 +793,18 @@ public sealed class MultiStaffLayouter
             // score leaves the chain untouched. Applied before the FirstNoteSpring
             // tweak below, which Math.Max-preserves the widened minimum.
             if (!score.Lyrics.IsDefaultOrEmpty)
-                springs = SpacingRules.ApplyLyricSpacing(springs, primaryMeasure, i, score.Lyrics);
+            {
+                // On a lead sheet the chords change at most every quarter note, so
+                // the chord (primary) row has far fewer columns than the syllable
+                // grid; reserving lyric width against IT under-counts and the
+                // syllables crowd. Reserve against the DENSEST row at this bar (the
+                // lyrics), whose item count matches the timing columns the springs
+                // were built from. Staff-backed scores keep the primary measure.
+                var lyricMeasure = score.IsLeadSheet
+                    ? DensestMeasure(allMeasures)
+                    : primaryMeasure;
+                springs = SpacingRules.ApplyLyricSpacing(springs, lyricMeasure, i, score.Lyrics);
+            }
 
             // LINE-START measure: spring 0 is the prefix→first-note spacing
             // (space-alist of the last prefix item), not the mid-line
@@ -961,6 +972,21 @@ public sealed class MultiStaffLayouter
         }
 
         return measures;
+    }
+
+    /// <summary>
+    /// The measure with the most items among <paramref name="measures"/> (all rows at
+    /// one bar). On a lead sheet this is the lyrics row (one spacer per syllable),
+    /// whose item count matches the timing-column grid the springs were built from —
+    /// the basis lyric-width reservation needs.
+    /// </summary>
+    private static Measure DensestMeasure(IReadOnlyList<Measure> measures)
+    {
+        var best = measures[0];
+        for (int k = 1; k < measures.Count; k++)
+            if (measures[k].Items.Length > best.Items.Length)
+                best = measures[k];
+        return best;
     }
 
     // --- Skyline-based staff spacing ---

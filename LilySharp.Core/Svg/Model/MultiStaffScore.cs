@@ -245,6 +245,27 @@ public sealed record MultiStaffScore
     /// <summary>Number of measures (from the first content staff).</summary>
     public int MeasureCount => PrimaryContentStaff.MeasureCount;
 
+    /// <summary>
+    /// True when every row is a text row (lyrics and/or chords) and there is no
+    /// notation staff — a lead-sheet score. Such a score draws a measure grid on
+    /// its top text row and spaces each bar by its densest (lyric) row rather than
+    /// the coarse chord durations.
+    /// </summary>
+    public bool IsLeadSheet
+    {
+        get
+        {
+            bool any = false;
+            foreach (var (_, staff, _) in EnumerateStaves())
+            {
+                any = true;
+                if (!staff.IsTextRow)
+                    return false;
+            }
+            return any;
+        }
+    }
+
     /// <summary>Gets all voices across all staves.</summary>
     public IEnumerable<Voice> AllVoices
     {
