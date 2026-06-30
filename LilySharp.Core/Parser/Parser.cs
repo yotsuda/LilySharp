@@ -352,19 +352,6 @@ internal sealed class Parser
         return items;
     }
 
-    private PartDeclarationGreen ParseLegacyPartDeclaration()
-    {
-        var keyword = Expect(SyntaxKind.PartKeyword);
-        var name = TryConsume(SyntaxKind.Identifier);
-        var displayName = TryConsume(SyntaxKind.StringLiteral);
-        var openBrace = Expect(SyntaxKind.OpenBrace);
-
-        var members = ParseList(SyntaxKind.CloseBrace, ParsePartMember);
-
-        var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new PartDeclarationGreen(keyword, name, displayName, openBrace, [.. members], closeBrace);
-    }
-
     private GreenNode? ParsePartProperty()
     {
         // In a part/staff header every attribute is colon-form ('name: value'),
@@ -395,36 +382,6 @@ internal sealed class Parser
             return new PropertyAssignmentGreen(propName, colon, [.. values]);
         }
         return null;
-    }
-
-    private GreenNode? ParsePartMember()
-    {
-        return Current.Kind switch
-        {
-            SyntaxKind.StaffKeyword => ParseStaffDeclaration(),
-            SyntaxKind.ClefKeyword or SyntaxKind.KeyKeyword => ParsePropertyAssignment(),
-            // Part/staff header: time and tempo are colon-form like the other attributes.
-            SyntaxKind.TimeKeyword => ParseTimeSignature(expectColon: true),
-            SyntaxKind.TempoKeyword => ParseTempoDeclaration(expectColon: true),
-            SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
-
-            SyntaxKind.OpenBrace => ParseMusicBlock(),
-            _ when IsMusicItemStart() => ParseMusicItem(),
-            _ => null
-        };
-    }
-
-    private StaffDeclarationGreen ParseStaffDeclaration()
-    {
-        var keyword = Expect(SyntaxKind.StaffKeyword);
-        var name = TryConsume(SyntaxKind.Identifier);
-        var openBrace = Expect(SyntaxKind.OpenBrace);
-
-        // Staff has the same members as a part.
-        var members = ParseList(SyntaxKind.CloseBrace, ParsePartMember);
-
-        var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new StaffDeclarationGreen(keyword, name, openBrace, [.. members], closeBrace);
     }
 
     // ========== Properties and Metadata ==========

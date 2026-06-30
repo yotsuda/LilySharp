@@ -2450,9 +2450,6 @@ public sealed class MeasureCollector
         }
     }
 
-    private void ProcessPartBlock(PartBlockSyntax partBlock, Action<IEnumerable<SyntaxNode>> processNodes)
-        => ProcessMusicContainer(partBlock, processNodes);
-
     /// <summary>
     /// Process the music inside a container node — a <c>part-block</c> (section-major)
     /// or a part-major inner <c>section</c>. Both expose their music as descendants.
