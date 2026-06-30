@@ -1,0 +1,22 @@
+// Ties on second-interval chords: each tie must follow its own head's
+// within-chord horizontal displacement (the reversed head sits a notehead
+// to the side of the stem), not the undisplaced chord column. These low
+// clusters are stem-up, so the reversed (upper) head shifts RIGHT and its
+// tie starts/ends a notehead further right than the column tie.
+// LILYPOND-REF: lily/stem.cc Stem::calc_positioning_done; lily/tie-formatting-problem.cc.
+title "Ties on seconds"
+composer "Lily#"
+
+time 4/4
+key c major
+
+part melody {
+  clef treble
+  section Main { <c d>2 ~ <c d>2 | <d e>2 ~ <d e>2 | }
+}
+
+structure { Main }
+
+score "tie-seconds" {
+  staff melody
+}

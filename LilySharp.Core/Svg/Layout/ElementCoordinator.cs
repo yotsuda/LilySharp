@@ -554,6 +554,38 @@ public sealed class ElementCoordinator
         => LayoutUtilities.GetItemXOffset(voice.Measures, measureIndex, itemIndex, measureLayout);
 
     /// <summary>
+    /// Within-chord horizontal displacement (staff spaces) of the note at
+    /// <paramref name="staffPosition"/> inside the item at <paramref name="itemIndex"/>,
+    /// or 0 when the item is a single note or the chord has no second/unison that
+    /// reverses a head to the far side of the stem. This mirrors the per-head offset
+    /// the renderer applies (<see cref="ChordHeadPositioning.CalculateOffsets"/>) so a
+    /// tie or slur attaches to the DISPLACED head's edge, not the undisplaced chord
+    /// column. Without it, a tie/slur on the reversed head of a seconds chord starts
+    /// inside its own head and fails to reach the matching head at the other end.
+    /// LILYPOND-REF: lily/stem.cc Stem::calc_positioning_done; the tie/slur outline
+    /// attachment follows the note head's actual X (lily/tie-formatting-problem.cc).
+    /// </summary>
+    private static double GetChordHeadXOffset(
+        Voice voice, int measureIndex, int itemIndex, int staffPosition)
+    {
+        if (measureIndex < 0 || measureIndex >= voice.Measures.Length)
+            return 0;
+        var measure = voice.Measures[measureIndex];
+        if (itemIndex < 0 || itemIndex >= measure.Items.Length)
+            return 0;
+        if (measure.Items[itemIndex] is not ChordItem chord)
+            return 0;
+        int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
+        double scale = chord.IsCue ? 0.66 : 1.0;
+        var offsets = ChordHeadPositioning.CalculateOffsets(
+            chord.Notes, chord.StemUp, noteValue, scale);
+        for (int i = 0; i < chord.Notes.Length; i++)
+            if (chord.Notes[i].StaffPosition == staffPosition)
+                return offsets[i];
+        return 0;
+    }
+
+    /// <summary>
     /// Detects ties and calculates their layouts, splitting cross-system ties into broken pieces.
     /// </summary>
     /// <remarks>
@@ -601,7 +633,9 @@ public sealed class ElementCoordinator
                 if (segment.IsFirst)
                 {
                     segStartX = startMeasure.X
-                        + GetItemXOffset(score.Voice, tie.StartMeasureIndex, tie.StartItemIndex, startMeasure);
+                        + GetItemXOffset(score.Voice, tie.StartMeasureIndex, tie.StartItemIndex, startMeasure)
+                        // Follow the tied head's within-chord displacement (seconds).
+                        + GetChordHeadXOffset(score.Voice, tie.StartMeasureIndex, tie.StartItemIndex, tie.StaffPosition);
 
                     // The tie attaches at the RIGHT edge of the left note's
                     // outline (head + augmentation dots) — the item X is the
@@ -635,7 +669,9 @@ public sealed class ElementCoordinator
                 if (segment.IsLast)
                 {
                     segEndX = endMeasure.X
-                        + GetItemXOffset(score.Voice, tie.EndMeasureIndex, tie.EndItemIndex, endMeasure);
+                        + GetItemXOffset(score.Voice, tie.EndMeasureIndex, tie.EndItemIndex, endMeasure)
+                        // Follow the tied head's within-chord displacement (seconds).
+                        + GetChordHeadXOffset(score.Voice, tie.EndMeasureIndex, tie.EndItemIndex, tie.StaffPosition);
                 }
                 else
                 {

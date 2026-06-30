@@ -86,6 +86,9 @@ public class SvgSnapshotTests
         yield return new object[] { "test/beaming" };
         yield return new object[] { "test/grace-notes" };
         yield return new object[] { "test/ties-slurs" };
+        // A tie on a second-interval chord follows its own reversed head's X
+        // displacement, not the chord column.
+        yield return new object[] { "test/tie-seconds" };
         // Tab ties sit on each tied note's STRING line (above the fret digit), not
         // at the notation pitch height — the two ties are on different strings.
         yield return new object[] { "test/tab-tie" };
