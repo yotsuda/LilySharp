@@ -50,5 +50,8 @@ public sealed record OttavaBracketItem(
     /// <summary>Measure index of the end (where loco or next ottava appears).</summary>
     int EndMeasureIndex,
     /// <summary>Source position for click-to-source mapping.</summary>
-    int SourcePosition
+    int SourcePosition,
+    /// <summary>F3/B: index of the originating ottava mark in score.MusicMarks,
+    /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
+    int SourceIndex = -1
 );

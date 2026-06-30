@@ -47,7 +47,10 @@ public readonly record struct OttavaBracketLayout(
     /// <summary>Dash fraction for the dashed line.</summary>
     double DashFraction,
     /// <summary>Source position for click-to-source mapping.</summary>
-    int SourcePosition
+    int SourcePosition,
+    /// <summary>F3/B: index of the originating ottava mark in score.MusicMarks,
+    /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
+    int SourceIndex = -1
 );
 
 /// <summary>
@@ -187,7 +190,8 @@ public static class OttavaBracketEngraver
                     EdgeHeight: segEdgeHeight,
                     DashPeriod: DashPeriod,
                     DashFraction: DashFraction,
-                    SourcePosition: bracket.SourcePosition
+                    SourcePosition: bracket.SourcePosition,
+                    SourceIndex: bracket.SourceIndex
                 ));
             }
         }
@@ -208,13 +212,16 @@ public static class OttavaBracketEngraver
     {
         var brackets = ImmutableArray.CreateBuilder<OttavaBracketItem>();
 
+        // F3/B: keep each mark's ORIGINAL index in musicMarks (== score.MusicMarks) so the
+        // bracket can re-derive its data-pos from the live score on reuse.
         var ottavaMarks = musicMarks
-            .Where(m => m.Type == MusicMarkType.OttavaUp ||
-                        m.Type == MusicMarkType.OttavaDown ||
-                        m.Type == MusicMarkType.QuindicesUp ||
-                        m.Type == MusicMarkType.QuindicesDown ||
-                        m.Type == MusicMarkType.Loco)
-            .OrderBy(m => m.MeasureIndex)
+            .Select((m, i) => (Mark: m, Index: i))
+            .Where(x => x.Mark.Type == MusicMarkType.OttavaUp ||
+                        x.Mark.Type == MusicMarkType.OttavaDown ||
+                        x.Mark.Type == MusicMarkType.QuindicesUp ||
+                        x.Mark.Type == MusicMarkType.QuindicesDown ||
+                        x.Mark.Type == MusicMarkType.Loco)
+            .OrderBy(x => x.Mark.MeasureIndex)
             .ToList();
 
         if (ottavaMarks.Count == 0)
@@ -224,7 +231,7 @@ public static class OttavaBracketEngraver
         // terminated by the next ottava/loco mark
         for (int i = 0; i < ottavaMarks.Count; i++)
         {
-            var mark = ottavaMarks[i];
+            var (mark, srcIndex) = ottavaMarks[i];
 
             // Skip loco marks (they only terminate, don't start)
             if (mark.Type == MusicMarkType.Loco)
@@ -246,7 +253,7 @@ public static class OttavaBracketEngraver
             if (i + 1 < ottavaMarks.Count)
             {
                 // Bracket covers up to the measure before the terminator
-                endMeasure = ottavaMarks[i + 1].MeasureIndex - 1;
+                endMeasure = ottavaMarks[i + 1].Mark.MeasureIndex - 1;
                 if (endMeasure < mark.MeasureIndex)
                     endMeasure = mark.MeasureIndex; // at minimum, cover the start measure
             }
@@ -262,7 +269,8 @@ public static class OttavaBracketEngraver
                     Type: type,
                     StartMeasureIndex: mark.MeasureIndex,
                     EndMeasureIndex: endMeasure,
-                    SourcePosition: mark.SourcePosition
+                    SourcePosition: mark.SourcePosition,
+                    SourceIndex: srcIndex
                 ));
             }
         }

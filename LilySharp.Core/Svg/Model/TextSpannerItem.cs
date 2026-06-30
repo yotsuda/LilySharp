@@ -61,5 +61,8 @@ public sealed record TextSpannerItem(
     /// <summary>Line style (dashed, solid, none).</summary>
     TextSpannerStyle Style,
     /// <summary>Source position for click-to-source mapping.</summary>
-    int SourcePosition
+    int SourcePosition,
+    /// <summary>F3/B: index of the originating rit/accel mark in score.MusicMarks,
+    /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
+    int SourceIndex = -1
 );

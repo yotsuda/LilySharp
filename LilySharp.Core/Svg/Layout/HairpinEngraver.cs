@@ -49,7 +49,10 @@ public readonly record struct HairpinLayout(
     /// <summary>Crescendo or decrescendo.</summary>
     HairpinDirection Direction,
     /// <summary>Source position for click-to-source mapping.</summary>
-    int SourcePosition
+    int SourcePosition,
+    /// <summary>F3/B: index of the originating cresc/decresc mark in score.MusicMarks,
+    /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
+    int SourceIndex = -1
 );
 
 /// <summary>
@@ -170,7 +173,8 @@ public static class HairpinEngraver
 
                 layouts.Add(new HairpinLayout(
                     segment.StartMeasureIndex, segStartX, segEndX, BaseY,
-                    startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition));
+                    startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition,
+                    hairpin.SourceIndex));
             }
         }
 
@@ -212,12 +216,15 @@ public static class HairpinEngraver
     {
         var hairpins = ImmutableArray.CreateBuilder<HairpinItem>();
 
-        // Sort all events by position (measure, item)
+        // Sort all events by position (measure, item). F3/B: keep each mark's ORIGINAL
+        // index in musicMarks (== score.MusicMarks) so the hairpin can re-derive its
+        // data-pos from the live score on reuse.
         var crescMarks = musicMarks
-            .Where(m => m.Type == MusicMarkType.Cresc ||
-                        m.Type == MusicMarkType.Decresc ||
-                        m.Type == MusicMarkType.Dim)
-            .OrderBy(m => m.MeasureIndex)
+            .Select((m, i) => (Mark: m, Index: i))
+            .Where(x => x.Mark.Type == MusicMarkType.Cresc ||
+                        x.Mark.Type == MusicMarkType.Decresc ||
+                        x.Mark.Type == MusicMarkType.Dim)
+            .OrderBy(x => x.Mark.MeasureIndex)
             .ToList();
 
         if (crescMarks.Count == 0)
@@ -229,7 +236,7 @@ public static class HairpinEngraver
             .ThenBy(d => d.ItemIndex)
             .ToList();
 
-        foreach (var mark in crescMarks)
+        foreach (var (mark, srcIndex) in crescMarks)
         {
             var direction = mark.Type == MusicMarkType.Cresc
                 ? HairpinDirection.Crescendo
@@ -243,6 +250,7 @@ public static class HairpinEngraver
 
             // Find the next cresc/decresc mark (another hairpin starts there)
             var nextMark = crescMarks
+                .Select(x => x.Mark)
                 .FirstOrDefault(m =>
                     m != mark &&
                     (m.MeasureIndex > mark.MeasureIndex ||
@@ -281,7 +289,8 @@ public static class HairpinEngraver
                     StartItemIndex: 0,
                     EndMeasureIndex: endMeasure,
                     EndItemIndex: endItem,
-                    SourcePosition: mark.SourcePosition
+                    SourcePosition: mark.SourcePosition,
+                    SourceIndex: srcIndex
                 ));
             }
         }

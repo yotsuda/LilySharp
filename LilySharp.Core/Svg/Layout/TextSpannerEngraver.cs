@@ -46,7 +46,10 @@ public readonly record struct TextSpannerLayout(
     /// <summary>Dash fraction (proportion of period that is visible).</summary>
     double DashFraction,
     /// <summary>Source position for click-to-source mapping.</summary>
-    int SourcePosition
+    int SourcePosition,
+    /// <summary>F3/B: index of the originating rit/accel mark in score.MusicMarks,
+    /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
+    int SourceIndex = -1
 );
 
 /// <summary>
@@ -233,7 +236,8 @@ public static class TextSpannerEngraver
                     Style: spanner.Style,
                     DashPeriod: DashPeriod,
                     DashFraction: DashFraction,
-                    SourcePosition: spanner.SourcePosition
+                    SourcePosition: spanner.SourcePosition,
+                    SourceIndex: spanner.SourceIndex
                 ));
             }
         }
@@ -315,18 +319,22 @@ public static class TextSpannerEngraver
     {
         var spanners = ImmutableArray.CreateBuilder<TextSpannerItem>();
 
+        // F3/B: keep each mark's ORIGINAL index in musicMarks (== score.MusicMarks) so the
+        // spanner can re-derive its data-pos from the live score on reuse.
         var ritAccelMarks = musicMarks
-            .Where(m => m.Type == MusicMarkType.Rit || m.Type == MusicMarkType.Accel)
-            .OrderBy(m => m.MeasureIndex)
+            .Select((m, i) => (Mark: m, Index: i))
+            .Where(x => x.Mark.Type == MusicMarkType.Rit || x.Mark.Type == MusicMarkType.Accel)
+            .OrderBy(x => x.Mark.MeasureIndex)
             .ToList();
 
         if (ritAccelMarks.Count == 0)
             return ImmutableArray<TextSpannerItem>.Empty;
 
-        foreach (var mark in ritAccelMarks)
+        foreach (var (mark, srcIndex) in ritAccelMarks)
         {
             // Find the next rit/accel mark (terminates this spanner)
             var nextMark = ritAccelMarks
+                .Select(x => x.Mark)
                 .FirstOrDefault(m =>
                     m != mark && m.MeasureIndex > mark.MeasureIndex);
 
@@ -355,7 +363,8 @@ public static class TextSpannerEngraver
                     EndMeasureIndex: endMeasure,
                     EndItemIndex: endItem,
                     Style: TextSpannerStyle.DashedLine,
-                    SourcePosition: mark.SourcePosition
+                    SourcePosition: mark.SourcePosition,
+                    SourceIndex: srcIndex
                 ));
             }
         }

@@ -120,6 +120,14 @@ public class MigratedDataPosTests
             // Fingering is note-hosted too (its host can be a single note OR a chord).
             CheckNote(fx, "Fingering", l1.FingeringLayouts, l2.FingeringLayouts, s2,
                 x => (x.StaffIndex, x.MeasureIndex, x.ItemIndex), x => x.SourcePosition, covered);
+
+            // Detected spanners resolve from score.MusicMarks (the originating mark).
+            Check(fx, "Hairpin", l1.HairpinLayouts, l2.HairpinLayouts, s2.MusicMarks,
+                x => x.SourceIndex, x => x.SourcePosition, it => it.SourcePosition, covered);
+            Check(fx, "Ottava", l1.OttavaBracketLayouts, l2.OttavaBracketLayouts, s2.MusicMarks,
+                x => x.SourceIndex, x => x.SourcePosition, it => it.SourcePosition, covered);
+            Check(fx, "TextSpanner", l1.TextSpannerLayouts, l2.TextSpannerLayouts, s2.MusicMarks,
+                x => x.SourceIndex, x => x.SourcePosition, it => it.SourcePosition, covered);
         }
 
         // Every migrated type the fixtures contain must have been exercised. (CustomText
@@ -130,6 +138,7 @@ public class MigratedDataPosTests
             "Dynamic", "Articulation", "Arpeggio", "FiguredBass", "VoltaBracket",
             "TupletBracket", "PercentRepeat", "GraceNote", "ChordName", "TrillSpanner",
             "MusicMark", "Lyric", "Glissando", "Fingering",
+            "Hairpin", "Ottava", "TextSpanner",
         };
         var missing = new List<string>();
         foreach (var t in expected)

@@ -197,6 +197,61 @@ public class IncrementalCompilerTests
     }
 
     [Fact]
+    public void ContentUnchangedEdit_WithBeams_ReusesWholeLayout_AndMatchesFull()
+    {
+        // Beamed notes: the renderer's beamed-item set must be matched by POSITION
+        // (staff, measure, item), NOT by MusicItem value — a value key includes the
+        // shifting SourcePosition, so a reused layout would fail to recognise every
+        // beamed note and re-stem it ON TOP of the beam (double stems). Guards that.
+        string withBeams = """
+            time 4/4
+            key c major
+            part melody
+            section Main {
+              melody { c8 d e f g a b c | d8 e f g a b c d | }
+            }
+            structure { Main }
+            score "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(withBeams);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = new TextChange(new TextSpan(0, 0), "\n");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.True(session.LastEditReusedLayout);
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    [Fact]
+    public void ContentUnchangedEdit_WithHairpin_ReusesWholeLayout_AndMatchesFull()
+    {
+        // Hairpins (detected from cresc/decresc marks) are now migrated out of ReuseSafe,
+        // so a hairpin-bearing score is reuse-eligible. Reuse must fire and stay
+        // byte-identical — the hairpin data-pos re-derives from the originating mark.
+        string withHairpin = """
+            time 4/4
+            key c major
+            part melody
+            section Main {
+              melody { c4@p d@cresc e f@f | g4@f a@decresc b c@p | }
+            }
+            structure { Main }
+            score "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(withHairpin);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = new TextChange(new TextSpan(0, 0), "\n");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.True(session.LastEditReusedLayout);
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    [Fact]
     public void TitleChange_DoesNotReuseLayout_ButMatchesFull()
     {
         // A rendered title is score-global: it is NOT in any per-measure content key, so

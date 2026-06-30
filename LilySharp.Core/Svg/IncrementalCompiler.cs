@@ -198,18 +198,13 @@ public sealed class IncrementalCompiler
 
     // F3/B-2: a cached layout is safe to reuse only if it carries no annotation whose
     // data-pos is still BAKED into the layout (i.e. not yet migrated onto the render-time
-    // SourceIndex resolution). Those would go stale on reuse since a content-unchanged
-    // edit shifts source offsets. The migrated arrays (dynamics, articulations, marks,
-    // lyrics, …) are re-resolved from the live score by SharedRenderer.ResolveDataPos, so
-    // they impose no constraint. Every detection source of the arrays below is itself
-    // folded into the content key (the marks/dynamics tables, or note items via the
-    // intrinsic key), so a content-key match guarantees these stay empty — checking the
-    // cached layout is equivalent to checking the edited score would produce none.
-    // PedalBracketLayouts is always empty today (pedals render as text marks), kept for
-    // completeness.
+    // SourceIndex / note-locator resolution). Such a value would go stale on reuse since a
+    // content-unchanged edit shifts source offsets. ALL data-pos-emitting annotations are
+    // now migrated and re-resolved from the live score by SharedRenderer.ResolveDataPos, so
+    // the only remaining entry is PedalBracketLayouts — which is always empty today (pedals
+    // render as text marks, never a bracket layout), kept as a guard against a future pedal
+    // bracket emitter that bakes data-pos. Override-free + content-key + global-key match
+    // (checked in Compile) already covers geometry; this just guards baked data-pos.
     private static bool ReuseSafe(ScoreLayout layout) =>
-        layout.HairpinLayouts.IsDefaultOrEmpty
-        && layout.OttavaBracketLayouts.IsDefaultOrEmpty
-        && layout.TextSpannerLayouts.IsDefaultOrEmpty
-        && layout.PedalBracketLayouts.IsDefaultOrEmpty;
+        layout.PedalBracketLayouts.IsDefaultOrEmpty;
 }

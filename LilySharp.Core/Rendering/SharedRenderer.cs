@@ -157,21 +157,32 @@ public static class SharedRenderer
 
     // ---------- System ----------
 
-    private static HashSet<MusicItem> BuildBeamedItemsSet(ScoreLayout layout)
+    // F3/B: identify beamed notes by their POSITION (staff, measure, item), not by the
+    // MusicItem value. A value key includes SourcePosition, so on whole-layout reuse the
+    // cached layout's beam members (built from the pre-edit score) no longer value-equal the
+    // live score's notes (offsets shifted) — every beamed note would then be re-stemmed AND
+    // beamed = double stems. The position key is offset-independent. Beams are detected from
+    // each staff's PRIMARY voice only (DetectBeamGroups uses score.Voice), so the set is
+    // matched against voice 1 only (see DrawStaffMeasures) — a non-primary voice never beams.
+    private static HashSet<(int Staff, int Measure, int Item)> BuildBeamedItemsSet(ScoreLayout layout)
     {
-        // Records use value equality; SourcePosition uniquely identifies each
-        // note/chord across the score, so default equality is correct here.
-        var set = new HashSet<MusicItem>();
+        var set = new HashSet<(int, int, int)>();
         foreach (var beam in layout.BeamLayouts)
+        {
+            int staff = beam.StaffIndex < 0 ? 0 : beam.StaffIndex;
             foreach (var member in beam.Group.Members)
-                set.Add(member.Item);
+            {
+                int measure = member.MeasureIndex >= 0 ? member.MeasureIndex : beam.Group.MeasureIndex;
+                set.Add((staff, measure, member.ItemIndex));
+            }
+        }
         return set;
     }
 
     private static void DrawSystem(
         MultiStaffScore score, ScoreLayout layout,
         SystemLayout system, GrobPropertyResolver resolver,
-        HashSet<MusicItem> beamedItems, IDrawingContext gc)
+        HashSet<(int Staff, int Measure, int Item)> beamedItems, IDrawingContext gc)
     {
         bool isFirstSystem = system.SystemIndex == 0;
         double systemStartX = system.Indent;
@@ -214,7 +225,7 @@ public static class SharedRenderer
                 // Tablature staves: string lines + TAB clef + fret numbers.
                 if (staff.IsTab)
                 {
-                    DrawTabStaff(staff, system, localStaffY, staffRight, systemStartX, beamedItems, gc);
+                    DrawTabStaff(staff, system, globalIdx, localStaffY, staffRight, systemStartX, beamedItems, gc);
                     continue;
                 }
 
@@ -265,7 +276,7 @@ public static class SharedRenderer
                         ? VoiceDefaults.GetDefaultStemUp(voiceNumber)
                         : null;
                     DrawStaffMeasures(voices[vi], voiceNumber, forcedStemUp,
-                        system, layout, localStaffY, clef, resolver, beamedItems, gc);
+                        system, layout, globalIdx, localStaffY, clef, resolver, beamedItems, gc);
                 }
 
                 // Barlines (typed: single / double / final / repeat) per measure
@@ -341,9 +352,9 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/tab-note-heads-engraver.cc — fret numbers as note heads
     /// LILYPOND-REF: scm/translation-functions.scm determine-frets
     /// </remarks>
-    private static void DrawTabStaff(Staff staff, SystemLayout system,
+    private static void DrawTabStaff(Staff staff, SystemLayout system, int staffIndex,
         double staffY, double staffRight, double systemStartX,
-        HashSet<MusicItem> beamedItems, IDrawingContext gc)
+        HashSet<(int Staff, int Measure, int Item)> beamedItems, IDrawingContext gc)
     {
         var tuningType = staff.Tuning ?? TuningType.Guitar;
         int stringCount = Tunings.GetStringCount(tuningType);
@@ -388,18 +399,20 @@ public static class SharedRenderer
 
         foreach (var ml in system.Measures)
         {
-            foreach (var voice in staff.Voices)
+            for (int vi = 0; vi < staff.Voices.Length; vi++)
             {
+                var voice = staff.Voices[vi];
                 if (ml.MeasureIndex < voice.Measures.Length)
                     DrawTabMeasure(voice.Measures[ml.MeasureIndex], ml, staffY,
-                        tuning, stringCount, octaveShift, staff, beamedItems, gc);
+                        tuning, stringCount, octaveShift, staff, staffIndex, vi + 1, beamedItems, gc);
             }
         }
     }
 
     private static void DrawTabMeasure(Measure measure, MeasureLayout ml,
         double staffY, int[] tuning, int stringCount, int octaveShift,
-        Staff staff, HashSet<MusicItem> beamedItems, IDrawingContext gc)
+        Staff staff, int staffIndex, int voiceNumber,
+        HashSet<(int Staff, int Measure, int Item)> beamedItems, IDrawingContext gc)
     {
         bool useColumnTiming = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
         var currentTiming = Fraction.Zero;
@@ -413,6 +426,11 @@ public static class SharedRenderer
                 : (i < ml.Items.Length ? ml.X + ml.Items[i].X : ml.X);
             currentTiming += item.Duration;
 
+            // Beams are detected from the primary voice only — match this position
+            // against the beamed set (offset-independent) and only for voice 1.
+            bool isBeamed = voiceNumber == 1
+                && beamedItems.Contains((staffIndex, ml.MeasureIndex, i));
+
             switch (item)
             {
                 case NoteItem note:
@@ -422,12 +440,12 @@ public static class SharedRenderer
                         DrawTabNote(note.Midi, itemX, staffY,
                             tuning, note.StringNumber, octaveShift, stringSpace, note.SourcePosition, gc, note.IsDead);
                     DrawUnbeamedTabStem(note, note.BaseDuration, note.StemUp,
-                        itemX, staffY, staff, beamedItems, gc);
+                        itemX, staffY, staff, isBeamed, gc);
                     break;
                 case ChordItem chord:
                     DrawTabChord(chord, itemX, staffY, tuning, octaveShift, stringSpace, gc);
                     DrawUnbeamedTabStem(chord, chord.BaseDuration, chord.StemUp,
-                        itemX, staffY, staff, beamedItems, gc);
+                        itemX, staffY, staff, isBeamed, gc);
                     break;
                 // RestItem: nothing on a tab staff.
             }
@@ -443,11 +461,11 @@ public static class SharedRenderer
     /// </summary>
     private static void DrawUnbeamedTabStem(MusicItem item, Fraction baseDuration,
         bool stemUp, double itemX, double staffY, Staff staff,
-        HashSet<MusicItem> beamedItems, IDrawingContext gc)
+        bool isBeamed, IDrawingContext gc)
     {
         int noteValue = baseDuration.Denominator;
         if (baseDuration.Numerator != 1) noteValue = 1;
-        if (noteValue < 2 || beamedItems.Contains(item))
+        if (noteValue < 2 || isBeamed)
             return; // whole notes have no stem; beamed notes are drawn elsewhere.
 
         const double stemLength = 3.0;
@@ -865,9 +883,9 @@ public static class SharedRenderer
 
     private static void DrawStaffMeasures(
         Voice voice, int voiceNumber, bool? forcedStemUp,
-        SystemLayout system, ScoreLayout layout,
+        SystemLayout system, ScoreLayout layout, int staffIndex,
         double staffY, ClefType clef, GrobPropertyResolver resolver,
-        HashSet<MusicItem> beamedItems, IDrawingContext gc)
+        HashSet<(int Staff, int Measure, int Item)> beamedItems, IDrawingContext gc)
     {
         double staffMiddleY = staffY + StaffHeight / 2;
 
@@ -898,7 +916,9 @@ public static class SharedRenderer
             switch (item)
             {
                 case NoteItem note:
-                    DrawNote(note, itemX, staffMiddleY, resolver, beamedItems.Contains(note), forcedStemUp, headWiped, gc);
+                    DrawNote(note, itemX, staffMiddleY, resolver,
+                        voiceNumber == 1 && beamedItems.Contains((staffIndex, ml.MeasureIndex, itemIdx)),
+                        forcedStemUp, headWiped, gc);
                     break;
                 case RestItem rest:
                     // Measures inside a multi-measure-rest run get their
@@ -910,7 +930,9 @@ public static class SharedRenderer
                         DrawRest(rest, itemX, staffY, gc);
                     break;
                 case ChordItem chord:
-                    DrawChord(chord, itemX, staffMiddleY, resolver, beamedItems.Contains(chord), forcedStemUp, headWiped, gc);
+                    DrawChord(chord, itemX, staffMiddleY, resolver,
+                        voiceNumber == 1 && beamedItems.Contains((staffIndex, ml.MeasureIndex, itemIdx)),
+                        forcedStemUp, headWiped, gc);
                     break;
                 case ClefChangeItem clefChange:
                     DrawClefChange(clefChange, itemX, staffY, gc);
@@ -2095,6 +2117,14 @@ public static class SharedRenderer
             FingeringLayouts = ResolveNoteArr(layout.FingeringLayouts, noteHosts,
                 static l => (l.StaffIndex, l.MeasureIndex, l.ItemIndex),
                 static (l, pos) => l with { SourcePosition = pos }),
+            // Detected spanners (hairpin / ottava / text spanner) take their data-pos from
+            // the originating cresc/ottava/rit mark in score.MusicMarks — re-derive by its index.
+            HairpinLayouts = ResolveArr(layout.HairpinLayouts, score.MusicMarks,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            OttavaBracketLayouts = ResolveArr(layout.OttavaBracketLayouts, score.MusicMarks,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
+            TextSpannerLayouts = ResolveArr(layout.TextSpannerLayouts, score.MusicMarks,
+                static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
         };
     }
 
