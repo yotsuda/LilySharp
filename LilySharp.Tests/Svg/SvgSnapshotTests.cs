@@ -147,6 +147,11 @@ public class SvgSnapshotTests
         // Multi-staff: dynamics that belong to the SECOND (bass) staff render
         // under THAT staff, not collapsed under the first (DynamicItem.StaffIndex).
         yield return new object[] { "test/dynamics-lower-staff" };
+        // Forced-above dynamics (@x.up): on-staff above vs. below neighbours,
+        // note-governed placement over high notes, and two-voice same-column
+        // stacking outward. Guards the above-staff dynamic geometry (descender-aware
+        // clearance, matched to LilyPond \dynamicUp); no other fixture uses it.
+        yield return new object[] { "test/above-dynamics" };
         // Multi-staff: articulations + ornaments on the SECOND (bass) staff render
         // against that staff's notes, not the first (ArticulationItem.StaffIndex).
         yield return new object[] { "test/articulations-lower-staff" };

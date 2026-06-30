@@ -1,0 +1,20 @@
+// Forced-above dynamics (@x.up). Exercises every above-staff dynamic path, which
+// no other fixture touches: an on-staff @f.up / @mf.up sits above the staff while
+// @p / @f on neighbours stay below (measure 1); above dynamics over high,
+// ledger-lined notes are note-governed and rise with the pitch (measure 2); and
+// two voices' @p.up / @f.up on the SAME column stack outward, away from the staff
+// (measure 3). The above baseline clears the staff/notes by the glyph DESCENDER,
+// matching LilyPond's \dynamicUp (see DynamicEngraver.TextDescent). Absolute octave
+// mode keeps the pitches explicit.
+octave absolute
+title "Above-staff dynamics"
+part m { clef treble }
+section S {
+  m {
+    b4@f.up c'@p e'@mf.up f'@f |
+    g'4@ff.up a'@f.up b'@p.up c''@mf.up |
+    voice { e'4@f.up f' g' a' } voice { b4@p.up c' d' e' } |
+  }
+}
+structure { S }
+score "above-dynamics" { staff m }
