@@ -136,8 +136,18 @@ public static class MultiMeasureRestEngraver
                 }
                 var (_, endMeasure) = endInfo;
 
-                double startX = startMeasure.X;
-                double endX = endMeasure.X + endMeasure.Width;
+                // Centre the rest between the INNER edges of the bounding bar lines,
+                // not the outer measure box. A bar line's drawn stencil — especially a
+                // repeat `:|`, whose dots reach ~1.8 ss back into the measure — must be
+                // excluded, or the centre drifts toward the barline and a whole rest
+                // collides with the repeat dots.
+                // LILYPOND-REF: lily/multi-measure-rest.cc Multi_measure_rest::bar_width
+                // — centres between Paper_column::break_align_width(col,"staff-bar")[-d],
+                // i.e. each bounding bar line's INNER edge.
+                double startX = startMeasure.X
+                    + EngravingDefaults.BarlineDrawnWidth(voice.Measures[runStart].StartBarline);
+                double endX = endMeasure.X + endMeasure.Width
+                    - EngravingDefaults.BarlineDrawnWidth(voice.Measures[runEnd].EndBarline);
                 double y = LayoutUtilities.ResolveStaffMiddleY(startSystem, staffIndex, staffHeight);
 
                 builder.Add(new MultiMeasureRestLayout(
