@@ -21,22 +21,22 @@ const NEW_SCORE_TEMPLATE = `// Twinkle, Twinkle, Little Star (public domain).
 // Relative octave (the default): each note sits in the octave nearest the
 // previous one. Add ' to jump up an octave (the leap to G is g'), , to jump down (g,).
 title "Twinkle, Twinkle, Little Star"
+composer "Jane Taylor"
 
+tempo 100
 time 4/4
 key c major
 
-part melody { clef treble }
-
-section A {
-  melody { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
+// A single part can hold its sections inline (part-major). For several parts,
+// section-major often reads better (see the grand-staff template); the editor's
+// "Lily#: Convert Layout" command switches between the two.
+part melody {
+  clef treble
+  section A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
+  section B { g'4 g f f | e e d2 | }
 }
 
-section B {
-  melody { g'4 g f f | e e d2 | }
-}
-
-// structure plays the sections in order, and |: B :| repeats B. The reprise of A is
-// re-labelled "A2" so it reads as a distinct rehearsal mark.
+// |: B :| repeats B; the reprise of A is re-labelled "A2".
 structure { A |: B :| A "A2" }
 
 score "score" {
