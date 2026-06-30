@@ -1,70 +1,47 @@
-# Lily# Grammar — Feature Status
+# Lily# Grammar — Doc Map, Coverage & Known Gaps
 
-> Quick implemented-feature checklist. The canonical syntax reference is
-> [`GRAMMAR_FOR_LLM.md`](GRAMMAR_FOR_LLM.md); the formal EBNF is [`GRAMMAR.md`](GRAMMAR.md).
-> Updated 2026-07-01.
+This is the **index** for the grammar documentation plus a high-level coverage
+summary. It does not re-list syntax — see the references below for that.
 
-### 1. Header / metadata
-| Feature | Syntax | Status |
-|------|------|------|
-| Title / composer | `title "..."` / `composer "..."` | ✅ |
-| Tempo | `tempo 120` (`tempo 120 swing` / `swing 16` shuffle feel) | ✅ |
-| Time / key | `time 4/4` / `key c major` | ✅ |
+## Which grammar doc to read
 
-### 2. Structure declarations
-| Feature | Syntax | Status | Notes |
-|------|------|------|------|
-| Part | `part name { clef treble }` | ✅ | bare attributes (no colon); `instrument`/`octave`/`channel`/`transpose` |
-| Phrase | `phrase name { notes }` referenced as `$name` | ✅ | |
-| Section | `section Name { partName { … } }` | ✅ | |
-| Structure | `structure { Section … }` | ✅ | optional; navigation marks; per-score override |
+| Doc | Role | When to read |
+|-----|------|--------------|
+| [`GRAMMAR_FOR_LLM.md`](GRAMMAR_FOR_LLM.md) | **Canonical spec** — compressed, every example parse-verified | Authoring `.lys`; dropping into an LLM's context |
+| [`GRAMMAR.md`](GRAMMAR.md) | **Formal EBNF** of the same language | You want the precise grammar productions |
+| [`SYNTAX_REFERENCE.md`](SYNTAX_REFERENCE.md) | Human reference (tables, longer examples) | A worked, browsable reference |
+| [`GRAMMAR_ANALYSIS.md`](GRAMMAR_ANALYSIS.md) | **Historical** design rationale (some forms dated) | The *why* behind design choices |
+| this file | Doc index + coverage + known gaps | "Is X implemented?" / "what's missing?" |
 
-### 3. Render targets
-| Feature | Syntax | Status | Notes |
-|------|------|------|------|
-| Score | `score "name" { … }` | ✅ | one or more; optional per-score `structure` |
-| Staff | `staff name` (bare, no braces) | ✅ | optional clef: `staff bass name` |
-| Grand staff | `grandStaff { staff a  staff b }` | ✅ | |
-| Tab | `tab name` | ✅ | Guitar/Bass/Bass5/Ukulele |
-| Ossia | `ossia { name }` | ✅ | reduced-size alternative passage |
-| Lead sheet | `chords name` / `lyrics name` (no staff) | ✅ | barline grid, chords between bars, lyrics below |
-| MIDI | CLI: `lysc midi file.lys file.mid` | ✅ | no source block |
+The parser is the ultimate authority; the three spec docs above are kept in sync with it.
 
-### 4. Music elements
-| Feature | Syntax | Status |
-|------|------|------|
-| Notes / rests / spacer | `c4 d8 e16` / `r4` / `s4` / `R1` | ✅ |
-| Chords | `<c e g>4` | ✅ |
-| Octave / accidentals / dots | `c' c,` / `cis ees` / `c4. c4..` | ✅ |
-| Tie / slur | `c4~ c4` / `c4( d e)` — slurs bind chords too: `<c e>4( <d f>)` | ✅ |
-| Tuplets / grace | `tuplet 3/2 { c8 d e }` / `grace { c16 d } e4` | ✅ |
-| Beams | automatic, or manual `c8[ d e f]` | ✅ |
-| Multi-voice | `voice { … } voice { … }` (NOT `<< \\ >>`) | ✅ |
+## Coverage at a glance (syntax in `GRAMMAR_FOR_LLM.md`)
 
-### 5. Annotations (`@name`, with optional `.up` / `.down`)
-| Feature | Syntax | Status |
-|------|------|------|
-| Articulations | `@staccato @accent @tenuto @marcato @fermata @portato` | ✅ |
-| Ornaments | `@trill @mordent @prall @turn @invertedturn` | ✅ |
-| Dynamics | `@p @f @mf …` (`@f.up` forces side) | ✅ |
-| Hairpins | `@cresc @decresc @dim` (no `.up`/`.down`) | ✅ |
-| Stem direction | `@stemUp` / `@stemDown` | ✅ |
-| Accidental style | `@courtesy` / `@editorial` | ✅ |
-| Arpeggio / glissando | `<c e g>4@arpeggio` / `c4@glissando d` | ✅ |
-| Figured bass / chord name | `c4@fig.6` / `c4@chord.C` | ✅ |
+All ✅ implemented:
 
-### 6. Repeats / navigation
-| Feature | Syntax | Status |
-|------|------|------|
-| Repeat | `|: … :|` (count `:|*N`) | ✅ |
-| Volta endings | `[1. A] [2. B]` | ✅ |
-| Marks / spanners | `segno coda fine dc ds`, `@rit @accel`, `@ottava … @loco`, trill spanner, pedals | ✅ |
+- **Core music** — notes / rests / spacers / full-measure rests, chords, relative
+  octaves, accidentals, dotted & tremolo durations.
+- **Connectors** — ties, slurs (over notes *and* chords), automatic & manual beams.
+- **Groupings** — tuplets (nested), grace / acciaccatura / appoggiatura, multi-voice
+  (`voice { } voice { }`).
+- **Annotations** (`@name`, with `.up`/`.down`) — articulations, ornaments, dynamics,
+  hairpins, `@stemUp/@stemDown`, `@courtesy`/`@editorial`, arpeggio, glissando, figured
+  bass, inline chord names.
+- **Structure** — parts, phrases (`$ref`), sections, `structure` (+ per-score override),
+  repeats `|: :|` (`:|*N`), volta endings, navigation marks & spanners (segno/coda/fine/
+  D.S./D.C., rit/accel, ottava, trill spanner, pedals), `break`.
+- **Render targets** — staff, grandStaff, tab, ossia, and **staff-less lead sheets**
+  (`chords name` / `lyrics name` rows drawn as a barline grid); `tempo … swing`;
+  `override`/`revert`.
+- **Output** — SVG / PDF / PNG engraving, MIDI, MusicXML (partial — see gaps).
 
-### 7. Other
-| Feature | Syntax | Status |
-|------|------|------|
-| Lyrics | `lyrics { Hap- py birth- day | to you | }` | ✅ |
-| System break | `break` | ✅ |
-| Custom text | `_"text"` | ✅ |
-| Phrase / variable ref | `$name` | ✅ |
-| Override / revert | `override Stem.length = 7` / `revert …` / `once override …` | ✅ |
+## Known gaps (not implemented)
+
+- **Cross-staff beam layout** — a beam spanning two staves of a grand staff. (Multi-staff
+  rendering otherwise works; the upstream layout does not yet emit cross-staff beams.)
+- **MusicXML export: lyrics and tuplet numbers** — parsed but not emitted; the rest of
+  MusicXML (notes, ties, slurs, grace, dynamics, articulations, ornaments, multi-part)
+  is exported.
+- **Multi-file projects** (`include` across files) and a **LilyPond → Lily# converter**.
+- The long tail of specialist notation (early music, microtonal/maqam, fretboard
+  diagrams, chord grids, clusters, ambitus, …) is intentionally out of scope.
