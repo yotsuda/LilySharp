@@ -3311,10 +3311,18 @@ public static class SharedRenderer
         if (pieces.Count == 0) return;
 
         double totalWidth = pieces.Sum(p => p.Width) + Gap * (pieces.Count - 1);
+        // Centre the row of rest glyphs on cx. DrawGlyph anchors at the glyph's
+        // LEFT edge (SVG text-anchor="start"; these rest glyphs have bbox Left=0),
+        // so each glyph's left edge is laid at the running x — NOT at x+Width/2,
+        // which would shift the ink right by half a glyph (an R1 then landed ~0.75 ss
+        // right of the bar-line midpoint). The whole row spans [cx-totalWidth/2,
+        // cx+totalWidth/2], centring the symbols' ink on the span midpoint.
+        // LILYPOND-REF: lily/multi-measure-rest.cc church_rest — left_offset =
+        // (space - symbols_width)/2, then each glyph add_at_edge LEFT (left-anchored).
         double x = cx - totalWidth / 2;
         foreach (var p in pieces)
         {
-            gc.DrawGlyph(p.Glyph, x + p.Width / 2, p.Y, FontSize);
+            gc.DrawGlyph(p.Glyph, x, p.Y, FontSize);
             x += p.Width + Gap;
         }
         if (mmr.MeasureCount > 1)
