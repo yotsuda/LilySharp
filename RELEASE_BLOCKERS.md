@@ -9,16 +9,17 @@
 
 ## ★ 再検証（2026-06-30、現行コードに照合・並列調査）
 
-作成時(6-29)以降の進捗を踏まえ各 P0 を現行コードで再確認した結果（証拠は各 P0 節に追記）:
+作成時(6-29)以降の進捗を踏まえ各 P0 を現行コードで再確認した結果（証拠は各 P0 節に追記）。
+**★ 後続対処（同日中の後続コミットで P0-1/P0-3/P0-4 を解消、下表は対処後の状態）:**
 
-| # | 項目 | 再検証判定 | 残作業 |
+| # | 項目 | 判定 | 状態 / 残作業 |
 |---|---|---|---|
-| **P0-1** | README/audit 誇大主張 | 🟡 **存続**（記述のみ・低工数） | README の MusicXML/cross-staff 記述修正、古い `audit/grob_coverage.md` の公開除外 |
-| **P0-2** | 視覚回帰ベースライン | 🟢 **解消済み＝ブロッカーでない** | `SvgSnapshotTests`＋`Snapshots/` に **94 本の固定 SVG**、byte-identical 比較が稼働中。最小線は達成済み（フル pixel-diff は P1） |
-| **P0-3** | MusicXML サイレント欠落 | 🟡 **縮小**（部分解消） | アーティキュレーション/装飾/強弱は**今は emit 済**。残る欠落は**歌詞・連符番号**のみ→明示(P0)or実装(P1) |
-| **P0-4** | AI 言語仕様1枚 | 🔴 **存続** | LLM 投入用の圧縮1枚は未作成。`SYNTAX_REFERENCE.md`/`GRAMMAR.md` が良質素材 |
+| **P0-1** | README/audit 誇大主張 | 🟢 **解消**（79df3b1） | README を実装に整合（cross-staff beam 未対応・MusicXML の歌詞/連符未出力を明記）。残は判断1点＝`audit/grob_coverage.md` を注記残置のままにするか公開物から外すか |
+| **P0-2** | 視覚回帰ベースライン | 🟢 **解消済み＝ブロッカーでない** | `SvgSnapshotTests`＋`Snapshots/` に **95 本の固定 SVG**（above-dynamics 追加）、byte-identical 比較が稼働中。最小線は達成済み（フル pixel-diff は P1） |
+| **P0-3** | MusicXML サイレント欠落 | 🟢 **明示済**（79df3b1） | アーティキュレーション/装飾/強弱は emit 済。残る欠落（歌詞・連符番号）は README で**明示**＝P0(b) 達成。完全 emit (a) は P1-3 |
+| **P0-4** | AI 言語仕様1枚 | 🟢 **解消**（1828bb6） | `docs/GRAMMAR_FOR_LLM.md`（圧縮1枚・全例 parse 検証済）を作成。System prompt 投入可 |
 
-**含意**: 実質ブロッカーは2つに集約 — (a) **README/audit のドキュメント整合パス**（P0-1＋P0-3 の明示分）、(b) **言語仕様1枚の作成**（P0-4）。P0-2 は解消、歌詞/連符の MusicXML emit 実装は P1。
+**含意**: P0-1〜P0-4 は全て解消（明示 or 実装）。**ハード P0 残はゼロ。** 残るのは判断1点（audit 文書の処遇）と、実装系の fast-follow（歌詞/連符の MusicXML emit、cross-staff beam）＝いずれも P1。
 
 ---
 
@@ -30,8 +31,9 @@
 
 ```
 P0 (出す前に必須)      : 4件 — 誇大主張除去 / 正しさ検証の最小線 / MusicXML欠落の明示 / AI仕様1枚
-  └ 再検証(6-30): P0-2 解消済み(snapshot 94本稼働)、P0-3 縮小(残=歌詞/連符)、P0-1+P0-4 が存続。
-    実質残=「README/audit 整合パス(P0-1+P0-3明示)」＋「言語仕様1枚(P0-4)」の2つ。
+  └ 再検証(6-30): P0-2 解消済み(snapshot 95本稼働)。
+  └ 対処(6-30 後続): P0-1(README整合) / P0-3(欠落明示) / P0-4(言語仕様1枚) を解消。
+    ★ ハード P0 残はゼロ。判断1点(audit 文書の処遇)のみ。
 P1 (早期fast-follow)   : 4件 — クロススタッフ連桁 / 視覚回帰フル / MusicXML完全化 / repo体裁
 P2 / 非ブロッカー       : god分割 / 長い裾野 / callback property 等
 ```
@@ -40,7 +42,7 @@ P2 / 非ブロッカー       : god分割 / 長い裾野 / callback property 等
 
 ## P0 — リリースブロッカー（出す前に必須）
 
-### P0-1. README/ドキュメントの主張をコードに合わせる（誇大主張の除去）　🟡 再検証(6-30): 存続・低工数
+### P0-1. README/ドキュメントの主張をコードに合わせる（誇大主張の除去）　🟢 解消(79df3b1)　← 旧: 🟡 再検証(6-30) 存続
 > 再検証の確認結果: ①README は MusicXML を `[ ] Planned` と誌記するが**実装済み**（partial）→`MusicXmlExporter.cs`。②`SharedRenderer.cs:50-51` に「cross-staff beam PRODUCTION is the remaining known gap」＝README「Multi-staff ✓」と整合させる注記が要る。③`audit/grob_coverage.md`(2026-04-25) は BarNumber/Fingering/LedgerLineSpanner/Glissando/MultiMeasureRest を "Absent" と誤記だが**engraver は全て実在**＝audit スクリプトの欠陥。公開物から除外/訂正。
 - **何が問題か**: 主張＞実装の箇所が残ると初日に信用を失う。例として要確認:
   - README「Multi-staff / GrandStaff rendering」 vs コードの「cross-staff beam PRODUCTION は remaining known gap」(SharedRenderer.cs)
@@ -58,15 +60,16 @@ P2 / 非ブロッカー       : god分割 / 長い裾野 / callback property 等
 - **コスト**: 中（最小なら低）。
 - 参照: LilyPond の `input/regression/`（2200本視覚diff）が手本。
 
-### P0-3. MusicXML のサイレントなデータ欠落をなくす（または明示）　🟡 再検証(6-30): 縮小（部分解消）
+### P0-3. MusicXML のサイレントなデータ欠落をなくす（または明示）　🟢 明示済(79df3b1)　← 旧: 🟡 再検証(6-30) 縮小
 > 再検証の確認結果: **アーティキュレーション/装飾/強弱は現在 emit 済み**（`MusicXmlExporter.cs` `MapArticulation`/`MapOrnament`/`EmitPendingDynamic`、`MusicXmlTests` でカバー）＝旧主張「アーティキュレーションを落とす」は陳腐化。**残るサイレント欠落は「歌詞」と「連符番号」のみ**（`MusicXml` namespace に lyric/tuplet 参照ゼロ、SVG 側ではパース済み）。P0 としては (b)明示で可、(a)emit 実装は P1。
 - **何が問題か**: MusicXML エクスポートは ~85% で、**アーティキュレーション/歌詞を黙って落とす**（パース済みだが emit されない）。MusicXML は相互運用の標準フォーマットで、黙ってデータが消えるのは最悪。
 - **なぜブロッカー**: 「export できます」と言って往復でデータが失われると、相互運用の信頼を一発で失う。
 - **対応（どちらか）**: (a) アーティキュレーション/歌詞も emit する（望ましい、P1 と統合可）、または最低限 (b) 落とす要素を README/警告で**明示**してサイレント欠落をやめる。P0 としては (b) で可、(a) は P1。
 - **コスト**: (b)低 / (a)中。
 
-### P0-4. AI が文脈に入れる「言語仕様1枚」を同梱　🔴 再検証(6-30): 存続（未作成）
-> 再検証の確認結果: LLM の system prompt にそのまま入れる圧縮1枚は**不在**（`docs/GRAMMAR_FOR_LLM.md` 等は無し）。素材は `docs/SYNTAX_REFERENCE.md`(533行・表中心)＋`docs/GRAMMAR.md`(632行・EBNF)＝品質は高いが未圧縮。`~150-200行`の圧縮1枚を作る低〜中工数タスク。
+### P0-4. AI が文脈に入れる「言語仕様1枚」を同梱　🟢 解消(1828bb6)　← 旧: 🔴 再検証(6-30) 存続
+> **対処(1828bb6): `docs/GRAMMAR_FOR_LLM.md`（圧縮1枚・全例 parse 検証済）を作成し解消。以下は対処前の調査。**
+> 再検証の確認結果(対処前): LLM の system prompt にそのまま入れる圧縮1枚は**不在**だった。素材は `docs/SYNTAX_REFERENCE.md`(表中心)＋`docs/GRAMMAR.md`(EBNF)＝品質は高いが未圧縮。`~150-200行`の圧縮1枚を作る低〜中工数タスク。
 - **何が問題か**: Lily# はコーパスがゼロ＝LLM は zero-shot で書けない。リリースの旗が「AIフレンドリーなターゲット言語」である以上、**AI に渡せる仕様1枚**が無いと初日に主張を実証できない。
 - **なぜブロッカー**: ポジショニングの中核前提。これが無いと「AIフレンドリー」が空手形。
 - **対応**: `docs/GRAMMAR.md`/`SYNTAX_REFERENCE.md` から、System prompt 投入用の圧縮1ファイルを作る（全構文＋最小正例、同義表現は載せない）。詳細は `AI_POSITIONING_HANDOFF.md` 優先1。
@@ -104,8 +107,8 @@ P2 / 非ブロッカー       : god分割 / 長い裾野 / callback property 等
 
 ## リリース前チェックリスト（pre-flight）
 
-- [ ] P0-1〜P0-4 解消（または README で明示しダウングレード）
-- [ ] `dotnet build` / `dotnet test` 全緑（1462 件）
+- [x] P0-1〜P0-4 解消（README 明示＋言語仕様1枚＋snapshot 最小線。79df3b1 / 1828bb6）
+- [ ] `dotnet build` / `dotnet test` 全緑（現行 1937 件）
 - [ ] LICENSE（GPLv3）とフォント OFL ライセンスの同梱確認
 - [ ] バージョン番号確定（現行 0.1.2-dev → リリース版へ）
 - [ ] README の機能表が実コードと一致
