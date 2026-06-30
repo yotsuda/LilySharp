@@ -44,8 +44,13 @@ public static class SpacingRules
     /// <summary>Width of a single barline in staff spaces.</summary>
     public const double BarlineWidth = 0.8;
 
-    /// <summary>Width of a repeat barline in staff spaces.</summary>
-    public const double RepeatBarlineWidth = 1.6;
+    /// <summary>Width reserved for a repeat barline in staff spaces. Must cover the
+    /// barline's full DRAWN extent so it is not engraved into the preceding column:
+    /// SharedRenderer.GetVisualBarlineWidth draws a repeat end/start ~1.79 s3
+    /// (dots-offset + thin + sep + thick) and RepeatBoth ~2.98 (= this * 1.5 = 3.0).
+    /// The old 1.6 under-reserved by ~0.19, so a whole rest could collide with a `:|`.
+    /// LILYPOND-REF: lily/bar-line.cc — the bar line's own X-extent feeds spacing.</summary>
+    public const double RepeatBarlineWidth = 2.0;
 
     /// <summary>Width of a double or final barline in staff spaces.</summary>
     public const double DoubleBarlineWidth = 1.2;
