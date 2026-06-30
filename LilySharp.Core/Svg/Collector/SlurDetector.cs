@@ -28,7 +28,7 @@ public sealed class SlurDetector
     {
         var slurs = new List<SlurItem>();
         var measures = score.Voice.Measures;
-        var openSlurs = new Stack<(int measureIdx, int itemIdx, NoteItem note)>();
+        var openSlurs = new Stack<(int measureIdx, int itemIdx, MusicItem item)>();
 
         for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
         {
@@ -36,27 +36,29 @@ public sealed class SlurDetector
 
             for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
             {
-                if (measure.Items[itemIdx] is not NoteItem note)
+                var item = measure.Items[itemIdx];
+                // Slurs attach to a note OR a chord (`<c e>( <d f>)`).
+                if (!TryGetSlurFlags(item, out bool hasStart, out bool hasEnd))
                     continue;
 
-                if (note.HasSlurStart)
+                if (hasStart)
                 {
-                    openSlurs.Push((measureIdx, itemIdx, note));
+                    openSlurs.Push((measureIdx, itemIdx, item));
                 }
 
-                if (note.HasSlurEnd && openSlurs.Count > 0)
+                if (hasEnd && openSlurs.Count > 0)
                 {
-                    var (startMeasureIdx, startItemIdx, startNote) = openSlurs.Pop();
+                    var (startMeasureIdx, startItemIdx, startItem) = openSlurs.Pop();
 
-                    // Slur curves opposite to stem direction
-                    // NoteItem.StemUp: true = stem visually UP, false = stem visually DOWN
-                    bool curveUp = !startNote.StemUp;
+                    // Slur curves opposite to the start item's stem direction.
+                    bool curveUp = !StemUpOf(startItem);
 
                     slurs.Add(new SlurItem(
-                        startNote,
-                        note,
-                        startNote.StaffPosition,
-                        note.StaffPosition,
+                        startItem as NoteItem,
+                        item as NoteItem,
+                        // For a chord the slur anchors at the head on the curve side.
+                        EdgeStaffPosition(startItem, curveUp),
+                        EdgeStaffPosition(item, curveUp),
                         curveUp,
                         startMeasureIdx,
                         measureIdx,
@@ -68,4 +70,33 @@ public sealed class SlurDetector
 
         return slurs.ToImmutableArray();
     }
+
+    private static bool TryGetSlurFlags(MusicItem item, out bool hasStart, out bool hasEnd)
+    {
+        switch (item)
+        {
+            case NoteItem n: hasStart = n.HasSlurStart; hasEnd = n.HasSlurEnd; return true;
+            case ChordItem c: hasStart = c.HasSlurStart; hasEnd = c.HasSlurEnd; return true;
+            default: hasStart = false; hasEnd = false; return false;
+        }
+    }
+
+    // NoteItem/ChordItem.StemUp: true = stem visually UP, false = DOWN.
+    private static bool StemUpOf(MusicItem item) => item switch
+    {
+        NoteItem n => n.StemUp,
+        ChordItem c => c.StemUp,
+        _ => false
+    };
+
+    // The slur attaches to the head on the curve side: the chord's top note for an
+    // up-curving slur, its bottom note for a down-curving one (a plain note is its
+    // own edge). Mirrors ElementCoordinator.ItemStaffPosition.
+    private static int EdgeStaffPosition(MusicItem item, bool curveUp) => item switch
+    {
+        NoteItem n => n.StaffPosition,
+        ChordItem c when c.Notes.Length > 0
+            => curveUp ? c.Notes.Max(n => n.StaffPosition) : c.Notes.Min(n => n.StaffPosition),
+        _ => 0
+    };
 }

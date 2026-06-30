@@ -1,0 +1,21 @@
+// Slurs on chords: `<...>( <...> )` attaches a phrasing slur to a chord, not
+// just a single note. The slur anchors at the head on the curve side (the
+// chord's outer note away from the stem) and curves opposite the stem.
+// LILYPOND-REF: lily/slur.cc / slur-scoring.cc; the slur bounds are notes OR chords.
+title "Slurs on chords"
+composer "Lily#"
+
+time 4/4
+key c major
+
+part melody {
+  clef treble
+  // Plain triads, then a second-interval chord, all slurred two-at-a-time.
+  section Main { <c e>2 ( <d f>2 ) | <e f>2 ( <g a>2 ) | }
+}
+
+structure { Main }
+
+score "slur-chords" {
+  staff melody
+}

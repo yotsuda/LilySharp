@@ -824,7 +824,9 @@ public sealed class ElementCoordinator
                 if (segment.IsFirst)
                 {
                     segStartX = startMeasure.X
-                        + GetItemXOffset(score.Voice, slur.StartMeasureIndex, slur.StartItemIndex, startMeasure);
+                        + GetItemXOffset(score.Voice, slur.StartMeasureIndex, slur.StartItemIndex, startMeasure)
+                        // Follow the curve-side head's within-chord displacement (seconds).
+                        + GetChordHeadXOffset(score.Voice, slur.StartMeasureIndex, slur.StartItemIndex, slur.StartStaffPosition);
                 }
                 else
                 {
@@ -835,7 +837,9 @@ public sealed class ElementCoordinator
                 if (segment.IsLast)
                 {
                     segEndX = endMeasure.X
-                        + GetItemXOffset(score.Voice, slur.EndMeasureIndex, slur.EndItemIndex, endMeasure);
+                        + GetItemXOffset(score.Voice, slur.EndMeasureIndex, slur.EndItemIndex, endMeasure)
+                        // Follow the curve-side head's within-chord displacement (seconds).
+                        + GetChordHeadXOffset(score.Voice, slur.EndMeasureIndex, slur.EndItemIndex, slur.EndStaffPosition);
                 }
                 else
                 {

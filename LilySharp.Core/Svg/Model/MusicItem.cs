@@ -321,7 +321,12 @@ public sealed record ChordItem : MusicItem
     /// <remarks>LILYPOND-REF: lily/tie-column.cc — TieColumn groups chord ties.</remarks>
     public bool HasTieStart { get; }
 
-    public ChordItem(ImmutableArray<ChordNoteInfo> notes, Fraction baseDuration, int dots, int sourcePosition, int tremoloBeams = 0, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasArpeggio = false, bool isCue = false, bool hasTieStart = false)
+    /// <summary>Whether this chord opens a slur (a <c>(</c> follows it).</summary>
+    public bool HasSlurStart { get; }
+    /// <summary>Whether this chord closes a slur (a <c>)</c> follows it).</summary>
+    public bool HasSlurEnd { get; }
+
+    public ChordItem(ImmutableArray<ChordNoteInfo> notes, Fraction baseDuration, int dots, int sourcePosition, int tremoloBeams = 0, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasArpeggio = false, bool isCue = false, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false)
     {
         Notes = notes;
         BaseDuration = baseDuration;
@@ -332,6 +337,8 @@ public sealed record ChordItem : MusicItem
         HasArpeggio = hasArpeggio;
         IsCue = isCue;
         HasTieStart = hasTieStart;
+        HasSlurStart = hasSlurStart;
+        HasSlurEnd = hasSlurEnd;
         _sourcePosition = sourcePosition;
     }
 }

@@ -89,6 +89,8 @@ public class SvgSnapshotTests
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };
+        // A phrasing slur can bind two chords (not just single notes).
+        yield return new object[] { "test/slur-chords" };
         // Tab ties sit on each tied note's STRING line (above the fret digit), not
         // at the notation pitch height — the two ties are on different strings.
         yield return new object[] { "test/tab-tie" };

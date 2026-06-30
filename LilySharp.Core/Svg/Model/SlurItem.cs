@@ -25,11 +25,11 @@ namespace LilySharp.Core.Svg.Model;
 /// </summary>
 public sealed record SlurItem
 {
-    /// <summary>The starting note of the slur.</summary>
-    public NoteItem StartNote { get; }
+    /// <summary>The starting note of the slur, or null when the slur starts on a chord.</summary>
+    public NoteItem? StartNote { get; }
 
-    /// <summary>The ending note of the slur.</summary>
-    public NoteItem EndNote { get; }
+    /// <summary>The ending note of the slur, or null when the slur ends on a chord.</summary>
+    public NoteItem? EndNote { get; }
 
     /// <summary>Staff position at start.</summary>
     public int StartStaffPosition { get; }
@@ -53,8 +53,8 @@ public sealed record SlurItem
     public int EndItemIndex { get; }
 
     public SlurItem(
-        NoteItem startNote,
-        NoteItem endNote,
+        NoteItem? startNote,
+        NoteItem? endNote,
         int startStaffPosition,
         int endStaffPosition,
         bool curveUp,
