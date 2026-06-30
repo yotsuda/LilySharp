@@ -1,0 +1,13 @@
+// Accidentals an octave apart straddling the middle line must be grouped into
+// DIFFERENT octaves (so they are not overstruck). This exercises the floored
+// octave division in AccidentalPlacement: with C# truncating division, staff
+// positions 3 (E5) and -4 (E4) both mapped to octave 0 and wrongly overstruck.
+// LILYPOND-REF: lily/accidental-placement.cc acc_less / set_ape_skylines.
+title "Accidental octave straddle"
+octave absolute
+part m { clef treble }
+section Main {
+  m { <eis' eis'' cis' cis''>1 | }
+}
+structure { Main }
+score "accidental-octave-straddle" { staff m }

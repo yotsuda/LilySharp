@@ -220,8 +220,8 @@ public sealed class AccidentalPlacement
         // Octave grouping ensures same-octave accidentals are placed together
         entries.Sort((a, b) =>
         {
-            int octaveA = a.StaffPosition / 7;
-            int octaveB = b.StaffPosition / 7;
+            int octaveA = OctaveOf(a.StaffPosition);
+            int octaveB = OctaveOf(b.StaffPosition);
             if (octaveA != octaveB)
                 return octaveA.CompareTo(octaveB);
             return a.Priority.CompareTo(b.Priority);
@@ -273,7 +273,7 @@ public sealed class AccidentalPlacement
 
         foreach (var entry in entries)
         {
-            int octave = entry.StaffPosition / 7;
+            int octave = OctaveOf(entry.StaffPosition);
             // Note name class: staff positions with same value mod 7 are the same note name
             // in different octaves (e.g. D4 and D5)
             int noteName = ((entry.StaffPosition % 7) + 7) % 7;
@@ -462,6 +462,15 @@ public sealed class AccidentalPlacement
     /// In Lily#'s forward iteration, lower priority = processed first = rightmost.
     /// Naturals get priority 0 (rightmost) to match LilyPond's effective placement.
     /// </remarks>
+    /// <summary>
+    /// The diatonic octave of a staff position (7 positions per octave), using FLOORED
+    /// division so it agrees with the floored note-name modulo below the middle line.
+    /// C# integer division truncates toward zero, which would put e.g. position 3 and
+    /// position -4 (one octave apart) in the same octave and wrongly overstrike them.
+    /// </summary>
+    private static int OctaveOf(int staffPosition) =>
+        (int)Math.Floor(staffPosition / 7.0);
+
     private static int GetAlterationPriority(string accidental) => accidental switch
     {
         "natural" => 0,
