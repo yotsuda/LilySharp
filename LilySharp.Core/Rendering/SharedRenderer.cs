@@ -1689,24 +1689,10 @@ public static class SharedRenderer
     }
 
     /// <summary>Total horizontal extent of a barline glyph (for right-edge alignment).</summary>
+    // The drawn extent and the reserved spacing width are the same quantity;
+    // both come from EngravingDefaults.BarlineDrawnWidth so they cannot drift.
     private static double GetVisualBarlineWidth(BarlineType type)
-    {
-        double thin = EngravingDefaults.ThinBarlineThickness;
-        double thick = EngravingDefaults.ThickBarlineThickness;
-        double sep = EngravingDefaults.BarlineSeparation;
-        double dotsOffset = EngravingDefaults.RepeatDotsOffset;
-        return type switch
-        {
-            BarlineType.None => 0,
-            BarlineType.Single => thin,
-            BarlineType.Double => thin + sep + thin,
-            BarlineType.Final => thin + sep + thick,
-            BarlineType.RepeatStart => thick + sep + thin + dotsOffset,
-            BarlineType.RepeatEnd => dotsOffset + thin + sep + thick,
-            BarlineType.RepeatBoth => dotsOffset + thin + sep + thick + sep + thin + dotsOffset,
-            _ => thin
-        };
-    }
+        => EngravingDefaults.BarlineDrawnWidth(type);
 
     // ---------- Beams ----------
 

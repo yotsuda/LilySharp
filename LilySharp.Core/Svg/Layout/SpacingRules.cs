@@ -44,13 +44,16 @@ public static class SpacingRules
     /// <summary>Width of a single barline in staff spaces.</summary>
     public const double BarlineWidth = 0.8;
 
-    /// <summary>Width reserved for a repeat barline in staff spaces. Must cover the
-    /// barline's full DRAWN extent so it is not engraved into the preceding column:
-    /// SharedRenderer.GetVisualBarlineWidth draws a repeat end/start ~1.79 s3
-    /// (dots-offset + thin + sep + thick) and RepeatBoth ~2.98 (= this * 1.5 = 3.0).
-    /// The old 1.6 under-reserved by ~0.19, so a whole rest could collide with a `:|`.
-    /// LILYPOND-REF: lily/bar-line.cc — the bar line's own X-extent feeds spacing.</summary>
-    public const double RepeatBarlineWidth = 2.0;
+    /// <summary>The clearance a bar line reserves to its neighbour OVER its own drawn
+    /// stencil. A plain barline reserves <see cref="BarlineWidth"/> (0.8) for a
+    /// stencil that is only <see cref="EngravingDefaults.ThinBarlineThickness"/>
+    /// (0.19) wide, i.e. ~0.61 of breathing room. Repeat barlines reuse the SAME
+    /// clearance, measured from their actual (wider, leftward-dotted) stencil — so
+    /// the reservation tracks the glyph instead of a hand-tuned constant, and a
+    /// whole rest before a `:|` always clears the dots.
+    /// LILYPOND-REF: scm/define-grobs.scm BarLine space-alist — the padding to a
+    /// neighbouring note is applied uniformly over the bar line's own X-extent.</summary>
+    public const double BarlineClearance = BarlineWidth - EngravingDefaults.ThinBarlineThickness;
 
     /// <summary>Width of a double or final barline in staff spaces.</summary>
     public const double DoubleBarlineWidth = 1.2;
@@ -137,9 +140,11 @@ public static class SpacingRules
         BarlineType.Single => BarlineWidth,
         BarlineType.Double => DoubleBarlineWidth,
         BarlineType.Final => DoubleBarlineWidth,
-        BarlineType.RepeatStart => RepeatBarlineWidth,
-        BarlineType.RepeatEnd => RepeatBarlineWidth,
-        BarlineType.RepeatBoth => RepeatBarlineWidth * 1.5,
+        // Repeat barlines reserve their actual drawn stencil plus the same
+        // clearance a plain barline gets — the reservation tracks the glyph.
+        BarlineType.RepeatStart => EngravingDefaults.BarlineDrawnWidth(type) + BarlineClearance,
+        BarlineType.RepeatEnd => EngravingDefaults.BarlineDrawnWidth(type) + BarlineClearance,
+        BarlineType.RepeatBoth => EngravingDefaults.BarlineDrawnWidth(type) + BarlineClearance,
         _ => BarlineWidth
     };
 

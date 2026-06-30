@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Svg.Model;
+
 namespace LilySharp.Core.Svg;
 
 /// <summary>
@@ -266,6 +268,31 @@ public static class EngravingDefaults
     /// <remarks>LILYPOND-REF: scm/bar-line.scm:766-801 — the colon glyph is
     /// stacked with the same kern as the line segments.</remarks>
     public const double RepeatDotsOffset = 2 * RepeatDotRadius + RepeatBarlineDotSeparation;
+
+    /// <summary>
+    /// The drawn X-extent of a bar line, in staff spaces — the sum of the glyph
+    /// components actually stencilled (thin/thick segments, their separations, and
+    /// the leftward repeat-dots block). This is the SINGLE source of truth shared
+    /// by the renderer (which draws the bar line this wide) and the spacing engine
+    /// (which must reserve at least this much so a bar line is never engraved into
+    /// the preceding column). Keeping both on this one method prevents the two from
+    /// drifting apart, which is what let a whole rest collide with a `:|`.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/bar-line.cc — a bar line's own stencil X-extent
+    /// feeds the spacing; the printed width and the reserved width are the same
+    /// quantity.</remarks>
+    public static double BarlineDrawnWidth(BarlineType type) => type switch
+    {
+        BarlineType.None => 0,
+        BarlineType.Single => ThinBarlineThickness,
+        BarlineType.Double => ThinBarlineThickness + BarlineSeparation + ThinBarlineThickness,
+        BarlineType.Final => ThinBarlineThickness + BarlineSeparation + ThickBarlineThickness,
+        BarlineType.RepeatStart => ThickBarlineThickness + BarlineSeparation + ThinBarlineThickness + RepeatDotsOffset,
+        BarlineType.RepeatEnd => RepeatDotsOffset + ThinBarlineThickness + BarlineSeparation + ThickBarlineThickness,
+        BarlineType.RepeatBoth => RepeatDotsOffset + ThinBarlineThickness + BarlineSeparation + ThickBarlineThickness
+                                  + BarlineSeparation + ThinBarlineThickness + RepeatDotsOffset,
+        _ => ThinBarlineThickness
+    };
 
     // LilyPond-style variable thickness parameters
     // Reference: LilyPond's 'thickness' property (distance between arcs at thickest point)
