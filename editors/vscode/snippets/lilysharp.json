@@ -1,0 +1,72 @@
+{
+  "New score (single staff)": {
+    "prefix": ["score", "template", "newscore"],
+    "description": "A complete single-staff Lily# score skeleton",
+    "body": [
+      "title \"${1:Untitled}\"",
+      "",
+      "time ${2:4/4}",
+      "key ${3:c major}",
+      "",
+      "part ${4:melody} { clef ${5:treble} }",
+      "",
+      "section ${6:A} {",
+      "  ${4:melody} { ${7:c'4 d' e' f' | g'1 |} }",
+      "}",
+      "",
+      "structure { ${6:A} }",
+      "",
+      "score \"${8:score}\" {",
+      "  staff ${4:melody}",
+      "}",
+      "$0"
+    ]
+  },
+  "New score (grand staff / piano)": {
+    "prefix": ["grandstaff", "piano"],
+    "description": "A two-staff (piano) Lily# score skeleton",
+    "body": [
+      "title \"${1:Untitled}\"",
+      "",
+      "time ${2:4/4}",
+      "key ${3:c major}",
+      "",
+      "part rh { clef treble }",
+      "part lh { clef bass }",
+      "",
+      "section ${4:A} {",
+      "  rh { ${5:c'4 d' e' f' | g'1 |} }",
+      "  lh { ${6:c2 g, | c1 |} }",
+      "}",
+      "",
+      "structure { ${4:A} }",
+      "",
+      "score \"${7:score}\" {",
+      "  grandStaff {",
+      "    staff rh",
+      "    staff lh",
+      "  }",
+      "}",
+      "$0"
+    ]
+  },
+  "Part declaration": {
+    "prefix": "part",
+    "description": "A part declaration (clef lives here)",
+    "body": ["part ${1:name} { clef ${2:treble} }"]
+  },
+  "Section block": {
+    "prefix": "section",
+    "description": "A section binding music to a part",
+    "body": [
+      "section ${1:A} {",
+      "  ${2:partName} { ${3:c'4 d' e' f' |} }",
+      "}"
+    ]
+  },
+  "Phrase (reusable music)": {
+    "prefix": "phrase",
+    "description": "A reusable phrase, referenced as $name",
+    "body": ["phrase ${1:motif} { ${2:c'4 d' e' f' |} }"]
+  }
+}

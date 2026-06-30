@@ -35,6 +35,12 @@
         "path": "./syntaxes/lilysharp.tmLanguage.json"
       }
     ],
+    "snippets": [
+      {
+        "language": "lilysharp",
+        "path": "./snippets/lilysharp.json"
+      }
+    ],
     "semanticTokenTypes": [
       {
         "id": "pitch",
@@ -145,10 +151,19 @@
         "command": "lilysharp.convertLayout",
         "category": "Lily#",
         "title": "Convert Layout (part-major ⇄ section-major)"
+      },
+      {
+        "command": "lilysharp.newScore",
+        "category": "Lily#",
+        "icon": "$(new-file)",
+        "title": "New Score"
       }
     ],
     "menus": {
       "commandPalette": [
+        {
+          "command": "lilysharp.newScore"
+        },
         {
           "command": "lilysharp.openPreview",
           "when": "resourceLangId == lilysharp"

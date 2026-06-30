@@ -12,6 +12,27 @@ let client: LanguageClient;
 let clientReady = false;
 let clientReadyPromise: Promise<void>;
 const previewPanels = new Map<string, vscode.WebviewPanel>();
+
+// Skeleton for the "Lily#: New Score" command — a complete, valid single-staff score
+// the author can fill in. (The same shape is offered as a `score` snippet for files
+// that already exist.)
+const NEW_SCORE_TEMPLATE = `title "Untitled"
+
+time 4/4
+key c major
+
+part melody { clef treble }
+
+section A {
+  melody { c'4 d' e' f' | g'1 | }
+}
+
+structure { A }
+
+score "score" {
+  staff melody
+}
+`;
 let debounceTimers = new Map<string, NodeJS.Timeout>();
 const outputChannel = vscode.window.createOutputChannel('Lily# Extension');
 
@@ -159,6 +180,14 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('lilysharp.convertLayout', () => {
             outputChannel.appendLine('convertLayout command triggered');
             convertLayout();
+        }),
+        vscode.commands.registerCommand('lilysharp.newScore', async () => {
+            outputChannel.appendLine('newScore command triggered');
+            const doc = await vscode.workspace.openTextDocument({
+                language: 'lilysharp',
+                content: NEW_SCORE_TEMPLATE,
+            });
+            await vscode.window.showTextDocument(doc);
         })
     );
 
