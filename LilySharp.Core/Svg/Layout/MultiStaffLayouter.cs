@@ -980,7 +980,7 @@ public sealed class MultiStaffLayouter
     /// whose item count matches the timing-column grid the springs were built from —
     /// the basis lyric-width reservation needs.
     /// </summary>
-    private static Measure DensestMeasure(IReadOnlyList<Measure> measures)
+    internal static Measure DensestMeasure(IReadOnlyList<Measure> measures)
     {
         var best = measures[0];
         for (int k = 1; k < measures.Count; k++)

@@ -49,9 +49,14 @@ public sealed class SystemBreaker
                                                 double? baseShortestDuration = null)
     {
         var measures = score.Voice.Measures;
+        // Fold each system's indent into the prefix width so the break decision
+        // matches the rendered fit (the layout subtracts the same indent from the
+        // available width). Default indent 0 → no-op.
+        // LILYPOND-REF: scm/output-lib.scm system-start-text indent.
         double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true,
-            score.TimeSignature.Beats, score.TimeSignature.BeatType);
-        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false);
+            score.TimeSignature.Beats, score.TimeSignature.BeatType) + _options.Indent;
+        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false)
+            + _options.ShortIndent;
 
         if (_options.UseOptimalLineBreaking)
         {
@@ -89,9 +94,14 @@ public sealed class SystemBreaker
         if (precomputedLineSizes != null)
             return RegroupBySizes(measures, precomputedLineSizes);
 
+        // Fold each system's indent into the prefix width so the break decision
+        // matches the rendered fit (the layout subtracts the same indent from the
+        // available width). Default indent 0 → no-op.
+        // LILYPOND-REF: scm/output-lib.scm system-start-text indent.
         double firstPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: true,
-            score.TimeSignature.Beats, score.TimeSignature.BeatType);
-        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false);
+            score.TimeSignature.Beats, score.TimeSignature.BeatType) + _options.Indent;
+        double continuationPrefixWidth = SpacingRules.CalculatePrefixWidth(score.KeySignature.Sharps, includeTimeSignature: false)
+            + _options.ShortIndent;
 
         if (_options.UseOptimalLineBreaking)
         {
@@ -133,6 +143,20 @@ public sealed class SystemBreaker
             var allMeasures = MultiStaffLayouter.CollectAllMeasuresAtIndex(score, i);
             var springs = layouter.CreateTimingSprings(
                 primaryMeasure, allTimings, baseShortestDuration, allMeasures);
+
+            // Price lyric syllables into the break gate exactly as the system
+            // layout does (MultiStaffLayouter), so a syllable that widens a measure
+            // can push it to the next line instead of overflowing. Without this the
+            // breaker under-counts lyric-heavy bars and packs lines too tightly.
+            // LILYPOND-REF: lily/lyric-extender.cc / spacing — syllable widths join
+            // the column springs the spacing-spanner solves.
+            if (!score.Lyrics.IsDefaultOrEmpty)
+            {
+                var lyricMeasure = score.IsLeadSheet
+                    ? MultiStaffLayouter.DensestMeasure(allMeasures)
+                    : primaryMeasure;
+                springs = SpacingRules.ApplyLyricSpacing(springs, lyricMeasure, i, score.Lyrics);
+            }
 
             double ideal = 0, min = 0, invStretch = 0;
             foreach (var s in springs)

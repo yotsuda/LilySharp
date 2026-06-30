@@ -1,0 +1,26 @@
+// The line breaker must price lyric syllable widths, not just note springs.
+// These whole notes are narrow, so by note spacing alone all eight bars pack
+// onto one line — but the long syllables underneath are far wider and overflow
+// the page. The break gate now applies the same lyric spacing the system layout
+// does, so it wraps to the systems that actually fit.
+// LILYPOND-REF: lily/spacing-spanner.cc — syllable widths join the column springs.
+title "Lyric break pricing"
+time 4/4
+part melody
+section Main {
+  melody {
+    c1 | c1 | c1 | c1 | c1 | c1 | c1 | c1 |
+  }
+  lyrics {
+    supercalifragi |
+    expialidocious |
+    antidisestablish |
+    mentarianismword |
+    incomprehensibil |
+    pneumonoultramic |
+    floccinaucinihili |
+    pseudopseudohypo |
+  }
+}
+structure { Main }
+score "lyric-break-pricing" { staff melody }

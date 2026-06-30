@@ -93,6 +93,8 @@ public class SvgSnapshotTests
         yield return new object[] { "test/beamlets" };
         // Slur lifts to clear high interior notes (encompass obstacles).
         yield return new object[] { "test/slur-obstacle-clearance" };
+        // Line breaker prices lyric widths so long syllables wrap instead of overflowing.
+        yield return new object[] { "test/lyric-break-pricing" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };
