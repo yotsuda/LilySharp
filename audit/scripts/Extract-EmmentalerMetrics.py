@@ -86,7 +86,10 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("ClefG", 0xE085, "G (treble) clef", "mf/feta-clefs.mf — clefs.G"),
     GlyphSpec("ClefF", 0xE083, "F (bass) clef", "mf/feta-clefs.mf — clefs.F"),
     GlyphSpec("ClefC", 0xE07F, "C (alto/tenor) clef", "mf/feta-clefs.mf — clefs.C"),
-    # Rests (ink extents; used to place augmentation dots after the glyph)
+    # Rests (ink extents; used to place augmentation dots after the glyph
+    # and to centre the church-rest combination of a multi-measure rest)
+    GlyphSpec("RestLonga",       0xE005, "Longa (4-measure) rest",      "mf/feta-rests.mf — rests.M2"),
+    GlyphSpec("RestDoubleWhole", 0xE006, "Double-whole (breve) rest",   "mf/feta-rests.mf — rests.M1"),
     GlyphSpec("RestWhole",   0xE000, "Whole rest",   "mf/feta-rests.mf — rests.0"),
     GlyphSpec("RestHalf",    0xE001, "Half rest",    "mf/feta-rests.mf — rests.1"),
     GlyphSpec("RestQuarter", 0xE008, "Quarter rest", "mf/feta-rests.mf — rests.2"),

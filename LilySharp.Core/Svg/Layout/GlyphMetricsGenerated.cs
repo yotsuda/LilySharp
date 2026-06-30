@@ -173,6 +173,18 @@ public static partial class GlyphMetrics
     /// <summary>C (alto/tenor) clef — advance width (next-glyph horizontal feed).</summary>
     public const double ClefCAdvance = 2.7200;
 
+    /// <summary>Longa (4-measure) rest — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.M2 (U+E005 = rests.M2)</remarks>
+    public static readonly BBox RestLonga = new(0.0000, -1.0000, 0.6000, 1.0000);
+    /// <summary>Longa (4-measure) rest — advance width (next-glyph horizontal feed).</summary>
+    public const double RestLongaAdvance = 0.6000;
+
+    /// <summary>Double-whole (breve) rest — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.M1 (U+E006 = rests.M1)</remarks>
+    public static readonly BBox RestDoubleWhole = new(0.0000, 0.0000, 0.6000, 1.0000);
+    /// <summary>Double-whole (breve) rest — advance width (next-glyph horizontal feed).</summary>
+    public const double RestDoubleWholeAdvance = 0.6000;
+
     /// <summary>Whole rest — BBox.</summary>
     /// <remarks>LILYPOND-REF: mf/feta-rests.mf — rests.0 (U+E000 = rests.0)</remarks>
     public static readonly BBox RestWhole = new(0.0000, -0.6240, 1.5000, 0.0000);

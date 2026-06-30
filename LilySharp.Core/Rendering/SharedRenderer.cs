@@ -3289,8 +3289,15 @@ public static class SharedRenderer
         double cy = mmr.Y;
 
         // Greedy decomposition: 4 (long), 2 (breve), 1 (whole).
+        // Use each rest glyph's REAL ink width (from the extracted font metrics) so
+        // the centred row matches LilyPond's church_rest, which sums r.extent(X) for
+        // each symbol. The block longa/breve rests are only ~0.6 ss wide; the whole
+        // rest is 1.5 ss. LILYPOND-REF: lily/multi-measure-rest.cc church_rest.
         var pieces = new List<(int Span, char Glyph, double Width, double Y)>();
-        const double LongWidth = 2.0, BreveWidth = 1.5, WholeWidth = 1.5, Gap = 0.4;
+        double LongWidth = GlyphMetrics.RestLonga.Width;
+        double BreveWidth = GlyphMetrics.RestDoubleWhole.Width;
+        double WholeWidth = GlyphMetrics.RestWhole.Width;
+        const double Gap = 0.4;
         int remaining = mmr.MeasureCount;
         foreach (var (span, glyph, width, dy) in new[]
         {
