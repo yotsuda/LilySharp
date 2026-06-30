@@ -297,10 +297,12 @@ c8[ d e f]     % Beam these four notes together
 ## Parallel Voices (Multi-Voice)
 
 ```
-<< { c'2 d } \\ { e2 f } >>
+voice { c'2 d } voice { e2 f }
 ```
 
-The `\\` separator creates a second voice on the same staff.
+Each `voice { … }` block is a simultaneous voice on the same staff. (The
+LilyPond `<< … \\ … >>` form is **not** Lily# — the parser rejects it with a
+hint to use `voice { … }`.)
 
 ## Named Music (Phrases)
 
@@ -387,14 +389,14 @@ structure {
 
 ## Render Block
 
-Controls output layout. Each `staff { partName }` names the part to draw; the
-clef comes from the part declaration, not the render block:
+Controls output layout. Each `staff partName` names the part to draw (a bare
+name, no braces); the clef comes from the part declaration, not the render block:
 
 ```
 score "out" {
   grandStaff {
-    staff { rightHand }
-    staff { leftHand }
+    staff rightHand
+    staff leftHand
   }
 }
 ```
@@ -403,7 +405,7 @@ A single-staff score names one staff directly:
 
 ```
 score "out" {
-  staff { melody }
+  staff melody
 }
 ```
 
@@ -437,8 +439,8 @@ override Stem.length = 7
 c4 d e f |
 revert Stem.length
 
-once override NoteHead.color = "red"
-c4 d e f |        % Only first note is red
+once override Stem.length = 9
+c4 d e f |        % 'once' applies to the next note only
 ```
 
 ## Lyrics
