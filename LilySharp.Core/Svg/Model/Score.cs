@@ -78,9 +78,9 @@ public sealed record Score
     /// <summary>Tempo in BPM (optional).</summary>
     public int? Tempo { get; }
 
-    /// <summary>Whether the initial tempo asked for a swing/shuffle feel indicator
-    /// (the swing-eighths equation drawn beside the metronome mark).</summary>
-    public bool SwingTempo { get; }
+    /// <summary>The note value the initial tempo asked to swing (0 = none, 8 = eighths,
+    /// 16 = sixteenths), drawn as the swing-feel equation beside the metronome mark.</summary>
+    public int SwingSubdivision { get; }
 
     /// <summary>Title (optional).</summary>
     public string? Title { get; }
@@ -175,8 +175,8 @@ public sealed record Score
         ImmutableArray<GrobRevert>? grobReverts = null,
         ImmutableArray<TrillSpannerItem>? trillSpanners = null,
         HeaderPositions header = default,
-        bool swingTempo = false)
-        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts, voltaBrackets, tupletBrackets, arpeggios, figuredBasses, chordNames, percentRepeats, crossStaffItems, grobOverrides, grobReverts, trillSpanners, header, swingTempo)
+        int swingSubdivision = 0)
+        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts, voltaBrackets, tupletBrackets, arpeggios, figuredBasses, chordNames, percentRepeats, crossStaffItems, grobOverrides, grobReverts, trillSpanners, header, swingSubdivision)
     {
     }
 
@@ -209,7 +209,7 @@ public sealed record Score
         ImmutableArray<GrobRevert>? grobReverts = null,
         ImmutableArray<TrillSpannerItem>? trillSpanners = null,
         HeaderPositions header = default,
-        bool swingTempo = false)
+        int swingSubdivision = 0)
     {
         if (voices.Length == 0)
             throw new ArgumentException("Score must have at least one voice", nameof(voices));
@@ -219,7 +219,7 @@ public sealed record Score
         KeySignature = keySignature;
         Clef = clef;
         Tempo = tempo;
-        SwingTempo = swingTempo;
+        SwingSubdivision = swingSubdivision;
         Title = title;
         Composer = composer;
         Dynamics = dynamics ?? ImmutableArray<DynamicItem>.Empty;

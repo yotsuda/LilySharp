@@ -3056,11 +3056,14 @@ public static class SharedRenderer
 
     /// <summary>
     /// Draws the swing/shuffle feel equation beside a tempo mark: two beamed straight
-    /// eighths "=" a beamed dotted-eighth + eighth under a triplet "3". Hand-built from
-    /// the same notehead/stem/beam primitives the metronome mark itself uses.
+    /// notes "=" a beamed dotted + plain note under a triplet "3". <paramref name="subdivision"/>
+    /// picks the note value — 8 = eighths (single beam), 16 = sixteenths (double beam).
+    /// Hand-built from the same notehead/stem/beam primitives the metronome mark uses.
     /// </summary>
-    private static void DrawSwingEquation(IDrawingContext gc, double startX, double baselineY)
+    private static void DrawSwingEquation(IDrawingContext gc, double startX, double baselineY, int subdivision)
     {
+        int beams = subdivision >= 16 ? 2 : 1;
+        const double beamGap = 0.3;          // spacing between the two beams of a 16th
         // Sizes track the metronome mark: the same notehead size (1.6) and stem length,
         // and a beam scaled to that small note (0.48 staff-beam x 1.6/FontSize) rather
         // than the full staff-beam thickness, which read as too heavy here.
@@ -3087,7 +3090,8 @@ public static class SharedRenderer
             double beamY = baselineY - stemUp;
             gc.DrawLine(s1, baselineY, s1, beamY, Color.Black, stemW);
             gc.DrawLine(s2, baselineY, s2, beamY, Color.Black, stemW);
-            gc.DrawLine(s1, beamY, s2, beamY, Color.Black, beamW);   // thin beam
+            for (int b = 0; b < beams; b++)   // 1 thin beam (8th) or 2 (16th)
+                gc.DrawLine(s1, beamY + b * beamGap, s2, beamY + b * beamGap, Color.Black, beamW);
             if (withThree)
             {
                 // Triplet bracket "3" above the beam (as on shuffle charts).
@@ -3137,10 +3141,10 @@ public static class SharedRenderer
             double tempoTextX = m.X + noteSize * 0.5 + 0.3;
             gc.DrawText("= " + m.Text, tempoTextX, absY,
                 textSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
-            if (m.TempoSwing)
+            if (m.SwingSubdivision != 0)
             {
                 double textEnd = tempoTextX + SerifTextMetrics.MeasureBold("= " + m.Text, textSize);
-                DrawSwingEquation(gc, textEnd + 0.8, absY);
+                DrawSwingEquation(gc, textEnd + 0.8, absY, m.SwingSubdivision);
             }
             return;
         }

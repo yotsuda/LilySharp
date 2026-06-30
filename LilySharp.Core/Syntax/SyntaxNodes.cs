@@ -633,38 +633,49 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// True if a 'swing' / 'shuffle' feel word follows the tempo (e.g. <c>tempo 120 swing</c>),
-    /// requesting the swing-eighths equation drawn beside the metronome mark.
+    /// The note value made to swing by a trailing 'swing'/'shuffle' word, or 0 for no
+    /// swing: <c>tempo 120 swing</c> = 8 (eighths), <c>tempo 120 swing 16</c> = 16
+    /// (sixteenths). Drives the swing-feel equation drawn beside the metronome mark.
     /// </summary>
-    public bool IsSwing
+    public int SwingSubdivision
     {
         get
         {
+            bool sawSwing = false;
             foreach (var value in Values)
-                if (value is SyntaxTokenNode t && t.Kind == SyntaxKind.Identifier &&
-                    (t.Text == "swing" || t.Text == "shuffle"))
-                    return true;
-            return false;
+            {
+                if (value is not SyntaxTokenNode t)
+                    continue;
+                if (t.Kind == SyntaxKind.Identifier && (t.Text == "swing" || t.Text == "shuffle"))
+                    sawSwing = true;
+                else if (sawSwing &&
+                         (t.Kind == SyntaxKind.IntegerLiteral || t.Kind == SyntaxKind.DurationNumber) &&
+                         int.TryParse(t.Text, out int n))
+                    return n;  // the value right after the swing word
+            }
+            return sawSwing ? 8 : 0;  // bare 'swing' = eighths
         }
     }
 
     /// <summary>
-    /// Gets the BPM value, if present.
+    /// Gets the BPM value, if present. Stops at a 'swing'/'shuffle' word so the
+    /// subdivision number after it (e.g. the 16 in <c>swing 16</c>) is not mistaken
+    /// for the tempo.
     /// </summary>
     public int? Bpm
     {
         get
         {
-            // Look for the last integer (BPM is usually at the end)
             int? lastInt = null;
             foreach (var value in Values)
             {
-                if (value is SyntaxTokenNode token &&
-                    (token.Kind == SyntaxKind.IntegerLiteral || token.Kind == SyntaxKind.DurationNumber))
-                {
-                    if (int.TryParse(token.Text, out var n))
-                        lastInt = n;
-                }
+                if (value is not SyntaxTokenNode token)
+                    continue;
+                if (token.Kind == SyntaxKind.Identifier && (token.Text == "swing" || token.Text == "shuffle"))
+                    break;
+                if ((token.Kind == SyntaxKind.IntegerLiteral || token.Kind == SyntaxKind.DurationNumber) &&
+                    int.TryParse(token.Text, out var n))
+                    lastInt = n;
             }
             return lastInt;
         }

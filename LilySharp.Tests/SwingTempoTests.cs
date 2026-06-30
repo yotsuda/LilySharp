@@ -48,28 +48,38 @@ public class SwingTempoTests
     [Theory]
     [InlineData("swing")]
     [InlineData("shuffle")]
-    public void TempoWithFeelWord_SetsSwingTempo(string word)
+    public void BareFeelWord_SwingsEighths(string word)
     {
-        Assert.True(Collect($"tempo 120 {word}").SwingTempo);
+        Assert.Equal(8, Collect($"tempo 120 {word}").SwingSubdivision);
+    }
+
+    [Fact]
+    public void Swing16_SwingsSixteenths_AndKeepsTheTempo()
+    {
+        // 'swing 16' selects sixteenth swing — and the 16 must NOT be read as the BPM.
+        var score = Collect("tempo 120 swing 16");
+        Assert.Equal(16, score.SwingSubdivision);
+        Assert.Equal(120, score.Tempo);
     }
 
     [Fact]
     public void PlainTempo_IsNotSwing()
     {
-        Assert.False(Collect("tempo 120").SwingTempo);
+        Assert.Equal(0, Collect("tempo 120").SwingSubdivision);
     }
 
     [Fact]
-    public void SwingTempo_ReachesTheTempoMarkLayout()
+    public void SwingSubdivision_ReachesTheTempoMarkLayout()
     {
-        // Locks the whole chain: parse -> collect -> Score.SwingTempo -> the laid-out
-        // Tempo mark carries TempoSwing so the renderer draws the equation.
-        var layout = new LayoutEngine().Layout(Collect("tempo 120 swing"));
-        var tempo = layout.MusicMarkLayouts.Single(m => m.MarkType == MusicMarkType.Tempo);
-        Assert.True(tempo.TempoSwing);
+        // Locks the whole chain: parse -> collect -> Score.SwingSubdivision -> the laid-out
+        // Tempo mark carries it so the renderer draws the right equation.
+        var swung = new LayoutEngine().Layout(Collect("tempo 120 swing 16"))
+            .MusicMarkLayouts.Single(m => m.MarkType == MusicMarkType.Tempo);
+        Assert.Equal(16, swung.SwingSubdivision);
 
-        var plain = new LayoutEngine().Layout(Collect("tempo 120"));
-        Assert.False(plain.MusicMarkLayouts.Single(m => m.MarkType == MusicMarkType.Tempo).TempoSwing);
+        var plain = new LayoutEngine().Layout(Collect("tempo 120"))
+            .MusicMarkLayouts.Single(m => m.MarkType == MusicMarkType.Tempo);
+        Assert.Equal(0, plain.SwingSubdivision);
     }
 
     [Fact]

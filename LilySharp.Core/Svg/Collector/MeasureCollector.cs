@@ -613,7 +613,7 @@ public sealed class MeasureCollector
     private int _timePosition;
     private int _keyPosition;
     private int? _tempo;
-    private bool _swingTempo;
+    private int _swingSubdivision;
     private int _timeBeats = 4;
     private int _timeBeatType = 4;
     private int _keySharps = 0;
@@ -697,7 +697,7 @@ public sealed class MeasureCollector
             _dynamics.ToImmutableArray(),
             _articulations.ToImmutableArray(),
             _graceNotes.ToImmutableArray(),
-            swingTempo: _swingTempo,
+            swingSubdivision: _swingSubdivision,
             lyrics: _lyricsCollector.Lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
@@ -1000,7 +1000,7 @@ public sealed class MeasureCollector
             _tempo,
             _title,
             _composer,
-            swingTempo: _swingTempo,
+            swingSubdivision: _swingSubdivision,
             lyrics: _lyricsCollector.Lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
@@ -1143,7 +1143,7 @@ public sealed class MeasureCollector
             _dynamics.ToImmutableArray(),
             _articulations.ToImmutableArray(),
             _graceNotes.ToImmutableArray(),
-            swingTempo: _swingTempo,
+            swingSubdivision: _swingSubdivision,
             lyrics: _lyricsCollector.Lyrics.ToImmutableArray(),
             musicMarks: _musicMarks.ToImmutableArray(),
             customTexts: _customTexts.ToImmutableArray(),
@@ -1806,7 +1806,7 @@ public sealed class MeasureCollector
         _keyPosition = 0;
         _clefPosition = 0;
         _tempo = null;
-        _swingTempo = false;
+        _swingSubdivision = 0;
         _timeBeats = 4;
         _timeBeatType = 4;
         _keySharps = 0;
@@ -2023,8 +2023,8 @@ public sealed class MeasureCollector
         var values = tempoDecl.Values.ToList();
         if (values.Count > 0 && values[0] is SyntaxTokenNode token && int.TryParse(token.Text, out int tempo))
             _tempo = tempo;
-        if (tempoDecl.IsSwing)
-            _swingTempo = true;
+        if (tempoDecl.SwingSubdivision != 0)
+            _swingSubdivision = tempoDecl.SwingSubdivision;
     }
 
     private int CalculateKeySharps(KeySignatureSyntax key)

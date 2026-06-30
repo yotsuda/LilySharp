@@ -38,7 +38,7 @@ public readonly record struct MusicMarkLayout(
     int SourceIndex = -1,   // F3/B: index into BuildAllMarks() — position-independent
                             //   ref so a reused layout re-derives SourcePosition from
                             //   the live score (see SharedRenderer.ResolveDataPos).
-    bool TempoSwing = false // Tempo marks only: draw the swing-eighths feel equation.
+    int SwingSubdivision = 0 // Tempo marks only: note value to swing (0/8/16) for the feel equation.
 );
 
 /// <summary>
@@ -108,7 +108,7 @@ public static class MusicMarkEngraver
         ImmutableArray<VoltaBracketLayout> voltaBrackets = default)
     {
         // Merge section labels and tempo marking into the mark list
-        var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingTempo ?? false);
+        var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0);
 
         if (allMarks.Length == 0)
             return ImmutableArray<MusicMarkLayout>.Empty;
@@ -233,7 +233,7 @@ public static class MusicMarkEngraver
 
                 layouts.Add(new MusicMarkLayout(
                     mark.MeasureIndex, x, y, mark.Type, mark.Text,
-                    mark.IsSymbol, mark.SourcePosition, si, mark.TempoSwing));
+                    mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision));
             }
 
             // Stack below-staff marks (lower priority = closer to staff).
@@ -302,7 +302,7 @@ public static class MusicMarkEngraver
 
                 layouts.Add(new MusicMarkLayout(
                     mark.MeasureIndex, x, y, mark.Type, mark.Text,
-                    mark.IsSymbol, mark.SourcePosition, si, mark.TempoSwing));
+                    mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision));
             }
         }
 
@@ -384,10 +384,10 @@ public static class MusicMarkEngraver
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<Measure> measures,
         int? tempo,
-        bool swingTempo = false)
+        int swingSubdivision = 0)
     {
         var allMarks = MergeSectionLabels(musicMarks, measures);
-        return MergeTempoMark(allMarks, tempo, swingTempo);
+        return MergeTempoMark(allMarks, tempo, swingSubdivision);
     }
 
     /// <summary>
@@ -436,13 +436,13 @@ public static class MusicMarkEngraver
     /// LILYPOND-REF: define-grobs.scm:1835 MetronomeMark outside-staff-priority = 1000
     /// </remarks>
     private static ImmutableArray<MusicMarkItem> MergeTempoMark(
-        ImmutableArray<MusicMarkItem> marks, int? tempo, bool swing = false)
+        ImmutableArray<MusicMarkItem> marks, int? tempo, int swingSubdivision = 0)
     {
         if (tempo == null)
             return marks;
 
         var tempoMark = new MusicMarkItem(
-            MusicMarkType.Tempo, tempo.Value.ToString(), 0, 0) { TempoSwing = swing };
+            MusicMarkType.Tempo, tempo.Value.ToString(), 0, 0) { SwingSubdivision = swingSubdivision };
 
         var builder = ImmutableArray.CreateBuilder<MusicMarkItem>();
         if (!marks.IsDefaultOrEmpty)
