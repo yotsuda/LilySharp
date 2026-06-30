@@ -53,6 +53,9 @@ namespace LilySharp.Core.Rendering;
 public static class SharedRenderer
 {
     private const double StaffHeight = 4.0;
+    // Height of the short measure-divider barlines on a lead-sheet text row
+    // (no staff, so the bar is just a tick the chord row hangs on).
+    private const double LeadSheetBarlineHeight = 2.0;
     private const double FontSize = 4.0;
     private const double TempoNoteSize = 1.6;  // metronome-mark notehead size (shared with the swing equation)
     private const double OssiaScale = 0.65;  // LP magnifyStaff default for ossia
@@ -209,6 +212,16 @@ public static class SharedRenderer
         // Left-edge system bar + span bars through grand-staff gaps.
         DrawStaffConnectors(score, layout, system, systemStartX, gc);
 
+        // Lead-sheet score: every row is a text row (chords and/or lyrics, no
+        // notation staff). Then there are no staff barlines, so draw the measure
+        // barlines on the TOP text row — the chords/lyrics read as a measure grid
+        // (chords sit between the barlines, lyrics hang below). A score with any
+        // real staff keeps that staff's own barlines and leaves text rows bare.
+        var enumeratedStaves = score.EnumerateStaves().ToList();
+        bool leadSheet = enumeratedStaves.Count > 0
+            && enumeratedStaves.All(t => t.Staff.IsTextRow);
+        int barlineRowIdx = leadSheet ? enumeratedStaves[0].GlobalStaffIndex : -1;
+
         // Per-staff: staff lines + prefix glyphs + notes
         foreach (var (group, staff, globalIdx) in score.EnumerateStaves())
         {
@@ -218,7 +231,11 @@ public static class SharedRenderer
             // Independent text rows (chords / lyrics) draw no staff lines / clef /
             // notes — only their text, emitted by DrawChordNames / DrawLyrics at the row Y.
             if (staff.IsTextRow)
+            {
+                if (leadSheet && globalIdx == barlineRowIdx)
+                    DrawLeadSheetBarlines(system, staffY, gc);
                 continue;
+            }
 
             IDisposable? groupScope = isOssia
                 ? gc.BeginGroup(new DrawingTransform(0, staffY, OssiaScale, OssiaScale))
@@ -1561,8 +1578,9 @@ public static class SharedRenderer
     // ---------- Barlines ----------
 
     private static void DrawBarlines(SystemLayout system, Staff staff, double staffY,
-        ScoreLayout layout, IDrawingContext gc)
+        ScoreLayout layout, IDrawingContext gc, double? barHeight = null)
     {
+        double height = barHeight ?? StaffHeight;
         var voice = staff.PrimaryVoice;
         foreach (var ml in system.Measures)
         {
@@ -1572,7 +1590,7 @@ public static class SharedRenderer
 
             // Start barline (e.g. repeat-start) at the measure's left edge.
             if (measure.StartBarline != BarlineType.None)
-                DrawBarline(measure.StartBarline, ml.X, staffY, StaffHeight, gc);
+                DrawBarline(measure.StartBarline, ml.X, staffY, height, gc);
 
             // End barline drawn so its right edge sits on the column boundary
             // (matches SvgRenderer: endX - visualWidth). Normal measures carry
@@ -1588,7 +1606,28 @@ public static class SharedRenderer
 
             double endX = ml.X + ml.Width;
             double width = GetVisualBarlineWidth(measure.EndBarline);
-            DrawBarline(measure.EndBarline, endX - width, staffY, StaffHeight, gc);
+            DrawBarline(measure.EndBarline, endX - width, staffY, height, gc);
+        }
+    }
+
+    /// <summary>
+    /// Draws the measure grid for a lead-sheet (text-row-only) score: a thin barline
+    /// at the end of every measure and a final barline at the system's right edge.
+    /// The text rows synthesize their measures with <see cref="BarlineType.None"/>
+    /// (no staff carries the real barline types), so the grid is drawn here instead.
+    /// </summary>
+    private static void DrawLeadSheetBarlines(SystemLayout system, double staffY, IDrawingContext gc)
+    {
+        if (system.Measures.Length == 0) return;
+        double h = LeadSheetBarlineHeight;
+        for (int i = 0; i < system.Measures.Length; i++)
+        {
+            var ml = system.Measures[i];
+            double endX = ml.X + ml.Width;
+            bool last = i == system.Measures.Length - 1;
+            var type = last ? BarlineType.Final : BarlineType.Single;
+            double width = GetVisualBarlineWidth(type);
+            DrawBarline(type, endX - width, staffY, h, gc);
         }
     }
 

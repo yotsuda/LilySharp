@@ -1,0 +1,11 @@
+// Chords-only score: no staff, no notes — chord symbols laid out between
+// measure barlines at their timing positions (durations DO matter for chords,
+// so a mid-bar change lands at its musical moment). The measure grid is drawn
+// on the chord row.
+title "Chords only"
+time 4/4
+section Main {
+  chords prog { c2 a:m | f2 g:7 | c1 | }
+}
+structure { Main }
+score "lead-sheet-chords" { chords prog }

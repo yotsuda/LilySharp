@@ -1,0 +1,11 @@
+// Lyrics-only score: no staff, no notes — just the lyrics laid out between
+// measure barlines. A score whose every row is a text row draws the measure
+// grid on the top row (here the lyrics row). Durations don't matter; the
+// syllables fill each measure.
+title "Lyrics only"
+time 4/4
+section Main {
+  lyrics words { Twin- kle twin- kle | lit- tle star | }
+}
+structure { Main }
+score "lead-sheet-lyrics" { lyrics words }

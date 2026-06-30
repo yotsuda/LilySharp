@@ -91,6 +91,11 @@ public class SvgSnapshotTests
         yield return new object[] { "test/tie-seconds" };
         // A phrasing slur can bind two chords (not just single notes).
         yield return new object[] { "test/slur-chords" };
+        // Lead-sheet scores: text rows only (lyrics and/or chords, no staff) draw
+        // a measure grid — barlines on the top row, content between them.
+        yield return new object[] { "test/lead-sheet-lyrics" };
+        yield return new object[] { "test/lead-sheet-chords" };
+        yield return new object[] { "test/lead-sheet" };
         // Tab ties sit on each tied note's STRING line (above the fret digit), not
         // at the notation pitch height — the two ties are on different strings.
         yield return new object[] { "test/tab-tie" };

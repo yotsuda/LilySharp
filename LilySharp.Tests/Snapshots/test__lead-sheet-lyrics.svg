@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="135.0" viewBox="0 0 119.05 13.50">
+<style>
+  @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
+  .music { font-family: 'Emmentaler', serif; }
+</style>
+  <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="265">Lyrics only</text>
+  <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
+  <rect x="30.15" y="6.00" width="0.19" height="2.00" fill="#000000"/>
+  <rect x="45.63" y="6.00" width="0.19" height="2.00" fill="#000000"/>
+  <rect x="46.12" y="6.00" width="0.60" height="2.00" fill="#000000"/>
+  <text x="9.40" y="7.60" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="320">Twin</text>
+  <text x="13.98" y="7.60" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">-</text>
+  <text x="15.18" y="7.60" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="326">kle</text>
+  <text x="20.96" y="7.60" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="330">twin</text>
+  <text x="25.31" y="7.60" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">-</text>
+  <text x="26.74" y="7.60" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="336">kle</text>
+  <text x="32.50" y="7.60" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="342">lit</text>
+  <text x="35.38" y="7.60" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">-</text>
+  <text x="36.84" y="7.60" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="347">tle</text>
+  <text x="42.62" y="7.60" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="351">star</text>
+  </g>
+</svg>

@@ -1,0 +1,10 @@
+// Chords + lyrics, no staff: the chord row carries the measure barlines and the
+// chords sit between them (timing-aware); the lyrics hang below the barlines.
+title "Lead sheet"
+time 4/4
+section Main {
+  chords prog { c2 g:7 | a:m f | c1 | g:7 c | }
+  lyrics words { Twin- kle | lit- tle | star | high low | }
+}
+structure { Main }
+score "lead-sheet" { chords prog lyrics words }
