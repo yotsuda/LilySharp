@@ -1,6 +1,7 @@
-LilySharp の F3（意味解析〜レイアウトの増分化）を再開する。現在地は **B = whole-layout reuse が稼働中**。
-MusicMark（`8e8755e`）＋ B-2 reuse（`706d36d`）＋ Lyric（`7d1d436`）＋ Glissando（`7f0a12d`）＋ Fingering（`aebafb5`）まで完了・push 済み。
-まず現状を読んでから、次の一手（**最後の実作業＝detected Hairpin/Ottava/TextSpanner 移行＝検出元 side-table index を threading し `ReuseSafe` から外す**）に着手して。
+LilySharp の F3（意味解析〜レイアウトの増分化）。現在地は **B = whole-layout reuse が稼働中、注釈移行は完了**。
+data-pos を出す全注釈型（18型）を移行済みで `ReuseSafe` は実質空（Pedal のみ）＝override 無しスコアほぼ全てで内容不変編集の reuse が発火。
+**未 push のローカルコミットあり（`e56dc23`・`1c41f8c`、push 保留指示中）。master=origin/master=`0dfec86` のまま。push 解禁後に `git branch -f master f3-incremental` + push。**
+次は **(a) reuse 実効の benchmark 計測**、または **(b) 道 C＝width-changing 編集にも効かせる per-system 注釈の段ごと化（最難・大工事）**。まず現状を読んで方針を確認して。
 
 ## 最初に読む（この順で）
 1. `C:\MyProj\LilySharp\docs\DEV_BUGFIX_WORKFLOW.md` の §0（アドホック禁止）と §19（F3 引き継ぎ・運用）。
@@ -9,7 +10,7 @@ MusicMark（`8e8755e`）＋ B-2 reuse（`706d36d`）＋ Lyric（`7d1d436`）＋ 
 4. **`C:\MyProj\LilySharp\LSP_F3_ANNOTATION_REMAINING.md`** ← **今回の本丸**。B の設計・残型・**MusicMark 移行の具体手順**・B-2 復活手順が全部ここにある。
 
 ## 現在地（2026-06-30 更新）
-- リポジトリ `C:\MyProj\LilySharp`、ブランチ `f3-incremental` = `origin/master`（最新 tip `aebafb5`）。全テスト **1849 passed / 3 skipped**。作業ツリー clean。
+- リポジトリ `C:\MyProj\LilySharp`、ブランチ `f3-incremental`（**`0dfec86`=origin/master 以降は未 push**、`git log origin/master..` で確認）。全テスト **1851 passed / 3 skipped**。作業ツリー clean（未追跡の別件 .md 2本除く）。
 - 着手前に必ず `dotnet test LilySharp.Tests`（ripple MCP の pwsh で）でベースライン確認。
 
 ### 完了済み（コミット済・push 済）
@@ -35,18 +36,19 @@ MusicMark（`8e8755e`）＋ B-2 reuse（`706d36d`）＋ Lyric（`7d1d436`）＋ 
   `staff.PrimaryVoice.Measures[mi].Items[ii]`（基底 `MusicItem`）から `SourcePosition` を引く。`BuildStaffMeasures` で lazy 構築。
 - **Fingering 移行**（`aebafb5`、15型目、resolver 再利用）: `FingeringLayout` に `StaffIndex` 追加。host は note も **chord** も可
   なので `ResolveNoteArr` は基底 `MusicItem.SourcePosition` を読む。和音 fingering も対応。
-- **TieVariant は移行不要**を確認（`DrawTieVariants` が `gc.Source` を呼ばず data-pos を出さない）。残 `ReuseSafe`=4アレイ
-  （Hairpin/Ottava/TextSpanner/Pedal）、うち Pedal は常に空。
+- **TieVariant は移行不要**を確認（`DrawTieVariants` が data-pos を出さない）。
+- **detected Hairpin/Ottava/TextSpanner 移行**（`e56dc23`、16〜18型目）: 検出元 cresc/ottava/rit mark（`score.MusicMarks`、単一テーブル）の
+  元 index を threading、`ResolveArr(…, score.MusicMarks, …)` で再導出。3型とも `ReuseSafe` から除外＝残は Pedal（常に空）のみ。
+- **beam reuse 穴を修正**（`e56dc23`、B-2 潜在バグ）: detected 移行で beamed multi-staff の reuse が初発火し露見。レンダラの beamed-item 集合が
+  MusicItem 値（SourcePosition 込み）判定で、reuse 時に cached ビームメンバーが live ノートと値不一致→ビーム上に再ステム（+47 stray）。
+  **位置キー `(staff,measure,item)` 化＋voice 1 のみ照合**で修正（ビームは primary voice 由来）。通常レンダ byte-identical。
 
-## 次にやること（B の続き ＝ 最後の実作業＝detected グループを `ReuseSafe` から外す）
-**`LSP_F3_ANNOTATION_REMAINING.md` の「残型の移行方針」をそのまま実行する。** 残4アレイの検出元も content key 被覆済み（健全性の
-論拠は同ファイル参照）。Pedal は空で無害なので、実作業は **Hairpin/Ottava/TextSpanner** の3つ。
-
-- **detected Hairpin/Ottava/TextSpanner（score 非保持、musicMarks/dynamics 由来）**: いずれも `gc.Source` で data-pos を出す。
-  検出器（`DetectHairpins(musicMarks,dynamics)` / `DetectOttavaBrackets(musicMarks)` / `DetectTextSpanners(musicMarks)`）が各検出
-  item の**元 side-table（score.MusicMarks / score.Dynamics）への index**を追跡→layout に載せ、`ResolveDataPos` で既存
-  `ResolveArr` により再導出。Hairpin は2テーブル由来なので table 識別（tableId+index 等）が要る。各移行後 `ReuseSafe` から外し、
-  `MigratedDataPosTests`＋`IncrementalCompilerTests`（hairpin 入りスコアの reuse 発火）で実証。
+## 次にやること（注釈移行は完了。方針確認から）
+**まず `LSP_F3_ANNOTATION_REMAINING.md` 冒頭の「★ B 完了」を読む。** 残る選択肢は2つ、いずれも着手前にユーザーに方針確認:
+1. **reuse 実効の benchmark 計測**: `IncrementalSessionBenchmark` 等で「内容不変編集の reuse 発火時 vs フル」のレイテンシ差を実測し、
+   S5-1 の数値（layout 7.7ms＝全体の最大）がどれだけ削れたか定量化。安価・低リスク。
+2. **道 C＝per-system 注釈の段ごと化（最難・大工事）**: width-CHANGING 編集にも効かせる。solver の段跨ぎ衝突回避を「自段＋上流確定段境界」に
+   再設計し annotation も per-system キャッシュ。最大効果だが最高リスク（`LSP_F3_ANNOTATION_REMAINING.md` の「道 C」参照）。
 
 ## 検証
 - `MigratedDataPosTests`（B-1 の頑健性ガード）: 移行型を足したら必ずここに追加（位置ずれ編集下の resolution 正当性を実証）。

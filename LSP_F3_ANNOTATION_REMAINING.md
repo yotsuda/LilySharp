@@ -3,6 +3,13 @@
 > 作成 2026-06-30。親文書: `LSP_F3_QUERY_GRAPH_DESIGN.md`（§0.5 と S-stage 進捗）、`docs/DEV_BUGFIX_WORKFLOW.md` §19。
 > 行番号は目安。着手時は識別子で再 grep すること。
 
+## ★ B（whole-layout reuse）の注釈移行は **完了**（2026-06-30、コミット `e56dc23` まで）
+data-pos を出す全注釈型（計18型）を SourceIndex / note-locator 機構へ移行し、`IncrementalCompiler.ReuseSafe` は
+**実質空（`PedalBracketLayouts` のみ＝常に empty）**。→ **override 無しスコアはほぼ全て、内容不変編集で whole-layout reuse が
+発火**（`LayoutEngine.Layout` 完全 skip、増分==フル byte-identical）。beamed multi-staff も健全（下記 beam 修正）。
+**残るは「width-CHANGING 編集にも効かせる」=道 C（per-system 注釈の段ごと化、最難）か、reuse 実効の benchmark 計測のみ。**
+以下は移行過程の記録。
+
 ## 現在地
 
 S5-3a/c で **per-system の spring 解（`LayoutMeasures`）＋ skyline（`BuildSystemSkylines`）をキャッシュ済み**
@@ -120,13 +127,17 @@ B-2（`706d36d`）も復活＝override 無しの通常スコアで内容不変�
   ＝baked 値（通常レンダで正、reuse 経路は `Layout(MultiStaffScore)` で実 staffIndex）。両型とも `ReuseSafe` から除外済み。
 - ~~**TieVariant**~~: **移行不要を確認**。`DrawTieVariants` は `gc.Source` を呼ばず data-pos を出さない（`SourcePosition`
   フィールドは未使用）→ reuse で stale 化しない。元から `ReuseSafe` に無い。
-- **Hairpin/Ottava/TextSpanner（detected, score 非保持）＝次の最優先・最後の実作業**: いずれも `gc.Source` で data-pos を出す
-  （`DrawHairpins`/`DrawOttavaBrackets`/`DrawTextSpanners` で確認）。検出元: Hairpin=`DetectHairpins(musicMarks, dynamics)`、
-  Ottava=`DetectOttavaBrackets(musicMarks)`、TextSpanner=`DetectTextSpanners(musicMarks)`。`SourcePosition` はその検出元
-  mark/dynamic item 由来。**方針**: 検出器が各検出 item の**元 side-table（score.MusicMarks / score.Dynamics）への index**を
-  追跡→layout に載せ、`ResolveDataPos` で `ResolveArr`（既存ヘルパ）で再導出。Hairpin は2テーブル由来なので「どちらのテーブルの
-  どの index か」を識別する必要（例: tableId + index、または検出元種別で分岐）。各移行後 `ReuseSafe` から外す。Pedal は空で無害。
-- 各移行後、`MigratedDataPosTests` に追加＋`IncrementalCompilerTests` で hairpin 入りスコアの reuse 発火を増分==フルで実証。
+- ~~**Hairpin/Ottava/TextSpanner（detected, score 非保持）**~~: **完了 `e56dc23`**。data-pos は検出元 cresc/ottava/rit mark
+  （`score.MusicMarks`）由来＝**単一テーブル**（end 位置は次の dynamic/mark だが data-pos は開始 mark のみ＝「2テーブル」懸念は誤りだった）。
+  各検出器が開始 mark の `score.MusicMarks` への元 index を追跡→item/layout の `SourceIndex` に threading、`ResolveDataPos` で
+  `ResolveArr(…, score.MusicMarks, …)` で再導出。3型とも `ReuseSafe` から除外。
+- **beam reuse 穴の修正（`e56dc23`、B-2 の潜在バグ）**: detected 移行で初めて beamed multi-staff（grammar-tour）で reuse が発火し露見。
+  レンダラの beamed-item 集合が **MusicItem 値**（＝SourcePosition 込み）で判定していたため、reuse 時に cached のビームメンバー（編集前 offset）が
+  live ノートと値一致せず、全 beamed ノートがビームの上に再ステム描画（grammar-tour で +47 stray stem/flag）。
+  **修正**: beamed 集合を **位置キー `(staff, measure, item)`**（offset 非依存）化し、**voice 1 のみ**照合（ビームは各譜表 primary voice 由来）。
+  通常レンダは byte-identical、reuse で健全。`DrawStaffMeasures`/`DrawTabStaff` に staffIndex を threading。
+- 各移行後、`MigratedDataPosTests` に追加＋`IncrementalCompilerTests` で reuse 発火を増分==フルで実証
+  （`ContentUnchangedEdit_With{Beams,Hairpin,Gliss,Fingering,Lyrics}`、`SystemLayoutCacheTests.MultiStaff` も whole-layout reuse を経由）。
 
 ### B-1 の頑健性は実証済み（commit `8afaf0e`）
 `MigratedDataPosTests`：全 fixture を「元」vs「先頭改行コピー（全 offset +1）」でレイアウトし、移行済み各アレイで
