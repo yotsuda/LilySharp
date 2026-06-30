@@ -3298,15 +3298,23 @@ public static class SharedRenderer
         double BreveWidth = GlyphMetrics.RestDoubleWhole.Width;
         double WholeWidth = GlyphMetrics.RestWhole.Width;
         const double Gap = 0.4;
+        // Vertical placement (dy, in staff spaces below the staff middle cy — device
+        // +Y is down). Each church-rest glyph sits at its own natural staff position
+        // spi = Rest::staff_position_internal(me, dl, CENTER). For a normal 5-line staff
+        // (line-positions {-4,-2,0,2,4}, neutral direction, default font-size 0 so the
+        // dl<0 "(ss - fs)" term vanishes) that resolves to:
+        //   whole (dl= 0): spi = +2  → hangs from the 4th line (one line above middle)
+        //   breve (dl=-1): spi =  0  → sits on the middle line (ink fills the space above it)
+        //   longa (dl=-2): spi =  0  → centred on the middle line (ink spans ±1 space)
+        // dy = -0.5 * spi converts a staff position to a device offset from cy.
+        // Matches LilyPond 2.24 with \compressMMRests (verified by juxtaposition).
+        // LILYPOND-REF: lily/rest.cc Rest::staff_position_internal; lily/multi-measure-rest.cc church_rest.
         int remaining = mmr.MeasureCount;
         foreach (var (span, glyph, width, dy) in new[]
         {
-            (4, EmmentalerGlyphs.RestLonga, LongWidth, 0.0),
-            (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, 0.0),
-            // A whole rest hangs from the 4th line (staffY+1 = cy-1), exactly like a
-            // standalone whole rest (DrawRest). The old -0.5 sat it half a space too
-            // low, so an R1 / R1*1 looked like a half rest.
-            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -1.0),
+            (4, EmmentalerGlyphs.RestLonga, LongWidth, 0.0),       // spi 0  → dy 0
+            (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, 0.0), // spi 0  → dy 0
+            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -1.0),      // spi +2 → dy -1.0
         })
         {
             while (remaining >= span)
