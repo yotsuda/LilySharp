@@ -1118,9 +1118,24 @@ private GreenNode?[] ParseArticulations()
                         && IsPlacementWord(Peek(1))
                         && Peek(2)?.Kind != SyntaxKind.Dot)
                     {
+                        // cresc/decresc/dim drive a HAIRPIN (always below); '.up' / '.down'
+                        // is a dynamic-text placement and is not meaningful there. Flag it
+                        // explicitly (no silent drop) and recover as a plain trigger.
+                        bool isHairpinTrigger = name.Text is "cresc" or "decresc" or "dim";
+                        int qStart = _textPosition;
                         Advance();             // .
                         var dir = Advance();   // up / down
-                        articulations.Add(new DynamicGreen(at, name, dir));
+                        if (isHairpinTrigger)
+                        {
+                            var span = new TextSpan(qStart, System.Math.Max(1, _textPosition - qStart));
+                            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                                $"'.{dir.Text}' placement is not supported on '@{name.Text}' (a hairpin is always below the staff).");
+                            articulations.Add(new DynamicGreen(at, name));
+                        }
+                        else
+                        {
+                            articulations.Add(new DynamicGreen(at, name, dir));
+                        }
                     }
                     else
                     {

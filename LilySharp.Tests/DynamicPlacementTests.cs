@@ -58,6 +58,23 @@ public class DynamicPlacementTests
     }
 
     [Fact]
+    public void Placement_OnHairpinTrigger_IsRejected_NotSilentlyDropped()
+    {
+        // cresc/decresc/dim drive a hairpin (always below); '.up'/'.down' is meaningless
+        // there and must be flagged, not silently swallowed.
+        var tree = SyntaxTree.Parse(
+            "part m { clef treble } section S { m { c''4@p@cresc.up d e f@f } }\n" +
+            "structure { S } score \"o\" { staff m }\n");
+        Assert.True(tree.HasErrors);
+        Assert.Contains(tree.Diagnostics, d => d.Message.Contains("cresc"));
+
+        // A dynamic LEVEL placement is fine.
+        Assert.False(SyntaxTree.Parse(
+            "part m { clef treble } section S { m { c''4@f.up } }\n" +
+            "structure { S } score \"o\" { staff m }\n").HasErrors);
+    }
+
+    [Fact]
     public void AboveDynamic_LaysOutHigherThanBelow()
     {
         var score = Collect("c''4@f.up c''4@mf");
