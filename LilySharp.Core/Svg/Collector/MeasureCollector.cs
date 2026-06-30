@@ -3313,7 +3313,11 @@ public sealed class MeasureCollector
 
         int dots = rest.Duration?.DotCount ?? 0;
 
-        return new RestItem(Fraction.FromNoteValue(noteValue), dots, rest.Position);
+        // 's' is a spacer rest: it occupies time/width but is never drawn (unlike 'r').
+        return new RestItem(Fraction.FromNoteValue(noteValue), dots, rest.Position)
+        {
+            IsSpacer = rest.RestToken.Text == "s"
+        };
     }
 
     /// <summary>

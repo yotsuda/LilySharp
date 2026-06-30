@@ -926,12 +926,13 @@ public static class SharedRenderer
                         forcedStemUp, headWiped, gc);
                     break;
                 case RestItem rest:
-                    // Measures inside a multi-measure-rest run get their
-                    // symbol from DrawMultiMeasureRests (church rest or
-                    // H-bar); drawing the per-measure whole rest too would
-                    // double-print. LILYPOND-REF: lily/multi-measure-rest.cc
-                    // — the MMR spanner replaces the individual rests.
-                    if (!IsMmrCovered(layout, ml.MeasureIndex))
+                    // A spacer rest ('s') reserves its column width but is never
+                    // drawn. Measures inside a multi-measure-rest run get their
+                    // symbol from DrawMultiMeasureRests (church rest or H-bar);
+                    // drawing the per-measure whole rest too would double-print.
+                    // LILYPOND-REF: lily/multi-measure-rest.cc — the MMR spanner
+                    // replaces the individual rests.
+                    if (!rest.IsSpacer && !IsMmrCovered(layout, ml.MeasureIndex))
                         DrawRest(rest, itemX, staffY, gc);
                     break;
                 case ChordItem chord:
