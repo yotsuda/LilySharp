@@ -240,7 +240,8 @@ public static class OutsideStaffStacker
                    ImmutableArray<OttavaBracketLayout> Ottavas,
                    ImmutableArray<CustomTextLayout> CustomTexts,
                    ImmutableArray<VoltaBracketLayout> Voltas,
-                   ImmutableArray<MusicMarkLayout> MusicMarks)
+                   ImmutableArray<MusicMarkLayout> MusicMarks,
+                   ImmutableArray<DynamicLayout> Dynamics)
         StackAboveStaff(
             ImmutableArray<SystemLayout> systems,
             IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
@@ -251,10 +252,11 @@ public static class OutsideStaffStacker
             ImmutableArray<CustomTextLayout> customTexts,
             ImmutableArray<VoltaBracketLayout> voltas,
             ImmutableArray<MusicMarkLayout> musicMarks,
-            ImmutableArray<ArticulationLayout> articulations = default)
+            ImmutableArray<ArticulationLayout> articulations = default,
+            ImmutableArray<DynamicLayout> aboveDynamics = default)
     {
         if (systems.IsDefaultOrEmpty)
-            return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks);
+            return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks, aboveDynamics);
 
         var measureToSystem = new Dictionary<int, int>();
         for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
@@ -408,6 +410,29 @@ public static class OutsideStaffStacker
             adjBarNumbers = b.ToImmutable();
         }
 
+        // ---- 250: DynamicText forced ABOVE (@f.up) ----
+        // LILYPOND-REF: scm/define-grobs.scm:1298 DynamicText.outside-staff-priority = 250
+        // Below-staff dynamics are handled by StackBelowStaff; here the FORCED-above ones
+        // stack outward from the staff and push higher-priority above-staff grobs (ottava,
+        // marks, …) clear of them. Text ascends UP from its baseline anchor.
+        var adjDynamics = aboveDynamics;
+        if (!aboveDynamics.IsDefaultOrEmpty)
+        {
+            var b = aboveDynamics.ToBuilder();
+            for (int i = 0; i < b.Count; i++)
+            {
+                var dyn = b[i];
+                if (!dyn.IsAbove || !measureToSystem.TryGetValue(dyn.MeasureIndex, out int sysIdx))
+                    continue;
+                double newAbs = Place(trackers[sysIdx],
+                    dyn.X - DynamicHalfWidth, dyn.X + DynamicHalfWidth,
+                    systems[sysIdx].Y + dyn.Y,
+                    topOffset: -DynamicTextAscent, bottomOffset: 0.0);
+                b[i] = dyn with { Y = newAbs - systems[sysIdx].Y };
+            }
+            adjDynamics = b.ToImmutable();
+        }
+
         // ---- 400: OttavaBracket (above-staff only) ----
         var adjOttavas = ottavas;
         if (!ottavas.IsDefaultOrEmpty)
@@ -529,7 +554,7 @@ public static class OutsideStaffStacker
             adjMarks = b.ToImmutable();
         }
 
-        return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks);
+        return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks, adjDynamics);
     }
 
     /// <summary>

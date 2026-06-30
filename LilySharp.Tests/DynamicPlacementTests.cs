@@ -87,4 +87,20 @@ public class DynamicPlacementTests
         Assert.True(above.Y < below.Y,
             $"above dynamic (Y={above.Y}) should sit higher than below (Y={below.Y})");
     }
+
+    [Fact]
+    public void AboveDynamic_ClearsOtherAboveStaffGrobs()
+    {
+        // @f.up (dynamic, priority 250) and @mark.A (rehearsal mark, 1500) share a column.
+        // The above-staff stacker must separate them — the higher-priority mark sits
+        // ABOVE the dynamic (smaller Y), not overlapping it.
+        var score = Collect("c''4@f.up@mark.A");
+        var layout = new LayoutEngine().Layout(score);
+
+        var dyn = layout.DynamicLayouts.Single(d => d.IsAbove);
+        var mark = layout.MusicMarkLayouts.Single(m => m.MarkType == MusicMarkType.Rehearsal);
+
+        Assert.True(mark.Y < dyn.Y,
+            $"rehearsal mark (Y={mark.Y}) should sit above the above-dynamic (Y={dyn.Y})");
+    }
 }

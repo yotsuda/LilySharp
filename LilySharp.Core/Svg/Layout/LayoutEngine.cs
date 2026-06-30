@@ -962,12 +962,16 @@ public sealed class LayoutEngine
         // so the first FULL measure is numbered 1, not 2.
         int barNumberOffset = (!measures.IsDefaultOrEmpty && measures[0].IsPickup) ? -1 : 0;
         var barNumberLayouts = BarNumberEngraver.Calculate(systems, numberOffset: barNumberOffset);
+        // Forced-above dynamics (@f.up) join the above-staff pass so they clear, and are
+        // cleared by, the other above-staff grobs. Below dynamics were already placed by
+        // StackBelowStaff and pass through untouched.
         var (stackedTrills, stackedBarNumbers, stackedOttavas, stackedCustomTexts,
-             stackedVoltas, stackedMarks) = OutsideStaffStacker.StackAboveStaff(
+             stackedVoltas, stackedMarks, stackedDynamicsAbove) = OutsideStaffStacker.StackAboveStaff(
             systems, systemSkylines, tupletBracketLayouts,
             trillSpannerLayouts, barNumberLayouts, ottavaLayouts,
             customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
-            articulationLayouts);
+            articulationLayouts, aboveDynamics: stackedDynamics);
+        stackedDynamics = stackedDynamicsAbove;
         // After stacking, sit a boundary "To Coda" on the adjacent section label's
         // line (the two straddle one barline) instead of stacking them apart.
         stackedMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(stackedMarks);
