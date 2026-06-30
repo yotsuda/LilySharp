@@ -232,6 +232,7 @@ public class SvgSnapshotTests
         // columns.
         yield return new object[] { "test/named-voice-lyrics" };
         yield return new object[] { "test/multi-measure-rest" };
+        yield return new object[] { "test/multi-measure-rest-single" };
         // Multi-staff: when ONE staff rests (R1*N) but ANOTHER has content over
         // the same measures, the resting staff shows individual whole rests and
         // BOTH staves keep their barlines — no merged MMR symbol (that only

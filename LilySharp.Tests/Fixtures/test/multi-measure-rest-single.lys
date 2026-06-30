@@ -1,0 +1,36 @@
+// Single / short multi-measure rests + a plain whole rest.
+// Locks in two distinct behaviours:
+//   * lowercase `r1`  -> ordinary whole rest at beat 1 (NOT centred),
+//                        hanging from the 4th line.
+//   * `R1*1`/`R1*2`/`R1*3` -> centred multi-measure-rest church glyphs; the
+//     whole-rest piece (R1*1, R1*3) must hang from the 4th line like a real
+//     whole rest, not sit a half-space low (regression: looked like a half rest).
+// Note measures separate the R-runs so each stays its own church rest.
+title "MMR (single / short)"
+composer "Lily#"
+
+tempo 120
+time 4/4
+key c major
+
+part melody
+
+section Main {
+  melody {
+    c4 d e f |
+    r1 |
+    c4 d e f |
+    R1*1 |
+    g4 a b c |
+    R1*2 |
+    c4 d e f |
+    R1*3 |
+    g4 a b c |
+  }
+}
+
+structure { Main }
+
+score "multi-measure-rest-single" {
+  staff melody
+}

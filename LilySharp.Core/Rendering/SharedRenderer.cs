@@ -3296,7 +3296,10 @@ public static class SharedRenderer
         {
             (4, EmmentalerGlyphs.RestLonga, LongWidth, 0.0),
             (2, EmmentalerGlyphs.RestDoubleWhole, BreveWidth, 0.0),
-            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -0.5),
+            // A whole rest hangs from the 4th line (staffY+1 = cy-1), exactly like a
+            // standalone whole rest (DrawRest). The old -0.5 sat it half a space too
+            // low, so an R1 / R1*1 looked like a half rest.
+            (1, EmmentalerGlyphs.RestWhole, WholeWidth, -1.0),
         })
         {
             while (remaining >= span)
