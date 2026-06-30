@@ -108,6 +108,7 @@ c4@staccato d4@accent <e g>4@arpeggio |
 ```
 c4~ | c4 d e f       // tie (same pitch across the barline) with ~
 c4( d e f)           // slur (different pitches) with ( )
+<c e>4( <d f>)       // a slur may bind chords, not just single notes
 c8[ d e f]           // manual beam; beaming is automatic otherwise
 ```
 
@@ -167,6 +168,24 @@ section Main {
   melody { c4 d e f | g2 g | }
   lyrics { Hap- py birth- day | to you | }
 }
+```
+
+## Lead sheet (chords and/or lyrics, no staff)
+
+An independent `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a
+`score` with `chords NAME` / `lyrics NAME` (instead of `staff NAME`), renders WITHOUT
+a staff: just a grid of measure barlines, the chord symbols between them and the
+lyrics below. A chord entry is `root[duration][:quality][/bass]` (`c`=C, `a:m`=Am,
+`g:7`=G7, `c/g`=C over a G bass) and honours its duration; lyric syllables fill each
+bar. Barlines in the source (`|` `|:` `:|` `||` `|.`) are drawn.
+
+```
+section Main {
+  chords prog  { c2 g:7 | a:m f | c1 :| }     // C G7 | Am F | C (repeat)
+  lyrics words { Twin- kle | lit- tle | star | }
+}
+structure { Main }
+score "sheet" { chords prog lyrics words }     // chords + lyrics rows, no staff
 ```
 
 ## Structure: reuse and navigation

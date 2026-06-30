@@ -20,7 +20,7 @@ LilySharp/
 │   └── Midi/                # MIDI export
 ├── LilySharp.Cli/           # Command-line interface
 ├── LilySharp.Lsp/           # Language Server Protocol implementation
-├── LilySharp.Tests/         # Unit tests (450+ tests)
+├── LilySharp.Tests/         # Unit + SVG-snapshot tests (1900+ tests)
 ├── editors/
 │   └── vscode/              # VS Code extension
 ├── samples/                 # Example .lys files
@@ -36,19 +36,19 @@ LilySharp/
 // Comments
 title "Happy Birthday"
 composer "Traditional"
-tempo "Allegro" 4 = 120
+tempo 120
 time 3/4
 key g major
-clef treble
 
-score {
-    part Melody {
-        relative c' {
-            c4 d e f | g2 g |
-        }
-    }
-}
+part melody { clef treble }       // declare each part; clef lives here
+section Main { melody { c4 d e f | g2 g | } }
+structure { Main }                // print/playback order of sections
+score "out" { staff melody }      // one or more render blocks
 ```
+
+> Lily# is **not** LilyPond: `\relative`, `<< … \\ … >>`, `\new Staff`, `\version`
+> and other backslash constructs are rejected. The compressed grammar in
+> [`docs/GRAMMAR_FOR_LLM.md`](docs/GRAMMAR_FOR_LLM.md) is the canonical single-file spec.
 
 ### Pitch Names
 
@@ -89,11 +89,39 @@ tuplet 5/4 { c16 d e f g }  // Quintuplet
 grace { c16 d } e4  // Grace notes before e
 ```
 
-### Lyrics
+### Slurs (notes or chords)
 
 ```lilysharp
-{ c4 d e f }
-lyrics { Hap -- py birth -- day }
+c4( d e f)          // slur over single notes
+<c e>4( <d f>)      // a slur can bind chords too
+```
+
+### Lyrics
+
+Lyrics live inside a section and align to that part's notes; `-` joins syllables of
+one word and `|` mirrors the music's barlines.
+
+```lilysharp
+section Main {
+    melody { c4 d e f | g2 g | }
+    lyrics { Hap- py birth- day | to you | }
+}
+```
+
+### Lead sheets (chords and/or lyrics, no staff)
+
+A `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a `score` with
+`chords NAME` / `lyrics NAME` (instead of `staff NAME`), renders without a staff: a
+grid of measure barlines with the chord symbols between them (at their timing) and
+the lyrics below. Chord entries are `root[duration][:quality][/bass]`.
+
+```lilysharp
+section Main {
+    chords prog  { c2 g:7 | a:m f | c1 :| }
+    lyrics words { Twin- kle | lit- tle | star | }
+}
+structure { Main }
+score "sheet" { chords prog lyrics words }
 ```
 
 ### Repeats and Alternatives
@@ -109,10 +137,10 @@ state it explicitly with `|: … :|*N`.
 (The `repeat` keyword remains for `unfold` / `percent` / `tremolo`, which are not
 volta repeats.)
 
-### Parallel Voices
+### Parallel Voices (one staff)
 
 ```lilysharp
-<< { c2 d } \\ { e2 f } >>
+voice { c'2 d } voice { e2 f }   // each voice { } is a simultaneous voice
 ```
 
 ### Named music (phrases)
@@ -120,12 +148,12 @@ volta repeats.)
 Named music is declared with `phrase` and referenced with `$name`:
 
 ```lilysharp
-phrase melody { c4 d e f }
-phrase bass { c2 g }
+phrase motif { c4 d e f }
 
-score {
-    part { $melody }
-}
+part melody { clef treble }
+section Main { melody { $motif g2 g | } }
+structure { Main }
+score "out" { staff melody }
 ```
 
 ## Building
@@ -226,9 +254,10 @@ The LSP server supports incremental text synchronization:
 - [x] Key signatures, clefs, tuplets
 - [x] Grace notes
 - [x] Lyrics support
-- [x] SVG music engraving (Emmentaler font, beams, ties, slurs, tuplets, volta brackets)
+- [x] SVG music engraving (Emmentaler font, beams, ties, slurs — including slurs over chords, tuplets, volta brackets, multi-measure rests)
 - [x] Multi-system layout with Knuth-Plass line breaking
 - [x] Multi-staff / GrandStaff rendering (cross-staff beam layout is not yet implemented)
+- [x] Lead sheets — staff-less chord rows and lyric rows drawn as a measure grid (chords, lyrics, or both)
 - [x] MusicXML export (notes, ties, slurs, grace notes, dynamics, articulations, ornaments, multi-part) — lyrics and tuplet numbers are not yet emitted
 - [x] CLI tool
 
