@@ -13,10 +13,14 @@ let clientReady = false;
 let clientReadyPromise: Promise<void>;
 const previewPanels = new Map<string, vscode.WebviewPanel>();
 
-// Skeleton for the "Lily#: New Score" command — a complete, valid single-staff score
-// the author can fill in. (The same shape is offered as a `score` snippet for files
-// that already exist.)
-const NEW_SCORE_TEMPLATE = `title "Untitled"
+// Content for the "Lily#: New Score" command — a complete, valid, recognizable
+// piece (public-domain Twinkle, Twinkle) so a new file shows real notation at once
+// and demonstrates relative octaves (' / ,), the |: :| repeat, and structure replay.
+// (The same content is offered as a `score` snippet for files that already exist.)
+const NEW_SCORE_TEMPLATE = `// Twinkle, Twinkle, Little Star (public domain).
+// Relative octave (the default): each note sits in the octave nearest the
+// previous one. Add ' to jump up an octave (the leap to G is g'), , to jump down (g,).
+title "Twinkle, Twinkle, Little Star"
 
 time 4/4
 key c major
@@ -24,10 +28,16 @@ key c major
 part melody { clef treble }
 
 section A {
-  melody { c'4 d' e' f' | g'1 | }
+  melody { c4 c g' g | a a g2 | f4 f e e | d d c2 | }
 }
 
-structure { A }
+// |: ... :| repeats the bars between them.
+section B {
+  melody { |: g'4 g f f | e e d2 :| }
+}
+
+// structure replays sections in order: A, then B (repeated), then A again.
+structure { A B A }
 
 score "score" {
   staff melody
