@@ -3,6 +3,25 @@
 > 作成 2026-06-30。親文書: `LSP_F3_QUERY_GRAPH_DESIGN.md`（§0.5 と S-stage 進捗）、`docs/DEV_BUGFIX_WORKFLOW.md` §19。
 > 行番号は目安。着手時は識別子で再 grep すること。
 
+## ★ reuse 実効の benchmark 計測結果（2026-06-30、`IncrementalSessionBenchmark`、warm session・1編集・InvocationCount=1）
+
+内容不変編集（先頭改行＝whole-layout reuse 発火、`VerifyReuses` で発火を保証）vs width-changing 編集（reuse 不可・full）。中央値/割当:
+
+| 編集 | reuse(width-preserving) | full(width-changing) |
+|---|---|---|
+| **単一譜**(grammar-2026-06-09) | **1.24 ms / 530 KB** | 3.08 ms / 3008 KB |
+| **多譜表**(grammar-tour) | 6.01 ms / 3142 KB | 5.55 ms / 3164 KB |
+
+**所見（重要・道 C の判断を左右）**:
+- **単一譜は明確な大勝**: reuse でレイテンシ ~60%減（3.08→1.24ms）、割当 ~82%減（3.0MB→0.5MB）。
+- **多譜表は実質中立**（中央値差 0.46ms < StdDev 0.68-1.17ms＝ノイズ内、**割当はほぼ同一 3142 vs 3164KB＝堅牢な信号**）。
+  → 多譜表では layout を100% skip しても速くならない＝**律速は layout(注釈含む)ではなく、毎編集走る collect + content-key(multi ~1.6ms) +
+  ResolveDataPos(全注釈アレイ再構築) + render**。これらは reuse/full 両方が払う。per-system cache(S5-3c)が既に多譜表 layout を最小化済み。
+- **含意**: 道 C（per-system 注釈の段ごと化）は width-changing 編集の **annotation layout** を狙うが、上記より多譜表の annotation layout は
+  もはや律速でない（reuse で全 layout を消しても無益＝annotation 分を消しても無益）。**道 C は多譜表で低ペイオフの可能性が高い。**
+  多譜表をさらに速くするなら狙うべきは content-key 計算 / render / collect、または **ResolveDataPos を fresh render では skip**
+  （正常レンダは data-pos 既に正しい＝再導出不要。reuse 時のみ必要。これは安価で全レンダに効く最適化候補）。
+
 ## ★ B（whole-layout reuse）の注釈移行は **完了**（2026-06-30、コミット `e56dc23` まで）
 data-pos を出す全注釈型（計18型）を SourceIndex / note-locator 機構へ移行し、`IncrementalCompiler.ReuseSafe` は
 **実質空（`PedalBracketLayouts` のみ＝常に empty）**。→ **override 無しスコアはほぼ全て、内容不変編集で whole-layout reuse が

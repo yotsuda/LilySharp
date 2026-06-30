@@ -36,11 +36,14 @@ namespace LilySharp.Benchmarks;
 /// (InvocationCount=1, UnrollFactor=1).
 ///
 /// Two edits bracket the behaviour:
-///   WidthPreserving — a leading newline (pure trivia): no measure's natural width
-///                     changes, so the gate is unchanged and the break DP is SKIPPED.
-///   WidthChanging   — inserting a note: a measure's spring vector changes, so the
-///                     break DP runs fully. The gap between the two is S4b's payoff;
-///                     what remains in the cheap case is layout+render — the S5 target.
+///   WidthPreserving — a leading newline (pure trivia): no measure's content or natural
+///                     width changes. Post-F3/B this takes the WHOLE-LAYOUT REUSE path —
+///                     LayoutEngine.Layout is skipped outright (not just the break DP),
+///                     and the renderer re-derives data-pos from the live score. Only
+///                     collect + render remain. This is the B payoff over S4b/S5-3.
+///   WidthChanging   — inserting a note: a measure's spring vector changes, so reuse is
+///                     declined and the full layout (break DP + system layout) runs. The
+///                     gap between the two is the reuse payoff on a content-unchanged edit.
 ///
 /// Run: dotnet run -c Release -- --filter '*IncrementalSession*'
 /// </summary>
@@ -109,6 +112,21 @@ public class IncrementalSessionBenchmark
         _singleTree = SyntaxTree.Parse(single);
         _singleWidthPreservingEdit = new TextChange(new TextSpan(0, 0), "\n");
         _singleWidthChangingEdit = new TextChange(new TextSpan(single.Length / 2, 0), " c4");
+
+        // Sanity: the width-preserving edits MUST take the whole-layout reuse path,
+        // otherwise this benchmark silently measures the wrong thing. Fail fast if not.
+        VerifyReuses(_tree, _widthPreservingEdit, nameof(Multi_WidthPreserving));
+        VerifyReuses(_singleTree, _singleWidthPreservingEdit, nameof(Single_WidthPreserving));
+    }
+
+    private static void VerifyReuses(SyntaxTree tree, TextChange edit, string label)
+    {
+        var probe = new IncrementalCompiler(tree, Options);
+        probe.Render();
+        probe.Edit(edit);
+        if (!probe.LastEditReusedLayout)
+            throw new InvalidOperationException(
+                $"{label}: expected whole-layout reuse to fire, but it did not.");
     }
 
     [IterationSetup]
