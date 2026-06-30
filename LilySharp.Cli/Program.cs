@@ -57,6 +57,7 @@ static int Run(string[] args)
         "xml" => RunXml(args.Skip(1).ToArray()),
         "ly" => RunLy(args.Skip(1).ToArray()),
         "check" => RunCheck(args.Skip(1).ToArray()),
+        "layout" => RunLayout(args.Skip(1).ToArray()),
         _ => UnknownCommand(first)
     };
 }
@@ -76,6 +77,7 @@ static void ShowHelp()
           midi    Convert to MIDI (audio)
           xml     Convert to MusicXML
           check   Check syntax without output
+          layout  Print a text summary of the layout (system/line breaks, bars per system)
 
         Global Options:
           -h, --help       Show this help
@@ -811,6 +813,61 @@ static bool ReportDiagnostics(SyntaxTree tree)
     foreach (var diag in all)
         Console.Error.WriteLine($"  {diag}");
     return hasErrors;
+}
+
+// ============ Layout Command ============
+
+static int RunLayout(string[] args)
+{
+    if (args.Contains("-h") || args.Contains("--help"))
+    {
+        Console.WriteLine("""
+            Print a text summary of the engine's layout decisions
+
+            Usage: lysc layout <input.lys>
+
+            Shows, per score: the staves, page/system counts, which bars landed in
+            each system, and where the line breaker split the music — the layout
+            facts a source file does not reveal, so you can verify the result
+            without rendering an image. (For resolved pitches, use 'check --pitches'.)
+
+            Options:
+              -h, --help       Show this help
+
+            Examples:
+              lysc layout score.lys
+            """);
+        return 0;
+    }
+
+    var inputPath = args.FirstOrDefault(a => !a.StartsWith('-'));
+    if (inputPath is null)
+    {
+        Console.Error.WriteLine("Error: Input file required");
+        Console.Error.WriteLine("Run 'lysc layout --help' for usage.");
+        return 1;
+    }
+    if (!File.Exists(inputPath))
+    {
+        Console.Error.WriteLine($"Error: File not found: {inputPath}");
+        return 1;
+    }
+
+    try
+    {
+        var (_, tree) = LoadAndParse(inputPath);
+        // Surface warnings, abort on errors — a layout summary of broken source is
+        // misleading, so route through the same gate as every output command.
+        if (ReportDiagnostics(tree)) return 1;
+
+        Console.Write(LilySharp.Core.Svg.LayoutReport.Generate(tree));
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        return 1;
+    }
 }
 
 // ============ Shared Utilities ============

@@ -136,6 +136,29 @@ Validates syntax without producing output. Reports errors with line and column n
 ```bash
 lysc check score.lys
 # Output: No errors. (12 measures, 48 notes)
+lysc check score.lys --pitches    # also print each note's resolved absolute pitch
+```
+
+### layout - Layout Summary
+
+```bash
+lysc layout <input.lys>
+```
+
+Prints a plain-text summary of the engine's layout decisions to stdout: the staves,
+page/system counts, which bars landed in each system, and where the line breaker
+split the music. This exposes the facts a source file does not reveal — where breaks
+actually fell and how the bars are distributed — so you can verify the layout without
+rendering an image. (For resolved pitches, use `check --pitches`.)
+
+**Example:**
+```bash
+lysc layout score.lys
+# score "demo"
+#   staves: treble, bass  |  time 4/4  |  1 page, 2 systems, 6 bars
+#   system 1: bars 1-3      (3 bars)
+#   system 2: bars 4-6      (3 bars)
+#   line breaks after bar: 3
 ```
 
 ## Output File Naming
