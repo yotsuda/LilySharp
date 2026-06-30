@@ -1859,10 +1859,24 @@ public static class SpacingRules
         }
 
         int noteValue = GetNoteValue(item);
-        var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
 
-        // Right extent from center = width - centerX
-        double extent = noteheadBBox.Width - noteheadBBox.CenterX;
+        // A rest is drawn glyph-left-aligned at its column X (DrawRest: DrawGlyph at x),
+        // so its right reach from the column origin is the rest glyph's right edge —
+        // wide for a whole/half rest. Using the (smaller) notehead box here let a whole
+        // rest's glyph collide with the following barline. LILYPOND-REF: lily/rest.cc
+        // Rest::width / generic_extent_callback — the rest stencil's own X-extent feeds
+        // the column skyline / separation.
+        double extent;
+        if (item is RestItem)
+        {
+            extent = GlyphMetrics.GetRestBBox(noteValue).Right;
+        }
+        else
+        {
+            var noteheadBBox = GlyphMetrics.GetNoteheadBBox(noteValue);
+            // Right extent from center = width - centerX
+            extent = noteheadBBox.Width - noteheadBBox.CenterX;
+        }
 
         // Add dots if present
         int dots = GetDots(item);
