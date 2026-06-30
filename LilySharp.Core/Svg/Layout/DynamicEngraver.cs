@@ -207,6 +207,25 @@ public static class DynamicEngraver
     }
 
     /// <summary>
+    /// ABOVE-staff mirror of <see cref="ColumnBaselineY"/>: the baseline Y a forced-above
+    /// dynamic occupies (negative = above the staff top), BEFORE same-column stacking.
+    /// Exposed so the inter-staff skyline widens the gap to the staff ABOVE by the
+    /// dynamic's upward reach.
+    /// </summary>
+    internal static double ColumnAboveBaselineY(
+        ImmutableArray<Voice> voices, int measureIndex, int itemIndex)
+    {
+        var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
+        double aboveBaseY = -(StaffPadding + Padding);
+        if (vs.IsEmpty)
+            return aboveBaseY;
+        return CalculateYPositionAboveVoices(vs, measureIndex, itemIndex, aboveBaseY);
+    }
+
+    /// <summary>Upward ink reach of a dynamic above its baseline (text ascends up).</summary>
+    internal const double DynamicAboveAscent = TextAscent;
+
+    /// <summary>
     /// Dynamic Y that clears the deepest note/stem of ANY voice at the column —
     /// so in a &lt;&lt; \\ &gt;&gt; the dynamic sits below the lower voice's
     /// down-stem instead of through it.

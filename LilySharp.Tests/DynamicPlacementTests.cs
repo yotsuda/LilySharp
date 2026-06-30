@@ -88,6 +88,36 @@ public class DynamicPlacementTests
             $"above dynamic (Y={above.Y}) should sit higher than below (Y={below.Y})");
     }
 
+    // Lower-staff Y in a treble-over-bass score; the lower staff carries a high chord
+    // (so the inter-staff gap is skyline-driven, not pinned at the basic-distance floor),
+    // then the dynamic under test rides on it.
+    private static double LowerStaffYWithDynamic(string dynamic)
+    {
+        var src =
+            "part top { clef treble }\npart bot { clef bass }\n" +
+            $"section S {{ top {{ c'1 }} bot {{ <c' e' g'>1{dynamic} }} }}\n" +
+            "structure { S }\nscore \"o\" { staff top staff bot }\n";
+        var tree = SyntaxTree.Parse(src);
+        Assert.False(tree.HasErrors,
+            string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
+        var score = SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
+        var layout = new LayoutEngine().Layout(score);
+        return layout.Systems[0].StaffGroups[1].Y;
+    }
+
+    [Fact]
+    public void AboveDynamic_OnLowerStaff_WidensGapToStaffAbove()
+    {
+        // A forced-above dynamic on the LOWER staff rises into the inter-staff gap and
+        // must push the lower staff further down. A below dynamic on the same note hangs
+        // under the lower staff and leaves the gap above untouched.
+        double above = LowerStaffYWithDynamic("@f.up");
+        double below = LowerStaffYWithDynamic("@f");
+
+        Assert.True(above > below,
+            $"@f.up lower staff (Y={above}) should sit lower than @f-below (Y={below})");
+    }
+
     [Fact]
     public void AboveDynamic_ClearsOtherAboveStaffGrobs()
     {
