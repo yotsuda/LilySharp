@@ -130,6 +130,26 @@ public sealed class PngDocumentContext : IDocumentContext
                 image.Dispose();
             _pages.Clear();
         }
+        else
+        {
+            // No page was produced (e.g. a score that laid out to zero systems).
+            // Emit a 1x1 blank instead of leaving _bytes null, so GetBytes() can't
+            // throw "Dispose first." on an empty render.
+            using var blank = SKSurface.Create(new SKImageInfo(1, 1,
+                SKColorType.Rgba8888, SKAlphaType.Premul));
+            if (blank != null)
+            {
+                var bg = _options.Background;
+                blank.Canvas.Clear(new SKColor(bg.R, bg.G, bg.B, bg.A));
+                using var snapshot = blank.Snapshot();
+                using var data = snapshot.Encode(SKEncodedImageFormat.Png, _options.Quality);
+                _bytes = data.ToArray();
+            }
+            else
+            {
+                _bytes = System.Array.Empty<byte>();
+            }
+        }
         _disposed = true;
     }
 
