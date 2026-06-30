@@ -776,6 +776,61 @@ public sealed class ElementCoordinator
         return null;
     }
 
+    /// <summary>
+    /// Note-head obstacles the slur encompasses within this broken segment, in
+    /// device coordinates and sorted by X. The scorer treats the first and last
+    /// columns as the slur's edges and scores head encompass over the interior,
+    /// so the curve lifts to clear notes that bulge into its path. Returns an
+    /// empty list when the segment covers no note column.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/slur-scoring.cc Slur_score_state::get_encompass_infos —
+    /// the encompassed note columns (bounds included) feed score_encompass().
+    /// </remarks>
+    private static IReadOnlyList<SlurObstacle> BuildSlurObstacles(
+        Score score, SystemLayout segSystem, SlurItem slur,
+        double staffMiddleY, double segStartX, double segEndX)
+    {
+        const double headHalfHeight = 0.5; // staff spaces, half a notehead
+        const double eps = 0.001;
+        var obstacles = new List<SlurObstacle>();
+
+        foreach (var ml in segSystem.Measures)
+        {
+            int mi = ml.MeasureIndex;
+            if (mi < slur.StartMeasureIndex || mi > slur.EndMeasureIndex)
+                continue;
+            if (mi >= score.Voice.Measures.Length)
+                continue;
+
+            var items = score.Voice.Measures[mi].Items;
+            int lo = mi == slur.StartMeasureIndex ? slur.StartItemIndex : 0;
+            int hi = mi == slur.EndMeasureIndex ? slur.EndItemIndex : items.Length - 1;
+            hi = Math.Min(hi, items.Length - 1);
+
+            for (int i = lo; i <= hi; i++)
+            {
+                int? topPos = MusicItem.EdgeStaffPosition(items[i], preferTop: true);
+                int? bottomPos = MusicItem.EdgeStaffPosition(items[i], preferTop: false);
+                if (topPos is null || bottomPos is null)
+                    continue; // rest / spacer / barline — no head
+
+                double x = ml.X + GetItemXOffset(score.Voice, mi, i, ml);
+                if (x < segStartX - eps || x > segEndX + eps)
+                    continue;
+
+                // Visual top edge = highest pitch (smallest device Y) minus half a
+                // head; visual bottom edge = lowest pitch plus half a head.
+                double topY = StaffFrame.PositionToDevice(topPos.Value, staffMiddleY) - headHalfHeight;
+                double bottomY = StaffFrame.PositionToDevice(bottomPos.Value, staffMiddleY) + headHalfHeight;
+                obstacles.Add(new SlurObstacle(x, topY, bottomY, SlurObstacleType.NoteHead));
+            }
+        }
+
+        obstacles.Sort((a, b) => a.X.CompareTo(b.X));
+        return obstacles;
+    }
+
     public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
     {
         var slurs = _slurDetector.DetectSlurs(score);
@@ -870,8 +925,12 @@ public sealed class ElementCoordinator
                     segEndY += slurOffset;
                 }
 
+                var obstacles = BuildSlurObstacles(
+                    score, segSystem, slur, staffMiddleY, segStartX, segEndX);
+
                 var problem = new SlurScoringProblem(
                     slur, segStartX, segStartY, segEndX, segEndY,
+                    obstacles: obstacles,
                     existingSlurs: slurLayouts,
                     staffHeight: _options.StaffHeight,
                     isBrokenLeft: !segment.IsFirst,

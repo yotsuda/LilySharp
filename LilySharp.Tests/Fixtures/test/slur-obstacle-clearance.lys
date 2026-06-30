@@ -1,0 +1,12 @@
+// A slur whose interior notes rise well above its endpoints must lift to clear
+// them: the encompassed note-head columns are fed to the slur scorer as
+// obstacles, so the curve is raised rather than cutting through the high g''/e''.
+// LILYPOND-REF: lily/slur-scoring.cc score_encompass over the encompassed columns.
+title "Slur obstacle clearance"
+octave absolute
+part m { clef treble }
+section Main {
+  m { c''4( g''4 e''4 c''4) | }
+}
+structure { Main }
+score "slur-obstacle-clearance" { staff m }

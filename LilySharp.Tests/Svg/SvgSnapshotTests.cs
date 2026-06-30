@@ -91,6 +91,8 @@ public class SvgSnapshotTests
         yield return new object[] { "test/accidental-octave-straddle" };
         // Partial secondary beams (beamlets) on isolated 16ths in dotted rhythms.
         yield return new object[] { "test/beamlets" };
+        // Slur lifts to clear high interior notes (encompass obstacles).
+        yield return new object[] { "test/slur-obstacle-clearance" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };
