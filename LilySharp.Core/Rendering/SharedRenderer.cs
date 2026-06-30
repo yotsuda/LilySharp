@@ -1577,9 +1577,8 @@ public static class SharedRenderer
     // ---------- Barlines ----------
 
     private static void DrawBarlines(SystemLayout system, Staff staff, double staffY,
-        ScoreLayout layout, IDrawingContext gc, double? barHeight = null)
+        ScoreLayout layout, IDrawingContext gc)
     {
-        double height = barHeight ?? StaffHeight;
         var voice = staff.PrimaryVoice;
         foreach (var ml in system.Measures)
         {
@@ -1589,7 +1588,7 @@ public static class SharedRenderer
 
             // Start barline (e.g. repeat-start) at the measure's left edge.
             if (measure.StartBarline != BarlineType.None)
-                DrawBarline(measure.StartBarline, ml.X, staffY, height, gc);
+                DrawBarline(measure.StartBarline, ml.X, staffY, StaffHeight, gc);
 
             // End barline drawn so its right edge sits on the column boundary
             // (matches SvgRenderer: endX - visualWidth). Normal measures carry
@@ -1605,7 +1604,7 @@ public static class SharedRenderer
 
             double endX = ml.X + ml.Width;
             double width = GetVisualBarlineWidth(measure.EndBarline);
-            DrawBarline(measure.EndBarline, endX - width, staffY, height, gc);
+            DrawBarline(measure.EndBarline, endX - width, staffY, StaffHeight, gc);
         }
     }
 
