@@ -38,13 +38,22 @@ public class MmrRenderTests
         return SvgGenerator.Generate(tree, options);
     }
 
+    /// <summary>
+    /// The SVG fragment for a single MMR count digit. LilyPond's
+    /// MultiMeasureRestNumber uses the music-font number glyphs (font-encoding
+    /// fetaText), so the count is one or more <c>&lt;text class="music"&gt;</c>
+    /// glyph elements — NOT a serif <c>&gt;N&lt;</c> text run. Each digit is its
+    /// own glyph element.
+    /// </summary>
+    private static string CountDigit(int d)
+        => $">{EmmentalerGlyphs.GetTimeSigDigit(d)}<";
+
     [Fact]
     public void Render_R1Star4_ContainsMmrCountText()
     {
         var svg = Render("R1*4 |");
-        // The MMR renderer prints the measure count as text-anchor="middle" with
-        // font-weight="bold". Our run produces ">4<" inside that text element.
-        Assert.Contains(">4<", svg);
+        // The measure count is drawn with the music-font number glyph for '4'.
+        Assert.Contains(CountDigit(4), svg);
         // SharedRenderer emits hex colors (`#000000`) where SvgRenderer used named
         // colors (`black`). Either form is acceptable — barlines/H-bar fill must exist.
         Assert.True(svg.Contains("fill=\"black\"") || svg.Contains("fill=\"#000000\""),
@@ -55,34 +64,35 @@ public class MmrRenderTests
     public void Render_RegularMusic_DoesNotContainMmrText()
     {
         var svg = Render("c4 d e f |");
-        // No MMR span → no measure count emitted from MmrEngraver.
-        // (The "4" might still appear from durations in attributes, so guard
-        // by looking for the bold serif size 2.4 used by MMR text.)
-        Assert.DoesNotContain("font-size=\"2.4\" font-weight=\"bold\"", svg);
+        // No MMR span → no MMR count number glyph. (Default 4/4 renders as the
+        // Common-time glyph, not digit glyphs, and durations aren't drawn as
+        // glyphs, so a count digit could only come from an MMR.)
+        Assert.DoesNotContain(CountDigit(4), svg);
     }
 
     [Fact]
     public void Render_MmrAndMusic_BothPresent()
     {
         var svg = Render("R1*3 c4 d e f |");
-        // MMR text "3" + regular note c4 should both appear.
-        Assert.Contains(">3<", svg);
+        // MMR count "3" (music-font digit) + regular note c4 should both appear.
+        Assert.Contains(CountDigit(3), svg);
     }
 
     [Fact]
     public void Render_R1Star12_ShowsCountAboveTen()
     {
         var svg = Render("R1*12 |");
-        Assert.Contains(">12<", svg);
+        // Two-digit count: each digit is its own music-font glyph element.
+        Assert.Contains(CountDigit(1), svg);
+        Assert.Contains(CountDigit(2), svg);
     }
 
     [Fact]
     public void Render_SingleR1_DoesNotEmitCountNumber()
     {
-        // 1-measure MMR draws a whole rest glyph only, no count text.
+        // 1-measure MMR draws a whole rest glyph only, no count number.
         var svg = Render("R1 |");
-        // No bold count text at the LP MMR style.
-        Assert.DoesNotContain("font-size=\"2.4\" font-weight=\"bold\"", svg);
+        Assert.DoesNotContain(CountDigit(1), svg);
     }
 
     [Fact]
@@ -91,7 +101,7 @@ public class MmrRenderTests
         // 4 measures should render via church_rest (a single long rest glyph),
         // NOT the H-bar (which has a thick rect of height ~0.5 ss).
         var svg = Render("R1*4 |");
-        Assert.Contains(">4<", svg);
+        Assert.Contains(CountDigit(4), svg);
         // H-bar rectangles use height="0.50" — should NOT appear for church_rest.
         Assert.DoesNotContain("height=\"0.50\"", svg);
     }

@@ -3341,8 +3341,34 @@ public static class SharedRenderer
             x += p.Width + Gap;
         }
         if (mmr.MeasureCount > 1)
-            gc.DrawText(mmr.MeasureCount.ToString(), cx, cy - 2.5,
-                2.4, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
+            DrawMmrNumber(mmr.MeasureCount, cx, cy, gc);
+    }
+
+    /// <summary>
+    /// Draws a multi-measure rest's measure count above the staff.
+    /// </summary>
+    /// <remarks>
+    /// LilyPond's MultiMeasureRestNumber uses the music-font number glyphs
+    /// (font-encoding fetaText — NOT a text serif font), centred on the rest
+    /// (self-alignment-X CENTER) and placed above the staff (direction UP,
+    /// staff-padding 0.4). The feta digits are baseline-anchored (bottom =
+    /// baseline), so the baseline sits 0.4 ss above the top staff line:
+    /// cy - 2.0 (top line) - 0.4 = cy - 2.4.
+    /// LILYPOND-REF: scm/define-grobs.scm MultiMeasureRestNumber.
+    /// </remarks>
+    private static void DrawMmrNumber(int count, double cx, double cy, IDrawingContext gc)
+    {
+        var digits = count.ToString();
+        double totalAdvance = 0;
+        foreach (var ch in digits)
+            totalAdvance += GlyphMetrics.GetTimeSigDigitWidth(ch - '0');
+        double x = cx - totalAdvance / 2;
+        double baseline = cy - 2.4;
+        foreach (var ch in digits)
+        {
+            gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(ch - '0'), x, baseline, FontSize);
+            x += GlyphMetrics.GetTimeSigDigitWidth(ch - '0');
+        }
     }
 
     private static void DrawBigRest(MultiMeasureRestLayout mmr, IDrawingContext gc)
@@ -3363,10 +3389,7 @@ public static class SharedRenderer
         gc.DrawRectangle(right - capThickness / 2, cy - endCapHeight,
             capThickness, 2 * endCapHeight, fill: Color.Black);
 
-        double textX = (left + right) / 2;
-        double textY = cy - endCapHeight - 0.5;
-        gc.DrawText(mmr.MeasureCount.ToString(), textX, textY,
-            2.4, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
+        DrawMmrNumber(mmr.MeasureCount, (left + right) / 2, cy, gc);
     }
 
     // ---------- Tie variants (laissez-vibrer / repeat-tie) ----------
