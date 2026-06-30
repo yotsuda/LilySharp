@@ -76,6 +76,13 @@ public static class DynamicEngraver
     // LILYPOND-REF: define-grobs.scm:1317 Y-offset = (scale-by-font-size -0.6)
     private const double TextAscent = 1.2;
 
+    // Text descent BELOW the baseline for dynamic glyphs (the f / p swashes reach
+    // well under the baseline). Only matters for ABOVE placement, where the descender
+    // is the edge that faces the staff/notes — a pure ascent mirror would let it
+    // intrude. Measured from LilyPond 2.24.4: a forced-up dynamic's baseline sits
+    // 1.34 ss above the staff top = (staff-padding 0.1 + padding 0.6 + descent 0.64).
+    private const double TextDescent = 0.64;
+
     // Vertical step between two dynamics that fall on the same note column.
     internal const double StackStep = 2.0;
 
@@ -108,9 +115,11 @@ public static class DynamicEngraver
         // Base Y position: dynamic text baseline must be low enough that the
         // visual top of the text (baseline - TextAscent) clears the staff bottom.
         double baseY = StaffBottom + StaffPadding + Padding + TextAscent;
-        // ABOVE baseline (mirror): the text bottom (= its baseline, since dynamic text
-        // ascends UP from the baseline) sits just above the staff top (Y = 0).
-        double aboveBaseY = -(StaffPadding + Padding);
+        // ABOVE baseline: the glyph's DESCENDER (the edge facing the staff) must clear
+        // the staff top (Y = 0) by staff-padding + padding, and the baseline sits one
+        // descent further up. Matches LilyPond's forced-up dynamic (baseline 1.34 ss
+        // above the staff top).
+        double aboveBaseY = -(StaffPadding + Padding + TextDescent);
 
         var fallbackVoices = voices.IsDefaultOrEmpty ? ImmutableArray.Create(score.Voice) : voices;
 
@@ -216,7 +225,7 @@ public static class DynamicEngraver
         ImmutableArray<Voice> voices, int measureIndex, int itemIndex)
     {
         var vs = voices.IsDefaultOrEmpty ? ImmutableArray<Voice>.Empty : voices;
-        double aboveBaseY = -(StaffPadding + Padding);
+        double aboveBaseY = -(StaffPadding + Padding + TextDescent);
         if (vs.IsEmpty)
             return aboveBaseY;
         return CalculateYPositionAboveVoices(vs, measureIndex, itemIndex, aboveBaseY);
@@ -324,7 +333,9 @@ public static class DynamicEngraver
                 continue;
             bool? forcedStemUp = multiVoice ? VoiceDefaults.GetDefaultStemUp(vi + 1) : null;
             double highest = GetHighestExtent(items[itemIndex], forcedStemUp);
-            y = Math.Min(y, highest - Padding);
+            // The glyph descender (baseline + descent) is what faces the note, so the
+            // baseline must sit a further TextDescent above the note-clearance point.
+            y = Math.Min(y, highest - Padding - TextDescent);
         }
         return y;
     }

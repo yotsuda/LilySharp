@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using System.Linq;
 using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
@@ -116,6 +117,20 @@ public class DynamicPlacementTests
 
         Assert.True(above > below,
             $"@f.up lower staff (Y={above}) should sit lower than @f-below (Y={below})");
+    }
+
+    [Fact]
+    public void AboveDynamic_StaffClearance_MatchesLilyPond()
+    {
+        // Ground truth (LilyPond 2.24.4, \dynamicUp on an on-staff note): the forced-up
+        // dynamic's baseline sits 1.34 staff-spaces above the staff top
+        // (staff-padding 0.1 + padding 0.6 + glyph descent 0.64). The DESCENDER — not the
+        // baseline — is the edge facing the staff, so a pure ascent-mirror (0.7) would let
+        // the f/p swash nearly touch the top line. ColumnAboveBaselineY with no voices
+        // returns the staff-governed baseline.
+        double aboveBaseline = DynamicEngraver.ColumnAboveBaselineY(
+            ImmutableArray<Voice>.Empty, 0, 0);
+        Assert.Equal(-1.34, aboveBaseline, 2);  // LP measured -1.342 above the staff top
     }
 
     [Fact]
