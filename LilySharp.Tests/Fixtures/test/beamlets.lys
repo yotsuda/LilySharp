@@ -1,0 +1,13 @@
+// Partial secondary beams (beamlets / fractional beams). A 16th adjacent to a
+// longer beamed note carries its second beam as a short stub pointing toward the
+// beat: the last note of a group points left, the first points right. Without
+// them a dotted-8th + 16th reads as two 8ths.
+// LILYPOND-REF: lily/beam.cc Beam::print (fractional beams).
+title "Beamlets"
+octave absolute
+part m { clef treble }
+section Main {
+  m { c''8. d''16 e''16 f''8. g''8 a''16 b''16 c'''8 | }
+}
+structure { Main }
+score "beamlets" { staff m }

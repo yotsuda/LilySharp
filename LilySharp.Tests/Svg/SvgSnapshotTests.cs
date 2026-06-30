@@ -89,6 +89,8 @@ public class SvgSnapshotTests
         // Accidentals an octave apart straddling the middle line group into distinct
         // octaves (floored division) — they must not overstrike.
         yield return new object[] { "test/accidental-octave-straddle" };
+        // Partial secondary beams (beamlets) on isolated 16ths in dotted rhythms.
+        yield return new object[] { "test/beamlets" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };

@@ -1790,26 +1790,44 @@ public static class SharedRenderer
             DrawBeamSegment(leftStemX, leftBeamY, rightStemX, rightBeamY, gc);
 
             // Secondary beams (16th+) stack toward the noteheads of the beam's
-            // overall direction.
+            // overall direction. Each level draws full segments between adjacent
+            // members that both carry the beam, plus short partial beams (beamlets)
+            // for members that carry it in isolation — e.g. the 16th in a
+            // dotted-8th + 16th pair, whose second beam is a left-pointing stub.
+            // LILYPOND-REF: lily/beam.cc Beam::print / fractional (stub) beams.
             int maxBeamCount = grp.Members.Max(m => m.BeamCount);
             for (int level = 1; level < maxBeamCount; level++)
             {
                 double offset = level * EngravingDefaults.BeamTranslation;
                 if (!grp.StemUp) offset = -offset;
                 double beamSpanX = rightStemX - leftStemX;
+                double BeamYAt(double x) => leftBeamY + offset +
+                    (beamSpanX > 0.001 ? (x - leftStemX) / beamSpanX : 0) * (rightBeamY - leftBeamY);
 
-                for (int i = 0; i < grp.Members.Length - 1; i++)
+                for (int i = 0; i < grp.Members.Length; i++)
                 {
-                    if (grp.Members[i].BeamCount > level && grp.Members[i + 1].BeamCount > level)
+                    if (grp.Members[i].BeamCount <= level) continue;
+                    bool rightFull = i < grp.Members.Length - 1 && grp.Members[i + 1].BeamCount > level;
+                    bool leftFull = i > 0 && grp.Members[i - 1].BeamCount > level;
+
+                    if (rightFull)
                     {
+                        // Full segment i -> i+1 (drawn once, from its left member).
                         double xa = StemAttachX(i);
                         double xb = StemAttachX(i + 1);
-                        double ta = beamSpanX > 0.001 ? (xa - leftStemX) / beamSpanX : 0;
-                        double tb = beamSpanX > 0.001 ? (xb - leftStemX) / beamSpanX : 0;
-                        double ya = leftBeamY + offset + ta * (rightBeamY - leftBeamY);
-                        double yb = leftBeamY + offset + tb * (rightBeamY - leftBeamY);
-                        DrawBeamSegment(xa, ya, xb, yb, gc);
+                        DrawBeamSegment(xa, BeamYAt(xa), xb, BeamYAt(xb), gc);
                     }
+                    else if (!leftFull)
+                    {
+                        // Isolated at this level: a beamlet (fractional beam) stub.
+                        // It points back toward the previous note; the first note of
+                        // the group points forward instead.
+                        double x0 = StemAttachX(i);
+                        double x1 = x0 + (i > 0 ? -EngravingDefaults.BeamletLength : EngravingDefaults.BeamletLength);
+                        DrawBeamSegment(x0, BeamYAt(x0), x1, BeamYAt(x1), gc);
+                    }
+                    // else (leftFull && !rightFull): this member is the right end of a
+                    // full segment already drawn from i-1; nothing more to do.
                 }
             }
 
