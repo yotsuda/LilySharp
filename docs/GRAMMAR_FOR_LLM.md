@@ -186,7 +186,7 @@ A `score` may carry its own `structure { ... }` to render a different arrangemen
 
 ```
 structure { Intro Verse Outro }
-score practice { structure { Intro } staff { melody } }
+score practice { structure { Intro } staff melody }
 ```
 
 ## Override / revert (engraving properties)
@@ -208,8 +208,31 @@ c4 d e f |
   the top-level commands. Override/revert use `=`.
 - Identifiers (parts, phrases, sections) may use any Unicode letters: `phrase 動機 { ... }`.
 - Comments: `// line` and `/* block */`.
-- `@name` is the canonical annotation prefix; `\name` is tolerated for LilyPond
-  familiarity but do not generate it. Lily# is NOT LilyPond — do not emit LilyPond-only
-  constructs (`\repeat volta`, `\relative`, `\new Staff`, `\version`, `<<...>>` at top
-  level, etc.).
+- `@name` is the canonical annotation prefix. `\name` annotations are rejected (use `@`);
+  backslash is reserved for tablature only (`\3` string numbers, `\tuning`). Lily# is NOT
+  LilyPond — do not emit LilyPond-only constructs (`\repeat volta`, `\relative`, `\new
+  Staff`, `\version`, `<< ... \\ ... >>`, etc.).
+
+## Reserved words
+
+These are keywords and cannot be used as bare identifiers, EXCEPT the four clef-name words
+(`treble bass alto tenor`), which ARE allowed as part / section / phrase names (so a `bass`
+part is fine). Keywords:
+
+```text
+section structure include tab ossia transpose octave instrument channel
+score part staff grandStaff voice phrase repeat volta alternative let use break partial
+title composer tempo time key clef
+major minor dorian phrygian lydian mixolydian aeolian locrian
+treble bass alto tenor treble_8
+tuplet grace acciaccatura appoggiatura lyrics chordnames chords tabStaff tuning
+override revert once
+segno fine coda dc ds al to
+ppp pp p mp mf f ff fff
+```
+
+Also special: single letters `a`-`g` are pitches; `r`/`R`/`s` are rests. Articulation,
+ornament, dynamic-text and mark NAMES (`staccato`, `tr`, `mordent`, `cresc`, `dim`, …) are
+NOT reserved — they are resolved from the `@name` text — so they remain free for your own
+identifiers.
 </content>

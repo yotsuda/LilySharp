@@ -533,3 +533,31 @@ c4@chord.C d@chord.Dm e@chord.Em f@chord.F |
 /* This is a
    block comment */
 ```
+
+## Reserved Words
+
+The following words are keywords. They cannot be used as bare identifiers (variable /
+part / section / phrase names) — **except** the four clef-name words `treble`, `bass`,
+`alto`, `tenor`, which are accepted as part / section / phrase names (so a `bass` part can
+be declared and referenced).
+
+| Group | Words |
+|-------|-------|
+| Structure | `section` `structure` `include` `tab` `ossia` `transpose` `octave` `instrument` `channel` |
+| Score / layout | `score` `part` `staff` `grandStaff` `voice` `phrase` `repeat` `volta` `alternative` `let` `use` `break` `partial` |
+| Metadata | `title` `composer` `tempo` `time` `key` `clef` |
+| Modes | `major` `minor` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
+| Clef names | `treble` `bass` `alto` `tenor` `treble_8` |
+| Notation | `tuplet` `grace` `acciaccatura` `appoggiatura` `lyrics` `chordnames` `chords` `tabStaff` `tuning` |
+| Overrides | `override` `revert` `once` |
+| Navigation (structure block) | `segno` `fine` `coda` `dc` `ds` `al` `to` |
+| Dynamics | `ppp` `pp` `p` `mp` `mf` `f` `ff` `fff` |
+
+Notes:
+
+- Single letters `a`–`g` are pitch names; `r`/`R` are rests, `s` is a spacer rest.
+- Articulation, ornament, dynamic-text and mark **names** (`staccato`, `tr`, `mordent`,
+  `cresc`, `dim`, `segno`, …) are resolved from the `@name` text and are **not** reserved
+  as identifiers — `tr`, `acc`, `ten`, `dim` etc. remain usable as your own names.
+- `grandStaff` and `tabStaff` also accept the all-lowercase spellings `grandstaff` /
+  `tabstaff`.
