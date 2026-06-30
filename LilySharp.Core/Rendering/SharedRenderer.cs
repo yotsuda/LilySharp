@@ -54,6 +54,7 @@ public static class SharedRenderer
 {
     private const double StaffHeight = 4.0;
     private const double FontSize = 4.0;
+    private const double TempoNoteSize = 1.6;  // metronome-mark notehead size (shared with the swing equation)
     private const double OssiaScale = 0.65;  // LP magnifyStaff default for ossia
 
     public static void RenderTo(
@@ -3060,38 +3061,53 @@ public static class SharedRenderer
     /// </summary>
     private static void DrawSwingEquation(IDrawingContext gc, double startX, double baselineY)
     {
-        const double ns = 1.0;           // small notehead size
-        const double headGap = 0.95;     // x between the two heads of a pair
-        const double stemUp = 1.3;       // stem height (upward)
-        const double stemDx = ns * 0.32; // stem offset from head origin (right side)
-        const double eqSize = 1.6;
+        // Sizes track the metronome mark: the same notehead size (1.6) and stem length,
+        // and a beam scaled to that small note (0.48 staff-beam x 1.6/FontSize) rather
+        // than the full staff-beam thickness, which read as too heavy here.
+        const double ns = TempoNoteSize;
+        const double headGap = 1.0;          // x between the two heads of a pair
+        const double stemUp = 1.4;           // stem height (matches the metronome stem)
+        const double stemDx = ns * 0.32;     // stem offset from head origin (right side)
+        const double stemW = 0.09;
+        const double beamW = EngravingDefaults.BeamThickness * (ns / FontSize);
+        const double eqSize = 1.8;           // matches the "= NNN" text
         const double threeSize = 1.0;
 
         // Draws one beamed eighth pair at px; returns the x just past it.
         double DrawPair(double px, bool dotted, bool withThree)
         {
             double h1 = px;
-            double h2 = px + headGap + (dotted ? ns * 0.5 : 0);
+            double h2 = px + headGap + (dotted ? ns * 0.42 : 0);
             gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, h1, baselineY, ns);
             gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, h2, baselineY, ns);
             if (dotted)
-                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, h1 + ns * 0.62, baselineY, ns);
+                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, h1 + ns * 0.6, baselineY, ns);
             double s1 = h1 + stemDx;
             double s2 = h2 + stemDx;
             double beamY = baselineY - stemUp;
-            gc.DrawLine(s1, baselineY, s1, beamY, Color.Black, 0.10);
-            gc.DrawLine(s2, baselineY, s2, beamY, Color.Black, 0.10);
-            DrawBeamSegment(s1, beamY, s2, beamY, gc);
+            gc.DrawLine(s1, baselineY, s1, beamY, Color.Black, stemW);
+            gc.DrawLine(s2, baselineY, s2, beamY, Color.Black, stemW);
+            gc.DrawLine(s1, beamY, s2, beamY, Color.Black, beamW);   // thin beam
             if (withThree)
-                gc.DrawText("3", (s1 + s2) / 2, beamY - 0.25, threeSize, "serif",
-                    FontStyle.Regular, TextAnchor.Middle, Color.Black);
-            return s2 + ns * 0.4;
+            {
+                // Triplet bracket "3" above the beam (as on shuffle charts).
+                double midX = (s1 + s2) / 2;
+                double brkY = beamY - 0.55;
+                const double hook = 0.22, halfGap = 0.3;
+                gc.DrawLine(s1, brkY, s1, brkY + hook, Color.Black, 0.07);
+                gc.DrawLine(s1, brkY, midX - halfGap, brkY, Color.Black, 0.07);
+                gc.DrawLine(midX + halfGap, brkY, s2, brkY, Color.Black, 0.07);
+                gc.DrawLine(s2, brkY, s2, brkY + hook, Color.Black, 0.07);
+                gc.DrawText("3", midX, brkY + 0.35, threeSize, "serif",
+                    FontStyle.Bold, TextAnchor.Middle, Color.Black);
+            }
+            return s2 + ns * 0.35;
         }
 
         double x = DrawPair(startX, dotted: false, withThree: false);
-        x += 0.3;
+        x += 0.35;
         gc.DrawText("=", x, baselineY, eqSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
-        x += SerifTextMetrics.MeasureBold("=", eqSize) + 0.4;
+        x += SerifTextMetrics.MeasureBold("=", eqSize) + 0.45;
         DrawPair(x, dotted: true, withThree: true);
     }
 
@@ -3112,7 +3128,7 @@ public static class SharedRenderer
         {
             // LILYPOND-REF: scm/define-grobs.scm:1835 MetronomeMark
             // LILYPOND-REF: lily/metronome-engraver.cc — notehead + stem + " = NNN"
-            const double noteSize = 1.6;
+            const double noteSize = TempoNoteSize;
             const double textSize = 1.8;
             gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, m.X, absY, noteSize);
             double stemX = m.X + noteSize * 0.32;
