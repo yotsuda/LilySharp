@@ -129,7 +129,12 @@ export function activate(context: vscode.ExtensionContext) {
     };
 
     const clientOptions: LanguageClientOptions = {
-        documentSelector: [{ scheme: 'file', language: 'lilysharp' }],
+        // 'untitled' so a brand-new, unsaved score (e.g. from "Lily#: New Score") is
+        // synced to the server and the preview can render it before it's saved to disk.
+        documentSelector: [
+            { scheme: 'file', language: 'lilysharp' },
+            { scheme: 'untitled', language: 'lilysharp' }
+        ],
         synchronize: {
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.lys')
         },
