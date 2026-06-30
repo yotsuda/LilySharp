@@ -57,8 +57,8 @@ public sealed class SlurDetector
                         startItem as NoteItem,
                         item as NoteItem,
                         // For a chord the slur anchors at the head on the curve side.
-                        EdgeStaffPosition(startItem, curveUp),
-                        EdgeStaffPosition(item, curveUp),
+                        MusicItem.EdgeStaffPosition(startItem, curveUp) ?? 0,
+                        MusicItem.EdgeStaffPosition(item, curveUp) ?? 0,
                         curveUp,
                         startMeasureIdx,
                         measureIdx,
@@ -87,16 +87,5 @@ public sealed class SlurDetector
         NoteItem n => n.StemUp,
         ChordItem c => c.StemUp,
         _ => false
-    };
-
-    // The slur attaches to the head on the curve side: the chord's top note for an
-    // up-curving slur, its bottom note for a down-curving one (a plain note is its
-    // own edge). Mirrors ElementCoordinator.ItemStaffPosition.
-    private static int EdgeStaffPosition(MusicItem item, bool curveUp) => item switch
-    {
-        NoteItem n => n.StaffPosition,
-        ChordItem c when c.Notes.Length > 0
-            => curveUp ? c.Notes.Max(n => n.StaffPosition) : c.Notes.Min(n => n.StaffPosition),
-        _ => 0
     };
 }

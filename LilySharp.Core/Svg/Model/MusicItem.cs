@@ -40,6 +40,20 @@ public abstract record MusicItem
     /// rather than being spacing contributors.
     /// </remarks>
     public virtual bool IsLoose => false;
+
+    /// <summary>
+    /// The staff position of this item's curve-side edge note: a chord's TOP note
+    /// when <paramref name="preferTop"/> (e.g. an up-curving slur or tie), its BOTTOM
+    /// note otherwise; a single note is its own edge. Null for items with no note
+    /// head (rests, spacers, barlines).
+    /// </summary>
+    public static int? EdgeStaffPosition(MusicItem item, bool preferTop) => item switch
+    {
+        NoteItem n => n.StaffPosition,
+        ChordItem c when c.Notes.Length > 0
+            => preferTop ? c.Notes.Max(n => n.StaffPosition) : c.Notes.Min(n => n.StaffPosition),
+        _ => null
+    };
 }
 
 /// <summary>

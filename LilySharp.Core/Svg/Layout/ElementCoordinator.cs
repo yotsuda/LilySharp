@@ -763,27 +763,18 @@ public sealed class ElementCoordinator
             if (leftEdge)
             {
                 for (int i = lo; i <= hi; i++)
-                    if (ItemStaffPosition(items[i], slur.CurveUp) is { } p)
+                    if (MusicItem.EdgeStaffPosition(items[i], slur.CurveUp) is { } p)
                         return p;
             }
             else
             {
                 for (int i = hi; i >= lo; i--)
-                    if (ItemStaffPosition(items[i], slur.CurveUp) is { } p)
+                    if (MusicItem.EdgeStaffPosition(items[i], slur.CurveUp) is { } p)
                         return p;
             }
         }
         return null;
     }
-
-    private static int? ItemStaffPosition(MusicItem item, bool curveUp) => item switch
-    {
-        NoteItem n => n.StaffPosition,
-        ChordItem c when c.Notes.Length > 0 => curveUp
-            ? c.Notes.Max(n => n.StaffPosition)
-            : c.Notes.Min(n => n.StaffPosition),
-        _ => null
-    };
 
     public ImmutableArray<SlurLayout> LayoutSlurs(Score score, ImmutableArray<SystemLayout> systems, int staffIndex = -1)
     {
