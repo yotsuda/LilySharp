@@ -57,13 +57,17 @@ public static class SharedRenderer
     private const double OssiaScale = 0.65;  // LP magnifyStaff default for ossia
 
     public static void RenderTo(
-        MultiStaffScore score, ScoreLayout layout, IDocumentContext doc)
+        MultiStaffScore score, ScoreLayout layout, IDocumentContext doc,
+        bool resolveDataPos = false)
     {
-        // F3/B: re-derive every annotation's data-pos source offset from the LIVE
-        // score (via the SourceIndex each layout carries) so a reused (cached) layout
-        // emits fresh data-pos. Identity for a normal render (same score => same value,
-        // snapshot-identical); refreshes after the edit on whole-layout reuse.
-        layout = ResolveDataPos(layout, score);
+        // F3/B: a layout freshly built from THIS score already bakes the correct
+        // data-pos, so resolution is a no-op there and we skip it (it rebuilds every
+        // annotation array — measurable allocation on annotation-heavy scores). Only a
+        // REUSED (cached, whole-layout) layout carries stale offsets from the pre-edit
+        // score; the IncrementalCompiler reuse path passes resolveDataPos=true to
+        // re-derive each annotation's source offset from the live score.
+        if (resolveDataPos)
+            layout = ResolveDataPos(layout, score);
         var options = layout.Options;
         var resolver = layout.GrobPropertyResolver;
         // Items participating in a beam — DrawNote/DrawChord skip stem & flag for these,

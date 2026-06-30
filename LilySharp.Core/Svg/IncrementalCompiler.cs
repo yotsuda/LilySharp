@@ -193,7 +193,9 @@ public sealed class IncrementalCompiler
         LastEditSkippedLineBreak = skip;
         LastEditReusedLayout = reuse;
 
-        return SvgGenerator.RenderToSvg(score, layout, _options);
+        // Only a reused layout carries stale (pre-edit) data-pos that the renderer must
+        // re-derive from the live score; a freshly laid-out layout already has it right.
+        return SvgGenerator.RenderToSvg(score, layout, _options, resolveDataPos: reuse);
     }
 
     // F3/B-2: a cached layout is safe to reuse only if it carries no annotation whose

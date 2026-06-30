@@ -140,7 +140,8 @@ public static class SvgGenerator
         return MultiStaffScore.FromScore(score);
     }
 
-    internal static string RenderToSvg(MultiStaffScore score, ScoreLayout layout, SvgRenderOptions options)
+    internal static string RenderToSvg(MultiStaffScore score, ScoreLayout layout,
+        SvgRenderOptions options, bool resolveDataPos = false)
     {
         var docOptions = new SvgDocumentOptions
         {
@@ -149,7 +150,7 @@ public static class SvgGenerator
             FontDirectory = options.FontDirectory,
         };
         using var doc = new SvgDocumentContext(docOptions);
-        SharedRenderer.RenderTo(score, layout, doc);
+        SharedRenderer.RenderTo(score, layout, doc, resolveDataPos);
         doc.Dispose();
         return doc.ToSvg();
     }
