@@ -1,4 +1,4 @@
-// Lead sheet idiom: a single melody staff carrying chord symbols (@chord.X)
+// Lead sheet idiom: a single melody staff carrying chord symbols (@chord(X))
 // above and lyrics below — the "fake book" layout. Exercises chord-name
 // routing on a melody staff together with lyric alignment (including the word
 // "to", which used to collide with a reserved token and vanish). Authored in
@@ -15,8 +15,8 @@ part melody { clef treble }
 
 section A {
   melody {
-    e4@chord.C e f g | a4@chord.Am g e d |
-    f4@chord.F a g f | e4@chord.G7 d c2 |
+    e4@chord(C) e f g | a4@chord(Am) g e d |
+    f4@chord(F) a g f | e4@chord(G7) d c2 |
   }
   lyrics { Mu- sic fills the | air to- night so | ev- 'ry- one will | sing a- long | }
 }

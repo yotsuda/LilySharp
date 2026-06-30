@@ -11,12 +11,12 @@ part melody
 
 phrase featheredAccel {
   // Feathered beams: accelerando (notes get closer)
-  c16@feather.right d e f g a b c' |
+  c16@feather(right) d e f g a b c' |
 }
 
 phrase featheredRit {
   // Feathered beams: ritardando (notes spread out)
-  c16@feather.left b a g f e d c |
+  c16@feather(left) b a g f e d c |
 }
 
 phrase nestedTuplet {

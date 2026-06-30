@@ -245,16 +245,16 @@ public sealed record MusicMarkItem
             "decresc" => MusicMarkType.Decresc,
             "dim" => MusicMarkType.Dim,
             "ottava" or "8va" => MusicMarkType.OttavaUp,
-            "ottava.bassa" or "8vb" => MusicMarkType.OttavaDown,
+            "ottavabassa" or "ottava.bassa" or "8vb" => MusicMarkType.OttavaDown,
             "quindicesima" or "15ma" => MusicMarkType.QuindicesUp,
-            "quindicesima.bassa" or "15mb" => MusicMarkType.QuindicesDown,
+            "quindicesimabassa" or "quindicesima.bassa" or "15mb" => MusicMarkType.QuindicesDown,
             "loco" => MusicMarkType.Loco,
             "ped" or "sustain" => MusicMarkType.SustainOn,
-            "ped.off" or "sustain.off" => MusicMarkType.SustainOff,
-            "sost.ped" or "sostenuto" => MusicMarkType.SostenutoOn,
-            "sost.ped.off" or "sostenuto.off" => MusicMarkType.SostenutoOff,
-            "una.corda" => MusicMarkType.UnaCordaOn,
-            "tre.corde" => MusicMarkType.UnaCordaOff,
+            "pedoff" or "ped.off" or "sustainoff" or "sustain.off" => MusicMarkType.SustainOff,
+            "sostenuto" or "sost.ped" => MusicMarkType.SostenutoOn,
+            "sostenutooff" or "sost.ped.off" or "sostenuto.off" => MusicMarkType.SostenutoOff,
+            "unacorda" or "una.corda" => MusicMarkType.UnaCordaOn,
+            "trecorde" or "tre.corde" => MusicMarkType.UnaCordaOff,
             _ => null
         };
     }

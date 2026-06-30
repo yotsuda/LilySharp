@@ -82,10 +82,10 @@ phrase mmr {
 }
 
 // ---- 8. 運指 (L-2: 単音 + L-2 ext: 和音内ピッチごと) -----------------------
-// @finger.N: 1=親指 ... 5=小指。和音内では <ピッチ@finger.N ...> で個別指定
+// @finger(N): 1=親指 ... 5=小指。和音内では <ピッチ@finger(N) ...> で個別指定
 phrase fingering {
-  g4@finger.1 a@finger.2 b@finger.3 c@finger.4 |
-  <c@finger.1 e@finger.3 g@finger.5>4 <d@finger.2 f@finger.4 a@finger.5> r2 |
+  g4@finger(1) a@finger(2) b@finger(3) c@finger(4) |
+  <c@finger(1) e@finger(3) g@finger(5)>4 <d@finger(2) f@finger(4) a@finger(5)> r2 |
 }
 
 // ---- 9. ハーフタイ (L-3: laissezVibrer / repeatTie) -----------------------

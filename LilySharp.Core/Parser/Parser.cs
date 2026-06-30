@@ -1162,11 +1162,28 @@ private GreenNode?[] ParseArticulations()
                         var dir = Advance();   // up / down
                         articulations.Add(new ArticulationGreen(at, name, dir));
                     }
-                    // Check for compound mark name: @name.part (e.g., @fig.6, @feather.right)
-                    // If current is a plain Identifier followed by a dot, parse as MusicMark
+                    // @name(args) — parenthesised arguments, e.g. @fig(6 4), @chord(Dm),
+                    // @mark(A), @finger(3), @feather(right), @ped(off). The '.' is reserved
+                    // for .up/.down placement (handled above); EVERY annotation argument now
+                    // goes in parentheses, separated by whitespace or commas. The arg tokens
+                    // are kept on the green node (so the source span is exact) but excluded
+                    // from MusicMarkSyntax.MarkName, which still yields "name.arg.arg" so the
+                    // downstream collectors (figured bass / chord / fingering / mark) are
+                    // unchanged.
+                    else if (Current.Kind == SyntaxKind.Identifier && Peek(1)?.Kind == SyntaxKind.OpenParen)
+                    {
+                        var name = Advance();
+                        var parts = new List<SyntaxToken> { at, name, Advance() /* ( */ };
+                        while (!Check(SyntaxKind.CloseParen) && !Check(SyntaxKind.EndOfFile))
+                            parts.Add(Advance()); // argument token (or a ',' separator)
+                        parts.Add(Expect(SyntaxKind.CloseParen));
+                        articulations.Add(new MusicMarkGreen([.. parts]));
+                    }
+                    // Legacy dotted form: @name.part (e.g. @fig.6.4, @sost.ped). Still
+                    // accepted alongside the parenthesised form above; MarkName joins the
+                    // parts the same way so downstream is identical.
                     else if (Current.Kind == SyntaxKind.Identifier && Peek(1)?.Kind == SyntaxKind.Dot)
                     {
-                        // Compound music mark - reuse ParseMusicMark logic
                         var name = Advance();
                         var parts = new List<SyntaxToken> { at, name };
                         while (Check(SyntaxKind.Dot))

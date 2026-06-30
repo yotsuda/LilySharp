@@ -8,7 +8,7 @@
 //   4 結合線     タイ(~) / スラー(( )) / 自動・手動ビーム([ ])
 //   5 リズム     連符(tuplet) / 装飾音(grace) / トレモロ(:N)
 //   6 装飾記号   @trill @mordent @turn / グリッサンド
-//   7 拡張       多小節休符(R1*N) / 運指(@finger.N) / ハーフタイ / 和音タイ
+//   7 拡張       多小節休符(R1*N) / 運指(@finger(N)) / ハーフタイ / 和音タイ
 //   8 反復       インライン・ボルタ(|: … [1.…] :| [2.…]) / 反復回数(:|*N)
 //   9 多声部     1 段に 2 声部 (voice { } voice { })
 //  10 構造       part / phrase / section / structure / render
@@ -91,8 +91,8 @@ phrase p_mmr {
   c4 d e f |
 }
 phrase p_fingering {
-  g4@finger.1 a@finger.2 b@finger.3 c@finger.4 |          // 単音の運指
-  <c@finger.1 e@finger.3 g@finger.5>4 <d@finger.2 f@finger.4 a@finger.5> r2 |  // 和音内
+  g4@finger(1) a@finger(2) b@finger(3) c@finger(4) |          // 単音の運指
+  <c@finger(1) e@finger(3) g@finger(5)>4 <d@finger(2) f@finger(4) a@finger(5)> r2 |  // 和音内
 }
 phrase p_halfTies {
   g4@laissezVibrer r r r |          // l.v.(余韻ハーフタイ)

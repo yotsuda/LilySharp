@@ -11,7 +11,7 @@ part melody
 
 phrase intro {
   // Rehearsal mark A + dynamics + hairpin (crescendo wedge)
-  d4@mark.A@p e fis g |
+  d4@mark(A)@p e fis g |
   a4@cresc b cis d@f |
 }
 
@@ -23,7 +23,7 @@ phrase theme {
 
 phrase bridge {
   // Rehearsal mark B + rit. text spanner
-  d4@mark.B@mf e@p@rit fis g |
+  d4@mark(B)@mf e@p@rit fis g |
   a2. r4 |
 }
 

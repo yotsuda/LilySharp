@@ -346,8 +346,10 @@ Beam           = '[' | ']' ;      (* manual; beaming is automatic otherwise *)
 
 ### 8.4 Annotations (@name, attached to a note or chord)
 
-Annotation     = '@' , AnnotationName , [ Placement ] , [ '.' , AnnotationArg ] ;
+Annotation     = '@' , AnnotationName , [ '(' , Arg , { ( ' ' | ',' ) , Arg } , ')' ] , [ Placement ] ;
 Placement      = '.up' | '.down' ;   (* force above / below; default is automatic *)
+(* A value-bearing annotation puts its argument(s) in parentheses (space- or
+   comma-separated); '.' is reserved for the .up / .down placement suffix. *)
 
 (* The '@' prefix is the ONLY annotation prefix; '\name' is rejected (backslash is
    tablature-only). AnnotationName is resolved from text — it is NOT a reserved keyword,
@@ -361,11 +363,13 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Accidental:    @courtesy (cautionary) @editorial (musica ficta)
    - Arpeggio:      <c e g>4@arpeggio
    - Glissando:     c4@glissando d
-   - Figured bass:  c4@fig.6 , d4@fig.6.4
-   - Chord name:    c4@chord.C , d4@chord.Dm
-   - Marks/spanners: @mark.A @segno @coda @fine @dc @ds.al.fine @rit @accel
+   - Figured bass:  c4@fig(6) , d4@fig(6 4)
+   - Chord name:    c4@chord(C) , d4@chord(Dm)
+   - Fingering:     <c@finger(1) e@finger(3)>4
+   - Rehearsal mark: c4@mark(A)
+   - Marks/spanners: @segno @coda @fine @dc @ds @rit @accel
                      @ottava … @loco , @startTrillSpan … @stopTrillSpan ,
-                     @ped … @ped.off *)
+                     @ped … @ped(off) *)
 
 (* Example: c4@staccato.up d4@accent@p <e g>4@arpeggio | *)
 

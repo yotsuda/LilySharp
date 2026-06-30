@@ -84,9 +84,11 @@ R1          // full-measure rest
 
 ## Annotations (`@name` attached to a note or chord)
 
-Attach with `@`. One note may take several: `c4@staccato@p`. Add `.up` / `.down` to force
-an articulation above / below the note (default is automatic, opposite the stem):
-`c4@staccato.up`, `d4@accent.down`.
+Attach with `@`. One note may take several: `c4@staccato@p`. Two suffixes:
+`.up` / `.down` forces an articulation/dynamic above / below the note (default is
+automatic, opposite the stem): `c4@staccato.up`, `d4@accent.down`, `@f.up`.
+An annotation that takes a VALUE puts it in parentheses (space- or comma-separated):
+`@chord(Dm)`, `@fig(6 4)`, `@mark(A)`, `@finger(3)`.
 
 - Stem direction: `@stemUp` / `@stemDown` force a note's stem (default is automatic).
   On a beamed note the beam's shared direction wins.
@@ -97,8 +99,10 @@ an articulation above / below the note (default is automatic, opposite the stem)
 - Accidental style: `@courtesy` (cautionary, parenthesized), `@editorial` (musica ficta)
 - Arpeggio: `<c e g>4@arpeggio`
 - Glissando: `c4@glissando d` (line from this note to the next)
-- Figured bass: `c4@fig.6` , `d4@fig.6.4`
-- Chord names: `c4@chord.C` , `d4@chord.Dm`
+- Figured bass: `c4@fig(6)` , `d4@fig(6 4)`
+- Chord names: `c4@chord(C)` , `d4@chord(Dm)`
+- Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
+- Rehearsal mark: `c4@mark(A)`
 
 ```
 c4@staccato d4@accent <e g>4@arpeggio |

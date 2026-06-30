@@ -12,7 +12,7 @@ part bot { clef bass }
 
 section Main {
   top { c'4 d e f | g1 | }
-  bot { c4@finger.1 d@finger.2 e@finger.3 f@finger.5 | g1@finger.1 | }
+  bot { c4@finger(1) d@finger(2) e@finger(3) f@finger(5) | g1@finger(1) | }
 }
 
 structure { Main }

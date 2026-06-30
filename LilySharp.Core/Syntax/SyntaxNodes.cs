@@ -1672,8 +1672,10 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// Gets the mark name by combining all parts.
-    /// For example: "@ds.al.fine" returns "ds.al.fine"
+    /// Gets the mark name by joining the name and its arguments with '.'.
+    /// For example "@fig(6 4)" returns "fig.6.4" and "@chord(Dm)" returns "chord.Dm".
+    /// The bracketing '(' ')' and ',' separators are part of the source span but are
+    /// excluded here, so downstream collectors keep parsing the same dotted string.
     /// </summary>
     public string MarkName
     {
@@ -1683,7 +1685,9 @@ public sealed partial class MusicMarkSyntax : SyntaxNode
             for (int i = 0; i < SlotCount; i++)
             {
                 var child = GetChild(i);
-                if (child is SyntaxTokenNode token && token.Kind != SyntaxKind.At && token.Kind != SyntaxKind.Dot)
+                if (child is SyntaxTokenNode token && token.Kind is not (
+                        SyntaxKind.At or SyntaxKind.Dot or SyntaxKind.OpenParen
+                        or SyntaxKind.CloseParen or SyntaxKind.Comma))
                 {
                     parts.Add(token.Text);
                 }
