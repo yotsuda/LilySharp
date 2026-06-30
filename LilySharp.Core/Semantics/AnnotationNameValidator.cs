@@ -48,6 +48,7 @@ public sealed class AnnotationNameValidator : ISemanticValidator
             "arpeggio",
             "laissezvibrer", "repeattie",
             "dead",
+            "stemup", "stemdown",
         };
 
     /// <summary>

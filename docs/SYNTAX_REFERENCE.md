@@ -304,6 +304,18 @@ Beams are automatic for eighth notes and shorter. Manual beam control:
 c8[ d e f]     % Beam these four notes together
 ```
 
+## Stem Direction
+
+A stem points up or down automatically from the note's staff position. Force it with
+`@stemUp` / `@stemDown`:
+
+```
+c''4@stemUp d''4@stemDown e''4    % first up, second down, third automatic
+```
+
+On a beamed note the beam's shared direction wins (a beam carries one direction for the
+whole group).
+
 ## Parallel Voices (Multi-Voice)
 
 ```

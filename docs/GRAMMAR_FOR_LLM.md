@@ -87,6 +87,8 @@ Attach with `@`. One note may take several: `c4@staccato@p`. Add `.up` / `.down`
 an articulation above / below the note (default is automatic, opposite the stem):
 `c4@staccato.up`, `d4@accent.down`.
 
+- Stem direction: `@stemUp` / `@stemDown` force a note's stem (default is automatic).
+  On a beamed note the beam's shared direction wins.
 - Articulations: `@staccato @accent @tenuto @marcato @fermata @portato`
 - Ornaments: `@trill @mordent @prall @turn @invertedturn`
 - Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff`

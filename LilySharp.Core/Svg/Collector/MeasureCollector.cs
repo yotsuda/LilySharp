@@ -2688,6 +2688,20 @@ public sealed class MeasureCollector
     }
 
     /// <summary>
+    /// Forced stem direction from a <c>@stemUp</c> / <c>@stemDown</c> annotation:
+    /// <c>true</c> = up, <c>false</c> = down, <c>null</c> = automatic (from staff
+    /// position). Feeds <see cref="NoteItem.StemUpOverride"/>, the same slot beam
+    /// resolution writes — so a stem override on a BEAMED note is superseded by the
+    /// beam's shared direction (the beam carries one stem direction for the group).
+    /// </summary>
+    private static bool? GetStemDirectionOverride(SyntaxNode node)
+    {
+        if (HasNamedArticulation(node, "stemup")) return true;
+        if (HasNamedArticulation(node, "stemdown")) return false;
+        return null;
+    }
+
+    /// <summary>
     /// Extracts a finger number from a single pitch's articulations (used for
     /// per-pitch fingerings inside chord brackets).
     /// </summary>
@@ -3277,6 +3291,7 @@ public sealed class MeasureCollector
             StringNumber = ExtractStringNumber(note),
             Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.RelativeOctave),
             IsDead = HasNamedArticulation(note, "dead"),
+            StemUpOverride = GetStemDirectionOverride(note),
         };
     }
 
