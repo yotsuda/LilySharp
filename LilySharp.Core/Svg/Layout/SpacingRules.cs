@@ -1462,19 +1462,23 @@ public static class SpacingRules
 
         if (item is ChordItem chord)
         {
-            // LILYPOND-REF: lily/note-column.cc — notehead side assignment for seconds
-            // When two notes are a second apart (staff position diff = 1), one notehead
-            // shifts right. The right skyline must include these displaced noteheads.
-            var displacements = CalculateChordDisplacements(chord.Notes, chord.StemUp, noteheadWidth);
+            // Within-chord seconds: reversed heads shift sideways. Use the SAME
+            // per-head offsets the renderer and the left skyline use, so the right
+            // skyline reflects where the heads are actually drawn — a second,
+            // simpler displacement model here (keyed by staff position, so unisons
+            // and clusters diverged) mispredicted the skyline.
+            // LILYPOND-REF: lily/stem.cc:606-760 calc_positioning_done.
+            double[] headOffsets = ChordHeadPositioning.CalculateOffsets(
+                chord.Notes, chord.StemUp, noteValue);
 
-            foreach (var noteInfo in chord.Notes)
+            for (int i = 0; i < chord.Notes.Length; i++)
             {
+                var noteInfo = chord.Notes[i];
                 double noteY = staffY - noteInfo.StaffPosition / 2.0;
                 double noteheadYBottom = noteY - noteheadBBox.Top;
                 double noteheadYTop = noteY - noteheadBBox.Bottom;
 
-                double xOffset = displacements.GetValueOrDefault(noteInfo.StaffPosition, 0);
-                double thisLeftX = noteheadLeftX + xOffset;
+                double thisLeftX = noteheadLeftX + headOffsets[i];
                 double thisRightX = thisLeftX + noteheadWidth;
 
                 boxes.Add((noteheadYBottom, noteheadYTop, thisLeftX, thisRightX));
@@ -1579,62 +1583,6 @@ public static class SpacingRules
         }
 
         return HorizontalSkyline.FromBoxes(boxes, HorizontalDirection.Right);
-    }
-
-    /// <summary>
-    /// Calculates horizontal displacement offsets for chord noteheads with seconds.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/note-column.cc — notehead side assignment
-    /// When two notes are a second apart (adjacent staff positions), one notehead
-    /// shifts to the opposite side of the stem:
-    /// - Stem up: lower note of the pair shifts right by noteheadWidth
-    /// - Stem down: upper note of the pair shifts right by noteheadWidth
-    /// </remarks>
-    internal static Dictionary<int, double> CalculateChordDisplacements(
-        ImmutableArray<ChordNoteInfo> notes, bool stemUp, double noteheadWidth)
-    {
-        var offsets = new Dictionary<int, double>();
-        if (notes.Length < 2)
-            return offsets;
-
-        var sorted = notes.OrderBy(n => n.StaffPosition).Select(n => n.StaffPosition).ToList();
-        var shifted = new HashSet<int>();
-
-        if (stemUp)
-        {
-            // Stem up: lower note of adjacent pair shifts right
-            for (int i = 0; i < sorted.Count - 1; i++)
-            {
-                if (sorted[i + 1] - sorted[i] == 1)
-                {
-                    if (!shifted.Contains(sorted[i]))
-                    {
-                        offsets[sorted[i]] = noteheadWidth;
-                        shifted.Add(sorted[i]);
-                    }
-                    i++; // Skip next to avoid double-shifting in clusters
-                }
-            }
-        }
-        else
-        {
-            // Stem down: upper note of adjacent pair shifts right
-            for (int i = sorted.Count - 1; i > 0; i--)
-            {
-                if (sorted[i] - sorted[i - 1] == 1)
-                {
-                    if (!shifted.Contains(sorted[i]))
-                    {
-                        offsets[sorted[i]] = noteheadWidth;
-                        shifted.Add(sorted[i]);
-                    }
-                    i--; // Skip next to avoid double-shifting in clusters
-                }
-            }
-        }
-
-        return offsets;
     }
 
     /// <summary>
