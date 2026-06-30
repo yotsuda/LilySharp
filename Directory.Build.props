@@ -1,0 +1,11 @@
+<Project>
+
+  <!-- Single source of truth for the package/assembly version across all
+       projects (Core, Cli, Lsp, and the non-packed Tests/Benchmarks). The
+       per-project <Version> entries had drifted (Cli 0.2.0, Core 0.1.0,
+       Lsp 0.1.1); centralizing here keeps a coordinated release in lockstep. -->
+  <PropertyGroup>
+    <Version>0.2.0</Version>
+  </PropertyGroup>
+
+</Project>

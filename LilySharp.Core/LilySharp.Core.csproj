@@ -8,7 +8,6 @@
 
     <!-- NuGet package metadata -->
     <PackageId>LilySharp.Core</PackageId>
-    <Version>0.1.0</Version>
     <Authors>Yoshifumi Tsuda</Authors>
     <Description>Music notation rendering engine inspired by LilyPond. Parses .lys notation files and generates SVG/PDF output with professional engraving quality.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
