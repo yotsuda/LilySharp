@@ -31,35 +31,44 @@ public sealed class GlissandoDetector
     public ImmutableArray<GlissandoItem> DetectGlissandos(Score score)
     {
         var glissandos = new List<GlissandoItem>();
-        var measures = score.Voice.Measures;
 
-        for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
+        // Each voice runs its own glissando engraver; scan them all so a second
+        // voice's glissando is not lost. Single-voice scores iterate once with
+        // voiceIndex 0 (byte-identical).
+        // LILYPOND-REF: scm/scheme-engravers.scm — Glissando_engraver per Voice.
+        for (int v = 0; v < score.Voices.Length; v++)
         {
-            var measure = measures[measureIdx];
+            var measures = score.Voices[v].Measures;
 
-            for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
+            for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
             {
-                if (measure.Items[itemIdx] is not NoteItem startNote)
-                    continue;
+                var measure = measures[measureIdx];
 
-                if (!startNote.HasGlissando)
-                    continue;
-
-                // Glissandos connect to the next note of any pitch.
-                var endNote = NoteScan.FindNextNote(measures, measureIdx, itemIdx, _ => true);
-                if (endNote != null)
+                for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
                 {
-                    var (endMeasureIdx, endItemIdx, note) = endNote.Value;
+                    if (measure.Items[itemIdx] is not NoteItem startNote)
+                        continue;
 
-                    glissandos.Add(new GlissandoItem(
-                        StartMeasureIndex: measureIdx,
-                        StartItemIndex: itemIdx,
-                        StartStaffPosition: startNote.StaffPosition,
-                        EndMeasureIndex: endMeasureIdx,
-                        EndItemIndex: endItemIdx,
-                        EndStaffPosition: note.StaffPosition,
-                        Style: GlissandoStyle.Line,
-                        SourcePosition: startNote.SourcePosition));
+                    if (!startNote.HasGlissando)
+                        continue;
+
+                    // Glissandos connect to the next note of any pitch.
+                    var endNote = NoteScan.FindNextNote(measures, measureIdx, itemIdx, _ => true);
+                    if (endNote != null)
+                    {
+                        var (endMeasureIdx, endItemIdx, note) = endNote.Value;
+
+                        glissandos.Add(new GlissandoItem(
+                            StartMeasureIndex: measureIdx,
+                            StartItemIndex: itemIdx,
+                            StartStaffPosition: startNote.StaffPosition,
+                            EndMeasureIndex: endMeasureIdx,
+                            EndItemIndex: endItemIdx,
+                            EndStaffPosition: note.StaffPosition,
+                            Style: GlissandoStyle.Line,
+                            SourcePosition: startNote.SourcePosition,
+                            VoiceIndex: v));
+                    }
                 }
             }
         }

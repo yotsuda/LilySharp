@@ -27,41 +27,50 @@ public sealed class SlurDetector
     public ImmutableArray<SlurItem> DetectSlurs(Score score)
     {
         var slurs = new List<SlurItem>();
-        var measures = score.Voice.Measures;
-        var openSlurs = new Stack<(int measureIdx, int itemIdx, MusicItem item)>();
 
-        for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
+        // Each voice runs its own slur engraver: a voice's open-slur stack must
+        // not pair with another voice's close, so the stack is per voice. A
+        // single-voice score iterates once with voiceIndex 0 (byte-identical).
+        // LILYPOND-REF: ly/engraver-init.ly — Slur_engraver lives in the Voice context.
+        for (int v = 0; v < score.Voices.Length; v++)
         {
-            var measure = measures[measureIdx];
+            var measures = score.Voices[v].Measures;
+            var openSlurs = new Stack<(int measureIdx, int itemIdx, MusicItem item)>();
 
-            for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
+            for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
             {
-                var item = measure.Items[itemIdx];
-                // Slurs attach to a note OR a chord (`<c e>( <d f>)`).
-                if (!TryGetSlurFlags(item, out bool hasStart, out bool hasEnd))
-                    continue;
+                var measure = measures[measureIdx];
 
-                if (hasStart)
+                for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
                 {
-                    openSlurs.Push((measureIdx, itemIdx, item));
-                }
+                    var item = measure.Items[itemIdx];
+                    // Slurs attach to a note OR a chord (`<c e>( <d f>)`).
+                    if (!TryGetSlurFlags(item, out bool hasStart, out bool hasEnd))
+                        continue;
 
-                if (hasEnd && openSlurs.Count > 0)
-                {
-                    var (startMeasureIdx, startItemIdx, startItem) = openSlurs.Pop();
+                    if (hasStart)
+                    {
+                        openSlurs.Push((measureIdx, itemIdx, item));
+                    }
 
-                    // Slur curves opposite to the start item's stem direction.
-                    bool curveUp = !StemUpOf(startItem);
+                    if (hasEnd && openSlurs.Count > 0)
+                    {
+                        var (startMeasureIdx, startItemIdx, startItem) = openSlurs.Pop();
 
-                    slurs.Add(new SlurItem(
-                        // For a chord the slur anchors at the head on the curve side.
-                        MusicItem.EdgeStaffPosition(startItem, curveUp) ?? 0,
-                        MusicItem.EdgeStaffPosition(item, curveUp) ?? 0,
-                        curveUp,
-                        startMeasureIdx,
-                        measureIdx,
-                        startItemIdx,
-                        itemIdx));
+                        // Slur curves opposite to the start item's stem direction.
+                        bool curveUp = !StemUpOf(startItem);
+
+                        slurs.Add(new SlurItem(
+                            // For a chord the slur anchors at the head on the curve side.
+                            MusicItem.EdgeStaffPosition(startItem, curveUp) ?? 0,
+                            MusicItem.EdgeStaffPosition(item, curveUp) ?? 0,
+                            curveUp,
+                            startMeasureIdx,
+                            measureIdx,
+                            startItemIdx,
+                            itemIdx,
+                            voiceIndex: v));
+                    }
                 }
             }
         }

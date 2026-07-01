@@ -27,38 +27,46 @@ public sealed class TieDetector
     public ImmutableArray<TieItem> DetectTies(Score score)
     {
         var ties = new List<TieItem>();
-        var measures = score.Voice.Measures;
 
-        for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
+        // Each voice runs its own tie engraver; scan them all so a second voice's
+        // ties are not lost. A single-voice score iterates once with voiceIndex 0
+        // (byte-identical). LILYPOND-REF: ly/engraver-init.ly — Tie_engraver per Voice.
+        for (int v = 0; v < score.Voices.Length; v++)
         {
-            var measure = measures[measureIdx];
+            var measures = score.Voices[v].Measures;
 
-            for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
+            for (int measureIdx = 0; measureIdx < measures.Length; measureIdx++)
             {
-                var item = measure.Items[itemIdx];
+                var measure = measures[measureIdx];
 
-                if (item is NoteItem startNote && startNote.HasTieStart)
+                for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
                 {
-                    // A tie connects to the next note of the SAME pitch.
-                    var endNote = NoteScan.FindNextNote(measures, measureIdx, itemIdx,
-                        c => c.StaffPosition == startNote.StaffPosition);
-                    if (endNote != null)
+                    var item = measure.Items[itemIdx];
+
+                    if (item is NoteItem startNote && startNote.HasTieStart)
                     {
-                        var (endMeasureIdx, endItemIdx, note) = endNote.Value;
-                        bool curveUp = !startNote.StemUp;
-                        ties.Add(new TieItem(
-                            startNote, note,
-                            startNote.StaffPosition,
-                            curveUp,
-                            measureIdx, endMeasureIdx,
-                            itemIdx, endItemIdx));
+                        // A tie connects to the next note of the SAME pitch.
+                        var endNote = NoteScan.FindNextNote(measures, measureIdx, itemIdx,
+                            c => c.StaffPosition == startNote.StaffPosition);
+                        if (endNote != null)
+                        {
+                            var (endMeasureIdx, endItemIdx, note) = endNote.Value;
+                            bool curveUp = !startNote.StemUp;
+                            ties.Add(new TieItem(
+                                startNote, note,
+                                startNote.StaffPosition,
+                                curveUp,
+                                measureIdx, endMeasureIdx,
+                                itemIdx, endItemIdx,
+                                voiceIndex: v));
+                        }
                     }
-                }
-                else if (item is ChordItem startChord && startChord.HasTieStart)
-                {
-                    // LILYPOND-REF: lily/tie-column.cc — tie every matching pitch
-                    // between this chord and the next chord/note.
-                    DetectChordTies(score, measureIdx, itemIdx, startChord, ties);
+                    else if (item is ChordItem startChord && startChord.HasTieStart)
+                    {
+                        // LILYPOND-REF: lily/tie-column.cc — tie every matching pitch
+                        // between this chord and the next chord/note.
+                        DetectChordTies(measures, v, measureIdx, itemIdx, startChord, ties);
+                    }
                 }
             }
         }
@@ -74,12 +82,11 @@ public sealed class TieDetector
     /// LILYPOND-REF: lily/tie-column.cc — TieColumn for chord ties.
     /// </remarks>
     private static void DetectChordTies(
-        Score score, int measureIdx, int itemIdx,
+        ImmutableArray<Measure> measures, int voiceIndex, int measureIdx, int itemIdx,
         ChordItem startChord,
         List<TieItem> ties)
     {
         // Find the next ChordItem or NoteItem.
-        var measures = score.Voice.Measures;
         for (int mi = measureIdx; mi < measures.Length; mi++)
         {
             var measure = measures[mi];
@@ -104,7 +111,7 @@ public sealed class TieDetector
                         // Unmatched pitches are silently dropped (LP behaviour for
                         // chord ties is to require matching pitches).
                     }
-                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii);
+                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex);
                     return;
                 }
                 else if (item is NoteItem endNoteItem)
@@ -116,7 +123,7 @@ public sealed class TieDetector
                         if (endNoteItem.StaffPosition == startPitch.StaffPosition)
                             matched.Add((startPitch, endNoteItem));
                     }
-                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii);
+                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex);
                     return;
                 }
             }
@@ -139,7 +146,8 @@ public sealed class TieDetector
         ChordItem startChord,
         List<TieItem> ties,
         int startMeasureIdx, int endMeasureIdx,
-        int startItemIdx, int endItemIdx)
+        int startItemIdx, int endItemIdx,
+        int voiceIndex)
     {
         if (matched.Count == 0)
             return;
@@ -183,7 +191,8 @@ public sealed class TieDetector
                 startPitch.StaffPosition,
                 dirs[i]!.Value,
                 startMeasureIdx, endMeasureIdx,
-                startItemIdx, endItemIdx));
+                startItemIdx, endItemIdx,
+                voiceIndex: voiceIndex));
         }
     }
 
