@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Linq;
 using LilySharp.Core.Midi;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -49,6 +50,24 @@ public class MidiTests
         Assert.Equal(60, midi.Tracks[1].Notes[0].Pitch); // c = C4
         Assert.Equal(62, midi.Tracks[1].Notes[1].Pitch); // d = D4
         Assert.Equal(64, midi.Tracks[1].Notes[2].Pitch); // e = E4
+    }
+
+    [Fact]
+    public void ExportParallelVoices_AllVoicesSoundSimultaneously()
+    {
+        // << v1 \\ v2 >> written as `voice { } voice { }`. Every voice must sound
+        // (regression: only voices[0] was exported), each starting at the block's
+        // tick rather than appended after the previous voice.
+        var source = "voice { c4 d4 } voice { e4 f4 }";
+        var tree = SyntaxTree.Parse(source);
+        var midi = new MidiExporter().Export(tree);
+        var notes = midi.Tracks[1].Notes;
+
+        Assert.Equal(4, notes.Count); // both voices, not just voice 1's two notes
+        // Voice 2 restarts the relative-octave frame from before the block.
+        Assert.Equal(new[] { 60, 62, 64, 65 }, notes.Select(n => n.Pitch).OrderBy(p => p).ToArray());
+        // The two voices are simultaneous: beats 1 and 2 each carry two notes.
+        Assert.Equal(new[] { 0, 0, 480, 480 }, notes.Select(n => n.StartTick).OrderBy(t => t).ToArray());
     }
 
     [Fact]

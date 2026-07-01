@@ -165,9 +165,28 @@ public sealed class MidiExporter
                 break;
 
             case ParallelExpressionSyntax parallel:
-                var voices = parallel.Voices.ToList();
-                if (voices.Count > 0)
-                    ProcessNode(voices[0], track, conductorTrack);
+                // Simultaneous voices (<< v1 \\ v2 >>): every voice sounds, each
+                // starting at the block's tick — not just voices[0]. Notes carry
+                // absolute start ticks, so we rewind to the block start before each
+                // voice, then advance past the LONGEST one. Each voice also restarts
+                // the relative-octave / default-duration state from the pre-block
+                // value, so voice 2 is not skewed by voice 1's ending pitch.
+                var voices = parallel.Voices;
+                int blockStartTick = _currentTick;
+                int startNoteName = _currentNoteName;
+                int startOctave = _currentOctave;
+                Fraction startDuration = _defaultDuration;
+                int voicesEndTick = blockStartTick;
+                foreach (var voice in voices)
+                {
+                    _currentTick = blockStartTick;
+                    _currentNoteName = startNoteName;
+                    _currentOctave = startOctave;
+                    _defaultDuration = startDuration;
+                    ProcessNode(voice, track, conductorTrack);
+                    voicesEndTick = Math.Max(voicesEndTick, _currentTick);
+                }
+                _currentTick = voicesEndTick;
                 break;
 
             case PhraseDeclarationSyntax phrase:
