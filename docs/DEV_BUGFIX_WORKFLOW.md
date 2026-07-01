@@ -426,6 +426,20 @@ git push                                          # deploy の自動 "Bump dev b
     snapshot 全面再ベースライン**。かつ 0.1 は Lily# の近似スカイラインでは ink を取りこぼし**衝突しうる**ので
     無条件に正しいとは言えず要検証。**F3 が `measure_natural_width`/spacing を作り替える**ため、今ここで
     全面再ベースラインするのは churn。F3 後に専用検証で。
+- **交差声部の水平 note-collision(下声部が上声部より高音で符幹が交差)** ― ✅ **評価済み・deferred(2026-07-01、§12-7)**。
+  多声ビーム一式(`VoiceIndex` 導通〜cross-voice **beam** collision まで)完了後に発見。repro=`voice{ c'8×8 }`(上・ステム上)＋
+  `voice{ a'1 }`(下・A5 全音符、C5 より高い交差)。LP は下声部音を左へずらして上声部の符幹を clear するが、Lily# はずらさず
+  **符幹が全音符を貫通**(垂直=ビーム高さは §cross-voice beam collision の commit で解決済、残るは水平のみ)。
+  **根因(特定済)**: `NoteCollision.AnalyzeCollision` は「too far apart」ゲート通過後も衝突タイプ不一致だと `NoCollision`(シフト0)を返す。
+  **LP は同位置で "meshing" フォールバック(0.17、ドット時0.1)を必ず適用**する(`lily/note-collision.cc:332-337`)。交差声部はこの経路。
+  **なぜ即修正しなかったか**: フォールバックだけでは不足。(a) **マグニチュード**=LP は per-note extent スケーリング
+  (`note-collision.cc:343-348`)＋`calc_positioning_done` で down-note 実幅を掛けるが、Lily# の note-collision は**固定 notehead 幅で近似**
+  ゆえ全音符(幅広)が LP ほど動かず clear しきれない。(b) 試作すると全音符が**予想と逆方向(右)に 0.67 移動**し、pinning
+  (どの声部が動くか)＋**連桁音の衝突オフセットと beam の列X描画の相互作用**を確証を持って説明できず、レンダも LP と明確一致せず。
+  §0「理解できない/アドホックな修正は出さない」に従い**試作を revert**(byte-identical へ戻し済)。
+  **希少性**: 発火に**声部交差**(下声部が高音)が必要=通常のポリフォニーでは起きない。
+  **やるなら**: note-collision の **per-note 幅対応**(固定 notehead 幅→実 extent)という広めの refactor＋交差時 pinning/連桁相互作用の
+  精査が要る。既存 collision fixture(equal-width は extent factor=1.0 で不変のはず)を担保しつつ mixed-width のみ再ベースライン。
 
 ---
 

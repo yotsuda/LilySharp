@@ -12,8 +12,9 @@
 >
 > **選択肢 A(collection で `StemUpOverride` 焼込)は採らず**、検出器で声部方向を固定した(§2 の「layout と render が
 > 同じ符幹を見る」を、render が既に voice で強制していることを利用して満たす=より小さい変更で layout/render 整合)。
-> **既知の非対応**(将来・稀): 声部を跨ぐ tuplet 境界(`score.TupletBrackets` は score-global で itemIndex 共有)は
-> 多声で beam を誤分割しうる ― 現 fixture 未発火。cross-voice beam collision も own-voice 限定。
+> **後続で対応済(2026-07-01、この handoff 以降の別コミット)**: 声部/譜表を跨ぐ tuplet 境界の誤分割(`VoiceIndex`/`StaffIndex` で
+> フィルタ)、下声部の tuplet ブラケットがステム下側に来ない件、**cross-voice の beam collision(垂直=ビームが他声部の音を避けて上がる)**。
+> **残る既知の非対応**: 交差声部の**水平** note-collision(下声部の高音が上声部の符幹を clear しない)＝ `DEV_BUGFIX_WORKFLOW.md` §12-7 に評価・deferred を記録。
 > 残りの本書(§0〜§6)は着手前の設計メモとして保存。**push は保留中**(未 push スタックに本作業 3 コミットが積まれた)。
 
 ---
