@@ -682,6 +682,11 @@ public sealed class MeasureCollector
         // Single voice
         var voice = _tabResolver.ResolveVoiceTabTies(new Voice(_voiceName ?? "default", measures.ToImmutableArray()));
 
+        // Ottava DISPLAY transposition: notes under an 8va draw an octave lower
+        // (etc.) while sounding at their written pitch. Single-staff score, so
+        // every ottava mark is on staff 0. See OttavaTransposer.
+        voice = OttavaTransposer.Transpose(voice, DetectOttavaSpans(0));
+
         // Collect lyrics
         _lyricsCollector.CollectNoteBound(tree.GetRoot(), measures, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
@@ -993,6 +998,30 @@ public sealed class MeasureCollector
             })
             .ToImmutableArray();
 
+        // Ottava DISPLAY transposition per staff (see OttavaTransposer): notes
+        // under an 8va draw an octave lower (etc.) while sounding at the written
+        // pitch. Each staff transposes only the spans authored on ITS OWN staff.
+        // The global staff index is walked in the same order as the lyrics
+        // band-sizing above, matching each mark's StaffIndex.
+        {
+            int ottavaStaffIndex = 0;
+            staffGroups = staffGroups
+                .Select(sg => sg with
+                {
+                    Staves = sg.Staves
+                        .Select(st =>
+                        {
+                            var spans = DetectOttavaSpans(ottavaStaffIndex++);
+                            return spans.Count == 0
+                                ? st
+                                : st with { Voices = st.Voices
+                                    .Select(v => OttavaTransposer.Transpose(v, spans)).ToImmutableArray() };
+                        })
+                        .ToImmutableArray()
+                })
+                .ToImmutableArray();
+        }
+
         return new MultiStaffScore(
             staffGroups,
             new TimeSignature(_timeBeats, _timeBeatType),
@@ -1109,6 +1138,12 @@ public sealed class MeasureCollector
         var extras = BuildExtraVoiceTracks(track0);
         for (int i = 0; i < extras.Count; i++)
             voices.Add(new Voice($"voice{i + 2}", extras[i]));
+
+        // Ottava DISPLAY transposition (single staff → staff 0). See OttavaTransposer.
+        var multiVoiceOttava = DetectOttavaSpans(0);
+        if (multiVoiceOttava.Count > 0)
+            for (int i = 0; i < voices.Count; i++)
+                voices[i] = OttavaTransposer.Transpose(voices[i], multiVoiceOttava);
 
         // Map named voices (voice sop { … }) to their measure track so a
         // `lyrics sop { … }` block can bind to it. Track 0 is voice 1, then extras.
@@ -3087,17 +3122,20 @@ public sealed class MeasureCollector
                         _fingeringByPosition[node.Position] = finger;
                 }
                 else if (MusicMarkItem.ParseMarkName(markSyntax.MarkName) is { } compoundMark
-                         && IsNoteAnchoredPedalMark(compoundMark))
+                         && (IsNoteAnchoredPedalMark(compoundMark) || IsOttavaMark(compoundMark)))
                 {
-                    // A compound PEDAL mark written ON a note (e.g. @ped.off,
-                    // @sost.ped.off). Like @ped above, anchor it to the host note's
-                    // column via itemIndex/anchorTiming so the release ("*") sits at
-                    // that note, not the measure start. Without this the off-mark was
-                    // created with no anchor and snapped to the bar start. The
-                    // statement-level handler then de-dupes by source position.
-                    // Non-pedal compound marks (e.g. @mark.A rehearsal) are left to
-                    // that statement-level handler, which extracts their text.
-                    // LILYPOND-REF: piano-pedal-engraver.cc — pedal marks at note moment.
+                    // A compound PEDAL mark (e.g. @ped.off) or a compound OTTAVA mark
+                    // (the down forms @ottava(bassa) / @quindicesima(bassa)) written ON
+                    // a note. Like @ped and the plain @ottava above, anchor it to the
+                    // host note's column via itemIndex/anchorTiming and — crucially —
+                    // carry _currentStaffIndex so the bracket and its octave
+                    // transposition land on the AUTHORING staff. Without this the
+                    // statement-level handler created it with no staff (defaulting to
+                    // staff 0), so on a grand staff a lower-staff 8vb was attributed to
+                    // the top staff. The statement-level handler then de-dupes this by
+                    // source position. Non-pedal, non-ottava compound marks (e.g.
+                    // @mark.A rehearsal) are left to that handler, which extracts text.
+                    // LILYPOND-REF: piano-pedal-engraver.cc / ottava-engraver.cc.
                     _musicMarks.Add(new MusicMarkItem(
                         compoundMark, measureIndex, markSyntax.Position, itemIndex, anchorTiming) { StaffIndex = _currentStaffIndex });
                 }
@@ -3115,6 +3153,17 @@ public sealed class MeasureCollector
         type is MusicMarkType.SustainOn or MusicMarkType.SustainOff
              or MusicMarkType.SostenutoOn or MusicMarkType.SostenutoOff
              or MusicMarkType.UnaCordaOn or MusicMarkType.UnaCordaOff;
+
+    /// <summary>
+    /// True for the ottava music marks. The down forms (@ottava(bassa) /
+    /// @quindicesima(bassa)) arrive as compound MusicMarkSyntax note articulations
+    /// and, like pedals, must be anchored WITH the staff index so a grand staff's
+    /// lower-staff 8vb is drawn and transposed on its own staff. (The up forms are
+    /// plain @ottava / @quindicesima identifiers handled on the simple mark path.)
+    /// </summary>
+    private static bool IsOttavaMark(MusicMarkType type) =>
+        type is MusicMarkType.OttavaUp or MusicMarkType.OttavaDown
+             or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown;
 
     /// <summary>
     /// Pairs trill spanner start/stop events into TrillSpannerItems.
@@ -3405,6 +3454,21 @@ public sealed class MeasureCollector
     /// <summary>One entry in the resolved-pitch trace: the source position of the
     /// written pitch and its resolved absolute spelling (e.g. "C6").</summary>
     public readonly record struct PitchTraceEntry(int Position, string Pitch);
+
+    /// <summary>
+    /// Ottava spans (measure range + type) for one staff, derived from the
+    /// collected @ottava/@loco marks. Reuses the SAME detector the bracket uses
+    /// at layout time, so the display transposition and the drawn bracket stay in
+    /// lockstep. The detector is a pure function of the marks (no layout geometry).
+    /// </summary>
+    private List<OttavaBracketItem> DetectOttavaSpans(int staffIndex)
+    {
+        var result = new List<OttavaBracketItem>();
+        foreach (var b in Layout.OttavaBracketEngraver.DetectOttavaBrackets(_musicMarks.ToImmutableArray()))
+            if (b.StaffIndex == staffIndex)
+                result.Add(b);
+        return result;
+    }
 
     private ResolvedPitch CalculateStaffPosition(PitchSyntax pitch)
     {

@@ -61,7 +61,9 @@ public abstract record MusicItem
 /// </summary>
 public sealed record NoteItem : MusicItem
 {
-    public int StaffPosition { get; }
+    // init so a post-pass (e.g. OttavaTransposer) can shift the DISPLAY position
+    // an octave without disturbing pitch/MIDI (which live in Midi/the syntax tree).
+    public int StaffPosition { get; init; }
     public Fraction BaseDuration { get; }
     public int Dots { get; }
     public string? Accidental { get; }

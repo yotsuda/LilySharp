@@ -1,17 +1,19 @@
-// Ottava brackets on BOTH staves of a grand staff. Each staff runs its own 8va
-// (bracket ABOVE its own staff) and terminates at the loco on ITS OWN staff —
-// the two staves no longer share one score.MusicMarks table, so the lower loco
-// does not end the upper 8va, and the above-staff stacker leaves the lower-staff
-// bracket over its own staff instead of piling it above the top staff (as the
-// per-system stacker did). LILYPOND-REF: lily/ottava-engraver.cc (per-staff
-// Ottava_spanner_engraver) + lily/axis-group-interface.cc per-staff outside-staff.
+// Ottava per staff on a grand staff, exercising BOTH directions: the top staff
+// runs an 8va (bracket ABOVE its staff, notes drawn an octave lower), the lower
+// staff an 8vb (@ottava(bassa) → bracket BELOW its staff, notes drawn an octave
+// higher). Each terminates at the loco on ITS OWN staff, and each bracket stacks
+// over/under its own staff — the two staves no longer share one score.MusicMarks
+// table. The same written pitch shows transposed in measure 1 (8va/8vb) and at
+// its true position in measure 2 (loco), while SOUNDING at the written pitch.
+// LILYPOND-REF: lily/ottava-engraver.cc (per-staff Ottava_spanner_engraver +
+// middleCOffset transposition) + lily/axis-group-interface.cc per-staff outside-staff.
 octave absolute
 title "Multi-staff ottava"
 part top { clef treble }
 part low { clef bass }
 section S {
-  top { c'''4@ottava c'''4 c'''4 c'''4@loco | }
-  low { c'4@ottava c'4 c'4 c'4@loco | }
+  top { c'''4@ottava c'''4 c'''4 c'''4 | c'''4@loco c'''4 c'''4 c'''4 | }
+  low { c,4@ottava(bassa) c,4 c,4 c,4 | c,4@loco c,4 c,4 c,4 | }
 }
 structure { S }
 score "multi-staff-ottava" { staff top staff low }
