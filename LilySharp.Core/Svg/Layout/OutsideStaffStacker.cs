@@ -461,6 +461,12 @@ public static class OutsideStaffStacker
                 var o = b[i];
                 if (!o.IsAbove || !measureToSystem.TryGetValue(o.StartMeasureIndex, out int sysIdx))
                     continue;
+                // Lower-staff brackets are already placed over their OWN staff by
+                // OttavaBracketEngraver (via staffYByIndex); the staff-0 seeded
+                // occupancy would wrongly pull them up to the top staff. Same
+                // treatment as lower-staff trills above.
+                if (o.StaffIndex != 0)
+                    continue;
                 double sy = systems[sysIdx].Y;
                 // anchor = text baseline / line Y; "8va" at 0.45 x 4sp with
                 // ~0.75em ascent; the end hook drops EdgeHeight below.

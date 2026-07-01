@@ -1,0 +1,17 @@
+// Ottava brackets on BOTH staves of a grand staff. Each staff runs its own 8va
+// (bracket ABOVE its own staff) and terminates at the loco on ITS OWN staff —
+// the two staves no longer share one score.MusicMarks table, so the lower loco
+// does not end the upper 8va, and the above-staff stacker leaves the lower-staff
+// bracket over its own staff instead of piling it above the top staff (as the
+// per-system stacker did). LILYPOND-REF: lily/ottava-engraver.cc (per-staff
+// Ottava_spanner_engraver) + lily/axis-group-interface.cc per-staff outside-staff.
+octave absolute
+title "Multi-staff ottava"
+part top { clef treble }
+part low { clef bass }
+section S {
+  top { c'''4@ottava c'''4 c'''4 c'''4@loco | }
+  low { c'4@ottava c'4 c'4 c'4@loco | }
+}
+structure { S }
+score "multi-staff-ottava" { staff top staff low }

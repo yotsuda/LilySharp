@@ -50,7 +50,10 @@ public readonly record struct OttavaBracketLayout(
     int SourcePosition,
     /// <summary>F3/B: index of the originating ottava mark in score.MusicMarks,
     /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
-    int SourceIndex = -1
+    int SourceIndex = -1,
+    /// <summary>The staff this bracket belongs to (0 = the first/only staff),
+    /// so above-staff stacking leaves lower-staff brackets over their own staff.</summary>
+    int StaffIndex = 0
 );
 
 /// <summary>
@@ -133,7 +136,8 @@ public static class OttavaBracketEngraver
     public static ImmutableArray<OttavaBracketLayout> Calculate(
         ImmutableArray<OttavaBracketItem> ottavaBrackets,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         if (ottavaBrackets.IsDefaultOrEmpty)
             return ImmutableArray<OttavaBracketLayout>.Empty;
@@ -151,7 +155,12 @@ public static class OttavaBracketEngraver
 
             bool isAbove = bracket.Type == OttavaType.Ottava8va ||
                            bracket.Type == OttavaType.Quindicesima15ma;
-            double y = isAbove ? AboveStaffY : BelowStaffY;
+            // Offset to this bracket's OWN staff on a grand staff, so an 8va over
+            // the lower staff sits above THAT staff, not the top one. Single-staff
+            // (offset 0) is unchanged. Mirrors HairpinEngraver/TrillSpannerEngraver.
+            double staffOffset = staffYByIndex != null
+                && staffYByIndex.TryGetValue(bracket.StaffIndex, out var so) ? so : 0;
+            double y = (isAbove ? AboveStaffY : BelowStaffY) + staffOffset;
 
             string text = bracket.Type switch
             {
@@ -191,7 +200,8 @@ public static class OttavaBracketEngraver
                     DashPeriod: DashPeriod,
                     DashFraction: DashFraction,
                     SourcePosition: bracket.SourcePosition,
-                    SourceIndex: bracket.SourceIndex
+                    SourceIndex: bracket.SourceIndex,
+                    StaffIndex: bracket.StaffIndex
                 ));
             }
         }
@@ -246,14 +256,24 @@ public static class OttavaBracketEngraver
                 _ => OttavaType.Ottava8va
             };
 
-            // Find the end: next ottava/loco mark
-            // LILYPOND-REF: lily/ottava-engraver.cc — bracket ends just before the
-            // terminating mark (loco or next ottava), so use measure - 1.
+            // Find the end: next ottava/loco mark ON THE SAME STAFF. On a grand
+            // staff each staff runs its own ottava, so a loco under the lower
+            // staff must not terminate an 8va over the upper staff.
+            // LILYPOND-REF: lily/ottava-engraver.cc — per-staff Ottava_spanner_engraver;
+            //   bracket ends just before the terminating mark, so use measure - 1.
+            MusicMarkItem? terminator = null;
+            for (int j = i + 1; j < ottavaMarks.Count; j++)
+                if (ottavaMarks[j].Mark.StaffIndex == mark.StaffIndex)
+                {
+                    terminator = ottavaMarks[j].Mark;
+                    break;
+                }
+
             int endMeasure;
-            if (i + 1 < ottavaMarks.Count)
+            if (terminator != null)
             {
                 // Bracket covers up to the measure before the terminator
-                endMeasure = ottavaMarks[i + 1].Mark.MeasureIndex - 1;
+                endMeasure = terminator.MeasureIndex - 1;
                 if (endMeasure < mark.MeasureIndex)
                     endMeasure = mark.MeasureIndex; // at minimum, cover the start measure
             }
@@ -270,7 +290,8 @@ public static class OttavaBracketEngraver
                     StartMeasureIndex: mark.MeasureIndex,
                     EndMeasureIndex: endMeasure,
                     SourcePosition: mark.SourcePosition,
-                    SourceIndex: srcIndex
+                    SourceIndex: srcIndex,
+                    StaffIndex: mark.StaffIndex
                 ));
             }
         }

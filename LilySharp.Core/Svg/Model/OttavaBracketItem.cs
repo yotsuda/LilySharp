@@ -53,5 +53,8 @@ public sealed record OttavaBracketItem(
     int SourcePosition,
     /// <summary>F3/B: index of the originating ottava mark in score.MusicMarks,
     /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
-    int SourceIndex = -1
+    int SourceIndex = -1,
+    /// <summary>The staff this ottava was authored on (0 = the first/only staff).
+    /// The bracket is stacked over/under THAT staff on a grand staff.</summary>
+    int StaffIndex = 0
 );

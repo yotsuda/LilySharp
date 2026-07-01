@@ -897,7 +897,7 @@ public sealed class LayoutEngine
 
         // Detect and layout ottava brackets from ottava/loco marks
         var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
-        var ottavaLayouts = OttavaBracketEngraver.Calculate(ottavaItems, systems, ml);
+        var ottavaLayouts = OttavaBracketEngraver.Calculate(ottavaItems, systems, ml, staffYByIndex);
 
         // Layout arpeggio markings
         var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, ml, _options.StaffHeight, measures, measuresByStaff, staffYByIndex);

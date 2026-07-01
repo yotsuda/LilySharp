@@ -269,6 +269,86 @@ public class OttavaBracketTests
     }
 
     [Fact]
+    public void DetectOttavaBrackets_LocoOnOtherStaff_DoesNotTerminate()
+    {
+        // A grand staff: staff 0 runs an 8va (measures 0..), staff 1 has its own
+        // loco at measure 2. The lower staff's loco must NOT end the upper 8va —
+        // termination is per staff. Staff 0's bracket has no same-staff terminator,
+        // so it extends one measure past its start.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.OttavaUp, 0, 0) { StaffIndex = 0 },
+            new MusicMarkItem(MusicMarkType.Loco, 2, 0) { StaffIndex = 1 });
+
+        var result = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
+
+        Assert.Single(result);
+        Assert.Equal(0, result[0].StaffIndex);
+        Assert.Equal(0, result[0].StartMeasureIndex);
+        // No same-staff terminator -> extends one measure past the start,
+        // rather than ending at the other staff's loco (measure 1).
+        Assert.Equal(1, result[0].EndMeasureIndex);
+    }
+
+    [Fact]
+    public void DetectOttavaBrackets_TerminatesWithinSameStaff()
+    {
+        // Two staves each with their own 8va + loco, interleaved by measure.
+        var musicMarks = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.OttavaUp, 0, 0) { StaffIndex = 0 },
+            new MusicMarkItem(MusicMarkType.OttavaUp, 0, 0) { StaffIndex = 1 },
+            new MusicMarkItem(MusicMarkType.Loco, 3, 0) { StaffIndex = 0 },
+            new MusicMarkItem(MusicMarkType.Loco, 3, 0) { StaffIndex = 1 });
+
+        var result = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
+
+        Assert.Equal(2, result.Length);
+        // Each bracket ends at the measure before ITS OWN staff's loco (measure 2).
+        Assert.All(result, b => Assert.Equal(2, b.EndMeasureIndex));
+        Assert.Contains(result, b => b.StaffIndex == 0);
+        Assert.Contains(result, b => b.StaffIndex == 1);
+    }
+
+    [Fact]
+    public void Calculate_LowerStaff_OffsetsBracketToOwnStaff()
+    {
+        // With a staff Y offset supplied, a lower-staff bracket sits over/under
+        // that staff (its Y shifts down by the offset), not the top staff.
+        var measures = CreateMeasureLayouts(4);
+        var systems = CreateSingleSystem(4);
+        var staffYByIndex = new Dictionary<int, double> { [0] = 0.0, [1] = 12.0 };
+
+        var top = ImmutableArray.Create(new OttavaBracketItem(
+            OttavaType.Ottava8va, 0, 3, 0, StaffIndex: 0));
+        var low = ImmutableArray.Create(new OttavaBracketItem(
+            OttavaType.Ottava8va, 0, 3, 0, StaffIndex: 1));
+
+        var topLayout = OttavaBracketEngraver.Calculate(top, systems, measures, staffYByIndex)[0];
+        var lowLayout = OttavaBracketEngraver.Calculate(low, systems, measures, staffYByIndex)[0];
+
+        Assert.Equal(1, lowLayout.StaffIndex);
+        // Lower staff's 8va is 12 staff-spaces below the top staff's 8va.
+        Assert.Equal(topLayout.Y + 12.0, lowLayout.Y, 3);
+    }
+
+    [Fact]
+    public void Calculate_LowerStaff_8vb_OffsetsBelowOwnStaff()
+    {
+        // 8vb (below) on the lower staff hangs below THAT staff.
+        var measures = CreateMeasureLayouts(4);
+        var systems = CreateSingleSystem(4);
+        var staffYByIndex = new Dictionary<int, double> { [0] = 0.0, [1] = 12.0 };
+
+        var low = ImmutableArray.Create(new OttavaBracketItem(
+            OttavaType.Ottava8vb, 0, 3, 0, StaffIndex: 1));
+
+        var lowLayout = OttavaBracketEngraver.Calculate(low, systems, measures, staffYByIndex)[0];
+
+        Assert.False(lowLayout.IsAbove);
+        // Below-staff Y (staff bottom + padding) shifted down to the lower staff.
+        Assert.True(lowLayout.Y > 12.0, "8vb on staff 1 should be below that staff");
+    }
+
+    [Fact]
     public void Calculate_OutOfRangeMeasure_Skipped()
     {
         var measures = CreateMeasureLayouts(2);
