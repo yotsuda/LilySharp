@@ -1,0 +1,16 @@
+// Hairpins on BOTH staves of a grand staff. Each cresc/dim pairs with the
+// dynamic on its OWN staff and the wedge hangs under that staff — previously the
+// two staves shared one score.MusicMarks table, so a cresc on staff 2 terminated
+// against staff 1's cresc (both spans collapsed and vanished), and the per-system
+// stacker would have piled both wedges under the top staff.
+// LILYPOND-REF: lily/hairpin.cc + axis-group-interface.cc per-staff outside-staff.
+octave absolute
+title "Multi-staff hairpins"
+part top { clef treble }
+part low { clef bass }
+section S {
+  top { c'2@cresc c'2 | c'2@f c'2 | }
+  low { c2@dim c2 | c2@p c2 | }
+}
+structure { S }
+score "multi-staff-hairpins" { staff top staff low }

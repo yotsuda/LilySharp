@@ -52,5 +52,7 @@ public sealed record HairpinItem(
     int SourcePosition,
     /// <summary>F3/B: index of the originating cresc/decresc mark in score.MusicMarks,
     /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
-    int SourceIndex = -1
+    int SourceIndex = -1,
+    /// <summary>The staff this hairpin belongs to (0 = first/only staff).</summary>
+    int StaffIndex = 0
 );

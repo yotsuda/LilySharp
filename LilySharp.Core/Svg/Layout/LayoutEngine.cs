@@ -888,7 +888,7 @@ public sealed class LayoutEngine
 
         // Detect and layout hairpins from cresc/decresc marks
         var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics);
-        var hairpinLayouts = HairpinEngraver.Calculate(hairpinItems, systems, ml);
+        var hairpinLayouts = HairpinEngraver.Calculate(hairpinItems, systems, ml, staffYByIndex);
 
         // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
         // Pass dynamic layouts so text spanners can stack below them

@@ -120,7 +120,8 @@ public static class HairpinEngraver
     public static ImmutableArray<HairpinLayout> Calculate(
         ImmutableArray<HairpinItem> hairpins,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         if (hairpins.IsDefaultOrEmpty)
             return ImmutableArray<HairpinLayout>.Empty;
@@ -145,6 +146,14 @@ public static class HairpinEngraver
             if (hairpin.StartMeasureIndex >= measureLayouts.Length ||
                 hairpin.EndMeasureIndex >= measureLayouts.Length)
                 continue;
+
+            // The wedge hangs a fixed distance below ITS staff; add the staff's
+            // within-system offset so a hairpin on staff 2 sits under staff 2, not
+            // staff 1. Staff 0 (or a single staff) has offset 0 -> unchanged. The
+            // per-staff stacker then keeps it clear of that staff's dynamics only.
+            double staffOffset = staffYByIndex != null
+                && staffYByIndex.TryGetValue(hairpin.StaffIndex, out var so) ? so : 0;
+            double hairpinY = BaseY + staffOffset;
 
             // LILYPOND-REF: lily/spanner.cc:36-144 — broken once per system; bounds
             // reattached to the system edges.
@@ -174,9 +183,9 @@ public static class HairpinEngraver
                 }
 
                 layouts.Add(new HairpinLayout(
-                    segment.StartMeasureIndex, segStartX, segEndX, BaseY,
+                    segment.StartMeasureIndex, segStartX, segEndX, hairpinY,
                     startOpening, endOpening, hairpin.Direction, hairpin.SourcePosition,
-                    hairpin.SourceIndex));
+                    hairpin.SourceIndex, hairpin.StaffIndex));
             }
         }
 
@@ -244,19 +253,26 @@ public static class HairpinEngraver
                 ? HairpinDirection.Crescendo
                 : HairpinDirection.Decrescendo;
 
-            // Find the next absolute dynamic after this cresc/decresc
+            // A hairpin ends at a dynamic / next hairpin ON THE SAME STAFF. Without
+            // the staff filter a cresc on staff 2 terminated against staff 1's cresc
+            // in the same measure, collapsing both spans to nothing (they share the
+            // single score.MusicMarks / Dynamics tables).
             var nextDynamic = sortedDynamics
                 .FirstOrDefault(d =>
-                    d.MeasureIndex > mark.MeasureIndex ||
-                    (d.MeasureIndex == mark.MeasureIndex && d.ItemIndex > 0));
+                    d.StaffIndex == mark.StaffIndex &&
+                    (d.MeasureIndex > mark.MeasureIndex ||
+                     (d.MeasureIndex == mark.MeasureIndex && d.ItemIndex > 0)));
 
-            // Find the next cresc/decresc mark (another hairpin starts there)
+            // Find the next cresc/decresc mark on this staff (another hairpin starts
+            // there). A same-measure mark only counts if it is at a LATER item, so a
+            // second cresc on the same beat can't be mistaken for this one's end.
             var nextMark = crescMarks
                 .Select(x => x.Mark)
                 .FirstOrDefault(m =>
-                    m != mark &&
+                    m != mark && m.StaffIndex == mark.StaffIndex &&
                     (m.MeasureIndex > mark.MeasureIndex ||
-                     (m.MeasureIndex == mark.MeasureIndex)));
+                     (m.MeasureIndex == mark.MeasureIndex &&
+                      m.AnchorItemIndex > mark.AnchorItemIndex)));
 
             // End at whichever comes first: next dynamic or next cresc/decresc
             int endMeasure;
@@ -292,7 +308,8 @@ public static class HairpinEngraver
                     EndMeasureIndex: endMeasure,
                     EndItemIndex: endItem,
                     SourcePosition: mark.SourcePosition,
-                    SourceIndex: srcIndex
+                    SourceIndex: srcIndex,
+                    StaffIndex: mark.StaffIndex
                 ));
             }
         }
