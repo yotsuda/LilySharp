@@ -1,0 +1,17 @@
+// Regression: a tuplet on ONE staff must not break another staff's beaming.
+// Upper staff has a quarter-note triplet; lower staff has eight straight eighths
+// that must beam 4+4. Auto-beaming breaks at a tuplet boundary by note index, so
+// a per-staff beam pass must see only its OWN staff's tuplets — else the upper
+// triplet's end-index splits the lower staff's first beam group ([c d] + two stray
+// flags + [g a b c']). Tuplets carry a StaffIndex; the beam pass now filters by it.
+// LILYPOND-REF: lily/auto-beam-engraver.cc — beaming is per Voice/Staff context.
+octave absolute
+title "Multi-staff tuplet + beams"
+part rh { clef treble }
+part lh { clef bass }
+section S {
+  rh { tuplet 3/2 { c''4 c'' c'' } c''2 | }
+  lh { c8 d e f g a b c' | }
+}
+structure { S }
+score "multistaff-tuplet-beams" { grandStaff { staff rh staff lh } }

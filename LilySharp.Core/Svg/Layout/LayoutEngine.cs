@@ -331,10 +331,14 @@ public sealed class LayoutEngine
             var prelimSlurs = new List<SlurLayout>();
             foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
             {
+                // Beam detection breaks at tuplet boundaries by note index, so a
+                // per-staff beam score must see only THIS staff's tuplets — else a
+                // tuplet on another staff would split a beam at a colliding index.
+                var staffTuplets = StaffTuplets(score.TupletBrackets, staffIndex);
                 var staffScore = new Score(
                     staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
                     ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                    tupletBrackets: score.TupletBrackets);
+                    tupletBrackets: staffTuplets);
                 // Beams detect per voice — expose every voice so voice 2's beam
                 // protrusions join the spacing extents (matches the final pass).
                 // Ties/slurs keep the primary-voice prelim score (unchanged).
@@ -342,7 +346,7 @@ public sealed class LayoutEngine
                     ? new Score(
                         staff.Voices, score.TimeSignature, score.KeySignature,
                         ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                        tupletBrackets: score.TupletBrackets)
+                        tupletBrackets: staffTuplets)
                     : staffScore;
                 prelimBeams.AddRange(_elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex));
                 prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff));
@@ -376,12 +380,16 @@ public sealed class LayoutEngine
         var allGlissandoLayouts = new List<GlissandoLayout>();
         foreach (var (group, staff, staffIndex) in score.EnumerateStaves())
         {
+            // Beam detection breaks at tuplet boundaries by note index, so scope
+            // the tuplets to THIS staff — a tuplet on another staff must not split
+            // this staff's beams at a colliding index.
+            var staffTuplets = StaffTuplets(score.TupletBrackets, staffIndex);
             var staffScore = new Score(
                 staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
                 ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
                 // Beam detection must see tuplet spans: auto beams break at
                 // tuplet boundaries (BeamDetector).
-                tupletBrackets: score.TupletBrackets);
+                tupletBrackets: staffTuplets);
             // Beam AND slur/tie/glissando detection run PER VOICE, so a polyphonic
             // staff must expose all its voices (not just the primary) — else voice 2's
             // eighths never beam. Single-voice staves reuse the primary-voice score,
@@ -390,7 +398,7 @@ public sealed class LayoutEngine
                 ? new Score(
                     staff.Voices, score.TimeSignature, score.KeySignature,
                     ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
-                    tupletBrackets: score.TupletBrackets)
+                    tupletBrackets: staffTuplets)
                 : staffScore;
             allBeamLayouts.AddRange(_elementCoordinator.LayoutBeams(staffSpannerScore, systemsArray, staffIndex));
             allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff));
@@ -1162,6 +1170,13 @@ public sealed class LayoutEngine
         ClefType.Treble8Below => "treble_8",
         _ => "treble"
     };
+
+    /// <summary>The tuplets belonging to one staff — used to scope beam-break
+    /// boundaries so a tuplet on another staff can't split this staff's beams.</summary>
+    private static ImmutableArray<TupletBracketItem> StaffTuplets(
+        ImmutableArray<TupletBracketItem> all, int staffIndex)
+        => all.IsDefaultOrEmpty ? all
+            : all.Where(t => t.StaffIndex == staffIndex).ToImmutableArray();
 
     private sealed record AnnotationLayouts(
         ImmutableArray<DynamicLayout> Dynamics,
