@@ -893,7 +893,7 @@ public sealed class LayoutEngine
         // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
         // Pass dynamic layouts so text spanners can stack below them
         var textSpannerItems = TextSpannerEngraver.DetectTextSpanners(musicMarks);
-        var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts);
+        var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYByIndex);
 
         // Detect and layout ottava brackets from ottava/loco marks
         var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);

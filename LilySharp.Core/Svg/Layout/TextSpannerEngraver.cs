@@ -156,7 +156,8 @@ public static class TextSpannerEngraver
         ImmutableArray<TextSpannerItem> textSpanners,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        ImmutableArray<DynamicLayout> dynamicLayouts)
+        ImmutableArray<DynamicLayout> dynamicLayouts,
+        Dictionary<int, double>? staffYByIndex = null)
     {
         if (textSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TextSpannerLayout>.Empty;
@@ -224,9 +225,16 @@ public static class TextSpannerEngraver
                 if (lineStartX > endX - MinimumLineLength)
                     lineStartX = endX;
 
+                // Below THIS spanner's staff, clear of the SAME staff's dynamics
+                // only. The staff's within-system offset moves the whole band down.
+                double staffOffset = staffYByIndex != null
+                    && staffYByIndex.TryGetValue(spanner.StaffIndex, out var so) ? so : 0;
+                var sameStaffDynamics = dynamicLayouts.IsDefaultOrEmpty
+                    ? dynamicLayouts
+                    : dynamicLayouts.Where(d => d.StaffIndex == spanner.StaffIndex).ToImmutableArray();
                 double y = CalculateYWithPriorityStacking(
                     startX, endX, segment.StartMeasureIndex,
-                    dynamicLayouts, measureToSystem);
+                    sameStaffDynamics, measureToSystem, staffOffset);
 
                 layouts.Add(new TextSpannerLayout(
                     StartMeasureIndex: segment.StartMeasureIndex,
@@ -239,7 +247,8 @@ public static class TextSpannerEngraver
                     DashPeriod: DashPeriod,
                     DashFraction: DashFraction,
                     SourcePosition: spanner.SourcePosition,
-                    SourceIndex: spanner.SourceIndex
+                    SourceIndex: spanner.SourceIndex,
+                    StaffIndex: spanner.StaffIndex
                 ));
             }
         }
@@ -260,10 +269,11 @@ public static class TextSpannerEngraver
     private static double CalculateYWithPriorityStacking(
         double startX, double endX, int startMeasureIndex,
         ImmutableArray<DynamicLayout> dynamicLayouts,
-        Dictionary<int, int> measureToSystem)
+        Dictionary<int, int> measureToSystem,
+        double staffOffset = 0)
     {
-        // Minimum Y: below staff with padding + text ascent
-        double minY = StaffBottom + StaffPadding + TextAscent;
+        // Minimum Y: below THIS staff (its within-system offset) with padding + text ascent
+        double minY = StaffBottom + staffOffset + StaffPadding + TextAscent;
 
         if (dynamicLayouts.IsDefaultOrEmpty)
             return minY;
@@ -334,11 +344,14 @@ public static class TextSpannerEngraver
 
         foreach (var (mark, srcIndex) in ritAccelMarks)
         {
-            // Find the next rit/accel mark (terminates this spanner)
+            // Find the next rit/accel mark ON THE SAME STAFF (terminates this
+            // spanner). Without the staff filter a rit on staff 2 would end at a rit
+            // in a later measure on staff 1 (they share score.MusicMarks).
             var nextMark = ritAccelMarks
                 .Select(x => x.Mark)
                 .FirstOrDefault(m =>
-                    m != mark && m.MeasureIndex > mark.MeasureIndex);
+                    m != mark && m.StaffIndex == mark.StaffIndex &&
+                    m.MeasureIndex > mark.MeasureIndex);
 
             int endMeasure;
             int endItem;
@@ -366,7 +379,8 @@ public static class TextSpannerEngraver
                     EndItemIndex: endItem,
                     Style: TextSpannerStyle.DashedLine,
                     SourcePosition: mark.SourcePosition,
-                    SourceIndex: srcIndex
+                    SourceIndex: srcIndex,
+                    StaffIndex: mark.StaffIndex
                 ));
             }
         }

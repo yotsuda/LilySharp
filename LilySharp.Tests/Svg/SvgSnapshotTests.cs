@@ -97,6 +97,8 @@ public class SvgSnapshotTests
         yield return new object[] { "test/lyric-break-pricing" };
         // Hairpins on both staves of a grand staff hang under their own staff.
         yield return new object[] { "test/multi-staff-hairpins" };
+        // Text spanners (rit./accel.) per staff on a grand staff.
+        yield return new object[] { "test/multi-staff-text-spanners" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };
