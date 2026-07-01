@@ -411,11 +411,16 @@ git push                                          # deploy の自動 "Bump dev b
     `SlurScoringProblem`(LP でも最難)へ headOffset を導通する必要があり、波及大。発火は
     「2度和音 + tie/slur」と稀。腰を据えて別途。
 - 中間クレフ/調号変更のスペーシングは LP の非音楽カラムの**近似**(端点リザーブ方式)。
-  - ✅ **評価済み・deferred(2026-06-29 夕、§12-4)**。LP 並置比較で**目立つ欠陥なし**(クレフ前後ギャップ・
-    位置とも LP とほぼ一致)。近似(次音符 spring に変更幅を上乗せ＋グリフ左 hang、`MeasureLayouter.cs:300-315`)は
-    documented かつ「reserved=drawn 一致」。正しい LP 構造(独立非音楽カラム＝両側 spring＋改行可能点)へ
-    揃えるのは**コア spacing への新カラム種別導入**で高コスト・高リスク・低可視効果。劣る点(中間クレフでの
-    改行不可など)は稀。**実害例が出たらピンポイント対応**。
+  - ✅ **評価済み・deferred(2026-06-29 夕・再確認2026-07-01、§12-4)**。**2026-07-01 に LP 実測で再評価**:
+    クレフが確保する増分=Lily# 2.52 vs LP 2.40(誤差5%)、目視でもクレフ位置は LP とほぼ一致=**endpoint-reserve
+    近似に可視欠陥なし**。正しい LP 構造(独立非音楽カラム＝両側 spring＋改行可能点)へ揃えるのは`Spring`/`SpringSolver`
+    のコア改修で高コスト・高リスク・低可視効果。**実害例が出たらピンポイント対応**。
+  - ⭐ **副産物:common-shortest-duration の定数バグを発見・修正(2026-07-01、commit `e7a1cf0`)**。§12-4 実測中に
+    「全4分譜が LP より 23% 間延び」を発見。真因=`EngravingDefaults.BaseShortestDuration` が **1/8(正:3/16)**。
+    spacing 基準 `d = min(base-shortest, mode)` で、8分譜は両者 1/8 で一致するが4分以上の譜で LP(3/16)と食い違っていた。
+    `define-grobs.scm:3242` の SpacingSpanner `base-shortest-duration=3/16` が正。定数1個修正で**全4分/2分主体譜が LP へ**
+    (4分ギャップ 3.70→3.0=LP 3.002 厳密一致、8分は不変)。100 snapshot 再ベース(全て横詰め=改善、構造変化12件は
+    line-break/trill 短縮=benign)。**spacing 系で最もコスパの良い LP 忠実化**(§12-6 の密8分4%より遥かに高可視)。
 - inter-system spacing は X 依存スカイラインでなく per-system extent の近似。
   - ✅ **対応済み(2026-07-01 夜、commit `4fc5a0e`)**。非最適パス(`LayoutEngine.CreatePages`、既定SVG)が
     `perSystemSkylines` を**受け取っていながら捨てて**スカラー和を使っていた=最適パス(`PageLayouter.PositionSystemsOnPage`、
