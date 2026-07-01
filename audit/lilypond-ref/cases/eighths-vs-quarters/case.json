@@ -2,6 +2,5 @@
   "description": "8th run then quarters: 8th gaps narrower than quarter gaps per get_duration_space.",
   "staff": 0,
   "heads": 6,
-  "tolerance": 0.08,
-  "knownDivergence": "Beamed-gap UNIFORMITY now matches LilyPond (beam-resolved stem directions). Residual ~6%: Lily#'s collision rod uses MinItemGap 0.4sp where LilyPond's skyline-horizontal-padding is 0.1sp, so dense 8th columns sit ~0.15sp wider relative to quarter gaps (LP gap5 1.474 vs ours 1.386). Fix = adopt LP padding + re-verify all collision minima; tracked follow-up."
+  "tolerance": 0.08
 }

@@ -45,5 +45,5 @@ Create `cases/<name>/` with:
 | case | status | encodes |
 |---|---|---|
 | even-quarters | PASS | four plain quarters space evenly |
-| triplet-vs-quarters | PASS (delta 0.013) | beats carrying triplet heads get more room; the beat under a half note gets plain quarter space |
-| eighths-vs-quarters | XFAIL | down-stem 8th gaps ~8% narrower than LilyPond — suspected stem_dir_correction divergence (note-spacing.cc) |
+| triplet-vs-quarters | PASS (delta 0.004) | beats carrying triplet heads get more room; the beat under a half note gets plain quarter space |
+| eighths-vs-quarters | PASS (delta 0.016) | 8th gaps narrower than quarter gaps per get_duration_space. (Was XFAIL — the "stem_dir_correction" guess was wrong; the real causes were a phantom flag in the beamed-note spacing skyline and the missing note-spacing.cc:77 head-width ideal term, fixed in 5d2358a / 78e3eea.) |

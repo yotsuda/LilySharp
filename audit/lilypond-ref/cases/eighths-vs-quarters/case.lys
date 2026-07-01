@@ -5,4 +5,4 @@ section Main {
   rh { $top }
 }
 structure { Main }
-score "x" { staff { rh } }
+score "x" { staff rh }

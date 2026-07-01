@@ -8,4 +8,4 @@ section Main {
   lh { $bottom }
 }
 structure { Main }
-score "x" { staff { rh } staff { lh } }
+score "x" { grandStaff { staff rh staff lh } }
