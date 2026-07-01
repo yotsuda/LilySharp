@@ -135,6 +135,23 @@ public class GrobOverrideTests
     }
 
     [Fact]
+    public void Collector_Override_NegativeWithSpace_RoundTrips_AndValueStripped()
+    {
+        // "- 5" (a space between the sign and the digits) must (a) round-trip verbatim —
+        // the combined negative-number token keeps the interior whitespace in its text so
+        // root.FullWidth == text.Length and positions don't drift — and (b) still resolve
+        // to the numeric value "-5" (the collector strips that interior whitespace).
+        var source = "override Stem.length = - 5 c4 d e f";
+        var tree = SyntaxTree.Parse(source);
+
+        Assert.Equal(source, tree.ToFullString());
+
+        var score = new MeasureCollector().Collect(tree);
+        Assert.Single(score.GrobOverrides);
+        Assert.Equal("-5", score.GrobOverrides[0].Value);
+    }
+
+    [Fact]
     public void Collector_Revert_Basic()
     {
         var tree = SyntaxTree.Parse("revert Stem.length c4 d e f");

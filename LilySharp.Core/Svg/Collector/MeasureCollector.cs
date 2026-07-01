@@ -2966,9 +2966,13 @@ public sealed class MeasureCollector
         string propertyName = node.PropertyName.Text;
         // A quoted value (e.g. color = "red") stores its CONTENT, not the quotes, so the
         // resolver's GetString/ParseColor see "red" — matching the bare-identifier form.
+        // A combined negative number keeps any interior whitespace ("- 5") in its token
+        // text for round-tripping, so strip it here for the numeric reparse (GetInt /
+        // GetDouble). Identifiers and positive integers carry no interior whitespace, so
+        // stripping is a no-op for them.
         string value = node.ValueToken.Kind == SyntaxKind.StringLiteral
             ? node.ValueToken.Text.Trim('"')
-            : node.ValueToken.Text;
+            : string.Concat(node.ValueToken.Text.Where(c => !char.IsWhiteSpace(c)));
         _grobOverrides.Add(new GrobOverride(grobType, propertyName, value, measureIndex, itemIndex, isOnce));
     }
 

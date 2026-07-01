@@ -941,8 +941,15 @@ internal sealed class Parser
         if (Current.Kind == SyntaxKind.IntegerLiteral)
         {
             var num = Advance();
-            // Create a combined token with the negative value
-            return new SyntaxToken(SyntaxKind.IntegerLiteral, "-" + num.Text,
+            // Keep ALL consumed text — including any whitespace written between the '-'
+            // and the digits ("- 5") — in the token's TEXT so its width equals the source
+            // span (root.FullWidth == text.Length) and the tree round-trips exactly. The
+            // interior trivia has nowhere else to live: a token's trivia is only leading
+            // or trailing, never internal. The collector strips this interior whitespace
+            // when it reads the numeric value.
+            string inner = (minus.TrailingTrivia?.ToFullString() ?? "")
+                         + (num.LeadingTrivia?.ToFullString() ?? "");
+            return new SyntaxToken(SyntaxKind.IntegerLiteral, "-" + inner + num.Text,
                 minus.LeadingTrivia, num.TrailingTrivia);
         }
         // Error: minus not followed by number
