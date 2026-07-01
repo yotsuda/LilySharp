@@ -417,13 +417,15 @@ git push                                          # deploy の自動 "Bump dev b
     揃えるのは**コア spacing への新カラム種別導入**で高コスト・高リスク・低可視効果。劣る点(中間クレフでの
     改行不可など)は稀。**実害例が出たらピンポイント対応**。
 - inter-system spacing は X 依存スカイラインでなく per-system extent の近似。
-  - ✅ **評価済み・deferred(2026-06-29 夕、§12-5)**。**最適ページ分割パスは実装済み**
-    (`PageLayouter.PositionSystemsOnPage` が `prevDown.Distance(nextUp)` を使用)。スカラー近似が残るのは
-    **非最適パス**(`LayoutEngine.cs:503-513`)で、SVG は既定(`UseOptimalPageBreaking=false`/`PageHeight=0`)で
-    こちらを通る。限定修正(非最適側でも skyline `Distance` を使う、最適側のミラー)は**小さいが影響が広い**
-    (全マルチシステム SVG snapshot の Y がずれ、再ベースライン多数)。`VerticalSkyline.Distance` の座標系が
-    extent と微妙に異なり要精査。**かつ F3(レイアウトの query 化)が同じ `system_layout` を作り替える予定**
-    のため、今ここで広域再ベースラインするのは無駄/衝突。F3 後 or 専用に。
+  - ✅ **対応済み(2026-07-01 夜、commit `4fc5a0e`)**。非最適パス(`LayoutEngine.CreatePages`、既定SVG)が
+    `perSystemSkylines` を**受け取っていながら捨てて**スカラー和を使っていた=最適パス(`PageLayouter.PositionSystemsOnPage`、
+    `prevDown.Distance(nextUp)`)の配線漏れ。非最適側でも `Distance()` を使うよう修正。**座標整合(doc の懸念)は解決**:
+    down skyline は system 参照Yから測る(`SkylineBuilder` の bottom-staff seed が `systemHeight-staffHeight/2`)ので
+    `Distance()≈systemHeight+downExtent+upExtent`=スカラー和と互換。式は
+    `minDistance = Math.Max(systemHeight + SystemSpacing, skylineDistance + padding)` で、**fallback(空 skyline)は
+    byte-identical**。`Distance()` は真の per-X 最小クリアランスゆえ、フロア＋padding で**overlap は原理上発生しない**
+    (「近づける」だけ)。**24 の複数システム snapshot が全て height 減(=詰まった、広がりゼロ)、数値スイープで staff-block
+    gap 全て正、最密 1.80(showcase/01-expressions)も目視でインク非衝突を確認**。単一システムと fallback は不変。1986緑。
 - XFAIL: eighths-vs-quarters の MinItemGap 0.4 vs LP skyline-horizontal-padding 0.1(追跡中)。
   - ✅ **評価済み・deferred(2026-06-29 夕、§12-6)**。実体は「`GlyphMetrics.MinItemGap` 既定 0.4 を
     LP の 0.1 にするか」というグローバル調整。**設定可能化は実装済み**(`NoteSpacingParameters.MinItemGap`
