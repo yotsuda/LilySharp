@@ -55,8 +55,14 @@ public sealed class BeamDetector
         var all = ImmutableArray.CreateBuilder<BeamGroup>();
         for (int v = 0; v < score.Voices.Length; v++)
         {
+            // A tuplet bounds beaming ONLY within its own voice — filtering by
+            // VoiceIndex stops an upper voice's triplet from splitting a lower
+            // voice's eighth run at the shared item index.
+            var voiceTuplets = score.TupletBrackets.IsDefaultOrEmpty
+                ? score.TupletBrackets
+                : score.TupletBrackets.Where(t => t.VoiceIndex == v).ToImmutableArray();
             all.AddRange(DetectBeamGroups(
-                score.Voices[v], score.TimeSignature, score.TupletBrackets,
+                score.Voices[v], score.TimeSignature, voiceTuplets,
                 voiceIndex: v, forceStemUp: VoiceDefaults.GetDefaultStemUp(v + 1)));
         }
         return all.ToImmutable();

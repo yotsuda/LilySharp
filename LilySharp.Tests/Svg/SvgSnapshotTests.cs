@@ -111,6 +111,9 @@ public class SvgSnapshotTests
         // Second-voice beaming: voice 2's eighths/sixteenths beam per voice, BELOW
         // the notes (stems forced down), while voice 1's quarters stay unbeamed.
         yield return new object[] { "test/multivoice-beams" };
+        // A tuplet in voice 1 must not break voice 2's beaming (tuplet boundaries
+        // are voice-local): voice 2's eighths still beam 4+4.
+        yield return new object[] { "test/multivoice-tuplet-beams" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };

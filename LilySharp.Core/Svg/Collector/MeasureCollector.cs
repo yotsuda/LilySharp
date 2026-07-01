@@ -510,6 +510,11 @@ public sealed class MeasureCollector
     // each dynamic so layout positions it under its own staff. 0 for the single-
     // staff/single-Score paths.
     private int _currentStaffIndex = 0;
+    // Voice index (within the current staff) being collected. Stamped onto each
+    // tuplet bracket so auto-beaming applies a tuplet's boundary only to its OWN
+    // voice (a lower voice's eighths must not break at an upper voice's triplet).
+    // 0 = primary voice; the parallel sub-voices set it in BuildExtraVoiceTracks.
+    private int _currentVoiceIndex = 0;
     // Articulation marks
     private readonly List<ArticulationItem> _articulations = new();
     // Grace notes
@@ -1231,8 +1236,12 @@ public sealed class MeasureCollector
                 // measure index; shift it to the span's real start so dynamics etc.
                 // land in the right measure.
                 _metadataMeasureOffset = start;
+                // Tag this sub-voice's tuplets with its voice index so their
+                // beam-breaking boundaries never leak into a sibling voice.
+                _currentVoiceIndex = t;
                 var sub = CollectMeasuresFromNode(blocks[t]);
                 ResolveBeamStemDirections(sub);
+                _currentVoiceIndex = 0;
                 _metadataMeasureOffset = 0;
 
                 _octave.Restore(savedOctave);
@@ -1794,7 +1803,8 @@ public sealed class MeasureCollector
                 measureIndex,
                 tuplet.Position,
                 nestingDepth,
-                _currentStaffIndex
+                _currentStaffIndex,
+                _currentVoiceIndex
             ));
         }
 
@@ -1814,6 +1824,7 @@ public sealed class MeasureCollector
         _variables.Clear();
         _dynamics.Clear();
         _currentStaffIndex = 0;
+        _currentVoiceIndex = 0;
         _articulations.Clear();
         _graceNotes.Clear();
         _arpeggios.Clear();

@@ -47,7 +47,12 @@ public sealed record TupletBracketItem(
     int NestingDepth = 0,
     /// <summary>Global staff index this tuplet belongs to (multi-staff routing;
     /// see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
-    int StaffIndex = 0
+    int StaffIndex = 0,
+    /// <summary>Index of the voice (within its staff) that owns this tuplet.
+    /// 0 = primary. Auto-beaming breaks at a tuplet boundary only within the
+    /// SAME voice, so the beam detector must not apply one voice's tuplet
+    /// indices to another voice's note stream.</summary>
+    int VoiceIndex = 0
 )
 {
     /// <summary>
