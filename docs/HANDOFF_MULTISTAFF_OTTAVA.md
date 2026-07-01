@@ -1,5 +1,17 @@
 # 引き継ぎ (a): 多譜表 ottava の完遂 ― above-staff スタッカーの per-staff 化
 
+> **✅ 完了(2026-07-01、commit `fix(ottava): support ottava brackets per staff on a grand staff`、未 push)。**
+> #6「多譜表スパナ」の残り 1 種 = ottava を実装。**手順 A(StaffIndex 導通)+ 手順 B は簡略版**を採用:
+> 核心の「`StackAboveStaff` を per-(system,staff) 化(per-staff up-skyline 配管)」ではなく、**trill と同じ
+> 前例**(`StackAboveStaff` の trill ループの `if (t.StaffIndex != 0) continue;`)を ottava にも適用した。
+> engraver(`OttavaBracketEngraver.Calculate`)が `staffYByIndex` で下段バケットを自分の譜表へオフセット済みで、
+> 下段の above グロブは再スタックせず engraver Y を信頼する ― これは**同ファイルの trill が既に採る家のスタイル**で、
+> per-staff up-skyline の広域配管(高コスト)を避ける最小・低リスク解。単一譜 byte-identical、fixture
+> `test/multi-staff-ottava`(8va×2 段)、unit test で per-staff 終端と 8va(above)/8vb(below)のオフセットを担保。
+> **残近似**: 下段バケットは自分の譜表の音符スカイラインとの衝突再回避はしない(trill と同じ割り切り、per-staff
+> up-skyline 配管は deferred)。**8vb(down)は現行 .lys 文法で記述不可**(`@ottava.bassa`/`@8vb` はドット/数字先頭で
+> lexer が割る)ゆえ below パスは fixture でなく unit test で検証。以下は着手前の設計メモ(経緯として残す)。
+
 **前提: `docs/DEV_BUGFIX_WORKFLOW.md` を先に読むこと**(ripple shell / `Write` でファイル化 / master 直 /
 勝手にブランチ作らない / LILYPOND-REF / **単一譜 byte-identical 不変条件** / `Co-Authored-By: Claude <current-model>`)。
 本書はその流儀の上で「多譜表スパナ #6」の**残り 1 種 = ottava(8va/8vb/15ma/15mb)**を仕上げるための手順。
