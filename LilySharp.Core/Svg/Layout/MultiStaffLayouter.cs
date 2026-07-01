@@ -81,8 +81,18 @@ public sealed class MultiStaffLayouter
 
             if (group.IsGrandStaff)
             {
-                // Intra-group: staff-staff-spacing basic distance
-                height += staffHeight * 2 + (sp.StaffStaff.BasicDistance - staffHeight);
+                // Sum each staff's ACTUAL height plus one intra-group gap per pair. A
+                // grand staff is usually two normal staves (piano/harp), but may hold
+                // three-plus (organ) or an ossia/tab staff; the old `staffHeight * 2`
+                // hardcoded exactly two normal staves and under-counted anything else.
+                // For the common two-normal-staff case this still equals
+                // `staffHeight*2 + (BasicDistance - staffHeight)`, and it mirrors LP's
+                // align-interface (sum of real staff extents + inter-staff spacing).
+                // LILYPOND-REF: lily/align-interface.cc internal_get_minimum_translations()
+                foreach (var staff in group.Staves)
+                    height += GetStaffHeight(staff);
+                if (group.StaffCount > 1)
+                    height += (sp.StaffStaff.BasicDistance - staffHeight) * (group.StaffCount - 1);
             }
             else
             {

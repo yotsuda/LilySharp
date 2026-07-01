@@ -66,8 +66,13 @@ public sealed class MidiExporter
         _root = tree.GetRoot();
         ProcessNode(_root, mainTrack, conductorTrack);
 
-        // Add initial time signature (may have been updated during processing)
-        conductorTrack.TimeSignatures.Insert(0, new TimeSignatureChange(0, _timeNumerator, _timeDenominator));
+        // Ensure there is an initial time signature at tick 0. If the score already
+        // declared one at the downbeat (ProcessTimeSignature added it), keep that and
+        // do NOT insert another: seeding the running (post-processing, i.e. final)
+        // value here put a spurious downbeat event on any score whose time signature
+        // changes later. Only seed the default when no tick-0 signature exists.
+        if (!conductorTrack.TimeSignatures.Any(ts => ts.Tick == 0))
+            conductorTrack.TimeSignatures.Insert(0, new TimeSignatureChange(0, _timeNumerator, _timeDenominator));
 
         if (mainTrack.Notes.Count > 0)
             midi.Tracks.Add(mainTrack);

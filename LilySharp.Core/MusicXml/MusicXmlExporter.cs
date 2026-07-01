@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 
@@ -455,24 +456,9 @@ public sealed class MusicXmlExporter
         var pitch = key.Pitch?.ToFullString().Trim().ToLower();
         var isMajor = key.IsMajor;
 
-        _keyFifths = pitch switch
-        {
-            "c" => isMajor ? 0 : -3,
-            "g" => isMajor ? 1 : -2,
-            "d" => isMajor ? 2 : -1,
-            "a" => isMajor ? 3 : 0,
-            "e" => isMajor ? 4 : 1,
-            "b" => isMajor ? 5 : 2,
-            "fis" => isMajor ? 6 : 3,
-            "cis" => isMajor ? 7 : 4,
-            "f" => isMajor ? -1 : -4,
-            "bes" => isMajor ? -2 : -5,
-            "ees" => isMajor ? -3 : -6,
-            "aes" => isMajor ? -4 : -7,
-            "des" => isMajor ? -5 : -8,
-            "ges" => isMajor ? -6 : -9,
-            _ => 0
-        };
+        // Delegate to KeySpelling (the single source of truth for tonic -> fifths);
+        // an unrecognized tonic falls back to 0 (C), as before.
+        _keyFifths = KeySpelling.SharpsFor(pitch ?? "", isMajor ? "major" : "minor") ?? 0;
         _keyMode = isMajor ? "major" : "minor";
     }
 

@@ -343,6 +343,14 @@ public sealed class SpringSolver
 
                 if (idealLen < dist)
                 {
+                    // Guard the divide the same way the blocking-force branch guards
+                    // invK below: a range of springs with zero total ideal length
+                    // cannot be scaled up, and dist / 0 would poison every spring with
+                    // NaN (0 * +Inf). Valid springs always have IdealDistance > 0, so
+                    // this only trips on degenerate input; skip the rod rather than NaN.
+                    if (idealLen <= 0)
+                        continue;
+
                     // Need to scale up ideal distances
                     double factor = dist / idealLen;
                     for (int i = left; i < right; i++)

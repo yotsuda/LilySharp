@@ -124,10 +124,18 @@ public sealed class IncrementalCompiler
         // — are memoized; Compute(MultiStaffScore) gives the sound all-staff key.
         bool overrideFree = score.GrobOverrides.IsDefaultOrEmpty
             && score.GrobReverts.IsDefaultOrEmpty;
-        var contentKeys = overrideFree
+        // Secondary voices (polyphony within a staff) are captured by NEITHER the
+        // per-measure content key NOR the spring gate — both fold only each staff's
+        // PRIMARY voice (MeasureContentKey.Compute, ComputeMultiStaffSpringData). A
+        // secondary-voice edit would therefore leave the key/gate unchanged and wrongly
+        // trip reuse, emitting stale voice-2 geometry. Gate every reuse path (content
+        // key, per-system cache, whole-layout reuse) on single-voice staves so
+        // polyphonic scores fall back to full layout, which is byte-identical.
+        bool reuseEligible = overrideFree && !score.HasSecondaryVoices;
+        var contentKeys = reuseEligible
             ? MeasureContentKey.Compute(score)
             : default;
-        if (overrideFree)
+        if (reuseEligible)
         {
             _systemCache ??= new SystemLayoutCache();
             _systemCache.SetContentKeys(contentKeys);
@@ -162,7 +170,7 @@ public sealed class IncrementalCompiler
         // (overrides spread spacing globally and are not localized by the per-measure key).
         var globalKey = (score.Title, score.Composer, score.Tempo);
         bool reuse = skip
-            && overrideFree
+            && reuseEligible
             && _cachedLayout != null
             && !_contentKeys.IsDefault
             && globalKey == _globalKey

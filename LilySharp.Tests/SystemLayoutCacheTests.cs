@@ -139,10 +139,12 @@ public class SystemLayoutCacheTests
     [Fact]
     public void MultiStaff_ReusesSystems_AndStaysByteIdentical()
     {
-        // grammar-tour is a 2-staff score with no grob overrides, so the cache
-        // engages (S5-3c) with per-measure keys that combine both staves, and both
-        // the spring solve AND the skyline are memoized per system.
-        var source = LoadFixture("showcase/grammar-tour");
+        // 03-piano is a single-voice, 2-staff grand-staff score with no grob
+        // overrides, so the per-system cache engages (S5-3c) with per-measure keys
+        // that combine both staves, and both the spring solve AND the skyline are
+        // memoized per system. (A multi-VOICE score is deliberately excluded from
+        // reuse — see MultiVoice_FallsBackToFullLayout_AndStaysByteIdentical.)
+        var source = LoadFixture("showcase/03-piano");
         var session = new IncrementalCompiler(SyntaxTree.Parse(source));
         session.Render();
 
@@ -166,6 +168,35 @@ public class SystemLayoutCacheTests
         var incremental2 = session.Edit(new TextChange(new TextSpan(source.Length / 2 + 1, 0), " c4"));
         var full2 = new IncrementalCompiler(SyntaxTree.Parse(edited2)).Render();
         Assert.Equal(full2, incremental2);
+    }
+
+    [Fact]
+    public void MultiVoice_FallsBackToFullLayout_AndStaysByteIdentical()
+    {
+        // grammar-tour has a staff with two simultaneous voices (voice { } voice { }).
+        // The per-measure content key and the spring gate fold only each staff's
+        // PRIMARY voice, so an edit to a SECONDARY voice would not be localized by
+        // them — reuse could emit stale voice-2 geometry. The incremental compiler
+        // must therefore disable reuse for any polyphonic score and fall back to a
+        // full layout every edit, which is byte-identical with a full recompile.
+        var source = LoadFixture("showcase/grammar-tour");
+        var session = new IncrementalCompiler(SyntaxTree.Parse(source));
+        session.Render();
+
+        // No per-system cache is installed for a multi-voice score.
+        Assert.Null(session.SystemCache);
+
+        // Editing the SECOND voice's first pitch (b' -> c') must stay byte-identical
+        // to a full recompile, and must NOT reuse the cached layout.
+        int at = source.IndexOf("voice { b'2", StringComparison.Ordinal) + "voice { ".Length;
+        Assert.True(at > "voice { ".Length, "expected a 'voice { b'2' second voice in the fixture");
+        string edited = source.Remove(at, 1).Insert(at, "c");
+        var incremental = session.Edit(new TextChange(new TextSpan(at, 1), "c"));
+
+        Assert.False(session.LastEditReusedLayout);
+        Assert.Null(session.SystemCache);
+        var full = new IncrementalCompiler(SyntaxTree.Parse(edited)).Render();
+        Assert.Equal(full, incremental);
     }
 
     private static string LoadFixture(string rel)

@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Text;
+using System.Globalization;
 using LilySharp.Core.Rendering;
 using LilySharp.Core.Rendering.Svg;
 using LilySharp.Core.Svg.Collector;
@@ -187,10 +188,11 @@ public static class SvgGenerator
 
         // Build combined SVG
         var sb = new StringBuilder();
-        var px = (double v) => (v * 4).ToString("F1");
+        var px = (double v) => (v * 4).ToString("F1", CultureInfo.InvariantCulture);
+        var n = (double v) => v.ToString("F2", CultureInfo.InvariantCulture);
 
         sb.AppendLine("""<?xml version="1.0" encoding="UTF-8"?>""");
-        sb.AppendLine($"""<svg xmlns="http://www.w3.org/2000/svg" width="{px(maxWidth)}" height="{px(totalHeight)}" viewBox="0 0 {maxWidth} {totalHeight}">""");
+        sb.AppendLine($"""<svg xmlns="http://www.w3.org/2000/svg" width="{px(maxWidth)}" height="{px(totalHeight)}" viewBox="0 0 {n(maxWidth)} {n(totalHeight)}">""");
 
         // Common styles
         sb.AppendLine("<style>");
@@ -211,7 +213,7 @@ public static class SvgGenerator
                 // Draw movement title
                 double titleX = maxWidth / 2;
                 double titleY = yOffset + movementTitleFontSize;
-                sb.AppendLine($"""  <text x="{titleX}" y="{titleY}" class="movement-title" font-size="{movementTitleFontSize}">{EscapeXml(title)}</text>""");
+                sb.AppendLine($"""  <text x="{n(titleX)}" y="{n(titleY)}" class="movement-title" font-size="{n(movementTitleFontSize)}">{EscapeXml(title)}</text>""");
                 yOffset += movementTitleSpacing;
             }
 
@@ -219,7 +221,7 @@ public static class SvgGenerator
             var content = ExtractSvgContent(svgContent);
             if (!string.IsNullOrEmpty(content))
             {
-                sb.AppendLine($"""  <g transform="translate(0, {yOffset})">""");
+                sb.AppendLine($"""  <g transform="translate(0, {n(yOffset)})">""");
                 sb.AppendLine(content);
                 sb.AppendLine("  </g>");
             }

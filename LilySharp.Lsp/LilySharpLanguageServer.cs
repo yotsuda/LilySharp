@@ -849,8 +849,8 @@ public sealed class LilySharpLanguageServer
         if (content == null)
             return null;
 
-        var (startLine, startCol) = GetLineAndColumn(doc.Text, node.Position);
-        var (endLine, endCol) = GetLineAndColumn(doc.Text, node.Position + node.FullWidth);
+        var (startLine, startCol) = GetLineAndColumn(doc.Text, node.Span.Start);
+        var (endLine, endCol) = GetLineAndColumn(doc.Text, node.Span.End);
 
         return new Hover
         {
@@ -984,8 +984,8 @@ public sealed class LilySharpLanguageServer
 
         if (name == null) return null;
 
-        var (startLine, startCol) = GetLineAndColumn(text, node.Position);
-        var (endLine, endCol) = GetLineAndColumn(text, node.Position + node.FullWidth);
+        var (startLine, startCol) = GetLineAndColumn(text, node.Span.Start);
+        var (endLine, endCol) = GetLineAndColumn(text, node.Span.End);
 
         return new DocumentSymbol
         {
@@ -1086,8 +1086,11 @@ public sealed class LilySharpLanguageServer
 
     private Location CreateLocation(Uri uri, string text, SyntaxNode node)
     {
-        var (startLine, startCol) = GetLineAndColumn(text, node.Position);
-        var (endLine, endCol) = GetLineAndColumn(text, node.Position + node.FullWidth);
+        // Use the node's Span (the bare token, excluding leading/trailing trivia)
+        // rather than Position/FullWidth (which include trivia): an LSP range must
+        // cover the identifier itself, not the surrounding whitespace/newlines.
+        var (startLine, startCol) = GetLineAndColumn(text, node.Span.Start);
+        var (endLine, endCol) = GetLineAndColumn(text, node.Span.End);
 
         return new Location
         {
@@ -1245,23 +1248,23 @@ public sealed class LilySharpLanguageServer
 
             if (tokenType.HasValue)
             {
-                var (line, character) = GetLineAndCharacter(text, node.Position);
-                tokens.Add(new SemanticToken(line, character, node.FullWidth, tokenType.Value));
+                var (line, character) = GetLineAndCharacter(text, node.Span.Start);
+                tokens.Add(new SemanticToken(line, character, node.Width, tokenType.Value));
             }
         }
         else if (node is VariableReferenceSyntax varRef)
         {
             // Variable reference (after $ or use)
             var nameNode = varRef.Name;
-            var (line, character) = GetLineAndCharacter(text, nameNode.Position);
-            tokens.Add(new SemanticToken(line, character, nameNode.FullWidth, 1));
+            var (line, character) = GetLineAndCharacter(text, nameNode.Span.Start);
+            tokens.Add(new SemanticToken(line, character, nameNode.Width, 1));
         }
         else if (node is VariableDeclarationSyntax varDecl)
         {
             // Variable declaration name
             var nameNode = varDecl.Name;
-            var (line, character) = GetLineAndCharacter(text, nameNode.Position);
-            tokens.Add(new SemanticToken(line, character, nameNode.FullWidth, 1));
+            var (line, character) = GetLineAndCharacter(text, nameNode.Span.Start);
+            tokens.Add(new SemanticToken(line, character, nameNode.Width, 1));
         }
 
         // Recurse into children
@@ -1398,13 +1401,13 @@ public sealed class LilySharpLanguageServer
         {
             if (decl.Name.Text == variableName)
             {
-                var (line, character) = GetLineAndCharacter(doc.Text, decl.Name.Position);
+                var (line, character) = GetLineAndCharacter(doc.Text, decl.Name.Span.Start);
                 edits.Add(new TextEdit
                 {
                     Range = new LspRange
                     {
                         Start = new Position { Line = line, Character = character },
-                        End = new Position { Line = line, Character = character + decl.Name.FullWidth }
+                        End = new Position { Line = line, Character = character + decl.Name.Width }
                     },
                     NewText = newName
                 });
@@ -1416,13 +1419,13 @@ public sealed class LilySharpLanguageServer
         {
             if (reference.Name.Text == variableName)
             {
-                var (line, character) = GetLineAndCharacter(doc.Text, reference.Name.Position);
+                var (line, character) = GetLineAndCharacter(doc.Text, reference.Name.Span.Start);
                 edits.Add(new TextEdit
                 {
                     Range = new LspRange
                     {
                         Start = new Position { Line = line, Character = character },
-                        End = new Position { Line = line, Character = character + reference.Name.FullWidth }
+                        End = new Position { Line = line, Character = character + reference.Name.Width }
                     },
                     NewText = newName
                 });
@@ -1904,13 +1907,13 @@ public sealed class LilySharpLanguageServer
         {
             if (decl.Name.Text == variableName)
             {
-                var (line, character) = GetLineAndCharacter(doc.Text, decl.Name.Position);
+                var (line, character) = GetLineAndCharacter(doc.Text, decl.Name.Span.Start);
                 highlights.Add(new DocumentHighlight
                 {
                     Range = new LspRange
                     {
                         Start = new Position { Line = line, Character = character },
-                        End = new Position { Line = line, Character = character + decl.Name.FullWidth }
+                        End = new Position { Line = line, Character = character + decl.Name.Width }
                     },
                     Kind = DocumentHighlightKind.Write
                 });
@@ -1922,13 +1925,13 @@ public sealed class LilySharpLanguageServer
         {
             if (reference.Name.Text == variableName)
             {
-                var (line, character) = GetLineAndCharacter(doc.Text, reference.Name.Position);
+                var (line, character) = GetLineAndCharacter(doc.Text, reference.Name.Span.Start);
                 highlights.Add(new DocumentHighlight
                 {
                     Range = new LspRange
                     {
                         Start = new Position { Line = line, Character = character },
-                        End = new Position { Line = line, Character = character + reference.Name.FullWidth }
+                        End = new Position { Line = line, Character = character + reference.Name.Width }
                     },
                     Kind = DocumentHighlightKind.Read
                 });

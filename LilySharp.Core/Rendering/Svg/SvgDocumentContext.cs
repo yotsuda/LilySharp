@@ -143,7 +143,9 @@ public sealed class SvgDocumentContext : IDocumentContext
         double heightPx = heightSpaces * _options.PixelsPerSpace;
 
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        sb.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{widthPx:F1}\" height=\"{heightPx:F1}\" viewBox=\"0 0 {widthSpaces:F2} {heightSpaces:F2}\">");
+        sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{0:F1}\" height=\"{1:F1}\" viewBox=\"0 0 {2:F2} {3:F2}\">",
+            widthPx, heightPx, widthSpaces, heightSpaces));
         sb.AppendLine("<style>");
         var fontFaceRule = GetFontFaceRule();
         if (!string.IsNullOrEmpty(fontFaceRule))

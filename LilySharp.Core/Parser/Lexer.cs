@@ -303,9 +303,13 @@ internal sealed class Lexer
 
         while (!IsAtEnd && Current != '"')
         {
-            if (Current == '\\' && !IsAtEnd)
-                _position++; // skip escape
-            _position++;
+            if (Current == '\\')
+            {
+                _position++; // skip the backslash
+                if (IsAtEnd)
+                    break; // trailing backslash at EOF: no escaped char to consume
+            }
+            _position++; // consume the (escaped or normal) character
         }
 
         if (Current == '"')
