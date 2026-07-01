@@ -160,10 +160,12 @@ public class PageBreakerTests
         spacing.AppendSystem(system1);
         spacing.AppendSystem(system2);
 
-        // First system: full height (20)
-        // Second system: staffHeight + bottomExtent (10 + 5 = 15)
-        // Plus spring length from first system
-        Assert.True(spacing.RodHeight >= 35);
+        // Every system contributes its FULL height to the rod (its top skyline is
+        // what clears the previous system's bottom), matching LilyPond's
+        // rod_height_ += line.tallness_ (page-spacing.cc:55). Omitting system2's
+        // TopExtent would under-count the rod as 35 (20 + staff 10 + bottom 5).
+        // First system full height (20) + second system full height (20) = 40.
+        Assert.Equal(40, spacing.RodHeight);
     }
 
     [Fact]

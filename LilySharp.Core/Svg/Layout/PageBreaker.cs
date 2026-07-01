@@ -203,8 +203,16 @@ public sealed class PageSpacing
         }
         else
         {
-            // Add spring between previous and current system
-            _rodHeight += system.StaffHeight + system.BottomExtent;
+            // Add spring between previous and current system. The rod (minimum)
+            // must include this system's FULL height — TopExtent + StaffHeight +
+            // BottomExtent — because its top skyline is what clears the previous
+            // system's bottom. Omitting TopExtent under-counts the page minimum, so
+            // the breaker crams more systems than PositionSystemsOnPage actually
+            // places (it spaces by the next system's up-extent, PageLayouter.cs:248/254),
+            // pushing lower systems past the bottom margin.
+            // LILYPOND-REF: lily/page-spacing.cc:55 rod_height_ += line.tallness_
+            //   (tallness includes the current line's top skyline; page-breaking.cc:1136).
+            _rodHeight += system.Height;
             _springLength += _lastSystem!.GetSpringLength(system);
         }
 
