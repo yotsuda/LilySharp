@@ -235,6 +235,13 @@ public sealed class ElementCoordinator
                 group,
                 itemXPositions);
 
+            // Also keep the beam clear of the OTHER voices' notes/rests (a
+            // polyphonic staff's stem-up beam rides over a high note held below).
+            double beamLeftX = itemXPositions[group.Members[0].ItemIndex];
+            double beamRightX = itemXPositions[group.Members[^1].ItemIndex];
+            collisions.AddRange(CollectCrossVoiceBeamCollisions(
+                score, group, measureLayout, beamLeftX, beamRightX));
+
             var beamLayout = _beamEngraver.CalculateBeamLayout(
                 group,
                 itemXPositions,
@@ -430,28 +437,8 @@ public sealed class ElementCoordinator
             if (itemX < beamLeftX - xPadding || itemX > beamRightX + xPadding)
                 continue;
 
-            int staffPosition;
-            double halfHeight;
-
-            switch (item)
-            {
-                case RestItem:
-                    staffPosition = (int)EngravingDefaults.RestCenterPosition;
-                    halfHeight = EngravingDefaults.RestExtent;
-                    break;
-                case NoteItem note:
-                    staffPosition = note.StaffPosition;
-                    halfHeight = EngravingDefaults.NoteheadHalfHeight;
-                    break;
-                case ChordItem chord:
-                    int minPos = chord.Notes.Min(n => n.StaffPosition);
-                    int maxPos = chord.Notes.Max(n => n.StaffPosition);
-                    staffPosition = (minPos + maxPos) / 2;
-                    halfHeight = (maxPos - minPos) / 2.0 + EngravingDefaults.NoteheadHalfHeight;
-                    break;
-                default:
-                    continue;
-            }
+            if (!TryGetCollisionExtent(item, out int staffPosition, out double halfHeight))
+                continue;
 
             // BeamCollision.X is relative to the beam's left stem —
             // BeamScoringProblem range-checks it against [0, xSpan] and
@@ -462,6 +449,79 @@ public sealed class ElementCoordinator
                 MinY: staffPosition - halfHeight,
                 MaxY: staffPosition + halfHeight,
                 BasePenalty: 1.0));
+        }
+
+        return collisions;
+    }
+
+    /// <summary>
+    /// Staff-position centre and half-height of an item's ink for beam collision
+    /// scoring; false for items a beam never needs to clear (clef/key changes).
+    /// </summary>
+    private static bool TryGetCollisionExtent(MusicItem item, out int staffPosition, out double halfHeight)
+    {
+        switch (item)
+        {
+            case RestItem:
+                staffPosition = (int)EngravingDefaults.RestCenterPosition;
+                halfHeight = EngravingDefaults.RestExtent;
+                return true;
+            case NoteItem note:
+                staffPosition = note.StaffPosition;
+                halfHeight = EngravingDefaults.NoteheadHalfHeight;
+                return true;
+            case ChordItem chord:
+                int minPos = chord.Notes.Min(n => n.StaffPosition);
+                int maxPos = chord.Notes.Max(n => n.StaffPosition);
+                staffPosition = (minPos + maxPos) / 2;
+                halfHeight = (maxPos - minPos) / 2.0 + EngravingDefaults.NoteheadHalfHeight;
+                return true;
+            default:
+                staffPosition = 0;
+                halfHeight = 0;
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// Collision objects for a beam from the OTHER voices on the same staff:
+    /// LilyPond's Beam_collision_engraver keeps a beam clear of noteheads/rests
+    /// in sibling voices (e.g. a stem-up beam rides over a high note held in the
+    /// lower voice). Cross-voice X only aligns through the shared timing columns,
+    /// so this is skipped for the item-slot layout path.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/beam-collision-engraver.cc.</remarks>
+    private List<BeamCollision> CollectCrossVoiceBeamCollisions(
+        Score score, BeamGroup group, MeasureLayout measureLayout,
+        double beamLeftX, double beamRightX)
+    {
+        var collisions = new List<BeamCollision>();
+        if (score.Voices.Length <= 1
+            || measureLayout.Columns.IsDefaultOrEmpty || measureLayout.Columns.Length == 0)
+            return collisions;
+
+        double xPadding = _options.CollisionXPadding;
+        for (int v = 0; v < score.Voices.Length; v++)
+        {
+            if (v == group.VoiceIndex) continue;
+            var measures = score.Voices[v].Measures;
+            if (group.MeasureIndex >= measures.Length) continue;
+
+            var timing = Fraction.Zero;
+            foreach (var item in measures[group.MeasureIndex].Items)
+            {
+                double itemX = measureLayout.X + measureLayout.GetXForTiming(timing);
+                timing += GetItemDuration(item);
+                if (itemX < beamLeftX - xPadding || itemX > beamRightX + xPadding)
+                    continue;
+                if (!TryGetCollisionExtent(item, out int staffPosition, out double halfHeight))
+                    continue;
+                collisions.Add(new BeamCollision(
+                    X: itemX - beamLeftX,
+                    MinY: staffPosition - halfHeight,
+                    MaxY: staffPosition + halfHeight,
+                    BasePenalty: 1.0));
+            }
         }
 
         return collisions;

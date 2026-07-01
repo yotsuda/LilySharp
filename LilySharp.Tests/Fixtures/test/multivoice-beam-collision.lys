@@ -1,0 +1,19 @@
+// Cross-voice beam collision: the upper voice's stem-up beam must ride ABOVE a
+// high note sustained in the lower voice, not sit on top of it. Voice 1 beams
+// C5 eighths (stems up); voice 2 holds an A5 whole note that falls in the beam's
+// path. LilyPond's Beam_collision_engraver raises the beam to clear it; before
+// this fix the beam only saw its own voice and cut across the A5 notehead.
+// (The A5's horizontal note-column offset against voice 1's stems is a separate
+// note-collision concern and is not addressed here.)
+// LILYPOND-REF: lily/beam-collision-engraver.cc.
+octave absolute
+title "Cross-voice beam collision"
+part mel { clef treble }
+section S {
+  mel {
+    voice { c'8 c' c' c' c' c' c' c' | }
+    voice { a'1 | }
+  }
+}
+structure { S }
+score "multivoice-beam-collision" { staff mel }

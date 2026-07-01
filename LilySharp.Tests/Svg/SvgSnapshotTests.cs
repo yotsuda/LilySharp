@@ -120,6 +120,9 @@ public class SvgSnapshotTests
         // A tuplet in the LOWER voice: its "3" bracket sits BELOW (the voice's
         // stem side), and its own triplet still breaks that voice's beaming.
         yield return new object[] { "test/multivoice-voice2-tuplet" };
+        // Cross-voice beam collision: the upper voice's beam clears a high note
+        // held in the lower voice (raised, not cutting across it).
+        yield return new object[] { "test/multivoice-beam-collision" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };
