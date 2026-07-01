@@ -2590,7 +2590,7 @@ public sealed class MeasureCollector
                     var markType = MusicMarkItem.ParseMarkName(markName);
                     if (markType != null)
                     {
-                        _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, dynamicSyntax.Position));
+                        _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, dynamicSyntax.Position) { StaffIndex = _currentStaffIndex });
                     }
                 }
             }
@@ -3054,14 +3054,14 @@ public sealed class MeasureCollector
                             if (markType.Value == MusicMarkType.Rehearsal)
                             {
                                 string text = MusicMarkItem.ParseRehearsalText(nameText);
-                                _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, text, measureIndex, articulationSyntax.Position, itemIndex, anchorTiming));
+                                _musicMarks.Add(new MusicMarkItem(MusicMarkType.Rehearsal, text, measureIndex, articulationSyntax.Position, itemIndex, anchorTiming) { StaffIndex = _currentStaffIndex });
                             }
                             else
                             {
                                 // Anchor to the host note's column so note-attached
                                 // marks (e.g. pedal "Ped.") sit at the note, not the
                                 // measure start.
-                                _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.Position, itemIndex, anchorTiming));
+                                _musicMarks.Add(new MusicMarkItem(markType.Value, measureIndex, articulationSyntax.Position, itemIndex, anchorTiming) { StaffIndex = _currentStaffIndex });
                             }
                         }
                     }
@@ -3099,7 +3099,7 @@ public sealed class MeasureCollector
                     // that statement-level handler, which extracts their text.
                     // LILYPOND-REF: piano-pedal-engraver.cc — pedal marks at note moment.
                     _musicMarks.Add(new MusicMarkItem(
-                        compoundMark, measureIndex, markSyntax.Position, itemIndex, anchorTiming));
+                        compoundMark, measureIndex, markSyntax.Position, itemIndex, anchorTiming) { StaffIndex = _currentStaffIndex });
                 }
             }
         }

@@ -146,6 +146,15 @@ public sealed record MusicMarkItem
     /// <summary>The measure index where this mark appears.</summary>
     public int MeasureIndex { get; }
 
+    /// <summary>
+    /// The staff this mark was authored on (0 = the first/only staff). Spanner
+    /// detection (hairpins, ottava, text spanners) pairs a start mark with its end
+    /// within the SAME staff, and the spanner is stacked below/above that staff —
+    /// so a cresc on staff 2 no longer terminates against a cresc on staff 1, and
+    /// the wedge hangs under its own staff.
+    /// </summary>
+    public int StaffIndex { get; init; }
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
 
