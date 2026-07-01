@@ -944,7 +944,7 @@ public sealed class LayoutEngine
             : ImmutableArray<ArticulationLayout>.Empty;
         var (stackedDynamics, stackedHairpins, stackedTextSpanners) =
             OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts, textSpannerLayouts,
-                articulationLayouts);
+                articulationLayouts, staffYByIndex);
 
         // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
         // tuplet brackets 200 as immovable seeds, ottava 400, text 450,

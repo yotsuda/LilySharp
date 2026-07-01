@@ -87,7 +87,8 @@ public static class OutsideStaffStacker
             ImmutableArray<DynamicLayout> dynamics,
             ImmutableArray<HairpinLayout> hairpins,
             ImmutableArray<TextSpannerLayout> textSpanners,
-            ImmutableArray<ArticulationLayout> articulations = default)
+            ImmutableArray<ArticulationLayout> articulations = default,
+            Dictionary<int, double>? staffYByIndex = null)
     {
         if ((dynamics.IsDefaultOrEmpty && hairpins.IsDefaultOrEmpty && textSpanners.IsDefaultOrEmpty)
             || systems.Length == 0)
@@ -101,10 +102,24 @@ public static class OutsideStaffStacker
             foreach (var m in systems[sysIdx].Measures)
                 measureToSystem[m.MeasureIndex] = sysIdx;
 
-        // Per-system occupied space tracker (stacks DOWN, below the staff)
-        var trackers = new DirectionalOccupancy[systems.Length];
-        for (int i = 0; i < systems.Length; i++)
-            trackers[i] = new DirectionalOccupancy(StaffBottom, dir: +1);
+        // Occupancy tracker PER (system, staff): each staff's below-staff column
+        // stacks down from ITS OWN bottom, so a hairpin under staff 2 is not pushed
+        // by staff 1's dynamics (they share the single Dynamics/Hairpin tables but
+        // occupy different vertical bands). Seeded lazily at StaffBottom + the
+        // staff's within-system Y offset. A single staff (offset 0) reproduces the
+        // former per-system tracker exactly, so single-staff output is unchanged.
+        var trackers = new Dictionary<(int Sys, int Staff), DirectionalOccupancy>();
+        DirectionalOccupancy Track(int sys, int staff)
+        {
+            if (!trackers.TryGetValue((sys, staff), out var t))
+            {
+                double off = staffYByIndex != null
+                    && staffYByIndex.TryGetValue(staff, out var so) ? so : 0;
+                t = new DirectionalOccupancy(StaffBottom + off, dir: +1);
+                trackers[(sys, staff)] = t;
+            }
+            return t;
+        }
 
         // Below-staff articulations (Script grobs) have NO outside-staff
         // priority in LilyPond: they sit against the note and everything at
@@ -119,7 +134,7 @@ public static class OutsideStaffStacker
                 if (a.IsAbove || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                     continue;
                 // Glyph roughly centered on its anchor; half-extent ~0.6sp.
-                trackers[sysIdx].AddRegion(a.X - 0.6, a.X + 0.6, a.Y + 0.6);
+                Track(sysIdx, a.StaffIndex).AddRegion(a.X - 0.6, a.X + 0.6, a.Y + 0.6);
             }
         }
 
@@ -145,13 +160,14 @@ public static class OutsideStaffStacker
 
                 double xStart = dyn.X - DynamicHalfWidth;
                 double xEnd = dyn.X + DynamicHalfWidth;
-                double occupied = trackers[sysIdx].Frontier(xStart, xEnd);
+                var tracker = Track(sysIdx, dyn.StaffIndex);
+                double occupied = tracker.Frontier(xStart, xEnd);
                 double requiredY = occupied + OutsideStaffPadding + DynamicTextAscent;
                 if (requiredY > dyn.Y)
                     dynBuilder[i] = dyn with { Y = requiredY };
 
                 double bottom = dynBuilder[i].Y + DynamicTextDescent;
-                trackers[sysIdx].AddRegion(xStart, xEnd, bottom);
+                tracker.AddRegion(xStart, xEnd, bottom);
             }
             adjDynamics = dynBuilder.ToImmutable();
         }
@@ -167,7 +183,8 @@ public static class OutsideStaffStacker
                 if (!measureToSystem.TryGetValue(hp.StartMeasureIndex, out int sysIdx))
                     continue;
 
-                double occupiedBottom = trackers[sysIdx].Frontier(hp.StartX, hp.EndX);
+                var tracker = Track(sysIdx, hp.StaffIndex);
+                double occupiedBottom = tracker.Frontier(hp.StartX, hp.EndX);
                 double requiredY = occupiedBottom + OutsideStaffPadding + HairpinHalfHeight;
                 double newY = Math.Max(hp.Y, requiredY);
 
@@ -176,7 +193,7 @@ public static class OutsideStaffStacker
 
                 // Register hairpin in tracker
                 double finalBottom = builder[i].Y + HairpinHalfHeight;
-                trackers[sysIdx].AddRegion(hp.StartX, hp.EndX, finalBottom);
+                tracker.AddRegion(hp.StartX, hp.EndX, finalBottom);
             }
             adjHairpins = builder.ToImmutable();
         }
@@ -194,7 +211,8 @@ public static class OutsideStaffStacker
                 if (!measureToSystem.TryGetValue(sp.StartMeasureIndex, out int sysIdx))
                     continue;
 
-                double occupiedBottom = trackers[sysIdx].Frontier(sp.StartX, sp.EndX);
+                var tracker = Track(sysIdx, sp.StaffIndex);
+                double occupiedBottom = tracker.Frontier(sp.StartX, sp.EndX);
                 double requiredY = occupiedBottom + OutsideStaffPadding + TextSpannerAscent;
                 double newY = Math.Max(sp.Y, requiredY);
 
@@ -203,7 +221,7 @@ public static class OutsideStaffStacker
 
                 // Register text spanner in tracker
                 double finalBottom = builder[i].Y + TextSpannerDescent;
-                trackers[sysIdx].AddRegion(sp.StartX, sp.EndX, finalBottom);
+                tracker.AddRegion(sp.StartX, sp.EndX, finalBottom);
             }
             adjTextSpanners = builder.ToImmutable();
         }

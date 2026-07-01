@@ -49,7 +49,9 @@ public readonly record struct TextSpannerLayout(
     int SourcePosition,
     /// <summary>F3/B: index of the originating rit/accel mark in score.MusicMarks,
     /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
-    int SourceIndex = -1
+    int SourceIndex = -1,
+    /// <summary>Which staff this spanner hangs under (per-staff stacking).</summary>
+    int StaffIndex = 0
 );
 
 /// <summary>

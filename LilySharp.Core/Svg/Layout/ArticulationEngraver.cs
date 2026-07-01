@@ -39,7 +39,8 @@ public readonly record struct ArticulationLayout(
     int SourcePosition,     // For click-to-source mapping
     double Scale = 1.0,     // Glyph scale (editorial accidentals: magstep(-2))
     GlyphMetrics.BBox Ink = default, // Ink box relative to the anchor (for skyline seeding)
-    int SourceIndex = -1    // F3/B: index into score.Articulations (data-pos resolved at render)
+    int SourceIndex = -1,   // F3/B: index into score.Articulations (data-pos resolved at render)
+    int StaffIndex = 0      // Which staff this script sits on (per-staff below-staff seeding)
 );
 
 /// <summary>
@@ -176,7 +177,7 @@ public static class ArticulationEngraver
                 string bendGlyph = articulation.Type == ArticulationType.Fall ? "bendFall" : "bendDoit";
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex, articulation.ItemIndex, fx, fy,
-                    bendGlyph, true, articulation.SourcePosition, 1.0, SourceIndex: arti));
+                    bendGlyph, true, articulation.SourcePosition, 1.0, SourceIndex: arti, StaffIndex: articulation.StaffIndex));
                 continue;
             }
 
@@ -203,7 +204,7 @@ public static class ArticulationEngraver
                     true,
                     articulation.SourcePosition,
                     1.0,
-                    GetSeedBBox(articulation.Type), SourceIndex: arti));
+                    GetSeedBBox(articulation.Type), SourceIndex: arti, StaffIndex: articulation.StaffIndex));
                 continue;
             }
 
@@ -232,7 +233,7 @@ public static class ArticulationEngraver
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex, articulation.ItemIndex, colX, tabY,
                     articulation.GetGlyph(), !stemUp, articulation.SourcePosition, 1.0,
-                    GetSeedBBox(articulation.Type), SourceIndex: arti));
+                    GetSeedBBox(articulation.Type), SourceIndex: arti, StaffIndex: articulation.StaffIndex));
                 continue;
             }
 
@@ -276,7 +277,8 @@ public static class ArticulationEngraver
                 articulation.SourcePosition,
                 scale,
                 GetSeedBBox(articulation.Type),
-                SourceIndex: arti
+                SourceIndex: arti,
+                StaffIndex: articulation.StaffIndex
             ));
         }
 
