@@ -271,6 +271,63 @@ public class NoteCollisionTests
             $"MeshingDotted ({p.MeshingDottedShift}) should be < MeshingGeneral ({p.MeshingGeneralShift})");
     }
 
+    // --- LILYPOND-REF crossing-voice meshing fallback tests ---
+
+    [Fact]
+    public void Crossing_UpBelowDown_UsesMeshingFallback()
+    {
+        // LILYPOND-REF: lily/note-collision.cc:332-337 — "we're meshing" fallback.
+        // Voice crossing: the up-stem note (pos 1) sits well BELOW the down-stem
+        // note (pos 6) — not too far apart, but no full/close/distant/touch/merge
+        // fires. LilyPond falls through to the meshing shift (0.17 without dots).
+        var collision = new NoteCollision();
+        var ups = new[] { 1 };   // up-stem voice, low
+        var downs = new[] { 6 }; // down-stem voice, high (crossing)
+
+        var result = collision.AnalyzeCollision(ups, downs,
+            upNoteValue: 8, downNoteValue: 1, upDots: 0, downDots: 0);
+
+        Assert.Equal(CollisionType.Meshing, result.Type);
+        Assert.Equal(0.17, result.UpStemXOffset, 2);
+        Assert.Equal(-0.17, result.DownStemXOffset, 2);
+    }
+
+    [Fact]
+    public void Crossing_Dotted_UsesDottedMeshingShift()
+    {
+        // LILYPOND-REF: lily/note-collision.cc:333-335 — dotted meshing shift 0.1.
+        var collision = new NoteCollision();
+        var result = collision.AnalyzeCollision(new[] { 1 }, new[] { 6 },
+            upNoteValue: 8, downNoteValue: 1, upDots: 0, downDots: 1);
+
+        Assert.Equal(CollisionType.Meshing, result.Type);
+        Assert.Equal(0.1, result.UpStemXOffset, 2);
+    }
+
+    [Fact]
+    public void Crossing_PinsUpVoice_ShiftsDownVoiceLeft()
+    {
+        // The consumer pins the up-stem (frequently beamed) voice at the column
+        // slot and moves the DOWN-stem voice LEFT, so a beamed upper voice keeps
+        // its column-X position. Separation = 2*0.17*width, matching LilyPond's
+        // (which shifts the upper voice right by the same amount).
+        var collision = new NoteCollision();
+        double w = EngravingDefaults.NoteheadWholeWidth;
+
+        var column = new VoiceColumn(ImmutableArray.Create(
+            new VoiceEntry(1, MakeNoteWithDuration(1, Fraction.Quarter), 0, forcedStemUp: true),
+            new VoiceEntry(2, MakeNoteWithDuration(6, Fraction.Whole), 0, forcedStemUp: false)
+        ), measureIndex: 0);
+
+        var offsets = collision.CalculateVoiceOffsets(column, w);
+
+        double up = offsets.First(o => o.VoiceId == 1).XOffset;
+        double down = offsets.First(o => o.VoiceId == 2).XOffset;
+
+        Assert.Equal(0.0, up, 3);                 // up-stem voice pinned at slot
+        Assert.Equal(-2 * 0.17 * w, down, 2);     // down-stem voice shifts LEFT
+    }
+
     // --- LILYPOND-REF head wipe conformance tests (I-2) ---
 
     [Fact]

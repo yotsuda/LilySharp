@@ -3,9 +3,10 @@
 // C5 eighths (stems up); voice 2 holds an A5 whole note that falls in the beam's
 // path. LilyPond's Beam_collision_engraver raises the beam to clear it; before
 // this fix the beam only saw its own voice and cut across the A5 notehead.
-// (The A5's horizontal note-column offset against voice 1's stems is a separate
-// note-collision concern and is not addressed here.)
-// LILYPOND-REF: lily/beam-collision-engraver.cc.
+// The A5's horizontal note-column offset against voice 1's stems is handled by
+// the note-collision meshing fallback: the A5 (down-stem voice) shifts LEFT so
+// voice 1's stem clears it on the right, matching LilyPond.
+// LILYPOND-REF: lily/beam-collision-engraver.cc, lily/note-collision.cc:332-337.
 octave absolute
 title "Cross-voice beam collision"
 part mel { clef treble }

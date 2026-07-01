@@ -123,6 +123,9 @@ public class SvgSnapshotTests
         // Cross-voice beam collision: the upper voice's beam clears a high note
         // held in the lower voice (raised, not cutting across it).
         yield return new object[] { "test/multivoice-beam-collision" };
+        // Crossing voices: the lower (stem-down) voice sits above the upper voice,
+        // so its heads shift LEFT to clear the upper voice's stems (meshing shift).
+        yield return new object[] { "test/multivoice-crossing-collision" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };

@@ -1,0 +1,18 @@
+// Crossing-voice horizontal note-collision: the lower voice (voice 2, stem-down)
+// crosses ABOVE the upper voice (voice 1, stem-up), so voice 1's stems would
+// pierce voice 2's noteheads. LilyPond's note-collision "meshing" fallback nudges
+// the crossed heads apart; here voice 2's A5 quarters shift LEFT so voice 1's
+// beamed C5 eighth stems clear them on the right. Mixed rhythm (8ths vs quarters)
+// exercises one collision per quarter (at beats 1..4), each independently offset.
+// LILYPOND-REF: lily/note-collision.cc:332-337 (meshing fallback).
+octave absolute
+title "Crossing-voice note collision"
+part mel { clef treble }
+section S {
+  mel {
+    voice { c'8 c' c' c' c' c' c' c' | }
+    voice { a'4 a' a' a' | }
+  }
+}
+structure { S }
+score "multivoice-crossing-collision" { staff mel }

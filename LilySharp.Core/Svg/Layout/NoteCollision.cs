@@ -37,7 +37,15 @@ public enum CollisionType
     Merge,
 
     /// <summary>Full collision requiring horizontal shift.</summary>
-    Full
+    Full,
+
+    /// <summary>
+    /// Voice crossing: an up-stem note sits more than a threshold BELOW the
+    /// down-stem note, so the up-stem's stem would pierce the down-stem head.
+    /// LilyPond falls through to its "meshing" shift here.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/note-collision.cc:332-337</remarks>
+    Meshing
 }
 
 /// <summary>
@@ -391,7 +399,30 @@ public sealed class NoteCollision
                 downDotForceDown: downDotForceDown);
         }
 
-        return NoteCollisionInfo.NoCollision;
+        // LILYPOND-REF: lily/note-collision.cc:332-337 — the "we're meshing" fallback.
+        // Reached only for a voice CROSSING: the up-stem note sits more than a
+        // threshold BELOW the down-stem note, so none of merge/touch/full/close/
+        // distant fired, yet the notes are not too far apart — the up-stem's stem
+        // would pierce the down-stem head. LP applies a small meshing shift
+        // (0.1 with dots, else 0.17). The consumer (CalculateVoiceOffsets) pins
+        // the UP-stem voice for CollisionType.Meshing and shifts the DOWN-stem
+        // voice LEFT, giving geometry identical to LP's (which shifts the upper
+        // voice right) while leaving a beamed upper voice at its column X so its
+        // beam — drawn at column X, not per-note — stays intact.
+        //
+        // Extent scaling (note-collision.cc:343-348): for a positive (up-shifts-
+        // right) shift the factor is (extent_down[RIGHT] - extent_up[LEFT]) /
+        // extent_down.length(). Every Lily# notehead has its left extent at 0, so
+        // this factor is exactly 1.0 here; the base width is applied by the
+        // consumer (× notehead width).
+        bool meshHasDots = upDots > 0 || downDots > 0;
+        double meshShift = meshHasDots
+            ? _params.MeshingDottedShift
+            : _params.MeshingGeneralShift;
+        double meshUpOffset = shiftUpRight ? meshShift : -meshShift;
+        double meshDownOffset = shiftUpRight ? -meshShift : meshShift;
+        return new NoteCollisionInfo(CollisionType.Meshing, meshUpOffset, meshDownOffset,
+            downDotForceDown: downDotForceDown);
     }
 
     private bool CheckTouch(List<int> ups, List<int> downs, int threshold)
@@ -565,10 +596,25 @@ public sealed class NoteCollision
                 i == 0 && collision.DownDotForceDown));
         }
 
-        double leftMost = raw.Count > 0 ? raw.Min(r => r.Offset) : 0.0;
+        // LILYPOND-REF: lily/note-collision.cc calc_positioning_done — each clash
+        // group translates by (amount - left_most), pinning the LEFTMOST group to
+        // the column slot; the up-stem voice ends up shifted right.
+        //
+        // A voice CROSSING (CollisionType.Meshing) is the exception: pin the
+        // rightmost group (the up-stem voice) instead and let the DOWN-stem voice
+        // move LEFT. The separation is identical to LP's, but the — frequently
+        // beamed — upper voice keeps its column-X position, so its beam (drawn at
+        // column X, not per-note) is not skewed. This matches LP's appearance
+        // (upper stem clears to the right of the lower head) without propagating a
+        // shift through Lily#'s beam/spacing.
+        double pin = raw.Count == 0
+            ? 0.0
+            : collision.Type == CollisionType.Meshing
+                ? raw.Max(r => r.Offset)
+                : raw.Min(r => r.Offset);
         foreach (var r in raw)
             offsets.Add((r.VoiceId, r.ItemIndex,
-                (r.Offset - leftMost) * noteheadWidth, r.Hide, r.Dot));
+                (r.Offset - pin) * noteheadWidth, r.Hide, r.Dot));
 
         return offsets.ToImmutableArray();
     }
