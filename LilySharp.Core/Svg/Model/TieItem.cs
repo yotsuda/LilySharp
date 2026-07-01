@@ -47,6 +47,11 @@ public sealed record TieItem
     /// <summary>Index of the end note within its measure.</summary>
     public int EndItemIndex { get; }
 
+    /// <summary>Index of the voice this tie belongs to (0 = the primary/only
+    /// voice). On a multi-voice staff the layout resolves the tie's endpoint X
+    /// and head displacement against THIS voice's measures.</summary>
+    public int VoiceIndex { get; }
+
     public TieItem(
         NoteItem startNote,
         NoteItem endNote,
@@ -55,7 +60,8 @@ public sealed record TieItem
         int startMeasureIndex,
         int endMeasureIndex,
         int startItemIndex,
-        int endItemIndex)
+        int endItemIndex,
+        int voiceIndex = 0)
     {
         StartNote = startNote;
         EndNote = endNote;
@@ -65,5 +71,6 @@ public sealed record TieItem
         EndMeasureIndex = endMeasureIndex;
         StartItemIndex = startItemIndex;
         EndItemIndex = endItemIndex;
+        VoiceIndex = voiceIndex;
     }
 }

@@ -46,6 +46,11 @@ public sealed record SlurItem
     /// <summary>Index of the end note within its measure.</summary>
     public int EndItemIndex { get; }
 
+    /// <summary>Index of the voice this slur belongs to (0 = the primary/only
+    /// voice). On a multi-voice staff the layout resolves the slur's endpoint X,
+    /// head displacement and obstacles against THIS voice's measures.</summary>
+    public int VoiceIndex { get; }
+
     public SlurItem(
         int startStaffPosition,
         int endStaffPosition,
@@ -53,7 +58,8 @@ public sealed record SlurItem
         int startMeasureIndex,
         int endMeasureIndex,
         int startItemIndex,
-        int endItemIndex)
+        int endItemIndex,
+        int voiceIndex = 0)
     {
         StartStaffPosition = startStaffPosition;
         EndStaffPosition = endStaffPosition;
@@ -62,5 +68,6 @@ public sealed record SlurItem
         EndMeasureIndex = endMeasureIndex;
         StartItemIndex = startItemIndex;
         EndItemIndex = endItemIndex;
+        VoiceIndex = voiceIndex;
     }
 }

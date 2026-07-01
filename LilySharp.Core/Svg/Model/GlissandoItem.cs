@@ -45,4 +45,7 @@ public readonly record struct GlissandoItem(
     int EndItemIndex,
     int EndStaffPosition,
     GlissandoStyle Style,
-    int SourcePosition);
+    int SourcePosition,
+    /// <summary>Index of the voice this glissando belongs to (0 = the primary/only
+    /// voice); the layout resolves its endpoints against THIS voice's measures.</summary>
+    int VoiceIndex = 0);
