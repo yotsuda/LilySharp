@@ -633,9 +633,9 @@ public sealed class ElementCoordinator
                 if (segment.IsFirst)
                 {
                     segStartX = startMeasure.X
-                        + GetItemXOffset(score.Voice, tie.StartMeasureIndex, tie.StartItemIndex, startMeasure)
+                        + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, startMeasure)
                         // Follow the tied head's within-chord displacement (seconds).
-                        + GetChordHeadXOffset(score.Voice, tie.StartMeasureIndex, tie.StartItemIndex, tie.StaffPosition);
+                        + GetChordHeadXOffset(score.Voices[tie.VoiceIndex], tie.StartMeasureIndex, tie.StartItemIndex, tie.StaffPosition);
 
                     // The tie attaches at the RIGHT edge of the left note's
                     // outline (head + augmentation dots) — the item X is the
@@ -669,9 +669,9 @@ public sealed class ElementCoordinator
                 if (segment.IsLast)
                 {
                     segEndX = endMeasure.X
-                        + GetItemXOffset(score.Voice, tie.EndMeasureIndex, tie.EndItemIndex, endMeasure)
+                        + GetItemXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, endMeasure)
                         // Follow the tied head's within-chord displacement (seconds).
-                        + GetChordHeadXOffset(score.Voice, tie.EndMeasureIndex, tie.EndItemIndex, tie.StaffPosition);
+                        + GetChordHeadXOffset(score.Voices[tie.VoiceIndex], tie.EndMeasureIndex, tie.EndItemIndex, tie.StaffPosition);
                 }
                 else
                 {
@@ -741,7 +741,7 @@ public sealed class ElementCoordinator
     /// anchors the edge. Null when the system holds no covered note.
     /// </summary>
     private static int? EdgeNoteStaffPosition(
-        Score score, SystemLayout segSystem, SlurItem slur, bool leftEdge)
+        Voice voice, SystemLayout segSystem, SlurItem slur, bool leftEdge)
     {
         var measures = leftEdge
             ? segSystem.Measures.AsEnumerable()
@@ -752,10 +752,10 @@ public sealed class ElementCoordinator
             int mi = ml.MeasureIndex;
             if (mi < slur.StartMeasureIndex || mi > slur.EndMeasureIndex)
                 continue;
-            if (mi >= score.Voice.Measures.Length)
+            if (mi >= voice.Measures.Length)
                 continue;
 
-            var items = score.Voice.Measures[mi].Items;
+            var items = voice.Measures[mi].Items;
             int lo = mi == slur.StartMeasureIndex ? slur.StartItemIndex : 0;
             int hi = mi == slur.EndMeasureIndex ? slur.EndItemIndex : items.Length - 1;
             hi = Math.Min(hi, items.Length - 1);
@@ -788,7 +788,7 @@ public sealed class ElementCoordinator
     /// the encompassed note columns (bounds included) feed score_encompass().
     /// </remarks>
     private static IReadOnlyList<SlurObstacle> BuildSlurObstacles(
-        Score score, SystemLayout segSystem, SlurItem slur,
+        Voice voice, SystemLayout segSystem, SlurItem slur,
         double staffMiddleY, double segStartX, double segEndX)
     {
         const double headHalfHeight = 0.5; // staff spaces, half a notehead
@@ -800,10 +800,10 @@ public sealed class ElementCoordinator
             int mi = ml.MeasureIndex;
             if (mi < slur.StartMeasureIndex || mi > slur.EndMeasureIndex)
                 continue;
-            if (mi >= score.Voice.Measures.Length)
+            if (mi >= voice.Measures.Length)
                 continue;
 
-            var items = score.Voice.Measures[mi].Items;
+            var items = voice.Measures[mi].Items;
             int lo = mi == slur.StartMeasureIndex ? slur.StartItemIndex : 0;
             int hi = mi == slur.EndMeasureIndex ? slur.EndItemIndex : items.Length - 1;
             hi = Math.Min(hi, items.Length - 1);
@@ -815,7 +815,7 @@ public sealed class ElementCoordinator
                 if (topPos is null || bottomPos is null)
                     continue; // rest / spacer / barline — no head
 
-                double x = ml.X + GetItemXOffset(score.Voice, mi, i, ml);
+                double x = ml.X + GetItemXOffset(voice, mi, i, ml);
                 if (x < segStartX - eps || x > segEndX + eps)
                     continue;
 
@@ -870,9 +870,9 @@ public sealed class ElementCoordinator
                 if (segment.IsFirst)
                 {
                     segStartX = startMeasure.X
-                        + GetItemXOffset(score.Voice, slur.StartMeasureIndex, slur.StartItemIndex, startMeasure)
+                        + GetItemXOffset(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex, startMeasure)
                         // Follow the curve-side head's within-chord displacement (seconds).
-                        + GetChordHeadXOffset(score.Voice, slur.StartMeasureIndex, slur.StartItemIndex, slur.StartStaffPosition);
+                        + GetChordHeadXOffset(score.Voices[slur.VoiceIndex], slur.StartMeasureIndex, slur.StartItemIndex, slur.StartStaffPosition);
                 }
                 else
                 {
@@ -883,9 +883,9 @@ public sealed class ElementCoordinator
                 if (segment.IsLast)
                 {
                     segEndX = endMeasure.X
-                        + GetItemXOffset(score.Voice, slur.EndMeasureIndex, slur.EndItemIndex, endMeasure)
+                        + GetItemXOffset(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex, endMeasure)
                         // Follow the curve-side head's within-chord displacement (seconds).
-                        + GetChordHeadXOffset(score.Voice, slur.EndMeasureIndex, slur.EndItemIndex, slur.EndStaffPosition);
+                        + GetChordHeadXOffset(score.Voices[slur.VoiceIndex], slur.EndMeasureIndex, slur.EndItemIndex, slur.EndStaffPosition);
                 }
                 else
                 {
@@ -903,11 +903,11 @@ public sealed class ElementCoordinator
                 // broken piece's own note columns.
                 double startStaffPos = segment.IsFirst
                     ? slur.StartStaffPosition
-                    : EdgeNoteStaffPosition(score, segSystem, slur, leftEdge: true)
+                    : EdgeNoteStaffPosition(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: true)
                         ?? slur.EndStaffPosition;
                 double endStaffPos = segment.IsLast
                     ? slur.EndStaffPosition
-                    : EdgeNoteStaffPosition(score, segSystem, slur, leftEdge: false)
+                    : EdgeNoteStaffPosition(score.Voices[slur.VoiceIndex], segSystem, slur, leftEdge: false)
                         ?? slur.StartStaffPosition;
 
                 double staffMiddleY = LayoutUtilities.ResolveStaffMiddleY(segSystem, staffIndex, _options.StaffHeight);
@@ -926,7 +926,7 @@ public sealed class ElementCoordinator
                 }
 
                 var obstacles = BuildSlurObstacles(
-                    score, segSystem, slur, staffMiddleY, segStartX, segEndX);
+                    score.Voices[slur.VoiceIndex], segSystem, slur, staffMiddleY, segStartX, segEndX);
 
                 var problem = new SlurScoringProblem(
                     slur, segStartX, segStartY, segEndX, segEndY,
@@ -955,6 +955,13 @@ public sealed class ElementCoordinator
         if (glissandos.Length == 0)
             return ImmutableArray<GlissandoLayout>.Empty;
 
-        return GlissandoEngraver.Calculate(glissandos, systems, _options.StaffHeight, staffIndex, score.Voice.Measures);
+        // Each glissando resolves its endpoint X against its OWN voice's measures.
+        // A single-voice score is one group over Voices[0] — byte-identical.
+        var layouts = ImmutableArray.CreateBuilder<GlissandoLayout>();
+        foreach (var group in glissandos.GroupBy(g => g.VoiceIndex))
+            layouts.AddRange(GlissandoEngraver.Calculate(
+                group.ToImmutableArray(), systems, _options.StaffHeight, staffIndex,
+                score.Voices[group.Key].Measures));
+        return layouts.ToImmutable();
     }
 }

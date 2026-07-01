@@ -35,7 +35,11 @@ public readonly record struct GlissandoLayout(
     // -1 = unresolved (direct unit-test construction / no note resolution).
     int StaffIndex = -1,
     int MeasureIndex = -1,
-    int ItemIndex = -1);
+    int ItemIndex = -1,
+    // Voice the start note lives in (0 = primary), so the locator resolves against
+    // the RIGHT voice on a polyphonic staff — a second voice's glissando must not
+    // re-derive its data-pos from the primary voice's note at the same index.
+    int VoiceIndex = 0);
 
 /// <summary>
 /// Calculates glissando layouts from detected glissando items.
@@ -165,7 +169,8 @@ public static class GlissandoEngraver
                     SourcePosition: gliss.SourcePosition,
                     StaffIndex: staffIndex,
                     MeasureIndex: gliss.StartMeasureIndex,
-                    ItemIndex: gliss.StartItemIndex));
+                    ItemIndex: gliss.StartItemIndex,
+                    VoiceIndex: gliss.VoiceIndex));
             }
         }
 

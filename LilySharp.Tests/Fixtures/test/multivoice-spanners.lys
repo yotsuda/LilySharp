@@ -1,0 +1,18 @@
+// Slur, tie and glissando in the SECOND voice of a single-staff polyphony
+// (voice { } voice { }). The detectors used to scan only the primary voice, so
+// voice 2's spanners vanished entirely. They now run per voice and lay out
+// against voice 2's own note columns (its stem-down slur curves UP, its tie and
+// glissando attach to voice-2 heads). Voice 1 carries no spanners, so any curve
+// here belongs to voice 2. LILYPOND-REF: ly/engraver-init.ly — Slur/Tie/
+// Glissando engravers run in each Voice context.
+octave absolute
+title "Multi-voice spanners"
+part mel { clef treble }
+section S {
+  mel {
+    voice { c''4 d'' e'' f'' | g''4 a'' b'' c''' | }
+    voice { e'4@glissando g' g'( e') | f'4 f'~ f' f' | }
+  }
+}
+structure { S }
+score "multivoice-spanners" { staff mel }

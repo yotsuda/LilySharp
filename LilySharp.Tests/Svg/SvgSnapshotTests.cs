@@ -102,6 +102,9 @@ public class SvgSnapshotTests
         // Ottava brackets per staff on a grand staff: the lower staff's 8va sits
         // above ITS staff, not piled above the top staff.
         yield return new object[] { "test/multi-staff-ottava" };
+        // Slur / tie / glissando in the SECOND voice of a single-staff polyphony
+        // — detected per voice and laid out against voice 2's own notes.
+        yield return new object[] { "test/multivoice-spanners" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };

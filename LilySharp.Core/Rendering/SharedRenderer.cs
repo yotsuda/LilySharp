@@ -2101,7 +2101,7 @@ public static class SharedRenderer
         // only built when such an annotation is present.
         var noteHosts = (layout.GlissandoLayouts.IsDefaultOrEmpty
                          && layout.FingeringLayouts.IsDefaultOrEmpty)
-            ? null : BuildStaffMeasures(score);
+            ? null : BuildStaffVoices(score);
         return layout with
         {
             DynamicLayouts = ResolveArr(layout.DynamicLayouts, score.Dynamics,
@@ -2143,11 +2143,12 @@ public static class SharedRenderer
             // Glissando data-pos = its start note's source offset; re-read it from the live
             // score by the note locator the layout carries.
             GlissandoLayouts = ResolveNoteArr(layout.GlissandoLayouts, noteHosts,
-                static l => (l.StaffIndex, l.MeasureIndex, l.ItemIndex),
+                static l => (l.StaffIndex, l.VoiceIndex, l.MeasureIndex, l.ItemIndex),
                 static (l, pos) => l with { SourcePosition = pos }),
-            // Fingering data-pos = its host note/chord's source offset.
+            // Fingering data-pos = its host note/chord's source offset. Fingerings are
+            // computed only for the primary voice, so they always resolve against voice 0.
             FingeringLayouts = ResolveNoteArr(layout.FingeringLayouts, noteHosts,
-                static l => (l.StaffIndex, l.MeasureIndex, l.ItemIndex),
+                static l => (l.StaffIndex, 0, l.MeasureIndex, l.ItemIndex),
                 static (l, pos) => l with { SourcePosition = pos }),
             // Detected spanners (hairpin / ottava / text spanner) take their data-pos from
             // the originating cresc/ottava/rit mark in score.MusicMarks — re-derive by its index.
@@ -2160,15 +2161,16 @@ public static class SharedRenderer
         };
     }
 
-    // staff index -> that staff's primary-voice measures, the host tables the note-locator
-    // annotations resolve against. Same staff-index convention as the layout build path
-    // (LayoutEngine's EnumerateStaves loop).
-    private static System.Collections.Generic.Dictionary<int, ImmutableArray<Measure>>
-        BuildStaffMeasures(MultiStaffScore score)
+    // staff index -> that staff's VOICES, the host tables the note-locator annotations
+    // resolve against. Same staff-index convention as the layout build path
+    // (LayoutEngine's EnumerateStaves loop). A note-hosted layout carries the voice it
+    // lives in, so a second voice's glissando resolves against its own voice's measures.
+    private static System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>
+        BuildStaffVoices(MultiStaffScore score)
     {
-        var map = new System.Collections.Generic.Dictionary<int, ImmutableArray<Measure>>();
+        var map = new System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>();
         foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
-            map[staffIndex] = staff.PrimaryVoice.Measures;
+            map[staffIndex] = staff.Voices;
         return map;
     }
 
@@ -2181,20 +2183,21 @@ public static class SharedRenderer
     // the re-derivation, and that path always carries a real staff index.
     private static ImmutableArray<T> ResolveNoteArr<T>(
         ImmutableArray<T> layouts,
-        System.Collections.Generic.Dictionary<int, ImmutableArray<Measure>>? staffMeasures,
-        System.Func<T, (int Staff, int Measure, int Item)> locator,
+        System.Collections.Generic.Dictionary<int, ImmutableArray<Voice>>? staffVoices,
+        System.Func<T, (int Staff, int Voice, int Measure, int Item)> locator,
         System.Func<T, int, T> resolve)
     {
-        if (layouts.IsDefaultOrEmpty || staffMeasures == null)
+        if (layouts.IsDefaultOrEmpty || staffVoices == null)
             return layouts;
         var b = layouts.ToBuilder();
         for (int i = 0; i < b.Count; i++)
         {
-            var (s, m, it) = locator(b[i]);
-            if (staffMeasures.TryGetValue(s, out var measures)
-                && (uint)m < (uint)measures.Length)
+            var (s, v, m, it) = locator(b[i]);
+            if (staffVoices.TryGetValue(s, out var voices)
+                && (uint)v < (uint)voices.Length
+                && (uint)m < (uint)voices[v].Measures.Length)
             {
-                var items = measures[m].Items;
+                var items = voices[v].Measures[m].Items;
                 if ((uint)it < (uint)items.Length)
                     b[i] = resolve(b[i], items[it].SourcePosition);
             }

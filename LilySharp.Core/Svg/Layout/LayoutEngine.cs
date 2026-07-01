@@ -373,10 +373,19 @@ public sealed class LayoutEngine
                 // Beam detection must see tuplet spans: auto beams break at
                 // tuplet boundaries (BeamDetector).
                 tupletBrackets: score.TupletBrackets);
+            // Slur/tie/glissando detection runs PER VOICE, so a polyphonic staff
+            // must expose all its voices (not just the primary). Single-voice
+            // staves reuse the primary-voice score, so their layout is unchanged.
+            var staffSpannerScore = staff.Voices.Length > 1
+                ? new Score(
+                    staff.Voices, score.TimeSignature, score.KeySignature,
+                    ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                    tupletBrackets: score.TupletBrackets)
+                : staffScore;
             allBeamLayouts.AddRange(_elementCoordinator.LayoutBeams(staffScore, systemsArray, staffIndex));
-            allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffScore, systemsArray, staffIndex, staff));
-            allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffScore, systemsArray, staffIndex));
-            allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffScore, systemsArray, staffIndex));
+            allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff));
+            allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffSpannerScore, systemsArray, staffIndex));
+            allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));
         }
 
         // Resolve cross-staff layouts per voice

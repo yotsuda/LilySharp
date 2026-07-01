@@ -115,11 +115,12 @@ public class MigratedDataPosTests
             // Glissando is note-hosted: its data-pos is the START note's source offset,
             // resolved from the edited score by the (staff, measure, item) locator.
             CheckNote(fx, "Glissando", l1.GlissandoLayouts, l2.GlissandoLayouts, s2,
-                x => (x.StaffIndex, x.MeasureIndex, x.ItemIndex), x => x.SourcePosition, covered);
+                x => (x.StaffIndex, x.VoiceIndex, x.MeasureIndex, x.ItemIndex), x => x.SourcePosition, covered);
 
-            // Fingering is note-hosted too (its host can be a single note OR a chord).
+            // Fingering is note-hosted too (its host can be a single note OR a chord);
+            // fingerings are computed only for the primary voice, so voice 0.
             CheckNote(fx, "Fingering", l1.FingeringLayouts, l2.FingeringLayouts, s2,
-                x => (x.StaffIndex, x.MeasureIndex, x.ItemIndex), x => x.SourcePosition, covered);
+                x => (x.StaffIndex, 0, x.MeasureIndex, x.ItemIndex), x => x.SourcePosition, covered);
 
             // Detected spanners resolve from score.MusicMarks (the originating mark).
             Check(fx, "Hairpin", l1.HairpinLayouts, l2.HairpinLayouts, s2.MusicMarks,
@@ -215,22 +216,25 @@ public class MigratedDataPosTests
     private static void CheckNote<TL>(
         string fixture, string name,
         ImmutableArray<TL> cached, ImmutableArray<TL> full, MultiStaffScore edited,
-        Func<TL, (int Staff, int Measure, int Item)> locator, Func<TL, int> layoutPos,
+        Func<TL, (int Staff, int Voice, int Measure, int Item)> locator, Func<TL, int> layoutPos,
         HashSet<string> covered)
     {
         if (cached.IsDefaultOrEmpty)
             return;
         Assert.True(cached.Length == full.Length, $"{fixture}/{name}: layout count changed under shift");
 
-        var staffMeasures = new Dictionary<int, ImmutableArray<LilySharp.Core.Svg.Model.Measure>>();
+        var staffVoices = new Dictionary<int, ImmutableArray<LilySharp.Core.Svg.Model.Voice>>();
         foreach (var (_, staff, idx) in edited.EnumerateStaves())
-            staffMeasures[idx] = staff.PrimaryVoice.Measures;
+            staffVoices[idx] = staff.Voices;
 
         for (int k = 0; k < cached.Length; k++)
         {
-            var (s, m, it) = locator(cached[k]);
-            Assert.True(staffMeasures.TryGetValue(s, out var measures),
+            var (s, v, m, it) = locator(cached[k]);
+            Assert.True(staffVoices.TryGetValue(s, out var voices),
                 $"{fixture}/{name}[{k}]: staff {s} not in edited score");
+            Assert.True((uint)v < (uint)voices.Length,
+                $"{fixture}/{name}[{k}]: voice {v} out of range");
+            var measures = voices[v].Measures;
             Assert.True((uint)m < (uint)measures.Length,
                 $"{fixture}/{name}[{k}]: measure {m} out of range");
             var items = measures[m].Items;
