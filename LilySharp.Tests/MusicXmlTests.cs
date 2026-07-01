@@ -38,6 +38,20 @@ public class MusicXmlTests
     }
 
     [Fact]
+    public void ExportTripleDottedNote_UsesBaseTypeWithThreeDots()
+    {
+        // A triple-dotted eighth reduces to 15/64. It must export as an "eighth" with
+        // three dots, not an undotted "64th" — only single/double dots were special-
+        // cased before, so any triple-plus dotted note mis-reported its <type>.
+        var tree = SyntaxTree.Parse("{ c8... }");
+        var xml = new MusicXmlExporter().Export(tree);
+
+        var note = xml.Parts[0].Measures[0].Notes[0];
+        Assert.Equal("eighth", note.Type);
+        Assert.Equal(3, note.Dots);
+    }
+
+    [Fact]
     public void ExportWithTitle()
     {
         var source = @"

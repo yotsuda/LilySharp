@@ -411,7 +411,11 @@ public sealed class MidiExporter
             }
         }
 
-        int actualDuration = durationTicks * durationPercent / 100;
+        // A sounding note keeps at least one tick: if a short value times a
+        // duration-shortening articulation (e.g. staccato) rounds to 0, its NoteOff
+        // would land on the same tick as its NoteOn and — because NoteOff sorts before
+        // NoteOn — be emitted first, leaving a stuck note.
+        int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
 
         bool startsTie = note.Articulations.OfType<TieSyntax>().Any();
 

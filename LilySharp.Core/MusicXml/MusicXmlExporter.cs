@@ -790,18 +790,19 @@ public sealed class MusicXmlExporter
         int dots = 0;
         int baseDenom = (int)duration.Denominator;
 
-        // Check for dotted notes (3/8 = dotted quarter, 3/4 = dotted half, etc.)
-        if (duration.Numerator == 3 && duration.Denominator % 2 == 0)
+        // A k-dotted note reduces to numerator (2^(k+1) - 1) — 3, 7, 15, 31, … — over
+        // the base value's denominator scaled by 2^k (e.g. dotted quarter 3/8, double
+        // 7/16, triple 15/32). Recover the dot count from that pattern; previously only
+        // single/double dots were special-cased, so a triple-dotted note mis-exported as
+        // an undotted shorter value (15/64 -> "64th" instead of a triple-dotted eighth).
+        for (int k = 1; k <= 8; k++)
         {
-            dots = 1;
-            baseDenom = (int)(duration.Denominator / 2);
-        }
-
-        // Check for double-dotted notes (7/16 = double-dotted quarter, etc.)
-        if (duration.Numerator == 7 && duration.Denominator % 4 == 0)
-        {
-            dots = 2;
-            baseDenom = (int)(duration.Denominator / 4);
+            if (duration.Numerator == (1L << (k + 1)) - 1 && duration.Denominator % (1L << k) == 0)
+            {
+                dots = k;
+                baseDenom = (int)(duration.Denominator >> k);
+                break;
+            }
         }
 
         string type = baseDenom switch
