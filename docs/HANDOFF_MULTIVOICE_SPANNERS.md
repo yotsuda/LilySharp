@@ -1,5 +1,14 @@
 # 引き継ぎ (b): #3 多声(polyphony)の slur / tie / glissando 検出・配置
 
+> **✅ 完了(2026-07-01、未 push、5 コミット)。** 検出器を全声部ループ化(声部ごとの open スタック)、
+> `LayoutEngine` が `staff.Voices` 全声部 Score を spanner layout に渡し、`ElementCoordinator` が
+> `score.Voices[item.VoiceIndex]` で X/障害物/端点を解決。**LP 並置比較で voice-2 スラー/タイの向きが
+> 上向き(誤)と判明→声部で向き固定(上声上・下声下、和音タイ含む)に修正**。Glissando の click-to-source
+> data-pos も voice-aware 化(`GlissandoLayout.VoiceIndex`＋`ResolveDataPos` の `(staff,voice,measure,item)`)。
+> fixture `test/multivoice-spanners`(gliss/slur/単音tie)＋`test/multivoice-chord-tie`。多譜表 polyphony にも効く
+> (`staff.Voices` 使用)。**残り = 多声ビーム → `docs/HANDOFF_MULTIVOICE_BEAMS.md`(§4 に本作業を手本として再掲)。**
+> 以下は着手前の設計メモ(経緯として保存)。
+
 **前提: `docs/DEV_BUGFIX_WORKFLOW.md` を先に読むこと**(ripple shell / `Write` でファイル化 / master 直 /
 LILYPOND-REF / **単一声部 byte-identical 不変条件** / `Co-Authored-By: Claude <current-model>`)。
 `§15` に polyphony の背景あり(`voice { … }` → `BuildMultiVoiceScore`、part の既定オクターブ基準)。
