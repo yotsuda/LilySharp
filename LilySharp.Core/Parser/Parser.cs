@@ -81,8 +81,12 @@ internal sealed class Parser
         _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
             $"Expected '{kind}', found '{Current.Kind}'");
 
-        // Error recovery: create a missing token
-        return new SyntaxToken(kind, "", Current.LeadingTrivia, null);
+        // Error recovery: create a zero-width missing token. It must carry NO trivia:
+        // the parser does not Advance past Current, so Current keeps its own leading
+        // trivia and contributes it when later consumed. Borrowing it here too would
+        // count that trivia twice and break the root.FullWidth == text.Length invariant
+        // (and round-tripping). Matches every hand-written synthetic token below.
+        return new SyntaxToken(kind, "", null, null);
     }
 
     // Header attributes and top-level directives are written bare ('clef treble',
@@ -109,8 +113,9 @@ internal sealed class Parser
         _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
             $"Expected {expected}, found '{Current.Kind}'");
 
-        // Error recovery: create a missing token
-        return new SyntaxToken(kinds[0], "", Current.LeadingTrivia, null);
+        // Error recovery: create a zero-width missing token with NO trivia (see the
+        // single-kind Expect above — borrowing Current's trivia double-counts it).
+        return new SyntaxToken(kinds[0], "", null, null);
     }
 
     private SyntaxToken? TryConsume(SyntaxKind kind)
@@ -2263,7 +2268,9 @@ private GreenNode?[] ParseArticulations()
         _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
             $"Expected part name, found '{Current.Kind}'");
 
-        return new SyntaxToken(SyntaxKind.Identifier, "", Current.LeadingTrivia, null);
+        // Zero-width missing token with NO trivia (Current keeps its own; borrowing it
+        // here would double-count — see Expect).
+        return new SyntaxToken(SyntaxKind.Identifier, "", null, null);
     }
 
     private GreenNode? ParseRenderItem()

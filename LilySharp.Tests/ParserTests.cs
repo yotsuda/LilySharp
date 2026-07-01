@@ -162,6 +162,23 @@ public class ParserTests
         Assert.Equal(original, reconstructed);
     }
 
+    // A failed Expect() inserts a ZERO-WIDTH missing token that must NOT absorb the
+    // next token's leading trivia — the real token keeps it and contributes it when
+    // consumed, so counting it on the synthetic token too would duplicate it and break
+    // the red-green invariant root.FullWidth == text.Length (and round-tripping). Each
+    // input trips one or more Expects where Current carries leading whitespace/newline
+    // (e.g. "time 4" then a stray token: Expect(Slash) AND Expect(denominator) both fail
+    // on the same following token).
+    [Theory]
+    [InlineData("time 4\n  x")]
+    [InlineData("time 3\n\tq")]
+    [InlineData("{ c4 } time 6\n   y")]
+    public void MalformedInput_RoundTripsExactly(string source)
+    {
+        var tree = SyntaxTree.Parse(source);
+        Assert.Equal(source, tree.ToFullString());
+    }
+
     [Fact]
     public void ParseDottedDuration()
     {
