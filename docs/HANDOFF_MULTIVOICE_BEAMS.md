@@ -1,5 +1,23 @@
 # 引き継ぎ (c): 多声(polyphony)のビーム ― 第 2 声部の連桁
 
+> **✅ 完了(2026-07-01)。** 第 2 声部の 8/16 分がその声部の音符に連桁され、**下声ビームは下・上声は上**。
+> LP 2.24 並置で連桁のグルーピング・下方配置・符幹下向き・beamlet 方向すべて一致を確認。単一声部＋既存多声
+> fixture は byte-identical(既存多声 fixture は 4 分/2 分のみで元々連桁しないため無変化)。全 1978 緑 / 3 skip。
+> コミット(古い順):
+> - `refactor(beams): carry VoiceIndex on beam groups` ― `BeamGroup.VoiceIndex`(byte-identical 基盤)。
+> - `feat(beams): beam every voice, not just the primary` ― 検出器を全声部ループ＋**声部で符幹方向固定**
+>   (voice1 上/voice2 下、forced 時 auto-knee 無効)、`ElementCoordinator.LayoutBeams` を `score.Voices[VoiceIndex]`
+>   解決、`LayoutEngine` が全声部 score をビームへ(最終＋prelim spacing)、レンダラの `beamedItems` を
+>   `(staff,voice,measure,item)` 化して声部ごとに flag 抑制。fixture `test/multivoice-beams`。
+>
+> **選択肢 A(collection で `StemUpOverride` 焼込)は採らず**、検出器で声部方向を固定した(§2 の「layout と render が
+> 同じ符幹を見る」を、render が既に voice で強制していることを利用して満たす=より小さい変更で layout/render 整合)。
+> **既知の非対応**(将来・稀): 声部を跨ぐ tuplet 境界(`score.TupletBrackets` は score-global で itemIndex 共有)は
+> 多声で beam を誤分割しうる ― 現 fixture 未発火。cross-voice beam collision も own-voice 限定。
+> 残りの本書(§0〜§6)は着手前の設計メモとして保存。**push は保留中**(未 push スタックに本作業 3 コミットが積まれた)。
+
+---
+
 **前提: `docs/DEV_BUGFIX_WORKFLOW.md` を先に読むこと**(ripple shell / `Write` でファイル化 / master 直 /
 LILYPOND-REF / **単一声部 byte-identical 不変条件** / `Co-Authored-By: Claude <current-model>` / **push は保留中**)。
 本書は #3(多声の slur/tie/gliss)の**続きで別軸**。#3 の spanner 対応が手本になる(§4 参照)。

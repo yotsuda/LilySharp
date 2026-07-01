@@ -4,11 +4,10 @@ Lily#(C#/.NET の LilyPond 風楽譜コンパイラ)のレイアウト不具合�
 LilyPond の実装に忠実に移植するための体系的な手順書。**次のセッションがこの文書だけで
 同じ品質の作業を再現できる**ことを目的とする。散文は日本語、コマンド/パス/識別子は原文どおり。
 
-> **次セッションの主タスク(2026-07-01 更新)** ― 本書と**併せて**下記を読むこと:
-> - `docs/HANDOFF_MULTIVOICE_BEAMS.md` ― #3 の続きで別軸 = **多声のビーム**(第 2 声部の 8/16 分が連桁されない)。
->   `LayoutBeams` が primary voice のみ＋多譜表パスは符幹方向を render 時にしか強制しない、が核心。**これが次の主タスク**。
->
-> **本セッション(2026-07-01)で完了・未 push**:
+> **直近の完了(2026-07-01)・未 push**:
+> - ✅ `docs/HANDOFF_MULTIVOICE_BEAMS.md` ― **多声のビーム完了**(第 2 声部の 8/16 分がその声部の音符に連桁、
+>   下声ビームは下・上声は上)。検出器を全声部ループ＋**声部で符幹方向固定**、`LayoutBeams` を `score.Voices[VoiceIndex]`
+>   解決、レンダラの `beamedItems` を `(staff,voice,measure,item)` 化。LP 2.24 並置一致。fixture `test/multivoice-beams`。
 > - ✅ `docs/HANDOFF_MULTISTAFF_OTTAVA.md` ― #6 ottava **完了**(per-staff 化＋**移調表示**=8va/8vb/15ma/15mb、
 >   `@ottava(bassa)` で下方も記述可、data-pos 修正込み)。
 > - ✅ `docs/HANDOFF_MULTIVOICE_SPANNERS.md` ― #3 **多声 slur/tie/gliss 完了**(検出・配置・**声部で向き固定**=
