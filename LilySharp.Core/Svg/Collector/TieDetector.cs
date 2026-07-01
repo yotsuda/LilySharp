@@ -71,7 +71,8 @@ public sealed class TieDetector
                     {
                         // LILYPOND-REF: lily/tie-column.cc — tie every matching pitch
                         // between this chord and the next chord/note.
-                        DetectChordTies(measures, v, measureIdx, itemIdx, startChord, ties);
+                        DetectChordTies(measures, v, measureIdx, itemIdx, startChord, ties,
+                            multiVoice: score.Voices.Length > 1);
                     }
                 }
             }
@@ -90,7 +91,8 @@ public sealed class TieDetector
     private static void DetectChordTies(
         ImmutableArray<Measure> measures, int voiceIndex, int measureIdx, int itemIdx,
         ChordItem startChord,
-        List<TieItem> ties)
+        List<TieItem> ties,
+        bool multiVoice)
     {
         // Find the next ChordItem or NoteItem.
         for (int mi = measureIdx; mi < measures.Length; mi++)
@@ -117,7 +119,7 @@ public sealed class TieDetector
                         // Unmatched pitches are silently dropped (LP behaviour for
                         // chord ties is to require matching pitches).
                     }
-                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex);
+                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex, multiVoice);
                     return;
                 }
                 else if (item is NoteItem endNoteItem)
@@ -129,7 +131,7 @@ public sealed class TieDetector
                         if (endNoteItem.StaffPosition == startPitch.StaffPosition)
                             matched.Add((startPitch, endNoteItem));
                     }
-                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex);
+                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex, multiVoice);
                     return;
                 }
             }
@@ -153,7 +155,7 @@ public sealed class TieDetector
         List<TieItem> ties,
         int startMeasureIdx, int endMeasureIdx,
         int startItemIdx, int endItemIdx,
-        int voiceIndex)
+        int voiceIndex, bool multiVoice)
     {
         if (matched.Count == 0)
             return;
@@ -162,7 +164,17 @@ public sealed class TieDetector
         matched.Sort((a, b) => a.Start.StaffPosition.CompareTo(b.Start.StaffPosition));
 
         var dirs = new bool?[matched.Count]; // true = curve up
-        if (matched.Count == 1)
+        if (multiVoice)
+        {
+            // Polyphony: the voice fixes EVERY tie's direction (upper voice up,
+            // lower voice down), overriding the single-voice bottom-DOWN/top-UP
+            // distribution so a lower voice's whole chord ties below its notes.
+            // LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo Tie.direction.
+            bool voiceUp = voiceIndex % 2 == 0;
+            for (int i = 0; i < matched.Count; i++)
+                dirs[i] = voiceUp;
+        }
+        else if (matched.Count == 1)
         {
             dirs[0] = !startChord.StemUp;
         }

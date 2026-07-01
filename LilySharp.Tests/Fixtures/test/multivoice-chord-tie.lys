@@ -1,0 +1,17 @@
+// A CHORD tie in the second voice of a single-staff polyphony. In a single voice
+// a chord's ties fan out (bottom curves down, top up); in polyphony the voice
+// fixes the whole chord's ties to one side — the lower voice ties BELOW its
+// notes (both e' and g' curve down here), so they stay clear of the upper voice.
+// Voice 1 carries no ties. LILYPOND-REF: ly/engraver-init.ly \voiceTwo sets
+// Tie.direction = DOWN; lily/tie-column.cc ties every matching pitch.
+octave absolute
+title "Multi-voice chord tie"
+part mel { clef treble }
+section S {
+  mel {
+    voice { c''4 d'' e'' f'' | g''1 }
+    voice { <e' g'>4~ <e' g'> e' g' | c'1 }
+  }
+}
+structure { S }
+score "multivoice-chord-tie" { staff mel }

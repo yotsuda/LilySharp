@@ -105,6 +105,9 @@ public class SvgSnapshotTests
         // Slur / tie / glissando in the SECOND voice of a single-staff polyphony
         // — detected per voice and laid out against voice 2's own notes.
         yield return new object[] { "test/multivoice-spanners" };
+        // A chord tie in the second voice: the whole chord's ties are forced to
+        // the voice's side (lower voice → below), not the single-voice fan-out.
+        yield return new object[] { "test/multivoice-chord-tie" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };
