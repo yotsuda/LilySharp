@@ -117,6 +117,9 @@ public class SvgSnapshotTests
         // A tuplet on the UPPER staff must not break the LOWER staff's beaming
         // (tuplet boundaries are staff-scoped too): the bass eighths beam 4+4.
         yield return new object[] { "test/multistaff-tuplet-beams" };
+        // A tuplet in the LOWER voice: its "3" bracket sits BELOW (the voice's
+        // stem side), and its own triplet still breaks that voice's beaming.
+        yield return new object[] { "test/multivoice-voice2-tuplet" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };

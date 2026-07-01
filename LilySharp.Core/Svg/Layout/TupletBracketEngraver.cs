@@ -157,13 +157,19 @@ public static class TupletBracketEngraver
                     tuplet.EndNoteIndex >= measureLayout.Items.Length))
                 continue;
 
-            // Resolve this tuplet's OWN staff (multi-staff): its measures (for
-            // note staff positions / slope / X), whether that staff is multi-
-            // voice (forced stem direction), and the staff's vertical offset.
-            var tupMeasures = measuresByStaff != null
-                && measuresByStaff.TryGetValue(tuplet.StaffIndex, out var mm) ? mm : measures;
-            bool tupForceStemUp = voicesByStaff != null
-                && voicesByStaff.TryGetValue(tuplet.StaffIndex, out var vv) ? vv.Length > 1 : forceStemUp;
+            // Resolve this tuplet's OWN voice on its OWN staff (multi-staff /
+            // polyphony): its measures drive the note staff positions used for
+            // slope / X, and whether the staff is polyphonic drives the forced
+            // stem side. A voice-2 tuplet must anchor to voice 2's notes and its
+            // OWN stem direction — not the staff's primary voice.
+            ImmutableArray<Voice> tupVoices = default;
+            voicesByStaff?.TryGetValue(tuplet.StaffIndex, out tupVoices);
+            bool staffMultiVoice = !tupVoices.IsDefaultOrEmpty ? tupVoices.Length > 1 : forceStemUp;
+            ImmutableArray<Measure> tupMeasures =
+                !tupVoices.IsDefaultOrEmpty && tuplet.VoiceIndex < tupVoices.Length
+                    ? tupVoices[tuplet.VoiceIndex].Measures
+                    : (measuresByStaff != null
+                        && measuresByStaff.TryGetValue(tuplet.StaffIndex, out var mm) ? mm : measures);
             double staffOffset = staffYByIndex != null
                 && staffYByIndex.TryGetValue(tuplet.StaffIndex, out var so) ? so : 0;
 
@@ -173,12 +179,16 @@ public static class TupletBracketEngraver
                 tupMeasures, tuplet.MeasureIndex, tuplet.EndNoteIndex, measureLayout);
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:560-630 get_default_dir
-            // In a multi-voice staff the primary voice's stems are FORCED up at
-            // render time (VoiceDefaults), but NoteItem.StemUp still holds the
-            // pitch default — so high tuplet notes would put the bracket below,
-            // on the wrong side. Honour the forced direction here. (The bracket
-            // list is resolved against the primary voice's measures.)
-            bool isStemUp = tupForceStemUp || CalculateDirection(tuplet, tupMeasures);
+            // In a polyphonic staff each voice's stems are FORCED by voice (voice 1
+            // up / voice 2 down, VoiceDefaults), and the bracket sits on that
+            // voice's stem side. Drive the direction from the tuplet's OWN voice —
+            // the old staff-wide "multi-voice => up" put a lower voice's bracket on
+            // the wrong (upper) side. Single-voice staves keep the pitch/stem
+            // majority (CalculateDirection).
+            bool isStemUp = staffMultiVoice
+                ? (VoiceDefaults.GetDefaultStemUp(tuplet.VoiceIndex + 1)
+                    ?? CalculateDirection(tuplet, tupMeasures))
+                : CalculateDirection(tuplet, tupMeasures);
 
             // The bracket's bound items are the OUTER STEMS when the stems
             // point in the bracket's direction (always true here: the
