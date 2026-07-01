@@ -1073,17 +1073,33 @@ public static class SpacingRules
     /// head (half 1.376 / whole 1.96) reserves proportionally more room than a
     /// black head (1.304). For a black head the net adjustment is
     /// 1.304 - 1.2 = +0.104 ss — the uniform gap LilyPond has over Lily#'s raw
-    /// duration spacing. The widest note/chord among the left items wins (a safe
-    /// choice for simultaneous voices). Rests and non-musical items leave the ideal
-    /// unchanged (LilyPond's narrower-rest reduction is not ported).
+    /// duration spacing. A rest uses its glyph's right extent instead (LilyPond's
+    /// g = the rest grob): a quarter rest (~0.95) is NARROWER than the increment,
+    /// so the space after a rest shrinks, matching LilyPond ("a quarter rest gets
+    /// almost 0.5 ss less horizontal space than a note"). The widest such left
+    /// item wins (a safe choice for simultaneous voices); non-musical items leave
+    /// the ideal unchanged.
     /// </remarks>
     internal static Spring ApplyLeftHeadWidth(Spring spring, IEnumerable<MusicItem> leftItems)
     {
         double leftHeadEnd = 0;
+        bool any = false;
         foreach (var p in leftItems)
-            if (p is NoteItem or ChordItem)
-                leftHeadEnd = Math.Max(leftHeadEnd, GlyphMetrics.GetNoteheadAdvance(GetNoteValue(p)));
-        if (leftHeadEnd <= 0)
+        {
+            double w = p switch
+            {
+                NoteItem or ChordItem => GlyphMetrics.GetNoteheadAdvance(GetNoteValue(p)),
+                // A rest is drawn glyph-left-aligned at its column, so its right
+                // extent from the column origin is the rest stencil's right edge.
+                RestItem => GlyphMetrics.GetRestBBox(GetNoteValue(p)).Right,
+                _ => double.NaN
+            };
+            if (double.IsNaN(w))
+                continue;
+            leftHeadEnd = Math.Max(leftHeadEnd, w);
+            any = true;
+        }
+        if (!any)
             return spring;
 
         double ideal = Math.Max(EngravingDefaults.SpacingIncrement,

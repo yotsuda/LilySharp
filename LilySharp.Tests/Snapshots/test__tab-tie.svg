@@ -5,24 +5,24 @@
   .music { font-family: 'Emmentaler', serif; }
 </style>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="11.64" x2="31.96" y2="11.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="13.14" x2="31.96" y2="13.14" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.64" x2="31.96" y2="14.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.14" x2="31.96" y2="16.14" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="11.64" x2="32.56" y2="11.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.14" x2="32.56" y2="13.14" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.64" x2="32.56" y2="14.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.14" x2="32.56" y2="16.14" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.00" y="13.89" font-size="3.11"></text>
-  <rect x="18.51" y="11.64" width="0.19" height="4.50" fill="#000000"/>
-  <rect x="30.87" y="11.64" width="0.19" height="4.50" fill="#000000"/>
-  <rect x="31.36" y="11.64" width="0.60" height="4.50" fill="#000000"/>
+  <rect x="18.81" y="11.64" width="0.19" height="4.50" fill="#000000"/>
+  <rect x="31.47" y="11.64" width="0.19" height="4.50" fill="#000000"/>
+  <rect x="31.96" y="11.64" width="0.60" height="4.50" fill="#000000"/>
   <rect x="6.99" y="15.25" width="1.62" height="1.79" fill="#FFFFFF" data-pos="214"/>
   <text x="7.80" y="16.97" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="214">5</text>
   <line x1="7.80" y1="14.95" x2="7.80" y2="11.95" stroke="#000000" stroke-width="0.130"/>
   <line x1="10.80" y1="14.95" x2="10.80" y2="11.95" stroke="#000000" stroke-width="0.130"/>
-  <rect x="19.84" y="13.75" width="1.62" height="1.79" fill="#FFFFFF" data-pos="229"/>
-  <text x="20.65" y="15.47" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="229">5</text>
-  <line x1="20.65" y1="15.83" x2="20.65" y2="18.83" stroke="#000000" stroke-width="0.130"/>
-  <line x1="23.66" y1="15.83" x2="23.66" y2="18.83" stroke="#000000" stroke-width="0.130"/>
+  <rect x="20.14" y="13.75" width="1.62" height="1.79" fill="#FFFFFF" data-pos="229"/>
+  <text x="20.95" y="15.47" font-size="2.60" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="229">5</text>
+  <line x1="20.95" y1="15.83" x2="20.95" y2="18.83" stroke="#000000" stroke-width="0.130"/>
+  <line x1="23.96" y1="15.83" x2="23.96" y2="18.83" stroke="#000000" stroke-width="0.130"/>
   <path d="M 9.30,17.68 C 9.65,18.14 10.26,18.14 10.60,17.68 C 10.26,18.36 9.65,18.36 9.30,17.68 Z" fill="#000000"/>
-  <path d="M 22.16,13.38 C 22.50,12.92 23.11,12.92 23.46,13.38 C 23.11,12.69 22.50,12.69 22.16,13.38 Z" fill="#000000"/>
+  <path d="M 22.46,13.38 C 22.80,12.92 23.41,12.92 23.76,13.38 C 23.41,12.69 22.80,12.69 22.46,13.38 Z" fill="#000000"/>
   <rect x="0.30" y="6.80" width="1.99" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="197"/>
   <text x="1.29" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="197">A</text>
   </g>

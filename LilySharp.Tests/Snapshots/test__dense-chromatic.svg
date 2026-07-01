@@ -6,11 +6,11 @@
 </style>
   <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="229">Dense chromatic / tight spacing</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="11.64" x2="70.16" y2="11.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="12.64" x2="70.16" y2="12.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="13.64" x2="70.16" y2="13.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="14.64" x2="70.16" y2="14.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.64" x2="70.16" y2="15.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="11.64" x2="70.46" y2="11.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="12.64" x2="70.46" y2="12.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="13.64" x2="70.46" y2="13.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.64" x2="70.46" y2="14.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.64" x2="70.46" y2="15.64" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="14.64" font-size="4.00" data-pos="293"></text>
   <text class="music" x="3.30" y="13.64" font-size="4.00" data-pos="263"></text>
   <line x1="8.95" y1="16.64" x2="10.68" y2="16.64" stroke="#000000" stroke-width="0.200"/>
@@ -57,8 +57,8 @@
   <text class="music" x="59.26" y="10.14" font-size="4.00" data-pos="411"></text>
   <text class="music" x="62.96" y="13.64" font-size="4.00" data-pos="419"></text>
   <rect x="41.51" y="11.64" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="69.07" y="11.64" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="69.56" y="11.64" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="69.37" y="11.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="69.86" y="11.64" width="0.60" height="4.00" fill="#000000"/>
   <line x1="10.29" y1="13.14" x2="18.25" y2="12.64" stroke="#000000" stroke-width="0.480"/>
   <line x1="10.29" y1="13.95" x2="12.80" y2="13.79" stroke="#000000" stroke-width="0.480"/>
   <line x1="12.80" y1="13.79" x2="15.75" y2="13.61" stroke="#000000" stroke-width="0.480"/>

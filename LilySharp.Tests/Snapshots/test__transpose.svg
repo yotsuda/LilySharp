@@ -7,11 +7,11 @@
   <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="373">Transpose</text>
   <text x="110.55" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="394">Lily#</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="23.00" x2="53.07" y2="23.00" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="24.00" x2="53.07" y2="24.00" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="25.00" x2="53.07" y2="25.00" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="26.00" x2="53.07" y2="26.00" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="27.00" x2="53.07" y2="27.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="23.00" x2="53.37" y2="23.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="24.00" x2="53.37" y2="24.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="25.00" x2="53.37" y2="25.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="26.00" x2="53.37" y2="26.00" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="27.00" x2="53.37" y2="27.00" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="26.00" font-size="4.00" data-pos="439"></text>
   <text class="music" x="3.30" y="23.00" font-size="4.00" data-pos="412"></text>
   <text class="music" x="4.40" y="24.50" font-size="4.00" data-pos="412"></text>
@@ -72,8 +72,8 @@
   <text class="music" x="47.77" y="25.00" font-size="4.00" data-pos="529"></text>
   <rect x="23.07" y="23.00" width="0.19" height="4.00" fill="#000000"/>
   <rect x="38.08" y="23.00" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="51.98" y="23.00" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="52.47" y="23.00" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="52.28" y="23.00" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="52.77" y="23.00" width="0.60" height="4.00" fill="#000000"/>
   <rect x="0.30" y="18.16" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="466"/>
   <text x="3.01" y="20.36" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="466">Main</text>
   </g>
