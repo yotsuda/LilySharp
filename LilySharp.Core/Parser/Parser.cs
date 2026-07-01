@@ -354,14 +354,15 @@ internal sealed class Parser
 
     private GreenNode? ParsePartProperty()
     {
-        // In a part/staff header every attribute is colon-form ('name: value'),
-        // including time and tempo (which keep their richer value grammars).
+        // In a part/staff header every attribute is written BARE ('name value'),
+        // including time and tempo (which keep their richer value grammars); a stray
+        // ':' is flagged and dropped. This matches the bare music-stream forms.
         if (Current.Kind == SyntaxKind.TimeKeyword)
-            return ParseTimeSignature(expectColon: true);
+            return ParseTimeSignature();
         if (Current.Kind == SyntaxKind.TempoKeyword)
-            return ParseTempoDeclaration(expectColon: true);
+            return ParseTempoDeclaration();
 
-        // clef: treble, instrument: "Violin", channel: 1, tuning: standard, transpose: d
+        // clef treble, instrument "Violin", channel 1, tuning standard, transpose d
         if (Current.Kind == SyntaxKind.Identifier ||
             Current.Kind == SyntaxKind.ClefKeyword ||
             Current.Kind == SyntaxKind.InstrumentKeyword ||
@@ -473,9 +474,10 @@ internal sealed class Parser
         return new MetadataDeclarationGreen(keyword, [.. valueTokens]);
     }
 
-    // expectColon: true in a part/staff header (the property form 'time: 4/4');
-    // false for the bare music-stream command ('time 4/4').
-    private TimeSignatureGreen ParseTimeSignature(bool expectColon = false)
+    // 'time 4/4' is written bare everywhere — as a music-stream command and as a
+    // part/staff-header attribute. A stray ':' ('time: 4/4') is flagged and dropped
+    // by ConsumeRejectedColon so the rest still parses.
+    private TimeSignatureGreen ParseTimeSignature()
     {
         var timeKeyword = Expect(SyntaxKind.TimeKeyword);
         SyntaxToken? colon = ConsumeRejectedColon();
@@ -485,9 +487,9 @@ internal sealed class Parser
         return new TimeSignatureGreen(timeKeyword, colon, numerator, slash, denominator);
     }
 
-    // expectColon: true in a part/staff header ('tempo: 120'); false for the bare
-    // music-stream command ('tempo 120').
-    private TempoDeclarationGreen ParseTempoDeclaration(bool expectColon = false)
+    // 'tempo 120' is written bare everywhere (music-stream command and part/staff
+    // attribute alike); a stray ':' is flagged and dropped by ConsumeRejectedColon.
+    private TempoDeclarationGreen ParseTempoDeclaration()
     {
         var tempoKeyword = Expect(SyntaxKind.TempoKeyword);
         SyntaxToken? colon = ConsumeRejectedColon();
