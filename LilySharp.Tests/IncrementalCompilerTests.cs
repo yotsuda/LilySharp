@@ -114,6 +114,60 @@ public class IncrementalCompilerTests
     }
 
     [Fact]
+    public void SwingToggleEdit_DefeatsReuse_AndMatchesFull()
+    {
+        // Toggling swing at an UNCHANGED bpm ("tempo 120" -> "tempo 120 swing") changes no
+        // measure content and no line-break gate, but the synthesized tempo/swing mark
+        // differs. SwingSubdivision is in the score-global key, so reuse must be defeated
+        // and the output must match a full recompile (before the fix: reuse fired -> stale).
+        string src = """
+            tempo 120
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section Main { melody { c4 d e f | g4 a b c | } }
+            structure { Main }
+            score "x" { staff melody }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "tempo 120", "tempo 120 swing");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.False(session.LastEditReusedLayout);
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    [Fact]
+    public void StaffNameEdit_DefeatsReuse_AndMatchesFull()
+    {
+        // A staff name drives the system indent and the drawn label but is NOT part of the
+        // line-break gate (springs/prefix), so before the fix a name edit tripped
+        // whole-layout reuse and kept the STALE name. AddStaffIdentity folds the name into
+        // the per-measure content key, defeating reuse so output matches a full recompile.
+        string src = """
+            time 4/4
+            key c major
+            part rh { clef treble name "Violin" }
+            part lh { clef bass name "Cello" }
+            section Main { rh { c4 d e f | g4 a b c | } lh { c4 d e f | g4 a b c | } }
+            structure { Main }
+            score "x" { grandStaff { staff rh staff lh } }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var session = new IncrementalCompiler(tree, Opt);
+        session.Render();
+
+        var change = Replace(src, "name \"Violin\"", "name \"Viola\"");
+        var incremental = Norm(session.Edit(change));
+
+        Assert.False(session.LastEditReusedLayout);
+        Assert.Equal(Full(tree.WithChange(change).Text), incremental);
+    }
+
+    [Fact]
     public void ContentUnchangedEdit_WithLyrics_ReusesWholeLayout_AndMatchesFull()
     {
         // Lyrics are now migrated onto SourceIndex resolution, so a score carrying them

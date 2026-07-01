@@ -79,7 +79,7 @@ public sealed class IncrementalCompiler
     // so the reused layout renders byte-identical to a full recompile.
     private ScoreLayout? _cachedLayout;
     private ImmutableArray<MeasureContentKey> _contentKeys;
-    private (string? Title, string? Composer, int? Tempo) _globalKey;
+    private (string? Title, string? Composer, int? Tempo, int SwingSubdivision) _globalKey;
 
     /// <summary>Whether the most recent <see cref="Edit"/> reused the cached
     /// break solution (true) or recomputed it (false). For diagnostics / tests.</summary>
@@ -168,7 +168,10 @@ public sealed class IncrementalCompiler
         // re-derives each migrated annotation's data-pos from the edited score, so the
         // output is byte-identical to a full recompile. Gated to the override-free path
         // (overrides spread spacing globally and are not localized by the per-measure key).
-        var globalKey = (score.Title, score.Composer, score.Tempo);
+        // SwingSubdivision joins the score-global key: the synthesized tempo/swing
+        // mark (MusicMarkEngraver.BuildAllMarks) is not in the side-tables the content
+        // key buckets, so a swing toggle at an unchanged BPM must be caught here.
+        var globalKey = (score.Title, score.Composer, score.Tempo, score.SwingSubdivision);
         bool reuse = skip
             && reuseEligible
             && _cachedLayout != null

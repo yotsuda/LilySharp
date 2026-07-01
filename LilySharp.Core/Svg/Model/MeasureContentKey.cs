@@ -153,6 +153,7 @@ public readonly record struct MeasureContentKey(int Hash)
             for (int i = 0; i < m; i++)
             {
                 acc[i].Add(staffIndex);                 // discriminate which staff
+                AddStaffIdentity(ref acc[i], staff);    // per-staff (indent/name/tuning/…)
                 AddIntrinsic(ref acc[i], measures[i]);
                 acc[i].Add(chain.Entry[i]);
             }
@@ -190,6 +191,27 @@ public readonly record struct MeasureContentKey(int Hash)
 
         foreach (var item in measure.Items)
             hc.Add(HashContent(item, ItemExclusions));
+    }
+
+    // --- staff-level identity (per-staff fields, not per-measure) ---
+
+    private static void AddStaffIdentity(ref HashCode hc, Staff staff)
+    {
+        // Staff-level fields that affect the staff's layout/render but are constant
+        // across its measures: the instrument name (drives the system indent and the
+        // drawn label), tab tuning, ossia scaling, hara-kiri visibility, staff
+        // affinity, per-staff key signature, and the text-row band. Clef and the
+        // primary voice's measures are already captured (entry context + AddIntrinsic);
+        // secondary voices defeat reuse upstream via MultiStaffScore.HasSecondaryVoices.
+        hc.Add(staff.InstrumentName);
+        hc.Add(staff.Tuning);
+        hc.Add(staff.IsOssia);
+        hc.Add(staff.RemoveEmpty);
+        hc.Add(staff.RemoveFirst);
+        hc.Add(staff.StaffAffinity);
+        hc.Add(staff.PerStaffKeySignature);
+        hc.Add(staff.IsTextRow);
+        hc.Add(staff.TextRowVerses);
     }
 
     // --- side-tables, bucketed onto measures by MeasureIndex ---
