@@ -292,16 +292,19 @@ public class PageLayouterTests
             (upExtent: 1.0, downExtent: 8.0),
             (upExtent: 8.0, downExtent: 1.0));
 
-        // Skylines: the tall parts are at different X positions, so they don't collide
+        // Skylines: the tall parts are at different X positions, so they don't collide.
+        // FromBox's height comes from yBottom for a DOWN building and from -yTop for an
+        // UP building, so the extent must go in THAT slot — passing it in the other one
+        // collapses every building to height 0 and makes this test vacuous.
         // System 0 DOWN: tall protrusion at X=[0,10], short elsewhere
         var sys0Down = new VerticalSkyline(VerticalDirection.Down);
-        sys0Down.Merge(VerticalSkyline.FromBox(0, 10, 0, 8.0, VerticalDirection.Down));   // tall at left
-        sys0Down.Merge(VerticalSkyline.FromBox(10, 70, 0, 2.0, VerticalDirection.Down));  // short at right
+        sys0Down.Merge(VerticalSkyline.FromBox(0, 10, 8.0, 0, VerticalDirection.Down));   // tall (h=8) at left
+        sys0Down.Merge(VerticalSkyline.FromBox(10, 70, 2.0, 0, VerticalDirection.Down));  // short (h=2) at right
 
         // System 1 UP: tall protrusion at X=[60,70], short elsewhere
         var sys1Up = new VerticalSkyline(VerticalDirection.Up);
-        sys1Up.Merge(VerticalSkyline.FromBox(0, 60, -2.0, 0, VerticalDirection.Up));      // short at left
-        sys1Up.Merge(VerticalSkyline.FromBox(60, 70, -8.0, 0, VerticalDirection.Up));     // tall at right
+        sys1Up.Merge(VerticalSkyline.FromBox(0, 60, 0, -2.0, VerticalDirection.Up));      // short (h=2) at left
+        sys1Up.Merge(VerticalSkyline.FromBox(60, 70, 0, -8.0, VerticalDirection.Up));     // tall (h=8) at right
 
         var skylines = ImmutableArray.Create(
             (up: new VerticalSkyline(VerticalDirection.Up), down: sys0Down),
@@ -313,10 +316,12 @@ public class PageLayouterTests
         double gapWithSkylines = pagesWithSkylines[0].Systems[1].Y - pagesWithSkylines[0].Systems[0].Y;
         double gapWithoutSkylines = pagesWithoutSkylines[0].Systems[1].Y - pagesWithoutSkylines[0].Systems[0].Y;
 
-        // Skyline distance should be smaller because tall parts don't overlap in X
-        // This means systems can be placed closer together
-        Assert.True(gapWithSkylines <= gapWithoutSkylines,
-            $"Skyline gap ({gapWithSkylines:F2}) should be <= scalar gap ({gapWithoutSkylines:F2})");
+        // The tall parts don't overlap in X, so the per-X skyline distance is STRICTLY
+        // smaller than the scalar worst case (which stacks max-down against max-up), and
+        // the systems pack closer together. Strict inequality guards against the whole
+        // skyline collapsing to zero (which would make the comparison vacuous).
+        Assert.True(gapWithSkylines < gapWithoutSkylines,
+            $"Skyline gap ({gapWithSkylines:F2}) should be < scalar gap ({gapWithoutSkylines:F2})");
     }
 
     [Fact]
