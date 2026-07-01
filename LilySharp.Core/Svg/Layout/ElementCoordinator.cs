@@ -314,7 +314,8 @@ public sealed class ElementCoordinator
                 measureIndex: anchorMeasure,
                 startIndex: pieceMembers[0].ItemIndex,
                 group.StemUp,
-                group.GrowDirection);
+                group.GrowDirection,
+                group.VoiceIndex);
 
             var pieceLayout = LayoutSingleSystemBeamPiece(score, subGroup, measureMap, staffIndex);
             if (pieceLayout != null)
@@ -380,7 +381,8 @@ public sealed class ElementCoordinator
             group.MeasureIndex,
             startIndex: 0,
             group.StemUp,
-            group.GrowDirection);
+            group.GrowDirection,
+            group.VoiceIndex);
 
         // Cross-measure collision detection is deferred — pass empty list for now.
         var beamLayout = _beamEngraver.CalculateBeamLayout(

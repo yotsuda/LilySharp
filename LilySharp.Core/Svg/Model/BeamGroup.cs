@@ -45,18 +45,30 @@ public sealed record BeamGroup
     /// </remarks>
     public int GrowDirection { get; }
 
+    /// <summary>
+    /// Index of the voice this beam belongs to (0 = primary). Beams never cross
+    /// voices: automatic beaming groups notes within a single voice, so each
+    /// group carries its voice so the engraver resolves member X/Y against
+    /// <c>score.Voices[VoiceIndex]</c> and the renderer suppresses flags on the
+    /// right voice.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/auto-beam-engraver.cc — one Beam per voice.</remarks>
+    public int VoiceIndex { get; }
+
     public BeamGroup(
         ImmutableArray<BeamMember> members,
         int measureIndex,
         int startIndex,
         bool stemUp,
-        int growDirection = 0)
+        int growDirection = 0,
+        int voiceIndex = 0)
     {
         Members = members;
         MeasureIndex = measureIndex;
         StartIndex = startIndex;
         StemUp = stemUp;
         GrowDirection = Math.Clamp(growDirection, -1, 1);
+        VoiceIndex = voiceIndex;
     }
 
     /// <summary>
