@@ -421,6 +421,12 @@ git push                                          # deploy の自動 "Bump dev b
     `define-grobs.scm:3242` の SpacingSpanner `base-shortest-duration=3/16` が正。定数1個修正で**全4分/2分主体譜が LP へ**
     (4分ギャップ 3.70→3.0=LP 3.002 厳密一致、8分は不変)。100 snapshot 再ベース(全て横詰め=改善、構造変化12件は
     line-break/trill 短縮=benign)。**spacing 系で最もコスパの良い LP 忠実化**(§12-6 の密8分4%より遥かに高可視)。
+  - ⭐ **audit ハーネス復旧＋休符 spacing 修正(2026-07-01)**。§12-6 の spacing 修正の副次点検で:
+    (a) `audit/lilypond-ref` の校正3ケースが旧構文(`staff { rh }`)で回らなくなっていた→現行構文化＋eighths-vs-quarters
+    の XFAIL 解除(誤診断「stem_dir_correction」も訂正)、**3/3 PASS 復活**(`9f8965e`)。(b) `ApplyLeftHeadWidth` が
+    **休符に head-width を適用していなかった**=休符後が LP より 9% 広い(実測 2.90 vs LP 2.649)。休符幅
+    (`GetRestBBox.Right`、4分休符~0.95<increment 1.2)で LP と一致化(2.67、`72a4c1b`)。24 snapshot 再ベース。
+    **A-2 評価の残り**(和音の旗/交差下声連桁/dotted extent/3声部交差/grace basis)は全て稀ケースゆえ documented deferral。
 - inter-system spacing は X 依存スカイラインでなく per-system extent の近似。
   - ✅ **対応済み(2026-07-01 夜、commit `4fc5a0e`)**。非最適パス(`LayoutEngine.CreatePages`、既定SVG)が
     `perSystemSkylines` を**受け取っていながら捨てて**スカラー和を使っていた=最適パス(`PageLayouter.PositionSystemsOnPage`、
