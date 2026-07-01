@@ -426,14 +426,19 @@ git push                                          # deploy の自動 "Bump dev b
     byte-identical**。`Distance()` は真の per-X 最小クリアランスゆえ、フロア＋padding で**overlap は原理上発生しない**
     (「近づける」だけ)。**24 の複数システム snapshot が全て height 減(=詰まった、広がりゼロ)、数値スイープで staff-block
     gap 全て正、最密 1.80(showcase/01-expressions)も目視でインク非衝突を確認**。単一システムと fallback は不変。1986緑。
-- XFAIL: eighths-vs-quarters の MinItemGap 0.4 vs LP skyline-horizontal-padding 0.1(追跡中)。
-  - ✅ **評価済み・deferred(2026-06-29 夕、§12-6)**。実体は「`GlyphMetrics.MinItemGap` 既定 0.4 を
-    LP の 0.1 にするか」というグローバル調整。**設定可能化は実装済み**(`NoteSpacingParameters.MinItemGap`
-    override、`SeparatingPaddingTests` で 0.1<0.4 を検証)。**失敗/skip テストは無い**(3 skip は
-    benchmark/ledger/MIDI で無関係)=追跡中の discrepancy。既定を 0.1 にすると**全譜の水平間隔が縮み
-    snapshot 全面再ベースライン**。かつ 0.1 は Lily# の近似スカイラインでは ink を取りこぼし**衝突しうる**ので
-    無条件に正しいとは言えず要検証。**F3 が `measure_natural_width`/spacing を作り替える**ため、今ここで
-    全面再ベースラインするのは churn。F3 後に専用検証で。
+- eighths-vs-quarters の note 間隔が LP と ~4-8% ずれる ― ✅ **対応済み(2026-07-01 夜、commit `5d2358a`+`78e3eea`)**。
+  **診断が2度誤っていた**(記録として明記):(a) doc 旧説「MinItemGap 0.4→0.1」は**誤り**=0.1 にすると過補正で
+  LP をむしろ下回る(2.4 vs 2.504)。(b) audit 旧説「stem_dir_correction 乖離」も**誤り**=当該 pair は隣接2度で
+  ヘッド重複ゆえ stemCorr=0(probe 実証)。**真因は2つ**、内部 spring 値の probe で確定:
+  **(1) 幻の旗**=`CreateRightSkyline` が**連桁音符にも旗を足し**(旗ボックスが符頭レベルまで垂れ次の頭と Y 重複)、
+  note-to-note rod を ~0.9 膨らませ連桁8分を rod-bound 2.596(LP 2.504)に。→ beam 所属を spacing に配線
+  (`MeasureLayouter.IsItemBeamed`、`LayoutEngine` が `DetectBeamGroups` から reference-identity predicate 構築)し、
+  連桁音符は旗を skip(`5d2358a`)。**(2) head-width ideal 欠落**=LP は `ideal = duration_space − increment + left_head_end`
+  (`note-spacing.cc:77`)で左音符の実ヘッド幅を足すが Lily# は生 duration space。全 gap 一律 −0.104(=1.304−1.2)不足。
+  → `SpacingRules.ApplyLeftHeadWidth`(`78e3eea`)。**結果**: eighths-vs-quarters が LP と丸め一致(eighth 2.5/2.504、
+  quarter 3.7/3.704、per-gap 比 ~1.0)。(1)は連桁密部のみ7 snapshot(詰まる=改善)、(2)はほぼ全譜再ベース(一律 widen=
+  衝突リスク無し、構造変化2件は line-break/長い trill wave=benign 実証)。**F3 との churn 懸念より正しさ優先で実施**。
+  MinItemGap override 機構(`NoteSpacingParameters.MinItemGap`/`SeparatingPaddingTests`)は無関係の別物として残置。
 - **交差声部の水平 note-collision(下声部が上声部より高音で符幹が交差)** ― ✅ **対応済み(2026-07-01 夜、commit `724f8cc`)**。
   **解決の要点**: LP 実測で真因と量が確定 ― `AnalyzeCollision` の末尾 `NoCollision` を LP の "meshing" フォールバック
   (`note-collision.cc:332-337`、ドット0.1/無0.17)へ差し替え、新 `CollisionType.Meshing` を付与。`CalculateVoiceOffsets` は
