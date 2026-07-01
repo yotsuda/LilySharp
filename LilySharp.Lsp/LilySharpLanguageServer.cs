@@ -35,7 +35,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260630-2114";
+    public const string Version = "0.1.1-20260702-0821";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -2332,6 +2332,7 @@ public class ConvertLayoutResponse
     public string? ToLayout { get; set; }
     public string? Error { get; set; }
 }
+
 
 
 
