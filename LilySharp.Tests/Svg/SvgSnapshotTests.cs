@@ -108,6 +108,9 @@ public class SvgSnapshotTests
         // A chord tie in the second voice: the whole chord's ties are forced to
         // the voice's side (lower voice → below), not the single-voice fan-out.
         yield return new object[] { "test/multivoice-chord-tie" };
+        // Second-voice beaming: voice 2's eighths/sixteenths beam per voice, BELOW
+        // the notes (stems forced down), while voice 1's quarters stay unbeamed.
+        yield return new object[] { "test/multivoice-beams" };
         // A tie on a second-interval chord follows its own reversed head's X
         // displacement, not the chord column.
         yield return new object[] { "test/tie-seconds" };

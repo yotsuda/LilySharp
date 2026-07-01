@@ -207,7 +207,9 @@ public sealed class ElementCoordinator
                 continue;
 
             var (system, measureLayout) = measureInfo;
-            var measure = score.Voice.Measures[group.MeasureIndex];
+            // Beams resolve against their OWN voice's measures (voice 2 has its own
+            // item stream); single-voice scores keep VoiceIndex 0 = score.Voice.
+            var measure = score.Voices[group.VoiceIndex].Measures[group.MeasureIndex];
 
             var itemXPositions = new List<double>();
             if (!measureLayout.Columns.IsDefaultOrEmpty && measureLayout.Columns.Length > 0)
@@ -229,7 +231,7 @@ public sealed class ElementCoordinator
             }
 
             var collisions = CollectBeamCollisions(
-                score.Voice.Measures[group.MeasureIndex],
+                score.Voices[group.VoiceIndex].Measures[group.MeasureIndex],
                 group,
                 itemXPositions);
 
@@ -349,7 +351,7 @@ public sealed class ElementCoordinator
                 return null;
 
             double x;
-            var measure = score.Voice.Measures[memberMeasure];
+            var measure = score.Voices[group.VoiceIndex].Measures[memberMeasure];
             if (!measureLayout.Columns.IsDefaultOrEmpty && measureLayout.Columns.Length > 0)
             {
                 Fraction t = Fraction.Zero;

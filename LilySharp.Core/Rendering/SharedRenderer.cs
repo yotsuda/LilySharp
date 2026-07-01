@@ -165,23 +165,24 @@ public static class SharedRenderer
 
     // ---------- System ----------
 
-    // F3/B: identify beamed notes by their POSITION (staff, measure, item), not by the
+    // F3/B: identify beamed notes by their POSITION (staff, voice, measure, item), not by the
     // MusicItem value. A value key includes SourcePosition, so on whole-layout reuse the
     // cached layout's beam members (built from the pre-edit score) no longer value-equal the
     // live score's notes (offsets shifted) — every beamed note would then be re-stemmed AND
-    // beamed = double stems. The position key is offset-independent. Beams are detected from
-    // each staff's PRIMARY voice only (DetectBeamGroups uses score.Voice), so the set is
-    // matched against voice 1 only (see DrawStaffMeasures) — a non-primary voice never beams.
-    private static HashSet<(int Staff, int Measure, int Item)> BuildBeamedItemsSet(ScoreLayout layout)
+    // beamed = double stems. The position key is offset-independent. The voice component keeps
+    // a polyphonic staff's beams matched to the RIGHT voice (voice 2's eighths beam under it;
+    // DetectBeamGroups now runs per voice) — without it a voice-1 beamed item would suppress a
+    // voice-2 flag at the same (staff,measure,item) and vice versa.
+    private static HashSet<(int Staff, int Voice, int Measure, int Item)> BuildBeamedItemsSet(ScoreLayout layout)
     {
-        var set = new HashSet<(int, int, int)>();
+        var set = new HashSet<(int, int, int, int)>();
         foreach (var beam in layout.BeamLayouts)
         {
             int staff = beam.StaffIndex < 0 ? 0 : beam.StaffIndex;
             foreach (var member in beam.Group.Members)
             {
                 int measure = member.MeasureIndex >= 0 ? member.MeasureIndex : beam.Group.MeasureIndex;
-                set.Add((staff, measure, member.ItemIndex));
+                set.Add((staff, beam.Group.VoiceIndex, measure, member.ItemIndex));
             }
         }
         return set;
@@ -190,7 +191,7 @@ public static class SharedRenderer
     private static void DrawSystem(
         MultiStaffScore score, ScoreLayout layout,
         SystemLayout system, GrobPropertyResolver resolver,
-        HashSet<(int Staff, int Measure, int Item)> beamedItems, IDrawingContext gc)
+        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc)
     {
         bool isFirstSystem = system.SystemIndex == 0;
         double systemStartX = system.Indent;
@@ -378,7 +379,7 @@ public static class SharedRenderer
     /// </remarks>
     private static void DrawTabStaff(Staff staff, SystemLayout system, int staffIndex,
         double staffY, double staffRight, double systemStartX,
-        HashSet<(int Staff, int Measure, int Item)> beamedItems, IDrawingContext gc)
+        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc)
     {
         var tuningType = staff.Tuning ?? TuningType.Guitar;
         int stringCount = Tunings.GetStringCount(tuningType);
@@ -436,7 +437,7 @@ public static class SharedRenderer
     private static void DrawTabMeasure(Measure measure, MeasureLayout ml,
         double staffY, int[] tuning, int stringCount, int octaveShift,
         Staff staff, int staffIndex, int voiceNumber,
-        HashSet<(int Staff, int Measure, int Item)> beamedItems, IDrawingContext gc)
+        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc)
     {
         bool useColumnTiming = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
         var currentTiming = Fraction.Zero;
@@ -450,10 +451,9 @@ public static class SharedRenderer
                 : (i < ml.Items.Length ? ml.X + ml.Items[i].X : ml.X);
             currentTiming += item.Duration;
 
-            // Beams are detected from the primary voice only — match this position
-            // against the beamed set (offset-independent) and only for voice 1.
-            bool isBeamed = voiceNumber == 1
-                && beamedItems.Contains((staffIndex, ml.MeasureIndex, i));
+            // Match this position against the beamed set (offset-independent),
+            // keyed by voice so each voice's beams suppress only its own flags.
+            bool isBeamed = beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, i));
 
             switch (item)
             {
@@ -909,7 +909,7 @@ public static class SharedRenderer
         Voice voice, int voiceNumber, bool? forcedStemUp,
         SystemLayout system, ScoreLayout layout, int staffIndex,
         double staffY, ClefType clef, GrobPropertyResolver resolver,
-        HashSet<(int Staff, int Measure, int Item)> beamedItems, IDrawingContext gc)
+        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc)
     {
         double staffMiddleY = staffY + StaffHeight / 2;
 
@@ -941,7 +941,7 @@ public static class SharedRenderer
             {
                 case NoteItem note:
                     DrawNote(note, itemX, staffMiddleY, resolver,
-                        voiceNumber == 1 && beamedItems.Contains((staffIndex, ml.MeasureIndex, itemIdx)),
+                        beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
                         forcedStemUp, headWiped, gc);
                     break;
                 case RestItem rest:
@@ -956,7 +956,7 @@ public static class SharedRenderer
                     break;
                 case ChordItem chord:
                     DrawChord(chord, itemX, staffMiddleY, resolver,
-                        voiceNumber == 1 && beamedItems.Contains((staffIndex, ml.MeasureIndex, itemIdx)),
+                        beamedItems.Contains((staffIndex, voiceNumber - 1, ml.MeasureIndex, itemIdx)),
                         forcedStemUp, headWiped, gc);
                     break;
                 case ClefChangeItem clefChange:

@@ -1,0 +1,20 @@
+// Second-voice beaming: voice 2's eighths and sixteenths group into their OWN
+// beams, sitting BELOW the notes because the lower voice forces stems down —
+// while voice 1's quarters stay unbeamed with stems up. Auto-beaming runs per
+// voice; before this fix each voice-2 eighth drew an isolated flag (the detector
+// scanned only the primary voice). Measure 1 is straight eighths (two beat
+// groups of four in 4/4); measure 2 mixes sixteenths and a dotted-eighth +
+// sixteenth (a right-pointing beamlet), all under voice 2's own down-stemmed beam.
+// LILYPOND-REF: lily/auto-beam-engraver.cc — one Beam per Voice context.
+// LILYPOND-REF: ly/engraver-init.ly — \voiceTwo forces stems (and beams) down.
+octave absolute
+title "Multi-voice beams"
+part mel { clef treble }
+section S {
+  mel {
+    voice { c''4 c'' c'' c'' | c''4 c'' c'' c'' | }
+    voice { e'8 f' g' a' b' a' g' f' | e'16 f' g' a' b'16 a' g' f' g'8. f'16 e'8 f' | }
+  }
+}
+structure { S }
+score "multivoice-beams" { staff mel }

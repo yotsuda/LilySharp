@@ -335,7 +335,16 @@ public sealed class LayoutEngine
                     staff.PrimaryVoice, score.TimeSignature, score.KeySignature,
                     ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
                     tupletBrackets: score.TupletBrackets);
-                prelimBeams.AddRange(_elementCoordinator.LayoutBeams(staffScore, prelimSystems, staffIndex));
+                // Beams detect per voice — expose every voice so voice 2's beam
+                // protrusions join the spacing extents (matches the final pass).
+                // Ties/slurs keep the primary-voice prelim score (unchanged).
+                var staffBeamScore = staff.Voices.Length > 1
+                    ? new Score(
+                        staff.Voices, score.TimeSignature, score.KeySignature,
+                        ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
+                        tupletBrackets: score.TupletBrackets)
+                    : staffScore;
+                prelimBeams.AddRange(_elementCoordinator.LayoutBeams(staffBeamScore, prelimSystems, staffIndex));
                 prelimTies.AddRange(_elementCoordinator.LayoutTies(staffScore, prelimSystems, staffIndex, staff));
                 prelimSlurs.AddRange(_elementCoordinator.LayoutSlurs(staffScore, prelimSystems, staffIndex));
             }
@@ -373,16 +382,17 @@ public sealed class LayoutEngine
                 // Beam detection must see tuplet spans: auto beams break at
                 // tuplet boundaries (BeamDetector).
                 tupletBrackets: score.TupletBrackets);
-            // Slur/tie/glissando detection runs PER VOICE, so a polyphonic staff
-            // must expose all its voices (not just the primary). Single-voice
-            // staves reuse the primary-voice score, so their layout is unchanged.
+            // Beam AND slur/tie/glissando detection run PER VOICE, so a polyphonic
+            // staff must expose all its voices (not just the primary) — else voice 2's
+            // eighths never beam. Single-voice staves reuse the primary-voice score,
+            // so their layout is unchanged.
             var staffSpannerScore = staff.Voices.Length > 1
                 ? new Score(
                     staff.Voices, score.TimeSignature, score.KeySignature,
                     ClefToString(staff.Clef), score.Tempo, score.Title, score.Composer,
                     tupletBrackets: score.TupletBrackets)
                 : staffScore;
-            allBeamLayouts.AddRange(_elementCoordinator.LayoutBeams(staffScore, systemsArray, staffIndex));
+            allBeamLayouts.AddRange(_elementCoordinator.LayoutBeams(staffSpannerScore, systemsArray, staffIndex));
             allTieLayouts.AddRange(_elementCoordinator.LayoutTies(staffSpannerScore, systemsArray, staffIndex, staff));
             allSlurLayouts.AddRange(_elementCoordinator.LayoutSlurs(staffSpannerScore, systemsArray, staffIndex));
             allGlissandoLayouts.AddRange(_elementCoordinator.LayoutGlissandos(staffSpannerScore, systemsArray, staffIndex));
