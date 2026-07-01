@@ -30,6 +30,15 @@ namespace LilySharp.Core.Svg.Layout;
 public sealed class MeasureLayouter
 {
     /// <summary>
+    /// Predicate returning whether a music item is part of a beam group (and so
+    /// carries NO flag). Set by <see cref="LayoutEngine"/> before a layout pass so
+    /// note-to-note spacing does not reserve flag width for beamed notes. Null =>
+    /// treat every note as unbeamed (flag reserved), the pre-beam-aware behaviour.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/note-spacing.cc — a beamed Stem has no Flag grob.</remarks>
+    public Func<MusicItem, bool>? IsItemBeamed { get; set; }
+
+    /// <summary>
     /// Layouts items within a measure using the Spring-Rod model.
     /// </summary>
     /// <remarks>
@@ -274,9 +283,11 @@ public sealed class MeasureLayouter
                 double maxSkyDist = 0;
                 foreach (var prev in prevItems)
                 {
+                    bool prevBeamed = IsItemBeamed?.Invoke(prev) ?? false;
                     foreach (var next in nextItems)
                     {
-                        double skyDist = SpacingRules.CalculateSkylineDistance(prev, next, staffY: 0);
+                        double skyDist = SpacingRules.CalculateSkylineDistance(
+                            prev, next, staffY: 0, prevBeamed: prevBeamed);
                         maxSkyDist = Math.Max(maxSkyDist, skyDist);
                     }
                 }

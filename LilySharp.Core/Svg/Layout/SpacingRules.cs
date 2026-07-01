@@ -1449,7 +1449,8 @@ public static class SpacingRules
     /// <param name="item">The music item</param>
     /// <param name="referenceX">X coordinate of the reference point (notehead center)</param>
     /// <param name="staffY">Y coordinate of the staff's middle line</param>
-    public static HorizontalSkyline CreateRightSkyline(MusicItem item, double referenceX, double staffY)
+    public static HorizontalSkyline CreateRightSkyline(MusicItem item, double referenceX, double staffY,
+        bool isBeamed = false)
     {
         var boxes = new List<(double YBottom, double YTop, double XLeft, double XRight)>();
 
@@ -1521,8 +1522,14 @@ public static class SpacingRules
             double noteheadYTop = noteY - noteheadBBox.Bottom;
             boxes.Add((noteheadYBottom, noteheadYTop, noteheadLeftX, noteheadLeftX + noteheadWidth));
 
-            // Add flag if present (8th notes and shorter with stems)
-            if (item is NoteItem note2 && noteValue >= 8)
+            // Add flag if present (8th notes and shorter with stems). A BEAMED
+            // note has NO flag — its stems join the beam — so including one here
+            // spuriously reserves ~1 notehead of extra horizontal space and makes
+            // beamed runs rod-bound wider than LilyPond. LP builds the skyline
+            // from the actual grobs, where a beamed note simply has no Flag grob.
+            // LILYPOND-REF: lily/note-spacing.cc get_spacing uses the note-column
+            //   skyline; a beamed Stem carries no Flag.
+            if (item is NoteItem note2 && noteValue >= 8 && !isBeamed)
             {
                 var flagBBox = GlyphMetrics.GetFlagBBox(noteValue, note2.StemUp);
                 if (flagBBox != default)
@@ -1747,7 +1754,8 @@ public static class SpacingRules
 
     public static double CalculateSkylineDistance(MusicItem? prevItem, MusicItem? nextItem,
                                                    double staffY,
-                                                   NoteSpacingParameters? noteParams = null)
+                                                   NoteSpacingParameters? noteParams = null,
+                                                   bool prevBeamed = false)
     {
         // LILYPOND-REF: scm/define-grobs.scm — skyline-horizontal-padding (LP default 0.1).
         // LilySharp historically used GlyphMetrics.MinItemGap (0.4) as the static
@@ -1781,7 +1789,7 @@ public static class SpacingRules
         }
 
         // Create skylines for both items (at reference X = 0)
-        var rightSkyline = CreateRightSkyline(prevItem, 0, staffY);
+        var rightSkyline = CreateRightSkyline(prevItem, 0, staffY, prevBeamed);
         var leftSkyline = CreateLeftSkyline(nextItem, 0, staffY);
 
         // Calculate minimum distance using skyline collision detection

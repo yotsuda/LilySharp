@@ -58,6 +58,10 @@ public sealed class LayoutEngine
         // Calculate the common shortest duration across all voices for Gourlay spacing
         double commonShortestDuration = SpacingRules.CalculateCommonShortestDuration(score);
 
+        // Beam membership drives note spacing: a beamed note has no flag, so its
+        // right skyline must not reserve flag width. (See MeasureLayouter.IsItemBeamed.)
+        _measureLayouter.IsItemBeamed = BeamedPredicate(_elementCoordinator.DetectBeamGroups(score));
+
         var systemMeasures = _systemBreaker.BreakIntoSystems(score, commonShortestDuration);
 
         // Pre-calculate first system skylines for initial Y positioning
@@ -206,6 +210,14 @@ public sealed class LayoutEngine
         // LILYPOND-REF: lily/spacing-spanner.cc
         // Calculate the common shortest duration across all voices for Gourlay spacing
         double commonShortestDuration = SpacingRules.CalculateCommonShortestDuration(score);
+
+        // Beam membership drives note spacing (a beamed note has no flag). Collect
+        // it across every staff's voices before laying out the measures.
+        var beamGroups = new List<BeamGroup>();
+        foreach (var (_, staff, _) in score.EnumerateStaves())
+            beamGroups.AddRange(_elementCoordinator.DetectBeamGroups(
+                new Score(staff.Voices, score.TimeSignature, score.KeySignature, ClefToString(staff.Clef))));
+        _measureLayouter.IsItemBeamed = BeamedPredicate(beamGroups);
 
         // LILYPOND-REF: ly/paper-defaults-init.ly — indent / short-indent
         // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
@@ -1182,6 +1194,22 @@ public sealed class LayoutEngine
         // Indent = max(LP default 15mm, name width + delimiter + padding)
         double calculatedIndent = maxNameWidth + 1.5; // 1.0 delimiter + 0.3 name padding + 0.2 extra
         return Math.Max(DefaultIndent, calculatedIndent);
+    }
+
+    /// <summary>
+    /// Builds a reference-identity predicate over the items carried by the given
+    /// beam groups (the notes/chords that render with no flag). Returns null when
+    /// nothing is beamed, so the spacing keeps its flag-reserving default.
+    /// </summary>
+    private static Func<MusicItem, bool>? BeamedPredicate(IEnumerable<BeamGroup> groups)
+    {
+        var set = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        foreach (var g in groups)
+            foreach (var m in g.Members)
+                set.Add(m.Item);
+        if (set.Count == 0)
+            return null;
+        return set.Contains;
     }
 
     private static string ClefToString(ClefType clef) => clef switch
