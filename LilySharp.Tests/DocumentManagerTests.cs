@@ -86,6 +86,20 @@ public class DocumentManagerTests
         Assert.Equal("{ c4 | d4 | }", doc.Text);
     }
 
+    [Fact]
+    public void ApplyChanges_UnopenedDocument_DoesNotThrow_AppliesFromEmpty()
+    {
+        // A didChange before didOpen is a client protocol violation. ApplyChanges must
+        // not throw (previously InvalidOperationException): it starts from an empty
+        // document and applies the edit best-effort.
+        var mgr = new DocumentManager();
+
+        var doc = mgr.ApplyChanges(TestUri, new[] { Change(0, 0, 0, 0, "c4") }, version: 3);
+
+        Assert.Equal("c4", doc.Text);
+        Assert.Equal(3, doc.Version);
+    }
+
     [Theory]
     // Character beyond the line length clamps to the line end (LSP spec).
     [InlineData(0, 99, 6)]

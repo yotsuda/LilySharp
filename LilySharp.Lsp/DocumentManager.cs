@@ -83,7 +83,14 @@ public sealed class DocumentManager
     {
         var doc = GetDocument(uri);
         if (doc == null)
-            throw new InvalidOperationException($"Document not found: {uri}");
+        {
+            // A didChange before didOpen is a client protocol violation. Rather than
+            // throw (which drops the edit and surfaces an error), start from an empty
+            // document and apply the changes best-effort; the client re-syncs on its
+            // next full update.
+            var empty = SyntaxTree.Parse("");
+            doc = new Document(uri, empty.Text, empty, version);
+        }
 
         var changeList = changes as IReadOnlyList<TextDocumentContentChangeEvent> ?? changes.ToList();
 

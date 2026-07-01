@@ -203,7 +203,12 @@ public sealed class LilySharpLanguageServer
     {
         if (@params.Text != null)
         {
-            var doc = _documentManager.OpenOrUpdate(@params.TextDocument.Uri, @params.Text);
+            // A save carries no version; preserve the current one instead of letting
+            // it reset to 0 (which is below any live didChange version and would make
+            // a pending debounced diagnostics run mis-decide it is stale).
+            var uri = @params.TextDocument.Uri;
+            var version = _documentManager.GetDocument(uri)?.Version ?? 0;
+            var doc = _documentManager.OpenOrUpdate(uri, @params.Text, version);
             PublishDiagnostics(doc);
         }
     }
@@ -900,20 +905,12 @@ public sealed class LilySharpLanguageServer
         };
     }
 
+    // Delegate to the single, correct line/character -> offset conversion in
+    // DocumentManager: it handles \n, \r\n AND lone \r line breaks and clamps the
+    // character to the END OF ITS LINE (not just the text length), so an over-large
+    // character no longer walks into following lines and resolves the wrong node.
     private static int GetOffset(string text, int line, int character)
-    {
-        int offset = 0;
-        int currentLine = 0;
-
-        while (offset < text.Length && currentLine < line)
-        {
-            if (text[offset] == '\n')
-                currentLine++;
-            offset++;
-        }
-
-        return Math.Min(offset + character, text.Length);
-    }
+        => DocumentManager.GetOffset(text, new Position { Line = line, Character = character });
 
     // ========== Document Symbols ==========
 
@@ -1569,7 +1566,11 @@ public sealed class LilySharpLanguageServer
         if (message.Contains("Unknown") || message.Contains("Expected"))
         {
             // Suggest inserting a rest if there's a parsing error
-            var (line, character) = GetLineAndCharacter(doc.Text, diagnostic.Span.Start);
+            // Compute the end from the span's END offset (not start-char + length):
+            // a diagnostic span may cross a line, and assuming one line puts the end
+            // past the line, yielding a malformed edit.
+            var (startLine, startChar) = GetLineAndCharacter(doc.Text, diagnostic.Span.Start);
+            var (endLine, endChar) = GetLineAndCharacter(doc.Text, diagnostic.Span.End);
             actions.Add(new CodeAction
             {
                 Title = "Insert rest (r4)",
@@ -1584,8 +1585,8 @@ public sealed class LilySharpLanguageServer
                             {
                                 Range = new LspRange
                                 {
-                                    Start = new Position { Line = line, Character = character },
-                                    End = new Position { Line = line, Character = character + diagnostic.Span.Length }
+                                    Start = new Position { Line = startLine, Character = startChar },
+                                    End = new Position { Line = endLine, Character = endChar }
                                 },
                                 NewText = "r4"
                             }
