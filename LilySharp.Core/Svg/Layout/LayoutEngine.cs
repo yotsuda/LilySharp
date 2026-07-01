@@ -265,6 +265,11 @@ public sealed class LayoutEngine
         var systems = new List<SystemLayout>();
         var perSystemExtents = new List<(double upExtent, double downExtent)>();
         var perSystemSkylines = new List<(VerticalSkyline up, VerticalSkyline down)>();
+        // Per-system body height. Equals the scalar systemHeight for every system
+        // unless hara-kiri hides different staves per system (then each system is as
+        // tall as its OWN surviving staves). CreatePages spaces systems by this so a
+        // hara-kiri'd system's gap is not over-reserved at the full height.
+        var perSystemHeights = new List<double>();
         int firstMeasureIndex = 0;
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
@@ -304,6 +309,7 @@ public sealed class LayoutEngine
             perSystemExtents.Add((
                 LayoutUtilities.CalculateUpExtent(upSky),
                 LayoutUtilities.CalculateDownExtent(downSky, sysHeight)));
+            perSystemHeights.Add(sysHeight);
 
             systems.Add(new SystemLayout(
                 SystemIndex: sysIdx, Y: currentY,
@@ -383,7 +389,7 @@ public sealed class LayoutEngine
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
-            perSystemSkylines);
+            perSystemSkylines, perSystemHeights);
 
         // Calculate beams/ties/slurs/glissandos per staff
         var allBeamLayouts = new List<BeamLayout>();
@@ -548,8 +554,16 @@ public sealed class LayoutEngine
     private (ImmutableArray<PageLayout> pages, ImmutableArray<SystemLayout> systems) CreatePages(
         ImmutableArray<SystemLayout> systems, double headerHeight,
         List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight,
-        List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines = null)
+        List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines = null,
+        List<double>? perSystemHeights = null)
     {
+        // Per-system body height, defaulting to the scalar systemHeight when the
+        // caller has none (single-staff path, or no hara-kiri) — in that case every
+        // entry equals systemHeight, so the result is byte-identical.
+        double SysHeight(int i) =>
+            perSystemHeights != null && i >= 0 && i < perSystemHeights.Count
+                ? perSystemHeights[i]
+                : systemHeight;
         // An empty score (no systems) has nothing to page; return empty rather than
         // indexing perSystemExtents[0] below.
         if (systems.IsDefaultOrEmpty || perSystemExtents.Count == 0)
@@ -592,7 +606,7 @@ public sealed class LayoutEngine
                 // then kept, which is byte-identical to the previous behaviour.
                 // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline;
                 //   lily/skyline.cc Skyline::distance.
-                double skylineDistance = systemHeight
+                double skylineDistance = SysHeight(i)
                     + perSystemExtents[i].downExtent + perSystemExtents[i + 1].upExtent;
                 if (perSystemSkylines != null && i + 1 < perSystemSkylines.Count)
                 {
@@ -602,12 +616,12 @@ public sealed class LayoutEngine
                 }
 
                 double minDistance = Math.Max(
-                    systemHeight + _options.SystemSpacing, skylineDistance + padding);
+                    SysHeight(i) + _options.SystemSpacing, skylineDistance + padding);
                 skylineY += minDistance;
             }
         }
         double lastDownExtent = perSystemExtents[systems.Length - 1].downExtent;
-        double totalHeight = skylineY + systemHeight + lastDownExtent + _options.MarginBottom;
+        double totalHeight = skylineY + SysHeight(systems.Length - 1) + lastDownExtent + _options.MarginBottom;
         var systemsArray = updatedSystems.ToImmutableArray();
         var page = new PageLayout(0, _options.PageWidth, totalHeight, headerHeight, systemsArray);
         return (ImmutableArray.Create(page), systemsArray);
