@@ -1,5 +1,19 @@
 # 引き継ぎ: 交差声部の水平 note-collision(per-note 幅対応)
 
+> **✅ 完了(2026-07-01 夜、commit `724f8cc`、未 push)。** 以下は着手時の引き継ぎ(経緯記録)。実装は下記の通り本書の
+> 段階案から**簡略化**された ― LP 実測で「per-note 幅対応の refactor は不要」と判明したため:
+> - **真因確定**: LP 並置実測で、交差の shift は `check_meshing_chords` の meshing フォールバック(0.17)そのもので、
+>   **extent スケーリング(343-348)は係数 1.0=no-op**(Lily# の notehead 左 extent=0 かつ正=up-shifts-right)。base 幅は
+>   列最大幅=down 幅で既に一致。よって **段階2(extent 係数)/per-note 幅 refactor は本ケースでは不要**だった。
+> - **実装**: `AnalyzeCollision` 末尾 `NoCollision` → meshing フォールバック＋新 `CollisionType.Meshing`。
+>   `CalculateVoiceOffsets` は Meshing 時のみ **rightMost をピン**=上声(連桁)を列 X に固定し**下声を左へ**(§4 完了定義どおり)。
+> - **前セッションの「clear しきれず」の正体**: マグニチュード不足でなく、**連桁の上声を動かすと beam が列 X から外れる**問題。
+>   下声を動かす設計(§3 段階4 の (a))で回避＝LP と同じ見た目・beam 無傷。
+> - **検証**: 全音符 0.66・4分 0.44 が LP(0.668/0.444=`0.34*down幅`)と一致(並置 PNG＋data-pos 実測)。equal-width 全
+>   snapshot byte-identical、`multivoice-beam-collision` は A5＋加線が左へ 0.66 のみ(純差分)。新 fixture
+>   `test/multivoice-crossing-collision`＋3 単体テスト。1986緑。**残り簡略化**: 下声は非連桁前提、dotted down-shifts-right の
+>   一般 extent スケーリングは据置(既存 snapshot 依存なし)。
+
 **前提: `docs/DEV_BUGFIX_WORKFLOW.md` を先に読むこと**(ripple shell / `Write` でファイル化 / master 直 /
 LILYPOND-REF / **単一声部・equal-width byte-identical 不変条件** / `Co-Authored-By: Claude <current-model>` /
 **push 保留中**)。本書は `DEV_BUGFIX_WORKFLOW.md` **§12-7 の実装版引き継ぎ**(evidence は §12-7、着手手順は本書)。

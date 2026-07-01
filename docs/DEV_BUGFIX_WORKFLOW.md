@@ -4,12 +4,13 @@ Lily#(C#/.NET の LilyPond 風楽譜コンパイラ)のレイアウト不具合�
 LilyPond の実装に忠実に移植するための体系的な手順書。**次のセッションがこの文書だけで
 同じ品質の作業を再現できる**ことを目的とする。散文は日本語、コマンド/パス/識別子は原文どおり。
 
-> **次セッションの主タスク(2026-07-01)** ― 本書と**併せて** `docs/HANDOFF_NOTE_COLLISION_PERNOTE_WIDTH.md` を読むこと:
-> = **交差声部の水平 note-collision(per-note 幅対応)**。多声ビュー一式で唯一残った本質的欠落(§12-7 の実装版引き継ぎ)。
-> 下声部が上声部より高音のとき上声部の符幹が下声部音を貫通する ― LP は下声を左へずらす。根因・LP 参照・段階手順・
-> **前セッションで踏んだ落とし穴(meshing フォールバック試作を §0 に従い revert)**まで handoff に記載済み。
+> **交差声部の水平 note-collision(per-note 幅対応)は ✅ 完了(2026-07-01 夜、commit `724f8cc`、未 push)。**
+> 詳細は §12-7(対応済みの要点)＋`docs/HANDOFF_NOTE_COLLISION_PERNOTE_WIDTH.md`(末尾に完了サマリ追記済み)。
+> 要旨: `AnalyzeCollision` に LP の meshing フォールバックを移植＋新 `CollisionType.Meshing` で**下声を左へ寄せる**ピン
+> (連桁の上声を列 X に温存)。分離量 `2*0.17*down_head_width` が LP 並置一致。多声ビュー一式はこれで本質的欠落なし。
 >
 > **直近の完了(2026-07-01)・未 push**:
+> - ✅ **交差声部の水平 note-collision**(`724f8cc`、上記)。1986緑。
 > - ✅ `docs/HANDOFF_MULTIVOICE_BEAMS.md` ― **多声のビーム完了**(第 2 声部の 8/16 分がその声部の音符に連桁、
 >   下声ビームは下・上声は上)。検出器を全声部ループ＋**声部で符幹方向固定**、`LayoutBeams` を `score.Voices[VoiceIndex]`
 >   解決、レンダラの `beamedItems` を `(staff,voice,measure,item)` 化。LP 2.24 並置一致。fixture `test/multivoice-beams`。
@@ -431,7 +432,17 @@ git push                                          # deploy の自動 "Bump dev b
     snapshot 全面再ベースライン**。かつ 0.1 は Lily# の近似スカイラインでは ink を取りこぼし**衝突しうる**ので
     無条件に正しいとは言えず要検証。**F3 が `measure_natural_width`/spacing を作り替える**ため、今ここで
     全面再ベースラインするのは churn。F3 後に専用検証で。
-- **交差声部の水平 note-collision(下声部が上声部より高音で符幹が交差)** ― ✅ **評価済み・deferred(2026-07-01、§12-7)**。
+- **交差声部の水平 note-collision(下声部が上声部より高音で符幹が交差)** ― ✅ **対応済み(2026-07-01 夜、commit `724f8cc`)**。
+  **解決の要点**: LP 実測で真因と量が確定 ― `AnalyzeCollision` の末尾 `NoCollision` を LP の "meshing" フォールバック
+  (`note-collision.cc:332-337`、ドット0.1/無0.17)へ差し替え、新 `CollisionType.Meshing` を付与。`CalculateVoiceOffsets` は
+  Meshing 時だけ **rightMost をピン**(＝上声=連桁声部を列 X に固定し、**下声を左へ寄せる**)。分離量は LP と同一
+  (`2*0.17*down_head_width`=全音符 0.668、4分 0.444 を LP 並置で一致確認)。**extent スケーリング(343-348)は Lily# の
+  notehead 左 extent=0 かつ up-shifts-right ゆえ係数 1.0=no-op**(全音符が clear しきれなかった前セッションの症状は
+  マグニチュード不足でなく**連桁声部を動かすと beam が列 X から外れる**問題だった=下声を動かす設計で回避)。equal-width は
+  全 snapshot byte-identical、`multivoice-beam-collision` のみ A5＋加線が左へ 0.66(純差分)、新 fixture
+  `test/multivoice-crossing-collision`(4分×8分)＋3 単体テスト追加。1986緑。**残り簡略化**: 下声は非連桁前提(LP がこの交差で
+  出す全音符/4分では常に真)、dotted down-shifts-right の一般 extent スケーリングは据置。**push 保留中**。
+  <details><summary>(以下・着手前の deferred 記録)</summary>
   多声ビーム一式(`VoiceIndex` 導通〜cross-voice **beam** collision まで)完了後に発見。repro=`voice{ c'8×8 }`(上・ステム上)＋
   `voice{ a'1 }`(下・A5 全音符、C5 より高い交差)。LP は下声部音を左へずらして上声部の符幹を clear するが、Lily# はずらさず
   **符幹が全音符を貫通**(垂直=ビーム高さは §cross-voice beam collision の commit で解決済、残るは水平のみ)。
@@ -445,6 +456,7 @@ git push                                          # deploy の自動 "Bump dev b
   **希少性**: 発火に**声部交差**(下声部が高音)が必要=通常のポリフォニーでは起きない。
   **やるなら**: note-collision の **per-note 幅対応**(固定 notehead 幅→実 extent)という広めの refactor＋交差時 pinning/連桁相互作用の
   精査が要る。既存 collision fixture(equal-width は extent factor=1.0 で不変のはず)を担保しつつ mixed-width のみ再ベースライン。
+  </details>
 
 ---
 
