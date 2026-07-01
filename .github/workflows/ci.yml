@@ -12,6 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
+        configuration: [Debug, Release]
 
     steps:
     - uses: actions/checkout@v4
@@ -25,13 +26,13 @@ jobs:
       run: dotnet restore
 
     - name: Build
-      run: dotnet build --no-restore --verbosity normal
+      run: dotnet build --no-restore --configuration ${{ matrix.configuration }} --verbosity normal
 
     - name: Test
-      run: dotnet test --no-build --verbosity normal --collect:"XPlat Code Coverage"
+      run: dotnet test --no-build --configuration ${{ matrix.configuration }} --verbosity normal --collect:"XPlat Code Coverage"
 
     - name: Upload coverage
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-latest' && matrix.configuration == 'Debug'
       uses: actions/upload-artifact@v4
       with:
         name: coverage-report
