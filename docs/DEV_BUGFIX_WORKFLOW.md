@@ -4,6 +4,14 @@ Lily#(C#/.NET の LilyPond 風楽譜コンパイラ)のレイアウト不具合�
 LilyPond の実装に忠実に移植するための体系的な手順書。**次のセッションがこの文書だけで
 同じ品質の作業を再現できる**ことを目的とする。散文は日本語、コマンド/パス/識別子は原文どおり。
 
+> **次セッションの主タスク(2026-07-01 時点)** ― 本書と**併せて**下記の引き継ぎを読むこと:
+> - `docs/HANDOFF_MULTISTAFF_OTTAVA.md` ― #6 多譜表スパナの残り 1 種 = **ottava**(above-staff スタッカーの
+>   per-staff 化)。hairpin/text-spanner は完了済み(未 push)。
+> - `docs/HANDOFF_MULTIVOICE_SPANNERS.md` ― #3 **多声の slur/tie/gliss** 検出・配置(検出器が primary voice のみ)。
+>
+> どちらも **単一譜/単一声部 byte-identical を各コミットで死守**する型。未 push コミットが積まれているので、
+> 着手前に `git --no-pager log --oneline origin/master..HEAD` で現状を把握すること。
+
 ---
 
 ## 0. 最優先原則 ― 「アドホックにしない」
