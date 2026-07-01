@@ -57,8 +57,15 @@ public sealed class SlurDetector
                     {
                         var (startMeasureIdx, startItemIdx, startItem) = openSlurs.Pop();
 
-                        // Slur curves opposite to the start item's stem direction.
-                        bool curveUp = !StemUpOf(startItem);
+                        // Single voice: the slur curves OPPOSITE the stem. Polyphony:
+                        // the voice fixes the direction regardless of stem — the upper
+                        // voice curves UP, the lower voice DOWN, so the two voices'
+                        // slurs stay clear of each other.
+                        // LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo set
+                        //   Slur.direction = UP / DOWN (voiceThree/Four alternate).
+                        bool curveUp = score.Voices.Length > 1
+                            ? (v % 2 == 0)
+                            : !StemUpOf(startItem);
 
                         slurs.Add(new SlurItem(
                             // For a chord the slur anchors at the head on the curve side.

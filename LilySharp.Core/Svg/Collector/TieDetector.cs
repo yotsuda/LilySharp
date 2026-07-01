@@ -51,7 +51,13 @@ public sealed class TieDetector
                         if (endNote != null)
                         {
                             var (endMeasureIdx, endItemIdx, note) = endNote.Value;
-                            bool curveUp = !startNote.StemUp;
+                            // Polyphony fixes the tie direction by voice (upper UP,
+                            // lower DOWN); a single voice curves opposite the stem.
+                            // LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo
+                            //   set Tie.direction = UP / DOWN.
+                            bool curveUp = score.Voices.Length > 1
+                                ? (v % 2 == 0)
+                                : !startNote.StemUp;
                             ties.Add(new TieItem(
                                 startNote, note,
                                 startNote.StaffPosition,
