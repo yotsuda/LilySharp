@@ -7,14 +7,14 @@
   <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="74">Two Verses</text>
   <text x="110.55" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="96">Lily#</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="17.16" x2="96.34" y2="17.16" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.16" x2="96.34" y2="18.16" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="19.16" x2="96.34" y2="19.16" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="20.16" x2="96.34" y2="20.16" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="21.16" x2="96.34" y2="21.16" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.16" x2="94.23" y2="17.16" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.16" x2="94.23" y2="18.16" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="19.16" x2="94.23" y2="19.16" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="20.16" x2="94.23" y2="20.16" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="21.16" x2="94.23" y2="21.16" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="20.16" font-size="4.00" data-pos="149"></text>
   <text class="music" x="3.30" y="19.16" font-size="4.00" data-pos="113"></text>
-  <line x1="47.71" y1="16.16" x2="49.67" y2="16.16" stroke="#000000" stroke-width="0.200"/>
+  <line x1="47.01" y1="16.16" x2="48.96" y2="16.16" stroke="#000000" stroke-width="0.200"/>
   <text class="music" x="9.72" y="18.66" font-size="4.00" data-pos="190"></text>
   <line x1="9.79" y1="18.66" x2="9.79" y2="22.16" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="17.74" y="18.16" font-size="4.00" data-pos="194"></text>
@@ -25,24 +25,24 @@
   <line x1="34.00" y1="17.16" x2="34.00" y2="20.66" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="43.06" y="16.66" font-size="4.00" data-pos="202"></text>
   <line x1="43.12" y1="16.66" x2="43.12" y2="20.16" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="48.04" y="16.16" font-size="4.00" data-pos="205"></text>
-  <line x1="48.10" y1="16.16" x2="48.10" y2="19.66" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="52.86" y="16.66" font-size="4.00" data-pos="208"></text>
-  <line x1="52.92" y1="16.66" x2="52.92" y2="20.16" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="61.18" y="17.16" font-size="4.00" data-pos="212"></text>
-  <line x1="61.24" y1="17.16" x2="61.24" y2="20.66" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="68.08" y="17.66" font-size="4.00" data-pos="215"></text>
-  <line x1="68.14" y1="17.66" x2="68.14" y2="21.16" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="75.78" y="18.16" font-size="4.00" data-pos="217"></text>
-  <line x1="75.84" y1="18.16" x2="75.84" y2="21.66" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="79.48" y="18.66" font-size="4.00" data-pos="219"></text>
-  <line x1="79.55" y1="18.66" x2="79.55" y2="22.16" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="88.38" y="20.16" font-size="4.00" data-pos="223"></text>
+  <text class="music" x="47.33" y="16.16" font-size="4.00" data-pos="205"></text>
+  <line x1="47.40" y1="16.16" x2="47.40" y2="19.66" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="52.15" y="16.66" font-size="4.00" data-pos="208"></text>
+  <line x1="52.22" y1="16.66" x2="52.22" y2="20.16" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="60.47" y="17.16" font-size="4.00" data-pos="212"></text>
+  <line x1="60.54" y1="17.16" x2="60.54" y2="20.66" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="67.37" y="17.66" font-size="4.00" data-pos="215"></text>
+  <line x1="67.44" y1="17.66" x2="67.44" y2="21.16" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="75.07" y="18.16" font-size="4.00" data-pos="217"></text>
+  <line x1="75.14" y1="18.16" x2="75.14" y2="21.66" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="78.77" y="18.66" font-size="4.00" data-pos="219"></text>
+  <line x1="78.84" y1="18.66" x2="78.84" y2="22.16" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="86.98" y="20.16" font-size="4.00" data-pos="223"></text>
   <rect x="39.75" y="17.16" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="58.19" y="17.16" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="83.79" y="17.16" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="95.25" y="17.16" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="95.74" y="17.16" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="57.48" y="17.16" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="82.39" y="17.16" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="93.14" y="17.16" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="93.63" y="17.16" width="0.60" height="4.00" fill="#000000"/>
   <text x="9.72" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="241">A</text>
   <text x="14.22" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000">-</text>
   <text x="17.74" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="244">ma</text>
@@ -50,21 +50,21 @@
   <text x="25.44" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="248">zing</text>
   <text x="33.94" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="253">grace</text>
   <text x="43.06" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="261">how</text>
-  <text x="52.86" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="266">sweet</text>
-  <text x="61.18" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="274">the</text>
-  <text x="68.08" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="278">sound</text>
-  <text x="75.78" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="284">that</text>
-  <text x="88.38" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="291">saved</text>
+  <text x="52.15" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="266">sweet</text>
+  <text x="60.47" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="274">the</text>
+  <text x="67.37" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="278">sound</text>
+  <text x="75.07" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="284">that</text>
+  <text x="86.98" y="24.77" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="291">saved</text>
   <text x="9.72" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="313">Twas</text>
   <text x="17.74" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="318">grace</text>
   <text x="25.44" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="324">that</text>
   <text x="33.94" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="329">taught</text>
   <text x="43.06" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="338">my</text>
-  <text x="52.86" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="342">heart</text>
-  <text x="61.18" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="350">to</text>
-  <text x="68.08" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="353">fear</text>
-  <text x="75.78" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="358">and</text>
-  <text x="88.38" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="364">grace</text>
+  <text x="52.15" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="342">heart</text>
+  <text x="60.47" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="350">to</text>
+  <text x="67.37" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="353">fear</text>
+  <text x="75.07" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="358">and</text>
+  <text x="86.98" y="26.57" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="364">grace</text>
   <text x="1.80" y="24.77" font-size="2.40" font-family="serif" font-weight="bold" fill="#000000">1.</text>
   <text x="1.80" y="26.57" font-size="2.40" font-family="serif" font-weight="bold" fill="#000000">2.</text>
   <text class="music" x="0.80" y="14.42" font-size="1.60" data-pos="0"></text>

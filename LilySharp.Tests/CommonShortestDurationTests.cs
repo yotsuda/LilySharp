@@ -30,18 +30,18 @@ namespace LilySharp.Tests;
 public class CommonShortestDurationTests
 {
     [Fact]
-    public void QuarterNoteOnlyScore_IsCappedAtEighth()
+    public void QuarterNoteOnlyScore_IsCappedAtBaseShortest()
     {
         // LILYPOND-REF: lily/spacing-spanner.cc:166-171 — the spacing basis is
-        // min(base-shortest-duration (1/8), mode of per-measure shortests), so a
-        // quarters-only score still spaces on the 1/8 basis like LilyPond.
+        // min(base-shortest-duration (3/16), mode of per-measure shortests), so a
+        // quarters-only score spaces on the 3/16 basis (NOT 1/8) like LilyPond.
         var source = "c4 d e f |";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree);
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
 
-        Assert.Equal(0.125, shortest, 4);
+        Assert.Equal(0.1875, shortest, 4);
     }
 
     [Fact]
@@ -63,14 +63,14 @@ public class CommonShortestDurationTests
     public void FullMeasureRests_DoNotContribute()
     {
         // Full-measure rests create no musical columns in LilyPond; the basis
-        // comes from the sounding measures only (here: capped 1/8).
+        // comes from the sounding measures only (here: quarters → capped 3/16).
         var source = "R1*2 c4 d e f |";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree);
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
 
-        Assert.Equal(0.125, shortest, 4);
+        Assert.Equal(0.1875, shortest, 4);
     }
 
     [Fact]

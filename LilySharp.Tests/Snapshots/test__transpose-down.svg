@@ -7,29 +7,29 @@
   <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="289">Transpose Down</text>
   <text x="110.55" y="8.49" font-size="2.20" font-family="serif" font-style="italic" text-anchor="end" data-pos="315">Lily#</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <line x1="0.00" y1="14.64" x2="38.13" y2="14.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="15.64" x2="38.13" y2="15.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="16.64" x2="38.13" y2="16.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="17.64" x2="38.13" y2="17.64" stroke="#000000" stroke-width="0.100"/>
-  <line x1="0.00" y1="18.64" x2="38.13" y2="18.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="14.64" x2="33.92" y2="14.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="15.64" x2="33.92" y2="15.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="16.64" x2="33.92" y2="16.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="17.64" x2="33.92" y2="17.64" stroke="#000000" stroke-width="0.100"/>
+  <line x1="0.00" y1="18.64" x2="33.92" y2="18.64" stroke="#000000" stroke-width="0.100"/>
   <text class="music" x="0.30" y="17.64" font-size="4.00" data-pos="360"></text>
   <text class="music" x="3.30" y="16.64" font-size="4.00" data-pos="333"></text>
   <text class="music" x="4.50" y="16.64" font-size="4.00" data-pos="323"></text>
   <text class="music" x="9.05" y="18.14" font-size="4.00" data-pos="416"></text>
   <line x1="10.29" y1="18.14" x2="10.29" y2="14.64" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="12.75" y="17.64" font-size="4.00" data-pos="420"></text>
-  <line x1="13.99" y1="17.64" x2="13.99" y2="14.14" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="16.46" y="17.14" font-size="4.00" data-pos="422"></text>
-  <line x1="17.70" y1="17.14" x2="17.70" y2="13.64" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="20.23" y="16.64" font-size="4.00" data-pos="424"></text>
-  <line x1="20.30" y1="16.64" x2="20.30" y2="20.14" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="26.73" y="16.14" font-size="4.00" data-pos="428"></text>
-  <line x1="26.79" y1="16.14" x2="26.79" y2="19.64" stroke="#000000" stroke-width="0.130"/>
-  <text class="music" x="31.95" y="14.64" font-size="4.00" data-pos="431"></text>
-  <line x1="32.02" y1="14.64" x2="32.02" y2="18.14" stroke="#000000" stroke-width="0.130"/>
-  <rect x="24.55" y="14.64" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="37.04" y="14.64" width="0.19" height="4.00" fill="#000000"/>
-  <rect x="37.53" y="14.64" width="0.60" height="4.00" fill="#000000"/>
+  <text class="music" x="12.05" y="17.64" font-size="4.00" data-pos="420"></text>
+  <line x1="13.29" y1="17.64" x2="13.29" y2="14.14" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="15.05" y="17.14" font-size="4.00" data-pos="422"></text>
+  <line x1="16.29" y1="17.14" x2="16.29" y2="13.64" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="18.13" y="16.64" font-size="4.00" data-pos="424"></text>
+  <line x1="18.19" y1="16.64" x2="18.19" y2="20.14" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="23.92" y="16.14" font-size="4.00" data-pos="428"></text>
+  <line x1="23.98" y1="16.14" x2="23.98" y2="19.64" stroke="#000000" stroke-width="0.130"/>
+  <text class="music" x="28.44" y="14.64" font-size="4.00" data-pos="431"></text>
+  <line x1="28.51" y1="14.64" x2="28.51" y2="18.14" stroke="#000000" stroke-width="0.130"/>
+  <rect x="21.74" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="32.83" y="14.64" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="33.32" y="14.64" width="0.60" height="4.00" fill="#000000"/>
   <rect x="0.30" y="9.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="390"/>
   <text x="3.01" y="12.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="390">Main</text>
   </g>

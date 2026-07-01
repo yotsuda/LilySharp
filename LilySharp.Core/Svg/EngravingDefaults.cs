@@ -239,10 +239,19 @@ public static class EngravingDefaults
     public const double ShortestDurationSpace = 2.0;
 
     /// <summary>
-    /// Base shortest duration as fraction (1/8 = eighth note).
-    /// Notes shorter than this use linear spacing instead of logarithmic.
+    /// Base shortest duration (3/16). Caps the common-shortest spacing basis:
+    /// a piece whose shortest note is a quarter or longer is spaced as if its
+    /// shortest were 3/16, keeping long-note music from spreading out. A piece
+    /// with eighths or shorter uses that actual (smaller) shortest instead.
     /// </summary>
-    public const double BaseShortestDuration = 0.125; // 1/8
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm:3242 SpacingSpanner
+    ///   (base-shortest-duration . (ly:make-moment 3 16)); used by
+    ///   lily/spacing-spanner.cc:166-172 calc_common_shortest_duration as
+    ///   d = min(base-shortest-duration, mode). (Previously 1/8 here, which
+    ///   over-spaced every quarter-or-longer piece by ~23% vs LilyPond.)
+    /// </remarks>
+    public const double BaseShortestDuration = 0.1875; // 3/16
 
     /// <summary>Maximum stiffness for zero-duration items.</summary>
     public const double MaxStiffness = 10.0;

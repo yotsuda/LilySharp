@@ -268,7 +268,7 @@ public class SpringRodModelTests
         // Calling with the default value should produce the same result
         var quarter = Fraction.Quarter;
         double defaultResult = SpacingRules.CalculateDurationSpace(quarter);
-        double explicitResult = SpacingRules.CalculateDurationSpace(quarter, 0.125);
+        double explicitResult = SpacingRules.CalculateDurationSpace(quarter, 0.1875);
 
         Assert.Equal(defaultResult, explicitResult, 6);
     }

@@ -646,7 +646,7 @@ public static class SpacingRules
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/spacing-options.cc:68-104 get_duration_space()
-    /// Uses EngravingDefaults.BaseShortestDuration (1/8). For score-specific spacing,
+    /// Uses EngravingDefaults.BaseShortestDuration (3/16). For score-specific spacing,
     /// use the overload that accepts a baseShortestDuration parameter from
     /// CalculateCommonShortestDuration().
     /// </remarks>
@@ -702,7 +702,7 @@ public static class SpacingRules
     /// LILYPOND-REF: lily/spacing-spanner.cc:92-173 calc_common_shortest_duration —
     /// per MEASURE, find the shortest sounding duration; the spacing basis is the
     /// MODE of those per-measure shortests across the piece (ties prefer the
-    /// shorter duration), capped at base-shortest-duration (1/8). This keeps one
+    /// shorter duration), capped at base-shortest-duration (3/16). This keeps one
     /// ornamental 32nd-note run from loosening the whole piece, and keeps
     /// long-note pieces from collapsing to minimal spacing — unlike the absolute
     /// global minimum this method used previously.
