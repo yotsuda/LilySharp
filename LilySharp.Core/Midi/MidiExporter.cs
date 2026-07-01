@@ -26,6 +26,12 @@ public sealed class MidiExporter
 {
     private readonly int _ticksPerQuarter;
     private int _currentTick;
+    // Grace notes steal their time from the FOLLOWING note (LilyPond's MIDI
+    // convention): the graces sound before the beat's note, and that note's
+    // sounding+advance duration is shortened by this many ticks so every later
+    // note stays on the metric grid. Accumulated by ProcessGrace, consumed once
+    // by the next timed event (note/chord/rest) via ConsumeGraceSteal.
+    private int _pendingGraceSteal;
     private int _currentOctave = 4;
     private int _currentNoteName = 0; // c=0, d=1, e=2, f=3, g=4, a=5, b=6
     // Octave mode (mirrors MeasureCollector): false = relative (default), true =
@@ -384,6 +390,7 @@ public sealed class MidiExporter
 
         var duration = GetDuration(note.Duration);
         int durationTicks = FractionToTicks(duration);
+        durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this note
 
         // Process articulations and dynamics
         int velocity = _velocity;
@@ -433,7 +440,9 @@ public sealed class MidiExporter
         // A rest breaks any pending tie (a tie cannot span a rest).
         _tiePending = false;
         var duration = GetDuration(rest.Duration);
-        _currentTick += FractionToTicks(duration);
+        int durationTicks = FractionToTicks(duration);
+        durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this rest
+        _currentTick += durationTicks;
     }
 
     private void ProcessChord(ChordSyntax chord, MidiTrack track)
@@ -444,6 +453,7 @@ public sealed class MidiExporter
         var durationNode = chord.DescendantNodes<DurationSyntax>().FirstOrDefault();
         var duration = durationNode != null ? GetDuration(durationNode) : _defaultDuration;
         int durationTicks = FractionToTicks(duration);
+        durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this chord
 
         // LilyPond relative chords: each note is relative to the PREVIOUS note in
         // the chord (so the state advances per pitch); the note AFTER the chord is
@@ -538,7 +548,7 @@ public sealed class MidiExporter
 
     private void ProcessGrace(GraceExpressionSyntax grace, MidiTrack track)
     {
-        // Grace notes steal time from the following note
+        // Grace notes steal time from the following note.
         // Use a fixed short duration (1/32 note per grace note)
         int graceDuration = _ticksPerQuarter / 8; // 1/32 note
 
@@ -555,7 +565,24 @@ public sealed class MidiExporter
             ));
 
             _currentTick += graceDuration;
+            // The following note gives up this time (see _pendingGraceSteal), so
+            // the beat after the grace+note pair stays on the metric grid.
+            _pendingGraceSteal += graceDuration;
         }
+    }
+
+    /// <summary>
+    /// The number of ticks the next timed event must give up to the grace notes
+    /// that preceded it, clamped so the event keeps at least one tick. Resets the
+    /// pending steal once consumed.
+    /// </summary>
+    private int ConsumeGraceSteal(int durationTicks)
+    {
+        if (_pendingGraceSteal <= 0)
+            return 0;
+        int steal = Math.Min(_pendingGraceSteal, Math.Max(0, durationTicks - 1));
+        _pendingGraceSteal = 0;
+        return steal;
     }
 
     private (int velocity, int durationPercent) ApplyArticulationType(

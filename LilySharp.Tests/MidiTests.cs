@@ -189,6 +189,32 @@ public class MidiTests
     }
 
     [Fact]
+    public void ExportGraceNotes_StealTimeFromFollowingNote_KeepsMetricGrid()
+    {
+        // Grace notes steal their time from the FOLLOWING note (LilyPond's MIDI
+        // convention). Two 1/32 graces (60 ticks each = 120 total) precede e4;
+        // e4 gives up those 120 ticks, so the note AFTER the grace+note pair (f4)
+        // still lands on the downbeat one quarter (480 ticks) later — the graces
+        // do NOT push the rest of the piece late.
+        var source = "grace { c8 d } e4 f4";
+        var tree = SyntaxTree.Parse(source);
+        var midi = new MidiExporter().Export(tree);
+
+        var notes = midi.Tracks.Skip(1).First().Notes;
+        Assert.Equal(4, notes.Count); // 2 graces + e + f
+
+        // Graces at ticks 0 and 60, e4 at 120.
+        Assert.Equal(0, notes[0].StartTick);
+        Assert.Equal(60, notes[1].StartTick);
+        Assert.Equal(120, notes[2].StartTick);
+        // e4 (nominal 480) gives up 120 ticks -> sounds 360.
+        Assert.Equal(360, notes[2].DurationTicks);
+        // f4 stays on the grid at tick 480, not pushed to 600.
+        Assert.Equal(480, notes[3].StartTick);
+        Assert.Equal(480, notes[3].DurationTicks);
+    }
+
+    [Fact]
     public void ExportWithDynamics()
     {
         var source = @"c4@p d4@f e4@ff";
