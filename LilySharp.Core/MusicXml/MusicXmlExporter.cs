@@ -26,7 +26,10 @@ namespace LilySharp.Core.MusicXml;
 /// </summary>
 public sealed class MusicXmlExporter
 {
-    private const int DivisionsPerQuarter = 4;
+    // Divisions per quarter note. 24 is divisible by 2/3/4/6/8/12, so triplets
+    // (and other tuplets) and notes down to 32nds get exact integer <duration>
+    // values — 4 truncated a triplet eighth to 1 and a 32nd to 0.
+    private const int DivisionsPerQuarter = 24;
 
     private int _currentOctave = 4;
     private int _currentStep = 0;     // c=0..b=6, for LilyPond relative-octave resolution (mirrors MidiExporter)
@@ -36,6 +39,10 @@ public sealed class MusicXmlExporter
     private bool _initialOctaveAbsolute; // file-level default, restored per part
     private bool _tieToNextNote;      // a tie was seen; the next note/chord ends it (gets tie-stop)
     private Fraction _defaultDuration = Fraction.Quarter;
+
+    // Active tuplet nesting: (actual, normal) = "actual notes in the time of normal"
+    // (a triplet is (3, 2)). Scales note durations and drives <time-modification>.
+    private readonly Stack<(int Actual, int Normal)> _tupletStack = new();
     private int _measureNumber = 1;
     // Anacrusis (partial) state: while a pickup is open, accumulate its duration
     // and auto-close the implicit measure once it reaches the declared length
@@ -373,6 +380,15 @@ public sealed class MusicXmlExporter
                 ProcessGraceNotes(grace);
                 break;
 
+            case TupletExpressionSyntax tuplet:
+                // A tuplet plays TupletRatio notes in the time of BaseDivision
+                // (triplet = 3 in 2). Scale durations and tag time-modification for
+                // the body's notes; nested tuplets multiply.
+                _tupletStack.Push((tuplet.TupletRatio, tuplet.BaseDivision));
+                ProcessNode(tuplet.Body);
+                _tupletStack.Pop();
+                break;
+
             case VariableReferenceSyntax varRef:
                 if (_variables.TryGetValue(varRef.Name.Text, out var varBody))
                 {
@@ -503,6 +519,7 @@ public sealed class MusicXmlExporter
         // Emit pending dynamic as direction before the note
         EmitPendingDynamic();
 
+        var (tupletActual, tupletNormal) = CurrentTupletRatio();
         var xmlNote = new MusicXmlNote
         {
             Step = step,
@@ -510,7 +527,9 @@ public sealed class MusicXmlExporter
             Octave = targetOctave,
             Duration = durationTicks,
             Type = type,
-            Dots = dots
+            Dots = dots,
+            ActualNotes = tupletActual,
+            NormalNotes = tupletNormal
         };
 
         // Process articulations and slurs
@@ -544,6 +563,7 @@ public sealed class MusicXmlExporter
         // the chord (state advances per pitch); the note after the chord is relative
         // to the FIRST pitch. Matches MidiExporter and MeasureCollector.
         int firstStep = _currentStep, firstOctave = _currentOctave;
+        var (tupletActual, tupletNormal) = CurrentTupletRatio();
         bool isFirst = true;
         foreach (var pitch in pitches)
         {
@@ -561,7 +581,9 @@ public sealed class MusicXmlExporter
                 Duration = durationTicks,
                 Type = type,
                 Dots = dots,
-                IsChord = !isFirst
+                IsChord = !isFirst,
+                ActualNotes = tupletActual,
+                NormalNotes = tupletNormal
             };
 
             // Add articulations + tie pairing only on the first note of the chord.
@@ -757,7 +779,24 @@ public sealed class MusicXmlExporter
 
     private int FractionToTicks(Fraction frac)
     {
-        return (int)(frac.Numerator * DivisionsPerQuarter * 4 / frac.Denominator);
+        long ticks = (long)frac.Numerator * DivisionsPerQuarter * 4 / frac.Denominator;
+        // Each enclosing tuplet shrinks the played duration to normal/actual.
+        foreach (var (actual, normal) in _tupletStack)
+            ticks = ticks * normal / actual;
+        return (int)ticks;
+    }
+
+    /// <summary>
+    /// The cumulative tuplet ratio to stamp on a note as &lt;time-modification&gt;:
+    /// the product of actual/normal across all enclosing tuplets (null when none).
+    /// </summary>
+    private (int? Actual, int? Normal) CurrentTupletRatio()
+    {
+        if (_tupletStack.Count == 0)
+            return (null, null);
+        int actual = 1, normal = 1;
+        foreach (var (a, n) in _tupletStack) { actual *= a; normal *= n; }
+        return (actual, normal);
     }
 
     private (string type, int dots) GetNoteType(Fraction duration)

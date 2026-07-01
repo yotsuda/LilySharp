@@ -16,6 +16,7 @@
 
 using Xunit;
 using LilySharp.Core.Syntax;
+using System.Linq;
 using LilySharp.Core.MusicXml;
 
 namespace LilySharp.Tests;
@@ -156,6 +157,27 @@ c4 d4";
     }
 
     [Fact]
+    public void ExportTuplet_ScalesDurationAndEmitsTimeModification()
+    {
+        // A triplet: three eighths in the time of two = one quarter total.
+        var source = "tuplet 3/2 { c8 d8 e8 }";
+        var tree = SyntaxTree.Parse(source);
+        var xml = new MusicXmlExporter().Export(tree);
+
+        var notes = xml.Parts[0].Measures[0].Notes;
+        Assert.Equal(3, notes.Count);
+        foreach (var n in notes)
+        {
+            Assert.Equal("eighth", n.Type);
+            Assert.Equal(3, n.ActualNotes);   // <time-modification> 3 in the time of 2
+            Assert.Equal(2, n.NormalNotes);
+            Assert.Equal(8, n.Duration);       // eighth(12) * 2/3, exact at divisions=24
+        }
+        // The three notes sum to exactly one quarter (24 divisions).
+        Assert.Equal(24, notes.Sum(n => n.Duration));
+    }
+
+    [Fact]
     public void ExportWithBarlines()
     {
         var source = "c4 d4 | e4 f4";
@@ -221,7 +243,7 @@ c4 d4 e4 f4";
 
         var attrs = xml.Parts[0].Measures[0].Attributes;
         Assert.NotNull(attrs);
-        Assert.Equal(4, attrs.Divisions);
+        Assert.Equal(24, attrs.Divisions);
         Assert.Equal(4, attrs.TimeBeats);
         Assert.Equal(4, attrs.TimeBeatType);
     }

@@ -233,6 +233,11 @@ public sealed class MusicXmlNote
     public int Duration { get; set; }
     public string? Type { get; set; }
     public int Dots { get; set; }
+    /// <summary>Tuplet ratio for <c>&lt;time-modification&gt;</c>: this note plays
+    /// <see cref="NormalNotes"/> in the time of <see cref="ActualNotes"/> (e.g. a
+    /// triplet is 3 actual in 2 normal). Null outside a tuplet.</summary>
+    public int? ActualNotes { get; set; }
+    public int? NormalNotes { get; set; }
     public List<string> Articulations { get; } = new();
     public List<string> Ornaments { get; } = new();
     public bool IsGrace { get; set; }
@@ -287,6 +292,12 @@ public sealed class MusicXmlNote
 
         for (int i = 0; i < Dots; i++)
             note.Add(new XElement("dot"));
+
+        // Tuplet timing: <actual-notes> play in the time of <normal-notes>.
+        if (ActualNotes.HasValue && NormalNotes.HasValue)
+            note.Add(new XElement("time-modification",
+                new XElement("actual-notes", ActualNotes.Value),
+                new XElement("normal-notes", NormalNotes.Value)));
 
         // Notations (articulations, ornaments, ties, slurs)
         var hasNotations = Articulations.Count > 0 || Ornaments.Count > 0 ||
