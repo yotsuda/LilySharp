@@ -566,8 +566,31 @@ public sealed class LayoutEngine
             if (i < systems.Length - 1)
             {
                 double padding = _options.SystemSpacing * 0.5;
-                double minDistance = systemHeight + Math.Max(_options.SystemSpacing,
-                    perSystemExtents[i].downExtent + perSystemExtents[i + 1].upExtent + padding);
+
+                // Reference-to-reference distance to the next system. Prefer the
+                // X-dependent skyline distance (the same measure the optimal page
+                // path uses); the scalar sum below adds this system's deepest
+                // downward protrusion to the next system's tallest upward one on
+                // ANY X, so it spaces systems too far apart when those protrusions
+                // do not actually overlap horizontally. Distance() is the true
+                // per-X minimum clearance, so flooring it by systemHeight +
+                // SystemSpacing (staff bodies never touch) and adding padding can
+                // never introduce an overlap — only close a false gap.
+                // Distance() returns -inf for an empty skyline; the scalar sum is
+                // then kept, which is byte-identical to the previous behaviour.
+                // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline;
+                //   lily/skyline.cc Skyline::distance.
+                double skylineDistance = systemHeight
+                    + perSystemExtents[i].downExtent + perSystemExtents[i + 1].upExtent;
+                if (perSystemSkylines != null && i + 1 < perSystemSkylines.Count)
+                {
+                    double dist = perSystemSkylines[i].down.Distance(perSystemSkylines[i + 1].up);
+                    if (!double.IsNegativeInfinity(dist))
+                        skylineDistance = dist;
+                }
+
+                double minDistance = Math.Max(
+                    systemHeight + _options.SystemSpacing, skylineDistance + padding);
                 skylineY += minDistance;
             }
         }
