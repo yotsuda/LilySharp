@@ -106,7 +106,7 @@ public static class TrillSpannerEngraver
         ImmutableArray<TrillSpannerItem> trillSpanners,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        Dictionary<int, double>? staffYByIndex = null)
+        Func<int, int, double>? staffYAt = null)
     {
         if (trillSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TrillSpannerLayout>.Empty;
@@ -122,8 +122,7 @@ public static class TrillSpannerEngraver
 
             // Y position: above staff with padding, offset to this spanner's OWN
             // staff (multi-staff). LILYPOND-REF: scm/define-grobs.scm:2213
-            double staffOffset = staffYByIndex != null
-                && staffYByIndex.TryGetValue(spanner.StaffIndex, out var so) ? so : 0;
+            double staffOffset = staffYAt?.Invoke(spanner.StartMeasureIndex, spanner.StaffIndex) ?? 0;
             double y = -StaffPadding - TrillGlyphHeight + staffOffset;
 
             var startMeasure = measureLayouts[spanner.StartMeasureIndex];

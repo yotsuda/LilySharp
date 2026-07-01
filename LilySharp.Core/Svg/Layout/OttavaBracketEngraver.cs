@@ -137,7 +137,7 @@ public static class OttavaBracketEngraver
         ImmutableArray<OttavaBracketItem> ottavaBrackets,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        Dictionary<int, double>? staffYByIndex = null)
+        Func<int, int, double>? staffYAt = null)
     {
         if (ottavaBrackets.IsDefaultOrEmpty)
             return ImmutableArray<OttavaBracketLayout>.Empty;
@@ -158,8 +158,7 @@ public static class OttavaBracketEngraver
             // Offset to this bracket's OWN staff on a grand staff, so an 8va over
             // the lower staff sits above THAT staff, not the top one. Single-staff
             // (offset 0) is unchanged. Mirrors HairpinEngraver/TrillSpannerEngraver.
-            double staffOffset = staffYByIndex != null
-                && staffYByIndex.TryGetValue(bracket.StaffIndex, out var so) ? so : 0;
+            double staffOffset = staffYAt?.Invoke(bracket.StartMeasureIndex, bracket.StaffIndex) ?? 0;
             double y = (isAbove ? AboveStaffY : BelowStaffY) + staffOffset;
 
             string text = bracket.Type switch

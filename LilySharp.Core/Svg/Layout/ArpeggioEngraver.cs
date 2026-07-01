@@ -64,7 +64,7 @@ public static class ArpeggioEngraver
         double staffHeight,
         ImmutableArray<Measure> measures = default,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null)
+        Func<int, int, double>? staffYAt = null)
     {
         if (arpeggios.IsDefaultOrEmpty || arpeggios.Length == 0)
             return ImmutableArray<ArpeggioLayout>.Empty;
@@ -92,8 +92,7 @@ public static class ArpeggioEngraver
             // the item X) and the staff's vertical offset within the system.
             var arpMeasures = measuresByStaff != null
                 && measuresByStaff.TryGetValue(arp.StaffIndex, out var mm) ? mm : measures;
-            double staffOffset = staffYByIndex != null
-                && staffYByIndex.TryGetValue(arp.StaffIndex, out var so) ? so : 0;
+            double staffOffset = staffYAt?.Invoke(arp.MeasureIndex, arp.StaffIndex) ?? 0;
 
             // Get X position of the chord item, then place arpeggio to the left
             // LILYPOND-REF: scm/define-grobs.scm:206 (direction . ,LEFT)

@@ -105,7 +105,7 @@ public static class DynamicEngraver
         ImmutableArray<Voice> voices = default,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null)
+        Func<int, int, double>? staffYAt = null)
     {
         if (dynamics.IsDefaultOrEmpty)
             return ImmutableArray<DynamicLayout>.Empty;
@@ -155,8 +155,7 @@ public static class DynamicEngraver
                 && voicesByStaff.TryGetValue(dynamic.StaffIndex, out var vv) ? vv : fallbackVoices;
             var dynMeasures = measuresByStaff != null
                 && measuresByStaff.TryGetValue(dynamic.StaffIndex, out var mm) ? mm : score.Voice.Measures;
-            double staffOffset = staffYByIndex != null
-                && staffYByIndex.TryGetValue(dynamic.StaffIndex, out var so) ? so : 0;
+            double staffOffset = staffYAt?.Invoke(dynamic.MeasureIndex, dynamic.StaffIndex) ?? 0;
 
             // Calculate X position (centered on the note)
             // LILYPOND-REF: define-grobs.scm:1311 self-alignment-X = CENTER

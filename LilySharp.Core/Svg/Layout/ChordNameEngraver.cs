@@ -97,7 +97,8 @@ public static class ChordNameEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures = default,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null,
+        Func<int, int, double>? staffYAt = null,
+        Func<int, double>? minStaffYAt = null,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
     {
         if (chordNames.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
@@ -112,8 +113,9 @@ public static class ChordNameEngraver
 
         // The top staff's chord line is the only one the system up-skyline describes;
         // lower-staff chords keep the fixed offset (their staff's skyline isn't here).
-        double minStaffOffset = staffYByIndex != null && staffYByIndex.Count > 0
-            ? staffYByIndex.Values.Min() : 0;
+        // The topmost-staff offset is resolved per chord (minStaffYAt), because under
+        // hara-kiri the set of visible staves — and thus the minimum offset — can
+        // differ between systems.
 
         // Pre-resolve each chord's X and per-staff offset.
         var prepared = new List<(ChordNameItem chord, double x, double staffOffset, bool topStaff, int sysIdx, int idx)>(chordNames.Length);
@@ -126,8 +128,7 @@ public static class ChordNameEngraver
             var ml = measureLayouts[chord.MeasureIndex];
             var cnMeasures = measuresByStaff != null
                 && measuresByStaff.TryGetValue(chord.StaffIndex, out var mm) ? mm : measures;
-            double staffOffset = staffYByIndex != null
-                && staffYByIndex.TryGetValue(chord.StaffIndex, out var so) ? so : 0;
+            double staffOffset = staffYAt?.Invoke(chord.MeasureIndex, chord.StaffIndex) ?? 0;
 
             // chordnames entries carry their own rhythm: place them by musical
             // moment against the shared column grid (the same X the renderer draws
@@ -137,7 +138,7 @@ public static class ChordNameEngraver
                 ? ml.X + ml.GetXForTiming(chord.Timing)
                 : ml.X + LayoutUtilities.GetItemXOffset(
                     cnMeasures, chord.MeasureIndex, chord.ItemIndex, ml);
-            bool topStaff = staffOffset <= minStaffOffset + 1e-6;
+            bool topStaff = staffOffset <= (minStaffYAt?.Invoke(chord.MeasureIndex) ?? 0) + 1e-6;
             int sysIdx = measureToSystem.TryGetValue(chord.MeasureIndex, out var si) ? si : -1;
 
             prepared.Add((chord, x, staffOffset, topStaff, sysIdx, cni));

@@ -951,6 +951,47 @@ public sealed class LayoutEngine
         Dictionary<int, Staff>? staffByIndex = null)
     {
         var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
+
+        // Per-system staff-Y resolver. A staff's within-system offset can differ
+        // between systems under hara-kiri (a hidden upper staff shifts the staves
+        // below it up), so a per-staff annotation must use the offset for the system
+        // its OWN measure falls in, not a single global value. Built from each
+        // system's StaffGroups only when staffYByIndex is supplied (the multi-staff
+        // final pass); staffYAt stays null for the offset-free prelim/single-staff
+        // passes, preserving their exact behavior. Without hara-kiri every system has
+        // the same staff Y, so staffYAt collapses to the old staffYByIndex lookup and
+        // the result is byte-identical.
+        Func<int, int, double>? staffYAt = null;
+        Func<int, double>? minStaffYAt = null;
+        if (staffYByIndex != null)
+        {
+            var measureToSystem = new Dictionary<int, int>();
+            var staffYBySystem = new List<Dictionary<int, double>>(systems.Length);
+            for (int s = 0; s < systems.Length; s++)
+            {
+                var map = new Dictionary<int, double>();
+                if (!systems[s].StaffGroups.IsDefaultOrEmpty)
+                    foreach (var sg in systems[s].StaffGroups)
+                        foreach (var st in sg.Staves)
+                            map[st.StaffIndex] = st.Y;
+                staffYBySystem.Add(map);
+                foreach (var m in systems[s].Measures)
+                    measureToSystem[m.MeasureIndex] = s;
+            }
+            int SysOf(int measureIndex) =>
+                staffYBySystem.Count == 0 ? 0
+                : measureToSystem.TryGetValue(measureIndex, out var s) ? s : 0;
+            staffYAt = (measureIndex, staffIndex) =>
+                staffYBySystem.Count > 0
+                && staffYBySystem[SysOf(measureIndex)].TryGetValue(staffIndex, out var y) ? y : 0;
+            minStaffYAt = measureIndex =>
+            {
+                if (staffYBySystem.Count == 0) return 0;
+                var map = staffYBySystem[SysOf(measureIndex)];
+                return map.Count > 0 ? map.Values.Min() : 0;
+            };
+        }
+
         var lyricLayouts = new LyricEngraver().CalculateLayouts(
             lyrics, ml, _options.StaffHeight, systems, systemSkylines, staffYByIndex);
 
@@ -960,23 +1001,23 @@ public sealed class LayoutEngine
         // so text spanners can be placed below dynamics.
 
         // Dynamics first (outside-staff-priority: 250)
-        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, systems, ml, staffVoices, voicesByStaff, measuresByStaff, staffYByIndex) : ImmutableArray<DynamicLayout>.Empty;
+        var dynamicLayouts = score != null ? DynamicEngraver.Calculate(score, dynamics, systems, ml, staffVoices, voicesByStaff, measuresByStaff, staffYAt) : ImmutableArray<DynamicLayout>.Empty;
 
         // Detect and layout hairpins from cresc/decresc marks
         var hairpinItems = HairpinEngraver.DetectHairpins(musicMarks, dynamics);
-        var hairpinLayouts = HairpinEngraver.Calculate(hairpinItems, systems, ml, staffYByIndex);
+        var hairpinLayouts = HairpinEngraver.Calculate(hairpinItems, systems, ml, staffYAt);
 
         // Detect and layout text spanners from rit/accel marks (outside-staff-priority: 350)
         // Pass dynamic layouts so text spanners can stack below them
         var textSpannerItems = TextSpannerEngraver.DetectTextSpanners(musicMarks);
-        var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYByIndex);
+        var textSpannerLayouts = TextSpannerEngraver.Calculate(textSpannerItems, systems, ml, dynamicLayouts, staffYAt);
 
         // Detect and layout ottava brackets from ottava/loco marks
         var ottavaItems = OttavaBracketEngraver.DetectOttavaBrackets(musicMarks);
-        var ottavaLayouts = OttavaBracketEngraver.Calculate(ottavaItems, systems, ml, staffYByIndex);
+        var ottavaLayouts = OttavaBracketEngraver.Calculate(ottavaItems, systems, ml, staffYAt);
 
         // Layout arpeggio markings
-        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, ml, _options.StaffHeight, measures, measuresByStaff, staffYByIndex);
+        var arpeggioLayouts = ArpeggioEngraver.Calculate(arpeggios, systems, ml, _options.StaffHeight, measures, measuresByStaff, staffYAt);
 
         // Pedal rendering uses the default TEXT style: "Ped." at the engage note
         // and "*" at the release note, with NO connecting line or hook (those
@@ -991,12 +1032,12 @@ public sealed class LayoutEngine
         // Layout figured bass
         var figuredBassLayouts = FiguredBassEngraver.Calculate(
             figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures,
-            measuresByStaff, staffYByIndex, systemSkylines);
+            measuresByStaff, staffYAt, systemSkylines);
 
         // Layout chord names (skyline-spaced above high notes when skylines available)
         var chordNameLayouts = ChordNameEngraver.Calculate(
             chordNames ?? ImmutableArray<ChordNameItem>.Empty, systems, ml, measures,
-            measuresByStaff, staffYByIndex, systemSkylines);
+            measuresByStaff, staffYAt, minStaffYAt, systemSkylines);
 
         // Layout percent repeats
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
@@ -1005,7 +1046,7 @@ public sealed class LayoutEngine
         // Layout trill spanners (tr + wavy line)
         // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning
         var trillSpannerLayouts = TrillSpannerEngraver.Calculate(
-            trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYByIndex);
+            trillSpanners ?? ImmutableArray<TrillSpannerItem>.Empty, systems, ml, staffYAt);
 
         // Calculate volta brackets first — needed by MusicMarkEngraver for collision avoidance
         // LILYPOND-REF: axis-group-interface.cc — elements sorted by outside-staff-priority
@@ -1016,11 +1057,11 @@ public sealed class LayoutEngine
         // This ensures hairpins avoid dynamics (both priority 250) and
         // text spanners avoid both dynamics and hairpins (priority 350).
         var articulationLayouts = score != null
-            ? ArticulationEngraver.Calculate(score, articulations, systems, ml, measuresByStaff, staffYByIndex, staffByIndex)
+            ? ArticulationEngraver.Calculate(score, articulations, systems, ml, measuresByStaff, staffYAt, staffByIndex)
             : ImmutableArray<ArticulationLayout>.Empty;
         var (stackedDynamics, stackedHairpins, stackedTextSpanners) =
             OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts, textSpannerLayouts,
-                articulationLayouts, staffYByIndex);
+                articulationLayouts, applyStaffOffsets: staffYAt != null);
 
         // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
         // tuplet brackets 200 as immovable seeds, ottava 400, text 450,
@@ -1030,7 +1071,7 @@ public sealed class LayoutEngine
         var tupletBracketLayouts = TupletBracketEngraver.Calculate(
             tupletBrackets, systems, ml, measures, beamGroups ?? default, beamLayouts ?? default,
             forceStemUp: tupletForceStemUp,
-            measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYByIndex: staffYByIndex);
+            measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt);
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             score, musicMarks, systems, ml, measures, default);
         var customTextLayouts = CustomTextEngraver.Calculate(score, customTexts, systems, ml);

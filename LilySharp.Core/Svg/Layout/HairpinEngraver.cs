@@ -121,7 +121,7 @@ public static class HairpinEngraver
         ImmutableArray<HairpinItem> hairpins,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
-        Dictionary<int, double>? staffYByIndex = null)
+        Func<int, int, double>? staffYAt = null)
     {
         if (hairpins.IsDefaultOrEmpty)
             return ImmutableArray<HairpinLayout>.Empty;
@@ -151,8 +151,7 @@ public static class HairpinEngraver
             // within-system offset so a hairpin on staff 2 sits under staff 2, not
             // staff 1. Staff 0 (or a single staff) has offset 0 -> unchanged. The
             // per-staff stacker then keeps it clear of that staff's dynamics only.
-            double staffOffset = staffYByIndex != null
-                && staffYByIndex.TryGetValue(hairpin.StaffIndex, out var so) ? so : 0;
+            double staffOffset = staffYAt?.Invoke(hairpin.StartMeasureIndex, hairpin.StaffIndex) ?? 0;
             double hairpinY = BaseY + staffOffset;
 
             // LILYPOND-REF: lily/spanner.cc:36-144 — broken once per system; bounds

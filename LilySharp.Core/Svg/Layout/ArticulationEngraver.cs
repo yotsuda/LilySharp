@@ -105,7 +105,7 @@ public static class ArticulationEngraver
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null,
+        Func<int, int, double>? staffYAt = null,
         Dictionary<int, Staff>? staffByIndex = null)
     {
         if (articulations.IsDefaultOrEmpty)
@@ -133,8 +133,7 @@ public static class ArticulationEngraver
             // offset within the system, so it sits under its own staff.
             var artMeasures = measuresByStaff != null
                 && measuresByStaff.TryGetValue(articulation.StaffIndex, out var mm) ? mm : score.Voice.Measures;
-            double staffOffset = staffYByIndex != null
-                && staffYByIndex.TryGetValue(articulation.StaffIndex, out var so) ? so : 0;
+            double staffOffset = staffYAt?.Invoke(articulation.MeasureIndex, articulation.StaffIndex) ?? 0;
 
             if (articulation.MeasureIndex >= artMeasures.Length)
                 continue;

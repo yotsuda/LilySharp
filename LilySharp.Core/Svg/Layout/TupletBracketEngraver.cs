@@ -133,7 +133,7 @@ public static class TupletBracketEngraver
         bool forceStemUp = false,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         Dictionary<int, ImmutableArray<Voice>>? voicesByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null)
+        Func<int, int, double>? staffYAt = null)
     {
         if (tuplets.IsDefaultOrEmpty)
             return ImmutableArray<TupletBracketLayout>.Empty;
@@ -170,8 +170,7 @@ public static class TupletBracketEngraver
                     ? tupVoices[tuplet.VoiceIndex].Measures
                     : (measuresByStaff != null
                         && measuresByStaff.TryGetValue(tuplet.StaffIndex, out var mm) ? mm : measures);
-            double staffOffset = staffYByIndex != null
-                && staffYByIndex.TryGetValue(tuplet.StaffIndex, out var so) ? so : 0;
+            double staffOffset = staffYAt?.Invoke(tuplet.MeasureIndex, tuplet.StaffIndex) ?? 0;
 
             double startOffset = LayoutUtilities.GetItemXOffset(
                 tupMeasures, tuplet.MeasureIndex, tuplet.StartNoteIndex, measureLayout);

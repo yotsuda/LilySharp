@@ -315,7 +315,7 @@ public class OttavaBracketTests
         // that staff (its Y shifts down by the offset), not the top staff.
         var measures = CreateMeasureLayouts(4);
         var systems = CreateSingleSystem(4);
-        var staffYByIndex = new Dictionary<int, double> { [0] = 0.0, [1] = 12.0 };
+        Func<int, int, double> staffYByIndex = (_, staffIndex) => staffIndex == 1 ? 12.0 : 0.0;
 
         var top = ImmutableArray.Create(new OttavaBracketItem(
             OttavaType.Ottava8va, 0, 3, 0, StaffIndex: 0));
@@ -336,7 +336,7 @@ public class OttavaBracketTests
         // 8vb (below) on the lower staff hangs below THAT staff.
         var measures = CreateMeasureLayouts(4);
         var systems = CreateSingleSystem(4);
-        var staffYByIndex = new Dictionary<int, double> { [0] = 0.0, [1] = 12.0 };
+        Func<int, int, double> staffYByIndex = (_, staffIndex) => staffIndex == 1 ? 12.0 : 0.0;
 
         var low = ImmutableArray.Create(new OttavaBracketItem(
             OttavaType.Ottava8vb, 0, 3, 0, StaffIndex: 1));
@@ -359,5 +359,31 @@ public class OttavaBracketTests
         var result = OttavaBracketEngraver.Calculate(brackets, systems, measures);
 
         Assert.True(result.IsEmpty);
+    }
+
+    [Fact]
+    public void Calculate_ResolvesStaffOffsetPerMeasure()
+    {
+        // The staff-Y resolver is keyed by (measureIndex, staffIndex): a bracket's
+        // offset comes from the system its OWN measure falls in. Under hara-kiri a
+        // staff's within-system Y differs between systems (a hidden upper staff shifts
+        // the staves below it up), so two brackets on the SAME staff in different
+        // measures must each pick up THEIR measure's offset — the fix for the old
+        // system-0-only staffYByIndex, which gave every system the first system's Y.
+        var measures = CreateMeasureLayouts(4);
+        var systems = CreateSingleSystem(4);
+        // Simulate a later system (measures >= 2) where the staff has shifted down 20.
+        Func<int, int, double> staffYAt = (measureIndex, _) => measureIndex >= 2 ? 20.0 : 0.0;
+
+        var early = ImmutableArray.Create(new OttavaBracketItem(
+            OttavaType.Ottava8va, 0, 0, 0, StaffIndex: 0));
+        var late = ImmutableArray.Create(new OttavaBracketItem(
+            OttavaType.Ottava8va, 3, 3, 0, StaffIndex: 0));
+
+        var earlyLayout = OttavaBracketEngraver.Calculate(early, systems, measures, staffYAt)[0];
+        var lateLayout = OttavaBracketEngraver.Calculate(late, systems, measures, staffYAt)[0];
+
+        // Same staff, but the later bracket's measure resolves to the +20 offset.
+        Assert.Equal(earlyLayout.Y + 20.0, lateLayout.Y, 3);
     }
 }

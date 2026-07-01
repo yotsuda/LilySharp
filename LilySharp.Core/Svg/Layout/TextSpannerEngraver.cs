@@ -157,7 +157,7 @@ public static class TextSpannerEngraver
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<DynamicLayout> dynamicLayouts,
-        Dictionary<int, double>? staffYByIndex = null)
+        Func<int, int, double>? staffYAt = null)
     {
         if (textSpanners.IsDefaultOrEmpty)
             return ImmutableArray<TextSpannerLayout>.Empty;
@@ -227,8 +227,7 @@ public static class TextSpannerEngraver
 
                 // Below THIS spanner's staff, clear of the SAME staff's dynamics
                 // only. The staff's within-system offset moves the whole band down.
-                double staffOffset = staffYByIndex != null
-                    && staffYByIndex.TryGetValue(spanner.StaffIndex, out var so) ? so : 0;
+                double staffOffset = staffYAt?.Invoke(spanner.StartMeasureIndex, spanner.StaffIndex) ?? 0;
                 var sameStaffDynamics = dynamicLayouts.IsDefaultOrEmpty
                     ? dynamicLayouts
                     : dynamicLayouts.Where(d => d.StaffIndex == spanner.StaffIndex).ToImmutableArray();

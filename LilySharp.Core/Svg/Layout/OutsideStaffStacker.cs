@@ -88,7 +88,7 @@ public static class OutsideStaffStacker
             ImmutableArray<HairpinLayout> hairpins,
             ImmutableArray<TextSpannerLayout> textSpanners,
             ImmutableArray<ArticulationLayout> articulations = default,
-            Dictionary<int, double>? staffYByIndex = null)
+            bool applyStaffOffsets = false)
     {
         if ((dynamics.IsDefaultOrEmpty && hairpins.IsDefaultOrEmpty && textSpanners.IsDefaultOrEmpty)
             || systems.Length == 0)
@@ -102,6 +102,21 @@ public static class OutsideStaffStacker
             foreach (var m in systems[sysIdx].Measures)
                 measureToSystem[m.MeasureIndex] = sysIdx;
 
+        // Each system's own staff-Y offsets. Under hara-kiri a staff's within-system
+        // offset can differ between systems, so seed each staff's tracker from ITS
+        // system's geometry (not a single global table). Without hara-kiri every
+        // system has the same staff Y, so this is byte-identical.
+        var staffYBySystem = new List<Dictionary<int, double>>(systems.Length);
+        for (int s = 0; s < systems.Length; s++)
+        {
+            var map = new Dictionary<int, double>();
+            if (!systems[s].StaffGroups.IsDefaultOrEmpty)
+                foreach (var sg in systems[s].StaffGroups)
+                    foreach (var st in sg.Staves)
+                        map[st.StaffIndex] = st.Y;
+            staffYBySystem.Add(map);
+        }
+
         // Occupancy tracker PER (system, staff): each staff's below-staff column
         // stacks down from ITS OWN bottom, so a hairpin under staff 2 is not pushed
         // by staff 1's dynamics (they share the single Dynamics/Hairpin tables but
@@ -113,8 +128,11 @@ public static class OutsideStaffStacker
         {
             if (!trackers.TryGetValue((sys, staff), out var t))
             {
-                double off = staffYByIndex != null
-                    && staffYByIndex.TryGetValue(staff, out var so) ? so : 0;
+                // Only apply per-staff offsets in the final annotation pass (the
+                // prelim/single-staff passes supply no staff-Y and stack from a zero
+                // baseline, so gating on this keeps their extent estimate unchanged).
+                double off = applyStaffOffsets && sys >= 0 && sys < staffYBySystem.Count
+                    && staffYBySystem[sys].TryGetValue(staff, out var so) ? so : 0;
                 t = new DirectionalOccupancy(StaffBottom + off, dir: +1);
                 trackers[(sys, staff)] = t;
             }

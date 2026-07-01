@@ -68,7 +68,7 @@ public static class FiguredBassEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures = default,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
-        Dictionary<int, double>? staffYByIndex = null,
+        Func<int, int, double>? staffYAt = null,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
     {
         if (figuredBasses.IsDefaultOrEmpty)
@@ -92,8 +92,7 @@ public static class FiguredBassEngraver
             // the staff's vertical offset, so it sits below its own staff.
             var fbMeasures = measuresByStaff != null
                 && measuresByStaff.TryGetValue(fb.StaffIndex, out var mm) ? mm : measures;
-            double staffOffset = staffYByIndex != null
-                && staffYByIndex.TryGetValue(fb.StaffIndex, out var so) ? so : 0;
+            double staffOffset = staffYAt?.Invoke(fb.MeasureIndex, fb.StaffIndex) ?? 0;
 
             double x = measureLayout.X + LayoutUtilities.GetItemXOffset(
                 fbMeasures, fb.MeasureIndex, fb.ItemIndex, measureLayout);
