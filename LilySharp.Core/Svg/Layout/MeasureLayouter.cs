@@ -265,6 +265,14 @@ public sealed class MeasureLayouter
             timingToItems.TryGetValue(timings[i - 1], out var prevItems);
             timingToItems.TryGetValue(timings[i], out var nextItems);
 
+            // Refine the duration-based ideal to the LEFT column's actual head
+            // width (LilyPond's note-spacing.cc:77), BEFORE the stem correction
+            // that LilyPond applies afterward. Without this every note gap is
+            // ~0.1 ss tighter than LilyPond (the head-width vs generic-increment
+            // difference).
+            if (prevItems != null)
+                spring = SpacingRules.ApplyLeftHeadWidth(spring, prevItems);
+
             // Stem-direction optical correction ([Wanske]): up-stem→down-stem
             // gets extra space, down→up less. LilyPond computes it per voice
             // inside each Note_spacing wish, then merges the simultaneous
@@ -338,6 +346,11 @@ public sealed class MeasureLayouter
         // Apply skyline rod: last item → barline (max across all voices)
         if (timingToItems.TryGetValue(timings[^1], out var lastItems))
         {
+            // LilyPond's note-spacing.cc:77 head-width refinement applies to every
+            // Note_spacing spring, including the last note → barline one, so the
+            // gap after the final note matches an interior gap of the same value.
+            endSpring = SpacingRules.ApplyLeftHeadWidth(endSpring, lastItems);
+
             double maxSkyDist = 0;
             foreach (var item in lastItems)
             {

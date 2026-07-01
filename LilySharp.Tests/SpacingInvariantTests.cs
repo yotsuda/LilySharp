@@ -67,8 +67,14 @@ public class SpacingInvariantTests
         Assert.Equal(4, springs.Length);
         double halfGap = springs[1].IdealDistance;
         double quarterGap = springs[2].IdealDistance;
-        double expectedDelta = SpacingRules.CalculateDurationSpace(new Fraction(1, 2), bsd)
+        // The ideal also carries the LEFT column's head width (note-spacing.cc:77):
+        // a half note's open head (1.376) is wider than a quarter's (1.304), so the
+        // half gap exceeds the quarter gap by the duration increment PLUS that
+        // head-width difference.
+        double durationDelta = SpacingRules.CalculateDurationSpace(new Fraction(1, 2), bsd)
                              - SpacingRules.CalculateDurationSpace(new Fraction(1, 4), bsd);
+        double headDelta = GlyphMetrics.GetNoteheadAdvance(2) - GlyphMetrics.GetNoteheadAdvance(4);
+        double expectedDelta = durationDelta + headDelta;
         Assert.True(halfGap > quarterGap, $"half {halfGap} must exceed quarter {quarterGap}");
         Assert.Equal(expectedDelta, halfGap - quarterGap, precision: 6);
         Assert.Equal(springs[2].IdealDistance, springs[3].IdealDistance, precision: 6);

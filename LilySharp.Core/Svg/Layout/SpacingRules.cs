@@ -1063,6 +1063,35 @@ public static class SpacingRules
     }
 
     /// <summary>
+    /// Refines a duration-based ideal to the LEFT note column's actual head width.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/note-spacing.cc:77 Note_spacing::get_spacing —
+    ///   ideal = base.ideal_distance() - increment + left_head_end.
+    /// The duration space assumes a generic notehead (spacing-increment). LilyPond
+    /// swaps that generic width for the left column's ACTUAL head width, so a wide
+    /// head (half 1.376 / whole 1.96) reserves proportionally more room than a
+    /// black head (1.304). For a black head the net adjustment is
+    /// 1.304 - 1.2 = +0.104 ss — the uniform gap LilyPond has over Lily#'s raw
+    /// duration spacing. The widest note/chord among the left items wins (a safe
+    /// choice for simultaneous voices). Rests and non-musical items leave the ideal
+    /// unchanged (LilyPond's narrower-rest reduction is not ported).
+    /// </remarks>
+    internal static Spring ApplyLeftHeadWidth(Spring spring, IEnumerable<MusicItem> leftItems)
+    {
+        double leftHeadEnd = 0;
+        foreach (var p in leftItems)
+            if (p is NoteItem or ChordItem)
+                leftHeadEnd = Math.Max(leftHeadEnd, GlyphMetrics.GetNoteheadAdvance(GetNoteValue(p)));
+        if (leftHeadEnd <= 0)
+            return spring;
+
+        double ideal = Math.Max(EngravingDefaults.SpacingIncrement,
+            spring.IdealDistance + leftHeadEnd - EngravingDefaults.SpacingIncrement);
+        return new Spring(ideal, spring.MinDistance, spring.InverseStretchStrength);
+    }
+
+    /// <summary>
     /// Computes the shortest playing duration across all voices at a given musical timing,
     /// matching LP's <c>shortest-playing-duration</c> column property.
     /// </summary>
