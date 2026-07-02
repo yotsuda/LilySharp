@@ -38,7 +38,8 @@ public static class InstrumentDefaults
             "violin" => (ClefType.Treble, 4),
             "viola" => (ClefType.Alto, 3),
             "cello" => (ClefType.Bass, 3),
-            "bass" or "contrabass" or "double-bass" => (ClefType.Bass, 2),
+            "bass" or "contrabass" or "double-bass" or "bass-guitar" or "electric-bass"
+                or "bass5" or "5-string-bass" or "bass6" or "6-string-bass" => (ClefType.Bass, 2),
             
             // Piano
             "piano-right" or "piano-treble" => (ClefType.Treble, 4),
@@ -112,9 +113,11 @@ public static class InstrumentDefaults
 
     /// <summary>
     /// The instrument-name presets a part's <c>instrument</c> accepts, ordered by
-    /// family (strings, piano, guitar, woodwinds, brass, voice). The single source of
-    /// truth for <see cref="IsKnownInstrument"/> AND the editor's after-<c>instrument</c>
-    /// name completion — keep it in step with the <see cref="GetDefaults"/> switch.
+    /// family (strings, piano, guitar/fretted, woodwinds, brass, voice). The single
+    /// source of truth for <see cref="IsKnownInstrument"/> AND the editor's
+    /// after-<c>instrument</c> name completion — keep it in step with BOTH the
+    /// <see cref="GetDefaults"/> and <see cref="GetTuning"/> switches (a name either
+    /// one recognizes belongs here).
     /// </summary>
     public static readonly IReadOnlyList<string> KnownInstruments = new[]
     {
@@ -122,8 +125,10 @@ public static class InstrumentDefaults
         "violin", "viola", "cello", "bass", "contrabass", "double-bass",
         // Piano
         "piano-right", "piano-treble", "piano-left", "piano-bass",
-        // Guitar
+        // Guitar / fretted (incl. the tab-tuning presets from GetTuning)
         "guitar", "acoustic-guitar", "electric-guitar",
+        "bass-guitar", "electric-bass", "bass5", "5-string-bass", "bass6", "6-string-bass",
+        "ukulele", "uke",
         // Woodwinds
         "flute", "piccolo", "oboe", "clarinet", "bassoon",
         // Brass

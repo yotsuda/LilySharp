@@ -17,6 +17,7 @@
 using System.Linq;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Lsp;
+using Microsoft.VisualStudio.LanguageServer.Protocol;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -29,11 +30,62 @@ namespace LilySharp.Tests;
 public class InstrumentCompletionTests
 {
     [Theory]
-    [InlineData("part m { instrument ", "instrument")]    // after 'instrument ' (no partial word)
-    [InlineData("part m { instrument gu", "instrument")]  // mid instrument name
+    [InlineData("part m { instrument ", "instrument")]         // after 'instrument ' (no partial word)
+    [InlineData("part m { instrument gu", "instrument")]       // mid instrument name
+    [InlineData("part m { instrument piano-", "instrument")]   // hyphenated preset, at the hyphen
+    [InlineData("part m { instrument piano-ri", "instrument")] // hyphenated preset, past the hyphen
+    [InlineData("part m { instrument 5-str", "instrument")]    // digit-leading hyphenated preset
     public void WordBeforeCursor_FindsInstrument(string text, string expected)
     {
         Assert.Equal(expected, LilySharpLanguageServer.WordBeforeCursor(text, text.Length));
+    }
+
+    [Theory]
+    [InlineData("part m { instrument ", true)]           // the real part property
+    [InlineData("part m { instrument piano-", true)]     // hyphenated partial keeps the context
+    [InlineData("lyrics { play my instrument ", false)]  // ordinary English word in lyrics
+    [InlineData("title \"My instrument ", false)]        // inside a string literal
+    [InlineData("structure { instrument ", false)]       // structure body, not a part
+    [InlineData("section S { m { instrument ", false)]   // part REFERENCE body, not a declaration
+    public void InstrumentContext_FiresOnlyInsideAPartBlock(string text, bool expected)
+    {
+        var context = LilySharpLanguageServer.GetCompletionContext(text, text.Length);
+        Assert.Equal(expected,
+            context == LilySharpLanguageServer.CompletionContext.AfterInstrument);
+    }
+
+    [Fact]
+    public void InstrumentCompletions_ReplaceTheWholeHyphenatedToken()
+    {
+        // After typing `instrument piano-`, the client's default word range stops at
+        // the hyphen — without an explicit TextEdit, accepting "piano-right" would
+        // leave the prefix in place and produce "piano-piano-right".
+        const string text = "part m { instrument piano-";
+        var items = LilySharpLanguageServer.GetInstrumentCompletions(
+            text, text.Length, new Position(0, text.Length)).Items;
+
+        int tokenStart = text.Length - "piano-".Length;
+        foreach (var item in items)
+        {
+            Assert.NotNull(item.TextEdit);
+            Assert.Equal(tokenStart, item.TextEdit!.Range.Start.Character);
+            Assert.Equal(text.Length, item.TextEdit.Range.End.Character);
+            Assert.Equal(item.Label, item.TextEdit.NewText);
+        }
+    }
+
+    [Fact]
+    public void TabTuningPresets_AreKnownAndComplete()
+    {
+        // GetTuning-only names are valid `instrument` values (they set the tab-tuning
+        // default), so they must be in KnownInstruments — which is also exactly what
+        // the completion offers.
+        foreach (var name in new[] { "ukulele", "uke", "bass-guitar", "electric-bass",
+                                     "bass5", "5-string-bass", "bass6", "6-string-bass" })
+        {
+            Assert.True(InstrumentDefaults.IsKnownInstrument(name), $"{name} not known");
+            Assert.NotNull(InstrumentDefaults.GetTuning(name));
+        }
     }
 
     [Fact]

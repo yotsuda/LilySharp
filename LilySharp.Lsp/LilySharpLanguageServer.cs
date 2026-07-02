@@ -36,7 +36,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260702-0821";
+    public const string Version = "0.1.1-20260702-1100";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -370,7 +370,7 @@ public sealed class LilySharpLanguageServer
             CompletionContext.MusicBlock => GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset)),
             CompletionContext.StructureBlock => GetStructureCompletions(doc.Text),
             CompletionContext.AfterClef => GetClefCompletions(),
-            CompletionContext.AfterInstrument => GetInstrumentCompletions(),
+            CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterAt => GetArticulationCompletions(),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
@@ -411,6 +411,51 @@ public sealed class LilySharpLanguageServer
             }
         }
         return stack.Count > 0 ? stack.Peek() : null;
+    }
+
+    /// <summary>
+    /// True when <paramref name="offset"/> sits inside a <c>part &lt;name&gt; { … }</c>
+    /// body. <see cref="InnermostOpenBlock"/> cannot answer this: the word before a
+    /// part's <c>{</c> is the part NAME, so the introducing <c>part</c> keyword is one
+    /// word further back — which is also what tells a declaration (<c>part rh {</c>)
+    /// apart from a section-body part reference (<c>rh {</c>).
+    /// </summary>
+    internal static bool IsInsidePartBlock(string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+        var stack = new System.Collections.Generic.Stack<bool>();
+        for (int i = 0; i < offset && i < text.Length; i++)
+        {
+            if (text[i] == '{')
+            {
+                int j = i - 1;
+                while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+                while (j >= 0 && IsWordChar(text[j])) j--;      // the block's name
+                while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+                int end = j + 1;
+                while (j >= 0 && IsWordChar(text[j])) j--;      // the introducing keyword
+                stack.Push(text.Substring(j + 1, end - (j + 1)) == "part");
+            }
+            else if (text[i] == '}' && stack.Count > 0)
+            {
+                stack.Pop();
+            }
+        }
+        return stack.Count > 0 && stack.Peek();
+    }
+
+    /// <summary>
+    /// True when <paramref name="offset"/> sits inside a <c>"…"</c> string literal.
+    /// Strings never span lines, so an odd number of quotes between the line start
+    /// and the cursor means the cursor is inside one.
+    /// </summary>
+    internal static bool IsInsideStringLiteral(string text, int offset)
+    {
+        int quotes = 0;
+        for (int i = offset - 1; i >= 0 && text[i] != '\n'; i--)
+            if (text[i] == '"')
+                quotes++;
+        return (quotes & 1) == 1;
     }
 
     /// <summary>Quality-token completions offered after a chord's ':' inside a chordnames block.</summary>
@@ -525,7 +570,7 @@ public sealed class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
-    private enum CompletionContext
+    internal enum CompletionContext
     {
         Unknown,
         TopLevel,
@@ -540,11 +585,15 @@ public sealed class LilySharpLanguageServer
     /// <summary>
     /// The whole word immediately before the partial word being typed at
     /// <paramref name="offset"/> (skipping the current word and any whitespace),
-    /// e.g. "clef" in <c>clef tr|</c> or <c>clef |</c>. Empty if none.
+    /// e.g. "clef" in <c>clef tr|</c> or <c>clef |</c>. Empty if none. Hyphen counts
+    /// as a word character: instrument presets are hyphenated (piano-right,
+    /// 5-string-bass), and the scan must not truncate at the hyphen — in
+    /// <c>instrument piano-|</c> the partial word is "piano-", and the preceding
+    /// word must still come out as "instrument".
     /// </summary>
     internal static string WordBeforeCursor(string text, int offset)
     {
-        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
         int i = offset;
         while (i > 0 && IsWordChar(text[i - 1])) i--;        // skip the partial word
         while (i > 0 && char.IsWhiteSpace(text[i - 1])) i--; // skip whitespace
@@ -553,7 +602,7 @@ public sealed class LilySharpLanguageServer
         return text.Substring(i, end - i);
     }
 
-    private CompletionContext GetCompletionContext(string text, int offset)
+    internal static CompletionContext GetCompletionContext(string text, int offset)
     {
         if (offset == 0)
             return CompletionContext.TopLevel;
@@ -573,12 +622,19 @@ public sealed class LilySharpLanguageServer
 
         // Right after the `clef` keyword (in a header or mid-music), only the clef
         // names are valid — offer those alone, not notes/keywords.
-        if (WordBeforeCursor(text, offset) == "clef")
+        var prevWord = WordBeforeCursor(text, offset);
+        if (prevWord == "clef")
             return CompletionContext.AfterClef;
 
         // Right after the `instrument` part property only the known instrument presets
-        // are valid — offer those alone (they set clef/octave/tuning defaults).
-        if (WordBeforeCursor(text, offset) == "instrument")
+        // are valid — offer those alone (they set clef/octave/tuning defaults). Unlike
+        // the music-jargon "clef", "instrument" is an ordinary English word, so the
+        // keyword alone is not enough context: it must sit where the part property is
+        // actually valid — inside a part { } body and not inside a string — or lyrics
+        // like `play my instrument` and titles would have their completion hijacked.
+        if (prevWord == "instrument"
+            && IsInsidePartBlock(text, offset)
+            && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterInstrument;
 
         // Inside structure { … } the body is a playback order (section names and
@@ -630,9 +686,29 @@ public sealed class LilySharpLanguageServer
     /// <summary>The instrument-preset names valid right after the <c>instrument</c>
     /// part property (they set clef/octave/tuning defaults). Sourced from
     /// <see cref="InstrumentDefaults.KnownInstruments"/> so the list never drifts from
-    /// what the compiler recognizes.</summary>
-    internal static CompletionList GetInstrumentCompletions()
+    /// what the compiler recognizes. When the request context is supplied, each item
+    /// carries a TextEdit replacing the whole hyphenated token being typed: the
+    /// client's default word range stops at '-', so accepting "piano-right" after
+    /// typing "piano-" would otherwise leave the prefix in place
+    /// ("piano-piano-right"); the explicit range also makes the client filter
+    /// against the full hyphenated prefix.</summary>
+    internal static CompletionList GetInstrumentCompletions(
+        string? text = null, int offset = 0, Position? position = null)
     {
+        LspRange? replaceRange = null;
+        if (text != null && position != null)
+        {
+            int start = offset;
+            while (start > 0 && (char.IsLetterOrDigit(text[start - 1])
+                                 || text[start - 1] == '_' || text[start - 1] == '-'))
+                start--;
+            replaceRange = new LspRange
+            {
+                Start = new Position(position.Line, position.Character - (offset - start)),
+                End = position,
+            };
+        }
+
         return new CompletionList
         {
             // SortText (zero-padded) preserves the family grouping — VS Code otherwise
@@ -643,6 +719,9 @@ public sealed class LilySharpLanguageServer
                 Kind = CompletionItemKind.EnumMember,
                 Detail = "Instrument preset (clef/octave defaults)",
                 SortText = i.ToString("D2"),
+                TextEdit = replaceRange == null
+                    ? null
+                    : new TextEdit { Range = replaceRange, NewText = name },
             }).ToArray()
         };
     }
