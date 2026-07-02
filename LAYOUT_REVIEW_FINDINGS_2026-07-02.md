@@ -93,15 +93,28 @@ positive); "empty BeamGroup" → not reproduced as a confirmed defect.
 
 ## Distinct defects below the report cap (from the synthesis summary)
 
-- [ ] VerticalSkyline.Raise flattens slopes (latent — currently dead code;
-  this is the old "Raise" item).
-- [ ] Rest-shift resolution is last-writer-wins (latent dead-code path).
-- [ ] Dead slur staff-line scorer (`SlurScoringProblem.cs` — unused scoring
-  input; also `SlurCandidate.Clone`/`TieCandidate.Clone`/`StaffLinePositions`
-  are dead).
-- [ ] Three performance cleanups (see workflow journal for details).
-- [ ] StaffGrouper override finding (PLAUSIBLE only — re-examine before
-  acting).
+- [x] VerticalSkyline.Raise flattens slopes (`64960f7`) — slope now preserved
+  (LP skyline.cc raise); pinned by a test although Raise still has no
+  production caller.
+- [x] Rest-shift resolution was last-writer-wins (`64960f7`) — greatest
+  clearance now wins. Still primary-voice rests only (pre-existing scope).
+- [x] Dead-code claims re-verified (`64960f7`): only
+  `TieFormattingProblem.StaffLinePositions` was actually dead (removed).
+  SlurScoringProblem's staff-line scorer is LIVE (:456/:477) and
+  `Clone()` has a test caller — the wider claim was wrong, matching its
+  refuted twin.
+- [x] Three performance cleanups — two were already resolved by the main
+  fixes (AdvanceTo linear scans → the replayable-timeline resolver
+  `47aaed2`; per-page map rebuild → page-scoped by design in `a0c8be2`).
+  Remaining micro-item (DrawBeams rebuilds staffByIndex per system)
+  deliberately skipped: threading a cache through DrawSystem isn't worth
+  the churn at this size.
+- [x] StaffGrouper override finding (PLAUSIBLE) — re-examined and CLOSED AS
+  UNREACHABLE: `ApplyOverrides` expects dotted sub-property names
+  ("staff-staff-spacing.basic-distance"), but the grammar parses exactly
+  `override Grob.property = value` (one dot), so these overrides are
+  API/test-only today. The positional/`\once` semantics gap becomes real
+  only if the dotted syntax is ever added to the parser — note it there.
 
 ## Refuted candidates (verifier-killed; re-derive before ever re-raising)
 
