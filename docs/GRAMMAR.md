@@ -53,10 +53,15 @@ OctaveDown     = { ',' }+ ;
 Octave         = OctaveUp | OctaveDown | ε ;
 PitchToken     = PitchBase , [ Accidental ] , Octave ;
 
-(* Octaves are always RELATIVE: each bare pitch lands in the octave nearest the
-   previous pitch (an interval of a fourth or less), then any '/',' marks shift it.
-   There is NO absolute-octave mode and no 'relative'/'absolute' keyword; the octave
-   resets to the part's base at each section boundary and at each phrase call. *)
+(* Octaves default to RELATIVE: each bare pitch lands in the octave nearest the
+   previous pitch (an interval of a fourth or less), then any '/',' marks shift it;
+   the frame resets to the part's base at each section boundary and phrase call.
+   `octave absolute` (top-level, part header, or mid-music) switches to ABSOLUTE
+   mode: bare c = C4, and '/',' are absolute offsets from that anchor (c' = C5,
+   c, = C3) with NO carry between notes — octave mistakes cannot cascade, which
+   is the recommended mode for AI-generated scores. `part X { octave N }`
+   re-anchors the absolute base (e.g. a bass part with `octave 2`). Section
+   boundaries restore the file-level mode. *)
 
 ### Duration
 
@@ -69,23 +74,28 @@ DurationToken  = DurationBase , [ Dots ] , [ Tremolo ] ;
 
 Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'part' | 'phrase' | 'section' | 'structure' | 'score'
-        | 'staff' | 'grandStaff' | 'tab' | 'tabStaff' | 'ossia' | 'voice'
-        | 'lyrics' | 'chords' | 'chordnames' | 'tuning' | 'instrument' | 'channel'
+        | 'staff' | 'grandStaff' | 'tab' | 'ossia' | 'voice'
+        | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'channel'
         | 'transpose' | 'octave' | 'include' | 'use' | 'let' | 'break' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura'
-        | 'repeat' | 'volta' | 'alternative' | 'swing'
+        | 'repeat' | 'volta' | 'alternative'
         | 'override' | 'revert' | 'once'
         | 'major' | 'minor' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
         | 'aeolian' | 'locrian'
         | 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8'
         | 'segno' | 'fine' | 'coda' | 'dc' | 'ds' | 'al' | 'to'
-        | 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'f' | 'ff' | 'fff'
+        | 'ppp' | 'pp' | 'p' | 'mp' | 'mf' | 'ff' | 'fff'
         ;
 
 (* The four clef-name words (treble bass alto tenor) ARE allowed as part / section /
-   phrase names. Single letters a-g are pitches; r / R / s are rests. Articulation,
-   ornament, dynamic-text and mark NAMES (staccato, tr, mordent, cresc, dim, …) are
-   resolved from the '@name' text and are NOT reserved. *)
+   phrase names. Single letters a-g are pitches ('f' is a pitch, not a keyword — @f
+   resolves the dynamic from text); r / R / s are rests. The reserved dynamic words
+   above (p, pp, mp, …) cannot be identifiers. 'swing'/'shuffle' are NOT reserved
+   (tempo value words). Articulation, ornament, dynamic-text and mark NAMES
+   (staccato, tr, sfz, cresc, dim, …) are resolved from the '@name' text and are
+   NOT reserved. 'volta'/'alternative' are reserved only to reject the removed
+   LilyPond-style forms; 'include'/'let'/'use' are reserved for multi-file and
+   variable extensions. *)
 
 ### Operators & Punctuation
 
@@ -121,8 +131,11 @@ MetadataKey    = 'title' | 'composer' ;
 
 GlobalSetting  = TempoDecl | TimeDecl | KeyDecl ;
 
-TempoDecl      = 'tempo' , Integer , [ 'swing' , [ Integer ] ] ;
-                 (* 'tempo 120 swing' draws a shuffle-feel equation; 'swing 16' = 16th swing *)
+TempoDecl      = 'tempo' , [ String ] , [ DurationBase , '=' ] , Integer ,
+                 [ ( 'swing' | 'shuffle' ) , [ Integer ] ] ;
+                 (* tempo 120 / tempo "Allegro" 120 / tempo "Andante" 4 = 96 —
+                    the string is tempo text, `duration =` picks the beat unit.
+                    'tempo 120 swing' draws a shuffle-feel equation; 'swing 16' = 16th swing *)
 TimeDecl       = 'time' , Integer , '/' , Integer ;
 KeyDecl        = 'key' , PitchBase , [ Accidental-text ] , Mode ;
 
@@ -149,9 +162,10 @@ PartBody       = '{' , { PartProperty } , '}' ;
 PartProperty   = 'clef'        , ClefName
                | 'instrument'  , ( Identifier | String )
                | 'channel'     , Integer
-               | 'octave'      , ( 'absolute' | 'relative' )
                | 'transpose'   , PitchToken
                | 'tuning'      , Identifier
+               | 'name'        , String                      (* display name *)
+               | 'octave'      , ( 'absolute' | 'relative' | Integer )
                | 'removeEmpty' , ( 'true' | 'all' | 'false' ) ;
 
 ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' ;
@@ -210,7 +224,9 @@ LyricsBlock    = 'lyrics' , [ Identifier ] , '{' , { LyricMeasure } , '}' ;
 LyricMeasure   = { LyricSyllable } , '|' ;
 LyricSyllable  = LyricText | '~' | '_' ;          (* '-' suffix joins one word's syllables *)
 
-ChordsBlock    = ( 'chordnames' | 'chords' ) , [ Identifier ] , '{' , { ChordEntry | Barline } , '}' ;
+ChordsBlock    = 'chords' , [ Identifier ] , '{' , { ChordEntry | Barline } , '}' ;
+                 (* WITH a name: an independent chord part for a score row (lead sheet).
+                    WITHOUT a name: symbols align above the co-written part's staff. *)
 ChordEntry     = PitchBase , [ Accidental-text ] , [ DurationToken ] , [ ':' , Quality ] , [ '/' , PitchBase ] ;
                  (* c=C, a:m=Am, g:7=G7, g:m7.5-=Gm7b5, c/g=C over a G bass *)
 
@@ -376,9 +392,15 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Fingering:     <c@finger(1) e@finger(3)>4
    - Rehearsal mark: c4@mark(A)
    - Free text:      c4@text("dolce") , c4@text("pizz.").up   (italic; below by default)
+   - Half ties:     c4@laissezVibrer (l.v. into silence) , c4@repeatTie (from a repeat)
+   - Cue/effects:   @cue (small cue note) , @cross / @dead (x notehead) ,
+                    @fall @doit (jazz bends) , @breath @caesura
+   - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
    - Marks/spanners: @segno @coda @fine @dc @ds @rit @accel
-                     @ottava … @loco , @startTrillSpan … @stopTrillSpan ,
-                     @ped … @ped(off) *)
+                     @ottava(…) @quindicesima(=@15ma/@15mb) … @loco ,
+                     @startTrillSpan … @stopTrillSpan , @ped … @ped(off)
+   - Abbreviations: @stac @acc @ten @marc @ferm @tr (= staccato accent tenuto
+                    marcato fermata trill) *)
 
 (* Example: c4@staccato.up d4@accent@p <e g>4@arpeggio | *)
 
@@ -386,6 +408,9 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
 
 Tuplet         = 'tuplet' , Integer , '/' , Integer , MusicBlock ;   (* nesting allowed *)
 Grace          = ( 'grace' | 'acciaccatura' | 'appoggiatura' ) , MusicBlock ;
+Repeat         = 'repeat' , ( 'percent' | 'unfold' | 'tremolo' ) , [ Integer ] , MusicBlock ;
+                 (* repeat percent 2 { … } = percent-repeat the measure; volta repeats
+                    use the symbolic |: … :| form, NOT a 'repeat' keyword *)
 
 ================================================================================
 ## 9. Override / Revert (engraving properties)

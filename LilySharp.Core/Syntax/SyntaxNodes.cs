@@ -1122,40 +1122,10 @@ public sealed class LyricsBlockSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Chord-names block: chordnames { c1 | a:m f | g:7 } — a parallel stream of
-/// chord symbols shown above the staff, aligned by timing.
-/// </summary>
-public sealed class ChordNamesBlockSyntax : SyntaxNode
-{
-    internal ChordNamesBlockSyntax(InternalSyntax.ChordNamesBlockGreen green, SyntaxNode? parent, int position)
-        : base(green, parent, position)
-    {
-    }
-
-    public SyntaxTokenNode ChordNamesKeyword => (SyntaxTokenNode)GetChild(0)!;
-    public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(1)!;
-
-    /// <summary>The chord entries and barlines, in source order.</summary>
-    public IEnumerable<SyntaxNode> Items
-    {
-        get
-        {
-            for (int i = 2; i < SlotCount - 1; i++)
-            {
-                var child = GetChild(i);
-                if (child != null)
-                    yield return child;
-            }
-        }
-    }
-
-    public SyntaxTokenNode CloseBrace => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
-}
-
-/// <summary>
-/// An independent chord part block: <c>chords name { c | g:7 c | }</c>. Same chord
-/// entries as <see cref="ChordNamesBlockSyntax"/>, but the name binds it to a chord
-/// row placed via <c>chords name</c> in a score.
+/// A chord-symbol block: <c>chords [name] { c | g:7 c | }</c>. WITH a name it is
+/// an independent chord part placed in a score via <c>chords name</c> (lead-sheet
+/// row); WITHOUT a name its symbols align above the co-written part's staff by
+/// timing (the pre-release <c>chordnames</c> form, folded into this keyword).
 /// </summary>
 public sealed class ChordPartBlockSyntax : SyntaxNode
 {
@@ -1335,21 +1305,6 @@ public sealed class DynamicSyntax : SyntaxNode
 // ============================================================
 // Tablature Nodes
 // ============================================================
-
-/// <summary>
-/// Represents a tablature staff declaration: \tabStaff { ... }
-/// </summary>
-public sealed partial class TabStaffDeclarationSyntax : SyntaxNode
-{
-    internal TabStaffDeclarationSyntax(TabStaffDeclarationGreen green, SyntaxNode? parent, int position)
-        : base(green, parent, position)
-    {
-    }
-
-    public SyntaxTokenNode TabStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
-    public TuningDeclarationSyntax? Tuning => SlotCount > 2 ? GetChild(1) as TuningDeclarationSyntax : null;
-    public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(SlotCount - 1)!;
-}
 
 /// <summary>
 /// Represents a tuning declaration: \tuning guitar | \tuning bass | \tuning custom { pitches }

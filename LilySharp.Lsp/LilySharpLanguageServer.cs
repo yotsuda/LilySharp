@@ -36,7 +36,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260702-1631";
+    public const string Version = "0.1.1-20260702-1654";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -359,7 +359,7 @@ public sealed class LilySharpLanguageServer
             wordStart--;
         string word = doc.Text.Substring(wordStart, offset - wordStart);
 
-        // Inside a chordnames { } block, right after a chord's ':', complete the
+        // Inside a nameless chords { } block, right after a chord's ':', complete the
         // quality tokens (m, m7, maj7, sus4, …).
         if (wordStart > 0 && doc.Text[wordStart - 1] == ':' && IsInsideChordNamesBlock(doc.Text, offset))
             return GetChordQualityCompletions();
@@ -382,16 +382,16 @@ public sealed class LilySharpLanguageServer
     private static bool IsChordWordChar(char c) => char.IsLetterOrDigit(c);
 
     /// <summary>
-    /// True when <paramref name="offset"/> sits inside a <c>chordnames { … }</c>
+    /// True when <paramref name="offset"/> sits inside a nameless <c>chords { … }</c>
     /// block — found by tracking the keyword before each open brace and seeing
-    /// whether the innermost still-open block is <c>chordnames</c>.
+    /// whether the innermost still-open block is <c>chords</c>.
     /// </summary>
     private static bool IsInsideChordNamesBlock(string text, int offset)
-        => InnermostOpenBlock(text, offset) == "chordnames";
+        => InnermostOpenBlock(text, offset) == "chords";
 
     /// <summary>
     /// The keyword introducing the innermost still-open <c>keyword { … }</c> block
-    /// at <paramref name="offset"/> (e.g. "structure", "chordnames", "section"),
+    /// at <paramref name="offset"/> (e.g. "structure", "chords", "section"),
     /// or null at the top level. Used to scope completions to the block kind.
     /// </summary>
     internal static string? InnermostOpenBlock(string text, int offset)
@@ -460,7 +460,7 @@ public sealed class LilySharpLanguageServer
         return (quotes & 1) == 1;
     }
 
-    /// <summary>Quality-token completions offered after a chord's ':' inside a chordnames block.</summary>
+    /// <summary>Quality-token completions offered after a chord's ':' inside a chords block.</summary>
     private static CompletionList GetChordQualityCompletions()
     {
         var items = ChordQualityRegistry.Tokens
@@ -685,7 +685,7 @@ public sealed class LilySharpLanguageServer
             ("name", "Display name (system indent label)"),
             ("tuning", "Tab tuning (guitar/bass/ukulele/…)"),
             ("channel", "MIDI channel"),
-            ("octave", "Octave mode (absolute | relative)"),
+            ("octave", "Octave mode or absolute base (absolute | relative | N)"),
             ("transpose", "Transpose target pitch"),
             ("removeEmpty", "Hara-kiri: hide this staff in rest-only systems (true | all)"),
             ("time", "Part-local time signature"),

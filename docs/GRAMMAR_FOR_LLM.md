@@ -15,7 +15,7 @@ with `|`.
 ```
 title "Song"            // optional metadata
 composer "Composer"     // optional
-tempo 120               // optional, quarter = BPM ('tempo 120 swing' adds a shuffle-feel equation; 'swing 16' = 16th swing)
+tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit); 'tempo 120 swing' adds a shuffle-feel equation ('swing 16' = 16th swing)
 time 4/4                // optional (default 4/4)
 key c major             // optional (default c major)
 
@@ -55,6 +55,11 @@ score "out" { staff melody }
 - Octave: `'` up one, `,` down one (repeatable: `''`, `,,`).
 - Default octave is C4. Each bare pitch takes the octave nearest the previous note
   (an interval of a fourth or less); `'`/`,` shift from there.
+- `octave absolute` (top level, part header, or mid-music) switches to ABSOLUTE
+  mode: bare `c` = C4 and `'`/`,` are absolute offsets from that anchor (`c'` = C5,
+  `c,` = C3), independent per note - octave mistakes never cascade. RECOMMENDED
+  when generating scores. `part X { octave 2 }` re-anchors the base (bass parts).
+  Sections restore the file-level mode.
 
 ```
 c d e f g a b c    // C4 D4 E4 F4 G4 A4 B4 C5
@@ -104,6 +109,10 @@ An annotation that takes a VALUE puts it in parentheses (space- or comma-separat
 - Chord names: `c4@chord(C)` , `d4@chord(Dm)`
 - Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
 - Rehearsal mark: `c4@mark(A)`
+- Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
+- Cue/effects: `@cue` (small cue note), `@cross`/`@dead` (x notehead), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
+- Feathered beams: `c16@feather(right) d e f` (accel), `@feather(left)` (rit)
+- Abbreviations: `@stac @acc @ten @marc @ferm @tr` = staccato/accent/tenuto/marcato/fermata/trill
 - Free expressive text: `c4@text("dolce")` (plain italic below the note; `.up` forces
   above: `c4@text("pizz.").up`). Not a dynamic: hairpins run through it.
 
@@ -180,7 +189,8 @@ section Main {
 
 ## Lead sheet (chords and/or lyrics, no staff)
 
-An independent `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a
+A NAMELESS `chords { … }` block inside a section aligns its symbols above the
+co-written part's staff by timing. An independent `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a
 `score` with `chords NAME` / `lyrics NAME` (instead of `staff NAME`), renders WITHOUT
 a staff: just a grid of measure barlines, the chord symbols between them and the
 lyrics below. A chord entry is `root[duration][:quality][/bass]` (`c`=C, `a:m`=Am,
@@ -212,7 +222,7 @@ structure { A segno  B to coda  C ds al coda  coda D }
 
 In-note marks: `c4@mark(A)` (rehearsal mark), `@segno @coda @fine @dc @ds`,
 text spanners `@rit` / `@accel`, ottava `@ottava` / `@ottava(bassa)` ... `@loco`,
-trill spanner `@startTrillSpan` ... `@stopTrillSpan`, pedals `@ped` ... `@ped(off)`,
+trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima`/`@15ma`/`@15mb`, pedals `@ped` ... `@ped(off)`,
 `@sost(ped)` / `@una(corda)` / `@tre(corde)` (a modifier word goes in `()`, like an
 argument). (`@ds al fine` etc. is the navigation form used inside `structure { }`.)
 
@@ -265,10 +275,10 @@ score part staff grandStaff voice phrase repeat volta alternative let use break 
 title composer tempo time key clef
 major minor dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8
-tuplet grace acciaccatura appoggiatura lyrics chordnames chords tabStaff tuning
+tuplet grace acciaccatura appoggiatura lyrics chords tuning
 override revert once
 segno fine coda dc ds al to
-ppp pp p mp mf f ff fff
+ppp pp p mp mf ff fff   (f is a PITCH; @f still works - dynamics resolve from text)
 ```
 
 Also special: single letters `a`-`g` are pitches; `r`/`R`/`s` are rests. Articulation,

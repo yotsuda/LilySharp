@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -511,9 +511,7 @@ internal sealed class Lexer
             "acciaccatura" => SyntaxKind.AcciaccaturaKeyword,
             "appoggiatura" => SyntaxKind.AppogiaturaKeyword,
             "lyrics" => SyntaxKind.LyricsKeyword,
-            "chordnames" => SyntaxKind.ChordNamesKeyword,
             "chords" => SyntaxKind.ChordsKeyword,
-            "tabStaff" or "tabstaff" => SyntaxKind.TabStaffKeyword,
             "tuning" => SyntaxKind.TuningKeyword,
             "break" => SyntaxKind.BreakKeyword,
             "partial" => SyntaxKind.PartialKeyword,

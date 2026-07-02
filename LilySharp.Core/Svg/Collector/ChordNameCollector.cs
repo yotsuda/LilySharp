@@ -60,7 +60,10 @@ internal sealed class ChordNameCollector
     public void CollectBlocks(
         SyntaxNode root, IReadOnlyDictionary<string, int> sectionStartMeasure, int staffIndex)
     {
-        var blocks = root.DescendantNodes().OfType<ChordNamesBlockSyntax>().ToList();
+        // Nameless chords { … } blocks (the former chordnames keyword, folded
+        // into chords pre-release): symbols align above the co-written staff.
+        var blocks = root.DescendantNodes().OfType<ChordPartBlockSyntax>()
+            .Where(b => b.PartName == null).ToList();
         if (blocks.Count == 0)
             return;
 

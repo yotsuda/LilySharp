@@ -532,27 +532,6 @@ internal sealed class GraceExpressionGreen : GreenSyntaxNode
 // ============================================================
 
 /// <summary>
-/// Tab staff declaration: tabStaff [tuning] { ... }
-/// </summary>
-internal sealed class TabStaffDeclarationGreen : GreenSyntaxNode
-{
-    public TabStaffDeclarationGreen(
-        SyntaxToken tabStaffKeyword,
-        GreenNode body)
-        : base(SyntaxKind.TabStaffDeclaration, [tabStaffKeyword, body])
-    {
-    }
-
-    public TabStaffDeclarationGreen(
-        SyntaxToken tabStaffKeyword,
-        GreenNode tuning,
-        GreenNode body)
-        : base(SyntaxKind.TabStaffDeclaration, [tabStaffKeyword, tuning, body])
-    {
-    }
-}
-
-/// <summary>
 /// Tuning declaration: \tuning guitar | \tuning bass
 /// </summary>
 internal sealed class TuningDeclarationGreen : GreenSyntaxNode
@@ -1048,18 +1027,6 @@ internal sealed class LyricSyllableGreen : GreenSyntaxNode
 {
     public LyricSyllableGreen(SyntaxToken token)
         : base(SyntaxKind.LyricSyllable, [token])
-    {
-    }
-}
-
-/// <summary>
-/// A chord-names block: chordnames { c1 | a:m f | g:7/b } — a parallel stream of
-/// chord symbols displayed above the staff, aligned by timing.
-/// </summary>
-internal sealed class ChordNamesBlockGreen : GreenSyntaxNode
-{
-    public ChordNamesBlockGreen(SyntaxToken keyword, SyntaxToken openBrace, GreenNode?[] items, SyntaxToken closeBrace)
-        : base(SyntaxKind.ChordNamesBlock, [keyword, openBrace, .. items, closeBrace])
     {
     }
 }

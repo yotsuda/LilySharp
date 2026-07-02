@@ -91,9 +91,7 @@ public enum SyntaxKind : ushort
     AcciaccaturaKeyword,
     AppogiaturaKeyword,
     LyricsKeyword,      // lyrics
-    ChordNamesKeyword,  // chordnames
     ChordsKeyword,      // chords (independent chord part: chords name { ... } + score row)
-    TabStaffKeyword,    // tabStaff (legacy)
     TuningKeyword,      // tuning
     TransposeKeyword,   // transpose
     OctaveKeyword,      // octave

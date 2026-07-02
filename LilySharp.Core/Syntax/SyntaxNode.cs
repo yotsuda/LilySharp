@@ -173,12 +173,10 @@ public abstract class SyntaxNode
             SyntaxKind.TupletExpression => new TupletExpressionSyntax((TupletExpressionGreen)green, this, position),
             SyntaxKind.GraceExpression => new GraceExpressionSyntax((GraceExpressionGreen)green, this, position),
             SyntaxKind.LyricsBlock => new LyricsBlockSyntax((LyricsBlockGreen)green, this, position),
-            SyntaxKind.ChordNamesBlock => new ChordNamesBlockSyntax((ChordNamesBlockGreen)green, this, position),
             SyntaxKind.ChordPartBlock => new ChordPartBlockSyntax((ChordPartBlockGreen)green, this, position),
             SyntaxKind.ChordEntry => new ChordEntrySyntax((ChordEntryGreen)green, this, position),
             SyntaxKind.Articulation => new ArticulationSyntax((ArticulationGreen)green, this, position),
             SyntaxKind.Dynamic => new DynamicSyntax((DynamicGreen)green, this, position),
-            SyntaxKind.TabStaffDeclaration => new TabStaffDeclarationSyntax((TabStaffDeclarationGreen)green, this, position),
             SyntaxKind.TuningDeclaration => new TuningDeclarationSyntax((TuningDeclarationGreen)green, this, position),
             SyntaxKind.StringNumberAnnotation => new StringNumberAnnotationSyntax((StringNumberAnnotationGreen)green, this, position),
 

@@ -20,13 +20,16 @@ The parser is the ultimate authority; the three spec docs above are kept in sync
 All ✅ implemented:
 
 - **Core music** — notes / rests / spacers / full-measure rests, chords, relative
-  octaves, accidentals, dotted & tremolo durations.
+  AND absolute octave modes (`octave absolute`), accidentals, dotted & tremolo
+  durations.
 - **Connectors** — ties, slurs (over notes *and* chords), automatic & manual beams.
 - **Groupings** — tuplets (nested), grace / acciaccatura / appoggiatura, multi-voice
   (`voice { } voice { }`).
-- **Annotations** (`@name`, with `.up`/`.down`) — articulations, ornaments, dynamics,
-  hairpins, `@stemUp/@stemDown`, `@courtesy`/`@editorial`, arpeggio, glissando, figured
-  bass, inline chord names.
+- **Annotations** (`@name`, with `.up`/`.down`) — articulations (incl. staccatissimo,
+  up/down-bow, harmonic), ornaments, dynamics (incl. the sfz family), free text
+  `@text("…")`, hairpins, `@stemUp/@stemDown`, `@courtesy`/`@editorial`, arpeggio,
+  glissando, figured bass, inline chord names, half ties, cue/cross/dead, feathered
+  beams.
 - **Structure** — parts, phrases (`$ref`), sections, `structure` (+ per-score override),
   repeats `|: :|` (`:|*N`), volta endings, navigation marks & spanners (segno/coda/fine/
   D.S./D.C., rit/accel, ottava, trill spanner, pedals), `break`.

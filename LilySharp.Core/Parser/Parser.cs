@@ -256,9 +256,7 @@ internal sealed class Parser
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
-            SyntaxKind.ChordNamesKeyword => ParseChordNamesBlock(),
             SyntaxKind.BreakKeyword => ParseBreak(),
-            SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
             SyntaxKind.TupletKeyword => ParseTupletExpression(),
             SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
             SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
@@ -696,9 +694,7 @@ internal sealed class Parser
             SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
-            SyntaxKind.ChordNamesKeyword => ParseChordNamesBlock(),
             SyntaxKind.BreakKeyword => ParseBreak(),
-                        SyntaxKind.TabStaffKeyword => ParseTabStaffDeclaration(),
             SyntaxKind.OverrideKeyword => ParseOverrideDeclaration(),
             SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
             SyntaxKind.OnceKeyword => ParseOnceModifier(),
@@ -1532,26 +1528,6 @@ private GreenNode?[] ParseArticulations()
 
     // ========== Tablature ==========
 
-    private TabStaffDeclarationGreen ParseTabStaffDeclaration()
-    {
-        var tabStaffKeyword = Expect(SyntaxKind.TabStaffKeyword);
-
-        // Optional tuning declaration
-        TuningDeclarationGreen? tuning = null;
-        if (Check(SyntaxKind.Backslash) && Peek(1)?.Kind == SyntaxKind.TuningKeyword)
-        {
-            tuning = ParseTuningDeclaration();
-        }
-
-        var body = ParseMusicBlock();
-
-        if (tuning != null)
-        {
-            return new TabStaffDeclarationGreen(tabStaffKeyword, tuning, body);
-        }
-        return new TabStaffDeclarationGreen(tabStaffKeyword, body);
-    }
-
     private TuningDeclarationGreen ParseTuningDeclaration()
     {
         var backslash = Expect(SyntaxKind.Backslash);
@@ -1640,7 +1616,6 @@ private GreenNode?[] ParseArticulations()
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
             SyntaxKind.PartialKeyword => ParsePartialDeclaration(),
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
-            SyntaxKind.ChordNamesKeyword => ParseChordNamesBlock(),
             SyntaxKind.ChordsKeyword => ParseChordPartBlock(),
             // Allow identifier or instrument keywords (bass, guitar-like names) as part names
             SyntaxKind.Identifier => ParsePartBlock(),
@@ -1691,32 +1666,10 @@ private GreenNode?[] ParseArticulations()
         or SyntaxKind.PitchD or SyntaxKind.PitchE or SyntaxKind.PitchF
         or SyntaxKind.PitchG or SyntaxKind.PitchA or SyntaxKind.PitchB;
 
-    // chordnames { c1 | a:m f | g:7/b } — a parallel stream of chord symbols.
-    // Entries and barlines are kept flat; the collector splits at the barlines.
-    private ChordNamesBlockGreen ParseChordNamesBlock()
-    {
-        var keyword = Expect(SyntaxKind.ChordNamesKeyword);
-        var openBrace = Expect(SyntaxKind.OpenBrace);
-        var items = new List<GreenNode?>();
-
-        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
-        {
-            if (Check(SyntaxKind.Bar) || Check(SyntaxKind.DoubleBar) || Check(SyntaxKind.FinalBar)
-                || Check(SyntaxKind.RepeatStartBar) || Check(SyntaxKind.RepeatEndBar))
-                items.Add(ParseBarline());
-            else if (IsPitchKind(Current.Kind))
-                items.Add(ParseChordEntry());
-            else
-                Advance(); // error recovery — skip stray tokens
-        }
-
-        var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new ChordNamesBlockGreen(keyword, openBrace, [.. items], closeBrace);
-    }
-
-    // chords name { c | g:7 c | } — an independent chord part bound to `name`,
-    // placed in a score via `chords name`. Same entry/barline grammar as
-    // chordnames; the optional name sits between the keyword and the brace.
+    // chords [name] { c | g:7 c | } — a chord-symbol stream. WITH a name it is an
+    // independent chord part placed in a score via `chords name` (lead-sheet row);
+    // WITHOUT a name it aligns above the co-written part's staff by timing (the
+    // former `chordnames` form, folded into the one keyword pre-release).
     private ChordPartBlockGreen ParseChordPartBlock()
     {
         var keyword = Expect(SyntaxKind.ChordsKeyword);

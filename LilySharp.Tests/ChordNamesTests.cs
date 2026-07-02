@@ -24,7 +24,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The chordnames { } block: structured chord entry (root + quality → interval
+/// The chords { } block: structured chord entry (root + quality → interval
 /// set + auto-named symbol), displayed above the staff and timing-aligned.
 /// LILYPOND-REF: scm/chord-entry.scm; ly/engraver-init.ly ChordNames.
 /// </summary>
@@ -96,7 +96,7 @@ public sealed class ChordNamesTests
     private const string LeadSheet =
         "key c major\npart m { clef treble }\n" +
         "section Main {\n  m {\n    time 4/4\n    c4 d e f | g a b c |\n  }\n" +
-        "  chordnames {\n    c2 a2:m | f2 g2:7 |\n  }\n}\n" +
+        "  chords {\n    c2 a2:m | f2 g2:7 |\n  }\n}\n" +
         "structure { Main }\nscore \"x\" { staff m }\n";
 
     [Fact]
@@ -104,7 +104,7 @@ public sealed class ChordNamesTests
     {
         var tree = SyntaxTree.Parse(LeadSheet);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
-        Assert.Single(tree.GetRoot().DescendantNodes().OfType<ChordNamesBlockSyntax>());
+        Assert.Single(tree.GetRoot().DescendantNodes().OfType<ChordPartBlockSyntax>().Where(b => b.PartName == null));
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public sealed class ChordNamesTests
     [InlineData("g:m7.5-7", "Gm7.5-7")]    // unknown extended chord → full text, not "Gm7"
     public void MultiTokenQuality_IsCapturedWhole(string entry, string expected)
     {
-        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chordnames { " + entry + " }\n}\n" +
+        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords { " + entry + " }\n}\n" +
                   "structure { Main }\nscore \"x\" { staff m }\n";
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src));
         var chord = Assert.Single(score.ChordNames);
@@ -179,7 +179,7 @@ public sealed class ChordNamesTests
     {
         // An extended chord not in the vocabulary still displays (root + raw token),
         // just without a structure.
-        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chordnames { c1:weird9 }\n}\n" +
+        var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords { c1:weird9 }\n}\n" +
                   "structure { Main }\nscore \"x\" { staff m }\n";
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src));
         var chord = Assert.Single(score.ChordNames);
