@@ -45,26 +45,39 @@ public sealed class TieDetector
 
                     if (item is NoteItem startNote && startNote.HasTieStart)
                     {
-                        // A tie connects to the next note of the SAME pitch.
-                        var endNote = NoteScan.FindNextNote(measures, measureIdx, itemIdx,
-                            c => c.StaffPosition == startNote.StaffPosition);
-                        if (endNote != null)
+                        // A tie binds only to the IMMEDIATELY following timed item:
+                        // the next note of the same pitch, or the matching pitch
+                        // inside the next chord. A rest or a different pitch there
+                        // means NO tie — LilyPond reports an unterminated tie and
+                        // never scans past intervening notes looking for a match.
+                        // LILYPOND-REF: lily/tie-engraver.cc stop_translation_timestep.
+                        var next = FindNextTimedItem(measures, measureIdx, itemIdx);
+                        if (next != null)
                         {
-                            var (endMeasureIdx, endItemIdx, note) = endNote.Value;
-                            // Polyphony fixes the tie direction by voice (upper UP,
-                            // lower DOWN); a single voice curves opposite the stem.
-                            // LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo
-                            //   set Tie.direction = UP / DOWN.
-                            bool curveUp = score.Voices.Length > 1
-                                ? (v % 2 == 0)
-                                : !startNote.StemUp;
-                            ties.Add(new TieItem(
-                                startNote, note,
-                                startNote.StaffPosition,
-                                curveUp,
-                                measureIdx, endMeasureIdx,
-                                itemIdx, endItemIdx,
-                                voiceIndex: v));
+                            var (endMeasureIdx, endItemIdx, endItem) = next.Value;
+                            NoteItem? note = endItem switch
+                            {
+                                NoteItem n when n.StaffPosition == startNote.StaffPosition => n,
+                                ChordItem c => MatchingChordPitch(c, startNote.StaffPosition),
+                                _ => null,
+                            };
+                            if (note != null)
+                            {
+                                // Polyphony fixes the tie direction by voice (upper UP,
+                                // lower DOWN); a single voice curves opposite the stem.
+                                // LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo
+                                //   set Tie.direction = UP / DOWN.
+                                bool curveUp = score.Voices.Length > 1
+                                    ? (v % 2 == 0)
+                                    : !startNote.StemUp;
+                                ties.Add(new TieItem(
+                                    startNote, note,
+                                    startNote.StaffPosition,
+                                    curveUp,
+                                    measureIdx, endMeasureIdx,
+                                    itemIdx, endItemIdx,
+                                    voiceIndex: v));
+                            }
                         }
                     }
                     else if (item is ChordItem startChord && startChord.HasTieStart)
@@ -94,48 +107,81 @@ public sealed class TieDetector
         List<TieItem> ties,
         bool multiVoice)
     {
-        // Find the next ChordItem or NoteItem.
+        // Like the single-note path: the ties bind only to the IMMEDIATELY
+        // following timed item. A rest there means no ties (LilyPond reports an
+        // unterminated tie rather than tying across the rest).
+        var next = FindNextTimedItem(measures, measureIdx, itemIdx);
+        if (next == null)
+            return;
+        var (mi, ii, item) = next.Value;
+
+        if (item is ChordItem endChord)
+        {
+            // For each pitch in startChord, find a matching pitch in endChord.
+            var matched = new List<(ChordNoteInfo Start, NoteItem End)>();
+            foreach (var startPitch in startChord.Notes)
+            {
+                foreach (var endPitch in endChord.Notes)
+                {
+                    if (endPitch.StaffPosition == startPitch.StaffPosition)
+                    {
+                        matched.Add((startPitch, SynthesizeNote(endPitch, endChord)));
+                        break;
+                    }
+                }
+                // Unmatched pitches are silently dropped (LP behaviour for
+                // chord ties is to require matching pitches).
+            }
+            EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex, multiVoice);
+        }
+        else if (item is NoteItem endNoteItem)
+        {
+            // chord ~ note: tie any pitch that matches the next note.
+            var matched = new List<(ChordNoteInfo Start, NoteItem End)>();
+            foreach (var startPitch in startChord.Notes)
+            {
+                if (endNoteItem.StaffPosition == startPitch.StaffPosition)
+                    matched.Add((startPitch, endNoteItem));
+            }
+            EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex, multiVoice);
+        }
+        // RestItem: no tie.
+    }
+
+    /// <summary>
+    /// The immediately following TIMED item (note / chord / rest) after
+    /// (<paramref name="measureIdx"/>, <paramref name="itemIdx"/>), or null.
+    /// Non-timed items (clef/key/time changes, marks) are transparent — a tie
+    /// legitimately crosses those — but notes, chords and rests all occupy the
+    /// next musical moment and therefore terminate the search.
+    /// </summary>
+    private static (int MeasureIdx, int ItemIdx, MusicItem Item)? FindNextTimedItem(
+        ImmutableArray<Measure> measures, int measureIdx, int itemIdx)
+    {
         for (int mi = measureIdx; mi < measures.Length; mi++)
         {
             var measure = measures[mi];
             int startII = (mi == measureIdx) ? itemIdx + 1 : 0;
             for (int ii = startII; ii < measure.Items.Length; ii++)
             {
-                var item = measure.Items[ii];
-                if (item is ChordItem endChord)
-                {
-                    // For each pitch in startChord, find a matching pitch in endChord.
-                    var matched = new List<(ChordNoteInfo Start, NoteItem End)>();
-                    foreach (var startPitch in startChord.Notes)
-                    {
-                        foreach (var endPitch in endChord.Notes)
-                        {
-                            if (endPitch.StaffPosition == startPitch.StaffPosition)
-                            {
-                                matched.Add((startPitch, SynthesizeNote(endPitch, endChord)));
-                                break;
-                            }
-                        }
-                        // Unmatched pitches are silently dropped (LP behaviour for
-                        // chord ties is to require matching pitches).
-                    }
-                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex, multiVoice);
-                    return;
-                }
-                else if (item is NoteItem endNoteItem)
-                {
-                    // chord ~ note: tie any pitch that matches the next note.
-                    var matched = new List<(ChordNoteInfo Start, NoteItem End)>();
-                    foreach (var startPitch in startChord.Notes)
-                    {
-                        if (endNoteItem.StaffPosition == startPitch.StaffPosition)
-                            matched.Add((startPitch, endNoteItem));
-                    }
-                    EmitChordTies(matched, startChord, ties, measureIdx, mi, itemIdx, ii, voiceIndex, multiVoice);
-                    return;
-                }
+                if (measure.Items[ii] is NoteItem or ChordItem or RestItem)
+                    return (mi, ii, measure.Items[ii]);
             }
         }
+        return null;
+    }
+
+    /// <summary>The synthesized end note for a note→chord tie: the chord pitch
+    /// matching <paramref name="staffPosition"/>, or null when the chord does
+    /// not contain it (then there is no tie).</summary>
+    private static NoteItem? MatchingChordPitch(ChordItem chord, int staffPosition)
+    {
+        foreach (var pitch in chord.Notes)
+        {
+            if (pitch.StaffPosition == staffPosition)
+                return SynthesizeNote(pitch, chord);
+        }
+        return null;
     }
 
     /// <summary>
