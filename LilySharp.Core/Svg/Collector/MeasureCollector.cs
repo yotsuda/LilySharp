@@ -2278,6 +2278,18 @@ public sealed class MeasureCollector
                     _musicMarks.Add(new MusicMarkItem(navMark, navMeasure, nav.Position));
                     break;
 
+                // _"text" — a free text directive between sections, engraved like
+                // the jump-from navigation text at the END of the section just
+                // played. The grammar has carried this form all along; the
+                // collector never produced the item, so it parsed but silently
+                // printed nothing.
+                case CustomTextSyntax custom when !IsInsideRepeatBlock(custom):
+                    _customTexts.Add(new CustomTextItem(
+                        custom.Text,
+                        Math.Max(0, builder.CurrentMeasureIndex - 1),
+                        custom.Position));
+                    break;
+
                 // ~Name — render the section's music but show NO label (the dedicated
                 // form for an unlabelled section, e.g. a Coda). Without this the whole
                 // section was silently dropped.

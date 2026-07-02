@@ -341,6 +341,9 @@ public class SvgSnapshotTests
         // system-level beam pass) and the dynamic must scale with the small
         // staff while staying on the shared spacing columns.
         yield return new object[] { "test/ossia-beams" };
+        // structure-level _"text" directive: engraves at the end of the section
+        // just played (parsed-but-silent until the collector was connected).
+        yield return new object[] { "test/custom-text" };
     }
 
     /// <summary>

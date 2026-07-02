@@ -1,0 +1,11 @@
+// structure-level custom text directive: _"text" engraves at the END of the
+// section just played (like fine / D.S. text), below the staff. This form
+// parsed but silently printed nothing until the collector was connected.
+part melody { clef treble }
+
+section A { melody { c4 d e f | g2 g | } }
+section B { melody { c4 b a g | c1 | } }
+
+structure { A _"poco a poco dim." B }
+
+score "custom-text" { staff melody }
