@@ -36,7 +36,7 @@ namespace LilySharp.Lsp;
 public sealed class LilySharpLanguageServer
 {
     // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260702-1100";
+    public const string Version = "0.1.1-20260702-1434";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
@@ -369,8 +369,10 @@ public sealed class LilySharpLanguageServer
             CompletionContext.TopLevel => GetTopLevelCompletions(),
             CompletionContext.MusicBlock => GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset)),
             CompletionContext.StructureBlock => GetStructureCompletions(doc.Text),
+            CompletionContext.PartBlock => GetPartPropertyCompletions(),
             CompletionContext.AfterClef => GetClefCompletions(),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
+            CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterAt => GetArticulationCompletions(),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
@@ -576,8 +578,10 @@ public sealed class LilySharpLanguageServer
         TopLevel,
         MusicBlock,
         StructureBlock,
+        PartBlock,
         AfterClef,
         AfterInstrument,
+        AfterRemoveEmpty,
         AfterAt,
         AfterBackslash
     }
@@ -637,6 +641,19 @@ public sealed class LilySharpLanguageServer
             && !IsInsideStringLiteral(text, offset))
             return CompletionContext.AfterInstrument;
 
+        // Right after the `removeEmpty` part property only its values are valid
+        // (true / all / false — LP RemoveEmptyStaves / RemoveAllEmptyStaves).
+        if (string.Equals(prevWord, "removeEmpty", StringComparison.OrdinalIgnoreCase)
+            && IsInsidePartBlock(text, offset)
+            && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.AfterRemoveEmpty;
+
+        // Directly inside a part { } header (and not after one of the
+        // value-taking keywords above): offer the part property names — a part
+        // body holds properties (and inner sections), never notes.
+        if (IsInsidePartBlock(text, offset) && !IsInsideStringLiteral(text, offset))
+            return CompletionContext.PartBlock;
+
         // Inside structure { … } the body is a playback order (section names and
         // navigation marks), not music — so it gets its own completions, never
         // note names. Checked before the brace fallback so 'structure {|' counts.
@@ -655,6 +672,59 @@ public sealed class LilySharpLanguageServer
         }
 
         return braceDepth > 0 ? CompletionContext.MusicBlock : CompletionContext.TopLevel;
+    }
+
+    /// <summary>The property names a part { } header accepts (bare `name value`
+    /// pairs plus inner sections), matching docs/GRAMMAR.md PartProperty.</summary>
+    internal static CompletionList GetPartPropertyCompletions()
+    {
+        var props = new (string Label, string Detail)[]
+        {
+            ("clef", "Clef (treble/bass/alto/tenor/treble_8)"),
+            ("instrument", "Instrument preset (clef/octave/tuning defaults)"),
+            ("name", "Display name (system indent label)"),
+            ("tuning", "Tab tuning (guitar/bass/ukulele/…)"),
+            ("channel", "MIDI channel"),
+            ("octave", "Octave mode (absolute | relative)"),
+            ("transpose", "Transpose target pitch"),
+            ("removeEmpty", "Hara-kiri: hide this staff in rest-only systems (true | all)"),
+            ("time", "Part-local time signature"),
+            ("tempo", "Part-local tempo"),
+            ("section", "Inner section (part-major form)"),
+        };
+        return new CompletionList
+        {
+            Items = props.Select((p, i) => new CompletionItem
+            {
+                Label = p.Label,
+                Kind = CompletionItemKind.Property,
+                Detail = p.Detail,
+                SortText = i.ToString("D2"),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>The values valid right after the <c>removeEmpty</c> part
+    /// property. LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves
+    /// (keeps the first system) / RemoveAllEmptyStaves.</summary>
+    internal static CompletionList GetRemoveEmptyCompletions()
+    {
+        var values = new (string Label, string Detail)[]
+        {
+            ("true", "Hide in rest-only systems; the FIRST system keeps the staff (LP RemoveEmptyStaves)"),
+            ("all", "Hide in rest-only systems including the first (LP RemoveAllEmptyStaves)"),
+            ("false", "Never hide (default)"),
+        };
+        return new CompletionList
+        {
+            Items = values.Select((v, i) => new CompletionItem
+            {
+                Label = v.Label,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = v.Detail,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
     }
 
     /// <summary>The clef names valid right after the <c>clef</c> keyword, ordered
