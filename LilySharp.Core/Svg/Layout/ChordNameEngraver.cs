@@ -194,10 +194,9 @@ public static class ChordNameEngraver
             // line clears high notes/ledger lines; the StaffPadding floor reproduces the
             // measured no-protrusion distance (lead sheet without notes above the staff).
             // The system skyline carries the real ink of noteheads, stems,
-            // ledgers AND accidentals (SkylineBuilder), so the sampled peak
-            // needs no flat allowance any more. Scripts laid out above a
-            // protruding note are still outside these skylines (they are
-            // computed later in the pipeline) — the one remaining omission.
+            // ledgers, accidentals (SkylineBuilder) and above-staff scripts
+            // (LayoutEngine.AugmentSkylinesWithScripts), so the sampled peak
+            // needs no allowances — it IS the content under the symbol.
             double protrusion = p.topStaff && systemPeak.TryGetValue(p.sysIdx, out var pk) ? pk : 0;
             double y = -(StaffPadding + protrusion) + p.staffOffset;
 
