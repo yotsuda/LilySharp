@@ -89,6 +89,39 @@ public class LayoutGeometryRuleTests
                 $"(smaller device Y) than the one below: {ties[i].StartY} vs {ties[i - 1].StartY}");
     }
 
+    // --- Ossia stacking: LILYPOND-REF lily/vertical-align-engraver.cc:150-190 ---
+
+    [Fact]
+    public void OssiaWrittenAfterItsStaff_StacksAboveIt()
+    {
+        // LP's alignAboveContext removes the new staff from the end of the
+        // vertical alignment and inserts it directly BEFORE the target staff;
+        // Lily#'s spec has no explicit target, so an ossia binds above the
+        // nearest preceding staff. Source order main-then-ossia must therefore
+        // come out stacked ossia-then-main.
+        string src = """
+            key c major
+            time 4/4
+            section Main {
+                melody { c'4 d e f | }
+                ossia_melody { c'4 e g e | }
+            }
+            structure { Main }
+            score "x" {
+                staff melody
+                ossia { ossia_melody }
+            }
+            """;
+        var tree = SyntaxTree.Parse(src);
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        var multi = new MeasureCollector().CollectMultiStaff(tree, spec!);
+
+        Assert.Equal(2, multi.StaffGroups.Length);
+        Assert.True(multi.StaffGroups[0].Staves[0].IsOssia, "ossia must stack above");
+        Assert.False(multi.StaffGroups[1].Staves[0].IsOssia, "the main staff sits below");
+    }
+
     // --- Skyline raise: LILYPOND-REF lily/skyline.cc Skyline::raise ---
 
     [Fact]

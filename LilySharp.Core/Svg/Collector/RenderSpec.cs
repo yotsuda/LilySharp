@@ -124,7 +124,7 @@ public sealed record RenderSpec(
     /// <summary>Gets all voice names referenced in this render.</summary>
     public IEnumerable<string> GetVoiceNames()
     {
-        foreach (var item in Items)
+        foreach (var item in OrderedItems())
         {
             switch (item)
             {
@@ -151,10 +151,41 @@ public sealed record RenderSpec(
         }
     }
 
+    /// <summary>
+    /// Render items in STACKING (top-to-bottom) order: an ossia written AFTER a
+    /// staff moves directly ABOVE the nearest preceding main item, LP-style —
+    /// an ossia decorates the staff below it (LILYPOND-REF: Notation Reference
+    /// "Ossia staves", alignAboveContext). An ossia written before any staff
+    /// already stacks above and keeps its place; several ossias keep their
+    /// source order (the first written ends up highest).
+    /// <see cref="GetVoiceNames"/> and <see cref="ToStaffGroups"/> both iterate
+    /// THIS order, so the collector's global staff indices stay in lockstep
+    /// with the layout's.
+    /// </summary>
+    private List<RenderItemSpec> OrderedItems()
+    {
+        var ordered = new List<RenderItemSpec>(Items.Length);
+        foreach (var item in Items)
+        {
+            if (item is OssiaStaffSpec)
+            {
+                int mainIdx = ordered.FindLastIndex(
+                    i => i is SingleStaffSpec or GrandStaffRenderSpec or TabStaffSpec);
+                if (mainIdx >= 0)
+                {
+                    ordered.Insert(mainIdx, item);
+                    continue;
+                }
+            }
+            ordered.Add(item);
+        }
+        return ordered;
+    }
+
     /// <summary>Gets all staff groups for layout.</summary>
     public IEnumerable<StaffGroup> ToStaffGroups(Func<string, ImmutableArray<Voice>> getVoices)
     {
-        foreach (var item in Items)
+        foreach (var item in OrderedItems())
         {
             switch (item)
             {

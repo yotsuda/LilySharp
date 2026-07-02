@@ -331,11 +331,11 @@ public class SvgSnapshotTests
         // dynamic at ITS per-system Y), and a SECOND voice keeps it alive while
         // the primary voice rests. Guards the hidden-staff content skip.
         yield return new object[] { "test/hara-kiri" };
-        // Ossia staff (reduced-size alternative passage) — the fixture existed
-        // but was referenced by no test at all. Pins CURRENT behavior: the
-        // ossia renders in render-spec order (here: below the main staff) as
-        // its own reduced-scale group. Known gap vs LP: no above-the-staff,
-        // measure-aligned ossia placement yet.
+        // Ossia staff (reduced-size alternative passage), LP-aligned: the ossia
+        // stacks ABOVE the staff it decorates (vertical-align-engraver.cc
+        // alignAboveContext insert-before), and its X positions stay on the
+        // score-wide spacing columns — barlines and note columns line up with
+        // the full-size staff below; only the notation shrinks (magnifyStaff).
         yield return new object[] { "test/ossia" };
     }
 

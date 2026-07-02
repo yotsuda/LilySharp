@@ -255,9 +255,17 @@ public static class SharedRenderer
                 continue;
             }
 
+            // Ossia: the group transform shrinks the notation uniformly, and the
+            // X-compensating wrapper puts every horizontal position back on the
+            // score-wide spacing columns — so the ossia's notes align vertically
+            // with the full-size staff it sits above, exactly like a magnified
+            // staff in LP (one paper column per moment spans every staff).
+            // LILYPOND-REF: lily/paper-column.cc, lily/spacing-spanner.cc;
+            // ly/music-functions-init.ly magnifyStaff.
             IDisposable? groupScope = isOssia
                 ? gc.BeginGroup(new DrawingTransform(0, staffY, OssiaScale, OssiaScale))
                 : null;
+            IDrawingContext sgc = isOssia ? new UnscaledXDrawingContext(gc, OssiaScale) : gc;
             try
             {
                 double localStaffY = isOssia ? 0 : staffY;
@@ -265,11 +273,11 @@ public static class SharedRenderer
                 // Tablature staves: string lines + TAB clef + fret numbers.
                 if (staff.IsTab)
                 {
-                    DrawTabStaff(staff, system, globalIdx, localStaffY, staffRight, systemStartX, beamedItems, gc);
+                    DrawTabStaff(staff, system, globalIdx, localStaffY, staffRight, systemStartX, beamedItems, sgc);
                     continue;
                 }
 
-                DrawStaffLines(localStaffY, staffRight, gc);
+                DrawStaffLines(localStaffY, staffRight, sgc);
 
                 // System-start prefix. The clef and key signature repeat at the
                 // head of EVERY system (standard notation); the key reflects any
@@ -286,23 +294,23 @@ public static class SharedRenderer
                 // and a multi-staff score's per-staff clefs would all wrongly point
                 // at the one score-level position.
                 int clefPos = isFirstSystem && score.TotalStaffCount == 1 ? score.Header.Clef : 0;
-                using (SourceScope(gc, clefPos))
-                    prefixEndX = DrawClef(clef, systemStartX, localStaffY, gc);
+                using (SourceScope(sgc, clefPos))
+                    prefixEndX = DrawClef(clef, systemStartX, localStaffY, sgc);
                 var activeKey = ResolveKeySignature(staff, system, score);
                 // Tag the key sig with its declaration on the first line only — there
                 // it IS the declared key; later lines may show a mid-piece change,
                 // which carries its own position via its measure item.
-                using (SourceScope(gc, isFirstSystem ? score.Header.Key : 0))
-                    prefixEndX = DrawKeySignature(activeKey, clef, prefixEndX, localStaffY, gc);
+                using (SourceScope(sgc, isFirstSystem ? score.Header.Key : 0))
+                    prefixEndX = DrawKeySignature(activeKey, clef, prefixEndX, localStaffY, sgc);
                 if (isFirstSystem)
                 {
-                    using (SourceScope(gc, score.Header.Time))
-                        prefixEndX = DrawTimeSignature(score.TimeSignature, prefixEndX, localStaffY, gc);
+                    using (SourceScope(sgc, score.Header.Time))
+                        prefixEndX = DrawTimeSignature(score.TimeSignature, prefixEndX, localStaffY, sgc);
                 }
                 else if (GetSystemStartTimeChange(staff, system) is { } startTimeChange)
                 {
                     // A meter change at the line break is part of the prefix.
-                    prefixEndX = DrawTimeSignature(startTimeChange.NewTime, prefixEndX, localStaffY, gc);
+                    prefixEndX = DrawTimeSignature(startTimeChange.NewTime, prefixEndX, localStaffY, sgc);
                 }
 
                 // Notes per measure — render every voice (voice 1 = stems up,
@@ -316,11 +324,11 @@ public static class SharedRenderer
                         ? VoiceDefaults.GetDefaultStemUp(voiceNumber)
                         : null;
                     DrawStaffMeasures(voices[vi], voiceNumber, forcedStemUp,
-                        system, layout, globalIdx, localStaffY, clef, resolver, beamedItems, gc);
+                        system, layout, globalIdx, localStaffY, clef, resolver, beamedItems, sgc);
                 }
 
                 // Barlines (typed: single / double / final / repeat) per measure
-                DrawBarlines(system, staff, localStaffY, layout, gc);
+                DrawBarlines(system, staff, localStaffY, layout, sgc);
             }
             finally
             {
