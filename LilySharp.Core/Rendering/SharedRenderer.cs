@@ -108,10 +108,10 @@ public static class SharedRenderer
                 var measureToSystemY = BuildMeasureToSystemY(page);
                 var measureToSystem = BuildMeasureToSystem(page);
                 var os = new OssiaShrink(ossiaStaves, measureToSystem);
-                DrawTies(layout, measureToSystemY, ossiaStaves, measureToSystem, gc);
-                DrawSlurs(layout, measureToSystemY, ossiaStaves, measureToSystem, gc);
-                DrawDynamics(layout, measureToSystemY, ossiaStaves, gc);
-                DrawArticulations(layout, measureToSystemY, ossiaStaves, gc);
+                DrawTies(layout, measureToSystemY, os, gc);
+                DrawSlurs(layout, measureToSystemY, os, gc);
+                DrawDynamics(layout, measureToSystemY, os, gc);
+                DrawArticulations(layout, measureToSystemY, os, gc);
                 DrawLyrics(layout, measureToSystemY, gc);
                 DrawHairpins(layout, measureToSystemY, os, gc);
                 DrawOttavaBrackets(layout, measureToSystemY, os, gc);
@@ -132,7 +132,7 @@ public static class SharedRenderer
                 DrawTextSpanners(layout, measureToSystemY, os, gc);
                 DrawPedalBrackets(layout, measureToSystemY, gc);
                 DrawMultiMeasureRests(layout, measureToSystemY, gc);
-                DrawTieVariants(layout, measureToSystemY, gc);
+                DrawTieVariants(layout, measureToSystemY, os, gc);
                 DrawLyricHyphens(layout, measureToSystemY, gc);
                 DrawPartCombine(layout, measureToSystemY, gc);
             }
@@ -1612,7 +1612,8 @@ public static class SharedRenderer
     }
 
     private static void DrawLedgerLines(int staffPosition, double x, double staffMiddleY,
-        IDrawingContext gc, double headWidth = EngravingDefaults.NoteheadBlackWidth)
+        IDrawingContext gc, double headWidth = EngravingDefaults.NoteheadBlackWidth,
+        double unit = 1.0)
     {
         // ledger_extent = head_extent widened by length-fraction·head_width —
         // proportional to the ACTUAL head, so whole/half noteheads (wider than
@@ -1624,16 +1625,22 @@ public static class SharedRenderer
         double x1 = x - ext;
         double x2 = x + headWidth + ext;
 
+        // `unit` shrinks the per-step offsets from the (already-transformed)
+        // staff middle — used by ossia grace groups, whose Ys go through the
+        // staff-top affine while this helper computes offsets itself.
+        double YOf(int pos) => staffMiddleY
+            + (StaffFrame.PositionToDevice(pos, staffMiddleY) - staffMiddleY) * unit;
+
         // Ledger lines above staff (staff position > 4 = above top line)
         for (int pos = 6; pos <= staffPosition; pos += 2)
         {
-            double y = StaffFrame.PositionToDevice(pos, staffMiddleY);
+            double y = YOf(pos);
             gc.DrawLine(x1, y, x2, y, Color.Black, thickness);
         }
         // Ledger lines below staff (staff position < -4 = below bottom line)
         for (int pos = -6; pos >= staffPosition; pos -= 2)
         {
-            double y = StaffFrame.PositionToDevice(pos, staffMiddleY);
+            double y = YOf(pos);
             gc.DrawLine(x1, y, x2, y, Color.Black, thickness);
         }
     }
@@ -2146,7 +2153,7 @@ public static class SharedRenderer
     // ---------- Ties & slurs ----------
 
     private static void DrawTies(ScoreLayout layout, Dictionary<int, double> sysY,
-        HashSet<int> ossiaStaves, Dictionary<int, SystemLayout> systems, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc)
     {
         foreach (var tie in layout.TieLayouts)
         {
@@ -2155,12 +2162,12 @@ public static class SharedRenderer
             DrawBow(tie.StartX, tie.StartY, tie.EndX, tie.EndY,
                 tie.Control1, tie.Control2, tie.CurveUp,
                 EngravingDefaults.TieMidThickness,
-                tie.StaffIndex, tie.Tie.StartMeasureIndex, ossiaStaves, systems, gc);
+                tie.StaffIndex, tie.Tie.StartMeasureIndex, os, gc);
         }
     }
 
     private static void DrawSlurs(ScoreLayout layout, Dictionary<int, double> sysY,
-        HashSet<int> ossiaStaves, Dictionary<int, SystemLayout> systems, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc)
     {
         foreach (var slur in layout.SlurLayouts)
         {
@@ -2169,7 +2176,7 @@ public static class SharedRenderer
             DrawBow(slur.StartX, slur.StartY, slur.EndX, slur.EndY,
                 slur.Control1, slur.Control2, slur.CurveUp,
                 EngravingDefaults.SlurMidThickness,
-                slur.StaffIndex, slur.Slur.StartMeasureIndex, ossiaStaves, systems, gc);
+                slur.StaffIndex, slur.Slur.StartMeasureIndex, os, gc);
         }
     }
 
@@ -2187,19 +2194,13 @@ public static class SharedRenderer
         (double X, double Y) c1, (double X, double Y) c2,
         bool curveUp, double midThickness,
         int staffIndex, int startMeasureIndex,
-        HashSet<int> ossiaStaves, Dictionary<int, SystemLayout> systems, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc)
     {
-        if (staffIndex >= 0 && ossiaStaves.Contains(staffIndex)
-            && systems.TryGetValue(startMeasureIndex, out var system))
-        {
-            double top = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
-            double S(double y) => top + (y - top) * OssiaScale;
-            startY = S(startY);
-            endY = S(endY);
-            c1 = (c1.X, S(c1.Y));
-            c2 = (c2.X, S(c2.Y));
-            midThickness *= OssiaScale;
-        }
+        startY = os.Y(startY, staffIndex, startMeasureIndex);
+        endY = os.Y(endY, staffIndex, startMeasureIndex);
+        c1 = (c1.X, os.Y(c1.Y, staffIndex, startMeasureIndex));
+        c2 = (c2.X, os.Y(c2.Y, staffIndex, startMeasureIndex));
+        midThickness = os.Size(midThickness, staffIndex);
         DrawCurve(startX, startY, endX, endY, c1, c2, curveUp, midThickness, gc);
     }
 
@@ -2506,7 +2507,7 @@ public static class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:1311 self-alignment-X = CENTER
     /// </remarks>
     private static void DrawDynamics(ScoreLayout layout, Dictionary<int, double> sysY,
-        HashSet<int> ossiaStaves, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.DynamicLayouts.IsDefaultOrEmpty) return;
         double fontSize = FontSize * 0.5;
@@ -2514,11 +2515,10 @@ public static class SharedRenderer
         {
             string text = NormalizeDynamicText(d.Text);
             if (!sysY.TryGetValue(d.MeasureIndex, out var sy)) continue; // other page
-            double y = sy + d.Y;
-            // A dynamic on an ossia staff shrinks with its staff's notation.
-            double size = ossiaStaves.Contains(d.StaffIndex)
-                ? fontSize * OssiaScale
-                : fontSize;
+            // A dynamic on an ossia staff shrinks with its staff's notation —
+            // both the glyph and its distance from the small staff.
+            double y = os.Y(sy + d.Y, d.StaffIndex, d.MeasureIndex);
+            double size = os.Size(fontSize, d.StaffIndex);
             using (gc.Source(d.SourcePosition))
                 gc.DrawText(text, d.X, y, size, "serif",
                     FontStyle.BoldItalic, TextAnchor.Middle, Color.Black);
@@ -2544,16 +2544,17 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/script-engraver.cc:92-125 acknowledge_note_head
     /// </remarks>
     private static void DrawArticulations(ScoreLayout layout, Dictionary<int, double> sysY,
-        HashSet<int> ossiaStaves, IDrawingContext gc)
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.ArticulationLayouts.IsDefaultOrEmpty) return;
         foreach (var a in layout.ArticulationLayouts)
         {
             if (string.IsNullOrEmpty(a.Glyph)) continue;
             if (!sysY.TryGetValue(a.MeasureIndex, out var sy)) continue; // other page
-            double y = sy + a.Y;
-            // A script on an ossia staff shrinks with its staff's notation.
-            double scale = ossiaStaves.Contains(a.StaffIndex) ? a.Scale * OssiaScale : a.Scale;
+            // A script on an ossia staff shrinks with its staff's notation —
+            // both the glyph and its distance from the small staff.
+            double y = os.Y(sy + a.Y, a.StaffIndex, a.MeasureIndex);
+            double scale = os.Size(a.Scale, a.StaffIndex);
             // Bend sentinels ("bendFall"/"bendDoit"): a trailing curve, not a glyph.
             if (a.Glyph is "bendFall" or "bendDoit")
             {
@@ -3008,13 +3009,13 @@ public static class SharedRenderer
                         g.StaffIndex, g.MeasureIndex);
                     // Ledgers under the head — layer 0 with the staff lines.
                     // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0)
-                    // (On an ossia the ledger anchor is the affined middle; the
-                    // per-step offsets inside stay unscaled — a visually minor
-                    // approximation for the rare ossia-grace-with-ledger case.)
+                    // On an ossia the anchor is the affined middle and the
+                    // per-step offsets shrink via `unit`, matching the heads.
                     if (note.NeedsLedger)
                         DrawLedgerLines(note.StaffPosition, currentX,
                             os.Y(staffMiddleY, g.StaffIndex, g.MeasureIndex), gc,
-                            EngravingDefaults.NoteheadBlackWidth * eff);
+                            EngravingDefaults.NoteheadBlackWidth * eff,
+                            unit: os.Size(1.0, g.StaffIndex));
                     if (note.Accidental is { } acc)
                         DrawAccidental(acc, isCourtesy: false, currentX, y,
                             g.SourcePosition, gc, eff);
@@ -3784,7 +3785,8 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/laissez-vibrer-engraver.cc — LaissezVibrerTie grob
     /// LILYPOND-REF: lily/repeat-tie-engraver.cc — RepeatTie grob
     /// </remarks>
-    private static void DrawTieVariants(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawTieVariants(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TieVariantLayouts.IsDefaultOrEmpty) return;
         // Tie variants use staff-relative Y already in the layout — no system offset needed
@@ -3793,9 +3795,10 @@ public static class SharedRenderer
         {
             if (!sysY.ContainsKey(v.MeasureIndex))
                 continue; // other page
-            DrawCurve(v.StartX, v.Y, v.EndX, v.Y,
+            DrawBow(v.StartX, v.Y, v.EndX, v.Y,
                 v.Control1, v.Control2, v.CurveUp,
-                EngravingDefaults.TieMidThickness, gc);
+                EngravingDefaults.TieMidThickness,
+                v.StaffIndex, v.MeasureIndex, os, gc);
         }
     }
 

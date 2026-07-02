@@ -56,7 +56,9 @@ public readonly record struct TieVariantLayout(
     (double X, double Y) Control2,
     /// <summary>True = curve up, false = curve down.</summary>
     bool CurveUp,
-    int SourcePosition);
+    int SourcePosition,
+    /// <summary>Owning staff (ossia shrink); -1 = unknown/test construction.</summary>
+    int StaffIndex = -1);
 
 /// <summary>
 /// Engraver for half-ties (LaissezVibrerTie and RepeatTie).
@@ -168,6 +170,7 @@ public static class TieVariantEngraver
             Control1: control1,
             Control2: control2,
             CurveUp: curveUp,
-            SourcePosition: note.SourcePosition);
+            SourcePosition: note.SourcePosition,
+            StaffIndex: staffIndex);
     }
 }
