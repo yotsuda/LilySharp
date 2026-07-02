@@ -65,7 +65,8 @@ public sealed class PageLayouter
         ImmutableArray<SystemLayout> systems,
         double headerHeight,
         ImmutableArray<(double upExtent, double downExtent)> systemExtents,
-        ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
+        ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
+        ImmutableArray<(double bandUp, double bandDown)>? systemBands = null)
     {
         if (systems.Length == 0)
         {
@@ -170,7 +171,7 @@ public sealed class PageLayouter
             // When skylines are available, use Distance() for X-dependent collision detection
             var pageSystems = PositionSystemsOnPage(
                 systems, systemExtents, systemDetails, systemStart, systemEnd,
-                isFirstPage, headerHeight, force, vs, systemSkylines);
+                isFirstPage, headerHeight, force, vs, systemSkylines, systemBands);
 
             pages.Add(new PageLayout(
                 PageIndex: pageIdx,
@@ -205,7 +206,8 @@ public sealed class PageLayouter
         int startIdx, int endIdx,
         bool isFirstPage, double headerHeight,
         double force, VerticalSpacingParameters vs,
-        ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
+        ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
+        ImmutableArray<(double bandUp, double bandDown)>? systemBands = null)
     {
         var pageSystems = new List<SystemLayout>();
 
@@ -244,9 +246,31 @@ public sealed class PageLayouter
                     double dist = prevDown.Distance(nextUp);
                     // Distance() returns negative infinity for empty skylines;
                     // fall back to scalar calculation in that case
-                    skylineDistance = double.IsNegativeInfinity(dist)
-                        ? _options.StaffHeight + d.BottomExtent + systemExtents[sysIdx + 1].upExtent
-                        : dist;
+                    if (double.IsNegativeInfinity(dist))
+                    {
+                        skylineDistance = _options.StaffHeight + d.BottomExtent
+                            + systemExtents[sysIdx + 1].upExtent;
+                    }
+                    else
+                    {
+                        // Whole-line annotation bands (lyric lines below,
+                        // chord-symbol rows above) lay out after the page Y is
+                        // fixed and are absent from the skylines; they floor
+                        // the distance (a band spans every X, so the X-disjoint
+                        // argument for preferring Distance() does not apply).
+                        if (systemBands is { } bands && sysIdx + 1 < bands.Length)
+                        {
+                            double bandDownPrev = bands[sysIdx].bandDown;
+                            double bandUpNext = bands[sysIdx + 1].bandUp;
+                            if (bandDownPrev > 0)
+                                dist = Math.Max(dist, _options.StaffHeight + bandDownPrev
+                                    + systemExtents[sysIdx + 1].upExtent);
+                            if (bandUpNext > 0)
+                                dist = Math.Max(dist, _options.StaffHeight
+                                    + systemExtents[sysIdx].downExtent + bandUpNext);
+                        }
+                        skylineDistance = dist;
+                    }
                 }
                 else
                 {

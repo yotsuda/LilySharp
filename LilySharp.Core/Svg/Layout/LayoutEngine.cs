@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -97,7 +97,10 @@ public sealed class LayoutEngine
         }
 
         // LILYPOND-REF: lily/page-layout-problem.cc:1025-1054 distribute_loose_lines()
-        // Augment system extents with estimated loose line heights (lyrics, dynamics, figured bass)
+        // Augment system extents with estimated loose line heights (lyrics, dynamics,
+        // figured bass), collecting the whole-line bands (lyrics down / chord rows up)
+        // that must floor the inter-system skyline distance.
+        var perSystemBands = new List<(double bandUp, double bandDown)>();
         var singleMeasureRanges = new List<(int startMeasure, int measureCount)>();
         int measStart = 0;
         foreach (var sysMeasures in systemMeasures)
@@ -107,7 +110,8 @@ public sealed class LayoutEngine
         }
         AugmentExtentsWithLooseLines(perSystemExtents,
             score.Lyrics, score.Dynamics, score.FiguredBasses,
-            score.MusicMarks, score.VoltaBrackets, singleMeasureRanges);
+            score.MusicMarks, score.VoltaBrackets, singleMeasureRanges,
+            score.ChordNames, perSystemBands);
 
         // Preliminary annotation pass: real protrusions join the spacing
         // extents (see EnrichExtentsWithAnnotationProtrusions). These
@@ -136,7 +140,7 @@ public sealed class LayoutEngine
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, _options.StaffHeight,
-            perSystemSkylines);
+            perSystemSkylines, perSystemBands: perSystemBands);
 
         var beamLayouts = _elementCoordinator.LayoutBeams(score, systemsArray);
         var tieLayouts = _elementCoordinator.LayoutTies(score, systemsArray);
@@ -323,6 +327,7 @@ public sealed class LayoutEngine
         }
 
         // LILYPOND-REF: lily/page-layout-problem.cc:1025-1054 distribute_loose_lines()
+        var perSystemBands = new List<(double bandUp, double bandDown)>();
         var multiMeasureRanges = new List<(int startMeasure, int measureCount)>();
         int multiMeasStart = 0;
         foreach (var sysMeasures in systemMeasures)
@@ -330,9 +335,19 @@ public sealed class LayoutEngine
             multiMeasureRanges.Add((multiMeasStart, sysMeasures.Count));
             multiMeasStart += sysMeasures.Count;
         }
+        // Chord symbols on a TEXT ROW (lead sheets) live in their own band and
+        // must not inflate a music staff's up-extent; inline chord symbols
+        // (nameless `chords { }`) sit above their staff and must.
+        var textRowStaves = new HashSet<int>();
+        foreach (var (_, st, gi) in score.EnumerateStaves())
+            if (st.IsTextRow)
+                textRowStaves.Add(gi);
+        var inlineChordNames = score.ChordNames
+            .Where(c => !textRowStaves.Contains(c.StaffIndex)).ToImmutableArray();
         AugmentExtentsWithLooseLines(perSystemExtents,
             score.Lyrics, score.Dynamics, score.FiguredBasses,
-            score.MusicMarks, score.VoltaBrackets, multiMeasureRanges);
+            score.MusicMarks, score.VoltaBrackets, multiMeasureRanges,
+            inlineChordNames, perSystemBands);
 
         // Preliminary annotation pass (see the single-staff path): real
         // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
@@ -389,7 +404,7 @@ public sealed class LayoutEngine
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
-            perSystemSkylines, perSystemHeights);
+            perSystemSkylines, perSystemHeights, perSystemBands);
 
         // Calculate beams/ties/slurs/glissandos per staff
         var allBeamLayouts = new List<BeamLayout>();
@@ -555,8 +570,19 @@ public sealed class LayoutEngine
         ImmutableArray<SystemLayout> systems, double headerHeight,
         List<(double upExtent, double downExtent)> perSystemExtents, double systemHeight,
         List<(VerticalSkyline up, VerticalSkyline down)>? perSystemSkylines = null,
-        List<double>? perSystemHeights = null)
+        List<double>? perSystemHeights = null,
+        List<(double bandUp, double bandDown)>? perSystemBands = null)
     {
+        // Whole-line annotation bands (lyric lines below, chord-symbol rows
+        // above). They lay out only after the page Y is fixed, so they are
+        // absent from the skylines — the skyline distance must be floored by
+        // them or adjacent systems overprint them (found by the Greensleeves
+        // sample). Local annotations (dynamics, ties, …) are NOT banded: the
+        // X-aware skyline distance is the better model for those.
+        (double up, double down) AnnBand(int i) =>
+            perSystemBands == null || i >= perSystemBands.Count
+                ? (0, 0)
+                : (perSystemBands[i].bandUp, perSystemBands[i].bandDown);
         // Per-system body height, defaulting to the scalar systemHeight when the
         // caller has none (single-staff path, or no hara-kiri) — in that case every
         // entry equals systemHeight, so the result is byte-identical.
@@ -577,7 +603,8 @@ public sealed class LayoutEngine
                 ? (ImmutableArray<(VerticalSkyline, VerticalSkyline)>?)perSystemSkylines.ToImmutableArray()
                 : null;
             var pages = _pageLayouter.CreatePagesWithOptimalBreaking(
-                systems, headerHeight, perSystemExtents.ToImmutableArray(), skylines);
+                systems, headerHeight, perSystemExtents.ToImmutableArray(), skylines,
+                perSystemBands?.ToImmutableArray());
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
 
@@ -612,7 +639,21 @@ public sealed class LayoutEngine
                 {
                     double dist = perSystemSkylines[i].down.Distance(perSystemSkylines[i + 1].up);
                     if (!double.IsNegativeInfinity(dist))
+                    {
+                        // A whole-line annotation band clears against the OTHER
+                        // side's full extent (the band spans every X, so the
+                        // X-disjoint argument for preferring Distance() does not
+                        // apply to it).
+                        var annPrev = AnnBand(i);
+                        var annNext = AnnBand(i + 1);
+                        if (annPrev.down > 0)
+                            dist = Math.Max(dist, SysHeight(i) + annPrev.down
+                                + perSystemExtents[i + 1].upExtent);
+                        if (annNext.up > 0)
+                            dist = Math.Max(dist, SysHeight(i)
+                                + perSystemExtents[i].downExtent + annNext.up);
                         skylineDistance = dist;
+                    }
                 }
 
                 double minDistance = Math.Max(
@@ -643,16 +684,38 @@ public sealed class LayoutEngine
     /// Pure height estimation covers both below-staff (downExtent) and above-staff (upExtent)
     /// elements so that page breaking can accurately predict system heights.
     /// </remarks>
-    private static (double downExtent, double upExtent) EstimateLooseLineExtents(
+    private static (double downExtent, double upExtent, double bandDown, double bandUp) EstimateLooseLineExtents(
         ImmutableArray<LyricItem> lyrics,
         ImmutableArray<DynamicItem> dynamics,
         ImmutableArray<FiguredBassItem> figuredBasses,
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<VoltaBracketItem> voltaBrackets,
-        int startMeasure, int endMeasure)
+        int startMeasure, int endMeasure,
+        ImmutableArray<ChordNameItem> chordNames = default)
     {
         double downExtent = 0;
         double upExtent = 0;
+        // Whole-line bands: annotation classes that span the system's full
+        // width (lyric lines below, chord-symbol rows above). These floor the
+        // inter-system skyline distance — see FloorDistance in CreatePages.
+        double bandDown = 0;
+        double bandUp = 0;
+
+        // LILYPOND-REF: scm/define-grobs.scm ChordName (a TextScript-class grob
+        // above the staff). Inline chord symbols (nameless `chords { }`) sit
+        // above the staff: staffPadding(~1.4) + text height(~1.6).
+        if (!chordNames.IsDefaultOrEmpty)
+        {
+            foreach (var cn in chordNames)
+            {
+                if (cn.MeasureIndex >= startMeasure && cn.MeasureIndex < endMeasure)
+                {
+                    upExtent = Math.Max(upExtent, 3.0);
+                    bandUp = Math.Max(bandUp, 3.0);
+                    break;
+                }
+            }
+        }
 
         // --- Below-staff elements (downExtent) ---
 
@@ -671,7 +734,11 @@ public sealed class LayoutEngine
                     maxVerse = Math.Max(maxVerse, lyric.VerseNumber);
             }
             if (maxVerse > 0)
-                downExtent = Math.Max(downExtent, 2.5 + (maxVerse - 1) * 1.8 + 1.2);
+            {
+                double lyricBand = 2.5 + (maxVerse - 1) * 1.8 + 1.2;
+                downExtent = Math.Max(downExtent, lyricBand);
+                bandDown = Math.Max(bandDown, lyricBand);
+            }
         }
 
         // LILYPOND-REF: scm/define-grobs.scm DynamicLineSpanner.outside-staff-priority = 250
@@ -764,7 +831,7 @@ public sealed class LayoutEngine
             }
         }
 
-        return (downExtent, upExtent);
+        return (downExtent, upExtent, bandDown, bandUp);
     }
 
     /// <summary>
@@ -909,14 +976,17 @@ public sealed class LayoutEngine
         ImmutableArray<FiguredBassItem> figuredBasses,
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<VoltaBracketItem> voltaBrackets,
-        List<(int startMeasure, int measureCount)> systemMeasureRanges)
+        List<(int startMeasure, int measureCount)> systemMeasureRanges,
+        ImmutableArray<ChordNameItem> chordNames = default,
+        List<(double bandUp, double bandDown)>? perSystemBands = null)
     {
         for (int i = 0; i < perSystemExtents.Count && i < systemMeasureRanges.Count; i++)
         {
             var (start, count) = systemMeasureRanges[i];
-            var (looseDown, looseUp) = EstimateLooseLineExtents(
+            var (looseDown, looseUp, bandDown, bandUp) = EstimateLooseLineExtents(
                 lyrics, dynamics, figuredBasses, musicMarks, voltaBrackets,
-                start, start + count);
+                start, start + count, chordNames);
+            perSystemBands?.Add((bandUp, bandDown));
 
             var ext = perSystemExtents[i];
             if (looseDown > 0 || looseUp > 0)
