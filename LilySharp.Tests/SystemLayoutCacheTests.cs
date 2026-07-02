@@ -94,6 +94,49 @@ public class SystemLayoutCacheTests
         Assert.Equal(0, cache.Count);
     }
 
+    [Fact]
+    public void ScoreLargerThanTheCap_KeepsEveryCurrentSystemCached()
+    {
+        // Regression guard for the eviction policy: with a flat FIFO cap, a score
+        // with more systems than MaxEntries (1024) would evict its OWN working set
+        // while the pass is still inserting it, and every subsequent edit would then
+        // miss every system forever (permanent 0% hit rate). Entries inserted or hit
+        // in the current pass are eviction-exempt, so a content-unchanged second
+        // pass must hit all N systems.
+        const int N = 1500;
+        var keys = new MeasureContentKey[N];
+        for (int i = 0; i < N; i++)
+            keys[i] = new MeasureContentKey(i + 1);
+
+        var cache = new SystemLayoutCache();
+        cache.SetContentKeys(keys.ToImmutableArray());
+        for (int i = 0; i < N; i++)
+            cache.GetOrComputeMeasures(i, 1, i == 0, i == N - 1, 2.0, 0.25, () => Layout(0));
+
+        cache.SetContentKeys(keys.ToImmutableArray()); // next edit, content unchanged
+        for (int i = 0; i < N; i++)
+        {
+            cache.GetOrComputeMeasures(i, 1, i == 0, i == N - 1, 2.0, 0.25, () => Layout(0));
+            Assert.True(cache.LastWasHit, $"system {i} was evicted mid-pass");
+        }
+    }
+
+    [Fact]
+    public void StaleEntriesAcrossManyEdits_StayBounded()
+    {
+        // The cap still does its job on the STALE backlog: a long session where
+        // every edit changes the (single) system's content leaves one dead entry
+        // per edit behind, and those must not accumulate without bound.
+        var cache = new SystemLayoutCache();
+        for (int g = 0; g < 3000; g++)
+        {
+            cache.SetContentKeys(ImmutableArray.Create(new MeasureContentKey(g + 1)));
+            cache.GetOrComputeMeasures(0, 1, true, true, 2.0, 0.25, () => Layout(0));
+        }
+        // At most the 1024-entry stale cap plus the current pass's live entry.
+        Assert.True(cache.Count <= 1025, $"cache grew unbounded: {cache.Count}");
+    }
+
     // Three systems via forced `break`s; one staff.
     private const string ThreeSystems = """
         time 4/4

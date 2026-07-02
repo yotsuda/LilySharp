@@ -56,8 +56,15 @@ public sealed class SystemLayoutCache
     private readonly TypedCache<(VerticalSkyline up, VerticalSkyline down)> _skylines = new();
 
     /// <summary>Refreshes the per-measure content keys for the current edit. Must be
-    /// called before the layout consults the cache.</summary>
-    public void SetContentKeys(ImmutableArray<MeasureContentKey> keys) => _keys = keys;
+    /// called before the layout consults the cache. Also marks the edit boundary for
+    /// eviction: entries inserted or hit from here on belong to the new pass and are
+    /// exempt from eviction until the next boundary.</summary>
+    public void SetContentKeys(ImmutableArray<MeasureContentKey> keys)
+    {
+        _keys = keys;
+        _measures.NextGeneration();
+        _skylines.NextGeneration();
+    }
 
     /// <summary>Number of currently cached system measure-layout entries (diagnostics / tests).</summary>
     public int Count => _measures.Count;
@@ -91,7 +98,7 @@ public sealed class SystemLayoutCache
     // slice), verify the full key exactly on hit so collisions only cost a recompute.
     private sealed class TypedCache<T>
     {
-        private readonly struct Entry
+        private sealed class Entry
         {
             public readonly int First, Count;
             public readonly bool IsFirst, IsLast;
@@ -99,11 +106,17 @@ public sealed class SystemLayoutCache
             public readonly ImmutableArray<MeasureContentKey> Content;
             public readonly T Value;
 
+            /// <summary>The pass (see <see cref="NextGeneration"/>) that last inserted
+            /// or hit this entry — current-pass entries are exempt from eviction.</summary>
+            public int Generation;
+
             public Entry(int first, int count, bool isFirst, bool isLast, double indent,
-                double shortest, double extra, ImmutableArray<MeasureContentKey> content, T value)
+                double shortest, double extra, ImmutableArray<MeasureContentKey> content, T value,
+                int generation)
             {
                 First = first; Count = count; IsFirst = isFirst; IsLast = isLast;
                 Indent = indent; Shortest = shortest; Extra = extra; Content = content; Value = value;
+                Generation = generation;
             }
 
             public bool Matches(int first, int count, bool isFirst, bool isLast, double indent,
@@ -120,19 +133,27 @@ public sealed class SystemLayoutCache
             }
         }
 
-        // Cap total live entries so a long editing session cannot grow the cache
-        // without bound: each edit that changes a system leaves its now-stale entry
-        // behind, so entries accumulate monotonically otherwise. Eviction is always
-        // SOUND — a dropped entry just degrades to a recompute (a miss), never a wrong
-        // reuse — so the policy can be as crude as FIFO. The cap trades a little reuse
-        // (across many historical versions) for a hard memory bound.
+        // Cap on the STALE backlog: each edit that changes a system leaves its
+        // now-stale entry behind, so entries would otherwise accumulate monotonically
+        // over a long session. Eviction is always SOUND — a dropped entry just
+        // degrades to a recompute (a miss), never a wrong reuse. But entries the
+        // CURRENT pass inserted or hit are exempt (second-chance rotation in
+        // EvictOldestIfOverCap): evicting those would let a score with more than
+        // MaxEntries systems flush its own working set mid-pass and degrade to a
+        // permanent 0% hit rate. So the live working set may exceed the cap when the
+        // score genuinely needs more; only prior-pass leftovers are bounded by it.
         private const int MaxEntries = 1024;
 
         private readonly Dictionary<int, List<Entry>> _buckets = new();
-        private readonly Queue<int> _insertionOrder = new(); // one bucketKey per live entry, oldest first
+        private readonly Queue<(int BucketKey, Entry Entry)> _insertionOrder = new(); // one token per live entry, oldest first
         private int _count;
+        private int _generation;
 
         public int Count => _count;
+
+        /// <summary>Marks an edit boundary (a new layout pass) for the eviction
+        /// exemption. Called once per edit via <see cref="SetContentKeys"/>.</summary>
+        public void NextGeneration() => _generation++;
 
         public T GetOrCompute(ImmutableArray<MeasureContentKey> keys,
             int first, int count, bool isFirst, bool isLast, double indent, double shortest,
@@ -166,6 +187,7 @@ public sealed class SystemLayoutCache
                 {
                     if (e.Matches(first, count, isFirst, isLast, indent, shortest, extra, slice))
                     {
+                        e.Generation = _generation; // live this pass -> eviction-exempt
                         hit = true;
                         return e.Value;
                     }
@@ -178,26 +200,36 @@ public sealed class SystemLayoutCache
             }
 
             var fresh = compute();
-            list.Add(new Entry(first, count, isFirst, isLast, indent, shortest, extra,
-                slice.ToImmutableArray(), fresh));
-            _insertionOrder.Enqueue(bucketKey);
+            var entry = new Entry(first, count, isFirst, isLast, indent, shortest, extra,
+                slice.ToImmutableArray(), fresh, _generation);
+            list.Add(entry);
+            _insertionOrder.Enqueue((bucketKey, entry));
             _count++;
             EvictOldestIfOverCap();
             hit = false;
             return fresh;
         }
 
-        // FIFO: drop the front entry of the oldest-inserted bucket. Global dequeue order
-        // mirrors enqueue order, so the front of the dequeued bucket is exactly the entry
-        // that insertion added — no wrong-entry removal, and _count stays exact.
+        // Second-chance FIFO, oldest first: an entry the current pass inserted or hit
+        // rotates to the back instead of being dropped (evicting the live working set
+        // would make a >MaxEntries-system score thrash itself to 0% hits). One full
+        // rotation without an eviction means everything live is current-pass — then
+        // the cap yields (the cache grows) rather than thrashes. Each queue token
+        // holds its exact entry, so removal never touches the wrong entry and _count
+        // stays exact.
         private void EvictOldestIfOverCap()
         {
-            while (_count > MaxEntries && _insertionOrder.Count > 0)
+            int scan = _insertionOrder.Count;
+            while (_count > MaxEntries && scan-- > 0)
             {
-                int oldKey = _insertionOrder.Dequeue();
-                if (_buckets.TryGetValue(oldKey, out var oldList) && oldList.Count > 0)
+                var (oldKey, entry) = _insertionOrder.Dequeue();
+                if (entry.Generation == _generation)
                 {
-                    oldList.RemoveAt(0);
+                    _insertionOrder.Enqueue((oldKey, entry));
+                    continue;
+                }
+                if (_buckets.TryGetValue(oldKey, out var oldList) && oldList.Remove(entry))
+                {
                     _count--;
                     if (oldList.Count == 0)
                         _buckets.Remove(oldKey);

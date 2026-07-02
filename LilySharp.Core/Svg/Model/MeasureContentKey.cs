@@ -22,6 +22,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Threading;
 using LilySharp.Core.Svg.Collector;
 
 namespace LilySharp.Core.Svg.Model;
@@ -345,11 +346,16 @@ public readonly record struct MeasureContentKey(long Hash)
     private static readonly ConcurrentDictionary<Type, Func<object, object?>[]> SideGetters = new();
     private static readonly ConcurrentDictionary<(Type, string), Func<object, int>?> IntGetters = new();
 
-    // A sentinel folded in place of a property whose getter (or whose element
-    // enumeration) throws — keeps a hostile/computed getter from crashing the whole
-    // key. Deterministic for a given item state, so the over-sensitivity bias holds:
-    // a throwing getter can only cost a missed reuse, never a false one.
-    private const int GetterThrewSentinel = unchecked((int)0xDEAD_FA11);
+    // A property getter (or element enumeration) that throws must not crash key
+    // computation — but folding a CONSTANT in its place would make the key BLIND to
+    // whatever state sits behind the throwing getter: two DIFFERENT states folding
+    // the same value is under-sensitivity, the false-reuse direction the soundness
+    // bias forbids. So the key is POISONED instead: a process-unique value is folded,
+    // making this compute's key equal to no other, and the throwing item simply
+    // defeats reuse (a missed reuse — the safe direction) instead of enabling it.
+    // (The one deliberate exception to the class-remark determinism: a poisoned key
+    // is unstable by design.)
+    private static int _getterPoison;
 
     private static long HashContent(object item, HashSet<string> excluded)
     {
@@ -358,7 +364,7 @@ public readonly record struct MeasureContentKey(long Hash)
         foreach (var get in Getters(item.GetType(), excluded))
         {
             try { AddValue(ref hc, get(item)); }
-            catch (Exception) { hc.Add(GetterThrewSentinel); }
+            catch (Exception) { hc.Add(Interlocked.Increment(ref _getterPoison)); }
         }
         return hc.ToHashCode();
     }
