@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -329,6 +329,9 @@ public sealed class SkylineBuilder
             case NoteItem note:
                 AddNoteToSkylines(note, x, staffMiddleY,
                     stemLength, noteheadHeight, upSkyline, downSkyline, forcedStemUp);
+                if (note.Accidental != null)
+                    AddAccidentalBoxToSkylines(note.Accidental, x,
+                        staffMiddleY - note.StaffPosition * 0.5, upSkyline, downSkyline);
                 break;
             case ChordItem chord:
                 int chordNoteValue = LayoutUtilities.GetNoteValueFromFraction(chord.BaseDuration);
@@ -343,6 +346,9 @@ public sealed class SkylineBuilder
                     AddNoteBoxToSkylines(chordNote.StaffPosition, x, staffMiddleY,
                         stemLength, noteheadHeight, chordStemUp, chordNoteValue,
                         upSkyline, downSkyline);
+                    if (chordNote.Accidental != null)
+                        AddAccidentalBoxToSkylines(chordNote.Accidental, x,
+                            staffMiddleY - chordNote.StaffPosition * 0.5, upSkyline, downSkyline);
                 }
                 break;
             case RestItem:
@@ -360,6 +366,32 @@ public sealed class SkylineBuilder
                 downSkyline.Merge(restDown);
                 break;
         }
+    }
+
+    /// <summary>
+    /// Seeds a printed accidental's ink box (left of its head) into the
+    /// skylines. LilyPond's skylines are built from every grob's stencil,
+    /// accidentals included — omitting them made everything spaced against
+    /// these skylines (the chord-name line, page stacking) graze a sharp or
+    /// flat over a high note, papered over by a flat allowance until now.
+    /// A chord's accidental COLUMNS can stagger further left
+    /// (AccidentalPlacement); the vertical extent — what skyline consumers
+    /// care about — is per glyph and identical, so the single-column X is
+    /// used here.
+    /// LILYPOND-REF: lily/stencil-integral.cc — every stencil contributes
+    /// its box; lily/accidental-placement.cc for the column stagger.
+    /// </summary>
+    private static void AddAccidentalBoxToSkylines(
+        string accidental, double headX, double headY,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        var bbox = GlyphMetrics.GetAccidentalBBox(accidental);
+        double right = headX - GlyphMetrics.AccidentalNoteGap;
+        double left = right - bbox.Width;
+        double top = headY - bbox.Top;        // ink is Y-up about the head; device is Y-down
+        double bottom = headY - bbox.Bottom;
+        upSkyline.Merge(VerticalSkyline.FromBox(left, right, bottom, top, VerticalDirection.Up));
+        downSkyline.Merge(VerticalSkyline.FromBox(left, right, bottom, top, VerticalDirection.Down));
     }
 
     /// <summary>

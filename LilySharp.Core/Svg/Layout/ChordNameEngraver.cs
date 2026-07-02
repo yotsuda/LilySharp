@@ -75,10 +75,7 @@ public static class ChordNameEngraver
     /// enough for a centred symbol's left half, but short of the system-start clef.</summary>
     private const double ChordRowLeftMargin = 2.0;
 
-    /// <summary>Extra clearance (staff spaces) added when notes protrude into the
-    /// chord row, covering the accidentals/scripts above the notehead that the
-    /// system skyline omits (an Emmentaler flat/sharp rises ~1 sp above its head).</summary>
-    private const double ProtrudingAccidentalAllowance = 0.9;
+
 
     /// <summary>
     /// Calculates chord name layouts from collected items.
@@ -167,13 +164,12 @@ public static class ChordNameEngraver
                 if (up.IsEmpty)
                     continue;
                 // The symbol's footprint: centred text at the chord font size
-                // (renderer: FontSize 4.0 × 0.65 = 2.6). Measured, not
-                // guessed — a wide "Gm7♭5" reaches over the NEXT beat's tall
-                // chord, which a narrow per-character estimate missed. Serif
-                // metrics stand in for the sans face (within ~10%), plus a
-                // small margin for the difference.
+                // (renderer: FontSize 4.0 × 0.65 = 2.6), measured with SANS
+                // bold advances — the face chord names render in. Measured,
+                // not guessed: a wide "Gm7♭5" reaches over the NEXT beat's
+                // tall chord, which a narrow per-character estimate missed.
                 double halfWidth = Math.Max(
-                    1.0, Rendering.SerifTextMetrics.MeasureBold(p.chord.ChordText, 2.6) / 2 + 0.4);
+                    1.0, Rendering.SansTextMetrics.MeasureBold(p.chord.ChordText, 2.6) / 2);
                 double peak = up.MaxProtrusionInRange(p.x - halfWidth, p.x + halfWidth);
                 if (!systemPeak.TryGetValue(p.sysIdx, out var cur) || peak > cur)
                     systemPeak[p.sysIdx] = peak;
@@ -197,14 +193,13 @@ public static class ChordNameEngraver
             // Raise by the system's peak note protrusion (top-staff only) so the chord
             // line clears high notes/ledger lines; the StaffPadding floor reproduces the
             // measured no-protrusion distance (lead sheet without notes above the staff).
+            // The system skyline carries the real ink of noteheads, stems,
+            // ledgers AND accidentals (SkylineBuilder), so the sampled peak
+            // needs no flat allowance any more. Scripts laid out above a
+            // protruding note are still outside these skylines (they are
+            // computed later in the pipeline) — the one remaining omission.
             double protrusion = p.topStaff && systemPeak.TryGetValue(p.sysIdx, out var pk) ? pk : 0;
-            // The system skyline is built from noteheads/stems/ledgers and omits the
-            // accidentals/scripts that sit above a protruding note, so add a small
-            // allowance when notes protrude — otherwise a flat above a high chord
-            // grazes the chord text. (No allowance in the common no-protrusion case,
-            // which keeps the measured lead-sheet distance exact.)
-            double accidentalAllowance = protrusion > 0 ? ProtrudingAccidentalAllowance : 0;
-            double y = -(StaffPadding + protrusion + accidentalAllowance) + p.staffOffset;
+            double y = -(StaffPadding + protrusion) + p.staffOffset;
 
             results.Add(new ChordNameLayout(
                 p.chord.MeasureIndex, p.x, y, p.chord.ChordText, p.chord.SourcePosition, p.idx));
