@@ -16,21 +16,21 @@ positive); "empty BeamGroup" → not reproduced as a confirmed defect.
 
 ## Confirmed findings (all verdicts CONFIRMED)
 
-- [ ] **1. Secondary-voice beam indices crash the non-column path** —
+- [x] **1. Secondary-voice beam indices crash the non-column path** (`def8f98`) —
   `ElementCoordinator.cs:425` (also :229, :240).
   `itemXPositions` is sized from `measureLayout.Items` (primary voice only);
   a secondary voice's beam group whose `ItemIndex` exceeds that length throws
   `ArgumentOutOfRangeException` (no guard like `SharedRenderer.cs:1028`).
   Repro: single staff, voice1 `c2`, voice2 `g8 g g g g g g g` → compile crash.
 
-- [ ] **2. Multi-page scores draw every page's overlays on every page** —
+- [x] **2. Multi-page scores draw every page's overlays on every page** (`a0c8be2`) —
   `SharedRenderer.cs:96-122`.
   DrawTies/DrawSlurs/DrawDynamics/DrawLyrics/DrawHairpins… iterate the whole
   layout inside the per-page loop with no page filter, while system Y is
   page-local (PageLayouter restarts at MarginTop per page). Any 2+-page score
   overprints other pages' spanners as garbage.
 
-- [ ] **3. Cross-measure beam member renumbering breaks stem suppression** —
+- [x] **3. Cross-measure beam member renumbering breaks stem suppression** (`def8f98`) —
   `ElementCoordinator.cs:380`.
   `LayoutSingleSystemBeamPiece` renumbers `BeamMember.ItemIndex` to dense
   0..N while keeping real `MeasureIndex`; `BuildBeamedItemsSet`
@@ -38,7 +38,7 @@ positive); "empty BeamGroup" → not reproduced as a confirmed defect.
   `r4 c8[ d8 | e8 f8] g4` → duplicate stems/flags on beamed notes, suppressed
   stems on unrelated notes. Same defect class as the fixed beam-reuse hole.
 
-- [ ] **4. Tie detection scans arbitrarily far forward** —
+- [x] **4. Tie detection scans arbitrarily far forward** (`efee798`) —
   `TieDetector.cs:49` (also :101).
   A tie start finds "the next note with the same staff position" at any
   distance; LP (lily/tie-engraver.cc) ties only the immediately following
@@ -46,7 +46,7 @@ positive); "empty BeamGroup" → not reproduced as a confirmed defect.
   long tie arc. The chord path (DetectChordTies) already stops at the
   immediate next item, so the two paths disagree.
 
-- [ ] **5. Override state leaks backward across voice/staff passes** —
+- [x] **5. Override state leaks backward across voice/staff passes** (`47aaed2`) —
   `SharedRenderer.cs:938`.
   The single stateful GrobPropertyResolver is re-advanced from measure 0 per
   voice/staff pass without reset, so a persistent override activated late in
@@ -55,14 +55,14 @@ positive); "empty BeamGroup" → not reproduced as a confirmed defect.
   lily/context-property.cc). Repro: 2-voice staff, color override at m2 →
   voice 2's m0–m1 render colored.
 
-- [ ] **6. `\once` cleanup erases the underlying persistent override** —
+- [x] **6. `\once` cleanup erases the underlying persistent override** (`47aaed2`) —
   `GrobProperty.cs:91`.
   Clearing a once-override does `active.Remove(propName)` instead of
   restoring the previous `\override` (LP pops the property stack,
   lily/context-property.cc execute_general_pushpop_property). Repro:
   red override + once blue → notes after the once revert to black, not red.
 
-- [ ] **7. `AdvanceTo` applies overrides only on exact position match** —
+- [x] **7. `AdvanceTo` applies overrides only on exact position match** (`47aaed2`) —
   `GrobProperty.cs:100`.
   Should apply everything in (lastPos, currentPos]; consumers that skip item
   indices silently drop overrides. E.g. `CalculateVoiceOffsets` advances only
@@ -70,20 +70,20 @@ positive); "empty BeamGroup" → not reproduced as a confirmed defect.
   other index is ignored; positions after a measure's last item or at skipped
   TimeSignatureChangeItems never activate.
 
-- [ ] **8. Slur direction uses only the start note's stem** —
+- [x] **8. Slur direction uses only the start note's stem** (`abd2f42`; snapshot test/multi-line-spanners re-approved via the visual harness) —
   `SlurDetector.cs:68`.
   LP rule (lily/slur.cc Slur::calc_direction): default DOWN, flip UP if ANY
   covered stem is DOWN. Repro: `g'4( c''4)` in treble — LP slurs UP, Lily#
   slurs DOWN into c'''s stem side.
 
-- [ ] **9. Tie-column monotonicity penalty inverted (device-Y vs Y-up)** —
+- [x] **9. Tie-column monotonicity penalty inverted (device-Y vs Y-up)** (`abd2f42`; proven against the LP source line — the pinned fixture passes either way) —
   `TieFormattingProblem.cs:499`.
   `configEdgeY <= existingEdgeY` penalizes the CORRECT bottom-to-top stacking
   EmitChordTies emits (inverts lily/tie-formatting-problem.cc:868-873).
   Chord tie columns bias clumped/inverted. Same class as the Stage-4 Y-up
   migration defects.
 
-- [ ] **10. Tuplet bracket beam-coverage check ignores voice & gaps** —
+- [x] **10. Tuplet bracket beam-coverage check ignores voice & gaps** (`abd2f42`) —
   `TupletBracketEngraver.cs:347`.
   `AreAllNotesBeamed`/`FindCoveringBeam` assume contiguous members
   (StartIndex+Members.Length-1) and never compare `BeamGroup.VoiceIndex` to
