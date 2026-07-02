@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -144,36 +144,39 @@ public static class ChordNameEngraver
             prepared.Add((chord, x, staffOffset, topStaff, sysIdx, cni));
         }
 
-        // Per system, the peak protrusion of staff content above the staff top, sampled
-        // under the top-staff chords. The whole chord line of a system shares one
-        // baseline (a VerticalAxisGroup is placed at a single offset per system), so we
-        // take the maximum over the chords in that system.
-        // The chord line shares ONE baseline per system, so it must clear the
-        // highest note any of its symbols sit over. A symbol has no note of its own
-        // at a high beat between chords (e.g. a tall chord on beat 4 under a wide
-        // "Gm7♭5" anchored on beat 3), so sampling only at the symbols' anchor
-        // points misses it. Instead clear the max staff protrusion from the first
-        // symbol rightward — excluding the system-start clef, which sits left of it.
-        // LILYPOND-REF: lily/axis-group-interface.cc — the ChordNames
-        // VerticalAxisGroup is skyline-spaced above the staff content it overlaps.
+        // Per system, the peak protrusion of staff content above the staff top,
+        // sampled UNDER EACH SYMBOL (its own X window), then maxed over the
+        // system's symbols — the chord line shares one baseline per system.
+        // Sampling the whole line instead (first symbol → end) floated every
+        // system's chords above its single tallest stem tip: an ordinary
+        // up-stem note pokes ~1 ss above the top line, so chord names ended up
+        // ~3 ss high even over quiet bars. LilyPond's spacing is the per-X
+        // skyline DISTANCE between the ChordNames line (texts at their own Xs)
+        // and the staff — content between the symbols does not push the line.
+        // LILYPOND-REF: lily/axis-group-interface.cc — VerticalAxisGroup
+        // skyline spacing; lily/skyline.cc Skyline::distance (per-X minimum).
         var systemPeak = new Dictionary<int, double>();
         if (systemSkylines != null)
         {
-            var systemMinX = new Dictionary<int, double>();
             foreach (var p in prepared)
             {
-                if (!p.topStaff || p.sysIdx < 0)
+                if (!p.topStaff || p.sysIdx < 0 || p.sysIdx >= systemSkylines.Count
+                    || p.chord.IsChordRow)
                     continue;
-                if (!systemMinX.TryGetValue(p.sysIdx, out var mx) || p.x < mx)
-                    systemMinX[p.sysIdx] = p.x;
-            }
-            foreach (var (sysIdx, minX) in systemMinX)
-            {
-                if (sysIdx >= systemSkylines.Count)
+                var up = systemSkylines[p.sysIdx].up;
+                if (up.IsEmpty)
                     continue;
-                var up = systemSkylines[sysIdx].up;
-                if (!up.IsEmpty)
-                    systemPeak[sysIdx] = up.MaxProtrusionInRange(minX - ChordRowLeftMargin, double.PositiveInfinity);
+                // The symbol's footprint: centred text at the chord font size
+                // (renderer: FontSize 4.0 × 0.65 = 2.6). Measured, not
+                // guessed — a wide "Gm7♭5" reaches over the NEXT beat's tall
+                // chord, which a narrow per-character estimate missed. Serif
+                // metrics stand in for the sans face (within ~10%), plus a
+                // small margin for the difference.
+                double halfWidth = Math.Max(
+                    1.0, Rendering.SerifTextMetrics.MeasureBold(p.chord.ChordText, 2.6) / 2 + 0.4);
+                double peak = up.MaxProtrusionInRange(p.x - halfWidth, p.x + halfWidth);
+                if (!systemPeak.TryGetValue(p.sysIdx, out var cur) || peak > cur)
+                    systemPeak[p.sysIdx] = peak;
             }
         }
 

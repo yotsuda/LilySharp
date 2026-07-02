@@ -75,6 +75,14 @@ public static class MusicMarkEngraver
         => systemBottom + 1.5 + Padding;
 
     // Y offset above staff for marks (when no volta brackets present)
+    // A mark and a chord symbol share a column when their centres are within
+    // this X window (label box half-width ~3 ss + chord half-width ~1 ss).
+    private const double MarkChordXWindow = 4.0;
+
+    // Cap-height ascent of the chord-name text above its baseline
+    // (chord font = 4.0 * 0.65 = 2.6 ss; cap height ≈ 0.72 em).
+    private const double ChordTextAscent = 1.9;
+
     // LILYPOND-REF: define-grobs.scm RehearsalMark padding=0.8
     private const double AboveStaffOffset = -2.0;
 
@@ -105,7 +113,8 @@ public static class MusicMarkEngraver
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures = default,
-        ImmutableArray<VoltaBracketLayout> voltaBrackets = default)
+        ImmutableArray<VoltaBracketLayout> voltaBrackets = default,
+        ImmutableArray<ChordNameLayout> chordNames = default)
     {
         // Merge section labels and tempo marking into the mark list
         var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0);
@@ -209,7 +218,24 @@ public static class MusicMarkEngraver
                 baseAboveY = voltaTopY - OutsideStaffPadding;
             }
 
-
+            // Chord symbols are the line CLOSEST to the staff (LP: the marks'
+            // outside-staff priority 1500 beats ChordNames), so a mark sharing
+            // its column with a chord symbol starts above that symbol's text —
+            // otherwise a section label box prints straight over the chord.
+            // Only inline top-staff chords have negative Y here; chord ROWS and
+            // lower staves don't share the marks' band.
+            double markCeiling = double.PositiveInfinity; // constraint on box BOTTOM
+            if (!chordNames.IsDefaultOrEmpty && aboveMarks.Count > 0)
+            {
+                double gx = aboveMarks[0].X;
+                foreach (var cn in chordNames)
+                {
+                    if (cn.Y >= 0 || Math.Abs(cn.X - gx) > MarkChordXWindow)
+                        continue;
+                    double chordTop = cn.Y - ChordTextAscent;
+                    markCeiling = Math.Min(markCeiling, chordTop - OutsideStaffPadding);
+                }
+            }
 
             // Stack above-staff marks (lower priority = closer to staff)
             double stackTopY = baseAboveY;
@@ -222,6 +248,8 @@ public static class MusicMarkEngraver
                 if (i == 0)
                 {
                     y = baseAboveY - Padding;
+                    if (!double.IsPositiveInfinity(markCeiling))
+                        y = Math.Min(y, markCeiling - halfExtent); // box bottom clears the chord
                     stackTopY = y - halfExtent;
                 }
                 else

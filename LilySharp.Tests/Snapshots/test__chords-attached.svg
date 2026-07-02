@@ -34,10 +34,10 @@
   <rect x="35.25" y="11.64" width="0.19" height="4.00" fill="#000000"/>
   <rect x="43.89" y="11.64" width="0.19" height="4.00" fill="#000000"/>
   <rect x="44.38" y="11.64" width="0.60" height="4.00" fill="#000000"/>
-  <text x="7.80" y="9.14" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="343">C</text>
-  <text x="13.80" y="9.14" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="346">G7</text>
-  <text x="22.56" y="9.14" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="352">Am</text>
-  <text x="37.72" y="9.14" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="359">C</text>
+  <text x="7.80" y="9.64" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="343">C</text>
+  <text x="13.80" y="9.64" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="346">G7</text>
+  <text x="22.56" y="9.64" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="352">Am</text>
+  <text x="37.72" y="9.64" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="359">C</text>
   <rect x="0.30" y="6.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="272"/>
   <text x="3.01" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="272">Main</text>
   </g>

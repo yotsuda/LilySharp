@@ -1143,7 +1143,8 @@ public sealed class LayoutEngine
             forceStemUp: tupletForceStemUp,
             measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt);
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
-            score, musicMarks, systems, ml, measures, default);
+            score, musicMarks, systems, ml, measures, default,
+            chordNames: chordNameLayouts);
         var customTextLayouts = CustomTextEngraver.Calculate(score, customTexts, systems, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.
