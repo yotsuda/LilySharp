@@ -30,6 +30,11 @@ public sealed record SlurLayout
     /// <summary>The slur model.</summary>
     public Model.SlurItem Slur { get; }
 
+    /// <summary>Global staff index this slur belongs to (-1 = unknown, e.g.
+    /// direct unit-test construction). The renderer uses it to shrink bows on
+    /// ossia staves with the rest of the staff's notation.</summary>
+    public int StaffIndex { get; init; } = -1;
+
     /// <summary>X coordinate of the start point.</summary>
     public double StartX { get; }
 

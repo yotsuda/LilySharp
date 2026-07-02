@@ -106,8 +106,9 @@ public static class SharedRenderer
                 // other page's local Y. Each drawer treats a missing measure
                 // key as "not on this page".
                 var measureToSystemY = BuildMeasureToSystemY(page);
-                DrawTies(layout, measureToSystemY, gc);
-                DrawSlurs(layout, measureToSystemY, gc);
+                var measureToSystem = BuildMeasureToSystem(page);
+                DrawTies(layout, measureToSystemY, ossiaStaves, measureToSystem, gc);
+                DrawSlurs(layout, measureToSystemY, ossiaStaves, measureToSystem, gc);
                 DrawDynamics(layout, measureToSystemY, ossiaStaves, gc);
                 DrawArticulations(layout, measureToSystemY, ossiaStaves, gc);
                 DrawLyrics(layout, measureToSystemY, gc);
@@ -2143,30 +2144,62 @@ public static class SharedRenderer
 
     // ---------- Ties & slurs ----------
 
-    private static void DrawTies(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawTies(ScoreLayout layout, Dictionary<int, double> sysY,
+        HashSet<int> ossiaStaves, Dictionary<int, SystemLayout> systems, IDrawingContext gc)
     {
         foreach (var tie in layout.TieLayouts)
         {
             if (!sysY.ContainsKey(tie.Tie.StartMeasureIndex))
                 continue; // not on this page (geometry is page-local)
-            DrawCurve(
-                tie.StartX, tie.StartY, tie.EndX, tie.EndY,
+            DrawBow(tie.StartX, tie.StartY, tie.EndX, tie.EndY,
                 tie.Control1, tie.Control2, tie.CurveUp,
-                EngravingDefaults.TieMidThickness, gc);
+                EngravingDefaults.TieMidThickness,
+                tie.StaffIndex, tie.Tie.StartMeasureIndex, ossiaStaves, systems, gc);
         }
     }
 
-    private static void DrawSlurs(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawSlurs(ScoreLayout layout, Dictionary<int, double> sysY,
+        HashSet<int> ossiaStaves, Dictionary<int, SystemLayout> systems, IDrawingContext gc)
     {
         foreach (var slur in layout.SlurLayouts)
         {
             if (!sysY.ContainsKey(slur.Slur.StartMeasureIndex))
                 continue; // not on this page (geometry is page-local)
-            DrawCurve(
-                slur.StartX, slur.StartY, slur.EndX, slur.EndY,
+            DrawBow(slur.StartX, slur.StartY, slur.EndX, slur.EndY,
                 slur.Control1, slur.Control2, slur.CurveUp,
-                EngravingDefaults.SlurMidThickness, gc);
+                EngravingDefaults.SlurMidThickness,
+                slur.StaffIndex, slur.Slur.StartMeasureIndex, ossiaStaves, systems, gc);
         }
+    }
+
+    /// <summary>
+    /// Draws a tie/slur bow, shrinking it around its OSSIA staff's frame when
+    /// it belongs to one: Y contracts toward the staff top by the ossia scale
+    /// and the mid-thickness scales too, while X stays on the shared spacing
+    /// columns — the same affine the ossia staff pass and beam pass apply.
+    /// Sound because the bow's endpoints/controls are note-anchored and note
+    /// offsets from the staff frame are linear in staff spaces (LP: every grob
+    /// of a magnified staff scales with it).
+    /// </summary>
+    private static void DrawBow(
+        double startX, double startY, double endX, double endY,
+        (double X, double Y) c1, (double X, double Y) c2,
+        bool curveUp, double midThickness,
+        int staffIndex, int startMeasureIndex,
+        HashSet<int> ossiaStaves, Dictionary<int, SystemLayout> systems, IDrawingContext gc)
+    {
+        if (staffIndex >= 0 && ossiaStaves.Contains(staffIndex)
+            && systems.TryGetValue(startMeasureIndex, out var system))
+        {
+            double top = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
+            double S(double y) => top + (y - top) * OssiaScale;
+            startY = S(startY);
+            endY = S(endY);
+            c1 = (c1.X, S(c1.Y));
+            c2 = (c2.X, S(c2.Y));
+            midThickness *= OssiaScale;
+        }
+        DrawCurve(startX, startY, endX, endY, c1, c2, curveUp, midThickness, gc);
     }
 
     /// <summary>
@@ -2267,6 +2300,17 @@ public static class SharedRenderer
         foreach (var system in page.Systems)
             foreach (var ml in system.Measures)
                 map[ml.MeasureIndex] = system.Y;
+        return map;
+    }
+
+    // Measure → its SystemLayout, for drawers that need per-staff Y resolution
+    // inside the system (the ossia bow shrink).
+    private static Dictionary<int, SystemLayout> BuildMeasureToSystem(PageLayout page)
+    {
+        var map = new Dictionary<int, SystemLayout>();
+        foreach (var system in page.Systems)
+            foreach (var ml in system.Measures)
+                map[ml.MeasureIndex] = system;
         return map;
     }
 

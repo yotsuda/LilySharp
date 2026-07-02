@@ -809,7 +809,7 @@ public sealed class ElementCoordinator
                     startDots: segment.IsFirst ? startDots : 0,
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast);
-                tieLayouts.Add(problem.Solve());
+                tieLayouts.Add(problem.Solve() with { StaffIndex = staffIndex });
             }
         }
 
@@ -1028,7 +1028,7 @@ public sealed class ElementCoordinator
                     staffHeight: _options.StaffHeight,
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast);
-                slurLayouts.Add(problem.Solve());
+                slurLayouts.Add(problem.Solve() with { StaffIndex = staffIndex });
             }
         }
 

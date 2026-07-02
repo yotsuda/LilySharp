@@ -30,6 +30,11 @@ public sealed record TieLayout
     /// <summary>The tie model.</summary>
     public Model.TieItem Tie { get; }
 
+    /// <summary>Global staff index this tie belongs to (-1 = unknown, e.g.
+    /// direct unit-test construction). The renderer uses it to shrink bows on
+    /// ossia staves with the rest of the staff's notation.</summary>
+    public int StaffIndex { get; init; } = -1;
+
     /// <summary>X coordinate of the start point.</summary>
     public double StartX { get; }
 
