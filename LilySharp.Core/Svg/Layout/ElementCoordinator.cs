@@ -230,6 +230,15 @@ public sealed class ElementCoordinator
                 }
             }
 
+            // The X table must cover the beam voice's whole item stream. On the
+            // non-column path it is built from the PRIMARY voice's layout items,
+            // so a SECONDARY voice's stream (more items than the layout has
+            // slots) cannot be positioned — skip the group rather than index out
+            // of range (the renderer guards the same situation with
+            // itemIdx >= ml.Items.Length and skips the note).
+            if (measure.Items.Length > itemXPositions.Count)
+                continue;
+
             var collisions = CollectBeamCollisions(
                 score.Voices[group.VoiceIndex].Measures[group.MeasureIndex],
                 group,
@@ -400,7 +409,21 @@ public sealed class ElementCoordinator
             collisions: null,
             staffIndex: staffIndex);
 
-        return beamLayout;
+        // The dense renumbering above exists ONLY so the scorer can index
+        // memberXs by member.ItemIndex. Everything downstream keys on the REAL
+        // (measure, item) position — the renderer's beamed-items suppression set
+        // (BuildBeamedItemsSet) and the data-pos note resolver — and the drawing
+        // itself reads members by ordinal, so hand the layout back with the
+        // ORIGINAL members. Leaving the dense indices in would re-stem the
+        // beamed notes and suppress unrelated items that happen to sit at the
+        // renumbered positions.
+        return new BeamLayout(
+            group,
+            beamLayout.LeftY, beamLayout.RightY,
+            beamLayout.LeftX, beamLayout.RightX,
+            beamLayout.MemberXPositions,
+            beamLayout.StaffIndex,
+            beamLayout.MemberStaffIndices);
     }
 
     private static Fraction GetItemDuration(MusicItem item) => item switch
