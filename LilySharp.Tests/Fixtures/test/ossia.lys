@@ -25,5 +25,5 @@ structure { Main }
 
 score "ossia" {
     staff melody
-    ossia { ossia_melody }
+    ossia ossia_melody
 }

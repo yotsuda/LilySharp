@@ -109,7 +109,7 @@ public class LayoutGeometryRuleTests
             structure { Main }
             score "x" {
                 staff melody
-                ossia { ossia_melody }
+                ossia ossia_melody
             }
             """;
         var tree = SyntaxTree.Parse(src);

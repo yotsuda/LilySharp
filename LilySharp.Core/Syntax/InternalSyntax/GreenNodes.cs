@@ -916,20 +916,16 @@ internal sealed class OssiaRenderGreen : GreenSyntaxNode
 {
     public OssiaRenderGreen(
         SyntaxToken ossiaKeyword,
-        SyntaxToken openBrace,
-        SyntaxToken partName,
-        SyntaxToken closeBrace)
-        : base(SyntaxKind.OssiaRender, [ossiaKeyword, openBrace, partName, closeBrace])
+        SyntaxToken partName)
+        : base(SyntaxKind.OssiaRender, [ossiaKeyword, partName])
     {
     }
 
     public OssiaRenderGreen(
         SyntaxToken ossiaKeyword,
         SyntaxToken clefName,
-        SyntaxToken openBrace,
-        SyntaxToken partName,
-        SyntaxToken closeBrace)
-        : base(SyntaxKind.OssiaRender, [ossiaKeyword, clefName, openBrace, partName, closeBrace])
+        SyntaxToken partName)
+        : base(SyntaxKind.OssiaRender, [ossiaKeyword, clefName, partName])
     {
     }
 }

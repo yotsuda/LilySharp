@@ -70,7 +70,7 @@ public sealed class SharedRendererPngTests
 
             score "ossia" {
                 staff melody
-                ossia { ossia_melody }
+                ossia ossia_melody
             }
             """;
         var tree = SyntaxTree.Parse(source);

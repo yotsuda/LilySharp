@@ -288,7 +288,7 @@ ScoreDecl      = 'score' , [ String ] , '{' , [ StructureDecl ] , { ScoreItem } 
 ScoreItem      = StaffRender                        (* staff partName — BARE, no braces *)
                | 'grandStaff' , '{' , { StaffRender } , '}'
                | 'tab' , PartRef                     (* tablature: tab partName *)
-               | 'ossia' , '{' , PartRef , '}'       (* ossia { partName } *)
+               | 'ossia' , [ ClefName ] , PartRef       (* ossia partName — BARE, like staff *)
                | 'chords' , PartRef                  (* independent chord ROW (lead sheet) *)
                | 'lyrics' , PartRef                  (* independent lyrics ROW (lead sheet) *)
                ;

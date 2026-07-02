@@ -348,46 +348,25 @@ public static class RenderSpecParser
     /// </summary>
     private static OssiaStaffSpec? ParseOssia(OssiaRenderSyntax ossia)
     {
-        ClefType? explicitClef = null;
-        string? voiceName = null;
-        bool foundOpenBrace = false;
-
-        for (int i = 0; i < ossia.SlotCount; i++)
-        {
-            var child = ossia.GetChild(i);
-            if (child is SyntaxTokenNode token)
-            {
-                if (token.Kind == SyntaxKind.OssiaKeyword)
-                    continue;
-                if (token.Kind == SyntaxKind.OpenBrace)
-                {
-                    foundOpenBrace = true;
-                    continue;
-                }
-                if (token.Kind == SyntaxKind.CloseBrace)
-                    break;
-
-                if (!foundOpenBrace)
-                {
-                    // Clef before open brace
-                    switch (token.Kind)
-                    {
-                        case SyntaxKind.TrebleKeyword: explicitClef = ClefType.Treble; break;
-                        case SyntaxKind.BassKeyword: explicitClef = ClefType.Bass; break;
-                        case SyntaxKind.AltoKeyword: explicitClef = ClefType.Alto; break;
-                        case SyntaxKind.TenorKeyword: explicitClef = ClefType.Tenor; break;
-                        case SyntaxKind.Treble8Keyword: explicitClef = ClefType.Treble8Below; break;
-                    }
-                }
-                else
-                {
-                    voiceName = token.Text;
-                }
-            }
-        }
-
-        if (voiceName == null)
+        // ossia [clef] partName — slots: [kw, name] or [kw, clef, name]
+        // (the LAST slot is always the part name; a clef word alone is a name).
+        if (ossia.SlotCount < 2 || ossia.GetChild(ossia.SlotCount - 1) is not SyntaxTokenNode nameToken)
             return null;
+        string voiceName = nameToken.Text;
+
+        ClefType? explicitClef = null;
+        if (ossia.SlotCount >= 3 && ossia.GetChild(1) is SyntaxTokenNode clefToken)
+        {
+            explicitClef = clefToken.Kind switch
+            {
+                SyntaxKind.TrebleKeyword => ClefType.Treble,
+                SyntaxKind.BassKeyword => ClefType.Bass,
+                SyntaxKind.AltoKeyword => ClefType.Alto,
+                SyntaxKind.TenorKeyword => ClefType.Tenor,
+                SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
+                _ => null,
+            };
+        }
 
         ClefType clef = explicitClef ?? GetPartClef(ossia, voiceName) ?? ClefType.Treble;
         return new OssiaStaffSpec(new StaffSpec(clef, voiceName));

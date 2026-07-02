@@ -17,5 +17,5 @@ structure { Main }
 
 score "ossia-beams" {
     staff melody
-    ossia { ossia_melody }
+    ossia ossia_melody
 }

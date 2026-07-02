@@ -2329,27 +2329,23 @@ private GreenNode?[] ParseArticulations()
     }
 
     /// <summary>
-    /// Parse ossia render: ossia [clef] { partName }
+    /// Parse ossia render: ossia [clef] partName — bare, exactly like staff
+    /// (the braces of the old form only ever held the one name).
     /// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
     /// </summary>
     private OssiaRenderGreen ParseOssiaRender()
     {
         var ossiaKeyword = Expect(SyntaxKind.OssiaKeyword);
 
-        // Check for optional clef (bass, treble, alto, tenor)
-        if (IsClefKeyword())
+        // A clef keyword followed by a part name is an override; alone it IS
+        // the part name (clef words are legal part names, as for staff).
+        if (IsClefKeyword() && IsPartNameKind(Peek(1)?.Kind))
         {
             var clef = Advance();
-            var openBrace = Expect(SyntaxKind.OpenBrace);
-            var partName = ExpectPartName();
-            var closeBrace = Expect(SyntaxKind.CloseBrace);
-            return new OssiaRenderGreen(ossiaKeyword, clef, openBrace, partName, closeBrace);
+            return new OssiaRenderGreen(ossiaKeyword, clef, ExpectPartName());
         }
 
-        var openBraceSimple = Expect(SyntaxKind.OpenBrace);
-        var partNameSimple = ExpectPartName();
-        var closeBraceSimple = Expect(SyntaxKind.CloseBrace);
-        return new OssiaRenderGreen(ossiaKeyword, openBraceSimple, partNameSimple, closeBraceSimple);
+        return new OssiaRenderGreen(ossiaKeyword, ExpectPartName());
     }
 
     /// <summary>

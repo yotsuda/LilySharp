@@ -396,7 +396,7 @@ section Main {
 structure { Main }
 score ""ossia-test"" {
     staff melody
-    ossia { alt }
+    ossia alt
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, "Syntax tree should have no errors");
@@ -429,7 +429,7 @@ section Main {
 structure { Main }
 score ""ossia-clef"" {
     staff melody
-    ossia bass { bassAlt }
+    ossia bass bassAlt
 }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, "Syntax tree should have no errors");
@@ -454,7 +454,7 @@ section Main {
 structure { Main }
 score ""ossia-barline"" {
     staff melody
-    ossia { alt }
+    ossia alt
 }";
         var tree = SyntaxTree.Parse(source);
         var svg = SvgGenerator.Generate(tree);
