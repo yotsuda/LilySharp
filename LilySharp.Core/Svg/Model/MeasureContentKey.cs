@@ -357,6 +357,15 @@ public readonly record struct MeasureContentKey(long Hash)
     // is unstable by design.)
     private static int _getterPoison;
 
+    // Only ordinary getter failures are poisoned. Process-fatal or flow-control
+    // exceptions must PROPAGATE: turning an OOM, a thread interrupt, or a
+    // cooperative cancellation into a hash value would silently convert a hard
+    // failure into a permanent reuse-miss slow path. (StackOverflowException is
+    // uncatchable on .NET Core; listed for intent.)
+    private static bool IsPoisonable(Exception ex) => ex is not (
+        OutOfMemoryException or StackOverflowException
+        or ThreadInterruptedException or OperationCanceledException);
+
     private static long HashContent(object item, HashSet<string> excluded)
     {
         var hc = new Hash64();
@@ -364,7 +373,10 @@ public readonly record struct MeasureContentKey(long Hash)
         foreach (var get in Getters(item.GetType(), excluded))
         {
             try { AddValue(ref hc, get(item)); }
-            catch (Exception) { hc.Add(Interlocked.Increment(ref _getterPoison)); }
+            catch (Exception ex) when (IsPoisonable(ex))
+            {
+                hc.Add(Interlocked.Increment(ref _getterPoison));
+            }
         }
         return hc.ToHashCode();
     }
