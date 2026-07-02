@@ -5,12 +5,13 @@
 //   octave absolute  — every pitch is anchored to C4; nothing drifts
 //   part { octave 3 }— the bass re-anchors to C3, so no comma pile-up
 //   phrase / $ref    — the A theme is written once and played twice
-//   partial 8        — the two-sixteenth pickup
+//   partial 8        — the two-sixteenth pickup, declared ONCE for all parts
 title "Für Elise"
 composer "L. v. Beethoven"
 tempo 120
 time 3/8
 key a minor
+partial 8
 octave absolute
 
 part rh { clef treble }
@@ -40,7 +41,6 @@ phrase themeA_lh {
 
 section Main {
   rh {
-    partial 8
     e'16@pp dis' |
     $themeA_rh
     e'8. g'16 f' e' |
@@ -50,7 +50,6 @@ section Main {
     $themeA_rh
   }
   lh {
-    partial 8
     r8 |
     $themeA_lh
     c16 g c' r16 r8 |

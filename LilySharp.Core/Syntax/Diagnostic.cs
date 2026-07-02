@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -151,6 +151,10 @@ public static class DiagnosticCodes
 
     // Lyric warnings (LYS4xxx)
     public const string LyricSyllableOverflow = "LYS4001";
+    /// <summary>An underfull FIRST measure with no `partial` declaration - a
+    /// bare anacrusis is indistinguishable from a miscount, so nudge toward
+    /// declaring it (which also numbers it as bar 0).</summary>
+    public const string PickupWithoutPartial = "LYS2003";
 
     // Tablature warnings (LYS5xxx)
     public const string TabTieStringConflict = "LYS5001";

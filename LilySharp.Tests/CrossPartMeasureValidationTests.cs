@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -94,8 +94,10 @@ public class CrossPartMeasureValidationTests
     }
 
     [Fact]
-    public void EqualPickups_NoWarning()
+    public void EqualPickups_WarnOnlyTheUndeclaredPickupNudge()
     {
+        // Matching pickups raise no cross-part mismatch; each bare pickup
+        // still gets the per-block "declare it with partial" nudge.
         var diags = Validate("""
             time 4/4
             section Main {
@@ -104,7 +106,7 @@ public class CrossPartMeasureValidationTests
             }
             structure { Main }
             """);
-        Assert.Empty(diags);
+        Assert.All(diags, d => Assert.Equal(DiagnosticCodes.PickupWithoutPartial, d.Code));
     }
 
     [Fact]
@@ -154,7 +156,8 @@ public class CrossPartMeasureValidationTests
             }
             structure { Main }
             """);
-        Assert.Single(diags);
-        Assert.Equal(DiagnosticCodes.MeasureIncomplete, diags[0].Code);
+        Assert.Single(diags.Where(d => d.Code == DiagnosticCodes.MeasureIncomplete));
+        // The bare quarter-note pickup additionally gets the declare-it nudge.
+        Assert.Single(diags.Where(d => d.Code == DiagnosticCodes.PickupWithoutPartial));
     }
 }

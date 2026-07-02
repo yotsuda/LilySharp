@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -498,6 +498,10 @@ public sealed class MeasureCollector
     // First-occurrence wins; populated during structure/section expansion.
     private readonly Dictionary<string, int> _sectionStartMeasure = new();
     private StructureDeclarationSyntax? _structure;
+    // A top-level partial N (a GlobalSetting, like time/key): the pickup is a
+    // fact of the piece, so it arms EVERY voice's first measure. In-music
+    // partial still works per voice (and mid-piece).
+    private Semantics.Fraction? _filePartial;
     private string? _voiceName;
     private SyntaxNode? _root;
 
@@ -1250,7 +1254,8 @@ public sealed class MeasureCollector
                 // No auto-final barline: this is a SPAN inside the piece, and a
                 // Final stamped on the span's last measure would win the
                 // cross-voice barline merge and print a final barline mid-piece.
-                var sub = CollectMeasuresFromNode(blocks[t], autoFinalBarline: false);
+                var sub = CollectMeasuresFromNode(blocks[t], autoFinalBarline: false,
+                    applyFilePartial: start == 0);
                 ResolveBeamStemDirections(sub);
                 _currentVoiceIndex = 0;
                 _metadataMeasureOffset = 0;
@@ -1316,9 +1321,15 @@ public sealed class MeasureCollector
         return musicNodes;
     }
 
-    private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode, bool autoFinalBarline = true)
+    private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode, bool autoFinalBarline = true,
+        bool applyFilePartial = true)
     {
         var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.Position);
+        // The file-level pickup arms a sub-collection only when it really sits
+        // at the piece's start (a mid-piece voice{} span must not shorten its
+        // own first bar).
+        if (applyFilePartial && _filePartial is { } subPickup)
+            builder.SetPartial(subPickup);
         _measureAccidentals.Clear();
         builder.MeasureCompleted = _measureAccidentals.Clear;
 
@@ -1852,6 +1863,7 @@ public sealed class MeasureCollector
         _measureAccidentals.Clear();
         _fingeringByPosition.Clear();
         _structure = null;
+        _filePartial = null;
         _root = null;
         _octave.ResetAll();
         _defaultDuration = Fraction.Quarter;
@@ -2013,6 +2025,14 @@ public sealed class MeasureCollector
                     // mid-music switches are handled in the music stream.
                     if (!IsInsideMusicContent(octaveDir))
                         _octave.OctaveAbsolute = octaveDir.IsAbsolute;
+                    break;
+
+                case PartialDeclarationSyntax partialDecl:
+                    // A top-level `partial N` declares the pickup once for every
+                    // part (grammar feedback: writing it in each voice repeated a
+                    // fact of the piece). Mid-music `partial` stays per voice.
+                    if (!IsInsideMusicContent(partialDecl))
+                        _filePartial = partialDecl.ToFraction();
                     break;
 
                 case SectionDeclarationSyntax section:
@@ -2183,6 +2203,8 @@ public sealed class MeasureCollector
     private List<Measure> CollectMeasures()
     {
         var builder = new MeasureBuilder(TimeSignatureFraction);
+        if (_filePartial is { } filePickup)
+            builder.SetPartial(filePickup); // top-level partial N arms every voice
         _measureAccidentals.Clear();
         builder.MeasureCompleted = _measureAccidentals.Clear;
 
@@ -2860,20 +2882,46 @@ public sealed class MeasureCollector
         string type = repeat.RepeatType.Text;
         int count = int.TryParse(repeat.Count.Text, out int c) ? c : 2;
 
+        // Expand phrase references in the body ONCE. The per-item dispatcher
+        // ignores VariableReferenceSyntax, so `repeat unfold 8 { $ground }`
+        // previously produced NOTHING, silently. ExpandVariable also inserts
+        // the phrase-boundary reset marker; honour it like the main loop does
+        // (each $call evaluates in the default frame).
+        var bodyNodes = new List<SyntaxNode>();
+        foreach (var item in repeat.Body.Items)
+        {
+            if (item is VariableReferenceSyntax varRef)
+                ExpandVariable(varRef.Name.Text, bodyNodes);
+            else
+                bodyNodes.Add(item);
+        }
+
+        void ProcessBodyOnce()
+        {
+            foreach (var item in bodyNodes)
+            {
+                if (item is RelativeResetMarker)
+                {
+                    _octave.ResetToInitial();
+                    _defaultDuration = Fraction.Quarter;
+                    continue;
+                }
+                ProcessMusicNode(item, builder);
+            }
+        }
+
         if (type == "percent")
         {
             // First iteration: process body normally
             int startMeasure = builder.CurrentMeasureIndex;
-            foreach (var item in repeat.Body.Items)
-                ProcessMusicNode(item, builder);
+            ProcessBodyOnce();
             int bodyMeasureCount = builder.CurrentMeasureIndex - startMeasure;
 
             // Additional iterations: process body again but mark as percent repeat
             for (int iter = 1; iter < count; iter++)
             {
                 int iterStart = builder.CurrentMeasureIndex;
-                foreach (var item in repeat.Body.Items)
-                    ProcessMusicNode(item, builder);
+                ProcessBodyOnce();
 
                 // Mark all measures in this iteration as percent repeats
                 for (int m = 0; m < bodyMeasureCount; m++)
@@ -2889,8 +2937,7 @@ public sealed class MeasureCollector
             // For volta/unfold/tremolo: unfold body count times (basic implementation)
             for (int i = 0; i < count; i++)
             {
-                foreach (var item in repeat.Body.Items)
-                    ProcessMusicNode(item, builder);
+                ProcessBodyOnce();
             }
         }
     }

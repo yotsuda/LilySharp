@@ -18,6 +18,7 @@ composer "Composer"     // optional
 tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit); 'tempo 120 swing' adds a shuffle-feel equation ('swing 16' = 16th swing)
 time 4/4                // optional (default 4/4)
 key c major             // optional (default c major)
+partial 8               // optional: the pickup length, once for every part
 
 part rightHand { clef treble }  // declare each part; clef lives here
 part leftHand  { clef bass }    // part names are identifiers, NOT reserved words
@@ -161,6 +162,16 @@ below the staff — the parser rejects it). Placement applies only to dynamic le
 tuplet 3/2 { c8 d e }                 // triplet: 3 in the time of 2
 tuplet 3/2 { c8 d tuplet 3/2 { e16 f g } | }   // nesting allowed
 ```
+
+## Repetition shorthand
+
+`repeat unfold N { ... }` writes its body out N times - phrases welcome:
+
+```
+phrase ground { d2 a,2 | b,2 fis,2 | }
+repeat unfold 8 { $ground }              // 32 bars from one line
+```
+
 
 ## Grace notes
 

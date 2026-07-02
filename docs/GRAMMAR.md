@@ -129,7 +129,13 @@ MetadataKey    = 'title' | 'composer' ;
 
 ### 2.3 Global Settings
 
-GlobalSetting  = TempoDecl | TimeDecl | KeyDecl ;
+GlobalSetting  = TempoDecl | TimeDecl | KeyDecl | PartialDecl | OctaveDecl ;
+
+PartialDecl    = 'partial' , DurationToken ;
+                 (* the piece-opening pickup, declared ONCE for every part; an
+                    in-music 'partial' declares it per voice (or mid-piece).
+                    A bare underfull first bar gets a warning suggesting this. *)
+OctaveDecl     = 'octave' , ( 'absolute' | 'relative' ) ;
 
 TempoDecl      = 'tempo' , [ String ] , [ DurationBase , '=' ] , Integer ,
                  [ ( 'swing' | 'shuffle' ) , [ Integer ] ] ;

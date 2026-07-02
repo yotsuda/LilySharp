@@ -9,13 +9,13 @@ composer "Traditional"
 tempo 60
 time 6/8
 key a minor
+partial 8
 octave absolute
 
 part melody { clef treble }
 
 section Verse {
   melody {
-    partial 8
     a8 |
     c'4 d'8 e'8. f'16 e'8 |
     d'4 b8 g8. a16 b8 |

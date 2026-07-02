@@ -159,15 +159,33 @@ public class SemanticTests
     }
 
     [Fact]
-    public void MeasureValidator_PickupAndClosingMeasures_DoNotWarn()
+    public void MeasureValidator_PickupAndClosingMeasures_OnlyNudgeThePickup()
     {
         // Anacrusis: a quarter-note pickup, full middle, shortened final bar.
-        // LilyPond expresses this with \partial; Lily# exempts edge measures.
+        // The closing bar stays exempt; the BARE pickup gets the friendly
+        // "declare it with partial" nudge (a declared one is checked exactly).
         var tree = SyntaxTree.Parse("{ c4 | c4 d e f | c4 d e | }");
         var validator = new MeasureValidator();
         validator.Validate(tree);
 
-        Assert.Empty(validator.Diagnostics);
+        var diag = Assert.Single(validator.Diagnostics);
+        Assert.Equal(DiagnosticCodes.PickupWithoutPartial, diag.Code);
+        Assert.Contains("partial 4", diag.Message);
+    }
+
+    [Fact]
+    public void MeasureValidator_TopLevelPartial_SilencesTheNudgeAndChecksExactly()
+    {
+        // Declared file-level pickup: no nudge, and a WRONG pickup length is
+        // strictly flagged.
+        var ok = new MeasureValidator();
+        ok.Validate(SyntaxTree.Parse("partial 4\n{ c4 | c4 d e f | }"));
+        Assert.Empty(ok.Diagnostics);
+
+        var bad = new MeasureValidator();
+        bad.Validate(SyntaxTree.Parse("partial 4\n{ c8 | c4 d e f | }"));
+        var diag = Assert.Single(bad.Diagnostics);
+        Assert.Equal(DiagnosticCodes.MeasureIncomplete, diag.Code);
     }
 
     [Fact]

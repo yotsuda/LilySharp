@@ -25,6 +25,9 @@ public sealed class MeasureValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
     private Fraction _timeSignature = new(4, 4); // Default 4/4
+    // Set by a top-level `partial N` — the declared pickup length for every
+    // voice's first measure (mirrors MeasureCollector._filePartial).
+    private Fraction? _filePartial;
 
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
@@ -62,6 +65,13 @@ public sealed class MeasureValidator : ISemanticValidator
 
             case TimeSignatureSyntax timeSig:
                 SetTimeSignature(timeSig.Beats, timeSig.BeatType);
+                break;
+
+            case PartialDeclarationSyntax filePartial when !IsInsideMusicBlock(filePartial):
+                // A top-level `partial N` (a GlobalSetting) arms EVERY voice's
+                // first measure; the first bar of each block is then strictly
+                // checked against the declared pickup length.
+                _filePartial = filePartial.ToFraction();
                 break;
 
             case MetadataDeclarationSyntax:
@@ -111,6 +121,17 @@ public sealed class MeasureValidator : ISemanticValidator
 
             var duration = CalculateMeasureDuration(measure.Items, ref defaultDuration);
 
+            // A file-level `partial` describes the PIECE-opening pickup. Blocks
+            // are validated per section, so apply it to a block's first bar
+            // only when that bar does not already fill the meter (a later
+            // section's full first bar is not the pickup). An inline `partial`
+            // in the bar always wins.
+            if (partialLength == null && i == 0 && _filePartial is { } fp
+                && duration != _timeSignature)
+            {
+                partialLength = fp;
+            }
+
             // The pickup's declared length overrides the meter as the fill target
             // for the measure that carries the \partial.
             var expected = partialLength ?? _timeSignature;
@@ -135,6 +156,21 @@ public sealed class MeasureValidator : ISemanticValidator
                                 ? $"Pickup measure duration {duration} is less than the declared partial {expected}"
                                 : $"Measure duration {duration} is less than time signature {expected}");
                     }
+                    else if (i == 0)
+                    {
+                        // An underfull FIRST bar is conventionally an anacrusis,
+                        // but written bare it is indistinguishable from a
+                        // miscount, gets no strict length check, and bar
+                        // numbering counts it as bar 1. Nudge toward declaring
+                        // it (a declared pickup is checked exactly and numbered
+                        // as bar 0).
+                        var span = GetSpan(measure.Items);
+                        _diagnostics.Warning(span, DiagnosticCodes.PickupWithoutPartial,
+                            $"first measure is shorter than the meter ({duration} of {expected}); " +
+                            $"if this is a pickup, declare it with '{SuggestPartial(duration)}' " +
+                            "(top level or in the voice) so its length is checked and " +
+                            "bar numbering starts after it");
+                    }
                 }
                 else if (duration > expected)
                 {
@@ -148,6 +184,27 @@ public sealed class MeasureValidator : ISemanticValidator
                 }
             }
         }
+    }
+
+    /// <summary>True when the node sits inside a music block (an in-music
+    /// `partial` belongs to one voice; only a top-level one is file-wide).</summary>
+    private static bool IsInsideMusicBlock(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is MusicBlockSyntax)
+                return true;
+        return false;
+    }
+
+    /// <summary>The `partial` clause matching a pickup of <paramref name="length"/>:
+    /// exact for plain (1/N) and dotted (3/2N) lengths, a generic hint otherwise.</summary>
+    private static string SuggestPartial(Fraction length)
+    {
+        if (length.Numerator == 1)
+            return $"partial {length.Denominator}";
+        if (length.Numerator == 3 && length.Denominator % 2 == 0)
+            return $"partial {length.Denominator / 2}.";
+        return "partial <duration>";
     }
 
     private record MeasureContent(List<SyntaxNode> Items, int StartPosition);
