@@ -432,7 +432,7 @@ internal sealed class MeasureBuilder
     }
 
 
-    public List<Measure> FinalizeMeasures()
+    public List<Measure> FinalizeMeasures(bool autoFinalBarline = true)
     {
         // Handle any remaining items as the final measure
         if (_currentItems.Count > 0)
@@ -456,8 +456,11 @@ internal sealed class MeasureBuilder
                 IsAligned: isAligned));
         }
 
-        // Auto-set final barline on the last measure (music convention)
-        if (_measures.Count > 0)
+        // Auto-set final barline on the last measure (music convention). Skipped
+        // for sub-streams that end mid-piece (a << \\ >> span's extra voice):
+        // their last measure is not the piece's last, and the Final would win
+        // the cross-voice barline merge.
+        if (autoFinalBarline && _measures.Count > 0)
         {
             var last = _measures[^1];
             if (last.EndBarline == BarlineType.Single)
@@ -1239,7 +1242,10 @@ public sealed class MeasureCollector
                 // Tag this sub-voice's tuplets with its voice index so their
                 // beam-breaking boundaries never leak into a sibling voice.
                 _currentVoiceIndex = t;
-                var sub = CollectMeasuresFromNode(blocks[t]);
+                // No auto-final barline: this is a SPAN inside the piece, and a
+                // Final stamped on the span's last measure would win the
+                // cross-voice barline merge and print a final barline mid-piece.
+                var sub = CollectMeasuresFromNode(blocks[t], autoFinalBarline: false);
                 ResolveBeamStemDirections(sub);
                 _currentVoiceIndex = 0;
                 _metadataMeasureOffset = 0;
@@ -1305,7 +1311,7 @@ public sealed class MeasureCollector
         return musicNodes;
     }
 
-    private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode)
+    private List<Measure> CollectMeasuresFromNode(SyntaxNode voiceNode, bool autoFinalBarline = true)
     {
         var builder = new MeasureBuilder(TimeSignatureFraction, voiceNode.Position);
         _measureAccidentals.Clear();
@@ -1331,7 +1337,7 @@ public sealed class MeasureCollector
 
         FinalizeInlineVoltas();
 
-        return builder.FinalizeMeasures();
+        return builder.FinalizeMeasures(autoFinalBarline);
     }
 
     /// <summary>
