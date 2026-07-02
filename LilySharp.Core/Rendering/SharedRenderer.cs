@@ -91,10 +91,16 @@ public static class SharedRenderer
             {
                 foreach (var system in page.Systems)
                     DrawSystem(score, layout, system, resolver, beamedItems, gc);
-                // Page-level overlays that span systems
-                var measureToSystemY = BuildMeasureToSystemY(layout);
-                DrawTies(layout, gc);
-                DrawSlurs(layout, gc);
+                // Page-level overlays that span systems. The Y-anchor map is
+                // built from THIS page's systems only: system Y is page-local
+                // (each page restarts at MarginTop), so every overlay whose
+                // measure lives on another page must be skipped on this one —
+                // drawing it here would overprint this page's music at the
+                // other page's local Y. Each drawer treats a missing measure
+                // key as "not on this page".
+                var measureToSystemY = BuildMeasureToSystemY(page);
+                DrawTies(layout, measureToSystemY, gc);
+                DrawSlurs(layout, measureToSystemY, gc);
                 DrawDynamics(layout, measureToSystemY, gc);
                 DrawArticulations(layout, measureToSystemY, gc);
                 DrawLyrics(layout, measureToSystemY, gc);
@@ -103,8 +109,8 @@ public static class SharedRenderer
                 DrawVoltaBrackets(layout, measureToSystemY, gc);
                 DrawTupletBrackets(layout, measureToSystemY, gc);
                 DrawTrillSpanners(layout, measureToSystemY, gc);
-                DrawGlissandos(layout, gc);
-                DrawArpeggios(layout, gc);
+                DrawGlissandos(layout, measureToSystemY, gc);
+                DrawArpeggios(layout, measureToSystemY, gc);
                 DrawGraceNotes(layout, measureToSystemY, gc);
                 DrawChordNames(layout, measureToSystemY, gc);
                 DrawFiguredBass(layout, measureToSystemY, gc);
@@ -116,7 +122,7 @@ public static class SharedRenderer
                 DrawCustomTexts(layout, measureToSystemY, gc);
                 DrawTextSpanners(layout, measureToSystemY, gc);
                 DrawPedalBrackets(layout, measureToSystemY, gc);
-                DrawMultiMeasureRests(layout, gc);
+                DrawMultiMeasureRests(layout, measureToSystemY, gc);
                 DrawTieVariants(layout, measureToSystemY, gc);
                 DrawLyricHyphens(layout, measureToSystemY, gc);
                 DrawPartCombine(layout, measureToSystemY, gc);
@@ -2030,22 +2036,30 @@ public static class SharedRenderer
 
     // ---------- Ties & slurs ----------
 
-    private static void DrawTies(ScoreLayout layout, IDrawingContext gc)
+    private static void DrawTies(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
     {
         foreach (var tie in layout.TieLayouts)
+        {
+            if (!sysY.ContainsKey(tie.Tie.StartMeasureIndex))
+                continue; // not on this page (geometry is page-local)
             DrawCurve(
                 tie.StartX, tie.StartY, tie.EndX, tie.EndY,
                 tie.Control1, tie.Control2, tie.CurveUp,
                 EngravingDefaults.TieMidThickness, gc);
+        }
     }
 
-    private static void DrawSlurs(ScoreLayout layout, IDrawingContext gc)
+    private static void DrawSlurs(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
     {
         foreach (var slur in layout.SlurLayouts)
+        {
+            if (!sysY.ContainsKey(slur.Slur.StartMeasureIndex))
+                continue; // not on this page (geometry is page-local)
             DrawCurve(
                 slur.StartX, slur.StartY, slur.EndX, slur.EndY,
                 slur.Control1, slur.Control2, slur.CurveUp,
                 EngravingDefaults.SlurMidThickness, gc);
+        }
     }
 
     /// <summary>
@@ -2073,10 +2087,12 @@ public static class SharedRenderer
 
     // ---------- Helpers for system-Y lookup ----------
 
-    private static Dictionary<int, double> BuildMeasureToSystemY(ScoreLayout layout)
+    // Page-scoped on purpose: the map doubles as the page-membership test for
+    // every overlay drawer (missing key = the measure is on another page).
+    private static Dictionary<int, double> BuildMeasureToSystemY(PageLayout page)
     {
         var map = new Dictionary<int, double>();
-        foreach (var system in layout.AllSystems)
+        foreach (var system in page.Systems)
             foreach (var ml in system.Measures)
                 map[ml.MeasureIndex] = system.Y;
         return map;
@@ -2240,7 +2256,8 @@ public static class SharedRenderer
         foreach (var d in layout.DynamicLayouts)
         {
             string text = NormalizeDynamicText(d.Text);
-            double y = (sysY.TryGetValue(d.MeasureIndex, out var sy) ? sy : 0) + d.Y;
+            if (!sysY.TryGetValue(d.MeasureIndex, out var sy)) continue; // other page
+            double y = sy + d.Y;
             using (gc.Source(d.SourcePosition))
                 gc.DrawText(text, d.X, y, fontSize, "serif",
                     FontStyle.BoldItalic, TextAnchor.Middle, Color.Black);
@@ -2271,7 +2288,8 @@ public static class SharedRenderer
         foreach (var a in layout.ArticulationLayouts)
         {
             if (string.IsNullOrEmpty(a.Glyph)) continue;
-            double y = (sysY.TryGetValue(a.MeasureIndex, out var sy) ? sy : 0) + a.Y;
+            if (!sysY.TryGetValue(a.MeasureIndex, out var sy)) continue; // other page
+            double y = sy + a.Y;
             // Bend sentinels ("bendFall"/"bendDoit"): a trailing curve, not a glyph.
             if (a.Glyph is "bendFall" or "bendDoit")
             {
@@ -2338,7 +2356,8 @@ public static class SharedRenderer
         double lyricFontSize = FontSize * 0.8;
         foreach (var l in layout.LyricLayouts)
         {
-            double y = (sysY.TryGetValue(l.Item.MeasureIndex, out var sy) ? sy : 0) + l.Y;
+            if (!sysY.TryGetValue(l.Item.MeasureIndex, out var sy)) continue; // other page
+            double y = sy + l.Y;
             // Tag the syllable with its source offset (data-pos) so the preview can
             // click-to-jump and editor-highlight it like a note. SourcePosition 0
             // means "unknown" (would clash with the bar-0 section mark), so only
@@ -2375,7 +2394,8 @@ public static class SharedRenderer
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var h in layout.HairpinLayouts)
         {
-            double absY = (sysY.TryGetValue(h.StartMeasureIndex, out var sy) ? sy : 0) + h.Y;
+            if (!sysY.TryGetValue(h.StartMeasureIndex, out var sy)) continue; // other page
+            double absY = sy + h.Y;
             double leftTop = absY - h.StartOpening;
             double leftBottom = absY + h.StartOpening;
             double rightTop = absY - h.EndOpening;
@@ -2409,7 +2429,8 @@ public static class SharedRenderer
         double textFontSize = FontSize * 0.45;
         foreach (var b in layout.OttavaBracketLayouts)
         {
-            double absY = (sysY.TryGetValue(b.StartMeasureIndex, out var sy) ? sy : 0) + b.Y;
+            if (!sysY.TryGetValue(b.StartMeasureIndex, out var sy)) continue; // other page
+            double absY = sy + b.Y;
             using (gc.Source(b.SourcePosition))
             {
                 gc.DrawText(b.Text, b.StartX, absY, textFontSize, "serif",
@@ -2452,7 +2473,8 @@ public static class SharedRenderer
 
         foreach (var v in layout.VoltaBracketLayouts)
         {
-            double absY = (sysY.TryGetValue(v.StartMeasureIndex, out var sy) ? sy : 0) + v.Y;
+            if (!sysY.TryGetValue(v.StartMeasureIndex, out var sy)) continue; // other page
+            double absY = sy + v.Y;
             bool hasText = !string.IsNullOrEmpty(v.VoltaText);
             using (gc.Source(v.SourcePosition))
             {
@@ -2497,7 +2519,7 @@ public static class SharedRenderer
 
         foreach (var b in layout.TupletBracketLayouts)
         {
-            double sy = sysY.TryGetValue(b.MeasureIndex, out var s) ? s : 0;
+            if (!sysY.TryGetValue(b.MeasureIndex, out var sy)) continue; // other page
             double startY = sy + b.StartY;
             double endY = sy + b.EndY;
             double midX = (b.StartX + b.EndX) / 2;
@@ -2552,7 +2574,8 @@ public static class SharedRenderer
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var s in layout.TrillSpannerLayouts)
         {
-            double absY = (sysY.TryGetValue(s.StartMeasureIndex, out var sy) ? sy : 0) + s.Y;
+            if (!sysY.TryGetValue(s.StartMeasureIndex, out var sy)) continue; // other page
+            double absY = sy + s.Y;
             using (gc.Source(s.SourcePosition))
             {
                 bool isContinuation = Math.Abs(s.GlyphX - s.LineStartX) < 0.01;
@@ -2592,12 +2615,16 @@ public static class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: scm/scheme-engravers.scm, scm/define-grobs.scm Glissando grob
     /// </remarks>
-    private static void DrawGlissandos(ScoreLayout layout, IDrawingContext gc)
+    private static void DrawGlissandos(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
     {
         if (layout.GlissandoLayouts.IsDefaultOrEmpty) return;
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var g in layout.GlissandoLayouts)
         {
+            // MeasureIndex -1 = direct unit-test construction: no page identity,
+            // draw unconditionally.
+            if (g.MeasureIndex >= 0 && !sysY.ContainsKey(g.MeasureIndex))
+                continue; // other page
             using (gc.Source(g.SourcePosition))
                 gc.DrawLine(g.StartX, g.StartY, g.EndX, g.EndY, Color.Black, thickness);
         }
@@ -2612,7 +2639,7 @@ public static class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/arpeggio.cc, scm/define-grobs.scm:201-224
     /// </remarks>
-    private static void DrawArpeggios(ScoreLayout layout, IDrawingContext gc)
+    private static void DrawArpeggios(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
     {
         if (layout.ArpeggioLayouts.IsDefaultOrEmpty) return;
         const double wavePeriod = 0.8;
@@ -2620,6 +2647,10 @@ public static class SharedRenderer
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var a in layout.ArpeggioLayouts)
         {
+            // MeasureIndex -1 = direct unit-test construction: no page identity,
+            // draw unconditionally.
+            if (a.MeasureIndex >= 0 && !sysY.ContainsKey(a.MeasureIndex))
+                continue; // other page
             double length = a.BottomY - a.TopY;
             if (length <= 0) continue;
             int halfWaves = Math.Max(1, (int)(length / (wavePeriod / 2)));
@@ -2661,7 +2692,7 @@ public static class SharedRenderer
         if (layout.GraceNoteLayouts.IsDefaultOrEmpty) return;
         foreach (var g in layout.GraceNoteLayouts)
         {
-            double sy = sysY.TryGetValue(g.MeasureIndex, out var s) ? s : 0;
+            if (!sysY.TryGetValue(g.MeasureIndex, out var sy)) continue; // other page
 
             // Tab staff: grace notes are small fret numbers on the string lines,
             // not noteheads. No stems/beam/slur/ledger — tab grace is just the
@@ -3008,6 +3039,8 @@ public static class SharedRenderer
         // outside-staff stacking pass (OutsideStaffStacker.StackAboveStaff).
         foreach (var bn in layout.BarNumberLayouts)
         {
+            if (!sysY.ContainsKey(bn.MeasureIndex))
+                continue; // other page
             double y = bn.Y;
             gc.DrawText(bn.Text, bn.X, y, fontSize, "serif",
                 FontStyle.Bold, bn.RightAligned ? TextAnchor.End : TextAnchor.Start,
@@ -3033,7 +3066,8 @@ public static class SharedRenderer
             // sn.Y is relative to the system top (the verse's lyric baseline);
             // add the system Y like DrawLyrics, so the number sits next to its
             // verse line rather than at the page top.
-            double y = (sysY.TryGetValue(sn.MeasureIndex, out var s) ? s : 0) + sn.Y;
+            if (!sysY.TryGetValue(sn.MeasureIndex, out var s)) continue; // other page
+            double y = s + sn.Y;
             gc.DrawText(sn.Text, sn.X, y, fontSize, "serif",
                 FontStyle.Bold, TextAnchor.Start, Color.Black);
         }
@@ -3054,7 +3088,8 @@ public static class SharedRenderer
         double size = FontSize * 0.56;  // magstep(-5)
         foreach (var f in layout.FingeringLayouts)
         {
-            double y = (sysY.TryGetValue(f.MeasureIndex, out var sy) ? sy : 0) + f.Y;
+            if (!sysY.TryGetValue(f.MeasureIndex, out var sy)) continue; // other page
+            double y = sy + f.Y;
             using (gc.Source(f.SourcePosition))
                 gc.DrawText(f.Number.ToString(), f.X, y, size, "serif",
                     FontStyle.Regular, TextAnchor.Middle, Color.Black);
@@ -3078,7 +3113,8 @@ public static class SharedRenderer
         foreach (var m in layout.MusicMarkLayouts)
         {
             if (IsHandledBySpannerEngraver(m.MarkType)) continue;
-            double y = (sysY.TryGetValue(m.MeasureIndex, out var s) ? s : 0) + m.Y;
+            if (!sysY.TryGetValue(m.MeasureIndex, out var s)) continue; // other page
+            double y = s + m.Y;
             using (gc.Source(m.SourcePosition))
                 DrawSingleMusicMark(m, y, gc);
         }
@@ -3238,7 +3274,8 @@ public static class SharedRenderer
         if (layout.CustomTextLayouts.IsDefaultOrEmpty) return;
         foreach (var t in layout.CustomTextLayouts)
         {
-            double y = (sysY.TryGetValue(t.MeasureIndex, out var s) ? s : 0) + t.Y;
+            if (!sysY.TryGetValue(t.MeasureIndex, out var s)) continue; // other page
+            double y = s + t.Y;
             using (gc.Source(t.SourcePosition))
                 gc.DrawText(t.Text, t.X, y, FontSize * 0.6, "serif",
                     FontStyle.Italic, TextAnchor.Middle, Color.Black);
@@ -3262,7 +3299,8 @@ public static class SharedRenderer
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var s in layout.TextSpannerLayouts)
         {
-            double absY = (sysY.TryGetValue(s.StartMeasureIndex, out var y) ? y : 0) + s.Y;
+            if (!sysY.TryGetValue(s.StartMeasureIndex, out var y)) continue; // other page
+            double absY = y + s.Y;
             using (gc.Source(s.SourcePosition))
             {
                 gc.DrawText(s.Text, s.StartX, absY, textSize, "serif",
@@ -3294,7 +3332,8 @@ public static class SharedRenderer
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var b in layout.PedalBracketLayouts)
         {
-            double absY = (sysY.TryGetValue(b.StartMeasureIndex, out var y) ? y : 0) + b.Y;
+            if (!sysY.TryGetValue(b.StartMeasureIndex, out var y)) continue; // other page
+            double absY = y + b.Y;
             using (gc.Source(b.SourcePosition))
             {
                 gc.DrawLine(b.StartX, absY, b.EndX, absY, Color.Black, thickness);
@@ -3314,11 +3353,13 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/multi-measure-rest.cc:194-220 big_rest
     /// LILYPOND-REF: lily/multi-measure-rest.cc:225-300 church_rest
     /// </remarks>
-    private static void DrawMultiMeasureRests(ScoreLayout layout, IDrawingContext gc)
+    private static void DrawMultiMeasureRests(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
     {
         if (layout.MultiMeasureRestLayouts.IsDefaultOrEmpty) return;
         foreach (var mmr in layout.MultiMeasureRestLayouts)
         {
+            if (!sysY.ContainsKey(mmr.StartMeasureIndex))
+                continue; // other page
             if (mmr.UseChurchRest)
                 DrawChurchRest(mmr, gc);
             else
@@ -3453,6 +3494,8 @@ public static class SharedRenderer
         // (TieVariantEngraver computes absolute Y).
         foreach (var v in layout.TieVariantLayouts)
         {
+            if (!sysY.ContainsKey(v.MeasureIndex))
+                continue; // other page
             DrawCurve(v.StartX, v.Y, v.EndX, v.Y,
                 v.Control1, v.Control2, v.CurveUp,
                 EngravingDefaults.TieMidThickness, gc);
@@ -3480,7 +3523,7 @@ public static class SharedRenderer
                 foreach (var dash in h.Dashes)
                 {
                     var src = layout.LyricLayouts[h.LyricIndex];
-                    double sy = sysY.TryGetValue(src.Item.MeasureIndex, out var s) ? s : 0;
+                    if (!sysY.TryGetValue(src.Item.MeasureIndex, out var sy)) continue; // other page
                     gc.DrawLine(dash.X1, sy + dash.Y, dash.X2, sy + dash.Y,
                         Color.Black, thickness);
                 }
@@ -3488,7 +3531,7 @@ public static class SharedRenderer
             else if (h.Type == LyricConnectorType.Extender)
             {
                 var src = layout.LyricLayouts[h.LyricIndex];
-                double sy = sysY.TryGetValue(src.Item.MeasureIndex, out var s) ? s : 0;
+                if (!sysY.TryGetValue(src.Item.MeasureIndex, out var sy)) continue; // other page
                 if (h.CrossesSystemBreak)
                 {
                     gc.DrawLine(h.ExtenderStartX, sy + h.ExtenderY,
@@ -3515,7 +3558,8 @@ public static class SharedRenderer
         double size = FontSize * 0.65;
         foreach (var pc in layout.PartCombineLayouts)
         {
-            double y = (sysY.TryGetValue(pc.MeasureIndex, out var s) ? s : 0) + pc.Y;
+            if (!sysY.TryGetValue(pc.MeasureIndex, out var s)) continue; // other page
+            double y = s + pc.Y;
             gc.DrawText(pc.Text, pc.X, y, size, "serif",
                 FontStyle.Italic, TextAnchor.Start, Color.Black);
         }
