@@ -231,6 +231,15 @@ public static class SharedRenderer
         // Per-staff: staff lines + prefix glyphs + notes
         foreach (var (group, staff, globalIdx) in score.EnumerateStaves())
         {
+            // Hara-kiri: a staff hidden in THIS system is absent from the
+            // system's staff table, and FindStaffYInSystem would fall back to
+            // the system top — drawing the hidden staff's clef/rests on top of
+            // the first visible staff. Skip its content entirely.
+            // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — suicided staves
+            // print nothing for the system.
+            if (!StaffPresentInSystem(system, globalIdx))
+                continue;
+
             double staffY = LayoutUtilities.FindStaffYInSystem(system, globalIdx);
             bool isOssia = staff.IsOssia;
 
@@ -2085,6 +2094,22 @@ public static class SharedRenderer
             (startX, startY), c1, c2,
             (endX, endY), c2Back, c1Back,
             Color.Black);
+    }
+
+    /// <summary>True when the staff is VISIBLE in this system. A hara-kiri
+    /// staff stays in the system's staff table but with IsHidden=true and its
+    /// Y collapsed onto a neighbour — drawing by that Y would print the hidden
+    /// staff's clef/rests on top of a visible staff. Single-staff layouts
+    /// carry no table (empty StaffGroups) and are always visible.</summary>
+    private static bool StaffPresentInSystem(SystemLayout system, int staffIndex)
+    {
+        if (system.StaffGroups.IsDefaultOrEmpty)
+            return true;
+        foreach (var g in system.StaffGroups)
+            foreach (var s in g.Staves)
+                if (s.StaffIndex == staffIndex)
+                    return !s.IsHidden;
+        return true;
     }
 
     // ---------- Helpers for system-Y lookup ----------

@@ -66,6 +66,19 @@ prefer the script: it forces the approve set to be an explicit, reviewed list.
 - If a fixture's change is plausible but you cannot decide from the corpus,
   add a minimal fixture that isolates the behavior (below) before approving.
 
+## Programmatic snapshots (API-only features)
+
+Features the `.lys` grammar cannot reach yet (e.g. `RemoveEmpty` hara-kiri)
+are pinned through `ProgrammaticSnapshot.Assert(name, svg)` (see
+`HaraKiriVisualTests`): the score is built through the model API, rendered,
+and compared byte-identical against `Snapshots/programmatic__<name>.svg`.
+Mismatches — and newly created baselines — land in the same
+`artifacts/visual-diff/report.html`, and `Approve-Snapshots.ps1` approves them
+by the same name (`-Name programmatic/hara-kiri`). The first such fixture
+immediately caught a real defect (a hidden staff's clef and rests overprinted
+the visible staff), which is exactly the point: build the fixture, LOOK at the
+report, then commit the baseline.
+
 ## Adding coverage
 
 1. Put a minimal `.lys` under `LilySharp.Tests/Fixtures/test/` (or
