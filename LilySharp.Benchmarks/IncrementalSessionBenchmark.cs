@@ -62,9 +62,14 @@ public class IncrementalSessionBenchmark
         }
     }
 
-    // grammar-tour is MULTI-staff (the S5-3a per-system cache does not engage);
-    // grammar-2026-06-09 is the largest SINGLE-staff fixture (cache engages).
-    private const string MultiFixture = "showcase/grammar-tour";
+    // The width-preserving benchmark measures the WHOLE-LAYOUT REUSE payoff, so both
+    // fixtures MUST be reuse-eligible: override-free AND single-voice (polyphony or a
+    // grob override disables reuse wholesale — see IncrementalCompiler.Compile — and
+    // VerifyReuses below would then throw). grammar-tour is NOT usable here (it has a
+    // 2-voice staff); 03-piano is a clean multi-staff (grand-staff) score where the
+    // per-system spring+skyline cache engages. grammar-2026-06-09 is the largest
+    // single-staff fixture.
+    private const string MultiFixture = "showcase/03-piano";
     private const string SingleFixture = "showcase/grammar-2026-06-09";
 
     private SyntaxTree _tree = null!;
