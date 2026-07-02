@@ -121,10 +121,16 @@ public sealed record Staff(
 
     /// <summary>
     /// Creates an ossia staff (small alternative passage).
-    /// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
+    /// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize.
+    /// An ossia exists only while its fragment plays: LP instantiates the ossia
+    /// context just for the span, so no staff prints anywhere else (NR "Ossia
+    /// staves"). Hara-kiri per system — including the first — is the
+    /// equivalent here; the renderer additionally trims the staff to the
+    /// fragment's measures WITHIN a system.
     /// </summary>
     public static Staff CreateOssia(ClefType clef, Voice voice, string? instrumentName = null)
-        => new(clef, ImmutableArray.Create(voice), null, instrumentName, IsOssia: true);
+        => new(clef, ImmutableArray.Create(voice), null, instrumentName, IsOssia: true,
+            RemoveEmpty: true, RemoveFirst: true);
 
     /// <summary>
     /// Creates an independent text row (chord-symbol or lyrics row): no staff lines

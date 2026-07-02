@@ -58,7 +58,7 @@ public static class SharedRenderer
     private const double LeadSheetBarlineHeight = 2.0;
     private const double FontSize = 4.0;
     private const double TempoNoteSize = 1.6;  // metronome-mark notehead size (shared with the swing equation)
-    private const double OssiaScale = 0.65;  // LP magnifyStaff default for ossia
+    private const double OssiaScale = EngravingDefaults.OssiaScale; // magstep(-3), shared with the layouter
 
     public static void RenderTo(
         MultiStaffScore score, ScoreLayout layout, IDocumentContext doc,
@@ -266,6 +266,29 @@ public static class SharedRenderer
                 ? gc.BeginGroup(new DrawingTransform(0, staffY, OssiaScale, OssiaScale))
                 : null;
             IDrawingContext sgc = isOssia ? new UnscaledXDrawingContext(gc, OssiaScale) : gc;
+
+            // Ossia fragment extent: the ossia prints ONLY over the measures
+            // where it has notes — LP instantiates the ossia context just for
+            // the span, so staff lines and barlines exist nowhere else
+            // (NR "Ossia staves"; lily/staff-symbol-engraver.cc — the
+            // StaffSymbol spanner lives exactly as long as its context).
+            int fragFrom = int.MinValue, fragTo = int.MaxValue;
+            double lineStartX = 0, lineEndX = staffRight;
+            if (isOssia)
+            {
+                (fragFrom, fragTo) = OssiaFragment(staff, system);
+                if (fragFrom < 0)
+                {
+                    groupScope?.Dispose();
+                    continue; // rest-only system (hara-kiri normally hides it upstream)
+                }
+                foreach (var ml in system.Measures)
+                {
+                    if (ml.MeasureIndex == fragFrom) lineStartX = ml.X;
+                    if (ml.MeasureIndex == fragTo) lineEndX = ml.X + ml.Width;
+                }
+            }
+
             try
             {
                 double localStaffY = isOssia ? 0 : staffY;
@@ -277,7 +300,7 @@ public static class SharedRenderer
                     continue;
                 }
 
-                DrawStaffLines(localStaffY, staffRight, sgc);
+                DrawStaffLines(localStaffY, lineEndX, sgc, lineStartX);
 
                 // System-start prefix. The clef and key signature repeat at the
                 // head of EVERY system (standard notation); the key reflects any
@@ -288,29 +311,49 @@ public static class SharedRenderer
                 // are break-aligned at every line start; TimeSignature is not.
                 double prefixEndX = systemStartX;
                 var clef = ResolveClef(staff, system, score);
-                // Tag the clef with its declaration for click-to-jump, on the first
-                // line of a single-staff score: there it IS the declared clef (later
-                // lines may show a mid-piece change, which owns its own position),
-                // and a multi-staff score's per-staff clefs would all wrongly point
-                // at the one score-level position.
-                int clefPos = isFirstSystem && score.TotalStaffCount == 1 ? score.Header.Clef : 0;
-                using (SourceScope(sgc, clefPos))
-                    prefixEndX = DrawClef(clef, systemStartX, localStaffY, sgc);
-                var activeKey = ResolveKeySignature(staff, system, score);
-                // Tag the key sig with its declaration on the first line only — there
-                // it IS the declared key; later lines may show a mid-piece change,
-                // which carries its own position via its measure item.
-                using (SourceScope(sgc, isFirstSystem ? score.Header.Key : 0))
-                    prefixEndX = DrawKeySignature(activeKey, clef, prefixEndX, localStaffY, sgc);
-                if (isFirstSystem)
+                // Ossia prefix, per the LP ossia conventions (NR "Ossia staves"):
+                // no time signature at all (\remove Time_signature_engraver), no
+                // clef on the ossia's FIRST appearance (firstClef = ##f —
+                // lily/clef-engraver.cc creates the clef only when a previous
+                // clef exists or firstClef is true), and the key signature only
+                // when the fragment starts at the system head (a mid-system
+                // fragment opens bare).
+                bool ossiaAtSystemStart = !isOssia
+                    || (system.Measures.Length > 0 && fragFrom <= system.Measures[0].MeasureIndex);
+                bool drawClef = !isOssia
+                    || (ossiaAtSystemStart && OssiaAppearedBefore(layout, staff, system, globalIdx));
+                if (drawClef)
                 {
-                    using (SourceScope(sgc, score.Header.Time))
-                        prefixEndX = DrawTimeSignature(score.TimeSignature, prefixEndX, localStaffY, sgc);
+                    // Tag the clef with its declaration for click-to-jump, on the first
+                    // line of a single-staff score: there it IS the declared clef (later
+                    // lines may show a mid-piece change, which owns its own position),
+                    // and a multi-staff score's per-staff clefs would all wrongly point
+                    // at the one score-level position.
+                    int clefPos = isFirstSystem && score.TotalStaffCount == 1 ? score.Header.Clef : 0;
+                    using (SourceScope(sgc, clefPos))
+                        prefixEndX = DrawClef(clef, systemStartX, localStaffY, sgc);
                 }
-                else if (GetSystemStartTimeChange(staff, system) is { } startTimeChange)
+                if (ossiaAtSystemStart)
                 {
-                    // A meter change at the line break is part of the prefix.
-                    prefixEndX = DrawTimeSignature(startTimeChange.NewTime, prefixEndX, localStaffY, sgc);
+                    var activeKey = ResolveKeySignature(staff, system, score);
+                    // Tag the key sig with its declaration on the first line only — there
+                    // it IS the declared key; later lines may show a mid-piece change,
+                    // which carries its own position via its measure item.
+                    using (SourceScope(sgc, isFirstSystem ? score.Header.Key : 0))
+                        prefixEndX = DrawKeySignature(activeKey, clef, prefixEndX, localStaffY, sgc);
+                }
+                if (!isOssia)
+                {
+                    if (isFirstSystem)
+                    {
+                        using (SourceScope(sgc, score.Header.Time))
+                            prefixEndX = DrawTimeSignature(score.TimeSignature, prefixEndX, localStaffY, sgc);
+                    }
+                    else if (GetSystemStartTimeChange(staff, system) is { } startTimeChange)
+                    {
+                        // A meter change at the line break is part of the prefix.
+                        prefixEndX = DrawTimeSignature(startTimeChange.NewTime, prefixEndX, localStaffY, sgc);
+                    }
                 }
 
                 // Notes per measure — render every voice (voice 1 = stems up,
@@ -324,11 +367,13 @@ public static class SharedRenderer
                         ? VoiceDefaults.GetDefaultStemUp(voiceNumber)
                         : null;
                     DrawStaffMeasures(voices[vi], voiceNumber, forcedStemUp,
-                        system, layout, globalIdx, localStaffY, clef, resolver, beamedItems, sgc);
+                        system, layout, globalIdx, localStaffY, clef, resolver, beamedItems, sgc,
+                        fragFrom, fragTo);
                 }
 
                 // Barlines (typed: single / double / final / repeat) per measure
-                DrawBarlines(system, staff, localStaffY, layout, sgc);
+                DrawBarlines(system, staff, localStaffY, layout, sgc,
+                    fromMeasure: fragFrom, toMeasure: fragTo);
             }
             finally
             {
@@ -380,12 +425,12 @@ public static class SharedRenderer
         }
     }
 
-    private static void DrawStaffLines(double staffY, double width, IDrawingContext gc)
+    private static void DrawStaffLines(double staffY, double width, IDrawingContext gc, double startX = 0)
     {
         for (int i = 0; i < 5; i++)
         {
             double y = staffY + i;
-            gc.DrawLine(0, y, width, y, Color.Black, EngravingDefaults.StaffLineThickness);
+            gc.DrawLine(startX, y, width, y, Color.Black, EngravingDefaults.StaffLineThickness);
         }
     }
 
@@ -932,7 +977,8 @@ public static class SharedRenderer
         Voice voice, int voiceNumber, bool? forcedStemUp,
         SystemLayout system, ScoreLayout layout, int staffIndex,
         double staffY, ClefType clef, GrobPropertyResolver resolver,
-        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc)
+        HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
+        int fragmentFrom = int.MinValue, int fragmentTo = int.MaxValue)
     {
         double staffMiddleY = staffY + StaffHeight / 2;
 
@@ -945,11 +991,11 @@ public static class SharedRenderer
         // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0);
         // NoteHead uses the default layer 1.
         var ledgerPlan = new List<LedgerRequest>();
-        foreach (var (item, _, _, itemX) in EnumerateStaffItems(voice, voiceNumber, system, layout))
+        foreach (var (item, _, _, itemX) in EnumerateStaffItems(voice, voiceNumber, system, layout, fragmentFrom, fragmentTo))
             CollectItemLedgers(item, itemX, staffMiddleY, ledgerPlan);
         DrawPlannedLedgers(ledgerPlan, gc);
 
-        foreach (var (item, ml, itemIdx, itemX) in EnumerateStaffItems(voice, voiceNumber, system, layout))
+        foreach (var (item, ml, itemIdx, itemX) in EnumerateStaffItems(voice, voiceNumber, system, layout, fragmentFrom, fragmentTo))
         {
             // Head-wipe when this voice's notehead merges with another's.
             bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
@@ -1003,10 +1049,15 @@ public static class SharedRenderer
     /// positions.
     /// </summary>
     private static IEnumerable<(MusicItem Item, MeasureLayout Ml, int ItemIdx, double ItemX)>
-        EnumerateStaffItems(Voice voice, int voiceNumber, SystemLayout system, ScoreLayout layout)
+        EnumerateStaffItems(Voice voice, int voiceNumber, SystemLayout system, ScoreLayout layout,
+            int fragmentFrom = int.MinValue, int fragmentTo = int.MaxValue)
     {
         foreach (var ml in system.Measures)
         {
+            // Ossia fragment trim: measures outside the fragment print nothing
+            // (their rests belong to a context that does not exist in LP).
+            if (ml.MeasureIndex < fragmentFrom || ml.MeasureIndex > fragmentTo)
+                continue;
             if (ml.MeasureIndex >= voice.Measures.Length)
                 continue;
 
@@ -1605,7 +1656,8 @@ public static class SharedRenderer
     // ---------- Barlines ----------
 
     private static void DrawBarlines(SystemLayout system, Staff staff, double staffY,
-        ScoreLayout layout, IDrawingContext gc, double? barHeight = null)
+        ScoreLayout layout, IDrawingContext gc, double? barHeight = null,
+        int fromMeasure = int.MinValue, int toMeasure = int.MaxValue)
     {
         // A lead-sheet text row has no staff, so its barlines are short ticks the
         // chord/lyric row hangs on; a real staff uses its full height.
@@ -1613,6 +1665,9 @@ public static class SharedRenderer
         var voice = staff.PrimaryVoice;
         foreach (var ml in system.Measures)
         {
+            // Ossia fragment trim: no barlines where no staff exists.
+            if (ml.MeasureIndex < fromMeasure || ml.MeasureIndex > toMeasure)
+                continue;
             if (ml.MeasureIndex >= voice.Measures.Length)
                 continue;
             var measure = voice.Measures[ml.MeasureIndex];
@@ -2102,6 +2157,55 @@ public static class SharedRenderer
             (startX, startY), c1, c2,
             (endX, endY), c2Back, c1Back,
             Color.Black);
+    }
+
+    /// <summary>
+    /// The contiguous measure range [From..To] of this system where the ossia
+    /// has notes/chords, or (-1, -1) when it only rests here. The ossia prints
+    /// nothing outside this range — in LP the ossia context exists only for
+    /// its fragment (NR "Ossia staves").
+    /// </summary>
+    private static (int From, int To) OssiaFragment(Staff staff, SystemLayout system)
+    {
+        int from = -1, to = -1;
+        var measures = staff.PrimaryVoice.Measures;
+        foreach (var ml in system.Measures)
+        {
+            if (ml.MeasureIndex >= measures.Length)
+                continue;
+            bool hasNotes = false;
+            foreach (var item in measures[ml.MeasureIndex].Items)
+            {
+                if (item is NoteItem or ChordItem)
+                {
+                    hasNotes = true;
+                    break;
+                }
+            }
+            if (!hasNotes)
+                continue;
+            if (from < 0) from = ml.MeasureIndex;
+            to = ml.MeasureIndex;
+        }
+        return (from, to);
+    }
+
+    /// <summary>True when the ossia already printed a fragment in an EARLIER
+    /// system: LP's ossia convention sets firstClef = ##f, and the clef
+    /// engraver creates a clef only when a previous clef exists or firstClef
+    /// is true (lily/clef-engraver.cc) — so the FIRST fragment opens bare and
+    /// later fragments carry the clef.</summary>
+    private static bool OssiaAppearedBefore(
+        ScoreLayout layout, Staff staff, SystemLayout system, int staffIndex)
+    {
+        foreach (var sys in layout.AllSystems)
+        {
+            if (sys.SystemIndex >= system.SystemIndex)
+                break;
+            if (StaffPresentInSystem(sys, staffIndex) && OssiaFragment(staff, sys).From >= 0)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>True when the staff is VISIBLE in this system. A hara-kiri

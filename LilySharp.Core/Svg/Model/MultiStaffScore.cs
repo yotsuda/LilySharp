@@ -242,6 +242,13 @@ public sealed record MultiStaffScore
     {
         get
         {
+            // Skip ossias too: an ossia stacks ABOVE the staff it decorates, so
+            // it can be the FIRST staff — but its stream is mostly rests and it
+            // carries no break marks, so letting it drive line breaking (or the
+            // measure count) would ignore the real music's `break`s.
+            foreach (var (_, staff, _) in EnumerateStaves())
+                if (!staff.IsTextRow && !staff.IsOssia && staff.PrimaryVoice.Measures.Length > 0)
+                    return staff;
             foreach (var (_, staff, _) in EnumerateStaves())
                 if (!staff.IsTextRow && staff.PrimaryVoice.Measures.Length > 0)
                     return staff;

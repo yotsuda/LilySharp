@@ -123,6 +123,15 @@ public static class EngravingDefaults
     /// <remarks>LILYPOND-REF: scm/define-grobs.scm TupletBracket (thickness . 1.6).</remarks>
     public const double TupletBracketThickness = 1.6 * LineThickness;
 
+    /// <summary>
+    /// Ossia staff scale: magstep(-3) = 2^(-3/6) ≈ 0.707 — the LP ossia
+    /// convention (fontSize = -3 with StaffSymbol.staff-space = magstep -3,
+    /// NR "Ossia staves"). Shared by the layouter (reserved heights and gaps)
+    /// and the renderer (drawing scale) so the two cannot drift apart and
+    /// leave phantom whitespace under the drawn ossia.
+    /// </summary>
+    public const double OssiaScale = 0.7071;
+
     // Rest collision avoidance
     /// <summary>Default staff position for rest center (middle line).</summary>
     public const double RestCenterPosition = 0.0;

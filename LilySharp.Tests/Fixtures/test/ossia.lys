@@ -1,16 +1,23 @@
-// Ossia staves test
-// Tests ossia (reduced-size alternative passage) rendering
-// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize and magnifyStaff
+// Ossia staves test — LP-aligned behaviour (NR "Ossia staves"):
+// the ossia stacks ABOVE the staff it decorates, prints ONLY over its
+// fragment's measures (context exists only for the span), shows no time
+// signature, no clef on its first appearance (firstClef = ##f), and shares
+// the score-wide spacing columns (only the notation shrinks, magstep -3).
+// System 1: fragment on measure 2 only (bare mid-system fragment).
+// System 2: the ossia rests throughout and vanishes entirely (hara-kiri).
 
-key C major
+key g major
 time 4/4
 
 section Main {
     melody {
-        | c'4 d e f | g2 e | c1 |
+        c4 d e fis | g4 a b c | b4 a g fis |
+        break
+        c4 d e fis | g2 g | c,1 |
     }
     ossia_melody {
-        | c'4 e g e | a2 f | e1 |
+        r1 | c'4 e g e | r1 |
+        r1 | r1 | r1 |
     }
 }
 

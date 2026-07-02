@@ -113,10 +113,16 @@ public sealed class MultiStaffLayouter
                 // LILYPOND-REF: lily/align-interface.cc:240-252 — direction-aware staff-affinity spec selection.
                 var nextGroup = score.StaffGroups[i + 1];
                 var spec = SelectInterGroupSpec(group, nextGroup, sp);
-                double interGroupGap = spec.BasicDistance - staffHeight;
 
                 bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                 bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
+                // An ossia joins the SAME vertical alignment as the staves in LP
+                // (vertical-align-engraver.cc inserts its grob among them), so
+                // the ossia/staff pair gets ordinary staff-staff-spacing — not
+                // the wider between-groups spacing — scaled with the ossia.
+                if (nextIsOssia || currentIsOssia)
+                    spec = sp.StaffStaff;
+                double interGroupGap = spec.BasicDistance - staffHeight;
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 height += interGroupGap;
@@ -168,9 +174,11 @@ public sealed class MultiStaffLayouter
     /// <summary>
     /// Scale factor for ossia staves: magstep(-3) = 2^(-3/6) ≈ 0.707.
     /// LILYPOND-REF: ly/engraver-init.ly — ossia staves typically use fontSize = #-3
-    /// with \override StaffSymbol.staff-space = #(magstep -3)
+    /// with \override StaffSymbol.staff-space = #(magstep -3).
+    /// Shared with the renderer via EngravingDefaults so reserved heights
+    /// match the drawn size exactly.
     /// </summary>
-    private const double OssiaScaleFactor = 0.70;
+    private const double OssiaScaleFactor = EngravingDefaults.OssiaScale;
 
     /// <summary>
     /// Gets the height of a staff in staff spaces.
@@ -246,9 +254,13 @@ public sealed class MultiStaffLayouter
                 // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                 var nextGroup = score.StaffGroups[i + 1];
                 var spec = SelectInterGroupSpec(group, nextGroup, sp);
-                double interGroupGap = spec.BasicDistance - staffHeight;
                 bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                 bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
+                // Ossia/staff pairs share one alignment in LP → ordinary
+                // staff-staff-spacing, scaled (see CalculateSystemHeight).
+                if (nextIsOssia || currentIsOssia)
+                    spec = sp.StaffStaff;
+                double interGroupGap = spec.BasicDistance - staffHeight;
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 currentY += interGroupGap;
@@ -341,9 +353,13 @@ public sealed class MultiStaffLayouter
                     // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                     var nextGroup = score.StaffGroups[i + 1];
                     var spec = SelectInterGroupSpec(group, nextGroup, sp);
-                    double interGroupGap = spec.BasicDistance - staffHeight;
                     bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                     bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
+                    // Ossia/staff pairs share one alignment in LP → ordinary
+                    // staff-staff-spacing, scaled (see CalculateSystemHeight).
+                    if (nextIsOssia || currentIsOssia)
+                        spec = sp.StaffStaff;
+                    double interGroupGap = spec.BasicDistance - staffHeight;
                     if (nextIsOssia || currentIsOssia)
                         interGroupGap *= OssiaScaleFactor;
                     currentY += interGroupGap;
@@ -1060,11 +1076,14 @@ public sealed class MultiStaffLayouter
                 // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                 var nextGroup = score.StaffGroups[i + 1];
                 var spec = SelectInterGroupSpec(group, nextGroup, sp);
-                double interGroupGap = CalculateStaffGapWithSkylines(
-                    spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
-
                 bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                 bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
+                // Ossia/staff pairs share one alignment in LP → ordinary
+                // staff-staff-spacing, scaled (see CalculateSystemHeight).
+                if (nextIsOssia || currentIsOssia)
+                    spec = sp.StaffStaff;
+                double interGroupGap = CalculateStaffGapWithSkylines(
+                    spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 height += interGroupGap;
@@ -1130,11 +1149,14 @@ public sealed class MultiStaffLayouter
                 // LILYPOND-REF: lily/align-interface.cc:240-252 — staff-affinity-aware spec selection.
                 var nextGroup = score.StaffGroups[i + 1];
                 var spec = SelectInterGroupSpec(group, nextGroup, sp);
-                double interGroupGap = CalculateStaffGapWithSkylines(
-                    spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
-
                 bool nextIsOssia = nextGroup.Staves.Any(s => s.IsOssia);
                 bool currentIsOssia = group.Staves.Any(s => s.IsOssia);
+                // Ossia/staff pairs share one alignment in LP → ordinary
+                // staff-staff-spacing, scaled (see CalculateSystemHeight).
+                if (nextIsOssia || currentIsOssia)
+                    spec = sp.StaffStaff;
+                double interGroupGap = CalculateStaffGapWithSkylines(
+                    spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 currentY += interGroupGap;
