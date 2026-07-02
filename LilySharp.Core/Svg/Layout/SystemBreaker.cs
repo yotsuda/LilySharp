@@ -202,8 +202,17 @@ public sealed class SystemBreaker
 
     /// <summary>
     /// Breaks measures into systems using a greedy first-fit algorithm.
+    /// Break permissions are honored the same way the optimal path does:
+    /// <c>break</c> (Force) always ends the system, and a width-driven break
+    /// never lands on a Forbid (noBreak) boundary — the Forbid-joined tail
+    /// moves to the next system instead, unless the whole system is one chain
+    /// (then it stays and goes overfull; permissions are absolute).
     /// </summary>
-    private List<List<Measure>> BreakIntoSystemsGreedy(
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc — break_permission_ is a hard
+    /// constraint, not a preference weight.
+    /// </remarks>
+    internal List<List<Measure>> BreakIntoSystemsGreedy(
         ImmutableArray<Measure> measures,
         double firstPrefixWidth,
         double continuationPrefixWidth,
@@ -222,10 +231,23 @@ public sealed class SystemBreaker
             // Check if measure fits in current system
             if (currentSystem.Count > 0 && currentWidth + measureWidth > availableWidth)
             {
-                // Start new system
-                result.Add(currentSystem);
-                currentSystem = new List<Measure>();
-                currentWidth = continuationPrefixWidth;
+                // The break may not land after a noBreak measure: carry the
+                // whole Forbid-joined tail over to the new system. keep == 0
+                // means the entire system is one chain — no legal break exists,
+                // so keep filling (overfull).
+                int keep = currentSystem.Count;
+                while (keep > 0 && currentSystem[keep - 1].LineBreakPermission == BreakPermission.Forbid)
+                    keep--;
+                if (keep > 0)
+                {
+                    var carried = currentSystem.GetRange(keep, currentSystem.Count - keep);
+                    currentSystem.RemoveRange(keep, currentSystem.Count - keep);
+                    result.Add(currentSystem);
+                    currentSystem = new List<Measure>(carried);
+                    currentWidth = continuationPrefixWidth;
+                    foreach (var carriedMeasure in carried)
+                        currentWidth += SpacingRules.CalculateMeasureIdealWidth(carriedMeasure, baseShortestDuration);
+                }
             }
 
             currentSystem.Add(measure);

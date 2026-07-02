@@ -488,9 +488,19 @@ public sealed class KnuthPlassBreaker
 
     /// <summary>
     /// Greedy fallback when DP fails to find a valid path.
-    /// Fills each system until the next measure would exceed available width.
+    /// Fills each system until the next measure would exceed available width,
+    /// honoring break permissions the same way the DP does: a Force break ends
+    /// the line right there, and a width-driven break may not land on a Forbid
+    /// boundary — it backs up to the nearest allowed one in the line, or
+    /// extends past the forbidden run (overfull) when the whole line is one
+    /// noBreak chain. The fallback must not violate what the primary algorithm
+    /// treats as an absolute constraint.
     /// </summary>
-    private List<int> GreedyBreak(MeasureSpringData[] springData, double[] cumMin)
+    /// <remarks>
+    /// LILYPOND-REF: lily/constrained-breaking.cc — break_permission_ is a hard
+    /// constraint, not a preference weight.
+    /// </remarks>
+    internal List<int> GreedyBreak(MeasureSpringData[] springData, double[] cumMin)
     {
         int n = springData.Length;
         var breaks = new List<int>();
@@ -502,14 +512,32 @@ public sealed class KnuthPlassBreaker
             double prefixWidth = isFirstLine ? _firstPrefixWidth : _continuationPrefixWidth;
             double availableWidth = _lineWidth - prefixWidth;
 
-            // Find how many measures fit on this line
+            // Fill while width allows, stopping hard at a forced break.
             int lineEnd = lineStart + 1; // At least one measure per line
-            while (lineEnd < n)
+            while (lineEnd < n
+                   && springData[lineEnd - 1].BreakPermission != BreakPermission.Force
+                   && cumMin[lineEnd + 1] - cumMin[lineStart] <= availableWidth)
             {
-                double minSum = cumMin[lineEnd + 1] - cumMin[lineStart];
-                if (minSum > availableWidth)
-                    break;
                 lineEnd++;
+            }
+
+            // A width-driven stop may not break at a Forbid boundary.
+            if (lineEnd < n && springData[lineEnd - 1].BreakPermission == BreakPermission.Forbid)
+            {
+                int back = lineEnd;
+                while (back > lineStart + 1 && springData[back - 1].BreakPermission == BreakPermission.Forbid)
+                    back--;
+                if (springData[back - 1].BreakPermission != BreakPermission.Forbid)
+                {
+                    lineEnd = back;
+                }
+                else
+                {
+                    // The whole line is one noBreak chain: extend past it
+                    // (overfull) rather than split it.
+                    while (lineEnd < n && springData[lineEnd - 1].BreakPermission == BreakPermission.Forbid)
+                        lineEnd++;
+                }
             }
 
             breaks.Add(lineEnd);
