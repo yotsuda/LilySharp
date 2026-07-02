@@ -510,15 +510,23 @@ public sealed class VerticalSkyline
     }
 
     /// <summary>
-    /// Raises the skyline by the given amount.
+    /// Raises the skyline by the given amount. Only the intercept moves — a
+    /// sloped building keeps its slope (the flat 3-arg ctor used here before
+    /// flattened every sloped building to its intercept, so a raised skyline
+    /// containing beam/merged-slope buildings came out with a corrupted roof).
     /// </summary>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc Skyline::raise —
+    /// <c>y_intercept_ += sky_ * amount</c>, slope untouched.</remarks>
     public void Raise(double amount)
     {
         double delta = (int)_direction * amount;
         for (int i = 0; i < _buildings.Count; i++)
         {
             var b = _buildings[i];
-            _buildings[i] = new Building(b.XLeft, b.XRight, b.YIntercept + delta);
+            _buildings[i] = b.Slope == 0
+                ? new Building(b.XLeft, b.XRight, b.YIntercept + delta)
+                : new Building(b.XLeft, b.Height(b.XLeft) + delta,
+                               b.Height(b.XRight) + delta, b.XRight);
         }
     }
 

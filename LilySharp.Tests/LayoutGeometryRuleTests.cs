@@ -89,6 +89,25 @@ public class LayoutGeometryRuleTests
                 $"(smaller device Y) than the one below: {ties[i].StartY} vs {ties[i - 1].StartY}");
     }
 
+    // --- Skyline raise: LILYPOND-REF lily/skyline.cc Skyline::raise ---
+
+    [Fact]
+    public void SkylineRaise_PreservesSlopes()
+    {
+        // LP's raise only moves the intercept (y_intercept_ += sky_ * amount);
+        // the old implementation rebuilt every building with the FLAT
+        // constructor, collapsing a sloped roof onto its intercept. Raise has
+        // no production caller yet — pinned so adoption cannot resurrect the
+        // corruption silently.
+        var sky = VerticalSkyline.FromSlope(0, 0, 10, 5, thickness: 0, VerticalDirection.Up);
+        double before0 = sky.Height(0), before10 = sky.Height(10);
+
+        sky.Raise(2);
+
+        Assert.Equal(before10 - before0, sky.Height(10) - sky.Height(0), 6);
+        Assert.NotEqual(sky.Height(0), sky.Height(10)); // still sloped
+    }
+
     // --- Tuplet bracket visibility: LILYPOND-REF tuplet-bracket.cc:79-95 ---
 
     [Fact]

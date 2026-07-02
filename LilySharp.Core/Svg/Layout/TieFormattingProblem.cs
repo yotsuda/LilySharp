@@ -87,9 +87,6 @@ public sealed class TieFormattingProblem
     private readonly bool _isBrokenLeft;
     private readonly bool _isBrokenRight;
 
-    // Staff line positions (in staff spaces from bottom line)
-    private static readonly double[] StaffLinePositions = { 0, 1, 2, 3, 4 };
-
     public TieFormattingProblem(
         TieItem tie,
         double startX,

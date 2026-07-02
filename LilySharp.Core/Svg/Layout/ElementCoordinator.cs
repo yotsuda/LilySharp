@@ -621,7 +621,13 @@ public sealed class ElementCoordinator
                     {
                         shift = Math.Ceiling(Math.Abs(shift) * 2) / 2.0 * Math.Sign(shift);
                         var key = new RestShiftKey(measureIndex, itemIdx);
-                        shifts[key] = shift;
+                        // Several beams can cross the same rest: keep the shift
+                        // with the greatest clearance need. Last-writer-wins let
+                        // whichever beam was iterated last move the rest back
+                        // toward a beam it had already been shifted away from.
+                        if (!shifts.TryGetValue(key, out var existing)
+                            || Math.Abs(shift) > Math.Abs(existing))
+                            shifts[key] = shift;
                     }
                 }
             }
