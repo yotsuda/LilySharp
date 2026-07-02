@@ -26,7 +26,13 @@ namespace LilySharp.Core.Svg.Collector;
 public sealed record StaffSpec(
     ClefType Clef,
     string VoiceName,
-    string? InstrumentName = null
+    string? InstrumentName = null,
+    /// <summary>Hara-kiri: hide this staff in systems where it only rests
+    /// (part property <c>removeEmpty true</c> — LP RemoveEmptyStaves).</summary>
+    bool RemoveEmpty = false,
+    /// <summary>Hara-kiri including the FIRST system (part property
+    /// <c>removeEmpty all</c> — LP RemoveAllEmptyStaves).</summary>
+    bool RemoveFirst = false
 );
 
 /// <summary>
@@ -156,7 +162,11 @@ public sealed record RenderSpec(
                     var singleStaff = Staff.Create(
                         single.Staff.Clef,
                         getVoices(single.Staff.VoiceName),
-                        single.Staff.InstrumentName);
+                        single.Staff.InstrumentName) with
+                    {
+                        RemoveEmpty = single.Staff.RemoveEmpty,
+                        RemoveFirst = single.Staff.RemoveFirst,
+                    };
                     yield return StaffGroup.CreateSingle(singleStaff);
                     break;
 
@@ -165,7 +175,11 @@ public sealed record RenderSpec(
                         .Select(s => Staff.Create(
                             s.Clef,
                             getVoices(s.VoiceName),
-                            s.InstrumentName))
+                            s.InstrumentName) with
+                        {
+                            RemoveEmpty = s.RemoveEmpty,
+                            RemoveFirst = s.RemoveFirst,
+                        })
                         .ToArray();
                     yield return StaffGroup.CreateGrandStaff(staves);
                     break;

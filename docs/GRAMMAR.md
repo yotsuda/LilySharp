@@ -146,20 +146,27 @@ Mode           = 'major' | 'minor' | 'dorian' | 'phrygian'
 
 PartDecl       = 'part' , Identifier , [ PartBody ] ;
 PartBody       = '{' , { PartProperty } , '}' ;
-PartProperty   = 'clef'       , ClefName
-               | 'instrument' , ( Identifier | String )
-               | 'channel'    , Integer
-               | 'octave'     , ( 'absolute' | 'relative' )
-               | 'transpose'  , PitchToken
-               | 'tuning'     , Identifier ;
+PartProperty   = 'clef'        , ClefName
+               | 'instrument'  , ( Identifier | String )
+               | 'channel'     , Integer
+               | 'octave'      , ( 'absolute' | 'relative' )
+               | 'transpose'   , PitchToken
+               | 'tuning'      , Identifier
+               | 'removeEmpty' , ( 'true' | 'all' | 'false' ) ;
 
 ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' ;
+
+(* removeEmpty (hara-kiri): hide this part's staff in systems where it only
+   rests. 'true' keeps the FIRST system (LilyPond \RemoveEmptyStaves);
+   'all' hides the first system too (\RemoveAllEmptyStaves). A system stays
+   visible if ANY voice of the staff plays. Default: never hide. *)
 
 (* Examples:
 
    part melody                        // minimal
    part melody { clef treble }        // bare attribute, no colon
    part bass   { clef bass  instrument "Cello" channel 2 }
+   part fill   { clef bass  removeEmpty all }   // hara-kiri staff
 *)
 
 ================================================================================

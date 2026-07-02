@@ -326,6 +326,17 @@ public class SvgSnapshotTests
         // its own note (beat 2), where the upper staff has no onset — not on the
         // upper voice's same-index note. Verified vs LilyPond \tempo.
         yield return new object[] { "test/tempo-grandstaff" };
+        // Hara-kiri via the part property `removeEmpty all` (RemoveAllEmptyStaves):
+        // the bass staff hides in rest-only systems, shows when playing (its
+        // dynamic at ITS per-system Y), and a SECOND voice keeps it alive while
+        // the primary voice rests. Guards the hidden-staff content skip.
+        yield return new object[] { "test/hara-kiri" };
+        // Ossia staff (reduced-size alternative passage) — the fixture existed
+        // but was referenced by no test at all. Pins CURRENT behavior: the
+        // ossia renders in render-spec order (here: below the main staff) as
+        // its own reduced-scale group. Known gap vs LP: no above-the-staff,
+        // measure-aligned ossia placement yet.
+        yield return new object[] { "test/ossia" };
     }
 
     /// <summary>
@@ -388,10 +399,22 @@ public class SvgSnapshotTests
 
             if (!UpdateSnapshots)
             {
-                // First run — baseline created, skip assertion
+                // First run — baseline created. A brand-new baseline still
+                // needs eyes: put its rendering in the visual-diff report
+                // (baseline == actual, 0 diff) so it can be inspected as a PNG
+                // before being committed.
+                string visual;
+                try
+                {
+                    visual = "Review the rendering: " + VisualDiffReport.Record(sampleName, svg, svg);
+                }
+                catch (Exception ex)
+                {
+                    visual = $"(rendering review unavailable: {ex.GetType().Name})";
+                }
                 Assert.Fail(
-                    $"Snapshot baseline created: {snapshotFileName}. " +
-                    "Re-run the test to verify against the new baseline.");
+                    $"Snapshot baseline created: {snapshotFileName}. {visual}\n" +
+                    "Inspect it, then re-run to verify against the new baseline.");
             }
             return;
         }

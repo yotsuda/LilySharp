@@ -240,6 +240,9 @@ c4 d e f |
   After `$phrase`, the next note is relative to the phrase's last note.
 - Part header attributes (`clef`/`key`/`time`/`tempo`) are written **bare, no `=`**, like
   the top-level commands. Override/revert use `=`.
+- `removeEmpty true|all` in a part header hides that part's staff in systems where it only
+  rests (hara-kiri). `true` keeps the first system (LP `\RemoveEmptyStaves`), `all` hides it
+  too (`\RemoveAllEmptyStaves`); any playing voice keeps the staff visible.
 - Identifiers (parts, phrases, sections) may use any Unicode letters: `phrase 動機 { ... }`.
 - Comments: `// line` and `/* block */`.
 - `@name` is the canonical annotation prefix. `\name` annotations are rejected (use `@`);

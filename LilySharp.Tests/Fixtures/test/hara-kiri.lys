@@ -1,0 +1,36 @@
+// Hara-kiri (removeEmpty) — the bass staff hides in systems where it only
+// rests. `removeEmpty all` = LP \RemoveAllEmptyStaves (the first system hides
+// too); `removeEmpty true` would keep the first system (\RemoveEmptyStaves).
+// System shapes exercised: hidden / playing (with a bass-staff dynamic) /
+// kept alive by a SECOND voice while the primary voice rests / hidden again.
+title "Hara-kiri"
+composer "Lily#"
+
+tempo 120
+time 4/4
+key c major
+
+part rh { clef treble }
+part lh { clef bass removeEmpty all }
+
+section Main {
+  rh {
+    c4 d e f | g4 a b c |
+    break
+    c,4 d e f | g4 a b c |
+    break
+    e,4 f g a | b4 a g f |
+    break
+    c4 d e f | g2 g |
+  }
+  lh {
+    r1 | r1 |
+    c4 d e f | g4@f a b c |
+    voice { r1 | r1 | } voice { c4 e g e | c4 e g e | }
+    r1 | r1 |
+  }
+}
+
+structure { Main }
+
+score "x" { grandStaff { staff rh staff lh } }

@@ -215,7 +215,17 @@ public static class RenderSpecParser
         ClefType clef = explicitClef ?? GetPartClef(staff, voiceName) ?? ClefType.Treble;
         string? instrumentName = GetPartProperty(staff, voiceName, "name")
                               ?? GetPartProperty(staff, voiceName, "instrument");
-        return new StaffSpec(clef, voiceName, instrumentName);
+
+        // Hara-kiri, as a part property: `removeEmpty true` hides the staff in
+        // systems where it only rests but keeps it in the FIRST system
+        // (LP \RemoveEmptyStaves); `removeEmpty all` hides the first system too
+        // (LP \RemoveAllEmptyStaves). Anything else (or absent) keeps the staff.
+        // LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves /
+        // RemoveAllEmptyStaves set VerticalAxisGroup.remove-empty (+ remove-first).
+        string? removeEmpty = GetPartProperty(staff, voiceName, "removeempty")?.ToLowerInvariant();
+        return new StaffSpec(clef, voiceName, instrumentName,
+            RemoveEmpty: removeEmpty is "true" or "all",
+            RemoveFirst: removeEmpty is "all");
     }
 
     private static TabStaffSpec? ParseTab(TabRenderSyntax tab)

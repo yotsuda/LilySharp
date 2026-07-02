@@ -107,6 +107,35 @@ public class HaraKiriTests
         Assert.False(HaraKiri.IsStaffEmpty(staff, 0, 1));
     }
 
+    // --- removeEmpty part property (grammar → Staff flags) ---
+
+    [Theory]
+    [InlineData("", false, false)]                    // absent: never hide
+    [InlineData("removeEmpty true", true, false)]     // LP \RemoveEmptyStaves
+    [InlineData("removeEmpty all", true, true)]       // LP \RemoveAllEmptyStaves
+    [InlineData("removeEmpty false", false, false)]   // explicit off
+    public void RemoveEmptyPartProperty_MapsToStaffFlags(
+        string property, bool removeEmpty, bool removeFirst)
+    {
+        string src = $$"""
+            time 4/4
+            key c major
+            part rh { clef treble }
+            part lh { clef bass {{property}} }
+            section Main { rh { c4 d e f | } lh { r1 | } }
+            structure { Main }
+            score "x" { grandStaff { staff rh staff lh } }
+            """;
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
+        var spec = Core.Svg.Collector.RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        var multi = new Core.Svg.Collector.MeasureCollector().CollectMultiStaff(tree, spec!);
+
+        var lh = multi.StaffGroups[0].Staves[1];
+        Assert.Equal(removeEmpty, lh.RemoveEmpty);
+        Assert.Equal(removeFirst, lh.RemoveFirst);
+    }
+
     // --- ShouldHideStaff tests ---
 
     [Fact]
