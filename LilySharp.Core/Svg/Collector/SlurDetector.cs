@@ -57,15 +57,21 @@ public sealed class SlurDetector
                     {
                         var (startMeasureIdx, startItemIdx, startItem) = openSlurs.Pop();
 
-                        // Single voice: the slur curves OPPOSITE the stem. Polyphony:
-                        // the voice fixes the direction regardless of stem — the upper
+                        // Single voice: default DOWN, flipped UP when ANY covered
+                        // stem points DOWN — not just the start note's (a slur from
+                        // a stem-up note to a stem-down note goes UP, or it curves
+                        // straight into the later note's stem side). Polyphony: the
+                        // voice fixes the direction regardless of stems — the upper
                         // voice curves UP, the lower voice DOWN, so the two voices'
                         // slurs stay clear of each other.
+                        // LILYPOND-REF: lily/slur.cc Slur::calc_direction — d = DOWN,
+                        //   set UP if any non-rest note column has direction DOWN.
                         // LILYPOND-REF: ly/engraver-init.ly \voiceOne/\voiceTwo set
                         //   Slur.direction = UP / DOWN (voiceThree/Four alternate).
                         bool curveUp = score.Voices.Length > 1
                             ? (v % 2 == 0)
-                            : !StemUpOf(startItem);
+                            : AnyCoveredStemDown(measures,
+                                startMeasureIdx, startItemIdx, measureIdx, itemIdx);
 
                         slurs.Add(new SlurItem(
                             // For a chord the slur anchors at the head on the curve side.
@@ -95,11 +101,29 @@ public sealed class SlurDetector
         }
     }
 
-    // NoteItem/ChordItem.StemUp: true = stem visually UP, false = DOWN.
-    private static bool StemUpOf(MusicItem item) => item switch
+    // True when any note/chord covered by the slur (inclusive range) has a
+    // DOWN stem — rests are transparent, like LP's !has_rests columns.
+    // LILYPOND-REF: lily/slur.cc Slur::calc_direction.
+    private static bool AnyCoveredStemDown(
+        ImmutableArray<Measure> measures,
+        int startMeasureIdx, int startItemIdx, int endMeasureIdx, int endItemIdx)
     {
-        NoteItem n => n.StemUp,
-        ChordItem c => c.StemUp,
-        _ => false
-    };
+        for (int mi = startMeasureIdx; mi <= endMeasureIdx && mi < measures.Length; mi++)
+        {
+            var items = measures[mi].Items;
+            int from = mi == startMeasureIdx ? startItemIdx : 0;
+            int to = mi == endMeasureIdx ? Math.Min(endItemIdx, items.Length - 1) : items.Length - 1;
+            for (int ii = from; ii <= to; ii++)
+            {
+                switch (items[ii])
+                {
+                    case NoteItem n when !n.StemUp:
+                        return true;
+                    case ChordItem c when !c.StemUp:
+                        return true;
+                }
+            }
+        }
+        return false;
+    }
 }

@@ -494,11 +494,16 @@ public sealed class TieFormattingProblem
                     _details.TieTieCollisionDistance,
                     Math.Abs(configEdgeY - existingEdgeY));
 
-            // Monotonicity: edges and centers must be ordered
+            // Monotonicity: edges and centers must be ordered. Ties are emitted
+            // bottom→top, so each new tie must sit strictly ABOVE the previous
+            // one. LP (Y-up) penalizes `edge <= last_edge`; our Y is device
+            // (down-positive), where "above" is the SMALLER value — so the
+            // violated order here is >=, not <= (<= penalized exactly the
+            // correct stacking and rewarded the inverted one).
             // LILYPOND-REF: tie-formatting-problem.cc:868-873
-            if (configEdgeY <= existingEdgeY)
+            if (configEdgeY >= existingEdgeY)
                 config.Demerits += _details.TieColumnMonotonicityPenalty;
-            if (configCenterY <= existingCenterY)
+            if (configCenterY >= existingCenterY)
                 config.Demerits += _details.TieColumnMonotonicityPenalty;
         }
     }

@@ -204,7 +204,7 @@ public static class TupletBracketEngraver
             double endX = measureLayout.X + endOffset + stemAttach + halfStem;
 
             // LILYPOND-REF: scm/define-grobs.scm bracket-visibility = if-no-beam
-            bool showBracket = !AreAllNotesBeamed(tuplet, beamGroups);
+            bool showBracket = !AreAllNotesBeamed(tuplet, beamGroups, tupMeasures);
 
             // LILYPOND-REF: lily/tuplet-bracket.cc:200-350 slope calculation
             // Calculate slope based on first/last note staff positions
@@ -218,7 +218,7 @@ public static class TupletBracketEngraver
             // when there is no bracket.
             if (!showBracket && !beamLayouts.IsDefaultOrEmpty)
             {
-                var beam = FindCoveringBeam(beamLayouts, tuplet);
+                var beam = FindCoveringBeam(beamLayouts, tuplet, tupMeasures);
                 if (beam != null)
                 {
                     isStemUp = beam.Group.StemUp;
@@ -333,25 +333,64 @@ public static class TupletBracketEngraver
     /// LILYPOND-REF: scm/define-grobs.scm TupletBracket.bracket-visibility = if-no-beam
     /// LILYPOND-REF: lily/tuplet-bracket.cc:79-95 bracket visibility check
     /// </remarks>
-    private static bool AreAllNotesBeamed(TupletBracketItem tuplet, ImmutableArray<BeamGroup> beamGroups)
+    private static bool AreAllNotesBeamed(TupletBracketItem tuplet,
+        ImmutableArray<BeamGroup> beamGroups, ImmutableArray<Measure> tupMeasures)
     {
         if (beamGroups.IsDefaultOrEmpty)
             return false;
 
-        // Find a beam group in the same measure that covers the entire tuplet range
+        // Find the tuplet's OWN beam: one group covering every note of the range.
         foreach (var beam in beamGroups)
         {
-            if (beam.MeasureIndex != tuplet.MeasureIndex)
-                continue;
-
-            int beamEnd = beam.StartIndex + beam.Members.Length - 1;
-
-            // Check if the beam completely covers the tuplet's note range
-            if (beam.StartIndex <= tuplet.StartNoteIndex && beamEnd >= tuplet.EndNoteIndex)
+            if (Covers(beam, tuplet, tupMeasures))
                 return true;
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// True when <paramref name="beam"/> is the tuplet's own beam: same measure,
+    /// same VOICE, and its member set contains every NOTE slot of the tuplet's
+    /// range (rests are transparent — a manual beam legitimately spans them).
+    /// The old span check (StartIndex + Members.Length - 1) assumed contiguous
+    /// members, and no voice check meant ANOTHER voice's beam at the same item
+    /// range could hide this voice's bracket.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/tuplet-bracket.cc:79-95 — the if-no-beam visibility
+    /// check consults the bracket's OWN beam (the beam of the stems it
+    /// encompasses), never a different voice's.
+    /// </remarks>
+    private static bool Covers(BeamGroup beam, TupletBracketItem tuplet,
+        ImmutableArray<Measure> tupMeasures)
+    {
+        if (beam.MeasureIndex != tuplet.MeasureIndex || beam.VoiceIndex != tuplet.VoiceIndex)
+            return false;
+
+        var members = new HashSet<int>();
+        foreach (var m in beam.Members)
+            if (m.ResolveMeasureIndex(beam.MeasureIndex) == tuplet.MeasureIndex)
+                members.Add(m.ItemIndex);
+
+        var items = !tupMeasures.IsDefaultOrEmpty && tuplet.MeasureIndex < tupMeasures.Length
+            ? tupMeasures[tuplet.MeasureIndex].Items
+            : default;
+
+        bool sawNote = false;
+        for (int i = tuplet.StartNoteIndex; i <= tuplet.EndNoteIndex; i++)
+        {
+            // Without item info every slot is treated as a note (conservative:
+            // more slots must be members before the bracket may hide).
+            bool isNote = items.IsDefault || i >= items.Length
+                || items[i] is NoteItem or ChordItem;
+            if (!isNote)
+                continue;
+            sawNote = true;
+            if (!members.Contains(i))
+                return false;
+        }
+        return sawNote;
     }
 
     /// <summary>
@@ -364,14 +403,12 @@ public static class TupletBracketEngraver
     /// to avoid excessively tilted brackets.
     /// </remarks>
     private static BeamLayout? FindCoveringBeam(
-        ImmutableArray<BeamLayout> beamLayouts, TupletBracketItem tuplet)
+        ImmutableArray<BeamLayout> beamLayouts, TupletBracketItem tuplet,
+        ImmutableArray<Measure> tupMeasures)
     {
         foreach (var beam in beamLayouts)
         {
-            int beamEnd = beam.Group.StartIndex + beam.Group.Members.Length - 1;
-            if (beam.Group.MeasureIndex == tuplet.MeasureIndex
-                && beam.Group.StartIndex <= tuplet.StartNoteIndex
-                && beamEnd >= tuplet.EndNoteIndex)
+            if (Covers(beam.Group, tuplet, tupMeasures))
                 return beam;
         }
         return null;
