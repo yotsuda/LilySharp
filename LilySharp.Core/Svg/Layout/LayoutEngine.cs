@@ -117,6 +117,7 @@ public sealed class LayoutEngine
         // extents (see EnrichExtentsWithAnnotationProtrusions). These
         // layouts are discarded; the final pass below recomputes them
         // against the re-spaced systems.
+        List<(VerticalSkyline up, VerticalSkyline down)>? pagingSkylines = perSystemSkylines;
         {
             var prelimSystems = systems.ToImmutableArray();
             var prelimBeams = _elementCoordinator.LayoutBeams(score, prelimSystems);
@@ -136,11 +137,14 @@ public sealed class LayoutEngine
                 prelimAnn,
                 _elementCoordinator.LayoutTies(score, prelimSystems),
                 _elementCoordinator.LayoutSlurs(score, prelimSystems));
+            pagingSkylines = AugmentSkylinesForPaging(
+                perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
+                prelimAnn.VoltaBrackets, prelimSystems);
         }
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, _options.StaffHeight,
-            perSystemSkylines, perSystemBands: perSystemBands);
+            pagingSkylines, perSystemBands: perSystemBands);
 
         var beamLayouts = _elementCoordinator.LayoutBeams(score, systemsArray);
         var tieLayouts = _elementCoordinator.LayoutTies(score, systemsArray);
@@ -352,6 +356,7 @@ public sealed class LayoutEngine
         // Preliminary annotation pass (see the single-staff path): real
         // protrusions of brackets/marks/voltas/dynamics/ties/slurs join the
         // spacing extents before the page Y is fixed.
+        List<(VerticalSkyline up, VerticalSkyline down)>? pagingSkylines = perSystemSkylines;
         {
             var prelimSystems = systems.ToImmutableArray();
             var prelimStaff = score.PrimaryContentStaff;
@@ -400,11 +405,14 @@ public sealed class LayoutEngine
                 staffVoices: prelimStaff.Voices);
             EnrichExtentsWithAnnotationProtrusions(perSystemExtents, prelimSystems,
                 prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
+            pagingSkylines = AugmentSkylinesForPaging(
+                perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
+                prelimAnn.VoltaBrackets, prelimSystems);
         }
 
         var (pages, systemsArray) = CreatePages(
             systems.ToImmutableArray(), headerHeight, perSystemExtents, systemHeight,
-            perSystemSkylines, perSystemHeights, perSystemBands);
+            pagingSkylines, perSystemHeights, perSystemBands);
 
         // Calculate beams/ties/slurs/glissandos per staff
         var allBeamLayouts = new List<BeamLayout>();
@@ -918,6 +926,18 @@ public sealed class LayoutEngine
             Add(cn.MeasureIndex, cn.Y - 0.9, cn.Y + 0.3);
         foreach (var tr in ann.TrillSpanners)
             Add(tr.StartMeasureIndex, tr.Y - GlyphMetrics.OrnTrillGlyph.Top, tr.Y + 0.25);
+        // Figured-bass rows hang below the staff; a skyline-dropped row must
+        // widen the gap to the NEXT system, or its digits print through that
+        // system's volta boxes / high notes (showcase/04).
+        foreach (var fb in ann.FiguredBasses)
+            Add(fb.MeasureIndex,
+                fb.Y - FiguredBassEngraver.FigureTopExtent,
+                fb.Y + (fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5);
+        // Note-bound scripts (a fermata over the top staff, a staccatissimo
+        // under the bottom) extend the system silhouette like any other
+        // annotation; Ink is the glyph's real box about its anchor (Y-up).
+        foreach (var a in ann.Articulations)
+            Add(a.MeasureIndex, a.Y - a.Ink.Top, a.Y - a.Ink.Bottom);
         foreach (var d in ann.Dynamics)
             Add(d.MeasureIndex, d.Y - 1.2, d.Y + 0.3);
         foreach (var h in ann.Hairpins)
@@ -1025,6 +1045,64 @@ public sealed class LayoutEngine
             }
         }
         return augmented;
+    }
+
+    /// <summary>
+    /// Paging skylines: the per-system skylines plus the annotation ink that
+    /// hangs outside the staves — note-bound scripts (both directions) and
+    /// figured-bass rows. The optimal page-stacking path spaces systems by
+    /// skyline DISTANCE (PageLayouter), so anything missing from these
+    /// silhouettes can print into the neighbouring system (showcase/04:
+    /// figured-bass digits through the next system's volta boxes).
+    /// LILYPOND-REF: lily/page-layout-problem.cc build_system_skyline — LP's
+    /// paging skylines contain every grob of the system.
+    /// </summary>
+    private static List<(VerticalSkyline up, VerticalSkyline down)>? AugmentSkylinesForPaging(
+        List<(VerticalSkyline up, VerticalSkyline down)>? skylines,
+        ImmutableArray<ArticulationLayout> articulations,
+        ImmutableArray<FiguredBassLayout> figuredBasses,
+        ImmutableArray<VoltaBracketLayout> voltaBrackets,
+        ImmutableArray<SystemLayout> systems)
+    {
+        if (skylines == null)
+            return null;
+        var result = AugmentSkylinesWithScripts(skylines, articulations, systems)!.ToList();
+
+        var measureToSystem = new Dictionary<int, int>();
+        for (int s = 0; s < systems.Length && s < result.Count; s++)
+            foreach (var m in systems[s].Measures)
+                measureToSystem[m.MeasureIndex] = s;
+
+        foreach (var fb in figuredBasses)
+        {
+            if (!measureToSystem.TryGetValue(fb.MeasureIndex, out int s))
+                continue;
+            double half = FiguredBassEngraver.MinFigureBoxWidth;
+            double top = fb.Y - FiguredBassEngraver.FigureTopExtent;
+            double bottom = fb.Y
+                + (fb.FigureTexts.Length - 1) * FiguredBassEngraver.FigureSpacing + 0.5;
+            var down = new VerticalSkyline(VerticalDirection.Down);
+            down.Merge(result[s].down);
+            down.Merge(VerticalSkyline.FromBox(
+                fb.X - half, fb.X + half, bottom, top, VerticalDirection.Down));
+            result[s] = (result[s].up, down);
+        }
+
+        // Volta brackets and their "End1"-style label boxes rise above the
+        // staff: without them in the UP silhouette, a previous system's
+        // figured-bass digits settle onto the boxes.
+        foreach (var v in voltaBrackets)
+        {
+            if (!measureToSystem.TryGetValue(v.StartMeasureIndex, out int s))
+                continue;
+            var up = new VerticalSkyline(VerticalDirection.Up);
+            up.Merge(result[s].up);
+            up.Merge(VerticalSkyline.FromBox(
+                v.StartX, v.EndX, v.Y + 1.6, v.Y - 0.1, VerticalDirection.Up));
+            result[s] = (result[s].up, result[s].down);
+            result[s] = (up, result[s].down);
+        }
+        return result;
     }
 
     private static void AugmentExtentsWithLooseLines(

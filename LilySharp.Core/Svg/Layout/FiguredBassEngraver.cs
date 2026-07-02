@@ -52,7 +52,7 @@ public static class FiguredBassEngraver
     // LILYPOND-REF: scm/define-grobs.scm:362 BassFigure defaults
     private const double StaffPadding = 1.0;   // Padding below staff bottom
     // LILYPOND-REF: scm/define-grobs.scm:369 (baseline-skip . 1.6)
-    private const double FigureSpacing = 1.6;  // Vertical spacing between stacked figures
+    internal const double FigureSpacing = 1.6;  // Vertical spacing between stacked figures
     private const double BelowStaffY = 5.0;    // Y offset below staff (staff bottom = 4.0)
 
     /// <summary>
@@ -63,8 +63,8 @@ public static class FiguredBassEngraver
     // was roughly half the real ascent, so a skyline-dropped row could
     // still print its digit tops through the content above (e.g. a
     // staccatissimo dagger under a stem).
-    private const double FigureTopExtent = 1.5;
-    private const double MinFigureBoxWidth = 0.8;
+    internal const double FigureTopExtent = 1.5;
+    internal const double MinFigureBoxWidth = 0.8;
     // relatedstaff-spacing padding + the distance→drop math live in SkylineDrop (shared with lyrics).
 
     public static ImmutableArray<FiguredBassLayout> Calculate(
