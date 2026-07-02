@@ -48,10 +48,6 @@ fonts/*
 !editors/**/*.svg
 !LilySharp.Tests/Snapshots/**/*.svg
 
-# Temporary sample files
-samples/test*.lys
-samples/simple-test.lys
-samples/feature-*.lys
 
 # VS Code extension build artifacts
 editors/vscode/*.vsix
@@ -77,9 +73,8 @@ vstest_diag.*
 # Output folder (generated files)
 output/
 
-# Local .lys playground — not snapshot fixtures (those live under
-# LilySharp.Tests/Fixtures/), so edits here must not show up as repo changes.
-samples/
+# Public samples in samples/ are TRACKED; the local .lys playground moved to
+# scratch/samples-playground/.
 
 # Scratch area for throwaway .lys / demo renders — never git-managed.
 scratch/

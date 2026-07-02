@@ -1,0 +1,70 @@
+// Greensleeves — English traditional (16th century), public domain.
+//
+// ONE source, TWO scores:
+//   "greensleeves"       — melody staff with chord symbols aligned above it
+//                          (the nameless `chords { }` block) and verse lyrics
+//   "greensleeves-sheet" — a staff-less lead sheet (chord grid + lyrics rows)
+title "Greensleeves"
+composer "Traditional"
+tempo 60
+time 6/8
+key a minor
+octave absolute
+
+part melody { clef treble }
+
+section Verse {
+  melody {
+    partial 8
+    a8 |
+    c'4 d'8 e'8. f'16 e'8 |
+    d'4 b8 g8. a16 b8 |
+    c'4 a8 a8. gis16 a8 |
+    b4 gis8 e4 a8 |
+    c'4 d'8 e'8. f'16 e'8 |
+    d'4 b8 g8. a16 b8 |
+    c'8. b16 a8 gis8. fis16 gis8 |
+    a4. a4 r8 |
+  }
+  chords {
+    |
+    a2.:m | g2. | a2.:m | e2. |
+    a2.:m | g2. | a4.:m e4. | a2.:m |
+  }
+  lyrics {
+    A- |
+    las my love ~ you | do me wrong ~ to |
+    cast me off ~ dis- | cour- teous- ly and |
+    I have lov- ~ ed | you so long ~ de- |
+    light- ~ ing in your com- | pa- ny |
+  }
+}
+
+section Chorus {
+  melody {
+    g'4. g'8. fis'16 e'8 |
+    d'4 b8 g8. a16 b8 |
+    c'4 a8 a8. gis16 a8 |
+    b4 gis8 e4. |
+    g'4. g'8. fis'16 e'8 |
+    d'4 b8 g8. a16 b8 |
+    c'8. b16 a8 gis8. fis16 gis8 |
+    a4. a4. |
+  }
+  chords {
+    c2. | g2. | a2.:m | e2. |
+    c2. | g2. | a4.:m e4. | a2.:m |
+  }
+  lyrics {
+    Green- sleeves ~ was | all my joy ~ Green- |
+    sleeves was my ~ de- | light ~ Green- |
+    sleeves was ~ my | heart of gold ~ and |
+    who but my la- ~ dy | Green- sleeves |
+  }
+}
+
+structure { Verse Chorus }
+
+score "greensleeves" {
+  staff melody
+}

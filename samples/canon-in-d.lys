@@ -1,0 +1,70 @@
+// Canon in D — Johann Pachelbel (1653–1706), public domain.
+// Keyboard reduction: the ground bass cycles unchanged underneath
+// progressively livelier variations (an excerpt in the original's spirit).
+//
+// Lily# features on display:
+//   phrase / $ref    — the 4-bar ground is written ONCE and cycled 8 times
+//   octave absolute  — with the bass re-anchored to C3 (part { octave 3 })
+//   R1               — whole-measure rests while the ground establishes itself
+title "Canon in D"
+composer "Johann Pachelbel"
+tempo 56
+time 4/4
+key d major
+octave absolute
+
+part violin { clef treble }
+part continuo { clef bass octave 3 }
+
+// The immortal ground: D  A  | Bm  F#m | G  D  | G  A
+phrase ground {
+  d2 a,2 | b,2 fis,2 | g,2 d2 | g,2 a,2 |
+}
+
+section Canon {
+  violin {
+    // Cycle 1: the ground alone.
+    R1 | R1 | R1 | R1 |
+    // Cycle 2: the canon enters in half notes.
+    fis'2@p e'2 | d'2 cis'2 | b2 a2 | b2 cis'2 |
+    // Cycle 3: quarters, circling each chord.
+    d'4 fis' a' g' | fis' d' fis' e' | d' b d' a | g b a g |
+    // Cycle 4: the famous descending quarters.
+    fis'4 e' d' cis' | b a b cis' | d' cis' b a | g fis g e |
+    // Cycle 5: broken-chord eighths.
+    d'8 fis' a' fis' cis' e' a' e' | b d' fis' d' a cis' fis' cis' |
+    b8 d' g' d' a d' fis' d' | b d' g' d' a cis' e' cis' |
+    // Cycle 6: a descending-third sequence in eighths.
+    a'8@mf fis' d' fis' a' e' cis' e' | fis' d' b d' fis' cis' a cis' |
+    g'8 d' b d' fis' d' a d' | g' d' b d' e' cis' a cis' |
+    // Cycle 7: sixteenth-note figuration.
+    fis'16 g' a' fis' d' e' fis' d' cis' d' e' cis' a b cis' a |
+    d'16 e' fis' d' b cis' d' b a b cis' a fis g a fis |
+    b16 cis' d' b g a b g fis g a fis d e fis d |
+    b16 cis' d' b g a b g cis' d' e' cis' a b cis' a |
+    // Cycle 8: the canon melody returns to close.
+    fis'2@f e'2 | d'2 cis'2 | b2 a2 | b2 cis'2 |
+    // Final cadence.
+    <d' fis' a'>1@fermata |
+  }
+  continuo {
+    $ground
+    $ground
+    $ground
+    $ground
+    $ground
+    $ground
+    $ground
+    $ground
+    d1 |
+  }
+}
+
+structure { Canon }
+
+score "canon-in-d" {
+  grandStaff {
+    staff violin
+    staff continuo
+  }
+}
