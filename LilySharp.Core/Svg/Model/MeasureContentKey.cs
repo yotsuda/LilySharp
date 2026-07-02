@@ -74,13 +74,18 @@ namespace LilySharp.Core.Svg.Model;
 /// silently drift out of the key (§9 drift hazard). Only proven-positional fields
 /// are excluded; everything else is included, so the bias is toward over- (never
 /// under-) sensitivity — a missed reuse costs a little speed, a false reuse would
-/// cost correctness. The hash is deterministic within a process (each element folds
-/// its own <see cref="object.GetHashCode()"/>, per-process randomized) — sufficient
-/// for an in-session cache and same-process tests. The key is a 64-bit FNV-1a fold
-/// (<see cref="Hash64"/>): whole-layout reuse and the per-system cache both decide
-/// equality by comparing this value, so the collision probability (~2⁻⁶⁴ between two
-/// distinct measure contents) — not just the incremental==full harness — is what
-/// bounds a false reuse. A missed reuse (over-sensitivity) only costs speed.
+/// cost correctness. The hash is deterministic within a process (strings fold their
+/// chars; other elements fold their own <see cref="object.GetHashCode()"/>,
+/// per-process randomized) — sufficient for an in-session cache and same-process
+/// tests. The key is a 64-bit FNV-1a fold (<see cref="Hash64"/>): whole-layout reuse
+/// and the per-system cache both decide equality by comparing this value, so its
+/// collision probability — not just the incremental==full harness — is what bounds
+/// a false reuse. Strings and composed per-item sub-hashes fold at full 64-bit
+/// width and int-sized leaves fold losslessly, so the bound is ~2⁻⁶⁴ — EXCEPT where
+/// the only differing leaf is itself a 32-bit <c>GetHashCode</c> (records/structs
+/// such as <see cref="MeasureContext"/>, doubles): a single-leaf edit there
+/// collides at that hash's ~2⁻³². A missed reuse (over-sensitivity) only costs
+/// speed.
 /// </para>
 /// </remarks>
 public readonly record struct MeasureContentKey(long Hash)
@@ -421,13 +426,14 @@ public readonly record struct MeasureContentKey(long Hash)
         }
     }
 
-    // A 64-bit FNV-1a fold. Each element contributes its own 32-bit GetHashCode
-    // (per-process randomized, like System.HashCode), but the running accumulator is
-    // 64-bit, so two DISTINCT measure contents collide with probability ~2⁻⁶⁴ rather
-    // than the ~2⁻³² a single System.HashCode would give — and that probability, not
-    // an exact content re-check, is what the reuse gates ultimately trust. The
-    // `constrained.` call to GetHashCode() means value-type elements (enums, records,
-    // MeasureContext) fold without boxing.
+    // A 64-bit FNV-1a fold. Composed sub-hashes (long) and strings fold at full
+    // 64-bit width, and int-sized leaves (int/enum/bool/char) fold losslessly, so
+    // those never collide below the accumulator's ~2⁻⁶⁴. Every OTHER element
+    // contributes its own 32-bit GetHashCode (per-process randomized, like
+    // System.HashCode) — records/structs (MeasureContext) and doubles keep that
+    // hash's ~2⁻³² collision odds, which is therefore the effective per-leaf bound
+    // (see the class remarks). The `constrained.` call to GetHashCode() means
+    // value-type elements (enums, records, MeasureContext) fold without boxing.
     private struct Hash64
     {
         private const ulong Offset = 14695981039346656037UL;
@@ -438,9 +444,37 @@ public readonly record struct MeasureContentKey(long Hash)
 
         public void Add<T>(T value)
         {
-            uint h = value is null ? 0u : unchecked((uint)value.GetHashCode());
-            _acc = unchecked((_acc ^ h) * Prime);
+            Fold(value is null ? 0u : unchecked((uint)value.GetHashCode()));
         }
+
+        // Folds both halves, so a composed 64-bit sub-hash (HashContent, BucketSpan)
+        // is not collapsed to lo^hi by Int64.GetHashCode on its way into the key.
+        public void Add(long value)
+        {
+            unchecked
+            {
+                Fold((uint)value);
+                Fold((uint)((ulong)value >> 32));
+            }
+        }
+
+        // Folds the chars directly (full width, not the 32-bit string hash), closed
+        // by a length terminator whose high bit no UTF-16 unit can carry — so
+        // adjacent strings cannot re-bracket ("ab"+"c" vs "a"+"bc") and "" stays
+        // distinct from null (which folds a bare 0 via Add<T>).
+        public void Add(string? value)
+        {
+            if (value is null)
+            {
+                Fold(0u);
+                return;
+            }
+            foreach (char c in value)
+                Fold(c);
+            Fold(unchecked((uint)value.Length | 0x8000_0000u));
+        }
+
+        private void Fold(uint h) => _acc = unchecked((_acc ^ h) * Prime);
 
         public readonly long ToHashCode() => unchecked((long)_acc);
     }
