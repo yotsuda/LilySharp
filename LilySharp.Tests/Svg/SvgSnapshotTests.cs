@@ -337,6 +337,10 @@ public class SvgSnapshotTests
         // score-wide spacing columns — barlines and note columns line up with
         // the full-size staff below; only the notation shrinks (magnifyStaff).
         yield return new object[] { "test/ossia" };
+        // Ossia with beamed eighths + a dynamic: beams/stems (drawn by the
+        // system-level beam pass) and the dynamic must scale with the small
+        // staff while staying on the shared spacing columns.
+        yield return new object[] { "test/ossia-beams" };
     }
 
     /// <summary>

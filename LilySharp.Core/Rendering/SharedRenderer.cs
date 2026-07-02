@@ -78,6 +78,13 @@ public static class SharedRenderer
         // because DrawBeams will draw the beam-aware stem instead. Mirrors SvgRenderer's
         // _beamedStemEndYs gating (lily/stem.cc — beamed stem end is computed by beam layout).
         var beamedItems = BuildBeamedItemsSet(layout);
+        // Ossia staves: their annotations (dynamics / scripts) shrink with the
+        // notation, like every grob the magnified staff owns in LP
+        // (ly/music-functions-init.ly magnifyStaff scales fontSize).
+        var ossiaStaves = new HashSet<int>();
+        foreach (var (_, st, gi) in score.EnumerateStaves())
+            if (st.IsOssia)
+                ossiaStaves.Add(gi);
         foreach (var page in layout.Pages)
         {
             var gc = doc.BeginPage(page.Width, page.Height);
@@ -101,8 +108,8 @@ public static class SharedRenderer
                 var measureToSystemY = BuildMeasureToSystemY(page);
                 DrawTies(layout, measureToSystemY, gc);
                 DrawSlurs(layout, measureToSystemY, gc);
-                DrawDynamics(layout, measureToSystemY, gc);
-                DrawArticulations(layout, measureToSystemY, gc);
+                DrawDynamics(layout, measureToSystemY, ossiaStaves, gc);
+                DrawArticulations(layout, measureToSystemY, ossiaStaves, gc);
                 DrawLyrics(layout, measureToSystemY, gc);
                 DrawHairpins(layout, measureToSystemY, gc);
                 DrawOttavaBrackets(layout, measureToSystemY, gc);
@@ -1815,7 +1822,26 @@ public static class SharedRenderer
             double staffY = beam.StaffIndex >= 0
                 ? LayoutUtilities.FindStaffYInSystem(system, beam.StaffIndex)
                 : system.Y;
+
+            // Ossia beams get the same treatment as the ossia staff pass: a
+            // uniform-scale group anchored at the staff's Y with X compensated
+            // back onto the shared columns — stems, beam thickness and slope
+            // all shrink with the notation (LP: the beam belongs to the
+            // magnified staff's grobs). All Ys below are then staff-LOCAL.
+            var beamStaff = beam.StaffIndex >= 0
+                && staffByIndex.TryGetValue(beam.StaffIndex, out var bst) ? bst : null;
+            bool ossiaBeam = beamStaff?.IsOssia == true;
+            IDisposable? ossiaScope = null;
+            IDrawingContext bgc = gc;
+            if (ossiaBeam)
+            {
+                ossiaScope = gc.BeginGroup(new DrawingTransform(0, staffY, OssiaScale, OssiaScale));
+                bgc = new UnscaledXDrawingContext(gc, OssiaScale);
+                staffY = 0;
+            }
             double staffMiddleY = staffY + StaffHeight / 2;
+            try
+            {
 
             // Resolve each member's staff. Cross-staff beams — and the tab
             // mirror of a notation beam — route members to a staff OTHER than
@@ -1867,7 +1893,7 @@ public static class SharedRenderer
             double rightStemX = StemAttachX(grp.Members.Length - 1);
 
             // Primary beam — drawn as a thick filled rectangle (sloped by polygon)
-            DrawBeamSegment(leftStemX, leftBeamY, rightStemX, rightBeamY, gc);
+            DrawBeamSegment(leftStemX, leftBeamY, rightStemX, rightBeamY, bgc);
 
             // Secondary beams (16th+) stack toward the noteheads of the beam's
             // overall direction. Each level draws full segments between adjacent
@@ -1895,7 +1921,7 @@ public static class SharedRenderer
                         // Full segment i -> i+1 (drawn once, from its left member).
                         double xa = StemAttachX(i);
                         double xb = StemAttachX(i + 1);
-                        DrawBeamSegment(xa, BeamYAt(xa), xb, BeamYAt(xb), gc);
+                        DrawBeamSegment(xa, BeamYAt(xa), xb, BeamYAt(xb), bgc);
                     }
                     else if (!leftFull)
                     {
@@ -1904,7 +1930,7 @@ public static class SharedRenderer
                         // the group points forward instead.
                         double x0 = StemAttachX(i);
                         double x1 = x0 + (i > 0 ? -EngravingDefaults.BeamletLength : EngravingDefaults.BeamletLength);
-                        DrawBeamSegment(x0, BeamYAt(x0), x1, BeamYAt(x1), gc);
+                        DrawBeamSegment(x0, BeamYAt(x0), x1, BeamYAt(x1), bgc);
                     }
                     // else (leftFull && !rightFull): this member is the right end of a
                     // full segment already drawn from i-1; nothing more to do.
@@ -1940,13 +1966,20 @@ public static class SharedRenderer
                 }
                 else
                 {
-                    double memberStaffMiddleY = memberStaffIdx >= 0
+                    // Ossia beams never cross staves: every member sits on the
+                    // ossia's own (local) frame.
+                    double memberStaffMiddleY = !ossiaBeam && memberStaffIdx >= 0
                         ? LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx) + StaffHeight / 2
                         : staffMiddleY;
                     headY = memberStaffMiddleY - GetMemberStaffPosition(member, up) * 0.5;
                 }
-                gc.DrawLine(stemX, headY, stemX, beamY,
+                bgc.DrawLine(stemX, headY, stemX, beamY,
                     Color.Black, EngravingDefaults.StemThickness);
+            }
+            }
+            finally
+            {
+                ossiaScope?.Dispose();
             }
         }
     }
@@ -2388,7 +2421,8 @@ public static class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:1298-1327 DynamicText grob
     /// LILYPOND-REF: scm/define-grobs.scm:1311 self-alignment-X = CENTER
     /// </remarks>
-    private static void DrawDynamics(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawDynamics(ScoreLayout layout, Dictionary<int, double> sysY,
+        HashSet<int> ossiaStaves, IDrawingContext gc)
     {
         if (layout.DynamicLayouts.IsDefaultOrEmpty) return;
         double fontSize = FontSize * 0.5;
@@ -2397,8 +2431,12 @@ public static class SharedRenderer
             string text = NormalizeDynamicText(d.Text);
             if (!sysY.TryGetValue(d.MeasureIndex, out var sy)) continue; // other page
             double y = sy + d.Y;
+            // A dynamic on an ossia staff shrinks with its staff's notation.
+            double size = ossiaStaves.Contains(d.StaffIndex)
+                ? fontSize * OssiaScale
+                : fontSize;
             using (gc.Source(d.SourcePosition))
-                gc.DrawText(text, d.X, y, fontSize, "serif",
+                gc.DrawText(text, d.X, y, size, "serif",
                     FontStyle.BoldItalic, TextAnchor.Middle, Color.Black);
         }
     }
@@ -2421,7 +2459,8 @@ public static class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm:2268-2310 Script grob
     /// LILYPOND-REF: lily/script-engraver.cc:92-125 acknowledge_note_head
     /// </remarks>
-    private static void DrawArticulations(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawArticulations(ScoreLayout layout, Dictionary<int, double> sysY,
+        HashSet<int> ossiaStaves, IDrawingContext gc)
     {
         if (layout.ArticulationLayouts.IsDefaultOrEmpty) return;
         foreach (var a in layout.ArticulationLayouts)
@@ -2429,6 +2468,8 @@ public static class SharedRenderer
             if (string.IsNullOrEmpty(a.Glyph)) continue;
             if (!sysY.TryGetValue(a.MeasureIndex, out var sy)) continue; // other page
             double y = sy + a.Y;
+            // A script on an ossia staff shrinks with its staff's notation.
+            double scale = ossiaStaves.Contains(a.StaffIndex) ? a.Scale * OssiaScale : a.Scale;
             // Bend sentinels ("bendFall"/"bendDoit"): a trailing curve, not a glyph.
             if (a.Glyph is "bendFall" or "bendDoit")
             {
@@ -2437,7 +2478,7 @@ public static class SharedRenderer
                 continue;
             }
             using (gc.Source(a.SourcePosition))
-                gc.DrawGlyph(a.Glyph[0], a.X, y, FontSize * a.Scale);
+                gc.DrawGlyph(a.Glyph[0], a.X, y, FontSize * scale);
         }
     }
 

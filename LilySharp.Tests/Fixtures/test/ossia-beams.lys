@@ -1,0 +1,21 @@
+// Ossia with beamed eighths and a dynamic: the ossia notation — beams and
+// stems included — must scale with the small staff while staying on the
+// score-wide spacing columns, exactly like the noteheads.
+key c major
+time 4/4
+
+section Main {
+    melody {
+        c4 d e f | g4 a b c | b4 g f d |
+    }
+    ossia_melody {
+        r1 | c'8@p d e f g f e d | r1 |
+    }
+}
+
+structure { Main }
+
+score "ossia-beams" {
+    staff melody
+    ossia { ossia_melody }
+}
