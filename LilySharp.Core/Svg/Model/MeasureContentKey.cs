@@ -252,7 +252,6 @@ public readonly record struct MeasureContentKey(long Hash)
         BucketSingle(score.Dynamics, buckets);
         BucketSingle(score.Articulations, buckets);
         BucketSingle(score.GraceNotes, buckets);
-        BucketSingle(score.Tremolos, buckets);
         BucketSingle(score.Lyrics, buckets);
         BucketSingle(score.MusicMarks, buckets);
         BucketSingle(score.CustomTexts, buckets);
@@ -281,8 +280,8 @@ public readonly record struct MeasureContentKey(long Hash)
             buckets[i] = new List<long>();
 
         // Same tables as the Score overload, by MeasureIndex across all staves.
-        // (MultiStaffScore has no separate Tremolos table — tremolo lives on the
-        // note item, already folded via the intrinsic key.)
+        // (Tremolo has no side table anywhere — it lives on the note item as
+        // TremoloBeams, already folded via the intrinsic key.)
         BucketSingle(score.Dynamics, buckets);
         BucketSingle(score.Articulations, buckets);
         BucketSingle(score.GraceNotes, buckets);

@@ -97,8 +97,6 @@ public sealed record Score
     /// <summary>Grace notes in the score.</summary>
     public ImmutableArray<GraceNoteItem> GraceNotes { get; }
 
-    /// <summary>Tremolo markings in the score.</summary>
-    public ImmutableArray<TremoloItem> Tremolos { get; }
 
     /// <summary>Lyrics in the score.</summary>
     public ImmutableArray<LyricItem> Lyrics { get; }
@@ -160,7 +158,6 @@ public sealed record Score
         ImmutableArray<DynamicItem>? dynamics = null,
         ImmutableArray<ArticulationItem>? articulations = null,
         ImmutableArray<GraceNoteItem>? graceNotes = null,
-        ImmutableArray<TremoloItem>? tremolos = null,
         ImmutableArray<LyricItem>? lyrics = null,
         ImmutableArray<MusicMarkItem>? musicMarks = null,
         ImmutableArray<CustomTextItem>? customTexts = null,
@@ -176,7 +173,7 @@ public sealed record Score
         ImmutableArray<TrillSpannerItem>? trillSpanners = null,
         HeaderPositions header = default,
         int swingSubdivision = 0)
-        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, tremolos, lyrics, musicMarks, customTexts, voltaBrackets, tupletBrackets, arpeggios, figuredBasses, chordNames, percentRepeats, crossStaffItems, grobOverrides, grobReverts, trillSpanners, header, swingSubdivision)
+        : this(ImmutableArray.Create(voice), timeSignature, keySignature, clef, tempo, title, composer, dynamics, articulations, graceNotes, lyrics, musicMarks, customTexts, voltaBrackets, tupletBrackets, arpeggios, figuredBasses, chordNames, percentRepeats, crossStaffItems, grobOverrides, grobReverts, trillSpanners, header, swingSubdivision)
     {
     }
 
@@ -194,7 +191,6 @@ public sealed record Score
         ImmutableArray<DynamicItem>? dynamics = null,
         ImmutableArray<ArticulationItem>? articulations = null,
         ImmutableArray<GraceNoteItem>? graceNotes = null,
-        ImmutableArray<TremoloItem>? tremolos = null,
         ImmutableArray<LyricItem>? lyrics = null,
         ImmutableArray<MusicMarkItem>? musicMarks = null,
         ImmutableArray<CustomTextItem>? customTexts = null,
@@ -225,7 +221,6 @@ public sealed record Score
         Dynamics = dynamics ?? ImmutableArray<DynamicItem>.Empty;
         Articulations = articulations ?? ImmutableArray<ArticulationItem>.Empty;
         GraceNotes = graceNotes ?? ImmutableArray<GraceNoteItem>.Empty;
-        Tremolos = tremolos ?? ImmutableArray<TremoloItem>.Empty;
         Lyrics = lyrics ?? ImmutableArray<LyricItem>.Empty;
         MusicMarks = musicMarks ?? ImmutableArray<MusicMarkItem>.Empty;
         CustomTexts = customTexts ?? ImmutableArray<CustomTextItem>.Empty;
