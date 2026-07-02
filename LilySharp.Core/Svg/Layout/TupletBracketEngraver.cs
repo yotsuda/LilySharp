@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -42,7 +42,8 @@ public readonly record struct TupletBracketLayout(
     bool IsStemUp,              // Whether bracket goes above (true) or below (false)
     bool ShowBracket,           // False = all notes beamed, show number only
     int SourcePosition,         // For click-to-source mapping
-    int SourceIndex = -1        // F3/B: index into score.TupletBrackets (data-pos resolved at render)
+    int SourceIndex = -1,       // F3/B: index into score.TupletBrackets (data-pos resolved at render)
+    int StaffIndex = -1         // owning staff (ossia shrink); -1 = unknown/test construction
 )
 {
     /// <summary>
@@ -261,7 +262,8 @@ public static class TupletBracketEngraver
                 isStemUp,
                 showBracket,
                 tuplet.SourcePosition,
-                ti
+                ti,
+                StaffIndex: tuplet.StaffIndex
             ));
         }
 

@@ -107,28 +107,29 @@ public static class SharedRenderer
                 // key as "not on this page".
                 var measureToSystemY = BuildMeasureToSystemY(page);
                 var measureToSystem = BuildMeasureToSystem(page);
+                var os = new OssiaShrink(ossiaStaves, measureToSystem);
                 DrawTies(layout, measureToSystemY, ossiaStaves, measureToSystem, gc);
                 DrawSlurs(layout, measureToSystemY, ossiaStaves, measureToSystem, gc);
                 DrawDynamics(layout, measureToSystemY, ossiaStaves, gc);
                 DrawArticulations(layout, measureToSystemY, ossiaStaves, gc);
                 DrawLyrics(layout, measureToSystemY, gc);
-                DrawHairpins(layout, measureToSystemY, gc);
-                DrawOttavaBrackets(layout, measureToSystemY, gc);
+                DrawHairpins(layout, measureToSystemY, os, gc);
+                DrawOttavaBrackets(layout, measureToSystemY, os, gc);
                 DrawVoltaBrackets(layout, measureToSystemY, gc);
-                DrawTupletBrackets(layout, measureToSystemY, gc);
-                DrawTrillSpanners(layout, measureToSystemY, gc);
-                DrawGlissandos(layout, measureToSystemY, gc);
-                DrawArpeggios(layout, measureToSystemY, gc);
-                DrawGraceNotes(layout, measureToSystemY, gc);
+                DrawTupletBrackets(layout, measureToSystemY, os, gc);
+                DrawTrillSpanners(layout, measureToSystemY, os, gc);
+                DrawGlissandos(layout, measureToSystemY, os, gc);
+                DrawArpeggios(layout, measureToSystemY, os, gc);
+                DrawGraceNotes(layout, measureToSystemY, os, gc);
                 DrawChordNames(layout, measureToSystemY, gc);
                 DrawFiguredBass(layout, measureToSystemY, gc);
                 DrawPercentRepeats(layout, measureToSystemY, gc);
                 DrawBarNumbers(layout, measureToSystemY, gc);
                 DrawStanzaNumbers(layout, measureToSystemY, gc);
-                DrawFingerings(layout, measureToSystemY, gc);
+                DrawFingerings(layout, measureToSystemY, os, gc);
                 DrawMusicMarks(layout, measureToSystemY, gc);
                 DrawCustomTexts(layout, measureToSystemY, gc);
-                DrawTextSpanners(layout, measureToSystemY, gc);
+                DrawTextSpanners(layout, measureToSystemY, os, gc);
                 DrawPedalBrackets(layout, measureToSystemY, gc);
                 DrawMultiMeasureRests(layout, measureToSystemY, gc);
                 DrawTieVariants(layout, measureToSystemY, gc);
@@ -2314,6 +2315,45 @@ public static class SharedRenderer
         return map;
     }
 
+    /// <summary>
+    /// Shrinks overlay geometry that belongs to an OSSIA staff: absolute Y
+    /// contracts toward the staff's top by the ossia scale and sizes/offsets
+    /// multiply by it, while X stays on the shared spacing columns — the same
+    /// affine the ossia staff pass and beam pass apply (LP: every grob of a
+    /// magnified staff scales with it, ly/music-functions-init.ly
+    /// magnifyStaff). Identity for normal staves and for layouts without
+    /// staff identity (StaffIndex &lt; 0). Sound for note-anchored overlays
+    /// because their offsets from the staff frame are linear in staff spaces.
+    /// </summary>
+    private readonly struct OssiaShrink
+    {
+        private readonly HashSet<int> _ossiaStaves;
+        private readonly Dictionary<int, SystemLayout> _systems;
+
+        public OssiaShrink(HashSet<int> ossiaStaves, Dictionary<int, SystemLayout> systems)
+        {
+            _ossiaStaves = ossiaStaves;
+            _systems = systems;
+        }
+
+        public bool Contains(int staffIndex)
+            => staffIndex >= 0 && _ossiaStaves.Contains(staffIndex);
+
+        /// <summary>Absolute-Y affine around the staff top; identity off-ossia
+        /// (or when the measure has no system on this page).</summary>
+        public double Y(double y, int staffIndex, int measureIndex)
+        {
+            if (!Contains(staffIndex) || !_systems.TryGetValue(measureIndex, out var system))
+                return y;
+            double top = LayoutUtilities.FindStaffYInSystem(system, staffIndex);
+            return top + (y - top) * OssiaScale;
+        }
+
+        /// <summary>Scales a size/offset/amplitude; identity off-ossia.</summary>
+        public double Size(double v, int staffIndex)
+            => Contains(staffIndex) ? v * OssiaScale : v;
+    }
+
     // ---------- F3/B: data-pos resolution ----------
 
     /// <summary>
@@ -2612,18 +2652,21 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/hairpin.cc:110-358 print()
     /// LILYPOND-REF: scm/define-grobs.scm:1641-1666 Hairpin grob (thickness = 1.0)
     /// </remarks>
-    private static void DrawHairpins(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawHairpins(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.HairpinLayouts.IsDefaultOrEmpty) return;
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var h in layout.HairpinLayouts)
         {
             if (!sysY.TryGetValue(h.StartMeasureIndex, out var sy)) continue; // other page
-            double absY = sy + h.Y;
-            double leftTop = absY - h.StartOpening;
-            double leftBottom = absY + h.StartOpening;
-            double rightTop = absY - h.EndOpening;
-            double rightBottom = absY + h.EndOpening;
+            double absY = os.Y(sy + h.Y, h.StaffIndex, h.StartMeasureIndex);
+            double startOpening = os.Size(h.StartOpening, h.StaffIndex);
+            double endOpening = os.Size(h.EndOpening, h.StaffIndex);
+            double leftTop = absY - startOpening;
+            double leftBottom = absY + startOpening;
+            double rightTop = absY - endOpening;
+            double rightBottom = absY + endOpening;
             using (gc.Source(h.SourcePosition))
             {
                 // Round caps so the two arms close cleanly at the wedge apex
@@ -2646,15 +2689,16 @@ public static class SharedRenderer
     /// LILYPOND-REF: scm/define-grobs.scm OttavaBracket grob
     /// LILYPOND-REF: lily/ottava-bracket.cc — Ottava_bracket
     /// </remarks>
-    private static void DrawOttavaBrackets(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawOttavaBrackets(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.OttavaBracketLayouts.IsDefaultOrEmpty) return;
         double thickness = EngravingDefaults.StaffLineThickness;
-        double textFontSize = FontSize * 0.45;
         foreach (var b in layout.OttavaBracketLayouts)
         {
             if (!sysY.TryGetValue(b.StartMeasureIndex, out var sy)) continue; // other page
-            double absY = sy + b.Y;
+            double absY = os.Y(sy + b.Y, b.StaffIndex, b.StartMeasureIndex);
+            double textFontSize = os.Size(FontSize * 0.45, b.StaffIndex);
             using (gc.Source(b.SourcePosition))
             {
                 gc.DrawText(b.Text, b.StartX, absY, textFontSize, "serif",
@@ -2672,7 +2716,8 @@ public static class SharedRenderer
                 if (b.EdgeHeight > 0)
                 {
                     double hookDir = b.IsAbove ? 1 : -1;
-                    gc.DrawLine(b.EndX, absY, b.EndX, absY + b.EdgeHeight * hookDir,
+                    gc.DrawLine(b.EndX, absY, b.EndX,
+                        absY + os.Size(b.EdgeHeight, b.StaffIndex) * hookDir,
                         Color.Black, thickness);
                 }
             }
@@ -2735,17 +2780,18 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/tuplet-bracket.cc:200-350 print()
     /// LILYPOND-REF: scm/define-grobs.scm TupletBracket defaults
     /// </remarks>
-    private static void DrawTupletBrackets(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawTupletBrackets(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TupletBracketLayouts.IsDefaultOrEmpty) return;
         const double thickness = 0.13;
-        double edgeHeight = TupletBracketEngraver.GetEdgeHeight();
 
         foreach (var b in layout.TupletBracketLayouts)
         {
             if (!sysY.TryGetValue(b.MeasureIndex, out var sy)) continue; // other page
-            double startY = sy + b.StartY;
-            double endY = sy + b.EndY;
+            double edgeHeight = os.Size(TupletBracketEngraver.GetEdgeHeight(), b.StaffIndex);
+            double startY = os.Y(sy + b.StartY, b.StaffIndex, b.MeasureIndex);
+            double endY = os.Y(sy + b.EndY, b.StaffIndex, b.MeasureIndex);
             double midX = (b.StartX + b.EndX) / 2;
             double midY = (startY + endY) / 2;
             double hookDir = b.IsStemUp ? 1 : -1;
@@ -2774,7 +2820,8 @@ public static class SharedRenderer
 
                 double textY = b.IsStemUp ? midY - 0.3 : midY + 0.8;
                 gc.DrawText(b.NumberText, midX, textY,
-                    FontSize * 0.6, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                    os.Size(FontSize * 0.6, b.StaffIndex), "serif",
+                    FontStyle.Bold, TextAnchor.Middle, Color.Black);
             }
         }
     }
@@ -2790,21 +2837,23 @@ public static class SharedRenderer
     /// LILYPOND-REF: scm/scheme-engravers.scm Trill_spanner_engraver
     /// LILYPOND-REF: scm/define-grobs.scm:2228 (style . trill)
     /// </remarks>
-    private static void DrawTrillSpanners(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawTrillSpanners(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TrillSpannerLayouts.IsDefaultOrEmpty) return;
         const double wavePeriod = 0.8;
-        const double waveAmplitude = 0.2;
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var s in layout.TrillSpannerLayouts)
         {
             if (!sysY.TryGetValue(s.StartMeasureIndex, out var sy)) continue; // other page
-            double absY = sy + s.Y;
+            double absY = os.Y(sy + s.Y, s.StaffIndex, s.StartMeasureIndex);
+            double waveAmplitude = os.Size(0.2, s.StaffIndex);
             using (gc.Source(s.SourcePosition))
             {
                 bool isContinuation = Math.Abs(s.GlyphX - s.LineStartX) < 0.01;
                 if (!isContinuation)
-                    gc.DrawGlyph(EmmentalerGlyphs.OrnTrill, s.GlyphX, absY, FontSize);
+                    gc.DrawGlyph(EmmentalerGlyphs.OrnTrill, s.GlyphX, absY,
+                        os.Size(FontSize, s.StaffIndex));
                 if (s.LineStartX < s.LineEndX)
                 {
                     double length = s.LineEndX - s.LineStartX;
@@ -2839,7 +2888,8 @@ public static class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: scm/scheme-engravers.scm, scm/define-grobs.scm Glissando grob
     /// </remarks>
-    private static void DrawGlissandos(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawGlissandos(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.GlissandoLayouts.IsDefaultOrEmpty) return;
         double thickness = EngravingDefaults.StaffLineThickness;
@@ -2850,7 +2900,10 @@ public static class SharedRenderer
             if (g.MeasureIndex >= 0 && !sysY.ContainsKey(g.MeasureIndex))
                 continue; // other page
             using (gc.Source(g.SourcePosition))
-                gc.DrawLine(g.StartX, g.StartY, g.EndX, g.EndY, Color.Black, thickness);
+                gc.DrawLine(
+                    g.StartX, os.Y(g.StartY, g.StaffIndex, g.MeasureIndex),
+                    g.EndX, os.Y(g.EndY, g.StaffIndex, g.MeasureIndex),
+                    Color.Black, thickness);
         }
     }
 
@@ -2863,11 +2916,11 @@ public static class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/arpeggio.cc, scm/define-grobs.scm:201-224
     /// </remarks>
-    private static void DrawArpeggios(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawArpeggios(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.ArpeggioLayouts.IsDefaultOrEmpty) return;
         const double wavePeriod = 0.8;
-        const double waveAmplitude = 0.2;
         double thickness = EngravingDefaults.StaffLineThickness;
         foreach (var a in layout.ArpeggioLayouts)
         {
@@ -2875,17 +2928,20 @@ public static class SharedRenderer
             // draw unconditionally.
             if (a.MeasureIndex >= 0 && !sysY.ContainsKey(a.MeasureIndex))
                 continue; // other page
-            double length = a.BottomY - a.TopY;
+            double topY = os.Y(a.TopY, a.StaffIndex, a.MeasureIndex);
+            double bottomY = os.Y(a.BottomY, a.StaffIndex, a.MeasureIndex);
+            double waveAmplitude = os.Size(0.2, a.StaffIndex);
+            double length = bottomY - topY;
             if (length <= 0) continue;
             int halfWaves = Math.Max(1, (int)(length / (wavePeriod / 2)));
             double seg = length / halfWaves;
-            double prevX = a.X, prevY = a.TopY;
+            double prevX = a.X, prevY = topY;
             const int subdivisions = 4;
             using (gc.Source(a.SourcePosition))
             {
                 for (int i = 0; i < halfWaves; i++)
                 {
-                    double startY = a.TopY + i * seg;
+                    double startY = topY + i * seg;
                     double sign = (i % 2 == 0) ? -1 : 1;
                     for (int j = 1; j <= subdivisions; j++)
                     {
@@ -2911,7 +2967,8 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/grace-engraver.cc:36-80 Grace_engraver
     /// LILYPOND-REF: scm/define-grobs.scm:1358-1402 GraceSpacing grob
     /// </remarks>
-    private static void DrawGraceNotes(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawGraceNotes(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.GraceNoteLayouts.IsDefaultOrEmpty) return;
         foreach (var g in layout.GraceNoteLayouts)
@@ -2930,7 +2987,12 @@ public static class SharedRenderer
             // StaffYOffset places the grace over its OWN staff in a multi-staff
             // score (0 for the first staff / single-staff).
             double staffMiddleY = sy + g.StaffYOffset + StaffHeight / 2;
-            double scaledFontSize = FontSize * g.Scale;
+            // On an ossia staff the whole group shrinks again: head Ys go
+            // through the staff-top affine and the grace's own scale compounds
+            // with the ossia scale (a grace on a magnified staff is scaled
+            // twice in LP too — fontSize composes).
+            double eff = os.Size(g.Scale, g.StaffIndex);
+            double scaledFontSize = FontSize * eff;
             double currentX = g.X;
             double lastNoteX = g.X, lastNoteY = staffMiddleY;
             // Per-head geometry, collected so the stems/beam can be drawn once
@@ -2942,22 +3004,27 @@ public static class SharedRenderer
             {
                 foreach (var note in g.Notes)
                 {
-                    double y = StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY);
+                    double y = os.Y(StaffFrame.PositionToDevice(note.StaffPosition, staffMiddleY),
+                        g.StaffIndex, g.MeasureIndex);
                     // Ledgers under the head — layer 0 with the staff lines.
                     // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0)
+                    // (On an ossia the ledger anchor is the affined middle; the
+                    // per-step offsets inside stay unscaled — a visually minor
+                    // approximation for the rare ossia-grace-with-ledger case.)
                     if (note.NeedsLedger)
-                        DrawLedgerLines(note.StaffPosition, currentX, staffMiddleY, gc,
-                            EngravingDefaults.NoteheadBlackWidth * g.Scale);
+                        DrawLedgerLines(note.StaffPosition, currentX,
+                            os.Y(staffMiddleY, g.StaffIndex, g.MeasureIndex), gc,
+                            EngravingDefaults.NoteheadBlackWidth * eff);
                     if (note.Accidental is { } acc)
                         DrawAccidental(acc, isCourtesy: false, currentX, y,
-                            g.SourcePosition, gc, g.Scale);
+                            g.SourcePosition, gc, eff);
                     gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize);
                     headX.Add(currentX);
                     headY.Add(y);
                     beamCounts.Add(BeamCountForDuration(note.BaseDuration.Denominator));
                     lastNoteX = currentX;
                     lastNoteY = y;
-                    currentX += 1.2 * g.Scale;  // approximate advance per grace note
+                    currentX += 1.2 * eff;  // approximate advance per grace note
                 }
 
                 // Stems (forced UP) plus the connecting beam, or a flag for a lone
@@ -2965,7 +3032,7 @@ public static class SharedRenderer
                 // LILYPOND-REF: scm/music-functions.scm:633-637 score-grace-settings —
                 //   ((Voice Stem direction ,UP) (Voice Slur direction ,DOWN)): grace
                 //   stems are forced up regardless of pitch, and the auto-slur bows down.
-                DrawGraceStemsAndBeam(headX, headY, beamCounts, g.Scale,
+                DrawGraceStemsAndBeam(headX, headY, beamCounts, eff,
                     g.Type == GraceNoteType.Acciaccatura, gc);
 
                 // Grace slur from the last grace notehead to the main notehead.
@@ -2974,8 +3041,10 @@ public static class SharedRenderer
                 if (g.Notes.Length > 0 &&
                     g.Type is GraceNoteType.Acciaccatura or GraceNoteType.Appoggiatura)
                 {
-                    double mainY = StaffFrame.PositionToDevice(g.MainNoteStaffPosition, staffMiddleY);
-                    DrawGraceSlur(lastNoteX, lastNoteY, g.MainNoteX, mainY, g.Scale, gc);
+                    double mainY = os.Y(
+                        StaffFrame.PositionToDevice(g.MainNoteStaffPosition, staffMiddleY),
+                        g.StaffIndex, g.MeasureIndex);
+                    DrawGraceSlur(lastNoteX, lastNoteY, g.MainNoteX, mainY, eff, gc);
                 }
             }
         }
@@ -3306,16 +3375,18 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/fingering-engraver.cc — Fingering grob
     /// LILYPOND-REF: scm/define-grobs.scm Fingering (font-size = -5 → ~0.56×)
     /// </remarks>
-    private static void DrawFingerings(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawFingerings(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.FingeringLayouts.IsDefaultOrEmpty) return;
         double size = FontSize * 0.56;  // magstep(-5)
         foreach (var f in layout.FingeringLayouts)
         {
             if (!sysY.TryGetValue(f.MeasureIndex, out var sy)) continue; // other page
-            double y = sy + f.Y;
+            double y = os.Y(sy + f.Y, f.StaffIndex, f.MeasureIndex);
             using (gc.Source(f.SourcePosition))
-                gc.DrawText(f.Number.ToString(), f.X, y, size, "serif",
+                gc.DrawText(f.Number.ToString(), f.X, y,
+                    os.Size(size, f.StaffIndex), "serif",
                     FontStyle.Regular, TextAnchor.Middle, Color.Black);
         }
     }
@@ -3516,7 +3587,8 @@ public static class SharedRenderer
     /// LILYPOND-REF: lily/text-spanner-engraver.cc TextSpanner engraver
     /// LILYPOND-REF: scm/define-grobs.scm:3504-3535 TextSpanner grob
     /// </remarks>
-    private static void DrawTextSpanners(ScoreLayout layout, Dictionary<int, double> sysY, IDrawingContext gc)
+    private static void DrawTextSpanners(ScoreLayout layout, Dictionary<int, double> sysY,
+        in OssiaShrink os, IDrawingContext gc)
     {
         if (layout.TextSpannerLayouts.IsDefaultOrEmpty) return;
         double textSize = FontSize * 0.5;
@@ -3524,10 +3596,11 @@ public static class SharedRenderer
         foreach (var s in layout.TextSpannerLayouts)
         {
             if (!sysY.TryGetValue(s.StartMeasureIndex, out var y)) continue; // other page
-            double absY = y + s.Y;
+            double absY = os.Y(y + s.Y, s.StaffIndex, s.StartMeasureIndex);
             using (gc.Source(s.SourcePosition))
             {
-                gc.DrawText(s.Text, s.StartX, absY, textSize, "serif",
+                gc.DrawText(s.Text, s.StartX, absY,
+                    os.Size(textSize, s.StaffIndex), "serif",
                     FontStyle.Italic, TextAnchor.Start, Color.Black);
                 if (s.Style != TextSpannerStyle.None && s.LineStartX < s.EndX)
                 {

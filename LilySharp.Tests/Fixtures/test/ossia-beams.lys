@@ -9,7 +9,7 @@ section Main {
         c4 d e f | g4 a b c | b4 g f d |
     }
     ossia_melody {
-        r1 | c'8@p( d e f) g f e~ e | r1 |
+        r1 | c'8@p( d e f) g f e~ e | tuplet 3/2 { g4@finger(3) f e } d4@glissando grace { d8 } c |
     }
 }
 

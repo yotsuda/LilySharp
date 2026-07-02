@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -29,7 +29,8 @@ public readonly record struct ArpeggioLayout(
     double BottomY,
     int SourcePosition,
     int SourceIndex = -1,    // F3/B: index into score.Arpeggios (data-pos resolved at render)
-    int MeasureIndex = -1);  // page membership for multi-page rendering (-1 = draw on every page)
+    int MeasureIndex = -1,   // page membership for multi-page rendering (-1 = draw on every page)
+    int StaffIndex = -1);    // owning staff (ossia shrink); -1 = unknown/test construction
 
 /// <summary>
 /// Calculates arpeggio layouts from detected arpeggio items.
@@ -144,7 +145,8 @@ public static class ArpeggioEngraver
                 BottomY: bottomY,
                 SourcePosition: arp.SourcePosition,
                 SourceIndex: ai,
-                MeasureIndex: arp.MeasureIndex));
+                MeasureIndex: arp.MeasureIndex,
+                StaffIndex: arp.StaffIndex));
         }
 
         return layouts.ToImmutableArray();

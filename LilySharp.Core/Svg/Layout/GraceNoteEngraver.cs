@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -50,7 +50,8 @@ public readonly record struct GraceNoteLayout(
     // grace as a small fret number (resolved from GraceNoteInfo.Midi) instead of
     // a notehead. null for ordinary notation staves.
     TuningType? Tuning = null,
-    int SourceIndex = -1                 // F3/B: index into score.GraceNotes (data-pos resolved at render)
+    int SourceIndex = -1,                // F3/B: index into score.GraceNotes (data-pos resolved at render)
+    int StaffIndex = -1                  // owning staff (ossia shrink); -1 = unknown/test construction
 );
 
 /// <summary>
@@ -185,7 +186,8 @@ public static class GraceNoteEngraver
                 MainNoteStaffPosition: mainStaffPosition,
                 StaffYOffset: staffOffset,
                 Tuning: tabTuning,
-                SourceIndex: gi
+                SourceIndex: gi,
+                StaffIndex: grace.StaffIndex
             ));
         }
 
