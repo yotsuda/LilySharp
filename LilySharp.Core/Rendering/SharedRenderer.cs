@@ -938,8 +938,10 @@ public static class SharedRenderer
             bool headWiped = layout.IsHeadWiped(ml.MeasureIndex, voiceNumber, itemIdx);
 
             // LILYPOND-REF: lily/grob-property.cc — apply \override / \revert at this position.
-            // Multi-staff scores re-advance the resolver per staff: harmless for ordinary
-            // overrides (idempotent), but \once overrides may double-apply across staves.
+            // Each voice/staff pass restarts at its first measure; the resolver detects the
+            // rewind and replays the override timeline from the top, so a later-measure
+            // override activated by the PREVIOUS pass can never leak into this pass's
+            // earlier measures, and a \once pops back to the value it displaced.
             if (resolver.HasOverrides)
                 resolver.AdvanceTo(ml.MeasureIndex, itemIdx);
 
