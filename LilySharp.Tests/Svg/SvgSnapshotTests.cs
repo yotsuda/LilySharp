@@ -348,6 +348,8 @@ public class SvgSnapshotTests
         yield return new object[] { "test/chords-attached" };
         // Real stem length (StemCalculator) in the script side-position support.
         yield return new object[] { "test/scripts-stem-support" };
+        // Below-staff scripts push the figured-bass row down (DOWN-skyline augmentation).
+        yield return new object[] { "test/figbass-below-script" };
         // sfz-family dynamics + staccatissimo / bowing / harmonic scripts.
         yield return new object[] { "test/scripts-dynamics" };
         // @text("...") free expressive text (italic, below by default, .up above).

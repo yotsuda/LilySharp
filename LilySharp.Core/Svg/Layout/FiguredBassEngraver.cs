@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -58,7 +58,12 @@ public static class FiguredBassEngraver
     /// <summary>
     /// Calculates layout for all figured bass items.
     /// </summary>
-    private const double FigureTopExtent = 0.76;
+    // Digit CAP height at the 3.0 ss figure font (measured ~0.5 em for the
+    // serif face): the top digit's ink above its baseline. The old 0.76
+    // was roughly half the real ascent, so a skyline-dropped row could
+    // still print its digit tops through the content above (e.g. a
+    // staccatissimo dagger under a stem).
+    private const double FigureTopExtent = 1.5;
     private const double MinFigureBoxWidth = 0.8;
     // relatedstaff-spacing padding + the distance→drop math live in SkylineDrop (shared with lyrics).
 

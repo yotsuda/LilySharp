@@ -1,0 +1,15 @@
+// A below-staff script must push the figured-bass row down: the
+// staccatissimo dagger under the down-stem A3 joins the DOWN skyline
+// (LayoutEngine.AugmentSkylinesWithScripts), and the row's top-digit
+// ascent (FigureTopExtent) is the real cap height - the "5" clears the
+// dagger instead of printing through it.
+part bs { clef bass octave 3 }
+octave absolute
+
+section Main {
+  bs { a2@fig(5 3)@staccatissimo.down g2@fig(6) | c1@fig(7) | }
+}
+
+structure { Main }
+
+score "figbass-below-script" { staff bs }
