@@ -426,8 +426,11 @@ public static class ArticulationEngraver
         // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
         // LILYPOND-REF: define-grobs.scm:2175 TrillSpanner: direction = UP
         // LILYPOND-REF: define-grobs.scm:100 AccidentalSuggestion: direction = UP
+        // LILYPOND-REF: scm/script.scm — upbow/downbow/flageolet: direction = UP
         bool forceAbove = articulation.Type == ArticulationType.Fermata || articulation.IsOrnament
-            || articulation.IsEditorialAccidental;
+            || articulation.IsEditorialAccidental
+            || articulation.Type is ArticulationType.UpBow or ArticulationType.DownBow
+                or ArticulationType.Flageolet;
         bool isAbove = forceAbove || articulation.IsAbove;
 
         // Convert staff position to Y coordinate (staff spaces from top).

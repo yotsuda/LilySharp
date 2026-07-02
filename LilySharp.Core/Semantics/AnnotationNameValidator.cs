@@ -59,6 +59,8 @@ public sealed class AnnotationNameValidator : ISemanticValidator
     private static readonly string[] SuggestionCandidates =
     [
         "staccato", "accent", "tenuto", "marcato", "fermata", "portato",
+        "staccatissimo", "upbow", "downbow", "harmonic", "flageolet",
+        "sfz", "sf", "fp", "rfz", "fz",
         "trill", "mordent", "prall", "turn", "invertedturn", "pralltriller",
         "starttrillspan", "stoptrillspan", "courtesy", "editorial", "glissando",
         "cue", "cross", "arpeggio", "laissezvibrer", "repeattie",

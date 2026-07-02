@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -131,6 +131,14 @@ public static class EmmentalerGlyphs
     public const char ArticTenutoAbove = '\uE04D';     // scripts.tenuto
     public const char ArticPortatoAbove = '\uE04E';    // scripts.uportato
     public const char ArticPortatoBelow = '\uE04F';    // scripts.dportato
+    public const char ArticStaccatissimoAbove = '\uE04B'; // scripts.ustaccatissimo
+    public const char ArticStaccatissimoBelow = '\uE04C'; // scripts.dstaccatissimo
+    public const char ArticUpBow = '\uE056';             // scripts.upbow (V)
+    public const char ArticDownBow = '\uE057';           // scripts.downbow (frog)
+    public const char ArticFlageolet = '\uE061';         // scripts.flageolet (harmonic circle)
+    // (The five above were verified visually against emmentaler-20.otf via a
+    // rendered contact sheet of the U+E039..E078 range - the anchors E048/E04A/
+    // E04D/E050/E05C/E062/E064/E066 all matched the existing constants.)
     public const char ArticMarcatoAbove = '\uE050';    // scripts.umarcato
     public const char ArticMarcatoBelow = '\uE051';    // scripts.dmarcato
 

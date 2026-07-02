@@ -1229,6 +1229,7 @@ private GreenNode?[] ParseArticulations()
         // decresc / dim which are now plain identifiers resolved by name downstream.
         var text = Current.Text;
         if (text is "f" or "ff" or "fff" or "p" or "pp" or "ppp" or "mp" or "mf" or
+            "sfz" or "sf" or "fp" or "rfz" or "fz" or
             "cresc" or "decresc" or "dim")
         {
             return true;

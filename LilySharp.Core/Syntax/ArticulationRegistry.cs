@@ -44,6 +44,12 @@ public static class ArticulationRegistry
             ["fermata"] = ArticulationType.Fermata,
             ["ferm"] = ArticulationType.Fermata,
             ["portato"] = ArticulationType.Portato,
+            ["staccatissimo"] = ArticulationType.Staccatissimo,
+            // String bowing marks and the harmonic circle.
+            ["upbow"] = ArticulationType.UpBow,
+            ["downbow"] = ArticulationType.DownBow,
+            ["harmonic"] = ArticulationType.Flageolet,
+            ["flageolet"] = ArticulationType.Flageolet,
             // Bend-after gestures (jazz fall / doit). `bendafter` aliases fall
             // (the common down-bend); use `doit` for the up-bend.
             ["fall"] = ArticulationType.Fall,

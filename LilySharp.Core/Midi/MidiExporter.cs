@@ -595,6 +595,7 @@ public sealed class MidiExporter
         return type switch
         {
             ArticulationType.Staccato => (velocity, 50),                      // Half duration
+            ArticulationType.Staccatissimo => (velocity, 30),                 // Even shorter
             ArticulationType.Accent => (Math.Min(127, velocity + 20), durationPercent),
             ArticulationType.Tenuto => (velocity, 100),                       // Full duration
             ArticulationType.Marcato => (Math.Min(127, velocity + 30), 80),   // Louder, slightly shorter

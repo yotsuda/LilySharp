@@ -1304,7 +1304,8 @@ public sealed class DynamicSyntax : SyntaxNode
 
             if (byKind != DynamicLevel.None) return byKind;
 
-            // Fallback to text matching (for pitch tokens used as dynamics like \f)
+            // Fallback to text matching (for pitch tokens used as dynamics like \f,
+            // and for the accent dynamics, which lex as plain identifiers).
             return DynamicToken.Text switch
             {
                 "ppp" => DynamicLevel.PPP,
@@ -1312,8 +1313,13 @@ public sealed class DynamicSyntax : SyntaxNode
                 "p" => DynamicLevel.P,
                 "mp" => DynamicLevel.MP,
                 "mf" => DynamicLevel.MF,
+                "fp" => DynamicLevel.FP,
                 "f" => DynamicLevel.F,
+                "sf" => DynamicLevel.SF,
                 "ff" => DynamicLevel.FF,
+                "sfz" => DynamicLevel.SFZ,
+                "rfz" => DynamicLevel.RFZ,
+                "fz" => DynamicLevel.FZ,
                 "fff" => DynamicLevel.FFF,
                 _ => DynamicLevel.None
             };

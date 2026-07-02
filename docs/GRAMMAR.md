@@ -362,9 +362,10 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    tablature-only). AnnotationName is resolved from text — it is NOT a reserved keyword,
    so names like 'tr' remain usable as identifiers. Categories: *)
 
-(* - Articulations: @staccato @accent @tenuto @marcato @fermata @portato  (.up/.down ok)
+(* - Articulations: @staccato @staccatissimo @accent @tenuto @marcato @fermata @portato  (.up/.down ok)
+   - Strings:       @upbow @downbow @harmonic|@flageolet  (always above)
    - Ornaments:     @trill @mordent @prall @turn @invertedturn
-   - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff   (default below; @f.up forces side)
+   - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @rfz @fz   (default below; @f.up forces side)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic; .up/.down REJECTED)
    - Stem:          @stemUp @stemDown      (a beam's shared direction wins)
    - Accidental:    @courtesy (cautionary) @editorial (musica ficta)

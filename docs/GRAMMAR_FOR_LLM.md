@@ -92,9 +92,10 @@ An annotation that takes a VALUE puts it in parentheses (space- or comma-separat
 
 - Stem direction: `@stemUp` / `@stemDown` force a note's stem (default is automatic).
   On a beamed note the beam's shared direction wins.
-- Articulations: `@staccato @accent @tenuto @marcato @fermata @portato`
+- Articulations: `@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato`
+- String technique: `@upbow @downbow @harmonic` (alias `@flageolet`) - always above
 - Ornaments: `@trill @mordent @prall @turn @invertedturn`
-- Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` (default below the staff; `.up` / `.down`
+- Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @rfz @fz` (default below the staff; `.up` / `.down`
   forces the side, e.g. `@f.up`)
 - Accidental style: `@courtesy` (cautionary, parenthesized), `@editorial` (musica ficta)
 - Arpeggio: `<c e g>4@arpeggio`

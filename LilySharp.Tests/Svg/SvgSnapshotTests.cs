@@ -344,6 +344,8 @@ public class SvgSnapshotTests
         // structure-level _"text" directive: engraves at the end of the section
         // just played (parsed-but-silent until the collector was connected).
         yield return new object[] { "test/custom-text" };
+        // sfz-family dynamics + staccatissimo / bowing / harmonic scripts.
+        yield return new object[] { "test/scripts-dynamics" };
     }
 
     /// <summary>

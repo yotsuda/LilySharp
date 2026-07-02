@@ -689,6 +689,7 @@ public sealed class MusicXmlExporter
         return type switch
         {
             ArticulationType.Staccato => "staccato",
+            ArticulationType.Staccatissimo => "staccatissimo",
             ArticulationType.Accent => "accent",
             ArticulationType.Tenuto => "tenuto",
             ArticulationType.Marcato => "strong-accent",

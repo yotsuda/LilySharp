@@ -29,6 +29,16 @@ public enum ArticulationType
     Marcato,
     Fermata,
     Portato,
+    /// <summary>Wedge-shaped extreme staccato (@staccatissimo).
+    /// LILYPOND-REF: mf/feta-scripts.mf scripts.u/dstaccatissimo.</summary>
+    Staccatissimo,
+    // String bowing marks (always above the staff, like LP's defaults).
+    // LILYPOND-REF: scm/script.scm "upbow"/"downbow"; mf/feta-scripts.mf.
+    UpBow,
+    DownBow,
+    /// <summary>Harmonic circle (@harmonic / @flageolet).
+    /// LILYPOND-REF: scripts.flageolet.</summary>
+    Flageolet,
     // Bend-after gestures: a short curved line trailing off the note — a jazz
     // "fall" (drops away) or "doit" (rises away). LilyPond's \bendAfter#-N / #+N.
     Fall,
@@ -69,8 +79,16 @@ public enum DynamicLevel
     P = 50,
     MP = 65,
     MF = 80,
+    /// <summary>fp — loud attack then soft; a single MIDI note gets the attack level.</summary>
+    FP = 90,
     F = 95,
+    /// <summary>sf — subito forte accent on one note.</summary>
+    SF = 105,
     FF = 110,
+    /// <summary>sfz / rfz / fz — sforzato family, a hair under fff.</summary>
+    SFZ = 112,
+    RFZ = 113,
+    FZ = 114,
     FFF = 127
 }
 

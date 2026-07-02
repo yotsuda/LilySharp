@@ -1,0 +1,16 @@
+// Accent dynamics (sfz family) and the string-player scripts added by the
+// 2026-07-02 grammar audit: staccatissimo (direction-flipped wedge),
+// up-bow / down-bow (always above), harmonic circle.
+part melody { clef treble }
+
+section Main {
+  melody {
+    c4@sfz d@fp e@sf f@rfz |
+    g4@staccatissimo a@staccatissimo b@upbow c@downbow |
+    d4@harmonic c@staccatissimo.down b@flageolet a@fz |
+  }
+}
+
+structure { Main }
+
+score "scripts-dynamics" { staff melody }
