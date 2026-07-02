@@ -111,17 +111,33 @@ public static class InstrumentDefaults
     };
 
     /// <summary>
+    /// The instrument-name presets a part's <c>instrument</c> accepts, ordered by
+    /// family (strings, piano, guitar, woodwinds, brass, voice). The single source of
+    /// truth for <see cref="IsKnownInstrument"/> AND the editor's after-<c>instrument</c>
+    /// name completion — keep it in step with the <see cref="GetDefaults"/> switch.
+    /// </summary>
+    public static readonly IReadOnlyList<string> KnownInstruments = new[]
+    {
+        // Strings
+        "violin", "viola", "cello", "bass", "contrabass", "double-bass",
+        // Piano
+        "piano-right", "piano-treble", "piano-left", "piano-bass",
+        // Guitar
+        "guitar", "acoustic-guitar", "electric-guitar",
+        // Woodwinds
+        "flute", "piccolo", "oboe", "clarinet", "bassoon",
+        // Brass
+        "trumpet", "horn", "french-horn", "trombone", "tuba",
+        // Voice
+        "soprano", "voice-soprano", "alto", "voice-alto",
+        "tenor", "voice-tenor", "voice-bass",
+    };
+
+    private static readonly HashSet<string> KnownSet =
+        new(KnownInstruments, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Checks if the given string is a known instrument name.
     /// </summary>
-    public static bool IsKnownInstrument(string name)
-    {
-        var lower = name.ToLowerInvariant();
-        return lower is "violin" or "viola" or "cello" or "bass" or "contrabass" or "double-bass"
-            or "piano-right" or "piano-treble" or "piano-left" or "piano-bass"
-            or "guitar" or "acoustic-guitar" or "electric-guitar"
-            or "flute" or "piccolo" or "oboe" or "clarinet" or "bassoon"
-            or "trumpet" or "horn" or "french-horn" or "trombone" or "tuba"
-            or "soprano" or "voice-soprano" or "alto" or "voice-alto"
-            or "tenor" or "voice-tenor" or "voice-bass";
-    }
+    public static bool IsKnownInstrument(string name) => KnownSet.Contains(name);
 }

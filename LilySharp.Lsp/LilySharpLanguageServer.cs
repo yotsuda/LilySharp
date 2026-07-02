@@ -21,6 +21,7 @@ using StreamJsonRpc;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Music;
 using LspRange = Microsoft.VisualStudio.LanguageServer.Protocol.Range;
 using LspDiagnosticSeverity = Microsoft.VisualStudio.LanguageServer.Protocol.DiagnosticSeverity;
@@ -369,6 +370,7 @@ public sealed class LilySharpLanguageServer
             CompletionContext.MusicBlock => GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset)),
             CompletionContext.StructureBlock => GetStructureCompletions(doc.Text),
             CompletionContext.AfterClef => GetClefCompletions(),
+            CompletionContext.AfterInstrument => GetInstrumentCompletions(),
             CompletionContext.AfterAt => GetArticulationCompletions(),
             CompletionContext.AfterBackslash => GetDynamicCompletions(),
             _ => null
@@ -530,6 +532,7 @@ public sealed class LilySharpLanguageServer
         MusicBlock,
         StructureBlock,
         AfterClef,
+        AfterInstrument,
         AfterAt,
         AfterBackslash
     }
@@ -573,6 +576,11 @@ public sealed class LilySharpLanguageServer
         if (WordBeforeCursor(text, offset) == "clef")
             return CompletionContext.AfterClef;
 
+        // Right after the `instrument` part property only the known instrument presets
+        // are valid — offer those alone (they set clef/octave/tuning defaults).
+        if (WordBeforeCursor(text, offset) == "instrument")
+            return CompletionContext.AfterInstrument;
+
         // Inside structure { … } the body is a playback order (section names and
         // navigation marks), not music — so it gets its own completions, never
         // note names. Checked before the brace fallback so 'structure {|' counts.
@@ -615,6 +623,26 @@ public sealed class LilySharpLanguageServer
                 Kind = CompletionItemKind.EnumMember,
                 Detail = c.Detail,
                 SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>The instrument-preset names valid right after the <c>instrument</c>
+    /// part property (they set clef/octave/tuning defaults). Sourced from
+    /// <see cref="InstrumentDefaults.KnownInstruments"/> so the list never drifts from
+    /// what the compiler recognizes.</summary>
+    internal static CompletionList GetInstrumentCompletions()
+    {
+        return new CompletionList
+        {
+            // SortText (zero-padded) preserves the family grouping — VS Code otherwise
+            // sorts by label, which would scatter e.g. "double-bass" among the woodwinds.
+            Items = InstrumentDefaults.KnownInstruments.Select((name, i) => new CompletionItem
+            {
+                Label = name,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = "Instrument preset (clef/octave defaults)",
+                SortText = i.ToString("D2"),
             }).ToArray()
         };
     }
