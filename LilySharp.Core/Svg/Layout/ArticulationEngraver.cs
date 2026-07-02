@@ -264,7 +264,7 @@ public static class ArticulationEngraver
             // the staff's within-system offset (multi-staff) so the page-level
             // renderer's system-top + Y lands under THIS staff.
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
-            double y = CalculateYPosition(articulation, staffPosition, stemUp) + staffOffset;
+            double y = CalculateYPosition(articulation, staffPosition, stemUp, item) + staffOffset;
 
             layouts.Add(new ArticulationLayout(
                 articulation.MeasureIndex,
@@ -421,7 +421,8 @@ public static class ArticulationEngraver
         return isAbove ? -bbox.Bottom : bbox.Top;
     }
 
-    private static double CalculateYPosition(ArticulationItem articulation, int staffPosition, bool stemUp)
+    private static double CalculateYPosition(ArticulationItem articulation, int staffPosition, bool stemUp,
+        MusicItem? item = null)
     {
         // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
         // LILYPOND-REF: define-grobs.scm:2175 TrillSpanner: direction = UP
@@ -433,11 +434,24 @@ public static class ArticulationEngraver
                 or ArticulationType.Flageolet;
         bool isAbove = forceAbove || articulation.IsAbove;
 
+        // Anchor on the note column's edge on the SCRIPT's side: a chord's
+        // script must clear its TOP head when above (BOTTOM head when below).
+        // The chord-midpoint anchor parked a fermata straight on a tall
+        // chord's top notehead — the staff-padding clamp below only guards
+        // against the staff, not against heads on ledger lines above it.
+        // LILYPOND-REF: lily/script-engraver.cc acknowledges the NOTE COLUMN;
+        // side-position-interface measures the column's full Y extent.
+        int anchorPosition = item is ChordItem anchorChord && anchorChord.Notes.Length > 0
+            ? (isAbove
+                ? anchorChord.Notes.Max(n => n.StaffPosition)
+                : anchorChord.Notes.Min(n => n.StaffPosition))
+            : staffPosition;
+
         // Convert staff position to Y coordinate (staff spaces from top).
         // StaffPosition: 0 = middle line, positive = up, negative = down.
         // Canonical formula used by note rendering: Y = StaffMiddle - StaffPosition * 0.5
         // LILYPOND-REF: staff-symbol-referencer.cc:76-89 staff_symbol_referencer::get_position
-        double noteY = StaffMiddle - staffPosition * 0.5;
+        double noteY = StaffMiddle - anchorPosition * 0.5;
 
         // Use quantize-position for staccato, marcato, tenuto
         // LILYPOND-REF: scm/script.scm staccato/marcato/tenuto: (quantize-position . #t)

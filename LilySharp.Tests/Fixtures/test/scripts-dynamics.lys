@@ -8,6 +8,7 @@ section Main {
     c4@sfz d@fp e@sf f@rfz |
     g4@staccatissimo a@staccatissimo b@upbow c@downbow |
     d4@harmonic c@staccatissimo.down b@flageolet a@fz |
+    <d, f a>2@fermata <g b d>2@staccato |
   }
 }
 
