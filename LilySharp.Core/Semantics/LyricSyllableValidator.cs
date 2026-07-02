@@ -57,11 +57,14 @@ public sealed class LyricSyllableValidator : ISemanticValidator
 
         foreach (var w in warnings)
         {
-            bool one = w.UnplacedSyllables == 1;
-            string phrase = one ? "syllable has" : "syllables have";
+            string tail = w.UnplacedSyllables == 1
+                ? "it will not be shown"
+                : $"it and the {w.UnplacedSyllables - 1} after it will not be shown";
+            // ASCII punctuation only: this exact string reaches legacy-codepage
+            // consoles through the CLI.
             _diagnostics.Warning(w.Span, DiagnosticCodes.LyricSyllableOverflow,
-                $"{w.UnplacedSyllables} lyric {phrase} no note to align with " +
-                "(more syllables than notes) and will not be shown");
+                $"lyric syllable '{w.FirstSyllable}' (bar {w.FirstBar} of its lyrics line) " +
+                $"has no note to align with; {tail}");
         }
     }
 }

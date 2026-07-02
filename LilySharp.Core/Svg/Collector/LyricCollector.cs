@@ -31,6 +31,14 @@ namespace LilySharp.Core.Svg.Collector;
 /// to one note in the melody. Hyphens (--) indicate word continuation,
 /// extenders (__) indicate melisma (single syllable over multiple notes).
 /// </remarks>
+/// <summary>
+/// A lyric line's overflow: how many syllables ran past the notes, and where
+/// the FIRST of them sits — its text, source offset, and 1-based bar number
+/// within the lyric line.
+/// </summary>
+public readonly record struct LyricOverflow(
+    int Count, string FirstText, int FirstPosition, int FirstBar);
+
 public sealed class LyricCollector
 {
     /// <summary>
@@ -43,24 +51,28 @@ public sealed class LyricCollector
     /// </param>
     /// <param name="voiceId">Voice ID to associate with these lyrics.</param>
     /// <param name="verseNumber">Verse number (1-based) for multiple lyric lines.</param>
-    /// <param name="unplacedSyllableCount">
-    /// Number of real syllables left over after the notes ran out (overflow). Each
-    /// is a word that would silently vanish from the engraving — the count lets the
-    /// caller warn about a miscounted lyric line. Melisma/extender markers do not
-    /// count (they consume no note), so a line shorter than the melody never
-    /// reports overflow.
+    /// <param name="overflow">
+    /// Non-null when real syllables were left over after the notes ran out: the
+    /// count, plus the FIRST dropped syllable's text, source offset and 1-based
+    /// bar number within the lyric line — so the warning can point at the exact
+    /// word where the miscount starts. Melisma/extender markers do not count
+    /// (they consume no note), so a line shorter than the melody never reports
+    /// overflow.
     /// </param>
     /// <returns>List of LyricItem objects.</returns>
     public ImmutableArray<LyricItem> Collect(
         LyricsBlockSyntax lyricsBlock,
         IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing)> noteItemIndices,
-        out int unplacedSyllableCount,
+        out LyricOverflow? overflow,
         int voiceId = 0,
         int verseNumber = 1)
     {
         var lyrics = ImmutableArray.CreateBuilder<LyricItem>();
         var syllables = ParseSyllables(lyricsBlock);
-        unplacedSyllableCount = 0;
+        overflow = null;
+        int unplacedSyllableCount = 0;
+        string firstDroppedText = "";
+        int firstDroppedPosition = 0, firstDroppedBar = 0;
 
         // Group the verse's notes by measure, in source order. A written "|" then
         // advances by exactly ONE measure — so an EMPTY measure ("| |") skips a
@@ -130,10 +142,20 @@ public sealed class LyricCollector
             else
             {
                 // More syllables than notes in this bar — the word would vanish.
+                if (unplacedSyllableCount == 0)
+                {
+                    firstDroppedText = text;
+                    firstDroppedPosition = position;
+                    firstDroppedBar = lm + 1;
+                }
                 unplacedSyllableCount++;
             }
             pos++;
         }
+
+        if (unplacedSyllableCount > 0)
+            overflow = new LyricOverflow(
+                unplacedSyllableCount, firstDroppedText, firstDroppedPosition, firstDroppedBar);
 
         return lyrics.ToImmutable();
     }

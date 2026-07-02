@@ -715,7 +715,7 @@ static int ExecuteCheck(string inputPath, bool showPitches = false)
                 _ => "info"
             };
             if (diag.Severity == DiagnosticSeverity.Error) hasErrors = true;
-            Console.WriteLine($"{inputPath}({diag.Span.Start}): {severity}: {diag.Message}");
+            Console.WriteLine($"{inputPath}({LineCol(source, diag.Span.Start)}): {severity}: {diag.Message}");
         }
 
         return hasErrors ? 1 : 0;
@@ -811,8 +811,21 @@ static bool ReportDiagnostics(SyntaxTree tree)
     bool hasErrors = all.Any(d => d.Severity == LilySharp.Core.Syntax.DiagnosticSeverity.Error);
     Console.Error.WriteLine(hasErrors ? "Syntax errors:" : "Diagnostics:");
     foreach (var diag in all)
-        Console.Error.WriteLine($"  {diag}");
+        Console.Error.WriteLine($"  ({LineCol(tree.Text, diag.Span.Start)}) {diag}");
     return hasErrors;
+}
+
+// 1-based line,column for a source offset — every human-facing diagnostic
+// prints this instead of the raw byte offset.
+static string LineCol(string text, int offset)
+{
+    int line = 1, col = 1;
+    for (int i = 0; i < offset && i < text.Length; i++)
+    {
+        if (text[i] == '\n') { line++; col = 1; }
+        else col++;
+    }
+    return $"{line},{col}";
 }
 
 // ============ Layout Command ============

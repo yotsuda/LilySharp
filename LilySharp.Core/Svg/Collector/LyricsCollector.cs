@@ -95,7 +95,7 @@ internal sealed class LyricsCollector
                 ? indices
                 : indices.Where(n => n.MeasureIndex >= startMeasure).ToList();
 
-            var lyrics = lyricCollector.Collect(lyricsBlock, aligned, out int unplaced, voiceId: voiceId, verseNumber);
+            var lyrics = lyricCollector.Collect(lyricsBlock, aligned, out var overflow, voiceId: voiceId, verseNumber);
             _lyrics.AddRange(lyrics);
 
             // A single block may auto-wrap into several stacked verses; the next block
@@ -106,10 +106,13 @@ internal sealed class LyricsCollector
             nextVerseByStart[startMeasure] = maxVerse + 1;
 
             // More syllables than notes: the loop above ran out of notes and the
-            // trailing syllables vanished. Flag the line so the author catches the
-            // miscount instead of silently losing words (the bug this guards).
-            if (unplaced > 0)
-                _warnings.Add(new LyricSyllableWarning(lyricsBlock.LyricsKeyword.Span, unplaced));
+            // trailing syllables vanished. Flag the FIRST dropped syllable itself
+            // (not just the lyrics keyword) so the author lands on the exact word
+            // where the miscount starts instead of recounting the whole line.
+            if (overflow is { } of)
+                _warnings.Add(new LyricSyllableWarning(
+                    new LilySharp.Core.Syntax.TextSpan(of.FirstPosition, Math.Max(1, of.FirstText.Length)),
+                    of.Count, of.FirstText, of.FirstBar));
         }
     }
 

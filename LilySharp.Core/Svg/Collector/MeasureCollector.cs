@@ -35,11 +35,16 @@ public record MeasureBoundary(
 /// <summary>
 /// Reports a lyrics line that has MORE syllables than the notes it binds to, so
 /// the trailing syllables found no note and were silently dropped from the
-/// engraving. <see cref="Span"/> points at the offending <c>lyrics</c> keyword.
+/// engraving. <see cref="Span"/> points at the FIRST dropped syllable, and
+/// <see cref="FirstSyllable"/>/<see cref="FirstBar"/> name it and its 1-based
+/// bar within the lyric line, so the author lands on the exact word where the
+/// miscount starts.
 /// </summary>
 public record LyricSyllableWarning(
     LilySharp.Core.Syntax.TextSpan Span,
-    int UnplacedSyllables
+    int UnplacedSyllables,
+    string FirstSyllable,
+    int FirstBar
 );
 
 /// <summary>

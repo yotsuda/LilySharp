@@ -47,16 +47,19 @@ public class LyricSyllableValidatorTests
         var warning = Overflow(diags);
         Assert.NotNull(warning);
         Assert.Equal(DiagnosticSeverity.Warning, warning!.Severity);
-        Assert.Contains("1 lyric syllable has no note", warning.Message);
+        // Names the exact dropped word and its bar within the lyric line.
+        Assert.Contains("lyric syllable 'five' (bar 1 of its lyrics line)", warning.Message);
+        Assert.Contains("it will not be shown", warning.Message);
     }
 
     [Fact]
-    public void TwoExtraSyllables_ReportsCountAndPluralizes()
+    public void TwoExtraSyllables_NamesFirstAndCountsTheRest()
     {
         var diags = Validate("time 4/4\n{ c4 d e f }\nlyrics { a b c d e f }\n");
         var warning = Overflow(diags);
         Assert.NotNull(warning);
-        Assert.Contains("2 lyric syllables have no note", warning!.Message);
+        Assert.Contains("lyric syllable 'e'", warning!.Message);
+        Assert.Contains("it and the 1 after it will not be shown", warning.Message);
     }
 
     [Fact]
@@ -82,12 +85,13 @@ public class LyricSyllableValidatorTests
     }
 
     [Fact]
-    public void WarningAnchorsAtLyricsKeyword()
+    public void WarningAnchorsAtTheFirstDroppedSyllable()
     {
         var source = "time 4/4\n{ c4 d e f }\nlyrics { one two three four five }\n";
         var warning = Overflow(Validate(source));
         Assert.NotNull(warning);
-        // Span points at the `lyrics` keyword, not the dropped syllable or bar 0.
-        Assert.Equal("lyrics", source.Substring(warning!.Span.Start, warning.Span.Length));
+        // Span points at the first word that vanished, so the editor squiggle
+        // lands exactly where the miscount starts.
+        Assert.Equal("five", source.Substring(warning!.Span.Start, warning.Span.Length));
     }
 }
