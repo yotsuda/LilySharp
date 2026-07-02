@@ -106,11 +106,13 @@ public static class ArticulationEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         Func<int, int, double>? staffYAt = null,
-        Dictionary<int, Staff>? staffByIndex = null)
+        Dictionary<int, Staff>? staffByIndex = null,
+        ImmutableArray<BeamLayout> beamLayouts = default)
     {
         if (articulations.IsDefaultOrEmpty)
             return ImmutableArray<ArticulationLayout>.Empty;
 
+        var beamedTips = BuildBeamedStemTips(beamLayouts);
         var layouts = ImmutableArray.CreateBuilder<ArticulationLayout>(articulations.Length);
 
         for (int arti = 0; arti < articulations.Length; arti++)
@@ -211,6 +213,17 @@ public static class ArticulationEngraver
             int staffPosition = GetStaffPosition(item);
             bool stemUp = GetStemUp(item, staffPosition);
 
+            // A beamed member's stem ends on the BEAM, not at the unbeamed
+            // formula's tip, and the beam also resolves its direction.
+            double? beamedStemTipY = null;
+            if (beamedTips.TryGetValue(
+                (articulation.StaffIndex, articulation.MeasureIndex, articulation.ItemIndex),
+                out var beamTip))
+            {
+                beamedStemTipY = beamTip.TipY;
+                stemUp = beamTip.StemUp;
+            }
+
             // On a TAB staff the fret number is centred on the note column (the
             // stem's x), with no notehead. So put the script at that column x — not
             // a notehead-edge offset, which makes a staccato dot look like an
@@ -264,7 +277,7 @@ public static class ArticulationEngraver
             // the staff's within-system offset (multi-staff) so the page-level
             // renderer's system-top + Y lands under THIS staff.
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
-            double y = CalculateYPosition(articulation, staffPosition, stemUp, item) + staffOffset;
+            double y = CalculateYPosition(articulation, staffPosition, stemUp, item, beamedStemTipY) + staffOffset;
 
             layouts.Add(new ArticulationLayout(
                 articulation.MeasureIndex,
@@ -421,8 +434,50 @@ public static class ArticulationEngraver
         return isAbove ? -bbox.Bottom : bbox.Top;
     }
 
+    /// <summary>
+    /// Beam-quanted stem tips by (staff, measure, item) in staff-local device Y,
+    /// plus the beam-resolved stem direction. A beamed stem ends on the beam
+    /// line — the unbeamed length formula under- or over-clears it — so the
+    /// script support must read the quanted end.
+    /// Sub-voice beams (VoiceIndex &gt; 0) are excluded: an articulation only
+    /// carries measure/item indices, which are resolved against the PRIMARY
+    /// voice, so a sub-voice key could collide with a primary-voice item.
+    /// LILYPOND-REF: lily/stem.cc — a beamed stem's end comes from the beam;
+    /// side-position then sees that real extent via the stem support.
+    /// </summary>
+    private static Dictionary<(int Staff, int Measure, int Item), (double TipY, bool StemUp)>
+        BuildBeamedStemTips(ImmutableArray<BeamLayout> beamLayouts)
+    {
+        var tips = new Dictionary<(int, int, int), (double, bool)>();
+        if (beamLayouts.IsDefaultOrEmpty)
+            return tips;
+        foreach (var beam in beamLayouts)
+        {
+            var group = beam.Group;
+            if (group.VoiceIndex != 0)
+                continue;
+            for (int i = 0; i < group.Members.Length && i < beam.MemberXPositions.Length; i++)
+            {
+                var member = group.Members[i];
+                // Beam Y at this member's X: LeftY/RightY are staff positions
+                // (half-spaces, up-positive from the middle line).
+                double t = beam.RightX > beam.LeftX
+                    ? (beam.MemberXPositions[i] - beam.LeftX) / (beam.RightX - beam.LeftX)
+                    : 0;
+                double positionAtX = beam.LeftY + t * (beam.RightY - beam.LeftY);
+                double tipY = StaffMiddle - positionAtX * 0.5;
+                int staff = !beam.MemberStaffIndices.IsDefaultOrEmpty
+                    ? beam.MemberStaffIndices[i]
+                    : Math.Max(0, beam.StaffIndex);
+                tips[(staff, member.ResolveMeasureIndex(group.MeasureIndex), member.ItemIndex)] =
+                    (tipY, member.MemberStemUp);
+            }
+        }
+        return tips;
+    }
+
     private static double CalculateYPosition(ArticulationItem articulation, int staffPosition, bool stemUp,
-        MusicItem? item = null)
+        MusicItem? item = null, double? beamedStemTipY = null)
     {
         // LILYPOND-REF: define-grobs.scm:1365 fermata: direction = UP
         // LILYPOND-REF: define-grobs.scm:2175 TrillSpanner: direction = UP
@@ -461,7 +516,8 @@ public static class ArticulationEngraver
         // LILYPOND-REF: scm/script.scm staccato/marcato/tenuto: (quantize-position . #t)
         if (ShouldQuantize(articulation.Type))
         {
-            return QuantizedYPosition(noteY, isAbove, stemUp, articulation.Type, item, anchorPosition);
+            return QuantizedYPosition(noteY, isAbove, stemUp, articulation.Type, item, anchorPosition,
+                beamedStemTipY);
         }
 
         // Non-quantized path: fermata, ornaments, accent, portato
@@ -473,8 +529,8 @@ public static class ArticulationEngraver
 
         double glyphNearExtent = GetNearExtent(articulation.Type, isAbove);
         double supportExtent = isAbove
-            ? (stemUp ? StemSupportExtent(item, anchorPosition, noteY, stemUp: true) : NoteheadHalfHeight)
-            : (!stemUp ? StemSupportExtent(item, anchorPosition, noteY, stemUp: false) : NoteheadHalfHeight);
+            ? (stemUp ? StemSupportExtent(item, anchorPosition, noteY, stemUp: true, beamedStemTipY) : NoteheadHalfHeight)
+            : (!stemUp ? StemSupportExtent(item, anchorPosition, noteY, stemUp: false, beamedStemTipY) : NoteheadHalfHeight);
 
         // dist = skyline distance; total_off = dist + padding
         double totalOff = supportExtent + glyphNearExtent + Padding;
@@ -545,8 +601,14 @@ public static class ArticulationEngraver
     /// LILYPOND-REF: lily/stem.cc:415-523 internal_calc_stem_end_position via
     /// StemCalculator; side-position supports carry the stem's real extent.
     /// </summary>
-    private static double StemSupportExtent(MusicItem? item, int anchorPosition, double anchorY, bool stemUp)
+    private static double StemSupportExtent(MusicItem? item, int anchorPosition, double anchorY, bool stemUp,
+        double? beamedStemTipY = null)
     {
+        // A beamed stem's end is the beam-quanted line, already resolved by
+        // beam layout — trust it over the unbeamed formula.
+        if (beamedStemTipY is { } beamTip)
+            return Math.Abs(anchorY - beamTip);
+
         int denominator = item switch
         {
             NoteItem n when n.BaseDuration.Numerator == 1 => n.BaseDuration.Denominator,
@@ -565,7 +627,7 @@ public static class ArticulationEngraver
     }
 
     private static double QuantizedYPosition(double noteY, bool isAbove, bool stemUp, ArticulationType type,
-        MusicItem? item = null, int anchorPosition = 0)
+        MusicItem? item = null, int anchorPosition = 0, double? beamedStemTipY = null)
     {
         // ── Stage 4-5 (aligned_side): Calculate total_off ──
         //
@@ -587,7 +649,7 @@ public static class ArticulationEngraver
             // For above: support's UP extent (top of notehead, or stem tip if stem goes up)
             // Stem is included only when stem direction matches placement direction
             supportExtent = stemUp
-                ? StemSupportExtent(item, anchorPosition, noteY, stemUp: true)
+                ? StemSupportExtent(item, anchorPosition, noteY, stemUp: true, beamedStemTipY)
                 : NoteheadHalfHeight;
             // ↑ if stemUp AND isAbove: stem IS in support (forced above case), real stem tip
             // ↑ if !stemUp AND isAbove: stem skipped, just notehead top = 0.5
@@ -596,7 +658,7 @@ public static class ArticulationEngraver
         {
             // For below: support's DOWN extent
             supportExtent = !stemUp
-                ? StemSupportExtent(item, anchorPosition, noteY, stemUp: false)
+                ? StemSupportExtent(item, anchorPosition, noteY, stemUp: false, beamedStemTipY)
                 : NoteheadHalfHeight;
             // ↑ if !stemUp AND !isAbove: stem IS in support (forced below case), real stem tip
             // ↑ if stemUp AND !isAbove: stem skipped, just notehead bottom = 0.5

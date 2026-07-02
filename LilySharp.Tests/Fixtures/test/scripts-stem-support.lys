@@ -5,7 +5,12 @@
 part m
 
 section Main {
-  m { a'32@fermata r32 r16 r8 r4 r2 | }
+  m {
+    a'32@fermata r32 r16 r8 r4 r2 |
+    // Beamed: the fermata clears the BEAM-quanted stem end of the first
+    // member (up-stems, descending run), not the unbeamed formula's tip.
+    a8@fermata g f e r2 |
+  }
 }
 
 structure { Main }

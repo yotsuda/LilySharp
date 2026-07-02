@@ -1155,7 +1155,8 @@ public sealed class LayoutEngine
         // LILYPOND-REF: lily/axis-group-interface.cc:359-474 — grobs without
         // outside-staff-priority stay in the support skyline.
         var articulationLayouts = score != null
-            ? ArticulationEngraver.Calculate(score, articulations, systems, ml, measuresByStaff, staffYAt, staffByIndex)
+            ? ArticulationEngraver.Calculate(score, articulations, systems, ml, measuresByStaff, staffYAt, staffByIndex,
+                beamLayouts ?? default)
             : ImmutableArray<ArticulationLayout>.Empty;
         var chordNameSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
