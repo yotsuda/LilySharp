@@ -533,7 +533,7 @@ c4@loco d e f |        % End ottava
 
 ```
 c4@ped d e f@ped.off |        % Sustain pedal
-c4@sost.ped d@sostenuto |     % Sostenuto pedal
+c4@sost d@sost.off |          % Sostenuto pedal
 c4@una.corda d@tre.corde |    % Una corda pedal
 ```
 

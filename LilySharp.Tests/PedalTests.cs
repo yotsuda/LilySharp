@@ -39,13 +39,9 @@ public class PedalTests
 
     [Theory]
     [InlineData("ped", MusicMarkType.SustainOn)]
-    [InlineData("sustain", MusicMarkType.SustainOn)]
     [InlineData("ped.off", MusicMarkType.SustainOff)]
-    [InlineData("sustain.off", MusicMarkType.SustainOff)]
-    [InlineData("sost.ped", MusicMarkType.SostenutoOn)]
-    [InlineData("sostenuto", MusicMarkType.SostenutoOn)]
-    [InlineData("sost.ped.off", MusicMarkType.SostenutoOff)]
-    [InlineData("sostenuto.off", MusicMarkType.SostenutoOff)]
+    [InlineData("sost", MusicMarkType.SostenutoOn)]
+    [InlineData("sost.off", MusicMarkType.SostenutoOff)]
     [InlineData("una.corda", MusicMarkType.UnaCordaOn)]
     [InlineData("tre.corde", MusicMarkType.UnaCordaOff)]
     public void ParseMarkName_PedalMarks(string name, MusicMarkType expected)
@@ -53,6 +49,20 @@ public class PedalTests
         var result = MusicMarkItem.ParseMarkName(name);
         Assert.NotNull(result);
         Assert.Equal(expected, result.Value);
+    }
+
+    // ONE spelling per pedal (grammar audit B-5): the removed alias and
+    // noun-continuation spellings are rejected, not silently mapped.
+    [Theory]
+    [InlineData("sustain")]
+    [InlineData("sustain.off")]
+    [InlineData("sost.ped")]
+    [InlineData("sost.ped.off")]
+    [InlineData("sostenuto")]
+    [InlineData("sostenuto.off")]
+    public void ParseMarkName_RemovedPedalSpellings_AreUnknown(string name)
+    {
+        Assert.Null(MusicMarkItem.ParseMarkName(name));
     }
 
     // --- MusicMarkItem text for pedals ---
@@ -358,12 +368,12 @@ public class PedalTests
     }
 
     [Fact]
-    public void ParseMarkParts_SostPed()
+    public void ParseMarkParts_SostOff()
     {
-        var parts = ImmutableArray.Create("sost", "ped");
+        var parts = ImmutableArray.Create("sost", "off");
         var result = MusicMarkItem.ParseMarkParts(parts);
         Assert.NotNull(result);
-        Assert.Equal(MusicMarkType.SostenutoOn, result.Value);
+        Assert.Equal(MusicMarkType.SostenutoOff, result.Value);
     }
 
     [Fact]

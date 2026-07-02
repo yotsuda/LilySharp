@@ -65,8 +65,8 @@ public sealed class AnnotationNameValidator : ISemanticValidator
         "starttrillspan", "stoptrillspan", "courtesy", "editorial", "glissando",
         "cue", "cross", "arpeggio", "laissezvibrer", "repeattie",
         "segno", "coda", "fine", "rit", "accel", "cresc", "decresc", "dim",
-        "ottava", "ottava.bassa", "loco", "ped", "ped.off", "sustain",
-        "sost.ped", "sostenuto", "una.corda", "tre.corde", "to.coda",
+        "ottava", "ottava.bassa", "loco", "ped", "ped.off",
+        "sost", "sost.off", "una.corda", "tre.corde", "to.coda",
         "mark.A", "finger.1", "feather.right", "feather.left",
         "trillspan.start", "trillspan.stop", "fig.6", "chord.C",
     ];

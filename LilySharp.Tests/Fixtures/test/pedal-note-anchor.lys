@@ -1,5 +1,5 @@
 // A pedal mark ("Ped.") attaches to the NOTE it is written on, not the measure
-// start. Here @sustain is on beat 3 and @sustainoff on beat 3 of the next bar,
+// start. Here @ped is on beat 3 and @ped(off) on beat 3 of the next bar,
 // so "Ped." and the release sit at those notes' columns (anchored via the music
 // mark's AnchorTiming, like the metronome mark). Verified against LilyPond.
 title "Pedal note anchor"

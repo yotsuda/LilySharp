@@ -407,7 +407,7 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
    - Marks/spanners: @segno @coda @fine @dc @ds @rit @accel
                      @ottava(…) @quindicesima(=@15ma/@15mb) … @loco ,
-                     @startTrillSpan … @stopTrillSpan , @ped … @ped(off)
+                     @startTrillSpan … @stopTrillSpan , @ped … @ped(off) , @sost … @sost(off) , @una(corda) … @tre(corde)
    - Abbreviations: @stac @acc @ten @marc @ferm @tr (= staccato accent tenuto
                     marcato fermata trill) *)
 

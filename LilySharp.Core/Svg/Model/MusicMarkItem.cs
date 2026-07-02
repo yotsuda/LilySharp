@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -258,10 +258,13 @@ public sealed record MusicMarkItem
             "quindicesima" or "15ma" => MusicMarkType.QuindicesUp,
             "quindicesima.bassa" or "15mb" => MusicMarkType.QuindicesDown,
             "loco" => MusicMarkType.Loco,
-            "ped" or "sustain" => MusicMarkType.SustainOn,
-            "ped.off" or "sustain.off" => MusicMarkType.SustainOff,
-            "sost.ped" or "sostenuto" => MusicMarkType.SostenutoOn,
-            "sost.ped.off" or "sostenuto.off" => MusicMarkType.SostenutoOff,
+            // ONE spelling per pedal (pre-release grammar audit B-5):
+            // engage = name, release = name.off. Una corda keeps its
+            // traditional pair (tre corde IS the release, not an "off").
+            "ped" => MusicMarkType.SustainOn,
+            "ped.off" => MusicMarkType.SustainOff,
+            "sost" => MusicMarkType.SostenutoOn,
+            "sost.off" => MusicMarkType.SostenutoOff,
             "una.corda" => MusicMarkType.UnaCordaOn,
             "tre.corde" => MusicMarkType.UnaCordaOff,
             _ => null
