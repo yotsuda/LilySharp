@@ -461,7 +461,7 @@ public static class ArticulationEngraver
         // LILYPOND-REF: scm/script.scm staccato/marcato/tenuto: (quantize-position . #t)
         if (ShouldQuantize(articulation.Type))
         {
-            return QuantizedYPosition(noteY, isAbove, stemUp, articulation.Type);
+            return QuantizedYPosition(noteY, isAbove, stemUp, articulation.Type, item, anchorPosition);
         }
 
         // Non-quantized path: fermata, ornaments, accent, portato
@@ -473,8 +473,8 @@ public static class ArticulationEngraver
 
         double glyphNearExtent = GetNearExtent(articulation.Type, isAbove);
         double supportExtent = isAbove
-            ? (stemUp ? DefaultStemLength : NoteheadHalfHeight)
-            : (!stemUp ? DefaultStemLength : NoteheadHalfHeight);
+            ? (stemUp ? StemSupportExtent(item, anchorPosition, noteY, stemUp: true) : NoteheadHalfHeight)
+            : (!stemUp ? StemSupportExtent(item, anchorPosition, noteY, stemUp: false) : NoteheadHalfHeight);
 
         // dist = skyline distance; total_off = dist + padding
         double totalOff = supportExtent + glyphNearExtent + Padding;
@@ -534,7 +534,38 @@ public static class ArticulationEngraver
     ///
     /// Conversion: lpPos = (StaffMiddle - Y) * 2;  Y = StaffMiddle - lpPos / 2
     /// </remarks>
-    private static double QuantizedYPosition(double noteY, bool isAbove, bool stemUp, ArticulationType type)
+    /// <summary>
+    /// The stem's contribution to the side-position support: the distance from
+    /// the anchor head (the stem-tip-side head) to the REAL stem tip, computed
+    /// by the same rule the renderer draws stems with (duration-based lengths,
+    /// unnatural-direction shortening, middle-line pull). The previous constant
+    /// 3.5 over-cleared shortened stems and pretended stemless whole notes had
+    /// a stem. Beamed stems still use the unbeamed rule (the beam-quanted end
+    /// lives in beam layout, not visible from here) — close, not exact.
+    /// LILYPOND-REF: lily/stem.cc:415-523 internal_calc_stem_end_position via
+    /// StemCalculator; side-position supports carry the stem's real extent.
+    /// </summary>
+    private static double StemSupportExtent(MusicItem? item, int anchorPosition, double anchorY, bool stemUp)
+    {
+        int denominator = item switch
+        {
+            NoteItem n when n.BaseDuration.Numerator == 1 => n.BaseDuration.Denominator,
+            ChordItem c when c.BaseDuration.Numerator == 1 => c.BaseDuration.Denominator,
+            _ => 0
+        };
+        if (item == null)
+            return DefaultStemLength;   // legacy callers without an item: old behaviour
+        if (denominator < 2)
+            return NoteheadHalfHeight;  // whole note / breve: no stem to clear
+
+        int durLog = StemCalculator.GetDurationLog(denominator);
+        double tipY = StemCalculator.CalculateStemEndY(
+            anchorY, stemUp, StaffTop, durLog, anchorPosition);
+        return Math.Abs(anchorY - tipY);
+    }
+
+    private static double QuantizedYPosition(double noteY, bool isAbove, bool stemUp, ArticulationType type,
+        MusicItem? item = null, int anchorPosition = 0)
     {
         // ── Stage 4-5 (aligned_side): Calculate total_off ──
         //
@@ -555,15 +586,19 @@ public static class ArticulationEngraver
         {
             // For above: support's UP extent (top of notehead, or stem tip if stem goes up)
             // Stem is included only when stem direction matches placement direction
-            supportExtent = stemUp ? (noteY - (noteY - DefaultStemLength)) : NoteheadHalfHeight;
-            // ↑ if stemUp AND isAbove: stem IS in support (forced above case), use stem length
+            supportExtent = stemUp
+                ? StemSupportExtent(item, anchorPosition, noteY, stemUp: true)
+                : NoteheadHalfHeight;
+            // ↑ if stemUp AND isAbove: stem IS in support (forced above case), real stem tip
             // ↑ if !stemUp AND isAbove: stem skipped, just notehead top = 0.5
         }
         else
         {
             // For below: support's DOWN extent
-            supportExtent = !stemUp ? (noteY + DefaultStemLength - noteY) : NoteheadHalfHeight;
-            // ↑ if !stemUp AND !isAbove: stem IS in support (forced below case), use stem length
+            supportExtent = !stemUp
+                ? StemSupportExtent(item, anchorPosition, noteY, stemUp: false)
+                : NoteheadHalfHeight;
+            // ↑ if !stemUp AND !isAbove: stem IS in support (forced below case), real stem tip
             // ↑ if stemUp AND !isAbove: stem skipped, just notehead bottom = 0.5
         }
 

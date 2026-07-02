@@ -1,0 +1,13 @@
+// Pins the REAL stem length in the script side-position support
+// (StemCalculator, lily/stem.cc rule) vs the old 3.5 constant:
+// a 32nd note's 4.25 ss stem pushes an above-script fermata visibly
+// higher on an up-stem note below the middle line (A4, unclamped).
+part m
+
+section Main {
+  m { a'32@fermata r32 r16 r8 r4 r2 | }
+}
+
+structure { Main }
+
+score "scripts-stem-support" { staff m }

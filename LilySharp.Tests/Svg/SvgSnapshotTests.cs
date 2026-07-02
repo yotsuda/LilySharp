@@ -346,6 +346,8 @@ public class SvgSnapshotTests
         yield return new object[] { "test/custom-text" };
         // staff NAME with chords CHORDPART: named progression aligned above a staff.
         yield return new object[] { "test/chords-attached" };
+        // Real stem length (StemCalculator) in the script side-position support.
+        yield return new object[] { "test/scripts-stem-support" };
         // sfz-family dynamics + staccatissimo / bowing / harmonic scripts.
         yield return new object[] { "test/scripts-dynamics" };
         // @text("...") free expressive text (italic, below by default, .up above).
