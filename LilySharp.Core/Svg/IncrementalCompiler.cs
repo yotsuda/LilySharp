@@ -93,9 +93,10 @@ public sealed class IncrementalCompiler
     /// <summary>The current syntax tree (after the last edit).</summary>
     public SyntaxTree Tree => _tree;
 
-    /// <summary>Test/diagnostic access to the per-system layout cache (null unless the
-    /// single-staff, override-free path installed one). Lets tests assert that
-    /// unchanged systems are reused rather than recomputed.</summary>
+    /// <summary>Test/diagnostic access to the per-system layout cache (null until an
+    /// override-free, single-voice edit first installs one; retained thereafter, even
+    /// across intervening ineligible edits, though it is not consulted while ineligible).
+    /// Lets tests assert that unchanged systems are reused rather than recomputed.</summary>
     internal SystemLayoutCache? SystemCache => _systemCache;
 
     public IncrementalCompiler(SyntaxTree tree, SvgRenderOptions? options = null)
@@ -135,14 +136,18 @@ public sealed class IncrementalCompiler
         var contentKeys = reuseEligible
             ? MeasureContentKey.Compute(score)
             : default;
+        // The cache's entries are content-addressed and re-verified on lookup, so they
+        // stay valid across a transient INELIGIBLE edit (e.g. an override typed then
+        // deleted) — a later eligible edit can still reuse the unchanged systems. So we
+        // RETAIN _systemCache rather than dropping it; we simply do not CONSULT it while
+        // ineligible (its content keys are not refreshed this edit), by passing null to
+        // the layout engine. cacheForEdit is the cache to use for THIS edit only.
+        SystemLayoutCache? cacheForEdit = null;
         if (reuseEligible)
         {
             _systemCache ??= new SystemLayoutCache();
             _systemCache.SetContentKeys(contentKeys);
-        }
-        else
-        {
-            _systemCache = null;
+            cacheForEdit = _systemCache;
         }
 
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
@@ -187,7 +192,7 @@ public sealed class IncrementalCompiler
         }
         else
         {
-            layout = new LayoutEngine().Layout(score, skip ? _lineSizes : null, _systemCache);
+            layout = new LayoutEngine().Layout(score, skip ? _lineSizes : null, cacheForEdit);
             // Reuse the prior line sizes on a gate-skip (still the correct solution);
             // otherwise capture the fresh ones.
             if (!skip)

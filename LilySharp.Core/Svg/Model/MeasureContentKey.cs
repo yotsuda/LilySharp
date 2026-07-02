@@ -74,19 +74,22 @@ namespace LilySharp.Core.Svg.Model;
 /// silently drift out of the key (§9 drift hazard). Only proven-positional fields
 /// are excluded; everything else is included, so the bias is toward over- (never
 /// under-) sensitivity — a missed reuse costs a little speed, a false reuse would
-/// cost correctness. The hash is deterministic within a process (it uses
-/// <see cref="HashCode"/> / <see cref="string.GetHashCode()"/>, both per-process
-/// randomized) — sufficient for an in-session cache and same-process tests.
-/// Collisions are git-like negligible and caught by the incremental==full harness.
+/// cost correctness. The hash is deterministic within a process (each element folds
+/// its own <see cref="object.GetHashCode()"/>, per-process randomized) — sufficient
+/// for an in-session cache and same-process tests. The key is a 64-bit FNV-1a fold
+/// (<see cref="Hash64"/>): whole-layout reuse and the per-system cache both decide
+/// equality by comparing this value, so the collision probability (~2⁻⁶⁴ between two
+/// distinct measure contents) — not just the incremental==full harness — is what
+/// bounds a false reuse. A missed reuse (over-sensitivity) only costs speed.
 /// </para>
 /// </remarks>
-public readonly record struct MeasureContentKey(int Hash)
+public readonly record struct MeasureContentKey(long Hash)
 {
     /// <summary>Computes the INTRINSIC content key of a single measure (its items
     /// and structural fields only — no side-tables, no entry context).</summary>
     public static MeasureContentKey Of(Measure measure)
     {
-        var hc = new HashCode();
+        var hc = new Hash64();
         AddIntrinsic(ref hc, measure);
         return new MeasureContentKey(hc.ToHashCode());
     }
@@ -116,10 +119,10 @@ public readonly record struct MeasureContentKey(int Hash)
         var builder = ImmutableArray.CreateBuilder<MeasureContentKey>(n);
         for (int i = 0; i < n; i++)
         {
-            var hc = new HashCode();
+            var hc = new Hash64();
             AddIntrinsic(ref hc, measures[i]);
-            hc.Add(chain.Entry[i]);                 // line-start prefix identity
-            foreach (int itemHash in sideTables[i]) // attached annotations (ordered)
+            hc.Add(chain.Entry[i]);                  // line-start prefix identity
+            foreach (long itemHash in sideTables[i]) // attached annotations (ordered)
                 hc.Add(itemHash);
             builder.Add(new MeasureContentKey(hc.ToHashCode()));
         }
@@ -142,7 +145,9 @@ public readonly record struct MeasureContentKey(int Hash)
     public static ImmutableArray<MeasureContentKey> Compute(MultiStaffScore score)
     {
         int n = score.MeasureCount;
-        var acc = new HashCode[n];
+        var acc = new Hash64[n];
+        for (int i = 0; i < n; i++)
+            acc[i] = new Hash64();                    // seed the FNV basis (array init is zero)
 
         foreach (var (_, staff, staffIndex) in score.EnumerateStaves())
         {
@@ -161,7 +166,7 @@ public readonly record struct MeasureContentKey(int Hash)
 
         var sideTables = BucketSideTables(score, n);
         for (int i = 0; i < n; i++)
-            foreach (int itemHash in sideTables[i])
+            foreach (long itemHash in sideTables[i])
                 acc[i].Add(itemHash);
 
         var builder = ImmutableArray.CreateBuilder<MeasureContentKey>(n);
@@ -170,11 +175,11 @@ public readonly record struct MeasureContentKey(int Hash)
         return builder.MoveToImmutable();
     }
 
-    public override string ToString() => $"mck:{Hash:x8}";
+    public override string ToString() => $"mck:{Hash:x16}";
 
     // --- intrinsic (items + structural fields) ---
 
-    private static void AddIntrinsic(ref HashCode hc, Measure measure)
+    private static void AddIntrinsic(ref Hash64 hc, Measure measure)
     {
         // Structural fields that affect layout/render but are NOT in Items. Position
         // fields (SourceStart/SourceEnd/SectionLabelPosition) are excluded so the
@@ -195,7 +200,7 @@ public readonly record struct MeasureContentKey(int Hash)
 
     // --- staff-level identity (per-staff fields, not per-measure) ---
 
-    private static void AddStaffIdentity(ref HashCode hc, Staff staff)
+    private static void AddStaffIdentity(ref Hash64 hc, Staff staff)
     {
         // Staff-level fields that affect the staff's layout/render but are constant
         // across its measures: the instrument name (drives the system indent and the
@@ -230,11 +235,11 @@ public readonly record struct MeasureContentKey(int Hash)
         "SourcePosition", "MeasureIndex", "StartMeasureIndex", "EndMeasureIndex",
     };
 
-    private static List<int>[] BucketSideTables(Score score, int measureCount)
+    private static List<long>[] BucketSideTables(Score score, int measureCount)
     {
-        var buckets = new List<int>[measureCount];
+        var buckets = new List<long>[measureCount];
         for (int i = 0; i < measureCount; i++)
-            buckets[i] = new List<int>();
+            buckets[i] = new List<long>();
 
         // Single-measure tables: each item belongs to one measure (item.MeasureIndex).
         // Fixed call order keeps the per-bucket fold deterministic.
@@ -263,11 +268,11 @@ public readonly record struct MeasureContentKey(int Hash)
         return buckets;
     }
 
-    private static List<int>[] BucketSideTables(MultiStaffScore score, int measureCount)
+    private static List<long>[] BucketSideTables(MultiStaffScore score, int measureCount)
     {
-        var buckets = new List<int>[measureCount];
+        var buckets = new List<long>[measureCount];
         for (int i = 0; i < measureCount; i++)
-            buckets[i] = new List<int>();
+            buckets[i] = new List<long>();
 
         // Same tables as the Score overload, by MeasureIndex across all staves.
         // (MultiStaffScore has no separate Tremolos table — tremolo lives on the
@@ -292,7 +297,7 @@ public readonly record struct MeasureContentKey(int Hash)
         return buckets;
     }
 
-    private static void BucketSingle(IEnumerable items, List<int>[] buckets)
+    private static void BucketSingle(IEnumerable items, List<long>[] buckets)
     {
         foreach (var item in items)
         {
@@ -302,7 +307,7 @@ public readonly record struct MeasureContentKey(int Hash)
         }
     }
 
-    private static void BucketSpan(IEnumerable items, List<int>[] buckets)
+    private static void BucketSpan(IEnumerable items, List<long>[] buckets)
     {
         foreach (var item in items)
         {
@@ -314,7 +319,7 @@ public readonly record struct MeasureContentKey(int Hash)
                     continue;
                 // Relative role: 0=only, 1=start, 2=middle, 3=end. Position-independent.
                 int role = start == end ? 0 : mi == start ? 1 : mi == end ? 3 : 2;
-                var hc = new HashCode();
+                var hc = new Hash64();
                 hc.Add(role);
                 hc.Add(HashContent(item, SideExclusions));
                 buckets[mi].Add(hc.ToHashCode());
@@ -335,12 +340,21 @@ public readonly record struct MeasureContentKey(int Hash)
     private static readonly ConcurrentDictionary<Type, Func<object, object?>[]> SideGetters = new();
     private static readonly ConcurrentDictionary<(Type, string), Func<object, int>?> IntGetters = new();
 
-    private static int HashContent(object item, HashSet<string> excluded)
+    // A sentinel folded in place of a property whose getter (or whose element
+    // enumeration) throws — keeps a hostile/computed getter from crashing the whole
+    // key. Deterministic for a given item state, so the over-sensitivity bias holds:
+    // a throwing getter can only cost a missed reuse, never a false one.
+    private const int GetterThrewSentinel = unchecked((int)0xDEAD_FA11);
+
+    private static long HashContent(object item, HashSet<string> excluded)
     {
-        var hc = new HashCode();
+        var hc = new Hash64();
         hc.Add(item.GetType());                       // discriminate kinds
         foreach (var get in Getters(item.GetType(), excluded))
-            AddValue(ref hc, get(item));
+        {
+            try { AddValue(ref hc, get(item)); }
+            catch (Exception) { hc.Add(GetterThrewSentinel); }
+        }
         return hc.ToHashCode();
     }
 
@@ -380,7 +394,7 @@ public readonly record struct MeasureContentKey(int Hash)
         return get == null ? -1 : get(item);
     }
 
-    private static void AddValue(ref HashCode hc, object? value)
+    private static void AddValue(ref Hash64 hc, object? value)
     {
         switch (value)
         {
@@ -405,5 +419,29 @@ public readonly record struct MeasureContentKey(int Hash)
                 hc.Add(value);
                 break;
         }
+    }
+
+    // A 64-bit FNV-1a fold. Each element contributes its own 32-bit GetHashCode
+    // (per-process randomized, like System.HashCode), but the running accumulator is
+    // 64-bit, so two DISTINCT measure contents collide with probability ~2⁻⁶⁴ rather
+    // than the ~2⁻³² a single System.HashCode would give — and that probability, not
+    // an exact content re-check, is what the reuse gates ultimately trust. The
+    // `constrained.` call to GetHashCode() means value-type elements (enums, records,
+    // MeasureContext) fold without boxing.
+    private struct Hash64
+    {
+        private const ulong Offset = 14695981039346656037UL;
+        private const ulong Prime = 1099511628211UL;
+        private ulong _acc;
+
+        public Hash64() => _acc = Offset;
+
+        public void Add<T>(T value)
+        {
+            uint h = value is null ? 0u : unchecked((uint)value.GetHashCode());
+            _acc = unchecked((_acc ^ h) * Prime);
+        }
+
+        public readonly long ToHashCode() => unchecked((long)_acc);
     }
 }

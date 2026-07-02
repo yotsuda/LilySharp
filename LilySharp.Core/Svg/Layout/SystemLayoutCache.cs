@@ -120,17 +120,19 @@ public sealed class SystemLayoutCache
             }
         }
 
-        private readonly Dictionary<int, List<Entry>> _buckets = new();
+        // Cap total live entries so a long editing session cannot grow the cache
+        // without bound: each edit that changes a system leaves its now-stale entry
+        // behind, so entries accumulate monotonically otherwise. Eviction is always
+        // SOUND — a dropped entry just degrades to a recompute (a miss), never a wrong
+        // reuse — so the policy can be as crude as FIFO. The cap trades a little reuse
+        // (across many historical versions) for a hard memory bound.
+        private const int MaxEntries = 1024;
 
-        public int Count
-        {
-            get
-            {
-                int n = 0;
-                foreach (var b in _buckets.Values) n += b.Count;
-                return n;
-            }
-        }
+        private readonly Dictionary<int, List<Entry>> _buckets = new();
+        private readonly Queue<int> _insertionOrder = new(); // one bucketKey per live entry, oldest first
+        private int _count;
+
+        public int Count => _count;
 
         public T GetOrCompute(ImmutableArray<MeasureContentKey> keys,
             int first, int count, bool isFirst, bool isLast, double indent, double shortest,
@@ -178,8 +180,29 @@ public sealed class SystemLayoutCache
             var fresh = compute();
             list.Add(new Entry(first, count, isFirst, isLast, indent, shortest, extra,
                 slice.ToImmutableArray(), fresh));
+            _insertionOrder.Enqueue(bucketKey);
+            _count++;
+            EvictOldestIfOverCap();
             hit = false;
             return fresh;
+        }
+
+        // FIFO: drop the front entry of the oldest-inserted bucket. Global dequeue order
+        // mirrors enqueue order, so the front of the dequeued bucket is exactly the entry
+        // that insertion added — no wrong-entry removal, and _count stays exact.
+        private void EvictOldestIfOverCap()
+        {
+            while (_count > MaxEntries && _insertionOrder.Count > 0)
+            {
+                int oldKey = _insertionOrder.Dequeue();
+                if (_buckets.TryGetValue(oldKey, out var oldList) && oldList.Count > 0)
+                {
+                    oldList.RemoveAt(0);
+                    _count--;
+                    if (oldList.Count == 0)
+                        _buckets.Remove(oldKey);
+                }
+            }
         }
     }
 }
