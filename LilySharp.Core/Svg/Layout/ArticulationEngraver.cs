@@ -434,13 +434,17 @@ public static class ArticulationEngraver
                 or ArticulationType.Flageolet;
         bool isAbove = forceAbove || articulation.IsAbove;
 
-        // Anchor on the note column's edge on the SCRIPT's side: a chord's
-        // script must clear its TOP head when above (BOTTOM head when below).
-        // The chord-midpoint anchor parked a fermata straight on a tall
-        // chord's top notehead — the staff-padding clamp below only guards
-        // against the staff, not against heads on ledger lines above it.
-        // LILYPOND-REF: lily/script-engraver.cc acknowledges the NOTE COLUMN;
-        // side-position-interface measures the column's full Y extent.
+        // Anchor on the chord's extreme head on the SCRIPT's side: the TOP
+        // head when above, the BOTTOM head when below. The chord-midpoint
+        // anchor parked a fermata straight on a tall chord's top notehead —
+        // the staff-padding clamp below only guards against the staff, not
+        // against heads on ledger lines above it.
+        // LILYPOND-REF: lily/script-engraver.cc:234-250
+        //   acknowledge_rhythmic_head — EVERY head of the chord becomes a
+        //   side-position support, so the UP side clears the highest head
+        //   (the note column at :253-268 only becomes the X-parent);
+        //   :181-192 acknowledge_stem — the stem is a support too, which the
+        //   supportExtent stem-length term below approximates.
         int anchorPosition = item is ChordItem anchorChord && anchorChord.Notes.Length > 0
             ? (isAbove
                 ? anchorChord.Notes.Max(n => n.StaffPosition)
