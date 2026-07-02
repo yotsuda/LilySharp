@@ -2519,9 +2519,12 @@ public static class SharedRenderer
             // both the glyph and its distance from the small staff.
             double y = os.Y(sy + d.Y, d.StaffIndex, d.MeasureIndex);
             double size = os.Size(fontSize, d.StaffIndex);
+            // Free expressive text (@text) prints plain italic; dynamic levels
+            // keep LP's bold-italic DynamicText face.
+            var style = d.IsExpressiveText ? FontStyle.Italic : FontStyle.BoldItalic;
             using (gc.Source(d.SourcePosition))
                 gc.DrawText(text, d.X, y, size, "serif",
-                    FontStyle.BoldItalic, TextAnchor.Middle, Color.Black);
+                    style, TextAnchor.Middle, Color.Black);
         }
     }
 

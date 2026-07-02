@@ -40,7 +40,8 @@ public readonly record struct DynamicLayout(
                             // reused (cached) layout emits fresh data-pos. See SharedRenderer.ResolveDataPos.
                             // -1 = "no source" (left unresolved): used by unit tests that build layouts directly.
     bool IsAbove = false,   // Forced above the staff (from @f.up); default below.
-    int StaffIndex = 0      // Which staff this dynamic hangs under (per-staff stacking).
+    int StaffIndex = 0,     // Which staff this dynamic hangs under (per-staff stacking).
+    bool IsExpressiveText = false // @text("…"): plain italic, not a dynamic level.
 );
 
 /// <summary>
@@ -193,7 +194,8 @@ public static class DynamicEngraver
                 dynamic.SourcePosition,
                 di,
                 dynamic.IsAbove,
-                dynamic.StaffIndex
+                dynamic.StaffIndex,
+                dynamic.IsExpressiveText
             ));
         }
 

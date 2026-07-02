@@ -1,0 +1,17 @@
+// @text("...") - free expressive text on a note (grammar audit D). Plain
+// italic below the staff by default, .up forces above; rides the DynamicText
+// pipeline but is NOT a dynamic: the m2 hairpin must run THROUGH "poco"
+// to the real closing @f.
+part melody { clef treble }
+
+section Main {
+  melody {
+    c4@text("dolce") d e f |
+    g4@p@cresc a@text("poco") b c@f |
+    d4@text("espress.") c b@text("sub.").up a |
+  }
+}
+
+structure { Main }
+
+score "text-annotation" { staff melody }

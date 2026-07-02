@@ -346,6 +346,8 @@ public class SvgSnapshotTests
         yield return new object[] { "test/custom-text" };
         // sfz-family dynamics + staccatissimo / bowing / harmonic scripts.
         yield return new object[] { "test/scripts-dynamics" };
+        // @text("...") free expressive text (italic, below by default, .up above).
+        yield return new object[] { "test/text-annotation" };
     }
 
     /// <summary>

@@ -104,6 +104,8 @@ An annotation that takes a VALUE puts it in parentheses (space- or comma-separat
 - Chord names: `c4@chord(C)` , `d4@chord(Dm)`
 - Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
 - Rehearsal mark: `c4@mark(A)`
+- Free expressive text: `c4@text("dolce")` (plain italic below the note; `.up` forces
+  above: `c4@text("pizz.").up`). Not a dynamic: hairpins run through it.
 
 ```
 c4@staccato d4@accent <e g>4@arpeggio |

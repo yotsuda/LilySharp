@@ -53,6 +53,15 @@ public sealed record DynamicItem
     /// <summary>Forced ABOVE the staff (from <c>@f.up</c>); default is below.</summary>
     public bool IsAbove { get; init; }
 
+    /// <summary>
+    /// True for free expressive text (<c>@text("dolce")</c>): rides the whole
+    /// DynamicText pipeline (placement, stacking, per-staff routing, ossia
+    /// shrink) but is NOT a dynamic level — hairpins do not terminate on it,
+    /// MIDI ignores it, and it prints in plain italic instead of bold.
+    /// LILYPOND-REF: scm/define-grobs.scm TextScript (direction DOWN default).
+    /// </summary>
+    public bool IsExpressiveText { get; init; }
+
     public DynamicItem(DynamicLevel level, int measureIndex, int itemIndex,
         int sourcePosition, int staffIndex = 0)
     {
@@ -62,6 +71,19 @@ public sealed record DynamicItem
         ItemIndex = itemIndex;
         SourcePosition = sourcePosition;
         StaffIndex = staffIndex;
+    }
+
+    /// <summary>Creates a free expressive-text item (<c>@text("…")</c>).</summary>
+    public DynamicItem(string text, int measureIndex, int itemIndex,
+        int sourcePosition, int staffIndex = 0)
+    {
+        Level = DynamicLevel.None;
+        Text = text;
+        MeasureIndex = measureIndex;
+        ItemIndex = itemIndex;
+        SourcePosition = sourcePosition;
+        StaffIndex = staffIndex;
+        IsExpressiveText = true;
     }
 
     private static string GetDynamicText(DynamicLevel level) => level switch

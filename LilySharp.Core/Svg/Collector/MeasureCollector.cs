@@ -3154,6 +3154,20 @@ public sealed class MeasureCollector
                     if (ParseFingerMark(markSyntax) is { } finger)
                         _fingeringByPosition[node.Position] = finger;
                 }
+                else if (markName == "text" || markName.StartsWith("text."))
+                {
+                    // @text("dolce")[.up/.down] — free expressive text on the host
+                    // note. Rides the DynamicText pipeline as expressive text: it
+                    // is NOT a dynamic level, so hairpins ignore it and MIDI is
+                    // untouched. LILYPOND-REF: TextScript (LP's c^"text"/c_"text"),
+                    // direction DOWN by default.
+                    if (ExtractTextAnnotation(markSyntax, out bool forcedUp) is { } freeText)
+                        _dynamics.Add(new DynamicItem(
+                            freeText, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex)
+                        {
+                            IsAbove = forcedUp,
+                        });
+                }
                 else if (MusicMarkItem.ParseMarkName(markSyntax.MarkName) is { } compoundMark
                          && (IsNoteAnchoredPedalMark(compoundMark) || IsOttavaMark(compoundMark)))
                 {
@@ -3174,6 +3188,33 @@ public sealed class MeasureCollector
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// The string payload of a <c>@text("…")</c> annotation (quotes stripped),
+    /// plus whether a trailing <c>.up</c> forces it above the staff. Null when
+    /// the annotation carries no string literal (e.g. a bare <c>@text</c>).
+    /// </summary>
+    private static string? ExtractTextAnnotation(MusicMarkSyntax mark, out bool forcedUp)
+    {
+        forcedUp = false;
+        string? text = null;
+        SyntaxTokenNode? last = null;
+        for (int i = 0; i < mark.SlotCount; i++)
+        {
+            if (mark.GetChild(i) is not SyntaxTokenNode token)
+                continue;
+            if (token.Kind == SyntaxKind.StringLiteral && text == null)
+            {
+                var raw = token.Text;
+                text = raw.Length >= 2 && raw[0] == '"' && raw[^1] == '"'
+                    ? raw[1..^1]
+                    : raw;
+            }
+            last = token;
+        }
+        forcedUp = last is { Kind: SyntaxKind.Identifier, Text: "up" };
+        return text;
     }
 
     /// <summary>

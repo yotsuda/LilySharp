@@ -375,6 +375,7 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Chord name:    c4@chord(C) , d4@chord(Dm)
    - Fingering:     <c@finger(1) e@finger(3)>4
    - Rehearsal mark: c4@mark(A)
+   - Free text:      c4@text("dolce") , c4@text("pizz.").up   (italic; below by default)
    - Marks/spanners: @segno @coda @fine @dc @ds @rit @accel
                      @ottava … @loco , @startTrillSpan … @stopTrillSpan ,
                      @ped … @ped(off) *)

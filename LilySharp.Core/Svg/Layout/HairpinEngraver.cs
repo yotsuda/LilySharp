@@ -240,8 +240,11 @@ public static class HairpinEngraver
         if (crescMarks.Count == 0)
             return ImmutableArray<HairpinItem>.Empty;
 
-        // Sort dynamics by position
+        // Sort dynamics by position. Free expressive text (@text) rides the
+        // dynamics table but is NOT a dynamic level — a hairpin must run
+        // through "dolce" to the real closing dynamic.
         var sortedDynamics = dynamics
+            .Where(d => !d.IsExpressiveText)
             .OrderBy(d => d.MeasureIndex)
             .ThenBy(d => d.ItemIndex)
             .ToList();

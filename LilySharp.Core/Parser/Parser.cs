@@ -1148,6 +1148,18 @@ private GreenNode?[] ParseArticulations()
                         while (!Check(SyntaxKind.CloseParen) && !Check(SyntaxKind.EndOfFile))
                             parts.Add(Advance()); // argument token (or a ',' separator)
                         parts.Add(Expect(SyntaxKind.CloseParen));
+                        // @text("…").up / .down — placement on the free-text
+                        // annotation. Only @text takes it: the other value
+                        // annotations have fixed sides, and consuming a '.'
+                        // here would corrupt their dotted MarkName forms.
+                        if (name.Text.Equals("text", StringComparison.OrdinalIgnoreCase)
+                            && Current.Kind == SyntaxKind.Dot
+                            && IsPlacementWord(Peek(1))
+                            && Peek(2)?.Kind != SyntaxKind.Dot)
+                        {
+                            parts.Add(Advance()); // .
+                            parts.Add(Advance()); // up / down
+                        }
                         articulations.Add(new MusicMarkGreen([.. parts]));
                     }
                     else

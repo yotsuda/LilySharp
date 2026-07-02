@@ -127,6 +127,10 @@ public sealed class AnnotationNameValidator : ISemanticValidator
         var lower = name.ToLowerInvariant();
         if (lower is "trillspan.start" or "trillspan.stop")
             return true;
+        // @text("…") — free expressive text (the compound name carries the
+        // string payload, e.g. text."dolce" or text."dolce".up).
+        if (lower.StartsWith("text.", StringComparison.Ordinal))
+            return true;
         if (lower is "feather.right" or "feather.left" or "feather.accel" or "feather.rit")
             return true;
         if (lower.StartsWith("finger.", StringComparison.Ordinal)
