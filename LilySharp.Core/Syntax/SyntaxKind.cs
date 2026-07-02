@@ -92,6 +92,7 @@ public enum SyntaxKind : ushort
     AppogiaturaKeyword,
     LyricsKeyword,      // lyrics
     ChordsKeyword,      // chords (independent chord part: chords name { ... } + score row)
+    WithKeyword,        // with (staff modifier: staff NAME with chords CHORDPART)
     TuningKeyword,      // tuning
     TransposeKeyword,   // transpose
     OctaveKeyword,      // octave

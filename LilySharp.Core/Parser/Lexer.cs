@@ -479,6 +479,7 @@ internal sealed class Lexer
             "alternative" => SyntaxKind.AlternativeKeyword,
             "let" => SyntaxKind.LetKeyword,
             "use" => SyntaxKind.UseKeyword,
+            "with" => SyntaxKind.WithKeyword,
 
             // Metadata keywords
             "title" => SyntaxKind.TitleKeyword,

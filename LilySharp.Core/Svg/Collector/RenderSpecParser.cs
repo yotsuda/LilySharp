@@ -194,8 +194,17 @@ public static class RenderSpecParser
 
     private static StaffSpec? ParseStaff(StaffRenderSyntax staff)
     {
-        // [part] or [clef, part]; braces (if any) are skipped.
+        // [clef?] part [with chords chordPart]; braces (if any) are skipped.
         var toks = RenderTargetTokens(staff);
+        if (toks.Count == 0) return null;
+
+        string? withChords = null;
+        int wi = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
+        if (wi >= 1 && wi + 2 < toks.Count + 1 && toks.Count >= wi + 3)
+        {
+            withChords = toks[wi + 2].Text; // [with][chords][NAME]
+            toks = toks.GetRange(0, wi);    // what precedes = [clef?] part
+        }
         if (toks.Count == 0) return null;
         var partToken = toks[^1];
         var clefToken = toks.Count >= 2 ? toks[0] : null;
@@ -225,7 +234,8 @@ public static class RenderSpecParser
         string? removeEmpty = GetPartProperty(staff, voiceName, "removeempty")?.ToLowerInvariant();
         return new StaffSpec(clef, voiceName, instrumentName,
             RemoveEmpty: removeEmpty is "true" or "all",
-            RemoveFirst: removeEmpty is "all");
+            RemoveFirst: removeEmpty is "all",
+            WithChords: withChords);
     }
 
     private static TabStaffSpec? ParseTab(TabRenderSyntax tab)

@@ -79,7 +79,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'transpose' | 'octave' | 'include' | 'use' | 'let' | 'break' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura'
         | 'repeat' | 'volta' | 'alternative'
-        | 'override' | 'revert' | 'once'
+        | 'override' | 'revert' | 'once' | 'with'
         | 'major' | 'minor' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
         | 'aeolian' | 'locrian'
         | 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8'
@@ -299,7 +299,10 @@ ScoreItem      = StaffRender                        (* staff partName — BARE, 
                | 'lyrics' , PartRef                  (* independent lyrics ROW (lead sheet) *)
                ;
 
-StaffRender    = 'staff' , [ ClefName ] , PartRef ;
+StaffRender    = 'staff' , [ ClefName ] , PartRef , [ 'with' 'chords' PartRef ] ;
+                 (* 'with chords NAME' aligns the named chord part's symbols
+                    above this staff; the same part can also feed a lead-sheet
+                    row ('chords NAME'), so a progression is written once *)
 PartRef        = Identifier ;
 
 (* A 'score' may carry its OWN 'structure { … }' to render a different arrangement

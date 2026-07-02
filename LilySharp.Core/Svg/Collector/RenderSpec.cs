@@ -32,7 +32,11 @@ public sealed record StaffSpec(
     bool RemoveEmpty = false,
     /// <summary>Hara-kiri including the FIRST system (part property
     /// <c>removeEmpty all</c> — LP RemoveAllEmptyStaves).</summary>
-    bool RemoveFirst = false
+    bool RemoveFirst = false,
+    /// <summary>A named chord part whose symbols align above this staff
+    /// (<c>staff NAME with chords CHORDPART</c>); the same part can also feed
+    /// a lead-sheet row, so a progression is written once.</summary>
+    string? WithChords = null
 );
 
 /// <summary>
@@ -123,29 +127,38 @@ public sealed record RenderSpec(
 
     /// <summary>Gets all voice names referenced in this render.</summary>
     public IEnumerable<string> GetVoiceNames()
+        => GetVoiceBindings().Select(b => b.VoiceName);
+
+    /// <summary>
+    /// The per-staff voice bindings in the SAME order <see cref="ToStaffGroups"/>
+    /// builds staves (so the caller's counter equals the global staff index):
+    /// the voice name plus the staff's attached chord part, if any
+    /// (<c>staff NAME with chords CHORDPART</c>).
+    /// </summary>
+    public IEnumerable<(string VoiceName, string? WithChords)> GetVoiceBindings()
     {
         foreach (var item in OrderedItems())
         {
             switch (item)
             {
                 case SingleStaffSpec single:
-                    yield return single.Staff.VoiceName;
+                    yield return (single.Staff.VoiceName, single.Staff.WithChords);
                     break;
                 case GrandStaffRenderSpec grand:
                     foreach (var staff in grand.GrandStaff.Staves)
-                        yield return staff.VoiceName;
+                        yield return (staff.VoiceName, staff.WithChords);
                     break;
                 case TabStaffSpec tab:
-                    yield return tab.Staff.VoiceName;
+                    yield return (tab.Staff.VoiceName, null);
                     break;
                 case OssiaStaffSpec ossia:
-                    yield return ossia.Staff.VoiceName;
+                    yield return (ossia.Staff.VoiceName, null);
                     break;
                 case ChordRowSpec chordRow:
-                    yield return chordRow.PartName;
+                    yield return (chordRow.PartName, null);
                     break;
                 case LyricsRowSpec lyricsRow:
-                    yield return lyricsRow.PartName;
+                    yield return (lyricsRow.PartName, null);
                     break;
             }
         }

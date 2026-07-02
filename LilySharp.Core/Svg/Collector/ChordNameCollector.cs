@@ -62,8 +62,30 @@ internal sealed class ChordNameCollector
     {
         // Nameless chords { … } blocks (the former chordnames keyword, folded
         // into chords pre-release): symbols align above the co-written staff.
-        var blocks = root.DescendantNodes().OfType<ChordPartBlockSyntax>()
-            .Where(b => b.PartName == null).ToList();
+        CollectAligned(
+            root.DescendantNodes().OfType<ChordPartBlockSyntax>().Where(b => b.PartName == null),
+            sectionStartMeasure, staffIndex);
+    }
+
+    /// <summary>
+    /// Aligns a NAMED chord part's symbols above a staff
+    /// (<c>staff NAME with chords CHORDPART</c>) — the same part can also feed a
+    /// lead-sheet row, so a progression is written once and reused.
+    /// </summary>
+    public void CollectAttached(
+        SyntaxNode root, string partName,
+        IReadOnlyDictionary<string, int> sectionStartMeasure, int staffIndex)
+    {
+        CollectAligned(
+            root.DescendantNodes().OfType<ChordPartBlockSyntax>().Where(b => b.PartName == partName),
+            sectionStartMeasure, staffIndex);
+    }
+
+    private void CollectAligned(
+        IEnumerable<ChordPartBlockSyntax> alignedBlocks,
+        IReadOnlyDictionary<string, int> sectionStartMeasure, int staffIndex)
+    {
+        var blocks = alignedBlocks.ToList();
         if (blocks.Count == 0)
             return;
 

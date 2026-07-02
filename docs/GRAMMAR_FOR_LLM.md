@@ -201,7 +201,9 @@ section Main {
 ## Lead sheet (chords and/or lyrics, no staff)
 
 A NAMELESS `chords { … }` block inside a section aligns its symbols above the
-co-written part's staff by timing. An independent `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a
+co-written part's staff by timing; a NAMED part can be aligned the same way with
+`staff melody with chords prog` in the score - and the SAME `prog` can also be a
+lead-sheet row, written once. An independent `chords NAME { … }` and/or `lyrics NAME { … }` part, placed in a
 `score` with `chords NAME` / `lyrics NAME` (instead of `staff NAME`), renders WITHOUT
 a staff: just a grid of measure barlines, the chord symbols between them and the
 lyrics below. A chord entry is `root[duration][:quality][/bass]` (`c`=C, `a:m`=Am,
@@ -287,7 +289,7 @@ title composer tempo time key clef
 major minor dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8
 tuplet grace acciaccatura appoggiatura lyrics chords tuning
-override revert once
+override revert once with
 segno fine coda dc ds al to
 ppp pp p mp mf ff fff   (f is a PITCH; @f still works - dynamics resolve from text)
 ```

@@ -648,7 +648,8 @@ public sealed class MeasureCollector
     /// Collects a Score from a syntax tree.
     /// </summary>
     public Score Collect(SyntaxTree tree, string? voiceName = null,
-        StructureDeclarationSyntax? localStructure = null)
+        StructureDeclarationSyntax? localStructure = null,
+        string? attachedChordPart = null)
     {
         _voiceName = voiceName;
         Reset();
@@ -707,6 +708,10 @@ public sealed class MeasureCollector
         // Collect lyrics
         _lyricsCollector.CollectNoteBound(tree.GetRoot(), measures, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
+        // `staff NAME with chords CHORDPART` on a single-staff score.
+        if (attachedChordPart != null)
+            _chordNameCollector.CollectAttached(
+                tree.GetRoot(), attachedChordPart, _sectionStartMeasure, _currentStaffIndex);
 
         return new Score(
             voice,
@@ -852,12 +857,20 @@ public sealed class MeasureCollector
         // Lyrics rows are collected AFTER the music, so the per-section bar count
         // (used to auto-wrap one block's verses) is known from the real content.
         var pendingLyricsRows = new List<(string Name, int StaffIndex)>();
-        foreach (var voiceName in renderSpec.GetVoiceNames())
+        // `staff NAME with chords CHORDPART` attachments, applied post-loop.
+        var attachedChords = new List<(string PartName, int StaffIndex)>();
+        foreach (var (voiceName, withChords) in renderSpec.GetVoiceBindings())
         {
             _voiceName = voiceName;
             _currentStaffIndex = collectStaffIndex++;
             _octave.LastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
+
+            // `staff NAME with chords CHORDPART`: remember the attachment; the
+            // chord symbols are collected AFTER the voice loop, once every
+            // section's start measure is registered.
+            if (withChords != null)
+                attachedChords.Add((withChords, _currentStaffIndex));
 
             // An independent chord row (`chords name` in the score) carries no music
             // voice — collect its chord symbols against this row's staff index and
@@ -950,6 +963,9 @@ public sealed class MeasureCollector
             _lyricsCollector.CollectNoteBound(tree.GetRoot(), firstStaffVoices[0].Measures.ToList(), _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
         }
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
+        foreach (var (attachedPart, attachedStaff) in attachedChords)
+            _chordNameCollector.CollectAttached(
+                tree.GetRoot(), attachedPart, _sectionStartMeasure, attachedStaff);
 
         // Phase 3: Build staff groups from render spec
         var staffGroups = renderSpec.ToStaffGroups(name =>

@@ -344,6 +344,8 @@ public class SvgSnapshotTests
         // structure-level _"text" directive: engraves at the end of the section
         // just played (parsed-but-silent until the collector was connected).
         yield return new object[] { "test/custom-text" };
+        // staff NAME with chords CHORDPART: named progression aligned above a staff.
+        yield return new object[] { "test/chords-attached" };
         // sfz-family dynamics + staccatissimo / bowing / harmonic scripts.
         yield return new object[] { "test/scripts-dynamics" };
         // @text("...") free expressive text (italic, below by default, .up above).

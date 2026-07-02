@@ -137,7 +137,9 @@ public static class SvgGenerator
         string? voiceName = renderSpec is { Items.Length: 1 } && renderSpec.Items[0] is SingleStaffSpec single
             ? single.Staff.VoiceName
             : null;
-        var score = collector.Collect(tree, voiceName, renderSpec?.LocalStructure);
+        string? attachedChords = renderSpec is { Items.Length: 1 }
+            && renderSpec.Items[0] is SingleStaffSpec s ? s.Staff.WithChords : null;
+        var score = collector.Collect(tree, voiceName, renderSpec?.LocalStructure, attachedChords);
         return MultiStaffScore.FromScore(score);
     }
 

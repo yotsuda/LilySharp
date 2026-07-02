@@ -2270,7 +2270,7 @@ private GreenNode?[] ParseArticulations()
     /// </summary>
     private StaffRenderGreen ParseStaffRender()
     {
-        // staff [clef] part   (clef optional; no braces)
+        // staff [clef] part [with chords chordPart]   (no braces)
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.StaffKeyword) };
 
         // A clef keyword followed by a part name is an override.
@@ -2278,6 +2278,17 @@ private GreenNode?[] ParseArticulations()
             tokens.Add(Advance());
 
         tokens.Add(ExpectPartName());
+
+        // `with chords NAME` attaches a NAMED chord part's symbols above this
+        // staff — the same progression can also feed a lead-sheet row, written
+        // once (grammar feedback: the nameless/named forms forced duplication).
+        if (Check(SyntaxKind.WithKeyword) && Peek(1)?.Kind == SyntaxKind.ChordsKeyword)
+        {
+            tokens.Add(Advance()); // with
+            tokens.Add(Advance()); // chords
+            tokens.Add(ExpectPartName());
+        }
+
         return new StaffRenderGreen([.. tokens]);
     }
 

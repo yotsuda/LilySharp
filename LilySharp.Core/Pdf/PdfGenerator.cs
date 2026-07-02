@@ -49,29 +49,11 @@ public static class PdfGenerator
             ? RenderSpecParser.FindFirst(tree)
             : RenderSpecParser.FindByName(tree, renderName);
 
-        // Always promote to MultiStaffScore so the new SharedRenderer can
-        // drive both single-staff and multi-staff cases through the same path.
-        MultiStaffScore multiScore;
-        ScoreLayout layout;
-        if (renderSpec != null && renderSpec.IsMultiStaff)
-        {
-            var collector = new MeasureCollector();
-            multiScore = collector.CollectMultiStaff(tree, renderSpec);
-            layout = new LayoutEngine().Layout(multiScore);
-        }
-        else
-        {
-            string? voiceName = null;
-            if (renderSpec != null && renderSpec.Items.Length == 1 &&
-                renderSpec.Items[0] is SingleStaffSpec single)
-            {
-                voiceName = single.Staff.VoiceName;
-            }
-            var collector = new MeasureCollector();
-            var score = collector.Collect(tree, voiceName, renderSpec?.LocalStructure);
-            multiScore = MultiStaffScore.FromScore(score);
-            layout = new LayoutEngine().Layout(multiScore);
-        }
+        // ONE collection path for every output format (see PngGenerator):
+        // the hand-copied variant here silently missed score transpose and the
+        // `with chords` attachment.
+        MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec);
+        ScoreLayout layout = new LayoutEngine().Layout(multiScore);
 
         var docOptions = new PdfDocumentOptions
         {

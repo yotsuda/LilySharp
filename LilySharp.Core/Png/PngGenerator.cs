@@ -16,6 +16,7 @@
 
 using LilySharp.Core.Rendering;
 using LilySharp.Core.Rendering.Png;
+using LilySharp.Core.Svg;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
 using LilySharp.Core.Svg.Model;
@@ -52,28 +53,12 @@ public static class PngGenerator
             ? RenderSpecParser.FindFirst(tree)
             : RenderSpecParser.FindByName(tree, renderName);
 
-        // Promote single-staff to MultiStaffScore so SharedRenderer drives both.
-        MultiStaffScore multiScore;
-        ScoreLayout layout;
-        if (renderSpec != null && renderSpec.IsMultiStaff)
-        {
-            var collector = new MeasureCollector();
-            multiScore = collector.CollectMultiStaff(tree, renderSpec);
-            layout = new LayoutEngine().Layout(multiScore);
-        }
-        else
-        {
-            string? voiceName = null;
-            if (renderSpec != null && renderSpec.Items.Length == 1 &&
-                renderSpec.Items[0] is SingleStaffSpec single)
-            {
-                voiceName = single.Staff.VoiceName;
-            }
-            var collector = new MeasureCollector();
-            var score = collector.Collect(tree, voiceName, renderSpec?.LocalStructure);
-            multiScore = MultiStaffScore.FromScore(score);
-            layout = new LayoutEngine().Layout(multiScore);
-        }
+        // ONE collection path for every output format: this used to be a
+        // hand-copied subset of SvgGenerator.CollectScore and silently missed
+        // its newer behaviours (score transpose, `with chords` attachment) —
+        // the PNG of a score could differ from its SVG.
+        MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec);
+        ScoreLayout layout = new LayoutEngine().Layout(multiScore);
 
         var fontDir = options.FontDirectory ?? FontLocator.Find();
         var docOptions = new PngDocumentOptions
