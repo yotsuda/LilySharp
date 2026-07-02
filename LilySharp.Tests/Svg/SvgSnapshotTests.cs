@@ -403,9 +403,27 @@ public class SvgSnapshotTests
         {
             // Find first difference for a helpful error message
             var (line, col) = FindFirstDifference(baseline, svg);
+
+            // Rasterize both sides and refresh the reviewable HTML report — the
+            // piece that lets a human JUDGE a geometry change instead of only
+            // detecting it. Best-effort: a rasterizer failure must not mask the
+            // snapshot failure itself.
+            string visual;
+            try
+            {
+                visual = "Visual diff report (open in a browser): " +
+                         VisualDiffReport.Record(sampleName, baseline, svg);
+            }
+            catch (Exception ex)
+            {
+                visual = $"Visual diff report unavailable ({ex.GetType().Name}: {ex.Message})";
+            }
+
             Assert.Fail(
                 $"SVG snapshot mismatch for '{sampleName}' at line {line}, col {col}.\n" +
-                $"To update: set LILYSHARP_UPDATE_SNAPSHOTS=1 and re-run.\n" +
+                visual + "\n" +
+                $"Approve THIS fixture: pwsh tools/Approve-Snapshots.ps1 -Name {sampleName}\n" +
+                $"Approve ALL: set LILYSHARP_UPDATE_SNAPSHOTS=1 and re-run.\n" +
                 $"Baseline: {snapshotPath}");
         }
     }

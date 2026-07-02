@@ -4,6 +4,9 @@
 [Oo]ut/
 BenchmarkDotNet.Artifacts/
 
+# Visual regression review output (transient, regenerated per test run)
+artifacts/
+
 # Visual Studio
 .vs/
 *.user
