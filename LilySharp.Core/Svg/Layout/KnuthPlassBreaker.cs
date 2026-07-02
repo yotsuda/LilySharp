@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -144,7 +144,7 @@ public sealed class KnuthPlassBreaker
     /// because <c>FindOptimalBreaks</c> depends only on this vector, an edit that
     /// leaves every measure's <see cref="MeasureSpringData"/> unchanged cannot
     /// change the break solution, so line-breaking can be skipped on that edit
-    /// (LSP_F3_QUERY_GRAPH_DESIGN.md §4 — measure_natural_width is the cutoff).
+    /// (the F3 incremental design notes §4 — measure_natural_width is the cutoff).
     /// </remarks>
     internal static MeasureSpringData[] ComputeMeasureSpringData(IReadOnlyList<Measure> measures,
                                                                 double? baseShortestDuration = null)

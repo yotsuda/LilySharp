@@ -19,7 +19,7 @@ namespace LilySharp.Core.Svg.Model;
 /// <summary>
 /// The running "Timing / Clef / Key" context that crosses barlines — the state
 /// LilyPond threads left-to-right through a voice. This is the F3 design's
-/// <c>entry_context</c> / <c>exit_context</c> payload (LSP_F3_QUERY_GRAPH_DESIGN.md
+/// <c>entry_context</c> / <c>exit_context</c> payload (F3 design notes
 /// §2 Layer 2): each measure's <c>entry</c> is the previous measure's <c>exit</c>,
 /// and a measure's semantics depend only on its green subtree plus this context.
 /// </summary>
@@ -27,7 +27,7 @@ namespace LilySharp.Core.Svg.Model;
 /// A <c>readonly record struct</c> on purpose: value equality is exactly the
 /// early-cutoff comparison the query DAG needs — when a measure's
 /// <c>exit_context</c> is unchanged after an edit, the running-state cascade to
-/// later measures stops (LSP_F3_QUERY_GRAPH_DESIGN.md §3-4).
+/// later measures stops (the F3 incremental design notes §3-4).
 ///
 /// SCOPE: this is the Timing/Clef/Key backbone LilyPond's three context
 /// engravers carry. The initial values come from the score header / part clef

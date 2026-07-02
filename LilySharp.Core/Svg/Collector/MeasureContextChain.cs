@@ -21,7 +21,7 @@ using LilySharp.Core.Svg.Model;
 namespace LilySharp.Core.Svg.Collector;
 
 /// <summary>
-/// F3a substrate (LSP_F3_QUERY_GRAPH_DESIGN.md §2 Layer 2): the
+/// F3a substrate (the F3 incremental design notes §2 Layer 2): the
 /// <c>entry_context → exit_context</c> chain for one voice.
 /// </summary>
 /// <remarks>

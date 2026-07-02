@@ -29,7 +29,7 @@ namespace LilySharp.Core.Svg;
 /// that reuses the previous line-break solution when an edit does not change the
 /// line-break gate, so the (heavy) global Knuth-Plass DP is skipped on the
 /// majority of edits — those that do not change any measure's natural width
-/// (LSP_F3_QUERY_GRAPH_DESIGN.md §4).
+/// (the F3 incremental design notes §4).
 /// </summary>
 /// <remarks>
 /// <para>

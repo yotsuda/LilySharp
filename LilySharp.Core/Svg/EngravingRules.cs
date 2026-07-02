@@ -44,7 +44,7 @@ public static class EngravingRules
     //   shortest-duration-space = 2.0
     //   spacing-increment = 1.2
     //   base-shortest-duration = 3/16  (NOTE: Lily# currently uses 1/8 — see H-1
-    //   in LAYOUT_ROADMAP_V3.md for the multi-voice tracking work that supersedes
+    //   in the layout roadmap notes for the multi-voice tracking work that supersedes
     //   this static reference)
     // The duration→space formula itself follows lily/spacing-basic.cc:109-183.
 

@@ -28,7 +28,7 @@ using LilySharp.Core.Svg.Collector;
 namespace LilySharp.Core.Svg.Model;
 
 /// <summary>
-/// F3 / S5 substrate (LSP_F3_QUERY_GRAPH_DESIGN.md §1 Layer 1, §19.4): a stable,
+/// F3 / S5 substrate (the F3 incremental design notes §1 Layer 1, §19.4): a stable,
 /// position-INDEPENDENT identity for a measure's rendered content. This is the
 /// "<c>measure_green</c>" the design assumed it got for free but does not — green
 /// nodes carry no structural hash and measures are discovered by the collector,

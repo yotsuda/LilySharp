@@ -10,7 +10,6 @@ summary. It does not re-list syntax — see the references below for that.
 | [`GRAMMAR_FOR_LLM.md`](GRAMMAR_FOR_LLM.md) | **Canonical spec** — compressed, every example parse-verified | Authoring `.lys`; dropping into an LLM's context |
 | [`GRAMMAR.md`](GRAMMAR.md) | **Formal EBNF** of the same language | You want the precise grammar productions |
 | [`SYNTAX_REFERENCE.md`](SYNTAX_REFERENCE.md) | Human reference (tables, longer examples) | A worked, browsable reference |
-| [`GRAMMAR_ANALYSIS.md`](GRAMMAR_ANALYSIS.md) | **Historical** design rationale (some forms dated) | The *why* behind design choices |
 | this file | Doc index + coverage + known gaps | "Is X implemented?" / "what's missing?" |
 
 The parser is the ultimate authority; the three spec docs above are kept in sync with it.

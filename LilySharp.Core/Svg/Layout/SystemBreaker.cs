@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -85,7 +85,7 @@ public sealed class SystemBreaker
     {
         var measures = score.PrimaryContentStaff.PrimaryVoice.Measures;
 
-        // F3 incremental cutoff (LSP_F3_QUERY_GRAPH_DESIGN.md §4): when the caller
+        // F3 incremental cutoff (the F3 incremental design notes §4): when the caller
         // has verified the line-break gate (per-measure spring vector + prefix
         // widths) is unchanged, the break solution cannot change, so regroup the
         // new measures by the cached line sizes and skip the spring computation

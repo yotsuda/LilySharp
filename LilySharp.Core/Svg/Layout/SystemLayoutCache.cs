@@ -25,7 +25,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// F3 / S5-3: a session-scoped memo of per-system layout. On an edit, a system
 /// whose content is unchanged reuses its cached results instead of recomputing
 /// them; only the systems containing edited measures recompute
-/// (LSP_F3_QUERY_GRAPH_DESIGN.md §6, §19.5). Two phases are memoized — the
+/// (the F3 incremental design notes §6, §19.5). Two phases are memoized — the
 /// per-system spring solve (<see cref="GetOrComputeMeasures"/>) and the per-system
 /// skyline build (<see cref="GetOrComputeSkyline"/>) — which the phase breakdown
 /// showed are the two dominant per-system costs (the skyline is the larger of the

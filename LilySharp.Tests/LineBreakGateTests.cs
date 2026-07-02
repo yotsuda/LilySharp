@@ -27,7 +27,7 @@ namespace LilySharp.Tests;
 /// The global Knuth-Plass line-break solution is a pure function of the
 /// per-measure natural-width vector (<see cref="KnuthPlassBreaker.ComputeMeasureSpringData"/>
 /// -> <c>FindOptimalBreaks</c>) plus the paper width. These tests prove the
-/// design's central early-cutoff (LSP_F3_QUERY_GRAPH_DESIGN.md §4): an edit that
+/// design's central early-cutoff (the F3 incremental design notes §4): an edit that
 /// does not change any measure's natural width CANNOT change where the lines
 /// break, so the incremental driver may reuse the previous break solution; and
 /// when a width DOES change, the change is LOCALIZED to the edited measure (the
