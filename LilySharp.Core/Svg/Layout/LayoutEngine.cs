@@ -970,13 +970,17 @@ public sealed class LayoutEngine
     }
 
     /// <summary>
-    /// Returns per-system skylines with the above-staff scripts' ink merged in
-    /// (top staff only) — the input skylines are NOT mutated; non-augmented
-    /// systems reuse the originals. LilyPond's axis-group skyline contains the
-    /// note-bound scripts, so anything spaced against it (the chord-name line)
-    /// clears a staccato or fermata above a protruding note; these system
-    /// skylines are built before script layout exists, hence this second pass.
-    /// The ink transform mirrors OutsideStaffStacker's script seeding.
+    /// Returns per-system skylines with the scripts' ink merged in — above
+    /// scripts into the UP skyline, below scripts into the DOWN skyline. The
+    /// input skylines are NOT mutated; non-augmented systems reuse the
+    /// originals. LilyPond's axis-group skyline contains the note-bound
+    /// scripts, so anything spaced against it (the chord-name line above, the
+    /// figured-bass row below) clears a staccato or fermata over a protruding
+    /// note; these system skylines are built before script layout exists,
+    /// hence this second pass. Inner-staff scripts merge harmlessly (the
+    /// system silhouette already dominates them). The ink transform mirrors
+    /// OutsideStaffStacker's script seeding; script Y is system-local
+    /// (staff offset already applied).
     /// LILYPOND-REF: lily/axis-group-interface.cc:359-474 — grobs without
     /// outside-staff-priority stay in the support skyline.
     /// </summary>
@@ -996,21 +1000,29 @@ public sealed class LayoutEngine
         var augmented = systemSkylines.ToArray();
         foreach (var a in articulations)
         {
-            // Top-staff scripts whose ink rises above the staff top (Y is
-            // staff-local for staff 0; BBox Top is up-positive).
-            if (!a.IsAbove || a.StaffIndex != 0
-                || !measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
+            if (!measureToSystem.TryGetValue(a.MeasureIndex, out int sysIdx))
                 continue;
+            // Ink box in system-local device Y (BBox Top is up-positive).
             double inkTop = a.Y - a.Ink.Top;
-            if (inkTop >= 0)
-                continue; // entirely inside the staff — the up-skyline covers it
-
-            var up = new VerticalSkyline(VerticalDirection.Up);
-            up.Merge(augmented[sysIdx].up);
-            up.Merge(VerticalSkyline.FromBox(
-                a.X + a.Ink.Left, a.X + a.Ink.Right,
-                a.Y - a.Ink.Bottom, inkTop, VerticalDirection.Up));
-            augmented[sysIdx] = (up, augmented[sysIdx].down);
+            double inkBottom = a.Y - a.Ink.Bottom;
+            if (a.IsAbove)
+            {
+                var up = new VerticalSkyline(VerticalDirection.Up);
+                up.Merge(augmented[sysIdx].up);
+                up.Merge(VerticalSkyline.FromBox(
+                    a.X + a.Ink.Left, a.X + a.Ink.Right,
+                    inkBottom, inkTop, VerticalDirection.Up));
+                augmented[sysIdx] = (up, augmented[sysIdx].down);
+            }
+            else
+            {
+                var down = new VerticalSkyline(VerticalDirection.Down);
+                down.Merge(augmented[sysIdx].down);
+                down.Merge(VerticalSkyline.FromBox(
+                    a.X + a.Ink.Left, a.X + a.Ink.Right,
+                    inkBottom, inkTop, VerticalDirection.Down));
+                augmented[sysIdx] = (augmented[sysIdx].up, down);
+            }
         }
         return augmented;
     }
@@ -1158,17 +1170,18 @@ public sealed class LayoutEngine
             ? ArticulationEngraver.Calculate(score, articulations, systems, ml, measuresByStaff, staffYAt, staffByIndex,
                 beamLayouts ?? default)
             : ImmutableArray<ArticulationLayout>.Empty;
-        var chordNameSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
+        var scriptedSkylines = AugmentSkylinesWithScripts(systemSkylines, articulationLayouts, systems);
 
-        // Layout figured bass
+        // Layout figured bass (drops below below-staff scripts via the
+        // script-augmented DOWN skylines)
         var figuredBassLayouts = FiguredBassEngraver.Calculate(
             figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures,
-            measuresByStaff, staffYAt, systemSkylines);
+            measuresByStaff, staffYAt, scriptedSkylines);
 
         // Layout chord names (skyline-spaced above high notes when skylines available)
         var chordNameLayouts = ChordNameEngraver.Calculate(
             chordNames ?? ImmutableArray<ChordNameItem>.Empty, systems, ml, measures,
-            measuresByStaff, staffYAt, minStaffYAt, chordNameSkylines);
+            measuresByStaff, staffYAt, minStaffYAt, scriptedSkylines);
 
         // Layout percent repeats
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(

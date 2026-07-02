@@ -81,7 +81,7 @@
   <text class="music" x="67.64" y="23.06" font-size="4.00" data-pos="367"></text>
   <text class="music" x="70.64" y="22.78" font-size="4.00" data-pos="380"></text>
   <text class="music" x="73.64" y="21.94" font-size="4.00" data-pos="391"></text>
-  <text class="music" x="76.64" y="16.41" font-size="4.00" data-pos="403"></text>
+  <text class="music" x="76.64" y="16.83" font-size="4.00" data-pos="403"></text>
   <line x1="41.55" y1="24.15" x2="46.13" y2="23.49" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>
   <line x1="41.55" y1="24.15" x2="46.13" y2="24.82" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="254"/>
   <line x1="56.31" y1="24.39" x2="60.96" y2="25.05" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="277"/>

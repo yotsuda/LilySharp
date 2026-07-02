@@ -98,11 +98,11 @@
   <text class="music" x="61.87" y="22.44" font-size="4.00" data-pos="327"></text>
   <text class="music" x="67.18" y="21.94" font-size="4.00" data-pos="336"></text>
   <text class="music" x="72.50" y="21.66" font-size="4.00" data-pos="345"></text>
-  <text class="music" x="80.57" y="21.96" font-size="4.00" data-pos="359"></text>
-  <text class="music" x="85.88" y="21.66" font-size="4.00" data-pos="369"></text>
+  <text class="music" x="80.57" y="21.66" font-size="4.00" data-pos="359"></text>
+  <text class="music" x="85.88" y="20.66" font-size="4.00" data-pos="369"></text>
   <text class="music" x="91.27" y="17.66" font-size="4.00" data-pos="379"></text>
   <text class="music" x="96.59" y="17.66" font-size="4.00" data-pos="389"></text>
-  <text class="music" x="8.22" y="28.41" font-size="4.00" data-pos="431"></text>
+  <text class="music" x="8.22" y="28.83" font-size="4.00" data-pos="431"></text>
   <text class="music" x="39.56" y="35.36" font-size="4.00" data-pos="452"></text>
   <text class="music" x="46.96" y="34.86" font-size="4.00" data-pos="462"></text>
   <text class="music" x="54.36" y="34.36" font-size="4.00" data-pos="472"></text>
@@ -110,7 +110,7 @@
   <text class="music" x="71.91" y="35.06" font-size="4.00" data-pos="557"></text>
   <text class="music" x="79.31" y="34.78" font-size="4.00" data-pos="568"></text>
   <text class="music" x="86.71" y="33.94" font-size="4.00" data-pos="577"></text>
-  <text class="music" x="94.10" y="34.46" font-size="4.00" data-pos="586"></text>
+  <text class="music" x="94.10" y="33.66" font-size="4.00" data-pos="586"></text>
   <text x="0.05" y="26.92" font-size="1.75" font-family="serif" font-weight="bold" fill="#000000">5</text>
   <text class="music" x="0.80" y="14.42" font-size="1.60" data-pos="0"></text>
   <line x1="1.31" y1="14.42" x2="1.31" y2="13.02" stroke="#000000" stroke-width="0.100" data-pos="0"/>

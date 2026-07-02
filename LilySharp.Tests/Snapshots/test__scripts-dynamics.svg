@@ -69,17 +69,17 @@
   <text x="13.80" y="17.94" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="271">sf</text>
   <text x="16.81" y="17.54" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="276">rfz</text>
   <text x="46.33" y="17.54" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="389">fz</text>
-  <text class="music" x="23.21" y="16.39" font-size="4.00" data-pos="289"></text>
-  <text class="music" x="26.21" y="16.39" font-size="4.00" data-pos="305"></text>
-  <text class="music" x="29.29" y="10.89" font-size="4.00" data-pos="321"></text>
-  <text class="music" x="32.29" y="10.89" font-size="4.00" data-pos="329"></text>
-  <text class="music" x="38.04" y="10.89" font-size="4.00" data-pos="346"></text>
-  <text class="music" x="41.05" y="17.34" font-size="4.00" data-pos="357"></text>
-  <text class="music" x="44.05" y="10.89" font-size="4.00" data-pos="377"></text>
-  <text class="music" x="52.80" y="9.94" font-size="4.00" data-pos="408"></text>
+  <text class="music" x="23.21" y="15.94" font-size="4.00" data-pos="289"></text>
+  <text class="music" x="26.21" y="15.94" font-size="4.00" data-pos="305"></text>
+  <text class="music" x="29.29" y="11.39" font-size="4.00" data-pos="321"></text>
+  <text class="music" x="32.29" y="11.39" font-size="4.00" data-pos="329"></text>
+  <text class="music" x="38.04" y="10.99" font-size="4.00" data-pos="346"></text>
+  <text class="music" x="41.05" y="16.89" font-size="4.00" data-pos="357"></text>
+  <text class="music" x="44.05" y="10.99" font-size="4.00" data-pos="377"></text>
+  <text class="music" x="52.80" y="10.36" font-size="4.00" data-pos="408"></text>
   <text class="music" x="57.58" y="11.14" font-size="4.00" data-pos="425"></text>
-  <text class="music" x="65.23" y="10.89" font-size="4.00" data-pos="443"></text>
-  <text class="music" x="73.71" y="9.44" font-size="4.00" data-pos="469"></text>
+  <text class="music" x="65.23" y="11.31" font-size="4.00" data-pos="443"></text>
+  <text class="music" x="73.71" y="9.86" font-size="4.00" data-pos="469"></text>
   <rect x="0.30" y="6.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="228"/>
   <text x="3.01" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="228">Main</text>
   </g>

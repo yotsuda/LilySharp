@@ -263,6 +263,48 @@ public static partial class GlyphMetrics
     /// <summary>Marcato below (downward V) — advance width (next-glyph horizontal feed).</summary>
     public const double ArticMarcatoBelowAdvance = 0.5000;
 
+    /// <summary>Fermata above — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.ufermata (U+E039 = scripts.ufermata)</remarks>
+    public static readonly BBox FermataAboveGlyph = new(-1.3280, -0.0760, 1.3280, 1.4520);
+    /// <summary>Fermata above — advance width (next-glyph horizontal feed).</summary>
+    public const double FermataAboveGlyphAdvance = 1.3240;
+
+    /// <summary>Fermata below — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.dfermata (U+E03A = scripts.dfermata)</remarks>
+    public static readonly BBox FermataBelowGlyph = new(-1.3280, -1.4520, 1.3280, 0.0760);
+    /// <summary>Fermata below — advance width (next-glyph horizontal feed).</summary>
+    public const double FermataBelowGlyphAdvance = 1.3240;
+
+    /// <summary>Staccatissimo above (dagger) — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.ustaccatissimo (U+E04B = scripts.ustaccatissimo)</remarks>
+    public static readonly BBox ArticStaccatissimoAboveGlyph = new(-0.2040, -0.0520, 0.2040, 1.0000);
+    /// <summary>Staccatissimo above (dagger) — advance width (next-glyph horizontal feed).</summary>
+    public const double ArticStaccatissimoAboveGlyphAdvance = 0.2000;
+
+    /// <summary>Staccatissimo below (dagger) — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.dstaccatissimo (U+E04C = scripts.dstaccatissimo)</remarks>
+    public static readonly BBox ArticStaccatissimoBelowGlyph = new(-0.2040, -1.0000, 0.2040, 0.0520);
+    /// <summary>Staccatissimo below (dagger) — advance width (next-glyph horizontal feed).</summary>
+    public const double ArticStaccatissimoBelowGlyphAdvance = 0.2000;
+
+    /// <summary>Up-bow (V) — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.upbow (U+E056 = scripts.upbow)</remarks>
+    public static readonly BBox ArticUpBowGlyph = new(-0.6480, 0.0000, 0.6520, 2.0800);
+    /// <summary>Up-bow (V) — advance width (next-glyph horizontal feed).</summary>
+    public const double ArticUpBowGlyphAdvance = 0.6480;
+
+    /// <summary>Down-bow (frog) — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.downbow (U+E057 = scripts.downbow)</remarks>
+    public static readonly BBox ArticDownBowGlyph = new(-0.7520, 0.0000, 0.7520, 1.3320);
+    /// <summary>Down-bow (frog) — advance width (next-glyph horizontal feed).</summary>
+    public const double ArticDownBowGlyphAdvance = 0.7480;
+
+    /// <summary>Flageolet / harmonic circle — BBox.</summary>
+    /// <remarks>LILYPOND-REF: mf/feta-scripts.mf — scripts.flageolet (U+E061 = scripts.flageolet)</remarks>
+    public static readonly BBox ArticFlageoletGlyph = new(-0.4000, -0.4000, 0.4000, 0.4000);
+    /// <summary>Flageolet / harmonic circle — advance width (next-glyph horizontal feed).</summary>
+    public const double ArticFlageoletGlyphAdvance = 0.4000;
+
     // ========== Advance widths (extracted from hmtx table) ==========
 
     /// <summary>G (treble) clef advance width</summary>

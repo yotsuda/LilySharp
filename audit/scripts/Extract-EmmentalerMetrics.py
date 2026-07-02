@@ -104,6 +104,13 @@ BBOX_GLYPHS: list[GlyphSpec] = [
     GlyphSpec("ArticTenuto",        0xE04D, "Tenuto articulation",             "mf/feta-scripts.mf — scripts.tenuto"),
     GlyphSpec("ArticMarcatoAbove",  0xE050, "Marcato above (upward V)",        "mf/feta-scripts.mf — scripts.umarcato"),
     GlyphSpec("ArticMarcatoBelow",  0xE051, "Marcato below (downward V)",      "mf/feta-scripts.mf — scripts.dmarcato"),
+    GlyphSpec("FermataAboveGlyph",  0xE039, "Fermata above",                   "mf/feta-scripts.mf — scripts.ufermata"),
+    GlyphSpec("FermataBelowGlyph",  0xE03A, "Fermata below",                   "mf/feta-scripts.mf — scripts.dfermata"),
+    GlyphSpec("ArticStaccatissimoAboveGlyph", 0xE04B, "Staccatissimo above (dagger)", "mf/feta-scripts.mf — scripts.ustaccatissimo"),
+    GlyphSpec("ArticStaccatissimoBelowGlyph", 0xE04C, "Staccatissimo below (dagger)", "mf/feta-scripts.mf — scripts.dstaccatissimo"),
+    GlyphSpec("ArticUpBowGlyph",    0xE056, "Up-bow (V)",                      "mf/feta-scripts.mf — scripts.upbow"),
+    GlyphSpec("ArticDownBowGlyph",  0xE057, "Down-bow (frog)",                 "mf/feta-scripts.mf — scripts.downbow"),
+    GlyphSpec("ArticFlageoletGlyph", 0xE061, "Flageolet / harmonic circle",    "mf/feta-scripts.mf — scripts.flageolet"),
 ]
 
 # --- Advance-only glyphs (just the horizontal advance width) ---

@@ -288,7 +288,7 @@ public static class ArticulationEngraver
                 articulation.IsAbove,
                 articulation.SourcePosition,
                 scale,
-                GetSeedBBox(articulation.Type),
+                GetSeedBBox(articulation.Type, articulation.IsAbove),
                 SourceIndex: arti,
                 StaffIndex: articulation.StaffIndex
             ));
@@ -347,7 +347,7 @@ public static class ArticulationEngraver
     /// <remarks>
     /// LILYPOND-REF: mf/feta-scripts.mf set_char_box() for each script glyph
     /// </remarks>
-    private static GlyphMetrics.BBox GetGlyphBBox(ArticulationType type)
+    private static GlyphMetrics.BBox GetGlyphBBox(ArticulationType type, bool isAbove = true)
     {
         if (IsEditorialType(type))
         {
@@ -363,8 +363,16 @@ public static class ArticulationEngraver
             ArticulationType.Staccato => GlyphMetrics.ArticStaccato,
             ArticulationType.Accent => GlyphMetrics.ArticAccent,
             ArticulationType.Tenuto => GlyphMetrics.ArticTenuto,
-            ArticulationType.Marcato => GlyphMetrics.ArticMarcatoAbove, // direction handled separately
-            _ => new GlyphMetrics.BBox(-0.5, -0.5, 0.5, 0.5) // fallback for fermata, ornaments
+            ArticulationType.Marcato => isAbove
+                ? GlyphMetrics.ArticMarcatoAbove : GlyphMetrics.ArticMarcatoBelow,
+            ArticulationType.Fermata => isAbove
+                ? GlyphMetrics.FermataAboveGlyph : GlyphMetrics.FermataBelowGlyph,
+            ArticulationType.Staccatissimo => isAbove
+                ? GlyphMetrics.ArticStaccatissimoAboveGlyph : GlyphMetrics.ArticStaccatissimoBelowGlyph,
+            ArticulationType.UpBow => GlyphMetrics.ArticUpBowGlyph,
+            ArticulationType.DownBow => GlyphMetrics.ArticDownBowGlyph,
+            ArticulationType.Flageolet => GlyphMetrics.ArticFlageoletGlyph,
+            _ => new GlyphMetrics.BBox(-0.5, -0.5, 0.5, 0.5) // fallback for the ornament family
         };
     }
 
@@ -385,7 +393,7 @@ public static class ArticulationEngraver
     /// the occupancy a mark must clear changes. Other types fall back.
     /// LILYPOND-REF: mf/feta-scripts.mf set_char_box() for each script glyph.
     /// </summary>
-    private static GlyphMetrics.BBox GetSeedBBox(ArticulationType type) => type switch
+    private static GlyphMetrics.BBox GetSeedBBox(ArticulationType type, bool isAbove = true) => type switch
     {
         ArticulationType.Trill => GlyphMetrics.OrnTrillGlyph,
         ArticulationType.Turn => GlyphMetrics.OrnTurnGlyph,
@@ -393,7 +401,7 @@ public static class ArticulationEngraver
         ArticulationType.Prall => GlyphMetrics.OrnPrallGlyph,
         ArticulationType.Mordent => GlyphMetrics.OrnMordentGlyph,
         ArticulationType.PrallTriller => GlyphMetrics.OrnPrallPrallGlyph,
-        _ => GetGlyphBBox(type)
+        _ => GetGlyphBBox(type, isAbove)
     };
 
     /// <summary>
@@ -427,7 +435,7 @@ public static class ArticulationEngraver
     /// </remarks>
     private static double GetNearExtent(ArticulationType type, bool isAbove)
     {
-        var bbox = GetGlyphBBox(type);
+        var bbox = GetGlyphBBox(type, isAbove);
         // "Near extent" = how far the glyph extends toward the note from its reference point.
         // For above placement: the glyph's bottom extent (positive = extends downward toward note)
         // For below placement: the glyph's top extent (positive = extends upward toward note)
