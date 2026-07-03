@@ -1113,6 +1113,21 @@ public static class SharedRenderer
     }
 
     /// <summary>
+    /// Kerning between two adjacent cancellation naturals: their vertical
+    /// edge intervals (previous glyph's LEFT side = its span shifted +3)
+    /// overlap → 0.3; just touch → 0.15; clear → 0.
+    /// LILYPOND-REF: lily/key-signature-interface.cc natural kerning.
+    /// </summary>
+    private static double NaturalKernPadding(int prevPos, int curPos)
+    {
+        double lo1 = 2 * prevPos - 3, hi1 = 2 * prevPos + 6; // prev, left side
+        double lo2 = 2 * curPos - 6, hi2 = 2 * curPos + 3;   // current, right side
+        double lo = Math.Max(lo1, lo2), hi = Math.Min(hi1, hi2);
+        if (lo > hi) return 0;
+        return hi > lo ? 0.3 : 0.15;
+    }
+
+    /// <summary>
     /// Staff position of the i-th key-signature accidental for a clef.
     /// LILYPOND-REF: scm/music-functions.scm key-signature-interface —
     /// staffPosition = hi − modulo(hi − (c0 + step), 7).
@@ -4442,18 +4457,26 @@ public static class SharedRenderer
         {
             int natCount = Math.Abs(prev) - (Math.Sign(prev) == Math.Sign(next) ? Math.Abs(next) : 0);
             int startAt = Math.Sign(prev) == Math.Sign(next) ? Math.Abs(next) : 0;
-            // Advance by the natural's INK width plus clearance — the old
-            // 0.7 was narrower than the glyph (0.724) and adjacent naturals
-            // overlapped. LILYPOND-REF: mf/feta-accidentals.mf natural extent.
-            double naturalAdvance = GlyphMetrics.AccidentalNatural.Width + 0.2;
+            // Naturals kern by their vertical-edge intervals, like LilyPond:
+            // a natural has vertical edges on BOTH sides, so neighbours whose
+            // edges overlap need 0.3 clearance, corner-touching pairs 0.15,
+            // vertically clear pairs none. The old flat 0.7 advance was
+            // narrower than the glyph itself (0.724) and the pair overlapped.
+            // LILYPOND-REF: lily/key-signature-interface.cc — ht interval
+            //   [2p−6, 2p+3], left side shifted +3; padding 0.3 / 0.15.
+            int prevNatPos = 0;
             for (int i = 0; i < natCount; i++)
             {
                 int staffPosition = KeySigStaffPosition(clef, prev > 0, startAt + i);
+                if (i > 0)
+                    dx += GlyphMetrics.AccidentalNatural.Width
+                        + NaturalKernPadding(prevNatPos, staffPosition);
                 double y = staffY + StaffHeight / 2 - staffPosition * 0.5;
                 using (gc.Source(change.SourcePosition))
                     gc.DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x + dx, y, FontSize);
-                dx += naturalAdvance;
+                prevNatPos = staffPosition;
             }
+            dx += GlyphMetrics.AccidentalNatural.Width;
             // Breathing room between the cancellation and the new signature.
             // LILYPOND-REF: scm/define-grobs.scm KeyCancellation
             //   padding-pairs give it its own break-align slot.

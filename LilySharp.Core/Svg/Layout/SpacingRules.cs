@@ -155,7 +155,9 @@ public static class SpacingRules
 
         double w = 0.8; // barline → signature gap
         if (natCount > 0)
-            w += natCount * (GlyphMetrics.AccidentalNatural.Width + 0.2) + 0.4;
+            // Upper bound of the LP natural kerning (0.3 per overlapping pair).
+            w += natCount * GlyphMetrics.AccidentalNatural.Width
+               + Math.Max(0, natCount - 1) * 0.3 + 0.4;
         if (nextSharps != 0)
             w += Math.Abs(nextSharps) * GlyphMetrics.GetKeySignatureAccidentalWidth(nextSharps > 0) + 0.4;
         return w;
