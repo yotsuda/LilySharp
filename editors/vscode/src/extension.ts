@@ -477,8 +477,12 @@ async function exportPreview(
     uri: string,
     renderName: string | undefined
 ) {
+    outputChannel.appendLine('exportPreview: opening save dialog (clientReady=' + clientReady + ')');
     if (!client || !clientReady) {
-        vscode.window.showErrorMessage('Lily#: language server not ready yet.');
+        // Typical cause: the language server was swapped/killed and the client
+        // gave up restarting — a window reload brings both back.
+        vscode.window.showErrorMessage(
+            'Lily#: language server not running — reload the window (Developer: Reload Window).');
         return;
     }
 
@@ -836,7 +840,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             pages = [{ top: 0, height: 0 }];
             svgWidthPx = 0;
             if (!svg) { updatePageInfo(); return; }
-            const vb = (svg.getAttribute('viewBox') || '0 0 1 1').split(/\s+/).map(Number);
+            const vb = (svg.getAttribute('viewBox') || '0 0 1 1').split(/ +/).map(Number);
             const vbW = vb[2] || 1, vbH = vb[3] || 1;
             svgWidthPx = parseFloat(svg.getAttribute('width')) || svg.clientWidth || 1;
             pxPerSpace = svgWidthPx / vbW;
