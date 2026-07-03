@@ -12,6 +12,15 @@ let client: LanguageClient;
 let clientReady = false;
 let clientReadyPromise: Promise<void>;
 const previewPanels = new Map<string, vscode.WebviewPanel>();
+// A message posted before the webview has finished loading its HTML is
+// DROPPED by VS Code. The webview script posts 'webviewReady' as its last
+// statement; content updates await that (with a timeout escape hatch).
+const panelReady = new Map<string, { promise: Promise<void>; resolve: () => void }>();
+function armPanelReady(uri: string) {
+    let resolve!: () => void;
+    const promise = new Promise<void>(r => { resolve = r; });
+    panelReady.set(uri, { promise, resolve });
+}
 
 // Content for the "Lily#: New Score" command — a complete, valid, recognizable
 // piece (public-domain Twinkle, Twinkle) so a new file shows real notation at once
@@ -297,10 +306,12 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     );
 
     previewPanels.set(uri, panel);
+    armPanelReady(uri);
 
     panel.onDidDispose(() => {
         outputChannel.appendLine(`Preview panel disposed: ${uri}`);
         previewPanels.delete(uri);
+        panelReady.delete(uri);
         selectedRenders.delete(uri);
         const timer = debounceTimers.get(uri);
         if (timer) {
@@ -313,6 +324,10 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
     panel.webview.onDidReceiveMessage(
         async message => {
             outputChannel.appendLine(`Received message from webview: ${message.type}`);
+            if (message.type === 'webviewReady') {
+                panelReady.get(uri)?.resolve();
+                return;
+            }
             if (message.type === 'export') {
                 await exportPreview(uri, message.renderName);
             } else if (message.type === 'jumpToPosition') {
@@ -378,6 +393,14 @@ async function updatePreviewContent(
     const selectedRender = selectedRenders.get(uri);
 
     outputChannel.appendLine(`updatePreviewContent called for ${uri}, clientReady=${clientReady}`);
+
+    // Never post into a webview that has not loaded its HTML yet — VS Code
+    // drops such messages silently and the panel sticks on "Loading…". The
+    // 3 s race is a safety net against a webview that never reports in.
+    const ready = panelReady.get(uri);
+    if (ready) {
+        await Promise.race([ready.promise, new Promise<void>(r => setTimeout(r, 3000))]);
+    }
 
     // Wait for client to be ready if not already
     if (!clientReady) {
@@ -1097,6 +1120,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 clearHighlights();
             }
         });
+
+        // Everything above is registered — tell the extension it is now safe
+        // to post content (messages before this point would have been lost).
+        vscode.postMessage({ type: 'webviewReady' });
     </script>
 </body>
 </html>`;
