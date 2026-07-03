@@ -88,7 +88,15 @@ public sealed record Staff(
     /// line). Drives the reserved band height so verse 2+ don't overlap the staff
     /// below. Always 1 for chord rows and normal staves.
     /// </summary>
-    int TextRowVerses = 1
+    int TextRowVerses = 1,
+    /// <summary>
+    /// Whether this text row carries LYRICS (vs chord symbols). A lyric row
+    /// renders as "a staff with the lines removed": it occupies a full
+    /// staff-height band, its barlines run at staff height and the words sit
+    /// where the staff would be. Chord rows keep the compact band their
+    /// symbols hang on.
+    /// </summary>
+    bool IsLyricsTextRow = false
 )
 {
     /// <summary>The primary voice (first voice).</summary>

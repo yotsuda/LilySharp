@@ -56,6 +56,8 @@ public static class SharedRenderer
     // Height of the short measure-divider barlines on a lead-sheet text row
     // (no staff, so the bar is just a tick the chord row hangs on).
     private const double LeadSheetBarlineHeight = 2.0;
+    // Mirror of LyricEngraver's VerseSpacing (baseline step between stacked verses).
+    private const double LyricVerseSpacing = 3.2;
     private const double FontSize = 4.0;
     private const double TempoNoteSize = 1.6;  // metronome-mark notehead size (shared with the swing equation)
     private const double OssiaScale = EngravingDefaults.OssiaScale; // magstep(-3), shared with the layouter
@@ -277,10 +279,14 @@ public static class SharedRenderer
                 // short ticks the chord symbols hang on.
                 if (leadSheet && globalIdx == barlineRowIdx)
                 {
-                    bool lyricGrid = layout.LyricLayouts.Any(l =>
-                        l.Item.IsLyricsRow && l.Item.StaffIndex == globalIdx);
-                    DrawBarlines(system, staff, staffY, layout, gc,
-                        barHeight: lyricGrid ? StaffHeight : LeadSheetBarlineHeight);
+                    // A lyric row is "a staff with the lines removed": its
+                    // barlines run the ordinary staff height, extended by one
+                    // verse-spacing per extra stacked verse so the grid spans
+                    // every line of words. Chords-only grids keep short ticks.
+                    double h = staff.IsLyricsTextRow
+                        ? StaffHeight + (staff.TextRowVerses - 1) * LyricVerseSpacing
+                        : LeadSheetBarlineHeight;
+                    DrawBarlines(system, staff, staffY, layout, gc, barHeight: h);
                 }
                 continue;
             }

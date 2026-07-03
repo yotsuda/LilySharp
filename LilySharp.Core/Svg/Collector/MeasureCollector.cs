@@ -997,7 +997,7 @@ public sealed class MeasureCollector
             if (ly.IsLyricsRow)
                 rowVerses[ly.StaffIndex] = Math.Max(
                     rowVerses.TryGetValue(ly.StaffIndex, out var mv) ? mv : 0, ly.VerseNumber);
-        if (rowVerses.Values.Any(v => v > 1))
+        if (rowVerses.Count > 0)
         {
             int gsi = 0;
             staffGroups = staffGroups
@@ -1007,8 +1007,11 @@ public sealed class MeasureCollector
                         .Select(st =>
                         {
                             int idx = gsi++;
-                            return st.IsTextRow && rowVerses.TryGetValue(idx, out var verses) && verses > 1
-                                ? st with { TextRowVerses = verses }
+                            // Every LYRIC row is tagged (it lays out as a staff
+                            // with the lines removed); the verse count grows its
+                            // band beyond the first line.
+                            return st.IsTextRow && rowVerses.TryGetValue(idx, out var verses)
+                                ? st with { TextRowVerses = verses, IsLyricsTextRow = true }
                                 : st;
                         })
                         .ToImmutableArray()

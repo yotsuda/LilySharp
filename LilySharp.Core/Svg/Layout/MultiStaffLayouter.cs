@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -122,7 +122,10 @@ public sealed class MultiStaffLayouter
                 // the wider between-groups spacing — scaled with the ossia.
                 if (nextIsOssia || currentIsOssia)
                     spec = sp.StaffStaff;
-                double interGroupGap = spec.BasicDistance - staffHeight;
+                bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
+                double interGroupGap = textRowPair
+                    ? TextRowPairGap
+                    : spec.BasicDistance - staffHeight;
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 height += interGroupGap;
@@ -195,9 +198,14 @@ public sealed class MultiStaffLayouter
             return (stringCount - 1) * EngravingDefaults.TabStringSpace(stringCount); // Bass: 3 → 4.5
         }
         if (staff.IsTextRow)
-            // One-line text band; a multi-verse lyrics row stacks extra lines, so
-            // grow the band by one verse-spacing per additional verse.
-            return TextRowHeight + (staff.TextRowVerses - 1) * TextRowVerseSpacing;
+            // A LYRIC row is "a staff with the lines removed": a full
+            // staff-height band (plus one verse-spacing per extra verse), so
+            // its barlines, spacing and neighbours behave exactly as around a
+            // real staff. A chord row keeps the compact band its symbols
+            // hang on.
+            return staff.IsLyricsTextRow
+                ? _options.StaffHeight + (staff.TextRowVerses - 1) * TextRowVerseSpacing
+                : TextRowHeight;
         if (staff.IsOssia)
             return _options.StaffHeight * OssiaScaleFactor;
         return _options.StaffHeight;
@@ -207,9 +215,15 @@ public sealed class MultiStaffLayouter
     /// (chords / lyrics): a line of text (~1.5 ss tall) plus a little breathing room.</summary>
     private const double TextRowHeight = 2.5;
 
-    /// <summary>Extra band height per additional lyrics verse (matches the
-    /// LyricEngraver verse spacing), so stacked verses get vertical room.</summary>
-    private const double TextRowVerseSpacing = 1.8;
+    /// <summary>Extra band height per additional lyrics verse. MUST match
+    /// LyricEngraver's VerseSpacing, or verse 2+ leak out of the reserved
+    /// band (they did, at the stale 1.8).</summary>
+    private const double TextRowVerseSpacing = 3.2;
+
+    /// <summary>Gap between two adjacent TEXT rows (chord row above a lyric
+    /// row): the chord symbols sit just above the lyric band, like chord
+    /// names above a staff — not a whole staff-distance away.</summary>
+    private const double TextRowPairGap = 0.6;
 
     /// <summary>
     /// Layouts all staff groups within a system.
@@ -260,7 +274,10 @@ public sealed class MultiStaffLayouter
                 // staff-staff-spacing, scaled (see CalculateSystemHeight).
                 if (nextIsOssia || currentIsOssia)
                     spec = sp.StaffStaff;
-                double interGroupGap = spec.BasicDistance - staffHeight;
+                bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
+                double interGroupGap = textRowPair
+                    ? TextRowPairGap
+                    : spec.BasicDistance - staffHeight;
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 currentY += interGroupGap;
@@ -359,7 +376,10 @@ public sealed class MultiStaffLayouter
                     // staff-staff-spacing, scaled (see CalculateSystemHeight).
                     if (nextIsOssia || currentIsOssia)
                         spec = sp.StaffStaff;
-                    double interGroupGap = spec.BasicDistance - staffHeight;
+                    bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
+                    double interGroupGap = textRowPair
+                        ? TextRowPairGap
+                        : spec.BasicDistance - staffHeight;
                     if (nextIsOssia || currentIsOssia)
                         interGroupGap *= OssiaScaleFactor;
                     currentY += interGroupGap;
@@ -1082,8 +1102,11 @@ public sealed class MultiStaffLayouter
                 // staff-staff-spacing, scaled (see CalculateSystemHeight).
                 if (nextIsOssia || currentIsOssia)
                     spec = sp.StaffStaff;
-                double interGroupGap = CalculateStaffGapWithSkylines(
-                    spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
+                bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
+                double interGroupGap = textRowPair
+                    ? TextRowPairGap
+                    : CalculateStaffGapWithSkylines(
+                        spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;
                 height += interGroupGap;
@@ -1155,7 +1178,10 @@ public sealed class MultiStaffLayouter
                 // staff-staff-spacing, scaled (see CalculateSystemHeight).
                 if (nextIsOssia || currentIsOssia)
                     spec = sp.StaffStaff;
-                double interGroupGap = CalculateStaffGapWithSkylines(
+                bool textRowPair = group.Staves[^1].IsTextRow && nextGroup.Staves[0].IsTextRow;
+                double interGroupGap = textRowPair
+                    ? TextRowPairGap
+                    : CalculateStaffGapWithSkylines(
                     spec, staffHeight, staffSkylines, lastOfGroup, firstOfNext);
                 if (nextIsOssia || currentIsOssia)
                     interGroupGap *= OssiaScaleFactor;

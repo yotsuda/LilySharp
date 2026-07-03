@@ -155,7 +155,11 @@ public sealed class LyricEngraver
     /// </param>
     /// <summary>Baseline of an independent lyrics ROW's verse 1 below the row band's
     /// top, so the text sits inside the reserved band (cf. ChordRow text baseline).</summary>
-    private const double LyricRowBaseline = 1.6;
+    // Verse 1's baseline inside the row's STAFF-HEIGHT band: the text block
+    // (ascender 2.11 + descender 0.9) vertically centred in the 4.0 ss band —
+    // the words sit where the staff lines would be, "a staff with the lines
+    // removed".
+    private const double LyricRowBaseline = 2.6;
 
     public ImmutableArray<LyricLayout> CalculateLayouts(
         IReadOnlyList<LyricItem> lyrics,
