@@ -1048,37 +1048,26 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         // y-gap (systems are far apart), then splits by x-gap. Returned in
         // reading order = chronological within the part's staff.
         function clusterInstances(matches) {
-            const items = matches.map(el => {
+            // DOM order IS drawing order (measure by measure, system by
+            // system) - i.e. chronological within the part's staff. Keep it,
+            // and only SPLIT when the next element sits far from the
+            // previous one (another measure or another system). The earlier
+            // y-band sort could merge two systems through ledger-note ys and
+            // then x-sorting interleaved their copies out of time order.
+            const instances = [];
+            let inst = null;
+            let prev = null;
+            for (const el of matches) {
                 let x = 0, y = 0;
                 try { const b = el.getBBox(); x = b.x; y = b.y; } catch (e) { /* non-SVG */ }
-                return { el: el, x: x, y: y };
-            });
-            items.sort((a, b) => a.y - b.y);
-            const bands = [];
-            for (const it of items) {
-                const band = bands[bands.length - 1];
-                if (band && it.y - band.maxY <= 12) {
-                    band.items.push(it);
-                    if (it.y > band.maxY) band.maxY = it.y;
-                } else {
-                    bands.push({ items: [it], maxY: it.y });
+                if (!inst || Math.abs(x - prev.x) > 6 || Math.abs(y - prev.y) > 12) {
+                    inst = [];
+                    instances.push(inst);
                 }
+                inst.push(el);
+                prev = { x: x, y: y };
             }
-            const instances = [];
-            for (const band of bands) {
-                band.items.sort((a, b) => a.x - b.x);
-                let inst = null;
-                for (const it of band.items) {
-                    if (inst && it.x - inst.maxX <= 6) {
-                        inst.els.push(it.el);
-                        if (it.x > inst.maxX) inst.maxX = it.x;
-                    } else {
-                        inst = { els: [it.el], maxX: it.x };
-                        instances.push(inst);
-                    }
-                }
-            }
-            return instances.map(i => i.els);
+            return instances;
         }
 
         // Paints every element of every given data-pos (playback lights the
