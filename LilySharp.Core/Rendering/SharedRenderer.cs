@@ -279,13 +279,11 @@ public static class SharedRenderer
                 // short ticks the chord symbols hang on.
                 if (leadSheet && globalIdx == barlineRowIdx)
                 {
-                    // A lyric row is "a staff with the lines removed": its
-                    // barlines run the ordinary staff height, extended by one
-                    // verse-spacing per extra stacked verse so the grid spans
-                    // every line of words. Chords-only grids keep short ticks.
-                    double h = staff.IsLyricsTextRow
-                        ? StaffHeight + (staff.TextRowVerses - 1) * LyricVerseSpacing
-                        : LeadSheetBarlineHeight;
+                    // The grid row is "a staff with the lines removed": its
+                    // barlines run the ordinary staff height — extended by one
+                    // verse-spacing per extra stacked verse on a lyric row —
+                    // whether the grid carries words or chord symbols.
+                    double h = StaffHeight + (staff.TextRowVerses - 1) * LyricVerseSpacing;
                     DrawBarlines(system, staff, staffY, layout, gc, barHeight: h);
                 }
                 continue;

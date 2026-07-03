@@ -71,6 +71,12 @@ public static class ChordNameEngraver
     /// row band's top, so a ~1.5 ss symbol sits inside the reserved band.</summary>
     private const double ChordRowTextBaseline = 1.6;
 
+    /// <summary>On a chords-ONLY grid sheet the row is the measure grid itself
+    /// ("a staff with the lines removed", full staff-height barlines): centre
+    /// the symbol between the bar ends — cap height 1.87 about the band middle
+    /// (2.0), baseline ≈ 2.0 + 1.87/2.</summary>
+    private const double GridChordBaseline = 2.9;
+
     /// <summary>How far left of the first chord symbol the protrusion scan starts —
     /// enough for a centred symbol's left half, but short of the system-start clef.</summary>
     private const double ChordRowLeftMargin = 2.0;
@@ -96,7 +102,8 @@ public static class ChordNameEngraver
         Dictionary<int, ImmutableArray<Measure>>? measuresByStaff = null,
         Func<int, int, double>? staffYAt = null,
         Func<int, double>? minStaffYAt = null,
-        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null)
+        IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
+        bool chordGridSheet = false)
     {
         if (chordNames.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<ChordNameLayout>.Empty;
@@ -183,8 +190,9 @@ public static class ChordNameEngraver
             // staff offset is the band top), not floated above an associated staff.
             if (p.chord.IsChordRow)
             {
+                double rowBaseline = chordGridSheet ? GridChordBaseline : ChordRowTextBaseline;
                 results.Add(new ChordNameLayout(
-                    p.chord.MeasureIndex, p.x, p.staffOffset + ChordRowTextBaseline,
+                    p.chord.MeasureIndex, p.x, p.staffOffset + rowBaseline,
                     p.chord.ChordText, p.chord.SourcePosition, p.idx));
                 continue;
             }

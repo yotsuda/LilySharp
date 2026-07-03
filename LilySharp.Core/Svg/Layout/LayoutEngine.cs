@@ -1261,10 +1261,16 @@ public sealed class LayoutEngine
             figuredBasses ?? ImmutableArray<FiguredBassItem>.Empty, systems, ml, measures,
             measuresByStaff, staffYAt, scriptedSkylines);
 
-        // Layout chord names (skyline-spaced above high notes when skylines available)
+        // Layout chord names (skyline-spaced above high notes when skylines available).
+        // A chords-ONLY sheet (chord rows, no lyric rows) is a measure grid: its
+        // symbols centre between the full-height grid barlines.
+        bool chordGridSheet =
+            (chordNames?.Any(c => c.IsChordRow) ?? false)
+            && !lyrics.Any(l => l.IsLyricsRow);
         var chordNameLayouts = ChordNameEngraver.Calculate(
             chordNames ?? ImmutableArray<ChordNameItem>.Empty, systems, ml, measures,
-            measuresByStaff, staffYAt, minStaffYAt, scriptedSkylines);
+            measuresByStaff, staffYAt, minStaffYAt, scriptedSkylines,
+            chordGridSheet: chordGridSheet);
 
         // Layout percent repeats
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
