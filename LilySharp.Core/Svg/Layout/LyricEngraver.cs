@@ -50,7 +50,12 @@ public sealed record LyricParameters
     public double ExtenderThickness { get; init; } = 0.04;
 
     /// <summary>Additional distance between lyric lines for multiple verses.</summary>
-    public double VerseSpacing { get; init; } = 1.8;
+    /// <remarks>Baseline-to-baseline step between stacked verses. Must clear a
+    /// full line of the 3.2 ss lyric font (ascender 2.11 + descender ~0.9): the
+    /// old 1.8 printed verse 2's ascenders through verse 1's descenders.
+    /// LILYPOND-REF: lyric lines space by their text extents (VerticalAxisGroup
+    /// per LyricLine context).</remarks>
+    public double VerseSpacing { get; init; } = 3.2;
 
     public static LyricParameters Default { get; } = new();
 }
@@ -301,6 +306,16 @@ public sealed class LyricEngraver
 
             var previous = result[i - 1];
 
+            // A new SYSTEM starts here (X rewinds to the left margin): the
+            // previous syllable belongs to the prior line and cannot collide —
+            // treating the rewind as an overlap used to shove the new line's
+            // first syllable right by maxShift, into its neighbour.
+            if (current.X < previous.X)
+            {
+                result.Add(current);
+                continue;
+            }
+
             // Use reduced width for collision detection (allows some overlap)
             // This keeps lyrics closer to their notes while still readable
             double effectiveWidth = 0.6; // Use a smaller effective width for collision
@@ -355,54 +370,19 @@ public sealed class LyricEngraver
             noteX = measureLayout.X + measureLayout.ItemPositions[lyric.ItemIndex];
         }
 
-        // Estimate text width (rough approximation: 0.5 staff spaces per character)
         double textWidth = EstimateTextWidth(lyric.Text);
 
-        // Center the syllable under the note
+        // Center the syllable under the note. Hyphen dashes and extender
+        // lines are LyricHyphen's job (the LP grobs: lyric-hyphen.cc /
+        // lyric-extender.cc); this engraver used to ALSO emit a "-" text and
+        // its own extender line, double-drawing every connector.
         double syllableX = noteX;
-
-        // Determine if we need a hyphen or extender
-        bool drawHyphen = false;
-        double hyphenX = 0;
-        bool drawExtender = false;
-        double extenderEndX = 0;
-
-        if (lyric.ConnectorType == LyricConnectorType.Hyphen && nextLyric != null)
-        {
-            // Calculate hyphen position (midpoint between syllables)
-            var nextNoteX = GetNoteX(nextLyric, measureLayouts);
-            if (nextNoteX.HasValue)
-            {
-                double gap = nextNoteX.Value - (syllableX + textWidth / 2);
-                if (gap > _params.MinHyphenLength + _params.HyphenPadding * 2)
-                {
-                    drawHyphen = true;
-                    hyphenX = syllableX + textWidth / 2 + _params.HyphenPadding +
-                             (gap - _params.HyphenPadding * 2) / 2;
-                }
-            }
-        }
-        else if (lyric.ConnectorType == LyricConnectorType.Extender && nextLyric != null)
-        {
-            // Extender line to next syllable
-            var nextNoteX = GetNoteX(nextLyric, measureLayouts);
-            if (nextNoteX.HasValue)
-            {
-                drawExtender = true;
-                double nextTextWidth = EstimateTextWidth(nextLyric.Text);
-                extenderEndX = nextNoteX.Value - nextTextWidth / 2 - _params.HyphenPadding;
-            }
-        }
 
         return new LyricLayout(
             lyric,
             syllableX,
             y,
-            textWidth,
-            drawHyphen,
-            hyphenX,
-            drawExtender,
-            extenderEndX);
+            textWidth);
     }
 
     /// <summary>
@@ -434,36 +414,5 @@ public sealed class LyricEngraver
     /// Width classes are grouped by similar advance widths in standard serif fonts.
     /// </remarks>
     private double EstimateTextWidth(string text)
-    {
-        // Character width estimation at rendered font size (3.2 staff spaces)
-        // Width ≈ fontSize * characterWidthRatio (em fraction)
-        const double fontSize = 3.2;
-        double width = 0;
-        foreach (char c in text)
-        {
-            // Width ratios based on Times New Roman advance widths (em fractions)
-            double ratio = c switch
-            {
-                ' ' => 0.25,
-                '!' or '.' or ',' or ':' or ';' or '\'' or '|' => 0.25,
-                'i' or 'l' or 'j' => 0.28,
-                'f' or 't' or 'r' => 0.33,
-                's' or 'z' => 0.39,
-                'a' or 'c' or 'e' => 0.44,
-                'b' or 'd' or 'g' or 'h' or 'k' or 'n' or 'o' or 'p' or 'q' or 'u' or 'v' or 'x' or 'y' => 0.50,
-                'w' => 0.72,
-                'm' => 0.78,
-                'I' => 0.33,
-                'J' => 0.39,
-                'A' or 'B' or 'C' or 'D' or 'E' or 'F' or 'G' or 'H' or 'K' or 'L'
-                    or 'N' or 'O' or 'P' or 'Q' or 'R' or 'S' or 'T' or 'U' or 'V'
-                    or 'X' or 'Y' or 'Z' => 0.61,
-                'M' or 'W' => 0.83,
-                '-' => 0.33,
-                _ => 0.50
-            };
-            width += fontSize * ratio;
-        }
-        return width;
-    }
+        => Rendering.SerifTextMetrics.Measure(text, LyricFontSize);
 }

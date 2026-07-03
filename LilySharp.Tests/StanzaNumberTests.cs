@@ -43,7 +43,7 @@ public class StanzaNumberTests
 
     private static LyricLayout MakeLyricLayout(string text, int measure, int verse, double x, double y) =>
         new(MakeLyric(text, measure, verse), X: x, Y: y, Width: 1.0,
-            DrawHyphen: false, HyphenX: 0, DrawExtender: false, ExtenderEndX: 0);
+            SourceIndex: -1);
 
     [Fact]
     public void SingleVerse_DefaultDoesNotEmitStanzaNumber()

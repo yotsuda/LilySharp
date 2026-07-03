@@ -44,7 +44,11 @@ public sealed record LyricHyphenParameters
     public double MinGapForHyphen { get; init; } = 0.8;
 
     /// <summary>Vertical offset from text baseline for hyphen (in staff spaces).</summary>
-    public double HyphenYOffset { get; init; } = 0.4;
+    /// <remarks>LILYPOND-REF: lily/lyric-hyphen.cc:67 — height = 0.5 ABOVE the
+    /// baseline (a hyphen sits at mid x-height, like the text glyph would);
+    /// device Y is down-positive, hence negative. The old +0.4 drew the dash
+    /// BELOW the baseline — it read as an underscore.</remarks>
+    public double HyphenYOffset { get; init; } = -0.5;
 
     /// <summary>Extender line thickness (in staff spaces).</summary>
     public double ExtenderThickness { get; init; } = 0.08;
@@ -240,9 +244,24 @@ public sealed class LyricHyphenEngraver
             );
         }
 
+        // Tight gap: LP shrinks the dash to max(gap - 2*padding, minimum 0.3)
+        // and only lets the hyphen DISAPPEAR when there is truly no room
+        // (mid-line; the cross-system case above always keeps its dashes).
+        // LILYPOND-REF: lily/lyric-hyphen.cc:107-121.
         double gap = endX - startX;
         if (gap < _params.MinGapForHyphen)
-            return null;
+        {
+            double squeezed = Math.Max(gap - 2 * _params.HyphenPadding, 0.3);
+            if (gap <= 0)
+                return null;
+            return new LyricHyphenLayout(
+                index,
+                LyricConnectorType.Hyphen,
+                ImmutableArray.Create(new HyphenDash(
+                    (startX + endX) / 2 - squeezed / 2,
+                    (startX + endX) / 2 + squeezed / 2,
+                    current.Y + _params.HyphenYOffset)));
+        }
 
         double y = current.Y + _params.HyphenYOffset;
         var dashList = new List<HyphenDash>();

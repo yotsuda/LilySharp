@@ -2637,12 +2637,8 @@ public static class SharedRenderer
             else
                 gc.DrawText(l.Item.Text, l.X, y, lyricFontSize, "serif",
                     FontStyle.Regular, TextAnchor.Middle, Color.Black);
-            if (l.DrawHyphen)
-                gc.DrawText("-", l.HyphenX, y, lyricFontSize, "serif",
-                    FontStyle.Regular, TextAnchor.Middle, Color.Black);
-            if (l.DrawExtender)
-                gc.DrawLine(l.X + l.Width / 2, y - 0.2, l.ExtenderEndX, y - 0.2,
-                    Color.Black, 0.1);
+            // Hyphen dashes / extender lines: DrawLyricHyphens (LyricHyphen
+            // layouts) — the single source, matching LP's grobs.
         }
     }
 

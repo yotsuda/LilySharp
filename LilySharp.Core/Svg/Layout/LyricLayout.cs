@@ -39,18 +39,6 @@ public sealed record LyricLayout(
     /// <summary>Width of the syllable text (in staff spaces).</summary>
     double Width,
 
-    /// <summary>Whether to draw a hyphen after this syllable.</summary>
-    bool DrawHyphen = false,
-
-    /// <summary>X position of hyphen if drawn (in staff spaces).</summary>
-    double HyphenX = 0,
-
-    /// <summary>Whether to draw an extender line after this syllable.</summary>
-    bool DrawExtender = false,
-
-    /// <summary>End X position of extender if drawn (in staff spaces).</summary>
-    double ExtenderEndX = 0,
-
     /// <summary>F3/B: index of this syllable in the score's <c>Lyrics</c> side-table
     /// — a position-independent reference so a reused (cached) layout re-derives its
     /// data-pos (<see cref="LyricItem.SourcePosition"/>) from the live score at render

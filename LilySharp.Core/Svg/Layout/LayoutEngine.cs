@@ -923,7 +923,12 @@ public sealed class LayoutEngine
         // (≈2.6 ss), Middle-anchored, so the glyph top is cap-height/2 ≈ 0.9 above
         // the anchor and the descent ≈ 0.3 below.
         foreach (var cn in ann.ChordNames)
-            Add(cn.MeasureIndex, cn.Y - 0.9, cn.Y + 0.3);
+            Add(cn.MeasureIndex, cn.Y - 1.9, cn.Y + 0.3);
+        // Lyric text (staff-bound AND row): the ascender rises ~2.11 ss above
+        // the baseline at the 3.2 ss lyric font — without it, a first system
+        // whose top content is a lyrics/chord ROW grazes the title ink.
+        foreach (var lyLay in ann.Lyrics)
+            Add(lyLay.Item.MeasureIndex, lyLay.Y - 2.11, lyLay.Y + 0.9);
         foreach (var tr in ann.TrillSpanners)
             Add(tr.StartMeasureIndex, tr.Y - GlyphMetrics.OrnTrillGlyph.Top, tr.Y + 0.25);
         // Figured-bass rows hang below the staff; a skyline-dropped row must

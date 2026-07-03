@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -139,27 +139,25 @@ public static class LayoutUtilities
     /// - Composer follows with spacing from title baseline
     /// - headerBottom = MarginTop + (vertical extent of all header elements)
     /// </remarks>
+    // Mirror of SharedRenderer.DrawHeader: the title BASELINE sits at
+    // MarginTop (fs 3.49) and the composer baseline TitleFontSize below it
+    // (fs 2.2). Header HEIGHT is the ink below MarginTop — the old model
+    // pretended the title had no descender (and used a stale 3.0 for the
+    // composer step), so a first system with no tall content of its own
+    // (a lyrics/chords ROW score) started inside the title's descender ink.
+    private const double HeaderTitleFontSize = 3.49;
+    private const double HeaderComposerFontSize = 2.2;
+    private const double DescentEm = 0.22; // serif descender depth per em
+
     public static double CalculateHeaderHeight(string? title, string? composer)
     {
-        // In SVG, text y is baseline (≈ bottom of text)
-        // Title is rendered at MarginTop, so title bottom ≈ MarginTop
-        // Only add height for elements BELOW the title baseline
-        double height = 0;
-
         if (title != null && composer != null)
-        {
-            // Composer is rendered below title with spacing
-            // DrawHeader: y += 3 after title, then composer
-            height = 3; // Gap between title baseline and composer baseline
-        }
-        else if (composer != null)
-        {
-            // Only composer, no extra height needed
-            height = 0;
-        }
-        // Title only: height = 0 (title bottom = MarginTop)
-
-        return height;
+            return HeaderTitleFontSize + HeaderComposerFontSize * DescentEm;
+        if (title != null)
+            return HeaderTitleFontSize * DescentEm;
+        if (composer != null)
+            return HeaderComposerFontSize * DescentEm;
+        return 0;
     }
 
     /// <summary>

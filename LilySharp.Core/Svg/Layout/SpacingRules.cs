@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1413,8 +1413,13 @@ public static class SpacingRules
         double prevRight = GetLyricRightExtent(prevLyrics);
         double nextLeft = GetLyricLeftExtent(nextLyrics);
 
-        // Add minimum gap between syllables
-        const double lyricPadding = 0.5;  // staff spaces
+        // Minimum INK gap between syllables: a word-space at the lyric font
+        // (~0.31 em at 3.2 ss), which is also what LP's lyric spacing yields
+        // between words. It doubles as headroom for the renderer's actual
+        // serif face, whose advances differ from the Times table by a few
+        // percent either way (the face behind generic "serif" is the
+        // viewer's choice; we cannot measure it at layout time).
+        const double lyricPadding = 1.0;  // staff spaces
 
         return prevRight + nextLeft + lyricPadding;
     }
@@ -1466,22 +1471,12 @@ public static class SpacingRules
     /// Uses the same estimation as LyricEngraver for consistency.
     /// The SVG renderer uses font-size = 4 * 0.8 = 3.2 staff spaces.
     /// </remarks>
+    // Real serif-regular advances (SerifTextMetrics) at the 3.2 ss lyric font —
+    // this used to be a crude 3-bucket table that under-measured capitals
+    // ("Up" by ~0.7 ss), so the springs reserved too little and wide syllables
+    // overlapped their neighbours in lyric rows.
     private static double EstimateLyricTextWidth(string text)
-    {
-        const double fontSize = 3.2;  // staff spaces (matches SvgRenderer)
-        double width = 0;
-        foreach (char c in text)
-        {
-            double ratio = c switch
-            {
-                'i' or 'l' or 'I' or '!' or '.' or '\'' or '-' => 0.3,
-                'm' or 'w' or 'M' or 'W' => 0.7,
-                _ => 0.5
-            };
-            width += fontSize * ratio;
-        }
-        return width;
-    }
+        => Rendering.SerifTextMetrics.Measure(text, 3.2);
 
     // ========================================
     // Skyline Generation
