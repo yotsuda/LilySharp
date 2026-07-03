@@ -324,7 +324,10 @@ public static class SharedRenderer
             // (NR "Ossia staves"; lily/staff-symbol-engraver.cc — the
             // StaffSymbol spanner lives exactly as long as its context).
             int fragFrom = int.MinValue, fragTo = int.MaxValue;
-            double lineStartX = 0, lineEndX = notationStaffRight;
+            // Staff lines start at the system indent (instrument names sit
+            // in the clean space left of it — LP: the StaffSymbol spans the
+            // system, whose left edge IS the indent).
+            double lineStartX = systemStartX, lineEndX = notationStaffRight;
             if (isOssia)
             {
                 (fragFrom, fragTo) = OssiaFragment(staff, system);

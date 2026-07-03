@@ -36,7 +36,10 @@ public sealed record StaffSpec(
     /// <summary>A named chord part whose symbols align above this staff
     /// (<c>staff NAME with chords CHORDPART</c>); the same part can also feed
     /// a lead-sheet row, so a progression is written once.</summary>
-    string? WithChords = null
+    string? WithChords = null,
+    /// <summary><c>staff ~flute</c>: the writer opted OUT of the default
+    /// instrument-name label for this staff.</summary>
+    bool NameSuppressed = false
 );
 
 /// <summary>

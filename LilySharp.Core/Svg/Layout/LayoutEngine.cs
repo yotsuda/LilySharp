@@ -1563,8 +1563,9 @@ public sealed class LayoutEngine
         double maxNameWidth = 0;
 
         // Font size: SvgRenderer.FontSize (4.0) × instrument name scale (0.75) = 3.0
-        // Average serif character width ≈ 0.5 × font-size = 1.5 staff spaces
-        const double charWidth = 1.5;
+        // Average serif char ≈ 0.5 em; CJK glyphs are full-width (≈ 1.0 em) —
+        // the flat Latin estimate ran 「津田さん」 into the clef.
+        const double nameFontSize = 3.0;
 
         foreach (var group in score.StaffGroups)
         {
@@ -1572,7 +1573,9 @@ public sealed class LayoutEngine
             {
                 if (!string.IsNullOrEmpty(staff.InstrumentName))
                 {
-                    double nameWidth = staff.InstrumentName.Length * charWidth;
+                    double nameWidth = 0;
+                    foreach (char ch in staff.InstrumentName)
+                        nameWidth += (ch >= 0x2E80 ? 1.0 : 0.5) * nameFontSize;
                     if (nameWidth > maxNameWidth)
                         maxNameWidth = nameWidth;
                 }

@@ -2294,14 +2294,25 @@ private GreenNode?[] ParseArticulations()
     /// </summary>
     private StaffRenderGreen ParseStaffRender()
     {
-        // staff [clef] part [with chords chordPart]   (no braces)
+        // staff [~] [clef] part ["display name"] [with chords chordPart]   (no braces)
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.StaffKeyword) };
+
+        // `staff ~flute` suppresses the default instrument name label.
+        if (Check(SyntaxKind.Tilde))
+            tokens.Add(Advance());
 
         // A clef keyword followed by a part name is an override.
         if (IsClefKeyword() && IsPartNameKind(Peek(1)?.Kind))
             tokens.Add(Advance());
 
         tokens.Add(ExpectPartName());
+
+        // `staff flute "津田さん"` (or a bare single word:
+        // `staff flute 津田さん`) overrides the displayed instrument name.
+        // Following render items always begin with a keyword, so a trailing
+        // identifier is unambiguous.
+        if (Check(SyntaxKind.StringLiteral) || IsPartNameKind(Peek(0)?.Kind))
+            tokens.Add(Advance());
 
         // `with chords NAME` attaches a NAMED chord part's symbols above this
         // staff — the same progression can also feed a lead-sheet row, written

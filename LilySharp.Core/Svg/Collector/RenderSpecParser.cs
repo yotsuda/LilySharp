@@ -86,6 +86,23 @@ public static class RenderSpecParser
             }
         }
 
+        // Ensemble default: with two or more plain staves, each unlabeled
+        // staff shows its part name (capitalized) on the first line — writers
+        // opt out per staff with `staff ~flute` or rename with
+        // `staff flute "…"`. Solo scores, grand staves and tabs stay clean.
+        int plainStaffCount = items.Count(it => it is SingleStaffSpec);
+        if (plainStaffCount >= 2)
+        {
+            for (int ii = 0; ii < items.Count; ii++)
+            {
+                if (items[ii] is SingleStaffSpec { Staff: { InstrumentName: null, NameSuppressed: false } st } sss)
+                {
+                    string defaultName = char.ToUpperInvariant(st.VoiceName[0]) + st.VoiceName[1..];
+                    items[ii] = sss with { Staff = st with { InstrumentName = defaultName } };
+                }
+            }
+        }
+
         var scoreTranspose = render.Transpose is { } t
             ? LilySharp.Core.Semantics.PartTranspose.ReadProperty(t)
             : null;
@@ -194,8 +211,21 @@ public static class RenderSpecParser
 
     private static StaffSpec? ParseStaff(StaffRenderSyntax staff)
     {
-        // [clef?] part [with chords chordPart]; braces (if any) are skipped.
+        // [~][clef?] part ["display"] [with chords chordPart]; braces skipped.
         var toks = RenderTargetTokens(staff);
+        if (toks.Count == 0) return null;
+
+        // `staff ~flute` = no instrument-name label for this staff.
+        bool nameSuppressed = toks.RemoveAll(t => t.Kind == SyntaxKind.Tilde) > 0;
+
+        // `staff flute "津田さん"` = per-score display-name override.
+        string? nameOverride = null;
+        int si = toks.FindIndex(t => t.Kind == SyntaxKind.StringLiteral);
+        if (si >= 0)
+        {
+            nameOverride = toks[si].Text.Trim('"');
+            toks.RemoveAt(si);
+        }
         if (toks.Count == 0) return null;
 
         string? withChords = null;
@@ -206,11 +236,11 @@ public static class RenderSpecParser
             toks = toks.GetRange(0, wi);    // what precedes = [clef?] part
         }
         if (toks.Count == 0) return null;
-        var partToken = toks[^1];
-        var clefToken = toks.Count >= 2 ? toks[0] : null;
-        string voiceName = partToken.Text;
 
-        ClefType? explicitClef = clefToken?.Kind switch
+        // [clef?] part [bare display name] — the clef is a distinct keyword
+        // kind, so the part is the first non-clef token; anything after it is
+        // an unquoted display name (`staff flute 津田さん`).
+        ClefType? explicitClef = toks[0].Kind switch
         {
             SyntaxKind.TrebleKeyword => ClefType.Treble,
             SyntaxKind.BassKeyword => ClefType.Bass,
@@ -219,11 +249,23 @@ public static class RenderSpecParser
             SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
             _ => null,
         };
+        int partIdx = explicitClef != null ? 1 : 0;
+        if (partIdx >= toks.Count) return null;
+        var partToken = toks[partIdx];
+        string voiceName = partToken.Text;
+        if (nameOverride == null && partIdx + 1 < toks.Count)
+            nameOverride = toks[partIdx + 1].Text;
 
         // No explicit clef in the render block → take it from the part definition.
         ClefType clef = explicitClef ?? GetPartClef(staff, voiceName) ?? ClefType.Treble;
-        string? instrumentName = GetPartProperty(staff, voiceName, "name")
-                              ?? GetPartProperty(staff, voiceName, "instrument");
+        // Priority: per-score override ("…") > part `name` > part `instrument`.
+        // The ensemble default (capitalized part name) is applied in Parse()
+        // once the staff count is known; ~ suppresses the label entirely.
+        string? instrumentName = nameSuppressed
+            ? null
+            : nameOverride
+              ?? GetPartProperty(staff, voiceName, "name")
+              ?? GetPartProperty(staff, voiceName, "instrument");
 
         // Hara-kiri, as a part property: `removeEmpty true` hides the staff in
         // systems where it only rests but keeps it in the FIRST system
@@ -235,7 +277,8 @@ public static class RenderSpecParser
         return new StaffSpec(clef, voiceName, instrumentName,
             RemoveEmpty: removeEmpty is "true" or "all",
             RemoveFirst: removeEmpty is "all",
-            WithChords: withChords);
+            WithChords: withChords,
+            NameSuppressed: nameSuppressed);
     }
 
     private static TabStaffSpec? ParseTab(TabRenderSyntax tab)
