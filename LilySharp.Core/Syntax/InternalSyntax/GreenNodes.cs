@@ -258,6 +258,13 @@ internal sealed class TimeSignatureGreen : GreenSyntaxNode
         : base(SyntaxKind.TimeSignature, [timeKeyword, colon, numerator, slash, denominator])
     {
     }
+
+    // Additive meter (time 3+2/8): extra (+, int)* tokens follow the first
+    // numerator IN SOURCE ORDER, before the slash.
+    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? colon, GreenNode?[] numeratorTokens, SyntaxToken slash, SyntaxToken denominator)
+        : base(SyntaxKind.TimeSignature, [timeKeyword, colon, .. numeratorTokens, slash, denominator])
+    {
+    }
 }
 
 /// <summary>

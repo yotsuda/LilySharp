@@ -144,6 +144,7 @@ public enum SyntaxKind : ushort
     RepeatEndBar,       // :|
     // LineBreakBar removed - use BreakKeyword instead
     Tilde,              // ~
+    Plus,               // + (additive meters: time 3+2/8)
     Asterisk,           // * (multi-measure rest count: R1*N)
     Colon,              // :
     TremoloSuffix,      // :8, :16, :32 (tremolo beams)

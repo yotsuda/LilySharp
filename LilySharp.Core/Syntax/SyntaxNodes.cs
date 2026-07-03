@@ -570,13 +570,60 @@ public sealed class TimeSignatureSyntax : SyntaxNode
     /// <summary>The <c>:</c> in a part-header <c>time: 4/4</c>; null for the bare music command.</summary>
     public SyntaxTokenNode? Colon => GetChild(1) as SyntaxTokenNode;
     public SyntaxTokenNode Numerator => (SyntaxTokenNode)GetChild(2)!;
-    public SyntaxTokenNode Slash => (SyntaxTokenNode)GetChild(3)!;
-    public SyntaxTokenNode Denominator => (SyntaxTokenNode)GetChild(4)!;
+
+    // Additive meters (time 3+2/8) put extra (+, int) tokens between the
+    // first numerator and the slash, so these scan instead of using fixed
+    // slot indices.
+    private int SlashIndex
+    {
+        get
+        {
+            for (int i = 3; i < SlotCount; i++)
+                if (GetChild(i) is SyntaxTokenNode t && t.Kind == SyntaxKind.Slash)
+                    return i;
+            return 3;
+        }
+    }
+
+    public SyntaxTokenNode Slash => (SyntaxTokenNode)GetChild(SlashIndex)!;
+    public SyntaxTokenNode Denominator => (SyntaxTokenNode)GetChild(SlashIndex + 1)!;
 
     /// <summary>
-    /// Gets the numerator value (e.g., 4 for 4/4).
+    /// Gets the numerator value — the SUM for additive meters (3+2/8 → 5).
     /// </summary>
-    public int Beats => int.TryParse(Numerator.Text, out var n) ? n : 4;
+    public int Beats
+    {
+        get
+        {
+            int sum = 0;
+            bool any = false;
+            for (int i = 2; i < SlashIndex; i++)
+            {
+                if (GetChild(i) is SyntaxTokenNode t && int.TryParse(t.Text, out var v))
+                {
+                    sum += v;
+                    any = true;
+                }
+            }
+            return any ? sum : 4;
+        }
+    }
+
+    /// <summary>The numerator AS WRITTEN ("3+2") for additive meters; null for
+    /// a plain single-number meter.</summary>
+    public string? BeatsText
+    {
+        get
+        {
+            if (SlashIndex == 3)
+                return null;
+            var sb = new System.Text.StringBuilder();
+            for (int i = 2; i < SlashIndex; i++)
+                if (GetChild(i) is SyntaxTokenNode t)
+                    sb.Append(t.Text);
+            return sb.ToString();
+        }
+    }
 
     /// <summary>
     /// Gets the denominator value (e.g., 4 for 4/4).

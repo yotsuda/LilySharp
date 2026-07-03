@@ -152,6 +152,9 @@ public sealed class MusicXmlAttributes
     public int? KeyFifths { get; set; }
     public string? KeyMode { get; set; }
     public int? TimeBeats { get; set; }
+    /// <summary>Numerator as written for additive meters ("3+2"); wins over
+    /// <see cref="TimeBeats"/> in the serialized &lt;beats&gt;.</summary>
+    public string? TimeBeatsText { get; set; }
     public int? TimeBeatType { get; set; }
     public string? ClefSign { get; set; }
     public int? ClefLine { get; set; }
@@ -171,7 +174,7 @@ public sealed class MusicXmlAttributes
         if (TimeBeats.HasValue && TimeBeatType.HasValue)
         {
             attrs.Add(new XElement("time",
-                new XElement("beats", TimeBeats.Value),
+                new XElement("beats", TimeBeatsText ?? TimeBeats.Value.ToString()),
                 new XElement("beat-type", TimeBeatType.Value)));
         }
 

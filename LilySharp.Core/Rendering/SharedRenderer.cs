@@ -1062,20 +1062,43 @@ public static class SharedRenderer
         // digit's CENTER onto the target line.
         // LILYPOND-REF: mf/feta-numbers.mf — time-signature numbers sit on the baseline.
         const double digitHalfHeight = 1.0; // feta number glyphs are ~2 ss tall
-        var num = ts.Beats.ToString();
+        // Additive meters print the numerator AS WRITTEN ("3+2" over 8), the
+        // rows centered on each other. LILYPOND-REF: \compoundMeter numerator.
+        var num = ts.BeatsText ?? ts.Beats.ToString();
         var den = ts.BeatType.ToString();
-        double dx = 0;
-        for (int i = 0; i < Math.Max(num.Length, den.Length); i++)
+        const double digitW = 1.4, plusW = 1.1;
+        double NumWidth(string s)
         {
-            if (i < num.Length)
-                gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(num[i] - '0'),
-                    x + dx, staffY + 1 + digitHalfHeight, FontSize);
-            if (i < den.Length)
-                gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(den[i] - '0'),
-                    x + dx, staffY + 3 + digitHalfHeight, FontSize);
-            dx += 1.4;
+            double w = 0;
+            foreach (var ch in s) w += ch == '+' ? plusW : digitW;
+            return w;
         }
-        return x + dx + 0.4;
+        double numWidth = NumWidth(num), denWidth = NumWidth(den);
+        double total = Math.Max(numWidth, denWidth);
+        double nx = x + (total - numWidth) / 2;
+        foreach (var ch in num)
+        {
+            if (ch == '+')
+            {
+                gc.DrawText("+", nx + plusW / 2, staffY + 1 + digitHalfHeight - 0.55,
+                    2.4, "serif", FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                nx += plusW;
+            }
+            else
+            {
+                gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(ch - '0'),
+                    nx, staffY + 1 + digitHalfHeight, FontSize);
+                nx += digitW;
+            }
+        }
+        double dnx = x + (total - denWidth) / 2;
+        foreach (var ch in den)
+        {
+            gc.DrawGlyph(EmmentalerGlyphs.GetTimeSigDigit(ch - '0'),
+                dnx, staffY + 3 + digitHalfHeight, FontSize);
+            dnx += digitW;
+        }
+        return x + total + 0.4;
     }
 
     // ---------- Key signature ----------

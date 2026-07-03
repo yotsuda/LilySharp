@@ -640,6 +640,7 @@ public sealed class MeasureCollector
     private int _tempoDots;
     private int _swingSubdivision;
     private int _timeBeats = 4;
+    private string? _timeBeatsText; // additive numerator as written ("3+2")
     private int _timeBeatType = 4;
     private int _keySharps = 0;
     private int _initialKeySharps = 0; // Preserved for Score.KeySignature (not mutated by mid-measure key changes)
@@ -723,7 +724,7 @@ public sealed class MeasureCollector
 
         return new Score(
             voice,
-            new TimeSignature(_timeBeats, _timeBeatType),
+            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText),
             new KeySignature(_initialKeySharps), // Use initial key, not the final state after key changes
             _initialClef, // Use initial clef, not the final state after clef changes
             _tempo,
@@ -1117,7 +1118,7 @@ public sealed class MeasureCollector
 
         return new MultiStaffScore(
             staffGroups,
-            new TimeSignature(_timeBeats, _timeBeatType),
+            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText),
             new KeySignature(_initialKeySharps), // Use initial key, not the final state after key changes
             _tempo,
             _title,
@@ -1165,7 +1166,7 @@ public sealed class MeasureCollector
 
         var voice = new Voice("beam-direction-probe", measures.ToImmutableArray());
         var groups = new BeamDetector().DetectBeamGroups(
-            voice, new TimeSignature(_timeBeats, _timeBeatType), _tupletBrackets.ToImmutableArray());
+            voice, new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText), _tupletBrackets.ToImmutableArray());
 
         foreach (var group in groups)
         {
@@ -1267,7 +1268,7 @@ public sealed class MeasureCollector
 
         return new Score(
             voices.ToImmutableArray(),
-            new TimeSignature(_timeBeats, _timeBeatType),
+            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText),
             new KeySignature(_initialKeySharps),
             _initialClef,
             _tempo,
@@ -1742,6 +1743,7 @@ public sealed class MeasureCollector
                     if (builder.CurrentMeasureIndex == 0 && builder.CurrentDuration == Fraction.Zero)
                     {
                         _timeBeats = timeSigChange.Beats;
+                        _timeBeatsText = timeSigChange.BeatsText;
                         _timeBeatType = timeSigChange.BeatType;
                         builder.SetMeasureLength(new Fraction(timeSigChange.Beats, timeSigChange.BeatType));
                     }
@@ -1749,7 +1751,7 @@ public sealed class MeasureCollector
                     {
                         // Mid-piece change: a zero-duration grob printed at the
                         // change point, re-arming the following measures' length.
-                        var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType);
+                        var newTime = new TimeSignature(timeSigChange.Beats, timeSigChange.BeatType, timeSigChange.BeatsText);
                         builder.AddItem(new TimeSignatureChangeItem(newTime, timeSigChange.Position));
                     }
                 }
@@ -1985,6 +1987,7 @@ public sealed class MeasureCollector
         _tempoDots = 0;
         _swingSubdivision = 0;
         _timeBeats = 4;
+        _timeBeatsText = null;
         _timeBeatType = 4;
         _keySharps = 0;
         _initialKeySharps = 0;
@@ -2109,6 +2112,7 @@ public sealed class MeasureCollector
                     if (!IsInsideMusicContent(timeSig))
                     {
                         _timeBeats = timeSig.Beats;
+                        _timeBeatsText = timeSig.BeatsText;
                         _timeBeatType = timeSig.BeatType;
                         _timePosition = timeSig.Span.Start;
                     }

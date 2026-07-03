@@ -804,7 +804,7 @@ public sealed class MultiStaffLayouter
 
         bool prefixHasTime = systemIndex == 0 || leadingTimeChange != null;
         double prefixWidth = SpacingRules.CalculatePrefixWidth(activeKeySharps, prefixHasTime,
-            leadingTimeChange?.NewTime.Beats ?? score.TimeSignature.Beats,
+            leadingTimeChange?.NewTime.LayoutBeats ?? score.TimeSignature.LayoutBeats,
             leadingTimeChange?.NewTime.BeatType ?? score.TimeSignature.BeatType);
         // LILYPOND-REF: scm/output-lib.scm — system-start-text::calc-x-offset
         // System-internal coordinates are LINE-RELATIVE (0 = line start); the page

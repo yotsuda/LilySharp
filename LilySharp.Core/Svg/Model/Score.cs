@@ -22,12 +22,18 @@ namespace LilySharp.Core.Svg.Model;
 /// <summary>
 /// Time signature (e.g., 3/4, 4/4, 6/8).
 /// </summary>
-public readonly record struct TimeSignature(int Beats, int BeatType)
+public readonly record struct TimeSignature(int Beats, int BeatType, string? BeatsText = null)
 {
+    /// <summary>Beats value whose DIGIT COUNT matches the printed numerator
+    /// width — prefix-width estimation for additive meters ("3+2" ≈ 3 cols).</summary>
+    public int LayoutBeats => BeatsText == null
+        ? Beats
+        : (int)Math.Pow(10, Math.Max(0, BeatsText.Length - 1));
+
     /// <summary>Duration of one full measure.</summary>
     public Fraction MeasureDuration => new(Beats, BeatType);
 
-    public override string ToString() => $"{Beats}/{BeatType}";
+    public override string ToString() => $"{BeatsText ?? Beats.ToString()}/{BeatType}";
 }
 
 /// <summary>

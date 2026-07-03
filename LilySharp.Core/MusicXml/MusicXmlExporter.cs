@@ -59,6 +59,7 @@ public sealed class MusicXmlExporter
 
     private int _tempo = 120;
     private int _timeNumerator = 4;
+    private string? _timeNumeratorText; // additive meters ("3+2")
     private int _timeDenominator = 4;
     private int _keyFifths = 0;
     private string _keyMode = "major";
@@ -357,6 +358,7 @@ public sealed class MusicXmlExporter
             {
                 Divisions = DivisionsPerQuarter,
                 TimeBeats = _timeNumerator,
+                TimeBeatsText = _timeNumeratorText,
                 TimeBeatType = _timeDenominator,
                 KeyFifths = _currentTranspose is { } trk
                     ? _keyFifths + PitchTransposer.KeySignatureFifthsShift(trk.step, trk.alt)
@@ -529,6 +531,7 @@ public sealed class MusicXmlExporter
     private void ProcessTimeSignature(TimeSignatureSyntax timeSig)
     {
         _timeNumerator = timeSig.Beats;
+        _timeNumeratorText = timeSig.BeatsText;
         _timeDenominator = timeSig.BeatType;
     }
 
