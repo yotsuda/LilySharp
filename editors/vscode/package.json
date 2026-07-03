@@ -156,10 +156,17 @@
         "command": "lilysharp.newScore",
         "category": "Lily#",
         "icon": "$(new-file)",
-        "title": "New Score"
+        "title": "New Score",
+        "shortTitle": "Lily# Score (.lys)"
       }
     ],
     "menus": {
+      "file/newFile": [
+        {
+          "command": "lilysharp.newScore",
+          "group": "file"
+        }
+      ],
       "commandPalette": [
         {
           "command": "lilysharp.newScore"
