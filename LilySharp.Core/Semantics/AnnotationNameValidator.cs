@@ -68,6 +68,7 @@ public sealed class AnnotationNameValidator : ISemanticValidator
         "ottava", "ottava.bassa", "loco", "ped", "ped.off",
         "sost", "sost.off", "una.corda", "tre.corde", "to.coda",
         "mark.A", "finger.1", "feather.right", "feather.left",
+        "notehead.x", "notehead.diamond", "notehead.slash",
         "trillspan.start", "trillspan.stop", "fig.6", "chord.C",
     ];
 
@@ -135,6 +136,9 @@ public sealed class AnnotationNameValidator : ISemanticValidator
             return true;
         if (lower.StartsWith("finger.", StringComparison.Ordinal)
             && int.TryParse(lower.AsSpan(7), out int finger) && finger >= 0)
+            return true;
+        if (lower is "notehead.x" or "notehead.cross" or "notehead.diamond"
+            or "notehead.triangle" or "notehead.slash" or "notehead.xcircle")
             return true;
         if (FiguredBassItem.ParseFigures(name) != null)
             return true;

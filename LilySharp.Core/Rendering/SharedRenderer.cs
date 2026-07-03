@@ -1454,7 +1454,7 @@ public static class SharedRenderer
         // LILYPOND-REF: lily/grob-property.cc — NoteHead.transparent
         Color? noteheadColor = ResolveColor(resolver, "NoteHead");
         bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;
-        char head = EmmentalerGlyphs.GetNotehead(noteValue);
+        char head = EmmentalerGlyphs.GetNotehead(note.Notehead, noteValue);
         if (!headWiped && !headTransparent)
             using (gc.Source(note.SourcePosition))
             {
@@ -1537,7 +1537,7 @@ public static class SharedRenderer
         IDrawingContext gc)
     {
         int noteValue = GlyphMetrics.NoteValueOf(chord.BaseDuration);
-        char head = EmmentalerGlyphs.GetNotehead(noteValue);
+        char head = EmmentalerGlyphs.GetNotehead(chord.Notehead, noteValue);
         Color? noteheadColor = ResolveColor(resolver, "NoteHead");
         // LILYPOND-REF: lily/grob-property.cc — NoteHead.transparent
         bool headTransparent = resolver.GetBool("NoteHead", "transparent") == true;

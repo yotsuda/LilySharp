@@ -47,6 +47,20 @@ public static class EmmentalerGlyphs
     public const char NoteheadHalf = '\uE0E9';        // noteheads.s1
     public const char NoteheadBlack = '\uE0EA';       // noteheads.s2
     public const char NoteheadDoubleWhole = '\uE0E6'; // noteheads.sM1
+    // Styled noteheads (verified visually against the font cmap strip):
+    public const char NoteheadDiamondWhole = '\uE0EB';  // noteheads.s0diamond
+    public const char NoteheadDiamondHalf = '\uE0EC';   // noteheads.s1diamond
+    public const char NoteheadDiamondBlack = '\uE0ED';  // noteheads.s2diamond
+    public const char NoteheadTriangleWhole = '\uE0EE'; // noteheads.s0do
+    public const char NoteheadTriangleHalf = '\uE0EF';  // noteheads.s1do
+    public const char NoteheadTriangleBlack = '\uE0F0'; // noteheads.s2do
+    public const char NoteheadSlashWhole = '\uE0F1';    // noteheads.s0slash
+    public const char NoteheadSlashHalf = '\uE0F2';     // noteheads.s1slash
+    public const char NoteheadSlashBlack = '\uE0F3';    // noteheads.s2slash
+    public const char NoteheadCrossWhole = '\uE0F4';    // noteheads.s0cross
+    public const char NoteheadCrossHalf = '\uE0F5';     // noteheads.s1cross
+    public const char NoteheadCrossBlack = '\uE0F6';    // noteheads.s2cross
+    public const char NoteheadXCircle = '\uE0F7';       // noteheads.s2xcircle
 
     // === Rests ===
     public const char RestMaxima = '\uE004';      // rests.M3
@@ -186,6 +200,30 @@ public static class EmmentalerGlyphs
         1 => RestWhole, 2 => RestHalf, 4 => RestQuarter, 8 => Rest8th,
         16 => Rest16th, 32 => Rest32nd, 64 => Rest64th, 128 => Rest128th,
         _ => RestQuarter
+    };
+
+    /// <summary>Notehead glyph for a style + note value; whole-note variants
+    /// serve breve too (styled breves are not in the font).</summary>
+    public static char GetNotehead(Model.NoteheadStyle style, int noteValue) => style switch
+    {
+        Model.NoteheadStyle.Cross => noteValue switch
+        {
+            0 or 1 => NoteheadCrossWhole, 2 => NoteheadCrossHalf, _ => NoteheadCrossBlack
+        },
+        Model.NoteheadStyle.Diamond => noteValue switch
+        {
+            0 or 1 => NoteheadDiamondWhole, 2 => NoteheadDiamondHalf, _ => NoteheadDiamondBlack
+        },
+        Model.NoteheadStyle.Triangle => noteValue switch
+        {
+            0 or 1 => NoteheadTriangleWhole, 2 => NoteheadTriangleHalf, _ => NoteheadTriangleBlack
+        },
+        Model.NoteheadStyle.Slash => noteValue switch
+        {
+            0 or 1 => NoteheadSlashWhole, 2 => NoteheadSlashHalf, _ => NoteheadSlashBlack
+        },
+        Model.NoteheadStyle.XCircle => NoteheadXCircle,
+        _ => GetNotehead(noteValue),
     };
 
     /// <summary>Gets the notehead glyph for a given note value.</summary>

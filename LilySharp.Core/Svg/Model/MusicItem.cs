@@ -20,6 +20,20 @@ using LilySharp.Core.Semantics;
 namespace LilySharp.Core.Svg.Model;
 
 /// <summary>
+/// Notehead style from a <c>@notehead.x</c>-family annotation.
+/// LILYPOND-REF: scm/define-grobs.scm NoteHead style property.
+/// </summary>
+public enum NoteheadStyle
+{
+    Default,
+    Cross,     // @notehead.x — ghost/percussion
+    Diamond,   // @notehead.diamond — harmonics
+    Triangle,  // @notehead.triangle — shape-note do
+    Slash,     // @notehead.slash — rhythm/comping notation
+    XCircle,   // @notehead.xcircle — hi-hat etc.
+}
+
+/// <summary>
 /// Base type for all music items that have duration.
 /// </summary>
 public abstract record MusicItem
@@ -75,6 +89,8 @@ public sealed record NoteItem : MusicItem
     /// each (TimeScale ½). 0 = not part of a pair.
     /// LILYPOND-REF: lily/chord-tremolo-engraver.cc.</summary>
     public int TremoloPairBeams { get; init; }
+    /// <summary>Notehead style (x / diamond / triangle / slash / xcircle).</summary>
+    public NoteheadStyle Notehead { get; init; }
     /// <summary>Whether this note starts a tie to the next note.</summary>
     public bool HasTieStart { get; }
     /// <summary>Whether this note starts a slur.</summary>
@@ -304,6 +320,8 @@ public sealed record ChordItem : MusicItem
     public int Dots { get; }
     /// <summary>Two-note tremolo between-beams count (see NoteItem).</summary>
     public int TremoloPairBeams { get; init; }
+    /// <summary>Notehead style applied to ALL heads of this chord.</summary>
+    public NoteheadStyle Notehead { get; init; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
     public int TremoloBeams { get; }
     /// <summary>Whether this chord starts a manual beam group.</summary>

@@ -1568,6 +1568,8 @@ public sealed class MeasureCollector
                     if (HasCourtesyAnnotation(note))
                         _courtesySourcePositions.Add(note.Position);
                     var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue);
+                    if (ExtractNoteheadStyle(note) is var nhStyle && nhStyle != NoteheadStyle.Default)
+                        noteItem = noteItem with { Notehead = nhStyle };
                     if (_tremoloPairShape is { } tpn)
                     {
                         // Halve the sounding time (display stays the total)
@@ -1637,6 +1639,8 @@ public sealed class MeasureCollector
                     bool hasArpeggio = HasArpeggioArticulation(chord);
                     bool isCue = HasCueAnnotation(chord);
                     var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieAfter: hasTieAfter, hasSlurStartAfter: hasSlurStartAfter, hasSlurEndAfter: hasSlurEndAfter);
+                    if (ExtractNoteheadStyle(chord) is var chStyle && chStyle != NoteheadStyle.Default)
+                        chordItem = chordItem with { Notehead = chStyle };
                     if (!_pendingLeadingGrace.IsDefaultOrEmpty)
                     {
                         chordItem = chordItem with { LeadingGrace = _pendingLeadingGrace };
@@ -2998,6 +3002,29 @@ public sealed class MeasureCollector
         _ => Enumerable.Empty<SyntaxNode>()
     };
 
+    /// <summary>Notehead style from a <c>@notehead.x</c>-family compound mark
+    /// on the note/chord, or Default. LILYPOND-REF: NoteHead style property.</summary>
+    private static NoteheadStyle ExtractNoteheadStyle(SyntaxNode node)
+    {
+        foreach (var art in ArticulationsOf(node))
+        {
+            if (art is MusicMarkSyntax mark
+                && mark.MarkName.StartsWith("notehead.", StringComparison.OrdinalIgnoreCase))
+            {
+                return mark.MarkName[9..].ToLowerInvariant() switch
+                {
+                    "x" or "cross" => NoteheadStyle.Cross,
+                    "diamond" => NoteheadStyle.Diamond,
+                    "triangle" => NoteheadStyle.Triangle,
+                    "slash" => NoteheadStyle.Slash,
+                    "xcircle" => NoteheadStyle.XCircle,
+                    _ => NoteheadStyle.Default,
+                };
+            }
+        }
+        return NoteheadStyle.Default;
+    }
+
     /// <summary>The finger number from a <c>@finger.N</c> compound mark, or null.</summary>
     /// <remarks>LILYPOND-REF: lily/fingering-engraver.cc — finger event handling.</remarks>
     private static int? ParseFingerMark(MusicMarkSyntax mark)
@@ -3517,6 +3544,11 @@ public sealed class MeasureCollector
                 else if (markName == "trillspan.stop")
                 {
                     _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex));
+                }
+                else if (markName.StartsWith("notehead."))
+                {
+                    // Consumed by ExtractNoteheadStyle at item creation — not a
+                    // printed mark.
                 }
                 else if (markName.StartsWith("finger."))
                 {
