@@ -1,0 +1,49 @@
+// Amazing Grace — words John Newton (1779), tune "New Britain" (public domain).
+//
+// Lily# features on display:
+//   partial 4            — the one-beat pickup, declared once
+//   staff ... with chords — ONE progression above the staff AND as a grid
+//   lyrics ~             — melisma: the syllable holds while notes move on
+title "Amazing Grace"
+composer "Traditional / J. Newton"
+tempo 84
+time 3/4
+key g major
+partial 4
+octave absolute
+
+part melody { clef treble }
+
+section Verse {
+  melody {
+    d4 |
+    g2 b8 g8 | b2 a4 | g2 e4 | d2 d4 |
+    g2 b8 g8 | b2 a4 | d'2. | d'2 b4 |
+    d'2 b8 d'8 | b2 g4 | d2 e8 g8 | g2 d4 |
+    g2 b8 g8 | b2 a4 | g2. |
+  }
+  chords prog {
+    |
+    g2. | g2. | c2. | g2. |
+    g2. | e2.:m | d2. | d2.:7 |
+    g2. | g2. | c2. | g2. |
+    e2.:m | d2.:7 | g2. |
+  }
+  lyrics {
+    A- |
+    maz- ~ ing | grace how | sweet the | sound that |
+    saved ~ a | wretch like | me | I |
+    once was ~ | lost but | now am ~ | found was |
+    blind ~ but | now I | see |
+  }
+}
+
+structure { Verse }
+
+score "amazing-grace" {
+  staff melody with chords prog
+}
+
+score "amazing-grace-grid" {
+  chords prog
+}

@@ -350,6 +350,8 @@ public class SvgSnapshotTests
         yield return new object[] { "test/scripts-stem-support" };
         // Below-staff scripts push the figured-bass row down (DOWN-skyline augmentation).
         yield return new object[] { "test/figbass-below-script" };
+        // Staff-less chord+lyric ROW sheet (row spacing, line-break rewind, header ink).
+        yield return new object[] { "test/rows-song-sheet" };
         // sfz-family dynamics + staccatissimo / bowing / harmonic scripts.
         yield return new object[] { "test/scripts-dynamics" };
         // @text("...") free expressive text (italic, below by default, .up above).

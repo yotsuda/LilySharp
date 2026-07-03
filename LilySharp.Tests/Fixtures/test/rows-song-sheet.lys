@@ -1,0 +1,23 @@
+// Staff-less song sheet: a chord ROW and a lyric ROW, no staves at all.
+// Pins the row machinery end-to-end: even-spread syllables sized by REAL
+// text widths (a capital-heavy line must not overlap), the line-break X
+// rewind (bar 5 starts a new line - its first syllable must NOT be shoved
+// right by a phantom overlap with the previous line), squeezed hyphen
+// dashes, and the title-only header ink clearance.
+title "Rows sheet"
+time 4/4
+
+section Main {
+  chords prog { c1 | g1 | a1:m | f1 | c1 | g1 | f2 g2 | c1 | }
+  lyrics words {
+    Twin- kle twin- kle | lit- tle star | how I won- der | what you are |
+    Up a- bove the | world so high | like a dia- mond | in the sky |
+  }
+}
+
+structure { Main }
+
+score "rows-song-sheet" {
+  chords prog
+  lyrics words
+}

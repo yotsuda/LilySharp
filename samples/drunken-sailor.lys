@@ -1,0 +1,39 @@
+// Drunken Sailor — sea shanty, traditional (public domain).
+//
+// A staff-less SONG SHEET: the same named parts feed two scores —
+//   "drunken-sailor-sheet"  — chord grid + lyrics (verses stack as 1. / 2.)
+//   "drunken-sailor-lyrics" — the words alone, as a text sheet
+// Writing the same lyrics name in one section twice stacks the verses.
+title "Drunken Sailor"
+composer "Traditional"
+time 4/4
+
+section Verse {
+  chords prog {
+    d1:m | d1:m | c1 | c1 |
+    d1:m | d1:m | c2 d2:m | d1:m |
+  }
+  lyrics words {
+    What shall we do with a | drunk- en sail- or |
+    what shall we do with a | drunk- en sail- or |
+    what shall we do with a | drunk- en sail- or |
+    ear- ly in the | morn- ing |
+  }
+  lyrics words {
+    Way hay and | up she ris- es |
+    way hay and | up she ris- es |
+    way hay and | up she ris- es |
+    ear- ly in the | morn- ing |
+  }
+}
+
+structure { Verse }
+
+score "drunken-sailor-sheet" {
+  chords prog
+  lyrics words
+}
+
+score "drunken-sailor-lyrics" {
+  lyrics words
+}
