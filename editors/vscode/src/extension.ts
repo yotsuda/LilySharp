@@ -1039,6 +1039,45 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
         }
 
+        // Groups all elements sharing one data-pos into printed instances
+        // (phrase copies): elements of ONE instance sit within a chord's
+        // footprint; other copies live in other measures/systems. Bands by
+        // y-gap (systems are far apart), then splits by x-gap. Returned in
+        // reading order = chronological within the part's staff.
+        function clusterInstances(matches) {
+            const items = matches.map(el => {
+                let x = 0, y = 0;
+                try { const b = el.getBBox(); x = b.x; y = b.y; } catch (e) { /* non-SVG */ }
+                return { el: el, x: x, y: y };
+            });
+            items.sort((a, b) => a.y - b.y);
+            const bands = [];
+            for (const it of items) {
+                const band = bands[bands.length - 1];
+                if (band && it.y - band.maxY <= 12) {
+                    band.items.push(it);
+                    if (it.y > band.maxY) band.maxY = it.y;
+                } else {
+                    bands.push({ items: [it], maxY: it.y });
+                }
+            }
+            const instances = [];
+            for (const band of bands) {
+                band.items.sort((a, b) => a.x - b.x);
+                let inst = null;
+                for (const it of band.items) {
+                    if (inst && it.x - inst.maxX <= 6) {
+                        inst.els.push(it.el);
+                        if (it.x > inst.maxX) inst.maxX = it.x;
+                    } else {
+                        inst = { els: [it.el], maxX: it.x };
+                        instances.push(inst);
+                    }
+                }
+            }
+            return instances.map(i => i.els);
+        }
+
         // Paints every element of every given data-pos (playback lights the
         // WHOLE onset: rh and lh notes striking together are different
         // source positions). Does NOT clear existing highlights.
@@ -1054,7 +1093,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 const occ = typeof entry === 'object' ? entry.occ : -1;
                 let matches = Array.from(document.querySelectorAll('[data-pos="' + pos + '"]'));
                 if (occ >= 0 && matches.length > 1) {
-                    matches = [matches[Math.min(occ, matches.length - 1)]];
+                    // Pick the occ-th printed INSTANCE — a chord's every head
+                    // (plus dots/accidentals) shares one data-pos, so slicing
+                    // by raw element index lit a single head and left the
+                    // rest of the chord dark. Cluster by geometry instead.
+                    const instances = clusterInstances(matches);
+                    matches = instances[Math.min(occ, instances.length - 1)] || matches;
                 }
                 painted.push.apply(painted, matches);
                 // A boxed mark (section/rehearsal) is a <rect> with a <text> label on
@@ -1136,6 +1180,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let playStartTime = 0;
         let playbackNotes = null; // last received event list — enables click-to-seek
         let playCounts = new Map(); // source pos → onsets consumed (occurrence index)
+        let pendingStartPos = -1;   // play-button start point (the highlighted note)
 
         function setPlayUi(playing) {
             document.getElementById('playBtn').disabled = playing;
@@ -1263,6 +1308,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
         document.getElementById('playBtn').addEventListener('click', () => {
             setPlayUi(true); // immediate feedback while the request runs
+            // A highlighted note (editor sync / preview click) is the start
+            // point: play from its first onset instead of the top.
+            pendingStartPos = lastHighlightPos;
             vscode.postMessage({ type: 'requestPlayback' });
         });
         document.getElementById('stopBtn').addEventListener('click', stopPlayback);
@@ -1312,7 +1360,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         }
                     } else {
                         playbackNotes = message.notes;
-                        startPlayback(playbackNotes, 0);
+                        let startAt = 0;
+                        if (pendingStartPos >= 0) {
+                            let first = Infinity;
+                            for (const n of playbackNotes) {
+                                if (n.S === pendingStartPos && n.T < first) first = n.T;
+                            }
+                            if (first !== Infinity) startAt = first;
+                        }
+                        pendingStartPos = -1;
+                        startPlayback(playbackNotes, startAt);
                     }
                     break;
                 case 'highlightPosition':
