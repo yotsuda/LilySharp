@@ -3703,7 +3703,11 @@ public static class SharedRenderer
                 : m.TempoBeatUnit == 2
                     ? EmmentalerGlyphs.NoteheadHalf
                     : EmmentalerGlyphs.NoteheadBlack;
-            gc.DrawGlyph(head, x, absY, noteSize);
+            // The stemless whole note sits a touch higher so its center
+            // lines up with the equation text the way the stemmed units do
+            // (their stem carries the visual weight upward).
+            double headY = m.TempoBeatUnit <= 1 ? absY - 0.5 : absY;
+            gc.DrawGlyph(head, x, headY, noteSize);
             double headW = m.TempoBeatUnit <= 1 ? noteSize * 0.62 : noteSize * 0.5;
             if (m.TempoBeatUnit >= 2)
             {
@@ -3716,7 +3720,9 @@ public static class SharedRenderer
             double dotX = x + headW + 0.15;
             for (int d = 0; d < m.TempoDots; d++)
             {
-                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, absY - 0.5, noteSize);
+                // Beside the head at ITS center (ly:dots::print puts the dot
+                // on the head's line) — absY-0.5 floated it above the head.
+                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, headY, noteSize);
                 dotX += 0.55;
             }
             double tempoTextX = Math.Max(x + headW + 0.3, m.TempoDots > 0 ? dotX + 0.15 : 0);
