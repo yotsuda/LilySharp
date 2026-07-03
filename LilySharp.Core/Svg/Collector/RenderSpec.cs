@@ -231,7 +231,7 @@ public sealed record RenderSpec(
                 // Tab / ossia staves don't support intra-staff polyphony; they
                 // take the primary voice only.
                 case TabStaffSpec tab:
-                    var tabStaff = Staff.CreateTab(tab.Tuning, getVoices(tab.Staff.VoiceName)[0]);
+                    var tabStaff = Staff.CreateTab(tab.Tuning, getVoices(tab.Staff.VoiceName)[0], tab.Staff.Clef);
                     yield return StaffGroup.CreateSingle(tabStaff);
                     break;
 

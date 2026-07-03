@@ -122,10 +122,17 @@ public sealed record Staff(
         => new(clef, voices, null, instrumentName);
 
     /// <summary>
+    /// The NOTATION clef of the part a tab staff was derived from: treble_8
+    /// (standard guitar notation) means the written pitches sound an octave
+    /// lower, which the fret calculation must recover.
+    /// </summary>
+    public ClefType TabSourceClef { get; init; } = ClefType.Treble;
+
+    /// <summary>
     /// Creates a tablature staff with the specified tuning.
     /// </summary>
-    public static Staff CreateTab(TuningType tuning, Voice voice)
-        => new(ClefType.Tab, ImmutableArray.Create(voice), tuning);
+    public static Staff CreateTab(TuningType tuning, Voice voice, ClefType sourceClef = ClefType.Treble)
+        => new(ClefType.Tab, ImmutableArray.Create(voice), tuning) { TabSourceClef = sourceClef };
 
     /// <summary>
     /// Creates an ossia staff (small alternative passage).

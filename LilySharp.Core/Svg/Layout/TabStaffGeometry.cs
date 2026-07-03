@@ -17,6 +17,8 @@
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Tablature;
 
+using LilySharp.Core.Svg.Model;
+
 namespace LilySharp.Core.Svg.Layout;
 
 /// <summary>
@@ -53,11 +55,11 @@ internal readonly struct TabStaffGeometry
     /// <summary>Number of strings for this tuning.</summary>
     public int StringCount { get; }
 
-    public TabStaffGeometry(TuningType tuning, double staffY)
+    public TabStaffGeometry(TuningType tuning, double staffY, ClefType clef = ClefType.Treble)
     {
         StaffY = staffY;
         _tuning = Tunings.GetTuning(tuning);
-        _octaveShift = Tunings.OctaveShift(tuning);
+        _octaveShift = Tunings.OctaveShift(tuning, clef);
         StringCount = Tunings.GetStringCount(tuning);
         StringSpace = EngravingDefaults.TabStringSpace(StringCount);
     }

@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -166,7 +166,7 @@ public static class ArticulationEngraver
                         ChordItem c when c.Notes.Length > 0 => c.Notes[0].Midi, _ => 0 };
                     int? sn = item is NoteItem ni ? ni.StringNumber : null;
                     var (strNum, _) = Tunings.CalculateFret(
-                        midi + Tunings.OctaveShift(tt), Tunings.GetTuning(tt), sn ?? 0);
+                        midi + Tunings.OctaveShift(tt, ts.TabSourceClef), Tunings.GetTuning(tt), sn ?? 0);
                     fx = itemX + 0.5;
                     fy = staffOffset + (strNum - 1) * space;
                 }

@@ -503,9 +503,9 @@ public static class SharedRenderer
         int stringCount = Tunings.GetStringCount(tuningType);
         int[] tuning = Tunings.GetTuning(tuningType);
         double stringSpace = EngravingDefaults.TabStringSpace(stringCount);
-        // Bass guitar sounds 8vb relative to its bass-clef notation, so its tab
-        // frets come from the written pitch shifted down an octave.
-        int octaveShift = Tunings.OctaveShift(tuningType);
+        // Written→sounding recovery: treble_8 (guitar) and bass tunings are
+        // notated an octave above where they sound.
+        int octaveShift = Tunings.OctaveShift(tuningType, staff.TabSourceClef);
 
         // One staff line per string, spaced stringSpace apart.
         for (int i = 0; i < stringCount; i++)
@@ -694,13 +694,14 @@ public static class SharedRenderer
     private static void DrawTabChord(ChordItem chord, double itemX, double staffY,
         int[] tuning, int octaveShift, double stringSpace, IDrawingContext gc)
     {
-        // Resolve (string, fret) per note and order top string (1) → bottom.
-        var notes = chord.Notes
-            .Select(cn =>
-            {
-                var (str, fret) = Tunings.CalculateFret(cn.Midi + octaveShift, tuning, cn.StringNumber ?? 0);
-                return (str, fret);
-            })
+        // LP-style exclusive allocation: each chord note gets its OWN string
+        // (assigned strings first, then highest pitch → highest free string),
+        // ordered top string (1) → bottom for the offset pass.
+        // LILYPOND-REF: scm/translation-functions.scm determine-frets-and-strings.
+        var notes = Tunings.CalculateChordFrets(
+                chord.Notes.Select(cn => (cn.Midi + octaveShift, cn.StringNumber)).ToList(),
+                tuning)
+            .Select(p => (str: p.stringNum, fret: p.fret))
             .OrderBy(p => p.str)
             .ToList();
 
@@ -2073,11 +2074,12 @@ public static class SharedRenderer
     private static double TabStemHeadY(MusicItem item, bool stemUp, double tabStaffTopY, Staff staff)
     {
         var tuningType = staff.Tuning ?? TuningType.Guitar;
-        int octaveShift = Tunings.OctaveShift(tuningType);
+        int octaveShift = Tunings.OctaveShift(tuningType, staff.TabSourceClef);
         int[] tuning = Tunings.GetTuning(tuningType);
 
         int midi = 0;
         int? stringNumber = null;
+        int? chordStringNum = null;
         switch (item)
         {
             case NoteItem n:
@@ -2086,19 +2088,25 @@ public static class SharedRenderer
             case ChordItem c when c.Notes.Length > 0:
                 // On a tab the digits stack by STRING, so the stem must meet the
                 // END of the stack in its direction — the TOP digit (smallest
-                // string number) for an up-stem, the BOTTOM for a down-stem. Picking
-                // by pitch can start the stem on a middle digit and run it THROUGH
-                // the others.
-                int StrOf(ChordNoteInfo x) =>
-                    Tunings.CalculateFret(x.Midi + octaveShift, tuning, x.StringNumber ?? 0).stringNum;
-                var head = stemUp
-                    ? c.Notes.OrderBy(StrOf).First()
-                    : c.Notes.OrderByDescending(StrOf).First();
-                midi = head.Midi; stringNumber = head.StringNumber;
+                // string number) for an up-stem, the BOTTOM for a down-stem. The
+                // strings come from the SAME exclusive allocation the drawn
+                // chord uses, or the stem could anchor on a digit that moved.
+                var chordAlloc = Tunings.CalculateChordFrets(
+                    c.Notes.Select(x => (x.Midi + octaveShift, x.StringNumber)).ToList(), tuning);
+                int headIdx = 0;
+                for (int ci = 1; ci < chordAlloc.Length; ci++)
+                {
+                    if (stemUp
+                        ? chordAlloc[ci].stringNum < chordAlloc[headIdx].stringNum
+                        : chordAlloc[ci].stringNum > chordAlloc[headIdx].stringNum)
+                        headIdx = ci;
+                }
+                chordStringNum = chordAlloc[headIdx].stringNum;
                 break;
         }
 
-        var (stringNum, _) = Tunings.CalculateFret(midi + octaveShift, tuning, stringNumber ?? 0);
+        int stringNum = chordStringNum
+            ?? Tunings.CalculateFret(midi + octaveShift, tuning, stringNumber ?? 0).stringNum;
         double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuningType));
         double digitY = tabStaffTopY + (stringNum - 1) * stringSpace;
         // Half the digit height (0.6875 × font) plus a small gap, so the stem meets
@@ -3039,7 +3047,7 @@ public static class SharedRenderer
             // shrunken digit before the main fret.
             if (g.Tuning is { } graceTuning)
             {
-                DrawTabGraceNotes(g, sy, graceTuning, gc);
+                DrawTabGraceNotes(g, sy, graceTuning, g.TabClef, gc);
                 continue;
             }
 
@@ -3115,11 +3123,12 @@ public static class SharedRenderer
     /// scaled by the grace scale. No stems, beams, slurs, or ledger lines — tab
     /// grace notes are just the shrunken digits ahead of the main fret.
     /// </summary>
-    private static void DrawTabGraceNotes(GraceNoteLayout g, double sy, TuningType tuning, IDrawingContext gc)
+    private static void DrawTabGraceNotes(GraceNoteLayout g, double sy, TuningType tuning,
+        ClefType clef, IDrawingContext gc)
     {
         double tabTopY = sy + g.StaffYOffset;
         int[] tuningArray = Tunings.GetTuning(tuning);
-        int octaveShift = Tunings.OctaveShift(tuning);
+        int octaveShift = Tunings.OctaveShift(tuning, clef);
         double stringSpace = EngravingDefaults.TabStringSpace(Tunings.GetStringCount(tuning));
         // Tab grace digits sit only slightly below the main fret size (NOT the
         // 0.65 notehead grace scale): on a tab staff the fret number IS the note,

@@ -261,7 +261,10 @@ public static class RenderSpecParser
             _ => TuningType.Guitar, // "standard"/"guitar"/unknown/none
         };
 
-        var staffSpec = new StaffSpec(ClefType.Tab, voiceName);
+        // Carry the part's NOTATION clef: treble_8 marks written-8va
+        // (guitar) parts, which the fret calculation shifts down an octave.
+        var sourceClef = GetPartClef(tab, voiceName) ?? ClefType.Treble;
+        var staffSpec = new StaffSpec(sourceClef, voiceName);
         return new TabStaffSpec(staffSpec, tuning);
     }
 

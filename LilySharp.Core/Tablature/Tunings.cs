@@ -73,6 +73,101 @@ public static class Tunings
     public static int OctaveShift(TuningType type) => IsBass(type) ? -12 : 0;
 
     /// <summary>
+    /// Clef-aware octave shift. LilyPond pitches are SOUNDING pitches; Lily#
+    /// writes display pitches, so the tab must recover the sounding octave
+    /// from the notation convention: a treble_8 part (standard guitar
+    /// notation) sounds an octave below what is written, and bass tunings
+    /// sound 8vb from their bass-clef notation. Without this, an open-string
+    /// arpeggio landed on frets 7–12 of the top string.
+    /// </summary>
+    public static int OctaveShift(TuningType type, Svg.Model.ClefType clef) =>
+        clef == Svg.Model.ClefType.Treble8Below ? -12
+        : IsBass(type) ? -12
+        : 0;
+
+    /// <summary>
+    /// String/fret allocation for a CHORD, mimicking LilyPond: notes with an
+    /// explicit string number claim it first; the rest, highest pitch first,
+    /// take the HIGHEST free string whose fret is playable (≥ 0) and within
+    /// the maximum stretch (4) of the frets already chosen. Results are in
+    /// input-note order.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/translation-functions.scm determine-frets-and-strings;
+    /// scm/translation-functions.scm:864 maximumFretStretch default 4.
+    /// </remarks>
+    public static (int stringNum, int fret)[] CalculateChordFrets(
+        System.Collections.Generic.IReadOnlyList<(int Midi, int? StringNumber)> notes,
+        int[] tuning)
+    {
+        const int maxStretch = 4;
+        int stringCount = tuning.Length;
+        var result = new (int stringNum, int fret)[notes.Count];
+        var freeStrings = new System.Collections.Generic.List<int>();
+        for (int s = 1; s <= stringCount; s++)
+            freeStrings.Add(s);
+        var chosenFrets = new System.Collections.Generic.List<int>();
+
+        int FretOn(int midi, int stringNum) => midi - tuning[stringCount - stringNum];
+        bool CloseEnough(int fret)
+        {
+            foreach (int f in chosenFrets)
+                if (f != 0 && fret != 0 && System.Math.Abs(fret - f) > maxStretch)
+                    return false;
+            return true;
+        }
+
+        // Assigned strings first.
+        for (int i = 0; i < notes.Count; i++)
+        {
+            result[i] = (0, -1);
+            if (notes[i].StringNumber is int s && s >= 1 && s <= stringCount)
+            {
+                int fret = FretOn(notes[i].Midi, s);
+                if (fret >= 0)
+                {
+                    result[i] = (s, fret);
+                    freeStrings.Remove(s);
+                    chosenFrets.Add(fret);
+                }
+            }
+        }
+
+        // Unassigned notes, highest pitch first.
+        var order = new System.Collections.Generic.List<int>();
+        for (int i = 0; i < notes.Count; i++)
+            if (result[i].stringNum == 0)
+                order.Add(i);
+        order.Sort((a, b) => notes[b].Midi.CompareTo(notes[a].Midi));
+
+        foreach (int i in order)
+        {
+            int chosen = -1, chosenFret = 0;
+            foreach (int s in freeStrings) // ascending = highest string first
+            {
+                int fret = FretOn(notes[i].Midi, s);
+                if (fret >= 0 && fret <= 24 && CloseEnough(fret))
+                {
+                    chosen = s;
+                    chosenFret = fret;
+                    break;
+                }
+            }
+            if (chosen < 0)
+            {
+                // LP warns "No string for pitch"; keep the note on the lowest
+                // string rather than dropping it.
+                chosen = stringCount;
+                chosenFret = System.Math.Max(0, FretOn(notes[i].Midi, stringCount));
+            }
+            result[i] = (chosen, chosenFret);
+            freeStrings.Remove(chosen);
+            chosenFrets.Add(chosenFret);
+        }
+        return result;
+    }
+
+    /// <summary>
     /// Calculates the best string and fret for a given MIDI pitch.
     /// </summary>
     /// <param name="midiPitch">The MIDI note number to place.</param>

@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -783,7 +783,7 @@ public sealed class ElementCoordinator
                     // It curves OPPOSITE the stem: below the digits when the stem
                     // points up, above when it points down (matching the tab stem,
                     // which uses note.StemUp).
-                    var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY);
+                    var geom = new TabStaffGeometry(staff.Tuning ?? TuningType.Guitar, staffY, staff.TabSourceClef);
                     double digitY = geom.DigitY(tie.StartNote.Midi, tie.StartNote.StringNumber);
                     // LilyPond hangs the tab tie right at the digit's edge — a small,
                     // shallow curve hugging the number — so offset by the VISIBLE

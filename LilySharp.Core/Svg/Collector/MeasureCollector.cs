@@ -1082,7 +1082,7 @@ public sealed class MeasureCollector
             {
                 Staves = sg.Staves
                     .Select(st => st.IsTab && st.Tuning.HasValue
-                        ? st with { Voices = st.Voices.SetItem(0, _tabResolver.ResolveTabStrings(st.PrimaryVoice, st.Tuning.Value)) }
+                        ? st with { Voices = st.Voices.SetItem(0, _tabResolver.ResolveTabStrings(st.PrimaryVoice, st.Tuning.Value, st.TabSourceClef)) }
                         : st)
                     .ToImmutableArray()
             })
