@@ -47,6 +47,17 @@ public sealed class MidiExporter
     // frame), declarations are silent. _activePhrases guards recursion.
     private Dictionary<string, SyntaxNode>? _phraseBodies;
     private readonly HashSet<string> _activePhrases = new();
+
+    // Structure-driven playback: sections play in `structure { … }` order
+    // (with |: :| repeats and volta alternatives), not declaration order.
+    private Dictionary<string, SectionDeclarationSyntax>? _sections;
+    private bool _structureDriven;
+    private bool _structurePlayed;
+
+    // Per-PART relative-pitch state, carried across sections and repeat
+    // passes — matching the collector, which streams one part's blocks
+    // sequentially through the whole piece.
+    private readonly Dictionary<string, (int NoteName, int Octave, Fraction Dur)> _partPitchLanes = new();
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _tempo = 120;
     private int _velocity = 80;
@@ -81,13 +92,20 @@ public sealed class MidiExporter
         var mainTrack = new MidiTrack { Name = "Track 1", Channel = 0 };
         _root = tree.GetRoot();
         _phraseBodies = new Dictionary<string, SyntaxNode>();
+        _sections = new Dictionary<string, SectionDeclarationSyntax>();
         foreach (var n in _root.DescendantNodes())
         {
             if (n is PhraseDeclarationSyntax ph)
                 _phraseBodies[ph.Name.Text] = ph.Body;
             else if (n is VariableDeclarationSyntax vd)
                 _phraseBodies[vd.Name.Text] = vd.Expression;
+            else if (n is SectionDeclarationSyntax sd)
+                _sections[sd.Name.Text] = sd;
         }
+        _structureDriven = _root.DescendantNodes().OfType<StructureDeclarationSyntax>()
+            .Any(s => !IsInsideRender(s));
+        _structurePlayed = false;
+        _partPitchLanes.Clear();
         ProcessNode(_root, mainTrack, conductorTrack);
 
         // Ensure there is an initial time signature at tick 0. If the score already
@@ -122,47 +140,22 @@ public sealed class MidiExporter
                 ProcessChildren(staff, track, conductorTrack);
                 break;
 
-            case SectionDeclarationSyntax section:
-            {
-                // A section's part blocks are SIMULTANEOUS staves, not a
-                // medley: rh then lh used to play one after the other, so the
-                // left hand seemed to never sound. Every part starts at the
-                // section's tick; the section ends with its longest part.
-                // Each part keeps its own relative-pitch lane, seeded from
-                // the part's `octave` anchor, carried across its blocks.
-                int sectionStart = _currentTick;
-                int sectionEnd = _currentTick;
-                var lanes = new Dictionary<string, (int Tick, int NoteName, int Octave, Fraction Dur)>();
-                for (int i = 0; i < section.SlotCount; i++)
-                {
-                    var child = section.GetChild(i);
-                    if (child == null || child is SyntaxTokenNode)
-                        continue;
-                    if (child is PartBlockSyntax sectionPart)
-                    {
-                        string pname = sectionPart.Name;
-                        int anchor = PartOctaveAnchor(pname);
-                        if (!lanes.TryGetValue(pname, out var lane))
-                            lane = (sectionStart, 0, anchor, Fraction.Quarter);
-                        _currentTick = lane.Tick;
-                        _currentNoteName = lane.NoteName;
-                        _currentOctave = lane.Octave;
-                        _defaultDuration = lane.Dur;
-                        _partOctaveAnchor = anchor;
-                        ProcessNode(sectionPart, track, conductorTrack);
-                        lanes[pname] = (_currentTick, _currentNoteName, _currentOctave, _defaultDuration);
-                        sectionEnd = Math.Max(sectionEnd, _currentTick);
-                        _partOctaveAnchor = 4;
-                    }
-                    else
-                    {
-                        ProcessNode(child, track, conductorTrack);
-                        sectionEnd = Math.Max(sectionEnd, _currentTick);
-                    }
-                }
-                _currentTick = sectionEnd;
+            case SectionDeclarationSyntax sectionDecl:
+                // With a structure the play order is ITS job; declarations
+                // are silent (they used to play in file order regardless).
+                if (!_structureDriven)
+                    PlaySection(sectionDecl, track, conductorTrack);
                 break;
-            }
+
+            case StructureDeclarationSyntax structureDecl:
+                // The top-level structure (score-local ones belong to their
+                // render block and are ignored for MIDI, like `render`).
+                if (!_structurePlayed && !IsInsideRender(structureDecl))
+                {
+                    _structurePlayed = true;
+                    PlayStructure(structureDecl, track, conductorTrack);
+                }
+                break;
 
             case PartBlockSyntax partBlock:
                 // A section's `partName { ... }` block: arm the part's transpose
@@ -291,6 +284,126 @@ public sealed class MidiExporter
                 // Process any other nodes by visiting their children
                 ProcessChildren(node, track, conductorTrack);
                 break;
+        }
+    }
+
+    /// <summary>True when the node sits inside a `score`/render declaration.</summary>
+    private static bool IsInsideRender(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is RenderDeclarationSyntax)
+                return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Plays one section: its part blocks run SIMULTANEOUSLY (each from the
+    /// section's start tick; the section ends with the longest part), and each
+    /// part's relative-pitch state persists across sections/repeat passes via
+    /// _partPitchLanes — the collector streams a part the same way.
+    /// </summary>
+    private void PlaySection(SectionDeclarationSyntax section, MidiTrack track, MidiTrack conductorTrack)
+    {
+        // Part-major layout: the section lives INSIDE its part — arm that
+        // part's anchor and play the children sequentially.
+        for (var p = section.Parent; p != null; p = p.Parent)
+        {
+            if (p is PartDeclarationSyntax owner)
+            {
+                _partOctaveAnchor = PartOctaveAnchor(owner.Name.Text);
+                ProcessChildren(section, track, conductorTrack);
+                _partOctaveAnchor = 4;
+                return;
+            }
+        }
+
+        int sectionStart = _currentTick;
+        int sectionEnd = _currentTick;
+        var tickLanes = new Dictionary<string, int>();
+        for (int i = 0; i < section.SlotCount; i++)
+        {
+            var child = section.GetChild(i);
+            if (child == null || child is SyntaxTokenNode)
+                continue;
+            if (child is PartBlockSyntax sectionPart)
+            {
+                string pname = sectionPart.Name;
+                int anchor = PartOctaveAnchor(pname);
+                var pitch = _partPitchLanes.TryGetValue(pname, out var saved)
+                    ? saved
+                    : (NoteName: 0, Octave: anchor, Dur: Fraction.Quarter);
+                _currentTick = tickLanes.TryGetValue(pname, out int lt) ? lt : sectionStart;
+                _currentNoteName = pitch.NoteName;
+                _currentOctave = pitch.Octave;
+                _defaultDuration = pitch.Dur;
+                _partOctaveAnchor = anchor;
+                ProcessNode(sectionPart, track, conductorTrack);
+                _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
+                tickLanes[pname] = _currentTick;
+                sectionEnd = Math.Max(sectionEnd, _currentTick);
+                _partOctaveAnchor = 4;
+            }
+            else
+            {
+                ProcessNode(child, track, conductorTrack);
+                sectionEnd = Math.Max(sectionEnd, _currentTick);
+            }
+        }
+        _currentTick = sectionEnd;
+    }
+
+    private void PlaySectionByName(string name, MidiTrack track, MidiTrack conductorTrack)
+    {
+        if (_sections != null && _sections.TryGetValue(name, out var section))
+            PlaySection(section, track, conductorTrack);
+    }
+
+    /// <summary>
+    /// Plays sections in structure order. `|: … :|` bodies play twice (or
+    /// once per volta alternative); display relabels ("A2") and navigation
+    /// text are visual and skipped. D.C./D.S. jump SEMANTICS are not yet
+    /// honored (they would need segno/fine targets in time).
+    /// </summary>
+    private void PlayStructure(StructureDeclarationSyntax structure, MidiTrack track, MidiTrack conductorTrack)
+    {
+        for (int i = 0; i < structure.SlotCount; i++)
+        {
+            var child = structure.GetChild(i);
+            switch (child)
+            {
+                case SectionReferenceSyntax reference:
+                    PlaySectionByName(reference.SectionName, track, conductorTrack);
+                    break;
+                case StructureRepeatBlockSyntax repeatBlock:
+                    PlayRepeatBlock(repeatBlock, track, conductorTrack);
+                    break;
+            }
+        }
+    }
+
+    private void PlayRepeatBlock(StructureRepeatBlockSyntax repeatBlock, MidiTrack track, MidiTrack conductorTrack)
+    {
+        var body = new List<string>();
+        var alternatives = new List<string>();
+        for (int i = 0; i < repeatBlock.SlotCount; i++)
+        {
+            switch (repeatBlock.GetChild(i))
+            {
+                case SectionReferenceSyntax reference:
+                    body.Add(reference.SectionName);
+                    break;
+                case StructureAlternativeSyntax alt:
+                    alternatives.Add(alt.SectionName.Text);
+                    break;
+            }
+        }
+        int passes = Math.Max(2, alternatives.Count);
+        for (int pass = 0; pass < passes; pass++)
+        {
+            foreach (var name in body)
+                PlaySectionByName(name, track, conductorTrack);
+            if (pass < alternatives.Count)
+                PlaySectionByName(alternatives[pass], track, conductorTrack);
         }
     }
 
