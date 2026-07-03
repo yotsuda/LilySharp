@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -251,11 +251,15 @@ public static partial class GlyphMetrics
     /// <c>Numerator == 1 ? Denominator : 1</c> idiom.
     /// </summary>
     public static int NoteValueOf(Semantics.Fraction baseDuration) =>
-        baseDuration.Numerator == 1 ? baseDuration.Denominator : 1;
+        baseDuration.Numerator == 2 && baseDuration.Denominator == 1
+            ? 0 // breve
+            : baseDuration.Numerator == 1 ? baseDuration.Denominator : 1;
 
     /// <summary>Gets the notehead advance width for a given note value.</summary>
     public static double GetNoteheadAdvance(int noteValue) => noteValue switch
     {
+        // Breve: the sM1 glyph is the whole head plus its side bars.
+        0 => NoteheadWholeAdvance * 1.30,
         1 => NoteheadWholeAdvance,
         2 => NoteheadHalfAdvance,
         _ => NoteheadBlackAdvance,

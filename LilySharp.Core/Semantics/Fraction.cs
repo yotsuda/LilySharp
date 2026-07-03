@@ -91,6 +91,9 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
     {
         return noteValue switch
         {
+            // 0 = breve (double whole): the natural extension of the integer
+            // scale downward (1 = whole). LILYPOND-REF: \breve.
+            0 => new(2, 1),
             1 => Whole,
             2 => Half,
             4 => Quarter,

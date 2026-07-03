@@ -178,6 +178,7 @@ public static class EmmentalerGlyphs
     /// <summary>Gets the rest glyph for a given note value.</summary>
     public static char GetRest(int noteValue) => noteValue switch
     {
+        0 => RestDoubleWhole,
         1 => RestWhole, 2 => RestHalf, 4 => RestQuarter, 8 => Rest8th,
         16 => Rest16th, 32 => Rest32nd, 64 => Rest64th, 128 => Rest128th,
         _ => RestQuarter
@@ -186,7 +187,7 @@ public static class EmmentalerGlyphs
     /// <summary>Gets the notehead glyph for a given note value.</summary>
     public static char GetNotehead(int noteValue) => noteValue switch
     {
-        1 => NoteheadWhole, 2 => NoteheadHalf, _ => NoteheadBlack
+        0 => NoteheadDoubleWhole, 1 => NoteheadWhole, 2 => NoteheadHalf, _ => NoteheadBlack
     };
 
     /// <summary>Gets the flag glyph for a given note value and stem direction.</summary>

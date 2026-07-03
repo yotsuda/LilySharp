@@ -23,7 +23,7 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 public sealed class DurationValidator : ISemanticValidator
 {
-    private static readonly HashSet<int> ValidDurations = [1, 2, 4, 8, 16, 32, 64, 128];
+    private static readonly HashSet<int> ValidDurations = [0, 1, 2, 4, 8, 16, 32, 64, 128];
 
     private readonly DiagnosticBag _diagnostics = new();
 
@@ -53,7 +53,7 @@ public sealed class DurationValidator : ISemanticValidator
             _diagnostics.Error(
                 duration.NumberToken.Span,
                 DiagnosticCodes.InvalidDuration,
-                $"Invalid duration '{duration.Value}'. Valid values are 1, 2, 4, 8, 16, 32, 64, 128.");
+                $"Invalid duration '{duration.Value}'. Valid values are 0 (breve), 1, 2, 4, 8, 16, 32, 64, 128.");
         }
 
         // Recurse into children

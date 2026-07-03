@@ -913,6 +913,7 @@ public sealed class MusicXmlExporter
 
         string type = baseDenom switch
         {
+            0 => "breve",
             1 => "whole",
             2 => "half",
             4 => "quarter",
