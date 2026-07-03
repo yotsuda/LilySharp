@@ -374,6 +374,15 @@ public sealed class LilySharpLanguageServer
             CompletionContext.AfterKey => GetKeyTonicCompletions(),
             CompletionContext.AfterKeyTonic => GetKeyModeCompletions(),
             CompletionContext.AfterOctave => GetOctaveCompletions(),
+            CompletionContext.AfterTempo => GetTempoCompletions(),
+            CompletionContext.AfterTime => GetTimeCompletions(),
+            CompletionContext.AfterPartial => GetPartialCompletions(),
+            CompletionContext.AfterTitleText => new CompletionList { Items = System.Array.Empty<CompletionItem>() },
+            CompletionContext.ScoreBlock => GetScoreBlockCompletions(),
+            CompletionContext.AfterStaffRef => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
+            CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
+            CompletionContext.AfterLyricsRef => GetDeclaredNameCompletions(doc.Text, "lyrics", "Lyrics part"),
+            CompletionContext.AfterWith => GetWithCompletions(),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterAt => GetArticulationCompletions(),
@@ -586,6 +595,15 @@ public sealed class LilySharpLanguageServer
         AfterKey,
         AfterKeyTonic,
         AfterOctave,
+        AfterTempo,
+        AfterTime,
+        AfterPartial,
+        AfterTitleText,
+        ScoreBlock,
+        AfterStaffRef,
+        AfterChordsRef,
+        AfterLyricsRef,
+        AfterWith,
         AfterInstrument,
         AfterRemoveEmpty,
         AfterAt,
@@ -645,6 +663,20 @@ public sealed class LilySharpLanguageServer
         // not completed).
         if (prevWord == "octave")
             return CompletionContext.AfterOctave;
+
+        // Value positions after the metadata/meter keywords: only their own
+        // value forms fit there, not the keyword list. Guarded against string
+        // interiors so a title like "tempo di valse" is not hijacked.
+        if (!IsInsideStringLiteral(text, offset))
+        {
+            switch (prevWord)
+            {
+                case "tempo": return CompletionContext.AfterTempo;
+                case "time": return CompletionContext.AfterTime;
+                case "partial": return CompletionContext.AfterPartial;
+                case "title" or "composer": return CompletionContext.AfterTitleText;
+            }
+        }
         if (IsPitchName(prevWord) && SecondWordBeforeCursor(text, offset) == "key")
             return CompletionContext.AfterKeyTonic;
 
@@ -677,6 +709,21 @@ public sealed class LilySharpLanguageServer
         // note names. Checked before the brace fallback so 'structure {|' counts.
         if (InnermostOpenBlock(text, offset) == "structure")
             return CompletionContext.StructureBlock;
+
+        // Inside score "name" { } / grandStaff { }: the body is a render spec.
+        // After its reference keywords only the declared part names fit; a
+        // `with` continues into `with chords PART`.
+        if (IsInsideScoreBlock(text, offset))
+        {
+            return prevWord switch
+            {
+                "staff" => CompletionContext.AfterStaffRef,
+                "chords" => CompletionContext.AfterChordsRef,
+                "lyrics" => CompletionContext.AfterLyricsRef,
+                "with" => CompletionContext.AfterWith,
+                _ => CompletionContext.ScoreBlock,
+            };
+        }
 
         if (i >= 0 && text[i] == '{')
             return CompletionContext.MusicBlock;
@@ -765,6 +812,214 @@ public sealed class LilySharpLanguageServer
         int end = i;
         while (i > 0 && IsWordChar(text[i - 1])) i--;        // the word before it
         return text.Substring(i, end - i);
+    }
+
+    /// <summary>
+    /// True when <paramref name="offset"/> sits inside a <c>score … { }</c> or
+    /// <c>grandStaff { }</c> body. A score block usually carries a name
+    /// (<c>score "sheet" {</c> / <c>score practice {</c>) between the keyword
+    /// and the brace, so the innermost-block scan must skip one quoted or bare
+    /// name before reading the keyword.
+    /// </summary>
+    internal static bool IsInsideScoreBlock(string text, int offset)
+    {
+        var stack = new System.Collections.Generic.Stack<bool>();
+        for (int i = 0; i < offset && i < text.Length; i++)
+        {
+            if (text[i] == '{')
+            {
+                stack.Push(IsScoreBlockOpener(text, i));
+            }
+            else if (text[i] == '}' && stack.Count > 0)
+            {
+                stack.Pop();
+            }
+        }
+        return stack.Count > 0 && stack.Peek();
+    }
+
+    private static bool IsScoreBlockOpener(string text, int braceIndex)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+        int j = braceIndex - 1;
+        while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+        // Read the word (or quoted name) directly before the brace.
+        string w1;
+        if (j >= 0 && text[j] == '"')
+        {
+            j--;
+            while (j >= 0 && text[j] != '"') j--;
+            j--;
+            w1 = ""; // a quoted score name — the keyword sits before it
+        }
+        else
+        {
+            int end = j + 1;
+            while (j >= 0 && IsWordChar(text[j])) j--;
+            w1 = text.Substring(j + 1, end - (j + 1));
+        }
+        if (w1 == "score" || w1 == "grandStaff")
+            return true;
+        // Known block keywords that take NO name between keyword and brace —
+        // anything else is a name (score x { / section A { …), so look one
+        // word further back.
+        if (w1 is "section" or "part" or "phrase" or "structure" or "chords"
+            or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
+            or "appoggiatura" or "repeat" or "ossia" or "tab" or "")
+        {
+            if (w1 != "")
+                return false;
+        }
+        while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+        int e2 = j + 1;
+        while (j >= 0 && IsWordChar(text[j])) j--;
+        string w0 = text.Substring(j + 1, e2 - (j + 1));
+        return w0 == "score";
+    }
+
+    /// <summary>The written tempo forms, as fill-in snippets — after <c>tempo</c>
+    /// nothing else fits (a bare BPM, a marking text, a beat-unit equation, or
+    /// a swing feel).</summary>
+    internal static CompletionList GetTempoCompletions()
+    {
+        var forms = new (string Label, string Insert, string Detail)[]
+        {
+            ("120", "${1:120}", "Metronome mark: ♩ = 120"),
+            ("\"Allegro\" 132", "\"${1:Allegro}\" ${2:132}", "Marking text + BPM: Allegro (♩ = 132)"),
+            ("\"Grave\" 4 = 54", "\"${1:Grave}\" ${2:4} = ${3:54}", "Marking + beat unit = BPM (4. = dotted unit)"),
+            ("120 swing", "${1:120} swing", "Swing feel (eighths; 'swing 16' for sixteenths)"),
+        };
+        return new CompletionList
+        {
+            Items = forms.Select((t, i) => new CompletionItem
+            {
+                Label = t.Label,
+                Kind = CompletionItemKind.Snippet,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = t.Insert,
+                Detail = t.Detail,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>Common meters offered after <c>time</c>.</summary>
+    internal static CompletionList GetTimeCompletions()
+    {
+        var meters = new (string Label, string Detail)[]
+        {
+            ("4/4", "Common time (engraved as C)"),
+            ("3/4", "Waltz / minuet"),
+            ("2/4", "March / polka"),
+            ("2/2", "Cut time (engraved as ¢)"),
+            ("6/8", "Compound duple (jig)"),
+            ("9/8", "Compound triple (slip jig)"),
+            ("12/8", "Compound quadruple (shuffle)"),
+            ("3/8", "Fast triple"),
+            ("5/4", "Quintuple"),
+            ("7/8", "Septuple"),
+        };
+        return new CompletionList
+        {
+            Items = meters.Select((t, i) => new CompletionItem
+            {
+                Label = t.Label,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = t.Detail,
+                SortText = i.ToString("D2"),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>Common pickup lengths offered after <c>partial</c> (the note-
+    /// duration grammar: number + optional dots).</summary>
+    internal static CompletionList GetPartialCompletions()
+    {
+        var durations = new (string Label, string Detail)[]
+        {
+            ("4", "Quarter-note pickup"),
+            ("8", "Eighth-note pickup"),
+            ("2", "Half-note pickup"),
+            ("4.", "Dotted-quarter pickup"),
+            ("2.", "Dotted-half pickup (three quarters)"),
+            ("8.", "Dotted-eighth pickup"),
+        };
+        return new CompletionList
+        {
+            Items = durations.Select((t, i) => new CompletionItem
+            {
+                Label = t.Label,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = t.Detail,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>The render-spec keywords valid inside a score / grandStaff body.</summary>
+    internal static CompletionList GetScoreBlockCompletions()
+    {
+        var specs = new (string Label, string Insert, string Detail)[]
+        {
+            ("staff", "staff $0", "A staff rendering the named part"),
+            ("grandStaff", "grandStaff {\n\t$0\n}", "Braced staff group (piano)"),
+            ("chords", "chords $0", "Chord row (no staff) for the named chord part"),
+            ("lyrics", "lyrics $0", "Lyrics row (no staff) for the named lyrics part"),
+            ("structure", "structure { $0 }", "Per-score playback order override"),
+        };
+        return new CompletionList
+        {
+            Items = specs.Select((t, i) => new CompletionItem
+            {
+                Label = t.Label,
+                Kind = CompletionItemKind.Keyword,
+                InsertTextFormat = InsertTextFormat.Snippet,
+                InsertText = t.Insert,
+                Detail = t.Detail,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>After <c>staff NAME with</c> the only continuation is <c>chords</c>.</summary>
+    internal static CompletionList GetWithCompletions()
+    {
+        return new CompletionList
+        {
+            Items =
+            [
+                new CompletionItem
+                {
+                    Label = "chords",
+                    Kind = CompletionItemKind.Keyword,
+                    Detail = "Attach a chord part's symbols above this staff",
+                },
+            ]
+        };
+    }
+
+    /// <summary>Names declared as <c>KEYWORD name {</c> anywhere in the document
+    /// (parts, chord parts, lyrics parts), offered where a score references them.</summary>
+    internal static CompletionList GetDeclaredNameCompletions(string text, string keyword, string detail)
+    {
+        var names = new System.Collections.Generic.List<string>();
+        var seen = new System.Collections.Generic.HashSet<string>();
+        foreach (Match m in Regex.Matches(text, $@"\b{keyword}\s+(\w+)\s*\{{"))
+        {
+            var name = m.Groups[1].Value;
+            if (seen.Add(name))
+                names.Add(name);
+        }
+        return new CompletionList
+        {
+            Items = names.Select((n, i) => new CompletionItem
+            {
+                Label = n,
+                Kind = CompletionItemKind.Reference,
+                Detail = detail,
+                SortText = i.ToString("D2"),
+            }).ToArray()
+        };
     }
 
     /// <summary>The octave-mode words valid right after <c>octave</c>. A bare
