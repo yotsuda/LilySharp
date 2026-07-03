@@ -677,7 +677,7 @@ internal sealed class Parser
             SyntaxKind.OpenAngle => true, // Chord
             SyntaxKind.VoiceKeyword => true, // Parallel voices: voice { } voice { }
             SyntaxKind.DoubleOpenAngle => true, // removed << >> — dispatched to a migration hint
-            SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
+            SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or SyntaxKind.DashedBar or
             SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => true,
             SyntaxKind.Tilde => true,
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => true,
@@ -724,7 +724,7 @@ internal sealed class Parser
             // a habit from LilyPond — gets a hint pointing at the Lily# form.
             SyntaxKind.Backslash => ParseLilypondBackslashCommand(topLevel: false),
 
-            SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or
+            SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or SyntaxKind.DashedBar or
             SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => ParseBarline(),
 
             SyntaxKind.Tilde => ParseTie(),

@@ -247,7 +247,7 @@ public static class ArticulationEngraver
                 // fermata INSIDE the staff under the bottom digit.
                 // LILYPOND-REF: ly/engraver-init.ly:1170-1188 TabVoice;
                 // LILYPOND-REF: scm/define-grobs.scm:1365 fermata direction = UP.
-                bool tabForceAbove = articulation.Type == ArticulationType.Fermata
+                bool tabForceAbove = IsFermata(articulation.Type)
                     || articulation.IsOrnament || articulation.IsEditorialAccidental
                     || articulation.Type is ArticulationType.UpBow or ArticulationType.DownBow
                         or ArticulationType.Flageolet;
@@ -257,9 +257,16 @@ public static class ArticulationEngraver
                     : staffOffset + (strings - 1) * space + tabGap; // below the bottom line
                 // The glyph must match the side chosen HERE (the item's own
                 // IsAbove was resolved with notation-staff logic).
-                string tabGlyph = articulation.Type == ArticulationType.Fermata
-                    ? (tabAbove ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow).ToString()
-                    : articulation.GetGlyph();
+                string tabGlyph = articulation.Type switch
+                {
+                    ArticulationType.Fermata =>
+                        (tabAbove ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow).ToString(),
+                    ArticulationType.FermataShort =>
+                        (tabAbove ? EmmentalerGlyphs.FermataShortAbove : EmmentalerGlyphs.FermataShortBelow).ToString(),
+                    ArticulationType.FermataLong =>
+                        (tabAbove ? EmmentalerGlyphs.FermataLongAbove : EmmentalerGlyphs.FermataLongBelow).ToString(),
+                    _ => articulation.GetGlyph(),
+                };
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex, articulation.ItemIndex, colX, tabY,
                     tabGlyph, tabAbove, articulation.SourcePosition, 1.0,
@@ -383,7 +390,7 @@ public static class ArticulationEngraver
             ArticulationType.Tenuto => GlyphMetrics.ArticTenuto,
             ArticulationType.Marcato => isAbove
                 ? GlyphMetrics.ArticMarcatoAbove : GlyphMetrics.ArticMarcatoBelow,
-            ArticulationType.Fermata => isAbove
+            ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong => isAbove
                 ? GlyphMetrics.FermataAboveGlyph : GlyphMetrics.FermataBelowGlyph,
             ArticulationType.Staccatissimo => isAbove
                 ? GlyphMetrics.ArticStaccatissimoAboveGlyph : GlyphMetrics.ArticStaccatissimoBelowGlyph,
@@ -432,7 +439,7 @@ public static class ArticulationEngraver
         return type switch
         {
             // Fermata and ornaments: use larger values since glyph BBox not defined
-            ArticulationType.Fermata => 1.5,
+            ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong => 1.5,
             ArticulationType.Trill or ArticulationType.Mordent or ArticulationType.Prall
                 or ArticulationType.Turn or ArticulationType.InvertedTurn
                 or ArticulationType.PrallTriller => 1.0,
@@ -451,6 +458,11 @@ public static class ArticulationEngraver
     /// For symmetric glyphs (staccato, tenuto): near extent = half height.
     /// For asymmetric glyphs (marcato): near extent = 0 (tip points toward note).
     /// </remarks>
+    /// <summary>All fermata shapes (normal / short-angled / long-square)
+    /// share direction-UP and placement behaviour.</summary>
+    private static bool IsFermata(ArticulationType t) =>
+        t is ArticulationType.Fermata or ArticulationType.FermataShort or ArticulationType.FermataLong;
+
     private static double GetNearExtent(ArticulationType type, bool isAbove)
     {
         var bbox = GetGlyphBBox(type, isAbove);
@@ -509,7 +521,7 @@ public static class ArticulationEngraver
         // LILYPOND-REF: define-grobs.scm:2175 TrillSpanner: direction = UP
         // LILYPOND-REF: define-grobs.scm:100 AccidentalSuggestion: direction = UP
         // LILYPOND-REF: scm/script.scm — upbow/downbow/flageolet: direction = UP
-        bool forceAbove = articulation.Type == ArticulationType.Fermata || articulation.IsOrnament
+        bool forceAbove = IsFermata(articulation.Type) || articulation.IsOrnament
             || articulation.IsEditorialAccidental
             || articulation.Type is ArticulationType.UpBow or ArticulationType.DownBow
                 or ArticulationType.Flageolet;

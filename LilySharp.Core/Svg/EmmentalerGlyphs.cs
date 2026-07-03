@@ -126,6 +126,10 @@ public static class EmmentalerGlyphs
     // === Articulations (verified against emmentaler-20.woff2 cmap) ===
     public const char FermataAbove = '\uE039';         // scripts.ufermata
     public const char FermataBelow = '\uE03A';         // scripts.dfermata
+    public const char FermataShortAbove = '\uE03B';    // scripts.ushortfermata (angled)
+    public const char FermataShortBelow = '\uE03C';    // scripts.dshortfermata
+    public const char FermataLongAbove = '\uE03D';     // scripts.ulongfermata (square)
+    public const char FermataLongBelow = '\uE03E';     // scripts.dlongfermata
     public const char ArticAccentAbove = '\uE048';     // scripts.sforzato
     public const char ArticStaccatoAbove = '\uE04A';   // scripts.staccato
     public const char ArticTenutoAbove = '\uE04D';     // scripts.tenuto

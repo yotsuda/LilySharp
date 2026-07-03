@@ -43,6 +43,8 @@ public static class ArticulationRegistry
             ["marc"] = ArticulationType.Marcato,
             ["fermata"] = ArticulationType.Fermata,
             ["ferm"] = ArticulationType.Fermata,
+            ["shortfermata"] = ArticulationType.FermataShort,
+            ["longfermata"] = ArticulationType.FermataLong,
             ["portato"] = ArticulationType.Portato,
             ["staccatissimo"] = ArticulationType.Staccatissimo,
             // String bowing marks and the harmonic circle.

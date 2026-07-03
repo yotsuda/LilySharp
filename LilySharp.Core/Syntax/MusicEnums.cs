@@ -28,6 +28,8 @@ public enum ArticulationType
     Tenuto,
     Marcato,
     Fermata,
+    FermataShort,   // angled (LP \shortfermata)
+    FermataLong,    // square (LP \longfermata)
     Portato,
     /// <summary>Wedge-shaped extreme staccato (@staccatissimo).
     /// LILYPOND-REF: mf/feta-scripts.mf scripts.u/dstaccatissimo.</summary>

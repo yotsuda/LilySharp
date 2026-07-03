@@ -3952,6 +3952,7 @@ public sealed class MeasureCollector
         ":|:" => BarlineType.RepeatBoth,
         "||" => BarlineType.Double,
         "|." => BarlineType.Final,
+        "!" => BarlineType.Dashed,
         _ => BarlineType.Single
     };
 

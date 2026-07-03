@@ -1973,6 +1973,18 @@ public static class SharedRenderer
                 gc.DrawRectangle(x + thin + sep, staffY, thin, height, fill: Color.Black);
                 break;
 
+            case BarlineType.Dashed:
+            {
+                // LILYPOND-REF: lily/bar-line.cc make_dashed_bar_line — dash
+                // length tuned so segments straddle the staff lines evenly
+                // (~⅔ dash, ⅓ gap per staff space).
+                const double dash = 0.67, gap = 0.33;
+                for (double dy = 0; dy < height; dy += dash + gap)
+                    gc.DrawRectangle(x, staffY + dy, thin,
+                        Math.Min(dash, height - dy), fill: Color.Black);
+                break;
+            }
+
             case BarlineType.Final:
                 gc.DrawRectangle(x, staffY, thin, height, fill: Color.Black);
                 gc.DrawRectangle(x + thin + sep, staffY, thick, height, fill: Color.Black);

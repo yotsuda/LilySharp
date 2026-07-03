@@ -31,7 +31,8 @@ public enum BarlineType
     Final,        // |.
     RepeatStart,  // |:
     RepeatEnd,    // :|
-    RepeatBoth    // :|:
+    RepeatBoth,   // :|:
+    Dashed        // !  (LP \bar "!")
 }
 
 /// <summary>

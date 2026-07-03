@@ -72,6 +72,8 @@ public sealed record ArticulationItem
         ArticulationType.Tenuto => EmmentalerGlyphs.ArticTenutoAbove.ToString(),
         ArticulationType.Marcato => (IsAbove ? EmmentalerGlyphs.ArticMarcatoAbove : EmmentalerGlyphs.ArticMarcatoBelow).ToString(),
         ArticulationType.Fermata => (IsAbove ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow).ToString(),
+        ArticulationType.FermataShort => (IsAbove ? EmmentalerGlyphs.FermataShortAbove : EmmentalerGlyphs.FermataShortBelow).ToString(),
+        ArticulationType.FermataLong => (IsAbove ? EmmentalerGlyphs.FermataLongAbove : EmmentalerGlyphs.FermataLongBelow).ToString(),
         ArticulationType.Portato => (IsAbove ? EmmentalerGlyphs.ArticPortatoAbove : EmmentalerGlyphs.ArticPortatoBelow).ToString(),
         ArticulationType.Staccatissimo => (IsAbove ? EmmentalerGlyphs.ArticStaccatissimoAbove : EmmentalerGlyphs.ArticStaccatissimoBelow).ToString(),
         ArticulationType.UpBow => EmmentalerGlyphs.ArticUpBow.ToString(),

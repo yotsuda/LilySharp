@@ -170,6 +170,7 @@ public static class SpacingRules
     {
         BarlineType.None => 0,
         BarlineType.Single => BarlineWidth,
+        BarlineType.Dashed => BarlineWidth,
         BarlineType.Double => DoubleBarlineWidth,
         BarlineType.Final => DoubleBarlineWidth,
         // Repeat barlines reserve their actual drawn stencil plus the same

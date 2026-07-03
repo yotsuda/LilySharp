@@ -189,6 +189,7 @@ internal sealed class Lexer
             case ']': _position++; return (SyntaxKind.CloseBracket, "]");
             case '~': _position++; return (SyntaxKind.Tilde, "~");
             case '+': _position++; return (SyntaxKind.Plus, "+");
+            case '!': _position++; return (SyntaxKind.DashedBar, "!"); // dashed barline (LP \bar "!")
             case '*': _position++; return (SyntaxKind.Asterisk, "*");
             case '=': _position++; return (SyntaxKind.Equals, "=");
             case '@': _position++; return (SyntaxKind.At, "@");
