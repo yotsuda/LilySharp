@@ -6,9 +6,9 @@
 </style>
   <text x="59.52" y="5.00" font-size="3.49" font-family="serif" font-weight="bold" text-anchor="middle" data-pos="265">Lyrics only</text>
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
-  <rect x="30.79" y="6.77" width="0.19" height="2.00" fill="#000000"/>
-  <rect x="44.84" y="6.77" width="0.19" height="2.00" fill="#000000"/>
-  <rect x="45.33" y="6.77" width="0.60" height="2.00" fill="#000000"/>
+  <rect x="30.79" y="6.77" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="44.84" y="6.77" width="0.19" height="4.00" fill="#000000"/>
+  <rect x="45.33" y="6.77" width="0.60" height="4.00" fill="#000000"/>
   <text x="9.58" y="8.37" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="320">Twin</text>
   <text x="15.91" y="8.37" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="326">kle</text>
   <text x="21.71" y="8.37" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="330">twin</text>

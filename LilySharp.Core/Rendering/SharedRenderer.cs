@@ -269,11 +269,19 @@ public static class SharedRenderer
             // notes — only their text, emitted by DrawChordNames / DrawLyrics at the row Y.
             if (staff.IsTextRow)
             {
-                // Lead-sheet measure grid: the top text row's measures carry the real
-                // barline types (synced from the chord/lyric source), drawn as short
-                // ticks the chords/lyrics hang on.
+                // Lead-sheet measure grid: the grid row's measures carry the real
+                // barline types (synced from the chord/lyric source). On a LYRIC
+                // row the bars run at the full staff height, like ordinary
+                // barlines around the words (maintainer feedback: the short
+                // ticks read as stray marks); a chords-only grid keeps the
+                // short ticks the chord symbols hang on.
                 if (leadSheet && globalIdx == barlineRowIdx)
-                    DrawBarlines(system, staff, staffY, layout, gc, barHeight: LeadSheetBarlineHeight);
+                {
+                    bool lyricGrid = layout.LyricLayouts.Any(l =>
+                        l.Item.IsLyricsRow && l.Item.StaffIndex == globalIdx);
+                    DrawBarlines(system, staff, staffY, layout, gc,
+                        barHeight: lyricGrid ? StaffHeight : LeadSheetBarlineHeight);
+                }
                 continue;
             }
 
