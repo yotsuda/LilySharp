@@ -492,6 +492,7 @@ internal sealed class Lexer
             // Mode keywords
             "major" => SyntaxKind.MajorKeyword,
             "minor" => SyntaxKind.MinorKeyword,
+            "ionian" => SyntaxKind.IonianKeyword,
             "dorian" => SyntaxKind.DorianKeyword,
             "phrygian" => SyntaxKind.PhrygianKeyword,
             "lydian" => SyntaxKind.LydianKeyword,

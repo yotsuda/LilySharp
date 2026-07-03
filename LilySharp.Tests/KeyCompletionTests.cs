@@ -60,12 +60,12 @@ public class KeyCompletionTests
     }
 
     [Fact]
-    public void ModeCompletions_AreExactlyTheEightModes()
+    public void ModeCompletions_AreExactlyTheNineModes()
     {
         var labels = LilySharpLanguageServer.GetKeyModeCompletions().Items
             .Select(i => i.Label).ToArray();
         Assert.Equal(
-            new[] { "major", "minor", "dorian", "phrygian", "lydian",
+            new[] { "major", "minor", "ionian", "dorian", "phrygian", "lydian",
                     "mixolydian", "aeolian", "locrian" },
             labels);
     }

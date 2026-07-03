@@ -790,6 +790,7 @@ public sealed class LilySharpLanguageServer
         {
             ("major", "Major (ionian)"),
             ("minor", "Natural minor (aeolian): major − 3 sharps"),
+            ("ionian", "Ionian (= major)"),
             ("dorian", "Dorian: major − 2 sharps"),
             ("phrygian", "Phrygian: major − 4 sharps"),
             ("lydian", "Lydian: major + 1 sharp"),

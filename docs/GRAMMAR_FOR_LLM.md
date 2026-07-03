@@ -19,7 +19,7 @@ tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 
 time 4/4                // optional (default 4/4); 4/4 engraves as the C
                         // (common time) glyph and 2/2 as cut-C, like LilyPond
 key c major             // optional (default c major); all church modes work:
-                        // major minor dorian phrygian lydian mixolydian aeolian locrian
+                        // major minor ionian dorian phrygian lydian mixolydian aeolian locrian
                         // (key d dorian = no accidentals, key e dorian = 2 sharps)
 partial 8               // optional: the pickup length, once for every part
 
@@ -289,7 +289,7 @@ part is fine). Keywords:
 section structure include tab ossia transpose octave instrument channel
 score part staff grandStaff voice phrase repeat volta alternative let use break partial
 title composer tempo time key clef
-major minor dorian phrygian lydian mixolydian aeolian locrian
+major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8
 tuplet grace acciaccatura appoggiatura lyrics chords tuning
 override revert once with

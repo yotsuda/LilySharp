@@ -1450,6 +1450,7 @@ private GreenNode?[] ParseArticulations()
 
         SyntaxToken mode;
         if (Check(SyntaxKind.MajorKeyword) || Check(SyntaxKind.MinorKeyword)
+            || Check(SyntaxKind.IonianKeyword)
             || Check(SyntaxKind.DorianKeyword) || Check(SyntaxKind.PhrygianKeyword)
             || Check(SyntaxKind.LydianKeyword) || Check(SyntaxKind.MixolydianKeyword)
             || Check(SyntaxKind.AeolianKeyword) || Check(SyntaxKind.LocrianKeyword))
@@ -1460,7 +1461,7 @@ private GreenNode?[] ParseArticulations()
         {
             var span = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
-                "Expected a mode: 'major', 'minor', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian' or 'locrian'");
+                "Expected a mode: 'major', 'minor', 'ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian' or 'locrian'");
             mode = new SyntaxToken(SyntaxKind.MajorKeyword, "major", null, null);
         }
 

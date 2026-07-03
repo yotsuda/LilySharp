@@ -80,7 +80,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura'
         | 'repeat' | 'volta' | 'alternative'
         | 'override' | 'revert' | 'once' | 'with'
-        | 'major' | 'minor' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
+        | 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian' | 'lydian' | 'mixolydian'
         | 'aeolian' | 'locrian'
         | 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8'
         | 'segno' | 'fine' | 'coda' | 'dc' | 'ds' | 'al' | 'to'
@@ -145,7 +145,7 @@ TempoDecl      = 'tempo' , [ String ] , [ DurationBase , '=' ] , Integer ,
 TimeDecl       = 'time' , Integer , '/' , Integer ;
 KeyDecl        = 'key' , PitchBase , [ Accidental-text ] , Mode ;
 
-Mode           = 'major' | 'minor' | 'dorian' | 'phrygian'
+Mode           = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian'
                | 'lydian' | 'mixolydian' | 'aeolian' | 'locrian' ;
 
 (* Example:

@@ -60,7 +60,7 @@ public static class KeySpelling
             "minor" or "aeolian" => -3,
             "phrygian" => -4,
             "locrian" => -5,
-            _ => 0, // major
+            _ => 0, // major / ionian
         };
         return sharps;
     }

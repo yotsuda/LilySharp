@@ -112,6 +112,7 @@ public enum SyntaxKind : ushort
     ToKeyword,          // to
 
     // === Mode Keywords ===
+    IonianKeyword,      // ionian (= major)
     DorianKeyword,      // dorian
     PhrygianKeyword,    // phrygian
     LydianKeyword,      // lydian

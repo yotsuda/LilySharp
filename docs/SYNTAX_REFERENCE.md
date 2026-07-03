@@ -588,7 +588,7 @@ be declared and referenced).
 | Structure | `section` `structure` `include` `tab` `ossia` `transpose` `octave` `instrument` `channel` |
 | Score / layout | `score` `part` `staff` `grandStaff` `voice` `phrase` `repeat` `volta` `alternative` `let` `use` `break` `partial` |
 | Metadata | `title` `composer` `tempo` `time` `key` `clef` |
-| Modes | `major` `minor` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
+| Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` |
 | Notation | `tuplet` `grace` `acciaccatura` `appoggiatura` `lyrics` `chordnames` `chords` `tabStaff` `tuning` |
 | Overrides | `override` `revert` `once` |
