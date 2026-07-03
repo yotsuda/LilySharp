@@ -494,7 +494,32 @@ public static class MusicMarkEngraver
                 if (dx < 8.0 && dx < bestDx) { bestDx = dx; bestJ = j; }
             }
             if (bestJ < 0)
+            {
+                // UNPAIRED tempo: it still shares the line with the pairs —
+                // "♩=120" (paired with its label) and a following "♩=90"
+                // overprinted on the grand-staff fixture. Same band model:
+                // its "line" is the label-center height it would pair at.
+                const double drop = 0.9; // = section-label fs/2 − pad
+                double uw = 2.3 + Rendering.SerifTextMetrics.MeasureBold("= " + tempo.Text, 1.8);
+                if (tempo.TempoText != null)
+                    uw += Rendering.SerifTextMetrics.MeasureBold(tempo.TempoText, 2.2) + 1.5;
+                if (tempo.SwingSubdivision != 0)
+                    uw += 5.0;
+                double uLine = tempo.Y - drop;
+                int uSys = measureToSystemIdx.TryGetValue(tempo.MeasureIndex, out int us) ? us : -1;
+                foreach (var placed in placedPairs)
+                {
+                    if (placed.Sys != uSys)
+                        continue;
+                    if (tempo.X + uw < placed.X0 - 1.0 || tempo.X > placed.X1 + 1.0)
+                        continue;
+                    if (Math.Abs(uLine - placed.LineY) < 3.0)
+                        uLine = Math.Min(uLine, placed.LineY - 3.6);
+                }
+                placedPairs.Add((uSys, tempo.X, tempo.X + uw, uLine));
+                result[i] = tempo with { Y = uLine + drop };
                 continue;
+            }
 
             var lab = result[bestJ];
             double labelFs = lab.MarkType == MusicMarkType.Rehearsal ? 4.0 * 0.6 : 4.0 * 0.55;
@@ -547,8 +572,11 @@ public static class MusicMarkEngraver
                 if (pairX1 < placed.X0 - 1.0 || pairX0 > placed.X1 + 1.0)
                     continue;
                 // Band of a pair ≈ ±1.7ss around its line; step a full band
-                // plus padding above the one it would run into.
-                lineY = Math.Min(lineY, placed.LineY - 3.6);
+                // plus padding above the one it would run into — but only
+                // when the bands actually meet (an X-overlapping mark two
+                // levels up leaves this line free).
+                if (Math.Abs(lineY - placed.LineY) < 3.0)
+                    lineY = Math.Min(lineY, placed.LineY - 3.6);
             }
             placedPairs.Add((tempoSys, pairX0, pairX1, lineY));
 
