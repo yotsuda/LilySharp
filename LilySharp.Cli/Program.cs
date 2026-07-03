@@ -55,6 +55,7 @@ static int Run(string[] args)
         "png" => RunPng(args.Skip(1).ToArray()),
         "midi" => RunMidi(args.Skip(1).ToArray()),
         "xml" => RunXml(args.Skip(1).ToArray()),
+        "vsqx" => RunVsqx(args.Skip(1).ToArray()),
         "ly" => RunLy(args.Skip(1).ToArray()),
         "check" => RunCheck(args.Skip(1).ToArray()),
         "layout" => RunLayout(args.Skip(1).ToArray()),
@@ -76,6 +77,7 @@ static void ShowHelp()
           png     Convert to PNG (raster image)
           midi    Convert to MIDI (audio)
           xml     Convert to MusicXML
+          vsqx    Convert to VOCALOID sequence (vocal part + lyrics)
           check   Check syntax without output
           layout  Print a text summary of the layout (system/line breaks, bars per system)
 
@@ -602,6 +604,46 @@ static int ExecuteMidi(string inputPath, string outputPath)
 }
 
 // ============ MusicXML Command ============
+
+static int RunVsqx(string[] args)
+{
+    if (args.Contains("-h") || args.Contains("--help"))
+    {
+        Console.WriteLine("""
+            Convert Lily# source to a VOCALOID4 sequence (.vsqx)
+
+            The first part carrying lyrics becomes the vocal track (Piapro
+            Studio / VOCALOID4+ import this directly). Kana lyrics get
+            VOCALOID phonemes; ties merge; rests become gaps.
+
+            Usage: lysc vsqx <input.lys> [output.vsqx]
+            """);
+        return 0;
+    }
+
+    var (inputPath, outputPath, error) = ParseSimpleOptions(args, ".vsqx");
+    if (error != null)
+    {
+        Console.Error.WriteLine($"Error: {error}");
+        Console.Error.WriteLine("Run 'lysc vsqx --help' for usage.");
+        return 1;
+    }
+
+    try
+    {
+        var (source, tree) = LoadAndParse(inputPath!);
+        if (ReportDiagnostics(tree)) return 1;
+        var doc = new LilySharp.Core.Vocaloid.VsqxExporter().Export(tree);
+        doc.Save(outputPath!);
+        Console.WriteLine($"Created: {outputPath}");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        return 1;
+    }
+}
 
 static int RunXml(string[] args)
 {

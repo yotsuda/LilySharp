@@ -2780,6 +2780,9 @@ public sealed class LilySharpLanguageServer
                 case "musicxml":
                     new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).Save(outputPath);
                     break;
+                case "vsqx":
+                    new LilySharp.Core.Vocaloid.VsqxExporter().Export(tree).Save(outputPath);
+                    break;
                 case "ly":
                     File.WriteAllText(outputPath,
                         new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree));
