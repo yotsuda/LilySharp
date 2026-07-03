@@ -52,6 +52,13 @@ for ($round = 1; $round -le 10 -and -not $ok; $round++) {
 }
 if (-not $ok) { throw 'Copy kept failing - close VS Code and re-run.' }
 
+# Grammar + client assets are not locked by the server process - plain copy.
+$repoExt = Join-Path $repoRoot 'editors\vscode'
+Copy-Item "$repoExt\syntaxes\*" (Join-Path $extDir.FullName 'syntaxes') -Recurse -Force -ErrorAction SilentlyContinue
+if (Test-Path "$repoExt\out") {
+    Copy-Item "$repoExt\out\*" (Join-Path $extDir.FullName 'out') -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 $ver = [System.Diagnostics.FileVersionInfo]::GetVersionInfo(
     (Join-Path $dest 'lilysharp-lsp.dll')).ProductVersion
 Write-Host "Deployed $ver (round $round)" -ForegroundColor Green

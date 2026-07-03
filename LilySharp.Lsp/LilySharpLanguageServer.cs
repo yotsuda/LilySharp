@@ -1865,6 +1865,65 @@ public sealed class LilySharpLanguageServer
             var (line, character) = GetLineAndCharacter(text, nameNode.Span.Start);
             tokens.Add(new SemanticToken(line, character, nameNode.Width, 1));
         }
+        else if (node is PropertyAssignmentSyntax propAssign)
+        {
+            // Property VALUE tokens (instrument bass-guitar, name Foo, …):
+            // color the whole value uniformly. Without this only value words
+            // that happened to be keywords ("bass" = the clef name) lit up,
+            // leaving "-guitar" plain. One span over first→last value token.
+            // Restricted to word-valued properties — pitch/number values
+            // (transpose d, channel 1) keep their own token colors and must
+            // not sit inside an overlapping span.
+            string propName = propAssign.NameToken.Text.ToLowerInvariant();
+            if (propName is not ("instrument" or "name" or "tuning"))
+                goto recurse;
+            SyntaxTokenNode? firstVal = null, lastVal = null;
+            for (int vi = 2; vi < propAssign.SlotCount; vi++)
+            {
+                if (propAssign.GetChild(vi) is SyntaxTokenNode vt)
+                {
+                    firstVal ??= vt;
+                    lastVal = vt;
+                }
+            }
+            if (firstVal != null && lastVal != null
+                && firstVal.Kind != SyntaxKind.StringLiteral)
+            {
+                var (line, character) = GetLineAndCharacter(text, firstVal.Span.Start);
+                int width = lastVal.Span.End - firstVal.Span.Start;
+                tokens.Add(new SemanticToken(line, character, width, 3));
+            }
+            // fall through to recursion: the property NAME keyword still
+            // gets its keyword color from the token pass.
+            recurse: ;
+        }
+        else if (node is ArticulationSyntax artNode)
+        {
+            // '@' + name as ONE articulation-colored span. @cue/@feather/…
+            // only lit up when a TextMate regex happened to list them.
+            var (line, character) = GetLineAndCharacter(text, artNode.Span.Start);
+            tokens.Add(new SemanticToken(line, character,
+                artNode.NameToken.Span.End - artNode.Span.Start, 7));
+        }
+        else if (node is MusicMarkSyntax markNode)
+        {
+            // '@name' prefix only — parenthesised args keep their own colors
+            // (numbers in @fig(6 4), the string in @text("…")).
+            if (markNode.GetChild(1) is SyntaxTokenNode markName)
+            {
+                var (line, character) = GetLineAndCharacter(text, markNode.Span.Start);
+                tokens.Add(new SemanticToken(line, character,
+                    markName.Span.End - markNode.Span.Start, 7));
+            }
+        }
+        else if (node is RepeatExpressionSyntax repNode)
+        {
+            // 'tremolo' / 'percent' / 'unfold' lex as identifiers, not
+            // keyword kinds — `repeat` colored, its type word did not.
+            var rt = repNode.RepeatType;
+            var (rline, rchar) = GetLineAndCharacter(text, rt.Span.Start);
+            tokens.Add(new SemanticToken(rline, rchar, rt.Width, 0));
+        }
 
         // Recurse into children
         for (int i = 0; i < node.SlotCount; i++)

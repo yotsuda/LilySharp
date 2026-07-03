@@ -155,7 +155,7 @@
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|partial|key|clef|major|minor|instrument|octave|channel|tuning|treble|bass|alto|tenor|percent|unfold)\\b"
+                    "match": "\\b(title|composer|tempo|time|partial|key|clef|major|minor|instrument|octave|channel|tuning|treble|bass|alto|tenor|percent|unfold|tremolo)\\b"
                 }
             ]
         },
@@ -292,7 +292,12 @@
                 {
                     "comment": "Cross-staff and other annotations",
                     "name": "keyword.other.annotation.lilysharp",
-                    "match": "@(cross|glissando|gliss|arpeggio|courtesy|editorial)\\b"
+                    "match": "@(cross|glissando|gliss|arpeggio|courtesy|editorial|cue)\\b"
+                },
+                {
+                    "comment": "Catch-all for any @name annotation (keeps new registry names colored without touching this file; specific patterns above win first)",
+                    "name": "keyword.other.annotation.lilysharp",
+                    "match": "@[A-Za-z][A-Za-z0-9]*"
                 }
             ]
         },
