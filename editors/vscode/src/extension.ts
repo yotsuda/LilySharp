@@ -1109,6 +1109,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let audioCtx = null;
         let playingOscs = [];
         let playEndTimer = null;
+        let playheadTimer = null;
+        let onsetList = [];
+        let onsetIdx = 0;
+        let playStartTime = 0;
 
         function setPlayUi(playing) {
             document.getElementById('playBtn').disabled = playing;
@@ -1118,6 +1122,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         function stopPlayback() {
             clearTimeout(playEndTimer);
             playEndTimer = null;
+            clearInterval(playheadTimer);
+            playheadTimer = null;
+            onsetList = [];
+            onsetIdx = 0;
+            clearHighlights();
+            lastHighlightPos = -1;
             for (const o of playingOscs) {
                 try { o.stop(); } catch (e) { /* already ended */ }
             }
@@ -1133,6 +1143,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             stopPlayback();
             if (!notes || notes.length === 0) { return; }
             audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') { audioCtx.resume(); }
             const master = audioCtx.createGain();
             master.gain.value = 0.25;
             master.connect(audioCtx.destination);
@@ -1159,6 +1170,36 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             }
             setPlayUi(true);
             playEndTimer = setTimeout(stopPlayback, (end + 0.5) * 1000);
+
+            // Follow-along: at each onset highlight the notation being played
+            // (the note's own data-pos - an exact match, so the existing
+            // click-sync highlighter lights the right head), and keep it in
+            // view without fighting manual scrolling more than needed.
+            playStartTime = t0;
+            onsetList = notes.filter(n => n.S >= 0).map(n => ({ t: n.T, s: n.S }));
+            onsetList.sort((a, b) => a.t - b.t);
+            onsetIdx = 0;
+            playheadTimer = setInterval(() => {
+                if (!audioCtx) return;
+                const elapsed = audioCtx.currentTime - playStartTime;
+                let s = -1;
+                while (onsetIdx < onsetList.length && onsetList[onsetIdx].t <= elapsed) {
+                    s = onsetList[onsetIdx].s;
+                    onsetIdx++;
+                }
+                if (s >= 0 && s !== lastHighlightPos) {
+                    lastHighlightPos = s;
+                    highlightNearestElement(s);
+                    const el = document.querySelector('[data-pos="' + s + '"]');
+                    if (el) {
+                        const r = el.getBoundingClientRect();
+                        const m = mainContent.getBoundingClientRect();
+                        const off = r.top < m.top + 30 || r.bottom > m.bottom - 30
+                                 || r.left < m.left + 30 || r.right > m.right - 30;
+                        if (off) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+                    }
+                }
+            }, 50);
         }
 
         document.getElementById('playBtn').addEventListener('click', () => {

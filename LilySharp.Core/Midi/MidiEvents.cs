@@ -24,7 +24,11 @@ public readonly record struct MidiNote(
     int Pitch,
     int Velocity,
     int StartTick,
-    int DurationTicks
+    int DurationTicks,
+    /// <summary>Source offset of the note's syntax — lets the preview player
+    /// highlight the notation being played. -1 = no source link. Not written
+    /// to .mid files.</summary>
+    int SourcePos = -1
 );
 
 /// <summary>

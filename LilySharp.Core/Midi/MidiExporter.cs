@@ -641,7 +641,7 @@ public sealed class MidiExporter
             return;
         }
 
-        track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration));
+        track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration, note.Position));
         _lastNoteIndex = track.Notes.Count - 1;
         _lastNoteTrack = track;
         _currentTick += durationTicks;
@@ -685,7 +685,7 @@ public sealed class MidiExporter
                 firstOctave = _currentOctave;
                 isFirst = false;
             }
-            track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks));
+            track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position));
         }
 
         // Next note is relative to the chord's first pitch.
@@ -774,7 +774,8 @@ public sealed class MidiExporter
                 midiPitch,
                 _velocity,
                 _currentTick,
-                graceDuration
+                graceDuration,
+                note.Position
             ));
 
             _currentTick += graceDuration;

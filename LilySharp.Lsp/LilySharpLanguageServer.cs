@@ -2845,6 +2845,7 @@ public sealed class LilySharpLanguageServer
                         D = Math.Max(0.03, SecondsAt(n.StartTick + n.DurationTicks) - t0),
                         P = n.Pitch,
                         V = n.Velocity,
+                        S = n.SourcePos,
                     };
                 })
                 .ToArray();
@@ -3075,6 +3076,7 @@ public class PlaybackNote
     public double D { get; set; }   // duration (s)
     public int P { get; set; }      // MIDI pitch
     public int V { get; set; }      // velocity 0-127
+    public int S { get; set; }      // source offset (-1 = none) for follow-along highlight
 }
 
 /// <summary>Response for the lilysharp/playback request.</summary>
