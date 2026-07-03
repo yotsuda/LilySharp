@@ -1210,27 +1210,51 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             if (notes.length === 0) { return; }
             audioCtx = new AudioContext();
             if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+            // Timbre families (note.I): waveform + envelope approximations —
+            // the webview has no access to OS synths or soundfonts (CSP), so
+            // instruments are voiced, not sampled. pluck = exponential decay.
+            const PATCHES = [
+                { w: 'triangle', a: 0.010, s: 0.55, r: 0.05, g: 1.00, pluck: true,  tau: 0.9  }, // 0 piano-ish
+                { w: 'sine',     a: 0.050, s: 0.90, r: 0.06, g: 1.15, pluck: false, tau: 0    }, // 1 flute
+                { w: 'square',   a: 0.030, s: 0.75, r: 0.05, g: 0.45, pluck: false, tau: 0    }, // 2 clarinet/reed
+                { w: 'sawtooth', a: 0.080, s: 0.85, r: 0.09, g: 0.55, pluck: false, tau: 0    }, // 3 strings
+                { w: 'triangle', a: 0.005, s: 0.40, r: 0.04, g: 1.00, pluck: true,  tau: 0.35 }, // 4 guitar
+                { w: 'sine',     a: 0.008, s: 0.45, r: 0.05, g: 1.30, pluck: true,  tau: 0.5  }, // 5 bass
+                { w: 'sawtooth', a: 0.020, s: 0.90, r: 0.06, g: 0.50, pluck: false, tau: 0    }, // 6 brass
+                { w: 'square',   a: 0.040, s: 1.00, r: 0.05, g: 0.35, pluck: false, tau: 0    }, // 7 organ
+                { w: 'sine',     a: 0.060, s: 0.90, r: 0.08, g: 1.10, pluck: false, tau: 0    }  // 8 voice
+            ];
             const master = audioCtx.createGain();
             master.gain.value = 0.25;
             master.connect(audioCtx.destination);
             const t0 = audioCtx.currentTime + 0.15;
             let end = 0;
             for (const n of notes) {
+                const p = PATCHES[n.I] || PATCHES[0];
                 const osc = audioCtx.createOscillator();
-                osc.type = 'triangle';
+                osc.type = p.w;
                 osc.frequency.value = 440 * Math.pow(2, (n.P - 69) / 12);
                 const g = audioCtx.createGain();
                 const at = t0 + n.T - offset;
                 const rel = at + n.D;
-                const peak = 0.9 * (n.V / 127);
+                const peak = 0.9 * (n.V / 127) * p.g;
                 g.gain.setValueAtTime(0, at);
-                g.gain.linearRampToValueAtTime(peak, at + 0.012);
-                g.gain.setValueAtTime(peak, Math.max(at + 0.012, rel - 0.04));
-                g.gain.linearRampToValueAtTime(0, rel);
+                g.gain.linearRampToValueAtTime(peak, at + p.a);
+                if (p.pluck) {
+                    // Plucked/struck: exponential decay through the note,
+                    // then a faster decay as the release.
+                    g.gain.setTargetAtTime(peak * 0.15, at + p.a, p.tau);
+                    g.gain.setTargetAtTime(0.0001, rel, 0.03);
+                } else {
+                    // Sustained: hold, ease to the sustain level, release.
+                    g.gain.setValueAtTime(peak, Math.max(at + p.a, rel - 0.06));
+                    g.gain.linearRampToValueAtTime(peak * p.s, Math.max(at + p.a, rel - 0.02));
+                    g.gain.linearRampToValueAtTime(0.0001, rel + p.r);
+                }
                 osc.connect(g);
                 g.connect(master);
                 osc.start(at);
-                osc.stop(rel + 0.05);
+                osc.stop(rel + p.r + 0.05);
                 playingOscs.push(osc);
                 if (n.T + n.D > end) end = n.T + n.D;
             }

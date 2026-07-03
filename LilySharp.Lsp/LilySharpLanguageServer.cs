@@ -2847,6 +2847,7 @@ public sealed class LilySharpLanguageServer
                         V = n.Velocity,
                         S = n.SourcePos,
                         O = n.SourceOrdinal,
+                        I = n.Timbre,
                     };
                 })
                 .ToArray();
@@ -3079,6 +3080,7 @@ public class PlaybackNote
     public int V { get; set; }      // velocity 0-127
     public int S { get; set; }      // source offset (-1 = none) for follow-along highlight
     public int O { get; set; }      // printed-copy ordinal of this onset among same-S copies
+    public int I { get; set; }      // timbre family for the preview synth
 }
 
 /// <summary>Response for the lilysharp/playback request.</summary>

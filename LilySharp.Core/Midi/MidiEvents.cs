@@ -32,7 +32,12 @@ public readonly record struct MidiNote(
     /// <summary>Which PRINTED copy of the source this onset corresponds to
     /// (phrase expansions share one position; repeats replay their pass-one
     /// ordinals). Not written to .mid files.</summary>
-    int SourceOrdinal = 0
+    int SourceOrdinal = 0,
+    /// <summary>Timbre family for the preview synth (0 piano, 1 flute,
+    /// 2 clarinet, 3 strings, 4 guitar, 5 bass, 6 brass, 7 organ, 8 voice),
+    /// resolved from the part's `instrument` (or its name). Not written to
+    /// .mid files.</summary>
+    int Timbre = 0
 );
 
 /// <summary>

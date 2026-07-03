@@ -43,6 +43,10 @@ public sealed class MidiExporter
     // collector, where `part lh { octave 3 }` roots the left hand at C3).
     private int _partOctaveAnchor = 4;
 
+    // Preview-synth timbre family of the part currently playing, resolved
+    // from its `instrument` property (or the part name itself).
+    private int _currentTimbre;
+
     // Phrase bodies by name; a $reference expands in place (fresh default
     // frame), declarations are silent. _activePhrases guards recursion.
     private Dictionary<string, SyntaxNode>? _phraseBodies;
@@ -146,8 +150,10 @@ public sealed class MidiExporter
 
             case PartDeclarationSyntax part:
                 _partOctaveAnchor = PartOctaveAnchor(part.Name.Text);
+                _currentTimbre = PartTimbre(part.Name.Text);
                 ProcessChildren(part, track, conductorTrack);
                 _partOctaveAnchor = 4;
+                _currentTimbre = 0;
                 break;
 
             case StaffDeclarationSyntax staff:
@@ -325,8 +331,10 @@ public sealed class MidiExporter
             if (p is PartDeclarationSyntax owner)
             {
                 _partOctaveAnchor = PartOctaveAnchor(owner.Name.Text);
+                _currentTimbre = PartTimbre(owner.Name.Text);
                 ProcessChildren(section, track, conductorTrack);
                 _partOctaveAnchor = 4;
+                _currentTimbre = 0;
                 return;
             }
         }
@@ -351,6 +359,7 @@ public sealed class MidiExporter
                 _currentOctave = pitch.Octave;
                 _defaultDuration = pitch.Dur;
                 _partOctaveAnchor = anchor;
+                _currentTimbre = PartTimbre(pname);
                 ProcessNode(sectionPart, track, conductorTrack);
                 _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
                 tickLanes[pname] = _currentTick;
@@ -424,6 +433,54 @@ public sealed class MidiExporter
             if (pass < alternatives.Count)
                 PlaySectionByName(alternatives[pass], track, conductorTrack);
         }
+    }
+
+    /// <summary>
+    /// Timbre family for the preview synth: the part's `instrument` property
+    /// wins, else the part NAME itself is matched (a part called "flute"
+    /// sounds flute-ish without any property).
+    /// </summary>
+    private int PartTimbre(string partName)
+    {
+        string? source = null;
+        if (_root != null)
+        {
+            foreach (var partDecl in _root.DescendantNodes().OfType<PartDeclarationSyntax>())
+            {
+                if (partDecl.Name.Text != partName)
+                    continue;
+                foreach (var prop in partDecl.Properties)
+                {
+                    if (prop.NameToken.Text.ToLowerInvariant() == "instrument")
+                    {
+                        var sb = new System.Text.StringBuilder();
+                        for (int vi = 2; vi < prop.SlotCount; vi++)
+                            if (prop.GetChild(vi) is SyntaxTokenNode vt)
+                                sb.Append(vt.Text);
+                        source = sb.ToString().Trim('"');
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+        return TimbreFamily(source ?? partName);
+    }
+
+    private static int TimbreFamily(string name)
+    {
+        string s = name.ToLowerInvariant();
+        bool Has(params string[] keys) => keys.Any(s.Contains);
+        if (Has("flute", "piccolo", "recorder", "fife")) return 1;
+        if (Has("clarinet")) return 2;
+        if (Has("violin", "viola", "cello", "string", "contrabass", "fiddle")) return 3;
+        if (Has("guitar", "banjo", "mandolin", "ukulele", "lute")) return Has("bass") ? 5 : 4;
+        if (Has("bass")) return 5;
+        if (Has("trumpet", "horn", "trombone", "tuba", "brass", "cornet")) return 6;
+        if (Has("organ", "harmonium", "accordion")) return 7;
+        if (Has("voice", "soprano", "alto", "tenor", "bariton", "choir", "vocal", "upper", "lower")) return 8;
+        if (Has("oboe", "bassoon", "sax")) return 2;
+        return 0; // piano-ish default
     }
 
     /// <summary>The part's header `octave N` anchor, or 4 when absent.</summary>
@@ -665,7 +722,7 @@ public sealed class MidiExporter
             return;
         }
 
-        track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration, note.Position, NextOrdinal(note.Position)));
+        track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration, note.Position, NextOrdinal(note.Position), _currentTimbre));
         _lastNoteIndex = track.Notes.Count - 1;
         _lastNoteTrack = track;
         _currentTick += durationTicks;
@@ -712,7 +769,7 @@ public sealed class MidiExporter
                 firstOctave = _currentOctave;
                 isFirst = false;
             }
-            track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position, chordOrdinal));
+            track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position, chordOrdinal, _currentTimbre));
         }
 
         // Next note is relative to the chord's first pitch.
