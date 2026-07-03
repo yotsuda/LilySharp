@@ -632,6 +632,9 @@ public sealed class MeasureCollector
     private int _timePosition;
     private int _keyPosition;
     private int? _tempo;
+    // Active `repeat tremolo N { … }` transform: the body note prints ONCE at
+    // the combined duration with the subdivision's stem slashes.
+    private int _tremoloRepeatCount = 1;
     private string? _tempoText;
     private int _tempoBeatUnit = 4;
     private int _tempoDots;
@@ -3127,14 +3130,59 @@ public sealed class MeasureCollector
                 }
             }
         }
+        else if (type == "tremolo" && bodyNodes.Count == 1
+            && (bodyNodes[0] is NoteSyntax || bodyNodes[0] is ChordSyntax)
+            && TremoloTotalIsPrintable(count, bodyNodes[0]))
+        {
+            // LILYPOND-REF: lily/chord-tremolo-iterator.cc +
+            // lily/stem-tremolo.cc — `\repeat tremolo 8 { c32 }` engraves ONE
+            // quarter note whose stem carries the 32nd's three slashes (the
+            // same drawing as the c4:32 suffix); the repetition is aural.
+            _tremoloRepeatCount = count;
+            ProcessBodyOnce();
+            _tremoloRepeatCount = 1;
+        }
         else
         {
-            // For volta/unfold/tremolo: unfold body count times (basic implementation)
+            // For volta/unfold (and non-printable tremolo shapes): unfold the
+            // body count times.
             for (int i = 0; i < count; i++)
             {
                 ProcessBodyOnce();
             }
         }
+    }
+
+    /// <summary>True when count × body duration reduces to a plain or dotted
+    /// printable note value (1 → base, 3 → dotted, 7 → double-dotted).</summary>
+    private static bool TremoloTotalIsPrintable(int count, SyntaxNode body)
+    {
+        int value = body switch
+        {
+            NoteSyntax n => n.Duration?.Value ?? 0,
+            ChordSyntax ch => ch.Duration?.Value ?? 0,
+            _ => 0
+        };
+        if (value < 8 || count < 2)
+            return false;
+        return CombineTremoloDuration(count, value) != null;
+    }
+
+    /// <summary>Reduces count/value to (noteValue, dots) — 8×1/32 = (4, 0),
+    /// 12×1/32 = (4, 1) — or null when the total is not a printable duration.</summary>
+    private static (int Value, int Dots)? CombineTremoloDuration(int count, int value)
+    {
+        int p = count, q = value;
+        while (p % 2 == 0 && q % 2 == 0) { p /= 2; q /= 2; }
+        if (q < 1)
+            return null;
+        return p switch
+        {
+            1 => (q, 0),
+            3 => q >= 2 ? (q / 2, 1) : null,
+            7 => q >= 4 ? (q / 4, 2) : null,
+            _ => null
+        };
     }
 
     /// <summary>
@@ -3593,6 +3641,16 @@ public sealed class MeasureCollector
         // Parse tremolo suffix (:8 = 1 beam, :16 = 2 beams, :32 = 3 beams)
         int tremoloBeams = ParseTremoloBeams(note.Tremolo);
 
+        // Inside `repeat tremolo N { … }`: print ONE note at the combined
+        // duration, slashes from the body's subdivision.
+        if (_tremoloRepeatCount > 1
+            && CombineTremoloDuration(_tremoloRepeatCount, noteValue) is { } combined)
+        {
+            tremoloBeams = Math.Max(tremoloBeams, (int)Math.Log2(noteValue) - 2);
+            noteValue = combined.Value;
+            dots = combined.Dots;
+        }
+
         var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
 
         // Check for explicit @courtesy annotation
@@ -3759,6 +3817,15 @@ public sealed class MeasureCollector
 
         int dots = chord.Duration?.DotCount ?? 0;
         int tremoloBeams = ParseTremoloBeams(chord.Tremolo);
+
+        // Inside `repeat tremolo N { … }` (see CreateNoteItem).
+        if (_tremoloRepeatCount > 1
+            && CombineTremoloDuration(_tremoloRepeatCount, noteValue) is { } combined)
+        {
+            tremoloBeams = Math.Max(tremoloBeams, (int)Math.Log2(noteValue) - 2);
+            noteValue = combined.Value;
+            dots = combined.Dots;
+        }
 
         return new ChordItem(notes.ToImmutableArray(), Fraction.FromNoteValue(noteValue), dots, chord.Position, tremoloBeams, hasBeamStartAfter, hasBeamEndAfter, hasArpeggio, isCue, hasTieStart: hasTieAfter, hasSlurStart: hasSlurStartAfter, hasSlurEnd: hasSlurEndAfter);
     }

@@ -165,4 +165,5 @@ public static class DiagnosticCodes
 
     // Structure / section-part grid errors (LYS7xxx)
     public const string DuplicateCell = "LYS7001";
+    public const string UnexpectedCharacter = "LYS0009";
 }

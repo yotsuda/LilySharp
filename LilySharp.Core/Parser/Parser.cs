@@ -45,6 +45,22 @@ internal sealed class Parser
         _reuse = reuse;
         _position = 0;
         _textPosition = 0;
+
+        // Unknown characters lex to BadToken and no parse rule consumes them —
+        // they were dropped in complete silence (a typo like `b??` compiled
+        // clean and simply lost the "??"). Flag each one up front.
+        int scanPos = 0;
+        foreach (var t in _tokens)
+        {
+            if (t.Kind == SyntaxKind.BadToken)
+            {
+                _diagnostics.Error(
+                    new TextSpan(scanPos + (t.FullWidth - t.Text.Length), t.Text.Length),
+                    DiagnosticCodes.UnexpectedCharacter,
+                    $"Unexpected character '{t.Text}' — it has no meaning here and is ignored");
+            }
+            scanPos += t.FullWidth;
+        }
     }
 
     public DiagnosticBag Diagnostics => _diagnostics;
