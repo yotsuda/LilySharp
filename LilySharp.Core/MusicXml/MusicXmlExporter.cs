@@ -155,17 +155,42 @@ public sealed class MusicXmlExporter
 
             if (partBlocks.Count > 0)
             {
+                // Section-level lyrics (siblings of the part blocks) sing the
+                // FIRST part's melody, like the engraving binds them.
+                var sectionLyrics = new List<LyricsBlockSyntax>();
+                for (int i = 0; i < section.SlotCount; i++)
+                    if (section.GetChild(i) is LyricsBlockSyntax slb)
+                        sectionLyrics.Add(slb);
+
+                MusicXmlPart? firstPart = null;
+                int firstBefore = 0;
                 foreach (var partBlock in partBlocks)
                 {
+                    if (firstPart == null)
+                    {
+                        firstBefore = _partsByName.TryGetValue(partBlock.Name, out var fp)
+                            ? fp.Measures.Count
+                            : 0;
+                    }
                     ProcessPartBlock(partBlock);
+                    firstPart ??= _partsByName[partBlock.Name];
                 }
+                if (firstPart != null && sectionLyrics.Count > 0)
+                    AttachLyrics(firstPart, firstBefore, sectionLyrics);
             }
             else
             {
-                // Section without named parts → treat as default part
+                // Section without named parts → treat as default part; its
+                // lyrics blocks map onto the notes just emitted.
                 EnsurePart("Part 1");
+                int before = _currentPart!.Measures.Count;
+                var blocks = new List<LyricsBlockSyntax>();
+                for (int i = 0; i < section.SlotCount; i++)
+                    if (section.GetChild(i) is LyricsBlockSyntax lb2)
+                        blocks.Add(lb2);
                 ProcessNode(section);
                 FlushCurrentMeasure();
+                AttachLyrics(_currentPart!, before, blocks);
             }
         }
     }
@@ -188,15 +213,88 @@ public sealed class MusicXmlExporter
         bool isFirst = _currentPart!.Measures.Count == 0;
         StartNewMeasure(addAttributes: isFirst);
 
-        // Process the content inside the part block
+        // Process the content inside the part block; lyrics blocks are
+        // collected and mapped onto the emitted notes afterwards.
+        int measuresBefore = _currentPart!.Measures.Count;
+        var lyricsBlocks = new List<LyricsBlockSyntax>();
         for (int i = 0; i < partBlock.SlotCount; i++)
         {
             var child = partBlock.GetChild(i);
+            if (child is LyricsBlockSyntax lb)
+            {
+                lyricsBlocks.Add(lb);
+                continue;
+            }
             if (child != null && child is not SyntaxTokenNode)
                 ProcessNode(child);
         }
 
         FlushCurrentMeasure();
+        AttachLyrics(_currentPart!, measuresBefore, lyricsBlocks);
+    }
+
+    /// <summary>
+    /// Maps a part block's lyrics onto the notes it just emitted, verse by
+    /// verse: syllables advance note-by-note (rests, chord members, grace
+    /// notes and tie continuations are not sung), a lyric barline syncs to
+    /// the next measure, hyphens become syllabic begin/middle/end, extenders
+    /// and melisma marks hold notes without new syllables. Vocal editors
+    /// (VOCALOID, Synthesizer V, CeVIO, NEUTRINO) read these on import.
+    /// </summary>
+    private static void AttachLyrics(MusicXmlPart part, int measuresBefore, List<LyricsBlockSyntax> lyricsBlocks)
+    {
+        if (lyricsBlocks.Count == 0)
+            return;
+        var measures = part.Measures.Skip(measuresBefore).ToList();
+        for (int verse = 0; verse < lyricsBlocks.Count; verse++)
+        {
+            var syllables = Svg.Collector.LyricCollector.ParseSyllables(lyricsBlocks[verse]);
+            int mi = 0, ni = 0;
+            bool prevHyphen = false;
+
+            MusicXmlNote? NextSingable()
+            {
+                while (mi < measures.Count)
+                {
+                    var notes = measures[mi].Notes;
+                    while (ni < notes.Count)
+                    {
+                        var n = notes[ni++];
+                        if (!n.IsRest && !n.IsChord && !n.IsGrace && !n.TieStop)
+                            return n;
+                    }
+                    mi++;
+                    ni = 0;
+                }
+                return null;
+            }
+
+            foreach (var (text, connector, _, isBarline, isMelisma) in syllables)
+            {
+                if (isBarline)
+                {
+                    // Lyric bar = measure sync: jump to the next measure's notes.
+                    mi++;
+                    ni = 0;
+                    continue;
+                }
+                if (isMelisma)
+                {
+                    NextSingable(); // held note, no new syllable
+                    continue;
+                }
+                var target = NextSingable();
+                if (target == null)
+                    return; // more syllables than notes — stop quietly
+                bool hyphen = connector == Svg.Model.LyricConnectorType.Hyphen;
+                string syllabic = prevHyphen
+                    ? (hyphen ? "middle" : "end")
+                    : (hyphen ? "begin" : "single");
+                target.Lyrics.Add((verse + 1, text, syllabic,
+                    connector == Svg.Model.LyricConnectorType.Extender));
+                prevHyphen = hyphen;
+            }
+        }
     }
 
     private void EnsurePart(string name)
@@ -279,6 +377,12 @@ public sealed class MusicXmlExporter
             case CompilationUnitSyntax unit:
                 foreach (var member in unit.Members)
                     ProcessNode(member);
+                break;
+
+            case LyricsBlockSyntax:
+                // Handled AFTER the notes exist (AttachLyrics maps syllables
+                // onto the emitted notes); walking it here would do nothing
+                // useful and the default recursion could misfire.
                 break;
 
             case TimeSignatureSyntax timeSig:

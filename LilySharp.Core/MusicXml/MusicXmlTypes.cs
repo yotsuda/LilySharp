@@ -250,6 +250,11 @@ public sealed class MusicXmlNote
     // Legacy property for backward compatibility
     public string? Dynamic { get; set; }
 
+    /// <summary>Sung syllables (verse, text, syllabic form, extender) — one per
+    /// verse. Vocal editors (VOCALOID, Synthesizer V, CeVIO, NEUTRINO …)
+    /// read these on import.</summary>
+    public List<(int Verse, string Text, string Syllabic, bool Extend)> Lyrics { get; } = new();
+
     public XElement ToXml()
     {
         var note = new XElement("note");
@@ -338,6 +343,17 @@ public sealed class MusicXmlNote
             }
 
             note.Add(notations);
+        }
+
+        // <lyric> — after notations per the MusicXML order.
+        foreach (var (verse, text, syllabic, extend) in Lyrics)
+        {
+            var lyric = new XElement("lyric", new XAttribute("number", verse));
+            lyric.Add(new XElement("syllabic", syllabic));
+            lyric.Add(new XElement("text", text));
+            if (extend)
+                lyric.Add(new XElement("extend"));
+            note.Add(lyric);
         }
 
         return note;

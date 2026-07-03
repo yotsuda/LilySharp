@@ -168,7 +168,7 @@ public sealed class LyricCollector
     ///
     /// Structure: LyricsBlock contains LyricMeasure nodes, each containing LyricSyllable nodes.
     /// </remarks>
-    private List<(string Text, LyricConnectorType Connector, int Position, bool IsBarline, bool IsMelisma)> ParseSyllables(LyricsBlockSyntax lyricsBlock)
+    internal static List<(string Text, LyricConnectorType Connector, int Position, bool IsBarline, bool IsMelisma)> ParseSyllables(LyricsBlockSyntax lyricsBlock)
     {
         var result = new List<(string, LyricConnectorType, int, bool, bool)>();
 
