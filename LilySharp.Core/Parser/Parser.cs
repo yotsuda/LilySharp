@@ -504,6 +504,10 @@ internal sealed class Parser
         while (Check(SyntaxKind.StringLiteral) ||
                Check(SyntaxKind.IntegerLiteral) ||
                Check(SyntaxKind.DurationNumber) ||
+               // a dotted beat unit: "tempo \"Lively\" 4. = 116" lexes as
+               // IntegerLiteral + Dot at declaration level — without accepting
+               // the dot the parser stopped there and ". = 116" was dropped.
+               Check(SyntaxKind.Dot) ||
                Check(SyntaxKind.Equals) ||
                (Check(SyntaxKind.Identifier) && IsSwingWord(Current.Text)))
         {

@@ -78,6 +78,15 @@ public sealed record Score
     /// <summary>Tempo in BPM (optional).</summary>
     public int? Tempo { get; }
 
+    /// <summary>Textual tempo marking ("Grave") for the opening metronome mark.</summary>
+    public string? TempoText { get; init; }
+
+    /// <summary>Metronome beat unit of the opening tempo (4 = quarter).</summary>
+    public int TempoBeatUnit { get; init; } = 4;
+
+    /// <summary>Augmentation dots on the opening tempo's beat unit.</summary>
+    public int TempoDots { get; init; }
+
     /// <summary>The note value the initial tempo asked to swing (0 = none, 8 = eighths,
     /// 16 = sixteenths), drawn as the swing-feel equation beside the metronome mark.</summary>
     public int SwingSubdivision { get; }

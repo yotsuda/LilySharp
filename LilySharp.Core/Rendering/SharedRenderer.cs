@@ -2437,7 +2437,8 @@ public static class SharedRenderer
             // the (re-collected) measures, explicit marks from score.MusicMarks.
             MusicMarkLayouts = ResolveArr(layout.MusicMarkLayouts,
                 MusicMarkEngraver.BuildAllMarks(score.MusicMarks,
-                    score.PrimaryContentStaff.PrimaryVoice.Measures, score.Tempo),
+                    score.PrimaryContentStaff.PrimaryVoice.Measures, score.Tempo,
+                    score.SwingSubdivision, score.TempoText, score.TempoBeatUnit, score.TempoDots),
                 static (l, it) => l with { SourcePosition = it.SourcePosition }, static l => l.SourceIndex),
             // Lyrics carry the source offset on their nested LyricItem (the renderer draws
             // data-pos from Item.SourcePosition); re-derive that from the live Lyrics table.
@@ -3523,19 +3524,47 @@ public static class SharedRenderer
         if (m.MarkType == MusicMarkType.Tempo)
         {
             // LILYPOND-REF: scm/define-grobs.scm:1835 MetronomeMark
-            // LILYPOND-REF: lily/metronome-engraver.cc — notehead + stem + " = NNN"
+            // LILYPOND-REF: lily/metronome-engraver.cc — notehead + stem + " = NNN";
+            // a textual marking prints bold with the equation parenthesized after
+            // it: Grave (♩ = 54). Text-only tempo prints just the bold marking.
             const double noteSize = TempoNoteSize;
             const double textSize = 1.8;
-            gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, m.X, absY, noteSize);
-            double stemX = m.X + noteSize * 0.32;
+            double x = m.X;
+            bool hasMetronome = m.Text.Length > 0;
+            if (m.TempoText != null)
+            {
+                const double markingSize = 2.2;
+                gc.DrawText(m.TempoText, x, absY, markingSize,
+                    "serif", FontStyle.Bold, TextAnchor.Start, Color.Black);
+                if (!hasMetronome)
+                    return;
+                x += SerifTextMetrics.MeasureBold(m.TempoText, markingSize) + 0.8;
+                gc.DrawText("(", x, absY, textSize,
+                    "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
+                x += SerifTextMetrics.Measure("(", textSize) + 0.1;
+            }
+            char head = m.TempoBeatUnit <= 2
+                ? EmmentalerGlyphs.NoteheadHalf
+                : EmmentalerGlyphs.NoteheadBlack;
+            gc.DrawGlyph(head, x, absY, noteSize);
+            double stemX = x + noteSize * 0.32;
             double stemTop = absY - 3.5 * (noteSize / FontSize);
             gc.DrawLine(stemX, absY, stemX, stemTop, Color.Black, 0.10);
-            double tempoTextX = m.X + noteSize * 0.5 + 0.3;
-            gc.DrawText("= " + m.Text, tempoTextX, absY,
+            if (m.TempoBeatUnit >= 8)
+                gc.DrawGlyph(EmmentalerGlyphs.Flag8thUp, stemX, stemTop, noteSize);
+            double dotX = x + noteSize * 0.5 + 0.15;
+            for (int d = 0; d < m.TempoDots; d++)
+            {
+                gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, absY - 0.5, noteSize);
+                dotX += 0.55;
+            }
+            double tempoTextX = Math.Max(x + noteSize * 0.5 + 0.3, m.TempoDots > 0 ? dotX + 0.15 : 0);
+            string equation = "= " + m.Text + (m.TempoText != null ? ")" : "");
+            gc.DrawText(equation, tempoTextX, absY,
                 textSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
             if (m.SwingSubdivision != 0)
             {
-                double textEnd = tempoTextX + SerifTextMetrics.MeasureBold("= " + m.Text, textSize);
+                double textEnd = tempoTextX + SerifTextMetrics.MeasureBold(equation, textSize);
                 DrawSwingEquation(gc, textEnd + 0.8, absY, m.SwingSubdivision);
             }
             return;

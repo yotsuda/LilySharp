@@ -56,6 +56,15 @@ public sealed record MultiStaffScore
     /// <summary>Tempo in BPM (optional).</summary>
     public int? Tempo { get; }
 
+    /// <summary>Textual tempo marking ("Grave") for the opening metronome mark.</summary>
+    public string? TempoText { get; init; }
+
+    /// <summary>Metronome beat unit of the opening tempo (4 = quarter).</summary>
+    public int TempoBeatUnit { get; init; } = 4;
+
+    /// <summary>Augmentation dots on the opening tempo's beat unit.</summary>
+    public int TempoDots { get; init; }
+
     /// <summary>The note value the initial tempo asked to swing (0 = none, 8, 16).</summary>
     public int SwingSubdivision { get; }
 
@@ -228,7 +237,12 @@ public sealed record MultiStaffScore
             grobReverts: score.GrobReverts,
             trillSpanners: score.TrillSpanners,
             header: score.Header,
-            swingSubdivision: score.SwingSubdivision);
+            swingSubdivision: score.SwingSubdivision)
+        {
+            TempoText = score.TempoText,
+            TempoBeatUnit = score.TempoBeatUnit,
+            TempoDots = score.TempoDots,
+        };
     }
 
     /// <summary>

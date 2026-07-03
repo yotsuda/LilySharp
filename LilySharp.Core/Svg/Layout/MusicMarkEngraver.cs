@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -38,7 +38,10 @@ public readonly record struct MusicMarkLayout(
     int SourceIndex = -1,   // F3/B: index into BuildAllMarks() — position-independent
                             //   ref so a reused layout re-derives SourcePosition from
                             //   the live score (see SharedRenderer.ResolveDataPos).
-    int SwingSubdivision = 0 // Tempo marks only: note value to swing (0/8/16) for the feel equation.
+    int SwingSubdivision = 0, // Tempo marks only: note value to swing (0/8/16) for the feel equation.
+    string? TempoText = null, // Tempo marks only: bold marking text ("Grave").
+    int TempoBeatUnit = 4,    // Tempo marks only: metronome beat unit.
+    int TempoDots = 0         // Tempo marks only: dots on the beat unit.
 );
 
 /// <summary>
@@ -117,7 +120,8 @@ public static class MusicMarkEngraver
         ImmutableArray<ChordNameLayout> chordNames = default)
     {
         // Merge section labels and tempo marking into the mark list
-        var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0);
+        var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
+            score?.TempoText, score?.TempoBeatUnit ?? 4, score?.TempoDots ?? 0);
 
         if (allMarks.Length == 0)
             return ImmutableArray<MusicMarkLayout>.Empty;
@@ -261,7 +265,8 @@ public static class MusicMarkEngraver
 
                 layouts.Add(new MusicMarkLayout(
                     mark.MeasureIndex, x, y, mark.Type, mark.Text,
-                    mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision));
+                    mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision,
+                    mark.TempoText, mark.TempoBeatUnit, mark.TempoDots));
             }
 
             // Stack below-staff marks (lower priority = closer to staff).
@@ -330,7 +335,8 @@ public static class MusicMarkEngraver
 
                 layouts.Add(new MusicMarkLayout(
                     mark.MeasureIndex, x, y, mark.Type, mark.Text,
-                    mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision));
+                    mark.IsSymbol, mark.SourcePosition, si, mark.SwingSubdivision,
+                    mark.TempoText, mark.TempoBeatUnit, mark.TempoDots));
             }
         }
 
@@ -412,10 +418,13 @@ public static class MusicMarkEngraver
         ImmutableArray<MusicMarkItem> musicMarks,
         ImmutableArray<Measure> measures,
         int? tempo,
-        int swingSubdivision = 0)
+        int swingSubdivision = 0,
+        string? tempoText = null,
+        int tempoBeatUnit = 4,
+        int tempoDots = 0)
     {
         var allMarks = MergeSectionLabels(musicMarks, measures);
-        return MergeTempoMark(allMarks, tempo, swingSubdivision);
+        return MergeTempoMark(allMarks, tempo, swingSubdivision, tempoText, tempoBeatUnit, tempoDots);
     }
 
     /// <summary>
@@ -464,13 +473,21 @@ public static class MusicMarkEngraver
     /// LILYPOND-REF: define-grobs.scm:1835 MetronomeMark outside-staff-priority = 1000
     /// </remarks>
     private static ImmutableArray<MusicMarkItem> MergeTempoMark(
-        ImmutableArray<MusicMarkItem> marks, int? tempo, int swingSubdivision = 0)
+        ImmutableArray<MusicMarkItem> marks, int? tempo, int swingSubdivision = 0,
+        string? tempoText = null, int tempoBeatUnit = 4, int tempoDots = 0)
     {
-        if (tempo == null)
+        // A textual marking without a BPM ("tempo \"Grave\"") still prints.
+        if (tempo == null && tempoText == null)
             return marks;
 
         var tempoMark = new MusicMarkItem(
-            MusicMarkType.Tempo, tempo.Value.ToString(), 0, 0) { SwingSubdivision = swingSubdivision };
+            MusicMarkType.Tempo, tempo?.ToString() ?? "", 0, 0)
+        {
+            SwingSubdivision = swingSubdivision,
+            TempoText = tempoText,
+            TempoBeatUnit = tempoBeatUnit,
+            TempoDots = tempoDots,
+        };
 
         var builder = ImmutableArray.CreateBuilder<MusicMarkItem>();
         if (!marks.IsDefaultOrEmpty)

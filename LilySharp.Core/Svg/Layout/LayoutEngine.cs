@@ -139,7 +139,8 @@ public sealed class LayoutEngine
                 _elementCoordinator.LayoutSlurs(score, prelimSystems));
             pagingSkylines = AugmentSkylinesForPaging(
                 perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
-                prelimAnn.VoltaBrackets, prelimSystems);
+                prelimAnn.VoltaBrackets, prelimSystems,
+                prelimAnn.MusicMarks, prelimAnn.CustomTexts);
         }
 
         var (pages, systemsArray) = CreatePages(
@@ -363,7 +364,12 @@ public sealed class LayoutEngine
             var prelimScore = new Score(
                 prelimStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
                 ClefToString(prelimStaff.Clef), score.Tempo, score.Title, score.Composer,
-                tupletBrackets: score.TupletBrackets);
+                tupletBrackets: score.TupletBrackets)
+            {
+                TempoText = score.TempoText,
+                TempoBeatUnit = score.TempoBeatUnit,
+                TempoDots = score.TempoDots,
+            };
             var prelimBeams = new List<BeamLayout>();
             var prelimTies = new List<TieLayout>();
             var prelimSlurs = new List<SlurLayout>();
@@ -407,7 +413,8 @@ public sealed class LayoutEngine
                 prelimAnn, prelimTies.ToImmutableArray(), prelimSlurs.ToImmutableArray());
             pagingSkylines = AugmentSkylinesForPaging(
                 perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
-                prelimAnn.VoltaBrackets, prelimSystems);
+                prelimAnn.VoltaBrackets, prelimSystems,
+                prelimAnn.MusicMarks, prelimAnn.CustomTexts);
         }
 
         var (pages, systemsArray) = CreatePages(
@@ -464,7 +471,12 @@ public sealed class LayoutEngine
         var primaryScore = new Score(
             primaryStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
             ClefToString(primaryStaff.Clef), score.Tempo, score.Title, score.Composer,
-            tupletBrackets: score.TupletBrackets, swingSubdivision: score.SwingSubdivision);
+            tupletBrackets: score.TupletBrackets, swingSubdivision: score.SwingSubdivision)
+        {
+            TempoText = score.TempoText,
+            TempoBeatUnit = score.TempoBeatUnit,
+            TempoDots = score.TempoDots,
+        };
 
         // Per-staff lookups so a dynamic is positioned under its OWN staff (clears
         // that staff's stems) and offset to it — score-level dynamics otherwise all
@@ -1078,7 +1090,9 @@ public sealed class LayoutEngine
         ImmutableArray<ArticulationLayout> articulations,
         ImmutableArray<FiguredBassLayout> figuredBasses,
         ImmutableArray<VoltaBracketLayout> voltaBrackets,
-        ImmutableArray<SystemLayout> systems)
+        ImmutableArray<SystemLayout> systems,
+        ImmutableArray<MusicMarkLayout> musicMarks = default,
+        ImmutableArray<CustomTextLayout> customTexts = default)
     {
         if (skylines == null)
             return null;
@@ -1117,6 +1131,47 @@ public sealed class LayoutEngine
                 v.StartX, v.EndX, v.Y + 1.6, v.Y - 0.1, VerticalDirection.Up));
             result[s] = (result[s].up, result[s].down);
             result[s] = (up, result[s].down);
+        }
+
+        // Section labels, rehearsal marks and navigation text (Fine, D.C. …)
+        // stack above (or below) the staff like any other annotation. Without
+        // their boxes in the silhouette, the X-aware inter-system distance let
+        // a label above system 2 print through system 1's figured bass. The
+        // box is added to BOTH sides — merging on the side the mark does not
+        // protrude toward is a no-op, so no direction bookkeeping is needed.
+        void AddMarkBox(int measureIndex, double x0, double x1, double top, double bottom)
+        {
+            if (!measureToSystem.TryGetValue(measureIndex, out int s))
+                return;
+            var up = new VerticalSkyline(VerticalDirection.Up);
+            up.Merge(result[s].up);
+            up.Merge(VerticalSkyline.FromBox(x0, x1, bottom, top, VerticalDirection.Up));
+            var down = new VerticalSkyline(VerticalDirection.Down);
+            down.Merge(result[s].down);
+            down.Merge(VerticalSkyline.FromBox(x0, x1, bottom, top, VerticalDirection.Down));
+            result[s] = (up, down);
+        }
+        if (!musicMarks.IsDefaultOrEmpty)
+        {
+            foreach (var m in musicMarks)
+            {
+                if (MusicMarkItem.IsSpannerHandled(m.MarkType))
+                    continue;
+                // Same vertical envelope Enrich uses; width from the real text
+                // (boxed labels get the box padding, symbols a 2 ss square).
+                double halfW = m.IsSymbol
+                    ? 1.0
+                    : Rendering.SerifTextMetrics.MeasureBold(m.Text, 2.4) / 2 + 0.4;
+                AddMarkBox(m.MeasureIndex, m.X - halfW, m.X + halfW, m.Y - 2.1, m.Y + 0.7);
+            }
+        }
+        if (!customTexts.IsDefaultOrEmpty)
+        {
+            foreach (var ct in customTexts)
+            {
+                double halfW = Rendering.SerifTextMetrics.MeasureBold(ct.Text, 2.0) / 2 + 0.2;
+                AddMarkBox(ct.MeasureIndex, ct.X - halfW, ct.X + halfW, ct.Y - 1.8, ct.Y + 0.6);
+            }
         }
         return result;
     }

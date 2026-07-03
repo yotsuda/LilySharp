@@ -630,6 +630,9 @@ public sealed class MeasureCollector
     private int _timePosition;
     private int _keyPosition;
     private int? _tempo;
+    private string? _tempoText;
+    private int _tempoBeatUnit = 4;
+    private int _tempoDots;
     private int _swingSubdivision;
     private int _timeBeats = 4;
     private int _timeBeatType = 4;
@@ -738,7 +741,12 @@ public sealed class MeasureCollector
             grobOverrides: _grobOverrides.ToImmutableArray(),
             grobReverts: _grobReverts.ToImmutableArray(),
             trillSpanners: PairTrillSpannerEvents(),
-            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition));
+            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition))
+        {
+            TempoText = _tempoText,
+            TempoBeatUnit = _tempoBeatUnit,
+            TempoDots = _tempoDots,
+        };
     }
 
     /// <summary>
@@ -1095,7 +1103,12 @@ public sealed class MeasureCollector
             percentRepeats: _percentRepeats.ToImmutableArray(),
             crossStaffItems: _crossStaffItems.ToImmutableArray(),
             trillSpanners: PairTrillSpannerEvents(),
-            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition));
+            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition))
+        {
+            TempoText = _tempoText,
+            TempoBeatUnit = _tempoBeatUnit,
+            TempoDots = _tempoDots,
+        };
     }
 
     /// <summary>
@@ -1240,7 +1253,12 @@ public sealed class MeasureCollector
             grobOverrides: _grobOverrides.ToImmutableArray(),
             grobReverts: _grobReverts.ToImmutableArray(),
             trillSpanners: PairTrillSpannerEvents(),
-            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition));
+            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition))
+        {
+            TempoText = _tempoText,
+            TempoBeatUnit = _tempoBeatUnit,
+            TempoDots = _tempoDots,
+        };
     }
 
     /// <summary>
@@ -1909,6 +1927,9 @@ public sealed class MeasureCollector
         _keyPosition = 0;
         _clefPosition = 0;
         _tempo = null;
+        _tempoText = null;
+        _tempoBeatUnit = 4;
+        _tempoDots = 0;
         _swingSubdivision = 0;
         _timeBeats = 4;
         _timeBeatType = 4;
@@ -2131,9 +2152,36 @@ public sealed class MeasureCollector
 
     private void CollectTempo(TempoDeclarationSyntax tempoDecl)
     {
-        var values = tempoDecl.Values.ToList();
-        if (values.Count > 0 && values[0] is SyntaxTokenNode token && int.TryParse(token.Text, out int tempo))
-            _tempo = tempo;
+        // Every written form reaches the opening mark: `tempo 120`,
+        // `tempo "Grave"`, `tempo "Grave" 120`, `tempo "Grave" 4 = 54`,
+        // `tempo "Lively" 4. = 116`. The text form used to be dropped
+        // silently (only a bare leading integer was read).
+        if (tempoDecl.Bpm is int bpm)
+            _tempo = bpm;
+        if (tempoDecl.Marking is string marking)
+            _tempoText = marking;
+        // Beat unit incl. dots: walk back from `=` over the dot tokens to the
+        // unit number ("4." lexes as IntegerLiteral 4 + Dot at declaration
+        // level, so the dots arrive as separate tokens).
+        var tokens = tempoDecl.Values.OfType<SyntaxTokenNode>().ToList();
+        int eq = tokens.FindIndex(t => t.Kind == SyntaxKind.Equals);
+        if (eq > 0)
+        {
+            int i = eq - 1, dots = 0;
+            while (i >= 0 && tokens[i].Kind == SyntaxKind.Dot)
+            {
+                dots++;
+                i--;
+            }
+            var m = i >= 0
+                ? System.Text.RegularExpressions.Regex.Match(tokens[i].Text, @"^([0-9]+)(\.*)$")
+                : System.Text.RegularExpressions.Match.Empty;
+            if (m.Success)
+            {
+                _tempoBeatUnit = int.Parse(m.Groups[1].Value);
+                _tempoDots = dots + m.Groups[2].Value.Length;
+            }
+        }
         if (tempoDecl.SwingSubdivision != 0)
             _swingSubdivision = tempoDecl.SwingSubdivision;
     }
@@ -2336,7 +2384,13 @@ public sealed class MeasureCollector
                     int navMeasure = target
                         ? builder.CurrentMeasureIndex
                         : Math.Max(0, builder.CurrentMeasureIndex - 1);
-                    _musicMarks.Add(new MusicMarkItem(navMark, navMeasure, nav.Position));
+                    // ProcessStructure runs once PER PART; a structure-level mark
+                    // must engrave once per SCORE — without this guard a grand
+                    // staff printed "Fine" / "D.C. al Fine" twice, stacked.
+                    if (!_musicMarks.Any(m => m.Type == navMark
+                            && m.MeasureIndex == navMeasure
+                            && m.SourcePosition == nav.Position))
+                        _musicMarks.Add(new MusicMarkItem(navMark, navMeasure, nav.Position));
                     break;
 
                 // _"text" — a free text directive between sections, engraved like
@@ -2345,10 +2399,13 @@ public sealed class MeasureCollector
                 // collector never produced the item, so it parsed but silently
                 // printed nothing.
                 case CustomTextSyntax custom when !IsInsideRepeatBlock(custom):
-                    _customTexts.Add(new CustomTextItem(
-                        custom.Text,
-                        Math.Max(0, builder.CurrentMeasureIndex - 1),
-                        custom.Position));
+                    // Same per-part guard as the navigation marks above.
+                    int textMeasure = Math.Max(0, builder.CurrentMeasureIndex - 1);
+                    if (!_customTexts.Any(t => t.Text == custom.Text
+                            && t.MeasureIndex == textMeasure
+                            && t.SourcePosition == custom.Position))
+                        _customTexts.Add(new CustomTextItem(
+                            custom.Text, textMeasure, custom.Position));
                     break;
 
                 // ~Name — render the section's music but show NO label (the dedicated

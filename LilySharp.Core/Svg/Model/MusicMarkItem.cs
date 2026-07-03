@@ -131,6 +131,18 @@ public sealed record MusicMarkItem
     /// (0 = none, 8 = eighths, 16 = sixteenths) — drives the feel equation beside it.</summary>
     public int SwingSubdivision { get; init; }
 
+    /// <summary>For a Tempo mark: the textual marking ("Grave") printed bold
+    /// before the parenthesized metronome equation; null for a bare ♩ = N.</summary>
+    public string? TempoText { get; init; }
+
+    /// <summary>For a Tempo mark: the metronome beat unit (4 = quarter,
+    /// 2 = half, 8 = eighth).</summary>
+    public int TempoBeatUnit { get; init; } = 4;
+
+    /// <summary>For a Tempo mark: augmentation dots on the beat unit
+    /// (<c>tempo "Lively" 4. = 116</c> → 1).</summary>
+    public int TempoDots { get; init; }
+
     /// <summary>The text representation of this mark.</summary>
     public string Text { get; }
 
