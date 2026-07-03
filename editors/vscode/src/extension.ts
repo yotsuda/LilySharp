@@ -1036,6 +1036,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // Highlight ALL elements with that data-pos
             if (nearestPos >= 0 && nearestDist < HIGHLIGHT_THRESHOLD) {
                 highlightPositions([nearestPos]);
+                lastResolvedPos = nearestPos;
+            } else {
+                lastResolvedPos = -1;
             }
         }
 
@@ -1179,8 +1182,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let onsetIdx = 0;
         let playStartTime = 0;
         let playbackNotes = null; // last received event list — enables click-to-seek
-        let playCounts = new Map(); // source pos → onsets consumed (occurrence index)
         let pendingStartPos = -1;   // play-button start point (the highlighted note)
+        let lastResolvedPos = -1;   // the note the current highlight actually resolved to
 
         function setPlayUi(playing) {
             document.getElementById('playBtn').disabled = playing;
@@ -1211,16 +1214,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             offset = offset || 0;
             stopPlayback();
             if (!notes || notes.length === 0) { return; }
-            // Occurrence bookkeeping over the SKIPPED prefix, so after a seek
-            // a phrase's n-th expansion still maps to the n-th printed copy.
-            playCounts = new Map();
-            for (const n of notes) {
-                if (n.S < 0 || n.T >= offset - 0.001) continue;
-                let times = playCounts.get(n.S);
-                if (!Array.isArray(times)) { times = []; playCounts.set(n.S, times); }
-                if (!times.some(t => Math.abs(t - n.T) < 0.005)) times.push(n.T);
-            }
-            playCounts.forEach((times, s) => playCounts.set(s, times.length));
             // Seek = re-schedule from the offset; notes already past it are
             // dropped (mid-note tails too — re-striking half a note reads
             // worse than starting cleanly at the next onset).
@@ -1262,15 +1255,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             playStartTime = t0;
             // Group onsets by time so SIMULTANEOUS notes (rh + lh striking
             // together = different source positions) light up together.
-            const raw = notes.filter(n => n.S >= 0).map(n => ({ t: n.T - offset, s: n.S }));
+            // Each entry keeps the server-computed printed-copy ordinal (O):
+            // no client-side counting, so repeats and seeks cannot drift.
+            const raw = notes.filter(n => n.S >= 0).map(n => ({ t: n.T - offset, s: n.S, o: n.O || 0 }));
             raw.sort((a, b) => a.t - b.t);
             onsetList = [];
             for (const o of raw) {
                 const g = onsetList[onsetList.length - 1];
                 if (g && Math.abs(o.t - g.t) < 0.005) {
-                    if (g.ss.indexOf(o.s) < 0) g.ss.push(o.s);
+                    if (!g.ss.some(e => e.s === o.s)) g.ss.push({ s: o.s, o: o.o });
                 } else {
-                    onsetList.push({ t: o.t, ss: [o.s] });
+                    onsetList.push({ t: o.t, ss: [{ s: o.s, o: o.o }] });
                 }
             }
             onsetIdx = 0;
@@ -1281,10 +1276,6 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 let gi = -1;
                 while (onsetIdx < onsetList.length && onsetList[onsetIdx].t <= elapsed) {
                     gi = onsetIdx;
-                    // Every passed group consumes one occurrence per position
-                    // (skipped groups too, or later copies drift backwards).
-                    for (const s of onsetList[onsetIdx].ss)
-                        playCounts.set(s, (playCounts.get(s) || 0) + 1);
                     onsetIdx++;
                 }
                 if (gi >= 0 && gi !== lastGroup) {
@@ -1292,8 +1283,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     const ss = onsetList[gi].ss;
                     clearHighlights();
                     const painted = highlightPositions(
-                        ss.map(s => ({ pos: s, occ: (playCounts.get(s) || 1) - 1 })));
-                    lastHighlightPos = ss[0];
+                        ss.map(e => ({ pos: e.s, occ: e.o })));
+                    lastHighlightPos = ss[0].s;
+                    lastResolvedPos = ss[0].s;
                     const el = painted.length > 0 ? painted[0] : null;
                     if (el) {
                         const r = el.getBoundingClientRect();
@@ -1309,8 +1301,10 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         document.getElementById('playBtn').addEventListener('click', () => {
             setPlayUi(true); // immediate feedback while the request runs
             // A highlighted note (editor sync / preview click) is the start
-            // point: play from its first onset instead of the top.
-            pendingStartPos = lastHighlightPos;
+            // point: play from its first onset instead of the top. Use the
+            // RESOLVED note position - lastHighlightPos may be a raw editor
+            // cursor offset that matches no playback event.
+            pendingStartPos = lastResolvedPos;
             vscode.postMessage({ type: 'requestPlayback' });
         });
         document.getElementById('stopBtn').addEventListener('click', stopPlayback);
@@ -1366,6 +1360,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                             for (const n of playbackNotes) {
                                 if (n.S === pendingStartPos && n.T < first) first = n.T;
                             }
+                            if (first === Infinity) {
+                                // Nothing plays exactly there (mark, rest…):
+                                // start at the next sounding event after it.
+                                let bestS = Infinity;
+                                for (const n of playbackNotes) {
+                                    if (n.S >= pendingStartPos && (n.S < bestS || (n.S === bestS && n.T < first))) {
+                                        bestS = n.S;
+                                        first = n.T;
+                                    }
+                                }
+                            }
                             if (first !== Infinity) startAt = first;
                         }
                         pendingStartPos = -1;
@@ -1397,21 +1402,29 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // of jumping the editor (listening mode). Non-note grobs
                 // (barlines, marks) fall through to the normal click.
                 if (playheadTimer !== null && playbackNotes) {
-                    // The clicked COPY (k-th in document order) maps to the
-                    // k-th distinct onset of that source position. Clear the
-                    // active highlight FIRST: it raises its element to the
-                    // parent's end, which would corrupt the document order.
+                    // The clicked printed COPY (its instance index in document
+                    // order) maps to the onset whose server-side ordinal (O)
+                    // matches. Clear the active highlight FIRST: it raises
+                    // its element, corrupting the document order.
                     clearHighlights();
                     const copies = Array.from(document.querySelectorAll('[data-pos="' + pos + '"]'));
-                    const occ = Math.max(0, copies.indexOf(target));
-                    const times = [];
+                    const instances = clusterInstances(copies);
+                    let occ = 0;
+                    for (let k = 0; k < instances.length; k++) {
+                        if (instances[k].indexOf(target) >= 0) { occ = k; break; }
+                    }
+                    let best = null;
                     for (const n of playbackNotes) {
                         if (n.S !== pos) continue;
-                        if (!times.some(t => Math.abs(t - n.T) < 0.005)) times.push(n.T);
+                        if ((n.O || 0) === occ && (best === null || n.T < best.T)) best = n;
                     }
-                    times.sort((a, b) => a - b);
-                    if (times.length > 0) {
-                        startPlayback(playbackNotes, times[Math.min(occ, times.length - 1)]);
+                    if (best === null) {
+                        for (const n of playbackNotes) {
+                            if (n.S === pos && (best === null || n.T < best.T)) best = n;
+                        }
+                    }
+                    if (best !== null) {
+                        startPlayback(playbackNotes, best.T);
                         return;
                     }
                 }

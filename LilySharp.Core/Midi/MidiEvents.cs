@@ -28,7 +28,11 @@ public readonly record struct MidiNote(
     /// <summary>Source offset of the note's syntax — lets the preview player
     /// highlight the notation being played. -1 = no source link. Not written
     /// to .mid files.</summary>
-    int SourcePos = -1
+    int SourcePos = -1,
+    /// <summary>Which PRINTED copy of the source this onset corresponds to
+    /// (phrase expansions share one position; repeats replay their pass-one
+    /// ordinals). Not written to .mid files.</summary>
+    int SourceOrdinal = 0
 );
 
 /// <summary>

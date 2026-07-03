@@ -58,6 +58,19 @@ public sealed class MidiExporter
     // passes — matching the collector, which streams one part's blocks
     // sequentially through the whole piece.
     private readonly Dictionary<string, (int NoteName, int Octave, Fraction Dur)> _partPitchLanes = new();
+
+    // Printed-copy ordinal per source position: the k-th onset of a source
+    // position corresponds to the k-th PRINTED copy (phrase expansions).
+    // Repeat passes whose material is engraved only ONCE (|: :| second pass,
+    // percent/tremolo iterations) restore a snapshot so the ordinal replays.
+    private Dictionary<int, int> _sourceOrdinals = new();
+
+    private int NextOrdinal(int pos)
+    {
+        _sourceOrdinals.TryGetValue(pos, out int k);
+        _sourceOrdinals[pos] = k + 1;
+        return k;
+    }
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _tempo = 120;
     private int _velocity = 80;
@@ -106,6 +119,7 @@ public sealed class MidiExporter
             .Any(s => !IsInsideRender(s));
         _structurePlayed = false;
         _partPitchLanes.Clear();
+        _sourceOrdinals = new Dictionary<int, int>();
         ProcessNode(_root, mainTrack, conductorTrack);
 
         // Ensure there is an initial time signature at tick 0. If the score already
@@ -398,8 +412,13 @@ public sealed class MidiExporter
             }
         }
         int passes = Math.Max(2, alternatives.Count);
+        // A structure repeat is engraved once (repeat barlines): later passes
+        // revisit the same printed copies.
+        var structOrdSnapshot = new Dictionary<int, int>(_sourceOrdinals);
         for (int pass = 0; pass < passes; pass++)
         {
+            if (pass > 0)
+                _sourceOrdinals = new Dictionary<int, int>(structOrdSnapshot);
             foreach (var name in body)
                 PlaySectionByName(name, track, conductorTrack);
             if (pass < alternatives.Count)
@@ -506,12 +525,17 @@ public sealed class MidiExporter
 
         int savedName = _currentNoteName, savedOctave = _currentOctave, savedVelocity = _velocity;
         var savedDuration = _defaultDuration;
+        // The repeat span is ENGRAVED once: later passes replay the same
+        // printed copies, so their ordinals restart from this snapshot.
+        var ordinalSnapshot = new Dictionary<int, int>(_sourceOrdinals);
         for (int pass = 1; pass <= count; pass++)
         {
             _currentNoteName = savedName;
             _currentOctave = savedOctave;
             _velocity = savedVelocity;
             _defaultDuration = savedDuration;
+            if (pass > 1)
+                _sourceOrdinals = new Dictionary<int, int>(ordinalSnapshot);
 
             ProcessSequence(body, track, conductorTrack);
 
@@ -641,7 +665,7 @@ public sealed class MidiExporter
             return;
         }
 
-        track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration, note.Position));
+        track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration, note.Position, NextOrdinal(note.Position)));
         _lastNoteIndex = track.Notes.Count - 1;
         _lastNoteTrack = track;
         _currentTick += durationTicks;
@@ -662,6 +686,9 @@ public sealed class MidiExporter
     {
         int startTick = _currentTick;
         var pitches = chord.Pitches.ToList();
+        // One ordinal per chord ONSET — every head shares the chord's source
+        // position and must map to the same printed copy.
+        int chordOrdinal = NextOrdinal(chord.Position);
 
         var durationNode = chord.DescendantNodes<DurationSyntax>().FirstOrDefault();
         var duration = durationNode != null ? GetDuration(durationNode) : _defaultDuration;
@@ -685,7 +712,7 @@ public sealed class MidiExporter
                 firstOctave = _currentOctave;
                 isFirst = false;
             }
-            track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position));
+            track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position, chordOrdinal));
         }
 
         // Next note is relative to the chord's first pitch.
@@ -725,8 +752,16 @@ public sealed class MidiExporter
 
         var alternatives = repeat.Alternative?.Alternatives.ToList();
 
+        // percent (％ signs) and tremolo (one slashed note) are engraved
+        // ONCE; unfold is printed in full, so its ordinals keep counting.
+        string repType = repeat.RepeatType.Text;
+        bool engravedOnce = repType is "percent" or "tremolo";
+        var ordSnapshot = engravedOnce ? new Dictionary<int, int>(_sourceOrdinals) : null;
+
         for (int i = 0; i < repeatCount; i++)
         {
+            if (i > 0 && ordSnapshot != null)
+                _sourceOrdinals = new Dictionary<int, int>(ordSnapshot);
             ProcessNode(repeat.Body, track, conductorTrack);
 
             if (alternatives != null && alternatives.Count > 0)
@@ -775,7 +810,8 @@ public sealed class MidiExporter
                 _velocity,
                 _currentTick,
                 graceDuration,
-                note.Position
+                note.Position,
+                NextOrdinal(note.Position)
             ));
 
             _currentTick += graceDuration;

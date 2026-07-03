@@ -2846,6 +2846,7 @@ public sealed class LilySharpLanguageServer
                         P = n.Pitch,
                         V = n.Velocity,
                         S = n.SourcePos,
+                        O = n.SourceOrdinal,
                     };
                 })
                 .ToArray();
@@ -3077,6 +3078,7 @@ public class PlaybackNote
     public int P { get; set; }      // MIDI pitch
     public int V { get; set; }      // velocity 0-127
     public int S { get; set; }      // source offset (-1 = none) for follow-along highlight
+    public int O { get; set; }      // printed-copy ordinal of this onset among same-S copies
 }
 
 /// <summary>Response for the lilysharp/playback request.</summary>
