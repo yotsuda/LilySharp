@@ -1406,6 +1406,8 @@ public sealed class LayoutEngine
         // After stacking, sit a boundary "To Coda" on the adjacent section label's
         // line (the two straddle one barline) instead of stacking them apart.
         stackedMarks = MusicMarkEngraver.CoPlaceToCodaWithLabels(stackedMarks);
+        // Likewise a tempo mark joins its section label's line ("[Chorus] ♩ = 132").
+        stackedMarks = MusicMarkEngraver.CoPlaceTempoWithLabels(stackedMarks, chordNameLayouts, systems);
 
         // Fingerings live on the NoteItem, so they must be read from EACH staff's
         // own voice (score.Voice is only the first staff) and positioned at that
