@@ -127,8 +127,11 @@ public sealed class SvgDocumentContext : IDocumentContext
         double yOffset = 0;
         foreach (var (content, _, h) in _pages)
         {
+            // class/data attributes let a viewer (the VS Code preview toolbar)
+            // find the page boundaries for fit-page zoom and page navigation.
             sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                "<g transform=\"translate(0, {0:F2})\">", yOffset));
+                "<g class=\"page\" data-page-top=\"{0:F2}\" data-page-height=\"{1:F2}\" transform=\"translate(0, {0:F2})\">",
+                yOffset, h));
             sb.Append(content);
             sb.AppendLine("</g>");
             yOffset += h;

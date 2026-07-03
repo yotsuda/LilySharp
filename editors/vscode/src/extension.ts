@@ -488,16 +488,17 @@ async function exportPreview(
     const sourceName = (docUri.path.split('/').pop() || 'score').replace(/\.lys$/i, '');
     const baseName = renderName && renderName.length > 0 ? renderName : sourceName;
 
+    // Default name WITHOUT an extension: the dialog's "Save as type"
+    // dropdown appends the chosen one. Baking .pdf into the name meant the
+    // typed name won over the selected type — picking PNG still saved a PDF.
     const target = await vscode.window.showSaveDialog({
-        defaultUri: vscode.Uri.joinPath(baseDir, baseName + '.pdf'),
-        // The dropdown order is the picker; the first entry is the default type.
+        defaultUri: vscode.Uri.joinPath(baseDir, baseName),
         filters: {
             'PDF document': ['pdf'],
-            'PNG image': ['png'],
             'SVG image': ['svg'],
+            'PNG image': ['png'],
             'LilyPond source': ['ly'],
-            'MIDI (whole piece)': ['mid'],
-            'MusicXML (whole piece)': ['musicxml'],
+            'MIDI (whole piece)': ['mid', 'midi'],
         }
     });
     if (!target) {
@@ -664,6 +665,22 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             opacity: 0.5;
             cursor: default;
         }
+        .toolbar .sep {
+            width: 1px;
+            height: 20px;
+            background: #ccc;
+        }
+        #pageInfo {
+            font-family: system-ui, sans-serif;
+            font-size: 13px;
+            color: #333;
+            min-width: 44px;
+            text-align: center;
+        }
+        @media (prefers-color-scheme: dark) {
+            .toolbar .sep { background: #555; }
+            #pageInfo { color: #ccc; }
+        }
         .main-content {
             flex: 1;
             /* A flex item defaults to min-height:auto, which refuses to shrink
@@ -756,6 +773,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             <option value="">(Default)</option>
         </select>
         <button id="exportBtn" type="button">Export…</button>
+        <span class="sep"></span>
+        <button id="fitPageBtn" type="button" title="Fit whole page">⊡ Page</button>
+        <button id="fitWidthBtn" type="button" title="Fit width">⬌ Width</button>
+        <span class="sep"></span>
+        <button id="firstPageBtn" type="button" title="First page">⏮</button>
+        <button id="prevPageBtn" type="button" title="Previous page">◀</button>
+        <span id="pageInfo">1 / 1</span>
+        <button id="nextPageBtn" type="button" title="Next page">▶</button>
+        <button id="lastPageBtn" type="button" title="Last page">⏭</button>
     </div>
     <div class="main-content">
         <div class="container">
@@ -780,14 +806,93 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let hideTimeout;
         let lastHighlightPos = -1;
 
+        // Pages of the current SVG (single-page SVGs have no g.page wrappers).
+        let pages = [{ top: 0, height: 0 }];
+        let svgWidthPx = 0;   // the SVG's natural width in px (width attribute)
+        let pxPerSpace = 10;  // px per staff-space (width / viewBox width)
+        let fitMode = null;   // 'page' | 'width' | null = manual zoom
+        const mainContent = document.querySelector('.main-content');
+        const pageInfo = document.getElementById('pageInfo');
+
+        // Zoom by resizing the SVG element (not CSS transform): real layout
+        // size keeps scrollbars, centering and page-scroll math correct.
         function updateZoom() {
-            svgContainer.style.transform = 'scale(' + scale + ')';
+            const svg = svgContainer.querySelector('svg');
+            if (svg && svgWidthPx > 0) {
+                svg.style.width = (svgWidthPx * scale) + 'px';
+                svg.style.height = 'auto';
+            }
             zoomInfo.textContent = Math.round(scale * 100) + '%';
             zoomInfo.classList.add('visible');
             clearTimeout(hideTimeout);
             hideTimeout = setTimeout(() => {
                 zoomInfo.classList.remove('visible');
             }, 1500);
+            updatePageInfo();
+        }
+
+        function collectPages() {
+            const svg = svgContainer.querySelector('svg');
+            pages = [{ top: 0, height: 0 }];
+            svgWidthPx = 0;
+            if (!svg) { updatePageInfo(); return; }
+            const vb = (svg.getAttribute('viewBox') || '0 0 1 1').split(/\s+/).map(Number);
+            const vbW = vb[2] || 1, vbH = vb[3] || 1;
+            svgWidthPx = parseFloat(svg.getAttribute('width')) || svg.clientWidth || 1;
+            pxPerSpace = svgWidthPx / vbW;
+            const gs = svg.querySelectorAll(':scope > g.page');
+            pages = gs.length > 0
+                ? Array.from(gs).map(g => ({
+                    top: parseFloat(g.getAttribute('data-page-top')) || 0,
+                    height: parseFloat(g.getAttribute('data-page-height')) || vbH
+                }))
+                : [{ top: 0, height: vbH }];
+            updatePageInfo();
+        }
+
+        function currentPageIndex() {
+            const st = mainContent.scrollTop - 10;
+            let idx = 0;
+            for (let i = 0; i < pages.length; i++) {
+                if (pages[i].top * pxPerSpace * scale <= st + 1) idx = i;
+            }
+            return idx;
+        }
+
+        function updatePageInfo() {
+            const n = pages.length;
+            pageInfo.textContent = (currentPageIndex() + 1) + ' / ' + n;
+            const single = n < 2;
+            for (const id of ['firstPageBtn', 'prevPageBtn', 'nextPageBtn', 'lastPageBtn']) {
+                document.getElementById(id).disabled = single;
+            }
+        }
+
+        function gotoPage(i) {
+            i = Math.max(0, Math.min(pages.length - 1, i));
+            mainContent.scrollTop = i === 0 ? 0 : pages[i].top * pxPerSpace * scale + 20;
+            updatePageInfo();
+        }
+
+        function availSize() {
+            return { w: mainContent.clientWidth - 44, h: mainContent.clientHeight - 44 };
+        }
+
+        function fitPage() {
+            fitMode = 'page';
+            const a = availSize();
+            const maxPageHpx = Math.max.apply(null, pages.map(p => p.height)) * pxPerSpace;
+            if (svgWidthPx > 0 && maxPageHpx > 0) {
+                scale = Math.min(a.w / svgWidthPx, a.h / maxPageHpx);
+            }
+            updateZoom();
+        }
+
+        function fitWidth() {
+            fitMode = 'width';
+            const a = availSize();
+            if (svgWidthPx > 0) scale = a.w / svgWidthPx;
+            updateZoom();
         }
 
         function getHighlightColor() {
@@ -923,6 +1028,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             vscode.postMessage({ type: 'export', renderName: renderSelect.value });
         });
 
+        document.getElementById('fitPageBtn').addEventListener('click', fitPage);
+        document.getElementById('fitWidthBtn').addEventListener('click', fitWidth);
+        document.getElementById('firstPageBtn').addEventListener('click', () => gotoPage(0));
+        document.getElementById('prevPageBtn').addEventListener('click', () => gotoPage(currentPageIndex() - 1));
+        document.getElementById('nextPageBtn').addEventListener('click', () => gotoPage(currentPageIndex() + 1));
+        document.getElementById('lastPageBtn').addEventListener('click', () => gotoPage(pages.length - 1));
+        mainContent.addEventListener('scroll', updatePageInfo);
+        window.addEventListener('resize', () => {
+            if (fitMode === 'page') fitPage();
+            else if (fitMode === 'width') fitWidth();
+        });
+
         window.addEventListener('message', event => {
             const message = event.data;
             console.log('Webview received message:', message.type);
@@ -935,6 +1052,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         svgContainer.innerHTML = '<div class="error">' + escapeHtml(message.error) + '</div>';
                     } else if (message.svg) {
                         svgContainer.innerHTML = message.svg;
+                        collectPages();
+                        // Keep the chosen fit across re-renders; otherwise
+                        // re-apply the current manual zoom to the fresh SVG.
+                        if (fitMode === 'page') fitPage();
+                        else if (fitMode === 'width') fitWidth();
+                        else updateZoom();
                         if (lastHighlightPos >= 0) {
                             highlightNearestElement(lastHighlightPos);
                         }
@@ -952,6 +1075,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 e.preventDefault();
                 const delta = e.deltaY > 0 ? -scaleStep : scaleStep;
                 scale = Math.min(maxScale, Math.max(minScale, scale + delta));
+                fitMode = null; // manual zoom overrides a fit mode
                 updateZoom();
             }
         }, { passive: false });

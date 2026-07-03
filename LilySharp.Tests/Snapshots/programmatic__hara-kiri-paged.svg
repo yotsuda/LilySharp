@@ -4,7 +4,7 @@
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
 </style>
-<g transform="translate(0, 0.00)">
+<g class="page" data-page-top="0.00" data-page-height="30.00" transform="translate(0, 0.00)">
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="6.00" x2="102.05" y2="6.00" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="7.00" x2="102.05" y2="7.00" stroke="#000000" stroke-width="0.100"/>
@@ -89,7 +89,7 @@
   <text x="0.05" y="15.76" font-size="1.75" font-family="serif" font-weight="bold" fill="#000000">3</text>
   </g>
 </g>
-<g transform="translate(0, 30.00)">
+<g class="page" data-page-top="30.00" data-page-height="30.00" transform="translate(0, 30.00)">
   <g transform="translate(8.50,0.00) scale(1.0000,1.0000)">
   <line x1="0.00" y1="9.54" x2="102.05" y2="9.54" stroke="#000000" stroke-width="0.100"/>
   <line x1="0.00" y1="10.54" x2="102.05" y2="10.54" stroke="#000000" stroke-width="0.100"/>
