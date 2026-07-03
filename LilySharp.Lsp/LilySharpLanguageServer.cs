@@ -35,8 +35,17 @@ namespace LilySharp.Lsp;
 /// </summary>
 public sealed class LilySharpLanguageServer
 {
-    // Version: increment this when making changes to verify deployment
-    public const string Version = "0.1.1-20260702-1654";
+    /// <summary>Reported to the client (lilysharp/version). Read from the
+    /// assembly's informational version — the build stamps it with the package
+    /// version and git SHA — so it can never go stale the way the previous
+    /// hand-written constant did (it still said 0.1.1-20260702 in July 3
+    /// builds, making every fresh deploy look like yesterday's server).</summary>
+    public static readonly string Version =
+        System.Attribute.GetCustomAttribute(
+            typeof(LilySharpLanguageServer).Assembly,
+            typeof(System.Reflection.AssemblyInformationalVersionAttribute))
+            is System.Reflection.AssemblyInformationalVersionAttribute info
+            ? info.InformationalVersion : "unknown";
 
     private readonly JsonRpc _rpc;
     private readonly DocumentManager _documentManager = new();
