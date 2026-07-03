@@ -66,7 +66,8 @@ public sealed class PageLayouter
         double headerHeight,
         ImmutableArray<(double upExtent, double downExtent)> systemExtents,
         ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
-        ImmutableArray<(double bandUp, double bandDown)>? systemBands = null)
+        ImmutableArray<(double bandUp, double bandDown)>? systemBands = null,
+        IReadOnlyList<double>? systemBodyHeights = null)
     {
         if (systems.Length == 0)
         {
@@ -80,7 +81,13 @@ public sealed class PageLayouter
         var systemDetails = new List<SystemDetails>();
         for (int i = 0; i < systems.Length; i++)
         {
-            double staffHeight = _options.StaffHeight;
+            // The system BODY height: a grand-staff/multi-staff system is far
+            // taller than one staff — pricing it at StaffHeight (4) made the
+            // page breaker cram a dozen grand-staff systems onto one page and
+            // truncate the bottom.
+            double staffHeight = systemBodyHeights != null && i < systemBodyHeights.Count
+                ? systemBodyHeights[i]
+                : _options.StaffHeight;
             double topExtent = systemExtents[i].upExtent;
             double bottomExtent = systemExtents[i].downExtent;
 

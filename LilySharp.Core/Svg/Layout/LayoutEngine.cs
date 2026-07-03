@@ -603,18 +603,21 @@ public sealed class LayoutEngine
         if (systems.IsDefaultOrEmpty || perSystemExtents.Count == 0)
             return (ImmutableArray<PageLayout>.Empty, ImmutableArray<SystemLayout>.Empty);
 
-        if (_options.UseOptimalPageBreaking && _options.PageHeight > 0)
+        // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
+        // Pass per-system skylines for X-dependent inter-system collision detection
+        (ImmutableArray<PageLayout>, ImmutableArray<SystemLayout>) OptimalPages()
         {
-            // LILYPOND-REF: lily/page-layout-problem.cc:1070-1127 build_system_skyline
-            // Pass per-system skylines for X-dependent inter-system collision detection
             var skylines = perSystemSkylines != null
                 ? (ImmutableArray<(VerticalSkyline, VerticalSkyline)>?)perSystemSkylines.ToImmutableArray()
                 : null;
             var pages = _pageLayouter.CreatePagesWithOptimalBreaking(
                 systems, headerHeight, perSystemExtents.ToImmutableArray(), skylines,
-                perSystemBands?.ToImmutableArray());
+                perSystemBands?.ToImmutableArray(), perSystemHeights);
             return (pages, pages.SelectMany(p => p.Systems).ToImmutableArray());
         }
+
+        if (_options.UseOptimalPageBreaking && _options.PageHeight > 0)
+            return OptimalPages();
 
         // Recalculate Y positions using skyline extents to avoid overlaps
         double headerBottom = _options.MarginTop + headerHeight;
@@ -671,6 +674,14 @@ public sealed class LayoutEngine
         }
         double lastDownExtent = perSystemExtents[systems.Length - 1].downExtent;
         double totalHeight = skylineY + SysHeight(systems.Length - 1) + lastDownExtent + _options.MarginBottom;
+
+        // Auto-pagination: a score that FITS one page keeps this simple layout
+        // (byte-identical to the historical single-page output); one that
+        // overflows the paper height re-runs through the optimal page breaker
+        // and splits across real pages, like LilyPond always does.
+        if (_options.PageHeight > 0 && totalHeight > _options.PageHeight)
+            return OptimalPages();
+
         var systemsArray = updatedSystems.ToImmutableArray();
         var page = new PageLayout(0, _options.PageWidth, totalHeight, headerHeight, systemsArray);
         return (ImmutableArray.Create(page), systemsArray);

@@ -54,11 +54,14 @@ public sealed record LayoutOptions
     public double MarginBottom { get; init; } = 5;
 
     /// <summary>
-    /// Page height in staff spaces.
-    /// Set to 0 or negative for automatic (single page, content-driven).
+    /// Page height in staff spaces. Defaults to A4 at the same scale as
+    /// <see cref="PageWidth"/> (595×842 pt at ~5 pt per staff space:
+    /// width 119.05, height 168.4) — LilyPond always engraves onto a real
+    /// paper size, so long pieces paginate instead of producing one
+    /// endless page. Set to 0 or negative for a single content-driven page.
     /// </summary>
-    /// <remarks>LILYPOND-REF: scm/paper.scm:41 paper-height</remarks>
-    public double PageHeight { get; init; } = 0;
+    /// <remarks>LILYPOND-REF: scm/paper.scm — a4 paper-height</remarks>
+    public double PageHeight { get; init; } = 168.4;
 
     // === Staff Dimensions (in staff spaces) ===
 
@@ -112,8 +115,10 @@ public sealed record LayoutOptions
     public double LineBreakingTolerance { get; init; } = 1.1;
 
     /// <summary>
-    /// If true, uses optimal page breaking algorithm.
-    /// Otherwise all systems are placed on a single page.
+    /// If true, ALWAYS runs the optimal page breaker. When false (default),
+    /// a score that FITS one page keeps the simple content-driven layout
+    /// (byte-identical to the historical output) and the breaker engages
+    /// automatically only when the content overflows <see cref="PageHeight"/>.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/page-spacing.cc</remarks>
     public bool UseOptimalPageBreaking { get; init; } = false;

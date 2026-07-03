@@ -87,12 +87,18 @@ public static class SharedRenderer
         foreach (var (_, st, gi) in score.EnumerateStaves())
             if (st.IsOssia)
                 ossiaStaves.Add(gi);
+        bool firstPage = true;
         foreach (var page in layout.Pages)
         {
             var gc = doc.BeginPage(page.Width, page.Height);
             // LILYPOND-REF: lily/page-layout-problem.cc:434 — header at MarginTop;
             // SystemLayout.Y already includes MarginTop, so apply MarginLeft only.
-            DrawHeader(score, page, options, gc);
+            // The title/composer header belongs to the FIRST page only (later
+            // pages reserve no header height, so re-printing it overlapped the
+            // top system).
+            if (firstPage)
+                DrawHeader(score, page, options, gc);
+            firstPage = false;
             var marginScope = options.MarginLeft != 0
                 ? gc.BeginGroup(DrawingTransform.Translate(options.MarginLeft, 0))
                 : null;

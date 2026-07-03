@@ -4,7 +4,7 @@
 //
 // Lily# features on display:
 //   phrase / $ref    — the 4-bar ground is written ONCE...
-//   repeat unfold    — ...and cycled 8 times with a single statement
+//   repeat unfold    — ...and cycled 13 times with a single statement
 //   octave absolute  — with the bass re-anchored to C3 (part { octave 3 })
 //   R1               — whole-measure rests while the ground establishes itself
 title "Canon in D"
@@ -43,13 +43,33 @@ section Canon {
     d'16 e' fis' d' b cis' d' b a b cis' a fis g a fis |
     b16 cis' d' b g a b g fis g a fis d e fis d |
     b16 cis' d' b g a b g cis' d' e' cis' a b cis' a |
-    // Cycle 8: the canon melody returns to close.
-    fis'2@f e'2 | d'2 cis'2 | b2 a2 | b2 cis'2 |
+    // Cycle 8: eighth-notes around a high pedal tone.
+    fis'8@mf a' d'' a' e' a' cis'' a' |
+    d'8 fis' b' fis' cis' fis' a' fis' |
+    d'8 g' b' g' d' fis' a' fis' |
+    d'8 g' b' g' cis' e' a' e' |
+    // Cycle 9: the sixteenth figuration an octave higher.
+    fis''16 g'' a'' fis'' d'' e'' fis'' d'' cis'' d'' e'' cis'' a' b' cis'' a' |
+    d''16 e'' fis'' d'' b' cis'' d'' b' a' b' cis'' a' fis' g' a' fis' |
+    b'16 cis'' d'' b' g' a' b' g' fis' g' a' fis' d' e' fis' d' |
+    b'16 cis'' d'' b' g' a' b' g' cis'' d'' e'' cis'' a' b' cis'' a' |
+    // Cycle 10: sweeping sixteenth arpeggios.
+    d'16@f fis' a' d'' a' fis' d'' a' cis' e' a' cis'' a' e' cis'' a' |
+    b16 d' fis' b' fis' d' b' fis' cis' fis' a' cis'' a' fis' cis'' a' |
+    g16 b d' g' d' b g' d' d' fis' a' d'' a' fis' d'' a' |
+    g16 b d' g' d' b g' d' cis' e' a' cis'' a' e' cis'' a' |
+    // Cycle 11: the climax, in solid chords.
+    <fis' a' d''>2@ff <e' a' cis''>2 | <d' fis' b'>2 <cis' fis' a'>2 |
+    <b d' g'>2 <a d' fis'>2 | <b d' g'>2 <cis' e' a'>2 |
+    // Cycle 12: winding down in sighing quarters.
+    a'4@mp fis' g' e' | fis' d' e' cis' | d' b d' a | b g cis' e' |
+    // Cycle 13: the canon melody returns to close.
+    fis'2@p e'2 | d'2 cis'2 | b2 a2 | b2 cis'2 |
     // Final cadence.
     <d' fis' a'>1@fermata |
   }
   continuo {
-    repeat unfold 8 { $ground }
+    repeat unfold 13 { $ground }
     d1 |
   }
 }
