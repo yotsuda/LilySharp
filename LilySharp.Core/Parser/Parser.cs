@@ -514,6 +514,14 @@ internal sealed class Parser
         SyntaxToken? colon = ConsumeRejectedColon();
         var valueTokens = new List<GreenNode?>();
 
+        // A single unquoted word right after `tempo` is the marking —
+        // `tempo Comodo 4 = 84` — matching the bare-identifier rule used for
+        // staff display names (quotes stay available for multi-word text).
+        // Only the FIRST value position, so a following swing word or the
+        // music that comes after the declaration is never swallowed.
+        if (Check(SyntaxKind.Identifier) && !IsSwingWord(Current.Text))
+            valueTokens.Add(Advance());
+
         // Collect value tokens: "marking" duration = bpm, plus an optional trailing
         // 'swing' / 'shuffle' feel word (kept as a value token; the red node reads it
         // via IsSwing). These are NOT reserved words, so they stay usable as names.

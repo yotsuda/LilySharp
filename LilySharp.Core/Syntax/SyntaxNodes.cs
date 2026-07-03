@@ -617,16 +617,27 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
     }
 
     /// <summary>
-    /// Gets the tempo marking string (e.g., "Allegro"), if present.
+    /// Gets the tempo marking string (e.g., "Allegro"), if present — either a
+    /// quoted string anywhere in the values or a bare word in the FIRST value
+    /// position (<c>tempo Comodo 4 = 84</c>; swing/shuffle are feel words,
+    /// not markings).
     /// </summary>
     public string? Marking
     {
         get
         {
+            bool first = true;
             foreach (var value in Values)
             {
-                if (value is SyntaxTokenNode token && token.Kind == SyntaxKind.StringLiteral)
-                    return token.Text.Trim('"');
+                if (value is SyntaxTokenNode token)
+                {
+                    if (token.Kind == SyntaxKind.StringLiteral)
+                        return token.Text.Trim('"');
+                    if (first && token.Kind == SyntaxKind.Identifier
+                        && token.Text is not ("swing" or "shuffle"))
+                        return token.Text;
+                }
+                first = false;
             }
             return null;
         }
