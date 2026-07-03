@@ -1242,47 +1242,44 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // click-sync highlighter lights the right head), and keep it in
             // view without fighting manual scrolling more than needed.
             playStartTime = t0;
-            // Group onsets by time so SIMULTANEOUS notes (rh + lh striking
-            // together = different source positions) light up together.
-            // Each entry keeps the server-computed printed-copy ordinal (O):
-            // no client-side counting, so repeats and seeks cannot drift.
-            const raw = notes.filter(n => n.S >= 0).map(n => ({ t: n.T - offset, s: n.S, o: n.O || 0 }));
-            raw.sort((a, b) => a.t - b.t);
-            onsetList = [];
-            for (const o of raw) {
-                const g = onsetList[onsetList.length - 1];
-                if (g && Math.abs(o.t - g.t) < 0.005) {
-                    if (!g.ss.some(e => e.s === o.s)) g.ss.push({ s: o.s, o: o.o });
-                } else {
-                    onsetList.push({ t: o.t, ss: [{ s: o.s, o: o.o }] });
-                }
-            }
-            onsetIdx = 0;
-            let lastGroup = -1;
+            // Highlight = the set of notes SOUNDING now (a quarter stays lit
+            // while the other hand's eighths change under it), not just the
+            // latest onset group. Entries carry the server-side printed-copy
+            // ordinal (O), so repeats and seeks cannot drift.
+            const sched = notes.filter(n => n.S >= 0)
+                .map(n => ({ t: n.T - offset, d: n.D, s: n.S, o: n.O || 0 }));
+            let activeKeys = '';
             playheadTimer = setInterval(() => {
                 if (!audioCtx) return;
                 const elapsed = audioCtx.currentTime - playStartTime;
-                let gi = -1;
-                while (onsetIdx < onsetList.length && onsetList[onsetIdx].t <= elapsed) {
-                    gi = onsetIdx;
-                    onsetIdx++;
+                const sounding = [];
+                const seen = new Set();
+                for (const n of sched) {
+                    if (n.t > elapsed || elapsed >= n.t + n.d) continue;
+                    const key = n.s + ':' + n.o;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    sounding.push({ pos: n.s, occ: n.o, t: n.t, key: key });
                 }
-                if (gi >= 0 && gi !== lastGroup) {
-                    lastGroup = gi;
-                    const ss = onsetList[gi].ss;
-                    clearHighlights();
-                    const painted = highlightPositions(
-                        ss.map(e => ({ pos: e.s, occ: e.o })));
-                    lastHighlightPos = ss[0].s;
-                    lastResolvedPos = ss[0].s;
-                    const el = painted.length > 0 ? painted[0] : null;
-                    if (el) {
-                        const r = el.getBoundingClientRect();
-                        const m = mainContent.getBoundingClientRect();
-                        const off = r.top < m.top + 30 || r.bottom > m.bottom - 30
-                                 || r.left < m.left + 30 || r.right > m.right - 30;
-                        if (off) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
-                    }
+                // Newest onset first: painted[0] is the scroll target.
+                sounding.sort((a, b) => b.t - a.t);
+                const keys = sounding.map(x => x.key).sort().join(',');
+                if (keys === activeKeys) return;
+                const hadNew = sounding.some(x => activeKeys.indexOf(x.key) < 0);
+                activeKeys = keys;
+                clearHighlights();
+                const painted = highlightPositions(sounding);
+                if (sounding.length > 0) {
+                    lastHighlightPos = sounding[0].pos;
+                    lastResolvedPos = sounding[0].pos;
+                }
+                const el = hadNew && painted.length > 0 ? painted[0] : null;
+                if (el) {
+                    const r = el.getBoundingClientRect();
+                    const m = mainContent.getBoundingClientRect();
+                    const off = r.top < m.top + 30 || r.bottom > m.bottom - 30
+                             || r.left < m.left + 30 || r.right > m.right - 30;
+                    if (off) el.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
                 }
             }, 50);
         }
