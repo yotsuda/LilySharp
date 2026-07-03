@@ -1471,6 +1471,85 @@ public static class SpacingRules
     /// Uses the same estimation as LyricEngraver for consistency.
     /// The SVG renderer uses font-size = 4 * 0.8 = 3.2 staff spaces.
     /// </remarks>
+    /// <summary>
+    /// Reserves the CHORD ROW symbols' real text widths on the timing columns
+    /// (the chord-row analog of ApplyLyricSpacing). A chords-only grid
+    /// otherwise has near-zero natural bar widths: sixteen bars "fit" one
+    /// line and the grid never wraps. Widths use the sans face the symbols
+    /// render in; a word-space (1.0) separates neighbours.
+    /// </summary>
+    public static ImmutableArray<Spring> ApplyChordRowSpacing(
+        ImmutableArray<Spring> springs,
+        IReadOnlyList<Fraction> timings,
+        int measureIndex,
+        ImmutableArray<ChordNameItem> chordNames)
+    {
+        if (chordNames.IsDefaultOrEmpty || springs.Length != timings.Count + 1)
+            return springs;
+
+        var half = new double[timings.Count];
+        bool any = false;
+        foreach (var cn in chordNames)
+        {
+            if (cn.MeasureIndex != measureIndex || !cn.IsChordRow)
+                continue;
+            for (int t = 0; t < timings.Count; t++)
+            {
+                if (timings[t] == cn.Timing)
+                {
+                    half[t] = Math.Max(half[t],
+                        Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2);
+                    any = true;
+                    break;
+                }
+            }
+        }
+        if (!any)
+            return springs;
+
+        const double chordGap = 1.0; // ink gap between neighbouring symbols
+        var result = springs.ToBuilder();
+        void Widen(int springIndex, double needed)
+        {
+            var s = result[springIndex];
+            if (needed > s.MinDistance)
+                result[springIndex] = new Spring(
+                    Math.Max(s.IdealDistance, needed), needed, s.InverseStretchStrength);
+        }
+        Widen(0, half[0] + MinItemGap);
+        for (int t = 0; t < timings.Count - 1; t++)
+            Widen(t + 1, half[t] + half[t + 1] + chordGap);
+        Widen(timings.Count, half[^1] + MinItemGap);
+        return result.ToImmutable();
+    }
+
+    /// <summary>
+    /// Floors a LEAD-SHEET bar at a readable grid-cell width. Row bars carry
+    /// no notation ink, so without a floor a long chart packs every bar onto
+    /// one line; with it the chart wraps like a song-book grid.
+    /// </summary>
+    public static ImmutableArray<Spring> EnsureLeadSheetBarWidth(ImmutableArray<Spring> springs)
+    {
+        const double gridBarMinWidth = 10.0;
+        if (springs.Length == 0)
+            return springs;
+        double minSum = 0;
+        foreach (var s in springs)
+            minSum += s.MinDistance;
+        if (minSum >= gridBarMinWidth)
+            return springs;
+        double extra = (gridBarMinWidth - minSum) / springs.Length;
+        var result = springs.ToBuilder();
+        for (int i = 0; i < result.Count; i++)
+        {
+            var s = result[i];
+            result[i] = new Spring(
+                Math.Max(s.IdealDistance, s.MinDistance + extra),
+                s.MinDistance + extra, s.InverseStretchStrength);
+        }
+        return result.ToImmutable();
+    }
+
     // Real serif-regular advances (SerifTextMetrics) at the 3.2 ss lyric font —
     // this used to be a crude 3-bucket table that under-measured capitals
     // ("Up" by ~0.7 ss), so the springs reserved too little and wide syllables

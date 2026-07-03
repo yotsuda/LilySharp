@@ -141,6 +141,21 @@ internal sealed class ChordNameCollector
     /// renderer skips chord rows) but give the layout timing columns so the bar gets
     /// width even with no music staff (standalone lead sheet).
     /// </returns>
+    /// <summary>Bar count of a chord part block: one per written barline,
+    /// plus a trailing bar when entries follow the last barline (the same
+    /// segmentation CollectPart commits by).</summary>
+    public static int CountBars(ChordPartBlockSyntax block)
+    {
+        int bars = 0;
+        bool pendingEntries = false;
+        foreach (var item in block.Items)
+        {
+            if (item is BarlineSyntax) { bars++; pendingEntries = false; }
+            else if (item is ChordEntrySyntax) pendingEntries = true;
+        }
+        return bars + (pendingEntries ? 1 : 0);
+    }
+
     public ImmutableArray<Measure> CollectPart(
         SyntaxNode root, string partName, int staffIndex,
         IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType)

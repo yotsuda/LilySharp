@@ -859,6 +859,8 @@ public sealed class MeasureCollector
         var pendingLyricsRows = new List<(string Name, int StaffIndex)>();
         // `staff NAME with chords CHORDPART` attachments, applied post-loop.
         var attachedChords = new List<(string PartName, int StaffIndex)>();
+        // Chord rows are also deferred (see the ChordRowSpec branch below).
+        var pendingChordRows = new List<(string Name, int StaffIndex)>();
         foreach (var (voiceName, withChords) in renderSpec.GetVoiceBindings())
         {
             _voiceName = voiceName;
@@ -872,14 +874,16 @@ public sealed class MeasureCollector
             if (withChords != null)
                 attachedChords.Add((withChords, _currentStaffIndex));
 
-            // An independent chord row (`chords name` in the score) carries no music
-            // voice — collect its chord symbols against this row's staff index and
-            // give the staff an empty placeholder voice.
+            // An independent chord row (`chords name` in the score). Defer its
+            // collection until AFTER the music voices: the section start table
+            // fills while music is processed, and a row spec listed first (or a
+            // rows-only score) would otherwise collect every section's block
+            // from bar 0, overprinting them.
             if (renderSpec.Items.OfType<ChordRowSpec>().Any(c => c.PartName == voiceName))
             {
-                var rowMeasures = _chordNameCollector.CollectPart(
-                    tree.GetRoot(), voiceName, _currentStaffIndex, _sectionStartMeasure, _timeBeats, _timeBeatType);
-                staffVoices[voiceName] = ImmutableArray.Create(new Voice(voiceName, rowMeasures));
+                pendingChordRows.Add((voiceName, _currentStaffIndex));
+                staffVoices[voiceName] = ImmutableArray.Create(
+                    new Voice(voiceName, ImmutableArray<Measure>.Empty));
                 continue;
             }
 
@@ -915,6 +919,17 @@ public sealed class MeasureCollector
                 voiceKeyDict[voiceName] = new KeySignature(_keySharps);
 
             staffVoices[voiceName] = CollectStaffVoices(voiceName);
+        }
+
+        // Rows collect AFTER the music. A rows-only score has no music to
+        // register the section starts — derive them from the row blocks.
+        if (pendingChordRows.Count > 0 || pendingLyricsRows.Count > 0)
+            EnsureSectionStartsForRows();
+        foreach (var (rowName, rowIdx) in pendingChordRows)
+        {
+            var rowMeasures = _chordNameCollector.CollectPart(
+                tree.GetRoot(), rowName, rowIdx, _sectionStartMeasure, _timeBeats, _timeBeatType);
+            staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, rowMeasures));
         }
 
         // Now that the music is collected, gather the lyrics rows. The wrap bar
@@ -2401,6 +2416,42 @@ public sealed class MeasureCollector
     };
 
     private static bool IsInsideRender(SyntaxNode node) => node.IsInside<RenderDeclarationSyntax>();
+
+    /// <summary>
+    /// Rows-only scores reach row collection with an EMPTY section-start
+    /// table — sections normally register while MUSIC is processed. Derive
+    /// the starts from the row blocks themselves: walk the structure (or
+    /// declaration) order, advancing by each section's widest row block
+    /// (chord bars preferred, lyric bars otherwise). Without this a
+    /// two-section chord grid printed both sections' symbols from bar 0,
+    /// overlapped. No-op when music already filled the table.
+    /// </summary>
+    private void EnsureSectionStartsForRows()
+    {
+        if (_sectionStartMeasure.Count > 0 || _sections.Count == 0)
+            return;
+
+        IEnumerable<string> order = _structure != null
+            ? _structure.DescendantNodes().OfType<SectionReferenceSyntax>()
+                .Select(r => r.SectionName)
+            : _sections.Values.OrderBy(s => s.Name.Span.Start).Select(s => s.SectionName);
+
+        int cur = 0;
+        foreach (var name in order)
+        {
+            if (!_sections.TryGetValue(name, out var section))
+                continue;
+            if (!_sectionStartMeasure.ContainsKey(name))
+                _sectionStartMeasure[name] = cur;
+
+            int chordBars = 0, lyricBars = 0;
+            foreach (var cb in section.DescendantNodes().OfType<ChordPartBlockSyntax>())
+                chordBars = Math.Max(chordBars, ChordNameCollector.CountBars(cb));
+            foreach (var lb in section.DescendantNodes().OfType<LyricsBlockSyntax>())
+                lyricBars = Math.Max(lyricBars, lb.Syllables.Count());
+            cur = _sectionStartMeasure[name] + (chordBars > 0 ? chordBars : lyricBars);
+        }
+    }
 
     private static bool IsInsideRepeatBlock(SyntaxNode node) => node.IsInside<StructureRepeatBlockSyntax>();
 

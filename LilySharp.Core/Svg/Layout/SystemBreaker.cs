@@ -157,6 +157,13 @@ public sealed class SystemBreaker
                     : primaryMeasure;
                 springs = SpacingRules.ApplyLyricSpacing(springs, lyricMeasure, i, score.Lyrics);
             }
+            if (score.IsLeadSheet)
+            {
+                // Mirror the system layout (MultiStaffLayouter): the break gate
+                // must price chord widths + the grid-cell floor identically.
+                springs = SpacingRules.ApplyChordRowSpacing(springs, allTimings, i, score.ChordNames);
+                springs = SpacingRules.EnsureLeadSheetBarWidth(springs);
+            }
 
             double ideal = 0, min = 0, invStretch = 0;
             foreach (var s in springs)

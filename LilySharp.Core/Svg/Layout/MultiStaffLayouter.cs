@@ -851,6 +851,14 @@ public sealed class MultiStaffLayouter
                     : primaryMeasure;
                 springs = SpacingRules.ApplyLyricSpacing(springs, lyricMeasure, i, score.Lyrics);
             }
+            if (score.IsLeadSheet)
+            {
+                // Chord symbols reserve their widths on the row columns, and a
+                // grid bar never collapses below a readable cell (else a long
+                // chords-only chart packs onto one line and never wraps).
+                springs = SpacingRules.ApplyChordRowSpacing(springs, allTimings, i, score.ChordNames);
+                springs = SpacingRules.EnsureLeadSheetBarWidth(springs);
+            }
 
             // LINE-START measure: spring 0 is the prefix→first-note spacing
             // (space-alist of the last prefix item), not the mid-line
