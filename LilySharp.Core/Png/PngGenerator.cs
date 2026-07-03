@@ -78,6 +78,37 @@ public static class PngGenerator
     }
 
     /// <summary>
+    /// Generates one PNG per page. LilyPond's PNG backend emits a file per
+    /// page (BASE-page%d.png, scm/ps-to-png.scm) rather than one tall image;
+    /// callers name the files accordingly.
+    /// </summary>
+    public static IReadOnlyList<byte[]> GeneratePages(SyntaxTree tree, PngRenderOptions? options = null, string? renderName = null)
+    {
+        options ??= PngRenderOptions.Default;
+
+        var renderSpec = string.IsNullOrEmpty(renderName)
+            ? RenderSpecParser.FindFirst(tree)
+            : RenderSpecParser.FindByName(tree, renderName);
+
+        MultiStaffScore multiScore = SvgGenerator.CollectScore(tree, renderSpec);
+        ScoreLayout layout = new LayoutEngine().Layout(multiScore);
+
+        var fontDir = options.FontDirectory ?? FontLocator.Find();
+        var docOptions = new PngDocumentOptions
+        {
+            PixelsPerSpace = options.Scale * 10.0,
+            Quality = options.Quality,
+            FontDirectory = fontDir,
+            SeparatePages = true,
+        };
+
+        using var doc = new PngDocumentContext(docOptions);
+        SharedRenderer.RenderTo(multiScore, layout, doc);
+        doc.Dispose();
+        return doc.GetPageBytes();
+    }
+
+    /// <summary>
     /// Converts an SVG string to PNG bytes using SkiaSharp's SVG rasterizer.
     /// Kept for callers that already hold an SVG document; new code should
     /// prefer <see cref="Generate"/> for the direct (no-roundtrip) path.

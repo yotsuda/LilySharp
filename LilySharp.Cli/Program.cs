@@ -500,11 +500,30 @@ static int ExecutePng(string inputPath, string outputPath, float scale, string? 
         if (!ValidateScoreName(tree, scoreName)) return 1;
         var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
         var pngOptions = new PngRenderOptions { Scale = scale, FontDirectory = fontDir };
-        var pngBytes = PngGenerator.Generate(tree, pngOptions, scoreName);
-        File.WriteAllBytes(outputPath, pngBytes);
 
-        Console.WriteLine($"Created: {outputPath}");
-        Console.WriteLine($"  Size: {pngBytes.Length / 1024.0:F1} KB");
+        // One file per page, following LilyPond's PNG naming: a single page
+        // keeps the requested name, multiple pages become BASE-page1.png,
+        // BASE-page2.png, … (scm/ps-to-png.scm).
+        var pages = PngGenerator.GeneratePages(tree, pngOptions, scoreName);
+        if (pages.Count == 1)
+        {
+            File.WriteAllBytes(outputPath, pages[0]);
+            Console.WriteLine($"Created: {outputPath}");
+            Console.WriteLine($"  Size: {pages[0].Length / 1024.0:F1} KB");
+        }
+        else
+        {
+            string dir = Path.GetDirectoryName(outputPath) ?? "";
+            string baseName = Path.GetFileNameWithoutExtension(outputPath);
+            string ext = Path.GetExtension(outputPath);
+            for (int p = 0; p < pages.Count; p++)
+            {
+                string pagePath = Path.Combine(dir, $"{baseName}-page{p + 1}{ext}");
+                File.WriteAllBytes(pagePath, pages[p]);
+                Console.WriteLine($"Created: {pagePath}");
+                Console.WriteLine($"  Size: {pages[p].Length / 1024.0:F1} KB");
+            }
+        }
         Console.WriteLine($"  Scale: {scale:F1}x");
         return 0;
     }

@@ -2684,9 +2684,33 @@ public sealed class LilySharpLanguageServer
                         LilySharp.Core.Svg.SvgGenerator.Generate(tree, svgOpts, renderName));
                     break;
                 case "png":
-                    File.WriteAllBytes(outputPath,
-                        LilySharp.Core.Png.PngGenerator.Generate(tree, null, renderName));
+                {
+                    // One file per page, LilyPond naming: single page keeps the
+                    // chosen name; multiple pages save as BASE-page1.png,
+                    // BASE-page2.png, … (scm/ps-to-png.scm).
+                    var pages = LilySharp.Core.Png.PngGenerator.GeneratePages(tree, null, renderName);
+                    if (pages.Count == 1)
+                    {
+                        File.WriteAllBytes(outputPath, pages[0]);
+                    }
+                    else
+                    {
+                        var dir = Path.GetDirectoryName(outputPath) ?? "";
+                        var baseName = Path.GetFileNameWithoutExtension(outputPath);
+                        var pngExt = Path.GetExtension(outputPath);
+                        var names = new List<string>(pages.Count);
+                        for (int p = 0; p < pages.Count; p++)
+                        {
+                            var pagePath = Path.Combine(dir, $"{baseName}-page{p + 1}{pngExt}");
+                            File.WriteAllBytes(pagePath, pages[p]);
+                            names.Add(Path.GetFileName(pagePath));
+                        }
+                        // The dialog's path names ONE file; report what was
+                        // actually written so the toast isn't a lie.
+                        outputPath = Path.Combine(dir, string.Join(", ", names));
+                    }
                     break;
+                }
                 case "pdf":
                     File.WriteAllBytes(outputPath,
                         LilySharp.Core.Pdf.PdfGenerator.Generate(tree, null, renderName));

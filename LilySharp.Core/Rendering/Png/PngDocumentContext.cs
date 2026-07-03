@@ -27,6 +27,10 @@ public sealed class PngDocumentOptions
     /// </summary>
     public double PixelsPerSpace { get; init; } = 20.0;
 
+    /// <summary>Encode each page as its own PNG (see GetPageBytes) instead
+    /// of stitching pages into one tall image.</summary>
+    public bool SeparatePages { get; init; }
+
     /// <summary>PNG encoder quality (0-100). 100 = lossless.</summary>
     public int Quality { get; init; } = 100;
 
@@ -59,6 +63,7 @@ public sealed class PngDocumentContext : IDocumentContext
     private PngDrawingContext? _currentPage;
     private bool _disposed;
     private byte[]? _bytes;
+    private List<byte[]>? _pageBytes;
 
     public PngDocumentContext(PngDocumentOptions? options = null)
     {
@@ -99,7 +104,22 @@ public sealed class PngDocumentContext : IDocumentContext
         if (_disposed) return;
         if (_currentPage != null) EndPage();
 
-        if (_pages.Count > 0)
+        if (_pages.Count > 0 && _options.SeparatePages)
+        {
+            // One PNG per page (LilyPond's multi-page PNG model: ps-to-png
+            // emits BASE-page%d.png instead of one tall image).
+            _pageBytes = new List<byte[]>(_pages.Count);
+            foreach (var (image, _, _) in _pages)
+            {
+                using var data = image.Encode(SKEncodedImageFormat.Png, _options.Quality);
+                _pageBytes.Add(data.ToArray());
+            }
+            _bytes = _pageBytes[0];
+            foreach (var (image, _, _) in _pages)
+                image.Dispose();
+            _pages.Clear();
+        }
+        else if (_pages.Count > 0)
         {
             int totalH = 0, maxW = 0;
             foreach (var (_, w, h) in _pages)
@@ -156,4 +176,10 @@ public sealed class PngDocumentContext : IDocumentContext
     /// <summary>Returns the saved PNG bytes (post-Dispose).</summary>
     public byte[] GetBytes() =>
         _bytes ?? throw new InvalidOperationException("Dispose first.");
+
+    /// <summary>Per-page PNG encodings (post-Dispose); requires
+    /// <see cref="PngDocumentOptions.SeparatePages"/>.</summary>
+    public IReadOnlyList<byte[]> GetPageBytes() =>
+        _pageBytes ?? throw new InvalidOperationException(
+            "Dispose first (with SeparatePages set).");
 }
