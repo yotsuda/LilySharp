@@ -79,11 +79,32 @@ public sealed class LayoutEngine
         int firstMeasureIndex = 0;
         for (int sysIdx = 0; sysIdx < systemMeasures.Count; sysIdx++)
         {
+            // End-of-line courtesy: when the NEXT system opens with a key
+            // change, this line reserves room after its final barline for
+            // the cancellation + new signature (LP explicitKeySignature-
+            // Visibility default all-visible — printed on both sides).
+            double courtesyW = 0;
+            if (sysIdx + 1 < systemMeasures.Count && systemMeasures[sysIdx + 1].Count > 0)
+            {
+                foreach (var lead in systemMeasures[sysIdx + 1][0].Items)
+                {
+                    if (lead is KeySignatureChangeItem kcNext)
+                    {
+                        courtesyW = SpacingRules.KeyCourtesySuffixWidth(
+                            kcNext.PreviousKey.Sharps, kcNext.NewKey.Sharps);
+                        break;
+                    }
+                    if (lead.Duration > Fraction.Zero)
+                        break;
+                }
+            }
+
             var system = _systemLayouter.LayoutSystem(
                 sysIdx, systemMeasures[sysIdx], currentY,
                 score.KeySignature.Sharps, sysIdx == 0, firstMeasureIndex,
                 score.Lyrics, isLastSystem: sysIdx == systemMeasures.Count - 1,
-                baseShortestDuration: commonShortestDuration);
+                baseShortestDuration: commonShortestDuration,
+                courtesySuffixWidth: courtesyW);
             systems.Add(system);
 
             var (upSkyline, downSkyline) = _skylineBuilder.BuildSystemSkylines(systemMeasures[sysIdx], system.Measures);

@@ -815,6 +815,25 @@ public sealed class MultiStaffLayouter
         double startX = CurrentIndent + prefixWidth;
         double availableWidth = _options.PageWidth - _options.MarginLeft - _options.MarginRight - CurrentIndent - prefixWidth;
 
+        // End-of-line courtesy: the NEXT measure (first of the next system)
+        // opening with a key change reserves room after this line's final
+        // barline for the cancellation + new signature.
+        // LILYPOND-REF: explicitKeySignatureVisibility default all-visible.
+        if (endMeasureIndex < primaryVoice.Measures.Length)
+        {
+            foreach (var lead in primaryVoice.Measures[endMeasureIndex].Items)
+            {
+                if (lead is KeySignatureChangeItem kcNext)
+                {
+                    availableWidth -= SpacingRules.KeyCourtesySuffixWidth(
+                        kcNext.PreviousKey.Sharps, kcNext.NewKey.Sharps);
+                    break;
+                }
+                if (lead.Duration > Fraction.Zero)
+                    break;
+            }
+        }
+
         // LILYPOND-REF: lily/spacing-spanner.cc — collect springs from ALL columns across
         // the entire system, then solve with a single SpringSolver for uniform force.
         // This matches SystemLayouter's approach for single-staff scores.

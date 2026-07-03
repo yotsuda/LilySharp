@@ -1,4 +1,4 @@
-﻿// Lily# - Music notation compiler
+// Lily# - Music notation compiler
 // Copyright (C) 2025-2026 Yoshifumi Tsuda
 //
 // This program is free software: you can redistribute it and/or modify
@@ -53,10 +53,11 @@ public sealed class SystemLayouter
         bool isFirstSystem,
         int firstMeasureIndex,
         bool isLastSystem = false,
-        double? baseShortestDuration = null)
+        double? baseShortestDuration = null,
+        double courtesySuffixWidth = 0)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, isLastSystem, baseShortestDuration);
+        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, isLastSystem, baseShortestDuration, courtesySuffixWidth);
 
         return new SystemLayout(
             systemIndex,
@@ -75,7 +76,8 @@ public sealed class SystemLayouter
         bool isFirstSystem,
         int firstMeasureIndex,
         bool isLastSystem = false,
-        double? baseShortestDuration = null)
+        double? baseShortestDuration = null,
+        double courtesySuffixWidth = 0)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
         // System-internal coordinates are LINE-RELATIVE (0 = line start); the
@@ -83,9 +85,12 @@ public sealed class SystemLayouter
         // So startX/rightEdge must NOT include MarginLeft — baking it in here
         // would double-count it (see MultiStaffLayouter). availableWidth is the
         // same either way, so justification width is unchanged.
+        // courtesySuffixWidth: end-of-line courtesy key signature (the next
+        // line opens with a key change) — the music stops short of the right
+        // edge so the cancellation + new signature fit after the barline.
         double startX = prefixWidth;
         double rightEdge = _options.PageWidth - _options.MarginLeft - _options.MarginRight;
-        double availableWidth = rightEdge - startX;
+        double availableWidth = rightEdge - startX - courtesySuffixWidth;
 
         // Collect springs and barline widths for each measure
         var measureSprings = new List<ImmutableArray<Spring>>();
@@ -200,10 +205,11 @@ public sealed class SystemLayouter
         int firstMeasureIndex,
         IReadOnlyList<LyricItem> lyrics,
         bool isLastSystem = false,
-        double? baseShortestDuration = null)
+        double? baseShortestDuration = null,
+        double courtesySuffixWidth = 0)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, lyrics, isLastSystem, baseShortestDuration);
+        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, lyrics, isLastSystem, baseShortestDuration, courtesySuffixWidth);
 
         return new SystemLayout(
             systemIndex,
@@ -227,17 +233,19 @@ public sealed class SystemLayouter
         int firstMeasureIndex,
         IReadOnlyList<LyricItem> lyrics,
         bool isLastSystem = false,
-        double? baseShortestDuration = null)
+        double? baseShortestDuration = null,
+        double courtesySuffixWidth = 0)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
         // System-internal coordinates are LINE-RELATIVE (0 = line start); the
         // renderer's margin translate places the whole line at MarginLeft once.
         // So startX/rightEdge must NOT include MarginLeft — baking it in here
         // would double-count it (see MultiStaffLayouter). availableWidth is the
-        // same either way, so justification width is unchanged.
+        // same either way, so justification width is unchanged. See the
+        // non-lyrics overload for courtesySuffixWidth.
         double startX = prefixWidth;
         double rightEdge = _options.PageWidth - _options.MarginLeft - _options.MarginRight;
-        double availableWidth = rightEdge - startX;
+        double availableWidth = rightEdge - startX - courtesySuffixWidth;
 
         // Collect springs and barline widths for each measure
         var measureSprings = new List<ImmutableArray<Spring>>();

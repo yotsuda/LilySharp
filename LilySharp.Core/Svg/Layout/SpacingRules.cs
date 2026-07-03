@@ -132,6 +132,36 @@ public static class SpacingRules
     }
 
     /// <summary>
+    /// Width reserved at the END of a line for the courtesy cancellation +
+    /// new key signature when the NEXT line opens with a key change (drawn
+    /// after the line's final barline). Geometry mirrors
+    /// SharedRenderer.DrawKeySignatureChange.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/key-engraver.cc + explicitKeySignatureVisibility
+    /// (default all-visible) — a changed signature prints on BOTH sides of
+    /// the break: courtesy at the old line's end, real one in the new
+    /// line's prefix.
+    /// </remarks>
+    public static double KeyCourtesySuffixWidth(int prevSharps, int nextSharps)
+    {
+        bool needNaturals = (prevSharps != 0 && nextSharps == 0) ||
+                            (prevSharps > 0 && nextSharps < 0) || (prevSharps < 0 && nextSharps > 0) ||
+                            (Math.Sign(prevSharps) == Math.Sign(nextSharps)
+                             && Math.Abs(nextSharps) < Math.Abs(prevSharps));
+        int natCount = needNaturals
+            ? Math.Abs(prevSharps) - (Math.Sign(prevSharps) == Math.Sign(nextSharps) ? Math.Abs(nextSharps) : 0)
+            : 0;
+
+        double w = 0.8; // barline → signature gap
+        if (natCount > 0)
+            w += natCount * 0.7 + 0.4;
+        if (nextSharps != 0)
+            w += Math.Abs(nextSharps) * GlyphMetrics.GetKeySignatureAccidentalWidth(nextSharps > 0) + 0.4;
+        return w;
+    }
+
+    /// <summary>
     /// Gets the width of a barline type.
     /// </summary>
     public static double GetBarlineWidth(BarlineType type) => type switch

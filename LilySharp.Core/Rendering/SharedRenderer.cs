@@ -233,6 +233,17 @@ public static class SharedRenderer
             ? system.Measures[^1].X + system.Measures[^1].Width
             : system.Width;
 
+        // An end-of-line courtesy key signature sits ON the staff after the
+        // final barline — the staff lines extend over the reserved suffix
+        // (tab staves keep the unextended width; they print no signatures).
+        double notationStaffRight = staffRight;
+        if (system.Measures.Length > 0
+            && GetSystemEndKeyChange(score.PrimaryContentStaff, system) is { } eolCourtesy)
+        {
+            notationStaffRight += SpacingRules.KeyCourtesySuffixWidth(
+                eolCourtesy.PreviousKey.Sharps, eolCourtesy.NewKey.Sharps);
+        }
+
         // Left-edge system bar + span bars through grand-staff gaps.
         DrawStaffConnectors(score, layout, system, systemStartX, gc);
 
@@ -313,7 +324,7 @@ public static class SharedRenderer
             // (NR "Ossia staves"; lily/staff-symbol-engraver.cc — the
             // StaffSymbol spanner lives exactly as long as its context).
             int fragFrom = int.MinValue, fragTo = int.MaxValue;
-            double lineStartX = 0, lineEndX = staffRight;
+            double lineStartX = 0, lineEndX = notationStaffRight;
             if (isOssia)
             {
                 (fragFrom, fragTo) = OssiaFragment(staff, system);
@@ -432,6 +443,20 @@ public static class SharedRenderer
                 // Barlines (typed: single / double / final / repeat) per measure
                 DrawBarlines(system, staff, localStaffY, layout, sgc,
                     fromMeasure: fragFrom, toMeasure: fragTo);
+
+                // End-of-line courtesy cancellation + new key signature when
+                // the NEXT line opens with a key change; the layouter reserved
+                // this room after the final barline.
+                // LILYPOND-REF: lily/key-engraver.cc +
+                // explicitKeySignatureVisibility default all-visible — the
+                // changed signature prints on BOTH sides of the break.
+                if (!isOssia && GetSystemEndKeyChange(staff, system) is { } eolKeyChange
+                    && system.Measures.Length > 0)
+                {
+                    var lastMl = system.Measures[^1];
+                    DrawKeySignatureChange(eolKeyChange,
+                        lastMl.X + lastMl.Width + 0.8, localStaffY, clef, sgc);
+                }
             }
             finally
             {
@@ -914,6 +939,29 @@ public static class SharedRenderer
                 return kc;
             if (item.Duration > Fraction.Zero)
                 break; // a note/rest before any change → not measure-opening
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Returns the key change that opens the measure AFTER this system's last
+    /// one (i.e. the first measure of the next line), or null — the trigger
+    /// for the end-of-line courtesy cancellation + signature.
+    /// </summary>
+    private static KeySignatureChangeItem? GetSystemEndKeyChange(Staff staff, SystemLayout system)
+    {
+        if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return null;
+        var voice = staff.PrimaryVoice;
+        int nextMeasureIndex = system.Measures[^1].MeasureIndex + 1;
+        if (nextMeasureIndex >= voice.Measures.Length)
+            return null;
+        foreach (var item in voice.Measures[nextMeasureIndex].Items)
+        {
+            if (item is KeySignatureChangeItem kc)
+                return kc;
+            if (item.Duration > Fraction.Zero)
+                break;
         }
         return null;
     }
