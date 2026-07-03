@@ -37,6 +37,16 @@ public sealed class MidiExporter
     // Octave mode (mirrors MeasureCollector): false = relative (default), true =
     // `octave absolute` ('/, are offsets from a fixed C4 anchor, no carry).
     private bool _octaveAbsolute;
+
+    // Part header `octave N` anchor: the base octave for bare letters in
+    // absolute mode and the seed of the relative frame (matches the
+    // collector, where `part lh { octave 3 }` roots the left hand at C3).
+    private int _partOctaveAnchor = 4;
+
+    // Phrase bodies by name; a $reference expands in place (fresh default
+    // frame), declarations are silent. _activePhrases guards recursion.
+    private Dictionary<string, SyntaxNode>? _phraseBodies;
+    private readonly HashSet<string> _activePhrases = new();
     private Fraction _defaultDuration = Fraction.Quarter;
     private int _tempo = 120;
     private int _velocity = 80;
@@ -70,6 +80,14 @@ public sealed class MidiExporter
 
         var mainTrack = new MidiTrack { Name = "Track 1", Channel = 0 };
         _root = tree.GetRoot();
+        _phraseBodies = new Dictionary<string, SyntaxNode>();
+        foreach (var n in _root.DescendantNodes())
+        {
+            if (n is PhraseDeclarationSyntax ph)
+                _phraseBodies[ph.Name.Text] = ph.Body;
+            else if (n is VariableDeclarationSyntax vd)
+                _phraseBodies[vd.Name.Text] = vd.Expression;
+        }
         ProcessNode(_root, mainTrack, conductorTrack);
 
         // Ensure there is an initial time signature at tick 0. If the score already
@@ -95,12 +113,56 @@ public sealed class MidiExporter
                 break;
 
             case PartDeclarationSyntax part:
+                _partOctaveAnchor = PartOctaveAnchor(part.Name.Text);
                 ProcessChildren(part, track, conductorTrack);
+                _partOctaveAnchor = 4;
                 break;
 
             case StaffDeclarationSyntax staff:
                 ProcessChildren(staff, track, conductorTrack);
                 break;
+
+            case SectionDeclarationSyntax section:
+            {
+                // A section's part blocks are SIMULTANEOUS staves, not a
+                // medley: rh then lh used to play one after the other, so the
+                // left hand seemed to never sound. Every part starts at the
+                // section's tick; the section ends with its longest part.
+                // Each part keeps its own relative-pitch lane, seeded from
+                // the part's `octave` anchor, carried across its blocks.
+                int sectionStart = _currentTick;
+                int sectionEnd = _currentTick;
+                var lanes = new Dictionary<string, (int Tick, int NoteName, int Octave, Fraction Dur)>();
+                for (int i = 0; i < section.SlotCount; i++)
+                {
+                    var child = section.GetChild(i);
+                    if (child == null || child is SyntaxTokenNode)
+                        continue;
+                    if (child is PartBlockSyntax sectionPart)
+                    {
+                        string pname = sectionPart.Name;
+                        int anchor = PartOctaveAnchor(pname);
+                        if (!lanes.TryGetValue(pname, out var lane))
+                            lane = (sectionStart, 0, anchor, Fraction.Quarter);
+                        _currentTick = lane.Tick;
+                        _currentNoteName = lane.NoteName;
+                        _currentOctave = lane.Octave;
+                        _defaultDuration = lane.Dur;
+                        _partOctaveAnchor = anchor;
+                        ProcessNode(sectionPart, track, conductorTrack);
+                        lanes[pname] = (_currentTick, _currentNoteName, _currentOctave, _defaultDuration);
+                        sectionEnd = Math.Max(sectionEnd, _currentTick);
+                        _partOctaveAnchor = 4;
+                    }
+                    else
+                    {
+                        ProcessNode(child, track, conductorTrack);
+                        sectionEnd = Math.Max(sectionEnd, _currentTick);
+                    }
+                }
+                _currentTick = sectionEnd;
+                break;
+            }
 
             case PartBlockSyntax partBlock:
                 // A section's `partName { ... }` block: arm the part's transpose
@@ -200,22 +262,56 @@ public sealed class MidiExporter
                 _currentTick = voicesEndTick;
                 break;
 
-            case PhraseDeclarationSyntax phrase:
-                // Phrase bodies evaluate in a fresh relative frame so a phrase
-                // means the same pitches wherever it is used (matches
-                // MeasureCollector's RelativeResetMarker). MIDI plays phrase
-                // declarations in source order, so the reset applies here.
-                _currentNoteName = 0;
-                _currentOctave = 4;
-                _defaultDuration = Fraction.Quarter;
-                ProcessChildren(phrase, track, conductorTrack);
+            case PhraseDeclarationSyntax:
+            case VariableDeclarationSyntax:
+                // Declarations are SILENT — bodies play where referenced.
+                // Playing them here put every phrase once at tick 0 in a C4
+                // frame, and $references then played nothing.
                 break;
+
+            case VariableReferenceSyntax varRef:
+            {
+                // $name expands in place, in a fresh default frame anchored at
+                // the part's octave (the collector's RelativeResetMarker).
+                string phName = varRef.Name.Text;
+                if (_phraseBodies != null
+                    && _phraseBodies.TryGetValue(phName, out var phraseBody)
+                    && _activePhrases.Add(phName))
+                {
+                    _currentNoteName = 0;
+                    _currentOctave = _partOctaveAnchor;
+                    _defaultDuration = Fraction.Quarter;
+                    ProcessNode(phraseBody, track, conductorTrack);
+                    _activePhrases.Remove(phName);
+                }
+                break;
+            }
 
             default:
                 // Process any other nodes by visiting their children
                 ProcessChildren(node, track, conductorTrack);
                 break;
         }
+    }
+
+    /// <summary>The part's header `octave N` anchor, or 4 when absent.</summary>
+    private int PartOctaveAnchor(string partName)
+    {
+        if (_root == null)
+            return 4;
+        foreach (var partDecl in _root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        {
+            if (partDecl.Name.Text != partName)
+                continue;
+            foreach (var prop in partDecl.Properties)
+            {
+                if (prop.NameToken.Text.ToLowerInvariant() == "octave"
+                    && prop.GetChild(2) is SyntaxTokenNode v
+                    && int.TryParse(v.Text, out int oct))
+                    return oct;
+            }
+        }
+        return 4;
     }
 
     private void ProcessChildren(SyntaxNode node, MidiTrack track, MidiTrack conductorTrack)
@@ -363,7 +459,7 @@ public sealed class MidiExporter
         // shared with the collector and the MusicXML exporter (RelativeOctave is
         // the single source of truth). Matches MeasureCollector exactly.
         int targetOctave = _octaveAbsolute
-            ? 4 + pitch.OctaveOffset
+            ? _partOctaveAnchor + pitch.OctaveOffset
             : RelativeOctave.Resolve(
                 _currentNoteName, _currentOctave, noteName, pitch.OctaveOffset);
 
