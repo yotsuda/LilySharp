@@ -1122,6 +1122,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         let onsetList = [];
         let onsetIdx = 0;
         let playStartTime = 0;
+        let playbackNotes = null; // last received event list — enables click-to-seek
 
         function setPlayUi(playing) {
             document.getElementById('playBtn').disabled = playing;
@@ -1148,9 +1149,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             setPlayUi(false);
         }
 
-        function startPlayback(notes) {
+        function startPlayback(notes, offset) {
+            offset = offset || 0;
             stopPlayback();
             if (!notes || notes.length === 0) { return; }
+            // Seek = re-schedule from the offset; notes already past it are
+            // dropped (mid-note tails too — re-striking half a note reads
+            // worse than starting cleanly at the next onset).
+            notes = notes.filter(n => n.T >= offset - 0.001);
+            if (notes.length === 0) { return; }
             audioCtx = new AudioContext();
             if (audioCtx.state === 'suspended') { audioCtx.resume(); }
             const master = audioCtx.createGain();
@@ -1163,7 +1170,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 osc.type = 'triangle';
                 osc.frequency.value = 440 * Math.pow(2, (n.P - 69) / 12);
                 const g = audioCtx.createGain();
-                const at = t0 + n.T;
+                const at = t0 + n.T - offset;
                 const rel = at + n.D;
                 const peak = 0.9 * (n.V / 127);
                 g.gain.setValueAtTime(0, at);
@@ -1178,7 +1185,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 if (n.T + n.D > end) end = n.T + n.D;
             }
             setPlayUi(true);
-            playEndTimer = setTimeout(stopPlayback, (end + 0.5) * 1000);
+            playEndTimer = setTimeout(stopPlayback, (end - offset + 0.5) * 1000);
 
             // Follow-along: at each onset highlight the notation being played
             // (the note's own data-pos - an exact match, so the existing
@@ -1187,7 +1194,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             playStartTime = t0;
             // Group onsets by time so SIMULTANEOUS notes (rh + lh striking
             // together = different source positions) light up together.
-            const raw = notes.filter(n => n.S >= 0).map(n => ({ t: n.T, s: n.S }));
+            const raw = notes.filter(n => n.S >= 0).map(n => ({ t: n.T - offset, s: n.S }));
             raw.sort((a, b) => a.t - b.t);
             onsetList = [];
             for (const o of raw) {
@@ -1276,7 +1283,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                             setTimeout(() => zoomInfo.classList.remove('visible'), 2500);
                         }
                     } else {
-                        startPlayback(message.notes);
+                        playbackNotes = message.notes;
+                        startPlayback(playbackNotes, 0);
                     }
                     break;
                 case 'highlightPosition':
@@ -1300,6 +1308,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const target = e.target;
             if (target && target.hasAttribute && target.hasAttribute('data-pos')) {
                 const pos = parseInt(target.getAttribute('data-pos'), 10);
+                // During playback a click on a played note SEEKS there instead
+                // of jumping the editor (listening mode). Non-note grobs
+                // (barlines, marks) fall through to the normal click.
+                if (playheadTimer !== null && playbackNotes) {
+                    let hit = null;
+                    for (const n of playbackNotes) {
+                        if (n.S === pos && (hit === null || n.T < hit.T)) hit = n;
+                    }
+                    if (hit) {
+                        startPlayback(playbackNotes, hit.T);
+                        return;
+                    }
+                }
                 vscode.postMessage({ type: 'jumpToPosition', position: pos });
             } else {
                 // Clicked empty space / a non-clickable grob: just drop the
