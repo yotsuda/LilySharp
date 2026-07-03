@@ -3122,7 +3122,8 @@ public sealed class MeasureCollector
                 {
                     _percentRepeats.Add(new PercentRepeatItem(
                         iterStart + m,
-                        repeat.Position));
+                        repeat.Position,
+                        _currentStaffIndex));
                 }
             }
         }

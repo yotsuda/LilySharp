@@ -35,5 +35,8 @@ public sealed record PercentRepeatItem(
     /// <summary>Measure index where the percent sign appears.</summary>
     int MeasureIndex,
     /// <summary>Source position for click-to-source mapping.</summary>
-    int SourcePosition
+    int SourcePosition,
+    /// <summary>The staff the repeat was written on — the sign prints there,
+    /// like LilyPond's Percent_repeat_engraver living in that Voice.</summary>
+    int StaffIndex = 0
 );

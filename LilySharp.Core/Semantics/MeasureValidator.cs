@@ -62,13 +62,23 @@ public sealed class MeasureValidator : ISemanticValidator
         if (node is TupletExpressionSyntax or GraceExpressionSyntax)
             return;
 
+        // A tremolo repeat's body ("{ c32 }") is metric material of the
+        // ENCLOSING measure (counted above via ItemDuration), never a
+        // standalone bar — recursing flagged it as a 1/32 "first measure".
+        if (node is RepeatExpressionSyntax trem && trem.RepeatType.Text == "tremolo")
+            return;
+
         switch (node)
         {
             case MusicBlockSyntax block:
                 ValidateMusicBlock(block);
                 break;
 
-            case TimeSignatureSyntax timeSig:
+            case TimeSignatureSyntax timeSig when !IsInsideMusicBlock(timeSig):
+                // Only a TOP-LEVEL / header `time` re-arms the document meter.
+                // An in-block change is applied inside ValidateMusicBlock and
+                // scoped there; re-applying it here leaked the previous part's
+                // mid-music 3/4 onto the NEXT part's perfectly good 4/4 bars.
                 SetTimeSignature(timeSig.Beats, timeSig.BeatType);
                 break;
 
@@ -101,6 +111,27 @@ public sealed class MeasureValidator : ISemanticValidator
     }
 
     private void ValidateMusicBlock(MusicBlockSyntax block)
+    {
+        // A mid-music `time` inside THIS block re-arms the meter for the rest
+        // of the block only — the state must not leak into the next part's
+        // block (each part restates its own changes), or every 4/4 bar of the
+        // following part gets flagged against the previous part's 3/4.
+        // LILYPOND-REF: Timing is Score-level in LP, but Lily# parts restate
+        // meter changes per part; validation follows the per-block timeline.
+        var savedTime = _timeSignature;
+        var savedMeterText = _meterText;
+        try
+        {
+            ValidateMusicBlockCore(block);
+        }
+        finally
+        {
+            _timeSignature = savedTime;
+            _meterText = savedMeterText;
+        }
+    }
+
+    private void ValidateMusicBlockCore(MusicBlockSyntax block)
     {
         var measures = SplitIntoMeasures(block);
         var defaultDuration = Fraction.Quarter;
@@ -290,6 +321,18 @@ public sealed class MeasureValidator : ISemanticValidator
             case GraceExpressionSyntax:
                 // Grace notes are ornamental and consume no metric time.
                 return Fraction.Zero;
+
+            case RepeatExpressionSyntax rep
+                when rep.RepeatType.Text == "tremolo"
+                  && int.TryParse(rep.Count.Text, out int tremCount):
+            {
+                // LILYPOND-REF: lily/chord-tremolo-iterator.cc — the tremolo
+                // repeat's metric length is count × body (8 × c32 = a quarter).
+                var body = Fraction.Zero;
+                foreach (var bodyItem in rep.Body.Items)
+                    body += ItemDuration(bodyItem, ref defaultDuration);
+                return body * new Fraction(tremCount, 1);
+            }
 
             default:
                 return Fraction.Zero;
@@ -487,9 +530,11 @@ public sealed class MeasureValidator : ISemanticValidator
         foreach (var n in scope.DescendantNodes())
         {
             // Tuplet/grace interiors are folded into their wrapper by
-            // ItemDuration; inline-volta and repeat interiors are ordinary
-            // written measures and flow through as themselves.
-            if (IsInside<TupletExpressionSyntax>(n, scope) || IsInside<GraceExpressionSyntax>(n, scope))
+            // ItemDuration; inline-volta interiors are ordinary written
+            // measures and flow through as themselves. Repeat interiors are
+            // expanded by the RepeatExpressionSyntax case below.
+            if (IsInside<TupletExpressionSyntax>(n, scope) || IsInside<GraceExpressionSyntax>(n, scope)
+                || IsInside<RepeatExpressionSyntax>(n, scope))
                 continue;
 
             switch (n)
@@ -501,6 +546,29 @@ public sealed class MeasureValidator : ISemanticValidator
                 case TupletExpressionSyntax:
                 case GraceExpressionSyntax:
                     output.Add(n);
+                    break;
+
+                // The cross-part alignment must see repeats at their PLAYED
+                // length: percent/unfold repeat their body COUNT times (the
+                // collector expands them into that many real measures), a
+                // tremolo is one metric item folded by ItemDuration — before
+                // this the cello's `repeat percent 3` counted once and every
+                // later measure "misaligned".
+                // LILYPOND-REF: lily/percent-repeat-iterator.cc,
+                //   lily/chord-tremolo-iterator.cc.
+                case RepeatExpressionSyntax rep:
+                    if (rep.RepeatType.Text == "tremolo")
+                    {
+                        output.Add(rep);
+                    }
+                    else if (int.TryParse(rep.Count.Text, out int repCount))
+                    {
+                        for (int r = 0; r < Math.Max(1, repCount); r++)
+                        {
+                            output.Add(DurationResetMarker.Instance);
+                            FlattenMusic(rep.Body, output, activeRefs);
+                        }
+                    }
                     break;
 
                 case VariableReferenceSyntax varRef:

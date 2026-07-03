@@ -1357,7 +1357,7 @@ public sealed class LayoutEngine
 
         // Layout percent repeats
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
-            percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml);
+            percentRepeats ?? ImmutableArray<PercentRepeatItem>.Empty, systems, ml, staffYAt);
 
         // Layout trill spanners (tr + wavy line)
         // LILYPOND-REF: scm/scheme-engravers.scm — trill spanner positioning

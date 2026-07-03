@@ -396,6 +396,16 @@ public static class SharedRenderer
                     }
                 }
 
+                // Measures covered by a percent repeat print ONLY the sign:
+                // LilyPond never typesets the repeated music (the % replaces
+                // it); our unfold keeps the notes for playback, so the visual
+                // pass must skip them on the repeat's own staff.
+                // LILYPOND-REF: lily/percent-repeat-engraver.cc.
+                var percentCovered = new HashSet<int>();
+                foreach (var prItem in score.PercentRepeats)
+                    if (prItem.StaffIndex == globalIdx)
+                        percentCovered.Add(prItem.MeasureIndex);
+
                 // Notes per measure — render every voice (voice 1 = stems up,
                 // voice 2 = stems down, with collision offsets / head wipes).
                 var voices = staff.Voices;
@@ -408,7 +418,7 @@ public static class SharedRenderer
                         : null;
                     DrawStaffMeasures(voices[vi], voiceNumber, forcedStemUp,
                         system, layout, globalIdx, localStaffY, clef, resolver, beamedItems, sgc,
-                        fragFrom, fragTo);
+                        fragFrom, fragTo, percentCovered);
                 }
 
                 // Barlines (typed: single / double / final / repeat) per measure
@@ -1018,7 +1028,8 @@ public static class SharedRenderer
         SystemLayout system, ScoreLayout layout, int staffIndex,
         double staffY, ClefType clef, GrobPropertyResolver resolver,
         HashSet<(int Staff, int Voice, int Measure, int Item)> beamedItems, IDrawingContext gc,
-        int fragmentFrom = int.MinValue, int fragmentTo = int.MaxValue)
+        int fragmentFrom = int.MinValue, int fragmentTo = int.MaxValue,
+        HashSet<int>? percentCovered = null)
     {
         double staffMiddleY = staffY + StaffHeight / 2;
 
@@ -1031,8 +1042,13 @@ public static class SharedRenderer
         // LILYPOND-REF: scm/define-grobs.scm LedgerLineSpanner (layer . 0);
         // NoteHead uses the default layer 1.
         var ledgerPlan = new List<LedgerRequest>();
-        foreach (var (item, _, _, itemX) in EnumerateStaffItems(voice, voiceNumber, system, layout, fragmentFrom, fragmentTo))
+        foreach (var (item, ledgerMl, _, itemX) in EnumerateStaffItems(voice, voiceNumber, system, layout, fragmentFrom, fragmentTo))
+        {
+            // Percent-covered measures draw no notes — and no ledgers either.
+            if (percentCovered != null && percentCovered.Contains(ledgerMl.MeasureIndex))
+                continue;
             CollectItemLedgers(item, itemX, staffMiddleY, ledgerPlan);
+        }
         DrawPlannedLedgers(ledgerPlan, gc);
 
         foreach (var (item, ml, itemIdx, itemX) in EnumerateStaffItems(voice, voiceNumber, system, layout, fragmentFrom, fragmentTo))
@@ -1047,6 +1063,11 @@ public static class SharedRenderer
             // earlier measures, and a \once pops back to the value it displaced.
             if (resolver.HasOverrides)
                 resolver.AdvanceTo(ml.MeasureIndex, itemIdx);
+
+            // A percent-covered measure shows only the % sign.
+            if (percentCovered != null && percentCovered.Contains(ml.MeasureIndex)
+                && item is NoteItem or ChordItem or RestItem)
+                continue;
 
             switch (item)
             {
@@ -1848,11 +1869,17 @@ public static class SharedRenderer
     private static void DrawBeams(MultiStaffScore score, ScoreLayout layout, SystemLayout system, IDrawingContext gc)
     {
         var staffByIndex = score.EnumerateStaves().ToDictionary(s => s.GlobalStaffIndex, s => s.Staff);
+        // Beams whose notes are hidden under a percent sign are hidden too.
+        var percentByStaff = new HashSet<(int Staff, int Measure)>();
+        foreach (var prItem in score.PercentRepeats)
+            percentByStaff.Add((prItem.StaffIndex, prItem.MeasureIndex));
         foreach (var beam in layout.BeamLayouts)
         {
             // Only draw beams whose first measure is in this system
             bool inSystem = system.Measures.Any(m => m.MeasureIndex == beam.Group.MeasureIndex);
             if (!inSystem) continue;
+            if (percentByStaff.Contains((Math.Max(0, beam.StaffIndex), beam.Group.MeasureIndex)))
+                continue;
 
             var grp = beam.Group;
 

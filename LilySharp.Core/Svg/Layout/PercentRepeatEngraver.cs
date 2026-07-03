@@ -51,10 +51,17 @@ public static class PercentRepeatEngraver
     public static ImmutableArray<PercentRepeatLayout> Calculate(
         ImmutableArray<PercentRepeatItem> percentRepeats,
         ImmutableArray<SystemLayout> systems,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        Func<int, int, double>? staffYAt = null)
     {
         if (percentRepeats.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<PercentRepeatLayout>.Empty;
+
+        // The sign belongs to the staff the repeat was WRITTEN on; a cello
+        // percent must not print its ％ over the flute.
+        // LILYPOND-REF: lily/percent-repeat-engraver.cc — the engraver lives
+        // in the Voice context of its own staff.
+        var measureToSystem = LayoutUtilities.BuildMeasureMap(systems);
 
         var results = ImmutableArray.CreateBuilder<PercentRepeatLayout>(percentRepeats.Length);
 
@@ -69,8 +76,14 @@ public static class PercentRepeatEngraver
             // Center of the measure
             double x = ml.X + ml.Width / 2;
 
-            // Y = center of staff (2 staff spaces from top = middle of 4-line staff)
-            double y = 2.0;
+            // Y = middle line of the OWN staff (2 ss below its top line).
+            double staffOffset = 0;
+            if (staffYAt != null
+                && measureToSystem.TryGetValue(item.MeasureIndex, out var info))
+            {
+                staffOffset = staffYAt(info.System.SystemIndex, item.StaffIndex);
+            }
+            double y = staffOffset + 2.0;
 
             results.Add(new PercentRepeatLayout(
                 item.MeasureIndex, x, y, ml.Width, item.SourcePosition, i));
