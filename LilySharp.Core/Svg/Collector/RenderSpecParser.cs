@@ -383,11 +383,16 @@ public static class RenderSpecParser
             {
                 if (prop.NameToken.Text.ToLowerInvariant() == propertyName)
                 {
-                    var valueToken = prop.GetChild(2) as SyntaxTokenNode;
-                    if (valueToken == null) continue;
+                    // Join ALL value tokens — a hyphenated bare value
+                    // ("bass-guitar") is word+minus+word in the green tree.
+                    var sb = new System.Text.StringBuilder();
+                    for (int vi = 2; vi < prop.SlotCount; vi++)
+                        if (prop.GetChild(vi) is SyntaxTokenNode vt)
+                            sb.Append(vt.Text);
+                    if (sb.Length == 0) continue;
 
                     // Handle string literals (strip quotes) and identifiers
-                    var text = valueToken.Text;
+                    var text = sb.ToString();
                     if (text.Length >= 2 && text[0] == '"' && text[^1] == '"')
                         text = text[1..^1];
                     return text;

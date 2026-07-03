@@ -396,9 +396,24 @@ internal sealed class Parser
             var value = Advance(); // identifier, string, number, or pitch
             // A transpose target may carry octave marks (transpose d' / c,);
             // harmless for the other properties, which never have trailing marks.
+            // A hyphenated bare value ('instrument bass-guitar') is ONE word:
+            // keep consuming minus+word pairs — it used to truncate silently
+            // to "bass". (Lyrics/chords never reach this header-only path, so
+            // merging hyphens here is safe.)
             var values = new List<GreenNode?> { value };
-            while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
-                values.Add(Advance());
+            while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma)
+                   || (Check(SyntaxKind.Minus) && IsPartNameKind(Peek(1)?.Kind)))
+            {
+                if (Check(SyntaxKind.Minus))
+                {
+                    values.Add(Advance()); // -
+                    values.Add(Advance()); // word
+                }
+                else
+                {
+                    values.Add(Advance());
+                }
+            }
             return new PropertyAssignmentGreen(propName, colon, [.. values]);
         }
         return null;
