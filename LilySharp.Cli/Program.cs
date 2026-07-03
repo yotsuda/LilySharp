@@ -123,7 +123,7 @@ static int RunSvg(string[] args)
         return 0;
     }
 
-    var (inputPath, outputPath, embedFont, allMovements, error) = ParseSvgOptions(args);
+    var (inputPath, outputPath, embedFont, allMovements, scoreName, error) = ParseSvgOptions(args);
     if (error != null)
     {
         Console.Error.WriteLine($"Error: {error}");
@@ -134,7 +134,7 @@ static int RunSvg(string[] args)
     if (allMovements)
         return ExecuteSvgAll(inputPath!, embedFont);
     else
-        return ExecuteSvg(inputPath!, outputPath!, embedFont);
+        return ExecuteSvg(inputPath!, outputPath!, embedFont, scoreName);
 }
 
 static void ShowSvgHelp()
@@ -152,6 +152,7 @@ static void ShowSvgHelp()
           -o, --output <file>    Output file path
           --no-embed-font        Don't embed font (smaller file, requires font installed)
           --all                  Generate all render blocks as separate SVG files
+          --score <name>         Render the named score block (default: the first)
           -h, --help             Show this help
 
         Examples:
@@ -159,16 +160,18 @@ static void ShowSvgHelp()
           lysc svg score.lys sheet.svg
           lysc svg -o sheet.svg score.lys
           lysc svg score.lys --no-embed-font
+          lysc svg --score greensleeves-grid greensleeves.lys
           lysc svg --all multi-movement.lys
         """);
 }
 
-static (string? InputPath, string? OutputPath, bool EmbedFont, bool AllMovements, string? Error) ParseSvgOptions(string[] args)
+static (string? InputPath, string? OutputPath, bool EmbedFont, bool AllMovements, string? ScoreName, string? Error) ParseSvgOptions(string[] args)
 {
     string? inputPath = null;
     string? outputPath = null;
     bool embedFont = true;
     bool allMovements = false;
+    string? scoreName = null;
 
     for (int i = 0; i < args.Length; i++)
     {
@@ -177,7 +180,7 @@ static (string? InputPath, string? OutputPath, bool EmbedFont, bool AllMovements
         if (arg is "-o" or "--output")
         {
             if (i + 1 >= args.Length)
-                return (null, null, false, false, "-o requires a file path");
+                return (null, null, false, false, null, "-o requires a file path");
             outputPath = args[++i];
         }
         else if (arg is "--no-embed-font" or "-n")
@@ -188,9 +191,15 @@ static (string? InputPath, string? OutputPath, bool EmbedFont, bool AllMovements
         {
             allMovements = true;
         }
+        else if (arg is "--score")
+        {
+            if (i + 1 >= args.Length)
+                return (null, null, false, false, null, "--score requires a score name");
+            scoreName = args[++i];
+        }
         else if (arg.StartsWith("-"))
         {
-            return (null, null, false, false, $"Unknown option: {arg}");
+            return (null, null, false, false, null, $"Unknown option: {arg}");
         }
         else if (inputPath == null)
         {
@@ -202,22 +211,22 @@ static (string? InputPath, string? OutputPath, bool EmbedFont, bool AllMovements
         }
         else
         {
-            return (null, null, false, false, $"Unexpected argument: {arg}");
+            return (null, null, false, false, null, $"Unexpected argument: {arg}");
         }
     }
 
     if (inputPath == null)
-        return (null, null, false, false, "Input file required");
+        return (null, null, false, false, null, "Input file required");
 
     if (!File.Exists(inputPath))
-        return (null, null, false, false, $"File not found: {inputPath}");
+        return (null, null, false, false, null, $"File not found: {inputPath}");
 
     outputPath ??= Path.ChangeExtension(inputPath, ".svg");
 
-    return (inputPath, outputPath, embedFont, allMovements, null);
+    return (inputPath, outputPath, embedFont, allMovements, scoreName, null);
 }
 
-static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
+static int ExecuteSvg(string inputPath, string outputPath, bool embedFont, string? scoreName = null)
 {
     try
     {
@@ -226,6 +235,7 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
         // Surface every diagnostic (warnings to stderr too, so silent typos like `es`
         // as a bare variable reference are visible); errors abort.
         if (ReportDiagnostics(tree)) return 1;
+        if (!ValidateScoreName(tree, scoreName)) return 1;
 
         // Configure render options
         LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
@@ -240,7 +250,7 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
         }
         
         // Generate SVG using shared generator
-        var svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, renderOptions);
+        var svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, renderOptions, scoreName);
         
         File.WriteAllText(outputPath, svg);
         Console.WriteLine($"Created: {outputPath}");
@@ -252,6 +262,25 @@ static int ExecuteSvg(string inputPath, string outputPath, bool embedFont)
         Console.Error.WriteLine($"Error: {ex.Message}");
         return 1;
     }
+}
+
+// The generators deliberately fall back to the FIRST score for an unknown
+// name (the LSP preview needs that after a rename) — on the command line a
+// typo must fail loudly instead of silently rendering the wrong score.
+static bool ValidateScoreName(LilySharp.Core.Syntax.SyntaxTree tree, string? scoreName)
+{
+    if (string.IsNullOrEmpty(scoreName))
+        return true;
+    if (LilySharp.Core.Svg.Collector.RenderSpecParser.FindByName(tree, scoreName) != null)
+        return true;
+    var names = LilySharp.Core.Svg.Collector.RenderSpecParser.FindAll(tree)
+        .Select(s => s.Name)
+        .Where(n => !string.IsNullOrEmpty(n))
+        .ToList();
+    Console.Error.WriteLine($"Error: no score named '{scoreName}'.");
+    if (names.Count > 0)
+        Console.Error.WriteLine($"Available scores: {string.Join(", ", names)}");
+    return false;
 }
 
 static int ExecuteSvgAll(string inputPath, bool embedFont)
@@ -311,7 +340,19 @@ static int RunPdf(string[] args)
         return 0;
     }
 
-    var (inputPath, outputPath, error) = ParseSimpleOptions(args, ".pdf");
+    // --score is peeled off first; the rest goes through the shared parser.
+    string? scoreName = null;
+    var rest = new List<string>();
+    for (int i = 0; i < args.Length; i++)
+    {
+        if (args[i] is "--score")
+        {
+            if (i + 1 >= args.Length) { Console.Error.WriteLine("Error: --score requires a score name"); return 1; }
+            scoreName = args[++i];
+        }
+        else rest.Add(args[i]);
+    }
+    var (inputPath, outputPath, error) = ParseSimpleOptions(rest.ToArray(), ".pdf");
     if (error != null)
     {
         Console.Error.WriteLine($"Error: {error}");
@@ -319,7 +360,7 @@ static int RunPdf(string[] args)
         return 1;
     }
 
-    return ExecutePdf(inputPath!, outputPath!);
+    return ExecutePdf(inputPath!, outputPath!, scoreName);
 }
 
 static void ShowPdfHelp()
@@ -335,6 +376,7 @@ static void ShowPdfHelp()
 
         Options:
           -o, --output <file>    Output file path
+          --score <name>         Render the named score block (default: the first)
           -h, --help             Show this help
 
         Examples:
@@ -344,15 +386,16 @@ static void ShowPdfHelp()
         """);
 }
 
-static int ExecutePdf(string inputPath, string outputPath)
+static int ExecutePdf(string inputPath, string outputPath, string? scoreName = null)
 {
     try
     {
         var (source, tree) = LoadAndParse(inputPath);
 
         if (ReportDiagnostics(tree)) return 1;
+        if (!ValidateScoreName(tree, scoreName)) return 1;
 
-        var pdfBytes = PdfGenerator.Generate(tree);
+        var pdfBytes = PdfGenerator.Generate(tree, null, scoreName);
         File.WriteAllBytes(outputPath, pdfBytes);
 
         Console.WriteLine($"Created: {outputPath}");
@@ -379,6 +422,7 @@ static int RunPng(string[] args)
     // Parse options with optional --scale flag
     string? inputPath = null;
     string? outputPath = null;
+    string? scoreName = null;
     float scale = 2.0f;
 
     for (int i = 0; i < args.Length; i++)
@@ -388,6 +432,11 @@ static int RunPng(string[] args)
         {
             if (i + 1 >= args.Length) { Console.Error.WriteLine("Error: -o requires a file path"); return 1; }
             outputPath = args[++i];
+        }
+        else if (arg is "--score")
+        {
+            if (i + 1 >= args.Length) { Console.Error.WriteLine("Error: --score requires a score name"); return 1; }
+            scoreName = args[++i];
         }
         else if (arg is "--scale")
         {
@@ -412,7 +461,7 @@ static int RunPng(string[] args)
     if (!File.Exists(inputPath)) { Console.Error.WriteLine($"Error: File not found: {inputPath}"); return 1; }
     outputPath ??= Path.ChangeExtension(inputPath, ".png");
 
-    return ExecutePng(inputPath, outputPath, scale);
+    return ExecutePng(inputPath, outputPath, scale, scoreName);
 }
 
 static void ShowPngHelp()
@@ -429,6 +478,7 @@ static void ShowPngHelp()
         Options:
           -o, --output <file>    Output file path
           --scale <factor>       Scale factor (default: 2.0 = 192 DPI)
+          --score <name>         Render the named score block (default: the first)
           -h, --help             Show this help
 
         Examples:
@@ -439,7 +489,7 @@ static void ShowPngHelp()
         """);
 }
 
-static int ExecutePng(string inputPath, string outputPath, float scale)
+static int ExecutePng(string inputPath, string outputPath, float scale, string? scoreName = null)
 {
     try
     {
@@ -447,9 +497,10 @@ static int ExecutePng(string inputPath, string outputPath, float scale)
 
         if (ReportDiagnostics(tree)) return 1;
 
+        if (!ValidateScoreName(tree, scoreName)) return 1;
         var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
         var pngOptions = new PngRenderOptions { Scale = scale, FontDirectory = fontDir };
-        var pngBytes = PngGenerator.Generate(tree, pngOptions);
+        var pngBytes = PngGenerator.Generate(tree, pngOptions, scoreName);
         File.WriteAllBytes(outputPath, pngBytes);
 
         Console.WriteLine($"Created: {outputPath}");

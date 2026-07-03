@@ -49,8 +49,19 @@ public static class KeySpelling
     {
         if (!MajorSharps.TryGetValue(tonic.ToLowerInvariant(), out int sharps))
             return null;
-        if (mode.ToLowerInvariant() == "minor")
-            sharps -= 3;
+        // Church-mode offsets from the major (ionian) signature on the same
+        // tonic: each step down the circle of fifths removes one sharp.
+        // LILYPOND-REF: ly/declarations-init.ly — major/minor/ionian…locrian.
+        sharps += mode.ToLowerInvariant() switch
+        {
+            "lydian" => 1,
+            "mixolydian" => -1,
+            "dorian" => -2,
+            "minor" or "aeolian" => -3,
+            "phrygian" => -4,
+            "locrian" => -5,
+            _ => 0, // major
+        };
         return sharps;
     }
 

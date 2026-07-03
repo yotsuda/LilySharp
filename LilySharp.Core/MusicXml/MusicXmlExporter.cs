@@ -454,12 +454,13 @@ public sealed class MusicXmlExporter
     private void ProcessKeySignature(KeySignatureSyntax key)
     {
         var pitch = key.Pitch?.ToFullString().Trim().ToLower();
-        var isMajor = key.IsMajor;
+        // MusicXML's <mode> takes the church-mode names directly.
+        var mode = key.Mode.Text.ToLowerInvariant();
 
         // Delegate to KeySpelling (the single source of truth for tonic -> fifths);
         // an unrecognized tonic falls back to 0 (C), as before.
-        _keyFifths = KeySpelling.SharpsFor(pitch ?? "", isMajor ? "major" : "minor") ?? 0;
-        _keyMode = isMajor ? "major" : "minor";
+        _keyFifths = KeySpelling.SharpsFor(pitch ?? "", mode) ?? 0;
+        _keyMode = mode;
     }
 
     private void ProcessClef(ClefDeclarationSyntax clef)

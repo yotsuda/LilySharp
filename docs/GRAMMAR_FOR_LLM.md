@@ -16,8 +16,11 @@ with `|`.
 title "Song"            // optional metadata
 composer "Composer"     // optional
 tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit); 'tempo 120 swing' adds a shuffle-feel equation ('swing 16' = 16th swing)
-time 4/4                // optional (default 4/4)
-key c major             // optional (default c major)
+time 4/4                // optional (default 4/4); 4/4 engraves as the C
+                        // (common time) glyph and 2/2 as cut-C, like LilyPond
+key c major             // optional (default c major); all church modes work:
+                        // major minor dorian phrygian lydian mixolydian aeolian locrian
+                        // (key d dorian = no accidentals, key e dorian = 2 sharps)
 partial 8               // optional: the pickup length, once for every part
 
 part rightHand { clef treble }  // declare each part; clef lives here

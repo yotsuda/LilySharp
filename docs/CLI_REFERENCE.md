@@ -25,6 +25,7 @@ lysc svg [options] <input.lys> [output.svg]
 |--------|-------------|
 | `-o, --output <file>` | Output file path |
 | `--no-embed-font, -n` | Don't embed Emmentaler font (smaller file, requires font installed) |
+| `--score <name>` | Render the named score block (default: the first) |
 | `-h, --help` | Show help |
 
 **Examples:**
@@ -45,6 +46,7 @@ lysc pdf [options] <input.lys> [output.pdf]
 | Option | Description |
 |--------|-------------|
 | `-o, --output <file>` | Output file path |
+| `--score <name>` | Render the named score block (default: the first) |
 | `-h, --help` | Show help |
 
 **Examples:**
@@ -64,6 +66,7 @@ lysc png [options] <input.lys> [output.png]
 |--------|-------------|
 | `-o, --output <file>` | Output file path |
 | `--scale <factor>` | Scale factor for resolution (default: 2.0 = 192 DPI) |
+| `--score <name>` | Render the named score block (default: the first) |
 | `-h, --help` | Show help |
 
 **Scale Values:**

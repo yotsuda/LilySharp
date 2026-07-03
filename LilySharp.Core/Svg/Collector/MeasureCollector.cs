@@ -497,6 +497,8 @@ public sealed class MeasureCollector
     // written inside a section aligns to THAT section's notes (not from bar 0).
     // First-occurrence wins; populated during structure/section expansion.
     private readonly Dictionary<string, int> _sectionStartMeasure = new();
+    // Section labels for a rows-only score (filled by EnsureSectionStartsForRows).
+    private readonly List<(int MeasureIndex, string Label, int Position)> _rowSectionLabels = new();
     private StructureDeclarationSyntax? _structure;
     // A top-level partial N (a GlobalSetting, like time/key): the pickup is a
     // fact of the piece, so it arms EVERY voice's first measure. In-music
@@ -955,6 +957,35 @@ public sealed class MeasureCollector
                 var rowMeasures = _lyricsCollector.CollectRow(
                     tree.GetRoot(), name, idx, wrapBars, _sectionStartMeasure, _timeBeats, _timeBeatType);
                 staffVoices[name] = ImmutableArray.Create(new Voice(name, rowMeasures));
+            }
+        }
+
+        // A rows-only score prints its section labels from the FIRST row's
+        // measures (that row is the PrimaryContentStaff fallback the mark
+        // merge reads). No-op for mixed scores: the label list only fills
+        // when no music registered the sections.
+        if (_rowSectionLabels.Count > 0)
+        {
+            string? firstRowName = renderSpec.Items
+                .Select(it => it switch
+                {
+                    ChordRowSpec c => c.PartName,
+                    LyricsRowSpec l => l.PartName,
+                    _ => null
+                })
+                .FirstOrDefault(n => n != null && staffVoices.ContainsKey(n));
+            if (firstRowName != null
+                && staffVoices[firstRowName] is { Length: > 0 } rowVoices
+                && rowVoices[0].Measures.Length > 0)
+            {
+                var ms = rowVoices[0].Measures.ToArray();
+                foreach (var (idx, label, pos) in _rowSectionLabels)
+                {
+                    if (idx >= 0 && idx < ms.Length)
+                        ms[idx] = ms[idx] with { SectionLabel = label, SectionLabelPosition = pos };
+                }
+                staffVoices[firstRowName] = ImmutableArray.Create(
+                    new Voice(firstRowName, ms.ToImmutableArray()));
             }
         }
 
@@ -1909,6 +1940,7 @@ public sealed class MeasureCollector
         _grobOverrides.Clear();
         _grobReverts.Clear();
         _sectionStartMeasure.Clear();
+        _rowSectionLabels.Clear();
         _voiceMeasuresByName.Clear();
         _trillSpannerEvents.Clear();
         _courtesySourcePositions.Clear();
@@ -2488,18 +2520,32 @@ public sealed class MeasureCollector
         if (_sectionStartMeasure.Count > 0 || _sections.Count == 0)
             return;
 
-        IEnumerable<string> order = _structure != null
-            ? _structure.DescendantNodes().OfType<SectionReferenceSyntax>()
-                .Select(r => r.SectionName)
-            : _sections.Values.OrderBy(s => s.Name.Span.Start).Select(s => s.SectionName);
+        // (name, display label, source position) in playback order. The label
+        // is stamped onto the grid row's measures afterwards so a rows-only
+        // sheet prints its Verse/Chorus boxes like a staff score does.
+        var order = new List<(string Name, string? Label, int Pos)>();
+        if (_structure != null)
+        {
+            foreach (var r in _structure.DescendantNodes().OfType<SectionReferenceSyntax>())
+                order.Add((r.SectionName, ResolveSectionLabel(r), SectionDeclPos(r.SectionName)));
+        }
+        else
+        {
+            foreach (var s in _sections.Values.OrderBy(s => s.Name.Span.Start))
+                order.Add((s.SectionName, s.SectionName, s.Name.Span.Start));
+        }
 
         int cur = 0;
-        foreach (var name in order)
+        foreach (var (name, label, pos) in order)
         {
             if (!_sections.TryGetValue(name, out var section))
                 continue;
             if (!_sectionStartMeasure.ContainsKey(name))
+            {
                 _sectionStartMeasure[name] = cur;
+                if (label != null)
+                    _rowSectionLabels.Add((cur, label, pos));
+            }
 
             int chordBars = 0, lyricBars = 0;
             foreach (var cb in section.DescendantNodes().OfType<ChordPartBlockSyntax>())

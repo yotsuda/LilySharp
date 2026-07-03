@@ -55,7 +55,7 @@ public sealed record Measure
     public BarlineType EndBarline { get; }
 
     /// <summary>Optional section label (e.g., "A", "B", "Coda").</summary>
-    public string? SectionLabel { get; }
+    public string? SectionLabel { get; init; }
 
     /// <summary>If true, force a line break after this measure.</summary>
     public bool HasBreakAfter { get; }
@@ -130,7 +130,7 @@ public sealed record Measure
     /// <summary>Source offset of this measure's section-label declaration (0 = none),
     /// so the section mark can carry a data-pos that jumps to <c>section X</c>
     /// instead of the measure's music. Falls back to SourceStart when unset.</summary>
-    public int SectionLabelPosition { get; }
+    public int SectionLabelPosition { get; init; }
 
     /// <summary>
     /// True when this measure is an anacrusis (pickup) declared with <c>partial</c>:
