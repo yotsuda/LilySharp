@@ -1035,8 +1035,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
 
             // Highlight ALL elements with that data-pos
             if (nearestPos >= 0 && nearestDist < HIGHLIGHT_THRESHOLD) {
-                const color = getHighlightColor();
-                const matches = document.querySelectorAll('[data-pos="' + nearestPos + '"]');
+                highlightPositions([nearestPos]);
+            }
+        }
+
+        // Paints every element of every given data-pos (playback lights the
+        // WHOLE onset: rh and lh notes striking together are different
+        // source positions). Does NOT clear existing highlights.
+        function highlightPositions(positions) {
+            const color = getHighlightColor();
+            for (const pos of positions) {
+                const matches = document.querySelectorAll('[data-pos="' + pos + '"]');
                 // A boxed mark (section/rehearsal) is a <rect> with a <text> label on
                 // top. Recoloring both to the highlight color hides the label, so when
                 // the group has a box we recolor the box only and leave its text its
@@ -1176,21 +1185,36 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             // click-sync highlighter lights the right head), and keep it in
             // view without fighting manual scrolling more than needed.
             playStartTime = t0;
-            onsetList = notes.filter(n => n.S >= 0).map(n => ({ t: n.T, s: n.S }));
-            onsetList.sort((a, b) => a.t - b.t);
+            // Group onsets by time so SIMULTANEOUS notes (rh + lh striking
+            // together = different source positions) light up together.
+            const raw = notes.filter(n => n.S >= 0).map(n => ({ t: n.T, s: n.S }));
+            raw.sort((a, b) => a.t - b.t);
+            onsetList = [];
+            for (const o of raw) {
+                const g = onsetList[onsetList.length - 1];
+                if (g && Math.abs(o.t - g.t) < 0.005) {
+                    if (g.ss.indexOf(o.s) < 0) g.ss.push(o.s);
+                } else {
+                    onsetList.push({ t: o.t, ss: [o.s] });
+                }
+            }
             onsetIdx = 0;
+            let lastGroup = -1;
             playheadTimer = setInterval(() => {
                 if (!audioCtx) return;
                 const elapsed = audioCtx.currentTime - playStartTime;
-                let s = -1;
+                let gi = -1;
                 while (onsetIdx < onsetList.length && onsetList[onsetIdx].t <= elapsed) {
-                    s = onsetList[onsetIdx].s;
+                    gi = onsetIdx;
                     onsetIdx++;
                 }
-                if (s >= 0 && s !== lastHighlightPos) {
-                    lastHighlightPos = s;
-                    highlightNearestElement(s);
-                    const el = document.querySelector('[data-pos="' + s + '"]');
+                if (gi >= 0 && gi !== lastGroup) {
+                    lastGroup = gi;
+                    const ss = onsetList[gi].ss;
+                    clearHighlights();
+                    highlightPositions(ss);
+                    lastHighlightPos = ss[0];
+                    const el = document.querySelector('[data-pos="' + ss[0] + '"]');
                     if (el) {
                         const r = el.getBoundingClientRect();
                         const m = mainContent.getBoundingClientRect();
