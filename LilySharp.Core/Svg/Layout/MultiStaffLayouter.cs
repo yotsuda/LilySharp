@@ -859,6 +859,18 @@ public sealed class MultiStaffLayouter
                 springs = SpacingRules.ApplyChordRowSpacing(springs, allTimings, i, score.ChordNames);
                 springs = SpacingRules.EnsureLeadSheetBarWidth(springs);
             }
+            else if (!score.ChordNames.IsDefaultOrEmpty)
+            {
+                // Staff-attached chord symbols price their widths into the
+                // columns on EVERY measure, exactly as LilyPond's ChordName
+                // item extent (expanded (-0.5 . 0.5)) joins its paper column
+                // — most visible over all-rest (R1) bars, which have no other
+                // width source and otherwise collapse, overprinting the
+                // symbols. LILYPOND-REF: scm/define-grobs.scm ChordName
+                // extra-spacing-width.
+                springs = SpacingRules.ApplyChordRowSpacing(
+                    springs, allTimings, i, score.ChordNames, includeAttached: true);
+            }
 
             // LINE-START measure: spring 0 is the prefix→first-note spacing
             // (space-alist of the last prefix item), not the mid-line

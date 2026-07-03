@@ -25,6 +25,10 @@ public sealed class MeasureValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
     private Fraction _timeSignature = new(4, 4); // Default 4/4
+    // The meter AS WRITTEN ("4/4", "6/8") for diagnostics — the Fraction
+    // normalizes (4/4 → "1"), which made the overfull warning read
+    // "exceeds time signature 1".
+    private string _meterText = "4/4";
     // Set by a top-level `partial N` — the declared pickup length for every
     // voice's first measure (mirrors MeasureCollector._filePartial).
     private Fraction? _filePartial;
@@ -37,6 +41,7 @@ public sealed class MeasureValidator : ISemanticValidator
     public void SetTimeSignature(int beats, int beatUnit)
     {
         _timeSignature = DurationCalculator.ParseTimeSignature(beats, beatUnit);
+        _meterText = $"{beats}/{beatUnit}";
     }
 
     /// <summary>
@@ -154,7 +159,7 @@ public sealed class MeasureValidator : ISemanticValidator
                         _diagnostics.Warning(span, DiagnosticCodes.MeasureIncomplete,
                             partialLength != null
                                 ? $"Pickup measure duration {duration} is less than the declared partial {expected}"
-                                : $"Measure duration {duration} is less than time signature {expected}");
+                                : $"Measure duration {duration} is less than time signature {_meterText}");
                     }
                     else if (i == 0)
                     {
@@ -166,7 +171,7 @@ public sealed class MeasureValidator : ISemanticValidator
                         // as bar 0).
                         var span = GetSpan(measure.Items);
                         _diagnostics.Warning(span, DiagnosticCodes.PickupWithoutPartial,
-                            $"first measure is shorter than the meter ({duration} of {expected}); " +
+                            $"first measure is shorter than the meter ({duration} of {_meterText}); " +
                             $"if this is a pickup, declare it with '{SuggestPartial(duration)}' " +
                             "(top level or in the voice) so its length is checked and " +
                             "bar numbering starts after it");
@@ -180,7 +185,7 @@ public sealed class MeasureValidator : ISemanticValidator
                     _diagnostics.Warning(span, DiagnosticCodes.MeasureOverflow,
                         partialLength != null
                             ? $"Pickup measure duration {duration} exceeds the declared partial {expected}"
-                            : $"Measure duration {duration} exceeds time signature {expected}");
+                            : $"Measure duration {duration} exceeds time signature {_meterText}");
                 }
             }
         }

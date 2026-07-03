@@ -471,7 +471,10 @@ public sealed class LayoutEngine
         var primaryScore = new Score(
             primaryStaff.PrimaryVoice, score.TimeSignature, score.KeySignature,
             ClefToString(primaryStaff.Clef), score.Tempo, score.Title, score.Composer,
-            tupletBrackets: score.TupletBrackets, swingSubdivision: score.SwingSubdivision)
+            tupletBrackets: score.TupletBrackets, swingSubdivision: score.SwingSubdivision,
+            // The MMR engraver reads score.ChordNames to keep a chord-bearing
+            // rest bar out of a compressed run (see MultiMeasureRestEngraver).
+            chordNames: score.ChordNames)
         {
             TempoText = score.TempoText,
             TempoBeatUnit = score.TempoBeatUnit,

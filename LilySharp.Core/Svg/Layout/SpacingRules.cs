@@ -1472,17 +1472,20 @@ public static class SpacingRules
     /// The SVG renderer uses font-size = 4 * 0.8 = 3.2 staff spaces.
     /// </remarks>
     /// <summary>
-    /// Reserves the CHORD ROW symbols' real text widths on the timing columns
-    /// (the chord-row analog of ApplyLyricSpacing). A chords-only grid
-    /// otherwise has near-zero natural bar widths: sixteen bars "fit" one
-    /// line and the grid never wraps. Widths use the sans face the symbols
-    /// render in; a word-space (1.0) separates neighbours.
+    /// Reserves chord symbols' real text widths on the timing columns, the
+    /// way LilyPond's ChordName item joins its paper column's horizontal
+    /// extent expanded by (-0.5 . 0.5) — so neighbouring symbols keep ≥1.0
+    /// space and a chords-only grid gets real bar widths (sixteen R1-thin
+    /// bars otherwise "fit" one line and the symbols overprint). Widths use
+    /// the sans face the symbols render in.
+    /// LILYPOND-REF: scm/define-grobs.scm ChordName extra-spacing-width.
     /// </summary>
     public static ImmutableArray<Spring> ApplyChordRowSpacing(
         ImmutableArray<Spring> springs,
         IReadOnlyList<Fraction> timings,
         int measureIndex,
-        ImmutableArray<ChordNameItem> chordNames)
+        ImmutableArray<ChordNameItem> chordNames,
+        bool includeAttached = false)
     {
         if (chordNames.IsDefaultOrEmpty || springs.Length != timings.Count + 1)
             return springs;
@@ -1491,7 +1494,11 @@ public static class SpacingRules
         bool any = false;
         foreach (var cn in chordNames)
         {
-            if (cn.MeasureIndex != measureIndex || !cn.IsChordRow)
+            if (cn.MeasureIndex != measureIndex)
+                continue;
+            // Row symbols always price; STAFF-ATTACHED symbols only when the
+            // caller opts in (an all-rest measure has no other width source).
+            if (!cn.IsChordRow && (!includeAttached || !cn.UseTiming))
                 continue;
             for (int t = 0; t < timings.Count; t++)
             {
@@ -1507,7 +1514,11 @@ public static class SpacingRules
         if (!any)
             return springs;
 
-        const double chordGap = 1.0; // ink gap between neighbouring symbols
+        // LILYPOND-REF: scm/define-grobs.scm ChordName extra-spacing-width
+        // (-0.5 . 0.5): each symbol's spacing extent grows 0.5 to each side,
+        // so adjacent symbols keep 1.0 and a symbol clears a barline by 0.5.
+        const double chordGap = 1.0;
+        const double edgeGap = 0.5;
         var result = springs.ToBuilder();
         void Widen(int springIndex, double needed)
         {
@@ -1516,10 +1527,10 @@ public static class SpacingRules
                 result[springIndex] = new Spring(
                     Math.Max(s.IdealDistance, needed), needed, s.InverseStretchStrength);
         }
-        Widen(0, half[0] + MinItemGap);
+        Widen(0, half[0] + edgeGap);
         for (int t = 0; t < timings.Count - 1; t++)
             Widen(t + 1, half[t] + half[t + 1] + chordGap);
-        Widen(timings.Count, half[^1] + MinItemGap);
+        Widen(timings.Count, half[^1] + edgeGap);
         return result.ToImmutable();
     }
 

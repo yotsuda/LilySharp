@@ -164,6 +164,13 @@ public sealed class SystemBreaker
                 springs = SpacingRules.ApplyChordRowSpacing(springs, allTimings, i, score.ChordNames);
                 springs = SpacingRules.EnsureLeadSheetBarWidth(springs);
             }
+            else if (!score.ChordNames.IsDefaultOrEmpty)
+            {
+                // Mirror the system layout: attached chord symbols price
+                // their widths on every measure (LP ChordName extent).
+                springs = SpacingRules.ApplyChordRowSpacing(
+                    springs, allTimings, i, score.ChordNames, includeAttached: true);
+            }
 
             double ideal = 0, min = 0, invStretch = 0;
             foreach (var s in springs)

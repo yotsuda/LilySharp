@@ -78,6 +78,16 @@ public static class MultiMeasureRestEngraver
         var voice = score.Voice;
         var builder = ImmutableArray.CreateBuilder<MultiMeasureRestLayout>();
 
+        // A rest measure that carries a CHORD SYMBOL stays its own bar (a
+        // one-bar MMR with a centred rest): merging it into a run stacked
+        // every chord of the run onto the combined bar's single anchor
+        // column, overprinting them. Chord ROWS live on their own row staff
+        // and do not constrain the music staff.
+        var chordMeasures = new HashSet<int>();
+        foreach (var cn in score.ChordNames)
+            if (!cn.IsChordRow)
+                chordMeasures.Add(cn.MeasureIndex);
+
         // A measure collapses into a multi-measure rest only when EVERY staff
         // rests it. LilyPond keeps the measures (and their barlines) separate when
         // another staff has content — the resting staff then shows individual
@@ -126,8 +136,12 @@ public static class MultiMeasureRestEngraver
 
             int runStart = mi;
             int runEnd = mi;
+            // A chord-bearing rest measure stays a ONE-bar MMR: it neither
+            // extends into a run nor lets a run swallow it (see chordMeasures).
             while (runEnd + 1 < voice.Measures.Length &&
                    RestsEverywhere(runEnd + 1) &&
+                   !chordMeasures.Contains(runStart) &&
+                   !chordMeasures.Contains(runEnd + 1) &&
                    measureMap.TryGetValue(runEnd + 1, out var nextInfo) &&
                    nextInfo.System.SystemIndex == startSystem.SystemIndex)
             {
