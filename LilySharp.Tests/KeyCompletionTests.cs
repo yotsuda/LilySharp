@@ -70,6 +70,18 @@ public class KeyCompletionTests
             labels);
     }
 
+    [Theory]
+    [InlineData("octave ")]                 // top level
+    [InlineData("part m { octave ")]        // part header
+    [InlineData("section A { m { octave ")] // mid-music
+    public void AfterOctave_OffersOnlyTheOctaveModes(string text)
+    {
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterOctave, ContextOf(text));
+        var labels = LilySharpLanguageServer.GetOctaveCompletions().Items
+            .Select(i => i.Label).ToArray();
+        Assert.Equal(new[] { "absolute", "relative" }, labels);
+    }
+
     [Fact]
     public void TopLevelCompletions_CarryTheScoreTemplates()
     {

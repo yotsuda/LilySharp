@@ -373,6 +373,7 @@ public sealed class LilySharpLanguageServer
             CompletionContext.AfterClef => GetClefCompletions(),
             CompletionContext.AfterKey => GetKeyTonicCompletions(),
             CompletionContext.AfterKeyTonic => GetKeyModeCompletions(),
+            CompletionContext.AfterOctave => GetOctaveCompletions(),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterAt => GetArticulationCompletions(),
@@ -584,6 +585,7 @@ public sealed class LilySharpLanguageServer
         AfterClef,
         AfterKey,
         AfterKeyTonic,
+        AfterOctave,
         AfterInstrument,
         AfterRemoveEmpty,
         AfterAt,
@@ -638,6 +640,11 @@ public sealed class LilySharpLanguageServer
         // (major/minor/dorian/…), not lyrics/tempo/every keyword.
         if (prevWord == "key")
             return CompletionContext.AfterKey;
+
+        // `octave |` → only its two modes (a bare number re-anchor is typed,
+        // not completed).
+        if (prevWord == "octave")
+            return CompletionContext.AfterOctave;
         if (IsPitchName(prevWord) && SecondWordBeforeCursor(text, offset) == "key")
             return CompletionContext.AfterKeyTonic;
 
@@ -758,6 +765,28 @@ public sealed class LilySharpLanguageServer
         int end = i;
         while (i > 0 && IsWordChar(text[i - 1])) i--;        // the word before it
         return text.Substring(i, end - i);
+    }
+
+    /// <summary>The octave-mode words valid right after <c>octave</c>. A bare
+    /// integer (<c>octave 3</c>, the part-header base re-anchor) is also legal
+    /// there but is typed, not completed.</summary>
+    internal static CompletionList GetOctaveCompletions()
+    {
+        var modes = new (string Label, string Detail)[]
+        {
+            ("absolute", "Absolute octaves: bare c = C4; ' / , are absolute offsets per note"),
+            ("relative", "Relative octaves (default): each note nearest the previous"),
+        };
+        return new CompletionList
+        {
+            Items = modes.Select((m, i) => new CompletionItem
+            {
+                Label = m.Label,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = m.Detail,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
     }
 
     /// <summary>Tonic pitches offered right after <c>key</c>, in circle-of-fifths
