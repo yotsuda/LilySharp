@@ -328,6 +328,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 panelReady.get(uri)?.resolve();
                 return;
             }
+            if (message.type === 'webviewError') {
+                outputChannel.appendLine(
+                    `WEBVIEW ERROR: ${message.message} (line ${message.line})`);
+                return;
+            }
             if (message.type === 'export') {
                 await exportPreview(uri, message.renderName);
             } else if (message.type === 'jumpToPosition') {
@@ -377,7 +382,7 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
 
     // Set initial HTML structure with font
     outputChannel.appendLine('Setting webview HTML');
-    panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource);
+    panel.webview.html = getPreviewHtml(fontUri.toString(), braceFontUri.toString(), panel.webview.cspSource, getNonce());
 
     // Then load content
     outputChannel.appendLine('Calling updatePreviewContent');
@@ -625,13 +630,27 @@ interface SvgResponse {
     Renders: RenderInfo[] | null;
 }
 
-function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string): string {
+// Webview scripts must be nonce-allowed: newer VS Code builds reject
+// script-src 'unsafe-inline' outright — the preview script then never runs
+// and the panel sits on "Loading preview…" while the extension happily posts
+// SVG into the void.
+// https://code.visualstudio.com/api/extension-guides/webview#content-security-policy
+function getNonce(): string {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 32; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+}
+
+function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string, nonce: string): string {
     return `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src ${cspSource}; script-src 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src ${cspSource}; script-src 'nonce-${nonce}';">
     <style>
         @font-face {
             font-family: 'Emmentaler';
@@ -818,8 +837,15 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </div>
     </div>
     <div class="zoom-info" id="zoomInfo">100%</div>
-    <script>
+    <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
+        // Boot beacon + error relay: the FIRST statements, so the extension's
+        // output channel shows whether this script ran at all, and any later
+        // runtime error lands in the same log instead of a hidden devtools.
+        vscode.postMessage({ type: 'webviewBoot' });
+        window.addEventListener('error', (e) => {
+            vscode.postMessage({ type: 'webviewError', message: String(e.message), line: e.lineno });
+        });
         const HIGHLIGHT_THRESHOLD = ${HIGHLIGHT_DISTANCE_THRESHOLD};
 
         let scale = 1;
