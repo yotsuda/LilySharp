@@ -155,7 +155,7 @@ public static class SpacingRules
 
         double w = 0.8; // barline → signature gap
         if (natCount > 0)
-            w += natCount * 0.7 + 0.4;
+            w += natCount * (GlyphMetrics.AccidentalNatural.Width + 0.2) + 0.4;
         if (nextSharps != 0)
             w += Math.Abs(nextSharps) * GlyphMetrics.GetKeySignatureAccidentalWidth(nextSharps > 0) + 0.4;
         return w;

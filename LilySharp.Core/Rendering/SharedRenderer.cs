@@ -4442,13 +4442,17 @@ public static class SharedRenderer
         {
             int natCount = Math.Abs(prev) - (Math.Sign(prev) == Math.Sign(next) ? Math.Abs(next) : 0);
             int startAt = Math.Sign(prev) == Math.Sign(next) ? Math.Abs(next) : 0;
+            // Advance by the natural's INK width plus clearance — the old
+            // 0.7 was narrower than the glyph (0.724) and adjacent naturals
+            // overlapped. LILYPOND-REF: mf/feta-accidentals.mf natural extent.
+            double naturalAdvance = GlyphMetrics.AccidentalNatural.Width + 0.2;
             for (int i = 0; i < natCount; i++)
             {
                 int staffPosition = KeySigStaffPosition(clef, prev > 0, startAt + i);
                 double y = staffY + StaffHeight / 2 - staffPosition * 0.5;
                 using (gc.Source(change.SourcePosition))
                     gc.DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x + dx, y, FontSize);
-                dx += 0.7;
+                dx += naturalAdvance;
             }
             // Breathing room between the cancellation and the new signature.
             // LILYPOND-REF: scm/define-grobs.scm KeyCancellation
