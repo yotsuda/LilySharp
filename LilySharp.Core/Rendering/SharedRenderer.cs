@@ -3696,22 +3696,30 @@ public static class SharedRenderer
                     "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
                 x += SerifTextMetrics.Measure("(", textSize) + 0.1;
             }
-            char head = m.TempoBeatUnit <= 2
-                ? EmmentalerGlyphs.NoteheadHalf
-                : EmmentalerGlyphs.NoteheadBlack;
+            // Beat-unit note: whole (1) = stemless whole head; 2 = hollow
+            // half with stem; 4+ = black head, stem, flags from the 8th up.
+            char head = m.TempoBeatUnit <= 1
+                ? EmmentalerGlyphs.NoteheadWhole
+                : m.TempoBeatUnit == 2
+                    ? EmmentalerGlyphs.NoteheadHalf
+                    : EmmentalerGlyphs.NoteheadBlack;
             gc.DrawGlyph(head, x, absY, noteSize);
-            double stemX = x + noteSize * 0.32;
-            double stemTop = absY - 3.5 * (noteSize / FontSize);
-            gc.DrawLine(stemX, absY, stemX, stemTop, Color.Black, 0.10);
-            if (m.TempoBeatUnit >= 8)
-                gc.DrawGlyph(EmmentalerGlyphs.Flag8thUp, stemX, stemTop, noteSize);
-            double dotX = x + noteSize * 0.5 + 0.15;
+            double headW = m.TempoBeatUnit <= 1 ? noteSize * 0.62 : noteSize * 0.5;
+            if (m.TempoBeatUnit >= 2)
+            {
+                double stemX = x + noteSize * 0.32;
+                double stemTop = absY - 3.5 * (noteSize / FontSize);
+                gc.DrawLine(stemX, absY, stemX, stemTop, Color.Black, 0.10);
+                if (m.TempoBeatUnit >= 8)
+                    gc.DrawGlyph(EmmentalerGlyphs.Flag8thUp, stemX, stemTop, noteSize);
+            }
+            double dotX = x + headW + 0.15;
             for (int d = 0; d < m.TempoDots; d++)
             {
                 gc.DrawGlyph(EmmentalerGlyphs.AugmentationDot, dotX, absY - 0.5, noteSize);
                 dotX += 0.55;
             }
-            double tempoTextX = Math.Max(x + noteSize * 0.5 + 0.3, m.TempoDots > 0 ? dotX + 0.15 : 0);
+            double tempoTextX = Math.Max(x + headW + 0.3, m.TempoDots > 0 ? dotX + 0.15 : 0);
             string equation = "= " + m.Text + (m.TempoText != null ? ")" : "");
             gc.DrawText(equation, tempoTextX, absY,
                 textSize, "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
