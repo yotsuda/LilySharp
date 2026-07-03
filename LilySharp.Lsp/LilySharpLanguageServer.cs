@@ -377,7 +377,7 @@ public sealed class LilySharpLanguageServer
             CompletionContext.AfterTempo => GetTempoCompletions(),
             CompletionContext.AfterTime => GetTimeCompletions(),
             CompletionContext.AfterPartial => GetPartialCompletions(),
-            CompletionContext.AfterTitleText => new CompletionList { Items = System.Array.Empty<CompletionItem>() },
+            CompletionContext.AfterTitleText => GetTitleTextCompletions(WordBeforeCursor(doc.Text, offset)),
             CompletionContext.ScoreBlock => GetScoreBlockCompletions(),
             CompletionContext.AfterStaffRef => GetDeclaredNameCompletions(doc.Text, "part", "Part"),
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
@@ -875,6 +875,26 @@ public sealed class LilySharpLanguageServer
         while (j >= 0 && IsWordChar(text[j])) j--;
         string w0 = text.Substring(j + 1, e2 - (j + 1));
         return w0 == "score";
+    }
+
+    /// <summary>After <c>title</c> / <c>composer</c>: one snippet that drops a
+    /// quote pair and parks the caret inside — the text itself is typed.</summary>
+    internal static CompletionList GetTitleTextCompletions(string keyword)
+    {
+        return new CompletionList
+        {
+            Items =
+            [
+                new CompletionItem
+                {
+                    Label = "\"\"",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "\"$0\"",
+                    Detail = keyword == "composer" ? "Quoted composer name" : "Quoted title text",
+                },
+            ]
+        };
     }
 
     /// <summary>The written tempo forms, as fill-in snippets — after <c>tempo</c>

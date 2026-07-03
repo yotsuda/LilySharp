@@ -94,12 +94,15 @@ public class ValueContextCompletionTests
     }
 
     [Fact]
-    public void TitleContext_OffersNothing()
+    public void TitleContext_OffersOnlyTheQuotePair()
     {
-        // An empty list keeps the popup out of the way while a name is typed.
-        Assert.Empty(LilySharpLanguageServer.GetTempoCompletions().Items
-            .Where(i => i.Label == "lyrics"));
-        Assert.Empty(LilySharpLanguageServer.GetPartialCompletions().Items
-            .Where(i => i.Kind != Microsoft.VisualStudio.LanguageServer.Protocol.CompletionItemKind.EnumMember));
+        // The text itself is typed; the single snippet just drops "" and
+        // parks the caret inside.
+        var items = LilySharpLanguageServer.GetTitleTextCompletions("title").Items;
+        var item = Assert.Single(items);
+        Assert.Equal("\"$0\"", item.InsertText);
+        Assert.Equal("Quoted title text", item.Detail);
+        Assert.Equal("Quoted composer name",
+            Assert.Single(LilySharpLanguageServer.GetTitleTextCompletions("composer").Items).Detail);
     }
 }
