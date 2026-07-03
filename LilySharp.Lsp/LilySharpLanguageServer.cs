@@ -371,6 +371,8 @@ public sealed class LilySharpLanguageServer
             CompletionContext.StructureBlock => GetStructureCompletions(doc.Text),
             CompletionContext.PartBlock => GetPartPropertyCompletions(),
             CompletionContext.AfterClef => GetClefCompletions(),
+            CompletionContext.AfterKey => GetKeyTonicCompletions(),
+            CompletionContext.AfterKeyTonic => GetKeyModeCompletions(),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterAt => GetArticulationCompletions(),
@@ -580,6 +582,8 @@ public sealed class LilySharpLanguageServer
         StructureBlock,
         PartBlock,
         AfterClef,
+        AfterKey,
+        AfterKeyTonic,
         AfterInstrument,
         AfterRemoveEmpty,
         AfterAt,
@@ -629,6 +633,13 @@ public sealed class LilySharpLanguageServer
         var prevWord = WordBeforeCursor(text, offset);
         if (prevWord == "clef")
             return CompletionContext.AfterClef;
+
+        // `key |` → tonic pitches; `key a |` → only the modes are valid
+        // (major/minor/dorian/…), not lyrics/tempo/every keyword.
+        if (prevWord == "key")
+            return CompletionContext.AfterKey;
+        if (IsPitchName(prevWord) && SecondWordBeforeCursor(text, offset) == "key")
+            return CompletionContext.AfterKeyTonic;
 
         // Right after the `instrument` part property only the known instrument presets
         // are valid — offer those alone (they set clef/octave/tuning defaults). Unlike
@@ -729,6 +740,75 @@ public sealed class LilySharpLanguageServer
 
     /// <summary>The clef names valid right after the <c>clef</c> keyword, ordered
     /// from the highest-sounding clef to the lowest (not alphabetically).</summary>
+    /// <summary>True for a bare pitch-name word (c…b with optional is/es
+    /// accidental suffixes) — the tonic between `key` and its mode.</summary>
+    internal static bool IsPitchName(string word)
+        => System.Text.RegularExpressions.Regex.IsMatch(word, "^[a-g](is|es|isis|eses)?$");
+
+    /// <summary>The word before <see cref="WordBeforeCursor"/> — "key" in
+    /// <c>key a m|</c>, where the partial word is "m" and the previous is "a".</summary>
+    internal static string SecondWordBeforeCursor(string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_' || c == '-';
+        int i = offset;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // skip the partial word
+        while (i > 0 && char.IsWhiteSpace(text[i - 1])) i--;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // the previous word
+        while (i > 0 && char.IsWhiteSpace(text[i - 1])) i--;
+        int end = i;
+        while (i > 0 && IsWordChar(text[i - 1])) i--;        // the word before it
+        return text.Substring(i, end - i);
+    }
+
+    /// <summary>Tonic pitches offered right after <c>key</c>, in circle-of-fifths
+    /// order (sharps up, then flats down) so related keys sit together.</summary>
+    internal static CompletionList GetKeyTonicCompletions()
+    {
+        var tonics = new (string Label, string Detail)[]
+        {
+            ("c", "0 ♯/♭ (major)"), ("g", "1 ♯"), ("d", "2 ♯"), ("a", "3 ♯"),
+            ("e", "4 ♯"), ("b", "5 ♯"), ("fis", "6 ♯"), ("cis", "7 ♯"),
+            ("f", "1 ♭"), ("bes", "2 ♭"), ("ees", "3 ♭"), ("aes", "4 ♭"),
+            ("des", "5 ♭"), ("ges", "6 ♭"), ("ces", "7 ♭"),
+        };
+        return new CompletionList
+        {
+            Items = tonics.Select((t, i) => new CompletionItem
+            {
+                Label = t.Label,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = $"Tonic — {t.Detail} signature",
+                SortText = i.ToString("D2"),
+            }).ToArray()
+        };
+    }
+
+    /// <summary>The modes valid after <c>key TONIC</c> — nothing else fits there.</summary>
+    internal static CompletionList GetKeyModeCompletions()
+    {
+        var modes = new (string Label, string Detail)[]
+        {
+            ("major", "Major (ionian)"),
+            ("minor", "Natural minor (aeolian): major − 3 sharps"),
+            ("dorian", "Dorian: major − 2 sharps"),
+            ("phrygian", "Phrygian: major − 4 sharps"),
+            ("lydian", "Lydian: major + 1 sharp"),
+            ("mixolydian", "Mixolydian: major − 1 sharp"),
+            ("aeolian", "Aeolian (= minor)"),
+            ("locrian", "Locrian: major − 5 sharps"),
+        };
+        return new CompletionList
+        {
+            Items = modes.Select((m, i) => new CompletionItem
+            {
+                Label = m.Label,
+                Kind = CompletionItemKind.EnumMember,
+                Detail = m.Detail,
+                SortText = i.ToString(),
+            }).ToArray()
+        };
+    }
+
     internal static CompletionList GetClefCompletions()
     {
         // High → low pitch range.
