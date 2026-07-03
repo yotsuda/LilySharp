@@ -239,12 +239,30 @@ public static class ArticulationEngraver
                     + LayoutUtilities.GetItemXOffset(artMeasures,
                         articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
                 const double tabGap = 1.0;
-                double tabY = stemUp
-                    ? staffOffset + (strings - 1) * space + tabGap // below the bottom line
-                    : staffOffset - tabGap;                        // above the top line
+                // Fermata, ornaments and bow marks keep direction = UP on a tab
+                // staff too — LilyPond's TabVoice keeps the Script_engraver and
+                // the script side-positions above the staff symbol; only
+                // stem-coupled articulations (staccato, accent, …) sit opposite
+                // the stem. Blindly following the stem parked the final chord's
+                // fermata INSIDE the staff under the bottom digit.
+                // LILYPOND-REF: ly/engraver-init.ly:1170-1188 TabVoice;
+                // LILYPOND-REF: scm/define-grobs.scm:1365 fermata direction = UP.
+                bool tabForceAbove = articulation.Type == ArticulationType.Fermata
+                    || articulation.IsOrnament || articulation.IsEditorialAccidental
+                    || articulation.Type is ArticulationType.UpBow or ArticulationType.DownBow
+                        or ArticulationType.Flageolet;
+                bool tabAbove = tabForceAbove || !stemUp;
+                double tabY = tabAbove
+                    ? staffOffset - tabGap                          // above the top line
+                    : staffOffset + (strings - 1) * space + tabGap; // below the bottom line
+                // The glyph must match the side chosen HERE (the item's own
+                // IsAbove was resolved with notation-staff logic).
+                string tabGlyph = articulation.Type == ArticulationType.Fermata
+                    ? (tabAbove ? EmmentalerGlyphs.FermataAbove : EmmentalerGlyphs.FermataBelow).ToString()
+                    : articulation.GetGlyph();
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex, articulation.ItemIndex, colX, tabY,
-                    articulation.GetGlyph(), !stemUp, articulation.SourcePosition, 1.0,
+                    tabGlyph, tabAbove, articulation.SourcePosition, 1.0,
                     GetSeedBBox(articulation.Type), SourceIndex: arti, StaffIndex: articulation.StaffIndex));
                 continue;
             }
