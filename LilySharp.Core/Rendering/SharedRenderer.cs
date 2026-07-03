@@ -379,7 +379,15 @@ public static class SharedRenderer
                     // Tag the key sig with its declaration on the first line only — there
                     // it IS the declared key; later lines may show a mid-piece change,
                     // which carries its own position via its measure item.
-                    using (SourceScope(sgc, isFirstSystem ? score.Header.Key : 0))
+                    int keySigPos = isFirstSystem ? score.Header.Key : 0;
+                    if (GetSystemStartKeyChange(staff, system) is { } startKeyChange)
+                    {
+                        // A key change at the line break: the new line opens
+                        // with the NEW key (no crammed naturals in bar one).
+                        activeKey = startKeyChange.NewKey;
+                        keySigPos = startKeyChange.SourcePosition;
+                    }
+                    using (SourceScope(sgc, keySigPos))
                         prefixEndX = DrawKeySignature(activeKey, clef, prefixEndX, localStaffY, sgc);
                 }
                 if (!isOssia)
@@ -882,6 +890,54 @@ public static class SharedRenderer
         return null;
     }
 
+    /// <summary>
+    /// Returns the key-signature change that OPENS the first measure of a
+    /// (non-first) system, or null. Such a change lands exactly at the line
+    /// break and prints as the NEW key in the system prefix; the cancellation
+    /// belongs to the previous line, not to bar one of the new line.
+    /// LILYPOND-REF: lily/break-align-engraver.cc — KeySignature is
+    /// break-aligned at every line start.
+    /// </summary>
+    private static KeySignatureChangeItem? GetSystemStartKeyChange(Staff staff, SystemLayout system)
+    {
+        if (system.SystemIndex == 0 || system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return null;
+
+        var voice = staff.PrimaryVoice;
+        int firstMeasureIndex = system.Measures[0].MeasureIndex;
+        if (firstMeasureIndex >= voice.Measures.Length)
+            return null;
+
+        foreach (var item in voice.Measures[firstMeasureIndex].Items)
+        {
+            if (item is KeySignatureChangeItem kc)
+                return kc;
+            if (item.Duration > Fraction.Zero)
+                break; // a note/rest before any change → not measure-opening
+        }
+        return null;
+    }
+
+    /// <summary>True when this key change is the one folded into its system's
+    /// start prefix (see GetSystemStartKeyChange) — the per-measure pass must
+    /// not draw it again.</summary>
+    private static bool IsSystemStartKeyChange(
+        Voice voice, SystemLayout system, int measureIndex, KeySignatureChangeItem kc)
+    {
+        if (system.SystemIndex == 0 || system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return false;
+        if (measureIndex != system.Measures[0].MeasureIndex || measureIndex >= voice.Measures.Length)
+            return false;
+        foreach (var item in voice.Measures[measureIndex].Items)
+        {
+            if (ReferenceEquals(item, kc))
+                return true;
+            if (item.Duration > Fraction.Zero)
+                return false;
+        }
+        return false;
+    }
+
     private static double DrawClef(ClefType clef, double x, double staffY, IDrawingContext gc)
     {
         char glyph = clef switch
@@ -987,9 +1043,31 @@ public static class SharedRenderer
     {
         if (key.Sharps == 0) return x;
 
-        // c0-position: staff position of middle C for each clef (half-spaces from
-        // the middle line, + = up). Replaces the old uniform integer clefShift,
-        // which placed accidentals on the wrong lines for non-treble clefs.
+        bool isSharps = key.Sharps > 0;
+        char glyph = isSharps ? EmmentalerGlyphs.AccidentalSharp : EmmentalerGlyphs.AccidentalFlat;
+        int[] positions = isSharps ? KeySigSharpPositions : KeySigFlatPositions;
+        int[] steps = isSharps ? KeySigSharpSteps : KeySigFlatSteps;
+
+        int n = Math.Min(Math.Abs(key.Sharps), 7);
+
+        double accidentalWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(isSharps);
+        for (int i = 0; i < n; i++)
+        {
+            int staffPosition = KeySigStaffPosition(clef, isSharps, i);
+            double y = staffY + StaffHeight / 2 - staffPosition * 0.5;
+            gc.DrawGlyph(glyph, x, y, FontSize);
+            x += accidentalWidth;
+        }
+        return x + 0.4;
+    }
+
+    /// <summary>
+    /// Staff position of the i-th key-signature accidental for a clef.
+    /// LILYPOND-REF: scm/music-functions.scm key-signature-interface —
+    /// staffPosition = hi − modulo(hi − (c0 + step), 7).
+    /// </summary>
+    private static int KeySigStaffPosition(ClefType clef, bool isSharps, int index)
+    {
         int c0Position = clef switch
         {
             ClefType.Bass => 6,
@@ -997,29 +1075,13 @@ public static class SharedRenderer
             ClefType.Tenor => 2,
             _ => -6, // treble (and treble_8)
         };
-
-        bool isSharps = key.Sharps > 0;
-        char glyph = isSharps ? EmmentalerGlyphs.AccidentalSharp : EmmentalerGlyphs.AccidentalFlat;
+        int cPos = ((c0Position % 7) + 7) % 7;
         int[] positions = isSharps ? KeySigSharpPositions : KeySigFlatPositions;
         int[] steps = isSharps ? KeySigSharpSteps : KeySigFlatSteps;
-
-        int cPos = ((c0Position % 7) + 7) % 7;
         int hi = positions[cPos];
-        int n = Math.Min(Math.Abs(key.Sharps), 7);
-
-        double accidentalWidth = GlyphMetrics.GetKeySignatureAccidentalWidth(isSharps);
-        for (int i = 0; i < n; i++)
-        {
-            int step = steps[i];
-            // LilyPond: staffPosition = hi - modulo(hi - (c-pos + step), 7).
-            int diff = hi - (cPos + step);
-            int modDiff = ((diff % 7) + 7) % 7;
-            int staffPosition = hi - modDiff;
-            double y = staffY + StaffHeight / 2 - staffPosition * 0.5;
-            gc.DrawGlyph(glyph, x, y, FontSize);
-            x += accidentalWidth;
-        }
-        return x + 0.4;
+        int diff = hi - (cPos + steps[index]);
+        int modDiff = ((diff % 7) + 7) % 7;
+        return hi - modDiff;
     }
 
     // ---------- Notes & rests per staff ----------
@@ -1096,7 +1158,11 @@ public static class SharedRenderer
                     DrawClefChange(clefChange, itemX, staffY, gc);
                     break;
                 case KeySignatureChangeItem keyChange:
-                    DrawKeySignatureChange(keyChange, itemX, staffY, gc);
+                    // A change that OPENS a later system is folded into that
+                    // system's prefix (new key only, like LilyPond) — drawing
+                    // it here too overprinted the prefix with naturals.
+                    if (!IsSystemStartKeyChange(voice, system, ml.MeasureIndex, keyChange))
+                        DrawKeySignatureChange(keyChange, itemX, staffY, clef, gc);
                     break;
                 case TimeSignatureChangeItem timeChange:
                     DrawTimeSignatureChange(timeChange, itemX, staffY, gc);
@@ -4275,35 +4341,42 @@ public static class SharedRenderer
     /// <remarks>
     /// LILYPOND-REF: lily/key-engraver.cc — process_music()
     /// </remarks>
-    private static void DrawKeySignatureChange(KeySignatureChangeItem change, double x, double staffY, IDrawingContext gc)
+    private static void DrawKeySignatureChange(KeySignatureChangeItem change, double x, double staffY,
+        ClefType clef, IDrawingContext gc)
     {
         int prev = change.PreviousKey.Sharps;
         int next = change.NewKey.Sharps;
         double dx = 0;
 
-        // Cancellation naturals when the sign flips or count shrinks.
+        // Cancellation naturals when the sign flips or count shrinks. Their
+        // positions are the PREVIOUS key's accidental positions, resolved for
+        // THIS staff's clef — the old treble-only table drew bass-staff
+        // naturals a third off.
+        // LILYPOND-REF: lily/key-engraver.cc — cancellation from key_signature;
+        // scm/music-functions.scm key-signature-interface positions.
         bool needNaturals = (prev != 0 && next == 0) ||
                             (prev > 0 && next < 0) || (prev < 0 && next > 0) ||
                             (Math.Sign(prev) == Math.Sign(next) && Math.Abs(next) < Math.Abs(prev));
         if (needNaturals)
         {
             int natCount = Math.Abs(prev) - (Math.Sign(prev) == Math.Sign(next) ? Math.Abs(next) : 0);
-            int[] sharpPos = { 8, 5, 9, 6, 3, 7, 4 };
-            int[] flatPos = { 4, 7, 3, 6, 2, 5, 1 };
-            var positions = prev > 0 ? sharpPos : flatPos;
             int startAt = Math.Sign(prev) == Math.Sign(next) ? Math.Abs(next) : 0;
             for (int i = 0; i < natCount; i++)
             {
-                int pos = positions[startAt + i];
-                double y = staffY + 4 - (pos - 1) * 0.5;
+                int staffPosition = KeySigStaffPosition(clef, prev > 0, startAt + i);
+                double y = staffY + StaffHeight / 2 - staffPosition * 0.5;
                 using (gc.Source(change.SourcePosition))
                     gc.DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x + dx, y, FontSize);
                 dx += 0.7;
             }
+            // Breathing room between the cancellation and the new signature.
+            // LILYPOND-REF: scm/define-grobs.scm KeyCancellation
+            //   padding-pairs give it its own break-align slot.
+            dx += 0.4;
         }
 
         if (next != 0)
-            DrawKeySignature(change.NewKey, ClefType.Treble, x + dx, staffY, gc);
+            DrawKeySignature(change.NewKey, clef, x + dx, staffY, gc);
     }
 
     /// <summary>
