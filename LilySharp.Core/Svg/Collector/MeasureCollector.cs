@@ -635,6 +635,10 @@ public sealed class MeasureCollector
     // Active `repeat tremolo N { … }` transform: the body note prints ONCE at
     // the combined duration with the subdivision's stem slashes.
     private int _tremoloRepeatCount = 1;
+    // Active two-note tremolo: (display value, display dots, between-beams);
+    // both notes print at the pair's TOTAL duration and sound half (TimeScale ½).
+    private (int Value, int Dots, int Beams)? _tremoloPairShape;
+    private bool _tremoloPairFirst;
     private string? _tempoText;
     private int _tempoBeatUnit = 4;
     private int _tempoDots;
@@ -1564,6 +1568,19 @@ public sealed class MeasureCollector
                     if (HasCourtesyAnnotation(note))
                         _courtesySourcePositions.Add(note.Position);
                     var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter, hasGliss, featherDir, isCue);
+                    if (_tremoloPairShape is { } tpn)
+                    {
+                        // Halve the sounding time (display stays the total)
+                        // and join the pair with the subdivision's beams.
+                        noteItem = noteItem with
+                        {
+                            TimeScale = noteItem.TimeScale * new Fraction(1, 2),
+                            TremoloPairBeams = tpn.Beams,
+                            HasBeamStart = _tremoloPairFirst,
+                            HasBeamEnd = !_tremoloPairFirst,
+                        };
+                        _tremoloPairFirst = false;
+                    }
                     if (!_pendingLeadingGrace.IsDefaultOrEmpty)
                     {
                         noteItem = noteItem with { LeadingGrace = _pendingLeadingGrace };
@@ -3152,6 +3169,19 @@ public sealed class MeasureCollector
                 }
             }
         }
+        else if (type == "tremolo" && bodyNodes.Count == 2
+            && bodyNodes.All(b => b is NoteSyntax or ChordSyntax)
+            && TremoloPairShape(count, bodyNodes) is { } pairShape)
+        {
+            // Two-note (chord) tremolo: both notes are WRITTEN with the
+            // pair's total duration, sound half of it each, and are joined
+            // by the subdivision's beams between the stems.
+            // LILYPOND-REF: lily/chord-tremolo-engraver.cc / chord-tremolo-iterator.cc.
+            _tremoloPairShape = pairShape;
+            _tremoloPairFirst = true;
+            ProcessBodyOnce();
+            _tremoloPairShape = null;
+        }
         else if (type == "tremolo" && bodyNodes.Count == 1
             && (bodyNodes[0] is NoteSyntax || bodyNodes[0] is ChordSyntax)
             && TremoloTotalIsPrintable(count, bodyNodes[0]))
@@ -3188,6 +3218,30 @@ public sealed class MeasureCollector
         if (value < 8 || count < 2)
             return false;
         return CombineTremoloDuration(count, value) != null;
+    }
+
+    /// <summary>Shape of a two-note tremolo, or null when not printable:
+    /// display duration = count × (both notes), equal written values required;
+    /// beams = the subdivision's flag count (16th → 2).</summary>
+    private static (int Value, int Dots, int Beams)? TremoloPairShape(int count, List<SyntaxNode> body)
+    {
+        int V(SyntaxNode n) => n switch
+        {
+            NoteSyntax ns => ns.Duration?.Value ?? 0,
+            ChordSyntax cs => cs.Duration?.Value ?? 0,
+            _ => 0
+        };
+        int v1 = V(body[0]), v2 = V(body[1]);
+        if (v2 == 0)
+            v2 = v1; // second note inherits the first's duration (c16 e)
+        if (v1 < 8 || v1 != v2 || count < 1)
+            return null;
+        // total = count × 2 × (1/v1); reuse the single-note reducer.
+        var total = CombineTremoloDuration(count * 2, v1);
+        if (total == null)
+            return null;
+        int beams = (int)Math.Log2(v1) - 2;
+        return (total.Value.Value, total.Value.Dots, beams);
     }
 
     /// <summary>Reduces count/value to (noteValue, dots) — 8×1/32 = (4, 0),
@@ -3671,6 +3725,13 @@ public sealed class MeasureCollector
             tremoloBeams = Math.Max(tremoloBeams, (int)Math.Log2(noteValue) - 2);
             noteValue = combined.Value;
             dots = combined.Dots;
+        }
+
+        // Two-note tremolo: this note prints at the pair's total duration.
+        if (_tremoloPairShape is { } pairDisp)
+        {
+            noteValue = pairDisp.Value;
+            dots = pairDisp.Dots;
         }
 
         var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);

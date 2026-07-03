@@ -670,6 +670,10 @@ public sealed class BeamDetector
 
     private bool IsBeamable(MusicItem item)
     {
+        // A two-note tremolo pair beams regardless of its written duration
+        // (halves joined by the subdivision's beams).
+        if (item is NoteItem { TremoloPairBeams: > 0 } or ChordItem { TremoloPairBeams: > 0 })
+            return true;
         var baseDuration = item switch
         {
             NoteItem note => note.BaseDuration,
@@ -682,6 +686,11 @@ public sealed class BeamDetector
 
     private int GetBeamCount(MusicItem item)
     {
+        switch (item)
+        {
+            case NoteItem { TremoloPairBeams: > 0 } tn: return tn.TremoloPairBeams;
+            case ChordItem { TremoloPairBeams: > 0 } tc: return tc.TremoloPairBeams;
+        }
         var baseDuration = item switch
         {
             NoteItem note => note.BaseDuration,

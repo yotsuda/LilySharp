@@ -70,6 +70,11 @@ public sealed record NoteItem : MusicItem
     public bool NeedsLedgerLines { get; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
     public int TremoloBeams { get; }
+    /// <summary>Two-note (chord) tremolo: the BETWEEN-stems beam count. The
+    /// pair is written at the tremolo's total duration and sounds half of it
+    /// each (TimeScale ½). 0 = not part of a pair.
+    /// LILYPOND-REF: lily/chord-tremolo-engraver.cc.</summary>
+    public int TremoloPairBeams { get; init; }
     /// <summary>Whether this note starts a tie to the next note.</summary>
     public bool HasTieStart { get; }
     /// <summary>Whether this note starts a slur.</summary>
@@ -77,9 +82,9 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this note ends a slur.</summary>
     public bool HasSlurEnd { get; }
     /// <summary>Whether this note starts a manual beam group.</summary>
-    public bool HasBeamStart { get; }
+    public bool HasBeamStart { get; init; }
     /// <summary>Whether this note ends a manual beam group.</summary>
-    public bool HasBeamEnd { get; }
+    public bool HasBeamEnd { get; init; }
     /// <summary>Whether this note has a glissando to the next note.</summary>
     public bool HasGlissando { get; }
     /// <summary>Feathered beam direction: 0=none, 1=right (accel), -1=left (rit).</summary>
@@ -297,6 +302,8 @@ public sealed record ChordItem : MusicItem
     public ImmutableArray<ChordNoteInfo> Notes { get; init; }
     public Fraction BaseDuration { get; }
     public int Dots { get; }
+    /// <summary>Two-note tremolo between-beams count (see NoteItem).</summary>
+    public int TremoloPairBeams { get; init; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
     public int TremoloBeams { get; }
     /// <summary>Whether this chord starts a manual beam group.</summary>
