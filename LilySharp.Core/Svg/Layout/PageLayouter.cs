@@ -178,7 +178,7 @@ public sealed class PageLayouter
             // When skylines are available, use Distance() for X-dependent collision detection
             var pageSystems = PositionSystemsOnPage(
                 systems, systemExtents, systemDetails, systemStart, systemEnd,
-                isFirstPage, headerHeight, force, vs, systemSkylines, systemBands);
+                isFirstPage, headerHeight, isRagged, vs, systemSkylines, systemBands);
 
             pages.Add(new PageLayout(
                 PageIndex: pageIdx,
@@ -212,7 +212,7 @@ public sealed class PageLayouter
         List<SystemDetails> systemDetails,
         int startIdx, int endIdx,
         bool isFirstPage, double headerHeight,
-        double force, VerticalSpacingParameters vs,
+        bool isRagged, VerticalSpacingParameters vs,
         ImmutableArray<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
         ImmutableArray<(double bandUp, double bandDown)>? systemBands = null)
     {
@@ -220,14 +220,17 @@ public sealed class PageLayouter
 
         // First system Y position
         var topSpec = vs.TopSystem;
-        double currentY = isFirstPage
+        double firstY = isFirstPage
             ? _options.MarginTop + headerHeight + systemExtents[startIdx].upExtent + topSpec.Padding
             : _options.MarginTop + systemExtents[startIdx].upExtent + topSpec.Padding;
 
+        // PASS 1 — the natural gap for each system pair, from the REAL
+        // (X-aware skyline) distances placement uses.
+        int count = endIdx - startIdx;
+        var gapNatural = new double[Math.Max(0, count - 1)];
+        var gapInvHooke = new double[Math.Max(0, count - 1)];
         for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
         {
-            pageSystems.Add(allSystems[sysIdx] with { Y = currentY });
-
             if (sysIdx < endIdx - 1)
             {
                 // Select spacing spec for this pair
@@ -304,16 +307,49 @@ public sealed class PageLayouter
                 // it can never contribute to a plain system-to-system spring.)
                 double minDistance = Math.Max(spec.MinimumDistance, skylineDistance + padding);
 
-                // Spring-based ideal distance
+                // Spring-based ideal (natural) distance
                 double springDistance = Math.Max(basicDist, minDistance);
 
-                // Apply force-based stretching
-                double inverseHooke = spec.Stretchability > 0 ? spec.Stretchability / 60.0 : 0.1;
-                double distance = springDistance + force * inverseHooke;
-
-                // Never go below minimum
-                currentY += Math.Max(distance, minDistance);
+                gapNatural[sysIdx - startIdx] = Math.Max(springDistance, minDistance);
+                gapInvHooke[sysIdx - startIdx] =
+                    spec.Stretchability > 0 ? spec.Stretchability / 60.0 : 0.1;
             }
+        }
+
+        // PASS 2 — justification. The page breaker's force is solved on
+        // SCALAR system heights, but placement packs tighter via the X-aware
+        // skyline distances, so that force under-fills real pages. Re-solve
+        // here against the actual gaps: stretch the springs (weighted by
+        // their stretchability) until the last system's ink reaches the
+        // bottom margin. Ragged pages (and the LP-default ragged LAST page)
+        // keep the natural gaps.
+        // LILYPOND-REF: lily/page-layout-problem.cc solve() — springs are
+        // solved against the real rods; ly/paper-defaults-init.ly
+        // ragged-bottom = ##f, ragged-last-bottom = ##t.
+        if (!isRagged && count > 1)
+        {
+            double naturalSum = 0, invSum = 0;
+            for (int i = 0; i < gapNatural.Length; i++)
+            {
+                naturalSum += gapNatural[i];
+                invSum += gapInvHooke[i];
+            }
+            var last = systemDetails[endIdx - 1];
+            double lastBottom = firstY + naturalSum + last.StaffHeight + last.BottomExtent;
+            double leftover = _options.PageHeight - _options.MarginBottom - lastBottom;
+            if (leftover > 0 && invSum > 0)
+            {
+                for (int i = 0; i < gapNatural.Length; i++)
+                    gapNatural[i] += leftover * gapInvHooke[i] / invSum;
+            }
+        }
+
+        double currentY = firstY;
+        for (int sysIdx = startIdx; sysIdx < endIdx; sysIdx++)
+        {
+            pageSystems.Add(allSystems[sysIdx] with { Y = currentY });
+            if (sysIdx < endIdx - 1)
+                currentY += gapNatural[sysIdx - startIdx];
         }
 
         return pageSystems.ToImmutableArray();

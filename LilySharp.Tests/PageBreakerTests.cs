@@ -214,7 +214,8 @@ public class PageBreakerTests
         // LILYPOND-REF: lily/page-breaking.cc:280-297
         // LILYPOND-REF: ly/paper-defaults-init.ly ragged-last-bottom = ##f
         Assert.False(p.RaggedBottom);
-        Assert.False(p.RaggedLastBottom);
+        // LILYPOND-REF: ly/paper-defaults-init.ly:56 ragged-last-bottom = ##t
+        Assert.True(p.RaggedLastBottom);
         Assert.Equal(0, p.SystemsPerPage);
         Assert.Equal(0, p.MaxSystemsPerPage);
         Assert.Equal(0, p.MinSystemsPerPage);

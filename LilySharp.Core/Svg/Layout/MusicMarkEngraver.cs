@@ -117,7 +117,8 @@ public static class MusicMarkEngraver
         ImmutableArray<MeasureLayout> measureLayouts,
         ImmutableArray<Measure> measures = default,
         ImmutableArray<VoltaBracketLayout> voltaBrackets = default,
-        ImmutableArray<ChordNameLayout> chordNames = default)
+        ImmutableArray<ChordNameLayout> chordNames = default,
+        ImmutableArray<LyricLayout> lyrics = default)
     {
         // Merge section labels and tempo marking into the mark list
         var allMarks = BuildAllMarks(musicMarks, measures, score?.Tempo, score?.SwingSubdivision ?? 0,
@@ -223,21 +224,32 @@ public static class MusicMarkEngraver
             }
 
             // Chord symbols are the line CLOSEST to the staff (LP: the marks'
-            // outside-staff priority 1500 beats ChordNames), so a mark sharing
-            // its column with a chord symbol starts above that symbol's text —
-            // otherwise a section label box prints straight over the chord.
+            // outside-staff priority 1500 beats ChordNames), so a mark whose
+            // INK overlaps a chord symbol starts above that symbol's text —
+            // otherwise a section label box (or a wide tempo marking like
+            // "Brightly (♩ = 108)") prints straight over the chord. The old
+            // centre-distance window missed wide texts whose ink reaches a
+            // chord several spaces away; LilyPond's outside-staff stacking is
+            // extent-based, so compare real horizontal spans.
+            // LILYPOND-REF: lily/axis-group-interface.cc:865-984 skyline_spacing.
             // Only inline top-staff chords have negative Y here; chord ROWS and
             // lower staves don't share the marks' band.
             double markCeiling = double.PositiveInfinity; // constraint on box BOTTOM
             if (!chordNames.IsDefaultOrEmpty && aboveMarks.Count > 0)
             {
-                double gx = aboveMarks[0].X;
-                foreach (var cn in chordNames)
+                foreach (var e in aboveMarks)
                 {
-                    if (cn.Y >= 0 || Math.Abs(cn.X - gx) > MarkChordXWindow)
-                        continue;
-                    double chordTop = cn.Y - ChordTextAscent;
-                    markCeiling = Math.Min(markCeiling, chordTop - OutsideStaffPadding);
+                    var (mx0, mx1) = MarkXExtent(e.Mark, e.X);
+                    foreach (var cn in chordNames)
+                    {
+                        if (cn.Y >= 0)
+                            continue;
+                        double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
+                        if (mx1 < cn.X - chHalf || mx0 > cn.X + chHalf)
+                            continue; // no horizontal ink overlap
+                        double chordTop = cn.Y - ChordTextAscent;
+                        markCeiling = Math.Min(markCeiling, chordTop - OutsideStaffPadding);
+                    }
                 }
             }
 
@@ -330,6 +342,26 @@ public static class MusicMarkEngraver
                 if (IsJumpInstruction(mark.Type))
                 {
                     y += JumpInstructionDrop;
+                    stackBottomY = Math.Max(stackBottomY, y + halfExtent);
+                }
+
+                // Below-staff text must clear the LYRIC lines: lyrics hang under
+                // the staff before any below-mark, and "D.S. al Coda" printed
+                // straight through the words. Drop the mark under the deepest
+                // syllable whose ink overlaps it horizontally (0.9 = descent of
+                // the 3.2 ss lyric face, as in the spacing extents).
+                if (!lyrics.IsDefaultOrEmpty && !IsPedal(mark.Type))
+                {
+                    var (mx0, mx1) = MarkXExtent(mark, x);
+                    foreach (var ly in lyrics)
+                    {
+                        double lyHalf = ly.Width / 2 + 0.3;
+                        if (mx1 < ly.X - lyHalf || mx0 > ly.X + lyHalf)
+                            continue;
+                        double lyricBottom = ly.Y + 0.9;
+                        if (y - halfExtent < lyricBottom + OutsideStaffPadding)
+                            y = lyricBottom + OutsideStaffPadding + halfExtent;
+                    }
                     stackBottomY = Math.Max(stackBottomY, y + halfExtent);
                 }
 
@@ -548,6 +580,45 @@ public static class MusicMarkEngraver
     /// - Symbol marks (Segno/Coda): symbol glyph height / 2
     /// - Text marks (D.S./Fine/etc.): fontSize / 2
     /// </remarks>
+    /// <summary>
+    /// The mark's approximate horizontal ink span. Tempo (left-anchored)
+    /// extends right from its X; End-positioned jump text extends left;
+    /// boxed labels and symbols are centred. Widths use the same faces the
+    /// renderer draws with.
+    /// </summary>
+    private static (double x0, double x1) MarkXExtent(MusicMarkItem mark, double x)
+    {
+        switch (mark.Type)
+        {
+            case MusicMarkType.Tempo:
+            {
+                double w = 2.3 + Rendering.SerifTextMetrics.MeasureBold("= " + mark.Text, 1.8);
+                if (mark.TempoText != null)
+                    w += Rendering.SerifTextMetrics.MeasureBold(mark.TempoText, 2.2) + 1.5;
+                if (mark.SwingSubdivision != 0)
+                    w += 5.0;
+                return (x, x + w);
+            }
+            case MusicMarkType.Rehearsal:
+            case MusicMarkType.SectionLabel:
+            {
+                double fs = mark.Type == MusicMarkType.Rehearsal ? 2.4 : 2.2;
+                double half = Rendering.SerifTextMetrics.MeasureBold(mark.Text, fs) / 2 + 0.2;
+                return (x - half, x + half);
+            }
+            case MusicMarkType.Segno:
+            case MusicMarkType.Coda:
+                return (x - 1.2, x + 1.2);
+            default:
+            {
+                double w = Rendering.SerifTextMetrics.MeasureBold(mark.Text, 2.2);
+                return mark.Position == MusicMarkPosition.End
+                    ? (x - w, x)
+                    : (x - w / 2, x + w / 2);
+            }
+        }
+    }
+
     private static double GetMarkHalfExtent(MusicMarkType type) => type switch
     {
         // LILYPOND-REF: define-grobs.scm:1835 MetronomeMark — notehead + stem + text

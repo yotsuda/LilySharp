@@ -282,7 +282,9 @@ public class PageLayouterTests
         // different (potentially smaller) result than worst-case scalar extents.
         var options = CreateOptions(pageHeight: 200) with
         {
-            PageBreaking = new PageBreakingParameters { RaggedLastBottom = false }
+            // Ragged: these tests observe the NATURAL gaps; justification would
+            // stretch every configuration to the same page-filling total.
+            PageBreaking = new PageBreakingParameters { RaggedBottom = true }
         };
         var layouter = new PageLayouter(options);
         var systems = CreateDummySystems(2);
@@ -417,11 +419,15 @@ public class PageLayouterTests
         var options = CreateOptions(pageHeight: 200) with
         {
             VerticalSpacing = customVs,
-            PageBreaking = new PageBreakingParameters { RaggedLastBottom = false }
+            // Ragged: these tests observe the NATURAL gaps; justification would
+            // stretch every configuration to the same page-filling total.
+            PageBreaking = new PageBreakingParameters { RaggedBottom = true }
         };
         var defaultOptions = CreateOptions(pageHeight: 200) with
         {
-            PageBreaking = new PageBreakingParameters { RaggedLastBottom = false }
+            // Ragged: these tests observe the NATURAL gaps; justification would
+            // stretch every configuration to the same page-filling total.
+            PageBreaking = new PageBreakingParameters { RaggedBottom = true }
         };
 
         var layouterCustom = new PageLayouter(options);

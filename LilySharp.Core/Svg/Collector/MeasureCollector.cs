@@ -2520,26 +2520,16 @@ public sealed class MeasureCollector
         if (_sectionStartMeasure.Count > 0 || _sections.Count == 0)
             return;
 
-        // (name, display label, source position) in playback order. The label
-        // is stamped onto the grid row's measures afterwards so a rows-only
-        // sheet prints its Verse/Chorus boxes like a staff score does.
-        var order = new List<(string Name, string? Label, int Pos)>();
-        if (_structure != null)
-        {
-            foreach (var r in _structure.DescendantNodes().OfType<SectionReferenceSyntax>())
-                order.Add((r.SectionName, ResolveSectionLabel(r), SectionDeclPos(r.SectionName)));
-        }
-        else
-        {
-            foreach (var s in _sections.Values.OrderBy(s => s.Name.Span.Start))
-                order.Add((s.SectionName, s.SectionName, s.Name.Span.Start));
-        }
-
+        // Walk the structure's children IN SOURCE ORDER so navigation marks
+        // (segno / to coda / D.S. …) interleave with the section references at
+        // the right bars — a rows-only score never runs ProcessStructure, so
+        // the band grid lost exactly the signs a band chart needs. Labels are
+        // stamped onto the grid row's measures afterwards.
         int cur = 0;
-        foreach (var (name, label, pos) in order)
+        void AdvanceSection(string name, string? label, int pos)
         {
             if (!_sections.TryGetValue(name, out var section))
-                continue;
+                return;
             if (!_sectionStartMeasure.ContainsKey(name))
             {
                 _sectionStartMeasure[name] = cur;
@@ -2553,6 +2543,37 @@ public sealed class MeasureCollector
             foreach (var lb in section.DescendantNodes().OfType<LyricsBlockSyntax>())
                 lyricBars = Math.Max(lyricBars, lb.Syllables.Count());
             cur = _sectionStartMeasure[name] + (chordBars > 0 ? chordBars : lyricBars);
+        }
+
+        if (_structure != null)
+        {
+            foreach (var child in _structure.DescendantNodes())
+            {
+                switch (child)
+                {
+                    case SectionReferenceSyntax r when !IsInsideRepeatBlock(r):
+                        AdvanceSection(r.SectionName, ResolveSectionLabel(r), SectionDeclPos(r.SectionName));
+                        break;
+                    case NavigationMarkSyntax nav when !IsInsideRepeatBlock(nav):
+                        // Same anchoring as ProcessStructure: targets (segno/coda)
+                        // at the NEXT section's start, jump text at the end of
+                        // the section just played.
+                        var navMark = NavigationToMusicMark(nav.MarkType);
+                        bool target = navMark is MusicMarkType.Segno or MusicMarkType.Coda;
+                        int navMeasure = target ? cur : Math.Max(0, cur - 1);
+                        _musicMarks.Add(new MusicMarkItem(navMark, navMeasure, nav.Position));
+                        break;
+                    case CustomTextSyntax custom when !IsInsideRepeatBlock(custom):
+                        _customTexts.Add(new CustomTextItem(
+                            custom.Text, Math.Max(0, cur - 1), custom.Position));
+                        break;
+                }
+            }
+        }
+        else
+        {
+            foreach (var s in _sections.Values.OrderBy(s => s.Name.Span.Start))
+                AdvanceSection(s.SectionName, s.SectionName, s.Name.Span.Start);
         }
     }
 

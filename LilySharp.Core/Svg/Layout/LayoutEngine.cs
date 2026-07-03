@@ -140,7 +140,7 @@ public sealed class LayoutEngine
             pagingSkylines = AugmentSkylinesForPaging(
                 perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
                 prelimAnn.VoltaBrackets, prelimSystems,
-                prelimAnn.MusicMarks, prelimAnn.CustomTexts);
+                prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames);
         }
 
         var (pages, systemsArray) = CreatePages(
@@ -414,7 +414,7 @@ public sealed class LayoutEngine
             pagingSkylines = AugmentSkylinesForPaging(
                 perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
                 prelimAnn.VoltaBrackets, prelimSystems,
-                prelimAnn.MusicMarks, prelimAnn.CustomTexts);
+                prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames);
         }
 
         var (pages, systemsArray) = CreatePages(
@@ -1095,7 +1095,8 @@ public sealed class LayoutEngine
         ImmutableArray<VoltaBracketLayout> voltaBrackets,
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MusicMarkLayout> musicMarks = default,
-        ImmutableArray<CustomTextLayout> customTexts = default)
+        ImmutableArray<CustomTextLayout> customTexts = default,
+        ImmutableArray<ChordNameLayout> chordNames = default)
     {
         if (skylines == null)
             return null;
@@ -1174,6 +1175,19 @@ public sealed class LayoutEngine
             {
                 double halfW = Rendering.SerifTextMetrics.MeasureBold(ct.Text, 2.0) / 2 + 0.2;
                 AddMarkBox(ct.MeasureIndex, ct.X - halfW, ct.X + halfW, ct.Y - 1.8, ct.Y + 0.6);
+            }
+        }
+        // Inline chord symbols: their scalar height joins the up-extents, but
+        // the X-aware inter-system Distance() never saw them — on a ragged
+        // (natural-gap) page a below-staff jump text ("D.S. al Coda") printed
+        // straight onto the next system's chord letters. Same envelope the
+        // scalar extents use (cap ascent 1.9, descent 0.3).
+        if (!chordNames.IsDefaultOrEmpty)
+        {
+            foreach (var cn in chordNames)
+            {
+                double halfW = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
+                AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cn.Y - 1.9, cn.Y + 0.3);
             }
         }
         return result;
@@ -1373,7 +1387,7 @@ public sealed class LayoutEngine
             measuresByStaff: measuresByStaff, voicesByStaff: voicesByStaff, staffYAt: staffYAt);
         var musicMarkLayouts = MusicMarkEngraver.Calculate(
             score, musicMarks, systems, ml, measures, default,
-            chordNames: chordNameLayouts);
+            chordNames: chordNameLayouts, lyrics: lyricLayouts);
         var customTextLayouts = CustomTextEngraver.Calculate(score, customTexts, systems, ml);
         // A leading \partial pickup is bar 0: shift displayed numbers down by one
         // so the first FULL measure is numbered 1, not 2.
