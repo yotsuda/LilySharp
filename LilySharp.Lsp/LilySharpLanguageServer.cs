@@ -876,7 +876,7 @@ public sealed class LilySharpLanguageServer
         };
     }
 
-    private static CompletionList GetTopLevelCompletions()
+    internal static CompletionList GetTopLevelCompletions()
     {
         return new CompletionList
         {
@@ -897,9 +897,25 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "override", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "override $1.$2 = $0", Detail = "Override grob property" },
                 new CompletionItem { Label = "revert", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "revert $1.$0", Detail = "Revert grob property" },
                 new CompletionItem { Label = "once", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "once override $1.$2 = $0", Detail = "One-time override" },
-                new CompletionItem { Label = "render", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "render score {\n\t${1|staff,grandStaff|} {\n\t\t$0\n\t}\n}", Detail = "Output layout declaration" },
+                new CompletionItem
+                {
+                    Label = "newscore",
+                    FilterText = "newscore score template",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "// Twinkle, Twinkle, Little Star (public domain).\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart melody {\n\tclef treble\n\tsection A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tsection B { g'4 g f f | e e d2 | }\n}\n\nstructure { A |: B :| A \"A2\" }\n\nscore \"score\" {\n\tstaff melody\n}\n$0",
+                    Detail = "Complete single-staff score (Twinkle template)",
+                },
                 new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics {\n\t$0\n}", Detail = "Lyrics block" },
-                new CompletionItem { Label = "piano", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "title \"${1:Title}\"\ntempo ${2:120}\ntime ${3:4/4}\nkey ${4:c} ${5|major,minor|}\n\npart rightHand { clef treble }\npart leftHand { clef bass }\n\nsection ${6:Main} {\n\trightHand { ${7:c'4 d' e' f' | g'2 g' |} }\n\tleftHand  { ${8:c2 g, | c g, |} }\n}\n\nrender score {\n\tgrandStaff {\n\t\tstaff treble { rightHand }\n\t\tstaff bass { leftHand }\n\t}\n}\n\nstructure { ${6:Main} }", Detail = "Grand staff (piano) score scaffold" }
+                new CompletionItem
+                {
+                    Label = "grandstaff",
+                    FilterText = "grandstaff piano",
+                    Kind = CompletionItemKind.Snippet,
+                    InsertTextFormat = InsertTextFormat.Snippet,
+                    InsertText = "// Twinkle, Twinkle, Little Star (public domain) — piano.\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart rh { clef treble }\npart lh { clef bass }\n\nsection A {\n\trh { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tlh { c,2 g | c2 c | f2 c | g2 c | }\n}\n\nstructure { A }\n\nscore \"score\" {\n\tgrandStaff {\n\t\tstaff rh\n\t\tstaff lh\n\t}\n}\n$0",
+                    Detail = "Two-staff (piano) score (grand staff template)",
+                }
             ]
         };
     }

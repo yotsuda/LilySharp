@@ -71,6 +71,19 @@ public class KeyCompletionTests
     }
 
     [Fact]
+    public void TopLevelCompletions_CarryTheScoreTemplates()
+    {
+        // The score templates moved from static VS Code snippets (which the
+        // editor merged into EVERY completion popup, even after `key a`) into
+        // the LSP's top-level items, where the context dispatch scopes them.
+        var items = LilySharpLanguageServer.GetTopLevelCompletions().Items;
+        Assert.Contains(items, i => i.Label == "newscore");
+        Assert.Contains(items, i => i.Label == "grandstaff");
+        var modeItems = LilySharpLanguageServer.GetKeyModeCompletions().Items;
+        Assert.DoesNotContain(modeItems, i => i.Label == "newscore" || i.Label == "grandstaff");
+    }
+
+    [Fact]
     public void TonicCompletions_CoverTheCircleOfFifths()
     {
         var labels = LilySharpLanguageServer.GetKeyTonicCompletions().Items
