@@ -472,6 +472,11 @@ public static class MusicMarkEngraver
                     measureToSystemIdx[ml.MeasureIndex] = si;
 
         var result = marks.ToBuilder();
+        // Pairs already re-aligned in this pass: a later pair whose span runs
+        // under an earlier one (adjacent one-bar sections with long tempo
+        // texts) must stack ABOVE it — each pair alone only solves against
+        // the chord symbols.
+        var placedPairs = new List<(int Sys, double X0, double X1, double LineY)>();
         for (int i = 0; i < result.Count; i++)
         {
             if (result[i].MarkType != MusicMarkType.Tempo)
@@ -531,6 +536,21 @@ public static class MusicMarkEngraver
                         lineY = Math.Min(lineY, chordTop - boxHalf);
                 }
             }
+
+            double pairX0 = lab.X - halfW;
+            double pairX1 = tempoX + tempoW;
+            int tempoSys = measureToSystemIdx.TryGetValue(tempo.MeasureIndex, out int tsys) ? tsys : -1;
+            foreach (var placed in placedPairs)
+            {
+                if (placed.Sys != tempoSys)
+                    continue;
+                if (pairX1 < placed.X0 - 1.0 || pairX0 > placed.X1 + 1.0)
+                    continue;
+                // Band of a pair ≈ ±1.7ss around its line; step a full band
+                // plus padding above the one it would run into.
+                lineY = Math.Min(lineY, placed.LineY - 3.6);
+            }
+            placedPairs.Add((tempoSys, pairX0, pairX1, lineY));
 
             result[bestJ] = lab with { Y = lineY };
             result[i] = tempo with

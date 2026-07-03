@@ -1771,7 +1771,25 @@ public sealed class MeasureCollector
                         _musicMarks.Add(new MusicMarkItem(
                             MusicMarkType.Tempo, bpm.ToString(),
                             builder.CurrentMeasureIndex, tempoChange.Position,
-                            builder.CurrentItemCount, builder.CurrentDuration));
+                            builder.CurrentItemCount, builder.CurrentDuration)
+                        {
+                            // The mid-music path dropped everything but the
+                            // number — "tempo Lively 4. = 80" rendered ♩=80.
+                            TempoText = tempoChange.Marking,
+                            TempoBeatUnit = tempoChange.BeatUnit ?? 4,
+                            TempoDots = tempoChange.BeatDots,
+                            SwingSubdivision = tempoChange.SwingSubdivision,
+                        });
+                    else if (tempoChange.Marking is { } markingOnly)
+                        // Text-only change ("tempo Meno mosso"): bold marking,
+                        // no metronome equation.
+                        _musicMarks.Add(new MusicMarkItem(
+                            MusicMarkType.Tempo, "",
+                            builder.CurrentMeasureIndex, tempoChange.Position,
+                            builder.CurrentItemCount, builder.CurrentDuration)
+                        {
+                            TempoText = markingOnly,
+                        });
                 }
                 break;
 

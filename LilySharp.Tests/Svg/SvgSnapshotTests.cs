@@ -356,6 +356,10 @@ public class SvgSnapshotTests
         yield return new object[] { "test/scripts-dynamics" };
         // @text("...") free expressive text (italic, below by default, .up above).
         yield return new object[] { "test/text-annotation" };
+        // Metronome-mark beat units: whole (stemless, riding higher), half,
+        // dotted quarter (dot beside the head), eighth (flag) — with bare
+        // unquoted markings and pair-vs-pair stacking of adjacent tempo+label.
+        yield return new object[] { "test/tempo-beat-units" };
     }
 
     /// <summary>

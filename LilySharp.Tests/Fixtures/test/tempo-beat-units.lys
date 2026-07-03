@@ -1,0 +1,31 @@
+// Tempo beat-unit shapes in the metronome mark:
+// whole (stemless head, riding higher), half (hollow + stem),
+// dotted quarter (dot beside the head), eighth (flag).
+// Also exercises the bare single-word marking (no quotes).
+title "Tempo Beat Units"
+composer "Lily#"
+
+part m { clef treble }
+
+section A {
+  m { tempo Grave 1 = 40
+      c1 | }
+}
+section B {
+  m { tempo Andante 2 = 60
+      c2 d | }
+}
+section C {
+  m { tempo Lively 4. = 80
+      c4. d8 e4 f | }
+}
+section D {
+  m { tempo Presto 8 = 240
+      c8 d e f g f e d | }
+}
+
+structure { A B C D }
+
+score "tempo-beat-units" {
+  staff m
+}

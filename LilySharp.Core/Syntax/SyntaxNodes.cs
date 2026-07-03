@@ -720,6 +720,35 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
             return foundEquals ? 4 : null; // Default to quarter note if = is present
         }
     }
+
+    /// <summary>Augmentation dots on the beat unit (<c>4. = 116</c> → 1).</summary>
+    public int BeatDots
+    {
+        get
+        {
+            int dots = 0;
+            bool sawUnit = false;
+            foreach (var value in Values)
+            {
+                if (value is not SyntaxTokenNode t)
+                    continue;
+                if (t.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DurationNumber)
+                {
+                    sawUnit = true;
+                    dots = 0;
+                    continue;
+                }
+                if (t.Kind == SyntaxKind.Dot && sawUnit)
+                {
+                    dots++;
+                    continue;
+                }
+                if (t.Kind == SyntaxKind.Equals)
+                    return dots;
+            }
+            return 0;
+        }
+    }
 }
 
 /// <summary>
