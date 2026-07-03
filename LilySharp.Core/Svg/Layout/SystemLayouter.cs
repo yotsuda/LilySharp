@@ -54,17 +54,19 @@ public sealed class SystemLayouter
         int firstMeasureIndex,
         bool isLastSystem = false,
         double? baseShortestDuration = null,
-        double courtesySuffixWidth = 0)
+        double courtesySuffixWidth = 0,
+        double indent = 0)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, isLastSystem, baseShortestDuration, courtesySuffixWidth);
+        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, isLastSystem, baseShortestDuration, courtesySuffixWidth, indent);
 
         return new SystemLayout(
             systemIndex,
             y,
             _options.PageWidth - _options.MarginLeft - _options.MarginRight,
             prefixWidth,
-            measureLayouts);
+            measureLayouts,
+            Indent: indent);
     }
 
     /// <summary>
@@ -77,7 +79,8 @@ public sealed class SystemLayouter
         int firstMeasureIndex,
         bool isLastSystem = false,
         double? baseShortestDuration = null,
-        double courtesySuffixWidth = 0)
+        double courtesySuffixWidth = 0,
+        double indent = 0)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
         // System-internal coordinates are LINE-RELATIVE (0 = line start); the
@@ -88,7 +91,9 @@ public sealed class SystemLayouter
         // courtesySuffixWidth: end-of-line courtesy key signature (the next
         // line opens with a key change) — the music stops short of the right
         // edge so the cancellation + new signature fit after the barline.
-        double startX = prefixWidth;
+        // indent: instrument-name space on the FIRST system (single-staff
+        // scores used to ignore it entirely, so a part's name never printed).
+        double startX = indent + prefixWidth;
         double rightEdge = _options.PageWidth - _options.MarginLeft - _options.MarginRight;
         double availableWidth = rightEdge - startX - courtesySuffixWidth;
 
@@ -206,17 +211,19 @@ public sealed class SystemLayouter
         IReadOnlyList<LyricItem> lyrics,
         bool isLastSystem = false,
         double? baseShortestDuration = null,
-        double courtesySuffixWidth = 0)
+        double courtesySuffixWidth = 0,
+        double indent = 0)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
-        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, lyrics, isLastSystem, baseShortestDuration, courtesySuffixWidth);
+        var measureLayouts = LayoutMeasuresForSystem(measures, keySharps, isFirstSystem, firstMeasureIndex, lyrics, isLastSystem, baseShortestDuration, courtesySuffixWidth, indent);
 
         return new SystemLayout(
             systemIndex,
             y,
             _options.PageWidth - _options.MarginLeft - _options.MarginRight,
             prefixWidth,
-            measureLayouts);
+            measureLayouts,
+            Indent: indent);
     }
 
     /// <summary>
@@ -234,7 +241,8 @@ public sealed class SystemLayouter
         IReadOnlyList<LyricItem> lyrics,
         bool isLastSystem = false,
         double? baseShortestDuration = null,
-        double courtesySuffixWidth = 0)
+        double courtesySuffixWidth = 0,
+        double indent = 0)
     {
         double prefixWidth = SpacingRules.CalculatePrefixWidth(keySharps, isFirstSystem);
         // System-internal coordinates are LINE-RELATIVE (0 = line start); the
@@ -242,8 +250,8 @@ public sealed class SystemLayouter
         // So startX/rightEdge must NOT include MarginLeft — baking it in here
         // would double-count it (see MultiStaffLayouter). availableWidth is the
         // same either way, so justification width is unchanged. See the
-        // non-lyrics overload for courtesySuffixWidth.
-        double startX = prefixWidth;
+        // non-lyrics overload for courtesySuffixWidth and indent.
+        double startX = indent + prefixWidth;
         double rightEdge = _options.PageWidth - _options.MarginLeft - _options.MarginRight;
         double availableWidth = rightEdge - startX - courtesySuffixWidth;
 

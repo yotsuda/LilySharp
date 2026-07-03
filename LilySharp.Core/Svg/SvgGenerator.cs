@@ -140,7 +140,16 @@ public static class SvgGenerator
         string? attachedChords = renderSpec is { Items.Length: 1 }
             && renderSpec.Items[0] is SingleStaffSpec s ? s.Staff.WithChords : null;
         var score = collector.Collect(tree, voiceName, renderSpec?.LocalStructure, attachedChords);
-        return MultiStaffScore.FromScore(score);
+
+        // The single-staff wrap used to drop the spec's instrument name — it
+        // lives on the Staff (first-line label + indent), so
+        // `part { instrument … }` / `name …` / `staff melody "…"` printed
+        // nothing on solo scores.
+        string? instrumentName = renderSpec is { Items.Length: 1 }
+            && renderSpec.Items[0] is SingleStaffSpec sss
+                ? sss.Staff.InstrumentName
+                : null;
+        return MultiStaffScore.FromScore(score, instrumentName);
     }
 
     internal static string RenderToSvg(MultiStaffScore score, ScoreLayout layout,

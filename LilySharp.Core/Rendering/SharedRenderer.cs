@@ -224,7 +224,7 @@ public static class SharedRenderer
 
         // Instrument names within the indent area (drawn before staves so glyphs
         // overlap correctly when names are wider than the indent).
-        DrawInstrumentNames(system, gc);
+        DrawInstrumentNames(score, system, gc);
 
         // Staff lines end exactly at the final barline (the last measure's right
         // edge), so the staff never overshoots a ragged system nor falls short of a
@@ -4152,14 +4152,30 @@ public static class SharedRenderer
     ///   nameX = MarginLeft + indent / 2 (MarginLeft applied by the page-level
     ///   translate group, so this method uses indent / 2 directly).
     /// </remarks>
-    private static void DrawInstrumentNames(SystemLayout system, IDrawingContext gc)
+    private static void DrawInstrumentNames(MultiStaffScore score, SystemLayout system, IDrawingContext gc)
     {
         if (system.Indent <= 0) return;
-        if (system.StaffGroups.IsDefaultOrEmpty) return;
 
         const double NameFontScale = 0.75;
         double actualFontSize = FontSize * NameFontScale;
         double nameX = system.Indent / 2.0;
+
+        // Single-staff scores carry no StaffGroup layouts — the one staff sits
+        // at the system Y with the standard staff height.
+        if (system.StaffGroups.IsDefaultOrEmpty)
+        {
+            foreach (var (_, st, _) in score.EnumerateStaves())
+            {
+                if (string.IsNullOrEmpty(st.InstrumentName) || st.IsTab)
+                    continue;
+                gc.DrawText(st.InstrumentName, nameX, system.Y + StaffHeight / 2.0,
+                    actualFontSize, "serif", FontStyle.Regular,
+                    TextAnchor.Middle, fill: null,
+                    verticalAnchor: VerticalAnchor.Middle);
+                break;
+            }
+            return;
+        }
 
         foreach (var staffGroup in system.StaffGroups)
         {
