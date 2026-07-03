@@ -333,6 +333,22 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                     `WEBVIEW ERROR: ${message.message} (line ${message.line})`);
                 return;
             }
+            if (message.type === 'requestPlayback') {
+                // The webview cannot reach the LSP: fetch note events here and
+                // hand them back for WebAudio scheduling.
+                if (!client || !clientReady) {
+                    panel.webview.postMessage({ type: 'playbackData', error: 'language server not running' });
+                    return;
+                }
+                try {
+                    const pb = await client.sendRequest<{ Notes?: { T: number, D: number, P: number, V: number }[], Error?: string }>(
+                        'lilysharp/playback', { textDocument: { uri } });
+                    panel.webview.postMessage({ type: 'playbackData', notes: pb.Notes ?? null, error: pb.Error ?? null });
+                } catch (e) {
+                    panel.webview.postMessage({ type: 'playbackData', error: String(e) });
+                }
+                return;
+            }
             if (message.type === 'export') {
                 await exportPreview(uri, message.renderName);
             } else if (message.type === 'jumpToPosition') {
@@ -825,6 +841,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </select>
         <button id="exportBtn" type="button">Export…</button>
         <span class="sep"></span>
+        <button id="playBtn" type="button" title="Play">▶</button>
+        <button id="stopBtn" type="button" title="Stop" disabled>⏹</button>
+        <span class="sep"></span>
         <button id="fitPageBtn" type="button" title="Fit whole page">⊡ Page</button>
         <button id="fitWidthBtn" type="button" title="Fit width">⬌ Width</button>
         <span class="sep"></span>
@@ -1086,6 +1105,68 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             vscode.postMessage({ type: 'export', renderName: renderSelect.value });
         });
 
+        // ---- WebAudio playback (simple triangle synth; events from the LSP) ----
+        let audioCtx = null;
+        let playingOscs = [];
+        let playEndTimer = null;
+
+        function setPlayUi(playing) {
+            document.getElementById('playBtn').disabled = playing;
+            document.getElementById('stopBtn').disabled = !playing;
+        }
+
+        function stopPlayback() {
+            clearTimeout(playEndTimer);
+            playEndTimer = null;
+            for (const o of playingOscs) {
+                try { o.stop(); } catch (e) { /* already ended */ }
+            }
+            playingOscs = [];
+            if (audioCtx) {
+                try { audioCtx.close(); } catch (e) { /* noop */ }
+                audioCtx = null;
+            }
+            setPlayUi(false);
+        }
+
+        function startPlayback(notes) {
+            stopPlayback();
+            if (!notes || notes.length === 0) { return; }
+            audioCtx = new AudioContext();
+            const master = audioCtx.createGain();
+            master.gain.value = 0.25;
+            master.connect(audioCtx.destination);
+            const t0 = audioCtx.currentTime + 0.15;
+            let end = 0;
+            for (const n of notes) {
+                const osc = audioCtx.createOscillator();
+                osc.type = 'triangle';
+                osc.frequency.value = 440 * Math.pow(2, (n.P - 69) / 12);
+                const g = audioCtx.createGain();
+                const at = t0 + n.T;
+                const rel = at + n.D;
+                const peak = 0.9 * (n.V / 127);
+                g.gain.setValueAtTime(0, at);
+                g.gain.linearRampToValueAtTime(peak, at + 0.012);
+                g.gain.setValueAtTime(peak, Math.max(at + 0.012, rel - 0.04));
+                g.gain.linearRampToValueAtTime(0, rel);
+                osc.connect(g);
+                g.connect(master);
+                osc.start(at);
+                osc.stop(rel + 0.05);
+                playingOscs.push(osc);
+                if (n.T + n.D > end) end = n.T + n.D;
+            }
+            setPlayUi(true);
+            playEndTimer = setTimeout(stopPlayback, (end + 0.5) * 1000);
+        }
+
+        document.getElementById('playBtn').addEventListener('click', () => {
+            setPlayUi(true); // immediate feedback while the request runs
+            vscode.postMessage({ type: 'requestPlayback' });
+        });
+        document.getElementById('stopBtn').addEventListener('click', stopPlayback);
+
         document.getElementById('fitPageBtn').addEventListener('click', fitPage);
         document.getElementById('fitWidthBtn').addEventListener('click', fitWidth);
         document.getElementById('firstPageBtn').addEventListener('click', () => gotoPage(0));
@@ -1119,6 +1200,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         if (lastHighlightPos >= 0) {
                             highlightNearestElement(lastHighlightPos);
                         }
+                    }
+                    break;
+                case 'playbackData':
+                    if (message.error || !message.notes) {
+                        setPlayUi(false);
+                        if (message.error) {
+                            zoomInfo.textContent = 'Play: ' + message.error;
+                            zoomInfo.classList.add('visible');
+                            setTimeout(() => zoomInfo.classList.remove('visible'), 2500);
+                        }
+                    } else {
+                        startPlayback(message.notes);
                     }
                     break;
                 case 'highlightPosition':

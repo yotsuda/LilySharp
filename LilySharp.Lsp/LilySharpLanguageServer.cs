@@ -2796,6 +2796,67 @@ public sealed class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// Flattens the piece to note events in seconds for the preview's WebAudio
+    /// player: the same MidiExporter model as .mid export, with the tempo map
+    /// applied server-side so the webview only schedules oscillators.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/playback", UseSingleObjectParameterDeserialization = true)]
+    public PlaybackResponse GetPlayback(PlaybackParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new PlaybackResponse { Error = "Document not found" };
+        var tree = ExpandIncludes(doc, @params.TextDocument.Uri);
+        if (tree.HasErrors)
+            return new PlaybackResponse { Error = "Score has errors" };
+        try
+        {
+            var midi = new LilySharp.Core.Midi.MidiExporter().Export(tree);
+            int tpq = midi.TicksPerQuarterNote;
+
+            // Tempo map: merged from all tracks, sorted; default 120 bpm.
+            var tempos = midi.Tracks.SelectMany(t => t.TempoChanges)
+                .OrderBy(t => t.Tick).ToList();
+            double SecondsAt(int tick)
+            {
+                double sec = 0;
+                int prevTick = 0;
+                double usPerBeat = 500000; // 120 bpm
+                foreach (var tc in tempos)
+                {
+                    if (tc.Tick >= tick)
+                        break;
+                    sec += (tc.Tick - prevTick) * usPerBeat / tpq / 1e6;
+                    prevTick = tc.Tick;
+                    usPerBeat = tc.MicrosecondsPerBeat;
+                }
+                return sec + (tick - prevTick) * usPerBeat / tpq / 1e6;
+            }
+
+            var notes = midi.Tracks
+                .SelectMany(t => t.Notes)
+                .OrderBy(n => n.StartTick)
+                .Select(n =>
+                {
+                    double t0 = SecondsAt(n.StartTick);
+                    return new PlaybackNote
+                    {
+                        T = t0,
+                        D = Math.Max(0.03, SecondsAt(n.StartTick + n.DurationTicks) - t0),
+                        P = n.Pitch,
+                        V = n.Velocity,
+                    };
+                })
+                .ToArray();
+            return new PlaybackResponse { Notes = notes };
+        }
+        catch (Exception ex)
+        {
+            return new PlaybackResponse { Error = ex.Message };
+        }
+    }
+
+    /// <summary>
     /// Converts the document between the section-major and part-major authoring
     /// layouts (the editor command toggles whichever the file currently uses) and
     /// returns the rewritten source; the extension applies it as a full-document edit.
@@ -2998,6 +3059,28 @@ public class ExportResponse
 {
     public bool Success { get; set; }
     public string? OutputPath { get; set; }
+    public string? Error { get; set; }
+}
+
+/// <summary>Parameters for the lilysharp/playback request.</summary>
+public class PlaybackParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+}
+
+/// <summary>One playable note, in SECONDS (tempo map already applied).</summary>
+public class PlaybackNote
+{
+    public double T { get; set; }   // onset (s)
+    public double D { get; set; }   // duration (s)
+    public int P { get; set; }      // MIDI pitch
+    public int V { get; set; }      // velocity 0-127
+}
+
+/// <summary>Response for the lilysharp/playback request.</summary>
+public class PlaybackResponse
+{
+    public PlaybackNote[]? Notes { get; set; }
     public string? Error { get; set; }
 }
 
