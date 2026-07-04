@@ -145,6 +145,7 @@ public abstract class SyntaxNode
             SyntaxKind.MusicBlock => new MusicBlockSyntax((MusicBlockGreen)green, this, position),
             SyntaxKind.Note => new NoteSyntax((NoteGreen)green, this, position),
             SyntaxKind.DrumNote => new DrumNoteSyntax((DrumNoteGreen)green, this, position),
+            SyntaxKind.NestedVoiceRecovery => new NestedVoiceRecoverySyntax((NestedVoiceRecoveryGreen)green, this, position),
             SyntaxKind.Rest => new RestSyntax((RestGreen)green, this, position),
             SyntaxKind.Chord => new ChordSyntax((ChordGreen)green, this, position),
             SyntaxKind.Pitch => new PitchSyntax((PitchGreen)green, this, position),

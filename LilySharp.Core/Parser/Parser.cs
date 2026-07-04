@@ -1398,9 +1398,11 @@ private GreenNode?[] ParseArticulations()
     private int _voiceBodyDepth;
 
     /// <summary>Flags a voice block opened INSIDE another voice's body, then
-    /// recovers by parsing it as before (a parallel sibling) so the rest of
-    /// the file still parses and renders identically.</summary>
-    private ParallelExpressionGreen ParseVoiceBlocksCheckingNesting()
+    /// recovers by INLINING its content into the enclosing voice (the braces
+    /// read as transparent): no phantom parallel voice, no voice renumbering,
+    /// no cascading measure warnings — the LYS0010 error alone marks the
+    /// defect. A chain of nested voice blocks recovers one wrapper each.</summary>
+    private GreenNode ParseVoiceBlocksCheckingNesting()
     {
         if (_voiceBodyDepth > 0)
         {
@@ -1408,6 +1410,10 @@ private GreenNode?[] ParseArticulations()
             _diagnostics.Error(span, DiagnosticCodes.NestedVoiceBlock,
                 "voice { } blocks do not nest — close the enclosing voice's braces first; "
                 + "voices are written as SIBLINGS: voice { … } voice { … }.");
+            var voiceKeyword = Advance();
+            SyntaxToken? name = Check(SyntaxKind.Identifier) ? Advance() : null;
+            var block = ParseMusicBlock();
+            return new NestedVoiceRecoveryGreen(voiceKeyword, name, block);
         }
         return ParseVoiceBlocks();
     }

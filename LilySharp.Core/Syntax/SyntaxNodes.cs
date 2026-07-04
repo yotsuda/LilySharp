@@ -220,6 +220,19 @@ public sealed class NoteSyntax : SyntaxNode
 }
 
 /// <summary>
+/// Error-recovery node for a nested <c>voice { }</c> (LYS0010): a neutral
+/// wrapper whose block content inlines into the enclosing voice — walkers
+/// reach the notes as ordinary descendants.
+/// </summary>
+public sealed class NestedVoiceRecoverySyntax : SyntaxNode
+{
+    internal NestedVoiceRecoverySyntax(InternalSyntax.NestedVoiceRecoveryGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+}
+
+/// <summary>
 /// A drum note: <c>bd4</c>, <c>sn8</c>, <c>hh</c> — a DrumNameRegistry name
 /// with the same trailing structure as a pitched note.
 /// </summary>

@@ -68,6 +68,12 @@ public sealed class MeasureValidator : ISemanticValidator
         if (node is RepeatExpressionSyntax trem && trem.RepeatType.Text == "tremolo")
             return;
 
+        // LYS0010 recovery: a nested voice's block INLINES into the enclosing
+        // voice (SplitIntoMeasures expands it there) — validating it as a
+        // standalone block would re-add the phantom short-bar warnings.
+        if (node is NestedVoiceRecoverySyntax)
+            return;
+
         switch (node)
         {
             case MusicBlockSyntax block:
@@ -251,22 +257,34 @@ public sealed class MeasureValidator : ISemanticValidator
         var currentItems = new List<SyntaxNode>();
         int startPos = block.Position;
 
-        foreach (var item in block.Items)
+        void AddItems(IEnumerable<SyntaxNode> items)
         {
-            if (item is BarlineSyntax)
+            foreach (var item in items)
             {
-                if (currentItems.Count > 0)
+                if (item is BarlineSyntax)
                 {
-                    measures.Add(new MeasureContent(currentItems, startPos));
-                    currentItems = [];
+                    if (currentItems.Count > 0)
+                    {
+                        measures.Add(new MeasureContent(currentItems, startPos));
+                        currentItems = [];
+                    }
+                    startPos = item.Position + item.FullWidth;
                 }
-                startPos = item.Position + item.FullWidth;
-            }
-            else
-            {
-                currentItems.Add(item);
+                else if (item is NestedVoiceRecoverySyntax)
+                {
+                    // LYS0010 recovery: the nested voice's braces are
+                    // transparent — its content counts in THIS voice's bars.
+                    for (int ci = 0; ci < item.SlotCount; ci++)
+                        if (item.GetChild(ci) is MusicBlockSyntax inner)
+                            AddItems(inner.Items);
+                }
+                else
+                {
+                    currentItems.Add(item);
+                }
             }
         }
+        AddItems(block.Items);
 
         // Add final measure if not empty
         if (currentItems.Count > 0)

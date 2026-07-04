@@ -113,6 +113,21 @@ internal sealed class NoteGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// Error-recovery wrapper for a voice { } opened INSIDE another voice's body
+/// (flagged LYS0010): keeps the tokens for full source fidelity while staying
+/// a NEUTRAL node — every walker sees the inner notes as plain descendants,
+/// so the content INLINES into the enclosing voice instead of spawning a
+/// phantom parallel voice.
+/// </summary>
+internal sealed class NestedVoiceRecoveryGreen : GreenSyntaxNode
+{
+    public NestedVoiceRecoveryGreen(SyntaxToken voiceKeyword, SyntaxToken? name, GreenNode block)
+        : base(SyntaxKind.NestedVoiceRecovery, [voiceKeyword, name, block])
+    {
+    }
+}
+
+/// <summary>
 /// A drum note (bd4, sn8, hh): name + optional duration + optional tremolo +
 /// articulations — the same trailing shape as NoteGreen.
 /// LILYPOND-REF: \drummode note events.

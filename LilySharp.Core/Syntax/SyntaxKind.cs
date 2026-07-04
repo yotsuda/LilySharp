@@ -234,6 +234,7 @@ public enum SyntaxKind : ushort
     // === Nodes: Notes and Rests ===
     Note,
     DrumNote,           // bd4, sn8, hh — drum-kit note (DrumNameRegistry)
+    NestedVoiceRecovery, // erroneous voice{} inside a voice body — content inlines
     Rest,
     Chord,
     Pitch,
