@@ -273,10 +273,12 @@ internal sealed class LyricsCollector
                     SetPrevConnector(LyricConnectorType.Extender);
                     break;
                 case LyricSyllableReader.Marker.HyphenWord:
-                    result.Add((LyricSyllableReader.TrimHyphenWord(text), LyricConnectorType.Hyphen, pos));
+                    result.Add((LyricSyllableReader.DisplaySyllable(LyricSyllableReader.TrimHyphenWord(text)),
+                        LyricConnectorType.Hyphen, pos));
                     break;
                 default: // Syllable
-                    result.Add((text, LyricConnectorType.None, pos));
+                    result.Add((LyricSyllableReader.DisplaySyllable(text),
+                        LyricConnectorType.None, pos));
                     break;
             }
         }

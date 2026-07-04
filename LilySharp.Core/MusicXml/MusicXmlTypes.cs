@@ -366,8 +366,16 @@ public sealed class MusicXmlNote
         foreach (var (verse, text, syllabic, extend) in Lyrics)
         {
             var lyric = new XElement("lyric", new XAttribute("number", verse));
+            // A '~' inside the syllable is an ELISION: two texts joined by
+            // <elision>‿</elision> inside ONE lyric (MusicXML lyric sequence).
+            var parts = text.Split('~', '‿');
             lyric.Add(new XElement("syllabic", syllabic));
-            lyric.Add(new XElement("text", text));
+            lyric.Add(new XElement("text", parts[0]));
+            for (int pi = 1; pi < parts.Length; pi++)
+            {
+                lyric.Add(new XElement("elision", "‿"));
+                lyric.Add(new XElement("text", parts[pi]));
+            }
             if (extend)
                 lyric.Add(new XElement("extend"));
             note.Add(lyric);

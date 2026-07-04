@@ -219,11 +219,12 @@ public sealed class LyricCollector
                     // A sung syllable ending in a hyphen (Mu-): render it WITHOUT the
                     // dash and draw a centered hyphen to the next syllable, same as a
                     // spaced `--` marker (and the lyrics-row path).
-                    result.Add((LyricSyllableReader.TrimHyphenWord(text),
+                    result.Add((LyricSyllableReader.DisplaySyllable(LyricSyllableReader.TrimHyphenWord(text)),
                         LyricConnectorType.Hyphen, position, false, false));
                     break;
                 default: // Syllable
-                    result.Add((text, LyricConnectorType.None, position, false, false));
+                    result.Add((LyricSyllableReader.DisplaySyllable(text),
+                        LyricConnectorType.None, position, false, false));
                     break;
             }
         }

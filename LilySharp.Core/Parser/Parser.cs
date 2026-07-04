@@ -1952,15 +1952,29 @@ private GreenNode?[] ParseArticulations()
         // trivia. Stop at a connector (- ~ _) or a delimiter (| }).
         var prev = text;
         bool merged = false;
-        while (prev.TrailingTriviaWidth == 0
-               && Current.LeadingTriviaWidth == 0
-               && Current.Kind != SyntaxKind.Bar
-               && Current.Kind != SyntaxKind.CloseBrace
-               && Current.Kind != SyntaxKind.EndOfFile
-               && Current.Kind != SyntaxKind.Minus
-               && Current.Kind != SyntaxKind.Tilde
-               && Current.Kind != SyntaxKind.Underscore)
+        while (true)
         {
+            if (prev.TrailingTriviaWidth != 0 || Current.LeadingTriviaWidth != 0)
+                break;
+            var k = Current.Kind;
+            if (k is SyntaxKind.Bar or SyntaxKind.CloseBrace or SyntaxKind.EndOfFile
+                or SyntaxKind.Minus or SyntaxKind.Underscore)
+                break;
+            if (k == SyntaxKind.Tilde)
+            {
+                // An INTERIOR '~' (glued on both sides: "va~ga") is a lyric
+                // ELISION and belongs to the word; a '~' at a word boundary
+                // stays the melisma marker.
+                // LILYPOND-REF: lyric tie "va~ga".
+                var nxt = Peek(1);
+                bool interior = Current.TrailingTriviaWidth == 0
+                    && nxt != null && nxt.LeadingTriviaWidth == 0
+                    && nxt.Kind != SyntaxKind.Bar && nxt.Kind != SyntaxKind.CloseBrace
+                    && nxt.Kind != SyntaxKind.EndOfFile && nxt.Kind != SyntaxKind.Minus
+                    && nxt.Kind != SyntaxKind.Tilde && nxt.Kind != SyntaxKind.Underscore;
+                if (!interior)
+                    break;
+            }
             prev = Advance();
             word.Append(prev.Text);
             merged = true;

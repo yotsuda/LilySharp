@@ -88,6 +88,12 @@ internal static class LyricSyllableReader
     /// without its trailing hyphen(s).</summary>
     public static string TrimHyphenWord(string text) => text.TrimEnd('-');
 
+    /// <summary>Display form of a sung syllable: a '~' INSIDE the word is a
+    /// lyric ELISION (two vowels sung on one note) and prints as the undertie
+    /// ‿ (U+203F). A standalone '~' is a melisma and never reaches here.
+    /// LILYPOND-REF: lyric tie — "va~ga" joins with the elision tie.</summary>
+    public static string DisplaySyllable(string text) => text.Replace('~', '‿');
+
     /// <summary>True for a barline glyph (<c>|</c>, <c>||</c>, <c>|.</c>, <c>|:</c>,
     /// <c>:|</c>, <c>.|</c>) — a run of only bar/dot/colon characters that contains
     /// at least one bar. Both paths treat it as a measure boundary, never a word.</summary>
