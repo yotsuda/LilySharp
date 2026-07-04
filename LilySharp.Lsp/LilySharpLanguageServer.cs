@@ -376,7 +376,11 @@ public sealed class LilySharpLanguageServer
         return context switch
         {
             CompletionContext.TopLevel => GetTopLevelCompletions(),
-            CompletionContext.MusicBlock => GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset)),
+            // A percussion part's music block offers the drum-kit vocabulary,
+            // not pitch letters (LILYPOND-REF: \drummode note names).
+            CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset)
+                ? GetDrumCompletions()
+                : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset)),
             CompletionContext.StructureBlock => GetStructureCompletions(doc.Text),
             CompletionContext.PartBlock => GetPartPropertyCompletions(),
             CompletionContext.AfterClef => GetClefCompletions(),
@@ -1250,6 +1254,95 @@ public sealed class LilySharpLanguageServer
         var last = matches[matches.Count - 1];
         return LilySharp.Core.Music.KeySpelling.SharpsFor(
             last.Groups[1].Value, last.Groups[2].Value) ?? 0;
+    }
+
+    /// <summary>
+    /// True when the cursor sits in the MUSIC of a percussion part: ascend the
+    /// unmatched-brace chain from the cursor, skip voice { } wrappers, take the
+    /// first named block as the part reference, and check that part's
+    /// declaration for `clef percussion`.
+    /// </summary>
+    internal static bool IsInsidePercussionPartMusic(string text, int offset)
+    {
+        int depth = 0;
+        for (int i = Math.Min(offset, text.Length) - 1; i >= 0; i--)
+        {
+            char ch = text[i];
+            if (ch == '}') { depth++; continue; }
+            if (ch != '{') continue;
+            if (depth > 0) { depth--; continue; }
+
+            // Word before this unmatched open brace
+            int e = i - 1;
+            while (e >= 0 && char.IsWhiteSpace(text[e])) e--;
+            int s = e;
+            while (s >= 0 && (char.IsLetterOrDigit(text[s]) || text[s] == '_')) s--;
+            if (e < 0 || s == e) return false;
+            string name = text[(s + 1)..(e + 1)];
+
+            if (name.Equals("voice", StringComparison.OrdinalIgnoreCase))
+                continue; // ascend to the enclosing part block
+
+            // Structural keywords: this is not a part-music block.
+            if (name is "section" or "score" or "structure" or "part" or "phrase"
+                or "grandstaff" or "lyrics" or "chords" or "repeat" or "tuplet"
+                or "grace" or "acciaccatura" or "appoggiatura")
+                return false;
+
+            return PartIsPercussion(text, name);
+        }
+        return false;
+    }
+
+    private static bool PartIsPercussion(string text, string partName)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(text,
+            @"\bpart\s+" + System.Text.RegularExpressions.Regex.Escape(partName)
+            + @"\s*\{(?<body>[^}]*)\}");
+        return m.Success && System.Text.RegularExpressions.Regex.IsMatch(
+            m.Groups["body"].Value, @"\bclef\s*:?\s*percussion\b");
+    }
+
+    /// <summary>
+    /// Drum-kit completions for a percussion part's music: the DrumNameRegistry
+    /// vocabulary (aliases first — the idiomatic form), plus rests and the
+    /// structural snippets that remain valid in drum music. No pitch letters.
+    /// </summary>
+    private static CompletionList GetDrumCompletions()
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>();
+        foreach (var kv in LilySharp.Core.Syntax.DrumNameRegistry.AliasEntries)
+        {
+            LilySharp.Core.Syntax.DrumNameRegistry.TryGet(kv.Key, out var info);
+            items.Add(new CompletionItem
+            {
+                Label = kv.Key,
+                Kind = CompletionItemKind.Value,
+                Detail = $"{kv.Value} (GM {info.GmKey})",
+                SortText = "0" + kv.Key,
+            });
+        }
+        foreach (var kv in LilySharp.Core.Syntax.DrumNameRegistry.CanonicalEntries)
+        {
+            items.Add(new CompletionItem
+            {
+                Label = kv.Key,
+                Kind = CompletionItemKind.Value,
+                Detail = $"GM {kv.Value.GmKey}",
+                SortText = "1" + kv.Key,
+            });
+        }
+        items.AddRange(new[]
+        {
+            new CompletionItem { Label = "r", Kind = CompletionItemKind.Value, Detail = "Rest", SortText = "2r" },
+            new CompletionItem { Label = "s", Kind = CompletionItemKind.Value, Detail = "Spacer rest (invisible)", SortText = "2s" },
+            new CompletionItem { Label = "R", Kind = CompletionItemKind.Value, Detail = "Full-measure rest", SortText = "2R" },
+            new CompletionItem { Label = "voice", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "voice { $0 }", Detail = "Voice (hats up / kick+snare down)", SortText = "3voice" },
+            new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat percent 2 {\n\t$0\n}", Detail = "Repeat block (percent/unfold/tremolo)", SortText = "3repeat" },
+            new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "3tuplet" },
+            new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "4time" },
+        });
+        return new CompletionList { IsIncomplete = false, Items = [.. items] };
     }
 
     private static CompletionList GetMusicCompletions(string word, int keySharps)

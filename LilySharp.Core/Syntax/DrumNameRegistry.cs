@@ -119,6 +119,12 @@ public static class DrumNameRegistry
         ["cymrb"] = "ridecymbalb",
     };
 
+    /// <summary>All alias → canonical-name pairs (for completion lists).</summary>
+    public static IEnumerable<KeyValuePair<string, string>> AliasEntries => Aliases;
+
+    /// <summary>All canonical entries (for completion lists).</summary>
+    public static IEnumerable<KeyValuePair<string, DrumInfo>> CanonicalEntries => Canonical;
+
     /// <summary>Whether the identifier names a drum (alias or full name).</summary>
     public static bool Contains(string name) =>
         Canonical.ContainsKey(name) || Aliases.ContainsKey(name);
