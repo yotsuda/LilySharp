@@ -125,6 +125,7 @@ public static class DiagnosticCodes
     public const string LegacyDeclarationForm = "LYS0007";
     public const string ParallelSyntaxRemoved = "LYS0008";
     public const string LilypondBackslashCommand = "LYS0009";
+    public const string NestedVoiceBlock = "LYS0010";
 
     // Semantic errors (LYS1xxx)
     public const string UndefinedVariable = "LYS1001";

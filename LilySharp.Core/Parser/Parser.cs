@@ -714,7 +714,7 @@ internal sealed class Parser
 
             SyntaxKind.OpenAngle => ParseChord(),
 
-            SyntaxKind.VoiceKeyword => ParseVoiceBlocks(),
+            SyntaxKind.VoiceKeyword => ParseVoiceBlocksCheckingNesting(),
 
             // Removed syntax: report a migration hint, then recover by parsing the
             // old structure so no cascade of errors follows.
@@ -1392,12 +1392,34 @@ private GreenNode?[] ParseArticulations()
     /// desugars to the same ParallelExpression those produced, so the collector,
     /// renderer and exporters are unchanged.
     /// </summary>
+    /// <summary>Tracks whether the parser is inside a voice { } body, so a
+    /// nested voice keyword can be flagged (it would silently become a
+    /// parallel SIBLING voice, not an inner one).</summary>
+    private int _voiceBodyDepth;
+
+    /// <summary>Flags a voice block opened INSIDE another voice's body, then
+    /// recovers by parsing it as before (a parallel sibling) so the rest of
+    /// the file still parses and renders identically.</summary>
+    private ParallelExpressionGreen ParseVoiceBlocksCheckingNesting()
+    {
+        if (_voiceBodyDepth > 0)
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.NestedVoiceBlock,
+                "voice { } blocks do not nest — close the enclosing voice's braces first; "
+                + "voices are written as SIBLINGS: voice { … } voice { … }.");
+        }
+        return ParseVoiceBlocks();
+    }
+
     private ParallelExpressionGreen ParseVoiceBlocks()
     {
         var firstVoice = Expect(SyntaxKind.VoiceKeyword);
         var children = new List<GreenNode?>();
         if (Check(SyntaxKind.Identifier)) children.Add(Advance()); // optional voice name
+        _voiceBodyDepth++;
         children.Add(ParseMusicBlock());
+        _voiceBodyDepth--;
 
         while (Check(SyntaxKind.VoiceKeyword))
         {
@@ -1405,7 +1427,9 @@ private GreenNode?[] ParseArticulations()
             // round-trips exactly; Voices skips it (only MusicBlocks are voices).
             children.Add(Advance());
             if (Check(SyntaxKind.Identifier)) children.Add(Advance()); // optional voice name
+            _voiceBodyDepth++;
             children.Add(ParseMusicBlock());
+            _voiceBodyDepth--;
         }
 
         // ParallelExpression carries an open/close token; voice blocks have no
