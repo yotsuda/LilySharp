@@ -88,6 +88,8 @@ public sealed record DynamicItem
 
     private static string GetDynamicText(DynamicLevel level) => level switch
     {
+        DynamicLevel.PPPPP => "ppppp",
+        DynamicLevel.PPPP => "pppp",
         DynamicLevel.PPP => "ppp",
         DynamicLevel.PP => "pp",
         DynamicLevel.P => "p",
@@ -98,9 +100,13 @@ public sealed record DynamicItem
         DynamicLevel.SF => "sf",
         DynamicLevel.FF => "ff",
         DynamicLevel.SFZ => "sfz",
+        DynamicLevel.RF => "rf",
         DynamicLevel.RFZ => "rfz",
         DynamicLevel.FZ => "fz",
+        DynamicLevel.SFFZ => "sffz",
         DynamicLevel.FFF => "fff",
+        DynamicLevel.FFFF => "ffff",
+        DynamicLevel.FFFFF => "fffff",
         _ => ""
     };
 }

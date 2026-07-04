@@ -77,6 +77,8 @@ public enum ArticulationType
 public enum DynamicLevel
 {
     None,
+    PPPPP = 6,
+    PPPP = 12,
     PPP = 20,
     PP = 35,
     P = 50,
@@ -88,11 +90,18 @@ public enum DynamicLevel
     /// <summary>sf — subito forte accent on one note.</summary>
     SF = 105,
     FF = 110,
+    /// <summary>rf — rinforzando, gentler than the sforzato family.</summary>
+    RF = 111,
     /// <summary>sfz / rfz / fz — sforzato family, a hair under fff.</summary>
     SFZ = 112,
     RFZ = 113,
     FZ = 114,
-    FFF = 127
+    /// <summary>sffz — the heaviest sforzato.</summary>
+    SFFZ = 116,
+    // fff moved off the 127 ceiling to give ffff/fffff their own headroom.
+    FFF = 120,
+    FFFF = 124,
+    FFFFF = 127
 }
 
 /// <summary>

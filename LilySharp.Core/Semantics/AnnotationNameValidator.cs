@@ -60,7 +60,8 @@ public sealed class AnnotationNameValidator : ISemanticValidator
     [
         "staccato", "accent", "tenuto", "marcato", "fermata", "portato",
         "staccatissimo", "upbow", "downbow", "harmonic", "flageolet",
-        "sfz", "sf", "fp", "rfz", "fz",
+        "sfz", "sf", "fp", "rf", "rfz", "fz", "sffz",
+        "pppp", "ppppp", "ffff", "fffff",
         "trill", "mordent", "prall", "turn", "invertedturn", "pralltriller",
         "starttrillspan", "stoptrillspan", "courtesy", "editorial", "glissando",
         "cue", "cross", "arpeggio", "laissezvibrer", "repeattie",

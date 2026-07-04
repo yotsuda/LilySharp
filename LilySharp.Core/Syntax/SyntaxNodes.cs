@@ -1409,6 +1409,8 @@ public sealed class DynamicSyntax : SyntaxNode
             // and for the accent dynamics, which lex as plain identifiers).
             return DynamicToken.Text switch
             {
+                "ppppp" => DynamicLevel.PPPPP,
+                "pppp" => DynamicLevel.PPPP,
                 "ppp" => DynamicLevel.PPP,
                 "pp" => DynamicLevel.PP,
                 "p" => DynamicLevel.P,
@@ -1419,8 +1421,12 @@ public sealed class DynamicSyntax : SyntaxNode
                 "sf" => DynamicLevel.SF,
                 "ff" => DynamicLevel.FF,
                 "sfz" => DynamicLevel.SFZ,
+                "rf" => DynamicLevel.RF,
                 "rfz" => DynamicLevel.RFZ,
                 "fz" => DynamicLevel.FZ,
+                "sffz" => DynamicLevel.SFFZ,
+                "fffff" => DynamicLevel.FFFFF,
+                "ffff" => DynamicLevel.FFFF,
                 "fff" => DynamicLevel.FFF,
                 _ => DynamicLevel.None
             };
