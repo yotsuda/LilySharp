@@ -1,0 +1,9 @@
+part kit { clef percussion }
+section Groove {
+  kit {
+    voice { hh8 hh hh hh hh hh hh hh | cymc4 hh8 hh hh hh hho hhc | }
+    voice { bd4 r8 bd r bd sn4 | bd4 sn8 bd sn4 bd | }
+  }
+}
+structure { Groove }
+score drums { staff kit }

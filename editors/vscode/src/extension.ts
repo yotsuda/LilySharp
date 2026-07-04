@@ -1223,15 +1223,54 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 { w: 'sine',     a: 0.008, s: 0.45, r: 0.05, g: 1.30, pluck: true,  tau: 0.5  }, // 5 bass
                 { w: 'sawtooth', a: 0.020, s: 0.90, r: 0.06, g: 0.50, pluck: false, tau: 0    }, // 6 brass
                 { w: 'square',   a: 0.040, s: 1.00, r: 0.05, g: 0.35, pluck: false, tau: 0    }, // 7 organ
-                { w: 'sine',     a: 0.060, s: 0.90, r: 0.08, g: 1.10, pluck: false, tau: 0    }  // 8 voice
+                { w: 'sine',     a: 0.060, s: 0.90, r: 0.08, g: 1.10, pluck: false, tau: 0    }, // 8 voice
+                { drum: true }                                                                     // 9 drums (noise)
             ];
             const master = audioCtx.createGain();
             master.gain.value = 0.25;
             master.connect(audioCtx.destination);
             const t0 = audioCtx.currentTime + 0.15;
             let end = 0;
+            // Shared white-noise buffer for the drum patch (timbre 9).
+            let noiseBuf = null;
+            const getNoise = () => {
+                if (!noiseBuf) {
+                    noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+                    const d = noiseBuf.getChannelData(0);
+                    for (let i = 0; i < d.length; i++) { d[i] = Math.random() * 2 - 1; }
+                }
+                return noiseBuf;
+            };
             for (const n of notes) {
                 const p = PATCHES[n.I] || PATCHES[0];
+                if (p.drum) {
+                    // GM percussion approximation: filtered noise burst.
+                    // Kick (<45): lowpass thump; snare-ish (45-47 + 38-40):
+                    // bandpass; cymbals/hats (42+, 49+): highpass sizzle.
+                    const src = audioCtx.createBufferSource();
+                    src.buffer = getNoise();
+                    const filt = audioCtx.createBiquadFilter();
+                    let tau = 0.06;
+                    if (n.P <= 36) { filt.type = 'lowpass'; filt.frequency.value = 180; tau = 0.10; }
+                    else if (n.P === 38 || n.P === 39 || n.P === 40) { filt.type = 'bandpass'; filt.frequency.value = 1800; filt.Q.value = 0.8; tau = 0.09; }
+                    else if (n.P >= 49 && n.P !== 51) { filt.type = 'highpass'; filt.frequency.value = 5000; tau = 0.45; } // crash etc ring
+                    else if (n.P === 46) { filt.type = 'highpass'; filt.frequency.value = 6500; tau = 0.25; } // open hat
+                    else if (n.P >= 41 && n.P <= 48 && n.P !== 42 && n.P !== 44) { filt.type = 'bandpass'; filt.frequency.value = 300 + (n.P - 41) * 90; filt.Q.value = 1.2; tau = 0.12; } // toms
+                    else { filt.type = 'highpass'; filt.frequency.value = 7500; tau = 0.05; } // closed/pedal hat, ride tick
+                    const dg = audioCtx.createGain();
+                    const dat = t0 + n.T - offset;
+                    const dpk = 0.9 * (n.V / 127);
+                    dg.gain.setValueAtTime(0, dat);
+                    dg.gain.linearRampToValueAtTime(dpk, dat + 0.004);
+                    dg.gain.setTargetAtTime(0.0001, dat + 0.004, tau);
+                    src.connect(filt); filt.connect(dg); dg.connect(master);
+                    src.start(dat);
+                    const dstop = dat + Math.min(n.D, tau * 6) + 0.05;
+                    src.stop(dstop);
+                    playingOscs.push(src);
+                    if (n.T + n.D > end) end = n.T + n.D;
+                    continue;
+                }
                 const osc = audioCtx.createOscillator();
                 osc.type = p.w;
                 osc.frequency.value = 440 * Math.pow(2, (n.P - 69) / 12);

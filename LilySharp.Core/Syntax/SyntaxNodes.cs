@@ -220,6 +220,37 @@ public sealed class NoteSyntax : SyntaxNode
 }
 
 /// <summary>
+/// A drum note: <c>bd4</c>, <c>sn8</c>, <c>hh</c> — a DrumNameRegistry name
+/// with the same trailing structure as a pitched note.
+/// </summary>
+/// <remarks>LILYPOND-REF: \drummode note events.</remarks>
+public sealed class DrumNoteSyntax : SyntaxNode
+{
+    internal DrumNoteSyntax(InternalSyntax.DrumNoteGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    public SyntaxTokenNode NameToken => (SyntaxTokenNode)GetChild(0)!;
+    public string DrumName => NameToken.Text;
+    public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+    public SyntaxTokenNode? Tremolo => GetChild(2) as SyntaxTokenNode;
+
+    public IEnumerable<SyntaxNode> Articulations
+    {
+        get
+        {
+            for (int i = 3; i < Green.SlotCount; i++)
+            {
+                var child = GetChild(i);
+                if (child != null)
+                    yield return child;
+            }
+        }
+    }
+}
+
+/// <summary>
 /// A rest: <c>r</c>, <c>s</c>, <c>R</c> + optional duration, with optional
 /// <c>*N</c> multi-measure count.
 /// </summary>

@@ -755,7 +755,11 @@ internal sealed class Parser
             SyntaxKind.RevertKeyword => ParseRevertDeclaration(),
             SyntaxKind.OnceKeyword => ParseOnceModifier(),
 
-            SyntaxKind.Identifier => ParseBareVariableReference(), // Variable reference without '$' (deprecated)
+            // Drum-kit vocabulary (bd, sn, hh, …) claims otherwise-invalid bare
+            // identifiers; anything else keeps the deprecated-variable warning.
+            SyntaxKind.Identifier => DrumNameRegistry.Contains(Current.Text)
+                ? ParseDrumNote()
+                : ParseBareVariableReference(),
             _ => null
         };
     }
@@ -817,6 +821,17 @@ internal sealed class Parser
         var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
         var articulations = ParsePostEvents();
         return new NoteGreen(pitch, duration, tremolo, articulations);
+    }
+
+    // bd4, sn8@f, hh — same trailing structure as ParseNote.
+    // LILYPOND-REF: \drummode note events.
+    private DrumNoteGreen ParseDrumNote()
+    {
+        var name = Advance();
+        var duration = ParseOptionalDuration();
+        var tremolo = Check(SyntaxKind.TremoloSuffix) ? Advance() : null;
+        var articulations = ParsePostEvents();
+        return new DrumNoteGreen(name, duration, tremolo, articulations);
     }
 
     /// <summary>

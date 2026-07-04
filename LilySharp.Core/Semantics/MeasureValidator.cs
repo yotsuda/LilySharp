@@ -298,6 +298,13 @@ public sealed class MeasureValidator : ISemanticValidator
                 if (note.Duration != null) defaultDuration = noteDuration;
                 return noteDuration;
 
+            case DrumNoteSyntax drum:
+                var drumDuration = drum.Duration is { } dd
+                    ? dd.ToFraction()
+                    : defaultDuration;
+                if (drum.Duration != null) defaultDuration = drumDuration;
+                return drumDuration;
+
             case RestSyntax rest:
                 var restDuration = DurationCalculator.GetDuration(rest, defaultDuration);
                 if (rest.Duration != null) defaultDuration = restDuration;
@@ -520,7 +527,7 @@ public sealed class MeasureValidator : ISemanticValidator
     {
         // A variable bound to a single music node has no relevant
         // DESCENDANTS — the node itself is the content.
-        if (scope is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax
+        if (scope is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax
             or TupletExpressionSyntax or GraceExpressionSyntax)
         {
             output.Add(scope);
@@ -540,6 +547,7 @@ public sealed class MeasureValidator : ISemanticValidator
             switch (n)
             {
                 case NoteSyntax:
+                case DrumNoteSyntax:
                 case RestSyntax:
                 case ChordSyntax:
                 case BarlineSyntax:

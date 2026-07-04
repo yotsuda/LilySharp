@@ -171,6 +171,11 @@ public sealed record Staff(
         "alto" => ClefType.Alto,
         "tenor" => ClefType.Tenor,
         "treble_8" => ClefType.Treble8Below,
+        "soprano" => ClefType.Soprano,
+        "mezzosoprano" => ClefType.MezzoSoprano,
+        "baritone" => ClefType.Baritone,
+        "bass_8" => ClefType.Bass8Below,
+        "percussion" => ClefType.Percussion,
         "tab" => ClefType.Tab,
         _ => ClefType.Treble
     };
@@ -185,6 +190,11 @@ public sealed record Staff(
         SyntaxKind.AltoKeyword => ClefType.Alto,
         SyntaxKind.TenorKeyword => ClefType.Tenor,
         SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
+        SyntaxKind.SopranoKeyword => ClefType.Soprano,
+        SyntaxKind.MezzoSopranoKeyword => ClefType.MezzoSoprano,
+        SyntaxKind.BaritoneKeyword => ClefType.Baritone,
+        SyntaxKind.Bass8Keyword => ClefType.Bass8Below,
+        SyntaxKind.PercussionKeyword => ClefType.Percussion,
         _ => ClefType.Treble
     };
 }

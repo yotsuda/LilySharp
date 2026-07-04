@@ -202,6 +202,10 @@ public sealed class MidiExporter
                 ProcessNote(note, track);
                 break;
 
+            case DrumNoteSyntax drumNote:
+                ProcessDrumNote(drumNote, track);
+                break;
+
             case TieSyntax:
                 // Tie between two sibling notes — the next same-pitch note extends
                 // the previous one rather than re-articulating.
@@ -727,6 +731,41 @@ public sealed class MidiExporter
         _lastNoteTrack = track;
         _currentTick += durationTicks;
         _tiePending = startsTie;
+    }
+
+    /// <summary>Drum note → GM percussion: channel 10 (0-based 9), pitch =
+    /// the drum's GM key, duration/velocity semantics as pitched notes.
+    /// Timbre 9 selects the preview's noise-based drum patch.</summary>
+    private void ProcessDrumNote(DrumNoteSyntax drum, MidiTrack track)
+    {
+        _tiePending = false; // drums do not tie
+        DrumNameRegistry.TryGet(drum.DrumName, out var info);
+        var duration = GetDuration(drum.Duration);
+        int durationTicks = FractionToTicks(duration);
+        durationTicks -= ConsumeGraceSteal(durationTicks);
+
+        int velocity = _velocity;
+        int durationPercent = 100;
+        foreach (var child in drum.Articulations)
+        {
+            switch (child)
+            {
+                case DynamicSyntax dynamic:
+                    velocity = dynamic.Velocity;
+                    _velocity = velocity;
+                    break;
+                case ArticulationSyntax articulation:
+                    (velocity, durationPercent) = ApplyArticulationType(articulation.Type, velocity, durationPercent);
+                    break;
+            }
+        }
+
+        int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
+        track.Notes.Add(new MidiNote(9, info.GmKey, velocity, _currentTick, actualDuration,
+            drum.Position, NextOrdinal(drum.Position), Timbre: 9));
+        _lastNoteIndex = track.Notes.Count - 1;
+        _lastNoteTrack = track;
+        _currentTick += durationTicks;
     }
 
     private void ProcessRest(RestSyntax rest)

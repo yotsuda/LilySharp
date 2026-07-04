@@ -420,6 +420,9 @@ public sealed class MusicXmlExporter
             case NoteSyntax note:
                 ProcessNote(note);
                 break;
+            case DrumNoteSyntax drumNote:
+                ProcessDrumNote(drumNote);
+                break;
 
             case ChordSyntax chord:
                 ProcessChord(chord);
@@ -603,6 +606,72 @@ public sealed class MusicXmlExporter
         return ("CDEFGAB"[ns].ToString(), na, no);
     }
 
+    /// <summary>MusicXML notehead value from a @notehead(...) mark, or the
+    /// drum table style. XCircle serializes as "circle-x".</summary>
+    private static string? NoteheadName(Svg.Model.NoteheadStyle style) => style switch
+    {
+        Svg.Model.NoteheadStyle.Cross => "x",
+        Svg.Model.NoteheadStyle.Diamond => "diamond",
+        Svg.Model.NoteheadStyle.Triangle => "triangle",
+        Svg.Model.NoteheadStyle.Slash => "slash",
+        Svg.Model.NoteheadStyle.XCircle => "circle-x",
+        _ => null,
+    };
+
+    private static string? NoteheadFromMarks(IEnumerable<SyntaxNode> articulations)
+    {
+        foreach (var art in articulations)
+            if (art is MusicMarkSyntax mark
+                && mark.MarkName.StartsWith("notehead.", StringComparison.OrdinalIgnoreCase))
+                return mark.MarkName[9..].ToLowerInvariant() switch
+                {
+                    "x" or "cross" => "x",
+                    "diamond" => "diamond",
+                    "triangle" => "triangle",
+                    "slash" => "slash",
+                    "xcircle" => "circle-x",
+                    _ => null,
+                };
+        return null;
+    }
+
+    /// <summary>Drum note → &lt;unpitched&gt; note: display position from the
+    /// drums-style staff position mapped onto treble letters (middle line =
+    /// B4), notehead from the same table.</summary>
+    /// <remarks>LILYPOND-REF: ly/drumpitch-init.ly drums-style.</remarks>
+    private void ProcessDrumNote(DrumNoteSyntax drum)
+    {
+        if (_currentMeasure == null) return;
+        _justAutoClosedPickup = false;
+        DrumNameRegistry.TryGet(drum.DrumName, out var info);
+
+        // Staff position → display step/octave (B4 = middle line).
+        int idx = 6 + info.StaffPosition;
+        int oct = 4 + (int)Math.Floor(idx / 7.0);
+        string step = "CDEFGAB"[((idx % 7) + 7) % 7].ToString();
+
+        var duration = GetDuration(drum.Duration);
+        int durationTicks = FractionToTicks(duration);
+        var (type, dots) = GetNoteType(duration);
+        EmitPendingDynamic();
+
+        var (tupletActual, tupletNormal) = CurrentTupletRatio();
+        var xmlNote = new MusicXmlNote
+        {
+            IsUnpitched = true,
+            Step = step,
+            Octave = oct,
+            Duration = durationTicks,
+            Type = type,
+            Dots = dots,
+            ActualNotes = tupletActual,
+            NormalNotes = tupletNormal,
+            Notehead = NoteheadName(info.Notehead),
+        };
+        _currentMeasure.Notes.Add(xmlNote);
+        MaybeClosePickup(duration);
+    }
+
     private void ProcessNote(NoteSyntax note)
     {
         if (_currentMeasure == null) return;
@@ -628,6 +697,7 @@ public sealed class MusicXmlExporter
             Duration = durationTicks,
             Type = type,
             Dots = dots,
+            Notehead = NoteheadFromMarks(note.Articulations),
             ActualNotes = tupletActual,
             NormalNotes = tupletNormal
         };

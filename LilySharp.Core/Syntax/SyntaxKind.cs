@@ -233,6 +233,7 @@ public enum SyntaxKind : ushort
 
     // === Nodes: Notes and Rests ===
     Note,
+    DrumNote,           // bd4, sn8, hh — drum-kit note (DrumNameRegistry)
     Rest,
     Chord,
     Pitch,

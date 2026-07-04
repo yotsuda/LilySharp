@@ -43,6 +43,7 @@ public sealed class DurationValidator : ISemanticValidator
         DurationSyntax? duration = node switch
         {
             NoteSyntax note => note.Duration,
+            DrumNoteSyntax drum => drum.Duration,
             RestSyntax rest => rest.Duration,
             ChordSyntax chord => chord.Duration,
             _ => null

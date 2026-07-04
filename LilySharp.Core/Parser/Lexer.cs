@@ -345,8 +345,25 @@ internal sealed class Lexer
         while (char.IsLetterOrDigit(Current) || Current == '_')
             _position++;
 
-        string text = _text[start.._position];
+        string text = TrimDrumDuration(start, _text[start.._position]);
         return (GetKeywordKind(text), text);
+    }
+
+    /// <summary>
+    /// "hh8" scans as one word, but a drum name takes its duration like a
+    /// pitch does — split the glued digits back off so the parser sees
+    /// name + duration tokens. Identifiers whose letter prefix is not a
+    /// drum name (v2, tomX3) are untouched.
+    /// </summary>
+    private string TrimDrumDuration(int start, string text)
+    {
+        int i = text.Length;
+        while (i > 0 && char.IsDigit(text[i - 1])) i--;
+        if (i == 0 || i == text.Length) return text;
+        string prefix = text[..i];
+        if (!Syntax.DrumNameRegistry.Contains(prefix)) return text;
+        _position = start + i;
+        return prefix;
     }
 
     private (SyntaxKind kind, string text) ScanPitchOrRestOrIdentifier(int start)
@@ -393,7 +410,7 @@ internal sealed class Lexer
         while (char.IsLetterOrDigit(Current) || Current == '_')
             _position++;
 
-        string text = _text[start.._position];
+        string text = TrimDrumDuration(start, _text[start.._position]);
         return (GetKeywordKind(text), text);
     }
 

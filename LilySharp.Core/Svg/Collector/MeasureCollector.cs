@@ -1456,6 +1456,7 @@ public sealed class MeasureCollector
         switch (node)
         {
             case NoteSyntax:
+            case DrumNoteSyntax:
             case RestSyntax:
             case ChordSyntax:
             case BarlineSyntax:
@@ -1595,6 +1596,19 @@ public sealed class MeasureCollector
                     CollectFiguredBass(note, measureIndex, itemIndex);
                     CollectChordNames(note, measureIndex, itemIndex);
                     CollectCrossStaff(note, measureIndex, itemIndex);
+                }
+                break;
+
+            case DrumNoteSyntax drumNote:
+                {
+                    int drumMeasureIndex = builder.CurrentMeasureIndex + _metadataMeasureOffset;
+                    int drumItemIndex = builder.CurrentItemCount;
+                    Fraction drumAnchorTiming = builder.CurrentDuration;
+                    var drumItem = CreateDrumNoteItem(drumNote);
+                    builder.AddItem(drumItem);
+                    CollectDynamics(drumNote, drumMeasureIndex, drumItemIndex);
+                    CollectArticulations(drumNote, drumMeasureIndex, drumItemIndex, drumItem.StemUp,
+                        null, drumAnchorTiming);
                 }
                 break;
 
@@ -2809,6 +2823,7 @@ public sealed class MeasureCollector
             switch (node)
             {
                 case NoteSyntax:
+                case DrumNoteSyntax:
                 case RestSyntax:
                 case ChordSyntax:
                 case BarlineSyntax:
@@ -2855,7 +2870,7 @@ public sealed class MeasureCollector
         musicNodes.Add(RelativeResetMarker.Instance);
 
         // Include expression itself if it is a music node
-        if (expression is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
+        if (expression is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
             or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax
             or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
             or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
@@ -2871,7 +2886,7 @@ public sealed class MeasureCollector
         var nodes = expression.DescendantNodes()
             .Where(n => !IsInsideGrace(n) && !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n)
                 && !IsInsideInlineVolta(n) && !IsInsideParallel(n)
-                && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
+                && n is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
                 or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax
                 or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
                 or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
@@ -3004,6 +3019,7 @@ public sealed class MeasureCollector
     {
         NoteSyntax note => note.Articulations,
         ChordSyntax chord => chord.Articulations,
+        DrumNoteSyntax drum => drum.Articulations,
         _ => Enumerable.Empty<SyntaxNode>()
     };
 
@@ -3864,6 +3880,36 @@ public sealed class MeasureCollector
             Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.RelativeOctave),
             IsDead = HasNamedArticulation(note, "dead"),
             StemUpOverride = GetStemDirectionOverride(note),
+        };
+    }
+
+    /// <summary>Drum note → NoteItem: placement/notehead/GM key from the
+    /// DrumNameRegistry (LP drums-style table); duration semantics identical
+    /// to pitched notes.</summary>
+    /// <remarks>LILYPOND-REF: lily/drum-note-engraver.cc — Drum_notes_engraver
+    /// reads drumStyleTable for position + style.</remarks>
+    private NoteItem CreateDrumNoteItem(DrumNoteSyntax drum)
+    {
+        DrumNameRegistry.TryGet(drum.DrumName, out var info);
+        int noteValue = drum.Duration?.Value ?? (int)_defaultDuration.Denominator;
+        if (drum.Duration != null)
+            _defaultDuration = Fraction.FromNoteValue(noteValue);
+        int dots = drum.Duration?.DotCount ?? 0;
+        int tremoloBeams = ParseTremoloBeams(drum.Tremolo);
+        bool needsLedger = info.StaffPosition <= -6 || info.StaffPosition >= 6;
+
+        return new NoteItem(
+            info.StaffPosition,
+            Fraction.FromNoteValue(noteValue),
+            dots,
+            accidental: null,
+            needsLedger,
+            drum.Position,
+            tremoloBeams)
+        {
+            Notehead = info.Notehead,
+            Midi = info.GmKey,
+            StemUpOverride = GetStemDirectionOverride(drum),
         };
     }
 

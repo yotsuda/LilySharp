@@ -230,6 +230,11 @@ public sealed class MusicXmlNote
 {
     public bool IsRest { get; set; }
     public bool IsChord { get; set; }
+    /// <summary>Drum note: serialize &lt;unpitched&gt; with Step/Octave as the
+    /// DISPLAY position instead of &lt;pitch&gt;.</summary>
+    public bool IsUnpitched { get; set; }
+    /// <summary>Notehead style name ("x", "diamond", …) or null for default.</summary>
+    public string? Notehead { get; set; }
     public string? Step { get; set; }
     public int? Alter { get; set; }
     public int? Octave { get; set; }
@@ -277,6 +282,12 @@ public sealed class MusicXmlNote
         {
             note.Add(new XElement("rest"));
         }
+        else if (IsUnpitched)
+        {
+            note.Add(new XElement("unpitched",
+                new XElement("display-step", Step),
+                new XElement("display-octave", Octave)));
+        }
         else
         {
             var pitch = new XElement("pitch",
@@ -306,6 +317,9 @@ public sealed class MusicXmlNote
             note.Add(new XElement("time-modification",
                 new XElement("actual-notes", ActualNotes.Value),
                 new XElement("normal-notes", NormalNotes.Value)));
+
+        if (Notehead != null)
+            note.Add(new XElement("notehead", Notehead));
 
         // Notations (articulations, ornaments, ties, slurs)
         var hasNotations = Articulations.Count > 0 || Ornaments.Count > 0 ||

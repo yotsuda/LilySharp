@@ -113,6 +113,19 @@ internal sealed class NoteGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// A drum note (bd4, sn8, hh): name + optional duration + optional tremolo +
+/// articulations — the same trailing shape as NoteGreen.
+/// LILYPOND-REF: \drummode note events.
+/// </summary>
+internal sealed class DrumNoteGreen : GreenSyntaxNode
+{
+    public DrumNoteGreen(SyntaxToken name, DurationGreen? duration, SyntaxToken? tremolo, GreenNode?[] articulations)
+        : base(SyntaxKind.DrumNote, [name, duration, tremolo, .. articulations])
+    {
+    }
+}
+
+/// <summary>
 /// A rest: r, s, R + optional duration + optional <c>*N</c> measure-count multiplier.
 /// </summary>
 /// <remarks>

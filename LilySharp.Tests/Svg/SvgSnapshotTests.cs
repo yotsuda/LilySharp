@@ -360,6 +360,7 @@ public class SvgSnapshotTests
         // dotted quarter (dot beside the head), eighth (flag) — with bare
         // unquoted markings and pair-vs-pair stacking of adjacent tempo+label.
         yield return new object[] { "test/tempo-beat-units" };
+        yield return new object[] { "test/drum-groove" };
     }
 
     /// <summary>
