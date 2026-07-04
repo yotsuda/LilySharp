@@ -1428,6 +1428,18 @@ public static class SharedRenderer
         }
     }
 
+    /// <summary>Stem start offset from the head CENTER for styled noteheads:
+    /// cross/slash ink only reaches the attach edge at its CORNERS, so the stem
+    /// joins the corner on the stem's side (±½ss); the do-triangle's corners
+    /// are both at the bottom. Round heads attach at center (0).
+    /// LILYPOND-REF: mf/feta-noteheads.mf stem_attachment per head style.</summary>
+    private static double StemAttachYOffset(NoteheadStyle style, bool stemUp) => style switch
+    {
+        NoteheadStyle.Cross or NoteheadStyle.Slash => stemUp ? -0.5 : 0.5,
+        NoteheadStyle.Triangle => 0.5,
+        _ => 0,
+    };
+
     private static void DrawNote(NoteItem note, double x, double staffMiddleY,
         GrobPropertyResolver resolver, bool isBeamed, bool? forcedStemUp, bool headWiped,
         IDrawingContext gc)
@@ -1493,7 +1505,8 @@ public static class SharedRenderer
             double staffTopY = staffMiddleY - StaffHeight / 2.0;
             double stemEndY = StemCalculator.CalculateStemEndY(
                 noteY, stemUp, staffTopY, durLog, note.StaffPosition);
-            gc.DrawLine(stemX, noteY, stemX, stemEndY,
+            gc.DrawLine(stemX, noteY + StemAttachYOffset(note.Notehead, stemUp),
+                stemX, stemEndY,
                 stemColor ?? Color.Black, EngravingDefaults.StemThickness);
 
             bool hasFlag = false;
@@ -1624,7 +1637,8 @@ public static class SharedRenderer
             // Stem attaches at the far notehead; its length is reckoned from the
             // stem-tip-side notehead (top note for stem-up, bottom for stem-down),
             // following LilyPond's Stem::internal_calc_stem_end_position (stem.cc:481).
-            double stemStartY = stemUp ? bottomY : topY;
+            double stemStartY = (stemUp ? bottomY : topY)
+                + StemAttachYOffset(chord.Notehead, stemUp);
             int stemTipPos = stemUp ? maxPos : minPos;
             double stemTipNoteY = stemUp ? topY : bottomY;
             int durLog = StemCalculator.GetDurationLog(noteValue);
@@ -2206,7 +2220,13 @@ public static class SharedRenderer
                     double memberStaffMiddleY = !ossiaBeam && memberStaffIdx >= 0
                         ? LayoutUtilities.FindStaffYInSystem(system, memberStaffIdx) + StaffHeight / 2
                         : staffMiddleY;
-                    headY = memberStaffMiddleY - GetMemberStaffPosition(member, up) * 0.5;
+                    headY = memberStaffMiddleY - GetMemberStaffPosition(member, up) * 0.5
+                        + StemAttachYOffset(member.Item switch
+                        {
+                            NoteItem n => n.Notehead,
+                            ChordItem ch => ch.Notehead,
+                            _ => NoteheadStyle.Default,
+                        }, up);
                 }
                 bgc.DrawLine(stemX, headY, stemX, beamY,
                     Color.Black, EngravingDefaults.StemThickness);
