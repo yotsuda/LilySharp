@@ -201,6 +201,7 @@ public sealed class MusicXmlExporter
         var partName = partBlock.Name;
         EnsurePart(partName);
         _currentTranspose = _root != null ? PartTranspose.Read(_root, partName) : null;
+        ApplyPartHeaderClef(partName);
 
         // Reset state for this part's continuation
         _currentOctave = 4;
@@ -490,6 +491,22 @@ public sealed class MusicXmlExporter
                 ProcessGraceNotes(grace);
                 break;
 
+            case ParallelExpressionSyntax parallel:
+                ProcessParallelVoices(parallel);
+                break;
+
+            case RepeatExpressionSyntax repeat:
+                // percent / unfold / tremolo bodies play COUNT times; the walk
+                // used to fall through and emit the body once (wrong length).
+                // Unfolded content is metrically correct; the shorthand
+                // notation (measure-repeat signs) is a later refinement.
+                {
+                    int repCount = int.TryParse(repeat.Count.Text, out int rc) ? Math.Max(1, rc) : 2;
+                    for (int rep = 0; rep < repCount; rep++)
+                        ProcessNode(repeat.Body);
+                }
+                break;
+
             case TupletExpressionSyntax tuplet:
                 // A tuplet plays TupletRatio notes in the time of BaseDivision
                 // (triplet = 3 in 2). Scale durations and tag time-modification for
@@ -528,6 +545,76 @@ public sealed class MusicXmlExporter
                         ProcessNode(child);
                 }
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Multi-voice: voice 1 leads the measure stream; each further voice
+    /// renders into a SCRATCH part and merges into the same measures behind a
+    /// &lt;backup&gt; cursor rewind, tagged with its voice number — the
+    /// MusicXML shape importers expect (the walk used to serialize voices
+    /// SEQUENTIALLY, doubling the measure count).
+    /// </summary>
+    private void ProcessParallelVoices(ParallelExpressionSyntax parallel)
+    {
+        var voices = parallel.Voices.ToList();
+        if (voices.Count == 0) return;
+        if (_currentPart == null)
+        {
+            foreach (var v in voices) ProcessNode(v);
+            return;
+        }
+
+        int startMeasure = _currentPart.Measures.Count;
+        ProcessNode(voices[0]);
+        FlushCurrentMeasure(); // voice blocks are bar-aligned; settle voice 1
+        int endMeasure = _currentPart.Measures.Count;
+
+        for (int v = 1; v < voices.Count; v++)
+        {
+            var savedPart = _currentPart;
+            var savedMeasure = _currentMeasure;
+            int savedMeasureNumber = _measureNumber;
+            var savedOctave = _currentOctave;
+            var savedStep = _currentStep;
+            var savedDefault = _defaultDuration;
+            var savedTie = _tieToNextNote;
+
+            var temp = new MusicXmlPart { Name = "voice-temp" };
+            _currentPart = temp;
+            _currentMeasure = null;
+            StartNewMeasure(); // scratch stream needs an open measure for its notes
+            _currentOctave = 4;
+            _currentStep = 0;
+            _defaultDuration = Fraction.Quarter;
+            _tieToNextNote = false;
+            ProcessNode(voices[v]);
+            FlushCurrentMeasure();
+
+            _currentPart = savedPart;
+            _currentMeasure = savedMeasure;
+            _measureNumber = savedMeasureNumber;
+            _currentOctave = savedOctave;
+            _currentStep = savedStep;
+            _defaultDuration = savedDefault;
+            _tieToNextNote = savedTie;
+
+            for (int i = 0; i < temp.Measures.Count && startMeasure + i < endMeasure; i++)
+            {
+                var target = _currentPart.Measures[startMeasure + i];
+                int written = target.Notes
+                    .Where(n => !n.IsChord && !n.IsGrace && !n.IsBackup)
+                    .Sum(n => n.Duration);
+                foreach (var n in target.Notes)
+                    if (!n.IsBackup)
+                        n.Voice ??= 1;
+                target.Notes.Add(new MusicXmlNote { IsBackup = true, Duration = written });
+                foreach (var n in temp.Measures[i].Notes)
+                {
+                    n.Voice = v + 1;
+                    target.Notes.Add(n);
+                }
+            }
         }
     }
 
@@ -573,9 +660,35 @@ public sealed class MusicXmlExporter
         _keyMode = mode;
     }
 
+    /// <summary>The part declaration's `clef` property (if any) sets the
+    /// part's opening clef — the walk only sees IN-MUSIC clef changes, so a
+    /// header-only clef (the normal case) used to export as G.</summary>
+    private void ApplyPartHeaderClef(string partName)
+    {
+        if (_root == null) return;
+        foreach (var pd in _root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        {
+            if (pd.Name.Text != partName) continue;
+            foreach (var prop in pd.Properties)
+            {
+                if (prop.NameToken.Text.Equals("clef", StringComparison.OrdinalIgnoreCase)
+                    && prop.GetChild(2) is SyntaxTokenNode v)
+                {
+                    SetClef(v.Text.ToLowerInvariant());
+                    return;
+                }
+            }
+            return;
+        }
+    }
+
     private void ProcessClef(ClefDeclarationSyntax clef)
     {
-        var clefName = clef.ClefName?.Text.ToLower();
+        SetClef(clef.ClefName?.Text.ToLower());
+    }
+
+    private void SetClef(string? clefName)
+    {
         (_clefSign, _clefLine) = clefName switch
         {
             "treble" => ("G", 2),

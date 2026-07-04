@@ -233,6 +233,11 @@ public sealed class MusicXmlNote
     /// <summary>Drum note: serialize &lt;unpitched&gt; with Step/Octave as the
     /// DISPLAY position instead of &lt;pitch&gt;.</summary>
     public bool IsUnpitched { get; set; }
+    /// <summary>A &lt;backup&gt; pseudo-entry (multi-voice): rewinds the measure
+    /// cursor by <see cref="Duration"/> before the next voice's notes.</summary>
+    public bool IsBackup { get; set; }
+    /// <summary>MusicXML voice number (1-based) in multi-voice measures.</summary>
+    public int? Voice { get; set; }
     /// <summary>Notehead style name ("x", "diamond", …) or null for default.</summary>
     public string? Notehead { get; set; }
     public string? Step { get; set; }
@@ -265,6 +270,10 @@ public sealed class MusicXmlNote
 
     public XElement ToXml()
     {
+        // Multi-voice measure-cursor rewind — not a <note> at all.
+        if (IsBackup)
+            return new XElement("backup", new XElement("duration", Duration));
+
         var note = new XElement("note");
 
         if (IsGrace)
@@ -305,6 +314,9 @@ public sealed class MusicXmlNote
             note.Add(new XElement("tie", new XAttribute("type", "start")));
         if (TieStop)
             note.Add(new XElement("tie", new XAttribute("type", "stop")));
+
+        if (Voice.HasValue)
+            note.Add(new XElement("voice", Voice.Value));
 
         if (Type != null)
             note.Add(new XElement("type", Type));
