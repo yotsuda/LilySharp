@@ -150,7 +150,8 @@ public static class ArticulationEngraver
             // Fall / Doit (bend-after): a short curve trailing off the RIGHT of the
             // note at the note's own height — on a tab staff, off the fret digit's
             // string row. Positioned independently of the Script side machinery.
-            if (articulation.Type is ArticulationType.Fall or ArticulationType.Doit)
+            if (articulation.Type is ArticulationType.Fall or ArticulationType.Doit
+                or ArticulationType.Bend)
             {
                 double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                     artMeasures, articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
@@ -175,7 +176,14 @@ public static class ArticulationEngraver
                     fx = itemX + 2.0 * NoteheadHalfWidth(item) + 0.15;
                     fy = (StaffMiddle - GetStaffPosition(item) * 0.5) + staffOffset;
                 }
-                string bendGlyph = articulation.Type == ArticulationType.Fall ? "bendFall" : "bendDoit";
+                string bendGlyph = articulation.Type switch
+                {
+                    ArticulationType.Fall => "bendFall",
+                    ArticulationType.Doit => "bendDoit",
+                    // Guitar bend-up: the renderer parses the amount off the
+                    // sentinel and draws arrow + label.
+                    _ => $"bendUp:{articulation.BendSemitones}",
+                };
                 layouts.Add(new ArticulationLayout(
                     articulation.MeasureIndex, articulation.ItemIndex, fx, fy,
                     bendGlyph, true, articulation.SourcePosition, 1.0, SourceIndex: arti, StaffIndex: articulation.StaffIndex));

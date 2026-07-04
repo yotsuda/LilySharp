@@ -2819,6 +2819,15 @@ public static class SharedRenderer
                     DrawBendAfter(a.X, y, fall: a.Glyph == "bendFall", gc);
                 continue;
             }
+            // Guitar bend-up sentinel ("bendUp:N", N = semitones): rising arrow
+            // with the bend amount labelled above the arrowhead.
+            if (a.Glyph.StartsWith("bendUp:", StringComparison.Ordinal))
+            {
+                int semis = int.TryParse(a.Glyph.AsSpan(7), out int bs) ? bs : 2;
+                using (gc.Source(a.SourcePosition))
+                    DrawGuitarBend(a.X, y, semis, gc);
+                continue;
+            }
             using (gc.Source(a.SourcePosition))
                 gc.DrawGlyph(a.Glyph[0], a.X, y, FontSize * scale);
         }
@@ -2860,6 +2869,44 @@ public static class SharedRenderer
             gc.DrawLine(px, py, nx, ny, Color.Black, 0.13, cap: LineCap.Round);
             px = nx; py = ny;
         }
+    }
+
+    /// <summary>
+    /// Draws a guitar bend-up: a curve leaving the note/fret nearly
+    /// horizontally then rising steeply, an arrowhead at the top, and the
+    /// bend amount ("½", "full", "1½", …) above the arrowhead.
+    /// LILYPOND-REF: TAB bend convention (bend-alter in MusicXML terms);
+    /// curve idiom follows DrawBendAfter.
+    /// </summary>
+    private static void DrawGuitarBend(double x0, double y0, int semitones, IDrawingContext gc)
+    {
+        const double len = 1.6;    // horizontal reach
+        const double rise = 2.6;   // vertical reach (upward)
+        double cx = x0 + len * 0.95, cy = y0 - rise * 0.1; // sharp late turn upward
+        double topX = x0 + len, topY = y0 - rise;
+        double px = x0, py = y0;
+        const int seg = 10;
+        for (int s = 1; s <= seg; s++)
+        {
+            double t = s / (double)seg, u = 1 - t;
+            double nx = u * u * x0 + 2 * u * t * cx + t * t * topX;
+            double ny = u * u * y0 + 2 * u * t * cy + t * t * topY;
+            gc.DrawLine(px, py, nx, ny, Color.Black, 0.13, cap: LineCap.Round);
+            px = nx; py = ny;
+        }
+        // Arrowhead: a V of two strokes at the curve's top (no polygon API).
+        const double ah = 0.55, aw = 0.32;
+        gc.DrawLine(topX - aw, topY + ah, topX, topY, Color.Black, 0.16, cap: LineCap.Round);
+        gc.DrawLine(topX + aw, topY + ah, topX, topY, Color.Black, 0.16, cap: LineCap.Round);
+        // Amount label in guitar convention: semitones → steps.
+        string label = semitones switch
+        {
+            1 => "½",
+            2 => "full",
+            _ => (semitones % 2 == 0) ? (semitones / 2).ToString() : $"{semitones / 2}½",
+        };
+        gc.DrawText(label, topX, topY - 0.35, 1.6, "serif", FontStyle.Italic,
+            TextAnchor.Middle, Color.Black);
     }
 
     // ---------- Lyrics ----------

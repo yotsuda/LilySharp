@@ -140,6 +140,10 @@ public sealed class AnnotationNameValidator : ISemanticValidator
         if (lower is "notehead.x" or "notehead.cross" or "notehead.diamond"
             or "notehead.triangle" or "notehead.slash" or "notehead.xcircle")
             return true;
+        if (lower is "bend.half" or "bend.full"
+            || (lower.StartsWith("bend.", StringComparison.Ordinal)
+                && int.TryParse(lower.AsSpan(5), out int bend) && bend is > 0 and <= 12))
+            return true;
         if (FiguredBassItem.ParseFigures(name) != null)
             return true;
         if (ChordNameItem.ParseChordName(name) != null)

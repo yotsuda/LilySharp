@@ -3545,6 +3545,23 @@ public sealed class MeasureCollector
                 {
                     _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex));
                 }
+                else if (markName.StartsWith("bend."))
+                {
+                    // @bend(full|half|N) — guitar bend-up, N in semitones.
+                    // LILYPOND-REF: MusicXML <bend><bend-alter> semantics.
+                    int? semis = markName[5..] switch
+                    {
+                        "half" => 1,
+                        "full" => 2,
+                        var s when int.TryParse(s, out int n) && n is > 0 and <= 12 => n,
+                        _ => null,
+                    };
+                    if (semis is { } sv)
+                        _articulations.Add(new ArticulationItem(
+                            ArticulationType.Bend, measureIndex, itemIndex, true,
+                            markSyntax.Position, _currentStaffIndex)
+                        { BendSemitones = sv });
+                }
                 else if (markName.StartsWith("notehead."))
                 {
                     // Consumed by ExtractNoteheadStyle at item creation — not a

@@ -40,6 +40,10 @@ public sealed record ArticulationItem
     /// <summary>Whether this articulation should be placed above the note.</summary>
     public bool IsAbove { get; }
 
+    /// <summary>Guitar bend amount in SEMITONES (2 = full step); only for
+    /// <see cref="ArticulationType.Bend"/>.</summary>
+    public int BendSemitones { get; init; }
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
 
@@ -83,6 +87,7 @@ public sealed record ArticulationItem
         // renderer draws as a trailing curve (see ArticulationEngraver), so GetGlyph
         // is never consulted for them.
         ArticulationType.Fall => "",
+        ArticulationType.Bend => "",
         ArticulationType.Doit => "",
         ArticulationType.Trill => EmmentalerGlyphs.OrnTrill.ToString(),
         ArticulationType.Mordent => EmmentalerGlyphs.OrnMordent.ToString(),
