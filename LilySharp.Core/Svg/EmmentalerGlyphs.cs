@@ -39,6 +39,8 @@ public static class EmmentalerGlyphs
     public const char FClef8va = '\uE083';        // same as FClef
     public const char CClef = '\uE07F';           // clefs.C
     public const char CClefChange = '\uE080';     // clefs.C_change (smaller, for clef changes)
+    public const char PercussionClef = '\uE08B';   // clefs.percussion
+    public const char PercussionClefChange = '\uE08C'; // clefs.percussion_change
     public const char TabClef = '\uE08F';          // clefs.tab (6-string TAB)
     public const char TabClefChange = '\uE090';    // clefs.tab_change (smaller)
 

@@ -29,6 +29,11 @@ public enum ClefType
     Alto,
     Tenor,
     Treble8Below,
+    Soprano,       // C clef, line 1 (C4 on the bottom line)
+    MezzoSoprano,  // C clef, line 2
+    Baritone,      // C clef, line 5 (top line)
+    Bass8Below,    // F clef sounding an octave lower (written like bass)
+    Percussion,    // unpitched percussion clef (positions like alto)
     Tab
 }
 

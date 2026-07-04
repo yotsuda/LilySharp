@@ -2095,6 +2095,11 @@ public sealed class MeasureCollector
                     ClefType.Alto => "alto",
                     ClefType.Tenor => "tenor",
                     ClefType.Treble8Below => "treble_8",
+                    ClefType.Soprano => "soprano",
+                    ClefType.MezzoSoprano => "mezzosoprano",
+                    ClefType.Baritone => "baritone",
+                    ClefType.Bass8Below => "bass_8",
+                    ClefType.Percussion => "percussion",
                     _ => "treble"
                 };
                 resolvedOctave ??= defaultOctave;
@@ -4014,9 +4019,13 @@ public sealed class MeasureCollector
         int basePosition = _clef switch
         {
             "treble" or "treble_8" => dStep - GetPitchIndex('b') + (dOctave - 4) * 7,
-            "bass" => dStep - GetPitchIndex('d') + (dOctave - 3) * 7,
-            "alto" => dStep - GetPitchIndex('c') + (dOctave - 4) * 7,
+            "bass" or "bass_8" => dStep - GetPitchIndex('d') + (dOctave - 3) * 7,
+            "alto" or "percussion" => dStep - GetPitchIndex('c') + (dOctave - 4) * 7,
             "tenor" => dStep - GetPitchIndex('a') + (dOctave - 3) * 7,
+            // C clefs on other lines: middle line = G4 (soprano), E4 (mezzo), F3 (baritone).
+            "soprano" => dStep - GetPitchIndex('g') + (dOctave - 4) * 7,
+            "mezzosoprano" => dStep - GetPitchIndex('e') + (dOctave - 4) * 7,
+            "baritone" => dStep - GetPitchIndex('f') + (dOctave - 3) * 7,
             _ => dStep - GetPitchIndex('b') + (dOctave - 4) * 7
         };
 
@@ -4052,6 +4061,11 @@ public sealed class MeasureCollector
         "alto" => ClefType.Alto,
         "tenor" => ClefType.Tenor,
         "treble_8" => ClefType.Treble8Below,
+        "soprano" => ClefType.Soprano,
+        "mezzosoprano" => ClefType.MezzoSoprano,
+        "baritone" => ClefType.Baritone,
+        "bass_8" => ClefType.Bass8Below,
+        "percussion" => ClefType.Percussion,
         _ => ClefType.Treble
     };
 

@@ -993,21 +993,26 @@ public static class SharedRenderer
     {
         char glyph = clef switch
         {
-            ClefType.Bass => EmmentalerGlyphs.FClef,
-            ClefType.Alto => EmmentalerGlyphs.CClef,
-            ClefType.Tenor => EmmentalerGlyphs.CClef,
+            ClefType.Bass or ClefType.Bass8Below => EmmentalerGlyphs.FClef,
+            ClefType.Alto or ClefType.Tenor or ClefType.Soprano
+                or ClefType.MezzoSoprano or ClefType.Baritone => EmmentalerGlyphs.CClef,
+            ClefType.Percussion => EmmentalerGlyphs.PercussionClef,
             _ => EmmentalerGlyphs.GClef,
         };
-        // Y baseline matches LP positioning (treble: G line, bass: F line, etc.)
+        // Y baseline matches LP positioning: the clef glyph anchors on the line
+        // it names (G / F / C); percussion centres on the middle line.
         double clefY = clef switch
         {
-            ClefType.Bass => staffY + 1,
-            ClefType.Alto => staffY + 2,
+            ClefType.Bass or ClefType.Bass8Below => staffY + 1,
+            ClefType.Alto or ClefType.Percussion => staffY + 2,
             ClefType.Tenor => staffY + 1,
+            ClefType.Soprano => staffY + 4,       // C4 on the bottom line
+            ClefType.MezzoSoprano => staffY + 3,  // C4 on line 2
+            ClefType.Baritone => staffY + 0,      // C4 on the top line
             _ => staffY + 3,
         };
         gc.DrawGlyph(glyph, x + 0.3, clefY, FontSize);
-        if (clef == ClefType.Treble8Below)
+        if (clef is ClefType.Treble8Below or ClefType.Bass8Below)
             DrawClefModifier8(x + 0.3, staffY, change: false, gc);
         return x + 0.3 + 3.0;  // approximate clef width + padding
     }
@@ -1159,9 +1164,12 @@ public static class SharedRenderer
     {
         int c0Position = clef switch
         {
-            ClefType.Bass => 6,
-            ClefType.Alto => 0,
+            ClefType.Bass or ClefType.Bass8Below => 6,
+            ClefType.Alto or ClefType.Percussion => 0,
             ClefType.Tenor => 2,
+            ClefType.Soprano => -4,
+            ClefType.MezzoSoprano => -2,
+            ClefType.Baritone => 4,
             _ => -6, // treble (and treble_8)
         };
         int cPos = ((c0Position % 7) + 7) % 7;
@@ -4509,22 +4517,26 @@ public static class SharedRenderer
     {
         char glyph = clefChange.NewClef switch
         {
-            ClefType.Bass => EmmentalerGlyphs.FClefChange,
-            ClefType.Alto => EmmentalerGlyphs.CClefChange,
-            ClefType.Tenor => EmmentalerGlyphs.CClefChange,
+            ClefType.Bass or ClefType.Bass8Below => EmmentalerGlyphs.FClefChange,
+            ClefType.Alto or ClefType.Tenor or ClefType.Soprano
+                or ClefType.MezzoSoprano or ClefType.Baritone => EmmentalerGlyphs.CClefChange,
+            ClefType.Percussion => EmmentalerGlyphs.PercussionClefChange,
             _ => EmmentalerGlyphs.GClefChange,
         };
         double clefY = clefChange.NewClef switch
         {
-            ClefType.Bass => staffY + 1,
-            ClefType.Alto => staffY + 2,
+            ClefType.Bass or ClefType.Bass8Below => staffY + 1,
+            ClefType.Alto or ClefType.Percussion => staffY + 2,
             ClefType.Tenor => staffY + 1,
+            ClefType.Soprano => staffY + 4,
+            ClefType.MezzoSoprano => staffY + 3,
+            ClefType.Baritone => staffY + 0,
             _ => staffY + 3,
         };
         using (gc.Source(clefChange.SourcePosition))
         {
             gc.DrawGlyph(glyph, x, clefY, FontSize);
-            if (clefChange.NewClef == ClefType.Treble8Below)
+            if (clefChange.NewClef is ClefType.Treble8Below or ClefType.Bass8Below)
                 DrawClefModifier8(x, staffY, change: true, gc);
         }
     }

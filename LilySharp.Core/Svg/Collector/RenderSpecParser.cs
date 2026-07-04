@@ -247,6 +247,11 @@ public static class RenderSpecParser
             SyntaxKind.AltoKeyword => ClefType.Alto,
             SyntaxKind.TenorKeyword => ClefType.Tenor,
             SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
+            SyntaxKind.SopranoKeyword => ClefType.Soprano,
+            SyntaxKind.MezzoSopranoKeyword => ClefType.MezzoSoprano,
+            SyntaxKind.BaritoneKeyword => ClefType.Baritone,
+            SyntaxKind.Bass8Keyword => ClefType.Bass8Below,
+            SyntaxKind.PercussionKeyword => ClefType.Percussion,
             _ => null,
         };
         int partIdx = explicitClef != null ? 1 : 0;
@@ -343,6 +348,11 @@ public static class RenderSpecParser
                         "alto" => ClefType.Alto,
                         "tenor" => ClefType.Tenor,
                         "treble_8" => ClefType.Treble8Below,
+                        "soprano" => ClefType.Soprano,
+                        "mezzosoprano" => ClefType.MezzoSoprano,
+                        "baritone" => ClefType.Baritone,
+                        "bass_8" => ClefType.Bass8Below,
+                        "percussion" => ClefType.Percussion,
                         _ => ClefType.Treble
                     };
                 }
@@ -425,6 +435,11 @@ public static class RenderSpecParser
                 SyntaxKind.AltoKeyword => ClefType.Alto,
                 SyntaxKind.TenorKeyword => ClefType.Tenor,
                 SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
+            SyntaxKind.SopranoKeyword => ClefType.Soprano,
+            SyntaxKind.MezzoSopranoKeyword => ClefType.MezzoSoprano,
+            SyntaxKind.BaritoneKeyword => ClefType.Baritone,
+            SyntaxKind.Bass8Keyword => ClefType.Bass8Below,
+            SyntaxKind.PercussionKeyword => ClefType.Percussion,
                 _ => null,
             };
         }

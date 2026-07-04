@@ -508,6 +508,11 @@ internal sealed class Lexer
             "alto" => SyntaxKind.AltoKeyword,
             "tenor" => SyntaxKind.TenorKeyword,
             "treble_8" => SyntaxKind.Treble8Keyword,
+            "soprano" => SyntaxKind.SopranoKeyword,
+            "mezzosoprano" => SyntaxKind.MezzoSopranoKeyword,
+            "baritone" => SyntaxKind.BaritoneKeyword,
+            "bass_8" => SyntaxKind.Bass8Keyword,
+            "percussion" => SyntaxKind.PercussionKeyword,
 
             // Other keywords
             "tuplet" => SyntaxKind.TupletKeyword,

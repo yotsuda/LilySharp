@@ -365,7 +365,7 @@ public sealed class MusicXmlExporter
                     : _keyFifths,
                 KeyMode = _keyMode,
                 ClefSign = _clefSign,
-                ClefLine = _clefLine
+                ClefLine = _clefLine > 0 ? _clefLine : null
             };
 
             _currentMeasure.Direction = new MusicXmlDirection { Tempo = _tempo };
@@ -576,9 +576,15 @@ public sealed class MusicXmlExporter
         (_clefSign, _clefLine) = clefName switch
         {
             "treble" => ("G", 2),
+            "treble_8" => ("G", 2),
             "bass" => ("F", 4),
+            "bass_8" => ("F", 4),
             "alto" => ("C", 3),
             "tenor" => ("C", 4),
+            "soprano" => ("C", 1),
+            "mezzosoprano" => ("C", 2),
+            "baritone" => ("C", 5),
+            "percussion" => ("percussion", 0),
             _ => ("G", 2)
         };
     }
