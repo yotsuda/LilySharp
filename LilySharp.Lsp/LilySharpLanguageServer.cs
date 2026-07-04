@@ -378,8 +378,8 @@ public sealed class LilySharpLanguageServer
             CompletionContext.TopLevel => GetTopLevelCompletions(),
             // A percussion part's music block offers the drum-kit vocabulary,
             // not pitch letters (LILYPOND-REF: \drummode note names).
-            CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset)
-                ? GetDrumCompletions()
+            CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
+                ? GetDrumCompletions(inVoice)
                 : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset)),
             CompletionContext.StructureBlock => GetStructureCompletions(doc.Text),
             CompletionContext.PartBlock => GetPartPropertyCompletions(),
@@ -1263,7 +1263,11 @@ public sealed class LilySharpLanguageServer
     /// declaration for `clef percussion`.
     /// </summary>
     internal static bool IsInsidePercussionPartMusic(string text, int offset)
+        => IsInsidePercussionPartMusic(text, offset, out _);
+
+    internal static bool IsInsidePercussionPartMusic(string text, int offset, out bool insideVoice)
     {
+        insideVoice = false;
         int depth = 0;
         for (int i = Math.Min(offset, text.Length) - 1; i >= 0; i--)
         {
@@ -1281,7 +1285,10 @@ public sealed class LilySharpLanguageServer
             string name = text[(s + 1)..(e + 1)];
 
             if (name.Equals("voice", StringComparison.OrdinalIgnoreCase))
+            {
+                insideVoice = true;
                 continue; // ascend to the enclosing part block
+            }
 
             // Structural keywords: this is not a part-music block.
             if (name is "section" or "score" or "structure" or "part" or "phrase"
@@ -1308,7 +1315,7 @@ public sealed class LilySharpLanguageServer
     /// vocabulary (aliases first — the idiomatic form), plus rests and the
     /// structural snippets that remain valid in drum music. No pitch letters.
     /// </summary>
-    private static CompletionList GetDrumCompletions()
+    private static CompletionList GetDrumCompletions(bool insideVoice)
     {
         var items = new System.Collections.Generic.List<CompletionItem>();
         foreach (var kv in LilySharp.Core.Syntax.DrumNameRegistry.AliasEntries)
@@ -1337,11 +1344,15 @@ public sealed class LilySharpLanguageServer
             new CompletionItem { Label = "r", Kind = CompletionItemKind.Value, Detail = "Rest", SortText = "2r" },
             new CompletionItem { Label = "s", Kind = CompletionItemKind.Value, Detail = "Spacer rest (invisible)", SortText = "2s" },
             new CompletionItem { Label = "R", Kind = CompletionItemKind.Value, Detail = "Full-measure rest", SortText = "2R" },
-            new CompletionItem { Label = "voice", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "voice { $0 }", Detail = "Voice (hats up / kick+snare down)", SortText = "3voice" },
             new CompletionItem { Label = "repeat", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "repeat percent 2 {\n\t$0\n}", Detail = "Repeat block (percent/unfold/tremolo)", SortText = "3repeat" },
             new CompletionItem { Label = "tuplet", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tuplet 3/2 { $0 }", Detail = "Tuplet (e.g., triplet)", SortText = "3tuplet" },
             new CompletionItem { Label = "time", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "time $0", Detail = "Change time signature", SortText = "4time" },
         });
+        // voice { } is only meaningful directly in the part's music —
+        // NESTED voice blocks silently become parallel siblings (verified),
+        // so the snippet is withheld inside a voice wrapper.
+        if (!insideVoice)
+            items.Add(new CompletionItem { Label = "voice", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "voice { $0 }", Detail = "Voice (hats up / kick+snare down)", SortText = "3voice" });
         return new CompletionList { IsIncomplete = false, Items = [.. items] };
     }
 
