@@ -30,7 +30,8 @@ public readonly record struct ArpeggioLayout(
     int SourcePosition,
     int SourceIndex = -1,    // F3/B: index into score.Arpeggios (data-pos resolved at render)
     int MeasureIndex = -1,   // page membership for multi-page rendering (-1 = draw on every page)
-    int StaffIndex = -1);    // owning staff (ossia shrink); -1 = unknown/test construction
+    int StaffIndex = -1,     // owning staff (ossia shrink); -1 = unknown/test construction
+    bool Bracket = false);   // non-arpeggiate: straight bracket, not a wave
 
 /// <summary>
 /// Calculates arpeggio layouts from detected arpeggio items.
@@ -146,7 +147,8 @@ public static class ArpeggioEngraver
                 SourcePosition: arp.SourcePosition,
                 SourceIndex: ai,
                 MeasureIndex: arp.MeasureIndex,
-                StaffIndex: arp.StaffIndex));
+                StaffIndex: arp.StaffIndex,
+                Bracket: arp.Bracket));
         }
 
         return layouts.ToImmutableArray();

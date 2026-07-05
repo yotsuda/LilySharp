@@ -70,6 +70,9 @@ public sealed class MusicXmlExporter
     private string? _keyCustomXml;  // non-traditional key (encoded pairs)
     private string? _noteFrameSpec; // @frame(...) on the note being written
     private MusicXmlNote? _lastPitchedNote; // hammer-on/pull-off start anchor
+    private string? _pendingLineStop;       // "glissando" | "slide": stop lands on the NEXT note
+    private string? _chordArpeggio;         // "arpeggiate" | "non-arpeggiate" for the chord being written
+    private readonly List<MusicXmlNote> _chordMembers = new(); // members of the chord being written
     private string? _pendingDynamic;
 
     // Track parts across sections for multi-section support
@@ -909,6 +912,30 @@ public sealed class MusicXmlExporter
         if (_tieToNextNote) { xmlNote.TieStop = true; _tieToNextNote = false; }
         if (note.Articulations.OfType<TieSyntax>().Any()) { xmlNote.TieStart = true; _tieToNextNote = true; }
 
+        // Glissando / slide lines pair start (this note) with stop (next).
+        if (_pendingLineStop is { } lineKind)
+        {
+            xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement(lineKind,
+                new System.Xml.Linq.XAttribute("type", "stop"),
+                new System.Xml.Linq.XAttribute("number", 1)));
+            _pendingLineStop = null;
+        }
+        foreach (var art in note.Articulations)
+        {
+            if (art is ArticulationSyntax { Type: ArticulationType.None } named
+                && named.NameToken.Text.ToLowerInvariant() is "gliss" or "glissando" or "slide")
+            {
+                string el = named.NameToken.Text.Equals("slide", StringComparison.OrdinalIgnoreCase)
+                    ? "slide" : "glissando";
+                xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement(el,
+                    new System.Xml.Linq.XAttribute("type", "start"),
+                    new System.Xml.Linq.XAttribute("number", 1),
+                    new System.Xml.Linq.XAttribute("line-type", el == "slide" ? "solid" : "wavy")));
+                _pendingLineStop = el;
+                break;
+            }
+        }
+
         _currentMeasure.Notes.Add(xmlNote);
         _lastPitchedNote = xmlNote;
         MaybeClosePickup(duration);
@@ -959,14 +986,43 @@ public sealed class MusicXmlExporter
             // Add articulations + tie pairing only on the first note of the chord.
             if (isFirst)
             {
+                bool hasArp = chord.Articulations.Any(a2 =>
+                    a2 is ArticulationSyntax { Type: ArticulationType.None } na
+                    && na.NameToken.Text.Equals("arpeggio", StringComparison.OrdinalIgnoreCase));
+                bool hasBracket = chord.Articulations.Any(a2 =>
+                    a2 is MusicMarkSyntax mm
+                    && mm.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase));
+                if (hasArp)
+                    _chordArpeggio = "arpeggiate";
+                else if (hasBracket)
+                    _chordArpeggio = "non-arpeggiate";
                 ProcessArticulations(chord.Articulations, xmlNote);
                 if (_tieToNextNote) { xmlNote.TieStop = true; _tieToNextNote = false; }
                 if (chord.Articulations.OfType<TieSyntax>().Any()) { xmlNote.TieStart = true; _tieToNextNote = true; }
                 isFirst = false;
             }
 
+            // Arpeggio marks: <arpeggiate> on EVERY member; the bracket form
+            // puts <non-arpeggiate> on the two OUTER members only.
+            if (_chordArpeggio == "arpeggiate")
+                xmlNote.ExtraNotations.Add(new System.Xml.Linq.XElement("arpeggiate",
+                    new System.Xml.Linq.XAttribute("number", 1)));
+
             _currentMeasure.Notes.Add(xmlNote);
+            _chordMembers.Add(xmlNote);
         }
+
+        if (_chordArpeggio == "non-arpeggiate" && _chordMembers.Count >= 2)
+        {
+            _chordMembers[0].ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
+                new System.Xml.Linq.XAttribute("type", "bottom"),
+                new System.Xml.Linq.XAttribute("number", 1)));
+            _chordMembers[^1].ExtraNotations.Add(new System.Xml.Linq.XElement("non-arpeggiate",
+                new System.Xml.Linq.XAttribute("type", "top"),
+                new System.Xml.Linq.XAttribute("number", 1)));
+        }
+        _chordArpeggio = null;
+        _chordMembers.Clear();
 
         // Continue from the first chord note (LilyPond: next note is relative to
         // the chord's first pitch).

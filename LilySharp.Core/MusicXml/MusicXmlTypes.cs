@@ -342,6 +342,8 @@ public sealed class MusicXmlNote
     public List<string> Ornaments { get; } = new();
     /// <summary>&lt;technical&gt; child elements (tap, snap-pizzicato, …).</summary>
     public List<XElement> Technicals { get; } = new();
+    /// <summary>Direct &lt;notations&gt; children (arpeggiate, glissando, …).</summary>
+    public List<XElement> ExtraNotations { get; } = new();
     public bool IsGrace { get; set; }
     public bool IsSlash { get; set; }
     public bool TieStart { get; set; }
@@ -431,7 +433,7 @@ public sealed class MusicXmlNote
 
         // Notations (articulations, ornaments, ties, slurs)
         var hasNotations = Articulations.Count > 0 || Ornaments.Count > 0 ||
-                          Technicals.Count > 0 ||
+                          Technicals.Count > 0 || ExtraNotations.Count > 0 ||
                           TieStart || TieStop || SlurStart || SlurStop;
 
         if (hasNotations)
@@ -476,6 +478,9 @@ public sealed class MusicXmlNote
                     tech.Add(t);
                 notations.Add(tech);
             }
+
+            foreach (var extra in ExtraNotations)
+                notations.Add(extra);
 
             note.Add(notations);
         }

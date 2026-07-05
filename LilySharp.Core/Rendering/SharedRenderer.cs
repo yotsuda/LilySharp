@@ -3428,6 +3428,18 @@ public static class SharedRenderer
             double waveAmplitude = os.Size(0.2, a.StaffIndex);
             double length = bottomY - topY;
             if (length <= 0) continue;
+            // Non-arpeggiate: a straight vertical bracket with end ticks —
+            // the chord is NOT rolled. LILYPOND-REF: \arpeggioBracket.
+            if (a.Bracket)
+            {
+                using (gc.Source(a.SourcePosition))
+                {
+                    gc.DrawLine(a.X, topY, a.X, bottomY, Color.Black, thickness * 1.6);
+                    gc.DrawLine(a.X, topY, a.X + 0.7, topY, Color.Black, thickness * 1.6);
+                    gc.DrawLine(a.X, bottomY, a.X + 0.7, bottomY, Color.Black, thickness * 1.6);
+                }
+                continue;
+            }
             int halfWaves = Math.Max(1, (int)(length / (wavePeriod / 2)));
             double seg = length / halfWaves;
             double prevX = a.X, prevY = topY;

@@ -1683,11 +1683,16 @@ public sealed class MeasureCollector
                     CollectChordNames(chord, measureIndex, itemIndex);
                     CollectCrossStaff(chord, measureIndex, itemIndex);
                     // Collect arpeggio if present
-                    if (hasArpeggio && chordItem.Notes.Length > 0)
+                    // @arpeggio(bracket) = non-arpeggiate (do NOT roll).
+                    bool arpBracket = chord.Articulations.Any(art =>
+                        art is MusicMarkSyntax { } am
+                        && am.MarkName.Equals("arpeggio.bracket", StringComparison.OrdinalIgnoreCase));
+                    if ((hasArpeggio || arpBracket) && chordItem.Notes.Length > 0)
                     {
                         int minPos = chordItem.Notes.Min(n => n.StaffPosition);
                         int maxPos = chordItem.Notes.Max(n => n.StaffPosition);
-                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, chord.Position, _currentStaffIndex));
+                        _arpeggios.Add(new ArpeggioItem(measureIndex, itemIndex, minPos, maxPos, chord.Position, _currentStaffIndex,
+                            Bracket: arpBracket));
                     }
                 }
                 break;

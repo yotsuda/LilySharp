@@ -149,6 +149,8 @@ public sealed class AnnotationNameValidator : ISemanticValidator
             return true;
         if (lower is "pluck.p" or "pluck.i" or "pluck.m" or "pluck.a")
             return true;
+        if (lower == "arpeggio.bracket")
+            return true;
         if (lower is "bend.half" or "bend.full"
             || (lower.StartsWith("bend.", StringComparison.Ordinal)
                 && int.TryParse(lower.AsSpan(5), out int bend) && bend is > 0 and <= 12))

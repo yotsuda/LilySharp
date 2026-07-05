@@ -32,4 +32,7 @@ public readonly record struct ArpeggioItem(
     int SourcePosition,
     // Global staff index this arpeggio belongs to (multi-staff routing;
     // see DynamicItem.StaffIndex). 0 for single-staff.
-    int StaffIndex = 0);
+    int StaffIndex = 0,
+    // Non-arpeggiate: a straight BRACKET instead of the wavy line — the
+    // chord is NOT to be rolled. LILYPOND-REF: \arpeggioBracket.
+    bool Bracket = false);
