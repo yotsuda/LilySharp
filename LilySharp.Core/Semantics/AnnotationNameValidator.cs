@@ -50,6 +50,7 @@ public sealed class AnnotationNameValidator : ISemanticValidator
             "dead",
             "stemup", "stemdown",
             "ho", "hammeron", "po", "pulloff", "tap", "snappizz", "slide", "stopped",
+            "thumb", "heel", "toe", "scoop", "plop",
         };
 
     /// <summary>
@@ -145,6 +146,8 @@ public sealed class AnnotationNameValidator : ISemanticValidator
         if (lower.StartsWith("frame.", StringComparison.Ordinal)
             && lower.Length is >= 10 and <= 14
             && lower.AsSpan(6).ToString().All(ch => ch is 'x' or 'o' or (>= '0' and <= '9')))
+            return true;
+        if (lower is "pluck.p" or "pluck.i" or "pluck.m" or "pluck.a")
             return true;
         if (lower is "bend.half" or "bend.full"
             || (lower.StartsWith("bend.", StringComparison.Ordinal)

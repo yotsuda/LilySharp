@@ -3623,6 +3623,15 @@ public sealed class MeasureCollector
                 {
                     _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex));
                 }
+                else if (markName.StartsWith("pluck.") && markName.Length == 7
+                         && markName[6] is 'p' or 'i' or 'm' or 'a')
+                {
+                    // p-i-m-a right-hand fingering, printed BELOW the note.
+                    _articulations.Add(new ArticulationItem(
+                        ArticulationType.Pluck, measureIndex, itemIndex, false,
+                        markSyntax.Position, _currentStaffIndex)
+                    { PluckLetter = markName[6..] });
+                }
                 else if (markName.StartsWith("frame."))
                 {
                     // @frame(x32010) — chord diagram above the note.

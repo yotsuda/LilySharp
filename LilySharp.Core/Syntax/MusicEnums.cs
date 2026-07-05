@@ -37,6 +37,12 @@ public enum ArticulationType
     SnapPizz,       // Bartók pizzicato (@snappizz)
     FretFrame,      // chord diagram (@frame(x32010))
     Stopped,        // "+" above (closed hi-hat, stopped horn)
+    Thumb,          // cello thumb position (@thumb)
+    Heel,           // organ heel (@heel)
+    Toe,            // organ toe (@toe)
+    Pluck,          // p-i-m-a right-hand fingering (@pluck(p))
+    Scoop,          // approach curve rising INTO the note (@scoop)
+    Plop,           // approach curve falling INTO the note (@plop)
     Portato,
     /// <summary>Wedge-shaped extreme staccato (@staccatissimo).
     /// LILYPOND-REF: mf/feta-scripts.mf scripts.u/dstaccatissimo.</summary>

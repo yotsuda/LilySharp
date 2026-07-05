@@ -151,7 +151,7 @@ public static class ArticulationEngraver
             // note at the note's own height — on a tab staff, off the fret digit's
             // string row. Positioned independently of the Script side machinery.
             if (articulation.Type is ArticulationType.Fall or ArticulationType.Doit
-                or ArticulationType.Bend)
+                or ArticulationType.Bend or ArticulationType.Scoop or ArticulationType.Plop)
             {
                 double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
                     artMeasures, articulation.MeasureIndex, articulation.ItemIndex, measureLayout);
@@ -176,8 +176,14 @@ public static class ArticulationEngraver
                     fx = itemX + 2.0 * NoteheadHalfWidth(item) + 0.15;
                     fy = (StaffMiddle - GetStaffPosition(item) * 0.5) + staffOffset;
                 }
+                bool approach = articulation.Type
+                    is ArticulationType.Scoop or ArticulationType.Plop;
+                if (approach)
+                    fx = itemX - 1.55; // the curve arrives FROM THE LEFT
                 string bendGlyph = articulation.Type switch
                 {
+                    ArticulationType.Scoop => "bendScoop",
+                    ArticulationType.Plop => "bendPlop",
                     ArticulationType.Fall => "bendFall",
                     ArticulationType.Doit => "bendDoit",
                     // Guitar bend-up: the renderer parses the amount off the

@@ -48,6 +48,10 @@ public sealed record ArticulationItem
     /// 0 = open, digit = fret); only for <see cref="ArticulationType.FretFrame"/>.</summary>
     public string? FrameSpec { get; init; }
 
+    /// <summary>Right-hand pluck letter (p/i/m/a); only for
+    /// <see cref="ArticulationType.Pluck"/>.</summary>
+    public string? PluckLetter { get; init; }
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
 
@@ -96,7 +100,13 @@ public sealed record ArticulationItem
         ArticulationType.HammerOn => "tabtech:H",
         ArticulationType.PullOff => "tabtech:P",
         ArticulationType.Tap => "tabtech:T",
-        ArticulationType.Stopped => "tabtech:+",
+        ArticulationType.Stopped => EmmentalerGlyphs.ArticStopped.ToString(),
+        ArticulationType.Thumb => EmmentalerGlyphs.ArticThumb.ToString(),
+        ArticulationType.Heel => (IsAbove ? EmmentalerGlyphs.PedalHeelUp : EmmentalerGlyphs.PedalHeelDown).ToString(),
+        ArticulationType.Toe => (IsAbove ? EmmentalerGlyphs.PedalToeUp : EmmentalerGlyphs.PedalToeDown).ToString(),
+        ArticulationType.Pluck => $"tabtech:{PluckLetter}",
+        ArticulationType.Scoop => "",
+        ArticulationType.Plop => "",
         ArticulationType.SnapPizz => "snappizz",
         ArticulationType.FretFrame => $"frame:{FrameSpec}",
         ArticulationType.Doit => "",

@@ -1060,6 +1060,18 @@ public sealed class MusicXmlExporter
                     case ArticulationType.SnapPizz:
                         xmlNote.Technicals.Add(new System.Xml.Linq.XElement("snap-pizzicato"));
                         break;
+                    case ArticulationType.Thumb:
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("thumb-position"));
+                        break;
+                    case ArticulationType.Heel:
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("heel"));
+                        break;
+                    case ArticulationType.Toe:
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("toe"));
+                        break;
+                    case ArticulationType.Stopped:
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("stopped"));
+                        break;
                     case ArticulationType.HammerOn:
                         // Proper paired form: start on the PREVIOUS note (the
                         // one struck), stop on this one.
@@ -1295,6 +1307,8 @@ public sealed class MusicXmlExporter
         return type switch
         {
             ArticulationType.Staccato => "staccato",
+            ArticulationType.Scoop => "scoop",
+            ArticulationType.Plop => "plop",
             ArticulationType.Staccatissimo => "staccatissimo",
             ArticulationType.Accent => "accent",
             ArticulationType.Tenuto => "tenuto",

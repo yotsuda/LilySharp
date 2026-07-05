@@ -170,6 +170,12 @@ public static class EmmentalerGlyphs
     // E04D/E050/E05C/E062/E064/E066 all matched the existing constants.)
     public const char ArticMarcatoAbove = '\uE050';    // scripts.umarcato
     public const char ArticMarcatoBelow = '\uE051';    // scripts.dmarcato
+    public const char ArticStopped = '';         // scripts.stopped (+)
+    public const char PedalHeelUp = '';          // scripts.upedalheel (U)
+    public const char PedalHeelDown = '';        // scripts.dpedalheel
+    public const char PedalToeUp = '';           // scripts.upedaltoe (V)
+    public const char PedalToeDown = '';         // scripts.dpedaltoe
+    public const char ArticThumb = '';           // scripts.thumb (cello thumb position)
 
     // === Ornaments (verified against emmentaler-20.woff2 cmap) ===
     public const char OrnReverseTurn = '\uE058';       // scripts.reverseturn

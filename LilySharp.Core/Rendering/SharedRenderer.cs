@@ -2895,6 +2895,13 @@ public static class SharedRenderer
                     DrawBendAfter(a.X, y, fall: a.Glyph == "bendFall", gc);
                 continue;
             }
+            // Approach curves INTO the note from the left: scoop rises, plop falls.
+            if (a.Glyph is "bendScoop" or "bendPlop")
+            {
+                using (gc.Source(a.SourcePosition))
+                    DrawBendBefore(a.X, y, rise: a.Glyph == "bendScoop", gc);
+                continue;
+            }
             // Guitar bend-up sentinel ("bendUp:N", N = semitones): rising arrow
             // with the bend amount labelled above the arrowhead.
             if (a.Glyph.StartsWith("bendUp:", StringComparison.Ordinal))
@@ -2957,6 +2964,30 @@ public static class SharedRenderer
     /// line trailing off to the right of a note, approximated by a polyline along
     /// a quadratic Bézier. LILYPOND-REF: lily/bend-after.cc BendAfter (curved fall).
     /// </summary>
+    /// <summary>
+    /// Draws a jazz scoop (rises into the note) or plop (falls into it) — the
+    /// mirror of <see cref="DrawBendAfter"/>: the curve starts away-and-left
+    /// and arrives at the notehead nearly horizontal.
+    /// </summary>
+    private static void DrawBendBefore(double x1, double y1, bool rise, IDrawingContext gc)
+    {
+        const double len = 1.25;
+        double drop = rise ? 1.7 : -1.7;          // start BELOW for a scoop
+        double x0 = x1 - len, y0 = y1 + drop;
+        // Control point mirrored: arrives at the note nearly horizontal.
+        double cx = x1 - len * 0.62, cy = y1 + drop * 0.08;
+        double px = x0, py = y0;
+        const int seg = 8;
+        for (int s = 1; s <= seg; s++)
+        {
+            double t = s / (double)seg, u = 1 - t;
+            double nx = u * u * x0 + 2 * u * t * cx + t * t * x1;
+            double ny = u * u * y0 + 2 * u * t * cy + t * t * y1;
+            gc.DrawLine(px, py, nx, ny, Color.Black, 0.13, cap: LineCap.Round);
+            px = nx; py = ny;
+        }
+    }
+
     private static void DrawBendAfter(double x0, double y0, bool fall, IDrawingContext gc)
     {
         const double len = 1.25;                 // horizontal reach
