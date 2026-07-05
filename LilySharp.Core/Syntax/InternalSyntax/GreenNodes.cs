@@ -510,6 +510,16 @@ internal sealed class KeySignatureGreen : GreenSyntaxNode
         : base(SyntaxKind.KeySignature, [keyKeyword, pitch, mode])
     {
     }
+
+    // Non-traditional signature: `key custom fis cis …` — the altered pitches
+    // in print order. LILYPOND-REF: keyAlterations; MusicXML key-step/key-alter.
+    public KeySignatureGreen(
+        SyntaxToken keyKeyword,
+        SyntaxToken customWord,
+        GreenNode?[] pitches)
+        : base(SyntaxKind.KeySignature, [keyKeyword, customWord, .. pitches])
+    {
+    }
 }
 
 /// <summary>

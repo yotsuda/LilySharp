@@ -646,6 +646,8 @@ public sealed class MeasureCollector
     private int _timeBeats = 4;
     private string? _timeBeatsText; // additive numerator as written ("3+2")
     private bool _timeSenzaMisura;  // time none — unmeasured
+    private string? _keyCustom;     // encoded custom key (KeySignature.EncodeCustom)
+    private string? _initialKeyCustom;
     private int _timeBeatType = 4;
     private int _keySharps = 0;
     private int _initialKeySharps = 0; // Preserved for Score.KeySignature (not mutated by mid-measure key changes)
@@ -697,6 +699,7 @@ public sealed class MeasureCollector
         _octave.InitialOctave = _octave.CurrentOctave;
         _initialClef = _clef; // Preserve initial clef before music processing
         _initialKeySharps = _keySharps; // Preserve initial key before music processing
+        _initialKeyCustom = _keyCustom;
         _octave.InitialOctaveAbsolute = _octave.OctaveAbsolute; // file-level octave mode default
 
         // Phase 2: Collect the primary (voice-0) stream. A << \\ >> span is
@@ -730,7 +733,7 @@ public sealed class MeasureCollector
         return new Score(
             voice,
             new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura),
-            new KeySignature(_initialKeySharps), // Use initial key, not the final state after key changes
+            new KeySignature(_initialKeySharps, _initialKeyCustom), // Use initial key, not the final state after key changes
             _initialClef, // Use initial clef, not the final state after clef changes
             _tempo,
             _title,
@@ -854,6 +857,7 @@ public sealed class MeasureCollector
         if (renderSpec.LocalStructure != null)
             _structure = renderSpec.LocalStructure;
         _initialKeySharps = _keySharps; // Preserve initial key before music processing
+        _initialKeyCustom = _keyCustom;
         // Capture the file-level `octave absolute/relative` default AFTER the
         // pre-scan, mirroring the single-staff path. Without this each part's
         // line-702 restore reads the post-Reset `false`, so a top-level
@@ -1124,7 +1128,7 @@ public sealed class MeasureCollector
         return new MultiStaffScore(
             staffGroups,
             new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura),
-            new KeySignature(_initialKeySharps), // Use initial key, not the final state after key changes
+            new KeySignature(_initialKeySharps, _initialKeyCustom), // Use initial key, not the final state after key changes
             _tempo,
             _title,
             _composer,
@@ -1274,7 +1278,7 @@ public sealed class MeasureCollector
         return new Score(
             voices.ToImmutableArray(),
             new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura),
-            new KeySignature(_initialKeySharps),
+            new KeySignature(_initialKeySharps, _initialKeyCustom),
             _initialClef,
             _tempo,
             _title,
@@ -2027,6 +2031,8 @@ public sealed class MeasureCollector
         _timeSenzaMisura = false;
         _timeBeatType = 4;
         _keySharps = 0;
+        _keyCustom = null;
+        _initialKeyCustom = null;
         _initialKeySharps = 0;
         _clef = "treble";
         _initialClef = "treble";
@@ -2166,7 +2172,10 @@ public sealed class MeasureCollector
                     // Only process top-level key declarations (not inside phrases/sections)
                     if (!IsInsideMusicContent(key))
                     {
-                        _keySharps = CalculateKeySharps(key);
+                        _keySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
+                        _keyCustom = key.IsCustom
+                            ? KeySignature.EncodeCustom(key.CustomAlterations)
+                            : null;
                         _keyPosition = key.Span.Start;
                     }
                     break;
@@ -2298,7 +2307,16 @@ public sealed class MeasureCollector
     /// Gets the expected alteration for a pitch step based on the current key signature.
     /// </summary>
     private int GetKeySignatureAlteration(int step)
-        => LilySharp.Core.Music.KeySpelling.Alteration(step, _keySharps);
+    {
+        if (_keyCustom != null)
+        {
+            foreach (var (s, a) in KeySignature.DecodeCustom(_keyCustom))
+                if (s == step)
+                    return a;
+            return 0;
+        }
+        return LilySharp.Core.Music.KeySpelling.Alteration(step, _keySharps);
+    }
 
     /// <summary>
     /// Determines the displayed accidental for a pitch using LilyPond's default

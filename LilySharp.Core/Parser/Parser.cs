@@ -1551,6 +1551,19 @@ private GreenNode?[] ParseArticulations()
     private KeySignatureGreen ParseKeySignature()
     {
         var keyKeyword = Expect(SyntaxKind.KeyKeyword);
+
+        // Non-traditional signature: key custom fis cis … (altered pitches in
+        // print order; naturals allowed for explicit cancels).
+        if (Current.Kind == SyntaxKind.Identifier
+            && Current.Text.Equals("custom", StringComparison.OrdinalIgnoreCase))
+        {
+            var customWord = Advance();
+            var pitches = new List<GreenNode?>();
+            while (IsPitchStart())
+                pitches.Add(ParsePitch());
+            return new KeySignatureGreen(keyKeyword, customWord, [.. pitches]);
+        }
+
         var pitch = ParsePitch();
 
         SyntaxToken mode;

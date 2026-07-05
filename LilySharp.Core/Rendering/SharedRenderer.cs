@@ -1127,6 +1127,30 @@ public static class SharedRenderer
     private static double DrawKeySignature(
         KeySignature key, ClefType clef, double x, double staffY, IDrawingContext gc)
     {
+        // Non-traditional signature: draw the written (step, alter) pairs in
+        // print order, each on the position the standard tables would give
+        // that step for its sign. LILYPOND-REF: keyAlterations; MusicXML
+        // non-traditional <key-step>/<key-alter> pairs.
+        if (key.Custom is { } custom)
+        {
+            foreach (var (step, alter) in KeySignature.DecodeCustom(custom))
+            {
+                string kind = alter switch
+                {
+                    2 => "doubleSharp",
+                    1 => "sharp",
+                    -1 => "flat",
+                    -2 => "doubleFlat",
+                    _ => "natural",
+                };
+                int staffPosition = KeySigStaffPositionForStep(clef, alter >= 0, step);
+                double y = staffY + StaffHeight / 2 - staffPosition * 0.5;
+                gc.DrawGlyph(EmmentalerGlyphs.AccidentalGlyph(kind), x, y, FontSize);
+                x += GlyphMetrics.GetKeySignatureAccidentalWidth(alter >= 0);
+            }
+            return x + 0.4;
+        }
+
         if (key.Sharps == 0) return x;
 
         bool isSharps = key.Sharps > 0;
@@ -1167,6 +1191,28 @@ public static class SharedRenderer
     /// LILYPOND-REF: scm/music-functions.scm key-signature-interface —
     /// staffPosition = hi − modulo(hi − (c0 + step), 7).
     /// </summary>
+    /// <summary>Key-signature staff position for an ARBITRARY step (custom
+    /// signatures) — same octave-choice tables, indexed by step instead of the
+    /// standard order. LILYPOND-REF: key-signature-interface alteration-position.</summary>
+    private static int KeySigStaffPositionForStep(ClefType clef, bool sharpish, int step)
+    {
+        int c0Position = clef switch
+        {
+            ClefType.Bass or ClefType.Bass8Below => 6,
+            ClefType.Alto or ClefType.Percussion => 0,
+            ClefType.Tenor => 2,
+            ClefType.Soprano => -4,
+            ClefType.MezzoSoprano => -2,
+            ClefType.Baritone => 4,
+            _ => -6,
+        };
+        int cPos = ((c0Position % 7) + 7) % 7;
+        int[] positions = sharpish ? KeySigSharpPositions : KeySigFlatPositions;
+        int hi = positions[cPos];
+        int diff = hi - (cPos + step);
+        return hi - (((diff % 7) + 7) % 7);
+    }
+
     private static int KeySigStaffPosition(ClefType clef, bool isSharps, int index)
     {
         int c0Position = clef switch

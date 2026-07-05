@@ -1141,10 +1141,30 @@ public sealed class KeySignatureSyntax : SyntaxNode
     }
 
     public SyntaxTokenNode KeyKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>True for <c>key custom …</c> (slot 1 is the word, pitches follow).</summary>
+    public bool IsCustom => GetChild(1) is SyntaxTokenNode t
+        && t.Text.Equals("custom", StringComparison.OrdinalIgnoreCase);
+
     public PitchSyntax Pitch => (PitchSyntax)GetChild(1)!;
     public SyntaxTokenNode Mode => (SyntaxTokenNode)GetChild(2)!;
 
-    public bool IsMajor => Mode.Kind == SyntaxKind.MajorKeyword;
+    public bool IsMajor => !IsCustom && Mode.Kind == SyntaxKind.MajorKeyword;
+
+    /// <summary>The custom signature's (step 0=C..6=B, alteration) pairs in
+    /// print order; empty for a traditional key.</summary>
+    public IEnumerable<(int Step, int Alter)> CustomAlterations
+    {
+        get
+        {
+            if (!IsCustom) yield break;
+            for (int i = 2; i < SlotCount; i++)
+                if (GetChild(i) is PitchSyntax p)
+                    yield return (
+                        "cdefgab".IndexOf(char.ToLowerInvariant(p.PitchName[0])),
+                        p.AccidentalOffset);
+        }
+    }
 }
 
 /// <summary>

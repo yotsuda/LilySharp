@@ -174,6 +174,9 @@ public sealed class MusicXmlAttributes
     public int Divisions { get; set; } = 1;
     public int? KeyFifths { get; set; }
     public string? KeyMode { get; set; }
+    /// <summary>Non-traditional key: encoded (step, alter) pairs
+    /// (KeySignature.EncodeCustom); wins over fifths.</summary>
+    public string? KeyCustom { get; set; }
     public int? TimeBeats { get; set; }
     /// <summary>Numerator as written for additive meters ("3+2"); wins over
     /// <see cref="TimeBeats"/> in the serialized &lt;beats&gt;.</summary>
@@ -191,7 +194,17 @@ public sealed class MusicXmlAttributes
         var attrs = new XElement("attributes",
             new XElement("divisions", Divisions));
 
-        if (KeyFifths.HasValue)
+        if (KeyCustom != null)
+        {
+            var keyEl = new XElement("key");
+            foreach (var (step, alter) in LilySharp.Core.Svg.Model.KeySignature.DecodeCustom(KeyCustom))
+            {
+                keyEl.Add(new XElement("key-step", "CDEFGAB"[step]));
+                keyEl.Add(new XElement("key-alter", alter));
+            }
+            attrs.Add(keyEl);
+        }
+        else if (KeyFifths.HasValue)
         {
             attrs.Add(new XElement("key",
                 new XElement("fifths", KeyFifths.Value),

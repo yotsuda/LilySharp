@@ -67,6 +67,7 @@ public sealed class MusicXmlExporter
     private int _clefLine = 2;
     private int? _clefOctaveChange; // ±1 for the _8 / ^8 clefs
     private bool _timeSenzaMisura;  // time none
+    private string? _keyCustomXml;  // non-traditional key (encoded pairs)
     private string? _pendingDynamic;
 
     // Track parts across sections for multi-section support
@@ -367,6 +368,7 @@ public sealed class MusicXmlExporter
                 KeyFifths = _currentTranspose is { } trk
                     ? _keyFifths + PitchTransposer.KeySignatureFifthsShift(trk.step, trk.alt)
                     : _keyFifths,
+                KeyCustom = _keyCustomXml,
                 KeyMode = _keyMode,
                 ClefSign = _clefSign,
                 ClefLine = _clefLine > 0 ? _clefLine : null,
@@ -673,6 +675,13 @@ public sealed class MusicXmlExporter
 
     private void ProcessKeySignature(KeySignatureSyntax key)
     {
+        if (key.IsCustom)
+        {
+            _keyCustomXml = LilySharp.Core.Svg.Model.KeySignature.EncodeCustom(key.CustomAlterations);
+            _keyFifths = 0;
+            return;
+        }
+        _keyCustomXml = null;
         var pitch = key.Pitch?.ToFullString().Trim().ToLower();
         // MusicXML's <mode> takes the church-mode names directly.
         var mode = key.Mode.Text.ToLowerInvariant();

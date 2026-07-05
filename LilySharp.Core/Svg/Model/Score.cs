@@ -39,12 +39,28 @@ public readonly record struct TimeSignature(int Beats, int BeatType, string? Bea
 /// <summary>
 /// Key signature (number of sharps or flats).
 /// </summary>
-public readonly record struct KeySignature(int Sharps)
+public readonly record struct KeySignature(int Sharps, string? Custom = null)
 {
     /// <summary>Positive for sharps, negative for flats.</summary>
     public bool IsSharps => Sharps > 0;
     public bool IsFlats => Sharps < 0;
-    public int Count => Math.Abs(Sharps);
+    public int Count => Custom != null ? DecodeCustom(Custom).Count() : Math.Abs(Sharps);
+
+    /// <summary>Encodes custom (step, alter) pairs as "s:a;s:a" — a string
+    /// keeps the record struct's VALUE equality (key-change detection).</summary>
+    public static string EncodeCustom(IEnumerable<(int Step, int Alter)> pairs)
+        => string.Join(";", pairs.Select(p => $"{p.Step}:{p.Alter}"));
+
+    /// <summary>Decodes the custom pairs in print order.</summary>
+    public static IEnumerable<(int Step, int Alter)> DecodeCustom(string custom)
+    {
+        foreach (var part in custom.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var bits = part.Split(':');
+            if (bits.Length == 2 && int.TryParse(bits[0], out int s) && int.TryParse(bits[1], out int a))
+                yield return (s, a);
+        }
+    }
 
     public static readonly KeySignature CMajor = new(0);
 }
