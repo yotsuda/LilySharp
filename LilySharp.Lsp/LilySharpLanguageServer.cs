@@ -2950,7 +2950,7 @@ public sealed class LilySharpLanguageServer
                     {
                         T = t0,
                         D = Math.Max(0.03, SecondsAt(n.StartTick + n.DurationTicks) - t0),
-                        P = n.Pitch,
+                        P = n.Pitch + 0.5 * n.QuarterBend,
                         V = n.Velocity,
                         S = n.SourcePos,
                         O = n.SourceOrdinal,
@@ -3183,7 +3183,7 @@ public class PlaybackNote
 {
     public double T { get; set; }   // onset (s)
     public double D { get; set; }   // duration (s)
-    public int P { get; set; }      // MIDI pitch
+    public double P { get; set; }   // MIDI pitch (fractional for quarter tones)
     public int V { get; set; }      // velocity 0-127
     public int S { get; set; }      // source offset (-1 = none) for follow-along highlight
     public int O { get; set; }      // printed-copy ordinal of this onset among same-S copies

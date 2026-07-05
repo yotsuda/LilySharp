@@ -88,6 +88,11 @@ public class MidiFile
 
             switch (evt.Type)
             {
+                case MidiEventType.PitchBend:
+                    trackWriter.Write((byte)(0xE0 | (evt.Channel & 0x0F)));
+                    trackWriter.Write((byte)(evt.Data1 & 0x7F));
+                    trackWriter.Write((byte)((evt.Data1 >> 7) & 0x7F));
+                    break;
                 case MidiEventType.NoteOn:
                     trackWriter.Write((byte)(0x90 | (evt.Channel & 0x0F)));
                     trackWriter.Write((byte)evt.Data1);
@@ -162,8 +167,24 @@ public class MidiFile
             events.Add(new MidiEvent(ts.Tick, MidiEventType.TimeSignature, 0, ts.Numerator, denomPow));
         }
 
+        bool bentNow = false;
         foreach (var note in track.Notes)
         {
+            // Quarter tones: bend before the note-on, reset when a later note
+            // has none. ±50 cents = ±1024 on the standard ±2-semitone range.
+            // Sorted BEFORE note-on at the same tick (enum order).
+            if (note.QuarterBend != 0)
+            {
+                events.Add(new MidiEvent(note.StartTick, MidiEventType.PitchBend,
+                    note.Channel, 8192 + note.QuarterBend * 1024, 0));
+                bentNow = true;
+            }
+            else if (bentNow)
+            {
+                events.Add(new MidiEvent(note.StartTick, MidiEventType.PitchBend,
+                    note.Channel, 8192, 0));
+                bentNow = false;
+            }
             events.Add(new MidiEvent(note.StartTick, MidiEventType.NoteOn, note.Channel, note.Pitch, note.Velocity));
             events.Add(new MidiEvent(note.StartTick + note.DurationTicks, MidiEventType.NoteOff, note.Channel, note.Pitch, 0));
         }
@@ -208,6 +229,6 @@ public class MidiFile
         foreach (var b in bytes) writer.Write(b);
     }
 
-    private enum MidiEventType { NoteOff = 0, NoteOn = 1, Tempo = 2, TimeSignature = 3, TrackName = 4, Lyric = 5 }
+    private enum MidiEventType { NoteOff = 0, PitchBend = 1, NoteOn = 2, Tempo = 3, TimeSignature = 4, TrackName = 5, Lyric = 6 }
     private readonly record struct MidiEvent(int Tick, MidiEventType Type, int Channel, int Data1, int Data2, string? Text = null);
 }

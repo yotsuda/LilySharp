@@ -29,6 +29,9 @@ public readonly record struct MidiNote(
     /// highlight the notation being played. -1 = no source link. Not written
     /// to .mid files.</summary>
     int SourcePos = -1,
+    // Quarter-tone offset (+1 = +50 cents): pitch bend in the .mid, a
+    // fractional pitch in the preview player. 0 for normal notes.
+    int QuarterBend = 0,
     /// <summary>Which PRINTED copy of the source this onset corresponds to
     /// (phrase expansions share one position; repeats replay their pass-one
     /// ordinals). Not written to .mid files.</summary>

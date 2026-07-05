@@ -184,6 +184,9 @@ public sealed class MusicXmlAttributes
     public int? TimeBeatType { get; set; }
     /// <summary>Unmeasured (&lt;senza-misura/&gt;); wins over beats.</summary>
     public bool TimeSenzaMisura { get; set; }
+    /// <summary>&lt;measure-style&gt;&lt;measure-repeat&gt; type
+    /// ("start"/"stop") for percent-repeat signs.</summary>
+    public string? MeasureRepeat { get; set; }
     public string? ClefSign { get; set; }
     public int? ClefLine { get; set; }
     /// <summary>±1 for the _8 / ^8 octave clefs (&lt;clef-octave-change&gt;).</summary>
@@ -230,6 +233,14 @@ public sealed class MusicXmlAttributes
                 ClefOctaveChange.HasValue
                     ? new XElement("clef-octave-change", ClefOctaveChange.Value)
                     : null));
+        }
+
+        if (MeasureRepeat != null)
+        {
+            var mr = new XElement("measure-repeat", new XAttribute("type", MeasureRepeat));
+            if (MeasureRepeat == "start")
+                mr.Add(new XAttribute("slashes", 1));
+            attrs.Add(new XElement("measure-style", mr));
         }
 
         return attrs;

@@ -68,6 +68,7 @@ public sealed class MusicXmlExporter
     private int? _clefOctaveChange; // ±1 for the _8 / ^8 clefs
     private bool _timeSenzaMisura;  // time none
     private string? _keyCustomXml;  // non-traditional key (encoded pairs)
+    private string? _noteFrameSpec; // @frame(...) on the note being written
     private string? _pendingDynamic;
 
     // Track parts across sections for multi-section support
@@ -519,12 +520,41 @@ public sealed class MusicXmlExporter
                 break;
 
             case RepeatExpressionSyntax repeat:
-                // percent / unfold / tremolo bodies play COUNT times; the walk
-                // used to fall through and emit the body once (wrong length).
-                // Unfolded content is metrically correct; the shorthand
-                // notation (measure-repeat signs) is a later refinement.
                 {
                     int repCount = int.TryParse(repeat.Count.Text, out int rc) ? Math.Max(1, rc) : 2;
+                    // A one-measure percent body exports the SIGN: the source
+                    // measure once, then empty measures under a
+                    // <measure-style><measure-repeat> run (importers play the
+                    // repeat and print %). Multi-measure bodies and the other
+                    // repeat types stay unfolded (metrically correct).
+                    bool oneMeasurePercent = repeat.RepeatType.Text == "percent"
+                        && repeat.Body.Items.Count(i => i is BarlineSyntax) == 1
+                        && repeat.Body.Items.LastOrDefault() is BarlineSyntax
+                        && _currentPart != null;
+                    if (oneMeasurePercent)
+                    {
+                        ProcessNode(repeat.Body);
+                        FlushCurrentMeasure();
+                        for (int rep = 1; rep < repCount; rep++)
+                        {
+                            _currentPart!.Measures.Add(new MusicXmlMeasure
+                            {
+                                Number = _measureNumber++,
+                                Attributes = new MusicXmlAttributes
+                                {
+                                    Divisions = DivisionsPerQuarter,
+                                    MeasureRepeat = rep == 1 ? "start" : null,
+                                },
+                            });
+                        }
+                        StartNewMeasure();
+                        _currentMeasure!.Attributes ??= new MusicXmlAttributes
+                        {
+                            Divisions = DivisionsPerQuarter,
+                            MeasureRepeat = "stop",
+                        };
+                        break;
+                    }
                     for (int rep = 0; rep < repCount; rep++)
                         ProcessNode(repeat.Body);
                 }
@@ -991,6 +1021,14 @@ public sealed class MusicXmlExporter
 
     private void ProcessArticulations(IEnumerable<SyntaxNode> articulations, MusicXmlNote xmlNote)
     {
+        // Pre-scan the frame spec so a chord symbol on the same note can
+        // embed it, whichever order the marks were written in.
+        _noteFrameSpec = null;
+        foreach (var artic in articulations)
+            if (artic is MusicMarkSyntax fm
+                && fm.MarkName.StartsWith("frame.", StringComparison.OrdinalIgnoreCase))
+                _noteFrameSpec = fm.MarkName[6..].ToLowerInvariant();
+
         foreach (var artic in articulations)
         {
             if (artic is ArticulationSyntax articulation)
@@ -1117,7 +1155,13 @@ public sealed class MusicXmlExporter
                 {
                     var harmony = BuildHarmony(chordText);
                     if (harmony != null)
+                    {
+                        // A @frame on the same note nests inside the harmony
+                        // (MusicXML <frame> is a harmony child).
+                        if (_noteFrameSpec is { } fspec && BuildFrame(fspec) is { } frameEl)
+                            harmony.Add(frameEl);
                         _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = harmony });
+                    }
                 }
                 break;
         }
@@ -1187,6 +1231,28 @@ public sealed class MusicXmlExporter
             harmony.Add(bassEl);
         }
         return harmony;
+    }
+
+    /// <summary>&lt;frame&gt; from a diagram spec ("x32010", LOW string
+    /// first): frame-note per sounding string (string 1 = highest pitch),
+    /// muted strings omitted per the schema.</summary>
+    private static System.Xml.Linq.XElement? BuildFrame(string spec)
+    {
+        int strings = spec.Length;
+        if (strings < 4) return null;
+        var frame = new System.Xml.Linq.XElement("frame",
+            new System.Xml.Linq.XElement("frame-strings", strings),
+            new System.Xml.Linq.XElement("frame-frets", 4));
+        for (int i = 0; i < strings; i++)
+        {
+            char ch = spec[i];
+            if (ch == 'x') continue;
+            int fret = ch is >= '1' and <= '9' ? ch - '0' : 0;
+            frame.Add(new System.Xml.Linq.XElement("frame-note",
+                new System.Xml.Linq.XElement("string", strings - i),
+                new System.Xml.Linq.XElement("fret", fret)));
+        }
+        return frame;
     }
 
     private void EmitPendingDynamic()

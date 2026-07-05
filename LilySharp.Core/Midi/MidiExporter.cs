@@ -726,7 +726,9 @@ public sealed class MidiExporter
             return;
         }
 
-        track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration, note.Position, NextOrdinal(note.Position), _currentTimbre));
+        track.Notes.Add(new MidiNote(track.Channel, midiPitch, velocity, _currentTick, actualDuration, note.Position,
+            QuarterBend: note.Pitch.QuarterOffset,
+            SourceOrdinal: NextOrdinal(note.Position), Timbre: _currentTimbre));
         _lastNoteIndex = track.Notes.Count - 1;
         _lastNoteTrack = track;
         _currentTick += durationTicks;
@@ -762,7 +764,7 @@ public sealed class MidiExporter
 
         int actualDuration = Math.Max(1, durationTicks * durationPercent / 100);
         track.Notes.Add(new MidiNote(9, info.GmKey, velocity, _currentTick, actualDuration,
-            drum.Position, NextOrdinal(drum.Position), Timbre: 9));
+            drum.Position, SourceOrdinal: NextOrdinal(drum.Position), Timbre: 9));
         _lastNoteIndex = track.Notes.Count - 1;
         _lastNoteTrack = track;
         _currentTick += durationTicks;
@@ -808,7 +810,9 @@ public sealed class MidiExporter
                 firstOctave = _currentOctave;
                 isFirst = false;
             }
-            track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position, chordOrdinal, _currentTimbre));
+            track.Notes.Add(new MidiNote(track.Channel, midiPitch, _velocity, startTick, durationTicks, chord.Position,
+                QuarterBend: pitch.QuarterOffset,
+                SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
         }
 
         // Next note is relative to the chord's first pitch.
@@ -907,7 +911,7 @@ public sealed class MidiExporter
                 _currentTick,
                 graceDuration,
                 note.Position,
-                NextOrdinal(note.Position)
+                SourceOrdinal: NextOrdinal(note.Position)
             ));
 
             _currentTick += graceDuration;
