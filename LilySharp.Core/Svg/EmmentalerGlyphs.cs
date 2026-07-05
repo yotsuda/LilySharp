@@ -83,6 +83,11 @@ public static class EmmentalerGlyphs
     public const char AccidentalSharp = '\uE013';        // accidentals.sharp
     public const char AccidentalDoubleSharp = '\uE01C';  // accidentals.doublesharp
     public const char AccidentalDoubleFlat = '\uE02A';   // accidentals.flatflat
+    // Quarter-tone accidentals (verified on the rendered cmap strip):
+    public const char AccidentalQuarterSharp = '\uE017';       // accidentals.sharp.slashslash.stem (\u00BC\u266F)
+    public const char AccidentalThreeQuarterSharp = '\uE018';  // accidentals.sharp.slashslashslash.stemstem (\u00BE\u266F)
+    public const char AccidentalQuarterFlat = '\uE025';        // accidentals.flat.slash (\u00BC\u266D)
+    public const char AccidentalThreeQuarterFlat = '\uE02B';   // accidentals.flatflat.slash (\u00BE\u266D)
 
     /// <summary>The glyph for a resolved accidental kind ("sharp", "flat",
     /// "doubleSharp", "doubleFlat"); anything else (incl. "natural") maps to the
@@ -93,6 +98,10 @@ public static class EmmentalerGlyphs
         "sharp" => AccidentalSharp,
         "flat" => AccidentalFlat,
         "doubleFlat" => AccidentalDoubleFlat,
+        "quarterSharp" => AccidentalQuarterSharp,
+        "threeQuarterSharp" => AccidentalThreeQuarterSharp,
+        "quarterFlat" => AccidentalQuarterFlat,
+        "threeQuarterFlat" => AccidentalThreeQuarterFlat,
         _ => AccidentalNatural,
     };
 

@@ -823,6 +823,8 @@ public sealed class MusicXmlExporter
         var (step, alter) = ParsePitch(note.Pitch);
         int targetOctave = ResolveRelativeOctave(note.Pitch);
         (step, alter, targetOctave) = ApplyTranspose(note.Pitch, step, alter, targetOctave);
+        // Quarter tones: half-integer alter + an explicit accidental name.
+        int quarter = note.Pitch.QuarterOffset;
 
         var duration = GetDuration(note.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -835,11 +837,19 @@ public sealed class MusicXmlExporter
         var xmlNote = new MusicXmlNote
         {
             Step = step,
-            Alter = alter,
+            Alter = quarter == 0 ? alter : alter + 0.5 * quarter,
             Octave = targetOctave,
             Duration = durationTicks,
             Type = type,
             Dots = dots,
+            AccidentalName = (alter, quarter) switch
+            {
+                (0, 1) => "quarter-sharp",
+                (1, 1) => "three-quarters-sharp",
+                (0, -1) => "quarter-flat",
+                (-1, -1) => "three-quarters-flat",
+                _ => null,
+            },
             Notehead = NoteheadFromMarks(note.Articulations),
             ActualNotes = tupletActual,
             NormalNotes = tupletNormal

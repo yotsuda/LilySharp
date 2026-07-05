@@ -147,10 +147,22 @@ public sealed class PitchSyntax : SyntaxNode
     public int AccidentalOffset => Accidental switch
     {
         "isis" => 2,
+        "isih" => 1,
         "is" => 1,
         "" => 0,
         "es" => -1,
+        "eseh" => -1,
         "eses" => -2,
+        _ => 0
+    };
+
+    /// <summary>Quarter-tone offset on top of <see cref="AccidentalOffset"/>:
+    /// +1 = a quarter sharp higher (ih / isih), -1 = a quarter flat lower
+    /// (eh / eseh), 0 otherwise. LILYPOND-REF: quarter-tone note names.</summary>
+    public int QuarterOffset => Accidental switch
+    {
+        "ih" or "isih" => 1,
+        "eh" or "eseh" => -1,
         _ => 0
     };
 }

@@ -94,7 +94,7 @@ public sealed class VsqxExporter
                     string lyric = n.Lyrics.FirstOrDefault(l => l.Verse == 1).Text ?? "-";
                     if (string.IsNullOrEmpty(lyric))
                         lyric = "-"; // melisma: continue the previous vowel
-                    int pitch = MidiPitch(n.Step, n.Alter ?? 0, n.Octave ?? 4);
+                    int pitch = MidiPitch(n.Step, (int)Math.Round(n.Alter ?? 0), n.Octave ?? 4);
                     notes.Add((tick, dur, pitch, lyric));
                     tick += dur;
                 }

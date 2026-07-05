@@ -301,8 +301,11 @@ public sealed class MusicXmlNote
     /// <summary>Notehead style name ("x", "diamond", …) or null for default.</summary>
     public string? Notehead { get; set; }
     public string? Step { get; set; }
-    public int? Alter { get; set; }
+    public double? Alter { get; set; }
     public int? Octave { get; set; }
+    /// <summary>Explicit &lt;accidental&gt; name (quarter-sharp etc.); null =
+    /// let the importer infer from alter.</summary>
+    public string? AccidentalName { get; set; }
     public int Duration { get; set; }
     public string? Type { get; set; }
     public int Dots { get; set; }
@@ -389,6 +392,9 @@ public sealed class MusicXmlNote
 
         for (int i = 0; i < Dots; i++)
             note.Add(new XElement("dot"));
+
+        if (AccidentalName != null)
+            note.Add(new XElement("accidental", AccidentalName));
 
         // Tuplet timing: <actual-notes> play in the time of <normal-notes>.
         if (ActualNotes.HasValue && NormalNotes.HasValue)

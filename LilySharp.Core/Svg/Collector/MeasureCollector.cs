@@ -3013,6 +3013,18 @@ public sealed class MeasureCollector
         return null;
     }
 
+    /// <summary>Display accidental kind for a quarter-tone pitch (ih/eh/isih/eseh).
+    /// LILYPOND-REF: quarter-tone note names; glyphs = accidentals.*.slash*.</summary>
+    private static string? QuarterToneAccidental(PitchSyntax pitch, string? fallback)
+        => (pitch.AccidentalOffset, pitch.QuarterOffset) switch
+        {
+            (0, 1) => "quarterSharp",
+            (1, 1) => "threeQuarterSharp",
+            (0, -1) => "quarterFlat",
+            (-1, -1) => "threeQuarterFlat",
+            _ => fallback,
+        };
+
     /// <summary>Absolute MIDI number from a diatonic step (0=C..6=B), alteration and octave.</summary>
     private static int PitchToMidi(int step, int alter, int octave)
         => RelativeOctave.StepToMidi(((step % 7) + 7) % 7, alter, octave);
@@ -3822,6 +3834,14 @@ public sealed class MeasureCollector
 
         var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
 
+        // Quarter tones always print their own accidental (they are never in
+        // the key). LILYPOND-REF: quarter-tone note names ih/eh/isih/eseh.
+        if (note.Pitch.QuarterOffset != 0)
+        {
+            accidental = QuarterToneAccidental(note.Pitch, accidental);
+            isCourtesy = false;
+        }
+
         // Check for explicit @courtesy annotation
         if (!isCourtesy && _courtesySourcePositions.Contains(note.Position))
         {
@@ -3992,6 +4012,13 @@ public sealed class MeasureCollector
             }
 
             var (accidental, isCourtesy) = GetDisplayAccidentalWithCourtesy(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
+
+            // Quarter tones always print their own accidental (never in the key).
+            if (pitch.QuarterOffset != 0)
+            {
+                accidental = QuarterToneAccidental(pitch, accidental);
+                isCourtesy = false;
+            }
 
             bool needsLedger = staffPosition <= -6 || staffPosition >= 6;
 

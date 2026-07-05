@@ -440,6 +440,19 @@ internal sealed class Lexer
             return true;
         }
 
+        // Three-quarter-tone accidentals (4 chars): isih (¾♯), eseh (¾♭).
+        // LILYPOND-REF: Note names — quarter-tone suffixes ih / eh.
+        if (MatchesAt("isih") && !char.IsLetter(Peek(4)))
+        {
+            _position += 4;
+            return true;
+        }
+        if (MatchesAt("eseh") && !char.IsLetter(Peek(4)))
+        {
+            _position += 4;
+            return true;
+        }
+
         // is / es (2 chars) - check Peek(2) for char after accidental
         if (MatchesAt("is") && !char.IsLetter(Peek(2)))
         {
@@ -447,6 +460,18 @@ internal sealed class Lexer
             return true;
         }
         if (MatchesAt("es") && !char.IsLetter(Peek(2)))
+        {
+            _position += 2;
+            return true;
+        }
+
+        // Quarter-tone accidentals: ih (¼♯), eh (¼♭).
+        if (MatchesAt("ih") && !char.IsLetter(Peek(2)))
+        {
+            _position += 2;
+            return true;
+        }
+        if (MatchesAt("eh") && !char.IsLetter(Peek(2)))
         {
             _position += 2;
             return true;
