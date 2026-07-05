@@ -33,6 +33,8 @@ public sealed record StaffSpec(
     /// <summary>Hara-kiri including the FIRST system (part property
     /// <c>removeEmpty all</c> — LP RemoveAllEmptyStaves).</summary>
     bool RemoveFirst = false,
+    /// <summary>Staff line count (part property <c>lines N</c>; 5 default).</summary>
+    int Lines = 5,
     /// <summary>A named chord part whose symbols align above this staff
     /// (<c>staff NAME with chords CHORDPART</c>); the same part can also feed
     /// a lead-sheet row, so a progression is written once.</summary>
@@ -213,6 +215,7 @@ public sealed record RenderSpec(
                     {
                         RemoveEmpty = single.Staff.RemoveEmpty,
                         RemoveFirst = single.Staff.RemoveFirst,
+                        Lines = single.Staff.Lines,
                     };
                     yield return StaffGroup.CreateSingle(singleStaff);
                     break;
@@ -226,6 +229,7 @@ public sealed record RenderSpec(
                         {
                             RemoveEmpty = s.RemoveEmpty,
                             RemoveFirst = s.RemoveFirst,
+                            Lines = s.Lines,
                         })
                         .ToArray();
                     yield return StaffGroup.CreateGrandStaff(staves);

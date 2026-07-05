@@ -149,7 +149,9 @@ public static class SvgGenerator
             && renderSpec.Items[0] is SingleStaffSpec sss
                 ? sss.Staff.InstrumentName
                 : null;
-        return MultiStaffScore.FromScore(score, instrumentName);
+        int staffLines = renderSpec is { Items.Length: 1 }
+            && renderSpec.Items[0] is SingleStaffSpec sls ? sls.Staff.Lines : 5;
+        return MultiStaffScore.FromScore(score, instrumentName, staffLines);
     }
 
     internal static string RenderToSvg(MultiStaffScore score, ScoreLayout layout,

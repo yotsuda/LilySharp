@@ -280,9 +280,12 @@ public static class RenderSpecParser
         // LILYPOND-REF: ly/context-mods-init.ly — RemoveEmptyStaves /
         // RemoveAllEmptyStaves set VerticalAxisGroup.remove-empty (+ remove-first).
         string? removeEmpty = GetPartProperty(staff, voiceName, "removeempty")?.ToLowerInvariant();
+        int lines = int.TryParse(GetPartProperty(staff, voiceName, "lines"), out int ln)
+            && ln is >= 1 and <= 5 ? ln : 5;
         return new StaffSpec(clef, voiceName, instrumentName,
             RemoveEmpty: removeEmpty is "true" or "all",
             RemoveFirst: removeEmpty is "all",
+            Lines: lines,
             WithChords: withChords,
             NameSuppressed: nameSuppressed);
     }

@@ -354,7 +354,7 @@ public static class SharedRenderer
                     continue;
                 }
 
-                DrawStaffLines(localStaffY, lineEndX, sgc, lineStartX);
+                DrawStaffLines(localStaffY, lineEndX, sgc, lineStartX, staff.Lines);
 
                 // System-start prefix. The clef and key signature repeat at the
                 // head of EVERY system (standard notation); the key reflects any
@@ -511,9 +511,22 @@ public static class SharedRenderer
         }
     }
 
-    private static void DrawStaffLines(double staffY, double width, IDrawingContext gc, double startX = 0)
+    private static void DrawStaffLines(double staffY, double width, IDrawingContext gc, double startX = 0,
+        int lines = 5)
     {
-        for (int i = 0; i < 5; i++)
+        // Reduced staves draw centered on the 5-line frame: 1 line = the
+        // middle, 2 lines = the timbales pair (rows 1 and 3), 3-4 contiguous
+        // centered. Geometry (positions, barlines, stems) stays 5-line.
+        // LILYPOND-REF: StaffSymbol line-positions — percussion/timbales styles.
+        IEnumerable<int> rows = lines switch
+        {
+            1 => [2],
+            2 => [1, 3],
+            3 => [1, 2, 3],
+            4 => [0, 1, 2, 3],
+            _ => [0, 1, 2, 3, 4],
+        };
+        foreach (int i in rows)
         {
             double y = staffY + i;
             gc.DrawLine(startX, y, width, y, Color.Black, EngravingDefaults.StaffLineThickness);

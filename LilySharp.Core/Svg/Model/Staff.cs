@@ -120,6 +120,12 @@ public sealed record Staff(
     /// <summary>
     /// Creates a single-voice staff.
     /// </summary>
+    /// <summary>Number of staff lines (5 default; 1 = rhythmic, 2 = timbales
+    /// style), drawn centered on the normal 5-line frame — positions, barline
+    /// height and stems keep the standard geometry.
+    /// LILYPOND-REF: StaffSymbol line-positions (percussion/timbales styles).</summary>
+    public int Lines { get; init; } = 5;
+
     public static Staff Create(ClefType clef, Voice voice, string? instrumentName = null)
         => new(clef, ImmutableArray.Create(voice), null, instrumentName);
 

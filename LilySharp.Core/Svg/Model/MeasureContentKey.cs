@@ -225,6 +225,7 @@ public readonly record struct MeasureContentKey(long Hash)
         hc.Add(staff.TextRowVerses);
         hc.Add(staff.IsLyricsTextRow);
         hc.Add(staff.TabSourceClef);
+        hc.Add(staff.Lines);
     }
 
     // --- side-tables, bucketed onto measures by MeasureIndex ---
