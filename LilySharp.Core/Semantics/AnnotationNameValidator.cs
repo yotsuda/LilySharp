@@ -142,6 +142,10 @@ public sealed class AnnotationNameValidator : ISemanticValidator
         if (lower is "notehead.x" or "notehead.cross" or "notehead.diamond"
             or "notehead.triangle" or "notehead.slash" or "notehead.xcircle")
             return true;
+        if (lower.StartsWith("frame.", StringComparison.Ordinal)
+            && lower.Length is >= 10 and <= 14
+            && lower.AsSpan(6).ToString().All(ch => ch is 'x' or 'o' or (>= '0' and <= '9')))
+            return true;
         if (lower is "bend.half" or "bend.full"
             || (lower.StartsWith("bend.", StringComparison.Ordinal)
                 && int.TryParse(lower.AsSpan(5), out int bend) && bend is > 0 and <= 12))

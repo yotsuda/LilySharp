@@ -3570,6 +3570,18 @@ public sealed class MeasureCollector
                 {
                     _trillSpannerEvents.Add((false, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex));
                 }
+                else if (markName.StartsWith("frame."))
+                {
+                    // @frame(x32010) — chord diagram above the note.
+                    // LILYPOND-REF: MusicXML <frame>; LP \fret-diagram.
+                    var spec = markName[6..];
+                    if (spec.Length is >= 4 and <= 8
+                        && spec.All(ch => ch is 'x' or 'o' or (>= '0' and <= '9')))
+                        _articulations.Add(new ArticulationItem(
+                            ArticulationType.FretFrame, measureIndex, itemIndex, true,
+                            markSyntax.Position, _currentStaffIndex)
+                        { FrameSpec = spec });
+                }
                 else if (markName.StartsWith("bend."))
                 {
                     // @bend(full|half|N) — guitar bend-up, N in semitones.

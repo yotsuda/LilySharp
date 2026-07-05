@@ -35,6 +35,7 @@ public enum ArticulationType
     PullOff,        // TAB "P" (@po)
     Tap,            // TAB "T" (@tap)
     SnapPizz,       // Bartók pizzicato (@snappizz)
+    FretFrame,      // chord diagram (@frame(x32010))
     Portato,
     /// <summary>Wedge-shaped extreme staccato (@staccatissimo).
     /// LILYPOND-REF: mf/feta-scripts.mf scripts.u/dstaccatissimo.</summary>

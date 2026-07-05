@@ -44,6 +44,10 @@ public sealed record ArticulationItem
     /// <see cref="ArticulationType.Bend"/>.</summary>
     public int BendSemitones { get; init; }
 
+    /// <summary>Fret-frame spec, low string first ("x32010": x = muted,
+    /// 0 = open, digit = fret); only for <see cref="ArticulationType.FretFrame"/>.</summary>
+    public string? FrameSpec { get; init; }
+
     /// <summary>Source position for click-to-source mapping.</summary>
     public int SourcePosition { get; }
 
@@ -93,6 +97,7 @@ public sealed record ArticulationItem
         ArticulationType.PullOff => "tabtech:P",
         ArticulationType.Tap => "tabtech:T",
         ArticulationType.SnapPizz => "snappizz",
+        ArticulationType.FretFrame => $"frame:{FrameSpec}",
         ArticulationType.Doit => "",
         ArticulationType.Trill => EmmentalerGlyphs.OrnTrill.ToString(),
         ArticulationType.Mordent => EmmentalerGlyphs.OrnMordent.ToString(),

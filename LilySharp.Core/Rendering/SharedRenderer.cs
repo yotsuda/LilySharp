@@ -2851,6 +2851,13 @@ public static class SharedRenderer
                         FontStyle.Italic, TextAnchor.Middle, Color.Black);
                 continue;
             }
+            // Chord diagram sentinel ("frame:x32010").
+            if (a.Glyph.StartsWith("frame:", StringComparison.Ordinal))
+            {
+                using (gc.Source(a.SourcePosition))
+                    DrawFretFrame(a.X, y, a.Glyph[6..], gc);
+                continue;
+            }
             // Bartók (snap) pizzicato: a circle with a stem rising from its
             // centre. LILYPOND-REF: scripts.snappizzicato.
             if (a.Glyph == "snappizz")
@@ -2904,6 +2911,64 @@ public static class SharedRenderer
             double ny = u * u * y0 + 2 * u * t * cy + t * t * (y0 + drop);
             gc.DrawLine(px, py, nx, ny, Color.Black, 0.13, cap: LineCap.Round);
             px = nx; py = ny;
+        }
+    }
+
+    /// <summary>
+    /// Draws a chord diagram (fret frame): string grid, finger dots, o/x
+    /// row, and an "Nfr" label when the shape sits above the 4th fret.
+    /// Spec is LOW string first ("x32010").
+    /// LILYPOND-REF: LP \fret-diagram-terse / MusicXML &lt;frame&gt;.
+    /// </summary>
+    private static void DrawFretFrame(double cx, double bottomY, string spec, IDrawingContext gc)
+    {
+        int strings = spec.Length;
+        const double dx = 0.55;   // string spacing
+        const double dy = 0.5;    // fret spacing
+        const int fretRows = 4;
+        double width = (strings - 1) * dx;
+        double left = cx - width / 2;
+        // Sits clear above the chord-name row (the two often pair on a note).
+        double top = bottomY - 5.0;          // grid top (below the o/x row)
+        double bottom = top + fretRows * dy;
+
+        // Base fret: shapes above the 4th fret shift down and get "Nfr".
+        int minFret = int.MaxValue;
+        foreach (var ch in spec)
+            if (ch is >= '1' and <= '9')
+                minFret = Math.Min(minFret, ch - '0');
+        int baseFret = minFret != int.MaxValue && minFret > 4 ? minFret : 1;
+
+        for (int s = 0; s < strings; s++)
+            gc.DrawLine(left + s * dx, top, left + s * dx, bottom, Color.Black, 0.05);
+        for (int f = 0; f <= fretRows; f++)
+            gc.DrawLine(left, top + f * dy, left + width, top + f * dy, Color.Black,
+                f == 0 && baseFret == 1 ? 0.16 : 0.05); // nut is thick at position 1
+
+        if (baseFret > 1)
+            gc.DrawText($"{baseFret}fr", left + width + 0.35, top + dy * 0.5, 1.1,
+                "serif", FontStyle.Regular, TextAnchor.Start, Color.Black);
+
+        for (int s = 0; s < strings; s++)
+        {
+            char ch = spec[s];
+            double sx = left + s * dx;
+            if (ch == 'x')
+            {
+                gc.DrawLine(sx - 0.16, top - 0.5, sx + 0.16, top - 0.18, Color.Black, 0.07);
+                gc.DrawLine(sx - 0.16, top - 0.18, sx + 0.16, top - 0.5, Color.Black, 0.07);
+            }
+            else if (ch is '0' or 'o')
+            {
+                gc.DrawCircle(sx, top - 0.34, 0.15, Color.Black);
+                gc.DrawCircle(sx, top - 0.34, 0.09, Color.White);
+            }
+            else if (ch is >= '1' and <= '9')
+            {
+                int fret = ch - '0' - (baseFret - 1);
+                if (fret is >= 1 and <= fretRows)
+                    gc.DrawCircle(sx, top + (fret - 0.5) * dy, 0.17, Color.Black);
+            }
         }
     }
 
