@@ -88,6 +88,11 @@ public sealed record ArticulationItem
         // is never consulted for them.
         ArticulationType.Fall => "",
         ArticulationType.Bend => "",
+        // TAB technique letters + Bartók pizz: layout sentinels, custom-drawn.
+        ArticulationType.HammerOn => "tabtech:H",
+        ArticulationType.PullOff => "tabtech:P",
+        ArticulationType.Tap => "tabtech:T",
+        ArticulationType.SnapPizz => "snappizz",
         ArticulationType.Doit => "",
         ArticulationType.Trill => EmmentalerGlyphs.OrnTrill.ToString(),
         ArticulationType.Mordent => EmmentalerGlyphs.OrnMordent.ToString(),

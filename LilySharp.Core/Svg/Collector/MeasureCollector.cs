@@ -3131,7 +3131,7 @@ public sealed class MeasureCollector
         foreach (var art in articulations)
         {
             if (art is ArticulationSyntax artSyntax &&
-                artSyntax.NameToken.Text is "glissando" or "gliss")
+                artSyntax.NameToken.Text is "glissando" or "gliss" or "slide")
                 return true;
         }
         return false;

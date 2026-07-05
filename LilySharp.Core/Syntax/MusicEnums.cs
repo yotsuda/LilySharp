@@ -31,6 +31,10 @@ public enum ArticulationType
     FermataShort,   // angled (LP \shortfermata)
     FermataLong,    // square (LP \longfermata)
     Bend,           // guitar bend-up with semitone amount (@bend(full))
+    HammerOn,       // TAB "H" (@ho)
+    PullOff,        // TAB "P" (@po)
+    Tap,            // TAB "T" (@tap)
+    SnapPizz,       // Bartók pizzicato (@snappizz)
     Portato,
     /// <summary>Wedge-shaped extreme staccato (@staccatissimo).
     /// LILYPOND-REF: mf/feta-scripts.mf scripts.u/dstaccatissimo.</summary>

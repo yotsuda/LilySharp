@@ -2843,6 +2843,27 @@ public static class SharedRenderer
                     DrawGuitarBend(a.X, y, semis, gc);
                 continue;
             }
+            // TAB technique letters (H / P / T): small italic serif text.
+            if (a.Glyph.StartsWith("tabtech:", StringComparison.Ordinal))
+            {
+                using (gc.Source(a.SourcePosition))
+                    gc.DrawText(a.Glyph[8..], a.X, y, 1.5, "serif",
+                        FontStyle.Italic, TextAnchor.Middle, Color.Black);
+                continue;
+            }
+            // Bartók (snap) pizzicato: a circle with a stem rising from its
+            // centre. LILYPOND-REF: scripts.snappizzicato.
+            if (a.Glyph == "snappizz")
+            {
+                using (gc.Source(a.SourcePosition))
+                {
+                    // Ring = black disc + white core (no stroked-circle API).
+                    gc.DrawCircle(a.X, y, 0.45, Color.Black);
+                    gc.DrawCircle(a.X, y, 0.33, Color.White);
+                    gc.DrawLine(a.X, y - 0.45, a.X, y - 1.4, Color.Black, 0.14);
+                }
+                continue;
+            }
             using (gc.Source(a.SourcePosition))
                 gc.DrawGlyph(a.Glyph[0], a.X, y, FontSize * scale);
         }

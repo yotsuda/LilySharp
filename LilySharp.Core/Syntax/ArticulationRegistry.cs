@@ -54,6 +54,12 @@ public static class ArticulationRegistry
             ["flageolet"] = ArticulationType.Flageolet,
             // Bend-after gestures (jazz fall / doit). `bendafter` aliases fall
             // (the common down-bend); use `doit` for the up-bend.
+            ["ho"] = ArticulationType.HammerOn,
+            ["hammeron"] = ArticulationType.HammerOn,
+            ["po"] = ArticulationType.PullOff,
+            ["pulloff"] = ArticulationType.PullOff,
+            ["tap"] = ArticulationType.Tap,
+            ["snappizz"] = ArticulationType.SnapPizz,
             ["fall"] = ArticulationType.Fall,
             ["bendafter"] = ArticulationType.Fall,
             ["doit"] = ArticulationType.Doit,

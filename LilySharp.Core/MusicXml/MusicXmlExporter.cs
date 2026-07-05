@@ -980,6 +980,27 @@ public sealed class MusicXmlExporter
                 // parse as name-only articulations, not compound marks.
                 if (articulation.Type == ArticulationType.None)
                     ProcessDirectionName(articulation.NameToken.Text.ToLowerInvariant());
+
+                // Guitar/TAB techniques → <technical> children. Hammer-on /
+                // pull-off are exported as text technicals (the paired
+                // start/stop form needs both notes; the letter is what TAB
+                // readers print anyway).
+                switch (articulation.Type)
+                {
+                    case ArticulationType.Tap:
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("tap"));
+                        break;
+                    case ArticulationType.SnapPizz:
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("snap-pizzicato"));
+                        break;
+                    case ArticulationType.HammerOn:
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("other-technical", "H"));
+                        break;
+                    case ArticulationType.PullOff:
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("other-technical", "P"));
+                        break;
+                }
+
                 var articName = MapArticulation(articulation.Type);
                 if (articName != null)
                     xmlNote.Articulations.Add(articName);

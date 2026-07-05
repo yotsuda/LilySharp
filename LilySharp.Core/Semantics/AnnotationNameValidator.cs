@@ -49,6 +49,7 @@ public sealed class AnnotationNameValidator : ISemanticValidator
             "laissezvibrer", "repeattie",
             "dead",
             "stemup", "stemdown",
+            "ho", "hammeron", "po", "pulloff", "tap", "snappizz", "slide",
         };
 
     /// <summary>
