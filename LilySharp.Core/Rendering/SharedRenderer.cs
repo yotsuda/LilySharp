@@ -1014,6 +1014,8 @@ public static class SharedRenderer
         gc.DrawGlyph(glyph, x + 0.3, clefY, FontSize);
         if (clef is ClefType.Treble8Below or ClefType.Bass8Below)
             DrawClefModifier8(x + 0.3, staffY, change: false, gc);
+        else if (clef == ClefType.Treble8Above)
+            DrawClefModifier8(x + 0.3, staffY, change: false, gc, above: true);
         return x + 0.3 + 3.0;  // approximate clef width + padding
     }
 
@@ -1033,11 +1035,13 @@ public static class SharedRenderer
     /// _change clef uses a smaller glyph, so the digit and its offset shrink to
     /// match (LP applies a font-size dampening for change clefs).
     /// </remarks>
-    private static void DrawClefModifier8(double clefGlyphX, double staffY, bool change, IDrawingContext gc)
+    private static void DrawClefModifier8(double clefGlyphX, double staffY, bool change, IDrawingContext gc, bool above = false)
     {
         double scale = change ? 0.85 : 1.0;
         double centerX = clefGlyphX + 1.1 * scale; // under the clef's descender (slightly left of the stem)
-        double centerY = staffY + 5.6;             // digit centre, clearing the clef's lower curl
+        // Below: clears the clef's lower curl. Above (treble^8): clears the
+        // G clef's upper hook symmetrically.
+        double centerY = above ? staffY - 3.2 : staffY + 5.6;
         double size = FontSize * 0.80 * scale;     // digit ~2 ss tall, matching LP
         gc.DrawText("8", centerX, centerY, size, "serif",
             FontStyle.Italic, TextAnchor.Middle, Color.Black, VerticalAnchor.Middle);
@@ -4538,6 +4542,8 @@ public static class SharedRenderer
             gc.DrawGlyph(glyph, x, clefY, FontSize);
             if (clefChange.NewClef is ClefType.Treble8Below or ClefType.Bass8Below)
                 DrawClefModifier8(x, staffY, change: true, gc);
+            else if (clefChange.NewClef == ClefType.Treble8Above)
+                DrawClefModifier8(x, staffY, change: true, gc, above: true);
         }
     }
 

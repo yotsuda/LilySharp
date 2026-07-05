@@ -346,6 +346,13 @@ internal sealed class Lexer
             _position++;
 
         string text = TrimDrumDuration(start, _text[start.._position]);
+        // "treble^8" — the ^ stops the word scan, so the up-octave clef name
+        // is stitched here (mirrors treble_8, whose _ is a word character).
+        if (text == "treble" && Current == '^' && Peek(1) == '8')
+        {
+            _position += 2;
+            return (SyntaxKind.Treble8UpKeyword, "treble^8");
+        }
         return (GetKeywordKind(text), text);
     }
 

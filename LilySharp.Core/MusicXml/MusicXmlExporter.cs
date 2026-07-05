@@ -65,6 +65,7 @@ public sealed class MusicXmlExporter
     private string _keyMode = "major";
     private string _clefSign = "G";
     private int _clefLine = 2;
+    private int? _clefOctaveChange; // ±1 for the _8 / ^8 clefs
     private string? _pendingDynamic;
 
     // Track parts across sections for multi-section support
@@ -366,7 +367,8 @@ public sealed class MusicXmlExporter
                     : _keyFifths,
                 KeyMode = _keyMode,
                 ClefSign = _clefSign,
-                ClefLine = _clefLine > 0 ? _clefLine : null
+                ClefLine = _clefLine > 0 ? _clefLine : null,
+                ClefOctaveChange = _clefOctaveChange
             };
 
             _currentMeasure.Direction = new MusicXmlDirection { Tempo = _tempo };
@@ -710,6 +712,7 @@ public sealed class MusicXmlExporter
         {
             "treble" => ("G", 2),
             "treble_8" => ("G", 2),
+            "treble^8" => ("G", 2),
             "bass" => ("F", 4),
             "bass_8" => ("F", 4),
             "alto" => ("C", 3),
@@ -719,6 +722,12 @@ public sealed class MusicXmlExporter
             "baritone" => ("C", 5),
             "percussion" => ("percussion", 0),
             _ => ("G", 2)
+        };
+        _clefOctaveChange = clefName switch
+        {
+            "treble_8" or "bass_8" => -1,
+            "treble^8" => 1,
+            _ => null,
         };
     }
 

@@ -2109,6 +2109,7 @@ public sealed class MeasureCollector
                     ClefType.Alto => "alto",
                     ClefType.Tenor => "tenor",
                     ClefType.Treble8Below => "treble_8",
+                    ClefType.Treble8Above => "treble^8",
                     ClefType.Soprano => "soprano",
                     ClefType.MezzoSoprano => "mezzosoprano",
                     ClefType.Baritone => "baritone",
@@ -4064,7 +4065,7 @@ public sealed class MeasureCollector
         // own cases both fell through to the treble default and rendered alike.
         int basePosition = _clef switch
         {
-            "treble" or "treble_8" => dStep - GetPitchIndex('b') + (dOctave - 4) * 7,
+            "treble" or "treble_8" or "treble^8" => dStep - GetPitchIndex('b') + (dOctave - 4) * 7,
             "bass" or "bass_8" => dStep - GetPitchIndex('d') + (dOctave - 3) * 7,
             "alto" or "percussion" => dStep - GetPitchIndex('c') + (dOctave - 4) * 7,
             "tenor" => dStep - GetPitchIndex('a') + (dOctave - 3) * 7,
@@ -4107,6 +4108,7 @@ public sealed class MeasureCollector
         "alto" => ClefType.Alto,
         "tenor" => ClefType.Tenor,
         "treble_8" => ClefType.Treble8Below,
+        "treble^8" => ClefType.Treble8Above,
         "soprano" => ClefType.Soprano,
         "mezzosoprano" => ClefType.MezzoSoprano,
         "baritone" => ClefType.Baritone,

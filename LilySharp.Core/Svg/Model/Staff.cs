@@ -29,6 +29,7 @@ public enum ClefType
     Alto,
     Tenor,
     Treble8Below,
+    Treble8Above,  // treble^8: G clef with the 8 ABOVE (sounds an octave up)
     Soprano,       // C clef, line 1 (C4 on the bottom line)
     MezzoSoprano,  // C clef, line 2
     Baritone,      // C clef, line 5 (top line)
@@ -171,6 +172,7 @@ public sealed record Staff(
         "alto" => ClefType.Alto,
         "tenor" => ClefType.Tenor,
         "treble_8" => ClefType.Treble8Below,
+        "treble^8" => ClefType.Treble8Above,
         "soprano" => ClefType.Soprano,
         "mezzosoprano" => ClefType.MezzoSoprano,
         "baritone" => ClefType.Baritone,
@@ -190,6 +192,7 @@ public sealed record Staff(
         SyntaxKind.AltoKeyword => ClefType.Alto,
         SyntaxKind.TenorKeyword => ClefType.Tenor,
         SyntaxKind.Treble8Keyword => ClefType.Treble8Below,
+        SyntaxKind.Treble8UpKeyword => ClefType.Treble8Above,
         SyntaxKind.SopranoKeyword => ClefType.Soprano,
         SyntaxKind.MezzoSopranoKeyword => ClefType.MezzoSoprano,
         SyntaxKind.BaritoneKeyword => ClefType.Baritone,

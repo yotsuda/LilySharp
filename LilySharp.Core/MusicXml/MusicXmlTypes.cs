@@ -181,6 +181,8 @@ public sealed class MusicXmlAttributes
     public int? TimeBeatType { get; set; }
     public string? ClefSign { get; set; }
     public int? ClefLine { get; set; }
+    /// <summary>±1 for the _8 / ^8 octave clefs (&lt;clef-octave-change&gt;).</summary>
+    public int? ClefOctaveChange { get; set; }
 
     public XElement ToXml()
     {
@@ -205,7 +207,10 @@ public sealed class MusicXmlAttributes
         {
             attrs.Add(new XElement("clef",
                 new XElement("sign", ClefSign),
-                ClefLine.HasValue ? new XElement("line", ClefLine.Value) : null));
+                ClefLine.HasValue ? new XElement("line", ClefLine.Value) : null,
+                ClefOctaveChange.HasValue
+                    ? new XElement("clef-octave-change", ClefOctaveChange.Value)
+                    : null));
         }
 
         return attrs;

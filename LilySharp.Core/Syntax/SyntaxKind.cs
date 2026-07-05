@@ -91,7 +91,8 @@ public enum SyntaxKind : ushort
     MezzoSopranoKeyword, // C clef on line 2
     BaritoneKeyword,     // C clef on line 5
     Bass8Keyword,        // F clef sounding an octave lower
-    PercussionKeyword,   // unpitched percussion clef     // treble_8
+    PercussionKeyword,   // unpitched percussion clef
+    Treble8UpKeyword,    // treble^8 — G clef sounding an octave higher     // treble_8
     GraceKeyword,       // grace
     AcciaccaturaKeyword,
     AppogiaturaKeyword,
