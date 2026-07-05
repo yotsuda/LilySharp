@@ -321,7 +321,7 @@ public static class ArticulationEngraver
                 articulation.IsAbove,
                 articulation.SourcePosition,
                 scale,
-                GetSeedBBox(articulation.Type, articulation.IsAbove),
+                GetSeedBBoxFor(articulation),
                 SourceIndex: arti,
                 StaffIndex: articulation.StaffIndex
             ));
@@ -405,6 +405,8 @@ public static class ArticulationEngraver
             ArticulationType.UpBow => GlyphMetrics.ArticUpBowGlyph,
             ArticulationType.DownBow => GlyphMetrics.ArticDownBowGlyph,
             ArticulationType.Flageolet => GlyphMetrics.ArticFlageoletGlyph,
+            // Chord diagram: anchored at the grid bottom, ink rises 2.7.
+            ArticulationType.FretFrame => new GlyphMetrics.BBox(-1.7, 0, 2.9, 2.7),
             _ => new GlyphMetrics.BBox(-0.5, -0.5, 0.5, 0.5) // fallback for the ornament family
         };
     }
@@ -426,6 +428,23 @@ public static class ArticulationEngraver
     /// the occupancy a mark must clear changes. Other types fall back.
     /// LILYPOND-REF: mf/feta-scripts.mf set_char_box() for each script glyph.
     /// </summary>
+    /// <summary>Real ink box of a chord diagram, anchored at the GRID BOTTOM
+    /// centre: 4 fret rows up (2.0), the o/x header above them (0.7), half the
+    /// string span each side plus the Nfr side-label allowance.</summary>
+    private static GlyphMetrics.BBox FrameBox(string? spec)
+    {
+        int strings = Math.Max(4, spec?.Length ?? 6);
+        double halfW = (strings - 1) * 0.55 / 2 + 0.3;
+        return new GlyphMetrics.BBox(-halfW, 0, halfW + 1.2, 2.7);
+    }
+
+    /// <summary>Seed box for THIS articulation instance — frame boxes depend
+    /// on the spec, everything else on the type alone.</summary>
+    private static GlyphMetrics.BBox GetSeedBBoxFor(ArticulationItem articulation) =>
+        articulation.Type == ArticulationType.FretFrame
+            ? FrameBox(articulation.FrameSpec)
+            : GetSeedBBox(articulation.Type, articulation.IsAbove);
+
     private static GlyphMetrics.BBox GetSeedBBox(ArticulationType type, bool isAbove = true) => type switch
     {
         ArticulationType.Trill => GlyphMetrics.OrnTrillGlyph,

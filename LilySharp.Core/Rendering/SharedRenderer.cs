@@ -2989,8 +2989,9 @@ public static class SharedRenderer
         const int fretRows = 4;
         double width = (strings - 1) * dx;
         double left = cx - width / 2;
-        // Sits clear above the chord-name row (the two often pair on a note).
-        double top = bottomY - 5.0;          // grid top (below the o/x row)
+        // The anchor Y comes from the script/skyline machinery (the frame's
+        // real ink box is seeded there) — the grid bottom sits ON the anchor.
+        double top = bottomY - fretRows * dy; // grid top (below the o/x row)
         double bottom = top + fretRows * dy;
 
         // Base fret: shapes above the 4th fret shift down and get "Nfr".
