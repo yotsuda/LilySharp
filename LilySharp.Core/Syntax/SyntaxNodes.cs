@@ -342,6 +342,17 @@ public sealed class ChordSyntax : SyntaxNode
     {
     }
 
+    /// <summary>Drum-name members of a drum chord (&lt;bd hh&gt;).</summary>
+    public IEnumerable<DrumNoteSyntax> DrumNames
+    {
+        get
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (GetChild(i) is DrumNoteSyntax d)
+                    yield return d;
+        }
+    }
+
     public IEnumerable<PitchSyntax> Pitches
     {
         get

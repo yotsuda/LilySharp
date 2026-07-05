@@ -60,6 +60,7 @@ public static class ArticulationRegistry
             ["pulloff"] = ArticulationType.PullOff,
             ["tap"] = ArticulationType.Tap,
             ["snappizz"] = ArticulationType.SnapPizz,
+            ["stopped"] = ArticulationType.Stopped,
             ["fall"] = ArticulationType.Fall,
             ["bendafter"] = ArticulationType.Fall,
             ["doit"] = ArticulationType.Doit,

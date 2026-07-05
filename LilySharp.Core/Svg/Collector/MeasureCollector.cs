@@ -1611,6 +1611,16 @@ public sealed class MeasureCollector
                     Fraction drumAnchorTiming = builder.CurrentDuration;
                     var drumItem = CreateDrumNoteItem(drumNote);
                     builder.AddItem(drumItem);
+                    // The drums-style table marks the closed hi-hat "+" and
+                    // the open hi-hat "○" automatically.
+                    if (DrumNameRegistry.TryGet(drumNote.DrumName, out var dInfoMark)
+                        && dInfoMark.Mark != null)
+                        _articulations.Add(new ArticulationItem(
+                            dInfoMark.Mark == "stopped"
+                                ? ArticulationType.Stopped
+                                : ArticulationType.Flageolet,
+                            drumMeasureIndex, drumItemIndex, true,
+                            drumNote.Position, _currentStaffIndex));
                     CollectDynamics(drumNote, drumMeasureIndex, drumItemIndex);
                     CollectArticulations(drumNote, drumMeasureIndex, drumItemIndex, drumItem.StemUp,
                         null, drumAnchorTiming);
@@ -4049,6 +4059,18 @@ public sealed class MeasureCollector
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
                 Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.RelativeOctave)));
+        }
+
+        // Drum chord members (<bd hh>): placement/head/GM key from the
+        // registry, mixed freely with pitched members.
+        foreach (var drum in chord.DrumNames)
+        {
+            DrumNameRegistry.TryGet(drum.DrumName, out var dinfo);
+            notes.Add(new ChordNoteInfo(
+                dinfo.StaffPosition, null,
+                dinfo.StaffPosition is <= -6 or >= 6,
+                Notehead: dinfo.Notehead,
+                Midi: dinfo.GmKey));
         }
 
         // Next chord/note is relative to first pitch of this chord (Lilypond spec)

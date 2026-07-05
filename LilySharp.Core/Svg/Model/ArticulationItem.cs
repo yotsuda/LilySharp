@@ -96,6 +96,7 @@ public sealed record ArticulationItem
         ArticulationType.HammerOn => "tabtech:H",
         ArticulationType.PullOff => "tabtech:P",
         ArticulationType.Tap => "tabtech:T",
+        ArticulationType.Stopped => "tabtech:+",
         ArticulationType.SnapPizz => "snappizz",
         ArticulationType.FretFrame => $"frame:{FrameSpec}",
         ArticulationType.Doit => "",

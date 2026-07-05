@@ -69,6 +69,7 @@ public sealed class MusicXmlExporter
     private bool _timeSenzaMisura;  // time none
     private string? _keyCustomXml;  // non-traditional key (encoded pairs)
     private string? _noteFrameSpec; // @frame(...) on the note being written
+    private MusicXmlNote? _lastPitchedNote; // hammer-on/pull-off start anchor
     private string? _pendingDynamic;
 
     // Track parts across sections for multi-section support
@@ -206,6 +207,7 @@ public sealed class MusicXmlExporter
         EnsurePart(partName);
         _currentTranspose = _root != null ? PartTranspose.Read(_root, partName) : null;
         ApplyPartHeaderClef(partName);
+        _lastPitchedNote = null; // ho/po never pairs across parts
 
         // Reset state for this part's continuation
         _currentOctave = 4;
@@ -903,6 +905,7 @@ public sealed class MusicXmlExporter
         if (note.Articulations.OfType<TieSyntax>().Any()) { xmlNote.TieStart = true; _tieToNextNote = true; }
 
         _currentMeasure.Notes.Add(xmlNote);
+        _lastPitchedNote = xmlNote;
         MaybeClosePickup(duration);
     }
 
@@ -1051,10 +1054,22 @@ public sealed class MusicXmlExporter
                         xmlNote.Technicals.Add(new System.Xml.Linq.XElement("snap-pizzicato"));
                         break;
                     case ArticulationType.HammerOn:
-                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("other-technical", "H"));
+                        // Proper paired form: start on the PREVIOUS note (the
+                        // one struck), stop on this one.
+                        _lastPitchedNote?.Technicals.Add(new System.Xml.Linq.XElement("hammer-on",
+                            new System.Xml.Linq.XAttribute("type", "start"),
+                            new System.Xml.Linq.XAttribute("number", 1), "H"));
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("hammer-on",
+                            new System.Xml.Linq.XAttribute("type", "stop"),
+                            new System.Xml.Linq.XAttribute("number", 1)));
                         break;
                     case ArticulationType.PullOff:
-                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("other-technical", "P"));
+                        _lastPitchedNote?.Technicals.Add(new System.Xml.Linq.XElement("pull-off",
+                            new System.Xml.Linq.XAttribute("type", "start"),
+                            new System.Xml.Linq.XAttribute("number", 1), "P"));
+                        xmlNote.Technicals.Add(new System.Xml.Linq.XElement("pull-off",
+                            new System.Xml.Linq.XAttribute("type", "stop"),
+                            new System.Xml.Linq.XAttribute("number", 1)));
                         break;
                 }
 

@@ -940,10 +940,22 @@ internal sealed class Parser
         var openAngle = Expect(SyntaxKind.OpenAngle);
         var pitches = new List<GreenNode?>();
 
-        while (IsPitchStart())
+        while (true)
         {
-            // LILYPOND-REF: lily/lily-parser.yy chord_body — per-pitch articulations.
-            pitches.Add(ParsePitch(inChord: true));
+            if (IsPitchStart())
+            {
+                // LILYPOND-REF: lily/lily-parser.yy chord_body — per-pitch articulations.
+                pitches.Add(ParsePitch(inChord: true));
+                continue;
+            }
+            // Drum chord member: <bd hh> — a bare drum name (no duration
+            // inside the brackets, like pitches).
+            if (Current.Kind == SyntaxKind.Identifier && DrumNameRegistry.Contains(Current.Text))
+            {
+                pitches.Add(new DrumNoteGreen(Advance(), null, null, []));
+                continue;
+            }
+            break;
         }
 
         var closeAngle = Expect(SyntaxKind.CloseAngle);

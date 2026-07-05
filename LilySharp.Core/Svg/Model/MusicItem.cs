@@ -306,6 +306,9 @@ public readonly record struct ChordNoteInfo(
     int? Fingering = null,
     /// <summary>Explicit tab string number (1 = highest) via <c>\N</c> inside a chord, or null for auto.</summary>
     int? StringNumber = null,
+    /// <summary>Per-note notehead style (drum chords mix heads: bd default,
+    /// hh cross); Default falls back to the chord-level style.</summary>
+    NoteheadStyle Notehead = NoteheadStyle.Default,
     /// <summary>Absolute sounding MIDI number (clef-independent), for tab frets.</summary>
     int Midi = 0
 );

@@ -27,7 +27,10 @@ namespace LilySharp.Core.Syntax;
 /// <param name="Notehead">Notehead style from the same table.</param>
 /// <param name="GmKey">General MIDI percussion key (channel 10).</param>
 public readonly record struct DrumInfo(
-    string FullName, int StaffPosition, NoteheadStyle Notehead, int GmKey);
+    string FullName, int StaffPosition, NoteheadStyle Notehead, int GmKey,
+    // Auto articulation from the drums-style table: "stopped" (+) on the
+    // closed hi-hat, "open" (○) on the open hi-hat.
+    string? Mark = null);
 
 /// <summary>
 /// The drum-note vocabulary: bare identifiers in a music stream that name
@@ -57,13 +60,13 @@ public static class DrumNameRegistry
         ["handclap"] = new("handclap", 1, NoteheadStyle.Triangle, 39),
         ["electricsnare"] = new("electricsnare", 1, NoteheadStyle.Default, 40),
         ["lowfloortom"] = new("lowfloortom", -4, NoteheadStyle.Default, 41),
-        ["closedhihat"] = new("closedhihat", 3, NoteheadStyle.Cross, 42),
+        ["closedhihat"] = new("closedhihat", 3, NoteheadStyle.Cross, 42, "stopped"),
         ["hihat"] = new("hihat", 3, NoteheadStyle.Cross, 42),
         ["highfloortom"] = new("highfloortom", -2, NoteheadStyle.Default, 43),
         ["pedalhihat"] = new("pedalhihat", -5, NoteheadStyle.Cross, 44),
         ["splashhihat"] = new("splashhihat", -5, NoteheadStyle.Cross, 44),
         ["lowtom"] = new("lowtom", -1, NoteheadStyle.Default, 45),
-        ["openhihat"] = new("openhihat", 3, NoteheadStyle.Cross, 46),
+        ["openhihat"] = new("openhihat", 3, NoteheadStyle.Cross, 46, "open"),
         ["halfopenhihat"] = new("halfopenhihat", 3, NoteheadStyle.XCircle, 46),
         ["lowmidtom"] = new("lowmidtom", 0, NoteheadStyle.Default, 47),
         ["himidtom"] = new("himidtom", 2, NoteheadStyle.Default, 48),

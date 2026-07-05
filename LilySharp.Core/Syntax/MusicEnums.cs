@@ -36,6 +36,7 @@ public enum ArticulationType
     Tap,            // TAB "T" (@tap)
     SnapPizz,       // Bartók pizzicato (@snappizz)
     FretFrame,      // chord diagram (@frame(x32010))
+    Stopped,        // "+" above (closed hi-hat, stopped horn)
     Portato,
     /// <summary>Wedge-shaped extreme staccato (@staccatissimo).
     /// LILYPOND-REF: mf/feta-scripts.mf scripts.u/dstaccatissimo.</summary>

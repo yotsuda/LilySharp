@@ -815,6 +815,14 @@ public sealed class MidiExporter
                 SourceOrdinal: chordOrdinal, Timbre: _currentTimbre));
         }
 
+        // Drum chord members: GM percussion alongside any pitched members.
+        foreach (var drum in chord.DrumNames)
+        {
+            DrumNameRegistry.TryGet(drum.DrumName, out var dinfo);
+            track.Notes.Add(new MidiNote(9, dinfo.GmKey, _velocity, startTick, durationTicks, chord.Position,
+                SourceOrdinal: chordOrdinal, Timbre: 9));
+        }
+
         // Next note is relative to the chord's first pitch.
         _currentNoteName = firstNoteName;
         _currentOctave = firstOctave;

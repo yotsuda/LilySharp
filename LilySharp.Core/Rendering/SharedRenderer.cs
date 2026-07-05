@@ -1648,9 +1648,13 @@ public static class SharedRenderer
         {
             var n = chord.Notes[i];
             double y = StaffFrame.PositionToDevice(n.StaffPosition, staffMiddleY);
+            // A drum chord mixes heads per member (bd default, hh cross).
+            char memberHead = n.Notehead != NoteheadStyle.Default
+                ? EmmentalerGlyphs.GetNotehead(n.Notehead, noteValue)
+                : head;
             if (!headWiped && !headTransparent)
                 using (gc.Source(chord.SourcePosition))
-                    gc.DrawGlyph(head, x + headOffsets[i], y, noteFontSize, noteheadColor);
+                    gc.DrawGlyph(memberHead, x + headOffsets[i], y, noteFontSize, noteheadColor);
             if (y < topY) topY = y;
             if (y > bottomY) bottomY = y;
             if (n.StaffPosition > maxPos) maxPos = n.StaffPosition;
