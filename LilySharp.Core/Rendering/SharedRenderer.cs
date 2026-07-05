@@ -1051,6 +1051,9 @@ public static class SharedRenderer
 
     private static double DrawTimeSignature(TimeSignature ts, double x, double staffY, IDrawingContext gc)
     {
+        // Senza misura: unmeasured music prints NO signature.
+        if (ts.SenzaMisura)
+            return x;
         if (ts.Beats == 4 && ts.BeatType == 4)
         {
             gc.DrawGlyph(EmmentalerGlyphs.TimeSigCommon, x, staffY + 2, FontSize);

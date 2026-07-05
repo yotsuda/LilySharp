@@ -25,6 +25,7 @@ public sealed class MeasureValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
     private Fraction _timeSignature = new(4, 4); // Default 4/4
+    private bool _senzaMisura; // time none: no bar-length validation
     // The meter AS WRITTEN ("4/4", "6/8") for diagnostics — the Fraction
     // normalizes (4/4 → "1"), which made the overfull warning read
     // "exceeds time signature 1".
@@ -80,6 +81,10 @@ public sealed class MeasureValidator : ISemanticValidator
                 ValidateMusicBlock(block);
                 break;
 
+            case TimeSignatureSyntax timeSig when !IsInsideMusicBlock(timeSig) && timeSig.IsSenzaMisura:
+                _senzaMisura = true;
+                break;
+
             case TimeSignatureSyntax timeSig when !IsInsideMusicBlock(timeSig):
                 // Only a TOP-LEVEL / header `time` re-arms the document meter.
                 // An in-block change is applied inside ValidateMusicBlock and
@@ -126,6 +131,7 @@ public sealed class MeasureValidator : ISemanticValidator
         // meter changes per part; validation follows the per-block timeline.
         var savedTime = _timeSignature;
         var savedMeterText = _meterText;
+        var savedSenza = _senzaMisura;
         try
         {
             ValidateMusicBlockCore(block);
@@ -134,6 +140,7 @@ public sealed class MeasureValidator : ISemanticValidator
         {
             _timeSignature = savedTime;
             _meterText = savedMeterText;
+            _senzaMisura = savedSenza;
         }
     }
 
@@ -156,7 +163,10 @@ public sealed class MeasureValidator : ISemanticValidator
             foreach (var item in measure.Items)
             {
                 if (item is TimeSignatureSyntax ts)
-                    SetTimeSignature(ts.Beats, ts.BeatType);
+                {
+                    if (ts.IsSenzaMisura) _senzaMisura = true;
+                    else { _senzaMisura = false; SetTimeSignature(ts.Beats, ts.BeatType); }
+                }
                 else if (item is PartialDeclarationSyntax pd)
                     partialLength = pd.ToFraction();
             }
@@ -178,7 +188,7 @@ public sealed class MeasureValidator : ISemanticValidator
             // for the measure that carries the \partial.
             var expected = partialLength ?? _timeSignature;
 
-            if (duration != expected && duration != Fraction.Zero)
+            if (!_senzaMisura && duration != expected && duration != Fraction.Zero)
             {
                 if (duration < expected)
                 {

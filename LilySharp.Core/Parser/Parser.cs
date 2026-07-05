@@ -515,6 +515,13 @@ internal sealed class Parser
     {
         var timeKeyword = Expect(SyntaxKind.TimeKeyword);
         SyntaxToken? colon = ConsumeRejectedColon();
+        // Senza misura: `time none` — unmeasured music (no signature printed,
+        // no bar-length validation). MusicXML <senza-misura/>.
+        if (Current.Kind == SyntaxKind.Identifier
+            && Current.Text.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            return new TimeSignatureGreen(timeKeyword, colon, Advance());
+        }
         var numerator = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
         // Additive meter: time 3+2/8 — MusicXML <beats>3+2</beats>.
         if (Check(SyntaxKind.Plus))

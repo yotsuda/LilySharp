@@ -287,6 +287,12 @@ internal sealed class TimeSignatureGreen : GreenSyntaxNode
     {
     }
 
+    // Senza misura (time none): just the keyword and the "none" word.
+    public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? colon, SyntaxToken noneWord)
+        : base(SyntaxKind.TimeSignature, [timeKeyword, colon, noneWord])
+    {
+    }
+
     // Additive meter (time 3+2/8): extra (+, int)* tokens follow the first
     // numerator IN SOURCE ORDER, before the slash.
     public TimeSignatureGreen(SyntaxToken timeKeyword, SyntaxToken? colon, GreenNode?[] numeratorTokens, SyntaxToken slash, SyntaxToken denominator)

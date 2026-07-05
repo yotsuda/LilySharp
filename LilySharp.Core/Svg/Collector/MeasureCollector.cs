@@ -645,6 +645,7 @@ public sealed class MeasureCollector
     private int _swingSubdivision;
     private int _timeBeats = 4;
     private string? _timeBeatsText; // additive numerator as written ("3+2")
+    private bool _timeSenzaMisura;  // time none — unmeasured
     private int _timeBeatType = 4;
     private int _keySharps = 0;
     private int _initialKeySharps = 0; // Preserved for Score.KeySignature (not mutated by mid-measure key changes)
@@ -728,7 +729,7 @@ public sealed class MeasureCollector
 
         return new Score(
             voice,
-            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText),
+            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura),
             new KeySignature(_initialKeySharps), // Use initial key, not the final state after key changes
             _initialClef, // Use initial clef, not the final state after clef changes
             _tempo,
@@ -1122,7 +1123,7 @@ public sealed class MeasureCollector
 
         return new MultiStaffScore(
             staffGroups,
-            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText),
+            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura),
             new KeySignature(_initialKeySharps), // Use initial key, not the final state after key changes
             _tempo,
             _title,
@@ -1170,7 +1171,7 @@ public sealed class MeasureCollector
 
         var voice = new Voice("beam-direction-probe", measures.ToImmutableArray());
         var groups = new BeamDetector().DetectBeamGroups(
-            voice, new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText), _tupletBrackets.ToImmutableArray());
+            voice, new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura), _tupletBrackets.ToImmutableArray());
 
         foreach (var group in groups)
         {
@@ -1272,7 +1273,7 @@ public sealed class MeasureCollector
 
         return new Score(
             voices.ToImmutableArray(),
-            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText),
+            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura),
             new KeySignature(_initialKeySharps),
             _initialClef,
             _tempo,
@@ -2023,6 +2024,7 @@ public sealed class MeasureCollector
         _swingSubdivision = 0;
         _timeBeats = 4;
         _timeBeatsText = null;
+        _timeSenzaMisura = false;
         _timeBeatType = 4;
         _keySharps = 0;
         _initialKeySharps = 0;
@@ -2154,6 +2156,7 @@ public sealed class MeasureCollector
                     {
                         _timeBeats = timeSig.Beats;
                         _timeBeatsText = timeSig.BeatsText;
+                        _timeSenzaMisura = timeSig.IsSenzaMisura;
                         _timeBeatType = timeSig.BeatType;
                         _timePosition = timeSig.Span.Start;
                     }

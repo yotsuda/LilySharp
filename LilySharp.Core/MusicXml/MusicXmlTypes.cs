@@ -179,6 +179,8 @@ public sealed class MusicXmlAttributes
     /// <see cref="TimeBeats"/> in the serialized &lt;beats&gt;.</summary>
     public string? TimeBeatsText { get; set; }
     public int? TimeBeatType { get; set; }
+    /// <summary>Unmeasured (&lt;senza-misura/&gt;); wins over beats.</summary>
+    public bool TimeSenzaMisura { get; set; }
     public string? ClefSign { get; set; }
     public int? ClefLine { get; set; }
     /// <summary>±1 for the _8 / ^8 octave clefs (&lt;clef-octave-change&gt;).</summary>
@@ -196,7 +198,11 @@ public sealed class MusicXmlAttributes
                 KeyMode != null ? new XElement("mode", KeyMode) : null));
         }
 
-        if (TimeBeats.HasValue && TimeBeatType.HasValue)
+        if (TimeSenzaMisura)
+        {
+            attrs.Add(new XElement("time", new XElement("senza-misura")));
+        }
+        else if (TimeBeats.HasValue && TimeBeatType.HasValue)
         {
             attrs.Add(new XElement("time",
                 new XElement("beats", TimeBeatsText ?? TimeBeats.Value.ToString()),

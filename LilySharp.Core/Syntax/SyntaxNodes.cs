@@ -629,8 +629,13 @@ public sealed class TimeSignatureSyntax : SyntaxNode
         }
     }
 
-    public SyntaxTokenNode Slash => (SyntaxTokenNode)GetChild(SlashIndex)!;
-    public SyntaxTokenNode Denominator => (SyntaxTokenNode)GetChild(SlashIndex + 1)!;
+    /// <summary>True for <c>time none</c> — unmeasured (senza misura).</summary>
+    public bool IsSenzaMisura =>
+        Numerator.Kind == SyntaxKind.Identifier
+        && Numerator.Text.Equals("none", StringComparison.OrdinalIgnoreCase);
+
+    public SyntaxTokenNode? Slash => GetChild(SlashIndex) as SyntaxTokenNode;
+    public SyntaxTokenNode? Denominator => GetChild(SlashIndex + 1) as SyntaxTokenNode;
 
     /// <summary>
     /// Gets the numerator value — the SUM for additive meters (3+2/8 → 5).
@@ -672,7 +677,7 @@ public sealed class TimeSignatureSyntax : SyntaxNode
     /// <summary>
     /// Gets the denominator value (e.g., 4 for 4/4).
     /// </summary>
-    public int BeatType => int.TryParse(Denominator.Text, out var n) ? n : 4;
+    public int BeatType => int.TryParse(Denominator?.Text, out var n) ? n : 4;
 }
 
 /// <summary>

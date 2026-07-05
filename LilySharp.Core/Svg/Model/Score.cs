@@ -22,7 +22,7 @@ namespace LilySharp.Core.Svg.Model;
 /// <summary>
 /// Time signature (e.g., 3/4, 4/4, 6/8).
 /// </summary>
-public readonly record struct TimeSignature(int Beats, int BeatType, string? BeatsText = null)
+public readonly record struct TimeSignature(int Beats, int BeatType, string? BeatsText = null, bool SenzaMisura = false)
 {
     /// <summary>Beats value whose DIGIT COUNT matches the printed numerator
     /// width — prefix-width estimation for additive meters ("3+2" ≈ 3 cols).</summary>

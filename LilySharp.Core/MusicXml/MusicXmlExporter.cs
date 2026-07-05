@@ -66,6 +66,7 @@ public sealed class MusicXmlExporter
     private string _clefSign = "G";
     private int _clefLine = 2;
     private int? _clefOctaveChange; // ±1 for the _8 / ^8 clefs
+    private bool _timeSenzaMisura;  // time none
     private string? _pendingDynamic;
 
     // Track parts across sections for multi-section support
@@ -361,6 +362,7 @@ public sealed class MusicXmlExporter
                 Divisions = DivisionsPerQuarter,
                 TimeBeats = _timeNumerator,
                 TimeBeatsText = _timeNumeratorText,
+                TimeSenzaMisura = _timeSenzaMisura,
                 TimeBeatType = _timeDenominator,
                 KeyFifths = _currentTranspose is { } trk
                     ? _keyFifths + PitchTransposer.KeySignatureFifthsShift(trk.step, trk.alt)
@@ -639,6 +641,8 @@ public sealed class MusicXmlExporter
 
     private void ProcessTimeSignature(TimeSignatureSyntax timeSig)
     {
+        _timeSenzaMisura = timeSig.IsSenzaMisura;
+        if (_timeSenzaMisura) return;
         _timeNumerator = timeSig.Beats;
         _timeNumeratorText = timeSig.BeatsText;
         _timeDenominator = timeSig.BeatType;
