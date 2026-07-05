@@ -1194,6 +1194,17 @@ public static class SharedRenderer
     /// <summary>Key-signature staff position for an ARBITRARY step (custom
     /// signatures) — same octave-choice tables, indexed by step instead of the
     /// standard order. LILYPOND-REF: key-signature-interface alteration-position.</summary>
+    /// <summary>The (step, alter) pairs of a STANDARD key signature in print
+    /// order (sharps F C G D A E B / flats B E A D G C F).</summary>
+    private static List<(int Step, int Alter)> StandardKeySteps(int sharps)
+    {
+        var list = new List<(int, int)>();
+        int n = Math.Min(Math.Abs(sharps), 7);
+        int[] steps = sharps > 0 ? KeySigSharpSteps : KeySigFlatSteps;
+        for (int i = 0; i < n; i++)
+            list.Add((steps[i], Math.Sign(sharps)));
+        return list;
+    }
     private static int KeySigStaffPositionForStep(ClefType clef, bool sharpish, int step)
     {
         int c0Position = clef switch
@@ -4702,6 +4713,40 @@ public static class SharedRenderer
         int prev = change.PreviousKey.Sharps;
         int next = change.NewKey.Sharps;
         double dx = 0;
+
+        // A CUSTOM key on either side: cancel every step of the previous
+        // signature that the new one no longer alters, then draw the new
+        // signature (custom or standard) — the simple form of LilyPond's
+        // per-step cancellation.
+        if (change.PreviousKey.Custom != null || change.NewKey.Custom != null)
+        {
+            var prevSteps = change.PreviousKey.Custom is { } pc
+                ? KeySignature.DecodeCustom(pc).ToList()
+                : StandardKeySteps(prev);
+            var newAltered = (change.NewKey.Custom is { } nc
+                ? KeySignature.DecodeCustom(nc).Select(p => p.Step)
+                : StandardKeySteps(next).Select(p => p.Step)).ToHashSet();
+            int prevNaturalPos = int.MinValue;
+            bool anyNatural = false;
+            foreach (var (step, alter) in prevSteps)
+            {
+                if (newAltered.Contains(step)) continue;
+                int staffPosition = KeySigStaffPositionForStep(clef, alter >= 0, step);
+                if (anyNatural)
+                    dx += GlyphMetrics.AccidentalNatural.Width
+                        + NaturalKernPadding(prevNaturalPos, staffPosition);
+                double ny = staffY + StaffHeight / 2 - staffPosition * 0.5;
+                using (gc.Source(change.SourcePosition))
+                    gc.DrawGlyph(EmmentalerGlyphs.AccidentalNatural, x + dx, ny, FontSize);
+                prevNaturalPos = staffPosition;
+                anyNatural = true;
+            }
+            if (anyNatural)
+                dx += GlyphMetrics.AccidentalNatural.Width + 0.4;
+            using (gc.Source(change.SourcePosition))
+                DrawKeySignature(change.NewKey, clef, x + dx, staffY, gc);
+            return;
+        }
 
         // Cancellation naturals when the sign flips or count shrinks. Their
         // positions are the PREVIOUS key's accidental positions, resolved for

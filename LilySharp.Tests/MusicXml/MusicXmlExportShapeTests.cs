@@ -64,8 +64,9 @@ public class MusicXmlExportShapeTests
     [Fact]
     public void PercentRepeat_ExportsMeasureRepeatSign()
     {
-        // A one-measure percent body exports the SIGN: the source measure
-        // once, then an empty measure under measure-style measure-repeat.
+        // A one-measure percent body exports the SIGN: repeated measures keep
+        // their REAL notes under measure-style measure-repeat (hidden behind
+        // the % by importers, full bars for strict ones).
         var doc = Export("""
             part m { clef treble }
             section A { m { repeat percent 2 { c'4 d' e' f' | } } }
@@ -73,7 +74,7 @@ public class MusicXmlExportShapeTests
             score x { staff m }
             """);
         Assert.Equal(2, doc.Descendants("measure").Count());
-        Assert.Equal(4, doc.Descendants("note").Count());
+        Assert.Equal(8, doc.Descendants("note").Count());
         Assert.Single(doc.Descendants("measure-repeat")
             .Where(m => (string?)m.Attribute("type") == "start"));
     }

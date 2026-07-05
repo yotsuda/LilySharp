@@ -535,26 +535,31 @@ public sealed class MusicXmlExporter
                         && _currentPart != null;
                     if (oneMeasurePercent)
                     {
-                        ProcessNode(repeat.Body);
-                        FlushCurrentMeasure();
-                        for (int rep = 1; rep < repCount; rep++)
+                        // Repeated measures carry their REAL notes under the
+                        // measure-style (importers hide them behind the % and
+                        // strict ones see full bars), like MuseScore exports.
+                        for (int rep = 0; rep < repCount; rep++)
                         {
-                            _currentPart!.Measures.Add(new MusicXmlMeasure
+                            // The body ends with its own barline, which flushes
+                            // the measure and opens the next (flushing HERE
+                            // nulls the open measure and drops later passes).
+                            ProcessNode(repeat.Body);
+                            if (rep == 1 && _currentPart!.Measures.Count > 0)
                             {
-                                Number = _measureNumber++,
-                                Attributes = new MusicXmlAttributes
+                                var m = _currentPart.Measures[^1];
+                                m.Attributes ??= new MusicXmlAttributes
                                 {
                                     Divisions = DivisionsPerQuarter,
-                                    MeasureRepeat = rep == 1 ? "start" : null,
-                                },
-                            });
+                                    MeasureRepeat = "start",
+                                };
+                            }
                         }
-                        StartNewMeasure();
-                        _currentMeasure!.Attributes ??= new MusicXmlAttributes
-                        {
-                            Divisions = DivisionsPerQuarter,
-                            MeasureRepeat = "stop",
-                        };
+                        if (_currentMeasure != null)
+                            _currentMeasure.Attributes ??= new MusicXmlAttributes
+                            {
+                                Divisions = DivisionsPerQuarter,
+                                MeasureRepeat = "stop",
+                            };
                         break;
                     }
                     for (int rep = 0; rep < repCount; rep++)
@@ -974,6 +979,8 @@ public sealed class MusicXmlExporter
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
+        // A rest breaks a hammer-on/pull-off pair (no note is held into it).
+        _lastPitchedNote = null;
 
         var duration = GetDuration(rest.Duration);
         int durationTicks = FractionToTicks(duration);

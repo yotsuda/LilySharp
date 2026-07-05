@@ -1571,7 +1571,12 @@ private GreenNode?[] ParseArticulations()
         {
             var customWord = Advance();
             var pitches = new List<GreenNode?>();
-            while (IsPitchStart())
+            // The list ends at the first NOTE-like token: a pitch followed by
+            // octave marks or a duration belongs to the music, not the key
+            // (custom-signature pitches are written plain: fis, bes, …).
+            while (IsPitchStart()
+                   && Peek(1)?.Kind is not (SyntaxKind.Apostrophe or SyntaxKind.Comma
+                       or SyntaxKind.IntegerLiteral))
                 pitches.Add(ParsePitch());
             return new KeySignatureGreen(keyKeyword, customWord, [.. pitches]);
         }

@@ -1768,10 +1768,23 @@ public sealed class MeasureCollector
                 {
                     // Mid-measure key signature change
                     // LILYPOND-REF: lily/key-engraver.cc — process_music() creates KeySignature grob
-                    var previousKey = new KeySignature(_keySharps);
-                    int newSharps = _octave.TransposeKeySharps(CalculateKeySharps(keySig));
-                    _keySharps = newSharps;
-                    var newKey = new KeySignature(newSharps);
+                    var previousKey = new KeySignature(_keySharps, _keyCustom);
+                    KeySignature newKey;
+                    if (keySig.IsCustom)
+                    {
+                        // Mid-piece custom signature: alterations as written
+                        // (transpose does not respell a custom map).
+                        _keySharps = 0;
+                        _keyCustom = KeySignature.EncodeCustom(keySig.CustomAlterations);
+                        newKey = new KeySignature(0, _keyCustom);
+                    }
+                    else
+                    {
+                        int newSharps = _octave.TransposeKeySharps(CalculateKeySharps(keySig));
+                        _keySharps = newSharps;
+                        _keyCustom = null;
+                        newKey = new KeySignature(newSharps);
+                    }
                     var keyChange = new KeySignatureChangeItem(newKey, previousKey, keySig.Position);
                     builder.AddItem(keyChange);
                 }
