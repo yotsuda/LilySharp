@@ -252,6 +252,7 @@ internal sealed class Parser
             SyntaxKind.ScoreKeyword => ParseRenderDeclaration(),
             SyntaxKind.PhraseKeyword => ParsePhraseDeclaration(),
             SyntaxKind.PartKeyword => ParsePartDeclaration(),  // New part syntax
+            SyntaxKind.DrummapKeyword => ParseDrummapDeclaration(),
 
             // Variable declaration: identifier = { ... } (legacy)
             SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
@@ -1422,6 +1423,19 @@ private GreenNode?[] ParseArticulations()
     /// read as transparent): no phantom parallel voice, no voice renumbering,
     /// no cascading measure warnings — the LYS0010 error alone marks the
     /// defect. A chain of nested voice blocks recovers one wrapper each.</summary>
+    /// <summary>drummap { hh: position 6 notehead x … } — the body is stored
+    /// token-for-token; the red node reads the entries.</summary>
+    private DrummapDeclarationGreen ParseDrummapDeclaration()
+    {
+        var keyword = Expect(SyntaxKind.DrummapKeyword);
+        var open = Expect(SyntaxKind.OpenBrace);
+        var tokens = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+            tokens.Add(Advance());
+        var close = Expect(SyntaxKind.CloseBrace);
+        return new DrummapDeclarationGreen(keyword, open, [.. tokens], close);
+    }
+
     private GreenNode ParseVoiceBlocksCheckingNesting()
     {
         if (_voiceBodyDepth > 0)

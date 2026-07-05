@@ -232,6 +232,62 @@ public sealed class NoteSyntax : SyntaxNode
 }
 
 /// <summary>
+/// <c>drummap { hh: position 6 notehead x … }</c> — per-score overrides of
+/// the built-in drum table (position / notehead / midi / mark of EXISTING
+/// registry names; new instrument names are out of scope, the parser's drum
+/// vocabulary is static).
+/// </summary>
+public sealed class DrummapDeclarationSyntax : SyntaxNode
+{
+    internal DrummapDeclarationSyntax(InternalSyntax.DrummapDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The entries: (drum name, key → value). Keys: position
+    /// (leading minus supported), notehead, midi, mark.</summary>
+    public IEnumerable<(string Name, Dictionary<string, string> Settings)> Entries
+    {
+        get
+        {
+            // Token stream: name colon (key value)* … next name colon …
+            var tokens = new List<string>();
+            for (int i = 2; i < SlotCount - 1; i++)
+                if (GetChild(i) is SyntaxTokenNode t)
+                    tokens.Add(t.Text);
+
+            string? name = null;
+            Dictionary<string, string>? settings = null;
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                if (i + 1 < tokens.Count && tokens[i + 1] == ":")
+                {
+                    if (name != null && settings != null)
+                        yield return (name, settings);
+                    name = tokens[i];
+                    settings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    i++; // skip the colon
+                    continue;
+                }
+                if (settings == null || i + 1 >= tokens.Count)
+                    continue;
+                string key = tokens[i].ToLowerInvariant();
+                string value = tokens[i + 1];
+                if (value == "-" && i + 2 < tokens.Count)
+                {
+                    value = "-" + tokens[i + 2];
+                    i++;
+                }
+                settings[key] = value;
+                i++;
+            }
+            if (name != null && settings != null)
+                yield return (name, settings);
+        }
+    }
+}
+
+/// <summary>
 /// Error-recovery node for a nested <c>voice { }</c> (LYS0010): a neutral
 /// wrapper whose block content inlines into the enclosing voice — walkers
 /// reach the notes as ordinary descendants.

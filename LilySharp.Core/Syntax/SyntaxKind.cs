@@ -236,6 +236,8 @@ public enum SyntaxKind : ushort
     Note,
     DrumNote,           // bd4, sn8, hh — drum-kit note (DrumNameRegistry)
     NestedVoiceRecovery, // erroneous voice{} inside a voice body — content inlines
+    DrummapDeclaration,  // drummap { hh: position 6 notehead x … }
+    DrummapKeyword,
     Rest,
     Chord,
     Pitch,

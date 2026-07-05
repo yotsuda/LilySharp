@@ -562,6 +562,7 @@ internal sealed class Lexer
             "baritone" => SyntaxKind.BaritoneKeyword,
             "bass_8" => SyntaxKind.Bass8Keyword,
             "percussion" => SyntaxKind.PercussionKeyword,
+            "drummap" => SyntaxKind.DrummapKeyword,
 
             // Other keywords
             "tuplet" => SyntaxKind.TupletKeyword,

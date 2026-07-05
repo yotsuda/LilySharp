@@ -140,3 +140,63 @@ public static class DrumNameRegistry
         return Canonical.TryGetValue(name, out info);
     }
 }
+
+/// <summary>
+/// Per-score drum-table overrides from <c>drummap { … }</c> blocks: position,
+/// notehead, GM key and the auto mark of EXISTING registry names (the parser's
+/// drum vocabulary is static, so new instrument names are out of scope).
+/// </summary>
+public static class DrumOverrides
+{
+    /// <summary>Builds the override map (canonical name → final info) from
+    /// every drummap block in the tree; null when there are none.</summary>
+    public static Dictionary<string, DrumInfo>? Build(SyntaxNode root)
+    {
+        Dictionary<string, DrumInfo>? map = null;
+        foreach (var dm in root.DescendantNodes().OfType<DrummapDeclarationSyntax>())
+        {
+            foreach (var (name, s) in dm.Entries)
+            {
+                if (!DrumNameRegistry.TryGet(name, out var info))
+                    continue; // unknown names are ignored (override-only scope)
+                map ??= new Dictionary<string, DrumInfo>(StringComparer.Ordinal);
+                if (map.TryGetValue(info.FullName, out var cur))
+                    info = cur;
+                if (s.TryGetValue("position", out var p) && int.TryParse(p, out int pos)
+                    && pos is >= -9 and <= 9)
+                    info = info with { StaffPosition = pos };
+                if (s.TryGetValue("notehead", out var nh))
+                    info = info with
+                    {
+                        Notehead = nh.ToLowerInvariant() switch
+                        {
+                            "x" or "cross" => NoteheadStyle.Cross,
+                            "diamond" => NoteheadStyle.Diamond,
+                            "triangle" => NoteheadStyle.Triangle,
+                            "slash" => NoteheadStyle.Slash,
+                            "xcircle" => NoteheadStyle.XCircle,
+                            "default" => NoteheadStyle.Default,
+                            _ => info.Notehead,
+                        },
+                    };
+                if (s.TryGetValue("midi", out var m) && int.TryParse(m, out int gm)
+                    && gm is >= 0 and <= 127)
+                    info = info with { GmKey = gm };
+                if (s.TryGetValue("mark", out var mk))
+                    info = info with
+                    {
+                        Mark = mk.ToLowerInvariant() is "stopped" or "open" ? mk.ToLowerInvariant() : null,
+                    };
+                map[info.FullName] = info;
+            }
+        }
+        return map;
+    }
+
+    /// <summary>Registry lookup with the score's overrides applied.</summary>
+    public static DrumInfo Resolve(Dictionary<string, DrumInfo>? overrides, string name)
+    {
+        DrumNameRegistry.TryGet(name, out var info);
+        return overrides != null && overrides.TryGetValue(info.FullName, out var o) ? o : info;
+    }
+}

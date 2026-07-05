@@ -113,6 +113,19 @@ internal sealed class NoteGreen : GreenSyntaxNode
 }
 
 /// <summary>
+/// drummap { hh: position 6 notehead x … } — per-score overrides of the
+/// built-in drum table. The body tokens are stored verbatim; the red node
+/// interprets the entry list (name: key value …).
+/// </summary>
+internal sealed class DrummapDeclarationGreen : GreenSyntaxNode
+{
+    public DrummapDeclarationGreen(SyntaxToken keyword, SyntaxToken openBrace, GreenNode?[] tokens, SyntaxToken closeBrace)
+        : base(SyntaxKind.DrummapDeclaration, [keyword, openBrace, .. tokens, closeBrace])
+    {
+    }
+}
+
+/// <summary>
 /// Error-recovery wrapper for a voice { } opened INSIDE another voice's body
 /// (flagged LYS0010): keeps the tokens for full source fidelity while staying
 /// a NEUTRAL node — every walker sees the inner notes as plain descendants,

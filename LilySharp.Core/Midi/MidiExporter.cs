@@ -98,8 +98,11 @@ public sealed class MidiExporter
         _ticksPerQuarter = ticksPerQuarter;
     }
 
+    private Dictionary<string, DrumInfo>? _drumOverrides; // drummap { } per-score
+
     public MidiFile Export(SyntaxTree tree)
     {
+        _drumOverrides = DrumOverrides.Build(tree.GetRoot());
         var midi = new MidiFile { TicksPerQuarterNote = _ticksPerQuarter };
 
         var conductorTrack = new MidiTrack { Name = "Tempo", Channel = 0 };
@@ -741,7 +744,7 @@ public sealed class MidiExporter
     private void ProcessDrumNote(DrumNoteSyntax drum, MidiTrack track)
     {
         _tiePending = false; // drums do not tie
-        DrumNameRegistry.TryGet(drum.DrumName, out var info);
+        var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
         var duration = GetDuration(drum.Duration);
         int durationTicks = FractionToTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks);
@@ -818,7 +821,7 @@ public sealed class MidiExporter
         // Drum chord members: GM percussion alongside any pitched members.
         foreach (var drum in chord.DrumNames)
         {
-            DrumNameRegistry.TryGet(drum.DrumName, out var dinfo);
+            var dinfo = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
             track.Notes.Add(new MidiNote(9, dinfo.GmKey, _velocity, startTick, durationTicks, chord.Position,
                 SourceOrdinal: chordOrdinal, Timbre: 9));
         }

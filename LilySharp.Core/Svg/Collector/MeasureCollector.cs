@@ -648,6 +648,7 @@ public sealed class MeasureCollector
     private bool _timeSenzaMisura;  // time none — unmeasured
     private string? _keyCustom;     // encoded custom key (KeySignature.EncodeCustom)
     private string? _initialKeyCustom;
+    private Dictionary<string, DrumInfo>? _drumOverrides; // drummap { } per-score
     private int _timeBeatType = 4;
     private int _keySharps = 0;
     private int _initialKeySharps = 0; // Preserved for Score.KeySignature (not mutated by mid-measure key changes)
@@ -1613,8 +1614,7 @@ public sealed class MeasureCollector
                     builder.AddItem(drumItem);
                     // The drums-style table marks the closed hi-hat "+" and
                     // the open hi-hat "○" automatically.
-                    if (DrumNameRegistry.TryGet(drumNote.DrumName, out var dInfoMark)
-                        && dInfoMark.Mark != null)
+                    if (DrumOverrides.Resolve(_drumOverrides, drumNote.DrumName) is { Mark: not null } dInfoMark)
                         _articulations.Add(new ArticulationItem(
                             dInfoMark.Mark == "stopped"
                                 ? ArticulationType.Stopped
@@ -2165,6 +2165,7 @@ public sealed class MeasureCollector
     private void CollectDefinitions(SyntaxNode root)
     {
         _root = root;
+        _drumOverrides = DrumOverrides.Build(root);
 
         foreach (var node in root.DescendantNodes())
         {
@@ -3981,7 +3982,7 @@ public sealed class MeasureCollector
     /// reads drumStyleTable for position + style.</remarks>
     private NoteItem CreateDrumNoteItem(DrumNoteSyntax drum)
     {
-        DrumNameRegistry.TryGet(drum.DrumName, out var info);
+        var info = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
         int noteValue = drum.Duration?.Value ?? (int)_defaultDuration.Denominator;
         if (drum.Duration != null)
             _defaultDuration = Fraction.FromNoteValue(noteValue);
@@ -4092,7 +4093,7 @@ public sealed class MeasureCollector
         // registry, mixed freely with pitched members.
         foreach (var drum in chord.DrumNames)
         {
-            DrumNameRegistry.TryGet(drum.DrumName, out var dinfo);
+            var dinfo = DrumOverrides.Resolve(_drumOverrides, drum.DrumName);
             notes.Add(new ChordNoteInfo(
                 dinfo.StaffPosition, null,
                 dinfo.StaffPosition is <= -6 or >= 6,

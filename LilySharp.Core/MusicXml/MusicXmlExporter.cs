@@ -86,6 +86,22 @@ public sealed class MusicXmlExporter
     // Variable/phrase resolution
     private readonly Dictionary<string, SyntaxNode> _variables = new();
 
+    // drummap { } per-score overrides, built lazily off the root.
+    private Dictionary<string, DrumInfo>? _drumOverridesCache;
+    private bool _drumOverridesBuilt;
+    private Dictionary<string, DrumInfo>? DrumOverridesMap
+    {
+        get
+        {
+            if (!_drumOverridesBuilt && _root != null)
+            {
+                _drumOverridesCache = DrumOverrides.Build(_root);
+                _drumOverridesBuilt = true;
+            }
+            return _drumOverridesCache;
+        }
+    }
+
     public MusicXmlDocument Export(SyntaxTree tree)
     {
         _document = new MusicXmlDocument();
@@ -835,7 +851,7 @@ public sealed class MusicXmlExporter
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
-        DrumNameRegistry.TryGet(drum.DrumName, out var info);
+        var info = DrumOverrides.Resolve(DrumOverridesMap, drum.DrumName);
 
         // Staff position → display step/octave (B4 = middle line).
         int idx = 6 + info.StaffPosition;
