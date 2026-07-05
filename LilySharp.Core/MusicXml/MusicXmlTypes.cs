@@ -119,6 +119,14 @@ public sealed class MusicXmlMeasure
     public List<MusicXmlDirection> Directions { get; } = new();
     public List<MusicXmlNote> Notes { get; } = new();
 
+    /// <summary>Repeat sign opening this measure (<c>|:</c>).</summary>
+    public bool RepeatForward { get; set; }
+    /// <summary>Repeat sign closing this measure (<c>:|</c>).</summary>
+    public bool RepeatBackward { get; set; }
+    /// <summary>Closing bar style ("light-light" for <c>||</c>, "light-heavy"
+    /// for <c>|.</c>, "dashed" for <c>!</c>); null = ordinary barline.</summary>
+    public string? BarStyle { get; set; }
+
     public XElement ToXml()
     {
         var measure = new XElement("measure", new XAttribute("number", Number));
@@ -127,6 +135,11 @@ public sealed class MusicXmlMeasure
 
         if (Attributes != null)
             measure.Add(Attributes.ToXml());
+
+        if (RepeatForward)
+            measure.Add(new XElement("barline", new XAttribute("location", "left"),
+                new XElement("bar-style", "heavy-light"),
+                new XElement("repeat", new XAttribute("direction", "forward"))));
 
         // Legacy single direction (tempo)
         if (Direction != null)
@@ -138,6 +151,16 @@ public sealed class MusicXmlMeasure
 
         foreach (var note in Notes)
             measure.Add(note.ToXml());
+
+        if (RepeatBackward || BarStyle != null)
+        {
+            var barline = new XElement("barline", new XAttribute("location", "right"));
+            barline.Add(new XElement("bar-style",
+                RepeatBackward ? "light-heavy" : BarStyle));
+            if (RepeatBackward)
+                barline.Add(new XElement("repeat", new XAttribute("direction", "backward")));
+            measure.Add(barline);
+        }
 
         return measure;
     }
@@ -197,6 +220,12 @@ public sealed class MusicXmlDirection
     public string? DynamicType { get; set; }
     public int? Tempo { get; set; }
     public string? Placement { get; set; }
+    /// <summary>Hairpin: "crescendo" / "diminuendo" / "stop".</summary>
+    public string? WedgeType { get; set; }
+    /// <summary>Pedal mark: "start" / "stop" / "sostenuto".</summary>
+    public string? PedalType { get; set; }
+    /// <summary>Ottava line: "down" (8va) / "up" (8vb) / "stop".</summary>
+    public string? OctaveShiftType { get; set; }
 
     public XElement ToXml()
     {
@@ -208,6 +237,22 @@ public sealed class MusicXmlDirection
             direction.Add(new XElement("direction-type",
                 new XElement("dynamics",
                     new XElement(DynamicType))));
+        }
+
+        if (WedgeType != null)
+            direction.Add(new XElement("direction-type",
+                new XElement("wedge", new XAttribute("type", WedgeType))));
+
+        if (PedalType != null)
+            direction.Add(new XElement("direction-type",
+                new XElement("pedal", new XAttribute("type", PedalType))));
+
+        if (OctaveShiftType != null)
+        {
+            var shift = new XElement("octave-shift", new XAttribute("type", OctaveShiftType));
+            if (OctaveShiftType != "stop")
+                shift.Add(new XAttribute("size", 8));
+            direction.Add(new XElement("direction-type", shift));
         }
 
         if (Tempo.HasValue)
@@ -236,6 +281,10 @@ public sealed class MusicXmlNote
     /// <summary>A &lt;backup&gt; pseudo-entry (multi-voice): rewinds the measure
     /// cursor by <see cref="Duration"/> before the next voice's notes.</summary>
     public bool IsBackup { get; set; }
+    /// <summary>Escape hatch for non-note entries that must keep their place
+    /// in the measure's note stream (e.g. &lt;harmony&gt; before its note):
+    /// when set, ToXml returns this element verbatim.</summary>
+    public XElement? RawElement { get; set; }
     /// <summary>MusicXML voice number (1-based) in multi-voice measures.</summary>
     public int? Voice { get; set; }
     /// <summary>Notehead style name ("x", "diamond", …) or null for default.</summary>
@@ -270,6 +319,10 @@ public sealed class MusicXmlNote
 
     public XElement ToXml()
     {
+        // Non-note pseudo-entries keep their slot in the note stream.
+        if (RawElement != null)
+            return RawElement;
+
         // Multi-voice measure-cursor rewind — not a <note> at all.
         if (IsBackup)
             return new XElement("backup", new XElement("duration", Duration));

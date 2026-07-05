@@ -90,6 +90,32 @@ public class MusicXmlExportShapeTests
     }
 
     [Fact]
+    public void DirectionFamily_ExportsWedgePedalOttavaRepeatHarmony()
+    {
+        var doc = Export("""
+            octave absolute
+            part pno { clef treble }
+            section A { pno {
+              |: c'4@ped@chord(Dm7) d'@cresc e' f'@ped(off) | g'1@f :|
+              a'4@ottava b' a'@loco g' | c'1@chord(G7/B) |
+            } }
+            structure { A }
+            score x { staff pno }
+            """);
+        Assert.Single(doc.Descendants("repeat").Where(r => (string?)r.Attribute("direction") == "forward"));
+        Assert.Single(doc.Descendants("repeat").Where(r => (string?)r.Attribute("direction") == "backward"));
+        Assert.Single(doc.Descendants("wedge").Where(w => (string?)w.Attribute("type") == "crescendo"));
+        Assert.Single(doc.Descendants("wedge").Where(w => (string?)w.Attribute("type") == "stop"));
+        Assert.Single(doc.Descendants("pedal").Where(p => (string?)p.Attribute("type") == "start"));
+        Assert.Single(doc.Descendants("pedal").Where(p => (string?)p.Attribute("type") == "stop"));
+        Assert.Single(doc.Descendants("octave-shift").Where(o => (string?)o.Attribute("type") == "down"));
+        Assert.Single(doc.Descendants("octave-shift").Where(o => (string?)o.Attribute("type") == "stop"));
+        var kinds = doc.Descendants("harmony").Select(h => h.Element("kind")!.Value).ToList();
+        Assert.Equal(new[] { "minor-seventh", "dominant" }, kinds);
+        Assert.Equal("B", doc.Descendants("bass-step").Single().Value);
+    }
+
+    [Fact]
     public void LyricElision_SplitsInsideOneLyric()
     {
         var doc = Export("""

@@ -449,23 +449,40 @@ public sealed class MusicXmlExporter
                 }
                 break;
 
-            case BarlineSyntax:
-                // A barline immediately after a pickup auto-close is redundant —
-                // the pickup measure already closed, so swallow it (no empty bar).
-                if (_justAutoClosedPickup)
+            case BarlineSyntax barline:
                 {
-                    _justAutoClosedPickup = false;
-                    break;
-                }
-                if (_currentMeasure != null && _currentPart != null)
-                {
-                    _currentPart.Measures.Add(_currentMeasure);
-                    StartNewMeasure();
+                    // A barline immediately after a pickup auto-close is redundant —
+                    // the pickup measure already closed, so swallow it (no empty bar).
+                    if (_justAutoClosedPickup)
+                    {
+                        _justAutoClosedPickup = false;
+                        break;
+                    }
+                    string barText = (barline.GetChild(0) as SyntaxTokenNode)?.Text ?? "|";
+                    if (_currentMeasure != null)
+                    {
+                        // Closing side: repeat sign / double / final / dashed.
+                        if (barText is ":|" or ":|:")
+                            _currentMeasure.RepeatBackward = true;
+                        else if (barText == "||")
+                            _currentMeasure.BarStyle = "light-light";
+                        else if (barText == "|.")
+                            _currentMeasure.BarStyle = "light-heavy";
+                        else if (barText == "!")
+                            _currentMeasure.BarStyle = "dashed";
+                    }
+                    if (_currentMeasure != null && _currentPart != null)
+                    {
+                        _currentPart.Measures.Add(_currentMeasure);
+                        StartNewMeasure();
+                        if (barText is "|:" or ":|:")
+                            _currentMeasure!.RepeatForward = true;
+                    }
                 }
                 break;
 
             case DynamicSyntax dynamic:
-                _pendingDynamic = dynamic.DynamicToken.Text;
+                HandleDynamicText(dynamic.DynamicToken.Text);
                 break;
 
             case TieSyntax:
@@ -946,6 +963,10 @@ public sealed class MusicXmlExporter
         {
             if (artic is ArticulationSyntax articulation)
             {
+                // Single-word direction marks (@ped, @sost, @ottava, @loco)
+                // parse as name-only articulations, not compound marks.
+                if (articulation.Type == ArticulationType.None)
+                    ProcessDirectionName(articulation.NameToken.Text.ToLowerInvariant());
                 var articName = MapArticulation(articulation.Type);
                 if (articName != null)
                     xmlNote.Articulations.Add(articName);
@@ -956,7 +977,11 @@ public sealed class MusicXmlExporter
             }
             else if (artic is DynamicSyntax dynamic)
             {
-                _pendingDynamic = dynamic.DynamicToken.Text;
+                HandleDynamicText(dynamic.DynamicToken.Text);
+            }
+            else if (artic is MusicMarkSyntax mark)
+            {
+                ProcessDirectionMark(mark);
             }
             else if (artic is SlurSyntax slur)
             {
@@ -966,6 +991,149 @@ public sealed class MusicXmlExporter
                     xmlNote.SlurStop = true;
             }
         }
+    }
+
+    /// <summary>Whether a crescendo/diminuendo wedge is open (closed by the
+    /// next level dynamic).</summary>
+    private bool _wedgeOpen;
+
+    /// <summary>A dynamic word: cresc/decresc/dim OPEN a &lt;wedge&gt; (they
+    /// used to leak into &lt;dynamics&gt; as invalid &lt;cresc/&gt;); a level
+    /// mark closes any open wedge, then emits as a dynamics direction.</summary>
+    private void HandleDynamicText(string text)
+    {
+        if (text is "cresc" or "decresc" or "dim")
+        {
+            _currentMeasure?.Directions.Add(new MusicXmlDirection
+            {
+                WedgeType = text == "cresc" ? "crescendo" : "diminuendo",
+                Placement = "below",
+            });
+            _wedgeOpen = true;
+            return;
+        }
+        if (_wedgeOpen)
+        {
+            _currentMeasure?.Directions.Add(new MusicXmlDirection
+            {
+                WedgeType = "stop",
+                Placement = "below",
+            });
+            _wedgeOpen = false;
+        }
+        _pendingDynamic = text;
+    }
+
+    /// <summary>Direction-family compound marks attached to a note:
+    /// pedal (@ped / @ped.off / @sost / @sost.off), ottava lines
+    /// (@ottava / @ottava.bassa / @loco) and chord symbols (@chord(...)).
+    /// Everything else stays with its specialized consumer.</summary>
+    private void ProcessDirectionMark(MusicMarkSyntax mark)
+        => ProcessDirectionName(mark.MarkName);
+
+    private void ProcessDirectionName(string rawName)
+    {
+        if (_currentMeasure == null) return;
+        var name = rawName.ToLowerInvariant(); // chord TEXT keeps its case below
+        switch (name)
+        {
+            case "ped":
+                _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "start", Placement = "below" });
+                break;
+            case "ped.off":
+            case "sost.off":
+                _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "stop", Placement = "below" });
+                break;
+            case "sost":
+                _currentMeasure.Directions.Add(new MusicXmlDirection { PedalType = "sostenuto", Placement = "below" });
+                break;
+            case "ottava":
+                // 8va above: MusicXML octave-shift "down" (written an octave
+                // below the sounding pitch).
+                _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "down" });
+                break;
+            case "ottava.bassa":
+                _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "up", Placement = "below" });
+                break;
+            case "loco":
+                _currentMeasure.Directions.Add(new MusicXmlDirection { OctaveShiftType = "stop" });
+                break;
+            default:
+                if (name.StartsWith("chord.", StringComparison.Ordinal)
+                    && LilySharp.Core.Svg.Model.ChordNameItem.ParseChordName(rawName) is { } chordText)
+                {
+                    var harmony = BuildHarmony(chordText);
+                    if (harmony != null)
+                        _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = harmony });
+                }
+                break;
+        }
+    }
+
+    /// <summary>&lt;harmony&gt; from a chord display text ("Cm7", "B♭maj7",
+    /// "C/E"): root step + alter, a kind from the common-suffix map (unknown
+    /// suffixes keep kind "other" with the original text), optional bass.</summary>
+    private static System.Xml.Linq.XElement? BuildHarmony(string chordText)
+    {
+        string text = chordText;
+        string? bass = null;
+        int slash = text.IndexOf('/');
+        if (slash > 0)
+        {
+            bass = text[(slash + 1)..];
+            text = text[..slash];
+        }
+        if (text.Length == 0 || text[0] < 'A' || text[0] > 'G')
+            return null;
+        string rootStep = text[..1];
+        int rootAlter = 0;
+        int qi = 1;
+        if (text.Length > 1 && (text[1] == '♭' || text[1] == 'b')) { rootAlter = -1; qi = 2; }
+        else if (text.Length > 1 && (text[1] == '♯' || text[1] == '#')) { rootAlter = 1; qi = 2; }
+        string suffix = text[qi..];
+
+        string kind = suffix switch
+        {
+            "" => "major",
+            "m" => "minor",
+            "7" => "dominant",
+            "m7" => "minor-seventh",
+            "maj7" => "major-seventh",
+            "dim" => "diminished",
+            "dim7" => "diminished-seventh",
+            "aug" => "augmented",
+            "sus4" => "suspended-fourth",
+            "sus2" => "suspended-second",
+            "6" => "major-sixth",
+            "m6" => "minor-sixth",
+            "9" => "dominant-ninth",
+            "maj9" => "major-ninth",
+            "m9" => "minor-ninth",
+            "mmaj7" => "major-minor",
+            _ => "other",
+        };
+
+        var root = new System.Xml.Linq.XElement("root",
+            new System.Xml.Linq.XElement("root-step", rootStep));
+        if (rootAlter != 0)
+            root.Add(new System.Xml.Linq.XElement("root-alter", rootAlter));
+
+        var kindEl = new System.Xml.Linq.XElement("kind", kind);
+        if (kind == "other")
+            kindEl.Add(new System.Xml.Linq.XAttribute("text", suffix));
+
+        var harmony = new System.Xml.Linq.XElement("harmony", root, kindEl);
+        if (bass is { Length: > 0 } && bass[0] >= 'A' && bass[0] <= 'G')
+        {
+            var bassEl = new System.Xml.Linq.XElement("bass",
+                new System.Xml.Linq.XElement("bass-step", bass[..1]));
+            if (bass.Length > 1 && (bass[1] == '♭' || bass[1] == 'b'))
+                bassEl.Add(new System.Xml.Linq.XElement("bass-alter", -1));
+            else if (bass.Length > 1 && (bass[1] == '♯' || bass[1] == '#'))
+                bassEl.Add(new System.Xml.Linq.XElement("bass-alter", 1));
+            harmony.Add(bassEl);
+        }
+        return harmony;
     }
 
     private void EmitPendingDynamic()
