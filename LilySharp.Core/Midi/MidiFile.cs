@@ -46,10 +46,57 @@ public class MidiFile
     {
         using var writer = new BinaryWriter(stream, System.Text.Encoding.ASCII, leaveOpen: true);
         WriteHeader(writer);
-        foreach (var track in Tracks)
+        var channelPlans = PlanQuarterToneChannels();
+        for (int i = 0; i < Tracks.Count; i++)
         {
-            WriteTrack(writer, track);
+            WriteTrack(writer, Tracks[i], channelPlans[i]);
         }
+    }
+
+    /// <summary>
+    /// MPE-lite channel plan for quarter tones: pitch bend is CHANNEL-wide, so
+    /// a bent note sharing its channel with a simultaneous plain note would
+    /// bend both. Each track's bent notes move to an auxiliary channel per
+    /// bend value (¼-up and ¼-down each get their own), leaving the main
+    /// channel clean; if the 16-channel space runs out, the affected notes
+    /// fall back to in-channel bends (correct for monophonic lines).
+    /// Returns, per track, the per-note output channel (null = no overrides).
+    /// </summary>
+    private List<int[]?> PlanQuarterToneChannels()
+    {
+        var used = new HashSet<int> { 9 }; // GM percussion stays reserved
+        foreach (var t in Tracks)
+            used.Add(t.Channel);
+        var free = new Queue<int>(Enumerable.Range(0, 16).Where(c => !used.Contains(c)));
+
+        var plans = new List<int[]?>(Tracks.Count);
+        foreach (var t in Tracks)
+        {
+            if (t.Channel == 9 || !t.Notes.Any(n => n.QuarterBend != 0))
+            {
+                plans.Add(null);
+                continue;
+            }
+            var auxByBend = new Dictionary<int, int>();
+            var plan = new int[t.Notes.Count];
+            for (int i = 0; i < t.Notes.Count; i++)
+            {
+                var n = t.Notes[i];
+                if (n.QuarterBend == 0)
+                {
+                    plan[i] = n.Channel;
+                    continue;
+                }
+                if (!auxByBend.TryGetValue(n.QuarterBend, out int aux))
+                {
+                    aux = free.Count > 0 ? free.Dequeue() : n.Channel;
+                    auxByBend[n.QuarterBend] = aux;
+                }
+                plan[i] = aux;
+            }
+            plans.Add(plan);
+        }
+        return plans;
     }
 
     /// <summary>
@@ -73,12 +120,12 @@ public class MidiFile
         WriteBigEndian16(writer, (ushort)TicksPerQuarterNote);
     }
 
-    private void WriteTrack(BinaryWriter writer, MidiTrack track)
+    private void WriteTrack(BinaryWriter writer, MidiTrack track, int[]? channelPlan = null)
     {
         using var trackStream = new MemoryStream();
         using var trackWriter = new BinaryWriter(trackStream);
 
-        var events = BuildEventList(track);
+        var events = BuildEventList(track, channelPlan);
 
         int lastTick = 0;
         foreach (var evt in events)
@@ -151,7 +198,7 @@ public class MidiFile
         writer.Write(trackStream.ToArray());
     }
 
-    private List<MidiEvent> BuildEventList(MidiTrack track)
+    private List<MidiEvent> BuildEventList(MidiTrack track, int[]? channelPlan = null)
     {
         var events = new List<MidiEvent>();
 
@@ -167,26 +214,25 @@ public class MidiFile
             events.Add(new MidiEvent(ts.Tick, MidiEventType.TimeSignature, 0, ts.Numerator, denomPow));
         }
 
-        bool bentNow = false;
-        foreach (var note in track.Notes)
+        // Quarter tones: ±50 cents = ±1024 on the standard ±2-semitone bend
+        // range. The channel plan routes bent notes to auxiliary channels
+        // (bend set once per channel); the fallback keeps in-channel bends,
+        // switching the value only when it changes. Bend events sort BEFORE
+        // note-on at the same tick (enum order).
+        var channelBend = new Dictionary<int, int>();
+        for (int ni = 0; ni < track.Notes.Count; ni++)
         {
-            // Quarter tones: bend before the note-on, reset when a later note
-            // has none. ±50 cents = ±1024 on the standard ±2-semitone range.
-            // Sorted BEFORE note-on at the same tick (enum order).
-            if (note.QuarterBend != 0)
+            var note = track.Notes[ni];
+            int channel = channelPlan != null ? channelPlan[ni] : note.Channel;
+            int want = note.QuarterBend;
+            if (channelBend.GetValueOrDefault(channel) != want)
             {
                 events.Add(new MidiEvent(note.StartTick, MidiEventType.PitchBend,
-                    note.Channel, 8192 + note.QuarterBend * 1024, 0));
-                bentNow = true;
+                    channel, 8192 + want * 1024, 0));
+                channelBend[channel] = want;
             }
-            else if (bentNow)
-            {
-                events.Add(new MidiEvent(note.StartTick, MidiEventType.PitchBend,
-                    note.Channel, 8192, 0));
-                bentNow = false;
-            }
-            events.Add(new MidiEvent(note.StartTick, MidiEventType.NoteOn, note.Channel, note.Pitch, note.Velocity));
-            events.Add(new MidiEvent(note.StartTick + note.DurationTicks, MidiEventType.NoteOff, note.Channel, note.Pitch, 0));
+            events.Add(new MidiEvent(note.StartTick, MidiEventType.NoteOn, channel, note.Pitch, note.Velocity));
+            events.Add(new MidiEvent(note.StartTick + note.DurationTicks, MidiEventType.NoteOff, channel, note.Pitch, 0));
         }
 
         foreach (var lyric in track.Lyrics)
