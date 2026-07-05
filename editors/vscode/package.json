@@ -2,8 +2,13 @@
   "name": "lilysharp",
   "displayName": "Lily#",
   "description": "Language support for Lily# music notation",
-  "version": "0.1.2-dev.203",
+  "version": "0.3.0",
   "publisher": "lilysharp",
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yotsuda/LilySharp.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -35,7 +40,6 @@
         "path": "./syntaxes/lilysharp.tmLanguage.json"
       }
     ],
-
     "semanticTokenTypes": [
       {
         "id": "pitch",

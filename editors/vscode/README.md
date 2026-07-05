@@ -1,4 +1,4 @@
-﻿# Lily# VS Code Extension
+# Lily# VS Code Extension
 
 Language support for Lily# music notation files (`.lys`).
 
@@ -34,8 +34,9 @@ Colors can be customized in settings.
 
 ## Requirements
 
-- .NET 10 SDK (to build the language server)
-- Node.js 18+ (to build the extension)
+- **.NET 9 Runtime** — the bundled language server runs on it
+  (`dotnet` must be on PATH; the SDK also works).
+  Building from source additionally needs the .NET 9 SDK and Node.js 18+.
 
 ## Installation
 

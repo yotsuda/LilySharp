@@ -45,6 +45,7 @@ jobs:
           --self-contained
           -p:PublishSingleFile=true
           -p:EnableCompressionInSingleFile=true
+          -p:Version=${GITHUB_REF_NAME#v}
           -o publish/${{ matrix.rid }}
       - name: Archive
         run: |
@@ -72,6 +73,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Publish LSP server into the extension
+        # Framework-dependent (portable): the extension always launches the
+        # server via 'dotnet lilysharp-lsp.dll', so ONE vsix serves every OS.
+        # Users need the .NET 9 runtime - stated in the extension README.
+        run: >
+          dotnet publish LilySharp.Lsp/LilySharp.Lsp.csproj
+          -c Release
+          -p:Version=${GITHUB_REF_NAME#v}
+          -o editors/vscode/server
+      - name: Bundle the license
+        run: cp LICENSE editors/vscode/LICENSE
       - name: Sync extension version to tag
         working-directory: editors/vscode
         # v0.3.0 → 0.3.0; "|| true" tolerates an already-matching version.
@@ -80,7 +92,8 @@ jobs:
         working-directory: editors/vscode
         run: |
           npm ci
-          npx @vscode/vsce package --allow-missing-repository --skip-license --pre-release
+          npm run compile
+          npx @vscode/vsce package --pre-release
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:

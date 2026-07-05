@@ -73,8 +73,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Priority: 1. User-configured path, 2. Bundled server, 3. PATH
     if (!serverPath || serverPath.trim() === '') {
-        // Look for bundled server in extension directory
-        const bundledServer = path.join(context.extensionPath, 'server', 'lilysharp-lsp.exe');
+        // Look for the bundled server in the extension directory. The DLL is
+        // the platform-neutral marker: CI publishes framework-dependent, so
+        // Linux/macOS builds have no .exe apphost — the server always runs
+        // via `dotnet lilysharp-lsp.dll` anyway.
+        const bundledServer = path.join(context.extensionPath, 'server', 'lilysharp-lsp.dll');
         if (fs.existsSync(bundledServer)) {
             serverPath = bundledServer;
             outputChannel.appendLine(`Using bundled server: ${serverPath}`);
@@ -102,10 +105,12 @@ export function activate(context: vscode.ExtensionContext) {
     let serverArgs: string[];
     let serverEnv: { [key: string]: string } | undefined;
 
-    if (serverPath.endsWith('.exe')) {
-        // For .exe, use dotnet to run the corresponding .dll
-        // This ensures the correct .NET runtime is used
-        const dllPath = serverPath.replace(/\.exe$/, '.dll');
+    if (serverPath.endsWith('.exe') || serverPath.endsWith('.dll')) {
+        // Run the .dll via dotnet (an .exe path maps to its sibling .dll).
+        // This ensures the correct .NET runtime is used on every platform.
+        const dllPath = serverPath.endsWith('.dll')
+            ? serverPath
+            : serverPath.replace(/\.exe$/, '.dll');
         if (fs.existsSync(dllPath)) {
             // Try to find user-installed dotnet first (has newer .NET versions)
             const userDotnetPath = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'dotnet');
