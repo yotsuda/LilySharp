@@ -4,6 +4,12 @@ Practical procedures and hard-won tips for maintaining Lily#. Written for
 AI-assisted development sessions (Claude et al.) as much as for humans —
 every rule here was earned by an actual mistake or verified procedure.
 
+A far more detailed Japanese working log (session-by-session history,
+LilyPond source navigation maps, probe-test techniques, LP comparison
+recipes) lives locally at `scratch/project-notes/DEV_BUGFIX_WORKFLOW.md`
+(untracked). This file is the distilled, durable subset; on conflict,
+trust this file and the actual code.
+
 ## Golden rules
 
 1. **Layout code mimics LilyPond — never invent.** Every layout fix must be
