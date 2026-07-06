@@ -807,6 +807,29 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             color: #666;
             font-family: system-ui, sans-serif;
         }
+        /* Non-destructive error surface: a banner shown ABOVE the (kept) preview
+           so a transient syntax error while typing doesn't blank the whole score. */
+        .error-banner {
+            display: none;
+            color: #f44336;
+            background: #ffebee;
+            border-bottom: 1px solid rgba(244, 67, 54, 0.5);
+            padding: 6px 12px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 6em;
+            overflow-y: auto;
+            flex: 0 0 auto;
+        }
+        .error-banner.visible {
+            display: block;
+        }
+        /* The last good preview stays but dims while the current source is invalid. */
+        #svgContainer.stale {
+            opacity: 0.45;
+            transition: opacity 0.15s;
+        }
         @media (prefers-color-scheme: dark) {
             body {
                 background: #1e1e1e;
@@ -832,6 +855,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             .error {
                 background: #4a1515;
                 color: #ff8a80;
+            }
+            .error-banner {
+                background: #4a1515;
+                color: #ff8a80;
+                border-bottom-color: rgba(255, 138, 128, 0.4);
             }
             .loading {
                 color: #aaa;
@@ -859,6 +887,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         <button id="nextPageBtn" type="button" title="Next page">▶</button>
         <button id="lastPageBtn" type="button" title="Last page">⏭</button>
     </div>
+    <div id="errorBanner" class="error-banner" role="alert"></div>
     <div class="main-content">
         <div class="container">
             <div id="svgContainer">
@@ -884,8 +913,18 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         const scaleStep = 0.1;
 
         const svgContainer = document.getElementById('svgContainer');
+        const errorBanner = document.getElementById('errorBanner');
         const zoomInfo = document.getElementById('zoomInfo');
         const renderSelect = document.getElementById('renderSelect');
+
+        function showErrorBanner(text) {
+            errorBanner.textContent = text;
+            errorBanner.classList.add('visible');
+        }
+        function hideErrorBanner() {
+            errorBanner.classList.remove('visible');
+            errorBanner.textContent = '';
+        }
         let hideTimeout;
         let lastHighlightPos = -1;
 
@@ -1380,13 +1419,31 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const message = event.data;
             console.log('Webview received message:', message.type);
             switch (message.type) {
-                case 'updateContent':
+                case 'updateContent': {
                     updateRenderSelect(message.renders, message.selectedRender);
+                    const hasPreview = !!svgContainer.querySelector('svg');
                     if (message.loading) {
-                        svgContainer.innerHTML = '<div class="loading">Waiting for language server...</div>';
+                        // Don't replace an existing preview with a spinner — keep
+                        // showing the last score while the server (re)starts.
+                        if (!hasPreview) {
+                            svgContainer.innerHTML = '<div class="loading">Waiting for language server...</div>';
+                        }
                     } else if (message.error) {
-                        svgContainer.innerHTML = '<div class="error">' + escapeHtml(message.error) + '</div>';
+                        // Transient parse errors (a half-typed @articulation, an
+                        // unclosed brace, …) should NOT blank the score. Keep the
+                        // last good preview, dim it, and show the error in a banner.
+                        // Only when nothing has rendered yet do we show the error
+                        // in place (there is nothing to preserve).
+                        if (hasPreview) {
+                            svgContainer.classList.add('stale');
+                            showErrorBanner(message.error);
+                        } else {
+                            hideErrorBanner();
+                            svgContainer.innerHTML = '<div class="error">' + escapeHtml(message.error) + '</div>';
+                        }
                     } else if (message.svg) {
+                        hideErrorBanner();
+                        svgContainer.classList.remove('stale');
                         svgContainer.innerHTML = message.svg;
                         collectPages();
                         // Keep the chosen fit across re-renders; otherwise
@@ -1399,6 +1456,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         }
                     }
                     break;
+                }
                 case 'playbackData':
                     if (message.error || !message.notes) {
                         setPlayUi(false);
