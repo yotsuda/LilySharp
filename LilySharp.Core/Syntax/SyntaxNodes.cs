@@ -1723,12 +1723,9 @@ public sealed class IncludeDirectiveSyntax : SyntaxNode
 }
 
 /// <summary>
-/// An optional language-version directive: <c>version "1"</c>. A soft top-level
-/// marker (the word <c>version</c> is NOT reserved — it is only a directive when
-/// it leads a top-level item and is followed by a string literal), so declaring
-/// a version never breaks a document that uses <c>version</c> as a name. Absence
-/// means the current/default grammar. Recorded so future grammar revisions can
-/// branch behavior on the declared version.
+/// An optional language-version directive: <c>version "1"</c>. A top-level marker
+/// recording the grammar version a document targets, so future grammar revisions
+/// can branch behavior on it. Absence means the current/default grammar.
 /// </summary>
 public sealed class VersionDeclarationSyntax : SyntaxNode
 {

@@ -127,10 +127,8 @@ TopLevelItem   = VersionDecl                      (* optional language-version m
 
 VersionDecl    = 'version' , String ;
                  (* optional, recommended first line: the language version the
-                    file targets, e.g. version "1". 'version' is a SOFT keyword —
-                    only a directive when it leads a top-level item and is followed
-                    by a string, so it never reserves the identifier 'version'.
-                    Recorded for forward compatibility; omitting it = current grammar. *)
+                    file targets, e.g. version "1". Recorded so future grammar
+                    revisions can branch on it; omitting it = current grammar. *)
 
 ### 2.3 Metadata
 

@@ -496,6 +496,7 @@ internal sealed class Lexer
         return text switch
         {
             // New structure keywords
+            "version" => SyntaxKind.VersionKeyword,
             "section" => SyntaxKind.SectionKeyword,
             "structure" => SyntaxKind.StructureKeyword,
             "include" => SyntaxKind.IncludeKeyword,

@@ -255,12 +255,8 @@ internal sealed class Parser
             SyntaxKind.PartKeyword => ParsePartDeclaration(),  // New part syntax
             SyntaxKind.DrummapKeyword => ParseDrummapDeclaration(),
 
-            // Optional language-version directive: `version "1"`. Soft keyword —
-            // `version` stays an ordinary identifier everywhere else; it is only a
-            // directive when it leads a top-level item and is followed by a string,
-            // so declaring a version never breaks a document using `version` as a name.
-            SyntaxKind.Identifier when Current.Text == "version"
-                && Peek(1)?.Kind == SyntaxKind.StringLiteral => ParseVersionDeclaration(),
+            // Optional language-version directive: `version "1"`.
+            SyntaxKind.VersionKeyword => ParseVersionDeclaration(),
 
             // Variable declaration: identifier = { ... } (legacy)
             SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
@@ -1747,10 +1743,10 @@ private GreenNode?[] ParseArticulations()
         return new IncludeDirectiveGreen(keyword, path);
     }
 
-    // Optional `version "1"` directive (soft keyword — see ParseTopLevelItem).
+    // Optional `version "1"` directive.
     private VersionDeclarationGreen ParseVersionDeclaration()
     {
-        var keyword = Advance();                         // the `version` identifier
+        var keyword = Expect(SyntaxKind.VersionKeyword);
         var value = Expect(SyntaxKind.StringLiteral);    // the quoted version
         return new VersionDeclarationGreen(keyword, value);
     }

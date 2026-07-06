@@ -81,6 +81,8 @@ public enum SyntaxKind : ushort
     StructureKeyword,
     /// <summary>The <c>include</c> keyword.</summary>
     IncludeKeyword,
+    /// <summary>The <c>version</c> keyword (optional language-version directive).</summary>
+    VersionKeyword,
     /// <summary>The <c>render</c> keyword.</summary>
     RenderKeyword,
     /// <summary>The <c>score</c> keyword (legacy).</summary>

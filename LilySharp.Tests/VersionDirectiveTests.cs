@@ -20,9 +20,9 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The optional <c>version "…"</c> directive: a soft top-level marker that lets
-/// future grammar revisions branch on a document's declared version. It must NOT
-/// reserve the word <c>version</c>, and must preserve the parser's round-trip.
+/// The optional <c>version "…"</c> directive: a top-level marker that lets future
+/// grammar revisions branch on a document's declared version. Must parse, expose
+/// the version, and preserve the parser's round-trip.
 /// </summary>
 [Trait("Category", "Unit")]
 public class VersionDirectiveTests
@@ -45,14 +45,10 @@ public class VersionDirectiveTests
     }
 
     [Fact]
-    public void VersionIsNotReserved_StillUsableAsAVariableName()
+    public void VersionValueReadsBackVerbatim()
     {
-        // `version` followed by `=` is a variable declaration, not the directive:
-        // the soft keyword only fires before a string literal.
-        var tree = SyntaxTree.Parse("version = { c4 d4 }");
-        Assert.Null(tree.DeclaredVersion);
-        Assert.Empty(tree.GetNodes<VersionDeclarationSyntax>());
-        Assert.Single(tree.GetNodes<VariableDeclarationSyntax>());
+        var tree = SyntaxTree.Parse("version \"2\"\npart m { section A { c4 } }\nscore \"s\" { staff m }");
+        Assert.Equal("2", tree.GetNodes<VersionDeclarationSyntax>().Single().Version);
     }
 
     [Fact]
