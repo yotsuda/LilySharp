@@ -33,7 +33,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// 3. If target > length: expand_line (simple linear calculation)
 /// 4. If target &lt; length: compress_line (iterative blocking)
 /// </remarks>
-public sealed class SpringSolver
+internal sealed class SpringSolver
 {
     private readonly ImmutableArray<Spring> _springs;
 

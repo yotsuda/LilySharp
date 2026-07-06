@@ -22,7 +22,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// <summary>
 /// Represents a candidate tie configuration for scoring.
 /// </summary>
-public sealed class TieCandidate
+internal sealed class TieCandidate
 {
     public double StartX { get; set; }
     public double StartY { get; set; }
@@ -73,7 +73,7 @@ public sealed class TieCandidate
 /// LILYPOND-REF: lily/tie-configuration.cc Tie_configuration class
 /// LILYPOND-REF: lily/misc.cc:48-65 peak_around(), convex_amplifier()
 /// </remarks>
-public sealed class TieFormattingProblem
+internal sealed class TieFormattingProblem
 {
     private readonly TieItem _tie;
     private readonly double _startX;

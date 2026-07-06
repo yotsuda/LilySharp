@@ -137,7 +137,7 @@ public class IncrementalEditBenchmark
         SvgGenerator.CollectScore(_editedTree, _editedSpec);
 
     [Benchmark(Description = "Edit stage 2: layout")]
-    public ScoreLayout Edit_Stage2_Layout() =>
+    public object Edit_Stage2_Layout() =>
         new LayoutEngine().Layout(_editedScore);
 
     [Benchmark(Description = "Edit stage 3: render SVG")]

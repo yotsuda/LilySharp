@@ -22,7 +22,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// <summary>
 /// Detects ties between notes of the same pitch.
 /// </summary>
-public sealed class TieDetector
+internal sealed class TieDetector
 {
     public ImmutableArray<TieItem> DetectTies(Score score)
     {

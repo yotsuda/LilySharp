@@ -61,7 +61,7 @@ public readonly record struct TrillSpannerLayout(
 /// - staff-padding: 1.0
 /// - outside-staff-priority: 50
 /// </remarks>
-public static class TrillSpannerEngraver
+internal static class TrillSpannerEngraver
 {
     /// <summary>
     /// Horizontal padding from bound objects.

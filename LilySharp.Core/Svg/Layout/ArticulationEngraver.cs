@@ -29,7 +29,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: define-grobs.scm:2268-2310 Script grob
 /// LILYPOND-REF: script-interface.cc positioning logic
 /// </remarks>
-public readonly record struct ArticulationLayout(
+internal readonly record struct ArticulationLayout(
     int MeasureIndex,       // Measure containing this articulation
     int ItemIndex,          // Item index within measure (for X alignment)
     double X,               // Absolute X position (staff spaces from score start)
@@ -57,7 +57,7 @@ public readonly record struct ArticulationLayout(
 /// - padding: 0.2 staff spaces
 /// - staff-padding: 0.25 staff spaces
 /// </remarks>
-public static class ArticulationEngraver
+internal static class ArticulationEngraver
 {
     // LILYPOND-REF: define-grobs.scm:2280 padding = 0.2
     private const double Padding = 0.2;

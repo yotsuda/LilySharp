@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: ly/paper-defaults-init.ly:64-89
 /// LILYPOND-REF: lily/page-layout-problem.cc:1340-1353 alter_spring_from_spacing_spec()
 /// </remarks>
-public sealed record VerticalSpacingSpec
+internal sealed record VerticalSpacingSpec
 {
     /// <summary>
     /// Ideal distance between reference points (staff spaces).
@@ -61,7 +61,7 @@ public sealed record VerticalSpacingSpec
 /// LILYPOND-REF: ly/paper-defaults-init.ly:64-89
 /// LILYPOND-REF: lily/page-layout-problem.cc:488-535 spacing spec selection
 /// </remarks>
-public sealed record VerticalSpacingParameters
+internal sealed record VerticalSpacingParameters
 {
     public static VerticalSpacingParameters Default { get; } = new();
 

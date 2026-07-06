@@ -30,7 +30,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// - InverseStretchStrength: Controls how much the spring stretches per unit force
 /// - Force: Applied uniformly to all springs to achieve target width
 /// </remarks>
-public sealed record Spring
+internal sealed record Spring
 {
     /// <summary>
     /// The ideal distance between reference points.

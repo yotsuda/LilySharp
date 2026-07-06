@@ -43,7 +43,7 @@ public readonly record struct PercentRepeatLayout(
 ///
 /// The percent symbol is centered horizontally and vertically within the measure.
 /// </remarks>
-public static class PercentRepeatEngraver
+internal static class PercentRepeatEngraver
 {
     /// <summary>
     /// Calculates percent repeat layouts from collected items.

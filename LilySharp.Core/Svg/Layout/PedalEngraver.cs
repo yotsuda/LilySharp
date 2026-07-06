@@ -51,7 +51,7 @@ public readonly record struct PedalBracketLayout(
 /// are not wired into the layout pipeline; this class is retained as the basis
 /// for a future bracket style.
 /// </remarks>
-public static class PedalEngraver
+internal static class PedalEngraver
 {
     // LILYPOND-REF: define-grobs.scm:2590 bound-padding = 1.0
     private const double BoundPadding = 1.0;

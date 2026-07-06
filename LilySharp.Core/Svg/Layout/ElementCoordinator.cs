@@ -29,7 +29,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// <remarks>
 /// LILYPOND-REF: lily/beam.cc, lily/tie.cc, lily/slur.cc
 /// </remarks>
-public sealed class ElementCoordinator
+internal sealed class ElementCoordinator
 {
     private readonly LayoutOptions _options;
     private readonly BeamDetector _beamDetector = new();

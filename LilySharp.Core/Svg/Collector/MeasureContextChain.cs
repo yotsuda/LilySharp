@@ -43,7 +43,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// semantics query (S5) and add a stable, edit-surviving measure identity (S4).
 /// </para>
 /// </remarks>
-public sealed class MeasureContextChain
+internal sealed class MeasureContextChain
 {
     /// <summary>Context at the START of each measure. <c>Entry[i+1] == Exit[i]</c>.</summary>
     public ImmutableArray<MeasureContext> Entry { get; }

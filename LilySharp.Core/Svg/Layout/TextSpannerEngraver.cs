@@ -76,7 +76,7 @@ public readonly record struct TextSpannerLayout(
 /// - font-shape: italic
 /// - staff-padding: 0.8
 /// </remarks>
-public static class TextSpannerEngraver
+internal static class TextSpannerEngraver
 {
     /// <summary>
     /// Dash period: length of one dash+gap cycle.

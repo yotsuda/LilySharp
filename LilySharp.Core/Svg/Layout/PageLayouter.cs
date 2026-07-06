@@ -40,7 +40,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// IMPLEMENTED — pure height estimation for pre-breaking optimization
 ///   via LayoutEngine.AugmentExtentsWithLooseLines + MultiStaffLayouter.CalculatePureSystemHeight
 /// </remarks>
-public sealed class PageLayouter
+internal sealed class PageLayouter
 {
     private readonly LayoutOptions _options;
 

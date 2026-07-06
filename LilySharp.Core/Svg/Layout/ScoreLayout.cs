@@ -45,7 +45,7 @@ public readonly record struct ColumnLayout(
 /// Layout information for a single measure.
 /// All coordinates are in staff spaces.
 /// </summary>
-public sealed record MeasureLayout
+internal sealed record MeasureLayout
 {
     public int MeasureIndex { get; }
     public double X { get; }                              // X position of measure start (staff spaces)
@@ -123,7 +123,7 @@ public sealed record MeasureLayout
 /// Layout information for a single system (staff line).
 /// All coordinates are in staff spaces.
 /// </summary>
-public sealed record SystemLayout(
+internal sealed record SystemLayout(
     int SystemIndex,
     double Y,                              // Y position of system top (staff spaces from page top)
     double Width,                          // System width (staff spaces) - staff lines extend to this
@@ -148,7 +148,7 @@ public sealed record SystemLayout(
 /// Layout information for a single page.
 /// All coordinates are in staff spaces.
 /// </summary>
-public sealed record PageLayout(
+internal sealed record PageLayout(
     int PageIndex,
     double Width,                          // Page width (staff spaces)
     double Height,                         // Page height (staff spaces)
@@ -170,7 +170,7 @@ public readonly record struct RestShiftKey(int MeasureIndex, int ItemIndex);
 /// Complete layout information for a score.
 /// All coordinates are in staff spaces unless otherwise noted.
 /// </summary>
-public sealed record ScoreLayout(
+internal sealed record ScoreLayout(
     ImmutableArray<PageLayout> Pages,
     ImmutableArray<SystemLayout> AllSystems,
     ImmutableArray<BeamLayout> BeamLayouts,

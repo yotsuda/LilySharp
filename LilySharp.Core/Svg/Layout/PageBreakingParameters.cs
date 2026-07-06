@@ -81,7 +81,7 @@ public static class BreakPermissionExtensions
 /// LILYPOND-REF: lily/page-breaking.cc:256-310 initialization
 /// LILYPOND-REF: scm/paper.scm page layout variables
 /// </remarks>
-public sealed record PageBreakingParameters
+internal sealed record PageBreakingParameters
 {
     public static PageBreakingParameters Default { get; } = new();
 

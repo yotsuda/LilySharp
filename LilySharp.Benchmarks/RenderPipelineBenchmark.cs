@@ -119,7 +119,7 @@ public class RenderPipelineBenchmark
     }
 
     [Benchmark(Description = "Stage 3: Layout")]
-    public ScoreLayout Stage_Layout()
+    public object Stage_Layout()
     {
         var layoutEngine = new LayoutEngine();
         return layoutEngine.Layout(_grammarTourMulti);

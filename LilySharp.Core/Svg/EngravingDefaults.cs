@@ -26,7 +26,7 @@ namespace LilySharp.Core.Svg;
 /// LILYPOND-REF: lily/spacing-options.cc:52-63 Spacing_options constructor (defaults)
 /// LILYPOND-REF: scm/define-grobs.scm (space-alist for Clef, BarLine, TimeSignature, StaffGrouper)
 /// </remarks>
-public static class EngravingDefaults
+internal static class EngravingDefaults
 {
     // === Staff and lines ===
 

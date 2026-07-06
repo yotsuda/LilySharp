@@ -66,7 +66,7 @@ public readonly record struct HairpinLayout(
 /// - minimum-length: 2.0
 /// - thickness: 1.0 (staff line widths)
 /// </remarks>
-public static class HairpinEngraver
+internal static class HairpinEngraver
 {
     /// <summary>
     /// Maximum opening of the wedge (half-height).

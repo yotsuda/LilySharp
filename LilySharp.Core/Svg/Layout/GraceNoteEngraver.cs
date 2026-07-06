@@ -69,7 +69,7 @@ public readonly record struct GraceNoteLayout(
 /// - Tighter spacing between grace notes
 /// - Acciaccatura slash through stem
 /// </remarks>
-public static class GraceNoteEngraver
+internal static class GraceNoteEngraver
 {
     // LILYPOND-REF: define-grobs.scm:1389 font-size = -3 (approximately 0.65)
     private const double GraceScale = GraceNoteItem.ScaleFactor;

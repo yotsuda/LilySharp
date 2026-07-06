@@ -21,7 +21,7 @@ namespace LilySharp.Core.Semantics;
 /// <summary>
 /// Validates that all symbol references (variables, phrases, sections) are defined.
 /// </summary>
-public sealed class SymbolReferenceValidator : ISemanticValidator
+internal sealed class SymbolReferenceValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
     private readonly HashSet<string> _definedVariables = new();

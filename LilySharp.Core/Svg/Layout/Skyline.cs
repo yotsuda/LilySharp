@@ -42,7 +42,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// IMPLEMENTED — padded() with 45° sloped edges (skyline.cc:558-615) on VerticalSkyline
 /// This simplified Skyline class supports horizon_padding via Y-range extension.
 /// </remarks>
-public sealed class Skyline
+internal sealed class Skyline
 {
     /// <summary>
     /// A segment of the skyline: a Y-interval with an X boundary.

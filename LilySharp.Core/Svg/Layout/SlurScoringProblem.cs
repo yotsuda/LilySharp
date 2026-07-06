@@ -22,7 +22,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// <summary>
 /// Represents a candidate slur configuration for scoring.
 /// </summary>
-public sealed class SlurCandidate
+internal sealed class SlurCandidate
 {
     public double StartX { get; set; }
     public double StartY { get; set; }
@@ -57,7 +57,7 @@ public sealed class SlurCandidate
 /// <summary>
 /// Represents an obstacle that a slur should avoid.
 /// </summary>
-public readonly record struct SlurObstacle(
+internal readonly record struct SlurObstacle(
     double X,
     double TopY,
     double BottomY,
@@ -66,7 +66,7 @@ public readonly record struct SlurObstacle(
 /// <summary>
 /// Types of obstacles for slur avoidance.
 /// </summary>
-public enum SlurObstacleType
+internal enum SlurObstacleType
 {
     NoteHead,
     Stem,
@@ -88,7 +88,7 @@ public enum SlurObstacleType
 /// LILYPOND-REF: lily/slur-configuration.cc:1-558 Slur_configuration class
 /// LILYPOND-REF: lily/misc.cc:48-55 peak_around()
 /// </remarks>
-public sealed class SlurScoringProblem
+internal sealed class SlurScoringProblem
 {
     private readonly SlurItem _slur;
     private readonly double _startX;

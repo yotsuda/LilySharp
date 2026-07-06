@@ -45,7 +45,7 @@ public readonly record struct ChordNameLayout(
 /// Chord names are positioned above the staff with padding.
 /// In LilyPond, ChordNames is a separate context above the staff.
 /// </remarks>
-public static class ChordNameEngraver
+internal static class ChordNameEngraver
 {
     /// <summary>Distance from the associated staff's top line up to the chord-name baseline.</summary>
     /// <remarks>

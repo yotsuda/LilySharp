@@ -27,7 +27,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/spacing-spanner.cc:musical_column_spacing()
 /// LILYPOND-REF: lily/system.cc
 /// </remarks>
-public sealed class SystemLayouter
+internal sealed class SystemLayouter
 {
     private readonly LayoutOptions _options;
     private readonly MeasureLayouter _measureLayouter;

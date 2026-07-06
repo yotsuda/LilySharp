@@ -22,7 +22,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// <summary>
 /// Detects slurs between notes in a score.
 /// </summary>
-public sealed class SlurDetector
+internal sealed class SlurDetector
 {
     public ImmutableArray<SlurItem> DetectSlurs(Score score)
     {

@@ -21,7 +21,7 @@ using PdfSharpCore.Pdf;
 namespace LilySharp.Core.Rendering.Pdf;
 
 /// <summary>Configuration for <see cref="PdfDocumentContext"/>.</summary>
-public sealed class PdfDocumentOptions
+internal sealed class PdfDocumentOptions
 {
     /// <summary>PDF points per staff-space (sets the overall engraving size).</summary>
     public double PointsPerSpace { get; init; } = 6.0;
@@ -57,7 +57,7 @@ public sealed class PdfDocumentOptions
 /// from <c>EmmentalerGlyphs</c> can be drawn directly via
 /// <see cref="IDrawingContext.DrawGlyph"/>.
 /// </summary>
-public sealed class PdfDocumentContext : IDocumentContext
+internal sealed class PdfDocumentContext : IDocumentContext
 {
     private static readonly object _resolverLock = new();
     private static bool _resolverInstalled;

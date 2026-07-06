@@ -26,7 +26,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// LILYPOND-REF: scm/scheme-engravers.scm - Glissando_engraver
 /// Unlike ties (same pitch), glissandos connect to the next note of any pitch.
 /// </remarks>
-public sealed class GlissandoDetector
+internal sealed class GlissandoDetector
 {
     public ImmutableArray<GlissandoItem> DetectGlissandos(Score score)
     {

@@ -20,7 +20,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// Represents a beam configuration candidate with position and score.
 /// LILYPOND-REF: lily/include/beam-scoring-problem.hh:1-203 Beam_configuration struct
 /// </summary>
-public sealed class BeamConfiguration
+internal sealed class BeamConfiguration
 {
     /// <summary>Y position at left end (in staff spaces).</summary>
     public double LeftY { get; set; }
@@ -93,7 +93,7 @@ public sealed class BeamConfiguration
 /// IMPLEMENTED — forbidden quants constants (FIXED_DEMERIT=0.39, FUDGE=2.2) in ScoreForbiddenQuants
 /// IMPLEMENTED — cross-staff 10× penalty multiplier
 /// </remarks>
-public enum BeamScorer
+internal enum BeamScorer
 {
     OriginalDistance,
     SlopeIdeal,

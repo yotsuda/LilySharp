@@ -27,7 +27,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/beam.cc:1-1554 Beam class
 /// LILYPOND-REF: lily/beam-quanting.cc:1-1397 Beam_scoring_problem class
 /// </remarks>
-public sealed class BeamEngraver
+internal sealed class BeamEngraver
 {
     private readonly BeamQuantParameters _parameters;
 

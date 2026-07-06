@@ -23,7 +23,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// <summary>
 /// Common utility methods for layout calculations.
 /// </summary>
-public static class LayoutUtilities
+internal static class LayoutUtilities
 {
     /// <summary>
     /// Gets note value (1=whole, 2=half, 4=quarter, 8=eighth) from duration fraction.

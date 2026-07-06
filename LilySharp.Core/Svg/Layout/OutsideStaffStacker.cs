@@ -42,7 +42,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// so that elements don't overlap. Each priority group is processed in order,
 /// with lower-priority elements occupying space first.
 /// </remarks>
-public static class OutsideStaffStacker
+internal static class OutsideStaffStacker
 {
     // Staff geometry
     private const double StaffBottom = 4.0;

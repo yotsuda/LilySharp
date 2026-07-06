@@ -41,7 +41,7 @@ public readonly record struct ArpeggioLayout(
 /// Parameters: padding=0.5, direction=LEFT, protrusion=0.4
 /// The arpeggio is a wavy vertical line placed to the left of a chord.
 /// </remarks>
-public static class ArpeggioEngraver
+internal static class ArpeggioEngraver
 {
     // LILYPOND-REF: scm/define-grobs.scm:210 Arpeggio (padding . 0.5) — this is the
     // gap between the arpeggio's RIGHT edge and the note column's LEFT edge

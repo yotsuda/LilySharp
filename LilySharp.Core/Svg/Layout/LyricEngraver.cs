@@ -26,7 +26,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: scm/define-grobs.scm:3020-3060 LyricText grob
 /// LILYPOND-REF: lily/lyric-engraver.cc:20-30 default parameters
 /// </remarks>
-public sealed record LyricParameters
+internal sealed record LyricParameters
 {
     /// <summary>Distance below the staff in staff spaces.</summary>
     public double StaffPadding { get; init; } = 2.5;
@@ -75,7 +75,7 @@ public sealed record LyricParameters
 /// Hyphens connect syllables of the same word.
 /// Extenders indicate melisma (one syllable over multiple notes).
 /// </remarks>
-public sealed class LyricEngraver
+internal sealed class LyricEngraver
 {
     private readonly LyricParameters _params;
 

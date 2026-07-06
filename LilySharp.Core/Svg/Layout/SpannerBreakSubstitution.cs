@@ -58,7 +58,7 @@ public readonly record struct SpannerBreakSegment(
 /// (StartMeasureIndex, IsFirst, IsLast) information so that broken-edge
 /// rendering (cut-off / continuation) can decide its visuals from the segment.
 /// </remarks>
-public static class SpannerBreakSubstitution
+internal static class SpannerBreakSubstitution
 {
     /// <summary>
     /// Builds a measure-index → system-index lookup for the given systems.

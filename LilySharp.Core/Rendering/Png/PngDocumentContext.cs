@@ -19,7 +19,7 @@ using SkiaSharp;
 namespace LilySharp.Core.Rendering.Png;
 
 /// <summary>Configuration for <see cref="PngDocumentContext"/>.</summary>
-public sealed class PngDocumentOptions
+internal sealed class PngDocumentOptions
 {
     /// <summary>
     /// Pixels per staff-space (sets engraving scale + image resolution).
@@ -53,7 +53,7 @@ public sealed class PngDocumentOptions
 /// pages of differing sizes without clipping — unlike a fixed pre-reserved
 /// surface, which dropped pages beyond a guessed height.
 /// </remarks>
-public sealed class PngDocumentContext : IDocumentContext
+internal sealed class PngDocumentContext : IDocumentContext
 {
     private readonly PngDocumentOptions _options;
     private readonly List<(SKImage Image, int WidthPx, int HeightPx)> _pages = new();

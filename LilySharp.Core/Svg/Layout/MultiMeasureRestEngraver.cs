@@ -53,7 +53,7 @@ public readonly record struct MultiMeasureRestLayout(
 /// single <see cref="RestItem"/> with no fingering / dynamics / etc. The
 /// renderer collapses such runs into a single visual MMR symbol.
 /// </remarks>
-public static class MultiMeasureRestEngraver
+internal static class MultiMeasureRestEngraver
 {
     /// <summary>
     /// Threshold above which the church_rest combination is replaced by an H-bar.

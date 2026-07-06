@@ -48,7 +48,7 @@ public readonly record struct StanzaNumberLayout(
 /// Emits one entry per (system, verseNumber) combination so that a number
 /// appears at the start of every verse line on every system.
 /// </remarks>
-public static class StanzaNumberEngraver
+internal static class StanzaNumberEngraver
 {
     /// <summary>
     /// Calculates stanza number layouts for verses present in the given lyric layouts.

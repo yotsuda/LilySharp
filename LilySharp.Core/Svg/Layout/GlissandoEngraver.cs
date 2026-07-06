@@ -48,7 +48,7 @@ public readonly record struct GlissandoLayout(
 /// LILYPOND-REF: scm/scheme-engravers.scm, scm/define-grobs.scm:1557-1577
 /// Parameters: style=line, gap=0.5, padding=0.5, zigzag-width=0.75
 /// </remarks>
-public static class GlissandoEngraver
+internal static class GlissandoEngraver
 {
     // LILYPOND-REF: scm/define-grobs.scm:1570 (gap . 0.5)
     private const double Gap = 0.5;

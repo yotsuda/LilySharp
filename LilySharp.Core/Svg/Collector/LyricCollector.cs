@@ -39,7 +39,7 @@ namespace LilySharp.Core.Svg.Collector;
 public readonly record struct LyricOverflow(
     int Count, string FirstText, int FirstPosition, int FirstBar);
 
-public sealed class LyricCollector
+internal sealed class LyricCollector
 {
     /// <summary>
     /// Collects lyrics from a LyricsBlockSyntax.

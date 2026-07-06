@@ -27,7 +27,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/spacing-basic.cc:100-130 note_spacing()
 /// LILYPOND-REF: lily/simple-spacer.cc (spring solver)
 /// </remarks>
-public sealed class MeasureLayouter
+internal sealed class MeasureLayouter
 {
     /// <summary>
     /// Predicate returning whether a music item is part of a beam group (and so

@@ -27,7 +27,7 @@ namespace LilySharp.Core.Semantics;
 /// collide, so this flags them. (Sections and parts themselves are open: a section
 /// may gather music from many parts, and a part may span many sections.)
 /// </summary>
-public sealed class DuplicateCellValidator : ISemanticValidator
+internal sealed class DuplicateCellValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
 

@@ -28,7 +28,7 @@ namespace LilySharp.Core.Semantics;
 /// ignored (last-wins), which is a footgun. Omitting <c>structure</c> entirely is
 /// still valid — sections then play in declaration order.
 /// </summary>
-public sealed class StructureDeclarationValidator : ISemanticValidator
+internal sealed class StructureDeclarationValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
 

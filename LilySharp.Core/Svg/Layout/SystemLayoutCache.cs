@@ -49,7 +49,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// content-key vector is refreshed each edit via <see cref="SetContentKeys"/>.
 /// </para>
 /// </remarks>
-public sealed class SystemLayoutCache
+internal sealed class SystemLayoutCache
 {
     private ImmutableArray<MeasureContentKey> _keys;
     private readonly TypedCache<ImmutableArray<MeasureLayout>> _measures = new();

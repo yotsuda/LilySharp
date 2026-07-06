@@ -26,7 +26,7 @@ namespace LilySharp.Core.Semantics;
 /// mirrors every name the collector consumes; when adding a new annotation,
 /// add its name here too (the all-samples sweep test pins the sync).
 /// </summary>
-public sealed class AnnotationNameValidator : ISemanticValidator
+internal sealed class AnnotationNameValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
 

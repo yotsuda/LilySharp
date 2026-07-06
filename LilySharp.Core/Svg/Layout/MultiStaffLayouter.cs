@@ -41,7 +41,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// IMPLEMENTED — brace collapse-height (system-start-delimiter.cc:127-129)
 /// IMPLEMENTED — ChoirStaff/bracket delimiter variants (system-start-delimiter.cc)
 /// </remarks>
-public sealed class MultiStaffLayouter
+internal sealed class MultiStaffLayouter
 {
     private readonly LayoutOptions _options;
     private readonly MeasureLayouter _measureLayouter;

@@ -25,7 +25,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/tie-formatting-problem.cc — optimization of tie shape
 /// Control points are computed by TieFormattingProblem; this record stores the result.
 /// </remarks>
-public sealed record TieLayout
+internal sealed record TieLayout
 {
     /// <summary>The tie model.</summary>
     public Model.TieItem Tie { get; }

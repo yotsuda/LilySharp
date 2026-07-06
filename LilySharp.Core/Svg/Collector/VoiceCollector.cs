@@ -31,7 +31,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// For single-voice scores, each item produces a VoiceColumn with one entry.
 /// For multi-voice scores, items at the same time position are grouped together.
 /// </remarks>
-public sealed class VoiceCollector
+internal sealed class VoiceCollector
 {
     /// <summary>
     /// Collects voice columns from a single-voice score.

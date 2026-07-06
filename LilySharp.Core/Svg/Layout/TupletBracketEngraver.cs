@@ -74,7 +74,7 @@ public readonly record struct TupletBracketLayout(
 /// - Small hooks at bracket ends
 /// - Position depends on majority stem direction of notes
 /// </remarks>
-public static class TupletBracketEngraver
+internal static class TupletBracketEngraver
 {
     // LILYPOND-REF: scm/define-grobs.scm TupletBracket defaults
     // LILYPOND-REF: scm/define-grobs.scm TupletBracket (padding . 1.1) —

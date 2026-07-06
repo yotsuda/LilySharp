@@ -59,7 +59,7 @@ public readonly record struct FingeringLayout(
 /// on a chord stack vertically (FingeringColumn). This implementation handles
 /// single fingerings per note and stacks chord fingerings via item-index ordering.
 /// </remarks>
-public static class FingeringEngraver
+internal static class FingeringEngraver
 {
     /// <summary>
     /// LILYPOND-REF: scm/define-grobs.scm Fingering — staff-padding default.

@@ -20,7 +20,7 @@ using System.Text;
 namespace LilySharp.Core.Rendering.Svg;
 
 /// <summary>Configuration for <see cref="SvgDocumentContext"/>.</summary>
-public sealed class SvgDocumentOptions
+internal sealed class SvgDocumentOptions
 {
     /// <summary>Pixels per staff-space when emitting outer width/height.</summary>
     public double PixelsPerSpace { get; init; } = 10.0;
@@ -51,7 +51,7 @@ public sealed class SvgDocumentOptions
 /// <c>&lt;g transform="translate(0, y)"&gt;</c> at its cumulative Y offset, so
 /// pages no longer overlap and nothing is clipped by the first page's height.
 /// </summary>
-public sealed class SvgDocumentContext : IDocumentContext
+internal sealed class SvgDocumentContext : IDocumentContext
 {
     private readonly SvgDocumentOptions _options;
     private readonly List<(StringBuilder Content, double Width, double Height)> _pages = new();

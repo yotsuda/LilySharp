@@ -51,7 +51,7 @@ public enum CollisionType
 /// <summary>
 /// Information about a collision between two note columns.
 /// </summary>
-public sealed record NoteCollisionInfo
+internal sealed record NoteCollisionInfo
 {
     /// <summary>Type of collision detected.</summary>
     public CollisionType Type { get; }
@@ -131,7 +131,7 @@ public sealed record NoteCollisionInfo
 /// IMPLEMENTED — within-chord seconds displacement (stem.cc:606-760) in ChordHeadPositioning
 /// IMPLEMENTED — multi-voice cascading for 3+ voices (note-collision-interface.cc:420-480)
 /// </remarks>
-public sealed record NoteCollisionParameters
+internal sealed record NoteCollisionParameters
 {
     public static NoteCollisionParameters Default { get; } = new();
 
@@ -211,7 +211,7 @@ public sealed record NoteCollisionParameters
 /// <remarks>
 /// LILYPOND-REF: lily/note-collision.cc:1-635 Note_collision_interface
 /// </remarks>
-public sealed class NoteCollision
+internal sealed class NoteCollision
 {
     private readonly NoteCollisionParameters _params;
 

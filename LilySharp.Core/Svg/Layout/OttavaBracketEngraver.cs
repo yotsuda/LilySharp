@@ -73,7 +73,7 @@ public readonly record struct OttavaBracketLayout(
 /// - font-series: bold
 /// - font-shape: italic
 /// </remarks>
-public static class OttavaBracketEngraver
+internal static class OttavaBracketEngraver
 {
     /// <summary>
     /// Dash fraction for the dashed line.

@@ -63,7 +63,7 @@ public readonly record struct MusicMarkLayout(
 /// outside-staff-priority: lower priority marks are placed closer to the staff,
 /// higher priority marks are placed farther away.
 /// </remarks>
-public static class MusicMarkEngraver
+internal static class MusicMarkEngraver
 {
     // LILYPOND-REF: define-grobs.scm:3665 padding = 0.5
     private const double Padding = 0.5;

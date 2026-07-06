@@ -33,7 +33,7 @@ namespace LilySharp.Core.Semantics;
 /// validator runs the collector and reads back the overflow it recorded as a side
 /// effect (<see cref="MeasureCollector.LyricWarnings"/>).
 /// </remarks>
-public sealed class LyricSyllableValidator : ISemanticValidator
+internal sealed class LyricSyllableValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
 

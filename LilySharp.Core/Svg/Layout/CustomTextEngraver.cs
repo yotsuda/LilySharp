@@ -46,7 +46,7 @@ public readonly record struct CustomTextLayout(
 /// Custom text is placed at the end of measures, typically below the staff
 /// for expression indications like "molto rit.", "a tempo", etc.
 /// </remarks>
-public static class CustomTextEngraver
+internal static class CustomTextEngraver
 {
     // LILYPOND-REF: define-grobs.scm:3925 padding = 0.5
     private const double Padding = 0.5;

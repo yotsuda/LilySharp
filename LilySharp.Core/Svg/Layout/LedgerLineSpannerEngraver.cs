@@ -47,7 +47,7 @@ public readonly record struct LedgerLineSpan(
 /// Per-note (unmerged) ledger lines remain a valid, simpler rendering — this
 /// engraver's output is purely additive metadata; renderers may opt in.
 /// </remarks>
-public static class LedgerLineSpannerEngraver
+internal static class LedgerLineSpannerEngraver
 {
     /// <summary>
     /// Distance (in staff spaces) below which two same-position notehead ledger

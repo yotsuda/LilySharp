@@ -52,7 +52,7 @@ public readonly record struct BarNumberLayout(
 /// LILYPOND-REF: scm/define-grobs.scm BarNumber:
 ///   self-alignment-X = LEFT, padding = 1.0, font-size = -2 (small)
 /// </remarks>
-public static class BarNumberEngraver
+internal static class BarNumberEngraver
 {
     /// <summary>
     /// Bar number text height: normal text is 11pt at a 20pt staff

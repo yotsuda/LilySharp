@@ -33,7 +33,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// - Pure 8th notes: grouped per half-measure (4 notes in 4/4)
 /// - 16th notes or mixed: grouped per beat
 /// </remarks>
-public sealed class BeamDetector
+internal sealed class BeamDetector
 {
     /// <summary>
     /// Detects all beam groups in a score, across every voice.

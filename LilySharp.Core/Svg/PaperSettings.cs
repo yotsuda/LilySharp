@@ -33,7 +33,7 @@ public enum PaperSize
 /// Paper dimensions and margin settings following LilyPond conventions.
 /// All values are in millimeters internally, converted as needed for output.
 /// </summary>
-public class PaperSettings
+internal class PaperSettings
 {
     // Unit conversion constants
     public const double MmPerPoint = 0.3528; // 1 pt = 0.3528 mm

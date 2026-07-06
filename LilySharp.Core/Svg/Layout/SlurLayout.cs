@@ -25,7 +25,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/slur-scoring.cc — scoring/optimization of slur shape
 /// Control points are computed by SlurScoringProblem; this record stores the result.
 /// </remarks>
-public sealed record SlurLayout
+internal sealed record SlurLayout
 {
     /// <summary>The slur model.</summary>
     public Model.SlurItem Slur { get; }

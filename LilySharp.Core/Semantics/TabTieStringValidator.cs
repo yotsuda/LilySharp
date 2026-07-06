@@ -32,7 +32,7 @@ namespace LilySharp.Core.Semantics;
 /// <see cref="LyricSyllableValidator"/> — this validator runs the collector and
 /// reads back the conflicts it recorded as a side effect.
 /// </remarks>
-public sealed class TabTieStringValidator : ISemanticValidator
+internal sealed class TabTieStringValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
 

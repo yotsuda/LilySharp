@@ -37,7 +37,7 @@ namespace LilySharp.Core.Svg.Layout;
 ///   bass-figure-interface, cluster-beacon-interface, fret-diagram-interface,
 ///   percent-repeat-interface, stanza-number-interface
 /// </remarks>
-public static class HaraKiri
+internal static class HaraKiri
 {
     /// <summary>
     /// Determines whether a staff should be hidden for a given measure range.

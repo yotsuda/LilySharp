@@ -25,7 +25,7 @@ namespace LilySharp.Core.Svg.Collector;
 /// <summary>
 /// Tracks measure boundary alignment status for incremental compilation.
 /// </summary>
-public record MeasureBoundary(
+internal record MeasureBoundary(
     int SourcePosition,
     Fraction AccumulatedDuration,
     bool IsExplicit,  // true if there was an explicit barline

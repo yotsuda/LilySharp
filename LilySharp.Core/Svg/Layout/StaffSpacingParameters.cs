@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: scm/define-grobs.scm:3040-3054 StaffGrouper
 /// LILYPOND-REF: lily/staff-grouper-interface.cc
 /// </remarks>
-public sealed record StaffSpacingParameters
+internal sealed record StaffSpacingParameters
 {
     public static StaffSpacingParameters Default { get; } = new();
 

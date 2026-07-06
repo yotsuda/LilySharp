@@ -78,7 +78,7 @@ public readonly record struct SpacingEntry(SpacingStyle Style, double Value);
 /// (clef, key signature, time signature) at the start of each system line.
 /// Each item type has a space-alist that maps adjacent item types to spacing values.
 /// </remarks>
-public static class BreakAlignSpacing
+internal static class BreakAlignSpacing
 {
     /// <summary>
     /// Default break-align order for start-of-line (index 2 in LP's break-align-orders vector).

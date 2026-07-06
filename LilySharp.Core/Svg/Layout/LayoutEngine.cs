@@ -26,7 +26,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// <summary>
 /// Engine for calculating score layout.
 /// </summary>
-public sealed class LayoutEngine
+internal sealed class LayoutEngine
 {
     private readonly LayoutOptions _options;
     private readonly ElementCoordinator _elementCoordinator;

@@ -48,7 +48,7 @@ internal readonly record struct MeasureSpringData(
 /// - force = (available - ideal_sum) / inverse_stretch_sum
 /// - Δforce = force_current - force_previous
 /// </remarks>
-public sealed class KnuthPlassBreaker
+internal sealed class KnuthPlassBreaker
 {
     private readonly double _lineWidth;
     private readonly double _firstPrefixWidth;

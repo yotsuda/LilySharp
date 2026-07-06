@@ -51,7 +51,7 @@ public readonly record struct VoltaBracketLayout(
 /// - Display number text at start
 /// - End with vertical hook if closed, or open if continuing
 /// </remarks>
-public static class VoltaBracketEngraver
+internal static class VoltaBracketEngraver
 {
     // LILYPOND-REF: scm/define-grobs.scm:4296 edge-height = (2.0 . 2.0) (VoltaBracket grob)
     private const double EdgeHeight = 2.0;

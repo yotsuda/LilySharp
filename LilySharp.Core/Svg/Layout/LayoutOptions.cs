@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// Staff space is the distance between two adjacent staff lines.
 /// This is the standard unit in LilyPond and music engraving.
 /// </remarks>
-public sealed record LayoutOptions
+internal sealed record LayoutOptions
 {
     // === Page Dimensions (in staff spaces) ===
 

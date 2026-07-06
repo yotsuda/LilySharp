@@ -66,7 +66,7 @@ public readonly record struct TieVariantLayout(
 /// <remarks>
 /// LILYPOND-REF: lily/laissez-vibrer-engraver.cc / lily/repeat-tie-engraver.cc
 /// </remarks>
-public static class TieVariantEngraver
+internal static class TieVariantEngraver
 {
     /// <summary>
     /// Length of the half-tie in staff spaces (the curve extends this far from the host note).

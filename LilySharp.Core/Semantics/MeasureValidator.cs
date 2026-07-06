@@ -21,7 +21,7 @@ namespace LilySharp.Core.Semantics;
 /// <summary>
 /// Validates measures against time signatures.
 /// </summary>
-public sealed class MeasureValidator : ISemanticValidator
+internal sealed class MeasureValidator : ISemanticValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
     private Fraction _timeSignature = new(4, 4); // Default 4/4

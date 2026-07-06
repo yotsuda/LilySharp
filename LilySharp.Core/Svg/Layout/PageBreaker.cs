@@ -25,7 +25,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// <remarks>
 /// LILYPOND-REF: lily/include/constrained-breaking.hh:45-119 Line_details struct
 /// </remarks>
-public sealed record SystemDetails
+internal sealed record SystemDetails
 {
     /// <summary>
     /// Full height of the system including top and bottom extents.
@@ -141,7 +141,7 @@ public sealed record SystemDetails
 /// Similar to horizontal Spring-Rod problem, but simpler because
 /// each system only interacts with adjacent systems.
 /// </remarks>
-public sealed class PageSpacing
+internal sealed class PageSpacing
 {
     private readonly double _pageHeight;
     private readonly double _topMargin;
@@ -252,7 +252,7 @@ public sealed class PageSpacing
 /// <summary>
 /// Result of page breaking optimization.
 /// </summary>
-public sealed record PageBreakResult
+internal sealed record PageBreakResult
 {
     /// <summary>
     /// Total penalty (demerits) of this solution.
@@ -282,7 +282,7 @@ public sealed record PageBreakResult
 /// Let D(n,k) = minimum penalty to put systems 0..n on exactly k pages
 /// Then: D(n,k) = min over j { D(j,k-1) + penalty(j+1..n on one page) }
 /// </remarks>
-public sealed class PageBreaker
+internal sealed class PageBreaker
 {
     private readonly double _pageHeight;
     private readonly double _topMargin;

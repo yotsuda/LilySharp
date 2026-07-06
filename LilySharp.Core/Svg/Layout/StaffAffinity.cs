@@ -45,7 +45,7 @@ public static class StaffAffinityDirection
 /// LILYPOND-REF: lily/page-layout-problem.cc:1173-1183 — is_spaceable check
 /// LILYPOND-REF: scm/define-grob-properties.scm:819-841 — non-staff spacing properties
 /// </remarks>
-public static class StaffAffinity
+internal static class StaffAffinity
 {
     /// <summary>
     /// True iff the staff is spaceable (no <c>staff-affinity</c> set).

@@ -27,7 +27,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline()
 /// LILYPOND-REF: lily/skyline.cc
 /// </remarks>
-public sealed class SkylineBuilder
+internal sealed class SkylineBuilder
 {
     private readonly double _staffHeight;
 

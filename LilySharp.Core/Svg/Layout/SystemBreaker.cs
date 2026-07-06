@@ -27,7 +27,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/constrained-breaking.cc
 /// LILYPOND-REF: lily/page-breaking.cc (break decisions)
 /// </remarks>
-public sealed class SystemBreaker
+internal sealed class SystemBreaker
 {
     private readonly LayoutOptions _options;
 

@@ -40,7 +40,7 @@ public readonly record struct AccidentalLayout(
 /// LILYPOND-REF: lily/accidental-placement.cc:393-439 position_apes
 /// LILYPOND-REF: scm/define-grobs.scm:84 AccidentalPlacement
 /// </remarks>
-public sealed record AccidentalPlacementParameters
+internal sealed record AccidentalPlacementParameters
 {
     public static AccidentalPlacementParameters Default { get; } = new();
 
@@ -86,7 +86,7 @@ public sealed record AccidentalPlacementParameters
 ///   direction UP), handled by the collector + ArticulationEngraver; the
 ///   left-of-note IsEditorial path below is retained but never fed.
 /// </remarks>
-public sealed class AccidentalPlacement
+internal sealed class AccidentalPlacement
 {
     private readonly AccidentalPlacementParameters _params;
 

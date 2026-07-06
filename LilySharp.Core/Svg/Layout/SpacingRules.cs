@@ -27,7 +27,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// Based on Gourlay (1987): "Spacing a Line of Music"
 /// The spacing is approximately logarithmic with respect to duration.
 /// </remarks>
-public static class SpacingRules
+internal static class SpacingRules
 {
     /// <summary>Base width for a quarter note in staff spaces.</summary>
     public const double QuarterNoteWidth = 3.6;

@@ -25,7 +25,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: scm/define-grobs.scm:2428-2442 NoteSpacing
 /// LILYPOND-REF: lily/note-spacing.cc:119-199 stem_dir_correction
 /// </remarks>
-public sealed record NoteSpacingParameters
+internal sealed record NoteSpacingParameters
 {
     public static NoteSpacingParameters Default { get; } = new();
 

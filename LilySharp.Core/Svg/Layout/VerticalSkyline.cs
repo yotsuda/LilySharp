@@ -29,7 +29,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// The height at any x is: Height(x) = Slope * x + YIntercept
 /// For horizontal buildings (most common), Slope = 0.
 /// </remarks>
-public readonly struct Building
+internal readonly struct Building
 {
     public double XLeft { get; }
     public double XRight { get; }
@@ -189,7 +189,7 @@ public enum VerticalDirection
 /// For UP skylines, we keep the highest roof at each x.
 /// For DOWN skylines, we keep the lowest floor at each x.
 /// </remarks>
-public sealed class VerticalSkyline
+internal sealed class VerticalSkyline
 {
     private readonly List<Building> _buildings;
     private readonly VerticalDirection _direction;

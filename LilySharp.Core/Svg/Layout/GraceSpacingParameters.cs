@@ -24,7 +24,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: scm/define-grobs.scm:1585-1598 GraceSpacing
 /// LILYPOND-REF: lily/spacing-basic.cc:140-155 grace note spring creation
 /// </remarks>
-public sealed record GraceSpacingParameters
+internal sealed record GraceSpacingParameters
 {
     public static GraceSpacingParameters Default { get; } = new();
 

@@ -70,7 +70,7 @@ public sealed record PartCombineLayout(
 /// Analyzes two voices for part combination: unison, solo, apart detection.
 /// LILYPOND-REF: scm/part-combiner.scm - determine-split-list, try-solo
 /// </summary>
-public static class PartCombineAnalyzer
+internal static class PartCombineAnalyzer
 {
     /// <summary>
     /// Text displayed for "a due" (unison) passages.

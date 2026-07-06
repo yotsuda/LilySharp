@@ -33,7 +33,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// - Y increases upward
 /// - Bounding box is defined by SW (south-west) and NE (north-east) corners
 /// </remarks>
-public static partial class GlyphMetrics
+internal static partial class GlyphMetrics
 {
     /// <summary>
     /// Bounding box for a glyph, in staff spaces.

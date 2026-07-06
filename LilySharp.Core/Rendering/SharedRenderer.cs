@@ -50,7 +50,7 @@ namespace LilySharp.Core.Rendering;
 /// knee-aware; cross-staff beam PRODUCTION (the upstream layout emitting
 /// MemberStaffIndices) is the remaining known gap.
 /// </remarks>
-public static class SharedRenderer
+internal static class SharedRenderer
 {
     private const double StaffHeight = 4.0;
     // Height of the short measure-divider barlines on a lead-sheet text row

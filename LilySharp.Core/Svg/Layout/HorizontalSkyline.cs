@@ -29,7 +29,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// The X position at any y is: X(y) = Slope * y + XIntercept
 /// For vertical buildings (most common), Slope = 0.
 /// </remarks>
-public readonly struct HorizontalBuilding
+internal readonly struct HorizontalBuilding
 {
     public double YBottom { get; }
     public double YTop { get; }
@@ -169,7 +169,7 @@ public enum HorizontalDirection
 /// - RIGHT skyline: rightmost X at each Y position
 /// - LEFT skyline: leftmost X at each Y position
 /// </remarks>
-public sealed class HorizontalSkyline
+internal sealed class HorizontalSkyline
 {
     private readonly List<HorizontalBuilding> _buildings;
     private readonly HorizontalDirection _direction;

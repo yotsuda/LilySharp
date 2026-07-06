@@ -36,7 +36,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// Sharps, naturals and double-sharps benefit little from sub-division because
 /// their silhouettes are nearly rectangular; we keep the BBox fallback for them.
 /// </remarks>
-public static class AccidentalGlyphSkyline
+internal static class AccidentalGlyphSkyline
 {
     // Fractions describe the flat glyph's bowl-on-top + stem-on-bottom shape as
     // ratios of the supplied BBox. Tuned via outline sampling against the bundled

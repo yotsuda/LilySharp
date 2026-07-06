@@ -35,7 +35,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// 5. Score candidates using priority queue (lazy evaluation)
 /// 6. Return best candidate
 /// </remarks>
-public sealed class BeamScoringProblem
+internal sealed class BeamScoringProblem
 {
     private readonly BeamGroup _group;
     private readonly IReadOnlyList<double> _itemXPositions;

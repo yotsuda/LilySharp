@@ -58,7 +58,7 @@ public readonly record struct DynamicLayout(
 /// - staff-padding: 0.1 staff spaces
 /// - Y-offset calculated by side-position-interface::y-aligned-side
 /// </remarks>
-public static class DynamicEngraver
+internal static class DynamicEngraver
 {
     // LILYPOND-REF: define-grobs.scm:1274 direction = DOWN
     private const int Direction = 1;  // DOWN = 1 (positive Y = down in our coordinate system)

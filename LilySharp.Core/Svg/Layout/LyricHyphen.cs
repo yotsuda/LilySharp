@@ -26,7 +26,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/lyric-hyphen.cc:20-50 default parameters
 /// LILYPOND-REF: scm/define-grobs.scm:3080-3120 LyricHyphen grob
 /// </remarks>
-public sealed record LyricHyphenParameters
+internal sealed record LyricHyphenParameters
 {
     /// <summary>Minimum length of a single hyphen dash (in staff spaces).</summary>
     public double MinDashLength { get; init; } = 0.4;
@@ -83,7 +83,7 @@ public sealed record HyphenDash(
 /// <remarks>
 /// LILYPOND-REF: lily/lyric-hyphen.cc:60-100
 /// </remarks>
-public sealed record LyricHyphenLayout(
+internal sealed record LyricHyphenLayout(
     // Index of the source lyric in the lyrics array.
     int LyricIndex,
 
@@ -122,7 +122,7 @@ public sealed record LyricHyphenLayout(
 /// LilyPond distributes multiple hyphens evenly across wide gaps.
 /// Extenders can cross system breaks, requiring two separate line segments.
 /// </remarks>
-public sealed class LyricHyphenEngraver
+internal sealed class LyricHyphenEngraver
 {
     private readonly LyricHyphenParameters _params;
 

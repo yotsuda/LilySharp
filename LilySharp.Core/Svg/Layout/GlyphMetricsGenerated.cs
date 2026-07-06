@@ -10,7 +10,7 @@
 
 namespace LilySharp.Core.Svg.Layout;
 
-public static partial class GlyphMetrics
+internal static partial class GlyphMetrics
 {
     // ========== BBox glyphs (extracted from font outlines) ==========
     // BBox = true visual extent (use for collision / skyline). For horizontal
