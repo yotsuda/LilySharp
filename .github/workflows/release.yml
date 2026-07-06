@@ -49,6 +49,7 @@ jobs:
           -o publish/${{ matrix.rid }}
       - name: Archive
         run: |
+          cp LICENSE THIRD-PARTY-NOTICES.md publish/${{ matrix.rid }}/
           cd publish/${{ matrix.rid }}
           if [[ "${{ matrix.rid }}" == win-* ]]; then
             zip -r ../../lysc-${{ github.ref_name }}-${{ matrix.rid }}.zip .
@@ -82,8 +83,10 @@ jobs:
           -c Release
           -p:Version=${GITHUB_REF_NAME#v}
           -o editors/vscode/server
-      - name: Bundle the license
-        run: cp LICENSE editors/vscode/LICENSE
+      - name: Bundle the license and third-party notices
+        run: |
+          cp LICENSE editors/vscode/LICENSE
+          cp THIRD-PARTY-NOTICES.md editors/vscode/THIRD-PARTY-NOTICES.md
       - name: Sync extension version to tag
         working-directory: editors/vscode
         # v0.3.0 → 0.3.0; "|| true" tolerates an already-matching version.

@@ -1,0 +1,22 @@
+Emmentaler music font (emmentaler-20.otf, emmentaler-20.woff2,
+emmentaler-brace.otf, emmentaler-brace.woff)
+
+Copyright (C) 1997-2023 Han-Wen Nienhuys, Jan Nieuwenhuizen, Werner Lemberg,
+and the LilyPond project contributors.
+
+The Emmentaler font is part of LilyPond, the GNU music typesetter
+(https://lilypond.org), and is DUAL-LICENSED. From the font sources:
+
+  The LilyPond font is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version, or you can redistribute it under
+  the SIL Open Font License.
+
+Lily# redistributes the font under the GNU General Public License,
+version 3 or later - the same license as Lily# itself; see the LICENSE
+file at the root of this distribution. The SIL Open Font License remains
+available directly from the LilyPond project for anyone preferring that
+branch of the dual license.
+
+Font sources: https://gitlab.com/lilypond/lilypond (mf/ directory).

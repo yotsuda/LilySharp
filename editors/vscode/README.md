@@ -145,4 +145,8 @@ npm run watch
 
 ## License
 
-MIT
+GPL-3.0-or-later. The extension bundles the Lily# language server, the
+Emmentaler music font (GPL/OFL dual license) and MIT-licensed libraries;
+see [LICENSE](https://github.com/yotsuda/LilySharp/blob/master/LICENSE) and
+[THIRD-PARTY-NOTICES](https://github.com/yotsuda/LilySharp/blob/master/THIRD-PARTY-NOTICES.md)
+in the repository.
