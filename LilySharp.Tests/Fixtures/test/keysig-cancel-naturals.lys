@@ -1,0 +1,14 @@
+// A key change from A major (3 sharps: F# C# G#) to F major (1 flat) prints a
+// 3-natural cancellation followed by the flat. The naturals kern by their
+// vertical edge overlap — F#/C# overlap (wider gap) while C#/G# are clear
+// (tight) — matching LilyPond key-signature-interface.cc. Guards the
+// cancellation-natural kerning (the left glyph's ht_right vs the right glyph's
+// last_ht_left): a swap once pushed the middle natural left and the last right.
+part melody {
+  section A { key a major a1 | }
+  section B { key f major bes1 | }
+}
+structure { A B }
+score "score" {
+  staff melody
+}

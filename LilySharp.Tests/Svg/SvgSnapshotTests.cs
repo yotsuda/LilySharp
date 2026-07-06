@@ -270,6 +270,11 @@ public class SvgSnapshotTests
         yield return new object[] { "test/instrument-names" };
         yield return new object[] { "test/clef-change" };
         yield return new object[] { "test/keysig-change" };
+        // A key change that CANCELS a 3-sharp signature (A major -> F major): the
+        // three cancellation naturals kern by vertical-edge overlap (F#/C# wide,
+        // C#/G# tight) before the new flat. Guards NaturalKernPadding — the only
+        // fixture with a 3-natural cancellation.
+        yield return new object[] { "test/keysig-cancel-naturals" };
         yield return new object[] { "test/trill-spanner" };
         yield return new object[] { "test/courtesy-accidentals" };
         yield return new object[] { "test/editorial-accidental" };
