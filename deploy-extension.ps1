@@ -88,7 +88,12 @@ Write-Host "LSP: $lspVersion" -ForegroundColor Yellow
 # deploy never stalls on a [y/N] prompt.
 Write-Host "`n[3/7] Building VSIX package..." -ForegroundColor Green
 Push-Location (Join-Path $projectRoot "editors/vscode")
-npx @vscode/vsce package --allow-missing-repository --skip-license --pre-release
+# Publish the LSP SELF-CONTAINED for this machine (win-x64) so the bundled server
+# runs without a system .NET install, then package a matching platform-specific
+# VSIX. (Marketplace builds for every platform: editors/vscode/publish-marketplace.ps1.)
+dotnet publish ../../LilySharp.Lsp -c Release -r win-x64 --self-contained true -o ./server
+if ($LASTEXITCODE -ne 0) { Pop-Location; throw "Server self-contained publish failed" }
+npx @vscode/vsce package --target win32-x64 --allow-missing-repository --skip-license --pre-release
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw "VSIX build failed" }
 $vsix = Get-ChildItem *.vsix | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 Pop-Location

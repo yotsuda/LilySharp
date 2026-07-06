@@ -5,6 +5,8 @@ src/**
 .gitignore
 tsconfig.json
 *.vsix
+dist/**
+publish-marketplace.ps1
 
 # Exclude dev dependencies but include production dependencies
 node_modules/.bin/**
@@ -13,3 +15,5 @@ node_modules/typescript/**
 
 # Include server directory (LSP)
 !server/**
+# …but not its debug symbols (not needed at runtime; trims the VSIX).
+**/*.pdb

@@ -1,12 +1,24 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as cp from 'child_process';
 import {
     LanguageClient,
     LanguageClientOptions,
     ServerOptions,
     TransportKind
 } from 'vscode-languageclient/node';
+
+// True if `cmd` resolves on PATH (used to give a clear error when the
+// framework-dependent dev server needs `dotnet` but it is not installed).
+function commandExists(cmd: string): boolean {
+    const probe = process.platform === 'win32' ? 'where' : 'which';
+    try {
+        return cp.spawnSync(probe, [cmd], { stdio: 'ignore' }).status === 0;
+    } catch {
+        return false;
+    }
+}
 
 let client: LanguageClient;
 let clientReady = false;
@@ -71,18 +83,20 @@ export function activate(context: vscode.ExtensionContext) {
 
     outputChannel.appendLine(`Config serverPath: "${serverPath}"`);
 
-    // Priority: 1. User-configured path, 2. Bundled server, 3. PATH
+    const serverDir = path.join(context.extensionPath, 'server');
+    const apphostName = process.platform === 'win32' ? 'lilysharp-lsp.exe' : 'lilysharp-lsp';
+
+    // Priority: 1. User-configured path, 2. bundled apphost, 3. bundled dll, 4. PATH.
     if (!serverPath || serverPath.trim() === '') {
-        // Look for the bundled server in the extension directory. The DLL is
-        // the platform-neutral marker: CI publishes framework-dependent, so
-        // Linux/macOS builds have no .exe apphost — the server always runs
-        // via `dotnet lilysharp-lsp.dll` anyway.
-        const bundledServer = path.join(context.extensionPath, 'server', 'lilysharp-lsp.dll');
-        if (fs.existsSync(bundledServer)) {
-            serverPath = bundledServer;
+        const bundledApphost = path.join(serverDir, apphostName);
+        const bundledDll = path.join(serverDir, 'lilysharp-lsp.dll');
+        if (fs.existsSync(bundledApphost)) {
+            serverPath = bundledApphost;
             outputChannel.appendLine(`Using bundled server: ${serverPath}`);
+        } else if (fs.existsSync(bundledDll)) {
+            serverPath = bundledDll;
+            outputChannel.appendLine(`Using bundled server (dll): ${serverPath}`);
         } else {
-            // Fallback to PATH
             serverPath = 'lilysharp-lsp';
             outputChannel.appendLine(`Using PATH: ${serverPath}`);
         }
@@ -90,50 +104,54 @@ export function activate(context: vscode.ExtensionContext) {
         outputChannel.appendLine(`Using configured path: ${serverPath}`);
     }
 
-    if (path.isAbsolute(serverPath)) {
-        if (fs.existsSync(serverPath)) {
-            outputChannel.appendLine(`Server executable found: ${serverPath}`);
-        } else {
-            outputChannel.appendLine(`ERROR: Server executable not found: ${serverPath}`);
-            vscode.window.showErrorMessage(`Lily# LSP server not found: ${serverPath}`);
-            return;
-        }
+    if (path.isAbsolute(serverPath) && !fs.existsSync(serverPath)) {
+        outputChannel.appendLine(`ERROR: Server executable not found: ${serverPath}`);
+        vscode.window.showErrorMessage(`Lily# LSP server not found: ${serverPath}`);
+        return;
     }
 
-    // Determine how to run the server
+    // A self-contained deployment ships its own .NET runtime next to the apphost
+    // (marked by coreclr), so the apphost is run DIRECTLY — no system .NET needed.
+    // A framework-dependent build (local dev) is run via `dotnet <dll>` instead; if
+    // `dotnet` is then missing we surface a clear, actionable error.
+    const runtimeLib = process.platform === 'win32' ? 'coreclr.dll'
+        : process.platform === 'darwin' ? 'libcoreclr.dylib' : 'libcoreclr.so';
+    const selfContained = fs.existsSync(path.join(serverDir, runtimeLib));
+    const bundledApphostPath = path.join(serverDir, apphostName);
+
     let serverCommand: string;
     let serverArgs: string[];
     let serverEnv: { [key: string]: string } | undefined;
 
-    if (serverPath.endsWith('.exe') || serverPath.endsWith('.dll')) {
-        // Run the .dll via dotnet (an .exe path maps to its sibling .dll).
-        // This ensures the correct .NET runtime is used on every platform.
-        const dllPath = serverPath.endsWith('.dll')
-            ? serverPath
-            : serverPath.replace(/\.exe$/, '.dll');
-        if (fs.existsSync(dllPath)) {
-            // Try to find user-installed dotnet first (has newer .NET versions)
-            const userDotnetPath = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'dotnet');
-            const userDotnetExe = path.join(userDotnetPath, 'dotnet.exe');
-
-            if (fs.existsSync(userDotnetExe)) {
-                serverCommand = userDotnetExe;
-                serverArgs = [dllPath];
-                // Set DOTNET_ROOT to ensure correct runtime is found
-                serverEnv = { ...process.env, DOTNET_ROOT: userDotnetPath } as { [key: string]: string };
-                outputChannel.appendLine(`Running via user dotnet: ${userDotnetExe}`);
-                outputChannel.appendLine(`DOTNET_ROOT: ${userDotnetPath}`);
-            } else {
-                // Fallback to system dotnet
-                serverCommand = 'dotnet';
-                serverArgs = [dllPath];
-                outputChannel.appendLine(`Running via system dotnet: ${dllPath}`);
-            }
+    if (selfContained && fs.existsSync(bundledApphostPath)) {
+        // Self-contained: launch the apphost directly.
+        serverCommand = bundledApphostPath;
+        serverArgs = [];
+        outputChannel.appendLine(`Running self-contained apphost: ${serverCommand}`);
+    } else if (serverPath.endsWith('.exe') || serverPath.endsWith('.dll')) {
+        // Framework-dependent: run the .dll via dotnet (an .exe maps to its .dll).
+        const dllPath = serverPath.endsWith('.dll') ? serverPath : serverPath.replace(/\.exe$/, '.dll');
+        const userDotnetPath = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'dotnet');
+        const userDotnetExe = path.join(userDotnetPath, 'dotnet.exe');
+        if (fs.existsSync(userDotnetExe)) {
+            serverCommand = userDotnetExe;
+            serverArgs = [dllPath];
+            serverEnv = { ...process.env, DOTNET_ROOT: userDotnetPath } as { [key: string]: string };
+            outputChannel.appendLine(`Running via user dotnet: ${userDotnetExe}`);
+        } else if (commandExists('dotnet')) {
+            serverCommand = 'dotnet';
+            serverArgs = [dllPath];
+            outputChannel.appendLine(`Running via system dotnet: ${dllPath}`);
         } else {
-            // Fallback to direct execution
-            serverCommand = serverPath;
-            serverArgs = [];
-            outputChannel.appendLine(`Running directly: ${serverPath}`);
+            const msg = 'Lily#: the language server needs the .NET runtime, which was not found. '
+                + 'Install .NET, or reinstall the platform-specific Lily# build (it bundles its own runtime).';
+            outputChannel.appendLine(`ERROR: ${msg}`);
+            vscode.window.showErrorMessage(msg, 'Get .NET').then(pick => {
+                if (pick === 'Get .NET') {
+                    vscode.env.openExternal(vscode.Uri.parse('https://dotnet.microsoft.com/download'));
+                }
+            });
+            return;
         }
     } else {
         serverCommand = serverPath;
