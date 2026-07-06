@@ -54,5 +54,6 @@ public readonly record struct MeasureContext(
     TimeSignature Time,
     ClefType Clef)
 {
+    /// <summary>Returns a compact key/time/clef description for debugging.</summary>
     public override string ToString() => $"key={Key.Sharps} time={Time} clef={Clef}";
 }

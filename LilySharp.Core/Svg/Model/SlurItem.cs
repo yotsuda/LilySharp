@@ -51,6 +51,7 @@ public sealed record SlurItem
     /// head displacement and obstacles against THIS voice's measures.</summary>
     public int VoiceIndex { get; }
 
+    /// <summary>Creates a slur spanning from a start note to an end note.</summary>
     public SlurItem(
         int startStaffPosition,
         int endStaffPosition,

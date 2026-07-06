@@ -36,6 +36,9 @@ public enum DiagnosticSeverity
 /// </summary>
 public sealed class Diagnostic
 {
+    /// <summary>
+    /// Initializes a new diagnostic with the given severity, source location, code, and message.
+    /// </summary>
     public Diagnostic(DiagnosticSeverity severity, TextSpan span, string code, string message)
     {
         Severity = severity;
@@ -64,6 +67,9 @@ public sealed class Diagnostic
     /// </summary>
     public string Message { get; }
 
+    /// <summary>
+    /// Returns a human-readable representation of this diagnostic.
+    /// </summary>
     public override string ToString()
     {
         var severityStr = Severity switch
@@ -77,12 +83,22 @@ public sealed class Diagnostic
     }
 
     // Factory methods
+
+    /// <summary>
+    /// Creates an error diagnostic.
+    /// </summary>
     public static Diagnostic Error(TextSpan span, string code, string message)
         => new(DiagnosticSeverity.Error, span, code, message);
 
+    /// <summary>
+    /// Creates a warning diagnostic.
+    /// </summary>
     public static Diagnostic Warning(TextSpan span, string code, string message)
         => new(DiagnosticSeverity.Warning, span, code, message);
 
+    /// <summary>
+    /// Creates an informational diagnostic.
+    /// </summary>
     public static Diagnostic Info(TextSpan span, string code, string message)
         => new(DiagnosticSeverity.Info, span, code, message);
 }
@@ -94,23 +110,51 @@ public sealed class DiagnosticBag
 {
     private readonly List<Diagnostic> _diagnostics = [];
 
+    /// <summary>
+    /// Adds a diagnostic to the bag.
+    /// </summary>
     public void Add(Diagnostic diagnostic) => _diagnostics.Add(diagnostic);
 
+    /// <summary>
+    /// Adds a sequence of diagnostics to the bag.
+    /// </summary>
     public void AddRange(IEnumerable<Diagnostic> diagnostics) => _diagnostics.AddRange(diagnostics);
 
+    /// <summary>
+    /// Adds an error diagnostic to the bag.
+    /// </summary>
     public void Error(TextSpan span, string code, string message)
         => Add(Diagnostic.Error(span, code, message));
 
+    /// <summary>
+    /// Adds a warning diagnostic to the bag.
+    /// </summary>
     public void Warning(TextSpan span, string code, string message)
         => Add(Diagnostic.Warning(span, code, message));
 
+    /// <summary>
+    /// Returns the diagnostics as a read-only list.
+    /// </summary>
     public IReadOnlyList<Diagnostic> ToList() => _diagnostics;
 
+    /// <summary>
+    /// Gets a value indicating whether the bag contains any error diagnostics.
+    /// </summary>
     public bool HasErrors => _diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
 
+    /// <summary>
+    /// Gets the number of diagnostics in the bag.
+    /// </summary>
     public int Count => _diagnostics.Count;
 
+    /// <summary>
+    /// Gets the error diagnostics in the bag.
+    /// </summary>
     public IEnumerable<Diagnostic> Errors => _diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error);
+
+    /// <summary>
+    /// Gets the warning diagnostics in the bag.
+    /// </summary>
     public IEnumerable<Diagnostic> Warnings => _diagnostics.Where(d => d.Severity == DiagnosticSeverity.Warning);
 }
 
@@ -120,41 +164,74 @@ public sealed class DiagnosticBag
 public static class DiagnosticCodes
 {
     // Parser errors (LYS0xxx)
+
+    /// <summary>Parser error: an unexpected token was encountered.</summary>
     public const string UnexpectedToken = "LYS0001";
+    /// <summary>Parser error: an expected token was missing.</summary>
     public const string ExpectedToken = "LYS0002";
+    /// <summary>Parser error: a string literal was not terminated.</summary>
     public const string UnterminatedString = "LYS0003";
+    /// <summary>Parser error: a comment was not terminated.</summary>
     public const string UnterminatedComment = "LYS0004";
+    /// <summary>Parser error: an invalid numeric literal was encountered.</summary>
     public const string InvalidNumber = "LYS0005";
+    /// <summary>Parser error: the removed repeat-volta syntax was used.</summary>
     public const string RepeatVoltaRemoved = "LYS0006";
+    /// <summary>Parser error: a legacy declaration form was used.</summary>
     public const string LegacyDeclarationForm = "LYS0007";
+    /// <summary>Parser error: the removed parallel syntax was used.</summary>
     public const string ParallelSyntaxRemoved = "LYS0008";
+    /// <summary>Parser error: a LilyPond-style backslash command was used.</summary>
     public const string LilypondBackslashCommand = "LYS0009";
+    /// <summary>Parser error: a voice block was nested where not allowed.</summary>
     public const string NestedVoiceBlock = "LYS0010";
 
     // Semantic errors (LYS1xxx)
+
+    /// <summary>Semantic error: reference to an undefined variable.</summary>
     public const string UndefinedVariable = "LYS1001";
+    /// <summary>Semantic error: a variable was declared more than once.</summary>
     public const string DuplicateVariable = "LYS1002";
+    /// <summary>Semantic error: an invalid pitch was specified.</summary>
     public const string InvalidPitch = "LYS1003";
+    /// <summary>Semantic error: an invalid duration was specified.</summary>
     public const string InvalidDuration = "LYS1004";
+    /// <summary>Semantic error: reference to an undefined section.</summary>
     public const string UndefinedSection = "LYS1005";
+    /// <summary>Semantic error: reference to an undefined phrase.</summary>
     public const string UndefinedPhrase = "LYS1006";
+    /// <summary>Semantic error: reference to an undefined part.</summary>
     public const string UndefinedPart = "LYS1007";
+    /// <summary>Semantic error: an unknown annotation was used.</summary>
     public const string UnknownAnnotation = "LYS1008";
+    /// <summary>Semantic error: multiple structure declarations were found.</summary>
     public const string MultipleStructureDeclarations = "LYS1009";
+    /// <summary>Semantic error: invalid barline placement for a volta repeat.</summary>
     public const string VoltaRepeatBarlinePlacement = "LYS1010";
 
     // Deprecation warnings (LYS3xxx)
+
+    /// <summary>Deprecation warning: use of a deprecated bare reference.</summary>
     public const string DeprecatedBareReference = "LYS3001";
+    /// <summary>Deprecation warning: use of the deprecated <c>use</c> keyword.</summary>
     public const string DeprecatedUseKeyword = "LYS3002";
 
     // Measure errors (LYS2xxx)
+
+    /// <summary>Measure error: a measure has fewer beats than the time signature requires.</summary>
     public const string MeasureIncomplete = "LYS2001";
+    /// <summary>Measure error: a measure has more beats than the time signature allows.</summary>
     public const string MeasureOverflow = "LYS2002";
+    /// <summary>Measure error: no time signature is in effect.</summary>
     public const string NoTimeSignature = "LYS2003";
+    /// <summary>Measure error: a measure's total duration does not match the time signature.</summary>
     public const string MeasureDurationMismatch = "LYS2004";
+    /// <summary>Measure error: conflicting time signatures were declared.</summary>
     public const string ConflictingTimeSignatures = "LYS2005";
 
     // Lyric warnings (LYS4xxx)
+
+    /// <summary>Lyric warning: more lyric syllables than available notes.</summary>
     public const string LyricSyllableOverflow = "LYS4001";
     /// <summary>An underfull FIRST measure with no `partial` declaration - a
     /// bare anacrusis is indistinguishable from a miscount, so nudge toward
@@ -162,13 +239,21 @@ public static class DiagnosticCodes
     public const string PickupWithoutPartial = "LYS2003";
 
     // Tablature warnings (LYS5xxx)
+
+    /// <summary>Tablature warning: a tie conflicts with the assigned string.</summary>
     public const string TabTieStringConflict = "LYS5001";
+    /// <summary>Tablature warning: a fret position is out of range for the instrument.</summary>
     public const string TabOutOfRange = "LYS5002";
 
     // Render/score declaration errors (LYS6xxx)
+
+    /// <summary>Render error: a score name was declared more than once.</summary>
     public const string DuplicateScoreName = "LYS6001";
 
     // Structure / section-part grid errors (LYS7xxx)
+
+    /// <summary>Structure error: a section-part grid cell was declared more than once.</summary>
     public const string DuplicateCell = "LYS7001";
+    /// <summary>Lexer error: an unexpected character was encountered.</summary>
     public const string UnexpectedCharacter = "LYS0009";
 }

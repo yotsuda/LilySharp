@@ -16,6 +16,9 @@
 
 namespace LilySharp.Core.Rendering;
 
+/// <summary>
+/// Font weight and slant flags for drawn text.
+/// </summary>
 [Flags]
 public enum FontStyle
 {
@@ -29,6 +32,9 @@ public enum FontStyle
     BoldItalic = Bold | Italic,
 }
 
+/// <summary>
+/// Horizontal alignment of drawn text relative to its anchor point.
+/// </summary>
 public enum TextAnchor
 {
     /// <summary>Anchor text at its start (left-aligned in left-to-right text).</summary>

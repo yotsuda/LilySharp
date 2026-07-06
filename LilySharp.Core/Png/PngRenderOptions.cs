@@ -36,7 +36,12 @@ public sealed class PngRenderOptions
     /// </summary>
     public string? FontDirectory { get; init; }
 
+    /// <summary>Default options (2.0 scale, 192 DPI).</summary>
     public static PngRenderOptions Default => new();
+
+    /// <summary>High-resolution preset (3.0 scale, 288 DPI).</summary>
     public static PngRenderOptions HighDpi => new() { Scale = 3.0f };
+
+    /// <summary>Low-resolution preset (1.0 scale, 96 DPI).</summary>
     public static PngRenderOptions LowDpi => new() { Scale = 1.0f };
 }

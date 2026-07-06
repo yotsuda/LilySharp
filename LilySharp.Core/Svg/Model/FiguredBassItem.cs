@@ -88,6 +88,7 @@ public sealed record FiguredBassItem
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
     public int StaffIndex { get; }
 
+    /// <summary>Creates a figured bass group attached to a bass note.</summary>
     public FiguredBassItem(
         ImmutableArray<FiguredBassFigure> figures,
         int measureIndex,

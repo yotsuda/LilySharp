@@ -51,6 +51,7 @@ public sealed record GrandStaffSpec(
     ImmutableArray<StaffSpec> Staves
 )
 {
+    /// <summary>Number of staves in this grand staff.</summary>
     public int StaffCount => Staves.Length;
 }
 

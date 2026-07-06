@@ -122,6 +122,7 @@ public sealed record Staff(
     /// LILYPOND-REF: StaffSymbol line-positions (percussion/timbales styles).</summary>
     public int Lines { get; init; } = 5;
 
+    /// <summary>Creates a single-voice staff.</summary>
     public static Staff Create(ClefType clef, Voice voice, string? instrumentName = null)
         => new(clef, ImmutableArray.Create(voice), null, instrumentName);
 

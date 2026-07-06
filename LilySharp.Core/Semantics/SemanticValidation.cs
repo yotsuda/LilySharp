@@ -27,7 +27,10 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 public interface ISemanticValidator
 {
+    /// <summary>Runs the validator over the parsed tree, collecting diagnostics.</summary>
     void Validate(SyntaxTree tree);
+
+    /// <summary>The diagnostics found by the most recent <see cref="Validate"/> call.</summary>
     IReadOnlyList<Diagnostic> Diagnostics { get; }
 }
 

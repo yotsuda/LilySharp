@@ -52,6 +52,7 @@ public sealed record TieItem
     /// and head displacement against THIS voice's measures.</summary>
     public int VoiceIndex { get; }
 
+    /// <summary>Creates a tie between two notes of the same pitch.</summary>
     public TieItem(
         NoteItem startNote,
         NoteItem endNote,

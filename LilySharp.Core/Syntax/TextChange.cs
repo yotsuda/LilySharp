@@ -31,6 +31,7 @@ public readonly struct TextChange
     /// </summary>
     public string NewText { get; }
 
+    /// <summary>Creates a text change replacing <paramref name="span"/> with <paramref name="newText"/>.</summary>
     public TextChange(TextSpan span, string newText)
     {
         Span = span;
@@ -55,6 +56,7 @@ public readonly struct TextChange
     public static TextChange Replace(TextSpan span, string newText)
         => new(span, newText);
 
+    /// <summary>Returns a readable representation of the span and its replacement text.</summary>
     public override string ToString()
         => $"[{Span.Start}..{Span.Start + Span.Length}) => \"{NewText}\"";
 }

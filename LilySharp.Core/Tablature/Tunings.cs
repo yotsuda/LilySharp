@@ -26,20 +26,26 @@ namespace LilySharp.Core.Tablature;
 public static class Tunings
 {
     // Guitar: E2=40, A2=45, D3=50, G3=55, B3=59, E4=64 (6弦→1弦)
+    /// <summary>Standard 6-string guitar tuning (MIDI notes, index 0 = lowest string).</summary>
     public static readonly int[] Guitar = [40, 45, 50, 55, 59, 64];
 
     // Bass (4-string): E1=28, A1=33, D2=38, G2=43 (4弦→1弦)
+    /// <summary>Standard 4-string bass tuning (MIDI notes, index 0 = lowest string).</summary>
     public static readonly int[] Bass = [28, 33, 38, 43];
 
     // Bass (5-string): B0=23, E1=28, A1=33, D2=38, G2=43 (5弦→1弦)
+    /// <summary>Standard 5-string bass tuning with low B (MIDI notes, index 0 = lowest string).</summary>
     public static readonly int[] Bass5 = [23, 28, 33, 38, 43];
 
     // Bass (6-string): B0=23, E1=28, A1=33, D2=38, G2=43, C3=48 (6弦→1弦, low B + high C)
+    /// <summary>Standard 6-string bass tuning with low B and high C (MIDI notes, index 0 = lowest string).</summary>
     public static readonly int[] Bass6 = [23, 28, 33, 38, 43, 48];
 
     // Ukulele: G4=67, C4=60, E4=64, A4=69 (4弦→1弦, re-entrant tuning)
+    /// <summary>Standard re-entrant ukulele tuning (MIDI notes, index 0 = lowest string).</summary>
     public static readonly int[] Ukulele = [67, 60, 64, 69];
 
+    /// <summary>Returns the tuning array (index 0 = lowest string) for the given tuning type.</summary>
     public static int[] GetTuning(TuningType type) => type switch
     {
         TuningType.Guitar => Guitar,
@@ -50,6 +56,7 @@ public static class Tunings
         _ => Guitar
     };
 
+    /// <summary>Returns the number of strings for the given tuning type.</summary>
     public static int GetStringCount(TuningType type) => type switch
     {
         TuningType.Guitar => 6,

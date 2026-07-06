@@ -142,6 +142,7 @@ public sealed record MultiStaffScore
     /// byte-identical with a full recompile.</summary>
     public bool HasSecondaryVoices => EnumerateStaves().Any(s => s.Staff.Voices.Length > 1);
 
+    /// <summary>Creates a multi-staff score from its staff groups and score-level tables.</summary>
     public MultiStaffScore(
         ImmutableArray<StaffGroup> staffGroups,
         TimeSignature timeSignature,

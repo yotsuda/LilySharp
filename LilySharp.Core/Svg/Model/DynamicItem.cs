@@ -62,6 +62,7 @@ public sealed record DynamicItem
     /// </summary>
     public bool IsExpressiveText { get; init; }
 
+    /// <summary>Creates a dynamic marking of the given level.</summary>
     public DynamicItem(DynamicLevel level, int measureIndex, int itemIndex,
         int sourcePosition, int staffIndex = 0)
     {

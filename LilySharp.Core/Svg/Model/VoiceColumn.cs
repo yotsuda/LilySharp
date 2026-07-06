@@ -29,6 +29,7 @@ public sealed record VoiceColumn
     /// <summary>Measure index.</summary>
     public int MeasureIndex { get; }
 
+    /// <summary>Creates a voice column from its entries at a measure index.</summary>
     public VoiceColumn(ImmutableArray<VoiceEntry> entries, int measureIndex)
     {
         Entries = entries;
@@ -53,6 +54,7 @@ public sealed record VoiceEntry
     /// <summary>Forced stem direction (null = use voice default or auto).</summary>
     public bool? ForcedStemUp { get; }
 
+    /// <summary>Creates a voice entry for a single item within a voice column.</summary>
     public VoiceEntry(int voiceId, MusicItem item, int itemIndex, bool? forcedStemUp = null)
     {
         VoiceId = voiceId;

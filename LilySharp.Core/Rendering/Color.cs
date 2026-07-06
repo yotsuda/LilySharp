@@ -25,7 +25,10 @@ namespace LilySharp.Core.Rendering;
 /// </summary>
 public readonly record struct Color(byte R, byte G, byte B, byte A = 255)
 {
+    /// <summary>Opaque black.</summary>
     public static readonly Color Black = new(0, 0, 0);
+
+    /// <summary>Opaque white.</summary>
     public static readonly Color White = new(255, 255, 255);
 
     /// <summary>Parses "#RRGGBB", "#RRGGBBAA", or a CSS named color (limited subset).</summary>

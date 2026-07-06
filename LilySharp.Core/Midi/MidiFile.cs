@@ -21,11 +21,17 @@ namespace LilySharp.Core.Midi;
 /// </summary>
 public class MidiTrack
 {
+    /// <summary>The track name (written as an MIDI track-name meta event).</summary>
     public string Name { get; set; } = "";
+    /// <summary>The MIDI channel (0-based) this track's events are emitted on.</summary>
     public int Channel { get; set; }
+    /// <summary>The notes played on this track.</summary>
     public List<MidiNote> Notes { get; } = [];
+    /// <summary>The tempo changes on this track.</summary>
     public List<TempoChange> TempoChanges { get; } = [];
+    /// <summary>The time-signature changes on this track.</summary>
     public List<TimeSignatureChange> TimeSignatures { get; } = [];
+    /// <summary>The lyric events on this track.</summary>
     public List<LyricEvent> Lyrics { get; } = [];
 }
 
@@ -34,9 +40,12 @@ public class MidiTrack
 /// </summary>
 public class MidiFile
 {
+    /// <summary>The default resolution of 480 ticks per quarter note.</summary>
     public const int DefaultTicksPerQuarter = 480;
 
+    /// <summary>The timing resolution in ticks per quarter note.</summary>
     public int TicksPerQuarterNote { get; set; } = DefaultTicksPerQuarter;
+    /// <summary>The tracks contained in this MIDI file.</summary>
     public List<MidiTrack> Tracks { get; } = [];
 
     /// <summary>

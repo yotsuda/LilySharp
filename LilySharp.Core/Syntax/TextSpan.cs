@@ -21,6 +21,7 @@ namespace LilySharp.Core.Syntax;
 /// </summary>
 public readonly struct TextSpan : IEquatable<TextSpan>
 {
+    /// <summary>Initializes a new <see cref="TextSpan"/> with the given start offset and length.</summary>
     public TextSpan(int start, int length)
     {
         Start = start;
@@ -62,11 +63,17 @@ public readonly struct TextSpan : IEquatable<TextSpan>
     /// </summary>
     public bool OverlapsWith(TextSpan span) => Start < span.End && span.Start < End;
 
+    /// <summary>Determines whether this span equals another span (same start and length).</summary>
     public bool Equals(TextSpan other) => Start == other.Start && Length == other.Length;
+    /// <summary>Determines whether this span equals the given object.</summary>
     public override bool Equals(object? obj) => obj is TextSpan span && Equals(span);
+    /// <summary>Returns a hash code for this span.</summary>
     public override int GetHashCode() => HashCode.Combine(Start, Length);
+    /// <summary>Returns a string of the form <c>[start..end)</c>.</summary>
     public override string ToString() => $"[{Start}..{End})";
 
+    /// <summary>Determines whether two spans are equal.</summary>
     public static bool operator ==(TextSpan left, TextSpan right) => left.Equals(right);
+    /// <summary>Determines whether two spans are not equal.</summary>
     public static bool operator !=(TextSpan left, TextSpan right) => !left.Equals(right);
 }

@@ -150,6 +150,7 @@ public sealed record Measure
     /// </summary>
     public bool IsPickup { get; }
 
+    /// <summary>Creates a measure from its items, barlines, and break/pickup metadata.</summary>
     public Measure(
         ImmutableArray<MusicItem> items,
         BarlineType startBarline,

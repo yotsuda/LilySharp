@@ -181,6 +181,7 @@ public readonly record struct MeasureContentKey(long Hash)
         return builder.MoveToImmutable();
     }
 
+    /// <summary>Returns the hash rendered as a fixed-width hex string.</summary>
     public override string ToString() => $"mck:{Hash:x16}";
 
     // --- intrinsic (items + structural fields) ---

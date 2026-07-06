@@ -59,6 +59,7 @@ public sealed record ArticulationItem
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
     public int StaffIndex { get; }
 
+    /// <summary>Creates an articulation mark of the given type.</summary>
     public ArticulationItem(ArticulationType type, int measureIndex, int itemIndex,
         bool isAbove, int sourcePosition, int staffIndex = 0)
     {

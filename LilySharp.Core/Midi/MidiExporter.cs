@@ -93,6 +93,7 @@ public sealed class MidiExporter
     private SyntaxNode? _root;
     private int _currentTransposeSemitones;
 
+    /// <summary>Initializes a new <see cref="MidiExporter"/> with the given timing resolution.</summary>
     public MidiExporter(int ticksPerQuarter = MidiFile.DefaultTicksPerQuarter)
     {
         _ticksPerQuarter = ticksPerQuarter;
@@ -100,6 +101,7 @@ public sealed class MidiExporter
 
     private Dictionary<string, DrumInfo>? _drumOverrides; // drummap { } per-score
 
+    /// <summary>Exports the given syntax tree to a <see cref="MidiFile"/>.</summary>
     public MidiFile Export(SyntaxTree tree)
     {
         _drumOverrides = DrumOverrides.Build(tree.GetRoot());

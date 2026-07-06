@@ -55,6 +55,7 @@ public sealed record BeamGroup
     /// <remarks>LILYPOND-REF: lily/auto-beam-engraver.cc — one Beam per voice.</remarks>
     public int VoiceIndex { get; }
 
+    /// <summary>Creates a beam group from its members and layout parameters.</summary>
     public BeamGroup(
         ImmutableArray<BeamMember> members,
         int measureIndex,
@@ -195,6 +196,7 @@ public sealed record BeamMember
     /// </summary>
     public int HeadPositionMax { get; }
 
+    /// <summary>Creates a beam member describing one stem's beaming.</summary>
     public BeamMember(
         MusicItem item,
         int beamCount,
@@ -270,6 +272,7 @@ public sealed record BeamLayout
     /// </remarks>
     public ImmutableArray<int> MemberStaffIndices { get; }
 
+    /// <summary>Creates a computed beam layout for the given beam group.</summary>
     public BeamLayout(
         BeamGroup group,
         double leftY,

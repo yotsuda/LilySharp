@@ -21,9 +21,19 @@ namespace LilySharp.Core.Semantics;
 /// </summary>
 public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
 {
+    /// <summary>
+    /// The numerator.
+    /// </summary>
     public int Numerator { get; }
+
+    /// <summary>
+    /// The denominator.
+    /// </summary>
     public int Denominator { get; }
 
+    /// <summary>
+    /// Initializes a new fraction from an integer numerator and denominator, reduced to lowest terms.
+    /// </summary>
     public Fraction(int numerator, int denominator = 1)
         : this((long)numerator, denominator)
     {
@@ -76,12 +86,20 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
     }
 
     // Common durations
+
+    /// <summary>The whole-note duration (1/1).</summary>
     public static readonly Fraction Whole = new(1, 1);
+    /// <summary>The half-note duration (1/2).</summary>
     public static readonly Fraction Half = new(1, 2);
+    /// <summary>The quarter-note duration (1/4).</summary>
     public static readonly Fraction Quarter = new(1, 4);
+    /// <summary>The eighth-note duration (1/8).</summary>
     public static readonly Fraction Eighth = new(1, 8);
+    /// <summary>The sixteenth-note duration (1/16).</summary>
     public static readonly Fraction Sixteenth = new(1, 16);
+    /// <summary>The thirty-second-note duration (1/32).</summary>
     public static readonly Fraction ThirtySecond = new(1, 32);
+    /// <summary>The zero duration (0/1).</summary>
     public static readonly Fraction Zero = new(0, 1);
 
     /// <summary>
@@ -123,6 +141,10 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
     }
 
     // Arithmetic operators
+
+    /// <summary>
+    /// Adds two fractions.
+    /// </summary>
     public static Fraction operator +(Fraction a, Fraction b)
     {
         return new Fraction(
@@ -130,6 +152,9 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
             (long)a.Denominator * b.Denominator);
     }
 
+    /// <summary>
+    /// Subtracts one fraction from another.
+    /// </summary>
     public static Fraction operator -(Fraction a, Fraction b)
     {
         return new Fraction(
@@ -137,39 +162,81 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
             (long)a.Denominator * b.Denominator);
     }
 
+    /// <summary>
+    /// Multiplies two fractions.
+    /// </summary>
     public static Fraction operator *(Fraction a, Fraction b)
     {
         return new Fraction((long)a.Numerator * b.Numerator, (long)a.Denominator * b.Denominator);
     }
 
+    /// <summary>
+    /// Divides one fraction by another.
+    /// </summary>
     public static Fraction operator /(Fraction a, Fraction b)
     {
         return new Fraction((long)a.Numerator * b.Denominator, (long)a.Denominator * b.Numerator);
     }
 
     // Comparison
+
+    /// <summary>
+    /// Compares this fraction to another, returning a negative, zero, or positive value.
+    /// </summary>
     public int CompareTo(Fraction other)
     {
         return ((long)Numerator * other.Denominator).CompareTo((long)other.Numerator * Denominator);
     }
 
+    /// <summary>
+    /// Determines whether one fraction is less than another.
+    /// </summary>
     public static bool operator <(Fraction a, Fraction b) => a.CompareTo(b) < 0;
+    /// <summary>
+    /// Determines whether one fraction is greater than another.
+    /// </summary>
     public static bool operator >(Fraction a, Fraction b) => a.CompareTo(b) > 0;
+    /// <summary>
+    /// Determines whether one fraction is less than or equal to another.
+    /// </summary>
     public static bool operator <=(Fraction a, Fraction b) => a.CompareTo(b) <= 0;
+    /// <summary>
+    /// Determines whether one fraction is greater than or equal to another.
+    /// </summary>
     public static bool operator >=(Fraction a, Fraction b) => a.CompareTo(b) >= 0;
 
     // Equality
+
+    /// <summary>
+    /// Determines whether this fraction equals another.
+    /// </summary>
     public bool Equals(Fraction other)
     {
         return Numerator == other.Numerator && Denominator == other.Denominator;
     }
 
+    /// <summary>
+    /// Determines whether this fraction equals the specified object.
+    /// </summary>
     public override bool Equals(object? obj) => obj is Fraction other && Equals(other);
+
+    /// <summary>
+    /// Returns a hash code for this fraction.
+    /// </summary>
     public override int GetHashCode() => HashCode.Combine(Numerator, Denominator);
 
+    /// <summary>
+    /// Determines whether two fractions are equal.
+    /// </summary>
     public static bool operator ==(Fraction a, Fraction b) => a.Equals(b);
+    /// <summary>
+    /// Determines whether two fractions are not equal.
+    /// </summary>
     public static bool operator !=(Fraction a, Fraction b) => !a.Equals(b);
 
+    /// <summary>
+    /// Returns a string representation of this fraction.
+    /// </summary>
     public override string ToString()
     {
         return Denominator == 1 ? Numerator.ToString() : $"{Numerator}/{Denominator}";

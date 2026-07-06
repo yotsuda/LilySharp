@@ -847,6 +847,9 @@ public sealed class MeasureCollector
         };
     }
 
+    /// <summary>
+    /// Collects a <see cref="MultiStaffScore"/> from a syntax tree based on a render specification.
+    /// </summary>
     public MultiStaffScore CollectMultiStaff(SyntaxTree tree, RenderSpec renderSpec)
     {
         Reset();

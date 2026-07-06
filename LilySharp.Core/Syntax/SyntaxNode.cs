@@ -286,6 +286,7 @@ public abstract class SyntaxNode
         return this;
     }
 
+    /// <summary>Returns the node kind and its full span for debugging.</summary>
     public override string ToString() => $"{Kind} [{Position}..{Position + FullWidth})";
 }
 

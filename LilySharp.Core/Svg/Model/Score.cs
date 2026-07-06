@@ -33,6 +33,7 @@ public readonly record struct TimeSignature(int Beats, int BeatType, string? Bea
     /// <summary>Duration of one full measure.</summary>
     public Fraction MeasureDuration => new(Beats, BeatType);
 
+    /// <summary>Returns the printed form of the meter, e.g. <c>3/4</c>.</summary>
     public override string ToString() => $"{BeatsText ?? Beats.ToString()}/{BeatType}";
 }
 
@@ -43,7 +44,10 @@ public readonly record struct KeySignature(int Sharps, string? Custom = null)
 {
     /// <summary>Positive for sharps, negative for flats.</summary>
     public bool IsSharps => Sharps > 0;
+    /// <summary>True when the signature is expressed with flats.</summary>
     public bool IsFlats => Sharps < 0;
+
+    /// <summary>Number of accidentals in the signature.</summary>
     public int Count => Custom != null ? DecodeCustom(Custom).Count() : Math.Abs(Sharps);
 
     /// <summary>Encodes custom (step, alter) pairs as "s:a;s:a" — a string
@@ -62,6 +66,7 @@ public readonly record struct KeySignature(int Sharps, string? Custom = null)
         }
     }
 
+    /// <summary>The C major / A minor key signature (no accidentals).</summary>
     public static readonly KeySignature CMajor = new(0);
 }
 

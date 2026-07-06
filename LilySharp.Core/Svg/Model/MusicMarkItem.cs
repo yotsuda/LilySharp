@@ -192,6 +192,7 @@ public sealed record MusicMarkItem
     /// </summary>
     public Fraction AnchorTiming { get; }
 
+    /// <summary>Creates a music mark of the given type with standard text.</summary>
     public MusicMarkItem(MusicMarkType type, int measureIndex, int sourcePosition,
         int anchorItemIndex = -1, Fraction anchorTiming = default)
     {
@@ -241,6 +242,8 @@ public sealed record MusicMarkItem
              or MusicMarkType.QuindicesUp or MusicMarkType.QuindicesDown
              or MusicMarkType.Loco;
 
+    /// <summary>Parses a mark name (e.g. <c>segno</c>, <c>ds.al.fine</c>, <c>mark.A</c>)
+    /// into a <see cref="MusicMarkType"/>, or null if unrecognized.</summary>
     public static MusicMarkType? ParseMarkName(string name)
     {
         // Check for rehearsal marks: @mark.A, @mark.B, @mark.1, etc.

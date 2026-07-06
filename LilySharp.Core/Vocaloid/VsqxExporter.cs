@@ -41,6 +41,7 @@ public sealed class VsqxExporter
     private const int DivisionsPerQuarter = 24;         // MusicXML divisions (MusicXmlExporter)
     private const int TickFactor = Resolution / DivisionsPerQuarter;
 
+    /// <summary>Exports the piece's vocal line as a VOCALOID4 (.vsqx) document.</summary>
     public XDocument Export(SyntaxTree tree)
     {
         var xml = new MusicXmlExporter().Export(tree);

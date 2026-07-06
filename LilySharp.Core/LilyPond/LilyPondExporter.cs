@@ -45,6 +45,7 @@ public sealed class LilyPondExporter
         ["segno"] = "\\segno", ["coda"] = "\\coda", ["fine"] = "\\fine",
     };
 
+    /// <summary>Exports the given syntax tree as LilyPond (.ly) source text.</summary>
     public string Export(SyntaxTree tree)
     {
         var root = tree.GetRoot();

@@ -57,9 +57,12 @@ public sealed class MusicBlockSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The opening <c>{</c> token.</summary>
     public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The closing <c>}</c> token.</summary>
     public SyntaxTokenNode CloseBrace => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
 
+    /// <summary>The items contained in the block, in source order.</summary>
     public IEnumerable<SyntaxNode> Items
     {
         get
@@ -84,6 +87,7 @@ public sealed class PitchSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The pitch-name token (letter with accidental suffix).</summary>
     public SyntaxTokenNode PitchToken => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
@@ -177,6 +181,7 @@ public sealed class DurationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The base-duration number token (before any dots).</summary>
     public SyntaxTokenNode NumberToken => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
@@ -205,7 +210,9 @@ public sealed class NoteSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The note's pitch.</summary>
     public PitchSyntax Pitch => (PitchSyntax)GetChild(0)!;
+    /// <summary>The note's duration, or null when unspecified (inherited from the previous note).</summary>
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
 
     /// <summary>
@@ -311,11 +318,16 @@ public sealed class DrumNoteSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The drum-name token.</summary>
     public SyntaxTokenNode NameToken => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The drum instrument name (a DrumNameRegistry entry).</summary>
     public string DrumName => NameToken.Text;
+    /// <summary>The drum note's duration, or null when unspecified.</summary>
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
+    /// <summary>The tremolo suffix (:8, :16, :32), or null.</summary>
     public SyntaxTokenNode? Tremolo => GetChild(2) as SyntaxTokenNode;
 
+    /// <summary>The articulations and dynamics attached to this drum note.</summary>
     public IEnumerable<SyntaxNode> Articulations
     {
         get
@@ -344,7 +356,9 @@ public sealed class RestSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The rest token (<c>r</c>, <c>s</c>, or <c>R</c>).</summary>
     public SyntaxTokenNode RestToken => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The rest's duration, or null when unspecified.</summary>
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
 
     /// <summary>
@@ -408,6 +422,7 @@ public sealed class ChordSyntax : SyntaxNode
         }
     }
 
+    /// <summary>The chord's pitch members.</summary>
     public IEnumerable<PitchSyntax> Pitches
     {
         get
@@ -480,6 +495,7 @@ public sealed class BarlineSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The barline token.</summary>
     public SyntaxTokenNode BarToken => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
@@ -525,6 +541,7 @@ public sealed class SlurSyntax : SyntaxNode
     {
     }
 
+    /// <summary>True for a slur-open <c>(</c>; false for a slur-close <c>)</c>.</summary>
     public bool IsOpen => ((SyntaxTokenNode)GetChild(0)!).Kind == SyntaxKind.OpenParen;
 }
 
@@ -538,6 +555,7 @@ public sealed class BeamMarkerSyntax : SyntaxNode
     {
     }
 
+    /// <summary>True for a beam-start <c>[</c>; false for a beam-end <c>]</c>.</summary>
     public bool IsStart => ((SyntaxTokenNode)GetChild(0)!).Kind == SyntaxKind.OpenBracket;
 }
 
@@ -554,11 +572,14 @@ public sealed class InlineVoltaSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The (first) volta pass-number token.</summary>
     public SyntaxTokenNode Number => (SyntaxTokenNode)GetChild(1)!;
 
     /// <summary>True for a range/list form like <c>[1-2. …]</c> or <c>[1,3. …]</c>.</summary>
     public bool HasSeparator => GetChild(2) is SyntaxTokenNode;
+    /// <summary>The range/list separator token (<c>-</c> or <c>,</c>), or null.</summary>
     public SyntaxTokenNode? Separator => GetChild(2) as SyntaxTokenNode;
+    /// <summary>The end volta-number token for a range/list form, or null.</summary>
     public SyntaxTokenNode? EndNumber => GetChild(3) as SyntaxTokenNode;
 
     /// <summary>Display text for the bracket label, e.g. "1.", "1-2.", "1,3.".</summary>
@@ -630,7 +651,9 @@ public sealed class StaffDeclarationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>staff</c> keyword token.</summary>
     public SyntaxTokenNode StaffKeyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The staff name token, or null when the staff is unnamed.</summary>
     public SyntaxTokenNode? Name => GetChild(1) as SyntaxTokenNode;
 }
 
@@ -644,7 +667,9 @@ public sealed class PropertyAssignmentSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The property name token.</summary>
     public SyntaxTokenNode NameToken => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The <c>:</c> separator token.</summary>
     public SyntaxTokenNode Colon => (SyntaxTokenNode)GetChild(1)!;
     /// <summary>
     /// Gets the value tokens (everything after the colon).
@@ -688,9 +713,11 @@ public sealed class TimeSignatureSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>time</c> keyword token.</summary>
     public SyntaxTokenNode TimeKeyword => (SyntaxTokenNode)GetChild(0)!;
     /// <summary>The <c>:</c> in a part-header <c>time: 4/4</c>; null for the bare music command.</summary>
     public SyntaxTokenNode? Colon => GetChild(1) as SyntaxTokenNode;
+    /// <summary>The first numerator token.</summary>
     public SyntaxTokenNode Numerator => (SyntaxTokenNode)GetChild(2)!;
 
     // Additive meters (time 3+2/8) put extra (+, int) tokens between the
@@ -712,7 +739,9 @@ public sealed class TimeSignatureSyntax : SyntaxNode
         Numerator.Kind == SyntaxKind.Identifier
         && Numerator.Text.Equals("none", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>The <c>/</c> separator token, or null when absent (e.g. <c>time none</c>).</summary>
     public SyntaxTokenNode? Slash => GetChild(SlashIndex) as SyntaxTokenNode;
+    /// <summary>The denominator token, or null when absent.</summary>
     public SyntaxTokenNode? Denominator => GetChild(SlashIndex + 1) as SyntaxTokenNode;
 
     /// <summary>
@@ -768,6 +797,7 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>tempo</c> keyword token.</summary>
     public SyntaxTokenNode TempoKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>The <c>:</c> in a part-header <c>tempo: 120</c>; null for the bare music command.</summary>
@@ -937,6 +967,7 @@ public sealed class PartialDeclarationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>partial</c> keyword token.</summary>
     public SyntaxTokenNode PartialKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>The pickup length as a duration node (number + optional dots).</summary>
@@ -956,6 +987,7 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The metadata keyword token (e.g. title, composer, tempo).</summary>
     public SyntaxTokenNode KeywordToken => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
@@ -1030,9 +1062,13 @@ public sealed class VariableDeclarationSyntax : SyntaxNode
     // Legacy style (4 slots): let name = expression
     private bool IsLegacyStyle => SlotCount == 4;
 
+    /// <summary>The legacy <c>let</c> keyword token, or null in the new <c>name = expr</c> form.</summary>
     public SyntaxTokenNode? LetKeyword => IsLegacyStyle ? (SyntaxTokenNode)GetChild(0)! : null;
+    /// <summary>The declared variable name token.</summary>
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(IsLegacyStyle ? 1 : 0)!;
+    /// <summary>The <c>=</c> token.</summary>
     public SyntaxTokenNode EqualsToken => (SyntaxTokenNode)GetChild(IsLegacyStyle ? 2 : 1)!;
+    /// <summary>The assigned expression.</summary>
     public SyntaxNode Expression => GetChild(IsLegacyStyle ? 3 : 2)!;
 }
 
@@ -1046,8 +1082,11 @@ public sealed class PhraseDeclarationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>phrase</c> keyword token.</summary>
     public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The declared phrase name token.</summary>
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
+    /// <summary>The phrase's music block.</summary>
     public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(2)!;
 }
 
@@ -1065,10 +1104,13 @@ public sealed class PartDeclarationSyntax : SyntaxNode
     // Without body: keyword name = 2 slots
     private bool HasBody => SlotCount > 2;
 
+    /// <summary>The <c>part</c> keyword token.</summary>
     public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The declared part name token.</summary>
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
 
     // Properties are between braces if HasBody
+    /// <summary>The part's property assignments (empty when the part has no body block).</summary>
     public IEnumerable<PropertyAssignmentSyntax> Properties
     {
         get
@@ -1095,6 +1137,7 @@ public sealed class VariableReferenceSyntax : SyntaxNode
     }
 
     // Name can be at index 0 (single-arg constructor) or index 1 (two-arg with keyword)
+    /// <summary>The referenced variable name token.</summary>
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(SlotCount > 1 ? 1 : 0)!;
 }
 
@@ -1108,10 +1151,15 @@ public sealed class RepeatExpressionSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>repeat</c> keyword token.</summary>
     public SyntaxTokenNode RepeatKeyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The repeat-type token (e.g. <c>volta</c>).</summary>
     public SyntaxTokenNode RepeatType => (SyntaxTokenNode)GetChild(1)!;
+    /// <summary>The repeat-count token.</summary>
     public SyntaxTokenNode Count => (SyntaxTokenNode)GetChild(2)!;
+    /// <summary>The repeated music block.</summary>
     public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(3)!;
+    /// <summary>The optional trailing alternative clause, or null.</summary>
     public AlternativeClauseSyntax? Alternative => GetChild(4) as AlternativeClauseSyntax;
 }
 
@@ -1125,8 +1173,10 @@ public sealed class AlternativeClauseSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>alternative</c> keyword token.</summary>
     public SyntaxTokenNode AlternativeKeyword => (SyntaxTokenNode)GetChild(0)!;
 
+    /// <summary>The alternative-ending music blocks, in order.</summary>
     public IEnumerable<MusicBlockSyntax> Alternatives
     {
         get
@@ -1150,7 +1200,9 @@ public sealed class ParallelExpressionSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The opening <c>&lt;&lt;</c> token.</summary>
     public SyntaxTokenNode OpenAngle => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The closing <c>&gt;&gt;</c> token.</summary>
     public SyntaxTokenNode CloseAngle => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
 
     /// <summary>
@@ -1206,15 +1258,19 @@ public sealed class KeySignatureSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>key</c> keyword token.</summary>
     public SyntaxTokenNode KeyKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>True for <c>key custom …</c> (slot 1 is the word, pitches follow).</summary>
     public bool IsCustom => GetChild(1) is SyntaxTokenNode t
         && t.Text.Equals("custom", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>The tonic pitch of a traditional key.</summary>
     public PitchSyntax Pitch => (PitchSyntax)GetChild(1)!;
+    /// <summary>The mode token (e.g. <c>major</c>, <c>minor</c>).</summary>
     public SyntaxTokenNode Mode => (SyntaxTokenNode)GetChild(2)!;
 
+    /// <summary>True for a major key (a non-custom key whose mode is <c>major</c>).</summary>
     public bool IsMajor => !IsCustom && Mode.Kind == SyntaxKind.MajorKeyword;
 
     /// <summary>The custom signature's (step 0=C..6=B, alteration) pairs in
@@ -1243,7 +1299,9 @@ public sealed class ClefDeclarationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>clef</c> keyword token.</summary>
     public SyntaxTokenNode ClefKeyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The clef name token (e.g. <c>treble</c>, <c>bass</c>).</summary>
     public SyntaxTokenNode ClefName => (SyntaxTokenNode)GetChild(1)!;
 }
 
@@ -1257,7 +1315,9 @@ public sealed class OctaveDirectiveSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>octave</c> keyword token.</summary>
     public SyntaxTokenNode OctaveKeyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The mode token (<c>absolute</c> or <c>relative</c>).</summary>
     public SyntaxTokenNode Mode => (SyntaxTokenNode)GetChild(1)!;
 
     /// <summary>True for <c>octave absolute</c>, false for <c>octave relative</c>.</summary>
@@ -1274,10 +1334,15 @@ public sealed class TupletExpressionSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>tuplet</c> keyword token.</summary>
     public SyntaxTokenNode TupletKeyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The ratio numerator token.</summary>
     public SyntaxTokenNode Numerator => (SyntaxTokenNode)GetChild(1)!;
+    /// <summary>The <c>/</c> token.</summary>
     public SyntaxTokenNode Slash => (SyntaxTokenNode)GetChild(2)!;
+    /// <summary>The ratio denominator token.</summary>
     public SyntaxTokenNode Denominator => (SyntaxTokenNode)GetChild(3)!;
+    /// <summary>The tuplet's music block.</summary>
     public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(4)!;
 
     /// <summary>
@@ -1301,7 +1366,9 @@ public sealed class GraceExpressionSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The grace keyword token (<c>grace</c>, <c>acciaccatura</c>, or <c>appoggiatura</c>).</summary>
     public SyntaxTokenNode GraceKeyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The grace-note music block.</summary>
     public MusicBlockSyntax Body => (MusicBlockSyntax)GetChild(1)!;
 
     /// <summary>
@@ -1325,6 +1392,7 @@ public sealed class LyricsBlockSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>lyrics</c> keyword token.</summary>
     public SyntaxTokenNode LyricsKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>True when written as `lyrics name { … }` (an optional name sits
@@ -1339,7 +1407,9 @@ public sealed class LyricsBlockSyntax : SyntaxNode
 
     private int OpenBraceIndex => HasName ? 2 : 1;
 
+    /// <summary>The opening <c>{</c> token.</summary>
     public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(OpenBraceIndex)!;
+    /// <summary>The lyric syllable items, in order.</summary>
     public IEnumerable<SyntaxNode> Syllables
     {
         get
@@ -1352,6 +1422,7 @@ public sealed class LyricsBlockSyntax : SyntaxNode
             }
         }
     }
+    /// <summary>The closing <c>}</c> token.</summary>
     public SyntaxTokenNode CloseBrace => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
 }
 
@@ -1368,6 +1439,7 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>chords</c> keyword token.</summary>
     public SyntaxTokenNode ChordsKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     private bool HasName =>
@@ -1379,6 +1451,7 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
 
     private int OpenBraceIndex => HasName ? 2 : 1;
 
+    /// <summary>The opening <c>{</c> token.</summary>
     public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(OpenBraceIndex)!;
 
     /// <summary>The chord entries and barlines, in source order.</summary>
@@ -1395,6 +1468,7 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
         }
     }
 
+    /// <summary>The closing <c>}</c> token.</summary>
     public SyntaxTokenNode CloseBrace => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
 }
 
@@ -1412,7 +1486,9 @@ public sealed class ChordEntrySyntax : SyntaxNode
 
     // Slots: 0 root, 1 duration?, 2 colon?, [quality tokens…], slash?, bass?
     // (slash/bass are always the final two slots, null when absent).
+    /// <summary>The chord root pitch.</summary>
     public PitchSyntax Root => (PitchSyntax)GetChild(0)!;
+    /// <summary>The chord's duration, or null when unspecified.</summary>
     public DurationSyntax? Duration => GetChild(1) as DurationSyntax;
 
     /// <summary>The full quality text after the <c>:</c> (e.g. "m7", "maj7", "7",
@@ -1443,7 +1519,9 @@ public sealed class ArticulationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The leading <c>@</c> token.</summary>
     public SyntaxTokenNode AtToken => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The articulation name token.</summary>
     public SyntaxTokenNode NameToken => (SyntaxTokenNode)GetChild(1)!;
 
     /// <summary>
@@ -1474,7 +1552,9 @@ public sealed class DynamicSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The leading <c>\</c> token.</summary>
     public SyntaxTokenNode BackslashToken => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The dynamic name token (e.g. <c>p</c>, <c>f</c>, <c>ff</c>).</summary>
     public SyntaxTokenNode DynamicToken => (SyntaxTokenNode)GetChild(1)!;
 
     /// <summary>
@@ -1556,8 +1636,11 @@ public sealed partial class TuningDeclarationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The leading <c>\</c> token.</summary>
     public SyntaxTokenNode BackslashToken => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The <c>tuning</c> keyword token.</summary>
     public SyntaxTokenNode TuningKeyword => (SyntaxTokenNode)GetChild(1)!;
+    /// <summary>The tuning name token (e.g. <c>guitar</c>, <c>bass</c>, <c>custom</c>).</summary>
     public SyntaxTokenNode TuningName => (SyntaxTokenNode)GetChild(2)!;
 
     /// <summary>
@@ -1584,6 +1667,7 @@ public sealed partial class StringNumberAnnotationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The string-number token (the full <c>\N</c> annotation, e.g. <c>\4</c>).</summary>
     public SyntaxTokenNode StringNumberToken => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
@@ -1607,7 +1691,9 @@ public sealed partial class SectionDeclarationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>section</c> keyword token.</summary>
     public SyntaxTokenNode SectionKeyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The section name token.</summary>
     public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(1)!;
 
     /// <summary>
@@ -1627,7 +1713,9 @@ public sealed class IncludeDirectiveSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>include</c> keyword token.</summary>
     public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The quoted file-path token.</summary>
     public SyntaxTokenNode PathToken => (SyntaxTokenNode)GetChild(1)!;
 
     /// <summary>The included file path, with surrounding quotes stripped.</summary>
@@ -1644,6 +1732,7 @@ public sealed partial class PartBlockSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The part name token.</summary>
     public SyntaxTokenNode PartName => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
@@ -1662,6 +1751,7 @@ public sealed partial class StructureDeclarationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>structure</c> keyword token.</summary>
     public SyntaxTokenNode StructureKeyword => (SyntaxTokenNode)GetChild(0)!;
 }
 
@@ -1675,6 +1765,7 @@ public sealed partial class SectionReferenceSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The referenced section name token.</summary>
     public SyntaxTokenNode Identifier => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
@@ -1948,6 +2039,7 @@ public sealed partial class RenderDeclarationSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>render</c> keyword token.</summary>
     public SyntaxTokenNode RenderKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
@@ -1977,6 +2069,7 @@ public sealed partial class StaffRenderSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>staff</c> keyword token.</summary>
     public SyntaxTokenNode StaffKeyword => (SyntaxTokenNode)GetChild(0)!;
 }
 
@@ -1991,6 +2084,7 @@ public sealed class ChordRowRenderSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>chords</c> keyword token.</summary>
     public SyntaxTokenNode ChordsKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>The chord part name to place (e.g. <c>chords riff</c> → "riff").</summary>
@@ -2008,6 +2102,7 @@ public sealed class LyricsRowRenderSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>lyrics</c> keyword token.</summary>
     public SyntaxTokenNode LyricsKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>The lyrics part name to place (e.g. <c>lyrics verse</c> → "verse").</summary>
@@ -2024,6 +2119,7 @@ public sealed partial class GrandStaffRenderSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>grandStaff</c> keyword token.</summary>
     public SyntaxTokenNode GrandStaffKeyword => (SyntaxTokenNode)GetChild(0)!;
 
     /// <summary>
@@ -2053,6 +2149,7 @@ public sealed partial class OssiaRenderSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>ossia</c> keyword token.</summary>
     public SyntaxTokenNode OssiaKeyword => (SyntaxTokenNode)GetChild(0)!;
 }
 
@@ -2066,6 +2163,7 @@ public sealed partial class TabRenderSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>tab</c> keyword token.</summary>
     public SyntaxTokenNode TabKeyword => (SyntaxTokenNode)GetChild(0)!;
 }
 
@@ -2079,6 +2177,7 @@ public sealed partial class MidiPartRenderSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The part name token.</summary>
     public SyntaxTokenNode PartName => (SyntaxTokenNode)GetChild(0)!;
 }
 
@@ -2093,6 +2192,7 @@ public sealed partial class BreakSyntax : SyntaxNode
     {
     }
 
+    /// <summary>The <c>break</c> keyword token.</summary>
     public SyntaxTokenNode BreakKeyword => (SyntaxTokenNode)GetChild(0)!;
 }
 

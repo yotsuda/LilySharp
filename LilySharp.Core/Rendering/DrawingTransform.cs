@@ -28,12 +28,16 @@ public readonly record struct DrawingTransform(
     double ScaleX = 1,
     double ScaleY = 1)
 {
+    /// <summary>The identity transform (no translation or scaling).</summary>
     public static DrawingTransform Identity => new();
 
+    /// <summary>Creates a pure translation by the given offsets.</summary>
     public static DrawingTransform Translate(double x, double y) => new(x, y);
 
+    /// <summary>Creates a uniform scale about the origin.</summary>
     public static DrawingTransform Scale(double s) => new(0, 0, s, s);
 
+    /// <summary>True when this transform has no effect on coordinates.</summary>
     public bool IsIdentity =>
         TranslateX == 0 && TranslateY == 0 && ScaleX == 1 && ScaleY == 1;
 }

@@ -79,6 +79,7 @@ public sealed record GraceNoteItem
     /// routing; see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
     public int StaffIndex { get; }
 
+    /// <summary>Creates a grace note group attached to a main note.</summary>
     public GraceNoteItem(
         GraceNoteType type,
         ImmutableArray<GraceNoteInfo> notes,

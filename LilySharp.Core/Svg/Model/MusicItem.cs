@@ -83,10 +83,15 @@ public sealed record NoteItem : MusicItem
 {
     // init so a post-pass (e.g. OttavaTransposer) can shift the DISPLAY position
     // an octave without disturbing pitch/MIDI (which live in Midi/the syntax tree).
+    /// <summary>The note's clef-relative vertical staff position, in diatonic steps from the middle staff line.</summary>
     public int StaffPosition { get; init; }
+    /// <summary>The written note value before dots and tuplet scaling, as a fraction of a whole note.</summary>
     public Fraction BaseDuration { get; }
+    /// <summary>The number of augmentation dots on the note.</summary>
     public int Dots { get; }
+    /// <summary>The accidental glyph drawn left of the notehead (e.g. <c>sharp</c>, <c>flat</c>), or null for none.</summary>
     public string? Accidental { get; }
+    /// <summary>Whether the note needs ledger lines because it sits outside the staff.</summary>
     public bool NeedsLedgerLines { get; }
     /// <summary>Number of tremolo beams (0 = no tremolo, 1-3 = tremolo).</summary>
     public int TremoloBeams { get; }
@@ -174,8 +179,10 @@ public sealed record NoteItem : MusicItem
     /// </summary>
     public Fraction TimeScale { get; init; } = new Fraction(1, 1);
 
+    /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
     public override Fraction Duration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
+    /// <summary>The note's source position in the syntax tree.</summary>
     public override int SourcePosition => _sourcePosition;
 
     /// <summary>
@@ -231,6 +238,7 @@ public sealed record NoteItem : MusicItem
     /// <summary>Whether this note has a tremolo marking.</summary>
     public bool HasTremolo => TremoloBeams > 0;
 
+    /// <summary>Initializes a new <see cref="NoteItem"/>.</summary>
     public NoteItem(int staffPosition, Fraction baseDuration, int dots, string? accidental, bool needsLedgerLines, int sourcePosition, int tremoloBeams = 0, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasGlissando = false, int featherDirection = 0, bool isCourtesy = false, bool isCue = false, string? editorialAccidental = null, int? fingering = null, bool hasLaissezVibrer = false, bool hasRepeatTie = false)
     {
         StaffPosition = staffPosition;
@@ -261,7 +269,9 @@ public sealed record NoteItem : MusicItem
 /// </summary>
 public sealed record RestItem : MusicItem
 {
+    /// <summary>The written rest value before dots and tuplet scaling, as a fraction of a whole note.</summary>
     public Fraction BaseDuration { get; }
+    /// <summary>The number of augmentation dots on the rest.</summary>
     public int Dots { get; }
     private readonly int _sourcePosition;
 
@@ -284,10 +294,13 @@ public sealed record RestItem : MusicItem
     /// </summary>
     public bool IsMultiMeasure { get; init; }
 
+    /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
     public override Fraction Duration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
+    /// <summary>The rest's source position in the syntax tree.</summary>
     public override int SourcePosition => _sourcePosition;
 
+    /// <summary>Initializes a new <see cref="RestItem"/>.</summary>
     public RestItem(Fraction baseDuration, int dots, int sourcePosition)
     {
         BaseDuration = baseDuration;
@@ -322,8 +335,11 @@ public readonly record struct ChordNoteInfo(
 /// </summary>
 public sealed record ChordItem : MusicItem
 {
+    /// <summary>The notes making up this chord.</summary>
     public ImmutableArray<ChordNoteInfo> Notes { get; init; }
+    /// <summary>The written chord value before dots and tuplet scaling, as a fraction of a whole note.</summary>
     public Fraction BaseDuration { get; }
+    /// <summary>The number of augmentation dots on the chord.</summary>
     public int Dots { get; }
     /// <summary>Two-note tremolo between-beams count (see NoteItem).</summary>
     public int TremoloPairBeams { get; init; }
@@ -345,8 +361,10 @@ public sealed record ChordItem : MusicItem
     /// <summary>Tuplet time scale; see <see cref="NoteItem.TimeScale"/>.</summary>
     public Fraction TimeScale { get; init; } = new Fraction(1, 1);
 
+    /// <summary>The sounding duration with dots and tuplet <see cref="TimeScale"/> applied, as a fraction of a whole note.</summary>
     public override Fraction Duration =>
         (Dots > 0 ? BaseDuration.Dotted(Dots) : BaseDuration) * TimeScale;
+    /// <summary>The chord's source position in the syntax tree.</summary>
     public override int SourcePosition => _sourcePosition;
 
     /// <summary>Beam-resolved stem direction; see <see cref="NoteItem.StemUpOverride"/>.</summary>
@@ -374,6 +392,7 @@ public sealed record ChordItem : MusicItem
     /// <summary>Whether this chord closes a slur (a <c>)</c> follows it).</summary>
     public bool HasSlurEnd { get; }
 
+    /// <summary>Initializes a new <see cref="ChordItem"/>.</summary>
     public ChordItem(ImmutableArray<ChordNoteInfo> notes, Fraction baseDuration, int dots, int sourcePosition, int tremoloBeams = 0, bool hasBeamStart = false, bool hasBeamEnd = false, bool hasArpeggio = false, bool isCue = false, bool hasTieStart = false, bool hasSlurStart = false, bool hasSlurEnd = false)
     {
         Notes = notes;
@@ -407,9 +426,12 @@ public sealed record ClefChangeItem : MusicItem
 
     private readonly int _sourcePosition;
 
+    /// <summary>Always <c>Fraction.Zero</c> — the clef change occupies horizontal space but no time.</summary>
     public override Fraction Duration => Fraction.Zero;
+    /// <summary>The clef change's source position in the syntax tree.</summary>
     public override int SourcePosition => _sourcePosition;
 
+    /// <summary>Initializes a new <see cref="ClefChangeItem"/>.</summary>
     public ClefChangeItem(ClefType newClef, int sourcePosition)
     {
         NewClef = newClef;
@@ -435,9 +457,12 @@ public sealed record KeySignatureChangeItem : MusicItem
 
     private readonly int _sourcePosition;
 
+    /// <summary>Always <c>Fraction.Zero</c> — the key change occupies horizontal space but no time.</summary>
     public override Fraction Duration => Fraction.Zero;
+    /// <summary>The key change's source position in the syntax tree.</summary>
     public override int SourcePosition => _sourcePosition;
 
+    /// <summary>Initializes a new <see cref="KeySignatureChangeItem"/>.</summary>
     public KeySignatureChangeItem(KeySignature newKey, KeySignature previousKey, int sourcePosition)
     {
         NewKey = newKey;
@@ -461,9 +486,12 @@ public sealed record TimeSignatureChangeItem : MusicItem
 
     private readonly int _sourcePosition;
 
+    /// <summary>Always <c>Fraction.Zero</c> — the time-signature change occupies horizontal space but no time.</summary>
     public override Fraction Duration => Fraction.Zero;
+    /// <summary>The time-signature change's source position in the syntax tree.</summary>
     public override int SourcePosition => _sourcePosition;
 
+    /// <summary>Initializes a new <see cref="TimeSignatureChangeItem"/>.</summary>
     public TimeSignatureChangeItem(TimeSignature newTime, int sourcePosition)
     {
         NewTime = newTime;

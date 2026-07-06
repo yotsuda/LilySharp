@@ -43,20 +43,24 @@ public enum LineCap
 /// </remarks>
 public interface IDrawingContext
 {
+    /// <summary>Draws a straight (optionally dashed) line between two points.</summary>
     void DrawLine(
         double x1, double y1, double x2, double y2,
         Color? stroke = null, double strokeWidth = 0.1,
         (double On, double Off)? dash = null,
         LineCap cap = LineCap.Butt);
 
+    /// <summary>Draws an axis-aligned rectangle with optional fill and stroke.</summary>
     void DrawRectangle(
         double x, double y, double width, double height,
         Color? fill = null, Color? stroke = null, double strokeWidth = 0);
 
+    /// <summary>Draws an axis-aligned ellipse with optional fill and stroke.</summary>
     void DrawEllipse(
         double cx, double cy, double rx, double ry,
         Color? fill = null, Color? stroke = null, double strokeWidth = 0);
 
+    /// <summary>Draws a filled circle of the given radius.</summary>
     void DrawCircle(
         double cx, double cy, double r,
         Color? fill = null);

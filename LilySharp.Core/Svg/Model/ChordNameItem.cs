@@ -78,6 +78,7 @@ public sealed record ChordNameItem
     /// </summary>
     public bool IsChordRow { get; }
 
+    /// <summary>Creates a chord name symbol for display above the staff.</summary>
     public ChordNameItem(string chordText, int measureIndex, int itemIndex,
         int sourcePosition, int staffIndex = 0,
         bool useTiming = false, Fraction timing = default, ChordStructure? structure = null,

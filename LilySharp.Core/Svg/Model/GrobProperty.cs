@@ -85,6 +85,7 @@ public sealed class GrobPropertyResolver
     private int _nextEvent;
     private int _measure = -1, _item = -1;
 
+    /// <summary>Creates a resolver over the given override and revert timelines.</summary>
     public GrobPropertyResolver(
         ImmutableArray<GrobOverride> overrides,
         ImmutableArray<GrobRevert> reverts)

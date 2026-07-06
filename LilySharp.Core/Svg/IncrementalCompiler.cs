@@ -100,6 +100,7 @@ public sealed class IncrementalCompiler
     /// Lets tests assert that unchanged systems are reused rather than recomputed.</summary>
     internal SystemLayoutCache? SystemCache => _systemCache;
 
+    /// <summary>Creates an incremental compiler seeded with an initial tree.</summary>
     public IncrementalCompiler(SyntaxTree tree, SvgRenderOptions? options = null)
     {
         _tree = tree;
