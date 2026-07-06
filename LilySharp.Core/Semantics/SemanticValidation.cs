@@ -48,6 +48,7 @@ public static class SemanticValidation
         new MeasureValidator(),             // measure fullness / cross-part length
         new DurationValidator(),            // invalid note values (5, 3, 6, …)
         new AnnotationNameValidator(),      // unknown @annotation names
+        new SymbolCaseValidator(),          // wrong-case / unknown header symbols
         new StructureDeclarationValidator(),// at most one structure per scope
         new LyricSyllableValidator(),       // more syllables than notes
         new TabTieStringValidator(),        // a tie naming two tab strings

@@ -281,6 +281,10 @@ c4 d e f |
   rests (hara-kiri). `true` keeps the first system (LP `\RemoveEmptyStaves`), `all` hides it
   too (`\RemoveAllEmptyStaves`); any playing voice keeps the staff visible.
 - Identifiers (parts, phrases, sections) may use any Unicode letters: `phrase 動機 { ... }`.
+- Everything is **case-sensitive**: keywords, identifiers, and vocabulary values (clef /
+  instrument-preset / tuning names, key modes) are written in their canonical (lowercase)
+  case. `Treble` is a different, unknown symbol from `treble` and is an error — not a
+  silent fallback.
 - Comments: `// line` and `/* block */`.
 - `@name` is the canonical annotation prefix. `\name` annotations are rejected (use `@`);
   backslash is reserved for tablature only (`\3` string numbers, `\tuning`). Lily# is NOT

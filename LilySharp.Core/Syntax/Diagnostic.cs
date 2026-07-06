@@ -218,6 +218,10 @@ public static class DiagnosticCodes
     /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
     public const string MetadataValueMustBeQuoted = "LYS1013";
 
+    /// <summary>Semantic error: an unknown or wrong-case symbol (property name or a
+    /// clef/instrument/tuning value); symbols are case-sensitive.</summary>
+    public const string UnknownSymbolCase = "LYS1014";
+
     // Measure errors (LYS2xxx)
 
     /// <summary>Measure error: a measure has fewer beats than the time signature requires.</summary>
