@@ -4846,9 +4846,14 @@ internal static class SharedRenderer
                 prevNatPos = staffPosition;
             }
             dx += GlyphMetrics.AccidentalNatural.Width;
-            // Breathing room between the cancellation and the new signature.
-            // LILYPOND-REF: scm/define-grobs.scm KeyCancellation
-            //   padding-pairs give it its own break-align slot.
+            // Gap before the new signature. LilyPond keeps the KeyCancellation and
+            // the following KeySignature as SEPARATE break-aligned grobs, so there is
+            // a deliberate gap between the cancellation naturals and the new key: it
+            // comes from KeyCancellation's space-alist entry
+            //   (key-signature . (extra-space . 0.5))
+            // trimmed by their (extra-spacing-width . (0.0 . 1.0)) overlap — a spring,
+            // not a fixed pad, whose net in this inline model is ~0.4.
+            // LILYPOND-REF: scm/define-grobs.scm — KeyCancellation space-alist.
             dx += 0.4;
         }
 
