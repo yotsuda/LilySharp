@@ -2939,7 +2939,7 @@ public sealed class LilySharpLanguageServer
                     new LilySharp.Core.Midi.MidiExporter().Export(tree).Save(outputPath);
                     break;
                 case "musicxml":
-                    new LilySharp.Core.MusicXml.MusicXmlExporter().Export(tree).Save(outputPath);
+                    new LilySharp.Core.MusicXml.MusicXmlExporter().ExportToFile(tree, outputPath);
                     break;
                 case "vsqx":
                     new LilySharp.Core.Vocaloid.VsqxExporter().Export(tree).Save(outputPath);

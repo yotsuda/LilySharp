@@ -694,13 +694,11 @@ static int ExecuteXml(string inputPath, string outputPath)
 
         if (ReportDiagnostics(tree)) return 1;
 
-        var exporter = new MusicXmlExporter();
-        var xml = exporter.Export(tree);
-        xml.Save(outputPath);
+        var (parts, measures) = new MusicXmlExporter().ExportToFile(tree, outputPath);
 
         Console.WriteLine($"Created: {outputPath}");
-        Console.WriteLine($"  Parts: {xml.Parts.Count}");
-        Console.WriteLine($"  Measures: {xml.Parts.Sum(p => p.Measures.Count)}");
+        Console.WriteLine($"  Parts: {parts}");
+        Console.WriteLine($"  Measures: {measures}");
         return 0;
     }
     catch (Exception ex)

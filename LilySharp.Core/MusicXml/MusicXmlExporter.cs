@@ -102,7 +102,17 @@ public sealed class MusicXmlExporter
         }
     }
 
-    public MusicXmlDocument Export(SyntaxTree tree)
+    /// <summary>Exports the tree to a MusicXML file at <paramref name="path"/> and
+    /// returns a summary (part / measure counts). The intermediate document model is
+    /// an implementation detail.</summary>
+    public (int Parts, int Measures) ExportToFile(SyntaxTree tree, string path)
+    {
+        var doc = Export(tree);
+        doc.Save(path);
+        return (doc.Parts.Count, doc.Parts.Sum(p => p.Measures.Count));
+    }
+
+    internal MusicXmlDocument Export(SyntaxTree tree)
     {
         _document = new MusicXmlDocument();
 

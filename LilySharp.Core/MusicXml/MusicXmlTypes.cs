@@ -21,7 +21,7 @@ namespace LilySharp.Core.MusicXml;
 /// <summary>
 /// Represents a MusicXML document.
 /// </summary>
-public sealed class MusicXmlDocument
+internal sealed class MusicXmlDocument
 {
     public string? Title { get; set; }
     public string? Composer { get; set; }
@@ -85,7 +85,7 @@ public sealed class MusicXmlDocument
 /// <summary>
 /// Represents a part in MusicXML.
 /// </summary>
-public sealed class MusicXmlPart
+internal sealed class MusicXmlPart
 {
     public string? Name { get; set; }
     public List<MusicXmlMeasure> Measures { get; } = new();
@@ -104,7 +104,7 @@ public sealed class MusicXmlPart
 /// <summary>
 /// Represents a measure in MusicXML.
 /// </summary>
-public sealed class MusicXmlMeasure
+internal sealed class MusicXmlMeasure
 {
     public int Number { get; set; }
 
@@ -169,7 +169,7 @@ public sealed class MusicXmlMeasure
 /// <summary>
 /// Measure attributes (time signature, key, clef, divisions).
 /// </summary>
-public sealed class MusicXmlAttributes
+internal sealed class MusicXmlAttributes
 {
     public int Divisions { get; set; } = 1;
     public int? KeyFifths { get; set; }
@@ -250,7 +250,7 @@ public sealed class MusicXmlAttributes
 /// <summary>
 /// Direction element for dynamics, tempo, and other performance indications.
 /// </summary>
-public sealed class MusicXmlDirection
+internal sealed class MusicXmlDirection
 {
     public string? DynamicType { get; set; }
     public int? Tempo { get; set; }
@@ -306,7 +306,7 @@ public sealed class MusicXmlDirection
 /// <summary>
 /// Represents a note in MusicXML.
 /// </summary>
-public sealed class MusicXmlNote
+internal sealed class MusicXmlNote
 {
     public bool IsRest { get; set; }
     public bool IsChord { get; set; }
