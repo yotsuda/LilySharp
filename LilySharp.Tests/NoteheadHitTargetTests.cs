@@ -67,4 +67,23 @@ public class NoteheadHitTargetTests
         Assert.DoesNotContain("nh-hit", svg);
         Assert.DoesNotContain("pointer-events", svg);
     }
+
+    [Fact]
+    public void PreviewAccidentalIsHighlightableButNotClickable()
+    {
+        // A note's accidental shares the note's data-pos (for highlight) but must
+        // NOT be a click target — otherwise the note's clickable area spills left
+        // onto the loose accidental glyph box. It is emitted pointer-events="none"
+        // (keeps data-pos), so only the notehead's nh-hit rect owns the click.
+        var svg = SvgGenerator.Generate(SyntaxTree.Parse(
+            "part m { clef treble section A { cis'4 } }\nstructure { A }\nscore \"s\" { staff m }"),
+            SvgRenderOptions.Preview());
+
+        // The accidental is a non-clickable music glyph that still carries data-pos.
+        Assert.Matches(
+            "<text class=\"music\" pointer-events=\"none\"[^>]*data-pos=\"\\d+\">",
+            svg);
+        // And a notehead hit rect still exists as the note's click target.
+        Assert.Contains("class=\"nh-hit\"", svg);
+    }
 }

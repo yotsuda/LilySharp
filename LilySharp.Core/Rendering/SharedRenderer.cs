@@ -2437,17 +2437,17 @@ internal static class SharedRenderer
             double accInkLeft = inkLeftX + leftParen.Width * scale;
             using (gc.Source(sourcePosition))
             {
-                gc.DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen,
+                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalLeftParen,
                     accInkLeft - leftParen.Right * scale, noteheadY, fs);
-                gc.DrawGlyph(glyph, accInkLeft - accBBox.Left * scale, noteheadY, fs);
-                gc.DrawGlyph(EmmentalerGlyphs.AccidentalRightParen,
+                gc.DrawAttachedGlyph(glyph, accInkLeft - accBBox.Left * scale, noteheadY, fs);
+                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalRightParen,
                     accInkLeft + accBBox.Width * scale - rightParen.Left * scale, noteheadY, fs);
             }
         }
         else
         {
             using (gc.Source(sourcePosition))
-                gc.DrawGlyph(glyph, inkLeftX - accBBox.Left * scale, noteheadY, fs);
+                gc.DrawAttachedGlyph(glyph, inkLeftX - accBBox.Left * scale, noteheadY, fs);
         }
     }
 
@@ -2487,17 +2487,17 @@ internal static class SharedRenderer
             using (gc.Source(sourcePosition))
             {
                 // Each origin is chosen so the glyph's INK lands flush.
-                gc.DrawGlyph(EmmentalerGlyphs.AccidentalLeftParen,
+                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalLeftParen,
                     accInkLeft - leftParen.Right * scale, noteheadY, fs);
-                gc.DrawGlyph(glyph, accInkLeft - accBBox.Left * scale, noteheadY, fs);
-                gc.DrawGlyph(EmmentalerGlyphs.AccidentalRightParen,
+                gc.DrawAttachedGlyph(glyph, accInkLeft - accBBox.Left * scale, noteheadY, fs);
+                gc.DrawAttachedGlyph(EmmentalerGlyphs.AccidentalRightParen,
                     accInkLeft + accWidth - rightParen.Left * scale, noteheadY, fs);
             }
         }
         else
         {
             using (gc.Source(sourcePosition))
-                gc.DrawGlyph(glyph, noteheadX - accWidth - gap, noteheadY, fs);
+                gc.DrawAttachedGlyph(glyph, noteheadX - accWidth - gap, noteheadY, fs);
         }
     }
 

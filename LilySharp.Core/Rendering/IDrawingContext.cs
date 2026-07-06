@@ -107,6 +107,19 @@ public interface IDrawingContext
         double inkWidth, double inkHeight)
         => DrawGlyph(glyph, x, y, fontSize, fill);
 
+    /// <summary>
+    /// Draws a music glyph that is ATTACHED to a note and shares its
+    /// <c>data-pos</c> — an accidental or its parentheses. In interactive SVG the
+    /// glyph stays highlightable (keeps its data-pos) but is NOT clickable, so a
+    /// note's only click target is its notehead hit rect (see
+    /// <see cref="DrawNotehead"/>), not the accidental's loose glyph box. The
+    /// default (static SVG, PDF, PNG) just draws the glyph like
+    /// <see cref="DrawGlyph"/>.
+    /// </summary>
+    void DrawAttachedGlyph(
+        char glyph, double x, double y, double fontSize, Color? fill = null)
+        => DrawGlyph(glyph, x, y, fontSize, fill);
+
     /// <summary>Draws plain (non-music) text such as titles, dynamics, lyrics.</summary>
     void DrawText(
         string text, double x, double y, double fontSize,

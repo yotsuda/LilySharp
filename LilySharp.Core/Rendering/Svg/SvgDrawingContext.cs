@@ -135,6 +135,25 @@ internal sealed class SvgDrawingContext : IDrawingContext
             x, y - inkHeight / 2, inkWidth, inkHeight, SourceAttr()));
     }
 
+    public void DrawAttachedGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
+    {
+        // Static output: identical to DrawGlyph.
+        if (!_interactive)
+        {
+            DrawGlyph(glyph, x, y, fontSize, fill);
+            return;
+        }
+        // Interactive preview: an accidental shares its note's data-pos, so it
+        // must stay highlightable — but it must NOT be a click target, or the
+        // note's clickable area would spill left onto the (loose) accidental box.
+        // pointer-events="none" keeps the highlight (fill recolor) while the
+        // notehead's nh-hit rect owns the click.
+        var fillAttr = fill is { } f ? string.Format(Inv, " fill=\"{0}\"", f.ToHex()) : "";
+        _sb.AppendLine(string.Format(Inv,
+            "  <text class=\"music\" pointer-events=\"none\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
+            x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph)));
+    }
+
     public void DrawText(string text, double x, double y, double fontSize,
         string fontFamily, FontStyle style = FontStyle.Regular,
         TextAnchor anchor = TextAnchor.Start, Color? fill = null,
