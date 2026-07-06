@@ -688,6 +688,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             background: white;
             display: flex;
             flex-direction: column;
+            /* The score is not selectable text. Without this, clicking a note
+               starts a text selection of the nearest SVG <text> glyph (a note-
+               head / accidental), which Chromium paints as a grey rectangle over
+               the neighbouring note. */
+            user-select: none;
+            -webkit-user-select: none;
             /* HEIGHT, not min-height: min lets the body grow with the sheet,
                so the WEBVIEW scrolls and .main-content never overflows —
                scrollTop stays 0 and the page-nav buttons do nothing. Capping
