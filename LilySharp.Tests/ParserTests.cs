@@ -1085,8 +1085,8 @@ $theme");
         var varRef = tree.Root.GetSlot(1) as VariableReferenceGreen;
         Assert.NotNull(varRef);
         Assert.Equal(SyntaxKind.VariableReference, varRef.Kind);
-        // $name should not produce deprecation warnings
-        Assert.Empty(tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.DeprecatedBareReference));
+        // $name is the blessed form — it must not trip the bare-reference error.
+        Assert.Empty(tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar));
     }
 
     [Fact]
@@ -1102,12 +1102,13 @@ structure { Main }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
-        Assert.Empty(tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.DeprecatedBareReference));
+        Assert.Empty(tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar));
     }
 
     [Fact]
-    public void BareNameReferenceEmitsDeprecationWarning()
+    public void BareNameReference_IsRejected_WithDollarHint()
     {
+        // A phrase reference requires '$': 'melody { intro }' must use '$intro'.
         var source = @"time 4/4
 part melody
 phrase intro { c4 d e f | }
@@ -1117,10 +1118,10 @@ section Main {
 structure { Main }
 ";
         var tree = SyntaxTree.Parse(source);
-        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
-        var warnings = tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.DeprecatedBareReference).ToList();
-        Assert.Single(warnings);
-        Assert.Contains("$intro", warnings[0].Message);
+        Assert.True(tree.HasErrors);
+        var errors = tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar).ToList();
+        Assert.Single(errors);
+        Assert.Contains("$intro", errors[0].Message);
     }
 
 }

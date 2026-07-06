@@ -73,11 +73,11 @@ public class IncrementalParsingTests
     [Fact]
     public void WithChange_PreservesParseability()
     {
-        var tree = SyntaxTree.Parse("relative c' { c d e f }");
-        var newTree = tree.WithChange(TextChange.Replace(new TextSpan(14, 1), "c"));
+        var tree = SyntaxTree.Parse("$relative c' { c d e f }");
+        var newTree = tree.WithChange(TextChange.Replace(new TextSpan(15, 1), "c"));
 
         Assert.False(newTree.HasErrors);
-        Assert.Equal("relative c' { c d e f }", newTree.Text);
+        Assert.Equal("$relative c' { c d e f }", newTree.Text);
     }
 
     [Fact]

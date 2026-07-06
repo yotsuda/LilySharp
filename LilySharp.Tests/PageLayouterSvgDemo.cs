@@ -51,9 +51,9 @@ public class PageLayouterSvgDemo
           e'4 d c b, | a,2 b, | c4 d e d | c1 |
         }
 
-        section Intro { melody { theme1 } }
-        section Dev { melody { theme2 } }
-        section Recap { melody { theme3 } }
+        section Intro { melody { $theme1 } }
+        section Dev { melody { $theme2 } }
+        section Recap { melody { $theme3 } }
 
         structure { Intro Dev Recap Intro Dev Recap }
 

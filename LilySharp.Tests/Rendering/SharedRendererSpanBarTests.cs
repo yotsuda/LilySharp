@@ -46,7 +46,7 @@ public sealed class SharedRendererSpanBarTests
             phrase rh { c''4 d'' e'' f'' | }
             phrase lh { c4 e g c' | }
 
-            section Main { melody { rh } bass { lh } }
+            section Main { melody { $rh } bass { $lh } }
             structure { Main }
 
             score "t" {

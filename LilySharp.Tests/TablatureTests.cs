@@ -33,7 +33,7 @@ public class TablatureTests
     [Fact]
     public void ParseTabStaff_NoTuning()
     {
-        var source = @"\tabStaff { e4 a d' }";
+        var source = @"$tabStaff { e4 a d' }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
@@ -41,7 +41,7 @@ public class TablatureTests
     [Fact]
     public void ParseTabStaff_WithGuitarTuning()
     {
-        var source = @"\tabStaff \tuning guitar { e4 a d' }";
+        var source = @"$tabStaff \tuning $guitar { e4 a d' }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
@@ -49,7 +49,7 @@ public class TablatureTests
     [Fact]
     public void ParseTabStaff_WithBassTuning()
     {
-        var source = @"\tabStaff \tuning bass { e,4 a, d g }";
+        var source = @"$tabStaff \tuning bass { e,4 a, d g }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
@@ -57,7 +57,7 @@ public class TablatureTests
     [Fact]
     public void ParseTabStaff_WithBass5Tuning()
     {
-        var source = @"\tabStaff \tuning bass5 { b,,4 e, a, d g }";
+        var source = @"$tabStaff \tuning $bass5 { b,,4 e, a, d g }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }
@@ -65,7 +65,7 @@ public class TablatureTests
     [Fact]
     public void ParseTabStaff_WithUkuleleTuning()
     {
-        var source = @"\tabStaff \tuning ukulele { g c' e' a' }";
+        var source = @"$tabStaff \tuning $ukulele { g c' e' a' }";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
     }

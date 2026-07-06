@@ -212,10 +212,8 @@ public static class DiagnosticCodes
     /// <summary>Syntax error: a volta ending must be bracketed — <c>[N. Section]</c>.</summary>
     public const string VoltaBracketRequired = "LYS1011";
 
-    // Deprecation warnings (LYS3xxx)
-
-    /// <summary>Deprecation warning: use of a deprecated bare reference.</summary>
-    public const string DeprecatedBareReference = "LYS3001";
+    /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
+    public const string BareReferenceRequiresDollar = "LYS1012";
 
     // Measure errors (LYS2xxx)
 

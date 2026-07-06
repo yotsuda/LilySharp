@@ -607,12 +607,14 @@ internal sealed class Parser
     }
 
 
+    // A bare identifier is not a phrase reference — '$' is required. Reject with a
+    // hint and recover by keeping the reference node so $name resolution/tooling works.
     private VariableReferenceGreen ParseBareVariableReference()
     {
         var span = new TextSpan(_textPosition, Current.FullWidth);
         var name = Advance();
-        _diagnostics.Warning(span, DiagnosticCodes.DeprecatedBareReference,
-            $"Use '${name.Text}' instead of '{name.Text}' for variable references");
+        _diagnostics.Error(span, DiagnosticCodes.BareReferenceRequiresDollar,
+            $"Use '${name.Text}' to reference a phrase; a bare '{name.Text}' is not allowed.");
         return new VariableReferenceGreen(name);
     }
 
