@@ -1923,8 +1923,7 @@ public sealed class LilySharpLanguageServer
                 SyntaxKind.ClefKeyword or SyntaxKind.TupletKeyword or SyntaxKind.GraceKeyword or
                 SyntaxKind.MajorKeyword or SyntaxKind.MinorKeyword or SyntaxKind.LyricsKeyword or
                 SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword or SyntaxKind.OnceKeyword or
-                SyntaxKind.PhraseKeyword or SyntaxKind.SectionKeyword or SyntaxKind.StructureKeyword or
-                SyntaxKind.RenderKeyword => 0,
+                SyntaxKind.PhraseKeyword or SyntaxKind.SectionKeyword or SyntaxKind.StructureKeyword => 0,
 
                 // Numbers
                 SyntaxKind.IntegerLiteral => 2,

@@ -433,8 +433,12 @@ Repeat         = 'repeat' , ( 'percent' | 'unfold' | 'tremolo' ) , [ Integer ] ,
 ## 9. Override / Revert (engraving properties)
 ================================================================================
 
-OverrideDecl   = [ 'once' ] , 'override' , Grob , '.' , Property , '=' , Integer
+OverrideDecl   = [ 'once' ] , 'override' , Grob , '.' , Property , '=' , OverrideValue
                | 'revert' , Grob , '.' , Property ;
+OverrideValue  = Integer | '-' Integer | Identifier | String ;
+                 (* the value form fits the property: a length/position is an
+                    integer, a direction/symbol an identifier (e.g. up, red), a
+                    colour a string ("red"). Stored as text and reparsed per property. *)
 
 (* Example:
    override Stem.length = 7

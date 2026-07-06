@@ -260,7 +260,7 @@ score practice { structure { Intro } staff melody }
 ## Override / revert (engraving properties)
 
 ```
-override Stem.length = 7        // property values are integers
+override Stem.length = 7        // value fits the property: int, -int, identifier (up/red), or "string"
 c4 d e f |
 revert Stem.length
 once override Stem.length = 9    // 'once' applies to the next note only

@@ -523,7 +523,7 @@ internal sealed class Lexer
             "score" => SyntaxKind.ScoreKeyword,
             "part" => SyntaxKind.PartKeyword,
             "staff" => SyntaxKind.StaffKeyword,
-            "grandStaff" or "grandstaff" => SyntaxKind.GrandStaffKeyword,
+            "grandStaff" => SyntaxKind.GrandStaffKeyword,
             "voice" => SyntaxKind.VoiceKeyword,
             "phrase" => SyntaxKind.PhraseKeyword,
             "repeat" => SyntaxKind.RepeatKeyword,
