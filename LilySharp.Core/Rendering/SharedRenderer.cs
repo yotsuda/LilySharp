@@ -1185,15 +1185,18 @@ internal static class SharedRenderer
     }
 
     /// <summary>
-    /// Kerning between two adjacent cancellation naturals: their vertical
-    /// edge intervals (previous glyph's LEFT side = its span shifted +3)
-    /// overlap → 0.3; just touch → 0.15; clear → 0.
-    /// LILYPOND-REF: lily/key-signature-interface.cc natural kerning.
+    /// Kerning between two adjacent cancellation naturals. The naturals are
+    /// laid out left→right; the gap depends on whether the LEFT glyph's right
+    /// edge and the RIGHT glyph's left edge overlap vertically: overlap → 0.3,
+    /// corners just touch → 0.15, clear → 0.
+    /// LILYPOND-REF: lily/key-signature-interface.cc — the left glyph contributes
+    /// its ht_right [2p−6, 2p+3]; the right (already-placed) glyph contributes its
+    /// last_ht_left = ht_right shifted +3 = [2p−3, 2p+6].
     /// </summary>
     private static double NaturalKernPadding(int prevPos, int curPos)
     {
-        double lo1 = 2 * prevPos - 3, hi1 = 2 * prevPos + 6; // prev, left side
-        double lo2 = 2 * curPos - 6, hi2 = 2 * curPos + 3;   // current, right side
+        double lo1 = 2 * prevPos - 6, hi1 = 2 * prevPos + 3; // left glyph, right edge (ht_right)
+        double lo2 = 2 * curPos - 3, hi2 = 2 * curPos + 6;   // right glyph, left edge (last_ht_left)
         double lo = Math.Max(lo1, lo2), hi = Math.Min(hi1, hi2);
         if (lo > hi) return 0;
         return hi > lo ? 0.3 : 0.15;
