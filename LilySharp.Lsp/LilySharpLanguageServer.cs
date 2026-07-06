@@ -1679,7 +1679,7 @@ public sealed class LilySharpLanguageServer
             RepeatExpressionSyntax repeat => ($"repeat {repeat.Count.Text}x", SymbolKind.Operator),
             ParallelExpressionSyntax => ("parallel", SymbolKind.Struct),
             TupletExpressionSyntax tuplet => ($"tuplet {tuplet.TupletRatio}/{tuplet.BaseDivision}", SymbolKind.Operator),
-            KeySignatureSyntax key => ($"key {key.Pitch.PitchName} {(key.IsMajor ? "major" : "minor")}", SymbolKind.Key),
+            KeySignatureSyntax key => ($"key {key.Pitch?.PitchName} {(key.IsMajor ? "major" : "minor")}", SymbolKind.Key),
             ClefDeclarationSyntax clef => ($"clef {clef.ClefName.Text}", SymbolKind.Key),
             LyricsBlockSyntax => ("lyrics", SymbolKind.String),
             OverrideDeclarationSyntax ovr => ($"override {ovr.GrobName.Text}.{ovr.PropertyName.Text}", SymbolKind.Property),

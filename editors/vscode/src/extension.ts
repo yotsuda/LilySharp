@@ -76,7 +76,6 @@ const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 
 export function activate(context: vscode.ExtensionContext) {
     outputChannel.appendLine('Lily# extension activating...');
-    outputChannel.show(true);  // Show output channel for debugging
 
     const config = vscode.workspace.getConfiguration('lilysharp');
     let serverPath = config.get<string>('serverPath');
@@ -212,6 +211,10 @@ export function activate(context: vscode.ExtensionContext) {
         });
     }).catch((error) => {
         outputChannel.appendLine(`Failed to start language client: ${error}`);
+        vscode.window.showErrorMessage(
+            'Lily#: the language server failed to start — live diagnostics and preview are unavailable.',
+            'Show Log'
+        ).then(pick => { if (pick === 'Show Log') { outputChannel.show(); } });
     });
 
     // Register preview commands

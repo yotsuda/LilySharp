@@ -136,14 +136,9 @@
         "legacy-keywords": {
             "patterns": [
                 {
-                    "comment": "Removed constructs: parser rejects 'repeat volta'/'alternative' (LYS0006) and 'let' (LegacyDeclarationForm). Highlight as errors.",
+                    "comment": "Removed LilyPond constructs: the parser rejects bare 'volta'/'alternative' (use the '|: … :| [1. …] [2. …]' form). Highlight as errors.",
                     "name": "invalid.illegal.removed-keyword.lilysharp",
-                    "match": "\\b(volta|alternative|let)\\b"
-                },
-                {
-                    "comment": "'use name' still parses but warns; prefer $name.",
-                    "name": "invalid.deprecated.use-keyword.lilysharp",
-                    "match": "\\buse\\b"
+                    "match": "\\b(volta|alternative)\\b"
                 }
             ]
         },
@@ -151,11 +146,11 @@
             "patterns": [
                 {
                     "name": "keyword.control.lilysharp",
-                    "match": "\\b(score|part|staff|tab|grandstaff|ossia|voice|relative|absolute|fixed|repeat|structure|include|render|grace|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics|chordnames)\\b"
+                    "match": "\\b(version|score|part|staff|grandStaff|tab|ossia|voice|phrase|section|structure|include|drummap|transpose|relative|absolute|repeat|grace|tuplet|acciaccatura|appoggiatura|override|revert|once|lyrics|chords)\\b"
                 },
                 {
                     "name": "keyword.other.lilysharp",
-                    "match": "\\b(title|composer|tempo|time|partial|key|clef|major|minor|instrument|octave|channel|tuning|treble|bass|alto|tenor|percent|unfold|tremolo)\\b"
+                    "match": "\\b(title|composer|tempo|time|partial|key|clef|major|minor|ionian|dorian|phrygian|lydian|mixolydian|aeolian|locrian|instrument|octave|channel|tuning|break|treble|bass|alto|tenor|percent|unfold|tremolo)\\b"
                 }
             ]
         },
@@ -196,8 +191,8 @@
             "patterns": [
                 {
                     "name": "variable.other.pitch.lilysharp",
-                    "comment": "Trailing (?![A-Za-z]) so a pitch letter that merely starts a longer word (g in grandStaff, b in bass, c in clef) is NOT mis-highlighted as a note. Notes are always followed by a duration digit, octave mark, space or punctuation, never a letter.",
-                    "match": "\\b[a-g](isis|eses|is|es|as)?[',]*(?![A-Za-z])"
+                    "comment": "Accidentals: is/es (sharp/flat), isis/eses (double), isih/eseh + ih/eh (quarter-tones) — the lexer produces no 'as'. Trailing (?![A-Za-z]) so a pitch letter that merely starts a longer word (g in grandStaff, b in bass, c in clef) is NOT mis-highlighted as a note.",
+                    "match": "\\b[a-g](isih|eseh|isis|eses|is|es|ih|eh)?[',]*(?![A-Za-z])"
                 }
             ]
         },
@@ -237,65 +232,29 @@
         "dynamics": {
             "patterns": [
                 {
+                    "comment": "@-prefixed dynamics ('f' bare is a PITCH; @f is the dynamic). Backslash dynamics (\\p, \\f) are rejected by the parser — not highlighted as valid.",
                     "name": "keyword.other.dynamic.lilysharp",
-                    "match": "@(ppp|pp|p|mp|mf|f|ff|fff|sfz|sfp|fp|cresc|decresc|dim)\\b"
-                },
-                {
-                    "comment": "Legacy backslash dynamics for backwards compatibility",
-                    "name": "keyword.other.dynamic.legacy.lilysharp",
-                    "match": "\\\\(ppp|pp|p|mp|mf|f|ff|fff|cresc|decresc|dim)\\b"
+                    "match": "@(ppppp|pppp|ppp|pp|mp|mf|p|fffff|ffff|fff|ff|sffz|sfz|sfp|sf|fp|rfz|rf|fz|f|cresc|decresc|dim)\\b"
                 }
             ]
         },
         "music-marks": {
             "patterns": [
                 {
-                    "comment": "Navigation marks",
-                    "name": "keyword.other.mark.lilysharp",
-                    "match": "@(segno|coda|fine|dc|ds\\.al\\.fine|ds\\.al\\.coda)\\b"
+                    "comment": "Value-carrying annotations take PARENTHESES: @mark(A), @fig(6 4), @chord(Dm), @feather(right), @ped(off), @text(\"dolce\"), @tuplet(3), @finger(1), @bend(…), @notehead(…), @frame(…). (The old dotted form @mark.A / @fig.6.4 was removed.)",
+                    "begin": "(@[A-Za-z][A-Za-z0-9]*)\\s*(\\()",
+                    "beginCaptures": {
+                        "1": { "name": "keyword.other.annotation.lilysharp" },
+                        "2": { "name": "punctuation.section.annotation.begin.lilysharp" }
+                    },
+                    "end": "(\\))",
+                    "endCaptures": { "1": { "name": "punctuation.section.annotation.end.lilysharp" } },
+                    "patterns": [
+                        { "name": "string.quoted.double.lilysharp", "match": "\"[^\"]*\"" }
+                    ]
                 },
                 {
-                    "comment": "Rehearsal marks",
-                    "name": "keyword.other.mark.lilysharp",
-                    "match": "@mark\\.[A-Za-z0-9]+"
-                },
-                {
-                    "comment": "Pedal markings",
-                    "name": "keyword.other.pedal.lilysharp",
-                    "match": "@(ped|ped\\.off|sost\\.ped|sostenuto|una\\.corda|tre\\.corde)\\b"
-                },
-                {
-                    "comment": "Ottava brackets",
-                    "name": "keyword.other.ottava.lilysharp",
-                    "match": "@(ottava|ottava\\.bassa|loco)\\b"
-                },
-                {
-                    "comment": "Text spanners",
-                    "name": "keyword.other.spanner.lilysharp",
-                    "match": "@(rit|accel|startTrillSpan|stopTrillSpan)\\b"
-                },
-                {
-                    "comment": "Figured bass",
-                    "name": "keyword.other.figuredbass.lilysharp",
-                    "match": "@fig(\\.[0-9sfn]+)+"
-                },
-                {
-                    "comment": "Chord names",
-                    "name": "keyword.other.chordname.lilysharp",
-                    "match": "@chord\\.[A-Za-z0-9#b/]+"
-                },
-                {
-                    "comment": "Feathered beams",
-                    "name": "keyword.other.feather.lilysharp",
-                    "match": "@feather\\.(right|left|accel|rit)\\b"
-                },
-                {
-                    "comment": "Cross-staff and other annotations",
-                    "name": "keyword.other.annotation.lilysharp",
-                    "match": "@(cross|glissando|gliss|arpeggio|courtesy|editorial|cue)\\b"
-                },
-                {
-                    "comment": "Catch-all for any @name annotation (keeps new registry names colored without touching this file; specific patterns above win first)",
+                    "comment": "Plain @name annotation: articulations, ornaments, dynamic text, spanners, navigation marks (@segno/@coda/@fine/@rit…), and any @name-registry name — all resolved from text, so always colored.",
                     "name": "keyword.other.annotation.lilysharp",
                     "match": "@[A-Za-z][A-Za-z0-9]*"
                 }
