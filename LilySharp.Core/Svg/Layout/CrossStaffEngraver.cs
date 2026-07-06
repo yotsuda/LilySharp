@@ -28,16 +28,16 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/stem.cc:1168-1179 - cross-staff stem handling
 /// </remarks>
 public readonly record struct CrossStaffLayout(
-    /// <summary>Measure index containing the cross-staff note.</summary>
+    // Measure index containing the cross-staff note.
     int MeasureIndex,
 
-    /// <summary>Item index within the measure.</summary>
+    // Item index within the measure.
     int ItemIndex,
 
-    /// <summary>Source staff index (where the voice belongs).</summary>
+    // Source staff index (where the voice belongs).
     int SourceStaffIndex,
 
-    /// <summary>Target staff index (where the note should render).</summary>
+    // Target staff index (where the note should render).
     int TargetStaffIndex
 );
 

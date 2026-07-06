@@ -297,19 +297,17 @@ public readonly record struct ChordNoteInfo(
     int StaffPosition,
     string? Accidental,
     bool NeedsLedgerLines,
-    /// <summary>Whether this accidental is a courtesy (cautionary) accidental shown in parentheses.</summary>
+    // Whether this accidental is a courtesy (cautionary) accidental shown in parentheses.
     bool IsCourtesy = false,
-    /// <summary>
-    /// Optional per-pitch finger number attached via <c>@finger.N</c> inside a chord.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/fingering-engraver.cc — FingeringColumn stacking.</remarks>
+    // Optional per-pitch finger number attached via @finger.N inside a chord.
+    // LILYPOND-REF: lily/fingering-engraver.cc — FingeringColumn stacking.
     int? Fingering = null,
-    /// <summary>Explicit tab string number (1 = highest) via <c>\N</c> inside a chord, or null for auto.</summary>
+    // Explicit tab string number (1 = highest) via \N inside a chord, or null for auto.
     int? StringNumber = null,
-    /// <summary>Per-note notehead style (drum chords mix heads: bd default,
-    /// hh cross); Default falls back to the chord-level style.</summary>
+    // Per-note notehead style (drum chords mix heads: bd default,
+    // hh cross); Default falls back to the chord-level style.
     NoteheadStyle Notehead = NoteheadStyle.Default,
-    /// <summary>Absolute sounding MIDI number (clef-independent), for tab frets.</summary>
+    // Absolute sounding MIDI number (clef-independent), for tab frets.
     int Midi = 0
 );
 

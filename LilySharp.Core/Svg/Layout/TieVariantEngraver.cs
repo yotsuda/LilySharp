@@ -44,20 +44,20 @@ public readonly record struct TieVariantLayout(
     TieVariantKind Kind,
     int MeasureIndex,
     int ItemIndex,
-    /// <summary>Start X (the side closer to the host note).</summary>
+    // Start X (the side closer to the host note).
     double StartX,
-    /// <summary>End X (the side away from the note, into empty space).</summary>
+    // End X (the side away from the note, into empty space).
     double EndX,
-    /// <summary>Y of both endpoints (the tie sits flat at this height).</summary>
+    // Y of both endpoints (the tie sits flat at this height).
     double Y,
-    /// <summary>Bezier control point 1.</summary>
+    // Bezier control point 1.
     (double X, double Y) Control1,
-    /// <summary>Bezier control point 2.</summary>
+    // Bezier control point 2.
     (double X, double Y) Control2,
-    /// <summary>True = curve up, false = curve down.</summary>
+    // True = curve up, false = curve down.
     bool CurveUp,
     int SourcePosition,
-    /// <summary>Owning staff (ossia shrink); -1 = unknown/test construction.</summary>
+    // Owning staff (ossia shrink); -1 = unknown/test construction.
     int StaffIndex = -1);
 
 /// <summary>

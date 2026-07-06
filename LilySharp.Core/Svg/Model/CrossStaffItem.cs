@@ -32,19 +32,17 @@ namespace LilySharp.Core.Svg.Model;
 /// appear on the other staff, connected by a beam.
 /// </remarks>
 public sealed record CrossStaffItem(
-    /// <summary>Measure containing the cross-staff note.</summary>
+    // Measure containing the cross-staff note.
     int MeasureIndex,
 
-    /// <summary>Item index within the measure.</summary>
+    // Item index within the measure.
     int ItemIndex,
 
-    /// <summary>
-    /// Target staff index within the staff group (0-based).
-    /// For grand staff: 0 = treble, 1 = bass.
-    /// -1 means revert to original staff.
-    /// </summary>
+    // Target staff index within the staff group (0-based).
+    // For grand staff: 0 = treble, 1 = bass.
+    // -1 means revert to original staff.
     int TargetStaffIndex,
 
-    /// <summary>Source position for diagnostics.</summary>
+    // Source position for diagnostics.
     int SourcePosition
 );

@@ -26,16 +26,10 @@ namespace LilySharp.Core.Svg.Model;
 /// LILYPOND-REF: scm/define-grob-interfaces.scm - bass-figure-interface
 /// </remarks>
 public readonly record struct FiguredBassFigure(
-    /// <summary>
-    /// The figure number (1-9), or 0 for an empty figure placeholder.
-    /// </summary>
+    // The figure number (1-9), or 0 for an empty figure placeholder.
     int Number,
-    /// <summary>
-    /// Alteration: 0=none, 1=sharp, -1=flat, 2=natural (cautionary).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/figured-bass-engraver.cc:120 alteration property
-    /// </remarks>
+    // Alteration: 0=none, 1=sharp, -1=flat, 2=natural (cautionary).
+    // LILYPOND-REF: lily/figured-bass-engraver.cc:120 alteration property
     int Alteration = 0
 )
 {

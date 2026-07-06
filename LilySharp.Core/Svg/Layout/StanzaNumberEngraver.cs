@@ -31,13 +31,13 @@ namespace LilySharp.Core.Svg.Layout;
 public readonly record struct StanzaNumberLayout(
     int VerseNumber,
     int SystemIndex,
-    /// <summary>A measure in this system, used to resolve the system's Y when drawing.</summary>
+    // A measure in this system, used to resolve the system's Y when drawing.
     int MeasureIndex,
-    /// <summary>X coordinate at the system's left edge (start of staff lines).</summary>
+    // X coordinate at the system's left edge (start of staff lines).
     double X,
-    /// <summary>Y coordinate (relative to the system top, matching the verse's lyric baseline).</summary>
+    // Y coordinate (relative to the system top, matching the verse's lyric baseline).
     double Y,
-    /// <summary>Display text (e.g., "1.", "2.").</summary>
+    // Display text (e.g., "1.", "2.").
     string Text);
 
 /// <summary>

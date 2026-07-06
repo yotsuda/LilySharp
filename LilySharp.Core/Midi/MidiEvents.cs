@@ -25,21 +25,21 @@ public readonly record struct MidiNote(
     int Velocity,
     int StartTick,
     int DurationTicks,
-    /// <summary>Source offset of the note's syntax — lets the preview player
-    /// highlight the notation being played. -1 = no source link. Not written
-    /// to .mid files.</summary>
+    // Source offset of the note's syntax — lets the preview player
+    // highlight the notation being played. -1 = no source link. Not written
+    // to .mid files.
     int SourcePos = -1,
     // Quarter-tone offset (+1 = +50 cents): pitch bend in the .mid, a
     // fractional pitch in the preview player. 0 for normal notes.
     int QuarterBend = 0,
-    /// <summary>Which PRINTED copy of the source this onset corresponds to
-    /// (phrase expansions share one position; repeats replay their pass-one
-    /// ordinals). Not written to .mid files.</summary>
+    // Which PRINTED copy of the source this onset corresponds to
+    // (phrase expansions share one position; repeats replay their pass-one
+    // ordinals). Not written to .mid files.
     int SourceOrdinal = 0,
-    /// <summary>Timbre family for the preview synth (0 piano, 1 flute,
-    /// 2 clarinet, 3 strings, 4 guitar, 5 bass, 6 brass, 7 organ, 8 voice),
-    /// resolved from the part's `instrument` (or its name). Not written to
-    /// .mid files.</summary>
+    // Timbre family for the preview synth (0 piano, 1 flute,
+    // 2 clarinet, 3 strings, 4 guitar, 5 bass, 6 brass, 7 organ, 8 voice),
+    // resolved from the part's `instrument` (or its name). Not written to
+    // .mid files.
     int Timbre = 0
 );
 

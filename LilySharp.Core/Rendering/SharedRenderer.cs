@@ -4718,15 +4718,12 @@ public static class SharedRenderer
         gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
     }
 
-    /// <summary>
-    /// Draws the curly brace used for grand staff (piano) groups. The brace
-    /// is rendered as a single Emmentaler-Brace glyph (576 sizes available
-    /// at U+E000+index, larger index → taller brace). Glyph selection mirrors
-    /// <see cref="Svg.Renderer.BraceRenderer"/> so SVG and PDF agree on size.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/define-markup-commands.scm (left-brace)
-    /// </remarks>
+    // Draws the curly brace used for grand staff (piano) groups. The brace
+    // is rendered as a single Emmentaler-Brace glyph (576 sizes available
+    // at U+E000+index, larger index → taller brace). Glyph selection mirrors
+    // Svg.Renderer.BraceRenderer so SVG and PDF agree on size.
+    // LILYPOND-REF: scm/define-markup-commands.scm (left-brace)
+
     // ---------- Mid-measure clef change ----------
 
     /// <summary>

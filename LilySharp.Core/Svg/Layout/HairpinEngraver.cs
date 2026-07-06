@@ -27,33 +27,29 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/hairpin.cc:110-358
 /// </remarks>
 public readonly record struct HairpinLayout(
-    /// <summary>Start measure index (for system Y lookup).</summary>
+    // Start measure index (for system Y lookup).
     int StartMeasureIndex,
-    /// <summary>Start X position (staff spaces from score start).</summary>
+    // Start X position (staff spaces from score start).
     double StartX,
-    /// <summary>End X position.</summary>
+    // End X position.
     double EndX,
-    /// <summary>Y position (center line of the wedge, staff spaces from staff top).</summary>
+    // Y position (center line of the wedge, staff spaces from staff top).
     double Y,
-    /// <summary>
-    /// Opening at the start (left) end (half-height, in staff spaces).
-    /// LILYPOND-REF: lily/hairpin.cc:180-220 — continued/continuing height fractions
-    /// For crescendo: 0 (point). For decrescendo: full or fractional opening.
-    /// </summary>
+    // Opening at the start (left) end (half-height, in staff spaces).
+    // LILYPOND-REF: lily/hairpin.cc:180-220 — continued/continuing height fractions
+    // For crescendo: 0 (point). For decrescendo: full or fractional opening.
     double StartOpening,
-    /// <summary>
-    /// Opening at the end (right) end (half-height, in staff spaces).
-    /// For crescendo: full or fractional opening. For decrescendo: 0 (point).
-    /// </summary>
+    // Opening at the end (right) end (half-height, in staff spaces).
+    // For crescendo: full or fractional opening. For decrescendo: 0 (point).
     double EndOpening,
-    /// <summary>Crescendo or decrescendo.</summary>
+    // Crescendo or decrescendo.
     HairpinDirection Direction,
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition,
-    /// <summary>F3/B: index of the originating cresc/decresc mark in score.MusicMarks,
-    /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
+    // F3/B: index of the originating cresc/decresc mark in score.MusicMarks,
+    // so a reused layout re-derives data-pos from the live score. -1 = unresolved.
     int SourceIndex = -1,
-    /// <summary>Which staff this wedge hangs under (per-staff stacking).</summary>
+    // Which staff this wedge hangs under (per-staff stacking).
     int StaffIndex = 0
 );
 

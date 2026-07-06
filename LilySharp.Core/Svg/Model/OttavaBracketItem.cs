@@ -43,18 +43,18 @@ public enum OttavaType
 /// LILYPOND-REF: scm/define-grobs.scm:2445-2468 OttavaBracket grob defaults
 /// </remarks>
 public sealed record OttavaBracketItem(
-    /// <summary>The type of ottava transposition.</summary>
+    // The type of ottava transposition.
     OttavaType Type,
-    /// <summary>Measure index of the start.</summary>
+    // Measure index of the start.
     int StartMeasureIndex,
-    /// <summary>Measure index of the end (where loco or next ottava appears).</summary>
+    // Measure index of the end (where loco or next ottava appears).
     int EndMeasureIndex,
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition,
-    /// <summary>F3/B: index of the originating ottava mark in score.MusicMarks,
-    /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
+    // F3/B: index of the originating ottava mark in score.MusicMarks,
+    // so a reused layout re-derives data-pos from the live score. -1 = unresolved.
     int SourceIndex = -1,
-    /// <summary>The staff this ottava was authored on (0 = the first/only staff).
-    /// The bracket is stacked over/under THAT staff on a grand staff.</summary>
+    // The staff this ottava was authored on (0 = the first/only staff).
+    // The bracket is stacked over/under THAT staff on a grand staff.
     int StaffIndex = 0
 );

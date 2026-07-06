@@ -32,11 +32,11 @@ namespace LilySharp.Core.Svg.Model;
 /// - Body is unfolded N times, iterations 2+ marked as percent repeats
 /// </remarks>
 public sealed record PercentRepeatItem(
-    /// <summary>Measure index where the percent sign appears.</summary>
+    // Measure index where the percent sign appears.
     int MeasureIndex,
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition,
-    /// <summary>The staff the repeat was written on — the sign prints there,
-    /// like LilyPond's Percent_repeat_engraver living in that Voice.</summary>
+    // The staff the repeat was written on — the sign prints there,
+    // like LilyPond's Percent_repeat_engraver living in that Voice.
     int StaffIndex = 0
 );

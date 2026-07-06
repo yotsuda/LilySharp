@@ -27,21 +27,21 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: scm/define-grobs.scm:3020-3060 LyricText grob
 /// </remarks>
 public sealed record LyricLayout(
-    /// <summary>The original lyric item.</summary>
+    // The original lyric item.
     LyricItem Item,
 
-    /// <summary>X position (center of syllable, in staff spaces).</summary>
+    // X position (center of syllable, in staff spaces).
     double X,
 
-    /// <summary>Y position (baseline of text, in staff spaces).</summary>
+    // Y position (baseline of text, in staff spaces).
     double Y,
 
-    /// <summary>Width of the syllable text (in staff spaces).</summary>
+    // Width of the syllable text (in staff spaces).
     double Width,
 
-    /// <summary>F3/B: index of this syllable in the score's <c>Lyrics</c> side-table
-    /// — a position-independent reference so a reused (cached) layout re-derives its
-    /// data-pos (<see cref="LyricItem.SourcePosition"/>) from the live score at render
-    /// time (SharedRenderer.ResolveDataPos). -1 = unresolved (direct unit-test construction).</summary>
+    // F3/B: index of this syllable in the score's Lyrics side-table
+    // — a position-independent reference so a reused (cached) layout re-derives its
+    // data-pos (LyricItem.SourcePosition) from the live score at render
+    // time (SharedRenderer.ResolveDataPos). -1 = unresolved (direct unit-test construction).
     int SourceIndex = -1
 );

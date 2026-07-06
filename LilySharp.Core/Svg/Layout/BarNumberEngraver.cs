@@ -29,18 +29,16 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 public readonly record struct BarNumberLayout(
     int MeasureIndex,
-    /// <summary>Bar number text (typically a 1-based integer).</summary>
+    // Bar number text (typically a 1-based integer).
     string Text,
-    /// <summary>X coordinate of the text anchor.</summary>
+    // X coordinate of the text anchor.
     double X,
-    /// <summary>Y coordinate of the text baseline (above the staff).</summary>
+    // Y coordinate of the text baseline (above the staff).
     double Y,
-    /// <summary>
-    /// When true the text right-aligns to <see cref="X"/> (TextAnchor.End).
-    /// Line-start and mid-line bar numbers LEFT-align (false) per BarNumber's
-    /// self-alignment-X = LEFT, so the number sits above the staff start and
-    /// extends rightward, clear of the system-start brace.
-    /// </summary>
+    // When true the text right-aligns to X (TextAnchor.End).
+    // Line-start and mid-line bar numbers LEFT-align (false) per BarNumber's
+    // self-alignment-X = LEFT, so the number sits above the staff start and
+    // extends rightward, clear of the system-start brace.
     bool RightAligned = false);
 
 /// <summary>

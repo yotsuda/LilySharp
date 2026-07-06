@@ -26,32 +26,28 @@ namespace LilySharp.Core.Svg.Model;
 /// LILYPOND-REF: lily/tuplet-bracket.cc:1-400 Tuplet_bracket class
 /// </remarks>
 public sealed record TupletBracketItem(
-    /// <summary>Tuplet ratio numerator (e.g., 3 for triplets).</summary>
+    // Tuplet ratio numerator (e.g., 3 for triplets).
     int Numerator,
-    /// <summary>Tuplet ratio denominator (e.g., 2 for triplets).</summary>
+    // Tuplet ratio denominator (e.g., 2 for triplets).
     int Denominator,
-    /// <summary>Starting note index within the measure.</summary>
+    // Starting note index within the measure.
     int StartNoteIndex,
-    /// <summary>Ending note index within the measure.</summary>
+    // Ending note index within the measure.
     int EndNoteIndex,
-    /// <summary>Measure index containing this tuplet.</summary>
+    // Measure index containing this tuplet.
     int MeasureIndex,
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition,
-    /// <summary>
-    /// Nesting depth for nested tuplets (0 = top-level, 1 = first nesting, etc.).
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/tuplet-bracket.cc:400-500 nested bracket stacking
-    /// </remarks>
+    // Nesting depth for nested tuplets (0 = top-level, 1 = first nesting, etc.).
+    // LILYPOND-REF: lily/tuplet-bracket.cc:400-500 nested bracket stacking
     int NestingDepth = 0,
-    /// <summary>Global staff index this tuplet belongs to (multi-staff routing;
-    /// see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
+    // Global staff index this tuplet belongs to (multi-staff routing;
+    // see DynamicItem.StaffIndex). 0 for single-staff.
     int StaffIndex = 0,
-    /// <summary>Index of the voice (within its staff) that owns this tuplet.
-    /// 0 = primary. Auto-beaming breaks at a tuplet boundary only within the
-    /// SAME voice, so the beam detector must not apply one voice's tuplet
-    /// indices to another voice's note stream.</summary>
+    // Index of the voice (within its staff) that owns this tuplet.
+    // 0 = primary. Auto-beaming breaks at a tuplet boundary only within the
+    // SAME voice, so the beam detector must not apply one voice's tuplet
+    // indices to another voice's note stream.
     int VoiceIndex = 0
 )
 {

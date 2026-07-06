@@ -51,57 +51,41 @@ public sealed record Staff(
     ImmutableArray<Voice> Voices,
     TuningType? Tuning = null,
     string? InstrumentName = null,
-    /// <summary>Whether this is an ossia staff (rendered at reduced size).</summary>
-    /// <remarks>LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize</remarks>
+    // Whether this is an ossia staff (rendered at reduced size).
+    // LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
     bool IsOssia = false,
-    /// <summary>
-    /// Whether empty staves should be automatically hidden (hara-kiri).
-    /// LILYPOND-REF: lily/hara-kiri-group-spanner.cc — remove-empty property
-    /// Equivalent to \override VerticalAxisGroup.remove-empty = ##t
-    /// </summary>
+    // Whether empty staves should be automatically hidden (hara-kiri).
+    // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — remove-empty property
+    // Equivalent to \override VerticalAxisGroup.remove-empty = ##t
     bool RemoveEmpty = false,
-    /// <summary>
-    /// Whether to allow removal even in the first system.
-    /// LILYPOND-REF: lily/hara-kiri-group-spanner.cc — remove-first property
-    /// When false (default), the first system always shows all staves.
-    /// </summary>
+    // Whether to allow removal even in the first system.
+    // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — remove-first property
+    // When false (default), the first system always shows all staves.
     bool RemoveFirst = false,
-    /// <summary>
-    /// Staff affinity direction for non-spaceable staves.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/align-interface.cc:240-252 staff-affinity
-    /// null = normal spaceable staff, UP = attach to staff above, DOWN = attach to staff below.
-    /// Used for ossia and cue staves.
-    /// </remarks>
+    // Staff affinity direction for non-spaceable staves.
+    // LILYPOND-REF: lily/align-interface.cc:240-252 staff-affinity
+    // null = normal spaceable staff, UP = attach to staff above, DOWN = attach to staff below.
+    // Used for ossia and cue staves.
     int? StaffAffinity = null,
-    /// <summary>
-    /// Per-staff key signature override. Set for a TRANSPOSED part in a
-    /// multi-staff score so the staff shows its own (transposed) key while the
-    /// concert-pitch staves keep the score key. Null = use the score key.
-    /// </summary>
+    // Per-staff key signature override. Set for a TRANSPOSED part in a
+    // multi-staff score so the staff shows its own (transposed) key while the
+    // concert-pitch staves keep the score key. Null = use the score key.
     KeySignature? PerStaffKeySignature = null,
-    /// <summary>
-    /// Whether this is an independent TEXT row (chord symbols or lyric syllables) —
-    /// no staff lines, no notes, just text laid out by timing in its own band. The
-    /// layout/renderer treat every text row the same; the chord-vs-lyric content
-    /// distinction lives on the items (<c>ChordNameItem</c> / <c>LyricItem</c>)
-    /// tagged with this staff's index, not on the staff.
-    /// </summary>
+    // Whether this is an independent TEXT row (chord symbols or lyric syllables) —
+    // no staff lines, no notes, just text laid out by timing in its own band. The
+    // layout/renderer treat every text row the same; the chord-vs-lyric content
+    // distinction lives on the items (ChordNameItem / LyricItem)
+    // tagged with this staff's index, not on the staff.
     bool IsTextRow = false,
-    /// <summary>
-    /// For a lyrics text row, how many stacked verses it carries (1 = a single
-    /// line). Drives the reserved band height so verse 2+ don't overlap the staff
-    /// below. Always 1 for chord rows and normal staves.
-    /// </summary>
+    // For a lyrics text row, how many stacked verses it carries (1 = a single
+    // line). Drives the reserved band height so verse 2+ don't overlap the staff
+    // below. Always 1 for chord rows and normal staves.
     int TextRowVerses = 1,
-    /// <summary>
-    /// Whether this text row carries LYRICS (vs chord symbols). A lyric row
-    /// renders as "a staff with the lines removed": it occupies a full
-    /// staff-height band, its barlines run at staff height and the words sit
-    /// where the staff would be. Chord rows keep the compact band their
-    /// symbols hang on.
-    /// </summary>
+    // Whether this text row carries LYRICS (vs chord symbols). A lyric row
+    // renders as "a staff with the lines removed": it occupies a full
+    // staff-height band, its barlines run at staff height and the words sit
+    // where the staff would be. Chord rows keep the compact band their
+    // symbols hang on.
     bool IsLyricsTextRow = false
 )
 {

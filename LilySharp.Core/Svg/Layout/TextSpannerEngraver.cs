@@ -27,30 +27,30 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: scm/define-grobs.scm:3504-3535 TextSpanner grob
 /// </remarks>
 public readonly record struct TextSpannerLayout(
-    /// <summary>Start measure index (for system Y lookup).</summary>
+    // Start measure index (for system Y lookup).
     int StartMeasureIndex,
-    /// <summary>Start X position (staff spaces from score start).</summary>
+    // Start X position (staff spaces from score start).
     double StartX,
-    /// <summary>End X position.</summary>
+    // End X position.
     double EndX,
-    /// <summary>X position where the text ends and the line begins.</summary>
+    // X position where the text ends and the line begins.
     double LineStartX,
-    /// <summary>Y position (staff spaces from staff top, positive = down).</summary>
+    // Y position (staff spaces from staff top, positive = down).
     double Y,
-    /// <summary>Display text (e.g., "rit.", "accel.").</summary>
+    // Display text (e.g., "rit.", "accel.").
     string Text,
-    /// <summary>Line style.</summary>
+    // Line style.
     TextSpannerStyle Style,
-    /// <summary>Dash period (length of one dash+gap cycle, in staff spaces).</summary>
+    // Dash period (length of one dash+gap cycle, in staff spaces).
     double DashPeriod,
-    /// <summary>Dash fraction (proportion of period that is visible).</summary>
+    // Dash fraction (proportion of period that is visible).
     double DashFraction,
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition,
-    /// <summary>F3/B: index of the originating rit/accel mark in score.MusicMarks,
-    /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
+    // F3/B: index of the originating rit/accel mark in score.MusicMarks,
+    // so a reused layout re-derives data-pos from the live score. -1 = unresolved.
     int SourceIndex = -1,
-    /// <summary>Which staff this spanner hangs under (per-staff stacking).</summary>
+    // Which staff this spanner hangs under (per-staff stacking).
     int StaffIndex = 0
 );
 

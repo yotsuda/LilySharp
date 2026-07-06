@@ -30,13 +30,11 @@ public sealed record StaffLayout(
     double Height,      // Staff height (typically 4 * staffSpace)
     TuningType? Tuning = null,  // Tuning for tablature staves
     string? InstrumentName = null,  // Display name for this staff
-    /// <summary>Whether this staff is an ossia (rendered at reduced size).</summary>
+    // Whether this staff is an ossia (rendered at reduced size).
     bool IsOssia = false,
-    /// <summary>
-    /// Whether this staff is hidden due to hara-kiri (empty staff removal).
-    /// LILYPOND-REF: lily/hara-kiri-group-spanner.cc — consider_suicide()
-    /// When true, the staff and its contents should not be rendered.
-    /// </summary>
+    // Whether this staff is hidden due to hara-kiri (empty staff removal).
+    // LILYPOND-REF: lily/hara-kiri-group-spanner.cc — consider_suicide()
+    // When true, the staff and its contents should not be rendered.
     bool IsHidden = false
 );
 

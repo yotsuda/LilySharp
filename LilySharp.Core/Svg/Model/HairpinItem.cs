@@ -38,21 +38,21 @@ public enum HairpinDirection
 /// LILYPOND-REF: scm/define-grobs.scm:1641-1666 Hairpin grob
 /// </remarks>
 public sealed record HairpinItem(
-    /// <summary>Crescendo or decrescendo.</summary>
+    // Crescendo or decrescendo.
     HairpinDirection Direction,
-    /// <summary>Measure index of the start note.</summary>
+    // Measure index of the start note.
     int StartMeasureIndex,
-    /// <summary>Item index within the start measure.</summary>
+    // Item index within the start measure.
     int StartItemIndex,
-    /// <summary>Measure index of the end note.</summary>
+    // Measure index of the end note.
     int EndMeasureIndex,
-    /// <summary>Item index within the end measure.</summary>
+    // Item index within the end measure.
     int EndItemIndex,
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition,
-    /// <summary>F3/B: index of the originating cresc/decresc mark in score.MusicMarks,
-    /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
+    // F3/B: index of the originating cresc/decresc mark in score.MusicMarks,
+    // so a reused layout re-derives data-pos from the live score. -1 = unresolved.
     int SourceIndex = -1,
-    /// <summary>The staff this hairpin belongs to (0 = first/only staff).</summary>
+    // The staff this hairpin belongs to (0 = first/only staff).
     int StaffIndex = 0
 );

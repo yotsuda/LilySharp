@@ -27,20 +27,20 @@ public sealed record StaffSpec(
     ClefType Clef,
     string VoiceName,
     string? InstrumentName = null,
-    /// <summary>Hara-kiri: hide this staff in systems where it only rests
-    /// (part property <c>removeEmpty true</c> — LP RemoveEmptyStaves).</summary>
+    // Hara-kiri: hide this staff in systems where it only rests
+    // (part property removeEmpty true — LP RemoveEmptyStaves).
     bool RemoveEmpty = false,
-    /// <summary>Hara-kiri including the FIRST system (part property
-    /// <c>removeEmpty all</c> — LP RemoveAllEmptyStaves).</summary>
+    // Hara-kiri including the FIRST system (part property
+    // removeEmpty all — LP RemoveAllEmptyStaves).
     bool RemoveFirst = false,
-    /// <summary>Staff line count (part property <c>lines N</c>; 5 default).</summary>
+    // Staff line count (part property lines N; 5 default).
     int Lines = 5,
-    /// <summary>A named chord part whose symbols align above this staff
-    /// (<c>staff NAME with chords CHORDPART</c>); the same part can also feed
-    /// a lead-sheet row, so a progression is written once.</summary>
+    // A named chord part whose symbols align above this staff
+    // (staff NAME with chords CHORDPART); the same part can also feed
+    // a lead-sheet row, so a progression is written once.
     string? WithChords = null,
-    /// <summary><c>staff ~flute</c>: the writer opted OUT of the default
-    /// instrument-name label for this staff.</summary>
+    // staff ~flute: the writer opted OUT of the default
+    // instrument-name label for this staff.
     bool NameSuppressed = false
 );
 

@@ -28,31 +28,31 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: scm/define-grobs.scm:2445-2468 OttavaBracket grob defaults
 /// </remarks>
 public readonly record struct OttavaBracketLayout(
-    /// <summary>Start measure index (for system Y lookup).</summary>
+    // Start measure index (for system Y lookup).
     int StartMeasureIndex,
-    /// <summary>Start X position (staff spaces from score start).</summary>
+    // Start X position (staff spaces from score start).
     double StartX,
-    /// <summary>End X position.</summary>
+    // End X position.
     double EndX,
-    /// <summary>Y position (staff spaces from staff top).</summary>
+    // Y position (staff spaces from staff top).
     double Y,
-    /// <summary>Display text (e.g., "8va", "8vb", "15ma", "15mb").</summary>
+    // Display text (e.g., "8va", "8vb", "15ma", "15mb").
     string Text,
-    /// <summary>Whether the bracket is above the staff (true) or below (false).</summary>
+    // Whether the bracket is above the staff (true) or below (false).
     bool IsAbove,
-    /// <summary>Edge height for the end hook (in staff spaces).</summary>
+    // Edge height for the end hook (in staff spaces).
     double EdgeHeight,
-    /// <summary>Dash period for the dashed line.</summary>
+    // Dash period for the dashed line.
     double DashPeriod,
-    /// <summary>Dash fraction for the dashed line.</summary>
+    // Dash fraction for the dashed line.
     double DashFraction,
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition,
-    /// <summary>F3/B: index of the originating ottava mark in score.MusicMarks,
-    /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
+    // F3/B: index of the originating ottava mark in score.MusicMarks,
+    // so a reused layout re-derives data-pos from the live score. -1 = unresolved.
     int SourceIndex = -1,
-    /// <summary>The staff this bracket belongs to (0 = the first/only staff),
-    /// so above-staff stacking leaves lower-staff brackets over their own staff.</summary>
+    // The staff this bracket belongs to (0 = the first/only staff),
+    // so above-staff stacking leaves lower-staff brackets over their own staff.
     int StaffIndex = 0
 );
 

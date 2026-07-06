@@ -27,21 +27,21 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: scm/define-grobs.scm:2175-2230 TrillSpanner grob
 /// </remarks>
 public readonly record struct TrillSpannerLayout(
-    /// <summary>Start measure index (for system Y lookup).</summary>
+    // Start measure index (for system Y lookup).
     int StartMeasureIndex,
-    /// <summary>X position of the "tr" glyph.</summary>
+    // X position of the "tr" glyph.
     double GlyphX,
-    /// <summary>X position where the wavy line starts (after "tr" glyph).</summary>
+    // X position where the wavy line starts (after "tr" glyph).
     double LineStartX,
-    /// <summary>X position where the wavy line ends.</summary>
+    // X position where the wavy line ends.
     double LineEndX,
-    /// <summary>Y position (staff spaces from staff top, negative = above staff).</summary>
+    // Y position (staff spaces from staff top, negative = above staff).
     double Y,
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition,
-    /// <summary>Global staff index this spanner belongs to (multi-staff). The
-    /// above-staff stacker only de-collides staff 0; lower staves keep their
-    /// engraver Y so they stay over their own staff.</summary>
+    // Global staff index this spanner belongs to (multi-staff). The
+    // above-staff stacker only de-collides staff 0; lower staves keep their
+    // engraver Y so they stay over their own staff.
     int StaffIndex = 0,
     int SourceIndex = -1   // F3/B: index into score.TrillSpanners (shared by all broken pieces)
 );

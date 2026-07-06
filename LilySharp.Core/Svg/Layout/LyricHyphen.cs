@@ -69,11 +69,11 @@ public sealed record LyricHyphenParameters
 /// Represents a single hyphen dash segment.
 /// </summary>
 public sealed record HyphenDash(
-    /// <summary>Start X position (in staff spaces).</summary>
+    // Start X position (in staff spaces).
     double X1,
-    /// <summary>End X position (in staff spaces).</summary>
+    // End X position (in staff spaces).
     double X2,
-    /// <summary>Y position (in staff spaces).</summary>
+    // Y position (in staff spaces).
     double Y
 );
 
@@ -84,31 +84,31 @@ public sealed record HyphenDash(
 /// LILYPOND-REF: lily/lyric-hyphen.cc:60-100
 /// </remarks>
 public sealed record LyricHyphenLayout(
-    /// <summary>Index of the source lyric in the lyrics array.</summary>
+    // Index of the source lyric in the lyrics array.
     int LyricIndex,
 
-    /// <summary>Type of connector.</summary>
+    // Type of connector.
     LyricConnectorType Type,
 
-    /// <summary>Hyphen dashes (may be multiple for wide gaps).</summary>
+    // Hyphen dashes (may be multiple for wide gaps).
     ImmutableArray<HyphenDash> Dashes,
 
-    /// <summary>For extenders: start X position.</summary>
+    // For extenders: start X position.
     double ExtenderStartX = 0,
 
-    /// <summary>For extenders: end X position.</summary>
+    // For extenders: end X position.
     double ExtenderEndX = 0,
 
-    /// <summary>For extenders: Y position.</summary>
+    // For extenders: Y position.
     double ExtenderY = 0,
 
-    /// <summary>Whether this connector crosses a system break.</summary>
+    // Whether this connector crosses a system break.
     bool CrossesSystemBreak = false,
 
-    /// <summary>For system-crossing extenders: end of first segment.</summary>
+    // For system-crossing extenders: end of first segment.
     double FirstSegmentEndX = 0,
 
-    /// <summary>For system-crossing extenders: start of second segment.</summary>
+    // For system-crossing extenders: start of second segment.
     double SecondSegmentStartX = 0
 );
 

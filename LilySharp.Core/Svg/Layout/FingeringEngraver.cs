@@ -28,22 +28,22 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: scm/define-grobs.scm — Fingering (font-size . -5, padding . 0.5)
 /// </remarks>
 public readonly record struct FingeringLayout(
-    /// <summary>Measure containing the host note.</summary>
+    // Measure containing the host note.
     int MeasureIndex,
-    /// <summary>Item index of the host note within its measure.</summary>
+    // Item index of the host note within its measure.
     int ItemIndex,
-    /// <summary>Finger number (typically 1-5).</summary>
+    // Finger number (typically 1-5).
     int Number,
-    /// <summary>X coordinate of the digit center (staff spaces from score start).</summary>
+    // X coordinate of the digit center (staff spaces from score start).
     double X,
-    /// <summary>Y coordinate of the digit baseline (staff spaces from staff top, positive=down).</summary>
+    // Y coordinate of the digit baseline (staff spaces from staff top, positive=down).
     double Y,
-    /// <summary>True = above the staff, false = below.</summary>
+    // True = above the staff, false = below.
     bool IsAbove,
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition,
-    /// <summary>F3/B: staff index of the host note/chord, so a reused layout re-derives
-    /// data-pos from the live score (SharedRenderer.ResolveDataPos). -1 = unresolved.</summary>
+    // F3/B: staff index of the host note/chord, so a reused layout re-derives
+    // data-pos from the live score (SharedRenderer.ResolveDataPos). -1 = unresolved.
     int StaffIndex = -1);
 
 /// <summary>

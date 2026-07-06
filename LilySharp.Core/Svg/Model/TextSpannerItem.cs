@@ -48,23 +48,23 @@ public enum TextSpannerStyle
 /// - cresc. --------  (text alternative to hairpin wedge)
 /// </remarks>
 public sealed record TextSpannerItem(
-    /// <summary>The display text (e.g., "rit.", "accel.").</summary>
+    // The display text (e.g., "rit.", "accel.").
     string Text,
-    /// <summary>Measure index of the start point.</summary>
+    // Measure index of the start point.
     int StartMeasureIndex,
-    /// <summary>Item index within the start measure.</summary>
+    // Item index within the start measure.
     int StartItemIndex,
-    /// <summary>Measure index of the end point.</summary>
+    // Measure index of the end point.
     int EndMeasureIndex,
-    /// <summary>Item index within the end measure.</summary>
+    // Item index within the end measure.
     int EndItemIndex,
-    /// <summary>Line style (dashed, solid, none).</summary>
+    // Line style (dashed, solid, none).
     TextSpannerStyle Style,
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition,
-    /// <summary>F3/B: index of the originating rit/accel mark in score.MusicMarks,
-    /// so a reused layout re-derives data-pos from the live score. -1 = unresolved.</summary>
+    // F3/B: index of the originating rit/accel mark in score.MusicMarks,
+    // so a reused layout re-derives data-pos from the live score. -1 = unresolved.
     int SourceIndex = -1,
-    /// <summary>The staff this spanner belongs to (0 = first/only staff).</summary>
+    // The staff this spanner belongs to (0 = first/only staff).
     int StaffIndex = 0
 );

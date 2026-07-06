@@ -27,12 +27,12 @@ namespace LilySharp.Core.Svg.Model;
 /// typically below the staff for expression indications.
 /// </remarks>
 public sealed record CustomTextItem(
-    /// <summary>The text content.</summary>
+    // The text content.
     string Text,
 
-    /// <summary>The measure index where this text appears.</summary>
+    // The measure index where this text appears.
     int MeasureIndex,
 
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition
 );

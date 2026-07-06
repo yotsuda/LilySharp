@@ -28,17 +28,17 @@ namespace LilySharp.Core.Svg.Model;
 ///   tr~~~~~~~~~~~~
 /// </remarks>
 public sealed record TrillSpannerItem(
-    /// <summary>Measure index of the start point.</summary>
+    // Measure index of the start point.
     int StartMeasureIndex,
-    /// <summary>Item index within the start measure.</summary>
+    // Item index within the start measure.
     int StartItemIndex,
-    /// <summary>Measure index of the end point.</summary>
+    // Measure index of the end point.
     int EndMeasureIndex,
-    /// <summary>Item index within the end measure.</summary>
+    // Item index within the end measure.
     int EndItemIndex,
-    /// <summary>Source position for click-to-source mapping.</summary>
+    // Source position for click-to-source mapping.
     int SourcePosition,
-    /// <summary>Global staff index this spanner belongs to (multi-staff routing;
-    /// see <c>DynamicItem.StaffIndex</c>). 0 for single-staff.</summary>
+    // Global staff index this spanner belongs to (multi-staff routing;
+    // see DynamicItem.StaffIndex). 0 for single-staff.
     int StaffIndex = 0
 );

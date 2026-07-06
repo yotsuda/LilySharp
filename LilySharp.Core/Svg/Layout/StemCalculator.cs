@@ -73,11 +73,11 @@ public sealed record StemDetails
 /// LILYPOND-REF: lily/stem.cc:1012-1022 Stem_info struct
 /// </remarks>
 public readonly record struct StemInfo(
-    /// <summary>Ideal stem end Y position (staff spaces from staff top).</summary>
+    // Ideal stem end Y position (staff spaces from staff top).
     double IdealY,
-    /// <summary>Minimum (shortest) stem end Y position.</summary>
+    // Minimum (shortest) stem end Y position.
     double ShortestY,
-    /// <summary>Stem direction: true = up.</summary>
+    // Stem direction: true = up.
     bool StemUp);
 
 /// <summary>

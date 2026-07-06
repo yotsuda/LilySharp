@@ -34,13 +34,13 @@ namespace LilySharp.Core.Svg.Layout;
 public readonly record struct MultiMeasureRestLayout(
     int StartMeasureIndex,
     int MeasureCount,
-    /// <summary>X coordinate of the leftmost measure's start.</summary>
+    // X coordinate of the leftmost measure's start.
     double StartX,
-    /// <summary>X coordinate of the rightmost measure's end.</summary>
+    // X coordinate of the rightmost measure's end.
     double EndX,
-    /// <summary>Y coordinate of the rest's vertical center (staff middle).</summary>
+    // Y coordinate of the rest's vertical center (staff middle).
     double Y,
-    /// <summary>True ⇒ church_rest (1..ExpandLimit), false ⇒ big_rest (H-bar).</summary>
+    // True ⇒ church_rest (1..ExpandLimit), false ⇒ big_rest (H-bar).
     bool UseChurchRest);
 
 /// <summary>

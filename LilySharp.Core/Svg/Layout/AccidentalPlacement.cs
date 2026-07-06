@@ -23,13 +23,13 @@ namespace LilySharp.Core.Svg.Layout;
 /// Information about a positioned accidental within a chord.
 /// </summary>
 public readonly record struct AccidentalLayout(
-    /// <summary>Staff position of the note.</summary>
+    // Staff position of the note.
     int StaffPosition,
-    /// <summary>The accidental type (sharp, flat, natural, etc.).</summary>
+    // The accidental type (sharp, flat, natural, etc.).
     string Accidental,
-    /// <summary>X offset from the note column in staff spaces (negative = left of note).</summary>
+    // X offset from the note column in staff spaces (negative = left of note).
     double XOffset,
-    /// <summary>Whether this is a courtesy (cautionary) accidental.</summary>
+    // Whether this is a courtesy (cautionary) accidental.
     bool IsCourtesy = false
 );
 

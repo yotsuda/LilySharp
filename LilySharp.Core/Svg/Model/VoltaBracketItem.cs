@@ -32,18 +32,18 @@ namespace LilySharp.Core.Svg.Model;
 /// - [1-3. ] = play on first through third time
 /// </remarks>
 public sealed record VoltaBracketItem(
-    /// <summary>Starting measure index (inclusive).</summary>
+    // Starting measure index (inclusive).
     int StartMeasureIndex,
-    
-    /// <summary>Ending measure index (inclusive).</summary>
+
+    // Ending measure index (inclusive).
     int EndMeasureIndex,
-    
-    /// <summary>Volta number text (e.g., "1.", "2.", "1, 3.", "1-3.").</summary>
+
+    // Volta number text (e.g., "1.", "2.", "1, 3.", "1-3.").
     string VoltaText,
-    
-    /// <summary>Whether the bracket is closed at the end (has right hook).</summary>
+
+    // Whether the bracket is closed at the end (has right hook).
     bool IsClosed,
-    
-    /// <summary>Source position for click-to-source mapping.</summary>
+
+    // Source position for click-to-source mapping.
     int SourcePosition
 );

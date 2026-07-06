@@ -113,11 +113,11 @@ public enum BeamScorer
 /// LILYPOND-REF: lily/beam-quanting.cc:69-77 Beam_collision struct
 /// </remarks>
 public readonly record struct BeamCollision(
-    /// <summary>X position relative to beam start (in staff spaces).</summary>
+    // X position relative to beam start (in staff spaces).
     double X,
-    /// <summary>Y range of the collision object (in staff positions, minY to maxY).</summary>
+    // Y range of the collision object (in staff positions, minY to maxY).
     double MinY,
     double MaxY,
-    /// <summary>Base penalty factor for this collision.</summary>
+    // Base penalty factor for this collision.
     double BasePenalty = 1.0
 );

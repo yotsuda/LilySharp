@@ -45,43 +45,43 @@ public enum LyricConnectorType
 /// Multiple syllables form words, connected by hyphens.
 /// </remarks>
 public sealed record LyricItem(
-    /// <summary>The text content of this syllable.</summary>
+    // The text content of this syllable.
     string Text,
 
-    /// <summary>Index of the measure containing this syllable.</summary>
+    // Index of the measure containing this syllable.
     int MeasureIndex,
 
-    /// <summary>Index of the note this syllable is attached to.</summary>
+    // Index of the note this syllable is attached to.
     int ItemIndex,
 
-    /// <summary>Type of connector after this syllable.</summary>
+    // Type of connector after this syllable.
     LyricConnectorType ConnectorType = LyricConnectorType.None,
 
-    /// <summary>Voice ID this lyric belongs to (for multi-voice lyrics). 0 = the
-    /// primary voice; greater than 0 = a named bound voice, whose X is resolved
-    /// from <see cref="Timing"/> against the shared column grid.</summary>
+    // Voice ID this lyric belongs to (for multi-voice lyrics). 0 = the
+    // primary voice; greater than 0 = a named bound voice, whose X is resolved
+    // from Timing against the shared column grid.
     int VoiceId = 0,
 
-    /// <summary>Verse number (1-based) for multiple lyric lines.</summary>
+    // Verse number (1-based) for multiple lyric lines.
     int VerseNumber = 1,
 
-    /// <summary>Musical moment of this syllable's note within its measure. Used
-    /// to place a bound (non-primary) voice's syllable over its real note column
-    /// (which the primary voice's item index would miss when rhythms differ).</summary>
+    // Musical moment of this syllable's note within its measure. Used
+    // to place a bound (non-primary) voice's syllable over its real note column
+    // (which the primary voice's item index would miss when rhythms differ).
     LilySharp.Core.Semantics.Fraction Timing = default,
 
-    /// <summary>Byte offset of this syllable's word in the source. Emitted as the
-    /// SVG data-pos so the preview can highlight the syllable from the editor and
-    /// jump back to it on click, like notes and other grobs.</summary>
+    // Byte offset of this syllable's word in the source. Emitted as the
+    // SVG data-pos so the preview can highlight the syllable from the editor and
+    // jump back to it on click, like notes and other grobs.
     int SourcePosition = 0,
 
-    /// <summary>Global staff index for an independent lyrics ROW (a <c>lyrics name</c>
-    /// score row), so the engraver places the syllable at that row's Y. 0 for
-    /// ordinary lyrics sitting below the first staff.</summary>
+    // Global staff index for an independent lyrics ROW (a lyrics name
+    // score row), so the engraver places the syllable at that row's Y. 0 for
+    // ordinary lyrics sitting below the first staff.
     int StaffIndex = 0,
 
-    /// <summary>True when this syllable belongs to an independent lyrics ROW. The
-    /// engraver then places it WITHIN its row's band (by <see cref="StaffIndex"/>)
-    /// and takes its X from <see cref="Timing"/>, not from a note column.</summary>
+    // True when this syllable belongs to an independent lyrics ROW. The
+    // engraver then places it WITHIN its row's band (by StaffIndex)
+    // and takes its X from Timing, not from a note column.
     bool IsLyricsRow = false
 );
