@@ -314,6 +314,17 @@ key g major
     }
 
     [Fact]
+    public void WrongCaseKeyMode_GivesCleanUnknownMode_NotStrayReference()
+    {
+        // `Major` is a wrong-case (unknown) mode. It must give a clean "unknown mode"
+        // error and be consumed — NOT leak into the music as a bare-reference error.
+        var tree = SyntaxTree.Parse("key c Major\npart vln { clef treble }\n" +
+            "section A { vln { c4 d e f } }\nstructure { A }\nscore \"s\" { staff vln }");
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnknownSymbolCase);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar);
+    }
+
+    [Fact]
     public void MetadataValue_MustBeQuoted()
     {
         // title/composer values are free-text strings (like a score name), so they

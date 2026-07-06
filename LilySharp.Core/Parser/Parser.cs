@@ -1600,6 +1600,18 @@ private GreenNode?[] ParseArticulations()
         {
             mode = Advance();
         }
+        else if (Current.Kind == SyntaxKind.Identifier)
+        {
+            // A bare word here is an unknown / wrong-case mode (e.g. `Major`). Modes
+            // are case-sensitive, so keep the word IN the key node — this preserves
+            // the round-trip AND stops it leaking into the music as a stray phrase
+            // reference — but flag it clearly instead of the generic "use $Major".
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.UnknownSymbolCase,
+                $"Unknown mode '{Current.Text}'. Modes are case-sensitive: major, minor, " +
+                "ionian, dorian, phrygian, lydian, mixolydian, aeolian, locrian.");
+            mode = Advance();
+        }
         else
         {
             var span = new TextSpan(_textPosition, Current.FullWidth);
