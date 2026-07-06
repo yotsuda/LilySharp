@@ -23,7 +23,7 @@ namespace LilySharp.Core.Svg;
 /// <remarks>
 /// Barlines are NOT glyphs in Emmentaler - they are drawn as shapes.
 /// </remarks>
-public static class EmmentalerGlyphs
+internal static class EmmentalerGlyphs
 {
     // === Clefs ===
     // Note: treble_8 "8" is NOT a glyph - it's rendered as italic text by the
