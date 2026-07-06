@@ -19,7 +19,22 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
 $repoServer = Join-Path $repoRoot 'editors\vscode\server'
 
+# Compile the extension TypeScript so the out/ copy below carries the latest
+# client changes (this script also deploys out/ and syntaxes/, not just the server).
+Write-Host "Compiling extension TypeScript..."
+Push-Location (Join-Path $repoRoot 'editors\vscode')
+npm run compile
+$compileExit = $LASTEXITCODE
+Pop-Location
+if ($compileExit -ne 0) { throw "tsc compile failed ($compileExit)" }
+
 Write-Host "Publishing LilySharp.Lsp ($Configuration)..."
+# Clean first: a prior SELF-CONTAINED publish leaves coreclr + the bundled runtime,
+# which the client would detect and then launch the (framework-dependent) apphost
+# DIRECTLY and fail. A clean framework-dependent publish keeps dev deploys fast and
+# the client correctly runs it via `dotnet`. (Marketplace builds are self-contained
+# via editors/vscode/publish-marketplace.ps1.)
+if (Test-Path $repoServer) { Remove-Item $repoServer -Recurse -Force }
 dotnet publish (Join-Path $repoRoot 'LilySharp.Lsp') -c $Configuration -o $repoServer --nologo
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed ($LASTEXITCODE)" }
 
