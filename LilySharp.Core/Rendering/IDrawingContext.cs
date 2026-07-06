@@ -89,6 +89,19 @@ public interface IDrawingContext
         char glyph, double x, double y, double fontSize,
         Color? fill = null);
 
+    /// <summary>
+    /// Draws a notehead glyph and, in interactive SVG output, a tight
+    /// transparent click target the exact size of the notehead ink
+    /// (<paramref name="inkWidth"/> × <paramref name="inkHeight"/> staff-spaces,
+    /// centred vertically on <paramref name="y"/>) so only the head — not the
+    /// whole glyph em-box — is clickable. The default (used by static SVG,
+    /// PDF and PNG backends) just draws the glyph like <see cref="DrawGlyph"/>.
+    /// </summary>
+    void DrawNotehead(
+        char glyph, double x, double y, double fontSize, Color? fill,
+        double inkWidth, double inkHeight)
+        => DrawGlyph(glyph, x, y, fontSize, fill);
+
     /// <summary>Draws plain (non-music) text such as titles, dynamics, lyrics.</summary>
     void DrawText(
         string text, double x, double y, double fontSize,

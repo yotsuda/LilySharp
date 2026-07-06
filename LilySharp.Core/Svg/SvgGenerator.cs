@@ -162,6 +162,7 @@ public static class SvgGenerator
             EmbedFont = options.EmbedFont,
             OmitFontFace = options.OmitFontFace,
             FontDirectory = options.FontDirectory,
+            Interactive = options.Interactive,
         };
         using var doc = new SvgDocumentContext(docOptions);
         SharedRenderer.RenderTo(score, layout, doc, resolveDataPos);

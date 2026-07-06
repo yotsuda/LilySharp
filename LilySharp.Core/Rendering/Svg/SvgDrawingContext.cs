@@ -25,12 +25,14 @@ internal sealed class SvgDrawingContext : IDrawingContext
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
     private readonly StringBuilder _sb;
+    private readonly bool _interactive;
     private int? _currentSourcePosition;
     private int _groupDepth;
 
-    public SvgDrawingContext(StringBuilder sb)
+    public SvgDrawingContext(StringBuilder sb, bool interactive = false)
     {
         _sb = sb;
+        _interactive = interactive;
     }
 
     public void DrawLine(double x1, double y1, double x2, double y2,
@@ -104,6 +106,33 @@ internal sealed class SvgDrawingContext : IDrawingContext
         _sb.AppendLine(string.Format(Inv,
             "  <text class=\"music\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
             x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph)));
+    }
+
+    public void DrawNotehead(char glyph, double x, double y, double fontSize,
+        Color? fill, double inkWidth, double inkHeight)
+    {
+        // Static output: identical to DrawGlyph (keeps exported SVG / snapshots
+        // byte-for-byte unchanged).
+        if (!_interactive)
+        {
+            DrawGlyph(glyph, x, y, fontSize, fill);
+            return;
+        }
+
+        // Interactive preview: the notehead's own <text> hit area is the glyph
+        // em-box (~2× the head, tall and wide). Make the glyph non-interactive
+        // and lay a transparent hit rectangle the exact size of the head ink
+        // (inkWidth × inkHeight, centred on the note Y) over it, so only the
+        // head is clickable. Both carry the same data-pos (the glyph for
+        // highlight, the rect for the click); the webview skips the .nh-hit rect
+        // when it recolors highlights so the transparent box never shows.
+        var fillAttr = fill is { } f ? string.Format(Inv, " fill=\"{0}\"", f.ToHex()) : "";
+        _sb.AppendLine(string.Format(Inv,
+            "  <text class=\"music\" pointer-events=\"none\" x=\"{0:F2}\" y=\"{1:F2}\" font-size=\"{2:F2}\"{3}{4}>{5}</text>",
+            x, y, fontSize, fillAttr, SourceAttr(), Escape(glyph)));
+        _sb.AppendLine(string.Format(Inv,
+            "  <rect class=\"nh-hit\" x=\"{0:F2}\" y=\"{1:F2}\" width=\"{2:F2}\" height=\"{3:F2}\" fill=\"none\" pointer-events=\"all\"{4}/>",
+            x, y - inkHeight / 2, inkWidth, inkHeight, SourceAttr()));
     }
 
     public void DrawText(string text, double x, double y, double fontSize,

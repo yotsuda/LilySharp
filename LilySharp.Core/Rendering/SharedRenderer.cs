@@ -1558,7 +1558,14 @@ public static class SharedRenderer
                 if (note.IsDead)
                     DrawDeadNotehead(x, noteY, noteheadColor, gc);
                 else
-                    gc.DrawGlyph(head, x, noteY, noteFontSize, noteheadColor);
+                {
+                    // Interactive preview gets a tight click target the size of the
+                    // head ink (× the cue scale), centred on noteY — see DrawNotehead.
+                    double headInk = note.IsCue ? 0.66 : 1.0;
+                    gc.DrawNotehead(head, x, noteY, noteFontSize, noteheadColor,
+                        GlyphMetrics.GetNoteheadAdvance(noteValue) * headInk,
+                        GlyphMetrics.GetNoteheadBBox(noteValue).Height * headInk);
+                }
             }
 
         // Ledger lines are drawn by the staff-measure ledger pre-pass, BEFORE
@@ -1678,7 +1685,9 @@ public static class SharedRenderer
                 : head;
             if (!headWiped && !headTransparent)
                 using (gc.Source(chord.SourcePosition))
-                    gc.DrawGlyph(memberHead, x + headOffsets[i], y, noteFontSize, noteheadColor);
+                    gc.DrawNotehead(memberHead, x + headOffsets[i], y, noteFontSize, noteheadColor,
+                        GlyphMetrics.GetNoteheadAdvance(noteValue) * headScale,
+                        GlyphMetrics.GetNoteheadBBox(noteValue).Height * headScale);
             if (y < topY) topY = y;
             if (y > bottomY) bottomY = y;
             if (n.StaffPosition > maxPos) maxPos = n.StaffPosition;
@@ -3538,7 +3547,9 @@ public static class SharedRenderer
                     if (note.Accidental is { } acc)
                         DrawAccidental(acc, isCourtesy: false, currentX, y,
                             g.SourcePosition, gc, eff);
-                    gc.DrawGlyph(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize);
+                    gc.DrawNotehead(EmmentalerGlyphs.NoteheadBlack, currentX, y, scaledFontSize, null,
+                        GlyphMetrics.NoteheadBlackAdvance * eff,
+                        GlyphMetrics.NoteheadBlack.Height * eff);
                     headX.Add(currentX);
                     headY.Add(y);
                     beamCounts.Add(BeamCountForDuration(note.BaseDuration.Denominator));

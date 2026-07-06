@@ -1128,7 +1128,11 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             for (const entry of positions) {
                 const pos = typeof entry === 'object' ? entry.pos : entry;
                 const occ = typeof entry === 'object' ? entry.occ : -1;
-                let matches = Array.from(document.querySelectorAll('[data-pos="' + pos + '"]'));
+                // Skip the transparent notehead hit rects (interactive click
+                // targets): they share the head's data-pos but must never be
+                // recolored — a filled 'nh-hit' rect would show as a box.
+                let matches = Array.from(document.querySelectorAll('[data-pos="' + pos + '"]'))
+                    .filter(el => !el.classList.contains('nh-hit'));
                 if (occ >= 0 && matches.length > 1) {
                     // Pick the occ-th printed INSTANCE — a chord's every head
                     // (plus dots/accidentals) shares one data-pos, so slicing

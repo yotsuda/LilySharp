@@ -37,6 +37,14 @@ public sealed class SvgRenderOptions
     public string? FontDirectory { get; init; }
 
     /// <summary>
+    /// If true, emit interactive click targets — a tight, transparent hit
+    /// rectangle over each notehead sized to the head ink, so only the notehead
+    /// (not the whole glyph em-box) is clickable. Set for the VS Code preview;
+    /// off for static SVG export so exported files stay unchanged.
+    /// </summary>
+    public bool Interactive { get; init; }
+
+    /// <summary>
     /// Default options (reference font by name, requires font installed on system).
     /// </summary>
     public static SvgRenderOptions Default => new();
@@ -55,6 +63,7 @@ public sealed class SvgRenderOptions
     /// </summary>
     public static SvgRenderOptions Preview() => new()
     {
-        OmitFontFace = true
+        OmitFontFace = true,
+        Interactive = true
     };
 }

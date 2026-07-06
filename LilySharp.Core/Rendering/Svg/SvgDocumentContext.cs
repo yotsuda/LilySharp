@@ -36,6 +36,12 @@ public sealed class SvgDocumentOptions
 
     /// <summary>Optional override for the font directory.</summary>
     public string? FontDirectory { get; init; }
+
+    /// <summary>
+    /// If true, pages emit interactive click targets (tight per-notehead hit
+    /// rectangles). Used by the VS Code preview; off for static export.
+    /// </summary>
+    public bool Interactive { get; init; }
 }
 
 /// <summary>
@@ -69,7 +75,7 @@ public sealed class SvgDocumentContext : IDocumentContext
         _currentContent = new StringBuilder();
         _currentWidth = widthSpaces;
         _currentHeight = heightSpaces;
-        _currentPage = new SvgDrawingContext(_currentContent);
+        _currentPage = new SvgDrawingContext(_currentContent, _options.Interactive);
         return _currentPage;
     }
 
