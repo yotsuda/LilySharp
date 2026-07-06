@@ -297,9 +297,10 @@ key g major
     }
 
     [Fact]
-    public void BareEqualsDeclaration_IsRejected_WithPhraseHint()
+    public void BareEqualsDeclaration_IsRejected()
     {
-        // 'name = { … }' was removed in favor of 'phrase name { … }'.
+        // Lily# has no '=' assignment; declarations are 'keyword name { … }'. The
+        // error is neutral — it does not presume which keyword was meant.
         var tree = SyntaxTree.Parse("theme = { c d e f }");
         Assert.True(tree.HasErrors);
         Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.LegacyDeclarationForm);

@@ -1693,11 +1693,13 @@ private GreenNode?[] ParseArticulations()
         // Body is always a music block
         var body = ParseMusicBlock();
 
-        // 'name = { … }' was removed in favor of 'phrase name { … }'. Reject with a
-        // hint and recover by keeping the parsed declaration (so $name still resolves).
+        // Lily# has no '=' assignment — declarations are written 'keyword name { … }'.
+        // Reject neutrally (don't presume which keyword was meant — phrase, section, …)
+        // and recover by keeping the parsed node so $name still resolves.
         var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
         _diagnostics.Error(span, DiagnosticCodes.LegacyDeclarationForm,
-            $"'{name.Text} = {{ … }}' is not a Lily# declaration; use 'phrase {name.Text} {{ … }}'.");
+            $"'{name.Text} = …' is not valid; Lily# declarations use a keyword and braces, " +
+            $"e.g. 'phrase {name.Text} {{ … }}' or 'section {name.Text} {{ … }}'.");
 
         return new VariableDeclarationGreen(name, equals, body);
     }
