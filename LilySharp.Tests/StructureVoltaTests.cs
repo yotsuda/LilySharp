@@ -63,6 +63,22 @@ public sealed class StructureVoltaTests
     }
 
     [Fact]
+    public void BareEnding_WithoutOpeningBracket_IsRejected()
+    {
+        // The '[' is required: write '[2. O]', not a bare '2. O'.
+        var tree = SyntaxTree.Parse(Head + "structure { |: A [1. D] :| 2. O }" + Tail);
+        Assert.True(tree.HasErrors);
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.VoltaBracketRequired);
+    }
+
+    [Fact]
+    public void OpenBracket_WithoutClosingBracket_IsAccepted()
+    {
+        // The closing ']' is optional — absent leaves the cap open.
+        Assert.True(MeasureCount("structure { |: A [1. D :| [2. O }") > 0);
+    }
+
+    [Fact]
     public void FirstEnding_BeforeRepeatBarline_Closes()
     {
         // The 1st ending sits before the :|, so its bracket must close with a down

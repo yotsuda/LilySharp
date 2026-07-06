@@ -2292,13 +2292,22 @@ private GreenNode?[] ParseArticulations()
     }
 
     /// <summary>
-    /// Parse structure alternative: 1. SectionName
+    /// Parse a bare (unbracketed) structure alternative: 1. SectionName.
+    /// The bracket is required — <c>[1. SectionName]</c> — so this rejects the bare
+    /// form with a hint and recovers by keeping the parsed alternative.
     /// </summary>
     private StructureAlternativeGreen ParseStructureAlternative()
     {
+        int startPos = _textPosition;
         var number = Expect(SyntaxKind.IntegerLiteral);
         var dot = Expect(SyntaxKind.Dot);
         var section = Expect(SyntaxKind.Identifier);
+
+        var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
+        _diagnostics.Error(span, DiagnosticCodes.VoltaBracketRequired,
+            $"A volta ending must be bracketed: write '[{number.Text}. {section.Text}]'. " +
+            "The closing ']' is optional (present = closed cap, absent = open).");
+
         return new StructureAlternativeGreen(number, dot, section);
     }
 

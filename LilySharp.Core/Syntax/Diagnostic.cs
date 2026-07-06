@@ -209,6 +209,9 @@ public static class DiagnosticCodes
     /// <summary>Semantic error: invalid barline placement for a volta repeat.</summary>
     public const string VoltaRepeatBarlinePlacement = "LYS1010";
 
+    /// <summary>Syntax error: a volta ending must be bracketed — <c>[N. Section]</c>.</summary>
+    public const string VoltaBracketRequired = "LYS1011";
+
     // Deprecation warnings (LYS3xxx)
 
     /// <summary>Deprecation warning: use of a deprecated bare reference.</summary>

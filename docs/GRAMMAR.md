@@ -274,7 +274,14 @@ StructureItem  = SectionRef                        (* Identifier — shows the s
                | String                            (* custom label for the preceding/section *)
                | NavMark                            (* segno / coda / fine / dc / ds / to coda *)
                | '_' , String                       (* custom text directive *)
+               | StructureVolta                     (* a repeat volta ending *)
                ;
+
+(* A repeat volta ending inside a |: … :| repeat, referencing a section:
+   structure { |: A [1. D] :| [2. O] }
+   The '[' is REQUIRED; the closing ']' is OPTIONAL — present draws the right cap
+   (closed ending), absent leaves it open. *)
+StructureVolta = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , [ '~' ] , Identifier , [ ']' ] ;
 
 NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
                | 'dc' [ 'al' ( 'fine' | 'coda' ) ]
@@ -372,8 +379,9 @@ Barline        = '|' | '||' | '|.' | '|:' | RepeatEnd ;
 RepeatEnd      = ':|' , [ '*' , Integer ] ;          (* :|*N plays the span N times, default 2 *)
 
 (* First/second-time endings inside a |: … :| repeat. '[' followed by an integer is a
-   volta; otherwise '[' … ']' is a manual beam group. *)
-InlineVolta    = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , { MusicItem } , ']' ;
+   volta; otherwise '[' … ']' is a manual beam group. The '[' is REQUIRED; the closing
+   ']' is OPTIONAL — present draws the right cap (closed ending), absent leaves it open. *)
+InlineVolta    = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , { MusicItem } , [ ']' ] ;
 Beam           = '[' | ']' ;
 PhraseRef      = '$' , Identifier ;
 

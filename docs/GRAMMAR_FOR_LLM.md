@@ -154,7 +154,10 @@ below the staff — the parser rejects it). Placement applies only to dynamic le
 
 - Barlines: `|` single, `||` double, `|.` final, `|:` repeat start, `:|` repeat end.
 - Volta repeats are symbolic; endings are inline `[1. ... ]` `[2. ... ]`. Play count
-  defaults to the highest ending number; set it with `*N`.
+  defaults to the highest ending number; set it with `*N`. The opening `[` is required
+  (a bare `1. ...` ending is rejected); the closing `]` is optional — write it to draw
+  the right cap (closed ending), omit it to leave the ending open. Section-level endings
+  in a `structure { }` repeat use the same `[N. Section]` form.
 
 ```
 |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ]
