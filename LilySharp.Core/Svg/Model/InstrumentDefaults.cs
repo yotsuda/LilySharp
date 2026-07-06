@@ -26,6 +26,29 @@ namespace LilySharp.Core.Svg.Model;
 public static class InstrumentDefaults
 {
     /// <summary>
+    /// Splits an <c>instrument</c> property's value tokens into the PRESET (the bare
+    /// words, e.g. <c>violin</c> / <c>bass-guitar</c> — which drive clef/octave/tuning
+    /// and MIDI) and the DISPLAY name (a trailing quoted <c>"…"</c> label if present,
+    /// else the preset). A quoted-only value (<c>instrument "1st Violin"</c>) yields
+    /// that string as both, so free-text names keep working.
+    /// </summary>
+    public static (string Preset, string DisplayName) SplitInstrument(
+        System.Collections.Generic.IEnumerable<string> valueTokenTexts)
+    {
+        string? label = null;
+        var preset = new System.Text.StringBuilder();
+        foreach (var t in valueTokenTexts)
+        {
+            if (t.Length >= 2 && t[0] == '"' && t[^1] == '"')
+                label = t[1..^1];       // trailing quoted display label (last wins)
+            else
+                preset.Append(t);       // bare word / hyphen segment
+        }
+        string presetText = preset.Length > 0 ? preset.ToString() : (label ?? "");
+        return (presetText, label ?? presetText);
+    }
+
+    /// <summary>
     /// Gets the default clef and octave for an instrument.
     /// </summary>
     /// <param name="instrument">The instrument name.</param>

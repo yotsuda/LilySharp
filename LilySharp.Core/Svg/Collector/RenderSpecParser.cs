@@ -271,7 +271,7 @@ public static class RenderSpecParser
             ? null
             : nameOverride
               ?? GetPartProperty(staff, voiceName, "name")
-              ?? GetPartProperty(staff, voiceName, "instrument");
+              ?? GetInstrument(staff, voiceName)?.DisplayName;
 
         // Hara-kiri, as a part property: `removeEmpty true` hides the staff in
         // systems where it only rests but keeps it in the FIRST system
@@ -303,7 +303,7 @@ public static class RenderSpecParser
         // implied by the part's `instrument` preset → else guitar.
         string? tuningName = tuningToken?.Text.ToLowerInvariant()
             ?? GetPartProperty(tab, voiceName, "tuning")?.ToLowerInvariant()
-            ?? InstrumentDefaults.GetTuning(GetPartProperty(tab, voiceName, "instrument"));
+            ?? InstrumentDefaults.GetTuning(GetInstrument(tab, voiceName)?.Preset);
         TuningType tuning = tuningName switch
         {
             "bass" => TuningType.Bass,
@@ -415,6 +415,35 @@ public static class RenderSpecParser
             }
         }
 
+        return null;
+    }
+
+    /// <summary>
+    /// Reads a part's <c>instrument</c> property split into its preset (drives
+    /// clef/octave/tuning) and display name (a trailing <c>"…"</c> label, else the
+    /// preset). Null when the part has no <c>instrument</c> property.
+    /// </summary>
+    private static (string Preset, string DisplayName)? GetInstrument(SyntaxNode node, string partName)
+    {
+        var root = node;
+        while (root.Parent != null)
+            root = root.Parent;
+
+        foreach (var partDecl in root.DescendantNodes().OfType<PartDeclarationSyntax>())
+        {
+            if (partDecl.Name.Text != partName)
+                continue;
+            foreach (var prop in partDecl.Properties)
+            {
+                if (prop.NameToken.Text.ToLowerInvariant() != "instrument")
+                    continue;
+                var texts = new List<string>();
+                for (int vi = 2; vi < prop.SlotCount; vi++)
+                    if (prop.GetChild(vi) is SyntaxTokenNode vt)
+                        texts.Add(vt.Text);
+                return texts.Count == 0 ? null : InstrumentDefaults.SplitInstrument(texts);
+            }
+        }
         return null;
     }
 

@@ -173,7 +173,7 @@ Mode           = 'major' | 'minor' | 'ionian' | 'dorian' | 'phrygian'
 PartDecl       = 'part' , Identifier , [ PartBody ] ;
 PartBody       = '{' , { PartProperty } , '}' ;
 PartProperty   = 'clef'        , ClefName
-               | 'instrument'  , ( Identifier | String )
+               | 'instrument'  , ( Identifier , [ String ] | String )
                | 'channel'     , Integer
                | 'transpose'   , PitchToken
                | 'tuning'      , Identifier
@@ -182,6 +182,12 @@ PartProperty   = 'clef'        , ClefName
                | 'removeEmpty' , ( 'true' | 'all' | 'false' ) ;
 
 ClefName       = 'treble' | 'bass' | 'alto' | 'tenor' | 'treble_8' ;
+
+(* instrument: a bare preset word (violin, cello, piano-right, …) drives the
+   default clef/octave/tuning and the MIDI timbre, and is shown as the staff name.
+   An optional trailing quoted string overrides just the shown name, keeping the
+   preset's defaults: `instrument cello "Cello I"` = cello defaults, label "Cello I".
+   A quoted string alone is a free-text name with no preset (default clef). *)
 
 (* removeEmpty (hara-kiri): hide this part's staff in systems where it only
    rests. 'true' keeps the FIRST system (LilyPond \RemoveEmptyStaves);

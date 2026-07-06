@@ -462,11 +462,13 @@ public sealed class MidiExporter
                 {
                     if (prop.NameToken.Text.ToLowerInvariant() == "instrument")
                     {
-                        var sb = new System.Text.StringBuilder();
+                        // MIDI timbre follows the preset (the bare word), not a
+                        // trailing "…" display label: instrument violin "1st Violin".
+                        var texts = new System.Collections.Generic.List<string>();
                         for (int vi = 2; vi < prop.SlotCount; vi++)
                             if (prop.GetChild(vi) is SyntaxTokenNode vt)
-                                sb.Append(vt.Text);
-                        source = sb.ToString().Trim('"');
+                                texts.Add(vt.Text);
+                        source = LilySharp.Core.Svg.Model.InstrumentDefaults.SplitInstrument(texts).Preset;
                         break;
                     }
                 }

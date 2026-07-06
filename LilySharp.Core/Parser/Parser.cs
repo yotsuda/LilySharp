@@ -418,6 +418,11 @@ internal sealed class Parser
                     values.Add(Advance());
                 }
             }
+            // An instrument preset may carry a quoted display-name label:
+            // `instrument violin "1st Violin"` — the preset drives clef/octave/tuning
+            // defaults while the quoted label overrides the shown instrument name.
+            if (propName.Kind == SyntaxKind.InstrumentKeyword && Check(SyntaxKind.StringLiteral))
+                values.Add(Advance());
             return new PropertyAssignmentGreen(propName, colon, [.. values]);
         }
         return null;

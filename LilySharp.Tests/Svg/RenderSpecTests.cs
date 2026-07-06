@@ -139,6 +139,21 @@ public class RenderSpecTests
     }
 
     [Fact]
+    public void Instrument_PresetPlusLabel_LabelShown_PresetDrivesClef()
+    {
+        // `instrument cello "Cello I"` — the cello preset drives the default clef
+        // (bass), while the quoted label overrides the displayed instrument name.
+        var tree = SyntaxTree.Parse(
+            "part vc { instrument cello \"Cello I\" }\n" +
+            "section A { vc { c4 d e f } }\nstructure { A }\nscore \"s\" { staff vc }");
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
+
+        var staff = (RenderSpecParser.FindFirst(tree)!.Items[0] as SingleStaffSpec)!.Staff;
+        Assert.Equal("Cello I", staff.InstrumentName);   // quoted label is shown
+        Assert.Equal(ClefType.Bass, staff.Clef);         // cello preset → bass clef
+    }
+
+    [Fact]
     public void ParseMixedStaffTypes_ReturnsCorrectStructure()
     {
         var source = """
