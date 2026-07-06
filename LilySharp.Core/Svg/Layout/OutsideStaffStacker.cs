@@ -672,9 +672,9 @@ public static class OutsideStaffStacker
     /// side-positioned against ONE accumulated skyline, parameterized by the
     /// stacking direction, rather than two hand-mirrored implementations.
     ///
-    /// Coordinates here are device Y (Y-down). <paramref name="_dir"/> = +1
+    /// Coordinates here are device Y (Y-down). <c>_dir</c> = +1
     /// stacks DOWN (below the staff: the frontier is the largest device Y, the
-    /// edge furthest below); <paramref name="_dir"/> = -1 stacks UP (above the
+    /// edge furthest below); <c>_dir</c> = -1 stacks UP (above the
     /// staff: the frontier is the smallest device Y, the edge furthest above).
     /// <see cref="Frontier"/> returns the staff edge when no region overlaps.
     /// </remarks>

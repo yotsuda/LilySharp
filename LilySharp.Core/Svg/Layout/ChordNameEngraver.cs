@@ -86,14 +86,14 @@ public static class ChordNameEngraver
     /// <summary>
     /// Calculates chord name layouts from collected items.
     /// </summary>
-    /// <param name="systemSkylines">
-    /// Per-system up/down skylines (1:1 with <paramref name="systems"/>). When supplied,
-    /// the chord-name line of each system is raised so it clears notes/ledger lines that
-    /// poke above the staff — LilyPond skyline-spaces the ChordNames VerticalAxisGroup
-    /// above the staff's up-skyline rather than from a fixed offset.
+    /// <remarks>
+    /// <c>systemSkylines</c> carries the per-system up/down skylines (1:1 with
+    /// <c>systems</c>). When supplied, the chord-name line of each system is raised so it
+    /// clears notes/ledger lines that poke above the staff — LilyPond skyline-spaces the
+    /// ChordNames VerticalAxisGroup above the staff's up-skyline rather than from a fixed offset.
     /// LILYPOND-REF: lily/axis-group-interface.cc skyline-based VerticalAxisGroup spacing;
     /// ly/engraver-init.ly:721-722 ChordNames staff-affinity=DOWN, relatedstaff padding=0.5.
-    /// </param>
+    /// </remarks>
     public static ImmutableArray<ChordNameLayout> Calculate(
         ImmutableArray<ChordNameItem> chordNames,
         ImmutableArray<SystemLayout> systems,

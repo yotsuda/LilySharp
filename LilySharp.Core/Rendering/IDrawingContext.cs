@@ -85,6 +85,7 @@ public interface IDrawingContext
     /// <param name="x">X position of the glyph anchor (staff-spaces).</param>
     /// <param name="y">Y position of the glyph anchor (staff-spaces).</param>
     /// <param name="fontSize">Font size in staff-spaces (typically 4.0).</param>
+    /// <param name="fill">Glyph color; null uses the renderer default (opaque black).</param>
     void DrawGlyph(
         char glyph, double x, double y, double fontSize,
         Color? fill = null);

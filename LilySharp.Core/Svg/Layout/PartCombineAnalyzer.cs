@@ -204,6 +204,7 @@ public static class PartCombineAnalyzer
     /// </summary>
     /// <param name="combineItems">State changes from Analyze()</param>
     /// <param name="measureLayouts">Measure layouts for X position lookup</param>
+    /// <param name="measures">Measures for the combined part, for timing/context lookup.</param>
     /// <returns>Layout items for rendering</returns>
     public static ImmutableArray<PartCombineLayout> Calculate(
         ImmutableArray<PartCombineItem> combineItems,

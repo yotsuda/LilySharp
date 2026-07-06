@@ -196,7 +196,6 @@ public sealed class DurationSyntax : SyntaxNode
 }
 
 /// <summary>
-/// <summary>
 /// A note: pitch + optional duration + optional tremolo + articulations
 /// </summary>
 public sealed class NoteSyntax : SyntaxNode
@@ -389,7 +388,7 @@ public sealed class RestSyntax : SyntaxNode
 }
 
 /// <summary>
-/// A chord: < pitches > + optional duration
+/// A chord: <c>&lt; pitches &gt;</c> + optional duration
 /// </summary>
 public sealed class ChordSyntax : SyntaxNode
 {
@@ -1142,7 +1141,7 @@ public sealed class AlternativeClauseSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Parallel expression: << expr \\ expr >>
+/// Parallel expression: <c>&lt;&lt; expr \\ expr &gt;&gt;</c>
 /// </summary>
 public sealed class ParallelExpressionSyntax : SyntaxNode
 {

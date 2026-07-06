@@ -26,6 +26,8 @@ namespace LilySharp.Core.Syntax;
 /// (0 = middle line, positive = up), from LilyPond's drums-style table.</param>
 /// <param name="Notehead">Notehead style from the same table.</param>
 /// <param name="GmKey">General MIDI percussion key (channel 10).</param>
+/// <param name="Mark">Auto articulation from the drums-style table: "stopped" (+) on the
+/// closed hi-hat, "open" (○) on the open hi-hat; null for no mark.</param>
 public readonly record struct DrumInfo(
     string FullName, int StaffPosition, NoteheadStyle Notehead, int GmKey,
     // Auto articulation from the drums-style table: "stopped" (+) on the

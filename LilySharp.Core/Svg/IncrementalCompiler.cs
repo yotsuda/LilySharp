@@ -87,7 +87,7 @@ public sealed class IncrementalCompiler
     public bool LastEditSkippedLineBreak { get; private set; }
 
     /// <summary>Whether the most recent <see cref="Edit"/> reused the ENTIRE cached
-    /// ScoreLayout (skipping <see cref="LayoutEngine.Layout"/> outright). Implies
+    /// ScoreLayout (skipping <see cref="LayoutEngine"/>.Layout outright). Implies
     /// <see cref="LastEditSkippedLineBreak"/>. For diagnostics / tests.</summary>
     public bool LastEditReusedLayout { get; private set; }
 

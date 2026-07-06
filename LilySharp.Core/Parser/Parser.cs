@@ -141,6 +141,7 @@ internal sealed class Parser
         return null;
     }
 
+    /// <summary>
     /// Parse the entire source into a compilation unit.
     /// </summary>
     public CompilationUnitGreen ParseCompilationUnit()

@@ -97,6 +97,8 @@ public sealed class KnuthPlassBreaker
     /// Finds optimal line breaks for measures.
     /// </summary>
     /// <param name="measures">Measures to break into lines.</param>
+    /// <param name="baseShortestDuration">Optional spacing base-shortest-duration override
+    /// (staff-space scaling of note spacing); null uses the score default.</param>
     /// <returns>List of measure groups, each representing one line.</returns>
     public List<List<Measure>> BreakIntoLines(IReadOnlyList<Measure> measures,
                                                double? baseShortestDuration = null)

@@ -173,7 +173,7 @@ internal sealed class RestGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// A chord: < pitch pitch ... > + optional duration + optional tremolo
+/// A chord: <c>&lt; pitch pitch ... &gt;</c> + optional duration + optional tremolo
 /// </summary>
 internal sealed class ChordGreen : GreenSyntaxNode
 {
@@ -281,13 +281,12 @@ internal sealed class StaffDeclarationGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class PropertyAssignmentGreen : GreenSyntaxNode
 {
-    public PropertyAssignmentGreen(SyntaxToken name, SyntaxToken colon, GreenNode?[] valueTokens)
+    public PropertyAssignmentGreen(SyntaxToken name, SyntaxToken? colon, GreenNode?[] valueTokens)
         : base(SyntaxKind.PropertyAssignment, [name, colon, .. valueTokens])
     {
     }
 }
 
-/// <summary>
 /// <summary>
 /// Time signature: time 4/4
 /// </summary>
@@ -340,6 +339,7 @@ internal sealed class PartialDeclarationGreen : GreenSyntaxNode
     }
 }
 
+/// <summary>
 /// Metadata declaration: title "value" or tempo 120
 /// </summary>
 internal sealed class MetadataDeclarationGreen : GreenSyntaxNode
@@ -498,7 +498,7 @@ internal sealed class AlternativeClauseGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Parallel expression: << expr \\ expr >>
+/// Parallel expression: <c>&lt;&lt; expr \\ expr &gt;&gt;</c>
 /// </summary>
 internal sealed class ParallelExpressionGreen : GreenSyntaxNode
 {
@@ -1093,7 +1093,7 @@ internal sealed class LyricSyllableGreen : GreenSyntaxNode
 
 /// <summary>
 /// An independent chord part block: <c>chords name { c | g:7 c | }</c>. Same chord
-/// entry grammar as <see cref="ChordNamesBlockGreen"/>, but carries a (required)
+/// entry grammar as <see cref="ChordEntryGreen"/>, but carries a (required)
 /// name binding it to a chord row placed via <c>chords name</c> in a score. The
 /// name sits between the keyword and the brace (mirrors LyricsBlockGreen).
 /// </summary>

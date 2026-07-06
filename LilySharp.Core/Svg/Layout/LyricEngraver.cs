@@ -139,6 +139,14 @@ public sealed class LyricEngraver
     private const double MinSyllableBoxWidth = 0.8;
 
 
+    /// <summary>Baseline of an independent lyrics ROW's verse 1 below the row band's
+    /// top, so the text sits inside the reserved band (cf. ChordRow text baseline).</summary>
+    // Verse 1's baseline inside the row's STAFF-HEIGHT band: the text block
+    // (ascender 2.11 + descender 0.9) vertically centred in the 4.0 ss band —
+    // the words sit where the staff lines would be, "a staff with the lines
+    // removed".
+    private const double LyricRowBaseline = 2.6;
+
     /// <summary>
     /// Calculate layouts for all lyrics in a score.
     /// </summary>
@@ -153,14 +161,8 @@ public sealed class LyricEngraver
     /// max(basic-distance, down-skyline + lyric-extent), the staff-affinity-UP
     /// VerticalAxisGroup spacing (engraver-init.ly:648-652).
     /// </param>
-    /// <summary>Baseline of an independent lyrics ROW's verse 1 below the row band's
-    /// top, so the text sits inside the reserved band (cf. ChordRow text baseline).</summary>
-    // Verse 1's baseline inside the row's STAFF-HEIGHT band: the text block
-    // (ascender 2.11 + descender 0.9) vertically centred in the 4.0 ss band —
-    // the words sit where the staff lines would be, "a staff with the lines
-    // removed".
-    private const double LyricRowBaseline = 2.6;
-
+    /// <param name="staffYByIndex">Optional per-staff-index Y positions (staff spaces) for
+    /// placing lyric rows in a multi-staff score; null falls back to <paramref name="staffBottom"/>.</param>
     public ImmutableArray<LyricLayout> CalculateLayouts(
         IReadOnlyList<LyricItem> lyrics,
         IReadOnlyList<MeasureLayout> measureLayouts,

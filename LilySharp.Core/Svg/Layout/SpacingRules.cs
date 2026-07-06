@@ -1181,6 +1181,8 @@ public static class SpacingRules
     /// Creates all springs for a measure.
     /// </summary>
     /// <param name="measure">The measure to create springs for</param>
+    /// <param name="baseShortestDuration">Optional spacing base-shortest-duration override;
+    /// null uses the score default.</param>
     /// <returns>Array of springs (one between each pair of adjacent reference points)</returns>
     public static ImmutableArray<Spring> CreateSpringsForMeasure(Measure measure,
                                                                  double? baseShortestDuration = null)
@@ -1261,6 +1263,8 @@ public static class SpacingRules
     /// <param name="measure">The measure to create springs for</param>
     /// <param name="measureIndex">Index of this measure in the score</param>
     /// <param name="lyrics">All lyrics in the score</param>
+    /// <param name="baseShortestDuration">Optional spacing base-shortest-duration override;
+    /// null uses the score default.</param>
     /// <returns>Array of springs with lyrics-adjusted minimum distances</returns>
     /// <remarks>
     /// LILYPOND-REF: lily/separation-item.cc:49-70 set_distance()
@@ -1612,6 +1616,7 @@ public static class SpacingRules
     /// <param name="item">The music item</param>
     /// <param name="referenceX">X coordinate of the reference point (notehead center)</param>
     /// <param name="staffY">Y coordinate of the staff's middle line</param>
+    /// <param name="isBeamed">True when the item is beamed, so its flag is omitted from the skyline.</param>
     public static HorizontalSkyline CreateRightSkyline(MusicItem item, double referenceX, double staffY,
         bool isBeamed = false)
     {

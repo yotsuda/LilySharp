@@ -1307,7 +1307,7 @@ public sealed class MeasureCollector
     }
 
     /// <summary>
-    /// Builds the measure tracks for voices 1..N-1 of a << \\ >> mixed stream
+    /// Builds the measure tracks for voices 1..N-1 of a <c>&lt;&lt; \\ &gt;&gt;</c> mixed stream
     /// from the spans recorded in <see cref="_parallelSpans"/>: each track is
     /// full length, empty except where a span supplies its sub-voice. Shared by
     /// the single-staff Score path (<see cref="BuildMultiVoiceScore"/>) and the
@@ -1371,7 +1371,7 @@ public sealed class MeasureCollector
 
     /// <summary>
     /// Collects ALL voices of one staff in a multi-staff score: the primary
-    /// (voice-0) stream plus any voices contributed by << \\ >> spans inside
+    /// (voice-0) stream plus any voices contributed by <c>&lt;&lt; \\ &gt;&gt;</c> spans inside
     /// that staff. Voice 0 keeps the part's name (the staff is keyed by it for
     /// per-staff key signatures); extra voices get a derived name.
     /// </summary>
@@ -2723,7 +2723,7 @@ public sealed class MeasureCollector
     private static bool IsInsideTuplet(SyntaxNode node) => node.IsInside<TupletExpressionSyntax>();
 
     /// <summary>
-    /// Checks if a node is inside a << \\ >> parallel expression. The primary
+    /// Checks if a node is inside a <c>&lt;&lt; \\ &gt;&gt;</c> parallel expression. The primary
     /// walk uses this to SKIP a span's inner nodes (they are processed by the
     /// ParallelExpressionSyntax handler) while the span node itself passes
     /// through atomically.
