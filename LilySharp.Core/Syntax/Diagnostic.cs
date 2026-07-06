@@ -213,8 +213,6 @@ public static class DiagnosticCodes
 
     /// <summary>Deprecation warning: use of a deprecated bare reference.</summary>
     public const string DeprecatedBareReference = "LYS3001";
-    /// <summary>Deprecation warning: use of the deprecated <c>use</c> keyword.</summary>
-    public const string DeprecatedUseKeyword = "LYS3002";
 
     // Measure errors (LYS2xxx)
 

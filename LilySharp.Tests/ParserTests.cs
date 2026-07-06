@@ -286,25 +286,14 @@ key g major
     }
 
     [Fact]
-    public void ParseVariableDeclaration()
+    public void BareEqualsDeclaration_BuildsRecoveryNode()
     {
-        var tree = SyntaxTree.Parse(@"let theme = relative c' { c d e f }
-
-part {
-    use theme
-}");
+        // 'name = { … }' is rejected in favor of 'phrase name { … }', but a
+        // VariableDeclaration node is still built so $name can resolve.
+        var tree = SyntaxTree.Parse("theme = { c d e f }");
         var varDecl = tree.Root.GetSlot(0) as VariableDeclarationGreen;
         Assert.NotNull(varDecl);
         Assert.Equal(SyntaxKind.VariableDeclaration, varDecl.Kind);
-    }
-
-    [Fact]
-    public void LetDeclaration_IsRejected_WithPhraseHint()
-    {
-        // 'let name = …' was removed in favor of 'phrase name { … }'.
-        var tree = SyntaxTree.Parse("let theme = { c d e f }");
-        Assert.True(tree.HasErrors);
-        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.LegacyDeclarationForm);
     }
 
     [Fact]
@@ -348,8 +337,8 @@ part {
     [Fact]
     public void ParseVariableReference()
     {
-        var tree = SyntaxTree.Parse(@"let theme = { c d e f }
-use theme");
+        var tree = SyntaxTree.Parse(@"phrase theme { c d e f }
+$theme");
 
         var varRef = tree.Root.GetSlot(1) as VariableReferenceGreen;
         Assert.NotNull(varRef);
@@ -1134,14 +1123,4 @@ structure { Main }
         Assert.Contains("$intro", warnings[0].Message);
     }
 
-    [Fact]
-    public void UseKeywordEmitsDeprecationWarning()
-    {
-        var tree = SyntaxTree.Parse(@"phrase theme { c d e f }
-use theme");
-        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
-        var warnings = tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.DeprecatedUseKeyword).ToList();
-        Assert.Single(warnings);
-        Assert.Contains("$theme", warnings[0].Message);
-    }
 }

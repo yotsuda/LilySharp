@@ -33,10 +33,11 @@ public class ReservedWordsTests
     // four clef names which are intentionally allowed as names (see ClefNamesAreNames).
     public static readonly string[] Reserved =
     {
+        "version",
         "section", "structure", "include", "tab", "ossia", "transpose", "octave",
         "instrument", "channel",
         "score", "part", "staff", "grandStaff", "voice", "phrase", "repeat", "volta",
-        "alternative", "let", "use", "break", "partial",
+        "alternative", "break", "partial",
         "title", "composer", "tempo", "time", "key", "clef",
         "major", "minor", "dorian", "phrygian", "lydian", "mixolydian", "aeolian", "locrian",
         "tuplet", "grace", "acciaccatura", "appoggiatura", "lyrics", "chords",

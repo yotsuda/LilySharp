@@ -94,8 +94,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
    (tempo value words). Articulation, ornament, dynamic-text and mark NAMES
    (staccato, tr, sfz, cresc, dim, …) are resolved from the '@name' text and are
    NOT reserved. 'volta'/'alternative' are reserved only to reject the removed
-   LilyPond-style forms; 'include'/'let'/'use' are reserved for multi-file and
-   variable extensions. *)
+   LilyPond-style forms; 'include' is reserved for multi-file support. *)
 
 ### Operators & Punctuation
 

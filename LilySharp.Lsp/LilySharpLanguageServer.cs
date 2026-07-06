@@ -1916,7 +1916,7 @@ public sealed class LilySharpLanguageServer
             {
                 // Keywords
                 SyntaxKind.RepeatKeyword or
-                SyntaxKind.AlternativeKeyword or SyntaxKind.LetKeyword or SyntaxKind.UseKeyword or
+                SyntaxKind.AlternativeKeyword or
                 SyntaxKind.ScoreKeyword or SyntaxKind.PartKeyword or SyntaxKind.StaffKeyword or
                 SyntaxKind.VoiceKeyword or SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword or
                 SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or SyntaxKind.KeyKeyword or

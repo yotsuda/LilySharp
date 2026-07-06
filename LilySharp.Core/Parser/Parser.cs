@@ -261,8 +261,7 @@ internal sealed class Parser
             // Variable declaration: identifier = { ... } (legacy)
             SyntaxKind.Identifier when Peek(1)?.Kind == SyntaxKind.Equals => ParseNewVariableDeclaration(),
 
-            SyntaxKind.LetKeyword => ParseVariableDeclaration(),
-            SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
+            SyntaxKind.Dollar => ParseVariableReference(),
 
             SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword => ParseMetadataDeclaration(),
             SyntaxKind.TimeKeyword => ParseTimeSignature(),
@@ -599,40 +598,12 @@ internal sealed class Parser
 
     // ========== Variables ==========
 
-    private VariableDeclarationGreen ParseVariableDeclaration()
-    {
-        int startPos = _textPosition;
-        var letKeyword = Expect(SyntaxKind.LetKeyword);
-        var name = Expect(SyntaxKind.Identifier);
-        var equals = Expect(SyntaxKind.Equals);
-        var expression = ParseMusicExpression();
-
-        // 'let name = …' was removed in favor of 'phrase name { … }'. Reject with a
-        // hint and recover by keeping the parsed declaration (so $name still resolves).
-        var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
-        _diagnostics.Error(span, DiagnosticCodes.LegacyDeclarationForm,
-            $"'let {name.Text} = …' is not a Lily# declaration; use 'phrase {name.Text} {{ … }}'.");
-
-        return new VariableDeclarationGreen(letKeyword, name, equals, expression);
-    }
-
     private VariableReferenceGreen ParseVariableReference()
     {
-        if (Check(SyntaxKind.UseKeyword))
-        {
-            var span = new TextSpan(_textPosition, Current.FullWidth);
-            var use = Advance();
-            var name = Expect(SyntaxKind.Identifier);
-            _diagnostics.Warning(span, DiagnosticCodes.DeprecatedUseKeyword,
-                $"Use '${name.Text}' instead of 'use {name.Text}' for variable references");
-            return new VariableReferenceGreen(use, name);
-        }
-        else // $name
-        {
-            var dollar = Expect(SyntaxKind.Dollar);
-            var name = ExpectPartName();   // phrase refs may name clef-name words too
-            return new VariableReferenceGreen(dollar, name);
-        }
+        // $name — reference a phrase.
+        var dollar = Expect(SyntaxKind.Dollar);
+        var name = ExpectPartName();   // phrase refs may name clef-name words too
+        return new VariableReferenceGreen(dollar, name);
     }
 
 
@@ -746,7 +717,7 @@ internal sealed class Parser
             SyntaxKind.OpenBracket => ParseBeamOrInlineVolta(),
             SyntaxKind.CloseBracket => ParseBeamMarker(),
 
-            SyntaxKind.UseKeyword or SyntaxKind.Dollar => ParseVariableReference(),
+            SyntaxKind.Dollar => ParseVariableReference(),
 
 
             SyntaxKind.RepeatKeyword => ParseRepeatExpression(),

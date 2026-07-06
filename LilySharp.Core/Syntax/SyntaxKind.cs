@@ -105,10 +105,6 @@ public enum SyntaxKind : ushort
     VoltaKeyword,
     /// <summary>The <c>alternative</c> keyword (legacy).</summary>
     AlternativeKeyword,
-    /// <summary>The <c>let</c> keyword (legacy).</summary>
-    LetKeyword,
-    /// <summary>The <c>use</c> keyword (legacy).</summary>
-    UseKeyword,
     /// <summary>The <c>title</c> keyword.</summary>
     TitleKeyword,
     /// <summary>The <c>composer</c> keyword.</summary>

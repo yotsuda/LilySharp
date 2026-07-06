@@ -291,8 +291,8 @@ These are keywords and cannot be used as bare identifiers, EXCEPT the four clef-
 part is fine). Keywords:
 
 ```text
-section structure include tab ossia transpose octave instrument channel
-score part staff grandStaff voice phrase repeat volta alternative let use break partial
+version section structure include tab ossia transpose octave instrument channel
+score part staff grandStaff voice phrase repeat volta alternative break partial
 title composer tempo time key clef
 major minor ionian dorian phrygian lydian mixolydian aeolian locrian
 treble bass alto tenor treble_8

@@ -363,16 +363,6 @@ internal sealed class VariableDeclarationGreen : GreenSyntaxNode
         : base(SyntaxKind.VariableDeclaration, [name, equals, expression])
     {
     }
-
-    // Legacy style: let name = expr
-    public VariableDeclarationGreen(
-        SyntaxToken letKeyword,
-        SyntaxToken name,
-        SyntaxToken equals,
-        GreenNode expression)
-        : base(SyntaxKind.VariableDeclaration, [letKeyword, name, equals, expression])
-    {
-    }
 }
 
 /// <summary>

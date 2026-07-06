@@ -1049,7 +1049,7 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Variable declaration: let name = expr
+/// Variable declaration: name = expr
 /// </summary>
 public sealed class VariableDeclarationSyntax : SyntaxNode
 {
@@ -1058,18 +1058,12 @@ public sealed class VariableDeclarationSyntax : SyntaxNode
     {
     }
 
-    // New style (3 slots): name = expression
-    // Legacy style (4 slots): let name = expression
-    private bool IsLegacyStyle => SlotCount == 4;
-
-    /// <summary>The legacy <c>let</c> keyword token, or null in the new <c>name = expr</c> form.</summary>
-    public SyntaxTokenNode? LetKeyword => IsLegacyStyle ? (SyntaxTokenNode)GetChild(0)! : null;
     /// <summary>The declared variable name token.</summary>
-    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(IsLegacyStyle ? 1 : 0)!;
+    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(0)!;
     /// <summary>The <c>=</c> token.</summary>
-    public SyntaxTokenNode EqualsToken => (SyntaxTokenNode)GetChild(IsLegacyStyle ? 2 : 1)!;
+    public SyntaxTokenNode EqualsToken => (SyntaxTokenNode)GetChild(1)!;
     /// <summary>The assigned expression.</summary>
-    public SyntaxNode Expression => GetChild(IsLegacyStyle ? 3 : 2)!;
+    public SyntaxNode Expression => GetChild(2)!;
 }
 
 /// <summary>

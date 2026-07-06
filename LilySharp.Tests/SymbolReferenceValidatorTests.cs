@@ -41,7 +41,7 @@ public class SymbolReferenceValidatorTests
     public void Validate_DefinedVariable_NoError()
     {
         var source = @"
-let melody = { c4 d e f | }
+phrase melody { c4 d e f | }
 $melody
 ";
         var tree = SyntaxTree.Parse(source);
