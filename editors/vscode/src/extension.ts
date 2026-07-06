@@ -1233,6 +1233,12 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             onsetIdx = 0;
             clearHighlights();
             lastHighlightPos = -1;
+            // No note is highlighted once playback ends (naturally or via Stop),
+            // so forget the resolved start point too — otherwise it stays pinned
+            // to the last sounded note and the next Play resumes from the end
+            // instead of restarting from the top. Cursor sync re-sets it when the
+            // caret lands on a note again.
+            lastResolvedPos = -1;
             for (const o of playingOscs) {
                 try { o.stop(); } catch (e) { /* already ended */ }
             }
