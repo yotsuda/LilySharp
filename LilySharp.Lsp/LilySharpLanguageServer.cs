@@ -2130,6 +2130,47 @@ public sealed class LilySharpLanguageServer
 
         // Find the node at position
         int offset = GetOffset(doc.Text, position.Line, position.Character);
+
+        // Part-name rename: from the caret on any `part NAME` declaration or one
+        // of its references (section-body part blocks, score staff/ossia/tab
+        // targets, midi part renders), rewrite every occurrence at once.
+        var partToken = LilySharp.Core.Editing.PartReferenceFinder.PartNameTokenAt(doc.Tree.GetRoot(), offset);
+        if (partToken != null)
+        {
+            var partEdits = LilySharp.Core.Editing.PartReferenceFinder
+                .Occurrences(doc.Tree.GetRoot(), partToken.Text)
+                .Select(t => TokenTextEdit(doc.Text, t, newName))
+                .ToArray();
+            if (partEdits.Length == 0) return null;
+            return new WorkspaceEdit
+            {
+                Changes = new Dictionary<string, TextEdit[]>
+                {
+                    [uri.ToString()] = partEdits
+                }
+            };
+        }
+
+        // Section-name rename: from the caret on any `section NAME` declaration or
+        // one of its structure references (plain `NAME`, silent `~NAME`, volta
+        // `[1. NAME]`), rewrite every occurrence at once.
+        var sectionToken = LilySharp.Core.Editing.SectionReferenceFinder.SectionNameTokenAt(doc.Tree.GetRoot(), offset);
+        if (sectionToken != null)
+        {
+            var sectionEdits = LilySharp.Core.Editing.SectionReferenceFinder
+                .Occurrences(doc.Tree.GetRoot(), sectionToken.Text)
+                .Select(t => TokenTextEdit(doc.Text, t, newName))
+                .ToArray();
+            if (sectionEdits.Length == 0) return null;
+            return new WorkspaceEdit
+            {
+                Changes = new Dictionary<string, TextEdit[]>
+                {
+                    [uri.ToString()] = sectionEdits
+                }
+            };
+        }
+
         var node = doc.Tree.FindNode(offset);
         if (node == null) return null;
 
@@ -2202,6 +2243,22 @@ public sealed class LilySharpLanguageServer
             {
                 [uri.ToString()] = edits.ToArray()
             }
+        };
+    }
+
+    /// <summary>A single-token replacement edit: covers the bare token span
+    /// (leading trivia excluded) so only the identifier is rewritten.</summary>
+    private static TextEdit TokenTextEdit(string text, SyntaxNode token, string newName)
+    {
+        var (line, character) = GetLineAndCharacter(text, token.Span.Start);
+        return new TextEdit
+        {
+            Range = new LspRange
+            {
+                Start = new Position { Line = line, Character = character },
+                End = new Position { Line = line, Character = character + token.Width }
+            },
+            NewText = newName
         };
     }
 
