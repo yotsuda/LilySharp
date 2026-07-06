@@ -47,6 +47,21 @@ internal static class EngravingDefaults
     public const double StaffLineThickness = 1.0 * LineThickness;
 
     /// <summary>
+    /// Horizon padding applied when measuring the X-aware distance between two
+    /// SYSTEMS (page stacking): each roof gets 45° shoulders this wide, so
+    /// facing ink that is only just X-disjoint (a deep bass note one staff
+    /// space left of the next system's high note, a line-start bar number
+    /// beside the staff) still spaces the systems apart instead of slipping
+    /// past in the max-over-X.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: scm/define-grobs.scm System (skyline-horizontal-padding . 1.0)
+    /// LILYPOND-REF: lily/page-layout-problem.cc:618-629 append_system —
+    /// up_skyline.distance (bottom_skyline_, skyline-horizontal-padding).
+    /// </remarks>
+    public const double SystemSkylineHorizontalPadding = 1.0;
+
+    /// <summary>
     /// Ledger line thickness: StaffSymbol.ledger-line-thickness = (1.0 . 0.1)
     /// → 1.0·line-thickness + 0.1·staff-space.
     /// </summary>

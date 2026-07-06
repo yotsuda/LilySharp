@@ -107,7 +107,8 @@ internal sealed class LayoutEngine
                 courtesySuffixWidth: courtesyW);
             systems.Add(system);
 
-            var (upSkyline, downSkyline) = _skylineBuilder.BuildSystemSkylines(systemMeasures[sysIdx], system.Measures);
+            var (upSkyline, downSkyline) = _skylineBuilder.BuildSystemSkylines(
+                systemMeasures[sysIdx], system.Measures, system.Indent);
             perSystemSkylines.Add((upSkyline, downSkyline));
             perSystemExtents.Add((
                 LayoutUtilities.CalculateUpExtent(upSkyline),
@@ -161,7 +162,8 @@ internal sealed class LayoutEngine
             pagingSkylines = AugmentSkylinesForPaging(
                 perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
                 prelimAnn.VoltaBrackets, prelimSystems,
-                prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames);
+                prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
+                prelimAnn.BarNumbers);
         }
 
         var (pages, systemsArray) = CreatePages(
@@ -287,7 +289,8 @@ internal sealed class LayoutEngine
         bool hasHaraKiri = score.StaffGroups.Any(g => g.Staves.Any(s => s.RemoveEmpty));
 
         // Pre-calculate first system skylines for initial Y positioning
-        var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(score, firstSystemMeasureLayouts, systemHeight);
+        var (firstUpSkyline, _) = _skylineBuilder.BuildSystemSkylines(
+            score, firstSystemMeasureLayouts, systemHeight, indent);
         double currentY = LayoutUtilities.CalculateFirstSystemY(
             headerBottom, LayoutUtilities.CalculateUpExtent(firstUpSkyline), _options.TopSystemPadding);
 
@@ -334,7 +337,7 @@ internal sealed class LayoutEngine
 
             var (upSky, downSky) = ComputeSystemSkyline(systemCache, firstMeasureIndex, measureCount,
                 isFirstSystem, sysIdx == systemMeasures.Count - 1, sysIndent, commonShortestDuration, sysHeight,
-                () => _skylineBuilder.BuildSystemSkylines(score, measureLayouts, sysHeight));
+                () => _skylineBuilder.BuildSystemSkylines(score, measureLayouts, sysHeight, sysIndent));
             perSystemSkylines.Add((upSky, downSky));
             perSystemExtents.Add((
                 LayoutUtilities.CalculateUpExtent(upSky),
@@ -435,7 +438,8 @@ internal sealed class LayoutEngine
             pagingSkylines = AugmentSkylinesForPaging(
                 perSystemSkylines, prelimAnn.Articulations, prelimAnn.FiguredBasses,
                 prelimAnn.VoltaBrackets, prelimSystems,
-                prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames);
+                prelimAnn.MusicMarks, prelimAnn.CustomTexts, prelimAnn.ChordNames,
+                prelimAnn.BarNumbers);
         }
 
         var (pages, systemsArray) = CreatePages(
@@ -684,7 +688,11 @@ internal sealed class LayoutEngine
                     + perSystemExtents[i].downExtent + perSystemExtents[i + 1].upExtent;
                 if (perSystemSkylines != null && i + 1 < perSystemSkylines.Count)
                 {
-                    double dist = perSystemSkylines[i].down.Distance(perSystemSkylines[i + 1].up);
+                    // LILYPOND-REF: lily/page-layout-problem.cc:618-629 — measured
+                    // with the System grob's skyline-horizontal-padding (1.0).
+                    double dist = perSystemSkylines[i + 1].up.Distance(
+                        perSystemSkylines[i].down,
+                        EngravingDefaults.SystemSkylineHorizontalPadding);
                     if (!double.IsNegativeInfinity(dist))
                     {
                         // A whole-line annotation band clears against the OTHER
@@ -1117,7 +1125,8 @@ internal sealed class LayoutEngine
         ImmutableArray<SystemLayout> systems,
         ImmutableArray<MusicMarkLayout> musicMarks = default,
         ImmutableArray<CustomTextLayout> customTexts = default,
-        ImmutableArray<ChordNameLayout> chordNames = default)
+        ImmutableArray<ChordNameLayout> chordNames = default,
+        ImmutableArray<BarNumberLayout> barNumbers = default)
     {
         if (skylines == null)
             return null;
@@ -1209,6 +1218,31 @@ internal sealed class LayoutEngine
             {
                 double halfW = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
                 AddMarkBox(cn.MeasureIndex, cn.X - halfW, cn.X + halfW, cn.Y - 1.9, cn.Y + 0.3);
+            }
+        }
+        // Line-start bar numbers sit in the band above the staff start where
+        // only the staff-symbol roof exists; without their ink in the UP
+        // silhouette, Distance() lets the previous system's staff lines crowd
+        // the number (their scalar up-extent is overridden by the X-aware
+        // distance). Same cap envelope Enrich uses (top = baseline − 1.3).
+        // LILYPOND-REF: lily/page-layout-problem.cc build_system_skyline —
+        // the system skyline contains the BarNumber grob.
+        if (!barNumbers.IsDefaultOrEmpty)
+        {
+            foreach (var bn in barNumbers)
+            {
+                if (!measureToSystem.TryGetValue(bn.MeasureIndex, out int s))
+                    continue;
+                // Bar numbers carry ABSOLUTE page Y — relativize via their system.
+                double rel = bn.Y - systems[s].Y;
+                double w = Rendering.SerifTextMetrics.MeasureBold(
+                    bn.Text, BarNumberEngraver.FontSize);
+                double x0 = bn.RightAligned ? bn.X - w : bn.X;
+                var up = new VerticalSkyline(VerticalDirection.Up);
+                up.Merge(result[s].up);
+                up.Merge(VerticalSkyline.FromBox(
+                    x0, x0 + w, rel, rel - 1.3, VerticalDirection.Up));
+                result[s] = (up, result[s].down);
             }
         }
         return result;

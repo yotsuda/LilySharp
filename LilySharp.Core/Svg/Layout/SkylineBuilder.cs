@@ -49,7 +49,8 @@ internal sealed class SkylineBuilder
     public (VerticalSkyline Up, VerticalSkyline Down) BuildSystemSkylines(
         MultiStaffScore score,
         ImmutableArray<MeasureLayout> measureLayouts,
-        double systemHeight = 0)
+        double systemHeight = 0,
+        double systemLeft = double.NaN)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
@@ -77,7 +78,52 @@ internal sealed class SkylineBuilder
                 stemLength, noteheadHeight, upSkyline, downSkyline);
         }
 
+        double bottomLineY = lastStaff != firstStaff && systemHeight > 0
+            ? systemHeight
+            : _staffHeight;
+        SeedSystemStaffSymbol(measureLayouts, systemLeft,
+            seedTop: !firstStaff.IsTextRow, topLineY: 0.0,
+            seedBottom: !lastStaff.IsTextRow, bottomLineY: bottomLineY,
+            upSkyline, downSkyline);
+
         return (upSkyline, downSkyline);
+    }
+
+    /// <summary>
+    /// Seeds the inter-system skylines with the outer staff LINES over the full
+    /// drawn width. The renderer draws the staff lines from the system indent
+    /// (under the clef/key prefix — see SharedRenderer), so the system skylines
+    /// must carry the same roof/floor: built from music items only, the skyline
+    /// was empty left of the first measure, which let a neighbouring system's
+    /// left-margin grobs (the line-start bar number) sit level with this
+    /// system's staff lines. Text rows (lead-sheet chords/lyrics) print no
+    /// staff lines and get no seed. <paramref name="systemLeft"/> = NaN skips
+    /// seeding entirely (callers that only read the scalar extents).
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/page-layout-problem.cc:1075-1124 build_system_skyline —
+    /// each staff's vertical-skyline includes the StaffSymbol grob, whose
+    /// stencil spans the whole system width.
+    /// </remarks>
+    private static void SeedSystemStaffSymbol(
+        ImmutableArray<MeasureLayout> measureLayouts, double systemLeft,
+        bool seedTop, double topLineY, bool seedBottom, double bottomLineY,
+        VerticalSkyline upSkyline, VerticalSkyline downSkyline)
+    {
+        if (double.IsNaN(systemLeft) || measureLayouts.IsDefaultOrEmpty)
+            return;
+        double xRight = double.NegativeInfinity;
+        foreach (var ml in measureLayouts)
+            xRight = Math.Max(xRight, ml.X + ml.Width);
+        if (xRight <= systemLeft)
+            return;
+
+        if (seedTop)
+            upSkyline.Merge(VerticalSkyline.FromBox(
+                systemLeft, xRight, topLineY, topLineY, VerticalDirection.Up));
+        if (seedBottom)
+            downSkyline.Merge(VerticalSkyline.FromBox(
+                systemLeft, xRight, bottomLineY, bottomLineY, VerticalDirection.Down));
     }
 
     private void AddStaffToSkylines(
@@ -274,10 +320,18 @@ internal sealed class SkylineBuilder
     /// </summary>
     public (VerticalSkyline Up, VerticalSkyline Down) BuildSystemSkylines(
         List<Measure> measures,
-        ImmutableArray<MeasureLayout> measureLayouts)
+        ImmutableArray<MeasureLayout> measureLayouts,
+        double systemLeft = double.NaN)
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
+
+        // A single-staff system is one plain notation staff: seed its top and
+        // bottom LINES over the drawn width (see SeedSystemStaffSymbol).
+        SeedSystemStaffSymbol(measureLayouts, systemLeft,
+            seedTop: true, topLineY: 0.0,
+            seedBottom: true, bottomLineY: _staffHeight,
+            upSkyline, downSkyline);
 
         // All dimensions in staff spaces (coordinate system is unified)
         double staffMiddleY = _staffHeight / 2;

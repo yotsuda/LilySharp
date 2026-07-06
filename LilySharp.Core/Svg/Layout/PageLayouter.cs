@@ -253,7 +253,12 @@ internal sealed class PageLayouter
                 {
                     var prevDown = systemSkylines.Value[sysIdx].down;
                     var nextUp = systemSkylines.Value[sysIdx + 1].up;
-                    double dist = prevDown.Distance(nextUp);
+                    // LILYPOND-REF: lily/page-layout-problem.cc:618-629 — the
+                    // inter-system distance is measured with the System grob's
+                    // skyline-horizontal-padding, so nearly-X-adjacent facing
+                    // ink still interacts through the 45° shoulders.
+                    double dist = nextUp.Distance(prevDown,
+                        EngravingDefaults.SystemSkylineHorizontalPadding);
                     // Distance() returns negative infinity for empty skylines;
                     // fall back to scalar calculation in that case
                     if (double.IsNegativeInfinity(dist))
