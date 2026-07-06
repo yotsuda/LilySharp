@@ -1850,15 +1850,25 @@ public sealed partial class NavigationMarkSyntax : SyntaxNode
 /// </summary>
 public enum NavigationMarkType
 {
+    /// <summary>Segno sign (jump target).</summary>
     Segno,
+    /// <summary>Fine: end of the piece on a repeat pass.</summary>
     Fine,
+    /// <summary>Coda sign (jump target for the coda section).</summary>
     Coda,
+    /// <summary>To Coda: jump to the coda from this point.</summary>
     ToCoda,
+    /// <summary>Da Capo: repeat from the beginning.</summary>
     DaCapo,
+    /// <summary>Da Capo al Fine: repeat from the beginning, then stop at Fine.</summary>
     DaCapoAlFine,
+    /// <summary>Da Capo al Coda: repeat from the beginning, then jump to the coda.</summary>
     DaCapoAlCoda,
+    /// <summary>Dal Segno: repeat from the segno.</summary>
     DalSegno,
+    /// <summary>Dal Segno al Fine: repeat from the segno, then stop at Fine.</summary>
     DalSegnoAlFine,
+    /// <summary>Dal Segno al Coda: repeat from the segno, then jump to the coda.</summary>
     DalSegnoAlCoda
 }
 

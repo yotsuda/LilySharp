@@ -22,11 +22,16 @@ namespace LilySharp.Core.Svg;
 /// </summary>
 public enum PaperSize
 {
-    A4,      // 210 x 297 mm (default)
-    A5,      // 148 x 210 mm
-    Letter,  // 215.9 x 279.4 mm (8.5 x 11 in)
-    Legal,   // 215.9 x 355.6 mm (8.5 x 14 in)
-    B5,      // 176 x 250 mm
+    /// <summary>A4, 210 × 297 mm (the default).</summary>
+    A4,
+    /// <summary>A5, 148 × 210 mm.</summary>
+    A5,
+    /// <summary>US Letter, 215.9 × 279.4 mm (8.5 × 11 in).</summary>
+    Letter,
+    /// <summary>US Legal, 215.9 × 355.6 mm (8.5 × 14 in).</summary>
+    Legal,
+    /// <summary>B5, 176 × 250 mm.</summary>
+    B5,
 }
 
 /// <summary>

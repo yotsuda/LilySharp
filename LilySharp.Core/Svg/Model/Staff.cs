@@ -24,17 +24,29 @@ namespace LilySharp.Core.Svg.Model;
 /// </summary>
 public enum ClefType
 {
+    /// <summary>Treble (G) clef.</summary>
     Treble,
+    /// <summary>Bass (F) clef.</summary>
     Bass,
+    /// <summary>Alto (C) clef, centered on the middle line.</summary>
     Alto,
+    /// <summary>Tenor (C) clef, centered on the fourth line.</summary>
     Tenor,
+    /// <summary>Treble clef sounding an octave lower (<c>treble_8</c>).</summary>
     Treble8Below,
-    Treble8Above,  // treble^8: G clef with the 8 ABOVE (sounds an octave up)
-    Soprano,       // C clef, line 1 (C4 on the bottom line)
-    MezzoSoprano,  // C clef, line 2
-    Baritone,      // C clef, line 5 (top line)
-    Bass8Below,    // F clef sounding an octave lower (written like bass)
-    Percussion,    // unpitched percussion clef (positions like alto)
+    /// <summary>Treble clef with the 8 ABOVE, sounding an octave up (<c>treble^8</c>).</summary>
+    Treble8Above,
+    /// <summary>Soprano clef: C clef on line 1 (C4 on the bottom line).</summary>
+    Soprano,
+    /// <summary>Mezzo-soprano clef: C clef on line 2.</summary>
+    MezzoSoprano,
+    /// <summary>Baritone clef: C clef on line 5 (top line).</summary>
+    Baritone,
+    /// <summary>Bass clef sounding an octave lower (<c>bass_8</c>, written like bass).</summary>
+    Bass8Below,
+    /// <summary>Unpitched percussion clef (positions like alto).</summary>
+    Percussion,
+    /// <summary>Tablature clef for fret/string notation.</summary>
     Tab
 }
 

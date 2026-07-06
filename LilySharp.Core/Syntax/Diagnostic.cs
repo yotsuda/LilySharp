@@ -21,9 +21,13 @@ namespace LilySharp.Core.Syntax;
 /// </summary>
 public enum DiagnosticSeverity
 {
+    /// <summary>Suppressed diagnostic — not surfaced to the user.</summary>
     Hidden,
+    /// <summary>Informational message; no problem implied.</summary>
     Info,
+    /// <summary>Warning — a potential problem that does not stop compilation.</summary>
     Warning,
+    /// <summary>Error — a problem that prevents successful compilation.</summary>
     Error
 }
 

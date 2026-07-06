@@ -174,7 +174,9 @@ internal readonly struct Building
 /// </remarks>
 public enum VerticalDirection
 {
+    /// <summary>Upward skyline (sky = -1): heights stored as <c>-y</c>, keeping the highest roof at each X.</summary>
     Up = -1,
+    /// <summary>Downward skyline (sky = +1): heights stored as <c>+y</c>, keeping the lowest floor at each X.</summary>
     Down = 1
 }
 

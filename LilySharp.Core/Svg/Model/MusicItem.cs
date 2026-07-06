@@ -25,12 +25,18 @@ namespace LilySharp.Core.Svg.Model;
 /// </summary>
 public enum NoteheadStyle
 {
+    /// <summary>Default (plain) notehead.</summary>
     Default,
-    Cross,     // @notehead.x — ghost/percussion
-    Diamond,   // @notehead.diamond — harmonics
-    Triangle,  // @notehead.triangle — shape-note do
-    Slash,     // @notehead.slash — rhythm/comping notation
-    XCircle,   // @notehead.xcircle — hi-hat etc.
+    /// <summary>Cross "x" notehead (<c>@notehead.x</c>) for ghost/percussion notes.</summary>
+    Cross,
+    /// <summary>Diamond notehead (<c>@notehead.diamond</c>) for harmonics.</summary>
+    Diamond,
+    /// <summary>Triangle notehead (<c>@notehead.triangle</c>) for the shape-note "do".</summary>
+    Triangle,
+    /// <summary>Slash notehead (<c>@notehead.slash</c>) for rhythm/comping notation.</summary>
+    Slash,
+    /// <summary>Crossed-circle notehead (<c>@notehead.xcircle</c>) for hi-hat and similar.</summary>
+    XCircle,
 }
 
 /// <summary>

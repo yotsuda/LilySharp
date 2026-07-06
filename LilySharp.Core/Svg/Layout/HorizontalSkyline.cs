@@ -155,7 +155,9 @@ internal readonly struct HorizontalBuilding
 /// </remarks>
 public enum HorizontalDirection
 {
+    /// <summary>Rightward skyline (sky = +1): the rightmost X at each Y.</summary>
     Right = 1,
+    /// <summary>Leftward skyline (sky = -1): the leftmost X at each Y.</summary>
     Left = -1
 }
 

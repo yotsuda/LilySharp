@@ -19,16 +19,23 @@ namespace LilySharp.Core.Rendering;
 [Flags]
 public enum FontStyle
 {
+    /// <summary>No style flags — upright, normal weight.</summary>
     Regular = 0,
+    /// <summary>Bold weight.</summary>
     Bold = 1,
+    /// <summary>Italic slant.</summary>
     Italic = 2,
+    /// <summary>Bold weight combined with italic slant.</summary>
     BoldItalic = Bold | Italic,
 }
 
 public enum TextAnchor
 {
+    /// <summary>Anchor text at its start (left-aligned in left-to-right text).</summary>
     Start,
+    /// <summary>Anchor text at its horizontal center.</summary>
     Middle,
+    /// <summary>Anchor text at its end (right-aligned in left-to-right text).</summary>
     End,
 }
 

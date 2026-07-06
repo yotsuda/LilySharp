@@ -25,17 +25,29 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 public enum BreakAlignSymbol
 {
+    /// <summary>Left edge of the system prefix (the starting reference point).</summary>
     LeftEdge,
+    /// <summary>Pitch-range indicator (ambitus) shown at the start of the staff.</summary>
     Ambitus,
+    /// <summary>Breath mark positioned among the prefix items.</summary>
     BreathingSign,
+    /// <summary>The clef at the start of the line.</summary>
     Clef,
+    /// <summary>Naturals cancelling the outgoing key signature.</summary>
     KeyCancellation,
+    /// <summary>The key signature.</summary>
     KeySignature,
+    /// <summary>The time signature.</summary>
     TimeSignature,
+    /// <summary>The barline at the break point.</summary>
     StaffBar,
+    /// <summary>The cue clef opening a cue passage.</summary>
     CueClef,
+    /// <summary>The clef restoring the main part after a cue passage.</summary>
     CueEndClef,
+    /// <summary>The first note column following the prefix.</summary>
     FirstNote,
+    /// <summary>Right edge of the system prefix.</summary>
     RightEdge
 }
 
@@ -53,11 +65,17 @@ public enum BreakAlignSymbol
 /// </remarks>
 public enum SpacingStyle
 {
+    /// <summary>Adds the value to the right item's extent: <c>distance = extent(right) + value</c>.</summary>
     ExtraSpace,
+    /// <summary>At least the value from the left item: <c>distance = max(extent(right) + min_pad, value)</c>.</summary>
     MinimumSpace,
+    /// <summary>Fixed distance from the left/right edge: <c>distance = extent(left_right_edge) + value</c>.</summary>
     FixedSpace,
+    /// <summary>Fixed spacing floored at a minimum: <c>distance = max(extent(left_right_edge) + value, min_from_left_edge)</c>.</summary>
     MinimumFixedSpace,
+    /// <summary>Half natural, half fixed: <c>distance = extent(left_right_edge) + value/2 + natural/2</c>.</summary>
     SemiFixedSpace,
+    /// <summary>Mostly fixed but slightly compressible, allowing the spacing to shrink under compression.</summary>
     SemiShrinkSpace
 }
 

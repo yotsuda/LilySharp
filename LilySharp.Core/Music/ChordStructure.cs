@@ -33,23 +33,41 @@ namespace LilySharp.Core.Music;
 /// </remarks>
 public enum ChordQuality
 {
+    /// <summary>Major triad (root, major third, perfect fifth); no suffix.</summary>
     Major,
+    /// <summary>Minor triad (root, minor third, perfect fifth); suffix <c>m</c>.</summary>
     Minor,
+    /// <summary>Diminished triad (root, minor third, diminished fifth); suffix <c>dim</c>.</summary>
     Diminished,
+    /// <summary>Augmented triad (root, major third, augmented fifth); suffix <c>aug</c>.</summary>
     Augmented,
+    /// <summary>Dominant seventh: major triad plus a minor seventh; suffix <c>7</c>.</summary>
     Dominant7,
+    /// <summary>Major seventh: major triad plus a major seventh; suffix <c>maj7</c>.</summary>
     Major7,
+    /// <summary>Minor seventh: minor triad plus a minor seventh; suffix <c>m7</c>.</summary>
     Minor7,
+    /// <summary>Minor-major seventh: minor triad plus a major seventh; suffix <c>m maj7</c>.</summary>
     MinorMajor7,
+    /// <summary>Diminished seventh: diminished triad plus a diminished seventh; suffix <c>dim7</c>.</summary>
     Diminished7,
+    /// <summary>Half-diminished seventh: diminished triad plus a minor seventh; suffix <c>m7♭5</c>.</summary>
     HalfDiminished7,
+    /// <summary>Major sixth: major triad plus a major sixth; suffix <c>6</c>.</summary>
     Major6,
+    /// <summary>Minor sixth: minor triad plus a major sixth; suffix <c>m6</c>.</summary>
     Minor6,
+    /// <summary>Dominant ninth: dominant seventh plus a major ninth; suffix <c>9</c>.</summary>
     Dominant9,
+    /// <summary>Major ninth: major seventh plus a major ninth; suffix <c>maj9</c>.</summary>
     Major9,
+    /// <summary>Minor ninth: minor seventh plus a major ninth; suffix <c>m9</c>.</summary>
     Minor9,
+    /// <summary>Suspended second (root, major second, perfect fifth); suffix <c>sus2</c>.</summary>
     Sus2,
+    /// <summary>Suspended fourth (root, perfect fourth, perfect fifth); suffix <c>sus4</c>.</summary>
     Sus4,
+    /// <summary>Dominant seventh with a suspended fourth (no third); suffix <c>7sus4</c>.</summary>
     Dominant7Sus4,
 }
 

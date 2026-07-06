@@ -25,14 +25,22 @@ namespace LilySharp.Core.Svg.Model;
 /// </summary>
 public enum BarlineType
 {
+    /// <summary>No barline.</summary>
     None,
-    Single,       // |
-    Double,       // ||
-    Final,        // |.
-    RepeatStart,  // |:
-    RepeatEnd,    // :|
-    RepeatBoth,   // :|:
-    Dashed        // !  (LP \bar "!")
+    /// <summary>Single thin barline (<c>|</c>).</summary>
+    Single,
+    /// <summary>Double thin barline (<c>||</c>).</summary>
+    Double,
+    /// <summary>Final barline: thin then thick (<c>|.</c>).</summary>
+    Final,
+    /// <summary>Repeat-start barline (<c>|:</c>).</summary>
+    RepeatStart,
+    /// <summary>Repeat-end barline (<c>:|</c>).</summary>
+    RepeatEnd,
+    /// <summary>Back-to-back repeat barline: end then start (<c>:|:</c>).</summary>
+    RepeatBoth,
+    /// <summary>Dashed barline (LilyPond <c>\bar "!"</c>).</summary>
+    Dashed
 }
 
 /// <summary>
