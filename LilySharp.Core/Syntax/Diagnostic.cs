@@ -215,6 +215,9 @@ public static class DiagnosticCodes
     /// <summary>Syntax error: a phrase reference needs a <c>$</c> — write <c>$name</c>.</summary>
     public const string BareReferenceRequiresDollar = "LYS1012";
 
+    /// <summary>Syntax error: a metadata value (title/composer) must be a quoted string.</summary>
+    public const string MetadataValueMustBeQuoted = "LYS1013";
+
     // Measure errors (LYS2xxx)
 
     /// <summary>Measure error: a measure has fewer beats than the time signature requires.</summary>

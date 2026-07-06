@@ -47,7 +47,7 @@ public sealed class IncludeTests
     {
         // Positions in the file the user edits must not move, so the main text is
         // the literal prefix of the expanded source.
-        const string main = "title x\ninclude \"a.lys\"\nscore { staff p }\n";
+        const string main = "title \"x\"\ninclude \"a.lys\"\nscore { staff p }\n";
         var expanded = Expand(main, new() { ["a.lys"] = "part p { clef treble }" });
         Assert.StartsWith(main, expanded);
         Assert.Contains("part p", expanded);
@@ -84,8 +84,8 @@ public sealed class IncludeTests
     [Fact]
     public void MissingFile_IsSkipped()
     {
-        var expanded = Expand("title x\ninclude \"nope.lys\"\n", new());
-        Assert.Contains("title x", expanded);
+        var expanded = Expand("title \"x\"\ninclude \"nope.lys\"\n", new());
+        Assert.Contains("title \"x\"", expanded);
     }
 
     [Fact]

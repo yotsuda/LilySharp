@@ -497,16 +497,28 @@ internal sealed class Parser
         var keyword = Advance();
         var valueTokens = new List<GreenNode?>();
 
-        // Collect value tokens (string, number, identifiers)
-        while (Check(SyntaxKind.StringLiteral) ||
-               Check(SyntaxKind.IntegerLiteral) ||
-               Check(SyntaxKind.Identifier) ||
-               IsPitchStart() ||
-               Check(SyntaxKind.MajorKeyword) ||
-               Check(SyntaxKind.MinorKeyword) ||
-               Check(SyntaxKind.Slash))
+        // The value is a quoted string — like score names and other free-text values
+        // (title "Song", composer "Name"); a bare, unquoted value is rejected.
+        if (Check(SyntaxKind.StringLiteral))
         {
             valueTokens.Add(Advance());
+        }
+        else
+        {
+            var span = new TextSpan(_textPosition, Math.Max(1, Current.FullWidth));
+            _diagnostics.Error(span, DiagnosticCodes.MetadataValueMustBeQuoted,
+                $"The {keyword.Text} value must be a quoted string, e.g. {keyword.Text} \"…\".");
+            // Recover by consuming the old loose run so the rest still parses.
+            while (Check(SyntaxKind.StringLiteral) ||
+                   Check(SyntaxKind.IntegerLiteral) ||
+                   Check(SyntaxKind.Identifier) ||
+                   IsPitchStart() ||
+                   Check(SyntaxKind.MajorKeyword) ||
+                   Check(SyntaxKind.MinorKeyword) ||
+                   Check(SyntaxKind.Slash))
+            {
+                valueTokens.Add(Advance());
+            }
         }
 
         return new MetadataDeclarationGreen(keyword, [.. valueTokens]);

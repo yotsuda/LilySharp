@@ -314,6 +314,19 @@ key g major
     }
 
     [Fact]
+    public void MetadataValue_MustBeQuoted()
+    {
+        // title/composer values are free-text strings (like a score name), so they
+        // must be quoted; a bare value is rejected.
+        var bare = SyntaxTree.Parse("title Song");
+        Assert.True(bare.HasErrors);
+        Assert.Contains(bare.Diagnostics, d => d.Code == DiagnosticCodes.MetadataValueMustBeQuoted);
+
+        var quoted = SyntaxTree.Parse("title \"Song\"\ncomposer \"Bach\"");
+        Assert.DoesNotContain(quoted.Diagnostics, d => d.Code == DiagnosticCodes.MetadataValueMustBeQuoted);
+    }
+
+    [Fact]
     public void UnterminatedString_IsReported()
     {
         var tree = SyntaxTree.Parse("title \"oops");
