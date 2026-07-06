@@ -13,6 +13,7 @@ with `|`.
 ## Document skeleton (top level, in this order)
 
 ```
+version "1"             // optional; declares the language version this file targets
 title "Song"            // optional metadata
 composer "Composer"     // optional
 tempo 120               // optional; also: tempo "Allegro" 120, tempo "Andante" 4 = 96 (text + beat unit); 'tempo 120 swing' adds a shuffle-feel equation ('swing 16' = 16th swing)
@@ -43,6 +44,13 @@ score "out" {                   // one or more render blocks
   }
 }
 ```
+
+`version "1"` is an optional top-level directive (recommended as the first line).
+It records the language version the file targets so future grammar revisions can
+stay backward-compatible with older documents. `version` is a *soft* keyword — it
+is only the directive when it leads a top-level item and is followed by a quoted
+string, so it never conflicts with an identifier named `version`. Omitting it means
+the current grammar.
 
 A minimal single-staff document:
 

@@ -112,7 +112,8 @@ Punctuation    = '{' | '}' | '(' | ')' | '<' | '>' | '[' | ']'
 
 File           = { TopLevelItem } ;
 
-TopLevelItem   = MetadataDecl                     (* title, composer *)
+TopLevelItem   = VersionDecl                      (* optional language-version marker *)
+               | MetadataDecl                     (* title, composer *)
                | GlobalSetting                    (* tempo, time, key *)
                | PartDecl                         (* part definitions *)
                | PhraseDecl                       (* reusable music fragments *)
@@ -122,12 +123,21 @@ TopLevelItem   = MetadataDecl                     (* title, composer *)
                | OverrideDecl                     (* engraving overrides *)
                ;
 
-### 2.2 Metadata
+### 2.2 Version (optional)
+
+VersionDecl    = 'version' , String ;
+                 (* optional, recommended first line: the language version the
+                    file targets, e.g. version "1". 'version' is a SOFT keyword —
+                    only a directive when it leads a top-level item and is followed
+                    by a string, so it never reserves the identifier 'version'.
+                    Recorded for forward compatibility; omitting it = current grammar. *)
+
+### 2.3 Metadata
 
 MetadataDecl   = MetadataKey , String ;
 MetadataKey    = 'title' | 'composer' ;
 
-### 2.3 Global Settings
+### 2.4 Global Settings
 
 GlobalSetting  = TempoDecl | TimeDecl | KeyDecl | PartialDecl | OctaveDecl ;
 

@@ -336,6 +336,10 @@ public enum SyntaxKind : ushort
     StructureDeclaration,
     /// <summary>An include directive node (<c>include "file.lys"</c>).</summary>
     IncludeDirective,
+    /// <summary>An optional language-version directive node (<c>version "1"</c>) —
+    /// a soft top-level marker that lets future grammar revisions branch behavior
+    /// without breaking documents that declare their version.</summary>
+    VersionDeclaration,
     /// <summary>A render declaration node (<c>render Name "file.svg" { ... }</c>).</summary>
     RenderDeclaration,
     /// <summary>A part block node (e.g. <c>guitar { ... }</c> inside a section).</summary>

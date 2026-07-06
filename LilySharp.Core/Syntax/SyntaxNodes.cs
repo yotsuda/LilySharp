@@ -1723,6 +1723,31 @@ public sealed class IncludeDirectiveSyntax : SyntaxNode
 }
 
 /// <summary>
+/// An optional language-version directive: <c>version "1"</c>. A soft top-level
+/// marker (the word <c>version</c> is NOT reserved — it is only a directive when
+/// it leads a top-level item and is followed by a string literal), so declaring
+/// a version never breaks a document that uses <c>version</c> as a name. Absence
+/// means the current/default grammar. Recorded so future grammar revisions can
+/// branch behavior on the declared version.
+/// </summary>
+public sealed class VersionDeclarationSyntax : SyntaxNode
+{
+    internal VersionDeclarationSyntax(InternalSyntax.VersionDeclarationGreen green, SyntaxNode? parent, int position)
+        : base(green, parent, position)
+    {
+    }
+
+    /// <summary>The <c>version</c> directive word token.</summary>
+    public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
+    /// <summary>The quoted version value token.</summary>
+    public SyntaxTokenNode ValueToken => (SyntaxTokenNode)GetChild(1)!;
+
+    /// <summary>The declared version string, with surrounding quotes stripped
+    /// (e.g. <c>"1"</c> → <c>1</c>).</summary>
+    public string Version => ValueToken.Text.Trim('"');
+}
+
+/// <summary>
 /// Represents a part block inside a section: partName { ... }
 /// </summary>
 public sealed partial class PartBlockSyntax : SyntaxNode

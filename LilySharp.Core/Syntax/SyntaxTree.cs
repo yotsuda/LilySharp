@@ -74,6 +74,15 @@ public sealed class SyntaxTree
     }
 
     /// <summary>
+    /// The language version declared by an optional top-level <c>version "…"</c>
+    /// directive, or null when the document declares none (meaning the current /
+    /// default grammar). Lets future grammar revisions branch behavior on the
+    /// declared version without breaking older documents.
+    /// </summary>
+    public string? DeclaredVersion =>
+        GetNodes<VersionDeclarationSyntax>().FirstOrDefault()?.Version;
+
+    /// <summary>
     /// Parse source text into a syntax tree.
     /// </summary>
     public static SyntaxTree Parse(string text)
