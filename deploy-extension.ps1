@@ -101,7 +101,7 @@ Pop-Location
 # Step 4: Install extension (force overwrite so it always lands, even on a version
 # clash). --force also suppresses any install confirmation.
 Write-Host "`n[4/7] Installing extension..." -ForegroundColor Green
-code --uninstall-extension lilysharp.lilysharp 2>$null
+code --uninstall-extension ytsuda.lilysharp 2>$null
 Start-Sleep -Seconds 1
 code --install-extension (Join-Path $projectRoot "editors/vscode/$($vsix.Name)") --force
 if ($LASTEXITCODE -ne 0) { throw "Extension install failed" }

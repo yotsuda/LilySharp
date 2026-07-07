@@ -3,7 +3,7 @@
   "displayName": "Lily#",
   "description": "Language support for Lily# music notation",
   "version": "0.3.0",
-  "publisher": "lilysharp",
+  "publisher": "ytsuda",
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",

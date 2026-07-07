@@ -63,7 +63,7 @@ cd C:\MyProj\LilySharp\editors\vscode
 npm run vscode:prepublish
 
 # Copy to installed extension
-$ext = "$env:USERPROFILE\.vscode\extensions\lilysharp.lilysharp-0.1.1-dev.19"
+$ext = "$env:USERPROFILE\.vscode\extensions\ytsuda.lilysharp-0.3.0"
 Copy-Item "server" $ext -Recurse -Force
 Copy-Item "out\extension.js" "$ext\out\" -Force
 Copy-Item "out\extension.js.map" "$ext\out\" -Force
