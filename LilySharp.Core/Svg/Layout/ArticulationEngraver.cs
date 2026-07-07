@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Linq;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Tablature;
@@ -112,10 +113,39 @@ internal static class ArticulationEngraver
         if (articulations.IsDefaultOrEmpty)
             return ImmutableArray<ArticulationLayout>.Empty;
 
+        // Stack multiple scripts on one note in LilyPond's script-priority order
+        // (staccato innermost, then tenuto, then default scripts, then fermata),
+        // independent of the written order. Group by note (first-occurrence index
+        // keeps notes in their original order) and sort by priority within each
+        // note; OrderBy is stable so equal priorities keep the written order.
+        // LILYPOND-REF: scm/script.scm script-priority.
+        // Reorder the ITERATION (not the array): SourceIndex below must stay the
+        // articulation's original index for click-to-source mapping.
+        int[] order = Enumerable.Range(0, articulations.Length).ToArray();
+        if (articulations.Length > 1)
+        {
+            var firstSeen = new Dictionary<(int, int, int), int>();
+            for (int k = 0; k < articulations.Length; k++)
+            {
+                var a = articulations[k];
+                var nk = (a.StaffIndex, a.MeasureIndex, a.ItemIndex);
+                if (!firstSeen.ContainsKey(nk)) firstSeen[nk] = k;
+            }
+            order = order
+                .OrderBy(i => firstSeen[(articulations[i].StaffIndex,
+                    articulations[i].MeasureIndex, articulations[i].ItemIndex)])
+                .ThenBy(i => ScriptPriority(articulations[i].Type))
+                .ToArray();
+        }
+
         var beamedTips = BuildBeamedStemTips(beamLayouts);
         var layouts = ImmutableArray.CreateBuilder<ArticulationLayout>(articulations.Length);
+        // Per-note, per-side running offset so stacked scripts don't overprint:
+        // each successive script on the same (staff, measure, item, side) is pushed
+        // outward past the previous glyph + a small padding.
+        var stackOffset = new Dictionary<(int, int, int, bool), double>();
 
-        for (int arti = 0; arti < articulations.Length; arti++)
+        foreach (int arti in order)
         {
             var articulation = articulations[arti];
             // Find the measure layout
@@ -318,6 +348,15 @@ internal static class ArticulationEngraver
             // LILYPOND-REF: side-position-interface.cc:229-264 skyline calculation
             double y = CalculateYPosition(articulation, staffPosition, stemUp, item, beamedStemTipY) + staffOffset;
 
+            // Stack multiple scripts on the same note & side outward (past the
+            // previous glyph + a small padding) instead of overprinting them.
+            var stackKey = (articulation.StaffIndex, articulation.MeasureIndex,
+                articulation.ItemIndex, articulation.IsAbove);
+            double stackDelta = stackOffset.GetValueOrDefault(stackKey, 0.0);
+            y += articulation.IsAbove ? -stackDelta : stackDelta;
+            var seedBBox = GetSeedBBoxFor(articulation);
+            stackOffset[stackKey] = stackDelta + seedBBox.Height + ScriptStackPadding;
+
             layouts.Add(new ArticulationLayout(
                 articulation.MeasureIndex,
                 articulation.ItemIndex,
@@ -327,7 +366,7 @@ internal static class ArticulationEngraver
                 articulation.IsAbove,
                 articulation.SourcePosition,
                 scale,
-                GetSeedBBoxFor(articulation),
+                seedBBox,
                 SourceIndex: arti,
                 StaffIndex: articulation.StaffIndex
             ));
@@ -335,6 +374,22 @@ internal static class ArticulationEngraver
 
         return layouts.ToImmutable();
     }
+
+    // Padding between two stacked scripts (staff-spaces).
+    // LILYPOND-REF: scm/script.scm padding ~0.2.
+    private const double ScriptStackPadding = 0.2;
+
+    // LilyPond script-priority: lower = closer to the note. Only some scripts set
+    // it explicitly; the rest use the Script grob default (0).
+    // LILYPOND-REF: scm/script.scm; scm/define-grobs.scm Script.script-priority = 0.
+    private static int ScriptPriority(ArticulationType type) => type switch
+    {
+        ArticulationType.Staccato => -100,
+        ArticulationType.Tenuto => -50,
+        ArticulationType.Fermata or ArticulationType.FermataShort
+            or ArticulationType.FermataLong => 175,
+        _ => 0,
+    };
 
     /// <summary>
     /// Gets the staff position of a music item.

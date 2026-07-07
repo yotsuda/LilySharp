@@ -82,6 +82,10 @@ public class SvgSnapshotTests
         // just the un-displaced column.
         yield return new object[] { "test/arpeggio-second" };
         yield return new object[] { "test/articulations" };
+        // Multiple articulations on one note stack outward in script-priority
+        // order (staccato innermost), independent of written order — the only
+        // fixture that exercises ArticulationEngraver's per-note script stacking.
+        yield return new object[] { "test/script-stacking" };
         yield return new object[] { "test/dynamics" };
         yield return new object[] { "test/beaming" };
         yield return new object[] { "test/grace-notes" };

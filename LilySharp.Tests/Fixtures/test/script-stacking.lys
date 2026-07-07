@@ -1,0 +1,23 @@
+// Multiple articulations on ONE note stack outward in LilyPond script-priority
+// order — staccato innermost, then default scripts (accent/marcato), then the
+// written order for ties — regardless of the order they were written. The
+// second note writes them scrambled (tenuto, marcato, staccato) to prove the
+// sort reorders to staccato-innermost. Guards ArticulationEngraver's per-note
+// script stacking; they used to overprint at the same Y.
+// LILYPOND-REF: scm/script.scm script-priority (staccato -100, tenuto -50).
+title "Script stacking"
+octave absolute
+time 4/4
+key c major
+
+part melody
+
+phrase stack {
+  g'4@staccato@accent@marcato c''4@tenuto@marcato@staccato e'4@accent@staccato r4 |
+}
+
+section Main { melody { $stack } }
+structure { Main }
+score "script-stacking" {
+  staff melody
+}
