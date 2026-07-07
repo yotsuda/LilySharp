@@ -24,7 +24,7 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Parser;
 
 /// <summary>
-/// Resolves <c>include "file.lys"</c> directives into a single combined source,
+/// Resolves <c>using "file.lys"</c> directives into a single combined source,
 /// giving a piece spread over many files (partial-class style: each file
 /// contributes parts/sections that merge into one grid).
 /// </summary>
@@ -32,14 +32,14 @@ namespace LilySharp.Core.Parser;
 /// The main text is kept as the PREFIX of the combined source so every position
 /// in the file the user is editing is preserved exactly (editor &lt;-&gt; preview
 /// sync). Each included file's text is appended once, depth-first, deduplicated by
-/// full path; include cycles terminate. A path that cannot be read is skipped (its
-/// directive simply stays inert), so a missing include never aborts the render.
+/// full path; using cycles terminate. A path that cannot be read is skipped (its
+/// directive simply stays inert), so a missing using never aborts the render.
 /// </remarks>
-public static class IncludeExpander
+public static class UsingExpander
 {
-    /// <summary>True if the text contains at least one <c>include</c> directive.</summary>
-    public static bool HasIncludes(string text)
-        => SyntaxTree.Parse(text).GetRoot().DescendantNodes().OfType<IncludeDirectiveSyntax>().Any();
+    /// <summary>True if the text contains at least one <c>using</c> directive.</summary>
+    public static bool HasUsings(string text)
+        => SyntaxTree.Parse(text).GetRoot().DescendantNodes().OfType<UsingDirectiveSyntax>().Any();
 
     /// <summary>
     /// Expand includes starting from <paramref name="mainText"/> (the in-memory
@@ -71,16 +71,16 @@ public static class IncludeExpander
             sb.Append('\n');
 
         var dir = Path.GetDirectoryName(full) ?? string.Empty;
-        foreach (var include in FindIncludePaths(text))
+        foreach (var usingPath in FindUsingPaths(text))
         {
-            var resolved = Path.IsPathRooted(include) ? include : Path.Combine(dir, include);
+            var resolved = Path.IsPathRooted(usingPath) ? usingPath : Path.Combine(dir, usingPath);
             Walk(resolved, readFile(resolved), visited, sb, readFile);
         }
     }
 
-    private static IEnumerable<string> FindIncludePaths(string text)
+    private static IEnumerable<string> FindUsingPaths(string text)
         => SyntaxTree.Parse(text).GetRoot().DescendantNodes()
-            .OfType<IncludeDirectiveSyntax>()
+            .OfType<UsingDirectiveSyntax>()
             .Select(d => d.Path)
             .Where(p => p.Length > 0)
             .ToList();

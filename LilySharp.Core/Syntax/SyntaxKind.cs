@@ -79,8 +79,8 @@ public enum SyntaxKind : ushort
     SectionKeyword,
     /// <summary>The <c>structure</c> keyword.</summary>
     StructureKeyword,
-    /// <summary>The <c>include</c> keyword.</summary>
-    IncludeKeyword,
+    /// <summary>The <c>using</c> keyword.</summary>
+    UsingKeyword,
     /// <summary>The <c>version</c> keyword (optional language-version directive).</summary>
     VersionKeyword,
     /// <summary>The <c>score</c> keyword (legacy).</summary>
@@ -330,8 +330,8 @@ public enum SyntaxKind : ushort
     SectionDeclaration,
     /// <summary>A structure declaration node (<c>structure { ... }</c>).</summary>
     StructureDeclaration,
-    /// <summary>An include directive node (<c>include "file.lys"</c>).</summary>
-    IncludeDirective,
+    /// <summary>A using directive node (<c>using "file.lys"</c>).</summary>
+    UsingDirective,
     /// <summary>An optional language-version directive node (<c>version "1"</c>) —
     /// a soft top-level marker that lets future grammar revisions branch behavior
     /// without breaking documents that declare their version.</summary>

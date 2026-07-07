@@ -499,7 +499,7 @@ internal sealed class Lexer
             "version" => SyntaxKind.VersionKeyword,
             "section" => SyntaxKind.SectionKeyword,
             "structure" => SyntaxKind.StructureKeyword,
-            "include" => SyntaxKind.IncludeKeyword,
+            "using" => SyntaxKind.UsingKeyword,
             "tab" => SyntaxKind.TabKeyword,
             "ossia" => SyntaxKind.OssiaKeyword,
 

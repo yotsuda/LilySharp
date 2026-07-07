@@ -2829,17 +2829,17 @@ public sealed class LilySharpLanguageServer
     /// Used for real-time preview in VS Code.
     /// </summary>
     /// <summary>
-    /// The document's tree with <c>include "..."</c> directives resolved (files read
+    /// The document's tree with <c>using "..."</c> directives resolved (files read
     /// relative to the document), or the plain tree when there are no includes. The
     /// document's own text stays the prefix, so its positions are preserved.
     /// </summary>
-    private static SyntaxTree ExpandIncludes(Document doc, Uri uri)
+    private static SyntaxTree ExpandUsings(Document doc, Uri uri)
     {
-        if (!LilySharp.Core.Parser.IncludeExpander.HasIncludes(doc.Text))
+        if (!LilySharp.Core.Parser.UsingExpander.HasUsings(doc.Text))
             return doc.Tree;
 
         var basePath = uri.IsFile ? uri.LocalPath : string.Empty;
-        var expanded = LilySharp.Core.Parser.IncludeExpander.Expand(doc.Text, basePath,
+        var expanded = LilySharp.Core.Parser.UsingExpander.Expand(doc.Text, basePath,
             p => System.IO.File.Exists(p) ? System.IO.File.ReadAllText(p) : null);
         return SyntaxTree.Parse(expanded);
     }
@@ -2857,10 +2857,10 @@ public sealed class LilySharpLanguageServer
             };
         }
 
-        // Resolve `include "..."` directives so the preview shows the whole piece.
+        // Resolve `using "..."` directives so the preview shows the whole piece.
         // The main file is the prefix of the combined source, so its positions
         // (data-pos editor<->preview sync) are unchanged.
-        var tree = ExpandIncludes(doc, @params.TextDocument.Uri);
+        var tree = ExpandUsings(doc, @params.TextDocument.Uri);
 
         // Extract render definitions
         var renders = ExtractRenderInfo(tree);
@@ -2920,7 +2920,7 @@ public sealed class LilySharpLanguageServer
         if (doc == null)
             return new ExportResponse { Success = false, Error = "Document not found" };
 
-        var tree = ExpandIncludes(doc, @params.TextDocument.Uri);
+        var tree = ExpandUsings(doc, @params.TextDocument.Uri);
         if (tree.HasErrors)
         {
             var errors = string.Join("\n", tree.Diagnostics
@@ -3017,7 +3017,7 @@ public sealed class LilySharpLanguageServer
         var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
         if (doc == null)
             return new PlaybackResponse { Error = "Document not found" };
-        var tree = ExpandIncludes(doc, @params.TextDocument.Uri);
+        var tree = ExpandUsings(doc, @params.TextDocument.Uri);
         if (tree.HasErrors)
             return new PlaybackResponse { Error = "Score has errors" };
         try

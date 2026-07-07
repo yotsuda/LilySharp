@@ -76,7 +76,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
         | 'part' | 'phrase' | 'section' | 'structure' | 'score'
         | 'staff' | 'grandStaff' | 'tab' | 'ossia' | 'voice'
         | 'lyrics' | 'chords' | 'tuning' | 'instrument' | 'channel'
-        | 'transpose' | 'octave' | 'include' | 'use' | 'let' | 'break' | 'partial'
+        | 'transpose' | 'octave' | 'using' | 'use' | 'let' | 'break' | 'partial'
         | 'tuplet' | 'grace' | 'acciaccatura' | 'appoggiatura'
         | 'repeat' | 'volta' | 'alternative'
         | 'override' | 'revert' | 'once' | 'with'
@@ -94,7 +94,7 @@ Keyword = 'title' | 'composer' | 'tempo' | 'time' | 'key' | 'clef'
    (tempo value words). Articulation, ornament, dynamic-text and mark NAMES
    (staccato, tr, sfz, cresc, dim, …) are resolved from the '@name' text and are
    NOT reserved. 'volta'/'alternative' are reserved only to reject the removed
-   LilyPond-style forms; 'include' is reserved for multi-file support. *)
+   LilyPond-style forms; 'using' is reserved for multi-file support. *)
 
 ### Operators & Punctuation
 

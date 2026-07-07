@@ -24,21 +24,21 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// `include "file.lys"` expansion: a piece spread over many files merges into one
+/// `using "file.lys"` expansion: a piece spread over many files merges into one
 /// grid (partial-class style), with the main file kept as the prefix.
 /// </summary>
 [Trait("Category", "Unit")]
-public sealed class IncludeTests
+public sealed class UsingTests
 {
     // Resolve includes against an in-memory file set, keyed by file name.
     private static string Expand(string main, Dictionary<string, string> files)
-        => IncludeExpander.Expand(main, "C:/proj/main.lys",
+        => UsingExpander.Expand(main, "C:/proj/main.lys",
             p => files.TryGetValue(Path.GetFileName(p), out var t) ? t : null);
 
     [Fact]
-    public void Parses_IncludeDirective()
+    public void Parses_UsingDirective()
     {
-        var tree = SyntaxTree.Parse("include \"parts.lys\"\nscore { staff rh }\n");
+        var tree = SyntaxTree.Parse("using \"parts.lys\"\nscore { staff rh }\n");
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
 
@@ -47,7 +47,7 @@ public sealed class IncludeTests
     {
         // Positions in the file the user edits must not move, so the main text is
         // the literal prefix of the expanded source.
-        const string main = "title \"x\"\ninclude \"a.lys\"\nscore { staff p }\n";
+        const string main = "title \"x\"\nusing \"a.lys\"\nscore { staff p }\n";
         var expanded = Expand(main, new() { ["a.lys"] = "part p { clef treble }" });
         Assert.StartsWith(main, expanded);
         Assert.Contains("part p", expanded);
@@ -56,26 +56,26 @@ public sealed class IncludeTests
     [Fact]
     public void Diamond_IncludesSharedFileOnce()
     {
-        var expanded = Expand("include \"a.lys\"\ninclude \"b.lys\"\n", new()
+        var expanded = Expand("using \"a.lys\"\nusing \"b.lys\"\n", new()
         {
-            ["a.lys"] = "include \"c.lys\"\npart a { clef treble }",
-            ["b.lys"] = "include \"c.lys\"\npart b { clef bass }",
+            ["a.lys"] = "using \"c.lys\"\npart a { clef treble }",
+            ["b.lys"] = "using \"c.lys\"\npart b { clef bass }",
             ["c.lys"] = "part c { clef alto }",
         });
 
         int first = expanded.IndexOf("part c");
         int last = expanded.LastIndexOf("part c");
-        Assert.True(first >= 0 && first == last, "shared include c.lys must appear exactly once");
+        Assert.True(first >= 0 && first == last, "shared using c.lys must appear exactly once");
     }
 
     [Fact]
     public void Cycle_Terminates()
     {
         // a includes b, b includes a — expansion must not loop.
-        var expanded = Expand("include \"a.lys\"\n", new()
+        var expanded = Expand("using \"a.lys\"\n", new()
         {
-            ["a.lys"] = "include \"b.lys\"\npart a { clef treble }",
-            ["b.lys"] = "include \"a.lys\"\npart b { clef bass }",
+            ["a.lys"] = "using \"b.lys\"\npart a { clef treble }",
+            ["b.lys"] = "using \"a.lys\"\npart b { clef bass }",
         });
         Assert.Contains("part a", expanded);
         Assert.Contains("part b", expanded);
@@ -84,7 +84,7 @@ public sealed class IncludeTests
     [Fact]
     public void MissingFile_IsSkipped()
     {
-        var expanded = Expand("title \"x\"\ninclude \"nope.lys\"\n", new());
+        var expanded = Expand("title \"x\"\nusing \"nope.lys\"\n", new());
         Assert.Contains("title \"x\"", expanded);
     }
 
@@ -92,7 +92,7 @@ public sealed class IncludeTests
     public void CrossFile_DuplicateCell_IsError()
     {
         // Two files both supply (section A x part p) — a duplicated cell across files.
-        var expanded = Expand("include \"a.lys\"\ninclude \"b.lys\"\nstructure { A }\n", new()
+        var expanded = Expand("using \"a.lys\"\nusing \"b.lys\"\nstructure { A }\n", new()
         {
             ["a.lys"] = "part vln { clef treble section A { c4 d e f | } }",
             ["b.lys"] = "part vln { clef treble section A { g4 a b c | } }",
@@ -106,7 +106,7 @@ public sealed class IncludeTests
     [Fact]
     public void CrossFile_DistinctParts_AreClean()
     {
-        var expanded = Expand("include \"rh.lys\"\ninclude \"lh.lys\"\nstructure { A }\n", new()
+        var expanded = Expand("using \"rh.lys\"\nusing \"lh.lys\"\nstructure { A }\n", new()
         {
             ["rh.lys"] = "part rh { clef treble section A { c'4 d' e' f' | } }",
             ["lh.lys"] = "part lh { clef bass    section A { c4 g, c, g, | } }",

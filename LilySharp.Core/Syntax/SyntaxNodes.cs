@@ -1697,17 +1697,17 @@ public sealed partial class SectionDeclarationSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Represents an include directive: include "file.lys". Resolved by the include
+/// Represents a using directive: using "file.lys". Resolved by the using
 /// expander before collection; in the parsed tree it is an inert marker.
 /// </summary>
-public sealed class IncludeDirectiveSyntax : SyntaxNode
+public sealed class UsingDirectiveSyntax : SyntaxNode
 {
-    internal IncludeDirectiveSyntax(InternalSyntax.IncludeDirectiveGreen green, SyntaxNode? parent, int position)
+    internal UsingDirectiveSyntax(InternalSyntax.UsingDirectiveGreen green, SyntaxNode? parent, int position)
         : base(green, parent, position)
     {
     }
 
-    /// <summary>The <c>include</c> keyword token.</summary>
+    /// <summary>The <c>using</c> keyword token.</summary>
     public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
     /// <summary>The quoted file-path token.</summary>
     public SyntaxTokenNode PathToken => (SyntaxTokenNode)GetChild(1)!;

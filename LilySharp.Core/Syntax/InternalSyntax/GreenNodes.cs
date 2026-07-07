@@ -630,12 +630,12 @@ internal sealed class SectionDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Include directive: include "file.lys"
+/// Include directive: using "file.lys"
 /// </summary>
-internal sealed class IncludeDirectiveGreen : GreenSyntaxNode
+internal sealed class UsingDirectiveGreen : GreenSyntaxNode
 {
-    public IncludeDirectiveGreen(SyntaxToken keyword, SyntaxToken path)
-        : base(SyntaxKind.IncludeDirective, [keyword, path])
+    public UsingDirectiveGreen(SyntaxToken keyword, SyntaxToken path)
+        : base(SyntaxKind.UsingDirective, [keyword, path])
     {
     }
 }

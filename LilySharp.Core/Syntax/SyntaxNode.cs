@@ -185,7 +185,7 @@ public abstract class SyntaxNode
 
             // Section/Structure/Render declarations
             SyntaxKind.SectionDeclaration => new SectionDeclarationSyntax((SectionDeclarationGreen)green, this, position),
-            SyntaxKind.IncludeDirective => new IncludeDirectiveSyntax((IncludeDirectiveGreen)green, this, position),
+            SyntaxKind.UsingDirective => new UsingDirectiveSyntax((UsingDirectiveGreen)green, this, position),
             SyntaxKind.VersionDeclaration => new VersionDeclarationSyntax((VersionDeclarationGreen)green, this, position),
             SyntaxKind.PartBlock => new PartBlockSyntax((PartBlockGreen)green, this, position),
             SyntaxKind.StructureDeclaration => new StructureDeclarationSyntax((StructureDeclarationGreen)green, this, position),

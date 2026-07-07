@@ -1001,14 +1001,14 @@ static int RunLayout(string[] args)
 
 // ============ Shared Utilities ============
 
-// Read a .lys file and parse it, first resolving any `include "..."` directives
+// Read a .lys file and parse it, first resolving any `using "..."` directives
 // (relative to the file) into one combined source. The main file is the prefix, so
 // its diagnostic positions are unchanged.
 static (string Source, LilySharp.Core.Syntax.SyntaxTree Tree) LoadAndParse(string inputPath)
 {
     var source = File.ReadAllText(inputPath);
-    if (LilySharp.Core.Parser.IncludeExpander.HasIncludes(source))
-        source = LilySharp.Core.Parser.IncludeExpander.Expand(source, inputPath,
+    if (LilySharp.Core.Parser.UsingExpander.HasUsings(source))
+        source = LilySharp.Core.Parser.UsingExpander.Expand(source, inputPath,
             p => File.Exists(p) ? File.ReadAllText(p) : null);
     return (source, LilySharp.Core.Syntax.SyntaxTree.Parse(source));
 }
