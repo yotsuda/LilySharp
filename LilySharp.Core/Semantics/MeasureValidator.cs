@@ -265,13 +265,38 @@ internal sealed class MeasureValidator : ISemanticValidator
     }
 
     /// <summary>True when the node sits inside a music block (an in-music
-    /// `partial` belongs to one voice; only a top-level one is file-wide).</summary>
+    /// `partial`/`time` belongs to one voice/section; only a top-level one is
+    /// file-wide). A PART-MAJOR section holds its music inline with no MusicBlock
+    /// wrapper, so a `partial`/`time` written among that inline music counts as
+    /// in-music too — otherwise it leaks as a file-wide pickup onto every section.
+    /// A SECTION-MAJOR section holds part blocks; its section-level `time`/`partial`
+    /// arms the meter for the whole section and is left to the top-level path, so
+    /// that is NOT treated as "inside a block" here.</summary>
     private static bool IsInsideMusicBlock(SyntaxNode node)
     {
         for (var p = node.Parent; p != null; p = p.Parent)
+        {
             if (p is MusicBlockSyntax)
                 return true;
+            if (p is SectionDeclarationSyntax s && SectionHasInlineMusic(s))
+                return true;
+        }
         return false;
+    }
+
+    /// <summary>True for a PART-MAJOR section (inline note/bar children), false for
+    /// a SECTION-MAJOR section (part blocks) or an empty one.</summary>
+    private static bool SectionHasInlineMusic(SectionDeclarationSyntax section)
+    {
+        bool sawItem = false;
+        for (int i = 0; i < section.SlotCount; i++)
+        {
+            var child = section.GetChild(i);
+            if (child is null or SyntaxTokenNode) continue;
+            if (child is PartBlockSyntax) return false; // section-major
+            sawItem = true;
+        }
+        return sawItem;
     }
 
     /// <summary>The `partial` clause matching a pickup of <paramref name="length"/>:

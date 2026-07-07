@@ -23,7 +23,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// A PART-MAJOR section (<c>part p { section A { c d f | } }</c>) keeps its music
+/// A PART-MAJOR section (<c>part mel { section A { c d f | } }</c>) keeps its music
 /// INLINE on the SectionDeclaration — there is no MusicBlock wrapper — so the bar
 /// check used to skip it entirely and short measures passed silently. It must now
 /// be validated exactly like a section-major (part-block) section.
@@ -42,7 +42,7 @@ public sealed class MeasureValidatorSectionTests
     public void PartMajorSection_ShortInteriorMeasure_Warns()
     {
         // Interior 1/4 bar in 4/4 — a genuine short measure, not an edge pickup.
-        var diags = Diagnose("time 4/4\npart p {\n  section A { c4 d | c4 | c4 d | }\n}\n");
+        var diags = Diagnose("time 4/4\npart mel {\n  section A { c4 d | c4 | c4 d | }\n}\n");
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.MeasureIncomplete);
     }
 
@@ -51,7 +51,7 @@ public sealed class MeasureValidatorSectionTests
     {
         // The reported case: section A { c d f | } in 4/4 — a 3/4 first measure.
         // It now warns (before, part-major sections were never bar-checked).
-        var diags = Diagnose("time 4/4\npart p {\n  section A { c d f | }\n}\n");
+        var diags = Diagnose("time 4/4\npart mel {\n  section A { c d f | }\n}\n");
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.PickupWithoutPartial);
     }
 
@@ -59,9 +59,24 @@ public sealed class MeasureValidatorSectionTests
     public void PartMajorSection_FullMeasures_NoWarning()
     {
         // Full 4/4 bars must NOT be flagged (no false positives from the new pass).
-        var diags = Diagnose("time 4/4\npart p {\n  section A { c4 d e f | c4 d e f | }\n}\n");
+        var diags = Diagnose("time 4/4\npart mel {\n  section A { c4 d e f | c4 d e f | }\n}\n");
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MeasureIncomplete
             || d.Code == DiagnosticCodes.MeasureOverflow
             || d.Code == DiagnosticCodes.PickupWithoutPartial);
+    }
+
+    [Fact]
+    public void PartMajorSection_InlinePartial_DoesNotLeakToOtherSections()
+    {
+        // `partial 2.` INSIDE part-major section A (no MusicBlock wrapper) declares
+        // A's own 3/4 pickup. It must NOT be mistaken for a file-wide partial that
+        // then re-targets every later section to 3/4 and hides B's short measure.
+        // Regression: before the fix this returned no diagnostics at all.
+        var diags = Diagnose(
+            "time 4/4\npart mel {\n" +
+            "  section A { partial 2. c d f }\n" +   // declared 3/4 pickup, filled -> clean
+            "  section B { | a' b c | }\n" +          // 3/4 bar in 4/4 -> must warn
+            "  section C { a' b c d }\n}\n");         // full 4/4 -> clean
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.PickupWithoutPartial);
     }
 }
