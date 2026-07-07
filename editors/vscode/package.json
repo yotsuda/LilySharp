@@ -15,6 +15,14 @@
   "categories": [
     "Programming Languages"
   ],
+  "keywords": [
+    "music",
+    "notation",
+    "sheet music",
+    "lilypond",
+    "score",
+    "engraving"
+  ],
   "activationEvents": [
     "onLanguage:lilysharp"
   ],
