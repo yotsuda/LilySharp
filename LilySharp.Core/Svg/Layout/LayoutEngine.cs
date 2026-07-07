@@ -1486,6 +1486,45 @@ internal sealed class LayoutEngine
         else
             fingeringLayouts = FingeringEngraver.Calculate(score, systems);
 
+        // Push each fingering OUTSIDE any articulation sharing the note & side, so
+        // they don't overprint. LilyPond keeps the articulation (Script) close to
+        // the note and places the fingering on the OUTSIDE -- verified against
+        // LilyPond 2.24.4: a fingering and a marcato forced above the same note
+        // render marcato inner, fingering outer (the digit sits above the marcato).
+        // So the fingering, not the articulation, is the one that moves.
+        // LILYPOND-REF: lily/new-fingering-engraver.cc; empirical stacking order.
+        if (!fingeringLayouts.IsDefaultOrEmpty && !articulationLayouts.IsDefaultOrEmpty)
+        {
+            // Gap from the outermost articulation's anchor to the fingering baseline.
+            // Below needs more: the fingering baseline is the digit's lower edge.
+            const double aboveGap = 1.4;
+            const double belowGap = 1.9;
+            // Outermost articulation anchor per note & side (min Y above / max Y below).
+            // StaffIndex is -1 for single-staff fingerings and 0 for their articulations,
+            // so normalise a negative staff to 0 on both sides before matching.
+            var artOuter = new Dictionary<(int, int, int, bool), double>();
+            foreach (var a in articulationLayouts)
+            {
+                var key = (a.StaffIndex < 0 ? 0 : a.StaffIndex, a.MeasureIndex, a.ItemIndex, a.IsAbove);
+                artOuter[key] = artOuter.TryGetValue(key, out var cur)
+                    ? (a.IsAbove ? System.Math.Min(cur, a.Y) : System.Math.Max(cur, a.Y))
+                    : a.Y;
+            }
+            var fb2 = fingeringLayouts.ToBuilder();
+            for (int i = 0; i < fb2.Count; i++)
+            {
+                var fg = fb2[i];
+                var key = (fg.StaffIndex < 0 ? 0 : fg.StaffIndex, fg.MeasureIndex, fg.ItemIndex, fg.IsAbove);
+                if (artOuter.TryGetValue(key, out var artY))
+                {
+                    double target = fg.IsAbove ? artY - aboveGap : artY + belowGap;
+                    double newY = fg.IsAbove ? System.Math.Min(fg.Y, target) : System.Math.Max(fg.Y, target);
+                    fb2[i] = fg with { Y = newY };
+                }
+            }
+            fingeringLayouts = fb2.ToImmutable();
+        }
+
         return new AnnotationLayouts(
             Dynamics: stackedDynamics,
             Articulations: articulationLayouts,

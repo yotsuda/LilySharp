@@ -1,0 +1,23 @@
+// A fingering and articulation(s) on the SAME note & side must not overprint:
+// LilyPond keeps the fingering close to the note (Fingering has no
+// outside-staff-priority) and pushes the articulation (Script, outside-staff-
+// priority 0) outside it -- fingering inner, articulation outer. Guards the
+// LayoutEngine post-pass that shifts articulations past a shared-side fingering.
+// LILYPOND-REF: lily/new-fingering-engraver.cc position_scripts;
+//   scm/define-grobs.scm Fingering (no priority) vs Script (0).
+title "Fingering + articulation"
+octave absolute
+time 4/4
+key c major
+
+part melody
+
+phrase fa {
+  g'4@marcato@finger(1) c''4@tenuto@marcato@finger(3) e'4@staccato@finger(2) r4 |
+}
+
+section Main { melody { $fa } }
+structure { Main }
+score "fingering-articulation" {
+  staff melody
+}

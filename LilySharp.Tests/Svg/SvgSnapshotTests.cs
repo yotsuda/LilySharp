@@ -86,6 +86,9 @@ public class SvgSnapshotTests
         // order (staccato innermost), independent of written order — the only
         // fixture that exercises ArticulationEngraver's per-note script stacking.
         yield return new object[] { "test/script-stacking" };
+        // A fingering + articulation on one note & side: fingering stays inner,
+        // articulation is pushed outer (LayoutEngine fingering/articulation pass).
+        yield return new object[] { "test/fingering-articulation" };
         yield return new object[] { "test/dynamics" };
         yield return new object[] { "test/beaming" };
         yield return new object[] { "test/grace-notes" };
