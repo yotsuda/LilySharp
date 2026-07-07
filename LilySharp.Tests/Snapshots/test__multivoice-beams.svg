@@ -75,37 +75,37 @@
   <rect x="38.04" y="12.41" width="0.19" height="4.00" fill="#000000"/>
   <rect x="74.64" y="12.41" width="0.19" height="4.00" fill="#000000"/>
   <rect x="75.13" y="12.41" width="0.60" height="4.00" fill="#000000"/>
-  <line x1="7.87" y1="15.41" x2="18.98" y2="14.60" stroke="#000000" stroke-width="0.480"/>
+  <line x1="7.80" y1="15.41" x2="19.04" y2="14.59" stroke="#000000" stroke-width="0.480"/>
   <line x1="7.87" y1="12.91" x2="7.87" y2="15.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="11.57" y1="12.41" x2="11.57" y2="15.14" stroke="#000000" stroke-width="0.130"/>
   <line x1="15.27" y1="11.91" x2="15.27" y2="14.87" stroke="#000000" stroke-width="0.130"/>
   <line x1="18.98" y1="11.41" x2="18.98" y2="14.60" stroke="#000000" stroke-width="0.130"/>
-  <line x1="22.68" y1="14.60" x2="33.79" y2="15.22" stroke="#000000" stroke-width="0.480"/>
+  <line x1="22.62" y1="14.59" x2="33.86" y2="15.22" stroke="#000000" stroke-width="0.480"/>
   <line x1="22.68" y1="10.91" x2="22.68" y2="14.60" stroke="#000000" stroke-width="0.130"/>
   <line x1="26.39" y1="11.41" x2="26.39" y2="14.80" stroke="#000000" stroke-width="0.130"/>
   <line x1="30.09" y1="11.91" x2="30.09" y2="15.01" stroke="#000000" stroke-width="0.130"/>
   <line x1="33.79" y1="12.41" x2="33.79" y2="15.22" stroke="#000000" stroke-width="0.130"/>
-  <line x1="40.25" y1="16.22" x2="47.76" y2="15.41" stroke="#000000" stroke-width="0.480"/>
-  <line x1="40.25" y1="15.41" x2="42.75" y2="15.14" stroke="#000000" stroke-width="0.480"/>
+  <line x1="40.18" y1="16.22" x2="47.83" y2="15.40" stroke="#000000" stroke-width="0.480"/>
+  <line x1="40.18" y1="15.41" x2="42.75" y2="15.14" stroke="#000000" stroke-width="0.480"/>
   <line x1="42.75" y1="15.14" x2="45.26" y2="14.87" stroke="#000000" stroke-width="0.480"/>
-  <line x1="45.26" y1="14.87" x2="47.76" y2="14.60" stroke="#000000" stroke-width="0.480"/>
+  <line x1="45.26" y1="14.87" x2="47.83" y2="14.59" stroke="#000000" stroke-width="0.480"/>
   <line x1="40.25" y1="12.91" x2="40.25" y2="16.22" stroke="#000000" stroke-width="0.130"/>
   <line x1="42.75" y1="12.41" x2="42.75" y2="15.95" stroke="#000000" stroke-width="0.130"/>
   <line x1="45.26" y1="11.91" x2="45.26" y2="15.68" stroke="#000000" stroke-width="0.130"/>
   <line x1="47.76" y1="11.41" x2="47.76" y2="15.41" stroke="#000000" stroke-width="0.130"/>
-  <line x1="50.26" y1="14.41" x2="57.78" y2="15.22" stroke="#000000" stroke-width="0.480"/>
-  <line x1="50.26" y1="13.60" x2="52.77" y2="13.87" stroke="#000000" stroke-width="0.480"/>
+  <line x1="50.20" y1="14.40" x2="57.84" y2="15.22" stroke="#000000" stroke-width="0.480"/>
+  <line x1="50.20" y1="13.59" x2="52.77" y2="13.87" stroke="#000000" stroke-width="0.480"/>
   <line x1="52.77" y1="13.87" x2="55.27" y2="14.14" stroke="#000000" stroke-width="0.480"/>
-  <line x1="55.27" y1="14.14" x2="57.78" y2="14.41" stroke="#000000" stroke-width="0.480"/>
+  <line x1="55.27" y1="14.14" x2="57.84" y2="14.41" stroke="#000000" stroke-width="0.480"/>
   <line x1="50.26" y1="10.91" x2="50.26" y2="14.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="52.77" y1="11.41" x2="52.77" y2="14.68" stroke="#000000" stroke-width="0.130"/>
   <line x1="55.27" y1="11.91" x2="55.27" y2="14.95" stroke="#000000" stroke-width="0.130"/>
   <line x1="57.78" y1="12.41" x2="57.78" y2="15.22" stroke="#000000" stroke-width="0.130"/>
-  <line x1="60.28" y1="15.22" x2="64.69" y2="15.60" stroke="#000000" stroke-width="0.480"/>
-  <line x1="64.69" y1="14.79" x2="63.69" y2="14.70" stroke="#000000" stroke-width="0.480"/>
+  <line x1="60.22" y1="15.21" x2="64.75" y2="15.60" stroke="#000000" stroke-width="0.480"/>
+  <line x1="64.75" y1="14.79" x2="63.69" y2="14.70" stroke="#000000" stroke-width="0.480"/>
   <line x1="60.28" y1="11.91" x2="60.28" y2="15.22" stroke="#000000" stroke-width="0.130"/>
   <line x1="64.69" y1="12.41" x2="64.69" y2="15.60" stroke="#000000" stroke-width="0.130"/>
-  <line x1="67.19" y1="15.60" x2="70.89" y2="15.41" stroke="#000000" stroke-width="0.480"/>
+  <line x1="67.13" y1="15.60" x2="70.96" y2="15.40" stroke="#000000" stroke-width="0.480"/>
   <line x1="67.19" y1="12.91" x2="67.19" y2="15.60" stroke="#000000" stroke-width="0.130"/>
   <line x1="70.89" y1="12.41" x2="70.89" y2="15.41" stroke="#000000" stroke-width="0.130"/>
   <rect x="0.30" y="7.57" width="1.62" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="775"/>

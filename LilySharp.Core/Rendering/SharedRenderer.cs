@@ -2242,8 +2242,17 @@ internal static class SharedRenderer
             double leftStemX = StemAttachX(0);
             double rightStemX = StemAttachX(grp.Members.Length - 1);
 
+            // Extend each beam END outward by half the stem thickness so the beam
+            // covers the terminal stems flush; otherwise it stops at the stem
+            // centre and reads a stem-width short when the preview is zoomed in.
+            // LILYPOND-REF: lily/beam.cc:631 horizontal_[dir] += dir * stem_width/2.
+            double halfStem = EngravingDefaults.StemThickness / 2;
+            double beamSlope = rightStemX > leftStemX + 0.001
+                ? (rightBeamY - leftBeamY) / (rightStemX - leftStemX) : 0.0;
+
             // Primary beam — drawn as a thick filled rectangle (sloped by polygon)
-            DrawBeamSegment(leftStemX, leftBeamY, rightStemX, rightBeamY, bgc);
+            DrawBeamSegment(leftStemX - halfStem, leftBeamY - beamSlope * halfStem,
+                rightStemX + halfStem, rightBeamY + beamSlope * halfStem, bgc);
 
             // Secondary beams (16th+) stack toward the noteheads of the beam's
             // overall direction. Each level draws full segments between adjacent
@@ -2271,6 +2280,9 @@ internal static class SharedRenderer
                         // Full segment i -> i+1 (drawn once, from its left member).
                         double xa = StemAttachX(i);
                         double xb = StemAttachX(i + 1);
+                        // Flush the whole-beam ends with the terminal stems (as above).
+                        if (i == 0) xa -= halfStem;
+                        if (i + 1 == grp.Members.Length - 1) xb += halfStem;
                         DrawBeamSegment(xa, BeamYAt(xa), xb, BeamYAt(xb), bgc);
                     }
                     else if (!leftFull)
@@ -2280,6 +2292,9 @@ internal static class SharedRenderer
                         // the group points forward instead.
                         double x0 = StemAttachX(i);
                         double x1 = x0 + (i > 0 ? -EngravingDefaults.BeamletLength : EngravingDefaults.BeamletLength);
+                        // Flush the stub's outer end (at a terminal stem) with the stem.
+                        if (i == 0) x0 -= halfStem;
+                        else if (i == grp.Members.Length - 1) x0 += halfStem;
                         DrawBeamSegment(x0, BeamYAt(x0), x1, BeamYAt(x1), bgc);
                     }
                     // else (leftFull && !rightFull): this member is the right end of a

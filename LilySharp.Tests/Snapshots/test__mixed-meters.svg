@@ -84,34 +84,34 @@
   <rect x="54.91" y="12.41" width="0.19" height="4.00" fill="#000000"/>
   <rect x="82.85" y="12.41" width="0.19" height="4.00" fill="#000000"/>
   <rect x="83.34" y="12.41" width="0.60" height="4.00" fill="#000000"/>
-  <line x1="10.59" y1="14.22" x2="23.11" y2="13.60" stroke="#000000" stroke-width="0.480"/>
+  <line x1="10.52" y1="14.22" x2="23.17" y2="13.59" stroke="#000000" stroke-width="0.480"/>
   <line x1="10.59" y1="18.91" x2="10.59" y2="14.22" stroke="#000000" stroke-width="0.130"/>
   <line x1="13.09" y1="18.41" x2="13.09" y2="14.09" stroke="#000000" stroke-width="0.130"/>
   <line x1="15.60" y1="17.91" x2="15.60" y2="13.97" stroke="#000000" stroke-width="0.130"/>
   <line x1="18.10" y1="17.41" x2="18.10" y2="13.84" stroke="#000000" stroke-width="0.130"/>
   <line x1="20.61" y1="16.91" x2="20.61" y2="13.72" stroke="#000000" stroke-width="0.130"/>
   <line x1="23.11" y1="16.41" x2="23.11" y2="13.60" stroke="#000000" stroke-width="0.130"/>
-  <line x1="28.88" y1="12.22" x2="33.88" y2="11.60" stroke="#000000" stroke-width="0.480"/>
+  <line x1="28.81" y1="12.22" x2="33.95" y2="11.59" stroke="#000000" stroke-width="0.480"/>
   <line x1="28.88" y1="15.41" x2="28.88" y2="12.22" stroke="#000000" stroke-width="0.130"/>
   <line x1="31.38" y1="14.91" x2="31.38" y2="11.91" stroke="#000000" stroke-width="0.130"/>
   <line x1="33.88" y1="14.41" x2="33.88" y2="11.60" stroke="#000000" stroke-width="0.130"/>
-  <line x1="35.29" y1="17.22" x2="40.29" y2="16.60" stroke="#000000" stroke-width="0.480"/>
+  <line x1="35.22" y1="17.22" x2="40.36" y2="16.59" stroke="#000000" stroke-width="0.480"/>
   <line x1="35.29" y1="13.91" x2="35.29" y2="17.22" stroke="#000000" stroke-width="0.130"/>
   <line x1="37.79" y1="13.41" x2="37.79" y2="16.91" stroke="#000000" stroke-width="0.130"/>
   <line x1="40.29" y1="12.91" x2="40.29" y2="16.60" stroke="#000000" stroke-width="0.130"/>
-  <line x1="57.76" y1="14.60" x2="60.27" y2="14.41" stroke="#000000" stroke-width="0.480"/>
+  <line x1="57.70" y1="14.60" x2="60.33" y2="14.40" stroke="#000000" stroke-width="0.480"/>
   <line x1="57.76" y1="11.91" x2="57.76" y2="14.60" stroke="#000000" stroke-width="0.130"/>
   <line x1="60.27" y1="11.41" x2="60.27" y2="14.41" stroke="#000000" stroke-width="0.130"/>
-  <line x1="62.77" y1="14.41" x2="65.27" y2="14.41" stroke="#000000" stroke-width="0.480"/>
+  <line x1="62.71" y1="14.41" x2="65.34" y2="14.41" stroke="#000000" stroke-width="0.480"/>
   <line x1="62.77" y1="10.91" x2="62.77" y2="14.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="65.27" y1="10.41" x2="65.27" y2="14.41" stroke="#000000" stroke-width="0.130"/>
-  <line x1="67.78" y1="14.41" x2="70.28" y2="14.41" stroke="#000000" stroke-width="0.480"/>
+  <line x1="67.71" y1="14.41" x2="70.35" y2="14.41" stroke="#000000" stroke-width="0.480"/>
   <line x1="67.78" y1="9.91" x2="67.78" y2="14.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="70.28" y1="9.41" x2="70.28" y2="14.41" stroke="#000000" stroke-width="0.130"/>
-  <line x1="72.79" y1="14.41" x2="75.29" y2="14.41" stroke="#000000" stroke-width="0.480"/>
+  <line x1="72.72" y1="14.41" x2="75.36" y2="14.41" stroke="#000000" stroke-width="0.480"/>
   <line x1="72.79" y1="8.91" x2="72.79" y2="14.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="75.29" y1="8.41" x2="75.29" y2="14.41" stroke="#000000" stroke-width="0.130"/>
-  <line x1="77.79" y1="14.41" x2="80.30" y2="14.41" stroke="#000000" stroke-width="0.480"/>
+  <line x1="77.73" y1="14.41" x2="80.36" y2="14.41" stroke="#000000" stroke-width="0.480"/>
   <line x1="77.79" y1="7.91" x2="77.79" y2="14.41" stroke="#000000" stroke-width="0.130"/>
   <line x1="80.30" y1="7.41" x2="80.30" y2="14.41" stroke="#000000" stroke-width="0.130"/>
   <rect x="0.30" y="7.57" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="302"/>
