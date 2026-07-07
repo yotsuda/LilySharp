@@ -1523,10 +1523,10 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "courtesy", Kind = CompletionItemKind.Value, Detail = "Force courtesy accidental", SortText = "6courtesy" },
                 new CompletionItem { Label = "editorial", Kind = CompletionItemKind.Value, Detail = "Editorial (suggestion) accidental above the note", SortText = "6editorial" },
 
-                // Figured bass
-                new CompletionItem { Label = "fig.6", Kind = CompletionItemKind.Value, Detail = "Figured bass: 6", SortText = "7fig" },
-                new CompletionItem { Label = "fig.6.4", Kind = CompletionItemKind.Value, Detail = "Figured bass: 6/4", SortText = "7fig" },
-                new CompletionItem { Label = "fig.5.3", Kind = CompletionItemKind.Value, Detail = "Figured bass: 5/3", SortText = "7fig" },
+                // Figured bass — parenthesised, figures space-separated: @fig(6 4).
+                new CompletionItem { Label = "fig(6)", Kind = CompletionItemKind.Value, Detail = "Figured bass: 6", SortText = "7fig" },
+                new CompletionItem { Label = "fig(6 4)", Kind = CompletionItemKind.Value, Detail = "Figured bass: 6/4", SortText = "7fig" },
+                new CompletionItem { Label = "fig(5 3)", Kind = CompletionItemKind.Value, Detail = "Figured bass: 5/3", SortText = "7fig" },
 
                 // Chord names
                 new CompletionItem { Label = "chord(C)", Kind = CompletionItemKind.Value, Detail = "Chord name: C major", SortText = "8chord" },
