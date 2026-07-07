@@ -81,6 +81,10 @@ internal sealed class MeasureValidator : ISemanticValidator
                 ValidateMusicBlock(block);
                 break;
 
+            case SectionDeclarationSyntax section:
+                ValidateSectionInlineMusic(section);
+                break;
+
             case TimeSignatureSyntax timeSig when !IsInsideMusicBlock(timeSig) && timeSig.IsSenzaMisura:
                 _senzaMisura = true;
                 break;
@@ -122,11 +126,33 @@ internal sealed class MeasureValidator : ISemanticValidator
     }
 
     private void ValidateMusicBlock(MusicBlockSyntax block)
+        => ValidateItemsScoped(block.Items, block.Position);
+
+    // Part-major sections hold their music INLINE (a SectionDeclarationSyntax with
+    // note/bar children and no MusicBlock wrapper), so the bar-check never saw them
+    // — only section-major sections, whose part blocks each wrap a MusicBlock, were
+    // checked. Validate the inline music the same way. A section-major section holds
+    // part blocks (not inline music) and is left to the per-part-block pass.
+    private void ValidateSectionInlineMusic(SectionDeclarationSyntax section)
     {
-        // A mid-music `time` inside THIS block re-arms the meter for the rest
-        // of the block only — the state must not leak into the next part's
-        // block (each part restates its own changes), or every 4/4 bar of the
-        // following part gets flagged against the previous part's 3/4.
+        var items = new List<SyntaxNode>();
+        for (int i = 0; i < section.SlotCount; i++)
+        {
+            var child = section.GetChild(i);
+            if (child is null or SyntaxTokenNode) continue;
+            if (child is PartBlockSyntax) return; // section-major: not inline music
+            items.Add(child);
+        }
+        if (items.Count > 0)
+            ValidateItemsScoped(items, section.Position);
+    }
+
+    private void ValidateItemsScoped(IEnumerable<SyntaxNode> items, int startPos)
+    {
+        // A mid-music `time` re-arms the meter for the rest of THIS block/section
+        // only — the state must not leak into the next part's block (each part
+        // restates its own changes), or every 4/4 bar of the following part gets
+        // flagged against the previous part's 3/4.
         // LILYPOND-REF: Timing is Score-level in LP, but Lily# parts restate
         // meter changes per part; validation follows the per-block timeline.
         var savedTime = _timeSignature;
@@ -134,7 +160,7 @@ internal sealed class MeasureValidator : ISemanticValidator
         var savedSenza = _senzaMisura;
         try
         {
-            ValidateMusicBlockCore(block);
+            ValidateMeasures(items, startPos);
         }
         finally
         {
@@ -144,9 +170,9 @@ internal sealed class MeasureValidator : ISemanticValidator
         }
     }
 
-    private void ValidateMusicBlockCore(MusicBlockSyntax block)
+    private void ValidateMeasures(IEnumerable<SyntaxNode> items, int startPos)
     {
-        var measures = SplitIntoMeasures(block);
+        var measures = SplitIntoMeasures(items, startPos);
         var defaultDuration = Fraction.Quarter;
 
         for (int i = 0; i < measures.Count; i++)
@@ -261,11 +287,11 @@ internal sealed class MeasureValidator : ISemanticValidator
 
     private record MeasureContent(List<SyntaxNode> Items, int StartPosition);
 
-    private List<MeasureContent> SplitIntoMeasures(MusicBlockSyntax block)
+    private List<MeasureContent> SplitIntoMeasures(IEnumerable<SyntaxNode> blockItems, int blockStartPos)
     {
         var measures = new List<MeasureContent>();
         var currentItems = new List<SyntaxNode>();
-        int startPos = block.Position;
+        int startPos = blockStartPos;
 
         void AddItems(IEnumerable<SyntaxNode> items)
         {
@@ -294,7 +320,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                 }
             }
         }
-        AddItems(block.Items);
+        AddItems(blockItems);
 
         // Add final measure if not empty
         if (currentItems.Count > 0)
