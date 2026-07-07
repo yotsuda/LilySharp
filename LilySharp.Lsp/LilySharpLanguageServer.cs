@@ -659,6 +659,21 @@ public sealed class LilySharpLanguageServer
                 return CompletionContext.AfterAt;
             if (text[i] == '\\')
                 return CompletionContext.AfterBackslash;
+
+            // A partial name already typed after the trigger — '@acc', '\stac' —
+            // must keep offering the list (the editor then filters it to 'accent'
+            // etc.). Skip the partial word back to the trigger and re-check;
+            // otherwise the context was lost the moment the first letter was typed.
+            int at = i;
+            while (at >= 0 && (char.IsLetterOrDigit(text[at]) || text[at] == '-'))
+                at--;
+            if (at >= 0)
+            {
+                if (text[at] == '@')
+                    return CompletionContext.AfterAt;
+                if (text[at] == '\\')
+                    return CompletionContext.AfterBackslash;
+            }
         }
 
         // Right after the `clef` keyword (in a header or mid-music), only the clef
