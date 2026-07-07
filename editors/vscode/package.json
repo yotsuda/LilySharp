@@ -222,9 +222,10 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run check-types && node esbuild.js --production",
+    "compile": "node esbuild.js",
+    "check-types": "tsc --noEmit",
+    "watch": "node esbuild.js --watch",
     "deploy-server": "pwsh -Command \"dotnet publish ../../LilySharp.Lsp -c Release -r win-x64 --self-contained true -o ./server\"",
     "package": "vsce package",
     "publish": "vsce publish"
@@ -232,6 +233,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.85.0",
+    "esbuild": "^0.28.1",
     "typescript": "^5.3.0"
   },
   "dependencies": {

@@ -4,14 +4,14 @@ src/**
 *.map
 .gitignore
 tsconfig.json
+**/*.map
 *.vsix
 dist/**
 publish-marketplace.ps1
+esbuild.js
 
-# Exclude dev dependencies but include production dependencies
-node_modules/.bin/**
-node_modules/@types/**
-node_modules/typescript/**
+# Dependencies are bundled into out/extension.js by esbuild, so ship none of them.
+node_modules/**
 
 # Include server directory (LSP)
 !server/**
