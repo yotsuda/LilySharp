@@ -173,6 +173,14 @@ internal static class DynamicEngraver
                 : CalculateYPositionAcrossVoices(
                     dynVoices, dynamic.MeasureIndex, dynamic.ItemIndex, baseY);
 
+            // A wide (or CJK, full-em) label centred on this note also covers its
+            // neighbours' columns; clear those noteheads too so the label never
+            // overprints an adjacent lower note. (Below-staff placement; the
+            // forced-above path is a follow-up.)
+            if (!dynamic.IsAbove)
+                y = ClearNeighbors(dynMeasures, dynamic.MeasureIndex, measureLayout,
+                    x, LabelHalfWidth(dynamic.Text, dynamic.IsExpressiveText), y);
+
             var key = (dynamic.MeasureIndex, dynamic.ItemIndex, dynamic.StaffIndex, dynamic.IsAbove);
             int depth = stackAt.GetValueOrDefault(key, 0);
             stackAt[key] = depth + 1;
@@ -261,6 +269,51 @@ internal static class DynamicEngraver
             bool? forcedStemUp = multiVoice ? VoiceDefaults.GetDefaultStemUp(vi + 1) : null;
             double lowest = GetLowestExtent(items[itemIndex], forcedStemUp);
             y = Math.Max(y, lowest + Padding + TextAscent);
+        }
+        return y;
+    }
+
+    // The dynamic/expressive label is drawn at FontSize*0.5 = 2.0 with
+    // TextAnchor.Middle (see DrawDynamics), so it extends this far to each side of
+    // the note. SerifTextMetrics counts a CJK glyph as a full em, so a "これ" label
+    // reports its true (wide) extent.
+    private const double DynamicFontSize = 2.0;
+
+    private static double LabelHalfWidth(string text, bool expressive)
+    {
+        double w = expressive
+            ? LilySharp.Core.Rendering.SerifTextMetrics.Measure(text, DynamicFontSize)
+            : LilySharp.Core.Rendering.SerifTextMetrics.MeasureBold(text, DynamicFontSize);
+        return w / 2.0;
+    }
+
+    /// <summary>
+    /// Pushes a below-staff label clear of EVERY note whose column its width
+    /// overlaps, not just the annotated note's. A wide (or CJK, full-em) label
+    /// centred on a high note otherwise overprints its lower neighbours.
+    /// </summary>
+    /// <remarks>
+    /// LILYPOND-REF: lily/side-position-interface.cc:189-320 aligned_side() — an
+    ///   outside-staff grob is pushed off the skyline of EVERY support whose skyline
+    ///   overlaps its horizontal extent, not one column.
+    /// LILYPOND-REF: lily/axis-group-interface.cc:45,395 outside-staff skyline
+    ///   (default_outside_staff_padding_ = 0.46).
+    /// </remarks>
+    private static double ClearNeighbors(
+        ImmutableArray<Measure> measures, int measureIndex,
+        MeasureLayout measureLayout, double labelX, double halfWidth, double y)
+    {
+        if (measureIndex >= measures.Length)
+            return y;
+        var items = measures[measureIndex].Items;
+        for (int j = 0; j < items.Length; j++)
+        {
+            double itemX = measureLayout.X + LayoutUtilities.GetItemXOffset(
+                measures, measureIndex, j, measureLayout);
+            // The note's head lies (even partly) under the label's horizontal span.
+            if (Math.Abs(itemX - labelX) > halfWidth + EngravingDefaults.NoteheadHalfWidth)
+                continue;
+            y = Math.Max(y, GetLowestExtent(items[j]) + Padding + TextAscent);
         }
         return y;
     }

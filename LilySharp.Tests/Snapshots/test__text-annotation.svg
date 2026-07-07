@@ -43,9 +43,9 @@
   <rect x="49.93" y="11.64" width="0.60" height="4.00" fill="#000000"/>
   <text x="7.80" y="18.94" font-size="2.00" font-family="serif" font-style="italic" text-anchor="middle" fill="#000000" data-pos="313">dolce</text>
   <text x="22.56" y="17.54" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="342">p</text>
-  <text x="25.56" y="17.54" font-size="2.00" font-family="serif" font-style="italic" text-anchor="middle" fill="#000000" data-pos="352">poco</text>
+  <text x="25.56" y="18.94" font-size="2.00" font-family="serif" font-style="italic" text-anchor="middle" fill="#000000" data-pos="352">poco</text>
   <text x="31.64" y="18.44" font-size="2.00" font-family="serif" font-weight="bold" font-style="italic" text-anchor="middle" fill="#000000" data-pos="369">f</text>
-  <text x="37.39" y="17.94" font-size="2.00" font-family="serif" font-style="italic" text-anchor="middle" fill="#000000" data-pos="380">espress.</text>
+  <text x="37.39" y="18.44" font-size="2.00" font-family="serif" font-style="italic" text-anchor="middle" fill="#000000" data-pos="380">espress.</text>
   <text x="43.40" y="10.30" font-size="2.00" font-family="serif" font-style="italic" text-anchor="middle" fill="#000000" data-pos="401">sub.</text>
   <line x1="26.72" y1="19.53" x2="31.37" y2="18.87" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="344"/>
   <line x1="26.72" y1="19.53" x2="31.37" y2="20.20" stroke="#000000" stroke-width="0.100" stroke-linecap="round" data-pos="344"/>
