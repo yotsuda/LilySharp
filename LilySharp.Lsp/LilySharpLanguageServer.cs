@@ -1664,6 +1664,14 @@ public sealed class LilySharpLanguageServer
         }
     }
 
+    // The score's name (the quoted string right after `score`), or plain "score"
+    // when unnamed. Child 1 is either the name token or the opening brace —
+    // mirrors RenderSpecParser's name extraction.
+    private static string RenderSymbolName(RenderDeclarationSyntax render) =>
+        render.GetChild(1) is SyntaxTokenNode nameTok && nameTok.Kind != SyntaxKind.OpenBrace
+            ? $"score {nameTok.Text}"
+            : "score";
+
     private DocumentSymbol? CreateSymbol(SyntaxNode node, string text)
     {
         var (name, kind) = node switch
@@ -1675,18 +1683,26 @@ public sealed class LilySharpLanguageServer
             PhraseDeclarationSyntax phrase => ($"phrase {phrase.Name.Text}", SymbolKind.Function),
             SectionDeclarationSyntax section => ($"section {section.SectionName}", SymbolKind.Namespace),
             StructureDeclarationSyntax => ("structure", SymbolKind.Struct),
-            RenderDeclarationSyntax => ("score", SymbolKind.Module),
+            RenderDeclarationSyntax render => (RenderSymbolName(render), SymbolKind.Module),
             RepeatExpressionSyntax repeat => ($"repeat {repeat.Count.Text}x", SymbolKind.Operator),
-            ParallelExpressionSyntax => ("parallel", SymbolKind.Struct),
-            TupletExpressionSyntax tuplet => ($"tuplet {tuplet.TupletRatio}/{tuplet.BaseDivision}", SymbolKind.Operator),
+            // Tuplets and voice-parallel blocks are inline music constructs, not
+            // navigation landmarks — emitting one per triplet floods the outline.
             KeySignatureSyntax key => ($"key {key.Pitch?.PitchName} {(key.IsMajor ? "major" : "minor")}", SymbolKind.Key),
             ClefDeclarationSyntax clef => ($"clef {clef.ClefName.Text}", SymbolKind.Key),
             LyricsBlockSyntax => ("lyrics", SymbolKind.String),
             OverrideDeclarationSyntax ovr => ($"override {ovr.GrobName.Text}.{ovr.PropertyName.Text}", SymbolKind.Property),
+            // Header landmarks: title/composer (and any other metadata), time, tempo.
+            MetadataDeclarationSyntax meta => (NodeText(meta, text), SymbolKind.String),
+            TimeSignatureSyntax time => (NodeText(time, text), SymbolKind.Key),
+            TempoDeclarationSyntax tempo => (NodeText(tempo, text), SymbolKind.Key),
             _ => (null, SymbolKind.Null)
         };
 
         if (name == null) return null;
+
+        // A part's human-readable instrument name (the display label if present,
+        // else the preset) shows dimmed beside the identifier via the detail field.
+        string? detail = node is PartDeclarationSyntax partNode ? GetPartInstrument(partNode) : null;
 
         var (startLine, startCol) = GetLineAndColumn(text, node.Span.Start);
         var (endLine, endCol) = GetLineAndColumn(text, node.Span.End);
@@ -1694,6 +1710,7 @@ public sealed class LilySharpLanguageServer
         return new DocumentSymbol
         {
             Name = name,
+            Detail = detail,
             Kind = kind,
             Range = new LspRange
             {
@@ -1708,20 +1725,50 @@ public sealed class LilySharpLanguageServer
         };
     }
 
-    private static string GetPartName(PartDeclarationSyntax part)
+    // Single-line source text of a node (whitespace-collapsed), used for header
+    // landmarks (title / composer / time / tempo) shown verbatim in the outline.
+    private static string NodeText(SyntaxNode node, string text)
     {
-        // Try to get identifier or string name
+        // Start at the FIRST TOKEN's span, not the node's: a composite node reports
+        // no leading trivia (LeadingTrivia => null), so its Span begins at any
+        // leading comment above it — the first token's span correctly excludes it.
+        int start = node.GetChild(0)?.Span.Start ?? node.Span.Start;
+        var raw = text.Substring(start, node.Span.End - start);
+        return System.Text.RegularExpressions.Regex.Replace(raw.Trim(), @"\s+", " ");
+    }
+
+    // A part's instrument label for the outline detail: the quoted display name
+    // (`instrument violin "1st Violin"` → "1st Violin") if present, else the
+    // preset (`instrument piano-right` → piano-right), else null.
+    private static string? GetPartInstrument(PartDeclarationSyntax part)
+    {
         for (int i = 0; i < part.SlotCount; i++)
         {
-            var child = part.GetChild(i);
-            if (child is SyntaxTokenNode token)
+            if (part.GetChild(i) is PropertyAssignmentSyntax prop
+                && prop.NameToken.Kind == SyntaxKind.InstrumentKeyword)
             {
-                if (token.Kind == SyntaxKind.Identifier)
-                    return token.Text;
-                if (token.Kind == SyntaxKind.StringLiteral)
-                    return token.Text.Trim('"');
+                var tokens = new List<SyntaxTokenNode>();
+                for (int j = 2; j < prop.SlotCount; j++)
+                    if (prop.GetChild(j) is SyntaxTokenNode t) tokens.Add(t);
+                var label = tokens.FirstOrDefault(t => t.Kind == SyntaxKind.StringLiteral);
+                if (label != null) return label.Text;          // quoted display name
+                var preset = string.Concat(tokens.Select(t => t.Text));
+                return string.IsNullOrWhiteSpace(preset) ? null : preset;
             }
         }
+        return null;
+    }
+
+    private static string GetPartName(PartDeclarationSyntax part)
+    {
+        // The name is child 1 (keyword, name, ...). It may be a clef-word keyword
+        // (`part bass`/`treble`), so take child 1 directly rather than scanning for
+        // the first Identifier — that scan would skip a keyword name and wrongly
+        // return the instrument identifier deeper in the body.
+        if (part.GetChild(1) is SyntaxTokenNode name
+            && name.Kind != SyntaxKind.OpenBrace
+            && !string.IsNullOrWhiteSpace(name.Text))
+            return $"part {name.Text.Trim('"')}";
         return "part";
     }
 
