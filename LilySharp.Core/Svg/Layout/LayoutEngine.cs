@@ -1427,8 +1427,8 @@ internal sealed class LayoutEngine
         // Post-process below-staff elements using priority-based stacking.
         // This ensures hairpins avoid dynamics (both priority 250) and
         // text spanners avoid both dynamics and hairpins (priority 350).
-        var (stackedDynamics, stackedHairpins, stackedTextSpanners) =
-            OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts, textSpannerLayouts,
+        var (stackedDynamics, stackedHairpins) =
+            OutsideStaffStacker.StackBelowStaff(systems, dynamicLayouts, hairpinLayouts,
                 articulationLayouts, applyStaffOffsets: staffYAt != null);
 
         // ABOVE-staff: one unified priority pass (trill 50, bar number 100,
@@ -1452,11 +1452,11 @@ internal sealed class LayoutEngine
         // cleared by, the other above-staff grobs. Below dynamics were already placed by
         // StackBelowStaff and pass through untouched.
         var (stackedTrills, stackedBarNumbers, stackedOttavas, stackedCustomTexts,
-             stackedVoltas, stackedMarks, stackedDynamicsAbove) = OutsideStaffStacker.StackAboveStaff(
+             stackedVoltas, stackedMarks, stackedDynamicsAbove, stackedTextSpanners) = OutsideStaffStacker.StackAboveStaff(
             systems, systemSkylines, tupletBracketLayouts,
             trillSpannerLayouts, barNumberLayouts, ottavaLayouts,
             customTextLayouts, voltaBracketLayouts, musicMarkLayouts,
-            articulationLayouts, aboveDynamics: stackedDynamics);
+            articulationLayouts, aboveDynamics: stackedDynamics, textSpanners: textSpannerLayouts);
         stackedDynamics = stackedDynamicsAbove;
         // After stacking, sit a boundary "To Coda" on the adjacent section label's
         // line (the two straddle one barline) instead of stacking them apart.

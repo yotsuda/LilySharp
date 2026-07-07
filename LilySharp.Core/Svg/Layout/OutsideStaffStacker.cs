@@ -80,20 +80,18 @@ internal static class OutsideStaffStacker
     /// than the individual engraver already calculated.
     /// </remarks>
     public static (ImmutableArray<DynamicLayout> Dynamics,
-                    ImmutableArray<HairpinLayout> Hairpins,
-                    ImmutableArray<TextSpannerLayout> TextSpanners)
+                    ImmutableArray<HairpinLayout> Hairpins)
         StackBelowStaff(
             ImmutableArray<SystemLayout> systems,
             ImmutableArray<DynamicLayout> dynamics,
             ImmutableArray<HairpinLayout> hairpins,
-            ImmutableArray<TextSpannerLayout> textSpanners,
             ImmutableArray<ArticulationLayout> articulations = default,
             bool applyStaffOffsets = false)
     {
-        if ((dynamics.IsDefaultOrEmpty && hairpins.IsDefaultOrEmpty && textSpanners.IsDefaultOrEmpty)
+        if ((dynamics.IsDefaultOrEmpty && hairpins.IsDefaultOrEmpty)
             || systems.Length == 0)
         {
-            return (dynamics, hairpins, textSpanners);
+            return (dynamics, hairpins);
         }
 
         // Build measure-to-system mapping
@@ -216,35 +214,9 @@ internal static class OutsideStaffStacker
             adjHairpins = builder.ToImmutable();
         }
 
-        // --- Priority 350: TextSpanner ---
-        // LILYPOND-REF: scm/define-grobs.scm:3472 TextSpanner.outside-staff-priority = 350
-
-        var adjTextSpanners = textSpanners;
-        if (!textSpanners.IsDefaultOrEmpty)
-        {
-            var builder = textSpanners.ToBuilder();
-            for (int i = 0; i < builder.Count; i++)
-            {
-                var sp = builder[i];
-                if (!measureToSystem.TryGetValue(sp.StartMeasureIndex, out int sysIdx))
-                    continue;
-
-                var tracker = Track(sysIdx, sp.StaffIndex);
-                double occupiedBottom = tracker.Frontier(sp.StartX, sp.EndX);
-                double requiredY = occupiedBottom + OutsideStaffPadding + TextSpannerAscent;
-                double newY = Math.Max(sp.Y, requiredY);
-
-                if (Math.Abs(newY - sp.Y) > 0.01)
-                    builder[i] = sp with { Y = newY };
-
-                // Register text spanner in tracker
-                double finalBottom = builder[i].Y + TextSpannerDescent;
-                tracker.AddRegion(sp.StartX, sp.EndX, finalBottom);
-            }
-            adjTextSpanners = builder.ToImmutable();
-        }
-
-        return (adjDynamics, adjHairpins, adjTextSpanners);
+        // TextSpanner (priority 350) is now stacked ABOVE the staff (LilyPond
+        // TextSpanner direction=UP) by StackAboveStaff, not here.
+        return (adjDynamics, adjHairpins);
     }
 
     // =================================================================
@@ -277,7 +249,8 @@ internal static class OutsideStaffStacker
                    ImmutableArray<CustomTextLayout> CustomTexts,
                    ImmutableArray<VoltaBracketLayout> Voltas,
                    ImmutableArray<MusicMarkLayout> MusicMarks,
-                   ImmutableArray<DynamicLayout> Dynamics)
+                   ImmutableArray<DynamicLayout> Dynamics,
+                   ImmutableArray<TextSpannerLayout> TextSpanners)
         StackAboveStaff(
             ImmutableArray<SystemLayout> systems,
             IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines,
@@ -289,10 +262,11 @@ internal static class OutsideStaffStacker
             ImmutableArray<VoltaBracketLayout> voltas,
             ImmutableArray<MusicMarkLayout> musicMarks,
             ImmutableArray<ArticulationLayout> articulations = default,
-            ImmutableArray<DynamicLayout> aboveDynamics = default)
+            ImmutableArray<DynamicLayout> aboveDynamics = default,
+            ImmutableArray<TextSpannerLayout> textSpanners = default)
     {
         if (systems.IsDefaultOrEmpty)
-            return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks, aboveDynamics);
+            return (trills, barNumbers, ottavas, customTexts, voltas, musicMarks, aboveDynamics, textSpanners);
 
         var measureToSystem = new Dictionary<int, int>();
         for (int sysIdx = 0; sysIdx < systems.Length; sysIdx++)
@@ -469,6 +443,27 @@ internal static class OutsideStaffStacker
             adjDynamics = b.ToImmutable();
         }
 
+        // ---- 350: TextSpanner (accel./rit. — LilyPond TextSpanner direction=UP) ----
+        // LILYPOND-REF: scm/define-grobs.scm TextSpanner (direction . UP),
+        //   (outside-staff-priority . 350), (staff-padding . 0.8). Placed above the
+        //   staff, clearing the up-skyline, instead of below where it hit low notes.
+        var adjTextSpanners = textSpanners;
+        if (!textSpanners.IsDefaultOrEmpty)
+        {
+            var b = textSpanners.ToBuilder();
+            for (int i = 0; i < b.Count; i++)
+            {
+                var ts = b[i];
+                if (ts.StaffIndex != 0) continue; // top staff only, like trills
+                if (!measureToSystem.TryGetValue(ts.StartMeasureIndex, out int sysIdx)) continue;
+                double sy = systems[sysIdx].Y;
+                double newAbs = Place(trackers[sysIdx], ts.StartX, ts.EndX, sy + ts.Y,
+                    topOffset: -TextSpannerAscent, bottomOffset: TextSpannerDescent);
+                b[i] = ts with { Y = newAbs - sy };
+            }
+            adjTextSpanners = b.ToImmutable();
+        }
+
         // ---- 400: OttavaBracket (above-staff only) ----
         var adjOttavas = ottavas;
         if (!ottavas.IsDefaultOrEmpty)
@@ -596,7 +591,7 @@ internal static class OutsideStaffStacker
             adjMarks = b.ToImmutable();
         }
 
-        return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks, adjDynamics);
+        return (adjTrills, adjBarNumbers, adjOttavas, adjCustomTexts, adjVoltas, adjMarks, adjDynamics, adjTextSpanners);
     }
 
     /// <summary>

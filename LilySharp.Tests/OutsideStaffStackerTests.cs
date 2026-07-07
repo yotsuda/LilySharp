@@ -56,10 +56,8 @@ public class OutsideStaffStackerTests
                 Y: 5.2, StartOpening: 0, EndOpening: 0.333,
                 Direction: HairpinDirection.Crescendo, SourcePosition: 0));
 
-        var textSpanners = ImmutableArray<TextSpannerLayout>.Empty;
-
-        var (_, adjHairpins, _) = OutsideStaffStacker.StackBelowStaff(
-            systems, dynamics, hairpins, textSpanners);
+        var (_, adjHairpins) = OutsideStaffStacker.StackBelowStaff(
+            systems, dynamics, hairpins);
 
         // Hairpin should be pushed below the dynamic's bottom extent
         // Dynamic bottom = 6.0 + 0.3 (descent) = 6.3
@@ -86,8 +84,8 @@ public class OutsideStaffStackerTests
                 Y: 5.2, StartOpening: 0, EndOpening: 0.333,
                 Direction: HairpinDirection.Crescendo, SourcePosition: 0));
 
-        var (_, adjHairpins, _) = OutsideStaffStacker.StackBelowStaff(
-            systems, dynamics, hairpins, ImmutableArray<TextSpannerLayout>.Empty);
+        var (_, adjHairpins) = OutsideStaffStacker.StackBelowStaff(
+            systems, dynamics, hairpins);
 
         // No X overlap, so hairpin Y should stay at StaffBottom + padding + halfHeight
         // (or its original value if that's larger)
@@ -95,36 +93,9 @@ public class OutsideStaffStackerTests
             $"Hairpin Y ({adjHairpins[0].Y:F2}) should not be significantly pushed when no overlap");
     }
 
-    [Fact]
-    public void TextSpannerStacksBelowDynamicAndHairpin()
-    {
-        // LILYPOND-REF: scm/define-grobs.scm:3472 TextSpanner.outside-staff-priority = 350
-        // Text spanner (priority 350) should stack below dynamics+hairpins (priority 250)
-        var systems = CreateSingleSystem();
-
-        // Dynamic at X=20, Y=6.0
-        var dynamics = ImmutableArray.Create(
-            new DynamicLayout(MeasureIndex: 0, ItemIndex: 0, X: 20, Y: 6.0, Text: "mf", SourcePosition: 0));
-
-        // Hairpin at X=[22, 35], will be pushed below dynamic
-        var hairpins = ImmutableArray.Create(
-            new HairpinLayout(StartMeasureIndex: 0, StartX: 22, EndX: 35,
-                Y: 5.2, StartOpening: 0, EndOpening: 0.333,
-                Direction: HairpinDirection.Crescendo, SourcePosition: 0));
-
-        // Text spanner overlapping with both dynamic and hairpin
-        var textSpanners = ImmutableArray.Create(
-            new TextSpannerLayout(StartMeasureIndex: 0, StartX: 18, EndX: 40,
-                LineStartX: 22, Y: 5.5, Text: "rit.", Style: TextSpannerStyle.DashedLine,
-                DashPeriod: 2.0, DashFraction: 0.4, SourcePosition: 0));
-
-        var (_, adjHairpins, adjSpanners) = OutsideStaffStacker.StackBelowStaff(
-            systems, dynamics, hairpins, textSpanners);
-
-        // Text spanner should be below the hairpin
-        Assert.True(adjSpanners[0].Y > adjHairpins[0].Y,
-            $"TextSpanner Y ({adjSpanners[0].Y:F2}) should be below hairpin Y ({adjHairpins[0].Y:F2})");
-    }
+    // (Former TextSpannerStacksBelowDynamicAndHairpin removed: text spanners now
+    // stack ABOVE the staff via StackAboveStaff — LilyPond TextSpanner direction=UP
+    // — covered by the SVG snapshot fixtures.)
 
     [Fact]
     public void EmptyInputsReturnUnchanged()
@@ -132,13 +103,10 @@ public class OutsideStaffStackerTests
         var systems = CreateSingleSystem();
         var emptyDyn = ImmutableArray<DynamicLayout>.Empty;
         var emptyHp = ImmutableArray<HairpinLayout>.Empty;
-        var emptyTs = ImmutableArray<TextSpannerLayout>.Empty;
-
-        var (d, h, t) = OutsideStaffStacker.StackBelowStaff(systems, emptyDyn, emptyHp, emptyTs);
+        var (d, h) = OutsideStaffStacker.StackBelowStaff(systems, emptyDyn, emptyHp);
 
         Assert.True(d.IsEmpty);
         Assert.True(h.IsEmpty);
-        Assert.True(t.IsEmpty);
     }
 
     [Fact]
@@ -164,8 +132,8 @@ public class OutsideStaffStackerTests
                 Y: 5.2, StartOpening: 0, EndOpening: 0.333,
                 Direction: HairpinDirection.Crescendo, SourcePosition: 0));
 
-        var (_, adjHairpins, _) = OutsideStaffStacker.StackBelowStaff(
-            systems, dynamics, hairpins, ImmutableArray<TextSpannerLayout>.Empty);
+        var (_, adjHairpins) = OutsideStaffStacker.StackBelowStaff(
+            systems, dynamics, hairpins);
 
         // Hairpin in system 1 should NOT be affected by dynamic in system 0
         Assert.True(adjHairpins[0].Y <= 5.2 + 0.5,

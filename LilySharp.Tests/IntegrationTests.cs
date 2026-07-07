@@ -109,10 +109,10 @@ score ""test"" {
     }
 
     [Fact]
-    public void ShowcaseExpressions_TextSpannerBelowDynamics()
+    public void ShowcaseExpressions_TextSpannerAboveDynamics()
     {
-        // Integration test: verify rit./accel. text spanners are placed below
-        // overlapping dynamics per outside-staff-priority stacking
+        // Integration test: rit./accel. text spanners are placed ABOVE the staff
+        // (LilyPond TextSpanner direction=UP), clear of the below-staff dynamics.
         var source = @"
 tempo 120
 time 4/4
@@ -175,8 +175,10 @@ score ""test"" {
 
         Assert.NotEmpty(overlappingDynamics);
         var maxDynY = overlappingDynamics.Max(d => d.Y);
-        Assert.True(ritSpanner.Y > maxDynY,
-            $"rit. Y ({ritSpanner.Y:F2}) should be below max overlapping dynamic Y ({maxDynY:F2})");
+        // Y grows downward: an above-staff spanner sits at a SMALLER Y than the
+        // below-staff dynamics.
+        Assert.True(ritSpanner.Y < maxDynY,
+            $"rit. Y ({ritSpanner.Y:F2}) should be above (smaller Y than) max overlapping dynamic Y ({maxDynY:F2})");
     }
 
     [Fact]

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="472.3" viewBox="0 0 119.05 47.23">
+<svg xmlns="http://www.w3.org/2000/svg" width="1190.5" height="456.7" viewBox="0 0 119.05 45.67">
 <style>
   @font-face { font-family: 'Emmentaler'; src: local('Emmentaler'); }
   .music { font-family: 'Emmentaler', serif; }
@@ -134,9 +134,9 @@
   <text x="1.37" y="15.39" font-size="2.40" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="275">A</text>
   <rect x="0.30" y="26.83" width="2.00" height="2.80" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="517"/>
   <text x="1.30" y="29.23" font-size="2.40" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="517">B</text>
-  <text x="10.76" y="41.93" font-size="2.00" font-family="serif" font-style="italic" fill="#000000" data-pos="532">rit.</text>
-  <line x1="13.46" y1="41.93" x2="55.21" y2="41.93" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="532"/>
-  <text x="55.46" y="39.37" font-size="2.00" font-family="serif" font-style="italic" fill="#000000" data-pos="613">accel.</text>
-  <line x1="59.26" y1="39.37" x2="80.72" y2="39.37" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="613"/>
+  <text x="10.76" y="31.81" font-size="2.00" font-family="serif" font-style="italic" fill="#000000" data-pos="532">rit.</text>
+  <line x1="13.46" y1="31.81" x2="55.21" y2="31.81" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="532"/>
+  <text x="55.46" y="31.81" font-size="2.00" font-family="serif" font-style="italic" fill="#000000" data-pos="613">accel.</text>
+  <line x1="59.26" y1="31.81" x2="80.72" y2="31.81" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 2.40" data-pos="613"/>
   </g>
 </svg>
