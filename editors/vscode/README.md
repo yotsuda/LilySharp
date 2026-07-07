@@ -34,9 +34,11 @@ Colors can be customized in settings.
 
 ## Requirements
 
-- **.NET 9 Runtime** — the bundled language server runs on it
-  (`dotnet` must be on PATH; the SDK also works).
-  Building from source additionally needs the .NET 9 SDK and Node.js 18+.
+None. The language server is **self-contained** — each platform's build bundles its
+own .NET runtime, so nothing needs to be installed. Just install the extension and open
+a `.lys` file.
+
+(Building from source needs the .NET 9 SDK and Node.js 18+.)
 
 ## Installation
 
@@ -86,7 +88,7 @@ If not set, the extension looks for `lilysharp-lsp` in PATH.
 2. Start typing Lily# notation
 3. Use `Ctrl+Space` for completion suggestions
 4. Hover over elements for documentation
-5. Use `Ctrl+Shift+O` to open document outline
+5. Press `Ctrl+Shift+O` to jump to a symbol, or open the **Outline** view in the Explorer sidebar for the score structure
 6. Use `F12` to go to variable definition
 7. Use `Shift+Alt+F` to format document
 
