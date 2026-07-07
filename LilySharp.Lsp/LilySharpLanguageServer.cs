@@ -1446,7 +1446,7 @@ public sealed class LilySharpLanguageServer
         return new CompletionList { Items = items.ToArray() };
     }
 
-    private static CompletionList GetArticulationCompletions()
+    internal static CompletionList GetArticulationCompletions()
     {
         return new CompletionList
         {
@@ -1492,14 +1492,13 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "cresc", Kind = CompletionItemKind.Value, Detail = "Crescendo hairpin", SortText = "2cresc" },
                 new CompletionItem { Label = "decresc", Kind = CompletionItemKind.Value, Detail = "Decrescendo hairpin", SortText = "2decresc" },
 
-                // Music navigation marks
+                // Music navigation signs that attach to a note. The compound
+                // jump DIRECTIVES (dc, ds al coda / al fine, rehearsal marks) are
+                // structure-level only and error after '@' — they belong in the
+                // structure { } completions, not here.
                 new CompletionItem { Label = "segno", Kind = CompletionItemKind.Value, Detail = "Segno sign", SortText = "3segno" },
                 new CompletionItem { Label = "coda", Kind = CompletionItemKind.Value, Detail = "Coda sign", SortText = "3coda" },
                 new CompletionItem { Label = "fine", Kind = CompletionItemKind.Value, Detail = "Fine (end)", SortText = "3fine" },
-                new CompletionItem { Label = "dc", Kind = CompletionItemKind.Value, Detail = "Da Capo", SortText = "3dc" },
-                new CompletionItem { Label = "ds.al.fine", Kind = CompletionItemKind.Value, Detail = "Dal Segno al Fine", SortText = "3ds.al.fine" },
-                new CompletionItem { Label = "ds.al.coda", Kind = CompletionItemKind.Value, Detail = "Dal Segno al Coda", SortText = "3ds.al.coda" },
-                new CompletionItem { Label = "mark.A", Kind = CompletionItemKind.Value, Detail = "Rehearsal mark A", SortText = "3mark" },
 
                 // Spanners and brackets
                 new CompletionItem { Label = "rit", Kind = CompletionItemKind.Value, Detail = "Ritardando text spanner", SortText = "4rit" },
@@ -1511,11 +1510,11 @@ public sealed class LilySharpLanguageServer
 
                 // Pedal markings
                 new CompletionItem { Label = "ped", Kind = CompletionItemKind.Value, Detail = "Sustain pedal on", SortText = "5ped" },
-                new CompletionItem { Label = "ped.off", Kind = CompletionItemKind.Value, Detail = "Sustain pedal off", SortText = "5ped.off" },
-                new CompletionItem { Label = "sost.ped", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal on", SortText = "5sost.ped" },
+                new CompletionItem { Label = "ped(off)", Kind = CompletionItemKind.Value, Detail = "Sustain pedal off", SortText = "5ped.off" },
+                new CompletionItem { Label = "sost(ped)", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal on", SortText = "5sost.ped" },
                 new CompletionItem { Label = "sostenuto", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal off", SortText = "5sostenuto" },
-                new CompletionItem { Label = "una.corda", Kind = CompletionItemKind.Value, Detail = "Una corda pedal on", SortText = "5una.corda" },
-                new CompletionItem { Label = "tre.corde", Kind = CompletionItemKind.Value, Detail = "Una corda pedal off", SortText = "5tre.corde" },
+                new CompletionItem { Label = "una(corda)", Kind = CompletionItemKind.Value, Detail = "Una corda pedal on", SortText = "5una.corda" },
+                new CompletionItem { Label = "tre(corde)", Kind = CompletionItemKind.Value, Detail = "Una corda pedal off", SortText = "5tre.corde" },
 
                 // Notation marks
                 new CompletionItem { Label = "glissando", Kind = CompletionItemKind.Value, Detail = "Glissando to next note", SortText = "6glissando" },
@@ -1530,8 +1529,8 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "fig.5.3", Kind = CompletionItemKind.Value, Detail = "Figured bass: 5/3", SortText = "7fig" },
 
                 // Chord names
-                new CompletionItem { Label = "chord.C", Kind = CompletionItemKind.Value, Detail = "Chord name: C major", SortText = "8chord" },
-                new CompletionItem { Label = "chord.Am", Kind = CompletionItemKind.Value, Detail = "Chord name: A minor", SortText = "8chord" }
+                new CompletionItem { Label = "chord(C)", Kind = CompletionItemKind.Value, Detail = "Chord name: C major", SortText = "8chord" },
+                new CompletionItem { Label = "chord(Am)", Kind = CompletionItemKind.Value, Detail = "Chord name: A minor", SortText = "8chord" }
             ]
         };
     }
