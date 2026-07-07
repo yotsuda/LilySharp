@@ -431,7 +431,8 @@ public sealed class MidiExporter
         }
         int passes = Math.Max(2, alternatives.Count);
         // A structure repeat is engraved once (repeat barlines): later passes
-        // revisit the same printed copies.
+        // revisit the same printed BODY copy, so the body's ordinals restart from
+        // this snapshot each pass (the highlight re-lights the same printed body).
         var structOrdSnapshot = new Dictionary<int, int>(_sourceOrdinals);
         for (int pass = 0; pass < passes; pass++)
         {
@@ -440,7 +441,26 @@ public sealed class MidiExporter
             foreach (var name in body)
                 PlaySectionByName(name, track, conductorTrack);
             if (pass < alternatives.Count)
+            {
+                // Each ENDING, unlike the body, is a distinct printed copy laid out
+                // in pass order after the body. When the endings reuse the body's
+                // section they share its source positions, so the body's per-pass
+                // ordinal restart would otherwise map every ending onto the FIRST
+                // ending's printed copy (highlighting ending 1 each pass, never
+                // ending 2). Advance the body's positions by `pass` so this pass's
+                // ending resolves to its OWN printed copy. Only positions the body
+                // just bumped are advanced, leaving intro/outro sections intact.
+                if (pass > 0)
+                {
+                    foreach (var key in new List<int>(_sourceOrdinals.Keys))
+                    {
+                        structOrdSnapshot.TryGetValue(key, out int before);
+                        if (_sourceOrdinals[key] > before)
+                            _sourceOrdinals[key] += pass;
+                    }
+                }
                 PlaySectionByName(alternatives[pass], track, conductorTrack);
+            }
         }
     }
 

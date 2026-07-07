@@ -122,4 +122,32 @@ public sealed class MidiRepeatTests
         // '[' before a note is still a beam marker, not a volta: [c d] plays once.
         Assert.Equal(new[] { 60, 62 }, Pitches("{ [c8 d8] }"));
     }
+
+    // SourceOrdinal per note = which printed copy the playback highlight lights.
+    private static int[] Ordinals(string source, int pitch) =>
+        new MidiExporter().Export(SyntaxTree.Parse(source))
+            .Tracks[1].Notes.Where(n => n.Pitch == pitch)
+            .OrderBy(n => n.StartTick).Select(n => n.SourceOrdinal).ToArray();
+
+    [Fact]
+    public void VoltaEndingsReusingBodySection_HighlightDistinctPrintedCopies()
+    {
+        // structure { A |: B | [1. B "x"] :| [2. B "y"] | A }: both endings reuse
+        // section B, printed as body (copy 0), ending 1 (copy 1), ending 2 (copy 2).
+        // The playback highlight picks the printed copy by SourceOrdinal, so B's
+        // four onsets (body, ending 1, body, ending 2) must carry ordinals
+        // 0,1,0,2 -- NOT 0,1,0,1, which re-lit ending 1 on both passes and never
+        // ending 2. Intro/outro section A must keep its own 0,1 (undisturbed).
+        const string src =
+            "octave absolute\n" +
+            "part mel\n" +
+            "phrase pa { c'4 }\n" +
+            "phrase pb { g'4 }\n" +
+            "section A { mel { $pa } }\n" +
+            "section B { mel { $pb } }\n" +
+            "structure { A |: B | [1. B \"x\"] :| [2. B \"y\"] | A }\n" +
+            "score \"s\" { staff mel }\n";
+        Assert.Equal(new[] { 0, 1, 0, 2 }, Ordinals(src, 79)); // section B (g' = 79)
+        Assert.Equal(new[] { 0, 1 }, Ordinals(src, 72));       // intro/outro A (c' = 72)
+    }
 }
