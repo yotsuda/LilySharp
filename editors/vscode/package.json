@@ -135,7 +135,7 @@
         "lilysharp.preview.refreshDelay": {
           "minimum": 100,
           "maximum": 2000,
-          "default": 300,
+          "default": 100,
           "description": "Delay in milliseconds before refreshing preview after document change",
           "type": "number"
         }

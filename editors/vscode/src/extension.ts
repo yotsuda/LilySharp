@@ -71,7 +71,7 @@ const outputChannel = vscode.window.createOutputChannel('Lily# Extension');
 const selectedRenders = new Map<string, string>();
 
 // Constants
-const DEBOUNCE_DELAY_DEFAULT = 300;
+const DEBOUNCE_DELAY_DEFAULT = 100;
 const HIGHLIGHT_DISTANCE_THRESHOLD = 50;
 
 export function activate(context: vscode.ExtensionContext) {
