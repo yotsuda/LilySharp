@@ -1,0 +1,21 @@
+// A volta-bracket alternative can carry a display label: [1. B "label"]. The
+// label is shown as the section mark above the volta bracket, just like a plain
+// reference's  A "A2". Guards the StructureAlternative displayLabel slot and its
+// rendering -- the label used to be dropped by the parser (no slot for it), so
+// only the plain  A "A2"  worked while  [1. B "..."]  was silently ignored.
+title "Volta labels"
+octave absolute
+time 4/4
+key c major
+
+part mel
+phrase pa { c''4 d'' e'' f'' }
+phrase pb { g''4 a'' b'' c''' }
+section A { mel { $pa } }
+section B { mel { $pb } }
+
+structure { A |: B | [1. B "first"] :| [2. B "second"] | A "A2" }
+
+score "volta-labels" {
+  staff mel
+}

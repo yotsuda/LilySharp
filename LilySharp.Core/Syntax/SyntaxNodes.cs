@@ -1840,9 +1840,10 @@ public sealed partial class StructureAlternativeSyntax : SyntaxNode
 
     /// <summary>
     /// True if this has a range separator (- or ,) like [1-3. A] or [1,3. A]
-    /// Slot layout: Bracket with separator has 8 slots, without has 6 slots
+    /// Slot layout: Bracket with separator has 9 slots, without has 7 slots
+    /// (the extra slot over the historical 8/6 is the optional display label).
     /// </summary>
-    public bool HasSeparator => HasBracket && SlotCount == 8;
+    public bool HasSeparator => HasBracket && SlotCount == 9;
 
     /// <summary>
     /// True if this is a silent section reference [1. ~A] (no label displayed)
@@ -1910,6 +1911,27 @@ public sealed partial class StructureAlternativeSyntax : SyntaxNode
             if (!HasBracket) return $"{Number.Text}.";
             if (!HasSeparator) return $"{Number.Text}.";
             return $"{Number.Text}{Separator!.Text}{EndNumber!.Text}.";
+        }
+    }
+
+    /// <summary>
+    /// Optional display label on a bracket alternative: <c>[1. A "label"]</c>,
+    /// shown as the section's mark just like a plain reference's <c>A "A2"</c>.
+    /// Null when no label was given (or on the legacy non-bracket style). The
+    /// label slot sits right after the section name (slot[7] with a separator,
+    /// slot[5] without).
+    /// </summary>
+    public string? DisplayLabel
+    {
+        get
+        {
+            if (!HasBracket) return null;
+            if (GetChild(HasSeparator ? 7 : 5) is not SyntaxTokenNode { Kind: SyntaxKind.StringLiteral } token)
+                return null;
+            var text = token.Text;
+            if (text.StartsWith("\"") && text.EndsWith("\"") && text.Length >= 2)
+                return text.Substring(1, text.Length - 2);
+            return text;
         }
     }
 }

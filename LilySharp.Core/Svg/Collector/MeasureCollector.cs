@@ -2795,7 +2795,7 @@ public sealed class MeasureCollector
                         // Track measure index before processing this alternative
                         int startMeasureIndex = builder.CurrentMeasureIndex;
 
-                        builder.SectionLabel = altSectionName;
+                        builder.SectionLabel = alt.DisplayLabel ?? altSectionName;
                         builder.SectionLabelPosition = SectionDeclPos(altSectionName);
                         ProcessSection(section, processNodes);
 

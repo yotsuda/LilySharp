@@ -823,7 +823,7 @@ internal sealed class StructureAlternativeGreen : GreenSyntaxNode
     {
     }
 
-    // Bracket style: [1. A] or [1-3. A] or [1,3. A] or [1. ~A]
+    // Bracket style: [1. A] or [1-3. A] or [1,3. A] or [1. ~A] or [1. A "label"]
     public StructureAlternativeGreen(
         SyntaxToken openBracket,
         SyntaxToken number,
@@ -832,9 +832,10 @@ internal sealed class StructureAlternativeGreen : GreenSyntaxNode
         SyntaxToken dot,
         SyntaxToken? tilde,
         SyntaxToken sectionName,
+        SyntaxToken? displayLabel,
         SyntaxToken? closeBracket)
         : base(SyntaxKind.StructureAlternative,
-            BuildSlots(openBracket, number, separator, endNumber, dot, tilde, sectionName, closeBracket))
+            BuildSlots(openBracket, number, separator, endNumber, dot, tilde, sectionName, displayLabel, closeBracket))
     {
     }
 
@@ -846,18 +847,19 @@ internal sealed class StructureAlternativeGreen : GreenSyntaxNode
         SyntaxToken dot,
         SyntaxToken? tilde,
         SyntaxToken sectionName,
+        SyntaxToken? displayLabel,
         SyntaxToken? closeBracket)
     {
-        // Slot layout (always include tilde slot for consistent indexing):
-        // With separator: [openBracket, number, separator, endNumber, dot, tilde?, sectionName, closeBracket]
-        // Without separator: [openBracket, number, dot, tilde?, sectionName, closeBracket]
+        // Slot layout (always include tilde + displayLabel slots for consistent indexing):
+        // With separator: [openBracket, number, separator, endNumber, dot, tilde?, sectionName, displayLabel?, closeBracket]
+        // Without separator: [openBracket, number, dot, tilde?, sectionName, displayLabel?, closeBracket]
         if (separator != null)
         {
-            return [openBracket, number, separator, endNumber, dot, tilde, sectionName, closeBracket];
+            return [openBracket, number, separator, endNumber, dot, tilde, sectionName, displayLabel, closeBracket];
         }
         else
         {
-            return [openBracket, number, dot, tilde, sectionName, closeBracket];
+            return [openBracket, number, dot, tilde, sectionName, displayLabel, closeBracket];
         }
     }
 }

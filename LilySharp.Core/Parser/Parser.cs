@@ -2244,10 +2244,13 @@ private GreenNode?[] ParseArticulations()
         }
 
         var section = Expect(SyntaxKind.Identifier);
+        // Optional display label: [1. B "label"] — shown as the section's mark,
+        // exactly like a plain reference's  A "A2".
+        SyntaxToken? displayLabel = Check(SyntaxKind.StringLiteral) ? Advance() : null;
         // The ']' is optional: present = closed (right cap drawn), absent = open.
         SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
 
-        return new StructureAlternativeGreen(openBracket, number, separator, endNumber, dot, tilde, section, closeBracket);
+        return new StructureAlternativeGreen(openBracket, number, separator, endNumber, dot, tilde, section, displayLabel, closeBracket);
     }
 
     /// <summary>
