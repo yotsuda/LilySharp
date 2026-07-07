@@ -59,6 +59,12 @@ for ($round = 1; $round -le 10 -and -not $ok; $round++) {
         }
     Start-Sleep -Milliseconds 300
     try {
+        # Clean the destination first: if the installed extension was a
+        # SELF-CONTAINED build (marketplace VSIX), its coreclr + runtime would
+        # linger and make the client launch this framework-dependent apphost
+        # DIRECTLY (→ "No frameworks were found"). Removing them leaves a pure
+        # FD server the client correctly runs via `dotnet`.
+        if (Test-Path $dest) { Remove-Item "$dest\*" -Recurse -Force -ErrorAction Stop }
         Copy-Item "$repoServer\*" $dest -Recurse -Force -ErrorAction Stop
         $ok = $true
     } catch {
