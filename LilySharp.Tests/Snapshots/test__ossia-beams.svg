@@ -95,7 +95,7 @@
   <text class="music" x="62.14" y="12.35" font-size="1.84" data-pos="406"></text>
   <line x1="62.71" y1="12.35" x2="62.71" y2="10.74" stroke="#000000" stroke-width="0.060" data-pos="406"/>
   <text class="music" x="62.71" y="10.74" font-size="1.84" fill="#000000" data-pos="406"></text>
-  <text x="49.00" y="11.29" font-size="1.58" font-family="serif" text-anchor="middle" fill="#000000" data-pos="374">3</text>
+  <text x="49.00" y="10.58" font-size="1.58" font-family="serif" text-anchor="middle" fill="#000000" data-pos="374">3</text>
   <rect x="0.30" y="6.80" width="5.41" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="229"/>
   <text x="3.01" y="9.00" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="229">Main</text>
   </g>

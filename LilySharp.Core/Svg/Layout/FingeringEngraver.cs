@@ -220,13 +220,21 @@ internal static class FingeringEngraver
         // Default staff height = 4 staff spaces (5 lines).
         const double StaffHeight = 4.0;
 
-        // Y baseline: place the digit just outside the staff on the appropriate side.
-        // For the "above" case, the digit's baseline sits above the staff top by
-        // StaffPadding + DigitHeight (so the digit's bottom is StaffPadding above
-        // the staff top). For "below", baseline sits below staff bottom.
+        // Y baseline: place the digit just outside the staff on the appropriate side,
+        // but also clear of the NOTEHEAD. A fingering on a note above the top line
+        // (or below the bottom) must sit outside the notehead, else it overprints it.
+        // Take whichever is farther out — the staff edge or the note. This mirrors
+        // LilyPond's side-position (the notehead is a support) while honouring the
+        // Fingering staff-padding.
+        // LILYPOND-REF: lily/side-position-interface.cc; scm/define-grobs.scm Fingering.
+        const double StaffMiddle = 2.0;        // middle line, staff spaces from staff top
+        const double NoteheadHalfHeight = 0.5; // notehead half-height (staff spaces)
+        double noteheadY = staffY + StaffMiddle - note.StaffPosition * 0.5;
         double y = isAbove
-            ? staffY - StaffPadding
-            : staffY + StaffHeight + StaffPadding + DigitHeight;
+            ? System.Math.Min(staffY - StaffPadding,
+                noteheadY - NoteheadHalfHeight - StaffPadding)
+            : System.Math.Max(staffY + StaffHeight + StaffPadding + DigitHeight,
+                noteheadY + NoteheadHalfHeight + StaffPadding + DigitHeight);
 
         return new FingeringLayout(
             MeasureIndex: measureIndex,
