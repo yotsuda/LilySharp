@@ -407,6 +407,10 @@ public sealed class LilySharpLanguageServer
         if (wordStart > 0 && doc.Text[wordStart - 1] == ':' && IsInsideChordNamesBlock(doc.Text, offset))
             return GetChordQualityCompletions();
 
+        // Inside a @chord(…) argument: offer the current key's diatonic chords.
+        if (IsInsideChordAnnotation(doc.Text, offset))
+            return GetDiatonicChordCompletions(doc.Text, offset);
+
         return context switch
         {
             CompletionContext.TopLevel => GetTopLevelCompletions(),
@@ -1306,6 +1310,110 @@ public sealed class LilySharpLanguageServer
             last.Groups[1].Value, last.Groups[2].Value) ?? 0;
     }
 
+    /// <summary>True when <paramref name="offset"/> sits inside a <c>@chord(…)</c>
+    /// argument — scan back on the current line to the nearest unclosed '(' and
+    /// check its word is <c>chord</c> preceded by '@'.</summary>
+    internal static bool IsInsideChordAnnotation(string text, int offset)
+    {
+        for (int i = Math.Min(offset, text.Length) - 1; i >= 0; i--)
+        {
+            char c = text[i];
+            if (c is ')' or '\n' or '\r')
+                return false; // past a close paren, or off the line — not inside
+            if (c != '(')
+                continue;
+            int e = i - 1, s = i - 1;
+            while (s >= 0 && char.IsLetter(text[s])) s--;
+            string name = s + 1 <= e ? text[(s + 1)..(e + 1)] : "";
+            return name.Equals("chord", StringComparison.OrdinalIgnoreCase)
+                && s >= 0 && text[s] == '@';
+        }
+        return false;
+    }
+
+    /// <summary>The seven diatonic chords of the key in force at
+    /// <paramref name="offset"/> (C major when none), each a chord-name symbol like
+    /// C, Dm, Em, F, G, Am, Bdim — computed from the key's tonic + signature.</summary>
+    internal static CompletionList GetDiatonicChordCompletions(string text, int offset)
+    {
+        var prefix = text.Substring(0, Math.Min(offset, text.Length));
+        var matches = Regex.Matches(
+            prefix, @"\bkey\s+([a-gA-G](?:is|es|isis|eses)?)\s+([A-Za-z]+)");
+        char tonic = 'c';
+        int sharps = 0;
+        if (matches.Count > 0)
+        {
+            var last = matches[^1];
+            tonic = char.ToLowerInvariant(last.Groups[1].Value[0]);
+            sharps = KeySpelling.SharpsFor(last.Groups[1].Value, last.Groups[2].Value) ?? 0;
+        }
+
+        const string letters = "cdefgab";       // step 0..6
+        int tonicStep = KeySpelling.StepOf(tonic);
+        if (tonicStep < 0) tonicStep = 0;
+
+        var items = new System.Collections.Generic.List<CompletionItem>();
+        for (int deg = 0; deg < 7; deg++)
+        {
+            int step = (tonicStep + deg) % 7;
+            char letter = letters[step];
+            string quality = TriadQuality(step, sharps);   // "", "m", "dim", "aug"
+            string chord = ChordRootName(letter, sharps) + quality;
+            items.Add(new CompletionItem
+            {
+                Label = chord,
+                Kind = CompletionItemKind.Value,
+                Detail = $"Diatonic chord ({DiatonicRoman(deg, quality)})",
+                SortText = deg.ToString("D2"),  // keep scale order, not alphabetical
+            });
+        }
+        return new CompletionList { Items = items.ToArray() };
+    }
+
+    /// <summary>A chord ROOT display ("C", "F#", "Bb") for a note letter under a key
+    /// signature — uppercase letter + '#'/'b' (not the parser's is/es).</summary>
+    private static string ChordRootName(char letter, int sharps)
+    {
+        int alt = KeySpelling.Alteration(KeySpelling.StepOf(letter), sharps);
+        string acc = alt switch { 2 => "##", 1 => "#", -1 => "b", -2 => "bb", _ => "" };
+        return char.ToUpperInvariant(letter) + acc;
+    }
+
+    // Semitone of a note letter under a key signature (0–11, C = 0).
+    private static int NoteSemitone(char letter, int sharps)
+    {
+        int baseSemi = letter switch
+        { 'c' => 0, 'd' => 2, 'e' => 4, 'f' => 5, 'g' => 7, 'a' => 9, 'b' => 11, _ => 0 };
+        return ((baseSemi + KeySpelling.Alteration(KeySpelling.StepOf(letter), sharps)) % 12 + 12) % 12;
+    }
+
+    /// <summary>The triad quality on a scale degree in a key: "" major, "m" minor,
+    /// "dim" diminished, "aug" augmented — from the root/third/fifth intervals.</summary>
+    private static string TriadQuality(int rootStep, int sharps)
+    {
+        const string letters = "cdefgab";
+        int r = NoteSemitone(letters[rootStep], sharps);
+        int third = (NoteSemitone(letters[(rootStep + 2) % 7], sharps) - r + 12) % 12;
+        int fifth = (NoteSemitone(letters[(rootStep + 4) % 7], sharps) - r + 12) % 12;
+        return (third, fifth) switch
+        {
+            (4, 7) => "",
+            (3, 7) => "m",
+            (3, 6) => "dim",
+            (4, 8) => "aug",
+            _ => "",
+        };
+    }
+
+    /// <summary>Roman-numeral degree for a chord's Detail: uppercase for major,
+    /// lowercase for minor/dim, with ° (dim) / + (aug).</summary>
+    private static string DiatonicRoman(int degree, string quality)
+    {
+        string r = new[] { "I", "II", "III", "IV", "V", "VI", "VII" }[degree];
+        if (quality is "m" or "dim") r = r.ToLowerInvariant();
+        return quality switch { "dim" => r + "°", "aug" => r + "+", _ => r };
+    }
+
     /// <summary>
     /// True when the cursor sits in the MUSIC of a percussion part: ascend the
     /// unmatched-brace chain from the cursor, skip voice { } wrappers, take the
@@ -1567,9 +1675,21 @@ public sealed class LilySharpLanguageServer
                 new CompletionItem { Label = "fig(6 4)", Kind = CompletionItemKind.Value, Detail = "Figured bass: 6/4", SortText = "7fig" },
                 new CompletionItem { Label = "fig(5 3)", Kind = CompletionItemKind.Value, Detail = "Figured bass: 5/3", SortText = "7fig" },
 
-                // Chord names
-                new CompletionItem { Label = "chord(C)", Kind = CompletionItemKind.Value, Detail = "Chord name: C major", SortText = "8chord" },
-                new CompletionItem { Label = "chord(Am)", Kind = CompletionItemKind.Value, Detail = "Chord name: A minor", SortText = "8chord" }
+                // Chord name. Inserts '@chord()' with the caret inside the parens and
+                // immediately re-triggers completion, which then offers the current
+                // key's diatonic chords (see GetDiatonicChordCompletions).
+                new CompletionItem
+                {
+                    Label = "chord", Kind = CompletionItemKind.Value,
+                    Detail = "Chord name — offers the current key's diatonic chords",
+                    InsertText = "chord($0)", InsertTextFormat = InsertTextFormat.Snippet,
+                    SortText = "8chord",
+                    Command = new Command
+                    {
+                        Title = "Suggest chords",
+                        CommandIdentifier = "editor.action.triggerSuggest",
+                    },
+                }
             ]
         };
     }
