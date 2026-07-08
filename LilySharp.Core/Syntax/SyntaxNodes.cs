@@ -1414,7 +1414,9 @@ public sealed class LyricsBlockSyntax : SyntaxNode
 
     /// <summary>The opening <c>{</c> token.</summary>
     public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(OpenBraceIndex)!;
-    /// <summary>The lyric syllable items, in order.</summary>
+    /// <summary>The lyric syllable items (lyric measures), in order. For the
+    /// part-major form these are <see cref="SectionDeclarationSyntax"/> children
+    /// instead; use <see cref="Sections"/> to read them.</summary>
     public IEnumerable<SyntaxNode> Syllables
     {
         get
@@ -1427,6 +1429,32 @@ public sealed class LyricsBlockSyntax : SyntaxNode
             }
         }
     }
+
+    /// <summary>Inner section declarations of the part-major lyric track form
+    /// (<c>lyrics { section A { .. } section B { .. } }</c>) — each holds this
+    /// track's verse for one named section. Empty for the flat form.</summary>
+    public IEnumerable<SectionDeclarationSyntax> Sections
+    {
+        get
+        {
+            for (int i = OpenBraceIndex + 1; i < SlotCount - 1; i++)
+                if (GetChild(i) is SectionDeclarationSyntax section)
+                    yield return section;
+        }
+    }
+
+    /// <summary>True when this lyric track is written in the part-major (per-section) form.</summary>
+    public bool HasSections
+    {
+        get
+        {
+            for (int i = OpenBraceIndex + 1; i < SlotCount - 1; i++)
+                if (GetChild(i) is SectionDeclarationSyntax)
+                    return true;
+            return false;
+        }
+    }
+
     /// <summary>The closing <c>}</c> token.</summary>
     public SyntaxTokenNode CloseBrace => (SyntaxTokenNode)GetChild(SlotCount - 1)!;
 }

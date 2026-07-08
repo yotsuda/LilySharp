@@ -93,10 +93,10 @@ public static class PartSectionLayoutConverter
     }
 
     /// <summary>
-    /// True when a section-major section carries a block the converter cannot transpose
-    /// — currently a <c>lyrics { }</c> block (part-major has no per-section home for it
-    /// yet). Part blocks and <c>chords name { }</c> chord parts ARE transposed, so they
-    /// don't trip this. The editor uses it to explain a refused conversion.
+    /// True when a section-major section carries a block the converter cannot transpose.
+    /// Part blocks, <c>chords name { }</c> chord parts and <c>lyrics { }</c> blocks are
+    /// all transposed, so nothing common trips this today — it stays as a guard against
+    /// any future section-only block type. The editor uses it to explain a refusal.
     /// </summary>
     public static bool HasUntransposableSectionContent(string source)
         => HasUntransposableSectionContent(SyntaxTree.Parse(source).GetRoot());
@@ -104,7 +104,8 @@ public static class PartSectionLayoutConverter
     private static bool HasUntransposableSectionContent(CompilationUnitSyntax root)
         => TopLevel(root).OfType<SectionDeclarationSyntax>()
             .Where(s => DirectChildrenOfType<PartBlockSyntax>(s).Any())
-            .Any(s => DirectChildren(s).Any(c => c is not PartBlockSyntax and not ChordPartBlockSyntax));
+            .Any(s => DirectChildren(s).Any(
+                c => c is not PartBlockSyntax and not ChordPartBlockSyntax and not LyricsBlockSyntax));
 
     // --- model extraction -----------------------------------------------------
 
@@ -118,6 +119,10 @@ public static class PartSectionLayoutConverter
         // (chordName, section) -> the chord entries text.
         var chordParts = new List<string?>();
         var chordCells = new Dictionary<(string? Name, string Section), string>();
+        // Lyric tracks: (name, ordinal) — the ordinal separates several same-named
+        // (usually nameless) verse blocks in one section — and (track, section) text.
+        var lyricTracks = new List<(string? Name, int Ordinal)>();
+        var lyricCells = new Dictionary<(string? Name, int Ordinal, string Section), string>();
         var sectionOrder = new List<string>();
         void AddSection(string name)
         {
@@ -126,6 +131,10 @@ public static class PartSectionLayoutConverter
         void AddChordPart(string? name)
         {
             if (!chordParts.Contains(name)) chordParts.Add(name);
+        }
+        void AddLyricTrack((string?, int) track)
+        {
+            if (!lyricTracks.Contains(track)) lyricTracks.Add(track);
         }
 
         foreach (var member in TopLevel(root))
@@ -159,6 +168,19 @@ public static class PartSectionLayoutConverter
                     }
                     break;
 
+                // Part-major lyric track: lyrics [name] { section A { .. } section B { .. } }.
+                case LyricsBlockSyntax topLyrics when topLyrics.HasSections:
+                {
+                    int ord = lyricTracks.Count(t => t.Name == topLyrics.VoiceName);
+                    AddLyricTrack((topLyrics.VoiceName, ord));
+                    foreach (var ls in topLyrics.Sections)
+                    {
+                        AddSection(ls.SectionName);
+                        lyricCells[(topLyrics.VoiceName, ord, ls.SectionName)] = BetweenBraces(ls.ToFullString());
+                    }
+                    break;
+                }
+
                 case SectionDeclarationSyntax section
                         when DirectChildrenOfType<PartBlockSyntax>(section).Any(): // section-major
                     AddSection(section.SectionName);
@@ -170,6 +192,19 @@ public static class PartSectionLayoutConverter
                         AddChordPart(cb.PartName);
                         chordCells[(cb.PartName, section.SectionName)] = BetweenBraces(cb.ToFullString());
                     }
+                    // In-section lyric verses: the Nth same-named block per section is
+                    // the Nth verse of that track (so stacked verses stay distinct).
+                    // Count per name; "" stands in for the nameless form (a
+                    // Dictionary rejects a null key).
+                    var lyricOrd = new Dictionary<string, int>();
+                    foreach (var lb in DirectChildrenOfType<LyricsBlockSyntax>(section))
+                    {
+                        string key = lb.VoiceName ?? "";
+                        int ord = lyricOrd.GetValueOrDefault(key);
+                        lyricOrd[key] = ord + 1;
+                        AddLyricTrack((lb.VoiceName, ord));
+                        lyricCells[(lb.VoiceName, ord, section.SectionName)] = BetweenBraces(lb.ToFullString());
+                    }
                     break;
             }
         }
@@ -179,12 +214,21 @@ public static class PartSectionLayoutConverter
             if (!parts.Any(pt => pt.Name == p))
                 parts.Add((p, ""));
 
+        var tracks = new TrackData(chordParts, chordCells, lyricTracks, lyricCells);
         var body = target == LayoutForm.PartMajor
-            ? EmitPartMajor(parts, sectionOrder, cells, chordParts, chordCells)
-            : EmitSectionMajor(parts, sectionOrder, cells, chordParts, chordCells);
+            ? EmitPartMajor(parts, sectionOrder, cells, tracks)
+            : EmitSectionMajor(parts, sectionOrder, cells, tracks);
 
         return Reassemble(source, root, body);
     }
+
+    /// <summary>The non-part section tracks (chords + lyrics) carried across a
+    /// transpose, so the emitters take one bundle rather than four parameters.</summary>
+    private sealed record TrackData(
+        List<string?> ChordParts,
+        Dictionary<(string? Name, string Section), string> ChordCells,
+        List<(string? Name, int Ordinal)> LyricTracks,
+        Dictionary<(string? Name, int Ordinal, string Section), string> LyricCells);
 
     /// <summary>Writes the <c>chords</c> keyword with its optional name.</summary>
     private static void AppendChordsKeyword(StringBuilder sb, string? name)
@@ -194,10 +238,17 @@ public static class PartSectionLayoutConverter
             sb.Append(' ').Append(name);
     }
 
+    /// <summary>Writes the <c>lyrics</c> keyword with its optional voice name.</summary>
+    private static void AppendLyricsKeyword(StringBuilder sb, string? name)
+    {
+        sb.Append("lyrics");
+        if (name != null)
+            sb.Append(' ').Append(name);
+    }
+
     private static string EmitPartMajor(
         List<(string Name, string Attrs)> parts, List<string> sectionOrder,
-        Dictionary<(string, string), string> cells,
-        List<string?> chordParts, Dictionary<(string? Name, string Section), string> chordCells)
+        Dictionary<(string, string), string> cells, TrackData tracks)
     {
         var sb = new StringBuilder();
         foreach (var (name, attrs) in parts)
@@ -211,13 +262,23 @@ public static class PartSectionLayoutConverter
             sb.Append("}\n");
         }
         // Each chord track becomes its own top-level block with inner sections.
-        foreach (var chordName in chordParts)
+        foreach (var chordName in tracks.ChordParts)
         {
             AppendChordsKeyword(sb, chordName);
             sb.Append(" {\n");
             foreach (var section in sectionOrder)
-                if (chordCells.TryGetValue((chordName, section), out var entries))
+                if (tracks.ChordCells.TryGetValue((chordName, section), out var entries))
                     sb.Append("  section ").Append(section).Append(' ').Append(Braced(entries)).Append('\n');
+            sb.Append("}\n");
+        }
+        // ... and each lyric verse-track likewise.
+        foreach (var (lyricName, ordinal) in tracks.LyricTracks)
+        {
+            AppendLyricsKeyword(sb, lyricName);
+            sb.Append(" {\n");
+            foreach (var section in sectionOrder)
+                if (tracks.LyricCells.TryGetValue((lyricName, ordinal, section), out var text))
+                    sb.Append("  section ").Append(section).Append(' ').Append(Braced(text)).Append('\n');
             sb.Append("}\n");
         }
         return sb.ToString();
@@ -225,8 +286,7 @@ public static class PartSectionLayoutConverter
 
     private static string EmitSectionMajor(
         List<(string Name, string Attrs)> parts, List<string> sectionOrder,
-        Dictionary<(string, string), string> cells,
-        List<string?> chordParts, Dictionary<(string? Name, string Section), string> chordCells)
+        Dictionary<(string, string), string> cells, TrackData tracks)
     {
         var sb = new StringBuilder();
         foreach (var (name, attrs) in parts)
@@ -242,12 +302,20 @@ public static class PartSectionLayoutConverter
                 if (cells.TryGetValue((name, section), out var music))
                     sb.Append("  ").Append(name).Append(' ').Append(Braced(music)).Append('\n');
             // Chord tracks fold back into per-section chords blocks.
-            foreach (var chordName in chordParts)
-                if (chordCells.TryGetValue((chordName, section), out var entries))
+            foreach (var chordName in tracks.ChordParts)
+                if (tracks.ChordCells.TryGetValue((chordName, section), out var entries))
                 {
                     sb.Append("  ");
                     AppendChordsKeyword(sb, chordName);
                     sb.Append(' ').Append(Braced(entries)).Append('\n');
+                }
+            // Lyric verse-tracks fold back into per-section lyrics blocks.
+            foreach (var (lyricName, ordinal) in tracks.LyricTracks)
+                if (tracks.LyricCells.TryGetValue((lyricName, ordinal, section), out var text))
+                {
+                    sb.Append("  ");
+                    AppendLyricsKeyword(sb, lyricName);
+                    sb.Append(' ').Append(Braced(text)).Append('\n');
                 }
             sb.Append("}\n");
         }
@@ -267,7 +335,8 @@ public static class PartSectionLayoutConverter
         foreach (var member in TopLevel(root))
         {
             bool structural = member is PartDeclarationSyntax
-                || (member is ChordPartBlockSyntax cb && cb.HasSections) // part-major chord track
+                || (member is ChordPartBlockSyntax cb && cb.HasSections)   // part-major chord track
+                || (member is LyricsBlockSyntax lb && lb.HasSections)      // part-major lyric track
                 || (member is SectionDeclarationSyntax s && DirectChildrenOfType<PartBlockSyntax>(s).Any());
             if (structural)
             {

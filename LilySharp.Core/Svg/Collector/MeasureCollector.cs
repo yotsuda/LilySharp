@@ -2233,11 +2233,12 @@ public sealed class MeasureCollector
                     break;
 
                 case SectionDeclarationSyntax section:
-                    // A section INSIDE a `chords` block is a chord-track cell, not a
-                    // structure section: it must not become a structure ordering/label
-                    // rep or a part cell (its body is chord entries, not music). The
-                    // chord collector reads it via ChordPartBlockSyntax.Sections.
-                    if (IsInsideChordPart(section))
+                    // A section INSIDE a `chords` / `lyrics` block is that track's cell,
+                    // not a structure section: it must not become a structure
+                    // ordering/label rep or a part cell (its body is chord entries or
+                    // syllables, not music). The chord/lyric collectors read it via
+                    // ChordPartBlockSyntax.Sections / LyricsBlockSyntax.Sections.
+                    if (IsInsidePartMajorTrack(section))
                         break;
                     // First declaration of a name wins as the order/label
                     // representative (source order), so a name appearing in both
@@ -2614,13 +2615,13 @@ public sealed class MeasureCollector
         return null;
     }
 
-    /// <summary>True when <paramref name="node"/> sits inside a <c>chords</c> block
-    /// (a part-major chord-track inner section), so it is a chord cell rather than a
-    /// structure section.</summary>
-    private static bool IsInsideChordPart(SyntaxNode node)
+    /// <summary>True when <paramref name="node"/> sits inside a <c>chords</c> or
+    /// <c>lyrics</c> block (a part-major track's inner section), so it is that track's
+    /// cell rather than a structure section.</summary>
+    private static bool IsInsidePartMajorTrack(SyntaxNode node)
     {
         for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is ChordPartBlockSyntax)
+            if (p is ChordPartBlockSyntax or LyricsBlockSyntax)
                 return true;
         return false;
     }

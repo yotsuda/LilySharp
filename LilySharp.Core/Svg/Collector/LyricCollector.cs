@@ -66,9 +66,19 @@ internal sealed class LyricCollector
         out LyricOverflow? overflow,
         int voiceId = 0,
         int verseNumber = 1)
+        => Collect(lyricsBlock.Syllables, noteItemIndices, out overflow, voiceId, verseNumber);
+
+    /// <summary>Collects lyrics from an explicit set of lyric-measure nodes (the
+    /// whole block, or one part-major inner section's measures).</summary>
+    public ImmutableArray<LyricItem> Collect(
+        IEnumerable<SyntaxNode> syllableMeasures,
+        IReadOnlyList<(int MeasureIndex, int ItemIndex, LilySharp.Core.Semantics.Fraction Timing)> noteItemIndices,
+        out LyricOverflow? overflow,
+        int voiceId = 0,
+        int verseNumber = 1)
     {
         var lyrics = ImmutableArray.CreateBuilder<LyricItem>();
-        var syllables = ParseSyllables(lyricsBlock);
+        var syllables = ParseSyllablesFrom(syllableMeasures);
         overflow = null;
         int unplacedSyllableCount = 0;
         string firstDroppedText = "";
@@ -169,6 +179,11 @@ internal sealed class LyricCollector
     /// Structure: LyricsBlock contains LyricMeasure nodes, each containing LyricSyllable nodes.
     /// </remarks>
     internal static List<(string Text, LyricConnectorType Connector, int Position, bool IsBarline, bool IsMelisma)> ParseSyllables(LyricsBlockSyntax lyricsBlock)
+        => ParseSyllablesFrom(lyricsBlock.Syllables);
+
+    /// <summary>Parses syllables from an explicit set of lyric-measure nodes
+    /// (a block's own measures, or one inner section's).</summary>
+    internal static List<(string Text, LyricConnectorType Connector, int Position, bool IsBarline, bool IsMelisma)> ParseSyllablesFrom(IEnumerable<SyntaxNode> measureNodes)
     {
         var result = new List<(string, LyricConnectorType, int, bool, bool)>();
 
@@ -177,8 +192,12 @@ internal sealed class LyricCollector
         // Barlines are KEPT (not stripped) so Collect can use them to skip to the
         // next measure's notes — a written bar is a real measure boundary.
         var allTokens = new List<(string Text, int Position)>();
-        foreach (var measureNode in lyricsBlock.Syllables)
+        foreach (var measureNode in measureNodes)
         {
+            // A part-major inner section is not a lyric measure — skip it (the
+            // sectioned form is collected via its sections, not this flat path).
+            if (measureNode is SectionDeclarationSyntax)
+                continue;
             // Each child of lyrics block is a LyricMeasure (Kind = LyricMeasure)
             // LyricMeasure contains LyricSyllable nodes and a trailing barline token.
             for (int i = 0; i < measureNode.SlotCount; i++)

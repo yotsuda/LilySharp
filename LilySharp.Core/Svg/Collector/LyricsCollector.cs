@@ -88,31 +88,45 @@ internal sealed class LyricsCollector
                 voiceId = bound.Index;
             }
 
-            int startMeasure = ResolveStartMeasure(lyricsBlock, sectionStartMeasure);
-            int verseNumber = nextVerseByStart.TryGetValue(startMeasure, out var v) ? v : 1;
+            // Collect one run of lyric measures aligned from an absolute start bar,
+            // stacking verses per start and reporting any overflow.
+            void ProcessRun(IEnumerable<SyntaxNode> syllableMeasures, int startMeasure)
+            {
+                int verseNumber = nextVerseByStart.TryGetValue(startMeasure, out var v) ? v : 1;
 
-            IReadOnlyList<(int MeasureIndex, int ItemIndex, Fraction Timing)> aligned = startMeasure <= 0
-                ? indices
-                : indices.Where(n => n.MeasureIndex >= startMeasure).ToList();
+                IReadOnlyList<(int MeasureIndex, int ItemIndex, Fraction Timing)> aligned = startMeasure <= 0
+                    ? indices
+                    : indices.Where(n => n.MeasureIndex >= startMeasure).ToList();
 
-            var lyrics = lyricCollector.Collect(lyricsBlock, aligned, out var overflow, voiceId: voiceId, verseNumber);
-            _lyrics.AddRange(lyrics);
+                var lyrics = lyricCollector.Collect(syllableMeasures, aligned, out var overflow, voiceId: voiceId, verseNumber);
+                _lyrics.AddRange(lyrics);
 
-            // A single block may auto-wrap into several stacked verses; the next block
-            // at this start begins after the highest verse this one produced.
-            int maxVerse = verseNumber;
-            foreach (var ly in lyrics)
-                if (ly.VerseNumber > maxVerse) maxVerse = ly.VerseNumber;
-            nextVerseByStart[startMeasure] = maxVerse + 1;
+                // A single block may auto-wrap into several stacked verses; the next
+                // block at this start begins after the highest verse this one produced.
+                int maxVerse = verseNumber;
+                foreach (var ly in lyrics)
+                    if (ly.VerseNumber > maxVerse) maxVerse = ly.VerseNumber;
+                nextVerseByStart[startMeasure] = maxVerse + 1;
 
-            // More syllables than notes: the loop above ran out of notes and the
-            // trailing syllables vanished. Flag the FIRST dropped syllable itself
-            // (not just the lyrics keyword) so the author lands on the exact word
-            // where the miscount starts instead of recounting the whole line.
-            if (overflow is { } of)
-                _warnings.Add(new LyricSyllableWarning(
-                    new LilySharp.Core.Syntax.TextSpan(of.FirstPosition, Math.Max(1, of.FirstText.Length)),
-                    of.Count, of.FirstText, of.FirstBar));
+                // More syllables than notes: the loop above ran out of notes and the
+                // trailing syllables vanished. Flag the FIRST dropped syllable itself
+                // (not just the lyrics keyword) so the author lands on the exact word
+                // where the miscount starts instead of recounting the whole line.
+                if (overflow is { } of)
+                    _warnings.Add(new LyricSyllableWarning(
+                        new LilySharp.Core.Syntax.TextSpan(of.FirstPosition, Math.Max(1, of.FirstText.Length)),
+                        of.Count, of.FirstText, of.FirstBar));
+            }
+
+            // Part-major lyric track: each inner section's verse aligns under its own
+            // named section's bars. Flat form: the whole block starts at its enclosing
+            // section (or 0 at top level).
+            if (lyricsBlock.HasSections)
+                foreach (var section in lyricsBlock.Sections)
+                    ProcessRun(SectionLyricMeasures(section),
+                        sectionStartMeasure.GetValueOrDefault(section.SectionName, 0));
+            else
+                ProcessRun(lyricsBlock.Syllables, ResolveStartMeasure(lyricsBlock, sectionStartMeasure));
         }
     }
 
@@ -317,5 +331,15 @@ internal sealed class LyricsCollector
                 && sectionStartMeasure.TryGetValue(section.SectionName, out int start))
                 return start;
         return 0;
+    }
+
+    /// <summary>The lyric measures of a lyric-track inner section (the nodes between
+    /// its name and closing brace).</summary>
+    private static IEnumerable<SyntaxNode> SectionLyricMeasures(SectionDeclarationSyntax section)
+    {
+        // Slots: 0 keyword, 1 name, 2 '{', 3..n-2 items, n-1 '}'.
+        for (int i = 3; i < section.SlotCount - 1; i++)
+            if (section.GetChild(i) is SyntaxNode node and not SyntaxTokenNode)
+                yield return node;
     }
 }

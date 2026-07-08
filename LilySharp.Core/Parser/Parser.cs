@@ -1952,11 +1952,51 @@ private GreenNode?[] ParseArticulations()
         var name = Check(SyntaxKind.Identifier) ? Advance() : (SyntaxToken?)null;
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
-        var measures = ParseList(SyntaxKind.CloseBrace, ParseLyricMeasure);
+        var items = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            // Part-major lyric track: a `lyrics` block may hold its own `section`
+            // blocks (dual of a part's inner sections), so a verse can be written per
+            // section and replayed by the structure —
+            //   lyrics { section A { Twin- kle | } section B { how | } }
+            if (Check(SyntaxKind.SectionKeyword))
+            {
+                items.Add(ParseLyricInnerSection());
+                continue;
+            }
+
+            var measure = ParseLyricMeasure();
+            if (measure != null)
+                items.Add(measure);
+            else
+                Advance();
+        }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
 
-        return new LyricsBlockGreen(keyword, name, openBrace, [.. measures], closeBrace);
+        return new LyricsBlockGreen(keyword, name, openBrace, [.. items], closeBrace);
+    }
+
+    /// <summary>A lyric track's inner section (part-major form): <c>section NAME {
+    /// syllables }</c>. Its body is lyric measures bound to this lyric track; reuses
+    /// <see cref="SectionDeclarationGreen"/> so it resolves through the same
+    /// section-name machinery as instrument parts.</summary>
+    private SectionDeclarationGreen ParseLyricInnerSection()
+    {
+        var keyword = Expect(SyntaxKind.SectionKeyword);
+        var name = ExpectPartName();
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        var measures = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var measure = ParseLyricMeasure();
+            if (measure != null)
+                measures.Add(measure);
+            else
+                break; // no syllable/barline consumed → at the section's close
+        }
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new SectionDeclarationGreen(keyword, name, openBrace, [.. measures], closeBrace);
     }
 
     private static bool IsPitchKind(SyntaxKind kind) => kind is SyntaxKind.PitchC
