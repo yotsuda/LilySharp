@@ -730,7 +730,7 @@ public sealed class MeasureCollector
         voice = OttavaTransposer.Transpose(voice, DetectOttavaSpans(0));
 
         // Collect lyrics
-        _lyricsCollector.CollectNoteBound(tree.GetRoot(), measures, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
+        _lyricsCollector.CollectNoteBound(tree.GetRoot(), measures, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure, _sectionAllStarts);
         _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
         _chordNameCollector.SectionStarts = _sectionAllStarts;
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
@@ -1042,7 +1042,7 @@ public sealed class MeasureCollector
             && staffVoices.TryGetValue(firstVoiceName, out var firstStaffVoices)
             && firstStaffVoices.Length > 0)
         {
-            _lyricsCollector.CollectNoteBound(tree.GetRoot(), firstStaffVoices[0].Measures.ToList(), _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
+            _lyricsCollector.CollectNoteBound(tree.GetRoot(), firstStaffVoices[0].Measures.ToList(), _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure, _sectionAllStarts);
         }
         _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
         _chordNameCollector.SectionStarts = _sectionAllStarts;
@@ -1289,7 +1289,7 @@ public sealed class MeasureCollector
         }
 
         // Unnamed lyrics align with the primary voice; named ones bind above.
-        _lyricsCollector.CollectNoteBound(root, track0, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
+        _lyricsCollector.CollectNoteBound(root, track0, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure, _sectionAllStarts);
         _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
         _chordNameCollector.SectionStarts = _sectionAllStarts;
         _chordNameCollector.CollectBlocks(root, _sectionStartMeasure, _currentStaffIndex);
@@ -2534,7 +2534,11 @@ public sealed class MeasureCollector
             _sectionStartMeasure[name] = startMeasure;
         if (!_sectionAllStarts.TryGetValue(name, out var list))
             _sectionAllStarts[name] = list = new List<int>();
-        list.Add(startMeasure);
+        // ProcessStructure runs once PER PART, so the same occurrence is recorded
+        // several times on a multi-part score — a distinct start per occurrence, so
+        // dedup by value keeps one entry each (and never duplicates the chords/lyrics).
+        if (!list.Contains(startMeasure))
+            list.Add(startMeasure);
     }
 
     private void ProcessStructure(Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)

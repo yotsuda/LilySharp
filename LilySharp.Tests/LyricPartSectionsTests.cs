@@ -75,6 +75,29 @@ public class LyricPartSectionsTests
         Assert.Equal(4, score.Voice.Measures.Length);
     }
 
+    [Fact]
+    public void LyricTrack_RepeatsUnderAReprise()
+    {
+        // structure { A B A "A2" }: A's verse must reappear at the A2 reprise.
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            key c major
+            part melody { clef treble
+              section A { c'4 c' g' g' | a' a' g'2 | }
+              section B { f'4 f' e' e' | }
+            }
+            lyrics { section A { Twin- kle | star | } section B { how | } }
+            structure { A B A "A2" }
+            score s { staff melody }
+            """);
+        var score = new MeasureCollector().Collect(tree, "melody");
+        var byMeasure = score.Lyrics
+            .OrderBy(l => l.MeasureIndex).ThenBy(l => l.Timing.ToDouble())
+            .Select(l => $"{l.MeasureIndex}:{l.Text}").ToArray();
+        // A: Twin/kle(m0) star(m1); B: how(m2); A2: Twin/kle(m3) star(m4).
+        Assert.Equal(new[] { "0:Twin", "0:kle", "1:star", "2:how", "3:Twin", "3:kle", "4:star" }, byMeasure);
+    }
+
     private static string LyricSignature(string src)
     {
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "melody");

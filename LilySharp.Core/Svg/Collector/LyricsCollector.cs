@@ -58,7 +58,8 @@ internal sealed class LyricsCollector
         SyntaxNode root, List<Measure> measures,
         IReadOnlySet<string> lyricsRowNames,
         IReadOnlyDictionary<string, (int Index, List<Measure> Measures)> voiceMeasuresByName,
-        IReadOnlyDictionary<string, int> sectionStartMeasure)
+        IReadOnlyDictionary<string, int> sectionStartMeasure,
+        IReadOnlyDictionary<string, List<int>>? sectionAllStarts = null)
     {
         var lyricsBlocks = root.DescendantNodes().OfType<LyricsBlockSyntax>().ToList();
         if (lyricsBlocks.Count == 0)
@@ -119,14 +120,28 @@ internal sealed class LyricsCollector
             }
 
             // Part-major lyric track: each inner section's verse aligns under its own
-            // named section's bars. Flat form: the whole block starts at its enclosing
-            // section (or 0 at top level).
+            // named section's bars — at EVERY occurrence (a reprise gets it too). Flat
+            // form: the enclosing section's occurrences (or 0 at top level).
+            IEnumerable<int> StartsFor(string sectionName)
+            {
+                if (sectionAllStarts != null && sectionAllStarts.TryGetValue(sectionName, out var all) && all.Count > 0)
+                    return all;
+                return new[] { sectionStartMeasure.GetValueOrDefault(sectionName, 0) };
+            }
+
             if (lyricsBlock.HasSections)
                 foreach (var section in lyricsBlock.Sections)
-                    ProcessRun(SectionLyricMeasures(section),
-                        sectionStartMeasure.GetValueOrDefault(section.SectionName, 0));
+                    foreach (int start in StartsFor(section.SectionName))
+                        ProcessRun(SectionLyricMeasures(section), start);
             else
-                ProcessRun(lyricsBlock.Syllables, ResolveStartMeasure(lyricsBlock, sectionStartMeasure));
+            {
+                string? enclosing = EnclosingSectionName(lyricsBlock);
+                if (enclosing != null)
+                    foreach (int start in StartsFor(enclosing))
+                        ProcessRun(lyricsBlock.Syllables, start);
+                else
+                    ProcessRun(lyricsBlock.Syllables, ResolveStartMeasure(lyricsBlock, sectionStartMeasure));
+            }
         }
     }
 
@@ -331,6 +346,16 @@ internal sealed class LyricsCollector
                 && sectionStartMeasure.TryGetValue(section.SectionName, out int start))
                 return start;
         return 0;
+    }
+
+    /// <summary>The name of the section a flat lyrics block is written inside, or null
+    /// at top level — used to repeat its verse under every occurrence of that section.</summary>
+    private static string? EnclosingSectionName(LyricsBlockSyntax block)
+    {
+        for (var n = block.Parent; n != null; n = n.Parent)
+            if (n is SectionDeclarationSyntax section)
+                return section.SectionName;
+        return null;
     }
 
     /// <summary>The lyric measures of a lyric-track inner section (the nodes between
