@@ -88,6 +88,23 @@ public class StructureNavigationTests
     }
 
     [Fact]
+    public void ToCoda_OneWordSpelling_IsCollected()
+    {
+        // "tocoda" (run together) is accepted as "to coda" — it previously read as
+        // an undefined section name.
+        var marks = Marks("A tocoda B coda C D");
+        Assert.Contains(MusicMarkType.ToCoda, marks);
+    }
+
+    [Fact]
+    public void ToCoda_OneWordAndTwoWord_AreEquivalent()
+    {
+        Assert.Equal(
+            Marks("A to coda B coda C D"),
+            Marks("A tocoda B coda C D"));
+    }
+
+    [Fact]
     public void DaCapoAlFineAndFine_AreCollected()
     {
         var marks = Marks("A B dc al fine C fine D");

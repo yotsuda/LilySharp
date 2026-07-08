@@ -529,6 +529,11 @@ internal sealed class Lexer
             "ds" => SyntaxKind.DsKeyword,
             "al" => SyntaxKind.AlKeyword,
             "to" => SyntaxKind.ToKeyword,
+            // "tocoda" (one word) is accepted alongside "to coda" (two words) —
+            // LP charts write "To Coda" and the run-together spelling is a common
+            // reflex. Both lex to ToKeyword; ParseNavigationMark handles the one-
+            // word form (no trailing 'coda' to consume).
+            "tocoda" => SyntaxKind.ToKeyword,
 
             // Legacy structure keywords
             "score" => SyntaxKind.ScoreKeyword,
