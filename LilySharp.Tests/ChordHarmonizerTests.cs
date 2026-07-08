@@ -99,11 +99,12 @@ public class ChordHarmonizerTests
     }
 
     [Fact]
-    public void PartMajor_ConvertsToSectionMajorThenHarmonizesEachSection()
+    public void PartMajor_AddsAPartMajorChordTrack_WithoutReshaping()
     {
-        // The default (newScore) template is part-major, but a chords part needs the
-        // section-major layout; the editor command converts first, then harmonizes
-        // each section. This checks that pipeline's core.
+        // The default (newScore) template is part-major. Adding a chord track must
+        // RESPECT that layout — a top-level `chords harmony { section A { } … }` track
+        // — not convert the file to section-major (which used to move the sections
+        // above the parts).
         var partMajor = """
             octave absolute
             time 4/4
@@ -120,12 +121,16 @@ public class ChordHarmonizerTests
 
         var result = ChordHarmonizer.AddChordTracks(partMajor);
         Assert.NotNull(result);
-        Assert.NotNull(result!.Value.Info);   // the user is told the layout was converted
+        Assert.Null(result!.Value.Info);   // no conversion happened
 
-        // The generated document parses clean and carries a chords part per section
-        // wired into the score.
         var reparsed = SyntaxTree.Parse(result.Value.Text);
         Assert.False(reparsed.HasErrors, string.Join("\n", reparsed.Diagnostics));
+        // Still part-major, with a part-major chord track wired into the score.
+        Assert.Equal(LayoutForm.PartMajor,
+            PartSectionLayoutConverter.Detect(reparsed.GetRoot()));
+        Assert.Contains("part melody {", result.Value.Text);   // the part is untouched
+        Assert.Contains("chords harmony {", result.Value.Text);
+        Assert.Contains("section A", result.Value.Text);
         Assert.Contains("with chords harmony", result.Value.Text);
         Assert.Contains("c1", result.Value.Text);      // section A -> C
         Assert.Contains("g1:7", result.Value.Text);    // section B -> G7

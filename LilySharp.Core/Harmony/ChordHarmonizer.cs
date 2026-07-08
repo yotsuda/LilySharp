@@ -50,43 +50,85 @@ public static class ChordHarmonizer
     /// <summary>
     /// Adds a harmonized chords part to <paramref name="source"/> and returns the new
     /// document text (plus an optional note for the user), or null when there is no
-    /// section melody to harmonize. A chords part lives inside a section, so a
-    /// part-major document is converted to section-major first (that reshapes the
-    /// whole file — hence returning full text, not an incremental edit). Powers the
-    /// "Lily#: Add Chord Track" editor command.
+    /// section melody to harmonize. The chords track RESPECTS the document's layout: a
+    /// part-major file gets a top-level <c>chords harmony { section A { … } … }</c>
+    /// track (no reshaping), a section-major file gets a <c>chords harmony { … }</c>
+    /// spliced into each section. Powers the "Lily#: Add Chord Track" editor command.
     /// </summary>
     public static (string Text, string? Info)? AddChordTracks(string source)
     {
-        string text = source;
-        string? info = null;
-        if (PartSectionLayoutConverter.Detect(SyntaxTree.Parse(text).GetRoot()) == LayoutForm.PartMajor)
+        var tree = SyntaxTree.Parse(source);
+        var root = tree.GetRoot();
+
+        // Part-major: add a top-level chord track with matching inner sections, so the
+        // current layout is preserved (previously the file was converted to
+        // section-major first, which moved the sections above the parts).
+        if (PartSectionLayoutConverter.Detect(root) == LayoutForm.PartMajor)
         {
-            var converted = PartSectionLayoutConverter.Convert(text);
-            if (converted == null)
+            var voice = DetectVoice(root);
+            var melodyPart = voice == null ? null
+                : root.DescendantNodes<PartDeclarationSyntax>().FirstOrDefault(p => p.Name.Text == voice);
+            var block = melodyPart == null ? null : HarmonizePartMajor(tree, voice!, melodyPart);
+            if (block == null)
                 return null;
-            text = converted;
-            info = "Converted to the section-major layout so the chords could attach.";
+
+            // Drop the track in just after the melody part, then wire the staff to it.
+            var text = source.Insert(melodyPart!.Span.End, "\n\n" + block + "\n");
+            return (AttachWithChords(text, voice!), null);
         }
 
-        var tracks = HarmonizeBySections(SyntaxTree.Parse(text));
+        var tracks = HarmonizeBySections(tree);
         if (tracks.Count == 0)
             return null;
 
         // Splice a chords part after each section's melody part-block (deepest offset
         // first, so earlier insertions do not shift later positions); indent it to sit
         // as a sibling inside the section, on its own lines.
-        var sb = new StringBuilder(text);
+        var sb = new StringBuilder(source);
         foreach (var track in tracks.OrderByDescending(t => t.MelodyBlock.Span.End))
             sb.Insert(track.MelodyBlock.Span.End, "\n  " + track.ChordsBlock.Replace("\n", "\n  ") + "\n");
-        text = sb.ToString();
 
-        // Attach it to the melody staff once: `staff X` -> `staff X with chords harmony`.
+        return (AttachWithChords(sb.ToString(), tracks[0].MelodyBlock.PartName.Text), null);
+    }
+
+    // Wire the melody staff to the chords once: `staff X` -> `staff X with chords harmony`.
+    private static string AttachWithChords(string text, string melodyName)
+    {
         var staff = Regex.Match(text,
-            @"\bstaff\s+" + Regex.Escape(tracks[0].MelodyBlock.PartName.Text) + @"\b(?!\s+with\b)");
-        if (staff.Success)
-            text = text.Insert(staff.Index + staff.Length, " with chords harmony");
+            @"\bstaff\s+" + Regex.Escape(melodyName) + @"\b(?!\s+with\b)");
+        return staff.Success
+            ? text.Insert(staff.Index + staff.Length, " with chords harmony")
+            : text;
+    }
 
-        return (text, info);
+    /// <summary>
+    /// Harmonizes a part-major melody INTO A SINGLE part-major chord track:
+    /// <c>chords harmony { section A { … } section B { … } }</c>, one inner section per
+    /// the melody part's own sections. Returns null when nothing harmonizes.
+    /// </summary>
+    private static string? HarmonizePartMajor(SyntaxTree tree, string voice, PartDeclarationSyntax melodyPart)
+    {
+        var (tonic, sharps) = ReadKey(tree.ToFullString());
+        var chords = DiatonicChords.ForKey(tonic, sharps);
+        var pcByPos = PitchClassesByPosition(tree.GetRoot());
+
+        var sb = new StringBuilder("chords harmony {\n");
+        bool any = false;
+        foreach (var section in melodyPart.DescendantNodes<SectionDeclarationSyntax>())
+        {
+            // Collect just this section's melody (a local structure naming only it) and
+            // harmonize it, exactly as the section-major path does per section.
+            var measures = new MeasureCollector()
+                .Collect(tree, voice, SectionStructure(section.Name.Text)).Voice.Measures;
+            var entries = HarmonizeMeasures(measures, pcByPos, chords);
+            if (entries.Count == 0)
+                continue;
+            sb.Append("  section ").Append(section.SectionName)
+              .Append(" { ").Append(string.Join(" | ", entries)).Append(" | }\n");
+            any = true;
+        }
+        sb.Append('}');
+        return any ? sb.ToString() : null;
     }
 
     /// <summary>
