@@ -47,6 +47,19 @@ Default starting octave is C4 (middle C). Each pitch takes the octave
 closest to the previous note (an interval of a fourth or less); `'` and `,`
 shift octaves on top of that.
 
+> **Octave mode — relative (default) vs absolute.** By default Lily# resolves
+> octaves *relative* to the previous note (the "nearest octave" rule above). It is
+> compact, but a wide leap can leave the line an octave from where you meant it,
+> and a repeated figure like `c c g g` can walk steadily downward. To write
+> **fixed** octaves instead — bare `c` always means C4, and `'` / `,` are absolute
+> per-note offsets — put **`octave absolute`** at the top of your file (return to
+> the default with `octave relative`):
+>
+> ```
+> octave absolute
+> c' d' e' c'        % always C5 D5 E5 C5 — no drift, whatever the leaps
+> ```
+
 ```
 c d e f g a b c    % C4 D4 E4 F4 G4 A4 B4 C5 — bare c after b is already C5
 c' c,              % C6 C5 — marks shift from the nearest octave
