@@ -2944,6 +2944,59 @@ public sealed class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// Auto-harmonizes the melody and returns the edits that add a diatonic chords
+    /// part: a <c>chords harmony { … }</c> block inserted after the first section's
+    /// part-block, and <c>with chords harmony</c> appended to the melody's staff in
+    /// the score. Powers the "Lily#: Add Chord Track" editor command.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/addChordTrack", UseSingleObjectParameterDeserialization = true)]
+    public AddChordTrackResponse AddChordTrack(SvgParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new AddChordTrackResponse { Error = "Document not found." };
+
+        var tree = SyntaxTree.Parse(doc.Text);
+        if (tree.HasErrors)
+            return new AddChordTrackResponse { Error = "Fix the errors in the score first." };
+
+        var block = LilySharp.Core.Harmony.ChordHarmonizer.Harmonize(tree);
+        if (block == null)
+            return new AddChordTrackResponse { Error = "No melody found to harmonize." };
+
+        var partBlock = tree.GetRoot().DescendantNodes<SectionDeclarationSyntax>()
+            .FirstOrDefault()?.DescendantNodes<PartBlockSyntax>().FirstOrDefault();
+        if (partBlock == null)
+            return new AddChordTrackResponse { Error = "Could not find a section to add the chords to." };
+
+        var edits = new System.Collections.Generic.List<ChordTrackEdit>();
+
+        // 1) The chords part, right after the melody's part-block (a section sibling).
+        edits.Add(InsertAt(doc.Text, partBlock.Span.End, "\n  " + block));
+
+        // 2) Attach it to the melody staff: `staff X` -> `staff X with chords harmony`.
+        var part = Regex.Match(doc.Text, @"\bpart\s+(\w+)");
+        if (part.Success)
+        {
+            var staff = Regex.Match(doc.Text,
+                @"\bstaff\s+" + Regex.Escape(part.Groups[1].Value) + @"\b(?!\s+with\b)");
+            if (staff.Success)
+                edits.Add(InsertAt(doc.Text, staff.Index + staff.Length, " with chords harmony"));
+        }
+
+        return new AddChordTrackResponse { Edits = edits.ToArray() };
+    }
+
+    private static ChordTrackEdit InsertAt(string text, int offset, string newText)
+    {
+        var (line, col) = GetLineAndColumn(text, offset);
+        return new ChordTrackEdit
+        {
+            StartLine = line, StartChar = col, EndLine = line, EndChar = col, NewText = newText,
+        };
+    }
+
+    /// <summary>
     /// Custom request to generate SVG from a document.
     /// Used for real-time preview in VS Code.
     /// </summary>
@@ -3365,6 +3418,24 @@ public class RenderInfo
     public string Name { get; set; } = "";
     public string Type { get; set; } = "";  // "score" or "audio"
     public string Filename { get; set; } = "";
+}
+
+/// <summary>Result of lilysharp/addChordTrack: the edits that add the chords part
+/// (empty/absent when <see cref="Error"/> explains why none were produced).</summary>
+public class AddChordTrackResponse
+{
+    public ChordTrackEdit[]? Edits { get; set; }
+    public string? Error { get; set; }
+}
+
+/// <summary>A single insertion for the add-chord-track edit (0-based line/char).</summary>
+public class ChordTrackEdit
+{
+    public int StartLine { get; set; }
+    public int StartChar { get; set; }
+    public int EndLine { get; set; }
+    public int EndChar { get; set; }
+    public string NewText { get; set; } = "";
 }
 
 /// <summary>

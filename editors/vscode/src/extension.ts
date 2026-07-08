@@ -259,6 +259,10 @@ export function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine('convertLayout command triggered');
             convertLayout();
         }),
+        vscode.commands.registerCommand('lilysharp.addChordTrack', () => {
+            outputChannel.appendLine('addChordTrack command triggered');
+            addChordTrack();
+        }),
         vscode.commands.registerCommand('lilysharp.newScore', async () => {
             outputChannel.appendLine('newScore command triggered');
             const doc = await vscode.workspace.openTextDocument({
@@ -685,6 +689,57 @@ async function convertLayout() {
         }
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: layout conversion failed: ${err}`);
+    }
+}
+
+interface ChordTrackEdit {
+    StartLine: number;
+    StartChar: number;
+    EndLine: number;
+    EndChar: number;
+    NewText: string;
+}
+interface AddChordTrackResponse {
+    Edits: ChordTrackEdit[] | null;
+    Error: string | null;
+}
+
+/**
+ * Auto-harmonizes the active melody: asks the server for a diatonic chords part
+ * and applies the returned edits (inserts a `chords harmony { }` block and wires
+ * it to the melody staff). The result is a starting point to edit.
+ */
+async function addChordTrack() {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || editor.document.languageId !== 'lilysharp') {
+        vscode.window.showErrorMessage('Lily#: open a .lys file to add a chord track.');
+        return;
+    }
+    if (!client) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return;
+    }
+
+    const doc = editor.document;
+    try {
+        const response = await client.sendRequest<AddChordTrackResponse>('lilysharp/addChordTrack', {
+            textDocument: { uri: doc.uri.toString() }
+        });
+        if (response.Edits && response.Edits.length > 0) {
+            const edit = new vscode.WorkspaceEdit();
+            for (const e of response.Edits) {
+                const pos = new vscode.Position(e.StartLine, e.StartChar);
+                const end = new vscode.Position(e.EndLine, e.EndChar);
+                edit.replace(doc.uri, new vscode.Range(pos, end), e.NewText);
+            }
+            await vscode.workspace.applyEdit(edit);
+            vscode.window.showInformationMessage(
+                'Lily#: added a diatonic chord track — a starting point, edit as needed.');
+        } else {
+            vscode.window.showErrorMessage(`Lily#: ${response.Error ?? 'could not add a chord track.'}`);
+        }
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: add chord track failed: ${err}`);
     }
 }
 

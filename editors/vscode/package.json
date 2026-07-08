@@ -173,6 +173,11 @@
         "title": "Convert Layout (part-major ⇄ section-major)"
       },
       {
+        "command": "lilysharp.addChordTrack",
+        "category": "Lily#",
+        "title": "Add Chord Track (auto-harmonize)"
+      },
+      {
         "command": "lilysharp.newScore",
         "category": "Lily#",
         "icon": "$(new-file)",
@@ -202,11 +207,20 @@
         {
           "command": "lilysharp.convertLayout",
           "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.addChordTrack",
+          "when": "resourceLangId == lilysharp"
         }
       ],
       "editor/context": [
         {
           "command": "lilysharp.convertLayout",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification"
+        },
+        {
+          "command": "lilysharp.addChordTrack",
           "when": "resourceLangId == lilysharp",
           "group": "1_modification"
         }
