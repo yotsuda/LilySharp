@@ -825,10 +825,14 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
         const warnings = response.Warnings ?? [];
         if (warnings.length > 0) {
             const n = warnings.length;
-            vscode.window.showWarningMessage(
-                `Lily#: imported with ${n} approximation${n === 1 ? '' : 's'} — a starting point, edit as needed.`,
-                'Show Details'
-            ).then(choice => {
+            // A single warning (e.g. "no notes; the score is empty") reads best shown
+            // verbatim; several are summarized with the report behind "Show Details".
+            // The "starting point, edit as needed" framing is reserved for a clean
+            // import — it's misleading when nothing (or little) came through.
+            const message = n === 1
+                ? `Lily#: ${warnings[0]}`
+                : `Lily#: imported with ${n} approximations — see the import report.`;
+            vscode.window.showWarningMessage(message, 'Show Details').then(choice => {
                 if (choice === 'Show Details') {
                     outputChannel.appendLine('MusicXML import report:');
                     for (const w of warnings) {
