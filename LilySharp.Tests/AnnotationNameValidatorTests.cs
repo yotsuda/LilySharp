@@ -74,9 +74,9 @@ public class AnnotationNameValidatorTests
     // --- Known names stay silent ---
 
     [Theory]
-    // Articulations & ornaments (full + abbreviation)
-    [InlineData("c4@staccato d@stac e@accent f@acc |")]
-    [InlineData("c4@trill d@tr e@mordent f@turn |")]
+    // Articulations & ornaments (full words)
+    [InlineData("c4@staccato d@tenuto e@accent f@marcato |")]
+    [InlineData("c4@trill d@prall e@mordent f@turn |")]
     [InlineData("c4@fermata d@marcato e@tenuto f@portato |")]
     // Music marks (plain + compound)
     [InlineData("c4@segno d@coda e@fine f |")]

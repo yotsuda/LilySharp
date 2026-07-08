@@ -107,7 +107,7 @@ An annotation that takes a VALUE puts it in parentheses (space- or comma-separat
 - Stem direction: `@stemUp` / `@stemDown` force a note's stem (default is automatic).
   On a beamed note the beam's shared direction wins.
 - Articulations: `@staccato @staccatissimo @accent @tenuto @marcato @fermata @portato`
-- String technique: `@upbow @downbow @harmonic` (alias `@flageolet`) - always above
+- String technique: `@upbow @downbow @flageolet` - always above
 - Ornaments: `@trill @mordent @prall @turn @invertedturn`
 - Dynamics: `@ppp @pp @p @mp @mf @f @ff @fff` and the accent dynamics `@sfz @sf @fp @rfz @fz` (default below the staff; `.up` / `.down`
   forces the side, e.g. `@f.up`)
@@ -121,7 +121,6 @@ An annotation that takes a VALUE puts it in parentheses (space- or comma-separat
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
 - Cue/effects: `@cue` (small cue note), `@cross`/`@dead` (x notehead), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
 - Feathered beams: `c16@feather(right) d e f` (accel), `@feather(left)` (rit)
-- Abbreviations: `@stac @acc @ten @marc @ferm @tr` = staccato/accent/tenuto/marcato/fermata/trill
 - Free expressive text: `c4@text("dolce")` (plain italic below the note; `.up` forces
   above: `c4@text("pizz.").up`). Not a dynamic: hairpins run through it.
 

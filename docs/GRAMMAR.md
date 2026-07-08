@@ -409,7 +409,7 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    so names like 'tr' remain usable as identifiers. Categories: *)
 
 (* - Articulations: @staccato @staccatissimo @accent @tenuto @marcato @fermata @portato  (.up/.down ok)
-   - Strings:       @upbow @downbow @harmonic|@flageolet  (always above)
+   - Strings:       @upbow @downbow @flageolet  (always above)
    - Ornaments:     @trill @mordent @prall @turn @invertedturn
    - Dynamics:      @ppp @pp @p @mp @mf @f @ff @fff @sfz @sf @fp @rfz @fz   (default below; @f.up forces side)
    - Hairpins:      @cresc @decresc @dim  (start note → next dynamic; .up/.down REJECTED)
@@ -428,9 +428,7 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Feathered beam: c16@feather(right) … (accel) / @feather(left) (rit)
    - Marks/spanners: @segno @coda @fine @dc @ds @rit @accel
                      @ottava(…) @quindicesima(=@15ma/@15mb) … @loco ,
-                     @startTrillSpan … @stopTrillSpan , @ped … @ped(off) , @sost … @sost(off) , @una(corda) … @tre(corde)
-   - Abbreviations: @stac @acc @ten @marc @ferm @tr (= staccato accent tenuto
-                    marcato fermata trill) *)
+                     @startTrillSpan … @stopTrillSpan , @ped … @ped(off) , @sost … @sost(off) , @una(corda) … @tre(corde) *)
 
 (* Example: c4@staccato.up d4@accent@p <e g>4@arpeggio | *)
 

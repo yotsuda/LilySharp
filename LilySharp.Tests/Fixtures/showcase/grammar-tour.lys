@@ -49,9 +49,9 @@ phrase p_accidentals {
   a4@courtesy bes c@editorial r |   // 注意臨時記号 / 編集臨時記号
 }
 
-// 3 表情：アーティキュレーション(略記可) / ダイナミクス / ヘアピン
+// 3 表情：アーティキュレーション / ダイナミクス / ヘアピン
 phrase p_expression {
-  g4@p@stac a@acc b@ten c@marc |    // @stac/@acc/@ten/@marc は略記
+  g4@p@staccato a@accent b@tenuto c@marcato |
   d4@cresc e fis g@f |              // @cresc … @f でヘアピン(増)
   fis4@decresc e d c@p |            // @decresc … @p でヘアピン(減)
   b2.@fermata r4 |                  // フェルマータ

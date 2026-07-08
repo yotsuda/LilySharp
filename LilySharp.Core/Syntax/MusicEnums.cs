@@ -40,9 +40,9 @@ public enum ArticulationType
     FermataLong,
     /// <summary>Guitar bend-up with a semitone amount (<c>@bend(full)</c>).</summary>
     Bend,
-    /// <summary>Hammer-on — TAB "H" (<c>@ho</c>).</summary>
+    /// <summary>Hammer-on — TAB "H" (<c>@hammeron</c>).</summary>
     HammerOn,
-    /// <summary>Pull-off — TAB "P" (<c>@po</c>).</summary>
+    /// <summary>Pull-off — TAB "P" (<c>@pulloff</c>).</summary>
     PullOff,
     /// <summary>Tap — TAB "T" (<c>@tap</c>).</summary>
     Tap,
@@ -75,7 +75,7 @@ public enum ArticulationType
     UpBow,
     /// <summary>Down-bow — string bowing mark, above the staff.</summary>
     DownBow,
-    /// <summary>Harmonic circle (@harmonic / @flageolet).
+    /// <summary>Harmonic circle (@flageolet).
     /// LILYPOND-REF: scripts.flageolet.</summary>
     Flageolet,
     // Bend-after gestures: a short curved line trailing off the note — a jazz

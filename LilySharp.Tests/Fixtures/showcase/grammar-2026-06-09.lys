@@ -31,7 +31,7 @@ phrase intro {
 }
 
 // G3 — `tr` used to be a reserved keyword (trill); it is now an ordinary
-//      identifier, so it can name a phrase. (`@tr` still means trill — below.)
+//      identifier, so it can name a phrase.
 phrase tr {
   e4 f g a | b2 b |
 }
@@ -43,13 +43,12 @@ phrase tr {
   // Reuse phrases by reference:
   $intro
 
-  // G3 — articulations resolve from `@name` text via a registry; full names and
-  //      abbreviations both work:
-  c4@staccato d@stac e@accent f@acc |     // @stac == @staccato, @acc == @accent
-  g@tenuto a@ten b@marcato c@marc |      // @ten == @tenuto,   @marc == @marcato
+  // G3 — articulations resolve from `@name` text via a registry:
+  c4@staccato d@staccato e@accent f@accent |
+  g@tenuto a@tenuto b@marcato c@marcato |
 
-  // G3 — ornaments too (@tr == @trill):
-  c4@trill d,@tr e@mordent f@turn |
+  // G3 — ornaments:
+  c4@trill d,@trill e@mordent f@turn |
 
   // Task 15 — inline volta repeat: body once, with first/second-time endings.
   |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ]

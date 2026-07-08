@@ -120,15 +120,15 @@ Notes enclosed in angle brackets share a duration:
 ## Articulations
 
 Articulations are attached to notes with the `@` prefix. Names are resolved from
-text (not reserved keywords), so common abbreviations also work and names like
-`tr`/`acc`/`ten`/`dim` remain usable as ordinary identifiers elsewhere:
+text, not reserved keywords, so a word like `tr` or `accent` stays usable as an
+ordinary identifier (say, a phrase name) elsewhere:
 
 ```
-c4@staccato     % Staccato   (abbrev: @stac)
-d4@accent       % Accent     (abbrev: @acc)
-e4@tenuto       % Tenuto      (abbrev: @ten)
-f4@marcato      % Marcato     (abbrev: @marc)
-g4@fermata      % Fermata     (abbrev: @ferm)
+c4@staccato     % Staccato
+d4@accent       % Accent
+e4@tenuto       % Tenuto
+f4@marcato      % Marcato
+g4@fermata      % Fermata
 a4@portato      % Portato (tenuto + staccato)
 ```
 
@@ -145,7 +145,7 @@ d4@accent.down      % accent forced below
 ## Ornaments
 
 ```
-c4@trill          % Trill (abbrev: @tr)
+c4@trill          % Trill
 d4@mordent        % Mordent
 e4@prall          % Inverted mordent (pralltriller)
 f4@turn           % Turn

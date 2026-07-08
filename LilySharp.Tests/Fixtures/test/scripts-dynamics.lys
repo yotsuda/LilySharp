@@ -7,7 +7,7 @@ section Main {
   melody {
     c4@sfz d@fp e@sf f@rfz |
     g4@staccatissimo a@staccatissimo b@upbow c@downbow |
-    d4@harmonic c@staccatissimo.down b@flageolet a@fz |
+    d4@flageolet c@staccatissimo.down b@flageolet a@fz |
     <d, f a>2@fermata <g b d>2@staccato |
     e1@fermata |
     voice { a'4@fermata r2. } voice { c4 d2. } |

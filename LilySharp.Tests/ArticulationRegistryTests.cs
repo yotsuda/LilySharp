@@ -39,30 +39,38 @@ public sealed class ArticulationRegistryTests
 
     [Theory]
     [InlineData("staccato", ArticulationType.Staccato)]
-    [InlineData("stac", ArticulationType.Staccato)]
     [InlineData("accent", ArticulationType.Accent)]
-    [InlineData("acc", ArticulationType.Accent)]
     [InlineData("tenuto", ArticulationType.Tenuto)]
-    [InlineData("ten", ArticulationType.Tenuto)]
     [InlineData("trill", ArticulationType.Trill)]
-    [InlineData("tr", ArticulationType.Trill)]
     [InlineData("mordent", ArticulationType.Mordent)]
-    public void Registry_ResolvesNamesAndAbbreviations(string name, ArticulationType expected)
+    public void Registry_ResolvesNames(string name, ArticulationType expected)
     {
         Assert.Equal(expected, ArticulationRegistry.Resolve(name));
     }
 
-    [Fact]
-    public void Registry_UnknownName_ResolvesToNone()
+    // The abbreviations stac/acc/ten/marc/ferm/tr/ho/po and the synonyms
+    // harmonic/bendafter were removed pre-0.3.0 (cf. @glissando); they must no
+    // longer resolve to an articulation.
+    [Theory]
+    [InlineData("bogus")]
+    [InlineData("stac")]
+    [InlineData("acc")]
+    [InlineData("ten")]
+    [InlineData("marc")]
+    [InlineData("ferm")]
+    [InlineData("tr")]
+    [InlineData("ho")]
+    [InlineData("po")]
+    [InlineData("harmonic")]
+    [InlineData("bendafter")]
+    public void Registry_UnknownName_ResolvesToNone(string name)
     {
-        Assert.Equal(ArticulationType.None, ArticulationRegistry.Resolve("bogus"));
+        Assert.Equal(ArticulationType.None, ArticulationRegistry.Resolve(name));
     }
 
     [Theory]
     [InlineData("{ c4@staccato }", ArticulationType.Staccato)]
-    [InlineData("{ c4@stac }", ArticulationType.Staccato)]
     [InlineData("{ c4@trill }", ArticulationType.Trill)]
-    [InlineData("{ c4@tr }", ArticulationType.Trill)]
     public void ParsedArticulation_ResolvesType(string source, ArticulationType expected)
     {
         Assert.Equal(expected, ParseArticulationType(source));

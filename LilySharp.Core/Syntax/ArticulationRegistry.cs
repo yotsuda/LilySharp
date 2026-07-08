@@ -20,29 +20,24 @@ using System.Collections.Generic;
 namespace LilySharp.Core.Syntax;
 
 /// <summary>
-/// Resolves articulation / ornament names (and their abbreviations) written as
-/// <c>@name</c> to an <see cref="ArticulationType"/>. This is the single source of
-/// truth that replaces the former reserved lexer keywords, so names like
-/// <c>tr</c>, <c>acc</c>, <c>ten</c>, and <c>dim</c> are free to be ordinary
-/// identifiers and only carry articulation meaning behind the <c>@</c> sigil.
+/// Resolves articulation / ornament names written as <c>@name</c> to an
+/// <see cref="ArticulationType"/>. This is the single source of truth that
+/// replaces the former reserved lexer keywords, so ordinary words like
+/// <c>turn</c> stay free as identifiers and only carry articulation meaning
+/// behind the <c>@</c> sigil.
 /// </summary>
 public static class ArticulationRegistry
 {
-    // Full names and their conventional abbreviations. Case-insensitive.
+    // Recognized articulation / ornament names. Case-insensitive.
     private static readonly Dictionary<string, ArticulationType> ByName =
         new(StringComparer.OrdinalIgnoreCase)
         {
             // Articulations
             ["staccato"] = ArticulationType.Staccato,
-            ["stac"] = ArticulationType.Staccato,
             ["accent"] = ArticulationType.Accent,
-            ["acc"] = ArticulationType.Accent,
             ["tenuto"] = ArticulationType.Tenuto,
-            ["ten"] = ArticulationType.Tenuto,
             ["marcato"] = ArticulationType.Marcato,
-            ["marc"] = ArticulationType.Marcato,
             ["fermata"] = ArticulationType.Fermata,
-            ["ferm"] = ArticulationType.Fermata,
             ["shortfermata"] = ArticulationType.FermataShort,
             ["longfermata"] = ArticulationType.FermataLong,
             ["portato"] = ArticulationType.Portato,
@@ -50,13 +45,8 @@ public static class ArticulationRegistry
             // String bowing marks and the harmonic circle.
             ["upbow"] = ArticulationType.UpBow,
             ["downbow"] = ArticulationType.DownBow,
-            ["harmonic"] = ArticulationType.Flageolet,
             ["flageolet"] = ArticulationType.Flageolet,
-            // Bend-after gestures (jazz fall / doit). `bendafter` aliases fall
-            // (the common down-bend); use `doit` for the up-bend.
-            ["ho"] = ArticulationType.HammerOn,
             ["hammeron"] = ArticulationType.HammerOn,
-            ["po"] = ArticulationType.PullOff,
             ["pulloff"] = ArticulationType.PullOff,
             ["tap"] = ArticulationType.Tap,
             ["snappizz"] = ArticulationType.SnapPizz,
@@ -67,11 +57,9 @@ public static class ArticulationRegistry
             ["scoop"] = ArticulationType.Scoop,
             ["plop"] = ArticulationType.Plop,
             ["fall"] = ArticulationType.Fall,
-            ["bendafter"] = ArticulationType.Fall,
             ["doit"] = ArticulationType.Doit,
             // Ornaments
             ["trill"] = ArticulationType.Trill,
-            ["tr"] = ArticulationType.Trill,
             ["mordent"] = ArticulationType.Mordent,
             ["prall"] = ArticulationType.Prall,
             ["turn"] = ArticulationType.Turn,
