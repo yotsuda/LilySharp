@@ -270,6 +270,10 @@ export function activate(context: vscode.ExtensionContext) {
                 content: NEW_SCORE_TEMPLATE,
             });
             await vscode.window.showTextDocument(doc);
+        }),
+        vscode.commands.registerCommand('lilysharp.importMusicXml', (uri?: vscode.Uri) => {
+            outputChannel.appendLine('importMusicXml command triggered');
+            importMusicXml(context, uri);
         })
     );
 
@@ -754,6 +758,90 @@ async function addChordTrack() {
         }
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: add chord track failed: ${err}`);
+    }
+}
+
+interface ImportMusicXmlResponse {
+    Lys: string | null;
+    Warnings: string[];
+    Error: string | null;
+}
+
+/**
+ * Imports a MusicXML file (.xml/.musicxml/.mxl) into Lily#. From the command
+ * palette it opens a file picker and drops the result in a new untitled .lys; from
+ * the Explorer context menu (a uri is passed) it writes `<name>.lys` next to the
+ * source. Either way it opens the preview to the side and surfaces the import
+ * report (approximations/drops) as a warning — import is a faithful STARTING POINT,
+ * not a byte round-trip.
+ */
+async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vscode.Uri) {
+    if (!client) {
+        vscode.window.showErrorMessage('Lily#: language server not ready.');
+        return;
+    }
+
+    const fromExplorer = sourceUri !== undefined;
+    let fileUri = sourceUri;
+    if (!fileUri) {
+        const picked = await vscode.window.showOpenDialog({
+            canSelectMany: false,
+            openLabel: 'Import',
+            filters: { 'MusicXML': ['xml', 'musicxml', 'mxl'] },
+        });
+        if (!picked || picked.length === 0) {
+            return;
+        }
+        fileUri = picked[0];
+    }
+
+    try {
+        const response = await client.sendRequest<ImportMusicXmlResponse>('lilysharp/importMusicXml', {
+            filePath: fileUri.fsPath,
+        });
+        if (response.Error || response.Lys == null) {
+            vscode.window.showErrorMessage(`Lily#: import failed: ${response.Error ?? 'no output.'}`);
+            return;
+        }
+
+        let doc: vscode.TextDocument;
+        if (fromExplorer) {
+            // Write <name>.lys next to the source and open it.
+            const targetUri = fileUri.with({
+                path: fileUri.path.replace(/\.(xml|musicxml|mxl)$/i, '') + '.lys',
+            });
+            await vscode.workspace.fs.writeFile(targetUri, Buffer.from(response.Lys, 'utf8'));
+            doc = await vscode.workspace.openTextDocument(targetUri);
+        } else {
+            // Command palette: a brand-new untitled .lys.
+            doc = await vscode.workspace.openTextDocument({
+                language: 'lilysharp',
+                content: response.Lys,
+            });
+        }
+        await vscode.window.showTextDocument(doc);
+        openPreview(context, vscode.ViewColumn.Beside);
+
+        const warnings = response.Warnings ?? [];
+        if (warnings.length > 0) {
+            const n = warnings.length;
+            vscode.window.showWarningMessage(
+                `Lily#: imported with ${n} approximation${n === 1 ? '' : 's'} — a starting point, edit as needed.`,
+                'Show Details'
+            ).then(choice => {
+                if (choice === 'Show Details') {
+                    outputChannel.appendLine('MusicXML import report:');
+                    for (const w of warnings) {
+                        outputChannel.appendLine(`  - ${w}`);
+                    }
+                    outputChannel.show(true);
+                }
+            });
+        } else {
+            vscode.window.showInformationMessage('Lily#: imported MusicXML — a starting point, edit as needed.');
+        }
+    } catch (err) {
+        vscode.window.showErrorMessage(`Lily#: import failed: ${err}`);
     }
 }
 

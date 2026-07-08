@@ -2996,6 +2996,48 @@ public sealed class LilySharpLanguageServer
     }
 
     /// <summary>
+    /// Imports a MusicXML file (<c>.xml</c> / <c>.musicxml</c> / <c>.mxl</c>) into
+    /// Lily# source. A file PATH is preferred so a binary <c>.mxl</c> zip reads
+    /// directly; raw <c>XmlText</c> is the fallback. Import is opinionated and
+    /// non-unique: the result is a faithful STARTING POINT, and every dropped or
+    /// approximated construct comes back in <c>Warnings</c> (the import report).
+    /// Powers the "Lily#: Import MusicXML…" editor command.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/importMusicXml", UseSingleObjectParameterDeserialization = true)]
+    public ImportMusicXmlResponse ImportMusicXml(ImportMusicXmlParams @params)
+    {
+        try
+        {
+            var importer = new LilySharp.Core.MusicXmlImport.MusicXmlImporter();
+            (string Lys, LilySharp.Core.MusicXmlImport.ImportReport Report) result;
+            if (!string.IsNullOrEmpty(@params.FilePath))
+            {
+                if (!System.IO.File.Exists(@params.FilePath))
+                    return new ImportMusicXmlResponse { Error = $"File not found: {@params.FilePath}" };
+                result = importer.ImportBytes(System.IO.File.ReadAllBytes(@params.FilePath));
+            }
+            else if (!string.IsNullOrEmpty(@params.XmlText))
+            {
+                result = importer.Import(@params.XmlText);
+            }
+            else
+            {
+                return new ImportMusicXmlResponse { Error = "No MusicXML file path or text provided." };
+            }
+
+            return new ImportMusicXmlResponse
+            {
+                Lys = result.Lys,
+                Warnings = result.Report.Warnings.ToArray(),
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ImportMusicXmlResponse { Error = ex.Message };
+        }
+    }
+
+    /// <summary>
     /// Custom request to generate SVG from a document.
     /// Used for real-time preview in VS Code.
     /// </summary>
@@ -3502,6 +3544,25 @@ public class ConvertLayoutResponse
     public string? NewText { get; set; }
     public string? FromLayout { get; set; }
     public string? ToLayout { get; set; }
+    public string? Error { get; set; }
+}
+
+/// <summary>Parameters for lilysharp/importMusicXml. A <see cref="FilePath"/> is
+/// preferred (handles a binary <c>.mxl</c>); <see cref="XmlText"/> is the fallback
+/// when only raw XML is on hand.</summary>
+public class ImportMusicXmlParams
+{
+    public string? FilePath { get; set; }
+    public string? XmlText { get; set; }
+}
+
+/// <summary>Response for lilysharp/importMusicXml: the generated Lily# source, the
+/// import-report warnings (dropped/approximated constructs), and an error if the
+/// file could not be read or parsed.</summary>
+public class ImportMusicXmlResponse
+{
+    public string? Lys { get; set; }
+    public string[] Warnings { get; set; } = System.Array.Empty<string>();
     public string? Error { get; set; }
 }
 

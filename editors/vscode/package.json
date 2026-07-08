@@ -183,6 +183,11 @@
         "icon": "$(new-file)",
         "title": "New Score",
         "shortTitle": "Lily# Score (.lys)"
+      },
+      {
+        "command": "lilysharp.importMusicXml",
+        "category": "Lily#",
+        "title": "Import MusicXML…"
       }
     ],
     "menus": {
@@ -211,6 +216,16 @@
         {
           "command": "lilysharp.addChordTrack",
           "when": "resourceLangId == lilysharp"
+        },
+        {
+          "command": "lilysharp.importMusicXml"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "lilysharp.importMusicXml",
+          "when": "resourceExtname == .xml || resourceExtname == .musicxml || resourceExtname == .mxl",
+          "group": "7_modification"
         }
       ],
       "editor/context": [
