@@ -307,6 +307,18 @@ export function activate(context: vscode.ExtensionContext) {
                 const panel = previewPanels.get(uri);
                 if (panel) {
                     const doc = event.textEditor.document;
+
+                    // A non-empty selection highlights EVERY note whose position falls
+                    // inside a selected range (block/multi-cursor selections send more
+                    // than one range).
+                    const ranges = event.selections
+                        .filter(s => !s.isEmpty)
+                        .map(s => [doc.offsetAt(s.start), doc.offsetAt(s.end)]);
+                    if (ranges.length > 0) {
+                        panel.webview.postMessage({ type: 'highlightRange', ranges });
+                        return;
+                    }
+
                     const offset = doc.offsetAt(event.selections[0].active);
                     const text = doc.getText();
                     // Highlight only when the cursor touches a token: if it sits in a
@@ -1045,6 +1057,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
         let hideTimeout;
         let lastHighlightPos = -1;
+        let lastHighlightRanges = null;   // set while a selection (not a bare cursor) is highlighted
 
         // Pages of the current SVG (single-page SVGs have no g.page wrappers).
         let pages = [{ top: 0, height: 0 }];
@@ -1203,6 +1216,26 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             } else {
                 lastResolvedPos = -1;
             }
+        }
+
+        // Highlight every note whose source position falls inside a selected range
+        // (an editor selection, possibly several ranges for a multi-cursor select).
+        function highlightRange(ranges) {
+            clearHighlights();
+            const positions = new Set();
+            document.querySelectorAll('[data-pos]').forEach(el => {
+                const pos = parseInt(el.getAttribute('data-pos'), 10);
+                for (let i = 0; i < ranges.length; i++) {
+                    if (pos >= ranges[i][0] && pos < ranges[i][1]) {
+                        positions.add(pos);
+                        break;
+                    }
+                }
+            });
+            if (positions.size > 0) {
+                highlightPositions(Array.from(positions));
+            }
+            lastResolvedPos = -1;   // a range has no single resolved note
         }
 
         // Groups all elements sharing one data-pos into printed instances
@@ -1579,7 +1612,9 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                         if (fitMode === 'page') fitPage();
                         else if (fitMode === 'width') fitWidth();
                         else updateZoom();
-                        if (lastHighlightPos >= 0) {
+                        if (lastHighlightRanges) {
+                            highlightRange(lastHighlightRanges);
+                        } else if (lastHighlightPos >= 0) {
                             highlightNearestElement(lastHighlightPos);
                         }
                     }
@@ -1620,7 +1655,13 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                     break;
                 case 'highlightPosition':
                     lastHighlightPos = message.position;
+                    lastHighlightRanges = null;
                     highlightNearestElement(message.position);
+                    break;
+                case 'highlightRange':
+                    lastHighlightRanges = message.ranges;
+                    lastHighlightPos = -1;
+                    highlightRange(message.ranges);
                     break;
             }
         });
