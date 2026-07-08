@@ -50,6 +50,13 @@ public class FiguredBassTests
     }
 
     [Fact]
+    public void FiguredBassFigure_DisplayText_Held()
+    {
+        var figure = new FiguredBassFigure(0, 0, Held: true);
+        Assert.Equal("–", figure.DisplayText);  // en dash (extension)
+    }
+
+    [Fact]
     public void FiguredBassFigure_DisplayText_WithNatural()
     {
         var figure = new FiguredBassFigure(7, 2);
@@ -166,6 +173,29 @@ public class FiguredBassTests
         Assert.Equal(1, result.Value[0].Alteration);
         Assert.Equal(4, result.Value[1].Number);
         Assert.Equal(0, result.Value[1].Alteration);
+    }
+
+    [Fact]
+    public void ParseFigures_HeldFigure()
+    {
+        // @fig(7 _) → a 7 over a held/continuation slot.
+        var result = FiguredBassItem.ParseFigures("fig.7._");
+        Assert.NotNull(result);
+        Assert.Equal(2, result!.Value.Length);
+        Assert.Equal(7, result.Value[0].Number);
+        Assert.False(result.Value[0].Held);
+        Assert.Equal(0, result.Value[1].Number);
+        Assert.True(result.Value[1].Held);
+    }
+
+    [Fact]
+    public void ParseFigures_StandaloneHeld()
+    {
+        // @fig(_) → a lone held figure line.
+        var result = FiguredBassItem.ParseFigures("fig._");
+        Assert.NotNull(result);
+        Assert.Single(result!.Value);
+        Assert.True(result.Value[0].Held);
     }
 
     [Fact]
@@ -306,6 +336,23 @@ public class FiguredBassTests
         Assert.Single(fb.Figures);
         Assert.Equal(6, fb.Figures[0].Number);
         Assert.Equal(1, fb.Figures[0].Alteration);
+    }
+
+    [Fact]
+    public void Collector_FiguredBass_HeldFigure()
+    {
+        var source = "c4 @fig(7 _) d e f";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree);
+
+        Assert.Single(score.FiguredBasses);
+        var fb = score.FiguredBasses[0];
+        Assert.Equal(2, fb.Figures.Length);
+        Assert.Equal(7, fb.Figures[0].Number);
+        Assert.True(fb.Figures[1].Held);
     }
 
     [Fact]

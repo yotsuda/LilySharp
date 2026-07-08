@@ -30,16 +30,23 @@ public readonly record struct FiguredBassFigure(
     int Number,
     // Alteration: 0=none, 1=sharp, -1=flat, 2=natural (cautionary).
     // LILYPOND-REF: lily/figured-bass-engraver.cc:120 alteration property
-    int Alteration = 0
+    int Alteration = 0,
+    // A held / continuation figure ('_' in @fig): the figure sustains from the
+    // previous bass note and is drawn as a horizontal extension dash. Continuo.
+    bool Held = false
 )
 {
     /// <summary>
-    /// Gets the display text for this figure (number + optional accidental).
+    /// Gets the display text for this figure (number + optional accidental,
+    /// or an extension dash for a held figure).
     /// </summary>
     public string DisplayText
     {
         get
         {
+            if (Held)
+                return "–";  // en dash: continuo extension / held figure
+
             string numStr = Number > 0 ? Number.ToString() : "";
             string altStr = Alteration switch
             {
@@ -150,6 +157,18 @@ public sealed record FiguredBassItem
                 // it binds to the coming figure; alone ('#') it is a bare sharp.
                 // (Suffix sharp keeps the existing 's' spelling: '6.s'.)
                 pendingAlteration = 1;
+            }
+            else if (part == "_")
+            {
+                // '_' is a held / continuation figure line (continuo): its own
+                // stacked slot that sustains from the previous bass note. Flush any
+                // current figure, then add the held slot.
+                if (currentNumber >= 0)
+                    figures.Add(new FiguredBassFigure(currentNumber, currentAlteration));
+                figures.Add(new FiguredBassFigure(0, 0, Held: true));
+                currentNumber = -1;
+                currentAlteration = 0;
+                pendingAlteration = 0;
             }
             else if (currentNumber >= 0 && part.Length == 1)
             {
