@@ -127,6 +127,15 @@ internal sealed class MusicXmlMeasure
     /// for <c>|.</c>, "dashed" for <c>!</c>); null = ordinary barline.</summary>
     public string? BarStyle { get; set; }
 
+    /// <summary>Volta ending that STARTS on this measure — the number(s) as a
+    /// MusicXML ending list ("1", "1,2", "1,2,3"); null when none.</summary>
+    public string? EndingStartNumbers { get; set; }
+    /// <summary>Volta ending that ENDS on this measure — the number(s); null when none.</summary>
+    public string? EndingStopNumbers { get; set; }
+    /// <summary>The ending-stop kind: "stop" (closed hook, e.g. a 1st ending) or
+    /// "discontinue" (open, e.g. the final ending). Defaults to "stop".</summary>
+    public string? EndingStopType { get; set; }
+
     public XElement ToXml()
     {
         var measure = new XElement("measure", new XAttribute("number", Number));
@@ -136,10 +145,20 @@ internal sealed class MusicXmlMeasure
         if (Attributes != null)
             measure.Add(Attributes.ToXml());
 
-        if (RepeatForward)
-            measure.Add(new XElement("barline", new XAttribute("location", "left"),
-                new XElement("bar-style", "heavy-light"),
-                new XElement("repeat", new XAttribute("direction", "forward"))));
+        if (RepeatForward || EndingStartNumbers != null)
+        {
+            // DTD order inside <barline>: bar-style, ending, repeat.
+            var left = new XElement("barline", new XAttribute("location", "left"));
+            if (RepeatForward)
+                left.Add(new XElement("bar-style", "heavy-light"));
+            if (EndingStartNumbers != null)
+                left.Add(new XElement("ending",
+                    new XAttribute("number", EndingStartNumbers),
+                    new XAttribute("type", "start")));
+            if (RepeatForward)
+                left.Add(new XElement("repeat", new XAttribute("direction", "forward")));
+            measure.Add(left);
+        }
 
         // Legacy single direction (tempo)
         if (Direction != null)
@@ -152,11 +171,17 @@ internal sealed class MusicXmlMeasure
         foreach (var note in Notes)
             measure.Add(note.ToXml());
 
-        if (RepeatBackward || BarStyle != null)
+        if (RepeatBackward || BarStyle != null || EndingStopNumbers != null)
         {
+            // DTD order inside <barline>: bar-style, ending, repeat.
             var barline = new XElement("barline", new XAttribute("location", "right"));
-            barline.Add(new XElement("bar-style",
-                RepeatBackward ? "light-heavy" : BarStyle));
+            if (RepeatBackward || BarStyle != null)
+                barline.Add(new XElement("bar-style",
+                    RepeatBackward ? "light-heavy" : BarStyle));
+            if (EndingStopNumbers != null)
+                barline.Add(new XElement("ending",
+                    new XAttribute("number", EndingStopNumbers),
+                    new XAttribute("type", EndingStopType ?? "stop")));
             if (RepeatBackward)
                 barline.Add(new XElement("repeat", new XAttribute("direction", "backward")));
             measure.Add(barline);

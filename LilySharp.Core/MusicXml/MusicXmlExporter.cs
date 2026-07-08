@@ -294,13 +294,24 @@ public sealed class MusicXmlExporter
     /// part — mirroring the inline-barline handling.</summary>
     private void EmitRepeatBlock(StructureRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
+        bool hasEndings = false;
+        for (int i = 0; i < rb.SlotCount; i++)
+            if (rb.GetChild(i) is StructureAlternativeSyntax) { hasEndings = true; break; }
+
+        if (hasEndings)
+            EmitVoltaRepeatBlock(rb, byName);
+        else
+            EmitPlainRepeatBlock(rb, byName);
+    }
+
+    private void EmitPlainRepeatBlock(StructureRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    {
         var runs = new List<List<SyntaxNode>>();
         var cur = new List<SyntaxNode>();
         for (int i = 0; i < rb.SlotCount; i++)
         {
             var child = rb.GetChild(i);
-            if (child is SectionReferenceSyntax or StructureAlternativeSyntax
-                or { Kind: SyntaxKind.SilentSectionReference })
+            if (child is SectionReferenceSyntax or { Kind: SyntaxKind.SilentSectionReference })
                 cur.Add(child);
             else if (child is SyntaxTokenNode { Kind: SyntaxKind.RepeatBothBar })
             {
@@ -314,29 +325,99 @@ public sealed class MusicXmlExporter
         {
             if (run.Count == 0)
                 continue;
-
             var startIdx = _document.Parts.ToDictionary(p => p, p => p.Measures.Count);
             foreach (var item in run)
-            {
-                switch (item)
-                {
-                    case SectionReferenceSyntax r: EmitSectionByName(byName, r.SectionName); break;
-                    case StructureAlternativeSyntax alt: EmitSectionByName(byName, alt.SectionName.Text); break;
-                    case { Kind: SyntaxKind.SilentSectionReference } silent
-                            when silent.GetChild(1) is SyntaxTokenNode nm:
-                        EmitSectionByName(byName, nm.Text);
-                        break;
-                }
-            }
+                EmitStructureItem(item, byName);
             foreach (var p in _document.Parts)
             {
-                if (p.Measures.Count > startIdx[p])
+                if (p.Measures.Count > startIdx.GetValueOrDefault(p))
                 {
-                    p.Measures[startIdx[p]].RepeatForward = true;
+                    p.Measures[startIdx.GetValueOrDefault(p)].RepeatForward = true;
                     p.Measures[^1].RepeatBackward = true;
                 }
             }
         }
+    }
+
+    /// <summary>A <c>|: BODY [1. E1] :| [2. E2]</c> volta repeat. The body opens the
+    /// forward repeat; each ending gets a &lt;ending&gt; start/stop bracket; the
+    /// backward repeat sits on the last measure before the <c>:|</c>; endings AFTER
+    /// the <c>:|</c> are final (type "discontinue", no repeat). A silent <c>~</c>
+    /// ending suppresses its bracket (as the engraving does) but still plays.</summary>
+    private void EmitVoltaRepeatBlock(StructureRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    {
+        bool forwardPending = true;
+        bool afterEndBar = false;
+
+        for (int i = 0; i < rb.SlotCount; i++)
+        {
+            var child = rb.GetChild(i);
+            if (child is StructureAlternativeSyntax alt)
+            {
+                var startIdx = _document.Parts.ToDictionary(p => p, p => p.Measures.Count);
+                EmitSectionByName(byName, alt.SectionName.Text);
+                string num = EndingNumbers(alt);
+                string stopType = afterEndBar ? "discontinue" : "stop";
+                foreach (var p in _document.Parts)
+                {
+                    if (p.Measures.Count <= startIdx.GetValueOrDefault(p)) continue;
+                    if (!alt.IsSilent)
+                    {
+                        p.Measures[startIdx.GetValueOrDefault(p)].EndingStartNumbers = num;
+                        p.Measures[^1].EndingStopNumbers = num;
+                        p.Measures[^1].EndingStopType = stopType;
+                    }
+                    if (forwardPending) p.Measures[startIdx.GetValueOrDefault(p)].RepeatForward = true;
+                }
+                forwardPending = false;
+            }
+            else if (child is SectionReferenceSyntax or { Kind: SyntaxKind.SilentSectionReference })
+            {
+                var startIdx = _document.Parts.ToDictionary(p => p, p => p.Measures.Count);
+                EmitStructureItem(child, byName);
+                if (forwardPending)
+                {
+                    foreach (var p in _document.Parts)
+                        if (p.Measures.Count > startIdx.GetValueOrDefault(p))
+                            p.Measures[startIdx.GetValueOrDefault(p)].RepeatForward = true;
+                    forwardPending = false;
+                }
+            }
+            else if (child is SyntaxTokenNode { Kind: SyntaxKind.RepeatEndBar })
+            {
+                // The :| repeats back to the |:; it caps the ending just played.
+                afterEndBar = true;
+                foreach (var p in _document.Parts)
+                    if (p.Measures.Count > 0)
+                        p.Measures[^1].RepeatBackward = true;
+            }
+        }
+    }
+
+    private void EmitStructureItem(SyntaxNode item, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    {
+        switch (item)
+        {
+            case SectionReferenceSyntax r: EmitSectionByName(byName, r.SectionName); break;
+            case StructureAlternativeSyntax alt: EmitSectionByName(byName, alt.SectionName.Text); break;
+            case { Kind: SyntaxKind.SilentSectionReference } silent
+                    when silent.GetChild(1) is SyntaxTokenNode nm:
+                EmitSectionByName(byName, nm.Text);
+                break;
+        }
+    }
+
+    /// <summary>The MusicXML <c>&lt;ending number&gt;</c> list for a volta: "1", a
+    /// range <c>[1-3.]</c> → "1,2,3", a list <c>[1,3.]</c> → "1,3".</summary>
+    private static string EndingNumbers(StructureAlternativeSyntax alt)
+    {
+        int n = alt.AlternativeNumber;
+        if (alt.Separator is not { } sep || alt.EndNumber is not { } endTok
+            || !int.TryParse(endTok.Text, out int e))
+            return n.ToString();
+        if (sep.Text == "-")
+            return string.Join(",", System.Linq.Enumerable.Range(n, System.Math.Max(1, e - n + 1)));
+        return $"{n},{e}";
     }
 
     private void ProcessPartBlock(PartBlockSyntax partBlock)

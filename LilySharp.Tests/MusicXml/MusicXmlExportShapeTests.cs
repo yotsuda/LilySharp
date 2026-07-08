@@ -159,6 +159,37 @@ public class MusicXmlExportShapeTests
     }
 
     [Fact]
+    public void Volta_EmitsEndingBrackets()
+    {
+        var doc = Export("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { c'4 d' e' f' | } }
+            section D { m { g'4 a' b' c'' | } }
+            section O { m { e'4 f' g' a' | } }
+            structure { |: A [1. D] :| [2. O] }
+            score x { staff m }
+            """);
+        var measures = doc.Descendants("measure").ToList();
+        Assert.Equal(3, measures.Count);   // A, 1st ending D, 2nd ending O
+
+        bool HasEnding(XElement m, string num, string type) =>
+            m.Elements("barline").Elements("ending").Any(e =>
+                e.Attribute("number")?.Value == num && e.Attribute("type")?.Value == type);
+        bool HasRepeat(XElement m, string dir) =>
+            m.Elements("barline").Elements("repeat").Any(r => r.Attribute("direction")?.Value == dir);
+
+        Assert.True(HasRepeat(measures[0], "forward"));        // A opens the repeat
+        Assert.True(HasEnding(measures[1], "1", "start"));     // 1st ending brackets
+        Assert.True(HasEnding(measures[1], "1", "stop"));
+        Assert.True(HasRepeat(measures[1], "backward"));       // :| caps the 1st ending
+        Assert.True(HasEnding(measures[2], "2", "start"));     // 2nd ending
+        Assert.True(HasEnding(measures[2], "2", "discontinue"));
+        Assert.False(HasRepeat(measures[2], "backward"));      // 2nd ending does not repeat
+    }
+
+    [Fact]
     public void PercentRepeat_ExportsMeasureRepeatSign()
     {
         // A one-measure percent body exports the SIGN: repeated measures keep
