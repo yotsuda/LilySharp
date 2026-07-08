@@ -404,13 +404,14 @@ public sealed class LilySharpLanguageServer
             wordStart--;
         string word = doc.Text.Substring(wordStart, offset - wordStart);
 
-        // Inside a nameless chords { } block, right after a chord's ':', complete the
-        // quality tokens (m, m7, maj7, sus4, …).
-        if (wordStart > 0 && doc.Text[wordStart - 1] == ':' && IsInsideChordNamesBlock(doc.Text, offset))
+        // Inside a chords { } block (or its inner sections), right after a chord's
+        // ':', complete the quality tokens (m, m7, maj7, sus4, …).
+        if (wordStart > 0 && doc.Text[wordStart - 1] == ':' && IsInsideChordsBlock(doc.Text, offset))
             return GetChordQualityCompletions();
 
-        // Inside a @chord(…) argument: offer the current key's diatonic chords.
-        if (IsInsideChordAnnotation(doc.Text, offset))
+        // Inside a @chord(…) argument OR a chords { } block, offer the current key's
+        // diatonic chords — one format for both (insert text is the chords{} form).
+        if (IsInsideChordAnnotation(doc.Text, offset) || IsInsideChordsBlock(doc.Text, offset))
             return GetDiatonicChordCompletions(doc.Text, offset);
 
         return context switch
@@ -455,6 +456,50 @@ public sealed class LilySharpLanguageServer
     /// </summary>
     private static bool IsInsideChordNamesBlock(string text, int offset)
         => InnermostOpenBlock(text, offset) == "chords";
+
+    /// <summary>
+    /// True when <paramref name="offset"/> sits inside a <c>chords [name] { … }</c>
+    /// block — INCLUDING a <c>section</c> nested in one (the part-major chord track).
+    /// Unlike <see cref="IsInsideChordNamesBlock"/> this matches the NAMED form too
+    /// (<c>chords harmony {</c>, whose word before the brace is the name). Used to
+    /// offer chord entries: the diatonic chords, and quality tokens after ':'.
+    /// </summary>
+    internal static bool IsInsideChordsBlock(string text, int offset)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+        // The INTRODUCING keyword of each still-open block (for `chords harmony {` and
+        // `section A {` it is one word before the name, so a two-word lookback).
+        var stack = new System.Collections.Generic.Stack<string>();
+        for (int i = 0; i < offset && i < text.Length; i++)
+        {
+            if (text[i] == '{')
+            {
+                int j = i - 1;
+                while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+                int end1 = j + 1;
+                while (j >= 0 && IsWordChar(text[j])) j--;
+                string w1 = text.Substring(j + 1, end1 - (j + 1));   // word before '{'
+                int k = j;
+                while (k >= 0 && char.IsWhiteSpace(text[k])) k--;
+                int end2 = k + 1;
+                while (k >= 0 && IsWordChar(text[k])) k--;
+                string w2 = text.Substring(k + 1, end2 - (k + 1));   // and the one before it
+                stack.Push(w2 is "chords" or "lyrics" or "section" or "part" ? w2 : w1);
+            }
+            else if (text[i] == '}' && stack.Count > 0)
+            {
+                stack.Pop();
+            }
+        }
+        // Inside a chords block, or a section nested inside one (skip section levels).
+        foreach (var keyword in stack) // innermost first
+        {
+            if (keyword == "chords") return true;
+            if (keyword == "section") continue;
+            return false;
+        }
+        return false;
+    }
 
     /// <summary>
     /// The keyword introducing the innermost still-open <c>keyword { … }</c> block
