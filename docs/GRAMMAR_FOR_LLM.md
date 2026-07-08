@@ -245,7 +245,7 @@ structure { A segno  B to coda  C ds al coda  coda D }
 
 In-note marks: `c4@mark(A)` (rehearsal mark), `@segno @coda @fine @dc @ds`,
 text spanners `@rit` / `@accel`, ottava `@ottava` / `@ottava(bassa)` ... `@loco`,
-trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima`/`@15ma`/`@15mb`, pedals `@ped` ... `@ped(off)`,
+trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`, pedals `@ped` ... `@ped(off)`,
 `@ped`/`@ped.off`, `@sost`/`@sost.off` (release = `.off`), `@una.corda`/`@tre.corde` (the traditional pair; tre corde IS the release, like an
 argument). (`@ds al fine` etc. is the navigation form used inside `structure { }`.)
 
