@@ -802,27 +802,6 @@ internal static class SharedRenderer
         return off;
     }
 
-    /// <summary>
-    /// Converts a staff position and accidental back to a MIDI note number
-    /// (staff position 0 = middle C = MIDI 60).
-    /// </summary>
-    private static int StaffPositionToMidi(int staffPosition, string? accidental)
-    {
-        int step = ((staffPosition % 7) + 7) % 7;
-        int octave = 4 + (staffPosition - step) / 7;
-
-        int alteration = accidental switch
-        {
-            "sharp" => 1,
-            "flat" => -1,
-            "doubleSharp" => 2,
-            "doubleFlat" => -2,
-            _ => 0
-        };
-
-        return Semantics.RelativeOctave.StepToMidi(step, alteration, octave);
-    }
-
     // ---------- Clef ----------
 
     /// <summary>
@@ -1791,65 +1770,7 @@ internal static class SharedRenderer
         if (!resolver.HasOverrides) return null;
         var s = resolver.GetString(grobType, "color");
         if (string.IsNullOrEmpty(s)) return null;
-        return ParseColor(s);
-    }
-
-    private static Color? ParseColor(string s)
-    {
-        // Hex literal: #rgb / #rrggbb
-        if (s.Length >= 4 && s[0] == '#')
-        {
-            ReadOnlySpan<char> hex = s.AsSpan(1);
-            if (hex.Length == 3 &&
-                TryParseHexNibble(hex[0], out int r3) &&
-                TryParseHexNibble(hex[1], out int g3) &&
-                TryParseHexNibble(hex[2], out int b3))
-            {
-                return new Color((byte)(r3 * 17), (byte)(g3 * 17), (byte)(b3 * 17));
-            }
-            if (hex.Length == 6 &&
-                TryParseHexByte(hex[0], hex[1], out int r6) &&
-                TryParseHexByte(hex[2], hex[3], out int g6) &&
-                TryParseHexByte(hex[4], hex[5], out int b6))
-            {
-                return new Color((byte)r6, (byte)g6, (byte)b6);
-            }
-            return null;
-        }
-        // Named color (subset of CSS / X11)
-        return s.ToLowerInvariant() switch
-        {
-            "black" => null,           // default — let backends use their own black
-            "red" => new Color(255, 0, 0),
-            "green" => new Color(0, 128, 0),
-            "blue" => new Color(0, 0, 255),
-            "yellow" => new Color(255, 255, 0),
-            "cyan" => new Color(0, 255, 255),
-            "magenta" => new Color(255, 0, 255),
-            "white" => new Color(255, 255, 255),
-            "gray" or "grey" => new Color(128, 128, 128),
-            "orange" => new Color(255, 165, 0),
-            "purple" => new Color(128, 0, 128),
-            "brown" => new Color(165, 42, 42),
-            _ => null,
-        };
-    }
-
-    private static bool TryParseHexNibble(char c, out int v)
-    {
-        if (c >= '0' && c <= '9') { v = c - '0'; return true; }
-        if (c >= 'a' && c <= 'f') { v = 10 + c - 'a'; return true; }
-        if (c >= 'A' && c <= 'F') { v = 10 + c - 'A'; return true; }
-        v = 0; return false;
-    }
-
-    private static bool TryParseHexByte(char hi, char lo, out int v)
-    {
-        v = 0;
-        if (!TryParseHexNibble(hi, out int h)) return false;
-        if (!TryParseHexNibble(lo, out int l)) return false;
-        v = (h << 4) | l;
-        return true;
+        return ColorParser.Parse(s);
     }
 
     // ---------- Ledger lines (ledger-line-spanner.cc port) ----------
