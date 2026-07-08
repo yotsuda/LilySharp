@@ -118,6 +118,37 @@ public sealed class StructureVoltaTests
     }
 
     [Fact]
+    public void SilentReference_WithHiddenLabel_WarnsButRendersUnlabelled()
+    {
+        // '~D "alt"' — a label parked but hidden by '~' (write now, reveal later by
+        // dropping the '~'). Valid (not an error): warn, keep the text, render the
+        // measure with NO label.
+        var tree = SyntaxTree.Parse(Head + "structure { A ~D \"alt\" }" + Tail);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.HiddenSectionLabel);
+
+        var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures.ToArray();
+        Assert.Equal(2, measures.Length);                              // A, ~D
+        Assert.DoesNotContain(measures, m => m.SectionLabel == "alt"); // label stays hidden
+    }
+
+    [Fact]
+    public void SilentReference_NoLabel_DoesNotWarn()
+    {
+        var tree = SyntaxTree.Parse(Head + "structure { A ~D }" + Tail);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.HiddenSectionLabel);
+    }
+
+    [Fact]
+    public void VoltaSilentAlternative_WithLabel_DoesNotWarn()
+    {
+        // '[2. ~O "alt"]' SHOWS "alt" — there the '~' suppresses only the volta
+        // bracket, so the label is not hidden and must not warn.
+        var tree = SyntaxTree.Parse(Head + "structure { |: A [1. D] :| [2. ~O \"alt\"] }" + Tail);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.HiddenSectionLabel);
+    }
+
+    [Fact]
     public void FirstEnding_BeforeRepeatBarline_Closes()
     {
         // The 1st ending sits before the :|, so its bracket must close with a down

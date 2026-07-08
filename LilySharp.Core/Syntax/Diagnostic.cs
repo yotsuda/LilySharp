@@ -191,6 +191,11 @@ public static class DiagnosticCodes
     /// silently drops. Points to the real grand-staff form.</summary>
     public const string ClefNameAsStaff = "LYS0011";
 
+    /// <summary>Parser warning: a silent section reference carries a display label
+    /// that is hidden by the <c>~</c> (e.g. <c>~B "alt"</c>). The label text is
+    /// kept in the source but not shown; a nudge that it is currently hidden.</summary>
+    public const string HiddenSectionLabel = "LYS0012";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

@@ -2264,13 +2264,28 @@ private GreenNode?[] ParseArticulations()
     }
 
     /// <summary>
-    /// Parse silent section reference: ~SectionName
+    /// Parse silent section reference: ~SectionName or ~SectionName "label".
+    /// The optional label is kept on the node but NOT displayed (the '~' hides it);
+    /// it lets an author park a label text and reveal it later by dropping the '~'.
     /// </summary>
     private SilentSectionReferenceGreen ParseSilentSectionReference()
     {
         var tilde = Expect(SyntaxKind.Tilde);
         var name = ExpectPartName();
-        return new SilentSectionReferenceGreen(tilde, name);
+
+        // '~B "alt"' — a label written but hidden by '~'. Keep it (do not drop it),
+        // and nudge that it is currently not shown.
+        SyntaxToken? label = null;
+        if (Check(SyntaxKind.StringLiteral))
+        {
+            int labelStart = _textPosition;
+            label = Advance();
+            var span = new TextSpan(labelStart, Math.Max(1, _textPosition - labelStart));
+            _diagnostics.Warning(span, DiagnosticCodes.HiddenSectionLabel,
+                $"The section label {label.Text} is hidden by '~'; drop the '~' to show it (or remove the label).");
+        }
+
+        return new SilentSectionReferenceGreen(tilde, name, label);
     }
 
     /// <summary>

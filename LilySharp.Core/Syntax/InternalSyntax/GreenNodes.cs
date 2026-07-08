@@ -696,8 +696,8 @@ internal sealed class SectionReferenceGreen : GreenSyntaxNode
 /// </summary>
 internal sealed class SilentSectionReferenceGreen : GreenSyntaxNode
 {
-    public SilentSectionReferenceGreen(SyntaxToken tilde, SyntaxToken identifier)
-        : base(SyntaxKind.SilentSectionReference, [tilde, identifier])
+    public SilentSectionReferenceGreen(SyntaxToken tilde, SyntaxToken identifier, SyntaxToken? displayLabel = null)
+        : base(SyntaxKind.SilentSectionReference, [tilde, identifier, displayLabel])
     {
     }
 }
