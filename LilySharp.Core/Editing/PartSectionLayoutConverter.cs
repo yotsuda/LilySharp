@@ -93,10 +93,10 @@ public static class PartSectionLayoutConverter
     }
 
     /// <summary>
-    /// True when a section-major section carries a block that is NOT a part block
-    /// (a <c>chords name { }</c> chord part or a <c>lyrics { }</c> block). Those live
-    /// only in the section-major layout, so a part-major conversion would drop them.
-    /// The editor uses this to explain why the file was left as section-major.
+    /// True when a section-major section carries a block the converter cannot transpose
+    /// — currently a <c>lyrics { }</c> block (part-major has no per-section home for it
+    /// yet). Part blocks and <c>chords name { }</c> chord parts ARE transposed, so they
+    /// don't trip this. The editor uses it to explain a refused conversion.
     /// </summary>
     public static bool HasUntransposableSectionContent(string source)
         => HasUntransposableSectionContent(SyntaxTree.Parse(source).GetRoot());
@@ -104,7 +104,7 @@ public static class PartSectionLayoutConverter
     private static bool HasUntransposableSectionContent(CompilationUnitSyntax root)
         => TopLevel(root).OfType<SectionDeclarationSyntax>()
             .Where(s => DirectChildrenOfType<PartBlockSyntax>(s).Any())
-            .Any(s => DirectChildren(s).Any(c => c is not PartBlockSyntax));
+            .Any(s => DirectChildren(s).Any(c => c is not PartBlockSyntax and not ChordPartBlockSyntax));
 
     // --- model extraction -----------------------------------------------------
 
@@ -114,10 +114,18 @@ public static class PartSectionLayoutConverter
         var parts = new List<(string Name, string Attrs)>();
         // (part, section) -> music cell text (verbatim, between the braces).
         var cells = new Dictionary<(string Part, string Section), string>();
+        // Chord tracks: name (null = the nameless form) in first-seen order, and
+        // (chordName, section) -> the chord entries text.
+        var chordParts = new List<string?>();
+        var chordCells = new Dictionary<(string? Name, string Section), string>();
         var sectionOrder = new List<string>();
         void AddSection(string name)
         {
             if (!sectionOrder.Contains(name)) sectionOrder.Add(name);
+        }
+        void AddChordPart(string? name)
+        {
+            if (!chordParts.Contains(name)) chordParts.Add(name);
         }
 
         foreach (var member in TopLevel(root))
@@ -141,11 +149,27 @@ public static class PartSectionLayoutConverter
                     parts.Add((part.Name.Text, string.Join(" ", attrs.Where(a => a.Length > 0))));
                     break;
 
+                // Part-major chord track: chords name { section A { c1 } section B { c1 } }.
+                case ChordPartBlockSyntax topChords when topChords.HasSections:
+                    AddChordPart(topChords.PartName);
+                    foreach (var cs in topChords.Sections)
+                    {
+                        AddSection(cs.SectionName);
+                        chordCells[(topChords.PartName, cs.SectionName)] = BetweenBraces(cs.ToFullString());
+                    }
+                    break;
+
                 case SectionDeclarationSyntax section
                         when DirectChildrenOfType<PartBlockSyntax>(section).Any(): // section-major
                     AddSection(section.SectionName);
                     foreach (var pb in DirectChildrenOfType<PartBlockSyntax>(section))
                         cells[(pb.Name, section.SectionName)] = BetweenBraces(pb.ToFullString());
+                    // In-section chord tracks become part-major chord tracks and back.
+                    foreach (var cb in DirectChildrenOfType<ChordPartBlockSyntax>(section))
+                    {
+                        AddChordPart(cb.PartName);
+                        chordCells[(cb.PartName, section.SectionName)] = BetweenBraces(cb.ToFullString());
+                    }
                     break;
             }
         }
@@ -156,15 +180,24 @@ public static class PartSectionLayoutConverter
                 parts.Add((p, ""));
 
         var body = target == LayoutForm.PartMajor
-            ? EmitPartMajor(parts, sectionOrder, cells)
-            : EmitSectionMajor(parts, sectionOrder, cells);
+            ? EmitPartMajor(parts, sectionOrder, cells, chordParts, chordCells)
+            : EmitSectionMajor(parts, sectionOrder, cells, chordParts, chordCells);
 
         return Reassemble(source, root, body);
     }
 
+    /// <summary>Writes the <c>chords</c> keyword with its optional name.</summary>
+    private static void AppendChordsKeyword(StringBuilder sb, string? name)
+    {
+        sb.Append("chords");
+        if (name != null)
+            sb.Append(' ').Append(name);
+    }
+
     private static string EmitPartMajor(
         List<(string Name, string Attrs)> parts, List<string> sectionOrder,
-        Dictionary<(string, string), string> cells)
+        Dictionary<(string, string), string> cells,
+        List<string?> chordParts, Dictionary<(string? Name, string Section), string> chordCells)
     {
         var sb = new StringBuilder();
         foreach (var (name, attrs) in parts)
@@ -177,12 +210,23 @@ public static class PartSectionLayoutConverter
                     sb.Append("  section ").Append(section).Append(' ').Append(Braced(music)).Append('\n');
             sb.Append("}\n");
         }
+        // Each chord track becomes its own top-level block with inner sections.
+        foreach (var chordName in chordParts)
+        {
+            AppendChordsKeyword(sb, chordName);
+            sb.Append(" {\n");
+            foreach (var section in sectionOrder)
+                if (chordCells.TryGetValue((chordName, section), out var entries))
+                    sb.Append("  section ").Append(section).Append(' ').Append(Braced(entries)).Append('\n');
+            sb.Append("}\n");
+        }
         return sb.ToString();
     }
 
     private static string EmitSectionMajor(
         List<(string Name, string Attrs)> parts, List<string> sectionOrder,
-        Dictionary<(string, string), string> cells)
+        Dictionary<(string, string), string> cells,
+        List<string?> chordParts, Dictionary<(string? Name, string Section), string> chordCells)
     {
         var sb = new StringBuilder();
         foreach (var (name, attrs) in parts)
@@ -197,6 +241,14 @@ public static class PartSectionLayoutConverter
             foreach (var (name, _) in parts)
                 if (cells.TryGetValue((name, section), out var music))
                     sb.Append("  ").Append(name).Append(' ').Append(Braced(music)).Append('\n');
+            // Chord tracks fold back into per-section chords blocks.
+            foreach (var chordName in chordParts)
+                if (chordCells.TryGetValue((chordName, section), out var entries))
+                {
+                    sb.Append("  ");
+                    AppendChordsKeyword(sb, chordName);
+                    sb.Append(' ').Append(Braced(entries)).Append('\n');
+                }
             sb.Append("}\n");
         }
         return sb.ToString();
@@ -215,6 +267,7 @@ public static class PartSectionLayoutConverter
         foreach (var member in TopLevel(root))
         {
             bool structural = member is PartDeclarationSyntax
+                || (member is ChordPartBlockSyntax cb && cb.HasSections) // part-major chord track
                 || (member is SectionDeclarationSyntax s && DirectChildrenOfType<PartBlockSyntax>(s).Any());
             if (structural)
             {

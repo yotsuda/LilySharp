@@ -85,22 +85,33 @@ public class PartSectionLayoutConverterTests
     }
 
     [Fact]
-    public void Convert_SectionWithChordsBlock_RefusesRatherThanDropData()
+    public void Convert_SectionMajorWithChords_ToPartMajor_PreservesChordTrack()
     {
-        // A `chords name { }` chord part lives only in the section-major layout, so a
-        // part-major conversion has nowhere to put it. It must be REFUSED (null), not
-        // silently dropped — the previous behaviour lost the whole chords block.
-        var src = """
+        // A `chords name { }` chord part transposes to a part-major chord track
+        // (`chords name { section .. }`) and back — no data loss.
+        var sm = """
             part melody { clef treble }
-            section A {
-              melody { c4 c g' g | }
-              chords harmony { c1 | f1 | }
-            }
-            structure { A }
+            section A { melody { c4 c g' g | } chords harmony { c1 | f1 | } }
+            section B { melody { g'4 g f f | } chords harmony { c1 | } }
+            structure { A B }
             score "s" { staff melody with chords harmony }
             """;
-        Assert.True(PartSectionLayoutConverter.HasUntransposableSectionContent(src));
-        Assert.Null(PartSectionLayoutConverter.Convert(src));
+        Assert.False(PartSectionLayoutConverter.HasUntransposableSectionContent(sm));
+
+        var pm = PartSectionLayoutConverter.Convert(sm);
+        Assert.NotNull(pm);
+        Assert.Equal(LayoutForm.PartMajor, PartSectionLayoutConverter.Detect(pm!));
+        Assert.Contains("chords harmony {", pm);
+        Assert.Contains("section A { c1 | f1 | }", pm);
+        Assert.Contains("section B { c1 | }", pm);
+        Assert.False(SyntaxTree.Parse(pm!).HasErrors);
+
+        // Round-trips back to section-major with the chords folded into the sections.
+        var sm2 = PartSectionLayoutConverter.Convert(pm!);
+        Assert.NotNull(sm2);
+        Assert.Equal(LayoutForm.SectionMajor, PartSectionLayoutConverter.Detect(sm2!));
+        Assert.Contains("chords harmony { c1 | f1 | }", sm2);
+        Assert.False(SyntaxTree.Parse(sm2!).HasErrors);
     }
 
     [Fact]
