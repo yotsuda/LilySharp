@@ -411,6 +411,23 @@ key g major
     }
 
     [Fact]
+    public void DoublePlacementSuffix_GivesClearError()
+    {
+        // @staccato.up.down — a second placement is a mistake; the message must
+        // name the real problem, not cascade into "'down' is not a note".
+        var tree = SyntaxTree.Parse("c4@staccato.up.down");
+        Assert.Contains(tree.Diagnostics, d => d.Message.Contains("only one of"));
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Message.Contains("not a note"));
+    }
+
+    [Fact]
+    public void SinglePlacementSuffix_IsClean()
+    {
+        var tree = SyntaxTree.Parse("c4@staccato.up");
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+    }
+
+    [Fact]
     public void ParseVariableReference()
     {
         var tree = SyntaxTree.Parse(@"phrase theme { c d e f }

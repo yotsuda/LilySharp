@@ -1298,13 +1298,26 @@ private GreenNode?[] ParseArticulations()
                     // '.up' / '.down' qualifier is a placement, not a mark part.
                     if (Current.Kind == SyntaxKind.Identifier
                         && Peek(1)?.Kind == SyntaxKind.Dot
-                        && IsPlacementWord(Peek(2))
-                        && Peek(3)?.Kind != SyntaxKind.Dot)
+                        && IsPlacementWord(Peek(2)))
                     {
                         var name = Advance();
                         Advance();             // .
                         var dir = Advance();   // up / down
                         articulations.Add(new ArticulationGreen(at, name, dir));
+
+                        // A second placement suffix (@staccato.up.down) is a mistake:
+                        // an articulation takes only one side. Consume the extra
+                        // '.up' / '.down' with a clear message instead of letting the
+                        // bare 'up' / 'down' cascade into a confusing "not a note" error.
+                        while (Check(SyntaxKind.Dot) && IsPlacementWord(Peek(1)))
+                        {
+                            int extraStart = _textPosition;
+                            Advance();              // .
+                            var extra = Advance();  // up / down
+                            var span = new TextSpan(extraStart, Math.Max(1, _textPosition - extraStart));
+                            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+                                $"an articulation takes only one of '.up' / '.down'; remove the extra '.{extra.Text}'.");
+                        }
                     }
                     // @name(args) — parenthesised arguments, e.g. @fig(6 4), @chord(Dm),
                     // @mark("A"), @finger(3), @feather(right), @ped(off). The '.' is reserved
