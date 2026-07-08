@@ -1458,10 +1458,11 @@ public sealed class MeasureCollector
 
         foreach (var node in voiceNode.DescendantNodes())
         {
-            // Skip nodes that are inside a tuplet, repeat, grace, once, or inline
-            // volta (they'll be processed by those handlers)
-            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideOnce(node)
-                || IsInsideGrace(node) || IsInsideInlineVolta(node))
+            // Skip nodes inside a container expression (they travel as one
+            // wrapper) — EXCEPT parallel: the per-voice path flattens << \\ >>
+            // (see GatherMusicNode), so its descendants must reach the walk.
+            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
+                || IsInsideInlineVolta(node) || IsInsideOnce(node))
                 continue;
 
             GatherMusicNode(node, musicNodes);
@@ -1480,38 +1481,15 @@ public sealed class MeasureCollector
     /// </summary>
     private void GatherMusicNode(SyntaxNode node, List<SyntaxNode> musicNodes)
     {
-        switch (node)
-        {
-            case NoteSyntax:
-            case DrumNoteSyntax:
-            case RestSyntax:
-            case ChordSyntax:
-            case BarlineSyntax:
-            case BreakSyntax:
-            case TieSyntax:
-            case SlurSyntax:
-            case BeamMarkerSyntax:
-            case InlineVoltaSyntax:
-            case GraceExpressionSyntax:
-            case TupletExpressionSyntax:
-            case RepeatExpressionSyntax:
-            case MusicMarkSyntax:
-            case OverrideDeclarationSyntax:
-            case RevertDeclarationSyntax:
-            case OnceModifierSyntax:
-            case ClefDeclarationSyntax:
-            case OctaveDirectiveSyntax:
-            case KeySignatureSyntax:
-            case TimeSignatureSyntax:
-            case TempoDeclarationSyntax:
-            case PartialDeclarationSyntax:
-                musicNodes.Add(node);
-                break;
-
-            case VariableReferenceSyntax varRef:
-                ExpandVariable(varRef.Name.Text, musicNodes);
-                break;
-        }
+        if (node is VariableReferenceSyntax varRef)
+            ExpandVariable(varRef.Name.Text, musicNodes);
+        // NOTE: unlike the other walks, the per-voice path does NOT treat a
+        // << \\ >> span as one wrapper. Its caller does not skip parallel
+        // descendants, so the inner notes are collected (flattened) here — the
+        // established multi-voice rendering behavior. A ParallelExpressionSyntax
+        // node itself is therefore not added.
+        else if (node is not ParallelExpressionSyntax && IsCollectableMusicNode(node))
+            musicNodes.Add(node);
     }
 
     /// <summary>
@@ -2539,7 +2517,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && !IsInsideInlineVolta(n) && !IsInsideParallel(n) && n is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or InlineVoltaSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax or PartialDeclarationSyntax);
+                .Where(n => !IsInsideProcessedContainer(n) && IsCollectableMusicNode(n));
             ProcessNodes(musicNodes);
         }
 
@@ -2839,6 +2817,32 @@ public sealed class MeasureCollector
 
     private static bool IsInsideInlineVolta(SyntaxNode node) => node.IsInside<InlineVoltaSyntax>();
 
+    /// <summary>
+    /// Single source of truth for "this node is a flat music node the collector
+    /// consumes directly". Container expressions (tuplet/repeat/grace/inline-volta/
+    /// parallel/once) appear here too but travel as ONE wrapper node — their inner
+    /// content is skipped via <see cref="IsInsideProcessedContainer"/>. Keeping the
+    /// membership test in one place stops the per-walk whitelists from drifting
+    /// apart (which silently dropped overrides, drum notes, clefs, etc.).
+    /// </summary>
+    private static bool IsCollectableMusicNode(SyntaxNode node) =>
+        node is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax
+            or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
+            or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax
+            or ParallelExpressionSyntax or InlineVoltaSyntax or MusicMarkSyntax
+            or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax
+            or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax
+            or TimeSignatureSyntax or TempoDeclarationSyntax or PartialDeclarationSyntax;
+
+    /// <summary>
+    /// True when a node lives inside a container expression that owns its own
+    /// walk (tuplet/repeat/grace/inline-volta/parallel/once). Such nodes must be
+    /// skipped by the outer walks so the wrapper is processed once, not flattened.
+    /// </summary>
+    private static bool IsInsideProcessedContainer(SyntaxNode node) =>
+        IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
+        || IsInsideInlineVolta(node) || IsInsideParallel(node) || IsInsideOnce(node);
+
     private void ProcessRepeatBlock(StructureRepeatBlockSyntax repeat, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
         bool afterRepeatStart = false;
@@ -2979,46 +2983,13 @@ public sealed class MeasureCollector
             // in particular must pass through as ONE wrapper node, or the
             // bracket ([1. ]/[2.]) is lost while its notes leak out flat. A
             // << \\ >> span likewise passes through as one node.
-            if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
-                || IsInsideInlineVolta(node) || IsInsideParallel(node) || IsInsideOnce(node))
+            if (IsInsideProcessedContainer(node))
                 continue;
 
-            switch (node)
-            {
-                case NoteSyntax:
-                case DrumNoteSyntax:
-                case RestSyntax:
-                case ChordSyntax:
-                case BarlineSyntax:
-                case BreakSyntax:
-                case TieSyntax:
-                case SlurSyntax:
-                case BeamMarkerSyntax:
-                case GraceExpressionSyntax:
-                case TupletExpressionSyntax:
-                case RepeatExpressionSyntax:
-                case ParallelExpressionSyntax:
-                case InlineVoltaSyntax:
-                case MusicMarkSyntax:
-                // Grob overrides written inside a section { part { … } } — the
-                // section-major walk previously omitted these, so an \override /
-                // \revert / \once here never reached CollectOverride.
-                case OverrideDeclarationSyntax:
-                case RevertDeclarationSyntax:
-                case OnceModifierSyntax:
-                case ClefDeclarationSyntax:
-                case OctaveDirectiveSyntax:
-                case KeySignatureSyntax:
-                case TimeSignatureSyntax:
-                case TempoDeclarationSyntax:
-                case PartialDeclarationSyntax:
-                    musicNodes.Add(node);
-                    break;
-
-                case VariableReferenceSyntax varRef:
-                    ExpandVariable(varRef.Name.Text, musicNodes);
-                    break;
-            }
+            if (node is VariableReferenceSyntax varRef)
+                ExpandVariable(varRef.Name.Text, musicNodes);
+            else if (IsCollectableMusicNode(node))
+                musicNodes.Add(node);
         }
 
         processNodes(musicNodes);
@@ -3038,28 +3009,14 @@ public sealed class MeasureCollector
         // following $phrase is relative to the phrase's last note.
         musicNodes.Add(RelativeResetMarker.Instance);
 
-        // Include expression itself if it is a music node
-        if (expression is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
-            or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax
-            or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-            or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
-            or PartialDeclarationSyntax)
-        {
+        // Include the expression itself if it is a music node.
+        if (IsCollectableMusicNode(expression))
             musicNodes.Add(expression);
-        }
 
-        // Get music nodes from the variable expression descendants.
-        // Skip nodes inside containers (grace, tuplet, repeat, once, inline
-        // volta, parallel) — they'll be processed by those handlers; the inline
-        // volta and the << \\ >> span must travel as ONE wrapper node each.
+        // Get music nodes from the variable expression descendants; container
+        // expressions travel as ONE wrapper node each (inner content skipped).
         var nodes = expression.DescendantNodes()
-            .Where(n => !IsInsideGrace(n) && !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n)
-                && !IsInsideInlineVolta(n) && !IsInsideParallel(n)
-                && n is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax
-                or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or InlineVoltaSyntax
-                or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or BreakSyntax
-                or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax
-                or PartialDeclarationSyntax);
+            .Where(n => !IsInsideProcessedContainer(n) && IsCollectableMusicNode(n));
 
         musicNodes.AddRange(nodes);
     }
