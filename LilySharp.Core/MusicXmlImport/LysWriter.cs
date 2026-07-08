@@ -106,7 +106,7 @@ internal static class LysWriter
         // Section-level lyrics sing the first part carrying them.
         var lyricPart = doc.Parts.FirstOrDefault(HasLyrics);
         if (lyricPart != null)
-            foreach (var line in WriteLyrics(lyricPart))
+            foreach (var line in WriteLyrics(lyricPart, 0, lyricPart.Measures.Count))
                 sb.Append("  ").Append(line).Append('\n');
         sb.Append("}\n\n");
         sb.Append("structure { A }\n\n");
@@ -118,9 +118,7 @@ internal static class LysWriter
     private static void WriteVoltaSections(
         StringBuilder sb, ImportDocument doc, VoltaLayout layout, ImportReport report)
     {
-        if (doc.Parts.Any(HasLyrics))
-            report.Warn("lyrics under a repeat with endings are not yet aligned; dropped.");
-
+        var lyricPart = doc.Parts.FirstOrDefault(HasLyrics);
         foreach (var seg in layout.Segments)
         {
             sb.Append("section ").Append(seg.Name).Append(" {\n");
@@ -130,6 +128,10 @@ internal static class LysWriter
                 sb.Append("    ").Append(WriteMusicRange(part, seg.Start, seg.End, report)).Append('\n');
                 sb.Append("  }\n");
             }
+            // Lyrics for just this section's measures, so each ending sings its own text.
+            if (lyricPart != null)
+                foreach (var line in WriteLyrics(lyricPart, seg.Start, seg.End))
+                    sb.Append("  ").Append(line).Append('\n');
             sb.Append("}\n\n");
         }
         sb.Append("structure {\n  ").Append(layout.Structure).Append("\n}\n\n");
@@ -492,18 +494,19 @@ internal static class LysWriter
         => part.Measures.SelectMany(m => m.PrimaryItems)
             .OfType<ImportNote>().Any(n => n.Lyrics.Count > 0);
 
-    /// <summary>One <c>lyrics { ... }</c> block per verse present in the part.
-    /// Syllables walk the singable notes (no rests, chord members or tie
-    /// continuations), synced to the music by a <c>|</c> per measure.</summary>
-    private static IEnumerable<string> WriteLyrics(ImportPart part)
+    /// <summary>One <c>lyrics { ... }</c> block per verse present in the part's
+    /// measures [start, end). Syllables walk the singable notes (no rests, chord
+    /// members or tie continuations), synced to the music by a <c>|</c> per measure.</summary>
+    private static IEnumerable<string> WriteLyrics(ImportPart part, int start, int end)
     {
-        var verses = part.Measures.SelectMany(m => m.PrimaryItems).OfType<ImportNote>()
+        var measures = part.Measures.Skip(start).Take(end - start).ToList();
+        var verses = measures.SelectMany(m => m.PrimaryItems).OfType<ImportNote>()
             .SelectMany(n => n.Lyrics).Select(l => l.Verse).Distinct().OrderBy(v => v);
 
         foreach (int verse in verses)
         {
             var sb = new StringBuilder("lyrics { ");
-            foreach (var measure in part.Measures)
+            foreach (var measure in measures)
             {
                 foreach (var note in measure.PrimaryItems.OfType<ImportNote>())
                 {

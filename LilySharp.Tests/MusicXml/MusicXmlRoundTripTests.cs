@@ -329,6 +329,46 @@ public class MusicXmlRoundTripTests
     }
 
     [Fact]
+    public void LyricsUnderVolta_AlignPerSection()
+    {
+        // Each section of a volta carries only its own measures' syllables.
+        var (lys, _) = new MusicXmlImporter().Import("""
+            <?xml version="1.0"?>
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>Tune</part-name></score-part></part-list>
+              <part id="P1">
+                <measure number="1">
+                  <attributes><divisions>1</divisions>
+                    <time><beats>4</beats><beat-type>4</beat-type></time>
+                    <clef><sign>G</sign><line>2</line></clef></attributes>
+                  <barline location="left"><repeat direction="forward"/></barline>
+                  <note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><type>whole</type><lyric><syllabic>single</syllabic><text>la</text></lyric></note>
+                </measure>
+                <measure number="2">
+                  <barline location="left"><ending number="1" type="start"/></barline>
+                  <note><pitch><step>D</step><octave>5</octave></pitch><duration>4</duration><type>whole</type><lyric><syllabic>single</syllabic><text>one</text></lyric></note>
+                  <barline location="right"><ending number="1" type="stop"/><repeat direction="backward"/></barline>
+                </measure>
+                <measure number="3">
+                  <barline location="left"><ending number="2" type="start"/></barline>
+                  <note><pitch><step>E</step><octave>5</octave></pitch><duration>4</duration><type>whole</type><lyric><syllabic>single</syllabic><text>two</text></lyric></note>
+                  <barline location="right"><ending number="2" type="discontinue"/></barline>
+                </measure>
+              </part>
+            </score-partwise>
+            """);
+        Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
+        Assert.Contains("section Body {", lys);
+        // Each ending sings its own word, not the whole run.
+        int body = lys.IndexOf("section Body", System.StringComparison.Ordinal);
+        int end1 = lys.IndexOf("section End1", System.StringComparison.Ordinal);
+        int end2 = lys.IndexOf("section End2", System.StringComparison.Ordinal);
+        Assert.Contains("lyrics { la |", lys[body..end1]);
+        Assert.Contains("lyrics { one |", lys[end1..end2]);
+        Assert.Contains("lyrics { two |", lys[end2..]);
+    }
+
+    [Fact]
     public void MultipleStaves_SplitIntoAGrandStaff()
     {
         // A piano part with two staves (treble RH / bass LH) becomes two Lily# parts
