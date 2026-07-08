@@ -64,10 +64,17 @@ internal sealed class Parser
             bool inChordFigArg = argDepth > 0;
             if (t.Kind == SyntaxKind.BadToken && !(inChordFigArg && t.Text == "#"))
             {
+                // '?' is LilyPond's cautionary accidental; Lily# has no such
+                // shorthand, so point at the annotation form instead of a bare
+                // "unexpected character".
+                string message = t.Text == "?"
+                    ? "Unexpected '?' — Lily# has no LilyPond-style cautionary accidental; "
+                      + "write @courtesy (cautionary) or @editorial after the note."
+                    : $"Unexpected character '{t.Text}' — it has no meaning here and is ignored";
                 _diagnostics.Error(
                     new TextSpan(scanPos + (t.FullWidth - t.Text.Length), t.Text.Length),
                     DiagnosticCodes.UnexpectedCharacter,
-                    $"Unexpected character '{t.Text}' — it has no meaning here and is ignored");
+                    message);
             }
 
             if (inChordFigArg)
@@ -1373,6 +1380,21 @@ private GreenNode?[] ParseArticulations()
                     _textPosition -= backslash.FullWidth;
                     break;
                 }
+            }
+            else if (Check(SyntaxKind.DashedBar)
+                     && Current.LeadingTriviaWidth == 0
+                     && _position > 0 && _tokens[_position - 1].TrailingTriviaWidth == 0)
+            {
+                // 'c'!' — a LilyPond forced accidental glued to the note. Lily# reads a
+                // bare '!' as a dashed barline (\bar "!"), so a glued one silently did
+                // nothing. Point at the annotation form and consume it so it does not
+                // drop a stray barline. A SPACED '!' stays a dashed barline (falls to
+                // the break below, since it has separating trivia).
+                var span = new TextSpan(_textPosition, Math.Max(1, Current.Width));
+                _diagnostics.Warning(span, DiagnosticCodes.LilypondAccidentalReflex,
+                    "'!' after a note is a LilyPond forced accidental; Lily# uses @editorial "
+                    + "(or @courtesy for a cautionary accidental). A spaced '!' is a dashed barline.");
+                Advance();
             }
             else
             {

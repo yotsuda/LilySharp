@@ -381,6 +381,36 @@ key g major
     }
 
     [Fact]
+    public void CautionaryAccidentalReflex_PointsToCourtesy()
+    {
+        // 'c'?' is LilyPond's cautionary accidental — flag it with a pointer to
+        // the Lily# annotation form rather than a bare "unexpected character".
+        var tree = SyntaxTree.Parse("c'? d'");
+        Assert.Contains(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.UnexpectedCharacter && d.Message.Contains("@courtesy"));
+    }
+
+    [Fact]
+    public void ForcedAccidentalReflex_GluedBang_WarnsNotBarline()
+    {
+        // 'c'!' glued to the note is a LilyPond forced accidental; warn (not error)
+        // and point to @editorial. It must not silently drop a dashed barline.
+        var tree = SyntaxTree.Parse("c'! d'");
+        Assert.Contains(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.LilypondAccidentalReflex);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+    }
+
+    [Fact]
+    public void SpacedBang_StaysDashedBarline_NoReflex()
+    {
+        // A spaced '!' is still a dashed barline — no accidental-reflex warning.
+        var tree = SyntaxTree.Parse("c'4 ! d'4");
+        Assert.DoesNotContain(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.LilypondAccidentalReflex);
+    }
+
+    [Fact]
     public void ParseVariableReference()
     {
         var tree = SyntaxTree.Parse(@"phrase theme { c d e f }
