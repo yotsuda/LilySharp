@@ -196,6 +196,11 @@ public static class DiagnosticCodes
     /// kept in the source but not shown; a nudge that it is currently hidden.</summary>
     public const string HiddenSectionLabel = "LYS0012";
 
+    /// <summary>Parser error: the language <c>version</c> value was quoted
+    /// (<c>version "1"</c>, a LilyPond habit). It is a bare number like the other
+    /// structured directives (<c>time</c>, <c>tempo</c>, <c>key</c>): <c>version 1</c>.</summary>
+    public const string VersionNumberNotQuoted = "LYS0013";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>

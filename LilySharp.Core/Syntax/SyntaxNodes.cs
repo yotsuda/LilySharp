@@ -1728,7 +1728,7 @@ public sealed class UsingDirectiveSyntax : SyntaxNode
 }
 
 /// <summary>
-/// An optional language-version directive: <c>version "1"</c>. A top-level marker
+/// An optional language-version directive: <c>version 1</c>. A top-level marker
 /// recording the grammar version a document targets, so future grammar revisions
 /// can branch behavior on it. Absence means the current/default grammar.
 /// </summary>
@@ -1741,11 +1741,11 @@ public sealed class VersionDeclarationSyntax : SyntaxNode
 
     /// <summary>The <c>version</c> directive word token.</summary>
     public SyntaxTokenNode Keyword => (SyntaxTokenNode)GetChild(0)!;
-    /// <summary>The quoted version value token.</summary>
+    /// <summary>The version value token (a bare integer, e.g. <c>1</c>).</summary>
     public SyntaxTokenNode ValueToken => (SyntaxTokenNode)GetChild(1)!;
 
-    /// <summary>The declared version string, with surrounding quotes stripped
-    /// (e.g. <c>"1"</c> → <c>1</c>).</summary>
+    /// <summary>The declared version string (e.g. <c>1</c>). Any surrounding quotes
+    /// from the rejected legacy <c>version "1"</c> form are stripped for recovery.</summary>
     public string Version => ValueToken.Text.Trim('"');
 }
 

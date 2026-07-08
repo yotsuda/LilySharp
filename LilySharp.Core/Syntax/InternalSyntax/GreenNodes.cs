@@ -641,7 +641,7 @@ internal sealed class UsingDirectiveGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Optional language-version directive: version "1"
+/// Optional language-version directive: version 1
 /// </summary>
 internal sealed class VersionDeclarationGreen : GreenSyntaxNode
 {

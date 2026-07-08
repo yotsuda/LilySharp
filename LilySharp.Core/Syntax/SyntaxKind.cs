@@ -335,7 +335,7 @@ public enum SyntaxKind : ushort
     StructureDeclaration,
     /// <summary>A using directive node (<c>using "file.lys"</c>).</summary>
     UsingDirective,
-    /// <summary>An optional language-version directive node (<c>version "1"</c>) —
+    /// <summary>An optional language-version directive node (<c>version 1</c>) —
     /// a soft top-level marker that lets future grammar revisions branch behavior
     /// without breaking documents that declare their version.</summary>
     VersionDeclaration,

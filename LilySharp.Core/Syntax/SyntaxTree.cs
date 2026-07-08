@@ -74,7 +74,7 @@ public sealed class SyntaxTree
     }
 
     /// <summary>
-    /// The language version declared by an optional top-level <c>version "…"</c>
+    /// The language version declared by an optional top-level <c>version 1</c>
     /// directive, or null when the document declares none (meaning the current /
     /// default grammar). Lets future grammar revisions branch behavior on the
     /// declared version without breaking older documents.

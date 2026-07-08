@@ -20,9 +20,10 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// The optional <c>version "…"</c> directive: a top-level marker that lets future
-/// grammar revisions branch on a document's declared version. Must parse, expose
-/// the version, and preserve the parser's round-trip.
+/// The optional <c>version 1</c> directive: a top-level marker that lets future
+/// grammar revisions branch on a document's declared version. The value is a bare
+/// number (like <c>time</c>/<c>tempo</c>/<c>key</c>), not a quoted string. Must
+/// parse, expose the version, and preserve the parser's round-trip.
 /// </summary>
 [Trait("Category", "Unit")]
 public class VersionDirectiveTests
@@ -30,8 +31,8 @@ public class VersionDirectiveTests
     [Fact]
     public void ParsesTopLevelVersionDirective()
     {
-        var tree = SyntaxTree.Parse("version \"1\"\npart m { section A { c4 } }\nscore \"s\" { staff m }");
-        Assert.False(tree.HasErrors);
+        var tree = SyntaxTree.Parse("version 1\npart m { section A { c4 } }\nscore \"s\" { staff m }");
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         Assert.Equal("1", tree.DeclaredVersion);
         Assert.Single(tree.GetNodes<VersionDeclarationSyntax>());
     }
@@ -47,15 +48,28 @@ public class VersionDirectiveTests
     [Fact]
     public void VersionValueReadsBackVerbatim()
     {
-        var tree = SyntaxTree.Parse("version \"2\"\npart m { section A { c4 } }\nscore \"s\" { staff m }");
+        var tree = SyntaxTree.Parse("version 2\npart m { section A { c4 } }\nscore \"s\" { staff m }");
         Assert.Equal("2", tree.GetNodes<VersionDeclarationSyntax>().Single().Version);
     }
 
     [Fact]
     public void PreservesRoundTrip()
     {
-        const string src = "version \"1\"\npart m { section A { cis'4 } }\nscore \"s\" { staff m }";
+        const string src = "version 1\npart m { section A { cis'4 } }\nscore \"s\" { staff m }";
         var tree = SyntaxTree.Parse(src);
         Assert.Equal(src, tree.ToFullString());
+    }
+
+    [Fact]
+    public void QuotedVersion_IsRejectedWithAPointer()
+    {
+        // 'version "1"' (a LilyPond habit) is an error — the value is a bare number.
+        var tree = SyntaxTree.Parse("version \"1\"\npart m { section A { c4 } }\nscore \"s\" { staff m }");
+        Assert.True(tree.HasErrors);
+        var diag = System.Linq.Enumerable.Single(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.VersionNumberNotQuoted);
+        Assert.Contains("version 1", diag.Message);
+        // Recovers: the declared version is still read (quotes stripped).
+        Assert.Equal("1", tree.DeclaredVersion);
     }
 }

@@ -1249,7 +1249,7 @@ public sealed class LilySharpLanguageServer
         {
             Items =
             [
-                new CompletionItem { Label = "version", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "version \"$0\"", Detail = "Language version this file targets (optional, first line)" },
+                new CompletionItem { Label = "version", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "version ${1:1}", Detail = "Language version this file targets (a bare number; optional, first line)" },
                 new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "score {\n\t$0\n}", Detail = "Score block" },
                 new CompletionItem { Label = "part", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "part $1 {\n\t$0\n}", Detail = "Part declaration" },
                 new CompletionItem { Label = "section", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "section $1 {\n\t$0\n}", Detail = "Section declaration" },

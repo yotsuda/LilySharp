@@ -124,10 +124,11 @@ TopLevelItem   = VersionDecl                      (* optional language-version m
 
 ### 2.2 Version (optional)
 
-VersionDecl    = 'version' , String ;
+VersionDecl    = 'version' , Integer ;
                  (* optional, recommended first line: the language version the
-                    file targets, e.g. version "1". Recorded so future grammar
-                    revisions can branch on it; omitting it = current grammar. *)
+                    file targets, a bare number e.g. version 1 (not quoted).
+                    Recorded so future grammar revisions can branch on it;
+                    omitting it = current grammar. *)
 
 ### 2.3 Metadata
 

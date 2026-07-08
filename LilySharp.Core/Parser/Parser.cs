@@ -321,7 +321,7 @@ internal sealed class Parser
             SyntaxKind.PartKeyword => ParsePartDeclaration(),  // New part syntax
             SyntaxKind.DrummapKeyword => ParseDrummapDeclaration(),
 
-            // Optional language-version directive: `version "1"`.
+            // Optional language-version directive: `version 1`.
             SyntaxKind.VersionKeyword => ParseVersionDeclaration(),
 
             // Variable declaration: identifier = { ... } (legacy)
@@ -1853,11 +1853,26 @@ private GreenNode?[] ParseArticulations()
         return new UsingDirectiveGreen(keyword, path);
     }
 
-    // Optional `version "1"` directive.
+    // Optional `version 1` directive.
     private VersionDeclarationGreen ParseVersionDeclaration()
     {
         var keyword = Expect(SyntaxKind.VersionKeyword);
-        var value = Expect(SyntaxKind.StringLiteral);    // the quoted version
+
+        // The language version is a bare integer, like the other structured
+        // directives (time 4/4, tempo 100, key c major) — not a quoted string.
+        // A quoted `version "1"` (a LilyPond habit) gets a clear pointer, then
+        // recovers by taking the value inside the quotes.
+        if (Check(SyntaxKind.StringLiteral))
+        {
+            int start = _textPosition;
+            var quoted = Advance();
+            var span = new TextSpan(start, Math.Max(1, _textPosition - start));
+            _diagnostics.Error(span, DiagnosticCodes.VersionNumberNotQuoted,
+                $"The language version is a bare number: write 'version {quoted.Text.Trim('"')}', not 'version {quoted.Text}'.");
+            return new VersionDeclarationGreen(keyword, quoted);
+        }
+
+        var value = Expect(SyntaxKind.IntegerLiteral);   // the language version number
         return new VersionDeclarationGreen(keyword, value);
     }
 
