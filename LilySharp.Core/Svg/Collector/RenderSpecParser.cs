@@ -260,6 +260,14 @@ public static class RenderSpecParser
             _ => null,
         };
         int partIdx = explicitClef != null ? 1 : 0;
+        if (explicitClef != null && partIdx >= toks.Count)
+        {
+            // The only token is a clef-name word, so it IS the part name, not a clef
+            // modifier — `staff bass` references a part literally named "bass" (its clef
+            // then comes from the part definition), not a bass-clef staff with no part.
+            explicitClef = null;
+            partIdx = 0;
+        }
         if (partIdx >= toks.Count) return null;
         var partToken = toks[partIdx];
         string voiceName = partToken.Text;

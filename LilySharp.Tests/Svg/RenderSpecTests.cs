@@ -70,6 +70,27 @@ public class RenderSpecTests
     }
 
     [Fact]
+    public void StaffReferencingAPartNamedLikeAClef_UsesThePartsClef()
+    {
+        // `staff bass` where a part is literally named "bass": the lone clef-name word
+        // is the PART name, not a bass-clef modifier with a missing part. Regression:
+        // the part's declared clef was dropped and the staff fell back to treble.
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            part bass { clef bass }
+            section A { bass { c1 } }
+            structure { A }
+            score s { staff bass }
+            """);
+        Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
+
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        var single = Assert.IsType<SingleStaffSpec>(Assert.Single(spec.Items));
+        Assert.Equal("bass", single.Staff.VoiceName);
+        Assert.Equal(ClefType.Bass, single.Staff.Clef);
+    }
+
+    [Fact]
     public void OmittedFilename_ParsesWithEmptyOutputFile()
     {
         // The output filename is optional: `score { … }` is valid and
