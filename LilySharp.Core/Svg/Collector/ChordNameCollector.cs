@@ -37,10 +37,35 @@ internal sealed class ChordNameCollector
 {
     private readonly List<ChordNameItem> _items = new();
 
-    /// <summary>The current key, for Roman-numeral degrees: the tonic's diatonic step
-    /// (0=C..6=B) and the signature (+sharps/-flats). Set by the collector before use;
-    /// a chord's degree is computed against it at item-creation time.</summary>
-    public (int TonicStep, int Sharps) Key { get; set; }
+    /// <summary>The key timeline for Roman-numeral degrees: (start measure, tonic step
+    /// 0=C..6=B, signature ±sharps) sorted ascending, so a chord's degree follows the
+    /// key in force at its bar (a mid-piece modulation re-bases the degrees). Set by
+    /// the collector before use; defaults to C major.</summary>
+    public IReadOnlyList<(int Measure, int TonicStep, int Sharps)> KeyByMeasure { get; set; }
+        = new[] { (0, 0, 0) };
+
+    /// <summary>The (tonic step, sharps) in force at <paramref name="measure"/> — the
+    /// last timeline entry that begins at or before it.</summary>
+    private (int TonicStep, int Sharps) KeyAt(int measure)
+    {
+        (int TonicStep, int Sharps) eff = (0, 0);
+        foreach (var e in KeyByMeasure)
+        {
+            if (e.Measure <= measure) eff = (e.TonicStep, e.Sharps);
+            else break;
+        }
+        return eff;
+    }
+
+    /// <summary>The chord's Roman degree in the key at <paramref name="measure"/>, or
+    /// null with no resolved structure.</summary>
+    private string? Roman(LilySharp.Core.Music.ChordStructure? structure, int measure)
+    {
+        if (structure == null)
+            return null;
+        var (tonicStep, sharps) = KeyAt(measure);
+        return structure.ToRomanNumeral(tonicStep, sharps);
+    }
 
     /// <summary>EVERY start measure of each section across the structure, so a chord
     /// track repeats under a reprise (A played again as "A2" gets its chords again).
@@ -79,7 +104,7 @@ internal sealed class ChordNameCollector
                 _items[k] = it with
                 {
                     DisplayMode = mode,
-                    RomanText = it.Structure?.ToRomanNumeral(Key.TonicStep, Key.Sharps),
+                    RomanText = Roman(it.Structure, it.MeasureIndex),
                 };
         }
     }
@@ -191,7 +216,7 @@ internal sealed class ChordNameCollector
                 timing: timing,
                 structure: structure)
             {
-                RomanText = structure?.ToRomanNumeral(Key.TonicStep, Key.Sharps),
+                RomanText = Roman(structure, startMeasure + localMeasure),
                 DisplayMode = mode,
             });
 
@@ -387,7 +412,7 @@ internal sealed class ChordNameCollector
                 staffIndex: staffIndex, useTiming: true, timing: timing, structure: structure,
                 isChordRow: true)
             {
-                RomanText = structure?.ToRomanNumeral(Key.TonicStep, Key.Sharps),
+                RomanText = Roman(structure, measureIndex),
                 DisplayMode = mode,
             });
 

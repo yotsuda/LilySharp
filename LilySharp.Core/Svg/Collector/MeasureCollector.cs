@@ -657,6 +657,9 @@ public sealed class MeasureCollector
     private int _keySharps = 0;
     private int _initialKeySharps = 0; // Preserved for Score.KeySignature (not mutated by mid-measure key changes)
     private int _keyTonicStep = 0;     // key tonic's diatonic step (0=C..6=B), for Roman-numeral chord degrees
+    // measure -> (tonic step, sharps) at each key change, so a chord's Roman degree
+    // follows the key in force at its bar (a mid-piece modulation re-bases the degrees).
+    private readonly SortedDictionary<int, (int TonicStep, int Sharps)> _keyByMeasure = new();
     private string _clef = "treble";
     private string _initialClef = "treble"; // Preserved for Score.Clef (not mutated by mid-measure clef changes)
     private int _clefPosition; // Source offset of the clef declaration (0 = none), for data-pos
@@ -731,7 +734,7 @@ public sealed class MeasureCollector
 
         // Collect lyrics
         _lyricsCollector.CollectNoteBound(tree.GetRoot(), measures, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure, _sectionAllStarts);
-        _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
+        _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionAllStarts;
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
         // `staff NAME with chords CHORDPART [as roman|both]` on a single-staff score.
@@ -961,7 +964,7 @@ public sealed class MeasureCollector
         // register the section starts — derive them from the row blocks.
         if (pendingChordRows.Count > 0 || pendingLyricsRows.Count > 0)
             EnsureSectionStartsForRows();
-        _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
+        _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionAllStarts;
         foreach (var (rowName, rowIdx, rowMode) in pendingChordRows)
         {
@@ -1044,7 +1047,7 @@ public sealed class MeasureCollector
         {
             _lyricsCollector.CollectNoteBound(tree.GetRoot(), firstStaffVoices[0].Measures.ToList(), _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure, _sectionAllStarts);
         }
-        _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
+        _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionAllStarts;
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
         foreach (var (attachedPart, attachedStaff, attachedMode) in attachedChords)
@@ -1290,7 +1293,7 @@ public sealed class MeasureCollector
 
         // Unnamed lyrics align with the primary voice; named ones bind above.
         _lyricsCollector.CollectNoteBound(root, track0, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure, _sectionAllStarts);
-        _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
+        _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionAllStarts;
         _chordNameCollector.CollectBlocks(root, _sectionStartMeasure, _currentStaffIndex);
 
@@ -1807,6 +1810,11 @@ public sealed class MeasureCollector
                         _keySharps = newSharps;
                         _keyCustom = null;
                         newKey = new KeySignature(newSharps);
+                        // Record the modulation for Roman-numeral chord degrees at this
+                        // bar onward (per-voice walk, so a SortedDictionary dedups by
+                        // measure). Custom signatures carry no tonic → no degree change.
+                        _keyByMeasure[builder.CurrentMeasureIndex] =
+                            (Math.Max(0, LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.PitchName[0])), newSharps);
                     }
                     var keyChange = new KeySignatureChangeItem(newKey, previousKey, keySig.Position);
                     builder.AddItem(keyChange);
@@ -2050,6 +2058,7 @@ public sealed class MeasureCollector
         _grobReverts.Clear();
         _sectionStartMeasure.Clear();
         _sectionAllStarts.Clear();
+        _keyByMeasure.Clear();
         _rowSectionLabels.Clear();
         _voiceMeasuresByName.Clear();
         _trillSpannerEvents.Clear();
@@ -2528,6 +2537,17 @@ public sealed class MeasureCollector
     /// (<see cref="_sectionStartMeasure"/>) plus EVERY occurrence
     /// (<see cref="_sectionAllStarts"/>), so a chord/lyric track can repeat under a
     /// reprise (e.g. A played again as "A2").</summary>
+    /// <summary>The key timeline for Roman-numeral chord degrees: the initial key at
+    /// bar 0 plus each mid-piece modulation, sorted ascending.</summary>
+    private List<(int Measure, int TonicStep, int Sharps)> BuildKeyTimeline()
+    {
+        var list = new List<(int, int, int)> { (0, _keyTonicStep, _initialKeySharps) };
+        foreach (var (m, key) in _keyByMeasure)
+            if (m > 0)
+                list.Add((m, key.TonicStep, key.Sharps));
+        return list;
+    }
+
     private void RecordSectionStart(string name, int startMeasure)
     {
         if (!_sectionStartMeasure.ContainsKey(name))

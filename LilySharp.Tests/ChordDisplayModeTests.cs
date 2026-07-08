@@ -100,6 +100,26 @@ public class ChordDisplayModeTests
     }
 
     [Fact]
+    public void MidPieceKeyChange_RebasesRomanDegrees()
+    {
+        // Modulate C -> G mid-section: a G chord is V in C but I in G.
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section A { melody { c'4 c' c' c' | key g major d' d' d' d' | } }
+            chords harmony { c1 | g1 | }
+            structure { A }
+            score s { staff melody with chords harmony as roman }
+            """);
+        var score = new MeasureCollector()
+            .Collect(tree, "melody", null, "harmony", ChordDisplayMode.Roman);
+        Assert.Equal(new[] { "I", "I" },
+            score.ChordNames.OrderBy(c => c.MeasureIndex).Select(c => c.RomanText).ToArray());
+    }
+
+    [Fact]
     public void Collect_DefaultNames_HasNoModeButStillComputesDegree()
     {
         var score = new MeasureCollector()

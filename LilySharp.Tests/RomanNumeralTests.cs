@@ -75,4 +75,14 @@ public class RomanNumeralTests
     {
         Assert.Equal("V7/VII", Roman("g:7/b", 0, 0));
     }
+
+    [Fact]
+    public void DiminishedAugmentedHalfDim_UseSymbolStyle()
+    {
+        // ° / +  / ø read better as Roman numerals than dim / aug / m7♭5.
+        Assert.Equal("VII°", Roman("b:dim", 0, 0));
+        Assert.Equal("VII°7", Roman("b:dim7", 0, 0));
+        Assert.Equal("VIIø7", Roman("b:m7b5", 0, 0));
+        Assert.Equal("I+", Roman("c:aug", 0, 0));
+    }
 }

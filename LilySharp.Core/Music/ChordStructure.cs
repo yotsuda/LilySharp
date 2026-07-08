@@ -282,11 +282,24 @@ public sealed record ChordStructure(
         }
 
         var sb = new StringBuilder(Degree(RootStep, RootAlter, tonicStep, keySharps));
-        sb.Append(ChordQualityRegistry.GetSuffix(Quality));
+        sb.Append(RomanSuffix(Quality));
         if (BassStep is int bs)
             sb.Append('/').Append(Degree(bs, BassAlter ?? 0, tonicStep, keySharps));
         return sb.ToString();
     }
+
+    /// <summary>The quality suffix in Roman-numeral style: the triad symbols
+    /// diminished ° / augmented + / half-diminished ø are more idiomatic there than
+    /// the name-style "dim"/"aug"/"m7♭5"; every other quality keeps the printed
+    /// suffix (m, maj7, m7, 7, …), so IIm7 / V7 / Imaj7 read as expected.</summary>
+    private static string RomanSuffix(ChordQuality quality) => quality switch
+    {
+        ChordQuality.Diminished => "°",       // °
+        ChordQuality.Diminished7 => "°7",     // °7
+        ChordQuality.HalfDiminished7 => "ø7",  // ø7
+        ChordQuality.Augmented => "+",
+        _ => ChordQualityRegistry.GetSuffix(quality),
+    };
 
     /// <summary>
     /// The chord as a Lily# note chord, e.g. "&lt;c e g b&gt;" (Cmaj7),
