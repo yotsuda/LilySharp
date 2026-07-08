@@ -209,6 +209,9 @@ public static class DiagnosticCodes
     public const string UndefinedPart = "LYS1007";
     /// <summary>Semantic error: an unknown annotation was used.</summary>
     public const string UnknownAnnotation = "LYS1008";
+    /// <summary>Semantic error: a rehearsal mark label was not quoted
+    /// (<c>@mark(A)</c> instead of <c>@mark("A")</c>).</summary>
+    public const string MarkLabelNotQuoted = "LYS1009";
     /// <summary>Semantic error: multiple structure declarations were found.</summary>
     public const string MultipleStructureDeclarations = "LYS1009";
     /// <summary>Semantic error: invalid barline placement for a volta repeat.</summary>

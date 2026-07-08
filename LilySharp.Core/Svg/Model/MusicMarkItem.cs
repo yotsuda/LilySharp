@@ -293,7 +293,13 @@ public sealed record MusicMarkItem
     public static string ParseRehearsalText(string name)
     {
         if (name.Length > 5 && name.StartsWith("mark.", StringComparison.OrdinalIgnoreCase))
-            return name.Substring(5).ToUpperInvariant();
+        {
+            var label = name.Substring(5);
+            // @mark("A") — strip the surrounding quotes so the box shows A, not "A".
+            if (label.Length >= 2 && label[0] == '"' && label[^1] == '"')
+                label = label.Substring(1, label.Length - 2);
+            return label.ToUpperInvariant();
+        }
         return name;
     }
 

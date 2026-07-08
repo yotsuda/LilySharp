@@ -80,7 +80,7 @@ public class AnnotationNameValidatorTests
     [InlineData("c4@fermata d@marcato e@tenuto f@portato |")]
     // Music marks (plain + compound)
     [InlineData("c4@segno d@coda e@fine f |")]
-    [InlineData("c4@mark(A) d@mark(12) e f |")]
+    [InlineData("c4@mark(\"A\") d@mark(\"12\") e f |")]
     [InlineData("c4@rit d@accel e@cresc f@dim |")]
     [InlineData("c4@ottava d@ottava(bassa) e@loco f |")]
     [InlineData("c4@ped d@ped(off) e@sost f@tre(corde) |")]
@@ -101,6 +101,28 @@ public class AnnotationNameValidatorTests
     {
         var diags = Validate(source);
         Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.UnknownAnnotation);
+    }
+
+    // --- Rehearsal mark labels must be quoted: @mark("A"), not @mark(A) ---
+
+    [Theory]
+    [InlineData("c4@mark(A) d |")]
+    [InlineData("c4@mark(12) d |")]
+    [InlineData("c4@mark(Verse) d |")]
+    public void BareRehearsalMark_RequiresQuotes(string source)
+    {
+        var diags = Validate(source);
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.MarkLabelNotQuoted);
+    }
+
+    [Theory]
+    [InlineData("c4@mark(\"A\") d |")]
+    [InlineData("c4@mark(\"D.S.\") d |")]
+    [InlineData("c4@mark(\"12\") d |")]
+    public void QuotedRehearsalMark_NoQuoteError(string source)
+    {
+        var diags = Validate(source);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MarkLabelNotQuoted);
     }
 
     // --- Sweep: every shipped sample must be free of unknown annotations.

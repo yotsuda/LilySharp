@@ -102,7 +102,7 @@ Attach with `@`. One note may take several: `c4@staccato@p`. Two suffixes:
 `.up` / `.down` forces an articulation/dynamic above / below the note (default is
 automatic, opposite the stem): `c4@staccato.up`, `d4@accent.down`, `@f.up`.
 An annotation that takes a VALUE puts it in parentheses (space- or comma-separated):
-`@chord(Dm)`, `@fig(6 4)`, `@mark(A)`, `@finger(3)`.
+`@chord(Dm)`, `@fig(6 4)`, `@mark("A")`, `@finger(3)`.
 
 - Stem direction: `@stemUp` / `@stemDown` force a note's stem (default is automatic).
   On a beamed note the beam's shared direction wins.
@@ -117,7 +117,7 @@ An annotation that takes a VALUE puts it in parentheses (space- or comma-separat
 - Figured bass: `c4@fig(6)` , `d4@fig(6 4)`
 - Chord names: `c4@chord(C)` , `d4@chord(Dm)`
 - Fingering (per chord note): `<c@finger(1) e@finger(3)>4`
-- Rehearsal mark: `c4@mark(A)`
+- Rehearsal mark: `c4@mark("A")`
 - Half ties: `c4@laissezVibrer` (l.v. into silence), `c4@repeatTie` (resume from a repeat)
 - Cue/effects: `@cue` (small cue note), `@cross`/`@dead` (x notehead), `@fall`/`@doit` (jazz bends), `@breath`/`@caesura`
 - Feathered beams: `c16@feather(right) d e f` (accel), `@feather(left)` (rit)
@@ -243,7 +243,7 @@ of the following section; text directives `fine`, `to coda`, `dc`/`ds` (and `dc 
 structure { A segno  B to coda  C ds al coda  coda D }
 ```
 
-In-note marks: `c4@mark(A)` (rehearsal mark), `@segno @coda @fine @dc @ds`,
+In-note marks: `c4@mark("A")` (rehearsal mark), `@segno @coda @fine @dc @ds`,
 text spanners `@rit` / `@accel`, ottava `@ottava` / `@ottava(bassa)` ... `@loco`,
 trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`, pedals `@ped` ... `@ped(off)`,
 `@ped`/`@ped.off`, `@sost`/`@sost.off` (release = `.off`), `@una.corda`/`@tre.corde` (the traditional pair; tre corde IS the release, like an

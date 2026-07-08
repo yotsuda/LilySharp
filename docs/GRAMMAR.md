@@ -420,7 +420,7 @@ Placement      = '.up' | '.down' ;   (* force above / below; default is automati
    - Figured bass:  c4@fig(6) , d4@fig(6 4)
    - Chord name:    c4@chord(C) , d4@chord(Dm)
    - Fingering:     <c@finger(1) e@finger(3)>4
-   - Rehearsal mark: c4@mark(A)
+   - Rehearsal mark: c4@mark("A")   (label is a quoted string)
    - Free text:      c4@text("dolce") , c4@text("pizz.").up   (italic; below by default)
    - Half ties:     c4@laissezVibrer (l.v. into silence) , c4@repeatTie (from a repeat)
    - Cue/effects:   @cue (small cue note) , @cross / @dead (x notehead) ,

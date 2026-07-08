@@ -96,6 +96,11 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                 var name = mark.MarkName;
                 if (!IsKnownCompoundName(name))
                     WarnUnknown(mark, name);
+                else if (IsBareRehearsalMarkLabel(name))
+                    _diagnostics.Error(
+                        new TextSpan(mark.Position, mark.FullWidth),
+                        DiagnosticCodes.MarkLabelNotQuoted,
+                        "a rehearsal mark label must be quoted: write @mark(\"A\") not @mark(A).");
                 break;
             }
         }
@@ -161,6 +166,20 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             return true;
 
         return false;
+    }
+
+    /// <summary>
+    /// A rehearsal mark label must be a quoted string — <c>@mark("A")</c>, not a
+    /// bare <c>@mark(A)</c>. The mark is free text (letters, words, "D.S.", spaces),
+    /// so it is quoted like <c>@text("…")</c>. MarkName is <c>mark.&lt;label&gt;</c>;
+    /// the label is quoted iff it starts and ends with a double quote.
+    /// </summary>
+    private static bool IsBareRehearsalMarkLabel(string markName)
+    {
+        if (markName.Length <= 5 || !markName.StartsWith("mark.", StringComparison.OrdinalIgnoreCase))
+            return false;
+        var label = markName.Substring(5);
+        return !(label.Length >= 2 && label[0] == '"' && label[^1] == '"');
     }
 
     private void WarnUnknown(SyntaxNode node, string name)
