@@ -56,7 +56,6 @@ static int Run(string[] args)
         "midi" => RunMidi(args.Skip(1).ToArray()),
         "xml" => RunXml(args.Skip(1).ToArray()),
         "vsqx" => RunVsqx(args.Skip(1).ToArray()),
-        "ly" => RunLy(args.Skip(1).ToArray()),
         "check" => RunCheck(args.Skip(1).ToArray()),
         "layout" => RunLayout(args.Skip(1).ToArray()),
         _ => UnknownCommand(first)
@@ -699,46 +698,6 @@ static int ExecuteXml(string inputPath, string outputPath)
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine($"  Parts: {parts}");
         Console.WriteLine($"  Measures: {measures}");
-        return 0;
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        return 1;
-    }
-}
-
-// ============ LilyPond Command ============
-
-static int RunLy(string[] args)
-{
-    if (args.Contains("-h") || args.Contains("--help"))
-    {
-        Console.WriteLine("""
-            Convert Lily# source to LilyPond (.ly)
-
-            Usage: lysc ly [options] <input.lys> [output.ly]
-              -o, --output <file>    Output file path
-              -h, --help             Show this help
-            """);
-        return 0;
-    }
-
-    var (inputPath, outputPath, error) = ParseSimpleOptions(args, ".ly");
-    if (error != null)
-    {
-        Console.Error.WriteLine($"Error: {error}");
-        Console.Error.WriteLine("Run 'lysc ly --help' for usage.");
-        return 1;
-    }
-
-    try
-    {
-        var (_, tree) = LoadAndParse(inputPath!);
-        if (ReportDiagnostics(tree)) return 1;
-        var ly = new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree);
-        File.WriteAllText(outputPath!, ly);
-        Console.WriteLine($"Created: {outputPath}");
         return 0;
     }
     catch (Exception ex)

@@ -3004,10 +3004,6 @@ public sealed class LilySharpLanguageServer
                 case "vsqx":
                     new LilySharp.Core.Vocaloid.VsqxExporter().Export(tree).Save(outputPath);
                     break;
-                case "ly":
-                    File.WriteAllText(outputPath,
-                        new LilySharp.Core.LilyPond.LilyPondExporter().Export(tree));
-                    break;
                 default:
                     return new ExportResponse { Success = false, Error = $"Unknown format: {format}" };
             }
