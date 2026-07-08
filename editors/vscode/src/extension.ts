@@ -798,9 +798,15 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
     // The source file's name (URI paths use '/' on every OS), for the result dialogs.
     const sourceName = fileUri.path.split('/').pop() ?? 'the file';
 
+    // Relative-octave output is opt-in via a setting (default: explicit absolute).
+    const relativeOctave = vscode.workspace
+        .getConfiguration('lilysharp')
+        .get<boolean>('import.relativeOctave', false);
+
     try {
         const response = await client.sendRequest<ImportMusicXmlResponse>('lilysharp/importMusicXml', {
             filePath: fileUri.fsPath,
+            relativeOctave,
         });
         if (response.Error || response.Lys == null) {
             vscode.window.showErrorMessage(`Lily#: import failed: ${response.Error ?? 'no output.'}`);

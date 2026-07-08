@@ -51,6 +51,24 @@ public class ImportMusicXmlRequestTests
     }
 
     [Fact]
+    public void RelativeOctaveFlag_ProducesRelativeOutput()
+    {
+        var xml = new MusicXmlExporter().Export(SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            key c major
+            c'4 d' e' f' | g'1 |
+            """)).ToXml().ToString();
+
+        var response = Server().ImportMusicXml(
+            new ImportMusicXmlParams { XmlText = xml, RelativeOctave = true });
+
+        Assert.Null(response.Error);
+        Assert.False(SyntaxTree.Parse(response.Lys!).HasErrors);
+        Assert.Contains("octave relative", response.Lys);
+    }
+
+    [Fact]
     public void MissingFile_ReturnsError()
     {
         var response = Server().ImportMusicXml(

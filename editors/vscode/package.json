@@ -151,6 +151,11 @@
           ],
           "default": "full",
           "description": "How flat pitches (E♭, A♭) are spelled in the autocomplete list. Both spellings always compile; this only changes which the completer suggests."
+        },
+        "lilysharp.import.relativeOctave": {
+          "type": "boolean",
+          "default": false,
+          "description": "When importing MusicXML, emit compact relative-octave notes (c d e) instead of explicit absolute octaves (c' d' e'). Both render identically."
         }
       }
     },

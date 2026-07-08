@@ -3121,11 +3121,11 @@ public sealed class LilySharpLanguageServer
             {
                 if (!System.IO.File.Exists(@params.FilePath))
                     return new ImportMusicXmlResponse { Error = $"File not found: {@params.FilePath}" };
-                result = importer.ImportBytes(System.IO.File.ReadAllBytes(@params.FilePath));
+                result = importer.ImportBytes(System.IO.File.ReadAllBytes(@params.FilePath), @params.RelativeOctave);
             }
             else if (!string.IsNullOrEmpty(@params.XmlText))
             {
-                result = importer.Import(@params.XmlText);
+                result = importer.Import(@params.XmlText, @params.RelativeOctave);
             }
             else
             {
@@ -3672,6 +3672,8 @@ public class ImportMusicXmlParams
 {
     public string? FilePath { get; set; }
     public string? XmlText { get; set; }
+    /// <summary>Emit compact relative-octave notes instead of explicit absolute.</summary>
+    public bool RelativeOctave { get; set; }
 }
 
 /// <summary>Response for lilysharp/importMusicXml: the generated Lily# source, the
