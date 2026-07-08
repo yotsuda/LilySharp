@@ -321,6 +321,8 @@ internal static class LysWriter
                 : (rel != null ? rel.Chord(members)
                                : "<" + string.Join(" ", members.Select(Pitch)) + ">");
             string token = body + Value(note.NoteValue, note.Dots);
+            if (note.TremoloMarks > 0)
+                token += ":" + note.TremoloMarks; // single-note tremolo slash (c2:8)
             if (pendingChord != null)
             {
                 token += pendingChord;

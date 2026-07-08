@@ -565,6 +565,51 @@ public class MusicXmlRoundTripTests
     }
 
     [Fact]
+    public void GlissandoAndArpeggio_SurviveRoundTrip()
+    {
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            key c major
+            c'4@glissando g'4 <c' e' g'>2@arpeggio | c'1 |
+            """);
+        var xml1 = new MusicXmlExporter().Export(tree).ToXml();
+        var (lys, _) = new MusicXmlImporter().Import(xml1.ToString());
+
+        var importedTree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(importedTree), $"imported .lys did not parse clean:\n{lys}");
+        Assert.Equal(Signature(tree), Signature(importedTree));
+        Assert.Contains("@glissando", lys);
+        Assert.Contains("@arpeggio", lys);
+    }
+
+    [Fact]
+    public void TremoloAndInvertedTurn_ImportFromNotations()
+    {
+        // The Lily# exporter does not emit <tremolo>/<inverted-turn>, so import from
+        // hand-crafted MusicXML: a 2-beam single tremolo -> :16, plus @invertedturn.
+        var (lys, _) = new MusicXmlImporter().Import("""
+            <?xml version="1.0"?>
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>P</part-name></score-part></part-list>
+              <part id="P1"><measure number="1">
+                <attributes><divisions>1</divisions>
+                  <time><beats>4</beats><beat-type>4</beat-type></time>
+                  <clef><sign>G</sign><line>2</line></clef></attributes>
+                <note><pitch><step>C</step><octave>5</octave></pitch><duration>2</duration><type>half</type>
+                  <notations><ornaments><tremolo type="single">2</tremolo></ornaments></notations></note>
+                <note><pitch><step>D</step><octave>5</octave></pitch><duration>2</duration><type>half</type>
+                  <notations><ornaments><inverted-turn/></ornaments></notations></note>
+              </measure></part>
+            </score-partwise>
+            """);
+        var tree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(tree), $"{lys}\n---\n{Diagnostics(tree)}");
+        Assert.Contains("c'2:16", lys);          // 2 tremolo beams -> :16
+        Assert.Contains("@invertedturn", lys);
+    }
+
+    [Fact]
     public void ArticulationsAndSlurs_SurviveRoundTrip()
     {
         var tree = SyntaxTree.Parse("""

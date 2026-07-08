@@ -440,8 +440,24 @@ internal static class MusicXmlReader
                 if (ArticulationMark(a.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
                     note.Articulations.Add(mark);
             foreach (var o in Local(notations, "ornaments")?.Elements() ?? Enumerable.Empty<XElement>())
+            {
                 if (OrnamentMark(o.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
                     note.Articulations.Add(mark);
+                // A single-note tremolo (<tremolo type="single">N</tremolo>): N beams
+                // print as a :value slash (1 beam = :8, 2 = :16, 3 = :32).
+                if (o.Name.LocalName == "tremolo"
+                    && (string?)o.Attribute("type") is null or "single"
+                    && int.TryParse(o.Value, out int beams) && beams is >= 1 and <= 3)
+                    note.TremoloMarks = 4 << beams;
+            }
+            // A glissando / slide prints @glissando on the note it leaves from.
+            if ((Els(notations, "glissando").Concat(Els(notations, "slide")))
+                    .Any(g => (string?)g.Attribute("type") == "start")
+                && !note.Articulations.Contains("glissando"))
+                note.Articulations.Add("glissando");
+            // An arpeggiated chord prints @arpeggio (on the head note).
+            if (Local(notations, "arpeggiate") != null && !note.Articulations.Contains("arpeggio"))
+                note.Articulations.Add("arpeggio");
             // Tuplet bracket: the ratio comes from <time-modification>.
             foreach (var tup in Els(notations, "tuplet"))
                 switch ((string?)tup.Attribute("type"))
@@ -551,6 +567,7 @@ internal static class MusicXmlReader
         "mordent" => "mordent",
         "inverted-mordent" => "prall",
         "turn" => "turn",
+        "inverted-turn" => "invertedturn",
         _ => null,
     };
 

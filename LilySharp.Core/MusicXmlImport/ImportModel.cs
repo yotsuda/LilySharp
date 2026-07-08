@@ -160,6 +160,9 @@ internal sealed class ImportNote : ImportItem
     /// <summary>Grace notes written immediately before this note, emitted as a leading
     /// <c>acciaccatura { … }</c> (slashed) or <c>grace { … }</c> block.</summary>
     public List<ImportGraceNote> LeadingGrace { get; } = new();
+    /// <summary>A single-note tremolo subdivision (8/16/32) → a <c>:N</c> slash after
+    /// the duration; 0 = none.</summary>
+    public int TremoloMarks { get; set; }
     /// <summary>Sung syllables, one per verse, in MusicXML note order.</summary>
     public List<ImportLyric> Lyrics { get; } = new();
 }
