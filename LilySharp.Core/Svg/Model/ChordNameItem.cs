@@ -127,7 +127,15 @@ public sealed record ChordNameItem
     /// LILYPOND-REF: scm/chord-ignatzek-names.scm - root + quality → printed name.
     /// </remarks>
     public static string? ParseChordName(string markName)
+        => ParseChordName(markName, out _);
+
+    /// <summary>As <see cref="ParseChordName(string)"/>, also returning the resolved
+    /// <see cref="LilySharp.Core.Music.ChordStructure"/> (null for the empty/quoted
+    /// forms) so an inline <c>@chord</c> can render a Roman-numeral degree too.</summary>
+    public static string? ParseChordName(string markName, out LilySharp.Core.Music.ChordStructure? structure)
     {
+        structure = null;
+
         // '@chord()' with no argument yet (e.g. just after the completion inserted
         // the parentheses) is a recognized, empty chord — not an unknown annotation.
         if (markName == "chord")
@@ -156,8 +164,11 @@ public sealed record ChordNameItem
         // A real chord entry (the chords{} form) is rendered as its canonical symbol;
         // anything else is rejected (→ unknown-annotation warning), steering @chord
         // to valid, playable chords. Free display text goes in quotes (above).
-        return LilySharp.Core.Music.ChordStructure.TryParseChordEntry(rawText, out var structure)
-            ? structure.DisplayName
-            : null;
+        if (LilySharp.Core.Music.ChordStructure.TryParseChordEntry(rawText, out var parsed))
+        {
+            structure = parsed;
+            return parsed.DisplayName;
+        }
+        return null;
     }
 }

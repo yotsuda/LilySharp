@@ -53,10 +53,36 @@ internal sealed class ChordNameCollector
     /// <summary>Resets between reused collection passes.</summary>
     public void Clear() => _items.Clear();
 
-    /// <summary>Adds one inline chord name (a <c>c:m</c> mark on a note). The main
-    /// walk parses the mark text and supplies the note's measure/item/position.</summary>
-    public void AddInline(string text, int measureIndex, int itemIndex, int position, int staffIndex)
-        => _items.Add(new ChordNameItem(text, measureIndex, itemIndex, position, staffIndex));
+    /// <summary>Adds one inline chord name (a <c>@chord(c:m)</c> mark on a note). The
+    /// main walk parses the mark text/structure and supplies the note's
+    /// measure/item/position. The structure lets it render as a Roman degree if the
+    /// staff's attached chords are shown that way (see <see cref="ApplyDisplayMode"/>).</summary>
+    public void AddInline(string text, int measureIndex, int itemIndex, int position, int staffIndex,
+        LilySharp.Core.Music.ChordStructure? structure = null)
+        => _items.Add(new ChordNameItem(text, measureIndex, itemIndex, position, staffIndex,
+            structure: structure));
+
+    /// <summary>Applies a display mode to the INLINE <c>@chord</c> symbols already
+    /// collected on a staff (aligned/row items already carry their own mode). Called
+    /// when a staff attaches chords <c>as roman|both</c>, so an inline mark on the same
+    /// staff shows the same way instead of clashing with the track's symbol.</summary>
+    public void ApplyDisplayMode(int staffIndex, ChordDisplayMode mode)
+    {
+        if (mode == ChordDisplayMode.Names)
+            return;
+        for (int k = 0; k < _items.Count; k++)
+        {
+            var it = _items[k];
+            // Inline marks are placed by item index (UseTiming false); aligned/row
+            // symbols use timing and already carry the mode.
+            if (it.StaffIndex == staffIndex && !it.UseTiming)
+                _items[k] = it with
+                {
+                    DisplayMode = mode,
+                    RomanText = it.Structure?.ToRomanNumeral(Key.TonicStep, Key.Sharps),
+                };
+        }
+    }
 
     /// <summary>
     /// Collects chord symbols from every <c>chordnames { … }</c> block. Each block is
@@ -91,6 +117,8 @@ internal sealed class ChordNameCollector
         CollectAligned(
             root.DescendantNodes().OfType<ChordPartBlockSyntax>().Where(b => b.PartName == partName),
             sectionStartMeasure, staffIndex, mode);
+        // An inline @chord on this staff should follow the same display as the track.
+        ApplyDisplayMode(staffIndex, mode);
     }
 
     private void CollectAligned(

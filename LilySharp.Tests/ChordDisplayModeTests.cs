@@ -78,6 +78,28 @@ public class ChordDisplayModeTests
     }
 
     [Fact]
+    public void InlineChord_FollowsTheStaffsRomanMode()
+    {
+        // A staff with `as roman` shows its inline @chord as a degree too, so it does
+        // not clash with the track's Roman symbol (both render "Imaj7").
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section A { melody { c'4@chord(c:maj7) c' g' g' | } }
+            chords harmony { c:maj7 | }
+            structure { A }
+            score s { staff melody with chords harmony as roman }
+            """);
+        var score = new MeasureCollector()
+            .Collect(tree, "melody", null, "harmony", ChordDisplayMode.Roman);
+        Assert.Equal(2, score.ChordNames.Length); // inline + track, same slot
+        Assert.All(score.ChordNames, c => Assert.Equal("Imaj7", c.RomanText));
+        Assert.All(score.ChordNames, c => Assert.Equal(ChordDisplayMode.Roman, c.DisplayMode));
+    }
+
+    [Fact]
     public void Collect_DefaultNames_HasNoModeButStillComputesDegree()
     {
         var score = new MeasureCollector()

@@ -3493,10 +3493,10 @@ public sealed class MeasureCollector
         {
             if (child is MusicMarkSyntax markSyntax)
             {
-                var chordText = ChordNameItem.ParseChordName(markSyntax.MarkName);
+                var chordText = ChordNameItem.ParseChordName(markSyntax.MarkName, out var structure);
                 if (chordText != null)
                     _chordNameCollector.AddInline(
-                        chordText, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex);
+                        chordText, measureIndex, itemIndex, markSyntax.Position, _currentStaffIndex, structure);
             }
         }
     }
