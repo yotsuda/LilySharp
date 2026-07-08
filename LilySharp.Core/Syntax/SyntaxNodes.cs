@@ -1459,7 +1459,9 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
     /// <summary>The opening <c>{</c> token.</summary>
     public SyntaxTokenNode OpenBrace => (SyntaxTokenNode)GetChild(OpenBraceIndex)!;
 
-    /// <summary>The chord entries and barlines, in source order.</summary>
+    /// <summary>The chord entries and barlines, in source order. For the part-major
+    /// form these are <see cref="SectionDeclarationSyntax"/> children instead; use
+    /// <see cref="Sections"/> to read them.</summary>
     public IEnumerable<SyntaxNode> Items
     {
         get
@@ -1470,6 +1472,31 @@ public sealed class ChordPartBlockSyntax : SyntaxNode
                 if (child != null)
                     yield return child;
             }
+        }
+    }
+
+    /// <summary>Inner section declarations of the part-major chord track form
+    /// (<c>chords name { section A { c1 } section B { c1 } }</c>) — each holds this
+    /// part's chords for one named section. Empty for the flat form.</summary>
+    public IEnumerable<SectionDeclarationSyntax> Sections
+    {
+        get
+        {
+            for (int i = OpenBraceIndex + 1; i < SlotCount - 1; i++)
+                if (GetChild(i) is SectionDeclarationSyntax section)
+                    yield return section;
+        }
+    }
+
+    /// <summary>True when this chord track is written in the part-major (per-section) form.</summary>
+    public bool HasSections
+    {
+        get
+        {
+            for (int i = OpenBraceIndex + 1; i < SlotCount - 1; i++)
+                if (GetChild(i) is SectionDeclarationSyntax)
+                    return true;
+            return false;
         }
     }
 

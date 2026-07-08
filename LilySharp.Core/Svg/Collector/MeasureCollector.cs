@@ -2233,6 +2233,12 @@ public sealed class MeasureCollector
                     break;
 
                 case SectionDeclarationSyntax section:
+                    // A section INSIDE a `chords` block is a chord-track cell, not a
+                    // structure section: it must not become a structure ordering/label
+                    // rep or a part cell (its body is chord entries, not music). The
+                    // chord collector reads it via ChordPartBlockSyntax.Sections.
+                    if (IsInsideChordPart(section))
+                        break;
                     // First declaration of a name wins as the order/label
                     // representative (source order), so a name appearing in both
                     // forms stays stable.
@@ -2606,6 +2612,17 @@ public sealed class MeasureCollector
             if (p is PartDeclarationSyntax part)
                 return part.Name.Text;
         return null;
+    }
+
+    /// <summary>True when <paramref name="node"/> sits inside a <c>chords</c> block
+    /// (a part-major chord-track inner section), so it is a chord cell rather than a
+    /// structure section.</summary>
+    private static bool IsInsideChordPart(SyntaxNode node)
+    {
+        for (var p = node.Parent; p != null; p = p.Parent)
+            if (p is ChordPartBlockSyntax)
+                return true;
+        return false;
     }
 
     private static MusicMarkType NavigationToMusicMark(NavigationMarkType t) => t switch

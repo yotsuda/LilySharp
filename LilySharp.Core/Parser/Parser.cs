@@ -319,6 +319,9 @@ internal sealed class Parser
             SyntaxKind.ScoreKeyword => ParseRenderDeclaration(),
             SyntaxKind.PhraseKeyword => ParsePhraseDeclaration(),
             SyntaxKind.PartKeyword => ParsePartDeclaration(),  // New part syntax
+            // A top-level chord track — the part-major dual of an in-section chords
+            // block: `chords name { section A { c1 } section B { c1 } }`.
+            SyntaxKind.ChordsKeyword => ParseChordPartBlock(),
             SyntaxKind.DrummapKeyword => ParseDrummapDeclaration(),
 
             // Optional language-version directive: `version 1`.
@@ -1973,18 +1976,61 @@ private GreenNode?[] ParseArticulations()
 
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
-            if (Check(SyntaxKind.Bar) || Check(SyntaxKind.DoubleBar) || Check(SyntaxKind.FinalBar)
-                || Check(SyntaxKind.RepeatStartBar) || Check(SyntaxKind.RepeatEndBar)
-                || Check(SyntaxKind.RepeatBothBar))
-                items.Add(ParseBarline());
-            else if (IsPitchKind(Current.Kind))
-                items.Add(ParseChordEntry());
+            // Part-major chord track: a `chords` block may hold its own `section`
+            // blocks (dual of a part's inner sections), so a chord progression can be
+            // written per section and replayed by the structure —
+            //   chords harmony { section A { c1 | f1 } section B { c1 } }
+            if (Check(SyntaxKind.SectionKeyword))
+            {
+                items.Add(ParseChordInnerSection());
+                continue;
+            }
+
+            var item = ParseChordBodyItem();
+            if (item != null)
+                items.Add(item);
             else
                 Advance(); // error recovery — skip stray tokens
         }
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
         return new ChordPartBlockGreen(keyword, name, openBrace, [.. items], closeBrace);
+    }
+
+    /// <summary>A chord track's inner section (part-major form): <c>section NAME {
+    /// chord-entries }</c>. Its body is chord entries + barlines (not general music),
+    /// bound to this chord part; reuses <see cref="SectionDeclarationGreen"/> so it
+    /// resolves through the same section-name machinery as instrument parts.</summary>
+    private SectionDeclarationGreen ParseChordInnerSection()
+    {
+        var keyword = Expect(SyntaxKind.SectionKeyword);
+        var name = ExpectPartName();
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+        var items = new List<GreenNode?>();
+        while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
+        {
+            var item = ParseChordBodyItem();
+            if (item != null)
+                items.Add(item);
+            else
+                Advance();
+        }
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new SectionDeclarationGreen(keyword, name, openBrace, [.. items], closeBrace);
+    }
+
+    /// <summary>One item of a chord-block body: a barline or a chord entry, or null
+    /// for a stray token (the caller skips it). Shared by the flat and the
+    /// per-section chord-block forms.</summary>
+    private GreenNode? ParseChordBodyItem()
+    {
+        if (Check(SyntaxKind.Bar) || Check(SyntaxKind.DoubleBar) || Check(SyntaxKind.FinalBar)
+            || Check(SyntaxKind.RepeatStartBar) || Check(SyntaxKind.RepeatEndBar)
+            || Check(SyntaxKind.RepeatBothBar))
+            return ParseBarline();
+        if (IsPitchKind(Current.Kind))
+            return ParseChordEntry();
+        return null;
     }
 
     private static bool IsQualityToken(SyntaxKind kind) => kind is SyntaxKind.Identifier

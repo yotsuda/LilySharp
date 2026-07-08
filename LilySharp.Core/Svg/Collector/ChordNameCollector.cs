@@ -91,40 +91,61 @@ internal sealed class ChordNameCollector
 
         foreach (var block in blocks)
         {
-            int startMeasure = StartMeasureOf(block, sectionStartMeasure);
-
-            int localMeasure = 0;
-            var timing = Fraction.Zero;
-            var defaultDuration = Fraction.Quarter;
-
-            foreach (var item in block.Items)
-            {
-                if (item is BarlineSyntax)
-                {
-                    localMeasure++;
-                    timing = Fraction.Zero;
-                    continue;
-                }
-                if (item is not ChordEntrySyntax entry)
-                    continue;
-
-                var (text, structure) = ResolveChordEntry(entry);
-                _items.Add(new ChordNameItem(
-                    text,
-                    startMeasure + localMeasure,
-                    itemIndex: -1,
-                    entry.Root.Position,
-                    staffIndex,
-                    useTiming: true,
-                    timing: timing,
-                    structure: structure));
-
-                var dur = entry.Duration?.ToFraction() ?? defaultDuration;
-                if (entry.Duration != null)
-                    defaultDuration = dur;
-                timing += dur;
-            }
+            // Part-major chord track: each inner section's chords align under its own
+            // named section's bars. Flat form: the whole block aligns under the
+            // section it is written inside (StartMeasureOf walks up to it).
+            if (block.HasSections)
+                foreach (var section in block.Sections)
+                    CollectAlignedItems(SectionItems(section),
+                        sectionStartMeasure.GetValueOrDefault(section.SectionName, 0), staffIndex);
+            else
+                CollectAlignedItems(block.Items, StartMeasureOf(block, sectionStartMeasure), staffIndex);
         }
+    }
+
+    private void CollectAlignedItems(IEnumerable<SyntaxNode> items, int startMeasure, int staffIndex)
+    {
+        int localMeasure = 0;
+        var timing = Fraction.Zero;
+        var defaultDuration = Fraction.Quarter;
+
+        foreach (var item in items)
+        {
+            if (item is BarlineSyntax)
+            {
+                localMeasure++;
+                timing = Fraction.Zero;
+                continue;
+            }
+            if (item is not ChordEntrySyntax entry)
+                continue;
+
+            var (text, structure) = ResolveChordEntry(entry);
+            _items.Add(new ChordNameItem(
+                text,
+                startMeasure + localMeasure,
+                itemIndex: -1,
+                entry.Root.Position,
+                staffIndex,
+                useTiming: true,
+                timing: timing,
+                structure: structure));
+
+            var dur = entry.Duration?.ToFraction() ?? defaultDuration;
+            if (entry.Duration != null)
+                defaultDuration = dur;
+            timing += dur;
+        }
+    }
+
+    /// <summary>The chord entries and barlines of a chord-track inner section (the
+    /// nodes between its name and closing brace).</summary>
+    private static IEnumerable<SyntaxNode> SectionItems(SectionDeclarationSyntax section)
+    {
+        // Slots: 0 keyword, 1 name, 2 '{', 3..n-2 items, n-1 '}'.
+        for (int i = 3; i < section.SlotCount - 1; i++)
+            if (section.GetChild(i) is SyntaxNode node and not SyntaxTokenNode)
+                yield return node;
     }
 
     /// <summary>
@@ -175,10 +196,10 @@ internal sealed class ChordNameCollector
         var measureEndBar = new Dictionary<int, BarlineType>();
         int maxIndex = -1;
 
-        foreach (var block in blocks)
+        // Process one run of chord items (flat block, or one inner section) whose
+        // first bar sits at absolute measure <paramref>startMeasure</paramref>.
+        void ProcessRun(IEnumerable<SyntaxNode> items, int startMeasure)
         {
-            int startMeasure = StartMeasureOf(block, sectionStartMeasure);
-
             int localMeasure = 0;
             var pending = new List<ChordEntrySyntax>();
             var pendingStart = BarlineType.None;
@@ -202,7 +223,7 @@ internal sealed class ChordNameCollector
                 pending.Clear();
             }
 
-            foreach (var item in block.Items)
+            foreach (var item in items)
             {
                 if (item is BarlineSyntax bar)
                 {
@@ -233,6 +254,18 @@ internal sealed class ChordNameCollector
             // A trailing measure with no closing barline still counts.
             if (pending.Count > 0 || pendingStart != BarlineType.None)
                 Commit(BarlineType.None);
+        }
+
+        foreach (var block in blocks)
+        {
+            // Part-major chord track: each inner section fills its own named section's
+            // bars. Flat form: the whole block starts at its enclosing section.
+            if (block.HasSections)
+                foreach (var section in block.Sections)
+                    ProcessRun(SectionItems(section),
+                        sectionStartMeasure.GetValueOrDefault(section.SectionName, 0));
+            else
+                ProcessRun(block.Items, StartMeasureOf(block, sectionStartMeasure));
         }
 
         if (maxIndex < 0)
