@@ -1,0 +1,87 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+using System.Linq;
+using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Model;
+using LilySharp.Core.Syntax;
+using Xunit;
+
+namespace LilySharp.Tests;
+
+/// <summary>
+/// The chord display selector: <c>staff X with chords Y as roman | both | names</c>
+/// (and the same on a chord row). Absolute names by default, Roman-numeral degrees
+/// for the key, or both stacked.
+/// </summary>
+public class ChordDisplayModeTests
+{
+    private const string Doc = """
+        octave absolute
+        time 4/4
+        key c major
+        part melody { clef treble }
+        section A { melody { e'4 e' f' g' | a' g' e' d' | } }
+        chords harmony { c1 | a1:m | }
+        structure { A }
+        score names { staff melody with chords harmony }
+        score roman { staff melody with chords harmony as roman }
+        score both  { staff melody with chords harmony as both }
+        score row   { chords harmony as roman }
+        """;
+
+    private static ChordDisplayMode StaffMode(string score)
+        => RenderSpecParser.FindByName(SyntaxTree.Parse(Doc), score)!
+            .GetVoiceBindings().First().ChordDisplay;
+
+    [Fact]
+    public void AsSelector_ParsesEachMode()
+    {
+        // `as` doubles as the Dutch A-flat pitch, so it is matched by text — this
+        // guards that the selector still reads correctly.
+        Assert.Equal(ChordDisplayMode.Names, StaffMode("names"));
+        Assert.Equal(ChordDisplayMode.Roman, StaffMode("roman"));
+        Assert.Equal(ChordDisplayMode.Both, StaffMode("both"));
+    }
+
+    [Fact]
+    public void ChordRow_AsRoman_Parses()
+    {
+        var rs = RenderSpecParser.FindByName(SyntaxTree.Parse(Doc), "row")!;
+        var row = rs.Items.OfType<ChordRowSpec>().Single();
+        Assert.Equal(ChordDisplayMode.Roman, row.DisplayMode);
+    }
+
+    [Fact]
+    public void Collect_Roman_StampsDegreeAndMode()
+    {
+        var score = new MeasureCollector()
+            .Collect(SyntaxTree.Parse(Doc), "melody", null, "harmony", ChordDisplayMode.Roman);
+        // C major: c1 -> I, a1:m -> VIm.
+        Assert.Equal(new[] { "I", "VIm" }, score.ChordNames.Select(c => c.RomanText).ToArray());
+        Assert.All(score.ChordNames, c => Assert.Equal(ChordDisplayMode.Roman, c.DisplayMode));
+        // The absolute name is still carried (Both mode shows it below the degree).
+        Assert.Equal(new[] { "C", "Am" }, score.ChordNames.Select(c => c.ChordText).ToArray());
+    }
+
+    [Fact]
+    public void Collect_DefaultNames_HasNoModeButStillComputesDegree()
+    {
+        var score = new MeasureCollector()
+            .Collect(SyntaxTree.Parse(Doc), "melody", null, "harmony");
+        Assert.All(score.ChordNames, c => Assert.Equal(ChordDisplayMode.Names, c.DisplayMode));
+    }
+}

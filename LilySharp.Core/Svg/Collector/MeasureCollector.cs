@@ -652,6 +652,7 @@ public sealed class MeasureCollector
     private int _timeBeatType = 4;
     private int _keySharps = 0;
     private int _initialKeySharps = 0; // Preserved for Score.KeySignature (not mutated by mid-measure key changes)
+    private int _keyTonicStep = 0;     // key tonic's diatonic step (0=C..6=B), for Roman-numeral chord degrees
     private string _clef = "treble";
     private string _initialClef = "treble"; // Preserved for Score.Clef (not mutated by mid-measure clef changes)
     private int _clefPosition; // Source offset of the clef declaration (0 = none), for data-pos
@@ -666,7 +667,8 @@ public sealed class MeasureCollector
     /// </summary>
     public Score Collect(SyntaxTree tree, string? voiceName = null,
         StructureDeclarationSyntax? localStructure = null,
-        string? attachedChordPart = null)
+        string? attachedChordPart = null,
+        ChordDisplayMode attachedChordDisplay = ChordDisplayMode.Names)
     {
         _voiceName = voiceName;
         Reset();
@@ -725,11 +727,13 @@ public sealed class MeasureCollector
 
         // Collect lyrics
         _lyricsCollector.CollectNoteBound(tree.GetRoot(), measures, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
+        _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
-        // `staff NAME with chords CHORDPART` on a single-staff score.
+        // `staff NAME with chords CHORDPART [as roman|both]` on a single-staff score.
         if (attachedChordPart != null)
             _chordNameCollector.CollectAttached(
-                tree.GetRoot(), attachedChordPart, _sectionStartMeasure, _currentStaffIndex);
+                tree.GetRoot(), attachedChordPart, _sectionStartMeasure, _currentStaffIndex,
+                attachedChordDisplay);
 
         return new Score(
             voice,
@@ -885,30 +889,30 @@ public sealed class MeasureCollector
         // (used to auto-wrap one block's verses) is known from the real content.
         var pendingLyricsRows = new List<(string Name, int StaffIndex)>();
         // `staff NAME with chords CHORDPART` attachments, applied post-loop.
-        var attachedChords = new List<(string PartName, int StaffIndex)>();
+        var attachedChords = new List<(string PartName, int StaffIndex, ChordDisplayMode Mode)>();
         // Chord rows are also deferred (see the ChordRowSpec branch below).
-        var pendingChordRows = new List<(string Name, int StaffIndex)>();
-        foreach (var (voiceName, withChords) in renderSpec.GetVoiceBindings())
+        var pendingChordRows = new List<(string Name, int StaffIndex, ChordDisplayMode Mode)>();
+        foreach (var (voiceName, withChords, chordDisplay) in renderSpec.GetVoiceBindings())
         {
             _voiceName = voiceName;
             _currentStaffIndex = collectStaffIndex++;
             _octave.LastPitchName = 'c';
             _defaultDuration = Fraction.Quarter;
 
-            // `staff NAME with chords CHORDPART`: remember the attachment; the
-            // chord symbols are collected AFTER the voice loop, once every
-            // section's start measure is registered.
+            // `staff NAME with chords CHORDPART [as roman|both]`: remember the
+            // attachment (and its display); the chord symbols are collected AFTER
+            // the voice loop, once every section's start measure is registered.
             if (withChords != null)
-                attachedChords.Add((withChords, _currentStaffIndex));
+                attachedChords.Add((withChords, _currentStaffIndex, chordDisplay));
 
-            // An independent chord row (`chords name` in the score). Defer its
-            // collection until AFTER the music voices: the section start table
-            // fills while music is processed, and a row spec listed first (or a
-            // rows-only score) would otherwise collect every section's block
-            // from bar 0, overprinting them.
+            // An independent chord row (`chords name [as roman|both]` in the score).
+            // Defer its collection until AFTER the music voices: the section start
+            // table fills while music is processed, and a row spec listed first (or a
+            // rows-only score) would otherwise collect every section's block from bar
+            // 0, overprinting them.
             if (renderSpec.Items.OfType<ChordRowSpec>().Any(c => c.PartName == voiceName))
             {
-                pendingChordRows.Add((voiceName, _currentStaffIndex));
+                pendingChordRows.Add((voiceName, _currentStaffIndex, chordDisplay));
                 staffVoices[voiceName] = ImmutableArray.Create(
                     new Voice(voiceName, ImmutableArray<Measure>.Empty));
                 continue;
@@ -952,10 +956,11 @@ public sealed class MeasureCollector
         // register the section starts — derive them from the row blocks.
         if (pendingChordRows.Count > 0 || pendingLyricsRows.Count > 0)
             EnsureSectionStartsForRows();
-        foreach (var (rowName, rowIdx) in pendingChordRows)
+        _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
+        foreach (var (rowName, rowIdx, rowMode) in pendingChordRows)
         {
             var rowMeasures = _chordNameCollector.CollectPart(
-                tree.GetRoot(), rowName, rowIdx, _sectionStartMeasure, _timeBeats, _timeBeatType);
+                tree.GetRoot(), rowName, rowIdx, _sectionStartMeasure, _timeBeats, _timeBeatType, rowMode);
             staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, rowMeasures));
         }
 
@@ -1033,10 +1038,11 @@ public sealed class MeasureCollector
         {
             _lyricsCollector.CollectNoteBound(tree.GetRoot(), firstStaffVoices[0].Measures.ToList(), _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
         }
+        _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
-        foreach (var (attachedPart, attachedStaff) in attachedChords)
+        foreach (var (attachedPart, attachedStaff, attachedMode) in attachedChords)
             _chordNameCollector.CollectAttached(
-                tree.GetRoot(), attachedPart, _sectionStartMeasure, attachedStaff);
+                tree.GetRoot(), attachedPart, _sectionStartMeasure, attachedStaff, attachedMode);
 
         // Phase 3: Build staff groups from render spec
         var staffGroups = renderSpec.ToStaffGroups(name =>
@@ -1277,6 +1283,7 @@ public sealed class MeasureCollector
 
         // Unnamed lyrics align with the primary voice; named ones bind above.
         _lyricsCollector.CollectNoteBound(root, track0, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
+        _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
         _chordNameCollector.CollectBlocks(root, _sectionStartMeasure, _currentStaffIndex);
 
         return new Score(
@@ -2205,6 +2212,9 @@ public sealed class MeasureCollector
                     if (!IsInsideMusicContent(key))
                     {
                         _keySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
+                        if (!key.IsCustom)
+                            _keyTonicStep = Math.Max(0,
+                                LilySharp.Core.Music.KeySpelling.StepOf(key.Pitch.PitchName[0]));
                         _keyCustom = key.IsCustom
                             ? KeySignature.EncodeCustom(key.CustomAlterations)
                             : null;

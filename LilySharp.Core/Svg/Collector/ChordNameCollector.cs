@@ -37,6 +37,11 @@ internal sealed class ChordNameCollector
 {
     private readonly List<ChordNameItem> _items = new();
 
+    /// <summary>The current key, for Roman-numeral degrees: the tonic's diatonic step
+    /// (0=C..6=B) and the signature (+sharps/-flats). Set by the collector before use;
+    /// a chord's degree is computed against it at item-creation time.</summary>
+    public (int TonicStep, int Sharps) Key { get; set; }
+
     /// <summary>All collected chord-name items.</summary>
     public IReadOnlyList<ChordNameItem> Items => _items;
 
@@ -62,9 +67,10 @@ internal sealed class ChordNameCollector
     {
         // Nameless chords { … } blocks (the former chordnames keyword, folded
         // into chords pre-release): symbols align above the co-written staff.
+        // A nameless block has no placement selector, so it shows absolute names.
         CollectAligned(
             root.DescendantNodes().OfType<ChordPartBlockSyntax>().Where(b => b.PartName == null),
-            sectionStartMeasure, staffIndex);
+            sectionStartMeasure, staffIndex, ChordDisplayMode.Names);
     }
 
     /// <summary>
@@ -74,16 +80,17 @@ internal sealed class ChordNameCollector
     /// </summary>
     public void CollectAttached(
         SyntaxNode root, string partName,
-        IReadOnlyDictionary<string, int> sectionStartMeasure, int staffIndex)
+        IReadOnlyDictionary<string, int> sectionStartMeasure, int staffIndex,
+        ChordDisplayMode mode = ChordDisplayMode.Names)
     {
         CollectAligned(
             root.DescendantNodes().OfType<ChordPartBlockSyntax>().Where(b => b.PartName == partName),
-            sectionStartMeasure, staffIndex);
+            sectionStartMeasure, staffIndex, mode);
     }
 
     private void CollectAligned(
         IEnumerable<ChordPartBlockSyntax> alignedBlocks,
-        IReadOnlyDictionary<string, int> sectionStartMeasure, int staffIndex)
+        IReadOnlyDictionary<string, int> sectionStartMeasure, int staffIndex, ChordDisplayMode mode)
     {
         var blocks = alignedBlocks.ToList();
         if (blocks.Count == 0)
@@ -97,13 +104,13 @@ internal sealed class ChordNameCollector
             if (block.HasSections)
                 foreach (var section in block.Sections)
                     CollectAlignedItems(SectionItems(section),
-                        sectionStartMeasure.GetValueOrDefault(section.SectionName, 0), staffIndex);
+                        sectionStartMeasure.GetValueOrDefault(section.SectionName, 0), staffIndex, mode);
             else
-                CollectAlignedItems(block.Items, StartMeasureOf(block, sectionStartMeasure), staffIndex);
+                CollectAlignedItems(block.Items, StartMeasureOf(block, sectionStartMeasure), staffIndex, mode);
         }
     }
 
-    private void CollectAlignedItems(IEnumerable<SyntaxNode> items, int startMeasure, int staffIndex)
+    private void CollectAlignedItems(IEnumerable<SyntaxNode> items, int startMeasure, int staffIndex, ChordDisplayMode mode)
     {
         int localMeasure = 0;
         var timing = Fraction.Zero;
@@ -129,7 +136,11 @@ internal sealed class ChordNameCollector
                 staffIndex,
                 useTiming: true,
                 timing: timing,
-                structure: structure));
+                structure: structure)
+            {
+                RomanText = structure?.ToRomanNumeral(Key.TonicStep, Key.Sharps),
+                DisplayMode = mode,
+            });
 
             var dur = entry.Duration?.ToFraction() ?? defaultDuration;
             if (entry.Duration != null)
@@ -179,7 +190,8 @@ internal sealed class ChordNameCollector
 
     public ImmutableArray<Measure> CollectPart(
         SyntaxNode root, string partName, int staffIndex,
-        IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType)
+        IReadOnlyDictionary<string, int> sectionStartMeasure, int timeBeats, int timeBeatType,
+        ChordDisplayMode mode = ChordDisplayMode.Names)
     {
         var blocks = root.DescendantNodes().OfType<ChordPartBlockSyntax>()
             .Where(b => b.PartName == partName).ToList();
@@ -211,7 +223,7 @@ internal sealed class ChordNameCollector
                 int mi = startMeasure + localMeasure;
                 if (pending.Count > 0)
                 {
-                    measureItems[mi] = EmitChordPartMeasure(pending, mi, staffIndex, timeBeats, timeBeatType);
+                    measureItems[mi] = EmitChordPartMeasure(pending, mi, staffIndex, timeBeats, timeBeatType, mode);
                     maxIndex = Math.Max(maxIndex, mi);
                 }
                 if (pendingStart != BarlineType.None)
@@ -301,7 +313,8 @@ internal sealed class ChordNameCollector
     /// explicit duration present), carry-forward explicit durations.
     /// </summary>
     private ImmutableArray<MusicItem> EmitChordPartMeasure(
-        List<ChordEntrySyntax> entries, int measureIndex, int staffIndex, int timeBeats, int timeBeatType)
+        List<ChordEntrySyntax> entries, int measureIndex, int staffIndex, int timeBeats, int timeBeatType,
+        ChordDisplayMode mode = ChordDisplayMode.Names)
     {
         bool anyExplicit = entries.Any(e => e.Duration != null);
         ImmutableArray<Fraction>? table = anyExplicit
@@ -318,7 +331,11 @@ internal sealed class ChordNameCollector
             _items.Add(new ChordNameItem(
                 text, measureIndex, itemIndex: -1, entry.Root.Position,
                 staffIndex: staffIndex, useTiming: true, timing: timing, structure: structure,
-                isChordRow: true));
+                isChordRow: true)
+            {
+                RomanText = structure?.ToRomanNumeral(Key.TonicStep, Key.Sharps),
+                DisplayMode = mode,
+            });
 
             Fraction dur;
             if (entry.Duration != null)

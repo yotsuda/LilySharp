@@ -257,6 +257,38 @@ public sealed record ChordStructure(
     }
 
     /// <summary>
+    /// This chord as a Roman-numeral scale degree in the given key, jazz style: an
+    /// UPPERCASE numeral for the root's scale degree plus the SAME quality suffix as
+    /// the printed name (e.g. <c>Imaj7</c>, <c>IIm7</c>, <c>V7</c>, <c>VIm</c>). A
+    /// chromatic root gets a ♯/♭ prefix (<c>♭III</c>, <c>♯IV</c>); a slash bass shows
+    /// as its own degree (<c>V7/VII</c>).
+    /// </summary>
+    /// <param name="tonicStep">The key tonic's diatonic step (0=C .. 6=B) — the actual
+    /// tonic, so a minor key is measured from its own tonic (A minor: Am = I).</param>
+    /// <param name="keySharps">The signature: +sharps / -flats.</param>
+    public string ToRomanNumeral(int tonicStep, int keySharps)
+    {
+        static string Degree(int step, int alter, int tonicStep, int keySharps)
+        {
+            int degree = ((step - tonicStep) % 7 + 7) % 7;
+            string numeral = new[] { "I", "II", "III", "IV", "V", "VI", "VII" }[degree];
+            // Accidental = how far the root sits from the scale's own note on that
+            // letter (0 = diatonic, +/- = chromatic).
+            int acc = alter - KeySpelling.Alteration(step, keySharps);
+            string prefix = acc > 0 ? new string('♯', acc)    // ♯
+                : acc < 0 ? new string('♭', -acc)             // ♭
+                : "";
+            return prefix + numeral;
+        }
+
+        var sb = new StringBuilder(Degree(RootStep, RootAlter, tonicStep, keySharps));
+        sb.Append(ChordQualityRegistry.GetSuffix(Quality));
+        if (BassStep is int bs)
+            sb.Append('/').Append(Degree(bs, BassAlter ?? 0, tonicStep, keySharps));
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// The chord as a Lily# note chord, e.g. "&lt;c e g b&gt;" (Cmaj7),
     /// "&lt;c ees g&gt;" (Cm). The notes are bare (no octave marks): in relative
     /// mode each successive tone resolves to the nearest pitch above, voicing the

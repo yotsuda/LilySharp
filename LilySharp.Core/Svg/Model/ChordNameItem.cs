@@ -33,10 +33,30 @@ namespace LilySharp.Core.Svg.Model;
 /// LilyPond's separate ChordNames context with pitch-set analysis.
 /// The chord symbol text is specified directly and displayed above the staff.
 /// </remarks>
+/// <summary>How a chord row / attachment wants its symbols shown.</summary>
+public enum ChordDisplayMode
+{
+    /// <summary>Absolute chord names (C, Am7, G7). The default.</summary>
+    Names,
+    /// <summary>Roman-numeral scale degrees for the key (I, IIm7, V7).</summary>
+    Roman,
+    /// <summary>Both, stacked: the degree above the absolute name.</summary>
+    Both,
+}
+
 public sealed record ChordNameItem
 {
     /// <summary>The chord symbol text for display (e.g., "Cm7", "B♭maj7").</summary>
     public string ChordText { get; }
+
+    /// <summary>The Roman-numeral degree for the current key (e.g. "IIm7", "V7"), or
+    /// null when the chord has no resolved structure. Computed at collection time (the
+    /// key is known there); shown when <see cref="DisplayMode"/> is Roman or Both.</summary>
+    public string? RomanText { get; init; }
+
+    /// <summary>How this symbol should be shown: absolute name (default), Roman-numeral
+    /// degree, or both stacked. Set from the placement's <c>as roman|both|names</c>.</summary>
+    public ChordDisplayMode DisplayMode { get; init; } = ChordDisplayMode.Names;
 
     /// <summary>Measure index containing this chord name.</summary>
     public int MeasureIndex { get; }

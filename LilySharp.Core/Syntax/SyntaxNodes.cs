@@ -2193,6 +2193,14 @@ public sealed class ChordRowRenderSyntax : SyntaxNode
 
     /// <summary>The chord part name to place (e.g. <c>chords riff</c> → "riff").</summary>
     public string PartName => ((SyntaxTokenNode)GetChild(1)!).Text;
+
+    /// <summary>The chord display selector after the name (<c>as roman|both|names</c> →
+    /// "roman"), or null when absent.</summary>
+    public string? DisplayModeText =>
+        SlotCount > 3 && GetChild(2) is SyntaxTokenNode a && a.Text == "as"
+            && GetChild(3) is SyntaxTokenNode m
+            ? m.Text
+            : null;
 }
 
 /// <summary>

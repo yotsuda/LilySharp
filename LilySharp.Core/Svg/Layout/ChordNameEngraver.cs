@@ -29,9 +29,10 @@ public readonly record struct ChordNameLayout(
     int MeasureIndex,
     double X,                // X position (staff spaces from page left)
     double Y,                // Y position (staff spaces from page top, above staff)
-    string ChordText,        // Display text (e.g., "Cm7", "B♭7")
+    string ChordText,        // Display text (e.g., "Cm7", "B♭7", or "IIm7" in Roman mode)
     int SourcePosition,
-    int SourceIndex = -1     // F3/B: index into score.ChordNames (data-pos resolved at render)
+    int SourceIndex = -1,    // F3/B: index into score.ChordNames (data-pos resolved at render)
+    string? AboveLine = null // `as both`: the Roman degree stacked ABOVE ChordText
 );
 
 /// <summary>
@@ -176,7 +177,7 @@ internal static class ChordNameEngraver
                 // not guessed: a wide "Gm7♭5" reaches over the NEXT beat's
                 // tall chord, which a narrow per-character estimate missed.
                 double halfWidth = Math.Max(
-                    1.0, Rendering.SansTextMetrics.MeasureBold(p.chord.ChordText, 2.6) / 2);
+                    1.0, Rendering.SansTextMetrics.MeasureBold(DisplayText(p.chord).Text, 2.6) / 2);
                 double peak = up.MaxProtrusionInRange(p.x - halfWidth, p.x + halfWidth);
                 if (!systemPeak.TryGetValue(p.sysIdx, out var cur) || peak > cur)
                     systemPeak[p.sysIdx] = peak;
@@ -191,9 +192,10 @@ internal static class ChordNameEngraver
             if (p.chord.IsChordRow)
             {
                 double rowBaseline = chordGridSheet ? GridChordBaseline : ChordRowTextBaseline;
+                var (rowText, rowAbove) = DisplayText(p.chord);
                 results.Add(new ChordNameLayout(
                     p.chord.MeasureIndex, p.x, p.staffOffset + rowBaseline,
-                    p.chord.ChordText, p.chord.SourcePosition, p.idx));
+                    rowText, p.chord.SourcePosition, p.idx, AboveLine: rowAbove));
                 continue;
             }
 
@@ -208,10 +210,21 @@ internal static class ChordNameEngraver
             double protrusion = p.topStaff && systemPeak.TryGetValue(p.sysIdx, out var pk) ? pk : 0;
             double y = -(StaffPadding + protrusion) + p.staffOffset;
 
+            var (text, above) = DisplayText(p.chord);
             results.Add(new ChordNameLayout(
-                p.chord.MeasureIndex, p.x, y, p.chord.ChordText, p.chord.SourcePosition, p.idx));
+                p.chord.MeasureIndex, p.x, y, text, p.chord.SourcePosition, p.idx, AboveLine: above));
         }
 
         return results.ToImmutable();
     }
+
+    /// <summary>The symbol's display text for its mode, plus the optional line stacked
+    /// above it: Names → the absolute name; Roman → the degree (falling back to the
+    /// name when no structure resolved); Both → the name with the degree above it.</summary>
+    private static (string Text, string? Above) DisplayText(ChordNameItem c) => c.DisplayMode switch
+    {
+        ChordDisplayMode.Roman => (c.RomanText ?? c.ChordText, null),
+        ChordDisplayMode.Both => (c.ChordText, c.RomanText),
+        _ => (c.ChordText, null),
+    };
 }

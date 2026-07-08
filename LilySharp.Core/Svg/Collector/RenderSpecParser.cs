@@ -77,7 +77,7 @@ public static class RenderSpecParser
                     break;
 
                 case ChordRowRenderSyntax chordRow:
-                    items.Add(new ChordRowSpec(chordRow.PartName));
+                    items.Add(new ChordRowSpec(chordRow.PartName, ParseChordMode(chordRow.DisplayModeText)));
                     break;
 
                 case LyricsRowRenderSyntax lyricsRow:
@@ -229,10 +229,14 @@ public static class RenderSpecParser
         if (toks.Count == 0) return null;
 
         string? withChords = null;
+        var chordDisplay = ChordDisplayMode.Names;
         int wi = toks.FindIndex(t => t.Kind == SyntaxKind.WithKeyword);
         if (wi >= 1 && wi + 2 < toks.Count + 1 && toks.Count >= wi + 3)
         {
             withChords = toks[wi + 2].Text; // [with][chords][NAME]
+            // Optional `as roman | both | names` after the chord name.
+            if (toks.Count >= wi + 5 && toks[wi + 3].Text == "as")
+                chordDisplay = ParseChordMode(toks[wi + 4].Text);
             toks = toks.GetRange(0, wi);    // what precedes = [clef?] part
         }
         if (toks.Count == 0) return null;
@@ -287,8 +291,17 @@ public static class RenderSpecParser
             RemoveFirst: removeEmpty is "all",
             Lines: lines,
             WithChords: withChords,
-            NameSuppressed: nameSuppressed);
+            NameSuppressed: nameSuppressed,
+            ChordDisplay: chordDisplay);
     }
+
+    /// <summary>Maps the `as roman | both | names` selector text to its mode.</summary>
+    private static ChordDisplayMode ParseChordMode(string? text) => text?.ToLowerInvariant() switch
+    {
+        "roman" => ChordDisplayMode.Roman,
+        "both" => ChordDisplayMode.Both,
+        _ => ChordDisplayMode.Names,
+    };
 
     private static TabStaffSpec? ParseTab(TabRenderSyntax tab)
     {

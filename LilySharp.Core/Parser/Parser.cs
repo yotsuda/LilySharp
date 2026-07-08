@@ -2733,19 +2733,36 @@ private GreenNode?[] ParseArticulations()
             tokens.Add(Advance()); // with
             tokens.Add(Advance()); // chords
             tokens.Add(ExpectPartName());
+            ConsumeChordDisplayMode(tokens); // `... as roman | both | names`
         }
 
         return new StaffRenderGreen([.. tokens]);
     }
 
     /// <summary>
-    /// Parse chord-row render: <c>chords partName</c> (places a chord part as a row).
+    /// Parse chord-row render: <c>chords partName [as roman|both|names]</c> (places a
+    /// chord part as a row, with an optional display selector).
     /// </summary>
     private ChordRowRenderGreen ParseChordRowRender()
     {
         var tokens = new List<SyntaxToken> { Expect(SyntaxKind.ChordsKeyword) };
         tokens.Add(ExpectPartName());
+        ConsumeChordDisplayMode(tokens);
         return new ChordRowRenderGreen([.. tokens]);
+    }
+
+    /// <summary>Consumes an optional chord DISPLAY selector — <c>as roman | as both |
+    /// as names</c> — appending its two tokens. NB: <c>as</c> also lexes as the Dutch
+    /// A-flat pitch, so match it by TEXT, not token kind; the mode word follows. This
+    /// position (right after the chord-part name) is unambiguous — a bare pitch there
+    /// is meaningless — so the match is safe.</summary>
+    private void ConsumeChordDisplayMode(List<SyntaxToken> tokens)
+    {
+        if (string.Equals(Current.Text, "as", System.StringComparison.Ordinal) && Peek(1) != null)
+        {
+            tokens.Add(Advance()); // as
+            tokens.Add(Advance()); // roman | both | names
+        }
     }
 
     /// <summary>

@@ -3789,12 +3789,19 @@ internal static class SharedRenderer
     {
         if (layout.ChordNameLayouts.IsDefaultOrEmpty) return;
         double size = FontSize * 0.65;
+        // `as both`: the Roman degree stacked one line ABOVE the absolute name.
+        const double stackLineHeight = 2.2;
         foreach (var c in layout.ChordNameLayouts)
         {
             if (!sysY.TryGetValue(c.MeasureIndex, out var sy)) continue;
             using (gc.Source(c.SourcePosition))
+            {
                 gc.DrawText(c.ChordText, c.X, sy + c.Y, size, "sans-serif",
                     FontStyle.Bold, TextAnchor.Middle, Color.Black);
+                if (c.AboveLine != null)
+                    gc.DrawText(c.AboveLine, c.X, sy + c.Y - stackLineHeight, size, "sans-serif",
+                        FontStyle.Bold, TextAnchor.Middle, Color.Black);
+            }
         }
     }
 
