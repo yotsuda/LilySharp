@@ -30,12 +30,22 @@ namespace LilySharp.Core.MusicXmlImport;
 /// </summary>
 internal static class LysWriter
 {
-    public static string Write(ImportDocument doc, ImportReport report)
+    public static string Write(ImportDocument doc, ImportReport report, bool relativeOctave = false)
     {
         var sb = new StringBuilder();
 
+        // Volta output is section-major; relative octave across sections is not modeled,
+        // so it stays absolute there. Relative applies only to the flat single-section
+        // layout, and the header must match the octaves actually emitted.
+        var layout = TryFactorVoltas(doc.Parts.Count > 0 ? doc.Parts[0].Measures : new List<ImportMeasure>());
+        bool useRelative = relativeOctave && layout == null;
+        if (relativeOctave && layout != null)
+            report.Warn("relative-octave output is not applied under a repeat with endings; used absolute.");
+
         // ---- header ----
-        sb.Append("octave absolute\n");
+        // Absolute is the unambiguous default; relative octave (Lily#'s file default)
+        // gives more compact, hand-written-style output when requested.
+        sb.Append(useRelative ? "octave relative\n" : "octave absolute\n");
         if (!string.IsNullOrWhiteSpace(doc.Title))
             sb.Append("title \"").Append(EscapeString(doc.Title!)).Append("\"\n");
         if (!string.IsNullOrWhiteSpace(doc.Composer))
@@ -63,11 +73,10 @@ internal static class LysWriter
         // ---- sections + structure ----
         // First/second endings factor into named sections + a volta structure;
         // anything else is one flat section played once.
-        var layout = TryFactorVoltas(doc.Parts.Count > 0 ? doc.Parts[0].Measures : new List<ImportMeasure>());
         if (layout != null)
             WriteVoltaSections(sb, doc, layout, report);
         else
-            WriteFlatSection(sb, doc, report);
+            WriteFlatSection(sb, doc, report, useRelative);
 
         // ---- score: one staff per part; split staves regroup into a grand staff ----
         sb.Append("score \"imported\" {\n");
@@ -94,13 +103,13 @@ internal static class LysWriter
 
     // The single-section flat layout (no repeat endings): every part's full music in
     // section A, with inline repeat barlines, played once by structure { A }.
-    private static void WriteFlatSection(StringBuilder sb, ImportDocument doc, ImportReport report)
+    private static void WriteFlatSection(StringBuilder sb, ImportDocument doc, ImportReport report, bool relative)
     {
         sb.Append("section A {\n");
         foreach (var part in doc.Parts)
         {
             sb.Append("  ").Append(part.SafeName).Append(" {\n");
-            sb.Append("    ").Append(WriteMusic(part, report)).Append('\n');
+            sb.Append("    ").Append(WriteMusic(part, report, relative)).Append('\n');
             sb.Append("  }\n");
         }
         // Section-level lyrics sing the first part carrying them.
@@ -221,27 +230,30 @@ internal static class LysWriter
         return sb.ToString().TrimEnd();
     }
 
-    private static string WriteMusic(ImportPart part, ImportReport report)
+    private static string WriteMusic(ImportPart part, ImportReport report, bool relative)
     {
         var voices = part.Measures
             .SelectMany(m => m.VoiceItems.Keys)
             .Distinct().OrderBy(n => n).ToList();
         if (voices.Count <= 1)
-            return WriteVoiceStream(part, voices.Count == 1 ? voices[0] : 1, report);
+            return WriteVoiceStream(part, voices.Count == 1 ? voices[0] : 1, report, Rel(relative));
 
         // Several voices on one staff → parallel voice { } blocks. Ascending voice
-        // order puts voice 1 (the upper part, stems up) first.
+        // order puts voice 1 (the upper part, stems up) first. Each voice is its own
+        // relative-octave stream.
         return string.Join(" ",
-            voices.Select(v => "voice { " + WriteVoiceStream(part, v, report) + " }"));
+            voices.Select(v => "voice { " + WriteVoiceStream(part, v, report, Rel(relative)) + " }"));
     }
 
+    private static RelativeOctave? Rel(bool relative) => relative ? new RelativeOctave() : null;
+
     // One voice's measures assembled with the shared barlines between them.
-    private static string WriteVoiceStream(ImportPart part, int voice, ImportReport report)
+    private static string WriteVoiceStream(ImportPart part, int voice, ImportReport report, RelativeOctave? rel)
     {
         var measures = part.Measures;
         var cells = measures
             .Select(m => WriteMeasureItems(
-                m.VoiceItems.TryGetValue(voice, out var items) ? items : EmptyItems, report))
+                m.VoiceItems.TryGetValue(voice, out var items) ? items : EmptyItems, report, rel))
             .ToList();
 
         var sb = new StringBuilder();
@@ -261,7 +273,7 @@ internal static class LysWriter
         return sb.ToString();
     }
 
-    private static string WriteMeasureItems(List<ImportItem> items, ImportReport report)
+    private static string WriteMeasureItems(List<ImportItem> items, ImportReport report, RelativeOctave? rel = null)
     {
         var tokens = new List<string>();
         string? pendingChord = null;
@@ -301,9 +313,14 @@ internal static class LysWriter
                 j++;
             }
 
+            // Grace notes precede the main note, so (in relative mode) they thread the
+            // reference first — build the grace block before the main note's body.
+            string? graceToken = note.LeadingGrace.Count > 0 ? GraceBlock(note.LeadingGrace, rel) : null;
+
             string body = members.Count == 1
-                ? Pitch(note)
-                : "<" + string.Join(" ", members.Select(Pitch)) + ">";
+                ? (rel != null ? rel.Note(note.Step, note.Alter, note.Octave) : Pitch(note))
+                : (rel != null ? rel.Chord(members)
+                               : "<" + string.Join(" ", members.Select(Pitch)) + ">");
             string token = body + Value(note.NoteValue, note.Dots);
             if (pendingChord != null)
             {
@@ -328,8 +345,8 @@ internal static class LysWriter
             if (note.TupletStart is { } tr)
                 tokens.Add($"tuplet {tr.Actual}/{tr.Normal} {{");
             // Leading grace notes hang before the main note (inside any tuplet wrap).
-            if (note.LeadingGrace.Count > 0)
-                tokens.Add(GraceBlock(note.LeadingGrace));
+            if (graceToken != null)
+                tokens.Add(graceToken);
             tokens.Add(token);
             if (note.TupletStop)
                 tokens.Add("}");
@@ -362,12 +379,59 @@ internal static class LysWriter
 
     /// <summary>A leading grace block: <c>acciaccatura { … }</c> (slashed) or
     /// <c>grace { … }</c>, from the notes written before the main note.</summary>
-    private static string GraceBlock(List<ImportGraceNote> grace)
+    private static string GraceBlock(List<ImportGraceNote> grace, RelativeOctave? rel)
     {
         string keyword = grace[0].Slash ? "acciaccatura" : "grace";
-        var notes = string.Join(" ",
-            grace.Select(g => PitchToken(g.Step, g.Alter, g.Octave) + Value(g.NoteValue, g.Dots)));
+        var notes = string.Join(" ", grace.Select(g =>
+            (rel != null ? rel.Note(g.Step, g.Alter, g.Octave) : PitchToken(g.Step, g.Alter, g.Octave))
+            + Value(g.NoteValue, g.Dots)));
         return keyword + " { " + notes + " }";
+    }
+
+    /// <summary>Relative-octave spelling: each note sits in the octave nearest the
+    /// previous note (interval ≤ a fourth); <c>'</c>/<c>,</c> shift by octaves. The
+    /// stream starts nearest C4. Used only in relative-output mode; each independent
+    /// music stream gets a fresh instance.</summary>
+    private sealed class RelativeOctave
+    {
+        private int _ref = 4 * 7; // C4 as a diatonic number (octave 4, letter C = 0)
+
+        /// <summary>Spell one note and advance the reference to it.</summary>
+        public string Note(int step, int alter, int octave)
+        {
+            string token = Spell(_ref, step, alter, octave);
+            _ref = octave * 7 + Mod7(step);
+            return token;
+        }
+
+        /// <summary>Spell a chord: the first member is relative to the running
+        /// reference, each later member relative to the PREVIOUS member; the reference
+        /// then advances to the FIRST member (the note after a chord is reckoned from
+        /// it). This matches how the collector reads relative chords.</summary>
+        public string Chord(IReadOnlyList<ImportNote> members)
+        {
+            int first = members[0].Octave * 7 + Mod7(members[0].Step);
+            int prev = _ref;
+            var parts = new List<string>();
+            foreach (var m in members)
+            {
+                parts.Add(Spell(prev, m.Step, m.Alter, m.Octave));
+                prev = m.Octave * 7 + Mod7(m.Step);
+            }
+            _ref = first;
+            return "<" + string.Join(" ", parts) + ">";
+        }
+
+        private static string Spell(int refDiatonic, int step, int alter, int octave)
+        {
+            int letter = Mod7(step);
+            int def = (int)System.Math.Round((refDiatonic - letter) / 7.0, System.MidpointRounding.AwayFromZero);
+            int marks = octave - def;
+            string oct = marks > 0 ? new string('\'', marks) : marks < 0 ? new string(',', -marks) : "";
+            return "cdefgab"[letter] + AlterSuffix(alter) + oct;
+        }
+
+        private static int Mod7(int step) => ((step % 7) + 7) % 7;
     }
 
     private static string Value(int noteValue, int dots)

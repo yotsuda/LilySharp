@@ -27,20 +27,21 @@ namespace LilySharp.Core.MusicXmlImport;
 public sealed class MusicXmlImporter
 {
     /// <summary>Imports a MusicXML document string, returning the Lily# source and
-    /// a report of everything dropped or approximated.</summary>
-    public (string Lys, ImportReport Report) Import(string xmlText)
+    /// a report of everything dropped or approximated. <paramref name="relativeOctave"/>
+    /// asks for compact relative-octave output (default: explicit absolute).</summary>
+    public (string Lys, ImportReport Report) Import(string xmlText, bool relativeOctave = false)
     {
         var report = new ImportReport();
         var doc = MusicXmlReader.Read(xmlText, report);
-        return (LysWriter.Write(doc, report), report);
+        return (LysWriter.Write(doc, report, relativeOctave), report);
     }
 
     /// <summary>Imports raw bytes — an <c>.mxl</c> zip or a plain XML file —
     /// returning the Lily# source and its import report.</summary>
-    public (string Lys, ImportReport Report) ImportBytes(byte[] bytes)
+    public (string Lys, ImportReport Report) ImportBytes(byte[] bytes, bool relativeOctave = false)
     {
         var report = new ImportReport();
         var doc = MusicXmlReader.ReadBytes(bytes, report);
-        return (LysWriter.Write(doc, report), report);
+        return (LysWriter.Write(doc, report, relativeOctave), report);
     }
 }

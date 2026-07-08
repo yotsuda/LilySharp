@@ -309,6 +309,25 @@ public class MusicXmlRoundTripTests
         Assert.Equal("N72:1/4 R:1/2 N77:1/4", Signature(importedTree));
     }
 
+    [Theory]
+    [InlineData("c'4 d' e' f' | g'2 a'4 b' | c''1 |")]                 // stepwise + leaps
+    [InlineData("c'4 e' g' c'' | c''4 g' e' c' | g,2 c1 |")]           // wide leaps, low notes
+    [InlineData("c'4 <c' e' g'>2 g'4 | <e' g' c''>1 |")]              // chords
+    [InlineData("acciaccatura { b'16 } c''4 b' a' g' | c'1 |")]        // grace notes
+    public void RelativeOctaveOutput_PreservesPitches(string music)
+    {
+        // Relative-octave output must render the SAME pitches as the absolute source;
+        // the round-trip signature (MIDI + duration) is the proof.
+        var tree = SyntaxTree.Parse($"octave absolute\ntime 4/4\nkey c major\n{music}");
+        var xml = new MusicXmlExporter().Export(tree).ToXml().ToString();
+
+        var (lys, _) = new MusicXmlImporter().Import(xml, relativeOctave: true);
+        var imported = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(imported), $"{lys}\n---\n{Diagnostics(imported)}");
+        Assert.Contains("octave relative", lys);
+        Assert.Equal(Signature(tree), Signature(imported));
+    }
+
     [Fact]
     public void SimpleRepeat_RoundTrips()
     {

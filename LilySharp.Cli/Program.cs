@@ -730,16 +730,20 @@ static int RunImport(string[] args)
 
             Options:
               -o, --output <file>    Output file path (default: input with .lys)
+              -r, --relative         Emit relative-octave notes (default: absolute)
               -h, --help             Show this help
 
             Examples:
               lysc import song.xml
               lysc import song.mxl song.lys
+              lysc import --relative song.xml
             """);
         return 0;
     }
 
-    var (inputPath, outputPath, error) = ParseSimpleOptions(args, ".lys");
+    bool relative = args.Contains("-r") || args.Contains("--relative");
+    var positional = args.Where(a => a != "-r" && a != "--relative").ToArray();
+    var (inputPath, outputPath, error) = ParseSimpleOptions(positional, ".lys");
     if (error != null)
     {
         Console.Error.WriteLine($"Error: {error}");
@@ -750,7 +754,7 @@ static int RunImport(string[] args)
     try
     {
         var bytes = File.ReadAllBytes(inputPath!);
-        var (lys, report) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().ImportBytes(bytes);
+        var (lys, report) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().ImportBytes(bytes, relative);
         File.WriteAllText(outputPath!, lys);
 
         Console.WriteLine($"Created: {outputPath}");
