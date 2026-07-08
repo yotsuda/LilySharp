@@ -568,7 +568,11 @@ public sealed class MusicXmlExporter
                     while (ni < notes.Count)
                     {
                         var n = notes[ni++];
-                        if (!n.IsRest && !n.IsChord && !n.IsGrace && !n.TieStop)
+                        // RawElement pseudo-entries (<harmony>, <figured-bass>) sit in
+                        // the note stream but are not sung — skip them, else a chord
+                        // symbol before the first note steals its syllable (and, being
+                        // serialized verbatim, drops it).
+                        if (!n.IsRest && !n.IsChord && !n.IsGrace && !n.TieStop && n.RawElement == null)
                             return n;
                     }
                     mi++;

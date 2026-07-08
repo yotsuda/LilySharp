@@ -55,6 +55,7 @@ static int Run(string[] args)
         "png" => RunPng(args.Skip(1).ToArray()),
         "midi" => RunMidi(args.Skip(1).ToArray()),
         "xml" => RunXml(args.Skip(1).ToArray()),
+        "import" => RunImport(args.Skip(1).ToArray()),
         "vsqx" => RunVsqx(args.Skip(1).ToArray()),
         "harmonize" => RunHarmonize(args.Skip(1).ToArray()),
         "check" => RunCheck(args.Skip(1).ToArray()),
@@ -77,6 +78,7 @@ static void ShowHelp()
           png     Convert to PNG (raster image)
           midi    Convert to MIDI (audio)
           xml     Convert to MusicXML
+          import  Import MusicXML (.xml/.musicxml/.mxl) to a Lily# source file
           vsqx    Convert to VOCALOID sequence (vocal part + lyrics)
           harmonize  Suggest a diatonic chord track for the melody (prints a chords part)
           check   Check syntax without output
@@ -700,6 +702,64 @@ static int ExecuteXml(string inputPath, string outputPath)
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine($"  Parts: {parts}");
         Console.WriteLine($"  Measures: {measures}");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        return 1;
+    }
+}
+
+// ============ Import Command ============
+
+static int RunImport(string[] args)
+{
+    if (args.Contains("-h") || args.Contains("--help"))
+    {
+        Console.WriteLine("""
+            Import MusicXML into a Lily# source file
+
+            Usage: lysc import [options] <input.(xml|musicxml|mxl)> [output.lys]
+
+            Reads a MusicXML score (or an .mxl zip) and writes an idiomatic Lily#
+            source file that renders the same music. Import is an opinionated,
+            non-unique mapping: the result is a faithful STARTING POINT to edit, not
+            a byte round-trip. Anything not representable is reported, never emitted
+            wrong.
+
+            Options:
+              -o, --output <file>    Output file path (default: input with .lys)
+              -h, --help             Show this help
+
+            Examples:
+              lysc import song.xml
+              lysc import song.mxl song.lys
+            """);
+        return 0;
+    }
+
+    var (inputPath, outputPath, error) = ParseSimpleOptions(args, ".lys");
+    if (error != null)
+    {
+        Console.Error.WriteLine($"Error: {error}");
+        Console.Error.WriteLine("Run 'lysc import --help' for usage.");
+        return 1;
+    }
+
+    try
+    {
+        var bytes = File.ReadAllBytes(inputPath!);
+        var (lys, report) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().ImportBytes(bytes);
+        File.WriteAllText(outputPath!, lys);
+
+        Console.WriteLine($"Created: {outputPath}");
+        if (report.HasWarnings)
+        {
+            Console.WriteLine($"  Imported with {report.Warnings.Count} approximation(s):");
+            foreach (var w in report.Warnings)
+                Console.WriteLine($"    - {w}");
+        }
         return 0;
     }
     catch (Exception ex)
