@@ -265,27 +265,108 @@ public sealed class MusicXmlExporter
     /// section, a repeat block brackets its span with repeat barlines. Nav marks,
     /// custom text and volta ENDING brackets are not yet mapped to MusicXML (the
     /// alternative's music is still emitted so nothing is lost).</summary>
+    // Segno / coda jump TARGETS wait here for the next section, whose first
+    // measure they open (they mark where a jump lands).
+    private readonly List<System.Xml.Linq.XElement> _pendingTargetDirections = new();
+
     private void WalkStructure(SyntaxNode container, Dictionary<string, List<SectionDeclarationSyntax>> byName)
     {
+        _pendingTargetDirections.Clear();
         for (int i = 0; i < container.SlotCount; i++)
         {
             switch (container.GetChild(i))
             {
                 case SectionReferenceSyntax r:
-                    EmitSectionByName(byName, r.SectionName);
+                    EmitWithPendingTargets(() => EmitSectionByName(byName, r.SectionName));
                     break;
                 case StructureRepeatBlockSyntax rb:
-                    EmitRepeatBlock(rb, byName);
+                    EmitWithPendingTargets(() => EmitRepeatBlock(rb, byName));
                     break;
                 case StructureAlternativeSyntax alt:
-                    EmitSectionByName(byName, alt.SectionName.Text);
+                    EmitWithPendingTargets(() => EmitSectionByName(byName, alt.SectionName.Text));
                     break;
                 case { Kind: SyntaxKind.SilentSectionReference } silent
                         when silent.GetChild(1) is SyntaxTokenNode nm:
-                    EmitSectionByName(byName, nm.Text);
+                    EmitWithPendingTargets(() => EmitSectionByName(byName, nm.Text));
+                    break;
+                case NavigationMarkSyntax nav:
+                    ApplyNavMark(nav.MarkType);
                     break;
             }
         }
+    }
+
+    /// <summary>Runs <paramref name="emit"/>, then opens each pending jump target
+    /// (segno / coda) on the FIRST measure it produced.</summary>
+    private void EmitWithPendingTargets(System.Action emit)
+    {
+        if (_pendingTargetDirections.Count == 0)
+        {
+            emit();
+            return;
+        }
+        var startIdx = _document.Parts.ToDictionary(p => p, p => p.Measures.Count);
+        emit();
+        foreach (var p in _document.Parts)
+        {
+            int si = startIdx.GetValueOrDefault(p);
+            if (p.Measures.Count <= si)
+                continue;
+            for (int k = _pendingTargetDirections.Count - 1; k >= 0; k--)
+                p.Measures[si].Notes.Insert(0,
+                    new MusicXmlNote { RawElement = new System.Xml.Linq.XElement(_pendingTargetDirections[k]) });
+        }
+        _pendingTargetDirections.Clear();
+    }
+
+    /// <summary>Places a structure navigation mark. Targets (segno / coda) are held
+    /// for the next section's start; jump-from instructions (fine, to coda, D.C.,
+    /// D.S. …) attach to the end of the section just played.</summary>
+    private void ApplyNavMark(NavigationMarkType type)
+    {
+        var (dir, isTarget) = BuildNavDirection(type);
+        if (dir == null)
+            return;
+        if (isTarget)
+        {
+            _pendingTargetDirections.Add(dir);
+        }
+        else
+        {
+            foreach (var p in _document.Parts)
+                if (p.Measures.Count > 0)
+                    p.Measures[^1].Notes.Add(
+                        new MusicXmlNote { RawElement = new System.Xml.Linq.XElement(dir) });
+        }
+    }
+
+    /// <summary>The MusicXML &lt;direction&gt; for a navigation mark, and whether it
+    /// is a jump TARGET (segno / coda) rather than a jump-from instruction. Signs use
+    /// &lt;segno&gt;/&lt;coda&gt;; the rest are &lt;words&gt;, each with the matching
+    /// &lt;sound&gt; playback attribute so importers can follow the jumps.</summary>
+    private static (System.Xml.Linq.XElement? dir, bool isTarget) BuildNavDirection(NavigationMarkType type)
+    {
+        static System.Xml.Linq.XElement Wrap(System.Xml.Linq.XElement inner, System.Xml.Linq.XElement sound)
+            => new("direction", new System.Xml.Linq.XAttribute("placement", "above"),
+                new System.Xml.Linq.XElement("direction-type", inner), sound);
+        static System.Xml.Linq.XElement Words(string t) => new("words", t);
+        static System.Xml.Linq.XElement Sound(string a, string v)
+            => new("sound", new System.Xml.Linq.XAttribute(a, v));
+
+        return type switch
+        {
+            NavigationMarkType.Segno => (Wrap(new("segno"), Sound("segno", "segno")), true),
+            NavigationMarkType.Coda => (Wrap(new("coda"), Sound("coda", "coda")), true),
+            NavigationMarkType.Fine => (Wrap(Words("Fine"), Sound("fine", "yes")), false),
+            NavigationMarkType.ToCoda => (Wrap(Words("To Coda"), Sound("tocoda", "coda")), false),
+            NavigationMarkType.DaCapo => (Wrap(Words("D.C."), Sound("dacapo", "yes")), false),
+            NavigationMarkType.DaCapoAlFine => (Wrap(Words("D.C. al Fine"), Sound("dacapo", "yes")), false),
+            NavigationMarkType.DaCapoAlCoda => (Wrap(Words("D.C. al Coda"), Sound("dacapo", "yes")), false),
+            NavigationMarkType.DalSegno => (Wrap(Words("D.S."), Sound("dalsegno", "segno")), false),
+            NavigationMarkType.DalSegnoAlFine => (Wrap(Words("D.S. al Fine"), Sound("dalsegno", "segno")), false),
+            NavigationMarkType.DalSegnoAlCoda => (Wrap(Words("D.S. al Coda"), Sound("dalsegno", "segno")), false),
+            _ => (null, false),
+        };
     }
 
     /// <summary>A <c>|: … :|</c> repeat block. A <c>:|:</c> divider splits it into

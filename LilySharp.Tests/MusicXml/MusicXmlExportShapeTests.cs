@@ -190,6 +190,33 @@ public class MusicXmlExportShapeTests
     }
 
     [Fact]
+    public void NavMarks_EmitSignsAtTargetsAndJumpWordsAtEnds()
+    {
+        var doc = Export("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { c'4 d' e' f' | } }
+            section B { m { g'4 a' b' c'' | } }
+            section C { m { e'4 f' g' a' | } }
+            structure { A segno B ds al fine C fine }
+            score x { staff m }
+            """);
+        var measures = doc.Descendants("measure").ToList();
+        Assert.Equal(3, measures.Count);
+
+        // The segno SIGN opens its target section B (measure 2), not the piece.
+        Assert.Single(doc.Descendants("segno"));
+        Assert.Single(measures[1].Descendants("segno"));
+        // Jump-from words sit at the END of the section just played.
+        Assert.Contains(measures[1].Descendants("words"), w => w.Value == "D.S. al Fine"); // end of B
+        Assert.Contains(measures[2].Descendants("words"), w => w.Value == "Fine");         // end of C
+        // …with the matching <sound> playback attributes.
+        Assert.Contains(doc.Descendants("sound"), s => s.Attribute("dalsegno")?.Value == "segno");
+        Assert.Contains(doc.Descendants("sound"), s => s.Attribute("fine")?.Value == "yes");
+    }
+
+    [Fact]
     public void PercentRepeat_ExportsMeasureRepeatSign()
     {
         // A one-measure percent body exports the SIGN: repeated measures keep
