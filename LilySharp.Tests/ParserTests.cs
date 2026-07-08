@@ -391,26 +391,6 @@ key g major
     }
 
     [Fact]
-    public void ForcedAccidentalReflex_GluedBang_WarnsNotBarline()
-    {
-        // 'c'!' glued to the note is a LilyPond forced accidental; warn (not error)
-        // and point to @editorial. It must not silently drop a dashed barline.
-        var tree = SyntaxTree.Parse("c'! d'");
-        Assert.Contains(tree.Diagnostics,
-            d => d.Code == DiagnosticCodes.LilypondAccidentalReflex);
-        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
-    }
-
-    [Fact]
-    public void SpacedBang_StaysDashedBarline_NoReflex()
-    {
-        // A spaced '!' is still a dashed barline — no accidental-reflex warning.
-        var tree = SyntaxTree.Parse("c'4 ! d'4");
-        Assert.DoesNotContain(tree.Diagnostics,
-            d => d.Code == DiagnosticCodes.LilypondAccidentalReflex);
-    }
-
-    [Fact]
     public void DoublePlacementSuffix_GivesClearError()
     {
         // @staccato.up.down — a second placement is a mistake; the message must

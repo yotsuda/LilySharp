@@ -1394,21 +1394,6 @@ private GreenNode?[] ParseArticulations()
                     break;
                 }
             }
-            else if (Check(SyntaxKind.DashedBar)
-                     && Current.LeadingTriviaWidth == 0
-                     && _position > 0 && _tokens[_position - 1].TrailingTriviaWidth == 0)
-            {
-                // 'c'!' — a LilyPond forced accidental glued to the note. Lily# reads a
-                // bare '!' as a dashed barline (\bar "!"), so a glued one silently did
-                // nothing. Point at the annotation form and consume it so it does not
-                // drop a stray barline. A SPACED '!' stays a dashed barline (falls to
-                // the break below, since it has separating trivia).
-                var span = new TextSpan(_textPosition, Math.Max(1, Current.Width));
-                _diagnostics.Warning(span, DiagnosticCodes.LilypondAccidentalReflex,
-                    "'!' after a note is a LilyPond forced accidental; Lily# uses @editorial "
-                    + "(or @courtesy for a cautionary accidental). A spaced '!' is a dashed barline.");
-                Advance();
-            }
             else
             {
                 break;

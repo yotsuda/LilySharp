@@ -191,11 +191,6 @@ public static class DiagnosticCodes
     /// silently drops. Points to the real grand-staff form.</summary>
     public const string ClefNameAsStaff = "LYS0011";
 
-    /// <summary>Parser warning: a LilyPond forced accidental <c>!</c> was written
-    /// glued to a note (e.g. <c>c'!</c>), which Lily# otherwise reads as a dashed
-    /// barline. Points to the <c>@editorial</c> / <c>@courtesy</c> annotations.</summary>
-    public const string LilypondAccidentalReflex = "LYS0012";
-
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>
