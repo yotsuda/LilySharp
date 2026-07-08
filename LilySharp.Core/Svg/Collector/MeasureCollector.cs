@@ -821,7 +821,7 @@ public sealed class MeasureCollector
                 builder[i] = new Measure(
                     m.Items, starts[i], ends[i], m.SectionLabel,
                     m.SourceStart, m.SourceEnd,
-                    hasBreakAfter: false,
+                    hasBreakAfter: m.HasBreakAfter,
                     lineBreakPermission: m.LineBreakPermission,
                     breakPenalty: m.BreakPenalty,
                     pageBreakPermission: m.PageBreakPermission,
@@ -1221,7 +1221,7 @@ public sealed class MeasureCollector
                     measure.Items.SetItem(member.ItemIndex, updated),
                     measure.StartBarline, measure.EndBarline, measure.SectionLabel,
                     measure.SourceStart, measure.SourceEnd,
-                    hasBreakAfter: false,
+                    hasBreakAfter: measure.HasBreakAfter,
                     lineBreakPermission: measure.LineBreakPermission,
                     breakPenalty: measure.BreakPenalty,
                     pageBreakPermission: measure.PageBreakPermission,
@@ -1965,11 +1965,25 @@ public sealed class MeasureCollector
         // Process all notes inside the tuplet body using Items property
         // (not DescendantNodes which includes all nested nodes)
         // Use AddItemWithoutDuration to avoid incorrect auto-completion
-        foreach (var item in tuplet.Body.Items)
+        var tupletItems = tuplet.Body.Items.ToList();
+        for (int j = 0; j < tupletItems.Count; j++)
         {
+            var item = tupletItems[j];
+
+            // One-node lookahead for tie/slur/beam markers that annotate the
+            // preceding note — the same rule ProcessMusicNodeSequence applies to
+            // the top-level stream. Without this, a tie/slur/beam written inside
+            // a tuplet body was silently dropped.
+            var next = j + 1 < tupletItems.Count ? tupletItems[j + 1] : null;
+            bool hasTieAfter = next is TieSyntax;
+            bool hasSlurStartAfter = next is SlurSyntax { IsOpen: true };
+            bool hasSlurEndAfter = next is SlurSyntax { IsOpen: false };
+            bool hasBeamStartAfter = next is BeamMarkerSyntax { IsStart: true };
+            bool hasBeamEndAfter = next is BeamMarkerSyntax { IsStart: false };
+
             if (item is NoteSyntax note)
             {
-                var noteItem = CreateNoteItem(note, false, false, false);
+                var noteItem = CreateNoteItem(note, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
                 writtenDuration += noteItem.Duration;
                 builder.AddItemWithoutDuration(noteItem with { TimeScale = scale });
                 lastSourcePosition = note.Position;
@@ -1983,7 +1997,8 @@ public sealed class MeasureCollector
             }
             else if (item is ChordSyntax chord)
             {
-                var chordItem = CreateChordItem(chord);
+                var chordItem = CreateChordItem(chord, hasBeamStartAfter, hasBeamEndAfter,
+                    hasArpeggio: false, isCue: false, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter);
                 writtenDuration += chordItem.Duration;
                 builder.AddItemWithoutDuration(chordItem with { TimeScale = scale });
                 lastSourcePosition = chord.Position;
@@ -2524,7 +2539,7 @@ public sealed class MeasureCollector
         else if (_root != null)
         {
             var musicNodes = _root.DescendantNodes()
-                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && !IsInsideInlineVolta(n) && !IsInsideParallel(n) && n is NoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or InlineVoltaSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax);
+                .Where(n => !IsInsideTuplet(n) && !IsInsideRepeat(n) && !IsInsideOnce(n) && !IsInsideGrace(n) && !IsInsideInlineVolta(n) && !IsInsideParallel(n) && n is NoteSyntax or DrumNoteSyntax or RestSyntax or ChordSyntax or BarlineSyntax or BreakSyntax or TieSyntax or SlurSyntax or BeamMarkerSyntax or InlineVoltaSyntax or GraceExpressionSyntax or TupletExpressionSyntax or RepeatExpressionSyntax or ParallelExpressionSyntax or OverrideDeclarationSyntax or RevertDeclarationSyntax or OnceModifierSyntax or MusicMarkSyntax or ClefDeclarationSyntax or OctaveDirectiveSyntax or KeySignatureSyntax or TimeSignatureSyntax or TempoDeclarationSyntax or PartialDeclarationSyntax);
             ProcessNodes(musicNodes);
         }
 
@@ -2965,7 +2980,7 @@ public sealed class MeasureCollector
             // bracket ([1. ]/[2.]) is lost while its notes leak out flat. A
             // << \\ >> span likewise passes through as one node.
             if (IsInsideTuplet(node) || IsInsideRepeat(node) || IsInsideGrace(node)
-                || IsInsideInlineVolta(node) || IsInsideParallel(node))
+                || IsInsideInlineVolta(node) || IsInsideParallel(node) || IsInsideOnce(node))
                 continue;
 
             switch (node)
@@ -2985,6 +3000,12 @@ public sealed class MeasureCollector
                 case ParallelExpressionSyntax:
                 case InlineVoltaSyntax:
                 case MusicMarkSyntax:
+                // Grob overrides written inside a section { part { … } } — the
+                // section-major walk previously omitted these, so an \override /
+                // \revert / \once here never reached CollectOverride.
+                case OverrideDeclarationSyntax:
+                case RevertDeclarationSyntax:
+                case OnceModifierSyntax:
                 case ClefDeclarationSyntax:
                 case OctaveDirectiveSyntax:
                 case KeySignatureSyntax:

@@ -43,6 +43,29 @@ public class NestedTupletTests
         Assert.Equal(1, item.NestingDepth);
     }
 
+    [Fact]
+    public void TupletBody_TieAndSlurMarkersAreDetected()
+    {
+        // Regression: ties/slurs/beams written inside a tuplet body were dropped
+        // because ProcessTuplet created notes with no one-node lookahead.
+        var source = @"
+time 4/4
+part m { clef treble }
+section A { m { tuplet 3/2 { c'8( d'~ e') } r4 c'2 | } }
+structure { A }
+score x { staff m }
+";
+        var tree = SyntaxTree.Parse(source);
+        var spec = RenderSpecParser.FindFirst(tree);
+        Assert.NotNull(spec);
+        var score = new MeasureCollector().CollectMultiStaff(tree, spec!);
+        var notes = score.StaffGroups[0].Staves[0].Voices[0]
+            .Measures[0].Items.OfType<NoteItem>().ToList();
+        Assert.True(notes[0].HasSlurStart);  // c'(
+        Assert.True(notes[1].HasTieStart);   // d'~
+        Assert.True(notes[2].HasSlurEnd);    // e')
+    }
+
     // --- Parser: nested tuplet syntax ---
 
     [Fact]
