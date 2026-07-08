@@ -17,7 +17,9 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
+using LilySharp.Core.Editing;
 using LilySharp.Core.Music;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Collector;
@@ -44,6 +46,48 @@ public static class ChordHarmonizer
     /// <summary>One section's generated chord track: the melody part-block it was
     /// read from (a chords part is added right after it) and the chords block text.</summary>
     public readonly record struct SectionChordTrack(PartBlockSyntax MelodyBlock, string ChordsBlock);
+
+    /// <summary>
+    /// Adds a harmonized chords part to <paramref name="source"/> and returns the new
+    /// document text (plus an optional note for the user), or null when there is no
+    /// section melody to harmonize. A chords part lives inside a section, so a
+    /// part-major document is converted to section-major first (that reshapes the
+    /// whole file — hence returning full text, not an incremental edit). Powers the
+    /// "Lily#: Add Chord Track" editor command.
+    /// </summary>
+    public static (string Text, string? Info)? AddChordTracks(string source)
+    {
+        string text = source;
+        string? info = null;
+        if (PartSectionLayoutConverter.Detect(SyntaxTree.Parse(text).GetRoot()) == LayoutForm.PartMajor)
+        {
+            var converted = PartSectionLayoutConverter.Convert(text);
+            if (converted == null)
+                return null;
+            text = converted;
+            info = "Converted to the section-major layout so the chords could attach.";
+        }
+
+        var tracks = HarmonizeBySections(SyntaxTree.Parse(text));
+        if (tracks.Count == 0)
+            return null;
+
+        // Splice a chords part after each section's melody part-block (deepest offset
+        // first, so earlier insertions do not shift later positions); indent it to sit
+        // as a sibling inside the section, on its own lines.
+        var sb = new StringBuilder(text);
+        foreach (var track in tracks.OrderByDescending(t => t.MelodyBlock.Span.End))
+            sb.Insert(track.MelodyBlock.Span.End, "\n  " + track.ChordsBlock.Replace("\n", "\n  ") + "\n");
+        text = sb.ToString();
+
+        // Attach it to the melody staff once: `staff X` -> `staff X with chords harmony`.
+        var staff = Regex.Match(text,
+            @"\bstaff\s+" + Regex.Escape(tracks[0].MelodyBlock.PartName.Text) + @"\b(?!\s+with\b)");
+        if (staff.Success)
+            text = text.Insert(staff.Index + staff.Length, " with chords harmony");
+
+        return (text, info);
+    }
 
     /// <summary>
     /// Harmonizes each section's melody INDEPENDENTLY — without consulting the

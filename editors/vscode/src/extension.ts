@@ -702,6 +702,7 @@ interface ChordTrackEdit {
 interface AddChordTrackResponse {
     Edits: ChordTrackEdit[] | null;
     Error: string | null;
+    Info: string | null;
 }
 
 /**
@@ -733,8 +734,9 @@ async function addChordTrack() {
                 edit.replace(doc.uri, new vscode.Range(pos, end), e.NewText);
             }
             await vscode.workspace.applyEdit(edit);
+            const note = response.Info ? ` ${response.Info}` : '';
             vscode.window.showInformationMessage(
-                'Lily#: added a diatonic chord track — a starting point, edit as needed.');
+                `Lily#: added a diatonic chord track — a starting point, edit as needed.${note}`);
         } else {
             vscode.window.showErrorMessage(`Lily#: ${response.Error ?? 'could not add a chord track.'}`);
         }

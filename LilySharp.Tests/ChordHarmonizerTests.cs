@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Linq;
+using LilySharp.Core.Editing;
 using LilySharp.Core.Harmony;
 using LilySharp.Core.Syntax;
 using Xunit;
@@ -95,6 +96,56 @@ public class ChordHarmonizerTests
         Assert.Contains("c1", tracks[0].ChordsBlock);      // section A outlines C
         Assert.Contains("g1:7", tracks[1].ChordsBlock);    // section B outlines G -> V7
         Assert.Equal("melody", tracks[0].MelodyBlock.PartName.Text);
+    }
+
+    [Fact]
+    public void PartMajor_ConvertsToSectionMajorThenHarmonizesEachSection()
+    {
+        // The default (newScore) template is part-major, but a chords part needs the
+        // section-major layout; the editor command converts first, then harmonizes
+        // each section. This checks that pipeline's core.
+        var partMajor = """
+            octave absolute
+            time 4/4
+            key c major
+            part melody { clef treble
+              section A { c'4 e' g' c'' | }
+              section B { g'4 b' d'' g'' | }
+            }
+            structure { A B }
+            score x { staff melody }
+            """;
+        Assert.Equal(LayoutForm.PartMajor,
+            PartSectionLayoutConverter.Detect(SyntaxTree.Parse(partMajor).GetRoot()));
+
+        var result = ChordHarmonizer.AddChordTracks(partMajor);
+        Assert.NotNull(result);
+        Assert.NotNull(result!.Value.Info);   // the user is told the layout was converted
+
+        // The generated document parses clean and carries a chords part per section
+        // wired into the score.
+        var reparsed = SyntaxTree.Parse(result.Value.Text);
+        Assert.False(reparsed.HasErrors, string.Join("\n", reparsed.Diagnostics));
+        Assert.Contains("with chords harmony", result.Value.Text);
+        Assert.Contains("c1", result.Value.Text);      // section A -> C
+        Assert.Contains("g1:7", result.Value.Text);    // section B -> G7
+    }
+
+    [Fact]
+    public void AddChordTracks_SectionMajor_DoesNotConvert()
+    {
+        var result = ChordHarmonizer.AddChordTracks("""
+            octave absolute
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section A { melody { c'4 e' g' c'' | } }
+            structure { A }
+            score x { staff melody }
+            """);
+        Assert.NotNull(result);
+        Assert.Null(result!.Value.Info);   // already section-major: no conversion note
+        Assert.False(SyntaxTree.Parse(result.Value.Text).HasErrors);
     }
 
     [Fact]

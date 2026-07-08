@@ -15,7 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
+using LilySharp.Core.Editing;
 using Microsoft.VisualStudio.LanguageServer.Protocol;
 using StreamJsonRpc;
 using LilySharp.Core.Syntax;
@@ -2970,36 +2972,26 @@ public sealed class LilySharpLanguageServer
         if (doc == null)
             return new AddChordTrackResponse { Error = "Document not found." };
 
-        var tree = SyntaxTree.Parse(doc.Text);
-        if (tree.HasErrors)
+        if (SyntaxTree.Parse(doc.Text).HasErrors)
             return new AddChordTrackResponse { Error = "Fix the errors in the score first." };
 
-        var tracks = LilySharp.Core.Harmony.ChordHarmonizer.HarmonizeBySections(tree);
-        if (tracks.Count == 0)
+        var result = LilySharp.Core.Harmony.ChordHarmonizer.AddChordTracks(doc.Text);
+        if (result == null)
             return new AddChordTrackResponse { Error = "No section melody found to harmonize." };
 
-        var edits = new System.Collections.Generic.List<ChordTrackEdit>();
-
-        // 1) A chords part after each section's melody part-block (a section sibling).
-        foreach (var track in tracks)
-            edits.Add(InsertAt(doc.Text, track.MelodyBlock.Span.End, "\n  " + track.ChordsBlock));
-
-        // 2) Attach it to the melody staff once: `staff X` -> `staff X with chords harmony`.
-        var voice = tracks[0].MelodyBlock.PartName.Text;
-        var staff = Regex.Match(doc.Text,
-            @"\bstaff\s+" + Regex.Escape(voice) + @"\b(?!\s+with\b)");
-        if (staff.Success)
-            edits.Add(InsertAt(doc.Text, staff.Index + staff.Length, " with chords harmony"));
-
-        return new AddChordTrackResponse { Edits = edits.ToArray() };
-    }
-
-    private static ChordTrackEdit InsertAt(string text, int offset, string newText)
-    {
-        var (line, col) = GetLineAndColumn(text, offset);
-        return new ChordTrackEdit
+        // One full-document replace: adding a chords part can convert the layout
+        // (part-major -> section-major), which reshapes the whole file.
+        var (endLine, endCol) = GetLineAndColumn(doc.Text, doc.Text.Length);
+        return new AddChordTrackResponse
         {
-            StartLine = line, StartChar = col, EndLine = line, EndChar = col, NewText = newText,
+            Edits = new[]
+            {
+                new ChordTrackEdit
+                {
+                    StartLine = 0, StartChar = 0, EndLine = endLine, EndChar = endCol, NewText = result.Value.Text,
+                },
+            },
+            Info = result.Value.Info,
         };
     }
 
@@ -3433,6 +3425,8 @@ public class AddChordTrackResponse
 {
     public ChordTrackEdit[]? Edits { get; set; }
     public string? Error { get; set; }
+    /// <summary>An optional note shown to the user (e.g. that the layout was converted).</summary>
+    public string? Info { get; set; }
 }
 
 /// <summary>A single insertion for the add-chord-track edit (0-based line/char).</summary>
