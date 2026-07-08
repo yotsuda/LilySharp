@@ -409,6 +409,17 @@ internal sealed class Lexer
                 return (GetPitchKind(first.ToString()), first.ToString());
             }
 
+            // Dutch contractions: `es` = ees (E flat), `as` = aes (A flat) — the
+            // bare letter e/a plus a trailing 's' that is not part of a longer
+            // word. LilyPond accepts these alongside ees/aes; PitchSyntax.PitchName
+            // normalizes the token to its canonical spelling for decoding.
+            if (first is 'e' or 'a' && Current == 's' && !char.IsLetter(Peek(1)))
+            {
+                _position++; // consume the 's'
+                string contracted = _text[start.._position];
+                return (GetPitchKind(contracted), contracted);
+            }
+
             // Next is letter but not accidental - continue as identifier
             _position = accidentalStart;
         }

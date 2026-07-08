@@ -624,15 +624,41 @@ internal sealed class Parser
     }
 
 
-    // A bare identifier is not a phrase reference — '$' is required. Reject with a
-    // hint and recover by keeping the reference node so $name resolution/tooling works.
+    // A bare identifier appears where a note/rest/music item is expected. It might
+    // be a mistyped note (not a phrase at all), so say so plainly and — for the
+    // classic English-accidental slip (eb, bb) — suggest the Dutch spelling, while
+    // still pointing at '$' for a genuine phrase reference. Recover by keeping the
+    // reference node so $name resolution/tooling still works.
     private VariableReferenceGreen ParseBareVariableReference()
     {
         var span = new TextSpan(_textPosition, Current.FullWidth);
         var name = Advance();
-        _diagnostics.Error(span, DiagnosticCodes.BareReferenceRequiresDollar,
-            $"Use '${name.Text}' to reference a phrase; a bare '{name.Text}' is not allowed.");
+        string word = name.Text;
+        string message = PitchSuggestion(word) is { } pitch
+            ? $"'{word}' is not a valid note here — did you mean the pitch '{pitch}'? "
+              + $"(For a phrase, write '${word}'.)"
+            : $"'{word}' is not a note, rest, or known name here. "
+              + $"If it names a phrase, reference it with '${word}'.";
+        _diagnostics.Error(span, DiagnosticCodes.BareReferenceRequiresDollar, message);
         return new VariableReferenceGreen(name);
+    }
+
+    // English-style accidental spellings map to Lily#'s Dutch note names:
+    // eb -> ees, bb -> bes, gflat -> ges, fsharp -> fis. Returns null when the
+    // word is not a plausible pitch typo.
+    private static string? PitchSuggestion(string word)
+    {
+        if (word.Length is < 2 or > 6)
+            return null;
+        char letter = char.ToLowerInvariant(word[0]);
+        if (letter is < 'a' or > 'g')
+            return null;
+        return word[1..].ToLowerInvariant() switch
+        {
+            "b" or "flat" => $"{letter}es",
+            "sharp" => $"{letter}is",
+            _ => null,
+        };
     }
 
     private GreenNode ParseMusicExpression()

@@ -93,7 +93,18 @@ public sealed class PitchSyntax : SyntaxNode
     /// <summary>
     /// The base pitch name (c, d, e, f, g, a, b) with accidentals.
     /// </summary>
-    public string PitchName => PitchToken.Text;
+    /// <remarks>
+    /// The lexer emits LilyPond's Dutch contractions <c>es</c>/<c>as</c> verbatim;
+    /// normalize them to the canonical flats <c>ees</c>/<c>aes</c> here so every
+    /// decoder (BaseName / Accidental / AccidentalOffset / exporters) sees a known
+    /// spelling. The raw token text is untouched, so source spans stay correct.
+    /// </remarks>
+    public string PitchName => PitchToken.Text switch
+    {
+        "es" => "ees",
+        "as" => "aes",
+        var t => t,
+    };
 
     /// <summary>
     /// Number of octave marks (' positive, , negative).

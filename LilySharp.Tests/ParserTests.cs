@@ -930,6 +930,45 @@ lyrics { do re mi fa sol }
         Assert.Equal(-1, pitch.AccidentalOffset);
     }
 
+    // LilyPond's Dutch contractions `es` (E flat) and `as` (A flat) are accepted
+    // alongside `ees`/`aes` and normalize to the same pitch.
+    [Theory]
+    [InlineData("es", 'e', -1)]
+    [InlineData("as", 'a', -1)]
+    [InlineData("ees", 'e', -1)]
+    [InlineData("aes", 'a', -1)]
+    public void PitchSyntax_DutchFlatContractions(string source, char baseName, int offset)
+    {
+        var tree = SyntaxTree.Parse(source);
+        var pitch = tree.GetNodes<PitchSyntax>().First();
+
+        Assert.Equal(baseName, pitch.BaseName);
+        Assert.Equal(offset, pitch.AccidentalOffset);
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    // A bare word where a note is expected reports clearly and, for the classic
+    // English-accidental slip, suggests the Dutch spelling instead of assuming a
+    // phrase reference.
+    [Theory]
+    [InlineData("{ c4 eb d4 }", "ees")]
+    [InlineData("{ c4 bb d4 }", "bes")]
+    [InlineData("{ c4 gflat d4 }", "ges")]
+    public void BareWord_EnglishAccidental_SuggestsDutchPitch(string source, string suggested)
+    {
+        var tree = SyntaxTree.Parse(source);
+        var err = tree.Diagnostics.First(d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar);
+        Assert.Contains($"'{suggested}'", err.Message);
+    }
+
+    [Fact]
+    public void BareWord_UnknownName_DoesNotClaimPhrase()
+    {
+        var tree = SyntaxTree.Parse("{ c4 xyz d4 }");
+        var err = tree.Diagnostics.First(d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar);
+        Assert.Contains("not a note, rest, or known name", err.Message);
+    }
+
     // ========== Metadata Properties ==========
 
     [Fact]
