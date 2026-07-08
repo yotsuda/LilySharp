@@ -15,6 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using LilySharp.Core.Svg.Collector;
+using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -121,5 +123,63 @@ public class SectionLabelTests
             score "x" { staff メロディ }
             """);
         Assert.Empty(tree.Diagnostics);
+    }
+
+    // --- Section rehearsal box is suppressed with only one distinct section ---
+    // (nothing to navigate between). This is a LAYOUT-stage decision, so these
+    // assert on the emitted SectionLabel MARKS, not the measures' SectionLabel
+    // property (which stays set for reuse hashing).
+
+    private static int SectionLabelMarkCount(string source)
+    {
+        var score = new MeasureCollector().Collect(SyntaxTree.Parse(source));
+        var marks = MusicMarkEngraver.BuildAllMarks(
+            score.MusicMarks, score.Voice.Measures, score.Tempo,
+            score.SwingSubdivision, score.TempoText, score.TempoBeatUnit, score.TempoDots);
+        return marks.Count(m => m.Type == MusicMarkType.SectionLabel);
+    }
+
+    [Fact]
+    public void SingleSection_EmitsNoSectionLabelBox()
+    {
+        Assert.Equal(0, SectionLabelMarkCount("""
+            section Main { melody { c4 d e f | g1 } }
+            structure { Main }
+            score "x" { staff melody }
+            """));
+    }
+
+    [Fact]
+    public void OneSectionRepeated_EmitsNoBox()
+    {
+        // `structure { A A }` is one distinct section repeated — nothing to jump to.
+        Assert.Equal(0, SectionLabelMarkCount("""
+            section A { melody { c4 d e f | } }
+            structure { A A }
+            score "x" { staff melody }
+            """));
+    }
+
+    [Fact]
+    public void TwoDistinctSections_KeepBothBoxes()
+    {
+        Assert.Equal(2, SectionLabelMarkCount("""
+            section Intro { melody { c4 d e f | } }
+            section Verse { melody { g4 f e d | } }
+            structure { Intro Verse }
+            score "x" { staff melody }
+            """));
+    }
+
+    [Fact]
+    public void ExplicitDisplayLabel_CountsAsDistinctAndKeepsBoxes()
+    {
+        // `A "A2"` is an explicit user label; alongside a plain `A` that is two
+        // distinct labels, so the boxes stay (the user asked to tell them apart).
+        Assert.Equal(2, SectionLabelMarkCount("""
+            section A { melody { c4 d e f | } }
+            structure { A A "A2" }
+            score "x" { staff melody }
+            """));
     }
 }

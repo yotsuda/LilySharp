@@ -79,7 +79,5 @@
   <path d="M 27.07,15.99 C 27.41,16.46 28.02,16.46 28.36,15.99 C 28.02,16.68 27.41,16.68 27.07,15.99 Z" fill="#000000"/>
   <path d="M 14.23,16.17 C 14.85,17.10 15.89,17.55 16.51,17.17 C 15.89,17.82 14.85,17.37 14.23,16.17 Z" fill="#000000"/>
   <line x1="8.75" y1="16.06" x2="9.97" y2="15.48" stroke="#000000" stroke-width="0.100" data-pos="672"/>
-  <rect x="0.30" y="10.93" width="1.62" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="587"/>
-  <text x="1.11" y="13.13" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="587">S</text>
   </g>
 </svg>

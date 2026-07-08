@@ -134,18 +134,25 @@ public class DynamicPlacementTests
     }
 
     [Fact]
-    public void AboveDynamic_ClearsOtherAboveStaffGrobs()
+    public void AboveGrobsSharingAColumn_StackClearInsteadOfOverprinting()
     {
-        // @f.up (dynamic, priority 250) and @mark(A) (rehearsal mark, 1500) share a column.
-        // The above-staff stacker must separate them — the higher-priority mark sits
-        // ABOVE the dynamic (smaller Y), not overlapping it.
-        var score = Collect("c''4@f.up@mark(A)");
+        // Two forced-above marks on the SAME note (@f.up and @text.up — both ride
+        // the above-dynamic pipeline) genuinely share a column. The above-staff
+        // stacker must separate them (~StackStep apart), the second sitting ABOVE
+        // (smaller Y), not overprinting the first.
+        //
+        // (An earlier version paired @f.up with @mark(A). But a rehearsal mark is
+        // engraved at the measure/section START, never on its host note's column,
+        // so it never actually collides with a note's dynamic — that test only
+        // passed because a lone-section box happened to occupy the mark's column.
+        // Lone-section boxes are now suppressed, exposing the non-overlap.)
+        var score = Collect("c''4@f.up@text(\"cresc\").up");
         var layout = new LayoutEngine().Layout(score);
 
-        var dyn = layout.DynamicLayouts.Single(d => d.IsAbove);
-        var mark = layout.MusicMarkLayouts.Single(m => m.MarkType == MusicMarkType.Rehearsal);
-
-        Assert.True(mark.Y < dyn.Y,
-            $"rehearsal mark (Y={mark.Y}) should sit above the above-dynamic (Y={dyn.Y})");
+        var above = layout.DynamicLayouts.Where(d => d.IsAbove).OrderBy(d => d.Y).ToList();
+        Assert.Equal(2, above.Count);
+        Assert.Equal(above[0].X, above[1].X, 3); // genuinely the same column
+        Assert.True(above[1].Y - above[0].Y >= 1.5,
+            $"stacked above-staff grobs must be separated (got {above[0].Y} and {above[1].Y})");
     }
 }

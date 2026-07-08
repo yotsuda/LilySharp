@@ -691,7 +691,13 @@ internal static class MusicMarkEngraver
             }
         }
 
-        if (sectionLabels.Count == 0)
+        // A section rehearsal box exists to navigate BETWEEN sections. With only
+        // one distinct section (`structure { Main }`, or `structure { A A }` — one
+        // section repeated) there is nothing to navigate to, so the lone box is
+        // noise; drop it. An explicit display label counts as distinct, so an
+        // `A "A2"` alongside a plain `A` keeps its boxes. (Covers Count == 0 too.)
+        int distinctSectionLabels = sectionLabels.Select(s => s.Text).Distinct().Count();
+        if (distinctSectionLabels <= 1)
             return musicMarks.IsDefaultOrEmpty ? ImmutableArray<MusicMarkItem>.Empty : musicMarks;
 
         // Merge: existing marks + section labels

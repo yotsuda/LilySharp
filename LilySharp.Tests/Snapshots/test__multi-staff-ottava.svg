@@ -99,7 +99,5 @@
   <text x="13.50" y="29.27" font-size="1.80" font-family="serif" font-weight="bold" font-style="italic" fill="#000000" data-pos="919">8vb</text>
   <line x1="16.80" y1="29.27" x2="28.51" y2="29.27" stroke="#000000" stroke-width="0.100" stroke-dasharray="0.60 1.40" data-pos="919"/>
   <line x1="28.51" y1="29.27" x2="28.51" y2="28.47" stroke="#000000" stroke-width="0.100" data-pos="919"/>
-  <rect x="8.80" y="7.93" width="1.62" height="2.60" fill="#FFFFFF" stroke="#000000" stroke-width="0.100" data-pos="822"/>
-  <text x="9.61" y="10.13" font-size="2.20" font-family="serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="822">S</text>
   </g>
 </svg>
