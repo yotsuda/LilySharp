@@ -77,6 +77,30 @@ public class ChordPartSectionsTests
         Assert.Equal(3, score.Voice.Measures.Length);
     }
 
+    [Fact]
+    public void ChordTrack_RepeatsUnderAReprise()
+    {
+        // structure { A B A "A2" }: A's chords must appear again at the A2 reprise,
+        // not only at A's first occurrence.
+        var tree = SyntaxTree.Parse("""
+            time 4/4
+            key c major
+            part melody { clef treble
+              section A { c4 c g' g | a a g2 | }
+              section B { g'4 g f f | }
+            }
+            chords harmony { section A { c1 | f1 | } section B { g1:7 | } }
+            structure { A B A "A2" }
+            score s { staff melody with chords harmony }
+            """);
+        var score = new MeasureCollector().Collect(tree, "melody", null, "harmony");
+        var byMeasure = score.ChordNames
+            .OrderBy(c => c.MeasureIndex).ThenBy(c => c.Timing.ToDouble())
+            .Select(c => $"{c.MeasureIndex}:{c.ChordText}").ToArray();
+        // A: C(m0) F(m1); B: G7(m2); A2: C(m3) F(m4).
+        Assert.Equal(new[] { "0:C", "1:F", "2:G7", "3:C", "4:F" }, byMeasure);
+    }
+
     private static string ChordSignature(string src)
     {
         var score = new MeasureCollector()

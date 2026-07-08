@@ -42,6 +42,11 @@ internal sealed class ChordNameCollector
     /// a chord's degree is computed against it at item-creation time.</summary>
     public (int TonicStep, int Sharps) Key { get; set; }
 
+    /// <summary>EVERY start measure of each section across the structure, so a chord
+    /// track repeats under a reprise (A played again as "A2" gets its chords again).
+    /// Null falls back to the single first-occurrence start.</summary>
+    public IReadOnlyDictionary<string, List<int>>? SectionStarts { get; set; }
+
     /// <summary>All collected chord-name items.</summary>
     public IReadOnlyList<ChordNameItem> Items => _items;
 
@@ -99,15 +104,35 @@ internal sealed class ChordNameCollector
         foreach (var block in blocks)
         {
             // Part-major chord track: each inner section's chords align under its own
-            // named section's bars. Flat form: the whole block aligns under the
-            // section it is written inside (StartMeasureOf walks up to it).
+            // named section's bars — at EVERY occurrence (a reprise gets them too).
+            // Flat form: the whole block aligns under the section it is written inside.
             if (block.HasSections)
                 foreach (var section in block.Sections)
-                    CollectAlignedItems(SectionItems(section),
-                        sectionStartMeasure.GetValueOrDefault(section.SectionName, 0), staffIndex, mode);
+                    foreach (int start in StartsFor(section.SectionName, sectionStartMeasure))
+                        CollectAlignedItems(SectionItems(section), start, staffIndex, mode);
             else
-                CollectAlignedItems(block.Items, StartMeasureOf(block, sectionStartMeasure), staffIndex, mode);
+                foreach (int start in BlockStarts(block, sectionStartMeasure))
+                    CollectAlignedItems(block.Items, start, staffIndex, mode);
         }
+    }
+
+    /// <summary>Every start measure a section occupies (each structure replay), or the
+    /// single first-occurrence anchor when the all-starts map is absent/empty.</summary>
+    private IEnumerable<int> StartsFor(string sectionName, IReadOnlyDictionary<string, int> single)
+    {
+        if (SectionStarts != null && SectionStarts.TryGetValue(sectionName, out var all) && all.Count > 0)
+            return all;
+        return new[] { single.GetValueOrDefault(sectionName, 0) };
+    }
+
+    /// <summary>Start measures for a FLAT (in-section) chord block: every occurrence of
+    /// its enclosing section, or 0 at top level.</summary>
+    private IEnumerable<int> BlockStarts(SyntaxNode block, IReadOnlyDictionary<string, int> single)
+    {
+        for (var n = block.Parent; n != null; n = n.Parent)
+            if (n is SectionDeclarationSyntax section)
+                return StartsFor(section.SectionName, single);
+        return new[] { 0 };
     }
 
     private void CollectAlignedItems(IEnumerable<SyntaxNode> items, int startMeasure, int staffIndex, ChordDisplayMode mode)
@@ -271,13 +296,14 @@ internal sealed class ChordNameCollector
         foreach (var block in blocks)
         {
             // Part-major chord track: each inner section fills its own named section's
-            // bars. Flat form: the whole block starts at its enclosing section.
+            // bars, at EVERY occurrence. Flat form: the enclosing section's occurrences.
             if (block.HasSections)
                 foreach (var section in block.Sections)
-                    ProcessRun(SectionItems(section),
-                        sectionStartMeasure.GetValueOrDefault(section.SectionName, 0));
+                    foreach (int start in StartsFor(section.SectionName, sectionStartMeasure))
+                        ProcessRun(SectionItems(section), start);
             else
-                ProcessRun(block.Items, StartMeasureOf(block, sectionStartMeasure));
+                foreach (int start in BlockStarts(block, sectionStartMeasure))
+                    ProcessRun(block.Items, start);
         }
 
         if (maxIndex < 0)

@@ -497,6 +497,10 @@ public sealed class MeasureCollector
     // written inside a section aligns to THAT section's notes (not from bar 0).
     // First-occurrence wins; populated during structure/section expansion.
     private readonly Dictionary<string, int> _sectionStartMeasure = new();
+    // EVERY start measure of each section across the structure (each replay), so a
+    // chord/lyric track repeats under every occurrence — a section reprised as "A2"
+    // gets its chords again. _sectionStartMeasure keeps only the first anchor.
+    private readonly Dictionary<string, List<int>> _sectionAllStarts = new();
     // Section labels for a rows-only score (filled by EnsureSectionStartsForRows).
     private readonly List<(int MeasureIndex, string Label, int Position)> _rowSectionLabels = new();
     private StructureDeclarationSyntax? _structure;
@@ -728,6 +732,7 @@ public sealed class MeasureCollector
         // Collect lyrics
         _lyricsCollector.CollectNoteBound(tree.GetRoot(), measures, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
         _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
+        _chordNameCollector.SectionStarts = _sectionAllStarts;
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
         // `staff NAME with chords CHORDPART [as roman|both]` on a single-staff score.
         if (attachedChordPart != null)
@@ -957,6 +962,7 @@ public sealed class MeasureCollector
         if (pendingChordRows.Count > 0 || pendingLyricsRows.Count > 0)
             EnsureSectionStartsForRows();
         _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
+        _chordNameCollector.SectionStarts = _sectionAllStarts;
         foreach (var (rowName, rowIdx, rowMode) in pendingChordRows)
         {
             var rowMeasures = _chordNameCollector.CollectPart(
@@ -1039,6 +1045,7 @@ public sealed class MeasureCollector
             _lyricsCollector.CollectNoteBound(tree.GetRoot(), firstStaffVoices[0].Measures.ToList(), _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
         }
         _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
+        _chordNameCollector.SectionStarts = _sectionAllStarts;
         _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
         foreach (var (attachedPart, attachedStaff, attachedMode) in attachedChords)
             _chordNameCollector.CollectAttached(
@@ -1284,6 +1291,7 @@ public sealed class MeasureCollector
         // Unnamed lyrics align with the primary voice; named ones bind above.
         _lyricsCollector.CollectNoteBound(root, track0, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure);
         _chordNameCollector.Key = (_keyTonicStep, _initialKeySharps);
+        _chordNameCollector.SectionStarts = _sectionAllStarts;
         _chordNameCollector.CollectBlocks(root, _sectionStartMeasure, _currentStaffIndex);
 
         return new Score(
@@ -2041,6 +2049,7 @@ public sealed class MeasureCollector
         _grobOverrides.Clear();
         _grobReverts.Clear();
         _sectionStartMeasure.Clear();
+        _sectionAllStarts.Clear();
         _rowSectionLabels.Clear();
         _voiceMeasuresByName.Clear();
         _trillSpannerEvents.Clear();
@@ -2497,8 +2506,7 @@ public sealed class MeasureCollector
             // (source order), so a single-section piece needs no structure at all.
             foreach (var section in _sections.Values.OrderBy(s => s.Name.Span.Start))
             {
-                if (!_sectionStartMeasure.ContainsKey(section.SectionName))
-                    _sectionStartMeasure[section.SectionName] = builder.CurrentMeasureIndex;
+                RecordSectionStart(section.SectionName, builder.CurrentMeasureIndex);
                 builder.SectionLabel = section.SectionName;
                 builder.SectionLabelPosition = section.Name.Span.Start;
                 ProcessSection(section, ProcessNodes);
@@ -2516,6 +2524,19 @@ public sealed class MeasureCollector
         return builder.FinalizeMeasures();
     }
 
+    /// <summary>Records where a section occurrence begins: the first-only anchor
+    /// (<see cref="_sectionStartMeasure"/>) plus EVERY occurrence
+    /// (<see cref="_sectionAllStarts"/>), so a chord/lyric track can repeat under a
+    /// reprise (e.g. A played again as "A2").</summary>
+    private void RecordSectionStart(string name, int startMeasure)
+    {
+        if (!_sectionStartMeasure.ContainsKey(name))
+            _sectionStartMeasure[name] = startMeasure;
+        if (!_sectionAllStarts.TryGetValue(name, out var list))
+            _sectionAllStarts[name] = list = new List<int>();
+        list.Add(startMeasure);
+    }
+
     private void ProcessStructure(Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
         foreach (var child in _structure!.DescendantNodes())
@@ -2528,8 +2549,7 @@ public sealed class MeasureCollector
                         break;
                     if (_sections.TryGetValue(reference.SectionName, out var section))
                     {
-                        if (!_sectionStartMeasure.ContainsKey(reference.SectionName))
-                            _sectionStartMeasure[reference.SectionName] = builder.CurrentMeasureIndex;
+                        RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
                         builder.SectionLabel = ResolveSectionLabel(reference);
                         builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         ProcessSection(section, processNodes);
@@ -2583,8 +2603,7 @@ public sealed class MeasureCollector
                         when !IsInsideRepeatBlock(silent)
                           && silent.GetChild(1) is SyntaxTokenNode nameTok
                           && _sections.TryGetValue(nameTok.Text, out var silentSection):
-                    if (!_sectionStartMeasure.ContainsKey(nameTok.Text))
-                        _sectionStartMeasure[nameTok.Text] = builder.CurrentMeasureIndex;
+                    RecordSectionStart(nameTok.Text, builder.CurrentMeasureIndex);
                     builder.SectionLabel = null;
                     builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
                     ProcessSection(silentSection, processNodes);
@@ -2818,8 +2837,7 @@ public sealed class MeasureCollector
                 {
                     if (_sections.TryGetValue(reference.SectionName, out var section))
                     {
-                        if (!_sectionStartMeasure.ContainsKey(reference.SectionName))
-                            _sectionStartMeasure[reference.SectionName] = builder.CurrentMeasureIndex;
+                        RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
                         builder.SectionLabel = ResolveSectionLabel(reference);
                         builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
                         ProcessSection(section, processNodes);
@@ -2833,8 +2851,7 @@ public sealed class MeasureCollector
                     // label. The top-level silent-reference case skips in-repeat nodes
                     // (IsInsideRepeatBlock), so without this the section's measures
                     // were dropped entirely, not just its label.
-                    if (!_sectionStartMeasure.ContainsKey(silentName.Text))
-                        _sectionStartMeasure[silentName.Text] = builder.CurrentMeasureIndex;
+                    RecordSectionStart(silentName.Text, builder.CurrentMeasureIndex);
                     builder.SectionLabel = null;
                     builder.SectionLabelPosition = SectionDeclPos(silentName.Text);
                     ProcessSection(silentSection, processNodes);
@@ -2846,6 +2863,7 @@ public sealed class MeasureCollector
                     {
                         // Track measure index before processing this alternative
                         int startMeasureIndex = builder.CurrentMeasureIndex;
+                        RecordSectionStart(altSectionName, startMeasureIndex);
 
                         builder.SectionLabel = alt.DisplayLabel ?? altSectionName;
                         builder.SectionLabelPosition = SectionDeclPos(altSectionName);
