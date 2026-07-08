@@ -96,6 +96,7 @@ internal sealed class PngDocumentContext : IDocumentContext
         _pageSurface.Dispose();
         _pageSurface = null;
         _pageCanvas = null;
+        _currentPage.Dispose(); // release this page's font handles (typefaces + SKFonts)
         _currentPage = null;
     }
 

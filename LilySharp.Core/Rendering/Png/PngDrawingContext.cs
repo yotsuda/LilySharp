@@ -19,11 +19,15 @@ using SkiaSharp;
 namespace LilySharp.Core.Rendering.Png;
 
 /// <summary>PNG implementation of <see cref="IDrawingContext"/>.</summary>
-internal sealed class PngDrawingContext : IDrawingContext
+internal sealed class PngDrawingContext : IDrawingContext, IDisposable
 {
     private readonly SKCanvas _canvas;
     private readonly double _scale;
     private readonly FontCache _fonts;
+
+    /// <summary>Releases the per-page font handles (typefaces loaded from disk and
+    /// the SKFonts derived from them). Called by PngDocumentContext.EndPage.</summary>
+    public void Dispose() => _fonts.Dispose();
 
     public PngDrawingContext(SKCanvas canvas, double pixelsPerSpace, string? fontDirectory)
     {

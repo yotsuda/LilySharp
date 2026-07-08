@@ -70,7 +70,10 @@ public static class BraceRenderer
         // X position: brace tip is at left, connects to staff at right
         double braceX = x;
 
-        return $"<text x=\"{braceX:F2}\" y=\"{yMid:F2}\" font-family=\"Emmentaler-Brace\" font-size=\"{fontSize:F2}\" dominant-baseline=\"middle\" text-anchor=\"end\">{braceGlyph}</text>";
+        // Invariant culture: SVG requires '.' decimals; a comma locale would emit
+        // "12,34" and break the coordinate.
+        return FormattableString.Invariant(
+            $"<text x=\"{braceX:F2}\" y=\"{yMid:F2}\" font-family=\"Emmentaler-Brace\" font-size=\"{fontSize:F2}\" dominant-baseline=\"middle\" text-anchor=\"end\">{braceGlyph}</text>");
     }
 
     /// <summary>

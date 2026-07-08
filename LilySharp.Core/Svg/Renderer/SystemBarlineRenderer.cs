@@ -38,7 +38,9 @@ public static class SystemBarlineRenderer
     /// <returns>SVG line element string</returns>
     public static string RenderSystemBarline(double x, double yTop, double yBottom, double thickness = 1.0)
     {
-        return $"""<line x1="{x:F2}" y1="{yTop:F2}" x2="{x:F2}" y2="{yBottom:F2}" stroke="black" stroke-width="{thickness:F2}" />""";
+        // Invariant culture: SVG requires '.' decimal separators regardless of locale.
+        return FormattableString.Invariant(
+            $"""<line x1="{x:F2}" y1="{yTop:F2}" x2="{x:F2}" y2="{yBottom:F2}" stroke="black" stroke-width="{thickness:F2}" />""");
     }
 
     /// <summary>
@@ -68,8 +70,8 @@ public static class SystemBarlineRenderer
         {
             // End repeat: dots, thin, thick
             double dotX = x - staffSpace;
-            sb.AppendLine($"""<circle cx="{dotX:F2}" cy="{midY - dotSpacing:F2}" r="{dotRadius:F2}" fill="black" />""");
-            sb.AppendLine($"""<circle cx="{dotX:F2}" cy="{midY + dotSpacing:F2}" r="{dotRadius:F2}" fill="black" />""");
+            sb.AppendLine(FormattableString.Invariant($"""<circle cx="{dotX:F2}" cy="{midY - dotSpacing:F2}" r="{dotRadius:F2}" fill="black" />"""));
+            sb.AppendLine(FormattableString.Invariant($"""<circle cx="{dotX:F2}" cy="{midY + dotSpacing:F2}" r="{dotRadius:F2}" fill="black" />"""));
             sb.AppendLine(RenderSystemBarline(x, yTop, yBottom, thickness));
             sb.AppendLine(RenderSystemBarline(x + 3, yTop, yBottom, thickness * 2));
         }
@@ -79,8 +81,8 @@ public static class SystemBarlineRenderer
             sb.AppendLine(RenderSystemBarline(x, yTop, yBottom, thickness * 2));
             sb.AppendLine(RenderSystemBarline(x + 3, yTop, yBottom, thickness));
             double dotX = x + 3 + staffSpace;
-            sb.AppendLine($"""<circle cx="{dotX:F2}" cy="{midY - dotSpacing:F2}" r="{dotRadius:F2}" fill="black" />""");
-            sb.AppendLine($"""<circle cx="{dotX:F2}" cy="{midY + dotSpacing:F2}" r="{dotRadius:F2}" fill="black" />""");
+            sb.AppendLine(FormattableString.Invariant($"""<circle cx="{dotX:F2}" cy="{midY - dotSpacing:F2}" r="{dotRadius:F2}" fill="black" />"""));
+            sb.AppendLine(FormattableString.Invariant($"""<circle cx="{dotX:F2}" cy="{midY + dotSpacing:F2}" r="{dotRadius:F2}" fill="black" />"""));
         }
 
         return sb.ToString();

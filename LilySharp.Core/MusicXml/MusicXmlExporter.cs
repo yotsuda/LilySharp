@@ -73,6 +73,7 @@ public sealed class MusicXmlExporter
     private string? _pendingLineStop;       // "glissando" | "slide": stop lands on the NEXT note
     private string? _chordArpeggio;         // "arpeggiate" | "non-arpeggiate" for the chord being written
     private readonly List<MusicXmlNote> _chordMembers = new(); // members of the chord being written
+    private readonly List<MusicXmlNote> _lastEmittedNotes = new(); // last note (1) or chord (N) — a following '~' node ties all of them
     private string? _pendingDynamic;
 
     // Track parts across sections for multi-section support
@@ -805,9 +806,12 @@ public sealed class MusicXmlExporter
                 break;
 
             case TieSyntax:
-                // Tie follows a note — mark the last note as tie start, and flag
-                // the next note/chord so it emits the matching tie-stop.
-                if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
+                // Tie follows a note or chord — mark EVERY note just emitted as a
+                // tie start (a chord ties all its members), and flag the next
+                // note/chord so it emits the matching tie-stop.
+                if (_lastEmittedNotes.Count > 0)
+                    foreach (var n in _lastEmittedNotes) n.TieStart = true;
+                else if (_currentMeasure != null && _currentMeasure.Notes.Count > 0)
                     _currentMeasure.Notes[^1].TieStart = true;
                 _tieToNextNote = true;
                 break;
@@ -996,9 +1000,15 @@ public sealed class MusicXmlExporter
             for (int i = 0; i < temp.Measures.Count && startMeasure + i < endMeasure; i++)
             {
                 var target = _currentPart.Measures[startMeasure + i];
+                // Back up by the CURRENT cursor offset from the bar start, i.e. the
+                // net forward advance already in this measure (forward notes minus
+                // the backups already emitted). Summing every forward note would,
+                // from the third voice on, rewind past the bar start because earlier
+                // voices' notes are already merged in.
                 int written = target.Notes
-                    .Where(n => !n.IsChord && !n.IsGrace && !n.IsBackup)
-                    .Sum(n => n.Duration);
+                        .Where(n => !n.IsChord && !n.IsGrace && !n.IsBackup)
+                        .Sum(n => n.Duration)
+                    - target.Notes.Where(n => n.IsBackup).Sum(n => n.Duration);
                 foreach (var n in target.Notes)
                     if (!n.IsBackup)
                         n.Voice ??= 1;
@@ -1269,6 +1279,8 @@ public sealed class MusicXmlExporter
 
         _currentMeasure.Notes.Add(xmlNote);
         _lastPitchedNote = xmlNote;
+        _lastEmittedNotes.Clear();
+        _lastEmittedNotes.Add(xmlNote);
         MaybeClosePickup(duration);
     }
 
@@ -1328,8 +1340,6 @@ public sealed class MusicXmlExporter
                 else if (hasBracket)
                     _chordArpeggio = "non-arpeggiate";
                 ProcessArticulations(chord.Articulations, xmlNote);
-                if (_tieToNextNote) { xmlNote.TieStop = true; _tieToNextNote = false; }
-                if (chord.Articulations.OfType<TieSyntax>().Any()) { xmlNote.TieStart = true; _tieToNextNote = true; }
                 isFirst = false;
             }
 
@@ -1352,6 +1362,18 @@ public sealed class MusicXmlExporter
                 new System.Xml.Linq.XAttribute("type", "top"),
                 new System.Xml.Linq.XAttribute("number", 1)));
         }
+        // Ties apply to EVERY member of the chord: <c e g>~ <c e g> ties all
+        // voices, so tagging only the first note (the old behavior) dropped the
+        // rest. Pair the stop from a preceding tie across all members too.
+        if (_tieToNextNote) { foreach (var m in _chordMembers) m.TieStop = true; _tieToNextNote = false; }
+        if (chord.Articulations.OfType<TieSyntax>().Any())
+        { foreach (var m in _chordMembers) m.TieStart = true; _tieToNextNote = true; }
+
+        // Remember this chord's members so a following standalone '~' node ties
+        // all of them (a chord tie), not just the last member.
+        _lastEmittedNotes.Clear();
+        _lastEmittedNotes.AddRange(_chordMembers);
+
         _chordArpeggio = null;
         _chordMembers.Clear();
 
@@ -1366,8 +1388,10 @@ public sealed class MusicXmlExporter
     {
         if (_currentMeasure == null) return;
         _justAutoClosedPickup = false;
-        // A rest breaks a hammer-on/pull-off pair (no note is held into it).
+        // A rest breaks a hammer-on/pull-off pair (no note is held into it) and
+        // cannot be tied, so a following '~' must not tie the pre-rest note.
         _lastPitchedNote = null;
+        _lastEmittedNotes.Clear();
 
         var duration = GetDuration(rest.Duration);
         int durationTicks = FractionToTicks(duration);
@@ -1867,6 +1891,12 @@ public sealed class MusicXmlExporter
                 break;
             }
         }
+
+        // A breve (2/1) or longa (4/1) has denominator 1 and numerator >= 2. Without
+        // this they collapse to baseDenom 1 => "whole" with double/quadruple ticks;
+        // the switch's "breve" arm is otherwise unreachable (Denominator is never 0).
+        if (duration.Denominator == 1 && duration.Numerator >= 2)
+            return (duration.Numerator >= 4 ? "long" : "breve", 0);
 
         string type = baseDenom switch
         {

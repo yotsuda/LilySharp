@@ -62,6 +62,46 @@ public class MusicXmlExportShapeTests
     }
 
     [Fact]
+    public void ThreeVoices_BackupRewindsToBarStartNotCumulatively()
+    {
+        // Regression: the third voice's <backup> summed EVERY forward note already
+        // merged into the measure (voice1 + voice2), rewinding past the bar start.
+        // Each backup must equal one bar (96 at 24 divisions per quarter, 4/4).
+        var doc = Export("""
+            part pno { clef treble }
+            section A {
+              pno {
+                voice { c'4 d' e' f' | }
+                voice { c4 d e f | }
+                voice { e4 f g a | }
+              }
+            }
+            structure { A }
+            score x { staff pno }
+            """);
+        var backups = doc.Descendants("backup").ToList();
+        Assert.Equal(2, backups.Count);
+        Assert.All(backups, b => Assert.Equal("96", b.Element("duration")!.Value));
+    }
+
+    [Fact]
+    public void TiedChord_TiesEveryChordMember()
+    {
+        // Regression: <c e g>~ <c e g> tied only the first note; all members tie.
+        var doc = Export("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { <c' e' g'>2~ <c' e' g'>2 | } }
+            structure { A }
+            score x { staff m }
+            """);
+        var ties = doc.Descendants("tie").ToList();
+        Assert.Equal(3, ties.Count(t => t.Attribute("type")!.Value == "start"));
+        Assert.Equal(3, ties.Count(t => t.Attribute("type")!.Value == "stop"));
+    }
+
+    [Fact]
     public void StructureOrder_EmitsSectionsInStructureOrderWithReplay()
     {
         // The structure gives the played ORDER; a replayed section reappears.

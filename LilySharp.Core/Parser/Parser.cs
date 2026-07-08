@@ -1474,7 +1474,9 @@ private GreenNode?[] ParseArticulations()
             var span = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
                 "Expected repeat type (unfold, percent, tremolo)");
-            repeatType = new SyntaxToken(SyntaxKind.VoltaKeyword, "volta", null, null);
+            // Missing token: zero-width so root.FullWidth == text.Length holds
+            // (matches Expect); the diagnostic above already reported the error.
+            repeatType = new SyntaxToken(SyntaxKind.VoltaKeyword, "", null, null);
         }
 
         // Expect count
@@ -1726,7 +1728,10 @@ private GreenNode?[] ParseArticulations()
             var span = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
                 "Expected a mode: 'major', 'minor', 'ionian', 'dorian', 'phrygian', 'lydian', 'mixolydian', 'aeolian' or 'locrian'");
-            mode = new SyntaxToken(SyntaxKind.MajorKeyword, "major", null, null);
+            // Missing token: zero-width to preserve round-trip. Kind stays
+            // MajorKeyword and SharpsFor("") resolves to major, so the recovery
+            // default is unchanged.
+            mode = new SyntaxToken(SyntaxKind.MajorKeyword, "", null, null);
         }
 
         return new KeySignatureGreen(keyKeyword, pitch, mode);
@@ -1748,7 +1753,8 @@ private GreenNode?[] ParseArticulations()
             var span = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
                 "Expected clef name (treble, treble_8, alto, tenor, bass)");
-            clefName = new SyntaxToken(SyntaxKind.TrebleKeyword, "treble", null, null);
+            // Missing token: zero-width to preserve round-trip (diagnostic above).
+            clefName = new SyntaxToken(SyntaxKind.TrebleKeyword, "", null, null);
         }
 
         return new ClefDeclarationGreen(clefKeyword, clefName);
@@ -1774,7 +1780,10 @@ private GreenNode?[] ParseArticulations()
             var span = new TextSpan(_textPosition, Current.FullWidth);
             _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
                 "Expected octave mode (absolute or relative)");
-            mode = new SyntaxToken(SyntaxKind.Identifier, "relative", null, null);
+            // Missing token: zero-width to preserve round-trip. An empty mode is
+            // read as neither "absolute" nor "relative", so it falls back to the
+            // relative default — unchanged recovery behavior.
+            mode = new SyntaxToken(SyntaxKind.Identifier, "", null, null);
         }
 
         return new OctaveDirectiveGreen(octaveKeyword, mode);
@@ -2157,8 +2166,11 @@ private GreenNode?[] ParseArticulations()
         // No barline found - might be at end of block
         if (syllables.Count > 0)
         {
-            // Create a synthetic barline token
-            var syntheticBar = new SyntaxToken(SyntaxKind.Bar, "|");
+            // Create a synthetic, zero-width barline token. This is a NON-error
+            // path (a valid lyrics block whose last measure omits the trailing
+            // '|' before '}'), so the token must add no width or every following
+            // node's Position would drift and ToFullString would emit a phantom '|'.
+            var syntheticBar = new SyntaxToken(SyntaxKind.Bar, "", null, null);
             return new LyricMeasureGreen([.. syllables], syntheticBar);
         }
 
@@ -2199,10 +2211,12 @@ private GreenNode?[] ParseArticulations()
             var first = Advance();
             if (Check(SyntaxKind.Minus))
             {
-                Advance(); // consume second minus
-                // Return as special marker token
+                var second = Advance(); // consume second minus
+                // Return as special marker token, preserving the outer trivia of
+                // the two consumed minuses so the tree round-trips (adjacent "--").
                 return new LyricSyllableGreen(
-                    new SyntaxToken(SyntaxKind.Identifier, "--"));
+                    new SyntaxToken(SyntaxKind.Identifier, "--",
+                        first.LeadingTrivia, second.TrailingTrivia));
             }
             // Single minus - treat as connector (rare but handle gracefully)
             return new LyricSyllableGreen(first);

@@ -219,12 +219,18 @@ public class MidiFile
 
         foreach (var ts in track.TimeSignatures)
         {
-            int denomPow = (int)Math.Log2(ts.Denominator);
+            // Denominator is a power of two; take its exact log2 via trailing-zero
+            // count. Floating-point Math.Log2 can return e.g. 2.9999… for 8 and
+            // truncate to 2.
+            int denomPow = ts.Denominator > 0
+                ? System.Numerics.BitOperations.TrailingZeroCount((uint)ts.Denominator)
+                : 2;
             events.Add(new MidiEvent(ts.Tick, MidiEventType.TimeSignature, 0, ts.Numerator, denomPow));
         }
 
-        // Quarter tones: ±50 cents = ±1024 on the standard ±2-semitone bend
-        // range. The channel plan routes bent notes to auxiliary channels
+        // Quarter tones: on the standard ±2-semitone (±8192-unit) bend range,
+        // 50 cents = 2048 units. The channel plan routes bent notes to auxiliary
+        // channels
         // (bend set once per channel); the fallback keeps in-channel bends,
         // switching the value only when it changes. Bend events sort BEFORE
         // note-on at the same tick (enum order).
@@ -237,7 +243,7 @@ public class MidiFile
             if (channelBend.GetValueOrDefault(channel) != want)
             {
                 events.Add(new MidiEvent(note.StartTick, MidiEventType.PitchBend,
-                    channel, 8192 + want * 1024, 0));
+                    channel, 8192 + want * 2048, 0));
                 channelBend[channel] = want;
             }
             events.Add(new MidiEvent(note.StartTick, MidiEventType.NoteOn, channel, note.Pitch, note.Velocity));

@@ -173,8 +173,25 @@ public class ParserTests
     [InlineData("time 4\n  x")]
     [InlineData("time 3\n\tq")]
     [InlineData("{ c4 } time 6\n   y")]
+    // Recovery placeholders for a missing key mode / clef name / octave mode are
+    // now zero-width (was "major" / "treble" / "relative"), so even these
+    // truncated inputs round-trip exactly (the token to recover is at end-of-input).
+    [InlineData("key c")]
+    [InlineData("clef")]
+    [InlineData("octave")]
     public void MalformedInput_RoundTripsExactly(string source)
     {
+        var tree = SyntaxTree.Parse(source);
+        Assert.Equal(source, tree.ToFullString());
+    }
+
+    [Fact]
+    public void LyricMeasureWithoutTrailingBar_RoundTripsWithoutPhantomBar()
+    {
+        // A VALID lyrics block whose final measure omits the trailing '|' before
+        // '}' must round-trip exactly: the synthetic barline is zero-width, so it
+        // emits no '|' and shifts no following node's position.
+        var source = "section M { m { c4 | } lyrics { hello world } }";
         var tree = SyntaxTree.Parse(source);
         Assert.Equal(source, tree.ToFullString());
     }

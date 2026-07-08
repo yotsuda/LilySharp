@@ -916,18 +916,24 @@ public sealed class MidiExporter
 
     private int FractionToTicks(Fraction duration)
     {
-        int baseTicks = (int)(duration.Numerator * 4 * _ticksPerQuarter / duration.Denominator);
+        // Round rather than truncate: independent flooring of each duration biases
+        // nested tuplets progressively earlier. Rounding is identical for the common
+        // power-of-two durations and only differs on awkward tuplet remainders.
+        long baseTicks = RoundedDiv(duration.Numerator * 4 * _ticksPerQuarter, duration.Denominator);
 
         // Apply tuplet scaling: each note plays in (denominator/numerator) of normal time
         foreach (var (numerator, denominator) in _tupletStack)
         {
-            baseTicks = baseTicks * denominator / numerator;
+            baseTicks = RoundedDiv(baseTicks * denominator, numerator);
         }
 
-        return baseTicks;
+        return (int)baseTicks;
     }
 
-    private static int BpmToMicroseconds(int bpm) => 60_000_000 / bpm;
+    /// <summary>Nearest-integer division for non-negative operands (a &gt;= 0, b &gt; 0).</summary>
+    private static long RoundedDiv(long a, long b) => b <= 0 ? 0 : (a + b / 2) / b;
+
+    private static int BpmToMicroseconds(int bpm) => 60_000_000 / Math.Max(1, bpm);
 
     private void ProcessGrace(GraceExpressionSyntax grace, MidiTrack track)
     {
