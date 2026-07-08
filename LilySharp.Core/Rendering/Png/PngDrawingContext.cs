@@ -340,21 +340,8 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
             return fallback ?? baseTypeface;
         }
 
-        private string? ResolveFontPath(string fileName)
-        {
-            if (!string.IsNullOrEmpty(_fontDirectory))
-            {
-                var p = Path.Combine(_fontDirectory, fileName);
-                if (File.Exists(p)) return p;
-            }
-            var baseDir = AppContext.BaseDirectory;
-            foreach (var sub in new[] { "Fonts", "fonts", "" })
-            {
-                var p = Path.Combine(baseDir, sub, fileName);
-                if (File.Exists(p)) return p;
-            }
-            return null;
-        }
+        private string? ResolveFontPath(string fileName) =>
+            FontLocator.ResolveFile(fileName, _fontDirectory);
 
         public void Dispose()
         {

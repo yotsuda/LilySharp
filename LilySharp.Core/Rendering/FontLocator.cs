@@ -51,4 +51,27 @@ public static class FontLocator
         }
         return null;
     }
+
+    /// <summary>
+    /// Resolves a specific bundled font file (e.g. <c>emmentaler-20.otf</c>) to an
+    /// absolute path, or null if not found. Probes an optional caller-supplied
+    /// override directory first, then the shared candidate directories, then the
+    /// app base directory itself. Single source of truth for the PDF/PNG/SVG
+    /// drawing contexts (each formerly carried its own {Fonts, fonts, ""} probe).
+    /// </summary>
+    public static string? ResolveFile(string fileName, string? overrideDir = null)
+    {
+        if (!string.IsNullOrEmpty(overrideDir))
+        {
+            var p = Path.Combine(overrideDir, fileName);
+            if (File.Exists(p)) return p;
+        }
+        foreach (var c in Candidates)
+        {
+            var p = Path.Combine(c, fileName);
+            if (File.Exists(p)) return p;
+        }
+        var baseFile = Path.Combine(AppContext.BaseDirectory, fileName);
+        return File.Exists(baseFile) ? baseFile : null;
+    }
 }

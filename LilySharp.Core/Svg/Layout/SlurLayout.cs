@@ -25,50 +25,13 @@ namespace LilySharp.Core.Svg.Layout;
 /// LILYPOND-REF: lily/slur-scoring.cc — scoring/optimization of slur shape
 /// Control points are computed by SlurScoringProblem; this record stores the result.
 /// </remarks>
-internal sealed record SlurLayout
+internal sealed record SlurLayout : BowLayout
 {
     /// <summary>The slur model.</summary>
     public Model.SlurItem Slur { get; }
 
-    /// <summary>Global staff index this slur belongs to (-1 = unknown, e.g.
-    /// direct unit-test construction). The renderer uses it to shrink bows on
-    /// ossia staves with the rest of the staff's notation.</summary>
-    public int StaffIndex { get; init; } = -1;
-
-    /// <summary>X coordinate of the start point.</summary>
-    public double StartX { get; }
-
-    /// <summary>Y coordinate of the start point.</summary>
-    public double StartY { get; }
-
-    /// <summary>X coordinate of the end point.</summary>
-    public double EndX { get; }
-
-    /// <summary>Y coordinate of the end point.</summary>
-    public double EndY { get; }
-
-    /// <summary>First control point (near start).</summary>
-    public (double X, double Y) Control1 { get; }
-
-    /// <summary>Second control point (near end).</summary>
-    public (double X, double Y) Control2 { get; }
-
     /// <summary>Direction: true = curve up, false = curve down.</summary>
-    public bool CurveUp => Slur.CurveUp;
-
-    /// <summary>
-    /// True if this layout is the right-side piece of a slur split at a system break
-    /// (the left bound has been reattached to the system's left edge).
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/item.cc:127-135 — break_status_dir == LEFT broken piece.</remarks>
-    public bool IsBrokenLeft { get; }
-
-    /// <summary>
-    /// True if this layout is the left-side piece of a slur split at a system break
-    /// (the right bound has been reattached to the system's right edge).
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/item.cc:127-135 — break_status_dir == RIGHT broken piece.</remarks>
-    public bool IsBrokenRight { get; }
+    public override bool CurveUp => Slur.CurveUp;
 
     public SlurLayout(
         Model.SlurItem slur,
@@ -80,15 +43,8 @@ internal sealed record SlurLayout
         (double X, double Y) control2,
         bool isBrokenLeft = false,
         bool isBrokenRight = false)
+        : base(startX, startY, endX, endY, control1, control2, isBrokenLeft, isBrokenRight)
     {
         Slur = slur;
-        StartX = startX;
-        StartY = startY;
-        EndX = endX;
-        EndY = endY;
-        Control1 = control1;
-        Control2 = control2;
-        IsBrokenLeft = isBrokenLeft;
-        IsBrokenRight = isBrokenRight;
     }
 }

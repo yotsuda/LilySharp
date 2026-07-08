@@ -193,19 +193,6 @@ internal sealed class SvgDocumentContext : IDocumentContext
             $"@font-face {{ font-family: '{family}'; src: url('data:font/{format};base64,{b64}') format('{format}'); }}");
     }
 
-    private string? ResolveFontPath(string fileName)
-    {
-        if (!string.IsNullOrEmpty(_options.FontDirectory))
-        {
-            var p = Path.Combine(_options.FontDirectory, fileName);
-            if (File.Exists(p)) return p;
-        }
-        var baseDir = AppContext.BaseDirectory;
-        foreach (var sub in new[] { "Fonts", "fonts", "" })
-        {
-            var p = Path.Combine(baseDir, sub, fileName);
-            if (File.Exists(p)) return p;
-        }
-        return null;
-    }
+    private string? ResolveFontPath(string fileName) =>
+        FontLocator.ResolveFile(fileName, _options.FontDirectory);
 }
