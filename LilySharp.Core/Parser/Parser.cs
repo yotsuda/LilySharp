@@ -49,16 +49,46 @@ internal sealed class Parser
         // Unknown characters lex to BadToken and no parse rule consumes them —
         // they were dropped in complete silence (a typo like `b??` compiled
         // clean and simply lost the "??"). Flag each one up front.
+        //
+        // Exception: '#' (a BadToken everywhere, since Lily# deliberately avoids
+        // Scheme's '#') is LEGAL inside a @chord(...) / @fig(...) argument, where
+        // it means "sharp" — sharp roots (C#/F#), altered tensions (7#9, #11), and
+        // sharp figures (#6). It flows through MusicMarkSyntax.MarkName to the
+        // chord / figured-bass parsers. Track those argument regions so a '#'
+        // there is not flagged; every other BadToken (and '#' anywhere else) is.
         int scanPos = 0;
+        int argDepth = 0;  // paren depth inside a @chord/@fig argument (0 = outside)
+        int stage = 0;     // 0 = idle, 1 = saw '@', 2 = saw '@chord'/'@fig' name
         foreach (var t in _tokens)
         {
-            if (t.Kind == SyntaxKind.BadToken)
+            bool inChordFigArg = argDepth > 0;
+            if (t.Kind == SyntaxKind.BadToken && !(inChordFigArg && t.Text == "#"))
             {
                 _diagnostics.Error(
                     new TextSpan(scanPos + (t.FullWidth - t.Text.Length), t.Text.Length),
                     DiagnosticCodes.UnexpectedCharacter,
                     $"Unexpected character '{t.Text}' — it has no meaning here and is ignored");
             }
+
+            if (inChordFigArg)
+            {
+                if (t.Kind == SyntaxKind.OpenParen) argDepth++;
+                else if (t.Kind == SyntaxKind.CloseParen) argDepth--;
+            }
+            else if (t.Kind == SyntaxKind.At)
+                stage = 1;
+            else if (stage == 1 && t.Kind == SyntaxKind.Identifier
+                     && (t.Text.Equals("chord", StringComparison.OrdinalIgnoreCase)
+                         || t.Text.Equals("fig", StringComparison.OrdinalIgnoreCase)))
+                stage = 2;
+            else if (stage == 2 && t.Kind == SyntaxKind.OpenParen)
+            {
+                argDepth = 1;
+                stage = 0;
+            }
+            else
+                stage = 0;
+
             scanPos += t.FullWidth;
         }
     }

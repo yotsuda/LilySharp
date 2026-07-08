@@ -132,22 +132,23 @@ public sealed record ChordNameItem
     /// <remarks>
     /// LILYPOND-REF: scm/chord-name.scm:58-85 - alteration→text-accidental-markup
     /// Recognizes root flats: Bb→B♭, Eb→E♭, Ab→A♭, Db→D♭, Gb→G♭, Cb→C♭, Fb→F♭
+    /// Sharps ('#', anywhere) → ♯: sharp roots (C#→C♯, F#→F♯) and altered
+    /// tensions (7#9→7♯9, #11→♯11). '#' is the jazz lead-sheet sharp.
     /// </remarks>
     private static string FormatChordText(string raw)
     {
-        if (raw.Length < 2)
+        if (string.IsNullOrEmpty(raw))
             return raw;
 
         // Check for root flat: uppercase letter (A-G) followed by lowercase 'b'
-        // but only if it's a valid flat root (not "B" alone which is B natural)
-        char root = raw[0];
-        if (root is >= 'A' and <= 'G' && raw[1] == 'b')
-        {
-            // Verify this is a root flat, not part of a word like "Baug"
-            // Root flat: the 'b' must be at position 1 and the root must be a valid note
-            return root + "\u266D" + raw.Substring(2);  // ♭
-        }
+        // but only if it's a valid flat root (not "B" alone which is B natural).
+        // The 'b' must be at position 1 and the root a valid note (not "Baug").
+        if (raw.Length >= 2 && raw[0] is >= 'A' and <= 'G' && raw[1] == 'b')
+            raw = raw[0] + "♭" + raw.Substring(2);  // B flat root
 
-        return raw;
+        // Sharps: '#' is legal only inside a @chord(...) argument (see the Parser
+        // BadToken scan). Render every '#' as a sharp sign (U+266F) -- sharp roots
+        // (C#, F#) and altered tensions (7#9, #11) alike.
+        return raw.Replace('#', '♯');  // sharp
     }
 }

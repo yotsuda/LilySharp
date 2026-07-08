@@ -103,6 +103,32 @@ public class ChordNameTests
     }
 
     [Fact]
+    public void ParseChordName_SharpRoot()
+    {
+        // @chord(C#m7) → MarkName "chord.C.#.m7" (the '#' lexes as its own token)
+        var result = ChordNameItem.ParseChordName("chord.C.#.m7");
+        Assert.NotNull(result);
+        Assert.Equal("C♯m7", result);  // C♯m7
+    }
+
+    [Fact]
+    public void ParseChordName_SharpTension()
+    {
+        var result = ChordNameItem.ParseChordName("chord.G7.#.9");
+        Assert.NotNull(result);
+        Assert.Equal("G7♯9", result);  // G7♯9
+    }
+
+    [Fact]
+    public void ParseChordName_SharpRootWithFlatTension()
+    {
+        // F#m7b5 keeps the flat literal (as before) and sharps the root.
+        var result = ChordNameItem.ParseChordName("chord.F.#.m7b5");
+        Assert.NotNull(result);
+        Assert.Equal("F♯m7b5", result);  // F♯m7b5
+    }
+
+    [Fact]
     public void ParseChordName_NotChord_ReturnsNull()
     {
         Assert.Null(ChordNameItem.ParseChordName("segno"));
@@ -207,6 +233,34 @@ public class ChordNameTests
 
         Assert.Single(score.ChordNames);
         Assert.Equal("B\u266D7", score.ChordNames[0].ChordText);
+    }
+
+    [Fact]
+    public void Collector_ChordName_SharpChord()
+    {
+        var source = "c4 @chord(C#m7) d e f";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree);
+
+        Assert.Single(score.ChordNames);
+        Assert.Equal("C♯m7", score.ChordNames[0].ChordText);  // C♯m7
+    }
+
+    [Fact]
+    public void Collector_ChordName_SharpTension()
+    {
+        var source = "c4 @chord(G7#9) d e f";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree);
+
+        Assert.Single(score.ChordNames);
+        Assert.Equal("G7♯9", score.ChordNames[0].ChordText);  // G7♯9
     }
 
     [Fact]

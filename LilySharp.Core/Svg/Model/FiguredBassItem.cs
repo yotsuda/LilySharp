@@ -127,6 +127,7 @@ public sealed record FiguredBassItem
         var figures = ImmutableArray.CreateBuilder<FiguredBassFigure>();
         int currentNumber = -1;
         int currentAlteration = 0;
+        int pendingAlteration = 0; // a leading '#' seen BEFORE its figure number
 
         foreach (var part in parts)
         {
@@ -140,7 +141,15 @@ public sealed record FiguredBassItem
                     figures.Add(new FiguredBassFigure(currentNumber, currentAlteration));
 
                 currentNumber = number;
-                currentAlteration = 0;
+                currentAlteration = pendingAlteration; // a leading '#6' binds here
+                pendingAlteration = 0;
+            }
+            else if (part == "#")
+            {
+                // '#' is the jazz / continuo sharp. Written before a number ('#6')
+                // it binds to the coming figure; alone ('#') it is a bare sharp.
+                // (Suffix sharp keeps the existing 's' spelling: '6.s'.)
+                pendingAlteration = 1;
             }
             else if (currentNumber >= 0 && part.Length == 1)
             {
@@ -164,6 +173,10 @@ public sealed record FiguredBassItem
         // Flush last figure
         if (currentNumber >= 0)
             figures.Add(new FiguredBassFigure(currentNumber, currentAlteration));
+
+        // A lone '#' with no figure at all is a standalone sharp (raised third).
+        if (pendingAlteration != 0 && currentNumber < 0)
+            figures.Add(new FiguredBassFigure(0, pendingAlteration));
 
         return figures.Count > 0 ? figures.ToImmutable() : null;
     }

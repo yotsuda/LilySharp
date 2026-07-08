@@ -360,6 +360,27 @@ key g major
     }
 
     [Fact]
+    public void Sharp_IsLegalInsideChordAndFigArgs()
+    {
+        // '#' is illegal everywhere EXCEPT inside a @chord(...) / @fig(...) argument.
+        foreach (var src in new[] { "c4 @chord(C#m7) d", "c4 @fig(#6) d" })
+        {
+            var tree = SyntaxTree.Parse(src);
+            Assert.DoesNotContain(tree.Diagnostics,
+                d => d.Code == DiagnosticCodes.UnexpectedCharacter);
+        }
+    }
+
+    [Fact]
+    public void Sharp_StaysIllegalOutsideChordAndFigArgs()
+    {
+        // A stray '#' outside a chord/fig argument is still flagged.
+        var tree = SyntaxTree.Parse("c4 # d");
+        Assert.Contains(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.UnexpectedCharacter);
+    }
+
+    [Fact]
     public void ParseVariableReference()
     {
         var tree = SyntaxTree.Parse(@"phrase theme { c d e f }

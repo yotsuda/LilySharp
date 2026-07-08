@@ -134,6 +134,41 @@ public class FiguredBassTests
     }
 
     [Fact]
+    public void ParseFigures_SharpPrefix()
+    {
+        // @fig(#6) → MarkName "fig.#.6"; the '#' sharpens the following figure.
+        var result = FiguredBassItem.ParseFigures("fig.#.6");
+        Assert.NotNull(result);
+        Assert.Single(result!.Value);
+        Assert.Equal(6, result.Value[0].Number);
+        Assert.Equal(1, result.Value[0].Alteration);
+    }
+
+    [Fact]
+    public void ParseFigures_StandaloneSharp()
+    {
+        // @fig(#) → a bare sharp (raised third), number 0.
+        var result = FiguredBassItem.ParseFigures("fig.#");
+        Assert.NotNull(result);
+        Assert.Single(result!.Value);
+        Assert.Equal(0, result.Value[0].Number);
+        Assert.Equal(1, result.Value[0].Alteration);
+    }
+
+    [Fact]
+    public void ParseFigures_SharpPrefix_ThenPlainFigure()
+    {
+        // @fig(#6 4) → 6♯ over a plain 4.
+        var result = FiguredBassItem.ParseFigures("fig.#.6.4");
+        Assert.NotNull(result);
+        Assert.Equal(2, result!.Value.Length);
+        Assert.Equal(6, result.Value[0].Number);
+        Assert.Equal(1, result.Value[0].Alteration);
+        Assert.Equal(4, result.Value[1].Number);
+        Assert.Equal(0, result.Value[1].Alteration);
+    }
+
+    [Fact]
     public void ParseFigures_NotFiguredBass_ReturnsNull()
     {
         Assert.Null(FiguredBassItem.ParseFigures("segno"));
@@ -252,6 +287,23 @@ public class FiguredBassTests
 
         Assert.Single(score.FiguredBasses);
         var fb = score.FiguredBasses[0];
+        Assert.Equal(6, fb.Figures[0].Number);
+        Assert.Equal(1, fb.Figures[0].Alteration);
+    }
+
+    [Fact]
+    public void Collector_FiguredBass_SharpPrefix()
+    {
+        var source = "c4 @fig(#6) d e f";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        var collector = new MeasureCollector();
+        var score = collector.Collect(tree);
+
+        Assert.Single(score.FiguredBasses);
+        var fb = score.FiguredBasses[0];
+        Assert.Single(fb.Figures);
         Assert.Equal(6, fb.Figures[0].Number);
         Assert.Equal(1, fb.Figures[0].Alteration);
     }
