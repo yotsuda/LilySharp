@@ -78,12 +78,33 @@ public static class PartSectionLayoutConverter
             return null;
         var target = form == LayoutForm.PartMajor ? LayoutForm.SectionMajor : LayoutForm.PartMajor;
 
+        // Chord (`chords name { }`) and lyric blocks are SECTION-MAJOR ONLY — a
+        // part's inner section holds music, not sub-blocks — so going to part-major
+        // has nowhere to put them. Refuse rather than silently drop them (data loss);
+        // the editor turns this into a clear "kept as section-major" message.
+        if (target == LayoutForm.PartMajor && HasUntransposableSectionContent(root))
+            return null;
+
         var result = Emit(source, root, target);
         // Safety net: only return a result that round-trips to a clean parse, so a
         // surprising cell (e.g. one with embedded braces) can never corrupt the
         // document in place. If it wouldn't parse, report "no change" instead.
         return SyntaxTree.Parse(result).HasErrors ? null : result;
     }
+
+    /// <summary>
+    /// True when a section-major section carries a block that is NOT a part block
+    /// (a <c>chords name { }</c> chord part or a <c>lyrics { }</c> block). Those live
+    /// only in the section-major layout, so a part-major conversion would drop them.
+    /// The editor uses this to explain why the file was left as section-major.
+    /// </summary>
+    public static bool HasUntransposableSectionContent(string source)
+        => HasUntransposableSectionContent(SyntaxTree.Parse(source).GetRoot());
+
+    private static bool HasUntransposableSectionContent(CompilationUnitSyntax root)
+        => TopLevel(root).OfType<SectionDeclarationSyntax>()
+            .Where(s => DirectChildrenOfType<PartBlockSyntax>(s).Any())
+            .Any(s => DirectChildren(s).Any(c => c is not PartBlockSyntax));
 
     // --- model extraction -----------------------------------------------------
 

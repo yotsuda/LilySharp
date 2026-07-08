@@ -85,6 +85,50 @@ public class PartSectionLayoutConverterTests
     }
 
     [Fact]
+    public void Convert_SectionWithChordsBlock_RefusesRatherThanDropData()
+    {
+        // A `chords name { }` chord part lives only in the section-major layout, so a
+        // part-major conversion has nowhere to put it. It must be REFUSED (null), not
+        // silently dropped — the previous behaviour lost the whole chords block.
+        var src = """
+            part melody { clef treble }
+            section A {
+              melody { c4 c g' g | }
+              chords harmony { c1 | f1 | }
+            }
+            structure { A }
+            score "s" { staff melody with chords harmony }
+            """;
+        Assert.True(PartSectionLayoutConverter.HasUntransposableSectionContent(src));
+        Assert.Null(PartSectionLayoutConverter.Convert(src));
+    }
+
+    [Fact]
+    public void Convert_SectionWithLyricsBlock_RefusesRatherThanDropData()
+    {
+        var src = """
+            part melody { clef treble }
+            section A {
+              melody { c4 c g' g | }
+              lyrics { twin- kle twin- kle }
+            }
+            structure { A }
+            score "s" { staff melody }
+            """;
+        Assert.True(PartSectionLayoutConverter.HasUntransposableSectionContent(src));
+        Assert.Null(PartSectionLayoutConverter.Convert(src));
+    }
+
+    [Fact]
+    public void Convert_PlainSections_NotFlaggedAsUntransposable()
+    {
+        // The ordinary section-major file (only part blocks in its sections) must
+        // still convert — the guard only trips on chord/lyric blocks.
+        Assert.False(PartSectionLayoutConverter.HasUntransposableSectionContent(SectionMajor));
+        Assert.NotNull(PartSectionLayoutConverter.Convert(SectionMajor));
+    }
+
+    [Fact]
     public void Convert_Unknown_ReturnsNull()
     {
         // No part blocks / inner sections — nothing to transpose.

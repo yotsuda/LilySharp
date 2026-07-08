@@ -3309,6 +3309,17 @@ public sealed class LilySharpLanguageServer
                 Error = "No part/section layout to convert — the file needs parts with sections."
             };
 
+        // Chord/lyric blocks only exist in the section-major layout; converting to
+        // part-major would drop them. Explain and keep the file unchanged.
+        if (from == LilySharp.Core.Editing.LayoutForm.SectionMajor
+            && LilySharp.Core.Editing.PartSectionLayoutConverter.HasUntransposableSectionContent(doc.Text))
+            return new ConvertLayoutResponse
+            {
+                Success = false,
+                Error = "This file has chords/lyrics blocks, which exist only in the section-major "
+                    + "layout. Converting to part-major would drop them, so it was left unchanged."
+            };
+
         // Convert self-guards: it returns null unless the result round-trips to a
         // clean parse, so this can never produce a corrupt document.
         var newText = LilySharp.Core.Editing.PartSectionLayoutConverter.Convert(doc.Text);
