@@ -102,8 +102,15 @@ internal static class MusicXmlReader
             doc.Parts.Add(part);
         }
 
+        // An empty score is a common surprise (e.g. a template exported with no
+        // music): the output parses but renders nothing, so say so plainly rather
+        // than leave the user wondering whether the importer swallowed the notes.
+        int totalNotes = doc.Parts.Sum(
+            p => p.Measures.Sum(m => m.Items.Count(i => i is ImportNote note && !note.IsRest)));
         if (doc.Parts.Count == 0)
             report.Warn("No <part> elements found; the imported score is empty.");
+        else if (totalNotes == 0)
+            report.Warn("The MusicXML contains no notes; the imported score is empty.");
         return doc;
     }
 

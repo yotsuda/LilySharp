@@ -198,6 +198,23 @@ public class MusicXmlRoundTripTests
         return ms.ToArray();
     }
 
+    [Fact]
+    public void EmptyScore_WarnsNoNotes()
+    {
+        // A part-list with an empty <part/> (no measures) is a real export artifact.
+        // The importer must say the score is empty, not silently produce nothing.
+        var (lys, report) = new MusicXmlImporter().Import("""
+            <?xml version="1.0" encoding="utf-8"?>
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>Part 1</part-name></score-part></part-list>
+              <part id="P1" />
+            </score-partwise>
+            """);
+
+        Assert.False(SyntaxTree.Parse(lys).HasErrors); // still emits a valid, empty .lys
+        Assert.Contains(report.Warnings, w => w.Contains("no notes"));
+    }
+
     // NOTE: structure-level repeats (|: A :|) replay sections in the collector but
     // the exporter unrolls them to repeat BARLINES (section emitted once), so a
     // round-trip through XML can't match on replay count until the importer factors
