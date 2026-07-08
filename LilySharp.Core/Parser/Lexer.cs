@@ -219,7 +219,14 @@ internal sealed class Lexer
         if (Current == ':')
         {
             _position++;
-            if (Current == '|') { _position++; return (SyntaxKind.RepeatEndBar, ":|"); }
+            if (Current == '|')
+            {
+                _position++;
+                // ':|:' — a back-to-back repeat (end then start). Written with one
+                // shared '|', so it is a single token, not ':|' + '|:'.
+                if (Current == ':') { _position++; return (SyntaxKind.RepeatBothBar, ":|:"); }
+                return (SyntaxKind.RepeatEndBar, ":|");
+            }
 
             // Check for tremolo suffix (:8, :16, :32 only)
             if (char.IsDigit(Current))

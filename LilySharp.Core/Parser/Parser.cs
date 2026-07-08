@@ -772,7 +772,7 @@ internal sealed class Parser
             SyntaxKind.VoiceKeyword => true, // Parallel voices: voice { } voice { }
             SyntaxKind.DoubleOpenAngle => true, // removed << >> — dispatched to a migration hint
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or SyntaxKind.DashedBar or
-            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => true,
+            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar or SyntaxKind.RepeatBothBar => true,
             SyntaxKind.Tilde => true,
             SyntaxKind.OpenParen or SyntaxKind.CloseParen => true,
             SyntaxKind.OpenBracket or SyntaxKind.CloseBracket => true,
@@ -819,7 +819,7 @@ internal sealed class Parser
             SyntaxKind.Backslash => ParseLilypondBackslashCommand(topLevel: false),
 
             SyntaxKind.Bar or SyntaxKind.DoubleBar or SyntaxKind.FinalBar or SyntaxKind.DashedBar or
-            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar => ParseBarline(),
+            SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar or SyntaxKind.RepeatBothBar => ParseBarline(),
 
             SyntaxKind.Tilde => ParseTie(),
 
@@ -1245,6 +1245,7 @@ internal sealed class Parser
         || (Check(SyntaxKind.OpenBracket) && Peek(1).Kind == SyntaxKind.IntegerLiteral)
         || Check(SyntaxKind.RepeatStartBar)
         || Check(SyntaxKind.RepeatEndBar)
+        || Check(SyntaxKind.RepeatBothBar)
         || Check(SyntaxKind.CloseBrace)
         || Check(SyntaxKind.EndOfFile);
 
@@ -1958,7 +1959,8 @@ private GreenNode?[] ParseArticulations()
         while (!Check(SyntaxKind.CloseBrace) && !Check(SyntaxKind.EndOfFile))
         {
             if (Check(SyntaxKind.Bar) || Check(SyntaxKind.DoubleBar) || Check(SyntaxKind.FinalBar)
-                || Check(SyntaxKind.RepeatStartBar) || Check(SyntaxKind.RepeatEndBar))
+                || Check(SyntaxKind.RepeatStartBar) || Check(SyntaxKind.RepeatEndBar)
+                || Check(SyntaxKind.RepeatBothBar))
                 items.Add(ParseBarline());
             else if (IsPitchKind(Current.Kind))
                 items.Add(ParseChordEntry());
@@ -2017,7 +2019,7 @@ private GreenNode?[] ParseArticulations()
     /// <summary>Any barline token that ends a lyric measure.</summary>
     private static bool IsLyricBarline(SyntaxKind kind) => kind is SyntaxKind.Bar
         or SyntaxKind.DoubleBar or SyntaxKind.FinalBar
-        or SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar;
+        or SyntaxKind.RepeatStartBar or SyntaxKind.RepeatEndBar or SyntaxKind.RepeatBothBar;
 
     /// <summary>
     /// Parse a single lyric measure: syllable syllable ... |
@@ -2373,6 +2375,16 @@ private GreenNode?[] ParseArticulations()
         // Parse items until :| or | (for alternatives)
         while (!Check(SyntaxKind.RepeatEndBar) && !Check(SyntaxKind.EndOfFile))
         {
+            // ':|:' back-to-back repeat: closes this repeat and immediately opens
+            // the next, sharing one barline. Keep it as a divider token in the item
+            // list; ProcessRepeatBlock expands it to ':|' + '|:' (which fuse into the
+            // RepeatBoth glyph), so 'A |: B :|: C :|' == 'A |: B :| |: C :|'.
+            if (Check(SyntaxKind.RepeatBothBar))
+            {
+                items.Add(Advance());
+                continue;
+            }
+
             // Check for | followed by number (start of alternatives)
             if (Check(SyntaxKind.Bar) && Peek(1)?.Kind == SyntaxKind.IntegerLiteral)
             {

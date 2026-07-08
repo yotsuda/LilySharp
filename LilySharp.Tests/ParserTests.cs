@@ -391,6 +391,16 @@ key g major
     }
 
     [Fact]
+    public void BackToBackRepeatBarline_Inline_ParsesCleanly()
+    {
+        // ':|:' is a single back-to-back repeat token, not ':|' + a stray ':'.
+        var tree = SyntaxTree.Parse("{ c4 c c c :|: d4 d d d }");
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        Assert.DoesNotContain(tree.Diagnostics,
+            d => d.Code == DiagnosticCodes.UnexpectedCharacter);
+    }
+
+    [Fact]
     public void DoublePlacementSuffix_GivesClearError()
     {
         // @staccato.up.down — a second placement is a mistake; the message must

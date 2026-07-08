@@ -2773,6 +2773,16 @@ public sealed class MeasureCollector
                 {
                     processNodes(new[] { CreateBarlineSyntax(token.Text, token.Position) });
                 }
+                else if (token.Text == ":|:")
+                {
+                    // Back-to-back repeat divider: close the current repeat and open
+                    // the next. The adjacent ':|' + '|:' fuse into the RepeatBoth
+                    // glyph at render time, and the following section is still marked
+                    // as a repeat (StartBarline = RepeatStart) — exactly ':| |:'.
+                    processNodes(new[] { CreateBarlineSyntax(":|", token.Position) });
+                    processNodes(new[] { CreateBarlineSyntax("|:", token.Position) });
+                    afterRepeatStart = true;
+                }
             }
             else if (afterRepeatStart)
             {

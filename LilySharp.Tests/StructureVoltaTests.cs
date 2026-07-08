@@ -17,6 +17,7 @@
 using System.Linq;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
+using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
 using Xunit;
 
@@ -76,6 +77,30 @@ public sealed class StructureVoltaTests
     {
         // The closing ']' is optional — absent leaves the cap open.
         Assert.True(MeasureCount("structure { |: A [1. D :| [2. O }") > 0);
+    }
+
+    [Fact]
+    public void BackToBackRepeat_ColonPipeColon_EqualsExplicitTwoBlocks()
+    {
+        // ':|:' (one shared barline) must produce exactly the same measures as the
+        // explicit ':| |:' two-block spelling — a repeat-end that opens a new repeat.
+        static (BarlineType Start, BarlineType End)[] Bars(string structure)
+        {
+            var tree = SyntaxTree.Parse(Head + structure + Tail);
+            Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+            return new MeasureCollector().Collect(tree, "m").Voice.Measures
+                .Select(m => (m.StartBarline, m.EndBarline)).ToArray();
+        }
+
+        var shorthand = Bars("structure { A |: D :|: O :| }");
+        var explicitTwoBlocks = Bars("structure { A |: D :| |: O :| }");
+        Assert.Equal(explicitTwoBlocks, shorthand);
+
+        // And the shared boundary is a repeat-end meeting a repeat-start (which the
+        // renderer fuses into the RepeatBoth glyph): D closes with RepeatEnd, O opens
+        // with RepeatStart.
+        Assert.Contains(shorthand, b => b.End == BarlineType.RepeatEnd);
+        Assert.Contains(shorthand, b => b.Start == BarlineType.RepeatStart);
     }
 
     [Fact]

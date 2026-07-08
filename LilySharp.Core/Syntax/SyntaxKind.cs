@@ -244,6 +244,9 @@ public enum SyntaxKind : ushort
     RepeatStartBar,
     /// <summary>A repeat-end bar-line <c>:|</c> token.</summary>
     RepeatEndBar,
+    /// <summary>A back-to-back repeat bar-line <c>:|:</c> token (end-then-start,
+    /// rendered as the RepeatBoth glyph with dots on both sides).</summary>
+    RepeatBothBar,
     // LineBreakBar removed - use BreakKeyword instead
     /// <summary>A tilde <c>~</c> token (tie).</summary>
     Tilde,
