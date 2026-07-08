@@ -216,6 +216,19 @@ public class MusicXmlRoundTripTests
     }
 
     [Fact]
+    public void Tuplets_SurviveRoundTrip()
+    {
+        // A triplet + a quintuplet: the scaled durations must match, which only holds
+        // if the tuplet ratio round-trips (plain 8ths would overflow the bar).
+        AssertRoundTrips("""
+            octave absolute
+            time 4/4
+            key c major
+            tuplet 3/2 { c'8 d' e' } f'4 g'4 a'4 | tuplet 5/4 { c'16 d' e' f' g' } b'4 c''4 d''4 |
+            """);
+    }
+
+    [Fact]
     public void ArticulationsAndSlurs_SurviveRoundTrip()
     {
         var tree = SyntaxTree.Parse("""

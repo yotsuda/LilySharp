@@ -369,6 +369,13 @@ internal static class MusicXmlReader
             foreach (var o in Local(notations, "ornaments")?.Elements() ?? Enumerable.Empty<XElement>())
                 if (OrnamentMark(o.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
                     note.Articulations.Add(mark);
+            // Tuplet bracket: the ratio comes from <time-modification>.
+            foreach (var tup in Els(notations, "tuplet"))
+                switch ((string?)tup.Attribute("type"))
+                {
+                    case "start": note.TupletStart = ReadTimeModification(el); break;
+                    case "stop": note.TupletStop = true; break;
+                }
         }
 
         foreach (var lyric in Els(el, "lyric"))
@@ -376,6 +383,18 @@ internal static class MusicXmlReader
                 note.Lyrics.Add(imported);
 
         return note;
+    }
+
+    /// <summary>The tuplet ratio (actual, normal) from a note's
+    /// &lt;time-modification&gt;, or null when absent/malformed.</summary>
+    private static (int Actual, int Normal)? ReadTimeModification(XElement el)
+    {
+        var tm = Local(el, "time-modification");
+        if (tm != null
+            && int.TryParse(Local(tm, "actual-notes")?.Value, out int a) && a > 0
+            && int.TryParse(Local(tm, "normal-notes")?.Value, out int n) && n > 0)
+            return (a, n);
+        return null;
     }
 
     /// <summary>A MusicXML &lt;articulations&gt; child to a Lily# mark, or null when

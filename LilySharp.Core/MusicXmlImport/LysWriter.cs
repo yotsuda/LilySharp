@@ -175,7 +175,13 @@ internal static class LysWriter
                 token += "(";
             if (note.TieStart)
                 token += "~";
+
+            // Wrap a tuplet group: `tuplet A/N { … }` around the notes it spans.
+            if (note.TupletStart is { } tr)
+                tokens.Add($"tuplet {tr.Actual}/{tr.Normal} {{");
             tokens.Add(token);
+            if (note.TupletStop)
+                tokens.Add("}");
             i = j;
         }
 
