@@ -1348,13 +1348,26 @@ public sealed class LilySharpLanguageServer
             sharps = KeySpelling.SharpsFor(last.Groups[1].Value, last.Groups[2].Value) ?? 0;
         }
 
+        // Each diatonic degree offers its triad, seventh, and suspended chords —
+        // sorted in scale order (degree), then triad < 7th < sus4 < sus2 per root.
+        // The label is the display symbol ("Dm7"); the inserted text is the shared
+        // chords{}-style form ("d:m7") so @chord and chords{} stay in one format.
+        static CompletionItem Item(string label, string insert, string detail, int degree, int rank) => new()
+        {
+            Label = label,
+            InsertText = insert,
+            Kind = CompletionItemKind.Value,
+            Detail = detail,
+            SortText = $"{degree:D2}{rank}",
+        };
+
         var items = DiatonicChords.ForKey(tonic, sharps)
-            .Select(c => new CompletionItem
+            .SelectMany(c => new[]
             {
-                Label = c.Symbol,
-                Kind = CompletionItemKind.Value,
-                Detail = $"Diatonic chord ({c.Roman})",
-                SortText = c.Degree.ToString("D2"),  // keep scale order, not alphabetical
+                Item(c.Symbol, c.LilyRoot + c.LilyQualitySuffix, $"Diatonic triad ({c.Roman})", c.Degree, 0),
+                Item(c.SeventhSymbol, $"{c.LilyRoot}:{c.SeventhQuality}", "Diatonic 7th", c.Degree, 1),
+                Item(c.SusFourthSymbol, $"{c.LilyRoot}:sus4", "Suspended 4th", c.Degree, 2),
+                Item(c.SusSecondSymbol, $"{c.LilyRoot}:sus2", "Suspended 2nd", c.Degree, 3),
             })
             .ToArray();
         return new CompletionList { Items = items };

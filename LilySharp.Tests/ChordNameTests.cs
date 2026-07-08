@@ -31,7 +31,8 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_SimpleChord()
     {
-        var result = ChordNameItem.ParseChordName("chord.C");
+        // @chord(c) — a Lily# root pitch, major triad.
+        var result = ChordNameItem.ParseChordName("chord.c");
         Assert.NotNull(result);
         Assert.Equal("C", result);
     }
@@ -39,7 +40,8 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_MinorSeventh()
     {
-        var result = ChordNameItem.ParseChordName("chord.Cm7");
+        // @chord(c:m7) → MarkName "chord.c.:.m7"
+        var result = ChordNameItem.ParseChordName("chord.c.:.m7");
         Assert.NotNull(result);
         Assert.Equal("Cm7", result);
     }
@@ -47,7 +49,8 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_FlatRoot()
     {
-        var result = ChordNameItem.ParseChordName("chord.Bb7");
+        // @chord(bes:7) — the flat root spells B-flat in the symbol.
+        var result = ChordNameItem.ParseChordName("chord.bes.:.7");
         Assert.NotNull(result);
         Assert.Equal("B\u266D7", result);  // B♭7
     }
@@ -55,7 +58,8 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_FlatRoot_Eb()
     {
-        var result = ChordNameItem.ParseChordName("chord.Ebmaj7");
+        // @chord(ees:maj7)
+        var result = ChordNameItem.ParseChordName("chord.ees.:.maj7");
         Assert.NotNull(result);
         Assert.Equal("E\u266Dmaj7", result);  // E♭maj7
     }
@@ -63,8 +67,8 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_NaturalB()
     {
-        // "B" alone should NOT be converted to flat
-        var result = ChordNameItem.ParseChordName("chord.B");
+        // @chord(b) — B natural major, not B-flat.
+        var result = ChordNameItem.ParseChordName("chord.b");
         Assert.NotNull(result);
         Assert.Equal("B", result);
     }
@@ -72,7 +76,7 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_SuspendedFourth()
     {
-        var result = ChordNameItem.ParseChordName("chord.Csus4");
+        var result = ChordNameItem.ParseChordName("chord.c.:.sus4");
         Assert.NotNull(result);
         Assert.Equal("Csus4", result);
     }
@@ -80,7 +84,7 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_Diminished()
     {
-        var result = ChordNameItem.ParseChordName("chord.Cdim");
+        var result = ChordNameItem.ParseChordName("chord.c.:.dim");
         Assert.NotNull(result);
         Assert.Equal("Cdim", result);
     }
@@ -88,7 +92,7 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_Augmented()
     {
-        var result = ChordNameItem.ParseChordName("chord.Caug");
+        var result = ChordNameItem.ParseChordName("chord.c.:.aug");
         Assert.NotNull(result);
         Assert.Equal("Caug", result);
     }
@@ -96,36 +100,40 @@ public class ChordNameTests
     [Fact]
     public void ParseChordName_MultiPartJoined()
     {
-        // If tokenized as separate parts: @chord(Am 7) → MarkName "chord.Am.7"
-        var result = ChordNameItem.ParseChordName("chord.Am.7");
+        // Tokenized as separate parts: @chord(g:7/b) → MarkName "chord.g.:.7./.b",
+        // rejoined without dots to the entry "g:7/b".
+        var result = ChordNameItem.ParseChordName("chord.g.:.7./.b");
         Assert.NotNull(result);
-        Assert.Equal("Am7", result);  // Parts joined without dots
+        Assert.Equal("G7/B", result);  // slash bass
     }
 
     [Fact]
     public void ParseChordName_SharpRoot()
     {
-        // @chord(C#m7) → MarkName "chord.C.#.m7" (the '#' lexes as its own token)
-        var result = ChordNameItem.ParseChordName("chord.C.#.m7");
+        // @chord(cis:m7) → MarkName "chord.cis.:.m7"; the sharp root spells C-sharp.
+        var result = ChordNameItem.ParseChordName("chord.cis.:.m7");
         Assert.NotNull(result);
-        Assert.Equal("C♯m7", result);  // C♯m7
+        Assert.Equal("C♯m7", result);  // C-sharp m7
     }
 
     [Fact]
-    public void ParseChordName_SharpTension()
+    public void ParseChordName_QuotedFreeText_ForAlteredChords()
     {
-        var result = ChordNameItem.ParseChordName("chord.G7.#.9");
-        Assert.NotNull(result);
-        Assert.Equal("G7♯9", result);  // G7♯9
+        // An altered chord outside the diatonic vocabulary (e.g. "7#9") is no longer
+        // a valid bare chord; it goes in the quoted free-text escape and prints as
+        // written (@chord("G7#9")).
+        Assert.Null(ChordNameItem.ParseChordName("chord.G7.#.9"));  // bare 7#9: rejected
+        Assert.Equal("G7#9", ChordNameItem.ParseChordName("chord.\"G7#9\""));  // quoted: verbatim
     }
 
     [Fact]
     public void ParseChordName_SharpRootWithFlatTension()
     {
-        // F#m7b5 keeps the flat literal (as before) and sharps the root.
-        var result = ChordNameItem.ParseChordName("chord.F.#.m7b5");
+        // @chord(fis:m7b5) resolves to the half-diminished quality; the canonical
+        // symbol spells both accidentals (root sharp, the b5 as flat).
+        var result = ChordNameItem.ParseChordName("chord.fis.:.m7b5");
         Assert.NotNull(result);
-        Assert.Equal("F♯m7b5", result);  // F♯m7b5
+        Assert.Equal("F♯m7♭5", result);  // half-diminished
     }
 
     [Fact]
@@ -199,7 +207,7 @@ public class ChordNameTests
     [Fact]
     public void Collector_ChordName_SingleChord()
     {
-        var source = "c4 @chord(C) d e f";
+        var source = "c4 @chord(c) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -214,7 +222,7 @@ public class ChordNameTests
     [Fact]
     public void Collector_ChordName_MinorSeventh()
     {
-        var source = "c4 @chord(Cm7) d e f";
+        var source = "c4 @chord(c:m7) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -226,7 +234,7 @@ public class ChordNameTests
     [Fact]
     public void Collector_ChordName_FlatRoot()
     {
-        var source = "c4 @chord(Bb7) d e f";
+        var source = "c4 @chord(bes:7) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -238,7 +246,7 @@ public class ChordNameTests
     [Fact]
     public void Collector_ChordName_SharpChord()
     {
-        var source = "c4 @chord(C#m7) d e f";
+        var source = "c4 @chord(cis:m7) d e f";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
@@ -246,13 +254,15 @@ public class ChordNameTests
         var score = collector.Collect(tree);
 
         Assert.Single(score.ChordNames);
-        Assert.Equal("C♯m7", score.ChordNames[0].ChordText);  // C♯m7
+        Assert.Equal("C♯m7", score.ChordNames[0].ChordText);  // C-sharp m7
     }
 
     [Fact]
-    public void Collector_ChordName_SharpTension()
+    public void Collector_ChordName_QuotedFreeText()
     {
-        var source = "c4 @chord(G7#9) d e f";
+        // An altered chord (not in the diatonic vocabulary) prints verbatim via the
+        // quoted free-text escape.
+        var source = "c4 @chord(\"G7#9\") d e f";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
@@ -260,13 +270,13 @@ public class ChordNameTests
         var score = collector.Collect(tree);
 
         Assert.Single(score.ChordNames);
-        Assert.Equal("G7♯9", score.ChordNames[0].ChordText);  // G7♯9
+        Assert.Equal("G7#9", score.ChordNames[0].ChordText);  // verbatim
     }
 
     [Fact]
     public void Collector_ChordName_MultipleChords()
     {
-        var source = "c4 @chord(C) d @chord(Am) e @chord(F) f";
+        var source = "c4 @chord(c) d @chord(a:m) e @chord(f) f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);
@@ -292,7 +302,7 @@ public class ChordNameTests
     public void Collector_ChordName_WithFiguredBass_BothCollected()
     {
         // Chord name and figured bass on the same note
-        var source = "c4 @chord(C) @fig(6) d e f";
+        var source = "c4 @chord(c) @fig(6) d e f";
         var tree = SyntaxTree.Parse(source);
         var collector = new MeasureCollector();
         var score = collector.Collect(tree);

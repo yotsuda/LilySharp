@@ -11,8 +11,8 @@ part melody
 
 phrase chorale {
   // Chord names above
-  <c e g>4@chord(C) <d f a>@chord(Dm) <e g b>@chord(Em) <f a c'>@chord(F) |
-  <g b d'>4@chord(G) <a c' e'>@chord(Am) <g b d'>@chord(G) <c e g>@chord(C) |
+  <c e g>4@chord(c) <d f a>@chord(d:m) <e g b>@chord(e:m) <f a c'>@chord(f) |
+  <g b d'>4@chord(g) <a c' e'>@chord(a:m) <g b d'>@chord(g) <c e g>@chord(c) |
 }
 
 phrase figured {

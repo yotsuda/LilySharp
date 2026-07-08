@@ -309,6 +309,64 @@ public sealed record ChordStructure(
         return true;
     }
 
+    /// <summary>
+    /// Parses a <c>chords { }</c> chord entry — the ONE chord format Lily# accepts:
+    /// a Lily# (Dutch) root pitch (<c>c</c>, <c>cis</c>, <c>bes</c>), an optional
+    /// <c>:</c> then a quality token (empty = major), and an optional <c>/</c> slash
+    /// bass. So "c", "c:m7", "cis:m7", "bes:7", and "g:7/b" parse; a chord symbol
+    /// ("Cm7", "C#m7") and an unknown quality ("c:7#9") do not. Shared by the
+    /// <c>chords { }</c> block and @chord annotations, so the two stay in one format.
+    /// </summary>
+    public static bool TryParseChordEntry(string s, out ChordStructure result)
+    {
+        result = default!;
+        if (string.IsNullOrEmpty(s))
+            return false;
+
+        int slash = s.IndexOf('/');
+        string main = slash >= 0 ? s.Substring(0, slash) : s;
+        string? bass = slash >= 0 ? s.Substring(slash + 1) : null;
+
+        int colon = main.IndexOf(':');
+        string pitchStr = colon >= 0 ? main.Substring(0, colon) : main;
+        string qualStr = colon >= 0 ? main.Substring(colon + 1) : "";
+
+        if (!TryParseDutchPitch(pitchStr, out int step, out int alter))
+            return false;
+        if (!ChordQualityRegistry.TryResolve(qualStr, out var quality))
+            return false;
+
+        int? bassStep = null, bassAlter = null;
+        if (bass != null)
+        {
+            if (!TryParseDutchPitch(bass, out int bs, out int ba))
+                return false;
+            bassStep = bs;
+            bassAlter = ba;
+        }
+
+        result = new ChordStructure(step, alter, quality, bassStep, bassAlter);
+        return true;
+    }
+
+    // A Lily# (Dutch) root pitch: lowercase letter + optional is/isis/es/eses
+    // accidental, nothing else (an uppercase root or a '#'/'b' does not parse).
+    private static bool TryParseDutchPitch(string s, out int step, out int alter)
+    {
+        step = -1; alter = 0;
+        if (string.IsNullOrEmpty(s))
+            return false;
+        step = "cdefgab".IndexOf(s[0]);
+        if (step < 0)
+            return false;
+        string rest = s.Substring(1);
+        if (rest.Length == 0)
+            return true;
+        foreach (var (suffix, a) in new[] { ("isis", 2), ("eses", -2), ("is", 1), ("es", -1) })
+            if (rest == suffix) { alter = a; return true; }
+        return false;
+    }
+
     /// <summary>Spells a diatonic step + alteration as a note name with a Unicode
     /// accidental (e.g. 0/+1 → "C♯", 6/-1 → "B♭"). Shared by the chord-name fallback.</summary>
     public static string SpellPitch(int step, int alter)

@@ -28,10 +28,18 @@ public readonly record struct DiatonicChord(
     char RootLetter,     // 'c'..'b'
     int RootAlter,       // -2..+2 semitones from the natural letter
     string Quality,      // "" major, "m" minor, "dim", "aug"
+    string SeventhQuality,   // the diatonic 7-chord suffix: "maj7", "7", "m7", "m7b5", …
     ImmutableArray<int> PitchClasses)   // root, third, fifth (0..11)
 {
     /// <summary>Chord-symbol display: "C", "Dm", "F#m", "Bdim".</summary>
     public string Symbol => RootDisplay + Quality;
+
+    /// <summary>The diatonic seventh chord: "Cmaj7", "Dm7", "G7", "Bm7b5".</summary>
+    public string SeventhSymbol => RootDisplay + SeventhQuality;
+
+    /// <summary>Suspended chords on this root: "Csus4" / "Csus2".</summary>
+    public string SusFourthSymbol => RootDisplay + "sus4";
+    public string SusSecondSymbol => RootDisplay + "sus2";
 
     /// <summary>The root as a chord symbol ("C", "F#", "Bb").</summary>
     public string RootDisplay =>
@@ -83,8 +91,10 @@ public static class DiatonicChords
             char third = Letters[(rootStep + 2) % 7];
             char fifth = Letters[(rootStep + 4) % 7];
 
+            char seventh = Letters[(rootStep + 6) % 7];
             int rPc = Pc(root, sharps), tPc = Pc(third, sharps), fPc = Pc(fifth, sharps);
             int t3 = (tPc - rPc + 12) % 12, t5 = (fPc - rPc + 12) % 12;
+            int t7 = (Pc(seventh, sharps) - rPc + 12) % 12;
             string quality = (t3, t5) switch
             {
                 (4, 7) => "",
@@ -93,9 +103,23 @@ public static class DiatonicChords
                 (4, 8) => "aug",
                 _ => "",
             };
+            // Seventh-chord quality from the triad + the seventh's interval
+            // (11 = major 7th, 10 = minor 7th, 9 = diminished 7th).
+            string seventhQuality = (quality, t7) switch
+            {
+                ("", 11) => "maj7",
+                ("", 10) => "7",
+                ("m", 10) => "m7",
+                ("m", 11) => "mmaj7",
+                ("dim", 10) => "m7b5",
+                ("dim", 9) => "dim7",
+                ("aug", 11) => "maj7#5",
+                ("aug", 10) => "7#5",
+                _ => "7",
+            };
 
             chords.Add(new DiatonicChord(
-                deg, root, KeySpelling.Alteration(rootStep, sharps), quality,
+                deg, root, KeySpelling.Alteration(rootStep, sharps), quality, seventhQuality,
                 ImmutableArray.Create(rPc, tPc, fPc)));
         }
         return chords.MoveToImmutable();

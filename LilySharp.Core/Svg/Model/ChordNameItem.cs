@@ -96,59 +96,48 @@ public sealed record ChordNameItem
     }
 
     /// <summary>
-    /// Parses a chord name annotation string (e.g., "chord.Cm7", "chord.Bb7").
-    /// Returns the display text, or null if not a chord annotation.
+    /// Parses a chord name annotation into its display symbol, or null if it is not
+    /// a valid chord. A bare argument is a chord in the shared <c>chords { }</c>
+    /// entry form — a Lily# root pitch, optional <c>:</c>quality, optional <c>/</c>
+    /// bass (<c>c</c>, <c>c:m7</c>, <c>cis:m7</c>, <c>g:7/b</c>) — rendered as the
+    /// canonical symbol (<c>C</c>, <c>Cm7</c>, <c>C♯m7</c>, <c>G7/B</c>). A quoted
+    /// argument (<c>@chord("N.C.")</c>) is free display text, shown verbatim.
     /// </summary>
     /// <remarks>
-    /// Syntax: "chord.TEXT" where TEXT is the chord symbol.
-    /// Post-processing: Root flats (Bb→B♭, Eb→E♭, etc.) are automatically converted.
-    /// LILYPOND-REF: scm/chord-ignatzek-names.scm - root naming with accidentals
+    /// LILYPOND-REF: scm/chord-ignatzek-names.scm - root + quality → printed name.
     /// </remarks>
     public static string? ParseChordName(string markName)
     {
+        // '@chord()' with no argument yet (e.g. just after the completion inserted
+        // the parentheses) is a recognized, empty chord — not an unknown annotation.
+        if (markName == "chord")
+            return "";
+
         if (!markName.StartsWith("chord.", StringComparison.Ordinal))
             return null;
 
-        // Join all parts after "chord." (remove dots used as token separators)
         var rest = markName.Substring(6);
         if (string.IsNullOrEmpty(rest))
             return null;
 
-        // Parts were joined with dots by MusicMarkSyntax.MarkName.
-        // For chord names, we join them without dots to form the display text.
-        // e.g., "chord.C.m7" → parts "C" + "m7" → "Cm7"
-        var parts = rest.Split('.');
-        var rawText = string.Join("", parts);
+        // Quoted free-text escape: @chord("N.C.") — display literally (dots kept).
+        if (rest[0] == '"')
+        {
+            int close = rest.LastIndexOf('"');
+            return close >= 1 ? rest.Substring(1, close - 1) : null;
+        }
 
+        // Parts were joined with dots by MusicMarkSyntax.MarkName; rejoin to the
+        // written text (e.g. "C.m7" → "Cm7", "c.:.m7" → "c:m7", "F./.A" → "F/A").
+        var rawText = string.Join("", rest.Split('.'));
         if (string.IsNullOrEmpty(rawText))
             return null;
 
-        return FormatChordText(rawText);
-    }
-
-    /// <summary>
-    /// Formats raw chord text by converting root accidentals to Unicode symbols.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: scm/chord-name.scm:58-85 - alteration→text-accidental-markup
-    /// Recognizes root flats: Bb→B♭, Eb→E♭, Ab→A♭, Db→D♭, Gb→G♭, Cb→C♭, Fb→F♭
-    /// Sharps ('#', anywhere) → ♯: sharp roots (C#→C♯, F#→F♯) and altered
-    /// tensions (7#9→7♯9, #11→♯11). '#' is the jazz lead-sheet sharp.
-    /// </remarks>
-    private static string FormatChordText(string raw)
-    {
-        if (string.IsNullOrEmpty(raw))
-            return raw;
-
-        // Check for root flat: uppercase letter (A-G) followed by lowercase 'b'
-        // but only if it's a valid flat root (not "B" alone which is B natural).
-        // The 'b' must be at position 1 and the root a valid note (not "Baug").
-        if (raw.Length >= 2 && raw[0] is >= 'A' and <= 'G' && raw[1] == 'b')
-            raw = raw[0] + "♭" + raw.Substring(2);  // B flat root
-
-        // Sharps: '#' is legal only inside a @chord(...) argument (see the Parser
-        // BadToken scan). Render every '#' as a sharp sign (U+266F) -- sharp roots
-        // (C#, F#) and altered tensions (7#9, #11) alike.
-        return raw.Replace('#', '♯');  // sharp
+        // A real chord entry (the chords{} form) is rendered as its canonical symbol;
+        // anything else is rejected (→ unknown-annotation warning), steering @chord
+        // to valid, playable chords. Free display text goes in quotes (above).
+        return LilySharp.Core.Music.ChordStructure.TryParseChordEntry(rawText, out var structure)
+            ? structure.DisplayName
+            : null;
     }
 }

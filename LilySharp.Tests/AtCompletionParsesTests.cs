@@ -39,7 +39,10 @@ public class AtCompletionParsesTests
         var failures = new System.Collections.Generic.List<string>();
         foreach (var item in list.Items)
         {
-            var label = string.IsNullOrEmpty(item.InsertText) ? item.Label : item.InsertText;
+            var raw = string.IsNullOrEmpty(item.InsertText) ? item.Label : item.InsertText;
+            // Strip snippet placeholders ($0, $1, ${1:…}) — editor cursors, not text.
+            // e.g. the 'chord($0)' item becomes '@chord()' (a recognized empty chord).
+            var label = System.Text.RegularExpressions.Regex.Replace(raw, @"\$\{[^}]*\}|\$\d+", "");
             var tree = SyntaxTree.Parse("{ c4@" + label + " }");
 
             var problems = tree.Diagnostics

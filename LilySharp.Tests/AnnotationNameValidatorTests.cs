@@ -105,7 +105,7 @@ public class AnnotationNameValidatorTests
     [InlineData("c16@feather(right) d e f g a b c' |")]
     [InlineData("c4@finger(1) d@finger(3) e f |")]
     [InlineData("c4@fig(6) d@fig(6 4) e f |")]
-    [InlineData("c4@chord(C) d@chord(Am) e f |")]
+    [InlineData("c4@chord(c) d@chord(a:m) e f |")]
     // Dynamics are parser-gated, never unknown
     [InlineData("c4@ff d@p e@mf f |")]
     public void KnownNames_NoWarning(string source)

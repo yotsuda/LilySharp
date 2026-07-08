@@ -256,8 +256,8 @@ public class MusicXmlExportShapeTests
             octave absolute
             part pno { clef treble }
             section A { pno {
-              |: c'4@ped@chord(Dm7) d'@cresc e' f'@ped(off) | g'1@f :|
-              a'4@ottava b' a'@loco g' | c'1@chord(G7/B) |
+              |: c'4@ped@chord(d:m7) d'@cresc e' f'@ped(off) | g'1@f :|
+              a'4@ottava b' a'@loco g' | c'1@chord(g:7/b) |
             } }
             structure { A }
             score x { staff pno }
