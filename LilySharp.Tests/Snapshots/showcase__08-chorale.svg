@@ -97,7 +97,7 @@
   <rect x="39.31" y="14.81" width="0.19" height="17.00" fill="#000000"/>
   <rect x="58.55" y="14.81" width="0.19" height="17.00" fill="#000000"/>
   <rect x="59.04" y="14.81" width="0.60" height="17.00" fill="#000000"/>
-  <text class="music" x="54.86" y="14.49" font-size="4.00" data-pos="761"></text>
+  <text class="music" x="54.86" y="13.04" font-size="4.00" data-pos="761"></text>
   <text x="11.66" y="37.93" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="935">Praise</text>
   <text x="19.33" y="37.93" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="942">God</text>
   <text x="26.19" y="37.93" font-size="3.20" font-family="serif" text-anchor="middle" fill="#000000" data-pos="946">from</text>

@@ -257,6 +257,23 @@ internal static class ArticulationEngraver
             int staffPosition = GetStaffPosition(item);
             bool stemUp = GetStemUp(item, staffPosition);
 
+            // In LilyPond the actual Stem grob — carrying the voice's forced
+            // direction (\voiceOne up, \voiceTwo down) — is added as a side-position
+            // SUPPORT of the script, so the fermata clears the real stem.
+            // LILYPOND-REF: lily/script-engraver.cc:181-191 acknowledge_stem —
+            //   Side_position_interface::add_support (script, stem).
+            // Here the note's pitch-natural StemUp is the WRONG direction for a
+            // multi-voice staff (a high voice-1 note is drawn stem-UP), so the up-stem
+            // would pierce the glyph. Articulations resolve against the staff's
+            // PRIMARY voice (LayoutEngine sets measuresByStaff = PrimaryVoice), so use
+            // voice 1's forced direction. Mirrors SkylineBuilder / DynamicEngraver.
+            // (Beamed members refine this from the beam just below.)
+            if (staffByIndex != null
+                && staffByIndex.TryGetValue(articulation.StaffIndex, out var ownStaff)
+                && ownStaff.Voices.Length > 1
+                && VoiceDefaults.GetDefaultStemUp(1) is { } voiceStemUp)
+                stemUp = voiceStemUp;
+
             // A beamed member's stem ends on the BEAM, not at the unbeamed
             // formula's tip, and the beam also resolves its direction.
             double? beamedStemTipY = null;
