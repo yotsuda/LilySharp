@@ -146,8 +146,8 @@
             "contracted"
           ],
           "enumItemLabels": [
-            "ees/aes (Full Dutch flat)",
-            "es/as (contracted flat)"
+            "ees / aes",
+            "es / as"
           ],
           "default": "full",
           "description": "How flat pitches (E♭, A♭) are spelled in the autocomplete list. Both spellings always compile; this only changes which the completer suggests."
