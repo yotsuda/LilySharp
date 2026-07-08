@@ -79,6 +79,10 @@ Copy-Item "$repoExt\syntaxes\*" (Join-Path $extDir.FullName 'syntaxes') -Recurse
 if (Test-Path "$repoExt\out") {
     Copy-Item "$repoExt\out\*" (Join-Path $extDir.FullName 'out') -Recurse -Force -ErrorAction SilentlyContinue
 }
+# The manifest too, so contributed settings / labels / commands (e.g. a new
+# config enum or its enumItemLabels) deploy. VS Code re-reads package.json on the
+# next window reload.
+Copy-Item "$repoExt\package.json" $extDir.FullName -Force -ErrorAction SilentlyContinue
 
 $ver = [System.Diagnostics.FileVersionInfo]::GetVersionInfo(
     (Join-Path $dest 'lilysharp-lsp.dll')).ProductVersion
