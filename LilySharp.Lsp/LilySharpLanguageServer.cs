@@ -1551,8 +1551,8 @@ public sealed class LilySharpLanguageServer
                 // Pedal markings
                 new CompletionItem { Label = "ped", Kind = CompletionItemKind.Value, Detail = "Sustain pedal on", SortText = "5ped" },
                 new CompletionItem { Label = "ped(off)", Kind = CompletionItemKind.Value, Detail = "Sustain pedal off", SortText = "5ped.off" },
-                new CompletionItem { Label = "sost(ped)", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal on", SortText = "5sost.ped" },
-                new CompletionItem { Label = "sostenuto", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal off", SortText = "5sostenuto" },
+                new CompletionItem { Label = "sost", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal on", SortText = "5sost" },
+                new CompletionItem { Label = "sost(off)", Kind = CompletionItemKind.Value, Detail = "Sostenuto pedal off", SortText = "5sost.off" },
                 new CompletionItem { Label = "una(corda)", Kind = CompletionItemKind.Value, Detail = "Una corda pedal on", SortText = "5una.corda" },
                 new CompletionItem { Label = "tre(corde)", Kind = CompletionItemKind.Value, Detail = "Una corda pedal off", SortText = "5tre.corde" },
 
