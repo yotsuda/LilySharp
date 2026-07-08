@@ -42,10 +42,14 @@ public static class ArticulationRegistry
             ["longfermata"] = ArticulationType.FermataLong,
             ["portato"] = ArticulationType.Portato,
             ["staccatissimo"] = ArticulationType.Staccatissimo,
-            // String bowing marks and the harmonic circle.
+            // String bowing marks and the harmonic circle (○). '@harmonic' is the
+            // familiar name for guitar / lead-sheet users; '@flageolet' is the
+            // classical term — both render the circle. (The diamond harmonic
+            // NOTEHEAD ◇ is '@notehead.diamond'.)
             ["upbow"] = ArticulationType.UpBow,
             ["downbow"] = ArticulationType.DownBow,
             ["flageolet"] = ArticulationType.Flageolet,
+            ["harmonic"] = ArticulationType.Flageolet,
             ["hammeron"] = ArticulationType.HammerOn,
             ["pulloff"] = ArticulationType.PullOff,
             ["tap"] = ArticulationType.Tap,

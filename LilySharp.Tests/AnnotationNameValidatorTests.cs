@@ -71,6 +71,17 @@ public class AnnotationNameValidatorTests
         Assert.DoesNotContain("Did you mean", warning.Message);
     }
 
+    [Fact]
+    public void Harmonic_IsAKnownArticulation()
+    {
+        // '@harmonic' (the familiar guitar/lead-sheet term for the ○ circle) is a
+        // known alias for '@flageolet' — no unknown-annotation warning. (It once
+        // warned AND absurdly suggested itself; the self-suggestion guard in
+        // FindSuggestion, and this registration, both close that.)
+        var diags = Validate("c4@harmonic d |");
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.UnknownAnnotation);
+    }
+
     // --- Known names stay silent ---
 
     [Theory]

@@ -43,14 +43,18 @@ public sealed class ArticulationRegistryTests
     [InlineData("tenuto", ArticulationType.Tenuto)]
     [InlineData("trill", ArticulationType.Trill)]
     [InlineData("mordent", ArticulationType.Mordent)]
+    // '@harmonic' is a familiar alias for '@flageolet' (the ○ harmonic circle).
+    [InlineData("harmonic", ArticulationType.Flageolet)]
+    [InlineData("flageolet", ArticulationType.Flageolet)]
     public void Registry_ResolvesNames(string name, ArticulationType expected)
     {
         Assert.Equal(expected, ArticulationRegistry.Resolve(name));
     }
 
-    // The abbreviations stac/acc/ten/marc/ferm/tr/ho/po and the synonyms
-    // harmonic/bendafter were removed pre-0.3.0 (cf. @glissando); they must no
-    // longer resolve to an articulation.
+    // The abbreviations stac/acc/ten/marc/ferm/tr/ho/po and the synonym
+    // bendafter were removed pre-0.3.0 (cf. @glissando); they must no longer
+    // resolve to an articulation. ('@harmonic' was later restored as a familiar
+    // alias for '@flageolet' — the ○ harmonic circle — for guitar / lead-sheet use.)
     [Theory]
     [InlineData("bogus")]
     [InlineData("stac")]
@@ -61,7 +65,6 @@ public sealed class ArticulationRegistryTests
     [InlineData("tr")]
     [InlineData("ho")]
     [InlineData("po")]
-    [InlineData("harmonic")]
     [InlineData("bendafter")]
     public void Registry_UnknownName_ResolvesToNone(string name)
     {

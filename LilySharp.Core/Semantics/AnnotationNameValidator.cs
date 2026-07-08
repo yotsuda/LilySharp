@@ -207,7 +207,10 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         foreach (var candidate in SuggestionCandidates)
         {
             int d = Levenshtein(name.ToLowerInvariant(), candidate.ToLowerInvariant(), bestDistance);
-            if (d < bestDistance)
+            // d == 0 means the name IS this candidate — never suggest it back to
+            // itself ("did you mean '@harmonic'?" for '@harmonic'); only real typos
+            // (distance 1..2) are useful.
+            if (d >= 1 && d < bestDistance)
             {
                 bestDistance = d;
                 best = candidate;
