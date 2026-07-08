@@ -167,6 +167,12 @@ internal static class LysWriter
                 token += pendingFig;
                 pendingFig = null;
             }
+            foreach (var art in note.Articulations)
+                token += "@" + art;
+            if (note.SlurStop)
+                token += ")";
+            if (note.SlurStart)
+                token += "(";
             if (note.TieStart)
                 token += "~";
             tokens.Add(token);

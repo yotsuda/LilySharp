@@ -115,6 +115,13 @@ internal sealed class ImportNote : ImportItem
     public bool TieStart { get; set; }
     /// <summary>A tie ends on this note (continuation of the previous note).</summary>
     public bool TieStop { get; set; }
+    /// <summary>A slur starts on this note (a <c>(</c> is emitted after it).</summary>
+    public bool SlurStart { get; set; }
+    /// <summary>A slur ends on this note (a <c>)</c> is emitted after it).</summary>
+    public bool SlurStop { get; set; }
+    /// <summary>Lily# articulation/ornament mark names (<c>staccato</c>, <c>accent</c>,
+    /// <c>fermata</c>, <c>trill</c>, …), emitted as <c>@name</c> suffixes.</summary>
+    public List<string> Articulations { get; } = new();
     /// <summary>Sung syllables, one per verse, in MusicXML note order.</summary>
     public List<ImportLyric> Lyrics { get; } = new();
 }

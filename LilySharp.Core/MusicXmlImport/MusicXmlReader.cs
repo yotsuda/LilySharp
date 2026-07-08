@@ -349,12 +349,59 @@ internal static class MusicXmlReader
             }
         }
 
+        // Slurs, articulations and ornaments live under <notations>.
+        var notations = Local(el, "notations");
+        if (notations != null)
+        {
+            foreach (var s in Els(notations, "slur"))
+                switch ((string?)s.Attribute("type"))
+                {
+                    case "start": note.SlurStart = true; break;
+                    case "stop": note.SlurStop = true; break;
+                }
+            // Fermata is a direct <notations> child in real files, but the Lily#
+            // exporter nests it under <articulations> (mapped below); handle both, once.
+            if (Local(notations, "fermata") != null && !note.Articulations.Contains("fermata"))
+                note.Articulations.Add("fermata");
+            foreach (var a in Local(notations, "articulations")?.Elements() ?? Enumerable.Empty<XElement>())
+                if (ArticulationMark(a.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
+                    note.Articulations.Add(mark);
+            foreach (var o in Local(notations, "ornaments")?.Elements() ?? Enumerable.Empty<XElement>())
+                if (OrnamentMark(o.Name.LocalName) is { } mark && !note.Articulations.Contains(mark))
+                    note.Articulations.Add(mark);
+        }
+
         foreach (var lyric in Els(el, "lyric"))
             if (ReadLyric(lyric) is { } imported)
                 note.Lyrics.Add(imported);
 
         return note;
     }
+
+    /// <summary>A MusicXML &lt;articulations&gt; child to a Lily# mark, or null when
+    /// unsupported (Tier 1 covers the common set).</summary>
+    private static string? ArticulationMark(string name) => name switch
+    {
+        "staccato" => "staccato",
+        "accent" => "accent",
+        "tenuto" => "tenuto",
+        "strong-accent" => "marcato",
+        "staccatissimo" => "staccatissimo",
+        "detached-legato" => "portato",
+        "fermata" => "fermata",   // the Lily# exporter nests fermata here
+        _ => null,
+    };
+
+    /// <summary>A MusicXML &lt;ornaments&gt; child to a Lily# mark, or null when
+    /// unsupported.</summary>
+    private static string? OrnamentMark(string name) => name switch
+    {
+        "trill-mark" => "trill",
+        "mordent" => "mordent",
+        "inverted-mordent" => "prall",
+        "turn" => "turn",
+        _ => null,
+    };
 
     /// <summary>The written note value (1/2/4/8/...) and dot count. Prefers the
     /// explicit <c>&lt;type&gt;</c>; falls back to decoding <c>duration/divisions</c>

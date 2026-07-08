@@ -215,6 +215,38 @@ public class MusicXmlRoundTripTests
         Assert.Contains(report.Warnings, w => w.Contains("no notes"));
     }
 
+    [Fact]
+    public void ArticulationsAndSlurs_SurviveRoundTrip()
+    {
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            key c major
+            c'4@staccato d'@accent e'@tenuto f'@marcato | g'2@fermata a'4( b') | c''1@trill |
+            """);
+        var xml1 = new MusicXmlExporter().Export(tree).ToXml();
+        var (lys, _) = new MusicXmlImporter().Import(xml1.ToString());
+
+        var importedTree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(importedTree), $"imported .lys did not parse clean:\n{lys}");
+        Assert.Equal(Signature(tree), Signature(importedTree));
+        Assert.Contains("@staccato", lys);
+        Assert.Contains("@fermata", lys);
+        Assert.Contains("(", lys);
+
+        // The notations survive: same articulation/ornament/fermata/slur set out.
+        var xml2 = new MusicXmlExporter().Export(importedTree).ToXml();
+        Assert.NotEqual("", NotationSignature(xml1));
+        Assert.Equal(NotationSignature(xml1), NotationSignature(xml2));
+    }
+
+    private static string NotationSignature(XDocument xml) =>
+        string.Join(" ", xml.Descendants("notations").SelectMany(n =>
+            n.Elements("articulations").Elements().Select(e => e.Name.LocalName)
+            .Concat(n.Elements("ornaments").Elements().Select(e => e.Name.LocalName))
+            .Concat(n.Elements("fermata").Select(_ => "fermata"))
+            .Concat(n.Elements("slur").Select(s => "slur:" + (string?)s.Attribute("type")))));
+
     // NOTE: structure-level repeats (|: A :|) replay sections in the collector but
     // the exporter unrolls them to repeat BARLINES (section emitted once), so a
     // round-trip through XML can't match on replay count until the importer factors
