@@ -2797,6 +2797,20 @@ public sealed class MeasureCollector
                         ProcessSection(section, processNodes);
                     }
                 }
+                else if (child is { Kind: SyntaxKind.SilentSectionReference } silent
+                         && silent.GetChild(1) is SyntaxTokenNode silentName
+                         && _sections.TryGetValue(silentName.Text, out var silentSection))
+                {
+                    // ~Name inside a repeat: render the section's music but show NO
+                    // label. The top-level silent-reference case skips in-repeat nodes
+                    // (IsInsideRepeatBlock), so without this the section's measures
+                    // were dropped entirely, not just its label.
+                    if (!_sectionStartMeasure.ContainsKey(silentName.Text))
+                        _sectionStartMeasure[silentName.Text] = builder.CurrentMeasureIndex;
+                    builder.SectionLabel = null;
+                    builder.SectionLabelPosition = SectionDeclPos(silentName.Text);
+                    ProcessSection(silentSection, processNodes);
+                }
                 else if (child is StructureAlternativeSyntax alt)
                 {
                     string altSectionName = alt.SectionName.Text;

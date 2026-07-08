@@ -104,6 +104,20 @@ public sealed class StructureVoltaTests
     }
 
     [Fact]
+    public void SilentReference_InsideRepeat_RendersMeasuresWithoutLabel()
+    {
+        // '~D' inside a repeat must render D's music with NO label — not drop the
+        // measure. The top-level silent-reference case skips in-repeat nodes, so
+        // without ProcessRepeatBlock handling it the whole measure vanished.
+        var tree = SyntaxTree.Parse(Head + "structure { A |: D :|: ~D :| }" + Tail);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures.ToArray();
+        Assert.Equal(3, measures.Length);                              // A, D, ~D (was 2)
+        Assert.Single(measures, m => m.SectionLabel == "D");           // only labelled D
+    }
+
+    [Fact]
     public void FirstEnding_BeforeRepeatBarline_Closes()
     {
         // The 1st ending sits before the :|, so its bracket must close with a down
