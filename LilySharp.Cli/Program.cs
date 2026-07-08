@@ -56,6 +56,7 @@ static int Run(string[] args)
         "midi" => RunMidi(args.Skip(1).ToArray()),
         "xml" => RunXml(args.Skip(1).ToArray()),
         "vsqx" => RunVsqx(args.Skip(1).ToArray()),
+        "harmonize" => RunHarmonize(args.Skip(1).ToArray()),
         "check" => RunCheck(args.Skip(1).ToArray()),
         "layout" => RunLayout(args.Skip(1).ToArray()),
         _ => UnknownCommand(first)
@@ -77,6 +78,7 @@ static void ShowHelp()
           midi    Convert to MIDI (audio)
           xml     Convert to MusicXML
           vsqx    Convert to VOCALOID sequence (vocal part + lyrics)
+          harmonize  Suggest a diatonic chord track for the melody (prints a chords part)
           check   Check syntax without output
           layout  Print a text summary of the layout (system/line breaks, bars per system)
 
@@ -698,6 +700,50 @@ static int ExecuteXml(string inputPath, string outputPath)
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine($"  Parts: {parts}");
         Console.WriteLine($"  Measures: {measures}");
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        return 1;
+    }
+}
+
+// ============ Harmonize Command ============
+
+static int RunHarmonize(string[] args)
+{
+    if (args.Contains("-h") || args.Contains("--help"))
+    {
+        Console.WriteLine("""
+            Usage: lysc harmonize <input.lys>
+
+            Reads the melody and key and prints a `chords harmony { … }` part — one
+            diatonic chord per measure — a starting point to drop into your section
+            (referenced with `staff <melody> with chords harmony`) and edit.
+            """);
+        return 0;
+    }
+
+    var inputPath = args.FirstOrDefault(a => !a.StartsWith('-'));
+    if (inputPath == null)
+    {
+        Console.Error.WriteLine("Error: no input file. Try: lysc harmonize score.lys");
+        return 1;
+    }
+
+    try
+    {
+        var (_, tree) = LoadAndParse(inputPath);
+        if (ReportDiagnostics(tree)) return 1;   // a broken melody can't be read reliably
+
+        var block = LilySharp.Core.Harmony.ChordHarmonizer.Harmonize(tree);
+        if (block == null)
+        {
+            Console.Error.WriteLine("No melody found to harmonize.");
+            return 1;
+        }
+        Console.WriteLine(block);
         return 0;
     }
     catch (Exception ex)

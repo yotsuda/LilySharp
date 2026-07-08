@@ -1348,70 +1348,16 @@ public sealed class LilySharpLanguageServer
             sharps = KeySpelling.SharpsFor(last.Groups[1].Value, last.Groups[2].Value) ?? 0;
         }
 
-        const string letters = "cdefgab";       // step 0..6
-        int tonicStep = KeySpelling.StepOf(tonic);
-        if (tonicStep < 0) tonicStep = 0;
-
-        var items = new System.Collections.Generic.List<CompletionItem>();
-        for (int deg = 0; deg < 7; deg++)
-        {
-            int step = (tonicStep + deg) % 7;
-            char letter = letters[step];
-            string quality = TriadQuality(step, sharps);   // "", "m", "dim", "aug"
-            string chord = ChordRootName(letter, sharps) + quality;
-            items.Add(new CompletionItem
+        var items = DiatonicChords.ForKey(tonic, sharps)
+            .Select(c => new CompletionItem
             {
-                Label = chord,
+                Label = c.Symbol,
                 Kind = CompletionItemKind.Value,
-                Detail = $"Diatonic chord ({DiatonicRoman(deg, quality)})",
-                SortText = deg.ToString("D2"),  // keep scale order, not alphabetical
-            });
-        }
-        return new CompletionList { Items = items.ToArray() };
-    }
-
-    /// <summary>A chord ROOT display ("C", "F#", "Bb") for a note letter under a key
-    /// signature — uppercase letter + '#'/'b' (not the parser's is/es).</summary>
-    private static string ChordRootName(char letter, int sharps)
-    {
-        int alt = KeySpelling.Alteration(KeySpelling.StepOf(letter), sharps);
-        string acc = alt switch { 2 => "##", 1 => "#", -1 => "b", -2 => "bb", _ => "" };
-        return char.ToUpperInvariant(letter) + acc;
-    }
-
-    // Semitone of a note letter under a key signature (0–11, C = 0).
-    private static int NoteSemitone(char letter, int sharps)
-    {
-        int baseSemi = letter switch
-        { 'c' => 0, 'd' => 2, 'e' => 4, 'f' => 5, 'g' => 7, 'a' => 9, 'b' => 11, _ => 0 };
-        return ((baseSemi + KeySpelling.Alteration(KeySpelling.StepOf(letter), sharps)) % 12 + 12) % 12;
-    }
-
-    /// <summary>The triad quality on a scale degree in a key: "" major, "m" minor,
-    /// "dim" diminished, "aug" augmented — from the root/third/fifth intervals.</summary>
-    private static string TriadQuality(int rootStep, int sharps)
-    {
-        const string letters = "cdefgab";
-        int r = NoteSemitone(letters[rootStep], sharps);
-        int third = (NoteSemitone(letters[(rootStep + 2) % 7], sharps) - r + 12) % 12;
-        int fifth = (NoteSemitone(letters[(rootStep + 4) % 7], sharps) - r + 12) % 12;
-        return (third, fifth) switch
-        {
-            (4, 7) => "",
-            (3, 7) => "m",
-            (3, 6) => "dim",
-            (4, 8) => "aug",
-            _ => "",
-        };
-    }
-
-    /// <summary>Roman-numeral degree for a chord's Detail: uppercase for major,
-    /// lowercase for minor/dim, with ° (dim) / + (aug).</summary>
-    private static string DiatonicRoman(int degree, string quality)
-    {
-        string r = new[] { "I", "II", "III", "IV", "V", "VI", "VII" }[degree];
-        if (quality is "m" or "dim") r = r.ToLowerInvariant();
-        return quality switch { "dim" => r + "°", "aug" => r + "+", _ => r };
+                Detail = $"Diatonic chord ({c.Roman})",
+                SortText = c.Degree.ToString("D2"),  // keep scale order, not alphabetical
+            })
+            .ToArray();
+        return new CompletionList { Items = items };
     }
 
     /// <summary>
