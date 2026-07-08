@@ -795,6 +795,9 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
         fileUri = picked[0];
     }
 
+    // The source file's name (URI paths use '/' on every OS), for the result dialogs.
+    const sourceName = fileUri.path.split('/').pop() ?? 'the file';
+
     try {
         const response = await client.sendRequest<ImportMusicXmlResponse>('lilysharp/importMusicXml', {
             filePath: fileUri.fsPath,
@@ -830,11 +833,11 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
             // The "starting point, edit as needed" framing is reserved for a clean
             // import — it's misleading when nothing (or little) came through.
             const message = n === 1
-                ? `Lily#: ${warnings[0]}`
-                : `Lily#: imported with ${n} approximations — see the import report.`;
+                ? `Lily#: ${sourceName}: ${warnings[0]}`
+                : `Lily#: imported ${sourceName} with ${n} approximations — see the import report.`;
             vscode.window.showWarningMessage(message, 'Show Details').then(choice => {
                 if (choice === 'Show Details') {
-                    outputChannel.appendLine('MusicXML import report:');
+                    outputChannel.appendLine(`MusicXML import report (${sourceName}):`);
                     for (const w of warnings) {
                         outputChannel.appendLine(`  - ${w}`);
                     }
@@ -842,7 +845,8 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
                 }
             });
         } else {
-            vscode.window.showInformationMessage('Lily#: imported MusicXML — a starting point, edit as needed.');
+            vscode.window.showInformationMessage(
+                `Lily#: imported ${sourceName} — a starting point, edit as needed.`);
         }
     } catch (err) {
         vscode.window.showErrorMessage(`Lily#: import failed: ${err}`);
