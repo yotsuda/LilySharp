@@ -127,6 +127,9 @@ internal sealed class ImportNote : ImportItem
     public (int Actual, int Normal)? TupletStart { get; set; }
     /// <summary>When this note CLOSES a tuplet (a <c>}</c> is emitted after it).</summary>
     public bool TupletStop { get; set; }
+    /// <summary>Grace notes written immediately before this note, emitted as a leading
+    /// <c>acciaccatura { … }</c> (slashed) or <c>grace { … }</c> block.</summary>
+    public List<ImportGraceNote> LeadingGrace { get; } = new();
     /// <summary>Sung syllables, one per verse, in MusicXML note order.</summary>
     public List<ImportLyric> Lyrics { get; } = new();
 }
@@ -163,6 +166,18 @@ internal sealed class ImportFiguredBass : ImportItem
 /// <param name="Alteration">0=none, 1=sharp, -1=flat, 2=natural.</param>
 /// <param name="Held">A continuation (<c>_</c>) figure sustained from the previous bass note.</param>
 internal readonly record struct ImportFigure(int Number, int Alteration, bool Held);
+
+/// <summary>One grace note (MusicXML <c>&lt;grace/&gt;</c> note): a pitch with a
+/// written value but no duration; <see cref="Slash"/> = a slashed acciaccatura.</summary>
+internal sealed class ImportGraceNote
+{
+    public int Step { get; set; }
+    public int Alter { get; set; }
+    public int Octave { get; set; }
+    public int NoteValue { get; set; } = 8;
+    public int Dots { get; set; }
+    public bool Slash { get; set; }
+}
 
 /// <summary>One sung syllable on a note.</summary>
 /// <param name="Verse">1-based verse number.</param>

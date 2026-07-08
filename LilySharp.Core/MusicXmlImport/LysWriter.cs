@@ -179,6 +179,9 @@ internal static class LysWriter
             // Wrap a tuplet group: `tuplet A/N { … }` around the notes it spans.
             if (note.TupletStart is { } tr)
                 tokens.Add($"tuplet {tr.Actual}/{tr.Normal} {{");
+            // Leading grace notes hang before the main note (inside any tuplet wrap).
+            if (note.LeadingGrace.Count > 0)
+                tokens.Add(GraceBlock(note.LeadingGrace));
             tokens.Add(token);
             if (note.TupletStop)
                 tokens.Add("}");
@@ -189,10 +192,12 @@ internal static class LysWriter
     }
 
     // A Lily# absolute-octave pitch token: letter + accidental + octave marks.
-    private static string Pitch(ImportNote note)
+    private static string Pitch(ImportNote note) => PitchToken(note.Step, note.Alter, note.Octave);
+
+    private static string PitchToken(int step, int alter, int octave)
     {
-        char letter = "cdefgab"[((note.Step % 7) + 7) % 7];
-        string acc = note.Alter switch
+        char letter = "cdefgab"[((step % 7) + 7) % 7];
+        string acc = alter switch
         {
             2 => "isis",
             1 => "is",
@@ -200,11 +205,21 @@ internal static class LysWriter
             -2 => "eses",
             _ => "",
         };
-        int marks = note.Octave - 4; // bare c = octave 4 (middle C) in Lily# absolute
-        string octave = marks > 0 ? new string('\'', marks)
+        int marks = octave - 4; // bare c = octave 4 (middle C) in Lily# absolute
+        string octaveMarks = marks > 0 ? new string('\'', marks)
             : marks < 0 ? new string(',', -marks)
             : "";
-        return letter + acc + octave;
+        return letter + acc + octaveMarks;
+    }
+
+    /// <summary>A leading grace block: <c>acciaccatura { … }</c> (slashed) or
+    /// <c>grace { … }</c>, from the notes written before the main note.</summary>
+    private static string GraceBlock(List<ImportGraceNote> grace)
+    {
+        string keyword = grace[0].Slash ? "acciaccatura" : "grace";
+        var notes = string.Join(" ",
+            grace.Select(g => PitchToken(g.Step, g.Alter, g.Octave) + Value(g.NoteValue, g.Dots)));
+        return keyword + " { " + notes + " }";
     }
 
     private static string Value(int noteValue, int dots)

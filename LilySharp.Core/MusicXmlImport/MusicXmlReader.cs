@@ -133,6 +133,9 @@ internal static class MusicXmlReader
             // <harmony>/<figured-bass> precede their note in the stream; hold them
             // until the note arrives so they attach to it in the writer.
             var pendingAnnotations = new List<ImportItem>();
+            // <direction> dynamics and <grace> notes also precede the note they mark.
+            var pendingDynamics = new List<string>();
+            var pendingGrace = new List<ImportGraceNote>();
 
             foreach (var el in measEl.Elements())
             {
@@ -149,6 +152,7 @@ internal static class MusicXmlReader
                             if (measureNo > 1 || measure.Items.Count > 0)
                                 measure.Tempo = bpm;
                         }
+                        pendingDynamics.AddRange(ReadDirectionDynamics(el));
                         break;
 
                     case "harmony":
@@ -186,15 +190,27 @@ internal static class MusicXmlReader
                             }
                             break;
                         }
+                        // A grace note has no duration — accumulate it to attach to the
+                        // next real note as a leading acciaccatura/grace block.
+                        if (Local(el, "grace") != null)
+                        {
+                            if (ReadGraceNote(el) is { } g)
+                                pendingGrace.Add(g);
+                            break;
+                        }
                         var note = ReadNote(el, divisions, report, measureNo);
                         if (note == null)
                             break;
                         // A chord member folds onto the previous note; harmony /
-                        // figured-bass attach to the head note only.
+                        // figured-bass / dynamics / grace attach to the head note only.
                         if (!note.ChordWithPrev)
                         {
                             measure.Items.AddRange(pendingAnnotations);
                             pendingAnnotations.Clear();
+                            note.Articulations.InsertRange(0, pendingDynamics);
+                            pendingDynamics.Clear();
+                            note.LeadingGrace.AddRange(pendingGrace);
+                            pendingGrace.Clear();
                         }
                         measure.Items.Add(note);
                         break;
@@ -287,12 +303,8 @@ internal static class MusicXmlReader
 
     private static ImportNote? ReadNote(XElement el, int divisions, ImportReport report, int measureNo)
     {
-        // Grace notes have no duration and are dropped in Tier 1.
-        if (Local(el, "grace") != null)
-        {
-            report.Warn(measureNo, "grace note dropped.");
-            return null;
-        }
+        // Grace notes are handled by the caller (attached as leading grace); a cue
+        // note is dropped for now.
         if (Local(el, "cue") != null)
         {
             report.Warn(measureNo, "cue note dropped.");
@@ -383,6 +395,47 @@ internal static class MusicXmlReader
                 note.Lyrics.Add(imported);
 
         return note;
+    }
+
+    /// <summary>A grace &lt;note&gt; → an <see cref="ImportGraceNote"/> (pitch + written
+    /// value + slash), or null for a rest/pitchless grace.</summary>
+    private static ImportGraceNote? ReadGraceNote(XElement el)
+    {
+        var pitch = Local(el, "pitch");
+        if (pitch == null)
+            return null;
+        string step = Local(pitch, "step")?.Value.Trim().ToUpperInvariant() ?? "C";
+        int stepIdx = "CDEFGAB".IndexOf(step.Length > 0 ? step[0] : 'C');
+        var (value, dots) = NoteValue(el, 1); // grace has no duration → use <type>
+        return new ImportGraceNote
+        {
+            Step = stepIdx < 0 ? 0 : stepIdx,
+            Alter = (int)Math.Round(ParseDouble(Local(pitch, "alter")?.Value)),
+            Octave = int.TryParse(Local(pitch, "octave")?.Value, out int oct) ? oct : 4,
+            NoteValue = value,
+            Dots = dots,
+            Slash = (string?)Local(el, "grace")?.Attribute("slash") == "yes",
+        };
+    }
+
+    /// <summary>Dynamic mark names from a &lt;direction&gt;: each &lt;dynamics&gt; level
+    /// (f, ff, p, mf, …) and an OPENING hairpin wedge (crescendo → cresc, diminuendo →
+    /// decresc). A wedge stop is not a mark.</summary>
+    private static IEnumerable<string> ReadDirectionDynamics(XElement dir)
+    {
+        var dt = Local(dir, "direction-type");
+        if (dt == null)
+            yield break;
+        foreach (var dyn in Els(dt, "dynamics"))
+            foreach (var level in dyn.Elements())
+                if (level.Name.LocalName != "other-dynamics")
+                    yield return level.Name.LocalName;
+        foreach (var wedge in Els(dt, "wedge"))
+            switch ((string?)wedge.Attribute("type"))
+            {
+                case "crescendo": yield return "cresc"; break;
+                case "diminuendo": yield return "decresc"; break;
+            }
     }
 
     /// <summary>The tuplet ratio (actual, normal) from a note's
@@ -608,12 +661,18 @@ internal static class MusicXmlReader
 
     // ---- helpers ----------------------------------------------------------
 
-    // Lily# reserved words a part identifier must not collide with.
+    // Lily# reserved words a part identifier must not collide with. Besides keywords,
+    // this includes the single-letter tokens a short part name can lex as: pitch
+    // letters (a-g), the rest r, and the dynamic marks (p, f, mf, …) — a part named
+    // "P" or "F" in the source would otherwise fail to parse (found 'DynamicP').
     private static readonly HashSet<string> Reserved = new(StringComparer.Ordinal)
     {
         "part", "section", "score", "staff", "structure", "chords", "lyrics",
         "time", "key", "clef", "tempo", "octave", "title", "composer", "with",
         "phrase", "drummap", "grace", "partial", "repeat", "tuplet",
+        "acciaccatura", "appoggiatura",
+        "a", "b", "c", "d", "e", "f", "g", "r",
+        "ppp", "pp", "p", "mp", "mf", "ff", "fff", "sf", "sfz", "fp", "fz", "rfz", "rf", "sffz",
     };
 
     /// <summary>Turns a MusicXML part name into a valid, unique Lily# identifier

@@ -216,6 +216,57 @@ public class MusicXmlRoundTripTests
     }
 
     [Fact]
+    public void Dynamics_ImportOntoTheFollowingNote()
+    {
+        // Real MusicXML interleaves a <direction> right before the note it marks. (The
+        // Lily# exporter instead piles every direction at the measure start, so a
+        // round-trip through it can't preserve per-note dynamics — hence hand-crafted
+        // XML here.) Each dynamic attaches to the next note as @p / @f.
+        var (lys, _) = new MusicXmlImporter().Import("""
+            <?xml version="1.0"?>
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>P</part-name></score-part></part-list>
+              <part id="P1"><measure number="1">
+                <attributes><divisions>1</divisions>
+                  <time><beats>4</beats><beat-type>4</beat-type></time>
+                  <clef><sign>G</sign><line>2</line></clef></attributes>
+                <direction><direction-type><dynamics><p/></dynamics></direction-type></direction>
+                <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+                <direction><direction-type><dynamics><f/></dynamics></direction-type></direction>
+                <note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+                <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+                <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+              </measure></part>
+            </score-partwise>
+            """);
+        Assert.False(HasErrors(SyntaxTree.Parse(lys)), lys);
+        Assert.Contains("c'4@p", lys);
+        Assert.Contains("d'4@f", lys);
+    }
+
+    [Fact]
+    public void GraceNotes_SurviveRoundTrip()
+    {
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            key c major
+            acciaccatura { c''16 } b'4 grace { a'16 } g'4 f'4 e'4 |
+            """);
+        var xml1 = new MusicXmlExporter().Export(tree).ToXml();
+        var (lys, _) = new MusicXmlImporter().Import(xml1.ToString());
+
+        var importedTree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(importedTree), $"imported .lys did not parse clean:\n{lys}");
+        // Grace notes carry no metric duration, so the main-note signature matches.
+        Assert.Equal(Signature(tree), Signature(importedTree));
+        Assert.Contains("acciaccatura {", lys);
+        Assert.Contains("grace {", lys);
+        // Two <grace> notes survive.
+        Assert.Equal(2, new MusicXmlExporter().Export(importedTree).ToXml().Descendants("grace").Count());
+    }
+
+    [Fact]
     public void Tuplets_SurviveRoundTrip()
     {
         // A triplet + a quintuplet: the scaled durations must match, which only holds
