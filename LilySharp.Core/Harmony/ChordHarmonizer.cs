@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
 using LilySharp.Core.Music;
@@ -40,32 +41,90 @@ namespace LilySharp.Core.Harmony;
 /// </remarks>
 public static class ChordHarmonizer
 {
+    /// <summary>One section's generated chord track: the melody part-block it was
+    /// read from (a chords part is added right after it) and the chords block text.</summary>
+    public readonly record struct SectionChordTrack(PartBlockSyntax MelodyBlock, string ChordsBlock);
+
     /// <summary>
-    /// Harmonizes the melody in <paramref name="tree"/> and returns a
-    /// <c>chords harmony { … }</c> block (one chord per measure), or null when there
-    /// is no melody to read.
+    /// Harmonizes each section's melody INDEPENDENTLY — without consulting the
+    /// <c>structure { }</c> block — and returns one <c>chords harmony { … }</c> track
+    /// per section, so each track lines up with its section as written. Robust to
+    /// documents with or without a structure block. <paramref name="voice"/> selects
+    /// which part to read (default: the first part-block's name, from the tree).
+    /// </summary>
+    public static IReadOnlyList<SectionChordTrack> HarmonizeBySections(SyntaxTree tree, string? voice = null)
+    {
+        var root = tree.GetRoot();
+        voice ??= DetectVoice(root);
+        var (tonic, sharps) = ReadKey(tree.ToFullString());
+        var chords = DiatonicChords.ForKey(tonic, sharps);
+        var pcByPos = PitchClassesByPosition(root);
+
+        var tracks = new List<SectionChordTrack>();
+        foreach (var section in root.DescendantNodes<SectionDeclarationSyntax>())
+        {
+            var melodyBlock = section.DescendantNodes<PartBlockSyntax>()
+                .FirstOrDefault(pb => voice == null || pb.PartName.Text == voice);
+            if (melodyBlock == null)
+                continue;
+
+            // Collect only THIS section for the voice, via a structure that names
+            // just it (resolved against the whole tree's section definitions) — so
+            // the track follows the written section, not the structure's ordering.
+            var local = SectionStructure(section.Name.Text);
+            var measures = new MeasureCollector()
+                .Collect(tree, melodyBlock.PartName.Text, local).Voice.Measures;
+
+            var entries = HarmonizeMeasures(measures, pcByPos, chords);
+            if (entries.Count == 0)
+                continue;
+            tracks.Add(new SectionChordTrack(melodyBlock, ChordsBlock(entries)));
+        }
+        return tracks;
+    }
+
+    /// <summary>
+    /// Harmonizes the whole melody and returns a single <c>chords harmony { … }</c>
+    /// block, or null when there is no melody. Kept for the CLI and simple/inline
+    /// documents; the editor command uses <see cref="HarmonizeBySections"/> so each
+    /// section gets its own aligned track.
     /// </summary>
     public static string? Harmonize(SyntaxTree tree)
     {
-        string source = tree.ToFullString();
-        var (tonic, sharps) = ReadKey(source);
-        var chords = DiatonicChords.ForKey(tonic, sharps);
-
-        // Pitch classes of the melody, keyed by each note/chord's source position —
-        // NoteItem/ChordItem carry the same position, so we can join the collected
-        // measures (which already have the correct rhythm + measure boundaries) to
-        // the actual pitches (which the collected model does not carry).
-        var pcByPos = new Dictionary<int, List<int>>();
         var root = tree.GetRoot();
+        var (tonic, sharps) = ReadKey(tree.ToFullString());
+        var chords = DiatonicChords.ForKey(tonic, sharps);
+        var measures = new MeasureCollector().Collect(tree, DetectVoice(root)).Voice.Measures;
+        var entries = HarmonizeMeasures(measures, PitchClassesByPosition(root), chords);
+        return entries.Count == 0 ? null : ChordsBlock(entries);
+    }
+
+    // One chord per measure, each capped with a barline (as chord parts are written)
+    // so the row's measures line up with the melody's.
+    private static string ChordsBlock(List<string> entries)
+        => "chords harmony {\n  " + string.Join(" | ", entries) + " |\n}";
+
+    // Pitch classes of the melody, keyed by each note/chord's source position —
+    // NoteItem/ChordItem carry the same position, so the collected measures (which
+    // have the rhythm + measure boundaries) can be joined to the actual pitches.
+    private static Dictionary<int, List<int>> PitchClassesByPosition(SyntaxNode root)
+    {
+        var pcByPos = new Dictionary<int, List<int>>();
         foreach (var n in root.DescendantNodes<NoteSyntax>())
             pcByPos[n.Position] = new List<int> { PitchClass(n.Pitch) };
         foreach (var c in root.DescendantNodes<ChordSyntax>())
             pcByPos[c.Position] = c.DescendantNodes<PitchSyntax>().Select(PitchClass).ToList();
+        return pcByPos;
+    }
 
-        var measures = new MeasureCollector().Collect(tree, FirstPartName(source)).Voice.Measures;
-        if (measures.Length == 0)
-            return null;
-
+    // One diatonic chord per measure: weight pitch classes by note duration (downbeat
+    // doubled), score each triad by chord-tone coverage; a rest-only measure holds
+    // the previous chord; the major-key V is voiced as V7.
+    private static List<string> HarmonizeMeasures(
+        IReadOnlyList<Measure> measures,
+        Dictionary<int, List<int>> pcByPos,
+        ImmutableArray<DiatonicChord> chords)
+    {
         var entries = new List<string>();
         int prevDegree = 0; // hold over rest-only measures; tonic to start
         foreach (var measure in measures)
@@ -94,19 +153,32 @@ public static class ChordHarmonizer
             prevDegree = degree;
 
             var chord = chords[degree];
-            // The dominant (V) reads stronger as a dominant seventh (V7). Only when
-            // it is a MAJOR triad — i.e. a major-key V; a minor-key v (natural minor)
-            // is left alone rather than emitting a weak v7.
+            // The dominant (V) reads stronger as a dominant seventh (V7) — but only
+            // when it is a MAJOR triad (a major-key V); a minor-key v is left alone.
             string quality = degree == 4 && chord.Quality.Length == 0
                 ? ":7"
                 : chord.LilyQualitySuffix;
             entries.Add(chord.LilyRoot + ToNoteValue(MeasureDuration(measure)) + quality);
         }
-
-        // One chord per measure, each capped with a barline (as chord parts are
-        // written) so the row's measures line up with the melody's.
-        return "chords harmony {\n  " + string.Join(" | ", entries) + " |\n}";
+        return entries;
     }
+
+    // The part to harmonize: the first part-block's name (section-major), else the
+    // first part declaration's name (part-major). From the tree, never a regex over
+    // the source — so a comment containing the word "part" cannot mislead it.
+    private static string? DetectVoice(SyntaxNode root)
+    {
+        var block = root.DescendantNodes<PartBlockSyntax>().FirstOrDefault();
+        if (block != null)
+            return block.PartName.Text;
+        return root.DescendantNodes<PartDeclarationSyntax>().FirstOrDefault()?.Name.Text;
+    }
+
+    // A structure that names one section, parsed standalone; its reference resolves
+    // against the main tree's section definitions when passed to Collect.
+    private static StructureDeclarationSyntax? SectionStructure(string sectionName)
+        => SyntaxTree.Parse("structure { " + sectionName + " }").GetRoot()
+            .DescendantNodes<StructureDeclarationSyntax>().FirstOrDefault();
 
     // Common chords first when the pitch score ties (I / IV / V over iii / vii°).
     private static int DegreePreference(int degree) => degree switch
@@ -145,11 +217,5 @@ public static class ChordHarmonizer
             return ('c', 0);
         char tonic = char.ToLowerInvariant(m.Groups[1].Value[0]);
         return (tonic, KeySpelling.SharpsFor(m.Groups[1].Value, m.Groups[2].Value) ?? 0);
-    }
-
-    private static string? FirstPartName(string source)
-    {
-        var m = Regex.Match(source, @"\bpart\s+(\w+)");
-        return m.Success ? m.Groups[1].Value : null;
     }
 }

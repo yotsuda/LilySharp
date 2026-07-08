@@ -2957,10 +2957,11 @@ public sealed class LilySharpLanguageServer
     }
 
     /// <summary>
-    /// Auto-harmonizes the melody and returns the edits that add a diatonic chords
-    /// part: a <c>chords harmony { … }</c> block inserted after the first section's
-    /// part-block, and <c>with chords harmony</c> appended to the melody's staff in
-    /// the score. Powers the "Lily#: Add Chord Track" editor command.
+    /// Auto-harmonizes each section's melody and returns the edits that add a diatonic
+    /// chords part: a <c>chords harmony { … }</c> block after every section's melody
+    /// part-block (each aligned to its own section, independent of the structure
+    /// block), and <c>with chords harmony</c> appended to the melody's staff in the
+    /// score. Powers the "Lily#: Add Chord Track" editor command.
     /// </summary>
     [JsonRpcMethod("lilysharp/addChordTrack", UseSingleObjectParameterDeserialization = true)]
     public AddChordTrackResponse AddChordTrack(SvgParams @params)
@@ -2973,29 +2974,22 @@ public sealed class LilySharpLanguageServer
         if (tree.HasErrors)
             return new AddChordTrackResponse { Error = "Fix the errors in the score first." };
 
-        var block = LilySharp.Core.Harmony.ChordHarmonizer.Harmonize(tree);
-        if (block == null)
-            return new AddChordTrackResponse { Error = "No melody found to harmonize." };
-
-        var partBlock = tree.GetRoot().DescendantNodes<SectionDeclarationSyntax>()
-            .FirstOrDefault()?.DescendantNodes<PartBlockSyntax>().FirstOrDefault();
-        if (partBlock == null)
-            return new AddChordTrackResponse { Error = "Could not find a section to add the chords to." };
+        var tracks = LilySharp.Core.Harmony.ChordHarmonizer.HarmonizeBySections(tree);
+        if (tracks.Count == 0)
+            return new AddChordTrackResponse { Error = "No section melody found to harmonize." };
 
         var edits = new System.Collections.Generic.List<ChordTrackEdit>();
 
-        // 1) The chords part, right after the melody's part-block (a section sibling).
-        edits.Add(InsertAt(doc.Text, partBlock.Span.End, "\n  " + block));
+        // 1) A chords part after each section's melody part-block (a section sibling).
+        foreach (var track in tracks)
+            edits.Add(InsertAt(doc.Text, track.MelodyBlock.Span.End, "\n  " + track.ChordsBlock));
 
-        // 2) Attach it to the melody staff: `staff X` -> `staff X with chords harmony`.
-        var part = Regex.Match(doc.Text, @"\bpart\s+(\w+)");
-        if (part.Success)
-        {
-            var staff = Regex.Match(doc.Text,
-                @"\bstaff\s+" + Regex.Escape(part.Groups[1].Value) + @"\b(?!\s+with\b)");
-            if (staff.Success)
-                edits.Add(InsertAt(doc.Text, staff.Index + staff.Length, " with chords harmony"));
-        }
+        // 2) Attach it to the melody staff once: `staff X` -> `staff X with chords harmony`.
+        var voice = tracks[0].MelodyBlock.PartName.Text;
+        var staff = Regex.Match(doc.Text,
+            @"\bstaff\s+" + Regex.Escape(voice) + @"\b(?!\s+with\b)");
+        if (staff.Success)
+            edits.Add(InsertAt(doc.Text, staff.Index + staff.Length, " with chords harmony"));
 
         return new AddChordTrackResponse { Edits = edits.ToArray() };
     }

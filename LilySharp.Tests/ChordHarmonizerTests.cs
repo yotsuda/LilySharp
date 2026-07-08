@@ -77,6 +77,45 @@ public class ChordHarmonizerTests
     }
 
     [Fact]
+    public void HarmonizeBySections_OneAlignedTrackPerSection()
+    {
+        // Each section is harmonized independently of the structure block.
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section A { melody { c'4 e' g' c'' | } }
+            section B { melody { g'4 b' d'' g'' | } }
+            structure { A B }
+            score x { staff melody }
+            """);
+        var tracks = ChordHarmonizer.HarmonizeBySections(tree);
+        Assert.Equal(2, tracks.Count);
+        Assert.Contains("c1", tracks[0].ChordsBlock);      // section A outlines C
+        Assert.Contains("g1:7", tracks[1].ChordsBlock);    // section B outlines G -> V7
+        Assert.Equal("melody", tracks[0].MelodyBlock.PartName.Text);
+    }
+
+    [Fact]
+    public void Harmonize_IgnoresThePartWordInComments()
+    {
+        // Regression: the melody part is found from the tree, so the word "part" in a
+        // comment cannot be mistaken for the part name (which used to yield "No melody").
+        var tree = SyntaxTree.Parse("""
+            // this is the melody part of the song
+            octave absolute
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section A { melody { c'4 e' g' c'' | } }
+            structure { A }
+            score x { staff melody }
+            """);
+        Assert.NotNull(ChordHarmonizer.Harmonize(tree));
+    }
+
+    [Fact]
     public void ProducesAChordsBlockWithOneChordPerMeasure()
     {
         var block = Harmonize("c'4 e' g' c'' | d'4 f' a' d'' |");
