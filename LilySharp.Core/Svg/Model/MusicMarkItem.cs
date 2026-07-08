@@ -298,7 +298,9 @@ public sealed record MusicMarkItem
             // @mark("A") — strip the surrounding quotes so the box shows A, not "A".
             if (label.Length >= 2 && label[0] == '"' && label[^1] == '"')
                 label = label.Substring(1, label.Length - 2);
-            return label.ToUpperInvariant();
+            // Render the label exactly as written — @mark("Solo") is "Solo", not
+            // "SOLO" (a free-text label, like @text and LilyPond's \mark "…").
+            return label;
         }
         return name;
     }

@@ -75,8 +75,10 @@ public class RehearsalMarkTests
     [InlineData("mark.A", "A")]
     [InlineData("mark.B", "B")]
     [InlineData("mark.1", "1")]
-    [InlineData("mark.abc", "ABC")]
-    [InlineData("MARK.z", "Z")]
+    [InlineData("mark.abc", "abc")]           // case preserved — no forced upper-casing
+    [InlineData("MARK.z", "z")]               // case preserved
+    [InlineData("mark.\"Solo\"", "Solo")]     // quoted free-text label kept as written
+    [InlineData("mark.\"D.S.\"", "D.S.")]     // quoted: symbols and case preserved
     public void ParseRehearsalText_ExtractsText(string name, string expected)
     {
         var result = MusicMarkItem.ParseRehearsalText(name);
