@@ -62,6 +62,65 @@ public class MusicXmlExportShapeTests
     }
 
     [Fact]
+    public void StructureOrder_EmitsSectionsInStructureOrderWithReplay()
+    {
+        // The structure gives the played ORDER; a replayed section reappears.
+        // (Previously the export dumped sections in declaration order, so 'A B A'
+        // collapsed to just A, B.)
+        var doc = Export("""
+            octave absolute
+            part m { clef treble }
+            section A { m { c'4 d' e' f' | } }
+            section B { m { g'4 a' b' c'' | } }
+            structure { A B A }
+            score x { staff m }
+            """);
+        var measures = doc.Descendants("measure").ToList();
+        Assert.Equal(3, measures.Count);   // A, B, A — not 2
+        string First(XElement m) => m.Descendants("note").First(n => n.Element("pitch") != null)
+            .Element("pitch")!.Element("step")!.Value;
+        Assert.Equal(new[] { "C", "G", "C" }, measures.Select(First));
+    }
+
+    [Fact]
+    public void StructureRepeat_BracketsSpanWithForwardAndBackwardBarlines()
+    {
+        var doc = Export("""
+            octave absolute
+            part m { clef treble }
+            section A { m { c'4 d' e' f' | } }
+            section B { m { g'4 a' b' c'' | d''4 c'' b' a' | } }
+            structure { A |: B :| }
+            score x { staff m }
+            """);
+        var measures = doc.Descendants("measure").ToList();
+        Assert.Equal(3, measures.Count);   // A(1) + B(2)
+        bool HasRepeat(XElement m, string loc, string dir) =>
+            m.Elements("barline").Any(bl => bl.Attribute("location")?.Value == loc
+                && bl.Element("repeat")?.Attribute("direction")?.Value == dir);
+        Assert.True(HasRepeat(measures[1], "left", "forward"));    // B opens the repeat
+        Assert.True(HasRepeat(measures[2], "right", "backward"));  // B closes it
+        Assert.False(HasRepeat(measures[0], "left", "forward"));   // A is outside the repeat
+    }
+
+    [Fact]
+    public void FiguredBass_ExportsFigureNumberWithAccidental()
+    {
+        var doc = Export("""
+            octave absolute
+            part m { clef treble }
+            section A { m { c'4@fig(#6) d' e' f' | } }
+            structure { A }
+            score x { staff m }
+            """);
+        var figs = doc.Descendants("figured-bass").ToList();
+        Assert.Single(figs);
+        var figure = figs[0].Element("figure")!;
+        Assert.Equal("6", figure.Element("figure-number")!.Value);
+        Assert.Equal("sharp", figure.Element("suffix")!.Value);
+    }
+
+    [Fact]
     public void PercentRepeat_ExportsMeasureRepeatSign()
     {
         // A one-measure percent body exports the SIGN: repeated measures keep

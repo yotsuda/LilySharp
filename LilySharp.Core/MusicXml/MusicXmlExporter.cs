@@ -183,49 +183,158 @@ public sealed class MusicXmlExporter
 
     private void ProcessSections(SyntaxNode root)
     {
-        foreach (var section in root.DescendantNodes().OfType<SectionDeclarationSyntax>())
+        var sectionDecls = root.DescendantNodes().OfType<SectionDeclarationSyntax>().ToList();
+        var structure = root.DescendantNodes().OfType<StructureDeclarationSyntax>().FirstOrDefault();
+
+        if (structure == null)
         {
-            // Each section may contain part blocks
-            var partBlocks = section.DescendantNodes().OfType<PartBlockSyntax>().ToList();
+            // No structure block: emit the sections in declaration order.
+            foreach (var section in sectionDecls)
+                EmitSection(section);
+            return;
+        }
 
-            if (partBlocks.Count > 0)
+        // A structure block carries the real playing ORDER and the REPEATS. Emit the
+        // sections it names, in its order (so replays reappear), and bracket each
+        // repeat span with forward/backward repeat barlines. Without this the MusicXML
+        // was just the raw sections in declaration order, with no repeats at all.
+        var byName = new Dictionary<string, List<SectionDeclarationSyntax>>(StringComparer.Ordinal);
+        foreach (var s in sectionDecls)
+        {
+            if (!byName.TryGetValue(s.SectionName, out var list))
+                byName[s.SectionName] = list = new List<SectionDeclarationSyntax>();
+            list.Add(s);
+        }
+        WalkStructure(structure, byName);
+    }
+
+    private void EmitSection(SectionDeclarationSyntax section)
+    {
+        // Each section may contain part blocks
+        var partBlocks = section.DescendantNodes().OfType<PartBlockSyntax>().ToList();
+
+        if (partBlocks.Count > 0)
+        {
+            // Section-level lyrics (siblings of the part blocks) sing the
+            // FIRST part's melody, like the engraving binds them.
+            var sectionLyrics = new List<LyricsBlockSyntax>();
+            for (int i = 0; i < section.SlotCount; i++)
+                if (section.GetChild(i) is LyricsBlockSyntax slb)
+                    sectionLyrics.Add(slb);
+
+            MusicXmlPart? firstPart = null;
+            int firstBefore = 0;
+            foreach (var partBlock in partBlocks)
             {
-                // Section-level lyrics (siblings of the part blocks) sing the
-                // FIRST part's melody, like the engraving binds them.
-                var sectionLyrics = new List<LyricsBlockSyntax>();
-                for (int i = 0; i < section.SlotCount; i++)
-                    if (section.GetChild(i) is LyricsBlockSyntax slb)
-                        sectionLyrics.Add(slb);
-
-                MusicXmlPart? firstPart = null;
-                int firstBefore = 0;
-                foreach (var partBlock in partBlocks)
+                if (firstPart == null)
                 {
-                    if (firstPart == null)
-                    {
-                        firstBefore = _partsByName.TryGetValue(partBlock.Name, out var fp)
-                            ? fp.Measures.Count
-                            : 0;
-                    }
-                    ProcessPartBlock(partBlock);
-                    firstPart ??= _partsByName[partBlock.Name];
+                    firstBefore = _partsByName.TryGetValue(partBlock.Name, out var fp)
+                        ? fp.Measures.Count
+                        : 0;
                 }
-                if (firstPart != null && sectionLyrics.Count > 0)
-                    AttachLyrics(firstPart, firstBefore, sectionLyrics);
+                ProcessPartBlock(partBlock);
+                firstPart ??= _partsByName[partBlock.Name];
             }
-            else
+            if (firstPart != null && sectionLyrics.Count > 0)
+                AttachLyrics(firstPart, firstBefore, sectionLyrics);
+        }
+        else
+        {
+            // Section without named parts → treat as default part; its
+            // lyrics blocks map onto the notes just emitted.
+            EnsurePart("Part 1");
+            int before = _currentPart!.Measures.Count;
+            var blocks = new List<LyricsBlockSyntax>();
+            for (int i = 0; i < section.SlotCount; i++)
+                if (section.GetChild(i) is LyricsBlockSyntax lb2)
+                    blocks.Add(lb2);
+            ProcessNode(section);
+            FlushCurrentMeasure();
+            AttachLyrics(_currentPart!, before, blocks);
+        }
+    }
+
+    private void EmitSectionByName(Dictionary<string, List<SectionDeclarationSyntax>> byName, string name)
+    {
+        if (byName.TryGetValue(name, out var list))
+            foreach (var section in list)
+                EmitSection(section);
+    }
+
+    /// <summary>Emits the structure's items in order: a section reference plays its
+    /// section, a repeat block brackets its span with repeat barlines. Nav marks,
+    /// custom text and volta ENDING brackets are not yet mapped to MusicXML (the
+    /// alternative's music is still emitted so nothing is lost).</summary>
+    private void WalkStructure(SyntaxNode container, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    {
+        for (int i = 0; i < container.SlotCount; i++)
+        {
+            switch (container.GetChild(i))
             {
-                // Section without named parts → treat as default part; its
-                // lyrics blocks map onto the notes just emitted.
-                EnsurePart("Part 1");
-                int before = _currentPart!.Measures.Count;
-                var blocks = new List<LyricsBlockSyntax>();
-                for (int i = 0; i < section.SlotCount; i++)
-                    if (section.GetChild(i) is LyricsBlockSyntax lb2)
-                        blocks.Add(lb2);
-                ProcessNode(section);
-                FlushCurrentMeasure();
-                AttachLyrics(_currentPart!, before, blocks);
+                case SectionReferenceSyntax r:
+                    EmitSectionByName(byName, r.SectionName);
+                    break;
+                case StructureRepeatBlockSyntax rb:
+                    EmitRepeatBlock(rb, byName);
+                    break;
+                case StructureAlternativeSyntax alt:
+                    EmitSectionByName(byName, alt.SectionName.Text);
+                    break;
+                case { Kind: SyntaxKind.SilentSectionReference } silent
+                        when silent.GetChild(1) is SyntaxTokenNode nm:
+                    EmitSectionByName(byName, nm.Text);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>A <c>|: … :|</c> repeat block. A <c>:|:</c> divider splits it into
+    /// back-to-back repeat spans (each <c>:| |:</c>); every span is bracketed with a
+    /// forward repeat on its first measure and a backward repeat on its last, per
+    /// part — mirroring the inline-barline handling.</summary>
+    private void EmitRepeatBlock(StructureRepeatBlockSyntax rb, Dictionary<string, List<SectionDeclarationSyntax>> byName)
+    {
+        var runs = new List<List<SyntaxNode>>();
+        var cur = new List<SyntaxNode>();
+        for (int i = 0; i < rb.SlotCount; i++)
+        {
+            var child = rb.GetChild(i);
+            if (child is SectionReferenceSyntax or StructureAlternativeSyntax
+                or { Kind: SyntaxKind.SilentSectionReference })
+                cur.Add(child);
+            else if (child is SyntaxTokenNode { Kind: SyntaxKind.RepeatBothBar })
+            {
+                runs.Add(cur);
+                cur = new List<SyntaxNode>();
+            }
+        }
+        runs.Add(cur);
+
+        foreach (var run in runs)
+        {
+            if (run.Count == 0)
+                continue;
+
+            var startIdx = _document.Parts.ToDictionary(p => p, p => p.Measures.Count);
+            foreach (var item in run)
+            {
+                switch (item)
+                {
+                    case SectionReferenceSyntax r: EmitSectionByName(byName, r.SectionName); break;
+                    case StructureAlternativeSyntax alt: EmitSectionByName(byName, alt.SectionName.Text); break;
+                    case { Kind: SyntaxKind.SilentSectionReference } silent
+                            when silent.GetChild(1) is SyntaxTokenNode nm:
+                        EmitSectionByName(byName, nm.Text);
+                        break;
+                }
+            }
+            foreach (var p in _document.Parts)
+            {
+                if (p.Measures.Count > startIdx[p])
+                {
+                    p.Measures[startIdx[p]].RepeatForward = true;
+                    p.Measures[^1].RepeatBackward = true;
+                }
             }
         }
     }
@@ -1279,8 +1388,56 @@ public sealed class MusicXmlExporter
                         _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = harmony });
                     }
                 }
+                else if (name.StartsWith("fig.", StringComparison.Ordinal)
+                    && LilySharp.Core.Svg.Model.FiguredBassItem.ParseFigures(rawName) is { } figures
+                    && BuildFiguredBass(figures) is { } figuredBass)
+                {
+                    // <figured-bass> sits before its bass note, like <harmony>.
+                    _currentMeasure.Notes.Add(new MusicXmlNote { RawElement = figuredBass });
+                }
                 break;
         }
+    }
+
+    /// <summary>A &lt;figured-bass&gt; from a parsed continuo figure group. Each
+    /// figure emits a &lt;figure-number&gt; with the accidental as a &lt;suffix&gt;
+    /// (6♯), a bare accidental as a &lt;prefix&gt;, and a held figure as
+    /// &lt;extend&gt;. Element order follows the MusicXML DTD: prefix, number,
+    /// suffix, extend.</summary>
+    private static System.Xml.Linq.XElement? BuildFiguredBass(
+        System.Collections.Immutable.ImmutableArray<LilySharp.Core.Svg.Model.FiguredBassFigure> figures)
+    {
+        if (figures.IsDefaultOrEmpty)
+            return null;
+
+        var fb = new System.Xml.Linq.XElement("figured-bass");
+        foreach (var f in figures)
+        {
+            var figure = new System.Xml.Linq.XElement("figure");
+            string? acc = f.Alteration switch
+            {
+                1 => "sharp",
+                -1 => "flat",
+                2 => "natural",
+                _ => null,
+            };
+            if (f.Held)
+                figure.Add(new System.Xml.Linq.XElement("extend",
+                    new System.Xml.Linq.XAttribute("type", "continue")));
+            else if (f.Number > 0)
+            {
+                figure.Add(new System.Xml.Linq.XElement("figure-number", f.Number));
+                if (acc != null)
+                    figure.Add(new System.Xml.Linq.XElement("suffix", acc));
+            }
+            else if (acc != null)
+                figure.Add(new System.Xml.Linq.XElement("prefix", acc));
+            else
+                continue;
+
+            fb.Add(figure);
+        }
+        return fb.HasElements ? fb : null;
     }
 
     /// <summary>&lt;harmony&gt; from a chord display text ("Cm7", "B♭maj7",
