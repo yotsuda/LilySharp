@@ -121,6 +121,44 @@ public class MusicXmlExportShapeTests
     }
 
     [Fact]
+    public void Tuplet_EmitsTupletBracketNotations()
+    {
+        var doc = Export("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { tuplet 3/2 { c'8 d' e' } r4 c'2 | } }
+            structure { A }
+            score x { staff m }
+            """);
+        var tuplets = doc.Descendants("tuplet").ToList();
+        Assert.Equal(2, tuplets.Count);
+        Assert.Equal("start", tuplets[0].Attribute("type")!.Value);
+        Assert.Equal("stop", tuplets[1].Attribute("type")!.Value);
+        // The bracket lives in <notations>; the duration math <time-modification> stays.
+        Assert.All(tuplets, t => Assert.Equal("notations", t.Parent!.Name.LocalName));
+        Assert.Equal(3, doc.Descendants("time-modification").Count());
+    }
+
+    [Fact]
+    public void LeadingRepeatBar_DoesNotEmitEmptyMeasure()
+    {
+        var doc = Export("""
+            octave absolute
+            time 4/4
+            part m { clef treble }
+            section A { m { |: c'4 d' e' f' | g' a' b' c'' :| } }
+            structure { A }
+            score x { staff m }
+            """);
+        var measures = doc.Descendants("measure").ToList();
+        Assert.Equal(2, measures.Count);   // NOT 3 — no spurious empty leading measure
+        Assert.True(measures[0].Elements("barline").Any(b =>
+            b.Element("repeat")?.Attribute("direction")?.Value == "forward"));
+        Assert.Equal(4, measures[0].Elements("note").Count());   // the notes land in measure 1
+    }
+
+    [Fact]
     public void PercentRepeat_ExportsMeasureRepeatSign()
     {
         // A one-measure percent body exports the SIGN: repeated measures keep

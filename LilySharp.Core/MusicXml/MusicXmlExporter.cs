@@ -620,8 +620,14 @@ public sealed class MusicXmlExporter
                     }
                     if (_currentMeasure != null && _currentPart != null)
                     {
-                        _currentPart.Measures.Add(_currentMeasure);
-                        StartNewMeasure();
+                        if (_currentMeasure.Notes.Count > 0)
+                        {
+                            // Close the current measure and open the next one.
+                            _currentPart.Measures.Add(_currentMeasure);
+                            StartNewMeasure();
+                        }
+                        // else: an empty current measure (e.g. a leading '|:' before
+                        // any notes) — reuse it instead of emitting a blank bar.
                         if (barText is "|:" or ":|:")
                             _currentMeasure!.RepeatForward = true;
                     }
@@ -710,8 +716,32 @@ public sealed class MusicXmlExporter
                 // (triplet = 3 in 2). Scale durations and tag time-modification for
                 // the body's notes; nested tuplets multiply.
                 _tupletStack.Push((tuplet.TupletRatio, tuplet.BaseDivision));
+                int tupletNumber = _tupletStack.Count;
+                var tupletMeasure = _currentMeasure;
+                int tupletFrom = _currentMeasure?.Notes.Count ?? 0;
                 ProcessNode(tuplet.Body);
                 _tupletStack.Pop();
+                // Add the <tuplet> notation bracket (start on the body's first note,
+                // stop on its last) alongside the <time-modification> already stamped.
+                // Skipped when the body crossed a barline (rare) — no bracket beats a
+                // wrong one.
+                if (_currentMeasure != null && ReferenceEquals(_currentMeasure, tupletMeasure))
+                {
+                    var body = _currentMeasure.Notes;
+                    int firstIdx = -1, lastIdx = -1;
+                    for (int k = tupletFrom; k < body.Count; k++)
+                    {
+                        if (body[k].IsChord || body[k].RawElement != null)
+                            continue; // chord members / <harmony> / <figured-bass> are not the tuplet's notes
+                        if (firstIdx < 0) firstIdx = k;
+                        lastIdx = k;
+                    }
+                    if (firstIdx >= 0)
+                    {
+                        body[firstIdx].ExtraNotations.Add(TupletNotation("start", tupletNumber));
+                        body[lastIdx].ExtraNotations.Add(TupletNotation("stop", tupletNumber));
+                    }
+                }
                 break;
 
             case VariableReferenceSyntax varRef:
@@ -1644,6 +1674,13 @@ public sealed class MusicXmlExporter
         foreach (var (a, n) in _tupletStack) { actual *= a; normal *= n; }
         return (actual, normal);
     }
+
+    /// <summary>A &lt;tuplet&gt; notation bracket (start / stop) for the visual
+    /// bracket + ratio number, alongside the note's &lt;time-modification&gt;.</summary>
+    private static System.Xml.Linq.XElement TupletNotation(string type, int number)
+        => new("tuplet",
+            new System.Xml.Linq.XAttribute("type", type),
+            new System.Xml.Linq.XAttribute("number", number));
 
     private (string type, int dots) GetNoteType(Fraction duration)
     {
