@@ -1188,4 +1188,71 @@ structure { Main }
         Assert.Contains("$intro", errors[0].Message);
     }
 
+    // --- Naive grand-staff mistake: clef name used like a staff block ---
+
+    [Fact]
+    public void ClefNameAsStaff_NaiveGrandStaffAttempt_Warns()
+    {
+        // The dogfood mistake: `treble { … } bass { … }` treated as staves. The
+        // clef keywords aren't top-level items and were silently skipped; warn.
+        var tree = SyntaxTree.Parse("treble { c'1 }\nbass { c1 }");
+        Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.ClefNameAsStaff);
+    }
+
+    [Fact]
+    public void ClefNameAsStaff_CorrectGrandStaff_DoesNotWarn()
+    {
+        var tree = SyntaxTree.Parse(
+            "part upper { clef treble }\npart lower { clef bass }\n" +
+            "section Main { upper { c'1 } lower { c1 } }\nstructure { Main }\n" +
+            "score \"x\" { grandStaff { staff upper staff lower } }");
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.ClefNameAsStaff);
+    }
+
+    [Fact]
+    public void ClefNameAsStaff_ClefDeclaration_DoesNotWarn()
+    {
+        // `clef treble` (with the clef keyword) is the real clef form — never flagged.
+        var tree = SyntaxTree.Parse("part p { clef treble }\nsection M { p { c1 } }\nstructure { M }");
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.ClefNameAsStaff);
+    }
+
+    [Fact]
+    public void ClefNameAsStaff_SingleStaffMusic_DoesNotWarn()
+    {
+        var tree = SyntaxTree.Parse("{ c d e f }");
+        Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.ClefNameAsStaff);
+    }
+
+    [Fact]
+    public void ClefNameAsStaff_NoFixtureOrSampleTripsIt()
+    {
+        // No shipped .lys legitimately writes a bare clef name before a block, so
+        // the warning must never fire on the fixtures or the samples playground.
+        var offenders = new System.Collections.Generic.List<string>();
+        foreach (var dir in EnumerateLysRoots())
+            foreach (var file in System.IO.Directory.EnumerateFiles(dir, "*.lys", System.IO.SearchOption.AllDirectories))
+            {
+                var tree = SyntaxTree.Parse(System.IO.File.ReadAllText(file));
+                if (tree.Diagnostics.Any(d => d.Code == DiagnosticCodes.ClefNameAsStaff))
+                    offenders.Add(System.IO.Path.GetFileName(file));
+            }
+        Assert.True(offenders.Count == 0, "ClefNameAsStaff fired on: " + string.Join(", ", offenders));
+    }
+
+    private static System.Collections.Generic.IEnumerable<string> EnumerateLysRoots()
+    {
+        var dir = System.AppContext.BaseDirectory;
+        while (dir != null)
+        {
+            var roots = new System.Collections.Generic.List<string>();
+            var samples = System.IO.Path.Combine(dir, "samples");
+            if (System.IO.Directory.Exists(samples)) roots.Add(samples);
+            var fixtures = System.IO.Path.Combine(dir, "LilySharp.Tests", "Fixtures");
+            if (System.IO.Directory.Exists(fixtures)) roots.Add(fixtures);
+            if (roots.Count > 0) return roots;
+            dir = System.IO.Path.GetDirectoryName(dir);
+        }
+        return System.Array.Empty<string>();
+    }
 }

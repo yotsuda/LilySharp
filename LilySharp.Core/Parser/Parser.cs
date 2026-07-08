@@ -168,11 +168,40 @@ internal sealed class Parser
             if (member != null)
                 members.Add(member);
             else
+            {
+                WarnIfClefNameUsedAsStaff();
                 Advance(); // Skip unexpected token
+            }
         }
 
         var eof = Expect(SyntaxKind.EndOfFile);
         return new CompilationUnitGreen([.. members], eof);
+    }
+
+    /// <summary>
+    /// A newcomer reaching for a grand staff often writes the intuitive
+    /// <c>treble { … } bass { … }</c>, treating a clef name like a staff block.
+    /// Bare clef names aren't top-level items, so they get skipped silently and
+    /// the <c>{ … }</c> blocks collapse onto one default-clef staff with no
+    /// diagnostic. Catch the giveaway — a clef name immediately followed by a
+    /// music block at the top level — and point at the real grand-staff form.
+    /// Runs only on the skip path, so a legitimate <c>clef treble</c> (consumed
+    /// by ParseClefDeclaration) never reaches here.
+    /// </summary>
+    private void WarnIfClefNameUsedAsStaff()
+    {
+        if (CheckAny(SyntaxKind.TrebleKeyword, SyntaxKind.BassKeyword,
+                     SyntaxKind.AltoKeyword, SyntaxKind.TenorKeyword,
+                     SyntaxKind.Treble8Keyword)
+            && Peek(1)?.Kind == SyntaxKind.OpenBrace)
+        {
+            var name = Current.Text;
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Warning(span, DiagnosticCodes.ClefNameAsStaff,
+                $"'{name}' is not a staff here. For multiple staves, put each part on its own " +
+                $"staff in a grand staff -- score \"...\" {{ grandStaff {{ staff ... staff ... }} }} -- " +
+                $"and set a part's clef with 'clef {name}'.");
+        }
     }
 
     /// <summary>

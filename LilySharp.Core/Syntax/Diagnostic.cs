@@ -186,6 +186,11 @@ public static class DiagnosticCodes
     /// <summary>Parser error: a voice block was nested where not allowed.</summary>
     public const string NestedVoiceBlock = "LYS0010";
 
+    /// <summary>Parser warning: a bare clef name (treble/bass/…) was used like a
+    /// staff block at the top level (e.g. <c>treble { … }</c>), which the grammar
+    /// silently drops. Points to the real grand-staff form.</summary>
+    public const string ClefNameAsStaff = "LYS0011";
+
     // Semantic errors (LYS1xxx)
 
     /// <summary>Semantic error: reference to an undefined variable.</summary>
