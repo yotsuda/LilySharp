@@ -170,10 +170,20 @@ internal static class MusicXmlReader
                         break;
 
                     case "backup":
-                    case "forward":
-                        // Contents are bucketed by <voice>, so the cursor moves are
-                        // implicit — nothing to do. (A <forward> gap is not yet filled.)
+                        // A rewind to overlay another voice; voices are bucketed by
+                        // <voice>, so the cursor move is implicit — nothing to do.
                         break;
+
+                    case "forward":
+                    {
+                        // A gap in the current voice — fill it with rest(s) so the
+                        // following notes stay on the beat.
+                        int fvoice = int.TryParse(Local(el, "voice")?.Value, out int fv) ? fv : lastVoice;
+                        int fdur = int.TryParse(Local(el, "duration")?.Value, out int fd) ? fd : 0;
+                        foreach (var (value, dots) in DecomposeDuration(fdur, divisions))
+                            measure.Voice(fvoice).Add(new ImportNote { IsRest = true, NoteValue = value, Dots = dots });
+                        break;
+                    }
 
                     case "note":
                     {
@@ -487,6 +497,24 @@ internal static class MusicXmlReader
                 case "crescendo": yield return "cresc"; break;
                 case "diminuendo": yield return "decresc"; break;
             }
+    }
+
+    /// <summary>Greedily splits a tick duration into undotted rest note-values
+    /// (largest first), e.g. a dotted-half gap → a half rest + a quarter rest. Used to
+    /// fill a &lt;forward&gt; gap.</summary>
+    private static IEnumerable<(int value, int dots)> DecomposeDuration(int duration, int divisions)
+    {
+        int wholeTicks = 4 * Math.Max(1, divisions);
+        int remaining = duration;
+        foreach (int value in new[] { 1, 2, 4, 8, 16, 32 })
+        {
+            int ticks = wholeTicks / value;
+            while (ticks > 0 && remaining >= ticks)
+            {
+                yield return (value, 0);
+                remaining -= ticks;
+            }
+        }
     }
 
     /// <summary>The tuplet ratio (actual, normal) from a note's

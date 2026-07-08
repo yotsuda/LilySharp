@@ -247,6 +247,47 @@ public class MusicXmlRoundTripTests
     }
 
     [Fact]
+    public void ForwardGap_BecomesRests()
+    {
+        // A <forward> advances the cursor, leaving a gap that must sound as a rest.
+        var (lys, _) = new MusicXmlImporter().Import("""
+            <?xml version="1.0"?>
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>P</part-name></score-part></part-list>
+              <part id="P1"><measure number="1">
+                <attributes><divisions>1</divisions>
+                  <time><beats>4</beats><beat-type>4</beat-type></time>
+                  <clef><sign>G</sign><line>2</line></clef></attributes>
+                <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+                <forward><duration>2</duration></forward>
+                <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><type>quarter</type></note>
+              </measure></part>
+            </score-partwise>
+            """);
+        var importedTree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(importedTree), $"{lys}\n---\n{Diagnostics(importedTree)}");
+        // quarter, half-rest (the 2-beat gap), quarter.
+        Assert.Equal("N72:1/4 R:1/2 N77:1/4", Signature(importedTree));
+    }
+
+    [Fact]
+    public void SimpleRepeat_RoundTrips()
+    {
+        // A plain |: ... :| repeat (no endings) stays a flat section with inline
+        // repeat barlines. (Wrapped in a section so the fixture collects the same way
+        // the importer's section-major output does.)
+        AssertRoundTrips("""
+            octave absolute
+            time 4/4
+            key c major
+            part melody { clef treble }
+            section A { melody { |: c'4 d' e' f' | g'4 a' b' c'' :| } }
+            structure { A }
+            score s { staff melody }
+            """);
+    }
+
+    [Fact]
     public void FirstSecondEndings_FactorIntoAVoltaStructure()
     {
         // |: body :| with a first and second ending → Body/End1/End2 sections and a
