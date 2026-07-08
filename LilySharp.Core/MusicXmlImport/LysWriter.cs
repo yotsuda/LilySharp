@@ -34,13 +34,10 @@ internal static class LysWriter
     {
         var sb = new StringBuilder();
 
-        // Volta output is section-major; relative octave across sections is not modeled,
-        // so it stays absolute there. Relative applies only to the flat single-section
-        // layout, and the header must match the octaves actually emitted.
+        // Lily# resets the relative-octave reference at each section, so relative works
+        // for the section-major volta layout too — each section is its own stream.
         var layout = TryFactorVoltas(doc.Parts.Count > 0 ? doc.Parts[0].Measures : new List<ImportMeasure>());
-        bool useRelative = relativeOctave && layout == null;
-        if (relativeOctave && layout != null)
-            report.Warn("relative-octave output is not applied under a repeat with endings; used absolute.");
+        bool useRelative = relativeOctave;
 
         // ---- header ----
         // Absolute is the unambiguous default; relative octave (Lily#'s file default)
@@ -74,7 +71,7 @@ internal static class LysWriter
         // First/second endings factor into named sections + a volta structure;
         // anything else is one flat section played once.
         if (layout != null)
-            WriteVoltaSections(sb, doc, layout, report);
+            WriteVoltaSections(sb, doc, layout, report, useRelative);
         else
             WriteFlatSection(sb, doc, report, useRelative);
 
@@ -125,7 +122,7 @@ internal static class LysWriter
     // repeat + volta brackets live in the structure (Body played twice, End1 the
     // first time, End2 the second).
     private static void WriteVoltaSections(
-        StringBuilder sb, ImportDocument doc, VoltaLayout layout, ImportReport report)
+        StringBuilder sb, ImportDocument doc, VoltaLayout layout, ImportReport report, bool relative)
     {
         var lyricPart = doc.Parts.FirstOrDefault(HasLyrics);
         foreach (var seg in layout.Segments)
@@ -134,7 +131,7 @@ internal static class LysWriter
             foreach (var part in doc.Parts)
             {
                 sb.Append("  ").Append(part.SafeName).Append(" {\n");
-                sb.Append("    ").Append(WriteMusicRange(part, seg.Start, seg.End, report)).Append('\n');
+                sb.Append("    ").Append(WriteMusicRange(part, seg.Start, seg.End, report, relative)).Append('\n');
                 sb.Append("  }\n");
             }
             // Lyrics for just this section's measures, so each ending sings its own text.
@@ -207,23 +204,25 @@ internal static class LysWriter
     private static readonly List<ImportItem> EmptyItems = new();
 
     // One part's music over a measure range [start, end), voice-aware, joined by plain
-    // barlines (repeat/volta bars come from the structure, not the notes).
-    private static string WriteMusicRange(ImportPart part, int start, int end, ImportReport report)
+    // barlines (repeat/volta bars come from the structure, not the notes). Each section
+    // is its own relative-octave stream (Lily# resets relative per section).
+    private static string WriteMusicRange(ImportPart part, int start, int end, ImportReport report, bool relative)
     {
         var voices = part.Measures.SelectMany(m => m.VoiceItems.Keys).Distinct().OrderBy(x => x).ToList();
         if (voices.Count <= 1)
-            return WriteVoiceRange(part, voices.Count == 1 ? voices[0] : 1, start, end, report);
+            return WriteVoiceRange(part, voices.Count == 1 ? voices[0] : 1, start, end, report, Rel(relative));
         return string.Join(" ",
-            voices.Select(v => "voice { " + WriteVoiceRange(part, v, start, end, report) + " }"));
+            voices.Select(v => "voice { " + WriteVoiceRange(part, v, start, end, report, Rel(relative)) + " }"));
     }
 
-    private static string WriteVoiceRange(ImportPart part, int voice, int start, int end, ImportReport report)
+    private static string WriteVoiceRange(
+        ImportPart part, int voice, int start, int end, ImportReport report, RelativeOctave? rel)
     {
         var sb = new StringBuilder();
         for (int i = start; i < end && i < part.Measures.Count; i++)
         {
             var items = part.Measures[i].VoiceItems.TryGetValue(voice, out var v) ? v : EmptyItems;
-            sb.Append(WriteMeasureItems(items, report)).Append(' ');
+            sb.Append(WriteMeasureItems(items, report, rel)).Append(' ');
             if (i < end - 1)
                 sb.Append("| ");
         }
