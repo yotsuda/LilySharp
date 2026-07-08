@@ -42,7 +42,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
         {
             "starttrillspan", "stoptrillspan",
             "courtesy", "editorial",
-            "gliss", "glissando",
+            "glissando",
             "cue",
             "cross",
             "arpeggio",

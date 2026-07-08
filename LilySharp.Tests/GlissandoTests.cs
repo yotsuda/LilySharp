@@ -62,18 +62,17 @@ public class GlissandoTests
         Assert.True(note.HasGlissando);
     }
 
-    // --- @glissando / @gliss parsing through the collector ---
+    // --- @glissando parsing through the collector ---
 
     [Theory]
     [InlineData("g4@glissando c e b |")]
-    [InlineData("g4@gliss c e b |")]
     public void Collect_GlissandoArticulation_SetsHasGlissando(string source)
     {
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree);
 
         var first = Assert.IsType<NoteItem>(score.Voice.Measures[0].Items[0]);
-        Assert.True(first.HasGlissando, "@glissando/@gliss should set HasGlissando");
+        Assert.True(first.HasGlissando, "@glissando should set HasGlissando");
 
         var glissandos = new GlissandoDetector().DetectGlissandos(score);
         Assert.Single(glissandos);

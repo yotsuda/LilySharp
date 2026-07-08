@@ -29,8 +29,8 @@ phrase tupletDemo {
 
 phrase glissDemo {
   // Glissando
-  g4@gliss d r2 |
-  e'4@gliss b r2 |
+  g4@glissando d r2 |
+  e'4@glissando b r2 |
 }
 
 phrase arpeggioDemo {

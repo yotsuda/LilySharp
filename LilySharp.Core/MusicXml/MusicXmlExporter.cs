@@ -949,7 +949,7 @@ public sealed class MusicXmlExporter
         foreach (var art in note.Articulations)
         {
             if (art is ArticulationSyntax { Type: ArticulationType.None } named
-                && named.NameToken.Text.ToLowerInvariant() is "gliss" or "glissando" or "slide")
+                && named.NameToken.Text.ToLowerInvariant() is "glissando" or "slide")
             {
                 string el = named.NameToken.Text.Equals("slide", StringComparison.OrdinalIgnoreCase)
                     ? "slide" : "glissando";

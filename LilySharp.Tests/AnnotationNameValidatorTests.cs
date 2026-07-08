@@ -87,7 +87,7 @@ public class AnnotationNameValidatorTests
     [InlineData("c4@sost(off) d@una(corda) e f |")]
     [InlineData("c4@ds(al fine) d e f |")]
     // Feature annotations
-    [InlineData("c4@glissando d@gliss e f |")]
+    [InlineData("c4@glissando d e f |")]
     [InlineData("c4@startTrillSpan d e@stopTrillSpan f |")]
     [InlineData("c4@courtesy d@cue e@cross f@arpeggio |")]
     [InlineData("c4@laissezVibrer d@repeatTie e f |")]

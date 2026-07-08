@@ -547,7 +547,6 @@ c4@startTrillSpan d e@stopTrillSpan f |
 
 ```
 c4@glissando d |       % Glissando from C to D
-c4@gliss d |           % Short alias for @glissando
 ```
 
 ## Arpeggio
