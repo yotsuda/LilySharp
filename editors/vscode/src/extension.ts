@@ -223,6 +223,26 @@ export function activate(context: vscode.ExtensionContext) {
         ).then(pick => { if (pick === 'Show Log') { outputChannel.show(); } });
     });
 
+    // Push completion.flatSpelling changes to the server so they apply LIVE. The
+    // server seeds the value from initializationOptions at start; without this a
+    // change would only take effect after a window reload. The notification shape
+    // mirrors initializationOptions ({ completion: { flatSpelling } }).
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (!e.affectsConfiguration('lilysharp.completion.flatSpelling') || !client || !clientReady) {
+                return;
+            }
+            const cfg = vscode.workspace.getConfiguration('lilysharp');
+            client.sendNotification('workspace/didChangeConfiguration', {
+                settings: {
+                    completion: {
+                        flatSpelling: cfg.get<string>('completion.flatSpelling', 'full')
+                    }
+                }
+            });
+        })
+    );
+
     // Register preview commands
     context.subscriptions.push(
         vscode.commands.registerCommand('lilysharp.openPreview', () => {

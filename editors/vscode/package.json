@@ -2,7 +2,7 @@
   "name": "lilysharp",
   "displayName": "Lily#",
   "description": "Language support and live score preview for Lily#, a LilyPond-inspired music notation language",
-  "version": "0.3.0-dev.1",
+  "version": "0.3.0-dev.2",
   "publisher": "ytsuda",
   "license": "GPL-3.0-or-later",
   "repository": {
@@ -145,9 +145,9 @@
             "full",
             "contracted"
           ],
-          "enumDescriptions": [
-            "ees / aes (full Dutch flats)",
-            "es / as (contracted flats)"
+          "enumItemLabels": [
+            "ees/aes (Full Dutch flat)",
+            "es/as (contracted flat)"
           ],
           "default": "full",
           "description": "How flat pitches (E♭, A♭) are spelled in the autocomplete list. Both spellings always compile; this only changes which the completer suggests."

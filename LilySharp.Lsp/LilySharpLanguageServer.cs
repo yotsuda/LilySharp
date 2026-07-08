@@ -59,9 +59,20 @@ public sealed class LilySharpLanguageServer
 
     // Editor setting (lilysharp.completion.flatSpelling): when true the completer
     // suggests the contracted Dutch flats es/as instead of ees/aes. Compilation
-    // accepts both regardless; this only changes suggestions. Set from the
-    // client's initializationOptions at server start. Default = full (ees/aes).
+    // accepts both regardless; this only changes suggestions. Seeded from the
+    // client's initializationOptions at start and kept live via
+    // DidChangeConfiguration. Default = full (ees/aes).
     private bool _flatSpellingContracted;
+
+    /// <summary>
+    /// True iff the pushed settings ask for the contracted Dutch flats (es/as).
+    /// The client sends <c>{ completion: { flatSpelling: "contracted" | "full" } }</c>
+    /// both as initializationOptions and in didChangeConfiguration, so one parse
+    /// serves both entry points. null / missing / anything-but-"contracted" means
+    /// the default, full (ees/aes).
+    /// </summary>
+    internal static bool ParseFlatSpellingContracted(Newtonsoft.Json.Linq.JObject? settings) =>
+        settings?["completion"]?["flatSpelling"]?.ToString() == "contracted";
 
     public LilySharpLanguageServer(Stream input, Stream output)
     {
@@ -83,12 +94,10 @@ public sealed class LilySharpLanguageServer
     public InitializeResult Initialize(InitializeParams @params)
     {
         // completion.flatSpelling: "contracted" makes the completer suggest es/as
-        // in flat keys instead of ees/aes (both always compile).
-        if (@params.InitializationOptions is Newtonsoft.Json.Linq.JObject opts
-            && opts["completion"]?["flatSpelling"]?.ToString() == "contracted")
-        {
-            _flatSpellingContracted = true;
-        }
+        // in flat keys instead of ees/aes (both always compile). This is the
+        // STARTUP value; DidChangeConfiguration keeps it live afterwards.
+        _flatSpellingContracted = ParseFlatSpellingContracted(
+            @params.InitializationOptions as Newtonsoft.Json.Linq.JObject);
 
         return new InitializeResult
         {
@@ -154,6 +163,17 @@ public sealed class LilySharpLanguageServer
     public void Initialized()
     {
         // Client is ready
+    }
+
+    // Applied live when the user changes a lilysharp.* setting — the client pushes
+    // the new values here, so e.g. completion.flatSpelling takes effect on the next
+    // completion without a window reload. The next Completion() reads the updated
+    // field. Settings shape matches initializationOptions: { completion: { … } }.
+    [JsonRpcMethod(Methods.WorkspaceDidChangeConfigurationName, UseSingleObjectParameterDeserialization = true)]
+    public void DidChangeConfiguration(DidChangeConfigurationParams @params)
+    {
+        _flatSpellingContracted = ParseFlatSpellingContracted(
+            @params.Settings as Newtonsoft.Json.Linq.JObject);
     }
 
     [JsonRpcMethod(Methods.ShutdownName)]
@@ -3345,6 +3365,7 @@ public class ConvertLayoutResponse
     public string? ToLayout { get; set; }
     public string? Error { get; set; }
 }
+
 
 
 

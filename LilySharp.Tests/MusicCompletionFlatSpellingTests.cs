@@ -17,6 +17,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using LilySharp.Lsp;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace LilySharp.Tests;
@@ -35,6 +36,20 @@ public class MusicCompletionFlatSpellingTests
     private static List<string> Labels(bool contracted) =>
         LilySharpLanguageServer.GetMusicCompletions("", ThreeFlats, contracted)
             .Items.Select(i => i.Label).ToList();
+
+    // The same parse backs both initializationOptions (startup) and the live
+    // didChangeConfiguration push, so a change takes effect without a reload.
+    [Theory]
+    [InlineData("{\"completion\":{\"flatSpelling\":\"contracted\"}}", true)]
+    [InlineData("{\"completion\":{\"flatSpelling\":\"full\"}}", false)]
+    [InlineData("{\"completion\":{}}", false)]
+    [InlineData("{}", false)]
+    public void ParseFlatSpellingContracted_ReadsPushedSetting(string json, bool expected) =>
+        Assert.Equal(expected, LilySharpLanguageServer.ParseFlatSpellingContracted(JObject.Parse(json)));
+
+    [Fact]
+    public void ParseFlatSpellingContracted_NullSettings_DefaultsToFull() =>
+        Assert.False(LilySharpLanguageServer.ParseFlatSpellingContracted(null));
 
     [Fact]
     public void Full_OffersFullDutchFlats()
