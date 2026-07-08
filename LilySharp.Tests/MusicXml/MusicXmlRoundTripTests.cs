@@ -15,7 +15,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Xml.Linq;
 using LilySharp.Core.MusicXml;
 using LilySharp.Core.MusicXmlImport;
 using LilySharp.Core.Semantics;
@@ -111,6 +114,88 @@ public class MusicXmlRoundTripTests
 
         var firstNote = xml.Descendants("note").First();
         Assert.Equal("Mu", firstNote.Element("lyric")?.Element("text")?.Value);
+    }
+
+    [Fact]
+    public void FiguredBass_SurvivesRoundTrip()
+    {
+        // Figured bass is not in the MIDI/duration signature, so verify it by a
+        // DOUBLE export: original -> XML1 -> import -> XML2, comparing the
+        // <figured-bass> figures (number + accidental + held) across the loop.
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            key c major
+            part bass { clef bass }
+            section A {
+              bass { c4@fig(6) d4@fig(6 4) e4@fig(7 s) f4@fig(_) | }
+            }
+            structure { A }
+            score x { staff bass }
+            """);
+        Assert.False(HasErrors(tree), "the fixture itself must parse clean");
+
+        var xml1 = new MusicXmlExporter().Export(tree).ToXml();
+        var (lys, report) = new MusicXmlImporter().Import(xml1.ToString());
+        var importedTree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(importedTree), $"imported .lys did not parse clean:\n{lys}");
+
+        var xml2 = new MusicXmlExporter().Export(importedTree).ToXml();
+        Assert.Equal(FiguredBassSignature(xml1), FiguredBassSignature(xml2));
+        Assert.Equal("6 6/4 7sharp _", FiguredBassSignature(xml1)); // sanity on the fixture
+        Assert.Equal(Signature(tree), Signature(importedTree));
+        Assert.False(report.HasWarnings, string.Join("; ", report.Warnings));
+    }
+
+    [Fact]
+    public void Mxl_ZipContainer_ImportsSameAsRawXml()
+    {
+        // Exercises the .mxl code path: a real ZIP with META-INF/container.xml
+        // pointing at the score, imported via ImportBytes, must equal the raw-XML
+        // import and still round-trip the music.
+        var tree = SyntaxTree.Parse("""
+            octave absolute
+            time 4/4
+            key c major
+            c'4 d' e' f' | g'2 a'4 b' | c''1 |
+            """);
+        var xml = new MusicXmlExporter().Export(tree).ToXml().ToString();
+
+        var (lysFromXml, _) = new MusicXmlImporter().Import(xml);
+        var (lysFromMxl, _) = new MusicXmlImporter().ImportBytes(BuildMxl(xml));
+
+        Assert.Equal(lysFromXml, lysFromMxl);
+        var importedTree = SyntaxTree.Parse(lysFromMxl);
+        Assert.False(HasErrors(importedTree), $"imported .lys did not parse clean:\n{lysFromMxl}");
+        Assert.Equal(Signature(tree), Signature(importedTree));
+    }
+
+    /// <summary>A compact fingerprint of every <c>&lt;figured-bass&gt;</c> group:
+    /// per group, its figures as number + accidental + held marker.</summary>
+    private static string FiguredBassSignature(XDocument xml)
+        => string.Join(" ", xml.Descendants("figured-bass").Select(fb =>
+            string.Join("/", fb.Elements("figure").Select(f =>
+                (f.Element("figure-number")?.Value ?? "")
+                + (f.Element("suffix")?.Value ?? f.Element("prefix")?.Value ?? "")
+                + (f.Element("extend") != null ? "_" : "")))));
+
+    /// <summary>Wraps a MusicXML string in a minimal, valid <c>.mxl</c> zip.</summary>
+    private static byte[] BuildMxl(string xml)
+    {
+        using var ms = new MemoryStream();
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            using (var w = new StreamWriter(zip.CreateEntry("META-INF/container.xml").Open()))
+                w.Write("""
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <container><rootfiles>
+                      <rootfile full-path="score.xml" media-type="application/vnd.recordare.musicxml+xml"/>
+                    </rootfiles></container>
+                    """);
+            using (var w = new StreamWriter(zip.CreateEntry("score.xml").Open()))
+                w.Write(xml);
+        }
+        return ms.ToArray();
     }
 
     // NOTE: structure-level repeats (|: A :|) replay sections in the collector but

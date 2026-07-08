@@ -116,6 +116,7 @@ internal static class LysWriter
     {
         var tokens = new List<string>();
         string? pendingChord = null;
+        string? pendingFig = null;
         var items = measure.Items;
 
         for (int i = 0; i < items.Count;)
@@ -126,12 +127,19 @@ internal static class LysWriter
                 i++;
                 continue;
             }
+            if (items[i] is ImportFiguredBass figuredBass)
+            {
+                pendingFig = FigAnnotation(figuredBass, report);
+                i++;
+                continue;
+            }
 
             var note = (ImportNote)items[i];
             if (note.IsRest)
             {
                 tokens.Add("r" + Value(note.NoteValue, note.Dots));
                 pendingChord = null; // a rest cannot carry a chord symbol
+                pendingFig = null;   // ... nor figured bass
                 i++;
                 continue;
             }
@@ -153,6 +161,11 @@ internal static class LysWriter
             {
                 token += pendingChord;
                 pendingChord = null;
+            }
+            if (pendingFig != null)
+            {
+                token += pendingFig;
+                pendingFig = null;
             }
             if (note.TieStart)
                 token += "~";
@@ -234,6 +247,38 @@ internal static class LysWriter
             sb.Append('/').Append("cdefgab"[((bs % 7) + 7) % 7]).Append(AlterSuffix(h.BassAlter ?? 0));
         sb.Append(')');
         return sb.ToString();
+    }
+
+    // ---- figured bass (@fig) ---------------------------------------------
+
+    private static string? FigAnnotation(ImportFiguredBass fig, ImportReport report)
+    {
+        var parts = new List<string>();
+        foreach (var f in fig.Figures)
+        {
+            if (f.Held)
+            {
+                parts.Add("_");
+                continue;
+            }
+            if (f.Number > 0)
+            {
+                parts.Add(f.Number.ToString());
+                // Accidental rides as a suffix token after the figure (6 s = 6-sharp).
+                string? acc = f.Alteration switch { 1 => "s", -1 => "f", 2 => "n", _ => null };
+                if (acc != null)
+                    parts.Add(acc);
+            }
+            else if (f.Alteration == 1)
+            {
+                parts.Add("#"); // bare sharp (raised third)
+            }
+            else
+            {
+                report.Warn("figured-bass accidental without a figure dropped.");
+            }
+        }
+        return parts.Count > 0 ? "@fig(" + string.Join(" ", parts) + ")" : null;
     }
 
     // Inverse of the exporter's suffix -> kind map (MusicXmlExporter.BuildHarmony).

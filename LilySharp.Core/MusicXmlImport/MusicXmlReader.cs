@@ -123,7 +123,9 @@ internal static class MusicXmlReader
 
             int firstVoice = 0;         // Tier 1: keep only the first voice seen
             bool warnedVoices = false;
-            var pendingHarmony = new List<ImportHarmony>();
+            // <harmony>/<figured-bass> precede their note in the stream; hold them
+            // until the note arrives so they attach to it in the writer.
+            var pendingAnnotations = new List<ImportItem>();
 
             foreach (var el in measEl.Elements())
             {
@@ -144,7 +146,12 @@ internal static class MusicXmlReader
 
                     case "harmony":
                         if (ReadHarmony(el) is { } h)
-                            pendingHarmony.Add(h);
+                            pendingAnnotations.Add(h);
+                        break;
+
+                    case "figured-bass":
+                        if (ReadFiguredBass(el) is { } fb)
+                            pendingAnnotations.Add(fb);
                         break;
 
                     case "backup":
@@ -175,13 +182,12 @@ internal static class MusicXmlReader
                         var note = ReadNote(el, divisions, report, measureNo);
                         if (note == null)
                             break;
-                        // A chord member folds onto the previous note; harmonies
-                        // attach to the head note only.
+                        // A chord member folds onto the previous note; harmony /
+                        // figured-bass attach to the head note only.
                         if (!note.ChordWithPrev)
                         {
-                            foreach (var ph in pendingHarmony)
-                                measure.Items.Add(ph);
-                            pendingHarmony.Clear();
+                            measure.Items.AddRange(pendingAnnotations);
+                            pendingAnnotations.Clear();
                         }
                         measure.Items.Add(note);
                         break;
@@ -193,10 +199,9 @@ internal static class MusicXmlReader
                 }
             }
             endMeasure:
-            // Any harmony with no following note still gets emitted (its @chord will
-            // ride the next note the writer sees, or be dropped with a note of its own).
-            foreach (var ph in pendingHarmony)
-                measure.Items.Add(ph);
+            // Any annotation with no following note still gets recorded (the writer
+            // drops a dangling @chord/@fig with a warning rather than mis-attaching).
+            measure.Items.AddRange(pendingAnnotations);
 
             part.Measures.Add(measure);
         }
@@ -427,6 +432,39 @@ internal static class MusicXmlReader
         }
         return h;
     }
+
+    private static ImportFiguredBass? ReadFiguredBass(XElement el)
+    {
+        var fb = new ImportFiguredBass();
+        foreach (var figEl in Els(el, "figure"))
+        {
+            if (Local(figEl, "extend") != null && Local(figEl, "figure-number") == null)
+            {
+                fb.Figures.Add(new ImportFigure(0, 0, Held: true));
+                continue;
+            }
+            int number = int.TryParse(Local(figEl, "figure-number")?.Value, out int n) ? n : 0;
+            // An accidental rides either the <suffix> (numbered figures) or the
+            // <prefix> (a bare accidental); both encode the same alteration.
+            int alter = AccidentalValue(Local(figEl, "suffix")?.Value)
+                        ?? AccidentalValue(Local(figEl, "prefix")?.Value)
+                        ?? 0;
+            if (number == 0 && alter == 0)
+                continue;
+            fb.Figures.Add(new ImportFigure(number, alter, Held: false));
+        }
+        return fb.Figures.Count > 0 ? fb : null;
+    }
+
+    private static int? AccidentalValue(string? name) => name?.Trim().ToLowerInvariant() switch
+    {
+        "sharp" => 1,
+        "flat" => -1,
+        "natural" => 2,
+        "double-sharp" or "sharp-sharp" => 1,   // Tier 1 approximates doubles as single
+        "flat-flat" => -1,
+        _ => null,
+    };
 
     private static void ReadBarline(XElement el, ImportMeasure measure)
     {

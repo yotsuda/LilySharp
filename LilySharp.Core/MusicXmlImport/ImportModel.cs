@@ -137,6 +137,21 @@ internal sealed class ImportHarmony : ImportItem
     public int? BassAlter { get; set; }
 }
 
+/// <summary>
+/// A figured-bass group (MusicXML <c>&lt;figured-bass&gt;</c>). Like a harmony it
+/// attaches to the FOLLOWING (bass) note, as an inline <c>@fig(...)</c>.
+/// </summary>
+internal sealed class ImportFiguredBass : ImportItem
+{
+    public List<ImportFigure> Figures { get; } = new();
+}
+
+/// <summary>One figure in a figured-bass group.</summary>
+/// <param name="Number">The figure digit (0 = accidental-only / held placeholder).</param>
+/// <param name="Alteration">0=none, 1=sharp, -1=flat, 2=natural.</param>
+/// <param name="Held">A continuation (<c>_</c>) figure sustained from the previous bass note.</param>
+internal readonly record struct ImportFigure(int Number, int Alteration, bool Held);
+
 /// <summary>One sung syllable on a note.</summary>
 /// <param name="Verse">1-based verse number.</param>
 /// <param name="Text">The syllable text.</param>
