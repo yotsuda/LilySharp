@@ -436,6 +436,8 @@ public sealed class LilySharpLanguageServer
             CompletionContext.AfterChordsRef => GetDeclaredNameCompletions(doc.Text, "chords", "Chord part"),
             CompletionContext.AfterLyricsRef => GetDeclaredNameCompletions(doc.Text, "lyrics", "Lyrics part"),
             CompletionContext.AfterWith => GetWithCompletions(),
+            CompletionContext.AfterChordAttachName => GetChordAttachNameCompletions(),
+            CompletionContext.AfterChordDisplayAs => GetChordDisplayModeCompletions(),
             CompletionContext.AfterInstrument => GetInstrumentCompletions(doc.Text, offset, position),
             CompletionContext.AfterRemoveEmpty => GetRemoveEmptyCompletions(),
             CompletionContext.AfterAt => GetArticulationCompletions(),
@@ -657,6 +659,8 @@ public sealed class LilySharpLanguageServer
         AfterChordsRef,
         AfterLyricsRef,
         AfterWith,
+        AfterChordAttachName,
+        AfterChordDisplayAs,
         AfterInstrument,
         AfterRemoveEmpty,
         AfterAt,
@@ -783,14 +787,22 @@ public sealed class LilySharpLanguageServer
         // `with` continues into `with chords PART`.
         if (IsInsideScoreBlock(text, offset))
         {
-            return prevWord switch
+            // `… as |` → the chord DISPLAY modes (roman | both | names).
+            if (prevWord == "as")
+                return CompletionContext.AfterChordDisplayAs;
+            switch (prevWord)
             {
-                "staff" => CompletionContext.AfterStaffRef,
-                "chords" => CompletionContext.AfterChordsRef,
-                "lyrics" => CompletionContext.AfterLyricsRef,
-                "with" => CompletionContext.AfterWith,
-                _ => CompletionContext.ScoreBlock,
-            };
+                case "staff": return CompletionContext.AfterStaffRef;
+                case "chords": return CompletionContext.AfterChordsRef;
+                case "lyrics": return CompletionContext.AfterLyricsRef;
+                case "with": return CompletionContext.AfterWith;
+            }
+            // `chords NAME |` / `with chords NAME |`: after the attached chord part's
+            // name, offer the `as roman|both|names` display selector (plus the normal
+            // continuations, so a following render item is not blocked).
+            if (SecondWordBeforeCursor(text, offset) == "chords")
+                return CompletionContext.AfterChordAttachName;
+            return CompletionContext.ScoreBlock;
         }
 
         if (i >= 0 && text[i] == '{')
@@ -1083,6 +1095,56 @@ public sealed class LilySharpLanguageServer
                     Detail = "Attach a chord part's symbols above this staff",
                 },
             ]
+        };
+    }
+
+    /// <summary>After <c>chords NAME</c> / <c>with chords NAME</c>: the chord DISPLAY
+    /// selector (<c>as roman | as both | as names</c>), then the ordinary render-item
+    /// continuations so a following <c>staff</c>/<c>chords</c>/… is not blocked.</summary>
+    internal static CompletionList GetChordAttachNameCompletions()
+    {
+        var items = new System.Collections.Generic.List<CompletionItem>
+        {
+            AsItem("as roman", "Show chord symbols as Roman-numeral degrees (I, IIm7, V7)", "0"),
+            AsItem("as both", "Show both: the Roman degree stacked above the chord name", "1"),
+            AsItem("as names", "Show absolute chord names (C, Am7) — the default", "2"),
+        };
+        // The next render item can also start here; keep those, sorted after `as …`.
+        foreach (var it in GetScoreBlockCompletions().Items)
+        {
+            it.SortText = "9" + (it.SortText ?? "");
+            items.Add(it);
+        }
+        return new CompletionList { Items = items.ToArray() };
+
+        static CompletionItem AsItem(string label, string detail, string sort) => new()
+        {
+            Label = label,
+            Kind = CompletionItemKind.Keyword,
+            InsertText = label,
+            Detail = detail,
+            SortText = sort,
+        };
+    }
+
+    /// <summary>After <c>… as</c>: the three chord display modes.</summary>
+    internal static CompletionList GetChordDisplayModeCompletions()
+    {
+        var modes = new (string Label, string Detail)[]
+        {
+            ("roman", "Roman-numeral degrees for the key (I, IIm7, V7)"),
+            ("both", "The Roman degree stacked above the absolute chord name"),
+            ("names", "Absolute chord names (C, Am7)"),
+        };
+        return new CompletionList
+        {
+            Items = modes.Select((t, i) => new CompletionItem
+            {
+                Label = t.Label,
+                Kind = CompletionItemKind.Keyword,
+                Detail = t.Detail,
+                SortText = i.ToString(),
+            }).ToArray()
         };
     }
 
