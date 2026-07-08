@@ -60,22 +60,14 @@ internal static class LysWriter
               .Append(" { clef ").Append(part.Clef).Append(" }\n");
         sb.Append('\n');
 
-        // ---- one section holding every part's music (flat structure) ----
-        sb.Append("section A {\n");
-        foreach (var part in doc.Parts)
-        {
-            sb.Append("  ").Append(part.SafeName).Append(" {\n");
-            sb.Append("    ").Append(WriteMusic(part, report)).Append('\n');
-            sb.Append("  }\n");
-        }
-        // Section-level lyrics sing the first part carrying them.
-        var lyricPart = doc.Parts.FirstOrDefault(HasLyrics);
-        if (lyricPart != null)
-            foreach (var line in WriteLyrics(lyricPart))
-                sb.Append("  ").Append(line).Append('\n');
-        sb.Append("}\n\n");
-
-        sb.Append("structure { A }\n\n");
+        // ---- sections + structure ----
+        // First/second endings factor into named sections + a volta structure;
+        // anything else is one flat section played once.
+        var layout = TryFactorVoltas(doc.Parts.Count > 0 ? doc.Parts[0].Measures : new List<ImportMeasure>());
+        if (layout != null)
+            WriteVoltaSections(sb, doc, layout, report);
+        else
+            WriteFlatSection(sb, doc, report);
 
         // ---- score: one staff per part; split staves regroup into a grand staff ----
         sb.Append("score \"imported\" {\n");
@@ -98,9 +90,134 @@ internal static class LysWriter
         return sb.ToString();
     }
 
+    // ---- sections ---------------------------------------------------------
+
+    // The single-section flat layout (no repeat endings): every part's full music in
+    // section A, with inline repeat barlines, played once by structure { A }.
+    private static void WriteFlatSection(StringBuilder sb, ImportDocument doc, ImportReport report)
+    {
+        sb.Append("section A {\n");
+        foreach (var part in doc.Parts)
+        {
+            sb.Append("  ").Append(part.SafeName).Append(" {\n");
+            sb.Append("    ").Append(WriteMusic(part, report)).Append('\n');
+            sb.Append("  }\n");
+        }
+        // Section-level lyrics sing the first part carrying them.
+        var lyricPart = doc.Parts.FirstOrDefault(HasLyrics);
+        if (lyricPart != null)
+            foreach (var line in WriteLyrics(lyricPart))
+                sb.Append("  ").Append(line).Append('\n');
+        sb.Append("}\n\n");
+        sb.Append("structure { A }\n\n");
+    }
+
+    // A first/second-ending layout: the music splits into named sections and the
+    // repeat + volta brackets live in the structure (Body played twice, End1 the
+    // first time, End2 the second).
+    private static void WriteVoltaSections(
+        StringBuilder sb, ImportDocument doc, VoltaLayout layout, ImportReport report)
+    {
+        if (doc.Parts.Any(HasLyrics))
+            report.Warn("lyrics under a repeat with endings are not yet aligned; dropped.");
+
+        foreach (var seg in layout.Segments)
+        {
+            sb.Append("section ").Append(seg.Name).Append(" {\n");
+            foreach (var part in doc.Parts)
+            {
+                sb.Append("  ").Append(part.SafeName).Append(" {\n");
+                sb.Append("    ").Append(WriteMusicRange(part, seg.Start, seg.End, report)).Append('\n');
+                sb.Append("  }\n");
+            }
+            sb.Append("}\n\n");
+        }
+        sb.Append("structure {\n  ").Append(layout.Structure).Append("\n}\n\n");
+    }
+
+    private sealed record VoltaSegment(string Name, int Start, int End);
+    private sealed record VoltaLayout(IReadOnlyList<VoltaSegment> Segments, string Structure);
+
+    /// <summary>Recognizes the common <c>[Intro] |: Body [1. End1] :| [2. End2]
+    /// [Coda]</c> shape from the measures' repeat and ending markers, returning the
+    /// sections + structure; null (→ flat layout) when there are no endings or the
+    /// shape is not one we factor.</summary>
+    private static VoltaLayout? TryFactorVoltas(List<ImportMeasure> measures)
+    {
+        int n = measures.Count;
+        if (n == 0 || !measures.Any(m => m.EndingStart != null))
+            return null;
+
+        int end1Start = IndexWhere(measures, 0, m => m.EndingStart == 1);
+        int end2Start = IndexWhere(measures, 0, m => m.EndingStart == 2);
+        if (end1Start < 0 || end2Start < 0 || end1Start >= end2Start)
+            return null;
+        int end1Stop = IndexWhere(measures, end1Start, m => m.EndingStop);
+        int end2Stop = IndexWhere(measures, end2Start, m => m.EndingStop);
+        if (end1Stop < 0 || end2Stop < 0 || end2Start != end1Stop + 1)
+            return null;
+
+        // The repeated body runs from the |: (or the top if none) to the first ending.
+        int repeatFwd = IndexWhere(measures, 0, m => m.RepeatForward);
+        if (repeatFwd < 0 || repeatFwd > end1Start)
+            repeatFwd = 0;
+        if (repeatFwd >= end1Start)
+            return null; // empty body
+
+        var segments = new List<VoltaSegment>();
+        var structure = new StringBuilder();
+        if (repeatFwd > 0)
+        {
+            segments.Add(new VoltaSegment("Intro", 0, repeatFwd));
+            structure.Append("Intro ");
+        }
+        segments.Add(new VoltaSegment("Body", repeatFwd, end1Start));
+        segments.Add(new VoltaSegment("End1", end1Start, end1Stop + 1));
+        segments.Add(new VoltaSegment("End2", end2Start, end2Stop + 1));
+        structure.Append("|: Body [1. End1] :| [2. End2]");
+        if (end2Stop + 1 < n)
+        {
+            segments.Add(new VoltaSegment("Coda", end2Stop + 1, n));
+            structure.Append(" Coda");
+        }
+        return new VoltaLayout(segments, structure.ToString());
+    }
+
+    private static int IndexWhere(List<ImportMeasure> ms, int from, System.Func<ImportMeasure, bool> pred)
+    {
+        for (int i = from; i < ms.Count; i++)
+            if (pred(ms[i]))
+                return i;
+        return -1;
+    }
+
     // ---- music emission ---------------------------------------------------
 
     private static readonly List<ImportItem> EmptyItems = new();
+
+    // One part's music over a measure range [start, end), voice-aware, joined by plain
+    // barlines (repeat/volta bars come from the structure, not the notes).
+    private static string WriteMusicRange(ImportPart part, int start, int end, ImportReport report)
+    {
+        var voices = part.Measures.SelectMany(m => m.VoiceItems.Keys).Distinct().OrderBy(x => x).ToList();
+        if (voices.Count <= 1)
+            return WriteVoiceRange(part, voices.Count == 1 ? voices[0] : 1, start, end, report);
+        return string.Join(" ",
+            voices.Select(v => "voice { " + WriteVoiceRange(part, v, start, end, report) + " }"));
+    }
+
+    private static string WriteVoiceRange(ImportPart part, int voice, int start, int end, ImportReport report)
+    {
+        var sb = new StringBuilder();
+        for (int i = start; i < end && i < part.Measures.Count; i++)
+        {
+            var items = part.Measures[i].VoiceItems.TryGetValue(voice, out var v) ? v : EmptyItems;
+            sb.Append(WriteMeasureItems(items, report)).Append(' ');
+            if (i < end - 1)
+                sb.Append("| ");
+        }
+        return sb.ToString().TrimEnd();
+    }
 
     private static string WriteMusic(ImportPart part, ImportReport report)
     {

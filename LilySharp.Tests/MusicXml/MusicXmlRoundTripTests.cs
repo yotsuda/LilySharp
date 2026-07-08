@@ -247,6 +247,47 @@ public class MusicXmlRoundTripTests
     }
 
     [Fact]
+    public void FirstSecondEndings_FactorIntoAVoltaStructure()
+    {
+        // |: body :| with a first and second ending → Body/End1/End2 sections and a
+        // volta structure (the endings are alternatives, not sequential music).
+        var (lys, _) = new MusicXmlImporter().Import("""
+            <?xml version="1.0"?>
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>Tune</part-name></score-part></part-list>
+              <part id="P1">
+                <measure number="1">
+                  <attributes><divisions>1</divisions>
+                    <time><beats>4</beats><beat-type>4</beat-type></time>
+                    <clef><sign>G</sign><line>2</line></clef></attributes>
+                  <barline location="left"><repeat direction="forward"/></barline>
+                  <note><pitch><step>C</step><octave>5</octave></pitch><duration>4</duration><type>whole</type></note>
+                </measure>
+                <measure number="2">
+                  <barline location="left"><ending number="1" type="start"/></barline>
+                  <note><pitch><step>D</step><octave>5</octave></pitch><duration>4</duration><type>whole</type></note>
+                  <barline location="right"><ending number="1" type="stop"/><repeat direction="backward"/></barline>
+                </measure>
+                <measure number="3">
+                  <barline location="left"><ending number="2" type="start"/></barline>
+                  <note><pitch><step>E</step><octave>5</octave></pitch><duration>4</duration><type>whole</type></note>
+                  <barline location="right"><ending number="2" type="discontinue"/></barline>
+                </measure>
+              </part>
+            </score-partwise>
+            """);
+        var importedTree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(importedTree), $"{lys}\n---\n{Diagnostics(importedTree)}");
+        Assert.Contains("|: Body [1. End1] :| [2. End2]", lys);
+        Assert.Contains("section Body", lys);
+        Assert.Contains("section End1", lys);
+        Assert.Contains("section End2", lys);
+        // The volta brackets are visual; Lily# emits each section once (Body, End1,
+        // End2 = C5, D5, E5), so both endings render with the repeat bars around them.
+        Assert.Equal("N72:1 | N74:1 | N76:1", Signature(importedTree));
+    }
+
+    [Fact]
     public void MultipleStaves_SplitIntoAGrandStaff()
     {
         // A piano part with two staves (treble RH / bass LH) becomes two Lily# parts

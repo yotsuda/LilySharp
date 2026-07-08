@@ -87,6 +87,11 @@ internal sealed class ImportMeasure
     public int? Tempo { get; set; }
     /// <summary>A repeat-start (<c>|:</c>) opens this measure.</summary>
     public bool RepeatForward { get; set; }
+    /// <summary>The volta number whose bracket STARTS at this measure (a MusicXML
+    /// <c>&lt;ending type="start"&gt;</c>), e.g. 1 for the first ending; null otherwise.</summary>
+    public int? EndingStart { get; set; }
+    /// <summary>A volta bracket STOPS/discontinues at this measure's right barline.</summary>
+    public bool EndingStop { get; set; }
     /// <summary>The measure's closing bar style.</summary>
     public BarlineKind BarlineRight { get; set; } = BarlineKind.Plain;
 

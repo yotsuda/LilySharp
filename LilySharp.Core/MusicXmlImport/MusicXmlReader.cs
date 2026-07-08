@@ -648,13 +648,23 @@ internal static class MusicXmlReader
         string location = (string?)el.Attribute("location") ?? "right";
         var repeat = Local(el, "repeat");
         string? barStyle = Local(el, "bar-style")?.Value.Trim();
+        var ending = Local(el, "ending");
+        string? endingType = (string?)ending?.Attribute("type");
 
         if (location == "left")
         {
             if ((string?)repeat?.Attribute("direction") == "forward")
                 measure.RepeatForward = true;
+            // A volta bracket opens here (first ending = "1", second = "2", ...).
+            if (endingType == "start"
+                && int.TryParse((string?)ending?.Attribute("number"), out int num))
+                measure.EndingStart = num;
             return;
         }
+
+        // A volta bracket closes at this measure's right barline.
+        if (endingType is "stop" or "discontinue")
+            measure.EndingStop = true;
 
         if ((string?)repeat?.Attribute("direction") == "backward")
             measure.BarlineRight = BarlineKind.RepeatEnd;
