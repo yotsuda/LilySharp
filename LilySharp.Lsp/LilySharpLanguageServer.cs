@@ -57,6 +57,12 @@ public sealed class LilySharpLanguageServer
     private readonly Dictionary<Uri, CancellationTokenSource> _pendingDiagnostics = [];
     private readonly object _diagnosticsGate = new();
 
+    // Editor setting (lilysharp.completion.flatSpelling): when true the completer
+    // suggests the contracted Dutch flats es/as instead of ees/aes. Compilation
+    // accepts both regardless; this only changes suggestions. Set from the
+    // client's initializationOptions at server start. Default = full (ees/aes).
+    private bool _flatSpellingContracted;
+
     public LilySharpLanguageServer(Stream input, Stream output)
     {
         var handler = new HeaderDelimitedMessageHandler(output, input);
@@ -76,6 +82,14 @@ public sealed class LilySharpLanguageServer
     [JsonRpcMethod(Methods.InitializeName, UseSingleObjectParameterDeserialization = true)]
     public InitializeResult Initialize(InitializeParams @params)
     {
+        // completion.flatSpelling: "contracted" makes the completer suggest es/as
+        // in flat keys instead of ees/aes (both always compile).
+        if (@params.InitializationOptions is Newtonsoft.Json.Linq.JObject opts
+            && opts["completion"]?["flatSpelling"]?.ToString() == "contracted")
+        {
+            _flatSpellingContracted = true;
+        }
+
         return new InitializeResult
         {
             Capabilities = new ServerCapabilities
@@ -380,7 +394,7 @@ public sealed class LilySharpLanguageServer
             // not pitch letters (LILYPOND-REF: \drummode note names).
             CompletionContext.MusicBlock => IsInsidePercussionPartMusic(doc.Text, offset, out bool inVoice)
                 ? GetDrumCompletions(inVoice)
-                : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset)),
+                : GetMusicCompletions(word, CurrentKeySharps(doc.Text, offset), _flatSpellingContracted),
             CompletionContext.StructureBlock => GetStructureCompletions(doc.Text),
             CompletionContext.PartBlock => GetPartPropertyCompletions(),
             CompletionContext.AfterClef => GetClefCompletions(),
@@ -1372,7 +1386,7 @@ public sealed class LilySharpLanguageServer
         return new CompletionList { IsIncomplete = false, Items = [.. items] };
     }
 
-    private static CompletionList GetMusicCompletions(string word, int keySharps)
+    internal static CompletionList GetMusicCompletions(string word, int keySharps, bool contracted = false)
     {
         var items = new System.Collections.Generic.List<CompletionItem>();
 
@@ -1385,6 +1399,11 @@ public sealed class LilySharpLanguageServer
             int alt = LilySharp.Core.Music.KeySpelling.Alteration(
                 LilySharp.Core.Music.KeySpelling.StepOf(letter), keySharps);
             string spelled = LilySharp.Core.Music.KeySpelling.SpellLetter(letter, keySharps);
+            // lilysharp.completion.flatSpelling = "contracted": suggest the Dutch
+            // contractions es/as instead of ees/aes. Only E-flat and A-flat have a
+            // contraction; bes/des/ges/ces/fes have none and are left as-is.
+            if (contracted)
+                spelled = spelled switch { "ees" => "es", "aes" => "as", _ => spelled };
             string upper = char.ToUpperInvariant(letter).ToString();
             items.Add(new CompletionItem
             {

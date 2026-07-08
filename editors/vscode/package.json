@@ -138,6 +138,19 @@
           "default": 100,
           "description": "Delay in milliseconds before refreshing preview after document change",
           "type": "number"
+        },
+        "lilysharp.completion.flatSpelling": {
+          "type": "string",
+          "enum": [
+            "full",
+            "contracted"
+          ],
+          "enumDescriptions": [
+            "ees / aes (full Dutch flats)",
+            "es / as (contracted flats)"
+          ],
+          "default": "full",
+          "description": "How flat pitches (E♭, A♭) are spelled in the autocomplete list. Both spellings always compile; this only changes which the completer suggests."
         }
       }
     },

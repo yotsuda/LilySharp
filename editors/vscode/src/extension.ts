@@ -179,7 +179,13 @@ export function activate(context: vscode.ExtensionContext) {
         synchronize: {
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.lys')
         },
-        outputChannelName: 'Lily# Language Server'
+        outputChannelName: 'Lily# Language Server',
+        // Applied when the server starts; change takes effect on reload.
+        initializationOptions: {
+            completion: {
+                flatSpelling: config.get<string>('completion.flatSpelling', 'full')
+            }
+        }
     };
 
     client = new LanguageClient(
