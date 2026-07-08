@@ -32,27 +32,22 @@ namespace LilySharp.Core.Semantics;
 /// <see cref="LyricSyllableValidator"/> — this validator runs the collector and
 /// reads back the conflicts it recorded as a side effect.
 /// </remarks>
-internal sealed class TabTieStringValidator : ISemanticValidator
+internal sealed class TabTieStringValidator : ISharedCollectValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
 
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
-    public void Validate(SyntaxTree tree)
+    public void Validate(SyntaxTree tree) =>
+        ValidateWith(new System.Lazy<Svg.Collector.MeasureCollector?>(
+            () => SemanticValidation.TryCollect(tree)));
+
+    public void ValidateWith(System.Lazy<Svg.Collector.MeasureCollector?> sharedCollect)
     {
-        IReadOnlyList<TabTieStringWarning> warnings;
-        try
-        {
-            var collector = new MeasureCollector();
-            collector.Collect(tree);
-            warnings = collector.TabTieWarnings;
-        }
-        catch
-        {
-            // A malformed score that the collector cannot process surfaces its real
-            // error through the parser / other validators; we add nothing here.
+        // A malformed score (null collector) surfaces its real error elsewhere.
+        var warnings = sharedCollect.Value?.TabTieWarnings;
+        if (warnings == null)
             return;
-        }
 
         foreach (var w in warnings)
             _diagnostics.Warning(new TextSpan(w.SourcePosition, 1),

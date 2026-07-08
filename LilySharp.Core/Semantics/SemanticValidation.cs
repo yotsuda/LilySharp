@@ -14,7 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System;
 using System.Collections.Generic;
+using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Syntax;
 
 namespace LilySharp.Core.Semantics;
@@ -32,6 +34,18 @@ public interface ISemanticValidator
 
     /// <summary>The diagnostics found by the most recent <see cref="Validate"/> call.</summary>
     IReadOnlyList<Diagnostic> Diagnostics { get; }
+}
+
+/// <summary>
+/// A validator whose diagnostics come from warnings recorded as a side effect of a
+/// single-staff <see cref="MeasureCollector.Collect"/>. <see cref="SemanticValidation.Run"/>
+/// supplies ONE shared, lazily-computed collector so several such validators don't
+/// each re-walk the whole score.
+/// </summary>
+internal interface ISharedCollectValidator : ISemanticValidator
+{
+    /// <summary>Emit diagnostics from the shared collector (null if it failed).</summary>
+    void ValidateWith(Lazy<MeasureCollector?> sharedCollect);
 }
 
 /// <summary>
@@ -65,11 +79,36 @@ public static class SemanticValidation
     public static IReadOnlyList<Diagnostic> Run(SyntaxTree tree)
     {
         var result = new List<Diagnostic>();
+        // One shared single-staff collect, computed at most once and reused by every
+        // collector-backed validator (previously each re-ran the full collector).
+        var sharedCollect = new Lazy<MeasureCollector?>(() => TryCollect(tree));
         foreach (var v in CreateAll())
         {
-            v.Validate(tree);
+            if (v is ISharedCollectValidator sc)
+                sc.ValidateWith(sharedCollect);
+            else
+                v.Validate(tree);
             result.AddRange(v.Diagnostics);
         }
         return result;
+    }
+
+    /// <summary>
+    /// Runs a single-staff <see cref="MeasureCollector.Collect"/>, swallowing collector
+    /// failures (a malformed score surfaces its real error through the parser / other
+    /// validators). Returns null on failure.
+    /// </summary>
+    internal static MeasureCollector? TryCollect(SyntaxTree tree)
+    {
+        try
+        {
+            var collector = new MeasureCollector();
+            collector.Collect(tree);
+            return collector;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }

@@ -33,27 +33,22 @@ namespace LilySharp.Core.Semantics;
 /// validator runs the collector and reads back the overflow it recorded as a side
 /// effect (<see cref="MeasureCollector.LyricWarnings"/>).
 /// </remarks>
-internal sealed class LyricSyllableValidator : ISemanticValidator
+internal sealed class LyricSyllableValidator : ISharedCollectValidator
 {
     private readonly DiagnosticBag _diagnostics = new();
 
     public IReadOnlyList<Diagnostic> Diagnostics => _diagnostics.ToList();
 
-    public void Validate(SyntaxTree tree)
+    public void Validate(SyntaxTree tree) =>
+        ValidateWith(new System.Lazy<Svg.Collector.MeasureCollector?>(
+            () => SemanticValidation.TryCollect(tree)));
+
+    public void ValidateWith(System.Lazy<Svg.Collector.MeasureCollector?> sharedCollect)
     {
-        IReadOnlyList<LyricSyllableWarning> warnings;
-        try
-        {
-            var collector = new MeasureCollector();
-            collector.Collect(tree);
-            warnings = collector.LyricWarnings;
-        }
-        catch
-        {
-            // A malformed score that the collector cannot process surfaces its real
-            // error through the parser / other validators; we add nothing here.
+        // A malformed score (null collector) surfaces its real error elsewhere.
+        var warnings = sharedCollect.Value?.LyricWarnings;
+        if (warnings == null)
             return;
-        }
 
         foreach (var w in warnings)
         {
