@@ -861,20 +861,27 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             color: #666;
             font-family: system-ui, sans-serif;
         }
-        /* Non-destructive error surface: a banner shown ABOVE the (kept) preview
-           so a transient syntax error while typing doesn't blank the whole score. */
+        /* Non-destructive error surface: an overlay pinned to the BOTTOM of the
+           preview so a transient syntax error / warning while typing neither blanks
+           the score nor reflows it. (As an in-flow banner above .main-content it
+           shrank the scroller on every appear/disappear, jittering the sheet up and
+           down.) position:fixed takes it out of flow → the sheet never moves. */
         .error-banner {
             display: none;
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 20;
             color: #f44336;
             background: #ffebee;
-            border-bottom: 1px solid rgba(244, 67, 54, 0.5);
+            border-top: 1px solid rgba(244, 67, 54, 0.5);
             padding: 6px 12px;
             white-space: pre-wrap;
             font-family: monospace;
             font-size: 12px;
             max-height: 6em;
             overflow-y: auto;
-            flex: 0 0 auto;
         }
         .error-banner.visible {
             display: block;
@@ -913,7 +920,7 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             .error-banner {
                 background: #4a1515;
                 color: #ff8a80;
-                border-bottom-color: rgba(255, 138, 128, 0.4);
+                border-top-color: rgba(255, 138, 128, 0.4);
             }
             .loading {
                 color: #aaa;
