@@ -148,6 +148,45 @@ public class MusicXmlRoundTripTests
     }
 
     [Fact]
+    public void Mxl_MuseScoreStyleNamespacedScore_ImportsAllFeatures()
+    {
+        // A realistic export: a DEFAULT NAMESPACE + <identification>, harmony, a
+        // staccato articulation and a triplet, delivered through the .mxl zip. The
+        // reader is namespace-agnostic (matches by local name), so all survive.
+        const string xml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <score-partwise xmlns="http://www.musicxml.org/xsd/MusicXML" version="4.0">
+              <identification><encoding><software>MuseScore 4.2</software></encoding></identification>
+              <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
+              <part id="P1"><measure number="1">
+                <attributes><divisions>6</divisions>
+                  <key><fifths>0</fifths></key>
+                  <time><beats>4</beats><beat-type>4</beat-type></time>
+                  <clef><sign>G</sign><line>2</line></clef></attributes>
+                <harmony><root><root-step>C</root-step></root><kind>major</kind></harmony>
+                <note><pitch><step>C</step><octave>5</octave></pitch><duration>6</duration><type>quarter</type>
+                  <notations><articulations><staccato/></articulations></notations></note>
+                <note><pitch><step>D</step><octave>5</octave></pitch><duration>2</duration><type>eighth</type>
+                  <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
+                  <notations><tuplet type="start"/></notations></note>
+                <note><pitch><step>E</step><octave>5</octave></pitch><duration>2</duration><type>eighth</type>
+                  <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification></note>
+                <note><pitch><step>F</step><octave>5</octave></pitch><duration>2</duration><type>eighth</type>
+                  <time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>
+                  <notations><tuplet type="stop"/></notations></note>
+                <note><pitch><step>G</step><octave>5</octave></pitch><duration>12</duration><type>half</type></note>
+              </measure></part>
+            </score-partwise>
+            """;
+        var (lys, report) = new MusicXmlImporter().ImportBytes(BuildMxl(xml));
+        var importedTree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(importedTree), $"{lys}\n---\n{Diagnostics(importedTree)}\nwarnings: {string.Join("; ", report.Warnings)}");
+        Assert.Contains("@chord(c)", lys);      // harmony
+        Assert.Contains("@staccato", lys);       // articulation
+        Assert.Contains("tuplet 3/2 {", lys);    // triplet
+    }
+
+    [Fact]
     public void Mxl_ZipContainer_ImportsSameAsRawXml()
     {
         // Exercises the .mxl code path: a real ZIP with META-INF/container.xml
