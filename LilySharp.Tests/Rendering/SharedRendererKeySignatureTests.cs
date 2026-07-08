@@ -66,6 +66,45 @@ public sealed class SharedRendererKeySignatureTests
             $"first key sharp (F#) Y={sharps[0].Y:F3} should sit on the top staff line Y={topLineY:F3}");
     }
 
+    [Fact]
+    public void LeadingClefInMusic_DrawsOneClef_NotDoubled_SingleStaff()
+    {
+        // `clef bass` as the first music item is folded into the opening clef, not
+        // ALSO printed as a mid-measure change glyph (which doubled the clef).
+        var (score, layout) = BuildLayout("""
+            octave absolute
+            part low
+            section A { low { clef bass c2 g,2 | c,1 | } }
+            structure { A }
+            score "o" { staff low }
+            """);
+        var rec = new GlyphRecorder();
+        SharedRenderer.RenderTo(score, layout, rec);
+
+        Assert.Equal(1, rec.Glyphs.Count(g => g.Glyph == EmmentalerGlyphs.FClef));
+        Assert.Equal(0, rec.Glyphs.Count(g => g.Glyph == EmmentalerGlyphs.FClefChange));
+    }
+
+    [Fact]
+    public void LeadingClefInMusic_DrawsOneClef_NotDoubled_GrandStaff()
+    {
+        // The same folding on the lower staff of a grand staff (a separate render path).
+        var (score, layout) = BuildLayout("""
+            octave absolute
+            time 4/4
+            part hi { clef treble }
+            part lo
+            section A { hi { c''1 } lo { clef bass c2 g,2 } }
+            structure { A }
+            score "o" { grandStaff { staff hi  staff lo } }
+            """);
+        var rec = new GlyphRecorder();
+        SharedRenderer.RenderTo(score, layout, rec);
+
+        Assert.Equal(1, rec.Glyphs.Count(g => g.Glyph == EmmentalerGlyphs.FClef));
+        Assert.Equal(0, rec.Glyphs.Count(g => g.Glyph == EmmentalerGlyphs.FClefChange));
+    }
+
     private static (MultiStaffScore Score, ScoreLayout Layout) BuildLayout(string source)
     {
         var tree = SyntaxTree.Parse(source);

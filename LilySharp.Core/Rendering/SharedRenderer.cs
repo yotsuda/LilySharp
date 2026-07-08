@@ -1002,6 +1002,28 @@ internal static class SharedRenderer
         return false;
     }
 
+    /// <summary>True when a clef change is a LEADING change (before the first sounding
+    /// item) in a system's first measure. <see cref="ResolveClef"/> folds such a change
+    /// into the system-start clef, so drawing it again as a mid-measure change would
+    /// double-print it. Unlike the key-signature analog this also applies to the first
+    /// system, because a moment-0 clef IS the opening clef there.</summary>
+    private static bool IsSystemStartClefChange(
+        Voice voice, SystemLayout system, int measureIndex, ClefChangeItem cc)
+    {
+        if (system.Measures.IsDefaultOrEmpty || system.Measures.Length == 0)
+            return false;
+        if (measureIndex != system.Measures[0].MeasureIndex || measureIndex >= voice.Measures.Length)
+            return false;
+        foreach (var item in voice.Measures[measureIndex].Items)
+        {
+            if (ReferenceEquals(item, cc))
+                return true;
+            if (item.Duration > Fraction.Zero)
+                return false;
+        }
+        return false;
+    }
+
     private static double DrawClef(ClefType clef, double x, double staffY, IDrawingContext gc)
     {
         char glyph = clef switch
@@ -1332,7 +1354,11 @@ internal static class SharedRenderer
                         forcedStemUp, headWiped, gc);
                     break;
                 case ClefChangeItem clefChange:
-                    DrawClefChange(clefChange, itemX, staffY, gc);
+                    // A leading clef change that opens a system is already drawn as the
+                    // system-start clef (ResolveClef folds it) — drawing it here too
+                    // would double-print the clef.
+                    if (!IsSystemStartClefChange(voice, system, ml.MeasureIndex, clefChange))
+                        DrawClefChange(clefChange, itemX, staffY, gc);
                     break;
                 case KeySignatureChangeItem keyChange:
                     // A change that OPENS a later system is folded into that
