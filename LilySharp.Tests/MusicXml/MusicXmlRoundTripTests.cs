@@ -246,6 +246,36 @@ public class MusicXmlRoundTripTests
         Assert.True(v1 >= 0 && v2 >= 0 && v1 < v2, lys);
     }
 
+    [Fact]
+    public void MultipleStaves_SplitIntoAGrandStaff()
+    {
+        // A piano part with two staves (treble RH / bass LH) becomes two Lily# parts
+        // grouped in a grandStaff, each with its own clef.
+        var (lys, _) = new MusicXmlImporter().Import("""
+            <?xml version="1.0"?>
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>Piano</part-name></score-part></part-list>
+              <part id="P1"><measure number="1">
+                <attributes><divisions>1</divisions>
+                  <time><beats>4</beats><beat-type>4</beat-type></time>
+                  <clef number="1"><sign>G</sign><line>2</line></clef>
+                  <clef number="2"><sign>F</sign><line>4</line></clef></attributes>
+                <note><pitch><step>E</step><octave>5</octave></pitch><duration>4</duration><voice>1</voice><type>whole</type><staff>1</staff></note>
+                <backup><duration>4</duration></backup>
+                <note><pitch><step>C</step><octave>3</octave></pitch><duration>4</duration><voice>2</voice><type>whole</type><staff>2</staff></note>
+              </measure></part>
+            </score-partwise>
+            """);
+        var importedTree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(importedTree), $"{lys}\n---\n{Diagnostics(importedTree)}");
+        Assert.Contains("grandStaff {", lys);
+        Assert.Contains("clef treble", lys);
+        Assert.Contains("clef bass", lys);
+        // RH note in the treble part, LH note in the bass part.
+        Assert.Contains("e'1", lys); // E5 whole, treble
+        Assert.Contains("c,1", lys); // C3 whole, bass
+    }
+
     private static int CountOccurrences(string haystack, string needle)
     {
         int n = 0, i = 0;

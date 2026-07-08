@@ -92,14 +92,17 @@ internal static class MusicXmlReader
         {
             index++;
             var id = (string?)partEl.Attribute("id") ?? $"P{index}";
-            var part = new ImportPart
+            var working = new ImportPart
             {
                 Id = id,
                 Name = names.GetValueOrDefault(id),
             };
-            part.SafeName = SafeIdentifier(part.Name, index, used);
-            ReadPart(partEl, part, doc, report);
-            doc.Parts.Add(part);
+            // One MusicXML part may yield several Lily# parts (one per staff).
+            foreach (var p in ReadPart(partEl, working, doc, report))
+            {
+                p.SafeName = SafeIdentifier(p.Name, index, used);
+                doc.Parts.Add(p);
+            }
         }
 
         // An empty score is a common surprise (e.g. a template exported with no
@@ -114,13 +117,13 @@ internal static class MusicXmlReader
         return doc;
     }
 
-    private static void ReadPart(XElement partEl, ImportPart part, ImportDocument doc, ImportReport report)
+    private static List<ImportPart> ReadPart(XElement partEl, ImportPart part, ImportDocument doc, ImportReport report)
     {
         int divisions = 1;              // ticks per quarter; may change mid-part
         string? clefSet = null;         // most recent clef, for the part header
         int measureNo = 0;
-        int firstStaff = 0;             // this part's reference staff; others → warn once
-        bool warnedStaves = false;
+        var staffClefs = new Dictionary<int, string>();   // staff number -> clef
+        var voiceStaff = new Dictionary<int, int>();       // voice number -> its staff
 
         foreach (var measEl in Els(partEl, "measure"))
         {
@@ -143,7 +146,7 @@ internal static class MusicXmlReader
                 switch (el.Name.LocalName)
                 {
                     case "attributes":
-                        ReadAttributes(el, measure, ref divisions, ref clefSet, report, measureNo);
+                        ReadAttributes(el, measure, ref divisions, ref clefSet, staffClefs, report, measureNo);
                         break;
 
                     case "direction":
@@ -176,17 +179,10 @@ internal static class MusicXmlReader
                     {
                         int voice = int.TryParse(Local(el, "voice")?.Value, out int v) ? v : 1;
                         lastVoice = voice;
-                        // A part spread over several staves (a piano grand staff) is
-                        // imported as parallel voices on one staff for now.
+                        // Remember which staff each voice sits on; a part spanning
+                        // several staves is split into a grand staff below.
                         int staff = int.TryParse(Local(el, "staff")?.Value, out int st) ? st : 1;
-                        if (firstStaff == 0)
-                            firstStaff = staff;
-                        else if (staff != firstStaff && !warnedStaves)
-                        {
-                            report.Warn(measureNo,
-                                "a part with multiple staves is imported as parallel voices on one staff.");
-                            warnedStaves = true;
-                        }
+                        voiceStaff[voice] = staff;
                         // A grace note has no duration — accumulate it to attach to the
                         // next real note as a leading acciaccatura/grace block.
                         if (Local(el, "grace") != null)
@@ -227,11 +223,66 @@ internal static class MusicXmlReader
         }
 
         part.Clef = clefSet ?? "treble";
+
+        // A part whose voices span more than one staff (a piano grand staff) splits
+        // into one Lily# part per staff, grouped into a grandStaff by the score.
+        var staves = voiceStaff.Values.Distinct().OrderBy(s => s).ToList();
+        if (staves.Count <= 1)
+            return new List<ImportPart> { part };
+        return SplitByStaff(part, staves, voiceStaff, staffClefs);
+    }
+
+    /// <summary>Splits a multi-staff part into one part per staff (grouped as a grand
+    /// staff), each keeping only the voices that sit on it, with its own clef.</summary>
+    private static List<ImportPart> SplitByStaff(
+        ImportPart part, List<int> staves,
+        Dictionary<int, int> voiceStaff, Dictionary<int, string> staffClefs)
+    {
+        var result = new List<ImportPart>();
+        foreach (int staff in staves)
+        {
+            var sub = new ImportPart
+            {
+                Id = $"{part.Id}s{staff}",
+                Name = StaffPartName(part.Name, staff, staves),
+                StaffGroup = part.Id,
+                Clef = staffClefs.TryGetValue(staff, out var clef) ? clef
+                     : staff == staves[0] ? "treble" : "bass",
+            };
+            foreach (var measure in part.Measures)
+            {
+                var m = new ImportMeasure
+                {
+                    Implicit = measure.Implicit,
+                    Key = measure.Key,
+                    Time = measure.Time,
+                    Tempo = measure.Tempo,
+                    RepeatForward = measure.RepeatForward,
+                    BarlineRight = measure.BarlineRight,
+                };
+                foreach (var (voice, items) in measure.VoiceItems)
+                    if (voiceStaff.GetValueOrDefault(voice, 1) == staff)
+                        m.Voice(voice).AddRange(items);
+                sub.Measures.Add(m);
+            }
+            result.Add(sub);
+        }
+        return result;
+    }
+
+    /// <summary>A readable Lily# part name per staff of a split part: RH/LH for the
+    /// common two-staff piano, else "… staff N".</summary>
+    private static string StaffPartName(string? baseName, int staff, List<int> staves)
+    {
+        string b = string.IsNullOrWhiteSpace(baseName) ? "Part" : baseName!;
+        if (staves.Count == 2)
+            return b + (staff == staves[0] ? " RH" : " LH");
+        return $"{b} staff {staff}";
     }
 
     private static void ReadAttributes(
         XElement el, ImportMeasure measure, ref int divisions, ref string? clefSet,
-        ImportReport report, int measureNo)
+        Dictionary<int, string> staffClefs, ImportReport report, int measureNo)
     {
         if (int.TryParse(Local(el, "divisions")?.Value, out int d) && d > 0)
             divisions = d;
@@ -260,12 +311,15 @@ internal static class MusicXmlReader
                 measure.Time = new ImportTime(beats, beatType);
         }
 
-        var clefEl = Local(el, "clef");
-        if (clefEl != null)
+        // A multi-staff part carries one <clef number="N"> per staff; a single-staff
+        // part omits the number (staff 1). Record each so a split keeps its own clef.
+        foreach (var clefEl in Els(el, "clef"))
         {
             string name = ClefName(clefEl, report, measureNo);
-            measure.Clef = name;
-            clefSet ??= name;   // first clef becomes the part header clef
+            int staff = int.TryParse((string?)clefEl.Attribute("number"), out int n) ? n : 1;
+            staffClefs.TryAdd(staff, name);
+            measure.Clef = name;        // mid-piece single-staff clef change
+            clefSet ??= name;           // first clef becomes the part header clef
         }
     }
 

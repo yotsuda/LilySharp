@@ -45,6 +45,10 @@ internal sealed class ImportPart
     public string SafeName { get; set; } = "";
     /// <summary>The part's opening clef as a Lily# clef name ("treble", "bass", ...).</summary>
     public string Clef { get; set; } = "treble";
+    /// <summary>When several parts came from splitting one multi-staff MusicXML part
+    /// (a piano grand staff), they share this group id so the score wraps them in a
+    /// single <c>grandStaff { }</c>. Null for an ordinary standalone part.</summary>
+    public string? StaffGroup { get; set; }
     public List<ImportMeasure> Measures { get; } = new();
 }
 

@@ -77,10 +77,22 @@ internal static class LysWriter
 
         sb.Append("structure { A }\n\n");
 
-        // ---- score: one staff per part ----
+        // ---- score: one staff per part; split staves regroup into a grand staff ----
         sb.Append("score \"imported\" {\n");
-        foreach (var part in doc.Parts)
-            sb.Append("  staff ").Append(part.SafeName).Append('\n');
+        for (int gi = 0; gi < doc.Parts.Count;)
+        {
+            var group = doc.Parts[gi].StaffGroup;
+            if (group == null)
+            {
+                sb.Append("  staff ").Append(doc.Parts[gi++].SafeName).Append('\n');
+                continue;
+            }
+            // A run of consecutive parts sharing a staff group = one grand staff.
+            sb.Append("  grandStaff {\n");
+            while (gi < doc.Parts.Count && doc.Parts[gi].StaffGroup == group)
+                sb.Append("    staff ").Append(doc.Parts[gi++].SafeName).Append('\n');
+            sb.Append("  }\n");
+        }
         sb.Append("}\n");
 
         return sb.ToString();
