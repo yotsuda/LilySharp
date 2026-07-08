@@ -216,6 +216,44 @@ public class MusicXmlRoundTripTests
     }
 
     [Fact]
+    public void MultipleVoices_ImportAsParallelVoiceBlocks()
+    {
+        // Two voices on one staff, separated by <backup> (voice 1 upper, voice 2 lower).
+        var (lys, _) = new MusicXmlImporter().Import("""
+            <?xml version="1.0"?>
+            <score-partwise version="4.0">
+              <part-list><score-part id="P1"><part-name>Melody</part-name></score-part></part-list>
+              <part id="P1"><measure number="1">
+                <attributes><divisions>1</divisions>
+                  <time><beats>4</beats><beat-type>4</beat-type></time>
+                  <clef><sign>G</sign><line>2</line></clef></attributes>
+                <note><pitch><step>C</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>quarter</type></note>
+                <note><pitch><step>D</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>quarter</type></note>
+                <note><pitch><step>E</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>quarter</type></note>
+                <note><pitch><step>F</step><octave>5</octave></pitch><duration>1</duration><voice>1</voice><type>quarter</type></note>
+                <backup><duration>4</duration></backup>
+                <note><pitch><step>C</step><octave>4</octave></pitch><duration>2</duration><voice>2</voice><type>half</type></note>
+                <note><pitch><step>G</step><octave>4</octave></pitch><duration>2</duration><voice>2</voice><type>half</type></note>
+              </measure></part>
+            </score-partwise>
+            """);
+        var importedTree = SyntaxTree.Parse(lys);
+        Assert.False(HasErrors(importedTree), $"{lys}\n---\n{Diagnostics(importedTree)}");
+        // Two parallel voice { } blocks came back, in ascending voice order.
+        Assert.Equal(2, CountOccurrences(lys, "voice {"));
+        int v1 = lys.IndexOf("c'4", System.StringComparison.Ordinal); // voice 1 upper
+        int v2 = lys.IndexOf("c2", System.StringComparison.Ordinal);  // voice 2 lower half note
+        Assert.True(v1 >= 0 && v2 >= 0 && v1 < v2, lys);
+    }
+
+    private static int CountOccurrences(string haystack, string needle)
+    {
+        int n = 0, i = 0;
+        while ((i = haystack.IndexOf(needle, i, System.StringComparison.Ordinal)) >= 0) { n++; i += needle.Length; }
+        return n;
+    }
+
+    [Fact]
     public void Dynamics_ImportOntoTheFollowingNote()
     {
         // Real MusicXML interleaves a <direction> right before the note it marks. (The

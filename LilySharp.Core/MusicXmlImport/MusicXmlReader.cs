@@ -105,8 +105,8 @@ internal static class MusicXmlReader
         // An empty score is a common surprise (e.g. a template exported with no
         // music): the output parses but renders nothing, so say so plainly rather
         // than leave the user wondering whether the importer swallowed the notes.
-        int totalNotes = doc.Parts.Sum(
-            p => p.Measures.Sum(m => m.Items.Count(i => i is ImportNote note && !note.IsRest)));
+        int totalNotes = doc.Parts.Sum(p => p.Measures.Sum(
+            m => m.VoiceItems.Values.Sum(list => list.Count(i => i is ImportNote note && !note.IsRest))));
         if (doc.Parts.Count == 0)
             report.Warn("No <part> elements found; the imported score is empty.");
         else if (totalNotes == 0)
@@ -119,6 +119,8 @@ internal static class MusicXmlReader
         int divisions = 1;              // ticks per quarter; may change mid-part
         string? clefSet = null;         // most recent clef, for the part header
         int measureNo = 0;
+        int firstStaff = 0;             // this part's reference staff; others → warn once
+        bool warnedStaves = false;
 
         foreach (var measEl in Els(partEl, "measure"))
         {
@@ -128,8 +130,7 @@ internal static class MusicXmlReader
                 Implicit = (string?)measEl.Attribute("implicit") == "yes",
             };
 
-            int firstVoice = 0;         // Tier 1: keep only the first voice seen
-            bool warnedVoices = false;
+            int lastVoice = 1;          // voice a dangling annotation attaches to
             // <harmony>/<figured-bass> precede their note in the stream; hold them
             // until the note arrives so they attach to it in the writer.
             var pendingAnnotations = new List<ImportItem>();
@@ -149,7 +150,7 @@ internal static class MusicXmlReader
                         if (ReadDirectionTempo(el) is int bpm)
                         {
                             doc.Tempo ??= bpm;
-                            if (measureNo > 1 || measure.Items.Count > 0)
+                            if (measureNo > 1 || measure.HasAnyItems)
                                 measure.Tempo = bpm;
                         }
                         pendingDynamics.AddRange(ReadDirectionDynamics(el));
@@ -167,28 +168,24 @@ internal static class MusicXmlReader
 
                     case "backup":
                     case "forward":
-                        if (!warnedVoices)
-                        {
-                            report.Warn(measureNo,
-                                "multiple voices/staves are not yet imported; kept the first voice only.");
-                            warnedVoices = true;
-                        }
-                        // Tier 1: everything after a backup belongs to another voice.
-                        goto endMeasure;
+                        // Contents are bucketed by <voice>, so the cursor moves are
+                        // implicit — nothing to do. (A <forward> gap is not yet filled.)
+                        break;
 
                     case "note":
                     {
                         int voice = int.TryParse(Local(el, "voice")?.Value, out int v) ? v : 1;
-                        if (firstVoice == 0) firstVoice = voice;
-                        if (voice != firstVoice)
+                        lastVoice = voice;
+                        // A part spread over several staves (a piano grand staff) is
+                        // imported as parallel voices on one staff for now.
+                        int staff = int.TryParse(Local(el, "staff")?.Value, out int st) ? st : 1;
+                        if (firstStaff == 0)
+                            firstStaff = staff;
+                        else if (staff != firstStaff && !warnedStaves)
                         {
-                            if (!warnedVoices)
-                            {
-                                report.Warn(measureNo,
-                                    "multiple voices are not yet imported; kept the first voice only.");
-                                warnedVoices = true;
-                            }
-                            break;
+                            report.Warn(measureNo,
+                                "a part with multiple staves is imported as parallel voices on one staff.");
+                            warnedStaves = true;
                         }
                         // A grace note has no duration — accumulate it to attach to the
                         // next real note as a leading acciaccatura/grace block.
@@ -201,18 +198,19 @@ internal static class MusicXmlReader
                         var note = ReadNote(el, divisions, report, measureNo);
                         if (note == null)
                             break;
+                        var target = measure.Voice(voice);
                         // A chord member folds onto the previous note; harmony /
                         // figured-bass / dynamics / grace attach to the head note only.
                         if (!note.ChordWithPrev)
                         {
-                            measure.Items.AddRange(pendingAnnotations);
+                            target.AddRange(pendingAnnotations);
                             pendingAnnotations.Clear();
                             note.Articulations.InsertRange(0, pendingDynamics);
                             pendingDynamics.Clear();
                             note.LeadingGrace.AddRange(pendingGrace);
                             pendingGrace.Clear();
                         }
-                        measure.Items.Add(note);
+                        target.Add(note);
                         break;
                     }
 
@@ -221,10 +219,9 @@ internal static class MusicXmlReader
                         break;
                 }
             }
-            endMeasure:
             // Any annotation with no following note still gets recorded (the writer
             // drops a dangling @chord/@fig with a warning rather than mis-attaching).
-            measure.Items.AddRange(pendingAnnotations);
+            measure.Voice(lastVoice).AddRange(pendingAnnotations);
 
             part.Measures.Add(measure);
         }

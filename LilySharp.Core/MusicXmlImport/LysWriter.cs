@@ -88,14 +88,32 @@ internal static class LysWriter
 
     // ---- music emission ---------------------------------------------------
 
+    private static readonly List<ImportItem> EmptyItems = new();
+
     private static string WriteMusic(ImportPart part, ImportReport report)
     {
-        var cells = new List<string>();
-        foreach (var measure in part.Measures)
-            cells.Add(WriteMeasure(measure, report));
+        var voices = part.Measures
+            .SelectMany(m => m.VoiceItems.Keys)
+            .Distinct().OrderBy(n => n).ToList();
+        if (voices.Count <= 1)
+            return WriteVoiceStream(part, voices.Count == 1 ? voices[0] : 1, report);
+
+        // Several voices on one staff → parallel voice { } blocks. Ascending voice
+        // order puts voice 1 (the upper part, stems up) first.
+        return string.Join(" ",
+            voices.Select(v => "voice { " + WriteVoiceStream(part, v, report) + " }"));
+    }
+
+    // One voice's measures assembled with the shared barlines between them.
+    private static string WriteVoiceStream(ImportPart part, int voice, ImportReport report)
+    {
+        var measures = part.Measures;
+        var cells = measures
+            .Select(m => WriteMeasureItems(
+                m.VoiceItems.TryGetValue(voice, out var items) ? items : EmptyItems, report))
+            .ToList();
 
         var sb = new StringBuilder();
-        var measures = part.Measures;
         if (measures.Count > 0 && measures[0].RepeatForward)
             sb.Append("|: ");
 
@@ -112,12 +130,11 @@ internal static class LysWriter
         return sb.ToString();
     }
 
-    private static string WriteMeasure(ImportMeasure measure, ImportReport report)
+    private static string WriteMeasureItems(List<ImportItem> items, ImportReport report)
     {
         var tokens = new List<string>();
         string? pendingChord = null;
         string? pendingFig = null;
-        var items = measure.Items;
 
         for (int i = 0; i < items.Count;)
         {
@@ -343,7 +360,7 @@ internal static class LysWriter
     // ---- lyrics -----------------------------------------------------------
 
     private static bool HasLyrics(ImportPart part)
-        => part.Measures.SelectMany(m => m.Items)
+        => part.Measures.SelectMany(m => m.PrimaryItems)
             .OfType<ImportNote>().Any(n => n.Lyrics.Count > 0);
 
     /// <summary>One <c>lyrics { ... }</c> block per verse present in the part.
@@ -351,7 +368,7 @@ internal static class LysWriter
     /// continuations), synced to the music by a <c>|</c> per measure.</summary>
     private static IEnumerable<string> WriteLyrics(ImportPart part)
     {
-        var verses = part.Measures.SelectMany(m => m.Items).OfType<ImportNote>()
+        var verses = part.Measures.SelectMany(m => m.PrimaryItems).OfType<ImportNote>()
             .SelectMany(n => n.Lyrics).Select(l => l.Verse).Distinct().OrderBy(v => v);
 
         foreach (int verse in verses)
@@ -359,7 +376,7 @@ internal static class LysWriter
             var sb = new StringBuilder("lyrics { ");
             foreach (var measure in part.Measures)
             {
-                foreach (var note in measure.Items.OfType<ImportNote>())
+                foreach (var note in measure.PrimaryItems.OfType<ImportNote>())
                 {
                     if (note.IsRest || note.ChordWithPrev || note.TieStop)
                         continue;

@@ -69,8 +69,9 @@ internal readonly record struct ImportTime(int Beats, int BeatType);
 
 /// <summary>
 /// One measure. Attribute fields (key/time/clef/tempo) are set only when they
-/// CHANGE at this measure (the first measure carries the openers). Tier 1 keeps a
-/// single flat item stream; multi-voice arrives with <c>&lt;backup&gt;</c> in Tier 2.
+/// CHANGE at this measure (the first measure carries the openers). Contents are kept
+/// per MusicXML voice (a single-voice measure has just one entry); a part with more
+/// than one voice is written as parallel <c>voice { }</c> blocks.
 /// </summary>
 internal sealed class ImportMeasure
 {
@@ -84,7 +85,27 @@ internal sealed class ImportMeasure
     public bool RepeatForward { get; set; }
     /// <summary>The measure's closing bar style.</summary>
     public BarlineKind BarlineRight { get; set; } = BarlineKind.Plain;
-    public List<ImportItem> Items { get; } = new();
+
+    /// <summary>Ordered contents per MusicXML voice number (ascending, so voice 1 —
+    /// the upper voice, stems up — comes first).</summary>
+    public SortedDictionary<int, List<ImportItem>> VoiceItems { get; } = new();
+
+    /// <summary>The item list for a voice number, created on first use.</summary>
+    public List<ImportItem> Voice(int number)
+    {
+        if (!VoiceItems.TryGetValue(number, out var list))
+            VoiceItems[number] = list = new List<ImportItem>();
+        return list;
+    }
+
+    /// <summary>The primary (lowest-numbered) voice's items — the single-voice view
+    /// used for lyrics and note counts.</summary>
+    public IEnumerable<ImportItem> PrimaryItems =>
+        VoiceItems.Count > 0 ? VoiceItems[System.Linq.Enumerable.First(VoiceItems.Keys)]
+                             : System.Linq.Enumerable.Empty<ImportItem>();
+
+    /// <summary>True when any voice holds at least one item.</summary>
+    public bool HasAnyItems => System.Linq.Enumerable.Any(VoiceItems.Values, v => v.Count > 0);
 }
 
 /// <summary>Base for the ordered contents of a measure (notes, rests, harmonies).</summary>
