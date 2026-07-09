@@ -460,6 +460,14 @@ static int RunPng(string[] args)
         }
         else if (inputPath == null) inputPath = arg;
         else if (outputPath == null) outputPath = arg;
+        else
+        {
+            // A stray extra positional used to be silently dropped; reject it so png
+            // matches the strictness of the shared ParseSimpleOptions parser.
+            Console.Error.WriteLine($"Error: Unexpected argument: {arg}");
+            Console.Error.WriteLine("Run 'lysc png --help' for usage.");
+            return 1;
+        }
     }
 
     if (inputPath == null) { Console.Error.WriteLine("Error: Input file required"); return 1; }
