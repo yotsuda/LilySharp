@@ -78,9 +78,15 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     /// <summary>
     /// Validates all <c>@name</c> annotations in a syntax tree.
     /// </summary>
-    public void Validate(SyntaxTree tree) => Walk(tree.GetRoot());
+    public void Validate(SyntaxTree tree)
+    {
+        var root = tree.GetRoot();
+        CheckNode(root);
+        foreach (var node in root.DescendantNodes())
+            CheckNode(node);
+    }
 
-    private void Walk(SyntaxNode node)
+    private void CheckNode(SyntaxNode node)
     {
         switch (node)
         {
@@ -103,13 +109,6 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                         "a rehearsal mark label must be quoted: write @mark(\"A\") not @mark(A).");
                 break;
             }
-        }
-
-        for (int i = 0; i < node.SlotCount; i++)
-        {
-            var child = node.GetChild(i);
-            if (child != null)
-                Walk(child);
         }
     }
 

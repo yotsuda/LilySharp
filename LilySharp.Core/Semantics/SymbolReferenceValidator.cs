@@ -42,12 +42,16 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
         _definedParts.Clear();
 
         var root = tree.GetRoot();
-        
+        var nodes = new List<SyntaxNode> { root };
+        nodes.AddRange(root.DescendantNodes());
+
         // First pass: collect all definitions
-        CollectDefinitions(root);
-        
+        foreach (var node in nodes)
+            CollectDefinitions(node);
+
         // Second pass: validate references
-        ValidateReferences(root);
+        foreach (var node in nodes)
+            ValidateReferences(node);
     }
 
     private void CollectDefinitions(SyntaxNode node)
@@ -71,14 +75,6 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
             case PartDeclarationSyntax partDecl:
                 _definedParts.Add(partDecl.Name.Text);
                 break;
-        }
-
-        // Recurse into children
-        for (int i = 0; i < node.SlotCount; i++)
-        {
-            var child = node.GetChild(i);
-            if (child != null)
-                CollectDefinitions(child);
         }
     }
 
@@ -107,14 +103,6 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                         $"Undefined section: '{sectionName}'");
                 }
                 break;
-        }
-
-        // Recurse into children
-        for (int i = 0; i < node.SlotCount; i++)
-        {
-            var child = node.GetChild(i);
-            if (child != null)
-                ValidateReferences(child);
         }
     }
 }

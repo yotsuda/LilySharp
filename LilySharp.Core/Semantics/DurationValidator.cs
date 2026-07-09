@@ -35,10 +35,14 @@ internal sealed class DurationValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
-        ValidateNode(root);
+        CheckNode(root);
+        foreach (var node in root.DescendantNodes())
+            CheckNode(node);
     }
 
-    private void ValidateNode(SyntaxNode node)
+    // Token nodes fall to the default case (no duration), so walking them via
+    // DescendantNodes() instead of hand-rolled recursion is behavior-preserving.
+    private void CheckNode(SyntaxNode node)
     {
         DurationSyntax? duration = node switch
         {
@@ -55,16 +59,6 @@ internal sealed class DurationValidator : ISemanticValidator
                 duration.NumberToken.Span,
                 DiagnosticCodes.InvalidDuration,
                 $"Invalid duration '{duration.Value}'. Valid values are 0 (breve), 1, 2, 4, 8, 16, 32, 64, 128.");
-        }
-
-        // Recurse into children
-        for (int i = 0; i < node.SlotCount; i++)
-        {
-            var child = node.GetChild(i);
-            if (child != null && child is not SyntaxTokenNode)
-            {
-                ValidateNode(child);
-            }
         }
     }
 }
