@@ -69,8 +69,6 @@ public enum SyntaxKind : ushort
     // Handled as part of pitch token
 
     // === Duration ===
-    /// <summary>A duration number (1, 2, 4, 8, 16, 32, 64, 128).</summary>
-    DurationNumber,
     /// <summary>A duration dot (<c>.</c>).</summary>
     Dot,
 

@@ -875,7 +875,7 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
                 if (t.Kind == SyntaxKind.Identifier && (t.Text == "swing" || t.Text == "shuffle"))
                     sawSwing = true;
                 else if (sawSwing &&
-                         (t.Kind == SyntaxKind.IntegerLiteral || t.Kind == SyntaxKind.DurationNumber) &&
+                         (t.Kind == SyntaxKind.IntegerLiteral) &&
                          int.TryParse(t.Text, out int n))
                     return n;  // the value right after the swing word
             }
@@ -899,7 +899,7 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
                     continue;
                 if (token.Kind == SyntaxKind.Identifier && (token.Text == "swing" || token.Text == "shuffle"))
                     break;
-                if ((token.Kind == SyntaxKind.IntegerLiteral || token.Kind == SyntaxKind.DurationNumber) &&
+                if ((token.Kind == SyntaxKind.IntegerLiteral) &&
                     int.TryParse(token.Text, out var n))
                     lastInt = n;
             }
@@ -925,7 +925,7 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
                         foundEquals = true;
                         break;
                     }
-                    if (token.Kind == SyntaxKind.IntegerLiteral || token.Kind == SyntaxKind.DurationNumber)
+                    if (token.Kind == SyntaxKind.IntegerLiteral)
                     {
                         if (int.TryParse(token.Text, out var n))
                             return n;
@@ -947,7 +947,7 @@ public sealed class TempoDeclarationSyntax : SyntaxNode
             {
                 if (value is not SyntaxTokenNode t)
                     continue;
-                if (t.Kind is SyntaxKind.IntegerLiteral or SyntaxKind.DurationNumber)
+                if (t.Kind is SyntaxKind.IntegerLiteral)
                 {
                     sawUnit = true;
                     dots = 0;
@@ -1048,7 +1048,7 @@ public sealed class MetadataDeclarationSyntax : SyntaxNode
             foreach (var value in Values)
             {
                 if (value is SyntaxTokenNode token &&
-                    (token.Kind == SyntaxKind.IntegerLiteral || token.Kind == SyntaxKind.DurationNumber))
+                    (token.Kind == SyntaxKind.IntegerLiteral))
                 {
                     if (int.TryParse(token.Text, out var result))
                         return result;

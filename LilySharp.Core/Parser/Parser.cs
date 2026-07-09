@@ -612,7 +612,7 @@ internal sealed class Parser
         {
             return new TimeSignatureGreen(timeKeyword, colon, Advance());
         }
-        var numerator = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
+        var numerator = Expect(SyntaxKind.IntegerLiteral);
         // Additive meter: time 3+2/8 — MusicXML <beats>3+2</beats>.
         if (Check(SyntaxKind.Plus))
         {
@@ -620,14 +620,14 @@ internal sealed class Parser
             while (Check(SyntaxKind.Plus))
             {
                 numTokens.Add(Advance()); // +
-                numTokens.Add(Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber));
+                numTokens.Add(Expect(SyntaxKind.IntegerLiteral));
             }
             var addSlash = Expect(SyntaxKind.Slash);
-            var addDen = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
+            var addDen = Expect(SyntaxKind.IntegerLiteral);
             return new TimeSignatureGreen(timeKeyword, colon, [.. numTokens], addSlash, addDen);
         }
         var slash = Expect(SyntaxKind.Slash);
-        var denominator = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
+        var denominator = Expect(SyntaxKind.IntegerLiteral);
         return new TimeSignatureGreen(timeKeyword, colon, numerator, slash, denominator);
     }
 
@@ -652,7 +652,6 @@ internal sealed class Parser
         // via IsSwing). These are NOT reserved words, so they stay usable as names.
         while (Check(SyntaxKind.StringLiteral) ||
                Check(SyntaxKind.IntegerLiteral) ||
-               Check(SyntaxKind.DurationNumber) ||
                // a dotted beat unit: "tempo \"Lively\" 4. = 116" lexes as
                // IntegerLiteral + Dot at declaration level — without accepting
                // the dot the parser stopped there and ". = 116" was dropped.
@@ -674,7 +673,7 @@ internal sealed class Parser
     private PartialDeclarationGreen ParsePartialDeclaration()
     {
         var partialKeyword = Expect(SyntaxKind.PartialKeyword);
-        var number = Expect(SyntaxKind.IntegerLiteral, SyntaxKind.DurationNumber);
+        var number = Expect(SyntaxKind.IntegerLiteral);
         var dots = new List<GreenNode?>();
         while (Check(SyntaxKind.Dot))
             dots.Add(Advance());
@@ -2064,7 +2063,7 @@ private GreenNode?[] ParseArticulations()
     }
 
     private static bool IsQualityToken(SyntaxKind kind) => kind is SyntaxKind.Identifier
-        or SyntaxKind.IntegerLiteral or SyntaxKind.DurationNumber
+        or SyntaxKind.IntegerLiteral
         or SyntaxKind.Dot or SyntaxKind.Minus;
 
     // root[duration][:quality][/bass] — reuses the pitch and duration grammar.
