@@ -648,6 +648,42 @@ public class MusicXmlRoundTripTests
 
     // ---- harness ----------------------------------------------------------
 
+    [Theory]
+    // <sound tempo> is quarter-BPM; a <metronome> counts <beat-unit> beats, so the
+    // importer must scale per-minute to quarter-BPM.
+    [InlineData("half", 0, 60, 120)]      // half = 60  -> quarter = 120
+    [InlineData("eighth", 0, 120, 60)]    // eighth = 120 -> quarter = 60
+    [InlineData("quarter", 0, 100, 100)]  // quarter = 100 -> unchanged
+    [InlineData("quarter", 1, 80, 120)]   // dotted quarter = 80 -> quarter = 120
+    public void Metronome_BeatUnit_NormalizesToQuarterBpm(string beatUnit, int dots, int perMinute, int expected)
+    {
+        var beatDots = string.Concat(Enumerable.Repeat("<beat-unit-dot/>", dots));
+        var xml = $"""
+            <?xml version="1.0"?>
+            <score-partwise version="3.1">
+              <part-list><score-part id="P1"><part-name>Music</part-name></score-part></part-list>
+              <part id="P1">
+                <measure number="1">
+                  <attributes><divisions>1</divisions>
+                    <key><fifths>0</fifths></key>
+                    <time><beats>4</beats><beat-type>4</beat-type></time>
+                    <clef><sign>G</sign><line>2</line></clef>
+                  </attributes>
+                  <direction>
+                    <direction-type>
+                      <metronome><beat-unit>{beatUnit}</beat-unit>{beatDots}<per-minute>{perMinute}</per-minute></metronome>
+                    </direction-type>
+                  </direction>
+                  <note><pitch><step>C</step><octave>4</octave></pitch><duration>4</duration><type>whole</type></note>
+                </measure>
+              </part>
+            </score-partwise>
+            """;
+
+        var (importedLys, _) = new MusicXmlImporter().Import(xml);
+        Assert.Contains($"tempo {expected}", importedLys);
+    }
+
     private static void AssertRoundTrips(string originalLys)
     {
         var originalTree = SyntaxTree.Parse(originalLys);
