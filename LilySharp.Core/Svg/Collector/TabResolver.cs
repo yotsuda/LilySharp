@@ -134,8 +134,23 @@ internal sealed class TabResolver
                 if (fret < bestFret) { bestFret = fret; best = str; }
             }
             if (best == -1)
-                best = Tunings.CalculateFret(midi, tun, 0).stringNum; // out of range: best effort
-            else
+            {
+                // No FREE string frets this pitch within 0-24. Still prefer a free
+                // string (least out of range) so two out-of-range notes in the chord
+                // never land on the same line; only if every string is already taken
+                // do we fall back to a possibly-shared best-effort string.
+                int bestDist = int.MaxValue;
+                for (int str = 1; str <= n; str++)
+                {
+                    if (used[str]) continue;
+                    int fret = midi - tun[n - str];
+                    int dist = fret < 0 ? -fret : fret - 24;
+                    if (dist < bestDist) { bestDist = dist; best = str; }
+                }
+                if (best == -1)
+                    best = Tunings.CalculateFret(midi, tun, 0).stringNum; // no free string at all
+            }
+            if (best >= 1 && best <= n)
                 used[best] = true;
             result[i] = notes[i] with { StringNumber = best };
         }

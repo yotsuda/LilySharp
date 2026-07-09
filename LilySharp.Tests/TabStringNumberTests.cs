@@ -185,6 +185,26 @@ public sealed class TabStringNumberTests
         Assert.Equal(new[] { 0.0, 0.0 }, off);
     }
 
+    [Fact]
+    public void ChordWithOutOfRangeNotes_AssignsDistinctStrings()
+    {
+        // Several very low notes fret below 0 on every string (out of range). The
+        // fallback used to pick a shared best-effort string (CalculateFret ignores
+        // occupancy) and not mark it used, so two could collide on one line. Every
+        // chord member must still get its own string.
+        var src = "part bl { clef bass }\nsection Main {\n  bl {\n <c,,,, e,,,, g,,,,>4 r r r |\n  }\n}\n" +
+                  "structure { Main }\nscore \"x\" { tab bass bl }\n";
+        var tree = SyntaxTree.Parse(src);
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        var multi = new MeasureCollector().CollectMultiStaff(tree, spec);
+        var tab = multi.EnumerateStaves().First(s => s.Staff.IsTab).Staff;
+        var chord = tab.PrimaryVoice.Measures.SelectMany(m => m.Items).OfType<ChordItem>().First();
+
+        var strings = chord.Notes.Select(n => n.StringNumber).ToList();
+        Assert.Equal(3, strings.Count);
+        Assert.Equal(strings.Count, strings.Distinct().Count()); // no two members share a string
+    }
+
     // ---- Part-defined tuning + braceless render grammar ----
 
     private static Staff RenderStaff(string body, bool wantTab)
