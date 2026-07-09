@@ -57,6 +57,15 @@ public sealed class MusicXmlExporter
     private MusicXmlPart? _currentPart;
     private MusicXmlDocument? _document;
 
+    /// <summary>The document under construction. It is created at the top of the
+    /// build and stays non-null for the whole emit phase, so the emit helpers reach
+    /// it through this checked accessor: a violated invariant throws a clear error
+    /// instead of a bare <see cref="System.NullReferenceException"/>, and the
+    /// nullable analysis no longer needs a scattering of null-forgiving <c>!</c>.</summary>
+    private MusicXmlDocument Document =>
+        _document ?? throw new System.InvalidOperationException(
+            "MusicXmlExporter: the document was accessed before the build created it.");
+
     private int _tempo = 120;
     private int _timeNumerator = 4;
     private string? _timeNumeratorText; // additive meters ("3+2")
@@ -128,7 +137,7 @@ public sealed class MusicXmlExporter
             // Simple single-part mode — collect metadata first, then process music
             CollectMetadata(root);
             _currentPart = new MusicXmlPart { Name = "Part 1" };
-            _document.Parts.Add(_currentPart);
+            Document.Parts.Add(_currentPart);
             StartNewMeasure(addAttributes: true);
             ProcessNode(root);
             FlushCurrentMeasure();
@@ -306,9 +315,9 @@ public sealed class MusicXmlExporter
             emit();
             return;
         }
-        var startIdx = _document.Parts.ToDictionary(p => p, p => p.Measures.Count);
+        var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
         emit();
-        foreach (var p in _document.Parts)
+        foreach (var p in Document.Parts)
         {
             int si = startIdx.GetValueOrDefault(p);
             if (p.Measures.Count <= si)
@@ -334,7 +343,7 @@ public sealed class MusicXmlExporter
         }
         else
         {
-            foreach (var p in _document.Parts)
+            foreach (var p in Document.Parts)
                 if (p.Measures.Count > 0)
                     p.Measures[^1].Notes.Add(
                         new MusicXmlNote { RawElement = new System.Xml.Linq.XElement(dir) });
@@ -407,10 +416,10 @@ public sealed class MusicXmlExporter
         {
             if (run.Count == 0)
                 continue;
-            var startIdx = _document.Parts.ToDictionary(p => p, p => p.Measures.Count);
+            var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
             foreach (var item in run)
                 EmitStructureItem(item, byName);
-            foreach (var p in _document.Parts)
+            foreach (var p in Document.Parts)
             {
                 if (p.Measures.Count > startIdx.GetValueOrDefault(p))
                 {
@@ -436,11 +445,11 @@ public sealed class MusicXmlExporter
             var child = rb.GetChild(i);
             if (child is StructureAlternativeSyntax alt)
             {
-                var startIdx = _document.Parts.ToDictionary(p => p, p => p.Measures.Count);
+                var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
                 EmitSectionByName(byName, alt.SectionName.Text);
                 string num = EndingNumbers(alt);
                 string stopType = afterEndBar ? "discontinue" : "stop";
-                foreach (var p in _document.Parts)
+                foreach (var p in Document.Parts)
                 {
                     if (p.Measures.Count <= startIdx.GetValueOrDefault(p)) continue;
                     if (!alt.IsSilent)
@@ -455,11 +464,11 @@ public sealed class MusicXmlExporter
             }
             else if (child is SectionReferenceSyntax or { Kind: SyntaxKind.SilentSectionReference })
             {
-                var startIdx = _document.Parts.ToDictionary(p => p, p => p.Measures.Count);
+                var startIdx = Document.Parts.ToDictionary(p => p, p => p.Measures.Count);
                 EmitStructureItem(child, byName);
                 if (forwardPending)
                 {
-                    foreach (var p in _document.Parts)
+                    foreach (var p in Document.Parts)
                         if (p.Measures.Count > startIdx.GetValueOrDefault(p))
                             p.Measures[startIdx.GetValueOrDefault(p)].RepeatForward = true;
                     forwardPending = false;
@@ -469,7 +478,7 @@ public sealed class MusicXmlExporter
             {
                 // The :| repeats back to the |:; it caps the ending just played.
                 afterEndBar = true;
-                foreach (var p in _document.Parts)
+                foreach (var p in Document.Parts)
                     if (p.Measures.Count > 0)
                         p.Measures[^1].RepeatBackward = true;
             }
@@ -620,7 +629,7 @@ public sealed class MusicXmlExporter
         else
         {
             _currentPart = new MusicXmlPart { Name = name };
-            _document!.Parts.Add(_currentPart);
+            Document.Parts.Add(_currentPart);
             _partsByName[name] = _currentPart;
             _measureNumber = 1;
         }
