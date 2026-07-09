@@ -1566,7 +1566,20 @@ internal static class SpacingRules
         }
         Widen(0, half[0] + edgeGap);
         for (int t = 0; t < timings.Count - 1; t++)
+        {
+            // A STAFF-ATTACHED symbol OVERHANGS a bare-note column (LP ChordName
+            // extra-spacing-width -0.5 . 0.5) rather than pushing the note right,
+            // so where a symbol borders a column with no symbol, reserve nothing
+            // and let the note keep its natural, even spacing. A chords ROW/grid
+            // (includeAttached == false) has no notes to overhang — its symbols
+            // ARE the content — so it keeps the full reservation on every cell.
+            // Two adjacent symbols always price so they never overprint, and the
+            // bar EDGES below price the full width so an all-rest (R1) attached
+            // bar, whose only column is the rest, still clears the barlines.
+            if (includeAttached && (half[t] <= 0 || half[t + 1] <= 0))
+                continue;
             Widen(t + 1, half[t] + half[t + 1] + chordGap);
+        }
         Widen(timings.Count, half[^1] + edgeGap);
         return result.ToImmutable();
     }
