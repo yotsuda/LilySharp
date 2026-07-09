@@ -2654,6 +2654,7 @@ public sealed class LilySharpLanguageServer
         var sb = new System.Text.StringBuilder();
         int depth = 0;
         var lines = source.Split('\n');
+        bool inBlockComment = false; // /* … */ carries across lines
 
         foreach (var rawLine in lines)
         {
@@ -2665,33 +2666,74 @@ public sealed class LilySharpLanguageServer
                 continue;
             }
 
+            // Drive indentation off a code-only view (string literals and comments
+            // blanked out) so a brace inside "…" or a // / /* */ comment doesn't
+            // corrupt the depth — and a real brace hidden behind a trailing comment
+            // still counts.
+            var codeLine = StripStringsAndComments(line, ref inBlockComment).Trim();
+
             // Adjust depth for closing braces at start of line
-            if (line.StartsWith('}') || line.StartsWith(">>"))
+            if (codeLine.StartsWith('}') || codeLine.StartsWith(">>"))
             {
                 depth = Math.Max(0, depth - 1);
             }
 
-            // Write indented line
+            // Write indented line (the ORIGINAL text, strings/comments intact)
             var indent = string.Concat(Enumerable.Repeat(indentStr, depth));
             sb.AppendLine($"{indent}{line}");
 
             // Adjust depth for opening braces at end of line
-            if (line.EndsWith('{') || line.EndsWith("<<"))
+            if (codeLine.EndsWith('{') || codeLine.EndsWith("<<"))
             {
                 depth++;
             }
-            // Handle inline close (e.g., "} else {")
-            else if (line.Contains('{') && !line.Contains('}'))
+            // Handle inline open (e.g., "} else {")
+            else if (codeLine.Contains('{') && !codeLine.Contains('}'))
             {
                 depth++;
-            }
-            else if (line.Contains('}') && !line.Contains('{'))
-            {
-                // Already handled above
             }
         }
 
         return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>
+    /// Returns <paramref name="line"/> with string literals and comments replaced by
+    /// spaces, so brace-based indentation logic sees only code. Strings are
+    /// line-bounded; a <c>/* … */</c> block comment carries across lines via
+    /// <paramref name="inBlockComment"/>.
+    /// </summary>
+    internal static string StripStringsAndComments(string line, ref bool inBlockComment)
+    {
+        var sb = new System.Text.StringBuilder(line.Length);
+        bool inString = false;
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            if (inBlockComment)
+            {
+                if (c == '/' && i > 0 && line[i - 1] == '*') inBlockComment = false;
+                sb.Append(' ');
+                continue;
+            }
+            if (inString)
+            {
+                if (c == '"') inString = false;
+                sb.Append(' ');
+                continue;
+            }
+            if (c == '"') { inString = true; sb.Append(' '); continue; }
+            if (c == '/' && i + 1 < line.Length && line[i + 1] == '/')
+                break; // rest of the line is a // comment; the code before it is kept
+            if (c == '/' && i + 1 < line.Length && line[i + 1] == '*')
+            {
+                inBlockComment = true;
+                sb.Append(' ');
+                continue;
+            }
+            sb.Append(c);
+        }
+        return sb.ToString();
     }
 
     // ========== Code Actions ==========

@@ -74,6 +74,22 @@ public class CompletionContextCommentStringTests
     }
 
     [Fact]
+    public void FormatStrip_IgnoresBracesInStringsAndComments()
+    {
+        bool inBlock = false;
+        // A '{' inside a string is blanked, so it drives no indentation.
+        Assert.DoesNotContain('{', LilySharpLanguageServer.StripStringsAndComments("title \"a {\"", ref inBlock));
+        // A real '{' behind a trailing // comment still counts.
+        Assert.Contains('{', LilySharpLanguageServer.StripStringsAndComments("part m { // hi", ref inBlock));
+        // A /* … */ block comment carries its state across lines.
+        LilySharpLanguageServer.StripStringsAndComments("x /* open", ref inBlock);
+        Assert.True(inBlock);
+        var reopened = LilySharpLanguageServer.StripStringsAndComments("brace } here */ y", ref inBlock);
+        Assert.False(inBlock);
+        Assert.DoesNotContain('}', reopened); // the '}' was inside the block comment
+    }
+
+    [Fact]
     public void PercussionScan_NotFooledByBraceInString()
     {
         // The backward percussion scan must ignore a '}' inside a string; otherwise
