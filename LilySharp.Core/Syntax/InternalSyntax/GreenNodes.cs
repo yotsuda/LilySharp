@@ -586,20 +586,6 @@ internal sealed class GraceExpressionGreen : GreenSyntaxNode
 // ============================================================
 
 /// <summary>
-/// Tuning declaration: \tuning guitar | \tuning bass
-/// </summary>
-internal sealed class TuningDeclarationGreen : GreenSyntaxNode
-{
-    public TuningDeclarationGreen(
-        SyntaxToken backslash,
-        SyntaxToken tuningKeyword,
-        SyntaxToken tuningName)
-        : base(SyntaxKind.TuningDeclaration, [backslash, tuningKeyword, tuningName])
-    {
-    }
-}
-
-/// <summary>
 /// String number annotation: \1, \2, etc.
 /// </summary>
 internal sealed class StringNumberAnnotationGreen : GreenSyntaxNode
@@ -709,17 +695,6 @@ internal sealed class CustomTextGreen : GreenSyntaxNode
 {
     public CustomTextGreen(SyntaxToken underscore, SyntaxToken text)
         : base(SyntaxKind.CustomText, [underscore, text])
-    {
-    }
-}
-
-/// <summary>
-/// Repeat count: x3
-/// </summary>
-internal sealed class RepeatCountGreen : GreenSyntaxNode
-{
-    public RepeatCountGreen(SyntaxToken x, SyntaxToken number)
-        : base(SyntaxKind.RepeatCount, [x, number])
     {
     }
 }
@@ -1029,20 +1004,6 @@ internal sealed class BreakGreen : GreenSyntaxNode
 {
     public BreakGreen(SyntaxToken breakKeyword)
         : base(SyntaxKind.Break, [breakKeyword])
-    {
-    }
-}
-
-/// <summary>
-/// Marker indicating the start of a new section.
-/// Used to reset relative pitch resolver at section boundaries.
-/// </summary>
-internal sealed class SectionStartMarkerGreen : GreenSyntaxNode
-{
-    public static readonly SectionStartMarkerGreen Instance = new();
-
-    private SectionStartMarkerGreen()
-        : base(SyntaxKind.SectionStartMarker, [])
     {
     }
 }

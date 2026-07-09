@@ -370,16 +370,12 @@ public enum SyntaxKind : ushort
     /// <summary>A MIDI part render node (<c>guitar channel:1</c> inside render).</summary>
     MidiPartRender,
     // === Nodes: Structure Block Items ===
-    /// <summary>A marker node that resets the pitch resolver at section boundaries.</summary>
-    SectionStartMarker,
     /// <summary>A section reference node (a section name in a structure).</summary>
     SectionReference,
     /// <summary>A silent section reference node (<c>~section name</c>, no label).</summary>
     SilentSectionReference,
     /// <summary>A custom-text node (<c>_"text"</c> in a structure).</summary>
     CustomText,
-    /// <summary>A repeat-count node (<c>x3</c> after a repeat block).</summary>
-    RepeatCount,
     /// <summary>A structure repeat block node (<c>|: ... :|</c> in a structure).</summary>
     StructureRepeatBlock,
     /// <summary>A structure alternative node (<c>1. A, 2. B</c> in a structure).</summary>
@@ -472,8 +468,6 @@ public enum SyntaxKind : ushort
     // === Nodes: Tablature ===
     /// <summary>A tablature staff declaration node.</summary>
     TabStaffDeclaration,
-    /// <summary>A tuning declaration node.</summary>
-    TuningDeclaration,
     /// <summary>A string-number annotation node.</summary>
     StringNumberAnnotation,
 

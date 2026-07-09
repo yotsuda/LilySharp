@@ -1687,37 +1687,6 @@ public sealed class DynamicSyntax : SyntaxNode
 // ============================================================
 
 /// <summary>
-/// Represents a tuning declaration: \tuning guitar | \tuning bass | \tuning custom { pitches }
-/// </summary>
-public sealed partial class TuningDeclarationSyntax : SyntaxNode
-{
-    internal TuningDeclarationSyntax(TuningDeclarationGreen green, SyntaxNode? parent, int position)
-        : base(green, parent, position)
-    {
-    }
-
-    /// <summary>The leading <c>\</c> token.</summary>
-    public SyntaxTokenNode BackslashToken => (SyntaxTokenNode)GetChild(0)!;
-    /// <summary>The <c>tuning</c> keyword token.</summary>
-    public SyntaxTokenNode TuningKeyword => (SyntaxTokenNode)GetChild(1)!;
-    /// <summary>The tuning name token (e.g. <c>guitar</c>, <c>bass</c>, <c>custom</c>).</summary>
-    public SyntaxTokenNode TuningName => (SyntaxTokenNode)GetChild(2)!;
-
-    /// <summary>
-    /// Gets the tuning type.
-    /// </summary>
-    public TuningType Type => TuningName.Text.ToLowerInvariant() switch
-    {
-        "guitar" => TuningType.Guitar,
-        "bass" => TuningType.Bass,
-        "bass5" => TuningType.Bass5,
-        "bass6" => TuningType.Bass6,
-        "ukulele" => TuningType.Ukulele,
-        _ => TuningType.Guitar
-    };
-}
-
-/// <summary>
 /// Represents a string number annotation: \1, \2, \3, etc.
 /// </summary>
 public sealed partial class StringNumberAnnotationSyntax : SyntaxNode
@@ -2306,24 +2275,6 @@ public sealed partial class BreakSyntax : SyntaxNode
 
     /// <summary>The <c>break</c> keyword token.</summary>
     public SyntaxTokenNode BreakKeyword => (SyntaxTokenNode)GetChild(0)!;
-}
-
-/// <summary>
-/// Marker indicating the start of a new section.
-/// Used to reset relative pitch resolver at section boundaries.
-/// </summary>
-public sealed class SectionStartMarkerSyntax : SyntaxNode
-{
-    internal SectionStartMarkerSyntax(SectionStartMarkerGreen green, SyntaxNode? parent, int position)
-        : base(green, parent, position)
-    {
-    }
-
-    /// <summary>
-    /// Creates a new instance of SectionStartMarkerSyntax.
-    /// </summary>
-    public static SectionStartMarkerSyntax Create(int position)
-        => new(SectionStartMarkerGreen.Instance, null, position);
 }
 
 /// <summary>

@@ -1807,25 +1807,6 @@ private GreenNode?[] ParseArticulations()
     }
 
 
-    // ========== Tablature ==========
-
-    private TuningDeclarationGreen ParseTuningDeclaration()
-    {
-        var backslash = Expect(SyntaxKind.Backslash);
-        var tuningKeyword = Expect(SyntaxKind.TuningKeyword);
-
-        // Tuning name can be Identifier or a keyword like "bass"
-        var tuningName = Current.Kind switch
-        {
-            SyntaxKind.BassKeyword => Advance(),
-            SyntaxKind.Identifier => Advance(),
-            _ => Expect(SyntaxKind.Identifier) // will produce error
-        };
-
-        return new TuningDeclarationGreen(backslash, tuningKeyword, tuningName);
-    }
-
-
     // ========== New Section-Oriented Parsing ==========
 
     /// <summary>
