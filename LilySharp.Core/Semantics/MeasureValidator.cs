@@ -173,7 +173,22 @@ internal sealed class MeasureValidator : ISemanticValidator
     private void ValidateMeasures(IEnumerable<SyntaxNode> items, int startPos)
     {
         var measures = SplitIntoMeasures(items, startPos);
+
+        // Measure durations in one pass, threading the running default note
+        // value (a bare note inherits the previous note's duration across bar
+        // lines). Precomputed so the FINAL bar can be compared against the
+        // OPENING pickup (anacrusis complement) below.
+        var durations = new Fraction[measures.Count];
         var defaultDuration = Fraction.Quarter;
+        for (int di = 0; di < measures.Count; di++)
+            durations[di] = CalculateMeasureDuration(measures[di].Items, ref defaultDuration);
+
+        // The opening pickup: the first sounding bar, when it is shorter than a
+        // full bar. A legitimately shortened FINAL bar must complete it
+        // (pickup + final == one bar); otherwise a short final bar warns.
+        int openingPickupIndex = -1;
+        var openingPickupDuration = Fraction.Zero;
+        bool seenSounding = false;
 
         for (int i = 0; i < measures.Count; i++)
         {
@@ -197,7 +212,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                     partialLength = pd.ToFraction();
             }
 
-            var duration = CalculateMeasureDuration(measure.Items, ref defaultDuration);
+            var duration = durations[i];
 
             // A file-level `partial` describes the PIECE-opening pickup. Blocks
             // are validated per section, so apply it to a block's first bar
@@ -214,18 +229,45 @@ internal sealed class MeasureValidator : ISemanticValidator
             // for the measure that carries the \partial.
             var expected = partialLength ?? _timeSignature;
 
+            // Remember the opening pickup: the first sounding bar, when shorter
+            // than a full bar (a bare anacrusis or a declared \partial). Its
+            // length is what a shortened final bar must complete.
+            if (duration != Fraction.Zero && !seenSounding)
+            {
+                seenSounding = true;
+                if (duration < _timeSignature)
+                {
+                    openingPickupIndex = i;
+                    openingPickupDuration = duration;
+                }
+            }
+
             if (!_senzaMisura && duration != expected && duration != Fraction.Zero)
             {
                 if (duration < expected)
                 {
-                    // Underfull FIRST measures are pickups (anacrusis) and
-                    // underfull LAST measures conventionally complete them —
-                    // both are normal notation, not authoring errors, so only
-                    // interior measures warn. But a measure with an explicit
-                    // 'partial N' is strictly checked against its declared length
-                    // even at an edge: that is the whole point of writing \partial.
-                    bool isEdgeMeasure = i == 0 || i == measures.Count - 1;
-                    if (!isEdgeMeasure || partialLength != null)
+                    bool isFirst = i == 0;
+                    bool isLast = i == measures.Count - 1;
+
+                    // A short FINAL bar is exempt ONLY when it completes the
+                    // opening pickup (anacrusis: pickup + final == one bar).
+                    // Without such a pickup it is a genuine short bar — a
+                    // miscount, or a section reused mid-form by a `structure`
+                    // whose "last" bar is actually interior — and warns like any
+                    // interior bar. (Per-section validation cannot see a bar
+                    // split across an ADJACENT section boundary; that legitimate
+                    // case belongs to the assembled-stream bar check.)
+                    bool completesOpeningPickup = isLast
+                        && openingPickupIndex >= 0 && openingPickupIndex < i
+                        && openingPickupDuration + duration == expected;
+
+                    // An underfull FIRST bar written bare is a benefit-of-the-
+                    // doubt anacrusis: no strict length check, just a nudge to
+                    // declare it. A measure carrying an explicit 'partial N' is
+                    // always checked strictly — that is the whole point of \partial.
+                    bool isBarePickup = isFirst && partialLength == null;
+
+                    if (partialLength != null || (!completesOpeningPickup && !isBarePickup))
                     {
                         var span = GetSpan(measure.Items);
                         _warnedSpans.Add((span.Start, span.Length));
@@ -234,7 +276,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                                 ? $"Pickup measure duration {duration} is less than the declared partial {expected}"
                                 : $"Measure duration {duration} is less than time signature {_meterText}");
                     }
-                    else if (i == 0)
+                    else if (isBarePickup)
                     {
                         // An underfull FIRST bar is conventionally an anacrusis,
                         // but written bare it is indistinguishable from a
@@ -249,6 +291,7 @@ internal sealed class MeasureValidator : ISemanticValidator
                             "(top level or in the voice) so its length is checked and " +
                             "bar numbering starts after it");
                     }
+                    // else: completesOpeningPickup — exempt, no diagnostic.
                 }
                 else if (duration > expected)
                 {

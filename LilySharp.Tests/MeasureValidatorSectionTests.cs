@@ -79,4 +79,26 @@ public sealed class MeasureValidatorSectionTests
             "  section C { a' b c d }\n}\n");         // full 4/4 -> clean
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.PickupWithoutPartial);
     }
+
+    [Fact]
+    public void PartMajorSection_ShortFinalMeasure_NoPickup_Warns()
+    {
+        // Reported case: section A's closing `d d` (2/4 in 4/4) is only "last"
+        // within A's own text — a structure reuses A mid-form, so it is really
+        // an interior bar. A opens with a FULL bar, so there is no pickup for
+        // `d d` to complete: it is a genuine short bar and must warn. (Before,
+        // the unconditional last-measure exemption silently swallowed it.)
+        var diags = Diagnose("time 4/4\npart mel {\n  section A { f4 f e e | d d }\n}\n");
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.MeasureIncomplete);
+    }
+
+    [Fact]
+    public void PartMajorSection_ShortFinalMeasure_CompletingPickup_StaysExempt()
+    {
+        // Genuine anacrusis: a 1/4 pickup and a 3/4 closing bar sum to one 4/4
+        // bar. The closing bar completes the pickup, so it is NOT flagged short
+        // (only the bare pickup gets its declare-with-partial nudge).
+        var diags = Diagnose("time 4/4\npart mel {\n  section A { c4 | c4 d e f | c4 d e }\n}\n");
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.MeasureIncomplete);
+    }
 }
