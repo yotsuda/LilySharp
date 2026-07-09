@@ -299,12 +299,12 @@ internal sealed class MeasureBuilder
             _pendingEndBarline = BarlineType.None;
             _measureSourceStart = sourceEnd;
 
-            // Handle overflow: if we exceeded time signature, the excess carries over
-            if (_currentDuration > _timeSignature)
-            {
-                // Note: For now we don't handle splitting notes across barlines
-                // This would require more complex handling
-            }
+            // Overflow (a note running past the auto-completed barline): the excess
+            // is currently dropped. Carrying it forward as a bare duration fragments
+            // the following measures (the correct fix splits the note into a tied
+            // continuation, which is a larger change), so this is deliberately left
+            // as a known limitation rather than a worse half-fix. MeasureValidator
+            // already warns about the overfull bar.
             _currentDuration = Fraction.Zero;
             RestorePartialIfPending();
             MeasureCompleted?.Invoke();
