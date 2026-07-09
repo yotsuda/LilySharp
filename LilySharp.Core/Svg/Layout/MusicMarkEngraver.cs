@@ -86,6 +86,17 @@ internal static class MusicMarkEngraver
     // (chord font = 4.0 * 0.65 = 2.6 ss; cap height ≈ 0.72 em).
     private const double ChordTextAscent = 1.9;
 
+    // `as both`: the Roman-degree row is drawn this far ABOVE the chord-text
+    // baseline (renderer DrawChordNames stackLineHeight), so a two-row chord's
+    // real top is that much higher. A mark clearing such a chord must clear the
+    // UPPER row, or the tempo / section label overprints the degree line.
+    private const double ChordStackLineHeight = 2.2;
+
+    /// <summary>Cap-height ascent of a chord symbol above its baseline Y,
+    /// including the stacked Roman-degree row when the chord is drawn `as both`.</summary>
+    private static double ChordAscent(ChordNameLayout cn)
+        => ChordTextAscent + (cn.AboveLine != null ? ChordStackLineHeight : 0);
+
     // LILYPOND-REF: define-grobs.scm RehearsalMark padding=0.8
     private const double AboveStaffOffset = -2.0;
 
@@ -262,7 +273,7 @@ internal static class MusicMarkEngraver
                         double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
                         if (mx1 < cn.X - chHalf || mx0 > cn.X + chHalf)
                             continue; // no horizontal ink overlap
-                        double chordTop = cn.Y - ChordTextAscent;
+                        double chordTop = cn.Y - ChordAscent(cn);
                         markCeiling = Math.Min(markCeiling, chordTop - OutsideStaffPadding);
                     }
                 }
@@ -295,7 +306,7 @@ internal static class MusicMarkEngraver
                         bool overLabel = !(lx1 < cn.X - chHalf || lx0 > cn.X + chHalf);
                         bool overTempo = !(tx1 < cn.X - chHalf || tx0 > cn.X + chHalf);
                         if (overLabel || overTempo)
-                            ceiling = Math.Min(ceiling, cn.Y - ChordTextAscent - OutsideStaffPadding);
+                            ceiling = Math.Min(ceiling, cn.Y - ChordAscent(cn) - OutsideStaffPadding);
                     }
                 }
 
@@ -551,7 +562,7 @@ internal static class MusicMarkEngraver
                         && cs != ts2)
                         continue;
                     double chHalf = Rendering.SansTextMetrics.MeasureBold(cn.ChordText, 2.6) / 2 + 0.3;
-                    double chordTop = cn.Y - ChordTextAscent - OutsideStaffPadding;
+                    double chordTop = cn.Y - ChordAscent(cn) - OutsideStaffPadding;
                     bool overTempo = !(tempoX + tempoW < cn.X - chHalf || tempoX > cn.X + chHalf);
                     bool overLabel = !(lab.X + halfW < cn.X - chHalf || lab.X - halfW > cn.X + chHalf);
                     // Tempo ink: stem to ~2.1 above the baseline, digits ~0.5 below.

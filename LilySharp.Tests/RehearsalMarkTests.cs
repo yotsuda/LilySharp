@@ -232,4 +232,33 @@ public class RehearsalMarkTests
         Assert.Equal("A", result[0].Text);
         Assert.Equal("B", result[1].Text);
     }
+
+    [Fact]
+    public void Calculate_MarkClearsTwoRowChord_AsBoth()
+    {
+        // `as both` stacks the Roman degree ABOVE the chord name, making the
+        // chord band ~2.2 ss taller. A mark over that chord must clear the
+        // UPPER row — before the fix it cleared only the name row and the mark
+        // (tempo / section label) overprinted the degree line.
+        var systems = CreateSingleSystem(2);
+        var ml = systems.SelectMany(s => s.Measures).ToImmutableArray();
+        var mark = ImmutableArray.Create(
+            new MusicMarkItem(MusicMarkType.Rehearsal, "A", 0, 0));
+
+        // An inline top-staff chord (negative Y) at the mark's own column, so
+        // its ink certainly overlaps the mark horizontally.
+        double markX = MusicMarkEngraver.Calculate(null, mark, systems, ml)[0].X;
+        ChordNameLayout Chord(string? above) =>
+            new ChordNameLayout(0, markX, -3.0, "Cmaj7", 0, AboveLine: above);
+
+        double oneRowY = MusicMarkEngraver
+            .Calculate(null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord(null)))[0].Y;
+        double twoRowY = MusicMarkEngraver
+            .Calculate(null, mark, systems, ml, chordNames: ImmutableArray.Create(Chord("Imaj7")))[0].Y;
+
+        // The stacked degree row lifts the mark higher (more negative) by the
+        // row height, so it clears the top line instead of overprinting it.
+        Assert.True(twoRowY < oneRowY - 2.0,
+            $"two-row mark Y ({twoRowY:F2}) should sit well above one-row ({oneRowY:F2})");
+    }
 }
