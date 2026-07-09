@@ -1467,6 +1467,13 @@ public sealed partial class MeasureCollector
         _courtesySourcePositions.Clear();
         _measureAccidentals.Clear();
         _fingeringByPosition.Clear();
+        // Reused-instance hygiene: without these, a second Collect/CollectMultiStaff
+        // on the same collector would carry a stale part-major cell map and lyric-row
+        // names, and PitchTrace would grow without bound. (All current callers use a
+        // fresh instance, so this only matters for reuse via the public API.)
+        _pitchTrace.Clear();
+        _partMajorCells.Clear();
+        _lyricsRowNames = new();
         _structure = null;
         _filePartial = null;
         _root = null;
