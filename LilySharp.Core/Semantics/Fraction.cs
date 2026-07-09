@@ -129,7 +129,13 @@ public readonly struct Fraction : IEquatable<Fraction>, IComparable<Fraction>
     /// </summary>
     public Fraction Dotted(int dots)
     {
-        if (dots == 0) return this;
+        if (dots <= 0) return this;
+
+        // Clamp absurd dot counts (malformed input, e.g. "c4" with 30+ dots): the
+        // (1 << (dots+1)) shift silently wraps int at dots >= 30, and the dotted
+        // value asymptotes to 2x the base anyway, so a large clamp is rhythmically
+        // indistinguishable from more dots and keeps the shift in range.
+        if (dots > 16) dots = 16;
 
         // Dotted value = original * (2 - 1/2^dots)
         // For 1 dot: 3/2 of original

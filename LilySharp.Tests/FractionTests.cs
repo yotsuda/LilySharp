@@ -49,6 +49,18 @@ public sealed class FractionTests
         Assert.Equal(1, f.Denominator);
     }
 
+    [Fact]
+    public void Dotted_AbsurdDotCount_DoesNotOverflow()
+    {
+        // Malformed input (a note with dozens of dots) used to overflow the int
+        // (1 << (dots+1)) shift and wrap to a garbage/negative value; it is clamped
+        // now, so the result stays a positive fraction between the base and its 2x limit.
+        var f = new Fraction(1, 4).Dotted(40);
+        Assert.True(f.Numerator > 0 && f.Denominator > 0);
+        Assert.True(f.Numerator * 4 > f.Denominator); // > 1/4
+        Assert.True(f.Numerator * 2 < f.Denominator); // < 1/2
+    }
+
     [Theory]
     [InlineData(1, 4, 1, 4, 1, 2)]
     [InlineData(1, 3, 1, 6, 1, 2)]
