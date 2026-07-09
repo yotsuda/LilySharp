@@ -81,6 +81,13 @@ internal sealed class BeamScoringProblem
     // Staff radius (half staff height in half-spaces = 2.0 for 5-line staff)
     private const double StaffRadius = 2.0;
 
+    // Staff-line gap scoring tuning. LILYPOND-REF: lily/beam-quanting.cc:1280-1322.
+    private const double BeamGapFudgeFactor = 2.2;   // beam-edge inset when testing gaps
+    private const double BeamGapFixedDemerit = 0.39; // baseline demerit for a line in the gap
+
+    // Max-slope damping factor. LILYPOND-REF: lily/beam-quanting.cc:770.
+    private const double BeamSlopeDampingFactor = 0.6;
+
     // Musical dy (least-squares slope * xSpan, used by scorers)
     private double _musicalDy;
 
@@ -378,7 +385,7 @@ internal sealed class BeamScoringProblem
             double slope = (_xSpan > 0.001) ? dy / _xSpan : 0;
 
             // LILYPOND-REF: lily/beam-quanting.cc:770
-            slope = 0.6 * Math.Tanh(slope) / (damping + concaveness);
+            slope = BeamSlopeDampingFactor * Math.Tanh(slope) / (damping + concaveness);
 
             double dampedDy = slope * _xSpan;
 
@@ -862,13 +869,12 @@ internal sealed class BeamScoringProblem
             for (int j = 1; j <= _edgeBeamCounts[e]; j++)
             {
                 // LILYPOND-REF: lily/beam-quanting.cc:1280-1294
-                double fudgeFactor = 2.2;
                 double gap1 = endYSS
                     - stemDir * ((j - 1) * _beamTranslation + _beamThickness / 2
-                                  - _lineThickness / fudgeFactor);
+                                  - _lineThickness / BeamGapFudgeFactor);
                 double gap2 = endYSS
                     - stemDir * (j * _beamTranslation - _beamThickness / 2
-                                  + _lineThickness / fudgeFactor);
+                                  + _lineThickness / BeamGapFudgeFactor);
 
                 double gapMin = Math.Min(gap1, gap2);
                 double gapMax = Math.Max(gap1, gap2);
@@ -881,9 +887,8 @@ internal sealed class BeamScoringProblem
                     if (k >= gapMin && k <= gapMax)
                     {
                         double dist = Math.Min(Math.Abs(gapMax - k), Math.Abs(gapMin - k));
-                        double fixedDemerit = 0.39;
                         dem += extraDemerit
-                               * (fixedDemerit + (1 - fixedDemerit) * (dist / Math.Max(gapLength, eps)) * 2);
+                               * (BeamGapFixedDemerit + (1 - BeamGapFixedDemerit) * (dist / Math.Max(gapLength, eps)) * 2);
                     }
                 }
             }
