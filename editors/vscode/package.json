@@ -2,7 +2,7 @@
   "name": "lilysharp",
   "displayName": "Lily#",
   "description": "Language support and live score preview for Lily#, a LilyPond-inspired music notation language",
-  "version": "0.3.0-dev.11",
+  "version": "0.3.0-dev.12",
   "publisher": "ytsuda",
   "license": "GPL-3.0-or-later",
   "repository": {
@@ -10,7 +10,7 @@
     "url": "https://github.com/yotsuda/LilySharp.git"
   },
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Programming Languages"
@@ -193,6 +193,12 @@
         "command": "lilysharp.importMusicXml",
         "category": "Lily#",
         "title": "Import MusicXML…"
+      },
+      {
+        "command": "lilysharp.aiTransform",
+        "category": "Lily#",
+        "icon": "$(sparkle)",
+        "title": "Transform Selection with AI…"
       }
     ],
     "menus": {
@@ -224,6 +230,10 @@
         },
         {
           "command": "lilysharp.importMusicXml"
+        },
+        {
+          "command": "lilysharp.aiTransform",
+          "when": "resourceLangId == lilysharp"
         }
       ],
       "explorer/context": [
@@ -235,14 +245,19 @@
       ],
       "editor/context": [
         {
+          "command": "lilysharp.aiTransform",
+          "when": "resourceLangId == lilysharp",
+          "group": "1_modification@1"
+        },
+        {
           "command": "lilysharp.convertLayout",
           "when": "resourceLangId == lilysharp",
-          "group": "1_modification"
+          "group": "1_modification@2"
         },
         {
           "command": "lilysharp.addChordTrack",
           "when": "resourceLangId == lilysharp",
-          "group": "1_modification"
+          "group": "1_modification@3"
         }
       ],
       "editor/title": [
@@ -265,6 +280,12 @@
         "key": "ctrl+k v",
         "mac": "cmd+k v",
         "when": "resourceLangId == lilysharp"
+      },
+      {
+        "command": "lilysharp.aiTransform",
+        "key": "ctrl+i",
+        "mac": "cmd+i",
+        "when": "editorTextFocus && editorLangId == lilysharp"
       }
     ]
   },
@@ -279,7 +300,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.90.0",
     "esbuild": "^0.28.1",
     "typescript": "^5.3.0"
   },

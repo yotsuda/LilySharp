@@ -3543,6 +3543,161 @@ public sealed class LilySharpLanguageServer
         };
     }
 
+    // ============================================================
+    // Custom: AI collaborative editing (docs/ai-collab-design)
+    // ============================================================
+
+    /// <summary>
+    /// Validates an arbitrary candidate source string — parser diagnostics plus the
+    /// full semantic validator registry (the same set <c>check</c> and the push
+    /// diagnostics use, so they can't drift). The candidate is parsed in isolation
+    /// and NEVER touches document state. Powers the AI transform's
+    /// validate-and-self-repair loop: a candidate with new errors is repaired (its
+    /// diagnostics fed back to the model) before it is ever shown to the user.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/checkCandidate", UseSingleObjectParameterDeserialization = true)]
+    public CheckCandidateResponse CheckCandidate(CheckCandidateParams @params)
+    {
+        var text = @params.Text ?? "";
+        var tree = SyntaxTree.Parse(text);
+
+        var diags = new List<CandidateDiagnostic>();
+        void Add(LilySharp.Core.Syntax.Diagnostic d)
+        {
+            var (line, col) = GetLineAndColumn(text, d.Span.Start);
+            diags.Add(new CandidateDiagnostic
+            {
+                Line = line,
+                Char = col,
+                Offset = d.Span.Start,
+                Length = d.Span.Length,
+                Severity = d.Severity switch
+                {
+                    CoreDiagnosticSeverity.Error => "error",
+                    CoreDiagnosticSeverity.Warning => "warning",
+                    CoreDiagnosticSeverity.Info => "info",
+                    _ => "hint"
+                },
+                Message = d.Message,
+                Code = d.Code,
+            });
+        }
+
+        foreach (var d in tree.Diagnostics)
+            Add(d);
+        // Semantic validation can throw on a badly-shaped-but-parseable tree; a
+        // candidate that trips it is simply "not valid", not a server error.
+        try
+        {
+            foreach (var d in LilySharp.Core.Semantics.SemanticValidation.Run(tree))
+                Add(d);
+        }
+        catch (Exception ex)
+        {
+            diags.Add(new CandidateDiagnostic { Message = $"Validation failed: {ex.Message}" });
+        }
+
+        return new CheckCandidateResponse
+        {
+            HasErrors = diags.Any(d => d.Severity == "error"),
+            Diagnostics = diags.ToArray(),
+        };
+    }
+
+    /// <summary>
+    /// Renders an arbitrary candidate source string to preview SVG without touching
+    /// the open document — the non-destructive, offscreen compile behind "decide on
+    /// the score" (§3/§7). Same render path and Preview() options as
+    /// <see cref="GetSvg"/>, but the text is supplied directly rather than read from
+    /// document state.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/renderText", UseSingleObjectParameterDeserialization = true)]
+    public SvgResponse RenderText(RenderTextParams @params)
+    {
+        var tree = SyntaxTree.Parse(@params.Text ?? "");
+        var renders = ExtractRenderInfo(tree);
+
+        if (tree.HasErrors)
+        {
+            var errors = string.Join("\n", tree.Diagnostics
+                .Where(d => d.Severity == CoreDiagnosticSeverity.Error)
+                .Select(d =>
+                {
+                    var (line, col) = GetLineAndColumn(tree.Text, d.Span.Start);
+                    return $"Line {line}, Col {col}: {d.Message}";
+                }));
+            return new SvgResponse { Svg = null, Error = errors, Renders = renders };
+        }
+
+        try
+        {
+            var svg = LilySharp.Core.Svg.SvgGenerator.Generate(
+                tree, LilySharp.Core.Svg.Renderer.SvgRenderOptions.Preview(), @params.RenderName);
+            return new SvgResponse { Svg = svg, Error = null, Renders = renders };
+        }
+        catch (Exception ex)
+        {
+            return new SvgResponse { Svg = null, Error = ex.Message, Renders = renders };
+        }
+    }
+
+    /// <summary>
+    /// Returns the resolved musical facts of a selection so the model sees what the
+    /// compiler sees (§5): each note's written token and its resolved absolute pitch
+    /// (mirrors <c>check --pitches</c>), limited to notes whose source offset falls
+    /// inside the requested range. Read-only.
+    /// </summary>
+    [JsonRpcMethod("lilysharp/factsForRange", UseSingleObjectParameterDeserialization = true)]
+    public FactsForRangeResponse FactsForRange(FactsForRangeParams @params)
+    {
+        var doc = _documentManager.GetDocument(@params.TextDocument.Uri);
+        if (doc == null)
+            return new FactsForRangeResponse { Error = "Document not found" };
+
+        var text = doc.Text;
+        try
+        {
+            var collector = new LilySharp.Core.Svg.Collector.MeasureCollector();
+            collector.Collect(doc.Tree);
+            var trace = collector.PitchTrace;
+
+            var facts = new List<ResolvedPitchFact>();
+            foreach (var e in trace)
+            {
+                if (e.Position < @params.Start || e.Position >= @params.End)
+                    continue;
+                // The trace position starts at the token's leading trivia; advance
+                // to the pitch so the "written" token lines up (as `check --pitches`
+                // does).
+                int p = e.Position;
+                while (p < text.Length && char.IsWhiteSpace(text[p])) p++;
+                facts.Add(new ResolvedPitchFact
+                {
+                    Offset = p,
+                    Written = ReadPitchTokenAt(text, p),
+                    Resolved = e.Pitch,
+                });
+            }
+            return new FactsForRangeResponse { Pitches = facts.ToArray() };
+        }
+        catch (Exception ex)
+        {
+            return new FactsForRangeResponse { Error = ex.Message };
+        }
+    }
+
+    /// <summary>Reads a bare pitch token (letters plus <c>'</c>/<c>,</c> octave
+    /// marks) at <paramref name="pos"/>, for the resolved-pitch facts display.</summary>
+    private static string ReadPitchTokenAt(string source, int pos)
+    {
+        if (pos < 0 || pos >= source.Length) return "";
+        int end = pos;
+        while (end < source.Length &&
+               (char.IsLetter(source[end]) || source[end] == '\'' || source[end] == ','))
+            end++;
+        return source.Substring(pos, end - pos);
+    }
+
     /// <summary>
     /// Extract render definitions from the syntax tree.
     /// </summary>
@@ -3636,4 +3791,5 @@ public sealed class LilySharpLanguageServer
             or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword;
     }
 }
+
 
