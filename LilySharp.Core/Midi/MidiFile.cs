@@ -179,7 +179,7 @@ public class MidiFile
                 case MidiEventType.TrackName:
                     trackWriter.Write((byte)0xFF);
                     trackWriter.Write((byte)0x03);
-                    var nameBytes = System.Text.Encoding.ASCII.GetBytes(track.Name);
+                    var nameBytes = System.Text.Encoding.UTF8.GetBytes(track.Name ?? "");
                     WriteVariableLength(trackWriter, nameBytes.Length);
                     trackWriter.Write(nameBytes);
                     break;
@@ -198,6 +198,8 @@ public class MidiFile
         trackWriter.Write((byte)0xFF);
         trackWriter.Write((byte)0x2F);
         trackWriter.Write((byte)0x00);
+
+        trackWriter.Flush(); // ensure every buffered byte is in trackStream before length/ToArray
 
         writer.Write((byte)'M');
         writer.Write((byte)'T');
