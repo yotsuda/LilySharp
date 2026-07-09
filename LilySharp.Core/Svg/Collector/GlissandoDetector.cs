@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Linq;
 using LilySharp.Core.Svg.Model;
 
 namespace LilySharp.Core.Svg.Collector;
@@ -52,11 +53,21 @@ internal sealed class GlissandoDetector
                     if (!startNote.HasGlissando)
                         continue;
 
-                    // Glissandos connect to the next note of any pitch.
-                    var endNote = NoteScan.FindNextNote(measures, measureIdx, itemIdx, _ => true);
-                    if (endNote != null)
+                    // Glissandos connect to the next note of any pitch — a note OR
+                    // a chord (a chord endpoint used to be skipped, dropping the gliss).
+                    var endItem = NoteScan.FindNextNoteOrChord(measures, measureIdx, itemIdx);
+                    if (endItem != null)
                     {
-                        var (endMeasureIdx, endItemIdx, note) = endNote.Value;
+                        var (endMeasureIdx, endItemIdx, item) = endItem.Value;
+                        // Into a chord: connect to the nearest chord tone (single line;
+                        // LilyPond fans to every tone, a future refinement).
+                        int endPos = item switch
+                        {
+                            NoteItem n => n.StaffPosition,
+                            ChordItem c when c.Notes.Length > 0 =>
+                                c.Notes.MinBy(cn => System.Math.Abs(cn.StaffPosition - startNote.StaffPosition)).StaffPosition,
+                            _ => startNote.StaffPosition,
+                        };
 
                         glissandos.Add(new GlissandoItem(
                             StartMeasureIndex: measureIdx,
@@ -64,7 +75,7 @@ internal sealed class GlissandoDetector
                             StartStaffPosition: startNote.StaffPosition,
                             EndMeasureIndex: endMeasureIdx,
                             EndItemIndex: endItemIdx,
-                            EndStaffPosition: note.StaffPosition,
+                            EndStaffPosition: endPos,
                             Style: GlissandoStyle.Line,
                             SourcePosition: startNote.SourcePosition,
                             VoiceIndex: v));

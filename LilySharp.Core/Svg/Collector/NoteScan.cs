@@ -52,4 +52,30 @@ internal static class NoteScan
 
         return null;
     }
+
+    /// <summary>
+    /// Like <see cref="FindNextNote"/> but matches a <see cref="NoteItem"/> OR a
+    /// <see cref="ChordItem"/> — used by glissandos, which may slide into a chord
+    /// (a note-only scan would skip the chord and drop the glissando).
+    /// </summary>
+    public static (int MeasureIdx, int ItemIdx, MusicItem Item)? FindNextNoteOrChord(
+        ImmutableArray<Measure> measures,
+        int startMeasureIdx,
+        int startItemIdx)
+    {
+        var current = measures[startMeasureIdx];
+        for (int i = startItemIdx + 1; i < current.Items.Length; i++)
+            if (current.Items[i] is NoteItem or ChordItem)
+                return (startMeasureIdx, i, current.Items[i]);
+
+        for (int m = startMeasureIdx + 1; m < measures.Length; m++)
+        {
+            var measure = measures[m];
+            for (int i = 0; i < measure.Items.Length; i++)
+                if (measure.Items[i] is NoteItem or ChordItem)
+                    return (m, i, measure.Items[i]);
+        }
+
+        return null;
+    }
 }

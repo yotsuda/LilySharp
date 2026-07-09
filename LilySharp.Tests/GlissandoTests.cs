@@ -78,6 +78,20 @@ public class GlissandoTests
         Assert.Single(glissandos);
     }
 
+    [Fact]
+    public void Collect_GlissandoIntoChord_ConnectsToChordNotDropped()
+    {
+        // A note's glissando into a following chord used to be dropped — FindNextNote
+        // skipped the ChordItem and, with only rests after, found no target. It now
+        // connects to the chord (nearest tone).
+        var tree = LilySharp.Core.Syntax.SyntaxTree.Parse("c'4@glissando <e' g'>4 r r |");
+        var score = new MeasureCollector().Collect(tree);
+
+        var g = Assert.Single(new GlissandoDetector().DetectGlissandos(score));
+        Assert.Equal(0, g.StartItemIndex);
+        Assert.Equal(1, g.EndItemIndex); // the chord, not skipped
+    }
+
     // --- GlissandoDetector ---
 
     [Fact]
