@@ -757,8 +757,11 @@ public sealed partial class MeasureCollector
         ResolveBeamStemDirections(measures);
 
         // If any parallel span was seen, reconstruct the additional voices.
+        // Pass the attached chord part through: BuildMultiVoiceScore collects it
+        // itself (this method's CollectAttached below is never reached for the
+        // multi-voice path).
         if (_parallelSpans.Count > 0)
-            return BuildMultiVoiceScore(measures, tree.GetRoot());
+            return BuildMultiVoiceScore(measures, tree.GetRoot(), attachedChordPart, attachedChordDisplay);
 
         // Single voice
         var voice = _tabResolver.ResolveVoiceTabTies(new Voice(_voiceName ?? "default", measures.ToImmutableArray()));
@@ -1236,7 +1239,9 @@ public sealed partial class MeasureCollector
     /// is the primary stream; each additional voice is a full-length, synchronized
     /// measure list that is empty except where a span supplies its sub-voice.
     /// </summary>
-    private Score BuildMultiVoiceScore(List<Measure> track0, SyntaxNode root)
+    private Score BuildMultiVoiceScore(List<Measure> track0, SyntaxNode root,
+        string? attachedChordPart = null,
+        ChordDisplayMode attachedChordDisplay = ChordDisplayMode.Names)
     {
         var voices = new List<Voice>
         {
@@ -1275,6 +1280,13 @@ public sealed partial class MeasureCollector
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
         _chordNameCollector.SectionStarts = _sectionAllStarts;
         _chordNameCollector.CollectBlocks(root, _sectionStartMeasure, _currentStaffIndex);
+        // `staff NAME with chords CHORDPART [as roman|both]` on a multi-voice single
+        // staff — collected here (after CollectBlocks, matching the single-voice order),
+        // because Collect's own CollectAttached is skipped by the multi-voice early return.
+        if (attachedChordPart != null)
+            _chordNameCollector.CollectAttached(
+                root, attachedChordPart, _sectionStartMeasure, _currentStaffIndex,
+                attachedChordDisplay);
 
         // A single-staff score surfaces the same annotations whether it has one
         // voice or several — a multi-voice (voice { } blocks) score keeps its chord

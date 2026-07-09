@@ -237,6 +237,32 @@ public class ChordNameTests
     }
 
     [Fact]
+    public void WithChords_KeptInMultiVoiceScore()
+    {
+        // Regression: `staff NAME with chords PART` on a multi-voice single staff
+        // used to drop the whole chord progression (Collect returned to
+        // BuildMultiVoiceScore before CollectAttached ran). Both single- and
+        // multi-voice must surface the attached chords. Uses the real render path.
+        string Doc(string body) => $@"
+part m {{ clef treble }}
+chords prog {{ c1 | d1 | }}
+section A {{ m {{ {body} }} }}
+structure {{ A }}
+score x {{ staff m with chords prog }}
+";
+        var sTree = SyntaxTree.Parse(Doc("c'4 d' e' f' | g'4 a' b' c'' |"));
+        var mTree = SyntaxTree.Parse(Doc("voice { c'4 d' e' f' | } voice { c4 d e f | }"));
+        Assert.Empty(sTree.Diagnostics);
+        Assert.Empty(mTree.Diagnostics);
+
+        var single = LilySharp.Core.Svg.SvgGenerator.CollectScore(sTree, RenderSpecParser.FindFirst(sTree));
+        var multi = LilySharp.Core.Svg.SvgGenerator.CollectScore(mTree, RenderSpecParser.FindFirst(mTree));
+
+        Assert.Equal(2, single.ChordNames.Length);  // control
+        Assert.Equal(2, multi.ChordNames.Length);   // was 0 before the fix
+    }
+
+    [Fact]
     public void Collector_ChordName_MinorSeventh()
     {
         var source = "c4 @chord(c:m7) d e f";
