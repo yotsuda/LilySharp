@@ -1707,10 +1707,6 @@ public sealed partial class MeasureCollector
                 case PhraseDeclarationSyntax phraseDecl:
                     _variables[phraseDecl.Name.Text] = phraseDecl.Body;
                     break;
-
-                case RenderDeclarationSyntax render:
-                    ExtractVoiceName(render);
-                    break;
             }
         }
     }
@@ -1847,38 +1843,6 @@ public sealed partial class MeasureCollector
         'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3, 'g' => 4, 'a' => 5, 'b' => 6,
         _ => 0
     };
-
-    private void ExtractVoiceName(RenderDeclarationSyntax render)
-    {
-        // Inference only: never clobber a voice the caller pinned (SvgGenerator
-        // passes the selected render's voice), and with multiple render blocks
-        // the FIRST one wins — previously every render block overwrote
-        // _voiceName, so a two-render file always collected the LAST render's
-        // part regardless of which render was being generated.
-        if (_voiceName != null)
-            return;
-
-        if (render.GetChild(1) is not SyntaxTokenNode outputType || outputType.Text != "score")
-            return;
-
-        foreach (var child in render.DescendantNodes())
-        {
-            if (child is StaffRenderSyntax staff)
-            {
-                for (int i = 0; i < staff.SlotCount; i++)
-                {
-                    if (staff.GetChild(i) is SyntaxTokenNode token &&
-                        token.Kind == SyntaxKind.Identifier &&
-                        token.Text != "staff" && token.Text != "treble" &&
-                        token.Text != "bass" && token.Text != "alto" && token.Text != "tenor")
-                    {
-                        _voiceName = token.Text;
-                        return;
-                    }
-                }
-            }
-        }
-    }
 
     private List<Measure> CollectMeasures()
     {
