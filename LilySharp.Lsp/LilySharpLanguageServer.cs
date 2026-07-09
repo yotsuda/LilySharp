@@ -470,8 +470,10 @@ public sealed class LilySharpLanguageServer
         // The INTRODUCING keyword of each still-open block (for `chords harmony {` and
         // `section A {` it is one word before the name, so a two-word lookback).
         var stack = new System.Collections.Generic.Stack<string>();
+        bool inStr = false, inLine = false, inBlock = false;
         for (int i = 0; i < offset && i < text.Length; i++)
         {
+            if (!IsCodeChar(text, i, ref inStr, ref inLine, ref inBlock)) continue;
             if (text[i] == '{')
             {
                 int j = i - 1;
@@ -509,8 +511,10 @@ public sealed class LilySharpLanguageServer
     internal static string? InnermostOpenBlock(string text, int offset)
     {
         var stack = new System.Collections.Generic.Stack<string>();
+        bool inStr = false, inLine = false, inBlock = false;
         for (int i = 0; i < offset && i < text.Length; i++)
         {
+            if (!IsCodeChar(text, i, ref inStr, ref inLine, ref inBlock)) continue;
             if (text[i] == '{')
             {
                 int j = i - 1;
@@ -538,8 +542,10 @@ public sealed class LilySharpLanguageServer
     {
         static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
         var stack = new System.Collections.Generic.Stack<bool>();
+        bool inStr = false, inLine = false, inBlock = false;
         for (int i = 0; i < offset && i < text.Length; i++)
         {
+            if (!IsCodeChar(text, i, ref inStr, ref inLine, ref inBlock)) continue;
             if (text[i] == '{')
             {
                 int j = i - 1;
@@ -570,6 +576,42 @@ public sealed class LilySharpLanguageServer
             if (text[i] == '"')
                 quotes++;
         return (quotes & 1) == 1;
+    }
+
+    /// <summary>
+    /// Sequential string/comment state machine for the brace scanners below: call
+    /// for each index i = 0,1,2,… in order; it returns true when <c>text[i]</c> is
+    /// live code, false inside a <c>"…"</c> string (line-bounded, matching
+    /// <see cref="IsInsideStringLiteral"/>), a <c>//</c> line comment, or a
+    /// <c>/* … */</c> block comment. Without this the scanners counted braces that
+    /// sit in strings/comments (e.g. <c>title "a {b"</c>) and mis-detected context.
+    /// </summary>
+    private static bool IsCodeChar(string text, int i,
+        ref bool inString, ref bool inLineComment, ref bool inBlockComment)
+    {
+        char c = text[i];
+        if (inLineComment)
+        {
+            if (c == '\n') inLineComment = false;
+            return false;
+        }
+        if (inBlockComment)
+        {
+            if (c == '/' && i > 0 && text[i - 1] == '*') inBlockComment = false;
+            return false;
+        }
+        if (inString)
+        {
+            if (c == '"' || c == '\n') inString = false;
+            return false;
+        }
+        if (c == '"') { inString = true; return false; }
+        if (c == '/' && i + 1 < text.Length)
+        {
+            if (text[i + 1] == '/') { inLineComment = true; return false; }
+            if (text[i + 1] == '*') { inBlockComment = true; return false; }
+        }
+        return true;
     }
 
     /// <summary>Quality-token completions offered after a chord's ':' inside a chords block.</summary>
@@ -853,10 +895,12 @@ public sealed class LilySharpLanguageServer
         if (i >= 0 && text[i] == '{')
             return CompletionContext.MusicBlock;
 
-        // Check if inside braces
+        // Check if inside braces (ignoring braces in strings/comments)
         int braceDepth = 0;
-        for (int j = 0; j < offset; j++)
+        bool inStr = false, inLine = false, inBlock = false;
+        for (int j = 0; j < offset && j < text.Length; j++)
         {
+            if (!IsCodeChar(text, j, ref inStr, ref inLine, ref inBlock)) continue;
             if (text[j] == '{') braceDepth++;
             else if (text[j] == '}') braceDepth--;
         }
@@ -949,8 +993,10 @@ public sealed class LilySharpLanguageServer
     internal static bool IsInsideScoreBlock(string text, int offset)
     {
         var stack = new System.Collections.Generic.Stack<bool>();
+        bool inStr = false, inLine = false, inBlock = false;
         for (int i = 0; i < offset && i < text.Length; i++)
         {
+            if (!IsCodeChar(text, i, ref inStr, ref inLine, ref inBlock)) continue;
             if (text[i] == '{')
             {
                 stack.Push(IsScoreBlockOpener(text, i));
