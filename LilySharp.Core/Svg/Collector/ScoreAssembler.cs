@@ -1,0 +1,149 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+using System.Collections.Immutable;
+using LilySharp.Core.Svg.Model;
+
+namespace LilySharp.Core.Svg.Collector;
+
+/// <summary>
+/// An immutable snapshot of everything <see cref="MeasureCollector"/> accumulates
+/// during a pass that a <see cref="Score"/> / <see cref="MultiStaffScore"/> needs
+/// beyond its voices or staff groups: the piece-level metadata and every
+/// annotation list. Captured once at the end of collection
+/// (<c>MeasureCollector.CaptureScoreContent</c>) and handed to
+/// <see cref="ScoreAssembler"/>, which is the single place that knows the shape of
+/// the model constructors.
+/// </summary>
+internal sealed record ScoreContent(
+    TimeSignature TimeSignature,
+    KeySignature KeySignature,
+    string Clef,
+    int? Tempo,
+    string? Title,
+    string? Composer,
+    int SwingSubdivision,
+    ImmutableArray<DynamicItem> Dynamics,
+    ImmutableArray<ArticulationItem> Articulations,
+    ImmutableArray<GraceNoteItem> GraceNotes,
+    ImmutableArray<LyricItem> Lyrics,
+    ImmutableArray<MusicMarkItem> MusicMarks,
+    ImmutableArray<CustomTextItem> CustomTexts,
+    ImmutableArray<VoltaBracketItem> VoltaBrackets,
+    ImmutableArray<TupletBracketItem> TupletBrackets,
+    ImmutableArray<ArpeggioItem> Arpeggios,
+    ImmutableArray<FiguredBassItem> FiguredBasses,
+    ImmutableArray<ChordNameItem> ChordNames,
+    ImmutableArray<PercentRepeatItem> PercentRepeats,
+    ImmutableArray<CrossStaffItem> CrossStaffItems,
+    ImmutableArray<GrobOverride> GrobOverrides,
+    ImmutableArray<GrobRevert> GrobReverts,
+    ImmutableArray<TrillSpannerItem> TrillSpanners,
+    HeaderPositions Header,
+    string? TempoText,
+    int TempoBeatUnit,
+    int TempoDots);
+
+/// <summary>
+/// Turns a <see cref="ScoreContent"/> snapshot plus a set of voices / staff groups
+/// into the corresponding model object. This is the one place the ~25-argument
+/// Score / MultiStaffScore constructors are invoked — previously the same call was
+/// copy-pasted across three collector methods, which is how they drifted (the
+/// multi-voice path silently omitted chord names, percent repeats and cross-staff
+/// items; the multi-staff path omits grob overrides/reverts). Those differences are
+/// now explicit here instead of hidden in duplicated argument lists.
+/// </summary>
+internal static class ScoreAssembler
+{
+    /// <summary>
+    /// Builds a single- or multi-voice <see cref="Score"/>. Grob overrides/reverts
+    /// are always included. Chord-name / percent-repeat / cross-staff items are
+    /// included only when <paramref name="includeChordExtras"/> is set — the
+    /// single-voice path sets it; the multi-voice <c>&lt;&lt; \\ &gt;&gt;</c> path
+    /// has historically not surfaced them.
+    /// </summary>
+    public static Score BuildScore(ImmutableArray<Voice> voices, ScoreContent c, bool includeChordExtras) =>
+        new Score(
+            voices,
+            c.TimeSignature,
+            c.KeySignature,
+            c.Clef,
+            c.Tempo,
+            c.Title,
+            c.Composer,
+            dynamics: c.Dynamics,
+            articulations: c.Articulations,
+            graceNotes: c.GraceNotes,
+            lyrics: c.Lyrics,
+            musicMarks: c.MusicMarks,
+            customTexts: c.CustomTexts,
+            voltaBrackets: c.VoltaBrackets,
+            tupletBrackets: c.TupletBrackets,
+            arpeggios: c.Arpeggios,
+            figuredBasses: c.FiguredBasses,
+            chordNames: includeChordExtras ? c.ChordNames : ImmutableArray<ChordNameItem>.Empty,
+            percentRepeats: includeChordExtras ? c.PercentRepeats : ImmutableArray<PercentRepeatItem>.Empty,
+            crossStaffItems: includeChordExtras ? c.CrossStaffItems : ImmutableArray<CrossStaffItem>.Empty,
+            grobOverrides: c.GrobOverrides,
+            grobReverts: c.GrobReverts,
+            trillSpanners: c.TrillSpanners,
+            header: c.Header,
+            swingSubdivision: c.SwingSubdivision)
+        {
+            TempoText = c.TempoText,
+            TempoBeatUnit = c.TempoBeatUnit,
+            TempoDots = c.TempoDots,
+        };
+
+    /// <summary>Single-voice convenience overload.</summary>
+    public static Score BuildScore(Voice voice, ScoreContent c, bool includeChordExtras) =>
+        BuildScore(ImmutableArray.Create(voice), c, includeChordExtras);
+
+    /// <summary>
+    /// Builds a <see cref="MultiStaffScore"/>. Chord-name / percent-repeat /
+    /// cross-staff items are included; grob overrides/reverts are not surfaced at the
+    /// multi-staff level (preserving the prior behavior of the collector).
+    /// </summary>
+    public static MultiStaffScore BuildMultiStaffScore(ImmutableArray<StaffGroup> staffGroups, ScoreContent c) =>
+        new MultiStaffScore(
+            staffGroups,
+            c.TimeSignature,
+            c.KeySignature,
+            c.Tempo,
+            c.Title,
+            c.Composer,
+            swingSubdivision: c.SwingSubdivision,
+            lyrics: c.Lyrics,
+            musicMarks: c.MusicMarks,
+            customTexts: c.CustomTexts,
+            voltaBrackets: c.VoltaBrackets,
+            tupletBrackets: c.TupletBrackets,
+            dynamics: c.Dynamics,
+            articulations: c.Articulations,
+            graceNotes: c.GraceNotes,
+            arpeggios: c.Arpeggios,
+            figuredBasses: c.FiguredBasses,
+            chordNames: c.ChordNames,
+            percentRepeats: c.PercentRepeats,
+            crossStaffItems: c.CrossStaffItems,
+            trillSpanners: c.TrillSpanners,
+            header: c.Header)
+        {
+            TempoText = c.TempoText,
+            TempoBeatUnit = c.TempoBeatUnit,
+            TempoDots = c.TempoDots,
+        };
+}

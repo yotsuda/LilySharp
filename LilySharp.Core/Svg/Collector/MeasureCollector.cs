@@ -670,6 +670,42 @@ public sealed partial class MeasureCollector
     private Fraction TimeSignatureFraction => new(_timeBeats, _timeBeatType);
 
     /// <summary>
+    /// Snapshots the accumulated piece-level metadata and annotation lists into an
+    /// immutable <see cref="ScoreContent"/>. Call once, after all collection is done;
+    /// <see cref="ScoreAssembler"/> turns it into the Score / MultiStaffScore. This is
+    /// the single reader of the collector's output state — the three build sites used
+    /// to each re-list ~25 arguments (and drifted).
+    /// </summary>
+    private ScoreContent CaptureScoreContent() => new(
+        new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura),
+        new KeySignature(_initialKeySharps, _initialKeyCustom), // initial key, not the post-change state
+        _initialClef, // initial clef, not the post-change state
+        _tempo,
+        _title,
+        _composer,
+        _swingSubdivision,
+        _dynamics.ToImmutableArray(),
+        _articulations.ToImmutableArray(),
+        _graceNotes.ToImmutableArray(),
+        _lyricsCollector.Lyrics.ToImmutableArray(),
+        _musicMarks.ToImmutableArray(),
+        _customTexts.ToImmutableArray(),
+        _voltaBrackets.ToImmutableArray(),
+        _tupletBrackets.ToImmutableArray(),
+        _arpeggios.ToImmutableArray(),
+        _figuredBasses.ToImmutableArray(),
+        _chordNameCollector.Items.ToImmutableArray(),
+        _percentRepeats.ToImmutableArray(),
+        _crossStaffItems.ToImmutableArray(),
+        _grobOverrides.ToImmutableArray(),
+        _grobReverts.ToImmutableArray(),
+        PairTrillSpannerEvents(),
+        new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition),
+        _tempoText,
+        _tempoBeatUnit,
+        _tempoDots);
+
+    /// <summary>
     /// Collects a Score from a syntax tree.
     /// </summary>
     public Score Collect(SyntaxTree tree, string? voiceName = null,
@@ -743,37 +779,7 @@ public sealed partial class MeasureCollector
                 tree.GetRoot(), attachedChordPart, _sectionStartMeasure, _currentStaffIndex,
                 attachedChordDisplay);
 
-        return new Score(
-            voice,
-            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura),
-            new KeySignature(_initialKeySharps, _initialKeyCustom), // Use initial key, not the final state after key changes
-            _initialClef, // Use initial clef, not the final state after clef changes
-            _tempo,
-            _title,
-            _composer,
-            _dynamics.ToImmutableArray(),
-            _articulations.ToImmutableArray(),
-            _graceNotes.ToImmutableArray(),
-            swingSubdivision: _swingSubdivision,
-            lyrics: _lyricsCollector.Lyrics.ToImmutableArray(),
-            musicMarks: _musicMarks.ToImmutableArray(),
-            customTexts: _customTexts.ToImmutableArray(),
-            voltaBrackets: _voltaBrackets.ToImmutableArray(),
-            tupletBrackets: _tupletBrackets.ToImmutableArray(),
-            arpeggios: _arpeggios.ToImmutableArray(),
-            figuredBasses: _figuredBasses.ToImmutableArray(),
-            chordNames: _chordNameCollector.Items.ToImmutableArray(),
-            percentRepeats: _percentRepeats.ToImmutableArray(),
-            crossStaffItems: _crossStaffItems.ToImmutableArray(),
-            grobOverrides: _grobOverrides.ToImmutableArray(),
-            grobReverts: _grobReverts.ToImmutableArray(),
-            trillSpanners: PairTrillSpannerEvents(),
-            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition))
-        {
-            TempoText = _tempoText,
-            TempoBeatUnit = _tempoBeatUnit,
-            TempoDots = _tempoDots,
-        };
+        return ScoreAssembler.BuildScore(voice, CaptureScoreContent(), includeChordExtras: true);
     }
 
     /// <summary>
@@ -1145,34 +1151,7 @@ public sealed partial class MeasureCollector
                 .ToImmutableArray();
         }
 
-        return new MultiStaffScore(
-            staffGroups,
-            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura),
-            new KeySignature(_initialKeySharps, _initialKeyCustom), // Use initial key, not the final state after key changes
-            _tempo,
-            _title,
-            _composer,
-            swingSubdivision: _swingSubdivision,
-            lyrics: _lyricsCollector.Lyrics.ToImmutableArray(),
-            musicMarks: _musicMarks.ToImmutableArray(),
-            customTexts: _customTexts.ToImmutableArray(),
-            voltaBrackets: _voltaBrackets.ToImmutableArray(),
-            tupletBrackets: _tupletBrackets.ToImmutableArray(),
-            dynamics: _dynamics.ToImmutableArray(),
-            articulations: _articulations.ToImmutableArray(),
-            graceNotes: _graceNotes.ToImmutableArray(),
-            arpeggios: _arpeggios.ToImmutableArray(),
-            figuredBasses: _figuredBasses.ToImmutableArray(),
-            chordNames: _chordNameCollector.Items.ToImmutableArray(),
-            percentRepeats: _percentRepeats.ToImmutableArray(),
-            crossStaffItems: _crossStaffItems.ToImmutableArray(),
-            trillSpanners: PairTrillSpannerEvents(),
-            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition))
-        {
-            TempoText = _tempoText,
-            TempoBeatUnit = _tempoBeatUnit,
-            TempoDots = _tempoDots,
-        };
+        return ScoreAssembler.BuildMultiStaffScore(staffGroups, CaptureScoreContent());
     }
 
     /// <summary>
@@ -1297,34 +1276,9 @@ public sealed partial class MeasureCollector
         _chordNameCollector.SectionStarts = _sectionAllStarts;
         _chordNameCollector.CollectBlocks(root, _sectionStartMeasure, _currentStaffIndex);
 
-        return new Score(
-            voices.ToImmutableArray(),
-            new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura),
-            new KeySignature(_initialKeySharps, _initialKeyCustom),
-            _initialClef,
-            _tempo,
-            _title,
-            _composer,
-            _dynamics.ToImmutableArray(),
-            _articulations.ToImmutableArray(),
-            _graceNotes.ToImmutableArray(),
-            swingSubdivision: _swingSubdivision,
-            lyrics: _lyricsCollector.Lyrics.ToImmutableArray(),
-            musicMarks: _musicMarks.ToImmutableArray(),
-            customTexts: _customTexts.ToImmutableArray(),
-            voltaBrackets: _voltaBrackets.ToImmutableArray(),
-            tupletBrackets: _tupletBrackets.ToImmutableArray(),
-            arpeggios: _arpeggios.ToImmutableArray(),
-            figuredBasses: _figuredBasses.ToImmutableArray(),
-            grobOverrides: _grobOverrides.ToImmutableArray(),
-            grobReverts: _grobReverts.ToImmutableArray(),
-            trillSpanners: PairTrillSpannerEvents(),
-            header: new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition))
-        {
-            TempoText = _tempoText,
-            TempoBeatUnit = _tempoBeatUnit,
-            TempoDots = _tempoDots,
-        };
+        // Multi-voice single-staff (<< \\ >>) has historically not surfaced chord
+        // names / percent repeats / cross-staff items — preserved via includeChordExtras: false.
+        return ScoreAssembler.BuildScore(voices.ToImmutableArray(), CaptureScoreContent(), includeChordExtras: false);
     }
 
     /// <summary>
