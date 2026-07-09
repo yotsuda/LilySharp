@@ -344,28 +344,14 @@ internal sealed class PageBreaker
     {
         int n = systems.Count;
 
-        // Estimate page count range
+        // Page-count range for the DP. maxPages = n (one system per page) is the
+        // correct upper bound: the demerit-optimal layout can legitimately use any
+        // count up to that, so it must not be capped lower. (A previous "better upper
+        // bound" block here was dead — its inner loop did no height check, its result
+        // was discarded, and it left maxPages == n — so it is removed.)
         // LILYPOND-REF: lily/page-spacing.cc:146-179 — iterate min_pages..max_pages
         int minPages = 1;
-        int maxPages = n; // At most one system per page
-
-        // Better upper bound: fit as many systems as possible per page
-        {
-            int sysIdx = 0;
-            int pages = 0;
-            while (sysIdx < n)
-            {
-                pages++;
-                sysIdx++; // At least one system per page
-                // Greedily add more while they fit (rough estimate)
-                while (sysIdx < n)
-                {
-                    // Simple height check
-                    sysIdx++;
-                }
-            }
-            maxPages = Math.Min(maxPages, n);
-        }
+        int maxPages = n;
 
         // 2D DP: dp[j * (maxPages+1) + p] = min demerits for systems 0..j-1 on p pages
         int cols = maxPages + 1;

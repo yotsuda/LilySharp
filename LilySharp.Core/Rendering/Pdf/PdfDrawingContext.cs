@@ -25,6 +25,10 @@ internal sealed class PdfDrawingContext : IDrawingContext
     private readonly double _scale;  // points per staff-space
     private readonly double _originPt; // page-margin offset applied to positions
 
+    // XFont is immutable and reused across every glyph/text of the same face+size;
+    // a full score draws thousands, so cache them instead of allocating per draw.
+    private readonly Dictionary<(string Family, double Size, XFontStyle Style), XFont> _fontCache = new();
+
     public PdfDrawingContext(XGraphics gfx, double pointsPerSpace, double originPt = 0)
     {
         _gfx = gfx;
@@ -39,6 +43,14 @@ internal sealed class PdfDrawingContext : IDrawingContext
     {
         var col = c ?? Color.Black;
         return XColor.FromArgb(col.A, col.R, col.G, col.B);
+    }
+
+    private XFont GetFont(string family, double size, XFontStyle style = XFontStyle.Regular)
+    {
+        var key = (family, size, style);
+        if (!_fontCache.TryGetValue(key, out var font))
+            _fontCache[key] = font = new XFont(family, size, style);
+        return font;
     }
 
     public void DrawLine(double x1, double y1, double x2, double y2,
@@ -127,7 +139,7 @@ internal sealed class PdfDrawingContext : IDrawingContext
 
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
     {
-        var font = new XFont("Emmentaler", T(fontSize));
+        var font = GetFont("Emmentaler", T(fontSize));
         // SVG <text y="..."> places the baseline at y. PdfSharpCore's
         // DrawString with TopLeft format places the top of the box at y;
         // BaseLineLeft was removed in PdfSharpCore. We approximate by
@@ -150,7 +162,7 @@ internal sealed class PdfDrawingContext : IDrawingContext
             (false, true) => XFontStyle.Italic,
             _ => XFontStyle.Regular,
         };
-        var font = new XFont(fontFamily, T(fontSize), pdfStyle);
+        var font = GetFont(fontFamily, T(fontSize), pdfStyle);
         var fmt = anchor switch
         {
             TextAnchor.Middle => XStringFormats.BaseLineCenter,
