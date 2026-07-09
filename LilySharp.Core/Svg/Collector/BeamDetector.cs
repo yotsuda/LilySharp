@@ -204,7 +204,11 @@ internal sealed class BeamDetector
         bool? forceStemUp = null)
     {
         var allEntries = new List<(MusicItem Item, int Index, Fraction StartPos, int Measure)>();
-        Fraction running = Fraction.Zero;
+        // Items this pair WOULD consume — committed to the shared `consumed` set
+        // only once we know a beam group is actually built. A degenerate pair
+        // (fewer than two beamable items) must not suppress the per-measure pass
+        // from beaming the spanned items itself.
+        var pendingConsumed = new List<(int, int)>();
 
         for (int mi = startMeasure; mi <= endMeasure; mi++)
         {
@@ -225,12 +229,15 @@ internal sealed class BeamDetector
                     allEntries.Add((item, ii, positionInMeasure, mi));
                 }
                 positionInMeasure += GetDuration(item);
-                consumed.Add((mi, ii));
+                pendingConsumed.Add((mi, ii));
             }
         }
 
         if (allEntries.Count < 2)
             return;
+
+        foreach (var key in pendingConsumed)
+            consumed.Add(key);
 
         // Build per-member metadata mirroring CreateBeamGroup but with explicit measure index.
         var members = new List<BeamMember>(allEntries.Count);
