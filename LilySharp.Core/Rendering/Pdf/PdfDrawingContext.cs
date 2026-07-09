@@ -61,7 +61,12 @@ internal sealed class PdfDrawingContext : IDrawingContext
         if (dash is { } d)
         {
             pen.DashStyle = XDashStyle.Custom;
-            pen.DashPattern = new[] { d.On, d.Off };
+            // PdfSharpCore's DashPattern is in multiples of the pen WIDTH, but d.On/d.Off
+            // are in staff-spaces (like the SVG/PNG backends). Divide by the staff-space
+            // stroke width so the dash lengths match the other backends.
+            pen.DashPattern = strokeWidth > 0
+                ? new[] { d.On / strokeWidth, d.Off / strokeWidth }
+                : new[] { d.On, d.Off };
         }
         pen.LineCap = cap == LineCap.Round ? XLineCap.Round : XLineCap.Flat;
         _gfx.DrawLine(pen, X(x1), X(y1), X(x2), X(y2));
