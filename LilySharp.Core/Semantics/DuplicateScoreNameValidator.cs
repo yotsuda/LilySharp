@@ -45,7 +45,7 @@ internal sealed class DuplicateScoreNameValidator : ISemanticValidator
             var tok = nameToken ?? keyword;
             if (tok == null) continue;
             string label = name.Length == 0 ? "the default (unnamed) score" : $"score name \"{name}\"";
-            _diagnostics.Error(new TextSpan(tok.Position, tok.FullWidth),
+            _diagnostics.Error(tok.Span,
                 DiagnosticCodes.DuplicateScoreName,
                 $"Duplicate {label}; each score must have a unique name");
         }

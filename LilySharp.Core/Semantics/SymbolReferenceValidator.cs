@@ -87,7 +87,7 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                 if (!_definedVariables.Contains(varName) && !_definedPhrases.Contains(varName))
                 {
                     _diagnostics.Error(
-                        new TextSpan(varRef.Name.Position, varRef.Name.FullWidth),
+                        varRef.Name.Span,
                         DiagnosticCodes.UndefinedVariable,
                         $"Undefined variable or phrase: '{varName}'");
                 }
@@ -98,7 +98,7 @@ internal sealed class SymbolReferenceValidator : ISemanticValidator
                 if (!_definedSections.Contains(sectionName))
                 {
                     _diagnostics.Error(
-                        new TextSpan(sectionRef.Position, sectionRef.FullWidth),
+                        sectionRef.Span,
                         DiagnosticCodes.UndefinedSection,
                         $"Undefined section: '{sectionName}'");
                 }

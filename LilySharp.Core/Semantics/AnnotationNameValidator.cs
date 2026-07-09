@@ -104,7 +104,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
                     WarnUnknown(mark, name);
                 else if (IsBareRehearsalMarkLabel(name))
                     _diagnostics.Error(
-                        new TextSpan(mark.Position, mark.FullWidth),
+                        mark.Span,
                         DiagnosticCodes.MarkLabelNotQuoted,
                         "a rehearsal mark label must be quoted: write @mark(\"A\") not @mark(A).");
                 break;
@@ -189,7 +189,7 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
             message += $" Did you mean '@{suggestion}'?";
 
         _diagnostics.Warning(
-            new TextSpan(node.Position, node.FullWidth),
+            node.Span,
             DiagnosticCodes.UnknownAnnotation,
             message);
     }

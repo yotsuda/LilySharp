@@ -118,6 +118,6 @@ internal sealed class SymbolCaseValidator : ISemanticValidator
     }
 
     private void Error(SyntaxNode token, string message) =>
-        _diagnostics.Error(new TextSpan(token.Position, token.FullWidth),
+        _diagnostics.Error(token.Span,
             DiagnosticCodes.UnknownSymbolCase, message);
 }

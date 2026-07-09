@@ -57,7 +57,7 @@ internal sealed class DuplicateCellValidator : ISemanticValidator
     private void Record(HashSet<(string, string)> seen, string section, string part, SyntaxTokenNode token)
     {
         if (seen.Add((section, part))) return;
-        _diagnostics.Error(new TextSpan(token.Position, token.FullWidth),
+        _diagnostics.Error(token.Span,
             DiagnosticCodes.DuplicateCell,
             $"Section \"{section}\" already has music for part \"{part}\"; " +
             "each section/part cell may be defined only once");

@@ -50,7 +50,7 @@ internal sealed class StructureDeclarationValidator : ISemanticValidator
                 if (n++ == 0) continue;
                 var keyword = structure.StructureKeyword;
                 _diagnostics.Error(
-                    new TextSpan(keyword.Position, keyword.FullWidth),
+                    keyword.Span,
                     DiagnosticCodes.MultipleStructureDeclarations,
                     inScore
                         ? "Only one 'structure' declaration is allowed per score. "
