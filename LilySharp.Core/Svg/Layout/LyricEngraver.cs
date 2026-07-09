@@ -392,24 +392,6 @@ internal sealed class LyricEngraver
     }
 
     /// <summary>
-    /// Get the X position of a note for a lyric item.
-    /// </summary>
-    private double? GetNoteX(LyricItem lyric, IReadOnlyList<MeasureLayout> measureLayouts)
-    {
-        if (lyric.MeasureIndex < 0 || lyric.MeasureIndex >= measureLayouts.Count)
-            return null;
-
-        var measureLayout = measureLayouts[lyric.MeasureIndex];
-
-        if (lyric.VoiceId > 0 || lyric.IsLyricsRow)
-            return measureLayout.X + measureLayout.GetXForTiming(lyric.Timing);
-
-        if (lyric.ItemIndex < 0 || lyric.ItemIndex >= measureLayout.ItemPositions.Count)
-            return null;
-        return measureLayout.X + measureLayout.ItemPositions[lyric.ItemIndex];
-    }
-
-    /// <summary>
     /// Estimate text width in staff spaces using serif font character width ratios.
     /// </summary>
     /// <remarks>

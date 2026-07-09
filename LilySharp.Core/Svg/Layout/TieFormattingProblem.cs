@@ -45,21 +45,6 @@ internal sealed class TieCandidate
 
     public double Demerits { get; set; }
     public bool IsScored { get; set; }
-
-    public TieCandidate Clone() => new()
-    {
-        StartX = StartX,
-        StartY = StartY,
-        EndX = EndX,
-        EndY = EndY,
-        Height = Height,
-        CurveUp = CurveUp,
-        AttachmentY = AttachmentY,
-        Position = Position,
-        DeltaY = DeltaY,
-        Demerits = Demerits,
-        IsScored = IsScored
-    };
 }
 
 /// <summary>

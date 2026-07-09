@@ -89,7 +89,6 @@ internal static class TupletBracketEngraver
     private const double StaffMiddleY = 2.0;    // staff-top frame: middle line = StaffHeight/2
     private const double YOffsetAbove = -2.5;  // Above staff
     private const double YOffsetBelow = 5.5;   // Below staff
-    private const double HalfNoteheadWidth = 0.59;  // NoteheadBlackWidth / 2
 
     // LILYPOND-REF: scm/define-grobs.scm TupletBracket.max-slope
     private const double MaxSlope = 0.5;

@@ -39,19 +39,6 @@ internal sealed class SlurCandidate
     /// </summary>
     public int NextScorerTodo { get; set; } = 1; // Start after INITIAL_SCORE
     public bool IsDone => NextScorerTodo >= 5; // NUM_SCORERS
-
-    public SlurCandidate Clone() => new()
-    {
-        StartX = StartX,
-        StartY = StartY,
-        EndX = EndX,
-        EndY = EndY,
-        Height = Height,
-        CurveUp = CurveUp,
-        YOffset = YOffset,
-        Demerits = Demerits,
-        NextScorerTodo = NextScorerTodo
-    };
 }
 
 /// <summary>

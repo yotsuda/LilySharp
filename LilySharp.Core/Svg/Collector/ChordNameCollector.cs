@@ -438,17 +438,6 @@ internal sealed class ChordNameCollector
         return rests.MoveToImmutable();
     }
 
-    /// <summary>The first measure of the section a block sits in (0 at top level), so a
-    /// chord block inside section B starts under B's bars.</summary>
-    private static int StartMeasureOf(SyntaxNode block, IReadOnlyDictionary<string, int> sectionStartMeasure)
-    {
-        for (var n = block.Parent; n != null; n = n.Parent)
-            if (n is SectionDeclarationSyntax section
-                && sectionStartMeasure.TryGetValue(section.SectionName, out int s))
-                return s;
-        return 0;
-    }
-
     /// <summary>
     /// Resolves a chord entry to its display text and (when the quality is known) its
     /// structure. The root step comes from the pitch letter, the alteration from its

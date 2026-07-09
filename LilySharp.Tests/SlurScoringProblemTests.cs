@@ -159,34 +159,6 @@ public class SlurScoringProblemTests
     }
 
     [Fact]
-    public void SlurCandidate_Clone_CreatesIndependentCopy()
-    {
-        // Arrange
-        var original = new SlurCandidate
-        {
-            StartX = 10,
-            StartY = 2,
-            EndX = 50,
-            EndY = 2,
-            Height = 1.5,
-            CurveUp = true,
-            YOffset = 0.3,
-            Demerits = 5.0
-        };
-
-        // Act
-        var clone = original.Clone();
-        clone.Demerits = 10.0;
-        clone.YOffset = 0.6;
-
-        // Assert
-        Assert.Equal(5.0, original.Demerits);
-        Assert.Equal(0.3, original.YOffset);
-        Assert.Equal(10.0, clone.Demerits);
-        Assert.Equal(0.6, clone.YOffset);
-    }
-
-    [Fact]
     public void SlurScoreParameters_Default_MatchesLilyPondLayoutSlur()
     {
         var p = SlurScoreParameters.Default;

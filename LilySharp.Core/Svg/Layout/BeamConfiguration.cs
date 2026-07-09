@@ -58,12 +58,6 @@ internal sealed class BeamConfiguration
         ScoreCard += $"{reason}: {demerit:F2}";
     }
 
-    /// <summary>Creates a new configuration with offset.</summary>
-    public static BeamConfiguration CreateWithOffset(double leftY, double rightY, double leftOffset, double rightOffset)
-    {
-        return new BeamConfiguration(leftY + leftOffset, rightY + rightOffset);
-    }
-
     /// <summary>Gets the slope of this beam configuration.</summary>
     public double GetSlope(double xSpan)
     {
