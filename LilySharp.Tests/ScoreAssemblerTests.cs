@@ -87,7 +87,7 @@ public class ScoreAssemblerTests
     public void BuildScore_SingleVoice_WrapsVoiceAndFlowsMetadata()
     {
         var c = MakeContent();
-        var s = ScoreAssembler.BuildScore(EmptyVoice("melody"), c, includeChordExtras: true);
+        var s = ScoreAssembler.BuildScore(EmptyVoice("melody"), c);
 
         Assert.Single(s.Voices);
         Assert.Equal("melody", s.Voices[0].Name);
@@ -104,7 +104,7 @@ public class ScoreAssemblerTests
     [Fact]
     public void BuildScore_SetsInitOnlyTempoProperties()
     {
-        var s = ScoreAssembler.BuildScore(EmptyVoice(), MakeContent(), includeChordExtras: true);
+        var s = ScoreAssembler.BuildScore(EmptyVoice(), MakeContent());
         Assert.Equal("Allegro", s.TempoText);
         Assert.Equal(2, s.TempoBeatUnit);
         Assert.Equal(1, s.TempoDots);
@@ -114,15 +114,17 @@ public class ScoreAssemblerTests
     public void BuildScore_MultiVoice_KeepsAllVoices()
     {
         var voices = ImmutableArray.Create(EmptyVoice("v1"), EmptyVoice("v2"), EmptyVoice("v3"));
-        var s = ScoreAssembler.BuildScore(voices, MakeContent(), includeChordExtras: false);
+        var s = ScoreAssembler.BuildScore(voices, MakeContent());
         Assert.Equal(3, s.Voices.Length);
     }
 
     [Fact]
-    public void BuildScore_IncludeChordExtrasTrue_PreservesChordExtras()
+    public void BuildScore_IncludesChordExtras()
     {
+        // Chord names / percent repeats / cross-staff flow through for both the
+        // single- and multi-voice Score paths (the multi-voice path used to drop them).
         var c = MakeContent(chordNames: OneChord(), percentRepeats: OnePercent(), crossStaff: OneCrossStaff());
-        var s = ScoreAssembler.BuildScore(EmptyVoice(), c, includeChordExtras: true);
+        var s = ScoreAssembler.BuildScore(EmptyVoice(), c);
 
         Assert.Single(s.ChordNames);
         Assert.Single(s.PercentRepeats);
@@ -130,24 +132,22 @@ public class ScoreAssemblerTests
     }
 
     [Fact]
-    public void BuildScore_IncludeChordExtrasFalse_OmitsChordExtras()
+    public void BuildScore_MultiVoice_StillIncludesChordExtras()
     {
-        // Even though the snapshot carries them, the multi-voice path omits these
-        // three — the historical behavior this flag makes explicit.
-        var c = MakeContent(chordNames: OneChord(), percentRepeats: OnePercent(), crossStaff: OneCrossStaff());
-        var s = ScoreAssembler.BuildScore(EmptyVoice(), c, includeChordExtras: false);
+        // Regression for the dropped-chord-names bug: a multi-voice Score keeps them.
+        var c = MakeContent(chordNames: OneChord(), percentRepeats: OnePercent());
+        var voices = ImmutableArray.Create(EmptyVoice("v1"), EmptyVoice("v2"));
+        var s = ScoreAssembler.BuildScore(voices, c);
 
-        Assert.Empty(s.ChordNames);
-        Assert.Empty(s.PercentRepeats);
-        Assert.Empty(s.CrossStaffItems);
+        Assert.Single(s.ChordNames);
+        Assert.Single(s.PercentRepeats);
     }
 
     [Fact]
-    public void BuildScore_AlwaysIncludesGrobOverridesAndReverts()
+    public void BuildScore_IncludesGrobOverridesAndReverts()
     {
-        // Grob overrides/reverts flow through regardless of includeChordExtras.
         var c = MakeContent(grobOverrides: OneOverride(), grobReverts: OneRevert());
-        var s = ScoreAssembler.BuildScore(EmptyVoice(), c, includeChordExtras: false);
+        var s = ScoreAssembler.BuildScore(EmptyVoice(), c);
 
         Assert.Single(s.GrobOverrides);
         Assert.Single(s.GrobReverts);

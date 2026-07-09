@@ -220,6 +220,23 @@ public class ChordNameTests
     }
 
     [Fact]
+    public void Collector_ChordName_KeptInMultiVoiceScore()
+    {
+        // Regression: a single-staff score with voice { } polyphony used to drop
+        // chord names (BuildMultiVoiceScore omitted them). It must keep them, just
+        // like the single-voice case above.
+        var source = "c4 @chord(c) voice { d e } voice { d e } f";
+        var tree = SyntaxTree.Parse(source);
+        Assert.Empty(tree.Diagnostics); // supported syntax, no rejection
+
+        var score = new MeasureCollector().Collect(tree);
+
+        Assert.True(score.Voices.Length >= 2); // reconstructed as multiple voices
+        Assert.Single(score.ChordNames);
+        Assert.Equal("C", score.ChordNames[0].ChordText);
+    }
+
+    [Fact]
     public void Collector_ChordName_MinorSeventh()
     {
         var source = "c4 @chord(c:m7) d e f";

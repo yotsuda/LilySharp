@@ -779,7 +779,7 @@ public sealed partial class MeasureCollector
                 tree.GetRoot(), attachedChordPart, _sectionStartMeasure, _currentStaffIndex,
                 attachedChordDisplay);
 
-        return ScoreAssembler.BuildScore(voice, CaptureScoreContent(), includeChordExtras: true);
+        return ScoreAssembler.BuildScore(voice, CaptureScoreContent());
     }
 
     /// <summary>
@@ -1276,9 +1276,10 @@ public sealed partial class MeasureCollector
         _chordNameCollector.SectionStarts = _sectionAllStarts;
         _chordNameCollector.CollectBlocks(root, _sectionStartMeasure, _currentStaffIndex);
 
-        // Multi-voice single-staff (<< \\ >>) has historically not surfaced chord
-        // names / percent repeats / cross-staff items — preserved via includeChordExtras: false.
-        return ScoreAssembler.BuildScore(voices.ToImmutableArray(), CaptureScoreContent(), includeChordExtras: false);
+        // A single-staff score surfaces the same annotations whether it has one
+        // voice or several — a multi-voice (voice { } blocks) score keeps its chord
+        // names / percent repeats, which the old construction here silently dropped.
+        return ScoreAssembler.BuildScore(voices.ToImmutableArray(), CaptureScoreContent());
     }
 
     /// <summary>

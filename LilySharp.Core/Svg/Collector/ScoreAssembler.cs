@@ -63,19 +63,19 @@ internal sealed record ScoreContent(
 /// Score / MultiStaffScore constructors are invoked — previously the same call was
 /// copy-pasted across three collector methods, which is how they drifted (the
 /// multi-voice path silently omitted chord names, percent repeats and cross-staff
-/// items; the multi-staff path omits grob overrides/reverts). Those differences are
-/// now explicit here instead of hidden in duplicated argument lists.
+/// items — a copy-paste oversight when voice{}-block support was added). Both Score
+/// paths now surface the full annotation set; the multi-staff path still omits grob
+/// overrides/reverts (not surfaced at that level).
 /// </summary>
 internal static class ScoreAssembler
 {
     /// <summary>
-    /// Builds a single- or multi-voice <see cref="Score"/>. Grob overrides/reverts
-    /// are always included. Chord-name / percent-repeat / cross-staff items are
-    /// included only when <paramref name="includeChordExtras"/> is set — the
-    /// single-voice path sets it; the multi-voice <c>&lt;&lt; \\ &gt;&gt;</c> path
-    /// has historically not surfaced them.
+    /// Builds a single- or multi-voice <see cref="Score"/> with the full annotation
+    /// set. A single-staff score therefore renders the same annotations (chord names,
+    /// percent repeats, etc.) whether it has one voice or several — the multi-voice
+    /// path used to drop chord names / percent repeats / cross-staff items.
     /// </summary>
-    public static Score BuildScore(ImmutableArray<Voice> voices, ScoreContent c, bool includeChordExtras) =>
+    public static Score BuildScore(ImmutableArray<Voice> voices, ScoreContent c) =>
         new Score(
             voices,
             c.TimeSignature,
@@ -94,9 +94,9 @@ internal static class ScoreAssembler
             tupletBrackets: c.TupletBrackets,
             arpeggios: c.Arpeggios,
             figuredBasses: c.FiguredBasses,
-            chordNames: includeChordExtras ? c.ChordNames : ImmutableArray<ChordNameItem>.Empty,
-            percentRepeats: includeChordExtras ? c.PercentRepeats : ImmutableArray<PercentRepeatItem>.Empty,
-            crossStaffItems: includeChordExtras ? c.CrossStaffItems : ImmutableArray<CrossStaffItem>.Empty,
+            chordNames: c.ChordNames,
+            percentRepeats: c.PercentRepeats,
+            crossStaffItems: c.CrossStaffItems,
             grobOverrides: c.GrobOverrides,
             grobReverts: c.GrobReverts,
             trillSpanners: c.TrillSpanners,
@@ -109,8 +109,8 @@ internal static class ScoreAssembler
         };
 
     /// <summary>Single-voice convenience overload.</summary>
-    public static Score BuildScore(Voice voice, ScoreContent c, bool includeChordExtras) =>
-        BuildScore(ImmutableArray.Create(voice), c, includeChordExtras);
+    public static Score BuildScore(Voice voice, ScoreContent c) =>
+        BuildScore(ImmutableArray.Create(voice), c);
 
     /// <summary>
     /// Builds a <see cref="MultiStaffScore"/>. Chord-name / percent-repeat /
