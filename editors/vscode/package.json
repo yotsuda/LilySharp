@@ -2,7 +2,7 @@
   "name": "lilysharp",
   "displayName": "Lily#",
   "description": "Language support and live score preview for Lily#, a LilyPond-inspired music notation language",
-  "version": "0.3.0-dev.10",
+  "version": "0.3.0-dev.11",
   "publisher": "ytsuda",
   "license": "GPL-3.0-or-later",
   "repository": {

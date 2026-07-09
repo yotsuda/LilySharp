@@ -3636,3 +3636,4 @@ public sealed class LilySharpLanguageServer
             or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword;
     }
 }
+
