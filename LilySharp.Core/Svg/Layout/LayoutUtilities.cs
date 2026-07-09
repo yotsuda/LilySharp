@@ -56,6 +56,18 @@ internal static class LayoutUtilities
     }
 
     /// <summary>
+    /// The measures a per-staff annotation is positioned against: the annotation's own
+    /// staff measures when a multi-staff map is supplied and contains the staff, else
+    /// the fallback (the single- or primary-voice measures). Shared by the annotation
+    /// engravers, which all repeated this ternary.
+    /// </summary>
+    public static ImmutableArray<Measure> ResolveStaffMeasures(
+        Dictionary<int, ImmutableArray<Measure>>? measuresByStaff, int staffIndex,
+        ImmutableArray<Measure> fallback)
+        => measuresByStaff != null && measuresByStaff.TryGetValue(staffIndex, out var mm)
+            ? mm : fallback;
+
+    /// <summary>
     /// Builds a map from measure index to (system, measureLayout) for quick lookup.
     /// </summary>
     public static Dictionary<int, (SystemLayout System, MeasureLayout Measure)> BuildMeasureMap(

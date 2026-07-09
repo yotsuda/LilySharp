@@ -131,8 +131,7 @@ internal static class ChordNameEngraver
                 continue;
 
             var ml = measureLayouts[chord.MeasureIndex];
-            var cnMeasures = measuresByStaff != null
-                && measuresByStaff.TryGetValue(chord.StaffIndex, out var mm) ? mm : measures;
+            var cnMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, chord.StaffIndex, measures);
             double staffOffset = staffYAt?.Invoke(chord.MeasureIndex, chord.StaffIndex) ?? 0;
 
             // chordnames entries carry their own rhythm: place them by musical

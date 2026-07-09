@@ -154,8 +154,7 @@ internal static class DynamicEngraver
             // within the system (so it sits under its own staff, not the first).
             var dynVoices = voicesByStaff != null
                 && voicesByStaff.TryGetValue(dynamic.StaffIndex, out var vv) ? vv : fallbackVoices;
-            var dynMeasures = measuresByStaff != null
-                && measuresByStaff.TryGetValue(dynamic.StaffIndex, out var mm) ? mm : score.Voice.Measures;
+            var dynMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, dynamic.StaffIndex, score.Voice.Measures);
             double staffOffset = staffYAt?.Invoke(dynamic.MeasureIndex, dynamic.StaffIndex) ?? 0;
 
             // Calculate X position (centered on the note)

@@ -168,8 +168,7 @@ internal static class TupletBracketEngraver
             ImmutableArray<Measure> tupMeasures =
                 !tupVoices.IsDefaultOrEmpty && tuplet.VoiceIndex < tupVoices.Length
                     ? tupVoices[tuplet.VoiceIndex].Measures
-                    : (measuresByStaff != null
-                        && measuresByStaff.TryGetValue(tuplet.StaffIndex, out var mm) ? mm : measures);
+                    : LayoutUtilities.ResolveStaffMeasures(measuresByStaff, tuplet.StaffIndex, measures);
             double staffOffset = staffYAt?.Invoke(tuplet.MeasureIndex, tuplet.StaffIndex) ?? 0;
 
             double startOffset = LayoutUtilities.GetItemXOffset(

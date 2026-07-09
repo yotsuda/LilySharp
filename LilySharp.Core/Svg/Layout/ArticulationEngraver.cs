@@ -163,8 +163,7 @@ internal static class ArticulationEngraver
             // Resolve this articulation's OWN staff (multi-staff): its measures
             // (to read the right note's staff position) and the staff's vertical
             // offset within the system, so it sits under its own staff.
-            var artMeasures = measuresByStaff != null
-                && measuresByStaff.TryGetValue(articulation.StaffIndex, out var mm) ? mm : score.Voice.Measures;
+            var artMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, articulation.StaffIndex, score.Voice.Measures);
             double staffOffset = staffYAt?.Invoke(articulation.MeasureIndex, articulation.StaffIndex) ?? 0;
 
             if (articulation.MeasureIndex >= artMeasures.Length)

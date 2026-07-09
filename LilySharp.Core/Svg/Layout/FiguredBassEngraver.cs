@@ -95,8 +95,7 @@ internal static class FiguredBassEngraver
 
             // Resolve this figure's OWN staff (multi-staff): its measures (X) and
             // the staff's vertical offset, so it sits below its own staff.
-            var fbMeasures = measuresByStaff != null
-                && measuresByStaff.TryGetValue(fb.StaffIndex, out var mm) ? mm : measures;
+            var fbMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, fb.StaffIndex, measures);
             double staffOffset = staffYAt?.Invoke(fb.MeasureIndex, fb.StaffIndex) ?? 0;
 
             double x = measureLayout.X + LayoutUtilities.GetItemXOffset(

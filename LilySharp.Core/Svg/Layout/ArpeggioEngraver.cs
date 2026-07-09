@@ -93,8 +93,7 @@ internal static class ArpeggioEngraver
 
             // Resolve this arpeggio's OWN staff (multi-staff): its measures (for
             // the item X) and the staff's vertical offset within the system.
-            var arpMeasures = measuresByStaff != null
-                && measuresByStaff.TryGetValue(arp.StaffIndex, out var mm) ? mm : measures;
+            var arpMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, arp.StaffIndex, measures);
             double staffOffset = staffYAt?.Invoke(arp.MeasureIndex, arp.StaffIndex) ?? 0;
 
             // Get X position of the chord item, then place arpeggio to the left

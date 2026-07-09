@@ -118,8 +118,7 @@ internal static class GraceNoteEngraver
             // Resolve this grace's OWN staff (multi-staff): its measures (for the
             // main-note X / accidental) and the staff's vertical offset (carried
             // to the renderer via StaffYOffset, since it recomputes note Y).
-            var graceMeasures = measuresByStaff != null
-                && measuresByStaff.TryGetValue(grace.StaffIndex, out var gm) ? gm : score.Voice.Measures;
+            var graceMeasures = LayoutUtilities.ResolveStaffMeasures(measuresByStaff, grace.StaffIndex, score.Voice.Measures);
             double staffOffset = staffYByIndex != null
                 && staffYByIndex.TryGetValue(grace.StaffIndex, out var so) ? so : 0;
             // Tab staves render grace notes as small fret numbers, not noteheads.
