@@ -614,6 +614,21 @@ public sealed class LilySharpLanguageServer
         return true;
     }
 
+    /// <summary>
+    /// Precomputes, for indices <c>0..length-1</c>, whether each character is live
+    /// code (not in a string/comment). Lets a BACKWARD scanner ignore braces in
+    /// strings/comments, which the forward <see cref="IsCodeChar"/> state machine
+    /// cannot answer out of order.
+    /// </summary>
+    private static bool[] CodeMask(string text, int length)
+    {
+        var mask = new bool[length];
+        bool inString = false, inLine = false, inBlock = false;
+        for (int i = 0; i < length; i++)
+            mask[i] = IsCodeChar(text, i, ref inString, ref inLine, ref inBlock);
+        return mask;
+    }
+
     /// <summary>Quality-token completions offered after a chord's ':' inside a chords block.</summary>
     private static CompletionList GetChordQualityCompletions()
     {
@@ -1541,8 +1556,11 @@ public sealed class LilySharpLanguageServer
     {
         insideVoice = false;
         int depth = 0;
-        for (int i = Math.Min(offset, text.Length) - 1; i >= 0; i--)
+        int end = Math.Min(offset, text.Length);
+        var code = CodeMask(text, end); // ignore braces inside strings/comments
+        for (int i = end - 1; i >= 0; i--)
         {
+            if (!code[i]) continue;
             char ch = text[i];
             if (ch == '}') { depth++; continue; }
             if (ch != '{') continue;

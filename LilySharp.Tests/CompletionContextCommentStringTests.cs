@@ -72,4 +72,16 @@ public class CompletionContextCommentStringTests
         var doc = "title \"score { x\"\n";
         Assert.False(LilySharpLanguageServer.IsInsideScoreBlock(doc, doc.Length));
     }
+
+    [Fact]
+    public void PercussionScan_NotFooledByBraceInString()
+    {
+        // The backward percussion scan must ignore a '}' inside a string; otherwise
+        // the stray brace mis-pairs the braces and the drum part is not detected.
+        var clean = "part dr { clef percussion }\nsection A { dr {\n  hihat4\n  ";
+        var stray = "part dr { clef percussion }\nsection A { dr {\n  \"x } y\"\n  ";
+
+        Assert.True(LilySharpLanguageServer.IsInsidePercussionPartMusic(clean, clean.Length, out _));
+        Assert.True(LilySharpLanguageServer.IsInsidePercussionPartMusic(stray, stray.Length, out _));
+    }
 }
