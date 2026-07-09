@@ -91,4 +91,34 @@ public class KeySpellingTests
     {
         Assert.Null(KeySpelling.SharpsFor("h", "major"));
     }
+
+    [Fact]
+    public void CSharpMajor_AllSevenSingleSharps()
+    {
+        // Boundary: 7 sharps = every letter single-sharp, no doubles.
+        int sharps = KeySpelling.SharpsFor("cis", "major")!.Value;
+        Assert.Equal(7, sharps);
+        Assert.Equal(new[] { "cis", "dis", "eis", "fis", "gis", "ais", "bis" }, Diatonic(sharps));
+    }
+
+    [Fact]
+    public void CSharpLydian_DoubleSharpsF()
+    {
+        // 8 sharps: the order wraps and F is double-sharped (fisis). The old
+        // Alteration capped at 7 and dropped this, spelling F as "fis".
+        int sharps = KeySpelling.SharpsFor("cis", "lydian")!.Value;
+        Assert.Equal(8, sharps);
+        Assert.Equal(new[] { "cis", "dis", "eis", "fisis", "gis", "ais", "bis" }, Diatonic(sharps));
+        Assert.Equal(2, KeySpelling.Alteration(KeySpelling.StepOf('f'), sharps));
+    }
+
+    [Fact]
+    public void EFlatLocrian_DoubleFlatsB()
+    {
+        // 8 flats: B is double-flatted (beses), the rest single.
+        int flats = KeySpelling.SharpsFor("ees", "locrian")!.Value;
+        Assert.Equal(-8, flats);
+        Assert.Equal(new[] { "ces", "des", "ees", "fes", "ges", "aes", "beses" }, Diatonic(flats));
+        Assert.Equal(-2, KeySpelling.Alteration(KeySpelling.StepOf('b'), flats));
+    }
 }

@@ -82,7 +82,7 @@ public sealed partial class MeasureCollector
                 int alt = GetKeySignatureAlteration(step);
                 accidental = alt switch
                 {
-                    1 => "sharp", -1 => "flat", _ => "natural"
+                    >= 2 => "doubleSharp", 1 => "sharp", <= -2 => "doubleFlat", -1 => "flat", _ => "natural"
                 };
             }
         }
@@ -113,7 +113,7 @@ public sealed partial class MeasureCollector
                 int alt = GetKeySignatureAlteration(step);
                 editorialAccidental = alt switch
                 {
-                    1 => "sharp", -1 => "flat", _ => "natural"
+                    >= 2 => "doubleSharp", 1 => "sharp", <= -2 => "doubleFlat", -1 => "flat", _ => "natural"
                 };
             }
             accidental = null; // suggestion replaces the left-of-note accidental

@@ -66,21 +66,26 @@ public static class KeySpelling
     }
 
     /// <summary>
-    /// The alteration (-1 flat, 0 natural, +1 sharp) the key signature gives a
-    /// diatonic step (c=0, d=1, … b=6).
+    /// The alteration the key signature gives a diatonic step (c=0, d=1, … b=6):
+    /// 0 natural, ±1 single sharp/flat, ±2 double. Keys past 7 accidentals wrap the
+    /// order and double the first step(s) — e.g. C-sharp lydian (8 sharps) double-
+    /// sharps F (fisis), so this returns 2 for step F. The old loop capped at 7 and
+    /// silently dropped the 8th accidental.
     /// </summary>
     public static int Alteration(int step, int sharps)
     {
         if (sharps > 0)
         {
-            for (int i = 0; i < sharps && i < SharpOrder.Length; i++)
-                if (SharpOrder[i] == step) return 1;
+            int pos = System.Array.IndexOf(SharpOrder, step);
+            // The step recurs at pos, pos+7, pos+14, … in the repeated sharp order;
+            // count how many of those fall within the first `sharps` accidentals.
+            return pos >= 0 && pos < sharps ? (sharps - pos - 1) / 7 + 1 : 0;
         }
-        else if (sharps < 0)
+        if (sharps < 0)
         {
             int flatCount = -sharps;
-            for (int i = 0; i < flatCount && i < FlatOrder.Length; i++)
-                if (FlatOrder[i] == step) return -1;
+            int pos = System.Array.IndexOf(FlatOrder, step);
+            return pos >= 0 && pos < flatCount ? -((flatCount - pos - 1) / 7 + 1) : 0;
         }
         return 0;
     }
@@ -103,8 +108,10 @@ public static class KeySpelling
         if (step < 0) return letter.ToString();
         return Alteration(step, sharps) switch
         {
-            > 0 => lower + "is",
-            < 0 => lower + "es",
+            >= 2 => lower + "isis",  // double sharp (keys past 7 sharps)
+            1 => lower + "is",
+            -1 => lower + "es",
+            <= -2 => lower + "eses", // double flat (keys past 7 flats)
             _ => lower.ToString()
         };
     }
