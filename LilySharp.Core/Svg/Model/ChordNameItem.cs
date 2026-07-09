@@ -44,6 +44,9 @@ public enum ChordDisplayMode
     Both,
 }
 
+/// <summary>A resolved chord symbol to be engraved above the staff (or as an
+/// independent chord row): its display text, the moment/index it aligns to, and
+/// how it should be shown (see <see cref="ChordDisplayMode"/>).</summary>
 public sealed record ChordNameItem
 {
     /// <summary>The chord symbol text for display (e.g., "Cm7", "B♭maj7").</summary>

@@ -37,8 +37,10 @@ public readonly record struct DiatonicChord(
     /// <summary>The diatonic seventh chord: "Cmaj7", "Dm7", "G7", "Bm7b5".</summary>
     public string SeventhSymbol => RootDisplay + SeventhQuality;
 
-    /// <summary>Suspended chords on this root: "Csus4" / "Csus2".</summary>
+    /// <summary>The suspended-fourth chord on this root ("Csus4").</summary>
     public string SusFourthSymbol => RootDisplay + "sus4";
+
+    /// <summary>The suspended-second chord on this root ("Csus2").</summary>
     public string SusSecondSymbol => RootDisplay + "sus2";
 
     /// <summary>The root as a chord symbol ("C", "F#", "Bb").</summary>
