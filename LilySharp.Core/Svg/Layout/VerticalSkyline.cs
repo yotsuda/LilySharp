@@ -294,7 +294,23 @@ internal sealed class VerticalSkyline
         // resolving the whole set once is byte-identical to merging one at a
         // time — but O(K log K) instead of O(K^2). This is the fix for the
         // per-note skyline construction that dominated layout allocation.
-        if (_deferResolve || IsEmpty)
+        if (_deferResolve)
+        {
+            // Batch mode: append only the REAL buildings. FromBox wraps each box in
+            // ±inf empty-region padders; EndBatch's resolve drops those anyway (the
+            // -inf skip in RebuildKeepingHighest), so filtering them here keeps the
+            // batch's sort+copy small. Identical result — the same drop, moved earlier.
+            foreach (var b in other._buildings)
+            {
+                if (double.IsNegativeInfinity(b.Height(b.XLeft))
+                    && double.IsNegativeInfinity(b.Height(b.XRight)))
+                    continue;
+                _buildings.Add(b);
+            }
+            return;
+        }
+
+        if (IsEmpty)
         {
             _buildings.AddRange(other._buildings);
             return;
