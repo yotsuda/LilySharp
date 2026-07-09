@@ -208,6 +208,15 @@ public sealed record RenderSpec(
     /// <summary>Gets all staff groups for layout.</summary>
     public IEnumerable<StaffGroup> ToStaffGroups(Func<string, ImmutableArray<Voice>> getVoices)
     {
+        // The single-voice rows (tab/ossia/chord/lyrics) take the part's primary
+        // voice; a spec naming an undefined/empty part falls back to an empty voice
+        // rather than throwing IndexOutOfRange.
+        Voice FirstVoiceOrEmpty(string name)
+        {
+            var vs = getVoices(name);
+            return vs.Length > 0 ? vs[0] : new Voice(name, ImmutableArray<Measure>.Empty);
+        }
+
         foreach (var item in OrderedItems())
         {
             switch (item)
@@ -243,32 +252,24 @@ public sealed record RenderSpec(
                 // Tab / ossia staves don't support intra-staff polyphony; they
                 // take the primary voice only.
                 case TabStaffSpec tab:
-                    var tabStaff = Staff.CreateTab(tab.Tuning, getVoices(tab.Staff.VoiceName)[0], tab.Staff.Clef);
+                    var tabStaff = Staff.CreateTab(tab.Tuning, FirstVoiceOrEmpty(tab.Staff.VoiceName), tab.Staff.Clef);
                     yield return StaffGroup.CreateSingle(tabStaff);
                     break;
 
                 case OssiaStaffSpec ossia:
                     var ossiaStaff = Staff.CreateOssia(
                         ossia.Staff.Clef,
-                        getVoices(ossia.Staff.VoiceName)[0],
+                        FirstVoiceOrEmpty(ossia.Staff.VoiceName),
                         ossia.Staff.InstrumentName);
                     yield return StaffGroup.CreateSingle(ossiaStaff);
                     break;
 
                 case ChordRowSpec chordRow:
-                    var chordVoices = getVoices(chordRow.PartName);
-                    var chordVoice = chordVoices.Length > 0
-                        ? chordVoices[0]
-                        : new Voice(chordRow.PartName, ImmutableArray<Measure>.Empty);
-                    yield return StaffGroup.CreateSingle(Staff.CreateTextRow(chordVoice));
+                    yield return StaffGroup.CreateSingle(Staff.CreateTextRow(FirstVoiceOrEmpty(chordRow.PartName)));
                     break;
 
                 case LyricsRowSpec lyricsRow:
-                    var lyricVoices = getVoices(lyricsRow.PartName);
-                    var lyricVoice = lyricVoices.Length > 0
-                        ? lyricVoices[0]
-                        : new Voice(lyricsRow.PartName, ImmutableArray<Measure>.Empty);
-                    yield return StaffGroup.CreateSingle(Staff.CreateTextRow(lyricVoice));
+                    yield return StaffGroup.CreateSingle(Staff.CreateTextRow(FirstVoiceOrEmpty(lyricsRow.PartName)));
                     break;
             }
         }
