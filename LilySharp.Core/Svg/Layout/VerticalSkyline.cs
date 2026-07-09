@@ -430,15 +430,20 @@ internal sealed class VerticalSkyline
     {
         var result = new List<Building>();
 
-        // Collect all boundary points
-        var boundaries = new SortedSet<double>();
+        // Collect all boundary points. A plain List sorted in place replaces a
+        // SortedSet (a red-black tree that allocates a node per insert) — this
+        // primitive is the hottest allocator in skyline resolution, hit by both
+        // system-skyline construction and Padded(). Duplicate boundaries are not
+        // removed here; the interval loop skips zero-width spans below, which is
+        // equivalent to the set's dedup.
+        var boundaryList = new List<double>(existing.Count * 2 + 2);
         foreach (var b in existing)
         {
-            if (!double.IsInfinity(b.XLeft)) boundaries.Add(b.XLeft);
-            if (!double.IsInfinity(b.XRight)) boundaries.Add(b.XRight);
+            if (!double.IsInfinity(b.XLeft)) boundaryList.Add(b.XLeft);
+            if (!double.IsInfinity(b.XRight)) boundaryList.Add(b.XRight);
         }
-        if (!double.IsInfinity(newBuilding.XLeft)) boundaries.Add(newBuilding.XLeft);
-        if (!double.IsInfinity(newBuilding.XRight)) boundaries.Add(newBuilding.XRight);
+        if (!double.IsInfinity(newBuilding.XLeft)) boundaryList.Add(newBuilding.XLeft);
+        if (!double.IsInfinity(newBuilding.XRight)) boundaryList.Add(newBuilding.XRight);
 
         // Add intersection points
         foreach (var b in existing)
@@ -449,18 +454,19 @@ internal sealed class VerticalSkyline
                 if (ix > Math.Max(b.XLeft, newBuilding.XLeft) &&
                     ix < Math.Min(b.XRight, newBuilding.XRight))
                 {
-                    boundaries.Add(ix);
+                    boundaryList.Add(ix);
                 }
             }
         }
 
-        var boundaryList = boundaries.ToList();
+        boundaryList.Sort();
 
         // For each interval, find the "above" building
         for (int i = 0; i < boundaryList.Count - 1; i++)
         {
             double left = boundaryList[i];
             double right = boundaryList[i + 1];
+            if (right <= left) continue; // zero-width span (duplicate boundary) — matches SortedSet dedup
             double mid = (left + right) / 2;
 
             // Find highest building at midpoint
