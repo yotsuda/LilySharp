@@ -155,21 +155,23 @@ internal sealed class KnuthPlassBreaker
         for (int i = 0; i < measures.Count; i++)
         {
             var m = measures[i];
-            double idealWidth = SpacingRules.CalculateMeasureIdealWidth(m, baseShortestDuration);
 
-            // Sum inverse stretch strengths from the measure's springs
-            double inverseStretch = 0;
-            double minWidth = 0;
+            // Build the measure's springs ONCE and derive all three sums from them.
+            // (Previously CalculateMeasureIdealWidth built the springs internally and
+            // then CreateSpringsForMeasure built them again — the same work twice.)
+            double startBar = SpacingRules.GetBarlineWidth(m.StartBarline);
+            double endBar = SpacingRules.GetBarlineWidth(m.EndBarline);
             var springs = SpacingRules.CreateSpringsForMeasure(m, baseShortestDuration);
+
+            double idealWidth = startBar + endBar;  // matches CalculateMeasureIdealWidth
+            double inverseStretch = 0;
+            double minWidth = startBar + endBar;
             foreach (var spring in springs)
             {
+                idealWidth += spring.IdealDistance;
                 inverseStretch += spring.InverseStretchStrength;
                 minWidth += spring.MinDistance;
             }
-
-            // Add barline widths to min
-            minWidth += SpacingRules.GetBarlineWidth(m.StartBarline);
-            minWidth += SpacingRules.GetBarlineWidth(m.EndBarline);
 
             // LILYPOND-REF: lily/constrained-breaking.cc:112-113 — break_penalty_ propagation
             data[i] = new MeasureSpringData(idealWidth, minWidth, inverseStretch,
