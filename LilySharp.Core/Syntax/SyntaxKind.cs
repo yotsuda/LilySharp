@@ -385,7 +385,6 @@ public enum SyntaxKind : ushort
 
     // === Nodes: Legacy Structure ===
     /// <summary>A staff declaration node (legacy).</summary>
-    StaffDeclaration,
     /// <summary>A voice declaration node (legacy).</summary>
     VoiceDeclaration,
 

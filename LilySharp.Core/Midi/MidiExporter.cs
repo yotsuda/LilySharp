@@ -161,10 +161,6 @@ public sealed class MidiExporter
                 _currentTimbre = 0;
                 break;
 
-            case StaffDeclarationSyntax staff:
-                ProcessChildren(staff, track, conductorTrack);
-                break;
-
             case SectionDeclarationSyntax sectionDecl:
                 // With a structure the play order is ITS job; declarations
                 // are silent (they used to play in file order regardless).

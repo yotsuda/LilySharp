@@ -1982,7 +1982,6 @@ public sealed class LilySharpLanguageServer
         var (name, kind) = node switch
         {
             PartDeclarationSyntax part => (GetPartName(part), SymbolKind.Class),
-            StaffDeclarationSyntax staff => (GetStaffName(staff), SymbolKind.Class),
 
             VariableDeclarationSyntax variable => (variable.Name.Text, SymbolKind.Variable),
             PhraseDeclarationSyntax phrase => ($"phrase {phrase.Name.Text}", SymbolKind.Function),
@@ -2075,17 +2074,6 @@ public sealed class LilySharpLanguageServer
             && !string.IsNullOrWhiteSpace(name.Text))
             return $"part {name.Text.Trim('"')}";
         return "part";
-    }
-
-    private static string GetStaffName(StaffDeclarationSyntax staff)
-    {
-        for (int i = 0; i < staff.SlotCount; i++)
-        {
-            var child = staff.GetChild(i);
-            if (child is SyntaxTokenNode token && token.Kind == SyntaxKind.Identifier)
-                return token.Text;
-        }
-        return "staff";
     }
 
     // ========== Go to Definition ==========
@@ -2432,7 +2420,7 @@ public sealed class LilySharpLanguageServer
     {
         // Foldable node types: MusicBlock, PartDeclaration, etc.
         bool isFoldable = node is MusicBlockSyntax or
-                          PartDeclarationSyntax or StaffDeclarationSyntax or
+                          PartDeclarationSyntax or
                           RepeatExpressionSyntax or ParallelExpressionSyntax or
                           TupletExpressionSyntax or GraceExpressionSyntax or
                           LyricsBlockSyntax or AlternativeClauseSyntax or

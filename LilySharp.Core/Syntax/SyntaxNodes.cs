@@ -653,22 +653,6 @@ public sealed class InlineVoltaSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Staff declaration: staff Name { ... }
-/// </summary>
-public sealed class StaffDeclarationSyntax : SyntaxNode
-{
-    internal StaffDeclarationSyntax(StaffDeclarationGreen green, SyntaxNode? parent, int position)
-        : base(green, parent, position)
-    {
-    }
-
-    /// <summary>The <c>staff</c> keyword token.</summary>
-    public SyntaxTokenNode StaffKeyword => (SyntaxTokenNode)GetChild(0)!;
-    /// <summary>The staff name token, or null when the staff is unnamed.</summary>
-    public SyntaxTokenNode? Name => GetChild(1) as SyntaxTokenNode;
-}
-
-/// <summary>
 /// Property assignment: name: value
 /// </summary>
 public sealed class PropertyAssignmentSyntax : SyntaxNode

@@ -261,22 +261,6 @@ internal sealed class InlineVoltaGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Staff declaration: staff Name { ... }
-/// </summary>
-internal sealed class StaffDeclarationGreen : GreenSyntaxNode
-{
-    public StaffDeclarationGreen(
-        SyntaxToken staffKeyword,
-        SyntaxToken? name,
-        SyntaxToken openBrace,
-        GreenNode?[] members,
-        SyntaxToken closeBrace)
-        : base(SyntaxKind.StaffDeclaration, [staffKeyword, name, openBrace, .. members, closeBrace])
-    {
-    }
-}
-
-/// <summary>
 /// Property assignment: name: value
 /// </summary>
 internal sealed class PropertyAssignmentGreen : GreenSyntaxNode
