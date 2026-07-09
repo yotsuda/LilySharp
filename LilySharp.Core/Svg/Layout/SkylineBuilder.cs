@@ -54,6 +54,11 @@ internal sealed class SkylineBuilder
     {
         var upSkyline = new VerticalSkyline(VerticalDirection.Up);
         var downSkyline = new VerticalSkyline(VerticalDirection.Down);
+        // Building a system skyline merges ~5-8 boxes PER NOTE; resolving each
+        // merge individually is O(K^2) (measured: the dominant layout allocation
+        // on large scores). Batch the boxes and resolve once at the end.
+        upSkyline.BeginBatch();
+        downSkyline.BeginBatch();
 
         // All dimensions in staff spaces (coordinate system is unified)
         double stemLength = EngravingDefaults.DefaultStemLength;
@@ -86,6 +91,8 @@ internal sealed class SkylineBuilder
             seedBottom: !lastStaff.IsTextRow, bottomLineY: bottomLineY,
             upSkyline, downSkyline);
 
+        upSkyline.EndBatch();
+        downSkyline.EndBatch();
         return (upSkyline, downSkyline);
     }
 

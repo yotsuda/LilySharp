@@ -288,13 +288,35 @@ internal sealed class VerticalSkyline
 
         if (other.IsEmpty) return;
 
-        if (IsEmpty)
+        // Batch mode (BeginBatch/EndBatch): only APPEND the other skyline's
+        // buildings; overlap resolution is deferred to EndBatch. Because the
+        // resolve keeps the HIGHEST building at each point (a commutative max),
+        // resolving the whole set once is byte-identical to merging one at a
+        // time — but O(K log K) instead of O(K^2). This is the fix for the
+        // per-note skyline construction that dominated layout allocation.
+        if (_deferResolve || IsEmpty)
         {
             _buildings.AddRange(other._buildings);
             return;
         }
 
         MergeInternal(other._buildings);
+    }
+
+    private bool _deferResolve;
+
+    /// <summary>Start deferring overlap resolution; every <see cref="Merge"/> just
+    /// appends until <see cref="EndBatch"/>. The skyline must NOT be read between
+    /// Begin/End (callers only merge boxes in during construction).</summary>
+    public void BeginBatch() => _deferResolve = true;
+
+    /// <summary>Resolve all buildings accumulated since <see cref="BeginBatch"/> in a
+    /// single sort+rebuild, restoring the normal (fully resolved) invariant.</summary>
+    public void EndBatch()
+    {
+        _deferResolve = false;
+        if (_buildings.Count > 1)
+            RebuildKeepingHighest(new List<Building>(_buildings));
     }
 
     /// <summary>
@@ -316,9 +338,20 @@ internal sealed class VerticalSkyline
             return;
         }
 
-        // Collect all buildings and sort by left X
+        // Collect all buildings and resolve keeping the highest at each point.
         var allBuildings = new List<Building>(_buildings);
         allBuildings.AddRange(otherBuildings);
+        RebuildKeepingHighest(allBuildings);
+    }
+
+    /// <summary>
+    /// Sorts the combined building list by X and rebuilds THIS skyline keeping the
+    /// highest building at each point. Order-independent (max is commutative), so
+    /// resolving all buildings at once equals merging them one at a time — the
+    /// property the batch path relies on.
+    /// </summary>
+    private void RebuildKeepingHighest(List<Building> allBuildings)
+    {
         allBuildings.Sort((a, b) => a.XLeft.CompareTo(b.XLeft));
 
         // Rebuild skyline keeping highest at each point
