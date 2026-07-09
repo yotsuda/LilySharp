@@ -299,12 +299,15 @@ internal sealed class MeasureBuilder
             _pendingEndBarline = BarlineType.None;
             _measureSourceStart = sourceEnd;
 
-            // Overflow (a note running past the auto-completed barline): the excess
-            // is currently dropped. Carrying it forward as a bare duration fragments
-            // the following measures (the correct fix splits the note into a tied
-            // continuation, which is a larger change), so this is deliberately left
-            // as a known limitation rather than a worse half-fix. MeasureValidator
-            // already warns about the overfull bar.
+            // BY DESIGN: Lily# is "explicit over implicit" (no hidden state) and does
+            // NOT auto-split a note across a barline the way LilyPond does. A note that
+            // overruns the meter makes an OVERFULL measure, which is a user error that
+            // MeasureValidator flags ("Measure duration exceeds time signature"); the
+            // fix is to write an explicit tie (c4 d e f4~ | f4 …). The renderer draws
+            // every note as written (nothing is lost — the bar is simply drawn wide)
+            // and resets the beat counter so the following (clean) measures stay
+            // aligned. So the excess beat count is intentionally dropped here, not
+            // carried into a tied continuation.
             _currentDuration = Fraction.Zero;
             RestorePartialIfPending();
             MeasureCompleted?.Invoke();
