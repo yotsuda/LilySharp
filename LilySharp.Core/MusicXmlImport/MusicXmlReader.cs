@@ -730,7 +730,30 @@ internal static class MusicXmlReader
             return t;
         var metro = Local(Local(el, "direction-type"), "metronome");
         if (metro != null && int.TryParse(Local(metro, "per-minute")?.Value, out int pm) && pm > 0)
-            return pm;
+        {
+            // <sound tempo> is always quarter-note BPM; a metronome mark counts
+            // <beat-unit> beats, so scale per-minute to quarter-BPM. A dotted
+            // beat-unit (e.g. dotted-quarter = 90) lengthens the beat by 1.5 per dot.
+            int beatUnitValue = (Local(metro, "beat-unit")?.Value.Trim().ToLowerInvariant()) switch
+            {
+                "breve" or "double-whole" => 1,
+                "whole" => 1,
+                "half" => 2,
+                "quarter" => 4,
+                "eighth" => 8,
+                "16th" => 16,
+                "32nd" => 32,
+                "64th" => 64,
+                "128th" => 128,
+                _ => 4, // absent/unknown: treat as quarter (no scaling)
+            };
+            double dotFactor = 1.0;
+            int beatDots = Els(metro, "beat-unit-dot").Count();
+            for (int i = 0; i < beatDots; i++)
+                dotFactor += 1.0 / (1 << (i + 1)); // +1/2, +1/4, ...
+            int quarterBpm = (int)Math.Round(pm * (4.0 / beatUnitValue) * dotFactor);
+            return quarterBpm > 0 ? quarterBpm : null;
+        }
         return null;
     }
 
