@@ -81,7 +81,8 @@ public sealed class DocumentManager
     /// </summary>
     public Document ApplyChanges(Uri uri, IEnumerable<TextDocumentContentChangeEvent> changes, int version)
     {
-        var doc = GetDocument(uri);
+        var baseDoc = GetDocument(uri);
+        var doc = baseDoc;
         if (doc == null)
         {
             // A didChange before didOpen is a client protocol violation. Rather than
@@ -131,7 +132,17 @@ public sealed class DocumentManager
 
         var newDoc = new Document(uri, tree.Text, tree, version);
         lock (_gate)
+        {
+            // Atomic compare-and-store: drop this update if a newer version is already
+            // stored, or if the document changed since we read our base (a stale or
+            // out-of-order didChange whose text was computed from now-superseded state).
+            // Notifications dispatch sequentially today, so this is a safety net for
+            // concurrent access rather than a currently-hit race.
+            var current = _documents.GetValueOrDefault(uri);
+            if (current != null && (version < current.Version || !ReferenceEquals(current, baseDoc)))
+                return current;
             _documents[uri] = newDoc;
+        }
         return newDoc;
     }
 

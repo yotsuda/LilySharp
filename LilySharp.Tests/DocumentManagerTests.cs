@@ -43,6 +43,34 @@ public class DocumentManagerTests
     };
 
     [Fact]
+    public void ApplyChanges_StaleVersion_DoesNotClobberNewerDocument()
+    {
+        var mgr = new DocumentManager();
+        mgr.OpenOrUpdate(TestUri, "hello", version: 5);
+
+        // An out-of-order didChange carrying an OLDER version must be dropped.
+        var result = mgr.ApplyChanges(TestUri,
+            new[] { new TextDocumentContentChangeEvent { Text = "STALE" } }, version: 3);
+
+        Assert.Equal("hello", result.Text);
+        Assert.Equal(5, result.Version);
+        Assert.Equal("hello", mgr.GetDocument(TestUri)!.Text);
+    }
+
+    [Fact]
+    public void ApplyChanges_NewerVersion_IsApplied()
+    {
+        var mgr = new DocumentManager();
+        mgr.OpenOrUpdate(TestUri, "hello", version: 1);
+
+        var result = mgr.ApplyChanges(TestUri,
+            new[] { new TextDocumentContentChangeEvent { Text = "world" } }, version: 2);
+
+        Assert.Equal("world", result.Text);
+        Assert.Equal(2, result.Version);
+    }
+
+    [Fact]
     public void ApplyChanges_SequentialBatch_AppliesInOrder()
     {
         var mgr = new DocumentManager();
