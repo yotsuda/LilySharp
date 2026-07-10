@@ -461,14 +461,21 @@ internal sealed class ChordNameCollector
             return (structure.DisplayName, structure);
         }
 
-        // Unknown quality (e.g. an extended chord not in the vocabulary): show the root
-        // + the raw token text so the name still displays, but carry no structure (no
-        // interval set for future notes/fret diagrams).
+        // Unknown quality (e.g. "M7" or an extended chord not in the vocabulary). With
+        // a valid root we still carry a structure holding the raw suffix: the interval
+        // set is unknown (no note expansion), but the root resolves to a Roman degree,
+        // so `c:M7` shows "CM7" / "IM7" instead of the un-converted literal.
+        if (rootStep >= 0)
+        {
+            var raw = new LilySharp.Core.Music.ChordStructure(
+                rootStep, rootAlter, LilySharp.Core.Music.ChordQuality.Major,
+                bassStep, bassAlter, RawSuffix: entry.QualityText);
+            return (raw.DisplayName, raw);
+        }
+
+        // Unparseable root — show the raw name with no structure at all.
         var sb = new System.Text.StringBuilder();
-        sb.Append(rootStep >= 0
-            ? LilySharp.Core.Music.ChordStructure.SpellPitch(rootStep, rootAlter)
-            : entry.Root.PitchName);
-        sb.Append(entry.QualityText);
+        sb.Append(entry.Root.PitchName).Append(entry.QualityText);
         if (bassStep is int bs)
             sb.Append('/').Append(LilySharp.Core.Music.ChordStructure.SpellPitch(bs, bassAlter ?? 0));
         return (sb.ToString(), null);

@@ -175,15 +175,29 @@ public sealed class ChordNamesTests
     }
 
     [Fact]
-    public void Collector_UnknownQuality_FallsBackToRawText()
+    public void Collector_UnknownQuality_KeepsRawSuffix_NoTones()
     {
-        // An extended chord not in the vocabulary still displays (root + raw token),
-        // just without a structure.
+        // An extended chord not in the vocabulary still displays (root + raw token)
+        // and now resolves a Roman degree from its root, but carries no interval set
+        // (unknown tones → no note expansion).
         var src = "section Main {\n  m { time 4/4 c4 d e f | }\n  chords { c1:weird9 }\n}\n" +
-                  "form main { Main }\nscore \"x\" { staff m }\n";
+                  "form main { Main }\nscore main \"x\" { staff m }\n";
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src));
         var chord = Assert.Single(score.ChordNames);
         Assert.Equal("Cweird9", chord.ChordText);
-        Assert.Null(chord.Structure);
+        Assert.NotNull(chord.Structure);
+        Assert.Empty(chord.Structure!.Intervals);                      // tones are unknown
+        Assert.Equal("Iweird9", chord.Structure.ToRomanNumeral(0, 0)); // root still gives a degree
+    }
+
+    [Fact]
+    public void ChordStructure_RawSuffix_RomanKeepsTypedSuffix()
+    {
+        // `c:M7` (jazz major-7th shorthand, not a registry token) keeps its typed
+        // suffix and converts the root to a Roman degree: "CM7" → "IM7", not "CM7".
+        var s = new LilySharp.Core.Music.ChordStructure(
+            0, 0, LilySharp.Core.Music.ChordQuality.Major, RawSuffix: "M7");
+        Assert.Equal("CM7", s.DisplayName);
+        Assert.Equal("IM7", s.ToRomanNumeral(0, 0)); // C in C major → I, suffix verbatim
     }
 }

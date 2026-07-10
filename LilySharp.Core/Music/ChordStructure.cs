@@ -205,13 +205,19 @@ public sealed record ChordStructure(
     int RootAlter,           // accidental: -2..+2 (semitone alteration)
     ChordQuality Quality,
     int? BassStep = null,    // slash bass diatonic step (null = no bass)
-    int? BassAlter = null)
+    int? BassAlter = null,
+    // A verbatim quality suffix for a chord whose token is NOT in the registry
+    // (e.g. "M7", "7#9"): the interval set is unknown (Tones stays empty, so no
+    // note expansion), but the root still yields a Roman degree — so `c:M7`
+    // shows "CM7" / "IM7" instead of falling back to the literal name.
+    string? RawSuffix = null)
 {
     // Diatonic-step semitones come from RelativeOctave.StepSemitoneOf (single source).
 
     /// <summary>Semitone offsets of the chord tones above the root (the pitch set).</summary>
     public ImmutableArray<int> Intervals =>
-        [.. ChordQualityRegistry.GetTones(Quality).Select(t => t.Semitone)];
+        RawSuffix != null ? ImmutableArray<int>.Empty
+        : [.. ChordQualityRegistry.GetTones(Quality).Select(t => t.Semitone)];
 
     /// <summary>
     /// The spelled chord tones (letter step, accidental, octave above the root).
@@ -223,6 +229,8 @@ public sealed record ChordStructure(
     {
         get
         {
+            if (RawSuffix != null)
+                return ImmutableArray<ChordTone>.Empty;
             var b = ImmutableArray.CreateBuilder<ChordTone>();
             foreach (var spec in ChordQualityRegistry.GetTones(Quality))
             {
@@ -246,7 +254,7 @@ public sealed record ChordStructure(
         {
             var sb = new StringBuilder();
             sb.Append(SpellPitch(RootStep, RootAlter));
-            sb.Append(ChordQualityRegistry.GetSuffix(Quality));
+            sb.Append(RawSuffix ?? ChordQualityRegistry.GetSuffix(Quality));
             if (BassStep is int bs)
             {
                 sb.Append('/');
@@ -282,7 +290,7 @@ public sealed record ChordStructure(
         }
 
         var sb = new StringBuilder(Degree(RootStep, RootAlter, tonicStep, keySharps));
-        sb.Append(RomanSuffix(Quality));
+        sb.Append(RawSuffix ?? RomanSuffix(Quality));
         if (BassStep is int bs)
             sb.Append('/').Append(Degree(bs, BassAlter ?? 0, tonicStep, keySharps));
         return sb.ToString();
