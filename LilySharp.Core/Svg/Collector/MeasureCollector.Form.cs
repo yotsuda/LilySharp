@@ -134,6 +134,31 @@ public sealed partial class MeasureCollector
         _octave.ResetForSection();
         _defaultDuration = Fraction.Quarter;
 
+        // Time and key revert to the SCORE level too, for the same self-containment:
+        // a mid-section meter/key change must not leak past the section end (nor into
+        // the same section reused elsewhere by the form). A section that wants a
+        // different meter/key states it at its own start, which overrides this.
+        //
+        // Only redraw when a prior section actually left a different meter/key — so
+        // the common case (nothing changed) emits nothing, and the first section
+        // (running == score level) is a no-op. The redraw makes the revert visible
+        // instead of silently leaving the previous signature on the staff.
+        int sectionPos = section.Name.Span.Start;
+        var scoreTime = TimeSignatureFraction;
+        if (builder.CurrentMeasureLength != scoreTime)
+            builder.AddItem(new TimeSignatureChangeItem(
+                new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText),
+                sectionPos));
+
+        if (_meta.KeySharps != _sectionResetKeySharps || _meta.KeyCustom != _sectionResetKeyCustom)
+        {
+            var previousKey = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
+            _meta.KeySharps = _sectionResetKeySharps;
+            _meta.KeyCustom = _sectionResetKeyCustom;
+            builder.AddItem(new KeySignatureChangeItem(
+                new KeySignature(_meta.KeySharps, _meta.KeyCustom), previousKey, sectionPos));
+        }
+
         int startMeasure = builder.CurrentMeasureIndex;
         bool matched = false;
         foreach (var child in section.DescendantNodes())

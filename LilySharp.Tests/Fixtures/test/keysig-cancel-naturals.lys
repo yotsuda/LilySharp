@@ -4,11 +4,15 @@
 // (tight) — matching LilyPond key-signature-interface.cc. Guards the
 // cancellation-natural kerning (the left glyph's ht_right vs the right glyph's
 // last_ht_left): a swap once pushed the middle natural left and the last right.
+//
+// The A->F change is written WITHIN one section: a section boundary reverts the
+// key to the score level (self-contained sections), so the cancellation must be a
+// mid-section modulation to exercise it — across two sections F major would cancel
+// nothing (each section starts fresh at the score key).
 part melody {
-  section A { key a major a1 | }
-  section B { key f major bes1 | }
+  section A { key a major a1 | key f major bes1 | }
 }
-form main { A B }
+form main { A }
 score main "score" {
   staff melody
 }

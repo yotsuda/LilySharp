@@ -126,6 +126,11 @@ internal sealed class MeasureBuilder
     /// <summary>Gets the current accumulated duration within the measure.</summary>
     public Fraction CurrentDuration => _currentDuration;
 
+    /// <summary>The auto-complete measure length currently in force (the running
+    /// meter). A section boundary reads this to decide whether reverting to the
+    /// score meter needs a redrawn time signature.</summary>
+    public Fraction CurrentMeasureLength => _timeSignature;
+
     /// <summary>Current measure index (completed measures count).</summary>
     public int CurrentMeasureIndex => _measures.Count;
 
@@ -556,6 +561,13 @@ public sealed partial class MeasureCollector
     private ImmutableArray<GraceNoteInfo> _pendingLeadingGrace = ImmutableArray<GraceNoteInfo>.Empty;
     // Default duration
     private Fraction _defaultDuration = Fraction.Quarter;
+
+    // This voice's score-level key, captured at collection start. A section
+    // boundary reverts the running key to it (like octave/duration) so a section
+    // is self-contained: a mid-section modulation cannot leak into the next
+    // section — nor into the same section reused elsewhere in the form.
+    private int _sectionResetKeySharps;
+    private string? _sectionResetKeyCustom;
 
     // Piece-level metadata (title/composer/tempo/time/key/clef + header source
     // positions) grouped into one owner. See MetadataState.
@@ -1726,6 +1738,11 @@ public sealed partial class MeasureCollector
 
     private List<Measure> CollectMeasures()
     {
+        // Snapshot this voice's score-level key (already transposed for the part)
+        // so each section boundary can revert the running key to it.
+        _sectionResetKeySharps = _meta.KeySharps;
+        _sectionResetKeyCustom = _meta.KeyCustom;
+
         var builder = new MeasureBuilder(TimeSignatureFraction);
         if (_filePartial is { } filePickup)
             builder.SetPartial(filePickup); // top-level partial N arms every voice
