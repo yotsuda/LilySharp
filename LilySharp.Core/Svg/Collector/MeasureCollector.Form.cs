@@ -126,8 +126,13 @@ public sealed partial class MeasureCollector
     private void ProcessSection(SectionDeclarationSyntax section, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
         // Reset the relative frame (and revert the octave mode to the file
-        // default) at each section boundary.
+        // default) at each section boundary. The default DURATION resets too, so a
+        // section is self-contained: an un-numbered first note starts a quarter
+        // regardless of the preceding section's last duration. Without this the
+        // reprise `A` after `~B` (`g'1`) inherited B's whole-note and rendered its
+        // quarter-note melody as whole notes.
         _octave.ResetForSection();
+        _defaultDuration = Fraction.Quarter;
 
         int startMeasure = builder.CurrentMeasureIndex;
         bool matched = false;
