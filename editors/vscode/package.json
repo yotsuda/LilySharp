@@ -2,7 +2,7 @@
   "name": "lilysharp",
   "displayName": "Lily#",
   "description": "Language support and live score preview for Lily#, a LilyPond-inspired music notation language",
-  "version": "0.3.0-dev.13",
+  "version": "0.3.0-dev.14",
   "publisher": "ytsuda",
   "license": "GPL-3.0-or-later",
   "repository": {
@@ -156,6 +156,33 @@
           "type": "boolean",
           "default": false,
           "description": "When importing MusicXML, emit compact relative-octave notes (c d e) instead of explicit absolute octaves (c' d' e'). Both render identically."
+        },
+        "lilysharp.ai.ghostCompletion": {
+          "type": "boolean",
+          "default": false,
+          "description": "Suggest the next measure as ghost text while you type (just after a barline), using your language model (GitHub Copilot). Each suggestion is compiled first and only shown if it is valid. Off by default because it calls the model as you type."
+        },
+        "lilysharp.ai.provider": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "copilot",
+            "anthropic",
+            "openai"
+          ],
+          "enumDescriptions": [
+            "Use GitHub Copilot if available, otherwise a bring-your-own key",
+            "GitHub Copilot models only (vscode.lm)",
+            "Anthropic (Claude) with your own API key",
+            "OpenAI (GPT) with your own API key"
+          ],
+          "default": "auto",
+          "description": "Which language model the AI features use. For 'anthropic'/'openai', set the key with the \"Lily#: Set AI API Key…\" command (stored in SecretStorage)."
+        },
+        "lilysharp.ai.model": {
+          "type": "string",
+          "default": "",
+          "description": "Model id for a bring-your-own-key provider (e.g. claude-sonnet-5, gpt-4.1). Empty uses the provider's default. Ignored for GitHub Copilot."
         }
       }
     },
@@ -199,6 +226,16 @@
         "category": "Lily#",
         "icon": "$(sparkle)",
         "title": "Transform Selection with AI…"
+      },
+      {
+        "command": "lilysharp.setAiKey",
+        "category": "Lily#",
+        "title": "Set AI API Key…"
+      },
+      {
+        "command": "lilysharp.clearAiKey",
+        "category": "Lily#",
+        "title": "Clear AI API Keys"
       }
     ],
     "menus": {
