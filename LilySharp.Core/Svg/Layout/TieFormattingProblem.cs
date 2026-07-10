@@ -66,7 +66,6 @@ internal sealed class TieFormattingProblem
     private readonly double _y;
     private readonly TieDetails _details;
     private readonly IReadOnlyList<TieLayout>? _existingTies;
-    private readonly double _staffHeight;
     private readonly int _startDots;
     private readonly bool _isBrokenLeft;
     private readonly bool _isBrokenRight;
@@ -78,7 +77,6 @@ internal sealed class TieFormattingProblem
         double y,
         TieDetails? details = null,
         IReadOnlyList<TieLayout>? existingTies = null,
-        double staffHeight = 4.0,
         int startDots = 0,
         bool isBrokenLeft = false,
         bool isBrokenRight = false)
@@ -91,7 +89,6 @@ internal sealed class TieFormattingProblem
         _y = y;
         _details = details ?? TieDetails.Default;
         _existingTies = existingTies;
-        _staffHeight = staffHeight;
         _startDots = startDots;
     }
 

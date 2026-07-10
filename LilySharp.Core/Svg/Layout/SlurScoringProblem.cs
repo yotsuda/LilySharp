@@ -84,7 +84,6 @@ internal sealed class SlurScoringProblem
     private readonly SlurScoreParameters _parameters;
     private readonly IReadOnlyList<SlurObstacle>? _obstacles;
     private readonly IReadOnlyList<SlurLayout>? _existingSlurs;
-    private readonly double _staffHeight;
     private readonly bool _isBrokenLeft;
     private readonly bool _isBrokenRight;
 
@@ -104,7 +103,6 @@ internal sealed class SlurScoringProblem
         SlurScoreParameters? parameters = null,
         IReadOnlyList<SlurObstacle>? obstacles = null,
         IReadOnlyList<SlurLayout>? existingSlurs = null,
-        double staffHeight = 4.0,
         bool isBrokenLeft = false,
         bool isBrokenRight = false)
     {
@@ -121,7 +119,6 @@ internal sealed class SlurScoringProblem
         _endY = -endY;
         _parameters = parameters ?? SlurScoreParameters.Default;
         _existingSlurs = existingSlurs;
-        _staffHeight = staffHeight;
         _isBrokenLeft = isBrokenLeft;
         _isBrokenRight = isBrokenRight;
 

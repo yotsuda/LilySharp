@@ -111,7 +111,7 @@ public class TieFormattingProblemTests
     public void Solve_TieAtStaffLine_ReturnsValidLayout()
     {
         var tie = CreateTie(0, curveUp: true);
-        var problem = new TieFormattingProblem(tie, 5, 15, 2, staffHeight: 4);
+        var problem = new TieFormattingProblem(tie, 5, 15, 2);
 
         var layout = problem.Solve();
 

@@ -804,7 +804,6 @@ internal sealed class ElementCoordinator
                 var problem = new TieFormattingProblem(
                     tieForProblem, segStartX, segEndX, y,
                     existingTies: tieLayouts,
-                    staffHeight: _options.StaffHeight,
                     startDots: segment.IsFirst ? startDots : 0,
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast);
@@ -1024,7 +1023,6 @@ internal sealed class ElementCoordinator
                     slur, segStartX, segStartY, segEndX, segEndY,
                     obstacles: obstacles,
                     existingSlurs: slurLayouts,
-                    staffHeight: _options.StaffHeight,
                     isBrokenLeft: !segment.IsFirst,
                     isBrokenRight: !segment.IsLast);
                 slurLayouts.Add(problem.Solve() with { StaffIndex = staffIndex });
