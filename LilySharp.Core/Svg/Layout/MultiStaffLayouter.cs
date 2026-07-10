@@ -960,6 +960,15 @@ internal sealed class MultiStaffLayouter
             }
         }
 
+        // Timing-placed chord symbols carry their own rhythm and may fall BETWEEN
+        // note onsets (e.g. a chord on a beat inside a half note). Give each its own
+        // column so the spacing reserves the symbol's width there and the measure
+        // widens to fit — otherwise the symbol has no column and overhangs the barline.
+        if (!score.ChordNames.IsDefaultOrEmpty)
+            foreach (var cn in score.ChordNames)
+                if (cn.MeasureIndex == measureIndex && cn.UseTiming)
+                    timings.Add(cn.Timing);
+
         var sortedTimings = timings.ToList();
         sortedTimings.Sort();
         return sortedTimings;
