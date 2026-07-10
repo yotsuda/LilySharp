@@ -48,6 +48,22 @@ public class CliParserTests
         Assert.Equal("x", OutputStyle().Parse(new[] { "--output", "x" }).Get("output"));
     }
 
+    [Theory]
+    [InlineData("--verbose")]
+    [InlineData("--debug")]
+    public void TakeVerbose_strips_flag_and_records_it(string flag)
+    {
+        var args = new[] { "svg", flag, "in.lys" };
+        Assert.True(CliParser.TakeVerbose(ref args));
+        Assert.True(CliParser.Verbose);
+        Assert.Equal(new[] { "svg", "in.lys" }, args); // flag stripped so strict parse won't reject it
+
+        var plain = new[] { "svg", "in.lys" };
+        Assert.False(CliParser.TakeVerbose(ref plain));
+        Assert.False(CliParser.Verbose);
+        Assert.Equal(new[] { "svg", "in.lys" }, plain);
+    }
+
     [Fact]
     public void Flag_is_present_without_a_value()
     {

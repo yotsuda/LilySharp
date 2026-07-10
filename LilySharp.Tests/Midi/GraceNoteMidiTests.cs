@@ -133,4 +133,23 @@ public class GraceNoteMidiTests
         Assert.Equal(grace.DurationTicks, main.StartTick);          // main begins where the grace ends
         Assert.Equal(quarter, main.StartTick + main.DurationTicks); // pair fills d's original quarter slot
     }
+
+    [Fact]
+    public void GraceNote_AdvancesRelativeOctaveForFollowingNote()
+    {
+        // Default (relative) mode: the note AFTER a grace group resolves its octave
+        // relative to the grace's LAST pitch — the same result as if the grace pitch
+        // were a plain note. Pins the collector/exporter octave-threading seam through
+        // grace, which was previously untested. LILYPOND-REF: grace threads relative octave.
+        int DAfter(string body) => ExportNotes($$"""
+            part m { clef treble }
+            section A { m { {{body}} } }
+            structure { A }
+            score x { staff m }
+            """).OrderByDescending(n => n.StartTick).First().Pitch; // the trailing d
+
+        // `grace { g'16 }` and a plain `g'16` before the d reference the same pitch,
+        // so d must land on the same octave in both.
+        Assert.Equal(DAfter("c'4 g'16 d16"), DAfter("c'4 grace { g'16 } d16"));
+    }
 }

@@ -26,6 +26,10 @@ return Run(args);
 
 static int Run(string[] args)
 {
+    // Global --verbose/--debug: print full stack traces on error. Stripped here so
+    // the strict per-command parsers don't reject it as an unknown option.
+    CliParser.TakeVerbose(ref args);
+
     // Handle empty args or global help
     if (args.Length == 0)
     {
@@ -569,7 +573,7 @@ static int RunImport(string[] args)
     }
     catch (Exception ex)
     {
-        Console.Error.WriteLine($"Error: {ex.Message}");
+        Console.Error.WriteLine(CliParser.Verbose ? ex.ToString() : $"Error: {ex.Message}");
         return 1;
     }
 }
@@ -695,7 +699,7 @@ static int ExecuteCheck(string inputPath, bool showPitches = false)
     }
     catch (Exception ex)
     {
-        Console.Error.WriteLine($"Error: {ex.Message}");
+        Console.Error.WriteLine(CliParser.Verbose ? ex.ToString() : $"Error: {ex.Message}");
         return 1;
     }
 }
@@ -855,7 +859,7 @@ static int RunOutputCommand(string inputPath, string? scoreName, Func<SyntaxTree
     }
     catch (Exception ex)
     {
-        Console.Error.WriteLine($"Error: {ex.Message}");
+        Console.Error.WriteLine(CliParser.Verbose ? ex.ToString() : $"Error: {ex.Message}");
         return 1;
     }
 }

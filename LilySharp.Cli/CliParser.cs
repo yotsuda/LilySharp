@@ -128,4 +128,24 @@ internal sealed class CliParser
             ?? (r.Positionals.Count >= 2 ? r.Positionals[1] : Path.ChangeExtension(input, defaultExt));
         return (input, output, null);
     }
+
+    /// <summary>
+    /// True once <see cref="TakeVerbose"/> has seen a global <c>--verbose</c>/<c>--debug</c>
+    /// flag; the CLI's error handlers print the full exception (stack trace) instead
+    /// of just its message when set.
+    /// </summary>
+    internal static bool Verbose { get; private set; }
+
+    /// <summary>
+    /// Detects and STRIPS the global <c>--verbose</c>/<c>--debug</c> flag from
+    /// <paramref name="args"/> (so the strict per-command parsers don't reject it as
+    /// an unknown option), recording it in <see cref="Verbose"/>. Returns whether it
+    /// was present.
+    /// </summary>
+    public static bool TakeVerbose(ref string[] args)
+    {
+        Verbose = args.Any(a => a is "--verbose" or "--debug");
+        if (Verbose) args = args.Where(a => a is not ("--verbose" or "--debug")).ToArray();
+        return Verbose;
+    }
 }
