@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Reflection;
+using LilySharp.Cli;
 using LilySharp.Core.Midi;
 using LilySharp.Core.MusicXml;
 using LilySharp.Core.Pdf;
@@ -33,14 +34,14 @@ static int Run(string[] args)
     }
 
     var first = args[0].ToLowerInvariant();
-    
+
     // Global options
     if (first is "-h" or "--help")
     {
         ShowHelp();
         return 0;
     }
-    
+
     if (first is "-V" or "--version")
     {
         ShowVersion();
@@ -118,28 +119,42 @@ static int UnknownCommand(string command)
     return 1;
 }
 
+// Prints an option-parsing error with the standard "Run 'lysc <cmd> --help'"
+// footer. One place for the per-command error footer that used to be inlined ~10x.
+static int OptionError(string message, string command)
+{
+    Console.Error.WriteLine($"Error: {message}");
+    Console.Error.WriteLine($"Run 'lysc {command} --help' for usage.");
+    return 1;
+}
+
+static bool WantsHelp(string[] args) => args.Contains("-h") || args.Contains("--help");
+
 // ============ SVG Command ============
 
 static int RunSvg(string[] args)
 {
-    if (args.Contains("-h") || args.Contains("--help"))
+    if (WantsHelp(args))
     {
         ShowSvgHelp();
         return 0;
     }
 
-    var (inputPath, outputPath, embedFont, allMovements, scoreName, error) = ParseSvgOptions(args);
-    if (error != null)
-    {
-        Console.Error.WriteLine($"Error: {error}");
-        Console.Error.WriteLine("Run 'lysc svg --help' for usage.");
-        return 1;
-    }
+    var r = new CliParser(maxPositionals: 2)
+        .Value("output", "-o requires a file path", "-o", "--output")
+        .Value("score", "--score requires a score name", "--score")
+        .Flag("no-embed-font", "--no-embed-font", "-n")
+        .Flag("all", "--all")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "svg");
 
-    if (allMovements)
+    var (inputPath, outputPath, ioError) = CliParser.ResolveIo(r, ".svg");
+    if (ioError != null) return OptionError(ioError, "svg");
+
+    bool embedFont = !r.Has("no-embed-font");
+    if (r.Has("all"))
         return ExecuteSvgAll(inputPath!, embedFont);
-    else
-        return ExecuteSvg(inputPath!, outputPath!, embedFont, scoreName);
+    return ExecuteSvg(inputPath!, outputPath!, embedFont, r.Get("score"));
 }
 
 static void ShowSvgHelp()
@@ -155,7 +170,7 @@ static void ShowSvgHelp()
 
         Options:
           -o, --output <file>    Output file path
-          --no-embed-font        Don't embed font (smaller file, requires font installed)
+          -n, --no-embed-font    Don't embed font (smaller file, requires font installed)
           --all                  Generate all render blocks as separate SVG files
           --score <name>         Render the named score block (default: the first)
           -h, --help             Show this help
@@ -170,104 +185,21 @@ static void ShowSvgHelp()
         """);
 }
 
-static (string? InputPath, string? OutputPath, bool EmbedFont, bool AllMovements, string? ScoreName, string? Error) ParseSvgOptions(string[] args)
-{
-    string? inputPath = null;
-    string? outputPath = null;
-    bool embedFont = true;
-    bool allMovements = false;
-    string? scoreName = null;
-
-    for (int i = 0; i < args.Length; i++)
+static int ExecuteSvg(string inputPath, string outputPath, bool embedFont, string? scoreName = null) =>
+    RunOutputCommand(inputPath, scoreName, tree =>
     {
-        var arg = args[i];
-
-        if (arg is "-o" or "--output")
-        {
-            if (i + 1 >= args.Length)
-                return (null, null, false, false, null, "-o requires a file path");
-            outputPath = args[++i];
-        }
-        else if (arg is "--no-embed-font" or "-n")
-        {
-            embedFont = false;
-        }
-        else if (arg is "--all")
-        {
-            allMovements = true;
-        }
-        else if (arg is "--score")
-        {
-            if (i + 1 >= args.Length)
-                return (null, null, false, false, null, "--score requires a score name");
-            scoreName = args[++i];
-        }
-        else if (arg.StartsWith("-"))
-        {
-            return (null, null, false, false, null, $"Unknown option: {arg}");
-        }
-        else if (inputPath == null)
-        {
-            inputPath = arg;
-        }
-        else if (outputPath == null)
-        {
-            outputPath = arg;
-        }
-        else
-        {
-            return (null, null, false, false, null, $"Unexpected argument: {arg}");
-        }
-    }
-
-    if (inputPath == null)
-        return (null, null, false, false, null, "Input file required");
-
-    if (!File.Exists(inputPath))
-        return (null, null, false, false, null, $"File not found: {inputPath}");
-
-    outputPath ??= Path.ChangeExtension(inputPath, ".svg");
-
-    return (inputPath, outputPath, embedFont, allMovements, scoreName, null);
-}
-
-static int ExecuteSvg(string inputPath, string outputPath, bool embedFont, string? scoreName = null)
-{
-    try
-    {
-        var (source, tree) = LoadAndParse(inputPath);
-
-        // Surface every diagnostic (warnings to stderr too, so silent typos like `es`
-        // as a bare variable reference are visible); errors abort.
-        if (ReportDiagnostics(tree)) return 1;
-        if (!ValidateScoreName(tree, scoreName)) return 1;
-
-        // Configure render options
-        LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
-        if (embedFont)
-        {
-            var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
-            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(fontDir);
-        }
-        else
-        {
-            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
-        }
-        
-        // Generate SVG using shared generator
+        var renderOptions = MakeSvgOptions(embedFont);
         var svg = LilySharp.Core.Svg.SvgGenerator.Generate(tree, renderOptions, scoreName);
-        
         File.WriteAllText(outputPath, svg);
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine(embedFont ? "  Font embedded: Yes" : "  Font embedded: No");
         return 0;
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        return 1;
-    }
-}
+    });
+
+static LilySharp.Core.Svg.Renderer.SvgRenderOptions MakeSvgOptions(bool embedFont)
+    => embedFont
+        ? LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(LilySharp.Core.Rendering.FontLocator.Find())
+        : LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
 
 // The generators deliberately fall back to the FIRST score for an unknown
 // name (the LSP preview needs that after a rename) — on the command line a
@@ -288,26 +220,10 @@ static bool ValidateScoreName(LilySharp.Core.Syntax.SyntaxTree tree, string? sco
     return false;
 }
 
-static int ExecuteSvgAll(string inputPath, bool embedFont)
-{
-    try
+static int ExecuteSvgAll(string inputPath, bool embedFont) =>
+    RunOutputCommand(inputPath, null, tree =>
     {
-        var (source, tree) = LoadAndParse(inputPath);
-
-        if (ReportDiagnostics(tree)) return 1;
-
-        LilySharp.Core.Svg.Renderer.SvgRenderOptions renderOptions;
-        if (embedFont)
-        {
-            var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
-            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Export(fontDir);
-        }
-        else
-        {
-            renderOptions = LilySharp.Core.Svg.Renderer.SvgRenderOptions.Default;
-        }
-
-        var results = LilySharp.Core.Svg.SvgGenerator.GenerateAll(tree, renderOptions);
+        var results = LilySharp.Core.Svg.SvgGenerator.GenerateAll(tree, MakeSvgOptions(embedFont));
         var inputDir = Path.GetDirectoryName(inputPath) ?? ".";
 
         Console.WriteLine($"Generating {results.Count} movement(s):");
@@ -327,45 +243,28 @@ static int ExecuteSvgAll(string inputPath, bool embedFont)
         }
 
         return 0;
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        return 1;
-    }
-}
+    });
 
 // ============ PDF Command ============
 
 static int RunPdf(string[] args)
 {
-    if (args.Contains("-h") || args.Contains("--help"))
+    if (WantsHelp(args))
     {
         ShowPdfHelp();
         return 0;
     }
 
-    // --score is peeled off first; the rest goes through the shared parser.
-    string? scoreName = null;
-    var rest = new List<string>();
-    for (int i = 0; i < args.Length; i++)
-    {
-        if (args[i] is "--score")
-        {
-            if (i + 1 >= args.Length) { Console.Error.WriteLine("Error: --score requires a score name"); return 1; }
-            scoreName = args[++i];
-        }
-        else rest.Add(args[i]);
-    }
-    var (inputPath, outputPath, error) = ParseSimpleOptions(rest.ToArray(), ".pdf");
-    if (error != null)
-    {
-        Console.Error.WriteLine($"Error: {error}");
-        Console.Error.WriteLine("Run 'lysc pdf --help' for usage.");
-        return 1;
-    }
+    var r = new CliParser(maxPositionals: 2)
+        .Value("output", "-o requires a file path", "-o", "--output")
+        .Value("score", "--score requires a score name", "--score")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "pdf");
 
-    return ExecutePdf(inputPath!, outputPath!, scoreName);
+    var (inputPath, outputPath, ioError) = CliParser.ResolveIo(r, ".pdf");
+    if (ioError != null) return OptionError(ioError, "pdf");
+
+    return ExecutePdf(inputPath!, outputPath!, r.Get("score"));
 }
 
 static void ShowPdfHelp()
@@ -391,90 +290,41 @@ static void ShowPdfHelp()
         """);
 }
 
-static int ExecutePdf(string inputPath, string outputPath, string? scoreName = null)
-{
-    try
+static int ExecutePdf(string inputPath, string outputPath, string? scoreName = null) =>
+    RunOutputCommand(inputPath, scoreName, tree =>
     {
-        var (source, tree) = LoadAndParse(inputPath);
-
-        if (ReportDiagnostics(tree)) return 1;
-        if (!ValidateScoreName(tree, scoreName)) return 1;
-
         var pdfBytes = PdfGenerator.Generate(tree, null, scoreName);
         File.WriteAllBytes(outputPath, pdfBytes);
-
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine($"  Size: {pdfBytes.Length / 1024.0:F1} KB");
         return 0;
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        return 1;
-    }
-}
+    });
 
 // ============ PNG Command ============
 
 static int RunPng(string[] args)
 {
-    if (args.Contains("-h") || args.Contains("--help"))
+    if (WantsHelp(args))
     {
         ShowPngHelp();
         return 0;
     }
 
-    // Parse options with optional --scale flag
-    string? inputPath = null;
-    string? outputPath = null;
-    string? scoreName = null;
+    var r = new CliParser(maxPositionals: 2)
+        .Value("output", "-o requires a file path", "-o", "--output")
+        .Value("score", "--score requires a score name", "--score")
+        .Value("scale", "--scale requires a number", "--scale")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "png");
+
     float scale = 2.0f;
+    if (r.Get("scale") is { } scaleText && (!float.TryParse(scaleText, out scale) || scale <= 0))
+        return OptionError("--scale must be a positive number", "png");
 
-    for (int i = 0; i < args.Length; i++)
-    {
-        var arg = args[i];
-        if (arg is "-o" or "--output")
-        {
-            if (i + 1 >= args.Length) { Console.Error.WriteLine("Error: -o requires a file path"); return 1; }
-            outputPath = args[++i];
-        }
-        else if (arg is "--score")
-        {
-            if (i + 1 >= args.Length) { Console.Error.WriteLine("Error: --score requires a score name"); return 1; }
-            scoreName = args[++i];
-        }
-        else if (arg is "--scale")
-        {
-            if (i + 1 >= args.Length) { Console.Error.WriteLine("Error: --scale requires a number"); return 1; }
-            if (!float.TryParse(args[++i], out scale) || scale <= 0)
-            {
-                Console.Error.WriteLine("Error: --scale must be a positive number");
-                return 1;
-            }
-        }
-        else if (arg.StartsWith("-"))
-        {
-            Console.Error.WriteLine($"Error: Unknown option: {arg}");
-            Console.Error.WriteLine("Run 'lysc png --help' for usage.");
-            return 1;
-        }
-        else if (inputPath == null) inputPath = arg;
-        else if (outputPath == null) outputPath = arg;
-        else
-        {
-            // A stray extra positional used to be silently dropped; reject it so png
-            // matches the strictness of the shared ParseSimpleOptions parser.
-            Console.Error.WriteLine($"Error: Unexpected argument: {arg}");
-            Console.Error.WriteLine("Run 'lysc png --help' for usage.");
-            return 1;
-        }
-    }
+    var (inputPath, outputPath, ioError) = CliParser.ResolveIo(r, ".png");
+    if (ioError != null) return OptionError(ioError, "png");
 
-    if (inputPath == null) { Console.Error.WriteLine("Error: Input file required"); return 1; }
-    if (!File.Exists(inputPath)) { Console.Error.WriteLine($"Error: File not found: {inputPath}"); return 1; }
-    outputPath ??= Path.ChangeExtension(inputPath, ".png");
-
-    return ExecutePng(inputPath, outputPath, scale, scoreName);
+    return ExecutePng(inputPath!, outputPath!, scale, r.Get("score"));
 }
 
 static void ShowPngHelp()
@@ -502,15 +352,9 @@ static void ShowPngHelp()
         """);
 }
 
-static int ExecutePng(string inputPath, string outputPath, float scale, string? scoreName = null)
-{
-    try
+static int ExecutePng(string inputPath, string outputPath, float scale, string? scoreName = null) =>
+    RunOutputCommand(inputPath, scoreName, tree =>
     {
-        var (source, tree) = LoadAndParse(inputPath);
-
-        if (ReportDiagnostics(tree)) return 1;
-
-        if (!ValidateScoreName(tree, scoreName)) return 1;
         var fontDir = LilySharp.Core.Rendering.FontLocator.Find();
         var pngOptions = new PngRenderOptions { Scale = scale, FontDirectory = fontDir };
 
@@ -539,31 +383,20 @@ static int ExecutePng(string inputPath, string outputPath, float scale, string? 
         }
         Console.WriteLine($"  Scale: {scale:F1}x");
         return 0;
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        return 1;
-    }
-}
+    });
 
 // ============ MIDI Command ============
 
 static int RunMidi(string[] args)
 {
-    if (args.Contains("-h") || args.Contains("--help"))
+    if (WantsHelp(args))
     {
         ShowMidiHelp();
         return 0;
     }
 
-    var (inputPath, outputPath, error) = ParseSimpleOptions(args, ".mid");
-    if (error != null)
-    {
-        Console.Error.WriteLine($"Error: {error}");
-        Console.Error.WriteLine("Run 'lysc midi --help' for usage.");
-        return 1;
-    }
+    var (inputPath, outputPath, error) = ParseIoOnly(args, ".mid");
+    if (error != null) return OptionError(error, "midi");
 
     return ExecuteMidi(inputPath!, outputPath!);
 }
@@ -590,35 +423,23 @@ static void ShowMidiHelp()
         """);
 }
 
-static int ExecuteMidi(string inputPath, string outputPath)
-{
-    try
+static int ExecuteMidi(string inputPath, string outputPath) =>
+    RunOutputCommand(inputPath, null, tree =>
     {
-        var (source, tree) = LoadAndParse(inputPath);
-
-        if (ReportDiagnostics(tree)) return 1;
-
         var exporter = new MidiExporter();
         var midi = exporter.Export(tree);
         midi.Save(outputPath);
-
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine($"  Tracks: {midi.Tracks.Count}");
         Console.WriteLine($"  Notes: {midi.Tracks.Skip(1).Sum(t => t.Notes.Count)}");
         return 0;
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        return 1;
-    }
-}
+    });
 
-// ============ MusicXML Command ============
+// ============ VSQX Command ============
 
 static int RunVsqx(string[] args)
 {
-    if (args.Contains("-h") || args.Contains("--help"))
+    if (WantsHelp(args))
     {
         Console.WriteLine("""
             Convert Lily# source to a VOCALOID4 sequence (.vsqx)
@@ -632,45 +453,30 @@ static int RunVsqx(string[] args)
         return 0;
     }
 
-    var (inputPath, outputPath, error) = ParseSimpleOptions(args, ".vsqx");
-    if (error != null)
-    {
-        Console.Error.WriteLine($"Error: {error}");
-        Console.Error.WriteLine("Run 'lysc vsqx --help' for usage.");
-        return 1;
-    }
+    var (inputPath, outputPath, error) = ParseIoOnly(args, ".vsqx");
+    if (error != null) return OptionError(error, "vsqx");
 
-    try
+    return RunOutputCommand(inputPath!, null, tree =>
     {
-        var (source, tree) = LoadAndParse(inputPath!);
-        if (ReportDiagnostics(tree)) return 1;
         var doc = new LilySharp.Core.Vocaloid.VsqxExporter().Export(tree);
         doc.Save(outputPath!);
         Console.WriteLine($"Created: {outputPath}");
         return 0;
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        return 1;
-    }
+    });
 }
+
+// ============ MusicXML Command ============
 
 static int RunXml(string[] args)
 {
-    if (args.Contains("-h") || args.Contains("--help"))
+    if (WantsHelp(args))
     {
         ShowXmlHelp();
         return 0;
     }
 
-    var (inputPath, outputPath, error) = ParseSimpleOptions(args, ".xml");
-    if (error != null)
-    {
-        Console.Error.WriteLine($"Error: {error}");
-        Console.Error.WriteLine("Run 'lysc xml --help' for usage.");
-        return 1;
-    }
+    var (inputPath, outputPath, error) = ParseIoOnly(args, ".xml");
+    if (error != null) return OptionError(error, "xml");
 
     return ExecuteXml(inputPath!, outputPath!);
 }
@@ -697,33 +503,21 @@ static void ShowXmlHelp()
         """);
 }
 
-static int ExecuteXml(string inputPath, string outputPath)
-{
-    try
+static int ExecuteXml(string inputPath, string outputPath) =>
+    RunOutputCommand(inputPath, null, tree =>
     {
-        var (source, tree) = LoadAndParse(inputPath);
-
-        if (ReportDiagnostics(tree)) return 1;
-
         var (parts, measures) = new MusicXmlExporter().ExportToFile(tree, outputPath);
-
         Console.WriteLine($"Created: {outputPath}");
         Console.WriteLine($"  Parts: {parts}");
         Console.WriteLine($"  Measures: {measures}");
         return 0;
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        return 1;
-    }
-}
+    });
 
 // ============ Import Command ============
 
 static int RunImport(string[] args)
 {
-    if (args.Contains("-h") || args.Contains("--help"))
+    if (WantsHelp(args))
     {
         Console.WriteLine("""
             Import MusicXML into a Lily# source file
@@ -749,20 +543,19 @@ static int RunImport(string[] args)
         return 0;
     }
 
-    bool relative = args.Contains("-r") || args.Contains("--relative");
-    var positional = args.Where(a => a != "-r" && a != "--relative").ToArray();
-    var (inputPath, outputPath, error) = ParseSimpleOptions(positional, ".lys");
-    if (error != null)
-    {
-        Console.Error.WriteLine($"Error: {error}");
-        Console.Error.WriteLine("Run 'lysc import --help' for usage.");
-        return 1;
-    }
+    var r = new CliParser(maxPositionals: 2)
+        .Value("output", "-o requires a file path", "-o", "--output")
+        .Flag("relative", "-r", "--relative")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "import");
+
+    var (inputPath, outputPath, ioError) = CliParser.ResolveIo(r, ".lys");
+    if (ioError != null) return OptionError(ioError, "import");
 
     try
     {
         var bytes = File.ReadAllBytes(inputPath!);
-        var (lys, report) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().ImportBytes(bytes, relative);
+        var (lys, report) = new LilySharp.Core.MusicXmlImport.MusicXmlImporter().ImportBytes(bytes, r.Has("relative"));
         File.WriteAllText(outputPath!, lys);
 
         Console.WriteLine($"Created: {outputPath}");
@@ -785,7 +578,7 @@ static int RunImport(string[] args)
 
 static int RunHarmonize(string[] args)
 {
-    if (args.Contains("-h") || args.Contains("--help"))
+    if (WantsHelp(args))
     {
         Console.WriteLine("""
             Usage: lysc harmonize <input.lys>
@@ -797,18 +590,16 @@ static int RunHarmonize(string[] args)
         return 0;
     }
 
-    var inputPath = args.FirstOrDefault(a => !a.StartsWith('-'));
-    if (inputPath == null)
+    var r = new CliParser(maxPositionals: 1).Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "harmonize");
+    if (r.Positionals.Count == 0)
     {
         Console.Error.WriteLine("Error: no input file. Try: lysc harmonize score.lys");
         return 1;
     }
 
-    try
+    return RunOutputCommand(r.Positionals[0], null, tree =>
     {
-        var (_, tree) = LoadAndParse(inputPath);
-        if (ReportDiagnostics(tree)) return 1;   // a broken melody can't be read reliably
-
         var block = LilySharp.Core.Harmony.ChordHarmonizer.Harmonize(tree);
         if (block == null)
         {
@@ -817,40 +608,35 @@ static int RunHarmonize(string[] args)
         }
         Console.WriteLine(block);
         return 0;
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        return 1;
-    }
+    });
 }
 
 // ============ Check Command ============
 
 static int RunCheck(string[] args)
 {
-    if (args.Contains("-h") || args.Contains("--help"))
+    if (WantsHelp(args))
     {
         ShowCheckHelp();
         return 0;
     }
 
-    if (args.Length == 0)
-    {
-        Console.Error.WriteLine("Error: Input file required");
-        Console.Error.WriteLine("Run 'lysc check --help' for usage.");
-        return 1;
-    }
+    var r = new CliParser(maxPositionals: 1)
+        .Flag("pitches", "-p", "--pitches")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "check");
 
-    bool showPitches = args.Contains("--pitches") || args.Contains("-p");
-    var inputPath = args.FirstOrDefault(a => !a.StartsWith('-'));
-    if (inputPath is null || !File.Exists(inputPath))
+    if (r.Positionals.Count == 0)
+        return OptionError("Input file required", "check");
+
+    var inputPath = r.Positionals[0];
+    if (!File.Exists(inputPath))
     {
         Console.Error.WriteLine($"Error: File not found: {inputPath}");
         return 1;
     }
 
-    return ExecuteCheck(inputPath, showPitches);
+    return ExecuteCheck(inputPath, r.Has("pitches"));
 }
 
 static void ShowCheckHelp()
@@ -941,23 +727,11 @@ static void PrintResolvedPitches(string source, SyntaxTree tree)
         // to the actual pitch so the line:col and written token line up.
         int p = e.Position;
         while (p < source.Length && char.IsWhiteSpace(source[p])) p++;
-        var (line, col) = LineColFromPosition(source, p);
+        var (line, col) = LineColOf(source, p);
         string written = ReadPitchToken(source, p);
         Console.WriteLine($"  {line,4}:{col,-3} {written,-7} -> {e.Pitch}");
     }
     Console.WriteLine();
-}
-
-static (int Line, int Col) LineColFromPosition(string source, int pos)
-{
-    int line = 1, col = 1;
-    int n = Math.Min(pos, source.Length);
-    for (int i = 0; i < n; i++)
-    {
-        if (source[i] == '\n') { line++; col = 1; }
-        else col++;
-    }
-    return (line, col);
 }
 
 static string ReadPitchToken(string source, int pos)
@@ -1002,24 +776,11 @@ static bool ReportDiagnostics(SyntaxTree tree)
     return hasErrors;
 }
 
-// 1-based line,column for a source offset — every human-facing diagnostic
-// prints this instead of the raw byte offset.
-static string LineCol(string text, int offset)
-{
-    int line = 1, col = 1;
-    for (int i = 0; i < offset && i < text.Length; i++)
-    {
-        if (text[i] == '\n') { line++; col = 1; }
-        else col++;
-    }
-    return $"{line},{col}";
-}
-
 // ============ Layout Command ============
 
 static int RunLayout(string[] args)
 {
-    if (args.Contains("-h") || args.Contains("--help"))
+    if (WantsHelp(args))
     {
         Console.WriteLine("""
             Print a text summary of the engine's layout decisions
@@ -1045,35 +806,24 @@ static int RunLayout(string[] args)
         return 0;
     }
 
-    bool allScores = args.Contains("--all");
-    var inputPath = args.FirstOrDefault(a => !a.StartsWith('-'));
-    if (inputPath is null)
-    {
-        Console.Error.WriteLine("Error: Input file required");
-        Console.Error.WriteLine("Run 'lysc layout --help' for usage.");
-        return 1;
-    }
+    var r = new CliParser(maxPositionals: 1)
+        .Flag("all", "--all")
+        .Parse(args);
+    if (r.Error != null) return OptionError(r.Error, "layout");
+
+    if (r.Positionals.Count == 0)
+        return OptionError("Input file required", "layout");
+
+    var inputPath = r.Positionals[0];
     if (!File.Exists(inputPath))
-    {
-        Console.Error.WriteLine($"Error: File not found: {inputPath}");
-        return 1;
-    }
+        return OptionError($"File not found: {inputPath}", "layout");
 
-    try
+    bool allScores = r.Has("all");
+    return RunOutputCommand(inputPath, null, tree =>
     {
-        var (_, tree) = LoadAndParse(inputPath);
-        // Surface warnings, abort on errors — a layout summary of broken source is
-        // misleading, so route through the same gate as every output command.
-        if (ReportDiagnostics(tree)) return 1;
-
         Console.Write(LilySharp.Core.Svg.LayoutReport.Generate(tree, allScores));
         return 0;
-    }
-    catch (Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
-        return 1;
-    }
+    });
 }
 
 // ============ Shared Utilities ============
@@ -1090,47 +840,53 @@ static (string Source, LilySharp.Core.Syntax.SyntaxTree Tree) LoadAndParse(strin
     return (source, LilySharp.Core.Syntax.SyntaxTree.Parse(source));
 }
 
-static (string? InputPath, string? OutputPath, string? Error) ParseSimpleOptions(string[] args, string defaultExt)
+// The shared skeleton behind every file-output command: load+parse, surface
+// diagnostics (abort on error), validate an optional --score name, run the
+// format-specific body, and turn any exception into "Error: <message>" / exit 1.
+// scoreName == null skips score validation (formats without a --score option).
+static int RunOutputCommand(string inputPath, string? scoreName, Func<SyntaxTree, int> body)
 {
-    string? inputPath = null;
-    string? outputPath = null;
-
-    for (int i = 0; i < args.Length; i++)
+    try
     {
-        var arg = args[i];
-        
-        if (arg is "-o" or "--output")
-        {
-            if (i + 1 >= args.Length)
-                return (null, null, "-o requires a file path");
-            outputPath = args[++i];
-        }
-        else if (arg.StartsWith("-"))
-        {
-            return (null, null, $"Unknown option: {arg}");
-        }
-        else if (inputPath == null)
-        {
-            inputPath = arg;
-        }
-        else if (outputPath == null)
-        {
-            outputPath = arg;
-        }
-        else
-        {
-            return (null, null, $"Unexpected argument: {arg}");
-        }
+        var (_, tree) = LoadAndParse(inputPath);
+        if (ReportDiagnostics(tree)) return 1;
+        if (!ValidateScoreName(tree, scoreName)) return 1;
+        return body(tree);
     }
-
-    if (inputPath == null)
-        return (null, null, "Input file required");
-
-    if (!File.Exists(inputPath))
-        return (null, null, $"File not found: {inputPath}");
-
-    outputPath ??= Path.ChangeExtension(inputPath, defaultExt);
-    
-    return (inputPath, outputPath, null);
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
+        return 1;
+    }
 }
 
+// The input/output pair for the format commands whose only option is -o/--output.
+static (string? InputPath, string? OutputPath, string? Error) ParseIoOnly(string[] args, string defaultExt)
+{
+    var r = new CliParser(maxPositionals: 2)
+        .Value("output", "-o requires a file path", "-o", "--output")
+        .Parse(args);
+    if (r.Error != null) return (null, null, r.Error);
+    return CliParser.ResolveIo(r, defaultExt);
+}
+
+// 1-based (line, column) for a source offset.
+static (int Line, int Col) LineColOf(string text, int offset)
+{
+    int line = 1, col = 1;
+    int n = Math.Min(offset, text.Length);
+    for (int i = 0; i < n; i++)
+    {
+        if (text[i] == '\n') { line++; col = 1; }
+        else col++;
+    }
+    return (line, col);
+}
+
+// "line,column" for a source offset — every human-facing diagnostic prints this
+// instead of the raw byte offset.
+static string LineCol(string text, int offset)
+{
+    var (line, col) = LineColOf(text, offset);
+    return $"{line},{col}";
+}

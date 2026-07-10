@@ -110,36 +110,14 @@ public sealed partial class LilySharpLanguageServer
     /// </summary>
     internal static bool IsInsideChordsBlock(string text, int offset)
     {
-        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
         // The INTRODUCING keyword of each still-open block (for `chords harmony {` and
         // `section A {` it is one word before the name, so a two-word lookback).
-        var stack = new System.Collections.Generic.Stack<string>();
-        bool inStr = false, inLine = false, inBlock = false;
-        for (int i = 0; i < offset && i < text.Length; i++)
-        {
-            if (!IsCodeChar(text, i, ref inStr, ref inLine, ref inBlock)) continue;
-            if (text[i] == '{')
-            {
-                int j = i - 1;
-                while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
-                int end1 = j + 1;
-                while (j >= 0 && IsWordChar(text[j])) j--;
-                string w1 = text.Substring(j + 1, end1 - (j + 1));   // word before '{'
-                int k = j;
-                while (k >= 0 && char.IsWhiteSpace(text[k])) k--;
-                int end2 = k + 1;
-                while (k >= 0 && IsWordChar(text[k])) k--;
-                string w2 = text.Substring(k + 1, end2 - (k + 1));   // and the one before it
-                stack.Push(w2 is "chords" or "lyrics" or "section" or "part" ? w2 : w1);
-            }
-            else if (text[i] == '}' && stack.Count > 0)
-            {
-                stack.Pop();
-            }
-        }
+        var frames = ScanOpenBlocks(text, offset, ReadFrame);
         // Inside a chords block, or a section nested inside one (skip section levels).
-        foreach (var keyword in stack) // innermost first
+        for (int i = frames.Count - 1; i >= 0; i--) // innermost first
         {
+            var f = frames[i];
+            string keyword = f.Prefix is "chords" or "lyrics" or "section" or "part" ? f.Prefix : f.Name;
             if (keyword == "chords") return true;
             if (keyword == "section") continue;
             return false;
@@ -154,25 +132,8 @@ public sealed partial class LilySharpLanguageServer
     /// </summary>
     internal static string? InnermostOpenBlock(string text, int offset)
     {
-        var stack = new System.Collections.Generic.Stack<string>();
-        bool inStr = false, inLine = false, inBlock = false;
-        for (int i = 0; i < offset && i < text.Length; i++)
-        {
-            if (!IsCodeChar(text, i, ref inStr, ref inLine, ref inBlock)) continue;
-            if (text[i] == '{')
-            {
-                int j = i - 1;
-                while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
-                int end = j + 1;
-                while (j >= 0 && (char.IsLetterOrDigit(text[j]) || text[j] == '_')) j--;
-                stack.Push(text.Substring(j + 1, end - (j + 1)));
-            }
-            else if (text[i] == '}' && stack.Count > 0)
-            {
-                stack.Pop();
-            }
-        }
-        return stack.Count > 0 ? stack.Peek() : null;
+        var frames = ScanOpenBlocks(text, offset, ReadFrame);
+        return frames.Count > 0 ? frames[^1].Name : null;
     }
 
     /// <summary>
@@ -184,28 +145,8 @@ public sealed partial class LilySharpLanguageServer
     /// </summary>
     internal static bool IsInsidePartBlock(string text, int offset)
     {
-        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
-        var stack = new System.Collections.Generic.Stack<bool>();
-        bool inStr = false, inLine = false, inBlock = false;
-        for (int i = 0; i < offset && i < text.Length; i++)
-        {
-            if (!IsCodeChar(text, i, ref inStr, ref inLine, ref inBlock)) continue;
-            if (text[i] == '{')
-            {
-                int j = i - 1;
-                while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
-                while (j >= 0 && IsWordChar(text[j])) j--;      // the block's name
-                while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
-                int end = j + 1;
-                while (j >= 0 && IsWordChar(text[j])) j--;      // the introducing keyword
-                stack.Push(text.Substring(j + 1, end - (j + 1)) == "part");
-            }
-            else if (text[i] == '}' && stack.Count > 0)
-            {
-                stack.Pop();
-            }
-        }
-        return stack.Count > 0 && stack.Peek();
+        var frames = ScanOpenBlocks(text, offset, ReadFrame);
+        return frames.Count > 0 && frames[^1].Prefix == "part";
     }
 
     /// <summary>
@@ -271,6 +212,52 @@ public sealed partial class LilySharpLanguageServer
         for (int i = 0; i < length; i++)
             mask[i] = IsCodeChar(text, i, ref inString, ref inLine, ref inBlock);
         return mask;
+    }
+
+    /// <summary>
+    /// Forward-scans <paramref name="text"/> over <c>[0, offset)</c>, maintaining
+    /// the stack of still-open <c>{ … }</c> blocks (braces inside strings/comments
+    /// ignored via <see cref="IsCodeChar"/>). For each opening brace,
+    /// <paramref name="atOpenBrace"/> computes the payload pushed onto the stack;
+    /// the returned list is outermost-first, so <c>[^1]</c> is the innermost block.
+    /// This is the shared skeleton of the forward block-context scanners.
+    /// </summary>
+    private static List<T> ScanOpenBlocks<T>(string text, int offset, Func<string, int, T> atOpenBrace)
+    {
+        var stack = new List<T>();
+        bool inStr = false, inLine = false, inBlock = false;
+        int limit = Math.Min(offset, text.Length);
+        for (int i = 0; i < limit; i++)
+        {
+            if (!IsCodeChar(text, i, ref inStr, ref inLine, ref inBlock)) continue;
+            if (text[i] == '{') stack.Add(atOpenBrace(text, i));
+            else if (text[i] == '}' && stack.Count > 0) stack.RemoveAt(stack.Count - 1);
+        }
+        return stack;
+    }
+
+    /// <summary>A still-open block frame: the bare word immediately before its
+    /// <c>{</c> (<see cref="Name"/>) and the word before that (<see cref="Prefix"/>),
+    /// so callers can tell <c>chords harmony {</c> (Prefix=chords, Name=harmony)
+    /// from <c>structure {</c> (Prefix="", Name=structure).</summary>
+    private readonly record struct BlockFrame(string Prefix, string Name);
+
+    /// <summary>Reads the two bare words before <paramref name="braceIndex"/> into a
+    /// <see cref="BlockFrame"/> (skipping intervening whitespace).</summary>
+    private static BlockFrame ReadFrame(string text, int braceIndex)
+    {
+        static bool IsWordChar(char c) => char.IsLetterOrDigit(c) || c == '_';
+        int j = braceIndex - 1;
+        while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+        int end1 = j + 1;
+        while (j >= 0 && IsWordChar(text[j])) j--;
+        string name = text.Substring(j + 1, end1 - (j + 1));   // word before '{'
+        int k = j;
+        while (k >= 0 && char.IsWhiteSpace(text[k])) k--;
+        int end2 = k + 1;
+        while (k >= 0 && IsWordChar(text[k])) k--;
+        string prefix = text.Substring(k + 1, end2 - (k + 1));  // and the one before it
+        return new BlockFrame(prefix, name);
     }
 
     /// <summary>Quality-token completions offered after a chord's ':' inside a chords block.</summary>
@@ -651,21 +638,8 @@ public sealed partial class LilySharpLanguageServer
     /// </summary>
     internal static bool IsInsideScoreBlock(string text, int offset)
     {
-        var stack = new System.Collections.Generic.Stack<bool>();
-        bool inStr = false, inLine = false, inBlock = false;
-        for (int i = 0; i < offset && i < text.Length; i++)
-        {
-            if (!IsCodeChar(text, i, ref inStr, ref inLine, ref inBlock)) continue;
-            if (text[i] == '{')
-            {
-                stack.Push(IsScoreBlockOpener(text, i));
-            }
-            else if (text[i] == '}' && stack.Count > 0)
-            {
-                stack.Pop();
-            }
-        }
-        return stack.Count > 0 && stack.Peek();
+        var stack = ScanOpenBlocks(text, offset, IsScoreBlockOpener);
+        return stack.Count > 0 && stack[^1];
     }
 
     private static bool IsScoreBlockOpener(string text, int braceIndex)

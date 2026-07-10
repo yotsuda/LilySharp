@@ -86,6 +86,34 @@ public sealed partial class LilySharpLanguageServer
         return null;
     }
 
+    /// <summary>The variable name at <paramref name="node"/> — from the node itself
+    /// or its immediate parent being a variable reference/declaration — or null.
+    /// Shared by Rename and DocumentHighlight; References/Definition use the
+    /// full-ancestor <see cref="FindAncestor{T}"/> walk instead.</summary>
+    private static string? FindVariableNameAt(SyntaxNode node) => node switch
+    {
+        VariableReferenceSyntax r => r.Name.Text,
+        VariableDeclarationSyntax d => d.Name.Text,
+        _ => node.Parent switch
+        {
+            VariableReferenceSyntax r => r.Name.Text,
+            VariableDeclarationSyntax d => d.Name.Text,
+            _ => null,
+        },
+    };
+
+    /// <summary>Invokes <paramref name="onOccurrence"/> for every declaration
+    /// (isDeclaration=true) then every reference of <paramref name="name"/>, passing
+    /// each occurrence's NAME node. Declaration-first order matches what Rename and
+    /// DocumentHighlight emit.</summary>
+    private static void ForEachOccurrence(SyntaxNode root, string name, Action<SyntaxNode, bool> onOccurrence)
+    {
+        foreach (var decl in root.DescendantNodes<VariableDeclarationSyntax>())
+            if (decl.Name.Text == name) onOccurrence(decl.Name, true);
+        foreach (var reference in root.DescendantNodes<VariableReferenceSyntax>())
+            if (reference.Name.Text == name) onOccurrence(reference.Name, false);
+    }
+
     private Location CreateLocation(Uri uri, string text, SyntaxNode node)
     {
         // Use the node's Span (the bare token, excluding leading/trailing trivia)

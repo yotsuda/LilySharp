@@ -25,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LilySharp.Core\LilySharp.Core.csproj" />
     <ProjectReference Include="..\LilySharp.Lsp\LilySharp.Lsp.csproj" />
+    <ProjectReference Include="..\LilySharp.Cli\LilySharp.Cli.csproj" />
   </ItemGroup>
 
 

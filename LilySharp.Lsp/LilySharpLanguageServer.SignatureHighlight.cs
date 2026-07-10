@@ -148,64 +148,24 @@ public sealed partial class LilySharpLanguageServer
         if (node == null) return null;
 
         // Find variable name at position
-        string? variableName = null;
-
-        if (node is VariableReferenceSyntax varRef)
-        {
-            variableName = varRef.Name.Text;
-        }
-        else if (node is VariableDeclarationSyntax varDecl)
-        {
-            variableName = varDecl.Name.Text;
-        }
-        else if (node.Parent is VariableReferenceSyntax parentRef)
-        {
-            variableName = parentRef.Name.Text;
-        }
-        else if (node.Parent is VariableDeclarationSyntax parentDecl)
-        {
-            variableName = parentDecl.Name.Text;
-        }
-
+        string? variableName = FindVariableNameAt(node);
         if (variableName == null) return null;
 
+        // Declaration → Write, references → Read (ForEachOccurrence yields decls first).
         var highlights = new List<DocumentHighlight>();
-
-        // Highlight declaration (Write)
-        foreach (var decl in doc.Tree.GetNodes<VariableDeclarationSyntax>())
+        ForEachOccurrence(doc.Tree.GetRoot(), variableName, (nameNode, isDeclaration) =>
         {
-            if (decl.Name.Text == variableName)
+            var (line, character) = GetLineAndCharacter(doc.Text, nameNode.Span.Start);
+            highlights.Add(new DocumentHighlight
             {
-                var (line, character) = GetLineAndCharacter(doc.Text, decl.Name.Span.Start);
-                highlights.Add(new DocumentHighlight
+                Range = new LspRange
                 {
-                    Range = new LspRange
-                    {
-                        Start = new Position { Line = line, Character = character },
-                        End = new Position { Line = line, Character = character + decl.Name.Width }
-                    },
-                    Kind = DocumentHighlightKind.Write
-                });
-            }
-        }
-
-        // Highlight references (Read)
-        foreach (var reference in doc.Tree.GetNodes<VariableReferenceSyntax>())
-        {
-            if (reference.Name.Text == variableName)
-            {
-                var (line, character) = GetLineAndCharacter(doc.Text, reference.Name.Span.Start);
-                highlights.Add(new DocumentHighlight
-                {
-                    Range = new LspRange
-                    {
-                        Start = new Position { Line = line, Character = character },
-                        End = new Position { Line = line, Character = character + reference.Name.Width }
-                    },
-                    Kind = DocumentHighlightKind.Read
-                });
-            }
-        }
+                    Start = new Position { Line = line, Character = character },
+                    End = new Position { Line = line, Character = character + nameNode.Width }
+                },
+                Kind = isDeclaration ? DocumentHighlightKind.Write : DocumentHighlightKind.Read
+            });
+        });
 
         return highlights.ToArray();
     }
