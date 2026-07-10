@@ -134,6 +134,12 @@ public sealed partial class MeasureCollector
         _octave.ResetForSection();
         _defaultDuration = Fraction.Quarter;
 
+        // The phrase auto-transpose baseline reverts with the key: a mid-section
+        // modulation must not carry into the next section (nor a reused copy).
+        // Unconditional — the running tonic can differ from home even when the
+        // sharp count matches (A minor → C major both have 0 sharps).
+        ResetAmbientTonicToHome();
+
         // Time and key revert to the SCORE level too, for the same self-containment:
         // a mid-section meter/key change must not leak past the section end (nor into
         // the same section reused elsewhere by the form). A section that wants a
@@ -329,6 +335,10 @@ public sealed partial class MeasureCollector
             .Where(n => !IsInsideProcessedContainer(n) && IsCollectableMusicNode(n));
 
         musicNodes.AddRange(nodes);
+
+        // Close the phrase so its auto-transpose is dropped before any inline
+        // notes that follow the reference (paired with the reset marker above).
+        musicNodes.Add(PhraseEndMarker.Instance);
     }
 
     private static BarlineSyntax CreateBarlineSyntax(string barText, int position)

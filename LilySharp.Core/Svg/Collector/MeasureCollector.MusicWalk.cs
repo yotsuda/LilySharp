@@ -56,10 +56,20 @@ public sealed partial class MeasureCollector
             var node = musicNodes[i];
 
             // Phrase-reference boundary: evaluate the body in the default frame,
-            // shifted by the reference's octave marks.
+            // shifted by the reference's octave marks, and auto-transposed from the
+            // score's home key to the ambient key here.
             if (node is RelativeResetMarker reset)
             {
                 EnterDefaultFrame(reset.OctaveOffset);
+                EnterPhraseTranspose();
+                continue;
+            }
+
+            // End of a phrase body: drop its auto-transpose so following inline
+            // notes stay at their written pitch.
+            if (node is PhraseEndMarker)
+            {
+                ExitPhraseTranspose();
                 continue;
             }
 
@@ -370,6 +380,8 @@ public sealed partial class MeasureCollector
                         _meta.KeySharps = 0;
                         _meta.KeyCustom = KeySignature.EncodeCustom(keySig.CustomAlterations);
                         newKey = new KeySignature(0, _meta.KeyCustom);
+                        // A custom key has no tonic — phrases placed here are unshifted.
+                        _ambientTonicValid = false;
                     }
                     else
                     {
@@ -377,6 +389,12 @@ public sealed partial class MeasureCollector
                         _meta.KeySharps = newSharps;
                         _meta.KeyCustom = null;
                         newKey = new KeySignature(newSharps);
+                        // Advance the phrase auto-transpose baseline to this key's
+                        // (written) tonic.
+                        _ambientTonicStep = Math.Max(0,
+                            LilySharp.Core.Music.KeySpelling.StepOf(keySig.Pitch.PitchName[0]));
+                        _ambientTonicAlter = keySig.Pitch.AccidentalOffset;
+                        _ambientTonicValid = true;
                         // Record the modulation for Roman-numeral chord degrees at this
                         // bar onward (per-voice walk, so a SortedDictionary dedups by
                         // measure). Custom signatures carry no tonic → no degree change.

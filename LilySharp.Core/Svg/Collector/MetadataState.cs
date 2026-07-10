@@ -50,7 +50,12 @@ internal sealed class MetadataState
     public string? KeyCustom;     // encoded custom key (KeySignature.EncodeCustom)
     public string? InitialKeyCustom;
     public int InitialKeySharps;  // preserved for Score.KeySignature (not mutated by mid-measure key changes)
-    public int KeyTonicStep;      // key tonic's diatonic step (0=C..6=B), for Roman-numeral chord degrees
+    // KeyTonicStep/KeyTonicAlter describe the SCORE main key's tonic (the phrase
+    // auto-transpose home). Like the other Key* header fields they are set by the
+    // top-level `key` and, matching KeyTonicStep's original behavior, left out of
+    // Reset() (a fresh collector zeroes them = C natural, the default tonic).
+    public int KeyTonicStep;      // tonic's diatonic step (0=C..6=B); also Roman-numeral chord degrees
+    public int KeyTonicAlter;     // tonic's accidental in semitones (Ees=-1, Fis=+1)
 
     public string Clef = "treble";
     public string InitialClef = "treble"; // preserved for Score.Clef (not mutated by mid-measure clef changes)

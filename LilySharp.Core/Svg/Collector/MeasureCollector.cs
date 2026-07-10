@@ -590,6 +590,21 @@ public sealed partial class MeasureCollector
     private int _sectionResetKeySharps;
     private string? _sectionResetKeyCustom;
 
+    // Running ambient key tonic (as WRITTEN, before any part transpose) tracked
+    // across the voice walk for phrase auto-transpose: a phrase written in the
+    // score's home key is shifted to whatever key is in effect where it is
+    // referenced. Reset to the home key per voice and at each section boundary,
+    // advanced by each mid-stream key change. Invalid = a custom/atonal ambient
+    // key (no tonic) → the phrase is placed unshifted.
+    private int _ambientTonicStep;
+    private int _ambientTonicAlter;
+    private bool _ambientTonicValid;
+
+    // Saved transpose targets around phrase-reference expansions (a stack so a
+    // phrase referenced inside another restores cleanly). Pushed at the reset
+    // marker, popped at the paired phrase-end marker.
+    private readonly Stack<(int step, int alt, int oct)?> _phraseTransposeSaves = new();
+
     // Piece-level metadata (title/composer/tempo/time/key/clef + header source
     // positions) grouped into one owner. See MetadataState.
     private readonly MetadataState _meta = new();
@@ -1449,6 +1464,65 @@ public sealed partial class MeasureCollector
         return PitchTransposer.Transpose(i.step, i.alt, i.oct, o.step, o.alt, o.oct);
     }
 
+    // ===== Phrase auto-transpose (movable motif) =====
+
+    /// <summary>Arms the running ambient tonic at the score's home key.</summary>
+    private void ResetAmbientTonicToHome()
+    {
+        _ambientTonicStep = _meta.KeyTonicStep;
+        _ambientTonicAlter = _meta.KeyTonicAlter;
+        // A custom/atonal home key has no tonic to transpose from.
+        _ambientTonicValid = _meta.InitialKeyCustom == null;
+    }
+
+    /// <summary>
+    /// The c-relative transpose target that moves a phrase from the score's home
+    /// key to the current ambient key, by the nearest octave (up if the shift is a
+    /// tritone or less, otherwise down). Null when there is nothing to do — the
+    /// ambient key equals home, or either key is custom/atonal — so the common
+    /// no-modulation case is an exact no-op.
+    /// </summary>
+    private (int step, int alt, int oct)? PhraseTransposeTarget()
+    {
+        if (!_ambientTonicValid || _meta.InitialKeyCustom != null)
+            return null;
+
+        int dStep = Mod7(_ambientTonicStep - _meta.KeyTonicStep);
+        int homeSemi = RelativeOctave.StepSemitoneOf(_meta.KeyTonicStep) + _meta.KeyTonicAlter;
+        int ambientSemi = RelativeOctave.StepSemitoneOf(_ambientTonicStep) + _ambientTonicAlter;
+        int dSemi = Mod12(ambientSemi - homeSemi);
+        if (dStep == 0 && dSemi == 0)
+            return null;
+
+        // Nearest octave: a shift of a tritone (6) or less goes up; more goes down.
+        int toOctave = dSemi <= 6 ? 0 : -1;
+        int toAlter = dSemi - RelativeOctave.StepSemitoneOf(dStep);
+        return (dStep, toAlter, toOctave);
+    }
+
+    /// <summary>
+    /// Arms the phrase transpose at a phrase-reference boundary and saves the
+    /// prior target so the paired <see cref="ExitPhraseTranspose"/> can restore
+    /// it. The phrase shift composes UNDER any part/score transpose (the written
+    /// pitch moves home→ambient first, then the instrument transpose applies).
+    /// </summary>
+    private void EnterPhraseTranspose()
+    {
+        var saved = _octave.GetTranspose();
+        _phraseTransposeSaves.Push(saved);
+        if (PhraseTransposeTarget() is { } phrase)
+            _octave.SetTranspose(ComposeTranspose(phrase, saved));
+    }
+
+    /// <summary>Restores the transpose saved by <see cref="EnterPhraseTranspose"/>.</summary>
+    private void ExitPhraseTranspose()
+    {
+        if (_phraseTransposeSaves.Count > 0)
+            _octave.SetTranspose(_phraseTransposeSaves.Pop());
+    }
+
+    private static int Mod7(int a) => ((a % 7) + 7) % 7;
+    private static int Mod12(int a) => ((a % 12) + 12) % 12;
 
     private static (string? clef, int? octave, (int step, int alt, int oct)? transpose, int clefPos) GetPartDefaults(SyntaxNode root, string partName)
     {
@@ -1555,8 +1629,11 @@ public sealed partial class MeasureCollector
                     {
                         _meta.KeySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
                         if (!key.IsCustom)
+                        {
                             _meta.KeyTonicStep = Math.Max(0,
                                 LilySharp.Core.Music.KeySpelling.StepOf(key.Pitch.PitchName[0]));
+                            _meta.KeyTonicAlter = key.Pitch.AccidentalOffset;
+                        }
                         _meta.KeyCustom = key.IsCustom
                             ? KeySignature.EncodeCustom(key.CustomAlterations)
                             : null;
@@ -1764,6 +1841,11 @@ public sealed partial class MeasureCollector
         _sectionResetKeySharps = _meta.KeySharps;
         _sectionResetKeyCustom = _meta.KeyCustom;
 
+        // Arm the ambient tonic at the score's home key for this voice's walk
+        // (phrase auto-transpose baseline).
+        ResetAmbientTonicToHome();
+        _phraseTransposeSaves.Clear();
+
         var builder = new MeasureBuilder(TimeSignatureFraction);
         if (_filePartial is { } filePickup)
             builder.SetPartial(filePickup); // top-level partial N arms every voice
@@ -1784,6 +1866,13 @@ public sealed partial class MeasureCollector
                 if (node is RelativeResetMarker reset)
                 {
                     EnterDefaultFrame(reset.OctaveOffset);
+                    EnterPhraseTranspose();
+                    continue;
+                }
+
+                if (node is PhraseEndMarker)
+                {
+                    ExitPhraseTranspose();
                     continue;
                 }
 

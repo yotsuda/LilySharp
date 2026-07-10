@@ -51,3 +51,25 @@ internal sealed class RelativeResetMarker : SyntaxNode
         private MarkerGreen() : base(SyntaxKind.None, fullWidth: 0) { }
     }
 }
+
+/// <summary>
+/// Zero-width sentinel closing a phrase-reference expansion: paired with the
+/// leading <see cref="RelativeResetMarker"/>, it lets the collector restore the
+/// pitch transpose it armed for the movable phrase, so inline notes that follow
+/// the reference stay at their written (absolute) pitch.
+/// </summary>
+internal sealed class PhraseEndMarker : SyntaxNode
+{
+    public static readonly PhraseEndMarker Instance = new();
+
+    private PhraseEndMarker()
+        : base(MarkerGreen.Shared, parent: null, position: 0)
+    {
+    }
+
+    private sealed class MarkerGreen : GreenNode
+    {
+        public static readonly MarkerGreen Shared = new();
+        private MarkerGreen() : base(SyntaxKind.None, fullWidth: 0) { }
+    }
+}

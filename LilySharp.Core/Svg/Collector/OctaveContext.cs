@@ -145,6 +145,14 @@ internal sealed class OctaveContext
     }
 
     /// <summary>
+    /// The currently armed transpose target (c→target interval), or null when the
+    /// voice is untransposed. Lets a caller save/restore the transpose around a
+    /// scoped shift (a phrase reference's auto-transpose).
+    /// </summary>
+    public (int step, int alt, int oct)? GetTranspose()
+        => HasTranspose ? (TransposeStep, TransposeAlt, TransposeOctave) : null;
+
+    /// <summary>
     /// Applies the part transpose to a resolved display pitch (no-op when the part
     /// is untransposed).
     /// </summary>
