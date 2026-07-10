@@ -401,24 +401,26 @@ internal sealed class MultiStaffLayouter
     }
 
     /// <summary>
-    /// Layouts a grand staff group with hara-kiri support.
+    /// The shared hara-kiri staff-stacking loop for a group: places each staff at its
+    /// real height (<see cref="GetStaffHeight"/> — a tab/ossia staff differs from the
+    /// nominal staffHeight), hiding hara-kiri staves at zero height. Returns the
+    /// builder plus the running bottom Y (<paramref name="currentY"/>) and whether any
+    /// staff is visible (<paramref name="anyVisible"/>). The grand/single/bracket
+    /// hara-kiri helpers share this and differ only in their delimiter tail.
     /// </summary>
-    private StaffGroupLayout LayoutGrandStaffGroupWithHaraKiri(
-        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
-        int startIndex, int startMeasure, int endMeasure, bool isFirstSystem)
+    private ImmutableArray<StaffLayout>.Builder StackHaraKiriStaves(
+        StaffGroup group, double y, double staffSpacing,
+        int startIndex, int startMeasure, int endMeasure, bool isFirstSystem,
+        out double currentY, out bool anyVisible)
     {
         var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
-        double currentY = y;
-        double staffSpacing = staffSpec.BasicDistance - staffHeight;
-        bool anyVisible = false;
+        currentY = y;
+        anyVisible = false;
 
         for (int i = 0; i < group.Staves.Length; i++)
         {
             var staff = group.Staves[i];
             bool hidden = HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem);
-            // Real per-staff height: a tab/ossia staff inside a grand staff differs
-            // from the nominal staffHeight, matching the single/bracket helpers and
-            // CalculateSystemHeight (the old fixed staffHeight mis-placed such staves).
             double thisStaffHeight = GetStaffHeight(staff);
 
             if (hidden)
@@ -450,6 +452,30 @@ internal sealed class MultiStaffLayouter
             }
         }
 
+        return staffLayouts;
+    }
+
+    /// <summary>Height of the last visible staff in a stacked group (0 if none).</summary>
+    private static double LastVisibleStaffHeight(ImmutableArray<StaffLayout>.Builder staffLayouts)
+    {
+        for (int i = staffLayouts.Count - 1; i >= 0; i--)
+            if (!staffLayouts[i].IsHidden)
+                return staffLayouts[i].Height;
+        return 0;
+    }
+
+    /// <summary>
+    /// Layouts a grand staff group with hara-kiri support.
+    /// </summary>
+    private StaffGroupLayout LayoutGrandStaffGroupWithHaraKiri(
+        StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
+        int startIndex, int startMeasure, int endMeasure, bool isFirstSystem)
+    {
+        double staffSpacing = staffSpec.BasicDistance - staffHeight;
+        var staffLayouts = StackHaraKiriStaves(
+            group, y, staffSpacing, startIndex, startMeasure, endMeasure, isFirstSystem,
+            out double currentY, out bool anyVisible);
+
         if (!anyVisible)
         {
             // All staves hidden — zero-height group
@@ -458,12 +484,7 @@ internal sealed class MultiStaffLayouter
                 new GrandStaffLayout(staffLayouts.ToImmutable(), 0, 0, 0));
         }
 
-        double lastVisibleHeight = 0;
-        for (int i = staffLayouts.Count - 1; i >= 0; i--)
-        {
-            if (!staffLayouts[i].IsHidden) { lastVisibleHeight = staffLayouts[i].Height; break; }
-        }
-        double totalHeight = currentY + lastVisibleHeight - y;
+        double totalHeight = currentY + LastVisibleStaffHeight(staffLayouts) - y;
         double braceX = CurrentIndent - SystemStartBracePadding;
 
         var grandStaffLayout = new GrandStaffLayout(
@@ -483,45 +504,10 @@ internal sealed class MultiStaffLayouter
         StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
         int startIndex, int startMeasure, int endMeasure, bool isFirstSystem)
     {
-        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
-        double currentY = y;
         double staffSpacing = staffSpec.BasicDistance - staffHeight;
-        bool anyVisible = false;
-
-        for (int i = 0; i < group.Staves.Length; i++)
-        {
-            var staff = group.Staves[i];
-            bool hidden = HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem);
-            double thisStaffHeight = GetStaffHeight(staff);
-
-            if (hidden)
-            {
-                staffLayouts.Add(new StaffLayout(
-                    StaffIndex: startIndex + i,
-                    Clef: staff.Clef,
-                    Y: currentY,
-                    Height: 0,
-                    Tuning: staff.Tuning,
-                    InstrumentName: staff.InstrumentName,
-                    IsOssia: staff.IsOssia,
-                    IsHidden: true));
-            }
-            else
-            {
-                if (anyVisible)
-                    currentY += thisStaffHeight + Math.Max(0, staffSpacing);
-
-                staffLayouts.Add(new StaffLayout(
-                    StaffIndex: startIndex + i,
-                    Clef: staff.Clef,
-                    Y: currentY,
-                    Height: thisStaffHeight,
-                    Tuning: staff.Tuning,
-                    InstrumentName: staff.InstrumentName,
-                    IsOssia: staff.IsOssia));
-                anyVisible = true;
-            }
-        }
+        var staffLayouts = StackHaraKiriStaves(
+            group, y, staffSpacing, startIndex, startMeasure, endMeasure, isFirstSystem,
+            out double currentY, out bool anyVisible);
 
         if (!anyVisible)
         {
@@ -530,16 +516,7 @@ internal sealed class MultiStaffLayouter
                 staffLayouts[0], y, 0);
         }
 
-        double lastVisibleHeight = 0;
-        for (int i = staffLayouts.Count - 1; i >= 0; i--)
-        {
-            if (!staffLayouts[i].IsHidden)
-            {
-                lastVisibleHeight = staffLayouts[i].Height;
-                break;
-            }
-        }
-
+        double lastVisibleHeight = LastVisibleStaffHeight(staffLayouts);
         double totalHeight = group.StaffCount == 1
             ? lastVisibleHeight
             : currentY + lastVisibleHeight - y;
@@ -558,45 +535,10 @@ internal sealed class MultiStaffLayouter
         StaffGroup group, double y, double staffHeight, VerticalSpacingSpec staffSpec,
         int startIndex, int startMeasure, int endMeasure, bool isFirstSystem)
     {
-        var staffLayouts = ImmutableArray.CreateBuilder<StaffLayout>();
-        double currentY = y;
         double staffSpacing = staffSpec.BasicDistance - staffHeight;
-        bool anyVisible = false;
-
-        for (int i = 0; i < group.Staves.Length; i++)
-        {
-            var staff = group.Staves[i];
-            bool hidden = HaraKiri.ShouldHideStaff(staff, startMeasure, endMeasure, isFirstSystem);
-            double thisStaffHeight = GetStaffHeight(staff);
-
-            if (hidden)
-            {
-                staffLayouts.Add(new StaffLayout(
-                    StaffIndex: startIndex + i,
-                    Clef: staff.Clef,
-                    Y: currentY,
-                    Height: 0,
-                    Tuning: staff.Tuning,
-                    InstrumentName: staff.InstrumentName,
-                    IsOssia: staff.IsOssia,
-                    IsHidden: true));
-            }
-            else
-            {
-                if (anyVisible)
-                    currentY += thisStaffHeight + Math.Max(0, staffSpacing);
-
-                staffLayouts.Add(new StaffLayout(
-                    StaffIndex: startIndex + i,
-                    Clef: staff.Clef,
-                    Y: currentY,
-                    Height: thisStaffHeight,
-                    Tuning: staff.Tuning,
-                    InstrumentName: staff.InstrumentName,
-                    IsOssia: staff.IsOssia));
-                anyVisible = true;
-            }
-        }
+        var staffLayouts = StackHaraKiriStaves(
+            group, y, staffSpacing, startIndex, startMeasure, endMeasure, isFirstSystem,
+            out double currentY, out bool anyVisible);
 
         if (!anyVisible)
         {
@@ -606,17 +548,7 @@ internal sealed class MultiStaffLayouter
                 new GrandStaffLayout(staffLayouts.ToImmutable(), 0, 0, 0, SystemStartDelimiterType.Bracket));
         }
 
-        double lastVisibleHeight = 0;
-        for (int i = staffLayouts.Count - 1; i >= 0; i--)
-        {
-            if (!staffLayouts[i].IsHidden)
-            {
-                lastVisibleHeight = staffLayouts[i].Height;
-                break;
-            }
-        }
-
-        double totalHeight = currentY + lastVisibleHeight - y;
+        double totalHeight = currentY + LastVisibleStaffHeight(staffLayouts) - y;
         double bracketX = CurrentIndent - SystemStartBracketPadding;
 
         var delimiterLayout = new GrandStaffLayout(
