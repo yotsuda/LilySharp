@@ -510,6 +510,19 @@ internal sealed class MeasureLayouter
             columns.Add(new ColumnLayout(timing, x, width));
         }
 
+        // Sentinel end-column at the measure's total duration, positioned at the
+        // content's right edge (where the end barline sits). Without it, a moment
+        // that falls WITHIN the last note — e.g. a chord name on a beat inside a
+        // half note — has no column past the last onset, so GetXForTiming snaps it
+        // onto the last column and it collides with the chord placed there. With the
+        // sentinel, GetXForTiming interpolates across the last note's span instead.
+        if (columns.Count > 0)
+        {
+            double endX = startBarlineWidth + positions[timings.Count + 1];
+            if (measure.TotalDuration > columns[^1].Timing)
+                columns.Add(new ColumnLayout(measure.TotalDuration, endX, 0));
+        }
+
         return columns.ToImmutable();
     }
 }
