@@ -54,7 +54,10 @@ public sealed class MidiExporter
 
     // Structure-driven playback: sections play in `structure { … }` order
     // (with |: :| repeats and volta alternatives), not declaration order.
-    private Dictionary<string, SectionDeclarationSyntax>? _sections;
+    // Sections keyed by name. A name maps to a LIST because part-major layout
+    // declares the same section name once per part (`part melody { section A … }`,
+    // `part bass { section A … }`); a structure reference plays them all.
+    private Dictionary<string, List<SectionDeclarationSyntax>>? _sections;
     private bool _structureDriven;
     private bool _structurePlayed;
 
@@ -122,7 +125,7 @@ public sealed class MidiExporter
         var mainTrack = new MidiTrack { Name = "Track 1", Channel = 0 };
         _root = tree.GetRoot();
         _phraseBodies = new Dictionary<string, SyntaxNode>();
-        _sections = new Dictionary<string, SectionDeclarationSyntax>();
+        _sections = new Dictionary<string, List<SectionDeclarationSyntax>>();
         _partDecls = new Dictionary<string, PartDeclarationSyntax>();
         foreach (var n in _root.DescendantNodes())
         {
@@ -131,7 +134,11 @@ public sealed class MidiExporter
             else if (n is VariableDeclarationSyntax vd)
                 _phraseBodies[vd.Name.Text] = vd.Expression;
             else if (n is SectionDeclarationSyntax sd)
-                _sections[sd.Name.Text] = sd;
+            {
+                if (!_sections.TryGetValue(sd.Name.Text, out var sameName))
+                    _sections[sd.Name.Text] = sameName = new List<SectionDeclarationSyntax>();
+                sameName.Add(sd);
+            }
             else if (n is PartDeclarationSyntax pd)
                 _partDecls.TryAdd(pd.Name.Text, pd); // first-wins, matching the old first-match scans
         }
@@ -351,9 +358,22 @@ public sealed class MidiExporter
         {
             if (p is PartDeclarationSyntax owner)
             {
-                _partOctaveAnchor = PartOctaveAnchor(owner.Name.Text);
-                _currentTimbre = PartTimbre(owner.Name.Text);
+                // Restore this part's own pitch/duration lane so concurrently
+                // played parts (one PlaySection call each, same structure
+                // reference) keep independent relative-octave chains across their
+                // sections instead of inheriting the previous part's last note.
+                string pname = owner.Name.Text;
+                int anchor = PartOctaveAnchor(pname);
+                var pitch = _partPitchLanes.TryGetValue(pname, out var saved)
+                    ? saved
+                    : (NoteName: 0, Octave: anchor, Dur: Fraction.Quarter);
+                _currentNoteName = pitch.NoteName;
+                _currentOctave = pitch.Octave;
+                _defaultDuration = pitch.Dur;
+                _partOctaveAnchor = anchor;
+                _currentTimbre = PartTimbre(pname);
                 ProcessChildren(section, track, conductorTrack);
+                _partPitchLanes[pname] = (_currentNoteName, _currentOctave, _defaultDuration);
                 _partOctaveAnchor = 4;
                 _currentTimbre = 0;
                 return;
@@ -398,8 +418,22 @@ public sealed class MidiExporter
 
     private void PlaySectionByName(string name, MidiTrack track, MidiTrack conductorTrack)
     {
-        if (_sections != null && _sections.TryGetValue(name, out var section))
+        // A structure reference to a part-major section name plays EVERY part's
+        // copy of it concurrently — each from the shared start tick on its own
+        // lane — not just the last-declared one (which silently dropped every
+        // earlier part, and yielded no notes at all when a chords part was
+        // declared last). Section-major names map to a single-element list.
+        if (_sections == null || !_sections.TryGetValue(name, out var sections))
+            return;
+        int start = _currentTick;
+        int end = start;
+        foreach (var section in sections)
+        {
+            _currentTick = start;
             PlaySection(section, track, conductorTrack);
+            end = Math.Max(end, _currentTick);
+        }
+        _currentTick = end;
     }
 
     /// <summary>

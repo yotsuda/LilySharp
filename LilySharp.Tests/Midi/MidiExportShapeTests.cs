@@ -56,6 +56,34 @@ public class MidiExportShapeTests
     }
 
     [Fact]
+    public void PartMajor_MultipleParts_WithChordsDeclaredLast_PlaysEveryPart()
+    {
+        // Part-major layout declares `section A` once per part. A structure
+        // reference must play EVERY part concurrently — even when a chords part
+        // is declared last. Previously the last-declared section won the name, so
+        // earlier parts were silently dropped, and a trailing chords part left
+        // the whole score with zero playable notes.
+        var notes = ExportNotes("""
+            octave absolute
+            part melody { clef treble section A { c'4 d' e' f' | } }
+            part bass { clef bass section A { c4 d e f | } }
+            chords harmony { section A { c1 | } }
+            structure { A }
+            score x { staff melody with chords harmony
+            staff bass }
+            """);
+
+        // Both parts sound: melody c'=C5 (72), bass c=C4 (60) — the chords part
+        // itself emits no MIDI notes.
+        Assert.Contains(notes, n => n.Pitch == 72); // melody — silently dropped before the fix
+        Assert.Contains(notes, n => n.Pitch == 60); // bass
+        // Concurrent: both parts' first note starts at the same tick.
+        Assert.Equal(
+            notes.Where(n => n.Pitch == 72).Min(n => n.StartTick),
+            notes.Where(n => n.Pitch == 60).Min(n => n.StartTick));
+    }
+
+    [Fact]
     public void QuarterTones_CarryQuarterBend()
     {
         var notes = ExportNotes("""
