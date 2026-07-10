@@ -51,6 +51,14 @@ internal sealed class VerticalSkyline
     private const double NegativeInfinity = double.NegativeInfinity;
     private const double PositiveInfinity = double.PositiveInfinity;
 
+    /// <summary>Two buildings are treated as parallel (no interior intersection
+    /// to split at) when their slopes differ by less than this.</summary>
+    private const double SlopeEqualityEpsilon = 1e-6;
+
+    /// <summary>Adjacent result segments are fused when their shared boundary,
+    /// slope, and value all coincide within this floating-point tolerance.</summary>
+    private const double ContinuityEpsilon = 1e-10;
+
     public VerticalSkyline(VerticalDirection direction)
     {
         _buildings = new List<SkylineBuilding>();
@@ -319,7 +327,7 @@ internal sealed class VerticalSkyline
         // Add intersection points
         foreach (var b in existing)
         {
-            if (Math.Abs(b.Slope - newBuilding.Slope) > 1e-6)
+            if (Math.Abs(b.Slope - newBuilding.Slope) > SlopeEqualityEpsilon)
             {
                 double ix = b.Intersection(newBuilding);
                 if (ix > Math.Max(b.Start, newBuilding.Start) &&
@@ -375,9 +383,9 @@ internal sealed class VerticalSkyline
                 if (result.Count > 0)
                 {
                     var last = result[^1];
-                    if (Math.Abs(last.End - segment.Start) < 1e-10 &&
-                        Math.Abs(last.Slope - segment.Slope) < 1e-10 &&
-                        Math.Abs(last.ValueAt(last.End) - segment.ValueAt(segment.Start)) < 1e-10)
+                    if (Math.Abs(last.End - segment.Start) < ContinuityEpsilon &&
+                        Math.Abs(last.Slope - segment.Slope) < ContinuityEpsilon &&
+                        Math.Abs(last.ValueAt(last.End) - segment.ValueAt(segment.Start)) < ContinuityEpsilon)
                     {
                         // Continuous - merge
                         result[^1] = new SkylineBuilding(last.Start, last.ValueAt(last.Start),

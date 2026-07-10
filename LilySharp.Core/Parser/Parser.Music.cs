@@ -66,7 +66,7 @@ internal sealed partial class Parser
             SyntaxKind.KeyKeyword => true,
             SyntaxKind.ClefKeyword => true,
             SyntaxKind.OctaveKeyword => true,
-            SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or SyntaxKind.AppogiaturaKeyword => true,
+            SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or SyntaxKind.AppoggiaturaKeyword => true,
             SyntaxKind.LyricsKeyword => true,
             SyntaxKind.OverrideKeyword or SyntaxKind.RevertKeyword or SyntaxKind.OnceKeyword => true,
             SyntaxKind.Identifier => true, // Variable reference
@@ -121,7 +121,7 @@ internal sealed partial class Parser
             SyntaxKind.PartialKeyword => ParsePartialDeclaration(),
 
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or
-            SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
+            SyntaxKind.AppoggiaturaKeyword => ParseGraceExpression(),
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             SyntaxKind.BreakKeyword => ParseBreak(),

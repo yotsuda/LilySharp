@@ -148,7 +148,7 @@ public enum SyntaxKind : ushort
     /// <summary>The <c>acciaccatura</c> grace-note keyword.</summary>
     AcciaccaturaKeyword,
     /// <summary>The <c>appoggiatura</c> grace-note keyword.</summary>
-    AppogiaturaKeyword,
+    AppoggiaturaKeyword,
     /// <summary>The <c>lyrics</c> keyword.</summary>
     LyricsKeyword,
     /// <summary>The <c>chords</c> keyword (independent chord part: <c>chords name { ... }</c> plus a score row).</summary>

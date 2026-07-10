@@ -66,6 +66,15 @@ internal static class ArticulationEngraver
     // LILYPOND-REF: define-grobs.scm:2295 staff-padding = 0.25
     private const double StaffPadding = 0.25;
 
+    // Bend/fall glyph X placement (staff-spaces; Lily#'s own tuning, no direct
+    // LP grob — LP renders bends via a different mechanism).
+    /// <summary>X offset of a bend glyph from the note on a TAB staff.</summary>
+    private const double BendTabXOffset = 0.5;
+    /// <summary>X gap between a bend glyph and the notehead's right edge.</summary>
+    private const double BendHeadPadding = 0.15;
+    /// <summary>X offset for a bend that arrives FROM THE LEFT (scoop/plop).</summary>
+    private const double BendApproachXOffset = 1.55;
+
     // Notehead half-extent and stem length: the canonical values live in
     // EngravingDefaults (single source of truth, LILYPOND-REF there).
     private const double NoteheadHalfHeight = EngravingDefaults.NoteheadHalfHeight;
@@ -205,18 +214,18 @@ internal static class ArticulationEngraver
                     int? sn = item is NoteItem ni ? ni.StringNumber : null;
                     var (strNum, _) = Tunings.CalculateFret(
                         midi + Tunings.OctaveShift(tt, ts.TabSourceClef), Tunings.GetTuning(tt), sn ?? 0);
-                    fx = itemX + 0.5;
+                    fx = itemX + BendTabXOffset;
                     fy = staffOffset + (strNum - 1) * space;
                 }
                 else
                 {
-                    fx = itemX + 2.0 * NoteheadHalfWidth(item) + 0.15;
+                    fx = itemX + 2.0 * NoteheadHalfWidth(item) + BendHeadPadding;
                     fy = (StaffMiddle - GetStaffPosition(item) * 0.5) + staffOffset;
                 }
                 bool approach = articulation.Type
                     is ArticulationType.Scoop or ArticulationType.Plop;
                 if (approach)
-                    fx = itemX - 1.55; // the curve arrives FROM THE LEFT
+                    fx = itemX - BendApproachXOffset; // the curve arrives FROM THE LEFT
                 string bendGlyph = articulation.Type switch
                 {
                     ArticulationType.Scoop => "bendScoop",

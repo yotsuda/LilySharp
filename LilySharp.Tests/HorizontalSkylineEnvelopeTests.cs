@@ -26,7 +26,7 @@ namespace LilySharp.Tests;
 /// internal_distance / height semantics.
 /// </summary>
 [Trait("Category", "Unit")]
-public class HorizontalSkylineTests
+public class HorizontalSkylineEnvelopeTests
 {
     [Fact]
     public void Distance_IsExactForBoxes()

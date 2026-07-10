@@ -829,7 +829,14 @@ internal sealed class LayoutEngine
             }
             if (maxVerse > 0)
             {
-                double lyricBand = 2.5 + (maxVerse - 1) * 1.8 + 1.2;
+                // Down-extent reserved for staff-attached lyrics. (These per-verse
+                // constants are the annotation-band ESTIMATE and are distinct from
+                // MultiStaffLayouter.TextRowVerseSpacing, which sizes independent
+                // text rows — different purpose, so the values legitimately differ.)
+                const double lyricStaffPadding = 2.5; // LyricText staff-padding
+                const double lyricVerseSpacing = 1.8; // extra band per additional verse
+                const double lyricFontSize = 1.2;     // lyric text height
+                double lyricBand = lyricStaffPadding + (maxVerse - 1) * lyricVerseSpacing + lyricFontSize;
                 downExtent = Math.Max(downExtent, lyricBand);
                 bandDown = Math.Max(bandDown, lyricBand);
             }
@@ -1762,9 +1769,12 @@ internal sealed class LayoutEngine
             {
                 if (!string.IsNullOrEmpty(staff.InstrumentName))
                 {
+                    const int cjkBlockStart = 0x2E80;  // CJK Radicals Supplement — first full-width block
+                    const double cjkEmWidth = 1.0;     // CJK glyph ≈ full em
+                    const double latinEmWidth = 0.5;   // average serif Latin char ≈ half em
                     double nameWidth = 0;
                     foreach (char ch in staff.InstrumentName)
-                        nameWidth += (ch >= 0x2E80 ? 1.0 : 0.5) * nameFontSize;
+                        nameWidth += (ch >= cjkBlockStart ? cjkEmWidth : latinEmWidth) * nameFontSize;
                     if (nameWidth > maxNameWidth)
                         maxNameWidth = nameWidth;
                 }

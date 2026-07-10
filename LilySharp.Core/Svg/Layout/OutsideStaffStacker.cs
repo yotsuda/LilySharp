@@ -65,6 +65,13 @@ internal static class OutsideStaffStacker
     // Dynamic text half-width estimate for X collision range
     private const double DynamicHalfWidth = 0.75;
 
+    // Serif text-metric ratios (fraction of the font size / em) used to bound a
+    // text grob's vertical extent from its font size. Own tuning approximating a
+    // serif face; no single LP grob source.
+    private const double CapHeightEm = 0.71;   // cap height (digits: no ascenders/descenders)
+    private const double TextAscentEm = 0.75;  // ascent above the baseline
+    private const double TextDescentEm = 0.25; // descent below the baseline
+
     /// <summary>
     /// Adjusts below-staff element Y positions using priority-based stacking.
     /// </summary>
@@ -395,7 +402,7 @@ internal static class OutsideStaffStacker
                 double sy = systems[sysIdx].Y;
                 // Bracket line + the centered number's upper half
                 // (number font = 0.6 x 4sp, cap height ~0.71em).
-                double top = sy + Math.Min(tb.StartY, tb.EndY) - 0.71 * 2.4 / 2 - 0.1;
+                double top = sy + Math.Min(tb.StartY, tb.EndY) - CapHeightEm * 2.4 / 2 - 0.1;
                 trackers[sysIdx].AddRegion(tb.StartX, tb.EndX, top);
             }
         }
@@ -453,7 +460,7 @@ internal static class OutsideStaffStacker
             double x0 = bn.RightAligned ? bn.X - width : bn.X;
             double x1 = bn.RightAligned ? bn.X : bn.X + width;
             double newY = Place(trackers[sysIdx], x0, x1,
-                bn.Y, topOffset: -0.71 * BarNumberEngraver.FontSize, bottomOffset: 0.0);
+                bn.Y, topOffset: -CapHeightEm * BarNumberEngraver.FontSize, bottomOffset: 0.0);
             b[i] = bn with { Y = newY };
         }
         return b.ToImmutable();
@@ -533,7 +540,7 @@ internal static class OutsideStaffStacker
             // ~0.75em ascent; the end hook drops EdgeHeight below.
             double newAbs = Place(trackers[sysIdx], o.StartX, o.EndX,
                 sy + o.Y,
-                topOffset: -0.75 * (0.45 * 4.0),
+                topOffset: -TextAscentEm * (0.45 * 4.0),
                 bottomOffset: Math.Max(0.1, o.EdgeHeight));
             b[i] = o with { Y = newAbs - sy };
         }
@@ -560,7 +567,7 @@ internal static class OutsideStaffStacker
             const double ctFs = 0.6 * 4.0;
             double halfWidth = SerifTextMetrics.MeasureBold(ct.Text, ctFs) / 2;
             double newAbs = Place(trackers[sysIdx], ct.X - halfWidth, ct.X + halfWidth,
-                sy + ct.Y, topOffset: -0.75 * ctFs, bottomOffset: 0.25 * ctFs);
+                sy + ct.Y, topOffset: -TextAscentEm * ctFs, bottomOffset: TextDescentEm * ctFs);
             b[i] = ct with { Y = newAbs - sy };
         }
         return b.ToImmutable();
@@ -586,7 +593,7 @@ internal static class OutsideStaffStacker
             // geometry), so the deeper of the two bounds the extent.
             double textDepth = string.IsNullOrEmpty(v.VoltaText)
                 ? 0
-                : 0.3 + 0.75 * (0.6 * 4.0);
+                : 0.3 + TextAscentEm * (0.6 * 4.0);
             return Math.Max(VoltaBracketEngraver.GetEdgeHeight(), textDepth);
         }
 
@@ -692,7 +699,7 @@ internal static class OutsideStaffStacker
                 // Plain bold(-italic) text at 0.7 x 4sp, baseline anchor.
                 double fs = fontSize * 0.7;
                 double halfW = SerifTextMetrics.MeasureBold(m.Text, fs) / 2;
-                return (halfW, -0.75 * fs, 0.25 * fs);
+                return (halfW, -TextAscentEm * fs, TextDescentEm * fs);
             }
         }
     }

@@ -340,7 +340,7 @@ internal sealed partial class Parser
             SyntaxKind.TransposeKeyword => ParseTopLevelTranspose(),
 
             SyntaxKind.GraceKeyword or SyntaxKind.AcciaccaturaKeyword or
-            SyntaxKind.AppogiaturaKeyword => ParseGraceExpression(),
+            SyntaxKind.AppoggiaturaKeyword => ParseGraceExpression(),
 
             SyntaxKind.LyricsKeyword => ParseLyricsBlock(),
             SyntaxKind.BreakKeyword => ParseBreak(),

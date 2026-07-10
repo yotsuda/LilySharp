@@ -38,6 +38,11 @@ internal readonly struct SkylineBuilding
     public double Slope { get; }
     public double Intercept { get; }
 
+    // Numerical tolerances (same magnitudes as LilyPond's skyline.cc precompute).
+    private const double FlatnessEpsilon = 1e-10;     // value/length deltas within this collapse to flat
+    private const double MaxSlope = 1e6;              // steeper roofs are treated as flat-at-max (near-vertical)
+    private const double SlopeEqualityEpsilon = 1e-4; // near-parallel roofs: no meaningful intersection
+
     /// <summary>
     /// Creates a sloped building spanning [<paramref name="start"/>, <paramref name="end"/>]
     /// with value <paramref name="startValue"/> at start and <paramref name="endValue"/> at end.
@@ -54,7 +59,7 @@ internal readonly struct SkylineBuilding
             Slope = 0;
             Intercept = startValue;
         }
-        else if (Math.Abs(startValue - endValue) < 1e-10)
+        else if (Math.Abs(startValue - endValue) < FlatnessEpsilon)
         {
             // Flat building.
             Slope = 0;
@@ -63,7 +68,7 @@ internal readonly struct SkylineBuilding
         else
         {
             double length = end - start;
-            if (Math.Abs(length) < 1e-10)
+            if (Math.Abs(length) < FlatnessEpsilon)
             {
                 Slope = 0;
                 Intercept = Math.Max(startValue, endValue);
@@ -73,7 +78,7 @@ internal readonly struct SkylineBuilding
                 Slope = (endValue - startValue) / length;
 
                 // Too steep - treat as flat at max value.
-                if (Math.Abs(Slope) > 1e6)
+                if (Math.Abs(Slope) > MaxSlope)
                 {
                     Slope = 0;
                     Intercept = Math.Max(startValue, endValue);
@@ -104,7 +109,7 @@ internal readonly struct SkylineBuilding
         double slopeDelta = other.Slope - Slope;
 
         // If slopes are very close, avoid division by a small number.
-        if (Math.Abs(slopeDelta) < 1e-4)
+        if (Math.Abs(slopeDelta) < SlopeEqualityEpsilon)
             return Math.Max(Start, other.Start);
 
         return (Intercept - other.Intercept) / slopeDelta;

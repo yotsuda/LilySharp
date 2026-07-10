@@ -590,7 +590,7 @@ internal sealed class Lexer
             "tuplet" => SyntaxKind.TupletKeyword,
             "grace" => SyntaxKind.GraceKeyword,
             "acciaccatura" => SyntaxKind.AcciaccaturaKeyword,
-            "appoggiatura" => SyntaxKind.AppogiaturaKeyword,
+            "appoggiatura" => SyntaxKind.AppoggiaturaKeyword,
             "lyrics" => SyntaxKind.LyricsKeyword,
             "chords" => SyntaxKind.ChordsKeyword,
             "tuning" => SyntaxKind.TuningKeyword,

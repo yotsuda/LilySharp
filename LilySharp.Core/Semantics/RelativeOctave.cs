@@ -70,7 +70,9 @@ public static class RelativeOctave
     public static int Resolve(int prevStep, int prevOctave, int step, int octaveOffset)
     {
         // Up/down octave candidates; pick the one closest in diatonic steps.
-        // (The distances always differ by 7, so there is never a tie.)
+        // When the step repeats (prevStep == step) both candidates collapse to
+        // prevOctave — a genuine tie the `<` resolves to downOctave (== prevOctave),
+        // so a repeated note stays in its octave. Otherwise the candidates differ.
         int upOctave = prevOctave;
         if (prevStep > step) upOctave++;
         int downOctave = prevOctave;

@@ -258,5 +258,5 @@ public sealed class GraceExpressionSyntax : SyntaxNode
     /// <summary>
     /// True if this is an appoggiatura (unslashed grace note)
     /// </summary>
-    public bool IsAppoggiatura => GraceKeyword.Kind == SyntaxKind.AppogiaturaKeyword;
+    public bool IsAppoggiatura => GraceKeyword.Kind == SyntaxKind.AppoggiaturaKeyword;
 }
