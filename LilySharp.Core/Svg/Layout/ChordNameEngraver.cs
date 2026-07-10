@@ -62,9 +62,10 @@ internal static class ChordNameEngraver
     /// (engraver-init.ly:650/692), mis-attributed to ChordNames. It floated single-staff chords
     /// far too high and, on a lower staff, shoved the chord up into the staff above it.
     ///
-    /// Known simplification: like the other annotation engravers, this uses a fixed offset from
-    /// the staff's top LINE rather than the staff's full skyline, so notes/ledger lines poking
-    /// above the staff are not yet cleared (LilyPond would skyline-space the ChordNames line).
+    /// This is the padding FLOOR: the row is then raised further by the per-(system, staff)
+    /// note protrusion so it skyline-clears notes/ledger lines poking above the staff (see
+    /// the linePeak pass below). On a lower staff, MultiStaffLayouter.ReserveChordRowBand
+    /// feeds the same band into the inter-staff gap so the staff above clears the row too.
     /// </remarks>
     private const double StaffPadding = 0.6;
 

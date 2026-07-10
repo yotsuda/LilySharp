@@ -1349,12 +1349,61 @@ internal sealed class MultiStaffLayouter
                 var dynamics = score.Dynamics.IsDefaultOrEmpty
                     ? ImmutableArray<DynamicItem>.Empty
                     : score.Dynamics.Where(d => d.StaffIndex == thisStaff).ToImmutableArray();
-                result.Add(skylineBuilder.BuildStaffSkylines(staff, measureLayouts, dynamics));
+                var sky = skylineBuilder.BuildStaffSkylines(staff, measureLayouts, dynamics);
+
+                // A staff carrying associated chord names (`staff X with chords ...`)
+                // shows a chord-symbol row just above it. The row shares one baseline
+                // per system, raised to clear THIS staff's own high notes, so it can
+                // rise well above the top line — reserve it in the UP skyline or a low
+                // note in the staff ABOVE overprints the chord symbols. (An independent
+                // chord GRID row, IsChordRow, is its own staff and reserves its own band.)
+                if (!score.ChordNames.IsDefaultOrEmpty
+                    && score.ChordNames.Any(c => c.StaffIndex == thisStaff && !c.IsChordRow))
+                    ReserveChordRowBand(sky.Up, measureLayouts);
+
+                result.Add(sky);
                 staffIndex++;
             }
         }
 
         return result;
+    }
+
+    /// <summary>Half-height (ss) of a bold sans chord symbol's cap above its
+    /// baseline — the renderer draws chord names at font 2.6 (FontSize 4.0 × 0.65),
+    /// cap height ≈ 0.72 × 2.6.</summary>
+    private const double ChordSymbolCapHeight = 1.9;
+
+    /// <summary>Chord-name baseline distance above the staff top line — mirrors
+    /// <c>ChordNameEngraver.StaffPadding</c>.</summary>
+    private const double ChordRowStaffPadding = 0.6;
+
+    /// <summary>
+    /// Extends a staff's UP skyline to cover its associated chord-name row, so the
+    /// gap to the staff above reserves room for the symbols. The row's baseline sits
+    /// <see cref="ChordRowStaffPadding"/> + note-protrusion above the top line (see
+    /// <see cref="ChordNameEngraver"/>), and the symbol reaches ~cap-height higher;
+    /// reserve a flat band to that top across the drawn width.
+    /// </summary>
+    private static void ReserveChordRowBand(
+        VerticalSkyline up, ImmutableArray<MeasureLayout> measureLayouts)
+    {
+        if (up.IsEmpty || measureLayouts.IsDefaultOrEmpty)
+            return;
+        double xLeft = double.PositiveInfinity, xRight = double.NegativeInfinity;
+        foreach (var ml in measureLayouts)
+        {
+            xLeft = Math.Min(xLeft, ml.X);
+            xRight = Math.Max(xRight, ml.X + ml.Width);
+        }
+        if (xRight <= xLeft)
+            return;
+
+        // Note ink already in the skyline sets where the shared-baseline row floats;
+        // the symbol top clears the top line by padding + that protrusion + cap.
+        double protrusion = up.MaxProtrusionInRange(xLeft, xRight);
+        double bandTop = -(ChordRowStaffPadding + protrusion + ChordSymbolCapHeight);
+        up.Merge(VerticalSkyline.FromBox(xLeft, xRight, 0.0, bandTop, VerticalDirection.Up));
     }
 
     /// <summary>
