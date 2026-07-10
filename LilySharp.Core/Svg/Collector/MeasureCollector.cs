@@ -470,22 +470,13 @@ internal sealed class MeasureBuilder
 /// </summary>
 public sealed partial class MeasureCollector
 {
-    private readonly Dictionary<string, SectionDeclarationSyntax> _sections = new();
-    // Part-major cells: `part X { section A { music } }` registers (A, X) -> the
-    // inner section, whose body IS the music for that part. Lets a section's music
-    // live inside the part instead of inside the section.
-    private readonly Dictionary<(string section, string part), SectionDeclarationSyntax> _partMajorCells = new();
+    // Section-tracking state grouped into one owner: section declarations by name,
+    // part-major cells `part X { section A { … } }` -> (A,X), the first/all
+    // expanded-measure starts per section (lyric/chord rows align to them; a
+    // reprise like "A2" replays under every start), and rows-only section labels.
+    // See SectionState.
+    private readonly SectionState _sectionState = new();
     private readonly Dictionary<string, SyntaxNode> _variables = new();
-    // First expanded-measure index where each section begins, so a `lyrics` block
-    // written inside a section aligns to THAT section's notes (not from bar 0).
-    // First-occurrence wins; populated during structure/section expansion.
-    private readonly Dictionary<string, int> _sectionStartMeasure = new();
-    // EVERY start measure of each section across the structure (each replay), so a
-    // chord/lyric track repeats under every occurrence — a section reprised as "A2"
-    // gets its chords again. _sectionStartMeasure keeps only the first anchor.
-    private readonly Dictionary<string, List<int>> _sectionAllStarts = new();
-    // Section labels for a rows-only score (filled by EnsureSectionStartsForRows).
-    private readonly List<(int MeasureIndex, string Label, int Position)> _rowSectionLabels = new();
     private StructureDeclarationSyntax? _structure;
     // A top-level partial N (a GlobalSetting, like time/key): the pickup is a
     // fact of the piece, so it arms EVERY voice's first measure. In-music
@@ -609,16 +600,9 @@ public sealed partial class MeasureCollector
     // Default duration
     private Fraction _defaultDuration = Fraction.Quarter;
 
-    // Metadata
-    private string? _title;
-    private string? _composer;
-    // Source offsets of the header grobs (0 = none), emitted as data-pos so the
-    // preview can click-to-jump to the title/composer/time/key declarations.
-    private int _titlePosition;
-    private int _composerPosition;
-    private int _timePosition;
-    private int _keyPosition;
-    private int? _tempo;
+    // Piece-level metadata (title/composer/tempo/time/key/clef + header source
+    // positions) grouped into one owner. See MetadataState.
+    private readonly MetadataState _meta = new();
     // Active `repeat tremolo N { … }` transform: the body note prints ONCE at
     // the combined duration with the subdivision's stem slashes.
     private int _tremoloRepeatCount = 1;
@@ -626,31 +610,15 @@ public sealed partial class MeasureCollector
     // both notes print at the pair's TOTAL duration and sound half (TimeScale ½).
     private (int Value, int Dots, int Beams)? _tremoloPairShape;
     private bool _tremoloPairFirst;
-    private string? _tempoText;
-    private int _tempoBeatUnit = 4;
-    private int _tempoDots;
-    private int _swingSubdivision;
-    private int _timeBeats = 4;
-    private string? _timeBeatsText; // additive numerator as written ("3+2")
-    private bool _timeSenzaMisura;  // time none — unmeasured
-    private string? _keyCustom;     // encoded custom key (KeySignature.EncodeCustom)
-    private string? _initialKeyCustom;
     private Dictionary<string, DrumInfo>? _drumOverrides; // drummap { } per-score
-    private int _timeBeatType = 4;
-    private int _keySharps = 0;
-    private int _initialKeySharps = 0; // Preserved for Score.KeySignature (not mutated by mid-measure key changes)
-    private int _keyTonicStep = 0;     // key tonic's diatonic step (0=C..6=B), for Roman-numeral chord degrees
     // measure -> (tonic step, sharps) at each key change, so a chord's Roman degree
     // follows the key in force at its bar (a mid-piece modulation re-bases the degrees).
     private readonly SortedDictionary<int, (int TonicStep, int Sharps)> _keyByMeasure = new();
-    private string _clef = "treble";
-    private string _initialClef = "treble"; // Preserved for Score.Clef (not mutated by mid-measure clef changes)
-    private int _clefPosition; // Source offset of the clef declaration (0 = none), for data-pos
 
     /// <summary>
     /// Gets the time signature as a Fraction.
     /// </summary>
-    private Fraction TimeSignatureFraction => new(_timeBeats, _timeBeatType);
+    private Fraction TimeSignatureFraction => new(_meta.TimeBeats, _meta.TimeBeatType);
 
     /// <summary>
     /// Snapshots the accumulated piece-level metadata and annotation lists into an
@@ -660,13 +628,13 @@ public sealed partial class MeasureCollector
     /// to each re-list ~25 arguments (and drifted).
     /// </summary>
     private ScoreContent CaptureScoreContent() => new(
-        new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura),
-        new KeySignature(_initialKeySharps, _initialKeyCustom), // initial key, not the post-change state
-        _initialClef, // initial clef, not the post-change state
-        _tempo,
-        _title,
-        _composer,
-        _swingSubdivision,
+        new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura),
+        new KeySignature(_meta.InitialKeySharps, _meta.InitialKeyCustom), // initial key, not the post-change state
+        _meta.InitialClef, // initial clef, not the post-change state
+        _meta.Tempo,
+        _meta.Title,
+        _meta.Composer,
+        _meta.SwingSubdivision,
         _dynamics.ToImmutableArray(),
         _articulations.ToImmutableArray(),
         _graceNotes.ToImmutableArray(),
@@ -683,10 +651,10 @@ public sealed partial class MeasureCollector
         _grobOverrides.ToImmutableArray(),
         _grobReverts.ToImmutableArray(),
         PairTrillSpannerEvents(),
-        new HeaderPositions(_titlePosition, _composerPosition, _timePosition, _keyPosition, _clefPosition),
-        _tempoText,
-        _tempoBeatUnit,
-        _tempoDots);
+        new HeaderPositions(_meta.TitlePosition, _meta.ComposerPosition, _meta.TimePosition, _meta.KeyPosition, _meta.ClefPosition),
+        _meta.TempoText,
+        _meta.TempoBeatUnit,
+        _meta.TempoDots);
 
     /// <summary>
     /// Collects a Score from a syntax tree.
@@ -711,24 +679,24 @@ public sealed partial class MeasureCollector
         {
             var (partClef, partOctave, partTranspose, partClefPos) = GetPartDefaults(tree.GetRoot(), voiceName);
             if (partClef != null)
-                _clef = partClef;
-            _clefPosition = partClefPos;
-            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+                _meta.Clef = partClef;
+            _meta.ClefPosition = partClefPos;
+            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
             _octave.OctaveBase = partOctave ?? 4;
             ApplyTranspose(partTranspose);
             // Transpose the written key signature (CollectDefinitions set it
             // before the part option was known) so the displayed key and the
             // accidental engine match the transposed pitches.
-            _keySharps = _octave.TransposeKeySharps(_keySharps);
+            _meta.KeySharps = _octave.TransposeKeySharps(_meta.KeySharps);
         }
         else
         {
-            _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+            _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
         }
         _octave.InitialOctave = _octave.CurrentOctave;
-        _initialClef = _clef; // Preserve initial clef before music processing
-        _initialKeySharps = _keySharps; // Preserve initial key before music processing
-        _initialKeyCustom = _keyCustom;
+        _meta.InitialClef = _meta.Clef; // Preserve initial clef before music processing
+        _meta.InitialKeySharps = _meta.KeySharps; // Preserve initial key before music processing
+        _meta.InitialKeyCustom = _meta.KeyCustom;
         _octave.InitialOctaveAbsolute = _octave.OctaveAbsolute; // file-level octave mode default
 
         // Phase 2: Collect the primary (voice-0) stream. A << \\ >> span is
@@ -755,14 +723,14 @@ public sealed partial class MeasureCollector
         voice = OttavaTransposer.Transpose(voice, DetectOttavaSpans(0));
 
         // Collect lyrics
-        _lyricsCollector.CollectNoteBound(tree.GetRoot(), measures, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure, _sectionAllStarts);
+        _lyricsCollector.CollectNoteBound(tree.GetRoot(), measures, _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
-        _chordNameCollector.SectionStarts = _sectionAllStarts;
-        _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
+        _chordNameCollector.SectionStarts = _sectionState.AllStarts;
+        _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionState.StartMeasure, _currentStaffIndex);
         // `staff NAME with chords CHORDPART [as roman|both]` on a single-staff score.
         if (attachedChordPart != null)
             _chordNameCollector.CollectAttached(
-                tree.GetRoot(), attachedChordPart, _sectionStartMeasure, _currentStaffIndex,
+                tree.GetRoot(), attachedChordPart, _sectionState.StartMeasure, _currentStaffIndex,
                 attachedChordDisplay);
 
         return ScoreAssembler.BuildScore(voice, CaptureScoreContent());
@@ -864,8 +832,8 @@ public sealed partial class MeasureCollector
         // this render only.
         if (renderSpec.LocalStructure != null)
             _structure = renderSpec.LocalStructure;
-        _initialKeySharps = _keySharps; // Preserve initial key before music processing
-        _initialKeyCustom = _keyCustom;
+        _meta.InitialKeySharps = _meta.KeySharps; // Preserve initial key before music processing
+        _meta.InitialKeyCustom = _meta.KeyCustom;
         // Capture the file-level `octave absolute/relative` default AFTER the
         // pre-scan, mirroring the single-staff path. Without this each part's
         // line-702 restore reads the post-Reset `false`, so a top-level
@@ -931,11 +899,11 @@ public sealed partial class MeasureCollector
 
             // Set clef and octave for this voice from part definition
             var (partClef, partOctave, partTranspose, partClefPos) = GetPartDefaults(tree.GetRoot(), voiceName);
-            _clef = partClef ?? "treble";
-            _clefPosition = partClefPos;
+            _meta.Clef = partClef ?? "treble";
+            _meta.ClefPosition = partClefPos;
 
             // Set initial octave: explicit > instrument default > clef default
-            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+            _octave.CurrentOctave = partOctave ?? InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
             _octave.InitialOctave = _octave.CurrentOctave;
             _octave.OctaveBase = partOctave ?? 4;
             _octave.OctaveAbsolute = _octave.InitialOctaveAbsolute; // restore file-level octave mode
@@ -945,9 +913,9 @@ public sealed partial class MeasureCollector
             // transposed by THIS part's option, so the accidental engine
             // suppresses in-key accidentals correctly and the key does not leak
             // between voices.
-            _keySharps = _octave.TransposeKeySharps(_initialKeySharps);
+            _meta.KeySharps = _octave.TransposeKeySharps(_meta.InitialKeySharps);
             if (_octave.HasTranspose)
-                voiceKeyDict[voiceName] = new KeySignature(_keySharps);
+                voiceKeyDict[voiceName] = new KeySignature(_meta.KeySharps);
 
             staffVoices[voiceName] = CollectStaffVoices(voiceName);
         }
@@ -957,11 +925,11 @@ public sealed partial class MeasureCollector
         if (pendingChordRows.Count > 0 || pendingLyricsRows.Count > 0)
             EnsureSectionStartsForRows();
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
-        _chordNameCollector.SectionStarts = _sectionAllStarts;
+        _chordNameCollector.SectionStarts = _sectionState.AllStarts;
         foreach (var (rowName, rowIdx, rowMode) in pendingChordRows)
         {
             var rowMeasures = _chordNameCollector.CollectPart(
-                tree.GetRoot(), rowName, rowIdx, _sectionStartMeasure, _timeBeats, _timeBeatType, rowMode);
+                tree.GetRoot(), rowName, rowIdx, _sectionState.StartMeasure, _meta.TimeBeats, _meta.TimeBeatType, rowMode);
             staffVoices[rowName] = ImmutableArray.Create(new Voice(rowName, rowMeasures));
         }
 
@@ -978,7 +946,7 @@ public sealed partial class MeasureCollector
             foreach (var (name, idx) in pendingLyricsRows)
             {
                 var rowMeasures = _lyricsCollector.CollectRow(
-                    tree.GetRoot(), name, idx, wrapBars, _sectionStartMeasure, _timeBeats, _timeBeatType);
+                    tree.GetRoot(), name, idx, wrapBars, _sectionState.StartMeasure, _meta.TimeBeats, _meta.TimeBeatType);
                 staffVoices[name] = ImmutableArray.Create(new Voice(name, rowMeasures));
             }
         }
@@ -987,7 +955,7 @@ public sealed partial class MeasureCollector
         // measures (that row is the PrimaryContentStaff fallback the mark
         // merge reads). No-op for mixed scores: the label list only fills
         // when no music registered the sections.
-        if (_rowSectionLabels.Count > 0)
+        if (_sectionState.RowLabels.Count > 0)
         {
             string? firstRowName = renderSpec.Items
                 .Select(it => it switch
@@ -1002,7 +970,7 @@ public sealed partial class MeasureCollector
                 && rowVoices[0].Measures.Length > 0)
             {
                 var ms = rowVoices[0].Measures.ToArray();
-                foreach (var (idx, label, pos) in _rowSectionLabels)
+                foreach (var (idx, label, pos) in _sectionState.RowLabels)
                 {
                     if (idx >= 0 && idx < ms.Length)
                         ms[idx] = ms[idx] with { SectionLabel = label, SectionLabelPosition = pos };
@@ -1037,14 +1005,14 @@ public sealed partial class MeasureCollector
             && staffVoices.TryGetValue(firstVoiceName, out var firstStaffVoices)
             && firstStaffVoices.Length > 0)
         {
-            _lyricsCollector.CollectNoteBound(tree.GetRoot(), firstStaffVoices[0].Measures.ToList(), _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure, _sectionAllStarts);
+            _lyricsCollector.CollectNoteBound(tree.GetRoot(), firstStaffVoices[0].Measures.ToList(), _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
         }
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
-        _chordNameCollector.SectionStarts = _sectionAllStarts;
-        _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionStartMeasure, _currentStaffIndex);
+        _chordNameCollector.SectionStarts = _sectionState.AllStarts;
+        _chordNameCollector.CollectBlocks(tree.GetRoot(), _sectionState.StartMeasure, _currentStaffIndex);
         foreach (var (attachedPart, attachedStaff, attachedMode) in attachedChords)
             _chordNameCollector.CollectAttached(
-                tree.GetRoot(), attachedPart, _sectionStartMeasure, attachedStaff, attachedMode);
+                tree.GetRoot(), attachedPart, _sectionState.StartMeasure, attachedStaff, attachedMode);
 
         // Phase 3: Build staff groups from render spec
         var staffGroups = renderSpec.ToStaffGroups(name =>
@@ -1160,7 +1128,7 @@ public sealed partial class MeasureCollector
 
         var voice = new Voice("beam-direction-probe", measures.ToImmutableArray());
         var groups = new BeamDetector().DetectBeamGroups(
-            voice, new TimeSignature(_timeBeats, _timeBeatType, _timeBeatsText, _timeSenzaMisura), _tupletBrackets.ToImmutableArray());
+            voice, new TimeSignature(_meta.TimeBeats, _meta.TimeBeatType, _meta.TimeBeatsText, _meta.TimeSenzaMisura), _tupletBrackets.ToImmutableArray());
 
         foreach (var group in groups)
         {
@@ -1259,16 +1227,16 @@ public sealed partial class MeasureCollector
         }
 
         // Unnamed lyrics align with the primary voice; named ones bind above.
-        _lyricsCollector.CollectNoteBound(root, track0, _lyricsRowNames, _voiceMeasuresByName, _sectionStartMeasure, _sectionAllStarts);
+        _lyricsCollector.CollectNoteBound(root, track0, _lyricsRowNames, _voiceMeasuresByName, _sectionState.StartMeasure, _sectionState.AllStarts);
         _chordNameCollector.KeyByMeasure = BuildKeyTimeline();
-        _chordNameCollector.SectionStarts = _sectionAllStarts;
-        _chordNameCollector.CollectBlocks(root, _sectionStartMeasure, _currentStaffIndex);
+        _chordNameCollector.SectionStarts = _sectionState.AllStarts;
+        _chordNameCollector.CollectBlocks(root, _sectionState.StartMeasure, _currentStaffIndex);
         // `staff NAME with chords CHORDPART [as roman|both]` on a multi-voice single
         // staff — collected here (after CollectBlocks, matching the single-voice order),
         // because Collect's own CollectAttached is skipped by the multi-voice early return.
         if (attachedChordPart != null)
             _chordNameCollector.CollectAttached(
-                root, attachedChordPart, _sectionStartMeasure, _currentStaffIndex,
+                root, attachedChordPart, _sectionState.StartMeasure, _currentStaffIndex,
                 attachedChordDisplay);
 
         // A single-staff score surfaces the same annotations whether it has one
@@ -1426,7 +1394,7 @@ public sealed partial class MeasureCollector
 
     private void Reset()
     {
-        _sections.Clear();
+        _sectionState.Reset();
         _variables.Clear();
         _dynamics.Clear();
         _currentStaffIndex = 0;
@@ -1440,10 +1408,7 @@ public sealed partial class MeasureCollector
         _crossStaffItems.Clear();
         _grobOverrides.Clear();
         _grobReverts.Clear();
-        _sectionStartMeasure.Clear();
-        _sectionAllStarts.Clear();
         _keyByMeasure.Clear();
-        _rowSectionLabels.Clear();
         _voiceMeasuresByName.Clear();
         _trillSpannerEvents.Clear();
         _courtesySourcePositions.Clear();
@@ -1454,35 +1419,13 @@ public sealed partial class MeasureCollector
         // names, and PitchTrace would grow without bound. (All current callers use a
         // fresh instance, so this only matters for reuse via the public API.)
         _pitchTrace.Clear();
-        _partMajorCells.Clear();
         _lyricsRowNames = new();
         _structure = null;
         _filePartial = null;
         _root = null;
         _octave.ResetAll();
         _defaultDuration = Fraction.Quarter;
-        _title = null;
-        _composer = null;
-        _titlePosition = 0;
-        _composerPosition = 0;
-        _timePosition = 0;
-        _keyPosition = 0;
-        _clefPosition = 0;
-        _tempo = null;
-        _tempoText = null;
-        _tempoBeatUnit = 4;
-        _tempoDots = 0;
-        _swingSubdivision = 0;
-        _timeBeats = 4;
-        _timeBeatsText = null;
-        _timeSenzaMisura = false;
-        _timeBeatType = 4;
-        _keySharps = 0;
-        _keyCustom = null;
-        _initialKeyCustom = null;
-        _initialKeySharps = 0;
-        _clef = "treble";
-        _initialClef = "treble";
+        _meta.Reset();
     }
 
     /// <summary>
@@ -1608,11 +1551,11 @@ public sealed partial class MeasureCollector
                     // TimeSignatureChangeItem re-arms the per-measure length).
                     if (!IsInsideMusicContent(timeSig))
                     {
-                        _timeBeats = timeSig.Beats;
-                        _timeBeatsText = timeSig.BeatsText;
-                        _timeSenzaMisura = timeSig.IsSenzaMisura;
-                        _timeBeatType = timeSig.BeatType;
-                        _timePosition = timeSig.Span.Start;
+                        _meta.TimeBeats = timeSig.Beats;
+                        _meta.TimeBeatsText = timeSig.BeatsText;
+                        _meta.TimeSenzaMisura = timeSig.IsSenzaMisura;
+                        _meta.TimeBeatType = timeSig.BeatType;
+                        _meta.TimePosition = timeSig.Span.Start;
                     }
                     break;
 
@@ -1620,20 +1563,20 @@ public sealed partial class MeasureCollector
                     // Only process top-level key declarations (not inside phrases/sections)
                     if (!IsInsideMusicContent(key))
                     {
-                        _keySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
+                        _meta.KeySharps = key.IsCustom ? 0 : CalculateKeySharps(key);
                         if (!key.IsCustom)
-                            _keyTonicStep = Math.Max(0,
+                            _meta.KeyTonicStep = Math.Max(0,
                                 LilySharp.Core.Music.KeySpelling.StepOf(key.Pitch.PitchName[0]));
-                        _keyCustom = key.IsCustom
+                        _meta.KeyCustom = key.IsCustom
                             ? KeySignature.EncodeCustom(key.CustomAlterations)
                             : null;
-                        _keyPosition = key.Span.Start;
+                        _meta.KeyPosition = key.Span.Start;
                     }
                     break;
 
                 case ClefDeclarationSyntax clef:
-                    _clef = clef.ClefName.Text.ToLowerInvariant();
-                    _clefPosition = clef.ClefName.Span.Start;
+                    _meta.Clef = clef.ClefName.Text.ToLowerInvariant();
+                    _meta.ClefPosition = clef.ClefName.Span.Start;
                     break;
 
                 case OctaveDirectiveSyntax octaveDir:
@@ -1662,13 +1605,13 @@ public sealed partial class MeasureCollector
                     // First declaration of a name wins as the order/label
                     // representative (source order), so a name appearing in both
                     // forms stays stable.
-                    if (!_sections.ContainsKey(section.SectionName))
-                        _sections[section.SectionName] = section;
+                    if (!_sectionState.Sections.ContainsKey(section.SectionName))
+                        _sectionState.Sections[section.SectionName] = section;
                     // Part-major: an inner section binds its music to the part it
                     // lives in. Record the (section, part) cell for voice lookup.
                     var owningPart = EnclosingPartName(section);
                     if (owningPart != null)
-                        _partMajorCells[(section.SectionName, owningPart)] = section;
+                        _sectionState.PartMajorCells[(section.SectionName, owningPart)] = section;
                     break;
 
                 case StructureDeclarationSyntax structure:
@@ -1700,15 +1643,15 @@ public sealed partial class MeasureCollector
             case "title":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode titleToken)
                 {
-                    _title = titleToken.Text.Trim('"');
-                    _titlePosition = titleToken.Span.Start;
+                    _meta.Title = titleToken.Text.Trim('"');
+                    _meta.TitlePosition = titleToken.Span.Start;
                 }
                 break;
             case "composer":
                 if (values.Count > 0 && values[0] is SyntaxTokenNode composerToken)
                 {
-                    _composer = composerToken.Text.Trim('"');
-                    _composerPosition = composerToken.Span.Start;
+                    _meta.Composer = composerToken.Text.Trim('"');
+                    _meta.ComposerPosition = composerToken.Span.Start;
                 }
                 break;
         }
@@ -1721,9 +1664,9 @@ public sealed partial class MeasureCollector
         // `tempo "Lively" 4. = 116`. The text form used to be dropped
         // silently (only a bare leading integer was read).
         if (tempoDecl.Bpm is int bpm)
-            _tempo = bpm;
+            _meta.Tempo = bpm;
         if (tempoDecl.Marking is string marking)
-            _tempoText = marking;
+            _meta.TempoText = marking;
         // Beat unit incl. dots: walk back from `=` over the dot tokens to the
         // unit number ("4." lexes as IntegerLiteral 4 + Dot at declaration
         // level, so the dots arrive as separate tokens).
@@ -1742,12 +1685,12 @@ public sealed partial class MeasureCollector
                 : System.Text.RegularExpressions.Match.Empty;
             if (m.Success)
             {
-                _tempoBeatUnit = int.Parse(m.Groups[1].Value);
-                _tempoDots = dots + m.Groups[2].Value.Length;
+                _meta.TempoBeatUnit = int.Parse(m.Groups[1].Value);
+                _meta.TempoDots = dots + m.Groups[2].Value.Length;
             }
         }
         if (tempoDecl.SwingSubdivision != 0)
-            _swingSubdivision = tempoDecl.SwingSubdivision;
+            _meta.SwingSubdivision = tempoDecl.SwingSubdivision;
     }
 
     private int CalculateKeySharps(KeySignatureSyntax key)
@@ -1762,14 +1705,14 @@ public sealed partial class MeasureCollector
     /// </summary>
     private int GetKeySignatureAlteration(int step)
     {
-        if (_keyCustom != null)
+        if (_meta.KeyCustom != null)
         {
-            foreach (var (s, a) in KeySignature.DecodeCustom(_keyCustom))
+            foreach (var (s, a) in KeySignature.DecodeCustom(_meta.KeyCustom))
                 if (s == step)
                     return a;
             return 0;
         }
-        return LilySharp.Core.Music.KeySpelling.Alteration(step, _keySharps);
+        return LilySharp.Core.Music.KeySpelling.Alteration(step, _meta.KeySharps);
     }
 
     /// <summary>
@@ -1858,11 +1801,11 @@ public sealed partial class MeasureCollector
         {
             ProcessStructure(ProcessNodes, builder);
         }
-        else if (_sections.Count > 0)
+        else if (_sectionState.Sections.Count > 0)
         {
             // No `structure { }` — default to the order the sections were declared
             // (source order), so a single-section piece needs no structure at all.
-            foreach (var section in _sections.Values.OrderBy(s => s.Name.Span.Start))
+            foreach (var section in _sectionState.Sections.Values.OrderBy(s => s.Name.Span.Start))
             {
                 RecordSectionStart(section.SectionName, builder.CurrentMeasureIndex);
                 builder.SectionLabel = section.SectionName;
@@ -1883,14 +1826,14 @@ public sealed partial class MeasureCollector
     }
 
     /// <summary>Records where a section occurrence begins: the first-only anchor
-    /// (<see cref="_sectionStartMeasure"/>) plus EVERY occurrence
-    /// (<see cref="_sectionAllStarts"/>), so a chord/lyric track can repeat under a
+    /// (<see cref="_sectionState.StartMeasure"/>) plus EVERY occurrence
+    /// (<see cref="_sectionState.AllStarts"/>), so a chord/lyric track can repeat under a
     /// reprise (e.g. A played again as "A2").</summary>
     /// <summary>The key timeline for Roman-numeral chord degrees: the initial key at
     /// bar 0 plus each mid-piece modulation, sorted ascending.</summary>
     private List<(int Measure, int TonicStep, int Sharps)> BuildKeyTimeline()
     {
-        var list = new List<(int, int, int)> { (0, _keyTonicStep, _initialKeySharps) };
+        var list = new List<(int, int, int)> { (0, _meta.KeyTonicStep, _meta.InitialKeySharps) };
         foreach (var (m, key) in _keyByMeasure)
             if (m > 0)
                 list.Add((m, key.TonicStep, key.Sharps));
@@ -1899,10 +1842,10 @@ public sealed partial class MeasureCollector
 
     private void RecordSectionStart(string name, int startMeasure)
     {
-        if (!_sectionStartMeasure.ContainsKey(name))
-            _sectionStartMeasure[name] = startMeasure;
-        if (!_sectionAllStarts.TryGetValue(name, out var list))
-            _sectionAllStarts[name] = list = new List<int>();
+        if (!_sectionState.StartMeasure.ContainsKey(name))
+            _sectionState.StartMeasure[name] = startMeasure;
+        if (!_sectionState.AllStarts.TryGetValue(name, out var list))
+            _sectionState.AllStarts[name] = list = new List<int>();
         // ProcessStructure runs once PER PART, so the same occurrence is recorded
         // several times on a multi-part score — a distinct start per occurrence, so
         // dedup by value keeps one entry each (and never duplicates the chords/lyrics).
@@ -1920,7 +1863,7 @@ public sealed partial class MeasureCollector
                     // Skip if inside a repeat block (will be handled by ProcessRepeatBlock)
                     if (IsInsideRepeatBlock(reference))
                         break;
-                    if (_sections.TryGetValue(reference.SectionName, out var section))
+                    if (_sectionState.Sections.TryGetValue(reference.SectionName, out var section))
                     {
                         RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
                         builder.SectionLabel = ResolveSectionLabel(reference);
@@ -1975,7 +1918,7 @@ public sealed partial class MeasureCollector
                 case { Kind: SyntaxKind.SilentSectionReference } silent
                         when !IsInsideRepeatBlock(silent)
                           && silent.GetChild(1) is SyntaxTokenNode nameTok
-                          && _sections.TryGetValue(nameTok.Text, out var silentSection):
+                          && _sectionState.Sections.TryGetValue(nameTok.Text, out var silentSection):
                     RecordSectionStart(nameTok.Text, builder.CurrentMeasureIndex);
                     builder.SectionLabel = null;
                     builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
@@ -1997,7 +1940,7 @@ public sealed partial class MeasureCollector
     /// declaration highlights the label in the preview. Sections are registered
     /// before structure expansion, so the lookup is populated here.</summary>
     private int SectionDeclPos(string sectionName)
-        => _sections.TryGetValue(sectionName, out var s) ? s.SectionKeyword.Span.Start : 0;
+        => _sectionState.Sections.TryGetValue(sectionName, out var s) ? s.SectionKeyword.Span.Start : 0;
 
     private static string? ResolveSectionLabel(SectionReferenceSyntax reference)
     {
@@ -2056,7 +1999,7 @@ public sealed partial class MeasureCollector
     /// </summary>
     private void EnsureSectionStartsForRows()
     {
-        if (_sectionStartMeasure.Count > 0 || _sections.Count == 0)
+        if (_sectionState.StartMeasure.Count > 0 || _sectionState.Sections.Count == 0)
             return;
 
         // Walk the structure's children IN SOURCE ORDER so navigation marks
@@ -2067,13 +2010,13 @@ public sealed partial class MeasureCollector
         int cur = 0;
         void AdvanceSection(string name, string? label, int pos)
         {
-            if (!_sections.TryGetValue(name, out var section))
+            if (!_sectionState.Sections.TryGetValue(name, out var section))
                 return;
-            if (!_sectionStartMeasure.ContainsKey(name))
+            if (!_sectionState.StartMeasure.ContainsKey(name))
             {
-                _sectionStartMeasure[name] = cur;
+                _sectionState.StartMeasure[name] = cur;
                 if (label != null)
-                    _rowSectionLabels.Add((cur, label, pos));
+                    _sectionState.RowLabels.Add((cur, label, pos));
             }
 
             int chordBars = 0, lyricBars = 0;
@@ -2081,7 +2024,7 @@ public sealed partial class MeasureCollector
                 chordBars = Math.Max(chordBars, ChordNameCollector.CountBars(cb));
             foreach (var lb in section.DescendantNodes().OfType<LyricsBlockSyntax>())
                 lyricBars = Math.Max(lyricBars, lb.Syllables.Count());
-            cur = _sectionStartMeasure[name] + (chordBars > 0 ? chordBars : lyricBars);
+            cur = _sectionState.StartMeasure[name] + (chordBars > 0 ? chordBars : lyricBars);
         }
 
         if (_structure != null)
@@ -2111,7 +2054,7 @@ public sealed partial class MeasureCollector
         }
         else
         {
-            foreach (var s in _sections.Values.OrderBy(s => s.Name.Span.Start))
+            foreach (var s in _sectionState.Sections.Values.OrderBy(s => s.Name.Span.Start))
                 AdvanceSection(s.SectionName, s.SectionName, s.Name.Span.Start);
         }
     }

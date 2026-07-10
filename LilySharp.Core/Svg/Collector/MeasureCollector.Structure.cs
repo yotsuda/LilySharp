@@ -64,7 +64,7 @@ public sealed partial class MeasureCollector
             {
                 if (child is SectionReferenceSyntax reference)
                 {
-                    if (_sections.TryGetValue(reference.SectionName, out var section))
+                    if (_sectionState.Sections.TryGetValue(reference.SectionName, out var section))
                     {
                         RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
                         builder.SectionLabel = ResolveSectionLabel(reference);
@@ -74,7 +74,7 @@ public sealed partial class MeasureCollector
                 }
                 else if (child is { Kind: SyntaxKind.SilentSectionReference } silent
                          && silent.GetChild(1) is SyntaxTokenNode silentName
-                         && _sections.TryGetValue(silentName.Text, out var silentSection))
+                         && _sectionState.Sections.TryGetValue(silentName.Text, out var silentSection))
                 {
                     // ~Name inside a repeat: render the section's music but show NO
                     // label. The top-level silent-reference case skips in-repeat nodes
@@ -88,7 +88,7 @@ public sealed partial class MeasureCollector
                 else if (child is StructureAlternativeSyntax alt)
                 {
                     string altSectionName = alt.SectionName.Text;
-                    if (_sections.TryGetValue(altSectionName, out var section))
+                    if (_sectionState.Sections.TryGetValue(altSectionName, out var section))
                     {
                         // Track measure index before processing this alternative
                         int startMeasureIndex = builder.CurrentMeasureIndex;
@@ -150,7 +150,7 @@ public sealed partial class MeasureCollector
         // Part-major fallback: this section's music for the current voice is not a
         // part-block here but lives inside `part <voice> { section <name> { ... } }`.
         if (!matched && _voiceName != null
-            && _partMajorCells.TryGetValue((section.SectionName, _voiceName), out var cell))
+            && _sectionState.PartMajorCells.TryGetValue((section.SectionName, _voiceName), out var cell))
         {
             ProcessMusicContainer(cell, processNodes);
         }
@@ -184,7 +184,7 @@ public sealed partial class MeasureCollector
         int max = 0;
 
         // Part-major: every `part <p> { section <name> { ... } }` cell for this name.
-        foreach (var kv in _partMajorCells)
+        foreach (var kv in _sectionState.PartMajorCells)
             if (kv.Key.section == section.SectionName)
                 max = Math.Max(max, CountBarsInScope(kv.Value));
 

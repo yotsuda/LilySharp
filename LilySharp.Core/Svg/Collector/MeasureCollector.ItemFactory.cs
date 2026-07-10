@@ -346,7 +346,7 @@ public sealed partial class MeasureCollector
         // The C clefs differ — alto puts middle C on the middle line, tenor on
         // the 4th line (so the middle line is A3, a third lower). Without their
         // own cases both fell through to the treble default and rendered alike.
-        int basePosition = _clef switch
+        int basePosition = _meta.Clef switch
         {
             "treble" or "treble_8" or "treble^8" => dStep - GetPitchIndex('b') + (dOctave - 4) * 7,
             "bass" or "bass_8" => dStep - GetPitchIndex('d') + (dOctave - 3) * 7,

@@ -337,8 +337,8 @@ public sealed partial class MeasureCollector
                     // Mid-measure clef change
                     // LILYPOND-REF: lily/clef-engraver.cc — inspect_clef_properties()
                     string newClef = clefDecl.ClefName.Text.ToLowerInvariant();
-                    _clef = newClef;
-                    _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_clef));
+                    _meta.Clef = newClef;
+                    _octave.CurrentOctave = InstrumentDefaults.GetDefaultOctave(ParseClefType(_meta.Clef));
                     var clefChange = new ClefChangeItem(ParseClefType(newClef), clefDecl.Position);
                     builder.AddItem(clefChange);
                 }
@@ -354,21 +354,21 @@ public sealed partial class MeasureCollector
                 {
                     // Mid-measure key signature change
                     // LILYPOND-REF: lily/key-engraver.cc — process_music() creates KeySignature grob
-                    var previousKey = new KeySignature(_keySharps, _keyCustom);
+                    var previousKey = new KeySignature(_meta.KeySharps, _meta.KeyCustom);
                     KeySignature newKey;
                     if (keySig.IsCustom)
                     {
                         // Mid-piece custom signature: alterations as written
                         // (transpose does not respell a custom map).
-                        _keySharps = 0;
-                        _keyCustom = KeySignature.EncodeCustom(keySig.CustomAlterations);
-                        newKey = new KeySignature(0, _keyCustom);
+                        _meta.KeySharps = 0;
+                        _meta.KeyCustom = KeySignature.EncodeCustom(keySig.CustomAlterations);
+                        newKey = new KeySignature(0, _meta.KeyCustom);
                     }
                     else
                     {
                         int newSharps = _octave.TransposeKeySharps(CalculateKeySharps(keySig));
-                        _keySharps = newSharps;
-                        _keyCustom = null;
+                        _meta.KeySharps = newSharps;
+                        _meta.KeyCustom = null;
                         newKey = new KeySignature(newSharps);
                         // Record the modulation for Roman-numeral chord degrees at this
                         // bar onward (per-voice walk, so a SortedDictionary dedups by
@@ -396,9 +396,9 @@ public sealed partial class MeasureCollector
                     //   timestep) and the last_spec_ comparison.
                     if (builder.CurrentMeasureIndex == 0 && builder.CurrentDuration == Fraction.Zero)
                     {
-                        _timeBeats = timeSigChange.Beats;
-                        _timeBeatsText = timeSigChange.BeatsText;
-                        _timeBeatType = timeSigChange.BeatType;
+                        _meta.TimeBeats = timeSigChange.Beats;
+                        _meta.TimeBeatsText = timeSigChange.BeatsText;
+                        _meta.TimeBeatType = timeSigChange.BeatType;
                         builder.SetMeasureLength(new Fraction(timeSigChange.Beats, timeSigChange.BeatType));
                     }
                     else
