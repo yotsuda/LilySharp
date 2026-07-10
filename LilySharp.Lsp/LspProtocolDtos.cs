@@ -163,3 +163,85 @@ public class ImportMusicXmlResponse
     public string[] Warnings { get; set; } = System.Array.Empty<string>();
     public string? Error { get; set; }
 }
+
+// ============================================================
+// AI collaborative editing (docs/ai-collab-design): the extension asks the
+// server to validate a candidate BEFORE showing it, render it non-destructively,
+// and describe the resolved musical facts of a selection so the model isn't blind.
+// None of these mutate the open document.
+// ============================================================
+
+/// <summary>Parameters for lilysharp/checkCandidate: an arbitrary candidate source
+/// string (typically the open document with the selection replaced by the model's
+/// output). The candidate is parsed and validated in isolation — it does NOT touch
+/// document state.</summary>
+public class CheckCandidateParams
+{
+    /// <summary>The full candidate source text to validate.</summary>
+    public string Text { get; set; } = "";
+}
+
+/// <summary>One diagnostic from validating a candidate: 0-based line/char (for the
+/// editor) plus the absolute source offset/length (so the client can attribute an
+/// error to the candidate's replaced span rather than a pre-existing one).</summary>
+public class CandidateDiagnostic
+{
+    public int Line { get; set; }
+    public int Char { get; set; }
+    public int Offset { get; set; }
+    public int Length { get; set; }
+    public string Severity { get; set; } = "error";  // error | warning | info | hint
+    public string Message { get; set; } = "";
+    public string? Code { get; set; }
+}
+
+/// <summary>Response for lilysharp/checkCandidate: every parser + semantic
+/// diagnostic, and <see cref="HasErrors"/> as a quick gate. The validate-and-
+/// self-repair loop feeds <see cref="Diagnostics"/> back to the model on failure so
+/// a broken candidate is never shown to the user.</summary>
+public class CheckCandidateResponse
+{
+    public bool HasErrors { get; set; }
+    public CandidateDiagnostic[] Diagnostics { get; set; } = System.Array.Empty<CandidateDiagnostic>();
+}
+
+/// <summary>Parameters for lilysharp/renderText: render an arbitrary candidate
+/// source string to preview SVG without touching the open document (the "decide on
+/// the score" preview of §3/§7 — an offscreen compile of the candidate).</summary>
+public class RenderTextParams
+{
+    public string Text { get; set; } = "";
+    /// <summary>Optional render/score name; null = first score / default preview.</summary>
+    public string? RenderName { get; set; }
+}
+
+/// <summary>Parameters for lilysharp/factsForRange: the resolved musical facts of a
+/// selection, so the model sees what the compiler sees (§5). The range is given as
+/// absolute source character offsets into the open document.</summary>
+public class FactsForRangeParams
+{
+    public TextDocumentIdentifier TextDocument { get; set; } = null!;
+    /// <summary>Inclusive start offset (absolute character position) of the selection.</summary>
+    public int Start { get; set; }
+    /// <summary>Exclusive end offset (absolute character position) of the selection.</summary>
+    public int End { get; set; }
+}
+
+/// <summary>One note's resolved absolute pitch within the selection: the written
+/// token (e.g. <c>c''</c>), its resolved absolute pitch (e.g. <c>C6</c>), and its
+/// source offset. Mirrors <c>check --pitches</c>.</summary>
+public class ResolvedPitchFact
+{
+    public int Offset { get; set; }
+    public string Written { get; set; } = "";
+    public string Resolved { get; set; } = "";
+}
+
+/// <summary>Response for lilysharp/factsForRange: the resolved absolute pitches
+/// inside the selection (the highest-value "un-blindfold" fact), plus an error if the
+/// document could not be resolved.</summary>
+public class FactsForRangeResponse
+{
+    public ResolvedPitchFact[] Pitches { get; set; } = System.Array.Empty<ResolvedPitchFact>();
+    public string? Error { get; set; }
+}
