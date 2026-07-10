@@ -1592,15 +1592,16 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         }
 
         function updateRenderSelect(renders, selectedRender) {
-            // One entry per score. The UNNAMED score shows as "(Default)" (value "");
-            // there is no "(Default)" entry when every score is named.
+            // One entry per score. Display the LABEL (the basename, or the form name
+            // such as main). The VALUE is the export basename / preview selector:
+            // empty for the main form with no basename, which exports to the source
+            // .lys filename.
             renderSelect.innerHTML = '';
             const scoreRenders = (renders || []).filter(r => r.Type === 'score');
             scoreRenders.forEach(render => {
                 const option = document.createElement('option');
-                const unnamed = !render.Filename;
-                option.value = unnamed ? '' : render.Name;
-                option.textContent = unnamed ? '(Default)' : render.Filename;
+                option.value = render.Filename;
+                option.textContent = render.Name;
                 if (option.value === (selectedRender || '')) {
                     option.selected = true;
                 }

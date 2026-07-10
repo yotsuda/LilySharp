@@ -596,18 +596,24 @@ public sealed partial class LilySharpLanguageServer
         {
             if (node is RenderDeclarationSyntax render)
             {
-                // Structure: score [name] { ... }; the name is the single token after
-                // the keyword (child 1 is the name token or the opening brace). Empty
-                // when unnamed — the preview shows such a score as "(Default)".
-                string filename = render.GetChild(1) is SyntaxTokenNode nameTok
-                    && nameTok.Kind != SyntaxKind.OpenBrace
-                    ? nameTok.Text.Trim('"') : "";
+                // `score <FormName> ["basename"] { ... }`.
+                string basename = render.BasenameText ?? "";
+                string formName = render.FormNameText;
+                // Picker label / --score selector: the basename when given, else the
+                // form name — so two scores on the same form still read distinctly
+                // (e.g. "main" and "あいう"). FindByName matches either.
+                string label = basename.Length > 0 ? basename : formName;
+                // Export basename: an explicit basename wins; else the reserved form
+                // `main` writes to the input file's name (empty ⇒ the previewer uses
+                // the source .lys stem); any other form name becomes the file name.
+                string exportName = basename.Length > 0 ? basename
+                    : formName == "main" ? "" : formName;
 
                 renders.Add(new RenderInfo
                 {
-                    Name = filename, // empty for an unnamed score
+                    Name = label,
                     Type = "score",
-                    Filename = filename
+                    Filename = exportName
                 });
             }
         }
