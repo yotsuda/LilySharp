@@ -22,7 +22,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// <summary>
 /// Represents a candidate slur configuration for scoring.
 /// </summary>
-internal sealed class SlurCandidate
+internal sealed class SlurCandidate : IScorableConfig
 {
     public double StartX { get; set; }
     public double StartY { get; set; }
@@ -188,20 +188,7 @@ internal sealed class SlurScoringProblem
 
         // Priority queue: lazy evaluation of scorers
         // LILYPOND-REF: lily/slur-scoring.cc:438-459
-        var queue = new PriorityQueue<SlurCandidate, double>();
-        foreach (var c in candidates)
-            queue.Enqueue(c, c.Demerits);
-
-        SlurCandidate best;
-        while (true)
-        {
-            best = queue.Dequeue();
-            if (best.IsDone)
-                break;
-
-            RunNextScorer(best);
-            queue.Enqueue(best, best.Demerits);
-        }
+        var best = BestFirstScorer.Solve(candidates, RunNextScorer);
 
         return CreateLayout(best);
     }

@@ -1,0 +1,172 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+namespace LilySharp.Core.Svg.Layout;
+
+/// <summary>
+/// One building in a skyline: a horizon interval [<see cref="Start"/>, <see cref="End"/>]
+/// carrying a sloped roof, value = <see cref="Slope"/>·coord + <see cref="Intercept"/>.
+/// </summary>
+/// <remarks>
+/// LILYPOND-REF: lily/skyline.cc:32-46, 98-176 Building struct
+///
+/// Axis-neutral. A VERTICAL skyline uses X as the horizon axis and (signed) Y as the
+/// value; a HORIZONTAL skyline uses Y as the horizon axis and (signed) X as the value.
+/// This is the single geometry primitive shared by <see cref="VerticalSkyline"/> and
+/// <see cref="HorizontalSkyline"/> — previously duplicated as the axis-transposed
+/// <c>Building</c> / <c>HorizontalBuilding</c> structs (line-for-line identical math).
+/// </remarks>
+internal readonly struct SkylineBuilding
+{
+    /// <summary>Left/bottom end of the horizon interval.</summary>
+    public double Start { get; }
+    /// <summary>Right/top end of the horizon interval.</summary>
+    public double End { get; }
+    public double Slope { get; }
+    public double Intercept { get; }
+
+    /// <summary>
+    /// Creates a sloped building spanning [<paramref name="start"/>, <paramref name="end"/>]
+    /// with value <paramref name="startValue"/> at start and <paramref name="endValue"/> at end.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:98-105, 116-138 precompute()</remarks>
+    public SkylineBuilding(double start, double startValue, double endValue, double end)
+    {
+        Start = start;
+        End = end;
+
+        if (double.IsInfinity(start) || double.IsInfinity(end))
+        {
+            // Infinite buildings must have constant value.
+            Slope = 0;
+            Intercept = startValue;
+        }
+        else if (Math.Abs(startValue - endValue) < 1e-10)
+        {
+            // Flat building.
+            Slope = 0;
+            Intercept = startValue;
+        }
+        else
+        {
+            double length = end - start;
+            if (Math.Abs(length) < 1e-10)
+            {
+                Slope = 0;
+                Intercept = Math.Max(startValue, endValue);
+            }
+            else
+            {
+                Slope = (endValue - startValue) / length;
+
+                // Too steep - treat as flat at max value.
+                if (Math.Abs(Slope) > 1e6)
+                {
+                    Slope = 0;
+                    Intercept = Math.Max(startValue, endValue);
+                }
+                else
+                {
+                    Intercept = startValue - Slope * start;
+                }
+            }
+        }
+    }
+
+    /// <summary>Creates a flat building (constant <paramref name="value"/>).</summary>
+    public SkylineBuilding(double start, double end, double value)
+        : this(start, value, value, end)
+    {
+    }
+
+    /// <summary>Value of the roof at the given horizon coordinate.</summary>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:140-144 Building::height()</remarks>
+    public double ValueAt(double coord)
+        => double.IsInfinity(coord) ? Intercept : Slope * coord + Intercept;
+
+    /// <summary>Horizon coordinate where this building's roof intersects another's.</summary>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:157-167 Building::intersection_x()</remarks>
+    public double Intersection(SkylineBuilding other)
+    {
+        double slopeDelta = other.Slope - Slope;
+
+        // If slopes are very close, avoid division by a small number.
+        if (Math.Abs(slopeDelta) < 1e-4)
+            return Math.Max(Start, other.Start);
+
+        return (Intercept - other.Intercept) / slopeDelta;
+    }
+
+    /// <summary>True if this building's roof is above the other's at the given coordinate.</summary>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:169-176 Building::above()</remarks>
+    public bool Above(SkylineBuilding other, double coord)
+    {
+        if (double.IsInfinity(Intercept) || double.IsInfinity(other.Intercept) || double.IsInfinity(coord))
+            return Intercept > other.Intercept;
+
+        return (Slope - other.Slope) * coord + Intercept > other.Intercept;
+    }
+
+    /// <summary>A copy restricted to [<paramref name="newStart"/>, <paramref name="newEnd"/>],
+    /// with roof values recomputed at the new endpoints.</summary>
+    public SkylineBuilding WithRange(double newStart, double newEnd)
+        => new SkylineBuilding(newStart, ValueAt(newStart), ValueAt(newEnd), newEnd);
+
+    public override string ToString()
+        => $"SkylineBuilding[{Start:F2}, {End:F2}] v = {Slope:F4}c + {Intercept:F2}";
+}
+
+/// <summary>Geometry kernels shared by the axis-typed skyline classes.</summary>
+internal static class SkylineMath
+{
+    /// <summary>
+    /// LilyPond <c>internal_distance</c> between two opposite-facing skylines,
+    /// given their (sign-convention) building lists. The gap value at a horizon
+    /// coordinate is <c>b1.ValueAt(c) + b2.ValueAt(c)</c>; that sum is linear
+    /// over any overlap, so its maximum is always at an endpoint — only the
+    /// overlap ends are sampled. Representation-independent: a building shadowed
+    /// by a taller one can never win the max, so a sparse (concatenated) list
+    /// yields the same result as a fully resolved envelope.
+    /// </summary>
+    /// <returns>
+    /// The maximum penetration in the LilyPond internal (sign*coordinate) frame;
+    /// larger means closer/overlapping. <see cref="double.NegativeInfinity"/>
+    /// when either side is empty (no constraint).
+    /// </returns>
+    /// <remarks>LILYPOND-REF: lily/skyline.cc:529-533, 617-649 internal_distance()</remarks>
+    public static double Distance(IReadOnlyList<SkylineBuilding> a, IReadOnlyList<SkylineBuilding> b)
+    {
+        if (a.Count == 0 || b.Count == 0)
+            return double.NegativeInfinity;
+
+        double max = double.NegativeInfinity;
+        foreach (var b1 in a)
+        {
+            foreach (var b2 in b)
+            {
+                double lo = Math.Max(b1.Start, b2.Start);
+                double hi = Math.Min(b1.End, b2.End);
+                if (lo < hi)
+                {
+                    double dLo = b1.ValueAt(lo) + b2.ValueAt(lo);
+                    double dHi = b1.ValueAt(hi) + b2.ValueAt(hi);
+                    max = Math.Max(max, Math.Max(dLo, dHi));
+                }
+            }
+        }
+        return max;
+    }
+}

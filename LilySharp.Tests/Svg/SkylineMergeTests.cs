@@ -64,7 +64,7 @@ public class SkylineMergeTests
 
         // Should have 2 non-empty buildings (plus empty fillers)
         int nonEmptyCount = skyline.Buildings.Count(b =>
-            !double.IsNegativeInfinity(b.Height(b.XLeft)));
+            !double.IsNegativeInfinity(b.ValueAt(b.Start)));
 
         _output.WriteLine($"Non-empty buildings: {nonEmptyCount}");
         foreach (var b in skyline.Buildings)

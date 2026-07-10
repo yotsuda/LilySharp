@@ -110,12 +110,22 @@ internal sealed class Skyline
 
     // LILYPOND-REF: lily/skyline.cc:529-533 Skyline::distance()
     /// <summary>
-    /// Calculates the minimum distance between this skyline and another.
-    /// This skyline should be a RightSkyline, other should be a LeftSkyline.
+    /// Minimum distance between this (RIGHT) skyline and an opposite-direction
+    /// (LEFT) <paramref name="other"/> — throws if they face the same way.
     /// </summary>
     /// <returns>
-    /// The minimum horizontal distance. Positive means no overlap,
-    /// negative means overlap (collision).
+    /// The signed horizontal gap in RAW coordinates (<c>other.X - this.X</c>),
+    /// minimised over overlapping segments: positive = clearance, negative =
+    /// collision. Returns <see cref="double.PositiveInfinity"/> when either side
+    /// is empty (no constraint).
+    /// <para>
+    /// NOTE — this flat skyline's <c>Distance</c> convention is the INVERSE of
+    /// <see cref="VerticalSkyline.Distance"/> / <see cref="HorizontalSkyline.Distance"/>,
+    /// which return the LilyPond internal (sign*coordinate) penetration MAXIMISED
+    /// over overlaps and <see cref="double.NegativeInfinity"/> when empty. Do not
+    /// mix the two contracts: this one is a raw signed gap (min, +∞-empty); those
+    /// are internal-frame penetration (max, -∞-empty).
+    /// </para>
     /// </returns>
     public double Distance(Skyline other)
     {
@@ -134,6 +144,9 @@ internal sealed class Skyline
     /// </remarks>
     public double Distance(Skyline other, double horizonPadding)
     {
+        if (_direction == other._direction)
+            throw new ArgumentException("Distance requires skylines with opposite directions");
+
         if (_segments.Length == 0 || other._segments.Length == 0)
             return double.PositiveInfinity;
 

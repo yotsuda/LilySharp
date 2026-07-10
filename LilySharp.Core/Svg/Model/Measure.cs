@@ -58,16 +58,17 @@ public sealed record Measure
     public ImmutableArray<MusicItem> Items { get; init; }
 
     /// <summary>Barline at the start of this measure (for repeat starts).</summary>
-    public BarlineType StartBarline { get; }
+    public BarlineType StartBarline { get; init; }
 
     /// <summary>Barline at the end of this measure.</summary>
-    public BarlineType EndBarline { get; }
+    public BarlineType EndBarline { get; init; }
 
     /// <summary>Optional section label (e.g., "A", "B", "Coda").</summary>
     public string? SectionLabel { get; init; }
 
-    /// <summary>If true, force a line break after this measure.</summary>
-    public bool HasBreakAfter { get; }
+    /// <summary>If true, force a line break after this measure. Derived from
+    /// <see cref="LineBreakPermission"/> so it can never drift out of sync with it.</summary>
+    public bool HasBreakAfter => LineBreakPermission == BreakPermission.Force;
 
     /// <summary>
     /// Line break permission after this measure.
@@ -78,7 +79,7 @@ public sealed record Measure
     /// Allow = normal break point, Forbid = cannot break here, Force = must break here.
     /// When Force, HasBreakAfter is also true for backward compatibility.
     /// </remarks>
-    public BreakPermission LineBreakPermission { get; }
+    public BreakPermission LineBreakPermission { get; init; }
 
     /// <summary>
     /// Page break permission after this measure (raw, before <c>min_permission</c> propagation).
@@ -89,7 +90,7 @@ public sealed record Measure
     /// Use <see cref="EffectivePagePermission"/> to obtain the value after LP's
     /// <c>min_permission(line, page)</c> chain.
     /// </remarks>
-    public BreakPermission PageBreakPermission { get; }
+    public BreakPermission PageBreakPermission { get; init; }
 
     /// <summary>
     /// Page turn permission after this measure (raw, before <c>min_permission</c> propagation).
@@ -100,7 +101,7 @@ public sealed record Measure
     /// Use <see cref="EffectiveTurnPermission"/> to obtain the value after LP's
     /// <c>min_permission(page, turn)</c> chain (which itself derives from line).
     /// </remarks>
-    public BreakPermission PageTurnPermission { get; }
+    public BreakPermission PageTurnPermission { get; init; }
 
     /// <summary>
     /// Page break permission after applying LP's chained <c>min_permission(line, page)</c>.
@@ -128,13 +129,13 @@ public sealed record Measure
     /// LILYPOND-REF: lily/constrained-breaking.cc:112-113 break_penalty_
     /// Added to demerits in the DP when a break occurs after this measure.
     /// </remarks>
-    public double BreakPenalty { get; }
+    public double BreakPenalty { get; init; }
 
     /// <summary>Source start position for caching and incremental updates.</summary>
-    public int SourceStart { get; }
+    public int SourceStart { get; init; }
 
     /// <summary>Source end position for caching and incremental updates.</summary>
-    public int SourceEnd { get; }
+    public int SourceEnd { get; init; }
 
     /// <summary>Source offset of this measure's section-label declaration (0 = none),
     /// so the section mark can carry a data-pos that jumps to <c>section X</c>
@@ -148,7 +149,7 @@ public sealed record Measure
     /// LILYPOND-REF: lily/bar-number-engraver.cc — \partial leaves the pickup
     /// uncounted (currentBarNumber reaches 1 only at the first full measure).
     /// </summary>
-    public bool IsPickup { get; }
+    public bool IsPickup { get; init; }
 
     /// <summary>Creates a measure from its items, barlines, and break/pickup metadata.</summary>
     public Measure(
@@ -174,9 +175,9 @@ public sealed record Measure
         SourceEnd = sourceEnd;
         SectionLabelPosition = sectionLabelPosition;
         IsPickup = isPickup;
-        // Derive permission: hasBreakAfter implies Force for backward compatibility
+        // Derive permission: hasBreakAfter implies Force for backward
+        // compatibility. HasBreakAfter is a computed property off this value.
         LineBreakPermission = hasBreakAfter ? BreakPermission.Force : lineBreakPermission;
-        HasBreakAfter = hasBreakAfter || LineBreakPermission == BreakPermission.Force;
         BreakPenalty = breakPenalty;
         PageBreakPermission = pageBreakPermission;
         PageTurnPermission = pageTurnPermission;

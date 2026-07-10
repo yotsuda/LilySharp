@@ -20,8 +20,8 @@ using Xunit;
 namespace LilySharp.Tests.Svg;
 
 /// <summary>
-/// Tests for sloped Building support in VerticalSkyline.
-/// LILYPOND-REF: lily/skyline.cc Building struct
+/// Tests for sloped SkylineBuilding support in VerticalSkyline.
+/// LILYPOND-REF: lily/skyline.cc SkylineBuilding struct
 /// </summary>
 [Trait("Category", "Unit")]
 public class SlopedBuildingTests
@@ -32,32 +32,32 @@ public class SlopedBuildingTests
     public void Building_HorizontalHeight_ReturnsConstant()
     {
         // Horizontal building: height = 5 everywhere
-        var b = new Building(0, 10, 5);
+        var b = new SkylineBuilding(0, 10, 5);
 
-        Assert.Equal(5, b.Height(0), Epsilon);
-        Assert.Equal(5, b.Height(5), Epsilon);
-        Assert.Equal(5, b.Height(10), Epsilon);
+        Assert.Equal(5, b.ValueAt(0), Epsilon);
+        Assert.Equal(5, b.ValueAt(5), Epsilon);
+        Assert.Equal(5, b.ValueAt(10), Epsilon);
     }
 
     [Fact]
     public void Building_SlopedHeight_ReturnsLinearInterpolation()
     {
         // Sloped building: from (0, 0) to (10, 10)
-        var b = new Building(0, 0, 10, 10);
+        var b = new SkylineBuilding(0, 0, 10, 10);
 
-        Assert.Equal(0, b.Height(0), Epsilon);
-        Assert.Equal(5, b.Height(5), Epsilon);
-        Assert.Equal(10, b.Height(10), Epsilon);
+        Assert.Equal(0, b.ValueAt(0), Epsilon);
+        Assert.Equal(5, b.ValueAt(5), Epsilon);
+        Assert.Equal(10, b.ValueAt(10), Epsilon);
     }
 
     [Fact]
     public void Building_IntersectionX_ParallelLines()
     {
         // Parallel buildings - should return max of left X
-        var b1 = new Building(0, 5, 5, 10);
-        var b2 = new Building(5, 10, 10, 15);
+        var b1 = new SkylineBuilding(0, 5, 5, 10);
+        var b2 = new SkylineBuilding(5, 10, 10, 15);
 
-        double ix = b1.IntersectionX(b2);
+        double ix = b1.Intersection(b2);
         Assert.Equal(5, ix, Epsilon);
     }
 
@@ -67,10 +67,10 @@ public class SlopedBuildingTests
         // b1: from (0, 0) to (10, 10) -> y = x
         // b2: from (0, 10) to (10, 0) -> y = -x + 10
         // Intersection: x = -x + 10 -> 2x = 10 -> x = 5
-        var b1 = new Building(0, 0, 10, 10);
-        var b2 = new Building(0, 10, 0, 10);
+        var b1 = new SkylineBuilding(0, 0, 10, 10);
+        var b2 = new SkylineBuilding(0, 10, 0, 10);
 
-        double ix = b1.IntersectionX(b2);
+        double ix = b1.Intersection(b2);
         Assert.Equal(5, ix, Epsilon);
     }
 
@@ -78,9 +78,9 @@ public class SlopedBuildingTests
     public void Building_Above_HorizontalVsSloped()
     {
         // Horizontal at y=5
-        var horizontal = new Building(0, 10, 5);
+        var horizontal = new SkylineBuilding(0, 10, 5);
         // Sloped from y=0 to y=10
-        var sloped = new Building(0, 0, 10, 10);
+        var sloped = new SkylineBuilding(0, 0, 10, 10);
 
         // At x=3: sloped=3, horizontal=5 -> horizontal above
         Assert.True(horizontal.Above(sloped, 3));
@@ -101,10 +101,10 @@ public class SlopedBuildingTests
         Assert.Single(skyline.Buildings);
 
         var b = skyline.Buildings[0];
-        Assert.Equal(0, b.XLeft, Epsilon);
-        Assert.Equal(100, b.XRight, Epsilon);
+        Assert.Equal(0, b.Start, Epsilon);
+        Assert.Equal(100, b.End, Epsilon);
 
-        // Building.Height() returns internal representation (negative for UP skyline)
+        // SkylineBuilding.Height() returns internal representation (negative for UP skyline)
         // VerticalSkyline.Height() returns real Y coordinate
         Assert.Equal(10, skyline.Height(0), Epsilon);
         Assert.Equal(20, skyline.Height(100), Epsilon);
@@ -181,15 +181,15 @@ public class SlopedBuildingTests
     public void Building_WithXRange_PreservesSlope()
     {
         // Original: from (0, 0) to (10, 10)
-        var original = new Building(0, 0, 10, 10);
+        var original = new SkylineBuilding(0, 0, 10, 10);
 
         // Extract middle portion
-        var middle = original.WithXRange(3, 7);
+        var middle = original.WithRange(3, 7);
 
-        Assert.Equal(3, middle.XLeft, Epsilon);
-        Assert.Equal(7, middle.XRight, Epsilon);
-        Assert.Equal(3, middle.Height(3), Epsilon);
-        Assert.Equal(7, middle.Height(7), Epsilon);
+        Assert.Equal(3, middle.Start, Epsilon);
+        Assert.Equal(7, middle.End, Epsilon);
+        Assert.Equal(3, middle.ValueAt(3), Epsilon);
+        Assert.Equal(7, middle.ValueAt(7), Epsilon);
         Assert.Equal(original.Slope, middle.Slope, Epsilon);
     }
 }

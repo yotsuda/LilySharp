@@ -58,19 +58,48 @@ public sealed partial class MeasureCollector
             // Phrase-reference boundary: evaluate the body in the default frame.
             if (node is RelativeResetMarker)
             {
-                _octave.ResetToInitial();
-                _defaultDuration = Fraction.Quarter;
+                EnterDefaultFrame();
                 continue;
             }
 
-            bool hasTieAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is TieSyntax;
-            bool hasSlurStartAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is SlurSyntax slurS && slurS.IsOpen;
-            bool hasSlurEndAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is SlurSyntax slurE && !slurE.IsOpen;
-            bool hasBeamStartAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is BeamMarkerSyntax beamS && beamS.IsStart;
-            bool hasBeamEndAfter = i + 1 < musicNodes.Count && musicNodes[i + 1] is BeamMarkerSyntax beamE && !beamE.IsStart;
-            ProcessMusicNode(node, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
+            var next = i + 1 < musicNodes.Count ? musicNodes[i + 1] : null;
+            ProcessMusicNode(node, builder, PeekMarkers(next));
         }
     }
+
+    /// <summary>
+    /// One-node lookahead flags. Ties/slurs/beams are written AFTER the note
+    /// they annotate, so a note's flags come from the following node.
+    /// </summary>
+    private readonly record struct MarkerFlags(
+        bool HasTieAfter, bool HasSlurStartAfter, bool HasSlurEndAfter,
+        bool HasBeamStartAfter, bool HasBeamEndAfter);
+
+    /// <summary>
+    /// Computes the tie/slur/beam lookahead for a note from the node that
+    /// follows it. Centralized so the top-level stream, tuplet bodies, and the
+    /// structure walk can't drift — a drifted copy previously silently dropped
+    /// markers inside tuplet/structure bodies.
+    /// </summary>
+    private static MarkerFlags PeekMarkers(SyntaxNode? next) => new(
+        HasTieAfter: next is TieSyntax,
+        HasSlurStartAfter: next is SlurSyntax { IsOpen: true },
+        HasSlurEndAfter: next is SlurSyntax { IsOpen: false },
+        HasBeamStartAfter: next is BeamMarkerSyntax { IsStart: true },
+        HasBeamEndAfter: next is BeamMarkerSyntax { IsStart: false });
+
+    /// <summary>Resets the relative-octave and default-duration state to the
+    /// initial frame — the invariant applied at every phrase-reference
+    /// (<see cref="RelativeResetMarker"/>) boundary.</summary>
+    private void EnterDefaultFrame()
+    {
+        _octave.ResetToInitial();
+        _defaultDuration = Fraction.Quarter;
+    }
+
+    private void ProcessMusicNode(SyntaxNode node, MeasureBuilder builder, MarkerFlags m)
+        => ProcessMusicNode(node, builder, m.HasTieAfter, m.HasSlurStartAfter,
+            m.HasSlurEndAfter, m.HasBeamStartAfter, m.HasBeamEndAfter);
 
     /// <summary>
     /// Converts the inline volta endings collected during this voice walk into
@@ -506,11 +535,7 @@ public sealed partial class MeasureCollector
             // the top-level stream. Without this, a tie/slur/beam written inside
             // a tuplet body was silently dropped.
             var next = j + 1 < tupletItems.Count ? tupletItems[j + 1] : null;
-            bool hasTieAfter = next is TieSyntax;
-            bool hasSlurStartAfter = next is SlurSyntax { IsOpen: true };
-            bool hasSlurEndAfter = next is SlurSyntax { IsOpen: false };
-            bool hasBeamStartAfter = next is BeamMarkerSyntax { IsStart: true };
-            bool hasBeamEndAfter = next is BeamMarkerSyntax { IsStart: false };
+            var (hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter) = PeekMarkers(next);
 
             if (item is NoteSyntax note)
             {

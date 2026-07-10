@@ -226,7 +226,7 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
     {
         private readonly string? _fontDirectory;
         private readonly Dictionary<string, SKTypeface> _typefaces = new(StringComparer.OrdinalIgnoreCase);
-        private readonly List<SKFont> _fonts = new();
+        private readonly Dictionary<string, SKFont> _fonts = new();
 
         public FontCache(string? fontDirectory)
         {
@@ -235,10 +235,16 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
 
         public SKFont GetFont(string family, float pixelSize, FontStyle style)
         {
+            // Cache SKFont by (family, size, style). DrawGlyph/DrawText call
+            // this per glyph/run, so allocating a fresh SKFont every time and
+            // only disposing at teardown accumulated thousands per document.
+            string key = $"{family.ToLowerInvariant()}|{pixelSize}|{style}";
+            if (_fonts.TryGetValue(key, out var cached))
+                return cached;
+
             var typeface = GetTypeface(family, style);
-            // SKFont allocations are cheap but disposable; cache for reuse.
             var font = new SKFont(typeface, pixelSize) { Edging = SKFontEdging.SubpixelAntialias };
-            _fonts.Add(font);
+            _fonts[key] = font;
             return font;
         }
 
@@ -345,7 +351,7 @@ internal sealed class PngDrawingContext : IDrawingContext, IDisposable
 
         public void Dispose()
         {
-            foreach (var f in _fonts) f.Dispose();
+            foreach (var f in _fonts.Values) f.Dispose();
             foreach (var t in _typefaces.Values) t.Dispose();
         }
     }

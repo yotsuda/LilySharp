@@ -8,6 +8,9 @@ import {
     ServerOptions,
     TransportKind
 } from 'vscode-languageclient/node';
+import { registerAiTransform } from './aiTransform';
+import { registerAiComplete } from './aiComplete';
+import { registerKeyCommands } from './modelClient';
 
 // True if `cmd` resolves on PATH (used to give a clear error when the
 // framework-dependent dev server needs `dotnet` but it is not installed).
@@ -277,6 +280,20 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    // AI collaborative editing: select → prompt → validate → decide-on-score → apply.
+    const aiDeps = {
+        extensionUri: context.extensionUri,
+        getClient: () => client,
+        isReady: () => clientReady,
+        secrets: context.secrets,
+        log: (msg: string) => outputChannel.appendLine(msg),
+    };
+    registerAiTransform(context, aiDeps);
+    // Second mode: validated ghost-text "next measure" completion (opt-in).
+    registerAiComplete(context, aiDeps);
+    // BYO-key management commands (set/clear Anthropic/OpenAI API keys).
+    registerKeyCommands(context);
+
     // Watch for document changes
     context.subscriptions.push(
         vscode.workspace.onDidChangeTextDocument(event => {
@@ -454,6 +471,11 @@ function openPreview(context: vscode.ExtensionContext, viewColumn: vscode.ViewCo
                 if (doc) {
                     updatePreviewContent(doc, panel, context);
                 }
+            } else if (message.type === 'aiTransformFromScore') {
+                // M3: a note range selected ON THE SCORE maps to a text range, which
+                // becomes the editor selection, then the same AI transform runs — so
+                // the loop is identical whether the selection started in text or score.
+                await aiTransformFromScore(uri, message.startPos, message.endPos);
             }
         },
         undefined,
@@ -859,6 +881,90 @@ async function importMusicXml(context: vscode.ExtensionContext, sourceUri?: vsco
     }
 }
 
+/**
+ * M3 bridge: a note range selected on the score preview (start/end are the
+ * `data-pos` source offsets of the first and last selected notes) is turned into a
+ * text selection in the editor, then the shared `lilysharp.aiTransform` command runs
+ * against it — so a score-origin selection drives the exact same transform loop as a
+ * text selection (§6).
+ */
+async function aiTransformFromScore(uri: string, startPos: number, endPos: number): Promise<void> {
+    const doc = vscode.workspace.textDocuments.find(d => d.uri.toString() === uri);
+    if (!doc) {
+        vscode.window.showErrorMessage('Lily#: open the .lys file to transform its notes.');
+        return;
+    }
+    const text = doc.getText();
+
+    // A grob's data-pos sits on its token's leading indentation; nudge the START
+    // forward over horizontal whitespace so the selection begins on the note itself.
+    let start = Math.max(0, Math.min(startPos, text.length));
+    while (start < text.length && (text[start] === ' ' || text[start] === '\t')) {
+        start++;
+    }
+    // The END data-pos is the LAST selected note's token start; extend it over that
+    // note (pitch + accidentals + octave marks + duration + dots) and any trailing
+    // @annotations so the replaced fragment ends cleanly after the note.
+    const end = noteSelectionEnd(text, endPos);
+
+    if (end <= start) {
+        vscode.window.showErrorMessage('Lily#: could not map the selected notes to a text range.');
+        return;
+    }
+
+    const range = new vscode.Range(doc.positionAt(start), doc.positionAt(end));
+    const editor = await vscode.window.showTextDocument(doc, { preserveFocus: false });
+    editor.selection = new vscode.Selection(range.start, range.end);
+    editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
+    await vscode.commands.executeCommand('lilysharp.aiTransform');
+}
+
+/**
+ * End offset of the note token that begins at (or just after) `pos`: skips leading
+ * whitespace, consumes the note/duration token, then any trailing `@annotations`
+ * attached to it. Used to turn a last-note data-pos into a clean fragment end.
+ */
+function noteSelectionEnd(text: string, pos: number): number {
+    let i = Math.max(0, Math.min(pos, text.length));
+    while (i < text.length && /\s/.test(text[i])) {
+        i++;
+    }
+    if (text[i] === '[') {
+        // A chord [c e g]4: consume to the matching ']' then its trailing duration.
+        i++;
+        while (i < text.length && text[i] !== ']') {
+            i++;
+        }
+        if (i < text.length) {
+            i++; // include ']'
+        }
+        while (i < text.length && /[0-9.]/.test(text[i])) {
+            i++;
+        }
+    } else {
+        while (i < text.length && /[A-Za-z0-9'.,]/.test(text[i])) {
+            i++;
+        }
+    }
+    // Absorb trailing "@annotation" tokens (e.g. @staccato, @f) on the same note.
+    for (;;) {
+        let k = i;
+        while (k < text.length && (text[k] === ' ' || text[k] === '\t')) {
+            k++;
+        }
+        if (k < text.length && text[k] === '@') {
+            k++;
+            while (k < text.length && /[A-Za-z0-9_-]/.test(text[k])) {
+                k++;
+            }
+            i = k;
+        } else {
+            break;
+        }
+    }
+    return i;
+}
+
 interface RenderInfo {
     Name: string;
     Type: string;
@@ -1097,6 +1203,25 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 color: #aaa;
             }
         }
+        /* M3: floating "transform with AI" action, shown while a score note range
+           is selected. */
+        .ai-fab {
+            position: fixed;
+            top: 52px;
+            right: 18px;
+            z-index: 20;
+            padding: 7px 14px;
+            font-family: system-ui, sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            background: #6f42c1;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        }
+        .ai-fab:hover { background: #7e4fd0; }
     </style>
 </head>
 <body>
@@ -1128,6 +1253,8 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         </div>
     </div>
     <div class="zoom-info" id="zoomInfo">100%</div>
+    <button id="aiTransformBtn" class="ai-fab" type="button" style="display:none"
+            title="Transform the selected notes with AI (Ctrl+I)">✨ Transform with AI</button>
     <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
         // Boot beacon + error relay: the FIRST statements, so the extension's
@@ -1148,6 +1275,32 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
         const errorBanner = document.getElementById('errorBanner');
         const zoomInfo = document.getElementById('zoomInfo');
         const renderSelect = document.getElementById('renderSelect');
+
+        // --- M3: select a note range on the score to drive the AI transform. A plain
+        // click sets the anchor (and still jumps the editor); shift-click extends the
+        // selection from the anchor. The "Transform with AI" action then maps the
+        // selected source offsets to a text range in the editor (§6). ---
+        const aiTransformBtn = document.getElementById('aiTransformBtn');
+        let aiAnchorPos = -1;                 // last plainly-clicked note = range anchor
+        let aiRangeLo = -1, aiRangeHi = -1;   // current score selection (source offsets)
+        function aiClearSelection() {
+            aiAnchorPos = -1; aiRangeLo = -1; aiRangeHi = -1;
+            aiTransformBtn.style.display = 'none';
+        }
+        function aiSetSelection(a, b) {
+            aiRangeLo = Math.min(a, b);
+            aiRangeHi = Math.max(a, b);
+            aiTransformBtn.style.display = 'block';
+            // Light the selection (inclusive of the end note's own data-pos).
+            highlightRange([[aiRangeLo, aiRangeHi + 1]]);
+            lastHighlightRanges = [[aiRangeLo, aiRangeHi + 1]];
+            lastHighlightPos = -1;
+        }
+        function aiSubmitSelection() {
+            if (aiRangeLo < 0) return;
+            vscode.postMessage({ type: 'aiTransformFromScore', startPos: aiRangeLo, endPos: aiRangeHi });
+        }
+        aiTransformBtn.addEventListener('click', aiSubmitSelection);
 
         function showErrorBanner(text) {
             errorBanner.textContent = text;
@@ -1782,6 +1935,19 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
             const target = e.target;
             if (target && target.hasAttribute && target.hasAttribute('data-pos')) {
                 const pos = parseInt(target.getAttribute('data-pos'), 10);
+                // M3: shift-click extends a score selection from the anchor — it never
+                // seeks/jumps. A prior plain click set the anchor; fall back to this
+                // note if none is set yet.
+                if (e.shiftKey) {
+                    if (aiAnchorPos < 0) { aiAnchorPos = pos; }
+                    aiSetSelection(aiAnchorPos, pos);
+                    return;
+                }
+                // Plain click: this note becomes the anchor; any prior score
+                // selection is dropped.
+                aiAnchorPos = pos;
+                aiRangeLo = -1; aiRangeHi = -1;
+                aiTransformBtn.style.display = 'none';
                 // During playback a click on a played note SEEKS there instead
                 // of jumping the editor (listening mode). Non-note grobs
                 // (barlines, marks) fall through to the normal click.
@@ -1818,7 +1984,17 @@ function getPreviewHtml(fontUri: string, braceFontUri: string, cspSource: string
                 // highlight. Don't move the editor cursor (no message sent), and
                 // forget the position so a re-render doesn't bring it back.
                 lastHighlightPos = -1;
+                aiClearSelection();
                 clearHighlights();
+            }
+        });
+
+        // M3 keyboard: Ctrl/Cmd+I submits the score selection; Escape clears it.
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'i' || e.key === 'I')) {
+                if (aiRangeLo >= 0) { e.preventDefault(); aiSubmitSelection(); }
+            } else if (e.key === 'Escape') {
+                if (aiRangeLo >= 0) { aiClearSelection(); clearHighlights(); }
             }
         });
 

@@ -155,12 +155,10 @@ internal static class HairpinEngraver
             foreach (var (segment, system) in SpannerBreakSubstitution.BrokenPieces(
                 hairpin.StartMeasureIndex, hairpin.EndMeasureIndex, systems, measureToSystemIdx))
             {
-                double segStartX = segment.IsFirst
-                    ? CalculateStartX(hairpin, measureLayouts)
-                    : system.Measures[0].X;
-                double segEndX = segment.IsLast
-                    ? CalculateEndX(hairpin, measureLayouts)
-                    : system.Measures[^1].X + system.Measures[^1].Width;
+                var (segStartX, segEndX) = SpannerBreakSubstitution.ReattachSpanX(
+                    segment, system,
+                    CalculateStartX(hairpin, measureLayouts),
+                    CalculateEndX(hairpin, measureLayouts));
 
                 if (segEndX - segStartX < MinimumLength)
                     segEndX = segStartX + MinimumLength;

@@ -16,136 +16,6 @@
 
 namespace LilySharp.Core.Svg.Layout;
 
-/// <summary>
-/// A building in a horizontal skyline - represents a region with Y extent and sloped edge.
-/// </summary>
-/// <remarks>
-/// LILYPOND-REF: lily/skyline.cc:32-46, 98-176 Building struct
-///
-/// A building is defined by:
-/// - Y range: [YBottom, YTop]
-/// - Edge line: x = Slope * y + XIntercept
-///
-/// The X position at any y is: X(y) = Slope * y + XIntercept
-/// For vertical buildings (most common), Slope = 0.
-/// </remarks>
-internal readonly struct HorizontalBuilding
-{
-    public double YBottom { get; }
-    public double YTop { get; }
-    public double Slope { get; }
-    public double XIntercept { get; }
-
-    /// <summary>
-    /// Creates a sloped building.
-    /// </summary>
-    /// <remarks>LILYPOND-REF: lily/skyline.cc:98-105</remarks>
-    public HorizontalBuilding(double yBottom, double xAtBottom, double xAtTop, double yTop)
-    {
-        YBottom = yBottom;
-        YTop = yTop;
-
-        if (double.IsInfinity(yBottom) || double.IsInfinity(yTop))
-        {
-            Slope = 0;
-            XIntercept = xAtBottom;
-        }
-        else if (Math.Abs(xAtBottom - xAtTop) < 1e-10)
-        {
-            Slope = 0;
-            XIntercept = xAtBottom;
-        }
-        else
-        {
-            double length = yTop - yBottom;
-            if (Math.Abs(length) < 1e-10)
-            {
-                Slope = 0;
-                XIntercept = Math.Max(xAtBottom, xAtTop);
-            }
-            else
-            {
-                Slope = (xAtTop - xAtBottom) / length;
-                if (Math.Abs(Slope) > 1e6)
-                {
-                    Slope = 0;
-                    XIntercept = Math.Max(xAtBottom, xAtTop);
-                }
-                else
-                {
-                    XIntercept = xAtBottom - Slope * yBottom;
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Creates a vertical building (constant X).
-    /// </summary>
-    public HorizontalBuilding(double yBottom, double yTop, double x)
-        : this(yBottom, x, x, yTop)
-    {
-    }
-
-    /// <summary>
-    /// Creates a building from a bounding box.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/skyline.cc:107-113
-    /// Uses LilyPond sign convention:
-    /// - RIGHT skyline (sky=+1): x = +xRight (positive for rightward)
-    /// - LEFT skyline (sky=-1): x = -xLeft (negative for leftward)
-    /// </remarks>
-    public static HorizontalBuilding FromBox(double yBottom, double yTop, double xLeft, double xRight, HorizontalDirection direction)
-    {
-        double x = direction == HorizontalDirection.Right ? xRight : -xLeft;
-        return new HorizontalBuilding(yBottom, yTop, x);
-    }
-
-    /// <summary>
-    /// Returns the X position at the given Y coordinate.
-    /// </summary>
-    public double X(double y)
-    {
-        return double.IsInfinity(y) ? XIntercept : Slope * y + XIntercept;
-    }
-
-    /// <summary>
-    /// Computes the Y coordinate where this building intersects with another.
-    /// </summary>
-    public double IntersectionY(HorizontalBuilding other)
-    {
-        double slopeDelta = other.Slope - Slope;
-        if (Math.Abs(slopeDelta) < 1e-4)
-            return Math.Max(YBottom, other.YBottom);
-        return (XIntercept - other.XIntercept) / slopeDelta;
-    }
-
-    /// <summary>
-    /// Returns true if this building is "above" the other at the given Y coordinate.
-    /// For RIGHT skyline, "above" means larger X (more to the right).
-    /// For LEFT skyline, "above" means smaller X (more to the left, stored as more negative).
-    /// </summary>
-    public bool Above(HorizontalBuilding other, double y)
-    {
-        if (double.IsInfinity(XIntercept) || double.IsInfinity(other.XIntercept) || double.IsInfinity(y))
-            return XIntercept > other.XIntercept;
-        return (Slope - other.Slope) * y + XIntercept > other.XIntercept;
-    }
-
-    /// <summary>
-    /// Creates a copy with modified Y range.
-    /// </summary>
-    public HorizontalBuilding WithYRange(double newBottom, double newTop)
-    {
-        double xAtBottom = X(newBottom);
-        double xAtTop = X(newTop);
-        return new HorizontalBuilding(newBottom, xAtBottom, xAtTop, newTop);
-    }
-
-    public override string ToString()
-        => $"HBuilding[{YBottom:F2}, {YTop:F2}] x = {Slope:F4}y + {XIntercept:F2}";
-}
 
 /// <summary>
 /// Direction for horizontal skylines.
@@ -173,7 +43,7 @@ public enum HorizontalDirection
 /// </remarks>
 internal sealed class HorizontalSkyline
 {
-    private readonly List<HorizontalBuilding> _buildings;
+    private readonly List<SkylineBuilding> _buildings;
     private readonly HorizontalDirection _direction;
 
     private const double NegativeInfinity = double.NegativeInfinity;
@@ -181,11 +51,11 @@ internal sealed class HorizontalSkyline
 
     public HorizontalSkyline(HorizontalDirection direction)
     {
-        _buildings = new List<HorizontalBuilding>();
+        _buildings = new List<SkylineBuilding>();
         _direction = direction;
     }
 
-    private HorizontalSkyline(List<HorizontalBuilding> buildings, HorizontalDirection direction)
+    private HorizontalSkyline(List<SkylineBuilding> buildings, HorizontalDirection direction)
     {
         _buildings = buildings;
         _direction = direction;
@@ -193,14 +63,14 @@ internal sealed class HorizontalSkyline
 
     public HorizontalDirection Direction => _direction;
     public bool IsEmpty => _buildings.Count == 0;
-    public IReadOnlyList<HorizontalBuilding> Buildings => _buildings;
+    public IReadOnlyList<SkylineBuilding> Buildings => _buildings;
 
     /// <summary>
     /// Creates a skyline from a single bounding box.
     /// </summary>
     public static HorizontalSkyline FromBox(double yBottom, double yTop, double xLeft, double xRight, HorizontalDirection direction)
     {
-        var building = HorizontalBuilding.FromBox(yBottom, yTop, xLeft, xRight, direction);
+        var building = BoxBuilding(yBottom, yTop, xLeft, xRight, direction);
         var skyline = new HorizontalSkyline(direction);
         skyline._buildings.Add(building);
         return skyline;
@@ -214,7 +84,7 @@ internal sealed class HorizontalSkyline
         var skyline = new HorizontalSkyline(direction);
         foreach (var (yBottom, yTop, xLeft, xRight) in boxes)
         {
-            var building = HorizontalBuilding.FromBox(yBottom, yTop, xLeft, xRight, direction);
+            var building = BoxBuilding(yBottom, yTop, xLeft, xRight, direction);
             skyline._buildings.Add(building);
         }
         return skyline;
@@ -226,10 +96,19 @@ internal sealed class HorizontalSkyline
     public static HorizontalSkyline FromSlope(double yBottom, double xBottom, double yTop, double xTop, HorizontalDirection direction)
     {
         int sky = (int)direction;
-        return new HorizontalSkyline(new List<HorizontalBuilding>
+        return new HorizontalSkyline(new List<SkylineBuilding>
         {
-            new HorizontalBuilding(yBottom, sky * xBottom, sky * xTop, yTop)
+            new SkylineBuilding(yBottom, sky * xBottom, sky * xTop, yTop)
         }, direction);
+    }
+
+    // LilyPond sign convention (skyline.cc:107-113): the stored value is sky*x.
+    // RIGHT (sky=+1) stores +xRight; LEFT (sky=-1) stores -xLeft. The horizon
+    // axis for a horizontal skyline is Y, so the box maps to [yBottom, yTop].
+    private static SkylineBuilding BoxBuilding(double yBottom, double yTop, double xLeft, double xRight, HorizontalDirection direction)
+    {
+        double x = direction == HorizontalDirection.Right ? xRight : -xLeft;
+        return new SkylineBuilding(yBottom, yTop, x);
     }
 
     /// <summary>
@@ -254,7 +133,12 @@ internal sealed class HorizontalSkyline
     }
 
     /// <summary>
-    /// Calculates the distance between this skyline and another of opposite direction.
+    /// Distance to another skyline of the OPPOSITE direction (throws otherwise),
+    /// in the LilyPond internal (sign*x) frame: larger = closer/overlapping.
+    /// Returns <see cref="double.NegativeInfinity"/> if either side is empty.
+    /// Shares the <see cref="SkylineMath.Distance"/> kernel with
+    /// <see cref="VerticalSkyline"/> — the two are the same axis-transposed
+    /// computation over <see cref="SkylineBuilding"/> horizon intervals.
     /// </summary>
     /// <remarks>LILYPOND-REF: lily/skyline.cc:617-649 internal_distance()</remarks>
     public double Distance(HorizontalSkyline other)
@@ -262,32 +146,7 @@ internal sealed class HorizontalSkyline
         if (_direction == other._direction)
             throw new ArgumentException("Distance requires skylines with opposite directions");
 
-        if (IsEmpty || other.IsEmpty)
-            return NegativeInfinity;
-
-        double maxDistance = NegativeInfinity;
-
-        foreach (var b1 in _buildings)
-        {
-            foreach (var b2 in other._buildings)
-            {
-                double overlapBottom = Math.Max(b1.YBottom, b2.YBottom);
-                double overlapTop = Math.Min(b1.YTop, b2.YTop);
-
-                if (overlapBottom < overlapTop)
-                {
-                    // b1.X + b2.X is LINEAR in y on the overlap, so its max is
-                    // attained at an endpoint — evaluating the two endpoints is
-                    // exact, not a sampling approximation. (The slopes'
-                    // intersection point is never an extremum of their SUM.)
-                    double atBottom = b1.X(overlapBottom) + b2.X(overlapBottom);
-                    double atTop = b1.X(overlapTop) + b2.X(overlapTop);
-                    maxDistance = Math.Max(maxDistance, Math.Max(atBottom, atTop));
-                }
-            }
-        }
-
-        return maxDistance;
+        return SkylineMath.Distance(_buildings, other._buildings);
     }
 
     /// <summary>
@@ -299,8 +158,8 @@ internal sealed class HorizontalSkyline
         for (int i = 0; i < _buildings.Count; i++)
         {
             var b = _buildings[i];
-            double newIntercept = b.XIntercept + sky * dx;
-            _buildings[i] = new HorizontalBuilding(b.YBottom, b.YTop, newIntercept);
+            double newIntercept = b.Intercept + sky * dx;
+            _buildings[i] = new SkylineBuilding(b.Start, b.End, newIntercept);
         }
     }
 
@@ -314,8 +173,8 @@ internal sealed class HorizontalSkyline
         double best = NegativeInfinity; // stored frame: larger = outer for both directions
         foreach (var b in _buildings)
         {
-            if (y >= b.YBottom && y <= b.YTop)
-                best = Math.Max(best, b.X(y));
+            if (y >= b.Start && y <= b.End)
+                best = Math.Max(best, b.ValueAt(y));
         }
 
         if (double.IsNegativeInfinity(best))

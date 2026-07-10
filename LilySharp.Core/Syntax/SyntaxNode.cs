@@ -200,6 +200,7 @@ public abstract class SyntaxNode
             SyntaxKind.GrandStaffRender => new GrandStaffRenderSyntax((GrandStaffRenderGreen)green, this, position),
             SyntaxKind.TabRender => new TabRenderSyntax((TabRenderGreen)green, this, position),
             SyntaxKind.OssiaRender => new OssiaRenderSyntax((OssiaRenderGreen)green, this, position),
+            SyntaxKind.MidiPartRender => new MidiPartRenderSyntax((MidiPartRenderGreen)green, this, position),
 
             // Override/Revert
             SyntaxKind.OverrideDeclaration => new OverrideDeclarationSyntax((OverrideDeclarationGreen)green, this, position),

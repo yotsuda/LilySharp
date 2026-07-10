@@ -15,6 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using System.Collections.Immutable;
+using System.Linq;
 using LilySharp.Core.Semantics;
 using LilySharp.Core.Svg.Model;
 using LilySharp.Core.Syntax;
@@ -68,7 +69,7 @@ public sealed partial class MeasureCollector
                         RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
                         builder.SectionLabel = ResolveSectionLabel(reference);
                         builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
-                        ProcessSection(section, processNodes);
+                        ProcessSection(section, processNodes, builder);
                     }
                 }
                 else if (child is { Kind: SyntaxKind.SilentSectionReference } silent
@@ -82,7 +83,7 @@ public sealed partial class MeasureCollector
                     RecordSectionStart(silentName.Text, builder.CurrentMeasureIndex);
                     builder.SectionLabel = null;
                     builder.SectionLabelPosition = SectionDeclPos(silentName.Text);
-                    ProcessSection(silentSection, processNodes);
+                    ProcessSection(silentSection, processNodes, builder);
                 }
                 else if (child is StructureAlternativeSyntax alt)
                 {
@@ -95,7 +96,7 @@ public sealed partial class MeasureCollector
 
                         builder.SectionLabel = alt.DisplayLabel ?? altSectionName;
                         builder.SectionLabelPosition = SectionDeclPos(altSectionName);
-                        ProcessSection(section, processNodes);
+                        ProcessSection(section, processNodes, builder);
 
                         // Track measure index after processing
                         int endMeasureIndex = builder.CurrentMeasureIndex;
@@ -122,12 +123,13 @@ public sealed partial class MeasureCollector
             _voltaBrackets.Add(new VoltaBracketItem(startMeasure, endMeasure, voltaText, isClosed, sourcePosition));
     }
 
-    private void ProcessSection(SectionDeclarationSyntax section, Action<IEnumerable<SyntaxNode>> processNodes)
+    private void ProcessSection(SectionDeclarationSyntax section, Action<IEnumerable<SyntaxNode>> processNodes, MeasureBuilder builder)
     {
         // Reset the relative frame (and revert the octave mode to the file
         // default) at each section boundary.
         _octave.ResetForSection();
 
+        int startMeasure = builder.CurrentMeasureIndex;
         bool matched = false;
         foreach (var child in section.DescendantNodes())
         {
@@ -138,7 +140,9 @@ public sealed partial class MeasureCollector
                     ProcessMusicContainer(partBlock, processNodes);
                     matched = true;
 
-                    if (_voiceName != null) return;
+                    // One part block per voice name; stop looking. (A null voice
+                    // is single-staff and legitimately concatenates every block.)
+                    if (_voiceName != null) break;
                 }
             }
         }
@@ -149,6 +153,96 @@ public sealed partial class MeasureCollector
             && _partMajorCells.TryGetValue((section.SectionName, _voiceName), out var cell))
         {
             ProcessMusicContainer(cell, processNodes);
+        }
+
+        // Pad this voice up to the section's canonical bar count so every staff stays
+        // aligned — whether this voice does not define the section AT ALL (fill it
+        // whole) or defines it with TOO FEW bars (fill only the shortfall). Without
+        // this the section is short here, the staff ends up under-length, and every
+        // part after it drifts out of alignment. The filler is invisible spacer rests
+        // (`s`, not `R`, so they never collapse into a multi-measure rest); the
+        // caller's pending SectionLabel still lands on the first filled measure, so
+        // the section mark shows on this staff too. Only pad at a clean bar boundary
+        // (a mid-measure section is malformed and flagged elsewhere).
+        if (_voiceName != null && builder.CurrentItemCount == 0)
+        {
+            int produced = builder.CurrentMeasureIndex - startMeasure;
+            int canonical = GetCanonicalSectionBars(section);
+            for (int i = produced; i < canonical; i++)
+                builder.AddItem(new RestItem(TimeSignatureFraction, 0, section.Position) { IsSpacer = true });
+        }
+    }
+
+    /// <summary>
+    /// The canonical bar count of a section: the greatest bar count among every part
+    /// that defines it (part-major cells across parts, or the sibling part blocks of a
+    /// section-major section). A section spans as many bars as its longest part, so
+    /// shorter parts pad up to this to stay aligned.
+    /// </summary>
+    private int GetCanonicalSectionBars(SectionDeclarationSyntax section)
+    {
+        int max = 0;
+
+        // Part-major: every `part <p> { section <name> { ... } }` cell for this name.
+        foreach (var kv in _partMajorCells)
+            if (kv.Key.section == section.SectionName)
+                max = Math.Max(max, CountBarsInScope(kv.Value));
+
+        // Section-major: the sibling part blocks inside the section declaration.
+        foreach (var part in section.DescendantNodes().OfType<PartBlockSyntax>())
+            max = Math.Max(max, CountBarsInScope(part));
+
+        // Fallback: a standalone section whose own descendants are the music.
+        if (max == 0)
+            max = CountBarsInScope(section);
+
+        return max;
+    }
+
+    /// <summary>
+    /// Bar count of a music scope (a part block or a part-major section cell): one per
+    /// written barline, plus a trailing partial bar when music follows the last
+    /// barline — the same segmentation as <see cref="ChordNameCollector.CountBars"/>.
+    /// A <c>&lt;&lt; \\ &gt;&gt;</c> polyphonic span counts as ONLY its first voice's
+    /// bars: the main stream advances by that voice while the others overlay the same
+    /// measures, so counting every voice's barlines would multiply the bar count.
+    /// </summary>
+    private static int CountBarsInScope(SyntaxNode scope)
+    {
+        int bars = 0;
+        bool pendingMusic = false;
+        WalkBars(scope, ref bars, ref pendingMusic);
+        return bars + (pendingMusic ? 1 : 0);
+    }
+
+    private static void WalkBars(SyntaxNode node, ref int bars, ref bool pendingMusic)
+    {
+        for (int i = 0; i < node.SlotCount; i++)
+        {
+            var child = node.GetChild(i);
+            switch (child)
+            {
+                case null:
+                    break;
+                case BarlineSyntax:
+                    bars++;
+                    pendingMusic = false;
+                    break;
+                case NoteSyntax:
+                case RestSyntax:
+                case ChordSyntax:
+                case ChordEntrySyntax:
+                    pendingMusic = true;
+                    break;
+                case ParallelExpressionSyntax parallel:
+                    var first = parallel.Voices.FirstOrDefault();
+                    if (first != null)
+                        WalkBars(first, ref bars, ref pendingMusic);
+                    break;
+                default:
+                    WalkBars(child, ref bars, ref pendingMusic);
+                    break;
+            }
         }
     }
 

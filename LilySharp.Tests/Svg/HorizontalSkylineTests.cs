@@ -20,7 +20,7 @@ using Xunit;
 namespace LilySharp.Tests.Svg;
 
 /// <summary>
-/// Tests for sloped HorizontalBuilding support in HorizontalSkyline.
+/// Tests for sloped SkylineBuilding support in HorizontalSkyline.
 /// LILYPOND-REF: lily/skyline.cc Building struct (horizontal axis variant)
 /// </summary>
 [Trait("Category", "Unit")]
@@ -32,22 +32,22 @@ public class HorizontalSkylineTests
     public void HorizontalBuilding_VerticalEdge_ReturnsConstant()
     {
         // Vertical building: x = 5 everywhere
-        var b = new HorizontalBuilding(0, 10, 5);
+        var b = new SkylineBuilding(0, 10, 5);
 
-        Assert.Equal(5, b.X(0), Epsilon);
-        Assert.Equal(5, b.X(5), Epsilon);
-        Assert.Equal(5, b.X(10), Epsilon);
+        Assert.Equal(5, b.ValueAt(0), Epsilon);
+        Assert.Equal(5, b.ValueAt(5), Epsilon);
+        Assert.Equal(5, b.ValueAt(10), Epsilon);
     }
 
     [Fact]
     public void HorizontalBuilding_SlopedEdge_ReturnsLinearInterpolation()
     {
         // Sloped building: from (y=0, x=0) to (y=10, x=10)
-        var b = new HorizontalBuilding(0, 0, 10, 10);
+        var b = new SkylineBuilding(0, 0, 10, 10);
 
-        Assert.Equal(0, b.X(0), Epsilon);
-        Assert.Equal(5, b.X(5), Epsilon);
-        Assert.Equal(10, b.X(10), Epsilon);
+        Assert.Equal(0, b.ValueAt(0), Epsilon);
+        Assert.Equal(5, b.ValueAt(5), Epsilon);
+        Assert.Equal(10, b.ValueAt(10), Epsilon);
     }
 
     [Fact]
@@ -56,10 +56,10 @@ public class HorizontalSkylineTests
         // b1: from (y=0, x=0) to (y=10, x=10) -> x = y
         // b2: from (y=0, x=10) to (y=10, x=0) -> x = -y + 10
         // Intersection: y = -y + 10 -> 2y = 10 -> y = 5
-        var b1 = new HorizontalBuilding(0, 0, 10, 10);
-        var b2 = new HorizontalBuilding(0, 10, 0, 10);
+        var b1 = new SkylineBuilding(0, 0, 10, 10);
+        var b2 = new SkylineBuilding(0, 10, 0, 10);
 
-        double iy = b1.IntersectionY(b2);
+        double iy = b1.Intersection(b2);
         Assert.Equal(5, iy, Epsilon);
     }
 
@@ -131,12 +131,12 @@ public class HorizontalSkylineTests
     [Fact]
     public void HorizontalBuilding_WithYRange_PreservesSlope()
     {
-        var original = new HorizontalBuilding(0, 0, 10, 10);
-        var middle = original.WithYRange(3, 7);
+        var original = new SkylineBuilding(0, 0, 10, 10);
+        var middle = original.WithRange(3, 7);
 
-        Assert.Equal(3, middle.YBottom, Epsilon);
-        Assert.Equal(7, middle.YTop, Epsilon);
-        Assert.Equal(3, middle.X(3), Epsilon);
-        Assert.Equal(7, middle.X(7), Epsilon);
+        Assert.Equal(3, middle.Start, Epsilon);
+        Assert.Equal(7, middle.End, Epsilon);
+        Assert.Equal(3, middle.ValueAt(3), Epsilon);
+        Assert.Equal(7, middle.ValueAt(7), Epsilon);
     }
 }

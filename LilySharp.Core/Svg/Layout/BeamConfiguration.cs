@@ -20,7 +20,7 @@ namespace LilySharp.Core.Svg.Layout;
 /// Represents a beam configuration candidate with position and score.
 /// LILYPOND-REF: lily/include/beam-scoring-problem.hh:1-203 Beam_configuration struct
 /// </summary>
-internal sealed class BeamConfiguration
+internal sealed class BeamConfiguration : IScorableConfig
 {
     /// <summary>Y position at left end (in staff spaces).</summary>
     public double LeftY { get; set; }

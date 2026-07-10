@@ -805,6 +805,13 @@ public sealed class MidiExporter
 
     private void ProcessChord(ChordSyntax chord, MidiTrack track)
     {
+        // A chord breaks any pending tie chain. Chords are not currently tie
+        // targets, and leaving stale _tiePending/_lastNoteIndex from the
+        // previous note would let a later same-pitch note wrongly merge across
+        // the chord.
+        _tiePending = false;
+        _lastNoteIndex = -1;
+
         int startTick = _currentTick;
         var pitches = chord.Pitches.ToList();
         // One ordinal per chord ONSET — every head shares the chord's source

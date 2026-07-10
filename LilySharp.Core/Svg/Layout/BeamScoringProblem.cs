@@ -186,20 +186,7 @@ internal sealed class BeamScoringProblem
 
         // Phase 5: Score using priority queue (lazy evaluation)
         // LILYPOND-REF: lily/beam-quanting.cc:1050-1083
-        var queue = new PriorityQueue<BeamConfiguration, double>();
-        foreach (var config in candidates)
-            queue.Enqueue(config, config.Demerits);
-
-        BeamConfiguration best;
-        while (true)
-        {
-            best = queue.Dequeue();
-            if (best.IsDone)
-                break;
-
-            OneScorer(best);
-            queue.Enqueue(best, best.Demerits);
-        }
+        var best = BestFirstScorer.Solve(candidates, OneScorer);
 
         return (best.LeftY, best.RightY);
     }

@@ -107,25 +107,8 @@ internal static class GlissandoEngraver
 
                 // Resolve segment-local X bounds against the system's measure layouts.
                 // LILYPOND-REF: lily/spanner.cc:124-137 — bounds reattached to system edges.
-                double segStartX, segEndX;
-                if (segment.IsFirst)
-                {
-                    segStartX = realStartX;
-                }
-                else
-                {
-                    segStartX = system.Measures[0].X;
-                }
-
-                if (segment.IsLast)
-                {
-                    segEndX = realEndX;
-                }
-                else
-                {
-                    var lastMeasure = system.Measures[^1];
-                    segEndX = lastMeasure.X + lastMeasure.Width;
-                }
+                var (segStartX, segEndX) = SpannerBreakSubstitution.ReattachSpanX(
+                    segment, system, realStartX, realEndX);
 
                 // Y at the broken edge "freezes" at the destination pitch — visual cue
                 // that the slide continues on the adjacent system.

@@ -318,18 +318,11 @@ internal sealed class MeasureBuilder
     {
         if (_currentItems.Count == 0 && _measures.Count > 0)
         {
-            // At measure boundary - apply break to previous measure
+            // At measure boundary - apply break to previous measure. `with`
+            // preserves break penalty and page/turn permissions; the old
+            // full rebuild silently reset them to defaults.
             var last = _measures[^1];
-            _measures[^1] = new Measure(
-                last.Items,
-                last.StartBarline,
-                last.EndBarline,
-                last.SectionLabel,
-                last.SourceStart,
-                last.SourceEnd,
-                hasBreakAfter: true,
-                sectionLabelPosition: last.SectionLabelPosition,
-                isPickup: last.IsPickup);
+            _measures[^1] = last with { LineBreakPermission = Layout.BreakPermission.Force };
         }
         else
         {
@@ -384,20 +377,7 @@ internal sealed class MeasureBuilder
             // Barline at an already-closed boundary (e.g. ":|" right after
             // auto-completion): retro-apply the type to the last measure.
             var lastMeasure = _measures[^1];
-            _measures[^1] = new Measure(
-                lastMeasure.Items,
-                lastMeasure.StartBarline,
-                endType,
-                lastMeasure.SectionLabel,
-                lastMeasure.SourceStart,
-                lastMeasure.SourceEnd,
-                hasBreakAfter: lastMeasure.HasBreakAfter,
-                lineBreakPermission: lastMeasure.LineBreakPermission,
-                breakPenalty: lastMeasure.BreakPenalty,
-                pageBreakPermission: lastMeasure.PageBreakPermission,
-                pageTurnPermission: lastMeasure.PageTurnPermission,
-                sectionLabelPosition: lastMeasure.SectionLabelPosition,
-                isPickup: lastMeasure.IsPickup);
+            _measures[^1] = lastMeasure with { EndBarline = endType };
         }
     }
 
@@ -1329,8 +1309,7 @@ public sealed partial class MeasureCollector
                 // the span's measures.
                 var savedOctave = _octave.Snapshot();
                 var savedDuration = _defaultDuration;
-                _octave.ResetToInitial();
-                _defaultDuration = Fraction.Quarter;
+                EnterDefaultFrame();
 
                 // Per-note metadata in this sub-voice is keyed by its local 0-based
                 // measure index; shift it to the span's real start so dynamics etc.
@@ -1865,18 +1844,12 @@ public sealed partial class MeasureCollector
                 // frame (same handling as ProcessMusicNodeSequence).
                 if (node is RelativeResetMarker)
                 {
-                    _octave.ResetToInitial();
-                    _defaultDuration = Fraction.Quarter;
+                    EnterDefaultFrame();
                     continue;
                 }
 
-                // Check if next node is a tie, slur, or beam marker
-                bool hasTieAfter = i + 1 < nodeList.Count && nodeList[i + 1] is TieSyntax;
-                bool hasSlurStartAfter = i + 1 < nodeList.Count && nodeList[i + 1] is SlurSyntax slurS && slurS.IsOpen;
-                bool hasSlurEndAfter = i + 1 < nodeList.Count && nodeList[i + 1] is SlurSyntax slurE && !slurE.IsOpen;
-                bool hasBeamStartAfter = i + 1 < nodeList.Count && nodeList[i + 1] is BeamMarkerSyntax beamS && beamS.IsStart;
-                bool hasBeamEndAfter = i + 1 < nodeList.Count && nodeList[i + 1] is BeamMarkerSyntax beamE && !beamE.IsStart;
-                ProcessMusicNode(node, builder, hasTieAfter, hasSlurStartAfter, hasSlurEndAfter, hasBeamStartAfter, hasBeamEndAfter);
+                var next = i + 1 < nodeList.Count ? nodeList[i + 1] : null;
+                ProcessMusicNode(node, builder, PeekMarkers(next));
             }
         }
 
@@ -1894,7 +1867,7 @@ public sealed partial class MeasureCollector
                 RecordSectionStart(section.SectionName, builder.CurrentMeasureIndex);
                 builder.SectionLabel = section.SectionName;
                 builder.SectionLabelPosition = section.Name.Span.Start;
-                ProcessSection(section, ProcessNodes);
+                ProcessSection(section, ProcessNodes, builder);
             }
         }
         else if (_root != null)
@@ -1952,7 +1925,7 @@ public sealed partial class MeasureCollector
                         RecordSectionStart(reference.SectionName, builder.CurrentMeasureIndex);
                         builder.SectionLabel = ResolveSectionLabel(reference);
                         builder.SectionLabelPosition = SectionDeclPos(reference.SectionName);
-                        ProcessSection(section, processNodes);
+                        ProcessSection(section, processNodes, builder);
                     }
                     break;
 
@@ -2006,7 +1979,7 @@ public sealed partial class MeasureCollector
                     RecordSectionStart(nameTok.Text, builder.CurrentMeasureIndex);
                     builder.SectionLabel = null;
                     builder.SectionLabelPosition = SectionDeclPos(nameTok.Text);
-                    ProcessSection(silentSection, processNodes);
+                    ProcessSection(silentSection, processNodes, builder);
                     break;
             }
         }
@@ -2513,8 +2486,7 @@ public sealed partial class MeasureCollector
             {
                 if (item is RelativeResetMarker)
                 {
-                    _octave.ResetToInitial();
-                    _defaultDuration = Fraction.Quarter;
+                    EnterDefaultFrame();
                     continue;
                 }
                 ProcessMusicNode(item, builder);

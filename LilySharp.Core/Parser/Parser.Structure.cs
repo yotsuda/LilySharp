@@ -1,0 +1,552 @@
+// Lily# - Music notation compiler
+// Copyright (C) 2025-2026 Yoshifumi Tsuda
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+using LilySharp.Core.Syntax;
+using LilySharp.Core.Syntax.InternalSyntax;
+
+namespace LilySharp.Core.Parser;
+
+internal sealed partial class Parser
+{
+    /// <summary>
+    /// Parse structure declaration: structure { ... }
+    /// </summary>
+    private StructureDeclarationGreen ParseStructureDeclaration()
+    {
+        var keyword = Expect(SyntaxKind.StructureKeyword);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+
+        var items = ParseList(SyntaxKind.CloseBrace, ParseStructureItem);
+
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new StructureDeclarationGreen(keyword, openBrace, [.. items], closeBrace);
+    }
+
+    private GreenNode? ParseStructureItem()
+    {
+        return Current.Kind switch
+        {
+            // Section reference with optional per-occurrence display label:
+            //   structure { First Second First "First (reprise)" }
+            // Clef-name words (bass/treble/alto/tenor) are allowed as section names too,
+            // matching part/section/phrase declarations.
+            SyntaxKind.Identifier or SyntaxKind.BassKeyword or SyntaxKind.TrebleKeyword
+                or SyntaxKind.AltoKeyword or SyntaxKind.TenorKeyword
+                => new SectionReferenceGreen(
+                    Advance(),
+                    Check(SyntaxKind.StringLiteral) ? Advance() : null),
+            SyntaxKind.Tilde => ParseSilentSectionReference(),
+            SyntaxKind.At => ParseMusicMark(),
+            SyntaxKind.Underscore => ParseCustomText(),
+            SyntaxKind.RepeatStartBar => ParseStructureRepeatBlock(),
+            SyntaxKind.OpenBracket => ParseVoltaBracket(),
+            SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
+                or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword
+                => ParseNavigationMark(),
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Parse silent section reference: ~SectionName or ~SectionName "label".
+    /// The optional label is kept on the node but NOT displayed (the '~' hides it);
+    /// it lets an author park a label text and reveal it later by dropping the '~'.
+    /// </summary>
+    private SilentSectionReferenceGreen ParseSilentSectionReference()
+    {
+        var tilde = Expect(SyntaxKind.Tilde);
+        var name = ExpectPartName();
+
+        // '~B "alt"' — a label written but hidden by '~'. Keep it (do not drop it),
+        // and nudge that it is currently not shown.
+        SyntaxToken? label = null;
+        if (Check(SyntaxKind.StringLiteral))
+        {
+            int labelStart = _textPosition;
+            label = Advance();
+            var span = new TextSpan(labelStart, Math.Max(1, _textPosition - labelStart));
+            _diagnostics.Warning(span, DiagnosticCodes.HiddenSectionLabel,
+                $"The section label {label.Text} is hidden by '~'; drop the '~' to show it (or remove the label).");
+        }
+
+        return new SilentSectionReferenceGreen(tilde, name, label);
+    }
+
+    /// <summary>
+    /// Parse music mark: @segno, @fine, @ds.al.fine, etc.
+    /// </summary>
+    private MusicMarkGreen ParseMusicMark()
+    {
+        var at = Expect(SyntaxKind.At);
+        var name = ExpectMarkName();
+
+        // Handle compound marks like @ds.al.fine
+        var parts = new List<SyntaxToken> { at, name };
+        while (Check(SyntaxKind.Dot))
+        {
+            parts.Add(Advance()); // .
+            parts.Add(ExpectMarkName());
+        }
+
+        return new MusicMarkGreen([.. parts]);
+    }
+
+    /// <summary>
+    /// Expect a mark name (identifier or navigation keyword)
+    /// </summary>
+    private SyntaxToken ExpectMarkName()
+    {
+        // Navigation keywords, integers, and pitch/rest tokens can appear as mark names
+        // LILYPOND-REF: lily/figured-bass-engraver.cc - figure numbers (e.g., @fig.6)
+        // Figured bass alterations: @fig.6.s (sharp), @fig.4.f (flat), @fig.7.n (natural)
+        // 's' → RestS, 'f' → PitchF, 'n' → Identifier (handled naturally)
+        if (Current.Kind is SyntaxKind.Identifier
+            or SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword
+            or SyntaxKind.DcKeyword or SyntaxKind.DsKeyword or SyntaxKind.ToKeyword
+            or SyntaxKind.AlKeyword
+            or SyntaxKind.IntegerLiteral  // For figured bass numbers (e.g., @fig.6)
+            or SyntaxKind.RestS           // For figured bass sharp suffix (e.g., @fig.6.s)
+            or SyntaxKind.PitchF)         // For figured bass flat suffix (e.g., @fig.4.f)
+        {
+            return Advance();
+        }
+        return Expect(SyntaxKind.Identifier);
+    }
+
+    /// <summary>
+    /// Parse custom text: _"text"
+    /// </summary>
+    private CustomTextGreen ParseCustomText()
+    {
+        var underscore = Expect(SyntaxKind.Underscore);
+        var text = Expect(SyntaxKind.StringLiteral);
+        return new CustomTextGreen(underscore, text);
+    }
+
+    /// <summary>
+    /// Parse volta bracket: [1. Section] or [1,3. Section] or [1-3. Section] or [1. ~Section]
+    /// </summary>
+    private StructureAlternativeGreen ParseVoltaBracket()
+    {
+        var openBracket = Expect(SyntaxKind.OpenBracket);
+        var number = Expect(SyntaxKind.IntegerLiteral);
+
+        // Check for range or list: [1-3. ] or [1,3. ]
+        SyntaxToken? separator = null;
+        SyntaxToken? endNumber = null;
+        if (Check(SyntaxKind.Minus) || Check(SyntaxKind.Comma))
+        {
+            separator = Advance();
+            endNumber = Expect(SyntaxKind.IntegerLiteral);
+        }
+
+        var dot = Expect(SyntaxKind.Dot);
+
+        // Check for silent section reference: [1. ~Section]
+        SyntaxToken? tilde = null;
+        if (Check(SyntaxKind.Tilde))
+        {
+            tilde = Advance();
+        }
+
+        var section = Expect(SyntaxKind.Identifier);
+        // Optional display label: [1. B "label"] — shown as the section's mark,
+        // exactly like a plain reference's  A "A2".
+        SyntaxToken? displayLabel = Check(SyntaxKind.StringLiteral) ? Advance() : null;
+        // The ']' is optional: present = closed (right cap drawn), absent = open.
+        SyntaxToken? closeBracket = Check(SyntaxKind.CloseBracket) ? Advance() : null;
+
+        return new StructureAlternativeGreen(openBracket, number, separator, endNumber, dot, tilde, section, displayLabel, closeBracket);
+    }
+
+    /// <summary>
+    /// Parse repeat block: |: ... :| or |: ... :| x3
+    /// </summary>
+    private StructureRepeatBlockGreen ParseStructureRepeatBlock()
+    {
+        var startBar = Expect(SyntaxKind.RepeatStartBar);
+
+        var items = new List<GreenNode?>();
+        var alternatives = new List<GreenNode?>();
+        SyntaxToken? pipeBeforeAlternatives = null;
+        int voltaBracketsBeforeClose = 0;
+
+        // Parse items until :| or | (for alternatives)
+        while (!Check(SyntaxKind.RepeatEndBar) && !Check(SyntaxKind.EndOfFile))
+        {
+            // ':|:' back-to-back repeat: closes this repeat and immediately opens
+            // the next, sharing one barline. Keep it as a divider token in the item
+            // list; ProcessRepeatBlock expands it to ':|' + '|:' (which fuse into the
+            // RepeatBoth glyph), so 'A |: B :|: C :|' == 'A |: B :| |: C :|'.
+            if (Check(SyntaxKind.RepeatBothBar))
+            {
+                items.Add(Advance());
+                continue;
+            }
+
+            // Check for | followed by number (start of alternatives)
+            if (Check(SyntaxKind.Bar) && Peek(1)?.Kind == SyntaxKind.IntegerLiteral)
+            {
+                pipeBeforeAlternatives = Advance(); // consume |
+                break;
+            }
+
+            // The repeat barline belongs BETWEEN the endings — write
+            //   |: … [1. D] :| [2. Outro]
+            // A second ending bracket before the :| is the old, ambiguous spelling
+            // (|: … [1. D] [2. Outro] :|), which wrongly implies the 2nd ending also
+            // repeats. Reject it with a hint to the correct form.
+            if (Check(SyntaxKind.OpenBracket) && ++voltaBracketsBeforeClose == 2)
+            {
+                _diagnostics.Error(new TextSpan(_textPosition, Current.FullWidth),
+                    DiagnosticCodes.VoltaRepeatBarlinePlacement,
+                    "Put the repeat barline between the endings: write '[1. ...] :| [2. ...]', " +
+                    "not '[1. ...] [2. ...] :|'");
+            }
+
+            var item = ParseStructureItem();
+            if (item != null)
+                items.Add(item);
+            else
+                Advance();
+        }
+        // Parse alternatives before :| (e.g., "1. A1" in "|: A | 1. A1 :| 2. A2")
+        if (pipeBeforeAlternatives != null)
+        {
+            while (Check(SyntaxKind.IntegerLiteral) && !Check(SyntaxKind.RepeatEndBar))
+            {
+                alternatives.Add(ParseStructureAlternative());
+            }
+        }
+
+        var endBar = Expect(SyntaxKind.RepeatEndBar);
+
+        // Final alternative after :| — the bare "2. A2" form or the bracket form
+        // "[2. A2]", so a structure repeat reads exactly like the inline volta:
+        //   |: Intro2 B C A2 [1. D] :| [2. Outro]
+        GreenNode? finalAlternative = null;
+        if (Check(SyntaxKind.IntegerLiteral))
+            finalAlternative = ParseStructureAlternative();
+        else if (Check(SyntaxKind.OpenBracket))
+            finalAlternative = ParseVoltaBracket();
+
+        // Parse repeat count: x3
+        SyntaxToken? xToken = null;
+        SyntaxToken? repeatCount = null;
+        if (Check(SyntaxKind.Identifier) && Current.Text == "x")
+        {
+            xToken = Advance();
+            repeatCount = Expect(SyntaxKind.IntegerLiteral);
+        }
+
+        return new StructureRepeatBlockGreen(startBar, [.. items], pipeBeforeAlternatives, [.. alternatives], endBar, finalAlternative, xToken, repeatCount);
+
+    }
+
+    /// <summary>
+    /// Parse a bare (unbracketed) structure alternative: 1. SectionName.
+    /// The bracket is required — <c>[1. SectionName]</c> — so this rejects the bare
+    /// form with a hint and recovers by keeping the parsed alternative.
+    /// </summary>
+    private StructureAlternativeGreen ParseStructureAlternative()
+    {
+        int startPos = _textPosition;
+        var number = Expect(SyntaxKind.IntegerLiteral);
+        var dot = Expect(SyntaxKind.Dot);
+        var section = Expect(SyntaxKind.Identifier);
+
+        var span = new TextSpan(startPos, Math.Max(1, _textPosition - startPos));
+        _diagnostics.Error(span, DiagnosticCodes.VoltaBracketRequired,
+            $"A volta ending must be bracketed: write '[{number.Text}. {section.Text}]'. " +
+            "The closing ']' is optional (present = closed cap, absent = open).");
+
+        return new StructureAlternativeGreen(number, dot, section);
+    }
+
+    /// <summary>
+    /// Parse navigation mark: segno, fine, coda, dc, ds, etc.
+    /// </summary>
+    private NavigationMarkGreen ParseNavigationMark()
+    {
+        var first = Advance();
+
+        // Single keyword: segno, fine, coda
+        if (first.Kind is SyntaxKind.SegnoKeyword or SyntaxKind.FineKeyword or SyntaxKind.CodaKeyword)
+        {
+            return new NavigationMarkGreen(first);
+        }
+
+        // "to coda" (two words) or "tocoda" (one word). The one-word spelling
+        // already carries the whole instruction, so there is no trailing 'coda'.
+        if (first.Kind == SyntaxKind.ToKeyword)
+        {
+            if (first.Text.Equals("tocoda", StringComparison.OrdinalIgnoreCase))
+                return new NavigationMarkGreen(first);
+            var coda = Expect(SyntaxKind.CodaKeyword);
+            return new NavigationMarkGreen(first, coda);
+        }
+
+        // dc/ds alone or with "al fine/coda"
+        if (first.Kind is SyntaxKind.DcKeyword or SyntaxKind.DsKeyword)
+        {
+            if (Check(SyntaxKind.AlKeyword))
+            {
+                var al = Advance();
+                var target = Expect(SyntaxKind.FineKeyword, SyntaxKind.CodaKeyword);
+                return new NavigationMarkGreen(first, al, target);
+            }
+            return new NavigationMarkGreen(first);
+        }
+
+        return new NavigationMarkGreen(first);
+    }
+
+    /// <summary>
+    /// Parse render declaration: render [name] "file.svg" { ... }
+    /// </summary>
+    // Parses a printable-score declaration: `score [ "basename" ] { layout }`.
+    // `score` is the keyword (the old `render score` form is gone). The optional
+    // string is the output BASENAME — its extension, if any, is ignored because
+    // the file format is a CLI choice; omitting it derives the name from the
+    // input file. Multiple `score` blocks (with distinct basenames) emit
+    // multiple files, e.g. a full score plus part extracts.
+    private RenderDeclarationGreen ParseRenderDeclaration()
+    {
+        var keyword = Expect(SyntaxKind.ScoreKeyword);
+
+        // Optional output basename: a single bare token (identifier, pitch letter,
+        // number) or a quoted string — quotes only needed for spaces/special
+        // characters, like `title`. Anything that is not the opening brace is the
+        // name. Extension (if written) is dropped downstream.
+        SyntaxToken? filename = Check(SyntaxKind.OpenBrace) || Check(SyntaxKind.TransposeKeyword)
+            ? null : Advance();
+
+        // Optional per-score transpose: `score [name] transpose <pitch> { ... }`.
+        // Stored as a transpose property (same shape the part header uses).
+        GreenNode? transpose = Check(SyntaxKind.TransposeKeyword) ? ParsePartProperty() : null;
+
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+
+        var items = ParseList(SyntaxKind.CloseBrace, ParseRenderItem);
+
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        // name is always null now (`score` is the keyword, not a name slot).
+        return new RenderDeclarationGreen(keyword, null, filename, transpose, openBrace, [.. items], closeBrace);
+    }
+
+
+    /// <summary>
+    /// Check if current token can be a part name (Identifier or instrument keyword like bass).
+    /// </summary>
+    private bool IsPartNameStart() => IsPartNameKind(Current.Kind);
+
+    private static bool IsPartNameKind(SyntaxKind? kind) => kind is SyntaxKind.Identifier
+        or SyntaxKind.BassKeyword
+        or SyntaxKind.TrebleKeyword
+        or SyntaxKind.AltoKeyword
+        or SyntaxKind.TenorKeyword;
+
+    /// <summary>
+    /// Expect a part name (Identifier or instrument keyword like bass).
+    /// </summary>
+    private SyntaxToken ExpectPartName()
+    {
+        if (IsPartNameStart())
+            return Advance();
+
+        // Report error
+        var span = new TextSpan(_textPosition, Current.FullWidth);
+        _diagnostics.Error(span, DiagnosticCodes.ExpectedToken,
+            $"Expected part name, found '{Current.Kind}'");
+
+        // Zero-width missing token with NO trivia (Current keeps its own; borrowing it
+        // here would double-count — see Expect).
+        return new SyntaxToken(SyntaxKind.Identifier, "", null, null);
+    }
+
+    private GreenNode? ParseRenderItem()
+    {
+        return Current.Kind switch
+        {
+            SyntaxKind.StaffKeyword => ParseStaffRender(),
+            SyntaxKind.ChordsKeyword => ParseChordRowRender(),
+            SyntaxKind.LyricsKeyword => ParseLyricsRowRender(),
+            SyntaxKind.GrandStaffKeyword => ParseGrandStaffRender(),
+            SyntaxKind.TabKeyword => ParseTabRender(),
+            SyntaxKind.OssiaKeyword => ParseOssiaRender(),
+            // A score may carry its own `structure { ... }` to render a different
+            // arrangement of the same sections (e.g. a practice excerpt), overriding
+            // the top-level structure for that score only.
+            SyntaxKind.StructureKeyword => ParseStructureDeclaration(),
+            _ when IsPartNameStart() => ParseMidiPartRender(),
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Parse staff render: staff [clef] { partName }
+    /// </summary>
+    private StaffRenderGreen ParseStaffRender()
+    {
+        // staff [~] [clef] part ["display name"] [with chords chordPart]   (no braces)
+        var tokens = new List<SyntaxToken> { Expect(SyntaxKind.StaffKeyword) };
+
+        // `staff ~flute` suppresses the default instrument name label.
+        if (Check(SyntaxKind.Tilde))
+            tokens.Add(Advance());
+
+        // A clef keyword followed by a part name is an override.
+        if (IsClefKeyword() && IsPartNameKind(Peek(1)?.Kind))
+            tokens.Add(Advance());
+
+        tokens.Add(ExpectPartName());
+
+        // `staff flute "津田さん"` (or a bare single word:
+        // `staff flute 津田さん`) overrides the displayed instrument name.
+        // Following render items always begin with a keyword, so a trailing
+        // identifier is unambiguous.
+        if (Check(SyntaxKind.StringLiteral) || IsPartNameKind(Peek(0)?.Kind))
+            tokens.Add(Advance());
+
+        // `with chords NAME` attaches a NAMED chord part's symbols above this
+        // staff — the same progression can also feed a lead-sheet row, written
+        // once (grammar feedback: the nameless/named forms forced duplication).
+        if (Check(SyntaxKind.WithKeyword) && Peek(1)?.Kind == SyntaxKind.ChordsKeyword)
+        {
+            tokens.Add(Advance()); // with
+            tokens.Add(Advance()); // chords
+            tokens.Add(ExpectPartName());
+            ConsumeChordDisplayMode(tokens); // `... as roman | both | names`
+        }
+
+        return new StaffRenderGreen([.. tokens]);
+    }
+
+    /// <summary>
+    /// Parse chord-row render: <c>chords partName [as roman|both|names]</c> (places a
+    /// chord part as a row, with an optional display selector).
+    /// </summary>
+    private ChordRowRenderGreen ParseChordRowRender()
+    {
+        var tokens = new List<SyntaxToken> { Expect(SyntaxKind.ChordsKeyword) };
+        tokens.Add(ExpectPartName());
+        ConsumeChordDisplayMode(tokens);
+        return new ChordRowRenderGreen([.. tokens]);
+    }
+
+    /// <summary>Consumes an optional chord DISPLAY selector — <c>as roman | as both |
+    /// as names</c> — appending its two tokens. NB: <c>as</c> also lexes as the Dutch
+    /// A-flat pitch, so match it by TEXT, not token kind; the mode word follows. This
+    /// position (right after the chord-part name) is unambiguous — a bare pitch there
+    /// is meaningless — so the match is safe.</summary>
+    private void ConsumeChordDisplayMode(List<SyntaxToken> tokens)
+    {
+        if (string.Equals(Current.Text, "as", System.StringComparison.Ordinal) && Peek(1) != null)
+        {
+            tokens.Add(Advance()); // as
+            tokens.Add(Advance()); // roman | both | names
+        }
+    }
+
+    /// <summary>
+    /// Parse lyrics-row render: <c>lyrics partName</c> (places a lyrics part as a row).
+    /// </summary>
+    private LyricsRowRenderGreen ParseLyricsRowRender()
+    {
+        var tokens = new List<SyntaxToken> { Expect(SyntaxKind.LyricsKeyword) };
+        tokens.Add(ExpectPartName());
+        return new LyricsRowRenderGreen([.. tokens]);
+    }
+
+    /// <summary>
+    /// Parse grand staff render: grandStaff { staff staff ... }
+    /// </summary>
+    private GrandStaffRenderGreen ParseGrandStaffRender()
+    {
+        var grandStaffKeyword = Expect(SyntaxKind.GrandStaffKeyword);
+        var openBrace = Expect(SyntaxKind.OpenBrace);
+
+        var staves = new List<StaffRenderGreen>();
+        while (Check(SyntaxKind.StaffKeyword))
+        {
+            staves.Add(ParseStaffRender());
+        }
+
+        var closeBrace = Expect(SyntaxKind.CloseBrace);
+        return new GrandStaffRenderGreen(grandStaffKeyword, openBrace, [.. staves], closeBrace);
+    }
+
+    private bool IsClefKeyword() => SyntaxFacts.IsClefKeyword(Current.Kind);
+
+    /// <summary>
+    /// Parse ossia render: ossia [clef] partName — bare, exactly like staff
+    /// (the braces of the old form only ever held the one name).
+    /// LILYPOND-REF: ly/engraver-init.ly — ossia staves use reduced fontSize
+    /// </summary>
+    private OssiaRenderGreen ParseOssiaRender()
+    {
+        var ossiaKeyword = Expect(SyntaxKind.OssiaKeyword);
+
+        // A clef keyword followed by a part name is an override; alone it IS
+        // the part name (clef words are legal part names, as for staff).
+        if (IsClefKeyword() && IsPartNameKind(Peek(1)?.Kind))
+        {
+            var clef = Advance();
+            return new OssiaRenderGreen(ossiaKeyword, clef, ExpectPartName());
+        }
+
+        return new OssiaRenderGreen(ossiaKeyword, ExpectPartName());
+    }
+
+    /// <summary>
+    /// Parse tab render: tab tuning { partName }
+    /// </summary>
+    private TabRenderGreen ParseTabRender()
+    {
+        // tab [tuning] part   (tuning optional; no braces)
+        var tokens = new List<SyntaxToken> { Expect(SyntaxKind.TabKeyword) };
+
+        // A tuning name followed by a part name is an override; otherwise the lone
+        // token is the part and the tuning comes from the part definition.
+        bool tuningish = Current.Kind is SyntaxKind.Identifier or SyntaxKind.BassKeyword;
+        if (tuningish && IsPartNameKind(Peek(1)?.Kind))
+            tokens.Add(Advance());
+
+        tokens.Add(ExpectPartName());
+        return new TabRenderGreen([.. tokens]);
+    }
+
+    /// <summary>
+    /// Parse MIDI part render: partName [channel:N] [instrument:N] [octave:N]
+    /// </summary>
+    private MidiPartRenderGreen ParseMidiPartRender()
+    {
+        var partName = ExpectPartName();
+
+        var options = new List<GreenNode?>();
+        while (Current.Kind is SyntaxKind.ChannelKeyword
+            or SyntaxKind.InstrumentKeyword
+            or SyntaxKind.OctaveKeyword)
+        {
+            var optKeyword = Advance();
+            var colon = ConsumeRejectedColon();
+            var value = Advance();
+            options.Add(new PropertyAssignmentGreen(optKeyword, colon, [value]));
+        }
+
+        return new MidiPartRenderGreen(partName, [.. options]);
+    }
+}

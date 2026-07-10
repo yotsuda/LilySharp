@@ -176,4 +176,23 @@ internal static class SpannerBreakSubstitution
         foreach (var segment in Split(spannerStartMeasure, spannerEndMeasure, systems, measureToSystemIdx))
             yield return (segment, systems[segment.SystemIndex]);
     }
+
+    /// <summary>
+    /// Reattaches a broken piece's X bounds to the system edges: the first piece
+    /// keeps the spanner's own <paramref name="ownStartX"/> and the last piece its
+    /// own <paramref name="ownEndX"/>; every cut edge snaps to the system's first
+    /// measure's left / last measure's right. Shared by the engravers whose
+    /// non-broken edge is exactly the system's outer measure bounds (Hairpin,
+    /// Glissando); other spanners (TextSpanner/Trill/Ottava/Volta) reattach to
+    /// their own padded item bounds and keep their own inline logic.
+    /// </summary>
+    /// <remarks>LILYPOND-REF: lily/spanner.cc:124-137 — clone() per system; bounds clamped to system edges.</remarks>
+    internal static (double StartX, double EndX) ReattachSpanX(
+        SpannerBreakSegment segment, SystemLayout system, double ownStartX, double ownEndX)
+    {
+        double startX = segment.IsFirst ? ownStartX : system.Measures[0].X;
+        var lastMeasure = system.Measures[^1];
+        double endX = segment.IsLast ? ownEndX : lastMeasure.X + lastMeasure.Width;
+        return (startX, endX);
+    }
 }

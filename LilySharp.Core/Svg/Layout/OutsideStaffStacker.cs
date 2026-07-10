@@ -282,22 +282,22 @@ internal static class OutsideStaffStacker
             // Seed with the system's up-skyline (staff content protrusions).
             // VerticalSkyline.Height converts the internal sky-relative value
             // to real coordinates (negative = above the staff top); raw
-            // Building.Height must NOT be used here.
+            // SkylineBuilding.ValueAt must NOT be used here.
             if (systemSkylines != null && i < systemSkylines.Count
                 && !systemSkylines[i].up.IsEmpty)
             {
                 var up = systemSkylines[i].up;
                 foreach (var b in up.Buildings)
                 {
-                    if (double.IsInfinity(b.XLeft) || double.IsInfinity(b.XRight))
+                    if (double.IsInfinity(b.Start) || double.IsInfinity(b.End))
                         continue;
-                    double mid = (b.XLeft + b.XRight) / 2;
+                    double mid = (b.Start + b.End) / 2;
                     double h = up.Height(mid);
                     if (double.IsInfinity(h) || double.IsNaN(h))
                         continue;
                     double protrusion = Math.Max(0, -h);
                     if (protrusion > 0)
-                        trackers[i].AddRegion(b.XLeft, b.XRight, systems[i].Y - protrusion);
+                        trackers[i].AddRegion(b.Start, b.End, systems[i].Y - protrusion);
                 }
             }
 

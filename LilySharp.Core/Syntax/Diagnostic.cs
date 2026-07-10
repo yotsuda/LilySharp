@@ -223,7 +223,7 @@ public static class DiagnosticCodes
     /// (<c>@mark(A)</c> instead of <c>@mark("A")</c>).</summary>
     public const string MarkLabelNotQuoted = "LYS1009";
     /// <summary>Semantic error: multiple structure declarations were found.</summary>
-    public const string MultipleStructureDeclarations = "LYS1009";
+    public const string MultipleStructureDeclarations = "LYS1015";
     /// <summary>Semantic error: invalid barline placement for a volta repeat.</summary>
     public const string VoltaRepeatBarlinePlacement = "LYS1010";
 
@@ -260,7 +260,7 @@ public static class DiagnosticCodes
     /// <summary>An underfull FIRST measure with no `partial` declaration - a
     /// bare anacrusis is indistinguishable from a miscount, so nudge toward
     /// declaring it (which also numbers it as bar 0).</summary>
-    public const string PickupWithoutPartial = "LYS2003";
+    public const string PickupWithoutPartial = "LYS2006";
 
     // Tablature warnings (LYS5xxx)
 
@@ -279,5 +279,5 @@ public static class DiagnosticCodes
     /// <summary>Structure error: a section-part grid cell was declared more than once.</summary>
     public const string DuplicateCell = "LYS7001";
     /// <summary>Lexer error: an unexpected character was encountered.</summary>
-    public const string UnexpectedCharacter = "LYS0009";
+    public const string UnexpectedCharacter = "LYS0014";
 }
