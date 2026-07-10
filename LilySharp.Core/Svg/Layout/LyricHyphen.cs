@@ -347,8 +347,4 @@ internal sealed class LyricHyphenEngraver
         );
     }
 
-    /// <summary>
-    /// Get the configured parameters.
-    /// </summary>
-    public LyricHyphenParameters Parameters => _params;
 }

@@ -29,9 +29,8 @@ internal static partial class SharedRenderer
     // ---------- System-start delimiters (group brackets / bar lines) ----------
 
     /// <summary>
-    /// Draws the system-start delimiter (bracket / line-bracket / bar-line)
-    /// on the left edge of each multi-staff group. Brace rendering is left
-    /// to a future phase that ports BraceRenderer's path output.
+    /// Draws the system-start delimiter (brace / bracket / line-bracket /
+    /// bar-line) on the left edge of each multi-staff group.
     /// </summary>
     /// <remarks>
     /// LILYPOND-REF: lily/system-start-delimiter.cc:127-129 collapse_height check
@@ -269,12 +268,6 @@ internal static partial class SharedRenderer
         gc.DrawLine(x, top, x, bottom, Color.Black, thickness);
     }
 
-    // Draws the curly brace used for grand staff (piano) groups. The brace
-    // is rendered as a single Emmentaler-Brace glyph (576 sizes available
-    // at U+E000+index, larger index → taller brace). Glyph selection mirrors
-    // Svg.Renderer.BraceRenderer so SVG and PDF agree on size.
-    // LILYPOND-REF: scm/define-markup-commands.scm (left-brace)
-
     // ---------- Mid-measure clef change ----------
 
     /// <summary>
@@ -423,6 +416,9 @@ internal static partial class SharedRenderer
             DrawTimeSignature(timeChange.NewTime, x, staffY, gc);
     }
 
+    // Draws the curly brace used for grand staff (piano) groups as a single
+    // Emmentaler-Brace glyph (576 sizes at U+E000+index, larger index → taller
+    // brace). LILYPOND-REF: scm/define-markup-commands.scm (left-brace).
     private static void DrawSystemStartBrace(double x, double top, double bottom, IDrawingContext gc)
     {
         double height = bottom - top;

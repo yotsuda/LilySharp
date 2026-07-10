@@ -145,11 +145,8 @@ internal sealed class PdfDrawingContext : IDrawingContext
     public void DrawGlyph(char glyph, double x, double y, double fontSize, Color? fill = null)
     {
         var font = GetFont("Emmentaler", T(fontSize));
-        // SVG <text y="..."> places the baseline at y. PdfSharpCore's
-        // DrawString with TopLeft format places the top of the box at y;
-        // BaseLineLeft was removed in PdfSharpCore. We approximate by
-        // drawing at (x, y) using BaseLineLeft format if available, else
-        // shift to compensate. PdfSharpCore exposes XStringFormats.BaseLineLeft.
+        // SVG <text y="..."> places the baseline at y; PdfSharpCore's
+        // XStringFormats.BaseLineLeft matches that, so we draw at (x, y).
         _gfx.DrawString(glyph.ToString(), font,
             new XSolidBrush(ToXColor(fill)),
             X(x), X(y), XStringFormats.BaseLineLeft);

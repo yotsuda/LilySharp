@@ -79,19 +79,10 @@ internal sealed record LayoutOptions
     /// </summary>
     public double TopSystemPadding { get; init; } = 1;
 
-    /// <summary>Spacing between staves in a grand staff (in staff spaces).</summary>
-    public double GrandStaffSpacing { get; init; } = 3;
-
-    /// <summary>Spacing between staff groups (in staff spaces).</summary>
-    public double StaffGroupSpacing { get; init; } = 5;
-
     // === Spacing Parameters (in staff spaces) ===
 
     /// <summary>Horizontal padding for collision detection in staff spaces.</summary>
     public double CollisionXPadding { get; init; } = 2;
-
-    /// <summary>Maximum stretch per measure during justification in staff spaces.</summary>
-    public double MaxStretchPerMeasure { get; init; } = 5;
 
     // === Layout Algorithm Options ===
 

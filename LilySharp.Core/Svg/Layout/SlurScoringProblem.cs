@@ -30,7 +30,6 @@ internal sealed class SlurCandidate : IScorableConfig
     public double EndY { get; set; }
     public double Height { get; set; }
     public bool CurveUp { get; set; }
-    public double YOffset { get; set; }
     public double Demerits { get; set; }
 
     /// <summary>
@@ -282,7 +281,6 @@ internal sealed class SlurScoringProblem
                     EndY = rightY,
                     Height = baseHeight,
                     CurveUp = preferUp,
-                    YOffset = leftY - baseStartY,
                     Demerits = 0,
                     NextScorerTodo = 1
                 };
@@ -301,7 +299,6 @@ internal sealed class SlurScoringProblem
                 EndY = baseEndY,
                 Height = baseHeight,
                 CurveUp = preferUp,
-                YOffset = 0,
                 Demerits = 0,
                 NextScorerTodo = 1
             });

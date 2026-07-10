@@ -83,8 +83,7 @@ internal sealed record AccidentalPlacementParameters
 ///   overstrike when same note name + same octave + same alteration
 /// NOTE — editorial (AccidentalSuggestion) accidentals do NOT pass through this
 ///   class: per LilyPond they are placed ABOVE the note (define-grobs.scm:96-123,
-///   direction UP), handled by the collector + ArticulationEngraver; the
-///   left-of-note IsEditorial path below is retained but never fed.
+///   direction UP), handled by the collector + ArticulationEngraver.
 /// </remarks>
 internal sealed class AccidentalPlacement
 {
@@ -450,6 +449,15 @@ internal sealed class AccidentalPlacement
     }
 
     /// <summary>
+    /// The diatonic octave of a staff position (7 positions per octave), using FLOORED
+    /// division so it agrees with the floored note-name modulo below the middle line.
+    /// C# integer division truncates toward zero, which would put e.g. position 3 and
+    /// position -4 (one octave apart) in the same octave and wrongly overstrike them.
+    /// </summary>
+    private static int OctaveOf(int staffPosition) =>
+        (int)Math.Floor(staffPosition / 7.0);
+
+    /// <summary>
     /// Gets alteration sorting priority.
     /// Lower values are placed first (rightmost, closest to notes).
     /// </summary>
@@ -462,15 +470,6 @@ internal sealed class AccidentalPlacement
     /// In Lily#'s forward iteration, lower priority = processed first = rightmost.
     /// Naturals get priority 0 (rightmost) to match LilyPond's effective placement.
     /// </remarks>
-    /// <summary>
-    /// The diatonic octave of a staff position (7 positions per octave), using FLOORED
-    /// division so it agrees with the floored note-name modulo below the middle line.
-    /// C# integer division truncates toward zero, which would put e.g. position 3 and
-    /// position -4 (one octave apart) in the same octave and wrongly overstrike them.
-    /// </summary>
-    private static int OctaveOf(int staffPosition) =>
-        (int)Math.Floor(staffPosition / 7.0);
-
     private static int GetAlterationPriority(string accidental) => accidental switch
     {
         "natural" => 0,

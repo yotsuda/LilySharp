@@ -66,21 +66,6 @@ internal sealed record StaffSpacingParameters
     };
 
     /// <summary>
-    /// Spacing for non-spaceable (loose) staves that use staff-affinity.
-    /// Kept for backward compatibility; equivalent to <see cref="NonStaffRelatedStaff"/>.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/align-interface.cc:240-252 staff-affinity
-    /// </remarks>
-    public VerticalSpacingSpec NonStaff { get; init; } = new()
-    {
-        BasicDistance = 5,
-        MinimumDistance = 3,
-        Padding = 0.5,
-        Stretchability = 2
-    };
-
-    /// <summary>
     /// Spacing between a non-staff line and the nearest staff in the direction of its
     /// <c>staff-affinity</c> ("close" / related direction).
     /// </summary>

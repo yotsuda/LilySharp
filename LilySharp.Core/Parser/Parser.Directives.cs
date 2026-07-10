@@ -101,11 +101,6 @@ internal sealed partial class Parser
     /// parallel SIBLING voice, not an inner one).</summary>
     private int _voiceBodyDepth;
 
-    /// <summary>Flags a voice block opened INSIDE another voice's body, then
-    /// recovers by INLINING its content into the enclosing voice (the braces
-    /// read as transparent): no phantom parallel voice, no voice renumbering,
-    /// no cascading measure warnings — the LYS0010 error alone marks the
-    /// defect. A chain of nested voice blocks recovers one wrapper each.</summary>
     /// <summary>drummap { hh: position 6 notehead x … } — the body is stored
     /// token-for-token; the red node reads the entries.</summary>
     private DrummapDeclarationGreen ParseDrummapDeclaration()
@@ -119,6 +114,11 @@ internal sealed partial class Parser
         return new DrummapDeclarationGreen(keyword, open, [.. tokens], close);
     }
 
+    /// <summary>Flags a voice block opened INSIDE another voice's body, then
+    /// recovers by INLINING its content into the enclosing voice (the braces
+    /// read as transparent): no phantom parallel voice, no voice renumbering,
+    /// no cascading measure warnings — the LYS0010 error alone marks the
+    /// defect. A chain of nested voice blocks recovers one wrapper each.</summary>
     private GreenNode ParseVoiceBlocksCheckingNesting()
     {
         if (_voiceBodyDepth > 0)

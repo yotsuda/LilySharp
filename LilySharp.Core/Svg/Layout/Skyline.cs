@@ -175,18 +175,6 @@ internal sealed class Skyline
     }
 
     /// <summary>
-    /// Shifts the skyline horizontally.
-    /// </summary>
-    public Skyline Shift(double dx)
-    {
-        if (_segments.Length == 0 || dx == 0)
-            return this;
-
-        var shifted = _segments.Select(s => new Segment(s.YBottom, s.YTop, s.X + dx));
-        return new Skyline(shifted.ToImmutableArray(), _direction);
-    }
-
-    /// <summary>
     /// Merges this skyline with another of the same direction.
     /// </summary>
     public Skyline Merge(Skyline other)

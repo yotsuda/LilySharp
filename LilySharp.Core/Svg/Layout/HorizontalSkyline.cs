@@ -150,20 +150,6 @@ internal sealed class HorizontalSkyline
     }
 
     /// <summary>
-    /// Shifts the skyline horizontally.
-    /// </summary>
-    public void Shift(double dx)
-    {
-        int sky = (int)_direction;
-        for (int i = 0; i < _buildings.Count; i++)
-        {
-            var b = _buildings[i];
-            double newIntercept = b.Intercept + sky * dx;
-            _buildings[i] = new SkylineBuilding(b.Start, b.End, newIntercept);
-        }
-    }
-
-    /// <summary>
     /// Returns the X position at a specific Y coordinate in real coordinates.
     /// Takes the OUTERMOST covering building (the envelope), since the
     /// building list may contain shadowed entries (see <see cref="Merge"/>).

@@ -2380,18 +2380,10 @@ public sealed partial class MeasureCollector
                 bodyNodes.Add(item);
         }
 
-        void ProcessBodyOnce()
-        {
-            foreach (var item in bodyNodes)
-            {
-                if (item is RelativeResetMarker)
-                {
-                    EnterDefaultFrame();
-                    continue;
-                }
-                ProcessMusicNode(item, builder);
-            }
-        }
+        // Route through the shared sequence walker so ties/slurs/beams inside a
+        // repeat body get the one-node marker lookahead (a manual per-item loop
+        // here previously dropped them — e.g. `repeat volta 2 { c4( d e f) }`).
+        void ProcessBodyOnce() => ProcessMusicNodeSequence(bodyNodes, builder);
 
         if (type == "percent")
         {
@@ -2543,7 +2535,7 @@ public sealed partial class MeasureCollector
                 var baseDuration = Fraction.FromNoteValue(noteValue);
                 graceDefaultDuration = baseDuration;
 
-                int graceMidi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.RelativeOctave);
+                int graceMidi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave);
                 graceNoteInfos.Add(new GraceNoteInfo(staffPosition, accidental, needsLedger, baseDuration, graceMidi));
             }
         }

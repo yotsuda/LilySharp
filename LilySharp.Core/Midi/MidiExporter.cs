@@ -960,9 +960,14 @@ public sealed class MidiExporter
         // built-in MIDI behavior. LILYPOND-REF: ly/articulate.ly
         // ac:defaultGraceFactor = 9/40 ("though the notation reference says 1/4").
         Fraction? written = null;
-        int GraceTicks(Fraction? w) => w is { } d
-            ? (int)RoundedDiv((long)FractionToTicks(d) * 9, 40)
-            : _ticksPerQuarter / 8;
+        // Sounding time is 9/40 of the NOTATED duration for both a written value
+        // and the unwritten 1/32 fallback (the fallback previously emitted a full
+        // 1/32, ~4× too long, skipping the 9/40 scaling every other path applies).
+        int GraceTicks(Fraction? w)
+        {
+            long notatedTicks = w is { } d ? FractionToTicks(d) : _ticksPerQuarter / 8;
+            return (int)RoundedDiv(notatedTicks * 9, 40);
+        }
 
         foreach (var item in grace.Body.Items)
         {

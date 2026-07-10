@@ -94,9 +94,8 @@ internal sealed record PageBreakingParameters
     /// <summary>
     /// Don't justify vertically on the last page only.
     /// </summary>
-    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly ragged-last-bottom = ##f</remarks>
-    // LILYPOND-REF: ly/paper-defaults-init.ly:56 ragged-last-bottom = ##t
-    // ("best for shorter scores") — the LAST page keeps natural spacing.
+    /// <remarks>LILYPOND-REF: ly/paper-defaults-init.ly:56 ragged-last-bottom = ##t
+    /// ("best for shorter scores") — the LAST page keeps natural spacing.</remarks>
     public bool RaggedLastBottom { get; init; } = true;
 
     /// <summary>

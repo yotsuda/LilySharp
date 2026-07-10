@@ -1138,6 +1138,29 @@ structure { A }
     }
 
     [Fact]
+    public void ParseTremolo_WidePowersOfTwo()
+    {
+        // LilyPond's tremolo_type accepts any power-of-two duration, not just
+        // :8/:16/:32 — e.g. :64 (4 beams) and :128 (5 beams).
+        var source = @"
+section A {
+    melody {
+        c4:64 d4:128 |
+    }
+}
+structure { A }
+";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        Assert.Equal(source, tree.ToFullString());
+
+        var noteNodes = tree.GetRoot().DescendantNodes().OfType<NoteSyntax>().ToList();
+        Assert.Equal(2, noteNodes.Count);
+        Assert.Equal(":64", noteNodes[0].Tremolo!.Text);
+        Assert.Equal(":128", noteNodes[1].Tremolo!.Text);
+    }
+
+    [Fact]
     public void ParseTremoloChord()
     {
         var source = @"

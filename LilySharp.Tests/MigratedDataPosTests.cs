@@ -160,8 +160,7 @@ public class MigratedDataPosTests
         var measureLayouts = ImmutableArray.Create(
             new MeasureLayout(0, 0, 4, ImmutableArray<ItemLayout>.Empty));
 
-        var layouts = CustomTextEngraver.Calculate(
-            null, items, ImmutableArray<SystemLayout>.Empty, measureLayouts);
+        var layouts = CustomTextEngraver.Calculate(items, measureLayouts);
 
         Assert.Equal(items.Length, layouts.Length);
         for (int k = 0; k < layouts.Length; k++)

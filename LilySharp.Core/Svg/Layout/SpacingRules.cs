@@ -29,18 +29,6 @@ namespace LilySharp.Core.Svg.Layout;
 /// </remarks>
 internal static class SpacingRules
 {
-    /// <summary>Base width for a quarter note in staff spaces.</summary>
-    public const double QuarterNoteWidth = 3.6;
-
-    /// <summary>Minimum width for any note in staff spaces.</summary>
-    public const double MinNoteWidth = 2.0;
-
-    /// <summary>Width added for each accidental in staff spaces.</summary>
-    public const double AccidentalWidth = 1.2;
-
-    /// <summary>Width added for each dot in staff spaces.</summary>
-    public const double DotWidth = 0.6;
-
     /// <summary>Width of a single barline in staff spaces.</summary>
     public const double BarlineWidth = 0.8;
 
@@ -180,16 +168,6 @@ internal static class SpacingRules
         BarlineType.RepeatBoth => EngravingDefaults.BarlineDrawnWidth(type) + BarlineClearance,
         _ => BarlineWidth
     };
-
-    private static double GetAccidentalWidth(MusicItem item)
-    {
-        return item switch
-        {
-            NoteItem note => note.Accidental != null ? AccidentalWidth : 0,
-            ChordItem chord => chord.Notes.Count(n => n.Accidental != null) * AccidentalWidth,
-            _ => 0
-        };
-    }
 
     private static bool HasAccidental(MusicItem? item)
     {

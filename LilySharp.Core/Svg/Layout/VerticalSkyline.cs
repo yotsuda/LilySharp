@@ -417,19 +417,6 @@ internal sealed class VerticalSkyline
     }
 
     /// <summary>
-    /// Returns true if a is above b at x, considering skyline direction.
-    /// </summary>
-    /// <remarks>
-    /// LILYPOND-REF: lily/skyline.cc:170-176 SkylineBuilding::above()
-    /// With LilyPond sign convention, SkylineBuilding::Above() already works correctly
-    /// for both directions - it compares internal heights directly.
-    /// </remarks>
-    private bool IsAbove(SkylineBuilding a, SkylineBuilding b, double x)
-    {
-        return a.Above(b, x);  // Same for both directions with LilyPond sign convention
-    }
-
-    /// <summary>
     /// Raises the skyline by the given amount. Only the intercept moves — a
     /// sloped building keeps its slope (the flat 3-arg ctor used here before
     /// flattened every sloped building to its intercept, so a raised skyline
@@ -447,57 +434,6 @@ internal sealed class VerticalSkyline
                 ? new SkylineBuilding(b.Start, b.End, b.Intercept + delta)
                 : new SkylineBuilding(b.Start, b.ValueAt(b.Start) + delta,
                                b.ValueAt(b.End) + delta, b.End);
-        }
-    }
-
-    /// <summary>
-    /// Shifts the skyline horizontally.
-    /// </summary>
-    public void Shift(double amount)
-    {
-        for (int i = 0; i < _buildings.Count; i++)
-        {
-            var b = _buildings[i];
-            // Need to recalculate YIntercept when shifting
-            double newLeft = b.Start + amount;
-            double newRight = b.End + amount;
-            double heightAtNewLeft = b.ValueAt(b.Start);  // Height stays same at equivalent position
-            double heightAtNewRight = b.ValueAt(b.End);
-            _buildings[i] = new SkylineBuilding(newLeft, heightAtNewLeft, heightAtNewRight, newRight);
-        }
-    }
-
-    /// <summary>
-    /// Sets a minimum height for the skyline.
-    /// </summary>
-    public void SetMinimumHeight(double height)
-    {
-        double targetHeight = (int)_direction * height;
-
-        if (_buildings.Count == 0)
-        {
-            _buildings.Add(new SkylineBuilding(NegativeInfinity, PositiveInfinity, targetHeight));
-            return;
-        }
-
-        for (int i = 0; i < _buildings.Count; i++)
-        {
-            var b = _buildings[i];
-            double leftHeight = b.ValueAt(b.Start);
-            double rightHeight = b.ValueAt(b.End);
-
-            if (_direction == VerticalDirection.Up)
-            {
-                leftHeight = Math.Max(leftHeight, targetHeight);
-                rightHeight = Math.Max(rightHeight, targetHeight);
-            }
-            else
-            {
-                leftHeight = Math.Min(leftHeight, targetHeight);
-                rightHeight = Math.Min(rightHeight, targetHeight);
-            }
-
-            _buildings[i] = new SkylineBuilding(b.Start, leftHeight, rightHeight, b.End);
         }
     }
 

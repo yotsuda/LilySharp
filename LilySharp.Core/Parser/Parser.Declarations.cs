@@ -176,60 +176,6 @@ internal sealed partial class Parser
         return new PropertyAssignmentGreen(keyword, null, [.. values]);
     }
 
-    private PropertyAssignmentGreen ParsePropertyAssignment()
-    {
-        var name = Advance(); // keyword like tempo, clef, etc.
-        var colon = ConsumeRejectedColon();
-        var valueTokens = ParsePropertyValue();
-        return new PropertyAssignmentGreen(name, colon, valueTokens);
-    }
-
-    private GreenNode?[] ParsePropertyValue()
-    {
-        var tokens = new List<GreenNode?>();
-
-        // Collect value tokens until we hit a newline, brace, or another property
-        while (!Check(SyntaxKind.EndOfFile) &&
-               !Check(SyntaxKind.OpenBrace) &&
-               !Check(SyntaxKind.CloseBrace) &&
-               !IsPropertyStart())
-        {
-            // Check if current token has trailing newline - stop after consuming it
-            var token = Current;
-            bool hasNewline = HasTrailingNewline(token);
-
-            tokens.Add(Advance());
-
-            if (hasNewline)
-                break;
-        }
-
-        return [.. tokens];
-    }
-
-    private bool IsPropertyStart()
-    {
-        return Current.Kind is SyntaxKind.TempoKeyword or SyntaxKind.TimeKeyword or
-            SyntaxKind.KeyKeyword or SyntaxKind.ClefKeyword or
-            SyntaxKind.TitleKeyword or SyntaxKind.ComposerKeyword;
-    }
-
-    private static bool HasTrailingNewline(SyntaxToken token)
-    {
-        var trivia = token.TrailingTrivia;
-        if (trivia == null) return false;
-
-        if (trivia.Kind == SyntaxKind.EndOfLineTrivia) return true;
-
-        // Check trivia list
-        for (int i = 0; i < trivia.SlotCount; i++)
-        {
-            if (trivia.GetSlot(i)?.Kind == SyntaxKind.EndOfLineTrivia)
-                return true;
-        }
-        return false;
-    }
-
     private MetadataDeclarationGreen ParseMetadataDeclaration()
     {
         var keyword = Advance();

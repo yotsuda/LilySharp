@@ -228,7 +228,11 @@ internal sealed class Lexer
                 return (SyntaxKind.RepeatEndBar, ":|");
             }
 
-            // Check for tremolo suffix (:8, :16, :32 only)
+            // Check for tremolo suffix (:N where N is a power-of-two note value
+            // ≥ 8, e.g. :8/:16/:32/:64/:128). LilyPond's tremolo_type accepts any
+            // make_duration value (a power of two); beams = log2(N) − 2, so N ≥ 8
+            // is the range that draws at least one slash.
+            // LILYPOND-REF: lily/parser.yy tremolo_type.
             if (char.IsDigit(Current))
             {
                 int numStart = _position;
@@ -236,8 +240,8 @@ internal sealed class Lexer
                     _position++;
                 string numText = _text.Substring(numStart, _position - numStart);
 
-                // Only valid tremolo values: 8, 16, 32
-                if (numText == "8" || numText == "16" || numText == "32")
+                if (int.TryParse(numText, out int tremoloValue)
+                    && tremoloValue >= 8 && (tremoloValue & (tremoloValue - 1)) == 0)
                 {
                     return (SyntaxKind.TremoloSuffix, ":" + numText);
                 }

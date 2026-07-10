@@ -88,8 +88,8 @@ public class GraceNoteMidiTests
         Assert.Equal(9, (int)Math.Round(g16 * 40.0 / NoteDur("16")));      // factor == 9/40
         Assert.Equal(9, (int)Math.Round(g32 * 40.0 / NoteDur("32")));
 
-        int gDefault = GraceDur("");                                       // unwritten → 1/32 fallback (no factor)
-        Assert.Equal(NoteDur("32"), gDefault);                            // a plain 1/32 note
+        int gDefault = GraceDur("");                                       // unwritten → notated 1/32 fallback
+        Assert.Equal(g32, gDefault);                                       // 9/40 of a 1/32, same as an explicit c32 grace
     }
 
     [Fact]

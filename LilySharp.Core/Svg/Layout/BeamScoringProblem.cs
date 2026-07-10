@@ -728,8 +728,9 @@ internal sealed class BeamScoringProblem
     /// <remarks>
     /// LILYPOND-REF: lily/beam-quanting.cc:1217-1235 score_slope_ideal()
     ///
-    /// Uses shrink_extra_weight: |x| * (x &lt; 0 ? 1.5 : 1.0)
-    /// to penalize being too flat more than too steep.
+    /// Uses shrink_extra_weight: |x| * (x &lt; 0 ? 1.5 : 1.0), where x is
+    /// |damped slope| − |candidate slope|, so a too-steep candidate (x &lt; 0)
+    /// takes the 1.5× weight: too-steep is penalized more than too-flat.
     /// </remarks>
     private void ScoreSlopeIdeal(BeamConfiguration config)
     {

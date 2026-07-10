@@ -35,9 +35,8 @@ internal sealed class ElementCoordinator
     private readonly BeamDetector _beamDetector = new();
     private readonly BeamEngraver _beamEngraver = new();
     private readonly TieDetector _tieDetector = new();
-    // Tie layout is done by TieFormattingProblem (see LayoutTies); the old
-    // (The reference-only TieEngraver twin was deleted; TieFormattingProblem
-    // below is the live tie layout.)
+    // Tie layout is done by TieFormattingProblem (see LayoutTies); the
+    // reference-only TieEngraver twin was deleted.
     private readonly SlurDetector _slurDetector = new();
     private readonly GlissandoDetector _glissandoDetector = new();
     private readonly VoiceCollector _voiceCollector = new();

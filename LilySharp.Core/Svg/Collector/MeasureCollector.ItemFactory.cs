@@ -142,7 +142,10 @@ public sealed partial class MeasureCollector
             hasRepeatTie: hasRepeatTie)
         {
             StringNumber = ExtractStringNumber(note),
-            Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.RelativeOctave),
+            // MIDI/tab pitch = the actually-drawn (display) pitch: pair the display
+            // step/alteration with DisplayOctave, not the written RelativeOctave, so a
+            // transpose that pushes a pitch across an octave boundary frets correctly.
+            Midi = PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave),
             IsDead = HasNamedArticulation(note, "dead"),
             StemUpOverride = GetStemDirectionOverride(note),
         };
@@ -198,25 +201,22 @@ public sealed partial class MeasureCollector
 
     /// <summary>
     /// Parses tremolo suffix into beam count.
-    /// :8 = 1 beam, :16 = 2 beams, :32 = 3 beams
+    /// beams = log2(N) − 2, so :8 = 1, :16 = 2, :32 = 3, :64 = 4, :128 = 5.
     /// </summary>
     private static int ParseTremoloBeams(SyntaxTokenNode? tremolo)
     {
         if (tremolo == null)
             return 0;
 
-        // Tremolo text is ":8", ":16", or ":32"
+        // Tremolo text is ":N" for a power-of-two value ≥ 8 (see Lexer).
         var text = tremolo.Text;
         if (text.Length < 2 || text[0] != ':')
             return 0;
 
-        return text[1..] switch
-        {
-            "8" => 1,
-            "16" => 2,
-            "32" => 3,
-            _ => 0
-        };
+        return int.TryParse(text[1..], out int value)
+            && value >= 8 && (value & (value - 1)) == 0
+            ? (int)Math.Log2(value) - 2
+            : 0;
     }
 
     private ChordItem CreateChordItem(ChordSyntax chord, bool hasBeamStartAfter = false, bool hasBeamEndAfter = false, bool hasArpeggio = false, bool isCue = false, bool hasTieAfter = false, bool hasSlurStartAfter = false, bool hasSlurEndAfter = false)
@@ -259,7 +259,7 @@ public sealed partial class MeasureCollector
                 IsCourtesy: isCourtesy,
                 Fingering: pitchFingering,
                 StringNumber: pitch.Articulations.OfType<StringNumberAnnotationSyntax>().FirstOrDefault()?.StringNumber,
-                Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.RelativeOctave)));
+                Midi: PitchToMidi(rp.DisplayStep, rp.DisplayAlteration, rp.DisplayOctave)));
         }
 
         // Drum chord members (<bd hh>): placement/head/GM key from the
