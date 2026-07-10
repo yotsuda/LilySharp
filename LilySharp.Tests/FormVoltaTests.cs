@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using System.Collections.Immutable;
 using System.Linq;
 using LilySharp.Core.Svg.Collector;
 using LilySharp.Core.Svg.Layout;
@@ -146,6 +147,40 @@ public sealed class FormVoltaTests
         // bracket, so the label is not hidden and must not warn.
         var tree = SyntaxTree.Parse(Head + "form main { |: A [1. D] :| [2. ~O \"alt\"] }" + Tail);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.HiddenSectionLabel);
+    }
+
+    [Fact]
+    public void SilentSection_BetweenRepeatedSections_KeepsVisibleLabels()
+    {
+        // 'A |: ~D :| A' hides only D's mark; the two A boxes must remain. The
+        // "single distinct section = noise, drop the box" heuristic counted only
+        // VISIBLE labels, so hiding D collapsed the visible set to one distinct "A"
+        // and wrongly wiped BOTH A boxes. A hand-hidden section signals the author
+        // is curating marks — keep the survivors.
+        var tree = SyntaxTree.Parse(Head + "form main { A |: ~D :| A }" + Tail);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures;
+        var marks = MusicMarkEngraver.BuildAllMarks(
+            ImmutableArray<MusicMarkItem>.Empty, measures, tempo: null);
+        var labels = marks.Where(m => m.Type == MusicMarkType.SectionLabel)
+                          .OrderBy(m => m.MeasureIndex).Select(m => m.Text).ToArray();
+        Assert.Equal(new[] { "A", "A" }, labels);  // D hidden, both A shown
+    }
+
+    [Fact]
+    public void SingleRepeatedSection_StillDropsRedundantBoxes()
+    {
+        // Guard the heuristic the fix above narrows: 'A A' (one section, no hidden
+        // sibling) is still one distinct section with nothing to navigate to — its
+        // boxes stay suppressed as noise.
+        var tree = SyntaxTree.Parse(Head + "form main { A A }" + Tail);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+
+        var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures;
+        var marks = MusicMarkEngraver.BuildAllMarks(
+            ImmutableArray<MusicMarkItem>.Empty, measures, tempo: null);
+        Assert.DoesNotContain(marks, m => m.Type == MusicMarkType.SectionLabel);
     }
 
     [Fact]
