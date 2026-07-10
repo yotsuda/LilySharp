@@ -173,7 +173,7 @@ public sealed partial class LilySharpLanguageServer
             VariableDeclarationSyntax variable => (variable.Name.Text, SymbolKind.Variable),
             PhraseDeclarationSyntax phrase => ($"phrase {phrase.Name.Text}", SymbolKind.Function),
             SectionDeclarationSyntax section => ($"section {section.SectionName}", SymbolKind.Namespace),
-            StructureDeclarationSyntax => ("structure", SymbolKind.Struct),
+            StructureDeclarationSyntax => ("form", SymbolKind.Struct),
             RenderDeclarationSyntax render => (RenderSymbolName(render), SymbolKind.Module),
             RepeatExpressionSyntax repeat => ($"repeat {repeat.Count.Text}x", SymbolKind.Operator),
             // Tuplets and voice-parallel blocks are inline music constructs, not

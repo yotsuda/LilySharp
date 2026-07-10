@@ -151,8 +151,8 @@ public class SystemLayoutCacheTests
             e4 f g a | b4 c d e |
           }
         }
-        structure { Main }
-        score "x" { staff melody }
+        form main { Main }
+        score main "x" { staff melody }
         """;
 
     [Fact]

@@ -66,10 +66,16 @@ public static class LayoutReport
         var score = SvgGenerator.CollectScore(tree, spec);
         var layout = new LayoutEngine().Layout(score);
 
-        string name = ScoreName(spec);
+        // Reconstruct the header as written: `score <form> ["basename"]`. The
+        // basename is shown only when it differs from the form name (i.e. it was
+        // given explicitly, not derived from the form).
+        string formName = spec?.Name ?? "";
+        string basename = ScoreName(spec);
         sb.Append("score");
-        if (name.Length > 0)
-            sb.Append(" \"").Append(name).Append('"');
+        if (formName.Length > 0)
+            sb.Append(' ').Append(formName);
+        if (basename.Length > 0 && basename != formName)
+            sb.Append(" \"").Append(basename).Append('"');
         sb.AppendLine();
 
         var staves = score.EnumerateStaves()

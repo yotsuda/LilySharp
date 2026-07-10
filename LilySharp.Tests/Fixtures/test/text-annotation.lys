@@ -12,6 +12,6 @@ section Main {
   }
 }
 
-structure { Main }
+form main { Main }
 
-score "text-annotation" { staff melody }
+score main "text-annotation" { staff melody }

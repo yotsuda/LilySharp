@@ -50,7 +50,7 @@ public sealed class StructureVoltaTests
     public void InlineVoltaForm_ParsesAndRenders()
     {
         // Repeat barline between the endings — the unified form.
-        Assert.True(MeasureCount("structure { |: A [1. D] :| [2. O] }") > 0);
+        Assert.True(MeasureCount("form main { |: A [1. D] :| [2. O] }") > 0);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public sealed class StructureVoltaTests
     {
         // |: A [1. D] [2. O] :|  — the repeat barline must go BETWEEN the endings
         // ([1. D] :| [2. O]); the old after-both spelling is rejected.
-        var tree = SyntaxTree.Parse(Head + "structure { |: A [1. D] [2. O] :| }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form main { |: A [1. D] [2. O] :| }" + Tail);
         Assert.True(tree.HasErrors);
         Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.VoltaRepeatBarlinePlacement);
     }
@@ -67,7 +67,7 @@ public sealed class StructureVoltaTests
     public void BareEnding_WithoutOpeningBracket_IsRejected()
     {
         // The '[' is required: write '[2. O]', not a bare '2. O'.
-        var tree = SyntaxTree.Parse(Head + "structure { |: A [1. D] :| 2. O }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form main { |: A [1. D] :| 2. O }" + Tail);
         Assert.True(tree.HasErrors);
         Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.VoltaBracketRequired);
     }
@@ -76,7 +76,7 @@ public sealed class StructureVoltaTests
     public void OpenBracket_WithoutClosingBracket_IsAccepted()
     {
         // The closing ']' is optional — absent leaves the cap open.
-        Assert.True(MeasureCount("structure { |: A [1. D :| [2. O }") > 0);
+        Assert.True(MeasureCount("form main { |: A [1. D :| [2. O }") > 0);
     }
 
     [Fact]
@@ -92,8 +92,8 @@ public sealed class StructureVoltaTests
                 .Select(m => (m.StartBarline, m.EndBarline)).ToArray();
         }
 
-        var shorthand = Bars("structure { A |: D :|: O :| }");
-        var explicitTwoBlocks = Bars("structure { A |: D :| |: O :| }");
+        var shorthand = Bars("form main { A |: D :|: O :| }");
+        var explicitTwoBlocks = Bars("form main { A |: D :| |: O :| }");
         Assert.Equal(explicitTwoBlocks, shorthand);
 
         // And the shared boundary is a repeat-end meeting a repeat-start (which the
@@ -109,7 +109,7 @@ public sealed class StructureVoltaTests
         // '~D' inside a repeat must render D's music with NO label — not drop the
         // measure. The top-level silent-reference case skips in-repeat nodes, so
         // without ProcessRepeatBlock handling it the whole measure vanished.
-        var tree = SyntaxTree.Parse(Head + "structure { A |: D :|: ~D :| }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form main { A |: D :|: ~D :| }" + Tail);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
 
         var measures = new MeasureCollector().Collect(tree, "m").Voice.Measures.ToArray();
@@ -123,7 +123,7 @@ public sealed class StructureVoltaTests
         // '~D "alt"' — a label parked but hidden by '~' (write now, reveal later by
         // dropping the '~'). Valid (not an error): warn, keep the text, render the
         // measure with NO label.
-        var tree = SyntaxTree.Parse(Head + "structure { A ~D \"alt\" }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form main { A ~D \"alt\" }" + Tail);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
         Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.HiddenSectionLabel);
 
@@ -135,7 +135,7 @@ public sealed class StructureVoltaTests
     [Fact]
     public void SilentReference_NoLabel_DoesNotWarn()
     {
-        var tree = SyntaxTree.Parse(Head + "structure { A ~D }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form main { A ~D }" + Tail);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.HiddenSectionLabel);
     }
 
@@ -144,7 +144,7 @@ public sealed class StructureVoltaTests
     {
         // '[2. ~O "alt"]' SHOWS "alt" — there the '~' suppresses only the volta
         // bracket, so the label is not hidden and must not warn.
-        var tree = SyntaxTree.Parse(Head + "structure { |: A [1. D] :| [2. ~O \"alt\"] }" + Tail);
+        var tree = SyntaxTree.Parse(Head + "form main { |: A [1. D] :| [2. ~O \"alt\"] }" + Tail);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.HiddenSectionLabel);
     }
 
@@ -155,7 +155,7 @@ public sealed class StructureVoltaTests
         // hook at the repeat (regression: it used to stay open — only the last
         // ending closed).
         var tree = SyntaxTree.Parse(
-            Head + "structure { |: A [1. D] :| [2. O] }\nscore { staff m  tab m }\n");
+            Head + "form main { |: A [1. D] :| [2. O] }\nscore { staff m  tab m }\n");
         var spec = RenderSpecParser.FindFirst(tree)!;
         var layout = new LayoutEngine().Layout(new MeasureCollector().CollectMultiStaff(tree, spec));
 

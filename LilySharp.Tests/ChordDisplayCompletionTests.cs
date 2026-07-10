@@ -31,14 +31,14 @@ public class ChordDisplayCompletionTests
         => LilySharpLanguageServer.GetCompletionContext(text, text.Length);
 
     [Theory]
-    [InlineData("score x { staff melody with chords harmony ")]
-    [InlineData("score x { chords harmony ")]
+    [InlineData("score main { staff melody with chords harmony ")]
+    [InlineData("score main { chords harmony ")]
     public void AfterChordName_OffersTheAsSelector(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterChordAttachName, Ctx(text));
 
     [Theory]
-    [InlineData("score x { staff melody with chords harmony as ")]
-    [InlineData("score x { chords harmony as ")]
+    [InlineData("score main { staff melody with chords harmony as ")]
+    [InlineData("score main { chords harmony as ")]
     public void AfterAs_OffersTheModes(string text)
         => Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterChordDisplayAs, Ctx(text));
 
@@ -47,7 +47,7 @@ public class ChordDisplayCompletionTests
     {
         // `with chords |` (before the name) keeps completing the chord-part names.
         Assert.Equal(LilySharpLanguageServer.CompletionContext.AfterChordsRef,
-            Ctx("score x { staff melody with chords "));
+            Ctx("score main { staff melody with chords "));
     }
 
     [Fact]

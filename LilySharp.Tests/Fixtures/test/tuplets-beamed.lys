@@ -28,8 +28,8 @@ section Main {
   melody { $beamedTuplets }
 }
 
-structure { Main }
+form main { Main }
 
-score "tuplets-beamed" {
+score main "tuplets-beamed" {
   staff melody
 }

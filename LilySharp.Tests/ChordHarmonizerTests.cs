@@ -33,8 +33,8 @@ public class ChordHarmonizerTests
             {{key}}
             part melody { clef treble }
             section A { melody { {{melodyMeasures}} } {{extra}} }
-            structure { A }
-            score x { {{scoreStaff}} }
+            form main { A }
+            score main { {{scoreStaff}} }
             """;
 
         var block = ChordHarmonizer.Harmonize(SyntaxTree.Parse(Doc("", "staff melody")));
@@ -88,8 +88,8 @@ public class ChordHarmonizerTests
             part melody { clef treble }
             section A { melody { c'4 e' g' c'' | } }
             section B { melody { g'4 b' d'' g'' | } }
-            structure { A B }
-            score x { staff melody }
+            form main { A B }
+            score main { staff melody }
             """);
         var tracks = ChordHarmonizer.HarmonizeBySections(tree);
         Assert.Equal(2, tracks.Count);
@@ -113,8 +113,8 @@ public class ChordHarmonizerTests
               section A { c'4 e' g' c'' | }
               section B { g'4 b' d'' g'' | }
             }
-            structure { A B }
-            score x { staff melody }
+            form main { A B }
+            score main { staff melody }
             """;
         Assert.Equal(LayoutForm.PartMajor,
             PartSectionLayoutConverter.Detect(SyntaxTree.Parse(partMajor).GetRoot()));
@@ -145,8 +145,8 @@ public class ChordHarmonizerTests
             key c major
             part melody { clef treble }
             section A { melody { c'4 e' g' c'' | } }
-            structure { A }
-            score x { staff melody }
+            form main { A }
+            score main { staff melody }
             """);
         Assert.NotNull(result);
         Assert.Null(result!.Value.Info);   // already section-major: no conversion note
@@ -165,8 +165,8 @@ public class ChordHarmonizerTests
             key c major
             part melody { clef treble }
             section A { melody { c'4 e' g' c'' | } }
-            structure { A }
-            score x { staff melody }
+            form main { A }
+            score main { staff melody }
             """);
         Assert.NotNull(ChordHarmonizer.Harmonize(tree));
     }

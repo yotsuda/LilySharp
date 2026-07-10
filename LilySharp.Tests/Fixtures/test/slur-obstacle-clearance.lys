@@ -8,5 +8,5 @@ part m { clef treble }
 section Main {
   m { c''4( g''4 e''4 c''4) | }
 }
-structure { Main }
-score "slur-obstacle-clearance" { staff m }
+form main { Main }
+score main "slur-obstacle-clearance" { staff m }

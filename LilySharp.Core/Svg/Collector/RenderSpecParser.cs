@@ -31,21 +31,23 @@ public static class RenderSpecParser
     /// </summary>
     public static RenderSpec? Parse(RenderDeclarationSyntax render)
     {
-        string? outputFile = null;
         var items = new List<RenderItemSpec>();
 
-        // Structure: scoreKeyword, [basename string], openBrace, items..., closeBrace
-        // The only header token is the optional basename string; its extension (if
-        // written) is dropped because the file format is a CLI choice.
-        // The name (if any) is the single token right after the keyword — child 1
-        // is either the name token or the opening brace.
-        if (render.GetChild(1) is SyntaxTokenNode nameTok && nameTok.Kind != SyntaxKind.OpenBrace)
-            outputFile = System.IO.Path.GetFileNameWithoutExtension(nameTok.Text.Trim('"'));
+        // Header: `score <FormName> ["basename"] [transpose …]`. The form name says
+        // WHICH form to render; the basename names the OUTPUT file.
+        string formName = render.FormNameText;
+        string? basename = render.BasenameText;
 
-        // The basename is optional. When omitted, OutputFile is empty (the
-        // consumer derives it from the input file). Name doubles as the
-        // selector for `--score <name>`; default to "score" when unnamed.
-        var name = string.IsNullOrEmpty(outputFile) ? "score" : outputFile;
+        // Output basename rule: an explicit "basename" wins; else the reserved
+        // form name `main` writes to the input .lys stem (empty OutputFile = "derive
+        // from the input file"); any other form name becomes the file name.
+        string outputFile = !string.IsNullOrEmpty(basename)
+            ? System.IO.Path.GetFileNameWithoutExtension(basename)
+            : formName == "main" ? "" : formName;
+
+        // Name doubles as the `--score <name>` selector — the form name, or "score"
+        // when the header is malformed (no form name).
+        var name = string.IsNullOrEmpty(formName) ? "score" : formName;
 
         // Parse render items
         foreach (var child in render.DescendantNodes())
@@ -107,13 +109,27 @@ public static class RenderSpecParser
             ? LilySharp.Core.Semantics.PartTranspose.ReadProperty(t)
             : null;
 
-        // A score-local `structure { ... }` overrides the top-level structure for
-        // this score only. The first one wins (a second is flagged by the validator).
-        var localStructure = render.DescendantNodes()
-            .OfType<StructureDeclarationSyntax>()
-            .FirstOrDefault();
+        // Bind the score to its form by name (case-sensitive). Null when the name
+        // is missing or unresolved — the validator reports it; the score renders nothing.
+        var form = ResolveForm(render, formName);
 
-        return new RenderSpec(name, outputFile ?? "", [.. items], scoreTranspose, localStructure);
+        return new RenderSpec(name, outputFile, [.. items], scoreTranspose, form);
+    }
+
+    /// <summary>
+    /// Resolves a score's <c>form &lt;Name&gt;</c> reference to the matching top-level
+    /// form declaration (case-sensitive). Null when the name is empty or unknown.
+    /// </summary>
+    private static StructureDeclarationSyntax? ResolveForm(RenderDeclarationSyntax render, string formName)
+    {
+        if (string.IsNullOrEmpty(formName))
+            return null;
+        SyntaxNode root = render;
+        while (root.Parent != null)
+            root = root.Parent;
+        return root.DescendantNodes()
+            .OfType<StructureDeclarationSyntax>()
+            .FirstOrDefault(f => string.Equals(f.NameText, formName, System.StringComparison.Ordinal));
     }
 
     /// <summary>

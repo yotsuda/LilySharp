@@ -22,7 +22,7 @@ namespace LilySharp.Tests;
 
 /// <summary>
 /// Value positions after tempo / time / partial / title, and the render-spec
-/// positions inside score { }, offer only what fits there — not the keyword list.
+/// positions inside score main { }, offer only what fits there — not the keyword list.
 /// </summary>
 [Trait("Category", "Unit")]
 public class ValueContextCompletionTests
@@ -53,14 +53,14 @@ public class ValueContextCompletionTests
     }
 
     [Theory]
-    [InlineData("score \"s\" { ", "ScoreBlock")]
-    [InlineData("score s { ", "ScoreBlock")]
-    [InlineData("score \"s\" { staff ", "AfterStaffRef")]
-    [InlineData("score s { grandStaff { staff ", "AfterStaffRef")]
-    [InlineData("score \"s\" { staff melody with ", "AfterWith")]
-    [InlineData("score \"s\" { staff melody with chords ", "AfterChordsRef")]
-    [InlineData("score \"s\" { chords ", "AfterChordsRef")]
-    [InlineData("score \"s\" { lyrics ", "AfterLyricsRef")]
+    [InlineData("score main \"s\" { ", "ScoreBlock")]
+    [InlineData("score main { ", "ScoreBlock")]
+    [InlineData("score main \"s\" { staff ", "AfterStaffRef")]
+    [InlineData("score main { grandStaff { staff ", "AfterStaffRef")]
+    [InlineData("score main \"s\" { staff melody with ", "AfterWith")]
+    [InlineData("score main \"s\" { staff melody with chords ", "AfterChordsRef")]
+    [InlineData("score main \"s\" { chords ", "AfterChordsRef")]
+    [InlineData("score main \"s\" { lyrics ", "AfterLyricsRef")]
     public void InsideAScoreBlock_RenderSpecContexts(string text, string expected)
     {
         Assert.Equal(expected, ContextOf(text).ToString());

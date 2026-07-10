@@ -16,5 +16,5 @@ section S {
     voice { a'1 | }
   }
 }
-structure { S }
-score "multivoice-beam-collision" { staff mel }
+form main { S }
+score main "multivoice-beam-collision" { staff mel }

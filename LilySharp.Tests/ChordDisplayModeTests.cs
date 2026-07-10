@@ -36,11 +36,11 @@ public class ChordDisplayModeTests
         part melody { clef treble }
         section A { melody { e'4 e' f' g' | a' g' e' d' | } }
         chords harmony { c1 | a1:m | }
-        structure { A }
-        score names { staff melody with chords harmony }
-        score roman { staff melody with chords harmony as roman }
-        score both  { staff melody with chords harmony as both }
-        score row   { chords harmony as roman }
+        form main { A }
+        score main "names" { staff melody with chords harmony }
+        score main "roman" { staff melody with chords harmony as roman }
+        score main "both"  { staff melody with chords harmony as both }
+        score main "row"   { chords harmony as roman }
         """;
 
     private static ChordDisplayMode StaffMode(string score)
@@ -89,8 +89,8 @@ public class ChordDisplayModeTests
             part melody { clef treble }
             section A { melody { c'4@chord(c:maj7) c' g' g' | } }
             chords harmony { c:maj7 | }
-            structure { A }
-            score s { staff melody with chords harmony as roman }
+            form main { A }
+            score main { staff melody with chords harmony as roman }
             """);
         var score = new MeasureCollector()
             .Collect(tree, "melody", null, "harmony", ChordDisplayMode.Roman);
@@ -110,8 +110,8 @@ public class ChordDisplayModeTests
             part melody { clef treble }
             section A { melody { c'4 c' c' c' | key g major d' d' d' d' | } }
             chords harmony { c1 | g1 | }
-            structure { A }
-            score s { staff melody with chords harmony as roman }
+            form main { A }
+            score main { staff melody with chords harmony as roman }
             """);
         var score = new MeasureCollector()
             .Collect(tree, "melody", null, "harmony", ChordDisplayMode.Roman);

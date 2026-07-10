@@ -42,8 +42,8 @@ key g major
 
 part melody { clef treble }       // declare each part; clef lives here
 section Main { melody { c4 d e f | g2 g | } }
-structure { Main }                // print/playback order of sections
-score "out" { staff melody }      // one or more render blocks
+form main { Main }                // print/playback order of sections
+score main "out" { staff melody }      // one or more render blocks
 ```
 
 > Lily# is **not** LilyPond: `\relative`, `<< … \\ … >>`, `\new Staff`, `\version`
@@ -120,8 +120,8 @@ section Main {
     chords prog  { c2 g:7 | a:m f | c1 :| }
     lyrics words { Twin- kle | lit- tle | star | }
 }
-structure { Main }
-score "sheet" { chords prog lyrics words }
+form main { Main }
+score main "sheet" { chords prog lyrics words }
 ```
 
 ### Repeats and Alternatives
@@ -152,8 +152,8 @@ phrase motif { c4 d e f }
 
 part melody { clef treble }
 section Main { melody { $motif g2 g | } }
-structure { Main }
-score "out" { staff melody }
+form main { Main }
+score main "out" { staff melody }
 ```
 
 ## Building

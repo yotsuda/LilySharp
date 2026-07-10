@@ -19,8 +19,8 @@ section Main {
   }
 }
 
-structure { Main }
+form main { Main }
 
-score "break" {
+score main "break" {
   staff melody
 }

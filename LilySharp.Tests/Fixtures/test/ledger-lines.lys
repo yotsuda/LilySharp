@@ -31,8 +31,8 @@ section Main {
   melody { $highNotes $lowNotes $extreme }
 }
 
-structure { Main }
+form main { Main }
 
-score "ledger-lines" {
+score main "ledger-lines" {
   staff melody
 }

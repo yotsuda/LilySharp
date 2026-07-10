@@ -14,9 +14,9 @@ section Main {
   bot { c4 d e f | tuplet 3/2 { g4 a b } c4 | }
 }
 
-structure { Main }
+form main { Main }
 
-score "tuplet-lower-staff" {
+score main "tuplet-lower-staff" {
   staff top
   staff bot
 }

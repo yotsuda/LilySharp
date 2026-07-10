@@ -34,7 +34,7 @@ public class ReservedWordsTests
     public static readonly string[] Reserved =
     {
         "version",
-        "section", "structure", "using", "tab", "ossia", "transpose", "octave",
+        "section", "form", "using", "tab", "ossia", "transpose", "octave",
         "instrument", "channel",
         "score", "part", "staff", "grandStaff", "voice", "phrase", "repeat", "volta",
         "alternative", "break", "partial",

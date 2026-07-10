@@ -12,5 +12,5 @@ section Main {
     g4 | c4 d e f | g2 e2 | c1 |
   }
 }
-structure { Main }
-score "partial-pickup" { staff m }
+form main { Main }
+score main "partial-pickup" { staff m }

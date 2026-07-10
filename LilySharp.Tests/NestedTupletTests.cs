@@ -52,8 +52,8 @@ public class NestedTupletTests
 time 4/4
 part m { clef treble }
 section A { m { tuplet 3/2 { c'8( d'~ e') } r4 c'2 | } }
-structure { A }
-score x { staff m }
+form main { A }
+score main { staff m }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);

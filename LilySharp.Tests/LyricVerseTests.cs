@@ -47,8 +47,8 @@ section Main {
   melody { c'4 d e f | g a b c'' | }
   lyrics melody { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
-structure { Main }
-score ""x"" { staff melody }
+form main { Main }
+score main ""x"" { staff melody }
 ");
         var v1 = score.Lyrics.Where(l => l.VerseNumber == 1).ToList();
         var v2 = score.Lyrics.Where(l => l.VerseNumber == 2).ToList();
@@ -70,8 +70,8 @@ score ""x"" { staff melody }
         var score = Collect(@"
 time 4/4
 section Main { lyrics verse { Aa bb cc dd | ee ff | } }
-structure { Main }
-score ""x"" { lyrics verse }
+form main { Main }
+score main ""x"" { lyrics verse }
 ");
         var row = score.Lyrics.Where(l => l.IsLyricsRow).ToList();
         Assert.NotEmpty(row);
@@ -99,8 +99,8 @@ section Main {
   melody { c'4 d e f | g a b c'' | }
   lyrics verse { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
-structure { Main }
-score ""x"" { staff melody  lyrics verse }
+form main { Main }
+score main ""x"" { staff melody  lyrics verse }
 ");
         var row = score.Lyrics.Where(l => l.IsLyricsRow).ToList();
         var v1 = row.Where(l => l.VerseNumber == 1).ToList();
@@ -128,8 +128,8 @@ section B {
   melody { c'4 d e f | g a b c'' | }
   lyrics verse { Xx yy zz w1 | mm nn oo pp | }
 }
-structure { A B }
-score ""x"" { staff melody  lyrics verse }
+form main { A B }
+score main ""x"" { staff melody  lyrics verse }
 ");
         var a = score.Lyrics.Where(l => l.Text == "Pp").ToList(); // verse 2 of section A
         Assert.NotEmpty(a);
@@ -150,8 +150,8 @@ score ""x"" { staff melody  lyrics verse }
         var score = Collect(@"
 time 4/4
 section Main { lyrics verse { Aa bb || cc dd |. } }
-structure { Main }
-score ""x"" { lyrics verse }
+form main { Main }
+score main ""x"" { lyrics verse }
 ");
         Assert.NotEmpty(score.Lyrics);
         Assert.DoesNotContain(score.Lyrics, l => l.Text.Contains('|'));
@@ -170,8 +170,8 @@ score ""x"" { lyrics verse }
         var noteBound = Collect(@"
 time 4/4
 section Main { melody { c'4 d e f | } lyrics melody { Mu- sic is here | } }
-structure { Main }
-score ""x"" { staff melody }
+form main { Main }
+score main ""x"" { staff melody }
 ");
         var mu = noteBound.Lyrics.Single(l => l.Text.StartsWith("Mu"));
         Assert.Equal("Mu", mu.Text);
@@ -180,8 +180,8 @@ score ""x"" { staff melody }
         var row = Collect(@"
 time 4/4
 section Main { lyrics verse { Mu- sic is here | } }
-structure { Main }
-score ""x"" { lyrics verse }
+form main { Main }
+score main ""x"" { lyrics verse }
 ");
         var muRow = row.Lyrics.Single(l => l.Text.StartsWith("Mu"));
         Assert.Equal("Mu", muRow.Text);
@@ -199,8 +199,8 @@ section Main {
   melody { c'4 d e f | g a b c'' | }
   lyrics verse { Aa bb cc dd | ee ff gg hh | Pp qq rr ss | tt uu vv ww | }
 }
-structure { Main }
-score ""x"" { staff melody  lyrics verse }
+form main { Main }
+score main ""x"" { staff melody  lyrics verse }
 ");
         var rowStaff = score.StaffGroups.SelectMany(g => g.Staves)
             .Single(s => s.IsTextRow);
@@ -217,8 +217,8 @@ section Main {
   melody { c'4 d e f | g a b c'' | }
   lyrics melody { Aa bb cc dd | | }
 }
-structure { Main }
-score ""x"" { staff melody }
+form main { Main }
+score main ""x"" { staff melody }
 ");
         Assert.NotEmpty(score.Lyrics);
         Assert.All(score.Lyrics, l => Assert.Equal(0, l.MeasureIndex));

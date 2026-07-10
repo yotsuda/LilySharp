@@ -13,8 +13,8 @@ section Main {
   m { c'4 d e f | voice { g'2@f a } voice { c2@p d }  | e'4 d c2 | }
 }
 
-structure { Main }
+form main { Main }
 
-score "voice-dynamics-mid" {
+score main "voice-dynamics-mid" {
   staff m
 }

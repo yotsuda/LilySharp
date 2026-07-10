@@ -48,8 +48,8 @@ public class SpacingInvariantTests
     private const string OneMeasure = """
         time 4/4
         section Main { melody { c2 d4 e | } }
-        structure { Main }
-        score "x" { staff melody }
+        form main { Main }
+        score main "x" { staff melody }
         """;
 
     [Fact]
@@ -115,8 +115,8 @@ public class SpacingInvariantTests
         var src = """
             time 4/4
             section Main { melody { R1 | c4 d e f | } }
-            structure { Main }
-            score "x" { staff melody }
+            form main { Main }
+            score main "x" { staff melody }
             """;
         var (timings, allMeasures, primary, _) = Collect(src, measureIndex: 0);
         var springs = new MeasureLayouter().CreateTimingSprings(primary, timings, 0.125, allMeasures);
@@ -144,8 +144,8 @@ public class SpacingInvariantTests
               rh { R1 | R1 | }
               lh { c8 d e f g a b c | R1 | }
             }
-            structure { Main }
-            score "x" { staff rh staff lh }
+            form main { Main }
+            score main "x" { staff rh staff lh }
             """;
         var (timings0, all0, primary0, _) = Collect(src, measureIndex: 0);
         var (timings1, all1, primary1, _) = Collect(src, measureIndex: 1);

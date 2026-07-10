@@ -31,6 +31,6 @@ section Main {
   }
 }
 
-structure { Main }
+form main { Main }
 
-score "x" { grandStaff { staff rh staff lh } }
+score main "x" { grandStaff { staff rh staff lh } }

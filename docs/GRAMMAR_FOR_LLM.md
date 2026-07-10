@@ -35,9 +35,9 @@ section Main {                  // a section binds music to each part by name
   leftHand  { c2 c | g2 g | }
 }
 
-structure { Main }              // playback/print order of sections
+form main { Main }              // playback/print order of sections
 
-score "out" {                   // one or more render blocks
+score main "out" {                   // one or more render blocks
   grandStaff {
     staff rightHand             // 'staff NAME' — bare name, no braces
     staff leftHand
@@ -55,8 +55,8 @@ A minimal single-staff document:
 ```
 part melody { clef treble }
 section Main { melody { c4 d e f | g2 g | } }
-structure { Main }
-score "out" { staff melody }
+form main { Main }
+score main "out" { staff melody }
 ```
 
 ## Pitches
@@ -157,7 +157,7 @@ below the staff — the parser rejects it). Placement applies only to dynamic le
   defaults to the highest ending number; set it with `*N`. The opening `[` is required
   (a bare `1. ...` ending is rejected); the closing `]` is optional — write it to draw
   the right cap (closed ending), omit it to leave the ending open. Section-level endings
-  in a `structure { }` repeat use the same `[N. Section]` form.
+  in a `form main { }` repeat use the same `[N. Section]` form.
 
 ```
 |: c4 d e f | [1. g2 g | ] :| [2. a2 a | ]
@@ -226,14 +226,14 @@ section Main {
   chords prog  { c2 g:7 | a:m f | c1 :| }     // C G7 | Am F | C (repeat)
   lyrics words { Twin- kle | lit- tle | star | }
 }
-structure { Main }
-score "sheet" { chords prog lyrics words }     // chords + lyrics rows, no staff
+form main { Main }
+score main "sheet" { chords prog lyrics words }     // chords + lyrics rows, no staff
 ```
 
 ## Structure: reuse and navigation
 
 ```
-structure { Intro Main Main "Main (reprise)" Coda }   // string = custom section label
+form main { Intro Main Main "Main (reprise)" Coda }   // string = custom section label
 ```
 
 Navigation marks sit between section names. Signs `segno` / `coda` engrave at the start
@@ -241,23 +241,26 @@ of the following section; text directives `fine`, `to coda`, `dc`/`ds` (and `dc 
 `ds al coda`) engrave at the end of the section just played.
 
 ```
-structure { A segno  B to coda  C ds al coda  coda D }
+form main { A segno  B to coda  C ds al coda  coda D }
 ```
 
 In-note marks: `c4@mark("A")` (rehearsal mark), `@segno @coda @fine @dc @ds`,
 text spanners `@rit` / `@accel`, ottava `@ottava` / `@ottava(bassa)` ... `@loco`,
 trill spanner `@startTrillSpan` ... `@stopTrillSpan`, 15ma `@quindicesima` / `@quindicesima(bassa)`, pedals `@ped` ... `@ped(off)`,
 `@ped`/`@ped.off`, `@sost`/`@sost.off` (release = `.off`), `@una.corda`/`@tre.corde` (the traditional pair; tre corde IS the release, like an
-argument). (`@ds al fine` etc. is the navigation form used inside `structure { }`.)
+argument). (`@ds al fine` etc. is the navigation form used inside `form main { }`.)
 
-## Per-score structure
+## Multiple forms (excerpts)
 
-A `score` may carry its own `structure { ... }` to render a different arrangement
-(e.g. a practice excerpt); it overrides the top-level structure for that score only.
+Declare several named forms and bind each `score` to one by name. The reserved
+form `main` writes to the input file's name; any other form name becomes the
+output file name (unless a `"basename"` overrides it).
 
 ```
-structure { Intro Verse Outro }
-score practice { structure { Intro } staff melody }
+form main { Intro Verse Outro }
+form practice { Verse }
+score main { staff melody }
+score practice { staff melody }
 ```
 
 ## Override / revert (engraving properties)

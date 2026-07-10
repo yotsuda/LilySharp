@@ -50,8 +50,8 @@ public class VsqxExportShapeTests
         var root = Export("""
             part m { clef treble }
             section A { m { c4 d e f | g1 } }
-            structure { A }
-            score x { staff m }
+            form main { A }
+            score main { staff m }
             """);
         var notes = Notes(root);
         Assert.Equal(5, notes.Count);
@@ -73,8 +73,8 @@ public class VsqxExportShapeTests
               m { c4 d e f | }
               lyrics { la le li lo | }
             }
-            structure { A }
-            score x { staff m }
+            form main { A }
+            score main { staff m }
             """);
         var notes = Notes(root);
         Assert.Equal(4, notes.Count);
@@ -88,8 +88,8 @@ public class VsqxExportShapeTests
         var root = Export("""
             part m { clef treble }
             section A { m { c4 d e f | } }
-            structure { A }
-            score x { staff m }
+            form main { A }
+            score main { staff m }
             """);
         Assert.Equal("vsq4", root.Name.LocalName);
         Assert.Equal(Ns, root.Name.Namespace);

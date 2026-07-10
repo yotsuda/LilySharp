@@ -23,8 +23,8 @@ section Main {
   }
 }
 
-structure { Main }
+form main { Main }
 
-score "lyrics" {
+score main "lyrics" {
   staff melody
 }

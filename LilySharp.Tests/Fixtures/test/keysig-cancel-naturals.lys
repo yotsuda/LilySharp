@@ -8,7 +8,7 @@ part melody {
   section A { key a major a1 | }
   section B { key f major bes1 | }
 }
-structure { A B }
-score "score" {
+form main { A B }
+score main "score" {
   staff melody
 }

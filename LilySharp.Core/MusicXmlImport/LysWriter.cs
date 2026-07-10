@@ -76,7 +76,7 @@ internal static class LysWriter
             WriteFlatSection(sb, doc, report, useRelative);
 
         // ---- score: one staff per part; split staves regroup into a grand staff ----
-        sb.Append("score \"imported\" {\n");
+        sb.Append("score main \"imported\" {\n");
         for (int gi = 0; gi < doc.Parts.Count;)
         {
             var group = doc.Parts[gi].StaffGroup;
@@ -115,7 +115,7 @@ internal static class LysWriter
             foreach (var line in WriteLyrics(lyricPart, 0, lyricPart.Measures.Count))
                 sb.Append("  ").Append(line).Append('\n');
         sb.Append("}\n\n");
-        sb.Append("structure { A }\n\n");
+        sb.Append("form main { A }\n\n");
     }
 
     // A first/second-ending layout: the music splits into named sections and the
@@ -140,7 +140,7 @@ internal static class LysWriter
                     sb.Append("  ").Append(line).Append('\n');
             sb.Append("}\n\n");
         }
-        sb.Append("structure {\n  ").Append(layout.Structure).Append("\n}\n\n");
+        sb.Append("form main {\n  ").Append(layout.Structure).Append("\n}\n\n");
     }
 
     private sealed record VoltaSegment(string Name, int Start, int End);

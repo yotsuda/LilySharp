@@ -25,9 +25,9 @@ section Main {
   lh { r8 e a | r8 e gis }
 }
 
-structure { Main }
+form main { Main }
 
-score "timesig-grandstaff" {
+score main "timesig-grandstaff" {
   grandStaff {
     staff rh
     staff lh

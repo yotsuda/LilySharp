@@ -29,8 +29,8 @@ section Main {
   melody { $correct $tooShort $tooLong }
 }
 
-structure { Main }
+form main { Main }
 
-score "barcheck" {
+score main "barcheck" {
   staff melody
 }

@@ -19,8 +19,8 @@ section Main {
   melody { $ficta }
 }
 
-structure { Main }
+form main { Main }
 
-score "editorial-accidental" {
+score main "editorial-accidental" {
   staff melody
 }

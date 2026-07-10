@@ -9,5 +9,5 @@ section Main {
   chords prog { c2 g:7 | a:m    | f2 g:7 | c1   | }
   lyrics words { Twin- kle lit- tle | star how I | won- der what | you~ | }
 }
-structure { Main }
-score "lead-sheet" { chords prog lyrics words }
+form main { Main }
+score main "lead-sheet" { chords prog lyrics words }

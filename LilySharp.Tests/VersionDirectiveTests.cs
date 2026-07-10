@@ -40,7 +40,7 @@ public class VersionDirectiveTests
     [Fact]
     public void NoDirectiveMeansNullVersion()
     {
-        var tree = SyntaxTree.Parse("part m { section A { c4 } }\nstructure { A }\nscore \"s\" { staff m }");
+        var tree = SyntaxTree.Parse("part m { section A { c4 } }\nform main { A }\nscore \"s\" { staff m }");
         Assert.False(tree.HasErrors);
         Assert.Null(tree.DeclaredVersion);
     }

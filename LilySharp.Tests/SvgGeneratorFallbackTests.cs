@@ -31,9 +31,9 @@ public sealed class SvgGeneratorFallbackTests
     private const string TwoScores =
         "part bl { clef bass tuning bass }\n" +
         "section A { bl { c4 d e f | } }\n" +
-        "structure { A }\n" +
-        "score { staff bl  tab bl }\n" +
-        "score tab2 { tab bl }\n";
+        "form main { A }\n" +
+        "score main { staff bl  tab bl }\n" +
+        "score main { tab bl }\n";
 
     [Fact]
     public void UnknownRenderName_FallsBackToFirstScore()

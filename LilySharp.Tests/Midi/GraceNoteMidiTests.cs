@@ -46,8 +46,8 @@ public class GraceNoteMidiTests
             octave absolute
             part m { clef treble }
             section A { m { grace { <c' e'>16 } d'4 | } }
-            structure { A }
-            score x { staff m }
+            form main { A }
+            score main { staff m }
             """);
         // Before the fix the grace chord was dropped whole (OfType<NoteSyntax>),
         // leaving only the main d'. Now both chord members sound as grace notes.
@@ -69,15 +69,15 @@ public class GraceNoteMidiTests
             octave absolute
             part m { clef treble }
             section A { m { grace { c'{{dur}} } d'4 | } }
-            structure { A }
-            score x { staff m }
+            form main { A }
+            score main { staff m }
             """).OrderBy(n => n.StartTick).First().DurationTicks;
         int NoteDur(string dur) => ExportNotes($$"""
             octave absolute
             part m { clef treble }
             section A { m { c'{{dur}} } }
-            structure { A }
-            score x { staff m }
+            form main { A }
+            score main { staff m }
             """).First().DurationTicks;
 
         // Each grace item's sounding time is 9/40 of its written value (checked
@@ -101,8 +101,8 @@ public class GraceNoteMidiTests
             octave absolute
             part m { clef treble }
             section A { m { grace { d'16 e' } f'4 | } }
-            structure { A }
-            score x { staff m }
+            form main { A }
+            score main { staff m }
             """).OrderBy(n => n.StartTick).ToList();
         Assert.Equal(3, notes.Count);
         Assert.Equal(notes[0].DurationTicks, notes[1].DurationTicks); // e' == d' (both 16th → same 9/40 length)
@@ -115,15 +115,15 @@ public class GraceNoteMidiTests
             octave absolute
             part m { clef treble }
             section A { m { grace { c'16 } d'4 | } }
-            structure { A }
-            score x { staff m }
+            form main { A }
+            score main { staff m }
             """).OrderBy(n => n.StartTick).ToList();
         int quarter = ExportNotes("""
             octave absolute
             part m { clef treble }
             section A { m { d'4 } }
-            structure { A }
-            score x { staff m }
+            form main { A }
+            score main { staff m }
             """).First().DurationTicks;
 
         Assert.Equal(2, notes.Count);
@@ -144,8 +144,8 @@ public class GraceNoteMidiTests
         int DAfter(string body) => ExportNotes($$"""
             part m { clef treble }
             section A { m { {{body}} } }
-            structure { A }
-            score x { staff m }
+            form main { A }
+            score main { staff m }
             """).OrderByDescending(n => n.StartTick).First().Pitch; // the trailing d
 
         // `grace { g'16 }` and a plain `g'16` before the d reference the same pitch,

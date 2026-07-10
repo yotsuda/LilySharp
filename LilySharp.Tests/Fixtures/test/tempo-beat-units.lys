@@ -24,8 +24,8 @@ section D {
       c8 d e f g f e d | }
 }
 
-structure { A B C D }
+form main { A B C D }
 
-score "tempo-beat-units" {
+score main "tempo-beat-units" {
   staff m
 }

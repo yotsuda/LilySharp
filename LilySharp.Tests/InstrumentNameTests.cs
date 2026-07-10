@@ -38,8 +38,8 @@ public class InstrumentNameTests
 part violin { name: Violin }
 phrase m { c4 d e f }
 section A { violin { $m } }
-structure { A }
-score ""test"" { staff violin }
+form main { A }
+score main ""test"" { staff violin }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -55,8 +55,8 @@ score ""test"" { staff violin }
 part vln1 { name: ""Violin I"" }
 phrase m { c4 d e f }
 section A { vln1 { $m } }
-structure { A }
-score ""test"" { staff vln1 }
+form main { A }
+score main ""test"" { staff vln1 }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -72,8 +72,8 @@ score ""test"" { staff vln1 }
 part melody { clef treble }
 phrase m { c4 d e f }
 section A { melody { $m } }
-structure { A }
-score ""test"" { staff melody }
+form main { A }
+score main ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -91,8 +91,8 @@ part lh { clef bass }
 phrase rhM { c4 d e f }
 phrase lhM { c,4 d e f }
 section A { rh { $rhM } lh { $lhM } }
-structure { A }
-score ""test"" { grandStaff { staff rh staff lh } }
+form main { A }
+score main ""test"" { grandStaff { staff rh staff lh } }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -113,8 +113,8 @@ part vln { clef treble  name: Violin }
 part vla { clef alto  name: Viola }
 phrase m { c4 d e f }
 section A { vln { $m } vla { $m } }
-structure { A }
-score ""test"" { staff vln staff vla }
+form main { A }
+score main ""test"" { staff vln staff vla }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -133,8 +133,8 @@ part vln { clef treble  name: ""Violin I"" }
 part vla { clef alto  name: Viola }
 phrase m { c4 d e f }
 section A { vln { $m } vla { $m } }
-structure { A }
-score ""test"" { staff vln staff vla }
+form main { A }
+score main ""test"" { staff vln staff vla }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };

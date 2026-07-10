@@ -16,9 +16,9 @@ section Main {
   bot { c'4 b a g | f2 e2 | }
 }
 
-structure { Main }
+form main { Main }
 
-score "voice-dynamics-multistaff" {
+score main "voice-dynamics-multistaff" {
   staff top
   staff bot
 }

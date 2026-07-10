@@ -74,11 +74,11 @@ section A {
     }
 }
 
-structure {
+form main {
     |: A | [1. A] :| [2. A]
 }
 
-score ""test"" {
+score main ""test"" {
     staff treble melody
 }
 ";

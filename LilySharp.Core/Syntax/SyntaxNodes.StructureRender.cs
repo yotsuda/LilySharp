@@ -107,7 +107,8 @@ public sealed partial class PartBlockSyntax : SyntaxNode
 }
 
 /// <summary>
-/// Represents a structure declaration: structure { ... }
+/// Represents a form declaration: <c>form Name { ... }</c> (the surface keyword
+/// is <c>form</c>; the node kind stays "Structure" internally).
 /// </summary>
 public sealed partial class StructureDeclarationSyntax : SyntaxNode
 {
@@ -116,8 +117,16 @@ public sealed partial class StructureDeclarationSyntax : SyntaxNode
     {
     }
 
-    /// <summary>The <c>structure</c> keyword token.</summary>
+    /// <summary>The <c>form</c> keyword token.</summary>
     public SyntaxTokenNode StructureKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>The form's name token (e.g. <c>Main</c>), or null when a malformed
+    /// declaration omitted it. Names are case-sensitive.</summary>
+    public SyntaxTokenNode? Name =>
+        GetChild(1) is SyntaxTokenNode { Kind: not SyntaxKind.OpenBrace } t ? t : null;
+
+    /// <summary>The form's name text, or empty when absent.</summary>
+    public string NameText => Name?.Text ?? "";
 }
 
 /// <summary>
@@ -426,8 +435,45 @@ public sealed partial class RenderDeclarationSyntax : SyntaxNode
     {
     }
 
-    /// <summary>The <c>render</c> keyword token.</summary>
+    /// <summary>The <c>score</c> keyword token.</summary>
     public SyntaxTokenNode RenderKeyword => (SyntaxTokenNode)GetChild(0)!;
+
+    /// <summary>
+    /// The form this score renders — the bare-identifier reference right after
+    /// <c>score</c> (`score Main …`), or null when omitted (a validator error).
+    /// A quoted string is the basename, never the form name.
+    /// </summary>
+    public SyntaxTokenNode? FormName => LeadingToken(basename: false);
+
+    /// <summary>The form name text, or empty when absent.</summary>
+    public string FormNameText => FormName?.Text ?? "";
+
+    /// <summary>
+    /// The optional output basename — the quoted string in the header
+    /// (`score Main "clean" …`), or null. Extension, if written, is dropped.
+    /// </summary>
+    public SyntaxTokenNode? Basename => LeadingToken(basename: true);
+
+    /// <summary>The basename text with surrounding quotes stripped, or null.</summary>
+    public string? BasenameText => Basename?.Text.Trim('"');
+
+    // Header tokens before the '{' are, in source order, an optional form-name
+    // (any bare token) and an optional basename (a string literal); the transpose
+    // is a property NODE, not a token, so it never matches here.
+    private SyntaxTokenNode? LeadingToken(bool basename)
+    {
+        for (int i = 1; i < SlotCount; i++)
+        {
+            if (GetChild(i) is not SyntaxTokenNode t)
+                continue;
+            if (t.Kind == SyntaxKind.OpenBrace)
+                break;
+            bool isString = t.Kind == SyntaxKind.StringLiteral;
+            if (isString == basename)
+                return t;
+        }
+        return null;
+    }
 
     /// <summary>
     /// The optional per-score <c>transpose &lt;pitch&gt;</c> (a property node before the

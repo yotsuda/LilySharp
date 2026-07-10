@@ -16,8 +16,8 @@ section Main {
   lh { c4 grace { fis16 } g4 <c e g>4@arpeggio grace { aes16 } b4 | }
 }
 
-structure { Main }
+form main { Main }
 
-score "single-staff-arpeggio-grace" {
+score main "single-staff-arpeggio-grace" {
   staff lh
 }

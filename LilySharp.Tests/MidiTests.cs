@@ -329,8 +329,8 @@ lyrics { Hap -- py birth -- day }
         var source = @"
 part clar { clef treble transpose d }
 section Main { clar { c4 d e } }
-structure { Main }
-score ""x"" { staff clar }";
+form main { Main }
+score main ""x"" { staff clar }";
         var tree = SyntaxTree.Parse(source);
         var midi = new MidiExporter().Export(tree);
         var notes = midi.Tracks[1].Notes;
@@ -348,8 +348,8 @@ score ""x"" { staff clar }";
         var source = @"
 part lower { clef bass transpose c, }
 section Main { lower { c4 d e } }
-structure { Main }
-score ""x"" { staff lower }";
+form main { Main }
+score main ""x"" { staff lower }";
         var tree = SyntaxTree.Parse(source);
         var midi = new MidiExporter().Export(tree);
         var notes = midi.Tracks[1].Notes;
@@ -369,8 +369,8 @@ tempo 120
 time 4/4
 part m { clef treble }
 section Main { m { c4 d e f | tempo 160 g a b c } }
-structure { Main }
-score ""x"" { staff m }";
+form main { Main }
+score main ""x"" { staff m }";
         var tree = SyntaxTree.Parse(source);
         var midi = new MidiExporter().Export(tree);
         var tempos = midi.Tracks[0].TempoChanges; // conductor track

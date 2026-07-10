@@ -49,7 +49,7 @@ public class CrossPartMeasureValidationTests
               rh { c4 d e f g | c4 d e f g | c4 d e f g | }
               lh { c2 g2 c4 | c2 g2 c4 | c2 g2 c4 | }
             }
-            structure { Main }
+            form main { Main }
             """);
         Assert.Empty(diags);
     }
@@ -66,7 +66,7 @@ public class CrossPartMeasureValidationTests
               rh { c4 d e f g | c4 d e f g | c4 d e f g | }
               lh { c2 g2 c4 | c2 g2 | c2 g2 c4 | }
             }
-            structure { Main }
+            form main { Main }
             """);
         var incomplete = diags.Where(d => d.Code == DiagnosticCodes.MeasureIncomplete).ToList();
         var mismatch = diags.Where(d => d.Code == DiagnosticCodes.MeasureDurationMismatch).ToList();
@@ -86,7 +86,7 @@ public class CrossPartMeasureValidationTests
               rh { c4 | c4 d e f | }
               lh { c2 | c4 d e f | }
             }
-            structure { Main }
+            form main { Main }
             """);
         var mismatch = diags.Where(d => d.Code == DiagnosticCodes.MeasureDurationMismatch).ToList();
         Assert.Single(mismatch);
@@ -104,7 +104,7 @@ public class CrossPartMeasureValidationTests
               rh { c4 | c4 d e f | }
               lh { e4 | c4 d e f | }
             }
-            structure { Main }
+            form main { Main }
             """);
         Assert.All(diags, d => Assert.Equal(DiagnosticCodes.PickupWithoutPartial, d.Code));
     }
@@ -122,7 +122,7 @@ public class CrossPartMeasureValidationTests
               rh { $pa }
               lh { $pb }
             }
-            structure { Main }
+            form main { Main }
             """);
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.MeasureDurationMismatch);
     }
@@ -139,7 +139,7 @@ public class CrossPartMeasureValidationTests
               time 3/4
               lh { c4 d e | }
             }
-            structure { Main }
+            form main { Main }
             """);
         Assert.Contains(diags, d => d.Code == DiagnosticCodes.ConflictingTimeSignatures);
     }
@@ -154,7 +154,7 @@ public class CrossPartMeasureValidationTests
             section Main {
               melody { c4 | c4 d e f | g2 a4 | c1 | }
             }
-            structure { Main }
+            form main { Main }
             """);
         Assert.Single(diags.Where(d => d.Code == DiagnosticCodes.MeasureIncomplete));
         // The bare quarter-note pickup additionally gets the declare-it nudge.

@@ -42,16 +42,16 @@ public sealed class PartMajorTests
           section Intro { c4 d e f | }
           section Verse { g4 a b c | }
         }
-        structure { Intro Verse }
-        score "x" { tab bl }
+        form main { Intro Verse }
+        score main "x" { tab bl }
         """;
 
     private const string SectionMajor = """
         part bl { clef bass tuning bass }
         section Intro { bl { c4 d e f | } }
         section Verse { bl { g4 a b c | } }
-        structure { Intro Verse }
-        score "x" { tab bl }
+        form main { Intro Verse }
+        score main "x" { tab bl }
         """;
 
     [Fact]
@@ -83,7 +83,7 @@ public sealed class PartMajorTests
               section Intro { c4 d e f | }
               section Verse { g4 a b c | }
             }
-            score "x" { tab bl }
+            score main "x" { tab bl }
             """);
         Assert.Equal(new[] { "Intro", "Verse" }, labels);
     }
@@ -94,8 +94,8 @@ public sealed class PartMajorTests
         var tree = SyntaxTree.Parse("""
             part rh { clef treble  section A { c'4 d' e' f' | } }
             part lh { clef bass     section A { c4 g, c, g, | } }
-            structure { A }
-            score "x" { staff rh  staff lh }
+            form main { A }
+            score main "x" { staff rh  staff lh }
             """);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
     }
@@ -126,8 +126,8 @@ public sealed class PartMajorTests
         v.Validate(SyntaxTree.Parse("""
             part rh { section A { c'4 } }
             part lh { section A { c4 } }
-            structure { A }
-            score "x" { staff rh  staff lh }
+            form main { A }
+            score main "x" { staff rh  staff lh }
             """));
         Assert.Empty(v.Diagnostics);
     }

@@ -2,5 +2,5 @@
 // not at the notation pitch height. The two ties below are on different strings.
 part bl { clef bass tuning bass }
 section A { bl { a4\4~ a\4 r2 | d4\3~ d\3 r2 | } }
-structure { A }
-score { tab bl }
+form main { A }
+score main { tab bl }

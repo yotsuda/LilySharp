@@ -33,8 +33,8 @@ public class NoteheadHitTargetTests
 {
     private const string Doc = """
         part m { clef treble section A { c'4 d' } }
-        structure { A }
-        score "s" { staff m }
+        form main { A }
+        score main "s" { staff m }
         """;
 
     private static string Render(SvgRenderOptions options)
@@ -76,7 +76,7 @@ public class NoteheadHitTargetTests
         // onto the loose accidental glyph box. It is emitted pointer-events="none"
         // (keeps data-pos), so only the notehead's nh-hit rect owns the click.
         var svg = SvgGenerator.Generate(SyntaxTree.Parse(
-            "part m { clef treble section A { cis'4 } }\nstructure { A }\nscore \"s\" { staff m }"),
+            "part m { clef treble section A { cis'4 } }\nform main { A }\nscore \"s\" { staff m }"),
             SvgRenderOptions.Preview());
 
         // The accidental is a non-clickable music glyph that still carries data-pos.

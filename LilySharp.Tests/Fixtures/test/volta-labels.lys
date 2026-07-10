@@ -14,8 +14,8 @@ phrase pb { g''4 a'' b'' c''' }
 section A { mel { $pa } }
 section B { mel { $pb } }
 
-structure { A |: B | [1. B "first"] :| [2. B "second"] | A "A2" }
+form main { A |: B | [1. B "first"] :| [2. B "second"] | A "A2" }
 
-score "volta-labels" {
+score main "volta-labels" {
   staff mel
 }

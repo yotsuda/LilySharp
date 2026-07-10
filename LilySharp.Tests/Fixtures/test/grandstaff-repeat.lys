@@ -25,9 +25,9 @@ section Main {
   lh { $lhBass }
 }
 
-structure { Main }
+form main { Main }
 
-score "grandstaff-repeat" {
+score main "grandstaff-repeat" {
   grandStaff {
     staff rh
     staff lh

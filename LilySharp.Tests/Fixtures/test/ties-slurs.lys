@@ -34,8 +34,8 @@ section Main {
   melody { $ties $slurs $tieDirection }
 }
 
-structure { Main }
+form main { Main }
 
-score "ties-slurs" {
+score main "ties-slurs" {
   staff melody
 }

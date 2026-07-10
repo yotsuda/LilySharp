@@ -32,7 +32,7 @@ public sealed class TabRangeValidatorTests
     {
         var v = new TabRangeValidator();
         v.Validate(SyntaxTree.Parse(
-            "part bl { clef bass tuning bass }\nsection A { bl { " + body + " } }\nstructure { A }\nscore { tab bl }\n"));
+            "part bl { clef bass tuning bass }\nsection A { bl { " + body + " } }\nform main { A }\nscore { tab bl }\n"));
         return v.Diagnostics;
     }
 
@@ -57,7 +57,7 @@ public sealed class TabRangeValidatorTests
         // The check only applies to tab renders; a staff score never warns.
         var v = new TabRangeValidator();
         v.Validate(SyntaxTree.Parse(
-            "part bl { clef bass }\nsection A { bl { a,,4 r2. | } }\nstructure { A }\nscore { staff bl }\n"));
+            "part bl { clef bass }\nsection A { bl { a,,4 r2. | } }\nform main { A }\nscore { staff bl }\n"));
         Assert.Empty(v.Diagnostics);
     }
 }

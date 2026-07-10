@@ -448,8 +448,8 @@ c4 d e f";
 key c major
 part melody { clef treble transpose d }
 section Main { melody { c4 d e } }
-structure { Main }
-score ""x"" { staff melody }";
+form main { Main }
+score main ""x"" { staff melody }";
         var tree = SyntaxTree.Parse(source);
         var xml = new MusicXmlExporter().Export(tree);
         var measure = xml.Parts[0].Measures[0];
@@ -476,8 +476,8 @@ tempo 120
 time 4/4
 part m { clef treble }
 section Main { m { c4 d e f | tempo 160 g a b c } }
-structure { Main }
-score ""x"" { staff m }";
+form main { Main }
+score main ""x"" { staff m }";
         var tree = SyntaxTree.Parse(source);
         var xml = new MusicXmlExporter().Export(tree);
         var measures = xml.Parts[0].Measures;

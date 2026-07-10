@@ -21,5 +21,5 @@ section Main {
     c2 a2:m | f2 g2:m7.5- |
   }
 }
-structure { Main }
-score "chordnames" { staff m }
+form main { Main }
+score main "chordnames" { staff m }

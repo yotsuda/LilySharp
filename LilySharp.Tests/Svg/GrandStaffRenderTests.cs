@@ -41,9 +41,9 @@ public class GrandStaffRenderTests
               bass { $lh }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "test" {
+            score main "test" {
               grandStaff {
                 staff treble melody
                 staff bass bass
@@ -85,9 +85,9 @@ public class GrandStaffRenderTests
               bass { $lh }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "test" {
+            score main "test" {
               grandStaff {
                 staff treble melody
                 staff bass bass
@@ -131,9 +131,9 @@ public class GrandStaffRenderTests
               bass { $lh }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "test" {
+            score main "test" {
               grandStaff {
                 staff treble melody
                 staff bass bass

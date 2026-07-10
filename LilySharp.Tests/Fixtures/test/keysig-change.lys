@@ -24,6 +24,6 @@ section A { melody { $m1 } }
 section B { melody { $m2 } }
 section C { melody { $m3 } }
 
-structure { A B C }
+form main { A B C }
 
-score "keysig-change" { staff melody }
+score main "keysig-change" { staff melody }

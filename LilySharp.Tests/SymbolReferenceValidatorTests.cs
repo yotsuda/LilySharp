@@ -72,7 +72,7 @@ $intro
     {
         var source = @"
 section Intro { c4 d e f | }
-structure {
+form main {
     Intro
     NonExistent
 }
@@ -93,7 +93,7 @@ structure {
         var source = @"
 section Intro { c4 d e f | }
 section Verse { g4 a b c | }
-structure {
+form main {
     Intro
     Verse
 }
@@ -110,7 +110,7 @@ structure {
     public void Validate_MultipleUndefinedReferences_ReportsAll()
     {
         var source = @"
-structure {
+form main {
     Section1
     Section2
 }

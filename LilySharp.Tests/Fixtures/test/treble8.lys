@@ -28,9 +28,9 @@ section Main {
   }
 }
 
-structure { Main }
+form main { Main }
 
-score "treble8" {
+score main "treble8" {
   staff gtr
   staff tnr
   staff t8

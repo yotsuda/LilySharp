@@ -13,6 +13,6 @@ section Main {
   }
 }
 
-structure { Main }
+form main { Main }
 
-score "scripts-stem-support" { staff m }
+score main "scripts-stem-support" { staff m }

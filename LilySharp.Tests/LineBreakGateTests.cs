@@ -48,7 +48,7 @@ public class LineBreakGateTests
             ? single.Staff.VoiceName
             : null;
         var score = new MeasureCollector { ScoreTranspose = spec?.ScoreTranspose }
-            .Collect(tree, voiceName, spec?.LocalStructure);
+            .Collect(tree, voiceName, spec?.Form);
         double shortest = SpacingRules.CalculateCommonShortestDuration(score);
         return KnuthPlassBreaker.ComputeMeasureSpringData(score.Voice.Measures, shortest);
     }
@@ -59,8 +59,8 @@ public class LineBreakGateTests
         part melody { clef treble }
         phrase p { {{phraseBody}} }
         section Main { melody { $p } }
-        structure { Main }
-        score "x" { staff melody }
+        form main { Main }
+        score main "x" { staff melody }
         """;
 
     [Fact]

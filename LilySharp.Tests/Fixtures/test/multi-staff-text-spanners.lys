@@ -10,5 +10,5 @@ section S {
   top { c'4@rit c'4 c'4 c'4 | c'4@accel c'4 c'4 c'4 | }
   low { c4@rit c4 c4 c4 | c4@accel c4 c4 c4 | }
 }
-structure { S }
-score "multi-staff-text-spanners" { staff top staff low }
+form main { S }
+score main "multi-staff-text-spanners" { staff top staff low }

@@ -21,8 +21,8 @@ section A {
   lyrics { Mu- sic fills the | air to- night so | ev- 'ry- one will | sing a- long | }
 }
 
-structure { A }
+form main { A }
 
-score "lead-sheet" {
+score main "lead-sheet" {
   staff melody
 }

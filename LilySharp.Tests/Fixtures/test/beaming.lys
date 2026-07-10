@@ -33,8 +33,8 @@ section Main {
   melody { $beamsWithRests $eighthBeams $sixteenthBeams $mixedBeams }
 }
 
-structure { Main }
+form main { Main }
 
-score "beaming" {
+score main "beaming" {
   staff melody
 }

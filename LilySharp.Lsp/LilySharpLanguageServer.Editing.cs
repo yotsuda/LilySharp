@@ -392,13 +392,13 @@ public sealed partial class LilySharpLanguageServer
             if (firstRender != null)
             {
                 offset = firstRender.Position;
-                newText = $"structure {{ {names} }}\n\n";
+                newText = $"form main {{ {names} }}\n\n";
             }
             else
             {
                 var last = sections[^1];
                 offset = last.Position + last.FullWidth;
-                newText = $"\nstructure {{ {names} }}\n";
+                newText = $"\nform main {{ {names} }}\n";
             }
             var (insLine, insChar) = GetLineAndCharacter(doc.Text, offset);
             actions.Add(new CodeAction

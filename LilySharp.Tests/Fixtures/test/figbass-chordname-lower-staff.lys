@@ -14,9 +14,9 @@ section Main {
   bot { c4@chord(c:m7) d@fig(6) e@fig(6 4) f | g1@chord(g:7) | }
 }
 
-structure { Main }
+form main { Main }
 
-score "figbass-chordname-lower-staff" {
+score main "figbass-chordname-lower-staff" {
   staff top
   staff bot
 }

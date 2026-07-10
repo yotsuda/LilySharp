@@ -28,8 +28,8 @@ section Main {
   melody { $triplets $tripletsHigh $mixedTuplets }
 }
 
-structure { Main }
+form main { Main }
 
-score "tuplets" {
+score main "tuplets" {
   staff melody
 }

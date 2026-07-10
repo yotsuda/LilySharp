@@ -15,9 +15,9 @@ section Main {
   bot { c4@p d e f | g1@f | }
 }
 
-structure { Main }
+form main { Main }
 
-score "dynamics-lower-staff" {
+score main "dynamics-lower-staff" {
   staff top
   staff bot
 }

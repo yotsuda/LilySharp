@@ -16,9 +16,9 @@ section Main {
   bot { c4@staccato d@accent e@tenuto f@marcato | g4@trill a@mordent b c | }
 }
 
-structure { Main }
+form main { Main }
 
-score "articulations-lower-staff" {
+score main "articulations-lower-staff" {
   staff top
   staff bot
 }

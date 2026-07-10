@@ -40,8 +40,8 @@ public class SectionReferenceFinderTests
               section A { c4 d e f | }
               section B { g4 a b c | }
             }
-            structure { A B A }
-            score "s" { staff m }
+            form main { A B A }
+            score main "s" { staff m }
             """);
 
         // decl + two plays of A in the structure (A B A).
@@ -58,8 +58,8 @@ public class SectionReferenceFinderTests
               section A { c4 d e f | }
               section B { g4 a b c | }
             }
-            structure { A |: B :| [1. ~A] [2. B] }
-            score "s" { staff m }
+            form main { A |: B :| [1. ~A] [2. B] }
+            score main "s" { staff m }
             """);
 
         // A: decl + plain + volta-silent [1. ~A].
@@ -73,8 +73,8 @@ public class SectionReferenceFinderTests
     {
         var src = """
             part m { section A { c4 } }
-            structure { A "A (reprise)" }
-            score "s" { staff m }
+            form main { A "A (reprise)" }
+            score main "s" { staff m }
             """;
         var root = Root(src);
 
@@ -88,9 +88,9 @@ public class SectionReferenceFinderTests
     [Fact]
     public void CaretOnReferenceResolvesToTheName()
     {
-        var src = "part m { section Intro { c4 } }\nstructure { Intro }\nscore \"s\" { staff m }";
+        var src = "part m { section Intro { c4 } }\nform main { Intro }\nscore \"s\" { staff m }";
         var root = Root(src);
-        // Caret on the reference inside structure { Intro }.
+        // Caret on the reference inside form main { Intro }.
         int caret = src.LastIndexOf("Intro") + 2;
         var tok = SectionReferenceFinder.SectionNameTokenAt(root, caret);
         Assert.NotNull(tok);

@@ -35,8 +35,8 @@ public class LyricPartSectionsTests
         part melody { clef treble }
         section A { melody { c4 c g' g | a a g2 | } lyrics { Twin- kle twin- kle | lit- tle star | } }
         section B { melody { g'4 g f f | e e d2 | } lyrics { how I won- der | what you are | } }
-        structure { A B }
-        score "s" { staff melody }
+        form main { A B }
+        score main "s" { staff melody }
         """;
 
     private const string PartMajor = """
@@ -50,8 +50,8 @@ public class LyricPartSectionsTests
           section A { Twin- kle twin- kle | lit- tle star | }
           section B { how I won- der | what you are | }
         }
-        structure { A B }
-        score "s" { staff melody }
+        form main { A B }
+        score main "s" { staff melody }
         """;
 
     [Fact]
@@ -78,7 +78,7 @@ public class LyricPartSectionsTests
     [Fact]
     public void LyricTrack_RepeatsUnderAReprise()
     {
-        // structure { A B A "A2" }: A's verse must reappear at the A2 reprise.
+        // form main { A B A "A2" }: A's verse must reappear at the A2 reprise.
         var tree = SyntaxTree.Parse("""
             time 4/4
             key c major
@@ -87,8 +87,8 @@ public class LyricPartSectionsTests
               section B { f'4 f' e' e' | }
             }
             lyrics { section A { Twin- kle | star | } section B { how | } }
-            structure { A B A "A2" }
-            score s { staff melody }
+            form main { A B A "A2" }
+            score main { staff melody }
             """);
         var score = new MeasureCollector().Collect(tree, "melody");
         var byMeasure = score.Lyrics

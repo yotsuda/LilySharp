@@ -25,9 +25,9 @@ section Main {
   }
 }
 
-structure { Main }
+form main { Main }
 
-score "multi-measure-rest-grandstaff" {
+score main "multi-measure-rest-grandstaff" {
   staff melody
   staff lh
 }

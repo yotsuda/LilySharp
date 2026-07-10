@@ -11,5 +11,5 @@ section Main {
     c4@breath d e f | g a@caesura b c |
   }
 }
-structure { Main }
-score "breath-marks" { staff m }
+form main { Main }
+score main "breath-marks" { staff m }

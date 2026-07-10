@@ -46,7 +46,7 @@ public class MeasureContextChainTests
             ? single.Staff.VoiceName
             : null;
         return new MeasureCollector { ScoreTranspose = spec?.ScoreTranspose }
-            .Collect(tree, voiceName, spec?.LocalStructure);
+            .Collect(tree, voiceName, spec?.Form);
     }
 
     // Single section, exact measure indices, one change of each kind:
@@ -65,8 +65,8 @@ public class MeasureContextChainTests
           time 3/4 c4 d e |
         }
         section Main { melody { $p } }
-        structure { Main }
-        score "x" { staff melody }
+        form main { Main }
+        score main "x" { staff melody }
         """;
 
     [Fact]
@@ -114,8 +114,8 @@ public class MeasureContextChainTests
             part melody { clef treble }
             phrase p { c4 d e f | g4 a b c | d4 e f g | }
             section Main { melody { $p } }
-            structure { Main }
-            score "x" { staff melody }
+            form main { Main }
+            score main "x" { staff melody }
             """;
         var score = Collect(source);
         var chain = MeasureContextChain.Compute(score);

@@ -48,9 +48,9 @@ section Main {
   leftHand { $lhAccomp $lhPedal }
 }
 
-structure { Main }
+form main { Main }
 
-score "03-piano" {
+score main "03-piano" {
   grandStaff {
     staff rightHand
     staff leftHand

@@ -36,7 +36,7 @@ public sealed class TabStringNumberTests
     private static NoteItem FirstNote(string body)
     {
         var src = "part bl { clef bass }\nsection Main {\n  bl {\n" + body + "\n  }\n}\n" +
-                  "structure { Main }\nscore \"x\" { staff bl }\n";
+                  "form main { Main }\nscore \"x\" { staff bl }\n";
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src));
         return score.Voice.Measures[0].Items.OfType<NoteItem>().First();
     }
@@ -93,7 +93,7 @@ public sealed class TabStringNumberTests
     private static (Score Score, MeasureCollector Collector) CollectBody(string body)
     {
         var src = "part bl { clef bass }\nsection Main {\n  bl {\n" + body + "\n  }\n}\n" +
-                  "structure { Main }\nscore \"x\" { staff bl }\n";
+                  "form main { Main }\nscore \"x\" { staff bl }\n";
         var collector = new MeasureCollector();
         var score = collector.Collect(SyntaxTree.Parse(src));
         return (score, collector);
@@ -139,7 +139,7 @@ public sealed class TabStringNumberTests
     private static List<NoteItem> TabNotes(string body)
     {
         var src = "part bl { clef bass }\nsection Main {\n  bl {\n" + body + "\n  }\n}\n" +
-                  "structure { Main }\nscore \"x\" { staff bass bl tab bass bl }\n";
+                  "form main { Main }\nscore \"x\" { staff bass bl tab bass bl }\n";
         var tree = SyntaxTree.Parse(src);
         var spec = RenderSpecParser.FindFirst(tree)!;
         var multi = new MeasureCollector().CollectMultiStaff(tree, spec);
@@ -193,7 +193,7 @@ public sealed class TabStringNumberTests
         // occupancy) and not mark it used, so two could collide on one line. Every
         // chord member must still get its own string.
         var src = "part bl { clef bass }\nsection Main {\n  bl {\n <c,,,, e,,,, g,,,,>4 r r r |\n  }\n}\n" +
-                  "structure { Main }\nscore \"x\" { tab bass bl }\n";
+                  "form main { Main }\nscore \"x\" { tab bass bl }\n";
         var tree = SyntaxTree.Parse(src);
         var spec = RenderSpecParser.FindFirst(tree)!;
         var multi = new MeasureCollector().CollectMultiStaff(tree, spec);
@@ -222,7 +222,7 @@ public sealed class TabStringNumberTests
         // `tab bl` with no tuning takes it from the part's `tuning bass5`.
         var tab = RenderStaff(
             "part bl { clef bass tuning bass5 }\nsection Main { bl { a4 b c d | } }\n" +
-            "structure { Main }\nscore \"x\" { tab bl }\n", wantTab: true);
+            "form main { Main }\nscore \"x\" { tab bl }\n", wantTab: true);
         Assert.Equal(TuningType.Bass5, tab.Tuning);
     }
 
@@ -231,7 +231,7 @@ public sealed class TabStringNumberTests
     {
         var tab = RenderStaff(
             "part bl { clef bass tuning bass }\nsection Main { bl { a4 b c d | } }\n" +
-            "structure { Main }\nscore \"x\" { tab bass6 bl }\n", wantTab: true);
+            "form main { Main }\nscore \"x\" { tab bass6 bl }\n", wantTab: true);
         Assert.Equal(TuningType.Bass6, tab.Tuning);
     }
 
@@ -240,7 +240,7 @@ public sealed class TabStringNumberTests
     {
         var notation = RenderStaff(
             "part bl { clef bass tuning bass }\nsection Main { bl { a4 b c d | } }\n" +
-            "structure { Main }\nscore \"x\" { staff bl  tab bl }\n", wantTab: false);
+            "form main { Main }\nscore \"x\" { staff bl  tab bl }\n", wantTab: false);
         Assert.Equal(ClefType.Bass, notation.Clef);
     }
 
@@ -250,7 +250,7 @@ public sealed class TabStringNumberTests
         // A lone `tab` (no paired `staff`) must still render as a tab staff, not
         // fall back to a plain notation staff.
         var src = "part bl { clef bass }\nsection Main {\n  bl {\n a4\\4 b4 c4 d4 |\n  }\n}\n" +
-                  "structure { Main }\nscore \"x\" { tab bass bl }\n";
+                  "form main { Main }\nscore \"x\" { tab bass bl }\n";
         var tree = SyntaxTree.Parse(src);
         var spec = RenderSpecParser.FindFirst(tree)!;
         Assert.True(spec.IsMultiStaff);
@@ -275,7 +275,7 @@ public sealed class TabStringNumberTests
         // drifts every following note's SourcePosition by 1 per \N, which silently
         // broke the editor<->preview note mapping on tab scores.
         var src = "part bl { clef bass }\nsection Main {\n  bl {\n r4 a4\\4 b4\\3 c4 |\n  }\n}\n" +
-                  "structure { Main }\nscore \"x\" { staff bl }\n";
+                  "form main { Main }\nscore \"x\" { staff bl }\n";
         var notes = Notes(new MeasureCollector().Collect(SyntaxTree.Parse(src)));
         Assert.Equal(src.IndexOf("b4") - src.IndexOf("a4"),
             notes[1].SourcePosition - notes[0].SourcePosition);
@@ -287,7 +287,7 @@ public sealed class TabStringNumberTests
     public void TabTieStringValidator_SurfacesConflict()
     {
         var src = "part bl { clef bass }\nsection Main {\n  bl {\n a4\\4~ a4\\3 b4 |\n  }\n}\n" +
-                  "structure { Main }\nscore \"x\" { staff bl }\n";
+                  "form main { Main }\nscore \"x\" { staff bl }\n";
         var validator = new TabTieStringValidator();
         validator.Validate(SyntaxTree.Parse(src));
         var d = Assert.Single(validator.Diagnostics);

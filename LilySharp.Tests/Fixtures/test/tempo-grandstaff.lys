@@ -20,9 +20,9 @@ section Main {
   leftHand  { c4 tempo 90 e g c | }
 }
 
-structure { Main }
+form main { Main }
 
-score "tempo-grandstaff" {
+score main "tempo-grandstaff" {
   grandStaff {
     staff rightHand
     staff leftHand

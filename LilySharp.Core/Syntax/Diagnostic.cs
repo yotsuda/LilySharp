@@ -224,6 +224,12 @@ public static class DiagnosticCodes
     public const string MarkLabelNotQuoted = "LYS1009";
     /// <summary>Semantic error: multiple structure declarations were found.</summary>
     public const string MultipleStructureDeclarations = "LYS1015";
+    /// <summary>Semantic error: a <c>form</c> was declared without a name.</summary>
+    public const string UnnamedForm = "LYS1016";
+    /// <summary>Semantic error: two forms share the same name.</summary>
+    public const string DuplicateFormName = "LYS1017";
+    /// <summary>Semantic error: a <c>score</c> references a form that is missing or undeclared.</summary>
+    public const string UnknownFormReference = "LYS1018";
     /// <summary>Semantic error: invalid barline placement for a volta repeat.</summary>
     public const string VoltaRepeatBarlinePlacement = "LYS1010";
 

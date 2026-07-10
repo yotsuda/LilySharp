@@ -18,8 +18,8 @@ section Main {
   }
 }
 
-structure { Main }
+form main { Main }
 
-score "voice-mixed" {
+score main "voice-mixed" {
   staff m
 }

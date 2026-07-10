@@ -22,8 +22,8 @@ section Main {
   lyrics alt { Low part deep   | slow now | }
 }
 
-structure { Main }
+form main { Main }
 
-score "named-voices" {
+score main "named-voices" {
   staff m
 }

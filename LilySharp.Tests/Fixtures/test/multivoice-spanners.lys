@@ -14,5 +14,5 @@ section S {
     voice { e'4@glissando g' g'( e') | f'4 f'~ f' f' | }
   }
 }
-structure { S }
-score "multivoice-spanners" { staff mel }
+form main { S }
+score main "multivoice-spanners" { staff mel }

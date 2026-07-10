@@ -18,8 +18,8 @@ section Main {
   bass_part { $test }
 }
 
-structure { Main }
+form main { Main }
 
-score "bass-clef" {
+score main "bass-clef" {
   staff bass_part
 }

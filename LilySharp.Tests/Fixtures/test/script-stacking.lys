@@ -17,7 +17,7 @@ phrase stack {
 }
 
 section Main { melody { $stack } }
-structure { Main }
-score "script-stacking" {
+form main { Main }
+score main "script-stacking" {
   staff melody
 }

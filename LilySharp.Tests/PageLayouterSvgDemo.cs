@@ -55,9 +55,9 @@ public class PageLayouterSvgDemo
         section Dev { melody { $theme2 } }
         section Recap { melody { $theme3 } }
 
-        structure { Intro Dev Recap Intro Dev Recap }
+        form main { Intro Dev Recap Intro Dev Recap }
 
-        score "demo" { staff melody }
+        score main "demo" { staff melody }
         """;
 
     [Fact]

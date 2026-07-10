@@ -7,5 +7,5 @@ section Main {
   rh { $top }
   lh { $bottom }
 }
-structure { Main }
-score "x" { grandStaff { staff rh staff lh } }
+form main { Main }
+score main "x" { grandStaff { staff rh staff lh } }

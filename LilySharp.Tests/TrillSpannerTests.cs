@@ -53,8 +53,8 @@ public class TrillSpannerTests
 part melody { clef treble }
 phrase m { c'4@startTrillSpan d e f@stopTrillSpan | }
 section A { melody { $m } }
-structure { A }
-score ""test"" { staff melody }
+form main { A }
+score main ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -83,8 +83,8 @@ score ""test"" { staff melody }
 part melody { clef treble }
 phrase m { c'4@startTrillSpan d e f | g4 a b c'@stopTrillSpan | }
 section A { melody { $m } }
-structure { A }
-score ""test"" { staff melody }
+form main { A }
+score main ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var singleScore = new MeasureCollector().Collect(tree, "melody");
@@ -103,8 +103,8 @@ score ""test"" { staff melody }
 part melody { clef treble }
 phrase m { c'4@startTrillSpan d@stopTrillSpan e4@startTrillSpan f@stopTrillSpan | }
 section A { melody { $m } }
-structure { A }
-score ""test"" { staff melody }
+form main { A }
+score main ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var singleScore = new MeasureCollector().Collect(tree, "melody");
@@ -128,8 +128,8 @@ score ""test"" { staff melody }
 part melody { clef treble }
 phrase m { c'4@startTrillSpan d e f@stopTrillSpan | g4 a b c' | }
 section A { melody { $m } }
-structure { A }
-score ""test"" { staff melody }
+form main { A }
+score main ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -155,8 +155,8 @@ score ""test"" { staff melody }
 part melody { clef treble }
 phrase m { c'4@trillSpan(start) d e f@trillSpan(stop) | g4 a b c' | }
 section A { melody { $m } }
-structure { A }
-score ""test"" { staff melody }
+form main { A }
+score main ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var singleScore = new MeasureCollector().Collect(tree, "melody");
@@ -177,8 +177,8 @@ score ""test"" { staff melody }
 part melody { clef treble }
 phrase m { c'4@startTrillSpan d e f | }
 section A { melody { $m } }
-structure { A }
-score ""test"" { staff melody }
+form main { A }
+score main ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var singleScore = new MeasureCollector().Collect(tree, "melody");

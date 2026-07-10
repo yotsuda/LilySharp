@@ -194,7 +194,9 @@ public sealed class MusicXmlExporter
     private void ProcessSections(SyntaxNode root)
     {
         var sectionDecls = root.DescendantNodes().OfType<SectionDeclarationSyntax>().ToList();
-        var structure = root.DescendantNodes().OfType<StructureDeclarationSyntax>().FirstOrDefault();
+        // Export the PRIMARY form (`main`, else the first declared).
+        var forms = root.DescendantNodes().OfType<StructureDeclarationSyntax>().ToList();
+        var structure = forms.FirstOrDefault(f => f.NameText == "main") ?? forms.FirstOrDefault();
 
         if (structure == null)
         {

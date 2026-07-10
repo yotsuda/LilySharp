@@ -143,8 +143,7 @@ public sealed class MidiExporter
                 _partDecls.TryAdd(pd.Name.Text, pd); // first-wins, matching the old first-match scans
         }
         _scoreTransposeDefault = PartTranspose.ReadScoreDefault(_root);
-        _structureDriven = _root.DescendantNodes().OfType<StructureDeclarationSyntax>()
-            .Any(s => !IsInsideRender(s));
+        _structureDriven = _root.DescendantNodes().OfType<StructureDeclarationSyntax>().Any();
         _structurePlayed = false;
         _partPitchLanes.Clear();
         _sourceOrdinals = new Dictionary<int, int>();
@@ -187,13 +186,14 @@ public sealed class MidiExporter
                     PlaySection(sectionDecl, track, conductorTrack);
                 break;
 
-            case StructureDeclarationSyntax structureDecl:
-                // The top-level structure (score-local ones belong to their
-                // render block and are ignored for MIDI, like `render`).
-                if (!_structurePlayed && !IsInsideRender(structureDecl))
+            case StructureDeclarationSyntax formDecl:
+                // A file may declare several named forms; MIDI plays the PRIMARY
+                // one (`main`, else the first declared) so the .mid matches the
+                // canonical arrangement.
+                if (!_structurePlayed && IsPrimaryForm(formDecl))
                 {
                     _structurePlayed = true;
-                    PlayStructure(structureDecl, track, conductorTrack);
+                    PlayStructure(formDecl, track, conductorTrack);
                 }
                 break;
 
@@ -335,13 +335,13 @@ public sealed class MidiExporter
         }
     }
 
-    /// <summary>True when the node sits inside a `score`/render declaration.</summary>
-    private static bool IsInsideRender(SyntaxNode node)
+    /// <summary>True when <paramref name="form"/> is the PRIMARY form to play: the
+    /// one named <c>main</c> (case-sensitive), or the first declared if none is.</summary>
+    private bool IsPrimaryForm(StructureDeclarationSyntax form)
     {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is RenderDeclarationSyntax)
-                return true;
-        return false;
+        var forms = _root!.DescendantNodes().OfType<StructureDeclarationSyntax>().ToList();
+        var primary = forms.FirstOrDefault(f => f.NameText == "main") ?? forms.FirstOrDefault();
+        return ReferenceEquals(form, primary);
     }
 
     /// <summary>

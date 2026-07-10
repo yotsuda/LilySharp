@@ -39,8 +39,8 @@ public class LilyPondExporterTests
           tuning bass
           section Main { c,4 d, e@dead fis, | g,8\4 a, b, c~ c r2 | }
         }
-        structure { ~Main }
-        score { staff bl  tab bl }
+        form main { ~Main }
+        score main { staff bl  tab bl }
         """;
 
     [Fact]
@@ -86,7 +86,7 @@ public class LilyPondExporterTests
     private static string ExportNote(string note) => Export($$"""
         octave absolute
         part bl { clef bass section S { {{note}} } }
-        structure { ~S }
-        score { staff bl }
+        form main { ~S }
+        score main { staff bl }
         """);
 }

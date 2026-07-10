@@ -17,8 +17,8 @@ section Main {
   low { c4 d e f | g a b c' | c' b a g | f e d c | }
 }
 
-structure { Main }
+form main { Main }
 
-score "octave-base" {
+score main "octave-base" {
   staff low
 }

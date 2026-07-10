@@ -43,8 +43,8 @@ public class ClefChangeTests
 part melody { clef treble }
 phrase m { c'4 d clef bass c,4 d | }
 section A { melody { $m } }
-structure { A }
-score ""test"" { staff melody }
+form main { A }
+score main ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -84,8 +84,8 @@ score ""test"" { staff melody }
 part melody { clef treble }
 phrase m { c'4 d clef treble_8 c4 d | }
 section A { melody { $m } }
-structure { A }
-score ""x"" { staff melody }
+form main { A }
+score main ""x"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
@@ -108,8 +108,8 @@ score ""x"" { staff melody }
 part gtr { clef treble_8 }
 phrase m { c'4 d e f | }
 section A { gtr { $m } }
-structure { A }
-score ""x"" { staff gtr }
+form main { A }
+score main ""x"" { staff gtr }
 ";
         var tree = SyntaxTree.Parse(source);
         var svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
@@ -129,8 +129,8 @@ score ""x"" { staff gtr }
 part melody { clef treble }
 phrase m { c'4 d clef treble_8 c4 d | }
 section A { melody { $m } }
-structure { A }
-score ""x"" { staff melody }
+form main { A }
+score main ""x"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var svg = SvgGenerator.Generate(tree, new SvgRenderOptions { EmbedFont = false });
@@ -155,8 +155,8 @@ score ""x"" { staff melody }
 part melody { clef treble }
 phrase m { c'4 d e f | clef bass c,4 d e f | clef treble c'4 d e f | }
 section A { melody { $m } }
-structure { A }
-score ""test"" { staff melody }
+form main { A }
+score main ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var spec = RenderSpecParser.FindFirst(tree);
@@ -202,8 +202,8 @@ score ""test"" { staff melody }
 part melody { clef treble }
 phrase m { c'4 d e f | g4 a clef bass c,4 d | }
 section A { melody { $m } }
-structure { A }
-score ""test"" { staff melody }
+form main { A }
+score main ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -224,8 +224,8 @@ score ""test"" { staff melody }
 part melody { clef treble }
 phrase m { c'4 d e f | g4 a b c' | clef bass c,4 d e f | g4 a b c | e4 f g a | b4 c d e | g4 a b c | e4 f g a | }
 section A { melody { $m } }
-structure { A }
-score ""test"" { staff melody }
+form main { A }
+score main ""test"" { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };

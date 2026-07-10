@@ -60,9 +60,9 @@ section Main {
   }
 }
 
-structure { Main }
+form main { Main }
 
-score "fur-elise" {
+score main "fur-elise" {
   grandStaff {
     staff rh
     staff lh

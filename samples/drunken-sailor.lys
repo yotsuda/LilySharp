@@ -27,13 +27,13 @@ section Verse {
   }
 }
 
-structure { Verse }
+form main { Verse }
 
-score "drunken-sailor-sheet" {
+score main "drunken-sailor-sheet" {
   chords prog
   lyrics words
 }
 
-score "drunken-sailor-lyrics" {
+score main "drunken-sailor-lyrics" {
   lyrics words
 }

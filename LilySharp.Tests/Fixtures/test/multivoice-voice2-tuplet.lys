@@ -13,5 +13,5 @@ section S {
     voice { tuplet 3/2 { e'8 f' g' } a' b' c'' b' a' g' | }
   }
 }
-structure { S }
-score "multivoice-voice2-tuplet" { staff mel }
+form main { S }
+score main "multivoice-voice2-tuplet" { staff mel }

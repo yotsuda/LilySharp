@@ -91,14 +91,14 @@ section Main {
   leftHand  { c2 g, | c g, | }
 }
 
-score {
+score main {
   grandStaff {
     staff treble { rightHand }
     staff bass { leftHand }
   }
 }
 
-structure { Main }
+form main { Main }
 ```
 
 ## Reusing Phrases

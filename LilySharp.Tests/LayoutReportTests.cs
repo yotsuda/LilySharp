@@ -45,10 +45,10 @@ public class LayoutReportTests
             "    e4 f g a | b2. r4 |\n" +
             "  }\n" +
             "}\n" +
-            "structure { Main }\n" +
-            "score \"brk\" { staff melody }\n");
+            "form main { Main }\n" +
+            "score main \"brk\" { staff melody }\n");
 
-        Assert.Contains("score \"brk\"", report);
+        Assert.Contains("score main \"brk\"", report);
         Assert.Contains("3 systems", report);
         Assert.Contains("systems 1-3: 2 bars each (bars 1-6)", report);
         Assert.Contains("forced breaks after bar: 2, 4", report);
@@ -60,8 +60,8 @@ public class LayoutReportTests
         var report = Report(
             "part melody\n" +
             "section Main { melody { c4 d e f | g4 a b c' | c'4 b a g | f4 e d c | } }\n" +
-            "structure { Main }\n" +
-            "score \"one\" { staff melody }\n");
+            "form main { Main }\n" +
+            "score main \"one\" { staff melody }\n");
 
         Assert.Contains("1 system, 4 bars", report);
         Assert.Contains("system 1: bars 1-4", report);
@@ -79,8 +79,8 @@ public class LayoutReportTests
             "  time 3/4 g4 a b |\n" +
             "  time 6/8 a8 g f e d c |\n" +
             "} }\n" +
-            "structure { Main }\n" +
-            "score \"meter\" { staff melody }\n");
+            "form main { Main }\n" +
+            "score main \"meter\" { staff melody }\n");
 
         Assert.Contains("time 4/4 -> 3/4 (bar 2) -> 6/8 (bar 3)", report);
     }
@@ -91,18 +91,18 @@ public class LayoutReportTests
         var src =
             "part rh { clef treble }\n" +
             "section A { rh { c'4 d' e' f' | } }\n" +
-            "structure { A }\n" +
-            "score \"first\" { staff rh }\n" +
-            "score \"second\" { staff rh }\n";
+            "form main { A }\n" +
+            "score main \"first\" { staff rh }\n" +
+            "score main \"second\" { staff rh }\n";
         var tree = SyntaxTree.Parse(src);
 
         var firstOnly = LayoutReport.Generate(tree);
-        Assert.Contains("score \"first\"", firstOnly);
-        Assert.DoesNotContain("score \"second\"", firstOnly);
+        Assert.Contains("score main \"first\"", firstOnly);
+        Assert.DoesNotContain("score main \"second\"", firstOnly);
 
         var all = LayoutReport.Generate(tree, allScores: true);
-        Assert.Contains("score \"first\"", all);
-        Assert.Contains("score \"second\"", all);
+        Assert.Contains("score main \"first\"", all);
+        Assert.Contains("score main \"second\"", all);
     }
 
     [Fact]
@@ -112,8 +112,8 @@ public class LayoutReportTests
             "part rh { clef treble }\n" +
             "part lh { clef bass }\n" +
             "section A { rh { c'4 d' e' f' | } lh { c2 g, | } }\n" +
-            "structure { A }\n" +
-            "score \"gs\" { grandStaff { staff rh staff lh } }\n");
+            "form main { A }\n" +
+            "score main \"gs\" { grandStaff { staff rh staff lh } }\n");
 
         Assert.Contains("staves: treble, bass", report);
     }

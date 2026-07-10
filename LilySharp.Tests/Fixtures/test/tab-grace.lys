@@ -3,5 +3,5 @@
 // (fret 5 on string 4); the notation staff above shows it as a small notehead.
 part bl { clef bass tuning bass }
 section A { bl { grace { g16 } a1\4 | } }
-structure { A }
-score { staff bl  tab bl }
+form main { A }
+score main { staff bl  tab bl }

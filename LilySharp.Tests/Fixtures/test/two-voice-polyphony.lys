@@ -10,5 +10,5 @@ section Main {
     voice { g'2 a | b4 c b a | } voice { c4 d e f | g2 g | } 
   }
 }
-structure { Main }
-score "two-voice-polyphony" { staff m }
+form main { Main }
+score main "two-voice-polyphony" { staff m }

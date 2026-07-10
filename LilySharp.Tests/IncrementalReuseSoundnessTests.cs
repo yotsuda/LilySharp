@@ -70,8 +70,8 @@ public class IncrementalReuseSoundnessTests
         part melody { clef treble }
         phrase p { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
         section Main { melody { $p } }
-        structure { Main }
-        score "x" { staff melody }
+        form main { Main }
+        score main "x" { staff melody }
         """;
 
     private const string Header = """
@@ -83,8 +83,8 @@ public class IncrementalReuseSoundnessTests
         part melody { clef treble }
         phrase p { c8 d e f g a b c | g4 a b c | }
         section Main { melody { $p } }
-        structure { Main }
-        score "x" { staff melody }
+        form main { Main }
+        score main "x" { staff melody }
         """;
 
     private const string Lyrics = """
@@ -95,8 +95,8 @@ public class IncrementalReuseSoundnessTests
           melody { c4 d e f | g4 a b c | }
           lyrics { Twin- kle lit- tle | star how I you | }
         }
-        structure { Main }
-        score "x" { staff melody }
+        form main { Main }
+        score main "x" { staff melody }
         """;
 
     private const string GrandStaff = """
@@ -105,8 +105,8 @@ public class IncrementalReuseSoundnessTests
         part rh { clef treble name "Violin" }
         part lh { clef bass name "Cello" }
         section Main { rh { c4 d e f | g4 a b c | } lh { c4 d e f | g4 a b c | } }
-        structure { Main }
-        score "x" { grandStaff { staff rh staff lh } }
+        form main { Main }
+        score main "x" { grandStaff { staff rh staff lh } }
         """;
 
     // ---------------------------------------------------------------------
@@ -167,8 +167,8 @@ public class IncrementalReuseSoundnessTests
         part melody
         phrase p { voice { c'2 d | e2 f | } voice { a2 g | b2 a | } }
         section Main { melody { $p } }
-        structure { Main }
-        score "x" { staff melody }
+        form main { Main }
+        score main "x" { staff melody }
         """;
 
     [Fact]
@@ -211,8 +211,8 @@ public class IncrementalReuseSoundnessTests
         part melody
         phrase p { override Stem.length = 10 c4 d e f | revert Stem.length g4 a b c | }
         section Main { melody { $p } }
-        structure { Main }
-        score "x" { staff melody }
+        form main { Main }
+        score main "x" { staff melody }
         """;
 
     [Fact]

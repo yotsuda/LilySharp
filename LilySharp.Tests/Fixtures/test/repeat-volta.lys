@@ -31,11 +31,11 @@ section Ending2 {
 }
 
 // Structure with repeat and volta
-structure {
+form main {
   A
   |: B [1. Ending1] :| [2. Ending2]
 }
 
-score "repeat-volta" {
+score main "repeat-volta" {
   staff melody
 }

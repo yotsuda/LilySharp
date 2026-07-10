@@ -40,8 +40,8 @@ section Main {
   melody { $featheredAccel $featheredRit $nestedTuplet $percentRepeat $kneedBeam }
 }
 
-structure { Main }
+form main { Main }
 
-score "05-special-techniques" {
+score main "05-special-techniques" {
   staff melody
 }

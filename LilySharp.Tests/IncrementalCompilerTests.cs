@@ -38,8 +38,8 @@ public class IncrementalCompilerTests
         part melody { clef treble }
         phrase p { c4 d e f | g4 a b c | d4 e f g | a4 b c d | }
         section Main { melody { $p } }
-        structure { Main }
-        score "x" { staff melody }
+        form main { Main }
+        score main "x" { staff melody }
         """;
 
     private static string Full(string text) =>
@@ -126,8 +126,8 @@ public class IncrementalCompilerTests
             key c major
             part melody { clef treble }
             section Main { melody { c4 d e f | g4 a b c | } }
-            structure { Main }
-            score "x" { staff melody }
+            form main { Main }
+            score main "x" { staff melody }
             """;
         var tree = SyntaxTree.Parse(src);
         var session = new IncrementalCompiler(tree, Opt);
@@ -153,8 +153,8 @@ public class IncrementalCompilerTests
             part rh { clef treble name "Violin" }
             part lh { clef bass name "Cello" }
             section Main { rh { c4 d e f | g4 a b c | } lh { c4 d e f | g4 a b c | } }
-            structure { Main }
-            score "x" { grandStaff { staff rh staff lh } }
+            form main { Main }
+            score main "x" { grandStaff { staff rh staff lh } }
             """;
         var tree = SyntaxTree.Parse(src);
         var session = new IncrementalCompiler(tree, Opt);
@@ -183,8 +183,8 @@ public class IncrementalCompilerTests
               lyrics { Twin- kle lit- tle | star how I you |
               }
             }
-            structure { Main }
-            score "x" { staff melody }
+            form main { Main }
+            score main "x" { staff melody }
             """;
         var tree = SyntaxTree.Parse(withLyrics);
         var session = new IncrementalCompiler(tree, Opt);
@@ -210,8 +210,8 @@ public class IncrementalCompilerTests
             section Main {
               melody { g4@glissando c e@glissando b | c4 d e f | }
             }
-            structure { Main }
-            score "x" { staff melody }
+            form main { Main }
+            score main "x" { staff melody }
             """;
         var tree = SyntaxTree.Parse(withGliss);
         var session = new IncrementalCompiler(tree, Opt);
@@ -236,8 +236,8 @@ public class IncrementalCompilerTests
             section Main {
               melody { g4@finger(1) a@finger(2) b@finger(3) c@finger(4) | <c@finger(1) e@finger(3) g@finger(5)>4 d e f | }
             }
-            structure { Main }
-            score "x" { staff melody }
+            form main { Main }
+            score main "x" { staff melody }
             """;
         var tree = SyntaxTree.Parse(withFingering);
         var session = new IncrementalCompiler(tree, Opt);
@@ -264,8 +264,8 @@ public class IncrementalCompilerTests
             section Main {
               melody { c8 d e f g a b c | d8 e f g a b c d | }
             }
-            structure { Main }
-            score "x" { staff melody }
+            form main { Main }
+            score main "x" { staff melody }
             """;
         var tree = SyntaxTree.Parse(withBeams);
         var session = new IncrementalCompiler(tree, Opt);
@@ -291,8 +291,8 @@ public class IncrementalCompilerTests
             section Main {
               melody { c4@p d@cresc e f@f | g4@f a@decresc b c@p | }
             }
-            structure { Main }
-            score "x" { staff melody }
+            form main { Main }
+            score main "x" { staff melody }
             """;
         var tree = SyntaxTree.Parse(withHairpin);
         var session = new IncrementalCompiler(tree, Opt);

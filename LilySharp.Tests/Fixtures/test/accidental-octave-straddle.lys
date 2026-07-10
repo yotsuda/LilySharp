@@ -9,5 +9,5 @@ part m { clef treble }
 section Main {
   m { <eis' eis'' cis' cis''>1 | }
 }
-structure { Main }
-score "accidental-octave-straddle" { staff m }
+form main { Main }
+score main "accidental-octave-straddle" { staff m }

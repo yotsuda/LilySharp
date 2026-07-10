@@ -14,5 +14,5 @@ section Main {
     e4 f g a | g1 |
   }
 }
-structure { Main }
-score "partial-barnumber" { staff m }
+form main { Main }
+score main "partial-barnumber" { staff m }

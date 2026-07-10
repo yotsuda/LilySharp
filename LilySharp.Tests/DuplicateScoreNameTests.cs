@@ -26,40 +26,51 @@ namespace LilySharp.Tests;
 public sealed class DuplicateScoreNameTests
 {
     private const string Head =
-        "part bl { clef bass tuning bass }\nsection Main { bl { a4 b c d | } }\nstructure { Main }\n";
+        "part bl { clef bass tuning bass }\nsection Main { bl { a4 b c d | } }\n";
 
     [Fact]
-    public void ScoreName_MayBeABareIdentifier()
+    public void MainForm_WritesToInputStem()
     {
-        // `score foo { ... }` — no quotes needed for a simple name.
-        var tree = SyntaxTree.Parse(Head + "score foo { staff bl }\n");
+        var tree = SyntaxTree.Parse(Head + "form main { Main }\nscore main { staff bl }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
         var spec = RenderSpecParser.FindFirst(tree)!;
-        Assert.Equal("foo", spec.OutputFile);
+        Assert.Equal("", spec.OutputFile);   // `main` → derive the name from the input file
     }
 
     [Fact]
-    public void UnnamedScore_IsAllowed()
+    public void NonMainForm_NamesTheOutputFile()
     {
-        var tree = SyntaxTree.Parse(Head + "score { staff bl }\n");
+        var tree = SyntaxTree.Parse(Head + "form verse { Main }\nscore verse { staff bl }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        Assert.Equal("verse", spec.OutputFile);   // any non-`main` form name becomes the file name
     }
 
     [Fact]
-    public void DuplicateName_IsAnError()
+    public void ExplicitBasename_Wins()
     {
+        var tree = SyntaxTree.Parse(Head + "form main { Main }\nscore main \"clean\" { staff bl }\n");
+        var spec = RenderSpecParser.FindFirst(tree)!;
+        Assert.Equal("clean", spec.OutputFile);
+    }
+
+    [Fact]
+    public void DuplicateOutput_IsAnError()
+    {
+        // Two `main` scores with no basename both write the input stem — a collision.
         var v = new DuplicateScoreNameValidator();
-        v.Validate(SyntaxTree.Parse(Head + "score foo { staff bl }\nscore foo { tab bl }\n"));
+        v.Validate(SyntaxTree.Parse(Head + "form main { Main }\nscore main { staff bl }\nscore main { tab bl }\n"));
         var d = Assert.Single(v.Diagnostics);
         Assert.Equal(DiagnosticCodes.DuplicateScoreName, d.Code);
     }
 
     [Fact]
-    public void DistinctNames_AndOneUnnamed_AreClean()
+    public void DistinctOutputs_AreClean()
     {
         var v = new DuplicateScoreNameValidator();
         v.Validate(SyntaxTree.Parse(Head +
-            "score a { staff bl }\nscore b { tab bl }\nscore { staff bl }\n"));
+            "form main { Main }\nform verse { Main }\n"
+            + "score main { staff bl }\nscore verse { tab bl }\nscore main \"extra\" { staff bl }\n"));
         Assert.Empty(v.Diagnostics);
     }
 }

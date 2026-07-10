@@ -16,9 +16,9 @@ section Main {
   lh { c4 d e f | <c' e' g'>1 | }
 }
 
-structure { Main }
+form main { Main }
 
-score "grandstaff-high-bass" {
+score main "grandstaff-high-bass" {
   staff rh
   staff lh
 }

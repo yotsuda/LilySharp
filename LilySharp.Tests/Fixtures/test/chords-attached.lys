@@ -14,12 +14,12 @@ section Main {
   chords prog { c2 g:7 | a1:m | c1 | f1 | }
 }
 
-structure { Main }
+form main { Main }
 
-score "chords-attached" {
+score main "chords-attached" {
   staff melody with chords prog
 }
 
-score "chords-attached-grid" {
+score main "chords-attached-grid" {
   chords prog
 }

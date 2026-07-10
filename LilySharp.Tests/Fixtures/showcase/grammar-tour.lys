@@ -135,9 +135,9 @@ section D {
   lh { $p_bass $p_bass $p_bass }
 }
 
-structure { A B C D }
+form main { A B C D }
 
-score "grammar-tour" {
+score main "grammar-tour" {
   staff rh
   staff lh
 }

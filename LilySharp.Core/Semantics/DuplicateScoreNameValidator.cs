@@ -32,22 +32,26 @@ internal sealed class DuplicateScoreNameValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        var seen = new HashSet<string>();
+        var seen = new HashSet<string>(System.StringComparer.Ordinal);
         foreach (var render in tree.GetRoot().DescendantNodes().OfType<RenderDeclarationSyntax>())
         {
-            // Child 0 is the `score` keyword; child 1 is the name token or the brace.
-            var keyword = render.GetChild(0) as SyntaxTokenNode;
-            var nameToken = render.GetChild(1) is SyntaxTokenNode t && t.Kind != SyntaxKind.OpenBrace ? t : null;
-            string name = nameToken == null ? "" : nameToken.Text.Trim('"');
+            // The on-disk output name: an explicit "basename" wins; else the form
+            // `main` writes to the input stem (the "" key), and any other form name
+            // becomes the file name. Two scores sharing that key collide on disk.
+            string? basename = render.BasenameText;
+            string form = render.FormNameText;
+            string outputKey = !string.IsNullOrEmpty(basename) ? basename
+                : form == "main" ? "" : form;
 
-            if (seen.Add(name)) continue; // first time → fine
+            if (seen.Add(outputKey)) continue; // first time → fine
 
-            var tok = nameToken ?? keyword;
-            if (tok == null) continue;
-            string label = name.Length == 0 ? "the default (unnamed) score" : $"score name \"{name}\"";
+            SyntaxTokenNode tok = render.Basename ?? render.FormName ?? render.RenderKeyword;
+            string label = outputKey.Length == 0
+                ? "the input-file output (form 'main' with no basename)"
+                : $"output name \"{outputKey}\"";
             _diagnostics.Error(tok.Span,
                 DiagnosticCodes.DuplicateScoreName,
-                $"Duplicate {label}; each score must have a unique name");
+                $"Duplicate {label}; give one score a distinct \"basename\".");
         }
     }
 }

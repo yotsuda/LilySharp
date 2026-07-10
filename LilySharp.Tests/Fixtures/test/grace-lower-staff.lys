@@ -14,9 +14,9 @@ section Main {
   bot { grace { e16 f } g4 a b c | grace { d16 e } f2 g2 | }
 }
 
-structure { Main }
+form main { Main }
 
-score "grace-lower-staff" {
+score main "grace-lower-staff" {
   staff top
   staff bot
 }

@@ -43,8 +43,8 @@ section Main {
   melody { $graceDemo $slurTie $tupletDemo $glissDemo $arpeggioDemo }
 }
 
-structure { Main }
+form main { Main }
 
-score "02-ornaments" {
+score main "02-ornaments" {
   staff melody
 }

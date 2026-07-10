@@ -49,9 +49,9 @@ section Main {
   pianoLH { $bassLine }
 }
 
-structure { Main }
+form main { Main }
 
-score "instrument-defaults" {
+score main "instrument-defaults" {
   staff guitar
   staff tenorVoice
   grandStaff {

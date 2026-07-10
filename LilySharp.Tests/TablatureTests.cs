@@ -123,9 +123,9 @@ public class TablatureTests
                 }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "test" {
+            score main "test" {
                 staff treble guitar
                 tab standard guitar
             }
@@ -159,9 +159,9 @@ public class TablatureTests
                 }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "test" {
+            score main "test" {
                 tab standard melody
             }
             """;
@@ -197,9 +197,9 @@ public class TablatureTests
               }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "guitar-tab" {
+            score main "guitar-tab" {
               staff guitar
               tab standard guitar
             }

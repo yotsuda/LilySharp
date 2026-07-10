@@ -23,8 +23,8 @@ section Main {
   melody { $clefChanges }
 }
 
-structure { Main }
+form main { Main }
 
-score "clef-change" {
+score main "clef-change" {
   staff melody
 }

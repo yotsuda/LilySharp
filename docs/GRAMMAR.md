@@ -285,7 +285,7 @@ StructureItem  = SectionRef                        (* Identifier — shows the s
                ;
 
 (* A repeat volta ending inside a |: … :| repeat, referencing a section:
-   structure { |: A [1. D] :| [2. O] }
+   form main { |: A [1. D] :| [2. O] }
    The '[' is REQUIRED; the closing ']' is OPTIONAL — present draws the right cap
    (closed ending), absent leaves it open. *)
 StructureVolta = '[' , Integer , [ ( '-' | ',' ) , Integer ] , '.' , [ '~' ] , Identifier , [ ']' ] ;
@@ -295,12 +295,12 @@ NavMark        = 'segno' | 'coda' | 'fine' | 'to' 'coda'
                | 'ds' [ 'al' ( 'fine' | 'coda' ) ] ;
 
 (* Section reuse and a custom label:
-   structure { Intro Verse Verse "Verse (reprise)" Coda } *)
+   form main { Intro Verse Verse "Verse (reprise)" Coda } *)
 
 (* Navigation: signs (segno/coda) engrave at the START of the following section; text
    directives (fine, to coda, dc/ds, dc al fine, ds al coda) engrave at the END of the
    section just played:
-   structure { A segno  B to coda  C ds al coda  coda D } *)
+   form main { A segno  B to coda  C ds al coda  coda D } *)
 
 ================================================================================
 ## 7. Score (Output) Definition
@@ -326,16 +326,16 @@ StaffRender    = 'staff' , [ ClefName ] , PartRef , [ 'with' 'chords' PartRef ] 
                     row ('chords NAME'), so a progression is written once *)
 PartRef        = Identifier ;
 
-(* A 'score' may carry its OWN 'structure { … }' to render a different arrangement
+(* A 'score' may carry its OWN 'form main { … }' to render a different arrangement
    (e.g. a practice excerpt); it overrides the top-level structure for that score only. *)
 
 (* Examples:
 
-   score "full" {
+   score main "full" {
      grandStaff { staff rightHand  staff leftHand }
    }
 
-   score practice { structure { Intro } staff melody }
+   score main "practice" { form main { Intro } staff melody }
 *)
 
 ### 7.1 Lead sheets (chords and/or lyrics, no staff)
@@ -350,8 +350,8 @@ PartRef        = Identifier ;
      chords prog  { c2 g:7 | a:m f | c1 :| }
      lyrics words { Twin- kle | lit- tle | star | }
    }
-   structure { Main }
-   score "sheet" { chords prog lyrics words }
+   form main { Main }
+   score main "sheet" { chords prog lyrics words }
 *)
 
 ================================================================================
@@ -484,10 +484,10 @@ section Sheet {
   lyrics words { Twin- kle twin- kle | lit- tle | star | }
 }
 
-structure { Verse }
+form main { Verse }
 
-score "demo"  { staff melody }
-score "sheet" { structure { Sheet } chords prog lyrics words }
+score main "demo"  { staff melody }
+score main "sheet" { form main { Sheet } chords prog lyrics words }
 ```
 
 MIDI export: `lysc midi demo.lys demo.mid` (no score block needed).

@@ -30,8 +30,8 @@ section GMajor {
   bassLine { $gMajorBass }
 }
 
-structure { FMajor GMajor }
+form main { FMajor GMajor }
 
-score "keysig-bass" {
+score main "keysig-bass" {
   staff bassLine
 }

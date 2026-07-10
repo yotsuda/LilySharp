@@ -63,12 +63,12 @@ section Chorus {
   }
 }
 
-structure { Verse Chorus }
+form main { Verse Chorus }
 
-score "greensleeves" {
+score main "greensleeves" {
   staff melody with chords prog
 }
 
-score "greensleeves-grid" {
+score main "greensleeves-grid" {
   chords prog
 }

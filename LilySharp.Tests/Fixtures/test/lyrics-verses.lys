@@ -13,8 +13,8 @@ section Main {
   lyrics { Twas grace that taught | my~ heart | to fear and | grace~ | }
 }
 
-structure { Main }
+form main { Main }
 
-score "lyrics-verses" {
+score main "lyrics-verses" {
   staff melody
 }

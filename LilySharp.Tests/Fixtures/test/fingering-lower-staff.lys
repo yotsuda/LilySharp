@@ -15,9 +15,9 @@ section Main {
   bot { c4@finger(1) d@finger(2) e@finger(3) f@finger(5) | g1@finger(1) | }
 }
 
-structure { Main }
+form main { Main }
 
-score "fingering-lower-staff" {
+score main "fingering-lower-staff" {
   staff top
   staff bot
 }

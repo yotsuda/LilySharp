@@ -34,8 +34,8 @@ section Main {
   melody { $basicTriads $accidentalChords $seventhChords $mixedChords }
 }
 
-structure { Main }
+form main { Main }
 
-score "chords" {
+score main "chords" {
   staff melody
 }

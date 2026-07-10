@@ -46,7 +46,7 @@ public class MeasureContentKeyTests
             ? single.Staff.VoiceName
             : null;
         return new MeasureCollector { ScoreTranspose = spec?.ScoreTranspose }
-            .Collect(tree, voiceName, spec?.LocalStructure);
+            .Collect(tree, voiceName, spec?.Form);
     }
 
     // Intrinsic keys (items + structural fields only).
@@ -69,8 +69,8 @@ public class MeasureContentKeyTests
           a4 b c d |
         }
         section Main { melody { $p } }
-        structure { Main }
-        score "x" { staff melody }
+        form main { Main }
+        score main "x" { staff melody }
         """;
 
     [Fact]
@@ -104,8 +104,8 @@ public class MeasureContentKeyTests
               r1 |
             }
             section Main { melody { $p } }
-            structure { Main }
-            score "x" { staff melody }
+            form main { Main }
+            score main "x" { staff melody }
             """;
         var keys = Keys(source);
         Assert.Equal(4, keys.Length);

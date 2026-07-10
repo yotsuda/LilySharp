@@ -139,7 +139,7 @@ public static class SvgGenerator
             : null;
         var singleStaff = renderSpec is { Items.Length: 1 } && renderSpec.Items[0] is SingleStaffSpec s ? s.Staff : null;
         string? attachedChords = singleStaff?.WithChords;
-        var score = collector.Collect(tree, voiceName, renderSpec?.LocalStructure, attachedChords,
+        var score = collector.Collect(tree, voiceName, renderSpec?.Form, attachedChords,
             singleStaff?.ChordDisplay ?? ChordDisplayMode.Names);
 
         // The single-staff wrap used to drop the spec's instrument name — it

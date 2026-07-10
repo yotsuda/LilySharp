@@ -27,8 +27,8 @@ section Main {
   melody { $intro $verse $chorus }
 }
 
-structure { Main }
+form main { Main }
 
-score "phrases" {
+score main "phrases" {
   staff melody
 }

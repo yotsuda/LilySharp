@@ -39,9 +39,9 @@ public class RenderSpecTests
               bass { $lh }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "test" {
+            score main "test" {
               grandStaff {
                 staff treble melody
                 staff bass bass
@@ -55,8 +55,8 @@ public class RenderSpecTests
         var renderSpec = RenderSpecParser.FindFirst(tree);
 
         Assert.NotNull(renderSpec);
-        Assert.Equal("test", renderSpec.Name);       // name = the basename
-        Assert.Equal("test", renderSpec.OutputFile); // extension dropped (CLI picks format)
+        Assert.Equal("main", renderSpec.Name);       // Name = the form reference
+        Assert.Equal("test", renderSpec.OutputFile); // basename (extension dropped; CLI picks format)
         Assert.True(renderSpec.HasGrandStaff);
         Assert.Single(renderSpec.Items);
 
@@ -79,8 +79,8 @@ public class RenderSpecTests
             octave absolute
             part bass { clef bass }
             section A { bass { c1 } }
-            structure { A }
-            score s { staff bass }
+            form main { A }
+            score main { staff bass }
             """);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
@@ -93,7 +93,7 @@ public class RenderSpecTests
     [Fact]
     public void OmittedFilename_ParsesWithEmptyOutputFile()
     {
-        // The output filename is optional: `score { … }` is valid and
+        // The output filename is optional: `score main { … }` is valid and
         // yields an empty OutputFile, signalling the consumer to derive the name
         // from the input file (<input>.<ext>).
         var source = """
@@ -106,9 +106,9 @@ public class RenderSpecTests
               melody { $melody }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score {
+            score main {
               staff treble melody
             }
             """;
@@ -118,7 +118,7 @@ public class RenderSpecTests
 
         var renderSpec = RenderSpecParser.FindFirst(tree);
         Assert.NotNull(renderSpec);
-        Assert.Equal("score", renderSpec.Name);
+        Assert.Equal("main", renderSpec.Name);
         Assert.Equal("", renderSpec.OutputFile);
         Assert.Single(renderSpec.Items); // the staff still parses
     }
@@ -136,9 +136,9 @@ public class RenderSpecTests
               guitar { $melody }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "test" {
+            score main "test" {
               staff treble guitar
             }
             """;
@@ -149,7 +149,7 @@ public class RenderSpecTests
         var renderSpec = RenderSpecParser.FindFirst(tree);
 
         Assert.NotNull(renderSpec);
-        Assert.Equal("test", renderSpec.Name);
+        Assert.Equal("main", renderSpec.Name);
         Assert.False(renderSpec.HasGrandStaff);
         Assert.Single(renderSpec.Items);
 
@@ -166,7 +166,7 @@ public class RenderSpecTests
         // (bass), while the quoted label overrides the displayed instrument name.
         var tree = SyntaxTree.Parse(
             "part vc { instrument cello \"Cello I\" }\n" +
-            "section A { vc { c4 d e f } }\nstructure { A }\nscore \"s\" { staff vc }");
+            "section A { vc { c4 d e f } }\nform main { A }\nscore \"s\" { staff vc }");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics));
 
         var staff = (RenderSpecParser.FindFirst(tree)!.Items[0] as SingleStaffSpec)!.Staff;
@@ -191,9 +191,9 @@ public class RenderSpecTests
               bass { $lh }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "test" {
+            score main "test" {
               staff treble singer
               grandStaff {
                 staff treble melody
@@ -208,7 +208,7 @@ public class RenderSpecTests
         var renderSpec = RenderSpecParser.FindFirst(tree);
 
         Assert.NotNull(renderSpec);
-        Assert.Equal("test", renderSpec.Name);
+        Assert.Equal("main", renderSpec.Name);
         Assert.True(renderSpec.HasGrandStaff);
         Assert.True(renderSpec.IsMultiStaff);
         Assert.Equal(2, renderSpec.Items.Length);
@@ -239,9 +239,9 @@ public class RenderSpecTests
               leftHand { $dummy }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "test" {
+            score main "test" {
               staff treble singer
               grandStaff {
                 staff treble rightHand
@@ -278,9 +278,9 @@ public class RenderSpecTests
               bass { $lh }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "test" {
+            score main "test" {
               grandStaff {
                 staff treble melody
                 staff bass bass
@@ -317,9 +317,9 @@ public class RenderSpecTests
               bass { $lh }
             }
 
-            structure { Main }
+            form main { Main }
 
-            score "test" {
+            score main "test" {
               grandStaff {
                 staff treble melody
                 staff bass bass

@@ -165,7 +165,7 @@ short final line) print on their own. Explicit `break`s are listed separately
 **Example:**
 ```bash
 lysc layout score.lys
-# score "demo"
+# score main "demo"
 #   staves: treble, bass  |  time 4/4  |  10 systems, 40 bars
 #   system 1: bars 1-4     (4 bars)
 #   systems 2-3: 5 bars each (bars 5-14)

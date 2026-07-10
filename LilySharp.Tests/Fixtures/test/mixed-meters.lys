@@ -14,5 +14,5 @@ section Main {
     g8 a b c d e fis g a b |
   }
 }
-structure { Main }
-score "mixed-meters" { staff m }
+form main { Main }
+score main "mixed-meters" { staff m }

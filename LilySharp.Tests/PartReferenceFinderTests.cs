@@ -42,8 +42,8 @@ public class PartReferenceFinderTests
               rh { c4 d e f | }
               lh { c2 g | }
             }
-            structure { A }
-            score "s" {
+            form main { A }
+            score main "s" {
               grandStaff { staff rh  staff lh }
             }
             """);
@@ -60,7 +60,7 @@ public class PartReferenceFinderTests
         var src = """
             part lh { clef bass }
             section A { lh { c2 } }
-            score "s" { staff bass lh }
+            score main "s" { staff bass lh }
             """;
         var root = Root(src);
 
@@ -84,7 +84,7 @@ public class PartReferenceFinderTests
             part m { clef treble }
             chords ch { c1 }
             section A { m { c4 } }
-            score "s" { staff m with chords ch }
+            score main "s" { staff m with chords ch }
             """;
         var root = Root(src);
 
@@ -100,7 +100,7 @@ public class PartReferenceFinderTests
     {
         var root = Root("""
             section A { flute { c4 } }
-            score "s" { staff ~flute "Flöte" }
+            score main "s" { staff ~flute "Flöte" }
             """);
 
         // section block + staff render — the `~` suppressor and the "Flöte"
@@ -119,15 +119,15 @@ public class PartReferenceFinderTests
               melody { c4 d e f | }
               ossia_melody { r1 | }
             }
-            structure { A }
-            score "s" { staff melody  ossia ossia_melody }
+            form main { A }
+            score main "s" { staff melody  ossia ossia_melody }
             """);
         Assert.Equal(2, PartReferenceFinder.Occurrences(ossia, "ossia_melody").Count);
 
         var tab = Root("""
             part bl { clef treble_8 }
             section A { bl { c4 } }
-            score "s" { tab bl }
+            score main "s" { tab bl }
             """);
         Assert.Equal(3, PartReferenceFinder.Occurrences(tab, "bl").Count);
     }

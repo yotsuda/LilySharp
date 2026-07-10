@@ -45,7 +45,7 @@ public class InstrumentCompletionTests
     [InlineData("part m { instrument piano-", true)]     // hyphenated partial keeps the context
     [InlineData("lyrics { play my instrument ", false)]  // ordinary English word in lyrics
     [InlineData("title \"My instrument ", false)]        // inside a string literal
-    [InlineData("structure { instrument ", false)]       // structure body, not a part
+    [InlineData("form main { instrument ", false)]       // structure body, not a part
     [InlineData("section S { m { instrument ", false)]   // part REFERENCE body, not a declaration
     public void InstrumentContext_FiresOnlyInsideAPartBlock(string text, bool expected)
     {

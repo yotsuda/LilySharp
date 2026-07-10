@@ -21,9 +21,9 @@ section Main {
     }
 }
 
-structure { Main }
+form main { Main }
 
-score "ossia" {
+score main "ossia" {
     staff melody
     ossia ossia_melody
 }

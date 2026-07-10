@@ -38,8 +38,8 @@ public class SwingTempoTests
             body + "\n" +
             "part m { clef treble }\n" +
             "section A { m { c'4 d' e' f' | } }\n" +
-            "structure { A }\n" +
-            "score \"s\" { staff m }\n";
+            "form main { A }\n" +
+            "score main \"s\" { staff m }\n";
         var tree = SyntaxTree.Parse(src);
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
         return SvgGenerator.CollectScore(tree, RenderSpecParser.FindFirst(tree));
@@ -91,8 +91,8 @@ public class SwingTempoTests
             "part swing { clef treble }\n" +
             "phrase shuffle { c'4 d' e' f' | }\n" +
             "section A { swing { $shuffle } }\n" +
-            "structure { A }\n" +
-            "score \"s\" { staff swing }\n");
+            "form main { A }\n" +
+            "score main \"s\" { staff swing }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
     }
 }

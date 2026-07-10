@@ -29,8 +29,8 @@ section Main {
   melody { $basicDynamics $crescDecres $withArticulations }
 }
 
-structure { Main }
+form main { Main }
 
-score "dynamics" {
+score main "dynamics" {
   staff melody
 }

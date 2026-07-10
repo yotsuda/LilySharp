@@ -32,7 +32,7 @@ public class SymbolCaseValidatorTests
     // Wrap a part header body in a minimal complete document. `vln` is a plain
     // identifier part name (p / pp / mf … are reserved dynamics, not names).
     private static string Doc(string header) =>
-        $"part vln {{ {header} }}\nsection A {{ vln {{ c4 d e f }} }}\nstructure {{ A }}\nscore \"s\" {{ staff vln }}";
+        $"part vln {{ {header} }}\nsection A {{ vln {{ c4 d e f }} }}\nform main {{ A }}\nscore \"s\" {{ staff vln }}";
 
     private static bool HasSymbolError(string header) =>
         SemanticValidation.Run(SyntaxTree.Parse(Doc(header)))

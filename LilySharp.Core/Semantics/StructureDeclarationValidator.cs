@@ -19,14 +19,13 @@ using LilySharp.Core.Syntax;
 namespace LilySharp.Core.Semantics;
 
 /// <summary>
-/// Validates that there is at most one top-level <c>structure</c> declaration,
-/// and at most one inside each <c>score { }</c> block. The top-level structure is
-/// the piece's default form (the order sections play in, with repeats and
-/// navigation), shared by every <c>score</c> render and by MIDI; a score may carry
-/// its own <c>structure</c> to override that default for that score only (e.g. a
-/// practice excerpt). A second structure in the same scope was previously silently
-/// ignored (last-wins), which is a footgun. Omitting <c>structure</c> entirely is
-/// still valid — sections then play in declaration order.
+/// Validates the <c>form</c> / <c>score</c> binding: every <c>form</c> is named
+/// (<c>form Main { ... }</c>), form names are unique (case-sensitive), and every
+/// <c>score</c> references an existing form by name (<c>score Main { ... }</c>).
+/// A form is the piece's arrangement — the order sections play in, with repeats
+/// and navigation. The reserved form name <c>main</c> writes to the input file's
+/// stem; any other name becomes the output file name unless a <c>"basename"</c>
+/// overrides it.
 /// </summary>
 internal sealed class StructureDeclarationValidator : ISemanticValidator
 {
@@ -36,38 +35,34 @@ internal sealed class StructureDeclarationValidator : ISemanticValidator
 
     public void Validate(SyntaxTree tree)
     {
-        var structures = tree.GetNodes<StructureDeclarationSyntax>().ToList();
+        var forms = tree.GetNodes<StructureDeclarationSyntax>().ToList();
 
-        // Group by owning scope: the enclosing score block, or null for top level.
-        // The first declaration in each scope is the effective one; flag the rest.
-        var byScope = structures.GroupBy(EnclosingScore);
-        foreach (var scope in byScope)
+        // Every form must be named; names are unique and case-sensitive.
+        var declared = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var form in forms)
         {
-            bool inScore = scope.Key != null;
-            int n = 0;
-            foreach (var structure in scope)
+            string name = form.NameText;
+            if (string.IsNullOrEmpty(name))
             {
-                if (n++ == 0) continue;
-                var keyword = structure.StructureKeyword;
-                _diagnostics.Error(
-                    keyword.Span,
-                    DiagnosticCodes.MultipleStructureDeclarations,
-                    inScore
-                        ? "Only one 'structure' declaration is allowed per score. "
-                          + "Remove the extra declaration."
-                        : "Only one top-level 'structure' declaration is allowed; "
-                          + "it defines the default form shared by all scores and MIDI. "
-                          + "A score may carry its own 'structure' to override it. "
-                          + "Remove the extra declaration.");
+                _diagnostics.Error(form.StructureKeyword.Span, DiagnosticCodes.UnnamedForm,
+                    "A 'form' must be named, e.g. 'form main { ... }'.");
+                continue;
             }
+            if (!declared.Add(name))
+                _diagnostics.Error(form.Name!.Span, DiagnosticCodes.DuplicateFormName,
+                    $"Duplicate form name '{name}'. Each form name must be unique.");
         }
-    }
 
-    private static RenderDeclarationSyntax? EnclosingScore(SyntaxNode node)
-    {
-        for (var p = node.Parent; p != null; p = p.Parent)
-            if (p is RenderDeclarationSyntax render)
-                return render;
-        return null;
+        // Every score must reference a form that exists.
+        foreach (var score in tree.GetNodes<RenderDeclarationSyntax>())
+        {
+            string reference = score.FormNameText;
+            if (string.IsNullOrEmpty(reference))
+                _diagnostics.Error(score.RenderKeyword.Span, DiagnosticCodes.UnknownFormReference,
+                    "A 'score' must name the form it renders, e.g. 'score main { ... }'.");
+            else if (!declared.Contains(reference))
+                _diagnostics.Error(score.FormName!.Span, DiagnosticCodes.UnknownFormReference,
+                    $"Unknown form '{reference}'. Declare it with 'form {reference} {{ ... }}'.");
+        }
     }
 }

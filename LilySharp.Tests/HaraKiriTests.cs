@@ -123,8 +123,8 @@ public class HaraKiriTests
             part rh { clef treble }
             part lh { clef bass {{property}} }
             section Main { rh { c4 d e f | } lh { r1 | } }
-            structure { Main }
-            score "x" { grandStaff { staff rh staff lh } }
+            form main { Main }
+            score main "x" { grandStaff { staff rh staff lh } }
             """;
         var tree = LilySharp.Core.Syntax.SyntaxTree.Parse(src);
         var spec = Core.Svg.Collector.RenderSpecParser.FindFirst(tree);

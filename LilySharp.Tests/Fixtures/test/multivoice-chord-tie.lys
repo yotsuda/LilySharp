@@ -13,5 +13,5 @@ section S {
     voice { <e' g'>4~ <e' g'> e' g' | c'1 }
   }
 }
-structure { S }
-score "multivoice-chord-tie" { staff mel }
+form main { S }
+score main "multivoice-chord-tie" { staff mel }

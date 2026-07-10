@@ -35,8 +35,8 @@ public class ChordPartSectionsTests
         part melody { clef treble }
         section A { melody { c4 c g' g | a a g2 | } chords harmony { c1 | f1 | } }
         section B { melody { g'4 g f f | } chords harmony { c1 | } }
-        structure { A B }
-        score "s" { staff melody with chords harmony }
+        form main { A B }
+        score main "s" { staff melody with chords harmony }
         """;
 
     private const string PartMajor = """
@@ -50,8 +50,8 @@ public class ChordPartSectionsTests
           section A { c1 | f1 | }
           section B { c1 | }
         }
-        structure { A B }
-        score "s" { staff melody with chords harmony }
+        form main { A B }
+        score main "s" { staff melody with chords harmony }
         """;
 
     [Fact]
@@ -80,7 +80,7 @@ public class ChordPartSectionsTests
     [Fact]
     public void ChordTrack_RepeatsUnderAReprise()
     {
-        // structure { A B A "A2" }: A's chords must appear again at the A2 reprise,
+        // form main { A B A "A2" }: A's chords must appear again at the A2 reprise,
         // not only at A's first occurrence.
         var tree = SyntaxTree.Parse("""
             time 4/4
@@ -90,8 +90,8 @@ public class ChordPartSectionsTests
               section B { g'4 g f f | }
             }
             chords harmony { section A { c1 | f1 | } section B { g1:7 | } }
-            structure { A B A "A2" }
-            score s { staff melody with chords harmony }
+            form main { A B A "A2" }
+            score main { staff melody with chords harmony }
             """);
         var score = new MeasureCollector().Collect(tree, "melody", null, "harmony");
         var byMeasure = score.ChordNames

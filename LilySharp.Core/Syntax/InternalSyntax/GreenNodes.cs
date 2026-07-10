@@ -642,10 +642,14 @@ internal sealed class StructureDeclarationGreen : GreenSyntaxNode
 {
     public StructureDeclarationGreen(
         SyntaxToken structureKeyword,
+        SyntaxToken? name,
         SyntaxToken openBrace,
         GreenNode?[] items,
         SyntaxToken closeBrace)
-        : base(SyntaxKind.StructureDeclaration, [structureKeyword, openBrace, .. items, closeBrace])
+        : base(SyntaxKind.StructureDeclaration,
+            name != null
+                ? [structureKeyword, name, openBrace, .. items, closeBrace]
+                : [structureKeyword, openBrace, .. items, closeBrace])
     {
     }
 }

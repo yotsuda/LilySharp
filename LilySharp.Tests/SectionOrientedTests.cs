@@ -74,7 +74,7 @@ public class SectionOrientedTests
     {
         var source = """
             section A { guitar { c4 } }
-            structure {
+            form main {
                 A
             }
             """;
@@ -88,7 +88,7 @@ public class SectionOrientedTests
         var source = """
             section A { guitar { c4 } }
             section B { guitar { d4 } }
-            structure {
+            form main {
                 A
                 segno
                 B
@@ -105,8 +105,8 @@ public class SectionOrientedTests
     {
         var source = """
             section A { guitar { c4 } }
-            structure { A }
-            score "output" {
+            form main { A }
+            score main "output" {
                 staff guitar
             }
             """;
@@ -119,8 +119,8 @@ public class SectionOrientedTests
     {
         var source = """
             section A { guitar { c4 d e f } }
-            structure { A }
-            score "guitar" {
+            form main { A }
+            score main "guitar" {
                 staff guitar
                 tab guitar guitar
             }
@@ -134,8 +134,8 @@ public class SectionOrientedTests
     {
         var source = """
             section A { guitar { c4 } }
-            structure { A }
-            score "song" {
+            form main { A }
+            score main "song" {
                 guitar channel 1 instrument 25
             }
             """;
@@ -165,13 +165,13 @@ public class SectionOrientedTests
                 bass { g,4 d, g, d, }
             }
 
-            structure {
+            form main {
                 Intro
                 A
                 fine
             }
 
-            score "test" {
+            score main "test" {
                 staff guitar
                 tab guitar guitar
                 staff bass bass

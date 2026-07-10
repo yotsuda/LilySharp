@@ -20,5 +20,5 @@ phrase tune {
 }
 
 section Main { melody { $tune } }
-structure { Main }
-score "06-meter-changes" { staff melody }
+form main { Main }
+score main "06-meter-changes" { staff melody }

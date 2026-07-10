@@ -336,7 +336,7 @@ key g major
         // `Major` is a wrong-case (unknown) mode. It must give a clean "unknown mode"
         // error and be consumed — NOT leak into the music as a bare-reference error.
         var tree = SyntaxTree.Parse("key c Major\npart vln { clef treble }\n" +
-            "section A { vln { c4 d e f } }\nstructure { A }\nscore \"s\" { staff vln }");
+            "section A { vln { c4 d e f } }\nform main { A }\nscore \"s\" { staff vln }");
         Assert.Contains(tree.Diagnostics, d => d.Code == DiagnosticCodes.UnknownSymbolCase);
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar);
     }
@@ -537,8 +537,8 @@ $theme");
             "part bass { clef bass }\n" +
             "phrase bass { c2 c | }\n" +
             "section bass { bass { $bass } }\n" +
-            "structure { bass }\n" +
-            "score \"out\" { staff bass }\n");
+            "form main { bass }\n" +
+            "score main \"out\" { staff bass }\n");
         Assert.False(tree.HasErrors, string.Join(", ", tree.Diagnostics.Select(d => d.Message)));
     }
 
@@ -1064,7 +1064,7 @@ lyrics { do re mi fa sol }
 section A {
     melody { c4 d e | }
 }
-structure {
+form main {
     |: A :|
 }
 ";
@@ -1089,7 +1089,7 @@ structure {
         var source = @"
 section A { melody { c4 | } }
 section B { melody { d4 | } }
-structure {
+form main {
     |: A [1-3. B] :| x4
 }
 ";
@@ -1104,7 +1104,7 @@ structure {
         var source = @"
 section A { melody { c4 | } }
 section B { melody { d4 | } }
-structure {
+form main {
     |: A [1,3. B] :| x4
 }
 ";
@@ -1122,7 +1122,7 @@ section A {
         c4:8 d4:16 e4:32 |
     }
 }
-structure { A }
+form main { A }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1148,7 +1148,7 @@ section A {
         c4:64 d4:128 |
     }
 }
-structure { A }
+form main { A }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1169,7 +1169,7 @@ section A {
         <c e g>4:16 |
     }
 }
-structure { A }
+form main { A }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1188,7 +1188,7 @@ section Verse {
     melody { c4 d4 e4 f4 | g2 g2 | }
     lyrics { き ら き ら | ひ か | }
 }
-structure { Verse }
+form main { Verse }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1203,7 +1203,7 @@ section Verse {
     melody { c4 d4 e4 f4 | g2 g2 | }
     lyrics { twi- nkle twi- nkle | li- tle | }
 }
-structure { Verse }
+form main { Verse }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1217,7 +1217,7 @@ section Verse {
     melody { c4 d4 e4 f4 | g2 g2 | }
     lyrics { Glo~ ~ ri- a | in ex- | }
 }
-structure { Verse }
+form main { Verse }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1232,7 +1232,7 @@ section Verse {
     lyrics { き ら き ら | ひ か | }
     lyrics { ま ば た き | し て | }
 }
-structure { Verse }
+form main { Verse }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1260,7 +1260,7 @@ phrase intro { c4 d e f | }
 section Main {
   melody { $intro }
 }
-structure { Main }
+form main { Main }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
@@ -1277,7 +1277,7 @@ phrase intro { c4 d e f | }
 section Main {
   melody { intro }
 }
-structure { Main }
+form main { Main }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.True(tree.HasErrors);
@@ -1302,8 +1302,8 @@ structure { Main }
     {
         var tree = SyntaxTree.Parse(
             "part upper { clef treble }\npart lower { clef bass }\n" +
-            "section Main { upper { c'1 } lower { c1 } }\nstructure { Main }\n" +
-            "score \"x\" { grandStaff { staff upper staff lower } }");
+            "section Main { upper { c'1 } lower { c1 } }\nform main { Main }\n" +
+            "score main \"x\" { grandStaff { staff upper staff lower } }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.ClefNameAsStaff);
     }
 
@@ -1311,7 +1311,7 @@ structure { Main }
     public void ClefNameAsStaff_ClefDeclaration_DoesNotWarn()
     {
         // `clef treble` (with the clef keyword) is the real clef form — never flagged.
-        var tree = SyntaxTree.Parse("part p { clef treble }\nsection M { p { c1 } }\nstructure { M }");
+        var tree = SyntaxTree.Parse("part p { clef treble }\nsection M { p { c1 } }\nform main { M }");
         Assert.DoesNotContain(tree.Diagnostics, d => d.Code == DiagnosticCodes.ClefNameAsStaff);
     }
 

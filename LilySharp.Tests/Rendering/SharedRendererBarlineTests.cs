@@ -41,8 +41,8 @@ public sealed class SharedRendererBarlineTests
                 line { {{body}} }
             }
 
-            structure { Demo }
-            score "out" { staff line }
+            form main { Demo }
+            score main "out" { staff line }
             """;
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors, string.Join("; ", tree.Diagnostics));

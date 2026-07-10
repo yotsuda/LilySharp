@@ -15,5 +15,5 @@ section Main {
   melody { c'4 d e f | g4 a tempo 160 g f | e4 d c2 | }
 }
 
-structure { Main }
-score "tempo-change" { staff melody }
+form main { Main }
+score main "tempo-change" { staff melody }

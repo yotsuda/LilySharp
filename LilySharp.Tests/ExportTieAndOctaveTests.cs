@@ -106,8 +106,8 @@ public sealed class ExportTieAndOctaveTests
 octave absolute
 part melody { clef treble }
 section A { melody { cis'4 c'' c' e' } }
-structure { A }
-score ""t"" { staff melody }
+form main { A }
+score main ""t"" { staff melody }
 ";
 
     [Fact]

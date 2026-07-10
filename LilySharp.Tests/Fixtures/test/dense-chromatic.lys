@@ -11,5 +11,5 @@ section Main {
     <cis e gis>8 <d f aes> <ees ges bes> <e g b> r2 |
   }
 }
-structure { Main }
-score "dense-chromatic" { staff m }
+form main { Main }
+score main "dense-chromatic" { staff m }

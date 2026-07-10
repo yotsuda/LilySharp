@@ -11,5 +11,5 @@ section Main {
     g4 a b | c4 d e |
   }
 }
-structure { Main }
-score "leading-time-change" { staff m }
+form main { Main }
+score main "leading-time-change" { staff m }

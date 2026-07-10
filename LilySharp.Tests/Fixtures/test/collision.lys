@@ -29,8 +29,8 @@ section Main {
   melody { $voiceCollision $accidentalCollision }
 }
 
-structure { Main }
+form main { Main }
 
-score "collision" {
+score main "collision" {
   staff melody
 }

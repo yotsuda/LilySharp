@@ -19,8 +19,8 @@ section Main {
   melody { $test }
 }
 
-structure { Main }
+form main { Main }
 
-score "arpeggio-second" {
+score main "arpeggio-second" {
   staff treble melody
 }

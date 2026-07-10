@@ -60,7 +60,7 @@ section A {
     public void ParseStructureDeclaration_Simple()
     {
         var source = @"
-structure {
+form main {
     Intro
     A
     B
@@ -73,7 +73,7 @@ structure {
     public void ParseStructureDeclaration_WithNavigation()
     {
         var source = @"
-structure {
+form main {
     Intro
     segno
     A
@@ -89,7 +89,7 @@ structure {
     public void ParseRenderDeclaration_Staff()
     {
         var source = @"
-score ""output"" {
+score main ""output"" {
     staff guitar
 }";
         var tree = SyntaxTree.Parse(source);
@@ -100,7 +100,7 @@ score ""output"" {
     public void ParseRenderDeclaration_Tab()
     {
         var source = @"
-score ""guitar"" {
+score main ""guitar"" {
     staff guitar
     tab guitar guitar
 }";
@@ -112,7 +112,7 @@ score ""guitar"" {
     public void ParseRenderDeclaration_Midi()
     {
         var source = @"
-score ""song"" {
+score main ""song"" {
     guitar channel 1 instrument 25
     bass channel 2 instrument 33
 }";
@@ -141,12 +141,12 @@ section A {
     bass { e,4 b, e, b, }
 }
 
-structure {
+form main {
     Intro
     A
 }
 
-score ""test"" {
+score main ""test"" {
     staff guitar
     staff bass bass
 }
@@ -159,7 +159,7 @@ score ""test"" {
     public void ParseStructureDeclaration_VoltaBracket_Simple()
     {
         var source = @"
-structure {
+form main {
     |: Verse [1. Bridge] :| [2. Chorus]
 }";
         var tree = SyntaxTree.Parse(source);
@@ -170,7 +170,7 @@ structure {
     public void ParseStructureDeclaration_VoltaBracket_SilentSection()
     {
         var source = @"
-structure {
+form main {
     |: Verse [1. Bridge] :| [2. ~Verse]
 }";
         var tree = SyntaxTree.Parse(source);
@@ -191,7 +191,7 @@ structure {
     public void ParseStructureDeclaration_VoltaBracket_RangeWithSilent()
     {
         var source = @"
-structure {
+form main {
     |: Verse [1-2. Bridge] :| [3. ~Coda] x3
 }";
         var tree = SyntaxTree.Parse(source);
@@ -202,7 +202,7 @@ structure {
     public void ParseStructureDeclaration_MusicMark_Simple()
     {
         var source = @"
-structure {
+form main {
     Intro
     @segno
     Verse
@@ -222,7 +222,7 @@ structure {
     public void ParseStructureDeclaration_MusicMark_Compound()
     {
         var source = @"
-structure {
+form main {
     Intro
     @ds.al.fine
 }";
@@ -237,7 +237,7 @@ structure {
     public void ParseStructureDeclaration_CustomText_Simple()
     {
         var source = @"
-structure {
+form main {
     Intro
     _""molto rit.""
     Verse
@@ -257,7 +257,7 @@ structure {
     public void ParseStructureDeclaration_CustomText_WithSpecialChars()
     {
         var source = @"
-structure {
+form main {
     Intro
     _""cresc. poco a poco""
 }";

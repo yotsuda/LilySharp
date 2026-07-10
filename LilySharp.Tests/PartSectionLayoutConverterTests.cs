@@ -35,8 +35,8 @@ public class PartSectionLayoutConverterTests
         part high { clef treble }
         section A { low { c4 d } high { e'4 f' } }
         section B { low { g,4 a, } high { b'4 c'' } }
-        structure { A B }
-        score "x" { staff low  staff high }
+        form main { A B }
+        score main "x" { staff low  staff high }
         """;
 
     [Fact]
@@ -62,8 +62,8 @@ public class PartSectionLayoutConverterTests
         Assert.Contains("section A { e'4 f' }", pm);
         // Attributes and every other top-level item survive verbatim.
         Assert.Contains("clef bass", pm);
-        Assert.Contains("structure { A B }", pm);
-        Assert.Contains("score \"x\" { staff low  staff high }", pm);
+        Assert.Contains("form main { A B }", pm);
+        Assert.Contains("score main \"x\" { staff low  staff high }", pm);
         // The result is valid .lys.
         Assert.False(SyntaxTree.Parse(pm!).HasErrors);
     }
@@ -80,7 +80,7 @@ public class PartSectionLayoutConverterTests
         Assert.Contains("section A {", sm2);
         Assert.Contains("low { c4 d }", sm2);
         Assert.Contains("high { e'4 f' }", sm2);
-        Assert.Contains("structure { A B }", sm2);
+        Assert.Contains("form main { A B }", sm2);
         Assert.False(SyntaxTree.Parse(sm2!).HasErrors);
     }
 
@@ -93,8 +93,8 @@ public class PartSectionLayoutConverterTests
             part melody { clef treble }
             section A { melody { c4 c g' g | } chords harmony { c1 | f1 | } }
             section B { melody { g'4 g f f | } chords harmony { c1 | } }
-            structure { A B }
-            score "s" { staff melody with chords harmony }
+            form main { A B }
+            score main "s" { staff melody with chords harmony }
             """;
         Assert.False(PartSectionLayoutConverter.HasUntransposableSectionContent(sm));
 
@@ -122,8 +122,8 @@ public class PartSectionLayoutConverterTests
             part melody { clef treble }
             section A { melody { c4 c g' g | } lyrics { Twin- kle twin- kle | } }
             section B { melody { g'4 g f f | } lyrics { how I won- der | } }
-            structure { A B }
-            score "s" { staff melody }
+            form main { A B }
+            score main "s" { staff melody }
             """;
         Assert.False(PartSectionLayoutConverter.HasUntransposableSectionContent(sm));
 
@@ -170,7 +170,7 @@ public class PartSectionLayoutConverterTests
     [Fact]
     public void Convert_CellEndingInLineComment_DoesNotSwallowBrace()
     {
-        var src = "part low { clef bass }\nsection A { low { c4 d e f // melody\n} }\nstructure { A }\n";
+        var src = "part low { clef bass }\nsection A { low { c4 d e f // melody\n} }\nform main { A }\n";
         var converted = PartSectionLayoutConverter.Convert(src);
         Assert.NotNull(converted);
         // The // comment must not comment out the regenerated closing brace.
@@ -181,7 +181,7 @@ public class PartSectionLayoutConverterTests
     [Fact]
     public void Convert_KeepsCommentAboveFirstStructuralBlock()
     {
-        var src = "// verse arrangement\npart low { clef bass }\nsection A { low { c4 d } }\nstructure { A }\n";
+        var src = "// verse arrangement\npart low { clef bass }\nsection A { low { c4 d } }\nform main { A }\n";
         var converted = PartSectionLayoutConverter.Convert(src);
         Assert.NotNull(converted);
         Assert.Contains("// verse arrangement", converted);

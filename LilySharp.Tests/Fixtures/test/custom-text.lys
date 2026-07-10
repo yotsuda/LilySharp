@@ -6,6 +6,6 @@ part melody { clef treble }
 section A { melody { c4 d e f | g2 g | } }
 section B { melody { c4 b a g | c1 | } }
 
-structure { A _"poco a poco dim." B }
+form main { A _"poco a poco dim." B }
 
-score "custom-text" { staff melody }
+score main "custom-text" { staff melody }

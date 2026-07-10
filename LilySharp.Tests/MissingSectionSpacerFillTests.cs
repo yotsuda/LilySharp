@@ -56,8 +56,8 @@ public class MissingSectionSpacerFillTests
           section A { c2 g, | }
           section B { c4 c c c | g2 g2 | }
         }
-        structure { A B A }
-        score "s" {
+        form main { A B A }
+        score main "s" {
           staff melody
           staff bass
         }
@@ -112,8 +112,8 @@ public class MissingSectionSpacerFillTests
               section A { c2 g, | }
               section B { c4 c c c | g2 g2 | }
             }
-            structure { A B A }
-            score "s" {
+            form main { A B A }
+            score main "s" {
               staff melody
               staff bass
             }
@@ -146,8 +146,8 @@ public class MissingSectionSpacerFillTests
             section B {
               bass { c4 c c c | g2 g2 | }
             }
-            structure { A B A }
-            score "s" {
+            form main { A B A }
+            score main "s" {
               staff melody
               staff bass
             }
@@ -177,8 +177,8 @@ public class MissingSectionSpacerFillTests
               section A { c2 g, | }
               section B { g2 g2 | }
             }
-            structure { A B A }
-            score "s" { staff melody staff bass }
+            form main { A B A }
+            score main "s" { staff melody staff bass }
             """);
 
         var melody = VoiceOf(score, 0);

@@ -24,56 +24,49 @@ namespace LilySharp.Tests;
 [Trait("Category", "Unit")]
 public class StructureDeclarationValidatorTests
 {
-    private static string Wrap(string structures) => $@"
+    private static string Wrap(string formsAndScore) => $@"
 title ""t""
 time 4/4
 part melody
 section A {{ melody {{ c'4 d e f | }} }}
 section B {{ melody {{ g'4 a b c | }} }}
-{structures}
-score {{ staff {{ melody }} }}
+{formsAndScore}
 ";
 
-    [Fact]
-    public void SingleStructure_NoError()
+    private static IReadOnlyList<Diagnostic> Validate(string formsAndScore)
     {
-        var tree = SyntaxTree.Parse(Wrap("structure { A B }"));
         var validator = new StructureDeclarationValidator();
-        validator.Validate(tree);
-        Assert.Empty(validator.Diagnostics);
+        validator.Validate(SyntaxTree.Parse(Wrap(formsAndScore)));
+        return validator.Diagnostics;
     }
 
     [Fact]
-    public void NoStructure_NoError()
-    {
-        // Omitting structure is valid — sections play in declaration order.
-        var tree = SyntaxTree.Parse(Wrap(""));
-        var validator = new StructureDeclarationValidator();
-        validator.Validate(tree);
-        Assert.Empty(validator.Diagnostics);
-    }
+    public void NamedFormWithMatchingScore_NoError()
+        => Assert.Empty(Validate("form main { A B }\nscore main { staff { melody } }"));
 
     [Fact]
-    public void TwoStructures_ReportsOneErrorOnTheSecond()
-    {
-        var tree = SyntaxTree.Parse(Wrap("structure { A B }\nstructure { B A }"));
-        var validator = new StructureDeclarationValidator();
-        validator.Validate(tree);
-
-        Assert.Single(validator.Diagnostics);
-        Assert.Equal(DiagnosticCodes.MultipleStructureDeclarations, validator.Diagnostics[0].Code);
-    }
+    public void MultipleNamedForms_NoError()
+        => Assert.Empty(Validate(
+            "form main { A B }\nform excerpt { B }\n"
+            + "score main { staff { melody } }\nscore excerpt { staff { melody } }"));
 
     [Fact]
-    public void ThreeStructures_FlagsEveryExtra()
-    {
-        var tree = SyntaxTree.Parse(Wrap("structure { A }\nstructure { B }\nstructure { A B }"));
-        var validator = new StructureDeclarationValidator();
-        validator.Validate(tree);
+    public void UnnamedForm_IsFlagged()
+        => Assert.Contains(Validate("form { A B }\nscore main { staff { melody } }"),
+            d => d.Code == DiagnosticCodes.UnnamedForm);
 
-        // First is the effective one; the 2nd and 3rd are flagged.
-        Assert.Equal(2, validator.Diagnostics.Count);
-        Assert.All(validator.Diagnostics,
-            d => Assert.Equal(DiagnosticCodes.MultipleStructureDeclarations, d.Code));
-    }
+    [Fact]
+    public void DuplicateFormName_IsFlagged()
+        => Assert.Contains(Validate("form main { A }\nform main { B }\nscore main { staff { melody } }"),
+            d => d.Code == DiagnosticCodes.DuplicateFormName);
+
+    [Fact]
+    public void UnknownFormReference_IsFlagged()
+        => Assert.Contains(Validate("form main { A B }\nscore verse { staff { melody } }"),
+            d => d.Code == DiagnosticCodes.UnknownFormReference);
+
+    [Fact]
+    public void ScoreWithoutFormName_IsFlagged()
+        => Assert.Contains(Validate("form main { A B }\nscore { staff { melody } }"),
+            d => d.Code == DiagnosticCodes.UnknownFormReference);
 }

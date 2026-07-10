@@ -247,8 +247,8 @@ public class ChordNameTests
 part m {{ clef treble }}
 chords prog {{ c1 | d1 | }}
 section A {{ m {{ {body} }} }}
-structure {{ A }}
-score x {{ staff m with chords prog }}
+form main {{ A }}
+score main {{ staff m with chords prog }}
 ";
         var sTree = SyntaxTree.Parse(Doc("c'4 d' e' f' | g'4 a' b' c'' |"));
         var mTree = SyntaxTree.Parse(Doc("voice { c'4 d' e' f' | } voice { c4 d e f | }"));

@@ -38,12 +38,12 @@ section Verse {
   }
 }
 
-structure { Verse }
+form main { Verse }
 
-score "amazing-grace" {
+score main "amazing-grace" {
   staff melody with chords prog
 }
 
-score "amazing-grace-grid" {
+score main "amazing-grace-grid" {
   chords prog
 }

@@ -15,5 +15,5 @@ section S {
   top { c'''4@ottava c'''4 c'''4 c'''4 | c'''4@loco c'''4 c'''4 c'''4 | }
   low { c,4@ottava(bassa) c,4 c,4 c,4 | c,4@loco c,4 c,4 c,4 | }
 }
-structure { S }
-score "multi-staff-ottava" { staff top staff low }
+form main { S }
+score main "multi-staff-ottava" { staff top staff low }

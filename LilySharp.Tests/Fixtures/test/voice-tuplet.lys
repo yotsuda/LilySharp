@@ -15,8 +15,8 @@ section Main {
   m { voice { tuplet 3/2 { c'4 d e } f2 } voice { e4 e e e }  | }
 }
 
-structure { Main }
+form main { Main }
 
-score "voice-tuplet" {
+score main "voice-tuplet" {
   staff m
 }

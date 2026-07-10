@@ -27,12 +27,12 @@ section Main {
   chords { $cueChords }
 }
 
-structure { Main }
+form main { Main }
 
-score "cue-melody" {
+score main "cue-melody" {
   staff treble melody
 }
 
-score "cue-chords" {
+score main "cue-chords" {
   staff treble chords
 }

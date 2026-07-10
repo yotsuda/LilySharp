@@ -14,5 +14,5 @@ section S {
     voice { a'4 a' a' a' | }
   }
 }
-structure { S }
-score "multivoice-crossing-collision" { staff mel }
+form main { S }
+score main "multivoice-crossing-collision" { staff mel }

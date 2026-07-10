@@ -626,8 +626,8 @@ public sealed partial class MeasureCollector
 
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
-        // A score-local `structure { ... }` overrides the top-level structure for
-        // this render only.
+        // An explicitly passed form overrides the primary-form default for this
+        // collection (used by callers that render a specific form directly).
         if (localStructure != null)
             _structure = localStructure;
 
@@ -785,10 +785,10 @@ public sealed partial class MeasureCollector
 
         // Phase 1: Collect definitions
         CollectDefinitions(tree.GetRoot());
-        // A score-local `structure { ... }` overrides the top-level structure for
-        // this render only.
-        if (renderSpec.LocalStructure != null)
-            _structure = renderSpec.LocalStructure;
+        // This score renders its bound form (resolved by name in the RenderSpec).
+        // Fall back to the primary form only when the reference is unresolved (a
+        // validator error) so a typo still previews something.
+        _structure = renderSpec.Form ?? _structure;
         _meta.InitialKeySharps = _meta.KeySharps; // Preserve initial key before music processing
         _meta.InitialKeyCustom = _meta.KeyCustom;
         // Capture the file-level `octave absolute/relative` default AFTER the
@@ -1571,12 +1571,13 @@ public sealed partial class MeasureCollector
                         _sectionState.PartMajorCells[(section.SectionName, owningPart)] = section;
                     break;
 
-                case StructureDeclarationSyntax structure:
-                    // Only the top-level structure becomes the file default. A
-                    // structure nested in a `score { }` block is a per-score
-                    // override, applied later from the RenderSpec.
-                    if (!IsInsideRender(structure))
-                        _structure = structure;
+                case StructureDeclarationSyntax form:
+                    // A score binds its form by name (from the RenderSpec). When a
+                    // path doesn't specify one (single-staff Collect, exporters),
+                    // fall back to the PRIMARY form: `main` if present, else the
+                    // first declared. (`main` is matched case-sensitively.)
+                    if (form.NameText == "main" || _structure == null)
+                        _structure = form;
                     break;
 
                 case VariableDeclarationSyntax varDecl:

@@ -54,11 +54,11 @@ section A {
     }
 }
 
-structure {
+form main {
     A
 }
 
-score ""test"" {
+score main ""test"" {
     staff treble melody
 }
 ";
@@ -89,11 +89,11 @@ section A {
     }
 }
 
-structure {
+form main {
     A
 }
 
-score ""test"" {
+score main ""test"" {
     staff treble melody
 }
 ";
@@ -138,9 +138,9 @@ section Main {
   melody { $intro $bridge $finale }
 }
 
-structure { Main }
+form main { Main }
 
-score ""test"" {
+score main ""test"" {
   staff melody
 }
 ";
@@ -215,14 +215,14 @@ phrase lh1 { c2 e | g g, | }
 phrase rh2 { e'4 d' c' d' | e'1 | }
 phrase lh2 { c2 g, | c1 | }
 
-score ""mvt1"" {
+score main ""mvt1"" {
   grandStaff {
     staff treble rh1
     staff bass lh1
   }
 }
 
-score ""mvt2"" {
+score main ""mvt2"" {
   grandStaff {
     staff treble rh2
     staff bass lh2
@@ -256,14 +256,14 @@ phrase lh1 { c2 e | g g, | }
 phrase rh2 { e'4 d' c' d' | e'1 | }
 phrase lh2 { c2 g, | c1 | }
 
-score ""movement1"" {
+score main ""movement1"" {
   grandStaff {
     staff treble rh1
     staff bass lh1
   }
 }
 
-score ""movement2"" {
+score main ""movement2"" {
   grandStaff {
     staff treble rh2
     staff bass lh2
@@ -304,9 +304,9 @@ score ""movement2"" {
 phrase rh { c'4 d' e' f' | }
 phrase lh { c2 e | }
 
-score ""first"" { staff treble rh }
-score ""second"" { staff treble lh }
-score ""third"" { staff treble rh }
+score main ""first"" { staff treble rh }
+score main ""second"" { staff treble lh }
+score main ""third"" { staff treble rh }
 ";
         var tree = SyntaxTree.Parse(source);
         Assert.False(tree.HasErrors);
@@ -395,8 +395,8 @@ section Main {
     melody { | c5/4 d5 e5 f5 | g5/1 | }
     alt { | e5/4 f5 g5 a5 | b5/1 | }
 }
-structure { Main }
-score ""ossia-test"" {
+form main { Main }
+score main ""ossia-test"" {
     staff melody
     ossia alt
 }";
@@ -428,8 +428,8 @@ section Main {
     melody { | c5/4 d5 e5 f5 | g5/1 | }
     bassAlt { | c3/4 d3 e3 f3 | g3/1 | }
 }
-structure { Main }
-score ""ossia-clef"" {
+form main { Main }
+score main ""ossia-clef"" {
     staff melody
     ossia bass bassAlt
 }";
@@ -453,8 +453,8 @@ section Main {
     melody { | c5/4 d5 e5 f5 | g5/1 | }
     alt { | e5/4 f5 g5 a5 | b5/1 | }
 }
-structure { Main }
-score ""ossia-barline"" {
+form main { Main }
+score main ""ossia-barline"" {
     staff melody
     ossia alt
 }";

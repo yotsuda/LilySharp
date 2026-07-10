@@ -14,8 +14,8 @@ part melody {
   section Main { <c e>2 ( <d f>2 ) | <e f>2 ( <g a>2 ) | }
 }
 
-structure { Main }
+form main { Main }
 
-score "slur-chords" {
+score main "slur-chords" {
   staff melody
 }

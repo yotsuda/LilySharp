@@ -29,9 +29,9 @@ section Main {
   lyrics { Praise God from whom | all bless- ings | }
 }
 
-structure { Main }
+form main { Main }
 
-score "chorale" {
+score main "chorale" {
   grandStaff {
     staff upper
     staff lower

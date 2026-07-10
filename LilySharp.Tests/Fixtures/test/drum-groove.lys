@@ -5,5 +5,5 @@ section Groove {
     voice { bd4 r8 bd r bd sn4 | bd4 sn8 bd sn4 bd | }
   }
 }
-structure { Groove }
-score drums { staff kit }
+form main { Groove }
+score main "drums" { staff kit }

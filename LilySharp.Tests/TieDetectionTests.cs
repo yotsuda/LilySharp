@@ -41,8 +41,8 @@ public class TieDetectionTests
             key c major
             part melody { clef treble }
             section Main { melody { {{music}} } }
-            structure { Main }
-            score "x" { staff melody }
+            form main { Main }
+            score main "x" { staff melody }
             """;
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(src), "melody");
         return new TieDetector().DetectTies(score);

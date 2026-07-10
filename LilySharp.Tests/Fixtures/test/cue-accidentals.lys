@@ -18,8 +18,8 @@ section Main {
   melody { $test }
 }
 
-structure { Main }
+form main { Main }
 
-score "cue-accidentals" {
+score main "cue-accidentals" {
   staff treble melody
 }

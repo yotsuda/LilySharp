@@ -408,7 +408,7 @@ section Main {
 ### Structure (Playback Order)
 
 ```
-structure { Intro Main Main Coda }
+form main { Intro Main Main Coda }
 ```
 
 A reused section prints the same section mark each time. Give an
@@ -416,14 +416,14 @@ occurrence its own display label with a string after the name; an empty
 string suppresses the mark (like `~Name`):
 
 ```
-structure { Intro Main Main "Main (reprise)" Coda }
+form main { Intro Main Main "Main (reprise)" Coda }
 ```
 
 Identifiers (sections, parts, phrases) may use any Unicode letters:
 
 ```
 section イントロ { メロディ { $動機 } }
-structure { イントロ イントロ "イントロ(再現)" }
+form main { イントロ イントロ "イントロ(再現)" }
 ```
 
 ### Navigation marks
@@ -434,7 +434,7 @@ target); the *text* directives `fine`, `to coda`, `dc`/`ds` (optionally
 `dc al fine`, `ds al coda`, …) engrave at the end of the section just played:
 
 ```
-structure {
+form main {
   A segno
   B  to coda
   C  ds al coda
@@ -448,7 +448,7 @@ Controls output layout. Each `staff partName` names the part to draw (a bare
 name, no braces); the clef comes from the part declaration, not the render block:
 
 ```
-score "out" {
+score main "out" {
   grandStaff {
     staff rightHand
     staff leftHand
@@ -459,28 +459,28 @@ score "out" {
 A single-staff score names one staff directly:
 
 ```
-score "out" {
+score main "out" {
   staff melody
 }
 ```
 
 ### Per-Score Structure
 
-A score may carry its own `structure { ... }` to render a different
+A score may carry its own `form main { ... }` to render a different
 arrangement of the same sections — for example a practice excerpt that
 plays only the intro. It overrides the file's top-level structure for
 that score only; scores without one keep using the top-level structure
 (and MIDI always uses the top-level form).
 
 ```
-structure { Intro Verse Outro }   % the default form
+form main { Intro Verse Outro }   % the default form
 
-score full {
+score main "full" {
   staff melody
 }
 
 score 練習 {
-  structure { Intro }             % this score renders only the intro
+  form main { Intro }             % this score renders only the intro
   staff melody
 }
 ```

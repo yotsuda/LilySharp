@@ -16,5 +16,5 @@ section S {
     voice { e'8 f' g' a' b' a' g' f' | }
   }
 }
-structure { S }
-score "multivoice-tuplet-beams" { staff mel }
+form main { S }
+score main "multivoice-tuplet-beams" { staff mel }

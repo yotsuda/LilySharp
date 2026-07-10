@@ -40,8 +40,8 @@ public class StructureNavigationTests
               section C { e4 f g a | }
               section D { c'4 b a g | }
             }
-            structure { {{structure}} }
-            score "x" { staff m }
+            form main { {{structure}} }
+            score main "x" { staff m }
             """;
         var score = new MeasureCollector().Collect(SyntaxTree.Parse(source));
         return score.MusicMarks.Select(m => m.Type).ToArray();
@@ -57,8 +57,8 @@ public class StructureNavigationTests
               section C { e4 f g a | }
               section D { c'4 b a g | }
             }
-            structure { {{structure}} }
-            score "x" { staff m }
+            form main { {{structure}} }
+            score main "x" { staff m }
             """;
         return new MeasureCollector().Collect(SyntaxTree.Parse(source)).MusicMarks.ToArray();
     }

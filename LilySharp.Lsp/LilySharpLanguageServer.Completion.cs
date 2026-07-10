@@ -509,10 +509,11 @@ public sealed partial class LilySharpLanguageServer
         if (IsInsidePartBlock(text, offset) && !IsInsideStringLiteral(text, offset))
             return CompletionContext.PartBlock;
 
-        // Inside structure { … } the body is a playback order (section names and
-        // navigation marks), not music — so it gets its own completions, never
-        // note names. Checked before the brace fallback so 'structure {|' counts.
-        if (InnermostOpenBlock(text, offset) == "structure")
+        // Inside form <name> { … } the body is a playback order (section names and
+        // navigation marks), not music — so it gets its own completions, never note
+        // names. A form is always named, so the `form` keyword is the frame Prefix.
+        var formFrames = ScanOpenBlocks(text, offset, ReadFrame);
+        if (formFrames.Count > 0 && formFrames[^1].Prefix == "form")
             return CompletionContext.StructureBlock;
 
         // Inside score "name" { } / grandStaff { }: the body is a render spec.
@@ -664,21 +665,38 @@ public sealed partial class LilySharpLanguageServer
         }
         if (w1 == "score" || w1 == "grandStaff")
             return true;
-        // Known block keywords that take NO name between keyword and brace —
-        // anything else is a name (score x { / section A { …), so look one
-        // word further back.
-        if (w1 is "section" or "part" or "phrase" or "structure" or "chords"
+        // Blocks that take NO name before their brace: if w1 is one of these,
+        // this brace opens that block, not a score.
+        if (w1 is "section" or "part" or "phrase" or "form" or "chords"
             or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
-            or "appoggiatura" or "repeat" or "ossia" or "tab" or "")
+            or "appoggiatura" or "repeat" or "ossia" or "tab")
+            return false;
+        // Otherwise w1 was a bare name or a quoted basename (w1 == ""). A score
+        // header is `score <form> ["basename"] {`, so up to two tokens precede the
+        // keyword; walk back over the remaining ones looking for `score`.
+        for (int skip = 0; skip < 2; skip++)
         {
-            if (w1 != "")
+            while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
+            if (j < 0) return false;
+            if (text[j] == '"')
+            {
+                j--;
+                while (j >= 0 && text[j] != '"') j--;
+                j--;
+                continue;
+            }
+            int e2 = j + 1;
+            while (j >= 0 && IsWordChar(text[j])) j--;
+            string w = text.Substring(j + 1, e2 - (j + 1));
+            if (w == "score" || w == "grandStaff")
+                return true;
+            if (w is "section" or "part" or "phrase" or "form" or "chords"
+                or "lyrics" or "voice" or "tuplet" or "grace" or "acciaccatura"
+                or "appoggiatura" or "repeat" or "ossia" or "tab")
                 return false;
+            // else a name — keep walking back
         }
-        while (j >= 0 && char.IsWhiteSpace(text[j])) j--;
-        int e2 = j + 1;
-        while (j >= 0 && IsWordChar(text[j])) j--;
-        string w0 = text.Substring(j + 1, e2 - (j + 1));
-        return w0 == "score";
+        return false;
     }
 
     /// <summary>After <c>title</c> / <c>composer</c>: one snippet that drops a
@@ -789,7 +807,6 @@ public sealed partial class LilySharpLanguageServer
             ("grandStaff", "grandStaff {\n\t$0\n}", "Braced staff group (piano)"),
             ("chords", "chords $0", "Chord row (no staff) for the named chord part"),
             ("lyrics", "lyrics $0", "Lyrics row (no staff) for the named lyrics part"),
-            ("structure", "structure { $0 }", "Per-score playback order override"),
         };
         return new CompletionList
         {
@@ -1042,12 +1059,12 @@ public sealed partial class LilySharpLanguageServer
             Items =
             [
                 new CompletionItem { Label = "version", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "version ${1:1}", Detail = "Language version this file targets (a bare number; optional, first line)" },
-                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "score {\n\t$0\n}", Detail = "Score block" },
+                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "score main {\n\t$0\n}", Detail = "Score block" },
                 new CompletionItem { Label = "part", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "part $1 {\n\t$0\n}", Detail = "Part declaration" },
                 new CompletionItem { Label = "section", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "section $1 {\n\t$0\n}", Detail = "Section declaration" },
                 new CompletionItem { Label = "phrase", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "phrase $1 {\n\t$0\n}", Detail = "Reusable phrase" },
-                new CompletionItem { Label = "structure", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "structure { $0 }", Detail = "Playback order" },
-                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "score {\n\t$0\n}", Detail = "Printable score (visual layout)" },
+                new CompletionItem { Label = "form", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "form main { $0 }", Detail = "Piece form (section play order)" },
+                new CompletionItem { Label = "score", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "score main {\n\t$0\n}", Detail = "Printable score (visual layout)" },
                 new CompletionItem { Label = "title", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "title \"$0\"", Detail = "Title metadata" },
                 new CompletionItem { Label = "composer", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "composer \"$0\"", Detail = "Composer metadata" },
                 new CompletionItem { Label = "tempo", Kind = CompletionItemKind.Keyword, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "tempo $0", Detail = "Tempo (BPM)" },
@@ -1063,7 +1080,7 @@ public sealed partial class LilySharpLanguageServer
                     FilterText = "newscore score template",
                     Kind = CompletionItemKind.Snippet,
                     InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = "// Twinkle, Twinkle, Little Star (public domain).\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart melody {\n\tclef treble\n\tsection A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tsection B { g'4 g f f | e e d2 | }\n}\n\nstructure { A |: B :| A \"A2\" }\n\nscore \"score\" {\n\tstaff melody\n}\n$0",
+                    InsertText = "// Twinkle, Twinkle, Little Star (public domain).\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart melody {\n\tclef treble\n\tsection A { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tsection B { g'4 g f f | e e d2 | }\n}\n\nform main { A |: B :| A \"A2\" }\n\nscore main {\n\tstaff melody\n}\n$0",
                     Detail = "Complete single-staff score (Twinkle template)",
                 },
                 new CompletionItem { Label = "lyrics", Kind = CompletionItemKind.Snippet, InsertTextFormat = InsertTextFormat.Snippet, InsertText = "lyrics {\n\t$0\n}", Detail = "Lyrics block" },
@@ -1073,7 +1090,7 @@ public sealed partial class LilySharpLanguageServer
                     FilterText = "grandstaff piano",
                     Kind = CompletionItemKind.Snippet,
                     InsertTextFormat = InsertTextFormat.Snippet,
-                    InsertText = "// Twinkle, Twinkle, Little Star (public domain) — piano.\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart rh { clef treble }\npart lh { clef bass }\n\nsection A {\n\trh { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tlh { c,2 g | c2 c | f2 c | g2 c | }\n}\n\nstructure { A }\n\nscore \"score\" {\n\tgrandStaff {\n\t\tstaff rh\n\t\tstaff lh\n\t}\n}\n$0",
+                    InsertText = "// Twinkle, Twinkle, Little Star (public domain) — piano.\ntitle \"Twinkle, Twinkle, Little Star\"\ncomposer \"Jane Taylor\"\n\ntempo 100\ntime 4/4\nkey c major\n\npart rh { clef treble }\npart lh { clef bass }\n\nsection A {\n\trh { c4 c g' g | a a g2 | f4 f e e | d d c2 | }\n\tlh { c,2 g | c2 c | f2 c | g2 c | }\n}\n\nform main { A }\n\nscore main {\n\tgrandStaff {\n\t\tstaff rh\n\t\tstaff lh\n\t}\n}\n$0",
                     Detail = "Two-staff (piano) score (grand staff template)",
                 }
             ]
@@ -1199,7 +1216,7 @@ public sealed partial class LilySharpLanguageServer
             }
 
             // Structural keywords: this is not a part-music block.
-            if (name is "section" or "score" or "structure" or "part" or "phrase"
+            if (name is "section" or "score" or "form" or "part" or "phrase"
                 or "grandstaff" or "lyrics" or "chords" or "repeat" or "tuplet"
                 or "grace" or "acciaccatura" or "appoggiatura")
                 return false;

@@ -60,8 +60,9 @@ public sealed class LilyPondExporter
         // Collect sections and structure order.
         foreach (var s in root.DescendantNodes().OfType<SectionDeclarationSyntax>())
             _sections.TryAdd(s.SectionName, s);
-        var structure = root.DescendantNodes().OfType<StructureDeclarationSyntax>()
-            .FirstOrDefault(s => s.Parent is not RenderDeclarationSyntax);
+        // Emit the PRIMARY form (`main`, else the first declared).
+        var forms = root.DescendantNodes().OfType<StructureDeclarationSyntax>().ToList();
+        var structure = forms.FirstOrDefault(f => f.NameText == "main") ?? forms.FirstOrDefault();
 
         _sb.AppendLine("\\version \"2.24.0\"");
         _sb.AppendLine();

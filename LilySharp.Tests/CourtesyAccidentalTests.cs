@@ -47,8 +47,8 @@ public class CourtesyAccidentalTests
 part melody { clef treble }
 phrase m { cis'4 d e f | c4 d e f | }
 section A { melody { $m } }
-structure { A }
-score { staff melody }
+form main { A }
+score main { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree, "melody");
@@ -71,8 +71,8 @@ score { staff melody }
 part melody { clef treble }
 phrase m { bes'4 c d e | b4 c d e | }
 section A { melody { $m } }
-structure { A }
-score { staff melody }
+form main { A }
+score main { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree, "melody");
@@ -96,8 +96,8 @@ score { staff melody }
 part melody { clef treble }
 phrase m { cis'4 c d e | }
 section A { melody { $m } }
-structure { A }
-score { staff melody }
+form main { A }
+score main { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree, "melody");
@@ -119,8 +119,8 @@ score { staff melody }
 part melody { clef treble }
 phrase m { dis'4 dis dis dis | }
 section A { melody { $m } }
-structure { A }
-score { staff melody }
+form main { A }
+score main { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree, "melody");
@@ -143,8 +143,8 @@ score { staff melody }
 part melody { clef treble }
 phrase m { cis'4 c' c, e | }
 section A { melody { $m } }
-structure { A }
-score { staff melody }
+form main { A }
+score main { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree, "melody");
@@ -163,8 +163,8 @@ score { staff melody }
 part melody { clef treble }
 phrase m { c'4 d e f | c4 d e f | }
 section A { melody { $m } }
-structure { A }
-score { staff melody }
+form main { A }
+score main { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree, "melody");
@@ -184,8 +184,8 @@ score { staff melody }
 part melody { clef treble }
 phrase m { c'4@courtesy d e f | }
 section A { melody { $m } }
-structure { A }
-score { staff melody }
+form main { A }
+score main { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree, "melody");
@@ -208,8 +208,8 @@ score { staff melody }
 part melody { clef treble }
 phrase m { cis'4 d e f | c4@courtesy d e f | }
 section A { melody { $m } }
-structure { A }
-score { staff melody }
+form main { A }
+score main { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var options = new SvgRenderOptions { EmbedFont = false };
@@ -268,8 +268,8 @@ part melody { clef treble }
 key g major
 phrase m { fis'4 g a b | f4 g a b | }
 section A { melody { $m } }
-structure { A }
-score { staff melody }
+form main { A }
+score main { staff melody }
 ";
         var tree = SyntaxTree.Parse(source);
         var score = new MeasureCollector().Collect(tree, "melody");

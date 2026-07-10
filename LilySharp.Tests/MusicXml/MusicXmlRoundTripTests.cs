@@ -87,9 +87,9 @@ public class MusicXmlRoundTripTests
               lyrics { Mu- sic fills the | air to- night so | ev- 'ry- one will | sing a- long | }
             }
 
-            structure { A }
+            form main { A }
 
-            score "lead-sheet" { staff melody }
+            score main "lead-sheet" { staff melody }
             """);
     }
 
@@ -108,8 +108,8 @@ public class MusicXmlRoundTripTests
               melody { e'4@chord(c) e' f' g' | }
               lyrics { Mu- sic fills the | }
             }
-            structure { A }
-            score x { staff melody }
+            form main { A }
+            score main { staff melody }
             """)).ToXml();
 
         var firstNote = xml.Descendants("note").First();
@@ -130,8 +130,8 @@ public class MusicXmlRoundTripTests
             section A {
               bass { c4@fig(6) d4@fig(6 4) e4@fig(7 s) f4@fig(_) | }
             }
-            structure { A }
-            score x { staff bass }
+            form main { A }
+            score main { staff bass }
             """);
         Assert.False(HasErrors(tree), "the fixture itself must parse clean");
 
@@ -340,8 +340,8 @@ public class MusicXmlRoundTripTests
             key c major
             part melody { clef treble }
             section A { melody { |: c'4 d' e' f' | g'4 a' b' c'' :| } }
-            structure { A }
-            score s { staff melody }
+            form main { A }
+            score main { staff melody }
             """);
     }
 
@@ -644,7 +644,7 @@ public class MusicXmlRoundTripTests
     // NOTE: structure-level repeats (|: A :|) replay sections in the collector but
     // the exporter unrolls them to repeat BARLINES (section emitted once), so a
     // round-trip through XML can't match on replay count until the importer factors
-    // repeats back into structure { } (Phase 3). Deliberately not covered here yet.
+    // repeats back into form main { } (Phase 3). Deliberately not covered here yet.
 
     // ---- harness ----------------------------------------------------------
 

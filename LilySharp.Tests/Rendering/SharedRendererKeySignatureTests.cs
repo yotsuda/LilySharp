@@ -46,8 +46,8 @@ public sealed class SharedRendererKeySignatureTests
 
             section S { line { | d'4 e g a | } }
 
-            structure { S }
-            score "o" { staff line }
+            form main { S }
+            score main "o" { staff line }
             """);
 
         var rec = new GlyphRecorder();
@@ -75,8 +75,8 @@ public sealed class SharedRendererKeySignatureTests
             octave absolute
             part low
             section A { low { clef bass c2 g,2 | c,1 | } }
-            structure { A }
-            score "o" { staff low }
+            form main { A }
+            score main "o" { staff low }
             """);
         var rec = new GlyphRecorder();
         SharedRenderer.RenderTo(score, layout, rec);
@@ -95,8 +95,8 @@ public sealed class SharedRendererKeySignatureTests
             part hi { clef treble }
             part lo
             section A { hi { c''1 } lo { clef bass c2 g,2 } }
-            structure { A }
-            score "o" { grandStaff { staff hi  staff lo } }
+            form main { A }
+            score main "o" { grandStaff { staff hi  staff lo } }
             """);
         var rec = new GlyphRecorder();
         SharedRenderer.RenderTo(score, layout, rec);

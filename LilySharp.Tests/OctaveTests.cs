@@ -111,8 +111,8 @@ part bassline { clef bass }
 section A {
     bassline { c4 d e f | }
 }
-structure { A }
-score ""test"" {
+form main { A }
+score main ""test"" {
     staff bass bassline
 }
 ";
@@ -142,8 +142,8 @@ part cellopart { instrument cello }
 section A {
     cellopart { c4 d e f | }
 }
-structure { A }
-score ""test"" {
+form main { A }
+score main ""test"" {
     staff bass cellopart
 }
 ";
@@ -252,8 +252,8 @@ part lead { instrument guitar }
 section A {
     lead { c4 d e f | }
 }
-structure { A }
-score ""test"" {
+form main { A }
+score main ""test"" {
     staff treble_8 lead
 }
 ";
@@ -272,8 +272,8 @@ part fl { instrument flute }
 section A {
     fl { c4 d e f | }
 }
-structure { A }
-score ""test"" {
+form main { A }
+score main ""test"" {
     staff treble fl
 }
 ";
@@ -294,8 +294,8 @@ part high { instrument violin, octave 5 }
 section A {
     high { c4 d e f | }
 }
-structure { A }
-score ""test"" {
+form main { A }
+score main ""test"" {
     staff treble high
 }
 ";
@@ -317,8 +317,8 @@ section A {
 section B {
     melody { c4 d e f | }
 }
-structure { A B }
-score ""test"" {
+form main { A B }
+score main ""test"" {
     staff treble melody
 }
 ";
@@ -345,8 +345,8 @@ section A {
 section B {
     bassline { c4 d e f | }
 }
-structure { A B }
-score ""test"" {
+form main { A B }
+score main ""test"" {
     staff bass bassline
 }
 ";
@@ -401,8 +401,8 @@ part melody { clef treble_8 }
 section A {
     melody { c4 d e f | }
 }
-structure { A }
-score ""test"" {
+form main { A }
+score main ""test"" {
     staff treble_8 melody
 }
 ";

@@ -22,17 +22,31 @@ namespace LilySharp.Core.Parser;
 internal sealed partial class Parser
 {
     /// <summary>
-    /// Parse structure declaration: structure { ... }
+    /// Parse form declaration: form Name { ... }
     /// </summary>
     private StructureDeclarationGreen ParseStructureDeclaration()
     {
-        var keyword = Expect(SyntaxKind.StructureKeyword);
+        var keyword = Expect(SyntaxKind.StructureKeyword);   // the `form` keyword
+
+        // A form is always named: `form Main { … }`. A score binds to it by that
+        // name (`score Main { … }`); the reserved name `main` writes to the input
+        // .lys stem. Names are case-sensitive (like every Lily# symbol).
+        SyntaxToken name;
+        if (!Check(SyntaxKind.OpenBrace))
+            name = Advance();
+        else
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            _diagnostics.Error(span, DiagnosticCodes.ExpectedToken, "Expected a form name after 'form'");
+            name = new SyntaxToken(SyntaxKind.Identifier, "", null, null);
+        }
+
         var openBrace = Expect(SyntaxKind.OpenBrace);
 
         var items = ParseList(SyntaxKind.CloseBrace, ParseStructureItem);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        return new StructureDeclarationGreen(keyword, openBrace, [.. items], closeBrace);
+        return new StructureDeclarationGreen(keyword, name, openBrace, [.. items], closeBrace);
     }
 
     private GreenNode? ParseStructureItem()
@@ -327,14 +341,21 @@ internal sealed partial class Parser
     {
         var keyword = Expect(SyntaxKind.ScoreKeyword);
 
-        // Optional output basename: a single bare token (identifier, pitch letter,
-        // number) or a quoted string — quotes only needed for spaces/special
-        // characters, like `title`. Anything that is not the opening brace is the
-        // name. Extension (if written) is dropped downstream.
-        SyntaxToken? filename = Check(SyntaxKind.OpenBrace) || Check(SyntaxKind.TransposeKeyword)
+        // `score <FormName> ["basename"] [transpose <pitch>] { ... }`.
+        // A bare token is the FORM reference (which form this score renders); a
+        // quoted string is the output basename (quotes only needed for spaces).
+        // The form name is REQUIRED at the semantic layer; a missing one is caught
+        // by the validator, not here, so recovery stays local.
+        SyntaxToken? formName = Check(SyntaxKind.OpenBrace)
+            || Check(SyntaxKind.TransposeKeyword)
+            || Check(SyntaxKind.StringLiteral)
             ? null : Advance();
 
-        // Optional per-score transpose: `score [name] transpose <pitch> { ... }`.
+        // Optional output basename (a quoted string). The extension, if written,
+        // is dropped downstream (the file format is a CLI choice).
+        SyntaxToken? filename = Check(SyntaxKind.StringLiteral) ? Advance() : null;
+
+        // Optional per-score transpose: `score <Form> transpose <pitch> { ... }`.
         // Stored as a transpose property (same shape the part header uses).
         GreenNode? transpose = Check(SyntaxKind.TransposeKeyword) ? ParsePartProperty() : null;
 
@@ -343,8 +364,8 @@ internal sealed partial class Parser
         var items = ParseList(SyntaxKind.CloseBrace, ParseRenderItem);
 
         var closeBrace = Expect(SyntaxKind.CloseBrace);
-        // name is always null now (`score` is the keyword, not a name slot).
-        return new RenderDeclarationGreen(keyword, null, filename, transpose, openBrace, [.. items], closeBrace);
+        // The `name` slot now carries the form reference; `filename` the basename.
+        return new RenderDeclarationGreen(keyword, formName, filename, transpose, openBrace, [.. items], closeBrace);
     }
 
 
@@ -387,10 +408,6 @@ internal sealed partial class Parser
             SyntaxKind.GrandStaffKeyword => ParseGrandStaffRender(),
             SyntaxKind.TabKeyword => ParseTabRender(),
             SyntaxKind.OssiaKeyword => ParseOssiaRender(),
-            // A score may carry its own `structure { ... }` to render a different
-            // arrangement of the same sections (e.g. a practice excerpt), overriding
-            // the top-level structure for that score only.
-            SyntaxKind.StructureKeyword => ParseStructureDeclaration(),
             _ when IsPartNameStart() => ParseMidiPartRender(),
             _ => null
         };
