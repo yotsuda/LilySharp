@@ -190,7 +190,19 @@ internal static partial class SharedRenderer
                 // (e.g. a fis sharp). LILYPOND-REF: lily/paper-column.cc —
                 // non-musical columns precede the musical column of the same
                 // moment, and the accidentals sit between them and the heads.
-                if (useColumnTiming)
+                bool isChange = item is ClefChangeItem or KeySignatureChangeItem or TimeSignatureChangeItem;
+                if (useColumnTiming && isChange && currentTiming == Fraction.Zero)
+                {
+                    // A change that OPENS the measure (a section-boundary revert, or
+                    // an authored key/time at the bar) anchors just after the barline
+                    // — NOT hanging left of the first note. A distant first note (a
+                    // low ledger note, a wide chord column) otherwise leaves the
+                    // signature floating in the middle of the bar.
+                    double afterBar = measure.StartBarline != BarlineType.None
+                        ? GetVisualBarlineWidth(measure.StartBarline) : 0;
+                    itemX = ml.X + afterBar + GlyphMetrics.ClefChangePadding;
+                }
+                else if (useColumnTiming && isChange)
                 {
                     double nextAcc = itemIdx + 1 < measure.Items.Length
                         ? FollowingAccidentalLeftExtent(measure.Items[itemIdx + 1])
