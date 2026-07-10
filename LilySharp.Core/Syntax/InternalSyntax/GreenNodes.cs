@@ -401,7 +401,9 @@ internal sealed class PartDeclarationGreen : GreenSyntaxNode
 }
 
 /// <summary>
-/// Variable reference: use name or $name or just name
+/// Variable reference: use name or $name or just name. A phrase reference may
+/// carry trailing octave marks (<c>Chorus'</c> / <c>Chorus,</c>, same spelling
+/// as a pitch's <c>c'</c> / <c>c,</c>) that shift where the movable phrase lands.
 /// </summary>
 internal sealed class VariableReferenceGreen : GreenSyntaxNode
 {
@@ -410,8 +412,18 @@ internal sealed class VariableReferenceGreen : GreenSyntaxNode
     {
     }
 
+    public VariableReferenceGreen(SyntaxToken keyword, SyntaxToken name, GreenNode?[] octaveMarks)
+        : base(SyntaxKind.VariableReference, [keyword, name, .. octaveMarks])
+    {
+    }
+
     public VariableReferenceGreen(SyntaxToken name)
         : base(SyntaxKind.VariableReference, [name])
+    {
+    }
+
+    public VariableReferenceGreen(SyntaxToken name, GreenNode?[] octaveMarks)
+        : base(SyntaxKind.VariableReference, [name, .. octaveMarks])
     {
     }
 }

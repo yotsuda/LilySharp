@@ -493,7 +493,33 @@ public sealed class VariableReferenceSyntax : SyntaxNode
     {
     }
 
-    // Name can be at index 0 (single-arg constructor) or index 1 (two-arg with keyword)
+    // The optional leading `$` keyword is the only Dollar token; when present the
+    // name sits at index 1, otherwise at index 0. Trailing octave marks (' / ,)
+    // follow the name, so slot count alone can no longer locate it.
+    private int NameIndex => GetChild(0) is SyntaxTokenNode { Kind: SyntaxKind.Dollar } ? 1 : 0;
+
     /// <summary>The referenced variable name token.</summary>
-    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(SlotCount > 1 ? 1 : 0)!;
+    public SyntaxTokenNode Name => (SyntaxTokenNode)GetChild(NameIndex)!;
+
+    /// <summary>
+    /// Net octave shift from the trailing marks (<c>'</c> = +1, <c>,</c> = -1),
+    /// applied when the movable phrase is placed at the reference site. Same
+    /// spelling and meaning as a pitch's octave marks.
+    /// </summary>
+    public int OctaveOffset
+    {
+        get
+        {
+            int offset = 0;
+            for (int i = NameIndex + 1; i < SlotCount; i++)
+            {
+                var child = GetChild(i) as SyntaxTokenNode;
+                if (child?.Kind == SyntaxKind.Apostrophe)
+                    offset++;
+                else if (child?.Kind == SyntaxKind.Comma)
+                    offset--;
+            }
+            return offset;
+        }
+    }
 }

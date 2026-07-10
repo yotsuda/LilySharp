@@ -1290,6 +1290,41 @@ form main { Main }
         Assert.Contains(tree.GetNodes<VariableReferenceSyntax>(), r => r.Name.Text == "intro");
     }
 
+    [Theory]
+    [InlineData("intro", 0)]
+    [InlineData("intro'", 1)]
+    [InlineData("intro''", 2)]
+    [InlineData("intro,", -1)]
+    [InlineData("intro,,", -2)]
+    [InlineData("$intro", 0)]
+    [InlineData("$intro'", 1)]
+    [InlineData("$intro,,", -2)]
+    public void PhraseReference_OctaveMarks_CountAsOffset(string reference, int expected)
+    {
+        // A phrase reference carries the SAME trailing octave marks as a pitch —
+        // intro' lands the movable phrase an octave up, intro,, two octaves down.
+        // The name stays intact; the marks contribute only to OctaveOffset.
+        var source = $"phrase intro {{ c4 d e f | }}\n{{ {reference} }}";
+        var tree = SyntaxTree.Parse(source);
+        Assert.False(tree.HasErrors, string.Join("\n", tree.Diagnostics));
+        var varRef = tree.GetNodes<VariableReferenceSyntax>().Single();
+        Assert.Equal("intro", varRef.Name.Text);
+        Assert.Equal(expected, varRef.OctaveOffset);
+    }
+
+    [Theory]
+    [InlineData("intro'")]
+    [InlineData("intro,,")]
+    [InlineData("$intro'")]
+    public void PhraseReference_OctaveMarks_RoundTrip(string reference)
+    {
+        // Marks live on the green node's tokens, so ToFullString reproduces the
+        // source byte-for-byte (the click-jump offsets stay exact).
+        var source = $"phrase intro {{ c4 d e f | }}\n{{ {reference} }}";
+        var tree = SyntaxTree.Parse(source);
+        Assert.Equal(source, tree.Root.ToFullString());
+    }
+
     // --- Naive grand-staff mistake: clef name used like a staff block ---
 
     [Fact]

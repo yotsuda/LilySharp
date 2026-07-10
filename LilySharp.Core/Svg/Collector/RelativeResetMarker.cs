@@ -23,15 +23,26 @@ namespace LilySharp.Core.Svg.Collector;
 /// Zero-width sentinel injected into the flattened music-node stream at each
 /// phrase-reference expansion: the collector resets its relative pitch and
 /// duration state when it encounters one, so every phrase body evaluates in
-/// the default frame regardless of call site.
+/// the default frame regardless of call site. A reference's trailing octave
+/// marks (<c>Chorus'</c> / <c>Chorus,</c>) travel on <see cref="OctaveOffset"/>,
+/// shifting the fresh frame up or down before the phrase body runs.
 /// </summary>
 internal sealed class RelativeResetMarker : SyntaxNode
 {
-    public static readonly RelativeResetMarker Instance = new();
+    /// <summary>The offset-free reset used by the overwhelming common case.</summary>
+    public static readonly RelativeResetMarker Instance = new(0);
 
-    private RelativeResetMarker()
+    /// <summary>Net octave shift applied to the reset frame (' = +1, , = -1).</summary>
+    public int OctaveOffset { get; }
+
+    /// <summary>Reuses <see cref="Instance"/> for the (common) no-mark case.</summary>
+    public static RelativeResetMarker For(int octaveOffset)
+        => octaveOffset == 0 ? Instance : new RelativeResetMarker(octaveOffset);
+
+    private RelativeResetMarker(int octaveOffset)
         : base(MarkerGreen.Shared, parent: null, position: 0)
     {
+        OctaveOffset = octaveOffset;
     }
 
     private sealed class MarkerGreen : GreenNode

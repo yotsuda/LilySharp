@@ -930,8 +930,9 @@ public sealed class MusicXmlExporter
                 {
                     // Phrase bodies evaluate in a fresh relative frame so a
                     // $phrase means the same pitches at every call site
-                    // (matches MeasureCollector's RelativeResetMarker).
-                    _currentOctave = 4;
+                    // (matches MeasureCollector's RelativeResetMarker). Trailing
+                    // marks (Chorus' / Chorus,) shift that frame up or down.
+                    _currentOctave = 4 + varRef.OctaveOffset;
                     _currentStep = 0;
                     _defaultDuration = Fraction.Quarter;
                     ProcessNode(varBody);

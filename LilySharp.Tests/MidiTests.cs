@@ -71,6 +71,21 @@ public class MidiTests
     }
 
     [Fact]
+    public void ExportPhraseReference_OctaveMarkShiftsPitch()
+    {
+        // A phrase is a movable motif: intro' plays an octave above where intro
+        // itself sounds, intro, an octave below. The reference's trailing marks
+        // shift the fresh frame — same rule the SVG collector applies.
+        var up = new MidiExporter().Export(SyntaxTree.Parse("phrase intro { c4 }\n{ intro' }"));
+        var plain = new MidiExporter().Export(SyntaxTree.Parse("phrase intro { c4 }\n{ intro }"));
+        var down = new MidiExporter().Export(SyntaxTree.Parse("phrase intro { c4 }\n{ intro, }"));
+
+        Assert.Equal(60, plain.Tracks[1].Notes.Single().Pitch); // C4
+        Assert.Equal(72, up.Tracks[1].Notes.Single().Pitch);    // C5
+        Assert.Equal(48, down.Tracks[1].Notes.Single().Pitch);  // C3
+    }
+
+    [Fact]
     public void ExportWithDuration()
     {
         var source = "c4 c2 c1";

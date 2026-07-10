@@ -298,7 +298,21 @@ internal sealed partial class Parser
         // $name — reference a phrase.
         var dollar = Expect(SyntaxKind.Dollar);
         var name = ExpectPartName();   // phrase refs may name clef-name words too
-        return new VariableReferenceGreen(dollar, name);
+        var marks = ParsePhraseOctaveMarks();
+        return marks.Length == 0
+            ? new VariableReferenceGreen(dollar, name)
+            : new VariableReferenceGreen(dollar, name, marks);
+    }
+
+    // Phrase references carry the SAME trailing octave marks as a pitch — Chorus'
+    // lands the movable phrase an octave higher, Chorus, an octave lower — so we
+    // reuse the note grammar's ' / , collection (ParsePitch, Parser.Music.cs).
+    private GreenNode?[] ParsePhraseOctaveMarks()
+    {
+        var marks = new List<GreenNode?>();
+        while (Check(SyntaxKind.Apostrophe) || Check(SyntaxKind.Comma))
+            marks.Add(Advance());
+        return [.. marks];
     }
 
 
@@ -317,7 +331,11 @@ internal sealed partial class Parser
                 $"'{bad.Text}' is not a valid note — did you mean the pitch '{pitch}'?");
             return new VariableReferenceGreen(bad);
         }
-        return new VariableReferenceGreen(Advance());
+        var name = Advance();
+        var marks = ParsePhraseOctaveMarks();
+        return marks.Length == 0
+            ? new VariableReferenceGreen(name)
+            : new VariableReferenceGreen(name, marks);
     }
 
     // English-style accidental spellings map to Lily#'s Dutch note names:

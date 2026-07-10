@@ -1781,9 +1781,9 @@ public sealed partial class MeasureCollector
 
                 // Phrase-reference boundary: evaluate the body in the default
                 // frame (same handling as ProcessMusicNodeSequence).
-                if (node is RelativeResetMarker)
+                if (node is RelativeResetMarker reset)
                 {
-                    EnterDefaultFrame();
+                    EnterDefaultFrame(reset.OctaveOffset);
                     continue;
                 }
 
@@ -2414,7 +2414,7 @@ public sealed partial class MeasureCollector
         foreach (var item in repeat.Body.Items)
         {
             if (item is VariableReferenceSyntax varRef)
-                ExpandVariable(varRef.Name.Text, bodyNodes);
+                ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, bodyNodes);
             else
                 bodyNodes.Add(item);
         }

@@ -35,7 +35,7 @@ public sealed partial class MeasureCollector
     private void GatherMusicNode(SyntaxNode node, List<SyntaxNode> musicNodes)
     {
         if (node is VariableReferenceSyntax varRef)
-            ExpandVariable(varRef.Name.Text, musicNodes);
+            ExpandVariable(varRef.Name.Text, varRef.OctaveOffset, musicNodes);
         // NOTE: unlike the other walks, the per-voice path does NOT treat a
         // << \\ >> span as one wrapper. Its caller does not skip parallel
         // descendants, so the inner notes are collected (flattened) here — the
@@ -55,10 +55,11 @@ public sealed partial class MeasureCollector
         {
             var node = musicNodes[i];
 
-            // Phrase-reference boundary: evaluate the body in the default frame.
-            if (node is RelativeResetMarker)
+            // Phrase-reference boundary: evaluate the body in the default frame,
+            // shifted by the reference's octave marks.
+            if (node is RelativeResetMarker reset)
             {
-                EnterDefaultFrame();
+                EnterDefaultFrame(reset.OctaveOffset);
                 continue;
             }
 
@@ -90,10 +91,16 @@ public sealed partial class MeasureCollector
 
     /// <summary>Resets the relative-octave and default-duration state to the
     /// initial frame — the invariant applied at every phrase-reference
-    /// (<see cref="RelativeResetMarker"/>) boundary.</summary>
-    private void EnterDefaultFrame()
+    /// (<see cref="RelativeResetMarker"/>) boundary. <paramref name="octaveOffset"/>
+    /// carries the reference's trailing marks (<c>Chorus'</c> / <c>Chorus,</c>),
+    /// shifting the fresh frame so the movable phrase lands an octave up or down.
+    /// The shift only bites in relative mode; absolute pitches (octave absolute)
+    /// anchor to a fixed C and ignore the running frame, so they carry their own
+    /// octaves and are unaffected by a reference mark.</summary>
+    private void EnterDefaultFrame(int octaveOffset = 0)
     {
         _octave.ResetToInitial();
+        _octave.CurrentOctave += octaveOffset;
         _defaultDuration = Fraction.Quarter;
     }
 

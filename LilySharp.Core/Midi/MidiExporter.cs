@@ -320,7 +320,9 @@ public sealed class MidiExporter
                     && _activePhrases.Add(phName))
                 {
                     _currentNoteName = 0;
-                    _currentOctave = _partOctaveAnchor;
+                    // Trailing marks on the reference (Chorus' / Chorus,) raise or
+                    // lower the movable phrase, matching the SVG collector's frame shift.
+                    _currentOctave = _partOctaveAnchor + varRef.OctaveOffset;
                     _defaultDuration = Fraction.Quarter;
                     ProcessNode(phraseBody, track, conductorTrack);
                     _activePhrases.Remove(phName);
