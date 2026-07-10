@@ -191,7 +191,28 @@ internal sealed class MeasureBuilder
         if (item is TimeSignatureChangeItem tsc)
         {
             _timeSignature = new Fraction(tsc.NewTime.Beats, tsc.NewTime.BeatType);
-            _currentItems.Add(item);
+            // Collapse a section reset immediately followed by the section's own
+            // `time`: keep the last meter so two time signatures don't overprint.
+            if (_currentItems.Count > 0 && _currentItems[^1] is TimeSignatureChangeItem)
+                _currentItems[^1] = item;
+            else
+                _currentItems.Add(item);
+            return;
+        }
+
+        // Collapse consecutive key changes at the same measure start — a section
+        // boundary reset (revert to the score key) immediately followed by the
+        // section's own `key`. Draw ONE change from the ORIGINAL previous key to the
+        // FINAL new key, or nothing if the net key is unchanged; otherwise the two
+        // signatures (e.g. a cancel-natural and the new flat) overprint.
+        if (item is KeySignatureChangeItem kc
+            && _currentItems.Count > 0 && _currentItems[^1] is KeySignatureChangeItem prevKc)
+        {
+            var merged = new KeySignatureChangeItem(kc.NewKey, prevKc.PreviousKey, kc.SourcePosition);
+            if (merged.NewKey == merged.PreviousKey)
+                _currentItems.RemoveAt(_currentItems.Count - 1); // net no change
+            else
+                _currentItems[^1] = merged;
             return;
         }
 
