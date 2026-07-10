@@ -176,15 +176,21 @@ internal static partial class SharedRenderer
             if (staves.Count < 2)
                 continue;
 
+            bool lineStart = true;
             foreach (var ml in system.Measures)
             {
                 if (ml.MeasureIndex >= voice.Measures.Length)
                     continue;
                 var measure = voice.Measures[ml.MeasureIndex];
+                bool atLineStart = lineStart;
+                lineStart = false;
 
                 bool suppressEnd = measure.EndBarline == BarlineType.Single
                     && IsMmrInnerEndBarline(layout, ml.MeasureIndex);
                 double endWidth = GetVisualBarlineWidth(measure.EndBarline);
+                // Keep the inter-staff connector aligned with the staff barlines,
+                // which clear the line-start clef by LineStartBarClearance.
+                double startX = atLineStart ? ml.X + LineStartBarClearance : ml.X;
 
                 for (int i = 0; i + 1 < staves.Count; i++)
                 {
@@ -195,7 +201,7 @@ internal static partial class SharedRenderer
                         continue;
 
                     if (measure.StartBarline != BarlineType.None)
-                        DrawBarline(measure.StartBarline, ml.X, gapTop, gapHeight,
+                        DrawBarline(measure.StartBarline, startX, gapTop, gapHeight,
                             gc, withDots: false);
                     if (!suppressEnd)
                         DrawBarline(measure.EndBarline, ml.X + ml.Width - endWidth,

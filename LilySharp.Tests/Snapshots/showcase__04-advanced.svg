@@ -157,10 +157,10 @@
   <text class="music" x="85.42" y="49.05" font-size="4.00" data-pos="740"></text>
   <line x1="86.66" y1="49.05" x2="86.66" y2="45.55" stroke="#000000" stroke-width="0.130"/>
   <text class="music" x="92.47" y="47.55" font-size="4.00" data-pos="744"></text>
-  <rect x="2.56" y="46.05" width="0.60" height="4.00" fill="#000000"/>
-  <rect x="3.46" y="46.05" width="0.19" height="4.00" fill="#000000"/>
-  <circle cx="4.15" cy="47.55" r="0.20" fill="#000000"/>
-  <circle cx="4.15" cy="48.55" r="0.20" fill="#000000"/>
+  <rect x="3.71" y="46.05" width="0.60" height="4.00" fill="#000000"/>
+  <rect x="4.61" y="46.05" width="0.19" height="4.00" fill="#000000"/>
+  <circle cx="5.30" cy="47.55" r="0.20" fill="#000000"/>
+  <circle cx="5.30" cy="48.55" r="0.20" fill="#000000"/>
   <rect x="26.44" y="46.05" width="0.19" height="4.00" fill="#000000"/>
   <rect x="39.77" y="46.05" width="0.19" height="4.00" fill="#000000"/>
   <rect x="58.38" y="46.05" width="0.19" height="4.00" fill="#000000"/>

@@ -53,6 +53,11 @@ namespace LilySharp.Core.Rendering;
 internal static partial class SharedRenderer
 {
     private const double StaffHeight = 4.0;
+    // Clearance from the redrawn clef/key/time prefix to a start barline that
+    // opens a line, so a `|:` at a system start doesn't overprint the clef.
+    // LILYPOND-REF: scm/define-grobs.scm BarLine space-alist — clef /
+    // key-signature / time-signature all reserve (extra-space . 1.15).
+    private const double LineStartBarClearance = 1.15;
     // Height of the short measure-divider barlines on a lead-sheet text row
     // (no staff, so the bar is just a tick the chord row hangs on).
     private const double LeadSheetBarlineHeight = 2.0;
@@ -496,13 +501,18 @@ internal static partial class SharedRenderer
 
             // Barline types are a measure property shared by all staves in the group.
             var voice = score.StaffGroups[gi].Staves[0].PrimaryVoice;
+            bool lineStart = true;
             foreach (var ml in system.Measures)
             {
                 if (ml.MeasureIndex >= voice.Measures.Length) continue;
                 var measure = voice.Measures[ml.MeasureIndex];
+                bool atLineStart = lineStart;
+                lineStart = false;
 
+                // Line-start start barline clears the redrawn clef (see DrawBarlines).
                 if (measure.StartBarline != BarlineType.None)
-                    DrawBarline(measure.StartBarline, ml.X, top, height, gc, withDots: false);
+                    DrawBarline(measure.StartBarline,
+                        atLineStart ? ml.X + LineStartBarClearance : ml.X, top, height, gc, withDots: false);
 
                 double endX = ml.X + ml.Width;
                 DrawBarline(measure.EndBarline, endX - GetVisualBarlineWidth(measure.EndBarline),

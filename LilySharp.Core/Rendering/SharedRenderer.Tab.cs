@@ -75,13 +75,18 @@ internal static partial class SharedRenderer
         double tabCenterY = staffY + tabHeight / 2.0;
         gc.DrawGlyph(EmmentalerGlyphs.TabClef, systemStartX, tabCenterY,
             FontSize * tabHeight / 5.78);
+        bool lineStart = true;
         foreach (var ml in system.Measures)
         {
             if (ml.MeasureIndex >= primaryVoice.Measures.Length)
                 continue;
             var measure = primaryVoice.Measures[ml.MeasureIndex];
+            bool atLineStart = lineStart;
+            lineStart = false;
+            // Line-start start barline clears the redrawn tab clef (see DrawBarlines).
             if (measure.StartBarline != BarlineType.None)
-                DrawBarline(measure.StartBarline, ml.X, staffY, tabHeight, gc, tabDots: tabDots);
+                DrawBarline(measure.StartBarline,
+                    atLineStart ? ml.X + LineStartBarClearance : ml.X, staffY, tabHeight, gc, tabDots: tabDots);
             double endX = ml.X + ml.Width;
             double width = GetVisualBarlineWidth(measure.EndBarline);
             DrawBarline(measure.EndBarline, endX - width, staffY, tabHeight, gc, tabDots: tabDots);

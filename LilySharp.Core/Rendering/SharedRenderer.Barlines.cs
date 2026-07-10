@@ -36,6 +36,7 @@ internal static partial class SharedRenderer
         // chord/lyric row hangs on; a real staff uses its full height.
         double height = barHeight ?? StaffHeight;
         var voice = staff.PrimaryVoice;
+        bool lineStart = true;
         foreach (var ml in system.Measures)
         {
             // Ossia fragment trim: no barlines where no staff exists.
@@ -44,10 +45,18 @@ internal static partial class SharedRenderer
             if (ml.MeasureIndex >= voice.Measures.Length)
                 continue;
             var measure = voice.Measures[ml.MeasureIndex];
+            bool atLineStart = lineStart;
+            lineStart = false;
 
-            // Start barline (e.g. repeat-start) at the measure's left edge.
+            // Start barline (e.g. repeat-start) at the measure's left edge. At a
+            // line start the redrawn clef/key/time prefix sits immediately left of
+            // this measure, so nudge the barline right by LilyPond's prefix→bar
+            // extra-space (1.15 ss) — otherwise a `|:` opening a line overprints
+            // the clef. LILYPOND-REF: scm/define-grobs.scm BarLine space-alist
+            // (clef/key-signature/time-signature . (extra-space . 1.15)).
             if (measure.StartBarline != BarlineType.None)
-                DrawBarline(measure.StartBarline, ml.X, staffY, height, gc);
+                DrawBarline(measure.StartBarline,
+                    atLineStart ? ml.X + LineStartBarClearance : ml.X, staffY, height, gc);
 
             // End barline drawn so its right edge sits on the column boundary
             // (matches SvgRenderer: endX - visualWidth). Normal measures carry
