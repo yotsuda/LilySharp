@@ -417,7 +417,10 @@ internal sealed class MeasureLayouter
                     SpacingRules.GetTimeSignatureChangeWidth(tc) + 2 * GlyphMetrics.ClefChangePadding,
                 _ => 0
             };
-            w = Math.Max(w, itemW);
+            // SUM, not max: clef/key/time changes sharing a column are drawn side by
+            // side (the renderer sequences them), so they need their combined width.
+            // A lone change (the common case) sums to its own width — unchanged.
+            w += itemW;
         }
         return w;
     }

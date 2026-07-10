@@ -144,6 +144,9 @@ internal static partial class SharedRenderer
             // notehead share the same X.
             bool useColumnTiming = !ml.Columns.IsDefaultOrEmpty && ml.Columns.Length > 0;
             var currentTiming = Fraction.Zero;
+            // Running X for changes that OPEN this measure (clef/key/time), so
+            // several are sequenced left-to-right after the barline instead of stacked.
+            double openChangeX = double.NaN;
             for (int itemIdx = 0; itemIdx < measure.Items.Length; itemIdx++)
             {
                 var item = measure.Items[itemIdx];
@@ -197,10 +200,24 @@ internal static partial class SharedRenderer
                     // an authored key/time at the bar) anchors just after the barline
                     // — NOT hanging left of the first note. A distant first note (a
                     // low ledger note, a wide chord column) otherwise leaves the
-                    // signature floating in the middle of the bar.
-                    double afterBar = measure.StartBarline != BarlineType.None
-                        ? GetVisualBarlineWidth(measure.StartBarline) : 0;
-                    itemX = ml.X + afterBar + GlyphMetrics.ClefChangePadding;
+                    // signature floating in the middle of the bar. Several opening
+                    // changes (key + time) sequence left-to-right so they don't
+                    // overprint each other.
+                    if (double.IsNaN(openChangeX))
+                    {
+                        double afterBar = measure.StartBarline != BarlineType.None
+                            ? GetVisualBarlineWidth(measure.StartBarline) : 0;
+                        openChangeX = ml.X + afterBar + GlyphMetrics.ClefChangePadding;
+                    }
+                    itemX = openChangeX;
+                    double glyphW = item switch
+                    {
+                        ClefChangeItem cc2 => SpacingRules.GetClefChangeWidth(cc2.NewClef),
+                        KeySignatureChangeItem kc2 => SpacingRules.GetKeySignatureChangeWidth(kc2),
+                        TimeSignatureChangeItem tc2 => GlyphMetrics.GetTimeSigWidth(tc2.NewTime.Beats, tc2.NewTime.BeatType),
+                        _ => 0
+                    };
+                    openChangeX += glyphW + GlyphMetrics.ClefChangePadding;
                 }
                 else if (useColumnTiming && isChange)
                 {
