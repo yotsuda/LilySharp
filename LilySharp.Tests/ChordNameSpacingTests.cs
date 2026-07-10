@@ -52,9 +52,12 @@ public class ChordNameSpacingTests
 
         var xs = layout.ChordNameLayouts.Select(c => c.X).OrderBy(x => x).ToList();
         Assert.Equal(4, xs.Count);
+        // Adjacent (centre-anchored) names must clear each other. The bug placed
+        // Dm and Em at the same X (gap 0); a proportional-only fix still left them
+        // ~2.1 ss apart — too tight for the ~4 ss-wide "Dm"/"Em" boxes.
         for (int i = 1; i < xs.Count; i++)
-            Assert.True(xs[i] > xs[i - 1],
-                $"chord X positions must be strictly increasing (no overlap): "
+            Assert.True(xs[i] - xs[i - 1] >= 2.5,
+                $"adjacent chord names overlap (gap < 2.5 ss): "
                 + $"[{string.Join(", ", xs.Select(x => x.ToString("F1")))}]");
     }
 }

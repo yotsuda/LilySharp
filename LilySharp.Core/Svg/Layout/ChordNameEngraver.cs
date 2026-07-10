@@ -148,6 +148,34 @@ internal static class ChordNameEngraver
             prepared.Add((chord, x, staffOffset, topStaff, sysIdx, cni));
         }
 
+        // Half the drawn width of a centred (TextAnchor.Middle) chord symbol, at
+        // the renderer's chord font size (FontSize 4.0 × 0.65 = 2.6), measured with
+        // SANS bold advances — the face the names render in.
+        double HalfWidth(ChordNameItem c) =>
+            Math.Max(1.0, Rendering.SansTextMetrics.MeasureBold(DisplayText(c).Text, 2.6) / 2);
+
+        // Resolve horizontal overlaps between adjacent TIMING-placed symbols ON THE
+        // SAME LINE (same system + staff). Proportional timing X can pack two names —
+        // e.g. a chord on a beat that falls inside a longer note — closer than their
+        // text boxes; shift the later one right until its box clears the previous
+        // one's. Inline @chord symbols (UseTiming false) stay anchored to their note.
+        prepared.Sort((a, b) =>
+            a.sysIdx != b.sysIdx ? a.sysIdx.CompareTo(b.sysIdx)
+            : a.chord.StaffIndex != b.chord.StaffIndex ? a.chord.StaffIndex.CompareTo(b.chord.StaffIndex)
+            : a.x.CompareTo(b.x));
+        const double chordGap = 0.6; // minimum ink gap between adjacent names (staff spaces)
+        for (int i = 1; i < prepared.Count; i++)
+        {
+            var prev = prepared[i - 1];
+            var cur = prepared[i];
+            if (!cur.chord.UseTiming || !prev.chord.UseTiming
+                || cur.sysIdx != prev.sysIdx || cur.chord.StaffIndex != prev.chord.StaffIndex)
+                continue;
+            double minX = prev.x + HalfWidth(prev.chord) + HalfWidth(cur.chord) + chordGap;
+            if (cur.x < minX)
+                prepared[i] = (cur.chord, minX, cur.staffOffset, cur.topStaff, cur.sysIdx, cur.idx);
+        }
+
         // Per system, the peak protrusion of staff content above the staff top,
         // sampled UNDER EACH SYMBOL (its own X window), then maxed over the
         // system's symbols — the chord line shares one baseline per system.
@@ -175,8 +203,7 @@ internal static class ChordNameEngraver
                 // bold advances — the face chord names render in. Measured,
                 // not guessed: a wide "Gm7♭5" reaches over the NEXT beat's
                 // tall chord, which a narrow per-character estimate missed.
-                double halfWidth = Math.Max(
-                    1.0, Rendering.SansTextMetrics.MeasureBold(DisplayText(p.chord).Text, 2.6) / 2);
+                double halfWidth = HalfWidth(p.chord);
                 double peak = up.MaxProtrusionInRange(p.x - halfWidth, p.x + halfWidth);
                 if (!systemPeak.TryGetValue(p.sysIdx, out var cur) || peak > cur)
                     systemPeak[p.sysIdx] = peak;
