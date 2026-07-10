@@ -47,8 +47,8 @@
   <rect x="28.95" y="20.77" width="0.19" height="4.00" fill="#000000"/>
   <rect x="37.59" y="20.77" width="0.19" height="4.00" fill="#000000"/>
   <rect x="38.08" y="20.77" width="0.60" height="4.00" fill="#000000"/>
-  <text x="16.30" y="20.17" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="432">Cm7</text>
-  <text x="31.43" y="20.17" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="471">G7</text>
+  <text x="16.30" y="19.17" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="432">Cm7</text>
+  <text x="31.43" y="19.17" font-size="2.60" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#000000" data-pos="471">G7</text>
   <text x="19.34" y="28.27" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="446">6</text>
   <text x="22.34" y="28.27" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="455">6</text>
   <text x="22.34" y="29.77" font-size="3.00" font-family="serif" text-anchor="middle" fill="#000000" data-pos="455">4</text>

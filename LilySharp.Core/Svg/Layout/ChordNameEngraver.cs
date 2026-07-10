@@ -104,7 +104,8 @@ internal static class ChordNameEngraver
         Func<int, int, double>? staffYAt = null,
         Func<int, double>? minStaffYAt = null,
         IReadOnlyList<(VerticalSkyline up, VerticalSkyline down)>? systemSkylines = null,
-        bool chordGridSheet = false)
+        bool chordGridSheet = false,
+        Func<int, int, VerticalSkyline?>? lowerStaffUpSkyline = null)
     {
         if (chordNames.IsDefaultOrEmpty || systems.IsDefaultOrEmpty || measureLayouts.IsDefaultOrEmpty)
             return ImmutableArray<ChordNameLayout>.Empty;
@@ -187,27 +188,36 @@ internal static class ChordNameEngraver
         // and the staff — content between the symbols does not push the line.
         // LILYPOND-REF: lily/axis-group-interface.cc — VerticalAxisGroup
         // skyline spacing; lily/skyline.cc Skyline::distance (per-X minimum).
-        var systemPeak = new Dictionary<int, double>();
-        if (systemSkylines != null)
+        // The topmost staff's chord line skyline-spaces above the SYSTEM up-skyline
+        // (script-augmented). A LOWER staff's chord line clears THAT staff's own
+        // notes instead — the system skyline carries only the top staff, so without
+        // a per-staff skyline a `staff bass with chords` row overprints the bass's
+        // high/ledger noteheads. The peak is keyed per (system, staff): each staff's
+        // chord row is its own baseline. For the common lead sheet (chords on the top
+        // staff only) the key collapses to the top staff and the result is unchanged.
+        var linePeak = new Dictionary<(int sys, int staff), double>();
+        foreach (var p in prepared)
         {
-            foreach (var p in prepared)
-            {
-                if (!p.topStaff || p.sysIdx < 0 || p.sysIdx >= systemSkylines.Count
-                    || p.chord.IsChordRow)
-                    continue;
-                var up = systemSkylines[p.sysIdx].up;
-                if (up.IsEmpty)
-                    continue;
-                // The symbol's footprint: centred text at the chord font size
-                // (renderer: FontSize 4.0 × 0.65 = 2.6), measured with SANS
-                // bold advances — the face chord names render in. Measured,
-                // not guessed: a wide "Gm7♭5" reaches over the NEXT beat's
-                // tall chord, which a narrow per-character estimate missed.
-                double halfWidth = HalfWidth(p.chord);
-                double peak = up.MaxProtrusionInRange(p.x - halfWidth, p.x + halfWidth);
-                if (!systemPeak.TryGetValue(p.sysIdx, out var cur) || peak > cur)
-                    systemPeak[p.sysIdx] = peak;
-            }
+            if (p.sysIdx < 0 || p.chord.IsChordRow)
+                continue;
+            VerticalSkyline? up;
+            if (p.topStaff)
+                up = systemSkylines != null && p.sysIdx < systemSkylines.Count
+                    ? systemSkylines[p.sysIdx].up : null;
+            else
+                up = lowerStaffUpSkyline?.Invoke(p.sysIdx, p.chord.StaffIndex);
+            if (up == null || up.IsEmpty)
+                continue;
+            // The symbol's footprint: centred text at the chord font size
+            // (renderer: FontSize 4.0 × 0.65 = 2.6), measured with SANS
+            // bold advances — the face chord names render in. Measured,
+            // not guessed: a wide "Gm7♭5" reaches over the NEXT beat's
+            // tall chord, which a narrow per-character estimate missed.
+            double halfWidth = HalfWidth(p.chord);
+            double peak = up.MaxProtrusionInRange(p.x - halfWidth, p.x + halfWidth);
+            var key = (p.sysIdx, p.chord.StaffIndex);
+            if (!linePeak.TryGetValue(key, out var cur) || peak > cur)
+                linePeak[key] = peak;
         }
 
         var results = ImmutableArray.CreateBuilder<ChordNameLayout>(prepared.Count);
@@ -226,14 +236,14 @@ internal static class ChordNameEngraver
             }
 
             // Y position: above the staff (negative = upward), offset to own staff.
-            // Raise by the system's peak note protrusion (top-staff only) so the chord
+            // Raise by this (system, staff) chord line's peak note protrusion so the
             // line clears high notes/ledger lines; the StaffPadding floor reproduces the
             // measured no-protrusion distance (lead sheet without notes above the staff).
-            // The system skyline carries the real ink of noteheads, stems,
-            // ledgers, accidentals (SkylineBuilder) and above-staff scripts
-            // (LayoutEngine.AugmentSkylinesWithScripts), so the sampled peak
+            // The skyline carries the real ink of noteheads, stems, ledgers,
+            // accidentals (SkylineBuilder) and — for the top staff — above-staff
+            // scripts (LayoutEngine.AugmentSkylinesWithScripts), so the sampled peak
             // needs no allowances — it IS the content under the symbol.
-            double protrusion = p.topStaff && systemPeak.TryGetValue(p.sysIdx, out var pk) ? pk : 0;
+            double protrusion = linePeak.TryGetValue((p.sysIdx, p.chord.StaffIndex), out var pk) ? pk : 0;
             double y = -(StaffPadding + protrusion) + p.staffOffset;
 
             var (text, above) = DisplayText(p.chord);

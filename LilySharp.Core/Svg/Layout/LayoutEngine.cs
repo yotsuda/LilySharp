@@ -1485,10 +1485,44 @@ internal sealed class LayoutEngine
         bool chordGridSheet =
             (chordNames?.Any(c => c.IsChordRow) ?? false)
             && !lyrics.Any(l => l.IsLyricsRow);
+
+        // Chord names on a NON-top staff (`staff bass with chords ...`) must clear
+        // that staff's own high/ledger notes, but the system up-skyline carries only
+        // the topmost staff. Provide a per-(system, staff) up-skyline for the staves
+        // that actually host a chord row below the top; built lazily and only when
+        // such a row exists, so the common lead sheet (chords on the top staff only)
+        // does no extra work and is byte-identical.
+        Func<int, int, VerticalSkyline?>? lowerStaffUpSkyline = null;
+        var cn = chordNames ?? ImmutableArray<ChordNameItem>.Empty;
+        if (!cn.IsDefaultOrEmpty && staffByIndex != null && staffYByIndex != null
+            && staffYByIndex.Count > 0)
+        {
+            double topStaffY = staffYByIndex.Values.Min();
+            bool anyLowerStaffChords = cn.Any(c => !c.IsChordRow
+                && staffYByIndex.TryGetValue(c.StaffIndex, out var sy) && sy > topStaffY + 1e-6);
+            if (anyLowerStaffChords)
+            {
+                var skyCache = new Dictionary<(int, int), VerticalSkyline?>();
+                lowerStaffUpSkyline = (sysIdx, staffIndex) =>
+                {
+                    if (sysIdx < 0 || sysIdx >= systems.Length
+                        || !staffByIndex.TryGetValue(staffIndex, out var staff))
+                        return null;
+                    var key = (sysIdx, staffIndex);
+                    if (!skyCache.TryGetValue(key, out var sky))
+                    {
+                        sky = _skylineBuilder.BuildStaffSkylines(staff, systems[sysIdx].Measures).Up;
+                        skyCache[key] = sky;
+                    }
+                    return sky;
+                };
+            }
+        }
+
         var chordNameLayouts = ChordNameEngraver.Calculate(
-            chordNames ?? ImmutableArray<ChordNameItem>.Empty, systems, ml, measures,
+            cn, systems, ml, measures,
             measuresByStaff, staffYAt, minStaffYAt, scriptedSkylines,
-            chordGridSheet: chordGridSheet);
+            chordGridSheet: chordGridSheet, lowerStaffUpSkyline: lowerStaffUpSkyline);
 
         // Layout percent repeats
         var percentRepeatLayouts = PercentRepeatEngraver.Calculate(
