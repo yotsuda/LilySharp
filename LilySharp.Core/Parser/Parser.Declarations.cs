@@ -302,23 +302,22 @@ internal sealed partial class Parser
     }
 
 
-    // A bare identifier appears where a note/rest/music item is expected. It might
-    // be a mistyped note (not a phrase at all), so say so plainly and — for the
-    // classic English-accidental slip (eb, bb) — suggest the Dutch spelling, while
-    // still pointing at '$' for a genuine phrase reference. Recover by keeping the
-    // reference node so $name resolution/tooling still works.
+    // A bare identifier in music is a PHRASE REFERENCE (the `$` sigil is gone —
+    // `Chorus` not `$Chorus`). A word that reads like an English-accidental note
+    // slip (eb, bb, fsharp) is almost certainly a mistyped pitch rather than a
+    // phrase, so keep the Dutch-spelling hint for that case; anything else is taken
+    // as a phrase reference and SymbolReferenceValidator reports it if undefined.
     private VariableReferenceGreen ParseBareVariableReference()
     {
-        var span = new TextSpan(_textPosition, Current.FullWidth);
-        var name = Advance();
-        string word = name.Text;
-        string message = PitchSuggestion(word) is { } pitch
-            ? $"'{word}' is not a valid note here — did you mean the pitch '{pitch}'? "
-              + $"(For a phrase, write '${word}'.)"
-            : $"'{word}' is not a note, rest, or known name here. "
-              + $"If it names a phrase, reference it with '${word}'.";
-        _diagnostics.Error(span, DiagnosticCodes.BareReferenceRequiresDollar, message);
-        return new VariableReferenceGreen(name);
+        if (PitchSuggestion(Current.Text) is { } pitch)
+        {
+            var span = new TextSpan(_textPosition, Current.FullWidth);
+            var bad = Advance();
+            _diagnostics.Error(span, DiagnosticCodes.BareReferenceRequiresDollar,
+                $"'{bad.Text}' is not a valid note — did you mean the pitch '{pitch}'?");
+            return new VariableReferenceGreen(bad);
+        }
+        return new VariableReferenceGreen(Advance());
     }
 
     // English-style accidental spellings map to Lily#'s Dutch note names:

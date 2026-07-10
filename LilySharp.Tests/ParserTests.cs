@@ -16,6 +16,7 @@
 
 using System.Linq;
 using Xunit;
+using LilySharp.Core.Semantics;
 using LilySharp.Core.Syntax;
 using LilySharp.Core.Syntax.InternalSyntax;
 
@@ -1037,11 +1038,13 @@ lyrics { do re mi fa sol }
     }
 
     [Fact]
-    public void BareWord_UnknownName_DoesNotClaimPhrase()
+    public void BareWord_UnknownName_IsUndefinedPhrase()
     {
+        // A bare identifier in music is a phrase reference (no `$` sigil); an
+        // unknown one is reported as an undefined phrase by semantic validation.
         var tree = SyntaxTree.Parse("{ c4 xyz d4 }");
-        var err = tree.Diagnostics.First(d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar);
-        Assert.Contains("not a note, rest, or known name", err.Message);
+        var diags = tree.Diagnostics.Concat(SemanticValidation.Run(tree)).ToList();
+        Assert.Contains(diags, d => d.Code == DiagnosticCodes.UndefinedVariable && d.Message.Contains("xyz"));
     }
 
     // ========== Metadata Properties ==========
@@ -1268,9 +1271,10 @@ form main { Main }
     }
 
     [Fact]
-    public void BareNameReference_IsRejected_WithDollarHint()
+    public void BareName_ReferencesPhrase_NoDollarNeeded()
     {
-        // A phrase reference requires '$': 'melody { intro }' must use '$intro'.
+        // A phrase is referenced by BARE name now: 'melody { intro }' resolves the
+        // `intro` phrase — no `$` sigil, no error.
         var source = @"time 4/4
 part melody
 phrase intro { c4 d e f | }
@@ -1280,10 +1284,10 @@ section Main {
 form main { Main }
 ";
         var tree = SyntaxTree.Parse(source);
-        Assert.True(tree.HasErrors);
-        var errors = tree.Diagnostics.Where(d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar).ToList();
-        Assert.Single(errors);
-        Assert.Contains("$intro", errors[0].Message);
+        var diags = tree.Diagnostics.Concat(SemanticValidation.Run(tree)).ToList();
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.BareReferenceRequiresDollar);
+        Assert.DoesNotContain(diags, d => d.Code == DiagnosticCodes.UndefinedVariable);
+        Assert.Contains(tree.GetNodes<VariableReferenceSyntax>(), r => r.Name.Text == "intro");
     }
 
     // --- Naive grand-staff mistake: clef name used like a staff block ---
