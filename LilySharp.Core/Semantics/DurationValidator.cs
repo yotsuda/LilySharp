@@ -35,7 +35,8 @@ internal sealed class DurationValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
-        CheckNode(root);
+        // root is a CompilationUnit — it never matches a duration-bearing case,
+        // so it is not checked separately (the old CheckNode(root) was a no-op).
         foreach (var node in root.DescendantNodes())
             CheckNode(node);
     }

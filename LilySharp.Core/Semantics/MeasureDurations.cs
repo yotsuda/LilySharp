@@ -48,9 +48,7 @@ internal static class MeasureDurations
                 return noteDuration;
 
             case DrumNoteSyntax drum:
-                var drumDuration = drum.Duration is { } dd
-                    ? dd.ToFraction()
-                    : defaultDuration;
+                var drumDuration = DurationCalculator.GetDuration(drum, defaultDuration);
                 if (drum.Duration != null) defaultDuration = drumDuration;
                 return drumDuration;
 

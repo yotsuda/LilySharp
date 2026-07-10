@@ -42,6 +42,12 @@ public static class DurationCalculator
         => chord.Duration?.ToFraction() ?? defaultDuration;
 
     /// <summary>
+    /// Gets the duration of a drum note, using default if not specified.
+    /// </summary>
+    public static Fraction GetDuration(DrumNoteSyntax drum, Fraction defaultDuration)
+        => drum.Duration?.ToFraction() ?? defaultDuration;
+
+    /// <summary>
     /// Parses a time signature like "4/4" or "3/4".
     /// </summary>
     public static Fraction ParseTimeSignature(int beats, int beatUnit)

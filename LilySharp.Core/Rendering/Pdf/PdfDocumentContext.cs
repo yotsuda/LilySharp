@@ -138,6 +138,19 @@ internal sealed class PdfDocumentContext : IDocumentContext
     public byte[] GetBytes() =>
         _savedBytes ?? throw new InvalidOperationException("Dispose first.");
 
+    /// <summary>
+    /// Installs the Emmentaler font resolver (composed over PdfSharpCore's default)
+    /// exactly once per process.
+    /// </summary>
+    /// <remarks>
+    /// LIMITATION: PdfSharpCore's <c>GlobalFontSettings.FontResolver</c> is a
+    /// process-global with no reset API, so the FIRST render's
+    /// <paramref name="fontDirectory"/> wins for the whole process lifetime — a
+    /// later <see cref="PdfDocumentContext"/> created with a DIFFERENT
+    /// FontDirectory is silently ignored. Harmless for the one-shot CLI (a fresh
+    /// process per invocation); latent for a long-lived host (e.g. an LSP server
+    /// rendering multiple documents with differing font directories).
+    /// </remarks>
     private static void EnsureFontResolver(string? fontDirectory)
     {
         lock (_resolverLock)

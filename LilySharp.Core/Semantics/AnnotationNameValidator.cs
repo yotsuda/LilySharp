@@ -81,7 +81,8 @@ internal sealed class AnnotationNameValidator : ISemanticValidator
     public void Validate(SyntaxTree tree)
     {
         var root = tree.GetRoot();
-        CheckNode(root);
+        // root is a CompilationUnit — it never matches an annotation-bearing case,
+        // so it is not checked separately (the old CheckNode(root) was a no-op).
         foreach (var node in root.DescendantNodes())
             CheckNode(node);
     }

@@ -34,11 +34,18 @@ namespace LilySharp.Core.Semantics;
 public static class RelativeOctave
 {
     /// <summary>Diatonic step index: c=0, d=1, … b=6.</summary>
-    public static int StepIndex(char baseName) => char.ToLowerInvariant(baseName) switch
+    public static int StepIndex(char baseName)
     {
-        'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3, 'g' => 4, 'a' => 5, 'b' => 6,
-        _ => 0
-    };
+        int step = char.ToLowerInvariant(baseName) switch
+        {
+            'c' => 0, 'd' => 1, 'e' => 2, 'f' => 3, 'g' => 4, 'a' => 5, 'b' => 6,
+            _ => -1
+        };
+        // Parser validation guarantees a diatonic base name; a miss means a
+        // malformed pitch slipped through — surface it in debug, fall back to c.
+        System.Diagnostics.Debug.Assert(step >= 0, $"RelativeOctave.StepIndex: non-diatonic base name '{baseName}'");
+        return step < 0 ? 0 : step;
+    }
 
     /// <summary>Chromatic semitone offset of a diatonic step within its octave
     /// (c=0, d=2, e=4, f=5, g=7, a=9, b=11).</summary>

@@ -747,6 +747,10 @@ public sealed class MidiExporter
             && track.Notes[_lastNoteIndex].Pitch == midiPitch)
         {
             var prev = track.Notes[_lastNoteIndex];
+            // The tie extends prev by the full written durationTicks, not the
+            // articulation-shortened actualDuration — so a staccato note that is
+            // tied-FROM gains full length on the merge. Rare (tie-over-staccato);
+            // kept deliberately, matching a sustained tied note's intent.
             track.Notes[_lastNoteIndex] = prev with { DurationTicks = prev.DurationTicks + durationTicks };
             _currentTick += durationTicks;
             _tiePending = startsTie; // continue a tie chain (c~ c~ c)
@@ -822,8 +826,9 @@ public sealed class MidiExporter
         // position and must map to the same printed copy.
         int chordOrdinal = NextOrdinal(chord.Position);
 
-        var durationNode = chord.DescendantNodes<DurationSyntax>().FirstOrDefault();
-        var duration = durationNode != null ? GetDuration(durationNode) : _defaultDuration;
+        // Use the chord's own typed duration, not a descendant scan (which could
+        // pick up a duration on an inner pitch if the grammar ever allowed it).
+        var duration = chord.Duration is { } cd ? GetDuration(cd) : _defaultDuration;
         int durationTicks = FractionToTicks(duration);
         durationTicks -= ConsumeGraceSteal(durationTicks); // grace notes steal from this chord
 
