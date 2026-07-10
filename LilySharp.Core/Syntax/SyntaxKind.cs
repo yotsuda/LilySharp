@@ -75,7 +75,7 @@ public enum SyntaxKind : ushort
     // === Structure Keywords (no backslash) ===
     /// <summary>The <c>section</c> keyword.</summary>
     SectionKeyword,
-    /// <summary>The <c>structure</c> keyword.</summary>
+    /// <summary>The <c>form</c> keyword (node kind stays "Structure" internally).</summary>
     StructureKeyword,
     /// <summary>The <c>using</c> keyword.</summary>
     UsingKeyword,
@@ -329,7 +329,7 @@ public enum SyntaxKind : ushort
     // === Nodes: New Structure ===
     /// <summary>A section declaration node (<c>section Name { ... }</c>).</summary>
     SectionDeclaration,
-    /// <summary>A structure declaration node (<c>structure { ... }</c>).</summary>
+    /// <summary>A form declaration node (<c>form Name { ... }</c>).</summary>
     StructureDeclaration,
     /// <summary>A using directive node (<c>using "file.lys"</c>).</summary>
     UsingDirective,

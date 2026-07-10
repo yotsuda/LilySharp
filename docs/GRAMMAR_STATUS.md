@@ -29,7 +29,7 @@ All ✅ implemented:
   `@text("…")`, hairpins, `@stemUp/@stemDown`, `@courtesy`/`@editorial`, arpeggio,
   glissando, figured bass, inline chord names, half ties, cue/cross/dead, feathered
   beams.
-- **Structure** — parts, phrases (`$ref`), sections, `structure` (+ per-score override),
+- **Structure** — parts, phrases (`$ref`), sections, named `form`s bound by `score <Name>`,
   repeats `|: :|` (`:|*N`), volta endings, navigation marks & spanners (segno/coda/fine/
   D.S./D.C., rit/accel, ottava, trill spanner, pedals), `break`.
 - **Render targets** — staff, grandStaff, tab, ossia, and **staff-less lead sheets**

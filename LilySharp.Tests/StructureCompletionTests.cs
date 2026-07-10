@@ -21,7 +21,7 @@ using Xunit;
 namespace LilySharp.Tests;
 
 /// <summary>
-/// Editor completion inside a <c>structure { }</c> block offers section names and
+/// Editor completion inside a <c>form Name { }</c> block offers section names and
 /// navigation marks, never note names.
 /// </summary>
 [Trait("Category", "Unit")]
@@ -32,24 +32,26 @@ public class StructureCompletionTests
           section Intro { c4 d e f | }
           section Verse { g4 a b c | }
         }
-        structure { Intro segno Verse to coda }
-        score "x" { staff m }
+        form main { Intro segno Verse to coda }
+        score main { staff m }
         """;
 
     [Fact]
-    public void InsideStructureBlock_IsDetected()
+    public void InsideFormBlock_IsDetected()
     {
-        int offset = Doc.IndexOf("Intro segno") + "Intro ".Length; // inside structure { }
-        Assert.Equal("structure", LilySharpLanguageServer.InnermostOpenBlock(Doc, offset));
+        int offset = Doc.IndexOf("Intro segno") + "Intro ".Length; // inside form main { }
+        Assert.Equal(LilySharpLanguageServer.CompletionContext.StructureBlock,
+            LilySharpLanguageServer.GetCompletionContext(Doc, offset));
     }
 
     [Fact]
-    public void InsideSectionMusicBlock_IsNotStructure()
+    public void InsideSectionMusicBlock_IsNotFormBody()
     {
-        // Inside a section's music block the innermost token is the section NAME,
-        // so it is not "structure" and routes to music (note) completions.
+        // Inside a section's music block the completions route to music (note)
+        // names, not the form body's section/navigation list.
         int offset = Doc.IndexOf("c4 d");
-        Assert.NotEqual("structure", LilySharpLanguageServer.InnermostOpenBlock(Doc, offset));
+        Assert.NotEqual(LilySharpLanguageServer.CompletionContext.StructureBlock,
+            LilySharpLanguageServer.GetCompletionContext(Doc, offset));
     }
 
     [Fact]

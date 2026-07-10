@@ -428,7 +428,7 @@ form main { イントロ イントロ "イントロ(再現)" }
 
 ### Navigation marks
 
-The structure may carry repeat-navigation marks between sections. The *signs*
+The form may carry repeat-navigation marks between sections. The *signs*
 `segno` and `coda` engrave at the start of the following section (the jump
 target); the *text* directives `fine`, `to coda`, `dc`/`ds` (optionally
 `dc al fine`, `ds al coda`, …) engrave at the end of the section just played:
@@ -464,25 +464,20 @@ score main "out" {
 }
 ```
 
-### Per-Score Structure
+### Multiple forms (excerpts)
 
-A score may carry its own `form main { ... }` to render a different
-arrangement of the same sections — for example a practice excerpt that
-plays only the intro. It overrides the file's top-level structure for
-that score only; scores without one keep using the top-level structure
-(and MIDI always uses the top-level form).
+Declare several named forms and bind each `score` to one by name — for example a
+full arrangement plus a practice excerpt that plays only the intro. The reserved
+form `main` writes to the input file's name; any other form name becomes the
+output file name (unless a `"basename"` overrides it). MIDI plays the `main` form
+(or the first declared).
 
 ```
-form main { Intro Verse Outro }   % the default form
+form main     { Intro Verse Outro }
+form practice { Intro }
 
-score main "full" {
-  staff melody
-}
-
-score 練習 {
-  form main { Intro }             % this score renders only the intro
-  staff melody
-}
+score main     "full" { staff melody }   % → full.svg
+score practice        { staff melody }   % → practice.svg
 ```
 
 ## Override/Revert
@@ -597,14 +592,14 @@ be declared and referenced).
 
 | Group | Words |
 |-------|-------|
-| Structure | `section` `structure` `include` `tab` `ossia` `transpose` `octave` `instrument` `channel` |
+| Structure | `section` `form` `include` `tab` `ossia` `transpose` `octave` `instrument` `channel` |
 | Score / layout | `score` `part` `staff` `grandStaff` `voice` `phrase` `repeat` `volta` `alternative` `let` `use` `break` `partial` |
 | Metadata | `title` `composer` `tempo` `time` `key` `clef` |
 | Modes | `major` `minor` `ionian` `dorian` `phrygian` `lydian` `mixolydian` `aeolian` `locrian` |
 | Clef names | `treble` `bass` `alto` `tenor` `treble_8` |
 | Notation | `tuplet` `grace` `acciaccatura` `appoggiatura` `lyrics` `chordnames` `chords` `tabStaff` `tuning` |
 | Overrides | `override` `revert` `once` |
-| Navigation (structure block) | `segno` `fine` `coda` `dc` `ds` `al` `to` |
+| Navigation (form block) | `segno` `fine` `coda` `dc` `ds` `al` `to` |
 | Dynamics | `ppp` `pp` `p` `mp` `mf` `f` `ff` `fff` |
 
 Notes:
